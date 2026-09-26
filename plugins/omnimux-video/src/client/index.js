@@ -1,6 +1,7 @@
 import { createElement } from 'react'
 import { NS, zh, en } from './locales.js'
 import { mountSidebarEntry, GOOGLE_VIDS_TAB_ID, ENTRY_SELECTOR } from './sidebar-entry.js'
+import { GoogleVidsStage } from './GoogleVidsStage.jsx'
 import { GoogleVidsStudioPanel } from './GoogleVidsStudioPanel.jsx'
 
 export const name = 'omnimux-video'
@@ -10,10 +11,10 @@ export const inject = ['locale']
  * 稳定单例引用的 Google Vids Studio 面板高阶组件，避免 Tab 宿主组件对比时触发不必要的 Unmount/Remount。
  */
 export function GoogleVidsTabPanel(props) {
-  return createElement(GoogleVidsStudioPanel, props)
+  return createElement(GoogleVidsStage, props)
 }
 
-export { GOOGLE_VIDS_TAB_ID, ENTRY_SELECTOR, GoogleVidsStudioPanel, mountSidebarEntry }
+export { GOOGLE_VIDS_TAB_ID, ENTRY_SELECTOR, GoogleVidsStage, GoogleVidsStudioPanel, mountSidebarEntry }
 
 function renderGoogleVidsIcon(size = 16) {
   return createElement('svg', {
@@ -75,6 +76,17 @@ export function apply(ctx) {
   } else {
     const unmount = mountSidebarSafely()
     if (typeof unmount === 'function') disposers.push(unmount)
+  }
+
+  // Issue #2698: Register Google Vids as first-level stage on shell.overlay seat (order 36)
+  if (ctx?.slots && typeof ctx.slots.inject === 'function') {
+    const uninjectSlot = ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+      name: 'shell.overlay',
+      id: 'omnimux-vids-stage',
+      order: 36,
+      locale: NS,
+    }, GoogleVidsStage))
+    if (typeof uninjectSlot === 'function') disposers.push(uninjectSlot)
   }
 
   const registerGoogleVidsTab = (sidebar) => {

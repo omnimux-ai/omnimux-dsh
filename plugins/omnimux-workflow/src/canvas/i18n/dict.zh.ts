@@ -621,6 +621,9 @@ const zh = {
   'assets.tag.costume': '服装',
   'assets.subjectLibrary': '主体库',
   'assets.newSubject': '新建主体',
+  'canvas.node.import.hint': '点击或拖拽上传素材',
+  'canvas.node.import.actionBtn': '选择文件',
+  'wizard.step2.pruneNotice.bar': '{count} 个未连线节点已排除',
 } as const;
 
 export type DictKey = keyof typeof zh;

@@ -1,0 +1,45 @@
+{
+  "id": "prd_29ef2448",
+  "name": "5ml便携迷你香水喷雾瓶 (买二送一)",
+  "handle": "5ml便携迷你香水喷雾瓶 (买二送一)",
+  "kind": "physical",
+  "category": "beauty_skincare",
+  "description": "Brand New and High Quality 5ml Mini Perfume Bottle.\n【规格参数】\n- 容量：5ml\n- 材质：高品质铝制金属外壳 + 玻璃防漏内胆\n- 包装：单瓶独立装\n- 适用：香水、精油、酒精、各类化妆水及清爽型液体随身分装\n- 净重：12g 超轻量随身携带",
+  "selling_points": "5ml随身便携可直接登机；底部微孔自抽充装或顶部注液，倒置剧烈摇晃绝不漏液；0.1mm纳米级细腻均匀雾化喷头；口红级精巧高定色泽；TikTok破万单买二送一爆款",
+  "target_audience": "经常需要随身补香的精致白领、频繁差旅/约会的年轻群体、不想带大几千元沉重玻璃香水瓶出门的香水爱好者",
+  "brand": "Comfort Bay",
+  "features": [
+    "5ml 口红级便携尺寸",
+    "底部充装防漏气阀技术",
+    "纳米雾化大广角微米喷头",
+    "防爆防漏安全登机",
+    "极简哑光金属磨砂外观"
+  ],
+  "pain_points": [
+    "大瓶香水笨重占包，出门怕摔碎心疼",
+    "普通分装瓶漏液，弄得包包和昂贵衣服满是刺鼻油渍",
+    "市面普通喷头水珠粗大，喷在衣服上留下难看水印",
+    "分装过程繁琐，用漏斗洒得到处都是"
+  ],
+  "price": "S$2.00 (原价 S$4.00, 50% OFF, BUY 2 TAKE 1)",
+  "sku": "1733226176535037573",
+  "promotion": "BUY 2 TAKE 1（买二送一），全场5折，已售4700+",
+  "categories": ["美妆个护", "收纳分装", "旅行便携", "TikTok爆款", "家居日用"],
+  "media_assets": [
+    {
+      "id": "med_01",
+      "path": "/Users/x/.omnimux-dev/omnimux/products/media/perfume-bottle-1733226176534972037-01.webp",
+      "desc": "金属磨砂外壳多色合集与口红对比图"
+    },
+    {
+      "id": "med_02",
+      "path": "/Users/x/.omnimux-dev/omnimux/products/media/perfume-bottle-1733226176534972037-02.webp",
+      "desc": "底部微孔直接对准大香水喷管自抽充装特写"
+    },
+    {
+      "id": "med_03",
+      "path": "/Users/x/.omnimux-dev/omnimux/products/media/perfume-bottle-1733226176534972037-03.webp",
+      "desc": "纳米级细腻云雾状喷雾慢动作展示"
+    }
+  ]
+}

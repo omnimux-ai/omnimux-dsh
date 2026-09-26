@@ -597,6 +597,9 @@ const en: Record<DictKey, string> = {
   'assets.tag.costume': 'Costume',
   'assets.subjectLibrary': 'Subject Library',
   'assets.newSubject': 'New Subject',
+  'canvas.node.import.hint': 'Click or drop to import',
+  'canvas.node.import.actionBtn': 'Select file',
+  'wizard.step2.pruneNotice.bar': '{count} unwired nodes excluded',
 };
 
 export default en;

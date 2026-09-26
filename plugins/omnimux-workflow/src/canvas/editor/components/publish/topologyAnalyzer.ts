@@ -18,8 +18,11 @@ import type {
   FormPropertySchema,
   FieldMappingEntry,
   FixedFieldSummaryEntry,
+  FlowNodeLike,
 } from './publishTypes.ts';
 import { NodeSpecRegistry } from '../../../../shared/specs/registry.ts';
+
+export type { FlowNodeLike };
 
 export const STANDARD_ASPECT_RATIOS = ['1:1', '4:3', '16:9', '9:16'] as const;
 
@@ -67,13 +70,6 @@ export function describeFixedValue(value: unknown): string {
   return String(value);
 }
 
-/** Minimal interface representing a canvas node */
-export interface FlowNodeLike {
-  id: string;
-  type?: string;
-  data?: Record<string, unknown>;
-}
-
 /** Minimal interface representing a canvas edge */
 export interface FlowEdgeLike {
   id?: string;
@@ -87,6 +83,52 @@ export interface FlowEdgeLike {
 export interface ToolCatalogProvider {
   getToolSpec?(nodeType: string, toolId: string): any;
   [key: string]: any;
+}
+
+/**
+ * 逆向 BFS 祖先可达闭包算法：
+ * 从指定的目标终端节点出发，沿着入边（target -> source）反向遍历，得到所有能到达终端节点的祖先节点 ID 集合。
+ */
+export function computeReverseReachability(
+  nodes: FlowNodeLike[],
+  edges: FlowEdgeLike[],
+  terminalNodeIds: string[],
+): Set<string> {
+  const nodeMap = new Map<string, FlowNodeLike>();
+  for (const node of nodes) {
+    nodeMap.set(node.id, node);
+  }
+
+  const reverseAdj = new Map<string, string[]>();
+  for (const edge of edges) {
+    if (!nodeMap.has(edge.source) || !nodeMap.has(edge.target)) continue;
+    const list = reverseAdj.get(edge.target) || [];
+    list.push(edge.source);
+    reverseAdj.set(edge.target, list);
+  }
+
+  const reachable = new Set<string>();
+  const queue: string[] = [];
+
+  for (const tid of terminalNodeIds) {
+    if (nodeMap.has(tid)) {
+      reachable.add(tid);
+      queue.push(tid);
+    }
+  }
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const parents = reverseAdj.get(current) || [];
+    for (const parent of parents) {
+      if (!reachable.has(parent)) {
+        reachable.add(parent);
+        queue.push(parent);
+      }
+    }
+  }
+
+  return reachable;
 }
 
 /**
@@ -121,35 +163,57 @@ export function analyzeWorkflowInputs(
     nodeOutDegrees[node.id] = 0;
   }
 
-  for (const edge of edges) {
-    const curIn = nodeInDegrees[edge.target];
-    if (curIn !== undefined) {
-      nodeInDegrees[edge.target] = curIn + 1;
-    }
-    const curOut = nodeOutDegrees[edge.source];
-    if (curOut !== undefined) {
-      nodeOutDegrees[edge.source] = curOut + 1;
-    }
+  const validEdges = edges.filter(
+    (e) => nodeInDegrees[e.source] !== undefined && nodeInDegrees[e.target] !== undefined,
+  );
+
+  for (const edge of validEdges) {
+    nodeInDegrees[edge.target] = (nodeInDegrees[edge.target] ?? 0) + 1;
+    nodeOutDegrees[edge.source] = (nodeOutDegrees[edge.source] ?? 0) + 1;
   }
 
-  const rootNodeIds: string[] = [];
-  const terminalNodeIds: string[] = [];
-
+  // 1. 有效终点识别：排除入度为 0 且出度为 0 的纯孤立节点
+  const effectiveTerminalNodeIds: string[] = [];
   for (const node of nodes) {
     const inDeg = nodeInDegrees[node.id] ?? 0;
     const outDeg = nodeOutDegrees[node.id] ?? 0;
-
-    if (inDeg === 0) {
-      rootNodeIds.push(node.id);
-    }
-    if (outDeg === 0) {
-      terminalNodeIds.push(node.id);
+    if (outDeg === 0 && inDeg > 0) {
+      effectiveTerminalNodeIds.push(node.id);
     }
   }
 
+  let activeNodeIds: string[] = [];
+  let terminalNodeIds: string[] = [];
+  let rootNodeIds: string[] = [];
+  let prunedNodes: FlowNodeLike[] = [];
+
+  // 边界兼容：针对完全孤立无连线的图做好边界兼容
+  if (effectiveTerminalNodeIds.length === 0) {
+    activeNodeIds = nodes.map((n) => n.id);
+    terminalNodeIds = nodes.filter((n) => (nodeOutDegrees[n.id] ?? 0) === 0).map((n) => n.id);
+    rootNodeIds = nodes.filter((n) => (nodeInDegrees[n.id] ?? 0) === 0).map((n) => n.id);
+    prunedNodes = [];
+  } else {
+    // 逆向 BFS 祖先可达闭包算法
+    terminalNodeIds = effectiveTerminalNodeIds;
+    const reachableSet = computeReverseReachability(nodes, validEdges, effectiveTerminalNodeIds);
+    activeNodeIds = nodes.filter((n) => reachableSet.has(n.id)).map((n) => n.id);
+    prunedNodes = nodes.filter((n) => !reachableSet.has(n.id));
+    rootNodeIds = nodes
+      .filter((n) => reachableSet.has(n.id) && (nodeInDegrees[n.id] ?? 0) === 0)
+      .map((n) => n.id);
+  }
+
+  const prunedNodeCount = prunedNodes.length;
+  const activeNodeIdSet = new Set(activeNodeIds);
+  const activeNodes = nodes.filter((n) => activeNodeIdSet.has(n.id));
+  const activeEdges = validEdges.filter(
+    (e) => activeNodeIdSet.has(e.source) && activeNodeIdSet.has(e.target),
+  );
+
   const inputs: ExposedWorkflowInput[] = [];
 
-  for (const node of nodes) {
+  for (const node of activeNodes) {
     const inDeg = nodeInDegrees[node.id] ?? 0;
     const data = node.data || {};
     const materialType = (data.materialType as string) || 'text';
@@ -242,7 +306,7 @@ export function analyzeWorkflowInputs(
     } else {
       // InDegree > 0: Generative or intermediate node (default unexposed / optional)
       // 1. Unwired input slots
-      const incomingEdges = edges.filter((e) => e.target === node.id);
+      const incomingEdges = activeEdges.filter((e) => e.target === node.id);
       const connectedSlotIds = new Set<string>();
       for (const edge of incomingEdges) {
         if (edge.targetHandle) {
@@ -436,10 +500,10 @@ export function analyzeWorkflowInputs(
   }
 
   // Suggest application category based on terminal nodes
-  const categorySuggestion = inferCategory(terminalNodeIds, nodes);
+  const categorySuggestion = inferCategory(terminalNodeIds, activeNodes.length > 0 ? activeNodes : nodes);
 
-  // Calculate deterministic workflow hash
-  const workflowHash = computeWorkflowHash(nodes, edges);
+  // Calculate deterministic workflow hash on active reachable graph
+  const workflowHash = computeWorkflowHash(activeNodes, activeEdges);
 
   return {
     inputs,
@@ -449,6 +513,9 @@ export function analyzeWorkflowInputs(
     nodeOutDegrees,
     categorySuggestion,
     workflowHash,
+    prunedNodes,
+    prunedNodeCount,
+    activeNodeIds,
   };
 }
 

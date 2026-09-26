@@ -44,7 +44,7 @@ async function loadModule() {
         builder.onLoad({ filter: /.*/, namespace: 'seam' }, () => ({ contents: SEAM }))
         builder.onResolve({ filter: /\/api\.js$/ }, () => ({ path: 'api', namespace: 'api' }))
         builder.onLoad({ filter: /.*/, namespace: 'api' }, () => ({
-          contents: 'exports.browseProjectDirectory = async () => ({ ok: true, body: { path: "/Users/x/Desktop", parent: "/Users/x", entries: [{ name: "projects", path: "/Users/x/Desktop/projects" }] } });',
+          contents: 'exports.pickProjectDirectory = async () => ({ ok: true, body: { path: "/Users/x/Desktop", paths: ["/Users/x/Desktop"] } }); exports.browseProjectDirectory = async () => ({ ok: true, body: { path: "/Users/x/Desktop", parent: "/Users/x", entries: [{ name: "projects", path: "/Users/x/Desktop/projects" }] } });',
         }))
       },
     }],
@@ -113,18 +113,15 @@ test('initialPath renders removable folder card', async () => {
   }
 })
 
-test('remove returns to drop zone; in-dialog browse then choose fills card', async () => {
+test('remove returns to drop zone; pick directory fills card', async () => {
   const submits = []
-  let browseCalls = 0
+  let pickCalls = 0
   const { container, root, dom, act } = await mount({
     initialPath: '/Users/x/Desktop/projects',
     onSubmit: (payload) => { submits.push(payload) },
-    onBrowseDirectory: async (path) => {
-      browseCalls += 1
-      if (!path) {
-        return { ok: true, body: { path: '/Users/x/Desktop', parent: '/Users/x', entries: [{ name: '短剧宣传片', path: '/Users/x/Movies/短剧宣传片' }] } }
-      }
-      return { ok: true, body: { path, parent: '/Users/x/Desktop', entries: [] } }
+    onPickDirectory: async () => {
+      pickCalls += 1
+      return { ok: true, body: { path: '/Users/x/Desktop', paths: ['/Users/x/Desktop'] } }
     },
   })
   try {
@@ -133,13 +130,11 @@ test('remove returns to drop zone; in-dialog browse then choose fills card', asy
     assert.equal(container.querySelector('[data-omnimux-new-project-picked]'), null)
 
     await act(async () => container.querySelector('[data-omnimux-new-project-drop]').click())
-    assert.equal(browseCalls, 1)
-    assert.ok(container.querySelector('[data-omnimux-new-project-browse]'))
-    assert.match(container.textContent, /短剧宣传片/)
-    await act(async () => container.querySelector('[data-omnimux-new-project-choose]').click())
+    assert.equal(pickCalls, 1)
     const picked = container.querySelector('[data-omnimux-new-project-picked]')
     assert.ok(picked)
     assert.match(picked.textContent, /Desktop/)
+    assert.equal(container.querySelector('[data-omnimux-new-project-browse]'), null)
 
     const primary = [...container.querySelectorAll('button')].find((btn) => btn.textContent.includes('projects.dialog.submit'))
     assert.ok(primary)
@@ -174,6 +169,74 @@ test('empty name disables submit; name-only submit omits projectRoot', async () 
     await act(async () => primary.click())
     assert.equal(submits[0].title, '短剧宣传片')
     assert.equal('projectRoot' in submits[0], false)
+  } finally {
+    await act(async () => root.unmount())
+    dom.window.close()
+  }
+})
+
+test('existing project prompt switches submit button and carries confirmedExisting on second submit', async () => {
+  const submits = []
+  const { container, root, dom, act } = await mount({
+    initialPath: '/Users/x/Desktop/projects',
+    initialTitle: '产品运营',
+    onSubmit: async (payload) => {
+      submits.push({ ...payload })
+      if (!payload.confirmedExisting) {
+        return { ok: false, existing: true, error: 'projects.existingConfirm' }
+      }
+      return { ok: true }
+    },
+  })
+  try {
+    let primary = [...container.querySelectorAll('button')].find((btn) =>
+      btn.textContent.includes('projects.dialog.submit') || btn.textContent.includes('projects.existingConfirmSubmit')
+    )
+    assert.ok(primary)
+    assert.match(primary.textContent, /projects\.dialog\.submit/)
+
+    // 第一次提交
+    await act(async () => primary.click())
+    assert.equal(submits.length, 1)
+    assert.equal(Boolean(submits[0].confirmedExisting), false)
+
+    // 确认态生效：按钮文案自适应切换为 projects.existingConfirmSubmit
+    primary = [...container.querySelectorAll('button')].find((btn) =>
+      btn.textContent.includes('projects.dialog.submit') || btn.textContent.includes('projects.existingConfirmSubmit')
+    )
+    assert.match(primary.textContent, /projects\.existingConfirmSubmit/)
+
+    // 第二次提交
+    await act(async () => primary.click())
+    assert.equal(submits.length, 2)
+    assert.equal(submits[1].confirmedExisting, true)
+  } finally {
+    await act(async () => root.unmount())
+    dom.window.close()
+  }
+})
+
+test('error prop matching existingConfirm activates confirmedExisting state', async () => {
+  const submits = []
+  const { container, root, dom, act } = await mount({
+    initialPath: '/Users/x/Desktop/projects',
+    initialTitle: '产品运营',
+    error: 'projects.existingConfirm',
+    onSubmit: async (payload) => {
+      submits.push({ ...payload })
+      return { ok: true }
+    },
+  })
+  try {
+    const primary = [...container.querySelectorAll('button')].find((btn) =>
+      btn.textContent.includes('projects.dialog.submit') || btn.textContent.includes('projects.existingConfirmSubmit')
+    )
+    assert.ok(primary)
+    assert.match(primary.textContent, /projects\.existingConfirmSubmit/)
+
+    await act(async () => primary.click())
+    assert.equal(submits.length, 1)
+    assert.equal(submits[0].confirmedExisting, true)
   } finally {
     await act(async () => root.unmount())
     dom.window.close()

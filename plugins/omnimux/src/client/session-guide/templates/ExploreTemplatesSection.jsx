@@ -200,6 +200,46 @@ export function ExploreTemplatesSection({
 
   // 外部素材库数据加载态
   const [libraryData, setLibraryData] = useState({ cards: [], loading: false, error: null });
+  const sectionRootRef = useRef(null);
+  const filterBarRef = useRef(null);
+
+  // 全屏探索组件生命周期标记
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__omnimuxFullscreenExploreActive = true;
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.__omnimuxFullscreenExploreActive = false;
+      }
+    };
+  }, []);
+
+  // 监听从加号菜单发起的平滑滚动置顶与 Tab 切换事件
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const onScrollToTab = (e) => {
+      const targetTab = e?.detail?.tab;
+      if (targetTab) {
+        handlePrimaryTabChange(targetTab);
+      }
+      // 平滑滚动至 Tab 栏置顶位置（刚好贴在视口顶部，图 1 效果）
+      const targetEl = filterBarRef.current || sectionRootRef.current;
+      if (targetEl && typeof targetEl.scrollIntoView === 'function') {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      // 触发输入框显式吸底意图
+      window.dispatchEvent(new CustomEvent('omnimux:composer:dock-intent', {
+        detail: { tab: targetTab },
+      }));
+    };
+
+    window.addEventListener('omnimux:explore:scroll-to-tab', onScrollToTab);
+    return () => {
+      window.removeEventListener('omnimux:explore:scroll-to-tab', onScrollToTab);
+    };
+  }, []);
 
   const currentLocale = useTemplateLocale(undefined, t);
   const isEn = String(currentLocale).toLowerCase().startsWith('en');
@@ -436,7 +476,7 @@ export function ExploreTemplatesSection({
     };
 
   return (
-    <div className="omnimux-explore-templates-root" data-omnimux-explore-section="">
+    <div ref={sectionRootRef} className="omnimux-explore-templates-root" data-omnimux-explore-section="">
       {/* 标题栏 */}
       <div className="omnimux-explore-header-row">
         <h2 className="omnimux-explore-title" data-explore-title="">
@@ -445,7 +485,7 @@ export function ExploreTemplatesSection({
       </div>
 
       {/* 一级导航与二级分类工具条 */}
-      <div className="omnimux-explore-filter-bar">
+      <div ref={filterBarRef} className="omnimux-explore-filter-bar">
         {/* 一级主库按钮栏：圆角矩形、无边框、无背景、无数量、带专属图标、激活显深底 */}
         <div className="omnimux-explore-primary-tabs" role="tablist" aria-label="一级核心库">
           {EXPLORE_PRIMARY_TABS.map((tab) => {

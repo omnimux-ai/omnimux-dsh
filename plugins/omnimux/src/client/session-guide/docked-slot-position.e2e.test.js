@@ -93,3 +93,54 @@ test('e2e: 输入框吸底态长列表安全避让垫高样式验证', () => {
   assert.equal(domCompact.window.getComputedStyle(seatCompact).paddingBottom, 'calc(var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px)')
   domCompact.window.close()
 })
+
+test('e2e: 吸底输入框最大宽度严格对齐顶部原生上限 952px (方案 A 样式红线白名单)', () => {
+  const start = styles.indexOf('[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card]')
+  const end = styles.indexOf('/* 工作区行留在 Hero', start)
+  assert.ok(start > 0 && end > start)
+  const cardRule = styles.slice(start, end)
+
+  // 1. 红线检查：绝对严禁出现 max-width: none
+  assert.equal(cardRule.includes('max-width:none'), false, '红线：严禁 max-width:none')
+  assert.equal(cardRule.includes('max-width: none'), false, '红线：严禁 max-width: none')
+
+  // 2. 白名单检查：必须对齐原生变量且兜底 952px
+  assert.ok(cardRule.includes('max-width:var(--dsh-composer-card-max-width, 952px)!important;') ||
+    cardRule.includes('max-width: var(--dsh-composer-card-max-width, 952px)!important;'))
+  assert.ok(cardRule.includes('position:fixed!important;') || cardRule.includes('position: fixed!important;'))
+  assert.ok(cardRule.includes('width:var(--omnimux-dock-width, 100%)!important;') || cardRule.includes('width: var(--omnimux-dock-width, 100%)!important;'))
+  assert.ok(cardRule.includes('margin:0!important;') || cardRule.includes('margin: 0!important;'))
+
+  // 3. 运行时 DOM 测试
+  const dom = new JSDOM(`<!doctype html><head><style>${cardRule}</style></head><body>
+    <div data-omnimux-starter-host data-omnimux-dock-open>
+      <div data-composer-card></div>
+    </div>
+  </body>`)
+  const card = dom.window.document.querySelector('[data-composer-card]')
+  const computed = dom.window.getComputedStyle(card)
+  assert.equal(computed.maxWidth, 'var(--dsh-composer-card-max-width, 952px)')
+  assert.equal(computed.position, 'fixed')
+  assert.equal(computed.margin, '0px')
+  dom.window.close()
+})
+
+test('e2e: 吸底输入框声明平滑位移过渡 transition，杜绝侧边栏折叠/展开突兀跳动', () => {
+  const start = styles.indexOf('[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card]')
+  const end = styles.indexOf('/* 工作区行留在 Hero', start)
+  assert.ok(start > 0 && end > start)
+  const cardRule = styles.slice(start, end)
+
+  // 1. 白名单检查：必须声明 left 与 width 平滑过渡
+  assert.ok(
+    cardRule.includes('transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1), width 200ms cubic-bezier(0.16, 1, 0.3, 1);') ||
+    cardRule.includes('transition: left 200ms cubic-bezier(0.16, 1, 0.3, 1), width 200ms cubic-bezier(0.16, 1, 0.3, 1);')
+  )
+
+  // 2. 收起按钮同步平滑过渡检查
+  const undockStart = styles.indexOf('.omnimux-trending-undock {')
+  const undockEnd = styles.indexOf('.omnimux-trending-undock:hover', undockStart)
+  assert.ok(undockStart > 0 && undockEnd > undockStart)
+  const undockRule = styles.slice(undockStart, undockEnd)
+  assert.ok(undockRule.includes('transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1)') || undockRule.includes('transition: left 200ms cubic-bezier(0.16, 1, 0.3, 1)'))
+})

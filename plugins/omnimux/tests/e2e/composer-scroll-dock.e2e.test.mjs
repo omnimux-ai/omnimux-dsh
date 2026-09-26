@@ -76,7 +76,7 @@ describe('E2E: 首页输入框滚动防抖定位状态机与交互收敛', () =>
           useInput: (fn) => fn({ draft: '' }),
           inputActions,
           store,
-          t: (k, fb) => (k === 'trending.undock' ? '收起输入框' : (fb || k)),
+          t: (k, fb) => (k === 'trending.undock' ? '收起' : (fb || k)),
         }))
       })
 

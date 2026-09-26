@@ -1,16 +1,168 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { measureInlineComposerDemand, releaseInlineComposerGeometry } from '../composer-compact.js'
 
-function dockGeometry(card, band) {
-  const rect = band?.getBoundingClientRect?.()
-  if (!rect || rect.width <= 0) return null
-  const column = card?.closest?.('[data-conversation-scroll], [class*="centerCol"]')?.getBoundingClientRect?.() || rect
-  const leftEdge = Math.max(rect.left + 12, column.left)
-  const rightEdge = Math.min(rect.left + rect.width - 12, column.right ?? column.left + column.width)
-  const available = Math.max(0, rightEdge - leftEdge)
+/**
+ * 精准探测当前会话工作台（栏目页面）的视口几何范围。
+ * 突破 closest 无法跨越兄弟节点的局限，支持侧边栏折叠/展开与多栏响应式。
+ *
+ * @param {Element | null} card 输入框卡片元素
+ * @param {Element | null} band 输入框原位槽位宿主
+ * @returns {{ left: number, width: number, right: number } | null}
+ */
+export function resolveConversationColumn(card, band) {
+  const doc = card?.ownerDocument || band?.ownerDocument || (typeof document !== 'undefined' ? document : null)
+  const win = doc?.defaultView || (typeof window !== 'undefined' ? window : null)
+  if (!doc || !win) return null
+
+  // 当前关联宿主上下文（card / band 所在的主机或工作区根节点）
+  const contextHost = card?.closest?.('[data-omnimux-starter-host], [data-phase]') ||
+    band?.closest?.('[data-omnimux-starter-host], [data-phase]') || null
+
+  const isContextMatch = (el) => {
+    if (!el) return false
+    if (card && (el === card || el.contains?.(card) || card.contains?.(el))) return true
+    if (band && (el === band || el.contains?.(band) || band.contains?.(el))) return true
+    if (contextHost && (el === contextHost || el.contains?.(contextHost) || contextHost.contains?.(el))) return true
+    return false
+  }
+
+  // Level 1: 优先探测权威的会话工作台主容器
+  // 覆盖原生会话表面、会话滚动容器、宿主内置滚动体以及三栏架构下的中间列 centerCol
+  const surfaceSelectors = [
+    '.dshDesktopConversationSurface',
+    '[data-conversation-scroll]',
+    '[class*="centerCol"]',
+    '.dshDesktopFrame > [class*="conversation"]',
+    '[data-omnimux-starter-host] [class*="scrollBody"]',
+    '[class*="scrollBody"]',
+  ]
+
+  const seen = new Set()
+  const candidates = []
+
+  for (const selector of surfaceSelectors) {
+    const elements = doc.querySelectorAll?.(selector) || []
+    for (const el of elements) {
+      if (!el || seen.has(el)) continue
+      seen.add(el)
+      const rect = el.getBoundingClientRect?.()
+      // 必须具有真实渲染尺寸，过滤掉 width <= 0 或 height === 0 的隐藏/脱落候选节点
+      const isZeroDimension = !rect || rect.width <= 0 || rect.height === 0
+      if (!isZeroDimension) {
+        candidates.push({
+          el,
+          rect,
+          matchesContext: isContextMatch(el),
+        })
+      }
+    }
+  }
+
+  // 优先选择包含当前 card / band / host 上下文的活动会话区域；若无包含则回退至首个具有布局的真实可见候选节点
+  const bestCandidate = candidates.find((c) => c.matchesContext) || candidates[0]
+  if (bestCandidate) {
+    const { rect } = bestCandidate
+    return {
+      left: Math.round(rect.left),
+      width: Math.round(rect.width),
+      right: Math.round(rect.right ?? (rect.left + rect.width)),
+    }
+  }
+
+  // Level 2: 侧边栏宽度推导兜底（当容器正在重绘或选择器未命中时）
+  let sidebarWidth = 0
+  const isLeftCollapsed = Boolean(
+    doc.documentElement?.hasAttribute?.('data-omnimux-left-collapsed') ||
+    doc.body?.hasAttribute?.('data-omnimux-left-collapsed') ||
+    doc.documentElement?.getAttribute?.('data-sidebar-collapsed') === 'true' ||
+    doc.body?.getAttribute?.('data-sidebar-collapsed') === 'true'
+  )
+
+  if (!isLeftCollapsed && win.getComputedStyle) {
+    const rootStyle = win.getComputedStyle(doc.documentElement)
+    const parsedWidth = parseFloat(rootStyle.getPropertyValue?.('--omnimux-sidebar-width'))
+    if (Number.isFinite(parsedWidth) && parsedWidth > 0) {
+      sidebarWidth = parsedWidth
+    } else {
+      // 检查真实侧边栏元素尺寸，过滤隐藏或无布局侧边栏
+      const sidebars = doc.querySelectorAll?.('.dshDesktopSidebar, [data-sidebar], aside') || []
+      const visibleSidebar = Array.from(sidebars).find((el) => {
+        const r = el?.getBoundingClientRect?.()
+        return r && r.width > 0 && r.height > 0 && r.left >= 0
+      })
+      const sideRect = visibleSidebar?.getBoundingClientRect?.()
+      if (sideRect && sideRect.width > 0 && sideRect.left >= 0) {
+        sidebarWidth = sideRect.width
+      } else {
+        // 桌面端默认侧边栏展开宽度 280px
+        sidebarWidth = 280
+      }
+    }
+  }
+
+  const winWidth = win.innerWidth || doc.documentElement?.clientWidth || 0
+  if (winWidth > 0) {
+    const colLeft = Math.max(0, Math.round(sidebarWidth))
+    const colWidth = Math.max(0, Math.round(winWidth - colLeft))
+    return {
+      left: colLeft,
+      width: colWidth,
+      right: colLeft + colWidth,
+    }
+  }
+
+  // Level 3: 最终安全退化保底
+  const fallbackRect = band?.getBoundingClientRect?.() || card?.getBoundingClientRect?.()
+  if (fallbackRect && fallbackRect.width > 0 && fallbackRect.height > 0) {
+    const colLeft = Math.max(0, Math.round(fallbackRect.left))
+    const colWidth = Math.max(0, Math.round(fallbackRect.width))
+    return {
+      left: colLeft,
+      width: colWidth,
+      right: colLeft + colWidth,
+    }
+  }
+
+  return null
+}
+
+/**
+ * 计算吸底输入框的宽度与水平居中坐标。
+ * 契约：严格以「会话栏目页面」内部水平居中，并对齐原生 952px 上限（方案 A）。
+ */
+export function dockGeometry(card, band) {
+  // 1. 获取会话工作台栏目页面的真实几何范围
+  const column = resolveConversationColumn(card, band)
+  if (!column || column.width <= 0) return null
+
+  // 2. 栏目内部可用宽度计算（两侧各预留 12px 呼吸缓冲）
+  const available = Math.max(0, column.width - 24)
   if (!available) return null
-  const width = Math.min(available, Math.max(DOCK_MAX_WIDTH, measureInlineComposerDemand(card)))
-  return { width, left: leftEdge + (available - width) / 2 }
+
+  // 3. 读取原生配置的卡片最大宽度（优先读 computedStyle CSS 变量，兜底 DOCK_MAX_WIDTH = 952px）
+  let nativeMaxWidth = DOCK_MAX_WIDTH
+  const win = card?.ownerDocument?.defaultView || (typeof window !== 'undefined' ? window : null)
+  if (win?.getComputedStyle && card) {
+    const rootStyle = win.getComputedStyle(card)
+    const parsedMax = parseFloat(rootStyle.getPropertyValue?.('--dsh-composer-card-max-width'))
+    if (Number.isFinite(parsedMax) && parsedMax > 0) {
+      nativeMaxWidth = parsedMax
+    }
+  }
+
+  // 4. 方案 A 核心计算：宽度上限完全对齐原生 nativeMaxWidth，自适应 available
+  const demandWidth = measureInlineComposerDemand(card)
+  const baseTargetWidth = Math.min(available, nativeMaxWidth)
+  const width = Math.min(available, Math.max(baseTargetWidth, demandWidth))
+
+  // 5. 【核心纠偏公式】：在栏目页面内部绝对居中！
+  // 栏目真实左边界 + (栏目总空间 - 输入框宽度) / 2
+  const left = column.left + (column.width - width) / 2
+
+  return {
+    width: Math.round(width),
+    left: Math.round(left),
+  }
 }
 
 /** 宿主上标记「原生输入框已停靠到会话视口底部」。 */
@@ -19,8 +171,8 @@ export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
 /** 停靠后输入框距会话视口底边的距离（px）。 */
 export const DOCK_BOTTOM = 20
 
-/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 780px 上限一致。 */
-export const DOCK_MAX_WIDTH = 780
+/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 952px 原生上限一致。 */
+export const DOCK_MAX_WIDTH = 952
 
 /** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
 export const SCROLLER_SELECTOR = '[class*="scrollBody"]'
@@ -143,6 +295,8 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const primedFlipRef = useRef(null)
   const pinnedRef = useRef(false)
   const isScrollTransitionRef = useRef(false)
+  const isIntentDrivenRef = useRef(false)
+  const isCollapsedRef = useRef(false)
 
   const undock = useCallback(() => {
     setDockedItem(null)
@@ -152,11 +306,15 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     primedFlipRef.current = null
     pinnedRef.current = false
     isScrollTransitionRef.current = false
+    isIntentDrivenRef.current = false
+    isCollapsedRef.current = true
     onUndock?.()
   }, [onUndock])
 
   const dock = useCallback((item, onDocked) => {
     if (!item) return false
+    isIntentDrivenRef.current = true
+    isCollapsedRef.current = false
     // 再次点击同一张卡片：作为反悔动作解除吸底
     if (!pinnedRef.current && dockedItem && isSameItem(dockedItem, item)) {
       undock()
@@ -403,13 +561,53 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const contentObserver = typeof window.MutationObserver === 'function'
       ? new window.MutationObserver(writeGeometry) : null
     if (toolbar) contentObserver?.observe(toolbar, { childList: true, characterData: true, subtree: true })
+
+    const doc = root.ownerDocument || document
+    const collapseObserver = typeof window.MutationObserver === 'function'
+      ? new window.MutationObserver(writeGeometry) : null
+    if (doc?.documentElement) {
+      collapseObserver?.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-omnimux-left-collapsed', 'data-sidebar-collapsed'] })
+    }
+    if (doc?.body) {
+      collapseObserver?.observe(doc.body, { attributes: true, attributeFilter: ['data-omnimux-left-collapsed', 'data-sidebar-collapsed'] })
+    }
+
+    const onTransitionEnd = (event) => {
+      const prop = event?.propertyName
+      const isGeometryProperty = (
+        prop === 'width' ||
+        prop === 'transform' ||
+        prop === 'max-width' ||
+        prop === 'min-width' ||
+        prop === 'left' ||
+        prop === 'right' ||
+        prop === 'flex-basis'
+      )
+      const transitionTarget = event?.target
+      const isSidebarOrHostTarget = Boolean(
+        transitionTarget?.closest?.('.dshDesktopSidebar, [data-sidebar], aside, [class*="sidebar"]')
+      )
+      const isNode = Boolean(transitionTarget && typeof transitionTarget.nodeType === 'number')
+      const relatedTransitionTarget = Boolean(
+        isSidebarOrHostTarget ||
+        transitionTarget?.closest?.('.dshDesktopFrame, [data-omnimux-starter-host]') ||
+        (isNode && root.contains?.(transitionTarget))
+      )
+      if (relatedTransitionTarget && (isGeometryProperty || isSidebarOrHostTarget)) {
+        writeGeometry()
+      }
+    }
+
     window.addEventListener('resize', writeGeometry)
+    window.addEventListener('transitionend', onTransitionEnd)
     return () => {
       primedAnimCancel?.()
       cancelAnim?.()
       observer?.disconnect()
       contentObserver?.disconnect()
+      collapseObserver?.disconnect()
       window.removeEventListener('resize', writeGeometry)
+      window.removeEventListener('transitionend', onTransitionEnd)
     }
   }, [dockedItem, placement, hostRef])
 
@@ -429,6 +627,26 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
       const scrollTop = readPageScrollTop(scroller)
 
+      // 处于主动收起态 (COLLAPSED)：上下滚动严格静默，唯有滑回到最顶部时才自然复位
+      if (isCollapsedRef.current) {
+        if (scrollTop <= revealThreshold) {
+          isCollapsedRef.current = false
+          leftTop = false
+          setPlacement('inline')
+        }
+        return
+      }
+
+      // 未显式触发输入框（纯向下滚动浏览）：
+      // 绝对不自动吸底！保持 inline 随页面自然滚出视口，底部保持纯净开阔
+      if (!isIntentDrivenRef.current) {
+        if (scrollTop <= revealThreshold) {
+          leftTop = false
+          setPlacement('inline')
+        }
+        return
+      }
+
       if (scrollTop > leaveThreshold) leftTop = true
 
       setPlacement((prev) => {
@@ -436,9 +654,10 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
         if (scrollTop <= revealThreshold && leftTop) {
           isScrollTransitionRef.current = true
           leftTop = false
+          isIntentDrivenRef.current = false
           return 'inline'
         }
-        // 向下滚动完全滑离顶部不可见（> leaveThreshold）→ 自动吸底
+        // 向下滚动完全滑离顶部不可见（> leaveThreshold）且存在显式意图 → 自动吸底
         if (scrollTop > leaveThreshold) {
           isScrollTransitionRef.current = true
           return 'docked'
@@ -446,6 +665,17 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
         // 迟滞保护区（revealThreshold 与 leaveThreshold 之间）：维持上一状态，绝不横跳
         return prev
       })
+    }
+
+    const onDockIntent = (event) => {
+      const item = event?.detail?.item
+      if (item) {
+        dock(item)
+        return
+      }
+      isIntentDrivenRef.current = true
+      isCollapsedRef.current = false
+      evaluate()
     }
 
     const onScroll = () => {
@@ -461,10 +691,12 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const targets = [scroller, window].filter(Boolean)
     for (const target of targets) target.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onResize)
+    window.addEventListener('omnimux:composer:dock-intent', onDockIntent)
     return () => {
       if (frame) cancelFrame(frame)
       for (const target of targets) target.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onResize)
+      window.removeEventListener('omnimux:composer:dock-intent', onDockIntent)
     }
   }, [hostRef, dockedItem])
 

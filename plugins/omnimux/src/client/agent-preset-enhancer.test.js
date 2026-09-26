@@ -35,6 +35,7 @@ import {
   resetAgentPresetEnhancerForTests,
   resolveAgentPresetAvatar,
   seatLabelText,
+  syncSeatAvatar,
   uninstallAgentPresetAvatarEnhancer,
 } from './agent-preset-enhancer.js'
 import { generatePixelAvatarDataUrl } from './pixel-avatar.js'
@@ -183,6 +184,13 @@ describe('agent preset avatars', () => {
     assert.equal(resolveAgentPresetAvatar('   '), null)
   })
 
+  it('correctly maps tiktok-agent and its aliases to tiktok-agent preset id', () => {
+    assert.equal(resolveAgentPresetAvatar('tiktok-agent').id, 'tiktok-agent')
+    assert.equal(resolveAgentPresetAvatar('TikTok运营专家团').id, 'tiktok-agent')
+    assert.equal(resolveAgentPresetAvatar('TikTok 运营操盘手').id, 'tiktok-agent')
+    assert.equal(resolveAgentPresetAvatar('TikTok Ops Team').id, 'tiktok-agent')
+  })
+
   it('gives every known expert a distinct avatar', () => {
     const ids = [
       'omni-agent',
@@ -268,6 +276,15 @@ describe('agent preset avatars', () => {
     assert.equal(after.getAttribute('src'), resolveAgentPresetAvatar('software-company', { size: SEAT_AVATAR_SIZE_PX }).src)
     assert.equal(after.getAttribute(PRESET_ID_ATTR), 'software-company')
     assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'software-company')
+  })
+
+  it('syncs active preset to window.__omnimuxActivePreset', async () => {
+    const { dom, doc } = setup()
+    globalThis.window = dom.window
+    const seat = findAgentPresetSeat(doc)
+    seat.querySelector('[class*="seatLabel"]').textContent = 'TikTok运营专家团'
+    syncSeatAvatar(doc, seat)
+    assert.equal(dom.window.__omnimuxActivePreset, 'tiktok-agent')
   })
 
   it('gives every picker row a 20px avatar, hides its description, and keeps the active check', async () => {

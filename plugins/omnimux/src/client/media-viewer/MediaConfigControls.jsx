@@ -360,7 +360,9 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                       className={`omx-ratio-card ${imageAspect === item.r ? 'is-active' : ''}`}
                       onClick={() => setImageAspect(item.r)}
                     >
-                      <span className={`omx-ratio-wire ${item.cls}`} />
+                      <span className="omx-ratio-wire-box">
+                        <span className={`omx-ratio-wire ${item.cls}`} />
+                      </span>
                       <span className="omx-ratio-label">{item.r}</span>
                     </button>
                   ))}
@@ -385,7 +387,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                 </div>
 
                 <div className="omx-param-subcol omx-subcol-sound">
-                  <div className="omx-param-title">生成张数</div>
+                  <div className="omx-param-title">张数</div>
                   <div className="omx-mode-track">
                     {['1', '2', '4'].map((cnt) => (
                       <button // exempt-ui01: 生成张数按钮
@@ -394,7 +396,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                         className={`omx-mode-pill ${imageBatch === cnt ? 'is-active' : ''}`}
                         onClick={() => setImageBatch(cnt)}
                       >
-                        {cnt} 张
+                        {cnt}张
                       </button>
                     ))}
                   </div>
@@ -404,7 +406,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
           ) : (
             <>
               <div className="omx-param-group">
-                <div className="omx-param-title">生成模式</div>
+                <div className="omx-param-title">生成方式</div>
                 <div className="omx-mode-track">
                   {['文生视频', '首帧', '首尾帧', '全能参考', '视频编辑'].map((m) => (
                     <button // exempt-ui01: 视频生成模式按钮
@@ -430,7 +432,9 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                       className={`omx-ratio-card ${videoAspect === item.r ? 'is-active' : ''}`}
                       onClick={() => setVideoAspect(item.r)}
                     >
-                      <span className={`omx-ratio-wire ${item.cls}`} />
+                      <span className="omx-ratio-wire-box">
+                        <span className={`omx-ratio-wire ${item.cls}`} />
+                      </span>
                       <span className="omx-ratio-label">{item.r}</span>
                     </button>
                   ))}
@@ -455,7 +459,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
                 </div>
 
                 <div className="omx-param-subcol omx-subcol-sound">
-                  <div className="omx-param-title">有声</div>
+                  <div className="omx-param-title">声音</div>
                   <div className="omx-mode-track">
                     <button // exempt-ui01: 有声开启按钮
                       type="button"
@@ -608,14 +612,14 @@ export function MediaConfigControls({ config, showModeSwitch = true, showModelSu
                 className={`omx-menu-row ${mode === 'image' ? 'is-selected' : ''}`}
                 onClick={() => { setMode('image'); setActivePopover(null); }}
               >
-                <span>图像生成 (Image)</span>
+                <span>图像生成</span>
               </button>
               <button // exempt-ui01: 视频模式选项
                 type="button"
                 className={`omx-menu-row ${mode === 'video' ? 'is-selected' : ''}`}
                 onClick={() => { setMode('video'); setActivePopover(null); }}
               >
-                <span>视频生成 (Video)</span>
+                <span>视频生成</span>
               </button>
             </div>
           )}

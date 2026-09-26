@@ -45,28 +45,28 @@ const NodeEmptyState: React.FC<NodeEmptyStateProps> = ({
 
   if (nodeKind === 'import') {
     return (
-      <div
-        className="wf-node-empty wf-node-empty--import-kind nodrag"
-        role={onImport ? 'button' : undefined}
-        tabIndex={onImport ? 0 : undefined}
-        onClick={(e) => {
-          if (!onImport) return;
-          e.stopPropagation();
-          onImport();
-        }}
-        onKeyDown={(e) => {
-          if (!onImport) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            e.stopPropagation();
-            onImport();
-          }
-        }}
-      >
+      <div className="wf-node-empty wf-node-empty--import-kind">
         <div className="wf-node-empty__icon-box">
           <UploadCloud size={44} strokeWidth={1.5} className="wf-node-empty__icon" />
         </div>
-        <div className="wf-node-empty__try-label">{t('panel.dropToImport')}</div>
+        <div className="wf-node-empty__try-label">
+          {t('canvas.node.import.hint') || t('panel.dropToImport')}
+        </div>
+        <div
+          className="wf-node-empty__actions nodrag"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="wf-node-empty__pill-btn nodrag"
+            onClick={(e) => {
+              e.stopPropagation();
+              onImport?.();
+            }}
+          >
+            <span>{t('canvas.node.import.actionBtn') || '选择文件'}</span>
+          </button>
+        </div>
       </div>
     );
   }

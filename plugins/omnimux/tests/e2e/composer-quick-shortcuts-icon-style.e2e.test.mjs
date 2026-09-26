@@ -142,11 +142,11 @@ async function mount(options) {
     setDraft: (text) => { draft = String(text ?? ''); writes.push(draft); return true },
     getDraft: () => draft,
   }
-  dom.window.__omnimuxSkillLibrary = { resolvePresetSkill: (slug) => ({ slug, title: slug }) }
+  dom.window.__omnimuxSkillLibrary = options?.skillLibrary ?? { resolvePresetSkill: (slug) => ({ slug, title: slug }) }
 
   const container = document.getElementById('host')
   const root = createRoot(container)
-  const session = { id: sessionId, blank: true }
+  const session = { id: sessionId, blank: true, agentPreset: options?.agentPreset ?? 'tiktok-agent' }
   await act(async () => {
     const props = {
       t: (key, fallback) => LABELS[key] || fallback || key,
@@ -288,6 +288,44 @@ describe('E2E: 四条快捷方式的无边框「图标 + 文字 + 箭头」', ()
       assert.equal(document.querySelectorAll('.omx-quick-shortcut-btn.is-active').length, 1, '任何时候只允许一条选中')
       assert.equal(document.querySelector('[data-omx-quick-shortcut="breakdown"]').getAttribute('aria-pressed'), 'true')
       assert.equal(document.querySelector('.omx-quick-shortcut-controls'), null, '拆解不得出现模型控件')
+    } finally {
+      await act(async () => env.root.unmount())
+    }
+  })
+
+  it('角色门禁：非 TikTok Agent 预设角色下立即返回 null（零 DOM 节点残留）', async () => {
+    const env = await mount({ sessionId: 'e2e-non-tiktok', agentPreset: 'standard' })
+    try {
+      assert.equal(document.querySelector('.omx-quick-shortcuts'), null, '非 TikTok Agent 下快捷方式组件不渲染')
+      assert.equal(document.querySelectorAll('[data-omx-quick-shortcut]').length, 0, '非 TikTok Agent 下零快捷方式按钮')
+    } finally {
+      await act(async () => env.root.unmount())
+    }
+  })
+
+  it('白名单别名角色门禁：支持 TikTok运营专家团 / TikTok 运营操盘手 / TikTok Ops Team 正常渲染', async () => {
+    for (const preset of ['TikTok运营专家团', 'TikTok 运营操盘手', 'TikTok Ops Team']) {
+      const env = await mount({ sessionId: `e2e-alias-${preset}`, agentPreset: preset })
+      try {
+        assert.ok(document.querySelector('.omx-quick-shortcuts'), `预设 ${preset} 下必须正常渲染快捷方式`)
+        assert.equal(document.querySelectorAll('[data-omx-quick-shortcut]').length, 4)
+      } finally {
+        await act(async () => env.root.unmount())
+      }
+    }
+  })
+
+  it('完整性门禁：当技能库只命中 1~3 条快捷技能时，严禁展示半吊子残缺状态，必须返回 null', async () => {
+    const partialLibrary = {
+      resolvePresetSkill: (slug) => {
+        if (slug === 'reverse-video-prompt') return null
+        return { slug, title: slug }
+      },
+    }
+    const env = await mount({ sessionId: 'e2e-partial-shortcuts', agentPreset: 'tiktok-agent', skillLibrary: partialLibrary })
+    try {
+      assert.equal(document.querySelector('.omx-quick-shortcuts'), null, '快捷方式不足 4 条时整条不渲染')
+      assert.equal(document.querySelectorAll('[data-omx-quick-shortcut]').length, 0, '零残缺按钮展示')
     } finally {
       await act(async () => env.root.unmount())
     }

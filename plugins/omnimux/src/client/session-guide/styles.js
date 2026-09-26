@@ -3145,15 +3145,17 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-trending-empty-hint { font-size:12px; opacity:0.75; max-width:520px; text-align:center; }
 
 /* 复刻接管：不复制任何控件，只把原生输入框搬到会话视口底部。
-   附件、专家、模型、发送仍全部来自官方 Host，行为与 Hero 完全一致。 */
+   附件、专家、模型、发送仍全部来自官方 Host，行为与 Hero 完全一致。
+   方案 A：最大宽度严格对齐顶部原生上限 var(--dsh-composer-card-max-width, 952px)。 */
 [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card] {
   position:fixed!important;
   left:var(--omnimux-dock-left, 0px)!important;
   width:var(--omnimux-dock-width, 100%)!important;
-  max-width:none!important;
+  max-width:var(--dsh-composer-card-max-width, 952px)!important;
   margin:0!important;
   bottom:var(--omnimux-dock-bottom, 20px)!important;
   z-index:45!important;
+  transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1), width 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 /* 工作区行留在 Hero：输入框已经搬走，它不该继续悬空显示 */
 [data-omnimux-starter-host][data-omnimux-dock-open] [class*="heroWorkspaceRow"] {
@@ -3182,7 +3184,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   border:1px solid var(--omnimux-trending-menu-ring); border-radius:999px;
   background:var(--omnimux-trending-menu-bg);
   color:var(--dsw-alias-label-secondary);
-  transition:color 160ms ease-out;
+  transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1), bottom 200ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms ease-out;
 }
 .omnimux-trending-undock:hover { color:var(--dsw-alias-label-primary); }
 .omnimux-trending-undock-icon { display:inline-flex; width:12px; height:12px; }
@@ -3215,7 +3217,17 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   margin: 0;
 }
 .omnimux-explore-main-title { font-size:18px; font-weight:700; color:var(--dsw-alias-label-primary); margin:0; }
-.omnimux-explore-filter-bar { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+.omnimux-explore-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  background: var(--dsw-alias-bg-layer-0, #0d0d0f);
+  padding: 8px 0 4px;
+}
 
 /* 一级导航：圆角矩形（非胶囊）、无边框、无背景、专属图标、激活显深底 */
 .omnimux-explore-primary-tabs { display:flex; align-items:center; gap:6px; overflow-x:auto; padding:2px 0; scrollbar-width:none; }

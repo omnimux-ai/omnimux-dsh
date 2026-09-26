@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { browseProjectDirectory } from '../api.js'
+import { pickProjectDirectory } from '../api.js'
 import { MAX_PROJECT_TITLE_LENGTH } from './limits.js'
-import { extractFolderName } from './pickDirectory.js'
+import { extractFolderName, firstPickedDirectory } from './pickDirectory.js'
 
 function CloseGlyph({ size = 14 }) {
   return (
@@ -48,45 +48,9 @@ function FolderPlusGlyph({ size = 14 }) {
   )
 }
 
-function ComputerGlyph({ size = 14 }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="5" width="18" height="12" rx="2" />
-      <path d="M8 19h8" />
-    </svg>
-  )
-}
-
-function ChevronGlyph({ size = 12 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function ChevronLeftGlyph({ size = 14 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 /**
- * 「编辑应用创建副本」轻量弹窗。
- * 遵循极简本地化设计规范，官方模板只读不可变，引导用户生成副本以供自由编辑。
- * 完全自包含，不引入外部组件库，避免打包及 Node 测试扩展名冲突。
+ * 「创建应用副本」轻量极简弹窗。
+ * 遵循现代 SaaS 极简规范，纯粹实体表述与动词律，系统原生文件夹打开窗口。
  *
  * @param {{
  *   manifest: object,
@@ -97,6 +61,7 @@ function ChevronLeftGlyph({ size = 14 }) {
  *   t?: (key: string) => string,
  *   onCancel: () => void,
  *   onSubmit: (payload: { mode: 'page' | 'project', title: string, projectRoot?: string }) => void | Promise<unknown>,
+ *   onPickDirectory?: () => Promise<unknown>,
  *   onBrowseDirectory?: (path?: string) => Promise<unknown>,
  * }} props
  */
@@ -108,12 +73,12 @@ export function ForkAppProjectDialog({
   error = '',
   onCancel,
   onSubmit,
+  onPickDirectory,
   onBrowseDirectory,
 }) {
   const appName = manifest?.metadata?.name || 'AI 应用'
   const hasHostProject = Boolean(hostProject?.id)
 
-  // 模式：已有项目时默认在当前项目创建创作页 ('page')，否则新建独立项目 ('project')
   const [mode, setMode] = useState(hasHostProject ? 'page' : 'project')
 
   const defaultPageTitle = `${appName}_副本`
@@ -122,12 +87,8 @@ export function ForkAppProjectDialog({
   const [nameTouched, setNameTouched] = useState(false)
 
   const [path, setPath] = useState(initialPath || '')
-  const [browsing, setBrowsing] = useState(false)
-  const [browsePath, setBrowsePath] = useState('')
-  const [browseParent, setBrowseParent] = useState(null)
-  const [browseEntries, setBrowseEntries] = useState([])
-  const [browseBusy, setBrowseBusy] = useState(false)
-  const [browseError, setBrowseError] = useState('')
+  const [picking, setPicking] = useState(false)
+  const [pickError, setPickError] = useState('')
 
   const nameRef = useRef(null)
 
@@ -135,11 +96,10 @@ export function ForkAppProjectDialog({
     nameRef.current?.focus()
   }, [])
 
-  // 模式切换时，若用户未手动修改过名称，则自动切换默认名称
   const handleModeChange = (nextMode) => {
     if (nextMode === mode) return
     setMode(nextMode)
-    setBrowseError('')
+    setPickError('')
     if (!nameTouched) {
       setName(nextMode === 'page' ? defaultPageTitle : defaultProjectTitle)
     }
@@ -147,7 +107,7 @@ export function ForkAppProjectDialog({
 
   const trimmed = name.trim()
   const trimmedPath = path.trim()
-  const canSubmit = trimmed !== '' && trimmed.length <= MAX_PROJECT_TITLE_LENGTH && !busy && !browsing
+  const canSubmit = trimmed !== '' && trimmed.length <= MAX_PROJECT_TITLE_LENGTH && !busy && !picking
 
   const submit = () => {
     if (!canSubmit) return
@@ -162,134 +122,76 @@ export function ForkAppProjectDialog({
     const next = typeof nextPath === 'string' ? nextPath.trim() : ''
     if (next === '') return
     setPath(next)
-    setBrowsing(false)
-  }
-
-  const loadBrowse = async (nextPath) => {
-    setBrowseBusy(true)
-    setBrowseError('')
-    try {
-      const loader = typeof onBrowseDirectory === 'function' ? onBrowseDirectory : browseProjectDirectory
-      const result = await loader(nextPath)
-      const body = result && typeof result === 'object' && 'body' in result ? result.body : result
-      if (!result || result.ok === false || !body || typeof body.path !== 'string') {
-        setBrowseError('浏览目录失败，请重试')
-        return
-      }
-      setBrowsePath(body.path)
-      setBrowseParent(typeof body.parent === 'string' ? body.parent : null)
-      setBrowseEntries(Array.isArray(body.entries) ? body.entries : [])
-      setBrowsing(true)
-    } catch {
-      setBrowseError('浏览目录失败，请重试')
-    } finally {
-      setBrowseBusy(false)
+    if (!nameTouched && mode === 'project') {
+      const fromFolder = extractFolderName(next)
+      if (fromFolder) setName(fromFolder)
     }
   }
 
-  const openBrowse = () => {
-    if (busy || browseBusy) return
-    void loadBrowse(trimmedPath || '')
+  const handlePickDirectory = async () => {
+    if (busy || picking) return
+    setPicking(true)
+    setPickError('')
+    try {
+      const picker = typeof onPickDirectory === 'function'
+        ? onPickDirectory
+        : typeof onBrowseDirectory === 'function'
+          ? onBrowseDirectory
+          : pickProjectDirectory
+      const result = await picker()
+      const chosen = firstPickedDirectory(result)
+      if (chosen) {
+        applyPickedPath(chosen)
+      }
+    } catch {
+      setPickError('操作失败，请重试。')
+    } finally {
+      setPicking(false)
+    }
   }
 
   const folderName = extractFolderName(trimmedPath)
 
-  const sourcePane = browsing ? (
-    <div className="omnimux-new-project-browse" data-omnimux-new-project-browse="">
-      <div className="omnimux-new-project-browse-bar">
-        <button // exempt-ui01 ai-app-ui-spec
-          type="button"
-          className="omx-apptab-modal-close"
-          disabled={browseBusy || !browseParent}
-          aria-label="返回上一层"
-          data-omnimux-new-project-up=""
-          onClick={() => { if (browseParent) void loadBrowse(browseParent) }}
-        >
-          <ChevronLeftGlyph />
-        </button>
-        <span className="omnimux-new-project-browse-path" title={browsePath}>{browsePath}</span>
-        <button // exempt-ui01 ai-app-ui-spec
-          type="button"
-          className="omx-apptab-modal-close"
-          disabled={browseBusy}
-          aria-label="关闭浏览"
-          data-omnimux-new-project-browse-close=""
-          onClick={() => { setBrowsing(false); setBrowseError('') }}
-        >
-          <CloseGlyph size={14} />
-        </button>
-      </div>
-      <div className="omnimux-new-project-browse-list">
-        {browseEntries.map((entry) => (
-          <button // exempt-ui01 ai-app-ui-spec
-            key={entry.path}
-            type="button"
-            className="omnimux-new-project-folder-row"
-            data-omnimux-new-project-folder=""
-            disabled={browseBusy}
-            onClick={() => { void loadBrowse(entry.path) }}
-          >
-            <FolderGlyph size={14} />
-            <span>{entry.name}</span>
-          </button>
-        ))}
-        {browseEntries.length === 0 && !browseBusy ? (
-          <p className="omnimux-new-project-browse-empty">当前文件夹为空</p>
-        ) : null}
-      </div>
-      <div className="omnimux-new-project-browse-actions">
-        <button // exempt-ui01 ai-app-ui-spec
-          type="button"
-          className="omx-apptab-btn-ghost"
-          disabled={browseBusy}
-          onClick={() => { setBrowsing(false); setBrowseError('') }}
-        >
-          取消
-        </button>
-        <button // exempt-ui01 ai-app-ui-spec
-          type="button"
-          className="omx-apptab-btn-primary"
-          disabled={browseBusy || !browsePath}
-          data-omnimux-new-project-choose=""
-          onClick={() => { applyPickedPath(browsePath) }}
-        >
-          选择此文件夹
-        </button>
-      </div>
-    </div>
-  ) : trimmedPath ? (
+  const sourcePane = trimmedPath ? (
     <div className="omnimux-new-project-picked" data-omnimux-new-project-picked="">
       <span className="omnimux-new-project-picked-icon" aria-hidden="true">
         <FolderGlyph />
       </span>
-      <span className="omnimux-new-project-picked-name" title={trimmedPath}>{folderName || trimmedPath}</span>
-      <button // exempt-ui01 ai-app-ui-spec
-        type="button"
-        className="omx-apptab-modal-close"
-        disabled={busy}
-        aria-label="移除文件夹"
-        data-omnimux-new-project-remove=""
-        onClick={() => setPath('')}
-      >
-        <CloseGlyph size={14} />
-      </button>
+      <span className="omnimux-new-project-picked-name" title={trimmedPath}>
+        {folderName || trimmedPath}
+      </span>
+      <div className="omnimux-new-project-picked-actions">
+        <button // exempt-ui01 ai-app-ui-spec
+          type="button"
+          className="omnimux-new-project-change-btn"
+          disabled={busy || picking}
+          data-omnimux-new-project-change=""
+          onClick={handlePickDirectory}
+        >
+          更改
+        </button>
+        <button // exempt-ui01 ai-app-ui-spec
+          type="button"
+          className="omx-apptab-modal-close"
+          disabled={busy || picking}
+          aria-label="移除文件夹"
+          data-omnimux-new-project-remove=""
+          onClick={() => setPath('')}
+        >
+          <CloseGlyph size={14} />
+        </button>
+      </div>
     </div>
   ) : (
     <button // exempt-ui01 ai-app-ui-spec
       type="button"
       className="omnimux-new-project-drop"
       data-omnimux-new-project-drop=""
-      disabled={busy || browseBusy}
-      onClick={openBrowse}
+      disabled={busy || picking}
+      onClick={handlePickDirectory}
     >
-      <span className="omnimux-new-project-drop-title">
-        选择存放的工作区文件夹
-        <ChevronGlyph />
-      </span>
-      <span className="omnimux-new-project-add-pill">
-        <FolderPlusGlyph />
-        浏览
-      </span>
+      <FolderPlusGlyph />
+      <span>选择文件夹</span>
     </button>
   )
 
@@ -297,7 +199,7 @@ export function ForkAppProjectDialog({
     <div className="omx-apptab-modal-mask">
       <div className="omx-apptab-modal is-wide">
         <div className="omx-apptab-modal-header">
-          <div className="omx-apptab-modal-title">创建应用编辑副本</div>
+          <div className="omx-apptab-modal-title">创建副本</div>
           <button // exempt-ui01 ai-app-ui-spec
             type="button"
             className="omx-apptab-modal-close"
@@ -310,15 +212,11 @@ export function ForkAppProjectDialog({
         </div>
 
         <div className="omx-apptab-modal-body">
-          <div className="omx-fork-dialog-desc">
-            官方预设应用为受保护模板。将为你生成独立副本，以便自由调整工作流并重新发布。
-          </div>
-
-          {/* 存放模式选择：仅在当前已有项目时提供选项 */}
+          {/* 副本类型选择：仅在当前已有项目时提供选项 */}
           {hasHostProject && (
             <div className="omx-fork-mode-section">
               <div className="omx-fork-mode-label" id="omx-fork-mode-label">
-                存放方式
+                副本类型
               </div>
               <div className="omx-fork-mode-grid" role="radiogroup" aria-labelledby="omx-fork-mode-label">
                 <div
@@ -330,10 +228,7 @@ export function ForkAppProjectDialog({
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleModeChange('page') }}
                 >
                   <div className="omx-fork-mode-title">
-                    加入当前项目
-                  </div>
-                  <div className="omx-fork-mode-sub">
-                    作为新创作页追加（推荐）
+                    当前项目创作页
                   </div>
                 </div>
 
@@ -346,21 +241,15 @@ export function ForkAppProjectDialog({
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleModeChange('project') }}
                 >
                   <div className="omx-fork-mode-title">
-                    新建独立项目
-                  </div>
-                  <div className="omx-fork-mode-sub">
-                    在工作区创建新工程包
+                    独立项目
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 副本名称输入：带显式标题与明确行为提示 */}
+          {/* 副本名称输入 */}
           <div className="omx-fork-input-group">
-            <label className="omx-fork-input-label" htmlFor="omnimux-fork-app-name">
-              {mode === 'page' ? '新创作页名称' : '项目显示名称'}
-            </label>
             <div className="omnimux-new-project-name">
               <span className="omnimux-new-project-name-prefix" aria-hidden="true">
                 <FolderGlyph />
@@ -371,7 +260,7 @@ export function ForkAppProjectDialog({
                 className="omnimux-new-project-name-field"
                 value={name}
                 maxLength={MAX_PROJECT_TITLE_LENGTH}
-                placeholder={mode === 'page' ? '输入创作页名称' : '输入项目名称'}
+                placeholder="副本名称"
                 disabled={busy}
                 onChange={(event) => {
                   setName(event.target.value)
@@ -385,27 +274,16 @@ export function ForkAppProjectDialog({
                 }}
               />
             </div>
-            <div className="omx-fork-input-hint">
-              {mode === 'project'
-                ? '仅作为软件内工程显示名称，不会在电脑硬盘中新建或重命名物理文件夹'
-                : `将在当前项目「${hostProject?.title || '未命名项目'}」中追加一张新画布，原项目名不变`}
-            </div>
           </div>
 
-          {/* 新建独立项目模式下选择工作区文件夹 */}
+          {/* 独立项目模式下展示存放位置 */}
           {mode === 'project' && (
             <>
               <div className="omnimux-new-project-source-head omx-fork-source-head">
-                <span className="omnimux-new-project-source-label">存放工作区目录</span>
-                {trimmedPath && !browsing ? (
-                  <span className="omnimux-new-project-device">
-                    <ComputerGlyph />
-                    本机电脑
-                  </span>
-                ) : null}
+                <span className="omnimux-new-project-source-label">存放位置</span>
               </div>
               {sourcePane}
-              {browseError && <p className="omnimux-new-project-error">{browseError}</p>}
+              {pickError && <p className="omnimux-new-project-error">{pickError}</p>}
             </>
           )}
 
@@ -431,7 +309,7 @@ export function ForkAppProjectDialog({
             disabled={!canSubmit || busy}
             onClick={submit}
           >
-            {busy ? '正在处理...' : '确认并进入画布'}
+            {busy ? '创建中...' : '创建副本'}
           </button>
         </div>
       </div>

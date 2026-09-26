@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, IconButton, InputField, ModalDialog } from 'dsh-ui-kit'
 import { IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { browseProjectDirectory } from '../api.js'
+import { pickProjectDirectory } from '../api.js'
 import { MAX_PROJECT_TITLE_LENGTH } from './limits.js'
-import { extractFolderName } from './pickDirectory.js'
+import { extractFolderName, firstPickedDirectory } from './pickDirectory.js'
 
 function FolderGlyph({ size = 16 }) {
   return (
@@ -42,45 +42,9 @@ function FolderPlusGlyph({ size = 14 }) {
   )
 }
 
-function ComputerGlyph({ size = 14 }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="5" width="18" height="12" rx="2" />
-      <path d="M8 19h8" />
-    </svg>
-  )
-}
-
-function ChevronGlyph({ size = 12 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function ChevronLeftGlyph({ size = 14 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 /**
  * 「创建项目」弹窗。token 走 --dsw-alias-*。
- * 名称必填；源文件夹在弹窗内浏览本机目录，选中后切成可移除卡片。
- * 留空目录则 Host 写入默认项目库。禁止弹出系统选文件夹窗口。
+ * 名称必填；点击「选择文件夹」唤起系统原生打开窗口，选中后切成可移除卡片。
  *
  * @param {{
  *   t: (key: string) => string,
@@ -90,7 +54,8 @@ function ChevronLeftGlyph({ size = 14 }) {
  *   initialTitle?: string,
  *   onCancel: () => void,
  *   onSubmit: (payload: { title: string, projectRoot?: string, confirmedExisting?: boolean }) => void | Promise<unknown>,
- *   onBrowseDirectory?: (path?: string) => Promise<unknown>,
+ *   onPickDirectory?: () => Promise<unknown>,
+ *   onBrowseDirectory?: () => Promise<unknown>,
  * }} props
  */
 export function NewLocalProjectDialog({
@@ -101,6 +66,7 @@ export function NewLocalProjectDialog({
   initialTitle = '',
   onCancel,
   onSubmit,
+  onPickDirectory,
   onBrowseDirectory,
 }) {
   const nameRef = useRef(null)
@@ -108,21 +74,24 @@ export function NewLocalProjectDialog({
   const [name, setName] = useState(defaultTitle)
   const [path, setPath] = useState(initialPath || '')
   const [nameTouched, setNameTouched] = useState(Boolean(defaultTitle))
-  const [browsing, setBrowsing] = useState(false)
-  const [browsePath, setBrowsePath] = useState('')
-  const [browseParent, setBrowseParent] = useState(null)
-  const [browseEntries, setBrowseEntries] = useState([])
-  const [browseBusy, setBrowseBusy] = useState(false)
-  const [browseError, setBrowseError] = useState('')
+  const [picking, setPicking] = useState(false)
+  const [pickError, setPickError] = useState('')
   const [confirmedExisting, setConfirmedExisting] = useState(false)
 
   useEffect(() => {
     nameRef.current?.focus()
   }, [])
 
+  useEffect(() => {
+    const confirmMessage = t('projects.existingConfirm')
+    if (error && (error === confirmMessage || (typeof confirmMessage === 'string' && confirmMessage !== '' && error.includes(confirmMessage)))) {
+      setConfirmedExisting(true)
+    }
+  }, [error, t])
+
   const trimmed = name.trim()
   const trimmedPath = path.trim()
-  const canSubmit = trimmed !== '' && trimmed.length <= MAX_PROJECT_TITLE_LENGTH && !busy && !browsing
+  const canSubmit = trimmed !== '' && trimmed.length <= MAX_PROJECT_TITLE_LENGTH && !busy && !picking
   const folderName = extractFolderName(trimmedPath)
 
   const submit = () => {
@@ -143,114 +112,63 @@ export function NewLocalProjectDialog({
     if (next === '') return
     setPath(next)
     setConfirmedExisting(false)
-    setBrowsing(false)
     if (!nameTouched) {
       const fromFolder = extractFolderName(next)
       if (fromFolder) setName(fromFolder)
     }
   }
 
-  const loadBrowse = async (nextPath) => {
-    setBrowseBusy(true)
-    setBrowseError('')
+  const handlePickDirectory = async () => {
+    if (busy || picking) return
+    setPicking(true)
+    setPickError('')
     try {
-      const loader = typeof onBrowseDirectory === 'function' ? onBrowseDirectory : browseProjectDirectory
-      const result = await loader(nextPath)
-      const body = result && typeof result === 'object' && 'body' in result ? result.body : result
-      if (!result || result.ok === false || !body || typeof body.path !== 'string') {
-        setBrowseError(t('projects.dialog.browseFailed'))
-        return
+      const picker = typeof onPickDirectory === 'function'
+        ? onPickDirectory
+        : typeof onBrowseDirectory === 'function'
+          ? onBrowseDirectory
+          : pickProjectDirectory
+      const result = await picker()
+      const chosen = firstPickedDirectory(result)
+      if (chosen) {
+        applyPickedPath(chosen)
       }
-      setBrowsePath(body.path)
-      setBrowseParent(typeof body.parent === 'string' ? body.parent : null)
-      setBrowseEntries(Array.isArray(body.entries) ? body.entries : [])
-      setBrowsing(true)
     } catch {
-      setBrowseError(t('projects.dialog.browseFailed'))
+      setPickError(t('projects.dialog.browseFailed'))
     } finally {
-      setBrowseBusy(false)
+      setPicking(false)
     }
   }
 
-  const openBrowse = () => {
-    if (busy || browseBusy) return
-    void loadBrowse('')
-  }
-
-  const sourcePane = browsing ? (
-    <div className="omnimux-new-project-browse" data-omnimux-new-project-browse="">
-      <div className="omnimux-new-project-browse-bar">
-        <IconButton
-          variant="ghost"
-          size="xs"
-          disabled={browseBusy || !browseParent}
-          aria-label={t('projects.dialog.goUp')}
-          data-omnimux-new-project-up=""
-          onClick={() => { if (browseParent) void loadBrowse(browseParent) }}
-        >
-          <ChevronLeftGlyph />
-        </IconButton>
-        <span className="omnimux-new-project-browse-path" title={browsePath}>{browsePath}</span>
-        <IconButton
-          variant="ghost"
-          size="xs"
-          disabled={browseBusy}
-          aria-label={t('projects.dialog.closeBrowse')}
-          data-omnimux-new-project-browse-close=""
-          onClick={() => { setBrowsing(false); setBrowseError('') }}
-        >
-          <IconCloseOutline16 size={14} />
-        </IconButton>
-      </div>
-      <div className="omnimux-new-project-browse-list">
-        {browseEntries.map((entry) => (
-          <Button
-            key={entry.path}
-            type="button"
-            variant="ghost"
-            className="omnimux-new-project-folder-row"
-            data-omnimux-new-project-folder=""
-            disabled={browseBusy}
-            onClick={() => { void loadBrowse(entry.path) }}
-          >
-            <FolderGlyph size={14} />
-            <span>{entry.name}</span>
-          </Button>
-        ))}
-        {browseEntries.length === 0 && !browseBusy ? (
-          <p className="omnimux-new-project-browse-empty">{t('projects.dialog.browseEmpty')}</p>
-        ) : null}
-      </div>
-      <div className="omnimux-new-project-browse-actions">
-        <Button variant="outline" disabled={browseBusy} onClick={() => { setBrowsing(false); setBrowseError('') }}>
-          {t('projects.dialog.cancel')}
-        </Button>
-        <Button
-          variant="primary"
-          disabled={browseBusy || !browsePath}
-          data-omnimux-new-project-choose=""
-          onClick={() => { applyPickedPath(browsePath) }}
-        >
-          {t('projects.dialog.chooseHere')}
-        </Button>
-      </div>
-    </div>
-  ) : trimmedPath ? (
+  const sourcePane = trimmedPath ? (
     <div className="omnimux-new-project-picked" data-omnimux-new-project-picked="">
       <span className="omnimux-new-project-picked-icon" aria-hidden="true">
         <FolderGlyph />
       </span>
-      <span className="omnimux-new-project-picked-name" title={trimmedPath}>{folderName || trimmedPath}</span>
-      <IconButton
-        variant="ghost"
-        size="xs"
-        disabled={busy}
-        aria-label={t('projects.dialog.removeFolder')}
-        data-omnimux-new-project-remove=""
-        onClick={() => { setPath(''); setConfirmedExisting(false) }}
-      >
-        <IconCloseOutline16 size={14} />
-      </IconButton>
+      <span className="omnimux-new-project-picked-name" title={trimmedPath}>
+        {folderName || trimmedPath}
+      </span>
+      <div className="omnimux-new-project-picked-actions">
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={busy || picking}
+          data-omnimux-new-project-change=""
+          onClick={handlePickDirectory}
+        >
+          {t('projects.dialog.change')}
+        </Button>
+        <IconButton
+          variant="ghost"
+          size="xs"
+          disabled={busy || picking}
+          aria-label={t('projects.dialog.removeFolder')}
+          data-omnimux-new-project-remove=""
+          onClick={() => { setPath(''); setConfirmedExisting(false) }}
+        >
+          <IconCloseOutline16 size={14} />
+        </IconButton>
+      </div>
     </div>
   ) : (
     <Button
@@ -258,17 +176,11 @@ export function NewLocalProjectDialog({
       variant="ghost"
       className="omnimux-new-project-drop"
       data-omnimux-new-project-drop=""
-      disabled={busy || browseBusy}
-      onClick={openBrowse}
+      disabled={busy || picking}
+      onClick={handlePickDirectory}
     >
-      <span className="omnimux-new-project-drop-title">
-        {t('projects.dialog.addFolder')}
-        <ChevronGlyph />
-      </span>
-      <span className="omnimux-new-project-add-pill">
-        <FolderPlusGlyph />
-        {t('projects.dialog.add')}
-      </span>
+      <FolderPlusGlyph />
+      <span>{t('projects.dialog.addFolder')}</span>
     </Button>
   )
 
@@ -285,7 +197,9 @@ export function NewLocalProjectDialog({
             {t('projects.dialog.cancel')}
           </Button>
           <Button variant="primary" disabled={!canSubmit} loading={busy} onClick={submit}>
-            {t('projects.dialog.submit')}
+            {confirmedExisting
+              ? (t('projects.existingConfirmSubmit') || '新建创作页')
+              : (t('projects.dialog.submit') || '创建项目')}
           </Button>
         </div>
       )}
@@ -319,21 +233,13 @@ export function NewLocalProjectDialog({
 
         <div className="omnimux-new-project-source-head">
           <span className="omnimux-new-project-source-label">{t('projects.dialog.pathLabel')}</span>
-          {trimmedPath && !browsing ? (
-            <span className="omnimux-new-project-device">
-              <ComputerGlyph />
-              {t('projects.dialog.thisComputer')}
-            </span>
-          ) : null}
         </div>
 
         {sourcePane}
 
-        {browseError ? <p className="omnimux-workflow-form-error">{browseError}</p> : null}
+        {pickError ? <p className="omnimux-workflow-form-error">{pickError}</p> : null}
         {error ? <p className="omnimux-workflow-form-error">{error}</p> : null}
       </div>
     </ModalDialog>
   )
 }
-
-

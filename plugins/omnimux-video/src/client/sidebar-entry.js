@@ -272,12 +272,27 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
   updateTexts()
 
   const handleClick = () => {
-    stageStore.open()
+    try {
+      if (typeof window !== 'undefined' && window.__omnimuxStage && typeof window.__omnimuxStage.claim === 'function') {
+        window.__omnimuxStage.claim('omnimux-vids')
+      }
+    } catch {}
+    try {
+      if (typeof window !== 'undefined' && window.__omnimuxWorkbench && typeof window.__omnimuxWorkbench.open === 'function') {
+        window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑' })
+      }
+    } catch {}
+    try {
+      if (typeof window !== 'undefined' && window.__omnimuxWorkbench && typeof window.__omnimuxWorkbench.setFocus === 'function') {
+        window.__omnimuxWorkbench.setFocus('split')
+      }
+    } catch {}
   }
   entry.addEventListener('click', handleClick)
 
   const syncActive = () => {
-    if (stageStore.getSnapshot()) {
+    const isStageActive = typeof document !== 'undefined' && document.documentElement?.dataset?.dshProductStage === 'omnimux-vids'
+    if (isStageActive) {
       entry.dataset.active = 'true'
     } else {
       delete entry.dataset.active
@@ -285,6 +300,9 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
   }
 
   const unsubscribeStage = stageStore.subscribe(syncActive)
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('dsh-product-stage', syncActive)
+  }
   syncActive()
 
   const rawUnsub = typeof resolvedLocale?.subscribe === 'function' ? resolvedLocale.subscribe(updateTexts) : undefined
@@ -301,6 +319,9 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
   return () => {
     if (typeof entry?.removeEventListener === 'function') {
       entry.removeEventListener('click', handleClick)
+    }
+    if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+      window.removeEventListener('dsh-product-stage', syncActive)
     }
     unregisterCoordinator()
     unsubscribeStage()

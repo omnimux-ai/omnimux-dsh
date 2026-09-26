@@ -183,7 +183,19 @@ export function uploadProjectFiles(projectId, paths = [], subpath = '') {
 }
 
 /**
+ * 唤起系统原生文件管理器打开窗口选择文件夹。
+ * @returns {Promise<unknown>}
+ */
+export function pickProjectDirectory() {
+  return workflowRequest('/omnimux-workflow/api/pick', {
+    method: 'POST',
+    body: { kind: 'directory' },
+  })
+}
+
+/**
  * 弹窗内列出本机一层文件夹。path 为空则落到桌面或用户主目录。
+ * @deprecated 改用 pickProjectDirectory 调用系统原生打开窗口
  * @param {string} [path]
  */
 export function browseProjectDirectory(path) {
