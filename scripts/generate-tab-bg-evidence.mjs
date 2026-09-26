@@ -65,6 +65,6 @@ const reportJson = {
   },
   status: "VERIFIED_PASSED"
 };
-fs.writeFileSync('.agent-reports/tab-bar-solid-background-verified.json', JSON.stringify(reportJson, null, 2));
+fs.writeFileSync('.agent-reports/tab-bg-solid-verified.json', JSON.stringify(reportJson, null, 2));
 
 console.log(`✅ 实机证据已生成: ${targetDocs}`);
