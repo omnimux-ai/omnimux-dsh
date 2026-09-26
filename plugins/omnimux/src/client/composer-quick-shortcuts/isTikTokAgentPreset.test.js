@@ -87,4 +87,77 @@ describe('isTikTokAgentPreset: TikTok Agent 角色预设探测与判定门禁', 
     assert.equal(isTikTokAgentPreset({ agentPreset: 'software-company' }, {}), false)
     assert.equal(isTikTokAgentPreset(null, { agentPreset: 'minimal' }), false)
   })
+
+  it('显式非 TikTok 预设绝对优先，绝不受全局 window.__omnimuxActivePreset 污染穿透', () => {
+    window.__omnimuxActivePreset = 'tiktok-agent'
+
+    // 显式 props
+    assert.equal(isTikTokAgentPreset(null, { agentPreset: 'standard' }), false)
+    assert.equal(isTikTokAgentPreset(null, { agentPreset: 'omni-agent' }), false)
+
+    // 显式 session.projectionValues
+    assert.equal(
+      isTikTokAgentPreset({ projectionValues: { agentPreset: 'omni-agent' } }, {}),
+      false,
+    )
+    assert.equal(
+      isTikTokAgentPreset({ projectionValues: { agentPreset: 'standard' } }, {}),
+      false,
+    )
+
+    // 显式 session.agentPreset
+    assert.equal(isTikTokAgentPreset({ agentPreset: 'standard' }, {}), false)
+    assert.equal(isTikTokAgentPreset({ agentPreset: 'software-company' }, {}), false)
+
+    // 显式 session.meta.agentPreset
+    assert.equal(
+      isTikTokAgentPreset({ meta: { agentPreset: 'standard' } }, {}),
+      false,
+    )
+  })
+
+  it('显式非 TikTok 预设绝对优先，绝不受 DOM 席位属性或文本残留污染穿透', () => {
+    // 构造 DOM TikTok 席位
+    const seat = document.createElement('div')
+    seat.setAttribute('data-omnimux-preset-seat', 'tiktok-agent')
+    document.body.appendChild(seat)
+
+    const label = document.createElement('span')
+    label.className = 'PnBhwW_seatLabel'
+    label.textContent = 'TikTok运营专家团'
+    document.body.appendChild(label)
+
+    // 显式 props
+    assert.equal(isTikTokAgentPreset(null, { agentPreset: 'standard' }), false)
+
+    // 显式 session.projectionValues
+    assert.equal(
+      isTikTokAgentPreset({ projectionValues: { agentPreset: 'omni-agent' } }, {}),
+      false,
+    )
+
+    // 显式 session.agentPreset
+    assert.equal(isTikTokAgentPreset({ agentPreset: 'standard' }, {}), false)
+
+    // 显式 session.meta.agentPreset
+    assert.equal(
+      isTikTokAgentPreset({ meta: { agentPreset: 'software-company' } }, {}),
+      false,
+    )
+  })
+
+  it('全局变量与 DOM 席位同时存在 TikTok 残留时，显式指定非 TikTok 预设依然严格隔离返回 false', () => {
+    window.__omnimuxActivePreset = 'tiktok-agent'
+
+    const seat = document.createElement('div')
+    seat.setAttribute('data-omnimux-preset-seat', 'tiktok-agent')
+    document.body.appendChild(seat)
+
+    assert.equal(isTikTokAgentPreset(null, { agentPreset: 'standard' }), false)
+    assert.equal(
+      isTikTokAgentPreset({ projectionValues: { agentPreset: 'omni-agent' } }, {}),
+      false,
+    )
+    assert.equal(isTikTokAgentPreset({ agentPreset: 'standard' }, {}), false)
+  })
 })

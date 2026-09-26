@@ -30,24 +30,31 @@ function matchesTikTokPreset(value) {
 
 /**
  * 探测当前是否处于 TikTok Agent 预设角色。
- * 支持从 props、session（projectionValues/agentPreset/meta）、window.__omnimuxActivePreset
- * 以及 DOM 席位 [data-omnimux-preset-seat] 或 seatLabel 中探测。
+ * 显式入参具有绝对优先级（props.agentPreset -> session.projectionValues.agentPreset -> session.agentPreset -> session.meta.agentPreset）。
+ * 只要任一显式入参存在且为非空字符串，就以其匹配结果直接返回，绝不向下穿透到全局或 DOM 回退。
+ * 只有当所有显式字段均为空/未指定时，才向下回退探测 window.__omnimuxActivePreset 与 DOM 席位。
  *
  * @param {object | null | undefined} session
  * @param {object | null | undefined} props
  * @returns {boolean}
  */
 export function isTikTokAgentPreset(session, props) {
-  const candidates = [
+  const explicitCandidates = [
     props?.agentPreset,
     session?.projectionValues?.agentPreset,
     session?.agentPreset,
     session?.meta?.agentPreset,
-    typeof window !== 'undefined' ? window.__omnimuxActivePreset : null,
   ];
 
-  for (const candidate of candidates) {
-    if (matchesTikTokPreset(candidate)) return true;
+  for (const candidate of explicitCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return matchesTikTokPreset(candidate);
+    }
+  }
+
+  // 只有当所有显式字段均为空/未指定时，才向下回退探测 window.__omnimuxActivePreset 与 DOM 席位
+  if (typeof window !== 'undefined' && matchesTikTokPreset(window.__omnimuxActivePreset)) {
+    return true;
   }
 
   if (typeof document !== 'undefined') {
