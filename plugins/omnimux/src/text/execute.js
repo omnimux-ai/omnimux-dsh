@@ -11,7 +11,7 @@ import { loadTextAudio, toAudioImageUrlPart } from './audio.js'
 import { loadTextDocument, toDocumentImageUrlPart } from './document.js'
 import { normalizeTextReferences } from './references.js'
 import { resolveRuntimeChoice } from '../settings/runtime-mode.js'
-import { isAuthenticOfficialToken } from '../media/mount.js'
+import { isAuthenticOfficialToken, resolveSyncOfficialToken } from '../media/mount.js'
 import { parseModelAndGroup, resolveRequestChannelIntent, isOfficialChannelId, getModelChannelGroups } from '../catalog/serving/channel-groups.js'
 import { runAgentText } from '../agents/local.js'
 
@@ -95,7 +95,19 @@ export async function executeOmnimuxText(input) {
   const isOfficialModel = Boolean(inputModelId && CHAT_MODEL_IDS.includes(inputModelId))
   const isExplicitAgent = targetChannel === 'agent' || targetChannel === 'local'
 
-  const rawSystemToken = input.env?.OMNIMUX_API_KEY || process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
+  let rawSystemToken = resolveSyncOfficialToken(input.env)
+  if (!rawSystemToken && input.credentials && typeof input.credentials.resolve === 'function') {
+    for (const ref of ['OMNIMUX_API_KEY', 'OMNIMUX_TOKEN']) {
+      try {
+        const hit = await input.credentials.resolve(ref)
+        const val = hit && typeof hit.value === 'string' ? hit.value.trim() : ''
+        if (isAuthenticOfficialToken(val)) {
+          rawSystemToken = val
+          break
+        }
+      } catch {}
+    }
+  }
   const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
 
   const isOfficialRequest = !channelIntent.isByokChannel && !isExplicitAgent
@@ -105,6 +117,11 @@ export async function executeOmnimuxText(input) {
     )
 
   const isOfficialBypass = isOfficialRequest && hasOfficialToken
+
+  if (isOfficialBypass && rawSystemToken) {
+    if (!input.env) input.env = {}
+    input.env.OMNIMUX_API_KEY = rawSystemToken
+  }
 
   // Chose BYOK but hasn't finished configuring — fail loudly, not silently
   // fall through to the official account.

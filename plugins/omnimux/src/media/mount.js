@@ -1,3 +1,6 @@
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
 import { assertCapabilityEnabled, isMediaEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from './errors.js'
 import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mode.js'
@@ -32,6 +35,74 @@ export function isAuthenticOfficialToken(token) {
     return false
   }
   return true
+}
+
+/**
+ * 同步解析官方权威凭据 Token：
+ * 优先级：
+ * 1. 显式安全 env / process.env (OMNIMUX_API_KEY / OMNIMUX_TOKEN)
+ * 2. profile 本地 .credentials.yaml 回退 ($DSH_HOME, ~/.omnimux, ~/.dsh)
+ * 3. ~/.config/omnimux/secrets.json 回退
+ * @param {Record<string, string | undefined>} [env]
+ * @param {{ allowDiskFallback?: boolean }} [opts]
+ * @returns {string | undefined}
+ */
+export function resolveSyncOfficialToken(env = process.env, opts = {}) {
+  const fromEnv = env?.OMNIMUX_API_KEY || env?.OMNIMUX_TOKEN
+  if (typeof fromEnv === 'string') {
+    if (isAuthenticOfficialToken(fromEnv)) return fromEnv.trim()
+    return undefined
+  }
+  const fromProcess = process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
+  if (typeof fromProcess === 'string') {
+    if (isAuthenticOfficialToken(fromProcess)) return fromProcess.trim()
+    return undefined
+  }
+
+  // 单元测试隔离保护：当通过 node:test 或 NODE_ENV=test 运行时，
+  // 必须显式开启 allowDiskFallback 才能穿透读取机器个人凭据文件，避免干扰断言隔离
+  const isTestRuntime = process.env.NODE_ENV === 'test' || Boolean(process.env.NODE_TEST_CONTEXT)
+  if (isTestRuntime && !opts.allowDiskFallback) {
+    return undefined
+  }
+
+  // 动态发现用户当前配置目录（支持生产版及开发版环境目录）
+  const profileDirName = (typeof process.env.DSH_PROFILE_DIR === 'string' && process.env.DSH_PROFILE_DIR.trim())
+    || (typeof process.env.DSH_HOME === 'string' && process.env.DSH_HOME.trim())
+    || ''
+  const searchDirs = [
+    process.env.DSH_HOME,
+    profileDirName,
+    join(homedir(), '.omnimux'),
+    join(homedir(), '.dsh'),
+  ].filter(Boolean)
+
+  for (const dir of searchDirs) {
+    try {
+      const credFile = join(dir, '.credentials.yaml')
+      if (existsSync(credFile)) {
+        const content = readFileSync(credFile, 'utf8')
+        const match = content.match(/OMNIMUX_API_KEY:\s*["']?([^"'\s\r\n]+)["']?/)
+          || content.match(/OMNIMUX_TOKEN:\s*["']?([^"'\s\r\n]+)["']?/)
+        if (match && isAuthenticOfficialToken(match[1])) {
+          return match[1].trim()
+        }
+      }
+    } catch {}
+  }
+
+  try {
+    const secFile = join(homedir(), '.config/omnimux/secrets.json')
+    if (existsSync(secFile)) {
+      const parsed = JSON.parse(readFileSync(secFile, 'utf8'))
+      const tok = parsed?.token || parsed?.access_token || parsed?.slots?.[parsed?.active_slot]?.access_token
+      if (typeof tok === 'string' && isAuthenticOfficialToken(tok)) {
+        return tok.trim()
+      }
+    }
+  } catch {}
+
+  return undefined
 }
 
 /**
@@ -90,8 +161,8 @@ export function mountMedia(ctx, opts) {
       const channelIntent = resolveRequestChannelIntent(req)
 
       // 官方凭据判定移至服务侧安全上下文，不信任调用方请求体自带的 req.env.OMNIMUX_API_KEY
-      // 严格核验宿主环境权威凭据真实性，杜绝伪造调用越权
-      const rawSystemToken = process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
+      // 严格核验宿主环境权威凭据真实性（支持 process.env、profile 凭据文件与 secrets.json 多层级回退）
+      const rawSystemToken = resolveSyncOfficialToken(process.env)
       const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
 
       const runtime = resolveRuntimeChoice(current)
