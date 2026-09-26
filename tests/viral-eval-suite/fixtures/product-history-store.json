@@ -1,0 +1,29 @@
+{
+  "product_id": "prd_29ef2448",
+  "product_name": "5ml便携迷你香水喷雾瓶 (买二送一)",
+  "total_generations": 2,
+  "history_records": [
+    {
+      "generation_id": "gen_001",
+      "timestamp": "2026-09-26T14:04:00Z",
+      "platform": "tiktok",
+      "marketing_goal": "direct_conversion",
+      "content_format": "pain_contrast_drama",
+      "persona": "通勤白领女性",
+      "hook_topic": "大瓶香水在通勤包内摔碎漏液弄脏手袋",
+      "scene_setting": "早高峰地铁与拥挤车厢",
+      "camera_direction": "手提包俯拍 ➔ 慢推特写 ➔ 微距平移 ➔ 环绕拉远"
+    },
+    {
+      "generation_id": "gen_002",
+      "timestamp": "2026-09-26T06:25:37.769Z",
+      "platform": "tiktok",
+      "marketing_goal": "direct_conversion",
+      "content_format": "airport_security_challenge",
+      "persona": "频繁跨国出行的国际空姐",
+      "hook_topic": "带大瓶香水被海关当场扔垃圾桶？掏出这个直接丝滑过机！",
+      "scene_setting": "国际机场安检通道与免税店登机口",
+      "camera_direction": "急速推镜 ➔ 微距平移 ➔ 环绕拉远定格尾帧"
+    }
+  ]
+}
