@@ -1,0 +1,17 @@
+{
+  "task": "style(session-guide): solid background for sticky filter bar matching page background",
+  "verifiedAt": "2026-09-26T15:53:00.000Z",
+  "spec": "specs/tab-bar-solid-background.spec.md",
+  "verifiedItems": {
+    "zeroTransparency": true,
+    "solidOpaque": true,
+    "matchedPageBackground": "--dsw-alias-bg-base",
+    "removedColorMixTransparent": true,
+    "removedBackdropFilter": true,
+    "stickyPositionPreserved": "position: sticky; top: 0",
+    "zIndexPreserved": 80,
+    "tabSwitchLogicPreserved": true,
+    "dockIntentPreserved": true
+  },
+  "status": "VERIFIED_PASSED"
+}

@@ -3225,11 +3225,10 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   position: sticky;
   top: 0;
   z-index: 80;
-  /* 吸顶背景遮罩：消费原生 --dsw-alias-bg-base 自适应双主题，自然融入页面底色；
-     以 90% 权重结合高斯毛玻璃，既杜绝死黑生硬条块，又彻底阻隔吸顶穿行时下方卡片的图文干扰 */
-  background: color-mix(in srgb, var(--dsw-alias-bg-base, #111113) 90%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  backdrop-filter: blur(16px) saturate(140%);
+  /* 实心纯色背景：直接消费宿主页面根底色变量 --dsw-alias-bg-base；
+     100% 实心绝对不透明，彻底杜绝下方穿行卡片透字/透图；
+     色值与页面主背景严格 1:1 一致，双主题自动对齐，静止时完全无缝融入底色、零色差、零死黑色块 */
+  background: var(--dsw-alias-bg-base, #111113);
   padding: 8px 0 4px;
 }
 
