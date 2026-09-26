@@ -258,11 +258,12 @@ export const EXPLORE_MENU_ITEMS = [
       const el = converged.get('omnimux-apps-entry')?.element
       if (el && typeof el.click === 'function') {
         el.click()
-        return
+        return true
       }
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('omnimux-app-open', { detail: { id: 'apps' } }))
       }
+      return true
     },
     iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg>',
   },
@@ -435,7 +436,10 @@ export function closeExploreMenu() {
 export function activateExploreItem(item) {
   closeExploreMenu()
   if (typeof item.action === 'function') {
-    item.action(CONVERGED_ROWS)
+    const handled = item.action(CONVERGED_ROWS)
+    if (handled !== false) {
+      return
+    }
   }
   const registered = CONVERGED_ROWS.get(item.entryId)
     ?? CONVERGED_ROWS.get(item.pluginId)

@@ -580,6 +580,82 @@ test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素
   }
 })
 
+test('激活 apps 项时其 element.click 仅被调用一次，绝无重复点击', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL, activateExploreItem, EXPLORE_MENU_ITEMS } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+
+  let appsClicks = 0
+  const appsBtn = document.createElement('button')
+  appsBtn.addEventListener('click', () => { appsClicks += 1 })
+  const disposeApps = api.register({ id: 'omnimux-apps-entry', rank: 1, create: () => appsBtn })
+
+  try {
+    api.place()
+    const root = document.querySelector('[data-pane="sidebar"]')
+    const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+
+    // 1. 通过探索菜单点击「应用」项，验证 element.click 仅被调用一次，绝无重复点击
+    exploreBtn.click()
+    const menu = document.getElementById('omnimux-explore-menu')
+    assert.ok(menu, '探索菜单已打开')
+    const appsItemEl = menu.querySelector('[data-explore-id="apps"]')
+    assert.ok(appsItemEl, '找到应用菜单项')
+
+    appsItemEl.click()
+    assert.equal(appsClicks, 1, 'apps.action 执行并触发 element.click 仅 1 次，绝无重复点击')
+    assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
+
+    // 2. 直接调用 activateExploreItem(appsItem)，再次验证仅触发 1 次（累计 2 次）
+    const appsItem = EXPLORE_MENU_ITEMS.find((it) => it.id === 'apps')
+    assert.ok(appsItem, 'EXPLORE_MENU_ITEMS 包含 apps')
+    activateExploreItem(appsItem)
+    assert.equal(appsClicks, 2, '直接激活 apps 项时其 element.click 同样仅被调用 1 次')
+  } finally {
+    disposeApps()
+  }
+})
+
+test('activateExploreItem 中 item.action 返回非 false 时阻止后续 registered.element.click，返回 false 时允许向下执行', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL, activateExploreItem } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+
+  let elementClicks = 0
+  const btn = document.createElement('button')
+  btn.addEventListener('click', () => { elementClicks += 1 })
+  const dispose = api.register({ id: 'omnimux-test-action-entry', rank: 1, create: () => btn })
+
+  try {
+    api.place()
+
+    // 1. action 返回 true，不触发 element.click
+    let actionCalls = 0
+    activateExploreItem({
+      id: 'test-handled',
+      entryId: 'omnimux-test-action-entry',
+      action: () => {
+        actionCalls += 1
+        return true
+      },
+    })
+    assert.equal(actionCalls, 1)
+    assert.equal(elementClicks, 0, 'action 返回 true 时提前 return，不调用 element.click')
+
+    // 2. action 返回 false，继续向下触发 element.click
+    activateExploreItem({
+      id: 'test-fallback',
+      entryId: 'omnimux-test-action-entry',
+      action: () => false,
+    })
+    assert.equal(elementClicks, 1, 'action 返回 false 时允许向下 fallback 调用 element.click')
+  } finally {
+    dispose()
+  }
+})
+
 test('按 Escape 键或点击外部可关闭探索浮动菜单', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
