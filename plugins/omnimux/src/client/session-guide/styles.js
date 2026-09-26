@@ -3155,6 +3155,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   margin:0!important;
   bottom:var(--omnimux-dock-bottom, 20px)!important;
   z-index:45!important;
+  transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1), width 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 /* 工作区行留在 Hero：输入框已经搬走，它不该继续悬空显示 */
 [data-omnimux-starter-host][data-omnimux-dock-open] [class*="heroWorkspaceRow"] {
@@ -3183,7 +3184,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   border:1px solid var(--omnimux-trending-menu-ring); border-radius:999px;
   background:var(--omnimux-trending-menu-bg);
   color:var(--dsw-alias-label-secondary);
-  transition:color 160ms ease-out;
+  transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1), bottom 200ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms ease-out;
 }
 .omnimux-trending-undock:hover { color:var(--dsw-alias-label-primary); }
 .omnimux-trending-undock-icon { display:inline-flex; width:12px; height:12px; }

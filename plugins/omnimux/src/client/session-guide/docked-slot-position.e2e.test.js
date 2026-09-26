@@ -124,3 +124,23 @@ test('e2e: 吸底输入框最大宽度严格对齐顶部原生上限 952px (方�
   assert.equal(computed.margin, '0px')
   dom.window.close()
 })
+
+test('e2e: 吸底输入框声明平滑位移过渡 transition，杜绝侧边栏折叠/展开突兀跳动', () => {
+  const start = styles.indexOf('[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card]')
+  const end = styles.indexOf('/* 工作区行留在 Hero', start)
+  assert.ok(start > 0 && end > start)
+  const cardRule = styles.slice(start, end)
+
+  // 1. 白名单检查：必须声明 left 与 width 平滑过渡
+  assert.ok(
+    cardRule.includes('transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1), width 200ms cubic-bezier(0.16, 1, 0.3, 1);') ||
+    cardRule.includes('transition: left 200ms cubic-bezier(0.16, 1, 0.3, 1), width 200ms cubic-bezier(0.16, 1, 0.3, 1);')
+  )
+
+  // 2. 收起按钮同步平滑过渡检查
+  const undockStart = styles.indexOf('.omnimux-trending-undock {')
+  const undockEnd = styles.indexOf('.omnimux-trending-undock:hover', undockStart)
+  assert.ok(undockStart > 0 && undockEnd > undockStart)
+  const undockRule = styles.slice(undockStart, undockEnd)
+  assert.ok(undockRule.includes('transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1)') || undockRule.includes('transition: left 200ms cubic-bezier(0.16, 1, 0.3, 1)'))
+})
