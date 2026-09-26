@@ -62,7 +62,7 @@ const HARNESS = `<!doctype html>
   <div class="page" data-phase="hero" data-omnimux-starter-host data-omnimux-dock-open
        style="--omnimux-dock-left: 200px; --omnimux-dock-width: 780px; --omnimux-dock-bottom: 20px; --omnimux-dock-card-height: 162px;">
     <div class="omx-attachment-dock" data-omnimux-attachments-dock="true"><div class="thumb"></div></div>
-    <button class="omnimux-trending-undock" type="button">收起输入框</button>
+    <button class="omnimux-trending-undock" type="button">收起</button>
     <div style="height: 900px;"></div>
     <div data-composer-card></div>
   </div>

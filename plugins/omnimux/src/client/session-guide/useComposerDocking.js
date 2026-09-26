@@ -1,15 +1,38 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { measureInlineComposerDemand, releaseInlineComposerGeometry } from '../composer-compact.js'
 
-function dockGeometry(card, band) {
+/**
+ * 计算吸底输入框的宽度与水平居中坐标。
+ * 契约：严格对齐 DSH 官方原生卡片上限与响应式逻辑（方案 A）。
+ */
+export function dockGeometry(card, band) {
   const rect = band?.getBoundingClientRect?.()
   if (!rect || rect.width <= 0) return null
+
+  // 1. 获取中间内容滚动的真实列边界
   const column = card?.closest?.('[data-conversation-scroll], [class*="centerCol"]')?.getBoundingClientRect?.() || rect
   const leftEdge = Math.max(rect.left + 12, column.left)
-  const rightEdge = Math.min(rect.left + rect.width - 12, column.right ?? column.left + column.width)
+  const rightEdge = Math.min(rect.left + rect.width - 12, column.right ?? (column.left + column.width))
   const available = Math.max(0, rightEdge - leftEdge)
   if (!available) return null
-  const width = Math.min(available, Math.max(DOCK_MAX_WIDTH, measureInlineComposerDemand(card)))
+
+  // 2. 读取原生配置的卡片最大宽度（优先读 computedStyle CSS 变量，兜底 DOCK_MAX_WIDTH = 952px）
+  let nativeMaxWidth = DOCK_MAX_WIDTH
+  const win = card?.ownerDocument?.defaultView || (typeof window !== 'undefined' ? window : null)
+  if (win?.getComputedStyle && card) {
+    const rootStyle = win.getComputedStyle(card)
+    const parsedMax = parseFloat(rootStyle.getPropertyValue?.('--dsh-composer-card-max-width'))
+    if (Number.isFinite(parsedMax) && parsedMax > 0) {
+      nativeMaxWidth = parsedMax
+    }
+  }
+
+  // 3. 方案 A 核心计算：宽度上限完全对齐原生 nativeMaxWidth，自适应 available
+  const demandWidth = measureInlineComposerDemand(card)
+  const baseTargetWidth = Math.min(available, nativeMaxWidth)
+  const width = Math.min(available, Math.max(baseTargetWidth, demandWidth))
+
+  // 4. 水平精确居中
   return { width, left: leftEdge + (available - width) / 2 }
 }
 
@@ -19,8 +42,8 @@ export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
 /** 停靠后输入框距会话视口底边的距离（px）。 */
 export const DOCK_BOTTOM = 20
 
-/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 780px 上限一致。 */
-export const DOCK_MAX_WIDTH = 780
+/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 952px 原生上限一致。 */
+export const DOCK_MAX_WIDTH = 952
 
 /** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
 export const SCROLLER_SELECTOR = '[class*="scrollBody"]'

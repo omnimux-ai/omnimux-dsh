@@ -388,12 +388,12 @@ function BlankSessionGuide({
           type="button"
           className="omnimux-trending-undock"
           onClick={undock}
-          aria-label={typeof t === 'function' ? (t('trending.undock') || '收起输入框') : '收起输入框'}
+          aria-label={typeof t === 'function' ? (t('trending.undock') || '收起') : '收起'}
         >
           <span className="omnimux-trending-undock-icon" aria-hidden="true">
             {ICON_CHEVRON_DOWN}
           </span>
-          {typeof t === 'function' ? (t('trending.undock') || '收起输入框') : '收起输入框'}
+          {typeof t === 'function' ? (t('trending.undock') || '收起') : '收起'}
         </button>
       )}
 
