@@ -1,0 +1,28 @@
+{
+  "task": "feat(session-guide): 恢复首页输入框下方 4 个热门入门卡片及模态框预填能力",
+  "issue": "#2709",
+  "verifiedAt": "2026-09-26T11:59:45.566Z",
+  "facts": {
+    "hasPopularTitleText": true,
+    "popularTitleText": "热门入门方式",
+    "popularCardsCount": 4,
+    "cardIds": [
+      "marketing-insight",
+      "url-to-video",
+      "recreate-viral-ads",
+      "bulk-create-ads"
+    ],
+    "hasInsightModal": true,
+    "hasUrlToVideoModal": true,
+    "hasRecreateViralAdsModal": true,
+    "hasBulkCreateAdsModal": true,
+    "fastFormInputsRetained": [
+      "url-to-video",
+      "recreate-viral-ads",
+      "bulk-create-ads"
+    ],
+    "prefillContract": "setDraft + focusEditor without auto-send",
+    "antiOverdesign": "zero-badge, zero-emoji, 100% SaaS minimal copy"
+  },
+  "status": "VERIFIED_PASSED"
+}

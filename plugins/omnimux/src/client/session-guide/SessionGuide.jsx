@@ -1,7 +1,13 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { STARTERS, STARTER_GROUPS } from './catalog.js'
+import { STARTERS, STARTER_GROUPS, POPULAR_STARTERS } from './catalog.js'
 import { isBlankConversation, selectStarter } from './state.js'
 import { StarterIcon } from './StarterIcon.jsx'
+import { PopularCardCover } from './PopularCardCover.jsx'
+import { MarketingInsightModal } from './MarketingInsightModal.jsx'
+import { UrlToVideoModal } from './UrlToVideoModal.jsx'
+import { RecreateViralAdsModal } from './RecreateViralAdsModal.jsx'
+import { BulkCreateAdsModal } from './BulkCreateAdsModal.jsx'
+import { CreativePresetsModal } from '../presets/CreativePresetsModal.jsx'
 import { TrendingReplicateSection } from './trending/TrendingReplicateSection.jsx'
 import { ExploreTemplatesSection, attachCardToConversation } from './templates/ExploreTemplatesSection.jsx'
 import { LIBRARY_STAGE_PROMPT_EVENT, mergeLibraryPrompt } from '../composer-add/library-stage-model.js'
@@ -61,6 +67,35 @@ function StarterGroupList({ groups, starters, selectedId, t, onChoose }) {
   )
 }
 
+function PopularStarterCard({ starter, t, onCardClick }) {
+  return (
+    <button key={starter.id} type="button" className="omnimux-popular-card" data-popular-starter-id={starter.id} onClick={() => onCardClick(starter)} /* exempt-ui01: popular starter card button */>
+      <div className="omnimux-popular-cover">
+        <PopularCardCover id={starter.id} />
+      </div>
+      <div className="omnimux-popular-footer">
+        <span className="omnimux-popular-card-title">{t(`guide.popular.${starter.id}.title`)}</span>
+        {starter.type === 'placeholder' && (
+          <span className="omnimux-popular-tag">Coming</span>
+        )}
+      </div>
+    </button>
+  )
+}
+
+function PopularStarterGrid({ popularStarters, t, onCardClick }) {
+  return (
+    <section className="omnimux-popular-section" aria-label={t('guide.popular.title')}>
+      <h2 className="omnimux-popular-title">{t('guide.popular.title')}</h2>
+      <div className="omnimux-popular-grid">
+        {popularStarters.map((starter) => (
+          <PopularStarterCard key={starter.id} starter={starter} t={t} onCardClick={onCardClick} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 /** The owner hooks address the rendered session, including its first draft. */
 export function SessionGuide(props) {
   const session = props.useSession((value) => value)
@@ -113,6 +148,11 @@ function BlankSessionGuide({
   const [notice, setNotice] = useState(null)
   const [toastText, setToastText] = useState(null)
   const toastTimer = useRef(null)
+  const [isInsightModalOpen, setIsInsightModalOpen] = useState(false)
+  const [isUrlToVideoOpen, setIsUrlToVideoOpen] = useState(false)
+  const [isRecreateModalOpen, setIsRecreateModalOpen] = useState(false)
+  const [isBulkCreateAdsOpen, setIsBulkCreateAdsOpen] = useState(false)
+  const [isCreativePresetsOpen, setIsCreativePresetsOpen] = useState(false)
   const guideRef = useRef(null)
   const live = useRef(null)
   const mounted = useRef(true)
@@ -209,6 +249,30 @@ function BlankSessionGuide({
     }
   }
 
+  function handlePopularClick(starter) {
+    if (starter.id === 'marketing-insight') {
+      setIsInsightModalOpen(true)
+      return
+    }
+    if (starter.id === 'url-to-video') {
+      setIsUrlToVideoOpen(true)
+      return
+    }
+    if (starter.id === 'recreate-viral-ads') {
+      setIsRecreateModalOpen(true)
+      return
+    }
+    if (starter.id === 'bulk-create-ads') {
+      setIsBulkCreateAdsOpen(true)
+      return
+    }
+    if (starter.id === 'creative-presets') {
+      setIsCreativePresetsOpen(true)
+      return
+    }
+    showToast(t('guide.popular.placeholder-notice'))
+  }
+
   /**
    * 把一段意图写入官方会话输入框（唯一副作用 = setDraft + 聚焦，从不代发）。
    *
@@ -238,6 +302,15 @@ function BlankSessionGuide({
   }
 
   applyDraftRef.current = applyDraftToComposer
+
+  function handleSubmitDraft(prompt) {
+    setIsInsightModalOpen(false)
+    setIsUrlToVideoOpen(false)
+    setIsRecreateModalOpen(false)
+    setIsBulkCreateAdsOpen(false)
+    setIsCreativePresetsOpen(false)
+    applyDraftToComposer(prompt, { toastKey: 'guide.insight.copied', copy: true })
+  }
 
   /**
    * 爆款对标吸底输入框提交：把复刻指令交回会话输入框所有权方。
@@ -367,6 +440,13 @@ function BlankSessionGuide({
       {/* 仅在非紧凑态（全宽大屏）下渲染下方卡片流；分栏紧凑态下只保留简洁对话模式 */}
       {!isCompact && (
         <>
+          {/* 第 2 层：Popular Ways to Get Started (4 Featured Cards) */}
+          <PopularStarterGrid
+            popularStarters={POPULAR_STARTERS}
+            t={t}
+            onCardClick={handlePopularClick}
+          />
+
           {/* 探索模板核心专区（内含 Skills 与各分类单行货架） */}
           <ExploreTemplatesSection
             onApplyTemplate={handleExploreTemplateApply}
@@ -418,6 +498,46 @@ function BlankSessionGuide({
           <span>{toastText}</span>
         </div>
       )}
+
+      {/* Marketing Insight Modal */}
+      <MarketingInsightModal
+        isOpen={isInsightModalOpen}
+        onClose={() => setIsInsightModalOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
+      />
+
+      {/* URL to Video Modal */}
+      <UrlToVideoModal
+        isOpen={isUrlToVideoOpen}
+        onClose={() => setIsUrlToVideoOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
+      />
+
+      {/* Recreate Viral Ads Modal */}
+      <RecreateViralAdsModal
+        isOpen={isRecreateModalOpen}
+        onClose={() => setIsRecreateModalOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
+      />
+
+      {/* Bulk Create Ads Modal */}
+      <BulkCreateAdsModal
+        isOpen={isBulkCreateAdsOpen}
+        onClose={() => setIsBulkCreateAdsOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
+      />
+
+      {/* Creative Presets Modal */}
+      <CreativePresetsModal
+        isOpen={isCreativePresetsOpen}
+        onClose={() => setIsCreativePresetsOpen(false)}
+        t={t}
+        onSubmitDraft={handleSubmitDraft}
+      />
     </section>
   )
 }
