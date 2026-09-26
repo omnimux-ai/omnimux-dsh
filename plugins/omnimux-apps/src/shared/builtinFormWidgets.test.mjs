@@ -50,16 +50,16 @@ describe('Builtin form widgets catalog (Issue #2596)', () => {
     }
   });
 
-  it('renovated classic apps have product_image upgraded to product-link and voice/aspectRatio properly configured', () => {
+  it('renovated classic apps have product_image upgraded to product-link, aspectRatio configured, and isolated voice pruned', () => {
     for (const id of RENOVATED_CREATIFY_IDS) {
       const app = catalogApps.find((a) => a.appId === id);
       const pi = app.formSchema.properties.product_image;
       assert.equal(pi.widget, 'product-link', `${id}: product_image widget must be product-link`);
       assert.equal(app.fieldMappings.product_image.widget, 'product-link', `${id}: fieldMapping widget must be product-link`);
 
-      const voice = app.formSchema.properties.voice;
-      assert.equal(voice.widget, 'select-single', `${id}: voice widget must be select-single`);
-      assert.ok(Array.isArray(voice.options) && voice.options.length > 0, `${id}: voice options missing`);
+      // 孤立未连线的解说人声音色已被彻底剪枝，不应出现在表单与映射中
+      assert.equal(app.formSchema.properties.voice, undefined, `${id}: voice property must be pruned`);
+      assert.equal(app.fieldMappings.voice, undefined, `${id}: voice fieldMapping must be pruned`);
 
       const aspect = app.formSchema.properties.aspect_ratio;
       assert.equal(aspect.widget, 'ratio-cards', `${id}: aspect_ratio widget must be ratio-cards`);
