@@ -3216,7 +3216,17 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   margin: 0;
 }
 .omnimux-explore-main-title { font-size:18px; font-weight:700; color:var(--dsw-alias-label-primary); margin:0; }
-.omnimux-explore-filter-bar { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+.omnimux-explore-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  background: var(--dsw-alias-bg-layer-0, #0d0d0f);
+  padding: 8px 0 4px;
+}
 
 /* 一级导航：圆角矩形（非胶囊）、无边框、无背景、专属图标、激活显深底 */
 .omnimux-explore-primary-tabs { display:flex; align-items:center; gap:6px; overflow-x:auto; padding:2px 0; scrollbar-width:none; }

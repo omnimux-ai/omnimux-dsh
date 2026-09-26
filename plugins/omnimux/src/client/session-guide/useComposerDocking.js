@@ -166,6 +166,8 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const primedFlipRef = useRef(null)
   const pinnedRef = useRef(false)
   const isScrollTransitionRef = useRef(false)
+  const isIntentDrivenRef = useRef(false)
+  const isCollapsedRef = useRef(false)
 
   const undock = useCallback(() => {
     setDockedItem(null)
@@ -175,11 +177,15 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     primedFlipRef.current = null
     pinnedRef.current = false
     isScrollTransitionRef.current = false
+    isIntentDrivenRef.current = false
+    isCollapsedRef.current = true
     onUndock?.()
   }, [onUndock])
 
   const dock = useCallback((item, onDocked) => {
     if (!item) return false
+    isIntentDrivenRef.current = true
+    isCollapsedRef.current = false
     // 再次点击同一张卡片：作为反悔动作解除吸底
     if (!pinnedRef.current && dockedItem && isSameItem(dockedItem, item)) {
       undock()
@@ -452,6 +458,26 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
       const scrollTop = readPageScrollTop(scroller)
 
+      // 处于主动收起态 (COLLAPSED)：上下滚动严格静默，唯有滑回到最顶部时才自然复位
+      if (isCollapsedRef.current) {
+        if (scrollTop <= revealThreshold) {
+          isCollapsedRef.current = false
+          leftTop = false
+          setPlacement('inline')
+        }
+        return
+      }
+
+      // 未显式触发输入框（纯向下滚动浏览）：
+      // 绝对不自动吸底！保持 inline 随页面自然滚出视口，底部保持纯净开阔
+      if (!isIntentDrivenRef.current) {
+        if (scrollTop <= revealThreshold) {
+          leftTop = false
+          setPlacement('inline')
+        }
+        return
+      }
+
       if (scrollTop > leaveThreshold) leftTop = true
 
       setPlacement((prev) => {
@@ -459,9 +485,10 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
         if (scrollTop <= revealThreshold && leftTop) {
           isScrollTransitionRef.current = true
           leftTop = false
+          isIntentDrivenRef.current = false
           return 'inline'
         }
-        // 向下滚动完全滑离顶部不可见（> leaveThreshold）→ 自动吸底
+        // 向下滚动完全滑离顶部不可见（> leaveThreshold）且存在显式意图 → 自动吸底
         if (scrollTop > leaveThreshold) {
           isScrollTransitionRef.current = true
           return 'docked'
@@ -469,6 +496,17 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
         // 迟滞保护区（revealThreshold 与 leaveThreshold 之间）：维持上一状态，绝不横跳
         return prev
       })
+    }
+
+    const onDockIntent = (event) => {
+      const item = event?.detail?.item
+      if (item) {
+        dock(item)
+        return
+      }
+      isIntentDrivenRef.current = true
+      isCollapsedRef.current = false
+      evaluate()
     }
 
     const onScroll = () => {
@@ -484,10 +522,12 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const targets = [scroller, window].filter(Boolean)
     for (const target of targets) target.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onResize)
+    window.addEventListener('omnimux:composer:dock-intent', onDockIntent)
     return () => {
       if (frame) cancelFrame(frame)
       for (const target of targets) target.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onResize)
+      window.removeEventListener('omnimux:composer:dock-intent', onDockIntent)
     }
   }, [hostRef, dockedItem])
 
