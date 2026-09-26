@@ -1,19 +1,15 @@
 /**
- * sidebar-coordinator 回归测试（P0）：
- *   注册 below（rank 5）+ inline（kind:'inline'）后，连续 place()（模拟 2s retry
- *   与 MutationObserver 触发）不得抛 NotFoundError。
- *
- * 根因：placeInline 把「新建会话」按钮移进 inline wrapper 后，placeBelow 仍以
- * 按钮为锚点，其 nextElementSibling 不再是 root 直接子节点 → insertBefore 抛
- * NotFoundError。修复后 placeBelow 感知 wrapper 并锚在其后。
+ * sidebar-coordinator 回归测试（P0）与探索菜单收敛专项测试：
+ *   1. 注册 below（rank 5）+ inline（kind:'inline'）后，连续 place() 不抛；
+ *   2. 常驻探索行 rank 3.9，排在项目（rank 4）上方；
+ *   3. 浮动菜单展示 11 项白名单，点击激活对应 Workbench Tab 并关闭菜单；
+ *   4. 收敛所有非常驻插件，不作为独立行挂入侧栏 DOM。
  */
 import { JSDOM } from 'jsdom'
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
 // install() 会 setInterval(2s) 轮询；测试里替换为 no-op，避免挂住测试进程。
-// 注意：不在此恢复 —— node --test 每个文件独立进程，且模块跨测试缓存，第二
-// 个测试的 install() 若在恢复后调用会重新排真实 interval，反而挂住进程。
 globalThis.setInterval = () => 1
 globalThis.clearInterval = () => {}
 
@@ -28,8 +24,6 @@ afterEach(async () => {
 })
 
 function setup(html) {
-  // 对齐官方 AppFrame：data-sidebar-collapsed 写在 frame 根，不是 <html>。
-  // logoRow 品牌钮必须在夹具里：#1572 曾把它误当成新对话锚点。
   dom = new JSDOM(html || `<!doctype html><html><body>
     <div data-slot="root">
       <div class="frame" data-omnimux-frame>
@@ -65,12 +59,10 @@ test('below + inline 并存时 place() 幂等不抛，且 below 行落在 wrappe
   const disposeInline = api.register({ id: 'inline-entry', kind: 'inline', create: () => inlineBtn })
 
   try {
-    // 首次放置 + 连续 place()（模拟 2s retry / MutationObserver 反复触发）不抛。
     for (let i = 0; i < 6; i++) {
       assert.doesNotThrow(() => { api.place() })
     }
 
-    // 结构断言：wrapper 包裹「新建会话」+ inline 按钮；below 行是 root 直接子且在其后。
     const root = document.querySelector('[data-pane="sidebar"]')
     const wrapper = root.querySelector('[data-omnimux-inline-row]')
     assert.ok(wrapper, 'inline wrapper 存在')
@@ -85,7 +77,7 @@ test('below + inline 并存时 place() 幂等不抛，且 below 行落在 wrappe
   }
 })
 
-test('仅 below 行（无 inline）时保持原有锚点行为', async () => {
+test('仅 below 行（无 inline）时保持原有锚点行为，探索行首发居前', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
@@ -102,8 +94,12 @@ test('仅 below 行（无 inline）时保持原有锚点行为', async () => {
 
     const root = document.querySelector('[data-pane="sidebar"]')
     const sessionBtn = root.querySelector('.newSession')
+    const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+    assert.ok(exploreBtn, '常驻探索行存在')
+    assert.equal(exploreBtn.parentElement, root)
+    assert.equal(exploreBtn.previousElementSibling, sessionBtn, '探索行紧接新建会话按钮')
     assert.equal(belowBtn.parentElement, root, 'below 行是 root 直接子节点')
-    assert.equal(belowBtn.previousElementSibling, sessionBtn, 'below 行紧接新建会话按钮')
+    assert.equal(belowBtn.previousElementSibling, exploreBtn, 'rank 5 below 行排在 rank 3.9 探索行之后')
     assert.equal(root.querySelector('[data-omnimux-inline-row]'), null, '无 inline wrapper')
   } finally {
     disposeBelow()
@@ -250,7 +246,6 @@ test('sidebar 就绪后 observer 收窄到侧栏列，overlay 突变不触发 pl
     )
     assert.notEqual(getSidebarObserverTargetForTests(), document.body)
 
-    // Flush the observer tick caused by register()'s own insertBefore.
     await new Promise((resolve) => { setTimeout(resolve, 20) })
     const before = getPlaceCountForTests()
     const overlay = document.createElement('div')
@@ -270,7 +265,6 @@ test('sidebar 就绪后 observer 收窄到侧栏列，overlay 突变不触发 pl
     disposeBelow()
   }
 })
-
 
 test('computeNewMenuPosition anchors under the visible control', async () => {
   setup()
@@ -305,7 +299,6 @@ test('openCollapsedNewMenuAt uses topbar anchor rect not hidden rail', async () 
     topbar.getBoundingClientRect = () => ({
       x: 124, y: 4, left: 124, top: 4, width: 32, height: 32, right: 156, bottom: 36,
     })
-    // Hidden official button sits far left (rail zeroed)
     const sessionBtn = document.querySelector('.newSession')
     sessionBtn.getBoundingClientRect = () => ({
       x: 0, y: 90, left: 0, top: 90, width: 0, height: 0, right: 0, bottom: 90,
@@ -321,10 +314,9 @@ test('openCollapsedNewMenuAt uses topbar anchor rect not hidden rail', async () 
   }
 })
 
-
 test('Alpha entries are excluded from sidebar placement while retaining source registers', async () => {
   setup()
-  const { installSidebarGlobal, SIDEBAR_GLOBAL, getPlaceCountForTests } = await import('./sidebar-coordinator.js')
+  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
   let clicks = 0
@@ -337,51 +329,39 @@ test('Alpha entries are excluded from sidebar placement while retaining source r
     return { name, element, row, dispose: api.register(row) }
   })
 
-  // 处于内测阶段（Alpha）的插件入口不挂入侧边栏 DOM，仅正式版条目插入
   for (const { name, element } of rows) {
     if (name === 'inspiration' || name === 'workflow') {
       assert.ok(element.parentElement !== null, `${name} 必须挂入 DOM`)
     } else {
-      assert.equal(element.parentElement, null, `${name} 内测版不得挂入侧栏 DOM`)
+      assert.equal(element.parentElement, null, `${name} 内测版与收敛项不得挂入侧栏 DOM`)
     }
   }
 
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
   assert.equal(document.querySelectorAll('[data-release-stage="alpha"]').length, 0)
 
-  // 触发 place() 后依然不渲染内测入口
   api.place()
   await new Promise(resolve => setTimeout(resolve, 20))
   assert.equal(document.querySelectorAll('.omnimux-sidebar-alpha-badge').length, 0)
 
-  // 释放 disposer 正常安全
   for (const { dispose } of rows) dispose()
 })
 
-test('品牌按钮不得抢占新对话锚点，below 行紧挨新对话且不抛', async () => {
+test('品牌按钮不得抢占新对话锚点，常驻探索行紧挨新对话且不插在品牌钮后', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
-  const belowBtn = document.createElement('button')
-  belowBtn.id = 'apps-entry'
-  belowBtn.setAttribute('data-omnimux-apps-entry', '')
-  let dispose
-  assert.doesNotThrow(() => {
-    dispose = api.register({ id: 'omnimux-apps-entry', rank: 1, create: () => belowBtn })
-  })
-  try {
-    for (let i = 0; i < 4; i++) assert.doesNotThrow(() => { api.place() })
-    const root = document.querySelector('[data-pane="sidebar"]')
-    const sessionBtn = root.querySelector('.newSession')
-    const brand = root.querySelector('.x-Wl6W_brand')
-    assert.ok(brand, '夹具含品牌钮')
-    assert.equal(belowBtn.parentElement, root)
-    assert.equal(belowBtn.previousElementSibling, sessionBtn, '入口必须紧挨新对话，不得插在品牌钮后')
-    assert.notEqual(belowBtn.previousElementSibling, brand)
-  } finally {
-    dispose?.()
-  }
+  for (let i = 0; i < 4; i++) assert.doesNotThrow(() => { api.place() })
+  const root = document.querySelector('[data-pane="sidebar"]')
+  const sessionBtn = root.querySelector('.newSession')
+  const brand = root.querySelector('.x-Wl6W_brand')
+  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+  assert.ok(brand, '夹具含品牌钮')
+  assert.ok(exploreBtn, '探索行已挂入 DOM')
+  assert.equal(exploreBtn.parentElement, root)
+  assert.equal(exploreBtn.previousElementSibling, sessionBtn, '探索行必须紧挨新对话，不得插在品牌钮后')
+  assert.notEqual(exploreBtn.previousElementSibling, brand)
 })
 
 test('desktop 外壳包住内层 pane 时仍把 extra row 插在新对话下方', async () => {
@@ -407,8 +387,11 @@ test('desktop 外壳包住内层 pane 时仍把 extra row 插在新对话下方'
   try {
     const pane = document.querySelector('[data-pane="sidebar"]')
     const sessionBtn = pane.querySelector('.newSession')
-    assert.equal(belowBtn.parentElement, pane, '不得插到 desktop surface 外壳')
-    assert.equal(belowBtn.previousElementSibling, sessionBtn)
+    const exploreBtn = pane.querySelector('[data-omnimux-explore-entry]')
+    assert.equal(exploreBtn.parentElement, pane, '探索行必须插在 inner pane')
+    assert.equal(exploreBtn.previousElementSibling, sessionBtn)
+    assert.equal(belowBtn.parentElement, pane, 'assets 必须插在 inner pane')
+    assert.equal(belowBtn.previousElementSibling, exploreBtn)
     assert.equal(belowBtn.nextElementSibling?.className, 'workspace')
   } finally {
     dispose()
@@ -423,4 +406,228 @@ test('coordinator 源码不得把 brand 类写进新对话选择器', async () =
   assert.doesNotMatch(source, /x-Wl6W_brand/)
   assert.doesNotMatch(source, /button\.x-Wl6W_brand/)
   assert.match(source, /button\[class\*="newSession"\]/)
+})
+
+/* ========================================================================= */
+/* 探索行与探索浮动菜单专项测试                                                */
+/* ========================================================================= */
+
+test('探索行 rank 严格为 3.9，排在「项目」（rank 4）正上方', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+
+  const workflowBtn = document.createElement('button')
+  workflowBtn.id = 'workflow-entry'
+  const disposeWorkflow = api.register({ id: 'omnimux-workflow-entry', rank: 4, create: () => workflowBtn })
+
+  try {
+    api.place()
+    const root = document.querySelector('[data-pane="sidebar"]')
+    const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+    assert.ok(exploreBtn, '探索行已常驻渲染')
+    assert.equal(exploreBtn.parentElement, root)
+    assert.equal(workflowBtn.parentElement, root)
+    assert.equal(exploreBtn.nextElementSibling, workflowBtn, '探索行必须排在「项目」正上方')
+    assert.equal(workflowBtn.previousElementSibling, exploreBtn)
+  } finally {
+    disposeWorkflow()
+  }
+})
+
+test('探索行折叠态展示为居中图标，隐藏文案标签', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  api.place()
+
+  const root = document.querySelector('[data-pane="sidebar"]')
+  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+  const label = exploreBtn.querySelector('.omnimux-explore-entry-label')
+  const icon = exploreBtn.querySelector('.omnimux-explore-entry-icon')
+
+  assert.ok(label && icon, '展开态包含图标与标签')
+  assert.equal(label.textContent, '探索', '文案严格为「探索」')
+
+  const frame = document.querySelector('[data-omnimux-frame]')
+  frame.setAttribute('data-sidebar-collapsed', '')
+  api.place()
+
+  const css = document.getElementById('omnimux-sidebar-explore-styles')?.textContent ?? ''
+  assert.match(css, /\[data-sidebar-collapsed\][\s\S]*\.omnimux-explore-entry[\s\S]*width:\s*36px/)
+  assert.match(css, /\[data-sidebar-collapsed\][\s\S]*\.omnimux-explore-entry-label[\s\S]*display:\s*none/)
+})
+
+test('非核心插件（video, products, device, clip, social-harvest, apps 等）收敛，不渲染独立行', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+
+  const targets = [
+    { id: 'omnimux-video-entry', rank: 7.5 },
+    { id: 'omnimux-google-vids-entry', rank: 7.5 },
+    { id: 'omnimux-products-entry', rank: 8 },
+    { id: 'omnimux-device-entry', rank: 3.5 },
+    { id: 'omnimux-clip-entry', rank: 8.2 },
+    { id: 'omnimux-social-harvest-entry', rank: 19 },
+    { id: 'omnimux-apps-entry', rank: 1 },
+    { id: 'omnimux-market-entry', rank: 8 },
+  ]
+
+  const disposers = targets.map((t) => {
+    const el = document.createElement('button')
+    el.id = t.id
+    return { ...t, el, dispose: api.register({ id: t.id, rank: t.rank, create: () => el }) }
+  })
+
+  api.place()
+  const root = document.querySelector('[data-pane="sidebar"]')
+
+  for (const { id, el } of disposers) {
+    assert.equal(el.parentElement, null, `${id} 必须收敛，不得插入侧栏 DOM`)
+    assert.equal(root.querySelector(`#${id}`), null)
+  }
+
+  for (const { dispose } of disposers) dispose()
+})
+
+test('点击探索行弹出浮动菜单，包含 Spec 锁定 11 项白名单与纯矢量 SVG', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL, closeExploreMenu } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  api.place()
+
+  const root = document.querySelector('[data-pane="sidebar"]')
+  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+
+  exploreBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }))
+
+  const menu = document.getElementById('omnimux-explore-menu')
+  assert.ok(menu, '浮动菜单必须挂入 document.body')
+  assert.equal(menu.getAttribute('role'), 'menu')
+  assert.equal(exploreBtn.getAttribute('aria-expanded'), 'true')
+
+  const items = [...menu.querySelectorAll('.omnimux-explore-menu-item')]
+  assert.equal(items.length, 11, '菜单项必须严格为 11 项')
+
+  const expectedLabels = [
+    '应用', '视频剪辑', 'Google Vids', '产品库', '发布',
+    '账号', '手机管理', '数据分析', '自动化', '任务表单', '社交采收',
+  ]
+  const actualLabels = items.map((el) => el.querySelector('.omnimux-explore-menu-item-label')?.textContent?.trim())
+  assert.deepEqual(actualLabels, expectedLabels, '11项文案必须逐字匹配白名单')
+
+  // 严禁 Emoji（UI04 门禁硬规则），每项必须包含矢量 SVG
+  for (const item of items) {
+    const svg = item.querySelector('svg')
+    assert.ok(svg, '每项必须包含矢量 SVG 图标')
+    assert.equal(svg.getAttribute('viewBox'), '0 0 16 16')
+    assert.doesNotMatch(item.textContent, /[\u{1F300}-\u{1F9FF}]/u, '严禁任何 Emoji')
+  }
+
+  const dividers = menu.querySelectorAll('.omnimux-explore-menu-divider')
+  assert.ok(dividers.length >= 2, '包含细分割线')
+
+  // 再次点击探索行，切换关闭菜单
+  exploreBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }))
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '再次点击关闭菜单')
+})
+
+test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素 click', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+
+  let videoClicks = 0
+  const videoBtn = document.createElement('button')
+  videoBtn.addEventListener('click', () => { videoClicks += 1 })
+  const disposeVideo = api.register({ id: 'omnimux-google-vids-entry', rank: 7.5, create: () => videoBtn })
+
+  let wbOpenedTab = null
+  window.__omnimuxWorkbench = {
+    open: (opts) => { wbOpenedTab = opts },
+  }
+
+  try {
+    api.place()
+    const root = document.querySelector('[data-pane="sidebar"]')
+    const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+
+    // 1. 点击已注册的 Google Vids，委托触发 videoBtn.click()
+    exploreBtn.click()
+    let menu = document.getElementById('omnimux-explore-menu')
+    const vidsItem = menu.querySelector('[data-explore-id="google-vids"]')
+    vidsItem.click()
+    assert.equal(videoClicks, 1, '优先触发已注册收敛元素的 click 处理器')
+    assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
+
+    // 2. 点击未注册实际元素的「数据分析」，fallback 到 window.__omnimuxWorkbench.open
+    exploreBtn.click()
+    menu = document.getElementById('omnimux-explore-menu')
+    const analyticsItem = menu.querySelector('[data-explore-id="analytics"]')
+    analyticsItem.click()
+    assert.equal(wbOpenedTab?.tabId, 'omnimux-analytics:library')
+    assert.equal(wbOpenedTab?.title, '数据分析')
+    assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
+  } finally {
+    disposeVideo()
+    delete window.__omnimuxWorkbench
+  }
+})
+
+test('按 Escape 键或点击外部可关闭探索浮动菜单', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  api.place()
+
+  const root = document.querySelector('[data-pane="sidebar"]')
+  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+
+  // 1. 按 Escape 键关闭
+  exploreBtn.click()
+  assert.ok(document.getElementById('omnimux-explore-menu'))
+  document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, 'Esc 键关闭菜单')
+
+  // 2. 点击外部区域关闭
+  exploreBtn.click()
+  assert.ok(document.getElementById('omnimux-explore-menu'))
+  document.body.dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true }))
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '点击外部关闭菜单')
+})
+
+test('computeExploreMenuPosition 具备视口防溢出几何计算', async () => {
+  setup()
+  const { computeExploreMenuPosition } = await import('./sidebar-coordinator.js')
+  const anchor = document.createElement('button')
+  document.body.append(anchor)
+
+  // 正常位置：显示在 anchor 右侧 6px
+  anchor.getBoundingClientRect = () => ({
+    x: 50, y: 100, left: 50, top: 100, width: 36, height: 36, right: 86, bottom: 136,
+  })
+  const posNormal = computeExploreMenuPosition(anchor, { innerWidth: 1280, innerHeight: 800 })
+  assert.equal(posNormal.left, 92, 'right + gap 6')
+  assert.equal(posNormal.top, 100, 'top 对齐')
+
+  // 右侧溢出位置：翻转到 anchor 左侧
+  anchor.getBoundingClientRect = () => ({
+    x: 1200, y: 100, left: 1200, top: 100, width: 36, height: 36, right: 1236, bottom: 136,
+  })
+  const posRightOverflow = computeExploreMenuPosition(anchor, { innerWidth: 1280, innerHeight: 800 })
+  assert.ok(posRightOverflow.left < 1200, '右侧溢出时翻转到左侧')
+
+  // 底部溢出位置：向上贴合防溢出
+  anchor.getBoundingClientRect = () => ({
+    x: 50, y: 700, left: 50, top: 700, width: 36, height: 36, right: 86, bottom: 736,
+  })
+  const posBottomOverflow = computeExploreMenuPosition(anchor, { innerWidth: 1280, innerHeight: 800 })
+  assert.ok(posBottomOverflow.top <= 800 - 380 - 8, '底部溢出时向上翻转贴合')
 })
