@@ -541,9 +541,10 @@ export async function waitForCanvasTab(service, timeoutMs = 4000) {
 /**
  * 项目会话占用右侧栏：关官方 details → 关空 Files 种子 → 打开画布。
  * @param {{ betterSidebar?: object, layout?: { closeDetails?: Function }, t?: Function }} ctx
- * @param {{ sessionId?: string, cwd?: string, focusGroupId?: string }} [opts]
+ * @param {{ sessionId?: string, cwd?: string, focusGroupId?: string, canvasWorkspaceId?: string, projectId?: string, pageId?: string, title?: string }} [opts]
  *   `focusGroupId`：「项目」页「AI应用」卡片「编辑」的目标工作流组，
  *   写入画布 tab 的 `meta`（契约字段，随布局持久化），由 CanvasTab 读出并透传。
+ *   `canvasWorkspaceId`：具体创作页绑定的画布工作区 ID。
  * @returns {Promise<boolean>}
  */
 export async function activateProjectCanvas(ctx, opts = {}) {
@@ -558,7 +559,11 @@ export async function activateProjectCanvas(ctx, opts = {}) {
 
   const sessionId = opts.sessionId
   const cwd = opts.cwd
-  const scope = sessionId ? { sessionId, ...(cwd ? { cwd } : {}) } : undefined
+  const canvasWorkspaceId = typeof opts.canvasWorkspaceId === 'string' ? opts.canvasWorkspaceId.trim() : ''
+  const scopedCanvasWorkspaceId = sessionId ? canvasWorkspaceId : ''
+  const scope = sessionId
+    ? { sessionId, ...(cwd ? { cwd } : {}), ...(scopedCanvasWorkspaceId ? { canvasWorkspaceId: scopedCanvasWorkspaceId } : {}) }
+    : (canvasWorkspaceId ? { canvasWorkspaceId, ...(cwd ? { cwd } : {}) } : undefined)
 
   const ready = sessionId ? await waitForSidebarSession(service, sessionId, timeoutMs) : true
   // 会话已在前台时带着 scope 打开会自动展开面板；仍在后台则不带 scope，
@@ -575,19 +580,35 @@ export async function activateProjectCanvas(ctx, opts = {}) {
     }
   }
 
-  const title = typeof ctx.t === 'function' ? ctx.t('details.canvasTab') : '创作画布'
+  const title = opts.title || (typeof ctx?.t === 'function' ? ctx.t('details.canvasTab') : '创作画布')
+  const canvasSessionId = scope?.sessionId ?? sessionId ?? null
+  const meta = {
+    ...(scopedCanvasWorkspaceId ? { canvasWorkspaceId: scopedCanvasWorkspaceId, canvasSessionId } : {}),
+  }
   service.openTab({
     type: CANVAS_TAB_ID,
     id: CANVAS_TAB_ID,
     title,
     path: CANVAS_SENTINEL_PATH,
+    meta,
   }, openScope)
 
-  // 卡片「编辑」定位：画布 tab 是 single:true，已打开时重复 openTab 只聚焦、
-  // 不会写入新的 meta，必须用 updateTab 覆盖（meta 随布局持久化）。
+  // 穿透单例：画布 tab 是 single:true，已打开时重复 openTab 只聚焦、
+  // 不会写入新的 meta，必须用 updateTab 显式覆盖（meta 随布局持久化）。
   const focusGroupId = typeof opts.focusGroupId === 'string' ? opts.focusGroupId.trim() : ''
-  if (focusGroupId && typeof service.updateTab === 'function') {
-    service.updateTab(CANVAS_TAB_ID, { meta: { focusGroupId } })
+  const nextMeta = {}
+  if (focusGroupId) nextMeta.focusGroupId = focusGroupId
+  if (scopedCanvasWorkspaceId) nextMeta.canvasWorkspaceId = scopedCanvasWorkspaceId
+  if (scopedCanvasWorkspaceId && canvasSessionId) nextMeta.canvasSessionId = canvasSessionId
+  if (Object.keys(nextMeta).length > 0 && typeof service.updateTab === 'function') {
+    service.updateTab(CANVAS_TAB_ID, { meta: nextMeta })
+  }
+
+  // 广播活跃画布变更事件（保证 CanvasTab 即使在单例不重开状态下也能即时收到新工作区 ID）
+  if (scopedCanvasWorkspaceId && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+      detail: { workspaceId: scopedCanvasWorkspaceId, sessionId },
+    }))
   }
 
   // Enter-Conversation Intent：从一级库（gui + conversationCollapsed）新建/打开项目时，
@@ -609,14 +630,15 @@ export async function activateProjectCanvas(ctx, opts = {}) {
 /**
  * 画布 tab 的目标画布工作区 id 解析（Issue #2104）。
  *
- * 优先级：显式 scope（项目页点某个创作页进来）> 本会话内用户选中的创作页 >
- * 本会话所属项目的当前创作页 > 会话散列兜底。
+ * 优先级（P0 最优先）：显式 scope / tab.meta（项目页点某个创作页进来或 updateTab 穿透）>
+ * 本会话内用户选中的创作页 > 本会话所属项目的当前创作页 > 会话散列兜底。
  *
  * 会话级的两项都按 `sessionId` 匹配：换工作区（=换会话）它们立刻失效，
  * 于是画布跟着工作区切，而不是停在上次点过的别的项目的创作页上。
  *
  * @param {{
  *   explicitWorkspaceId?: string | null,
+ *   tab?: { meta?: { canvasWorkspaceId?: string | null } } | null,
  *   pickedBySession?: { sessionId?: string | null, workspaceId?: string | null } | null,
  *   sessionBinding?: { sessionId?: string | null, canvasWorkspaceId?: string | null } | null,
  *   sessionId?: string | null,
@@ -625,10 +647,13 @@ export async function activateProjectCanvas(ctx, opts = {}) {
  * @returns {string | undefined}
  */
 export function resolveCanvasTargetWorkspaceId(input = {}) {
-  const { explicitWorkspaceId, pickedBySession, sessionBinding, sessionId, fallbackWorkspaceId } = input
+  const { explicitWorkspaceId, tab, pickedBySession, sessionBinding, sessionId, fallbackWorkspaceId } = input
   const clean = (value) => (typeof value === 'string' && value.trim() !== '' ? value.trim() : null)
 
-  const explicit = clean(explicitWorkspaceId)
+  const tabCanvasSessionId = tab?.meta?.canvasSessionId
+  const isTabSessionMatched = !tabCanvasSessionId || !sessionId || tabCanvasSessionId === sessionId
+  const tabCanvasWsId = isTabSessionMatched ? clean(tab?.meta?.canvasWorkspaceId) : null
+  const explicit = clean(explicitWorkspaceId) || tabCanvasWsId
   if (explicit) return explicit
 
   const hasSession = typeof sessionId === 'string' && sessionId !== ''

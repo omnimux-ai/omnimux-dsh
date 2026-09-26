@@ -142,6 +142,81 @@ describe('projectCanvas isolation', () => {
     assert.equal(opened[0].scope.sessionId, 'sess-1')
   })
 
+  it('activateProjectCanvas 传递 canvasWorkspaceId 到 scope、meta、updateTab 并广播 active-canvas-changed', async () => {
+    const opened = []
+    const updated = []
+    const dispatchedEvents = []
+    const previousWin = globalThis.window
+
+    const service = {
+      getTab(id) { return id === CANVAS_TAB_ID ? { id } : undefined },
+      getSnapshot() {
+        return {
+          sessionId: 'sess-page-1',
+          state: {
+            splits: { kind: 'leaf', tabs: [{ id: CANVAS_TAB_ID, type: CANVAS_TAB_ID }] },
+            bottomSplits: { kind: 'leaf', tabs: [] },
+          },
+        }
+      },
+      openTab(seed, scope) { opened.push({ seed, scope }) },
+      updateTab(tabId, data) { updated.push({ tabId, data }) },
+    }
+
+    class MockCustomEvent {
+      constructor(name, init) {
+        this.name = name
+        this.type = name
+        this.detail = init?.detail
+      }
+    }
+
+    const previousCustomEvent = globalThis.CustomEvent
+    globalThis.CustomEvent = MockCustomEvent
+    globalThis.window = {
+      CustomEvent: MockCustomEvent,
+      dispatchEvent(e) {
+        dispatchedEvents.push(e)
+        return true
+      },
+      __omnimuxBetterSidebar: service,
+    }
+
+    try {
+      const ok = await activateProjectCanvas({
+        betterSidebar: service,
+        t: (key) => key,
+      }, {
+        sessionId: 'sess-page-1',
+        cwd: '/tmp/project-path',
+        title: '创作页 2',
+        canvasWorkspaceId: 'ws_canvas_page_2',
+        timeoutMs: 0,
+      })
+
+      assert.equal(ok, true)
+      assert.equal(opened.length, 1)
+      assert.equal(opened[0].seed.meta?.canvasWorkspaceId, 'ws_canvas_page_2')
+      assert.equal(opened[0].seed.title, '创作页 2')
+      assert.equal(opened[0].scope?.canvasWorkspaceId, 'ws_canvas_page_2')
+
+      // 单例 updateTab 穿透
+      assert.equal(updated.length, 1)
+      assert.equal(updated[0].tabId, CANVAS_TAB_ID)
+      assert.equal(updated[0].data?.meta?.canvasWorkspaceId, 'ws_canvas_page_2')
+      assert.equal(updated[0].data?.meta?.canvasSessionId, 'sess-page-1')
+
+      // 广播 active-canvas-changed
+      assert.equal(dispatchedEvents.length, 1)
+      assert.equal(dispatchedEvents[0].name || dispatchedEvents[0].type, 'omnimux:active-canvas-changed')
+      assert.equal(dispatchedEvents[0].detail?.workspaceId, 'ws_canvas_page_2')
+      assert.equal(dispatchedEvents[0].detail?.sessionId, 'sess-page-1')
+    } finally {
+      globalThis.window = previousWin
+      globalThis.CustomEvent = previousCustomEvent
+    }
+  })
+
   it('activateProjectCanvas uncollapses conversation and forces split after opening canvas', async () => {
     resetProjectCanvasRatioMemory()
     const order = []

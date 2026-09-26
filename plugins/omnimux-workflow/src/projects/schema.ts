@@ -25,7 +25,7 @@ export const projectPageSchema = z.object({
   title: z.string().min(1).max(MAX_PROJECT_TITLE_LENGTH),
   createdAt: z.string(),
   updatedAt: z.string(),
-  canvasWorkspaceId: z.string().optional(),
+  canvasWorkspaceId: z.string().min(1),
   loadMemory: z.boolean().optional(),
 });
 
@@ -73,13 +73,40 @@ export const projectIndexSchema = z.object({
 
 export type ProjectIndex = z.infer<typeof projectIndexSchema>;
 
+const tolerantPageSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1).max(MAX_PROJECT_TITLE_LENGTH),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  canvasWorkspaceId: z.string().optional(),
+  loadMemory: z.boolean().optional(),
+});
+
+const tolerantProjectSchema = z.object({
+  schemaVersion: z.literal(PROJECT_SCHEMA_VERSION),
+  id: z.string().min(1),
+  title: z.string().min(1).max(MAX_PROJECT_TITLE_LENGTH),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  sessionId: z.string().nullable(),
+  canvasWorkspaceIds: z.array(z.string()),
+  activePageId: z.string().optional(),
+  pages: z.array(tolerantPageSchema).optional(),
+});
+
 /**
  * 读取侧容错解析：schemaVersion 更高 / 结构不合法一律返回 null（跳过坏文件）。
+ * 若为老旧版本缺失 canvasWorkspaceId 的页面，放行给 ProjectStore 读时自愈彻底修复。
  * 写入侧严格校验（见 ProjectStore，写前 re-validate）。
  */
 export function parseProject(raw: unknown): Project | null {
   const result = projectSchema.safeParse(raw);
-  return result.success ? result.data : null;
+  if (result.success) return result.data;
+  const tolerantResult = tolerantProjectSchema.safeParse(raw);
+  if (tolerantResult.success) {
+    return tolerantResult.data as unknown as Project;
+  }
+  return null;
 }
 
 export function parseProjectIndex(raw: unknown): ProjectIndex | null {

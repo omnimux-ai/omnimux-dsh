@@ -256,13 +256,16 @@ export function ProjectLibraryPage(props) {
     if (!selectedProject) return
     dismissProductStage()
 
+    const canvasWorkspaceId = page?.canvasWorkspaceId
+    let sessionId = selectedProject.sessionId
     // 将选中的创作页设置为当前活跃页
-    if (page.canvasWorkspaceId && typeof localStorage !== 'undefined') {
-      localStorage.setItem('omnimux:latest-active-canvas', page.canvasWorkspaceId)
+    if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
+      } catch {}
     }
     void updateProjectPage(selectedProject.id, page.id, { active: true }).catch(() => {})
 
-    let sessionId = selectedProject.sessionId
     if (!sessionId && sessions && typeof sessions.create === 'function') {
       try {
         const created = await createProjectSession(sessions, workspaces, selectedProject.path || selectedProject.title)
@@ -278,13 +281,17 @@ export function ProjectLibraryPage(props) {
       try { sessions.open(sessionId) } catch {}
     }
 
-    await activateProjectCanvas(selectedProject.id, {
-      layout,
-      betterSidebar,
-      title: page.title || selectedProject.title,
-      sessionId,
-      canvasWorkspaceId: page.canvasWorkspaceId,
-    })
+    await activateProjectCanvas(
+      { layout, betterSidebar, t },
+      {
+        sessionId,
+        projectId: selectedProject.id,
+        cwd: selectedProject.path,
+        title: page.title || selectedProject.title,
+        pageId: page.id,
+        canvasWorkspaceId,
+      }
+    )
   }
 
   // 4b. 点击 AI 应用卡片 → 右侧栏应用标签页。宿主在原生 surface 下通过 meta.appId 传递应用身份。
@@ -307,22 +314,17 @@ export function ProjectLibraryPage(props) {
       || ''
     dismissProductStage()
 
-    // 画布 tab 是 single:true：光 openTab 只会聚焦已挂载的旧实例，
-    // 必须把目标工作区写进既有 live 通道，画布才会切到该应用所属项目。
-    if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
-      localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId)
-    }
-    if (canvasWorkspaceId && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
-        detail: { workspaceId: canvasWorkspaceId },
-      }))
-    }
-
     let sessionId = project?.sessionId
+    // 画布 tab 是 single:true：光 openTab 只会聚焦已挂载的旧实例，
+    // 目标工作区与会话绑定，统一在会话就绪后由 activateProjectCanvas 安全联动，
+    // 避免在会话未就绪时提前向全局广播未带 sessionId 的事件造成污染。
+    if (canvasWorkspaceId && typeof localStorage !== 'undefined') {
+      try { localStorage.setItem('omnimux:latest-active-canvas', canvasWorkspaceId) } catch {}
+    }
     if (!sessionId && project && sessions && typeof sessions.create === 'function') {
       try {
         const created = await createProjectSession(sessions, workspaces, project.path || project.title)
-        sessionId = created?.id
+        sessionId = created?.id || created?.sessionId
         if (sessionId) void bindProjectSession(project.id, sessionId)
       } catch (e) {
         console.error('[omnimux-workflow] failed to create project session', e)
@@ -330,6 +332,12 @@ export function ProjectLibraryPage(props) {
     }
     if (sessionId && sessions && typeof sessions.open === 'function') {
       try { sessions.open(sessionId) } catch {}
+    }
+    // 移除非安全无 sessionId 的提前广播后，统一在会话就绪且合法时安全派发
+    if (sessionId && canvasWorkspaceId && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+        detail: { workspaceId: canvasWorkspaceId, sessionId },
+      }))
     }
 
     if (!project) {
@@ -374,7 +382,11 @@ export function ProjectLibraryPage(props) {
     try {
       const res = await createProjectPage(selectedProject.id, newTitle)
       if (res.ok) {
-        void loadProjectDetail(selectedProject)
+        if (res.body?.project) {
+          setProjectDetail(res.body.project)
+          setProjects((current) => current.map((item) => item.id === selectedProject.id ? { ...item, cover: res.body.project.cover, pages: res.body.project.pages } : item))
+        }
+        await loadProjectDetail(selectedProject)
         void reload()
       } else {
         setError(errText(res, t))
@@ -774,7 +786,7 @@ export function ProjectLibraryPage(props) {
           initialPath=""
           initialTitle=""
           onCancel={() => { if (!busy) setDialogOpen(false) }}
-          onSubmit={(payload) => { void handleDialogSubmit(payload) }}
+          onSubmit={handleDialogSubmit}
         />
       ) : null}
 
