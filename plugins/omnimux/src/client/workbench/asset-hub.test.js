@@ -601,11 +601,9 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     assert.equal(skill.lane, 'skills')
     assert.equal(skill.formatText, 'SKILL')
 
-    // 2. Click-to-Attach 载荷转换与 Spec 5.5 对齐
+    // 2. Click-to-Attach 载荷转换与 Spec 5.5 对齐（featured 与 skills 仅注入 prompt，不产生物理附件；trending 正常转换）
     const featuredPayload = adaptCardToAttachmentPayload(featured)
-    assert.equal(featuredPayload.sourcePlugin, 'omnimux')
-    assert.equal(featuredPayload.kind, 'inspiration')
-    assert.equal(featuredPayload.extension, 'TPL')
+    assert.equal(featuredPayload, null, 'featured 卡片严禁生成物理附件载荷')
 
     const trendingPayload = adaptCardToAttachmentPayload(trending)
     assert.equal(trendingPayload.sourcePlugin, 'omnimux-inspiration')
@@ -613,9 +611,7 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     assert.equal(trendingPayload.extension, 'MP4')
 
     const skillPayload = adaptCardToAttachmentPayload(skill)
-    assert.equal(skillPayload.sourcePlugin, 'omnimux')
-    assert.equal(skillPayload.kind, 'skill')
-    assert.equal(skillPayload.extension, 'SKILL')
+    assert.equal(skillPayload, null, 'skills 卡片严禁生成物理附件载荷')
 
     // 3. 路由方法 openTrending / openSkills / openFeatured
     const navStore = createAssetHubNavStore()

@@ -20,14 +20,7 @@ async function getFeaturedSkillsSnapshot() {
     cachedFeaturedSkills = FEATURED_SKILLS_JSON
     return cachedFeaturedSkills
   }
-  try {
-    const { createRequire } = await import('node:module')
-    const req = createRequire(import.meta.url)
-    cachedFeaturedSkills = req('../session-guide/skills/featured-skills.json')
-    return cachedFeaturedSkills
-  } catch {
-    return { skills: [] }
-  }
+  return { skills: [] }
 }
 
 async function requestJson(path, fetchImpl, signal) {
@@ -529,19 +522,11 @@ export function filterAssetHubItems(items, filterPill, searchQuery) {
  * 将素材卡片转换为 AttachmentStore 所需的标准载荷（严格遵循 PRD 5.5 节）
  */
 export function adaptCardToAttachmentPayload(card) {
-  const raw = card.raw || {}
+  const raw = card?.raw || {}
 
-  if (card.lane === 'featured') {
-    return {
-      sourcePlugin: 'omnimux',
-      kind: 'inspiration',
-      entityId: card.id,
-      title: card.title,
-      extension: 'TPL',
-      relativePath: raw.relativePath || `templates/${card.id}.tpl`,
-      previewUrl: card.thumbnailUrl,
-      metadata: { template: raw },
-    }
+  // 契约铁律：featured 与 skills 点击仅追加 Prompt，绝不生成物理附件载荷
+  if (card?.lane === 'featured' || card?.lane === 'skills') {
+    return null
   }
 
   if (card.lane === 'trending') {
@@ -554,19 +539,6 @@ export function adaptCardToAttachmentPayload(card) {
       relativePath: raw.relativePath || `trending/${card.id}.mp4`,
       previewUrl: card.thumbnailUrl,
       metadata: { trending: raw },
-    }
-  }
-
-  if (card.lane === 'skills') {
-    return {
-      sourcePlugin: 'omnimux',
-      kind: 'skill',
-      entityId: card.id,
-      title: card.title,
-      extension: 'SKILL',
-      relativePath: raw.relativePath || `skills/${card.id}`,
-      previewUrl: card.thumbnailUrl,
-      metadata: { skill: raw },
     }
   }
 

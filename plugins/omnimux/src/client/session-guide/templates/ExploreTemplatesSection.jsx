@@ -15,6 +15,7 @@ import { TemplateDetailDrawer } from './TemplateDetailDrawer.jsx';
 import FEATURED_SKILLS_JSON from '../skills/featured-skills.json' with { type: 'json' };
 import { openWorkbench } from '../../workbench/sidebar-controller.js';
 import { loadLibraryCards, promptForCard } from '../../composer-add/library-stage-model.js';
+import { FILTER_PILL_ENUM_MAP } from '../../workbench/asset-hub-data.js';
 import { ensureAssetCardStyles } from '../../components/asset-picker/AssetPickerCard.jsx';
 import { ensureProductCardStyles } from '../../components/product-picker/ProductPickerCard.jsx';
 import { ensureInspirationCardStyles } from '../../components/inspiration-picker/InspirationPickerCard.jsx';
@@ -408,6 +409,10 @@ export function ExploreTemplatesSection({
     if (activePrimaryTab === 'featured' || activePrimaryTab === 'skills') return [];
     if (selectedSubCategory === 'all') return libraryData.cards;
     const target = String(selectedSubCategory).toLowerCase();
+    const currentSubObj = currentSubCategories.find((s) => s.id === selectedSubCategory);
+    const subNameZh = currentSubObj?.nameZh || '';
+    const aliases = (FILTER_PILL_ENUM_MAP[subNameZh] || [target]).map((a) => String(a).toLowerCase());
+
     return libraryData.cards.filter((c) => {
       const trending = c.trending || {};
       const raw = c.raw || {};
@@ -415,9 +420,13 @@ export function ExploreTemplatesSection({
       const cat = String(
         trending.industry || trending.category || raw.category || raw.type || raw.kind || c.lane || ''
       ).toLowerCase();
-      return cat.includes(target) || categories.includes(target);
+      return (
+        aliases.some((alias) => cat.includes(alias) || categories.includes(alias)) ||
+        cat.includes(target) ||
+        categories.includes(target)
+      );
     });
-  }, [activePrimaryTab, selectedSubCategory, libraryData.cards]);
+  }, [activePrimaryTab, selectedSubCategory, libraryData.cards, currentSubCategories]);
 
   const currentCategoryObj =
     TEMPLATE_CATEGORIES.find((c) => c.slug === selectedSubCategory) || {

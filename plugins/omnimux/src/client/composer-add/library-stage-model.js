@@ -6,6 +6,7 @@
 import { mapInspirationRow } from '../components/inspiration-picker/picker-model.js'
 import { mapSourceItem } from '../session-guide/trending/trending-source.js'
 import { SHARED_PRIMARY_TABS } from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
+import { ALL_CREATIVE_TEMPLATES } from '../session-guide/templates/templates-data.js'
 import FEATURED_SKILLS_JSON from '../session-guide/skills/featured-skills.json' with { type: 'json' }
 
 export const LIBRARY_STAGE_EVENT = 'omnimux:library-stage'
@@ -38,8 +39,8 @@ export function sourcesForTab(tab) {
   if (tab === 'products') return ['products']
   if (tab === 'trending') return ['trending']
   if (tab === 'skills') return ['skills']
-  if (tab === 'featured') return ['assets', 'inspiration', 'products', 'trending']
-  return ['assets', 'inspiration', 'products', 'trending']
+  if (tab === 'featured') return ['featured']
+  return ['featured']
 }
 
 /**
@@ -158,7 +159,17 @@ async function loadSkills(fetchImpl, limit) {
     }))
 }
 
+async function loadFeatured(fetchImpl, limit) {
+  const list = Array.isArray(ALL_CREATIVE_TEMPLATES) ? ALL_CREATIVE_TEMPLATES : []
+  return list.slice(0, limit).map((tpl) => ({
+    id: String(tpl.id || tpl.appId || ''),
+    title: String(tpl.titleZh || tpl.title || tpl.id),
+    raw: tpl,
+  }))
+}
+
 const LOADERS = {
+  featured: loadFeatured,
   assets: loadAssets,
   products: loadProducts,
   inspiration: loadInspiration,
