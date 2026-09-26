@@ -100,7 +100,7 @@ export const SKILL_CONTEXT = {
   },
 };
 
-// 角色画像池 (UGC Personas)
+// 角色画像池 (UGC Personas 丰富扩容池，支撑单品持续衍生数十上百种爆款)
 export const PERSONA_POOL = [
   { id: 'flight_attendant', name: '频繁跨国出行的国际空姐', tag: '安检合规/机舱极度干燥/随身免税补香' },
   { id: 'metro_commuter', name: '早晚高峰挤地铁的外企通勤白领', tag: '包内杂乱/大瓶易碎/午休约会急救' },
@@ -108,6 +108,12 @@ export const PERSONA_POOL = [
   { id: 'gym_fitness_bro', name: '每天泡健身房的硬核运动达人', tag: '暴汗后体味/运动包易被压爆/耐摔防漏需求' },
   { id: 'college_student', name: '预算有限爱探索的大学女生', tag: '买不起几十瓶大牌/合伙分装/每天换香水' },
   { id: 'minimalist_geek', name: '追求极致轻量化 EDC 的科技极客', tag: '厌恶笨重冗余/精密机械密封控/极简主义' },
+  { id: 'night_club_girl', name: '周末酒吧夜店社交的年轻女孩', tag: '昏暗灯光/包包极小/洗手间快速补香社交' },
+  { id: 'bride_to_be', name: '筹备浪漫婚礼的备婚准新娘', tag: '伴手礼定制/仪式前快速补香/不弄脏婚纱' },
+  { id: 'outdoor_camper', name: '周末户外露营徒步的背包客', tag: '极轻负重/驱蚊液香水混装/耐摔防磕碰' },
+  { id: 'perfume_collector', name: '拥有上百瓶高定香水的资深香评人', tag: '大牌原瓶舍不得带/随身盲测/多香叠喷' },
+  { id: 'rideshare_driver', name: '全职网约车司机与差评恐惧者', tag: '车内异味/乘客敏感/一喷极速净化' },
+  { id: 'high_school_teacher', name: '讲台站立一整天的年轻高中老师', tag: '粉笔灰与汗水/下课3秒清新/学生不反感' },
 ];
 
 // ==========================================
@@ -210,21 +216,26 @@ export function scoreCreativeCandidate(candidate, product, userIntent) {
 // ==========================================
 // 核心逻辑 3：防重与负向空间排重器 (Anti-Repetition Arbitrator)
 // ==========================================
-export function filterAndRankCreatives(candidates, historyStore = { history_records: [] }, limit = 3) {
+export function filterAndRankCreatives(candidates, historyStore = { history_records: [] }, limit = 10) {
   const usedPersonas = new Set((historyStore.history_records || []).map(r => r.persona));
   const usedTemplates = new Set((historyStore.history_records || []).map(r => r.template_id));
+  const usedHooks = new Set((historyStore.history_records || []).map(r => r.hook_topic));
 
   // 计算与历史的“创意距离 (Creative Distance)”：
-  // 如果人设已用过，惩罚 -30 分；如果模板结构已用过，惩罚 -20 分
+  // 严格硬性降权：已用人设扣 100 分（硬拦截），已用模板扣 25 分
   const evaluated = candidates.map(c => {
     let penalty = 0;
     const notes = [];
     if (usedPersonas.has(c.persona)) {
-      penalty += 30;
-      notes.push(`人设 [${c.persona}] 已在历史中产生过`);
+      penalty += 100;
+      notes.push(`人设 [${c.persona}] 已在历史中产生过(硬排除)`);
+    }
+    if (usedHooks.has(c.generatedHook)) {
+      penalty += 100;
+      notes.push(`Hook [${c.generatedHook}] 历史完全重合(硬排除)`);
     }
     if (usedTemplates.has(c.templateId)) {
-      penalty += 20;
+      penalty += 25;
       notes.push(`模板结构 [${c.templateName}] 历史已有相似款`);
     }
 
@@ -232,7 +243,7 @@ export function filterAndRankCreatives(candidates, historyStore = { history_reco
     return {
       ...c,
       adjustedScore,
-      antiRepetitionStatus: penalty === 0 ? '全新正交创新' : '存在历史重合度',
+      antiRepetitionStatus: penalty === 0 ? '全新正交创新' : (penalty < 100 ? '模板复用但人设全新' : '严重重合拒绝'),
       divergenceNotes: notes.length > 0 ? notes.join('; ') : '与历史记录完全异构',
     };
   });
