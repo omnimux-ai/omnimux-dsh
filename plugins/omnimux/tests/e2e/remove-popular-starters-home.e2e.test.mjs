@@ -1,5 +1,5 @@
 /**
- * E2E: 首页移除热门入门方式整块，探索模板标题对齐原字号
+ * E2E: 首页恢复渲染热门入门方式整块，探索模板标题对齐原字号
  */
 import assert from 'node:assert/strict'
 import test from 'node:test'
@@ -30,7 +30,7 @@ async function loadSessionGuide() {
   return compiled.exports.SessionGuide
 }
 
-test('E2E: 首页不再渲染热门入门方式和四个快捷按钮，探索模板保留且标题对齐 16px/600', async () => {
+test('E2E: 首页恢复渲染热门入门方式 4 张卡片，探索模板保留且标题对齐 16px/600', async () => {
   const SessionGuide = await loadSessionGuide()
   const dom = new JSDOM(
     '<!doctype html><html><body><div id="root" data-phase="hero"><div id="guide"></div><div data-composer-input="true" contenteditable="true"></div></div></body></html>',
@@ -72,11 +72,11 @@ test('E2E: 首页不再渲染热门入门方式和四个快捷按钮，探索模
       )
     })
 
-    assert.equal(document.querySelectorAll('[data-popular-starter-id]').length, 0, '首页不得渲染热门入门卡片')
-    assert.equal(document.querySelector('.omnimux-popular-section'), null, '首页不得渲染热门入门整块')
-    assert.ok(!document.body.textContent.includes('热门入门方式'), '首页可见文案不得出现热门入门方式')
+    assert.equal(document.querySelectorAll('[data-popular-starter-id]').length, 4, '首页必须渲染 4 张热门入门卡片')
+    assert.ok(document.querySelector('.omnimux-popular-section'), '首页必须渲染热门入门整块')
+    assert.ok(document.body.textContent.includes('热门入门方式'), '首页可见文案必须包含热门入门方式')
 
-    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 0, '首页不再出现技能、视频广告、图片广告、竞争对手研究四个按钮')
+    assert.equal(document.querySelectorAll('.omnimux-pill-btn').length, 0, '首页不再出现四个旧胶囊按钮')
     const exploreRoot = document.querySelector('[data-omnimux-explore-section], .omnimux-explore-templates-root')
     assert.ok(exploreRoot, '探索模板专区必须保留')
 
