@@ -298,8 +298,10 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const isIntentDrivenRef = useRef(false)
   const isCollapsedRef = useRef(false)
   const isJumpingRef = useRef(false)
+  const jumpingTimerRef = useRef(null)
 
   const undock = useCallback(() => {
+    if (jumpingTimerRef.current) clearTimeout(jumpingTimerRef.current)
     setDockedItem(null)
     setPlacement('inline')
     pendingApplyRef.current = null
@@ -680,8 +682,10 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       isCollapsedRef.current = false
       isJumpingRef.current = true
       dock(item, { force })
-      setTimeout(() => {
+      if (jumpingTimerRef.current) clearTimeout(jumpingTimerRef.current)
+      jumpingTimerRef.current = setTimeout(() => {
         isJumpingRef.current = false
+        jumpingTimerRef.current = null
       }, 150)
     }
 
@@ -701,6 +705,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     window.addEventListener('omnimux:composer:dock-intent', onDockIntent)
     return () => {
       if (frame) cancelFrame(frame)
+      if (jumpingTimerRef.current) clearTimeout(jumpingTimerRef.current)
       for (const target of targets) target.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onResize)
       window.removeEventListener('omnimux:composer:dock-intent', onDockIntent)
