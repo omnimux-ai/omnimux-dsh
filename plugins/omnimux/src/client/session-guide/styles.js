@@ -3225,7 +3225,11 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   position: sticky;
   top: 0;
   z-index: 80;
-  background: var(--dsw-alias-bg-layer-0, #0d0d0f);
+  /* 吸顶背景遮罩：消费原生 --dsw-alias-bg-base 自适应双主题，自然融入页面底色；
+     以 90% 权重结合高斯毛玻璃，既杜绝死黑生硬条块，又彻底阻隔吸顶穿行时下方卡片的图文干扰 */
+  background: color-mix(in srgb, var(--dsw-alias-bg-base, #111113) 90%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
   padding: 8px 0 4px;
 }
 

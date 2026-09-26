@@ -110,11 +110,16 @@ test('全屏状态守卫：新会话全屏下点击加号绝不打开 split 右�
   }
 })
 
-test('Tab 栏吸顶固定样式契约验证：.omnimux-explore-filter-bar 包含 position: sticky 与 top: 0', () => {
+test('Tab 栏吸顶固定样式契约验证：.omnimux-explore-filter-bar 包含 position: sticky 与 top: 0 并消费原生底色自适应毛玻璃', () => {
   const stylesSource = readFileSync(new URL('./styles.js', import.meta.url), 'utf8')
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*position:\s*sticky/i, '必须设置 position: sticky')
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*top:\s*0/i, '必须设置 top: 0 吸顶固定')
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*z-index:\s*80/i, '必须具备合适的 z-index 保证吸顶层级')
+  // 背景色自适应与防穿透断言：严禁包含死黑 #0d0d0f，必须基于 --dsw-alias-bg-base 混合并带有 backdrop-filter
+  assert.doesNotMatch(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*#0d0d0f/i, '严禁硬编码死黑色值 #0d0d0f')
+  assert.doesNotMatch(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-layer-0/i, '严禁引用不存在的 Token --dsw-alias-bg-layer-0')
+  assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-base/i, '必须基于原生 --dsw-alias-bg-base 进行底色自适应')
+  assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*(?:^|;)\s*backdrop-filter:\s*blur/m, '必须设置 backdrop-filter 高斯模糊实现高级遮罩')
 })
 
 import { JSDOM } from 'jsdom'
