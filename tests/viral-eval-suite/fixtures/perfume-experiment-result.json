@@ -1,0 +1,80 @@
+{
+  "fullSpec": {
+    "productName": "5ml便携迷你香水喷雾瓶 (买二送一)",
+    "firstFrameT2IPrompt": "Candid 35mm film photography, 9:16 vertical framing. A stressed young East Asian professional woman in a crowded commuter subway, captured in a raw moment of panic and frustration as she looks inside her open designer leather handbag. Inside the tote bag, an oversized full-size glass perfume bottle has shattered, leaking perfumed oily liquid all over her leather purse, planner, and daily essentials. Kodak Portra 400 film grain, cinematic documentary style, realistic available lighting, emotional authentic storytelling, subtle motion blur, shallow depth of field, natural skin texture.",
+    "productT2IPrompt": "High-end commercial macro product photography, 9:16 vertical aspect ratio. Ultra close-up of an elegant, minimalist 5ml portable mini perfume atomizer with a luxury matte sandblasted anodized aluminum shell. High-speed frozen capture of the nozzle releasing an ultra-fine, wide-angle cone of micron-level nano vapor mist. Dramatic directional studio rim lighting carving out the metallic brushed texture and illuminating individual suspended glowing mist droplets. Deep moody architectural background, high-contrast chiaroscuro lighting, razor-sharp detail on nozzle aperture and mist dispersion, 8k resolution.",
+    "seedanceVideoPrompt": "【素材绑定】\n@图片1 作为首帧，锁定人物与核心场景外观外观真源；\n产品外观细节严格参考 @图片2。\n\n【主体与场景】\n一位精致都市女性在手袋前从为难心疼到优雅掏出迷你便携香水瓶完成补香的从容蜕变。\n氛围：都市柔和晨光与奢华哑光金属反光交织，真实电影感生活质感，反塑料3D感，画质真实自然，反过度锐化与3D塑料感。\n\n【分时段节拍与运镜】\n0–3秒 (黄金 Hook · 痛点与荒谬反差)：\n  • 表演动作：人物身体微俯，单手在手提包内翻找，随后提出一瓶沉重大玻璃香水瓶，由于瓶身过大无法拉上拉链，人物满面愁容与为难；镜头手持微颤慢速推近\n  • 镜头运镜：慢推镜头 (Slow Push-in)，从半身俯拍推进至手袋与笨重大瓶特写\n  • 微表情：眉头紧蹙，无奈轻微摇头叹气，嘴唇自然闭合（全片无口播说话）\n3–8秒 (动作因果 · 神奇底部自充装与爽感喷雾)：\n  • 表演动作：画面切至洗手台桌面，右手手持 @图片2 便携瓶底部对准大香水管微孔，轻轻向下按压两下，透明视窗内香水液体瞬间迅速升满；紧接着单指按压喷头，在空气中喷出一团极细腻的伞状微米冷雾\n  • 镜头运镜：极近景微距平移 (Macro Slide)，镜头紧贴金属瓶身与喷口水雾弧度\n  • 微表情：眼神中透露出掌控一切的从容与惊喜，睫毛微颤，紧绷的眉心彻底放松\n8–13秒 (高光见证 · 口红级优雅定格与转化)：\n  • 表演动作：人物随手将轻盈小巧的便携香水瓶滑入口袋或掌心，与大瓶香水并排对比，尽显极致小巧；优雅仰头完成锁骨轻喷，步履轻盈自信离开\n  • 镜头运镜：平滑横移环绕微退 (Slow Pull-out & Orbit 30°)，定格在精致小巧的机身与发光自信侧颜\n  • 微表情：嘴角浮现优雅淡定微笑，笃定从容\n\n【硬性守卫】\n• 人物始终禁止张嘴说话、禁止口播对白（嘴唇自然轻闭或微抿，纯眼神与动作情绪演进）；\n• 动作过渡平滑因果明确，避免突变与肢体畸变；\n• 音效参考：手袋拉链卡顿闷响 ➔ 沉重大玻璃碰撞脆响 ➔ 清脆咔哒按压充装液流吸入声 ➔ 极其细腻均匀的微米喷雾嗤嗤声 ➔ 欢快悦耳叮咚提示音。",
+    "audioVoiceover": [
+      {
+        "time": "00:00 - 00:03",
+        "line": "“你还在把大瓶香水塞包里？摔一次心疼一个月！普通分装瓶更离谱——漏得包包全是油渍！”"
+      },
+      {
+        "time": "00:03 - 00:08",
+        "line": "“看这个！底部直接怼上去，自动吸液，三秒装满。倒过来使劲甩——一滴不漏！0.1毫米纳米喷雾，喷衣服上零水印，比专柜喷头还细腻！”"
+      },
+      {
+        "time": "00:08 - 00:13",
+        "line": "“已经卖爆4700多单了！现在买二送一，五折到手！5ml直接带上飞机，颜色美到像口红。点下面黄车，手慢真没了！”"
+      }
+    ]
+  },
+  "evalReport": {
+    "score": 100,
+    "isPassed": true,
+    "issues": [
+      "Seedance 2.5 官方契约 100% 完美对齐"
+    ]
+  },
+  "productData": {
+    "id": "prd_29ef2448",
+    "name": "5ml便携迷你香水喷雾瓶 (买二送一)",
+    "handle": "5ml便携迷你香水喷雾瓶 (买二送一)",
+    "kind": "physical",
+    "category": "beauty_skincare",
+    "description": "Brand New and High Quality 5ml Mini Perfume Bottle.\n【规格参数】\n- 容量：5ml\n- 材质：高品质铝制金属外壳 + 玻璃防漏内胆\n- 包装：单瓶独立装\n- 适用：香水、精油、酒精、各类化妆水及清爽型液体随身分装\n- 净重：12g 超轻量随身携带",
+    "selling_points": "5ml随身便携可直接登机；底部微孔自抽充装或顶部注液，倒置剧烈摇晃绝不漏液；0.1mm纳米级细腻均匀雾化喷头；口红级精巧高定色泽；TikTok破万单买二送一爆款",
+    "target_audience": "经常需要随身补香的精致白领、频繁差旅/约会的年轻群体、不想带大几千元沉重玻璃香水瓶出门的香水爱好者",
+    "brand": "Comfort Bay",
+    "features": [
+      "5ml 口红级便携尺寸",
+      "底部充装防漏气阀技术",
+      "纳米雾化大广角微米喷头",
+      "防爆防漏安全登机",
+      "极简哑光金属磨砂外观"
+    ],
+    "pain_points": [
+      "大瓶香水笨重占包，出门怕摔碎心疼",
+      "普通分装瓶漏液，弄得包包和昂贵衣服满是刺鼻油渍",
+      "市面普通喷头水珠粗大，喷在衣服上留下难看水印",
+      "分装过程繁琐，用漏斗洒得到处都是"
+    ],
+    "price": "S$2.00 (原价 S$4.00, 50% OFF, BUY 2 TAKE 1)",
+    "sku": "1733226176535037573",
+    "promotion": "BUY 2 TAKE 1（买二送一），全场5折，已售4700+",
+    "categories": [
+      "美妆个护",
+      "收纳分装",
+      "旅行便携",
+      "TikTok爆款",
+      "家居日用"
+    ],
+    "media_assets": [
+      {
+        "id": "med_01",
+        "path": "/Users/x/.omnimux-dev/omnimux/products/media/perfume-bottle-1733226176534972037-01.webp",
+        "desc": "金属磨砂外壳多色合集与口红对比图"
+      },
+      {
+        "id": "med_02",
+        "path": "/Users/x/.omnimux-dev/omnimux/products/media/perfume-bottle-1733226176534972037-02.webp",
+        "desc": "底部微孔直接对准大香水喷管自抽充装特写"
+      },
+      {
+        "id": "med_03",
+        "path": "/Users/x/.omnimux-dev/omnimux/products/media/perfume-bottle-1733226176534972037-03.webp",
+        "desc": "纳米级细腻云雾状喷雾慢动作展示"
+      }
+    ]
+  }
+}
