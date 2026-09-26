@@ -1,0 +1,45 @@
+{
+  "presetId": "x-agent",
+  "name": "X (推特) 流量运营专家",
+  "description": "X (推特) 热点截流、高互动推文串、长文专栏与私信触达专属技能集",
+  "categories": [
+    { "id": "推特营销", "name": "推特营销" },
+    { "id": "互动与打分", "name": "互动与打分" },
+    { "id": "内容发布", "name": "内容发布" }
+  ],
+  "skills": [
+    {
+      "id": "sk-x-sopilot",
+      "slug": "sopilot-social-agents",
+      "skill": "sopilot-social-agents",
+      "name": "推特营销专项提示词路由中心",
+      "title": "推特营销专项提示词路由中心",
+      "category": "推特营销",
+      "description": "按发帖、高赞跟帖、引用转帖、推文串改写、私信触达等场景智能路由并加载专项模型提示词。",
+      "summary": "按发帖、高赞跟帖、引用转帖、推文串改写、私信触达等场景智能路由并加载专项模型提示词。",
+      "installed": true
+    },
+    {
+      "id": "sk-x-post-grader",
+      "slug": "post-grader",
+      "skill": "post-grader",
+      "name": "推特爆款病毒传播力评分器",
+      "title": "推特爆款病毒传播力评分器",
+      "category": "互动与打分",
+      "description": "针对推文的开场 Hook、争议性、情绪张力与转发价值进行综合打分，给出改进建议。",
+      "summary": "针对推文的开场 Hook、争议性、情绪张力与转发价值进行综合打分，给出改进建议。",
+      "installed": true
+    },
+    {
+      "id": "sk-x-publish",
+      "slug": "baoyu-post-to-x",
+      "skill": "baoyu-post-to-x",
+      "name": "推特图文与长文专栏发布",
+      "title": "推特图文与长文专栏发布",
+      "category": "内容发布",
+      "description": "支持富文本排版、多图上传以及 X Articles 深度长文格式的一键排版与草稿生成。",
+      "summary": "支持富文本排版、多图上传以及 X Articles 深度长文格式的一键排版与草稿生成。",
+      "installed": true
+    }
+  ]
+}

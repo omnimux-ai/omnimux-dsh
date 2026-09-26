@@ -193,3 +193,8 @@
               max: max
             compat:
               requiresReasoningContentOnAssistantMessages: true
+
+# 隔离机制：物理切断外部 ~/.agents 和 ~/.dsh 扫描，仅保留 OmniMux 自身受管环境与工作区
+- id: skill-filesystem
+  config:
+    includeDefaultRoots: false

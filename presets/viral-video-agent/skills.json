@@ -1,0 +1,56 @@
+{
+  "presetId": "viral-video-agent",
+  "name": "爆款视频复刻操盘手",
+  "description": "爆款视频 5D 深度拆解、分镜数据表编排、生成调度与视频导出专属技能集",
+  "categories": [
+    { "id": "爆款解构SOP", "name": "爆款解构SOP" },
+    { "id": "分镜与提示词", "name": "分镜与提示词" },
+    { "id": "后期合成导出", "name": "后期合成导出" }
+  ],
+  "skills": [
+    {
+      "id": "sk-viral-sop",
+      "slug": "viral-video-replication",
+      "skill": "viral-video-replication",
+      "name": "爆款视频复刻标准作业程序 (SOP)",
+      "title": "爆款视频复刻标准作业程序 (SOP)",
+      "category": "爆款解构SOP",
+      "description": "基于爆款参考视频，执行原片深度解构、黄金Hook提炼、字词级语义对齐与画布节点协同。",
+      "summary": "基于爆款参考视频，执行原片深度解构、黄金Hook提炼、字词级语义对齐与画布节点协同。",
+      "installed": true
+    },
+    {
+      "id": "sk-viral-reverse-prompt",
+      "slug": "reverse-video-prompt",
+      "skill": "reverse-video-prompt",
+      "name": "反推原片分镜画面与视频提示词",
+      "title": "反推原片分镜画面与视频提示词",
+      "category": "分镜与提示词",
+      "description": "对输入视频切片进行多模态视觉反推，提取画面主体、构图比例、灯光与动态运镜参数。",
+      "summary": "对输入视频切片进行多模态视觉反推，提取画面主体、构图比例、灯光与动态运镜参数。",
+      "installed": true
+    },
+    {
+      "id": "sk-viral-motion-lang",
+      "slug": "cinematic-motion-language",
+      "skill": "cinematic-motion-language",
+      "name": "电影级运镜与视听运动语言",
+      "title": "电影级运镜与视听运动语言",
+      "category": "分镜与提示词",
+      "description": "提供推拉摇移、升降跟拍、升格慢动作等工业级运镜参数词典，赋能分镜生成。",
+      "summary": "提供推拉摇移、升降跟拍、升格慢动作等工业级运镜参数词典，赋能分镜生成。",
+      "installed": true
+    },
+    {
+      "id": "sk-viral-clip-export",
+      "slug": "clip-export",
+      "skill": "clip-export",
+      "name": "剪辑工坊多轨装配与成片导出",
+      "title": "剪辑工坊多轨装配与成片导出",
+      "category": "后期合成导出",
+      "description": "调度剪辑时间线多轨道、卡点音效、字幕花字，并一键渲染导出 9:16 高清短视频成品。",
+      "summary": "调度剪辑时间线多轨道、卡点音效、字幕花字，并一键渲染导出 9:16 高清短视频成品。",
+      "installed": true
+    }
+  ]
+}

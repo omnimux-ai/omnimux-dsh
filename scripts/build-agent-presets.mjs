@@ -6,7 +6,7 @@
  * mid-line `    # ──` search. Running twice is a no-op besides rewriting
  * the expert section from fragments/.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -259,24 +259,15 @@ const targets = [
     persona: TIKTOK_AGENT_PERSONA,
   },
   {
-    file: 'presets/marketing-agent/agent.cordis.yml',
+    file: 'presets/ad-creative-agent/agent.cordis.yml',
     fragment: marketingFrag,
     persona: MARKETING_AGENT_PERSONA,
-  },
-  {
-    file: 'presets/marketing-growth-team/agent.cordis.yml',
-    fragment: growthFrag,
-    persona: GROWTH_AGENT_PERSONA,
-  },
-  {
-    file: 'presets/drama-agent/agent.cordis.yml',
-    fragment: dramaFrag,
-    persona: DRAMA_AGENT_PERSONA,
   },
 ]
 
 for (const t of targets) {
   const path = join(root, t.file)
+  if (!existsSync(path)) continue
   let yml = readFileSync(path, 'utf8')
   yml = replacePersona(yml, t.persona)
   yml = spliceExperts(yml, t.fragment)

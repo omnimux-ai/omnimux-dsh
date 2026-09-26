@@ -1,0 +1,56 @@
+{
+  "presetId": "youtube-agent",
+  "name": "YouTube 创作增长专家",
+  "description": "YouTube 高点击缩略图、完播留存脚本与长视频分段专属技能集",
+  "categories": [
+    { "id": "脚本与大纲", "name": "脚本与大纲" },
+    { "id": "封面缩略图", "name": "封面缩略图" },
+    { "id": "长视频切片", "name": "长视频切片" }
+  ],
+  "skills": [
+    {
+      "id": "sk-yt-creator",
+      "slug": "youtube-creator",
+      "skill": "youtube-creator",
+      "name": "YouTube 全流程创作助手",
+      "title": "YouTube 全流程创作助手",
+      "category": "脚本与大纲",
+      "description": "从高吸引力选题规划、高留存结构化脚本撰写到高转化点击率封面设计。",
+      "summary": "从高吸引力选题规划、高留存结构化脚本撰写到高转化点击率封面设计。",
+      "installed": true
+    },
+    {
+      "id": "sk-yt-cover",
+      "slug": "baoyu-cover-image",
+      "skill": "baoyu-cover-image",
+      "name": "高转化 16:9 封面缩略图生成",
+      "title": "高转化 16:9 封面缩略图生成",
+      "category": "封面缩略图",
+      "description": "融合电影感大画幅、视觉焦点对比与高 CTR 标题文字排版的 YouTube 封面图生成。",
+      "summary": "融合电影感大画幅、视觉焦点对比与高 CTR 标题文字排版的 YouTube 封面图生成。",
+      "installed": true
+    },
+    {
+      "id": "sk-yt-slice",
+      "slug": "course-to-short-video",
+      "skill": "course-to-short-video",
+      "name": "长视频高光分段切片提取",
+      "title": "长视频高光分段切片提取",
+      "category": "长视频切片",
+      "description": "长视频深度拆解，自动提取高能转折点、关键结论与适合二次分发的短切片。",
+      "summary": "长视频深度拆解，自动提取高能转折点、关键结论与适合二次分发的短切片。",
+      "installed": true
+    },
+    {
+      "id": "sk-yt-long-script",
+      "slug": "generate-long-video-script",
+      "skill": "generate-long-video-script",
+      "name": "中长视频多段式留存脚本生成",
+      "title": "中长视频多段式留存脚本生成",
+      "category": "脚本与大纲",
+      "description": "撰写包含引言钩子、核心论点推进、悬念承接与号召互动的 8~15 分钟长视频深度脚本。",
+      "summary": "撰写包含引言钩子、核心论点推进、悬念承接与号召互动的 8~15 分钟长视频深度脚本。",
+      "installed": true
+    }
+  ]
+}
