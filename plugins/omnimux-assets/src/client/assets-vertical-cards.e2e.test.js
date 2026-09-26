@@ -3,7 +3,7 @@ import test from 'node:test'
 import { runStyleDomProbe } from '../../../../scripts/test-fixtures/style-dom-probe.mjs'
 import { ASSETS_CSS } from './styles.js'
 
-test('本地资产库 3:4 黄金竖版卡片与图片自适应缩放端到端契约', () => {
+test('本地资产封面按类型使用角色 3:4、场景 16:9 和道具 4:3', () => {
   const result = runStyleDomProbe({
     name: 'assets-vertical-cards-geometry',
     styles: ASSETS_CSS,
@@ -11,7 +11,7 @@ test('本地资产库 3:4 黄金竖版卡片与图片自适应缩放端到端契
       <div class="omnimux-assets-main" style="width: 1200px;">
         <div class="omnimux-assets-grid" data-columns="3">
           <div class="omnimux-assets-masonry-col">
-            <div class="omnimux-assets-focusable omnimux-assets-card" style="width: 320px;">
+            <div class="omnimux-assets-focusable omnimux-assets-card omnimux-assets-card--character" style="width: 320px;">
               <div class="dshUk-MediaCard-coverWrapper" style="width: 100%;">
                 <div class="omnimux-assets-card-thumb">
                   <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E" class="omnimux-assets-card-media" alt="" />
@@ -26,6 +26,16 @@ test('本地资产库 3:4 黄金竖版卡片与图片自适应缩放端到端契
               <div class="omnimux-assets-card-body">
                 <div class="omnimux-assets-card-title">科技 Vlogger-粉衣女郎 Yuna</div>
                 <div class="omnimux-assets-card-desc">1小时前</div>
+              </div>
+            </div>
+          </div>
+          <div class="omnimux-assets-masonry-col">
+            <div class="omnimux-assets-card omnimux-assets-card--scene" style="width: 320px;">
+              <div class="dshUk-MediaCard-coverWrapper scene-cover"><div class="omnimux-assets-card-thumb"></div></div>
+            </div>
+            <div class="omnimux-assets-card omnimux-assets-card--prop" style="width: 320px;">
+              <div class="dshUk-MediaCard-coverWrapper prop-cover">
+                <div class="omnimux-assets-card-thumb"><img class="omnimux-assets-card-media prop-media" alt="" /></div>
               </div>
             </div>
           </div>
@@ -57,6 +67,9 @@ test('本地资产库 3:4 黄金竖版卡片与图片自适应缩放端到端契
         titleFontWeight: getComputedStyle(title).fontWeight,
         descFontSize: getComputedStyle(desc).fontSize,
         descText: desc.textContent.trim(),
+        sceneAspectRatio: getComputedStyle(document.querySelector('.scene-cover')).aspectRatio,
+        propAspectRatio: getComputedStyle(document.querySelector('.prop-cover')).aspectRatio,
+        propObjectFit: getComputedStyle(document.querySelector('.prop-media')).objectFit,
       }
     },
   })
@@ -64,6 +77,9 @@ test('本地资产库 3:4 黄金竖版卡片与图片自适应缩放端到端契
   // 1. 验证卡片宽度与比例符合 3:4 黄金竖版几何（宽度 320px 时，高度约 426.67px）
   assert.equal(result.cardWidth, 320)
   assert.equal(result.coverAspectRatio, '3 / 4')
+  assert.equal(result.sceneAspectRatio, '16 / 9')
+  assert.equal(result.propAspectRatio, '4 / 3')
+  assert.equal(result.propObjectFit, 'contain')
   assert.equal(result.thumbAspectRatio, '3 / 4')
   assert.ok(Math.abs(result.coverHeight - (result.coverWidth * 4) / 3) < 1.0, `高度期望为 4/3 宽，实际高度 ${result.coverHeight}`)
 

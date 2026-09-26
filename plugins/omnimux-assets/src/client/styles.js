@@ -232,14 +232,24 @@ export const ASSETS_CSS = `
   min-height: 0;
   display: block;
 }
-/* 本地资产库 3:4 黄金竖版卡片与图片等比居中自适应缩放（Issue 2229） */
+/* 本地资产库封面：角色保持 3:4，场景与背景为 16:9，其余为 4:3。 */
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 3;
   width: 100%;
   height: 100%;
   position: relative;
   overflow: hidden;
+}
+.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
+.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
+  aspect-ratio: 3 / 4;
+}
+.omnimux-assets-card--scene:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
+.omnimux-assets-card--scene:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb,
+.omnimux-assets-card--background:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
+.omnimux-assets-card--background:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
+  aspect-ratio: 16 / 9;
 }
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
@@ -248,6 +258,18 @@ export const ASSETS_CSS = `
   object-fit: cover;
   object-position: center;
   display: block;
+}
+.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
+.omnimux-assets-card--character:not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
+  object-position: center top;
+}
+.omnimux-assets-card--prop:not(.omnimux-assets-cloud-card) [class*="coverWrapper"],
+.omnimux-assets-card--prop:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb {
+  background: var(--dsw-alias-bg-module-platform, var(--dsw-alias-bg-layer-1));
+}
+.omnimux-assets-card--prop:not(.omnimux-assets-cloud-card) .omnimux-assets-card-media,
+.omnimux-assets-card--prop:not(.omnimux-assets-cloud-card) .omnimux-assets-card-video {
+  object-fit: contain;
 }
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb:has(.omnimux-assets-card-media),
 .omnimux-assets-card:not(.omnimux-assets-cloud-card) .omnimux-assets-card-thumb:has(.omnimux-assets-card-video) {
