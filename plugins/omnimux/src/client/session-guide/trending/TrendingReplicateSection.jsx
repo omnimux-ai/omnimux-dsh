@@ -9,7 +9,7 @@ import { useTrendingFeed } from './use-trending-feed.js'
 import { SkillsPanel } from '../skills/SkillsPanel.jsx'
 import { isLocaleEn, resolveSkillTitle } from '../skills/featured-skills-data.js'
 import { EMPTY_CAPABILITIES, TRENDING_SOURCE_STATUS, mergeCapabilities } from './trending-source.js'
-import { getComposerScrollThresholds } from '../useComposerDocking.js'
+import { getComposerScrollThresholds, dockGeometry } from '../useComposerDocking.js'
 import { getGlobalAttachmentStore } from '../../attachments/store.ts'
 import {
   RECREATE_PROMPT,
@@ -258,26 +258,20 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     if (!root) return undefined
     dockHostRef.current = root
 
-    const card = root.querySelector?.('[data-composer-card]')
+    const cards = Array.from(root.querySelectorAll?.('[data-composer-card]') || [])
+    const card = cards.find((el) => {
+      const rect = el?.getBoundingClientRect?.()
+      return rect && rect.width > 0 && rect.height > 0
+    }) || cards[0] || root.querySelector?.('[data-composer-card]') || null
     // 承载原生输入框的那一层：吸底期间由它替输入框留着原位的占位高度
     const band = card?.parentElement || root
 
-    // 停靠几何取自输入框所在的 Hero 栏：它始终留在文档流里，
-    // 即使输入框已经脱离流也保持原始的 left/width，缩放窗口时仍然算得准。
+    // 停靠几何：统一采用 resolveConversationColumn 与 dockGeometry
+    // 确保在侧边栏展开/折叠、多栏响应式下，严格在会话栏目页面内部像素级绝对居中
     const writeGeometry = () => {
-      const rect = band?.getBoundingClientRect?.()
-      if (!rect || rect.width <= 0) return
-      let nativeMaxWidth = DOCK_MAX_WIDTH
-      const win = card?.ownerDocument?.defaultView || (typeof window !== 'undefined' ? window : null)
-      if (win?.getComputedStyle && card) {
-        const rootStyle = win.getComputedStyle(card)
-        const parsedMax = parseFloat(rootStyle.getPropertyValue?.('--dsh-composer-card-max-width'))
-        if (Number.isFinite(parsedMax) && parsedMax > 0) {
-          nativeMaxWidth = parsedMax
-        }
-      }
-      const width = Math.min(nativeMaxWidth, Math.max(0, rect.width - 24))
-      const left = rect.left + (rect.width - width) / 2
+      const geometry = dockGeometry(card, band)
+      if (!geometry) return
+      const { width, left } = geometry
       root.style.setProperty('--omnimux-dock-left', `${Math.round(left)}px`)
       root.style.setProperty('--omnimux-dock-width', `${Math.round(width)}px`)
       root.style.setProperty('--omnimux-dock-bottom', `${DOCK_BOTTOM}px`)
@@ -350,17 +344,58 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
       }
     }
 
-    // 窗口缩放与会话列变化都要重新算停靠几何
+    // 窗口缩放、侧边栏展开/折叠与会话列变化都要重新算停靠几何
     const observer = typeof window.ResizeObserver === 'function'
       ? new window.ResizeObserver(writeGeometry)
       : null
     observer?.observe(root)
     if (card) observer?.observe(card)
+
+    const doc = root.ownerDocument || document
+    const collapseObserver = typeof window.MutationObserver === 'function'
+      ? new window.MutationObserver(writeGeometry)
+      : null
+    if (doc?.documentElement) {
+      collapseObserver?.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-omnimux-left-collapsed', 'data-sidebar-collapsed'] })
+    }
+    if (doc?.body) {
+      collapseObserver?.observe(doc.body, { attributes: true, attributeFilter: ['data-omnimux-left-collapsed', 'data-sidebar-collapsed'] })
+    }
+
+    const onTransitionEnd = (event) => {
+      const prop = event?.propertyName
+      const isGeometryProperty = (
+        prop === 'width' ||
+        prop === 'transform' ||
+        prop === 'max-width' ||
+        prop === 'min-width' ||
+        prop === 'left' ||
+        prop === 'right' ||
+        prop === 'flex-basis'
+      )
+      const transitionTarget = event?.target
+      const isSidebarOrHostTarget = Boolean(
+        transitionTarget?.closest?.('.dshDesktopSidebar, [data-sidebar], aside, [class*="sidebar"]')
+      )
+      const isNode = Boolean(transitionTarget && typeof transitionTarget.nodeType === 'number')
+      const relatedTransitionTarget = Boolean(
+        isSidebarOrHostTarget ||
+        transitionTarget?.closest?.('.dshDesktopFrame, [data-omnimux-starter-host]') ||
+        (isNode && root.contains?.(transitionTarget))
+      )
+      if (relatedTransitionTarget && (isGeometryProperty || isSidebarOrHostTarget)) {
+        writeGeometry()
+      }
+    }
+
     window.addEventListener('resize', writeGeometry)
+    window.addEventListener('transitionend', onTransitionEnd)
     return () => {
       cancelAnim?.()
       observer?.disconnect()
+      collapseObserver?.disconnect()
       window.removeEventListener('resize', writeGeometry)
+      window.removeEventListener('transitionend', onTransitionEnd)
     }
   }, [dockedItem, placement])
 

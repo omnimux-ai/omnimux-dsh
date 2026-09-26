@@ -2,21 +2,144 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { measureInlineComposerDemand, releaseInlineComposerGeometry } from '../composer-compact.js'
 
 /**
+ * 精准探测当前会话工作台（栏目页面）的视口几何范围。
+ * 突破 closest 无法跨越兄弟节点的局限，支持侧边栏折叠/展开与多栏响应式。
+ *
+ * @param {Element | null} card 输入框卡片元素
+ * @param {Element | null} band 输入框原位槽位宿主
+ * @returns {{ left: number, width: number, right: number } | null}
+ */
+export function resolveConversationColumn(card, band) {
+  const doc = card?.ownerDocument || band?.ownerDocument || (typeof document !== 'undefined' ? document : null)
+  const win = doc?.defaultView || (typeof window !== 'undefined' ? window : null)
+  if (!doc || !win) return null
+
+  // 当前关联宿主上下文（card / band 所在的主机或工作区根节点）
+  const contextHost = card?.closest?.('[data-omnimux-starter-host], [data-phase]') ||
+    band?.closest?.('[data-omnimux-starter-host], [data-phase]') || null
+
+  const isContextMatch = (el) => {
+    if (!el) return false
+    if (card && (el === card || el.contains?.(card) || card.contains?.(el))) return true
+    if (band && (el === band || el.contains?.(band) || band.contains?.(el))) return true
+    if (contextHost && (el === contextHost || el.contains?.(contextHost) || contextHost.contains?.(el))) return true
+    return false
+  }
+
+  // Level 1: 优先探测权威的会话工作台主容器
+  // 覆盖原生会话表面、会话滚动容器、宿主内置滚动体以及三栏架构下的中间列 centerCol
+  const surfaceSelectors = [
+    '.dshDesktopConversationSurface',
+    '[data-conversation-scroll]',
+    '[class*="centerCol"]',
+    '.dshDesktopFrame > [class*="conversation"]',
+    '[data-omnimux-starter-host] [class*="scrollBody"]',
+    '[class*="scrollBody"]',
+  ]
+
+  const seen = new Set()
+  const candidates = []
+
+  for (const selector of surfaceSelectors) {
+    const elements = doc.querySelectorAll?.(selector) || []
+    for (const el of elements) {
+      if (!el || seen.has(el)) continue
+      seen.add(el)
+      const rect = el.getBoundingClientRect?.()
+      // 必须具有真实渲染尺寸，过滤掉 width <= 0 或 height === 0 的隐藏/脱落候选节点
+      const isZeroDimension = !rect || rect.width <= 0 || rect.height === 0
+      if (!isZeroDimension) {
+        candidates.push({
+          el,
+          rect,
+          matchesContext: isContextMatch(el),
+        })
+      }
+    }
+  }
+
+  // 优先选择包含当前 card / band / host 上下文的活动会话区域；若无包含则回退至首个具有布局的真实可见候选节点
+  const bestCandidate = candidates.find((c) => c.matchesContext) || candidates[0]
+  if (bestCandidate) {
+    const { rect } = bestCandidate
+    return {
+      left: Math.round(rect.left),
+      width: Math.round(rect.width),
+      right: Math.round(rect.right ?? (rect.left + rect.width)),
+    }
+  }
+
+  // Level 2: 侧边栏宽度推导兜底（当容器正在重绘或选择器未命中时）
+  let sidebarWidth = 0
+  const isLeftCollapsed = Boolean(
+    doc.documentElement?.hasAttribute?.('data-omnimux-left-collapsed') ||
+    doc.body?.hasAttribute?.('data-omnimux-left-collapsed') ||
+    doc.documentElement?.getAttribute?.('data-sidebar-collapsed') === 'true' ||
+    doc.body?.getAttribute?.('data-sidebar-collapsed') === 'true'
+  )
+
+  if (!isLeftCollapsed && win.getComputedStyle) {
+    const rootStyle = win.getComputedStyle(doc.documentElement)
+    const parsedWidth = parseFloat(rootStyle.getPropertyValue?.('--omnimux-sidebar-width'))
+    if (Number.isFinite(parsedWidth) && parsedWidth > 0) {
+      sidebarWidth = parsedWidth
+    } else {
+      // 检查真实侧边栏元素尺寸，过滤隐藏或无布局侧边栏
+      const sidebars = doc.querySelectorAll?.('.dshDesktopSidebar, [data-sidebar], aside') || []
+      const visibleSidebar = Array.from(sidebars).find((el) => {
+        const r = el?.getBoundingClientRect?.()
+        return r && r.width > 0 && r.height > 0 && r.left >= 0
+      })
+      const sideRect = visibleSidebar?.getBoundingClientRect?.()
+      if (sideRect && sideRect.width > 0 && sideRect.left >= 0) {
+        sidebarWidth = sideRect.width
+      } else {
+        // 桌面端默认侧边栏展开宽度 280px
+        sidebarWidth = 280
+      }
+    }
+  }
+
+  const winWidth = win.innerWidth || doc.documentElement?.clientWidth || 0
+  if (winWidth > 0) {
+    const colLeft = Math.max(0, Math.round(sidebarWidth))
+    const colWidth = Math.max(0, Math.round(winWidth - colLeft))
+    return {
+      left: colLeft,
+      width: colWidth,
+      right: colLeft + colWidth,
+    }
+  }
+
+  // Level 3: 最终安全退化保底
+  const fallbackRect = band?.getBoundingClientRect?.() || card?.getBoundingClientRect?.()
+  if (fallbackRect && fallbackRect.width > 0 && fallbackRect.height > 0) {
+    const colLeft = Math.max(0, Math.round(fallbackRect.left))
+    const colWidth = Math.max(0, Math.round(fallbackRect.width))
+    return {
+      left: colLeft,
+      width: colWidth,
+      right: colLeft + colWidth,
+    }
+  }
+
+  return null
+}
+
+/**
  * 计算吸底输入框的宽度与水平居中坐标。
- * 契约：严格对齐 DSH 官方原生卡片上限与响应式逻辑（方案 A）。
+ * 契约：严格以「会话栏目页面」内部水平居中，并对齐原生 952px 上限（方案 A）。
  */
 export function dockGeometry(card, band) {
-  const rect = band?.getBoundingClientRect?.()
-  if (!rect || rect.width <= 0) return null
+  // 1. 获取会话工作台栏目页面的真实几何范围
+  const column = resolveConversationColumn(card, band)
+  if (!column || column.width <= 0) return null
 
-  // 1. 获取中间内容滚动的真实列边界
-  const column = card?.closest?.('[data-conversation-scroll], [class*="centerCol"]')?.getBoundingClientRect?.() || rect
-  const leftEdge = Math.max(rect.left + 12, column.left)
-  const rightEdge = Math.min(rect.left + rect.width - 12, column.right ?? (column.left + column.width))
-  const available = Math.max(0, rightEdge - leftEdge)
+  // 2. 栏目内部可用宽度计算（两侧各预留 12px 呼吸缓冲）
+  const available = Math.max(0, column.width - 24)
   if (!available) return null
 
-  // 2. 读取原生配置的卡片最大宽度（优先读 computedStyle CSS 变量，兜底 DOCK_MAX_WIDTH = 952px）
+  // 3. 读取原生配置的卡片最大宽度（优先读 computedStyle CSS 变量，兜底 DOCK_MAX_WIDTH = 952px）
   let nativeMaxWidth = DOCK_MAX_WIDTH
   const win = card?.ownerDocument?.defaultView || (typeof window !== 'undefined' ? window : null)
   if (win?.getComputedStyle && card) {
@@ -27,13 +150,19 @@ export function dockGeometry(card, band) {
     }
   }
 
-  // 3. 方案 A 核心计算：宽度上限完全对齐原生 nativeMaxWidth，自适应 available
+  // 4. 方案 A 核心计算：宽度上限完全对齐原生 nativeMaxWidth，自适应 available
   const demandWidth = measureInlineComposerDemand(card)
   const baseTargetWidth = Math.min(available, nativeMaxWidth)
   const width = Math.min(available, Math.max(baseTargetWidth, demandWidth))
 
-  // 4. 水平精确居中
-  return { width, left: leftEdge + (available - width) / 2 }
+  // 5. 【核心纠偏公式】：在栏目页面内部绝对居中！
+  // 栏目真实左边界 + (栏目总空间 - 输入框宽度) / 2
+  const left = column.left + (column.width - width) / 2
+
+  return {
+    width: Math.round(width),
+    left: Math.round(left),
+  }
 }
 
 /** 宿主上标记「原生输入框已停靠到会话视口底部」。 */
@@ -426,13 +555,53 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const contentObserver = typeof window.MutationObserver === 'function'
       ? new window.MutationObserver(writeGeometry) : null
     if (toolbar) contentObserver?.observe(toolbar, { childList: true, characterData: true, subtree: true })
+
+    const doc = root.ownerDocument || document
+    const collapseObserver = typeof window.MutationObserver === 'function'
+      ? new window.MutationObserver(writeGeometry) : null
+    if (doc?.documentElement) {
+      collapseObserver?.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-omnimux-left-collapsed', 'data-sidebar-collapsed'] })
+    }
+    if (doc?.body) {
+      collapseObserver?.observe(doc.body, { attributes: true, attributeFilter: ['data-omnimux-left-collapsed', 'data-sidebar-collapsed'] })
+    }
+
+    const onTransitionEnd = (event) => {
+      const prop = event?.propertyName
+      const isGeometryProperty = (
+        prop === 'width' ||
+        prop === 'transform' ||
+        prop === 'max-width' ||
+        prop === 'min-width' ||
+        prop === 'left' ||
+        prop === 'right' ||
+        prop === 'flex-basis'
+      )
+      const transitionTarget = event?.target
+      const isSidebarOrHostTarget = Boolean(
+        transitionTarget?.closest?.('.dshDesktopSidebar, [data-sidebar], aside, [class*="sidebar"]')
+      )
+      const isNode = Boolean(transitionTarget && typeof transitionTarget.nodeType === 'number')
+      const relatedTransitionTarget = Boolean(
+        isSidebarOrHostTarget ||
+        transitionTarget?.closest?.('.dshDesktopFrame, [data-omnimux-starter-host]') ||
+        (isNode && root.contains?.(transitionTarget))
+      )
+      if (relatedTransitionTarget && (isGeometryProperty || isSidebarOrHostTarget)) {
+        writeGeometry()
+      }
+    }
+
     window.addEventListener('resize', writeGeometry)
+    window.addEventListener('transitionend', onTransitionEnd)
     return () => {
       primedAnimCancel?.()
       cancelAnim?.()
       observer?.disconnect()
       contentObserver?.disconnect()
+      collapseObserver?.disconnect()
       window.removeEventListener('resize', writeGeometry)
+      window.removeEventListener('transitionend', onTransitionEnd)
     }
   }, [dockedItem, placement, hostRef])
 
