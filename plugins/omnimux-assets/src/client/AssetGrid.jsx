@@ -9,19 +9,6 @@ import { MasonryGrid } from './masonry-grid.jsx'
 import { coverRatioCache } from './ratio-cache.js'
 import { formatTimeAgo } from './format.js'
 
-const ASSET_ASPECT_RATIO_MAP = {
-  scene: '16:9',
-  background: '16:9',
-  prop: '4:3',
-  style: '4:3',
-  knowledge: '4:3',
-  custom: '4:3',
-}
-
-function resolveAssetAspectRatio(type) {
-  return ASSET_ASPECT_RATIO_MAP[type]
-}
-
 /**
  * @param {{
  *   asset: any,
@@ -188,7 +175,7 @@ function AssetGridCard({ asset, t, selected, onToggleSelect, onOpen, onPreview, 
       data-type={safeType ?? undefined}
       selected={selected}
       onClick={handleTriggerAction}
-      {...(resolveAssetAspectRatio(safeType) ? { aspectRatio: resolveAssetAspectRatio(safeType) } : {})}
+      aspectRatio="3:4"
       coverNode={coverNode}
       title={asset.name}
       subtitle={timeText || '—'}
@@ -403,6 +390,7 @@ export function AssetGrid({
       gridRef={gridRef}
       columns={gridColumns}
       items={assets}
+      getRatio={() => 3 / 4}
       renderItem={(asset) => {
         const missing = Number(asset.missing_file_count) > 0 && (!asset.files || asset.files.length === 0)
         const selected = selectedIds?.has(asset.id)

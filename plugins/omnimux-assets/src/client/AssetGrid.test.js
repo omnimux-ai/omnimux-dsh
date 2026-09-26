@@ -89,19 +89,14 @@ describe('AssetGrid cover preview and card CTA actions contract', () => {
   it('conforms to 3:4 vertical card ratio and relative time subtitle contract (Issue 2229)', () => {
     // 1. Imports formatTimeAgo from ./format.js
     assert.match(gridJsx, /import\s+.*formatTimeAgo.*from '\.\/format\.js'/)
-    // 2. 角色保持 3:4，场景与背景改 16:9，其余改 4:3
-    assert.match(gridJsx, /scene: '16:9'/)
-    assert.match(gridJsx, /background: '16:9'/)
-    assert.match(gridJsx, /prop: '4:3'/)
-    assert.match(gridJsx, /return ASSET_ASPECT_RATIO_MAP\[type\]/)
-    assert.doesNotMatch(gridJsx, /aspectRatio="3:4"|aspectRatio=\{?'3:4'\}?/)
+    // 2. 统一锁定 3:4 黄金画幅展台
+    assert.match(gridJsx, /<MediaCard[\s\S]*?aspectRatio="3:4"/)
     // 3. Replaces description subtitle with relative time from created_at/updated_at
     assert.match(gridJsx, /const timeText = formatTimeAgo\(asset\.created_at \|\| asset\.createdAt \|\| asset\.updated_at\)/)
     assert.match(gridJsx, /subtitle=\{timeText \|\| '—'\}/)
-    // 4. Stylesheet declares 3:4 aspect-ratio and object-fit cover for local cards
-    assert.match(stylesJs, /\.omnimux-assets-card--character:not\(\.omnimux-assets-cloud-card\)\s+\[class\*="coverWrapper"\],\s*\n\.omnimux-assets-card--character:not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-thumb\s*\{[\s\S]*?aspect-ratio:\s*3\s*\/\s*4;/)
-    assert.match(stylesJs, /aspect-ratio:\s*16\s*\/\s*9;/)
-    assert.match(stylesJs, /\.omnimux-assets-card--prop:not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-media,\s*\n\.omnimux-assets-card--prop:not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-video\s*\{[\s\S]*?object-fit:\s*contain;/)
-    assert.match(stylesJs, /\.omnimux-assets-card:not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-media[\s\S]*?object-fit:\s*cover;/)
+    // 4. Stylesheet declares 3:4 aspect-ratio for unified stage and object-fit for character / non-character
+    assert.match(stylesJs, /\.omnimux-assets-card:not\(\.omnimux-assets-cloud-card\)\s+\[class\*="coverWrapper"\],\s*\n\.omnimux-assets-card:not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-thumb\s*\{[\s\S]*?aspect-ratio:\s*3\s*\/\s*4;/)
+    assert.match(stylesJs, /\.omnimux-assets-card--character:not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-media[\s\S]*?object-fit:\s*cover;/)
+    assert.match(stylesJs, /\.omnimux-assets-card:not\(\.omnimux-assets-card--character\):not\(\.omnimux-assets-cloud-card\)\s+\.omnimux-assets-card-media[\s\S]*?object-fit:\s*contain;/)
   })
 })
