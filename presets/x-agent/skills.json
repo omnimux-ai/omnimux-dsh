@@ -1,13 +1,25 @@
 {
   "presetId": "x-agent",
   "name": "X (推特) 流量运营专家",
-  "description": "X (推特) 热点截流、高互动推文串、长文专栏与私信触达专属技能集",
+  "description": "X (推特) 开源算法引擎、热点截流、高互动推文串、爆款质检与安全发布专属技能集",
   "categories": [
+    { "id": "策略与算法导师", "name": "策略与算法导师" },
     { "id": "推特营销", "name": "推特营销" },
     { "id": "互动与打分", "name": "互动与打分" },
     { "id": "内容发布", "name": "内容发布" }
   ],
   "skills": [
+    {
+      "id": "sk-x-mastery-mentor",
+      "slug": "x-mentor-skill",
+      "skill": "x-mentor-skill",
+      "name": "X (推特) 运营导师与算法引擎",
+      "title": "X (推特) 运营导师与算法引擎",
+      "category": "策略与算法导师",
+      "description": "基于 X 开源算法权重分析、顶级创作者心智模型与 AI/科技赛道专精策略，提供选题定位、Hook 构造、账号诊断与变现闭环。",
+      "summary": "基于 X 开源算法权重分析、顶级创作者心智模型与 AI/科技赛道专精策略，提供选题定位、Hook 构造、账号诊断与变现闭环。",
+      "installed": true
+    },
     {
       "id": "sk-x-sopilot",
       "slug": "sopilot-social-agents",
