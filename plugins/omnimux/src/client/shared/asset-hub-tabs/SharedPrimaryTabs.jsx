@@ -23,7 +23,7 @@ export function SharedPrimaryTabs({
   ].filter(Boolean).join(' ')
 
   return (
-    <div className={containerClass} role="tablist" aria-label="创作素材库主导航">
+    <div className={containerClass} role="tablist" aria-label={isEn ? 'Primary asset library navigation' : '创作素材库主导航'}>
       {SHARED_PRIMARY_TABS.map((tab) => {
         const isSelected = activeTab === tab.id
         const label = getPrimaryTabTitle(tab.id, isEn)

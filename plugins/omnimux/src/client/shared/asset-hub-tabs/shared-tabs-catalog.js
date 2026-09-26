@@ -58,7 +58,6 @@ export const SHARED_SUB_CATEGORIES = Object.freeze({
   trending: Object.freeze([
     { id: 'all', nameZh: '全部', nameEn: 'All' },
     { id: 'beauty-personal', nameZh: '美妆个护', nameEn: 'Beauty' },
-    { id: 'beauty_skincare', nameZh: '美妆个护', nameEn: 'Beauty' },
     { id: 'fashion-style', nameZh: '服饰时尚', nameEn: 'Fashion' },
     { id: 'tech-electronics', nameZh: '数码家电', nameEn: 'Tech & Digital' },
     { id: 'food-drinks', nameZh: '美食饮品', nameEn: 'Food & Drinks' },

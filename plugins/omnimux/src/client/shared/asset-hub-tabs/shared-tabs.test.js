@@ -76,7 +76,7 @@ describe('Shared Tabs Catalog (共享契约层单一真源) 规格与规范测�
     assert.equal(getSubCategoriesForTab('assets').length, 6)
     assert.equal(getSubCategoriesForTab('inspiration').length, 5)
     assert.equal(getSubCategoriesForTab('products').length, 6)
-    assert.equal(getSubCategoriesForTab('trending').length, 9)
+    assert.equal(getSubCategoriesForTab('trending').length, 8)
     assert.equal(getSubCategoriesForTab('skills').length, 7)
 
     // 校验 searchPlaceholder

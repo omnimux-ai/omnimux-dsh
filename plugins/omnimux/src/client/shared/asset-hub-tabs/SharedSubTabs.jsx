@@ -27,15 +27,14 @@ export function SharedSubTabs({
   ].filter(Boolean).join(' ')
 
   return (
-    <div className={containerClass} role="group" aria-label="二级细分分类">
+    <div className={containerClass} role="group" aria-label={isEn ? 'Sub-category filter' : '二级细分分类'}>
       {categories.map((cat) => {
         const label = isEn ? cat.nameEn : cat.nameZh
         // 双向兼容：currentFilter 可能是 ID（'all'）也可能是中文（'全部'）
         const isSelected =
           currentFilter === cat.id ||
           currentFilter === cat.nameZh ||
-          currentFilter === cat.nameEn ||
-          ((currentFilter === 'all' || currentFilter === '全部') && (cat.id === 'all' || cat.nameZh === '全部'))
+          currentFilter === cat.nameEn
 
         const btnClass = [
           'omx-shared-sub-tab',
@@ -50,9 +49,7 @@ export function SharedSubTabs({
             className={btnClass}
             aria-pressed={isSelected}
             onClick={() => {
-              // 兼容回调：如果原始 currentFilter 传的是中文，优先触发中文以保障现有代码平滑兼容
-              const isChineseCaller = typeof currentFilter === 'string' && /[\u4e00-\u9fa5]/.test(currentFilter)
-              onFilterChange?.(isChineseCaller ? cat.nameZh : cat.id)
+              onFilterChange?.(cat.nameZh)
             }}
           >
             {label}

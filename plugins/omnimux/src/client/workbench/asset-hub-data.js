@@ -9,6 +9,27 @@ import { resolveProductPreview } from '../components/product-picker/product-atta
 import { ALL_CREATIVE_TEMPLATES } from '../session-guide/templates/templates-data.js'
 import FEATURED_SKILLS_JSON from '../session-guide/skills/featured-skills.json' with { type: 'json' }
 
+/**
+ * 安全加载精选技能数据代理（对齐 library-stage-model.js 使用标准 ESM 静态导入，严禁动态执行）
+ */
+let cachedFeaturedSkills = null
+
+async function getFeaturedSkillsSnapshot() {
+  if (cachedFeaturedSkills) return cachedFeaturedSkills
+  if (FEATURED_SKILLS_JSON && typeof FEATURED_SKILLS_JSON === 'object') {
+    cachedFeaturedSkills = FEATURED_SKILLS_JSON
+    return cachedFeaturedSkills
+  }
+  try {
+    const { createRequire } = await import('node:module')
+    const req = createRequire(import.meta.url)
+    cachedFeaturedSkills = req('../session-guide/skills/featured-skills.json')
+    return cachedFeaturedSkills
+  } catch {
+    return { skills: [] }
+  }
+}
+
 async function requestJson(path, fetchImpl, signal) {
   const fetchFn = fetchImpl || (typeof window !== 'undefined' ? window.fetch : globalThis.fetch)
   if (typeof fetchFn !== 'function') {
@@ -49,12 +70,16 @@ export function resolveSkillCover(cover, coverIndex) {
   if (!cover || typeof cover !== 'string') return ''
   const trimmed = cover.trim()
   if (!trimmed) return ''
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image/')) {
     return trimmed
   }
   const match = trimmed.match(/skill-card-(\d+)\.webp/)
   if (match) {
     return `/omnimux/assets/skill-card-covers/skill-card-${match[1]}.webp`
+  }
+  // 外部拼接 URL 增加安全协议白名单校验（拒绝非 http/https 协议）
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    return ''
   }
   return `/omnimux-market/icon?url=${encodeURIComponent(trimmed)}`
 }
@@ -228,14 +253,36 @@ export function normalizeTrendingItem(row) {
   const id = String(row.id || '')
   const title = String(row.title || row.name || row.description || id)
   const thumbnailUrl = row.coverUrl || row.cover || row.thumbnailUrl || row.poster || ''
-  const previewVideoUrl = row.previewVideoUrl || row.videoUrl || row.mediaUrl || row.url || (Array.isArray(row.media_urls) ? row.media_urls[0] : '') || ''
+
+  // previewVideoUrl 优化视频守卫逻辑：仅排除明确属于静态图片扩展名的候选链接，合法云端视频保持通路
+  let previewVideoUrl = ''
+  const candidate = (
+    row.previewVideoUrl ||
+    row.videoUrl ||
+    row.mediaUrl ||
+    row.url ||
+    (Array.isArray(row.media_urls) ? row.media_urls[0] : '') ||
+    ''
+  )
+  if (typeof candidate === 'string' && candidate.trim()) {
+    const trimmedCandidate = candidate.trim()
+    const cleanUrl = trimmedCandidate.split(/[?#]/)[0]
+    const isImageExt = /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(cleanUrl)
+    if (!isImageExt) {
+      previewVideoUrl = trimmedCandidate
+    }
+  }
+
   const durationText = typeof row.duration === 'number' && row.duration > 0 ? formatDuration(row.duration) : ''
 
+  // row.views 补齐数值有效性校验与安全兜底
   let dimensionsOrSize = ''
-  if (row.views) {
+  if (typeof row.views === 'number' && Number.isFinite(row.views) && row.views > 0) {
     dimensionsOrSize = `${row.views} 次播放`
+  } else if (typeof row.views === 'string' && row.views.trim()) {
+    dimensionsOrSize = `${row.views.trim()} 次播放`
   } else if (row.resolution) {
-    dimensionsOrSize = row.resolution
+    dimensionsOrSize = String(row.resolution)
   }
 
   return {
@@ -370,7 +417,8 @@ export async function loadAssetHubData(tab, options = {}) {
   }
 
   if (tab === 'skills') {
-    const list = Array.isArray(FEATURED_SKILLS_JSON?.skills) ? FEATURED_SKILLS_JSON.skills : []
+    const skillsData = await getFeaturedSkillsSnapshot()
+    const list = Array.isArray(skillsData?.skills) ? skillsData.skills : []
     return list.map(normalizeSkillItem).filter(Boolean)
   }
 
@@ -408,10 +456,6 @@ export const FILTER_PILL_ENUM_MAP = Object.freeze({
   '美妆护肤': Object.freeze(['beauty-care', 'beauty', 'care']),
   '服饰箱包': Object.freeze(['fashion-apparel', 'fashion', 'apparel', 'bags']),
   '食品饮料': Object.freeze(['food-beverage', 'food', 'beverage']),
-  '商品主图': Object.freeze(['main', 'primary', 'cover', 'hero', 'image']),
-  '模特展示': Object.freeze(['model', 'wear', 'tryon', 'person', 'character']),
-  '卖点细节': Object.freeze(['detail', 'feature', 'spec', 'close_up']),
-  '场景切片': Object.freeze(['scene', 'context', 'lifestyle', 'slice']),
 
   // 爆款趋势标签映射
   '美妆个护': Object.freeze(['beauty-personal', 'beauty_skincare', 'beauty', 'skincare']),

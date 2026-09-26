@@ -107,14 +107,20 @@ export function createAssetHubNavStore() {
       emit()
     },
     setSecondaryFilter(tab, filter) {
+      let targetFilter = filter
+      const subCats = SHARED_SUB_CATEGORIES[tab]
+      if (Array.isArray(subCats)) {
+        const found = subCats.find((c) => c.id === filter || c.nameEn === filter || c.nameZh === filter)
+        if (found) targetFilter = found.nameZh
+      }
       const allowed = SECONDARY_FILTER_WHITELIST[tab]
-      if (!allowed || !allowed.includes(filter)) return
-      if (state.secondaryFilters[tab] === filter) return
+      if (!allowed || !allowed.includes(targetFilter)) return
+      if (state.secondaryFilters[tab] === targetFilter) return
       state = {
         ...state,
         secondaryFilters: {
           ...state.secondaryFilters,
-          [tab]: filter,
+          [tab]: targetFilter,
         },
       }
       emit()

@@ -31,6 +31,7 @@ function getAssetHubCardPrompt(item) {
  * 彻底废除旧全屏弹窗，作为右侧边栏第三栏原生工作台运行。
  */
 export function AssetHubPanel(props) {
+  const isEn = Boolean(props?.isEn)
   useEffect(() => {
     return installAssetHubStyles(hostDocument())
   }, [])
@@ -291,6 +292,7 @@ export function AssetHubPanel(props) {
         onTabChange={(tab) => navStore.setActiveTab(tab)}
         onToggleFullscreen={handleToggleFullscreen}
         onCollapse={handleCollapse}
+        isEn={isEn}
       />
 
       {notice ? (
@@ -307,6 +309,7 @@ export function AssetHubPanel(props) {
         onFilterChange={(f) => navStore.setSecondaryFilter(activeTab, f)}
         onSearchChange={(q) => navStore.setSearchQuery(q)}
         onActionClick={handlePrimaryAction}
+        isEn={isEn}
       />
 
       {/* 卡片滚动流 */}

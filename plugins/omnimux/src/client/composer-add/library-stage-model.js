@@ -148,11 +148,14 @@ async function loadTrending(fetchImpl, limit) {
 
 async function loadSkills(fetchImpl, limit) {
   const list = Array.isArray(FEATURED_SKILLS_JSON?.skills) ? FEATURED_SKILLS_JSON.skills : []
-  return list.slice(0, limit).map((skill) => ({
-    id: String(skill.id),
-    title: String(skill.titleZh || skill.title || skill.id),
-    raw: skill,
-  }))
+  return list
+    .filter((skill) => skill?.id)
+    .slice(0, limit)
+    .map((skill) => ({
+      id: String(skill.id),
+      title: String(skill.titleZh || skill.title || skill.id),
+      raw: skill,
+    }))
 }
 
 const LOADERS = {

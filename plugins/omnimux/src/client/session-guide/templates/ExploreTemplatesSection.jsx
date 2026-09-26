@@ -408,12 +408,6 @@ export function ExploreTemplatesSection({
     if (activePrimaryTab === 'featured' || activePrimaryTab === 'skills') return [];
     if (selectedSubCategory === 'all') return libraryData.cards;
     const target = String(selectedSubCategory).toLowerCase();
-    if (target === 'favorites') {
-      return libraryData.cards.filter((c) => {
-        const raw = c.raw || {};
-        return Boolean(raw.is_favorite || raw.favorite || raw.source?.is_favorite);
-      });
-    }
     return libraryData.cards.filter((c) => {
       const trending = c.trending || {};
       const raw = c.raw || {};
