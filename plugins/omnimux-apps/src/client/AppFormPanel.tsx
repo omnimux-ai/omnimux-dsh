@@ -259,7 +259,10 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
     if (isSubmitting) return;
 
     // Run strict schema validation against effective exposed schema
-    const valResult = validateFormData(effectiveFormSchema, values);
+    const effectiveValues = Object.fromEntries(
+      Object.keys(effectiveFormSchema.properties).map((key) => [key, values[key]]),
+    );
+    const valResult = validateFormData(effectiveFormSchema, effectiveValues);
     if (!valResult.valid) {
       const fieldErrors: Record<string, string> = {};
       for (const err of valResult.errors) {
@@ -276,7 +279,7 @@ export const AppFormPanel: React.FC<AppFormPanelProps> = memo(({
     }
 
     setErrors({});
-    await onSubmit?.(values);
+    await onSubmit?.(effectiveValues);
   };
 
   // Determine UI widget for each field

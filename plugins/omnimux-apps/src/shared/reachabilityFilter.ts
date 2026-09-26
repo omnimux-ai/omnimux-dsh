@@ -25,19 +25,23 @@ export function filterReachableFormFields(
   const nodeInDegrees = new Map<string, number>();
   const nodeOutDegrees = new Map<string, number>();
   for (const n of snapshot.nodes) {
-    if (n && n.id) {
-      nodeInDegrees.set(n.id, 0);
-      nodeOutDegrees.set(n.id, 0);
+    if (n && typeof n === 'object' && 'id' in n && typeof (n as { id?: unknown }).id === 'string') {
+      const id = (n as { id: string }).id;
+      nodeInDegrees.set(id, 0);
+      nodeOutDegrees.set(id, 0);
     }
   }
 
   for (const e of snapshot.edges) {
-    if (!e) continue;
-    if (nodeInDegrees.has(e.target)) {
-      nodeInDegrees.set(e.target, (nodeInDegrees.get(e.target) || 0) + 1);
+    if (!e || typeof e !== 'object') continue;
+    const edgeObj = e as { source?: unknown; target?: unknown };
+    const source = typeof edgeObj.source === 'string' ? edgeObj.source : undefined;
+    const target = typeof edgeObj.target === 'string' ? edgeObj.target : undefined;
+    if (target && nodeInDegrees.has(target)) {
+      nodeInDegrees.set(target, (nodeInDegrees.get(target) || 0) + 1);
     }
-    if (nodeOutDegrees.has(e.source)) {
-      nodeOutDegrees.set(e.source, (nodeOutDegrees.get(e.source) || 0) + 1);
+    if (source && nodeOutDegrees.has(source)) {
+      nodeOutDegrees.set(source, (nodeOutDegrees.get(source) || 0) + 1);
     }
   }
 
