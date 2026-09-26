@@ -95,22 +95,6 @@ export function mountMedia(ctx, opts) {
       const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
 
       const runtime = resolveRuntimeChoice(current)
-      const isAgentVerified = current?.runtimeMode === 'agent'
-        && runtime.textReady === true
-        && typeof current?.runtimeAgentId === 'string'
-        && current.runtimeAgentId.trim().length > 0
-        && current?.runtimeAgentVerified === true
-      const hasVerifiedRuntime = (() => {
-        try {
-          assertRuntimeReady(current, kind)
-          return true
-        } catch {
-          return false
-        }
-      })()
-      const isOfficialAllowed = runtime.mode === 'official'
-        || (current?.allowOfficialMediaFallback === true && hasVerifiedRuntime)
-
       const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
       const targetChannel = typeof rawTargetChannel === 'string' ? rawTargetChannel.toLowerCase().trim() : ''
       const { modelId: requestModelId } = parseModelAndGroup(req?.model)
@@ -125,15 +109,20 @@ export function mountMedia(ctx, opts) {
 
       // 渠道严格判定：
       // 1. 若显式指定渠道，必须为已知官方专线；
-      // 2. 常规官方请求未显式指定渠道组（targetChannel 为空）时，在官方模式下正确识别为默认官方渠道；
+      // 2. 常规官方请求未显式指定渠道组（targetChannel 为空）时，若为官方模式或已验证的兜底模式，识别为官方通道；
       // 3. 绝不能被未知自定义渠道或 BYOK 渠道冒领
+      const hasVerifiedRuntime = Boolean(runtime.textReady || runtime.mediaReady)
+      const isFallbackOfficial = !targetChannel && current?.allowOfficialMediaFallback === true && hasVerifiedRuntime
       const isOfficialRequest = !channelIntent.isByokChannel
         && (
           (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
-          || (!targetChannel && runtime.mode === 'official')
+          || (!targetChannel && (runtime.mode === 'official' || isFallbackOfficial))
         )
 
-      const isOfficialBypass = isOfficialRequest && isOfficialAllowed && hasOfficialToken
+      // 正交共存架构：
+      // 1. 凡目标渠道为官方专线的请求，只要具备权威官方 Token，彻底取消对全局 runtimeMode 的阻断，直接放行执行！
+      // 2. 其余未通过官方 Bypass 的请求（如未配置的自备渠道或未指定渠道的请求），严格校验本地运行方式就绪度。
+      const isOfficialBypass = isOfficialRequest && hasOfficialToken
       if (!isOfficialBypass) {
         assertRuntimeReady(current, kind)
       }
