@@ -257,17 +257,32 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
             ? body.canvasWorkspaceId.trim()
             : undefined;
 
+          let createdNewWorkspace = false;
           if (!canvasWorkspaceId) {
             if (opts.workspaceStore) {
               const newWs = opts.workspaceStore.create(title);
               canvasWorkspaceId = newWs.id;
+              createdNewWorkspace = true;
             } else {
               canvasWorkspaceId = `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
             }
           }
 
           const loadMemory = Boolean(body.loadMemory);
-          const updatedProject = store.addPage(projectId, title, { canvasWorkspaceId, loadMemory });
+          let updatedProject;
+          try {
+            updatedProject = store.addPage(projectId, title, { canvasWorkspaceId, loadMemory });
+          } catch (error) {
+            if (createdNewWorkspace && canvasWorkspaceId && opts.workspaceStore) {
+              try {
+                opts.workspaceStore.remove(canvasWorkspaceId);
+              } catch {
+                // 忽略清理异常，向上抛出原始写入异常
+              }
+            }
+            throw error;
+          }
+
           const newPage = updatedProject.pages?.find((p) => p.id === updatedProject.activePageId)
             ?? updatedProject.pages?.find((p) => p.canvasWorkspaceId === canvasWorkspaceId);
 

@@ -10,7 +10,7 @@
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
@@ -601,6 +601,83 @@ test('T03: POST /pages 前置校验 title 合法性，非法时不触发 workspa
   assert.equal(validAddPageRes.body.page.title, '有效第三镜头组');
 
   rmSync(libraryRoot, { recursive: true, force: true });
+});
+
+test('T04: POST /pages 事务补偿与回滚：store.addPage 失败时自动调用 workspaceStore.remove 清理残留工作区', async () => {
+  const libraryRoot = tmpDir('omnimux-pages-rollback-');
+  const createdWorkspaces = [];
+  const removedWorkspaces = [];
+  const fakeWorkspaceStore = {
+    create(name) {
+      const ws = { id: `ws_rollback_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name };
+      createdWorkspaces.push(ws);
+      return ws;
+    },
+    remove(id) {
+      removedWorkspaces.push(id);
+    },
+  };
+
+  const dispatcher = host.createProjectDispatcher({
+    libraryRoot,
+    workspaceStore: fakeWorkspaceStore,
+  });
+
+  const localHeaders = { origin: 'http://localhost:3000' };
+
+  // 1. 创建测试项目
+  const createProjectRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-workflow/api/projects',
+    headers: localHeaders,
+    body: { title: '测试回滚项目' },
+  });
+  assert.equal(createProjectRes.status, 200);
+  const projectId = createProjectRes.body.project.id;
+  const projectRoot = createProjectRes.body.project.path;
+  const dotOmnimuxDir = join(projectRoot, '.omnimux');
+
+  // 2. 将 .omnimux 设为只读模式 (0o555)，使后续 store.addPage 写盘时触发 EACCES 抛出异常
+  chmodSync(dotOmnimuxDir, 0o555);
+
+  try {
+    const failedAddRes = await dispatcher.dispatch({
+      method: 'POST',
+      url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+      headers: localHeaders,
+      body: { title: '回滚镜头组' },
+    });
+
+    // 写入失败应返回 500 internal error
+    assert.equal(failedAddRes.status, 500);
+    // 验证先调用了 workspaceStore.create
+    assert.equal(createdWorkspaces.length, 1);
+    const createdId = createdWorkspaces[0].id;
+    // 核心断言：验证 store.addPage 失败时触发回滚补偿，workspaceStore.remove 被精确调用
+    assert.equal(removedWorkspaces.length, 1);
+    assert.equal(removedWorkspaces[0], createdId, 'opts.workspaceStore.remove 必须被调用以清理残留物理工作区');
+  } finally {
+    // 恢复目录写权限
+    chmodSync(dotOmnimuxDir, 0o755);
+  }
+
+  // 3. 对比断言：显式提供 canvasWorkspaceId 时，若 store.addPage 失败，严禁调用 remove 误删已有工作区
+  chmodSync(dotOmnimuxDir, 0o555);
+  try {
+    const failedWithExplicitWs = await dispatcher.dispatch({
+      method: 'POST',
+      url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+      headers: localHeaders,
+      body: { title: '已有画布页', canvasWorkspaceId: 'ws_existing_canvas_preserve' },
+    });
+    assert.equal(failedWithExplicitWs.status, 500);
+    // 严禁对已有工作区调用 remove
+    assert.equal(removedWorkspaces.length, 1, '未自动创建工作区时严禁调用 opts.workspaceStore.remove');
+    assert.equal(removedWorkspaces.includes('ws_existing_canvas_preserve'), false);
+  } finally {
+    chmodSync(dotOmnimuxDir, 0o755);
+    rmSync(libraryRoot, { recursive: true, force: true });
+  }
 });
 
 }); // describe
