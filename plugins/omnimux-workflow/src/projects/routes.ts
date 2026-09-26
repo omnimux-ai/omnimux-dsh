@@ -11,6 +11,7 @@
  *
  * 项目库作用域 = 默认库，不再接收 cwd。写操作先过 assertLocalWrite。
  */
+import { randomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
@@ -24,7 +25,7 @@ import {
 } from '../http/helpers';
 import { displayHomePath, ensureLibraryRoot, resolveVideosDir } from './library';
 import { ProjectPathError } from './paths';
-import { createProjectStore, ProjectStoreError } from './ProjectStore';
+import { createProjectStore, ProjectStoreError, validateTitle } from './ProjectStore';
 import { ensureWorkspaceProjectBound } from './workspaceProjectBinding';
 import { sessionToWorkspaceId } from '../shared/sessionWorkspaceId';
 import type { WorkspaceStore } from '../workflow/workspace/WorkspaceStore.ts';
@@ -55,6 +56,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   'session-required': 400,
   'body-too-large': 413,
   'project-not-found': 404,
+  'page-not-found': 404,
   'project-exists': 409,
   'not-found': 404,
   'not-local': 403,
@@ -190,7 +192,7 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
               title: record.title,
               path: record.path,
               activePageId: record.activePageId,
-              canvasWorkspaceId: activePage?.canvasWorkspaceId ?? record.canvasWorkspaceIds?.[0] ?? null,
+              canvasWorkspaceId: activePage?.canvasWorkspaceId ?? null,
               pages,
             },
           },
@@ -249,12 +251,47 @@ export function createProjectDispatcher(opts: { libraryRoot?: string; workspaceS
           const problem = jsonBodyProblem(req.body);
           if (problem) return problem;
           const body = req.body as { title?: unknown; canvasWorkspaceId?: unknown; loadMemory?: unknown };
-          const title = typeof body.title === 'string' ? body.title : '';
-          const canvasWorkspaceId = typeof body.canvasWorkspaceId === 'string' ? body.canvasWorkspaceId : undefined;
+          const title = validateTitle(body.title);
+          store.get(projectId);
+          let canvasWorkspaceId = typeof body.canvasWorkspaceId === 'string' && body.canvasWorkspaceId.trim() !== ''
+            ? body.canvasWorkspaceId.trim()
+            : undefined;
+
+          let createdNewWorkspace = false;
+          if (!canvasWorkspaceId) {
+            if (opts.workspaceStore) {
+              const newWs = opts.workspaceStore.create(title);
+              canvasWorkspaceId = newWs.id;
+              createdNewWorkspace = true;
+            } else {
+              canvasWorkspaceId = `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+            }
+          }
+
           const loadMemory = Boolean(body.loadMemory);
+          let updatedProject;
+          try {
+            updatedProject = store.addPage(projectId, title, { canvasWorkspaceId, loadMemory });
+          } catch (error) {
+            if (createdNewWorkspace && canvasWorkspaceId && opts.workspaceStore) {
+              try {
+                opts.workspaceStore.remove(canvasWorkspaceId);
+              } catch {
+                // 忽略清理异常，向上抛出原始写入异常
+              }
+            }
+            throw error;
+          }
+
+          const newPage = updatedProject.pages?.find((p) => p.id === updatedProject.activePageId)
+            ?? updatedProject.pages?.find((p) => p.canvasWorkspaceId === canvasWorkspaceId);
+
           return {
             status: 200,
-            body: { project: store.addPage(projectId, title, { canvasWorkspaceId, loadMemory }) },
+            body: {
+              project: updatedProject,
+              page: newPage,
+            },
           };
         }
         return { status: 404, body: { error: 'not-found', message: 'unknown route' } };

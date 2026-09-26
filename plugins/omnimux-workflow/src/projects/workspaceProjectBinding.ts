@@ -66,7 +66,7 @@ function findProjectByRoot(
   if (typeof projectStore.findByRoot === 'function') {
     return projectStore.findByRoot(root);
   }
-  const row = projectStore.list().find((entry) => resolve(entry.path) === root);
+  const row = projectStore.list().find((entry) => Boolean(entry.path) && resolve(entry.path!) === root);
   if (!row) return null;
   try {
     return projectStore.get(row.id);

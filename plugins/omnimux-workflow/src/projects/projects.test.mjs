@@ -10,7 +10,7 @@
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
@@ -307,6 +307,376 @@ test('T2 routes：GET library + 无 cwd list/create + 跨源写拒绝', async ()
     else process.env.OMNIMUX_VIDEOS_DIR = prevVideos;
     rmSync(harness, { recursive: true, force: true });
     rmSync(videosRoot, { recursive: true, force: true });
+  }
+});
+
+test('T0 schema：projectPageSchema 的 canvasWorkspaceId 必须 min(1)', () => {
+  assert.ok(host.projectPageSchema, 'projectPageSchema 存在');
+  const valid = host.projectPageSchema.safeParse({
+    id: 'page-1',
+    title: '第一页',
+    createdAt: '2026-09-26T00:00:00.000Z',
+    updatedAt: '2026-09-26T00:00:00.000Z',
+    canvasWorkspaceId: 'ws_valid123',
+  });
+  assert.equal(valid.success, true);
+
+  const missingWs = host.projectPageSchema.safeParse({
+    id: 'page-1',
+    title: '第一页',
+    createdAt: '2026-09-26T00:00:00.000Z',
+    updatedAt: '2026-09-26T00:00:00.000Z',
+  });
+  assert.equal(missingWs.success, false, '缺失 canvasWorkspaceId 必须拒绝');
+
+  const emptyWs = host.projectPageSchema.safeParse({
+    id: 'page-1',
+    title: '第一页',
+    createdAt: '2026-09-26T00:00:00.000Z',
+    updatedAt: '2026-09-26T00:00:00.000Z',
+    canvasWorkspaceId: '',
+  });
+  assert.equal(emptyWs.success, false, '空串 canvasWorkspaceId 必须拒绝');
+});
+
+test('T01: ProjectStore 数据一致性与读时自愈机制 (repairProjectRecord)', () => {
+  const libraryRoot = tmpDir('omnimux-healing-');
+  try {
+    const store = host.createProjectStore({ libraryRoot });
+
+    // 1. 测试 a: 若 pages 为空，自动补全首个创作页，生成合法 ws_*，去重同步 canvasWorkspaceIds
+    const projectA = store.create('项目自愈测试A');
+    const projectDirA = projectA.path;
+    const projectFileA = join(projectDirA, '.omnimux', 'project.json');
+    // 手工制造脏数据：清空 pages 且 activePageId 为空
+    const rawDirtyA = JSON.parse(readFileSync(projectFileA, 'utf8'));
+    rawDirtyA.pages = [];
+    rawDirtyA.activePageId = '';
+    rawDirtyA.canvasWorkspaceIds = ['ws_original_canvas'];
+    writeFileSync(projectFileA, JSON.stringify(rawDirtyA, null, 2), 'utf8');
+
+    // 读时触发自愈 (get)
+    const healedA = store.get(projectA.id);
+    assert.ok(healedA.pages && healedA.pages.length === 1, 'pages 为空时自动补全首个创作页');
+    assert.equal(healedA.pages[0].id, 'page-default');
+    assert.equal(healedA.pages[0].canvasWorkspaceId, 'ws_original_canvas', '优先保留已有合法 canvasWorkspaceIds[0]');
+    assert.equal(healedA.activePageId, 'page-default', 'activePageId 回落至 pages[0].id');
+    assert.deepEqual(healedA.canvasWorkspaceIds, ['ws_original_canvas'], '去重同步 canvasWorkspaceIds');
+    // 验证立即原子写盘持久化且绝无绝对路径 path 字段泄露污染
+    const persistedA = JSON.parse(readFileSync(projectFileA, 'utf8'));
+    assert.equal(persistedA.pages[0].canvasWorkspaceId, 'ws_original_canvas');
+    assert.equal(persistedA.activePageId, 'page-default');
+    assert.equal(persistedA.path, undefined, '写入磁盘的 project.json 严禁包含运行时派生的 path 绝对路径');
+    assert.equal('path' in persistedA, false, 'project.json 纯净元数据中不得有 path 键');
+
+    // 2. 测试 b/c/d: 遍历 pages，对缺失或空串分配全新 ws_*，去重同步，activePageId 失效回落
+    const projectB = store.create('项目自愈测试B');
+    const projectDirB = projectB.path;
+    const projectFileB = join(projectDirB, '.omnimux', 'project.json');
+    // 制造脏数据：包含缺失 canvasWorkspaceId 与空串的页面，activePageId 指向不存在的页面
+    const rawDirtyB = JSON.parse(readFileSync(projectFileB, 'utf8'));
+    rawDirtyB.pages = [
+      { id: 'page-1', title: '页1', createdAt: '2026-09-26T00:00:00.000Z', updatedAt: '2026-09-26T00:00:00.000Z' },
+      { id: 'page-2', title: '页2', createdAt: '2026-09-26T00:00:00.000Z', updatedAt: '2026-09-26T00:00:00.000Z', canvasWorkspaceId: '' },
+      { id: 'page-3', title: '页3', createdAt: '2026-09-26T00:00:00.000Z', updatedAt: '2026-09-26T00:00:00.000Z', canvasWorkspaceId: 'ws_existing_3' },
+    ];
+    rawDirtyB.activePageId = 'page-ghost';
+    rawDirtyB.canvasWorkspaceIds = ['ws_stale'];
+    writeFileSync(projectFileB, JSON.stringify(rawDirtyB, null, 2), 'utf8');
+
+    // 读时触发自愈 (list)
+    const listResult = store.list();
+    const itemB = listResult.find((p) => p.id === projectB.id);
+    assert.ok(itemB);
+    assert.equal(itemB.pages.length, 3);
+    assert.match(itemB.pages[0].canvasWorkspaceId, /^ws_[a-zA-Z0-9_-]{1,128}$/);
+    assert.match(itemB.pages[1].canvasWorkspaceId, /^ws_[a-zA-Z0-9_-]{1,128}$/);
+    assert.equal(itemB.pages[2].canvasWorkspaceId, 'ws_existing_3');
+    assert.notEqual(itemB.pages[0].canvasWorkspaceId, itemB.pages[1].canvasWorkspaceId, '各分配全新独立 ID');
+    assert.equal(itemB.activePageId, 'page-1', 'activePageId 安全回落至 pages[0].id');
+
+    // 验证盘上已同步
+    const diskB = store.get(projectB.id);
+    assert.equal(diskB.pages[0].canvasWorkspaceId, itemB.pages[0].canvasWorkspaceId);
+    assert.deepEqual(
+      new Set(diskB.canvasWorkspaceIds),
+      new Set([diskB.pages[0].canvasWorkspaceId, diskB.pages[1].canvasWorkspaceId, 'ws_existing_3', 'ws_stale']),
+      '所有创作页的 canvasWorkspaceId 去重同步至 canvasWorkspaceIds',
+    );
+    const persistedB = JSON.parse(readFileSync(projectFileB, 'utf8'));
+    assert.equal(persistedB.path, undefined, '自愈写盘后的 project.json 严禁泄露绝对路径 path');
+    assert.equal('path' in persistedB, false);
+
+    // 3. 测试 findByCanvasWorkspaceId 命中自愈后的创作页
+    const foundByWs = store.findByCanvasWorkspaceId(diskB.pages[1].canvasWorkspaceId);
+    assert.ok(foundByWs);
+    assert.equal(foundByWs.id, projectB.id);
+
+    // 4. 测试 setActivePage 自愈与安全设置
+    const activated = store.setActivePage(projectB.id, 'page-3');
+    assert.equal(activated.activePageId, 'page-3');
+    assert.throws(() => store.setActivePage(projectB.id, 'not-exist'), (e) => e.code === 'page-not-found');
+
+    // 5. 重构 addPage 契约测试
+    const afterAdd = store.addPage(projectB.id, '新创作页');
+    const newAddedPage = afterAdd.pages[afterAdd.pages.length - 1];
+    assert.match(newAddedPage.canvasWorkspaceId, /^ws_[a-zA-Z0-9_-]{1,128}$/);
+    assert.equal(afterAdd.activePageId, newAddedPage.id, 'activePageId 设置为新页面');
+    assert.ok(afterAdd.canvasWorkspaceIds.includes(newAddedPage.canvasWorkspaceId), '新页面的 wsId 自动进入 canvasWorkspaceIds');
+  } finally {
+    rmSync(libraryRoot, { recursive: true, force: true });
+  }
+});
+
+test('T02: POST /pages 物理工作区自动创建与 session-binding 修正', async () => {
+  const libraryRoot = tmpDir('omnimux-pages-routes-');
+  const createdWorkspaces = [];
+  const fakeWorkspaceStore = {
+    create(name) {
+      const ws = { id: `ws_created_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name };
+      createdWorkspaces.push(ws);
+      return ws;
+    },
+  };
+
+  const dispatcher = host.createProjectDispatcher({
+    libraryRoot,
+    workspaceStore: fakeWorkspaceStore,
+    resolveSessionWorkspaceDir: (sess) => join(libraryRoot, sess),
+  });
+
+  const localHeaders = { origin: 'http://localhost:3000' };
+
+  // 1. 先通过 dispatcher 创建一个测试项目
+  const createProjectRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-workflow/api/projects',
+    headers: localHeaders,
+    body: { title: '多创作页项目' },
+  });
+  assert.equal(createProjectRes.status, 200);
+  const projectId = createProjectRes.body.project.id;
+
+  // 2. POST /projects/:projectId/pages 未传 canvasWorkspaceId：
+  // 必须自动调用 workspaceStore.create(title)，并返回 { status: 200, body: { project, page } }
+  const addPageRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+    headers: localHeaders,
+    body: { title: '第二镜头组' },
+  });
+  assert.equal(addPageRes.status, 200);
+  assert.ok(addPageRes.body.project, '响应必须包含 project');
+  assert.ok(addPageRes.body.page, '响应必须包含 page');
+  assert.equal(addPageRes.body.page.title, '第二镜头组');
+  assert.equal(createdWorkspaces.length, 1, '调用了 workspaceStore.create');
+  assert.equal(addPageRes.body.page.canvasWorkspaceId, createdWorkspaces[0].id, '创作页使用了物理创建的 workspace ID');
+  assert.equal(addPageRes.body.project.activePageId, addPageRes.body.page.id);
+  assert.ok(addPageRes.body.project.canvasWorkspaceIds.includes(createdWorkspaces[0].id));
+
+  // 3. GET /projects/session-binding 优先使用 activePage.canvasWorkspaceId
+  const sessDir = join(libraryRoot, 'test-sess');
+  mkdirSync(sessDir, { recursive: true });
+  const bindingRes = await dispatcher.dispatch({
+    method: 'GET',
+    url: '/omnimux-workflow/api/projects/session-binding?sessionId=test-sess',
+  });
+  assert.equal(bindingRes.status, 200);
+  assert.equal(bindingRes.body.ok, true);
+  assert.ok(bindingRes.body.project);
+  assert.equal(
+    bindingRes.body.project.canvasWorkspaceId,
+    bindingRes.body.project.pages[0].canvasWorkspaceId,
+    '优先且必须等于 activePage 的 canvasWorkspaceId',
+  );
+
+  rmSync(libraryRoot, { recursive: true, force: true });
+});
+
+test('T03: POST /pages 前置校验 title 合法性，非法时不触发 workspaceStore.create 避免孤儿工作区', async () => {
+  const libraryRoot = tmpDir('omnimux-pages-title-validation-');
+  const createdWorkspaces = [];
+  const fakeWorkspaceStore = {
+    create(name) {
+      const ws = { id: `ws_created_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name };
+      createdWorkspaces.push(ws);
+      return ws;
+    },
+  };
+
+  const dispatcher = host.createProjectDispatcher({
+    libraryRoot,
+    workspaceStore: fakeWorkspaceStore,
+  });
+
+  const localHeaders = { origin: 'http://localhost:3000' };
+
+  // 1. 创建测试项目
+  const createProjectRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-workflow/api/projects',
+    headers: localHeaders,
+    body: { title: '测试项目校验' },
+  });
+  assert.equal(createProjectRes.status, 200);
+  const projectId = createProjectRes.body.project.id;
+
+  // 2. 缺少 title 字段
+  const missingTitleRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+    headers: localHeaders,
+    body: {},
+  });
+  assert.equal(missingTitleRes.status, 400);
+  assert.equal(missingTitleRes.body.error, 'title-required');
+  assert.equal(createdWorkspaces.length, 0, '缺少 title 严禁触发 workspaceStore.create');
+
+  // 3. 空字符串 title: ''
+  const emptyTitleRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+    headers: localHeaders,
+    body: { title: '' },
+  });
+  assert.equal(emptyTitleRes.status, 400);
+  assert.equal(emptyTitleRes.body.error, 'title-required');
+  assert.equal(createdWorkspaces.length, 0, '空 title 严禁触发 workspaceStore.create');
+
+  // 4. 纯空白字符串 title: '   '
+  const blankTitleRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+    headers: localHeaders,
+    body: { title: '   ' },
+  });
+  assert.equal(blankTitleRes.status, 400);
+  assert.equal(blankTitleRes.body.error, 'title-required');
+  assert.equal(createdWorkspaces.length, 0, '纯空白 title 严禁触发 workspaceStore.create');
+
+  // 5. 非字符串 title: 123
+  const nonStringTitleRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+    headers: localHeaders,
+    body: { title: 123 },
+  });
+  assert.equal(nonStringTitleRes.status, 400);
+  assert.equal(nonStringTitleRes.body.error, 'title-required');
+  assert.equal(createdWorkspaces.length, 0, '非字符串 title 严禁触发 workspaceStore.create');
+
+  // 6. 超过 200 字符的超长 title
+  const tooLongTitle = 'a'.repeat(201);
+  const tooLongTitleRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+    headers: localHeaders,
+    body: { title: tooLongTitle },
+  });
+  assert.equal(tooLongTitleRes.status, 400);
+  assert.equal(tooLongTitleRes.body.error, 'title-too-long');
+  assert.equal(createdWorkspaces.length, 0, '超长 title 严禁触发 workspaceStore.create');
+
+  // 7. 不存在的 projectId
+  const notFoundProjectRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-workflow/api/projects/non-existent-proj/pages',
+    headers: localHeaders,
+    body: { title: '有效名称' },
+  });
+  assert.equal(notFoundProjectRes.status, 404);
+  assert.equal(notFoundProjectRes.body.error, 'project-not-found');
+  assert.equal(createdWorkspaces.length, 0, '不存在的 projectId 严禁触发 workspaceStore.create');
+
+  // 8. 正确合法的 title（如 '有效第三镜头组'），成功创建且此时才触发一次 workspaceStore.create
+  const validAddPageRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+    headers: localHeaders,
+    body: { title: '  有效第三镜头组  ' },
+  });
+  assert.equal(validAddPageRes.status, 200);
+  assert.equal(createdWorkspaces.length, 1, '仅在校验合法后方才调用一次 workspaceStore.create');
+  assert.equal(createdWorkspaces[0].name, '有效第三镜头组', '工作区名称使用去除首尾空格后的合法 title');
+  assert.equal(validAddPageRes.body.page.title, '有效第三镜头组');
+
+  rmSync(libraryRoot, { recursive: true, force: true });
+});
+
+test('T04: POST /pages 事务补偿与回滚：store.addPage 失败时自动调用 workspaceStore.remove 清理残留工作区', async () => {
+  const libraryRoot = tmpDir('omnimux-pages-rollback-');
+  const createdWorkspaces = [];
+  const removedWorkspaces = [];
+  const fakeWorkspaceStore = {
+    create(name) {
+      const ws = { id: `ws_rollback_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name };
+      createdWorkspaces.push(ws);
+      return ws;
+    },
+    remove(id) {
+      removedWorkspaces.push(id);
+    },
+  };
+
+  const dispatcher = host.createProjectDispatcher({
+    libraryRoot,
+    workspaceStore: fakeWorkspaceStore,
+  });
+
+  const localHeaders = { origin: 'http://localhost:3000' };
+
+  // 1. 创建测试项目
+  const createProjectRes = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-workflow/api/projects',
+    headers: localHeaders,
+    body: { title: '测试回滚项目' },
+  });
+  assert.equal(createProjectRes.status, 200);
+  const projectId = createProjectRes.body.project.id;
+  const projectRoot = createProjectRes.body.project.path;
+  const dotOmnimuxDir = join(projectRoot, '.omnimux');
+
+  // 2. 将 .omnimux 设为只读模式 (0o555)，使后续 store.addPage 写盘时触发 EACCES 抛出异常
+  chmodSync(dotOmnimuxDir, 0o555);
+
+  try {
+    const failedAddRes = await dispatcher.dispatch({
+      method: 'POST',
+      url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+      headers: localHeaders,
+      body: { title: '回滚镜头组' },
+    });
+
+    // 写入失败应返回 500 internal error
+    assert.equal(failedAddRes.status, 500);
+    // 验证先调用了 workspaceStore.create
+    assert.equal(createdWorkspaces.length, 1);
+    const createdId = createdWorkspaces[0].id;
+    // 核心断言：验证 store.addPage 失败时触发回滚补偿，workspaceStore.remove 被精确调用
+    assert.equal(removedWorkspaces.length, 1);
+    assert.equal(removedWorkspaces[0], createdId, 'opts.workspaceStore.remove 必须被调用以清理残留物理工作区');
+  } finally {
+    // 恢复目录写权限
+    chmodSync(dotOmnimuxDir, 0o755);
+  }
+
+  // 3. 对比断言：显式提供 canvasWorkspaceId 时，若 store.addPage 失败，严禁调用 remove 误删已有工作区
+  chmodSync(dotOmnimuxDir, 0o555);
+  try {
+    const failedWithExplicitWs = await dispatcher.dispatch({
+      method: 'POST',
+      url: `/omnimux-workflow/api/projects/${projectId}/pages`,
+      headers: localHeaders,
+      body: { title: '已有画布页', canvasWorkspaceId: 'ws_existing_canvas_preserve' },
+    });
+    assert.equal(failedWithExplicitWs.status, 500);
+    // 严禁对已有工作区调用 remove
+    assert.equal(removedWorkspaces.length, 1, '未自动创建工作区时严禁调用 opts.workspaceStore.remove');
+    assert.equal(removedWorkspaces.includes('ws_existing_canvas_preserve'), false);
+  } finally {
+    chmodSync(dotOmnimuxDir, 0o755);
+    rmSync(libraryRoot, { recursive: true, force: true });
   }
 });
 

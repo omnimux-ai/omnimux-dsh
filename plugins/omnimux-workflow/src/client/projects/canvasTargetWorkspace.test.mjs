@@ -77,4 +77,25 @@ describe('resolveCanvasTargetWorkspaceId (#2104)', () => {
     assert.equal(resolveCanvasTargetWorkspaceId({}), undefined)
     assert.equal(resolveCanvasTargetWorkspaceId(), undefined)
   })
+
+  it('tab.meta.canvasWorkspaceId 作为 P0 优先级生效', () => {
+    const id = resolveCanvasTargetWorkspaceId({
+      tab: { meta: { canvasWorkspaceId: 'ws_from_tab_meta' } },
+      pickedBySession: { sessionId: 's1', workspaceId: 'ws_picked' },
+      sessionBinding: { sessionId: 's1', canvasWorkspaceId: 'ws_bound' },
+      sessionId: 's1',
+      fallbackWorkspaceId: 'ws_hash',
+    })
+    assert.equal(id, 'ws_from_tab_meta')
+  })
+
+  it('explicitWorkspaceId 优先或作为第一优先级透传', () => {
+    const id = resolveCanvasTargetWorkspaceId({
+      explicitWorkspaceId: 'ws_explicit_override',
+      tab: { meta: { canvasWorkspaceId: 'ws_from_tab_meta' } },
+      pickedBySession: { sessionId: 's1', workspaceId: 'ws_picked' },
+      sessionId: 's1',
+    })
+    assert.equal(id, 'ws_explicit_override')
+  })
 })

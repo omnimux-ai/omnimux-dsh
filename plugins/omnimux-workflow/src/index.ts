@@ -45,6 +45,7 @@ export {
   PROJECT_SCHEMA_VERSION,
   MAX_PROJECT_TITLE_LENGTH,
   projectSchema,
+  projectPageSchema,
   projectSummarySchema,
   projectIndexSchema,
   parseProject,
@@ -52,6 +53,7 @@ export {
 } from './projects/schema';
 export type {
   Project,
+  ProjectPage,
   ProjectSummary,
   ProjectIndex,
 } from './projects/schema';

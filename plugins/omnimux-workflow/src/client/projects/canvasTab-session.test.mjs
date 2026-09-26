@@ -63,3 +63,37 @@ test('源码契约 & 行为：CanvasTab 安全注入 workspaces 服务，防御 
   const effectiveWorkspaces = mockWorkspaces || safeGetService(unInjectedCtx, 'workspaces')
   assert.equal(effectiveWorkspaces, mockWorkspaces)
 })
+
+test('源码契约 & 行为：CanvasTab 事件监听器严格校验 sessionId，杜绝无 sessionId 误放行与跨会话污染', () => {
+  const src = readFileSync(join(here, 'CanvasTab.jsx'), 'utf8')
+  // 必须对齐主监听器与次级监听器中的严格判断
+  assert.match(src, /const eventSessionId = e\?\.detail\?\.sessionId/, '必须提取 eventSessionId')
+  assert.match(src, /if \(sessionId && eventSessionId !== sessionId\) \{\s*return\s*\}/, '必须严格比对当前 sessionId 与事件 sessionId')
+
+  // 行为验证：模拟监听器逻辑，防止外部派发无 sessionId 的事件穿透
+  const simulateHandler = (currentSessionId, eventDetail) => {
+    let handled = false
+    const e = { detail: eventDetail }
+    const eventSessionId = e?.detail?.sessionId
+    if (currentSessionId && eventSessionId !== currentSessionId) {
+      return handled
+    }
+    const wsId = e?.detail?.workspaceId
+    if (!wsId) return handled
+    handled = true
+    return handled
+  }
+
+  // 场景 A：当前组件存在 sessionId: 'sess-a'
+  // 1. 外部事件无 sessionId (undefined) -> 必须拦截
+  assert.equal(simulateHandler('sess-a', { workspaceId: 'ws_foreign' }), false, '无 sessionId 事件在有会话组件中必须被拦截')
+  // 2. 外部事件无 sessionId (null) -> 必须拦截
+  assert.equal(simulateHandler('sess-a', { workspaceId: 'ws_foreign', sessionId: null }), false, 'sessionId 为 null 必须被拦截')
+  // 3. 外部事件携带其他 sessionId -> 必须拦截
+  assert.equal(simulateHandler('sess-a', { workspaceId: 'ws_foreign', sessionId: 'sess-b' }), false, '不同 sessionId 事件必须被拦截')
+  // 4. 外部事件携带匹配的 sessionId -> 放行
+  assert.equal(simulateHandler('sess-a', { workspaceId: 'ws_target', sessionId: 'sess-a' }), true, '匹配 sessionId 事件允许放行')
+
+  // 场景 B：当前组件无 sessionId (如会话未绑定初始状态)
+  assert.equal(simulateHandler(null, { workspaceId: 'ws_init' }), true, '无会话约束时放行初始化事件')
+})

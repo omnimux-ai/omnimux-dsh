@@ -47,4 +47,16 @@ describe('ProjectLibraryPage Architectural Hierarchy', () => {
     assert.match(assetsTabSource, /全部文件/);
     assert.match(assetsTabSource, /omnimux-assets-table/);
   });
+
+  it('handleOpenPage passes { layout, betterSidebar, t } as first arg and canvasWorkspaceId in second arg', () => {
+    assert.match(pageSource, /await activateProjectCanvas\(\s*\{\s*layout,\s*betterSidebar,\s*t\s*\}/);
+    assert.match(pageSource, /canvasWorkspaceId,\s*\}/);
+    assert.match(pageSource, /window\.dispatchEvent\(new CustomEvent\('omnimux:active-canvas-changed'/);
+  });
+
+  it('handleCreatePageInProject updates project pages with assigned canvasWorkspaceId', () => {
+    assert.match(pageSource, /const res = await createProjectPage\(selectedProject\.id, newTitle\)/);
+    assert.match(pageSource, /setProjectDetail\(res\.body\.project\)/);
+    assert.match(pageSource, /await loadProjectDetail\(selectedProject\)/);
+  });
 });

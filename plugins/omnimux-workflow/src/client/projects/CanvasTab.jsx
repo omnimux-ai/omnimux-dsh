@@ -69,10 +69,45 @@ export function CanvasTab({
     }
   })
 
+  // 比对 tab.meta 与当前会话是否匹配：若存在 canvasSessionId，则必须与当前 sessionId 严格一致；
+  // 会话切换时清理并阻断非本会话的 tab.meta 反向渗透。
+  const isTabMetaValidForSession = (meta, currentSessionId) => {
+    if (!meta?.canvasWorkspaceId) return false
+    if (meta.canvasSessionId && currentSessionId && meta.canvasSessionId !== currentSessionId) {
+      return false
+    }
+    return true
+  }
+
+  // 记录主动接收到的最新画布工作区 ID（来自 active-canvas-changed 事件或 tab.meta）
+  const [activeCanvasWsId, setActiveCanvasWsId] = useState(() => {
+    if (isTabMetaValidForSession(tab?.meta, sessionId)) {
+      return tab.meta.canvasWorkspaceId
+    }
+    return scope?.canvasWorkspaceId || null
+  })
+
+  useEffect(() => {
+    setActiveCanvasWsId(null)
+  }, [sessionId])
+
+  useEffect(() => {
+    if (isTabMetaValidForSession(tab?.meta, sessionId)) {
+      setActiveCanvasWsId(tab.meta.canvasWorkspaceId)
+    } else {
+      setActiveCanvasWsId(null)
+    }
+  }, [tab?.meta?.canvasWorkspaceId, tab?.meta?.canvasSessionId, sessionId])
+
   useEffect(() => {
     const handler = (e) => {
+      const eventSessionId = e?.detail?.sessionId
+      if (sessionId && eventSessionId !== sessionId) {
+        return
+      }
       const wsId = e?.detail?.workspaceId
       if (!wsId) return
+      setActiveCanvasWsId(wsId)
       setPickedBySession({ sessionId: sessionId ?? null, workspaceId: wsId })
       try {
         if (typeof localStorage !== 'undefined') {
@@ -115,7 +150,11 @@ export function CanvasTab({
 
     refreshBinding()
 
-    const onCanvasChanged = () => {
+    const onCanvasChanged = (e) => {
+      const eventSessionId = e?.detail?.sessionId
+      if (sessionId && eventSessionId !== sessionId) {
+        return
+      }
       if (!cancelled) refreshBinding()
     }
     if (typeof window !== 'undefined') {
@@ -132,8 +171,13 @@ export function CanvasTab({
 
   // 优先级：显式 scope（从项目页点某创作页进来）> 本会话内用户选中的创作页 >
   // 本会话所属项目的当前创作页 > 会话散列画布。换工作区时前两项均失效，画布随之切换。
+  const validTabWsId = isTabMetaValidForSession(tab?.meta, sessionId)
+    ? (sessionId && typeof tab?.meta?.canvasWorkspaceId === 'string' ? tab.meta.canvasWorkspaceId : undefined)
+    : undefined
+  const explicitWorkspaceId = scope?.canvasWorkspaceId || scope?.workspaceId || activeCanvasWsId || validTabWsId
   const targetWorkspaceId = resolveCanvasTargetWorkspaceId({
-    explicitWorkspaceId: scope?.canvasWorkspaceId || scope?.workspaceId,
+    explicitWorkspaceId,
+    tab,
     pickedBySession,
     sessionBinding,
     sessionId,
@@ -145,6 +189,9 @@ export function CanvasTab({
   const hasExplicitCanvas = Boolean(
     scope?.canvasWorkspaceId ||
     scope?.workspaceId ||
+    activeCanvasWsId ||
+    validTabWsId ||
+    (sessionId && tab?.meta?.canvasWorkspaceId) ||
     isPickedForSession ||
     sessionBinding?.canvasWorkspaceId
   )

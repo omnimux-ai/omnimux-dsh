@@ -324,9 +324,14 @@ test('删除写盘失败：卡片保留并报错，不伪造成功', async () =>
   } finally { await page.teardown() }
 })
 
-test('卡片「编辑」打开所属项目画布并把工作流组写进 tab meta', async () => {
+test('卡片「编辑」打开所属项目画布并把工作流组写进 tab meta，且不提前广播无 sessionId 事件', async () => {
   const opened = []
   const updated = []
+  const rawEvents = []
+  const onRawEvent = (e) => rawEvents.push(e?.detail)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('omnimux:active-canvas-changed', onRawEvent)
+  }
   const sidebar = {
     getTab: (id) => ({ id }),
     getSnapshot: () => ({ state: { splits: { kind: 'leaf', tabs: [] }, bottomSplits: { kind: 'leaf', tabs: [] } } }),
@@ -352,7 +357,16 @@ test('卡片「编辑」打开所属项目画布并把工作流组写进 tab met
     assert.deepEqual(updated, [{ id: 'omnimux-workflow:canvas', patch: { meta: { focusGroupId: 'group_7' } } }])
     assert.equal(dialogEl(), null, '「编辑」不得弹出删除确认')
     assert.equal(cardEls(page.container).length, 1, '「编辑」不得改动列表')
-  } finally { await page.teardown() }
+
+    // 严禁派发未带合法 sessionId 的提前广播
+    const unsafeBroadcast = rawEvents.find((evt) => !evt?.sessionId)
+    assert.equal(unsafeBroadcast, undefined, '严禁在会话就绪前提前广播未带 sessionId 的脏事件')
+  } finally {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('omnimux:active-canvas-changed', onRawEvent)
+    }
+    await page.teardown()
+  }
 })
 
 test('旧记录没有 projectId 时按 workspaceId 反查所属项目并落到同一个会话', async () => {

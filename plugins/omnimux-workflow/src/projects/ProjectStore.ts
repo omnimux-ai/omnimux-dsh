@@ -50,6 +50,7 @@ export class ProjectStoreError extends Error {
 export type ProjectRecord = Project & { path: string };
 
 export interface ProjectStore {
+  repairProjectRecord(record: ProjectRecord): ProjectRecord;
   list(): ProjectSummary[];
   /**
    * 种子写入。未传 projectRoot 时 Host 在默认库分配唯一文件夹。
@@ -109,7 +110,7 @@ export function defaultReadme(title: string): string {
   return `# ${title}\n\n本地项目不会自动与其他设备或用户共享。\n`;
 }
 
-function validateTitle(title: unknown): string {
+export function validateTitle(title: unknown): string {
   if (typeof title !== 'string' || title.trim() === '') {
     throw new ProjectStoreError('title-required', 'project title is required');
   }
@@ -245,8 +246,9 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
       registerExternalProjectDir(paths.projectRoot);
     }
     assertProjectWriteSafe(paths.projectFile, paths.projectRoot);
-    atomicWriteJson(paths.projectFile, project);
-    return { ...project, path: paths.projectRoot };
+    const { path: _path, ...cleanProject } = project as Project & { path?: string };
+    atomicWriteJson(paths.projectFile, cleanProject);
+    return { ...cleanProject, path: paths.projectRoot };
   }
 
   function requireProject(id: string): { dir: string; project: Project } {
@@ -269,12 +271,104 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
     if (raw === undefined) return null;
     const project = parseProject(raw);
     if (!project) return null;
-    return { ...project, path: root };
+    return repairProjectRecord({ ...project, path: root });
+  }
+
+  function repairProjectRecord(record: ProjectRecord): ProjectRecord {
+    const dir = record.path;
+    let changed = false;
+
+    // a. 若 record.project.pages 为空，自动补全首个创作页，生成唯一合法的 ws_${randomUUID().replace(/-/g, '').slice(0, 12)}
+    let pages: ProjectPage[] = Array.isArray(record.pages) && record.pages.length > 0
+      ? [...record.pages]
+      : [];
+
+    if (pages.length === 0) {
+      changed = true;
+      const defaultWsId = (record.canvasWorkspaceIds && record.canvasWorkspaceIds[0]?.trim())
+        ? record.canvasWorkspaceIds[0].trim()
+        : `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+      pages = [{
+        id: 'page-default',
+        title: record.title || '创作页 1',
+        createdAt: record.createdAt || new Date().toISOString(),
+        updatedAt: record.updatedAt || new Date().toISOString(),
+        canvasWorkspaceId: defaultWsId,
+      }];
+    }
+
+    // b. 遍历 record.project.pages，对任何缺失或空串的 canvasWorkspaceId，分配一个全新的 ws_${randomUUID().replace(/-/g, '').slice(0, 12)}
+    pages = pages.map((page) => {
+      const wsId = typeof page.canvasWorkspaceId === 'string' ? page.canvasWorkspaceId.trim() : '';
+      if (!wsId) {
+        changed = true;
+        return {
+          ...page,
+          canvasWorkspaceId: `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
+        };
+      }
+      if (page.canvasWorkspaceId !== wsId) {
+        changed = true;
+        return {
+          ...page,
+          canvasWorkspaceId: wsId,
+        };
+      }
+      return page;
+    });
+
+    // c. 收集所有页面的 canvasWorkspaceId，更新并去重同步至 record.project.canvasWorkspaceIds 数组中
+    const pageWsIds = pages
+      .map((p) => p.canvasWorkspaceId)
+      .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
+
+    const currentCanvasIds = (record.canvasWorkspaceIds ?? []).filter(
+      (id): id is string => typeof id === 'string' && id.trim() !== '',
+    );
+
+    const collectedWorkspaceIds = Array.from(new Set([...currentCanvasIds, ...pageWsIds]));
+
+    const idsMatch = currentCanvasIds.length === collectedWorkspaceIds.length &&
+      currentCanvasIds.every((id, idx) => id === collectedWorkspaceIds[idx]);
+    if (!idsMatch) {
+      changed = true;
+    }
+
+    // d. 校验 record.project.activePageId，若为空或不存在于 pages 中，回落至 pages[0].id
+    let nextActivePageId = record.activePageId;
+    if (!nextActivePageId || !pages.some((p) => p.id === nextActivePageId)) {
+      nextActivePageId = pages[0]?.id ?? '';
+      if (nextActivePageId !== record.activePageId) {
+        changed = true;
+      }
+    }
+
+    // e. 若有任何自愈修复发生，调用 persistProject(record.dir, nextProject) 立即原子写盘持久化
+    if (changed) {
+      const { path: _path, ...projectData } = record;
+      const nextProject: Project = {
+        ...projectData,
+        pages,
+        canvasWorkspaceIds: collectedWorkspaceIds,
+        activePageId: nextActivePageId,
+        updatedAt: new Date().toISOString(),
+      };
+      return persistProject(dir, nextProject);
+    }
+
+    return record;
   }
 
   return {
+    repairProjectRecord(record: ProjectRecord): ProjectRecord {
+      return repairProjectRecord(record);
+    },
+
     list(): ProjectSummary[] {
-      return scanEntries().map((row) => toSummary(row.project, row.dir));
+      return scanEntries().map((row) => {
+        const repaired = repairProjectRecord({ ...row.project, path: row.dir });
+        return toSummary(repaired, repaired.path);
+      });
     },
 
     findByRoot(projectRoot: string): ProjectRecord | null {
@@ -323,136 +417,145 @@ export function createProjectStore(opts: { libraryRoot: string }): ProjectStore 
 
     get(id: string): ProjectRecord {
       const found = requireProject(id);
-      const existingPages = found.project.pages && found.project.pages.length > 0 ? found.project.pages : [];
-      if (existingPages.length === 0) {
-        const defaultWsId = found.project.canvasWorkspaceIds?.[0] || `ws_${found.project.id.replace(/-/g, '').slice(0, 12)}`;
-        const initialPage: ProjectPage = {
-          id: 'page-default',
-          title: found.project.title || '创作页 1',
-          createdAt: found.project.createdAt,
-          updatedAt: found.project.updatedAt,
-          canvasWorkspaceId: defaultWsId,
-        };
-        const updatedProject: Project = {
-          ...found.project,
-          canvasWorkspaceIds: found.project.canvasWorkspaceIds?.includes(defaultWsId)
-            ? found.project.canvasWorkspaceIds
-            : [...(found.project.canvasWorkspaceIds ?? []), defaultWsId],
-          pages: [initialPage],
-          activePageId: initialPage.id,
-          updatedAt: found.project.updatedAt,
-        };
-        return persistProject(found.dir, updatedProject);
-      }
-      return { ...found.project, path: found.dir };
+      return repairProjectRecord({ ...found.project, path: found.dir });
     },
 
     rename(id: string, title: string): ProjectRecord {
       const current = requireProject(id);
+      const repaired = repairProjectRecord({ ...current.project, path: current.dir });
       const trimmed = validateTitle(title);
-      const next: Project = { ...current.project, title: trimmed, updatedAt: new Date().toISOString() };
-      return persistProject(current.dir, next);
+      const { path: _path, ...projectData } = repaired;
+      const next: Project = { ...projectData, title: trimmed, updatedAt: new Date().toISOString() };
+      return persistProject(repaired.path, next);
     },
 
     bindSession(id: string, sessionId: string): ProjectRecord {
       const current = requireProject(id);
+      const repaired = repairProjectRecord({ ...current.project, path: current.dir });
       if (typeof sessionId !== 'string' || sessionId.trim() === '') {
         throw new ProjectStoreError('session-required', 'sessionId is required');
       }
-      const next: Project = { ...current.project, sessionId, updatedAt: new Date().toISOString() };
-      return persistProject(current.dir, next);
+      const { path: _path, ...projectData } = repaired;
+      const next: Project = { ...projectData, sessionId, updatedAt: new Date().toISOString() };
+      return persistProject(repaired.path, next);
     },
 
     findByCanvasWorkspaceId(workspaceId: string): ProjectRecord | null {
       if (typeof workspaceId !== 'string' || workspaceId.trim() === '') return null;
       const id = workspaceId.trim();
       for (const row of scanEntries()) {
-        const ids = row.project.canvasWorkspaceIds ?? [];
-        if (ids.includes(id)) {
-          return { ...row.project, path: row.dir };
+        const repaired = repairProjectRecord({ ...row.project, path: row.dir });
+        const ids = repaired.canvasWorkspaceIds ?? [];
+        if (ids.includes(id) || repaired.pages?.some((page) => page.canvasWorkspaceId === id)) {
+          return repaired;
         }
-        if (row.project.pages?.some((page) => page.canvasWorkspaceId === id)) {
-          return { ...row.project, path: row.dir };
-        }
-        if (row.project.sessionId && sessionToWorkspaceId(row.project.sessionId) === id) {
+        if (repaired.sessionId && sessionToWorkspaceId(repaired.sessionId) === id) {
           if (ids.includes(id)) {
-            return { ...row.project, path: row.dir };
+            return repaired;
           }
+          const { path: _path, ...projectData } = repaired;
           const next: Project = {
-            ...row.project,
+            ...projectData,
             canvasWorkspaceIds: [...ids, id],
             updatedAt: new Date().toISOString(),
           };
-          return persistProject(row.dir, next);
+          const persisted = persistProject(repaired.path, next);
+          return repairProjectRecord(persisted);
         }
       }
       return null;
     },
 
-    addPage(projectId: string, pageTitle: string, opts = {}): ProjectRecord {
+    addPage(projectId: string, pageTitle: string, opts: { canvasWorkspaceId?: string; loadMemory?: boolean } = {}): ProjectRecord {
       const current = requireProject(projectId);
+      const repaired = repairProjectRecord({ ...current.project, path: current.dir });
       const trimmed = validateTitle(pageTitle);
       const now = new Date().toISOString();
       const pageId = randomUUID();
+      // a. 确保新页面必有合法的 canvasWorkspaceId（若 opts.canvasWorkspaceId 为空则生成）
+      const canvasWorkspaceId = (typeof opts.canvasWorkspaceId === 'string' && opts.canvasWorkspaceId.trim() !== '')
+        ? opts.canvasWorkspaceId.trim()
+        : `ws_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+
       const newPage: ProjectPage = {
         id: pageId,
         title: trimmed,
         createdAt: now,
         updatedAt: now,
-        canvasWorkspaceId: opts.canvasWorkspaceId,
+        canvasWorkspaceId,
         loadMemory: opts.loadMemory ?? false,
       };
-      const existingPages = current.project.pages ?? [];
+      const existingPages = repaired.pages ?? [];
       const nextPages = [...existingPages, newPage];
+      // b. 将该 canvasWorkspaceId 添加进 project.canvasWorkspaceIds 数组中
+      const currentCanvasIds = repaired.canvasWorkspaceIds ?? [];
+      const nextCanvasWorkspaceIds = Array.from(new Set([...currentCanvasIds, canvasWorkspaceId]));
+      // c. 将 project.activePageId 设置为新页面的 pageId
+      const { path: _path, ...projectData } = repaired;
       const next: Project = {
-        ...current.project,
+        ...projectData,
         pages: nextPages,
+        canvasWorkspaceIds: nextCanvasWorkspaceIds,
         activePageId: pageId,
         updatedAt: now,
       };
-      return persistProject(current.dir, next);
+      // d. 持久化写盘
+      return persistProject(repaired.path, next);
     },
 
     removePage(projectId: string, pageId: string): ProjectRecord {
       const current = requireProject(projectId);
-      const existingPages = current.project.pages ?? [];
+      const repaired = repairProjectRecord({ ...current.project, path: current.dir });
+      const existingPages = repaired.pages ?? [];
       const nextPages = existingPages.filter((p) => p.id !== pageId);
       const nextActiveId =
-        current.project.activePageId === pageId
+        repaired.activePageId === pageId
           ? nextPages[0]?.id
-          : current.project.activePageId;
+          : repaired.activePageId;
+      const { path: _path, ...projectData } = repaired;
       const next: Project = {
-        ...current.project,
+        ...projectData,
         pages: nextPages,
         activePageId: nextActiveId,
         updatedAt: new Date().toISOString(),
       };
-      return persistProject(current.dir, next);
+      const persisted = persistProject(repaired.path, next);
+      return repairProjectRecord(persisted);
     },
 
     renamePage(projectId: string, pageId: string, title: string): ProjectRecord {
       const current = requireProject(projectId);
+      const repaired = repairProjectRecord({ ...current.project, path: current.dir });
       const trimmed = validateTitle(title);
-      const existingPages = current.project.pages ?? [];
+      const existingPages = repaired.pages ?? [];
       const nextPages = existingPages.map((p) =>
         p.id === pageId ? { ...p, title: trimmed, updatedAt: new Date().toISOString() } : p,
       );
+      const { path: _path, ...projectData } = repaired;
       const next: Project = {
-        ...current.project,
+        ...projectData,
         pages: nextPages,
         updatedAt: new Date().toISOString(),
       };
-      return persistProject(current.dir, next);
+      return persistProject(repaired.path, next);
     },
 
     setActivePage(projectId: string, pageId: string): ProjectRecord {
       const current = requireProject(projectId);
+      const repaired = repairProjectRecord({ ...current.project, path: current.dir });
+      const pages = repaired.pages ?? [];
+      const targetPage = pages.find((p) => p.id === pageId);
+      if (!targetPage) {
+        throw new ProjectStoreError('page-not-found', `page ${pageId} not found in project ${projectId}`);
+      }
+      const { path: _path, ...projectData } = repaired;
       const next: Project = {
-        ...current.project,
+        ...projectData,
         activePageId: pageId,
         updatedAt: new Date().toISOString(),
       };
-      return persistProject(current.dir, next);
+      const persisted = persistProject(repaired.path, next);
+      return repairProjectRecord(persisted);
     },
 
     remove(id: string): void {
