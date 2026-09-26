@@ -224,14 +224,26 @@ export function ExploreTemplatesSection({
       if (targetTab) {
         handlePrimaryTabChange(targetTab);
       }
-      // 平滑滚动至 Tab 栏置顶位置（刚好贴在视口顶部，图 1 效果）
+      // 1. 立即计算并原子跳转至 Tab 栏置顶位置（0ms 立即跳到置顶状态，对齐图 1 效果）
       const targetEl = filterBarRef.current || sectionRootRef.current;
-      if (targetEl && typeof targetEl.scrollIntoView === 'function') {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (targetEl) {
+        const scroller = targetEl.closest?.('[class*="scrollBody"], [data-conversation-scroll]') ||
+          (typeof document !== 'undefined' ? document.querySelector('[class*="scrollBody"]') : null);
+        
+        if (scroller && typeof scroller.getBoundingClientRect === 'function') {
+          const elRect = targetEl.getBoundingClientRect();
+          const scrollerRect = scroller.getBoundingClientRect();
+          const targetOffset = scroller.scrollTop + (elRect.top - scrollerRect.top);
+          scroller.scrollTop = Math.max(0, targetOffset);
+        } else if (typeof targetEl.scrollIntoView === 'function') {
+          // 兜底：使用 instant 确保 0ms 立即跳转，杜绝 smooth 异步滚动竞态
+          targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
+        }
       }
-      // 触发输入框显式吸底意图
+
+      // 2. 触发输入框原子强制吸底
       window.dispatchEvent(new CustomEvent('omnimux:composer:dock-intent', {
-        detail: { tab: targetTab },
+        detail: { tab: targetTab, force: true },
       }));
     };
 
