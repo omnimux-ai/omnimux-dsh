@@ -8,17 +8,67 @@ import { injectMediaViewerStyles } from './styles.js';
 import { syncImageCanvasStage } from './image-canvas-stage.js';
 import { registerContextContributor } from '../workbench/context.js';
 
+import { serializeReferenceAssets, isAllowedReferenceUrl } from './media-slot.js';
+
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
+export { serializeReferenceAssets, isAllowedReferenceUrl };
 
 /**
- * MediaViewerTab
- * Right panel tab for Image & Video creation workflow.
- * Supports:
- * - 3-column & 2-column layout switching
- * - Timeline feed with multi-image horizontal grouping
- * - Single image/video detail view with right vertical thumbnails rail
- * - Image annotation comments with popovers, consecutive numbering and model prompt integration
+ * 本地 File 预物化：对包含本地 file 且 url 为 blob: 或空的素材，使用 FileReader 异步转换为标准 Base64 Data URL 后再提交，
+ * 确保经过 serializeReferenceAssets 时不被静默 drop，后端可稳定接收有效素材数据
+ * @param {object} asset
+ * @returns {Promise<object>}
  */
+const MAX_MATERIALIZE_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+export async function materializeAssetFile(asset) {
+  if (!asset || typeof asset !== 'object') return asset;
+  const isBlobOrEmpty = !asset.url ||
+    (typeof asset.url === 'string' && asset.url.startsWith('blob:')) ||
+    (typeof asset.path === 'string' && asset.path.startsWith('blob:'));
+  // 仅对图片（asset.type === 'image'）且文件体积在合理阈值（≤5MB）内的素材执行 Base64 转换
+  const isEligible = asset.type === 'image' &&
+    (!asset.file?.size || asset.file.size <= MAX_MATERIALIZE_FILE_SIZE);
+  if (asset.file && isBlobOrEmpty && asset.type === 'image' && !isEligible) {
+    throw new Error('本地图片超过 5MB，请压缩后重试或先上传到资产库');
+  }
+  if (asset.file && isBlobOrEmpty && isEligible) {
+    try {
+      if (typeof FileReader !== 'undefined') {
+        const fileObj = (typeof Blob !== 'undefined' && asset.file instanceof Blob)
+          ? asset.file
+          : asset.file;
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(fileObj);
+        });
+        if (typeof dataUrl === 'string' && isAllowedReferenceUrl(dataUrl)) {
+          return {
+            ...asset,
+            url: dataUrl,
+            path: dataUrl,
+          };
+        }
+        throw new Error('本地图片格式暂不支持，请转换为 PNG/JPEG/WebP/GIF/BMP 后重试');
+      } else {
+        throw new Error('当前运行环境不支持本地图片解析，请先上传到资产库');
+      }
+    } catch (err) {
+      console.warn('[MediaViewerTab] Failed to materialize local file to base64 Data URL:', err);
+      if (err?.message === '本地图片格式暂不支持，请转换为 PNG/JPEG/WebP/GIF/BMP 后重试') {
+        throw err;
+      }
+      if (err?.message === '当前运行环境不支持本地图片解析，请先上传到资产库') {
+        throw err;
+      }
+      throw new Error('本地图片读取失败，请重试或先上传到资产库');
+    }
+  }
+  return asset;
+}
+
 const noSubscription = () => () => {};
 
 export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
@@ -55,23 +105,33 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const stageRef = useRef(null);
   const [draftText, setDraftText] = useState('');
 
-  const handleDirectSubmit = async ({ prompt, kind, model, channel, params }) => {
+  const handleDirectSubmit = async ({ prompt, kind, operation, model, channel, params, assets, annotations }) => {
     store.setGenerating(true, { prompt, model, status: 'running' });
     try {
+      const materializedAssets = Array.isArray(assets)
+        ? await Promise.all(assets.map(materializeAssetFile))
+        : assets;
+      const serializedReferences = serializeReferenceAssets(materializedAssets);
       const resp = await fetch('/omnimux/api/media/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
           kind,
+          operation,
           model,
           channel,
           aspectRatio: params?.aspectRatio,
           resolution: params?.resolution,
           duration: params?.duration,
           sessionId,
+          references: serializedReferences,
+          annotations,
         }),
       });
+      if (!resp.ok) {
+        throw new Error(`Media generation failed with HTTP status ${resp.status}`);
+      }
       const data = await resp.json();
       if (data.ok && (data.url || data.dest)) {
         const newItem = store.addMedia({
@@ -85,6 +145,12 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
       }
     } catch (err) {
       console.error('[MediaViewer] Direct generate failed:', err);
+      const message = err?.message || '生成任务提交失败，请重试';
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        try {
+          window.dispatchEvent(new CustomEvent('omnimux:toast', { detail: { message, type: 'error' } }));
+        } catch {}
+      }
     } finally {
       store.setGenerating(false);
     }
@@ -303,15 +369,15 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
           ) : (
             savedAnnotations.length > 0 ? (
               <div className="omx-mv-toolbar-comments-bar">
-                <span>{savedAnnotations.length} 条评论</span>
-                <span>请用对话发送按钮提交评论</span>
+                <span className="omx-mv-toolbar-comments-bar__count">已标记 {savedAnnotations.length} 处</span>
                 <button // exempt-ui01: 评论清空按钮
                   type="button"
                   className="omx-mv-toolbar-comments-bar__btn-close"
                   title="清空当前所有评论"
+                  aria-label="清空当前所有评论"
                   onClick={() => store.clearAnnotations(activeItem?.id)}
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
