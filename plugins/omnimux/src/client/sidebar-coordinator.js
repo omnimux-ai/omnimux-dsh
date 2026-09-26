@@ -18,6 +18,14 @@
  * only when it is out of place. Because the walker never mutates an
  * already-correct tree, a placement does not re-trigger its own observer, so
  * there is no feedback loop. Product-stage overlays must never be observed.
+ *
+ * 架构收敛（Architecture Convergence）：
+ * 1. 排除核心常驻项：`omnimux-workflow`（项目）、`omnimux-assets`（资产库）、`omnimux-inspiration`（灵感社区）以及 inline 的新建项目，继续挂载在侧栏；
+ * 2. 排除技能专家（`omnimux-market`，在底部 footer）；
+ * 3. 其余所有插件（包括所有 Alpha 插件 accounts, publish, analytics, forms, automation 以及垂直插件 video, products, device, clip, social-harvest, apps 等）全部收敛至探索菜单，不再作为独立行渲染在侧边栏；
+ * 4. 常驻探索行（rank 3.9，在项目上方），展开态显示图标与“探索”，折叠态显示居中图标；
+ * 5. 浮动探索菜单（挂在 document.body，深色半透明圆角面板、细分割线、hover 态、点击激活对应 Workbench Tab 并关闭菜单、点击外部或按 Esc 关闭、防溢出几何定位）；
+ * 6. 探索菜单项严格按照产品经理 Spec 白名单（11项：应用、视频剪辑、Google Vids、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标。
  */
 
 import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
@@ -66,7 +74,34 @@ export const SIDEBAR_GLOBAL = () => (typeof window !== 'undefined' ? window[SIDE
 
 const ROWS = []
 const INLINE_ROWS = []
+const CONVERGED_ROWS = new Map()
 const seen = new Set()
+
+/** 核心常驻侧栏项白名单（除 inline 新建项目与探索行自身外） */
+const PINNED_ENTRY_PREFIXES = ['omnimux-workflow', 'omnimux-assets', 'omnimux-inspiration']
+
+export function isPinnedSidebarEntry(id) {
+  if (id === 'omnimux-explore-entry') return true
+  const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
+  return PINNED_ENTRY_PREFIXES.includes(pluginId) || PINNED_ENTRY_PREFIXES.includes(id)
+}
+
+/**
+ * 判断是否应收敛到「探索」菜单，不再作为独立行渲染在侧边栏。
+ * 排除核心常驻项（workflow, assets, inspiration, explore）和非 omnimux 夹具；
+ * 其余所有 omnimux 功能插件均收敛。
+ */
+export function isConvergedEntry(id) {
+  if (isPinnedSidebarEntry(id)) return false
+  const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
+  if (pluginId === 'omnimux-workflow' || pluginId === 'omnimux-assets' || pluginId === 'omnimux-inspiration' || pluginId === 'omnimux-explore') {
+    return false
+  }
+  if (id.startsWith('omnimux-') || pluginId.startsWith('omnimux-')) {
+    return true
+  }
+  return false
+}
 
 /** Coordinator-owned chrome for the inline row (并排「新建会话」). */
 const INLINE_STYLES = `
@@ -102,11 +137,10 @@ const INLINE_STYLES = `
 }
 .omnimux-sidebar-new-menu {
   position: fixed; z-index: 400; min-width: 168px; padding: 6px;
-  border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.28));
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
-  /* DSH 没有 bg-elevated/bg-primary；菜单挂 body，必须用现网 layer token。 */
-  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base, #232324));
-  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1, rgba(0,0,0,.16));
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base));
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1);
   color: var(--dsw-alias-label-primary, inherit);
 }
 .omnimux-sidebar-new-menu[hidden] { display: none !important; }
@@ -117,9 +151,372 @@ const INLINE_STYLES = `
   font: var(--dsw-font-s-14, 14px/20px system-ui); text-align: left;
 }
 .omnimux-sidebar-new-menu button:hover {
-  background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12));
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 `
+
+/** 探索行（Rank 3.9）与探索浮动菜单样式，100% 消费官方原生 --dsw-alias-* Token */
+const EXPLORE_STYLES = `
+.omnimux-explore-entry {
+  box-sizing: border-box; display: flex; align-items: center; gap: 6px; position: relative;
+  width: calc(100% - 8px); height: 32px; margin: 0 4px 2px; padding: 0 8px;
+  border: none; border-radius: 8px; background: transparent;
+  color: var(--dsw-alias-label-primary, inherit);
+  font: var(--dsw-font-s-14, inherit); font-size: 14px; line-height: 20px;
+  cursor: pointer; text-align: left;
+}
+.omnimux-explore-entry:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omnimux-explore-entry[data-active="true"],
+.omnimux-explore-entry[aria-expanded="true"] {
+  background: var(--dsw-alias-interactive-bg-active);
+}
+.omnimux-explore-entry-icon {
+  flex: none; display: inline-flex; width: 14px; height: 14px; align-items: center; justify-content: center;
+}
+.omnimux-explore-entry svg {
+  display: block; width: 14px; height: 14px;
+}
+.omnimux-explore-entry-label {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 20px;
+}
+[data-sidebar-collapsed] .omnimux-explore-entry {
+  width: 36px; min-width: 36px; height: 36px;
+  padding: 0; margin: 0 auto 6px;
+  justify-content: center; align-self: center;
+}
+[data-sidebar-collapsed] .omnimux-explore-entry .omnimux-explore-entry-label {
+  display: none !important;
+}
+
+.omnimux-explore-menu {
+  position: fixed; z-index: 500; min-width: 180px; width: max-content; max-width: 240px;
+  box-sizing: border-box; padding: 5px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-elevated);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 28px var(--dsw-alias-bg-mask-1), 0 2px 8px var(--dsw-alias-bg-mask-1);
+  color: var(--dsw-alias-label-primary, inherit);
+  animation: omnimux-explore-pop 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes omnimux-explore-pop {
+  from { opacity: 0; transform: scale(0.96) translateX(-4px); }
+  to { opacity: 1; transform: scale(1) translateX(0); }
+}
+.omnimux-explore-menu[hidden] { display: none !important; }
+.omnimux-explore-menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 32px;
+  box-sizing: border-box; margin: 0 0 1px; padding: 0 10px;
+  border: 0; border-radius: 8px; background: transparent;
+  color: var(--dsw-alias-label-primary, inherit); cursor: pointer;
+  font: var(--dsw-font-s-14, 14px/20px system-ui); font-size: 14px; line-height: 20px;
+  text-align: left; transition: background 100ms ease;
+}
+.omnimux-explore-menu-item:last-child { margin-bottom: 0; }
+.omnimux-explore-menu-item:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omnimux-explore-menu-item:active {
+  background: var(--dsw-alias-interactive-bg-active);
+  transform: scale(0.98);
+}
+.omnimux-explore-menu-item-icon {
+  flex: none; display: inline-flex; width: 14px; height: 14px; align-items: center; justify-content: center;
+  color: var(--dsw-alias-label-secondary, inherit);
+}
+.omnimux-explore-menu-item:hover .omnimux-explore-menu-item-icon {
+  color: var(--dsw-alias-label-primary, inherit);
+}
+.omnimux-explore-menu-item-icon svg {
+  display: block; width: 14px; height: 14px;
+}
+.omnimux-explore-menu-item-label {
+  flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omnimux-explore-menu-divider {
+  height: 1px; margin: 4px 6px;
+  background: var(--dsw-alias-border-l1);
+}
+`
+
+/**
+ * 探索菜单项白名单（11项，逐字锁定）：
+ * 应用、视频剪辑、Google Vids、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收
+ * 统一带纯矢量 SVG 图标，严禁 Emoji，零冗余徽章、零副标题、零同义重复。
+ */
+export const EXPLORE_MENU_ITEMS = [
+  {
+    id: 'apps',
+    pluginId: 'omnimux-apps',
+    entryId: 'omnimux-apps-entry',
+    label: '应用',
+    tabId: 'omnimux:apps',
+    action: (converged) => {
+      const el = converged.get('omnimux-apps-entry')?.element
+      if (el && typeof el.click === 'function') {
+        el.click()
+        return true
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('omnimux-app-open', { detail: { id: 'apps' } }))
+      }
+      return true
+    },
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg>',
+  },
+  {
+    id: 'clip',
+    pluginId: 'omnimux-clip',
+    entryId: 'omnimux-clip-entry',
+    label: '视频剪辑',
+    tabId: 'omnimux-clip:studio',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.75" y="3.25" width="12.5" height="9.5" rx="1.75"/><path d="M6.4 5.6v4.8L10.6 8 6.4 5.6Z" fill="currentColor" stroke="none"/></svg>',
+  },
+  {
+    id: 'google-vids',
+    pluginId: 'omnimux-video',
+    entryId: 'omnimux-google-vids-entry',
+    label: 'Google Vids',
+    tabId: 'omnimux-video:google-vids',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2.5"/><path d="M6.5 5.5l4 2.5-4 2.5v-5z" fill="currentColor" stroke="none"/></svg>',
+    dividerAfter: true,
+  },
+  {
+    id: 'products',
+    pluginId: 'omnimux-products',
+    entryId: 'omnimux-products-entry',
+    label: '产品库',
+    tabId: 'omnimux-products:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h10l-1 9H4L3 5z"/><path d="M6 5V3.5a2 2 0 0 1 4 0V5"/></svg>',
+  },
+  {
+    id: 'publish',
+    pluginId: 'omnimux-publish',
+    entryId: 'omnimux-publish-entry',
+    label: '发布',
+    tabId: 'omnimux-publish:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 1.5 7 9M14.5 1.5 10 14.5l-3-4.5-4.5-3 12-5.5z"/></svg>',
+  },
+  {
+    id: 'accounts',
+    pluginId: 'omnimux-accounts',
+    entryId: 'omnimux-accounts-entry',
+    label: '账号',
+    tabId: 'omnimux-accounts:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="5" r="3"/><path d="M2.5 14a5.5 5.5 0 0 1 11 0"/></svg>',
+  },
+  {
+    id: 'device',
+    pluginId: 'omnimux-device',
+    entryId: 'omnimux-device-entry',
+    label: '手机管理',
+    tabId: 'omnimux-device:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="1.5" width="8" height="13" rx="2"/><circle cx="8" cy="11.5" r="0.75" fill="currentColor" stroke="none"/></svg>',
+    dividerAfter: true,
+  },
+  {
+    id: 'analytics',
+    pluginId: 'omnimux-analytics',
+    entryId: 'omnimux-analytics-entry',
+    label: '数据分析',
+    tabId: 'omnimux-analytics:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 14h12"/><path d="M4 11l3-4 3 2 4-5"/></svg>',
+  },
+  {
+    id: 'automation',
+    pluginId: 'omnimux-automation',
+    entryId: 'omnimux-automation-entry',
+    label: '自动化',
+    tabId: 'omnimux-automation:workbench',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8h1.5M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>',
+  },
+  {
+    id: 'forms',
+    pluginId: 'omnimux-forms',
+    entryId: 'omnimux-forms-entry',
+    label: '任务表单',
+    tabId: 'omnimux-forms:tasks',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M6 5.5h4M6 8h4M6 10.5h2.5"/></svg>',
+  },
+  {
+    id: 'social-harvest',
+    pluginId: 'omnimux-social-harvest',
+    entryId: 'omnimux-social-harvest-entry',
+    label: '社交采收',
+    tabId: 'omnimux-social-harvest:library',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="1" fill="currentColor" stroke="none"/></svg>',
+  },
+]
+
+let exploreEntryElement = null
+let exploreDocCleanup = null
+let currentExploreAnchor = null
+
+function createExploreIcon() {
+  return '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><polygon points="10.8 5.2 8.8 8.8 5.2 10.8 7.2 7.2" fill="currentColor" stroke="none"/></svg>'
+}
+
+/**
+ * 确保常驻「探索」行就位（Rank 3.9，在「项目」上方）。
+ */
+function ensureExploreRow() {
+  if (ROWS.some((r) => r.id === 'omnimux-explore-entry')) return
+  injectStyles(EXPLORE_STYLES, 'omnimux-sidebar-explore-styles')
+  if (!exploreEntryElement) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.id = 'omnimux-explore-entry'
+    btn.className = 'omnimux-sidebar-nav-entry omnimux-explore-entry'
+    btn.dataset.omnimuxExploreEntry = ''
+    btn.setAttribute('aria-label', '探索')
+    btn.setAttribute('aria-haspopup', 'menu')
+    btn.setAttribute('aria-expanded', 'false')
+    btn.innerHTML = `<span class="omnimux-explore-entry-icon">${createExploreIcon()}</span><span class="omnimux-explore-entry-label">探索</span>`
+    btn.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      toggleExploreMenu(btn)
+    })
+    exploreEntryElement = btn
+  }
+  ROWS.push({ id: 'omnimux-explore-entry', rank: 3.9, element: exploreEntryElement })
+}
+
+/**
+ * 计算探索浮动菜单位置，带视口边界防溢出定位。
+ * @param {HTMLElement} anchor
+ * @param {{ innerWidth: number, innerHeight: number }} [viewport]
+ * @returns {{ left: number, top: number }}
+ */
+export function computeExploreMenuPosition(anchor, viewport = typeof window !== 'undefined' ? window : undefined) {
+  const rect = anchor?.getBoundingClientRect?.() ?? { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }
+  const vw = viewport?.innerWidth ?? 1280
+  const vh = viewport?.innerHeight ?? 800
+  const menuW = 180
+  const menuH = 380
+  const gap = 6
+
+  let left = Math.round(rect.right + gap)
+  let top = Math.round(rect.top)
+
+  if (left + menuW > vw - 8) {
+    left = Math.max(8, Math.round(rect.left - menuW - gap))
+  }
+  if (left < 8) left = 8
+
+  if (top + menuH > vh - 8) {
+    top = Math.max(8, vh - menuH - 8)
+  }
+  if (top < 8) top = 8
+
+  return { left, top }
+}
+
+export function closeExploreMenu() {
+  exploreDocCleanup?.()
+  exploreDocCleanup = undefined
+  if (currentExploreAnchor) {
+    currentExploreAnchor.setAttribute('aria-expanded', 'false')
+    delete currentExploreAnchor.dataset.active
+    currentExploreAnchor = null
+  }
+  document.getElementById('omnimux-explore-menu')?.remove()
+}
+
+/**
+ * 激活探索菜单项：
+ * 1. 执行 item 特化 action（如有）；
+ * 2. 委托调用收敛插件已注册的按钮 click 处理器（保持原有鉴权与逻辑）；
+ * 3. 兜底通过 window.__omnimuxWorkbench.open 打开对应的 Workbench Tab；
+ * 4. 关闭菜单。
+ */
+export function activateExploreItem(item) {
+  closeExploreMenu()
+  if (typeof item.action === 'function') {
+    const handled = item.action(CONVERGED_ROWS)
+    if (handled !== false) {
+      return
+    }
+  }
+  const registered = CONVERGED_ROWS.get(item.entryId)
+    ?? CONVERGED_ROWS.get(item.pluginId)
+    ?? (item.id === 'google-vids' ? CONVERGED_ROWS.get('omnimux-video-entry') : undefined)
+  if (registered?.element && typeof registered.element.click === 'function') {
+    registered.element.click()
+    return
+  }
+  if (item.tabId && typeof window !== 'undefined' && window.__omnimuxWorkbench?.open) {
+    window.__omnimuxWorkbench.open({ tabId: item.tabId, title: item.label })
+  }
+}
+
+export function openExploreMenu(anchor) {
+  if (!(anchor instanceof HTMLElement)) return false
+  closeExploreMenu()
+  currentExploreAnchor = anchor
+  anchor.setAttribute('aria-expanded', 'true')
+  anchor.dataset.active = 'true'
+
+  const menu = document.createElement('div')
+  menu.id = 'omnimux-explore-menu'
+  menu.className = 'omnimux-explore-menu'
+  menu.setAttribute('role', 'menu')
+  menu.setAttribute('aria-label', '探索')
+
+  for (const item of EXPLORE_MENU_ITEMS) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'omnimux-explore-menu-item'
+    btn.setAttribute('role', 'menuitem')
+    btn.dataset.exploreId = item.id
+    btn.setAttribute('aria-label', item.label)
+    btn.innerHTML = `<span class="omnimux-explore-menu-item-icon">${item.iconSvg}</span><span class="omnimux-explore-menu-item-label">${item.label}</span>`
+    btn.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      activateExploreItem(item)
+    })
+    menu.append(btn)
+    if (item.dividerAfter) {
+      const divider = document.createElement('div')
+      divider.className = 'omnimux-explore-menu-divider'
+      divider.setAttribute('role', 'separator')
+      menu.append(divider)
+    }
+  }
+
+  document.body.append(menu)
+  const { left, top } = computeExploreMenuPosition(anchor)
+  menu.style.left = `${left}px`
+  menu.style.top = `${top}px`
+
+  const onDoc = (event) => {
+    if (menu.contains(event.target) || event.target === anchor || anchor.contains(event.target)) return
+    closeExploreMenu()
+  }
+  const onKey = (event) => {
+    if (event.key === 'Escape') closeExploreMenu()
+  }
+
+  document.addEventListener('mousedown', onDoc, true)
+  document.addEventListener('keydown', onKey, true)
+  exploreDocCleanup = () => {
+    document.removeEventListener('mousedown', onDoc, true)
+    document.removeEventListener('keydown', onKey, true)
+  }
+  return true
+}
+
+export function toggleExploreMenu(anchor) {
+  if (document.getElementById('omnimux-explore-menu')) {
+    closeExploreMenu()
+    return false
+  }
+  return openExploreMenu(anchor)
+}
 
 /** Inner pane/col first; desktop shell wrappers are fallback only. */
 function querySidebarColumn() {
@@ -158,7 +555,6 @@ function projectLabel(button) {
 }
 
 let skipNextCollapsedClick = false
-/** 菜单打开时的 document 监听；必须在所有 close 路径上卸掉，避免泄漏。 */
 let menuDocCleanup
 
 function closeNewMenu() {
@@ -183,10 +579,8 @@ export function computeNewMenuPosition(anchor, viewport = typeof window !== 'und
   const gap = 6
   let left = Math.round(rect.left)
   let top = Math.round(rect.bottom + gap)
-  // Prefer left-aligned under the anchor; clamp into the viewport.
   if (left + menuW > vw - 8) left = Math.max(8, vw - menuW - 8)
   if (left < 8) left = 8
-  // If not enough room below, flip above the anchor.
   if (top + menuH > vh - 8) {
     top = Math.max(8, Math.round(rect.top - menuH - gap))
   }
@@ -227,7 +621,6 @@ function openNewMenu(anchor, sessionBtn, projectBtn) {
   menu.style.top = `${top}px`
   const onDoc = (event) => {
     if (menu.contains(event.target) || event.target === anchor) return
-    // Also keep open when clicking the topbar new-session control that opened it.
     if (event.target instanceof Element && event.target.closest?.('[data-omnimux-topbar-new-session="1"]') === anchor) return
     closeNewMenu()
   }
@@ -258,7 +651,6 @@ export function openCollapsedNewMenuAt(anchor) {
   const projectBtn = INLINE_ROWS[0]?.element
   if (!(sessionBtn instanceof HTMLElement)) return false
   if (!(projectBtn instanceof HTMLElement)) {
-    // No project inline row registered yet — still offer new-session only.
     closeNewMenu()
     const menu = document.createElement('div')
     menu.id = 'omnimux-sidebar-new-menu'
@@ -386,7 +778,6 @@ let waitObserver
 let collapsedAttrObserver
 let collapsedHost
 let retry
-/** Node currently observed for extra-row placement. Never stay on document.body once the sidebar column exists. */
 let observedRoot
 let placeScheduled = false
 let placeCount = 0
@@ -406,11 +797,6 @@ function enqueuePlaceAll() {
   })
 }
 
-/**
- * Observe the sidebar column, not document.body. A body+subtree observer
- * re-enters placeAll() for every product-stage mount (unauthenticated
- * sidebar clicks now open stages directly) and wedges the renderer.
- */
 function bindWaitObserver() {
   const column = querySidebarColumn()
   const target = column instanceof HTMLElement
@@ -429,12 +815,6 @@ function bindWaitObserver() {
   waitObserver.observe(target, { childList: true, subtree: true })
 }
 
-/**
- * 官方 AppFrame 把 `data-sidebar-collapsed` 写在 frame 根节点，不是 `<html>`。
- * 监听必须覆盖真正带该属性的节点。优先绑 sidebar 列祖先里「已经带属性」
- * 的节点，展开时属性不在则绑列的 parent（即 AppFrame）。不要对 html/body
- * 做全树 attributes。
- */
 function collapsedHostNode() {
   const column = querySidebarColumn()
   if (column instanceof HTMLElement) {
@@ -458,7 +838,6 @@ function bindCollapsedAttrObserver() {
   collapsedHost = host
   collapsedAttrObserver?.disconnect()
   collapsedAttrObserver = new MutationObserver(() => { runPlaceAll() })
-  // 属性在 host 自身时不需要 subtree。只有 host 是 slot 锚点（属性在子 frame 上）才下探一层。
   const subtree = host.matches('[data-slot="root"]') && !host.hasAttribute('data-sidebar-collapsed')
   collapsedAttrObserver.observe(host, {
     attributes: true,
@@ -473,6 +852,7 @@ function runPlaceAll() {
   bindCollapsedAttrObserver()
   const root = sidebarRoot()
   if (root === undefined) return
+  ensureExploreRow()
   placeBelow(root)
   placeInline(root)
   if (!railCollapsed()) closeNewMenu()
@@ -485,9 +865,6 @@ function placeBelow(root) {
   if (anchor === undefined) return
   let slotExternal = true
   for (const row of sorted) {
-    // External family rows (taskboard/atb/ssh) slot between the hub block
-    // (ranks 1-2) and the vertical block. Rebase the anchor once, before the
-    // first vertical row, so our rows land below the external rows.
     if (row.rank >= 3 && slotExternal) {
       const ext = externalAnchor(root)
       if (ext instanceof HTMLElement) anchor = ext
@@ -505,8 +882,7 @@ function placeBelow(root) {
 
 /**
  * Inline rows：与「新建会话」并排。用一个 coordinator 自有的 wrapper 包裹
- * 新建会话按钮 + inline 按钮（不动官方按钮内部 DOM，只调整其容器的 flex 布局）。
- * 幂等：wrapper 已就位时只补齐缺失的 inline 按钮，不重插。
+ * 新建会话按钮 + inline 按钮。
  */
 function placeInline(root) {
   if (INLINE_ROWS.length === 0) return
@@ -542,17 +918,12 @@ function createApi() {
       const id = row.id
       if (seen.has(id)) return () => {}
       seen.add(id)
-      // 内测版从左侧侧边栏入口移除，不予显示；保留插件源码与内部能力
-      if (isAlphaEntry(id)) {
-        return () => {
-          seen.delete(id)
-        }
-      }
-      if (row.styles) injectStyles(row.styles, row.styleId)
-      const element = row.create()
-      markAlphaEntry(id, element)
-      // kind:'inline' → 并排「新建会话」；否则 → 下方 rank 行。
+
+      // kind:'inline' → 并排「新建会话」
       if (row.kind === 'inline') {
+        if (row.styles) injectStyles(row.styles, row.styleId)
+        const element = row.create()
+        markAlphaEntry(id, element)
         injectStyles(INLINE_STYLES, 'omnimux-sidebar-inline-styles')
         element.classList.add('omnimux-sidebar-inline-btn')
         INLINE_ROWS.push({ id, element })
@@ -565,6 +936,44 @@ function createApi() {
           runPlaceAll()
         }
       }
+
+      // 排除技能专家 omnimux-market（在底部 footer，不在侧栏 extra rows 挂载）
+      if (id === 'omnimux-market-entry' || id === 'omnimux-market-plaza' || id === 'omnimux-market') {
+        return () => {
+          seen.delete(id)
+        }
+      }
+
+      // 收敛至探索菜单的插件：包含所有 Alpha 内测插件与垂直插件
+      // 不再作为独立行渲染在侧边栏，收敛记录到 CONVERGED_ROWS 便于探索菜单委托激活
+      if (isAlphaEntry(id)) {
+        if (row.styles) injectStyles(row.styles, row.styleId)
+        const element = row.create()
+        markAlphaEntry(id, element)
+        CONVERGED_ROWS.set(id, { id, row, element })
+        return () => {
+          CONVERGED_ROWS.delete(id)
+          seen.delete(id)
+          element.remove()
+        }
+      }
+
+      if (isConvergedEntry(id)) {
+        if (row.styles) injectStyles(row.styles, row.styleId)
+        const element = row.create()
+        markAlphaEntry(id, element)
+        CONVERGED_ROWS.set(id, { id, row, element })
+        return () => {
+          CONVERGED_ROWS.delete(id)
+          seen.delete(id)
+          element.remove()
+        }
+      }
+
+      // 核心常驻项（omnimux-workflow, omnimux-assets, omnimux-inspiration）及普通 below 行
+      if (row.styles) injectStyles(row.styles, row.styleId)
+      const element = row.create()
+      markAlphaEntry(id, element)
       ROWS.push({ id, rank: row.rank, element })
       runPlaceAll()
       return () => {
@@ -594,7 +1003,6 @@ function install() {
   bindCollapsedAttrObserver()
   retry = setInterval(() => {
     runPlaceAll()
-    // 侧栏已挂载 → 收窄到 sidebar 列，后续 DOM 变化交给列级 observer，轮询自毁防泄漏。
     if (sidebarRoot() !== undefined) {
       clearInterval(retry)
       retry = undefined
@@ -606,7 +1014,7 @@ function install() {
 
 /** Call at module top level of the hub client (mirrors installStageGlobal). */
 export function installSidebarGlobal() {
-  install()
+  return install()
 }
 
 /** Test-only: node currently observed for extra-row placement. */
@@ -616,6 +1024,14 @@ export function getSidebarObserverTargetForTests() {
 
 export function getPlaceCountForTests() {
   return placeCount
+}
+
+export function getExploreEntryForTests() {
+  return exploreEntryElement
+}
+
+export function getConvergedRowsForTests() {
+  return CONVERGED_ROWS
 }
 
 /**
@@ -638,8 +1054,11 @@ export function resetSidebarCoordinatorForTests() {
   }
   ROWS.length = 0
   INLINE_ROWS.length = 0
+  CONVERGED_ROWS.clear()
   seen.clear()
   closeNewMenu()
+  closeExploreMenu()
+  exploreEntryElement = null
   if (typeof window !== 'undefined') {
     try {
       delete window[SIDEBAR_GLOBAL_KEY]

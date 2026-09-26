@@ -54,23 +54,24 @@ Derivation order is fixed and exclusive:
 
 | Marker | Owner | Label |
 |---|---|---|
-| `[data-omnimux-apps-entry]` | `omnimux` | 应用 / Apps |
+| `[data-omnimux-apps-entry]` | `omnimux` | 应用 / Apps（收敛至「探索」菜单） |
 | `[data-omnimux-app-tabs]` | `omnimux` | Dynamic app tab rows (see below) |
 | `[data-dsh-taskboard-entry]` | `dsh-taskboard-plugin` (fork) | 任务看板 / Taskboard |
 | `[data-omnimux-esc-entry]` | `omnimux-gallery`（历史 marker，现网无独立 gallery 包） | 专家·技能·连接器（**已迁** `omnimux-market`） |
-| `[data-dsh-omnimux-workflow-entry]` | `omnimux-workflow` | 项目 / Projects（rank 4 现网）。**Workbench 入口**：点开 `omnimux-workflow:library` Tab，**不得** `claimProductStage`。打开项目后激活 `omnimux-workflow:canvas`（默认 split），库 Tab 保留。 |
+| `[data-omnimux-explore-entry]` | `omnimux` | **探索 / Explore（rank 3.9，常驻项目正上方）**。点击呼出浮动菜单，收敛全部内测版与非排除项 OmniMux 插件（11 项白名单，见 specs）。 |
+| `[data-dsh-omnimux-workflow-entry]` | `omnimux-workflow` | 项目 / Projects（rank 4 现网，**核心常驻**）。**Workbench 入口**：点开 `omnimux-workflow:library` Tab，**不得** `claimProductStage`。打开项目后激活 `omnimux-workflow:canvas`（默认 split），库 Tab 保留。 |
 | `[data-dsh-omnimux-new-project-entry]` | `omnimux-workflow` | 新建项目 / New Project（展开：`kind:'inline'` 并排「新建会话」。收起：CSS 藏项目按钮，点官方加号弹出「新建会话 / 新建项目」，选中再 click 原按钮。折叠态属性在 AppFrame，不在 html。收起 wrapper 可用 `display:contents`，但官方加号上的 `flex:1` **必须**收回 `flex:none` + 36×36，否则会吃掉会话列表高度变成竖条） |
-| `[data-omnimux-assets-entry]` | `omnimux-assets` | 资产库（rank 6 现网）。**Workbench**：`omnimux-assets:library`，不得 claim |
-| `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（rank 8 现网）。**Workbench**：`omnimux-products:library`，不得 claim |
-| `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（rank 9）。**Workbench**：`omnimux-automation:workbench`，不得 claim；`access: offline` |
-| `[data-omnimux-inspiration-entry]` | `omnimux-inspiration` | 灵感社区（rank 7）。**Workbench**：`omnimux-inspiration:library`，不得 claim |
-| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，内测版 / Alpha）。**Workbench**：`omnimux-video:google-vids`，不得 claim；`access: offline` |
-| `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（rank 4.2 现网）。**Workbench**：`omnimux-publish:library`，不得 claim |
-| `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（rank 4.5 现网）。**Workbench**：`omnimux-analytics:library`，不得 claim |
-| `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（rank 3）。**Workbench**：`omnimux-accounts:library`，不得 claim；`access: cloud` |
-| `[data-omnimux-device-entry]` | `omnimux-device` | 手机管理（rank 3.5 现网）。**Workbench**：`omnimux-device:library`，不得 claim；`access: offline` |
-| `[data-omnimux-clip-entry]` | `omnimux-clip` | 视频剪辑（rank 8.2）。**现网隐藏**：`apply()` 不挂左侧行；Tab `omnimux-clip:studio` 仍注册，画布/Agent 可打开。`sidebar-entry.js` 保留以便恢复。不得 claim。见 [workbench-split.md](./workbench-split.md) |
-| `[data-omnimux-forms-entry]` | `omnimux-forms` | 任务表单（rank 11）。**现网隐藏**：`apply()` 不挂左侧行；Tab `omnimux-forms:tasks` 仍注册。`sidebar-entry.js` 保留以便恢复。不得 claim。 |
+| `[data-omnimux-assets-entry]` | `omnimux-assets` | 资产库（rank 6 现网，**核心常驻**）。**Workbench**：`omnimux-assets:library`，不得 claim |
+| `[data-omnimux-inspiration-entry]` | `omnimux-inspiration` | 灵感社区（rank 7，**核心常驻**）。**Workbench**：`omnimux-inspiration:library`，不得 claim |
+| `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（收敛至「探索」菜单） |
+| `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（收敛至「探索」菜单） |
+| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（收敛至「探索」菜单） |
+| `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（收敛至「探索」菜单） |
+| `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（收敛至「探索」菜单） |
+| `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（收敛至「探索」菜单） |
+| `[data-omnimux-device-entry]` | `omnimux-device` | 手机管理（收敛至「探索」菜单） |
+| `[data-omnimux-clip-entry]` | `omnimux-clip` | 视频剪辑（收敛至「探索」菜单） |
+| `[data-omnimux-forms-entry]` | `omnimux-forms` | 任务表单（收敛至「探索」菜单） |
 
 ## Alpha 内测标记
 
