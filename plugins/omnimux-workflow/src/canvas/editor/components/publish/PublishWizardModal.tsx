@@ -27,6 +27,7 @@ import {
   Info,
 } from 'lucide-react';
 import { CustomModal, toast } from '../../../ui';
+import { useT } from '../../../i18n';
 import {
   analyzeWorkflowInputs,
   generateFormConfig,
@@ -139,6 +140,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
   onPublished,
 }) => {
   // 1. Run pure topology analysis on workflow graph
+  const t = useT();
   const analysis = useMemo(() => {
     if (!isOpen) return null;
     return analyzeWorkflowInputs(nodes, edges, catalog || undefined);
@@ -872,6 +874,25 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
                 恢复推荐设置
               </button>
             </div>
+
+            {analysis.prunedNodeCount > 0 && (
+              <div
+                data-qa="pruned-nodes-notice"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--dsw-alias-bg-layer-1, rgba(255,255,255,0.03))',
+                  border: '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.06))',
+                  color: 'var(--dsw-alias-label-tertiary, #71717a)',
+                  fontSize: '11px',
+                  lineHeight: '16px',
+                }}
+              >
+                {t('wizard.step2.pruneNotice.bar').replace('{count}', String(analysis.prunedNodeCount))}
+              </div>
+            )}
 
             {INPUT_GROUP_META.map((group) => {
               const rows = inputs.filter((inp) => inp.group === group.id);

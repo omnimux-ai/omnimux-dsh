@@ -1,0 +1,13 @@
+{
+  "taskId": "isolated-nodes-publish-pruning",
+  "verifiedAt": "2026-09-26T16:08:00+08:00",
+  "environment": "node test harness & react-flow canvas simulation",
+  "suiteResults": {
+    "suite1_i18n": "PASS (3/3 keys verified in zh and en)",
+    "suite2_node_empty_state": "PASS (nodrag removed, click bubble unblocked, pill button isolated)",
+    "suite3_topology_reachability": "PASS (prunedNodeCount=2, isolated image and audio pruned, hash invariant)",
+    "suite4_publish_wizard_modal": "PASS (pruned-nodes-notice rendered with neutral tone)",
+    "allWorkflowUnitTests": "2180/2180 PASS"
+  },
+  "verdict": "VERIFIED_PASS"
+}

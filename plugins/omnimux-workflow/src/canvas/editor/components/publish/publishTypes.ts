@@ -208,6 +208,13 @@ export interface ExposedWorkflowInput {
   isInternal: boolean;
 }
 
+/** Minimal interface representing a canvas node */
+export interface FlowNodeLike {
+  id: string;
+  type?: string;
+  data?: Record<string, unknown>;
+}
+
 /** Result of the pure workflow topology analysis */
 export interface WorkflowAnalysisResult {
   /** All identified inputs (roots default exposed/required, non-roots default unexposed) */
@@ -224,6 +231,12 @@ export interface WorkflowAnalysisResult {
   categorySuggestion: ApplicationCategory;
   /** Deterministic SHA-256 hash of the workflow topology */
   workflowHash: string;
+  /** Pruned unwired / isolated nodes excluded from app input extraction */
+  prunedNodes: FlowNodeLike[];
+  /** Count of pruned nodes */
+  prunedNodeCount: number;
+  /** IDs of active reachable nodes */
+  activeNodeIds: string[];
 }
 
 /** Form schema and field mappings generated from selected inputs */
