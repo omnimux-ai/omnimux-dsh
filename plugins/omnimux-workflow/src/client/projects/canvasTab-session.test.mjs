@@ -97,4 +97,3 @@ test('源码契约 & 行为：CanvasTab 事件监听器严格校验 sessionId，
   // 场景 B：当前组件无 sessionId (如会话未绑定初始状态)
   assert.equal(simulateHandler(null, { workspaceId: 'ws_init' }), true, '无会话约束时放行初始化事件')
 })
-
