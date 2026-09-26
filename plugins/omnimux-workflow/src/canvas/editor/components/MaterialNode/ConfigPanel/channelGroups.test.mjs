@@ -5,10 +5,16 @@ import {
   formatPriceChip,
   formatPriceLabel,
   getModelChannelGroups,
+  resolveModelChannelGroups,
   parseModelAndGroup,
   resolveLineConstraints,
   resolveShortModelName,
   MODEL_CHANNEL_GROUPS,
+  DEFAULT_BYOK_CONSTRAINTS,
+  isRuntimeByokChannelSettings,
+  isLineConstraintsShape,
+  buildChannelSelectionPayload,
+  detectModelModality,
 } from './channelGroups.ts';
 // The picker mirror must equal the hub routing table; the hub is readable from a
 // test (product code may not import it). The same comparison runs as a CI gate in
@@ -212,5 +218,580 @@ describe('Canvas ConfigPanel ChannelGroups', () => {
     // 两组同选时取交集：长片版固定 15 秒会赢（标准版不施加时长约束）
     const mixed = resolveLineConstraints('minimax-h3', { allowedGroups: ['standard', 'task'] });
     assert.deepEqual(mixed.parameters.duration, { fixed: 15 });
+  });
+
+  describe('resolveModelChannelGroups implementation robustness', () => {
+    it('uses DEFAULT_BYOK_CONSTRAINTS as default constraints for byok channels', () => {
+      const settings = {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'fal',
+        runtimeMediaVideo: true,
+      };
+      const groups = resolveModelChannelGroups('seedance-2-0', settings);
+      const byok = groups.find((g) => g.id === 'byok-fal');
+      assert.ok(byok);
+      assert.equal(byok.constraints, DEFAULT_BYOK_CONSTRAINTS);
+    });
+
+    it('correctly calculates isCapEnabled: enables when caps are undefined for unknown model, or strictly by explicit toggle for video model', () => {
+      // 1. 未知模态模型在全部 undefined 时应该启用保底（对齐后端非全关健壮保底）
+      const groupsDefault = resolveModelChannelGroups('unknown-custom-model-xyz', {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'fal',
+      });
+      assert.ok(groupsDefault.some((g) => g.id === 'byok-fal'));
+
+      // 1b. 模态已知时，严格以开关状态为准：未显式开启时绝对不挂载（对齐前后端对称收敛逻辑）
+      const groupsDedicatedModelWithoutToggle = resolveModelChannelGroups('seedance-2-0', {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'fal',
+        runtimeMediaVideoModel: 'seedance-2-0',
+      });
+      assert.ok(!groupsDedicatedModelWithoutToggle.some((g) => g.id === 'byok-fal'));
+
+      // 1c. 显式开启开关时正常挂载
+      const groupsWithExplicitToggle = resolveModelChannelGroups('seedance-2-0', {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'fal',
+        runtimeMediaVideo: true,
+        runtimeMediaVideoModel: 'seedance-2-0',
+      });
+      assert.ok(groupsWithExplicitToggle.some((g) => g.id === 'byok-fal'));
+
+      // 2. 至少一个为 true 时启用
+      const groupsVideoOnly = resolveModelChannelGroups('seedance-2-0', {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'fal',
+        runtimeMediaImage: false,
+        runtimeMediaVideo: true,
+        runtimeMediaAudio: false,
+      });
+      assert.ok(groupsVideoOnly.some((g) => g.id === 'byok-fal'));
+
+      // 3. 全部为 false 时禁用
+      const groupsAllFalse = resolveModelChannelGroups('seedance-2-0', {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'fal',
+        runtimeMediaImage: false,
+        runtimeMediaVideo: false,
+        runtimeMediaAudio: false,
+      });
+      assert.ok(!groupsAllFalse.some((g) => g.id === 'byok-fal'));
+    });
+
+    it('strictly filters custom byok provider when endpoint is empty or missing', () => {
+      // 1. custom 提供商未配置 endpoint 时，绝对不挂载渠道
+      const settingsWithoutEndpoint = {
+        runtimeKeyVerified: false,
+        byokProviders: [
+          {
+            provider: 'custom',
+            verified: true,
+            endpoint: '',
+            capabilities: ['video'],
+          },
+          {
+            provider: 'custom',
+            verified: true,
+            capabilities: ['video'],
+          },
+        ],
+      };
+      const groupsWithoutEndpoint = resolveModelChannelGroups('seedance-2-0', settingsWithoutEndpoint);
+      assert.ok(!groupsWithoutEndpoint.some((g) => g.id === 'byok-custom'));
+
+      // 2. custom 提供商配置了有效 endpoint 时，正常挂载渠道
+      const settingsWithEndpoint = {
+        runtimeKeyVerified: false,
+        byokProviders: [
+          {
+            provider: 'custom',
+            verified: true,
+            endpoint: 'https://internal-llm.example.com/v1',
+            capabilities: ['video'],
+          },
+        ],
+      };
+      const groupsWithEndpoint = resolveModelChannelGroups('seedance-2-0', settingsWithEndpoint);
+      assert.ok(groupsWithEndpoint.some((g) => g.id === 'byok-custom'));
+
+      // 3. 主配置 custom 提供商未配置 endpoint 时，绝对不挂载渠道
+      const mainSettingsWithoutEndpoint = {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'custom',
+        runtimeMediaVideo: true,
+      };
+      const mainGroupsWithoutEndpoint = resolveModelChannelGroups('seedance-2-0', mainSettingsWithoutEndpoint);
+      assert.ok(!mainGroupsWithoutEndpoint.some((g) => g.id === 'byok-custom'));
+
+      // 4. 主配置 custom 提供商配置了有效 endpoint 时，正常挂载渠道
+      const mainSettingsWithEndpoint = {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'custom',
+        runtimeKeyEndpoint: 'https://custom-main.example.com/v1',
+        runtimeMediaVideo: true,
+      };
+      const mainGroupsWithEndpoint = resolveModelChannelGroups('seedance-2-0', mainSettingsWithEndpoint);
+      assert.ok(mainGroupsWithEndpoint.some((g) => g.id === 'byok-custom'));
+    });
+
+    it('enforces modality-specific capability gate: image-only settings do not enable byok for video model', () => {
+      // 视频模型在仅开启图片能力时不挂载 BYOK 渠道
+      const videoGroups = resolveModelChannelGroups('seedance-2-0', {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'fal',
+        runtimeMediaImage: true,
+        runtimeMediaVideo: false,
+        runtimeMediaAudio: false,
+      });
+      assert.ok(!videoGroups.some((g) => g.id === 'byok-fal'));
+
+      // 图片模型在开启图片能力时正常挂载 BYOK 渠道
+      const imageGroups = resolveModelChannelGroups('gpt-image-2.5', {
+        runtimeKeyVerified: true,
+        runtimeMediaProvider: 'fal',
+        runtimeMediaImage: true,
+        runtimeMediaVideo: false,
+        runtimeMediaAudio: false,
+      });
+      assert.ok(imageGroups.some((g) => g.id === 'byok-fal'));
+    });
+
+    it('filters byokProviders by declared capabilities against model modality', () => {
+      const settings = {
+        runtimeKeyVerified: false,
+        byokProviders: [
+          {
+            provider: 'fal',
+            verified: true,
+            capabilities: ['image'],
+          },
+          {
+            provider: 'openai',
+            verified: true,
+            capabilities: ['video'],
+          },
+        ],
+      };
+      // 视频模型仅挂载具有 video 能力的 openai，不挂载仅 image 的 fal
+      const videoGroups = resolveModelChannelGroups('seedance-2-0', settings);
+      assert.ok(videoGroups.some((g) => g.id === 'byok-openai'));
+      assert.ok(!videoGroups.some((g) => g.id === 'byok-fal'));
+    });
+
+    describe('isRuntimeByokChannelSettings type guard and fallback line constraints', () => {
+      it('validates strictly against well-formed runtime settings', () => {
+        assert.equal(isRuntimeByokChannelSettings({
+          runtimeMode: 'key',
+          runtimeMediaProvider: 'fal',
+          runtimeKeyVerified: true,
+          runtimeMediaVideo: true,
+          byokProviders: [{ provider: 'fal', verified: true, capabilities: ['video'] }],
+        }), true);
+
+        assert.equal(isRuntimeByokChannelSettings({
+          runtimeKeyVerified: true,
+        }), true);
+      });
+
+      it('rejects invalid, malicious or incomplete settings objects', () => {
+        assert.equal(isRuntimeByokChannelSettings(null), false);
+        assert.equal(isRuntimeByokChannelSettings(undefined), false);
+        assert.equal(isRuntimeByokChannelSettings('string'), false);
+        assert.equal(isRuntimeByokChannelSettings([]), false);
+        // 空对象拒绝
+        assert.equal(isRuntimeByokChannelSettings({}), false);
+        // 非法 runtimeMode 拒绝
+        assert.equal(isRuntimeByokChannelSettings({ runtimeMode: 'malicious' }), false);
+        // 非法类型拒绝
+        assert.equal(isRuntimeByokChannelSettings({ runtimeKeyVerified: 'not-a-bool' }), false);
+        assert.equal(isRuntimeByokChannelSettings({ runtimeMediaProvider: 12345 }), false);
+        // byokProviders 结构不合法拒绝
+        assert.equal(isRuntimeByokChannelSettings({ byokProviders: 'not-an-array' }), false);
+        assert.equal(isRuntimeByokChannelSettings({ byokProviders: [{ provider: 123 }] }), false);
+        // constraints 结构防御
+        assert.equal(isRuntimeByokChannelSettings({ constraints: 'not-an-object' }), false);
+        assert.equal(isRuntimeByokChannelSettings({ constraints: [] }), false);
+        assert.equal(isRuntimeByokChannelSettings({ constraints: null }), false);
+        assert.equal(isRuntimeByokChannelSettings({ constraints: { inputs: { image: { max: 1 } } } }), true);
+      });
+
+      it('does not silently fall back to fal when runtimeMediaProvider is empty string or whitespace', () => {
+        const emptySettings = {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: '',
+        };
+        const emptyGroups = resolveModelChannelGroups('seedance-2-0', emptySettings);
+        assert.ok(!emptyGroups.some((g) => g.id === 'byok-fal'), 'explicit empty string must not append byok-fal');
+
+        const whitespaceSettings = {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: '   ',
+        };
+        const whitespaceGroups = resolveModelChannelGroups('seedance-2-0', whitespaceSettings);
+        assert.ok(!whitespaceGroups.some((g) => g.id === 'byok-fal'), 'whitespace string must not append byok-fal');
+      });
+
+      it('injects standard aspect ratio and duration constraints for video models in fallback line constraints', () => {
+        const settings = {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: 'fal',
+          runtimeMediaVideo: true,
+        };
+        const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, settings);
+        assert.equal(constraints.inputs?.image?.max, 1);
+        assert.deepEqual(constraints.parameters?.aspectRatio, { only: ['16:9', '9:16', '1:1'] });
+        assert.deepEqual(constraints.parameters?.duration, { only: [5, 10] });
+      });
+    });
+
+    describe('buildChannelSelectionPayload pure function', () => {
+      const mockGroups = [
+        { id: 'standard', label: '官方标准版', category: 'official' },
+        { id: 'pro', label: '旗舰版', category: 'official' },
+        { id: 'byok-fal', label: '我的 fal.ai', category: 'byok', sourceType: 'byok' },
+      ];
+
+      it('builds standard payload for official group', () => {
+        const payload = buildChannelSelectionPayload('seedance-2-0', ['standard'], mockGroups);
+        assert.deepEqual(payload, {
+          modelId: 'seedance-2-0',
+          strategy: 'auto',
+          allowedGroups: ['standard'],
+        });
+      });
+
+      it('builds byok payload with channelGroupId and sourceType for byok group', () => {
+        const payload = buildChannelSelectionPayload('seedance-2-0', ['byok-fal'], mockGroups);
+        assert.deepEqual(payload, {
+          modelId: 'seedance-2-0',
+          strategy: 'auto',
+          allowedGroups: ['byok-fal'],
+          channelGroupId: 'byok-fal',
+          sourceType: 'byok',
+        });
+      });
+
+      it('returns standard model payload when groupIds is empty (unblocking basic models)', () => {
+        const payload = buildChannelSelectionPayload('seedance-2-0', [], mockGroups);
+        assert.deepEqual(payload, {
+          modelId: 'seedance-2-0',
+          strategy: 'auto',
+        });
+      });
+
+      it('returns null when requested group is not in available groups', () => {
+        const payload = buildChannelSelectionPayload('seedance-2-0', ['nonexistent'], mockGroups);
+        assert.equal(payload, null);
+      });
+
+      it('fails closed and returns null when multiple groupIds are provided', () => {
+        const payload = buildChannelSelectionPayload('seedance-2-0', ['standard', 'pro'], mockGroups);
+        assert.equal(payload, null, '必须 Fail-Closed 阻断多选');
+      });
+    });
+
+    describe('detectModelModality alignment with backend keywords', () => {
+      it('correctly detects video models for all required backend keywords', () => {
+        const videoModels = [
+          'wan-3.0',
+          'wan-2.1-t2v',
+          'luma-dream-machine',
+          'sora-turbo',
+          'grok-imagine-video-1-5',
+          'cogvideox-5b',
+          'runway-gen3',
+          'kling-v2-6',
+          'seedance-2-0',
+          'seedance-1.0-sound',
+          'minimax-h3',
+          'hailuo-v2',
+          'veo-2.0',
+        ];
+        for (const modelId of videoModels) {
+          assert.equal(detectModelModality(modelId), 'video', `Model ${modelId} must be detected as video`);
+        }
+      });
+
+      it('correctly detects audio and image models', () => {
+        assert.equal(detectModelModality('suno-v3'), 'audio');
+        assert.equal(detectModelModality('doubao-tts'), 'audio');
+        assert.equal(detectModelModality('seed-audio-1.0'), 'audio');
+        assert.equal(detectModelModality('flux-dev'), 'image');
+        assert.equal(detectModelModality('midjourney-v6'), 'image');
+        assert.equal(detectModelModality('dall-e-3'), 'image');
+        assert.equal(detectModelModality('stable-diffusion-xl'), 'image');
+        assert.equal(detectModelModality('nano-banana-2'), 'image');
+
+        // speech 词界正则防误伤验证
+        assert.equal(detectModelModality('my-speech-1'), 'audio');
+        assert.equal(detectModelModality('doubao-speech'), 'audio');
+        assert.equal(detectModelModality('speech-01'), 'audio');
+        assert.equal(detectModelModality('bespeech-tool'), null);
+        assert.equal(detectModelModality('unspeechable-model'), null);
+      });
+
+      it('prevents false positives like software-wan-demo or illumina from being detected as video', () => {
+        assert.equal(detectModelModality('software-wan-demo'), null);
+        assert.equal(detectModelModality('illumina'), null);
+      });
+    });
+
+    describe('resolveLineConstraints pure function isolation', () => {
+      it('never relies on window.__OMNIMUX_RUNTIME_SETTINGS__ and returns standard fallback when runtimeSettings is omitted', () => {
+        const originalWindow = globalThis.window;
+        try {
+          globalThis.window = {
+            __OMNIMUX_RUNTIME_SETTINGS__: {
+              runtimeKeyVerified: true,
+              runtimeMediaProvider: 'fal',
+              runtimeMediaVideo: true,
+            },
+          };
+          // 纯函数调用：未传入有效 settings 时不受 window 污染，返回纯函数标准兜底
+          const constraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] });
+          assert.deepEqual(constraints, {}, '未传入 runtimeSettings 时必须保持纯函数标准兜底，不得读取全局 window');
+
+          // 显式传入有效 settings 时正常解析约束
+          const validConstraints = resolveLineConstraints('seedance-2-0', { allowedGroups: ['byok-fal'] }, {
+            runtimeKeyVerified: true,
+            runtimeMediaProvider: 'fal',
+            runtimeMediaVideo: true,
+          });
+          assert.equal(validConstraints.inputs?.image?.max, 1, '显式传入 runtimeSettings 时正确获取自备渠道约束');
+          assert.deepEqual(validConstraints.parameters?.aspectRatio, { only: ['16:9', '9:16', '1:1'] });
+          assert.deepEqual(validConstraints.parameters?.duration, { only: [5, 10] });
+        } finally {
+          globalThis.window = originalWindow;
+        }
+      });
+
+      it('safely rejects invalid settings via isRuntimeByokChannelSettings guard and supports constraints injection', () => {
+        assert.equal(isRuntimeByokChannelSettings({
+          runtimeMode: 'malicious_mode',
+          runtimeKeyVerified: 'not_a_boolean',
+        }), false);
+
+        // 对齐服务端语义：当 runtimeMediaProvider 为 undefined 且 runtimeKeyVerified === true 时，安全映射为默认 fal
+        const groupsWithoutProvider = resolveModelChannelGroups('seedance-2-0', {
+          runtimeKeyVerified: true,
+          runtimeMediaVideo: true,
+          constraints: {
+            inputs: { image: { max: 1 } },
+            parameters: { duration: { only: [5] } },
+          },
+        });
+        const byokFalDefault = groupsWithoutProvider.find((g) => g.id === 'byok-fal');
+        assert.ok(byokFalDefault, 'runtimeMediaProvider 为 undefined 且已验证时安全映射为默认 fal');
+        assert.deepEqual(byokFalDefault.constraints?.parameters?.duration, { only: [5] }, '主渠道必须成功注入 runtimeSettings.constraints');
+
+        // 显式配置 fal 时正常解析并注入 constraints
+        const groupsWithFal = resolveModelChannelGroups('seedance-2-0', {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: 'fal',
+          runtimeMediaVideo: true,
+          constraints: {
+            inputs: { image: { max: 1 } },
+            parameters: { duration: { only: [5] } },
+          },
+        });
+        const byokFal = groupsWithFal.find((g) => g.id === 'byok-fal');
+        assert.ok(byokFal, '显式配置 fal 时正常解析');
+        assert.deepEqual(byokFal.constraints?.parameters?.duration, { only: [5] }, '主渠道必须成功注入 runtimeSettings.constraints');
+
+        // 空约束对象 {} 有效性保护：空对象回退到 DEFAULT_BYOK_CONSTRAINTS
+        const groupsEmptyConstraints = resolveModelChannelGroups('seedance-2-0', {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: 'fal',
+          runtimeMediaVideo: true,
+          constraints: {},
+        });
+        const byokFalEmptyCons = groupsEmptyConstraints.find((g) => g.id === 'byok-fal');
+        assert.deepEqual(byokFalEmptyCons?.constraints, DEFAULT_BYOK_CONSTRAINTS, '空约束对象 {} 自动回退到 DEFAULT_BYOK_CONSTRAINTS');
+
+        // 空白串或显式空串坚决拒绝
+        const groupsBlank = resolveModelChannelGroups('seedance-2-0', {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: '   ',
+          runtimeMediaVideo: true,
+        });
+        assert.ok(!groupsBlank.some((g) => g.id === 'byok-fal'), '空白串 runtimeMediaProvider 坚决拒绝');
+
+        const groupsEmptyStr = resolveModelChannelGroups('seedance-2-0', {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: '',
+          runtimeMediaVideo: true,
+        });
+        assert.ok(!groupsEmptyStr.some((g) => g.id === 'byok-fal'), '显式空串 runtimeMediaProvider 坚决拒绝');
+
+        // 移除通用 model 模态宽松判定：仅有通用 model 而无对应模态模型时严格排除
+        const groupsGeneralModel = resolveModelChannelGroups('seedance-2-0', {
+          runtimeKeyVerified: false,
+          byokProviders: [
+            {
+              provider: 'openai',
+              verified: true,
+              model: 'gpt-4o', // 仅有通用 model，无 videoModel / models.video / video 开关
+            },
+          ],
+        });
+        assert.ok(!groupsGeneralModel.some((g) => g.id === 'byok-openai'), '仅有通用 model 而无当前专属模态模型时严格排除');
+      });
+
+      it('correctly reads routing.channelGroupId to resolve line constraints', () => {
+        const settings = {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: 'fal',
+          runtimeMediaVideo: true,
+        };
+        const constraints = resolveLineConstraints('seedance-2-0', { channelGroupId: 'byok-fal' }, settings);
+        assert.equal(constraints.inputs?.image?.max, 1);
+        assert.deepEqual(constraints.parameters?.aspectRatio, { only: ['16:9', '9:16', '1:1'] });
+      });
+
+      it('deeply validates LineConstraints shape preventing malformed objects from escaping', () => {
+        // 合法结构
+        assert.equal(isLineConstraintsShape({
+          inputs: { image: { max: 1 } },
+          parameters: { duration: { only: [5, 10] } },
+        }), true);
+
+        // 畸变 inputs.image.max
+        assert.equal(isLineConstraintsShape({
+          inputs: { image: { max: 'invalid' } },
+        }), false);
+        assert.equal(isLineConstraintsShape({
+          inputs: { image: { max: -1 } },
+        }), false);
+
+        // 畸变 parameters.only
+        assert.equal(isLineConstraintsShape({
+          parameters: { duration: { only: 'not_an_array' } },
+        }), false);
+        assert.equal(isLineConstraintsShape({
+          parameters: { duration: { only: [5, { complex: 'object' }] } },
+        }), false);
+        assert.equal(isLineConstraintsShape({
+          parameters: { duration: { only: [null] } },
+        }), false);
+        assert.equal(isLineConstraintsShape({
+          parameters: { duration: { only: [undefined] } },
+        }), false);
+
+        // 严格基元类型检查 parameters.fixed
+        assert.equal(isLineConstraintsShape({
+          parameters: { duration: { fixed: 5 } },
+        }), true);
+        assert.equal(isLineConstraintsShape({
+          parameters: { aspectRatio: { fixed: '16:9' } },
+        }), true);
+        assert.equal(isLineConstraintsShape({
+          parameters: { generateSound: { fixed: false } },
+        }), true);
+        assert.equal(isLineConstraintsShape({
+          parameters: { duration: { fixed: {} } },
+        }), false);
+        assert.equal(isLineConstraintsShape({
+          parameters: { duration: { fixed: [] } },
+        }), false);
+        assert.equal(isLineConstraintsShape({
+          parameters: { duration: { fixed: () => {} } },
+        }), false);
+
+        // 畸变 operations
+        assert.equal(isLineConstraintsShape({
+          operations: 'not_an_array',
+        }), false);
+        assert.equal(isLineConstraintsShape({
+          operations: [123],
+        }), false);
+      });
+
+      it('fails closed and returns empty constraints when routing mixes official and byok channels', () => {
+        const settings = {
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: 'fal',
+          runtimeMediaVideo: true,
+        };
+        // 模拟历史脏数据中同时混杂了官方渠道和 BYOK 渠道
+        const mixedRouting = {
+          allowedGroups: ['standard', 'byok-fal'],
+        };
+        const constraints = resolveLineConstraints('seedance-2-0', mixedRouting, settings);
+        assert.deepEqual(constraints, {}, '混合渠道必须 Fail-Closed 拦截并返回空约束对象');
+
+        // 双路由残留但显式声明 sourceType 时，优先依据 sourceType 保留对应一方约束
+        const mixedByok = {
+          allowedGroups: ['standard', 'byok-fal'],
+          sourceType: 'byok',
+        };
+        const byokConstraints = resolveLineConstraints('seedance-2-0', mixedByok, settings);
+        assert.deepEqual(byokConstraints.inputs, { image: { max: 1 } }, '显式 sourceType: byok 时优先采纳 BYOK 约束');
+
+        const mixedOfficial = {
+          allowedGroups: ['pro', 'byok-fal'],
+          sourceType: 'official',
+        };
+        const officialConstraints = resolveLineConstraints('seedance-2-5', mixedOfficial, settings);
+        assert.deepEqual(officialConstraints.parameters?.duration?.fixed, 30, '显式 sourceType: official 时优先采纳 official 约束');
+      });
+
+      it('deduplicates conflicting BYOK IDs with channelGroupId as authoritative source', () => {
+        const settings = {
+          runtimeKeyVerified: true,
+          byokProviders: [
+            {
+              provider: 'fal',
+              verified: true,
+              video: true,
+              constraints: { inputs: { image: { max: 1 } }, parameters: { duration: { only: [5] } } },
+            },
+            {
+              provider: 'volcengine',
+              verified: true,
+              video: true,
+              constraints: { inputs: { image: { max: 2 } }, parameters: { duration: { only: [10] } } },
+            },
+          ],
+        };
+        // 当 channelGroupId 为 byok-volcengine，而 allowedGroups[0] 为 byok-fal 时，明确以 channelGroupId 为权威来源去重
+        const conflictingRouting = {
+          channelGroupId: 'byok-volcengine',
+          allowedGroups: ['byok-fal'],
+        };
+        const constraints = resolveLineConstraints('seedance-2-0', conflictingRouting, settings);
+        assert.equal(constraints.inputs?.image?.max, 2, '以 channelGroupId 为权威来源解析 volcengine 约束，而不是 fal 约束');
+        assert.deepEqual(constraints.parameters?.duration, { only: [10] });
+      });
+
+      it('accurately resolves byokProviders with legacy modal fields and cap models when capabilities is omitted or empty', () => {
+        // 1. item 带有 image: true 或 video: true 等布尔开关
+        const settingsWithBooleans = {
+          runtimeKeyVerified: true,
+          byokProviders: [
+            { provider: 'fal', verified: true, video: true },
+            { provider: 'openai', verified: true, image: true, video: false },
+          ],
+        };
+        const videoGroups = resolveModelChannelGroups('seedance-2-0', settingsWithBooleans);
+        assert.ok(videoGroups.some((g) => g.id === 'byok-fal'), '具备 video: true 的 provider 应被判定为视频可用');
+        assert.ok(!videoGroups.some((g) => g.id === 'byok-openai'), '显式 video: false 的 provider 应被排除在视频之外');
+
+        const imageGroups = resolveModelChannelGroups('flux-1-dev', settingsWithBooleans);
+        assert.ok(imageGroups.some((g) => g.id === 'byok-openai'), '具备 image: true 的 provider 应被判定为图片可用');
+
+        // 2. item 带有 models[capability] 或 imageModel / videoModel 等模型字段
+        const settingsWithModels = {
+          runtimeKeyVerified: true,
+          byokProviders: [
+            { provider: 'openrouter', verified: true, models: { video: 'luma-dream-machine' } },
+            { provider: 'custom', verified: true, endpoint: 'https://api.example.com', videoModel: 'my-custom-video-model' },
+          ],
+        };
+        const modelVideoGroups = resolveModelChannelGroups('seedance-2-0', settingsWithModels);
+        assert.ok(modelVideoGroups.some((g) => g.id === 'byok-openrouter'), '配置 models.video 模型的 provider 应放行');
+        assert.ok(modelVideoGroups.some((g) => g.id === 'byok-custom'), '配置 videoModel 的 custom provider 应放行');
+      });
+    });
   });
 });

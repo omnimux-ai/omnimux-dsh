@@ -62,7 +62,8 @@ test('actual migration effect preserves redo after panel remount and rejects sta
 });
 
 test('model cascade delegates one atomic model/routing/history update without stale params write', () => {
-  const callback = source.slice(source.indexOf('onSelect={({ modelId, strategy, allowedGroups })'), source.indexOf('onSelect={({ modelId, strategy, allowedGroups })') + 700).split('/>')[0];
+  const selectKey = 'onSelect={({ modelId, strategy, allowedGroups';
+  const callback = source.slice(source.indexOf(selectKey), source.indexOf(selectKey) + 700).split('/>')[0];
   assert.doesNotMatch(callback, /onUpdateNodeData|\.\.\.params/);
   assert.match(callback, /handleModelChange\(modelId,/);
   assert.match(source, /parameterSelections: transition.parameterSelections/);

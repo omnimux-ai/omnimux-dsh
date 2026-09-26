@@ -1,7 +1,38 @@
 import { assertCapabilityEnabled, isMediaEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from './errors.js'
-import { assertRuntimeReady } from '../settings/runtime-mode.js'
+import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mode.js'
+import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent } from '../catalog/serving/channel-groups.js'
 import { objectParams, rethrow } from '../tools/schema.js'
+
+/**
+ * 核验宿主环境官方 Token 真实性，排除伪造、空值或占位符字符串。
+ * @param {unknown} token
+ * @returns {boolean}
+ */
+function isAuthenticOfficialToken(token) {
+  if (typeof token !== 'string') return false
+  const trimmed = token.trim()
+  if (!trimmed) return false
+  const lower = trimmed.toLowerCase()
+  const FORGERY_PLACEHOLDERS = new Set([
+    'undefined',
+    'null',
+    'false',
+    'none',
+    '0',
+    'nan',
+    '[object object]',
+    'placeholder',
+    'empty',
+  ])
+  if (FORGERY_PLACEHOLDERS.has(lower)) {
+    return false
+  }
+  if (/[\r\n\t\0]/.test(trimmed)) {
+    return false
+  }
+  return true
+}
 
 /**
  * The model a submit actually routes on.
@@ -56,9 +87,71 @@ export function mountMedia(ctx, opts) {
     execute(req) {
       assertCapabilityEnabled(gate, kind, 'media')
       const current = ctx.get?.('settings')?.get?.('omnimux')
-      assertRuntimeReady(current, kind)
+      const channelIntent = resolveRequestChannelIntent(req)
+
+      // 官方凭据判定移至服务侧安全上下文，不信任调用方请求体自带的 req.env.OMNIMUX_API_KEY
+      // 严格核验宿主环境权威凭据真实性，杜绝伪造调用越权
+      const rawSystemToken = process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
+      const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
+
+      const runtime = resolveRuntimeChoice(current)
+      const isAgentVerified = current?.runtimeMode === 'agent'
+        && runtime.textReady === true
+        && typeof current?.runtimeAgentId === 'string'
+        && current.runtimeAgentId.trim().length > 0
+        && current?.runtimeAgentVerified === true
+      const hasVerifiedRuntime = (() => {
+        try {
+          assertRuntimeReady(current, kind)
+          return true
+        } catch {
+          return false
+        }
+      })()
+      const isOfficialAllowed = runtime.mode === 'official'
+        || (current?.allowOfficialMediaFallback === true && hasVerifiedRuntime)
+
+      const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
+      const targetChannel = typeof rawTargetChannel === 'string' ? rawTargetChannel.toLowerCase().trim() : ''
+      const { modelId: requestModelId } = parseModelAndGroup(req?.model)
+      const modelGroups = requestModelId ? getModelChannelGroups(requestModelId) : []
+      const isKnownOfficial = targetChannel
+        ? (targetChannel === 'official' || modelGroups.some((group) => {
+            const gid = typeof group.id === 'string' ? group.id.toLowerCase().trim() : ''
+            const wire = typeof group.wireGroup === 'string' ? group.wireGroup.toLowerCase().trim() : ''
+            return gid === targetChannel || wire === targetChannel
+          }))
+        : (runtime.mode === 'official')
+
+      // 渠道严格判定：
+      // 1. 若显式指定渠道，必须为已知官方专线；
+      // 2. 常规官方请求未显式指定渠道组（targetChannel 为空）时，在官方模式下正确识别为默认官方渠道；
+      // 3. 绝不能被未知自定义渠道或 BYOK 渠道冒领
+      const isOfficialRequest = !channelIntent.isByokChannel
+        && (
+          (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
+          || (!targetChannel && runtime.mode === 'official')
+        )
+
+      const isOfficialBypass = isOfficialRequest && isOfficialAllowed && hasOfficialToken
+      if (!isOfficialBypass) {
+        assertRuntimeReady(current, kind)
+      }
+      let finalReq
+      if (isOfficialBypass) {
+        finalReq = {
+          ...req,
+          env: {
+            OMNIMUX_API_KEY: rawSystemToken.trim(),
+          },
+        }
+      } else if (isOfficialRequest) {
+        finalReq = { ...req, env: {} }
+      } else {
+        finalReq = req
+      }
       return execute({
-        ...req,
+        ...finalReq,
         media,
         store: opts.store,
         credentials: ctx.get?.('credentials'),

@@ -19,6 +19,11 @@ export interface ChannelGroupItem {
   id: string;
   label: string;
   badge?: string;
+  /** 渠道分类：官方专线 vs 自备渠道 */
+  category?: 'official' | 'byok';
+  sourceType?: 'official' | 'byok';
+  chipLabel?: string;
+  isAvailable?: boolean;
   /** 适合场景与能力文字简介。 */
   description?: string;
   pricing?: {
@@ -661,9 +666,531 @@ export function parseModelAndGroup(input?: string): { modelId: string; group: st
  * picker must show "no channel choice" rather than invent channels and prices
  * the hub cannot route to.
  */
-export function getModelChannelGroups(modelId: string): ChannelGroupItem[] {
+export function getModelChannelGroups(
+  modelId: string,
+  runtimeSettings?: RuntimeByokChannelSettings | null,
+): ChannelGroupItem[] {
+  if (runtimeSettings) {
+    return resolveModelChannelGroups(modelId, runtimeSettings);
+  }
   const { modelId: canonical } = parseModelAndGroup(modelId);
   return MODEL_CHANNEL_GROUPS[canonical] ? [...MODEL_CHANNEL_GROUPS[canonical]] : [];
+}
+
+export interface RuntimeByokChannelSettings {
+  runtimeMode?: 'official' | 'agent' | 'key';
+  runtimeMediaProvider?: string;
+  runtimeKeyVerified?: boolean;
+  runtimeKeyEndpoint?: string;
+  runtimeMediaImage?: boolean;
+  runtimeMediaVideo?: boolean;
+  runtimeMediaAudio?: boolean;
+  runtimeMediaImageModel?: string;
+  runtimeMediaVideoModel?: string;
+  runtimeMediaAudioModel?: string;
+  constraints?: LineConstraints;
+  byokProviders?: Array<{
+    provider: string;
+    verified: boolean;
+    endpoint?: string;
+    capabilities?: Array<'image' | 'video' | 'audio'>;
+    constraints?: LineConstraints;
+    image?: boolean;
+    video?: boolean;
+    audio?: boolean;
+    runtimeMediaImage?: boolean;
+    runtimeMediaVideo?: boolean;
+    runtimeMediaAudio?: boolean;
+    models?: Record<string, string>;
+    imageModel?: string;
+    videoModel?: string;
+    audioModel?: string;
+    model?: string;
+  }>;
+}
+
+export const BYOK_PROVIDER_DISPLAY_MAP: Readonly<Record<string, {
+  id: string;
+  label: string;
+  badge: string;
+  chipLabel: string;
+  provider: 'fal-ai' | 'openai' | 'custom-http';
+}>> = Object.freeze({
+  fal: {
+    id: 'byok-fal',
+    label: '我的 fal.ai',
+    badge: '自备 API Key · 直连专线',
+    chipLabel: '按需自付',
+    provider: 'fal-ai',
+  },
+  openai: {
+    id: 'byok-openai',
+    label: '我的 OpenAI',
+    badge: '自备 API Key · 直连专线',
+    chipLabel: '按需自付',
+    provider: 'openai',
+  },
+  openrouter: {
+    id: 'byok-openrouter',
+    label: '我的 OpenRouter',
+    badge: '自备 API Key · 直连专线',
+    chipLabel: '按需自付',
+    provider: 'custom-http',
+  },
+  siliconflow: {
+    id: 'byok-siliconflow',
+    label: '我的 SiliconFlow',
+    badge: '自备 API Key · 直连专线',
+    chipLabel: '按需自付',
+    provider: 'custom-http',
+  },
+  custom: {
+    id: 'byok-custom',
+    label: '我的 自建端点',
+    badge: '自备 API Key · 直连专线',
+    chipLabel: '内部专线',
+    provider: 'custom-http',
+  },
+});
+
+/**
+ * 严格类型守卫：深层校验 LineConstraints 结构，对 inputs.image.max、parameters 等关键字段做结构校验，防止畸变对象逃逸。
+ */
+export function isLineConstraintsShape(raw: unknown): raw is LineConstraints {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return false;
+  }
+  const obj = raw as Record<string, unknown>;
+
+  if (obj.operations !== undefined) {
+    if (!Array.isArray(obj.operations) || !obj.operations.every((op) => typeof op === 'string')) {
+      return false;
+    }
+  }
+
+  if (obj.inputs !== undefined) {
+    if (!obj.inputs || typeof obj.inputs !== 'object' || Array.isArray(obj.inputs)) {
+      return false;
+    }
+    const inputs = obj.inputs as Record<string, unknown>;
+    for (const [, val] of Object.entries(inputs)) {
+      if (val === undefined) continue;
+      if (!val || typeof val !== 'object' || Array.isArray(val)) {
+        return false;
+      }
+      const limit = val as Record<string, unknown>;
+      if (limit.max !== undefined && (typeof limit.max !== 'number' || !Number.isFinite(limit.max) || limit.max < 0)) {
+        return false;
+      }
+    }
+  }
+
+  if (obj.parameters !== undefined) {
+    if (!obj.parameters || typeof obj.parameters !== 'object' || Array.isArray(obj.parameters)) {
+      return false;
+    }
+    const params = obj.parameters as Record<string, unknown>;
+    for (const [, val] of Object.entries(params)) {
+      if (val === undefined) continue;
+      if (!val || typeof val !== 'object' || Array.isArray(val)) {
+        return false;
+      }
+      const param = val as Record<string, unknown>;
+      if (param.only !== undefined) {
+        if (!Array.isArray(param.only)) {
+          return false;
+        }
+        for (const item of param.only) {
+          if (typeof item !== 'string' && typeof item !== 'number' && typeof item !== 'boolean') {
+            return false;
+          }
+        }
+      }
+      if (param.fixed !== undefined) {
+        if (
+          typeof param.fixed !== 'string' &&
+          typeof param.fixed !== 'number' &&
+          typeof param.fixed !== 'boolean'
+        ) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+/**
+ * 严格类型守卫函数：对 RuntimeByokChannelSettings 进行全字段深度防御性校验。
+ * 杜绝恶意注入、残缺对象或任意无关脏对象。
+ */
+export function isRuntimeByokChannelSettings(raw: unknown): raw is RuntimeByokChannelSettings {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return false;
+  }
+  const obj = raw as Record<string, unknown>;
+
+  if (obj.runtimeMode !== undefined) {
+    if (typeof obj.runtimeMode !== 'string' || !['official', 'agent', 'key'].includes(obj.runtimeMode)) {
+      return false;
+    }
+  }
+
+  if (obj.runtimeMediaProvider !== undefined && typeof obj.runtimeMediaProvider !== 'string') {
+    return false;
+  }
+
+  if (obj.runtimeKeyVerified !== undefined && typeof obj.runtimeKeyVerified !== 'boolean') {
+    return false;
+  }
+
+  if (obj.runtimeKeyEndpoint !== undefined && typeof obj.runtimeKeyEndpoint !== 'string') {
+    return false;
+  }
+
+  if (obj.runtimeMediaImage !== undefined && typeof obj.runtimeMediaImage !== 'boolean') {
+    return false;
+  }
+
+  if (obj.runtimeMediaVideo !== undefined && typeof obj.runtimeMediaVideo !== 'boolean') {
+    return false;
+  }
+
+  if (obj.runtimeMediaAudio !== undefined && typeof obj.runtimeMediaAudio !== 'boolean') {
+    return false;
+  }
+
+  if (obj.runtimeMediaImageModel !== undefined && typeof obj.runtimeMediaImageModel !== 'string') {
+    return false;
+  }
+
+  if (obj.runtimeMediaVideoModel !== undefined && typeof obj.runtimeMediaVideoModel !== 'string') {
+    return false;
+  }
+
+  if (obj.runtimeMediaAudioModel !== undefined && typeof obj.runtimeMediaAudioModel !== 'string') {
+    return false;
+  }
+
+  if (obj.byokProviders !== undefined) {
+    if (!Array.isArray(obj.byokProviders)) {
+      return false;
+    }
+    for (const item of obj.byokProviders) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return false;
+      }
+      const p = item as Record<string, unknown>;
+      if (typeof p.provider !== 'string' || typeof p.verified !== 'boolean') {
+        return false;
+      }
+      if (p.endpoint !== undefined && typeof p.endpoint !== 'string') {
+        return false;
+      }
+      if (p.capabilities !== undefined) {
+        if (!Array.isArray(p.capabilities)) {
+          return false;
+        }
+        for (const cap of p.capabilities) {
+          if (cap !== 'image' && cap !== 'video' && cap !== 'audio') {
+            return false;
+          }
+        }
+      }
+      if (p.image !== undefined && typeof p.image !== 'boolean') return false;
+      if (p.video !== undefined && typeof p.video !== 'boolean') return false;
+      if (p.audio !== undefined && typeof p.audio !== 'boolean') return false;
+      if (p.runtimeMediaImage !== undefined && typeof p.runtimeMediaImage !== 'boolean') return false;
+      if (p.runtimeMediaVideo !== undefined && typeof p.runtimeMediaVideo !== 'boolean') return false;
+      if (p.runtimeMediaAudio !== undefined && typeof p.runtimeMediaAudio !== 'boolean') return false;
+      if (p.imageModel !== undefined && typeof p.imageModel !== 'string') return false;
+      if (p.videoModel !== undefined && typeof p.videoModel !== 'string') return false;
+      if (p.audioModel !== undefined && typeof p.audioModel !== 'string') return false;
+      if (p.model !== undefined && typeof p.model !== 'string') return false;
+      if (p.models !== undefined && (typeof p.models !== 'object' || Array.isArray(p.models) || p.models === null)) return false;
+      if (p.constraints !== undefined) {
+        if (!isLineConstraintsShape(p.constraints)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  if (obj.constraints !== undefined) {
+    if (!isLineConstraintsShape(obj.constraints)) {
+      return false;
+    }
+  }
+
+  // 必须至少包含一个已知的有效字段，防止空对象 {} 逃逸
+  return (
+    obj.runtimeMode !== undefined ||
+    obj.runtimeMediaProvider !== undefined ||
+    obj.runtimeKeyVerified !== undefined ||
+    obj.runtimeKeyEndpoint !== undefined ||
+    obj.runtimeMediaImage !== undefined ||
+    obj.runtimeMediaVideo !== undefined ||
+    obj.runtimeMediaAudio !== undefined ||
+    obj.runtimeMediaImageModel !== undefined ||
+    obj.runtimeMediaVideoModel !== undefined ||
+    obj.runtimeMediaAudioModel !== undefined ||
+    obj.constraints !== undefined ||
+    obj.byokProviders !== undefined
+  );
+}
+
+/** BYOK 渠道默认基准约束（单图限制，统一渠道与线路约束引用） */
+export const DEFAULT_BYOK_CONSTRAINTS: LineConstraints = Object.freeze({
+  inputs: {
+    image: { max: 1 },
+  },
+});
+
+/**
+ * 判断渠道分组或渠道 ID 是否属于 BYOK（自备渠道）。
+ */
+export function isByokGroup(
+  groupOrId?: string | { id?: string; category?: string; sourceType?: string } | null,
+): boolean {
+  if (!groupOrId) return false;
+  if (typeof groupOrId === 'string') {
+    return groupOrId.startsWith('byok-');
+  }
+  return (
+    groupOrId.category === 'byok' ||
+    groupOrId.sourceType === 'byok' ||
+    Boolean(groupOrId.id?.startsWith('byok-'))
+  );
+}
+
+/**
+ * 清洗与防御校验 providerKey，过滤非预期特殊字符，避免注入或非法 ID 构造。
+ * 若清洗后为空串或入参非法，返回 null，由调用方跳过注入。
+ */
+export function sanitizeProviderKey(providerKey?: string): string | null {
+  if (!providerKey || typeof providerKey !== 'string') return null;
+  const norm = providerKey.toLowerCase().trim();
+  if (!/^[a-z0-9_-]+$/.test(norm)) return null;
+  return norm;
+}
+
+/**
+ * 启发式推导模型所属模态（image / video / audio），用于 BYOK 渠道可用性精细门禁。
+ */
+export function detectModelModality(modelId: string): 'image' | 'video' | 'audio' | null {
+  const { modelId: parsed } = parseModelAndGroup(modelId);
+  const id = parsed.toLowerCase();
+
+  // 1. 优先推导视频模型：避免带音频特性的视频模型（如 seedance-1.0-sound）被误判为纯音频模型
+  if (
+    id.includes('video') ||
+    id.includes('seedance') ||
+    id.includes('kling') ||
+    id.includes('minimax-h3') ||
+    id.includes('hailuo') ||
+    /(?:^|[-_])wan(?:[-_]?[0-9]|[-_]?(?:i2v|t2v)|x|$)/.test(id) ||
+    id.includes('sora') ||
+    id.includes('runway') ||
+    /(?:^|[-_])luma(?:[-_0-9]|$)/.test(id) ||
+    id.includes('cogvideo') ||
+    id.includes('grok-imagine-video') ||
+    id.startsWith('veo')
+  ) {
+    return 'video';
+  }
+
+  // 2. 图片模型
+  if (
+    id.includes('image') ||
+    id.includes('flux') ||
+    id.includes('midjourney') ||
+    id.startsWith('mj-') ||
+    id.includes('seedream') ||
+    id.includes('nano-banana') ||
+    id.includes('banana') ||
+    id.includes('imagen') ||
+    id.includes('dall-e') ||
+    id.includes('sd-') ||
+    id.includes('stable-diffusion')
+  ) {
+    return 'image';
+  }
+
+  // 3. 音频模型（对 sound 模态做词界精确匹配，防止非音频模型误命中）
+  if (
+    id.includes('audio') ||
+    id.includes('suno') ||
+    id.includes('tts') ||
+    id.includes('music') ||
+    id.includes('voice') ||
+    /(?:^|[-_])speech(?:[-_0-9]|$)/.test(id) ||
+    /(?:^|[-_])sound(?:[-_0-9]|fx|effect|$)/.test(id) ||
+    id.includes('whisper') ||
+    id.startsWith('seed-audio')
+  ) {
+    return 'audio';
+  }
+
+  return null;
+}
+
+/**
+ * 聚合指定逻辑模型的完整可用渠道池（官方内置专线 + 已验证的用户自备 BYOK 渠道）。
+ *
+ * @param modelId 逻辑模型 ID（支持带 @group 后缀，内部自动归一化）
+ * @param runtimeSettings 当前运行时设置快照
+ * @returns 包含 category ('official' | 'byok')、chipLabel 等属性的渠道分组列表
+ */
+export function resolveModelChannelGroups(
+  modelId: string,
+  runtimeSettings?: RuntimeByokChannelSettings | null,
+): ChannelGroupItem[] {
+  const { modelId: parsedModelId } = parseModelAndGroup(modelId);
+  const rawOfficialGroups = MODEL_CHANNEL_GROUPS[parsedModelId] || [];
+  const officialGroups = rawOfficialGroups.map((group) => ({
+    ...group,
+    category: 'official' as const,
+    sourceType: 'official' as const,
+    isAvailable: group.enabled !== false,
+  }));
+
+  if (!isRuntimeByokChannelSettings(runtimeSettings)) {
+    return officialGroups;
+  }
+
+  const byokGroups: ChannelGroupItem[] = [];
+  const addedIds = new Set(officialGroups.map((g) => g.id));
+
+  const appendByokProvider = (providerKey?: string, constraints?: LineConstraints) => {
+    const norm = sanitizeProviderKey(providerKey);
+    if (!norm) return;
+    const meta = Object.prototype.hasOwnProperty.call(BYOK_PROVIDER_DISPLAY_MAP, norm)
+      ? BYOK_PROVIDER_DISPLAY_MAP[norm]
+      : {
+          id: `byok-${norm}`,
+          label: `我的 ${norm}`,
+          badge: '自备 API Key · 直连专线',
+          chipLabel: '按需自付',
+          provider: 'custom-http' as const,
+        };
+    if (addedIds.has(meta.id)) return;
+    addedIds.add(meta.id);
+    byokGroups.push({
+      id: meta.id,
+      label: meta.label,
+      badge: meta.badge,
+      category: 'byok',
+      sourceType: 'byok',
+      chipLabel: meta.chipLabel,
+      wireGroup: meta.id,
+      enabled: true,
+      isAvailable: true,
+      pricing: {
+        pointsEstimate: null,
+        billingMode: 'payg',
+      },
+      constraints: constraints && Object.keys(constraints).length > 0 ? constraints : DEFAULT_BYOK_CONSTRAINTS,
+    });
+  };
+
+  const modelModality = detectModelModality(parsedModelId);
+
+  // 1. 检查主配置中的媒体 Provider，按模型所属模态（image/video/audio）校验是否开启
+  if (runtimeSettings.runtimeKeyVerified === true) {
+    const allFalse =
+      runtimeSettings.runtimeMediaImage === false &&
+      runtimeSettings.runtimeMediaVideo === false &&
+      runtimeSettings.runtimeMediaAudio === false;
+
+    let isCapEnabled = !allFalse;
+    if (modelModality) {
+      if (modelModality === 'image') {
+        isCapEnabled = runtimeSettings.runtimeMediaImage === true;
+      } else if (modelModality === 'video') {
+        isCapEnabled = runtimeSettings.runtimeMediaVideo === true;
+      } else if (modelModality === 'audio') {
+        isCapEnabled = runtimeSettings.runtimeMediaAudio === true;
+      }
+    }
+
+    if (isCapEnabled) {
+      const rawProvider = runtimeSettings.runtimeMediaProvider;
+      let providerCandidate = '';
+      if (typeof rawProvider === 'string') {
+        const trimmed = rawProvider.trim();
+        if (trimmed.length > 0) {
+          providerCandidate = trimmed;
+        }
+      } else if (rawProvider === undefined) {
+        providerCandidate = 'fal';
+      }
+      if (providerCandidate.length > 0) {
+        const provider = providerCandidate.toLowerCase();
+        const endpoint = typeof runtimeSettings.runtimeKeyEndpoint === 'string'
+          ? runtimeSettings.runtimeKeyEndpoint.trim()
+          : '';
+        if (provider !== 'custom' || /^https?:\/\//i.test(endpoint)) {
+          appendByokProvider(providerCandidate, runtimeSettings.constraints);
+        }
+      }
+    }
+  }
+
+  // 2. 检查多 Provider 扩展列表 (byokProviders)
+  if (Array.isArray(runtimeSettings.byokProviders)) {
+    for (const item of runtimeSettings.byokProviders) {
+      if (item && typeof item === 'object' && item.verified === true && item.provider) {
+        const provider = sanitizeProviderKey(item.provider);
+        if (!provider) {
+          continue;
+        }
+        if (provider === 'custom' && !(typeof item.endpoint === 'string' && /^https?:\/\//i.test(item.endpoint.trim()))) {
+          continue;
+        }
+        if (modelModality) {
+          if (Array.isArray(item.capabilities) && item.capabilities.length > 0) {
+            if (!item.capabilities.includes(modelModality)) {
+              continue;
+            }
+          } else {
+            // 向下兼容解析模态布尔字段以及专属模型字段，与后端 100% 对齐
+            const capFlag = modelModality === 'image'
+              ? 'runtimeMediaImage'
+              : modelModality === 'video'
+              ? 'runtimeMediaVideo'
+              : modelModality === 'audio'
+              ? 'runtimeMediaAudio'
+              : '';
+            const itemRecord = item as Record<string, unknown>;
+            const isCurrentCapTrue = Boolean(
+              itemRecord[modelModality] === true || (capFlag && itemRecord[capFlag] === true)
+            );
+            const isCurrentCapFalse = Boolean(
+              itemRecord[modelModality] === false || (capFlag && itemRecord[capFlag] === false)
+            );
+            const models = (itemRecord.models && typeof itemRecord.models === 'object')
+              ? (itemRecord.models as Record<string, unknown>)
+              : undefined;
+            const hasCapModel = Boolean(
+              (models && typeof models[modelModality] === 'string' && (models[modelModality] as string).trim().length > 0)
+              || (typeof itemRecord[`${modelModality}Model`] === 'string' && (itemRecord[`${modelModality}Model`] as string).trim().length > 0)
+            );
+
+            if (isCurrentCapFalse) {
+              continue;
+            }
+            if (!isCurrentCapTrue && !hasCapModel) {
+              continue;
+            }
+          }
+        }
+        appendByokProvider(provider, item.constraints);
+      }
+    }
+  }
+
+  return [...officialGroups, ...byokGroups];
 }
 
 /** `0.52` → `5.2折`；`1.43` → `×1.43`（加价组）；1 或缺失不出 chip。 */
@@ -762,15 +1289,43 @@ export function resolveShortModelName(modelId?: string, family?: string): string
 }
 
 /** Group ids named by a routing intent (`group`, `allowedGroups`); empty means automatic. */
-function selectedGroupIds(routing: unknown): Set<string> {
+function selectedGroupIds(routing: unknown, availableGroupIds?: Set<string>): Set<string> {
   const ids = new Set<string>();
   if (!routing || typeof routing !== 'object' || Array.isArray(routing)) return ids;
   const intent = routing as Record<string, unknown>;
   if (typeof intent.group === 'string' && intent.group.trim()) ids.add(intent.group.trim());
+  if (typeof intent.channelGroupId === 'string' && intent.channelGroupId.trim()) {
+    ids.add(intent.channelGroupId.trim());
+  }
   if (Array.isArray(intent.allowedGroups)) {
     for (const candidate of intent.allowedGroups) {
       if (typeof candidate === 'string' && candidate.trim()) ids.add(candidate.trim());
     }
+  }
+  // 当 channelGroupId 与 allowedGroups[0] 为不同 BYOK ID 时，
+  // 仅在 explicitByokId 确实在可用列表（若提供）中有效时，才将其作为权威来源剔除备选的 BYOK 分组；
+  // 若 explicitByokId 已陈旧失效，则保留 allowedGroups 中的候选以防约束清空逃逸
+  const explicitByokId = (typeof intent.channelGroupId === 'string' && isByokGroup(intent.channelGroupId.trim()))
+    ? intent.channelGroupId.trim()
+    : null;
+  const isExplicitValid = explicitByokId && (!availableGroupIds || availableGroupIds.has(explicitByokId));
+  if (isExplicitValid) {
+    for (const id of Array.from(ids)) {
+      if (isByokGroup(id) && id !== explicitByokId) {
+        ids.delete(id);
+      }
+    }
+  }
+  const hasByok = Array.from(ids).some((id) => isByokGroup(id));
+  const hasOfficial = Array.from(ids).some((id) => !isByokGroup(id));
+  if (hasByok && hasOfficial) {
+    if (intent.sourceType === 'byok') {
+      return new Set(Array.from(ids).filter((id) => isByokGroup(id)));
+    }
+    if (intent.sourceType === 'official') {
+      return new Set(Array.from(ids).filter((id) => !isByokGroup(id)));
+    }
+    return new Set<string>();
   }
   return ids;
 }
@@ -824,20 +1379,110 @@ export function intersectLineConstraints(declarations: LineConstraints[]): LineC
  *
  * @param modelId Model id (may carry a `@channelGroup` suffix).
  * @param routing Persisted routing intent (`group` and/or `allowedGroups`).
+ * @param runtimeSettings Optional runtime settings to resolve dynamic BYOK channels.
  */
-export function resolveLineConstraints(modelId: string, routing: unknown): LineConstraints {
-  const selected = selectedGroupIds(routing);
-  if (selected.size === 0) return {};
+/**
+ * 纯函数：针对视频自备渠道的兜底参数约束注入（标准比例与时长），避免契约逃逸。
+ */
+export function injectVideoByokDefaults(raw: LineConstraints = {}): LineConstraints {
+  return {
+    ...raw,
+    inputs: {
+      ...raw.inputs,
+      image: raw.inputs?.image ?? { max: 1 },
+    },
+    parameters: {
+      ...(raw.parameters || {}),
+      aspectRatio: raw.parameters?.aspectRatio ?? { only: ['16:9', '9:16', '1:1'] },
+      duration: raw.parameters?.duration ?? { only: [5, 10] },
+    },
+  };
+}
+
+export function resolveLineConstraints(
+  modelId: string,
+  routing: unknown,
+  runtimeSettings?: RuntimeByokChannelSettings | null,
+): LineConstraints {
+  const effectiveSettings = runtimeSettings ?? null;
   const { modelId: id } = parseModelAndGroup(modelId);
-  const declarations = getModelChannelGroups(id)
+  const groups = resolveModelChannelGroups(id, effectiveSettings);
+  const availableGroupIds = new Set(groups.map((g) => g.id));
+  const selected = selectedGroupIds(routing, availableGroupIds);
+  if (selected.size === 0) return {};
+  const declarations = groups
     .filter((group) => selected.has(group.id) || (group.wireGroup ? selected.has(group.wireGroup) : false))
     .map((group) => group.constraints)
     .filter((constraint): constraint is LineConstraints => Boolean(constraint));
-  const first = declarations[0];
-  if (!first) return {};
-  return declarations.length === 1 ? first : intersectLineConstraints(declarations);
+
+  if (declarations.length === 0) {
+    const confirmedActiveByokGroup = groups.find(
+      (group) => isByokGroup(group) && (selected.has(group.id) || (group.wireGroup ? selected.has(group.wireGroup) : false)),
+    );
+    if (confirmedActiveByokGroup) {
+      const base = confirmedActiveByokGroup.constraints || DEFAULT_BYOK_CONSTRAINTS;
+      const modality = detectModelModality(id);
+      if (modality === 'video') {
+        return injectVideoByokDefaults(base);
+      }
+      return base;
+    }
+    return {};
+  }
+
+  const rawResult: LineConstraints = (declarations.length === 1 ? declarations[0] : intersectLineConstraints(declarations)) || {};
+  // 若命中了自备渠道且属于视频模型，兜底注入基础参数约束（标准比例与时长），避免契约逃逸
+  if (detectModelModality(id) === 'video' && groups.some((g) => isByokGroup(g) && (selected.has(g.id) || (g.wireGroup ? selected.has(g.wireGroup) : false)))) {
+    return injectVideoByokDefaults(rawResult);
+  }
+
+  return rawResult;
 }
 
 // This module owns the group table, so it installs the lookup that the shared contract
 // surfaces read through. Without it they keep the full model declaration.
 setLineConstraintResolver(resolveLineConstraints);
+
+/**
+ * 渠道单选互斥路由派发载荷
+ */
+export interface ChannelSelectionPayload {
+  modelId: string;
+  strategy: 'auto';
+  allowedGroups?: string[];
+  channelGroupId?: string;
+  sourceType?: 'official' | 'byok';
+}
+
+/**
+ * 纯函数：根据模型 ID、选中的分组 ID 列表及当前可用分组，构造单选互斥路由派发载荷。
+ * 纯函数，独立于 React 组件生命周期，供 ModelCascadeMenu 派发与白盒测试直接断言。
+ */
+export function buildChannelSelectionPayload(
+  modelId: string,
+  groupIds: string[],
+  availableGroups: ChannelGroupItem[] = [],
+): ChannelSelectionPayload | null {
+  if (groupIds.length === 0) {
+    return {
+      modelId,
+      strategy: 'auto',
+    };
+  }
+  if (groupIds.length > 1) {
+    return null;
+  }
+  const [primaryGroupId] = groupIds;
+  if (!primaryGroupId) return null;
+  const matchedGroup = availableGroups.find((g) => g.id === primaryGroupId);
+  if (!matchedGroup || matchedGroup.enabled === false || matchedGroup.isAvailable === false) {
+    return null;
+  }
+  const isByok = isByokGroup(matchedGroup);
+  return {
+    modelId,
+    strategy: 'auto',
+    allowedGroups: [primaryGroupId],
+    ...(isByok ? { channelGroupId: primaryGroupId, sourceType: 'byok' } : {}),
+  };
+}
