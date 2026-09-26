@@ -1,8 +1,10 @@
 import { assertCapabilityEnabled, isModelEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from '../media/errors.js'
 import { objectParams } from '../tools/schema.js'
-import { assertRuntimeReady } from '../settings/runtime-mode.js'
-import { enabledTextModels } from './catalog.js'
+import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mode.js'
+import { isAuthenticOfficialToken } from '../media/mount.js'
+import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
+import { enabledTextModels, CHAT_MODEL_IDS } from './catalog.js'
 import { executeOmnimuxText } from './execute.js'
 
 /**
@@ -24,20 +26,65 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
      */
     execute(req) {
       assertCapabilityEnabled(gate, 'omnimux_text_complete', 'tool')
-      assertRuntimeReady(ctx.get?.('settings')?.get?.('omnimux'), 'text')
+      const current = ctx.get?.('settings')?.get?.('omnimux')
+      const channelIntent = resolveRequestChannelIntent(req)
+
+      const rawSystemToken = process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
+      const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
+      const runtime = resolveRuntimeChoice(current)
+
+      const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
+      const targetChannel = typeof rawTargetChannel === 'string' ? rawTargetChannel.toLowerCase().trim() : ''
+      const { modelId: requestModelId } = parseModelAndGroup(req?.model)
+      const modelGroups = requestModelId ? getModelChannelGroups(requestModelId) : []
+      const isKnownOfficial = targetChannel
+        ? (targetChannel === 'official' || modelGroups.some((group) => {
+            const gid = typeof group.id === 'string' ? group.id.toLowerCase().trim() : ''
+            const wire = typeof group.wireGroup === 'string' ? group.wireGroup.toLowerCase().trim() : ''
+            return gid === targetChannel || wire === targetChannel
+          }))
+        : (runtime.mode === 'official')
+
+      const isOfficialModel = Boolean(requestModelId && CHAT_MODEL_IDS.includes(requestModelId))
+      const isExplicitAgent = targetChannel === 'agent' || targetChannel === 'local'
+
+      const isOfficialRequest = !channelIntent.isByokChannel && !isExplicitAgent
+        && (
+          (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
+          || (!targetChannel && (runtime.mode === 'official' || isOfficialModel))
+        )
+
+      const isOfficialBypass = isOfficialRequest && hasOfficialToken
+      if (!isOfficialBypass) {
+        assertRuntimeReady(current, 'text')
+      }
       if (req.model) {
         const baseModel = String(req.model).split('@')[0].trim()
         assertCapabilityEnabled(gate, baseModel || req.model, 'model')
       }
+      let finalReq
+      if (isOfficialBypass) {
+        finalReq = {
+          ...req,
+          env: {
+            OMNIMUX_API_KEY: rawSystemToken.trim(),
+          },
+        }
+      } else if (isOfficialRequest) {
+        finalReq = { ...req, env: {} }
+      } else {
+        finalReq = req
+      }
+
       return executeOmnimuxText({
-        ...req,
+        ...finalReq,
         text: hub.text,
         gate,
         llm: ctx.get?.('llm'),
         attachments: ctx.get?.('attachments'),
         credentials: ctx.get?.('credentials'),
         settings: ctx.get?.('settings'),
-        env: process.env,
+        env: finalReq.env ?? process.env,
       })
     },
   }

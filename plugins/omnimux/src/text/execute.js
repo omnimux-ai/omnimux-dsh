@@ -3,7 +3,7 @@ import {
   assertGuardOutput,
   assertGuardSubmit,
 } from '../catalog/contract/submit-guard/index.js'
-import { parseTextConfig, resolveTextRoute } from './catalog.js'
+import { parseTextConfig, resolveTextRoute, CHAT_MODEL_IDS } from './catalog.js'
 import { completeTextViaChat } from './chat.js'
 import { probeTextImage, saveProbedTextImage, toImageUrlPart } from './image.js'
 import { loadTextVideo, toVideoImageUrlPart } from './video.js'
@@ -11,6 +11,8 @@ import { loadTextAudio, toAudioImageUrlPart } from './audio.js'
 import { loadTextDocument, toDocumentImageUrlPart } from './document.js'
 import { normalizeTextReferences } from './references.js'
 import { resolveRuntimeChoice } from '../settings/runtime-mode.js'
+import { isAuthenticOfficialToken } from '../media/mount.js'
+import { parseModelAndGroup, resolveRequestChannelIntent, isOfficialChannelId, getModelChannelGroups } from '../catalog/serving/channel-groups.js'
 import { runAgentText } from '../agents/local.js'
 
 /** Fixed credential reference for the BYOK API key. */
@@ -73,16 +75,47 @@ export async function executeOmnimuxText(input) {
     ? input.settings.get('omnimux')
     : undefined
   const runtime = resolveRuntimeChoice(runtimeSettings)
+
+  const { modelId: inputModelId } = typeof input.model === 'string'
+    ? parseModelAndGroup(input.model)
+    : { modelId: '', group: null }
+  const channelIntent = resolveRequestChannelIntent(input)
+  const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
+  const targetChannel = typeof rawTargetChannel === 'string' ? rawTargetChannel.toLowerCase().trim() : ''
+
+  const modelGroups = inputModelId ? getModelChannelGroups(inputModelId) : []
+  const isKnownOfficial = targetChannel
+    ? (targetChannel === 'official' || modelGroups.some((group) => {
+        const gid = typeof group.id === 'string' ? group.id.toLowerCase().trim() : ''
+        const wire = typeof group.wireGroup === 'string' ? group.wireGroup.toLowerCase().trim() : ''
+        return gid === targetChannel || wire === targetChannel
+      }))
+    : (runtime.mode === 'official')
+
+  const isOfficialModel = Boolean(inputModelId && CHAT_MODEL_IDS.includes(inputModelId))
+  const isExplicitAgent = targetChannel === 'agent' || targetChannel === 'local'
+
+  const rawSystemToken = input.env?.OMNIMUX_API_KEY || process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
+  const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
+
+  const isOfficialRequest = !channelIntent.isByokChannel && !isExplicitAgent
+    && (
+      (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
+      || (!targetChannel && (runtime.mode === 'official' || (isOfficialModel && hasOfficialToken)))
+    )
+
+  const isOfficialBypass = isOfficialRequest && hasOfficialToken
+
   // Chose BYOK but hasn't finished configuring — fail loudly, not silently
   // fall through to the official account.
-  if (runtime.mode === 'key' && !runtime.textReady) {
+  if (runtime.mode === 'key' && !runtime.textReady && !isOfficialBypass) {
     throw new OmnimuxError('omnimux-unconfigured', '自备密钥尚未配置完成，请在设置中填写地址和模型并测试通过')
   }
-  if (runtime.mode === 'agent' && !runtime.textReady) {
+  if (runtime.mode === 'agent' && !runtime.textReady && !isOfficialBypass) {
     throw new OmnimuxError('omnimux-unconfigured', '本机助手尚未配置完成，请在设置中选择并测试通过')
   }
-  const useByok = runtime.mode === 'key' && runtime.textReady
-  const useAgent = runtime.mode === 'agent' && runtime.textReady
+  const useByok = channelIntent.isByokChannel || (runtime.mode === 'key' && !isOfficialRequest && runtime.textReady)
+  const useAgent = (isExplicitAgent || (runtime.mode === 'agent' && !isOfficialRequest)) && runtime.textReady
 
   // Local agent: text goes to the selected CLI and back. Media references are
   // out of scope for the agent path in this version — only plain text rides it.
