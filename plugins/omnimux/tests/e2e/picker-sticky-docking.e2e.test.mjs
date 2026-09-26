@@ -13,7 +13,7 @@ const dockingHookSource = readFileSync(join(here, '../../src/client/session-guid
 test('E2E 契约 1: 全屏状态加号分发守卫，拦截 split 模式并派发置顶与切 Tab 事件', () => {
   // 必须包含全屏新会话探索专区与右栏折叠状态的联合判定
   assert.match(controllerSource, /isFullscreenExplore\s*=\s*Boolean\(win\?.__omnimuxFullscreenExploreActive\)/);
-  assert.match(controllerSource, /isRightPanelOpen\s*=\s*Boolean\(win\?.__omnimuxWorkbench\?\.getSnapshot/);
+  assert.match(controllerSource, /isRightPanelOpen\s*=\s*Boolean\(wb\?\.getSnapshot/);
   // 全屏未开右栏时，必须派发 omnimux:explore:scroll-to-tab 并直接 return 拦截 split
   assert.match(controllerSource, /if\s*\(isFullscreenExplore\s*&&\s*!isRightPanelOpen\s*&&\s*win\)\s*\{/);
   assert.match(controllerSource, /win\.dispatchEvent\(new CustomEvent\('omnimux:explore:scroll-to-tab'/);

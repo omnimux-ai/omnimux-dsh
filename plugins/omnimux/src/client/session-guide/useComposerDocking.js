@@ -476,8 +476,14 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     }
 
     const onDockIntent = (event) => {
-      const item = event?.detail?.item || { id: 'intent_trigger' }
-      dock(item)
+      const item = event?.detail?.item
+      if (item) {
+        dock(item)
+        return
+      }
+      isIntentDrivenRef.current = true
+      isCollapsedRef.current = false
+      evaluate()
     }
 
     const onScroll = () => {

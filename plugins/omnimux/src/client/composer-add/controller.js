@@ -392,8 +392,9 @@ export function createComposerAddController(options) {
 
     // 全屏新会话守卫：若当前处于全屏探索专区且右栏未展开，优先就地滚动置顶并激活 Tab，绝不打开 split 挤压会话！
     const win = typeof window !== 'undefined' ? window : null
+    const wb = (typeof window !== 'undefined' ? window.__omnimuxWorkbench : null) || options.workbench
     const isFullscreenExplore = Boolean(win?.__omnimuxFullscreenExploreActive)
-    const isRightPanelOpen = Boolean(win?.__omnimuxWorkbench?.getSnapshot?.()?.state?.panelOpen)
+    const isRightPanelOpen = Boolean(wb?.getSnapshot?.()?.state?.panelOpen)
 
     if (isFullscreenExplore && !isRightPanelOpen && win) {
       win.dispatchEvent(new CustomEvent('omnimux:explore:scroll-to-tab', {
@@ -408,7 +409,6 @@ export function createComposerAddController(options) {
     }
 
     if (targetSessionId) {
-      const wb = (typeof window !== 'undefined' ? window.__omnimuxWorkbench : null) || options.workbench
       try {
         await wb?.openWorkbench?.({
           tabId: ASSET_HUB_TAB_ID,
