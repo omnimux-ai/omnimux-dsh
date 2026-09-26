@@ -118,9 +118,12 @@ Config.video = {
 
 ```sh
 cd plugins/omnimux-video
+node scripts/build-client.mjs   # 客户端必须打成 lib/client.js（ModuleLoader 经典 script）
 node --test                 # L1 单测（纯 mock 参数构造 + 真 ffmpeg 冒烟）
 OMNIMUX_VIDEO_SKIP_FFMPEG=1 node --test   # 跳过需要真二进制/网络的冒烟
 ```
+
+`package.json` 的 `./client` 指向 `lib/client.js`，不指向 `src/client/index.js`。宿主把插件 client 拼进一个经典 script；源码里的 `import` 会让整段解析失败，后面的官方 UI 包也就注册不上。`lib/client.js` 是构建产物，不入库。
 
 - `node --test` 结果 0 = 全绿。冒烟在没有 ffmpeg 时会自跳过（不红）。
 - 单测禁止依赖本机 ffmpeg（spawn 已做成可注入 mock），冒烟除外。

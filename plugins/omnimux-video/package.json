@@ -5,17 +5,20 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./client": "./src/client/index.js",
+    "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
   "files": [
     "src",
+    "lib/client.js",
     "scripts",
     "prompts",
     "cordis.patch.yml",
     "README.md"
   ],
   "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "prepare": "npm run build",
     "test": "node --test 'src/**/*.test.js'"
   },
   "peerDependencies": {
@@ -38,6 +41,9 @@
       ],
       "platform": "web"
     }
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
   },
   "license": "MIT",
   "description": "Local ffmpeg video processing + depth map (Depth Anything V2) + hub-backed video understanding for OmniMux."
