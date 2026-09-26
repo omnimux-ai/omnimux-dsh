@@ -166,6 +166,33 @@
       }
     },
     {
+      "id": "sk-omx-replicate-carousel",
+      "title": "图文复刻",
+      "titleZh": "图文复刻",
+      "titleEn": "Carousel Replication",
+      "summary": "拆解参考图文案例的视觉结构，为新商品生成原创电商轮播方案。",
+      "summaryZh": "拆解参考图文案例的视觉结构，为新商品生成原创电商轮播方案。",
+      "summaryEn": "Deconstruct a reference carousel and rebuild an original one for a new product.",
+      "category": "image-static",
+      "tags": [
+        "图片和静态广告",
+        "新品上市"
+      ],
+      "cover": "catalog/covers/skills/skill-card-2.webp",
+      "avatar": "",
+      "badge": "HOT",
+      "skill": "replicate-carousel",
+      "isHot": true,
+      "isNew": true,
+      "coverIndex": 2,
+      "coverFile": "skill-card-2.webp",
+      "downloads": 100,
+      "sourceRef": {
+        "repo": "",
+        "path": "catalog/skills/replicate-carousel"
+      }
+    },
+    {
       "id": "sk-omx-course-to-short-video",
       "title": "课程转短视频",
       "titleZh": "课程转短视频",

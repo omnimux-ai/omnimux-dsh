@@ -4652,8 +4652,8 @@
         "type": "bundled",
         "path": "catalog/skills/replicate-carousel"
       },
-      "recommended": false,
-      "downloads": 0,
+      "recommended": true,
+      "downloads": 100,
       "cover": {
         "asset": "catalog/covers/skills/skill-card-2.webp",
         "alt": "图文复刻"
@@ -4662,11 +4662,11 @@
       "titleEn": "Carousel Replication",
       "summaryZh": "拆解参考图文案例的视觉结构，为新商品生成原创电商轮播方案。",
       "summaryEn": "Deconstruct a reference carousel and rebuild an original one for a new product.",
-      "isHot": false,
+      "isHot": true,
       "isNew": true,
       "coverIndex": 2,
       "coverFile": "skill-card-2.webp",
-      "badge": "NEW",
+      "badge": "HOT",
       "installFlow": "session-guide",
       "sessionPrefill": "/replicate-carousel\n请运行 图文复刻 (Carousel Replication) 技能，为我的商品复刻电商图文轮播方案。",
       "homeCover": {
