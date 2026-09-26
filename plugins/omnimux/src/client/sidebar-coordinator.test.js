@@ -97,9 +97,9 @@ test('仅 below 行（无 inline）时保持原有锚点行为，探索行首发
     const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
     assert.ok(exploreBtn, '常驻探索行存在')
     assert.equal(exploreBtn.parentElement, root)
-    assert.equal(exploreBtn.previousElementSibling, sessionBtn, '探索行紧接新建会话按钮')
     assert.equal(belowBtn.parentElement, root, 'below 行是 root 直接子节点')
-    assert.equal(belowBtn.previousElementSibling, exploreBtn, 'rank 5 below 行排在 rank 3.9 探索行之后')
+    assert.equal(belowBtn.previousElementSibling, sessionBtn, 'rank 5 below 行排在新会话后、探索行前')
+    assert.equal(exploreBtn.previousElementSibling, belowBtn, '探索行（rank 7.2）排在 rank 5 below 行之后（最下方）')
     assert.equal(root.querySelector('[data-omnimux-inline-row]'), null, '无 inline wrapper')
   } finally {
     disposeBelow()
@@ -389,10 +389,10 @@ test('desktop 外壳包住内层 pane 时仍把 extra row 插在新对话下方'
     const sessionBtn = pane.querySelector('.newSession')
     const exploreBtn = pane.querySelector('[data-omnimux-explore-entry]')
     assert.equal(exploreBtn.parentElement, pane, '探索行必须插在 inner pane')
-    assert.equal(exploreBtn.previousElementSibling, sessionBtn)
     assert.equal(belowBtn.parentElement, pane, 'assets 必须插在 inner pane')
-    assert.equal(belowBtn.previousElementSibling, exploreBtn)
-    assert.equal(belowBtn.nextElementSibling?.className, 'workspace')
+    assert.equal(belowBtn.previousElementSibling, sessionBtn, 'rank 6 assets 行排在新会话后')
+    assert.equal(exploreBtn.previousElementSibling, belowBtn, 'rank 7.2 探索行排在 assets 之后（最下方）')
+    assert.equal(exploreBtn.nextElementSibling?.className, 'workspace')
   } finally {
     dispose()
   }
@@ -412,7 +412,7 @@ test('coordinator 源码不得把 brand 类写进新对话选择器', async () =
 /* 探索行与探索浮动菜单专项测试                                                */
 /* ========================================================================= */
 
-test('探索行 rank 严格为 3.9，排在「项目」（rank 4）正上方', async () => {
+test('探索行 rank 严格为 7.2，位于最下方，且技能专家（rank 4.1）常驻保留', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
@@ -422,6 +422,18 @@ test('探索行 rank 严格为 3.9，排在「项目」（rank 4）正上方', a
   workflowBtn.id = 'workflow-entry'
   const disposeWorkflow = api.register({ id: 'omnimux-workflow-entry', rank: 4, create: () => workflowBtn })
 
+  const marketBtn = document.createElement('button')
+  marketBtn.id = 'market-entry'
+  const disposeMarket = api.register({ id: 'omnimux-market-entry', rank: 4.1, create: () => marketBtn })
+
+  const assetsBtn = document.createElement('button')
+  assetsBtn.id = 'assets-entry'
+  const disposeAssets = api.register({ id: 'omnimux-assets-entry', rank: 6, create: () => assetsBtn })
+
+  const inspirationBtn = document.createElement('button')
+  inspirationBtn.id = 'inspiration-entry'
+  const disposeInspiration = api.register({ id: 'omnimux-inspiration-entry', rank: 7, create: () => inspirationBtn })
+
   try {
     api.place()
     const root = document.querySelector('[data-pane="sidebar"]')
@@ -429,10 +441,19 @@ test('探索行 rank 严格为 3.9，排在「项目」（rank 4）正上方', a
     assert.ok(exploreBtn, '探索行已常驻渲染')
     assert.equal(exploreBtn.parentElement, root)
     assert.equal(workflowBtn.parentElement, root)
-    assert.equal(exploreBtn.nextElementSibling, workflowBtn, '探索行必须排在「项目」正上方')
-    assert.equal(workflowBtn.previousElementSibling, exploreBtn)
+    assert.equal(marketBtn.parentElement, root, '技能专家必须作为常驻项正常挂载在侧栏')
+    assert.equal(assetsBtn.parentElement, root)
+    assert.equal(inspirationBtn.parentElement, root)
+
+    // 相对顺序：workflow (4) -> market (4.1) -> assets (6) -> inspiration (7) -> explore (7.2)
+    assert.equal(workflowBtn.nextElementSibling, marketBtn, '项目后紧接技能专家')
+    assert.equal(inspirationBtn.nextElementSibling, exploreBtn, '探索行必须排在最下方（灵感社区正下方）')
+    assert.equal(exploreBtn.previousElementSibling, inspirationBtn)
   } finally {
     disposeWorkflow()
+    disposeMarket()
+    disposeAssets()
+    disposeInspiration()
   }
 })
 
@@ -474,7 +495,6 @@ test('非核心插件（video, products, device, clip, social-harvest, apps 等�
     { id: 'omnimux-clip-entry', rank: 8.2 },
     { id: 'omnimux-social-harvest-entry', rank: 19 },
     { id: 'omnimux-apps-entry', rank: 1 },
-    { id: 'omnimux-market-entry', rank: 8 },
   ]
 
   const disposers = targets.map((t) => {

@@ -57,12 +57,12 @@ Derivation order is fixed and exclusive:
 | `[data-omnimux-apps-entry]` | `omnimux` | 应用 / Apps（收敛至「探索」菜单） |
 | `[data-omnimux-app-tabs]` | `omnimux` | Dynamic app tab rows (see below) |
 | `[data-dsh-taskboard-entry]` | `dsh-taskboard-plugin` (fork) | 任务看板 / Taskboard |
-| `[data-omnimux-esc-entry]` | `omnimux-gallery`（历史 marker，现网无独立 gallery 包） | 专家·技能·连接器（**已迁** `omnimux-market`） |
-| `[data-omnimux-explore-entry]` | `omnimux` | **探索 / Explore（rank 3.9，常驻项目正上方）**。点击呼出浮动菜单，收敛全部内测版与非排除项 OmniMux 插件（11 项白名单，见 specs）。 |
+| `[data-omnimux-esc-entry]` | `omnimux-gallery`（历史 marker，现网无独立 gallery 包） | 专家·技能·连接器（**已迁** `omnimux-market`，rank 4.1，**核心常驻**） |
 | `[data-dsh-omnimux-workflow-entry]` | `omnimux-workflow` | 项目 / Projects（rank 4 现网，**核心常驻**）。**Workbench 入口**：点开 `omnimux-workflow:library` Tab，**不得** `claimProductStage`。打开项目后激活 `omnimux-workflow:canvas`（默认 split），库 Tab 保留。 |
 | `[data-dsh-omnimux-new-project-entry]` | `omnimux-workflow` | 新建项目 / New Project（展开：`kind:'inline'` 并排「新建会话」。收起：CSS 藏项目按钮，点官方加号弹出「新建会话 / 新建项目」，选中再 click 原按钮。折叠态属性在 AppFrame，不在 html。收起 wrapper 可用 `display:contents`，但官方加号上的 `flex:1` **必须**收回 `flex:none` + 36×36，否则会吃掉会话列表高度变成竖条） |
 | `[data-omnimux-assets-entry]` | `omnimux-assets` | 资产库（rank 6 现网，**核心常驻**）。**Workbench**：`omnimux-assets:library`，不得 claim |
 | `[data-omnimux-inspiration-entry]` | `omnimux-inspiration` | 灵感社区（rank 7，**核心常驻**）。**Workbench**：`omnimux-inspiration:library`，不得 claim |
+| `[data-omnimux-explore-entry]` | `omnimux` | **探索 / Explore（rank 7.2，位于最下方，排在灵感社区之后）**。点击呼出浮动菜单，收敛全部内测版与非排除项 OmniMux 插件（11 项白名单，见 specs）。 |
 | `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（收敛至「探索」菜单） |
 | `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（收敛至「探索」菜单） |
 | `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（收敛至「探索」菜单） |

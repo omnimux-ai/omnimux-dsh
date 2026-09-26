@@ -8,27 +8,28 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const root = path.resolve(__dirname, '../../')
 
-test('E2E: 验证左侧侧边栏非核心及内测插件收敛至探索菜单且常驻项目上方', async () => {
+test('E2E: 验证左侧侧边栏非核心及内测插件收敛至探索菜单且探索位于最下方', async () => {
   const coordinatorPath = path.join(root, 'plugins/omnimux/src/client/sidebar-coordinator.js')
   assert.ok(fs.existsSync(coordinatorPath), 'sidebar-coordinator.js 必须存在')
   const coordinatorContent = fs.readFileSync(coordinatorPath, 'utf8')
 
-  // 1. 验证探索行常驻定义与 Rank 3.9（精准定位于项目 rank 4 上方）
+  // 1. 验证探索行常驻定义与 Rank 7.2（排在最下方，位于灵感社区之后）
   assert.ok(
-    coordinatorContent.includes("rank: 3.9"),
-    '探索行必须设置 rank: 3.9，排在项目上方'
+    coordinatorContent.includes("rank: 7.2"),
+    '探索行必须设置 rank: 7.2，排在最下方'
   )
   assert.ok(
     coordinatorContent.includes("omnimux-explore-entry"),
     '必须包含常驻探索行 ID omnimux-explore-entry'
   )
 
-  // 2. 验证核心常驻排除名单
+  // 2. 验证核心常驻排除名单：项目、技能专家、资产库、灵感社区
   assert.ok(
     coordinatorContent.includes("omnimux-workflow") &&
+    coordinatorContent.includes("omnimux-market") &&
     coordinatorContent.includes("omnimux-assets") &&
     coordinatorContent.includes("omnimux-inspiration"),
-    '必须严格排除项目、资产库、灵感社区并保持常驻'
+    '必须严格排除项目、技能专家、资产库、灵感社区并保持常驻'
   )
 
   // 3. 验证 11 项白名单与 SVG 矢量图标定义（UI04 门禁）
