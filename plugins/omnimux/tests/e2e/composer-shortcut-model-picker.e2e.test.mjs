@@ -118,7 +118,7 @@ async function mount(options = {}) {
 
   const container = document.getElementById('host');
   const root = createRoot(container);
-  const session = { id: sessionId, blank: true };
+  const session = { id: sessionId, blank: true, agentPreset: 'tiktok-agent' };
 
   await act(async () => {
     const props = {
