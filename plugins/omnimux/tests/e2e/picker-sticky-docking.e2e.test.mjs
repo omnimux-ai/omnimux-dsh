@@ -19,11 +19,16 @@ test('E2E 契约 1: 全屏状态加号分发守卫，拦截 split 模式并派�
   assert.match(controllerSource, /win\.dispatchEvent\(new CustomEvent\('omnimux:explore:scroll-to-tab'/);
 });
 
-test('E2E 契约 2: Tab 栏吸顶固定样式，对齐图 1 效果', () => {
+test('E2E 契约 2: Tab 栏吸顶固定样式与背景自适应防穿透，对齐图 1 效果', () => {
   // .omnimux-explore-filter-bar 必须具备 position: sticky 与 top: 0 以及 z-index 保证吸顶层级
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*position:\s*sticky/);
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*top:\s*0/);
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*z-index:\s*80/);
+  // 背景色自适应与防穿透断言：严禁包含死黑 #0d0d0f，必须基于 --dsw-alias-bg-base 混合并带有 backdrop-filter
+  assert.doesNotMatch(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*#0d0d0f/);
+  assert.doesNotMatch(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-layer-0/);
+  assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-base/);
+  assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*backdrop-filter:\s*blur/);
 });
 
 test('E2E 契约 3: 全屏探索专区生命周期标记与滚动置顶事件闭环', () => {
