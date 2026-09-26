@@ -32,16 +32,17 @@ describe('create-project dialog source contracts', () => {
   const canvasSrc = readFileSync(join(here, 'CanvasTab.jsx'), 'utf8')
   const localesSrc = readFileSync(join(here, '../locales.js'), 'utf8')
 
-  it('keeps initialPath state and empty/picked folder cards', () => {
+  it('keeps initialPath state and empty/picked folder cards with native picker', () => {
     assert.match(dialogSrc, /initialPath\s*=\s*''/)
     assert.match(dialogSrc, /const\s*\[path,\s*setPath\]\s*=\s*useState\s*\(\s*initialPath/)
     assert.match(dialogSrc, /extractFolderName\s*\(\s*initialPath\s*\)/)
     assert.match(dialogSrc, /data-omnimux-new-project-drop/)
     assert.match(dialogSrc, /data-omnimux-new-project-picked/)
     assert.match(dialogSrc, /data-omnimux-new-project-remove/)
-    assert.match(dialogSrc, /data-omnimux-new-project-browse/)
-    assert.match(dialogSrc, /browseProjectDirectory/)
-    assert.doesNotMatch(dialogSrc, /pickProjectDirectory/)
+    assert.match(dialogSrc, /data-omnimux-new-project-change/)
+    assert.match(dialogSrc, /pickProjectDirectory/)
+    assert.doesNotMatch(dialogSrc, /browseProjectDirectory/)
+    assert.doesNotMatch(dialogSrc, /data-omnimux-new-project-browse/)
   })
 
   it('library create dialog does not prefill the current workspace path', () => {
@@ -56,12 +57,11 @@ describe('create-project dialog source contracts', () => {
     )
   })
 
-  it('uses create-project copy for title, source folder, add and remove', () => {
+  it('uses create-project copy for title, location, choose folder, change and remove', () => {
     assert.match(localesSrc, /'projects\.dialog\.title': '创建项目'/)
-    assert.match(localesSrc, /'projects\.dialog\.pathLabel': '源文件夹'/)
-    assert.match(localesSrc, /'projects\.dialog\.addFolder': '在此电脑上添加文件夹'/)
-    assert.match(localesSrc, /'projects\.dialog\.add': '添加'/)
+    assert.match(localesSrc, /'projects\.dialog\.pathLabel': '存放位置'/)
+    assert.match(localesSrc, /'projects\.dialog\.addFolder': '选择文件夹'/)
+    assert.match(localesSrc, /'projects\.dialog\.change': '更改'/)
     assert.match(localesSrc, /'projects\.dialog\.removeFolder': '移除文件夹'/)
-    assert.match(localesSrc, /'projects\.dialog\.chooseHere': '选择此文件夹'/)
   })
 })
