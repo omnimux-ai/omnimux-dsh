@@ -15,6 +15,19 @@ function withDom() {
   const listeners = new Map()
   const customEvents = []
 
+  const doc = {
+    createElement(tag) {
+      return {
+        tagName: tag,
+        style: {},
+        setAttribute: () => {},
+        removeAttribute: () => {},
+        appendChild: () => {},
+        remove: () => {},
+      }
+    },
+  }
+
   const win = {
     addEventListener(name, fn) {
       if (!listeners.has(name)) listeners.set(name, new Set())
@@ -34,13 +47,16 @@ function withDom() {
         this.detail = options.detail
       }
     },
+    document: doc,
     __omnimuxFullscreenExploreActive: false,
     __omnimuxWorkbench: null,
   }
 
   globalThis.window = win
+  globalThis.document = doc
   return {
     win,
+    doc,
     customEvents,
     cleanup() {
       globalThis.window = previousWindow
@@ -99,4 +115,47 @@ test('Tab 栏吸顶固定样式契约验证：.omnimux-explore-filter-bar 包含
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*position:\s*sticky/i, '必须设置 position: sticky')
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*top:\s*0/i, '必须设置 top: 0 吸顶固定')
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*z-index:\s*80/i, '必须具备合适的 z-index 保证吸顶层级')
+})
+
+import { JSDOM } from 'jsdom'
+
+test('抗竞态测试：顶部输入框点击添加触发 dock(force: true)，即使 scrollTop 为 0 也立即进入 docked 态', async () => {
+  const previousWindow = globalThis.window
+  const previousDocument = globalThis.document
+  const dom = new JSDOM('<div data-omnimux-starter-host><div class="scrollBody"><div data-composer-card></div><div id="seat"></div></div></div>')
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  let hookApi = null
+
+  function TestHarness() {
+    const guideRef = useRef(null)
+    hookApi = useComposerDocking({ hostRef: guideRef })
+    return React.createElement('div', { ref: guideRef }, 'RaceTest')
+  }
+
+  try {
+    const root = createRoot(dom.window.document.querySelector('#seat'))
+    await act(async () => {
+      root.render(React.createElement(TestHarness))
+    })
+
+    // 初始状态处于顶部 (scrollTop = 0)
+    assert.equal(hookApi.placement, 'inline')
+
+    // 模拟顶部加号菜单派发 dock-intent，携带 force: true
+    await act(async () => {
+      dom.window.dispatchEvent(new dom.window.CustomEvent('omnimux:composer:dock-intent', {
+        detail: { tab: 'inspiration', force: true }
+      }))
+    })
+
+    // 核心断言：必须突破 isTopVisible 阻断，立即切换为 docked！
+    assert.equal(hookApi.placement, 'docked', '带 force:true 必须无视顶部位置立即切换为 docked')
+    assert.equal(hookApi.isDocked, true)
+  } finally {
+    globalThis.window = previousWindow
+    globalThis.document = previousDocument
+    dom.window.close()
+  }
 })

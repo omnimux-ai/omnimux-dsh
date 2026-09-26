@@ -297,6 +297,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   const isScrollTransitionRef = useRef(false)
   const isIntentDrivenRef = useRef(false)
   const isCollapsedRef = useRef(false)
+  const isJumpingRef = useRef(false)
 
   const undock = useCallback(() => {
     setDockedItem(null)
@@ -308,15 +309,20 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     isScrollTransitionRef.current = false
     isIntentDrivenRef.current = false
     isCollapsedRef.current = true
+    isJumpingRef.current = false
     onUndock?.()
   }, [onUndock])
 
-  const dock = useCallback((item, onDocked) => {
+  const dock = useCallback((item, onDockedOrOptions) => {
     if (!item) return false
+    const options = typeof onDockedOrOptions === 'object' && onDockedOrOptions !== null ? onDockedOrOptions : {}
+    const onDocked = typeof onDockedOrOptions === 'function' ? onDockedOrOptions : options.onDocked
+    const force = options.force === true
+
     isIntentDrivenRef.current = true
     isCollapsedRef.current = false
-    // 再次点击同一张卡片：作为反悔动作解除吸底
-    if (!pinnedRef.current && dockedItem && isSameItem(dockedItem, item)) {
+    // 再次点击同一张卡片：作为反悔动作解除吸底（强制吸底时不执行反悔）
+    if (!pinnedRef.current && !force && dockedItem && isSameItem(dockedItem, item)) {
       undock()
       return false
     }
@@ -330,8 +336,8 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     savedScrollRef.current = currentScrollTop
 
     const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
-    // 顶部优先原则：当前顶部输入框可见的时候，点击任意业务事件直接在顶部原位触发输入框事件交互，绝不迁移到底部！
-    const isTopVisible = currentScrollTop <= revealThreshold && !pinnedRef.current
+    // 顶部优先原则：当前顶部输入框可见且未显式指定 force 时才留在顶部原位
+    const isTopVisible = !force && currentScrollTop <= revealThreshold && !pinnedRef.current
 
     if (isTopVisible) {
       setPlacement('inline')
@@ -622,7 +628,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
 
     const evaluate = () => {
       frame = 0
-      if (pinnedRef.current) return
+      if (pinnedRef.current || isJumpingRef.current) return
 
       const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
       const scrollTop = readPageScrollTop(scroller)
@@ -668,14 +674,15 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     }
 
     const onDockIntent = (event) => {
-      const item = event?.detail?.item
-      if (item) {
-        dock(item)
-        return
-      }
+      const item = event?.detail?.item || { id: 'jump_dock_active' }
+      const force = event?.detail?.force !== false
       isIntentDrivenRef.current = true
       isCollapsedRef.current = false
-      evaluate()
+      isJumpingRef.current = true
+      dock(item, { force })
+      setTimeout(() => {
+        isJumpingRef.current = false
+      }, 150)
     }
 
     const onScroll = () => {
