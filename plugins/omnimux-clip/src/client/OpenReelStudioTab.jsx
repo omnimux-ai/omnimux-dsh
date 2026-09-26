@@ -234,6 +234,184 @@ export function OpenReelStudioTab({ t: tProp, store, locale }) {
     }
   }, [hasOpenProject, project])
 
+  useEffect(() => {
+    let lastInsertTimestamp = 0
+    let lastInsertKey = ''
+
+    const broadcastStatus = (overrideStatus = null) => {
+      let storeState = null
+      try {
+        if (typeof useProjectStore?.getState === 'function') {
+          storeState = useProjectStore.getState()
+        }
+      } catch {}
+
+      const fallbackProject = storeState?.project !== undefined ? storeState.project : project
+      const fallbackHasOpen = storeState?.hasOpenProject !== undefined ? storeState.hasOpenProject : hasOpenProject
+
+      const currentProject = overrideStatus?.project !== undefined ? overrideStatus.project : fallbackProject
+      const currentHasOpen = overrideStatus?.hasOpenProject !== undefined ? overrideStatus.hasOpenProject : fallbackHasOpen
+
+      const isEditorReady = Boolean(
+        overrideStatus && typeof overrideStatus.isEditorReady === 'boolean'
+          ? overrideStatus.isEditorReady
+          : currentHasOpen && currentProject?.id
+      )
+      const detail = {
+        isEditorReady,
+        projectId: currentProject?.id || null,
+        projectName: currentProject?.name || null,
+      }
+      try {
+        if (typeof window !== 'undefined') {
+          window.__omnimuxClipStatus = detail
+          window.dispatchEvent(new CustomEvent('omnimux-clip:editor-status', { detail }))
+        }
+      } catch {}
+    }
+
+    broadcastStatus()
+
+    const onRequestStatus = () => {
+      broadcastStatus()
+    }
+
+    const onNewProject = (event) => {
+      setForceWelcome(false)
+      const createNewProject = typeof useProjectStore?.getState === 'function'
+        ? useProjectStore.getState()?.createNewProject
+        : null
+      if (typeof createNewProject === 'function') {
+        const title = event?.detail?.title || t('tab.untitled')
+        createNewProject(title, { width: 1280, height: 720, frameRate: 30 })
+        resetOpenReelRouter({ route: 'editor', params: {} })
+      }
+      broadcastStatus()
+    }
+
+    const onInsertClip = async (event) => {
+      const detail = event?.detail || {}
+      if (!detail.url && !detail.videoUrl) return
+
+      const mediaUrl = detail.url || detail.videoUrl
+      const dedupeKey = `${mediaUrl}_${detail.duration || detail.durationSec || ''}_${detail.title || ''}`
+      const now = Date.now()
+      if (now - lastInsertTimestamp < 350 && lastInsertKey === dedupeKey) {
+        return
+      }
+      lastInsertTimestamp = now
+      lastInsertKey = dedupeKey
+
+      const store = typeof useProjectStore?.getState === 'function' ? useProjectStore.getState() : null
+      let currProject = store?.project || project
+      const currentHasOpen = store?.hasOpenProject !== undefined ? store.hasOpenProject : hasOpenProject
+
+      if (!currentHasOpen || !currProject?.id) {
+        if (typeof store?.createNewProject === 'function') {
+          store.createNewProject(t('tab.untitled'), { width: 1280, height: 720, frameRate: 30 })
+          resetOpenReelRouter({ route: 'editor', params: {} })
+          currProject = typeof useProjectStore?.getState === 'function' ? useProjectStore.getState()?.project : currProject
+        }
+      }
+
+      if (!currProject) return
+
+      const durationSec = Number(detail.duration || detail.durationSec) || 10
+      const mediaId = `media_gvids_${Date.now()}`
+      const clipId = `clip_gvids_${Date.now()}`
+
+      const mediaItem = {
+        id: mediaId,
+        name: detail.title || 'Google Vids 成片',
+        type: 'video',
+        url: mediaUrl,
+        duration: durationSec,
+        metadata: {
+          width: detail.resolution === '1080p' ? 1920 : 1280,
+          height: detail.resolution === '1080p' ? 1080 : 720,
+          duration: durationSec,
+        },
+      }
+
+      const updatedProject = structuredClone(currProject)
+      if (!updatedProject.mediaLibrary) updatedProject.mediaLibrary = { items: [] }
+      if (!Array.isArray(updatedProject.mediaLibrary.items)) updatedProject.mediaLibrary.items = []
+      updatedProject.mediaLibrary.items.push(mediaItem)
+
+      if (!updatedProject.timeline) updatedProject.timeline = { tracks: [] }
+      if (!Array.isArray(updatedProject.timeline.tracks)) updatedProject.timeline.tracks = []
+
+      let v1Track = updatedProject.timeline.tracks.find((t) => t.type === 'video')
+      if (!v1Track) {
+        v1Track = {
+          id: `track_video_${Date.now()}`,
+          name: 'V1',
+          type: 'video',
+          clips: [],
+          visible: true,
+          locked: false,
+          muted: false,
+        }
+        updatedProject.timeline.tracks.unshift(v1Track)
+      }
+
+      let insertStartTime = 0
+      if (Array.isArray(v1Track.clips) && v1Track.clips.length > 0) {
+        for (const c of v1Track.clips) {
+          const end = (Number(c.startTime) || 0) + (Number(c.duration) || 0)
+          if (end > insertStartTime) insertStartTime = end
+        }
+      }
+
+      const newClip = {
+        id: clipId,
+        trackId: v1Track.id,
+        mediaId: mediaId,
+        name: detail.title || 'Google Vids 成片',
+        type: 'video',
+        startTime: insertStartTime,
+        duration: durationSec,
+        inPoint: 0,
+        outPoint: durationSec,
+        volume: 1,
+        playbackRate: 1,
+        visible: true,
+      }
+
+      if (!Array.isArray(v1Track.clips)) {
+        v1Track.clips = []
+      }
+      v1Track.clips.push(newClip)
+      updatedProject.modifiedAt = Date.now()
+
+      if (typeof useProjectStore?.setState === 'function') {
+        useProjectStore.setState({ project: updatedProject, hasOpenProject: true })
+      }
+
+      try {
+        useEngineStore.getState()?.seek?.(insertStartTime)
+      } catch {}
+
+      broadcastStatus()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('omnimux-clip:request-status', onRequestStatus)
+      window.addEventListener('omnimux-clip:new-project', onNewProject)
+      window.addEventListener('omnimux-clip:insert', onInsertClip)
+      window.addEventListener('omnimux:clip:insert-clip', onInsertClip)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('omnimux-clip:request-status', onRequestStatus)
+        window.removeEventListener('omnimux-clip:new-project', onNewProject)
+        window.removeEventListener('omnimux-clip:insert', onInsertClip)
+        window.removeEventListener('omnimux:clip:insert-clip', onInsertClip)
+      }
+    }
+  }, [hasOpenProject, project, t])
+
   const showCreate = forceWelcome && !hasOpenProject
 
   return (

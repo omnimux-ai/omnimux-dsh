@@ -139,6 +139,7 @@ class MockElement {
 
 function setupMockEnvironment() {
   globalThis.document = {
+    documentElement: { dataset: {} },
     createElement(tag) {
       return new MockElement(tag)
     },
@@ -300,32 +301,33 @@ test('AC-04 & AC-05: Strict copy assertions and dynamic locale switching', () =>
 test('AC-07: Single activation slot arbitration and click trigger', () => {
   setupMockEnvironment()
   let registeredRow = null
-  let activeState = false
-  let subscriber = null
-  let openCalled = 0
+  let stageClaimed = null
+  let openedTab = null
+  let focusMode = null
+  const listeners = {}
 
   globalThis.window = {
+    addEventListener(evt, fn) {
+      listeners[evt] = fn
+    },
+    removeEventListener(evt, fn) {
+      if (listeners[evt] === fn) delete listeners[evt]
+    },
+    dispatchEvent(evt) {
+      listeners[evt.type || 'dsh-product-stage']?.(evt)
+    },
     __omnimuxSidebar: {
       register(row) {
         registeredRow = row
         return () => { registeredRow = null }
       },
     },
+    __omnimuxStage: {
+      claim(id) { stageClaimed = id },
+    },
     __omnimuxWorkbench: {
-      createSidebarStore(opts) {
-        assert.equal(opts.tabId, GOOGLE_VIDS_TAB_ID)
-        assert.equal(typeof opts.title, 'function')
-        assert.equal(opts.title(), 'Google Vids')
-        return {
-          getSnapshot() { return activeState },
-          subscribe(fn) {
-            subscriber = fn
-            return () => { subscriber = null }
-          },
-          open() { openCalled += 1 },
-          close() {},
-        }
-      },
+      open(opts) { openedTab = opts },
+      setFocus(mode) { focusMode = mode },
     },
   }
 
@@ -335,19 +337,21 @@ test('AC-07: Single activation slot arbitration and click trigger', () => {
   // 初始为未激活态
   assert.equal(entry.dataset.active, undefined)
 
-  // 点击触发 open
+  // 点击触发 claim('omnimux-vids') 与 open('omnimux-clip:studio') 与 setFocus('split')
   entry.click()
-  assert.equal(openCalled, 1, 'Click should call stageStore.open()')
+  assert.equal(stageClaimed, 'omnimux-vids', 'Click should claim omnimux-vids stage')
+  assert.deepEqual(openedTab, { tabId: 'omnimux-clip:studio', title: '视频剪辑' }, 'Click should open clip studio')
+  assert.equal(focusMode, 'split', 'Click should set focus to split')
 
-  // 模拟右栏中枢广播激活态
-  activeState = true
-  subscriber?.()
-  assert.equal(entry.dataset.active, 'true', 'Must set data-active when snapshot is true')
+  // 模拟中栏主舞台广播激活态
+  document.documentElement.dataset.dshProductStage = 'omnimux-vids'
+  listeners['dsh-product-stage']?.({ detail: { id: 'omnimux-vids' } })
+  assert.equal(entry.dataset.active, 'true', 'Must set data-active when omnimux-vids stage is active')
 
-  // 模拟切换会话或其他 Tab，撤销激活态
-  activeState = false
-  subscriber?.()
-  assert.equal(entry.dataset.active, undefined, 'Must remove data-active when snapshot is false')
+  // 模拟切换会话或其他舞台，撤销激活态
+  delete document.documentElement.dataset.dshProductStage
+  listeners['dsh-product-stage']?.({ detail: { id: '' } })
+  assert.equal(entry.dataset.active, undefined, 'Must remove data-active when stage is inactive')
 
   unmount()
 })
@@ -2011,7 +2015,7 @@ test('Issue #2657 Review Round 12 - Point 1: subscribe race condition TOCTOU dis
 
 test('Issue #2657 Review Round 12 - Point 2: unmount explicitly removes click listener via removeEventListener', () => {
   setupMockEnvironment()
-  let opened = false
+  let stageClaimed = false
   let registeredRow = null
   globalThis.window = {
     __omnimuxSidebar: {
@@ -2020,12 +2024,12 @@ test('Issue #2657 Review Round 12 - Point 2: unmount explicitly removes click li
         return () => {}
       },
     },
+    __omnimuxStage: {
+      claim: () => { stageClaimed = true },
+    },
     __omnimuxWorkbench: {
-      createSidebarStore: () => ({
-        getSnapshot: () => false,
-        subscribe: () => () => {},
-        open: () => { opened = true },
-      }),
+      open: () => {},
+      setFocus: () => {},
     },
   }
 
@@ -2035,7 +2039,7 @@ test('Issue #2657 Review Round 12 - Point 2: unmount explicitly removes click li
 
   assert.equal(typeof entry.listeners.click, 'function', 'click listener should be attached')
   entry.click()
-  assert.equal(opened, true, 'click listener should trigger open')
+  assert.equal(stageClaimed, true, 'click listener should trigger stage claim')
 
   // 卸载
   unmount()
@@ -2128,7 +2132,9 @@ test('Static code review audit: verifies all 4 Review Round 12 points in source 
   assert.match(sidebarSrc, /unsub\s*=\s*typeof\s+sub\s*===\s*['"]function['"]\s*\?\s*sub\s*:\s*\(\)\s*=>\s*\{\}/)
 
   // 2. [Medium] 提取具名 handleClick 函数并在返回的 cleanup 中显式调用 entry.removeEventListener('click', handleClick)
-  assert.match(sidebarSrc, /const\s+handleClick\s*=\s*\(\)\s*=>\s*\{[\s\S]*?stageStore\.open\(\)[\s\S]*?\}/)
+  assert.match(sidebarSrc, /const\s+handleClick\s*=\s*\(\)\s*=>\s*\{[\s\S]*?claim\(['"]omnimux-vids['"]\)[\s\S]*?\}/)
+  assert.match(sidebarSrc, /omnimux-clip:studio/)
+  assert.doesNotMatch(sidebarSrc, /stageStore\.open\(\)/)
   assert.match(sidebarSrc, /entry\.addEventListener\(['"]click['"],\s*handleClick\)/)
   assert.match(sidebarSrc, /entry\.removeEventListener\(['"]click['"],\s*handleClick\)/)
 
