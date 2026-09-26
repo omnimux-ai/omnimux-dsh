@@ -5,7 +5,7 @@ import { GoogleVidsStage } from './GoogleVidsStage.jsx'
 import { GoogleVidsStudioPanel } from './GoogleVidsStudioPanel.jsx'
 
 export const name = 'omnimux-video'
-export const inject = ['locale']
+export const inject = ['locale', 'slots']
 
 /**
  * 稳定单例引用的 Google Vids Studio 面板高阶组件，避免 Tab 宿主组件对比时触发不必要的 Unmount/Remount。
