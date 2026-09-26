@@ -9,7 +9,7 @@ import { objectParams, rethrow } from '../tools/schema.js'
  * @param {unknown} token
  * @returns {boolean}
  */
-function isAuthenticOfficialToken(token) {
+export function isAuthenticOfficialToken(token) {
   if (typeof token !== 'string') return false
   const trimmed = token.trim()
   if (!trimmed) return false
