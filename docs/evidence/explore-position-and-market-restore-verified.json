@@ -1,0 +1,16 @@
+{
+  "task": "explore-position-and-market-restore",
+  "verifiedAt": "2026-09-26T14:32:30+08:00",
+  "status": "passed",
+  "summary": "Verified that omnimux-market-entry (rank 4.1) is restored as a pinned sidebar row, and omnimux-explore-entry is moved to the bottom (rank 7.2) below inspiration.",
+  "results": {
+    "sidebarCoordinatorTests": "21/21 passed",
+    "pinnedEntries": [
+      "omnimux-workflow (rank 4.0)",
+      "omnimux-market (rank 4.1)",
+      "omnimux-assets (rank 6.0)",
+      "omnimux-inspiration (rank 7.0)",
+      "omnimux-explore-entry (rank 7.2, bottom-most)"
+    ]
+  }
+}

@@ -78,7 +78,7 @@ const CONVERGED_ROWS = new Map()
 const seen = new Set()
 
 /** 核心常驻侧栏项白名单（除 inline 新建项目与探索行自身外） */
-const PINNED_ENTRY_PREFIXES = ['omnimux-workflow', 'omnimux-assets', 'omnimux-inspiration']
+const PINNED_ENTRY_PREFIXES = ['omnimux-workflow', 'omnimux-market', 'omnimux-assets', 'omnimux-inspiration']
 
 export function isPinnedSidebarEntry(id) {
   if (id === 'omnimux-explore-entry') return true
@@ -88,13 +88,13 @@ export function isPinnedSidebarEntry(id) {
 
 /**
  * 判断是否应收敛到「探索」菜单，不再作为独立行渲染在侧边栏。
- * 排除核心常驻项（workflow, assets, inspiration, explore）和非 omnimux 夹具；
+ * 排除核心常驻项（workflow, market, assets, inspiration, explore）和非 omnimux 夹具；
  * 其余所有 omnimux 功能插件均收敛。
  */
 export function isConvergedEntry(id) {
   if (isPinnedSidebarEntry(id)) return false
   const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
-  if (pluginId === 'omnimux-workflow' || pluginId === 'omnimux-assets' || pluginId === 'omnimux-inspiration' || pluginId === 'omnimux-explore') {
+  if (pluginId === 'omnimux-workflow' || pluginId === 'omnimux-market' || pluginId === 'omnimux-assets' || pluginId === 'omnimux-inspiration' || pluginId === 'omnimux-explore') {
     return false
   }
   if (id.startsWith('omnimux-') || pluginId.startsWith('omnimux-')) {
@@ -360,7 +360,7 @@ function createExploreIcon() {
 }
 
 /**
- * 确保常驻「探索」行就位（Rank 3.9，在「项目」上方）。
+ * 确保常驻「探索」行就位（Rank 7.2，位于最下方，排在「灵感社区」之后）。
  */
 function ensureExploreRow() {
   if (ROWS.some((r) => r.id === 'omnimux-explore-entry')) return
@@ -382,7 +382,7 @@ function ensureExploreRow() {
     })
     exploreEntryElement = btn
   }
-  ROWS.push({ id: 'omnimux-explore-entry', rank: 3.9, element: exploreEntryElement })
+  ROWS.push({ id: 'omnimux-explore-entry', rank: 7.2, element: exploreEntryElement })
 }
 
 /**
@@ -934,13 +934,6 @@ function createApi() {
           seen.delete(id)
           element.remove()
           runPlaceAll()
-        }
-      }
-
-      // 排除技能专家 omnimux-market（在底部 footer，不在侧栏 extra rows 挂载）
-      if (id === 'omnimux-market-entry' || id === 'omnimux-market-plaza' || id === 'omnimux-market') {
-        return () => {
-          seen.delete(id)
         }
       }
 
