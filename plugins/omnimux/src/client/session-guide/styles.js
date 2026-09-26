@@ -3145,12 +3145,13 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-trending-empty-hint { font-size:12px; opacity:0.75; max-width:520px; text-align:center; }
 
 /* 复刻接管：不复制任何控件，只把原生输入框搬到会话视口底部。
-   附件、专家、模型、发送仍全部来自官方 Host，行为与 Hero 完全一致。 */
+   附件、专家、模型、发送仍全部来自官方 Host，行为与 Hero 完全一致。
+   方案 A：最大宽度严格对齐顶部原生上限 var(--dsh-composer-card-max-width, 952px)。 */
 [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card] {
   position:fixed!important;
   left:var(--omnimux-dock-left, 0px)!important;
   width:var(--omnimux-dock-width, 100%)!important;
-  max-width:none!important;
+  max-width:var(--dsh-composer-card-max-width, 952px)!important;
   margin:0!important;
   bottom:var(--omnimux-dock-bottom, 20px)!important;
   z-index:45!important;

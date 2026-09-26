@@ -75,7 +75,7 @@ describe('E2E: 吸底先手——附件挂载提醒的强制滚动定位天然�
         useInput: (fn) => fn({ draft: '' }),
         inputActions,
         store,
-        t: (k, fb) => (k === 'trending.undock' ? '收起输入框' : (fb || k)),
+        t: (k, fb) => (k === 'trending.undock' ? '收起' : (fb || k)),
       }))
     })
 

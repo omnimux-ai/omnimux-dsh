@@ -591,7 +591,7 @@ test('TrendingReplicateSection：复刻把指令写进原生输入框并停靠�
     assert.equal(view.cards()[2].getAttribute('data-trending-active'), 'false')
     assert.equal(applied.length, 2, '归还输入框不应再写入指令')
 
-    // 「收起输入框」同样只归还位置，不改草稿
+    // 「收起」同样只归还位置，不改草稿
     await click(view.cards()[0].querySelector('.omnimux-trending-recreate-btn'))
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
     await click(host.querySelector('.omnimux-trending-undock'))
@@ -610,9 +610,9 @@ test('TrendingReplicateSection：复刻吸底给出停靠几何，只有滑回�
     await scrollTo(view.scroller, 900)
     await view.recreate()
     assert.equal(view.docked(), true, '复刻必须吸底')
-    // 780 = min(780, 1200-24)，604 = 394 + (1200-780)/2：输入框宽度与位置与 Hero 中完全一致
-    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-width'), '780px')
-    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-left'), '604px')
+    // 952 = min(952, 1200-24)，518 = 394 + (1200-952)/2：输入框宽度与位置与顶部原生上限 952px 完全一致
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-width'), '952px')
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-left'), '518px')
     assert.equal(view.host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
     assert.equal(view.host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
 

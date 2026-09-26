@@ -154,8 +154,15 @@ test('dock owner expands for inline demand, clamps to column and restores defaul
       card.querySelector('[data-omx-quick-shortcut-controls]').remove()
       await Promise.resolve()
     })
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '780px')
+    // 移除需求后，此时 availableWidth 仍为 900（available 为 888px），输入框自适应可用宽度 888px
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '888px')
     assert.equal(card.style.width, '')
+
+    // 视口再次展开至宽屏 1200px 时，恢复至原生上限 952px 且居中对齐
+    availableWidth = 1200
+    await act(async () => window.dispatchEvent(new window.Event('resize')))
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '952px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '518px')
   } finally {
     await act(async () => root.unmount())
     env.restore()

@@ -28,8 +28,8 @@ export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
 /** 停靠后输入框距会话视口底边的距离（px）。 */
 const DOCK_BOTTOM = 20
 
-/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 780px 上限一致。 */
-const DOCK_MAX_WIDTH = 780
+/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 952px 原生上限一致。 */
+const DOCK_MAX_WIDTH = 952
 
 /** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
 const SCROLLER_SELECTOR = '[class*="scrollBody"]'
@@ -167,7 +167,7 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
 
   /**
    * 撤回复刻技能：清空激活技能并广播撤回事件。
-   * 只用于本板块自己的决策（再点卡片 / 移除技能药丸 / 收起输入框 / 卸载），
+   * 只用于本板块自己的决策（再点卡片 / 移除技能药丸 / 收起 / 卸载），
    * 不参与外部同步，避免与附件栏、技能药丸形成回环。
    */
   const dropRecreateSkill = useCallback(() => {
@@ -267,7 +267,16 @@ export function TrendingReplicateSection({ t, onApplyPrompt, sessionId = '' }) {
     const writeGeometry = () => {
       const rect = band?.getBoundingClientRect?.()
       if (!rect || rect.width <= 0) return
-      const width = Math.min(DOCK_MAX_WIDTH, Math.max(0, rect.width - 24))
+      let nativeMaxWidth = DOCK_MAX_WIDTH
+      const win = card?.ownerDocument?.defaultView || (typeof window !== 'undefined' ? window : null)
+      if (win?.getComputedStyle && card) {
+        const rootStyle = win.getComputedStyle(card)
+        const parsedMax = parseFloat(rootStyle.getPropertyValue?.('--dsh-composer-card-max-width'))
+        if (Number.isFinite(parsedMax) && parsedMax > 0) {
+          nativeMaxWidth = parsedMax
+        }
+      }
+      const width = Math.min(nativeMaxWidth, Math.max(0, rect.width - 24))
       const left = rect.left + (rect.width - width) / 2
       root.style.setProperty('--omnimux-dock-left', `${Math.round(left)}px`)
       root.style.setProperty('--omnimux-dock-width', `${Math.round(width)}px`)

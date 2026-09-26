@@ -75,7 +75,7 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
         useInput: (fn) => fn({ draft: '' }),
         inputActions,
         store,
-        t: (k, fb) => (k === 'trending.undock' ? '收起输入框' : (fb || k)),
+        t: (k, fb) => (k === 'trending.undock' ? '收起' : (fb || k)),
       }))
     })
 
@@ -116,7 +116,7 @@ describe('E2E: 恢复使用技能或复刻按钮触发输入框吸底与交互�
     assert.equal(hostRoot.hasAttribute('data-omnimux-dock-open'), true, '向下浏览超过离开阈值时输入框自动迁移吸底')
     const undockBtn = document.querySelector('.omnimux-trending-undock')
     assert.ok(undockBtn, '吸底后右上方必须浮现收起按钮')
-    assert.equal(undockBtn.textContent.includes('收起输入框'), true, '收起按钮文本必须包含国际化文案')
+    assert.equal(undockBtn.textContent.includes('收起'), true, '收起按钮文本必须包含国际化文案')
 
     // 5. 点击收起按钮：解除吸底，恢复到原位
     await act(async () => {
