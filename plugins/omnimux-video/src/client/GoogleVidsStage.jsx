@@ -365,6 +365,12 @@ function ensureStageStyles() {
  */
 export function GoogleVidsStage(props) {
   const activeTimersRef = useRef(new Map())
+  const [everOpened, setEverOpened] = useState(false)
+  const open = typeof props?.visible === 'boolean' ? props.visible : true
+
+  useEffect(() => {
+    if (open) setEverOpened(true)
+  }, [open])
 
   useEffect(() => {
     ensureStageStyles()
@@ -588,8 +594,13 @@ export function GoogleVidsStage(props) {
     }
   }
 
+  if (!open && !everOpened) return null
+
   return (
-    <div className="omnimux-vids-stage">
+    <div
+      className="omnimux-vids-stage"
+      style={{ display: open ? undefined : 'none' }}
+    >
       {/* 3.1 顶部 Header */}
       <header className="gvids-header">
         {/* 关闭按钮 */}
