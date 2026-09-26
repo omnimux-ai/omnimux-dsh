@@ -3,10 +3,26 @@
   "name": "TikTok 运营操盘手",
   "description": "TikTok 蓝海选品、爆款短视频拆解、带货脚本与矩阵运营",
   "categories": [
-    { "id": "蓝海选品", "name": "蓝海选品" },
-    { "id": "爆款短视频", "name": "爆款短视频" },
-    { "id": "达人与账号复盘", "name": "达人与账号复盘" },
-    { "id": "创作者中心", "name": "创作者中心" }
+    {
+      "id": "蓝海选品",
+      "name": "蓝海选品"
+    },
+    {
+      "id": "爆款短视频",
+      "name": "爆款短视频"
+    },
+    {
+      "id": "达人与账号复盘",
+      "name": "达人与账号复盘"
+    },
+    {
+      "id": "创作者中心",
+      "name": "创作者中心"
+    },
+    {
+      "id": "创作视频",
+      "name": "创作视频"
+    }
   ],
   "skills": [
     {
@@ -84,6 +100,50 @@
       "category": "创作者中心",
       "description": "TikTok Drama Center 创作者认证、收益结算、原片上传与官方活动指引。",
       "summary": "TikTok Drama Center 创作者认证、收益结算、原片上传与官方活动指引。",
+      "installed": true
+    },
+    {
+      "id": "sk-tk-replicate-viral",
+      "slug": "replicate-viral-video",
+      "skill": "replicate-viral-video",
+      "name": "复刻爆款视频",
+      "title": "复刻爆款视频",
+      "category": "创作视频",
+      "description": "参考爆款视频结构，为你的产品一键生成同款带货视频。",
+      "summary": "参考爆款视频结构，为你的产品一键生成同款带货视频。",
+      "installed": true
+    },
+    {
+      "id": "sk-tk-create-selling-video",
+      "slug": "create-selling-video",
+      "skill": "create-selling-video",
+      "name": "创作带货视频",
+      "title": "创作带货视频",
+      "category": "创作视频",
+      "description": "从商品或参考视频出发，自动编排分析、脚本、提示词与生成全流程。",
+      "summary": "从商品或参考视频出发，自动编排分析、脚本、提示词与生成全流程。",
+      "installed": true
+    },
+    {
+      "id": "sk-tk-selling-hook-analysis",
+      "slug": "video-hook-analysis",
+      "skill": "video-hook-analysis",
+      "name": "视频拆解",
+      "title": "视频拆解",
+      "category": "创作视频",
+      "description": "拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。",
+      "summary": "拆解短视频叙事结构、黄金Hook与逐镜头分镜脚本。",
+      "installed": true
+    },
+    {
+      "id": "sk-tk-reverse-prompt",
+      "slug": "reverse-video-prompt",
+      "skill": "reverse-video-prompt",
+      "name": "反推视频提示词",
+      "title": "反推视频提示词",
+      "category": "创作视频",
+      "description": "上传TK视频链接，自动反推出该视频背后，可用于AI视频生成的高质量提示词。",
+      "summary": "上传TK视频链接，自动反推出该视频背后，可用于AI视频生成的高质量提示词。",
       "installed": true
     }
   ]
