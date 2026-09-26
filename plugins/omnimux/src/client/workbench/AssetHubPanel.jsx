@@ -197,6 +197,26 @@ export function AssetHubPanel(props) {
 
   const handleAttach = (item) => {
     const payload = adaptCardToAttachmentPayload(item)
+    const prompt = getAssetHubCardPrompt(item)
+
+    // 当卡片为 featured / skills 等纯 Prompt 模板类型（无需物理附件）时：
+    if (!payload) {
+      if (prompt) {
+        if (typeof props.onPrompt === 'function') {
+          props.onPrompt(prompt, resolvedSessionId)
+        }
+        const doc = hostDocument() || (typeof document !== 'undefined' ? document : null)
+        const win = doc?.defaultView || (typeof window !== 'undefined' ? window : null)
+        win?.dispatchEvent?.(new win.CustomEvent(LIBRARY_STAGE_PROMPT_EVENT, {
+          detail: { prompt, sessionId: resolvedSessionId },
+        }))
+        const okMsg = props.t?.('composerAdd.toast.promptAppended') || '提示词已填入输入框'
+        showNotice(okMsg)
+        doc?.querySelector?.('[data-composer-input="true"]')?.focus?.({ preventScroll: true })
+      }
+      return
+    }
+
     const result = attachmentStore.addAttachment(resolvedSessionId, payload)
     if (!result.ok) {
       if (result.reason === 'duplicate') {
@@ -211,7 +231,6 @@ export function AssetHubPanel(props) {
       }
     } else {
       // 成功注入附件槽后，将素材对应的提示词追加到中间会话输入框草稿中（打通 Prompt 管道）
-      const prompt = getAssetHubCardPrompt(item)
       if (prompt) {
         if (typeof props.onPrompt === 'function') {
           props.onPrompt(prompt, resolvedSessionId)
