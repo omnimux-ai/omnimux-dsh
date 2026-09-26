@@ -1,0 +1,27 @@
+{
+  "task": "market-featured-replicate-carousel",
+  "issue": "https://github.com/omnimux-ai/omnimux-dsh/issues/2719",
+  "feature": "将《图文复刻》作为官方核心主打技能上架技能插件市场",
+  "generatedAt": "2026-09-27T01:54:00+08:00",
+  "targetSkill": {
+    "id": "sk-omx-replicate-carousel",
+    "slug": "replicate-carousel",
+    "nameZh": "图文复刻",
+    "nameEn": "Carousel Replication",
+    "summaryZh": "拆解参考图文案例的视觉结构，为新商品生成原创电商轮播方案。",
+    "summaryEn": "Deconstruct a reference carousel and rebuild an original one for a new product.",
+    "category": "image-static",
+    "installType": "marketplace",
+    "recommended": true,
+    "isHot": true,
+    "badge": "HOT",
+    "pinnedTop": true
+  },
+  "verifiedGates": {
+    "verifySkillBilingual": "113/113 passed (kind:skill && tab:skills && recommended:true)",
+    "verifyMarketCatalog": "240 items passed (pre-installed: 1, marketplace: 239)",
+    "generateFeaturedSkills": "113 featured skills passed / 7 categories matched",
+    "featuredTopRank": "sk-omx-replicate-carousel in PINNED_TOP_SKILL_IDS index 6"
+  },
+  "status": "VERIFIED_PASS"
+}

@@ -34,6 +34,7 @@ export const PINNED_TOP_SKILL_IDS = [
   'sk-omx-ecommerce',
   'sk-omx-static-image',
   'sk-omx-carousel',
+  'sk-omx-replicate-carousel',
   'sk-omx-course-to-short-video',
   'sk-omx-ugc-fit-check',
   'sk-omx-youth-sports-hype-reel',
