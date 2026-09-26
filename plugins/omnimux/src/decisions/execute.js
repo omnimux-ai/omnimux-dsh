@@ -68,7 +68,7 @@ export function buildQuestions(args = {}) {
 }
 
 /**
- * Execute a decision request using TypeSafe Jev model via OpenRouter
+ * Execute a decision request using TypeSafe Jev model via OmniMux Gateway
  *
  * @param {{
  *   fetcher?: typeof fetch,
@@ -126,6 +126,6 @@ export async function executeJevDecision(deps, args, options = {}) {
     answers,
     usage: raw.usage || {},
     id: raw.id,
-    provider: raw.provider || 'TypeSafe',
+    provider: raw.provider || 'OmniMux',
   }
 }
