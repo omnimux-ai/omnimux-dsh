@@ -131,20 +131,20 @@ describe('Stage Mutual Exclusion & Host Chrome Rules', () => {
     assert.equal(document.documentElement.dataset.dshProductStage, undefined)
   })
 
-  it('never hides better-sidebar or panel-host when omnimux-apps stage is active', () => {
+  it('never hides better-sidebar or panel-host when omnimux-apps or omnimux-vids stage is active', () => {
     setup()
     ensureProductStageChrome()
 
     const chrome = document.getElementById('dsh-product-stage-chrome')?.textContent ?? ''
     assert.match(
       chrome,
-      /html\[data-dsh-product-stage\]:not\(\[data-dsh-product-stage="omnimux-apps"\]\)\s+\[data-dsh-better-sidebar\]/,
-      'better-sidebar must never be hidden when omnimux-apps is active (apps live in workbench tabs)',
+      /html\[data-dsh-product-stage\]:not\(\[data-dsh-product-stage="omnimux-apps"\]\)(?::not\(\[data-dsh-product-stage="omnimux-vids"\]\))?\s+\[data-dsh-better-sidebar\]/,
+      'better-sidebar must never be hidden when omnimux-apps or omnimux-vids is active',
     )
     assert.match(
       chrome,
-      /html\[data-dsh-product-stage\]:not\(\[data-dsh-product-stage="omnimux-apps"\]\)\s+\[data-dsh-panel-host\]/,
-      'panel-host must never be hidden when omnimux-apps is active (apps live in workbench tabs)',
+      /html\[data-dsh-product-stage\]:not\(\[data-dsh-product-stage="omnimux-apps"\]\)(?::not\(\[data-dsh-product-stage="omnimux-vids"\]\))?\s+\[data-dsh-panel-host\]/,
+      'panel-host must never be hidden when omnimux-apps or omnimux-vids is active',
     )
   })
 

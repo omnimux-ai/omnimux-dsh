@@ -31,6 +31,7 @@ export const STAGE_CSS_CLASS_MAP = {
   'omnimux-publish': 'omnimux-publish-stage',
   'omnimux-clip': 'omnimux-clip-stage',
   'omnimux-apps': 'omnimux-apps-stage',
+  'omnimux-vids': 'omnimux-vids-stage',
 }
 
 const STAGE_MUTUAL_EXCLUSION_RULES = Object.entries(STAGE_CSS_CLASS_MAP).map(([stageId, className]) => {
@@ -94,14 +95,14 @@ body[data-dsh-desktop-platform="darwin"] [class*="sidebarCol"] [class*="logoRow"
 body[data-dsh-desktop-platform="darwin"] [class*="sidebarCol"] [class*="logoRow"] *{
   position:relative;z-index:11;-webkit-app-region:no-drag!important;pointer-events:auto!important;
 }
-html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-dsh-better-sidebar],
-html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-dsh-better-sidebar] [class*="_panel"],
-html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-dsh-better-sidebar] [class*="_bottomPanel"],
-html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-dsh-panel-host],
-html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [class*="toggleCluster"],
-html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) [data-slot="shell.sidebar.auxiliary"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
-html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]){--dsh-sidebar-width:0px!important;--dsh-sidebar-height:0px!important;}
-html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) #root{margin-right:0px!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]):not([data-dsh-product-stage="omnimux-vids"]) [data-dsh-better-sidebar],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]):not([data-dsh-product-stage="omnimux-vids"]) [data-dsh-better-sidebar] [class*="_panel"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]):not([data-dsh-product-stage="omnimux-vids"]) [data-dsh-better-sidebar] [class*="_bottomPanel"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]):not([data-dsh-product-stage="omnimux-vids"]) [data-dsh-panel-host],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]):not([data-dsh-product-stage="omnimux-vids"]) [class*="toggleCluster"],
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]):not([data-dsh-product-stage="omnimux-vids"]) [data-slot="shell.sidebar.auxiliary"]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]):not([data-dsh-product-stage="omnimux-vids"]){--dsh-sidebar-width:0px!important;--dsh-sidebar-height:0px!important;}
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]):not([data-dsh-product-stage="omnimux-vids"]) #root{margin-right:0px!important;}
 html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) #dsh-window-drag{-webkit-app-region:no-drag!important;pointer-events:none!important;}
 html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header{-webkit-app-region:drag!important;}
 html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) header button,
