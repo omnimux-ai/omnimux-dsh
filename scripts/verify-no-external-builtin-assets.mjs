@@ -29,7 +29,6 @@ export const SCANNED_FILES = [
 ];
 
 export const FORBIDDEN_CDN_PATTERNS = [
-  /https?:\/\/cdn\.creatify\.ai[^\s"'`]*/gi,
   /https?:\/\/([a-zA-Z0-9-]+\.)?creatify\.ai[^\s"'`]*/gi,
 ];
 
@@ -40,7 +39,11 @@ export function auditBuiltinAssets() {
     let content;
     try {
       content = readFileSync(file, 'utf-8');
-    } catch {
+    } catch (err) {
+      violations.push({
+        file: basename(file),
+        match: `无法读取待检查文件 (Fail-Closed): ${err instanceof Error ? err.message : String(err)}`,
+      });
       continue;
     }
 

@@ -13,7 +13,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve, dirname, basename, extname } from 'node:path';
+import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -258,10 +258,11 @@ export function replaceProjectAssets(manifest) {
     let fileChanged = false;
 
     for (const [oldUrl, info] of Object.entries(manifest.urlMapping)) {
-      if (content.includes(oldUrl)) {
+      const occurrences = content.split(oldUrl).length - 1;
+      if (occurrences > 0) {
         content = content.replaceAll(oldUrl, info.targetUrl);
         fileChanged = true;
-        totalReplacements++;
+        totalReplacements += occurrences;
       }
     }
 
@@ -284,7 +285,7 @@ async function main() {
   let manifest;
   if (arg === '--manifest' || arg === '--all') {
     manifest = generateManifest();
-  } else {
+  } else if (arg === '--replace') {
     manifest = JSON.parse(readFileSync(resolve(ASSETS_DIR, 'manifest.json'), 'utf-8'));
   }
   if (arg === '--replace' || arg === '--all') {
