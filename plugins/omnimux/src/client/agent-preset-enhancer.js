@@ -43,6 +43,8 @@ export const PRESET_SEAT_ATTR = 'data-omnimux-preset-seat'
 export const PRESET_ICON_HIDDEN_ATTR = 'data-omnimux-preset-icon-hidden'
 /** Records the resolved preset id on an injected avatar. */
 export const PRESET_ID_ATTR = 'data-omnimux-preset-id'
+/** Global event dispatched when active agent preset changes. */
+export const AGENT_PRESET_CHANGED_EVENT = 'omnimux:agent-preset-changed'
 /** Host-published override bag: `window.__omnimuxPresetAvatars`. */
 export const PRESET_AVATAR_HOST_KEY = '__omnimuxPresetAvatars'
 
@@ -369,7 +371,11 @@ export function syncSeatAvatar(doc = globalThis.document, seat = findAgentPreset
   if (!resolved) return null
 
   if (typeof window !== 'undefined') {
+    const previousPreset = window.__omnimuxActivePreset
     window.__omnimuxActivePreset = resolved.id
+    if (previousPreset !== resolved.id && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+      window.dispatchEvent(new CustomEvent(AGENT_PRESET_CHANGED_EVENT, { detail: { id: resolved.id } }))
+    }
   }
 
   if (seat.getAttribute(PRESET_SEAT_ATTR) !== resolved.id) {
