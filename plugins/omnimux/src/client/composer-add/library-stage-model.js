@@ -6,7 +6,7 @@
 import { mapInspirationRow } from '../components/inspiration-picker/picker-model.js'
 import { mapSourceItem } from '../session-guide/trending/trending-source.js'
 import { SHARED_PRIMARY_TABS } from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
-import { ALL_CREATIVE_TEMPLATES } from '../session-guide/templates/templates-data.js'
+import { loadCreativeTemplates } from '../session-guide/templates/creative-templates-client.js'
 import FEATURED_SKILLS_JSON from '../session-guide/skills/featured-skills.json' with { type: 'json' }
 
 export const LIBRARY_STAGE_EVENT = 'omnimux:library-stage'
@@ -160,7 +160,7 @@ async function loadSkills(fetchImpl, limit) {
 }
 
 async function loadFeatured(fetchImpl, limit) {
-  const list = Array.isArray(ALL_CREATIVE_TEMPLATES) ? ALL_CREATIVE_TEMPLATES : []
+  const list = await loadCreativeTemplates({ fetchImpl })
   return list.slice(0, limit).map((tpl) => ({
     id: String(tpl.id || tpl.appId || ''),
     title: String(tpl.titleZh || tpl.title || tpl.id),

@@ -6,7 +6,7 @@
 
 import { inferExtension } from '../attachments/store.ts'
 import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
-import { ALL_CREATIVE_TEMPLATES } from '../session-guide/templates/templates-data.js'
+import { loadCreativeTemplates } from '../session-guide/templates/creative-templates-client.js'
 import FEATURED_SKILLS_JSON from '../session-guide/skills/featured-skills.json' with { type: 'json' }
 
 /**
@@ -364,7 +364,7 @@ export async function loadAssetHubData(tab, options = {}) {
   const { fetchImpl, signal } = options
 
   if (tab === 'featured') {
-    const list = Array.isArray(ALL_CREATIVE_TEMPLATES) ? ALL_CREATIVE_TEMPLATES : []
+    const list = await loadCreativeTemplates({ fetchImpl, signal })
     return list.map(normalizeFeaturedItem).filter(Boolean)
   }
 

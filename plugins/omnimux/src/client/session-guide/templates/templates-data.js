@@ -1,23 +1,43 @@
 /**
- * 创意模板核心数据模型与货架配置
- * 融合 7 大王牌官方 AI 应用与 395 套全量灵感模板及工作流上下文。
- * 完整模板数据与纯选择逻辑已移至 Host 侧数据模块
- * (src/templates/data.js)；本文件保留客户端展示配置并转导出既有符号。
+ * 创意模板客户端展示配置
+ * 本文件为纯浏览器模块：只保留探索页导航/分类/货架配置与本地纯函数。
+ * 完整模板数据与选择逻辑在 Host 侧数据模块 (src/templates/data.js)，
+ * 浏览器通过 creative-templates-client.js 适配器按需异步获取快照，
+ * 本文件不得再 import src/templates/data.js（其 JSON 会重新进入主包）。
  */
 
 import { resolveTemplateCopy } from './template-locale.js';
+import { getFeaturedAppsList } from './creative-templates-client.js';
 import {
   SHARED_PRIMARY_TABS,
   SHARED_SUB_CATEGORIES,
 } from '../../shared/asset-hub-tabs/shared-tabs-catalog.js';
 
-export {
-  ALL_CREATIVE_TEMPLATES,
-  FEATURED_APPS_LIST,
-  findTemplateById,
-  selectTemplatesByCategory,
-  selectShelfItems,
-} from '../../../templates/data.js';
+/**
+ * featured-only 路径的轻量列表（只含 7 大精选应用，不含全量模板）。
+ * 单一真源来自快照适配器的 featured 构造，展示 featured apps 时零请求。
+ */
+export const FEATURED_APPS_LIST = getFeaturedAppsList();
+
+/**
+ * 货架行取数（原 selectShelfItems 的显式列表版本）。
+ * 'explore-templates' 货架为 featured-only：不读快照、同步返回。
+ * 其余货架在传入的合并列表（featured-first）上按既有规则过滤；
+ * 快照未就绪时调用方传 FEATURED_APPS_LIST，自然得到 featured 近似结果。
+ * @param {ReadonlyArray<Record<string, unknown>>} list
+ * @param {string} shelfSlug
+ * @param {number} [limit=8]
+ * @returns {Array}
+ */
+export function selectShelfItemsFrom(list, shelfSlug, limit = 8) {
+  if (shelfSlug === 'explore-templates') {
+    return FEATURED_APPS_LIST.slice(0, limit);
+  }
+  const source = Array.isArray(list) ? list : [];
+  return source
+    .filter((item) => item.categorySlug === shelfSlug || item.categoryKey === shelfSlug)
+    .slice(0, limit);
+}
 
 /**
  * 一级主导航：六大创作与资产库（对齐共享单一真源）
