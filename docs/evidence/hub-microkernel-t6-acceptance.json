@@ -1,0 +1,44 @@
+{
+  "ticket": "T6",
+  "issue": 2734,
+  "spec": "specs/hub-microkernelization.spec.md",
+  "recordedAt": "2026-09-27",
+  "branch": "agent/omnimux-hub-microkernel-issue-2734",
+  "commits": ["fa56096bb","2dd921f04","ad5d36f30","dbd29993c","860d6a789","01a745929"],
+  "budget": {
+    "baselineWrappedUtf8": 4249150,
+    "finalWrappedUtf8": 3092407,
+    "relativeReduction": 0.2723,
+    "targetMin": 0.2,
+    "pass": true,
+    "metafileJsonInputs": "creative-templates.json absent; src/templates/data.js absent; only creative-templates-client.js + featured-apps-data.js remain"
+  },
+  "packUnpack": {
+    "tarball": "omnimux-0.1.2.tgz (889 files)",
+    "tplJson": { "path": "package/src/templates/creative-templates.json", "bytes": 1073071, "sha256": "a7228349feb8cbc02df1eddd552fa48fe7796860376d343f17ae7326af68bc01" },
+    "snapshotModule": "getCreativeTemplatesSnapshot() from unpacked artifact returns schemaVersion 1, dataVersion == file sha256, items 395",
+    "clientBytes": 3092407
+  },
+  "e2eHostContract": {
+    "env": "scripts/test-env-bootstrap.mjs (task plugin symlinked, evidenceLevel full)",
+    "GET /omnimux/templates/creative": "200, schemaVersion 1, items 395, dataVersion a7228349…, Cache-Control no-store",
+    "POST": "405 {\"error\":\"method not allowed\"}, Allow: GET",
+    "dataVersion": "matches packaged source JSON sha256"
+  },
+  "browserQa": {
+    "verifyApp": "PASS 8 assertions; screenshot .workbuddy/evidence/app-qa/079ee541-3b9d-4c85-b075-756aa9a8de52/app-home.png",
+    "businessPath": "NOT-VERIFIED: QA fixture cannot create session/select workspace to reach session-guide explore section or first-level asset hub pages; attempts documented in .workbuddy/evidence/app-qa/t6-explore/. T3/T4 browser-level acceptance remains a declared gap pending a reachable fixture or manual check."
+  },
+  "tests": {
+    "baselineFailingFiles": 42,
+    "finalFailingFiles": 40,
+    "newFailures": 0,
+    "fixed": ["src/client/composer-add/library-stage-model.test.js:47", "src/client/composer-add/library-stage-model.test.js:70"],
+    "scopedSuites": "82/82 pass (templates data+http, local-origin, adapter, migration, templates-data, grid-autoplay, locale, apps/origin) + 99/99 (library-stage-model + workbench)"
+  },
+  "reviews": {
+    "ocrCli": "PASS-WITH-NITS: 1 medium (stale-context claim, verified false — tests import data.js), 4 low (typo in featured prompt data unchanged by design; prefix const + listener leak FIXED in 01a745929)",
+    "qa": "QA_SIGN_OFF: PASS-WITH-NITS (R1/R3 degraded featured-only fallback during load/failure recorded as UI-gated deviation; R2 browser business assertions declared unverified; R4/R5 fixed)",
+    "pm": "N/A — zero visible UI change; TEMPLATE_CATEGORIES/SHELVES_CONFIG byte-identical; no new copy/elements/icons"
+  }
+}
