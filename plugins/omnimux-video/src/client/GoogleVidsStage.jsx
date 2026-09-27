@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { readVidsCenterBox } from './vids-stage-box.js'
 import { createVeoTask, fetchVeoTask } from './veo-api.js'
+import {
+  clearAllTaskTimers,
+  clearTaskTimers,
+  clearTimerInMap,
+} from './veo-timers.js'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
@@ -368,7 +373,10 @@ function injectGoogleVidsStyles() {
  * 100% 逐字对照 Spec 第 3 节白名单与文案字典，严禁自由发挥与装饰 Emoji。
  */
 export function GoogleVidsStage(props) {
-  const activeTimersRef = useRef(new Map())
+  // Host poll (fetchVeoTask) and local upscale fake-progress use separate maps
+  // so starting upscale never clears the real generation poll for that taskId.
+  const pollTimersRef = useRef(new Map())
+  const upscaleTimersRef = useRef(new Map())
   const [everOpened, setEverOpened] = useState(false)
   const open = typeof props?.visible === 'boolean' ? props.visible : true
   const [box, setBox] = useState(() => (
@@ -505,8 +513,10 @@ export function GoogleVidsStage(props) {
       if (typeof window !== 'undefined') {
         window.removeEventListener('omnimux-clip:editor-status', handleStatus)
       }
-      activeTimersRef.current.forEach((timer) => clearInterval(timer))
-      activeTimersRef.current.clear()
+      clearAllTaskTimers({
+        pollTimers: pollTimersRef.current,
+        upscaleTimers: upscaleTimersRef.current,
+      })
     }
   }, [])
 
@@ -603,9 +613,7 @@ export function GoogleVidsStage(props) {
       )
 
       const taskId = remote.id
-      if (activeTimersRef.current.has(taskId)) {
-        clearInterval(activeTimersRef.current.get(taskId))
-      }
+      clearTimerInMap(pollTimersRef.current, taskId)
       const timer = setInterval(async () => {
         try {
           const polled = await fetchVeoTask(taskId)
@@ -613,7 +621,7 @@ export function GoogleVidsStage(props) {
           if (!polled.ok || !task) {
             if (polled.status === 404) {
               clearInterval(timer)
-              activeTimersRef.current.delete(taskId)
+              pollTimersRef.current.delete(taskId)
             }
             return
           }
@@ -640,13 +648,13 @@ export function GoogleVidsStage(props) {
           )
           if (task.status === 'completed' || task.status === 'failed') {
             clearInterval(timer)
-            activeTimersRef.current.delete(taskId)
+            pollTimersRef.current.delete(taskId)
           }
         } catch {
           // keep polling; transient network blips
         }
       }, 1500)
-      activeTimersRef.current.set(taskId, timer)
+      pollTimersRef.current.set(taskId, timer)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setTasks((prev) =>
@@ -659,12 +667,9 @@ export function GoogleVidsStage(props) {
     }
   }
 
-  // 触发升频
+  // 触发升频（纯本地演示：不打 API；不得清掉同 taskId 的 Host 轮询）
   const handleUpscale = (taskId) => {
-    if (activeTimersRef.current.has(taskId)) {
-      clearInterval(activeTimersRef.current.get(taskId))
-      activeTimersRef.current.delete(taskId)
-    }
+    clearTimerInMap(upscaleTimersRef.current, taskId)
     setTasks((prev) =>
       prev.map((t) =>
         t.id === taskId ? { ...t, status: 'generating', progress: 12, isUpscaling: true } : t
@@ -675,7 +680,7 @@ export function GoogleVidsStage(props) {
       p += 25
       if (p >= 100) {
         clearInterval(timer)
-        activeTimersRef.current.delete(taskId)
+        upscaleTimersRef.current.delete(taskId)
         setTasks((prev) =>
           prev.map((t) =>
             t.id === taskId
@@ -689,7 +694,7 @@ export function GoogleVidsStage(props) {
         )
       }
     }, 350)
-    activeTimersRef.current.set(taskId, timer)
+    upscaleTimersRef.current.set(taskId, timer)
   }
 
   // 插入到时间轴 (向右侧 Clip 追加)
@@ -718,13 +723,12 @@ export function GoogleVidsStage(props) {
     }, 1500)
   }
 
-  // 移除任务
+  // 移除任务：两张 timer 表都清，避免泄漏
   const handleRemoveTask = (taskId) => {
-    const timer = activeTimersRef.current.get(taskId)
-    if (timer) {
-      clearInterval(timer)
-      activeTimersRef.current.delete(taskId)
-    }
+    clearTaskTimers({
+      pollTimers: pollTimersRef.current,
+      upscaleTimers: upscaleTimersRef.current,
+    }, taskId)
     setTasks((prev) => prev.filter((t) => t.id !== taskId))
   }
 
