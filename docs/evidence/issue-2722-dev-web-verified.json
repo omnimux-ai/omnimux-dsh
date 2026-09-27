@@ -1,0 +1,20 @@
+{
+  "verifiedAt": "2026-09-27T10:26:02.522Z",
+  "issue": "#2722",
+  "target": {
+    "url": "http://127.0.0.1:45120/?dsh-desktop-mode=advanced&dsh-desktop-platform=darwin&dsh-desktop-version=2.0.9&dsh-desktop-material=transparent",
+    "title": "OmniMux"
+  },
+  "domCheck": {
+    "passed": true,
+    "totalImages": 108,
+    "creatifyCount": 0,
+    "omnimuxCdnCount": 0
+  },
+  "appPresetCheck": {
+    "ok": false,
+    "status": 404
+  },
+  "screenshotPath": "docs/evidence/issue-2722-dev-web-verified.png",
+  "verdict": "PASS"
+}
