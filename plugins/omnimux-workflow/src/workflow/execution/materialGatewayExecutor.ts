@@ -300,6 +300,45 @@ export function createMaterialGatewayExecutor(opts: {
           delete request.audioTrack;
         }
       }
+
+      // Auto-enrich remote media metadata (Issue #2722):
+      // A remote (https) reference has no local statSync, so its sizeBytes is
+      // undefined unless probed. The submit guard strictly requires sizeBytes
+      // for any slot with maxSizeMb constraints. Asynchronously probe remote
+      // URLs via a lightweight HEAD request with timeout before submission.
+      if (Array.isArray(request.references) && request.references.length > 0) {
+        request.references = await Promise.all(
+          request.references.map(async (ref) => {
+            const url = ref?.pathOrUrl;
+            if (typeof url !== 'string' || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+              return ref;
+            }
+            if (ref.sizeBytes !== undefined && ref.mimeType !== undefined) {
+              return ref;
+            }
+            try {
+              const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+              const patch: Record<string, unknown> = {};
+              const len = res.headers.get('content-length');
+              if (len) {
+                const num = Number(len);
+                if (Number.isFinite(num) && num >= 0) patch.sizeBytes = num;
+              }
+              const ct = res.headers.get('content-type');
+              if (ct && !ref.mimeType) {
+                const mime = ct.split(';')[0]?.trim().toLowerCase();
+                if (mime && mime !== 'application/octet-stream' && mime !== 'binary/octet-stream') {
+                  patch.mimeType = mime;
+                }
+              }
+              return { ...ref, ...patch };
+            } catch {
+              return ref;
+            }
+          }),
+        );
+      }
+
       const resolved = resolveExecutorSubmission(request, catalog);
       const submitted = await gateway.submit(resolved);
       ctx.reportProgress?.(10, '已提交生成任务');

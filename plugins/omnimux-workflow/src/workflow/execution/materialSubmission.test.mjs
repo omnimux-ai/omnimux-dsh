@@ -117,3 +117,62 @@ test('untrusted node identifiers never become output path components', async () 
  assert.equal(new Set(destinations).size, destinations.length);
  for (const dest of destinations) assert.match(dest.slice(root.length + 1), /^[a-f0-9]{64}-[a-f0-9-]+\.txt$/);
 });
+
+test('auto-enriches remote media sizeBytes and mimeType via HEAD probe before gateway submission (#2722)', async () => {
+  const catalog = catalogFor('video', 'minimax-h3', [operation('first_frame', 'video', [
+    slot('prompt', 'prompt', 1, 1, 'prompt'),
+    {
+      ...slot('image', 'first_frame', 1, 1, 'first_frame'),
+      allowedMimes: ['image/jpeg', 'image/png', 'image/webp'],
+      maxSizeMb: 30,
+    },
+  ])]);
+
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url, opts) => {
+      if (opts?.method === 'HEAD' && url === 'https://example.test/product.png') {
+        return new Response(null, {
+          status: 200,
+          headers: {
+            'content-length': '30642',
+            'content-type': 'image/png; charset=utf-8',
+          },
+        });
+      }
+      return originalFetch(url, opts);
+    };
+
+    const gateway = captureGateway(catalog);
+    const remoteImage = {
+      mediaAssets: [{
+        type: 'image',
+        url: 'https://example.test/product.png',
+      }],
+    };
+    const bindings = [{
+      sourceNodeId: 'node-slot-product-image',
+      edgeId: 'edge-img-to-video',
+      role: 'first_frame',
+      targetSlot: 'first_frame',
+      output: remoteImage,
+    }];
+
+    await createMaterialGatewayExecutor({ gateway }).execute(
+      node('video', { model: 'minimax-h3', operation: 'first_frame' }),
+      context({ upstreamBindings: bindings }),
+    );
+
+    assert.equal(gateway.requests.length, 1);
+    const req = gateway.requests[0];
+    assert.equal(req.operation, 'first_frame');
+    assert.equal(req.model, 'minimax-h3');
+    const [firstRef] = req.references;
+    assert.equal(firstRef.pathOrUrl, 'https://example.test/product.png');
+    assert.equal(firstRef.sizeBytes, 30642);
+    assert.equal(firstRef.mimeType, 'image/png');
+    assert.equal(firstRef.targetSlot, 'first_frame');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
