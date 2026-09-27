@@ -5,6 +5,7 @@ import { executeVideoProcess } from './engine/job.js'
 import { SLUGS } from './engine/video.js'
 import { executeVideoAnalyze } from './understand/analyze.js'
 import { executeVideoReversePrompt, IDENTITY_MODES } from './understand/reverse.js'
+import { createVeoDispatcher, registerVeoRoutes } from './http/veo-routes.js'
 
 export const name = 'omnimux-video'
 export const inject = ['tools', 'textComplete']
@@ -264,6 +265,28 @@ export function apply(ctx, config = {}) {
       })
     },
   })
+
+  // Google Vids / Veo opencli generation HTTP (Issue #2741).
+  // webServer is optional at load time; mount via nested inject like omnimux-clip.
+  const veoDispatcher = createVeoDispatcher()
+  if (typeof ctx.provide === 'function') {
+    ctx.provide('veoTasks', {
+      get: (id) => veoDispatcher.store.get(id),
+      list: () => veoDispatcher.store.list(),
+    })
+  }
+  const mountVeoHttp = (httpCtx) => {
+    const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
+    if (!webServer || typeof webServer.register !== 'function') return
+    const mount = () => registerVeoRoutes(webServer, veoDispatcher, {
+      getConnection: () => httpCtx.get?.('connection') ?? httpCtx.connection,
+      outputDir: veoDispatcher.outputDir,
+    })
+    if (typeof httpCtx.effect === 'function') httpCtx.effect(mount, 'omnimux-video: veo http routes')
+    else mount()
+  }
+  if (typeof ctx.inject === 'function') ctx.inject(['webServer', 'connection'], mountVeoHttp)
+  else mountVeoHttp(ctx)
 
   ctx.tools.register({
     name: 'video_reverse_prompt',
