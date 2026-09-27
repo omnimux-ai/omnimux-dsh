@@ -544,6 +544,16 @@ export function GoogleVidsStage(props) {
     setAttachedAsset(asset)
   }
 
+  const failOptimistic = (id, message) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? { ...t, status: 'failed', progress: 0, message, error: message }
+          : t
+      )
+    )
+  }
+
   // 触发生成任务：走 Host /omnimux-video/api/veo → opencli veoHeadlessDriver
   const handleSubmitTask = async () => {
     if (!isEditorReady || !promptText.trim()) return
@@ -571,13 +581,7 @@ export function GoogleVidsStage(props) {
       })
       if (!created.ok || !created.body?.task?.id) {
         const message = created.body?.message || `提交失败（HTTP ${created.status}）`
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === optimisticId
-              ? { ...t, status: 'failed', progress: 0, message, error: message }
-              : t
-          )
-        )
+        failOptimistic(optimisticId, message)
         // 失败保留输入，便于微调后重试（PRD 异常防御）
         return
       }
@@ -649,13 +653,7 @@ export function GoogleVidsStage(props) {
       activeTimersRef.current.set(taskId, timer)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === optimisticId
-            ? { ...t, status: 'failed', progress: 0, message, error: message }
-            : t
-        )
-      )
+      failOptimistic(optimisticId, message)
     }
   }
 
