@@ -99,26 +99,30 @@ test('E2E: Google Vids 中间栏主舞台与视频剪辑同屏全链路质量验
     assert.doesNotMatch(stageSrc, /[💎✨🔥⚙️🗑️🎬⚡]/, '绝对禁止包含任何装饰性 Emoji')
   })
 
-  await t.test('E2E-AC-3: 侧边栏条目点击联动与分屏焦点切换', () => {
+  await t.test('E2E-AC-3: 侧边栏条目先开右侧剪辑再 claim 中栏，且分屏焦点由 open 决定', () => {
     const sidebarSrc = fs.readFileSync(
       path.join(root, 'plugins/omnimux-video/src/client/sidebar-entry.js'),
       'utf8',
     )
+    // 1. 必须先 await 打开 Clip 右侧栏 Tab，并由 open 自身决定 split 分屏焦点
     assert.match(
       sidebarSrc,
-      /window\.__omnimuxStage\.claim\('omnimux-vids'\)/,
-      '点击必须触发 claim(omnimux-vids)',
+      /const opened = await workbench\.open\(\{\s*tabId:\s*'omnimux-clip:studio',\s*title:\s*'视频剪辑',\s*focus:\s*'split',\s*\}\)/,
+      '点击必须 await 打开右侧视频剪辑工程并指定 split 分屏',
     )
+    // 2. 仅当返回严格为 true 时才 claim 中栏
     assert.match(
       sidebarSrc,
-      /window\.__omnimuxWorkbench\.open\(\{\s*tabId:\s*'omnimux-clip:studio',\s*title:\s*'视频剪辑'\s*\}\)/,
-      '点击必须联动打开右侧视频剪辑工程',
+      /if \(!mounted \|\| opened !== true\) return\s*\n\s*stage\.claim\('omnimux-vids'\)/,
+      '仅当 Clip 打开成功（严格 true）且条目仍挂载时才 claim 中栏',
     )
-    assert.match(
+    // 3. 禁止再独立写 setFocus，分屏焦点只能来自 open
+    assert.doesNotMatch(
       sidebarSrc,
-      /window\.__omnimuxWorkbench\.setFocus\('split'\)/,
-      '点击必须设置工作台焦点为 split 分屏',
+      /setFocus/,
+      '分屏焦点必须由 open(focus) 决定，禁止再单独调用 setFocus',
     )
+    // 4. 仍需监听 dsh-product-stage 事件实现高亮自适应
     assert.match(
       sidebarSrc,
       /dsh-product-stage/,

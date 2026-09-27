@@ -65,7 +65,7 @@ Derivation order is fixed and exclusive:
 | `[data-omnimux-explore-entry]` | `omnimux` | **探索 / Explore（rank 7.2，位于最下方，排在灵感社区之后）**。点击呼出浮动菜单，收敛全部内测版与非排除项 OmniMux 插件（11 项白名单，见 specs）。 |
 | `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（收敛至「探索」菜单） |
 | `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（收敛至「探索」菜单） |
-| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（收敛至「探索」菜单） |
+| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，收敛至「探索」菜单）。**中栏 Stage**：Vids 经 `shell.overlay` 注册，**不再**注册 Workbench Tab。点击先 `await workbench.open({ tabId: 'omnimux-clip:studio', focus: 'split' })` 把视频剪辑开到右侧栏，仅当返回值严格为 `true` 且条目仍挂载时才 `claim('omnimux-vids')`；失败时保持原 Stage 与焦点不变，禁止另写 `setFocus`。 |
 | `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（收敛至「探索」菜单） |
 | `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（收敛至「探索」菜单） |
 | `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（收敛至「探索」菜单） |

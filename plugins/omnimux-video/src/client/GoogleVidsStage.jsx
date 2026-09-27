@@ -349,7 +349,7 @@ const STAGE_STYLES = `
 }
 `
 
-function ensureStageStyles() {
+function injectGoogleVidsStyles() {
   if (typeof document === 'undefined') return
   if (document.getElementById(STAGE_STYLES_ID)) return
   const style = document.createElement('style')
@@ -373,7 +373,7 @@ export function GoogleVidsStage(props) {
   }, [open])
 
   useEffect(() => {
-    ensureStageStyles()
+    injectGoogleVidsStyles()
   }, [])
 
   // 剪辑工程就绪感知

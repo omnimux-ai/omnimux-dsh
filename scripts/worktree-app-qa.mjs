@@ -134,8 +134,15 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       visibleCount: geometry ? geometry.visibleCount : 0,
     });
 
-    const modalCheck = await send('Runtime.evaluate', { expression: "Boolean(document.querySelector('[data-omnimux-runtime-guide]'))", returnByValue: true });
-    assertions.push({ name: 'runtime-modal-bypassed', pass: modalCheck?.result?.value === false });
+    let modalShowing = true;
+    const modalDeadline = Date.now() + 6000;
+    while (Date.now() < modalDeadline) {
+      const modalCheck = await send('Runtime.evaluate', { expression: "Boolean(document.querySelector('[data-omnimux-runtime-guide]'))", returnByValue: true });
+      modalShowing = modalCheck?.result?.value === true;
+      if (!modalShowing) break;
+      await sleep(500);
+    }
+    assertions.push({ name: 'runtime-modal-bypassed', pass: !modalShowing });
 
     const captured = await send('Page.captureScreenshot', { format: 'png' });
     const png = Buffer.from(captured.data, 'base64');

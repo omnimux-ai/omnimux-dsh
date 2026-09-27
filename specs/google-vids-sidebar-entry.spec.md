@@ -13,7 +13,7 @@ issue: "#2657"
 # Google Vids (Veo) 视频生成侧边栏入口与内测标记功能规格与文案字典 (Spec Plan)
 
 > **设计基准**：严格遵循 `docs/contracts/sidebar-extra-entries.md` 侧边栏行契约、`docs/contracts/ui-copywriting-and-naming-standards.md` 全局 UI 微文案规范及现代 SaaS 极简标准。  
-> **唯一真源**：本文档与 `docs/prd/google-vids-sidebar-entry.prd.md` 构成前端开发与质量验收的唯一真源，严禁任何形式的自由发挥。
+> **当前依据**：UI 元素、文案及样式白名单仍以本文第 2–4 节与批准的中栏舞台 Spec 为准；Issue #2721 的座位拓扑与入口交互以 [`specs/google-vids-center-stage-entry-regression.spec.md`](google-vids-center-stage-entry-regression.spec.md) 为当前行为依据。本文保留 Issue #2657 的状态、归属及批准白名单历史记录，不覆盖 #2721 行为。
 
 ---
 
@@ -28,8 +28,8 @@ issue: "#2657"
 | `rank` | `number` | `7.5` | 排在灵感社区（Rank 7）之后、产品库（Rank 8）之前 |
 | `datasetKey` | `string` | `'data-omnimux-google-vids-entry'` | 自动化测试与契约选取的标准 Marker |
 | `customClassName` | `string` | `'omnimux-google-vids-entry'` | 扩展类名，前缀严格遵循规范 |
-| `access` | `string` | `'offline'` | 离线可点击准入：点击直接唤起工作台面板，内部由 Studio 自身引导门禁处理 Google 登录与剪辑工程就绪态 |
-| `tabId` | `string` | `'omnimux-video:google-vids'` | 唤起的 Workbench Tab 唯一命名空间 ID |
+| `access` | `string` | `'offline'` | 离线可点击准入：点击先请求 Clip Workbench split 打开，成功后再 claim Google Vids 中间舞台 |
+| `tabId` | `string` | 不适用 | Vids 不注册 Workbench Tab；Clip 使用 `omnimux-clip:studio`，由 Clip 插件注册 |
 
 ---
 
@@ -41,7 +41,6 @@ issue: "#2657"
   type="button"
   class="omnimux-sidebar-nav-entry omnimux-google-vids-entry"
   data-omnimux-google-vids-entry=""
-  data-tab-id="omnimux-video:google-vids"
   title="Google Vids · 内测版"
   aria-label="Google Vids · 内测版"
 >
@@ -101,6 +100,8 @@ issue: "#2657"
 2. `span.omnimux-sidebar-nav-entry-label`：仅包含纯文本标签。
 3. `span.omnimux-sidebar-alpha-badge`：仅包含「内测版」或「Alpha」纯文本徽标。
 
+> 本白名单是 #2657 已批准的界面基线；Issue #2721 不增删或改写可见子元素、图标、文案与样式。
+
 ### 3.2 显式红线黑名单（严禁出现，出现即打回）
 - ❌ **严禁任何前缀/后缀装饰 Emoji**：如 `💎 Google Vids`、`✨ 内测版`、`🔥 New`。
 - ❌ **严禁双重 Badge**：如既打 `[内测版]` 又打 `[Veo]` 或 `[Beta]`。
@@ -138,14 +139,17 @@ export const GOOGLE_VIDS_SIDEBAR_I18N = {
 
 ## 5. 工作台挂载与单激活槽仲裁契约（Workbench Mount & Activation Contract）
 
-### 5.1 Stage Store 挂载实现范式
-在 `plugins/omnimux-video/src/client/sidebar-entry.js` 中创建与 `window.__omnimuxWorkbench` 对齐的 Stage Store：
+> **历史基线冲突说明**：以下 5.1–5.2 Stage Store、Vids Workbench Tab 与工作台焦点仲裁内容属于 #2657 已批准时的实现基线，现已被 Issue #2721 回归规格替代；不得据此恢复 Vids Workbench Tab、旧 tab-id 或旧激活逻辑。#2721 当前行为只以 `specs/google-vids-center-stage-entry-regression.spec.md` 为准。
+
+### 5.1 Stage Store 挂载实现范式（历史基线，已被 #2721 替代）
+以下历史代码仅用于保留 #2657 的批准上下文，不是当前实施指令；不得从中恢复 Vids Workbench Tab、旧 tab-id 或其实现。当前代码与交互严格按 #2721 回归规格执行。原始 #2657 Stage Store 示例：
 
 ```javascript
 import { createSidebarEntry } from 'dsh-ui-kit';
 import { GOOGLE_VIDS_SIDEBAR_I18N } from './locales.js';
 
 export const ENTRY_SELECTOR = '[data-omnimux-google-vids-entry]';
+// Historical #2657 baseline only; Issue #2721 removes the Vids Workbench tab id.
 export const GOOGLE_VIDS_TAB_ID = 'omnimux-video:google-vids';
 
 const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" fill="none" role="presentation" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
@@ -223,11 +227,11 @@ export function mountSidebarEntry(_stage, t, locale) {
 }
 ```
 
-### 5.2 单激活槽仲裁铁律（The Single Rail Slot Law）
-1. **单一事实来源**：`entry.dataset.active` 必须完全由 `stageStore.getSnapshot()` 判定，严禁条目内部自行判断 `isOpen` 或监听 DOM 事件私设高亮。
-2. **多栏联动排他**：
-   - 当中间会话列展开且选中了会话时，工作台侧边栏条目必须处于未激活态；
-   - 当点击其他条目（如资产库、灵感社区）唤起其对应面板时，Google Vids 条目必须立即撤回激活态。
+### 5.2 单激活槽仲裁铁律（The Single Rail Slot Law，历史基线，已被 #2721 替代）
+1. **历史单一事实来源**：旧 `entry.dataset.active` 由 `stageStore.getSnapshot()` 判定；当前实现由 `data-dsh-product-stage="omnimux-vids"` 标记及 `dsh-product-stage` 事件投影，详见 #2721 回归规格。
+2. **历史多栏联动排他**：
+   - 旧规则以 Vids Workbench Tab 的激活态为依据，已不适用于当前 Vids `shell.overlay` 舞台；
+   - 当前座位行为与失败/卸载边界仅以 `specs/google-vids-center-stage-entry-regression.spec.md` 为准。
 
 ---
 
@@ -241,8 +245,11 @@ export function mountSidebarEntry(_stage, t, locale) {
 | **AC-04** | 中文文案锁定 | Label 为 `Google Vids`，Badge 为 `内测版` | 裴像素 | 必检 |
 | **AC-05** | 英文文案锁定 | 切换英文后，Label 为 `Google Vids`，Badge 为 `Alpha` | 裴像素 | 必检 |
 | **AC-06** | 零冗余元素检查 | 条目内直接子元素数 $\le 3$，无任何 Emoji / Extra Badge | 严过关 | 必检 |
-| **AC-07** | 激活态互斥 | 打开 Google Vids Tab 时有且仅有自身高亮，点击新会话后立即熄灭 | 严过关 | 必检 |
-| **AC-08** | 折叠态自愈 | 宿主加 `[data-sidebar-collapsed]` 后，Label 与 Badge 消失，宽度 36px 居中 | 严过关 | 必检 |
+| **AC-07** | 舞台激活态映射（#2721） | 仅当 `data-dsh-product-stage="omnimux-vids"` 时入口设置 `data-active="true"`；`dsh-product-stage` 事件后同步撤销/设置 | 当前实现由 #2721 回归规格定义 | 必检 |
+| **AC-08** | 折叠态自愈 | 宿主加 `[data-sidebar-collapsed]` 后，Label 与 Badge 消失，宽度 36px 居中 | 裴像素 | 必检 |
+| **AC-09** | #2721 当前交互 | Clip open 以 `focus: 'split'` 请求；仅严格成功后 claim Vids；失败/API 缺失/卸载时不 claim、不独立改焦点 | 详见 `specs/google-vids-center-stage-entry-regression.spec.md` | 必检 |
+
+> **当前实施与验收规范**：AC-07 与 AC-09 的唯一当前行为来源为 `specs/google-vids-center-stage-entry-regression.spec.md`；本表其余条目继续锁定 #2657 已批准且本次不变的 UI。
 
 ---
 *规格说明书签署完毕。请前端开发工程师裴像素严格依据本规格实施编码。*

@@ -1,16 +1,16 @@
 {
-  "runId": "079ee541-3b9d-4c85-b075-756aa9a8de52",
+  "runId": "035999ed-970b-4a04-9c3a-f475750137c3",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-hub-microkernel-issue-2734",
-  "origin": "http://127.0.0.1:50331",
-  "appPort": 50331,
-  "cdpPort": 50334,
-  "startedAt": "2026-09-27T12:16:29.031Z",
-  "completedAt": "2026-09-27T12:16:37.283Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-overlay-entry-issue-2721",
+  "origin": "http://127.0.0.1:57122",
+  "appPort": 57122,
+  "cdpPort": 57126,
+  "startedAt": "2026-09-27T10:03:21.848Z",
+  "completedAt": "2026-09-27T10:03:29.903Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:50331",
+    "origin": "http://127.0.0.1:57122",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "realModelRequest": false,
@@ -21,19 +21,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:50331",
+      "origin": "http://127.0.0.1:57122",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-__0o6S2Xo_mARnuirSAWByVx8GSdNnqJNIUJpADDglE"
+      "cookieName": "dsh-auth-yfAa90Rkk3IZ8-EgyqEXhmnInVQ8R1kmXtqGXtU0H1o"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 50334
+      "port": 57126
     },
     {
       "name": "auth-cookie-applied",
@@ -43,7 +43,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 119,
+        "visibleCount": 104,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -52,7 +52,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 112
+        "bodyTextLength": 55
       }
     },
     {
@@ -63,7 +63,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 119
+      "visibleCount": 104
     },
     {
       "name": "runtime-modal-bypassed",
@@ -80,7 +80,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-hub-microkernel-issue-2734/.workbuddy/evidence/app-qa/079ee541-3b9d-4c85-b075-756aa9a8de52/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-overlay-entry-issue-2721/.workbuddy/evidence/app-qa/035999ed-970b-4a04-9c3a-f475750137c3/app-home.png",
     "width": 1280,
     "height": 713,
     "bytes": 34455
