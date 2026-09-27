@@ -33,6 +33,7 @@ const FRAGMENTS = [
   'list-view.js',
   'settings.js',
   'marketplace.js',
+  'plugins-column.js',
   'skill-plaza.js',
   'skill-picker.js',
   'model-picker.js',
