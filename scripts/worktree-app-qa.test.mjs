@@ -5,7 +5,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAppQaRunner, resolveWorktreeRoot, isAppReady } from './worktree-app-qa.mjs';
+import { createAppQaRunner, resolveWorktreeRoot, isAppReady, assertBlankSessionHubPath } from './worktree-app-qa.mjs';
 
 test('isAppReady 要求可见元素数量与最大可见几何同时为正', () => {
   assert.equal(isAppReady({ visibleCount: 60, largest: { width: 900, height: 600 } }), true);
@@ -125,5 +125,117 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
   for (const item of written) {
     assert.equal(/token=/.test(item.value), false, '报告不得包含 token');
     assert.equal(/loginUrl/.test(item.value), false, '报告不得包含 loginUrl');
+  }
+});
+
+test('assertBlankSessionHubPath 进入空白会话并断言 Explore / asset-hub', async () => {
+  let guideStep = 0;
+  let libraryPoll = 0;
+  const send = async (method, params = {}) => {
+    if (method === 'Runtime.evaluate') {
+      const expr = params.expression || '';
+      if (expr.includes('data-omnimux-starter-guide') && expr.includes('exploreCardCount')) {
+        guideStep += 1;
+        if (guideStep === 1) {
+          return { result: { value: { guideVisible: false, exploreVisible: false, exploreCardCount: 0, compact: false, hubPanel: false } } };
+        }
+        return { result: { value: { guideVisible: true, exploreVisible: true, exploreCardCount: 7, compact: false, hubPanel: false } } };
+      }
+      if (expr.includes('data-omnimux-topbar-new-session') || expr.includes('新对话')) {
+        return { result: { value: { clicked: true, via: '[data-omnimux-topbar-new-session]' } } };
+      }
+      if (expr.includes('button[aria-label="添加附件"]') || expr.includes('Add attachment')) {
+        return { result: { value: { openedMenu: true } } };
+      }
+      if (expr.includes('clickedLibrary') && expr.includes('从资产库选择')) {
+        libraryPoll += 1;
+        if (libraryPoll < 2) return { result: { value: { clickedLibrary: false, found: false } } };
+        return { result: { value: { clickedLibrary: true, found: true, text: '从资产库选择' } } };
+      }
+      if (expr.includes('__omnimuxWorkbench') && expr.includes('openWorkbench')) {
+        return { result: { value: { ok: true, thenable: true, sessionId: 'sess_qa' } } };
+      }
+      if (expr.includes('omx-hub-panel') || expr.includes('素材工作台顶栏')) {
+        return { result: { value: true } };
+      }
+      return { result: { value: null } };
+    }
+    if (method === 'Page.captureScreenshot') {
+      return { data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' };
+    }
+    return {};
+  };
+  const evidenceDir = '/tmp/hub-path-qa-unit';
+  const { mkdirSync, rmSync } = await import('node:fs');
+  mkdirSync(evidenceDir, { recursive: true });
+  try {
+    const result = await assertBlankSessionHubPath({
+      send,
+      sleep: async () => {},
+      evidenceDir,
+      menuTimeoutMs: 10,
+      hubTimeoutMs: 10,
+      blankTimeoutMs: 10,
+    });
+    assert.equal(result.detail.clickedNewSession, true);
+    assert.equal(result.detail.exploreVisible, true);
+    assert.equal(result.detail.exploreCardCount, 7);
+    assert.equal(result.detail.assetHubOpened, true);
+    const hubAssertion = result.assertions.find(a => a.name === 'asset-hub-reachable-via-library');
+    assert.equal(hubAssertion.pass, true);
+    assert.equal(hubAssertion.clickedLibrary, true);
+    // 全屏 Explore 下菜单只滚 Tab；验收路径始终再走 openWorkbench(split)
+    assert.equal(hubAssertion.usedWorkbenchFallback, true);
+    assert.equal(result.assertions.every(a => a.pass), true);
+  } finally {
+    rmSync(evidenceDir, { recursive: true, force: true });
+  }
+});
+
+test('assertBlankSessionHubPath 菜单未命中时仍靠 workbench split 打开 asset-hub', async () => {
+  const send = async (method, params = {}) => {
+    if (method === 'Runtime.evaluate') {
+      const expr = params.expression || '';
+      if (expr.includes('data-omnimux-starter-guide') && expr.includes('exploreCardCount')) {
+        return { result: { value: { guideVisible: true, exploreVisible: true, exploreCardCount: 3, compact: false, hubPanel: false } } };
+      }
+      if (expr.includes('button[aria-label="添加附件"]') || expr.includes('Add attachment')) {
+        return { result: { value: { openedMenu: true } } };
+      }
+      if (expr.includes('clickedLibrary') && expr.includes('从资产库选择')) {
+        return { result: { value: { clickedLibrary: false, found: false } } };
+      }
+      if (expr.includes('__omnimuxWorkbench') && expr.includes('openWorkbench')) {
+        return { result: { value: { ok: true, thenable: true, sessionId: 'sess_qa' } } };
+      }
+      if (expr.includes('omx-hub-panel') || expr.includes('素材工作台顶栏')) {
+        return { result: { value: true } };
+      }
+      return { result: { value: null } };
+    }
+    if (method === 'Page.captureScreenshot') {
+      return { data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' };
+    }
+    return {};
+  };
+  const evidenceDir = '/tmp/hub-path-qa-fallback';
+  const { mkdirSync, rmSync } = await import('node:fs');
+  mkdirSync(evidenceDir, { recursive: true });
+  try {
+    const result = await assertBlankSessionHubPath({
+      send,
+      sleep: async () => {},
+      evidenceDir,
+      menuTimeoutMs: 10,
+      hubTimeoutMs: 10,
+      blankTimeoutMs: 10,
+    });
+    const hubAssertion = result.assertions.find(a => a.name === 'asset-hub-reachable-via-library');
+    assert.equal(hubAssertion.pass, true);
+    assert.equal(hubAssertion.clickedLibrary, false);
+    assert.equal(hubAssertion.usedWorkbenchFallback, true);
+    assert.equal(result.detail.assetHubOpened, true);
+  } finally {
+    rmSync(evidenceDir, { recursive: true, force: true });
   }
 });
