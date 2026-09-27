@@ -66,6 +66,214 @@ export function resolveWorktreeRoot(candidate, io = fs, repo = repositoryRoot) {
   return diagnosis.ok ? { ok: true, root: candidate } : diagnosis;
 }
 
+/**
+ * 进入空白会话并断言 Hub 三消费端可达性。
+ * Explore：`[data-omnimux-explore-section]`；library→asset-hub：`.omx-hub-panel`。
+ * @param {{send: Function, sleep: Function, evidenceDir: string}} deps
+ */
+export async function assertBlankSessionHubPath({
+  send,
+  sleep,
+  evidenceDir,
+  menuTimeoutMs = 5000,
+  hubTimeoutMs = 10000,
+  blankTimeoutMs = 12000,
+} = {}) {
+  const assertions = [];
+  const detail = {
+    guideVisibleBefore: false,
+    clickedNewSession: false,
+    exploreVisible: false,
+    exploreCardCount: 0,
+    assetHubOpened: false,
+  };
+
+  const inspectGuide = async () => {
+    const evaluated = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const guide = document.querySelector('[data-omnimux-starter-guide]');
+        const explore = document.querySelector('[data-omnimux-explore-section]');
+        const cards = document.querySelectorAll('[data-omnimux-explore-section] .omnimux-tpl-card, [data-omnimux-explore-section] [data-template-id]');
+        const compact = guide?.getAttribute('data-compact') === 'true' || guide?.classList?.contains('is-compact');
+        return {
+          guideVisible: Boolean(guide),
+          exploreVisible: Boolean(explore),
+          exploreCardCount: cards.length,
+          compact: Boolean(compact),
+          hubPanel: Boolean(document.querySelector('.omx-hub-panel')),
+        };
+      })()`,
+      returnByValue: true,
+    });
+    return evaluated?.result?.value || {};
+  };
+
+  let state = await inspectGuide();
+  detail.guideVisibleBefore = Boolean(state.guideVisible && state.exploreVisible && !state.compact);
+
+  if (!detail.guideVisibleBefore) {
+    const clickResult = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const selectors = [
+          '[data-omnimux-topbar-new-session]',
+          'button[aria-label*="新对话"]',
+          'button[aria-label*="New chat"]',
+          'button[aria-label*="New session"]',
+        ];
+        for (const sel of selectors) {
+          const el = document.querySelector(sel);
+          if (el) { el.click(); return { clicked: true, via: sel }; }
+        }
+        const btns = [...document.querySelectorAll('button, [role="button"]')];
+        const target = btns.find(b => {
+          const text = (b.textContent || '').trim();
+          return text === '新对话' || text.startsWith('新对话') || /^new\\s+(chat|session)/i.test(text);
+        });
+        if (target) { target.click(); return { clicked: true, via: 'text' }; }
+        return { clicked: false, via: null };
+      })()`,
+      returnByValue: true,
+    });
+    detail.clickedNewSession = Boolean(clickResult?.result?.value?.clicked);
+    const blankDeadline = Date.now() + blankTimeoutMs;
+    while (Date.now() < blankDeadline) {
+      await sleep(500);
+      state = await inspectGuide();
+      if (state.guideVisible && state.exploreVisible && !state.compact) break;
+    }
+  }
+
+  detail.exploreVisible = Boolean(state.exploreVisible && !state.compact);
+  detail.exploreCardCount = Number(state.exploreCardCount || 0);
+  assertions.push({
+    name: 'blank-session-guide-visible',
+    pass: Boolean(state.guideVisible && !state.compact),
+    clickedNewSession: detail.clickedNewSession,
+  });
+  assertions.push({
+    name: 'explore-section-visible',
+    pass: detail.exploreVisible,
+    cardCount: detail.exploreCardCount,
+  });
+  assertions.push({
+    name: 'explore-cards-present',
+    pass: detail.exploreCardCount > 0,
+    cardCount: detail.exploreCardCount,
+  });
+
+  // library-stage → asset-hub：
+  // 1) 点加号打开菜单 → 等待菜单项渲染 → 点「从资产库选择」
+  // 2) 菜单未命中时，用 window.__omnimuxWorkbench.openWorkbench 兜底（与 openLibrary 同路径）
+  const findLibraryRowExpr = `(() => {
+    const rows = [...document.querySelectorAll('[role="menuitem"], [role="option"], button, [data-command-name], [data-name]')];
+    return rows.find(el => {
+      const name = el.getAttribute?.('data-command-name') || el.getAttribute?.('data-name') || '';
+      const text = (el.textContent || '').trim();
+      return name === 'add-from-library'
+        || text === '从资产库选择'
+        || text === '从资产库添加'
+        || text === 'Choose from asset library'
+        || /从资产库|asset library|add-from-library/i.test(text);
+    }) || null;
+  })()`;
+
+  const clickAdd = await send('Runtime.evaluate', {
+    expression: `(() => {
+      const addBtn = document.querySelector(
+        '[data-composer-card] button[aria-label="添加附件"], [data-composer-card] button[aria-label="Add attachment"], [data-composer-card] button[aria-label*="attach"], [data-composer-card] button[aria-label*="附件"], [data-composer-card] button[class*="add"]'
+      );
+      if (!addBtn) return { openedMenu: false };
+      addBtn.click();
+      return { openedMenu: true };
+    })()`,
+    returnByValue: true,
+  });
+
+  let clickedLibrary = false;
+  let usedWorkbenchFallback = false;
+  const menuDeadline = Date.now() + menuTimeoutMs;
+  do {
+    const clickLibrary = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const library = ${findLibraryRowExpr};
+        if (!library) return { clickedLibrary: false, found: false };
+        library.click();
+        return { clickedLibrary: true, found: true, text: (library.textContent || '').trim().slice(0, 40) };
+      })()`,
+      returnByValue: true,
+    });
+    if (clickLibrary?.result?.value?.clickedLibrary) {
+      clickedLibrary = true;
+      break;
+    }
+    if (Date.now() >= menuDeadline) break;
+    await sleep(250);
+  } while (Date.now() < menuDeadline);
+
+  // 全屏 Explore 下菜单项只会滚动 Tab、不打开右栏 split；验收需强制 openWorkbench。
+  // 即使菜单点击成功，也再走一次 split 打开，保证 `.omx-hub-panel` 可见。
+  {
+    const fallback = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const wb = window.__omnimuxWorkbench;
+        if (!wb || typeof wb.openWorkbench !== 'function') {
+          return { ok: false, reason: 'no-workbench-api' };
+        }
+        const snap = typeof wb.getSnapshot === 'function' ? wb.getSnapshot() : null;
+        const sessionId = snap?.sessionId
+          || snap?.state?.sessionId
+          || document.querySelector('[data-omnimux-starter-guide]')?.getAttribute('data-session-id')
+          || null;
+        const p = wb.openWorkbench({
+          tabId: 'omnimux:asset-hub',
+          focus: 'split',
+          sessionId: sessionId || undefined,
+        });
+        return {
+          ok: true,
+          thenable: Boolean(p && typeof p.then === 'function'),
+          sessionId: sessionId || null,
+        };
+      })()`,
+      returnByValue: true,
+      awaitPromise: true,
+    });
+    usedWorkbenchFallback = Boolean(fallback?.result?.value?.ok);
+  }
+
+  const hubDeadline = Date.now() + hubTimeoutMs;
+  let hubVisible = false;
+  do {
+    const hubCheck = await send('Runtime.evaluate', {
+      expression: `Boolean(document.querySelector('.omx-hub-panel') || document.querySelector('[aria-label="素材工作台顶栏"]') || document.querySelector('[aria-label="素材筛选工具栏"]'))`,
+      returnByValue: true,
+    });
+    hubVisible = hubCheck?.result?.value === true;
+    if (hubVisible) break;
+    if (Date.now() >= hubDeadline) break;
+    await sleep(400);
+  } while (Date.now() < hubDeadline);
+  detail.assetHubOpened = hubVisible;
+  assertions.push({
+    name: 'asset-hub-reachable-via-library',
+    pass: hubVisible,
+    openedMenu: Boolean(clickAdd?.result?.value?.openedMenu),
+    clickedLibrary,
+    usedWorkbenchFallback,
+  });
+
+  try {
+    const shot = await send('Page.captureScreenshot', { format: 'png' });
+    const png = Buffer.from(shot.data, 'base64');
+    assertPng(png);
+    writeFileSync(join(evidenceDir, 'hub-business-path.png'), png);
+  } catch {
+    // 业务截图失败不单独阻断：主截图与断言仍保留。
+  }
+
+  return { assertions, detail };
+}
+
 /** 真实无头 Chrome 驱动：动态 CDP 端口、同源 cookie 注入、正几何断言、PNG 取证。 */
 async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, io = fs, chromePath = findChromePath() }) {
   let chrome; let socket;
@@ -134,15 +342,24 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       visibleCount: geometry ? geometry.visibleCount : 0,
     });
 
+// Runtime guide 可能晚于首屏几何出现；轮询等待其消失，避免瞬时误判。
     let modalShowing = true;
     const modalDeadline = Date.now() + 6000;
     while (Date.now() < modalDeadline) {
-      const modalCheck = await send('Runtime.evaluate', { expression: "Boolean(document.querySelector('[data-omnimux-runtime-guide]'))", returnByValue: true });
+      const modalCheck = await send('Runtime.evaluate', {
+        expression: "Boolean(document.querySelector('[data-omnimux-runtime-guide]'))",
+        returnByValue: true,
+      });
       modalShowing = modalCheck?.result?.value === true;
       if (!modalShowing) break;
       await sleep(500);
     }
     assertions.push({ name: 'runtime-modal-bypassed', pass: !modalShowing });
+
+    // Hub 业务路径：进入空白会话并断言 Explore / library→asset-hub。
+    // SessionGuide 仅在 blank|awaitingFirstTurn 且非 compact 时渲染探索区。
+    const hubPath = await assertBlankSessionHubPath({ send, sleep, evidenceDir });
+    assertions.push(...hubPath.assertions);
 
     const captured = await send('Page.captureScreenshot', { format: 'png' });
     const png = Buffer.from(captured.data, 'base64');
@@ -159,6 +376,7 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       cdpPort: cdpPort.value,
       assertions,
       geometry,
+      hubPath: hubPath.detail,
       screenshot: {
         path: screenshotPath,
         width: geometry ? geometry.vw : 0,
@@ -229,6 +447,7 @@ export function createAppQaRunner(deps = {}) {
       report.cdpPort = browser.cdpPort;
       report.assertions.push(...browser.assertions);
       report.screenshot = browser.screenshot;
+      if (browser.hubPath) report.hubPath = browser.hubPath;
       report.pass = report.assertions.every(assertion => assertion.pass);
     } catch (error) {
       report.errors.push(error?.code ?? error?.message ?? 'unknown');

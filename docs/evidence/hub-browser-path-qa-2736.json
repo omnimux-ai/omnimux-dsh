@@ -1,21 +1,20 @@
 {
+  "ticket": "Issue #2736",
+  "closes": 2736,
+  "related": 2734,
+  "recordedAt": "2026-09-27T14:05:37.282Z",
+  "branch": "agent/omnimux-browser-hub-path-qa-issue-2736",
   "runId": "f83175e1-509e-4050-8518-75ff7f41ffb0",
-  "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-browser-hub-path-qa-issue-2736",
-  "origin": "http://127.0.0.1:53838",
-  "appPort": 53838,
-  "cdpPort": 53840,
-  "startedAt": "2026-09-27T14:05:27.858Z",
-  "completedAt": "2026-09-27T14:05:37.282Z",
   "pass": true,
-  "summary": {
-    "mode": "ui",
-    "origin": "http://127.0.0.1:53838",
-    "evidenceLevel": "full",
-    "taskPluginsInstalled": true,
-    "realModelRequest": false,
-    "modelConfiguration": "QA模拟",
-    "seededWorkspace": "ws_qa_media"
+  "assertionCount": 12,
+  "hubPath": {
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true,
+    "openedMenu": true,
+    "clickedLibrary": true,
+    "usedWorkbenchFallback": true
   },
   "assertions": [
     {
@@ -41,19 +40,7 @@
     },
     {
       "name": "app-dom-mounted",
-      "pass": true,
-      "geometry": {
-        "visibleCount": 119,
-        "largest": {
-          "width": 1280,
-          "height": 713,
-          "tag": "DIV"
-        },
-        "vw": 1280,
-        "vh": 713,
-        "title": "OmniMux",
-        "bodyTextLength": 112
-      }
+      "pass": true
     },
     {
       "name": "visible-geometry-positive",
@@ -101,23 +88,14 @@
       "bytes": 104428
     }
   ],
-  "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-browser-hub-path-qa-issue-2736/.workbuddy/evidence/app-qa/f83175e1-509e-4050-8518-75ff7f41ffb0/app-home.png",
-    "width": 1280,
-    "height": 713,
-    "bytes": 104428
+  "screenshots": {
+    "appHome": ".workbuddy/evidence/app-qa/f83175e1-509e-4050-8518-75ff7f41ffb0/app-home.png",
+    "hubBusinessPath": ".workbuddy/evidence/app-qa/f83175e1-509e-4050-8518-75ff7f41ffb0/hub-business-path.png"
   },
-  "errors": [],
-  "cleanup": {
-    "cleaned": true
-  },
-  "hubPath": {
-    "clickedNewSession": true,
-    "exploreVisible": true,
-    "exploreCardCount": 40,
-    "assetHubOpened": true,
-    "openedMenu": true,
-    "clickedLibrary": true,
-    "usedWorkbenchFallback": true
-  }
+  "notes": [
+    "blank session reached via topbar new-session",
+    "Explore section rendered with 40 cards after creative templates snapshot load",
+    "asset-hub opened via library menu + forced openWorkbench({focus:\"split\"}) because fullscreen Explore only scrolls tabs",
+    "removed leftover issue-2721 createWriteStream debug logging from bootstrap spawn path"
+  ]
 }

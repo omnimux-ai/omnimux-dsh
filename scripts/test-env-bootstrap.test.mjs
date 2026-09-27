@@ -18,6 +18,10 @@ function fixture(behavior = 'ready') {
     writeFileSync: (p, value) => files.set(p, value),
     rmSync: p => removed.push(p),
     accessSync() {},
+    // seed / profile 探测依赖这些方法；默认无 fixture，不写 workspace 账本。
+    existsSync: () => false,
+    cpSync() {},
+    readdirSync: () => [],
   };
   const signals = new EventEmitter();
   const deps = { fs, repositoryRoot: repo, signals, startupTimeoutMs: 35, shutdownTimeoutMs: 20,
@@ -69,6 +73,26 @@ test('default ui isolates environment, fixed config, login capability and cleanu
   } finally { await run.cleanup(); }
   assert.equal(f.spawned[0].child.signalCode, 'SIGTERM'); assert.equal(f.removed.length, 1);
   await run.cleanup(); assert.equal(f.removed.length, 1); assert.equal(f.signals.listenerCount('SIGTERM'), 0);
+});
+
+test('seeded media fixture also writes storages/workspace.json ledger', async () => {
+  const { createTestEnvironmentStarter } = await load();
+  const f = fixture();
+  const fixturePath = root + '/tests/fixtures/qa-workspace-media';
+  f.deps.fs.existsSync = p => p === fixturePath;
+  f.deps.fs.cpSync = () => {};
+  const run = await createTestEnvironmentStarter(f.deps)({ root });
+  try {
+    assert.equal(run.summary.seededWorkspace, 'ws_qa_media');
+    const ledgerPath = [...f.files.keys()].find(p => p.endsWith('/storages/workspace.json'));
+    assert.ok(ledgerPath, '必须写入 storages/workspace.json');
+    const ledger = JSON.parse(f.files.get(ledgerPath));
+    assert.equal(ledger.unit?.name, 'workspace');
+    assert.deepEqual(ledger.global?.workspaceIds, ['ws_qa_media']);
+    assert.equal(ledger.tables?.workspaces?.ws_qa_media?.title, 'QA Media');
+    assert.deepEqual(ledger.tables?.workspaces?.ws_qa_media?.sessionIds, []);
+    assert.match(ledger.tables?.workspaces?.ws_qa_media?.path || '', /workspaces\/ws_qa_media$/);
+  } finally { await run.cleanup(); }
 });
 
 test('ui mock implements marked JSON and SSE without proxying unknown routes', async () => {

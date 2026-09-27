@@ -229,7 +229,7 @@ export function createTestEnvironmentStarter(deps = {}) {
 
       // 预置标准测试工程夹具（自带视频素材节点，解除测试环境空画布造数据死锁）
       // 必须同时写入 storages/workspace.json 账本，否则 UI 无合法 workspace，
-      // openWorkbench / 新对话都会因无 sessionId 失败。
+      // openWorkbench / 新对话都会因无 sessionId 失败，SessionGuide 永不渲染。
       const fixtureSrc = join(root, 'tests', 'fixtures', 'qa-workspace-media');
       const seededWorkspaceId = 'ws_qa_media';
       let hasSeededFixture = false;
@@ -335,18 +335,8 @@ export function createTestEnvironmentStarter(deps = {}) {
         const timer = setTimeout(() => no(failure('START_TIMEOUT')), deps.startupTimeoutMs ?? 60000);
         try {
           child = (deps.spawn ?? spawn)(EXECUTABLE, ['--expose-internals', WRAPPER, '--profile', profileName, '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
-          const logStream = io.createWriteStream(join(root, '.workbuddy/evidence/issue-2721/app-runtime.log'), { flags: 'a' });
-          child.stdout.pipe(logStream);
-          child.stderr.pipe(logStream);
-          let stderrBuffer = '';
-          child.stderr.on('data', chunk => {
-            stderrBuffer += chunk.toString();
-            if (stderrBuffer.length > 65536) stderrBuffer = stderrBuffer.slice(-65536);
-          });
-          child.once('exit', (code, signal) => {
-            exited = true;
-            if (stderrBuffer) console.error(`[CHILD_STDERR] (code=${code}, signal=${signal}):\n${stderrBuffer}`);
-            no(failure('RUNTIME_EXIT'));
+          child.once('exit', () => {
+            exited = true; no(failure('RUNTIME_EXIT'));
             void cleanup().catch(() => {});
           });
           child.on('error', () => no(failure('RUNTIME_START')));
@@ -360,7 +350,8 @@ export function createTestEnvironmentStarter(deps = {}) {
             }
           };
           child.stdout.on('data', output);
-          releaseOutput = () => { clearTimeout(timer); buffer = ''; child.stdout.off('data', output); child.stdout.resume(); child.stderr.resume(); };
+          child.stderr.resume();
+          releaseOutput = () => { clearTimeout(timer); buffer = ''; child.stdout.off('data', output); child.stdout.resume(); };
         } catch { clearTimeout(timer); no(failure('RUNTIME_START')); }
       });
       startupReject = undefined; releaseOutput();
