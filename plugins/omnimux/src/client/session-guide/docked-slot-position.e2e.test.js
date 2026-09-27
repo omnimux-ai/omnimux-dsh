@@ -144,3 +144,22 @@ test('e2e: 吸底输入框声明平滑位移过渡 transition，杜绝侧边栏�
   const undockRule = styles.slice(undockStart, undockEnd)
   assert.ok(undockRule.includes('transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1)') || undockRule.includes('transition: left 200ms cubic-bezier(0.16, 1, 0.3, 1)'))
 })
+
+test('e2e: 吸底输入框在 calc(...) 动态卡片最大宽度下与原生计算样式保持一致且居中', () => {
+  const start = styles.indexOf('[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card]')
+  const end = styles.indexOf('/* 工作区行留在 Hero', start)
+  assert.ok(start > 0 && end > start)
+  const cardRule = styles.slice(start, end)
+
+  const dom = new JSDOM(`<!doctype html><head><style>${cardRule}</style></head><body>
+    <div data-omnimux-starter-host data-omnimux-dock-open style="--omnimux-dock-width: 672px; --omnimux-dock-left: 668px;">
+      <div data-composer-card style="--dsh-composer-card-max-width: calc(640px + 32px);"></div>
+    </div>
+  </body>`)
+  const card = dom.window.document.querySelector('[data-composer-card]')
+  const computed = dom.window.getComputedStyle(card)
+  assert.equal(computed.position, 'fixed')
+  assert.equal(computed.maxWidth, 'var(--dsh-composer-card-max-width, 952px)')
+  assert.equal(computed.width, 'var(--omnimux-dock-width, 100%)')
+  dom.window.close()
+})
