@@ -176,3 +176,44 @@ test('auto-enriches remote media sizeBytes and mimeType via HEAD probe before ga
     globalThis.fetch = originalFetch;
   }
 });
+
+test('gracefully falls back when remote media HEAD probe fails or times out (#2722)', async () => {
+  const catalog = catalogFor('image', 'mock-img', [operation('text_to_image', 'image', [
+    slot('prompt', 'prompt', 1, 1, 'prompt'),
+    slot('image', 'reference', 0, 1, 'reference'),
+  ])]);
+
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => {
+      throw new Error('connection timeout');
+    };
+
+    const gateway = captureGateway(catalog, { url: 'https://example.test/output.png', type: 'image' });
+    const bindings = [{
+      sourceNodeId: 'node-slot-ref',
+      edgeId: 'edge-ref-to-img',
+      role: 'reference',
+      targetSlot: 'reference',
+      output: {
+        mediaAssets: [{
+          type: 'image',
+          url: 'https://example.test/broken.png',
+        }],
+      },
+    }];
+
+    // Should not throw unhandled exception during executor HEAD probe phase
+    await createMaterialGatewayExecutor({ gateway }).execute(
+      node('image', { model: 'mock-img', operation: 'text_to_image' }),
+      context({ upstreamBindings: bindings }),
+    );
+
+    assert.equal(gateway.requests.length, 1);
+    const [firstRef] = gateway.requests[0].references;
+    assert.equal(firstRef.pathOrUrl, 'https://example.test/broken.png');
+    assert.equal(firstRef.sizeBytes, undefined);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
