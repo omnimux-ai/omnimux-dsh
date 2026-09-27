@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import test from 'node:test'
+import test, { beforeEach } from 'node:test'
 import {
   loadLibraryCards,
   mergeLibraryPrompt,
@@ -7,6 +7,13 @@ import {
   sourcesForTab,
   tabForKind,
 } from './library-stage-model.js'
+import { resetCreativeTemplates } from '../session-guide/templates/creative-templates-client.js'
+
+const SNAPSHOT_VERSION = 'a'.repeat(64)
+
+beforeEach(() => {
+  resetCreativeTemplates()
+})
 
 function jsonResponse(status, body) {
   return {
@@ -28,6 +35,13 @@ function mockFetch(routes) {
 }
 
 const routes = {
+  '/omnimux/templates/creative': {
+    body: {
+      schemaVersion: 1,
+      dataVersion: SNAPSHOT_VERSION,
+      items: [{ id: 'tpl-1', title: '大屏广告', titleZh: '大屏广告' }],
+    },
+  },
   '/omnimux/assets/library': { body: { assets: [{ id: 'asset-1', name: '咖啡机' }] } },
   '/omnimux/products': { body: { products: [{ id: 'prod-1', name: '香水' }] } },
   '/omnimux/inspiration/local': {
@@ -44,10 +58,10 @@ test('三个素材入口分别打开资产库、灵感库、产品库', () => {
   assert.equal(tabForKind('product'), 'products')
 })
 
-test('灵感库只读本地，爆款趋势只读云端，精选四路都读', () => {
+test('灵感库只读本地，爆款趋势只读云端，精选读创意模板快照', () => {
   assert.deepEqual(sourcesForTab('inspiration'), ['inspiration'])
   assert.deepEqual(sourcesForTab('trending'), ['trending'])
-  assert.deepEqual(sourcesForTab('featured'), ['assets', 'inspiration', 'products', 'trending'])
+  assert.deepEqual(sourcesForTab('featured'), ['featured'])
 })
 
 test('灵感库请求不打云端，爆款趋势请求不打本地', async () => {
@@ -67,15 +81,27 @@ test('灵感库请求不打云端，爆款趋势请求不打本地', async () =>
   assert.equal(cloudResult.cards[0].raw.is_local, false)
 })
 
-test('精选一路失败时，其余卡片仍然留下', async () => {
+test('精选卡片来自创意模板快照，featured 优先', async () => {
+  const featured = mockFetch(routes)
+  const result = await loadLibraryCards('featured', { fetchImpl: featured.fetchImpl })
+  assert.equal(featured.calls.length, 1)
+  assert.match(featured.calls[0], /^\/omnimux\/templates\/creative/)
+  assert.equal(result.cards.length > 0, true)
+  assert.ok(result.cards.every((card) => card.lane === 'featured'))
+})
+
+test('创意模板快照失败时不崩溃，错误计入 featured lane', async () => {
   const featured = mockFetch({
     ...routes,
-    '/omnimux/inspiration?': { status: 401, body: { error: 'unauthorized' } },
+    '/omnimux/templates/creative': {
+      status: 503,
+      body: { error: 'templates-unavailable' },
+    },
   })
   const result = await loadLibraryCards('featured', { fetchImpl: featured.fetchImpl })
-  assert.equal(featured.calls.length, 4)
-  assert.deepEqual(result.cards.map((card) => card.lane), ['assets', 'inspiration', 'products'])
-  assert.equal(result.errors.trending.code, 'need-login')
+  assert.equal(featured.calls.length, 1)
+  assert.deepEqual(result.cards, [])
+  assert.ok(result.errors.featured, '快照失败必须产生 featured lane 错误')
 })
 
 test('提示词：空则写入，已有文字则追加，同一句不重复', () => {

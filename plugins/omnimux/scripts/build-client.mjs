@@ -5,6 +5,7 @@ import * as esbuild from 'esbuild'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outFile = join(root, 'lib', 'client.js')
+const metaFile = join(root, 'lib', 'client.metafile.json')
 
 const result = await esbuild.build({
   absWorkingDir: root,
@@ -15,6 +16,7 @@ const result = await esbuild.build({
   jsx: 'automatic',
   write: false,
   logLevel: 'info',
+  metafile: true,
   external: [
     'react',
     'react/jsx-runtime',
@@ -47,4 +49,8 @@ ${code}
 
 mkdirSync(dirname(outFile), { recursive: true })
 writeFileSync(outFile, wrapped)
-console.log(`wrote ${outFile} (${wrapped.length} bytes)`)
+if (result.metafile) {
+  writeFileSync(metaFile, JSON.stringify(result.metafile))
+}
+const wrappedBytes = Buffer.byteLength(wrapped, 'utf8')
+console.log(`wrote ${outFile} (${wrappedBytes} bytes)`)

@@ -1,0 +1,62 @@
+{
+  "ticket": "T0",
+  "issue": 2734,
+  "spec": "specs/hub-microkernelization.spec.md",
+  "recordedAt": "2026-09-27",
+  "baseline": {
+    "sourceSha": "7d68b93cd2fb7af7baf7236ad8d94c1a16b53906",
+    "sourceBase": "origin/main",
+    "worktree": ".worktrees/omnimux-hub-microkernel-issue-2734",
+    "lockfileSha256": "c8ed23b7878008390e64048990c1f56eb448197b7388fc27b467664a5727115f",
+    "node": "v25.8.0",
+    "pnpm": "11.7.0",
+    "esbuild": "0.28.2 (declared ^0.25.0 in plugins/omnimux devDependencies)"
+  },
+  "buildCommand": "corepack pnpm --filter omnimux run build",
+  "testCommand": "corepack pnpm --filter omnimux test (scripts/run-tests.mjs; collects plugins/omnimux cwd src/**/*.test.{js,ts} only; tests/e2e/*.e2e.test.mjs NOT collected)",
+  "bytes": {
+    "unwrappedUtf8": 4248894,
+    "wrappedUtf8": 4249150,
+    "wrappedGzip": 992754,
+    "metric": "statSync().size / Buffer.byteLength (UTF-8 bytes), not wrapped.length chars"
+  },
+  "budget": {
+    "targetRelativeReduction": 0.2,
+    "wrappedBaseline": 4249150,
+    "wrappedBudgetCeiling": 3399320
+  },
+  "metafile": {
+    "path": "plugins/omnimux/lib/client.metafile.json",
+    "producedBy": "plugins/omnimux/scripts/build-client.mjs (metafile: true added in T0)",
+    "outputKey": "index.js",
+    "inputCount": 250,
+    "creativeTemplatesBytesInOutput": 1162443
+  },
+  "templateData": {
+    "sourcePath": "plugins/omnimux/src/client/session-guide/templates/creative-templates.json",
+    "utf8Bytes": 1073071,
+    "sha256": "a7228349feb8cbc02df1eddd552fa48fe7796860376d343f17ae7326af68bc01",
+    "itemCount": 395
+  },
+  "packUnpack": {
+    "command": "cd plugins/omnimux && npm pack --pack-destination <tmp> && tar -xzf omnimux-0.1.2.tgz -C <tmp>",
+    "tarball": "omnimux-0.1.2.tgz",
+    "fileCount": 878,
+    "verified": {
+      "package/src/client/session-guide/templates/creative-templates.json": { "bytes": 1073071, "sha256": "a7228349feb8cbc02df1eddd552fa48fe7796860376d343f17ae7326af68bc01" },
+      "package/lib/client.js": { "bytes": 4249150 }
+    },
+    "note": "prepare hook triggers npm run build inside pack; files whitelist includes src/, lib/client.js, cordis.patch.yml"
+  },
+  "browserQa": {
+    "verifyApp": "pnpm verify:app (node scripts/worktree-app-qa.mjs; requires cwd = <repo>/.worktrees/<task>; dynamic port; self-cleaning; evidence .workbuddy/evidence/app-qa/<runId>/ + docs/evidence/worktree-app-qa-report.json)",
+    "worktreeWeb": "pnpm test:worktree-web = Stage fixture runner only, not business acceptance"
+  },
+  "testBaseline": {
+    "status": "PRE-EXISTING FAILURES",
+    "failingTestFiles": 42,
+    "logPath": "/tmp/t0-baseline-tests.log",
+    "failureListPath": "/tmp/t0-baseline-failures.txt",
+    "note": "Failures across src/text/execute.test.js, catalog tests, agent-preset tests, client e2e tests etc. Pre-date this change; T6 must show no NEW failures relative to this list."
+  }
+}

@@ -3,10 +3,12 @@ import test from 'node:test';
 import {
   ALL_CREATIVE_TEMPLATES,
   FEATURED_APPS_LIST,
-  TEMPLATE_CATEGORIES,
-  SHELVES_CONFIG,
   selectTemplatesByCategory,
   findTemplateById,
+} from '../../../templates/data.js';
+import {
+  TEMPLATE_CATEGORIES,
+  SHELVES_CONFIG,
   resolveLocalizedTemplate,
 } from './templates-data.js';
 

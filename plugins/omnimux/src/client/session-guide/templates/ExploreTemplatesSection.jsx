@@ -4,9 +4,10 @@ import {
   EXPLORE_SUB_CATEGORIES,
   TEMPLATE_CATEGORIES,
   SHELVES_CONFIG,
-  selectTemplatesByCategory,
-  selectShelfItems,
+  FEATURED_APPS_LIST,
+  selectShelfItemsFrom,
 } from './templates-data.js';
+import { loadCreativeTemplates } from './creative-templates-client.js';
 import { resolveTemplateCopy } from './template-locale.js';
 import { useTemplateLocale } from './use-template-locale.js';
 import { TemplatesShelfRow } from './TemplatesShelfRow.jsx';
@@ -28,12 +29,6 @@ import { SharedTabIcon } from '../../shared/asset-hub-tabs/SharedTabIcons.jsx';
 function renderPrimaryTabIcon(iconName) {
   return <SharedTabIcon name={iconName} size={15} />;
 }
-
-/**
- * 分类全量数据内存缓存池
- */
-const CATEGORY_DATA_CACHE = new Map();
-const CACHE_TTL_MS = 5 * 60 * 1000;
 
 function resolveSkillCover(cover, coverIndex) {
   if (typeof coverIndex === 'number' && Number.isFinite(coverIndex)) {
@@ -192,6 +187,9 @@ export function ExploreTemplatesSection({
 }) {
   const [activePrimaryTab, setActivePrimaryTab] = useState('featured');
   const [selectedSubCategory, setSelectedSubCategory] = useState('all');
+  // 创意模板快照：null = 尚未加载完成。适配器内部有单例缓存与共享请求，
+  // featured-only 展示路径不触发网络请求（详见 creative-templates-client.js）。
+  const [creativeList, setCreativeList] = useState(null);
   const [activeDrawerTemplate, setActiveDrawerTemplate] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [appLaunchError, setAppLaunchError] = useState('');
@@ -285,6 +283,24 @@ export function ExploreTemplatesSection({
     ensureProductCardStyles();
     ensureInspirationCardStyles();
   }, []);
+
+  // 精选 tab 存在非 featured-only 货架与分类网格，需要完整创意模板快照。
+  // 进入 featured tab 时按需加载一次（适配器内部缓存命中时几乎无感知）；
+  // 请求失败保持 creativeList=null，页面继续以 featured 数据渲染，不产生可见错误。
+  useEffect(() => {
+    if (activePrimaryTab !== 'featured') {
+      return undefined;
+    }
+    const controller = new AbortController();
+    loadCreativeTemplates({ signal: controller.signal })
+      .then((list) => {
+        if (!controller.signal.aborted) setCreativeList(list);
+      })
+      .catch(() => {
+        // AbortError 与业务/快照失败统一不落地为 UI 状态。
+      });
+    return () => controller.abort();
+  }, [activePrimaryTab]);
 
   // 当切换到资产库/灵感库/商品库/爆款趋势时，自动加载其卡片数据
   useEffect(() => {
@@ -455,11 +471,15 @@ export function ExploreTemplatesSection({
 
   const currentSubCategories = EXPLORE_SUB_CATEGORIES[activePrimaryTab] || EXPLORE_SUB_CATEGORIES.featured;
 
-  // 计算精选模板在网格视图下的数据集
+  // 计算精选模板在网格视图下的数据集；
+  // 快照未就绪时退回 featured 列表，保持页面有内容（原同步行为近似）。
   const featuredGridItems = useMemo(() => {
     if (activePrimaryTab !== 'featured' || selectedSubCategory === 'all') return [];
-    return selectTemplatesByCategory(selectedSubCategory);
-  }, [activePrimaryTab, selectedSubCategory]);
+    const list = creativeList || FEATURED_APPS_LIST;
+    return list.filter(
+      (item) => item.categorySlug === selectedSubCategory || item.categoryKey === selectedSubCategory
+    );
+  }, [activePrimaryTab, selectedSubCategory, creativeList]);
 
   // 计算技能在选定二级分类下的数据集
   const filteredSkills = useMemo(() => {
@@ -574,7 +594,7 @@ export function ExploreTemplatesSection({
             const shelfItems =
               shelf.slug === 'skills'
                 ? allSkillsItems.slice(0, 5)
-                : selectShelfItems(shelf.slug, 5);
+                : selectShelfItemsFrom(creativeList || FEATURED_APPS_LIST, shelf.slug, 5);
             return (
               <TemplatesShelfRow
                 key={shelf.slug}

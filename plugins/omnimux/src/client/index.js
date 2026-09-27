@@ -42,6 +42,7 @@ import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnh
 import { installUserMessageAttachmentsEnhancer } from './attachments/userMessageAttachmentsEnhancer.ts'
 import { installAssistantMessageMediaEnhancer } from './attachments/assistantMessageMediaEnhancer.ts'
 import { installPromptFenceGenerate } from './attachments/promptFenceGenerate.ts'
+import { resetCreativeTemplates } from './session-guide/templates/creative-templates-client.js'
 import { MediaViewerTab, MEDIA_VIEWER_TAB_ID } from './media-viewer/MediaViewerTab.jsx'
 import { AssetHubPanel } from './workbench/AssetHubPanel.jsx'
 import { ASSET_HUB_TAB_ID } from './workbench/geometry.js'
@@ -187,6 +188,8 @@ export function apply(ctx) {
   installGlobalReferenceApi()
   ctx.effect(() => ctx.locale.register('omnimux-session-guide', { zh: guideZh, en: guideEn }), 'omnimux: starter locale')
   ctx.effect(() => () => guideStore.dispose(), 'omnimux: starter state')
+  // 插件卸载清空创意模板快照缓存并中止进行中请求（spec §3.4）。
+  ctx.effect(() => () => resetCreativeTemplates(), 'omnimux: creative templates snapshot')
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'omnimux:session-guide', order: 110,
     locale: 'omnimux-session-guide', inject: () => guideFace,

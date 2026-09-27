@@ -1,16 +1,16 @@
 {
-  "runId": "68a3eb4f-0c5e-4d2d-a294-9e4a4a770d8a",
+  "runId": "079ee541-3b9d-4c85-b075-756aa9a8de52",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/market-expert-preset-sync-issue-2476",
-  "origin": "http://127.0.0.1:64567",
-  "appPort": 64567,
-  "cdpPort": 64571,
-  "startedAt": "2026-09-20T09:13:02.249Z",
-  "completedAt": "2026-09-20T09:13:10.451Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-hub-microkernel-issue-2734",
+  "origin": "http://127.0.0.1:50331",
+  "appPort": 50331,
+  "cdpPort": 50334,
+  "startedAt": "2026-09-27T12:16:29.031Z",
+  "completedAt": "2026-09-27T12:16:37.283Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:64567",
+    "origin": "http://127.0.0.1:50331",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "realModelRequest": false,
@@ -21,19 +21,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:64567",
+      "origin": "http://127.0.0.1:50331",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-9K9IiaKYs_cuvVOotygsH5O8vIo12JtInBwWG3lZnmo"
+      "cookieName": "dsh-auth-__0o6S2Xo_mARnuirSAWByVx8GSdNnqJNIUJpADDglE"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 64571
+      "port": 50334
     },
     {
       "name": "auth-cookie-applied",
@@ -43,7 +43,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 103,
+        "visibleCount": 119,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -52,7 +52,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 52
+        "bodyTextLength": 112
       }
     },
     {
@@ -63,7 +63,11 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 103
+      "visibleCount": 119
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
     },
     {
       "name": "screenshot-png-verified",
@@ -72,14 +76,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 79479
+      "bytes": 34455
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/market-expert-preset-sync-issue-2476/.workbuddy/evidence/app-qa/68a3eb4f-0c5e-4d2d-a294-9e4a4a770d8a/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-hub-microkernel-issue-2734/.workbuddy/evidence/app-qa/079ee541-3b9d-4c85-b075-756aa9a8de52/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 79479
+    "bytes": 34455
   },
   "errors": [],
   "cleanup": {

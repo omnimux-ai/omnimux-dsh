@@ -5,7 +5,7 @@
  * 供 Agent 作为生成策划、分镜对标与多模态创作时的上下文参考知识库。
  */
 
-import { ALL_CREATIVE_TEMPLATES, findTemplateById } from '../client/session-guide/templates/templates-data.js';
+import { ALL_CREATIVE_TEMPLATES, findTemplateById } from './data.js';
 import { JSON_TOOL_OUTPUT } from '../tools/schema.js';
 
 /**

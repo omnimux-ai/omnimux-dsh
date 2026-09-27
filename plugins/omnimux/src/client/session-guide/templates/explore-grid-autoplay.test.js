@@ -1,13 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { SHELVES_CONFIG, selectShelfItems } from './templates-data.js'
+import { SHELVES_CONFIG, selectShelfItemsFrom } from './templates-data.js'
+import { ALL_CREATIVE_TEMPLATES } from '../../../templates/data.js'
 
 test('explore grid layout: shelf items restricted to top 5 and styles define 5 columns', () => {
   // 1. Shelf items limited to 5
   for (const shelf of SHELVES_CONFIG) {
     if (shelf.slug !== 'skills') {
-      const items = selectShelfItems(shelf.slug, 5)
+      const items = selectShelfItemsFrom(ALL_CREATIVE_TEMPLATES, shelf.slug, 5)
       assert.ok(items.length <= 5, `${shelf.slug} must have at most 5 items, got ${items.length}`)
     }
   }
