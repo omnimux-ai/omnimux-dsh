@@ -81,6 +81,7 @@
           "aspectRatio": "9:16",
           "duration": 5,
           "mode": "first_frame",
+          "operation": "first_frame",
           "contentMode": "preset",
           "presetType": "ugc",
           "platforms": [
