@@ -82,7 +82,7 @@
     }
 
     function renderWorkshopIntro(opts) {
-      const { introHeading, introSubtitle, isExpertTab, isEn, tr, onOpenInstall } = opts;
+      const { introHeading, introSubtitle, isExpertTab, isPluginsTab, isEn, tr, onOpenInstall } = opts;
       const defaultCreateText = isEn ? "Create Expert" : "创建专家";
       const createLabel = isExpertTab ? (tr("expertMarket.createExpert") || defaultCreateText) : tr("workshop.create");
       const createOpts = isExpertTab ? { mode: "expert-creator", preset: "cordis", text: "" } : { text: "/skill-creator" };
@@ -90,7 +90,7 @@
       return h("section", { className: "workshop-intro", "aria-label": introHeading },
         h("div", { className: "workshop-heading", role: "heading", "aria-level": 1 }, introHeading),
         h("p", { className: "workshop-description" }, introSubtitle),
-        h("div", { className: "action-row" },
+        isPluginsTab ? null : h("div", { className: "action-row" },
           // exempt-ui01 create action button
           h("button", { type: "button", className: "btn-create", onClick: onCreateClick },
             h(PlazaIcon, { size: 14 }), createLabel,
@@ -111,9 +111,11 @@
       const { mainTab, setMainTab, setPage, searchQuery, setSearchQuery, placeholderText, onSearchSubmit, tr, isEn } = opts;
       const iconProps = { className: "tab-info-icon", width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
       const defaultExpertTab = isEn ? "Experts Market" : "专家市场";
+      const defaultPluginsTab = isEn ? "Plugins" : "插件专栏";
       const onTabDiscover = () => { setMainTab("discover"); setPage(1); };
       const onTabMine = () => setMainTab("mine");
       const onTabExperts = () => setMainTab("experts-market");
+      const onTabPlugins = () => setMainTab("plugins");
       const onInputKeyDown = (e) => { if (e.key === "Enter") onSearchSubmit(); };
 
       const TabsComp = typeof Tabs !== "undefined" ? Tabs : null;
@@ -135,12 +137,17 @@
           id: "experts-market",
           label: tr("workshop.tabExpertsMarket") || defaultExpertTab,
         },
+        {
+          id: "plugins",
+          label: tr("workshop.tabPlugins") || defaultPluginsTab,
+        },
       ];
 
       const handleTabChange = (nextTab) => {
         if (nextTab === "discover") onTabDiscover();
         else if (nextTab === "mine") onTabMine();
         else if (nextTab === "experts-market") onTabExperts();
+        else if (nextTab === "plugins") onTabPlugins();
       };
 
       const tabsNode = TabsComp
@@ -161,6 +168,9 @@
             ),
             h("button", { type: "button", "aria-pressed": mainTab === "experts-market", className: "nav-tab" + (mainTab === "experts-market" ? " active" : ""), onClick: onTabExperts },
               h("span", null, tr("workshop.tabExpertsMarket") || defaultExpertTab),
+            ),
+            h("button", { type: "button", "aria-pressed": mainTab === "plugins", className: "nav-tab" + (mainTab === "plugins" ? " active" : ""), onClick: onTabPlugins },
+              h("span", null, tr("workshop.tabPlugins") || defaultPluginsTab),
             ),
           );
 
@@ -262,6 +272,7 @@
     }
 
     function renderPlazaTabContent(opts) {
+      if (opts.mainTab === "plugins") return h(PluginsColumnTab, opts);
       if (opts.isExpertTab) return renderExpertsTab(opts);
       if (opts.mainTab === "mine") return renderMineTab(opts);
       return renderDiscoverTab(opts);
@@ -278,8 +289,9 @@
       });
       const isEn = tr("locale") === "en";
       const isExpertTab = state.mainTab === "experts-market";
+      const isPluginsTab = state.mainTab === "plugins";
       const isDiscoverTab = state.mainTab === "discover";
-      const { introHeading, introSubtitle, placeholderText } = resolveIntroTexts(state, tr, isEn, isExpertTab);
+      const { introHeading, introSubtitle, placeholderText } = resolveIntroTexts(state, tr, isEn, isExpertTab, isPluginsTab);
       const displayedExperts = filterDisplayedExperts(state.expertMarketItems, isExpertTab, state.searchQuery);
       const filteredMine = filterMineItems(state.installedItems, { category: state.category, presetBinding, mineCategory: state.mineCategory, mineSource: state.mineSource, searchQuery: state.searchQuery });
       const availableSources = Array.from(new Set(state.installedItems.map(extractItemSourceKey).filter(Boolean)));
@@ -287,7 +299,7 @@
       const onOpenInstall = () => state.setOpenInstallModal(true);
       const onSearchSubmit = () => { state.setSubmitted(state.searchQuery); state.setPage(1); };
       const tabContentOpts = {
-        isExpertTab, displayedExperts, tr, isEn, expertMarketToggling: state.expertMarketToggling, onToggleExpert: onToggleExp,
+        isExpertTab, isPluginsTab, searchQuery: state.searchQuery, displayedExperts, tr, isEn, expertMarketToggling: state.expertMarketToggling, onToggleExpert: onToggleExp,
         mainTab: state.mainTab, filteredMine, setOpen: state.setOpen, handleSwitchToggle: onToggleSwitch, category: state.category, hasQuery, hasMore: state.hasMore,
         onMore: () => state.setPage(state.page + 1),
         featuredItems,
@@ -298,7 +310,7 @@
       return {
         isExpertTab,
         isDiscoverTab,
-        introOpts: { introHeading, introSubtitle, isExpertTab, isEn, tr, onOpenInstall },
+        introOpts: { introHeading, introSubtitle, isExpertTab, isPluginsTab, isEn, tr, onOpenInstall },
         navBarOpts: { mainTab: state.mainTab, setMainTab: state.setMainTab, setPage: state.setPage, searchQuery: state.searchQuery, setSearchQuery: state.setSearchQuery, placeholderText, onSearchSubmit, tr, isEn },
         categoryBarOpts: { category: state.category, setCategory: state.setCategory, setMineCategory: state.setMineCategory, setPage: state.setPage, workshopCategories, tr },
         tabContentOpts,

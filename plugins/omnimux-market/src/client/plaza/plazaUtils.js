@@ -217,7 +217,12 @@ export function getExpertStatusText(conf, tr, isEn) {
   return '[ ' + (statusVal || fallback) + ' ]';
 }
 
-export function resolveIntroHeading(isExpertTab, isEn, tr) {
+export function resolveIntroHeading(isExpertTab, isEn, tr, isPluginsTab) {
+  if (isPluginsTab) {
+    const defaultEn = 'Plugins';
+    const defaultZh = '插件专栏';
+    return tr('pluginsColumn.title') || (isEn ? defaultEn : defaultZh);
+  }
   if (isExpertTab) {
     const defaultEn = 'Experts Market';
     const defaultZh = '专家市场';
@@ -226,7 +231,12 @@ export function resolveIntroHeading(isExpertTab, isEn, tr) {
   return tr('workshop.title') || 'Skill';
 }
 
-export function resolveIntroSubtitle(isExpertTab, isEn, tr) {
+export function resolveIntroSubtitle(isExpertTab, isEn, tr, isPluginsTab) {
+  if (isPluginsTab) {
+    const defaultEn = 'Manage and configure OmniMux features and extension plugins';
+    const defaultZh = '管理与配置 OmniMux 功能插件与扩展能力';
+    return tr('pluginsColumn.subtitle') || (isEn ? defaultEn : defaultZh);
+  }
   if (isExpertTab) {
     const defaultEn = 'Discover and install AI Agents to extend your workspace';
     const defaultZh = '发现并安装AI代理以扩展您的工作区';
@@ -235,7 +245,10 @@ export function resolveIntroSubtitle(isExpertTab, isEn, tr) {
   return tr('workshop.subtitle');
 }
 
-export function resolvePlaceholderText(isExpertTab, isEn, mainTab, tr) {
+export function resolvePlaceholderText(isExpertTab, isEn, mainTab, tr, isPluginsTab) {
+  if (isPluginsTab || mainTab === 'plugins') {
+    return tr('pluginsColumn.searchPlaceholder') || (isEn ? 'Search all plugins...' : '搜索全部插件...');
+  }
   if (isExpertTab) {
     return tr('expertMarket.searchPlaceholder') || (isEn ? 'Search all experts...' : '搜索全部专家');
   }
@@ -243,11 +256,12 @@ export function resolvePlaceholderText(isExpertTab, isEn, mainTab, tr) {
   return tr(key);
 }
 
-export function resolveIntroTexts(state, tr, isEn, isExpertTab) {
+export function resolveIntroTexts(state, tr, isEn, isExpertTab, isPluginsTab) {
+  const isPlugins = isPluginsTab || (state && state.mainTab === 'plugins');
   return {
-    introHeading: resolveIntroHeading(isExpertTab, isEn, tr),
-    introSubtitle: resolveIntroSubtitle(isExpertTab, isEn, tr),
-    placeholderText: resolvePlaceholderText(isExpertTab, isEn, state.mainTab, tr),
+    introHeading: resolveIntroHeading(isExpertTab, isEn, tr, isPlugins),
+    introSubtitle: resolveIntroSubtitle(isExpertTab, isEn, tr, isPlugins),
+    placeholderText: resolvePlaceholderText(isExpertTab, isEn, state.mainTab, tr, isPlugins),
   };
 }
 
