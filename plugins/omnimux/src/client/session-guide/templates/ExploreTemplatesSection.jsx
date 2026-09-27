@@ -219,14 +219,18 @@ export function ExploreTemplatesSection({
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
+    let rafId1 = null;
+    let rafId2 = null;
+
     const onScrollToTab = (e) => {
       const targetTab = e?.detail?.tab;
       if (targetTab) {
         handlePrimaryTabChange(targetTab);
       }
-      // 1. 立即计算并原子跳转至 Tab 栏置顶位置（0ms 立即跳到置顶状态，对齐图 1 效果）
-      const targetEl = filterBarRef.current || sectionRootRef.current;
-      if (targetEl) {
+
+      const scrollToTop = () => {
+        const targetEl = filterBarRef.current || sectionRootRef.current;
+        if (!targetEl) return;
         const scroller = targetEl.closest?.('[class*="scrollBody"], [data-conversation-scroll]') ||
           (typeof document !== 'undefined' ? document.querySelector('[class*="scrollBody"]') : null);
         
@@ -239,9 +243,24 @@ export function ExploreTemplatesSection({
           // 兜底：使用 instant 确保 0ms 立即跳转，杜绝 smooth 异步滚动竞态
           targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
         }
+      };
+
+      // 1. 立即执行 0ms 原子跳转，消除感知延迟
+      scrollToTop();
+
+      // 2. 双帧 RAF 校准：在 React 完成重排和浏览器布局回流后复核并锁定 filterBar 置顶于 top: 0
+      if (typeof window.requestAnimationFrame === 'function') {
+        if (rafId1) window.cancelAnimationFrame(rafId1);
+        if (rafId2) window.cancelAnimationFrame(rafId2);
+        rafId1 = window.requestAnimationFrame(() => {
+          scrollToTop();
+          rafId2 = window.requestAnimationFrame(() => {
+            scrollToTop();
+          });
+        });
       }
 
-      // 2. 触发输入框原子强制吸底
+      // 3. 触发输入框原子强制吸底
       window.dispatchEvent(new CustomEvent('omnimux:composer:dock-intent', {
         detail: { tab: targetTab, force: true },
       }));
@@ -250,6 +269,10 @@ export function ExploreTemplatesSection({
     window.addEventListener('omnimux:explore:scroll-to-tab', onScrollToTab);
     return () => {
       window.removeEventListener('omnimux:explore:scroll-to-tab', onScrollToTab);
+      if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+        if (rafId1) window.cancelAnimationFrame(rafId1);
+        if (rafId2) window.cancelAnimationFrame(rafId2);
+      }
     };
   }, []);
 

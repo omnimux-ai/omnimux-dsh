@@ -3299,8 +3299,19 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   border-radius:4px;
 }
 
-/* Shelf Row */
-.omnimux-explore-shelves-view { display:flex; flex-direction:column; gap:36px; }
+/* Tab 栏下方内容容器视口撑开规范：确保无论 0/5/50 卡片，都能滚动使 Tab 置顶 */
+.omnimux-explore-grid-view-wrap,
+.omnimux-explore-shelves-view {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(100vh - 96px);
+  padding-bottom: 120px;
+}
+.omnimux-explore-shelves-view {
+  gap: 36px;
+}
 .omnimux-shelf-section { display:flex; flex-direction:column; position:relative; }
 .omnimux-shelf-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
 .omnimux-shelf-title-wrap { display:flex; align-items:baseline; gap:12px; }
@@ -3770,8 +3781,14 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-tpl-btn-primary:hover { opacity:0.92; }
 
 .omnimux-library-stage-status {
-  margin:0; color:var(--dsw-alias-label-tertiary); font-size:13px;
-  display:flex; align-items:center; gap:12px;
+  margin: 40px auto 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 120px;
 }
 .omnimux-library-stage-retry {
   height:32px; padding:0 12px; border-radius:8px; cursor:pointer;
