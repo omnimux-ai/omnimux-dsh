@@ -293,6 +293,51 @@ describe('T05: Headless Execution Adapter & Parameter Injection Bridge', () => {
     assert.equal(virtualSource.data.mediaUrl, 'https://cdn.omnimux.com/products/headphones.jpg');
   });
 
+  it('T05.15: picked card carries mimeType and sizeBytes, passed through to mediaAssets and feedAsset (#2722)', () => {
+    const manifest = createMockManifest();
+    manifest.workflowBinding.snapshot.nodes.push({
+      id: 'node-slot-product-image',
+      type: 'material',
+      data: { isSlot: true, label: '商品主图' },
+    });
+    manifest.fieldMappings.productLink = {
+      nodeId: 'node-slot-product-image',
+      targetField: 'mediaUrl',
+      mappingType: 'media',
+      widget: 'product-link',
+      required: false,
+    };
+
+    const pickedValue = JSON.stringify({
+      name: '智能降噪耳机',
+      sub: '数码配件',
+      url: 'https://cdn.omnimux.com/products/headphones.jpg',
+      type: 'image',
+      mimeType: 'image/jpeg',
+      sizeBytes: 1048576,
+    });
+
+    const injected = prepareAndInjectWorkflowSnapshot(manifest, {
+      topic: '耳机种草测评',
+      productLink: pickedValue,
+    });
+
+    const slotNode = injected.nodes.find((n) => n.id === 'node-slot-product-image');
+    assert.ok(slotNode);
+    assert.equal(slotNode.data.mediaUrl, 'https://cdn.omnimux.com/products/headphones.jpg');
+    assert.equal(slotNode.data.mediaAssets[0].mimeType, 'image/jpeg');
+    assert.equal(slotNode.data.mediaAssets[0].sizeBytes, 1048576);
+
+    const feedAsset = slotNode.data.feedAssets[0];
+    assert.equal(feedAsset.mimeType, 'image/jpeg');
+    assert.equal(feedAsset.sizeBytes, 1048576);
+
+    const virtualSource = injected.nodes.find((n) => n.id === feedAsset.sourceNodeId);
+    assert.ok(virtualSource);
+    assert.equal(virtualSource.data.mediaAssets[0].mimeType, 'image/jpeg');
+    assert.equal(virtualSource.data.mediaAssets[0].sizeBytes, 1048576);
+  });
+
   it('T05.13: Fail-Closed: malformed picked-card JSON is rejected, never injected as a media URL', () => {
     const manifest = createMockManifest();
 

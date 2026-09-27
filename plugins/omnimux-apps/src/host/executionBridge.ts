@@ -652,6 +652,22 @@ export function prepareAndInjectWorkflowSnapshot(
             ? manifest.metadata.category || 'video'
             : 'image');
 
+      // A remote (https) reference can never be probed for byte size by the
+      // submission pipeline, so the library record's own metadata is the only
+      // chance to satisfy slots that declare maxSizeMb / allowedMimes. Carry it
+      // through instead of collapsing every pick down to { type, url }.
+      const mediaMimeType = typeof picked?.mimeType === 'string' && picked.mimeType.trim()
+        ? picked.mimeType.trim()
+        : undefined;
+      const rawSizeBytes = picked?.sizeBytes ?? picked?.size ?? picked?.bytes;
+      const mediaSizeBytes = typeof rawSizeBytes === 'number' && Number.isFinite(rawSizeBytes) && rawSizeBytes >= 0
+        ? rawSizeBytes
+        : undefined;
+      const mediaMeta = {
+        ...(mediaMimeType ? { mimeType: mediaMimeType } : {}),
+        ...(mediaSizeBytes !== undefined ? { sizeBytes: mediaSizeBytes } : {}),
+      };
+
       if (
         targetPath === 'mediaUrl' ||
         targetPath === 'data.mediaUrl' ||
@@ -664,6 +680,7 @@ export function prepareAndInjectWorkflowSnapshot(
           {
             type: mediaType,
             url: mediaUrl,
+            ...mediaMeta,
           },
         ];
       }
@@ -678,6 +695,7 @@ export function prepareAndInjectWorkflowSnapshot(
         pathOrUrl: mediaUrl,
         targetSlot: slotName,
         role: (mapping as any).role || slotName,
+        ...mediaMeta,
       };
 
       // Bind to node feedAssets & slotBindings
@@ -708,6 +726,7 @@ export function prepareAndInjectWorkflowSnapshot(
             {
               type: mediaType,
               url: mediaUrl,
+              ...mediaMeta,
             },
           ],
           status: 'completed',

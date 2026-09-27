@@ -18,6 +18,9 @@ import { runAgentText } from '../agents/local.js'
 /** Fixed credential reference for the BYOK API key. */
 const BYOK_KEY_REF = 'OMNIMUX_BYOK_API_KEY'
 
+/** 识别已知思考通道引导词/纯思考断言的前缀特征 */
+const REASONING_PREAMBLE_RE = /^(?:i['’]?m\s+thinking\s+through|let\s+me\s+think|thinking\s+process|thought\s*:)/i
+
 /**
  * One-shot expert completion. Default path: `ctx.llm.stream` (text / image).
  * Video path: bypass stream + attachments and POST chat completions with
@@ -343,14 +346,34 @@ export async function executeOmnimuxText(input) {
     ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId }),
   }
   let assembled = ''
+  let sawReasoning = false
   let finish
   for await (const chunk of input.llm.stream(options)) {
     if (!chunk || typeof chunk !== 'object') continue
     const row = /** @type {Record<string, unknown>} */ (chunk)
+    // Reasoning is a separate channel: it must never accumulate into the body,
+    // otherwise a thinking preamble ships as the business answer.
+    if (typeof row.type === 'string' && (row.type === 'reasoning-delta' || row.type === 'reasoning'
+      || row.type === 'thinking-delta' || row.type === 'thinking')) {
+      sawReasoning = true
+      continue
+    }
     if (row.type === 'text-delta' && typeof row.text === 'string') assembled += row.text
     if (row.type === 'block-end' && row.block && typeof row.block === 'object') {
       const block = /** @type {Record<string, unknown>} */ (row.block)
-      if (block.type === 'text' && typeof block.text === 'string' && !assembled) assembled += block.text
+      if (block.type === 'reasoning' || block.type === 'thinking') {
+        sawReasoning = true
+        continue
+      }
+      if (block.type === 'text' && typeof block.text === 'string') {
+        // A closed text block is authoritative for its own content: prefer it
+        // over whatever partial deltas preceded it, especially if preceding deltas
+        // only held reasoning preambles.
+        const trimmedCurrent = assembled.trim()
+        if (!trimmedCurrent || REASONING_PREAMBLE_RE.test(trimmedCurrent) || block.text.length > assembled.length) {
+          assembled = block.text
+        }
+      }
     }
     if (row.type === 'finish') finish = row
   }
@@ -366,8 +389,11 @@ export async function executeOmnimuxText(input) {
       : `text complete ${reason.kind}`
     throw new OmnimuxError('omnimux-failed', message)
   }
-  if (!assembled.trim()) {
-    throw new OmnimuxError('omnimux-invalid-response', 'text complete produced no text')
+  const trimmedFinal = assembled.trim()
+  if (!trimmedFinal || (REASONING_PREAMBLE_RE.test(trimmedFinal) && trimmedFinal.length < 120)) {
+    throw new OmnimuxError('omnimux-invalid-response', (sawReasoning || REASONING_PREAMBLE_RE.test(trimmedFinal))
+      ? '模型只返回了思考过程，没有给出正文，请重试或降低推理等级'
+      : 'text complete produced no text')
   }
   const result = { mode: 'live', model: route.modelId, text: assembled }
   assertGuardOutput(guardPlan, result, { capability: 'text' })
