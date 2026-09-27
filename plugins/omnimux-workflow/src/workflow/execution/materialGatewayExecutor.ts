@@ -300,6 +300,65 @@ export function createMaterialGatewayExecutor(opts: {
           delete request.audioTrack;
         }
       }
+
+      // Auto-enrich remote media metadata (Issue #2722):
+      // A remote (https) reference has no local statSync, so its sizeBytes is
+      // undefined unless probed. The submit guard strictly requires sizeBytes
+      // for any slot with maxSizeMb constraints. Asynchronously probe remote
+      // URLs via a lightweight HEAD request with timeout before submission.
+      const isSafePublicRemoteUrl = (rawUrl: string): boolean => {
+        try {
+          const parsed = new URL(rawUrl);
+          if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+          const host = parsed.hostname.toLowerCase();
+          if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0') return false;
+          if (/^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)) return false;
+          if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)) return false;
+          return true;
+        } catch {
+          return false;
+        }
+      };
+
+      const enrichRemoteReference = async <T extends { pathOrUrl?: string; sizeBytes?: number; mimeType?: string }>(
+        ref: T,
+      ): Promise<T> => {
+        const url = ref?.pathOrUrl;
+        if (typeof url !== 'string' || !isSafePublicRemoteUrl(url)) {
+          return ref;
+        }
+        if (ref.sizeBytes !== undefined && ref.mimeType !== undefined) {
+          return ref;
+        }
+        try {
+          const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+          if (!res.ok) return ref;
+          const patch: Record<string, unknown> = {};
+          const len = res.headers.get('content-length');
+          if (len) {
+            const num = Number(len);
+            if (Number.isFinite(num) && num >= 0) patch.sizeBytes = num;
+          }
+          const ct = res.headers.get('content-type');
+          if (ct && !ref.mimeType) {
+            const mime = ct.split(';')[0]?.trim().toLowerCase();
+            if (mime && mime !== 'application/octet-stream' && mime !== 'binary/octet-stream') {
+              patch.mimeType = mime;
+            }
+          }
+          return { ...ref, ...patch };
+        } catch {
+          return ref;
+        }
+      };
+
+      if (Array.isArray(request.references) && request.references.length > 0) {
+        request.references = await Promise.all(request.references.map(enrichRemoteReference));
+      }
+      if (request.audioTrack) {
+        request.audioTrack = await enrichRemoteReference(request.audioTrack);
+      }
+
       const resolved = resolveExecutorSubmission(request, catalog);
       const submitted = await gateway.submit(resolved);
       ctx.reportProgress?.(10, '已提交生成任务');
