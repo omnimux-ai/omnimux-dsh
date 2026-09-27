@@ -30,8 +30,10 @@ test('veoContracts 与 veoHeadlessDriver 测试套件', async (t) => {
     const env = detectOpenCliEnvironment();
     assert.equal(typeof env.installed, 'boolean');
     assert.equal(typeof env.bridgeConnected, 'boolean');
-    // 在当前开发机上必须探测到已安装
+    // 在当前开发机上必须探测到已安装（含绝对路径解析，兼容 Dev Host 裁剪 PATH）
     assert.equal(env.installed, true);
+    assert.equal(typeof env.bin, 'string');
+    assert.ok(env.bin.includes('opencli'));
   });
 
 });
