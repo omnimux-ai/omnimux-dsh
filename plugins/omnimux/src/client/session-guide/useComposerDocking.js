@@ -681,10 +681,11 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
 
       setPlacement((prev) => {
         // 向上滚动至顶部原位露头可见（<= revealThreshold），且此前确实曾滑离过顶部 → 归还原位
+        // 交互激活标记必须持久保留：滑回顶部只切换摆位，绝不抹除意图；
+        // 再次下滑时仍能吸底。意图只在 undock()/收起时清零。
         if (scrollTop <= revealThreshold && leftTop) {
           isScrollTransitionRef.current = true
           leftTop = false
-          isIntentDrivenRef.current = false
           return 'inline'
         }
         // 向下滚动完全滑离顶部不可见（> leaveThreshold）且存在显式意图 → 自动吸底

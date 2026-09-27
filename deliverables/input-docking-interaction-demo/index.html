@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniMux 会话输入框顶底切换与交互激活状态机 Demo</title>
+  <style>
+    :root {
+      --bg-base: #09090b;
+      --bg-surface: #121215;
+      --bg-card: #18181c;
+      --bg-card-hover: #222228;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.16);
+      --border-focus: #3b82f6;
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-tertiary: #71717a;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-subtle: rgba(59, 130, 246, 0.12);
+      --success: #10b981;
+      --success-subtle: rgba(16, 185, 129, 0.12);
+      --warning: #f59e0b;
+      --warning-subtle: rgba(245, 158, 11, 0.12);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-full: 9999px;
+      --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* 顶部控制与解释说明栏 (Inspector Header) */
+    .inspector-header {
+      background: #141418;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    .inspector-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .inspector-title {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      color: var(--text-primary);
+    }
+
+    .badge-tag {
+      background: var(--accent-subtle);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .state-metrics-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #1c1c22;
+      border: 1px solid var(--border-subtle);
+      padding: 6px 14px;
+      border-radius: var(--radius-md);
+    }
+
+    .metric-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .metric-label {
+      color: var(--text-tertiary);
+    }
+
+    .metric-value {
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+    }
+
+    .metric-value.active {
+      background: var(--success-subtle);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .metric-value.inactive {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-tertiary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .metric-value.highlight {
+      background: var(--accent-subtle);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* 自动化引导操作栏 */
+    .quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-step {
+      background: #27272f;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-step:hover {
+      background: #32323c;
+      color: var(--text-primary);
+      border-color: var(--border-medium);
+    }
+
+    .btn-step.highlight {
+      background: #1e3a8a;
+      color: #93c5fd;
+      border-color: #3b82f6;
+    }
+
+    /* 主视口布局 */
+    .main-layout {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 页面主滚动容器 */
+    .scroll-container {
+      flex: 1;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      position: relative;
+      background: var(--bg-base);
+    }
+
+    /* 会话引导区内容限制宽度 */
+    .content-constraint {
+      max-width: 952px;
+      margin: 0 auto;
+      padding: 32px 24px 160px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 顶部欢迎区 (Hero) */
+    .hero-section {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .hero-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .hero-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* 顶部内联输入框卡片 (Top Inline Composer) */
+    .composer-inline-band {
+      margin-bottom: 36px;
+      position: relative;
+      min-height: 130px;
+      transition: opacity 0.2s ease;
+    }
+
+    .composer-card {
+      background: #16161a;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .composer-card:focus-within {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 1px var(--accent-subtle), 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .composer-textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: none;
+      height: 48px;
+      font-family: inherit;
+    }
+
+    .composer-textarea::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .composer-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 10px;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pill-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .pill-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .pill-btn.active-skill {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    .send-btn {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-full);
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .send-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    /* 顶部占位空壳态（当切换到底部吸附时，顶部卡片可隐去或保持占位） */
+    .composer-inline-band.ghost .composer-card {
+      opacity: 0.25;
+      border-style: dashed;
+      pointer-events: none;
+    }
+
+    .composer-inline-band.ghost::after {
+      content: "↑ 输入框已移至视口底部随行显示";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 12px;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    /* 选项卡栏 (Sticky Tab Bar) */
+    .filter-tab-bar {
+      position: sticky;
+      top: 0;
+      background: rgba(9, 9, 11, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 10px 0;
+      margin-bottom: 24px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .tabs-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-item {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-item:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-item.active {
+      background: #27272a;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .tab-note {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    /* 爆款素材卡片网格 */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      min-height: calc(100vh - 96px); /* 上一轮交付的视口保证 */
+      padding-bottom: 120px;
+    }
+
+    .media-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .media-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-medium);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .media-card.active-selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 8px 24px var(--accent-subtle);
+    }
+
+    .card-thumb-wrap {
+      width: 100%;
+      height: 180px;
+      background: #24242c;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-thumb-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-tertiary);
+      font-size: 12px;
+    }
+
+    .card-duration {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+
+    /* 悬停浮现的复刻操作栏 */
+    .card-hover-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      padding: 16px;
+    }
+
+    .media-card:hover .card-hover-overlay {
+      opacity: 1;
+    }
+
+    .btn-recreate {
+      background: var(--text-primary);
+      color: #000;
+      border: none;
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .btn-recreate:hover {
+      background: #ffffff;
+      transform: scale(1.04);
+    }
+
+    .card-body {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    /* ============================================================== */
+    /* 核心部件：底部固定停靠输入框 (Bottom Docked Composer)            */
+    /* ============================================================== */
+    .docked-composer-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      width: calc(100% - 48px);
+      max-width: 952px;
+      z-index: 200;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* 激活吸底展示 */
+    .docked-composer-container.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* 顶部收起触发手柄栏 (Collapse Bar) */
+    .docked-collapse-bar {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+
+    .btn-collapse-composer {
+      background: rgba(24, 24, 28, 0.92);
+      border: 1px solid var(--border-medium);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.15s ease;
+    }
+
+    .btn-collapse-composer:hover {
+      background: #2a2a32;
+      color: var(--text-primary);
+      border-color: var(--text-tertiary);
+    }
+
+    .docked-box {
+      background: rgba(22, 22, 26, 0.95);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* 附件/复刻对标引用卡槽 */
+    .docked-attachment-tray {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .attachment-pill {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #93c5fd;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .attachment-remove-btn {
+      background: transparent;
+      border: none;
+      color: #93c5fd;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      padding: 0 2px;
+    }
+
+    .attachment-remove-btn:hover {
+      color: #fff;
+    }
+
+    /* 右下角悬浮操作提示面板 */
+    .interaction-callout {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 320px;
+      background: rgba(20, 20, 24, 0.95);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .callout-header {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-desc {
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .callout-rule {
+      padding: 6px 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 11px;
+      margin-top: 4px;
+      border-left: 2px solid var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部状态监控与控制栏 -->
+  <header class="inspector-header">
+    <div class="inspector-title-group">
+      <div class="inspector-title">输入框顶底切换与交互激活状态机</div>
+      <span class="badge-tag">SaaS 契约校验 Demo</span>
+    </div>
+
+    <!-- 实时状态流转指示器 -->
+    <div class="state-metrics-bar">
+      <div class="metric-item">
+        <span class="metric-label">事件交互状态:</span>
+        <span class="metric-value inactive" id="metricInteraction">未激活 (False)</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">主动收起状态:</span>
+        <span class="metric-value inactive" id="metricCollapsed">未收起 (False)</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">滚动视口区:</span>
+        <span class="metric-value highlight" id="metricScrollZone">顶部场景 (Top)</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">当前形态:</span>
+        <span class="metric-value active" id="metricPlacement">顶部 Inline</span>
+      </div>
+    </div>
+
+    <!-- 交互用例测试快捷键 -->
+    <div class="quick-actions">
+      <button class="btn-step" onclick="runTestCase(1)" title="模拟用户纯下滑浏览，无任何事件交互">1. 纯下滑浏览</button>
+      <button class="btn-step highlight" onclick="runTestCase(2)" title="点击卡片上的复刻按钮，触发事件交互">2. 点击复刻</button>
+      <button class="btn-step" onclick="runTestCase(3)" title="滑回页面最顶部">3. 滑回顶部</button>
+      <button class="btn-step highlight" onclick="runTestCase(4)" title="核心验证：再次向下滑动，检验输入框是否在底部恢复显示！">4. 再次向下滑动</button>
+      <button class="btn-step" onclick="runTestCase(5)" title="点击输入框顶部的收起按钮">5. 点击收起</button>
+      <button class="btn-step highlight" onclick="runTestCase(6)" title="收起后再点一次复刻，检验重新唤醒">6. 再次点击复刻</button>
+      <button class="btn-step" onclick="resetDemo()">↺ 重置</button>
+    </div>
+  </header>
+
+  <!-- 主工作台视口 -->
+  <main class="main-layout">
+    <div class="scroll-container" id="scrollContainer">
+      <div class="content-constraint">
+        
+        <!-- 欢迎头部 -->
+        <section class="hero-section" id="heroSection">
+          <h1 class="hero-title">OmniMux 全域灵感与爆款复刻</h1>
+          <p class="hero-subtitle">挑选值得复刻的爆款结构，一键接管输入框直接出片。</p>
+        </section>
+
+        <!-- 顶部内联输入框卡片 (Top Inline Composer) -->
+        <div class="composer-inline-band" id="composerInlineBand">
+          <div class="composer-card" id="topComposerCard">
+            <textarea class="composer-textarea" id="topComposerTextarea" placeholder="在此输入你的想法、要求或直接点击下方卡片引用素材..."></textarea>
+            <div class="composer-toolbar">
+              <div class="toolbar-left">
+                <div class="pill-btn" id="topSkillPill">⚡ 技能：爆款视频智能复刻</div>
+                <div class="pill-btn">📎 添加参考素材</div>
+              </div>
+              <button class="send-btn">生成出片</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 选项卡栏 (Sticky Tab Bar) -->
+        <nav class="filter-tab-bar" id="filterTabBar">
+          <div class="tabs-group">
+            <button class="tab-item active">探索模板</button>
+            <button class="tab-item">精选</button>
+            <button class="tab-item">灵感库</button>
+            <button class="tab-item">资产库</button>
+            <button class="tab-item">商品库</button>
+            <button class="tab-item">Skills</button>
+          </div>
+          <div class="tab-note">向下滚动浏览 · 支持自由滑轮滚动</div>
+        </nav>
+
+        <!-- 卡片网格流 -->
+        <div class="cards-grid" id="cardsGrid">
+          <!-- 卡片 1 -->
+          <div class="media-card" data-id="card-1" data-title="口红质感试色爆款分镜" onclick="handleCardClick(1)">
+            <div class="card-thumb-wrap">
+              <div class="card-thumb-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                <span>9:16 口红爆款视频</span>
+              </div>
+              <span class="card-duration">00:15</span>
+              <div class="card-hover-overlay">
+                <button class="btn-recreate" onclick="event.stopPropagation(); triggerRecreate(1)">
+                  <span>↺ 复刻</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="card-title">口红质感试色爆款分镜</div>
+              <div class="card-meta">
+                <span>美妆护肤 · 高转化率</span>
+                <span>12.8w 浏览</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 2 -->
+          <div class="media-card" data-id="card-2" data-title="解馋坚果包装撕开微距" onclick="handleCardClick(2)">
+            <div class="card-thumb-wrap">
+              <div class="card-thumb-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                <span>9:16 美食卡点快剪</span>
+              </div>
+              <span class="card-duration">00:20</span>
+              <div class="card-hover-overlay">
+                <button class="btn-recreate" onclick="event.stopPropagation(); triggerRecreate(2)">
+                  <span>↺ 复刻</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="card-title">解馋坚果包装撕开微距</div>
+              <div class="card-meta">
+                <span>食品饮料 · 强钩子</span>
+                <span>8.4w 浏览</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 3 -->
+          <div class="media-card" data-id="card-3" data-title="新潮运动外套街头抓拍" onclick="handleCardClick(3)">
+            <div class="card-thumb-wrap">
+              <div class="card-thumb-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                <span>9:16 潮服街拍分镜</span>
+              </div>
+              <span class="card-duration">00:18</span>
+              <div class="card-hover-overlay">
+                <button class="btn-recreate" onclick="event.stopPropagation(); triggerRecreate(3)">
+                  <span>↺ 复刻</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="card-title">新潮运动外套街头抓拍</div>
+              <div class="card-meta">
+                <span>服饰穿搭 · 节奏感</span>
+                <span>21.3w 浏览</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 4 -->
+          <div class="media-card" data-id="card-4" data-title="极简降噪耳机佩戴体验" onclick="handleCardClick(4)">
+            <div class="card-thumb-wrap">
+              <div class="card-thumb-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                <span>9:16 3C 数码评测</span>
+              </div>
+              <span class="card-duration">00:24</span>
+              <div class="card-hover-overlay">
+                <button class="btn-recreate" onclick="event.stopPropagation(); triggerRecreate(4)">
+                  <span>↺ 复刻</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="card-title">极简降噪耳机佩戴体验</div>
+              <div class="card-meta">
+                <span>消费电子 · 高保真</span>
+                <span>15.1w 浏览</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 5 -->
+          <div class="media-card" data-id="card-5" data-title="智能手环户外夜跑测速" onclick="handleCardClick(5)">
+            <div class="card-thumb-wrap">
+              <div class="card-thumb-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                <span>9:16 运动场景实测</span>
+              </div>
+              <span class="card-duration">00:16</span>
+              <div class="card-hover-overlay">
+                <button class="btn-recreate" onclick="event.stopPropagation(); triggerRecreate(5)">
+                  <span>↺ 复刻</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="card-title">智能手环户外夜跑测速</div>
+              <div class="card-meta">
+                <span>智能穿戴 · 实拍</span>
+                <span>9.7w 浏览</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 卡片 6 -->
+          <div class="media-card" data-id="card-6" data-title="便携咖啡机手冲萃取" onclick="handleCardClick(6)">
+            <div class="card-thumb-wrap">
+              <div class="card-thumb-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                <span>9:16 生活方式种草</span>
+              </div>
+              <span class="card-duration">00:22</span>
+              <div class="card-hover-overlay">
+                <button class="btn-recreate" onclick="event.stopPropagation(); triggerRecreate(6)">
+                  <span>↺ 复刻</span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="card-title">便携咖啡机手冲萃取</div>
+              <div class="card-meta">
+                <span>家居生活 · 仪式感</span>
+                <span>18.6w 浏览</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 底部固定停靠输入框 (Fixed Bottom Docked Composer) -->
+    <div class="docked-composer-container" id="dockedComposerContainer">
+      <!-- 收起按钮栏 -->
+      <div class="docked-collapse-bar">
+        <button class="btn-collapse-composer" onclick="collapseComposer()" title="收起底部输入框">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <span>收起输入框</span>
+        </button>
+      </div>
+
+      <!-- 输入框主体 -->
+      <div class="docked-box">
+        <div class="docked-attachment-tray" id="dockedAttachmentTray">
+          <div class="attachment-pill" id="dockedAttachmentPill">
+            <span>📹 已挂载对标视频: </span>
+            <strong id="dockedAttachmentTitle">口红质感试色爆款分镜</strong>
+            <button class="attachment-remove-btn" onclick="clearAttachment()" title="移除附件">×</button>
+          </div>
+          <div class="pill-btn active-skill">⚡ 复刻爆款视频</div>
+        </div>
+        <textarea class="composer-textarea" id="dockedComposerTextarea" placeholder="在此输入你的想法、要求或直接出片...">复刻这条爆款视频：保持原有镜头分镜节奏，替换为品牌新产品包装与真实卖点。</textarea>
+        <div class="composer-toolbar">
+          <div class="toolbar-left">
+            <span style="font-size: 11px; color: var(--text-tertiary);">按 Enter 发送 · 输入框随页面滚动吸底驻留</span>
+          </div>
+          <button class="send-btn">一键生成</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右下角逻辑解释说明卡片 -->
+    <div class="interaction-callout">
+      <div class="callout-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>核心业务契约</span>
+      </div>
+      <div class="callout-desc">
+        1. <strong>初始无事件交互</strong>：下滑时输入框随页面滚出视口，底部不出现。<br>
+        2. <strong>一旦事件交互（如点复刻）</strong>：输入框激活，在页面下滑时<strong>始终保持在底部显示</strong>。<br>
+        3. <strong>滑回顶部</strong>：平滑切换回顶部内联显示。<br>
+        4. <strong>再次下滑</strong>：<strong>交互状态保持有效</strong>，底部再次自动显示，绝不消失！<br>
+        5. <strong>点击收起</strong>：解除激活，底部消失；再点复刻时重新激活。
+      </div>
+      <div class="callout-rule" id="calloutLiveTip">
+        当前提示：处于初始未激活状态，请尝试向下滚动或点击卡片「复刻」。
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ==============================================================
+    // 状态机真源 (Single Source of Truth)
+    // ==============================================================
+    const state = {
+      interactionEngaged: false, // 是否存在事件交互（点击复刻/点击卡片/操作输入等）
+      isCollapsed: false,        // 用户是否主动点击了收起
+      scrollZone: 'top',         // 'top' | 'page'
+      placement: 'inline',       // 'inline' | 'docked' | 'none'
+      activeCard: null,          // 当前激活的卡片信息
+    };
+
+    // DOM 元素引用
+    const scroller = document.getElementById('scrollContainer');
+    const inlineBand = document.getElementById('composerInlineBand');
+    const dockedContainer = document.getElementById('dockedComposerContainer');
+    const dockedTitle = document.getElementById('dockedAttachmentTitle');
+    const calloutLiveTip = document.getElementById('calloutLiveTip');
+
+    // 指示器元素
+    const metricInteraction = document.getElementById('metricInteraction');
+    const metricCollapsed = document.getElementById('metricCollapsed');
+    const metricScrollZone = document.getElementById('metricScrollZone');
+    const metricPlacement = document.getElementById('metricPlacement');
+
+    // 滚动阈值计算（当顶部输入框底部边缘完全滚出视口顶部时判定离开）
+    function getScrollThreshold() {
+      const bandTop = inlineBand.offsetTop;
+      const bandHeight = inlineBand.offsetHeight;
+      return bandTop + bandHeight - 40; // 留出适当缓冲
+    }
+
+    // 更新界面状态指示器
+    function syncMetricsUI() {
+      // 1. 交互状态
+      if (state.interactionEngaged) {
+        metricInteraction.textContent = '已激活 (True)';
+        metricInteraction.className = 'metric-value active';
+      } else {
+        metricInteraction.textContent = '未激活 (False)';
+        metricInteraction.className = 'metric-value inactive';
+      }
+
+      // 2. 收起状态
+      if (state.isCollapsed) {
+        metricCollapsed.textContent = '已收起 (True)';
+        metricCollapsed.className = 'metric-value highlight';
+      } else {
+        metricCollapsed.textContent = '未收起 (False)';
+        metricCollapsed.className = 'metric-value inactive';
+      }
+
+      // 3. 滚动区域
+      if (state.scrollZone === 'top') {
+        metricScrollZone.textContent = '顶部场景 (Top)';
+        metricScrollZone.className = 'metric-value highlight';
+      } else {
+        metricScrollZone.textContent = '页面内容区 (Page)';
+        metricScrollZone.className = 'metric-value active';
+      }
+
+      // 4. 当前形态
+      if (state.placement === 'inline') {
+        metricPlacement.textContent = '顶部 Inline';
+        metricPlacement.className = 'metric-value active';
+      } else if (state.placement === 'docked') {
+        metricPlacement.textContent = '底部 Docked (吸底)';
+        metricPlacement.className = 'metric-value active';
+      } else {
+        metricPlacement.textContent = '页面外不可见 (None)';
+        metricPlacement.className = 'metric-value inactive';
+      }
+    }
+
+    // ==============================================================
+    // 核心状态机求值函数 (Core Evaluation Function)
+    // 严格落实用户业务要求：
+    // - 只要 interactionEngaged === true 且 !isCollapsed：
+    //   在页面下滑时（scrollZone === 'page'）必须吸附在底部显示！
+    //   在滑回顶部时（scrollZone === 'top'）切换到顶部显示！
+    //   再次下滑时（scrollZone === 'page'）绝不重置交互状态，继续保持底部吸底！
+    // ==============================================================
+    function evaluatePlacement() {
+      const threshold = getScrollThreshold();
+      const currentScrollTop = scroller.scrollTop;
+      state.scrollZone = currentScrollTop <= threshold ? 'top' : 'page';
+
+      // 场景 1：如果用户处于主动收起态 (isCollapsed === true)
+      if (state.isCollapsed) {
+        if (state.scrollZone === 'top') {
+          // 滚回顶部时自然复原
+          state.placement = 'inline';
+          inlineBand.classList.remove('ghost');
+          dockedContainer.classList.remove('visible');
+          calloutLiveTip.innerHTML = '已滚回页面最顶部：顶部输入框已就位。';
+        } else {
+          // 在页面中时保持收起，底部不出现
+          state.placement = 'none';
+          inlineBand.classList.remove('ghost');
+          dockedContainer.classList.remove('visible');
+          calloutLiveTip.innerHTML = '已主动收起输入框：页面滚动时底部保持隐藏。';
+        }
+        syncMetricsUI();
+        return;
+      }
+
+      // 场景 2：如果没有任何事件交互 (interactionEngaged === false)
+      if (!state.interactionEngaged) {
+        if (state.scrollZone === 'top') {
+          state.placement = 'inline';
+          inlineBand.classList.remove('ghost');
+          dockedContainer.classList.remove('visible');
+          calloutLiveTip.innerHTML = '初始未激活：在顶部展示内联输入框。';
+        } else {
+          state.placement = 'none';
+          inlineBand.classList.remove('ghost');
+          dockedContainer.classList.remove('visible');
+          calloutLiveTip.innerHTML = '未触发事件交互：纯向下浏览，输入框随页面滚出，底部保持纯净。';
+        }
+        syncMetricsUI();
+        return;
+      }
+
+      // 场景 3：存在事件交互 (interactionEngaged === true)
+      if (state.scrollZone === 'top') {
+        // 滑回到顶部：切换为顶部场景展示
+        state.placement = 'inline';
+        inlineBand.classList.remove('ghost');
+        dockedContainer.classList.remove('visible');
+        calloutLiveTip.innerHTML = '<strong>已滑到顶部</strong>：输入框平滑切换至顶部显示（交互激活状态完好保持）。';
+      } else {
+        // 滑离顶部在页面中：切换为底部吸附展示，始终保持显示！
+        state.placement = 'docked';
+        inlineBand.classList.add('ghost');
+        dockedContainer.classList.add('visible');
+        calloutLiveTip.innerHTML = '<strong>处于页面下方</strong>：事件交互保持激活，输入框<strong>吸附在视口底部随行显示</strong>！';
+      }
+
+      syncMetricsUI();
+    }
+
+    // 监听滚动事件
+    scroller.addEventListener('scroll', () => {
+      evaluatePlacement();
+    }, { passive: true });
+
+    // ==============================================================
+    // 业务交互触发事件 (User Events)
+    // ==============================================================
+
+    // 1. 点击卡片“复刻”按钮
+    function triggerRecreate(cardIndex) {
+      const card = document.querySelector(`.media-card[data-id="card-${cardIndex}"]`);
+      const title = card ? card.getAttribute('data-title') : `对标视频 #${cardIndex}`;
+
+      // 激活事件交互！
+      state.interactionEngaged = true;
+      state.isCollapsed = false;
+      state.activeCard = { index: cardIndex, title };
+
+      // 更新卡片激活样式
+      document.querySelectorAll('.media-card').forEach(c => c.classList.remove('active-selected'));
+      if (card) card.classList.add('active-selected');
+
+      // 更新底部停靠输入框内的附件挂载信息
+      dockedTitle.textContent = title;
+      document.getElementById('dockedComposerTextarea').value = `复刻这条爆款视频【${title}】：保持原有分镜与高留存节奏，替换为我的产品卖点。`;
+
+      // 立即评估摆位
+      evaluatePlacement();
+    }
+
+    // 2. 点击卡片主体（同样视为事件交互）
+    function handleCardClick(cardIndex) {
+      triggerRecreate(cardIndex);
+    }
+
+    // 3. 点击输入框的“收起”按钮
+    function collapseComposer() {
+      state.isCollapsed = true;
+      state.interactionEngaged = false; // 退出交互激活态
+      evaluatePlacement();
+    }
+
+    // 4. 清理附件
+    function clearAttachment() {
+      state.activeCard = null;
+      document.querySelectorAll('.media-card').forEach(c => c.classList.remove('active-selected'));
+      dockedTitle.textContent = '未选定对标素材';
+    }
+
+    // ==============================================================
+    // 快速测试用例执行器 (Quick Test Cases Runner)
+    // ==============================================================
+    function runTestCase(step) {
+      switch (step) {
+        case 1:
+          // 1. 纯下滑浏览：先重置到顶部，未激活状态，然后滚到 450px
+          state.interactionEngaged = false;
+          state.isCollapsed = false;
+          scroller.scrollTop = 450;
+          setTimeout(() => {
+            evaluatePlacement();
+          }, 50);
+          break;
+
+        case 2:
+          // 2. 点击卡片复刻：触发第 1 张卡片复刻
+          triggerRecreate(1);
+          break;
+
+        case 3:
+          // 3. 滑回顶部：将页面滚动回 0
+          scroller.scrollTop = 0;
+          setTimeout(() => {
+            evaluatePlacement();
+          }, 350);
+          break;
+
+        case 4:
+          // 4. 核心用例：再次向下滑动！验证在 interactionEngaged 为 true 的情况下，下滑时输入框是否在底部恢复显示！
+          scroller.scrollTop = 500;
+          setTimeout(() => {
+            evaluatePlacement();
+          }, 350);
+          break;
+
+        case 5:
+          // 5. 点击收起
+          collapseComposer();
+          break;
+
+        case 6:
+          // 6. 再次点击复刻：验证重新唤醒
+          triggerRecreate(2);
+          break;
+      }
+    }
+
+    // 重置 Demo
+    function resetDemo() {
+      state.interactionEngaged = false;
+      state.isCollapsed = false;
+      state.activeCard = null;
+      document.querySelectorAll('.media-card').forEach(c => c.classList.remove('active-selected'));
+      scroller.scrollTop = 0;
+      evaluatePlacement();
+    }
+
+    // 初始化运行一次
+    evaluatePlacement();
+  </script>
+</body>
+</html>
