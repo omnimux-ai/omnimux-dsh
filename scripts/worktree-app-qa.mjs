@@ -67,7 +67,7 @@ export function resolveWorktreeRoot(candidate, io = fs, repo = repositoryRoot) {
 }
 
 /** 真实无头 Chrome 驱动：动态 CDP 端口、同源 cookie 注入、正几何断言、PNG 取证。 */
-async function driveRealBrowser({ origin, cookie, evidenceDir, io = fs, chromePath = findChromePath() }) {
+async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, io = fs, chromePath = findChromePath() }) {
   let chrome; let socket;
   const assertions = [];
   const cdpPort = { value: null };
@@ -116,7 +116,8 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, io = fs, chromePa
     });
     assertions.push({ name: 'auth-cookie-applied', pass: sameSiteCookie.success !== false });
 
-    await send('Page.navigate', { url: `${origin}/` });
+    const targetUrl = seededWorkspace ? `${origin}/#/workspace/${seededWorkspace}` : `${origin}/`;
+    await send('Page.navigate', { url: targetUrl });
     const deadline = Date.now() + 30000;
     let geometry = null;
     while (Date.now() < deadline) {
@@ -132,6 +133,9 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, io = fs, chromePa
       largest: geometry ? geometry.largest : null,
       visibleCount: geometry ? geometry.visibleCount : 0,
     });
+
+    const modalCheck = await send('Runtime.evaluate', { expression: "Boolean(document.querySelector('[data-omnimux-runtime-guide]'))", returnByValue: true });
+    assertions.push({ name: 'runtime-modal-bypassed', pass: modalCheck?.result?.value === false });
 
     const captured = await send('Page.captureScreenshot', { format: 'png' });
     const png = Buffer.from(captured.data, 'base64');
@@ -208,7 +212,13 @@ export function createAppQaRunner(deps = {}) {
       if (!cookieName || !cookieValue) throw new Error('TEST_APP_QA_LOGIN_COOKIE');
       report.assertions.push({ name: 'same-origin-login', pass: loginResponse.status === 303, status: loginResponse.status, cookieName });
 
-      const browser = await driveBrowser({ origin: env.origin, cookie: { name: cookieName, value: cookieValue }, evidenceDir, io });
+      const browser = await driveBrowser({
+        origin: env.origin,
+        cookie: { name: cookieName, value: cookieValue },
+        evidenceDir,
+        seededWorkspace: env.summary?.seededWorkspace,
+        io,
+      });
       report.cdpPort = browser.cdpPort;
       report.assertions.push(...browser.assertions);
       report.screenshot = browser.screenshot;
