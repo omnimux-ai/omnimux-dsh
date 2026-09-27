@@ -65,7 +65,6 @@ export function createVeoTaskStore() {
     if (typeof cur.progress === 'number') {
       cur.progress = Math.max(0, Math.min(100, Math.round(cur.progress)))
     }
-    tasks.set(id, cur)
     return snapshot(cur)
   }
 
@@ -75,6 +74,7 @@ export function createVeoTaskStore() {
     return cur ? snapshot(cur) : null
   }
 
+  // Host seam via veoTasks.list — not a missing HTTP GET /tasks route.
   function list() {
     return [...tasks.values()].map(snapshot).sort((a, b) => b.createdAt - a.createdAt)
   }

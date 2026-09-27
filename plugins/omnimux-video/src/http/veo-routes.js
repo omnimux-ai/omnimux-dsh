@@ -67,6 +67,22 @@ function defaultOutputDir() {
  *   now?: () => number,
  * }} [deps]
  */
+/**
+ * Normalize Host/test URLs to relative paths under VEO_API_PREFIX.
+ * Parses via URL so query strings stay out of the pathname match.
+ * @param {string} rawPath
+ */
+export function normalizeVeoDispatchPath(rawPath) {
+  const url = new URL(rawPath || '/', 'http://127.0.0.1')
+  let pathname = url.pathname.replace(/\/+$/, '') || '/'
+  if (pathname === VEO_API_PREFIX) {
+    pathname = '/'
+  } else if (pathname.startsWith(`${VEO_API_PREFIX}/`)) {
+    pathname = pathname.slice(VEO_API_PREFIX.length) || '/'
+  }
+  return pathname
+}
+
 export function createVeoDispatcher(deps = {}) {
   const store = deps.store || createVeoTaskStore()
   const detectEnv = deps.detectEnv || detectOpenCliEnvironment
@@ -81,15 +97,9 @@ export function createVeoDispatcher(deps = {}) {
    */
   async function dispatch(req) {
     const method = (req.method || 'GET').toUpperCase()
-    const rawPath = req.url || VEO_API_PREFIX
-    const url = new URL(rawPath, 'http://127.0.0.1')
-    const pathname = url.pathname.replace(/\/+$/, '') || '/'
+    const pathname = normalizeVeoDispatchPath(req.url || '/')
 
-    if (method === 'OPTIONS') {
-      return { status: 204, body: {} }
-    }
-
-    if (method === 'GET' && (pathname === `${VEO_API_PREFIX}/health` || pathname === '/health')) {
+    if (method === 'GET' && pathname === '/health') {
       const env = detectEnv()
       return {
         status: 200,
@@ -101,7 +111,7 @@ export function createVeoDispatcher(deps = {}) {
       }
     }
 
-    if (method === 'POST' && (pathname === `${VEO_API_PREFIX}/tasks` || pathname === '/tasks')) {
+    if (method === 'POST' && pathname === '/tasks') {
       const body = req.body && typeof req.body === 'object' ? req.body : {}
       const prompt = typeof body.prompt === 'string' ? body.prompt : ''
       const mode = typeof body.mode === 'string' ? body.mode : 'create'
@@ -201,7 +211,7 @@ export function createVeoDispatcher(deps = {}) {
       return { status: 202, body: { task } }
     }
 
-    const taskMatch = pathname.match(new RegExp(`^(?:${VEO_API_PREFIX})?/tasks/([^/]+)$`))
+    const taskMatch = pathname.match(/^\/tasks\/([^/]+)$/)
     if (method === 'GET' && taskMatch) {
       const id = decodeURIComponent(taskMatch[1] || '')
       const task = store.get(id)
