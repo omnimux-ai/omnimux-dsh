@@ -1,0 +1,89 @@
+{
+  "runId": "issue-2739-center-column",
+  "pass": true,
+  "base": {
+    "stage": "omnimux-vids",
+    "left": {
+      "w": 279,
+      "x": 0
+    },
+    "vids": {
+      "w": 670,
+      "x": 280
+    },
+    "right": {
+      "w": 778,
+      "x": 950
+    },
+    "covers": false,
+    "overlap": 0,
+    "pos": "fixed",
+    "cssW": "670px"
+  },
+  "afterCollapse": {
+    "left": {
+      "w": 0,
+      "x": 0
+    },
+    "vids": {
+      "w": 670,
+      "x": 0
+    },
+    "right": {
+      "w": 1058,
+      "x": 670
+    },
+    "overlap": 0,
+    "cssW": "670px"
+  },
+  "afterExpand": {
+    "left": {
+      "w": 279,
+      "x": 0
+    },
+    "vids": {
+      "w": 670,
+      "x": 280
+    },
+    "right": {
+      "w": 778,
+      "x": 950
+    },
+    "overlap": 0
+  },
+  "assertions": [
+    {
+      "name": "stage-claimed",
+      "pass": true
+    },
+    {
+      "name": "not-full-viewport",
+      "pass": true
+    },
+    {
+      "name": "no-right-overlap",
+      "pass": true
+    },
+    {
+      "name": "left-visible",
+      "pass": true
+    },
+    {
+      "name": "right-visible",
+      "pass": true
+    },
+    {
+      "name": "fixed-position",
+      "pass": true
+    },
+    {
+      "name": "collapse-no-right-overlap",
+      "pass": true
+    },
+    {
+      "name": "expand-no-right-overlap",
+      "pass": true
+    }
+  ],
+  "pngBytes": 241571
+}

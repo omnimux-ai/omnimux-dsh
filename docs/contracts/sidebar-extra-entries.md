@@ -123,7 +123,7 @@ MUST NOT fake a tab as a real session row (no `conversation.view`, no session da
 | Rule | Workbench row | Overlay leftover |
 |---|---|---|
 | Seat | `ctx.betterSidebar.registerTab` on `[data-dsh-panel-host]` | `shell.overlay` |
-| Cover | Does **not** cover the conversation column. `gui` squeezes it via panel width; `split` leaves ~420px. | Whole conversation column. Overlay `z-index` is 200. |
+| Cover | Does **not** cover the conversation column. `gui` squeezes it via panel width; `split` leaves ~420px. | Conversation **column** only (not the whole frame). Host `.dshDesktopOverlay` is frame-sized; stages MUST measure the live column (and clamp to the right-panel left edge when workbench is open). Overlay stage `z-index` is 200. |
 | Top chrome | In-tab L1 still `12px 20px 12px` (same as official conversation header). Do not add a 44/56px inset. Window-drag stays on (no product-stage). | Same 12/20/12. Window-drag off while claimed. |
 | Mutual exclusion | Switching left-rows **activates** the other Tab; does not claim. Cross-type Tabs may coexist (`single: true` per type). | Opening one leftover dispatches `dsh-product-stage` so the others close. |
 | Layout chrome | MUST NOT hide `toggleCluster` or `[data-dsh-panel-host]`. Hub injects the chat-toggle as the cluster's first child. | While claimed, hide `toggleCluster`, `conversation.session.header`, **and** `[data-dsh-panel-host]`; force `--dsh-sidebar-width` / `--dsh-sidebar-height` to `0`. |

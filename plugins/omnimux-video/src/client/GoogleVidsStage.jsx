@@ -1,19 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { readVidsCenterBox } from './vids-stage-box.js'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
 .omnimux-vids-stage {
-  position: absolute;
-  inset: 0;
+  position: fixed;
+  z-index: 200;
+  top: var(--stage-top, 0px);
+  left: var(--stage-left, 56px);
+  width: var(--stage-width, 320px);
+  height: var(--stage-height, 240px);
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
   box-sizing: border-box;
   overflow: hidden;
-  z-index: 200;
+  pointer-events: auto;
 }
 .gvids-header {
   display: flex;
@@ -367,6 +370,9 @@ export function GoogleVidsStage(props) {
   const activeTimersRef = useRef(new Map())
   const [everOpened, setEverOpened] = useState(false)
   const open = typeof props?.visible === 'boolean' ? props.visible : true
+  const [box, setBox] = useState(() => (
+    typeof document !== 'undefined' ? readVidsCenterBox() : { top: 0, left: 56, width: 320, height: 240 }
+  ))
 
   useEffect(() => {
     if (open) setEverOpened(true)
@@ -375,6 +381,79 @@ export function GoogleVidsStage(props) {
   useEffect(() => {
     injectGoogleVidsStyles()
   }, [])
+
+  // Host shell.overlay sits on frame-level .dshDesktopOverlay (full frame).
+  // Measure the live conversation column and clamp to the right panel edge so
+  // Vids stays a true center-column surface while left/right rails remain usable.
+  useLayoutEffect(() => {
+    if (!open) return undefined
+    const update = () => { setBox(readVidsCenterBox()) }
+    update()
+    // Clip open / split settle after claim; remeasure a few frames later.
+    const timers = [50, 150, 400, 800].map((ms) => window.setTimeout(update, ms))
+    const targets = [
+      document.querySelector('[data-conversation-scroll]'),
+      document.querySelector('[data-slot="conversation"]')?.parentElement,
+      document.querySelector('[class*="centerCol"]'),
+      document.querySelector('[data-pane="sidebar"], [class*="sidebarCol"]'),
+      document.querySelector('[data-sidebar-right-panel]'),
+      document.querySelector('[data-dsh-panel-host]'),
+      document.querySelector('.dshDesktopFrame, [class*="frame"]'),
+    ].filter((el) => el instanceof HTMLElement)
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null
+    for (const target of targets) observer?.observe(target)
+    window.addEventListener('resize', update)
+    const onStage = () => update()
+    window.addEventListener('dsh-product-stage', onStage)
+    // Left/right rail toggles often keep the frame box size unchanged, so
+    // ResizeObserver on the frame is silent. Capture UI gestures + poll.
+    const onGesture = () => {
+      update()
+      window.setTimeout(update, 50)
+      window.setTimeout(update, 200)
+    }
+    document.addEventListener('click', onGesture, true)
+    document.addEventListener('pointerup', onGesture, true)
+    const poll = window.setInterval(update, 250)
+    const mo = typeof MutationObserver === 'function'
+      ? new MutationObserver(update)
+      : null
+    mo?.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: [
+        'data-omnimux-left-collapsed',
+        'data-omnimux-conversation-collapsed',
+        'data-dsh-product-stage',
+        'class',
+        'style',
+      ],
+    })
+    const frame = document.querySelector('.dshDesktopFrame, [class*="frame"]')
+    if (frame instanceof HTMLElement) {
+      mo?.observe(frame, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: [
+          'data-sidebar-collapsed',
+          'data-rightbar-collapsed',
+          'data-sidebar-right-panel',
+          'data-sidebar-right-open',
+          'class',
+          'style',
+        ],
+      })
+    }
+    return () => {
+      for (const id of timers) window.clearTimeout(id)
+      window.clearInterval(poll)
+      observer?.disconnect()
+      mo?.disconnect()
+      window.removeEventListener('resize', update)
+      window.removeEventListener('dsh-product-stage', onStage)
+      document.removeEventListener('click', onGesture, true)
+      document.removeEventListener('pointerup', onGesture, true)
+    }
+  }, [open])
 
   // 剪辑工程就绪感知
   const [isEditorReady, setIsEditorReady] = useState(() => {
@@ -599,7 +678,14 @@ export function GoogleVidsStage(props) {
   return (
     <div
       className="omnimux-vids-stage"
-      style={{ display: open ? undefined : 'none' }}
+      data-visible={open ? 'true' : 'false'}
+      style={{
+        display: open ? undefined : 'none',
+        '--stage-top': `${box.top}px`,
+        '--stage-left': `${box.left}px`,
+        '--stage-width': `${box.width}px`,
+        '--stage-height': `${box.height}px`,
+      }}
     >
       {/* 3.1 顶部 Header */}
       <header className="gvids-header">
