@@ -1,4 +1,13 @@
-/** Host authentication plus exact browser-origin admission. Native authenticated clients have no browser headers. */
+/**
+ * Host authentication plus exact browser-origin admission. Native authenticated clients have no browser headers.
+ *
+ * KEEP IN SYNC with Hub source (do not invent a shared package; verticals must not import Hub internals):
+ *   plugins/omnimux/src/host/request-authorization.js
+ *
+ * Import failure (#2748): `omnimux` package exports only "." / "./client" / "./package.json";
+ * `import 'omnimux/src/host/request-authorization.js'` → ERR_MODULE_NOT_FOUND / MODULE_NOT_FOUND.
+ * Relative `../../omnimux/...` is forbidden by hub contract (AGENTS.md / docs/contracts/hub.md).
+ */
 export function requestRejection(req, getConnection) {
   try {
     const headers = req.headers || {}
@@ -11,6 +20,7 @@ export function requestRejection(req, getConnection) {
       if (!['http:', 'https:'].includes(actual.protocol) || actual.username || actual.password || actual.origin !== expected.origin) return 403
       if (headers.origin !== undefined && (actual.pathname !== '/' || actual.search || actual.hash)) return 403
     } else if (headers['sec-fetch-site'] !== undefined) {
+      // Browser writes must carry an origin or referrer; ordinary same-origin GET may omit both.
       if (!['GET', 'HEAD'].includes(req.method)) return 403
     }
   } catch {
