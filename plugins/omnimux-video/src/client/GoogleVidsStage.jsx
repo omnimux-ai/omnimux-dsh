@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import React, { useState, useEffect, useLayoutEffect } from 'react'
 import { readVidsCenterBox } from './vids-stage-box.js'
-import { createVeoTask, fetchVeoTask } from './veo-api.js'
+import { useVeoTaskFeed } from './useVeoTaskFeed.js'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
@@ -368,7 +368,6 @@ function injectGoogleVidsStyles() {
  * 100% 逐字对照 Spec 第 3 节白名单与文案字典，严禁自由发挥与装饰 Emoji。
  */
 export function GoogleVidsStage(props) {
-  const activeTimersRef = useRef(new Map())
   const [everOpened, setEverOpened] = useState(false)
   const open = typeof props?.visible === 'boolean' ? props.visible : true
   const [box, setBox] = useState(() => (
@@ -474,20 +473,21 @@ export function GoogleVidsStage(props) {
   const [attachedAsset, setAttachedAsset] = useState(null)
   const [insertedFeedbackId, setInsertedFeedbackId] = useState(null)
 
-  // 任务生成列表
-  const [tasks, setTasks] = useState([
-    {
-      id: 'task_demo_skincare',
-      title: '韩国极简防晒美学成片',
-      videoUrl: './media/google_vids_korean_skincare.mp4',
-      status: 'completed',
-      durationSec: 10,
-      resolution: '720p',
-      isUpscaled: false,
-    },
-  ])
+  const {
+    tasks,
+    setTasks,
+    submitTask: handleSubmitTask,
+    removeTask: handleRemoveTask,
+    clearPollTimer,
+    pollTimersRef,
+  } = useVeoTaskFeed({
+    isEditorReady,
+    promptText,
+    setPromptText,
+    currentMode,
+  })
 
-  // 监听剪辑器状态广播与全局状态
+  // 监听剪辑器状态广播（生成 timer 清理由 useVeoTaskFeed 负责）
   useEffect(() => {
     const handleStatus = (event) => {
       const detail = event?.detail
@@ -505,8 +505,6 @@ export function GoogleVidsStage(props) {
       if (typeof window !== 'undefined') {
         window.removeEventListener('omnimux-clip:editor-status', handleStatus)
       }
-      activeTimersRef.current.forEach((timer) => clearInterval(timer))
-      activeTimersRef.current.clear()
     }
   }, [])
 
@@ -544,127 +542,9 @@ export function GoogleVidsStage(props) {
     setAttachedAsset(asset)
   }
 
-  // 触发生成任务：走 Host /omnimux-video/api/veo → opencli veoHeadlessDriver
-  const handleSubmitTask = async () => {
-    if (!isEditorReady || !promptText.trim()) return
-
-    const prompt = promptText.trim()
-    const optimisticId = `task_pending_${Date.now()}`
-    setTasks((prev) => [
-      {
-        id: optimisticId,
-        title: prompt.slice(0, 16),
-        status: 'generating',
-        progress: 2,
-        durationSec: 10,
-        resolution: '720p',
-        message: '正在提交生成任务…',
-      },
-      ...prev,
-    ])
-
-    try {
-      const created = await createVeoTask({
-        prompt,
-        mode: currentMode,
-        durationSec: 10,
-      })
-      if (!created.ok || !created.body?.task?.id) {
-        const message = created.body?.message || `提交失败（HTTP ${created.status}）`
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === optimisticId
-              ? { ...t, status: 'failed', progress: 0, message, error: message }
-              : t
-          )
-        )
-        // 失败保留输入，便于微调后重试（PRD 异常防御）
-        return
-      }
-
-      const remote = created.body.task
-      setPromptText('')
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === optimisticId
-            ? {
-                ...t,
-                id: remote.id,
-                status: remote.status === 'completed' ? 'completed' : 'generating',
-                progress: remote.progress ?? 3,
-                title: remote.title || t.title,
-                message: remote.message,
-                videoUrl: remote.videoUrl,
-                durationSec: remote.durationSec || 10,
-                resolution: remote.resolution || '720p',
-              }
-            : t
-        )
-      )
-
-      const taskId = remote.id
-      if (activeTimersRef.current.has(taskId)) {
-        clearInterval(activeTimersRef.current.get(taskId))
-      }
-      const timer = setInterval(async () => {
-        try {
-          const polled = await fetchVeoTask(taskId)
-          const task = polled.body?.task
-          if (!polled.ok || !task) {
-            if (polled.status === 404) {
-              clearInterval(timer)
-              activeTimersRef.current.delete(taskId)
-            }
-            return
-          }
-          setTasks((prev) =>
-            prev.map((t) =>
-              t.id === taskId
-                ? {
-                    ...t,
-                    status: task.status === 'failed'
-                      ? 'failed'
-                      : task.status === 'completed'
-                        ? 'completed'
-                        : 'generating',
-                    progress: task.progress ?? t.progress,
-                    message: task.message || t.message,
-                    error: task.error,
-                    videoUrl: task.videoUrl || t.videoUrl,
-                    durationSec: task.durationSec || t.durationSec,
-                    resolution: task.resolution || t.resolution,
-                    title: task.title || t.title,
-                  }
-                : t
-            )
-          )
-          if (task.status === 'completed' || task.status === 'failed') {
-            clearInterval(timer)
-            activeTimersRef.current.delete(taskId)
-          }
-        } catch {
-          // keep polling; transient network blips
-        }
-      }, 1500)
-      activeTimersRef.current.set(taskId, timer)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === optimisticId
-            ? { ...t, status: 'failed', progress: 0, message, error: message }
-            : t
-        )
-      )
-    }
-  }
-
-  // 触发升频
+  // 触发升频（本地假进度；本单不拆 timer 表，仍复用 pollTimersRef，见 #2746）
   const handleUpscale = (taskId) => {
-    if (activeTimersRef.current.has(taskId)) {
-      clearInterval(activeTimersRef.current.get(taskId))
-      activeTimersRef.current.delete(taskId)
-    }
+    clearPollTimer(taskId)
     setTasks((prev) =>
       prev.map((t) =>
         t.id === taskId ? { ...t, status: 'generating', progress: 12, isUpscaling: true } : t
@@ -675,7 +555,7 @@ export function GoogleVidsStage(props) {
       p += 25
       if (p >= 100) {
         clearInterval(timer)
-        activeTimersRef.current.delete(taskId)
+        pollTimersRef.current.delete(taskId)
         setTasks((prev) =>
           prev.map((t) =>
             t.id === taskId
@@ -689,7 +569,7 @@ export function GoogleVidsStage(props) {
         )
       }
     }, 350)
-    activeTimersRef.current.set(taskId, timer)
+    pollTimersRef.current.set(taskId, timer)
   }
 
   // 插入到时间轴 (向右侧 Clip 追加)
@@ -716,16 +596,6 @@ export function GoogleVidsStage(props) {
     setTimeout(() => {
       setInsertedFeedbackId((cur) => (cur === task.id ? null : cur))
     }, 1500)
-  }
-
-  // 移除任务
-  const handleRemoveTask = (taskId) => {
-    const timer = activeTimersRef.current.get(taskId)
-    if (timer) {
-      clearInterval(timer)
-      activeTimersRef.current.delete(taskId)
-    }
-    setTasks((prev) => prev.filter((t) => t.id !== taskId))
   }
 
   // 动态占位符
