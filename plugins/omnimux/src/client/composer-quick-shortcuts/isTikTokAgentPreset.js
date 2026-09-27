@@ -5,6 +5,8 @@
  * 其它角色预设（标准模式、软件开发团队、营销专家等）下必须返回 null 保持零 DOM。
  */
 
+export const AGENT_PRESET_CHANGED_EVENT = 'omnimux:agent-preset-changed';
+
 export const TIKTOK_AGENT_PRESET_WHITELIST = Object.freeze([
   'tiktok-agent',
   'tiktokagent',
@@ -73,3 +75,40 @@ export function isTikTokAgentPreset(session, props) {
 
   return false;
 }
+
+/**
+ * 订阅活跃 Agent 预设变动。
+ * 监听标准全局事件 `omnimux:agent-preset-changed` 及 DOM 席位变动。
+ *
+ * @param {() => void} callback
+ * @returns {() => void} 取消订阅函数
+ */
+export function subscribeActivePreset(callback) {
+  if (typeof window === 'undefined') return () => {};
+  const handleEvent = () => {
+    callback();
+  };
+  window.addEventListener(AGENT_PRESET_CHANGED_EVENT, handleEvent);
+
+  let observer = null;
+  if (typeof document !== 'undefined' && typeof MutationObserver === 'function') {
+    observer = new MutationObserver(() => {
+      callback();
+    });
+    const target = document.body || document.documentElement;
+    if (target) {
+      observer.observe(target, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['data-omnimux-preset-seat', 'data-omnimux-preset-id'],
+      });
+    }
+  }
+
+  return () => {
+    window.removeEventListener(AGENT_PRESET_CHANGED_EVENT, handleEvent);
+    if (observer) observer.disconnect();
+  };
+}
+

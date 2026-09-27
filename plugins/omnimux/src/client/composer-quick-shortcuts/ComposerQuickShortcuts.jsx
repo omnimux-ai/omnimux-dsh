@@ -18,8 +18,15 @@ import { getGlobalAttachmentStore } from '../attachments/store.ts';
 import { isBlankConversation } from '../session-guide/state.js';
 import {
   isTikTokAgentPreset,
+  subscribeActivePreset,
   TIKTOK_AGENT_PRESET_WHITELIST,
 } from './isTikTokAgentPreset.js';
+
+export function useIsTikTokAgentPreset(session, props) {
+  const subscribe = useCallback((onStoreChange) => subscribeActivePreset(onStoreChange), []);
+  const getSnapshot = useCallback(() => isTikTokAgentPreset(session, props), [session, props]);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
 
 export { isTikTokAgentPreset, TIKTOK_AGENT_PRESET_WHITELIST };
 
@@ -67,7 +74,8 @@ export function ComposerQuickShortcutControls(props) {
   const snapshot = useCallback(() => store.getSnapshot(sessionId), [store, sessionId]);
   const state = useSyncExternalStore(subscribe, snapshot, snapshot);
   useEffect(() => acquireQuickShortcutStyles(), []);
-  if (!isTikTokAgentPreset(currentSession, props)) return null;
+  const isTikTok = useIsTikTokAgentPreset(currentSession, props);
+  if (!isTikTok) return null;
   if (useSession && !isBlankConversation(session, hasTargets)) return null;
   if (state.activeId !== 'clone' && state.activeId !== 'selling') return null;
   return <QuickShortcutModelControls key={sessionId} sessionId={sessionId} />;
@@ -224,8 +232,9 @@ export function ComposerQuickShortcuts(props) {
 
   // 只在新对话（空会话）且为 TikTok Agent 角色时出现；
   // 必须全部 4 条快捷方式命中已内置技能时才完整渲染，残缺不展示。
+  const isTikTok = useIsTikTokAgentPreset(sessionProp || session, props);
   if (useSession && !isBlankConversation(session, hasTargets)) return null;
-  if (!isTikTokAgentPreset(sessionProp || session, props)) return null;
+  if (!isTikTok) return null;
   if (shortcuts.length !== 4) return null;
 
   const isActive = (id) => state.activeId === id;
