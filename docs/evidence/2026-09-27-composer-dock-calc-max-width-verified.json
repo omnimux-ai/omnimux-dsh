@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-09-27T03:26:37.743Z",
+  "viewport": {
+    "width": 1728,
+    "height": 994
+  },
+  "sidebarWidth": 280,
+  "column": {
+    "left": 280,
+    "width": 1448,
+    "right": 1728
+  },
+  "bugReproduction": {
+    "rawVar": "calc(640px + 32px)",
+    "oldParsedIsNaN": true,
+    "oldFallbackWidth": 952,
+    "oldLeftOffset": 528,
+    "distortionToLeft": 140
+  },
+  "newAlgorithmFix": {
+    "computedMaxStr": "672px",
+    "newResolvedMaxWidth": 672,
+    "actualRenderedCardWidth": 672,
+    "dockLeft": 668,
+    "leftMargin": 388,
+    "rightMargin": 388,
+    "symmetryDiff": 0,
+    "isStrictlyCentered": true
+  }
+}

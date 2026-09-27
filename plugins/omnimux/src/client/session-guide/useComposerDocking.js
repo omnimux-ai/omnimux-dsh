@@ -127,6 +127,36 @@ export function resolveConversationColumn(card, band) {
 }
 
 /**
+ * 解析卡片的原生最大宽度上限。
+ * 针对 calc(...) 表达式（如 calc(640px + 32px)），优先提取浏览器已求值的 rootStyle.maxWidth，
+ * 彻底消除 parseFloat 遇到 'c' 得到 NaN 导致误回退为 952px 的偏左畸变。
+ */
+export function resolveNativeComposerMaxWidth(card) {
+  if (!card) return DOCK_MAX_WIDTH
+  const win = card.ownerDocument?.defaultView || (typeof window !== 'undefined' ? window : null)
+  if (!win?.getComputedStyle) return DOCK_MAX_WIDTH
+  const rootStyle = win.getComputedStyle(card)
+
+  const computedMaxStr = rootStyle?.maxWidth
+  if (computedMaxStr && computedMaxStr !== 'none') {
+    const parsedComputed = parseFloat(computedMaxStr)
+    if (Number.isFinite(parsedComputed) && parsedComputed > 0) {
+      return parsedComputed
+    }
+  }
+
+  const rawVar = rootStyle?.getPropertyValue?.('--dsh-composer-card-max-width')?.trim()
+  if (rawVar) {
+    const parsedVar = parseFloat(rawVar)
+    if (Number.isFinite(parsedVar) && parsedVar > 0) {
+      return parsedVar
+    }
+  }
+
+  return DOCK_MAX_WIDTH
+}
+
+/**
  * 计算吸底输入框的宽度与水平居中坐标。
  * 契约：严格以「会话栏目页面」内部水平居中，并对齐原生 952px 上限（方案 A）。
  */
@@ -139,16 +169,8 @@ export function dockGeometry(card, band) {
   const available = Math.max(0, column.width - 24)
   if (!available) return null
 
-  // 3. 读取原生配置的卡片最大宽度（优先读 computedStyle CSS 变量，兜底 DOCK_MAX_WIDTH = 952px）
-  let nativeMaxWidth = DOCK_MAX_WIDTH
-  const win = card?.ownerDocument?.defaultView || (typeof window !== 'undefined' ? window : null)
-  if (win?.getComputedStyle && card) {
-    const rootStyle = win.getComputedStyle(card)
-    const parsedMax = parseFloat(rootStyle.getPropertyValue?.('--dsh-composer-card-max-width'))
-    if (Number.isFinite(parsedMax) && parsedMax > 0) {
-      nativeMaxWidth = parsedMax
-    }
-  }
+  // 3. 读取原生配置的卡片最大宽度（精准支持 calc(...) 与像素数值，兜底 DOCK_MAX_WIDTH = 952px）
+  const nativeMaxWidth = resolveNativeComposerMaxWidth(card)
 
   // 4. 方案 A 核心计算：宽度上限完全对齐原生 nativeMaxWidth，自适应 available
   const demandWidth = measureInlineComposerDemand(card)

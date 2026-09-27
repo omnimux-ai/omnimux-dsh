@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client'
 import {
   useComposerDocking,
   dockGeometry,
+  resolveNativeComposerMaxWidth,
   resolveConversationColumn,
   DOCK_OPEN_ATTR,
   DOCK_BOTTOM,
@@ -887,6 +888,48 @@ test('useComposerDocking: transitionend 事件安全过滤——仅响应几何�
     assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '374px')
   } finally {
     await act(async () => root.unmount())
+    env.restore()
+  }
+})
+
+test('resolveNativeComposerMaxWidth: 精准支持 calc(...) 表达式求值，消除 NaN 导致误回退为 952px 的偏左畸变', () => {
+  const env = withDom(`
+    <div id="root">
+      <div data-phase="conversation" data-omnimux-starter-host="">
+        <main class="dshDesktopConversationSurface" style="position: absolute; left: 280px; width: 1448px;">
+          <div class="uPhUma_scrollBody" data-conversation-scroll style="width: 1448px;">
+            <div class="hero-band">
+              <div data-composer-card="" style="max-width: 672px; width: 672px; height: 120px;"></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  `)
+
+  try {
+    const card = document.querySelector('[data-composer-card]')
+    const band = card.parentElement
+    const column = document.querySelector('.dshDesktopConversationSurface')
+
+    // Simulate browser computed style: raw token is calc(...), resolved max-width is 672px.
+    card.style.setProperty('--dsh-composer-card-max-width', 'calc(640px + 32px)')
+    column.getBoundingClientRect = () => ({ left: 280, right: 1728, width: 1448, height: 900 })
+
+    const resolvedMax = resolveNativeComposerMaxWidth(card)
+    assert.equal(resolvedMax, 672, 'calc expression resolves to 672px, never NaN or fallback 952px')
+
+    const geo = dockGeometry(card, band)
+    assert.ok(geo)
+    assert.equal(geo.width, 672)
+    assert.equal(geo.left, 668)
+
+    const leftMargin = geo.left - 280
+    const rightMargin = (280 + 1448) - (geo.left + geo.width)
+    assert.equal(leftMargin, 388)
+    assert.equal(rightMargin, 388)
+    assert.equal(leftMargin, rightMargin, 'column margins are exactly symmetric')
+  } finally {
     env.restore()
   }
 })
