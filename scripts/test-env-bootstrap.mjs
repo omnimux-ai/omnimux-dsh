@@ -206,7 +206,26 @@ export function createTestEnvironmentStarter(deps = {}) {
       const endpoint = mode === 'ui' ? mock.origin : OFFICIAL_ENDPOINT;
       if (mode !== 'onboarding') { env.DEEPSEEK_API_KEY = mode === 'ui' ? SYNTHETIC_KEY : credential; env.DEEPSEEK_BASE_URL = endpoint; }
       // JSON is YAML-compatible. The fresh fixed settings layer wins over bundle adapter defaults.
-      io.writeFileSync(join(env.DSH_HOME, 'settings.yaml'), JSON.stringify({ 'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: endpoint } }) + '\n', { mode: 0o600, flag: 'wx' });
+      const initialSettings = {
+        'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: endpoint },
+      };
+      if (mode !== 'onboarding') {
+        initialSettings['ui-onboarding'] = { welcomeNoticeVersion: '2026-08-13.1' };
+        initialSettings.omnimux = {
+          defaultTextModel: 'gemini-3.8-flash',
+          defaultVideoModel: 'minimax-h3',
+          runtimeAgentId: 'codex',
+          runtimeAgentVerified: true,
+          runtimeMode: 'agent',
+          runtimeAgentModel: '',
+          runtimeKeyVerified: true,
+          runtimeMediaProvider: 'fal',
+          runtimeMediaImage: true,
+          runtimeMediaVideo: true,
+          runtimeMediaAudio: true,
+        };
+      }
+      io.writeFileSync(join(env.DSH_HOME, 'settings.yaml'), JSON.stringify(initialSettings) + '\n', { mode: 0o600, flag: 'wx' });
 
       // 预置标准测试工程夹具（自带视频素材节点，解除测试环境空画布造数据死锁）
       const fixtureSrc = join(root, 'tests', 'fixtures', 'qa-workspace-media');

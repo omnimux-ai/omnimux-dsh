@@ -52,11 +52,14 @@ test('default ui isolates environment, fixed config, login capability and cleanu
     assert.equal(options.env.DEEPSEEK_API_KEY, 'QA-SYNTHETIC-NOT-A-REAL-KEY');
     assert.match(options.env.DEEPSEEK_BASE_URL, /^http:\/\/127\.0\.0\.1:\d+$/);
     assert.equal(f.reads(), 0);
-    assert.equal(options.env.OPENAI_API_KEY, undefined); assert.equal(options.env.NODE_OPTIONS, undefined);
+    assert.equal(options.env.OPENAI_API_KEY, undefined); assert.equal(options.env.NODE_OPTIONS, '--max-http-header-size=65536');
     for (const key of ['HOME', 'DSH_HOME', 'DSH_AGENTS_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_DATA_HOME', 'TMPDIR', 'TMP', 'TEMP']) assert.ok(options.env[key].startsWith(root + '/.test-env-'));
     assert.ok(options.cwd.startsWith(root + '/.test-env-'));
     const settings = JSON.parse(f.files.get(options.env.DSH_HOME + '/settings.yaml'));
     assert.deepEqual(settings['llm-deepseek'], { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: options.env.DEEPSEEK_BASE_URL });
+    assert.equal(settings['ui-onboarding']?.welcomeNoticeVersion, '2026-08-13.1');
+    assert.equal(settings.omnimux?.runtimeMode, 'agent');
+    assert.equal(settings.omnimux?.runtimeAgentVerified, true);
     assert.equal(run.origin, 'http://127.0.0.1:32123');
     assert.match(run.loginUrl, /unit-login-token/);
     assert.equal(Object.getOwnPropertyDescriptor(run, 'loginUrl').enumerable, false);
@@ -85,7 +88,14 @@ test('ui mock implements marked JSON and SSE without proxying unknown routes', a
 
 test('onboarding does not read credentials or inject a configured key', async () => {
   const { createTestEnvironmentStarter } = await load(); const f = fixture(); const run = await createTestEnvironmentStarter(f.deps)({ root, mode: 'onboarding' });
-  try { assert.equal(f.reads(), 0); assert.equal(f.spawned[0].options.env.DEEPSEEK_API_KEY, undefined); assert.equal(f.spawned[0].options.env.DEEPSEEK_BASE_URL, undefined); } finally { await run.cleanup(); }
+  try {
+    assert.equal(f.reads(), 0);
+    assert.equal(f.spawned[0].options.env.DEEPSEEK_API_KEY, undefined);
+    assert.equal(f.spawned[0].options.env.DEEPSEEK_BASE_URL, undefined);
+    const settings = JSON.parse(f.files.get(f.spawned[0].options.env.DSH_HOME + '/settings.yaml'));
+    assert.equal(settings['ui-onboarding'], undefined);
+    assert.equal(settings.omnimux, undefined);
+  } finally { await run.cleanup(); }
 });
 
 test('live alone reads credential into child env, never config or arguments', async () => {
