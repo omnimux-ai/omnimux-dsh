@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniMux 全域素材选择与会话形态交互 Demo (v2.0 升级版)</title>
+  <style>
+    :root {
+      --bg-base: #0d0d0f;
+      --bg-sidebar: #141416;
+      --bg-surface: #1a1a1e;
+      --bg-card: #222227;
+      --bg-card-hover: #2b2b32;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(255, 255, 255, 0.2);
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.25);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* 顶部场景调试与解说控制器 */
+    .demo-control-bar {
+      background: #18181b;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    .demo-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .demo-badge {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .demo-status-pill {
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .demo-scene-switches {
+      display: flex;
+      background: #27272a;
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      gap: 4px;
+    }
+
+    .demo-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .demo-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .demo-btn.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 主界面布局容器（三栏弹性系统） */
+    .app-viewport {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 左侧导航栏 */
+    .app-sidebar-left {
+      width: 220px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .brand-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: #3b82f6;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 11px;
+    }
+
+    .sidebar-menu {
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .menu-item:hover, .menu-item.active {
+      background: var(--bg-surface);
+      color: var(--text-primary);
+    }
+
+    .new-chat-btn {
+      margin: 8px 12px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: 0.15s;
+    }
+    .new-chat-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* 中间主视口区域 */
+    .app-main-content {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-base);
+      overflow: hidden;
+    }
+
+    /* 滚动流容器 */
+    .main-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      position: relative;
+    }
+
+    /* 新会话顶部 Hero 区域 */
+    .hero-section {
+      max-width: 860px;
+      margin: 36px auto 16px;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: opacity 0.25s, transform 0.25s;
+    }
+
+    .hero-icon-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .hero-robot-icon {
+      width: 28px;
+      height: 28px;
+      background: #8b5cf6;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-size: 16px;
+    }
+
+    .hero-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .hero-selectors {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .selector-pill {
+      background: #1f1f23;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    /* 居中常态输入框槽位 (Inline Slot) */
+    .composer-inline-slot {
+      width: 100%;
+      max-width: 780px;
+      margin: 0 auto 16px;
+      padding: 0 16px;
+      position: relative;
+      z-index: 50;
+    }
+
+    /* 输入框本体 */
+    .composer-box {
+      background: #1e1e24;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.2s;
+    }
+
+    .composer-box:focus-within {
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    /* 底部悬浮吸底输入框容器 (Docked Overlay Container) */
+    .composer-docked-wrapper {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      width: 100%;
+      max-width: 780px;
+      z-index: 120;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+    }
+
+    /* 仅在显式意图触发且处于吸底态时呈现 */
+    .composer-docked-wrapper.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* 三栏状态下吸底输入框位置自适应中栏 */
+    .with-sidebar-expanded .composer-docked-wrapper {
+      left: calc(220px + (100% - 220px) / 2);
+    }
+    .with-three-pane .composer-docked-wrapper {
+      left: calc(220px + (100% - 220px - 440px) / 2);
+      max-width: calc(100% - 220px - 440px - 40px);
+    }
+
+    /* 挂载的实体胶囊槽位 (Entity Tags) */
+    .composer-attachment-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-bottom: 4px;
+    }
+
+    .entity-tag {
+      background: #2a2a32;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #e4e4e7;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      animation: popIn 0.2s ease;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .entity-tag-remove {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1;
+    }
+    .entity-tag-remove:hover {
+      color: #ef4444;
+    }
+
+    .composer-input-area {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      min-height: 48px;
+      font-family: inherit;
+    }
+
+    .composer-bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .composer-actions-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+
+    .icon-action-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .icon-action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    .skill-chip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 3px 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .send-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .send-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* 加号弹出菜单 (图2精确还原) */
+    .plus-popover-menu {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      background: #222227;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      width: 340px;
+      padding: 6px;
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      animation: menuFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .plus-popover-menu.show {
+      display: flex;
+    }
+
+    @keyframes menuFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .menu-header-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 6px 8px 4px;
+      font-weight: 500;
+    }
+
+    .menu-item-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .menu-item-row:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .menu-item-icon {
+      color: var(--text-secondary);
+      font-size: 15px;
+      display: grid;
+      place-items: center;
+      width: 20px;
+    }
+
+    .menu-item-text {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .menu-item-title {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .menu-item-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* 快捷捷径胶囊行 */
+    .quick-prompts-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin: 8px 0 28px;
+    }
+
+    .quick-prompt-link {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .quick-prompt-link:hover {
+      color: var(--text-primary);
+    }
+
+    /* ============================================================== */
+    /* 核心抽离模块：统一探索与素材库容器 (Universal Explore Hub)      */
+    /* ============================================================== */
+    .explore-hub-container {
+      width: 100%;
+      position: relative;
+    }
+
+    /* 【细节一精髓】：吸顶 Tab 栏 (Sticky Header) */
+    .hub-sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      background: rgba(13, 13, 15, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 14px 32px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: box-shadow 0.2s;
+    }
+
+    .hub-sticky-header.is-stuck {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      border-bottom-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* 一级 Tab 栏 (图4精确还原) */
+    .hub-primary-tabs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+    }
+
+    .hub-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .hub-tab-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .hub-tab-btn.active {
+      background: #222227;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 二级分类胶囊流 */
+    .hub-sub-categories {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .sub-cat-item {
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color 0.15s;
+      position: relative;
+      padding-bottom: 6px;
+      white-space: nowrap;
+    }
+
+    .sub-cat-item:hover {
+      color: var(--text-secondary);
+    }
+
+    .sub-cat-item.active {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .sub-cat-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #ffffff;
+      border-radius: 2px;
+    }
+
+    /* 卡片内容区域：视口保底撑开，保证无论卡片多寡（0/5/海量）均能在视觉上撑满视口，支持 Tab 栏稳固置顶与输入框底部避让 */
+    .explore-content-body {
+      padding: 24px 32px 120px;
+      max-width: 1400px;
+      margin: 0 auto;
+      min-height: calc(100vh - 96px);
+      box-sizing: border-box;
+    }
+
+    /* 专区标题行 */
+    .section-shelf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .section-shelf-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .section-shelf-more {
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .section-shelf-more:hover {
+      color: var(--text-secondary);
+    }
+
+    /* 卡片网格展示流 */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .media-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .media-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.22);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .media-card-thumb {
+      width: 100%;
+      aspect-ratio: 9/13;
+      background: #18181b;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .media-card-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .card-hover-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .media-card:hover .card-hover-overlay {
+      opacity: 1;
+    }
+
+    .attach-action-btn {
+      background: #ffffff;
+      color: #000;
+      border: none;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .media-card-info {
+      padding: 10px 12px;
+      background: #1b1b20;
+    }
+
+    .media-card-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .media-card-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* Skills 卡片条形图 */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 36px;
+    }
+
+    .skill-box-card {
+      height: 90px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: transform 0.2s;
+    }
+    .skill-box-card:hover {
+      transform: translateY(-2px);
+    }
+
+    /* 悬浮收起控制条 (图3/图1精确呈现) */
+    .docked-undock-banner {
+      display: flex;
+      justify-content: flex-end;
+      padding-bottom: 6px;
+    }
+
+    .docked-undock-btn {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s;
+    }
+    .docked-undock-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* ============================================================== */
+    /* 右侧边栏 (Right Drawer / 3-Pane Side)                           */
+    /* ============================================================== */
+    .app-sidebar-right {
+      width: 0;
+      background: #141417;
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+      transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+    }
+
+    .app-sidebar-right.open {
+      width: 440px;
+    }
+
+    .sidebar-right-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background: #18181c;
+    }
+
+    .sidebar-right-title {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .close-right-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 6px;
+      border-radius: 4px;
+    }
+    .close-right-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .sidebar-right-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+    }
+
+    /* 右侧栏中的紧凑型网格 */
+    .sidebar-right-body .cards-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    /* 会话进行中聊天气泡视图 (场景2) */
+    .chat-stream-container {
+      display: none;
+      padding: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .chat-bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 85%;
+    }
+
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: #27272e;
+      color: var(--text-primary);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: #1a1a20;
+      color: #e4e4e7;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* 实时交互指导与指示器 */
+    .tip-toast {
+      position: fixed;
+      top: 54px;
+      right: 20px;
+      background: #1e1e24;
+      border: 1px solid var(--accent);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      z-index: 2000;
+      font-size: 12px;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      animation: popIn 0.3s ease;
+    }
+
+    .tip-toast-title {
+      font-weight: 600;
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .indicator-box {
+      margin-top: 4px;
+      padding: 6px 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      font-size: 11px;
+      color: #a1a1aa;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部场景控制器与对比切换栏 -->
+  <header class="demo-control-bar">
+    <div class="demo-title-group">
+      <div class="brand-icon">Ω</div>
+      <strong style="font-size: 13px;">OmniMux 素材选择与视口形态交互规范演示 (v2.0)</strong>
+      <span class="demo-badge">吸顶Tab + 意图驱动吸底</span>
+      <span class="demo-status-pill" id="liveStateBadge">自然浏览模式</span>
+    </div>
+
+    <!-- 三大交互场景无缝切换 -->
+    <div class="demo-scene-switches">
+      <button class="demo-btn active" id="btnScene1" onclick="switchScene(1)">
+        <span>① 新会话 · 全屏状态 (核心验证)</span>
+      </button>
+      <button class="demo-btn" id="btnScene2" onclick="switchScene(2)">
+        <span>② 会话进行中 (消息流模式)</span>
+      </button>
+      <button class="demo-btn" id="btnScene3" onclick="switchScene(3)">
+        <span>③ 三栏工作台 (右栏已常驻)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主体工作区三栏体系 -->
+  <div class="app-viewport with-sidebar-expanded" id="appViewport">
+
+    <!-- 1. 左侧导航栏 -->
+    <aside class="app-sidebar-left">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div style="display:flex; gap:6px; margin-right:4px;">
+            <span style="width:10px; height:10px; border-radius:50%; background:#ef4444;"></span>
+            <span style="width:10px; height:10px; border-radius:50%; background:#f59e0b;"></span>
+            <span style="width:10px; height:10px; border-radius:50%; background:#10b981;"></span>
+          </div>
+          <span>OmniMux</span>
+        </div>
+      </div>
+
+      <button class="new-chat-btn" onclick="resetToNewChat()">
+        <span>+ 新对话</span>
+      </button>
+
+      <div class="sidebar-menu">
+        <div class="menu-item"><span style="font-size:12px;">📁</span> 项目</div>
+        <div class="menu-item active"><span style="font-size:12px;">⊞</span> 技能/专家</div>
+        <div class="menu-item"><span style="font-size:12px;">⌂</span> 资产库</div>
+        <div class="menu-item"><span style="font-size:12px;">💡</span> 灵感社区</div>
+        <div class="menu-item"><span style="font-size:12px;">🎬</span> 视频拆解</div>
+      </div>
+    </aside>
+
+    <!-- 2. 中间主工作视口 -->
+    <main class="app-main-content">
+      <div class="main-scroll-area" id="mainScrollArea" onscroll="handleMainScroll()">
+
+        <!-- 场景 1 专用：新会话 Hero 标语 -->
+        <div class="hero-section" id="heroSection">
+          <div class="hero-icon-title">
+            <div class="hero-robot-icon">👾</div>
+            <h1 class="hero-title">属于你的 AI 社媒运营团队</h1>
+          </div>
+
+          <div class="hero-selectors">
+            <div class="selector-pill"><span>📁 产品运营</span> <span>▾</span></div>
+            <div class="selector-pill"><span>👤 全域社媒操盘手</span> <span>▾</span></div>
+          </div>
+        </div>
+
+        <!-- 居中原位输入框 (Inline Composer) -->
+        <div class="composer-inline-slot" id="composerInlineSlot">
+          <div class="composer-box" id="inlineComposerBox">
+            <div class="composer-attachment-row" id="inlineAttachmentRow">
+              <div class="skill-chip">
+                <span>≡ UGC 告白</span>
+                <span style="cursor:pointer; margin-left:2px;" onclick="this.parentElement.remove()">×</span>
+              </div>
+            </div>
+
+            <textarea class="composer-input-area" id="inlineComposerTextarea" placeholder="在此输入你的想法、要求或直接点击下方卡片引用素材...">用「手持创作者真实测评」做一条真人出镜、像朋友种草竖屏短视频：先说一个小麻烦，再用产品解决。卖点只写用户提供的内容。产品外观和包装跟上传图一致，不另加功效、价格或承诺。</textarea>
+
+            <div class="composer-bottom-bar">
+              <div class="composer-actions-left">
+                <!-- 加号按钮 (图2触发点) -->
+                <button class="icon-action-btn" id="inlinePlusBtn" title="添加素材/文件" onclick="togglePlusMenu(event)">
+                  <span style="font-size:17px; font-weight:400;">+</span>
+                </button>
+
+                <div class="skill-chip">
+                  <span>📖 技能</span>
+                </div>
+
+                <!-- 加号点击下拉菜单 (图2精确还原) -->
+                <div class="plus-popover-menu" id="inlinePlusMenu">
+                  <div class="menu-header-label">指令</div>
+                  <div class="menu-item-row" onclick="handlePlusCommand('file')">
+                    <span class="menu-item-icon">📎</span>
+                    <div class="menu-item-text">
+                      <span class="menu-item-title">上传媒体或文件</span>
+                      <span class="menu-item-desc">从本地选择文件或图片</span>
+                    </div>
+                  </div>
+                  <div class="menu-item-row" onclick="handlePlusCommand('inspiration')">
+                    <span class="menu-item-icon">💡</span>
+                    <div class="menu-item-text">
+                      <span class="menu-item-title">从灵感库选择</span>
+                      <span class="menu-item-desc">从灵感库选择参考作品</span>
+                    </div>
+                  </div>
+                  <div class="menu-item-row" onclick="handlePlusCommand('assets')">
+                    <span class="menu-item-icon">🖼</span>
+                    <div class="menu-item-text">
+                      <span class="menu-item-title">从资产库选择</span>
+                      <span class="menu-item-desc">从统一资产库选择素材</span>
+                    </div>
+                  </div>
+                  <div class="menu-item-row" onclick="handlePlusCommand('products')">
+                    <span class="menu-item-icon">🛍</span>
+                    <div class="menu-item-text">
+                      <span class="menu-item-title">从商品库选择</span>
+                      <span class="menu-item-desc">从商品库选择要介绍的商品</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="icon-action-btn" title="模型设置">⚙</button>
+                <button class="send-btn" title="发送指令" onclick="sendMessage()">↑</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 场景 1 专用：快捷捷径胶囊 -->
+        <div class="quick-prompts-row" id="quickPromptsRow">
+          <div class="quick-prompt-link" onclick="injectPrompt('复刻爆款短视频')">🎬 复刻爆款视频 ↗</div>
+          <div class="quick-prompt-link" onclick="injectPrompt('拆解爆款短视频结构')">📐 拆解爆款视频 ↗</div>
+          <div class="quick-prompt-link" onclick="injectPrompt('一键创作带货视频')">📦 一键创作带货视频 ↗</div>
+          <div class="quick-prompt-link" onclick="injectPrompt('反推视频提示词')">✨ 反推视频提示词 ↗</div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- 抽离出来的统一 Tab 栏与素材展示容器 (全屏新会话中消费)         -->
+        <!-- ========================================================== -->
+        <div class="explore-hub-container" id="fullscreenHubContainer">
+          
+          <!-- 【细节一实装】：吸顶 Tab 栏，position: sticky; top: 0 -->
+          <div class="hub-sticky-header" id="hubStickyHeader">
+            <!-- 一级 Tab 栏 (图4组件) -->
+            <div class="hub-primary-tabs" id="primaryTabsRow">
+              <button class="hub-tab-btn active" data-tab="featured" onclick="selectTab('featured')">
+                <span>📖</span> <span>精选</span>
+              </button>
+              <button class="hub-tab-btn" data-tab="assets" onclick="selectTab('assets')">
+                <span>📁</span> <span>资产库</span>
+              </button>
+              <button class="hub-tab-btn" data-tab="inspiration" onclick="selectTab('inspiration')">
+                <span>💡</span> <span>灵感库</span>
+              </button>
+              <button class="hub-tab-btn" data-tab="products" onclick="selectTab('products')">
+                <span>🛍</span> <span>商品库</span>
+              </button>
+              <button class="hub-tab-btn" data-tab="trending" onclick="selectTab('trending')">
+                <span>📈</span> <span>爆款趋势</span>
+              </button>
+              <button class="hub-tab-btn" data-tab="skills" onclick="selectTab('skills')">
+                <span>⚡</span> <span>Skills</span>
+              </button>
+            </div>
+
+            <!-- 二级分类胶囊流 -->
+            <div class="hub-sub-categories" id="subCategoriesRow">
+              <div class="sub-cat-item active" onclick="selectSubCat(this, 'all')">全部</div>
+              <div class="sub-cat-item" onclick="selectSubCat(this, 'hook')">黄金开场</div>
+              <div class="sub-cat-item" onclick="selectSubCat(this, 'seed')">真实种草</div>
+              <div class="sub-cat-item" onclick="selectSubCat(this, 'vfx')">视效大片</div>
+              <div class="sub-cat-item" onclick="selectSubCat(this, 'model')">模特试穿</div>
+              <div class="sub-cat-item" onclick="selectSubCat(this, 'industry')">行业精选</div>
+              <div class="sub-cat-item" onclick="selectSubCat(this, 'review')">硬核评测</div>
+              <div class="sub-cat-item" onclick="selectSubCat(this, 'software')">软件应用</div>
+            </div>
+          </div>
+
+          <!-- 内容卡片流 -->
+          <div class="explore-content-body" id="exploreContentBody">
+            <!-- 货架 1：王牌短视频应用 -->
+            <div class="section-shelf-header">
+              <div class="section-shelf-title">王牌短视频应用</div>
+              <div class="section-shelf-more">探索全部 <span>›</span></div>
+            </div>
+
+            <div class="cards-grid" id="mainCardsGrid">
+              <!-- 动态卡片 1 -->
+              <div class="media-card" onclick="attachItemToComposer('手机与网页交互实机演示', 'inspiration')">
+                <div class="media-card-thumb">
+                  <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500&auto=format&fit=crop&q=60" alt="demo">
+                  <div class="card-hover-overlay">
+                    <button class="attach-action-btn">+ 选用素材</button>
+                  </div>
+                </div>
+                <div class="media-card-info">
+                  <div class="media-card-title">手机与网页交互实机演示</div>
+                  <div class="media-card-subtitle">精细软件与 SaaS 操作</div>
+                </div>
+              </div>
+
+              <!-- 动态卡片 2 -->
+              <div class="media-card" onclick="attachItemToComposer('巨型商品撞屏与荒诞追逐', 'inspiration')">
+                <div class="media-card-thumb">
+                  <img src="https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=500&auto=format&fit=crop&q=60" alt="demo">
+                  <div class="card-hover-overlay">
+                    <button class="attach-action-btn">+ 选用素材</button>
+                  </div>
+                </div>
+                <div class="media-card-info">
+                  <div class="media-card-title">巨型商品撞屏与荒诞追逐</div>
+                  <div class="media-card-subtitle">3D 视觉奇观破屏</div>
+                </div>
+              </div>
+
+              <!-- 动态卡片 3 -->
+              <div class="media-card" onclick="attachItemToComposer('海外达人自拍第一视角口播评测', 'inspiration')">
+                <div class="media-card-thumb">
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=60" alt="demo">
+                  <div class="card-hover-overlay">
+                    <button class="attach-action-btn">+ 选用素材</button>
+                  </div>
+                </div>
+                <div class="media-card-info">
+                  <div class="media-card-title">海外达人自拍第一视角口播评测</div>
+                  <div class="media-card-subtitle">真人手持美妆保健种草</div>
+                </div>
+              </div>
+
+              <!-- 动态卡片 4 -->
+              <div class="media-card" onclick="attachItemToComposer('3D 视效粒子与动态破屏大片', 'assets')">
+                <div class="media-card-thumb">
+                  <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500&auto=format&fit=crop&q=60" alt="demo">
+                  <div class="card-hover-overlay">
+                    <button class="attach-action-btn">+ 选用素材</button>
+                  </div>
+                </div>
+                <div class="media-card-info">
+                  <div class="media-card-title">3D 视效粒子与动态破屏大片</div>
+                  <div class="media-card-subtitle">电影级粒子爆发渲染</div>
+                </div>
+              </div>
+
+              <!-- 动态卡片 5 -->
+              <div class="media-card" onclick="attachItemToComposer('全景多视角时装模特换装走秀', 'products')">
+                <div class="media-card-thumb">
+                  <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500&auto=format&fit=crop&q=60" alt="demo">
+                  <div class="card-hover-overlay">
+                    <button class="attach-action-btn">+ 选用素材</button>
+                  </div>
+                </div>
+                <div class="media-card-info">
+                  <div class="media-card-title">全景多视角时装模特换装走秀</div>
+                  <div class="media-card-subtitle">跨境电商多角度上身图</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 货架 2：Skills 技能库横条 -->
+            <div class="section-shelf-header">
+              <div class="section-shelf-title">Skills 技能库</div>
+              <div class="section-shelf-more">探索全部 <span>›</span></div>
+            </div>
+
+            <div class="skills-grid">
+              <div class="skill-box-card" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6);" onclick="attachItemToComposer('UGC 告白', 'skills')">
+                UGC 告白
+              </div>
+              <div class="skill-box-card" style="background: linear-gradient(135deg, #1e1e38, #6366f1);" onclick="attachItemToComposer('电影级视觉大片', 'skills')">
+                电影级视觉大片
+              </div>
+              <div class="skill-box-card" style="background: linear-gradient(135deg, #064e3b, #10b981);" onclick="attachItemToComposer('UGC 产品展示', 'skills')">
+                UGC 产品展示
+              </div>
+              <div class="skill-box-card" style="background: linear-gradient(135deg, #78350f, #f59e0b);" onclick="attachItemToComposer('电商营销实战', 'skills')">
+                电商营销实战
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 场景 2 专用：会话进行中消息流视图 -->
+        <div class="chat-stream-container" id="chatStreamContainer">
+          <div class="chat-bubble user">
+            请帮我为这款保湿修护面霜设计 3 条 TikTok 爆款脚本，重点突出质地清爽不油腻。
+          </div>
+          <div class="chat-bubble assistant">
+            收到！已为你拆解出 3 条高转化黄金脚本框架：<br>
+            1. <strong>反转打脸型</strong>：前 3 秒特写油光满面，随后 10 秒对比上脸瞬间哑光；<br>
+            2. <strong>实测硬核型</strong>：吸油面纸按压实测，零残留零油感；<br>
+            3. <strong>闺蜜种草型</strong>：手持自拍第一视角，真实分享夏季通勤包常备好物。<br><br>
+            你可以从资产库或灵感库中添加真实模特上脸素材作为参考，我将为你一键生成精准分镜与 Prompt。
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 【细节二实装】：底部悬浮吸底输入框 (有且仅在用户主动触发时显示，默认滚动绝对不显示) -->
+      <div class="composer-docked-wrapper" id="dockedComposerWrapper">
+        <div class="docked-undock-banner">
+          <button class="docked-undock-btn" onclick="collapseComposerManual()">
+            <span>收起输入框</span> <span>▾</span>
+          </button>
+        </div>
+
+        <div class="composer-box">
+          <div class="composer-attachment-row" id="dockedAttachmentRow">
+            <div class="skill-chip">
+              <span>≡ UGC 告白</span>
+              <span style="cursor:pointer; margin-left:2px;" onclick="this.parentElement.remove()">×</span>
+            </div>
+          </div>
+
+          <textarea class="composer-input-area" id="dockedComposerTextarea" placeholder="在此输入你的想法、要求或直接点击下方卡片引用素材...">用「手持创作者真实测评」做一条真人出镜、像朋友种草竖屏短视频：先说一个小麻烦，再用产品解决。卖点只写用户提供的内容。产品外观和包装跟上传图一致，不另加功效、价格或承诺。</textarea>
+
+          <div class="composer-bottom-bar">
+            <div class="composer-actions-left">
+              <button class="icon-action-btn" title="添加素材/文件" onclick="toggleDockedPlusMenu(event)">
+                <span style="font-size:17px; font-weight:400;">+</span>
+              </button>
+              <div class="skill-chip"><span>📖 技能</span></div>
+
+              <!-- 悬浮态加号菜单 -->
+              <div class="plus-popover-menu" id="dockedPlusMenu">
+                <div class="menu-header-label">指令</div>
+                <div class="menu-item-row" onclick="handlePlusCommand('file')"><span class="menu-item-icon">📎</span><div class="menu-item-text"><span class="menu-item-title">上传媒体或文件</span></div></div>
+                <div class="menu-item-row" onclick="handlePlusCommand('inspiration')"><span class="menu-item-icon">💡</span><div class="menu-item-text"><span class="menu-item-title">从灵感库选择</span></div></div>
+                <div class="menu-item-row" onclick="handlePlusCommand('assets')"><span class="menu-item-icon">🖼</span><div class="menu-item-text"><span class="menu-item-title">从资产库选择</span></div></div>
+                <div class="menu-item-row" onclick="handlePlusCommand('products')"><span class="menu-item-icon">🛍</span><div class="menu-item-text"><span class="menu-item-title">从商品库选择</span></div></div>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="icon-action-btn" title="模型设置">⚙</button>
+              <button class="send-btn" title="发送指令" onclick="sendMessage()">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- 3. 右侧边栏 (场景 2 / 场景 3 或全屏手动激活时展现) -->
+    <aside class="app-sidebar-right" id="appSidebarRight">
+      <div class="sidebar-right-header">
+        <div class="sidebar-right-title">
+          <span>📦</span>
+          <span id="rightSidebarTitle">素材与灵感中枢 (Asset Hub)</span>
+        </div>
+        <button class="close-right-btn" onclick="closeRightSidebar()" title="关闭侧栏">✕</button>
+      </div>
+
+      <div class="sidebar-right-body" id="rightSidebarBody">
+        <!-- 动态挂载共享的 Tab 栏与卡片流组件（100% 同一套代码与数据） -->
+        <div id="sharedHubMountInRightSidebar"></div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- 交互指示气泡说明 (实时响应用户操作) -->
+  <div class="tip-toast" id="tipToast">
+    <div class="tip-toast-title">
+      <span>💡</span> <span id="toastSceneTitle">全屏状态交互就绪</span>
+    </div>
+    <div id="toastSceneDesc" style="color: var(--text-secondary); line-height: 1.4;">
+      已升级实装用户指定的两大核心细节：
+    </div>
+    <div class="indicator-box">
+      <div><strong>细节一 (吸顶Tab)</strong>：<span id="tabStateDesc">当前处于原位流式</span></div>
+      <div><strong>细节二 (输入框)</strong>：<span id="composerStateDesc" style="color:#10b981;">默认滚动静默隐藏 (未触发)</span></div>
+    </div>
+  </div>
+
+  <script>
+    // 核心状态机模型
+    let currentScene = 1; // 1: 新会话全屏, 2: 会话进行中, 3: 三栏工作台常驻
+    let isIntentDrivenActive = false; // 是否通过加号或卡片显式激活了输入框吸底意图
+    let isTabStuck = false; // Tab 栏是否处于吸顶状态
+
+    const scrollArea = document.getElementById('mainScrollArea');
+    const heroSection = document.getElementById('heroSection');
+    const composerInlineSlot = document.getElementById('composerInlineSlot');
+    const dockedComposerWrapper = document.getElementById('dockedComposerWrapper');
+    const quickPromptsRow = document.getElementById('quickPromptsRow');
+    const rightSidebar = document.getElementById('appSidebarRight');
+    const appViewport = document.getElementById('appViewport');
+    const inlinePlusMenu = document.getElementById('inlinePlusMenu');
+    const dockedPlusMenu = document.getElementById('dockedPlusMenu');
+    const stickyHeader = document.getElementById('hubStickyHeader');
+    const fullscreenHub = document.getElementById('fullscreenHubContainer');
+    const chatStream = document.getElementById('chatStreamContainer');
+    const toastTitle = document.getElementById('toastSceneTitle');
+    const toastDesc = document.getElementById('toastSceneDesc');
+    const tabStateDesc = document.getElementById('tabStateDesc');
+    const composerStateDesc = document.getElementById('composerStateDesc');
+    const liveStateBadge = document.getElementById('liveStateBadge');
+
+    // 场景切换逻辑
+    function switchScene(sceneIndex) {
+      currentScene = sceneIndex;
+      document.querySelectorAll('.demo-btn').forEach((b, i) => {
+        b.classList.toggle('active', i + 1 === sceneIndex);
+      });
+
+      // 重置菜单
+      inlinePlusMenu.classList.remove('show');
+      dockedPlusMenu.classList.remove('show');
+      isIntentDrivenActive = false;
+
+      if (sceneIndex === 1) {
+        // 场景 1：新会话全屏状态（未打开右侧栏）
+        rightSidebar.classList.remove('open');
+        appViewport.classList.remove('with-three-pane');
+        heroSection.style.display = 'flex';
+        composerInlineSlot.style.display = 'block';
+        quickPromptsRow.style.display = 'flex';
+        fullscreenHub.style.display = 'block';
+        chatStream.style.display = 'none';
+        
+        hideDockedComposer();
+        scrollArea.scrollTop = 0;
+
+        showToast('场景 1：新会话全屏状态', '体验纯向下滚动时的纯净界面；或点击「+」加号的「从灵感库选择」体验精准吸顶与输入框唤起！');
+      } 
+      else if (sceneIndex === 2) {
+        // 场景 2：会话进行中（已有对话消息流）
+        rightSidebar.classList.remove('open');
+        appViewport.classList.remove('with-three-pane');
+        heroSection.style.display = 'none';
+        composerInlineSlot.style.display = 'none';
+        quickPromptsRow.style.display = 'none';
+        fullscreenHub.style.display = 'none';
+        chatStream.style.display = 'flex';
+
+        // 会话进行中输入框恒定固定在底部
+        showDockedComposer(false);
+
+        showToast('场景 2：会话进行中', '聊天流模式。点击底部「+」菜单，右侧展开抽屉展示统一 Tab 栏。注意：右侧栏内绝无重复输入框！');
+      } 
+      else if (sceneIndex === 3) {
+        // 场景 3：三栏工作台状态（右侧栏已常驻）
+        rightSidebar.classList.add('open');
+        appViewport.classList.add('with-three-pane');
+        heroSection.style.display = 'none';
+        composerInlineSlot.style.display = 'none';
+        quickPromptsRow.style.display = 'none';
+        fullscreenHub.style.display = 'none';
+        chatStream.style.display = 'flex';
+
+        showDockedComposer(false);
+        mountSharedHubInRightSidebar();
+
+        showToast('场景 3：三栏常驻工作台', '右侧栏常驻。点击中间「+」直接切换右侧 Tab，零位移，零重复输入框。');
+      }
+    }
+
+    // 加号菜单控制
+    function togglePlusMenu(e) {
+      e.stopPropagation();
+      inlinePlusMenu.classList.toggle('show');
+    }
+
+    function toggleDockedPlusMenu(e) {
+      e.stopPropagation();
+      dockedPlusMenu.classList.toggle('show');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!inlinePlusMenu.contains(e.target)) inlinePlusMenu.classList.remove('show');
+      if (!dockedPlusMenu.contains(e.target)) dockedPlusMenu.classList.remove('show');
+    });
+
+    // 核心交互：加号菜单点击分发 (关键逻辑实现)
+    function handlePlusCommand(commandKind) {
+      inlinePlusMenu.classList.remove('show');
+      dockedPlusMenu.classList.remove('show');
+
+      if (currentScene === 1) {
+        // 【核心细节一 & 细节二闭环】：
+        // 1. 绝对不要打开右侧栏！
+        // 2. 自动切换到对应 Tab 栏；
+        // 3. 页面平滑滚动到 Tab 栏置顶位置（刚好贴在页面顶部，图 1 效果）；
+        // 4. 用户表达了主动意图 -> 触发底部吸底输入框显示！
+
+        let targetTab = 'featured';
+        if (commandKind === 'inspiration') targetTab = 'inspiration';
+        if (commandKind === 'assets') targetTab = 'assets';
+        if (commandKind === 'products') targetTab = 'products';
+
+        // 切换 Tab
+        selectTab(targetTab);
+
+        // 【细节重构：0ms 立即原子跳到 Tab 栏置顶状态，并结合双帧 requestAnimationFrame 锁定置顶于 top: 0】
+        const performDemoScroll = () => {
+          const stickyHeaderTop = stickyHeader.offsetTop;
+          scrollArea.scrollTop = stickyHeaderTop;
+        };
+        performDemoScroll();
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(() => {
+            performDemoScroll();
+            window.requestAnimationFrame(() => {
+              performDemoScroll();
+            });
+          });
+        }
+
+        // 立即同步显示底部的输入框
+        isIntentDrivenActive = true;
+        showDockedComposer(true);
+
+        showToast('已立即跳到置顶并显示底部输入框', `已立即跳转至「${getTabZh(targetTab)}」置顶（图 1 效果），底部输入框同步显示并聚焦，彻底消除竞态！`);
+      } 
+      else if (currentScene === 2) {
+        rightSidebar.classList.add('open');
+        appViewport.classList.add('with-three-pane');
+        mountSharedHubInRightSidebar();
+
+        let targetTab = 'featured';
+        if (commandKind === 'inspiration') targetTab = 'inspiration';
+        if (commandKind === 'assets') targetTab = 'assets';
+        if (commandKind === 'products') targetTab = 'products';
+        selectTabInRightSidebar(targetTab);
+
+        showToast('右侧抽屉已呼出', `会话进行中呼出素材中枢，右侧栏复用共享 Tab 栏。点击卡片直接注入中栏输入框。`);
+      } 
+      else if (currentScene === 3) {
+        let targetTab = 'featured';
+        if (commandKind === 'inspiration') targetTab = 'inspiration';
+        if (commandKind === 'assets') targetTab = 'assets';
+        if (commandKind === 'products') targetTab = 'products';
+        selectTabInRightSidebar(targetTab);
+
+        showToast('右侧 Tab 已聚焦', `直接切换右侧工作台至「${getTabZh(targetTab)}」，零多余弹窗与位移。`);
+      }
+    }
+
+    // 【细节二实现】：意图驱动显示/隐藏底部吸底输入框
+    function showDockedComposer(withUndockBanner = true) {
+      dockedComposerWrapper.classList.add('visible');
+      composerStateDesc.textContent = '主动触发吸底中 (随时收起)';
+      composerStateDesc.style.color = '#60a5fa';
+      liveStateBadge.textContent = '意图吸底就绪';
+      liveStateBadge.style.background = 'rgba(59, 130, 246, 0.15)';
+      liveStateBadge.style.color = '#60a5fa';
+    }
+
+    function hideDockedComposer() {
+      dockedComposerWrapper.classList.remove('visible');
+      composerStateDesc.textContent = '默认滚动静默隐藏 (未触发)';
+      composerStateDesc.style.color = '#10b981';
+      liveStateBadge.textContent = '自然浏览模式';
+      liveStateBadge.style.background = 'rgba(16, 185, 129, 0.12)';
+      liveStateBadge.style.color = '#34d399';
+    }
+
+    // 用户主动点击「收起输入框」
+    function collapseComposerManual() {
+      isIntentDrivenActive = false;
+      hideDockedComposer();
+      showToast('输入框已主动收起', '已满足细节二：输入框收起后，你在下方浏览卡片、上下滚动，底部绝对不会强行反弹出现！');
+    }
+
+    // 【细节一实现】：滚动监听器与 Tab 栏吸顶状态机
+    function handleMainScroll() {
+      if (currentScene !== 1) return;
+      const st = scrollArea.scrollTop;
+      const stickyHeaderTop = stickyHeader.offsetTop;
+
+      // 1. 判断 Tab 栏是否处于吸顶位置
+      if (st >= stickyHeaderTop - 2) {
+        if (!isTabStuck) {
+          isTabStuck = true;
+          stickyHeader.classList.add('is-stuck');
+          tabStateDesc.textContent = '【吸顶固定在顶部】(列表可独立上下滚动)';
+          tabStateDesc.style.color = '#f59e0b';
+        }
+      } else {
+        if (isTabStuck) {
+          isTabStuck = false;
+          stickyHeader.classList.remove('is-stuck');
+          tabStateDesc.textContent = '【原位流式】(随页面向上回滚自然展开 Hero)';
+          tabStateDesc.style.color = '#a1a1aa';
+        }
+      }
+
+      // 2. 【细节二铁律验证】：
+      // 如果没有通过加号或卡片触发输入框意图 (isIntentDrivenActive === false)，
+      // 无论页面滚多深，绝不显示底部输入框！
+      if (!isIntentDrivenActive) {
+        hideDockedComposer();
+        return;
+      }
+
+      // 如果之前主动触发过，但用户滑回了最顶部（Hero 露出）：
+      if (st <= 40) {
+        hideDockedComposer();
+        isIntentDrivenActive = false; // 回到顶部后复位意图
+      }
+    }
+
+    // Tab 切换逻辑 (全屏容器)
+    function selectTab(tabKey) {
+      document.querySelectorAll('#primaryTabsRow .hub-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabKey);
+      });
+      refreshMockCards(tabKey);
+    }
+
+    // 二级分类切换
+    function selectSubCat(el, catKey) {
+      document.querySelectorAll('.sub-cat-item').forEach(i => i.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    // 刷新展示卡片内容
+    function refreshMockCards(tabKey) {
+      const grid = document.getElementById('mainCardsGrid');
+      let cardsHtml = '';
+      if (tabKey === 'assets') {
+        cardsHtml = `
+          <div class="media-card" onclick="attachItemToComposer('高保真产品实拍 4K BGM', 'assets')">
+            <div class="media-card-thumb"><img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500" alt="demo"><div class="card-hover-overlay"><button class="attach-action-btn">+ 选用素材</button></div></div>
+            <div class="media-card-info"><div class="media-card-title">头戴式耳机宣传无损音频</div><div class="media-card-subtitle">资产库 · BGM 48kHz</div></div>
+          </div>
+          <div class="media-card" onclick="attachItemToComposer('夏日青柠气泡水透光粒子', 'assets')">
+            <div class="media-card-thumb"><img src="https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500" alt="demo"><div class="card-hover-overlay"><button class="attach-action-btn">+ 选用素材</button></div></div>
+            <div class="media-card-info"><div class="media-card-title">夏日青柠气泡水透光粒子</div><div class="media-card-subtitle">资产库 · 视频 1080P</div></div>
+          </div>
+        `;
+      } else if (tabKey === 'products') {
+        cardsHtml = `
+          <div class="media-card" onclick="attachItemToComposer('极简天然益生菌软糖 60粒', 'products')">
+            <div class="media-card-thumb"><img src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500" alt="demo"><div class="card-hover-overlay"><button class="attach-action-btn">+ 选用素材</button></div></div>
+            <div class="media-card-info"><div class="media-card-title">天然益生菌软糖 60粒</div><div class="media-card-subtitle">商品库 · $29.9 · 肠道健康</div></div>
+          </div>
+          <div class="media-card" onclick="attachItemToComposer('复古工装背带裤 芥末黄', 'products')">
+            <div class="media-card-thumb"><img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500" alt="demo"><div class="card-hover-overlay"><button class="attach-action-btn">+ 选用素材</button></div></div>
+            <div class="media-card-info"><div class="media-card-title">复古工装背带裤 芥末黄</div><div class="media-card-subtitle">商品库 · ¥289 · 纯棉耐磨</div></div>
+          </div>
+        `;
+      } else {
+        cardsHtml = `
+          <div class="media-card" onclick="attachItemToComposer('海外达人自拍第一视角口播评测', 'inspiration')">
+            <div class="media-card-thumb"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500" alt="demo"><div class="card-hover-overlay"><button class="attach-action-btn">+ 选用素材</button></div></div>
+            <div class="media-card-info"><div class="media-card-title">海外达人自拍第一视角口播评测</div><div class="media-card-subtitle">灵感库 · 播放 240w+</div></div>
+          </div>
+          <div class="media-card" onclick="attachItemToComposer('巨型商品撞屏与荒诞追逐', 'inspiration')">
+            <div class="media-card-thumb"><img src="https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=500" alt="demo"><div class="card-hover-overlay"><button class="attach-action-btn">+ 选用素材</button></div></div>
+            <div class="media-card-info"><div class="media-card-title">巨型商品撞屏与荒诞追逐</div><div class="media-card-subtitle">灵感库 · 赞藏 18w+</div></div>
+          </div>
+        `;
+      }
+      grid.innerHTML = cardsHtml;
+    }
+
+    // 点击卡片直接将素材挂载到输入框中 (Click-to-Attach)
+    function attachItemToComposer(title, type) {
+      const inlineRow = document.getElementById('inlineAttachmentRow');
+      const dockedRow = document.getElementById('dockedAttachmentRow');
+      
+      let icon = '💡';
+      if (type === 'assets') icon = '🖼';
+      if (type === 'products') icon = '🛍';
+      if (type === 'skills') icon = '⚡';
+
+      const tagHtml = `
+        <div class="entity-tag">
+          <span>${icon} ${title}</span>
+          <span class="entity-tag-remove" onclick="this.parentElement.remove()">×</span>
+        </div>
+      `;
+
+      inlineRow.insertAdjacentHTML('beforeend', tagHtml);
+      dockedRow.insertAdjacentHTML('beforeend', tagHtml);
+
+      // 用户点击选用卡片属于显式触发 -> 立即激活底部吸底输入框！
+      isIntentDrivenActive = true;
+      showDockedComposer(true);
+
+      showToast('素材已挂载到输入框', `已将「${title}」作为实体引用追加到输入框。输入框已激活聚焦，随时可微调并发送！`);
+    }
+
+    // 快捷 Prompt 注入
+    function injectPrompt(text) {
+      document.getElementById('inlineComposerTextarea').value = text + '：' + document.getElementById('inlineComposerTextarea').value;
+      document.getElementById('dockedComposerTextarea').value = text + '：' + document.getElementById('dockedComposerTextarea').value;
+      isIntentDrivenActive = true;
+      showDockedComposer(true);
+    }
+
+    // 关闭右侧栏
+    function closeRightSidebar() {
+      rightSidebar.classList.remove('open');
+      appViewport.classList.remove('with-three-pane');
+    }
+
+    // 抽离的 Tab 模块在右侧边栏的渲染装配
+    function mountSharedHubInRightSidebar() {
+      const container = document.getElementById('sharedHubMountInRightSidebar');
+      container.innerHTML = `
+        <div class="hub-primary-tabs" style="margin-bottom:10px;">
+          <button class="hub-tab-btn active" onclick="selectTabInRightSidebar('featured')">📖 精选</button>
+          <button class="hub-tab-btn" onclick="selectTabInRightSidebar('assets')">📁 资产</button>
+          <button class="hub-tab-btn" onclick="selectTabInRightSidebar('inspiration')">💡 灵感</button>
+          <button class="hub-tab-btn" onclick="selectTabInRightSidebar('products')">🛍 商品</button>
+        </div>
+        <div class="cards-grid" id="rightSidebarGrid">
+          <div class="media-card" onclick="attachItemToComposer('爆款口播分镜参考', 'inspiration')">
+            <div class="media-card-thumb"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500" alt="demo"><div class="card-hover-overlay"><button class="attach-action-btn">+ 选用</button></div></div>
+            <div class="media-card-info"><div class="media-card-title">爆款口播分镜</div></div>
+          </div>
+          <div class="media-card" onclick="attachItemToComposer('3D 破屏特效', 'assets')">
+            <div class="media-card-thumb"><img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500" alt="demo"><div class="card-hover-overlay"><button class="attach-action-btn">+ 选用</button></div></div>
+            <div class="media-card-info"><div class="media-card-title">3D 破屏特效</div></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function selectTabInRightSidebar(tabKey) {
+      showToast('右侧栏 Tab 切换', `已同步切换右侧工作台到「${getTabZh(tabKey)}」，UI 与数据与全屏完全同源！`);
+    }
+
+    function getTabZh(key) {
+      const map = { featured: '精选', assets: '资产库', inspiration: '灵感库', products: '商品库', trending: '爆款趋势', skills: 'Skills' };
+      return map[key] || '精选';
+    }
+
+    function showToast(title, desc) {
+      toastTitle.textContent = title;
+      toastDesc.innerHTML = desc;
+    }
+
+    function resetToNewChat() {
+      switchScene(1);
+    }
+
+    function sendMessage() {
+      switchScene(2);
+      showToast('会话已开始', '用户发送了消息，会话进入进行中状态。此时输入框固定在底部，若再添加素材将通过右侧栏提供。');
+    }
+  </script>
+</body>
+</html>

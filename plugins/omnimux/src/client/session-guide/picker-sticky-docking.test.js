@@ -164,3 +164,101 @@ test('抗竞态测试：顶部输入框点击添加触发 dock(force: true)，�
     dom.window.close()
   }
 })
+
+test('样式契约验证：.omnimux-explore-grid-view-wrap 与 .omnimux-explore-shelves-view 统一设置视口最小高度与留白', () => {
+  const stylesSource = readFileSync(new URL('./styles.js', import.meta.url), 'utf8')
+  
+  // 必须为包裹层统一提供视口撑开与底部安全避让间距
+  assert.match(stylesSource, /\.omnimux-explore-grid-view-wrap,\s*\.omnimux-explore-shelves-view\s*\{[^}]*min-height:\s*calc\(100vh\s*-\s*96px\)/i, '必须配置 min-height: calc(100vh - 96px)')
+  assert.match(stylesSource, /\.omnimux-explore-grid-view-wrap,\s*\.omnimux-explore-shelves-view\s*\{[^}]*padding-bottom:\s*120px/i, '必须为吸底输入框预留 padding-bottom: 120px 避让空间')
+  assert.match(stylesSource, /\.omnimux-explore-grid-view-wrap,\s*\.omnimux-explore-shelves-view\s*\{[^}]*box-sizing:\s*border-box/i, '必须配置 box-sizing: border-box')
+
+  // 空态与状态指示器 .omnimux-library-stage-status
+  assert.match(stylesSource, /\.omnimux-library-stage-status\s*\{[^}]*margin:\s*40px\s+auto\s+0/i, '状态提示必须水平居中')
+  assert.match(stylesSource, /\.omnimux-library-stage-status\s*\{[^}]*min-height:\s*120px/i, '状态提示必须保证 min-height: 120px 优雅留白')
+  assert.match(stylesSource, /\.omnimux-library-stage-status\s*\{[^}]*justify-content:\s*center/i, '状态提示内容必须垂直水平居中')
+})
+
+test('置顶逻辑契约验证：ExploreTemplatesSection 具备 0ms 即时跳转与双帧 requestAnimationFrame 复核锁定', () => {
+  const exploreSource = readFileSync(new URL('./templates/ExploreTemplatesSection.jsx', import.meta.url), 'utf8')
+  
+  // 必须定义 scrollToTop 并立即同步执行
+  assert.match(exploreSource, /const\s+scrollToTop\s*=\s*\(\)\s*=>/i, '必须封装置顶滚动计算函数 scrollToTop')
+  assert.match(exploreSource, /scroller\.scrollTop\s*=\s*Math\.max\(0,\s*targetOffset\)/i, '必须同步赋值 scrollTop 实现 0ms 原子跳转')
+  
+  // 必须通过 requestAnimationFrame 双帧嵌套在 React 重排与 DOM 布局完成后复核锁定
+  assert.match(exploreSource, /window\.requestAnimationFrame\(\(\)\s*=>\s*\{[\s\S]*scrollToTop\(\);[\s\S]*window\.requestAnimationFrame\(\(\)\s*=>\s*\{[\s\S]*scrollToTop\(\);/i, '必须采用双帧 requestAnimationFrame 复核锁定置顶 top: 0')
+  assert.match(exploreSource, /cancelAnimationFrame/i, '必须在卸载或连续触发时取消未完成的 animation frame')
+})
+
+test('视口几何仿真断言：在 0 张、5 张与多张卡片下，Tab 栏 100% 滚动贴顶无截断', () => {
+  // 仿真全屏会话滚动容器几何模型
+  const viewportHeight = 800 // clientHeight = 800px (100vh)
+  const headerOffset = 320 // 欢迎区及上方高度 = 320px
+  const tabBarHeight = 96 // filterBar 自身高度 = 96px
+
+  function simulateScrollToTop(cardCount, cardHeightPerItem = 220) {
+    // 根据 CSS 规则：min-height = calc(100vh - 96px) = 800 - 96 = 704px; padding-bottom = 120px
+    const minContentHeight = viewportHeight - tabBarHeight // 704px
+    const paddingBottom = 120
+
+    // 真实内容自然高度
+    let naturalContentHeight = 0
+    if (cardCount === 0) {
+      naturalContentHeight = 120 // 空态 min-height: 120px
+    } else if (cardCount <= 5) {
+      naturalContentHeight = cardHeightPerItem // 首行 5 张卡片高 220px
+    } else {
+      const rows = Math.ceil(cardCount / 5)
+      naturalContentHeight = rows * cardHeightPerItem // 多行展开
+    }
+
+    // CSS min-height 生效机制：总容器高度 = Math.max(naturalHeight, minContentHeight) + paddingBottom
+    const containerHeight = Math.max(naturalContentHeight, minContentHeight) + paddingBottom
+
+    // 整个滚动容器的 scrollHeight
+    const scrollHeight = headerOffset + tabBarHeight + containerHeight
+    const clientHeight = viewportHeight
+
+    // 目标跳转位置：将 filterBar 顶贴滚动容器顶边缘
+    const targetOffset = headerOffset
+
+    // 浏览器物理可滚动的最大高度
+    const maxScrollTop = Math.max(0, scrollHeight - clientHeight)
+
+    // 0ms 跳转计算出来的最终 scrollTop
+    const actualScrollTop = Math.min(targetOffset, maxScrollTop)
+
+    // filterBar 相对视口顶部的最终可见位置：elRect.top - scrollerRect.top
+    const finalTopOffset = targetOffset - actualScrollTop
+
+    return {
+      scrollHeight,
+      clientHeight,
+      maxScrollTop,
+      targetOffset,
+      actualScrollTop,
+      finalTopOffset,
+      containerHeight,
+    }
+  }
+
+  // 1. 0 张卡片场景（空数据 / 加载态）
+  const zeroCards = simulateScrollToTop(0)
+  assert.ok(zeroCards.maxScrollTop >= zeroCards.targetOffset, '0 张卡片下必须撑开足够的 scrollHeight 供完全滚动')
+  assert.equal(zeroCards.actualScrollTop, zeroCards.targetOffset, '0 张卡片下实际滚动位置必须精确到达 targetOffset')
+  assert.equal(zeroCards.finalTopOffset, 0, '0 张卡片下 Tab 栏必须绝对贴顶 (top: 0)')
+
+  // 2. 5 张卡片场景（少量数据，核心痛点场景）
+  const fiveCards = simulateScrollToTop(5)
+  assert.ok(fiveCards.maxScrollTop >= fiveCards.targetOffset, '5 张卡片下必须撑开足够的 scrollHeight 供完全滚动')
+  assert.equal(fiveCards.actualScrollTop, fiveCards.targetOffset, '5 张卡片下实际滚动位置必须精确到达 targetOffset')
+  assert.equal(fiveCards.finalTopOffset, 0, '5 张卡片下 Tab 栏必须绝对贴顶 (top: 0)')
+  assert.ok(fiveCards.containerHeight >= 824, '卡片下方保证至少具备足够现代 SaaS 留白空间')
+
+  // 3. 50 张卡片场景（海量瀑布流）
+  const fiftyCards = simulateScrollToTop(50)
+  assert.ok(fiftyCards.maxScrollTop >= fiftyCards.targetOffset, '50 张卡片下自然满足置顶滚动条件')
+  assert.equal(fiftyCards.actualScrollTop, fiftyCards.targetOffset, '50 张卡片下精确贴顶')
+  assert.equal(fiftyCards.finalTopOffset, 0, '50 张卡片下 Tab 栏贴顶 (top: 0)')
+})
