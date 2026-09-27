@@ -1,51 +1,23 @@
 /**
  * 创意模板核心数据模型与货架配置
- * 融合 7 大王牌官方 AI 应用与 395 套全量灵感模板及工作流上下文
+ * 融合 7 大王牌官方 AI 应用与 395 套全量灵感模板及工作流上下文。
+ * 完整模板数据与纯选择逻辑已移至 Host 侧数据模块
+ * (src/templates/data.js)；本文件保留客户端展示配置并转导出既有符号。
  */
 
-import { FEATURED_APPS_CARDS } from './featured-apps-data.js';
-import CREATIVE_TEMPLATES_RAW from './creative-templates.json' with { type: 'json' };
 import { resolveTemplateCopy } from './template-locale.js';
 import {
   SHARED_PRIMARY_TABS,
   SHARED_SUB_CATEGORIES,
 } from '../../shared/asset-hub-tabs/shared-tabs-catalog.js';
 
-/**
- * 7 大精选应用卡片（包含对应 ApplicationManifest 与直通跳转参数）
- */
-export const FEATURED_APPS_LIST = Object.freeze(
-  FEATURED_APPS_CARDS.map((card) => {
-    return {
-      ...card,
-      id: card.appId,
-      title: card.titleZh,
-      titleEn: card.titleEn,
-      description: card.descZh,
-      prompt: card.descEn || card.descZh,
-      promptZh: card.descZh,
-      cover: card.coverUrl,
-      thumbnailUrl: card.coverUrl,
-      previewVideoUrl: card.previewVideoUrl,
-      categorySlug: card.categoryKey,
-      type: 'app',
-      isApp: true,
-      manifest: card.manifest || null,
-    };
-  })
-);
-
-/**
- * 全量模板库（7 款官方王牌应用置顶 + 395 套灵感模板）
- */
-export const ALL_CREATIVE_TEMPLATES = Object.freeze([
-  ...FEATURED_APPS_LIST,
-  ...CREATIVE_TEMPLATES_RAW.map((tpl) => ({
-    ...tpl,
-    isApp: false,
-    type: tpl.type || 'template',
-  })),
-]);
+export {
+  ALL_CREATIVE_TEMPLATES,
+  FEATURED_APPS_LIST,
+  findTemplateById,
+  selectTemplatesByCategory,
+  selectShelfItems,
+} from '../../../templates/data.js';
 
 /**
  * 一级主导航：六大创作与资产库（对齐共享单一真源）
@@ -199,36 +171,6 @@ export const SHELVES_CONFIG = Object.freeze([
 ]);
 
 /**
- * 按分类筛选模版列表
- * @param {string} categorySlug
- * @returns {Array}
- */
-export function selectTemplatesByCategory(categorySlug) {
-  if (!categorySlug || categorySlug === 'all') {
-    return ALL_CREATIVE_TEMPLATES;
-  }
-  return ALL_CREATIVE_TEMPLATES.filter(
-    (item) => item.categorySlug === categorySlug || item.categoryKey === categorySlug
-  );
-}
-
-/**
- * 根据 ID 查找指定模版或应用
- * @param {string} id
- * @returns {object | null}
- */
-export function findTemplateById(id) {
-  if (!id) return null;
-  return ALL_CREATIVE_TEMPLATES.find((item) => item.id === id || item.appId === id) || null;
-}
-
-/**
- * 获取货架行推荐项目
- * @param {string} shelfSlug
- * @param {number} [limit=8]
- * @returns {Array}
- */
-/**
  * 按当前语言取出名称与提示词。
  * @param {object | null | undefined} item
  * @param {string} locale
@@ -236,14 +178,4 @@ export function findTemplateById(id) {
  */
 export function resolveLocalizedTemplate(item, locale) {
   return resolveTemplateCopy(item, locale);
-}
-
-export function selectShelfItems(shelfSlug, limit = 8) {
-  if (shelfSlug === 'explore-templates') {
-    return FEATURED_APPS_LIST.slice(0, limit);
-  }
-  const filtered = ALL_CREATIVE_TEMPLATES.filter(
-    (item) => item.categorySlug === shelfSlug || item.categoryKey === shelfSlug
-  );
-  return filtered.slice(0, limit);
 }

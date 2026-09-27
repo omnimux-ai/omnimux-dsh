@@ -12,6 +12,7 @@ import { createComposerAttachmentsDispatcher, registerComposerAttachmentRoutes }
 import { registerTextCompleteRoutes } from '../text/http.js'
 import { registerByokRoutes } from '../byok/http.js'
 import { registerAgentRoutes } from '../agents/http.js'
+import { createTemplatesDispatcher, registerTemplatesRoutes } from '../templates/http.js'
 
 /**
  * Mount Host HTTP faces. Match order is auth → plugins → apps → official → inspiration → avatar.
@@ -119,6 +120,7 @@ export function mountHubHttp(httpCtx, deps) {
     const stopAgents = registerAgentRoutes(webServer, {
       getSettings: () => deps.settings ?? httpCtx.get?.('settings'),
     })
+    const stopTemplates = registerTemplatesRoutes(webServer, createTemplatesDispatcher())
     return () => {
       stopAuth()
       stopCatalog()
@@ -132,6 +134,7 @@ export function mountHubHttp(httpCtx, deps) {
       stopTextComplete()
       stopByok()
       stopAgents()
+      stopTemplates()
     }
   }
   if (typeof httpCtx.effect === 'function') httpCtx.effect(mount, 'omnimux: http routes')
