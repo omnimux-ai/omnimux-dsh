@@ -492,6 +492,47 @@ test('useComposerDocking: 意图驱动模式——纯向下滚动默认不吸底
     assert.equal(hookApi.placement, 'inline', '向上滚动回露头可见范围必须自动恢复 inline')
     assert.equal(hookApi.isDocked, false)
     assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '宿主吸底标记必须被移除')
+
+    // 阶段 4（核心回归）：再次向下滚动——交互意图必须持久，底部再次吸底
+    scroller.scrollTop = 280
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'docked', '再次下滑时输入框必须再次吸底，意图不得因滑回顶部被抹除')
+    assert.equal(hookApi.isDocked, true)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true, '再次下滑后宿主必须重新打上吸底标记')
+
+    // 阶段 5：显式收起后，页面中不再吸底
+    await act(async () => {
+      hookApi.undock()
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'inline', '收起后摆位归 inline')
+    assert.equal(hookApi.isDocked, false)
+
+    scroller.scrollTop = 320
+    await act(async () => {
+      scroller.dispatchEvent(new window.Event('scroll'))
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'inline', '收起后再次下滑严禁自动吸底')
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), false, '收起后宿主不得保留吸底标记')
+
+    // 阶段 6：再次触发交互事件 → 重新唤醒吸底
+    await act(async () => {
+      hookApi.dock({ id: 'card_intent_2' })
+    })
+    await flush()
+
+    assert.equal(hookApi.placement, 'docked', '再次触发交互必须重新吸底')
+    assert.equal(hookApi.isDocked, true)
+    assert.equal(host.hasAttribute(DOCK_OPEN_ATTR), true)
   } finally {
     await act(async () => root.unmount())
     env.restore()
