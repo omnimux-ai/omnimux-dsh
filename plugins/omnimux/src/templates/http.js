@@ -1,7 +1,8 @@
 import { sendJson } from '../auth/http-routes.js'
 import { getCreativeTemplatesSnapshot, TemplatesDataUnavailableError } from './snapshot.js'
 
-const SNAPSHOT_PATH = '/omnimux/templates/creative'
+const TEMPLATES_ROUTE_PREFIX = '/omnimux/templates'
+const SNAPSHOT_PATH = `${TEMPLATES_ROUTE_PREFIX}/creative`
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
 /**
@@ -51,7 +52,7 @@ export function createTemplatesDispatcher(deps = {}) {
 export function registerTemplatesRoutes(webServer, dispatcher) {
   const dispose = webServer.register({
     kind: 'prefix',
-    path: '/omnimux/templates',
+    path: TEMPLATES_ROUTE_PREFIX,
     async handler(req, res) {
       try {
         const result = dispatcher.dispatch({

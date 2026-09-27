@@ -21,7 +21,7 @@
  * 可安全进入浏览器包（不得引入 src/templates/data.js —— 它依赖 node:fs）。
  */
 
-import { FEATURED_APPS_CARDS } from './featured-apps-data.js';
+import { FEATURED_APPS_LIST } from '../../../templates/featured-apps-data.js';
 
 /** Host 快照端点（协议标识，同域相对路径）。 */
 export const CREATIVE_TEMPLATES_SNAPSHOT_PATH = '/omnimux/templates/creative';
@@ -32,28 +32,7 @@ const SNAPSHOT_SCHEMA_VERSION = 1;
 /** dataVersion 合同：64 位小写十六进制 SHA-256 摘要。 */
 const DATA_VERSION_PATTERN = /^[0-9a-f]{64}$/;
 
-/**
- * 与 Host 完全一致的 FEATURED_APPS_LIST 构造规则
- * （对齐 src/templates/data.js 与原 templates-data.js）。
- */
-const FEATURED_APPS_LIST = Object.freeze(
-  FEATURED_APPS_CARDS.map((card) => ({
-    ...card,
-    id: card.appId,
-    title: card.titleZh,
-    titleEn: card.titleEn,
-    description: card.descZh,
-    prompt: card.descEn || card.descZh,
-    promptZh: card.descZh,
-    cover: card.coverUrl,
-    thumbnailUrl: card.coverUrl,
-    previewVideoUrl: card.previewVideoUrl,
-    categorySlug: card.categoryKey,
-    type: 'app',
-    isApp: true,
-    manifest: card.manifest || null,
-  }))
-);
+/* FEATURED_APPS_LIST 单一真源：src/templates/featured-apps-data.js（纯数据模块，无 Node 依赖）。 */
 
 /**
  * 返回 featured-first 列表中常驻的 featured 应用列表。

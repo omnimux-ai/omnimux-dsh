@@ -824,3 +824,28 @@ export const FEATURED_APPS_CARDS = Object.freeze([
     }
   }
 ]);
+
+/**
+ * 7 大精选应用卡片（包含对应 ApplicationManifest 与直通跳转参数）。
+ * Host 与浏览器消费统一从本文件取列表，避免双处构造分叉。
+ */
+export const FEATURED_APPS_LIST = Object.freeze(
+  FEATURED_APPS_CARDS.map((card) => {
+    return {
+      ...card,
+      id: card.appId,
+      title: card.titleZh,
+      titleEn: card.titleEn,
+      description: card.descZh,
+      prompt: card.descEn || card.descZh,
+      promptZh: card.descZh,
+      cover: card.coverUrl,
+      thumbnailUrl: card.coverUrl,
+      previewVideoUrl: card.previewVideoUrl,
+      categorySlug: card.categoryKey,
+      type: 'app',
+      isApp: true,
+      manifest: card.manifest || null,
+    };
+  })
+);

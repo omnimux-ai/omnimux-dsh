@@ -159,8 +159,8 @@ async function loadSkills(fetchImpl, limit) {
     }))
 }
 
-async function loadFeatured(fetchImpl, limit) {
-  const list = await loadCreativeTemplates({ fetchImpl })
+async function loadFeatured(fetchImpl, limit, deps) {
+  const list = await loadCreativeTemplates({ fetchImpl, signal: deps?.signal })
   return list.slice(0, limit).map((tpl) => ({
     id: String(tpl.id || tpl.appId || ''),
     title: String(tpl.titleZh || tpl.title || tpl.id),
@@ -188,7 +188,7 @@ export async function loadLibraryCards(tab, deps = {}) {
     try {
       const loader = LOADERS[lane]
       if (!loader) return { lane, items: [], error: null }
-      const items = await loader(deps.fetchImpl, limit)
+      const items = await loader(deps.fetchImpl, limit, deps)
       return { lane, items, error: null }
     } catch (caught) {
       return {

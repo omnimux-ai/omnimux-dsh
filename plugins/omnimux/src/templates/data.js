@@ -6,31 +6,12 @@
  */
 
 import CREATIVE_TEMPLATES_RAW from './creative-templates.json' with { type: 'json' };
-import { FEATURED_APPS_CARDS } from './featured-apps-data.js';
+import { FEATURED_APPS_LIST } from './featured-apps-data.js';
 
 /**
  * 7 大精选应用卡片（包含对应 ApplicationManifest 与直通跳转参数）
  */
-export const FEATURED_APPS_LIST = Object.freeze(
-  FEATURED_APPS_CARDS.map((card) => {
-    return {
-      ...card,
-      id: card.appId,
-      title: card.titleZh,
-      titleEn: card.titleEn,
-      description: card.descZh,
-      prompt: card.descEn || card.descZh,
-      promptZh: card.descZh,
-      cover: card.coverUrl,
-      thumbnailUrl: card.coverUrl,
-      previewVideoUrl: card.previewVideoUrl,
-      categorySlug: card.categoryKey,
-      type: 'app',
-      isApp: true,
-      manifest: card.manifest || null,
-    };
-  })
-);
+export { FEATURED_APPS_LIST };
 
 /**
  * 全量模板库（7 款官方王牌应用置顶 + 全量灵感模板）
