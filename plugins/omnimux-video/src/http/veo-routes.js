@@ -11,6 +11,7 @@ import path from 'node:path'
 import { requestRejection } from './request-authorization.js'
 import { createVeoTaskStore, veoMediaUrl } from './veo-task-store.js'
 import { validateVeoTaskRequest } from '../contracts/veoContracts.js'
+import { VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
 import {
   detectOpenCliEnvironment,
   generateVideoSilently,
@@ -104,8 +105,10 @@ export function createVeoDispatcher(deps = {}) {
     if (method === 'POST' && (pathname === `${VEO_API_PREFIX}/tasks` || pathname === '/tasks')) {
       const body = req.body && typeof req.body === 'object' ? req.body : {}
       const prompt = typeof body.prompt === 'string' ? body.prompt : ''
-      const mode = typeof body.mode === 'string' ? body.mode : 'create'
-      const durationSec = Number(body.durationSec ?? body.parameters?.durationSec ?? 10)
+      const mode = typeof body.mode === 'string' ? body.mode : VEO_TASK_SPEC.defaultMode
+      const durationSec = Number(
+        body.durationSec ?? body.parameters?.durationSec ?? VEO_TASK_SPEC.durationSec.fallback,
+      )
       const validation = validateVeoTaskRequest({
         prompt,
         mode,
@@ -146,6 +149,8 @@ export function createVeoDispatcher(deps = {}) {
       })
 
       // Fire-and-forget background generation.
+      // NOTE: generateVideoSilently currently ignores `mode` and does not push
+      // durationSec into Google Vids page controls — modes are UI/validation only.
       if (!running.has(id)) {
         running.add(id)
         Promise.resolve()
@@ -179,7 +184,7 @@ export function createVeoDispatcher(deps = {}) {
               localPath: result.localPath,
               fileSize: result.fileSize,
               durationSec: result.durationSec || durationSec,
-              resolution: result.resolution || '720p',
+              resolution: result.resolution || VEO_TASK_SPEC.resolution,
               videoUrl: veoMediaUrl(fileName),
               title: prompt.trim().slice(0, 16) || '未命名成片',
             })

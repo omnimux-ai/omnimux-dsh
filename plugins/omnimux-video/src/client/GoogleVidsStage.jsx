@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { readVidsCenterBox } from './vids-stage-box.js'
 import { createVeoTask, fetchVeoTask } from './veo-api.js'
+import { resolveVeoMode, VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
@@ -468,8 +469,8 @@ export function GoogleVidsStage(props) {
   // 向导就绪面板状态
   const [onboardingOpen, setOnboardingOpen] = useState(false)
 
-  // 模式 Tab：'create' | 'modify' | 'animate' | 'extend'
-  const [currentMode, setCurrentMode] = useState('create')
+  // 模式 Tab：来自 VEO_TASK_SPEC.modes（展示/校验；driver 暂不消费）
+  const [currentMode, setCurrentMode] = useState(VEO_TASK_SPEC.defaultMode)
   const [promptText, setPromptText] = useState('')
   const [attachedAsset, setAttachedAsset] = useState(null)
   const [insertedFeedbackId, setInsertedFeedbackId] = useState(null)
@@ -481,8 +482,8 @@ export function GoogleVidsStage(props) {
       title: '韩国极简防晒美学成片',
       videoUrl: './media/google_vids_korean_skincare.mp4',
       status: 'completed',
-      durationSec: 10,
-      resolution: '720p',
+      durationSec: VEO_TASK_SPEC.durationSec.fallback,
+      resolution: VEO_TASK_SPEC.resolution,
       isUpscaled: false,
     },
   ])
@@ -556,8 +557,8 @@ export function GoogleVidsStage(props) {
         title: prompt.slice(0, 16),
         status: 'generating',
         progress: 2,
-        durationSec: 10,
-        resolution: '720p',
+        durationSec: VEO_TASK_SPEC.durationSec.fallback,
+        resolution: VEO_TASK_SPEC.resolution,
         message: '正在提交生成任务…',
       },
       ...prev,
@@ -567,7 +568,7 @@ export function GoogleVidsStage(props) {
       const created = await createVeoTask({
         prompt,
         mode: currentMode,
-        durationSec: 10,
+        durationSec: VEO_TASK_SPEC.durationSec.fallback,
       })
       if (!created.ok || !created.body?.task?.id) {
         const message = created.body?.message || `提交失败（HTTP ${created.status}）`
@@ -595,8 +596,8 @@ export function GoogleVidsStage(props) {
                 title: remote.title || t.title,
                 message: remote.message,
                 videoUrl: remote.videoUrl,
-                durationSec: remote.durationSec || 10,
-                resolution: remote.resolution || '720p',
+                durationSec: remote.durationSec || VEO_TASK_SPEC.durationSec.fallback,
+                resolution: remote.resolution || VEO_TASK_SPEC.resolution,
               }
             : t
         )
@@ -728,21 +729,10 @@ export function GoogleVidsStage(props) {
     setTasks((prev) => prev.filter((t) => t.id !== taskId))
   }
 
-  // 动态占位符
+  // 动态占位符（文案字典在 VEO_TASK_SPEC）
   const getPlaceholder = () => {
-    if (!isEditorReady) return '请先在右侧创建或打开剪辑工程...'
-    switch (currentMode) {
-      case 'create':
-        return '描述您想生成的视频画面与动作...'
-      case 'modify':
-        return '描述需要对当前视频进行的调整（如光影或服装风格）...'
-      case 'animate':
-        return '描述图像素材中应展现的动作与运镜细节...'
-      case 'extend':
-        return '描述当前视频结尾后续发生的情节发展...'
-      default:
-        return '描述您想生成的视频画面与动作...'
-    }
+    if (!isEditorReady) return VEO_TASK_SPEC.editorGatePlaceholder
+    return resolveVeoMode(currentMode).placeholder
   }
 
   if (!open && !everOpened) return null
@@ -960,12 +950,7 @@ export function GoogleVidsStage(props) {
       <div className="gvids-drawer">
         {/* 模式分段控制器（纯 2 字名词） */}
         <div className="gvids-segmented-control">
-          {[
-            { id: 'create', label: '创建' },
-            { id: 'modify', label: '修改' },
-            { id: 'animate', label: '动画' },
-            { id: 'extend', label: '扩展' },
-          ].map((tab) => (
+          {VEO_TASK_SPEC.modes.map((tab) => (
             <button // exempt-ui01 Google Vids 舞台专属按钮
               key={tab.id}
               type="button"
@@ -992,7 +977,7 @@ export function GoogleVidsStage(props) {
         <div className="gvids-drawer-bottom">
           {/* 客观规格胶囊 */}
           <div className="gvids-param-capsule">
-            720p · 16:9 · 10s
+            {VEO_TASK_SPEC.paramCapsule}
           </div>
 
           {/* 生成动作键 (纯向上箭头矢量 SVG) */}
