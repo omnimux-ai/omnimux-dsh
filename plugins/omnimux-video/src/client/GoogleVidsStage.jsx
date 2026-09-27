@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { readVidsCenterBox } from './vids-stage-box.js'
+import { createVeoTask, fetchVeoTask } from './veo-api.js'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
@@ -543,48 +544,119 @@ export function GoogleVidsStage(props) {
     setAttachedAsset(asset)
   }
 
-  // 触发生成任务
-  const handleSubmitTask = () => {
+  // 触发生成任务：走 Host /omnimux-video/api/veo → opencli veoHeadlessDriver
+  const handleSubmitTask = async () => {
     if (!isEditorReady || !promptText.trim()) return
 
-    const newTaskId = `task_${Date.now()}`
-    const newTask = {
-      id: newTaskId,
-      title: promptText.slice(0, 16),
-      status: 'generating',
-      progress: 3,
-      durationSec: 10,
-      resolution: '720p',
-    }
+    const prompt = promptText.trim()
+    const optimisticId = `task_pending_${Date.now()}`
+    setTasks((prev) => [
+      {
+        id: optimisticId,
+        title: prompt.slice(0, 16),
+        status: 'generating',
+        progress: 2,
+        durationSec: 10,
+        resolution: '720p',
+        message: '正在提交生成任务…',
+      },
+      ...prev,
+    ])
 
-    setTasks((prev) => [newTask, ...prev])
-    setPromptText('')
-
-    let p = 3
-    const timer = setInterval(() => {
-      p += 20
-      if (p >= 100) {
-        clearInterval(timer)
-        activeTimersRef.current.delete(newTaskId)
+    try {
+      const created = await createVeoTask({
+        prompt,
+        mode: currentMode,
+        durationSec: 10,
+      })
+      if (!created.ok || !created.body?.task?.id) {
+        const message = created.body?.message || `提交失败（HTTP ${created.status}）`
         setTasks((prev) =>
           prev.map((t) =>
-            t.id === newTaskId
-              ? {
-                  ...t,
-                  status: 'completed',
-                  videoUrl: './media/google_vids_puppy.mp4',
-                  title: '金毛幼犬草地奔跑成片',
-                }
+            t.id === optimisticId
+              ? { ...t, status: 'failed', progress: 0, message, error: message }
               : t
           )
         )
-      } else {
-        setTasks((prev) =>
-          prev.map((t) => (t.id === newTaskId ? { ...t, progress: p } : t))
-        )
+        // 失败保留输入，便于微调后重试（PRD 异常防御）
+        return
       }
-    }, 400)
-    activeTimersRef.current.set(newTaskId, timer)
+
+      const remote = created.body.task
+      setPromptText('')
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === optimisticId
+            ? {
+                ...t,
+                id: remote.id,
+                status: remote.status === 'completed' ? 'completed' : 'generating',
+                progress: remote.progress ?? 3,
+                title: remote.title || t.title,
+                message: remote.message,
+                videoUrl: remote.videoUrl,
+                durationSec: remote.durationSec || 10,
+                resolution: remote.resolution || '720p',
+              }
+            : t
+        )
+      )
+
+      const taskId = remote.id
+      if (activeTimersRef.current.has(taskId)) {
+        clearInterval(activeTimersRef.current.get(taskId))
+      }
+      const timer = setInterval(async () => {
+        try {
+          const polled = await fetchVeoTask(taskId)
+          const task = polled.body?.task
+          if (!polled.ok || !task) {
+            if (polled.status === 404) {
+              clearInterval(timer)
+              activeTimersRef.current.delete(taskId)
+            }
+            return
+          }
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === taskId
+                ? {
+                    ...t,
+                    status: task.status === 'failed'
+                      ? 'failed'
+                      : task.status === 'completed'
+                        ? 'completed'
+                        : 'generating',
+                    progress: task.progress ?? t.progress,
+                    message: task.message || t.message,
+                    error: task.error,
+                    videoUrl: task.videoUrl || t.videoUrl,
+                    durationSec: task.durationSec || t.durationSec,
+                    resolution: task.resolution || t.resolution,
+                    title: task.title || t.title,
+                  }
+                : t
+            )
+          )
+          if (task.status === 'completed' || task.status === 'failed') {
+            clearInterval(timer)
+            activeTimersRef.current.delete(taskId)
+          }
+        } catch {
+          // keep polling; transient network blips
+        }
+      }, 1500)
+      activeTimersRef.current.set(taskId, timer)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === optimisticId
+            ? { ...t, status: 'failed', progress: 0, message, error: message }
+            : t
+        )
+      )
+    }
   }
 
   // 触发升频
@@ -774,7 +846,7 @@ export function GoogleVidsStage(props) {
               <div className="gvids-generating-box">
                 <div className="gvids-generating-top">
                   <div className="gvids-generating-percent">
-                    {`${task.progress}%`}
+                    {`${task.progress || 0}%`}
                   </div>
                   <button // exempt-ui01 Google Vids 舞台专属按钮
                     type="button"
@@ -785,13 +857,31 @@ export function GoogleVidsStage(props) {
                   </button>
                 </div>
                 <div className="gvids-generating-status">
-                  {task.isUpscaling ? '正在升频画质...' : '正在生成视频...'}
+                  {task.isUpscaling
+                    ? '正在升频画质...'
+                    : (task.message || '正在生成视频...')}
                 </div>
                 <div className="gvids-progress-bar-bg">
                   <div
                     className="gvids-progress-bar-fill"
-                    style={{ width: `${task.progress}%` }}
+                    style={{ width: `${task.progress || 0}%` }}
                   />
+                </div>
+              </div>
+            ) : task.status === 'failed' ? (
+              <div className="gvids-generating-box">
+                <div className="gvids-generating-top">
+                  <div className="gvids-generating-percent">失败</div>
+                  <button // exempt-ui01 Google Vids 舞台专属按钮
+                    type="button"
+                    onClick={() => handleRemoveTask(task.id)}
+                    className="gvids-cancel-btn"
+                  >
+                    移除
+                  </button>
+                </div>
+                <div className="gvids-generating-status">
+                  {task.message || task.error || '生成失败，请微调提示词后重试'}
                 </div>
               </div>
             ) : (
