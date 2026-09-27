@@ -1,5 +1,5 @@
 ---
-title: "Workbench split — 对话可收、插件 GUI 常驻（一座：better-sidebar）"
+title: "Workbench split — 对话可收、Workbench GUI 常驻（Google Vids stage 例外）"
 id: "contract-workbench-split"
 type: "contract"
 status: "living"
@@ -22,23 +22,23 @@ related:
 
 Normative seat for plugin GUIs that must sit **beside** the official conversation (human + Agent both driving the same surface).
 
-**One seat.** First-level library / catalog / plaza pages, clip studio, and the project canvas all live on `ctx.betterSidebar.registerTab`. They **MUST NOT** claim `data-dsh-product-stage`. The 2026-08-31 «library = overlay» exception is abolished ([ADR](../decisions/2026-08-31-workbench-libraries-and-toggle.md)).
+**One Workbench seat.** First-level library / catalog / plaza pages, clip studio, and the project canvas live on `ctx.betterSidebar.registerTab`. Ordinary Workbench entry flows **MUST NOT** claim `data-dsh-product-stage`. The 2026-08-31 «library = overlay» exception is abolished ([ADR](../decisions/2026-08-31-workbench-libraries-and-toggle.md)). Google Vids is a narrowly scoped exception: its generation stage occupies `shell.overlay`, while its left-row launcher first awaits opening Clip in the Workbench with split focus; only when that call returns a value strictly equal to `true` may the launcher claim `omnimux-vids`. See the Overlay row and Issue #2721 spec.
 
 ## One seat, do not mix with overlay
 
 | Kind | Examples | Seat | Left-row click |
 |---|---|---|---|
-| **Workbench** | 资产 / 产品 / 账号 / 灵感 / 发布 / 分析 / 项目库 / 专家馆 / 视频剪辑 / 创作画布 | `ctx.betterSidebar.registerTab` on `[data-dsh-panel-host]` | `window.__omnimuxWorkbench.open({ tabId })`. **MUST NOT** set `data-dsh-product-stage` |
-| **Overlay leftover** | Hub 登录门；Apps 货架（未挂载）；Clip **画布节点 portal** | `shell.overlay` | 不走左栏 workbench 名单。Clip portal **MUST NOT** claim |
+| **Workbench** | 资产 / 产品 / 账号 / 灵感 / 发布 / 分析 / 项目库 / 专家馆 / 视频剪辑 / 创作画布 | `ctx.betterSidebar.registerTab` on `[data-dsh-panel-host]` | Ordinary Workbench entry flows use `window.__omnimuxWorkbench.open({ tabId })` and **MUST NOT** set `data-dsh-product-stage`; only the Google Vids launcher may claim its own `omnimux-vids` stage after the Clip open specified in the Overlay row is awaited and returns a value strictly equal to `true` |
+| **Overlay** | Hub 登录门；Apps 货架（未挂载）；Clip **画布节点 portal**；Google Vids 生成舞台 | `shell.overlay` | Google Vids 是唯一的创作 stage 例外：左侧入口 MUST first await `window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })`，并且仅当该调用的返回值严格等于 `true` 时才 claim `omnimux-vids`（`false`、拒绝或其他结果均不 claim）；Vids 不得注册为 `betterSidebar` Tab。Clip portal **MUST NOT** claim |
 
-Official AppFrame is already `sidebar | conversation | details`. Workbench does **not** replace `conversation`. The plugin GUI lives in the community `dsh-better-sidebar` panel (width up to the viewport). Official `details` stays at 300–520px and is closed (`layout.closeDetails`) when a workbench tab opens.
+Official AppFrame is already `sidebar | conversation | details`. Workbench does **not** replace `conversation`. Ordinary Workbench GUIs live in the community `dsh-better-sidebar` panel (width up to the viewport); Google Vids' generation stage instead occupies `shell.overlay`, while Clip studio remains a Workbench Tab in that right panel. Official `details` stays at 300–520px and is closed (`layout.closeDetails`) when a workbench tab opens.
 
 ## Layout
 
 ```
 左：官方 sidebar + 新会话下方入口
-中：官方 conversation（不可卸载）
-右：dsh-better-sidebar 工作台 Tab（可收起，Tab 状态按会话持久化）
+中：官方 conversation（不可卸载；Google Vids 生成舞台通过 shell.overlay 覆盖此区域）
+右：dsh-better-sidebar Workbench Tab（可收起，Tab 状态按会话持久化；Clip studio 在此）
 ```
 
 「关掉中间会话」(#372) = sticky `conversationCollapsed`（`html[data-omnimux-conversation-collapsed]` + CSS 折叠 `[class*="centerCol"]`）。`conversation` slot stays mounted；**不得**再把「藏中」唯一实现成右栏拉满 `viewport − 左栏`（否则收左栏会让中栏回显）。`gui` 仍可顺带拉满右栏填空，但中栏可见性以 collapsed 布尔为准。There is no official `hideConversation`. `chat` (`panelOpen: false`) 收的是**右栏工作台**，不是中间对话。
@@ -56,7 +56,8 @@ Official AppFrame is already `sidebar | conversation | details`. Workbench does 
 | `omnimux-workflow:library` | `omnimux-workflow` | `gui` | `[data-dsh-omnimux-workflow-entry]` |
 | `omnimux-workflow:canvas` | `omnimux-workflow` | `gui` | not a left-row; opened after a project session |
 | `omnimux-market:plaza` | `omnimux-market` | `gui` | `sidebar.footer.action` `[data-omnimux-market-entry]`（设置上方，不是新会话 extra row） |
-| `omnimux-clip:studio` | `omnimux-clip` | `gui` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；画布/Agent 打开 |
+| `omnimux-clip:studio` | `omnimux-clip` | `gui` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；由 Vids 左侧入口先行打开，或由画布/Agent 打开。Vids 入口 MUST await Clip Workbench open with `title: '视频剪辑'` and `focus: 'split'`, and may claim `omnimux-vids` only when the result is strictly `true` |
+| `omnimux-vids` (overlay stage, not a Workbench Tab) | `omnimux-video` | `split` on entry | Google Vids left-row launcher; awaits opening Clip (`tabId: 'omnimux-clip:studio'`, `title: '视频剪辑'`, `focus: 'split'`) and claims the overlay stage only when that result is exactly `true` |
 
 Clip overlay (`ClipStage`) remains **only** for canvas-node portal (`openFromCanvas`, does not claim). Sidebar clicks MUST NOT call `stage.open()`.
 
@@ -169,7 +170,7 @@ Hub installs `window.__omnimuxWorkbench` at module top-level (same pattern as `_
 
 - Shadow `root` / `sidebar` / `conversation` / `details`.
 - Draw a second composer inside `shell.overlay`.
-- Claim `data-dsh-product-stage` when opening a workbench tab (product-stage chrome hides the panel host).
+- Claim `data-dsh-product-stage` when opening a workbench tab (product-stage chrome hides the panel host), except the Google Vids left-row launcher may claim `omnimux-vids` only after the awaited `window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })` returns a value strictly equal to `true`.
 - Fall back to overlay or `details` when `dsh-better-sidebar` is missing. Host stays; Tab is absent.
 - Keep library pages on `shell.overlay`.
 - Inherit focus across tab ids.

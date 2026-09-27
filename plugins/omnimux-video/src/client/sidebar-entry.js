@@ -7,7 +7,6 @@ import { GOOGLE_VIDS_SIDEBAR_I18N } from './locales.js'
 
 export { GOOGLE_VIDS_SIDEBAR_I18N }
 export const ENTRY_SELECTOR = '[data-omnimux-google-vids-entry]'
-export const GOOGLE_VIDS_TAB_ID = 'omnimux-video:google-vids'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const COORDINATOR_TIMEOUT_MS = 10000
@@ -107,77 +106,6 @@ function resolveLocaleCurrent(locale) {
   return 'en'
 }
 
-export function createGoogleVidsStageStore(t) {
-  let store = null
-  let boundWorkbench = null
-  const ensure = () => {
-    const api = typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined
-    if (store && boundWorkbench === api) return store
-    if (store) {
-      try { store?.dispose?.() } catch {}
-      try { store?.destroy?.() } catch {}
-      store = null
-    }
-    if (!api || typeof api.createSidebarStore !== 'function') {
-      boundWorkbench = null
-      return null
-    }
-    boundWorkbench = api
-    store = api.createSidebarStore({
-      tabId: GOOGLE_VIDS_TAB_ID,
-      title: () => resolveText(t, 'workbench.google_vids.tab', 'Google Vids'),
-    })
-    return store
-  }
-  return {
-    getSnapshot() {
-      return Boolean(ensure()?.getSnapshot?.())
-    },
-    subscribe(listener) {
-      if (typeof listener !== 'function') return () => {}
-      const ready = ensure()
-      if (ready && typeof ready.subscribe === 'function') return ready.subscribe(listener)
-      let unsub = () => {}
-      let disposed = false
-      const started = Date.now()
-      const timer = setInterval(() => {
-        if (disposed) { clearInterval(timer); return }
-        const next = ensure()
-        if (next && typeof next.subscribe === 'function') {
-          clearInterval(timer)
-          const sub = next.subscribe(listener)
-          if (disposed) {
-            if (typeof sub === 'function') sub()
-            return
-          }
-          unsub = typeof sub === 'function' ? sub : () => {}
-          listener()
-          return
-        }
-        if (Date.now() - started >= COORDINATOR_TIMEOUT_MS) clearInterval(timer)
-      }, 200)
-      return () => {
-        disposed = true
-        clearInterval(timer)
-        unsub()
-      }
-    },
-    open() {
-      ensure()?.open?.()
-    },
-    close() {
-      ensure()?.close?.()
-    },
-    set(next) {
-      if (next) this.open()
-      else this.close()
-    },
-    readBox() {
-      return ensure()?.readBox?.() || { top: 0, left: 0, width: 0, height: 0 }
-    },
-  }
-}
-
 function registerWhenCoordinatorReady(row) {
   let unregister = () => {}
   let disposed = false
@@ -234,12 +162,9 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
   }
   if (typeof resolvedT !== 'function') resolvedT = (k) => k
   if (typeof document === 'undefined') return () => {}
-  const stageStore = createGoogleVidsStageStore(resolvedT)
-
   const entry = document.createElement('button')
   entry.type = 'button'
   entry.setAttribute('data-omnimux-google-vids-entry', '')
-  entry.setAttribute('data-tab-id', GOOGLE_VIDS_TAB_ID)
   entry.className = 'omnimux-sidebar-nav-entry omnimux-google-vids-entry'
 
   const iconSpan = document.createElement('span')
@@ -271,22 +196,24 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
 
   updateTexts()
 
-  const handleClick = () => {
+  let mounted = true
+  const handleClick = async () => {
+    if (typeof window === 'undefined') return
+    const workbench = window.__omnimuxWorkbench
+    const stage = window.__omnimuxStage
+    if (typeof workbench?.open !== 'function' || typeof stage?.claim !== 'function') return
+
     try {
-      if (typeof window !== 'undefined' && window.__omnimuxStage && typeof window.__omnimuxStage.claim === 'function') {
-        window.__omnimuxStage.claim('omnimux-vids')
-      }
-    } catch {}
-    try {
-      if (typeof window !== 'undefined' && window.__omnimuxWorkbench && typeof window.__omnimuxWorkbench.open === 'function') {
-        window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑' })
-      }
-    } catch {}
-    try {
-      if (typeof window !== 'undefined' && window.__omnimuxWorkbench && typeof window.__omnimuxWorkbench.setFocus === 'function') {
-        window.__omnimuxWorkbench.setFocus('split')
-      }
-    } catch {}
+      const opened = await workbench.open({
+        tabId: 'omnimux-clip:studio',
+        title: '视频剪辑',
+        focus: 'split',
+      })
+      if (!mounted || opened !== true) return
+      stage.claim('omnimux-vids')
+    } catch {
+      // Keep the current stage and focus unchanged when Clip cannot be opened.
+    }
   }
   entry.addEventListener('click', handleClick)
 
@@ -299,7 +226,6 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
     }
   }
 
-  const unsubscribeStage = stageStore.subscribe(syncActive)
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     window.addEventListener('dsh-product-stage', syncActive)
   }
@@ -317,6 +243,7 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
   })
 
   return () => {
+    mounted = false
     if (typeof entry?.removeEventListener === 'function') {
       entry.removeEventListener('click', handleClick)
     }
@@ -324,7 +251,6 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
       window.removeEventListener('dsh-product-stage', syncActive)
     }
     unregisterCoordinator()
-    unsubscribeStage()
     unsubscribeLocale()
     if (typeof entry?.remove === 'function') {
       entry.remove()

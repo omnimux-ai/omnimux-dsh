@@ -14,7 +14,7 @@
 
 ### 1.2 改造目标
 1. **中栏主舞台沉浸生成 (Left-Center Stage)**：将 Google Vids 迁出 `betterSidebar`，升级为一级产品舞台（Product Stage），挂载于 `[data-slot="shell.overlay"]`，覆盖主会话区。
-2. **右栏剪辑轨道常驻同屏 (Right Studio Rail)**：激活 Google Vids 时，系统联动激活右侧 `betterSidebar` 并强制切至 `omnimux-clip:studio`，形成 **45% : 55%** 黄金比例同屏创作格局。
+2. **右栏剪辑轨道常驻同屏 (Right Studio Rail)**：激活 Google Vids 时，系统联动打开右侧 `betterSidebar` 的 `omnimux-clip:studio` 并进入 split 焦点，确保剪辑器与 Vids 舞台同屏可见。具体分栏宽度由 Workbench 当前的视口约束与用户保存状态决定；**45% : 55%** 仅为原型示意目标，不是精确比例或运行时不变量。
 3. **跨栏语义与数据流闭环 (Cross-Column Synergy)**：
    - 门禁状态秒级感知：中栏门禁条感知右侧工程打开状态，就绪后平滑淡出自愈；
    - 成片即入轨：成片动作明确为「`→ 插入`」，点击后毫秒级追加至右侧时间轴主视频轨（V1），监视器自动加载预览；
@@ -23,6 +23,8 @@
 ---
 
 ## 2. 核心架构与命令 (Commands & Architecture)
+
+> **当前行为说明（Issue #2721）**：本 Spec 的原型目标与 UI 白名单仍作为视觉基线；入口执行顺序及错误路径以 `specs/google-vids-center-stage-entry-regression.spec.md` 为当前行为真源。下文中 45:55 是原型示意而非精确布局不变量；旧 tab-era 调用顺序不再适用。
 
 ### 2.1 执行与测试命令
 - 单元测试：`pnpm --filter omnimux test` / `pnpm test`
@@ -39,7 +41,7 @@
   - 移除 `betterSidebar.registerTab` 注册；
   - `ctx.slots.inject('shell.overlay', ...)` 注册 `omnimux-vids-stage` (order: 36, component: GoogleVidsStage)。
 - `plugins/omnimux-video/src/client/sidebar-entry.js`：
-  - 点击执行 `claim('omnimux-vids')` + `workbench.open('omnimux-clip:studio')` + `workbench.setFocus('split')`。
+  - 点击先等待 `workbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })`；仅当结果严格等于 `true` 且入口仍挂载时，再 claim `omnimux-vids`。不另行调用 `workbench.setFocus()`。当前行为细节以 Issue #2721 回归规格为准。
 - `plugins/omnimux-clip/src/client/OpenReelStudioTab.jsx`：
   - 广播工程就绪状态，监听 `omnimux-clip:insert` 事件将切片追加至 V1 视频轨。
 - `plugins/omnimux-video/src/client/GoogleVidsStage.jsx`：

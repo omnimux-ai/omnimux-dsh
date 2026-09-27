@@ -11,8 +11,6 @@ import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import {
   mountSidebarEntry,
-  createGoogleVidsStageStore,
-  GOOGLE_VIDS_TAB_ID,
   ENTRY_SELECTOR,
   GOOGLE_VIDS_SIDEBAR_I18N,
 } from '../../plugins/omnimux-video/src/client/sidebar-entry.js'
@@ -43,7 +41,7 @@ await build({
     },
   }],
 })
-const { apply, GoogleVidsTabPanel } = await import(tempFile.href)
+const { apply } = await import(tempFile.href)
 await rm(fileURLToPath(tempFile)).catch(() => {})
 
 console.log('===============================================================')
@@ -54,10 +52,10 @@ console.log('===============================================================\n')
 let passCount = 0
 let totalChecks = 0
 
-function runCheck(name, fn) {
+async function runCheck(name, fn) {
   totalChecks += 1
   try {
-    fn()
+    await fn()
     passCount += 1
     console.log(`  ✔ [PASS] ${name}`)
   } catch (err) {
@@ -127,7 +125,7 @@ class MockNode {
   }
 
   click() {
-    this.listeners['click']?.()
+    return this.listeners['click']?.()
   }
 
   remove() {
@@ -159,6 +157,7 @@ class MockNode {
 
 function initDOM() {
   globalThis.document = {
+    documentElement: new MockNode('HTML'),
     createElement(tag) {
       return new MockNode(tag)
     },
@@ -173,17 +172,19 @@ function initDOM() {
 // -------------------------------------------------------------
 console.log('【维度一：契约文档与真源审计】')
 
-runCheck('契约审计 1.1: sidebar-extra-entries.md 已登记 Rank 7.5 与内测标记', () => {
+await runCheck('契约审计 1.1: sidebar-extra-entries.md 已登记 Rank 7.5 与中栏 Stage 契约', () => {
   const contractDoc = readFileSync(resolve(root, 'docs/contracts/sidebar-extra-entries.md'), 'utf-8')
   assert.ok(contractDoc.includes('[data-omnimux-google-vids-entry]'), '必须包含选择器登记')
   assert.ok(contractDoc.includes('rank 7.5'), '必须注明 rank 7.5')
-  assert.ok(contractDoc.includes('内测版 / Alpha'), '必须注明 内测版 / Alpha')
-  assert.ok(contractDoc.includes('omnimux-video:google-vids'), '必须注明 workbench Tab ID')
-  assert.ok(contractDoc.includes('access: offline'), '必须注明 access: offline')
-  assert.ok(contractDoc.includes('不得 claim'), '必须注明不得 claim product stage')
+  assert.ok(contractDoc.includes("tabId: 'omnimux-clip:studio'"), '必须注明先打开 Clip 右侧栏 Tab')
+  assert.ok(contractDoc.includes("focus: 'split'"), '必须注明分屏焦点')
+  assert.ok(contractDoc.includes("claim('omnimux-vids')"), '必须注明成功后 claim 中栏 Stage')
+  assert.ok(contractDoc.includes('shell.overlay'), '必须注明 Vids 经 shell.overlay 注册')
+  assert.ok(contractDoc.includes('不再**注册 Workbench Tab'), '必须明确不再注册 Workbench Tab')
+  assert.doesNotMatch(contractDoc, /google-vids[\s\S]{0,200}?不得 claim/, 'Google Vids 已改为中栏 Stage，不得再写「不得 claim」')
 })
 
-runCheck('契约审计 1.2: PRD 与 Spec 唯一真源齐备性', () => {
+await runCheck('契约审计 1.2: PRD 与 Spec 唯一真源齐备性', () => {
   const prd = readFileSync(resolve(root, 'docs/prd/google-vids-sidebar-entry.prd.md'), 'utf-8')
   assert.ok(prd.includes('prd-google-vids-sidebar-entry'))
   assert.ok(prd.includes('许清楚'))
@@ -197,7 +198,7 @@ runCheck('契约审计 1.2: PRD 与 Spec 唯一真源齐备性', () => {
 // -------------------------------------------------------------
 console.log('\n【维度二：反过度设计与 SaaS 极简文案审计】')
 
-runCheck('文案审计 2.1: 中英文逐字锁定无越权', () => {
+await runCheck('文案审计 2.1: 中英文逐字锁定无越权', () => {
   assert.equal(GOOGLE_VIDS_SIDEBAR_I18N.zh['sidebar.google_vids.nav'], 'Google Vids')
   assert.equal(GOOGLE_VIDS_SIDEBAR_I18N.zh['sidebar.google_vids.badge'], '内测版')
   assert.equal(GOOGLE_VIDS_SIDEBAR_I18N.zh['sidebar.google_vids.tooltip'], 'Google Vids · 内测版')
@@ -209,7 +210,7 @@ runCheck('文案审计 2.1: 中英文逐字锁定无越权', () => {
   assert.equal(GOOGLE_VIDS_SIDEBAR_I18N.en['workbench.google_vids.tab'], 'Google Vids')
 })
 
-runCheck('反过度设计 2.2: 源码全面扫描禁用 Emoji、营销副标题与多重 Badge', () => {
+await runCheck('反过度设计 2.2: 源码全面扫描禁用 Emoji、营销副标题与多重 Badge', () => {
   const sidebarSource = readFileSync(resolve(root, 'plugins/omnimux-video/src/client/sidebar-entry.js'), 'utf-8')
   const localesSource = readFileSync(resolve(root, 'plugins/omnimux-video/src/client/locales.js'), 'utf-8')
   const indexSource = readFileSync(resolve(root, 'plugins/omnimux-video/src/client/index.js'), 'utf-8')
@@ -230,7 +231,7 @@ runCheck('反过度设计 2.2: 源码全面扫描禁用 Emoji、营销副标题�
   assert.doesNotMatch(localesSource, /Google Vids\s*\(.*?\)/, '导航标签严禁拖带括号说明')
 })
 
-runCheck('视觉规格 2.3: 样式与几何 Token 审计 (32px, 14x14 图标, 6px 间隙, 8px 圆角, 4px Badge 圆角)', () => {
+await runCheck('视觉规格 2.3: 样式与几何 Token 审计 (32px, 14x14 图标, 6px 间隙, 8px 圆角, 4px Badge 圆角)', () => {
   const sidebarSource = readFileSync(resolve(root, 'plugins/omnimux-video/src/client/sidebar-entry.js'), 'utf-8')
   assert.ok(sidebarSource.includes('height: 32px;'), '必须严格定义 32px 高度')
   assert.ok(sidebarSource.includes('gap: 6px;'), '必须严格定义 6px 间隙')
@@ -248,7 +249,7 @@ runCheck('视觉规格 2.3: 样式与几何 Token 审计 (32px, 14x14 图标, 6p
 // -------------------------------------------------------------
 console.log('\n【维度三：侧边栏 E2E 挂载、多模态与状态机协同】')
 
-runCheck('E2E 3.1: 侧边栏协调器在 Rank 7.5 成功注册与挂载', () => {
+await runCheck('E2E 3.1: 侧边栏协调器在 Rank 7.5 成功注册与挂载', () => {
   initDOM()
   let registeredRow = null
   globalThis.window = {
@@ -278,7 +279,7 @@ runCheck('E2E 3.1: 侧边栏协调器在 Rank 7.5 成功注册与挂载', () => 
   const el = registeredRow.create()
   assert.equal(el.tagName, 'BUTTON')
   assert.ok(el.hasAttribute('data-omnimux-google-vids-entry'))
-  assert.equal(el.getAttribute('data-tab-id'), 'omnimux-video:google-vids')
+  assert.equal(el.hasAttribute('data-tab-id'), false, 'Vids 不再是 Workbench Tab，必须移除 data-tab-id')
 
   // 白名单子元素严格只允许 3 个
   assert.equal(el.children.length, 3, '子节点必须且仅有 3 个')
@@ -297,7 +298,7 @@ runCheck('E2E 3.1: 侧边栏协调器在 Rank 7.5 成功注册与挂载', () => 
   assert.equal(el.removed, true, 'DOM 必须被安全移除')
 })
 
-runCheck('E2E 3.2: 动态国际化语言切换 (zh -> en)', () => {
+await runCheck('E2E 3.2: 动态国际化语言切换 (zh -> en)', () => {
   initDOM()
   let registeredRow = null
   let currentLocale = 'zh'
@@ -351,12 +352,11 @@ runCheck('E2E 3.2: 动态国际化语言切换 (zh -> en)', () => {
   unmount()
 })
 
-runCheck('E2E 3.3: 单激活槽仲裁与排他性', () => {
+await runCheck('E2E 3.3: 中栏 Stage 激活仲裁与 Clip 先行打开顺序', async () => {
   initDOM()
   let registeredRow = null
-  let activeState = false
-  let storeListener = null
-  let openTriggered = false
+  const calls = []
+  const listeners = new Map()
 
   globalThis.window = {
     __omnimuxSidebar: {
@@ -366,49 +366,64 @@ runCheck('E2E 3.3: 单激活槽仲裁与排他性', () => {
       },
     },
     __omnimuxWorkbench: {
-      createSidebarStore(opts) {
-        assert.equal(opts.tabId, 'omnimux-video:google-vids')
-        return {
-          getSnapshot: () => activeState,
-          subscribe: (fn) => {
-            storeListener = fn
-            return () => { storeListener = null }
-          },
-          open: () => { openTriggered = true },
-          close: () => { openTriggered = false },
-        }
+      open(opts) {
+        calls.push(['open', opts])
+        return Promise.resolve(true)
       },
     },
+    __omnimuxStage: {
+      claim(id) { calls.push(['claim', id]) },
+    },
+    addEventListener(ev, fn) {
+      if (!listeners.has(ev)) listeners.set(ev, new Set())
+      listeners.get(ev).add(fn)
+    },
+    removeEventListener(ev, fn) {
+      listeners.get(ev)?.delete(fn)
+    },
+  }
+
+  const emitStage = (value) => {
+    if (value === undefined) delete globalThis.document.documentElement.dataset.dshProductStage
+    else globalThis.document.documentElement.dataset.dshProductStage = value
+    for (const fn of listeners.get('dsh-product-stage') || []) fn()
   }
 
   const unmount = mountSidebarEntry(null, (k) => GOOGLE_VIDS_SIDEBAR_I18N.zh[k] || k, { current: 'zh' })
   const el = registeredRow.create()
 
-  // 初始无激活
-  assert.equal(el.dataset.active, undefined)
+  // 初始未进入中栏
+  assert.equal(el.dataset.active, undefined, '非 Vids 中栏时不得显示激活态')
 
-  // 点击触发 open
-  el.click()
-  assert.equal(openTriggered, true, '点击必须触发 open()')
+  // 点击：必须先 await 打开 Clip 到右侧栏，成功返回 true 后才 claim 中栏
+  await el.click()
+  assert.deepEqual(calls, [
+    ['open', { tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' }],
+    ['claim', 'omnimux-vids'],
+  ], '必须先打开 Clip 右侧栏再 claim 中栏')
+  assert.equal(typeof globalThis.window.__omnimuxWorkbench.setFocus, 'undefined', '不得再独立调用 setFocus')
 
-  // 接收到工作台激活广播
-  activeState = true
-  storeListener?.()
+  // 收到中栏激活广播
+  emitStage('omnimux-vids')
   assert.equal(el.dataset.active, 'true', '激活态必须加上 data-active')
 
-  // 会话被选中或打开其他 Tab 时，撤销激活态
-  activeState = false
-  storeListener?.()
+  // 切到其他中栏时撤销激活
+  emitStage('omnimux-apps')
   assert.equal(el.dataset.active, undefined, '失活态必须删除 data-active')
 
   unmount()
+
+  // 卸载后不再响应 Stage 事件
+  emitStage('omnimux-vids')
+  assert.equal(el.dataset.active, undefined, '卸载后必须停止响应 Stage 事件')
 })
 
-runCheck('E2E 3.4: 多模态 Studio Panel 挂载与客户端 apply 生命周期', () => {
+await runCheck('E2E 3.4: 客户端 apply 生命周期只挂中栏 Overlay，不再注册 Workbench Tab', () => {
   initDOM()
-  let registeredTab = null
   let registeredRow = null
   let boundState = null
+  const registeredTabs = []
+  const overlayRegistrations = []
 
   globalThis.window = {
     __omnimuxSidebar: {
@@ -418,67 +433,58 @@ runCheck('E2E 3.4: 多模态 Studio Panel 挂载与客户端 apply 生命周期'
       },
     },
     __omnimuxWorkbench: {
-      bind(patch) {
-        boundState = patch
-      },
-      unbind(patch) {
-        boundState = null
-      },
-      createSidebarStore() {
-        return {
-          getSnapshot: () => false,
-          subscribe: () => () => {},
-          open: () => {},
-          close: () => {},
-        }
-      },
+      bind(patch) { boundState = patch },
+      unbind() { boundState = null },
     },
   }
 
   const mockSidebar = {
     registerTab(spec) {
-      registeredTab = spec
-      return () => { registeredTab = null }
+      registeredTabs.push(spec)
+      return () => {}
     },
   }
 
-  const effectCleanups = []
-  const mockCtx = {
+  const dispose = apply({
     locale: {
       register: () => {},
       bind: () => (k) => GOOGLE_VIDS_SIDEBAR_I18N.zh[k] || k,
+    },
+    slots: {
+      inject(target, factory) {
+        assert.equal(target, 'shell.overlay', 'Vids 只能经 shell.overlay 挂中栏')
+        overlayRegistrations.push(factory())
+        return () => { overlayRegistrations.length = 0 }
+      },
+      register(spec, component) {
+        return { ...spec, component }
+      },
     },
     inject(deps, fn) {
       assert.deepEqual(deps, ['betterSidebar'])
       fn({ betterSidebar: mockSidebar })
       return () => {}
     },
-    effect(fn) {
-      const cleanup = fn()
-      if (typeof cleanup === 'function') effectCleanups.push(cleanup)
-      return cleanup
-    },
-  }
+  })
 
-  const dispose = apply(mockCtx)
+  // 1. 不得再注册 Workbench Tab
+  assert.deepEqual(registeredTabs, [], 'Vids 不得再注册 Workbench Tab')
 
-  // 验证 Tab 挂载
-  assert.ok(registeredTab, '必须注册 Google Vids Workbench Tab')
-  assert.equal(registeredTab.id, 'omnimux-video:google-vids')
-  assert.equal(registeredTab.title(), 'Google Vids')
-  assert.equal(registeredTab.component, GoogleVidsTabPanel)
-  assert.equal(registeredTab.order, 17.5)
+  // 2. 必须经 shell.overlay 注册中栏
+  assert.equal(overlayRegistrations.length, 1, '必须注册一个 shell.overlay 中栏')
+  assert.equal(overlayRegistrations[0].id, 'omnimux-vids-stage')
+  assert.equal(overlayRegistrations[0].order, 36)
+  assert.equal(typeof overlayRegistrations[0].component, 'function', '中栏组件必须是 GoogleVidsStage')
 
-  // 验证侧边栏注入
+  // 3. 侧边栏条目与 betterSidebar 绑定仍需保留（供打开 Clip 使用）
   assert.ok(registeredRow, '必须注册侧边栏 Entry')
   assert.equal(registeredRow.rank, 7.5)
+  assert.ok(boundState?.betterSidebar, 'betterSidebar 仍需绑定，供打开 Clip 右侧栏使用')
 
-  // 卸载与资源释放
   dispose()
-  for (const c of effectCleanups) c()
-
-  assert.equal(registeredTab, null, 'Tab 必须被完全注销')
   assert.equal(registeredRow, null, '侧边栏条目必须被完全注销')
+  assert.equal(overlayRegistrations.length, 0, '中栏 Overlay 必须被完全注销')
+  assert.equal(boundState, null, 'betterSidebar 绑定必须被解绑')
 })
 
 console.log('\n===============================================================')

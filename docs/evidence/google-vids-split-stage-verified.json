@@ -1,0 +1,90 @@
+{
+  "issueId": 2721,
+  "feature": "google-vids-overlay-clip-split-stage",
+  "runId": "baf9d0e8-32e4-48b4-881a-9bda1ad310f0",
+  "timestamp": "2026-09-27T13:45:05.298Z",
+  "pass": true,
+  "assertions": [
+    {
+      "name": "test-env-started",
+      "pass": true,
+      "origin": "http://127.0.0.1:50188"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true
+    },
+    {
+      "name": "page-mounted-and-ready",
+      "pass": true
+    },
+    {
+      "name": "vids-entry-or-explore-present",
+      "pass": true
+    },
+    {
+      "name": "vids-overlay-stage-claimed",
+      "pass": true,
+      "actual": "omnimux-vids"
+    },
+    {
+      "name": "vids-stage-dom-mounted",
+      "pass": true
+    },
+    {
+      "name": "saas-copy-title-google-vids",
+      "pass": true,
+      "actual": "Google Vids"
+    },
+    {
+      "name": "saas-copy-badge-internal-beta",
+      "pass": true,
+      "actual": "内测版"
+    },
+    {
+      "name": "clip-sidebar-coexists",
+      "pass": true
+    },
+    {
+      "name": "vids-stage-released-on-close",
+      "pass": true,
+      "actual": {
+        "stage": null,
+        "hasNode": true,
+        "visible": false,
+        "vidsGone": true
+      }
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "google-vids-split-stage-verified.png",
+      "bytes": 27176,
+      "path": "docs/evidence/google-vids-split-stage-verified.png"
+    },
+    {
+      "name": "google-vids-closed-session-restored.png",
+      "bytes": 62556,
+      "path": "docs/evidence/google-vids-closed-session-restored.png"
+    }
+  ],
+  "details": {
+    "splitState": {
+      "stage": "omnimux-vids",
+      "vidsMounted": true,
+      "titleText": "Google Vids",
+      "badgeText": "内测版",
+      "clipSidebarVisible": true,
+      "closeBtnMounted": true,
+      "wbFocus": "split"
+    },
+    "closeState": {
+      "stage": null,
+      "hasNode": true,
+      "visible": false,
+      "vidsGone": true
+    },
+    "appPort": 50188,
+    "cdpPort": 50192
+  }
+}

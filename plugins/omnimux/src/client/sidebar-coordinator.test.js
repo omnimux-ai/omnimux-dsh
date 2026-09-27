@@ -566,7 +566,8 @@ test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素
   let videoClicks = 0
   const videoBtn = document.createElement('button')
   videoBtn.addEventListener('click', () => { videoClicks += 1 })
-  const disposeVideo = api.register({ id: 'omnimux-google-vids-entry', rank: 7.5, create: () => videoBtn })
+  // 必须用 omnimux-video 插件真实注册的 row.id；用旧 id 会让探索菜单 entryId 匹配不上而落到死 tabId 兜底
+  const disposeVideo = api.register({ id: 'omnimux-video-google-vids-entry', rank: 7.5, create: () => videoBtn })
 
   let wbOpenedTab = null
   window.__omnimuxWorkbench = {
@@ -585,6 +586,8 @@ test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素
     vidsItem.click()
     assert.equal(videoClicks, 1, '优先触发已注册收敛元素的 click 处理器')
     assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
+    // Issue #2721: Vids 不再有 Workbench Tab，探索菜单点击它绝不能走 open() 兜底
+    assert.equal(wbOpenedTab, null, 'Vids 无 tabId，点击不得回落到 window.__omnimuxWorkbench.open')
 
     // 2. 点击未注册实际元素的「数据分析」，fallback 到 window.__omnimuxWorkbench.open
     exploreBtn.click()

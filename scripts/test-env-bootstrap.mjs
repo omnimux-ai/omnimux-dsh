@@ -228,6 +228,8 @@ export function createTestEnvironmentStarter(deps = {}) {
       io.writeFileSync(join(env.DSH_HOME, 'settings.yaml'), JSON.stringify(initialSettings) + '\n', { mode: 0o600, flag: 'wx' });
 
       // 预置标准测试工程夹具（自带视频素材节点，解除测试环境空画布造数据死锁）
+      // 必须同时写入 storages/workspace.json 账本，否则 UI 无合法 workspace，
+      // openWorkbench / 新对话都会因无 sessionId 失败。
       const fixtureSrc = join(root, 'tests', 'fixtures', 'qa-workspace-media');
       const seededWorkspaceId = 'ws_qa_media';
       let hasSeededFixture = false;
@@ -237,6 +239,24 @@ export function createTestEnvironmentStarter(deps = {}) {
           io.mkdirSync(targetWsDir, { recursive: true, mode: 0o700 });
           if (typeof io.cpSync === 'function') {
             io.cpSync(fixtureSrc, targetWsDir, { recursive: true });
+            const storageDir = join(env.DSH_HOME, 'storages');
+            io.mkdirSync(storageDir, { recursive: true, mode: 0o700 });
+            const timestamp = new Date().toISOString();
+            io.writeFileSync(join(storageDir, 'workspace.json'), JSON.stringify({
+              unit: { name: 'workspace', version: 2 },
+              global: { initialized: true, workspaceIds: [seededWorkspaceId], archivedSessionIds: [] },
+              tables: {
+                workspaces: {
+                  [seededWorkspaceId]: {
+                    path: targetWsDir,
+                    title: 'QA Media',
+                    sessionIds: [],
+                    createdAt: timestamp,
+                    updatedAt: timestamp,
+                  },
+                },
+              },
+            }) + '\n', { mode: 0o600, flag: 'wx' });
             hasSeededFixture = true;
           }
         }
@@ -256,20 +276,44 @@ export function createTestEnvironmentStarter(deps = {}) {
           const omnimuxProfileDir = join(env.DSH_HOME, 'profiles', 'omnimux');
           io.mkdirSync(omnimuxProfileDir, { recursive: true, mode: 0o700 });
           for (const item of io.readdirSync(devProfile)) {
-            if (item === 'node_modules') continue;
+            if (item === 'node_modules' || item === '.materialize-snapshots') continue;
             try {
               io.symlinkSync(join(devProfile, item), join(omnimuxProfileDir, item));
             } catch {}
           }
+
+          const taskPlugins = new Set(['omnimux', 'omnimux-video', 'omnimux-clip']);
+
+          // 1. 处理 .materialize-snapshots/plugins 映射：待验插件优先软链至任务工作树源码
+          const devSnapshotsPlugins = join(devProfile, '.materialize-snapshots', 'plugins');
+          if (io.existsSync(devSnapshotsPlugins)) {
+            const targetSnapshotsPlugins = join(omnimuxProfileDir, '.materialize-snapshots', 'plugins');
+            io.mkdirSync(targetSnapshotsPlugins, { recursive: true, mode: 0o700 });
+            for (const pkg of io.readdirSync(devSnapshotsPlugins)) {
+              if (taskPlugins.has(pkg)) {
+                try {
+                  io.symlinkSync(join(root, 'plugins', pkg), join(targetSnapshotsPlugins, pkg));
+                } catch {
+                  io.symlinkSync(join(devSnapshotsPlugins, pkg), join(targetSnapshotsPlugins, pkg));
+                }
+              } else {
+                try {
+                  io.symlinkSync(join(devSnapshotsPlugins, pkg), join(targetSnapshotsPlugins, pkg));
+                } catch {}
+              }
+            }
+          }
+
+          // 2. 处理 node_modules 映射
           try {
             const targetNodeModules = join(omnimuxProfileDir, 'node_modules');
             io.mkdirSync(targetNodeModules, { recursive: true, mode: 0o700 });
             const devNodeModules = join(devProfile, 'node_modules');
             if (io.existsSync(devNodeModules)) {
               for (const pkg of io.readdirSync(devNodeModules)) {
-                if (pkg === 'omnimux') {
+                if (taskPlugins.has(pkg)) {
                   try {
-                    io.symlinkSync(join(root, 'plugins', 'omnimux'), join(targetNodeModules, 'omnimux'));
+                    io.symlinkSync(join(root, 'plugins', pkg), join(targetNodeModules, pkg));
                   } catch {
                     io.symlinkSync(join(devNodeModules, pkg), join(targetNodeModules, pkg));
                   }
@@ -291,8 +335,18 @@ export function createTestEnvironmentStarter(deps = {}) {
         const timer = setTimeout(() => no(failure('START_TIMEOUT')), deps.startupTimeoutMs ?? 60000);
         try {
           child = (deps.spawn ?? spawn)(EXECUTABLE, ['--expose-internals', WRAPPER, '--profile', profileName, '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
-          child.once('exit', () => {
-            exited = true; no(failure('RUNTIME_EXIT'));
+          const logStream = io.createWriteStream(join(root, '.workbuddy/evidence/issue-2721/app-runtime.log'), { flags: 'a' });
+          child.stdout.pipe(logStream);
+          child.stderr.pipe(logStream);
+          let stderrBuffer = '';
+          child.stderr.on('data', chunk => {
+            stderrBuffer += chunk.toString();
+            if (stderrBuffer.length > 65536) stderrBuffer = stderrBuffer.slice(-65536);
+          });
+          child.once('exit', (code, signal) => {
+            exited = true;
+            if (stderrBuffer) console.error(`[CHILD_STDERR] (code=${code}, signal=${signal}):\n${stderrBuffer}`);
+            no(failure('RUNTIME_EXIT'));
             void cleanup().catch(() => {});
           });
           child.on('error', () => no(failure('RUNTIME_START')));
@@ -306,8 +360,7 @@ export function createTestEnvironmentStarter(deps = {}) {
             }
           };
           child.stdout.on('data', output);
-          child.stderr.resume();
-          releaseOutput = () => { clearTimeout(timer); buffer = ''; child.stdout.off('data', output); child.stdout.resume(); };
+          releaseOutput = () => { clearTimeout(timer); buffer = ''; child.stdout.off('data', output); child.stdout.resume(); child.stderr.resume(); };
         } catch { clearTimeout(timer); no(failure('RUNTIME_START')); }
       });
       startupReject = undefined; releaseOutput();

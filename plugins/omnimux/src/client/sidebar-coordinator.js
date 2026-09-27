@@ -278,9 +278,11 @@ export const EXPLORE_MENU_ITEMS = [
   {
     id: 'google-vids',
     pluginId: 'omnimux-video',
-    entryId: 'omnimux-google-vids-entry',
+    // 必须与 omnimux-video 侧栏注册的真实 row.id 一致，探索菜单才能委托到已挂载条目
+    entryId: 'omnimux-video-google-vids-entry',
     label: 'Google Vids',
-    tabId: 'omnimux-video:google-vids',
+    // Issue #2721: Vids 不再是 Workbench Tab，无 tabId 兜底；点击一律委托给已挂载条目，
+    // 由其先打开 Clip 右侧栏再 claim 中栏 Stage。
     iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2.5"/><path d="M6.5 5.5l4 2.5-4 2.5v-5z" fill="currentColor" stroke="none"/></svg>',
     dividerAfter: true,
   },
@@ -443,7 +445,6 @@ export function activateExploreItem(item) {
   }
   const registered = CONVERGED_ROWS.get(item.entryId)
     ?? CONVERGED_ROWS.get(item.pluginId)
-    ?? (item.id === 'google-vids' ? CONVERGED_ROWS.get('omnimux-video-entry') : undefined)
   if (registered?.element && typeof registered.element.click === 'function') {
     registered.element.click()
     return
