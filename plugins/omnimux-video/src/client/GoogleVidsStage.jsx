@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { readVidsCenterBox } from './vids-stage-box.js'
 import { createVeoTask, fetchVeoTask } from './veo-api.js'
+import { seedVeoTask, VEO_DEFAULT_DURATION_SEC } from '../shared/veoTaskSeed.js'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
@@ -550,24 +551,23 @@ export function GoogleVidsStage(props) {
 
     const prompt = promptText.trim()
     const optimisticId = `task_pending_${Date.now()}`
-    setTasks((prev) => [
-      {
-        id: optimisticId,
-        title: prompt.slice(0, 16),
-        status: 'generating',
-        progress: 2,
-        durationSec: 10,
-        resolution: '720p',
-        message: '正在提交生成任务…',
-      },
-      ...prev,
-    ])
+    const optimistic = seedVeoTask({
+      id: optimisticId,
+      prompt,
+      mode: currentMode,
+      durationSec: VEO_DEFAULT_DURATION_SEC,
+      status: 'generating',
+      progress: 2,
+      phase: 'submitting',
+      message: '正在提交生成任务…',
+    })
+    setTasks((prev) => [optimistic, ...prev])
 
     try {
       const created = await createVeoTask({
         prompt,
         mode: currentMode,
-        durationSec: 10,
+        durationSec: VEO_DEFAULT_DURATION_SEC,
       })
       if (!created.ok || !created.body?.task?.id) {
         const message = created.body?.message || `提交失败（HTTP ${created.status}）`
@@ -584,19 +584,20 @@ export function GoogleVidsStage(props) {
 
       const remote = created.body.task
       setPromptText('')
+      // Replace optimistic placeholder with the remote snapshot (title/duration/resolution come from seed).
       setTasks((prev) =>
         prev.map((t) =>
           t.id === optimisticId
             ? {
-                ...t,
-                id: remote.id,
-                status: remote.status === 'completed' ? 'completed' : 'generating',
-                progress: remote.progress ?? 3,
-                title: remote.title || t.title,
-                message: remote.message,
-                videoUrl: remote.videoUrl,
-                durationSec: remote.durationSec || 10,
-                resolution: remote.resolution || '720p',
+                ...remote,
+                // Keep UI-only fields the Host does not own.
+                isUpscaled: t.isUpscaled,
+                isUpscaling: t.isUpscaling,
+                status: remote.status === 'completed'
+                  ? 'completed'
+                  : remote.status === 'failed'
+                    ? 'failed'
+                    : 'generating',
               }
             : t
         )
