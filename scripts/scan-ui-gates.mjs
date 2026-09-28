@@ -229,6 +229,11 @@ for (const file of clientFiles) {
       }
     }
 
+    // UI05: Opaque Popovers & Undefined Token Gate (浮层防透光与未定义 Token 门禁)
+    if (file.includes('sidebar-coordinator.js') && /backdrop-filter/i.test(lineText)) {
+      reportError('UI05', file, lineNum, `侧边栏协调器浮层严禁使用 backdrop-filter 伪毛玻璃滤镜，避免透出底层内容`)
+    }
+
     // UI07: Idempotent Sidebar Navigation Gate (Prohibit stage.toggle() in sidebar entries)
     if (file.includes('sidebar-entry') && /stage\.toggle\s*\(/i.test(lineText)) {
       reportError('UI07', file, lineNum, `侧边栏条目严禁使用 stage.toggle() 非幂等反选，必须使用 stageStore.open() 保证幂等激活`)

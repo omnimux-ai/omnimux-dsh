@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createVeoTask, fetchVeoTask } from './veo-api.js'
+import { seedVeoTask } from '../shared/veoTaskSeed.js'
+import { VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
 
 const DEMO_TASKS = [
   {
@@ -7,8 +9,8 @@ const DEMO_TASKS = [
     title: '韩国极简防晒美学成片',
     videoUrl: './media/google_vids_korean_skincare.mp4',
     status: 'completed',
-    durationSec: 10,
-    resolution: '720p',
+    durationSec: VEO_TASK_SPEC.durationSec.fallback,
+    resolution: VEO_TASK_SPEC.resolution,
     isUpscaled: false,
   },
 ]
@@ -47,39 +49,42 @@ export function useVeoTaskFeed({
     }
   }, [])
 
+  const failOptimistic = useCallback((id, message) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? { ...t, status: 'failed', progress: 0, message, error: message }
+          : t
+      )
+    )
+  }, [])
+
   const submitTask = useCallback(async () => {
     if (!isEditorReady || !promptText.trim()) return
 
     const prompt = promptText.trim()
     const optimisticId = `task_pending_${Date.now()}`
-    setTasks((prev) => [
-      {
-        id: optimisticId,
-        title: prompt.slice(0, 16),
-        status: 'generating',
-        progress: 2,
-        durationSec: 10,
-        resolution: '720p',
-        message: '正在提交生成任务…',
-      },
-      ...prev,
-    ])
+    const optimistic = seedVeoTask({
+      id: optimisticId,
+      prompt,
+      mode: currentMode,
+      durationSec: VEO_TASK_SPEC.durationSec.fallback,
+      status: 'generating',
+      progress: 2,
+      phase: 'submitting',
+      message: '正在提交生成任务…',
+    })
+    setTasks((prev) => [optimistic, ...prev])
 
     try {
       const created = await createVeoTask({
         prompt,
         mode: currentMode,
-        durationSec: 10,
+        durationSec: VEO_TASK_SPEC.durationSec.fallback,
       })
       if (!created.ok || !created.body?.task?.id) {
         const message = created.body?.message || `提交失败（HTTP ${created.status}）`
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === optimisticId
-              ? { ...t, status: 'failed', progress: 0, message, error: message }
-              : t
-          )
-        )
+        failOptimistic(optimisticId, message)
         // Keep prompt for retry (PRD exception defense).
         return
       }
@@ -90,15 +95,14 @@ export function useVeoTaskFeed({
         prev.map((t) =>
           t.id === optimisticId
             ? {
-                ...t,
-                id: remote.id,
-                status: remote.status === 'completed' ? 'completed' : 'generating',
-                progress: remote.progress ?? 3,
-                title: remote.title || t.title,
-                message: remote.message,
-                videoUrl: remote.videoUrl,
-                durationSec: remote.durationSec || 10,
-                resolution: remote.resolution || '720p',
+                ...remote,
+                isUpscaled: t.isUpscaled,
+                isUpscaling: t.isUpscaling,
+                status: remote.status === 'completed'
+                  ? 'completed'
+                  : remote.status === 'failed'
+                    ? 'failed'
+                    : 'generating',
               }
             : t
         )
@@ -145,15 +149,9 @@ export function useVeoTaskFeed({
       pollTimersRef.current.set(taskId, timer)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === optimisticId
-            ? { ...t, status: 'failed', progress: 0, message, error: message }
-            : t
-        )
-      )
+      failOptimistic(optimisticId, message)
     }
-  }, [clearPollTimer, currentMode, isEditorReady, promptText, setPromptText])
+  }, [clearPollTimer, currentMode, failOptimistic, isEditorReady, promptText, setPromptText])
 
   const removeTask = useCallback((taskId) => {
     clearPollTimer(taskId)

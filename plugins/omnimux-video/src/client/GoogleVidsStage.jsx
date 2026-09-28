@@ -1,16 +1,30 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react'
-import { readVidsCenterBox } from './vids-stage-box.js'
+import React, { useState, useEffect, useRef } from 'react'
+import { resolveVeoMode, VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
 import { useVeoTaskFeed } from './useVeoTaskFeed.js'
+
+function safePortal(node, container) {
+  if (!container) return node
+  try {
+    const rd = typeof window !== 'undefined'
+      ? (window.ReactDOM || (typeof require === 'function' ? require('react-dom') : null))
+      : null
+    if (rd && typeof rd.createPortal === 'function') {
+      return rd.createPortal(node, container)
+    }
+  } catch {}
+  return node
+}
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
+.dshDesktopConversationSurface {
+  position: relative !important;
+}
 .omnimux-vids-stage {
-  position: fixed;
-  z-index: 200;
-  top: var(--stage-top, 0px);
-  left: var(--stage-left, 56px);
-  width: var(--stage-width, 320px);
-  height: var(--stage-height, 240px);
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
   display: flex;
   flex-direction: column;
   background: var(--dsw-alias-bg-base);
@@ -18,6 +32,7 @@ const STAGE_STYLES = `
   box-sizing: border-box;
   overflow: hidden;
   pointer-events: auto;
+  z-index: 50;
 }
 .gvids-header {
   display: flex;
@@ -370,90 +385,19 @@ function injectGoogleVidsStyles() {
 export function GoogleVidsStage(props) {
   const [everOpened, setEverOpened] = useState(false)
   const open = typeof props?.visible === 'boolean' ? props.visible : true
-  const [box, setBox] = useState(() => (
-    typeof document !== 'undefined' ? readVidsCenterBox() : { top: 0, left: 56, width: 320, height: 240 }
-  ))
 
   useEffect(() => {
-    if (open) setEverOpened(true)
+    if (open) {
+      setEverOpened(true)
+      if (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-omnimux-conversation-collapsed')) {
+        document.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
+      }
+    }
   }, [open])
 
   useEffect(() => {
     injectGoogleVidsStyles()
   }, [])
-
-  // Host shell.overlay sits on frame-level .dshDesktopOverlay (full frame).
-  // Measure the live conversation column and clamp to the right panel edge so
-  // Vids stays a true center-column surface while left/right rails remain usable.
-  useLayoutEffect(() => {
-    if (!open) return undefined
-    const update = () => { setBox(readVidsCenterBox()) }
-    update()
-    // Clip open / split settle after claim; remeasure a few frames later.
-    const timers = [50, 150, 400, 800].map((ms) => window.setTimeout(update, ms))
-    const targets = [
-      document.querySelector('[data-conversation-scroll]'),
-      document.querySelector('[data-slot="conversation"]')?.parentElement,
-      document.querySelector('[class*="centerCol"]'),
-      document.querySelector('[data-pane="sidebar"], [class*="sidebarCol"]'),
-      document.querySelector('[data-sidebar-right-panel]'),
-      document.querySelector('[data-dsh-panel-host]'),
-      document.querySelector('.dshDesktopFrame, [class*="frame"]'),
-    ].filter((el) => el instanceof HTMLElement)
-    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null
-    for (const target of targets) observer?.observe(target)
-    window.addEventListener('resize', update)
-    const onStage = () => update()
-    window.addEventListener('dsh-product-stage', onStage)
-    // Left/right rail toggles often keep the frame box size unchanged, so
-    // ResizeObserver on the frame is silent. Capture UI gestures + poll.
-    const onGesture = () => {
-      update()
-      window.setTimeout(update, 50)
-      window.setTimeout(update, 200)
-    }
-    document.addEventListener('click', onGesture, true)
-    document.addEventListener('pointerup', onGesture, true)
-    const poll = window.setInterval(update, 250)
-    const mo = typeof MutationObserver === 'function'
-      ? new MutationObserver(update)
-      : null
-    mo?.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: [
-        'data-omnimux-left-collapsed',
-        'data-omnimux-conversation-collapsed',
-        'data-dsh-product-stage',
-        'class',
-        'style',
-      ],
-    })
-    const frame = document.querySelector('.dshDesktopFrame, [class*="frame"]')
-    if (frame instanceof HTMLElement) {
-      mo?.observe(frame, {
-        attributes: true,
-        subtree: true,
-        attributeFilter: [
-          'data-sidebar-collapsed',
-          'data-rightbar-collapsed',
-          'data-sidebar-right-panel',
-          'data-sidebar-right-open',
-          'class',
-          'style',
-        ],
-      })
-    }
-    return () => {
-      for (const id of timers) window.clearTimeout(id)
-      window.clearInterval(poll)
-      observer?.disconnect()
-      mo?.disconnect()
-      window.removeEventListener('resize', update)
-      window.removeEventListener('dsh-product-stage', onStage)
-      document.removeEventListener('click', onGesture, true)
-      document.removeEventListener('pointerup', onGesture, true)
-    }
-  }, [open])
 
   // 剪辑工程就绪感知
   const [isEditorReady, setIsEditorReady] = useState(() => {
@@ -467,8 +411,8 @@ export function GoogleVidsStage(props) {
   // 向导就绪面板状态
   const [onboardingOpen, setOnboardingOpen] = useState(false)
 
-  // 模式 Tab：'create' | 'modify' | 'animate' | 'extend'
-  const [currentMode, setCurrentMode] = useState('create')
+  // 模式 Tab：来自 VEO_TASK_SPEC.modes（展示/校验；driver 暂不消费）
+  const [currentMode, setCurrentMode] = useState(VEO_TASK_SPEC.defaultMode)
   const [promptText, setPromptText] = useState('')
   const [attachedAsset, setAttachedAsset] = useState(null)
   const [insertedFeedbackId, setInsertedFeedbackId] = useState(null)
@@ -598,35 +542,20 @@ export function GoogleVidsStage(props) {
     }, 1500)
   }
 
-  // 动态占位符
+  // 动态占位符（文案字典在 VEO_TASK_SPEC）
   const getPlaceholder = () => {
-    if (!isEditorReady) return '请先在右侧创建或打开剪辑工程...'
-    switch (currentMode) {
-      case 'create':
-        return '描述您想生成的视频画面与动作...'
-      case 'modify':
-        return '描述需要对当前视频进行的调整（如光影或服装风格）...'
-      case 'animate':
-        return '描述图像素材中应展现的动作与运镜细节...'
-      case 'extend':
-        return '描述当前视频结尾后续发生的情节发展...'
-      default:
-        return '描述您想生成的视频画面与动作...'
-    }
+    if (!isEditorReady) return VEO_TASK_SPEC.editorGatePlaceholder
+    return resolveVeoMode(currentMode).placeholder
   }
 
   if (!open && !everOpened) return null
 
-  return (
+  const content = (
     <div
       className="omnimux-vids-stage"
       data-visible={open ? 'true' : 'false'}
       style={{
         display: open ? undefined : 'none',
-        '--stage-top': `${box.top}px`,
-        '--stage-left': `${box.left}px`,
-        '--stage-width': `${box.width}px`,
-        '--stage-height': `${box.height}px`,
       }}
     >
       {/* 3.1 顶部 Header */}
@@ -830,12 +759,7 @@ export function GoogleVidsStage(props) {
       <div className="gvids-drawer">
         {/* 模式分段控制器（纯 2 字名词） */}
         <div className="gvids-segmented-control">
-          {[
-            { id: 'create', label: '创建' },
-            { id: 'modify', label: '修改' },
-            { id: 'animate', label: '动画' },
-            { id: 'extend', label: '扩展' },
-          ].map((tab) => (
+          {VEO_TASK_SPEC.modes.map((tab) => (
             <button // exempt-ui01 Google Vids 舞台专属按钮
               key={tab.id}
               type="button"
@@ -862,7 +786,7 @@ export function GoogleVidsStage(props) {
         <div className="gvids-drawer-bottom">
           {/* 客观规格胶囊 */}
           <div className="gvids-param-capsule">
-            720p · 16:9 · 10s
+            {VEO_TASK_SPEC.paramCapsule}
           </div>
 
           {/* 生成动作键 (纯向上箭头矢量 SVG) */}
@@ -881,6 +805,12 @@ export function GoogleVidsStage(props) {
       </div>
     </div>
   )
+
+  const convTarget = typeof document !== 'undefined'
+    ? document.querySelector('.dshDesktopConversationSurface')
+    : null
+
+  return safePortal(content, convTarget)
 }
 
 export default GoogleVidsStage

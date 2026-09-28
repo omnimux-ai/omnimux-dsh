@@ -33,13 +33,13 @@ export function projectView(envelope, query = {}) {
   const durationMs = schema.canvasConfig?.durationMs || 0
   const clipCount = (schema.tracks || []).reduce((sum, track) => sum + (track.clips?.length || 0), 0)
   const base = {
-    projectId: schema.projectId || envelope.id,
+    projectId: schema.projectId || envelope.id || 'clip-project',
     view,
     durationSec: msToSec(durationMs),
     fps: schema.canvasConfig?.fps || 30,
     aspectRatio: schema.canvasConfig?.aspectRatio || '16:9',
-    width: schema.canvasConfig?.width,
-    height: schema.canvasConfig?.height,
+    width: schema.canvasConfig?.width ?? 1920,
+    height: schema.canvasConfig?.height ?? 1080,
     playheadSec: msToSec(envelope.playheadMs || 0),
     isPlaying: Boolean(envelope.isPlaying),
     trackCount: (schema.tracks || []).length,

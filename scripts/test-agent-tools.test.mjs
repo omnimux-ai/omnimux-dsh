@@ -46,4 +46,44 @@ describe('DSH Agent Tools Unified Test Suite', async () => {
     }
     assert.ok(audited > 0, '应成功审计出破坏性操作工具');
   });
+
+  test('Negative Gates: 门禁必须精准拦截非无损 JSON、非法 execute 签名与假参数缺失', async () => {
+    // 1. 签名门禁：必须拦截首参为 callId 的旧式签名
+    const badSigTool = {
+      name: 'bad_signature_tool',
+      description: '这是一个用于测试旧式参数签名的工具描述',
+      parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+      output: { schema: { type: 'object' }, render: () => ({ kind: 'text', content: 'ok' }) },
+      execute: async (_toolCallId, args = {}) => ({ ok: true, id: args.id }),
+    };
+    const badSigRes = validateToolContract(badSigTool);
+    assert.equal(badSigRes.valid, false);
+    assert.ok(badSigRes.errors.some((e) => e.includes('execute 签名非法') && e.includes('_toolCallId')));
+
+    // 2. 无损 JSON 门禁：必须拦截任何输出中包含 undefined 的工具
+    const undefTool = {
+      name: 'mock_undef_tool',
+      parameters: { type: 'object', properties: {} },
+      execute: async () => ({ ok: true, ghostKey: undefined }),
+    };
+    const undefRes = await testToolExecution(undefTool);
+    assert.equal(undefRes.ok, false);
+    assert.equal(undefRes.phase, 'lossless_json_empty_args');
+    assert.ok(undefRes.error.includes('ghostKey'));
+
+    // 3. 必填参数消费门禁：已在 args 提供必填参数却仍报缺失的，判定为签名错位
+    const falseMissingTool = {
+      name: 'mock_false_missing_tool',
+      parameters: { type: 'object', properties: { targetId: { type: 'string' } }, required: ['targetId'] },
+      execute: async (_toolCallId, args = {}) => {
+        const { targetId } = args || {};
+        if (!targetId) return { ok: false, error: 'Missing required parameter: targetId' };
+        return { ok: true, targetId };
+      },
+    };
+    const falseMissingRes = await testToolExecution(falseMissingTool);
+    assert.equal(falseMissingRes.ok, false);
+    assert.equal(falseMissingRes.phase, 'argument_consumption');
+    assert.ok(falseMissingRes.error.includes('targetId'));
+  });
 });

@@ -9,8 +9,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { requestRejection } from './request-authorization.js'
-import { createVeoTaskStore, veoMediaUrl } from './veo-task-store.js'
+import { createVeoTaskStore, safeMediaBase, veoMediaUrl } from './veo-task-store.js'
+import { seedVeoTask, VEO_DEFAULT_DURATION_SEC, VEO_DEFAULT_RESOLUTION } from '../shared/veoTaskSeed.js'
 import { validateVeoTaskRequest } from '../contracts/veoContracts.js'
+import { VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
 import {
   detectOpenCliEnvironment,
   generateVideoSilently,
@@ -104,8 +106,10 @@ export function createVeoDispatcher(deps = {}) {
     if (method === 'POST' && (pathname === `${VEO_API_PREFIX}/tasks` || pathname === '/tasks')) {
       const body = req.body && typeof req.body === 'object' ? req.body : {}
       const prompt = typeof body.prompt === 'string' ? body.prompt : ''
-      const mode = typeof body.mode === 'string' ? body.mode : 'create'
-      const durationSec = Number(body.durationSec ?? body.parameters?.durationSec ?? 10)
+      const mode = typeof body.mode === 'string' ? body.mode : VEO_TASK_SPEC.defaultMode
+      const durationSec = Number(
+        body.durationSec ?? body.parameters?.durationSec ?? VEO_TASK_SPEC.durationSec.fallback,
+      )
       const validation = validateVeoTaskRequest({
         prompt,
         mode,
@@ -133,19 +137,21 @@ export function createVeoDispatcher(deps = {}) {
       }
 
       const id = `task_veo_${now()}`
-      const task = store.create({
+      const seeded = seedVeoTask({
         id,
-        prompt: prompt.trim(),
+        prompt,
         mode,
         durationSec,
-        title: prompt.trim().slice(0, 16) || '未命名成片',
         status: 'queued',
         progress: 1,
         phase: 'queued',
         message: '任务已入队，准备启动无头沙箱…',
       })
+      const task = store.create(seeded)
 
       // Fire-and-forget background generation.
+      // NOTE: generateVideoSilently currently ignores `mode` and does not push
+      // durationSec into Google Vids page controls — modes are UI/validation only.
       if (!running.has(id)) {
         running.add(id)
         Promise.resolve()
@@ -157,8 +163,8 @@ export function createVeoDispatcher(deps = {}) {
               message: '正在初始化 opencli 后台沙箱…',
             })
             const result = await generate({
-              prompt: prompt.trim(),
-              durationSec,
+              prompt: seeded.prompt,
+              durationSec: seeded.durationSec,
               outputDir,
               onProgress: (evt) => {
                 store.update(id, {
@@ -169,7 +175,15 @@ export function createVeoDispatcher(deps = {}) {
                 })
               },
             })
-            const fileName = result.fileName || path.basename(result.localPath || '')
+            // Prefer generator fileName; otherwise basename of localPath — then
+            // validate once so an unsafe provided name cannot fall through.
+            const fileName = safeMediaBase(
+              result.fileName || path.basename(result.localPath || ''),
+            )
+            if (!fileName) {
+              throw new Error('invalid media file name')
+            }
+            const current = store.get(id)
             store.update(id, {
               status: 'completed',
               progress: 100,
@@ -178,10 +192,11 @@ export function createVeoDispatcher(deps = {}) {
               fileName,
               localPath: result.localPath,
               fileSize: result.fileSize,
-              durationSec: result.durationSec || durationSec,
-              resolution: result.resolution || '720p',
+              durationSec: result.durationSec || seeded.durationSec,
+              resolution: result.resolution || current?.resolution || VEO_TASK_SPEC.resolution,
               videoUrl: veoMediaUrl(fileName),
-              title: prompt.trim().slice(0, 16) || '未命名成片',
+              // Keep enqueue title; do not recompute from prompt.
+              title: current?.title || seeded.title,
             })
           })
           .catch((err) => {
@@ -222,8 +237,8 @@ export function createVeoDispatcher(deps = {}) {
  * @param {import('node:http').ServerResponse} res
  */
 export function trySendVeoMedia(fileName, outputDir, res) {
-  const base = path.basename(fileName || '')
-  if (!base || base !== fileName || base.includes('..')) return false
+  const base = safeMediaBase(fileName)
+  if (!base) return false
   const full = path.resolve(outputDir, base)
   const root = path.resolve(outputDir)
   if (!full.startsWith(root + path.sep) && full !== root) return false
