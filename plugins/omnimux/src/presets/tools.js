@@ -150,7 +150,7 @@ export function mountPresetsTools(ctx) {
       additionalProperties: false,
     },
     output: JSON_TOOL_OUTPUT,
-    execute: async (_toolCallId, args = {}) => {
+    execute: async (args = {}) => {
       try {
         const result = queryMarketingPresets(args || {})
         return {
