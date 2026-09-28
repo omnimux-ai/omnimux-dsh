@@ -10,6 +10,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { requestRejection } from './request-authorization.js'
 import { createVeoTaskStore, safeMediaBase, veoMediaUrl } from './veo-task-store.js'
+import { seedVeoTask, VEO_DEFAULT_DURATION_SEC, VEO_DEFAULT_RESOLUTION } from '../shared/veoTaskSeed.js'
 import { validateVeoTaskRequest } from '../contracts/veoContracts.js'
 import {
   detectOpenCliEnvironment,
@@ -105,7 +106,7 @@ export function createVeoDispatcher(deps = {}) {
       const body = req.body && typeof req.body === 'object' ? req.body : {}
       const prompt = typeof body.prompt === 'string' ? body.prompt : ''
       const mode = typeof body.mode === 'string' ? body.mode : 'create'
-      const durationSec = Number(body.durationSec ?? body.parameters?.durationSec ?? 10)
+      const durationSec = Number(body.durationSec ?? body.parameters?.durationSec ?? VEO_DEFAULT_DURATION_SEC)
       const validation = validateVeoTaskRequest({
         prompt,
         mode,
@@ -133,17 +134,17 @@ export function createVeoDispatcher(deps = {}) {
       }
 
       const id = `task_veo_${now()}`
-      const task = store.create({
+      const seeded = seedVeoTask({
         id,
-        prompt: prompt.trim(),
+        prompt,
         mode,
         durationSec,
-        title: prompt.trim().slice(0, 16) || '未命名成片',
         status: 'queued',
         progress: 1,
         phase: 'queued',
         message: '任务已入队，准备启动无头沙箱…',
       })
+      const task = store.create(seeded)
 
       // Fire-and-forget background generation.
       if (!running.has(id)) {
@@ -157,8 +158,8 @@ export function createVeoDispatcher(deps = {}) {
               message: '正在初始化 opencli 后台沙箱…',
             })
             const result = await generate({
-              prompt: prompt.trim(),
-              durationSec,
+              prompt: seeded.prompt,
+              durationSec: seeded.durationSec,
               outputDir,
               onProgress: (evt) => {
                 store.update(id, {
@@ -177,6 +178,7 @@ export function createVeoDispatcher(deps = {}) {
             if (!fileName) {
               throw new Error('invalid media file name')
             }
+            const current = store.get(id)
             store.update(id, {
               status: 'completed',
               progress: 100,
@@ -185,10 +187,11 @@ export function createVeoDispatcher(deps = {}) {
               fileName,
               localPath: result.localPath,
               fileSize: result.fileSize,
-              durationSec: result.durationSec || durationSec,
-              resolution: result.resolution || '720p',
+              durationSec: result.durationSec || seeded.durationSec,
+              resolution: result.resolution || current?.resolution || VEO_DEFAULT_RESOLUTION,
               videoUrl: veoMediaUrl(fileName),
-              title: prompt.trim().slice(0, 16) || '未命名成片',
+              // Keep enqueue title; do not recompute from prompt.
+              title: current?.title || seeded.title,
             })
           })
           .catch((err) => {

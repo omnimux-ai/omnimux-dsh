@@ -4,6 +4,7 @@
  */
 
 import path from 'node:path'
+import { seedVeoTask } from '../shared/veoTaskSeed.js'
 
 /**
  * @typedef {{
@@ -36,17 +37,21 @@ export function createVeoTaskStore() {
    */
   function create(seed) {
     const now = Date.now()
+    const seeded = seedVeoTask({
+      id: seed.id,
+      prompt: seed.prompt,
+      mode: seed.mode,
+      durationSec: seed.durationSec,
+      status: seed.status,
+      progress: seed.progress,
+      phase: seed.phase,
+      message: seed.message,
+    })
     /** @type {VeoTask} */
     const task = {
-      id: seed.id,
-      status: seed.status || 'queued',
-      progress: typeof seed.progress === 'number' ? seed.progress : 0,
-      phase: seed.phase || 'queued',
-      message: seed.message || '任务已入队',
-      prompt: seed.prompt,
-      mode: seed.mode || 'create',
-      durationSec: seed.durationSec || 10,
-      title: seed.title || seed.prompt.slice(0, 16) || '未命名成片',
+      ...seeded,
+      // Allow explicit title override only when caller already computed via seedVeoTask.
+      title: seed.title || seeded.title,
       createdAt: now,
       updatedAt: now,
     }
