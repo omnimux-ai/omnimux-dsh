@@ -1707,6 +1707,8 @@ export function scoreSkillCandidate(candidate, rawQuery, lang) {
   return undefined
 }
 
+export const activeSkillRegistry = new Map()
+
 /**
  * Enhance skill candidates by localizing names, descriptions, and filtering with smart multi-modal scores.
  * @param {Array<{ name: string, rawName?: string, description?: string, hint?: string, icon?: string }>} allSkills
@@ -1718,18 +1720,28 @@ export function enhanceSkillCandidates(allSkills, req, locale) {
   if (!Array.isArray(allSkills)) return []
   const lang = getActiveLang(locale)
 
+  const currentRawKeys = new Set()
   // 1. Map to localized display items with rawName preserved
   const localized = allSkills.map((skill) => {
     const rawName = skill.rawName || skill.name
     const displayName = resolveSkillDisplayName(rawName, skill.description, locale)
     const displayDesc = resolveSkillDescription(rawName, skill.description, locale)
-    return {
+    const item = {
       ...skill,
       name: displayName,
       rawName,
       description: displayDesc,
     }
+    const rawLower = String(rawName || '').toLowerCase()
+    if (rawLower) {
+      currentRawKeys.add(rawLower)
+      activeSkillRegistry.set(rawLower, item)
+    }
+    return item
   })
+  for (const key of activeSkillRegistry.keys()) {
+    if (!currentRawKeys.has(key)) activeSkillRegistry.delete(key)
+  }
 
   const rawQuery = (req?.query || '').trim()
   if (!rawQuery) {
@@ -1769,6 +1781,20 @@ export function wrapSkillInputTriggerSource(source, locale) {
       allSkills = await originalCandidates.call(this, session, baseReq)
     } catch {
       allSkills = await originalCandidates.call(this, session, req)
+    }
+    if (typeof window !== 'undefined' && Array.isArray(window.__omnimuxInstalledSkills)) {
+      const existing = new Set(allSkills.map((s) => String(s.rawName || s.name || '').toLowerCase()))
+      for (const item of window.__omnimuxInstalledSkills) {
+        const slug = String(item.slug || item.skill || item.name || '').toLowerCase()
+        if (slug && !existing.has(slug)) {
+          existing.add(slug)
+          allSkills.push({
+            name: item.name || slug,
+            rawName: slug,
+            description: item.description || '',
+          })
+        }
+      }
     }
     return enhanceSkillCandidates(allSkills, req, locale)
   }
@@ -1830,9 +1856,45 @@ export function wrapInputTriggersSkills(inputTriggers, locale) {
     }
   }
 
+  // 3. Direct typing hook: auto-attach skill pill when typing `/slug` and hitting Enter/Space
+  const onDocKeyDown = (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    if (e.isComposing || e.keyCode === 229) return
+    const target = e.target
+    if (!target || typeof target.closest !== 'function') return
+    if (!target.closest('[data-composer-card]')) return
+    const text = (target.textContent || target.value || '').trim()
+    const match = text.match(/^\/([a-zA-Z0-9_-]{2,64})$/)
+    if (match) {
+      const slug = match[1].toLowerCase()
+      const candidate = activeSkillRegistry.get(slug)
+      if (candidate) {
+        e.preventDefault?.()
+        e.stopPropagation?.()
+        const rawName = candidate.rawName || candidate.name
+        const displayName = candidate.name && candidate.name !== rawName ? candidate.name : rawName
+        requestSkillAttach({ id: '', slug: rawName, skill: rawName, name: displayName, title: displayName })
+        if (target.isContentEditable) {
+          target.textContent = ''
+          try { target.dispatchEvent(new Event('input', { bubbles: true })) } catch {}
+        } else if ('value' in target) {
+          target.value = ''
+          try { target.dispatchEvent(new Event('input', { bubbles: true })) } catch {}
+        }
+      }
+    }
+  }
+
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('keydown', onDocKeyDown, true)
+  }
+
   return () => {
     if (originalRegisterSource) {
       inputTriggers.registerSource = originalRegisterSource
+    }
+    if (typeof document !== 'undefined' && typeof document.removeEventListener === 'function') {
+      document.removeEventListener('keydown', onDocKeyDown, true)
     }
   }
 }

@@ -240,6 +240,22 @@ test('aggregateSkillSearch ignores remote popular fallback when local hits exist
   assert.equal(result.items[0].slug, 'face-warp')
 })
 
+test('aggregateSkillSearch discovers local installed skills that are not in catalog', async () => {
+  const result = await aggregateSkillSearch('skill-creator', {
+    cfg: cfg(),
+    catalog: FAKE_CATALOG as never,
+    installed: new Set(['skill-creator']),
+    installedSkills: [
+      { slug: 'skill-creator', name: '技能创建', description: '创建双语可复用Skill', path: '/fake/skill-creator' },
+    ],
+    channels: ['custom'],
+  })
+  assert.equal(result.items.length, 1)
+  assert.equal(result.items[0].slug, 'skill-creator')
+  assert.equal(result.items[0].name, '技能创建')
+  assert.equal(result.items[0].installed, true)
+})
+
 test('legacy Agent search retains popular fallback and its existing return fields', async () => {
   const result = await aggregateSkillSearch('unmatched', {
     cfg: cfg(), catalog: { items: [] },

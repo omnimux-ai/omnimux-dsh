@@ -159,13 +159,25 @@
           setErr("");
           setRemoteDown(false);
           setActiveIndex(0);
-          return undefined;
+          if (!debounced.trim()) {
+            return undefined;
+          }
         }
         let live = true;
         const payload = SkillShelf.buildSearchPayload(tabId, debounced);
         const cached = peekPickerCache(payload);
         if (cached) {
-          setItems(Array.isArray(cached.items) ? cached.items : []);
+          let cachedItems = Array.isArray(cached.items) ? cached.items : [];
+          if (presetBinding && !presetBinding.useDefaultContentCatalog && debounced.trim()) {
+            const presetMatches = SkillShelf.filterPresetSkills(presetBinding.skills, tabId, debounced);
+            const seen = new Set(presetMatches.map((it) => it.slug || it.id || it.skill));
+            const externalMatches = cachedItems.filter((it) => {
+              const k = it.slug || it.id || it.skill;
+              return k && !seen.has(k);
+            });
+            cachedItems = [...presetMatches, ...externalMatches];
+          }
+          setItems(cachedItems);
           setRemoteDown(Boolean(cached.channelErrors && cached.channelErrors.skillhub));
           setStatus("ready");
           setErr("");
@@ -176,7 +188,17 @@
           if (!live) return;
           const d = result && result.body;
           if (!d) return;
-          setItems(Array.isArray(d.items) ? d.items : []);
+          let searchItems = Array.isArray(d.items) ? d.items : [];
+          if (presetBinding && !presetBinding.useDefaultContentCatalog && debounced.trim()) {
+            const presetMatches = SkillShelf.filterPresetSkills(presetBinding.skills, tabId, debounced);
+            const seen = new Set(presetMatches.map((it) => it.slug || it.id || it.skill));
+            const externalMatches = searchItems.filter((it) => {
+              const k = it.slug || it.id || it.skill;
+              return k && !seen.has(k);
+            });
+            searchItems = [...presetMatches, ...externalMatches];
+          }
+          setItems(searchItems);
           setRemoteDown(Boolean(d.channelErrors && d.channelErrors.skillhub));
           setStatus("ready");
           setErr("");
@@ -184,6 +206,15 @@
         }).catch((e) => {
           if (!live) return;
           if (cached) return;
+          if (presetBinding && !presetBinding.useDefaultContentCatalog && debounced.trim()) {
+            const presetMatches = SkillShelf.filterPresetSkills(presetBinding.skills, tabId, debounced);
+            if (presetMatches.length) {
+              setItems(presetMatches);
+              setStatus("ready");
+              setErr("");
+              return;
+            }
+          }
           setItems([]);
           setStatus("error");
           setErr(e && e.message ? e.message : String(e || "error"));
@@ -235,7 +266,7 @@
       }, [open, onClose, anchorRef]);
 
       const visible = presetBinding && !presetBinding.useDefaultContentCatalog
-        ? SkillShelf.filterPickerItems(items, tabId, presetBinding, debounced)
+        ? (!debounced.trim() ? SkillShelf.filterPickerItems(items, tabId, presetBinding) : items)
         : SkillShelf.filterPickerItems(items, tabId);
 
       const handlePick = (item) => {

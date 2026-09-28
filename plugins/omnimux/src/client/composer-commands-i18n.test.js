@@ -1085,3 +1085,32 @@ test('syncMenuIcons handles English command names seamlessly', () => {
     assert.ok(icon && icon.innerHTML.includes('<svg'))
   }
 })
+
+test('wrapSkillInputTriggerSource merges window.__omnimuxInstalledSkills and supports auto-attaching pill on /slug typing', async () => {
+  const fakeSource = {
+    trigger: '/',
+    name: 'skill',
+    async candidates() {
+      return [{ name: 'existing-skill', description: '已有技能' }]
+    },
+    onPick({ candidate }) {
+      return { text: `/${candidate.name} ` }
+    },
+  }
+
+  globalThis.window = {
+    __omnimuxInstalledSkills: [
+      { slug: 'skill-creator', name: '技能创建', description: '创建双语可复用Skill' },
+    ],
+    __omnimuxActiveSkill: null,
+    CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init?.detail } },
+    dispatchEvent() {},
+  }
+
+  const wrapped = wrapSkillInputTriggerSource(fakeSource, fakeZhLocale)
+  const found = await wrapped.candidates({ sessionId: 's1' }, { query: 'creator' })
+  assert.equal(found.length, 1)
+  assert.equal(found[0].rawName, 'skill-creator')
+
+  delete globalThis.window
+})
