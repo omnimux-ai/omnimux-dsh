@@ -279,6 +279,28 @@ function initDom() {
     dom.window.HTMLInputElement.prototype.attachEvent = () => {}
     dom.window.HTMLInputElement.prototype.detachEvent = () => {}
   }
+
+  globalThis.fetch = async (url) => {
+    const sUrl = String(url)
+    if (sUrl.includes('/omnimux/products')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          products: [
+            {
+              id: 'prd_test_1',
+              name: '女士高级淡香水50ml (买一送一)',
+              sub: '规格: 50ml',
+              cover: { kind: 'image', id: 'med_1' },
+              cover_url: 'https://example.com/item.png',
+            },
+          ],
+        }),
+      }
+    }
+    throw new TypeError(`Failed to parse URL from ${url}`)
+  }
 }
 
 function fireClick(el) {
@@ -411,14 +433,19 @@ test('E2E: 经典旧应用在工作区 AppTab 中打开，音色与比例生效�
 
   // 点击从商品库选择按钮，唤起商品库选择交互弹窗
   fireClick(storeBtn)
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  })
   const modal = doc.querySelector('.omx-product-pick')
   assert.ok(modal, '点击商品库按钮必须弹出从商品库选择的交互弹窗')
   const productCards = Array.from(modal.querySelectorAll('.omx-product-pick-card')).filter(c => !c.className.includes('add'))
   assert.ok(productCards.length > 0, '商品库弹窗中必须列出已有可选商品卡片')
 
   // 双击第一款商品直接回填
-  act(() => {
+  await act(async () => {
     productCards[0].dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true, cancelable: true }))
+    await Promise.resolve()
   })
   assert.equal(doc.querySelector('.omx-product-pick'), null, '选择商品后弹窗自动关闭')
   const repickedCard = host.querySelector('.omx-apptab-picked')
@@ -546,14 +573,19 @@ test('E2E: 下拉菜单防透视穿透与商品主图三合一紧凑复合控件
 
   // 点击「从商品库选择」，验证弹窗交互并回填已有商品
   fireClick(storeBtn)
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  })
   const modal = doc.querySelector('.omx-product-pick')
   assert.ok(modal, '点击从商品库选择唤起交互弹窗')
   const items = Array.from(modal.querySelectorAll('.omx-product-pick-card')).filter((c) => !c.className.includes('add'))
   assert.ok(items.length >= 1, '商品库弹窗中提供已有商品列表')
 
   // 双击第一款商品直接回填并关闭弹窗
-  act(() => {
+  await act(async () => {
     items[0].dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true, cancelable: true }))
+    await Promise.resolve()
   })
   assert.equal(doc.querySelector('.omx-product-pick'), null, '选择商品后弹窗自动关闭')
 

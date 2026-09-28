@@ -383,58 +383,25 @@ export function resolveFieldModelOptions(prop, activeModelObj, isRes, isDur) {
 const EMPTY_PROPS = Object.freeze({})
 const EMPTY_REQUIRED = Object.freeze([])
 
-const DEFAULT_PRODUCTS = Object.freeze([
-  {
-    id: 'prod-001',
-    name: '智能降噪真无线耳机',
-    sub: '数码影音 · 现货',
-    url: 'https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp',
-    preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp',
-  },
-  {
-    id: 'prod-002',
-    name: '超轻透气缓震跑鞋',
-    sub: '运动户外 · 现货',
-    url: 'https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp',
-    preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp',
-  },
-  {
-    id: 'prod-003',
-    name: '极简便携桌面加湿器',
-    sub: '家居生活 · 现货',
-    url: 'https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp',
-    preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp',
-  },
-  {
-    id: 'prod-004',
-    name: '极简智能触控保温杯',
-    sub: '日常器物 · 现货',
-    url: 'https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp',
-    preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp',
-  },
-])
-
-const fallbackFetchProducts = async () => {
-  if (typeof fetch !== 'function') return DEFAULT_PRODUCTS;
+const fetchProductsForPicker = async () => {
   try {
     const res = await fetch('/omnimux/products')
     if (res.ok) {
       const data = await res.json()
-      if (Array.isArray(data?.products) && data.products.length > 0) {
-        return data.products.map((p, idx) => ({
-          id: p.id || `prod-remote-${idx}`,
-          name: p.name || p.title || '未命名商品',
-          sub: p.sub || (p.sku || p.price ? `规格: ${p.sku || p.price}` : '商品库'),
-          url: p.link || p.url || '',
-          preview: p.preview || p.image || p.url || '',
-          cover: p.cover,
-        }))
-      }
+      const list = Array.isArray(data) ? data : data?.products || []
+      return list.map((p, idx) => ({
+        id: p.id || `prod-remote-${idx}`,
+        name: p.name || p.title || '未命名商品',
+        sub: p.sub || (p.sku || p.price ? `规格: ${p.sku || p.price}` : '商品库'),
+        url: p.link || p.url || '',
+        preview: p.preview || p.image || p.url || '',
+        cover: p.cover,
+      }))
     }
   } catch (err) {
     console.warn('[omnimux-workflow] 获取商品列表失败:', err?.message)
   }
-  return DEFAULT_PRODUCTS
+  return []
 }
 
 function IconCheck({ size = 12, className = '' }) {
@@ -2325,6 +2292,7 @@ export function AppTab(props) {
           open={Boolean(productPickerModal)}
           onClose={() => setProductPickerModal(null)}
           onConfirm={handleSelectProduct}
+          fetchProducts={fetchProductsForPicker}
         />
       )}
 
