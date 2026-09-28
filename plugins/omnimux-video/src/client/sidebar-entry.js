@@ -204,12 +204,18 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
     if (typeof workbench?.open !== 'function' || typeof stage?.claim !== 'function') return
 
     try {
+      try {
+        document.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
+      } catch {}
       const opened = await workbench.open({
         tabId: 'omnimux-clip:studio',
         title: '视频剪辑',
         focus: 'split',
       })
       if (!mounted || opened !== true) return
+      try {
+        document.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
+      } catch {}
       stage.claim('omnimux-vids')
     } catch {
       // Keep the current stage and focus unchanged when Clip cannot be opened.
