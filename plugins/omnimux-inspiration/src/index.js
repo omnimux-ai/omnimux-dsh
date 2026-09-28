@@ -265,8 +265,8 @@ export function apply(ctx) {
     videoAnalyzeTool,
     textComplete,
     rivalDispatcher,
-    fetcher: ctx.fetcher,
-    resolver: ctx.resolver,
+    fetcher: typeof ctx.get === 'function' ? ctx.get('fetcher') : undefined,
+    resolver: typeof ctx.get === 'function' ? ctx.get('resolver') : undefined,
     // Hub capability `inspirationShare` owns the cloud publish (upload assets →
     // publish). Resolved at request time: this plugin must not hold the gateway
     // key, build a publish payload, or fall back to a link of its own.
