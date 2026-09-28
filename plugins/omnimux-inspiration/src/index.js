@@ -93,11 +93,26 @@ export function hasSocialPayload(data) {
   return parseSocialMeta(data).has_metadata
 }
 
+function createAbortError(message = 'This operation was aborted', cause) {
+  const err = new Error(message)
+  err.name = 'AbortError'
+  err.code = 'ABORT_ERR'
+  if (cause) err.cause = cause
+  return err
+}
+
 async function runFallback(fallback, params) {
   if (typeof fallback !== 'function') return null
+  if (params?.signal?.aborted) throw createAbortError()
   try {
     return await fallback(params)
-  } catch {
+  } catch (err) {
+    if (params?.signal?.aborted) {
+      throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') ? err : createAbortError('This operation was aborted', err)
+    }
+    if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
+      throw err
+    }
     return null
   }
 }
@@ -126,7 +141,8 @@ function socialFailureMessage({ platform, cloudUnsupported, cloudError, toolRead
  * @param {{ getTool?: (name: string) => any, fallback?: Function }} [deps]
  */
 export function createSocialFetcher({ getTool, fallback = fallbackResolveSocial } = {}) {
-  return async function socialFetcher({ platform, capability, url }) {
+  return async function socialFetcher({ platform, capability, url, signal }) {
+    if (signal?.aborted) throw createAbortError()
     const cloudUnsupported = !SUPPORTED_CLOUD_PLATFORMS.has(platform)
     const resolvedCapability = capability || capabilityOf(platform)
     const socialDataTool = cloudUnsupported || typeof getTool !== 'function' ? undefined : getTool('omnimux_social_data')
@@ -135,14 +151,22 @@ export function createSocialFetcher({ getTool, fallback = fallbackResolveSocial 
 
     if (toolReady) {
       try {
-        const res = await socialDataTool.execute({ platform, capability: resolvedCapability, url })
+        const res = await socialDataTool.execute({ platform, capability: resolvedCapability, url }, { signal })
         if (res && hasSocialPayload(res.data)) return res
       } catch (err) {
+        if (signal?.aborted) {
+          throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') ? err : createAbortError('This operation was aborted', err)
+        }
+        if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
+          throw err
+        }
         cloudError = err
       }
     }
 
-    const fallbackRes = await runFallback(fallback, { platform, capability: resolvedCapability, url })
+    if (signal?.aborted) throw createAbortError()
+
+    const fallbackRes = await runFallback(fallback, { platform, capability: resolvedCapability, url, signal })
     if (fallbackRes && hasSocialPayload(fallbackRes.data)) return fallbackRes
 
     throw new Error(socialFailureMessage({ platform, cloudUnsupported, cloudError, toolReady }))
@@ -170,7 +194,7 @@ export function apply(ctx) {
     return undefined
   }
 
-  const socialFetcher = createSocialFetcher({ getTool })
+  const socialFetcher = createSocialFetcher({ getTool, fallback: ctx.fallback || fallbackResolveSocial })
 
   // Video analyze tool: exclusively consumes omnimux-video tool video_analyze
   const videoAnalyzeTool = {
@@ -241,6 +265,8 @@ export function apply(ctx) {
     videoAnalyzeTool,
     textComplete,
     rivalDispatcher,
+    fetcher: ctx.fetcher,
+    resolver: ctx.resolver,
     // Hub capability `inspirationShare` owns the cloud publish (upload assets →
     // publish). Resolved at request time: this plugin must not hold the gateway
     // key, build a publish payload, or fall back to a link of its own.
@@ -300,9 +326,14 @@ export function apply(ctx) {
         method: req.method || 'GET',
         url: rawUrl,
         body,
+        signal: req.signal,
       })
       sendJson(res, result.status, result.body)
-    } catch {
+    } catch (err) {
+      if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
+        sendJson(res, 499, { error: 'aborted' })
+        return
+      }
       sendJson(res, 500, { error: 'internal error' })
     }
   }
@@ -396,7 +427,7 @@ export function apply(ctx) {
       auto_analyze: { type: 'boolean', description: 'Run AI five-dimension deconstruction (default true)' },
     }),
     output: jsonOut,
-    async execute(args) {
+    async execute(args, exec) {
       const result = await dispatcher.dispatch({
         method: 'POST',
         url: '/omnimux/inspiration/local/import-url',
@@ -405,7 +436,11 @@ export function apply(ctx) {
           tags: args.tags || [],
           auto_analyze: args.auto_analyze !== false,
         },
+        signal: exec?.signal,
       })
+      if (result.status === 499 || result.body?.error === 'aborted') {
+        throw createAbortError()
+      }
       if (result.status >= 400) throw new Error(result.body?.error || `HTTP ${result.status}`)
       const payload = result.body?.data || {}
       if (!result.body?.media_degraded) return safeJsonOutput(payload)

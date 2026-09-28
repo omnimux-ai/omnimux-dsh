@@ -165,6 +165,14 @@ function removeQuietly(filePath) {
   }
 }
 
+function createAbortError(message = 'This operation was aborted', cause) {
+  const err = new Error(message)
+  err.name = 'AbortError'
+  err.code = 'ABORT_ERR'
+  if (cause) err.cause = cause
+  return err
+}
+
 /**
  * Whether a declared content type can only belong to a document. Only `text/html`
  * is refused: media CDNs publish `application/octet-stream`, `binary/octet-stream`
@@ -244,7 +252,9 @@ function documentResponseError(url) {
 async function fetchValidated(fetcher, url, signal, deps = {}) {
   let current = url
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    if (signal?.aborted) throw createAbortError()
     await assertDownloadableUrl(current, deps)
+    if (signal?.aborted) throw createAbortError()
     const response = await fetcher(current, { redirect: 'manual', signal })
     if (!isRedirectStatus(response.status)) return { response, url: current }
     const location = resolveRedirectUrl(response.headers?.get?.('location'), current)
@@ -334,7 +344,8 @@ function assertMediaResponse(response, url) {
   }
 }
 
-async function writeBody(response, tempPath, maxBytes, url) {
+async function writeBody(response, tempPath, maxBytes, url, signal) {
+  if (signal?.aborted) throw createAbortError()
   const declared = Number(response.headers?.get?.('content-length') || 0)
   if (Number.isFinite(declared) && declared > maxBytes) {
     throw new Error(`媒体文件超过大小上限 ${formatMegabytes(maxBytes)}，已中止下载 (${url})`)
@@ -347,11 +358,14 @@ async function writeBody(response, tempPath, maxBytes, url) {
       createMediaSniff(url),
       createByteLimiter(maxBytes, url),
       createWriteStream(tempPath),
+      ...(signal ? [{ signal }] : []),
     )
     return
   }
   if (typeof response.arrayBuffer === 'function') {
+    if (signal?.aborted) throw createAbortError()
     const buffer = Buffer.from(await response.arrayBuffer())
+    if (signal?.aborted) throw createAbortError()
     if (buffer.length > maxBytes) {
       throw new Error(`媒体文件超过大小上限 ${formatMegabytes(maxBytes)}，已中止下载 (${url})`)
     }
@@ -378,6 +392,7 @@ async function writeBody(response, tempPath, maxBytes, url) {
  *   maxBytes?: number,
  *   timeoutMs?: number,
  *   resolver?: Function,
+ *   signal?: AbortSignal,
  * }} [opts] `resolver` overrides the DNS lookup used by the target check
  * @returns {Promise<string>} absolute path of saved file
  */
@@ -392,22 +407,53 @@ export async function downloadMedia(url, destDir, opts = {}) {
   const targetPath = join(destDir, filename)
   const tempPath = `${targetPath}.${randomUUID().slice(0, 4)}.tmp`
 
+  const timeoutSignal = AbortSignal.timeout(timeoutMs)
+  const signals = [opts.signal, timeoutSignal].filter(Boolean)
+  const combinedSignal = signals.length === 1 ? signals[0] : AbortSignal.any(signals)
+
   try {
+    if (opts.signal?.aborted) throw createAbortError()
+    if (timeoutSignal.aborted) {
+      const timeoutErr = new Error(`Download timed out after ${timeoutMs}ms`)
+      timeoutErr.name = 'TimeoutError'
+      timeoutErr.code = 'ETIMEDOUT'
+      throw timeoutErr
+    }
     const deps = opts.resolver ? { resolver: opts.resolver } : {}
     const { response, url: finalUrl } = await fetchValidated(
       fetcher,
       url,
-      AbortSignal.timeout(timeoutMs),
+      combinedSignal,
       deps,
     )
     if (!response.ok) {
       throw new Error(`Failed to download media: HTTP ${response.status} from ${finalUrl}`)
     }
-    await writeBody(response, tempPath, maxBytes, finalUrl)
+    await writeBody(response, tempPath, maxBytes, finalUrl, combinedSignal)
+    if (opts.signal?.aborted) throw createAbortError()
+    if (timeoutSignal.aborted) {
+      const timeoutErr = new Error(`Download timed out after ${timeoutMs}ms`)
+      timeoutErr.name = 'TimeoutError'
+      timeoutErr.code = 'ETIMEDOUT'
+      throw timeoutErr
+    }
     renameSync(tempPath, targetPath)
     return targetPath
   } catch (err) {
     removeQuietly(tempPath)
+    if (opts.signal?.aborted) {
+      throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR')
+        ? err
+        : createAbortError('This operation was aborted', err)
+    }
+    if (timeoutSignal.aborted || err?.name === 'TimeoutError') {
+      const detail = err?.message ? `: ${err.message}` : ''
+      const timeoutErr = new Error(`Download timed out after ${timeoutMs}ms${detail}`)
+      timeoutErr.name = 'TimeoutError'
+      timeoutErr.code = 'ETIMEDOUT'
+      if (err) timeoutErr.cause = err
+      throw timeoutErr
+    }
     throw err
   }
 }
