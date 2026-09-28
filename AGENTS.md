@@ -78,6 +78,7 @@ Choose checks by changed behavior, then satisfy required CI checks. Do not add t
 | Product paths / model routing / local state | `pnpm verify:product-baseline`（fail-closed：开发机私有状态不得进入产品运行时） |
 | Plugin behavior | `pnpm --filter <package> test`; add relevant boundary/registry checks from [package.json](package.json) |
 | Plugin Agent Tools / Schema | `pnpm test:agent-tools` (all 4 layers: Schema Lint, isolated sandbox execution, intent eval & security gates passed) |
+| DSH Plugin Contracts & Inject | `pnpm verify:dsh-contracts` + `pnpm test:dsh-contracts`（Cordis inject 依赖闭环、defineTool Schema 格式规范与依赖声明门禁） |
 | Model contracts | `pnpm verify:model-contracts`（契约门禁严格校验）；`pnpm hub:interfaces` 实时生成/更新执行中枢接口全景面板 HTML（`docs/tools/hub-interfaces.html`，覆盖模型能力 / 智能体工具 / 账号接入平台 / 发布通道）供直观核验 |
 | Client / Stage / sidebar | [design.md](design.md) + [UI guidelines](docs/contracts/ui-design-guidelines.md) + [copy standards](docs/contracts/ui-copywriting-and-naming-standards.md) before editing; `pnpm verify:stages`, then real ego-browser evidence through [plugin QA](docs/contracts/plugin-qa.md) |
 
