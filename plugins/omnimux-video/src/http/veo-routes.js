@@ -9,7 +9,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { requestRejection } from './request-authorization.js'
-import { createVeoTaskStore, veoMediaUrl } from './veo-task-store.js'
+import { createVeoTaskStore, safeMediaBase, veoMediaUrl } from './veo-task-store.js'
 import { seedVeoTask, VEO_DEFAULT_DURATION_SEC, VEO_DEFAULT_RESOLUTION } from '../shared/veoTaskSeed.js'
 import { validateVeoTaskRequest } from '../contracts/veoContracts.js'
 import {
@@ -170,7 +170,14 @@ export function createVeoDispatcher(deps = {}) {
                 })
               },
             })
-            const fileName = result.fileName || path.basename(result.localPath || '')
+            // Prefer generator fileName; otherwise basename of localPath — then
+            // validate once so an unsafe provided name cannot fall through.
+            const fileName = safeMediaBase(
+              result.fileName || path.basename(result.localPath || ''),
+            )
+            if (!fileName) {
+              throw new Error('invalid media file name')
+            }
             const current = store.get(id)
             store.update(id, {
               status: 'completed',
@@ -225,8 +232,8 @@ export function createVeoDispatcher(deps = {}) {
  * @param {import('node:http').ServerResponse} res
  */
 export function trySendVeoMedia(fileName, outputDir, res) {
-  const base = path.basename(fileName || '')
-  if (!base || base !== fileName || base.includes('..')) return false
+  const base = safeMediaBase(fileName)
+  if (!base) return false
   const full = path.resolve(outputDir, base)
   const root = path.resolve(outputDir)
   if (!full.startsWith(root + path.sep) && full !== root) return false
