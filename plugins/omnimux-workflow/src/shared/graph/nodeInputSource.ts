@@ -41,7 +41,7 @@ function usableUrl(value: unknown): string | undefined {
   const url = nonempty(value);
   if (!url || url.startsWith('blob:')) return undefined;
   if (/^https?:\/\//i.test(url) || /^data:(image|video|audio)\/[^,]+,.+/s.test(url)) return url;
-  if (url.startsWith('/omnimux-workflow/') || url.startsWith('/media/')) return url;
+  if (url.startsWith('/omnimux-workflow/') || url.startsWith('/omnimux/') || url.startsWith('/media/')) return url;
   return undefined;
 }
 

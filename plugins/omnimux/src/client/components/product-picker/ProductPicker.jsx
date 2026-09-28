@@ -178,12 +178,13 @@ export function ProductPicker({
   onClose,
   onConfirm,
   initialProductId,
+  initialProducts,
   fetchProducts = defaultFetchProducts,
   t,
 }) {
   const safeT = useMemo(() => createSafeT(t), [t]);
 
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(() => (Array.isArray(initialProducts) ? initialProducts : []));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -202,6 +203,10 @@ export function ProductPicker({
       return undefined;
     }
     let cancelled = false;
+    if (initialProducts?.length) {
+      setProducts(initialProducts);
+      return;
+    }
     setLoading(true);
     setError(null);
 

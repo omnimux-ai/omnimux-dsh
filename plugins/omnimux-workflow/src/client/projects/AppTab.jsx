@@ -25,6 +25,7 @@ import {
 import { fetchSessionProjectBinding, listProjects } from '../api.js'
 import { activateProjectCanvas, getBetterSidebar } from './projectCanvas.js'
 import { ForkAppProjectDialog } from './ForkAppProjectDialog.jsx'
+import { ProductPicker } from '../../../../omnimux/src/client/components/product-picker/index.js'
 import {
   resolveOptions,
   resolveModelAspectRatios,
@@ -387,31 +388,54 @@ const DEFAULT_PRODUCTS = Object.freeze([
     id: 'prod-001',
     name: '智能降噪真无线耳机',
     sub: '数码影音 · 现货',
-    url: 'https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp',
-    preview: 'https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp',
+    url: 'https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp',
+    preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp',
   },
   {
     id: 'prod-002',
     name: '超轻透气缓震跑鞋',
     sub: '运动户外 · 现货',
-    url: 'https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp',
-    preview: 'https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp',
+    url: 'https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp',
+    preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp',
   },
   {
     id: 'prod-003',
     name: '极简便携桌面加湿器',
     sub: '家居生活 · 现货',
-    url: 'https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp',
-    preview: 'https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp',
+    url: 'https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp',
+    preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp',
   },
   {
     id: 'prod-004',
     name: '极简智能触控保温杯',
     sub: '日常器物 · 现货',
-    url: 'https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp',
-    preview: 'https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp',
+    url: 'https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp',
+    preview: 'https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp',
   },
 ])
+
+const fallbackFetchProducts = async () => {
+  if (typeof fetch !== 'function') return DEFAULT_PRODUCTS;
+  try {
+    const res = await fetch('/omnimux/products')
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data?.products) && data.products.length > 0) {
+        return data.products.map((p, idx) => ({
+          id: p.id || `prod-remote-${idx}`,
+          name: p.name || p.title || '未命名商品',
+          sub: p.sub || (p.sku || p.price ? `规格: ${p.sku || p.price}` : '商品库'),
+          url: p.link || p.url || '',
+          preview: p.preview || p.image || p.url || '',
+          cover: p.cover,
+        }))
+      }
+    }
+  } catch (err) {
+    console.warn('[omnimux-workflow] 获取商品列表失败:', err?.message)
+  }
+  return DEFAULT_PRODUCTS
+}
 
 function IconCheck({ size = 12, className = '' }) {
   return (
@@ -762,7 +786,6 @@ export function AppTab(props) {
   const [linkDrafts, setLinkDrafts] = useState({})
   const [promptModal, setPromptModal] = useState(null)
   const [productPickerModal, setProductPickerModal] = useState(null)
-  const [customProducts, setCustomProducts] = useState(DEFAULT_PRODUCTS)
   const fileInputRef = useRef(null)
   const uploadTargetKeyRef = useRef(null)
   const loadedAppIdRef = useRef(null)
@@ -946,7 +969,10 @@ export function AppTab(props) {
     const nextDrafts = { ...linkDrafts, [key]: '' }
     setLinkDrafts(nextDrafts)
     if (draft) {
-      handleFieldChange(key, draft)
+      const safeUrl = sanitizePreviewUrl(draft)
+      if (safeUrl) {
+        handleFieldChange(key, safeUrl)
+      }
     }
   }, [handleFieldChange, linkDrafts])
 
@@ -968,56 +994,45 @@ export function AppTab(props) {
     setPromptModal(null)
   }, [promptModal, handleFieldChange])
 
-  // 打开商品库选择弹窗，支持异步获取用户建档商品及默认商品库展示
+  // 打开官方标准产品库选择器模态弹窗
   const handleOpenProductPicker = useCallback((key) => {
-    setProductPickerModal({
-      key,
-      title: '从商品库选择商品',
-      search: '',
-    })
-    if (typeof fetch === 'function') {
-      fetch('/omnimux/products/collection')
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          const list = Array.isArray(data?.products) ? data.products : []
-          if (list.length > 0) {
-            const mapped = list.map((p, idx) => ({
-              id: p.id || `prod-remote-${idx}`,
-              name: p.name || p.title || '未命名商品',
-              sub: p.sub || (p.sku || p.price ? `规格: ${p.sku || p.price}` : '商品库'),
-              url: p.link || p.url || '',
-              preview: p.preview || p.image || p.url || '',
-            }))
-            setCustomProducts(mapped)
-          }
-        })
-        .catch((err) => {
-          console.warn('[omnimux-workflow] 获取商品列表失败:', err?.message)
-        })
-    }
+    setProductPickerModal({ key })
   }, [])
 
-  // 从商品库选择已有商品并直接回填（先释放原有临时 Object URL）
+  // 从产品库选择已有商品并直接回填（先释放原有临时 Object URL）
   const handleSelectProduct = useCallback((item) => {
-    if (!productPickerModal) return
+    if (!productPickerModal || !item) return
     const { key } = productPickerModal
     revokeCreatedUrl(key)
+
+    const cover = item.cover
+    let preview = ''
+    if (cover?.kind === 'image' && cover.id) {
+      preview = `/omnimux/products/${encodeURIComponent(item.id)}?preview=${encodeURIComponent(cover.id)}`
+    } else {
+      preview = item.preview || item.cover_url || item.image || item.url || ''
+    }
+
     const picked = {
-      name: item.name,
-      sub: item.sub || '商品库',
-      url: item.url || item.preview,
-      preview: item.preview || item.url,
+      name: item.name || '商品',
+      sub: item.sub || (item.sku || item.price ? `规格: ${item.sku || item.price}` : (item.brand || '商品库')),
+      url: preview || cover?.real_path || item.url || item.link || '',
+      preview: preview || item.url || item.link || '',
+      pathOrUrl: cover?.real_path || undefined,
       source: 'product',
+      type: 'image',
+      mimeType: (cover?.original_name?.endsWith('.webp') || preview?.endsWith('.webp')) ? 'image/webp' : 'image/jpeg',
+      sizeBytes: typeof cover?.size === 'number' ? cover.size : undefined,
     }
     handleFieldChange(key, JSON.stringify(picked))
     setProductPickerModal(null)
   }, [productPickerModal, handleFieldChange, revokeCreatedUrl])
 
   // 商品库弹窗输入外部链接提交（增加协议安全清洗与释放原有 Object URL）
-  const handleProductModalSubmitLink = useCallback(() => {
+  const handleProductModalSubmitLink = useCallback((explicitVal) => {
     if (!productPickerModal) return
     const { key, search } = productPickerModal
-    const trimmed = (search || '').trim()
+    const trimmed = (typeof explicitVal === 'string' ? explicitVal : search || '').trim()
     if (!trimmed) {
       setProductPickerModal(null)
       return
@@ -2304,102 +2319,15 @@ export function AppTab(props) {
         </div>
       )}
 
-      {/* 从商品库选择已有商品的交互弹窗 */}
+      {/* 官方标准产品库选择器模态弹窗 */}
       {productPickerModal && (
-        <div
-          className="omx-apptab-modal-mask"
-          onClick={() => setProductPickerModal(null)}
-        >
-          <div
-            className="omx-apptab-modal is-wide"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="omx-apptab-modal-header">
-              <span className="omx-apptab-modal-title">{productPickerModal.title}</span>
-              <button // exempt-ui01 ai-app-ui-spec 28px modal close button
-                type="button"
-                className="omx-apptab-modal-close"
-                aria-label="关闭"
-                onClick={() => setProductPickerModal(null)}
-              >
-                <IconClose size={14} />
-              </button>
-            </div>
-            <div className="omx-apptab-modal-body">
-              <input
-                type="text"
-                className="omx-apptab-input"
-                autoFocus
-                value={productPickerModal.search || ''}
-                placeholder="搜索商品名称或输入商品链接 (https://...)"
-                onChange={(e) => {
-                  const s = e.target.value
-                  setProductPickerModal((prev) => ({ ...prev, search: s, error: '' }))
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleProductModalSubmitLink()
-                  } else if (e.key === 'Escape') {
-                    setProductPickerModal(null)
-                  }
-                }}
-              />
-              {productPickerModal.error && (
-                <div className="omx-apptab-error-text">
-                  <IconAlert size={14} />
-                  <span>{productPickerModal.error}</span>
-                </div>
-              )}
-              <div className="omx-apptab-product-list">
-                {customProducts
-                  .filter((p) => {
-                    const q = (productPickerModal.search || '').trim().toLowerCase()
-                    if (!q) return true
-                    return p.name.toLowerCase().includes(q) || (p.sub && p.sub.toLowerCase().includes(q))
-                  })
-                  .map((item) => {
-                    const safeThumb = sanitizePreviewUrl(item.preview)
-                    return (
-                      <div
-                        key={item.id}
-                        className="omx-apptab-product-item"
-                        onClick={() => handleSelectProduct(item)}
-                      >
-                        {safeThumb ? (
-                          <img src={safeThumb} alt={item.name} className="omx-apptab-product-item-thumb" />
-                        ) : (
-                          <div className="omx-apptab-product-item-thumb">
-                            <IconStore size={18} />
-                          </div>
-                        )}
-                        <div className="omx-apptab-product-item-meta">
-                          <div className="omx-apptab-product-item-name">{item.name}</div>
-                          {item.sub && <div className="omx-apptab-product-item-sub">{item.sub}</div>}
-                        </div>
-                      </div>
-                    )
-                  })}
-              </div>
-            </div>
-            <div className="omx-apptab-modal-footer">
-              <button // exempt-ui01 ai-app-ui-spec 32px modal cancel button
-                type="button"
-                className="omx-apptab-btn-ghost"
-                onClick={() => setProductPickerModal(null)}
-              >
-                取消
-              </button>
-              <button // exempt-ui01 ai-app-ui-spec 32px modal submit button
-                type="button"
-                className="omx-apptab-btn-primary"
-                onClick={handleProductModalSubmitLink}
-              >
-                确定
-              </button>
-            </div>
-          </div>
-        </div>
+        <ProductPicker
+            open={Boolean(productPickerModal)}
+            onClose={() => setProductPickerModal(null)}
+            onConfirm={handleSelectProduct}
+            initialProducts={DEFAULT_PRODUCTS}
+            fetchProducts={fallbackFetchProducts}
+          />
       )}
 
       {forkDialogOpen ? (

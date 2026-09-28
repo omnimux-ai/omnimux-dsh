@@ -34,7 +34,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "title": "商品主图 / 白底图",
           "description": "粘贴商品链接、从商品库选择或本地上传",
           "widget": "product-link",
-          "default": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+          "default": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
           "placeholder": "粘贴商品链接，或从商品库选择"
         },
         "copywriting": {
@@ -79,7 +79,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "mappingType": "media",
         "widget": "product-link",
         "required": true,
-        "defaultValue": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp"
+        "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp"
       },
       "copywriting": {
         "nodeId": "node-slot-copywriting",
@@ -105,8 +105,8 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "id": "showcase-app-creatify-app-demo-01",
           "title": "爆款成片效果演示",
           "mediaType": "video",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-preview.mp4",
-          "posterUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp"
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/7a/7adca79d2d106411accf915a79a1b4a40868533f41272864a0ed37cdf20730af.mp4",
+          "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp"
         }
       ]
     }
@@ -140,7 +140,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "title": "商品主图 / 白底图",
           "description": "粘贴商品链接、从商品库选择或本地上传",
           "widget": "product-link",
-          "default": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp",
+          "default": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
           "placeholder": "粘贴商品链接，或从商品库选择"
         },
         "copywriting": {
@@ -185,7 +185,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "mappingType": "media",
         "widget": "product-link",
         "required": true,
-        "defaultValue": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp"
+        "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp"
       },
       "copywriting": {
         "nodeId": "node-slot-copywriting",
@@ -211,8 +211,8 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "id": "showcase-app-creatify-chasing-product-01",
           "title": "爆款成片效果演示",
           "mediaType": "video",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-preview.mp4",
-          "posterUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp"
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ea/ea3fb5d23819086a2ffa88c598bf3728044cde636622a4340787ee10e280a2fd.mp4",
+          "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp"
         }
       ]
     }
@@ -246,7 +246,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "title": "商品主图 / 白底图",
           "description": "粘贴商品链接、从商品库选择或本地上传",
           "widget": "product-link",
-          "default": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp",
+          "default": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp",
           "placeholder": "粘贴商品链接，或从商品库选择"
         },
         "copywriting": {
@@ -291,7 +291,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "mappingType": "media",
         "widget": "product-link",
         "required": true,
-        "defaultValue": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp"
+        "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp"
       },
       "copywriting": {
         "nodeId": "node-slot-copywriting",
@@ -317,8 +317,8 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "id": "showcase-app-creatify-ugc-selfie-01",
           "title": "爆款成片效果演示",
           "mediaType": "video",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-preview.mp4",
-          "posterUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp"
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/24/24643db0f5a5527af731d822d4f8acb864b6316673eeb527f47bc45ce719b22e.mp4",
+          "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp"
         }
       ]
     }
@@ -352,7 +352,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "title": "商品主图 / 白底图",
           "description": "粘贴商品链接、从商品库选择或本地上传",
           "widget": "product-link",
-          "default": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp",
+          "default": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp",
           "placeholder": "粘贴商品链接，或从商品库选择"
         },
         "copywriting": {
@@ -397,7 +397,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "mappingType": "media",
         "widget": "product-link",
         "required": true,
-        "defaultValue": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp"
+        "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp"
       },
       "copywriting": {
         "nodeId": "node-slot-copywriting",
@@ -423,8 +423,8 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "id": "showcase-app-creatify-3d-cute-vfx-01",
           "title": "爆款成片效果演示",
           "mediaType": "video",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-preview.mp4",
-          "posterUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp"
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3b/3be607ed9780c9f5fd32d2d3fe8ec53bf91f48daa0e774c6d3162790b6cf044a.mp4",
+          "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp"
         }
       ]
     }
@@ -458,7 +458,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "title": "商品主图 / 白底图",
           "description": "粘贴商品链接、从商品库选择或本地上传",
           "widget": "product-link",
-          "default": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-poster.webp",
+          "default": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp",
           "placeholder": "粘贴商品链接，或从商品库选择"
         },
         "copywriting": {
@@ -503,7 +503,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "mappingType": "media",
         "widget": "product-link",
         "required": true,
-        "defaultValue": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-poster.webp"
+        "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp"
       },
       "copywriting": {
         "nodeId": "node-slot-copywriting",
@@ -529,8 +529,8 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "id": "showcase-app-creatify-apparel-tryon-01",
           "title": "爆款成片效果演示",
           "mediaType": "video",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-preview.mp4",
-          "posterUrl": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-poster.webp"
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/f5/f5c2aff3e8f62c8a696d3ee3444b92368d62287eb0c3b84bd43eb6b14c34b7fb.mp4",
+          "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp"
         }
       ]
     }
@@ -564,7 +564,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "title": "商品主图 / 白底图",
           "description": "粘贴商品链接、从商品库选择或本地上传",
           "widget": "product-link",
-          "default": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp",
+          "default": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp",
           "placeholder": "粘贴商品链接，或从商品库选择"
         },
         "copywriting": {
@@ -609,7 +609,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "mappingType": "media",
         "widget": "product-link",
         "required": true,
-        "defaultValue": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp"
+        "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp"
       },
       "copywriting": {
         "nodeId": "node-slot-copywriting",
@@ -635,8 +635,8 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "id": "showcase-app-creatify-product-spotlight-01",
           "title": "爆款成片效果演示",
           "mediaType": "video",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-preview.mp4",
-          "posterUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp"
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/85/8520202af50b49c3fa7c9e3aadb22bc0a631a7bc22556247b99d1e439f51ef1c.mp4",
+          "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp"
         }
       ]
     }
@@ -670,7 +670,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "title": "商品主图 / 白底图",
           "description": "粘贴商品链接、从商品库选择或本地上传",
           "widget": "product-link",
-          "default": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-poster.webp",
+          "default": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp",
           "placeholder": "粘贴商品链接，或从商品库选择"
         },
         "copywriting": {
@@ -715,7 +715,7 @@ export const BUILTIN_MANIFESTS = Object.freeze([
         "mappingType": "media",
         "widget": "product-link",
         "required": true,
-        "defaultValue": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-poster.webp"
+        "defaultValue": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp"
       },
       "copywriting": {
         "nodeId": "node-slot-copywriting",
@@ -741,8 +741,8 @@ export const BUILTIN_MANIFESTS = Object.freeze([
           "id": "showcase-app-creatify-fall-down-durability-01",
           "title": "爆款成片效果演示",
           "mediaType": "video",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-preview.mp4",
-          "posterUrl": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-poster.webp"
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/8b/8b4186752b7953ad7eb34102abe73ff4a6375f9280cca3eb0bcd22e224d5a351.mp4",
+          "posterUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp"
         }
       ]
     }
@@ -1590,7 +1590,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -1701,7 +1701,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -1812,7 +1812,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -1923,7 +1923,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -2034,7 +2034,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -2145,7 +2145,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -2256,7 +2256,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp",
           "params": {
             "aspectRatio": "9:16"
           }

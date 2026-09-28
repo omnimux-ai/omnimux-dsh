@@ -668,6 +668,11 @@ export function prepareAndInjectWorkflowSnapshot(
         ...(mediaSizeBytes !== undefined ? { sizeBytes: mediaSizeBytes } : {}),
       };
 
+      const rawPath = picked?.pathOrUrl || (typeof val === 'object' && val !== null ? (val as any).pathOrUrl || (val as any).path : undefined);
+      const filePath = typeof rawPath === 'string' && (rawPath.startsWith('/') || /^[a-zA-Z]:\\/.test(rawPath))
+        ? rawPath
+        : undefined;
+
       if (
         targetPath === 'mediaUrl' ||
         targetPath === 'data.mediaUrl' ||
@@ -676,10 +681,15 @@ export function prepareAndInjectWorkflowSnapshot(
         mapping.mappingType === 'media'
       ) {
         targetNode.data.mediaUrl = mediaUrl;
+        if (filePath) {
+          targetNode.data.realPath = filePath;
+          targetNode.data.path = filePath;
+        }
         targetNode.data.mediaAssets = [
           {
             type: mediaType,
             url: mediaUrl,
+            ...(filePath ? { path: filePath, realPath: filePath } : {}),
             ...mediaMeta,
           },
         ];
@@ -692,7 +702,8 @@ export function prepareAndInjectWorkflowSnapshot(
         availability: 'ready',
         ordinal: 0,
         url: mediaUrl,
-        pathOrUrl: mediaUrl,
+        pathOrUrl: filePath || mediaUrl,
+        ...(filePath ? { path: filePath, realPath: filePath } : {}),
         targetSlot: slotName,
         role: (mapping as any).role || slotName,
         ...mediaMeta,

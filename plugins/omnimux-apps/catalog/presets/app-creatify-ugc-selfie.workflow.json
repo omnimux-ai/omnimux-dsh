@@ -21,7 +21,7 @@
         "nodeKind": "import",
         "selectedTool": "import",
         "status": "completed",
-        "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp",
+        "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp",
         "params": {
           "aspectRatio": "9:16"
         }

@@ -21,7 +21,7 @@
         "nodeKind": "import",
         "selectedTool": "import",
         "status": "completed",
-        "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp",
+        "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp",
         "params": {
           "aspectRatio": "9:16"
         }

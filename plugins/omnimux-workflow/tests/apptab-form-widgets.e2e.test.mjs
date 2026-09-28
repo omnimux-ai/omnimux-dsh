@@ -22,6 +22,7 @@ import { build } from 'esbuild'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { existsSync } from 'node:fs'
 
 const require = createRequire(import.meta.url)
 const React = require('react')
@@ -201,6 +202,17 @@ afterEach(() => {
 async function loadAppTab() {
   if (AppTabComponent) return AppTabComponent
 
+  let cur = pluginRoot;
+  let kitDir = null;
+  while (cur && cur !== dirname(cur)) {
+    const candidate = resolve(cur, 'personal', 'dsh-ui-kit');
+    if (existsSync(candidate)) {
+      kitDir = candidate;
+      break;
+    }
+    cur = dirname(cur);
+  }
+
   const result = await build({
     stdin: {
       contents: `
@@ -215,11 +227,14 @@ async function loadAppTab() {
     platform: 'node',
     jsx: 'automatic',
     write: false,
+    alias: {
+      ...(kitDir ? { 'dsh-ui-kit': kitDir } : {}),
+    },
     plugins: [
       {
         name: 'stub-externals',
         setup(b) {
-          b.onResolve({ filter: /\.(css|less|scss)$/ }, () => ({
+          b.onResolve({ filter: /\.(css|less|scss|woff|woff2|ttf)$/ }, () => ({
             path: 'stub-css',
             namespace: 'stub-css',
           }))
@@ -235,8 +250,6 @@ async function loadAppTab() {
       'react/jsx-runtime',
       'react-dom',
       'react-dom/client',
-      'dsh-ui-kit',
-      '@deepseek-ai/dsh-client-ui-primitives',
     ],
   })
 
@@ -276,9 +289,23 @@ function fireClick(el) {
 
 function fireChange(el, value) {
   act(() => {
+    el.value = value
     const propKey = Object.keys(el).find((k) => k.startsWith('__reactProps$'))
     if (propKey && typeof el[propKey]?.onChange === 'function') {
       el[propKey].onChange({ target: { value } })
+    }
+  })
+}
+
+function fireCommit(el, value) {
+  act(() => {
+    el.value = value
+    const propKey = Object.keys(el).find((k) => k.startsWith('__reactProps$'))
+    if (propKey && typeof el[propKey]?.onChange === 'function') {
+      el[propKey].onChange({ target: { value } })
+    }
+    if (propKey && typeof el[propKey]?.onBlur === 'function') {
+      el[propKey].onBlur({ target: { value } })
     }
   })
 }
@@ -384,14 +411,16 @@ test('E2E: 经典旧应用在工作区 AppTab 中打开，音色与比例生效�
 
   // 点击从商品库选择按钮，唤起商品库选择交互弹窗
   fireClick(storeBtn)
-  const modal = doc.querySelector('.omx-apptab-modal')
+  const modal = doc.querySelector('.omx-product-pick')
   assert.ok(modal, '点击商品库按钮必须弹出从商品库选择的交互弹窗')
-  const productItems = Array.from(modal.querySelectorAll('.omx-apptab-product-item'))
-  assert.ok(productItems.length > 0, '商品库弹窗中必须列出已有可选商品卡片')
+  const productCards = Array.from(modal.querySelectorAll('.omx-product-pick-card')).filter(c => !c.className.includes('add'))
+  assert.ok(productCards.length > 0, '商品库弹窗中必须列出已有可选商品卡片')
 
-  // 点击第一款已有商品进行回填
-  fireClick(productItems[0])
-  assert.equal(doc.querySelector('.omx-apptab-modal'), null, '选择商品后弹窗自动关闭')
+  // 双击第一款商品直接回填
+  act(() => {
+    productCards[0].dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true, cancelable: true }))
+  })
+  assert.equal(doc.querySelector('.omx-product-pick'), null, '选择商品后弹窗自动关闭')
   const repickedCard = host.querySelector('.omx-apptab-picked')
   assert.ok(repickedCard, '挑选商品后重新渲染为已选卡片')
 
@@ -517,14 +546,16 @@ test('E2E: 下拉菜单防透视穿透与商品主图三合一紧凑复合控件
 
   // 点击「从商品库选择」，验证弹窗交互并回填已有商品
   fireClick(storeBtn)
-  const modal = doc.querySelector('.omx-apptab-modal')
+  const modal = doc.querySelector('.omx-product-pick')
   assert.ok(modal, '点击从商品库选择唤起交互弹窗')
-  const items = Array.from(modal.querySelectorAll('.omx-apptab-product-item'))
+  const items = Array.from(modal.querySelectorAll('.omx-product-pick-card')).filter((c) => !c.className.includes('add'))
   assert.ok(items.length >= 1, '商品库弹窗中提供已有商品列表')
 
-  // 点击挑选第一款商品
-  fireClick(items[0])
-  assert.equal(doc.querySelector('.omx-apptab-modal'), null, '选择商品后弹窗自动关闭')
+  // 双击第一款商品直接回填并关闭弹窗
+  act(() => {
+    items[0].dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true, cancelable: true }))
+  })
+  assert.equal(doc.querySelector('.omx-product-pick'), null, '选择商品后弹窗自动关闭')
 
   // 验证回填后统一渲染为带缩略图与移除按键的高质感卡片
   const pickedCard = host.querySelector('.omx-apptab-picked')
@@ -567,47 +598,19 @@ test('E2E: 商品库弹窗链接安全协议清洗与非法协议拦截 (Issue #
   const productWidget = host.querySelector('.omx-apptab-product-widget')
   assert.ok(productWidget, '商品主图复合条渲染')
 
-  const storeBtn = productWidget.querySelector('button[aria-label="从商品库选择"]')
-  assert.ok(storeBtn, '从商品库选择按钮存在')
-  fireClick(storeBtn)
-
-  const modal = doc.querySelector('.omx-apptab-modal')
-  assert.ok(modal, '点击唤起弹窗')
-
-  const modalInput = modal.querySelector('.omx-apptab-input')
-  assert.ok(modalInput, '弹窗搜索/链接输入框存在')
-
-  const submitBtn = modal.querySelector('.omx-apptab-btn-primary')
-  assert.ok(submitBtn, '弹窗确定按钮存在')
+  const linkInput = productWidget.querySelector('.omx-apptab-extractor-input')
+  assert.ok(linkInput, '输入条必须包含链接输入框')
 
   // 1. 模拟输入危险协议 javascript:alert(1)
-  fireChange(modalInput, 'javascript:alert(1)')
-
-  // 点击确定
-  fireClick(submitBtn)
-
-  // 验证弹窗依然存在（未被关闭），并且展示了安全拦截错误提示
-  assert.ok(doc.querySelector('.omx-apptab-modal'), '非法协议被拦截，弹窗不关闭')
-  let errorText = doc.querySelector('.omx-apptab-modal .omx-apptab-error-text')
-  assert.ok(errorText, '弹窗内展示错误提示')
-  assert.match(errorText.textContent, /链接协议不支持/)
+  fireCommit(linkInput, 'javascript:alert(1)')
+  assert.equal(host.querySelector('.omx-apptab-picked'), null, '非法协议被拦截，不生成已选卡片')
 
   // 1b. 模拟输入文件伪协议 file:///etc/passwd
-  fireChange(modalInput, 'file:///etc/passwd')
-  fireClick(submitBtn)
-  assert.ok(doc.querySelector('.omx-apptab-modal'), 'file协议被拦截，弹窗不关闭')
-  errorText = doc.querySelector('.omx-apptab-modal .omx-apptab-error-text')
-  assert.ok(errorText)
-  assert.match(errorText.textContent, /链接协议不支持/)
+  fireCommit(linkInput, 'file:///etc/passwd')
+  assert.equal(host.querySelector('.omx-apptab-picked'), null, 'file协议被拦截，不生成已选卡片')
 
   // 2. 模拟输入合法链接 https://example.com/item.png
-  fireChange(modalInput, 'https://example.com/item.png')
-
-  // 再次点击确定
-  fireClick(submitBtn)
-
-  // 验证弹窗成功关闭并回填为已选卡片
-  assert.equal(doc.querySelector('.omx-apptab-modal'), null, '合法链接提交后弹窗关闭')
+  fireCommit(linkInput, 'https://example.com/item.png')
   const pickedCard = host.querySelector('.omx-apptab-picked')
   assert.ok(pickedCard, '合法链接成功回填为已选卡片')
   assert.match(pickedCard.textContent, /item\.png/)

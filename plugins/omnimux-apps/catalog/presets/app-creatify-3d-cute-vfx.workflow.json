@@ -21,7 +21,7 @@
         "nodeKind": "import",
         "selectedTool": "import",
         "status": "completed",
-        "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp",
+        "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp",
         "params": {
           "aspectRatio": "9:16"
         }

@@ -53,14 +53,32 @@ export function createImportExecutor(): NodeExecutor {
         };
       }
 
-      const realPath = readString(data, 'realPath');
+      const firstMediaAsset = Array.isArray(data.mediaAssets) && data.mediaAssets[0] && typeof data.mediaAssets[0] === 'object'
+        ? (data.mediaAssets[0] as Record<string, unknown>)
+        : undefined;
+
+      const realPath = readString(data, 'realPath') ?? readString(data, 'path') ?? readString(firstMediaAsset, 'path') ?? readString(firstMediaAsset, 'realPath');
       if (realPath) {
-        return { realPath, mediaAssets: [{ type, url: localFileMediaUrl(realPath), path: realPath }] };
+        return {
+          realPath,
+          mediaAssets: [{
+            type,
+            url: localFileMediaUrl(realPath),
+            path: realPath,
+            ...(firstMediaAsset ?? {}),
+          }],
+        };
       }
 
-      const nodeMediaUrl = readString(data, 'mediaUrl');
+      const nodeMediaUrl = readString(data, 'mediaUrl') ?? readString(firstMediaAsset, 'url');
       if (nodeMediaUrl && !nodeMediaUrl.startsWith('blob:')) {
-        return { mediaAssets: [{ type, url: nodeMediaUrl }] };
+        return {
+          mediaAssets: [{
+            type,
+            url: nodeMediaUrl,
+            ...(firstMediaAsset ?? {}),
+          }],
+        };
       }
 
       const text = readString(data, 'content') ?? collectUpstreamText(ctx);

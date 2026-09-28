@@ -21,7 +21,7 @@
         "nodeKind": "import",
         "selectedTool": "import",
         "status": "completed",
-        "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp",
+        "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
         "params": {
           "aspectRatio": "9:16"
         }
