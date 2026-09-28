@@ -12,6 +12,7 @@ import { requestRejection } from './request-authorization.js'
 import { createVeoTaskStore, safeMediaBase, veoMediaUrl } from './veo-task-store.js'
 import { seedVeoTask, VEO_DEFAULT_DURATION_SEC, VEO_DEFAULT_RESOLUTION } from '../shared/veoTaskSeed.js'
 import { validateVeoTaskRequest } from '../contracts/veoContracts.js'
+import { VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
 import {
   detectOpenCliEnvironment,
   generateVideoSilently,
@@ -105,8 +106,10 @@ export function createVeoDispatcher(deps = {}) {
     if (method === 'POST' && (pathname === `${VEO_API_PREFIX}/tasks` || pathname === '/tasks')) {
       const body = req.body && typeof req.body === 'object' ? req.body : {}
       const prompt = typeof body.prompt === 'string' ? body.prompt : ''
-      const mode = typeof body.mode === 'string' ? body.mode : 'create'
-      const durationSec = Number(body.durationSec ?? body.parameters?.durationSec ?? VEO_DEFAULT_DURATION_SEC)
+      const mode = typeof body.mode === 'string' ? body.mode : VEO_TASK_SPEC.defaultMode
+      const durationSec = Number(
+        body.durationSec ?? body.parameters?.durationSec ?? VEO_TASK_SPEC.durationSec.fallback,
+      )
       const validation = validateVeoTaskRequest({
         prompt,
         mode,
@@ -147,6 +150,8 @@ export function createVeoDispatcher(deps = {}) {
       const task = store.create(seeded)
 
       // Fire-and-forget background generation.
+      // NOTE: generateVideoSilently currently ignores `mode` and does not push
+      // durationSec into Google Vids page controls — modes are UI/validation only.
       if (!running.has(id)) {
         running.add(id)
         Promise.resolve()
@@ -188,7 +193,7 @@ export function createVeoDispatcher(deps = {}) {
               localPath: result.localPath,
               fileSize: result.fileSize,
               durationSec: result.durationSec || seeded.durationSec,
-              resolution: result.resolution || current?.resolution || VEO_DEFAULT_RESOLUTION,
+              resolution: result.resolution || current?.resolution || VEO_TASK_SPEC.resolution,
               videoUrl: veoMediaUrl(fileName),
               // Keep enqueue title; do not recompute from prompt.
               title: current?.title || seeded.title,
