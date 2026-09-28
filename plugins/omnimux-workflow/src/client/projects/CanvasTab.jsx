@@ -57,17 +57,9 @@ export function CanvasTab({
     () => (locale ? locale.getLocale().active : 'zh'),
   )
   const sessionId = scope?.sessionId
-  // 「最近选中的创作页」按会话记账：换工作区（=换会话）即失效，画布才会跟着工作区走。
-  // 旧实现从 localStorage 直接取全局值，导致切工作区后画布停在别的项目的创作页（Issue #2104）。
-  const [pickedBySession, setPickedBySession] = useState(() => {
-    try {
-      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('omnimux:latest-active-canvas') : null
-      // sessionId 未知：只作最低优先级兜底，不参与「本会话」匹配。
-      return raw ? { sessionId: null, workspaceId: raw } : null
-    } catch {
-      return null
-    }
-  })
+  // 「最近选中的创作页」按会话记账：换工作区（=换会话）即失效，画布严格跟随当前工作区走。
+  // 彻底废除 localStorage 全局缓存，杜绝跨工作区污染（Issue #2104 / 架构收敛）。
+  const [pickedBySession, setPickedBySession] = useState(null)
 
   // 比对 tab.meta 与当前会话是否匹配：若存在 canvasSessionId，则必须与当前 sessionId 严格一致；
   // 会话切换时清理并阻断非本会话的 tab.meta 反向渗透。
@@ -109,11 +101,6 @@ export function CanvasTab({
       if (!wsId) return
       setActiveCanvasWsId(wsId)
       setPickedBySession({ sessionId: sessionId ?? null, workspaceId: wsId })
-      try {
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('omnimux:latest-active-canvas', wsId)
-        }
-      } catch {}
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('omnimux:active-canvas-changed', handler)

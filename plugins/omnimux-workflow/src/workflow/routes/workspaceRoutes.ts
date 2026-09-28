@@ -6,7 +6,6 @@ import type { SaveCanvasWorkspacePayload } from '../../shared/canvasTypes.ts';
 import { jsonBodyProblem } from '../../http/helpers.ts';
 import type { WorkspaceStore } from '../workspace/WorkspaceStore.ts';
 import type { ProjectStore } from '../../projects/ProjectStore.ts';
-import { PageGroupStore } from '../workspace/PageGroupStore.ts';
 import { notFound, type RouteTry, type WorkflowDispatchRequest } from './dispatch.ts';
 
 export function createWorkspaceRoutes(store: WorkspaceStore, projectStore?: ProjectStore): { tryHandle: RouteTry } {
@@ -18,8 +17,6 @@ export function createWorkspaceRoutes(store: WorkspaceStore, projectStore?: Proj
   const workspaceVersionRouteRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/version$`);
   const projectPagesRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/project-pages$`);
   const projectPageItemRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/project-pages/([^/]+)$`);
-
-  const pageGroupStore = new PageGroupStore(store.workspacesDir);
 
   const tryHandle: RouteTry = (method, path, req: WorkflowDispatchRequest) => {
     // 创作页集合路由 GET/POST /omnimux-workflow/api/workspaces/:id/project-pages
@@ -49,14 +46,21 @@ export function createWorkspaceRoutes(store: WorkspaceStore, projectStore?: Proj
             },
           };
         }
-        const group = pageGroupStore.ensureGroup(workspaceId);
+        // 未建项工作区：单一真源就是当前画布本身，不再依赖 page-groups.json 影子结构
+        const defaultPage = {
+          id: 'page-default',
+          title: '创作页 1',
+          canvasWorkspaceId: workspaceId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
         return {
           status: 200,
           body: {
             projectId: null,
             projectTitle: null,
-            activePageId: group.activePageId,
-            pages: group.pages,
+            activePageId: 'page-default',
+            pages: [defaultPage],
           },
         };
       }
@@ -81,14 +85,20 @@ export function createWorkspaceRoutes(store: WorkspaceStore, projectStore?: Proj
             },
           };
         }
-        const { group, page } = pageGroupStore.addPage(workspaceId, title, newWs.id);
+        const newPage = {
+          id: newWs.id,
+          title,
+          canvasWorkspaceId: newWs.id,
+          createdAt: newWs.metadata.createdAt,
+          updatedAt: newWs.metadata.updatedAt,
+        };
         return {
           status: 200,
           body: {
-            page,
+            page: newPage,
             workspace: newWs,
-            pages: group.pages,
-            activePageId: group.activePageId,
+            pages: [newPage],
+            activePageId: newWs.id,
           },
         };
       }
@@ -122,20 +132,12 @@ export function createWorkspaceRoutes(store: WorkspaceStore, projectStore?: Proj
             },
           };
         }
-        if (typeof body.title === 'string' && body.title.trim()) {
-          pageGroupStore.renamePage(workspaceId, pageId, body.title.trim());
-        }
-        let targetGroup = pageGroupStore.findGroupByWorkspaceId(workspaceId);
-        if (body.active === true) {
-          targetGroup = pageGroupStore.setActivePage(workspaceId, pageId);
-        }
-        const activeItem = targetGroup?.pages.find((p) => p.id === pageId);
         return {
           status: 200,
           body: {
             ok: true,
-            activePage: activeItem || { id: pageId },
-            canvasWorkspaceId: activeItem?.canvasWorkspaceId || workspaceId,
+            activePage: { id: pageId },
+            canvasWorkspaceId: workspaceId,
           },
         };
       }
@@ -144,8 +146,7 @@ export function createWorkspaceRoutes(store: WorkspaceStore, projectStore?: Proj
           const updatedProject = projectStore.removePage(project.id, pageId);
           return { status: 200, body: { ok: true, project: updatedProject } };
         }
-        const updatedGroup = pageGroupStore.removePage(workspaceId, pageId);
-        return { status: 200, body: { ok: true, group: updatedGroup } };
+        return { status: 200, body: { ok: true } };
       }
       return notFound();
     }

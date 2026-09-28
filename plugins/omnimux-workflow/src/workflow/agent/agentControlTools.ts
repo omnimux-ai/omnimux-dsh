@@ -28,14 +28,20 @@ export function createWorkflowConnectTool(deps: WorkflowAgentDeps): AgentToolSpe
       target_handle: { type: 'string', description: 'Target handle (default in)' },
     }),
     output: jsonOut,
-    async execute(args) {
+    async execute(args, exec?: unknown) {
       const source = readString(args, 'source');
       const target = readString(args, 'target');
       if (!source || !target) {
         return errorBody('invalid-args', 'source and target are required');
       }
 
-      const resolved = resolveTargetWorkspaceId(store, args, { getActiveView });
+      const sessionContext = extractSessionContext(exec);
+      const resolved = resolveTargetWorkspaceId(store, args, {
+        getActiveView,
+        projectStore: deps.projectStore,
+        resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
+        sessionContext,
+      });
       if ('error' in resolved) return resolved;
       const { workspaceId } = resolved;
 
@@ -71,7 +77,7 @@ export function createWorkflowDisconnectTool(deps: WorkflowAgentDeps): AgentTool
       target: { type: 'string', description: 'With source: remove the edge between these nodes' },
     }),
     output: jsonOut,
-    async execute(args) {
+    async execute(args, exec?: unknown) {
       const edgeIds = normalizeNodeIds(args.edge_ids);
       const source = readString(args, 'source');
       const target = readString(args, 'target');
@@ -79,7 +85,13 @@ export function createWorkflowDisconnectTool(deps: WorkflowAgentDeps): AgentTool
         return errorBody('invalid-args', 'pass edge_ids or source+target');
       }
 
-      const resolved = resolveTargetWorkspaceId(store, args, { getActiveView });
+      const sessionContext = extractSessionContext(exec);
+      const resolved = resolveTargetWorkspaceId(store, args, {
+        getActiveView,
+        projectStore: deps.projectStore,
+        resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
+        sessionContext,
+      });
       if ('error' in resolved) return resolved;
       const { workspaceId } = resolved;
 

@@ -115,6 +115,46 @@ describe('Workbench Tools', () => {
     assert.equal(res.code, 'already-active')
   })
 
+  it('workbench_open_tab 在同为创作画布但切换不同 workspaceId 时正常下发 RPC 并不报 already-active', async () => {
+    const { tools, ctx } = captureTools()
+    const bus = createHubEventBus()
+    const mailbox = createWorkbenchMailbox({ hubEvents: bus })
+
+    mailbox.updateViewport({
+      schemaVersion: 1,
+      ok: true,
+      capturedAt: Date.now(),
+      surface: { tabId: 'omnimux-workflow:canvas', panelOpen: true },
+      view: {
+        kind: 'canvas',
+        extra: { workspaceId: 'ws_old_canvas' },
+      },
+    })
+
+    let dispatchedPayload = null
+    mailbox.sendRpc = async (payload) => {
+      dispatchedPayload = payload
+      return { ok: true, applied: true, code: 'opened', requestId: payload.requestId }
+    }
+
+    mountWorkbenchTools(ctx, { mailbox, jsonOut: JSON_TOOL_OUTPUT })
+    const openTool = tools.get('workbench_open_tab')
+
+    const res = await openTool.execute({
+      tabId: 'omnimux-workflow:canvas',
+      reason: '切换至新生成的画布',
+      view: {
+        extra: { workspaceId: 'ws_new_canvas' },
+      },
+    })
+
+    assert.equal(res.ok, true)
+    assert.equal(res.applied, true)
+    assert.equal(res.code, 'opened')
+    assert.ok(dispatchedPayload, '必须下发 RPC')
+    assert.equal(dispatchedPayload.view?.extra?.workspaceId, 'ws_new_canvas')
+  })
+
   it('用完本会话切换配额后返回可读中文说明，且不谎称可重试（#2104）', async () => {
     const { tools, ctx } = captureTools()
     const bus = createHubEventBus()

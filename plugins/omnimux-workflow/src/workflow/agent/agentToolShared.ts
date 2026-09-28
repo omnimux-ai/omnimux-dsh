@@ -64,6 +64,8 @@ export interface WorkbenchMailboxSeat {
 
 export interface WorkflowAgentDeps {
   store: WorkspaceStore;
+  projectStore?: import('../../projects/ProjectStore.ts').ProjectStore;
+  resolveSessionWorkspaceDir?: (sessionId: string) => string | undefined;
   executionManager: ExecutionManager;
   /** Plugin media root (absolute) — resolves media URLs to local paths. */
   mediaDir: string;
@@ -363,23 +365,60 @@ export async function bindCanvasWorkspaceProject(
 export type WorkspaceResolutionSource =
   | 'explicit'
   | 'ui-context'
+  | 'project-default'
   | 'name';
 
+export interface ResolveWorkspaceOptions {
+  getActiveView?: WorkbenchMailboxSeat['getActiveView'];
+  projectStore?: import('../../projects/ProjectStore.ts').ProjectStore;
+  resolveSessionWorkspaceDir?: (sessionId: string) => string | undefined;
+  sessionContext?: { sessionId?: string; workspaceDir?: string };
+}
+
 /**
- * Resolve a workspace target with UI-context-aware defaults.
- * Priority: explicit workspace_id > ui_context workspace > unique workspace_name.
+ * Resolve a workspace target with UI-context-aware defaults and project boundary guards.
+ * Priority: explicit workspace_id > ui_context workspace > project active page > unique workspace_name.
  * Never falls back to "latest" or "only workspace in store".
  */
 export function resolveWorkspace(
   store: WorkspaceStore,
   workspaceId: string | undefined,
   workspaceName: string | undefined,
-  options?: { getActiveView?: WorkbenchMailboxSeat['getActiveView'] },
+  options?: ResolveWorkspaceOptions,
 ): {
   snapshot: CanvasWorkspaceSnapshot;
   source: WorkspaceResolutionSource;
 } | { error: string; message: string } {
+  // 解析当前会话的工作区物理目录
+  let workspaceDir = options?.sessionContext?.workspaceDir;
+  const sessionId = options?.sessionContext?.sessionId;
+  if (!workspaceDir && sessionId && options?.resolveSessionWorkspaceDir) {
+    try {
+      workspaceDir = options.resolveSessionWorkspaceDir(sessionId);
+    } catch {
+      // ignore
+    }
+  }
+
+  const project = options?.projectStore && workspaceDir
+    ? options.projectStore.findByRoot(workspaceDir)
+    : null;
+
   if (workspaceId) {
+    // Boundary Guard: 校验传入的 workspaceId 是否属于当前会话项目
+    if (project) {
+      const allowed = new Set([
+        ...(project.canvasWorkspaceIds || []),
+        ...(project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
+      ]);
+      if (!allowed.has(workspaceId)) {
+        return errorBody(
+          'outside-project-boundary',
+          `workspace "${workspaceId}" does not belong to current project "${project.title}"`,
+        );
+      }
+    }
+
     const hit = withWorkspace(store, workspaceId, (snapshot) => ({
       snapshot,
       source: 'explicit' as const,
@@ -389,13 +428,40 @@ export function resolveWorkspace(
 
   const fromUi = readUiContextWorkspaceId(options?.getActiveView);
   if (fromUi) {
-    const hit = withWorkspace(store, fromUi, (snapshot) => ({
-      snapshot,
-      source: 'ui-context' as const,
-    }));
-    if (!('error' in hit)) return hit;
-    // UI context pointed at a deleted workspace — surface that, do not invent another.
-    return hit;
+    if (project) {
+      const allowed = new Set([
+        ...(project.canvasWorkspaceIds || []),
+        ...(project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
+      ]);
+      if (allowed.has(fromUi)) {
+        const hit = withWorkspace(store, fromUi, (snapshot) => ({
+          snapshot,
+          source: 'ui-context' as const,
+        }));
+        return hit;
+      }
+    } else {
+      const hit = withWorkspace(store, fromUi, (snapshot) => ({
+        snapshot,
+        source: 'ui-context' as const,
+      }));
+      return hit;
+    }
+  }
+
+  // 兜底采用当前项目的活跃创作页
+  if (project) {
+    const activeCanvasId =
+      project.pages?.find((p) => p.id === project.activePageId)?.canvasWorkspaceId ||
+      project.pages?.[0]?.canvasWorkspaceId ||
+      project.canvasWorkspaceIds?.[0];
+    if (activeCanvasId) {
+      const hit = withWorkspace(store, activeCanvasId, (snapshot) => ({
+        snapshot,
+        source: 'project-default' as const,
+      }));
+      if (!('error' in hit)) return hit;
+    }
   }
 
   if (workspaceName) {
@@ -429,7 +495,7 @@ export function resolveWorkspace(
 export function resolveTargetWorkspaceId(
   store: WorkspaceStore,
   args: Record<string, unknown>,
-  options?: { getActiveView?: WorkbenchMailboxSeat['getActiveView'] },
+  options?: ResolveWorkspaceOptions,
 ): { workspaceId: string; source: WorkspaceResolutionSource } | { error: string; message: string } {
   const resolved = resolveWorkspace(
     store,

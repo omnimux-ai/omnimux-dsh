@@ -173,7 +173,7 @@ export function createWorkflowNodeAddTool(deps: WorkflowAgentDeps): AgentToolSpe
       },
     }),
     output: jsonOut,
-    async execute(args) {
+    async execute(args, exec?: unknown) {
       const materialType = readString(args, 'material_type') as MaterialType | undefined;
       if (!materialType || !MATERIAL_TYPE_ENUM.includes(materialType)) {
         return errorBody('invalid-args', `material_type must be one of ${MATERIAL_TYPE_ENUM.join(', ')}`);
@@ -182,7 +182,13 @@ export function createWorkflowNodeAddTool(deps: WorkflowAgentDeps): AgentToolSpe
       const toolResolved = resolveTool(materialType, args.tool);
       if ('error' in toolResolved) return toolResolved;
 
-      const target = resolveTargetWorkspaceId(store, args, { getActiveView });
+      const sessionContext = extractSessionContext(exec);
+      const target = resolveTargetWorkspaceId(store, args, {
+        getActiveView,
+        projectStore: deps.projectStore,
+        resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
+        sessionContext,
+      });
       if ('error' in target) return target;
       const { workspaceId } = target;
 
@@ -257,7 +263,7 @@ export function createWorkflowNodeUpdateTool(deps: WorkflowAgentDeps): AgentTool
       },
     }),
     output: jsonOut,
-    async execute(args) {
+    async execute(args, exec?: unknown) {
       const nodeId = readString(args, 'node_id');
       if (!nodeId) return errorBody('invalid-args', 'node_id is required');
 
@@ -266,7 +272,13 @@ export function createWorkflowNodeUpdateTool(deps: WorkflowAgentDeps): AgentTool
         return errorBody('invalid-args', 'patch object is required');
       }
 
-      const target = resolveTargetWorkspaceId(store, args, { getActiveView });
+      const sessionContext = extractSessionContext(exec);
+      const target = resolveTargetWorkspaceId(store, args, {
+        getActiveView,
+        projectStore: deps.projectStore,
+        resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
+        sessionContext,
+      });
       if ('error' in target) return target;
       const { workspaceId } = target;
 
@@ -306,11 +318,17 @@ export function createWorkflowNodeRemoveTool(deps: WorkflowAgentDeps): AgentTool
       node_ids: { type: 'array', required: true, items: { type: 'string' }, description: 'Node ids to remove' },
     }),
     output: jsonOut,
-    async execute(args) {
+    async execute(args, exec?: unknown) {
       const nodeIds = normalizeNodeIds(args.node_ids);
       if (nodeIds.length === 0) return errorBody('invalid-args', 'node_ids must be a non-empty array');
 
-      const target = resolveTargetWorkspaceId(store, args, { getActiveView });
+      const sessionContext = extractSessionContext(exec);
+      const target = resolveTargetWorkspaceId(store, args, {
+        getActiveView,
+        projectStore: deps.projectStore,
+        resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
+        sessionContext,
+      });
       if ('error' in target) return target;
       const { workspaceId } = target;
 
