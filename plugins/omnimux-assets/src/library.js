@@ -144,7 +144,7 @@ function fileView(absPath, fs, file = {}) {
     const kind = info.isDirectory() ? 'directory' : bucketOf(ext)
     const relative = str(file.relative_path)
     return {
-      relative_path: relative || undefined,
+      ...(relative ? { relative_path: relative } : {}),
       real_path: path,
       original_name: name,
       kind,
