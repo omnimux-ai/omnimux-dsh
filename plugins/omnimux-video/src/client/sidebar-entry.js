@@ -106,6 +106,23 @@ function resolveLocaleCurrent(locale) {
   return 'en'
 }
 
+function resolveLayout(resolvedLayout, workbench) {
+  if (typeof resolvedLayout?.selectPanel === 'function') return resolvedLayout
+  if (typeof workbench?.layout?.selectPanel === 'function') return workbench.layout
+  if (typeof window !== 'undefined' && typeof window.__omnimuxLayout?.selectPanel === 'function') return window.__omnimuxLayout
+  try {
+    const frame = typeof document !== 'undefined' ? document.querySelector('.dshDesktopFrame') : null
+    if (!frame) return null
+    const key = Object.keys(frame).find((k) => k.startsWith('__reactFiber'))
+    let node = key ? frame[key] : null
+    while (node) {
+      if (typeof node.memoizedProps?.layout?.selectPanel === 'function') return node.memoizedProps.layout
+      node = node.return
+    }
+  } catch {}
+  return null
+}
+
 function registerWhenCoordinatorReady(row) {
   let unregister = () => {}
   let disposed = false
@@ -217,10 +234,9 @@ export function mountSidebarEntry(t, locale, _legacyLocale, layout) {
       try {
         document.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
       } catch {}
-      if (typeof resolvedLayout?.selectPanel === 'function') {
-        resolvedLayout.selectPanel('omnimux-vids')
-      } else if (typeof workbench?.layout?.selectPanel === 'function') {
-        workbench.layout.selectPanel('omnimux-vids')
+      const layoutHandle = resolveLayout(resolvedLayout, workbench)
+      if (typeof layoutHandle?.selectPanel === 'function') {
+        layoutHandle.selectPanel('omnimux-vids')
       }
       stage.claim('omnimux-vids')
     } catch {

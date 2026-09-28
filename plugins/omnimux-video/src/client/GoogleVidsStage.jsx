@@ -445,12 +445,21 @@ export function GoogleVidsStage(props) {
   const handleCloseStage = () => {
     if (typeof window !== 'undefined') {
       try {
-        if (typeof props?.layout?.selectPanel === 'function') {
-          props.layout.selectPanel(null)
-        } else if (typeof window.__omnimuxWorkbench?.layout?.selectPanel === 'function') {
-          window.__omnimuxWorkbench.layout.selectPanel(null)
-        } else if (typeof window.__omnimuxLayout?.selectPanel === 'function') {
-          window.__omnimuxLayout.selectPanel(null)
+        let layout = props?.layout || window.__omnimuxWorkbench?.layout || window.__omnimuxLayout
+        if (!layout && typeof document !== 'undefined') {
+          const frame = document.querySelector('.dshDesktopFrame')
+          const key = frame && Object.keys(frame).find((k) => k.startsWith('__reactFiber'))
+          let node = key ? frame[key] : null
+          while (node) {
+            if (typeof node.memoizedProps?.layout?.selectPanel === 'function') {
+              layout = node.memoizedProps.layout
+              break
+            }
+            node = node.return
+          }
+        }
+        if (typeof layout?.selectPanel === 'function') {
+          layout.selectPanel(null)
         }
       } catch {}
       try {
