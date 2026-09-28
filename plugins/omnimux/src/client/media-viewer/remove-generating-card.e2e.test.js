@@ -13,26 +13,24 @@ import { createMediaViewerStore } from './media-viewer-store.js';
 const here = dirname(fileURLToPath(import.meta.url));
 
 test('E2E: 媒体查看器视口移除未完成生成状态黑色占位卡片契约验证', async () => {
-  // 1. 验证 GenerationTasks.jsx 契约
+  // 1. 验证 GenerationTasks.jsx 契约：彻底移除旧版破坏性文字横条，接入静默 InPlaceTaskSlot
   const tasksSource = await readFile(resolve(here, 'GenerationTasks.jsx'), 'utf8');
 
-  // 必须对任务做可操作/有产物过滤，未就绪的 pending/running 必须被剔除
   assert.ok(
-    tasksSource.includes('task.media && task.media.length > 0'),
-    'GenerationTasks 必须过滤仅展示含有产物媒体的任务'
+    tasksSource.includes('InPlaceTaskSlot'),
+    'GenerationTasks 必须接入 InPlaceTaskSlot 原位静默卡片'
   );
   assert.ok(
-    tasksSource.includes('if (!actionableTasks.length) return null;'),
-    '当没有具有媒体的任务时，必须直接返回 null，杜绝渲染任何黑色大卡片 DOM'
+    !tasksSource.includes('copyPrompt'),
+    'GenerationTasks 杜绝包含任何旧版复制提示词等冗余操作'
   );
 
-  // 2. 验证 MediaViewerTab.jsx 视口破坏消除
+  // 2. 验证 MediaViewerTab.jsx 视口破坏消除与原位卡槽接入
   const tabSource = await readFile(resolve(here, 'MediaViewerTab.jsx'), 'utf8');
   
-  // 视口容器 data-has-generation 不得在仅有 pending/running 时激活
   assert.ok(
-    tabSource.includes('task.sessionId === sessionId && task.media?.length > 0'),
-    '视口容器 data-has-generation 仅在有实际媒体产出时激活，杜绝破坏全屏大图 Flex 布局'
+    tabSource.includes('GenerationTasks'),
+    '视口容器必须正确挂载 GenerationTasks 原位任务槽'
   );
 
   // 3. 验证媒体查看器 Store 状态流转契约
