@@ -373,8 +373,11 @@ export function syncSeatAvatar(doc = globalThis.document, seat = findAgentPreset
   if (typeof window !== 'undefined') {
     const previousPreset = window.__omnimuxActivePreset
     window.__omnimuxActivePreset = resolved.id
-    if (previousPreset !== resolved.id && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-      window.dispatchEvent(new CustomEvent(AGENT_PRESET_CHANGED_EVENT, { detail: { id: resolved.id } }))
+    const CEvent = doc?.defaultView?.CustomEvent || globalThis.CustomEvent
+    if (previousPreset !== resolved.id && typeof window.dispatchEvent === 'function' && typeof CEvent === 'function') {
+      try {
+        window.dispatchEvent(new CEvent(AGENT_PRESET_CHANGED_EVENT, { detail: { id: resolved.id } }))
+      } catch {}
     }
   }
 

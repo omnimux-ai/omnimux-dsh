@@ -257,6 +257,51 @@ test('sync-agent-presets.sh maintains presets in KEEP array', () => {
   ok(syncScript.includes('KEEP=(cordis omni-agent tiktok-agent instagram-agent x-agent youtube-agent viral-video-agent ad-creative-agent)'))
 })
 
+test('all historical and legacy compatibility presets must exist and be structurally mountable', () => {
+  const legacyAliases = [
+    'media-creator',
+    'marketing-agent',
+    'daily-work',
+    'standard',
+    'marketing-growth-team',
+    'drama-agent',
+    'tiktok-agent',
+  ]
+  for (const alias of legacyAliases) {
+    ok(existsSync(join(root, 'presets', alias, 'preset.yml')), `legacy alias preset.yml missing: ${alias}`)
+    ok(existsSync(join(root, 'presets', alias, 'agent.cordis.yml')), `legacy alias agent.cordis.yml missing: ${alias}`)
+    const cordisText = read(`presets/${alias}/agent.cordis.yml`)
+    ok(cordisText.includes('prefix: |'), `${alias} must use persona prefix key`)
+    ok(!/^\s+text: \|/m.test(cordisText), `${alias} must not use retired persona text key`)
+    ok(cordisText.includes('sampleOverCapGlobResults: false'), `${alias} must contain sampleOverCapGlobResults`)
+    ok(cordisText.includes('provider: spawn'), `${alias} must contain provider: spawn for tool-subagent`)
+  }
+})
+
+test('sync-agent-presets.sh synchronizes all legacy aliases to prevent session resume lockup', () => {
+  const syncScript = read('scripts/sync-agent-presets.sh')
+  ok(syncScript.includes('media-creator'), 'sync-agent-presets.sh must include media-creator in legacy aliases')
+  ok(syncScript.includes('marketing-agent'), 'sync-agent-presets.sh must include marketing-agent in legacy aliases')
+  ok(syncScript.includes('daily-work'), 'sync-agent-presets.sh must include daily-work in legacy aliases')
+  ok(syncScript.includes('standard'), 'sync-agent-presets.sh must include standard in legacy aliases')
+})
+
+test('presets manifest.json defines the single source of truth whitelist for shipped presets', () => {
+  const manifest = JSON.parse(read('presets/manifest.json'))
+  ok(Array.isArray(manifest.shippedPresets), 'manifest.json must declare shippedPresets array')
+  const shippedIds = manifest.shippedPresets.map((p) => p.id)
+  deepEqual(shippedIds, [
+    'cordis',
+    'omni-agent',
+    'tiktok-agent',
+    'instagram-agent',
+    'x-agent',
+    'youtube-agent',
+    'viral-video-agent',
+    'ad-creative-agent',
+  ], 'shippedPresets in manifest.json is the single source of truth whitelist')
+})
+
 test('omni-agent persona positions as universal social lead and forbids forced spawn', () => {
   const text = read('presets/omni-agent/agent.cordis.yml')
   ok(text.includes('社媒专家') || text.includes('全能社媒操盘手') || text.includes('全域社媒操盘手'))
