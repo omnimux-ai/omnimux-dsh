@@ -481,6 +481,25 @@ export function ensurePlacementStyles(doc) {
 /** 加号按钮：aria-haspopup=listbox。斜杠联想没有这个按钮展开态。 */
 const PLUS_BUTTON = 'button[aria-haspopup="listbox"]'
 
+export const COMPOSER_OVERLAY_OPEN_EVENT = 'omnimux:composer:overlay:open'
+export const COMPOSER_OVERLAY_DISMISS_EVENT = 'omnimux:composer:overlay:dismiss'
+
+/**
+ * Dismiss the native composer command/plus menu if it is currently expanded.
+ * Safely triggers the native toggleCommandMenu dismissal path.
+ * @param {Document} [doc]
+ * @returns {boolean} True if a dismissal was dispatched
+ */
+export function dismissPlusMenu(doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc) return false
+  const plusBtn = doc.querySelector('button[aria-haspopup="listbox"][aria-expanded="true"]')
+  if (plusBtn && typeof plusBtn.click === 'function') {
+    plusBtn.click()
+    return true
+  }
+  return false
+}
+
 /**
  * 加号菜单与斜杠联想共用同一菜单层。只有加号处于展开，才允许改到输入框下方。
  * 菜单节点尚未挂上时，用卡片上的加号按钮判断。
@@ -690,10 +709,19 @@ export function installMenuAutoSync(doc = (typeof document !== 'undefined' ? doc
     win.addEventListener('scroll', onViewportChange, { capture: true, passive: true })
   }
 
-  // Pre-sync on "+" button pointerdown/click to preemptively set placement mode
+  // Pre-sync on "+" button pointerdown/click to preemptively set placement mode & coordinate overlays
   const onTriggerPointerDown = (e) => {
     const target = e.target
-    if (target && target.closest?.('button[aria-label="指令"], button[class*="add"], [class*="Q7WfXG_add"]')) {
+    if (!target) return
+
+    // 1. 如果点击的是加号按钮，通知关闭其它互斥浮层（如技能面板、模型选择器）
+    if (target.closest?.('button[aria-label="指令"], button[class*="add"], [class*="Q7WfXG_add"]')) {
+      if (win && typeof win.dispatchEvent === 'function') {
+        try {
+          const Evt = win.CustomEvent || CustomEvent
+          win.dispatchEvent(new Evt(COMPOSER_OVERLAY_OPEN_EVENT, { detail: { id: 'plus-menu' } }))
+        } catch {}
+      }
       const card = target.closest?.('[data-composer-card]') || doc.querySelector?.('[data-composer-card]')
       if (card) {
         const anchor = card.querySelector?.('[class*="overlayAnchor"]')
@@ -718,9 +746,34 @@ export function installMenuAutoSync(doc = (typeof document !== 'undefined' ? doc
         }
       }
       scheduleSync()
+      return
+    }
+
+    // 2. 如果加号菜单当前正处于展开态，并且用户点击了底栏的其它交互按钮（如技能选择器、模型选择器等）
+    // 由于原生 MenuView 的 click-outside 判定豁免了整个 [data-composer-card]，此处在捕获阶段立即帮加号菜单收起，
+    // 彻底杜绝加号菜单与新激活浮层同时驻留并遮挡
+    if (target.closest?.('[data-omnimux-skill-picker], .sh-model-capsule-btn, .sh-model-picker-trigger, [data-composer-action-btn]')) {
+      dismissPlusMenu(doc)
     }
   }
   doc.addEventListener('pointerdown', onTriggerPointerDown, true)
+
+  const onOverlayOpen = (e) => {
+    const id = e?.detail?.id
+    if (id && id !== 'plus-menu') {
+      dismissPlusMenu(doc)
+    }
+  }
+  const onOverlayDismiss = (e) => {
+    const id = e?.detail?.id
+    if (!id || id === 'plus-menu') {
+      dismissPlusMenu(doc)
+    }
+  }
+  if (win && typeof win.addEventListener === 'function') {
+    win.addEventListener(COMPOSER_OVERLAY_OPEN_EVENT, onOverlayOpen)
+    win.addEventListener(COMPOSER_OVERLAY_DISMISS_EVENT, onOverlayDismiss)
+  }
 
   // Initial sync attempt
   scheduleSync()
@@ -734,6 +787,10 @@ export function installMenuAutoSync(doc = (typeof document !== 'undefined' ? doc
     if (win) {
       win.removeEventListener('resize', onViewportChange)
       win.removeEventListener('scroll', onViewportChange, true)
+      if (typeof win.removeEventListener === 'function') {
+        win.removeEventListener(COMPOSER_OVERLAY_OPEN_EVENT, onOverlayOpen)
+        win.removeEventListener(COMPOSER_OVERLAY_DISMISS_EVENT, onOverlayDismiss)
+      }
     }
     doc.removeEventListener('pointerdown', onTriggerPointerDown, true)
   }
