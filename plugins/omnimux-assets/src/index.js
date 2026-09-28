@@ -145,7 +145,7 @@ const jsonOut = {
  * }} ctx
  */
 export function apply(ctx) {
-  const defineTool = ctx.defineTool ?? defaultDefineTool
+  const defineTool = defaultDefineTool
   const paths = resolveAssetsPaths()
   const mappings = createMappingStore({ paths })
   const artifacts = createArtifactStore({ paths })
