@@ -280,9 +280,8 @@ export const STYLES = `
   padding: 5px;
   border: 1px solid var(--dsw-alias-border, rgba(255,255,255,0.14));
   border-radius: 10px;
-  background: var(--dsw-alias-bg-elevated, #1c1c1f);
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base));
   box-shadow: 0 10px 28px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.5)), 0 2px 8px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.3));
-  backdrop-filter: blur(16px);
   animation: omnimux-accounts-menu-pop 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes omnimux-accounts-menu-pop {

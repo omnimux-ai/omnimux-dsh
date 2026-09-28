@@ -71,7 +71,7 @@ export function queryCreativeTemplates({
       ? item.prompt.slice(0, 160) + (item.prompt.length > 160 ? '...' : '')
       : '';
 
-    results.push({
+    const summary = {
       id: item.id || item.appId,
       title: item.title || item.titleZh,
       titleEn: item.titleEn || '',
@@ -80,13 +80,16 @@ export function queryCreativeTemplates({
       duration: item.duration || '15s',
       isApp: Boolean(item.isApp),
       hasWorkflow: Boolean(item.workflow || item.manifest),
-      workflowSummary: item.workflow ? {
+      promptSummary,
+    };
+    if (item.workflow) {
+      summary.workflowSummary = {
         nodeChain: item.workflow.nodeChain || '',
         nodeCount: item.workflow.nodeCount || 0,
         modelsUsed: item.workflow.modelsUsed || [],
-      } : undefined,
-      promptSummary,
-    });
+      };
+    }
+    results.push(summary);
   }
 
   return {
@@ -157,7 +160,7 @@ export function mountTemplatesTools(ctx) {
       additionalProperties: false,
     },
     output: JSON_TOOL_OUTPUT,
-    execute: async (_toolCallId, args = {}) => {
+    execute: async (args = {}) => {
       try {
         const result = queryCreativeTemplates(args || {});
         return {
@@ -192,7 +195,7 @@ export function mountTemplatesTools(ctx) {
       additionalProperties: false,
     },
     output: JSON_TOOL_OUTPUT,
-    execute: async (_toolCallId, args = {}) => {
+    execute: async (args = {}) => {
       try {
         const { id } = args || {};
         if (!id) {

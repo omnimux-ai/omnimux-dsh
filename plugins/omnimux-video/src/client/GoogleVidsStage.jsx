@@ -1,18 +1,19 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { readVidsCenterBox } from './vids-stage-box.js'
-import { createVeoTask, fetchVeoTask } from './veo-api.js'
+import React, { useState, useEffect, useRef } from 'react'
+import { resolveVeoMode, VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
+import { useVeoTaskFeed } from './useVeoTaskFeed.js'
+import {
+  clearAllTimersInMap,
+  clearTimerInMap,
+} from './veo-timers.js'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
 .omnimux-vids-stage {
-  position: fixed;
-  z-index: 200;
-  top: var(--stage-top, 0px);
-  left: var(--stage-left, 56px);
-  width: var(--stage-width, 320px);
-  height: var(--stage-height, 240px);
-  display: flex;
-  flex-direction: column;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
   box-sizing: border-box;
@@ -368,93 +369,23 @@ function injectGoogleVidsStyles() {
  * 100% 逐字对照 Spec 第 3 节白名单与文案字典，严禁自由发挥与装饰 Emoji。
  */
 export function GoogleVidsStage(props) {
-  const activeTimersRef = useRef(new Map())
+  // Local upscale fake-progress timers are kept separate from host poll timers
+  const upscaleTimersRef = useRef(new Map())
   const [everOpened, setEverOpened] = useState(false)
   const open = typeof props?.visible === 'boolean' ? props.visible : true
-  const [box, setBox] = useState(() => (
-    typeof document !== 'undefined' ? readVidsCenterBox() : { top: 0, left: 56, width: 320, height: 240 }
-  ))
 
   useEffect(() => {
-    if (open) setEverOpened(true)
+    if (open) {
+      setEverOpened(true)
+      if (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-omnimux-conversation-collapsed')) {
+        document.documentElement.removeAttribute('data-omnimux-conversation-collapsed')
+      }
+    }
   }, [open])
 
   useEffect(() => {
     injectGoogleVidsStyles()
   }, [])
-
-  // Host shell.overlay sits on frame-level .dshDesktopOverlay (full frame).
-  // Measure the live conversation column and clamp to the right panel edge so
-  // Vids stays a true center-column surface while left/right rails remain usable.
-  useLayoutEffect(() => {
-    if (!open) return undefined
-    const update = () => { setBox(readVidsCenterBox()) }
-    update()
-    // Clip open / split settle after claim; remeasure a few frames later.
-    const timers = [50, 150, 400, 800].map((ms) => window.setTimeout(update, ms))
-    const targets = [
-      document.querySelector('[data-conversation-scroll]'),
-      document.querySelector('[data-slot="conversation"]')?.parentElement,
-      document.querySelector('[class*="centerCol"]'),
-      document.querySelector('[data-pane="sidebar"], [class*="sidebarCol"]'),
-      document.querySelector('[data-sidebar-right-panel]'),
-      document.querySelector('[data-dsh-panel-host]'),
-      document.querySelector('.dshDesktopFrame, [class*="frame"]'),
-    ].filter((el) => el instanceof HTMLElement)
-    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null
-    for (const target of targets) observer?.observe(target)
-    window.addEventListener('resize', update)
-    const onStage = () => update()
-    window.addEventListener('dsh-product-stage', onStage)
-    // Left/right rail toggles often keep the frame box size unchanged, so
-    // ResizeObserver on the frame is silent. Capture UI gestures + poll.
-    const onGesture = () => {
-      update()
-      window.setTimeout(update, 50)
-      window.setTimeout(update, 200)
-    }
-    document.addEventListener('click', onGesture, true)
-    document.addEventListener('pointerup', onGesture, true)
-    const poll = window.setInterval(update, 250)
-    const mo = typeof MutationObserver === 'function'
-      ? new MutationObserver(update)
-      : null
-    mo?.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: [
-        'data-omnimux-left-collapsed',
-        'data-omnimux-conversation-collapsed',
-        'data-dsh-product-stage',
-        'class',
-        'style',
-      ],
-    })
-    const frame = document.querySelector('.dshDesktopFrame, [class*="frame"]')
-    if (frame instanceof HTMLElement) {
-      mo?.observe(frame, {
-        attributes: true,
-        subtree: true,
-        attributeFilter: [
-          'data-sidebar-collapsed',
-          'data-rightbar-collapsed',
-          'data-sidebar-right-panel',
-          'data-sidebar-right-open',
-          'class',
-          'style',
-        ],
-      })
-    }
-    return () => {
-      for (const id of timers) window.clearTimeout(id)
-      window.clearInterval(poll)
-      observer?.disconnect()
-      mo?.disconnect()
-      window.removeEventListener('resize', update)
-      window.removeEventListener('dsh-product-stage', onStage)
-      document.removeEventListener('click', onGesture, true)
-      document.removeEventListener('pointerup', onGesture, true)
-    }
-  }, [open])
 
   // 剪辑工程就绪感知
   const [isEditorReady, setIsEditorReady] = useState(() => {
@@ -468,26 +399,27 @@ export function GoogleVidsStage(props) {
   // 向导就绪面板状态
   const [onboardingOpen, setOnboardingOpen] = useState(false)
 
-  // 模式 Tab：'create' | 'modify' | 'animate' | 'extend'
-  const [currentMode, setCurrentMode] = useState('create')
+  // 模式 Tab：来自 VEO_TASK_SPEC.modes（展示/校验；driver 暂不消费）
+  const [currentMode, setCurrentMode] = useState(VEO_TASK_SPEC.defaultMode)
   const [promptText, setPromptText] = useState('')
   const [attachedAsset, setAttachedAsset] = useState(null)
   const [insertedFeedbackId, setInsertedFeedbackId] = useState(null)
 
-  // 任务生成列表
-  const [tasks, setTasks] = useState([
-    {
-      id: 'task_demo_skincare',
-      title: '韩国极简防晒美学成片',
-      videoUrl: './media/google_vids_korean_skincare.mp4',
-      status: 'completed',
-      durationSec: 10,
-      resolution: '720p',
-      isUpscaled: false,
-    },
-  ])
+  const {
+    tasks,
+    setTasks,
+    submitTask: handleSubmitTask,
+    removeTask: removeFeedTask,
+    clearPollTimer,
+    pollTimersRef,
+  } = useVeoTaskFeed({
+    isEditorReady,
+    promptText,
+    setPromptText,
+    currentMode,
+  })
 
-  // 监听剪辑器状态广播与全局状态
+  // 监听剪辑器状态广播（生成 timer 清理由 useVeoTaskFeed 负责）
   useEffect(() => {
     const handleStatus = (event) => {
       const detail = event?.detail
@@ -505,14 +437,22 @@ export function GoogleVidsStage(props) {
       if (typeof window !== 'undefined') {
         window.removeEventListener('omnimux-clip:editor-status', handleStatus)
       }
-      activeTimersRef.current.forEach((timer) => clearInterval(timer))
-      activeTimersRef.current.clear()
+      clearAllTimersInMap(upscaleTimersRef.current)
     }
   }, [])
 
   // 退出主舞台
   const handleCloseStage = () => {
     if (typeof window !== 'undefined') {
+      try {
+        if (typeof props?.layout?.selectPanel === 'function') {
+          props.layout.selectPanel(null)
+        } else if (typeof window.__omnimuxWorkbench?.layout?.selectPanel === 'function') {
+          window.__omnimuxWorkbench.layout.selectPanel(null)
+        } else if (typeof window.__omnimuxLayout?.selectPanel === 'function') {
+          window.__omnimuxLayout.selectPanel(null)
+        }
+      } catch {}
       try {
         if (window.__omnimuxStage && typeof window.__omnimuxStage.release === 'function') {
           window.__omnimuxStage.release('omnimux-vids')
@@ -544,127 +484,9 @@ export function GoogleVidsStage(props) {
     setAttachedAsset(asset)
   }
 
-  // 触发生成任务：走 Host /omnimux-video/api/veo → opencli veoHeadlessDriver
-  const handleSubmitTask = async () => {
-    if (!isEditorReady || !promptText.trim()) return
-
-    const prompt = promptText.trim()
-    const optimisticId = `task_pending_${Date.now()}`
-    setTasks((prev) => [
-      {
-        id: optimisticId,
-        title: prompt.slice(0, 16),
-        status: 'generating',
-        progress: 2,
-        durationSec: 10,
-        resolution: '720p',
-        message: '正在提交生成任务…',
-      },
-      ...prev,
-    ])
-
-    try {
-      const created = await createVeoTask({
-        prompt,
-        mode: currentMode,
-        durationSec: 10,
-      })
-      if (!created.ok || !created.body?.task?.id) {
-        const message = created.body?.message || `提交失败（HTTP ${created.status}）`
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === optimisticId
-              ? { ...t, status: 'failed', progress: 0, message, error: message }
-              : t
-          )
-        )
-        // 失败保留输入，便于微调后重试（PRD 异常防御）
-        return
-      }
-
-      const remote = created.body.task
-      setPromptText('')
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === optimisticId
-            ? {
-                ...t,
-                id: remote.id,
-                status: remote.status === 'completed' ? 'completed' : 'generating',
-                progress: remote.progress ?? 3,
-                title: remote.title || t.title,
-                message: remote.message,
-                videoUrl: remote.videoUrl,
-                durationSec: remote.durationSec || 10,
-                resolution: remote.resolution || '720p',
-              }
-            : t
-        )
-      )
-
-      const taskId = remote.id
-      if (activeTimersRef.current.has(taskId)) {
-        clearInterval(activeTimersRef.current.get(taskId))
-      }
-      const timer = setInterval(async () => {
-        try {
-          const polled = await fetchVeoTask(taskId)
-          const task = polled.body?.task
-          if (!polled.ok || !task) {
-            if (polled.status === 404) {
-              clearInterval(timer)
-              activeTimersRef.current.delete(taskId)
-            }
-            return
-          }
-          setTasks((prev) =>
-            prev.map((t) =>
-              t.id === taskId
-                ? {
-                    ...t,
-                    status: task.status === 'failed'
-                      ? 'failed'
-                      : task.status === 'completed'
-                        ? 'completed'
-                        : 'generating',
-                    progress: task.progress ?? t.progress,
-                    message: task.message || t.message,
-                    error: task.error,
-                    videoUrl: task.videoUrl || t.videoUrl,
-                    durationSec: task.durationSec || t.durationSec,
-                    resolution: task.resolution || t.resolution,
-                    title: task.title || t.title,
-                  }
-                : t
-            )
-          )
-          if (task.status === 'completed' || task.status === 'failed') {
-            clearInterval(timer)
-            activeTimersRef.current.delete(taskId)
-          }
-        } catch {
-          // keep polling; transient network blips
-        }
-      }, 1500)
-      activeTimersRef.current.set(taskId, timer)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === optimisticId
-            ? { ...t, status: 'failed', progress: 0, message, error: message }
-            : t
-        )
-      )
-    }
-  }
-
-  // 触发升频
+  // 触发升频（纯本地演示：不打 API；不得清掉同 taskId 的 Host 轮询）
   const handleUpscale = (taskId) => {
-    if (activeTimersRef.current.has(taskId)) {
-      clearInterval(activeTimersRef.current.get(taskId))
-      activeTimersRef.current.delete(taskId)
-    }
+    clearTimerInMap(upscaleTimersRef.current, taskId)
     setTasks((prev) =>
       prev.map((t) =>
         t.id === taskId ? { ...t, status: 'generating', progress: 12, isUpscaling: true } : t
@@ -675,7 +497,7 @@ export function GoogleVidsStage(props) {
       p += 25
       if (p >= 100) {
         clearInterval(timer)
-        activeTimersRef.current.delete(taskId)
+        clearTimerInMap(upscaleTimersRef.current, taskId)
         setTasks((prev) =>
           prev.map((t) =>
             t.id === taskId
@@ -689,7 +511,7 @@ export function GoogleVidsStage(props) {
         )
       }
     }, 350)
-    activeTimersRef.current.set(taskId, timer)
+    upscaleTimersRef.current.set(taskId, timer)
   }
 
   // 插入到时间轴 (向右侧 Clip 追加)
@@ -718,45 +540,26 @@ export function GoogleVidsStage(props) {
     }, 1500)
   }
 
-  // 移除任务
+  // 移除任务：清理本地升频定时器，同时通过 Hook 移除并清理轮询
   const handleRemoveTask = (taskId) => {
-    const timer = activeTimersRef.current.get(taskId)
-    if (timer) {
-      clearInterval(timer)
-      activeTimersRef.current.delete(taskId)
-    }
-    setTasks((prev) => prev.filter((t) => t.id !== taskId))
+    clearTimerInMap(upscaleTimersRef.current, taskId)
+    removeFeedTask(taskId)
   }
 
-  // 动态占位符
+  // 动态占位符（文案字典在 VEO_TASK_SPEC）
   const getPlaceholder = () => {
-    if (!isEditorReady) return '请先在右侧创建或打开剪辑工程...'
-    switch (currentMode) {
-      case 'create':
-        return '描述您想生成的视频画面与动作...'
-      case 'modify':
-        return '描述需要对当前视频进行的调整（如光影或服装风格）...'
-      case 'animate':
-        return '描述图像素材中应展现的动作与运镜细节...'
-      case 'extend':
-        return '描述当前视频结尾后续发生的情节发展...'
-      default:
-        return '描述您想生成的视频画面与动作...'
-    }
+    if (!isEditorReady) return VEO_TASK_SPEC.editorGatePlaceholder
+    return resolveVeoMode(currentMode).placeholder
   }
 
   if (!open && !everOpened) return null
 
-  return (
+  const content = (
     <div
       className="omnimux-vids-stage"
       data-visible={open ? 'true' : 'false'}
       style={{
         display: open ? undefined : 'none',
-        '--stage-top': `${box.top}px`,
-        '--stage-left': `${box.left}px`,
-        '--stage-width': `${box.width}px`,
-        '--stage-height': `${box.height}px`,
       }}
     >
       {/* 3.1 顶部 Header */}
@@ -960,12 +763,7 @@ export function GoogleVidsStage(props) {
       <div className="gvids-drawer">
         {/* 模式分段控制器（纯 2 字名词） */}
         <div className="gvids-segmented-control">
-          {[
-            { id: 'create', label: '创建' },
-            { id: 'modify', label: '修改' },
-            { id: 'animate', label: '动画' },
-            { id: 'extend', label: '扩展' },
-          ].map((tab) => (
+          {VEO_TASK_SPEC.modes.map((tab) => (
             <button // exempt-ui01 Google Vids 舞台专属按钮
               key={tab.id}
               type="button"
@@ -992,7 +790,7 @@ export function GoogleVidsStage(props) {
         <div className="gvids-drawer-bottom">
           {/* 客观规格胶囊 */}
           <div className="gvids-param-capsule">
-            720p · 16:9 · 10s
+            {VEO_TASK_SPEC.paramCapsule}
           </div>
 
           {/* 生成动作键 (纯向上箭头矢量 SVG) */}
@@ -1011,6 +809,8 @@ export function GoogleVidsStage(props) {
       </div>
     </div>
   )
+
+  return content
 }
 
 export default GoogleVidsStage

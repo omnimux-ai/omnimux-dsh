@@ -78,4 +78,37 @@ test('E2E: 验证左侧侧边栏非核心及内测插件收敛至探索菜单且
     contractContent.includes('data-omnimux-explore-entry'),
     'sidebar-extra-entries.md 必须登记探索行契约'
   )
+
+  // 7. 防透底硬门禁：探索浮动菜单必须使用不透明实体背景，严禁裸用未定义 Token 与伪毛玻璃滤镜
+  const menuStyleMatch = coordinatorContent.match(/\.omnimux-explore-menu\s*\{([^}]+)\}/)
+  assert.ok(menuStyleMatch, '必须定义 .omnimux-explore-menu 样式块')
+  const menuStyle = menuStyleMatch[1]
+
+  // 7.1 严禁使用 backdrop-filter 伪毛玻璃特效
+  assert.equal(
+    /backdrop-filter/i.test(menuStyle),
+    false,
+    '硬门禁拦截：.omnimux-explore-menu 严禁包含 backdrop-filter，避免透出中栏与底层内容'
+  )
+
+  // 7.2 严禁裸写 var(--dsw-alias-bg-elevated)
+  assert.equal(
+    /var\(\s*--dsw-alias-bg-elevated\s*\)/.test(menuStyle),
+    false,
+    '硬门禁拦截：.omnimux-explore-menu 严禁裸写未定义的 var(--dsw-alias-bg-elevated)，防止退化为 transparent'
+  )
+
+  // 7.3 严禁使用导致深色模式下变成中浅灰 (#61666b) 的 --dsw-alias-bg-overlay
+  assert.equal(
+    /--dsw-alias-bg-overlay\b/.test(menuStyle),
+    false,
+    '.omnimux-explore-menu 严禁使用 --dsw-alias-bg-overlay，避免深色主题严重偏色'
+  )
+
+  // 7.4 必须声明官方标准深色层级背景
+  assert.match(
+    menuStyle,
+    /background:\s*var\(--dsw-alias-bg-layer-2,\s*var\(--dsw-alias-bg-base\)\)/,
+    '.omnimux-explore-menu 必须使用官方深色规范层级底色'
+  )
 })

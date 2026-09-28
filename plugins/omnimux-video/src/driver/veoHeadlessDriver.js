@@ -191,9 +191,11 @@ export function detectOpenCliEnvironment() {
  * 后台静默调度生成视频
  * @param {Object} options
  * @param {string} options.prompt - 提示词
- * @param {number} [options.durationSec=10] - 时长
+ * @param {number} [options.durationSec=10] - 时长（今日仅回填返回值；不写入 Google Vids 页面控件）
  * @param {string} [options.outputDir] - 安全输出目录（必须在工作区内部）
  * @param {Function} [options.onProgress] - 进度回调
+ * @remarks `mode`（create/modify/animate/extend）不被本函数消费；UI 校验用 VEO_TASK_SPEC，
+ *   真接模式需另开行为单，勿在此 silently 加分支。
  */
 export async function generateVideoSilently({
   prompt,

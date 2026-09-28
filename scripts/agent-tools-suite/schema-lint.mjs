@@ -135,9 +135,27 @@ export function validateToolContract(tool) {
     }
   }
 
-  // 5. execute 执行体校验
+  // 5. execute 执行体与签名校验
   if (typeof tool.execute !== 'function') {
     errors.push(`工具 "${tool.name}" 必须具备可执行的 execute() 异步函数`);
+  } else if (tool._source !== 'static') {
+    // 静态签名防御：宿主标准契约为 execute(args, exec)。
+    // 严禁将首参命名为 _toolCallId / callId 等旧式形式（会导致宿主传入的实际参数对象被误当成 callId 丢弃）。
+    const fnStr = tool.execute.toString().trim();
+    const paramMatch =
+      fnStr.match(/^(?:async\s+)?(?:function\s*\w*\s*)?\(([^)]*)\)/) ||
+      fnStr.match(/^(?:async\s+)?(\w+)\s*=>/);
+    if (paramMatch) {
+      const paramsList = (paramMatch[1] || '')
+        .split(',')
+        .map((p) => p.trim().split(/[=:\s]/)[0])
+        .filter(Boolean);
+      if (paramsList.length >= 2 && /^(_?toolCallId|_?callId)$/i.test(paramsList[0])) {
+        errors.push(
+          `工具 "${tool.name}" 的 execute 签名非法: 第一个参数声明为 "${paramsList[0]}"。宿主契约为 execute(args, exec)，首参必须接收参数对象 (args)`
+        );
+      }
+    }
   }
 
   return {

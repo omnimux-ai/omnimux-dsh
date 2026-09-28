@@ -3,6 +3,8 @@
  * @module omnimux-video/contracts/veoContracts
  */
 
+import { VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
+
 /**
  * 谷歌底层 Protobuf 二进制数据包映射模板
  * @description
@@ -242,12 +244,13 @@ export function validateVeoTaskRequest(req) {
   if (!req.prompt || typeof req.prompt !== 'string' || !req.prompt.trim()) {
     return { valid: false, error: '必须提供有效的视频生成提示词' };
   }
-  const mode = req.mode || 'create';
-  if (!['create', 'modify', 'animate', 'extend'].includes(mode)) {
+  const mode = req.mode || VEO_TASK_SPEC.defaultMode;
+  if (!VEO_TASK_SPEC.modeIds.includes(mode)) {
     return { valid: false, error: `不支持的视频生成模式: ${mode}` };
   }
-  const duration = req.parameters?.durationSec ?? 10;
-  if (typeof duration !== 'number' || duration < 3 || duration > 10) {
+  const duration = req.parameters?.durationSec ?? VEO_TASK_SPEC.durationSec.fallback;
+  const { min, max } = VEO_TASK_SPEC.durationSec;
+  if (typeof duration !== 'number' || duration < min || duration > max) {
     return { valid: false, error: '生成时长必须在 3 秒至 10 秒之间' };
   }
   return { valid: true };
