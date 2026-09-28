@@ -46,11 +46,16 @@ test('硬门禁 2: sidebar-coordinator.js 探索菜单纯实体深色背景断�
     '.omnimux-explore-menu 严禁裸写 var(--dsw-alias-bg-elevated)，防止计算值回退为 transparent'
   )
 
-  // 3. 必须使用标准带实体兜底的 overlay 浮层变量
+  // 3. 必须使用标准深色层级变量，严禁使用导致浅灰偏色的 --dsw-alias-bg-overlay
+  assert.equal(
+    /--dsw-alias-bg-overlay\b/.test(styleBody),
+    false,
+    '.omnimux-explore-menu 严禁包含 --dsw-alias-bg-overlay，避免在深色主题下退化为 #61666b 中浅灰'
+  )
   assert.match(
     styleBody,
-    /background:\s*var\(--dsw-alias-bg-overlay,\s*var\(--dsw-alias-bg-layer-2,\s*#1c1c1f\)\)/,
-    '.omnimux-explore-menu 必须使用官方规范实体浮层底色链'
+    /background:\s*var\(--dsw-alias-bg-layer-2,\s*var\(--dsw-alias-bg-base\)\)/,
+    '.omnimux-explore-menu 必须使用官方深色规范层级底色'
   )
 })
 
@@ -82,16 +87,16 @@ test('硬门禁 3: 故障注入测试 (Fault Injection) - 验证门禁能够确�
     '门禁必须精确拦截裸写未定义变量 var(--dsw-alias-bg-elevated)'
   )
 
-  // 故障样本 C: 探索菜单丢失实体背景定义
+  // 故障样本 C: 探索菜单滥用中浅灰 --dsw-alias-bg-overlay (#61666b) 导致严重白灰偏色
   const faultySnippetC = `
     .omnimux-explore-menu {
       position: fixed;
-      border: 1px solid #333;
+      background: var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-2, #1c1c1f));
     }
   `
   const violationsC = checkContentForTransparencyViolations(faultySnippetC, 'sidebar-coordinator.js')
   assert.ok(
-    violationsC.some((v) => v.rule === 'EXPLORE_MENU_MUST_BE_SOLID_OVERLAY' && v.fatal),
-    '门禁必须精确拦截未显式声明官方不透明背景的探索菜单'
+    violationsC.some((v) => v.rule === 'POPOVER_NO_BG_OVERLAY_DISCOLORATION' && v.fatal),
+    '门禁必须精确拦截滥用 --dsw-alias-bg-overlay 造成的浅灰偏色缺陷'
   )
 })

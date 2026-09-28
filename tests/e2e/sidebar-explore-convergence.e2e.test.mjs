@@ -98,10 +98,17 @@ test('E2E: 验证左侧侧边栏非核心及内测插件收敛至探索菜单且
     '硬门禁拦截：.omnimux-explore-menu 严禁裸写未定义的 var(--dsw-alias-bg-elevated)，防止退化为 transparent'
   )
 
-  // 7.3 必须声明实体不透明兜底色（如 #1c1c1f 或标准 layer Token）
+  // 7.3 严禁使用导致深色模式下变成中浅灰 (#61666b) 的 --dsw-alias-bg-overlay
+  assert.equal(
+    /--dsw-alias-bg-overlay\b/.test(menuStyle),
+    false,
+    '.omnimux-explore-menu 严禁使用 --dsw-alias-bg-overlay，避免深色主题严重偏色'
+  )
+
+  // 7.4 必须声明官方标准深色层级背景
   assert.match(
     menuStyle,
-    /background:\s*var\(--dsw-alias-bg-overlay,\s*var\(--dsw-alias-bg-layer-2,\s*#1c1c1f\)\)/,
-    '.omnimux-explore-menu 必须使用带完整实体兜底的官方浮层 Token 链'
+    /background:\s*var\(--dsw-alias-bg-layer-2,\s*var\(--dsw-alias-bg-base\)\)/,
+    '.omnimux-explore-menu 必须使用官方深色规范层级底色'
   )
 })
