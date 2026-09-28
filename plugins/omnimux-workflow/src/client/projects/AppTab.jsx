@@ -2322,12 +2322,10 @@ export function AppTab(props) {
       {/* 官方标准产品库选择器模态弹窗 */}
       {productPickerModal && (
         <ProductPicker
-            open={Boolean(productPickerModal)}
-            onClose={() => setProductPickerModal(null)}
-            onConfirm={handleSelectProduct}
-            initialProducts={DEFAULT_PRODUCTS}
-            fetchProducts={fallbackFetchProducts}
-          />
+          open={Boolean(productPickerModal)}
+          onClose={() => setProductPickerModal(null)}
+          onConfirm={handleSelectProduct}
+        />
       )}
 
       {forkDialogOpen ? (
