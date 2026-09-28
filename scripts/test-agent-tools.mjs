@@ -89,9 +89,9 @@ async function main() {
     }
 
     if (execErrors === 0) {
-      console.log(`  ${colors.green}✔ 全部 ${allToolsMap.size} 个工具通过隔离调用与空参容错测试${colors.reset}\n`);
+      console.log(`  ${colors.green}✔ 全部 ${allToolsMap.size} 个工具通过隔离调用、无损 JSON 与签名契约校验${colors.reset}\n`);
     } else {
-      console.log(`  ${colors.red}✖ 隔离调用发现 ${execErrors} 个工具执行崩溃${colors.reset}\n`);
+      console.log(`  ${colors.red}✖ 隔离调用发现 ${execErrors} 个工具执行违背契约或产生脏数据${colors.reset}\n`);
       totalFailures += execErrors;
     }
   }

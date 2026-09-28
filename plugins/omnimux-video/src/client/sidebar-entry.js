@@ -106,6 +106,23 @@ function resolveLocaleCurrent(locale) {
   return 'en'
 }
 
+function resolveLayout(resolvedLayout, workbench) {
+  if (typeof resolvedLayout?.selectPanel === 'function') return resolvedLayout
+  if (typeof workbench?.layout?.selectPanel === 'function') return workbench.layout
+  if (typeof window !== 'undefined' && typeof window.__omnimuxLayout?.selectPanel === 'function') return window.__omnimuxLayout
+  try {
+    const frame = typeof document !== 'undefined' ? document.querySelector('.dshDesktopFrame') : null
+    if (!frame) return null
+    const key = Object.keys(frame).find((k) => k.startsWith('__reactFiber'))
+    let node = key ? frame[key] : null
+    while (node) {
+      if (typeof node.memoizedProps?.layout?.selectPanel === 'function') return node.memoizedProps.layout
+      node = node.return
+    }
+  } catch {}
+  return null
+}
+
 function registerWhenCoordinatorReady(row) {
   let unregister = () => {}
   let disposed = false
@@ -153,9 +170,10 @@ function registerWhenCoordinatorReady(row) {
  * @param {{ subscribe?: (fn: () => void) => () => void, get?: () => string, current?: string }} [_legacyLocale]
  * @returns {() => void} 销毁注销函数
  */
-export function mountSidebarEntry(t, locale, _legacyLocale) {
+export function mountSidebarEntry(t, locale, _legacyLocale, layout) {
   let resolvedT = t
   let resolvedLocale = locale
+  let resolvedLayout = layout
   if (typeof t !== 'function' && typeof locale === 'function') {
     resolvedT = locale
     resolvedLocale = _legacyLocale
@@ -204,12 +222,22 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
     if (typeof workbench?.open !== 'function' || typeof stage?.claim !== 'function') return
 
     try {
+      try {
+        document.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
+      } catch {}
       const opened = await workbench.open({
         tabId: 'omnimux-clip:studio',
         title: '视频剪辑',
         focus: 'split',
       })
       if (!mounted || opened !== true) return
+      try {
+        document.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
+      } catch {}
+      const layoutHandle = resolveLayout(resolvedLayout, workbench)
+      if (typeof layoutHandle?.selectPanel === 'function') {
+        layoutHandle.selectPanel('omnimux-vids')
+      }
       stage.claim('omnimux-vids')
     } catch {
       // Keep the current stage and focus unchanged when Clip cannot be opened.
@@ -218,12 +246,21 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
   entry.addEventListener('click', handleClick)
 
   const syncActive = () => {
-    const isStageActive = typeof document !== 'undefined' && document.documentElement?.dataset?.dshProductStage === 'omnimux-vids'
+    const isStageActive = typeof document !== 'undefined' && (
+      document.documentElement?.dataset?.dshProductStage === 'omnimux-vids'
+      || resolvedLayout?.panelInfo?.getSnapshot?.()?.activePanelId === 'omnimux-vids'
+      || window.__omnimuxWorkbench?.layout?.panelInfo?.getSnapshot?.()?.activePanelId === 'omnimux-vids'
+    )
     if (isStageActive) {
       entry.dataset.active = 'true'
     } else {
       delete entry.dataset.active
     }
+  }
+
+  let unsubPanel = null
+  if (typeof resolvedLayout?.panelInfo?.subscribe === 'function') {
+    unsubPanel = resolvedLayout.panelInfo.subscribe(syncActive)
   }
 
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
@@ -249,6 +286,9 @@ export function mountSidebarEntry(t, locale, _legacyLocale) {
     }
     if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
       window.removeEventListener('dsh-product-stage', syncActive)
+    }
+    if (typeof unsubPanel === 'function') {
+      unsubPanel()
     }
     unregisterCoordinator()
     unsubscribeLocale()

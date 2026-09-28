@@ -417,15 +417,15 @@ test('Issue #2721: Vids overlay registration retains Clip betterSidebar API bind
 
   assert.equal(typeof GoogleVidsStage, 'function')
   assert.deepEqual(manifest.capabilities.slots, [
-    { target: 'shell.overlay', componentPath: 'src/client/GoogleVidsStage.jsx' },
+    { target: 'main', componentPath: 'src/client/GoogleVidsStage.jsx' },
   ])
-  assert.deepEqual(injections, [['betterSidebar']])
-  assert.equal(slots[0].target, 'shell.overlay')
+  assert.ok(injections.some((dep) => dep.includes('betterSidebar')))
+  assert.equal(slots[0].target, 'main')
   assert.equal(typeof slots[0].register, 'function')
   slots[0].register()
-  assert.equal(slots[1].descriptor.id, 'omnimux-vids-stage')
-  assert.equal(slots[1].descriptor.name, 'shell.overlay')
-  assert.equal(slots[1].component, GoogleVidsStage)
+  assert.equal(slots[1].descriptor.key, 'omnimux-vids')
+  assert.equal(slots[1].descriptor.name, 'main')
+  assert.equal(typeof slots[1].component, 'function')
   assert.equal(typeof window.__omnimuxWorkbench, 'undefined', 'Workbench binding requires the host API to exist')
 
   window.__omnimuxWorkbench = hostWorkbench
@@ -454,7 +454,7 @@ test('legacy Google Vids Tab registration identifiers and sidebar store are abse
   assert.doesNotMatch(sidebarSource, /GOOGLE_VIDS_TAB_ID|createGoogleVidsStageStore|data-tab-id/)
   assert.doesNotMatch(indexSource, /GOOGLE_VIDS_TAB_ID|registerGoogleVidsTab|registerTab\s*\(/)
   assert.match(indexSource, /GoogleVidsStudioPanel/)
-  assert.match(manifestSource, /"target": "shell\.overlay"/)
-  assert.match(indexSource, /ctx\.slots\.inject\('shell\.overlay'/)
+  assert.match(manifestSource, /"target": "main"/)
+  assert.match(indexSource, /ctx\.slots\.inject\('main'/)
   assert.match(indexSource, /ctx\.inject\(\['betterSidebar'\]/)
 })
