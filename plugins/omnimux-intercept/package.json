@@ -25,6 +25,14 @@
     "@types/node": "^25.9.4",
     "typescript": "~5.9.3"
   },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-base": "^0.1.5-rc.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-base": {
+      "optional": true
+    }
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
