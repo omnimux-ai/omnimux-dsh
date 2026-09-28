@@ -45,7 +45,7 @@ export function ProductPickerCard({
   const preview =
     cover?.kind === 'image' && cover.id
       ? `/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(cover.id)}`
-      : (product.cover_url || product.image || '');
+      : (product.preview || product.previewUrl || product.cover_url || product.image || product.url || '');
 
   const glyph = (product.name || '?').trim().slice(0, 1).toUpperCase();
 
