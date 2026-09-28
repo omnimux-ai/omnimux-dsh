@@ -17,6 +17,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/resolve-omnimux-profile.sh"
 SRC="$ROOT/presets"
 KEEP=(cordis omni-agent tiktok-agent instagram-agent x-agent youtube-agent viral-video-agent ad-creative-agent)
+LEGACY_ALIASES=(media-creator marketing-agent daily-work standard marketing-growth-team drama-agent)
+ALL_PRESETS=("${KEEP[@]}" "${LEGACY_ALIASES[@]}")
 
 if [ ! -d "$SRC/omni-agent" ] && [ ! -d "$SRC/tiktok-agent" ]; then
   echo "❌ presets/ 缺少出厂预设 (omni-agent 或 tiktok-agent)" >&2
@@ -155,24 +157,26 @@ materialize_into() {
     return 0
   fi
   echo "==> 物化 Agent Presets → $dest"
-  # 只管理 KEEP 名单内的条目。目标目录里可能还有本脚本不拥有的预设——上游内置的
+  # 只管理 ALL_PRESETS (出厂8大预设 + 历史向后兼容别名) 名单内的条目。目标目录里可能还有本脚本不拥有的预设——上游内置的
   # minimal / ptc 就孵在同名的包目录下——删掉它们会让 asar 头列表跟着丢内置预设。
   for child in "$dest"/*; do
     [ -e "$child" ] || continue
     base=$(basename "$child")
     keep=0
-    for k in "${KEEP[@]}"; do
+    for k in "${ALL_PRESETS[@]}"; do
       if [ "$base" = "$k" ]; then keep=1; break; fi
     done
     if [ "$keep" -eq 0 ]; then
       echo "  · kept $base"
     fi
   done
-  for k in "${KEEP[@]}"; do
+  for k in "${ALL_PRESETS[@]}"; do
     rm -rf "$dest/$k"
     mkdir -p "$dest/$k"
-    cp -R "$SRC/$k/." "$dest/$k/"
-    echo "  + synced $k"
+    if [ -d "$SRC/$k" ]; then
+      cp -R "$SRC/$k/." "$dest/$k/"
+      echo "  + synced $k"
+    fi
   done
 }
 
@@ -182,12 +186,12 @@ for home_dir in "${TARGET_HOMES[@]}"; do
   if [ -d "$home_dir" ] && [ "$home_dir" != "$HOME/.dsh" ]; then
     mkdir -p "$home_dir/agent-presets-shipped"
     materialize_into "$home_dir/agent-presets-shipped"
-    mkdir -p "$home_dir/.agent-presets/tiktok-agent"
-    if [ -d "$SRC/tiktok-agent" ]; then
-      cp -R "$SRC/tiktok-agent/." "$home_dir/.agent-presets/tiktok-agent/"
-    elif [ -d "$SRC/omni-agent" ]; then
-      cp -R "$SRC/omni-agent/." "$home_dir/.agent-presets/tiktok-agent/"
-    fi
+    for alias_id in "${ALL_PRESETS[@]}"; do
+      mkdir -p "$home_dir/.agent-presets/$alias_id"
+      if [ -d "$SRC/$alias_id" ]; then
+        cp -R "$SRC/$alias_id/." "$home_dir/.agent-presets/$alias_id/"
+      fi
+    done
   fi
 
   for profile_home in "$home_dir/profiles"/*; do
