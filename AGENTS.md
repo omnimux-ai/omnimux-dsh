@@ -15,6 +15,19 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 
 The product baseline is a brand-new user's machine right after install and sign-in; **the development machine is not the baseline**. Anything that exists only on a dev machine (local model services, local compat proxies, dev-profile directories, dev ports or model aliases, machine-absolute checkout paths) MUST NOT be a default path, a first choice, or a silent fallback — only an explicit opt-in that fails loudly. Contract: [product baseline](docs/contracts/product-baseline.md).
 
+## 核心价值定位与无排他模式契约（开源 BYOK 与多渠道中枢）
+
+- **开源 BYOK 价值定位与无排他模式铁律（No Exclusive Runtime Modes）**：
+  OmniMux DSH 插件套件是面向全链路多模态内容生产的开源系统，核心定位是**支持完全自主掌控与 BYOK（Bring Your Own Key）**。系统中**绝对不存在非此即彼的全局排他运行模式**（严禁将 `official` / `key` / `agent` 设计为全局互斥锁）。启动或引导时的「登录官方账号 / 接入本地 CLI / 配置自备 API」仅为**最小可用性底线探测（Onboarding Provisioning Gate）**，目的是确保用户至少接入了一种可用通道使系统能够正常工作，绝非圈定排他监狱。
+- **正交消费场景与模型渠道解耦（Scenario-Level Independent Model Binding）**：
+  模型按**具体消费场景**（对话模型 Chat、工具调用与多模态分析模型 Multimodal/Vision、媒体生成模型 Image/Video/Audio/TTS）独立选型与绑定，不同渠道能力在消费场景中作为**可选项**并存露出。用户有权自由混搭：例如选择本地接入的 CLI 做对话模型，同时利用官方渠道（需账号有余额或权限，内置模型分组开箱即用）或自备第三方 API 做多模态视听拆解、视觉拉片与生图生视频。
+- **中枢统一纳管与自适应能力路由（Hub-Centric Orchestration & Graceful Degradation）**：
+  所有渠道（本地 CLI、第三方 API、官方服务）最终统一接入 OmniMux 执行中枢（Hub），所有域插件只能面向中枢消费能力。当某一消费场景发起调用时（例如携带视频的多模态视听拉片）：
+  1. 严禁因为主对话绑定了纯文本 CLI 而全局将多模态能力掐死；
+  2. 严禁向用户抛出“请去设置切换运行模式”的排他性甩锅式诊断；
+  3. 中枢必须自适应感知该能力在所有已注册渠道中的可用性（若配置了多模态 API 或官方渠道可用，自动路由或在场景中供选）；
+  4. 底层严禁使用空 `catch {}` 吞没上游真实鉴权/能力错误并误诊为业务问题（如将模型不支持/调用失败误诊为“视频超长/播客”）。
+
 ## MVP scope: viral video replication
 
 - Target & North Star: Deliver the viral video replication MVP across discovery, deconstruction, and replication. Drive progress by verified loops that produce usable, playable, exportable video deliverables aligned with user rewrite intent.

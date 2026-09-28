@@ -166,3 +166,40 @@ export function getPrimaryTabTitle(tabId, isEn = false) {
 export function getSubCategoriesForTab(tabId) {
   return SHARED_SUB_CATEGORIES[tabId] || Object.freeze([])
 }
+
+/**
+ * 云端真实分类枚举映射字典（单一事实源）
+ */
+export const CLOUD_CATEGORY_MAP = Object.freeze({
+  trending: Object.freeze({
+    'beauty-personal': 'beauty_skincare',
+    '美妆个护': 'beauty_skincare',
+    'fashion-style': 'fashion',
+    '服饰时尚': 'fashion',
+    'food-drinks': 'food_beverage',
+    '美食饮品': 'food_beverage',
+    'fitness-sports': 'fitness_sports',
+    '运动健身': 'fitness_sports',
+    'home-lifestyle': 'home_living',
+    '居家生活': 'home_living',
+    'tech-electronics': 'tech_digital',
+    '数码家电': 'tech_digital',
+    'pet-lifestyle': 'pets',
+    '萌宠生活': 'pets',
+  }),
+})
+
+/**
+ * 将二级分类 ID 或中文名映射为云端真实枚举
+ * @param {string} [subCategoryId]
+ * @param {string} [tabId='trending']
+ * @returns {string | undefined}
+ */
+export function resolveCloudCategory(subCategoryId, tabId = 'trending') {
+  if (subCategoryId == null) return undefined
+  const raw = String(subCategoryId).trim()
+  if (!raw || raw.toLowerCase() === 'all' || raw === '全部') return undefined
+  const categoryMap = CLOUD_CATEGORY_MAP[tabId] || CLOUD_CATEGORY_MAP.trending
+  return categoryMap?.[raw] || raw
+}
+

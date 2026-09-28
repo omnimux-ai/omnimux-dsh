@@ -10,13 +10,11 @@ const stylesSource = readFileSync(join(here, '../../src/client/session-guide/sty
 const exploreSectionSource = readFileSync(join(here, '../../src/client/session-guide/templates/ExploreTemplatesSection.jsx'), 'utf8');
 const dockingHookSource = readFileSync(join(here, '../../src/client/session-guide/useComposerDocking.js'), 'utf8');
 
-test('E2E 契约 1: 全屏状态加号分发守卫，拦截 split 模式并派发置顶与切 Tab 事件', () => {
-  // 必须包含全屏新会话探索专区与右栏折叠状态的联合判定
-  assert.match(controllerSource, /isFullscreenExplore\s*=\s*Boolean\(win\?.__omnimuxFullscreenExploreActive\)/);
-  assert.match(controllerSource, /isRightPanelOpen\s*=\s*Boolean\(wb\?\.getSnapshot/);
-  // 全屏未开右栏时，必须派发 omnimux:explore:scroll-to-tab 并直接 return 拦截 split
-  assert.match(controllerSource, /if\s*\(isFullscreenExplore\s*&&\s*!isRightPanelOpen\s*&&\s*win\)\s*\{/);
+test('E2E 契约 1: 加号选材宽窄自适应分流，大屏跳转 Tab 栏，窄栏打开 split 工作台', () => {
+  // 大屏新会话场景下派发 omnimux:explore:scroll-to-tab 平滑就地跳转
   assert.match(controllerSource, /win\.dispatchEvent\(new CustomEvent\('omnimux:explore:scroll-to-tab'/);
+  // 窄栏分栏态下统一通过 openWorkbench 唤起 ASSET_HUB_TAB_ID 的 split 模式
+  assert.match(controllerSource, /wb\?\.openWorkbench\?\.\(\{[\s\S]*tabId:\s*ASSET_HUB_TAB_ID,[\s\S]*focus:\s*'split'/);
 });
 
 test('E2E 契约 2: Tab 栏吸顶固定样式与实心纯色背景防穿透，对齐图 1 效果', () => {
@@ -31,18 +29,13 @@ test('E2E 契约 2: Tab 栏吸顶固定样式与实心纯色背景防穿透，�
   assert.match(stylesSource, /\.omnimux-explore-filter-bar\s*\{[^}]*--dsw-alias-bg-base/);
 });
 
-test('E2E 契约 3: 全屏探索专区生命周期标记与滚动置顶事件闭环', () => {
-  // 组件生命周期必须管理 window.__omnimuxFullscreenExploreActive
-  assert.match(exploreSectionSource, /window\.__omnimuxFullscreenExploreActive\s*=\s*true/);
-  assert.match(exploreSectionSource, /window\.__omnimuxFullscreenExploreActive\s*=\s*false/);
-  // 必须监听 omnimux:explore:scroll-to-tab
-  assert.match(exploreSectionSource, /window\.addEventListener\('omnimux:explore:scroll-to-tab'/);
-  assert.match(exploreSectionSource, /handlePrimaryTabChange\(targetTab\)/);
-  // 必须立即原子跳转置顶，杜绝 smooth 异步滚动竞态
-  assert.match(exploreSectionSource, /scroller\.scrollTop\s*=\s*Math\.max\(0,\s*targetOffset\)/);
-  // 必须派发意图驱动事件唤起吸底输入框且携带 force: true
-  assert.match(exploreSectionSource, /window\.dispatchEvent\(new CustomEvent\('omnimux:composer:dock-intent',/);
-  assert.match(exploreSectionSource, /force:\s*true/);
+test('E2E 契约 3: 全屏探索专区纯净解耦，响应平滑跳转但严禁空载强制吸底', () => {
+  // 严禁包含 window.__omnimuxFullscreenExploreActive 全局污染
+  assert.doesNotMatch(exploreSectionSource, /__omnimuxFullscreenExploreActive/);
+  // 必须监听 omnimux:explore:scroll-to-tab 响应大屏跳转
+  assert.match(exploreSectionSource, /omnimux:explore:scroll-to-tab/);
+  // 关键：严禁在跳转 Tab 栏时盲目广播强制吸底事件
+  assert.doesNotMatch(exploreSectionSource, /omnimux:composer:dock-intent/);
 });
 
 test('E2E 契约 4: useComposerDocking 意图驱动吸底与收起绝对静默状态机', () => {

@@ -7,6 +7,7 @@ import {
   isValidPrimaryTab,
   getPrimaryTabTitle,
   getSubCategoriesForTab,
+  resolveCloudCategory,
 } from './shared-tabs-catalog.js'
 
 describe('Shared Tabs Catalog (共享契约层单一真源) 规格与规范测试', () => {
@@ -85,5 +86,37 @@ describe('Shared Tabs Catalog (共享契约层单一真源) 规格与规范测�
     assert.equal(SHARED_I18N_SPEC.actions.collapse, '收起')
     assert.equal(SHARED_I18N_SPEC.actions.upload, '上传')
     assert.equal(SHARED_I18N_SPEC.actions.addProduct, '添加商品')
+  })
+
+  it('T04: resolveCloudCategory 将二级分类正确映射为云端真实枚举', () => {
+    // 基础映射：ID 与中文名
+    assert.equal(resolveCloudCategory('beauty-personal'), 'beauty_skincare')
+    assert.equal(resolveCloudCategory('美妆个护'), 'beauty_skincare')
+    assert.equal(resolveCloudCategory('fashion-style'), 'fashion')
+    assert.equal(resolveCloudCategory('服饰时尚'), 'fashion')
+    assert.equal(resolveCloudCategory('food-drinks'), 'food_beverage')
+    assert.equal(resolveCloudCategory('美食饮品'), 'food_beverage')
+    assert.equal(resolveCloudCategory('fitness-sports'), 'fitness_sports')
+    assert.equal(resolveCloudCategory('运动健身'), 'fitness_sports')
+    assert.equal(resolveCloudCategory('home-lifestyle'), 'home_living')
+    assert.equal(resolveCloudCategory('居家生活'), 'home_living')
+    assert.equal(resolveCloudCategory('tech-electronics'), 'tech_digital')
+    assert.equal(resolveCloudCategory('数码家电'), 'tech_digital')
+    assert.equal(resolveCloudCategory('pet-lifestyle'), 'pets')
+    assert.equal(resolveCloudCategory('萌宠生活'), 'pets')
+
+    // 空、'all' 或 '全部' 返回 undefined
+    assert.equal(resolveCloudCategory('all'), undefined)
+    assert.equal(resolveCloudCategory('ALL'), undefined)
+    assert.equal(resolveCloudCategory('全部'), undefined)
+    assert.equal(resolveCloudCategory(''), undefined)
+    assert.equal(resolveCloudCategory('   '), undefined)
+    assert.equal(resolveCloudCategory(null), undefined)
+    assert.equal(resolveCloudCategory(undefined), undefined)
+
+    // 已是合法枚举或未知分类原样返回
+    assert.equal(resolveCloudCategory('beauty_skincare'), 'beauty_skincare')
+    assert.equal(resolveCloudCategory('fashion'), 'fashion')
+    assert.equal(resolveCloudCategory('custom_category'), 'custom_category')
   })
 })

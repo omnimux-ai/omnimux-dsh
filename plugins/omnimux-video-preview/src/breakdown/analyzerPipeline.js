@@ -39,6 +39,7 @@ function loadStructurePrompt() {
  */
 function queryDirectTextComplete(ctx, options = {}) {
   if (options && options.textComplete) return options.textComplete
+  if (options && options.options && options.options.textComplete) return options.options.textComplete
   if (ctx) {
     if (ctx.textComplete) return ctx.textComplete
     if (typeof ctx.get === 'function') {
@@ -106,11 +107,9 @@ function buildPhysicalSceneConstraint(physicalScenes) {
  * @returns {Promise<string>}
  */
 async function invokeTextComplete(textComplete, params) {
-  try {
-    const res = await textComplete.execute(params)
-    if (typeof res === 'string') return res.trim()
-    if (res && typeof res.text === 'string') return res.text.trim()
-  } catch {}
+  const res = await textComplete.execute(params)
+  if (typeof res === 'string') return res.trim()
+  if (res && typeof res.text === 'string') return res.text.trim()
   return ''
 }
 
@@ -127,7 +126,7 @@ export async function executeDedicatedStructureAnalyze(options) {
   const systemPrompt = loadStructurePrompt()
   const textComplete = resolveTextCompleteService(ctx, options)
   if (!textComplete || typeof textComplete.execute !== 'function') {
-    return ''
+    throw new Error('多模态分析服务未就绪：当前中枢未提供 textComplete 能力')
   }
 
   const basePrompt = buildStructureInstruction(systemPrompt)
@@ -422,12 +421,88 @@ export function detectCompanionSubtitle(videoPath) {
 }
 
 /**
+ * Try resolving virtual references (e.g. @materials/templates/tpl-xxx.mp4, @trending/xxxx.mp4, @inspiration/insp_xxxx.mp4)
+ * to its direct playable/downloadable video URL from template catalog or inspiration API.
+ * @param {string} trimmed
+ * @param {object} [options]
+ * @returns {Promise<string|null>|string|null}
+ */
+export async function resolveVirtualTemplateVideoUrl(trimmed, options = {}) {
+  if (typeof trimmed !== 'string') return null
+  const meta = options.meta || {}
+  if (meta.videoUrl && isDirectVideoUrl(meta.videoUrl)) {
+    return meta.videoUrl
+  }
+
+  // 1. 匹配模板 ID (tpl-*)
+  const tplMatch = trimmed.match(/(?:@?materials\/templates\/|@?templates\/)?(tpl-[a-zA-Z0-9_-]+)(?:\.[a-zA-Z0-9]+)?$/i)
+  if (tplMatch) {
+    const templateId = tplMatch[1]
+    const candidatePaths = [
+      join(HERE, '../../../omnimux/src/templates/creative-templates.json'),
+      join(HERE, '../../../omnimux/src/client/session-guide/templates/creative-templates.json'),
+      process.env.DSH_HOME ? join(process.env.DSH_HOME, 'profiles/omnimux/node_modules/omnimux/src/templates/creative-templates.json') : null,
+      process.env.HOME ? join(process.env.HOME, '.omnimux-dev/profiles/omnimux/node_modules/omnimux/src/templates/creative-templates.json') : null,
+      process.env.HOME ? join(process.env.HOME, '.omnimux/profiles/omnimux/node_modules/omnimux/src/templates/creative-templates.json') : null,
+    ].filter(Boolean)
+
+    for (const p of candidatePaths) {
+      try {
+        if (existsSync(p)) {
+          const raw = JSON.parse(readFileSync(p, 'utf8'))
+          if (Array.isArray(raw)) {
+            const found = raw.find((t) => t && (t.id === templateId || t.appId === templateId))
+            if (found && typeof found.previewVideoUrl === 'string' && found.previewVideoUrl.startsWith('http')) {
+              return found.previewVideoUrl
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // 2. 匹配爆款/灵感条目 ID (@trending/2789.mp4 或 @inspiration/2789)
+  const trendingMatch = trimmed.match(/(?:@?materials\/trending\/|@?trending\/|@?inspiration\/)([a-zA-Z0-9_-]+)(?:\.[a-zA-Z0-9]+)?$/i)
+  if (trendingMatch) {
+    const itemId = trendingMatch[1]
+    try {
+      const port = process.env.DSH_PORT || '45120'
+      const res = await fetch(`http://127.0.0.1:${port}/omnimux/inspiration/${itemId}`)
+      if (res.ok) {
+        const json = await res.json()
+        const item = json.data || json
+        if (item) {
+          if (item.type === 'image') {
+            throw new Error(`所选素材「${item.title || itemId}」为图文轮播（Carousel 图片卡片，共 ${item.media_keys?.length || 1} 页），不是视频文件，无法执行逐镜头视听拉片。请直接查看图文分屏解析或使用图文分析技能。`)
+          }
+          if (item.video_url && isDirectVideoUrl(item.video_url)) {
+            return item.video_url
+          }
+          if (Array.isArray(item.media_keys)) {
+            const vid = item.media_keys.find((k) => /\.(mp4|mov|webm)/i.test(k))
+            if (vid) {
+              return vid.startsWith('http') ? vid : `http://127.0.0.1:${port}${vid.startsWith('/') ? '' : '/'}${vid}`
+            }
+          }
+        }
+      }
+    } catch (err) {
+      if (err.message && err.message.includes('图文轮播')) throw err
+    }
+  }
+
+  return null
+}
+
+/**
  * Build structured breakdown failure guidance message with companion awareness and DSH prompt directives.
  * @param {string} videoPath
+ * @param {number} [totalDuration]
  * @returns {string}
  */
-export function buildBreakdownFailureGuidance(videoPath) {
+export function buildBreakdownFailureGuidance(videoPath, totalDuration) {
   const subtitle = detectCompanionSubtitle(videoPath)
+  const isShort = typeof totalDuration === 'number' && totalDuration > 0 && totalDuration <= 120
   const subtitleNotice = subtitle
     ? `【系统感知】：已在同目录检测到配套字幕文件「${subtitle.filename}」（共 ${subtitle.linesCount.toLocaleString()} 行）。`
     : `【系统感知】：未在同目录检测到伴生字幕文件。`
@@ -439,8 +514,14 @@ export function buildBreakdownFailureGuidance(videoPath) {
     ? `跳过逐镜头视觉拆解，直接根据全片字幕（${subtitle.filename}）提炼对话核心观点与大纲`
     : '跳过逐镜头视觉拆解，若有字幕文件可直接提炼对话核心观点与大纲'
 
+  const failureReason = isShort
+    ? '视频视听拆解失败：多模态模型未解析出有效分镜（请确认视觉大模型服务连通性后重试，或检查视频画面内容）。'
+    : '视频视听拆解失败：多模态模型未解析出有效分镜（当前视频时长或内容结构超出短视频逐镜头拉片规格，如访谈播客或长视频）。'
+
+  const opt3Label = isShort ? '检查模型服务后重试 (Recommended)' : '检查模型服务后重试'
+
   return [
-    '视频视听拆解失败：多模态模型未解析出有效分镜（当前视频时长或内容结构超出短视频逐镜头拉片规格，如访谈播客或长视频）。',
+    failureReason,
     subtitleNotice,
     '【智能体行动准则（强制遵守）】：',
     '1. 严禁私自直接调用读取工具读取成千上万行的超长大文件（避免对话上下文被撑爆与巨额 Token 浪费）！',
@@ -448,7 +529,7 @@ export function buildBreakdownFailureGuidance(videoPath) {
     '3. 你必须立即调用原生交互工具 `ask_user_question` 向用户呈现单选决策卡片，交由用户拍板后继续：',
     `   - 选项 1：label: "${subtitleOptionLabel}", description: "${subtitleOptionDesc}"`,
     '   - 选项 2：label: "截取前 2 分钟切片拆解", description: "提取片头精华短视频切片，重新发起逐镜头画面拉片与分镜分析"',
-    '   - 选项 3：label: "检查模型服务后重试", description: "若原片本身即为短视频，请确认视觉大模型服务连通性后重试"',
+    `   - 选项 3：label: "${opt3Label}", description: "若原片本身即为短视频，请确认视觉大模型服务连通性后重试"`,
     '等待用户在界面点击选择后，严格根据用户的决策分支执行后续操作。',
   ].join('\n')
 }
@@ -460,7 +541,7 @@ export function buildBreakdownFailureGuidance(videoPath) {
  * @returns {Promise<{ shots: Array<object>, structure: Array<object>, pipeline: Array<string>, isModelGenerated: boolean }>}
  */
 async function resolveBreakdownData(params) {
-  const { analysisVideoPath, localVideoPath, ctx, options, signal, physicalScenes } = params
+  const { analysisVideoPath, localVideoPath, ctx, options, signal, physicalScenes, totalDuration } = params
   let analyzeReportText = ''
   if (analysisVideoPath) {
     analyzeReportText = await executeDedicatedStructureAnalyze({
@@ -480,7 +561,7 @@ async function resolveBreakdownData(params) {
   alignPhysicalScenesToShots(shots, physicalScenes)
 
   if (shots.length === 0) {
-    const guidance = buildBreakdownFailureGuidance(localVideoPath || analysisVideoPath)
+    const guidance = buildBreakdownFailureGuidance(localVideoPath || analysisVideoPath, totalDuration)
     throw new Error(guidance)
   }
 
@@ -499,13 +580,15 @@ async function resolveBreakdownData(params) {
  * @param {object|null} realMeta
  * @param {object} options
  * @param {string} trimmed
- * @returns {string}
+ * @returns {Promise<string>|string}
  */
-function resolveVideoPlaybackUrl(realMeta, options, trimmed) {
+async function resolveVideoPlaybackUrl(realMeta, options, trimmed) {
   const meta = options.meta || {}
   if (realMeta && realMeta.video_url) return realMeta.video_url
   if (meta.videoUrl) return meta.videoUrl
   if (isDirectVideoUrl(trimmed)) return trimmed
+  const virtualTpl = await resolveVirtualTemplateVideoUrl(trimmed, options)
+  if (virtualTpl) return virtualTpl
   return ''
 }
 
@@ -598,10 +681,14 @@ function resolveDisplayStats(realStats, meta) {
  */
 async function resolveLocalVideoTarget(isLocalFile, trimmed, videoPlayUrl, options = {}) {
   if (options.localVideoPath && existsSync(options.localVideoPath)) return resolve(options.localVideoPath)
-  if (isLocalFile) return resolve(trimmed)
-  if (videoPlayUrl && isDirectVideoUrl(videoPlayUrl)) {
-    return downloadVideoToWorkspaceCache(videoPlayUrl, options)
+  if (isLocalFile && existsSync(trimmed)) return resolve(trimmed)
+  const candidateUrl = (videoPlayUrl && isDirectVideoUrl(videoPlayUrl))
+    ? videoPlayUrl
+    : await resolveVirtualTemplateVideoUrl(trimmed, options)
+  if (candidateUrl && isDirectVideoUrl(candidateUrl)) {
+    return downloadVideoToWorkspaceCache(candidateUrl, options)
   }
+  if (isLocalFile) return resolve(trimmed)
   return null
 }
 
@@ -695,7 +782,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   const realMeta = isHttp ? await fetchRealSocialMetadata(trimmed, ctx) : null
 
   const authorInfo = resolveAuthorInfo(realMeta, options)
-  const videoPlayUrl = resolveVideoPlaybackUrl(realMeta, options, trimmed)
+  const videoPlayUrl = await resolveVideoPlaybackUrl(realMeta, options, trimmed)
   const coverUrl = resolveInitialCoverUrl(realMeta, options)
 
   const meta = options.meta || {}

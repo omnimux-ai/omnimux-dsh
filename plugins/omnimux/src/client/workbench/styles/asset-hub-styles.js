@@ -360,6 +360,13 @@ export const ASSET_HUB_CSS = `
   align-items: start;
 }
 
+.omx-hub-flow-wrap {
+  width: 100%;
+}
+.omx-hub-flow-grid {
+  width: 100%;
+}
+
 /* 素材卡片 */
 .omx-asset-card {
   display: flex;

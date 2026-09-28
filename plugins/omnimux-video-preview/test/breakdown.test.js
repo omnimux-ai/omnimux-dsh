@@ -1311,4 +1311,14 @@ Hook → Product Intro → Usage Detail → Proof Effect → Cta
 
     rmSync(dummyVideo, { force: true })
   })
+
+  it('resolves virtual template reference (@materials/templates/tpl-xxx.mp4) to real preview URL', async () => {
+    const { resolveVirtualTemplateVideoUrl } = await import('../src/breakdown/analyzerPipeline.js')
+    const virtualPath = '@materials/templates/tpl-pippit-pippit-marketing-agent-25-mksg_4170563342596.mp4'
+    const resolved = await resolveVirtualTemplateVideoUrl(virtualPath)
+
+    assert.ok(resolved)
+    assert.match(resolved, /^https?:\/\//)
+    assert.match(resolved, /74553028d70c0e9ef01457f9eeec78fdb1f15b973aa2b63b1a482a7ba3b384b5\.mp4/)
+  })
 })

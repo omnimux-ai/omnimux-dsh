@@ -699,7 +699,12 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     }
 
     const onDockIntent = (event) => {
-      const item = event?.detail?.item || { id: 'jump_dock_active' }
+      const item = event?.detail?.item
+      // 架构防御收紧：严禁空载虚构的 jump_dock_active 触发强制吸底。
+      // 必须具备明确的真实实体载荷（id/slug/prompt）
+      if (!item || !item.id || item.id === 'jump_dock_active') {
+        return
+      }
       const force = event?.detail?.force !== false
       isIntentDrivenRef.current = true
       isCollapsedRef.current = false

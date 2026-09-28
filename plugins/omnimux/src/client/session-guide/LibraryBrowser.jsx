@@ -6,6 +6,8 @@ import { ensureAssetCardStyles } from '../components/asset-picker/AssetPickerCar
 import { ensureProductCardStyles } from '../components/product-picker/ProductPickerCard.jsx'
 import { ensureInspirationCardStyles } from '../components/inspiration-picker/InspirationPickerCard.jsx'
 import { TrendingVideoCard } from './trending/TrendingVideoCard.jsx'
+import { UniversalLibraryCard } from '../components/library-flow/UniversalLibraryCard.jsx'
+import { UnifiedLibraryGrid } from '../components/library-flow/UnifiedLibraryGrid.jsx'
 import {
   LIBRARY_TABS,
   loadLibraryCards,
@@ -27,42 +29,7 @@ function laneClass(lane) {
 }
 
 export function LibraryCard({ card, t, onPick }) {
-  if (card.lane === 'assets') {
-    return (
-      <AssetPickerCard
-        asset={card.raw}
-        typeLabel=""
-        alreadyLabel=""
-        missingLabel=""
-        onToggle={() => onPick(card)}
-      />
-    )
-  }
-  if (card.lane === 'products') {
-    return (
-      <ProductPickerCard
-        product={card.raw}
-        typeLabel=""
-        onSelect={() => onPick(card)}
-      />
-    )
-  }
-  if (card.lane === 'trending' && card.trending) {
-    return (
-      <TrendingVideoCard
-        item={card.trending}
-        t={t}
-        onRecreate={() => onPick(card)}
-      />
-    )
-  }
-  return (
-    <InspirationPickerCard
-      item={card.raw}
-      alreadyLabel=""
-      onToggle={() => onPick(card)}
-    />
-  )
+  return <UniversalLibraryCard card={card} t={t} onPick={onPick} />
 }
 
 /**
@@ -170,17 +137,15 @@ export function LibraryBrowser({ model, t }) {
         <p className="omnimux-library-stage-status">{EMPTY_TEXT[tab] || EMPTY_TEXT.featured}</p>
       ) : null}
 
-      <div className={`omnimux-library-stage-grid${tab === 'featured' ? ' is-mixed' : ''}`}>
-        {result.cards.map((card) => (
-          <div
-            key={`${card.lane}:${card.id}`}
-            className={`omnimux-library-stage-cell ${laneClass(card.lane)}`}
-            data-library-lane={card.lane}
-          >
-            <LibraryCard card={card} t={t} onPick={(picked) => model?.onPick?.(picked)} />
-          </div>
-        ))}
-      </div>
+      {!loading && result.cards.length > 0 ? (
+        <UnifiedLibraryGrid
+          items={result.cards}
+          onPick={(picked) => model?.onPick?.(picked)}
+          t={t}
+          options={{ minColWidth: 180, gap: 16, maxCols: 6, minCols: 2 }}
+          className={tab === 'featured' ? 'is-mixed' : ''}
+        />
+      ) : null}
     </section>
   )
 }

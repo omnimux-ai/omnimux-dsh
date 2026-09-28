@@ -14,11 +14,30 @@ function withDom() {
   // 创建模拟 DOM
   const listeners = new Map()
   const customEvents = []
+  const attachedSelectors = new Set()
+
+  const body = {
+    appendChild: (el) => {
+      if (el?.selector) attachedSelectors.add(el.selector)
+    },
+    removeChild: () => {},
+  }
 
   const doc = {
+    body,
+    documentElement: {
+      hasAttribute: (attr) => false,
+    },
+    querySelector(sel) {
+      if (sel.includes('starter-guide') && attachedSelectors.has('starter-guide')) {
+        return { tagName: 'SECTION' }
+      }
+      return null
+    },
     createElement(tag) {
       return {
         tagName: tag,
+        selector: tag === 'section' ? 'starter-guide' : tag,
         style: {},
         setAttribute: () => {},
         removeAttribute: () => {},
@@ -65,19 +84,27 @@ function withDom() {
   }
 }
 
-test('全屏状态守卫：新会话全屏下点击加号绝不打开 split 右栏，派发平滑置顶与 Tab 切换事件', async () => {
+test('全屏与分栏自适应：宽栏大屏就地滚动跳转 Tab，窄栏分栏统一唤起素材工作台', async () => {
   const env = withDom()
   try {
     let wbOpened = false
+    let openedTabId = null
+    let openedMode = null
     const fakeWorkbench = {
-      openWorkbench: async () => {
+      openWorkbench: async ({ tabId, focus }) => {
         wbOpened = true
+        openedTabId = tabId
+        openedMode = focus
       },
     }
 
-    env.win.__omnimuxFullscreenExploreActive = true // 标记处于全屏新会话
     env.win.__omnimuxWorkbench = fakeWorkbench
     fakeWorkbench.getSnapshot = () => ({ state: { panelOpen: false } }) // 右栏未开
+
+    // 1. 宽栏全屏新会话场景：DOM 中挂载了完整的探索专区货架
+    const starterGuide = env.doc.createElement('section')
+    starterGuide.setAttribute('data-omnimux-starter-guide', '')
+    env.doc.body.appendChild(starterGuide)
 
     const controller = createComposerAddController({
       t: (k) => k,
@@ -89,22 +116,21 @@ test('全屏状态守卫：新会话全屏下点击加号绝不打开 split 右�
       workbench: fakeWorkbench,
     })
 
-    // 用户在全屏新会话中点击加号的「从灵感库选择」
+    // 宽栏大屏下点击加号「从灵感库选择」
     await controller.openInspiration('sess_blank')
 
-    // 契约一：绝不唤起右栏 split
-    assert.equal(wbOpened, false, '全屏状态下严禁唤起右栏 split 模式')
-
-    // 契约二：成功派发置顶与切 Tab 事件
+    // 契约一：宽栏全屏新会话优先就地滚动跳转 Tab，不粗暴挤压开分栏
+    assert.equal(wbOpened, false, '宽栏大屏新会话下无需额外打开右栏 split')
     const scrollEvent = env.customEvents.find(e => e.type === 'omnimux:explore:scroll-to-tab')
-    assert.ok(scrollEvent, '必须派发 omnimux:explore:scroll-to-tab 事件')
+    assert.ok(scrollEvent, '必须派发 omnimux:explore:scroll-to-tab 事件供大屏跳转')
     assert.equal(scrollEvent.detail.tab, 'inspiration', '必须切换到灵感库 Tab')
 
-    // 切换到三栏状态：右栏已打开
+    // 2. 窄栏场景（右栏已开或被挤窄）：切换到右栏展开状态
     fakeWorkbench.getSnapshot = () => ({ state: { panelOpen: true } })
-
     await controller.openLibrary('sess_blank')
-    assert.equal(wbOpened, true, '右栏已打开时正常通过 openWorkbench 联动')
+    assert.equal(wbOpened, true, '窄栏状态下统一通过 openWorkbench 联动')
+    assert.equal(openedTabId, 'omnimux:asset-hub', '必须打开 asset-hub 工作台')
+    assert.equal(openedMode, 'split', '必须以 split 形式打开')
   } finally {
     env.cleanup()
   }
@@ -124,7 +150,7 @@ test('Tab 栏吸顶固定样式契约验证：.omnimux-explore-filter-bar 包含
 
 import { JSDOM } from 'jsdom'
 
-test('抗竞态测试：顶部输入框点击添加触发 dock(force: true)，即使 scrollTop 为 0 也立即进入 docked 态', async () => {
+test('抗竞态与意图防御测试：无真实实体载荷的外部 dock-intent 被坚决拦截保持 inline 态，仅合法实体载荷允许切换为 docked', async () => {
   const previousWindow = globalThis.window
   const previousDocument = globalThis.document
   const dom = new JSDOM('<div data-omnimux-starter-host><div class="scrollBody"><div data-composer-card></div><div id="seat"></div></div></div>')
@@ -148,15 +174,22 @@ test('抗竞态测试：顶部输入框点击添加触发 dock(force: true)，�
     // 初始状态处于顶部 (scrollTop = 0)
     assert.equal(hookApi.placement, 'inline')
 
-    // 模拟顶部加号菜单派发 dock-intent，携带 force: true
+    // 1. 发送无载荷或虚构 jump_dock_active 的恶意/空意图，必须被防御守卫直接忽略，严禁切换为 docked！
     await act(async () => {
       dom.window.dispatchEvent(new dom.window.CustomEvent('omnimux:composer:dock-intent', {
         detail: { tab: 'inspiration', force: true }
       }))
     })
+    assert.equal(hookApi.placement, 'inline', '无真实实体的空载事件严禁触发吸底')
+    assert.equal(hookApi.isDocked, false)
 
-    // 核心断言：必须突破 isTopVisible 阻断，立即切换为 docked！
-    assert.equal(hookApi.placement, 'docked', '带 force:true 必须无视顶部位置立即切换为 docked')
+    // 2. 发送携带真实合法卡片 Payload 的操作事件，正常切换为 docked
+    await act(async () => {
+      dom.window.dispatchEvent(new dom.window.CustomEvent('omnimux:composer:dock-intent', {
+        detail: { item: { id: 'card_real_template_123', prompt: '真实复刻内容' }, force: true }
+      }))
+    })
+    assert.equal(hookApi.placement, 'docked', '真实业务卡片实体允许进入 docked 态')
     assert.equal(hookApi.isDocked, true)
   } finally {
     globalThis.window = previousWindow
@@ -179,16 +212,17 @@ test('样式契约验证：.omnimux-explore-grid-view-wrap 与 .omnimux-explore-
   assert.match(stylesSource, /\.omnimux-library-stage-status\s*\{[^}]*justify-content:\s*center/i, '状态提示内容必须垂直水平居中')
 })
 
-test('置顶逻辑契约验证：ExploreTemplatesSection 具备 0ms 即时跳转与双帧 requestAnimationFrame 复核锁定', () => {
+test('探索专区解耦契约验证：ExploreTemplatesSection 彻底消除全局标记，支持平滑滚动但严禁空载强制吸底', () => {
   const exploreSource = readFileSync(new URL('./templates/ExploreTemplatesSection.jsx', import.meta.url), 'utf8')
   
-  // 必须定义 scrollToTop 并立即同步执行
-  assert.match(exploreSource, /const\s+scrollToTop\s*=\s*\(\)\s*=>/i, '必须封装置顶滚动计算函数 scrollToTop')
-  assert.match(exploreSource, /scroller\.scrollTop\s*=\s*Math\.max\(0,\s*targetOffset\)/i, '必须同步赋值 scrollTop 实现 0ms 原子跳转')
+  // 必须彻底剔除全屏全局标记
+  assert.doesNotMatch(exploreSource, /__omnimuxFullscreenExploreActive/i, '严禁包含全局污染变量 __omnimuxFullscreenExploreActive')
   
-  // 必须通过 requestAnimationFrame 双帧嵌套在 React 重排与 DOM 布局完成后复核锁定
-  assert.match(exploreSource, /window\.requestAnimationFrame\(\(\)\s*=>\s*\{[\s\S]*scrollToTop\(\);[\s\S]*window\.requestAnimationFrame\(\(\)\s*=>\s*\{[\s\S]*scrollToTop\(\);/i, '必须采用双帧 requestAnimationFrame 复核锁定置顶 top: 0')
-  assert.match(exploreSource, /cancelAnimationFrame/i, '必须在卸载或连续触发时取消未完成的 animation frame')
+  // 必须支持监听平滑滚动事件
+  assert.match(exploreSource, /omnimux:explore:scroll-to-tab/i, '必须监听 omnimux:explore:scroll-to-tab 以响应大屏跳转')
+  
+  // 关键：绝对禁止在跳转时派发 dock-intent 强制吸底事件！
+  assert.doesNotMatch(exploreSource, /omnimux:composer:dock-intent/i, '严禁在跳转 Tab 时盲目派发 dock-intent 强制吸底')
 })
 
 test('视口几何仿真断言：在 0 张、5 张与多张卡片下，Tab 栏 100% 滚动贴顶无截断', () => {

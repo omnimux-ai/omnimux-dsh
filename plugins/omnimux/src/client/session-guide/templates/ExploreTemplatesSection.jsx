@@ -289,14 +289,18 @@ export function ExploreTemplatesSection({
       return;
     }
     const nextPage = (current.page || 1) + 1;
+    const requestTab = activePrimaryTab;
+    const requestCategory = selectedSubCategory;
     setLibraryData((prev) => ({ ...prev, loadingMore: true, loadMoreError: null }));
 
-    loadLibraryCards(activePrimaryTab, {
+    loadLibraryCards(requestTab, {
       page: nextPage,
       pageSize: 48,
-      category: selectedSubCategory,
+      category: requestCategory,
     })
       .then((res) => {
+        // 防串台守卫：若用户已切换 Tab/分类则静默丢弃旧请求结果
+        if (requestTab !== activePrimaryTab || requestCategory !== selectedSubCategory) return;
         setLibraryData((prev) => {
           const seen = new Set(prev.cards.map((c) => String(c.id)));
           const newCards = (res.cards || []).filter((c) => !seen.has(String(c.id)));
@@ -311,6 +315,7 @@ export function ExploreTemplatesSection({
         });
       })
       .catch((err) => {
+        if (requestTab !== activePrimaryTab || requestCategory !== selectedSubCategory) return;
         setLibraryData((prev) => ({
           ...prev,
           loadingMore: false,

@@ -5,6 +5,7 @@ import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mo
 import { isAuthenticOfficialToken, resolveSyncOfficialToken } from '../media/mount.js'
 import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
 import { enabledTextModels, CHAT_MODEL_IDS } from './catalog.js'
+import { normalizeTextReferences } from './references.js'
 import { executeOmnimuxText } from './execute.js'
 
 /**
@@ -45,13 +46,19 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
           }))
         : (runtime.mode === 'official')
 
+      const references = normalizeTextReferences(req)
+      const hasComplexMedia = references.some((asset) => asset.type === 'video' || asset.type === 'audio' || asset.type === 'image' || asset.type === 'document')
+      const isMultimodalRequest = references.length > 0 || hasComplexMedia
+      const effectiveModelId = requestModelId || hub.text?.defaultModel || 'gemini-3.8-flash'
+      const isEffectiveOfficialModel = Boolean(effectiveModelId && CHAT_MODEL_IDS.includes(effectiveModelId))
+
       const isOfficialModel = Boolean(requestModelId && CHAT_MODEL_IDS.includes(requestModelId))
       const isExplicitAgent = targetChannel === 'agent' || targetChannel === 'local'
 
       const isOfficialRequest = !channelIntent.isByokChannel && !isExplicitAgent
         && (
           (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
-          || (!targetChannel && (runtime.mode === 'official' || isOfficialModel))
+          || (!targetChannel && (runtime.mode === 'official' || isOfficialModel || (isMultimodalRequest && hasOfficialToken && isEffectiveOfficialModel)))
         )
 
       const isOfficialBypass = isOfficialRequest && hasOfficialToken

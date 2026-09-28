@@ -3,8 +3,12 @@ packages:
   - packages/*
   - plugins/omnimux-browser/extension
 allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': set this to true or false
+  '@google/genai': set this to true or false
   esbuild: true
+  koffi: set this to true or false
   node-pty: true
+  protobufjs: set this to true or false
 minimumReleaseAge: 0
 minimumReleaseAgeExclude:
   - aigc-provider-runtime-kit@0.2.0

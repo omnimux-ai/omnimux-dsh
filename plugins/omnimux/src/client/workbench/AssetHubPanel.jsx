@@ -13,6 +13,10 @@ import {
 } from './host-fullscreen.js'
 import { hostDocument } from './host-adapter.js'
 import { installAssetHubStyles } from './styles/asset-hub-styles.js'
+import { ensureAssetCardStyles } from '../components/asset-picker/AssetPickerCard.jsx'
+import { ensureProductCardStyles } from '../components/product-picker/ProductPickerCard.jsx'
+import { ensureInspirationCardStyles } from '../components/inspiration-picker/InspirationPickerCard.jsx'
+import { ensureLibraryFlowStyles } from '../components/library-flow/UnifiedLibraryGrid.jsx'
 
 function getAssetHubCardPrompt(item) {
   const title = String(item?.title || item?.name || '').trim()
@@ -21,7 +25,12 @@ function getAssetHubCardPrompt(item) {
   if (item.lane === 'assets') return `请参考附件素材「${title}」，进行风格对标与内容生成。`
   if (item.lane === 'inspiration') return `请基于灵感参考「${title}」，提炼其镜头节奏并复刻脚本。`
   if (item.lane === 'products') return `请基于商品「${title}」，分析核心卖点并规划宣传文案。`
-  if (item.lane === 'trending') return `请对标热门爆款「${title}」，还原其前3秒黄金Hook与分镜结构。`
+  if (item.lane === 'trending') {
+    const isImage = item.mediaType === 'image' || item.trending?.type === 'image' || item.formatText === '图文'
+    return isImage
+      ? `请对标热门爆款图文「${title}」，拆解其翻页钩子、痛点文案与图文排版结构。`
+      : `请对标热门爆款「${title}」，还原其前3秒黄金Hook与分镜结构。`
+  }
   if (item.lane === 'skills') return `为我运行技能「${title}」，指导下一步创作流程。`
   return promptForCard(item)
 }
@@ -33,7 +42,12 @@ function getAssetHubCardPrompt(item) {
 export function AssetHubPanel(props) {
   const isEn = Boolean(props?.isEn)
   useEffect(() => {
-    return installAssetHubStyles(hostDocument())
+    const doc = hostDocument()
+    ensureAssetCardStyles(doc)
+    ensureProductCardStyles(doc)
+    ensureInspirationCardStyles(doc)
+    ensureLibraryFlowStyles(doc)
+    return installAssetHubStyles(doc)
   }, [])
 
   const navStore = getGlobalAssetHubNavStore()

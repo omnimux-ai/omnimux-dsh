@@ -1,6 +1,6 @@
 import React from 'react'
-import { AssetHubCard } from './AssetHubCard.jsx'
 import { ASSET_HUB_I18N_SPEC } from './asset-hub-store.js'
+import { UnifiedLibraryGrid } from '../components/library-flow/UnifiedLibraryGrid.jsx'
 
 function RefreshIcon() {
   return (
@@ -14,6 +14,7 @@ function RefreshIcon() {
 
 /**
  * 高密度素材网格与状态机渲染（AssetHubGrid）
+ * 全面接入 UnifiedLibraryGrid 瀑布流，废弃私有 16:10 裁切卡片
  */
 export function AssetHubGrid({
   activeTab,
@@ -31,7 +32,7 @@ export function AssetHubGrid({
   if (loading) {
     return (
       <div className="omx-hub-grid omx-hub-grid--skeleton" aria-busy="true">
-        {Array.from({ length: 9 }).map((_, i) => (
+        {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="omx-hub-skeleton-card">
             <div className="omx-hub-skeleton-cover" />
             <div className="omx-hub-skeleton-line" />
@@ -106,17 +107,15 @@ export function AssetHubGrid({
     )
   }
 
-  // 5. 卡片网格瀑布流
+  // 5. 统一瀑布流网格渲染
   return (
-    <div className="omx-hub-grid" role="region" aria-label="素材卡片网格">
-      {items.map((item) => (
-        <AssetHubCard
-          key={`${item.lane}:${item.id}`}
-          item={item}
-          isSelected={attachedIds.has(item.id)}
-          onAttach={onAttach}
-        />
-      ))}
-    </div>
+    <UnifiedLibraryGrid
+      items={items}
+      attachedIds={attachedIds}
+      onAttach={onAttach}
+      options={{ minColWidth: 160, gap: 12, maxCols: 5, minCols: 2 }}
+      className="omx-hub-flow-wrap"
+      gridClassName="omx-hub-flow-grid"
+    />
   )
 }

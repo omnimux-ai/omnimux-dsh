@@ -3208,7 +3208,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 }
 
 /* Explore Templates Section & Shelves */
-.omnimux-explore-templates-root { display:flex; flex-direction:column; gap:20px; margin-top:28px; }
+.omnimux-explore-templates-root { display:flex; flex-direction:column; gap:20px; margin-top:28px; isolation:isolate; }
 .omnimux-explore-header-row { margin-bottom:8px; }
 .omnimux-explore-title {
   font-size: 16px;
