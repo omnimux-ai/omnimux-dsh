@@ -1,16 +1,17 @@
+import { createElement } from 'react'
 import { NS, zh, en } from './locales.js'
 import { mountSidebarEntry, ENTRY_SELECTOR } from './sidebar-entry.js'
 import { GoogleVidsStage } from './GoogleVidsStage.jsx'
 import { GoogleVidsStudioPanel } from './GoogleVidsStudioPanel.jsx'
 
 export const name = 'omnimux-video'
-export const inject = ['locale', 'slots']
+export const inject = ['locale', 'slots', 'layout']
 
 export { ENTRY_SELECTOR, GoogleVidsStage, GoogleVidsStudioPanel, mountSidebarEntry }
 
 /**
  * OmniMux-Video client entry: registers locale, sidebar entry and the Google Vids conversation stage.
- * @param {{ locale?: { register: Function, bind: Function }, inject?: Function, effect?: Function, slots?: object, on?: Function }} ctx
+ * @param {{ locale?: { register: Function, bind: Function }, inject?: Function, effect?: Function, slots?: object, layout?: object, on?: Function }} ctx
  */
 export function apply(ctx) {
   const disposers = []
@@ -25,7 +26,7 @@ export function apply(ctx) {
   const t = ctx?.locale?.bind ? ctx.locale.bind(NS) : (key) => key
   const mountSidebarSafely = () => {
     if (typeof document === 'undefined') return () => {}
-    return mountSidebarEntry(t, ctx?.locale)
+    return mountSidebarEntry(t, ctx?.locale, undefined, ctx?.layout)
   }
 
   if (typeof ctx?.effect === 'function') {
@@ -36,12 +37,12 @@ export function apply(ctx) {
   }
 
   if (ctx?.slots && typeof ctx.slots.inject === 'function') {
-    const uninjectSlot = ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-      name: 'shell.overlay',
-      id: 'omnimux-vids-stage',
+    const uninjectSlot = ctx.slots.inject('main', () => ctx.slots.register({
+      name: 'main',
+      key: 'omnimux-vids',
       order: 36,
       locale: NS,
-    }, GoogleVidsStage))
+    }, (props) => createElement(GoogleVidsStage, { ...props, layout: ctx?.layout })))
     if (typeof uninjectSlot === 'function') disposers.push(uninjectSlot)
   }
 
@@ -74,6 +75,10 @@ export function apply(ctx) {
     }
   }
 
+  if (ctx?.layout) {
+    bindWorkbench({ layout: ctx.layout })
+  }
+
   // Vids itself is a conversation-column stage; only bind the host's right-rail API for the Clip action.
   if (typeof ctx?.inject === 'function') {
     let injectResolved = false
@@ -85,7 +90,7 @@ export function apply(ctx) {
       if (typeof injectTimeoutTimer?.unref === 'function') injectTimeoutTimer.unref()
     }
 
-    const uninject = ctx.inject(['betterSidebar'], (inner) => {
+    const uninjectSidebar = ctx.inject(['betterSidebar'], (inner) => {
       if (pluginDisposed) return
       if (injectResolved) {
         unbindWorkbench({ betterSidebar: null })
@@ -97,9 +102,11 @@ export function apply(ctx) {
         injectTimeoutTimer = null
       }
       const sidebar = inner?.betterSidebar ?? inner?.get?.('betterSidebar')
-      bindWorkbench({ betterSidebar: sidebar })
+      const layout = inner?.layout ?? inner?.get?.('layout') ?? ctx?.layout
+      bindWorkbench({ betterSidebar: sidebar, ...(layout ? { layout } : {}) })
     })
-    if (typeof uninject === 'function') disposers.push(uninject)
+    if (typeof uninjectSidebar === 'function') disposers.push(uninjectSidebar)
+
     disposers.push(() => {
       if (injectTimeoutTimer) {
         clearTimeout(injectTimeoutTimer)
