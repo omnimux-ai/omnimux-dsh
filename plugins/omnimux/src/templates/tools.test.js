@@ -6,6 +6,25 @@ import {
   mountTemplatesTools,
 } from './tools.js';
 
+const HOST_EXEC = { callId: 'call_host', signal: null };
+
+function assertLossless(value, seen = new Set()) {
+  if (value === undefined) throw new Error('value is not lossless JSON');
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') return;
+  if (typeof value === 'number') {
+    assert.equal(Number.isFinite(value), true);
+    return;
+  }
+  assert.equal(typeof value, 'object');
+  assert.equal(seen.has(value), false);
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) assertLossless(item, seen);
+    return;
+  }
+  for (const key of Object.keys(value)) assertLossless(value[key], seen);
+}
+
 test('queryCreativeTemplates: 模糊检索与分类平台过滤', () => {
   // 1. 无参数返回列表
   const allRes = queryCreativeTemplates({ limit: 5 });
@@ -34,6 +53,15 @@ test('queryCreativeTemplates: 模糊检索与分类平台过滤', () => {
   // 4. 按关键词模糊检索 (3D)
   const queryRes = queryCreativeTemplates({ query: '3D', limit: 10 });
   assert.ok(queryRes.items.length > 0);
+
+  for (const page of [allRes, hookRes, creatifyRes, queryRes]) {
+    assertLossless(page);
+    for (const item of page.items) {
+      if (Object.hasOwn(item, 'workflowSummary')) {
+        assert.notEqual(item.workflowSummary, undefined);
+      }
+    }
+  }
 });
 
 test('getCreativeTemplateDetail: 调阅模板完整分镜提示词与工作流元数据', () => {
@@ -73,16 +101,35 @@ test('mountTemplatesTools: 注册工具契约与 execute 回调', async () => {
   assert.ok(searchTool);
   assert.ok(getTool);
 
-  // 验证 searchTool.execute
-  const searchOut = await searchTool.execute('call_1', { query: 'app', limit: 3 });
+  // 宿主签名：execute(args, exec)。第一个参数是模型参数，不是 callId。
+  const searchOut = await searchTool.execute({ query: 'app', limit: 3 }, HOST_EXEC);
   assert.equal(searchOut.ok, true);
   assert.ok(searchOut.items.length > 0);
+  assertLossless(searchOut);
 
-  // 验证 getTool.execute 成功与缺失参数
-  const getOut = await getTool.execute('call_2', { id: searchOut.items[0].id });
+  const categoryOut = await searchTool.execute({ category: 'apps-software', limit: 10 }, HOST_EXEC);
+  assert.equal(categoryOut.ok, true);
+  assert.ok(categoryOut.items.length > 0);
+  assertLossless(categoryOut);
+
+  const unfilteredOut = await searchTool.execute({}, HOST_EXEC);
+  assert.equal(unfilteredOut.ok, true);
+  assertLossless(unfilteredOut);
+
+  const vectorOut = await searchTool.execute({ query: '二维矢量卡通', limit: 5 }, HOST_EXEC);
+  assert.equal(vectorOut.ok, true);
+  assert.equal(vectorOut.items[0].title, '二维矢量卡通');
+  assertLossless(vectorOut);
+
+  const getOut = await getTool.execute(
+    { id: 'tpl-creatify-d3c96788-1379-42f8-842f-64fc2035f365' },
+    HOST_EXEC,
+  );
   assert.equal(getOut.ok, true);
-  assert.ok(getOut.template);
+  assert.equal(getOut.template.title, '二维矢量卡通');
+  assertLossless(getOut);
 
-  const missingOut = await getTool.execute('call_3', {});
+  const missingOut = await getTool.execute({}, HOST_EXEC);
   assert.equal(missingOut.ok, false);
+  assert.equal(missingOut.error, 'Missing required parameter: id');
 });
