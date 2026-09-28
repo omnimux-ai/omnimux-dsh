@@ -123,24 +123,35 @@ export function checkContentForTransparencyViolations(content, filePath = 'snipp
         })
       }
 
-      // 1.3 必须声明实体不透明背景
+      // 1.3 严禁滥用 --dsw-alias-bg-overlay（中浅灰 #61666b）导致严重偏色
+      if (/--dsw-alias-bg-overlay\b/.test(exploreMenuBlock.body)) {
+        violations.push({
+          rule: 'POPOVER_NO_BG_OVERLAY_DISCOLORATION',
+          file: filePath,
+          line: lineNum,
+          message: '.omnimux-explore-menu 严禁使用 --dsw-alias-bg-overlay！该变量在宿主深色主题中被解析为中浅灰 (#61666b) 导致严重白灰偏色，必须使用标准深色层级变量 var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base))。',
+          fatal: true,
+        })
+      }
+
+      // 1.4 必须声明官方标准深色层级背景
       if (
-        !/background:\s*var\(--dsw-alias-bg-overlay,\s*var\(--dsw-alias-bg-layer-2,\s*#1c1c1f\)\)/.test(
+        !/background:\s*var\(--dsw-alias-bg-layer-2,\s*var\(--dsw-alias-bg-base\)\)/.test(
           exploreMenuBlock.body
         )
       ) {
         violations.push({
-          rule: 'EXPLORE_MENU_MUST_BE_SOLID_OVERLAY',
+          rule: 'EXPLORE_MENU_MUST_BE_DARK_SOLID_LAYER',
           file: filePath,
           line: lineNum,
-          message: '.omnimux-explore-menu 必须使用官方规范实体浮层底色：var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-2, #1c1c1f))。',
+          message: '.omnimux-explore-menu 必须使用官方深色规范层级底色：var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base))。',
           fatal: true,
         })
       }
     }
   }
 
-  // 2. 通用浮层容器伪毛玻璃检测（仅对真正的浮层容器 .omnimux-*-menu 等）
+  // 2. 通用浮层容器伪毛玻璃与偏色 Token 检测（针对 .omnimux-*-menu 等）
   const ruleBlocks = extractCssRuleBlocks(content)
   for (const block of ruleBlocks) {
     const { selector, body, index } = block
@@ -157,6 +168,16 @@ export function checkContentForTransparencyViolations(content, filePath = 'snipp
           file: filePath,
           line: lineNum,
           message: `浮层菜单容器 [${selector}] 严禁使用 backdrop-filter 伪毛玻璃滤镜造成透底！必须使用实体深色背景。`,
+          fatal: true,
+        })
+      }
+      if (/--dsw-alias-bg-overlay\b/.test(body) && !body.includes('exempt-bg-overlay')) {
+        const lineNum = content.slice(0, index).split('\n').length
+        violations.push({
+          rule: 'POPOVER_NO_BG_OVERLAY_DISCOLORATION',
+          file: filePath,
+          line: lineNum,
+          message: `浮层菜单容器 [${selector}] 严禁使用 --dsw-alias-bg-overlay（深色模式下计算值为 #61666b 中浅灰）造成灰度倒挂与脱色！必须使用 var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base))。`,
           fatal: true,
         })
       }

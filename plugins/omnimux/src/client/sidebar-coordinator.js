@@ -195,7 +195,7 @@ const EXPLORE_STYLES = `
   box-sizing: border-box; padding: 5px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 12px;
-  background: var(--dsw-alias-bg-overlay, var(--dsw-alias-bg-layer-2, #1c1c1f));
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base));
   box-shadow: 0 10px 28px var(--dsw-alias-bg-mask-1), 0 2px 8px var(--dsw-alias-bg-mask-1);
   color: var(--dsw-alias-label-primary, inherit);
   animation: omnimux-explore-pop 0.12s cubic-bezier(0.16, 1, 0.3, 1);
