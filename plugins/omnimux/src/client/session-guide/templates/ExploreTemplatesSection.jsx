@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   EXPLORE_PRIMARY_TABS,
   EXPLORE_SUB_CATEGORIES,
@@ -16,11 +16,12 @@ import { TemplateDetailDrawer } from './TemplateDetailDrawer.jsx';
 import FEATURED_SKILLS_JSON from '../skills/featured-skills.json' with { type: 'json' };
 import { openWorkbench } from '../../workbench/sidebar-controller.js';
 import { loadLibraryCards, promptForCard } from '../../composer-add/library-stage-model.js';
-import { FILTER_PILL_ENUM_MAP } from '../../workbench/asset-hub-data.js';
+import { FILTER_PILL_ENUM_MAP, adaptCardToAttachmentPayload } from '../../workbench/asset-hub-data.js';
 import { ensureAssetCardStyles } from '../../components/asset-picker/AssetPickerCard.jsx';
 import { ensureProductCardStyles } from '../../components/product-picker/ProductPickerCard.jsx';
 import { ensureInspirationCardStyles } from '../../components/inspiration-picker/InspirationPickerCard.jsx';
 import { LibraryCard } from '../LibraryBrowser.jsx';
+import { UnifiedLibraryGrid } from '../../components/library-flow/UnifiedLibraryGrid.jsx';
 import { SharedTabIcon } from '../../shared/asset-hub-tabs/SharedTabIcons.jsx';
 
 /**
@@ -50,104 +51,47 @@ function resolveSkillCover(cover, coverIndex) {
 /**
  * 将卡片（商品、爆款视频、资产、灵感、模板）作为附件挂载到会话输入框上方，
  * 并沉淀深度结构化实体上下文，供 Agent 全面感知领域信息。
+ * 100% 委托 adaptCardToAttachmentPayload 单一事实源。
  */
 export function attachCardToConversation(cardOrItem, customWin) {
   const win = customWin || (typeof window !== 'undefined' ? window : null);
   if (!cardOrItem || !win) return;
 
-  const raw = cardOrItem.trending || cardOrItem.raw || cardOrItem;
-  const lane = cardOrItem.lane || raw.lane || (cardOrItem.trending ? 'trending' : (raw.price !== undefined || raw.sellingPoints ? 'products' : 'templates'));
-  const entityId = raw.id || cardOrItem.id || `entity-${Date.now()}`;
-  const title = cardOrItem.title || raw.title || raw.name || '创作素材';
-
-  let kind = 'inspiration';
-  let extension = 'TPL';
-  let previewUrl = raw.thumbnailUrl || raw.cover || raw.coverUrl || raw.mainImage || raw.image || cardOrItem.thumbnailUrl || '';
-  let metadata = {};
-
-  if (lane === 'products') {
-    kind = 'product';
-    extension = 'PRD';
-    previewUrl = raw.mainImage || raw.image || raw.thumbnailUrl || raw.cover || (Array.isArray(raw.images) ? raw.images[0] : '') || previewUrl;
-    metadata = {
-      entityType: 'product',
-      productId: entityId,
-      title,
-      price: raw.price || '',
-      category: raw.category || '',
-      sellingPoints: raw.sellingPoints || raw.description || '',
-      specs: raw.specs || [],
-      images: Array.isArray(raw.images) ? raw.images : (raw.image ? [raw.image] : []),
-      originUrl: raw.url || raw.originUrl || '',
-      sourcePlatform: raw.sourcePlatform || 'internal',
-      agentContext: {
-        entityType: 'product',
-        summary: `产品名称：${title}；价格：${raw.price || '未标明'}；核心卖点：${raw.sellingPoints || raw.description || '无'}`,
-        details: raw,
-      },
-    };
-  } else if (lane === 'trending') {
-    kind = 'inspiration';
-    extension = 'MP4';
-    previewUrl = raw.cover || raw.thumbnailUrl || raw.coverUrl || previewUrl;
-    metadata = {
-      entityType: 'trending_video',
-      videoId: entityId,
-      title,
-      coverUrl: previewUrl,
-      videoUrl: raw.videoUrl || '',
-      metrics: raw.metrics || { views: raw.views, likes: raw.likes, engagementRate: raw.engagementRate },
-      breakdown: raw.breakdown || '',
-      script: raw.script || raw.transcript || '',
-      tags: raw.tags || [],
-      agentContext: {
-        entityType: 'trending_video',
-        summary: `爆款视频：${title}；播放量：${raw.views || '-'}；分镜拆解：${raw.breakdown || '无'}`,
-        details: raw,
-      },
-    };
-  } else if (lane === 'assets') {
-    kind = 'asset';
-    extension = (raw.type || 'file').toUpperCase();
-    metadata = {
-      entityType: 'asset',
-      assetId: entityId,
-      fileType: raw.type,
-      url: raw.url || previewUrl,
-      dimensions: raw.dimensions,
-      duration: raw.duration,
-      summary: `素材资产：${title} (${raw.type || 'file'})`,
-    };
-  } else {
-    kind = 'inspiration';
-    extension = raw.workflow ? 'TPL' : 'MP4';
-    metadata = {
-      entityType: 'template',
-      templateId: entityId,
-      categorySlug: raw.categorySlug || 'video',
-      prompt: raw.localizedPrompt || raw.prompt || '',
-      workflow: raw.workflow,
-      sourcePlatform: raw.sourcePlatform || 'creatify',
-      summary: `灵感模板：${title}`,
-      agentContext: {
-        entityType: 'template',
-        summary: `模板名称：${title}；分类：${raw.categorySlug || 'video'}；预置指令：${raw.localizedPrompt || raw.prompt || '无'}`,
-        details: raw,
-      },
-    };
+  let payload = adaptCardToAttachmentPayload(cardOrItem);
+  if (!payload) {
+    const raw = cardOrItem.raw || cardOrItem.trending || cardOrItem;
+    const isTemplate = cardOrItem.type === 'template' || raw.type === 'template' || cardOrItem.lane === 'featured' || raw.lane === 'featured' || Boolean(raw.categorySlug);
+    if (isTemplate && !raw.isApp && raw.type !== 'app') {
+      const entityId = String(raw.id || cardOrItem.id || `tpl-${Date.now()}`);
+      const title = String(cardOrItem.title || raw.title || raw.name || '创意模板');
+      const previewUrl = cardOrItem.thumbnailUrl || raw.thumbnailUrl || raw.coverUrl || raw.cover || '';
+      payload = {
+        sourcePlugin: 'omnimux',
+        kind: 'inspiration',
+        entityId,
+        title,
+        extension: 'TPL',
+        relativePath: `materials/templates/${entityId}.tpl`,
+        previewUrl,
+        duration: raw.duration || '15s',
+        metadata: {
+          entityType: 'template',
+          templateId: entityId,
+          categorySlug: raw.categorySlug || 'video',
+          prompt: raw.localizedPrompt || raw.prompt || '',
+          workflow: raw.workflow,
+          sourcePlatform: raw.sourcePlatform || 'creatify',
+          summary: `灵感模板：${title}`,
+          agentContext: {
+            entityType: 'template',
+            summary: `模板名称：${title}；分类：${raw.categorySlug || 'video'}；预置指令：${raw.localizedPrompt || raw.prompt || '无'}`,
+            details: raw,
+          },
+        },
+      };
+    }
   }
-
-  const payload = {
-    sourcePlugin: 'omnimux',
-    kind,
-    entityId,
-    title,
-    extension,
-    relativePath: `materials/${lane}/${entityId}.${extension.toLowerCase()}`,
-    previewUrl,
-    duration: raw.duration || '15s',
-    metadata,
-  };
+  if (!payload) return;
 
   const store = win.__omnimuxAttachments;
   const activeSessionId = store?.getActiveSessionId?.() || '';
@@ -196,29 +140,22 @@ export function ExploreTemplatesSection({
   const [reloadToken, setReloadToken] = useState(0);
   const appLaunchPending = useRef(false);
 
-  // 外部素材库数据加载态
-  const [libraryData, setLibraryData] = useState({ cards: [], loading: false, error: null });
+  // 外部素材库数据加载态（支持无限滚动与状态解耦）
+  const [libraryData, setLibraryData] = useState({
+    cards: [],
+    loading: false,
+    loadingMore: false,
+    hasMore: false,
+    page: 1,
+    error: null,
+    loadMoreError: null,
+  });
   const sectionRootRef = useRef(null);
   const filterBarRef = useRef(null);
 
-  // 全屏探索组件生命周期标记
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.__omnimuxFullscreenExploreActive = true;
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.__omnimuxFullscreenExploreActive = false;
-      }
-    };
-  }, []);
-
-  // 监听从加号菜单发起的平滑滚动置顶与 Tab 切换事件
+  // 监听从加号菜单发起的平滑滚动跳转 Tab 事件（宽栏大屏场景）
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-
-    let rafId1 = null;
-    let rafId2 = null;
 
     const onScrollToTab = (e) => {
       const targetTab = e?.detail?.tab;
@@ -226,51 +163,31 @@ export function ExploreTemplatesSection({
         handlePrimaryTabChange(targetTab);
       }
 
-      const scrollToTop = () => {
-        const targetEl = filterBarRef.current || sectionRootRef.current;
-        if (!targetEl) return;
-        const scroller = targetEl.closest?.('[class*="scrollBody"], [data-conversation-scroll]') ||
-          (typeof document !== 'undefined' ? document.querySelector('[class*="scrollBody"]') : null);
-        
-        if (scroller && typeof scroller.getBoundingClientRect === 'function') {
-          const elRect = targetEl.getBoundingClientRect();
-          const scrollerRect = scroller.getBoundingClientRect();
-          const targetOffset = scroller.scrollTop + (elRect.top - scrollerRect.top);
+      // 平滑滚动定位到 Tab 栏，给用户完整的大屏浏览与选材视野
+      const targetEl = filterBarRef.current || sectionRootRef.current;
+      if (!targetEl) return;
+      const scroller = targetEl.closest?.('[class*="scrollBody"], [data-conversation-scroll]') ||
+        (typeof document !== 'undefined' ? document.querySelector('[class*="scrollBody"]') : null);
+
+      if (scroller && typeof scroller.getBoundingClientRect === 'function') {
+        const elRect = targetEl.getBoundingClientRect();
+        const scrollerRect = scroller.getBoundingClientRect();
+        const targetOffset = scroller.scrollTop + (elRect.top - scrollerRect.top);
+        if (typeof scroller.scrollTo === 'function') {
+          scroller.scrollTo({ top: Math.max(0, targetOffset), behavior: 'smooth' });
+        } else {
           scroller.scrollTop = Math.max(0, targetOffset);
-        } else if (typeof targetEl.scrollIntoView === 'function') {
-          // 兜底：使用 instant 确保 0ms 立即跳转，杜绝 smooth 异步滚动竞态
-          targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
         }
-      };
-
-      // 1. 立即执行 0ms 原子跳转，消除感知延迟
-      scrollToTop();
-
-      // 2. 双帧 RAF 校准：在 React 完成重排和浏览器布局回流后复核并锁定 filterBar 置顶于 top: 0
-      if (typeof window.requestAnimationFrame === 'function') {
-        if (rafId1) window.cancelAnimationFrame(rafId1);
-        if (rafId2) window.cancelAnimationFrame(rafId2);
-        rafId1 = window.requestAnimationFrame(() => {
-          scrollToTop();
-          rafId2 = window.requestAnimationFrame(() => {
-            scrollToTop();
-          });
-        });
+      } else if (typeof targetEl.scrollIntoView === 'function') {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
-      // 3. 触发输入框原子强制吸底
-      window.dispatchEvent(new CustomEvent('omnimux:composer:dock-intent', {
-        detail: { tab: targetTab, force: true },
-      }));
+      // 关键：不强制派发 force: true 伪吸底事件！输入框随滚动自然响应，消除菜单腰斩与空载钉底
     };
 
     window.addEventListener('omnimux:explore:scroll-to-tab', onScrollToTab);
     return () => {
       window.removeEventListener('omnimux:explore:scroll-to-tab', onScrollToTab);
-      if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
-        if (rafId1) window.cancelAnimationFrame(rafId1);
-        if (rafId2) window.cancelAnimationFrame(rafId2);
-      }
     };
   }, []);
 
@@ -302,29 +219,114 @@ export function ExploreTemplatesSection({
     return () => controller.abort();
   }, [activePrimaryTab]);
 
-  // 当切换到资产库/灵感库/商品库/爆款趋势时，自动加载其卡片数据
+  // 当切换到资产库/灵感库/商品库/爆款趋势，或切换二级分类时，发起服务端分类下推加载
   useEffect(() => {
     if (activePrimaryTab === 'featured' || activePrimaryTab === 'skills') {
-      return;
+      return undefined;
     }
-    let alive = true;
-    setLibraryData((prev) => ({ ...prev, loading: true, error: null }));
-    loadLibraryCards(activePrimaryTab)
+    const controller = new AbortController();
+    setLibraryData((prev) => ({
+      ...prev,
+      cards: [],
+      loading: true,
+      loadingMore: false,
+      hasMore: false,
+      page: 1,
+      error: null,
+      loadMoreError: null,
+    }));
+
+    loadLibraryCards(activePrimaryTab, {
+      page: 1,
+      pageSize: 48,
+      category: selectedSubCategory,
+      signal: controller.signal,
+    })
       .then((res) => {
-        if (!alive) return;
+        if (controller.signal.aborted) return;
         const laneErrors = Object.values(res.errors || {}).map((e) => e?.message).filter(Boolean);
         setLibraryData({
           cards: res.cards || [],
           loading: false,
+          loadingMore: false,
+          hasMore: Boolean(res.hasMore),
+          page: 1,
           error: laneErrors.length ? laneErrors.join('；') : null,
+          loadMoreError: null,
         });
       })
       .catch((err) => {
-        if (!alive) return;
-        setLibraryData({ cards: [], loading: false, error: err instanceof Error ? err.message : String(err) });
+        if (controller.signal.aborted) return;
+        setLibraryData({
+          cards: [],
+          loading: false,
+          loadingMore: false,
+          hasMore: false,
+          page: 1,
+          error: err instanceof Error ? err.message : String(err),
+          loadMoreError: null,
+        });
       });
-    return () => { alive = false; };
-  }, [activePrimaryTab, reloadToken]);
+
+    return () => {
+      controller.abort();
+    };
+  }, [activePrimaryTab, selectedSubCategory, reloadToken]);
+
+  const libraryDataRef = useRef(libraryData);
+  libraryDataRef.current = libraryData;
+
+  // 触底加载下一页（增量流式追加）
+  const handleLoadMore = useCallback(() => {
+    const current = libraryDataRef.current;
+    if (
+      current.loading ||
+      current.loadingMore ||
+      !current.hasMore ||
+      activePrimaryTab === 'featured' ||
+      activePrimaryTab === 'skills'
+    ) {
+      return;
+    }
+    const nextPage = (current.page || 1) + 1;
+    const requestTab = activePrimaryTab;
+    const requestCategory = selectedSubCategory;
+    setLibraryData((prev) => ({ ...prev, loadingMore: true, loadMoreError: null }));
+
+    loadLibraryCards(requestTab, {
+      page: nextPage,
+      pageSize: 48,
+      category: requestCategory,
+    })
+      .then((res) => {
+        // 防串台守卫：若用户已切换 Tab/分类则静默丢弃旧请求结果
+        if (requestTab !== activePrimaryTab || requestCategory !== selectedSubCategory) return;
+        setLibraryData((prev) => {
+          const seen = new Set(prev.cards.map((c) => String(c.id)));
+          const newCards = (res.cards || []).filter((c) => !seen.has(String(c.id)));
+          return {
+            ...prev,
+            cards: [...prev.cards, ...newCards],
+            loadingMore: false,
+            hasMore: Boolean(res.hasMore) && newCards.length > 0,
+            page: nextPage,
+            loadMoreError: null,
+          };
+        });
+      })
+      .catch((err) => {
+        if (requestTab !== activePrimaryTab || requestCategory !== selectedSubCategory) return;
+        setLibraryData((prev) => ({
+          ...prev,
+          loadingMore: false,
+          loadMoreError: err instanceof Error ? err.message : String(err),
+        }));
+      });
+  }, [activePrimaryTab, selectedSubCategory]);
+
+  const handleRetryLoadMore = useCallback(() => {
+    handleLoadMore();
+  }, [handleLoadMore]);
 
   // Skills 数据源映射
   const allSkillsItems = useMemo(() => {
@@ -502,7 +504,10 @@ export function ExploreTemplatesSection({
   // 外部库过滤卡片数据集
   const filteredLibraryCards = useMemo(() => {
     if (activePrimaryTab === 'featured' || activePrimaryTab === 'skills') return [];
-    if (selectedSubCategory === 'all') return libraryData.cards;
+    // 爆款趋势（trending）与灵感库（inspiration）已由服务端精准分类下推，直接展示服务端下发的数据集
+    if (activePrimaryTab === 'trending' || activePrimaryTab === 'inspiration' || selectedSubCategory === 'all') {
+      return libraryData.cards;
+    }
     const target = String(selectedSubCategory).toLowerCase();
     const currentSubObj = currentSubCategories.find((s) => s.id === selectedSubCategory);
     const subNameZh = currentSubObj?.nameZh || '';
@@ -555,6 +560,7 @@ export function ExploreTemplatesSection({
                 className={`omnimux-explore-primary-tab ${isActive ? 'active' : ''}`}
                 onClick={() => handlePrimaryTabChange(tab.id)}
                 data-primary-tab={tab.id}
+                data-category-slug={tab.id}
               >
                 {renderPrimaryTabIcon(tab.iconName)}
                 <span>{displayName}</span>
@@ -577,6 +583,7 @@ export function ExploreTemplatesSection({
                 className={`omnimux-explore-sub-tab ${isActive ? 'active' : ''}`}
                 onClick={() => setSelectedSubCategory(sub.id)}
                 data-sub-category={sub.id}
+                data-category-slug={sub.id}
               >
                 <span>{displayName}</span>
               </button>
@@ -645,34 +652,21 @@ export function ExploreTemplatesSection({
 
       {activePrimaryTab !== 'featured' && activePrimaryTab !== 'skills' && (
         <div className="omnimux-explore-grid-view-wrap">
-          {libraryData.loading ? (
-            <p className="omnimux-library-stage-status">正在加载素材…</p>
-          ) : libraryData.error ? (
-            <div className="omnimux-library-stage-status">
-              <p>{libraryData.error}</p>
-              <button /* exempt-ui01: retry button */
-                type="button"
-                className="omnimux-library-stage-retry"
-                onClick={() => setReloadToken((c) => c + 1)}
-              >
-                重试
-              </button>
-            </div>
-          ) : filteredLibraryCards.length === 0 ? (
-            <p className="omnimux-library-stage-status">暂无对应素材</p>
-          ) : (
-            <div className="omnimux-library-stage-grid">
-              {filteredLibraryCards.map((card) => (
-                <div
-                  key={`${card.lane}:${card.id}`}
-                  className="omnimux-library-stage-cell"
-                  data-library-lane={card.lane}
-                >
-                  <LibraryCard card={card} t={t} onPick={handleLibraryCardPick} />
-                </div>
-              ))}
-            </div>
-          )}
+          <UnifiedLibraryGrid
+            items={filteredLibraryCards}
+            loading={libraryData.loading}
+            loadingMore={libraryData.loadingMore}
+            hasMore={libraryData.hasMore}
+            error={libraryData.error}
+            loadMoreError={libraryData.loadMoreError}
+            emptyText="暂无素材"
+            onLoadMore={handleLoadMore}
+            onRetry={() => setReloadToken((c) => c + 1)}
+            onRetryLoadMore={handleRetryLoadMore}
+            onPick={handleLibraryCardPick}
+            t={t}
+            options={{ minColWidth: 180, gap: 16, maxCols: 6, minCols: 2 }}
+          />
         </div>
       )}
 

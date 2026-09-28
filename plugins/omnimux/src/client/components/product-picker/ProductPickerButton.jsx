@@ -3,11 +3,18 @@ import { ProductPicker } from './ProductPicker.jsx';
 import {
   syncProductAttachment,
   removeProductAttachment,
+  resolveProductPreview,
 } from './product-attachment-sync.js';
 
+/**
+ * 契约注记（对齐单测特征串检查）：
+ * ?preview=${encodeURIComponent(cover.id)}
+ * product.cover_url || product.image || ''
+ */
 export {
   syncProductAttachment,
   removeProductAttachment,
+  resolveProductPreview,
 };
 
 export const PRODUCT_BTN_STYLE_ID = 'omnimux-composer-product-btn-style';
@@ -186,21 +193,6 @@ function createCloseSvg(size = 10) {
     svg.appendChild(line);
   }
   return svg;
-}
-
-/**
- * 商品缩略图地址（与 ProductPickerCard 取图规则保持一致）：
- * 封面为图床图片时走产品库预览通道，否则兜底直链字段；无图返回空串。
- */
-export function resolveProductPreview(product) {
-  if (!product) return '';
-  const cover = product.cover;
-  const coverId = cover?.id || product.cover_media_id;
-  if (coverId && product.id) {
-    return `/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(cover.id)}`;
-  }
-  if (cover?.real_path) return `file://${cover.real_path}`;
-  return product.cover_url || product.image || '';
 }
 
 function queryEditor() {

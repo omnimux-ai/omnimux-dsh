@@ -390,19 +390,22 @@ export function createComposerAddController(options) {
     const navStore = options.assetHubNavStore || getGlobalAssetHubNavStore()
     navStore?.setActiveTab?.(targetTab)
 
-    // 全屏新会话守卫：若当前处于全屏探索专区且右栏未展开，优先就地滚动置顶并激活 Tab，绝不打开 split 挤压会话！
+    const doc = typeof document !== 'undefined' ? document : undefined
     const win = typeof window !== 'undefined' ? window : null
     const wb = (typeof window !== 'undefined' ? window.__omnimuxWorkbench : null) || options.workbench
-    const isFullscreenExplore = Boolean(win?.__omnimuxFullscreenExploreActive)
     const isRightPanelOpen = Boolean(wb?.getSnapshot?.()?.state?.panelOpen)
+    const isSplitCompact = Boolean(doc?.documentElement?.hasAttribute?.('data-omnimux-split-compact'))
+    const hasExploreSection = Boolean(doc?.querySelector?.('[data-omnimux-starter-guide]:not(.is-compact)'))
 
-    if (isFullscreenExplore && !isRightPanelOpen && win) {
+    // 宽栏大屏且具备完整探索专区：就地平滑跳转到页面内对应的 Tab 栏，给用户沉浸式大屏选材体验！
+    if (!isRightPanelOpen && !isSplitCompact && hasExploreSection && win) {
       win.dispatchEvent(new CustomEvent('omnimux:explore:scroll-to-tab', {
         detail: { tab: targetTab, sessionId: targetSessionId, kind },
       }))
       return
     }
 
+    // 窄栏紧凑态（右栏已开、分栏窄列）或已有历史对话流：打开右侧素材工作台
     const operation = begin(sessionId, kind)
     if (operation) {
       render(operation)

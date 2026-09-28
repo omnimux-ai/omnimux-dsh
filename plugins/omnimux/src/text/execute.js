@@ -97,6 +97,9 @@ export async function executeOmnimuxText(input) {
 
   const isOfficialModel = Boolean(inputModelId && CHAT_MODEL_IDS.includes(inputModelId))
   const isExplicitAgent = targetChannel === 'agent' || targetChannel === 'local'
+  const isMultimodalRequest = references.length > 0 || hasComplexMedia || hasImage
+  const effectiveModelId = inputModelId || text.defaultModel
+  const isEffectiveOfficialModel = Boolean(effectiveModelId && CHAT_MODEL_IDS.includes(effectiveModelId))
 
   let rawSystemToken = resolveSyncOfficialToken(input.env)
   if (!rawSystemToken && input.credentials && typeof input.credentials.resolve === 'function') {
@@ -116,7 +119,7 @@ export async function executeOmnimuxText(input) {
   const isOfficialRequest = !channelIntent.isByokChannel && !isExplicitAgent
     && (
       (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
-      || (!targetChannel && (runtime.mode === 'official' || (isOfficialModel && hasOfficialToken)))
+      || (!targetChannel && (runtime.mode === 'official' || (isOfficialModel && hasOfficialToken) || (isMultimodalRequest && hasOfficialToken && isEffectiveOfficialModel)))
     )
 
   const isOfficialBypass = isOfficialRequest && hasOfficialToken
@@ -135,7 +138,7 @@ export async function executeOmnimuxText(input) {
     throw new OmnimuxError('omnimux-unconfigured', '本机助手尚未配置完成，请在设置中选择并测试通过')
   }
   const useByok = channelIntent.isByokChannel || (runtime.mode === 'key' && !isOfficialRequest && runtime.textReady)
-  const useAgent = (isExplicitAgent || (runtime.mode === 'agent' && !isOfficialRequest)) && runtime.textReady
+  const useAgent = !isMultimodalRequest && (isExplicitAgent || (runtime.mode === 'agent' && !isOfficialRequest)) && runtime.textReady
 
   // Local agent: text goes to the selected CLI and back. Media references are
   // out of scope for the agent path in this version — only plain text rides it.

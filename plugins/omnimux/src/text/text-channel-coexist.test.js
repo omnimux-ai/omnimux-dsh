@@ -16,6 +16,21 @@ function collectStream(seen) {
   }
 }
 
+function box(type, payload) {
+  const header = Buffer.alloc(8)
+  header.writeUInt32BE(header.length + payload.length, 0)
+  header.write(type, 4, 4, 'ascii')
+  return Buffer.concat([header, payload])
+}
+
+function mp4WithDuration(seconds, timescale = 1_000) {
+  const ftyp = box('ftyp', Buffer.from([0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0]))
+  const payload = Buffer.alloc(20)
+  payload.writeUInt32BE(timescale, 12)
+  payload.writeUInt32BE(Math.round(seconds * timescale), 16)
+  return Buffer.concat([ftyp, box('moov', box('mvhd', payload))])
+}
+
 describe('Text Channel & Local Agent Orthogonal Coexistence (Issue #2694)', () => {
   const origKey = process.env.OMNIMUX_API_KEY
 
@@ -212,6 +227,44 @@ describe('Text Channel & Local Agent Orthogonal Coexistence (Issue #2694)', () =
       assert.equal(agentCalled, false, 'must not be hijacked by agent')
       assert.equal(llmCalled, true, 'must stream via official provider')
       assert.equal(res.text, 'credentials fallback success')
+    } finally {
+      if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
+      else delete process.env.OMNIMUX_API_KEY
+    }
+  })
+
+  it('routes multimodal video request with omitted model to official channel in agent mode', async () => {
+    try {
+      process.env.OMNIMUX_API_KEY = 'sk-official-hub-key-12345'
+      let agentCalled = false
+      let chatCalled = false
+
+      const agentSettings = {
+        runtimeMode: 'agent',
+        runtimeAgentId: 'codex',
+        runtimeAgentVerified: true,
+      }
+
+      const result = await executeOmnimuxText({
+        prompt: 'analyze this video',
+        video: `data:video/mp4;base64,${mp4WithDuration(1).toString('base64')}`,
+        settings: { get: (k) => (k === 'omnimux' ? agentSettings : undefined) },
+        fetcher: async (url, opts) => {
+          chatCalled = true
+          return new Response(JSON.stringify({
+            id: 'chatcmpl-video-test',
+            choices: [{ message: { content: 'video analyzed successfully by official multimodal model' } }],
+          }), { status: 200, headers: { 'content-type': 'application/json' } })
+        },
+        agentRun: async () => {
+          agentCalled = true
+          throw new Error('agent should not run on multimodal video request')
+        },
+      })
+
+      assert.equal(agentCalled, false, 'multimodal video request must NOT route to agent CLI')
+      assert.equal(chatCalled, true, 'must invoke official multimodal channel')
+      assert.equal(result.text, 'video analyzed successfully by official multimodal model')
     } finally {
       if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
       else delete process.env.OMNIMUX_API_KEY

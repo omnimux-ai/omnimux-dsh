@@ -85,6 +85,16 @@ export const AttachmentCard: React.FC<AttachmentCardProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
 
+  const validPreviewUrl = useMemo(() => {
+    if (typeof attachment.previewUrl === 'string') {
+      const trimmed = attachment.previewUrl.trim();
+      if (trimmed && !trimmed.includes('[object Object]')) {
+        return trimmed;
+      }
+    }
+    return '';
+  }, [attachment.previewUrl]);
+
   const ext = (attachment.extension || '').toUpperCase();
   const isMedia = isMediaAttachment(attachment);
   const isVideo = isVideoAttachment(attachment);
@@ -122,9 +132,9 @@ export const AttachmentCard: React.FC<AttachmentCardProps> = ({
       >
         {/* 圆角裁剪收敛到内部 frame，外凸的移除按钮不再被 overflow 裁掉 */}
         <div className="omx-att-card__media-frame">
-          {attachment.previewUrl && !imageError ? (
+          {validPreviewUrl && !imageError ? (
             <img
-              src={attachment.previewUrl}
+              src={validPreviewUrl}
               alt={attachment.title}
               className="omx-att-card__media-thumb"
               onError={() => setImageError(true)}

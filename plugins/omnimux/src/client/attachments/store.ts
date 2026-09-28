@@ -160,8 +160,28 @@ export function createAttachmentStore(): AttachmentStore {
       return { ok: false, reason: 'duplicate', attachment: currentList[existingIndex] };
     }
 
-    // 3. 构建新 Attachment
+    // 3. 构建新 Attachment 与运行时清洗门禁
     const extension = inferExtension(payload.title, payload.relativePath, payload.extension);
+    let sanitizedPreviewUrl = '';
+    if (typeof payload.previewUrl === 'string') {
+      const trimmed = payload.previewUrl.trim();
+      if (trimmed && !trimmed.includes('[object Object]') && !trimmed.startsWith('javascript:')) {
+        sanitizedPreviewUrl = trimmed;
+      }
+    } else if (payload.previewUrl && typeof payload.previewUrl === 'object') {
+      try {
+        const raw = payload.previewUrl as any;
+        const cover = raw.cover;
+        const coverId = (cover && typeof cover === 'object' ? cover.id : null) || raw.cover_media_id || raw.id;
+        const productId = raw.id || payload.entityId;
+        if (coverId && productId) {
+          sanitizedPreviewUrl = `/omnimux/products/${encodeURIComponent(productId)}?preview=${encodeURIComponent(coverId)}`;
+        } else if (cover && typeof cover === 'object' && typeof cover.real_path === 'string') {
+          sanitizedPreviewUrl = `file://${cover.real_path}`;
+        }
+      } catch {}
+    }
+
     const now = Date.now();
     const id = `att_${now}_${Math.random().toString(36).slice(2, 8)}`;
     const newAttachment: ConversationAttachment = {
@@ -175,7 +195,7 @@ export function createAttachmentStore(): AttachmentStore {
       extension,
       relativePath: payload.relativePath,
       absolutePath: payload.absolutePath,
-      previewUrl: payload.previewUrl,
+      previewUrl: sanitizedPreviewUrl,
       duration: payload.duration,
       status: 'ready',
       metadata: payload.metadata,
