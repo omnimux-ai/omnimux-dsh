@@ -5,7 +5,8 @@
  */
 import { mapInspirationRow } from '../components/inspiration-picker/picker-model.js'
 import { mapSourceItem } from '../session-guide/trending/trending-source.js'
-import { SHARED_PRIMARY_TABS } from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
+import { SHARED_PRIMARY_TABS, resolveCloudCategory } from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
+import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
 import { loadCreativeTemplates } from '../session-guide/templates/creative-templates-client.js'
 import FEATURED_SKILLS_JSON from '../session-guide/skills/featured-skills.json' with { type: 'json' }
 
@@ -68,10 +69,10 @@ export function mergeLibraryPrompt(draft, prompt) {
   return `${current.replace(/\s+$/, '')}\n${next}`
 }
 
-async function requestJson(path, fetchImpl) {
+async function requestJson(path, fetchImpl, signal) {
   const fetchFn = fetchImpl || globalThis.fetch
   if (typeof fetchFn !== 'function') throw new Error('无法连接素材服务')
-  const response = await fetchFn(path)
+  const response = await fetchFn(path, signal ? { signal } : undefined)
   let body = {}
   try {
     body = await response.json()
@@ -85,46 +86,89 @@ function failure(res, fallback) {
   return new Error(res.body?.message || res.body?.error || fallback)
 }
 
-async function loadAssets(fetchImpl, limit) {
-  const res = await requestJson('/omnimux/assets/library', fetchImpl)
+async function loadAssets(fetchImpl, limit, deps = {}) {
+  const res = await requestJson('/omnimux/assets/library', fetchImpl, deps?.signal)
   if (!res.ok) throw failure(res, '资产库暂时打不开')
   const rows = Array.isArray(res.body?.assets) ? res.body.assets : []
-  return rows.slice(0, limit).filter((row) => row?.id).map((row) => ({
+  const total = typeof res.body?.total === 'number' ? res.body.total : undefined
+  const items = rows.slice(0, limit).filter((row) => row?.id).map((row) => ({
     id: String(row.id),
     title: String(row.name || row.title || row.id),
     raw: row,
   }))
+  items.items = items
+  items.total = total
+  items.hasMore = false
+  return items
 }
 
-async function loadProducts(fetchImpl, limit) {
-  const res = await requestJson('/omnimux/products', fetchImpl)
+async function loadProducts(fetchImpl, limit, deps = {}) {
+  const res = await requestJson('/omnimux/products', fetchImpl, deps?.signal)
   if (!res.ok) throw failure(res, '产品库暂时打不开')
   const rows = Array.isArray(res.body?.products) ? res.body.products : []
-  return rows.slice(0, limit).filter((row) => row?.id).map((row) => ({
+  const total = typeof res.body?.total === 'number' ? res.body.total : undefined
+  const items = rows.slice(0, limit).filter((row) => row?.id).map((row) => ({
     id: String(row.id),
     title: String(row.name || row.title || row.id),
+    thumbnailUrl: resolveProductPreview(row),
+    mediaType: 'image',
     raw: row,
   }))
+  items.items = items
+  items.total = total
+  items.hasMore = false
+  return items
 }
 
-async function loadInspiration(fetchImpl, limit) {
+export async function loadInspiration(fetchImpl, limit, deps = {}) {
+  const page = Number(deps?.page) > 0 ? Number(deps.page) : 1
+  let catQuery = ''
+  if (deps?.category && deps.category !== 'all') {
+    catQuery = `&category=${encodeURIComponent(deps.category)}`
+  }
   const res = await requestJson(
-    `/omnimux/inspiration/local?sort=hot&page=1&page_size=${limit}&projection=lean`,
+    `/omnimux/inspiration/local?sort=hot&page=${page}&page_size=${limit}&projection=lean${catQuery}`,
     fetchImpl,
+    deps?.signal,
   )
   if (!res.ok) throw failure(res, '灵感库暂时打不开')
-  const rows = Array.isArray(res.body?.data?.items) ? res.body.data.items : []
-  return rows.map((row) => mapInspirationRow(row, true)).filter(Boolean).slice(0, limit).map((row) => ({
-    id: row.id,
-    title: row.title,
-    raw: row,
-  }))
+  const rows = Array.isArray(res.body?.data?.items)
+    ? res.body.data.items
+    : (Array.isArray(res.body?.items) ? res.body.items : [])
+  const total = typeof res.body?.data?.total === 'number'
+    ? res.body.data.total
+    : (typeof res.body?.total === 'number' ? res.body.total : undefined)
+  const items = rows
+    .map((row) => mapInspirationRow(row, true))
+    .filter(Boolean)
+    .slice(0, limit)
+    .map((row) => ({
+      id: row.id,
+      title: row.title,
+      raw: row,
+    }))
+  const rawCount = rows.length
+  const accumulatedCount = (page - 1) * limit + rawCount
+  const hasMore = rawCount >= limit && rawCount > 0 && (typeof total === 'number' ? accumulatedCount < total : true)
+  items.items = items
+  items.total = total
+  items.hasMore = hasMore
+  return items
 }
 
-async function loadTrending(fetchImpl, limit) {
+export async function loadTrending(fetchImpl, limit, deps = {}) {
+  const page = Number(deps?.page) > 0 ? Number(deps.page) : 1
+  let catQuery = ''
+  if (deps?.category && deps.category !== 'all') {
+    const cloudCat = resolveCloudCategory(deps.category, 'trending')
+    if (cloudCat) {
+      catQuery = `&category=${encodeURIComponent(cloudCat)}`
+    }
+  }
   const res = await requestJson(
-    `/omnimux/inspiration?sort=views&page=1&page_size=${limit}&projection=lean`,
+    `/omnimux/inspiration?sort=views&page=${page}&page_size=${limit}&projection=lean${catQuery}`,
     fetchImpl,
+    deps?.signal,
   )
   if (res.status === 401) {
     const error = new Error('登录后可查看云端灵感')
@@ -132,24 +176,40 @@ async function loadTrending(fetchImpl, limit) {
     throw error
   }
   if (!res.ok) throw failure(res, '爆款趋势暂时打不开')
-  const rows = Array.isArray(res.body?.data?.items) ? res.body.data.items : []
-  return rows.map((row) => mapSourceItem(row)).filter(Boolean).slice(0, limit).map((item) => ({
-    id: item.id,
-    title: item.title,
-    trending: item,
-    raw: {
+  const rows = Array.isArray(res.body?.data?.items)
+    ? res.body.data.items
+    : (Array.isArray(res.body?.items) ? res.body.items : [])
+  const total = typeof res.body?.data?.total === 'number'
+    ? res.body.data.total
+    : (typeof res.body?.total === 'number' ? res.body.total : undefined)
+  const items = rows
+    .map((row) => mapSourceItem(row))
+    .filter(Boolean)
+    .slice(0, limit)
+    .map((item) => ({
       id: item.id,
       title: item.title,
-      previewUrl: item.cover || '',
-      kind: item.videoUrl ? 'video' : 'image',
-      is_local: false,
-    },
-  }))
+      trending: item,
+      raw: {
+        id: item.id,
+        title: item.title,
+        previewUrl: item.cover || '',
+        kind: item.videoUrl ? 'video' : 'image',
+        is_local: false,
+      },
+    }))
+  const rawCount = rows.length
+  const accumulatedCount = (page - 1) * limit + rawCount
+  const hasMore = rawCount >= limit && rawCount > 0 && (typeof total === 'number' ? accumulatedCount < total : true)
+  items.items = items
+  items.total = total
+  items.hasMore = hasMore
+  return items
 }
 
-async function loadSkills(fetchImpl, limit) {
+async function loadSkills(fetchImpl, limit, deps = {}) {
   const list = Array.isArray(FEATURED_SKILLS_JSON?.skills) ? FEATURED_SKILLS_JSON.skills : []
-  return list
+  const items = list
     .filter((skill) => skill?.id)
     .slice(0, limit)
     .map((skill) => ({
@@ -157,15 +217,23 @@ async function loadSkills(fetchImpl, limit) {
       title: String(skill.titleZh || skill.title || skill.id),
       raw: skill,
     }))
+  items.items = items
+  items.total = list.length
+  items.hasMore = false
+  return items
 }
 
-async function loadFeatured(fetchImpl, limit, deps) {
+async function loadFeatured(fetchImpl, limit, deps = {}) {
   const list = await loadCreativeTemplates({ fetchImpl, signal: deps?.signal })
-  return list.slice(0, limit).map((tpl) => ({
+  const items = list.slice(0, limit).map((tpl) => ({
     id: String(tpl.id || tpl.appId || ''),
     title: String(tpl.titleZh || tpl.title || tpl.id),
     raw: tpl,
   }))
+  items.items = items
+  items.total = list.length
+  items.hasMore = false
+  return items
 }
 
 const LOADERS = {
@@ -179,33 +247,76 @@ const LOADERS = {
 
 /**
  * @param {string} tab
- * @param {{ fetchImpl?: typeof fetch }} [deps]
+ * @param {{
+ *   page?: number,
+ *   pageSize?: number,
+ *   category?: string,
+ *   search?: string,
+ *   signal?: AbortSignal,
+ *   fetchImpl?: typeof fetch,
+ * }} [deps]
  */
 export async function loadLibraryCards(tab, deps = {}) {
+  const {
+    page = 1,
+    pageSize = (tab === 'featured' ? FEATURED_LIMIT : PAGE_LIMIT),
+    category,
+    search,
+    signal,
+    fetchImpl,
+  } = deps
+
   const lanes = sourcesForTab(tab)
-  const limit = tab === 'featured' ? FEATURED_LIMIT : PAGE_LIMIT
-  const settled = await Promise.all(lanes.map(async (lane) => {
-    try {
-      const loader = LOADERS[lane]
-      if (!loader) return { lane, items: [], error: null }
-      const items = await loader(deps.fetchImpl, limit, deps)
-      return { lane, items, error: null }
-    } catch (caught) {
-      return {
-        lane,
-        items: [],
-        error: {
-          message: caught instanceof Error ? caught.message : String(caught),
-          code: caught?.code || '',
-        },
+  const limit = Number(pageSize) > 0 ? Number(pageSize) : (tab === 'featured' ? FEATURED_LIMIT : PAGE_LIMIT)
+  const parsedPage = Number(page) > 0 ? Number(page) : 1
+  const loaderDeps = {
+    ...deps,
+    page: parsedPage,
+    pageSize: limit,
+    category,
+    search,
+    signal,
+    fetchImpl,
+  }
+
+  const settled = await Promise.all(
+    lanes.map(async (lane) => {
+      try {
+        const loader = LOADERS[lane]
+        if (!loader) return { lane, items: [], total: undefined, hasMore: false, error: null }
+        const res = await loader(fetchImpl, limit, loaderDeps)
+        const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : [])
+        const total = typeof res?.total === 'number' ? res.total : undefined
+        const hasMore = Boolean(res?.hasMore)
+        return { lane, items, total, hasMore, error: null }
+      } catch (caught) {
+        return {
+          lane,
+          items: [],
+          total: undefined,
+          hasMore: false,
+          error: {
+            message: caught instanceof Error ? caught.message : String(caught),
+            code: caught?.code || '',
+          },
+        }
       }
-    }
-  }))
+    }),
+  )
+
   const cards = []
   const errors = {}
+  let hasMore = false
+  let total = undefined
+
   for (const row of settled) {
     if (row.error) errors[row.lane] = row.error
     for (const item of row.items) cards.push({ ...item, lane: row.lane })
+    if (row.hasMore) hasMore = true
+    if (typeof row.total === 'number') {
+      total = (total === undefined ? 0 : total) + row.total
+    }
   }
-  return { cards, errors, lanes }
+
+  return { cards, errors, lanes, hasMore, page: parsedPage, total }
 }

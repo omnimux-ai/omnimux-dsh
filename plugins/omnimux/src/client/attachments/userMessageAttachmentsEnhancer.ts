@@ -4,6 +4,7 @@
  */
 import { currentSessionId } from '../workbench/host-adapter.js';
 import { submittedAttachmentStore } from './submittedAttachmentStore.ts';
+import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js';
 import type { ConversationAttachment } from './types.ts';
 
 const USER_BUBBLE_SELECTOR = 'div[class*="userRow"] div[class*="bubble"], div[class*="userStack"] div[class*="bubble"]';
@@ -229,7 +230,17 @@ export function createAttachmentCardElement(att: ConversationAttachment, doc: Do
     const thumbWrap = doc.createElement('div');
     thumbWrap.className = 'omx-user-att-card__thumb-wrapper';
 
-    const previewUrl = att.previewUrl || att.relativePath || '';
+    let previewUrl = '';
+    if (typeof att.previewUrl === 'string') {
+      const trimmed = att.previewUrl.trim();
+      if (trimmed && !trimmed.includes('[object Object]')) {
+        previewUrl = trimmed;
+      }
+    }
+    if (!previewUrl) {
+      previewUrl = resolveProductPreview(att.metadata?.product || att);
+    }
+
     if (previewUrl && !previewUrl.endsWith('.json')) {
       const img = doc.createElement('img');
       img.src = previewUrl;

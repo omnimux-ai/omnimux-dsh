@@ -314,3 +314,41 @@ test('AttachmentStore: addAttachment 空 sessionId 在无活跃会话时落入 d
   assert.equal(store.getSnapshot('default').length, 1);
   assert.equal(store.getSnapshot('session-nobody').length, 0);
 });
+
+test('AttachmentStore: addAttachment 运行时门禁拦截 [object Object] 与自动自愈商品对象', () => {
+  const store = createAttachmentStore();
+
+  // 1. 拦截脏字符串 [object Object]
+  const dirtyRes = store.addAttachment('s1', makePayload({
+    entityId: 'dirty-1',
+    title: '脏预览.png',
+    previewUrl: '[object Object]',
+  }));
+  assert.equal(dirtyRes.ok, true);
+  assert.equal(dirtyRes.attachment?.previewUrl, '', '包含 [object Object] 的预览 URL 必须被清洗为空串');
+
+  // 2. 拦截包含 [object Object] 的复合脏串
+  const dirtyPrefixRes = store.addAttachment('s1', makePayload({
+    entityId: 'dirty-2',
+    title: '脏前缀.png',
+    previewUrl: 'http://localhost:43120/[object Object]',
+  }));
+  assert.equal(dirtyPrefixRes.ok, true);
+  assert.equal(dirtyPrefixRes.attachment?.previewUrl, '', '复合包含 [object Object] 的预览 URL 必须被清洗');
+
+  // 3. 自愈传入的商品对象作为 previewUrl
+  const objRes = store.addAttachment('s1', makePayload({
+    entityId: 'prd_bra',
+    title: '中老年纯棉文胸',
+    previewUrl: {
+      id: 'prd_bra',
+      cover: { id: 'med_bra_cover' },
+    } as any,
+  }));
+  assert.equal(objRes.ok, true);
+  assert.equal(
+    objRes.attachment?.previewUrl,
+    '/omnimux/products/prd_bra?preview=med_bra_cover',
+    '若 previewUrl 被误传为商品对象，必须自愈为合法 preview 路由'
+  );
+});

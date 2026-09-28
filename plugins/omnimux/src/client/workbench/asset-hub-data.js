@@ -204,6 +204,7 @@ export function normalizeInspirationItem(row) {
     lane: 'inspiration',
     title,
     thumbnailUrl,
+    previewUrl: thumbnailUrl,
     previewVideoUrl,
     mediaType,
     durationText,
@@ -247,22 +248,28 @@ export function normalizeTrendingItem(row) {
   const title = String(row.title || row.name || row.description || id)
   const thumbnailUrl = row.coverUrl || row.cover || row.thumbnailUrl || row.poster || ''
 
+  const isImage = row.type === 'image' || (row.duration === 0 && !row.previewVideoUrl && !row.videoUrl)
+  const mediaType = isImage ? 'image' : 'video'
+  const formatText = isImage ? '图文' : 'MP4'
+
   // previewVideoUrl 优化视频守卫逻辑：仅排除明确属于静态图片扩展名的候选链接，合法云端视频保持通路
   let previewVideoUrl = ''
-  const candidate = (
-    row.previewVideoUrl ||
-    row.videoUrl ||
-    row.mediaUrl ||
-    row.url ||
-    (Array.isArray(row.media_urls) ? row.media_urls[0] : '') ||
-    ''
-  )
-  if (typeof candidate === 'string' && candidate.trim()) {
-    const trimmedCandidate = candidate.trim()
-    const cleanUrl = trimmedCandidate.split(/[?#]/)[0]
-    const isImageExt = /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(cleanUrl)
-    if (!isImageExt) {
-      previewVideoUrl = trimmedCandidate
+  if (!isImage) {
+    const candidate = (
+      row.previewVideoUrl ||
+      row.videoUrl ||
+      row.mediaUrl ||
+      row.url ||
+      (Array.isArray(row.media_urls) ? row.media_urls[0] : '') ||
+      ''
+    )
+    if (typeof candidate === 'string' && candidate.trim()) {
+      const trimmedCandidate = candidate.trim()
+      const cleanUrl = trimmedCandidate.split(/[?#]/)[0]
+      const isImageExt = /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(cleanUrl)
+      if (!isImageExt) {
+        previewVideoUrl = trimmedCandidate
+      }
     }
   }
 
@@ -284,10 +291,11 @@ export function normalizeTrendingItem(row) {
     title,
     thumbnailUrl,
     previewVideoUrl,
-    mediaType: 'video',
+    mediaType,
     durationText,
-    formatText: 'MP4',
+    formatText,
     dimensionsOrSize,
+    trending: row,
     raw: row,
   }
 }
@@ -520,42 +528,115 @@ export function filterAssetHubItems(items, filterPill, searchQuery) {
 
 /**
  * 将素材卡片转换为 AttachmentStore 所需的标准载荷（严格遵循 PRD 5.5 节）
+ * 作为跨端（新会话全屏与素材工作台）的单一事实源。
  */
 export function adaptCardToAttachmentPayload(card) {
-  const raw = card?.raw || {}
+  if (!card) return null
+  const raw = card.raw || card.trending || card
+  const lane = card.lane || raw.lane || (card.trending ? 'trending' : (raw.price !== undefined || raw.sellingPoints ? 'products' : 'featured'))
+  const entityId = String(card.id || raw.id || raw.appId || `entity-${Date.now()}`)
+  const title = String(card.title || raw.title || raw.name || '创作素材')
 
-  // 契约铁律：featured 与 skills 点击仅追加 Prompt，绝不生成物理附件载荷
-  if (card?.lane === 'featured' || card?.lane === 'skills') {
+  // 契约铁律：技能点击仅运行或追加 Prompt，绝不生成物理附件载荷
+  if (lane === 'skills' || card.type === 'skill') {
     return null
   }
 
-  if (card.lane === 'trending') {
-    return {
-      sourcePlugin: 'omnimux-inspiration',
-      kind: 'inspiration',
-      entityId: card.id,
-      title: card.title,
-      extension: 'MP4',
-      relativePath: raw.relativePath || `trending/${card.id}.mp4`,
-      previewUrl: card.thumbnailUrl,
-      metadata: { trending: raw },
-    }
-  }
-
-  if (card.lane === 'products') {
+  if (lane === 'products') {
+    const previewUrl = resolveProductPreview(card) || resolveProductPreview(raw) || ''
     return {
       sourcePlugin: 'omnimux-products',
       kind: 'product',
-      entityId: card.id,
-      title: card.title,
-      extension: 'JSON',
-      relativePath: raw.relativePath || `products/${card.id}.json`,
-      previewUrl: card.thumbnailUrl,
-      metadata: { product: raw },
+      entityId,
+      title,
+      extension: 'PRD',
+      relativePath: raw.relativePath || `materials/products/${entityId}.prd`,
+      previewUrl,
+      metadata: {
+        entityType: 'product',
+        productId: entityId,
+        title,
+        price: raw.price || '',
+        category: raw.category || '',
+        sellingPoints: raw.sellingPoints || raw.selling_points || raw.description || '',
+        specs: raw.specs || [],
+        images: Array.isArray(raw.images) ? raw.images : (raw.image ? [raw.image] : []),
+        originUrl: raw.url || raw.link || raw.originUrl || '',
+        sourcePlatform: raw.sourcePlatform || 'internal',
+        agentContext: {
+          entityType: 'product',
+          summary: `产品名称：${title}；价格：${raw.price || '未标明'}；核心卖点：${raw.sellingPoints || raw.selling_points || raw.description || '无'}`,
+          details: raw,
+        },
+        product: raw,
+      },
     }
   }
 
-  if (card.lane === 'inspiration') {
+  if (lane === 'trending') {
+    const trendingData = card.trending || raw
+    const isImage = card.mediaType === 'image' || trendingData.type === 'image' || (trendingData.duration === 0 && !trendingData.videoUrl)
+    const previewUrl = card.thumbnailUrl || trendingData.cover || trendingData.thumbnailUrl || trendingData.coverUrl || ''
+    const extension = isImage ? 'JPG' : 'MP4'
+    const extLower = isImage ? 'jpg' : 'mp4'
+
+    return {
+      sourcePlugin: 'omnimux-inspiration',
+      kind: 'inspiration',
+      entityId,
+      title,
+      extension,
+      relativePath: raw.relativePath || `materials/trending/${entityId}.${extLower}`,
+      previewUrl,
+      duration: isImage ? undefined : (trendingData.duration ? formatDuration(trendingData.duration) : '15s'),
+      metadata: {
+        entityType: isImage ? 'trending_slideshow' : 'trending_video',
+        videoId: entityId,
+        title,
+        coverUrl: previewUrl,
+        videoUrl: isImage ? '' : (trendingData.videoUrl || ''),
+        metrics: trendingData.metrics || { views: trendingData.views, likes: trendingData.likes, engagementRate: trendingData.engagementRate },
+        breakdown: trendingData.breakdown || '',
+        script: trendingData.script || trendingData.transcript || '',
+        tags: trendingData.tags || [],
+        agentContext: {
+          entityType: isImage ? 'trending_slideshow' : 'trending_video',
+          summary: isImage
+            ? `爆款图文：${title}；类型：图文轮播 (Carousel)；播放量：${trendingData.views || '-'}；分镜拆解：${trendingData.breakdown || '无'}`
+            : `爆款视频：${title}；播放量：${trendingData.views || '-'}；分镜拆解：${trendingData.breakdown || '无'}`,
+          details: trendingData,
+        },
+        trending: trendingData,
+      },
+    }
+  }
+
+  if (lane === 'assets') {
+    const ext = inferExtension(title, raw.relativePath || raw.url || '', raw.extension || raw.format || card.formatText)
+    const previewUrl = card.thumbnailUrl || raw.thumbnailUrl || raw.url || ''
+    return {
+      sourcePlugin: 'omnimux',
+      kind: 'asset',
+      entityId,
+      title,
+      extension: ext,
+      relativePath: raw.relativePath || raw.path || `materials/assets/${entityId}.${ext.toLowerCase()}`,
+      previewUrl,
+      duration: raw.duration,
+      metadata: {
+        entityType: 'asset',
+        assetId: entityId,
+        fileType: raw.type,
+        url: raw.url || previewUrl,
+        dimensions: card.dimensionsOrSize || raw.dimensions,
+        duration: raw.duration,
+        summary: `素材资产：${title} (${raw.type || ext})`,
+        asset: raw,
+      },
+    }
+  }
+
+  if (lane === 'inspiration') {
     let kind = 'video'
     let extensionFallback = 'MP4'
     if (card.mediaType === 'image') {
@@ -566,31 +647,34 @@ export function adaptCardToAttachmentPayload(card) {
       extensionFallback = 'MP3'
     }
     const extension = card.formatText || extensionFallback
+    const previewUrl = card.thumbnailUrl || raw.thumbnailUrl || raw.coverUrl || raw.cover || ''
     return {
       sourcePlugin: 'omnimux-inspiration',
       kind,
-      entityId: card.id,
-      title: card.title,
+      entityId,
+      title,
       extension,
-      relativePath: raw.relativePath || `inspiration/${card.id}.${extension.toLowerCase()}`,
-      previewUrl: card.thumbnailUrl,
-      metadata: { inspiration: raw },
+      relativePath: raw.relativePath || `inspiration/${entityId}.${extension.toLowerCase()}`,
+      previewUrl,
+      duration: card.durationText || raw.duration,
+      metadata: {
+        entityType: 'template',
+        templateId: entityId,
+        categorySlug: raw.categorySlug || 'video',
+        prompt: raw.localizedPrompt || raw.prompt || '',
+        workflow: raw.workflow,
+        sourcePlatform: raw.sourcePlatform || 'creatify',
+        summary: `灵感模板：${title}`,
+        agentContext: {
+          entityType: 'template',
+          summary: `模板名称：${title}；分类：${raw.categorySlug || 'video'}；预置指令：${raw.localizedPrompt || raw.prompt || '无'}`,
+          details: raw,
+        },
+        inspiration: raw,
+      },
     }
   }
 
-  // 资产库 assets
-  return {
-    sourcePlugin: 'omnimux',
-    kind: 'asset',
-    entityId: card.id,
-    title: card.title,
-    extension: card.formatText || 'FILE',
-    relativePath: raw.relativePath || raw.path || `assets/${card.id}`,
-    previewUrl: card.thumbnailUrl,
-    metadata: {
-      duration: raw.duration,
-      dimensions: card.dimensionsOrSize,
-      asset: raw,
-    },
-  }
+  // featured (在素材工作台右栏规范中，模板属于纯 Prompt，绝不生成物理附件载荷)
+  return null
 }

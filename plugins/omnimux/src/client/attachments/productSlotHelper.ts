@@ -2,6 +2,8 @@
  * 产品槽位辅助逻辑：最近选择记录与快速排序
  */
 
+import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js';
+
 export const RECENT_PRODUCT_KEY = 'omx_recent_product_ids';
 
 export function getRecentProductIds(): string[] {
@@ -54,15 +56,6 @@ export function sortProductsForQuickMenu(products: any[], recentIds: string[], l
 }
 
 export function resolveProductThumbUrl(product: any): string {
-  if (!product) return '';
-  const cover = product.cover;
-  const coverId = cover?.id || product.cover_media_id;
-  if (coverId) {
-    return `/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(coverId)}`;
-  }
-  if (cover?.real_path) {
-    return `file://${cover.real_path}`;
-  }
-  return '';
+  return resolveProductPreview(product);
 }
 

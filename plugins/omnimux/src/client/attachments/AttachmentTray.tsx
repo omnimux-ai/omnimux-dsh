@@ -20,6 +20,7 @@ import { getGlobalQuickShortcutStore } from '../composer-quick-shortcuts/store.j
 import { buildQuickLinkSlots, quickLinkLabels, quickLinkEntryLabels } from '../composer-quick-shortcuts/links.js';
 import { resolveComposerSessionId } from '../composer-quick-shortcuts/session.js';
 import { AttachmentPreviewModal, type PreviewTarget } from './AttachmentPreviewModal.tsx';
+import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js';
 import {
   NativeAttachmentCard,
   resolveNativeTitle,
@@ -371,15 +372,9 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const handleAddProductAttachment = useCallback(
     (product: any) => {
       if (!product) return;
+      const previewUrl = resolveProductPreview(product);
       const cover = product.cover;
-      const coverId = cover?.id || product.cover_media_id;
-      const previewUrl = coverId
-        ? `/omnimux/products/${encodeURIComponent(product.id)}?preview=${encodeURIComponent(coverId)}`
-        : cover?.real_path
-          ? `file://${cover.real_path}`
-          : '';
-
-      const relativePath = cover?.real_path || `products/${product.id}.json`;
+      const relativePath = (cover && typeof cover === 'object' && cover.real_path) || `products/${product.id}.json`;
 
       store.addAttachment(currentSessionId, {
         sourcePlugin: 'omnimux-products',
