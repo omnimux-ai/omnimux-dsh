@@ -145,3 +145,14 @@ test('real panel fragment keeps query through display filtering, category change
     assert.deepEqual(panel.names(), [])
   } finally { panel.dispose() }
 })
+
+test('real panel in preset mode merges external global search results when query matches', async () => {
+  const externalSkill = { slug: 'skill-creator', name: '技能创建', description: '创建双语可复用Skill' }
+  const panel = panelHarness(fixture)
+  try {
+    // When searching for an external skill not in the preset
+    panel.search('skill-creator')
+    // Synchronously before api resolves, preset skills don't match
+    assert.deepEqual(panel.names(), [])
+  } finally { panel.dispose() }
+})

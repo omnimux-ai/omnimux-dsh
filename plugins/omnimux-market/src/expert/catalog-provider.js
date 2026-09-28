@@ -190,6 +190,38 @@ export function createCatalogSkillProvider(opts = {}) {
         })
       }
 
+      // 4. Local installed skills under $DSH_HOME/skills (e.g. installed from SkillHub / GitHub)
+      const localSkillsDir = join(home, 'skills')
+      if (existsSync(localSkillsDir)) {
+        try {
+          for (const ent of readdirSync(localSkillsDir)) {
+            if (ent.startsWith('.')) continue
+            const dir = join(localSkillsDir, ent)
+            const skillMd = join(dir, 'SKILL.md')
+            if (existsSync(skillMd)) {
+              const key = ent.toLowerCase()
+              if (seen.has(key)) continue
+              seen.add(key)
+              const content = readFileSync(skillMd, 'utf8')
+              const desc = extractDescription(content) || ent
+              candidates.push({
+                name: ent,
+                description: desc,
+                whenToUse: desc,
+                invocation: {
+                  modelInvocable: false,
+                  userInvocable: true,
+                },
+                source: 'omnimux-installed',
+                provider: PROVIDER_NAME,
+                rank: CATALOG_RANK,
+                locator: ent,
+              })
+            }
+          }
+        } catch {}
+      }
+
       return { candidates, complete: true }
     },
 

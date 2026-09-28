@@ -197,7 +197,8 @@ async function handleSearch(ctx: ApiContext): Promise<void> {
   const explicit = Number(body.limit)
   const limit = Number.isFinite(explicit) && explicit > 0 ? clamp(explicit, 1, 80) : cfg.maxResults
   const offset = Math.max(0, Math.floor(Number(body.offset) || 0))
-  const installed = await installedSlugs(cfg.skillsDir)
+  const installedList = await listInstalled(cfg.skillsDir)
+  const installed = new Set(installedList.map((it) => String(it.slug || '').trim().toLowerCase()).filter(Boolean))
   const result = await aggregateSkillSearch(query, {
     cfg,
     queries: body.queries,
@@ -206,6 +207,7 @@ async function handleSearch(ctx: ApiContext): Promise<void> {
     limit,
     offset,
     installed,
+    installedSkills: installedList,
     channels: body.channels,
   })
   void attachRatings(result.items, cfg).catch(() => {})

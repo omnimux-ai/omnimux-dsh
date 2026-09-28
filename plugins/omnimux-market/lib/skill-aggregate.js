@@ -34,9 +34,32 @@ export async function aggregateSkillSearch(query, opts) {
     const channelCounts = {};
     const channelErrors = {};
     const channelsServed = [];
-    const catalog = want.has('custom') || want.has('workbuddy')
+    const rawCatalog = want.has('custom') || want.has('workbuddy')
         ? (opts.catalog || (opts.loadCatalog || loadCatalogDefault)())
         : { items: [] };
+    const catalog = {
+        ...rawCatalog,
+        items: [...(rawCatalog.items || [])],
+    };
+    if (Array.isArray(opts.installedSkills) && opts.installedSkills.length) {
+        const existing = new Set(catalog.items.map((it) => String(it.skill || it.id).toLowerCase()));
+        for (const inst of opts.installedSkills) {
+            const slug = String(inst.slug || '').trim().toLowerCase();
+            if (!slug || existing.has(slug) || existing.has(`sk-omx-${slug}`))
+                continue;
+            catalog.items.push({
+                id: `sk-omx-${slug}`,
+                title: inst.name || slug,
+                summary: inst.description || '',
+                category: 'custom',
+                kind: 'skill',
+                tab: 'skills',
+                skill: slug,
+                source: { type: 'bundled' },
+            });
+            existing.add(slug);
+        }
+    }
     const custom = want.has('custom')
         ? rankCatalogChannel(catalog, 'custom', tokens, category, cfg, installed)
         : [];
