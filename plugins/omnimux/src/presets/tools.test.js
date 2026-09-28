@@ -104,18 +104,17 @@ test('Marketing Presets Tool: 工具注册与 Schema 契约校验', async () => 
   assert.ok(tool.parameters.properties.query)
   assert.ok(tool.parameters.properties.limit)
 
-  // 执行空参调用测试
-  const emptyExec = await tool.execute('call_1', {})
+  // 宿主签名：execute(args, exec)
+  const emptyExec = await tool.execute({}, { callId: 'call_host', signal: null })
   assert.equal(emptyExec.ok, true)
   assert.ok(emptyExec.total > 100)
   assert.equal(emptyExec.items.length, 10)
 
-  // 执行带条件调用测试
-  const searchExec = await tool.execute('call_2', {
+  const searchExec = await tool.execute({
     dimension: 'hook',
     query: '自拍',
     limit: 5,
-  })
+  }, { callId: 'call_host', signal: null })
   assert.equal(searchExec.ok, true)
   assert.ok(searchExec.total >= 1)
   assert.ok(searchExec.items.length <= 5)
