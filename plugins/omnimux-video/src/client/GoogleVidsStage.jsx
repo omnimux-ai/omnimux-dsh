@@ -2,37 +2,19 @@ import React, { useState, useEffect, useRef } from 'react'
 import { resolveVeoMode, VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
 import { useVeoTaskFeed } from './useVeoTaskFeed.js'
 
-function safePortal(node, container) {
-  if (!container) return node
-  try {
-    const rd = typeof window !== 'undefined'
-      ? (window.ReactDOM || (typeof require === 'function' ? require('react-dom') : null))
-      : null
-    if (rd && typeof rd.createPortal === 'function') {
-      return rd.createPortal(node, container)
-    }
-  } catch {}
-  return node
-}
-
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
-.dshDesktopConversationSurface {
-  position: relative !important;
-}
 .omnimux-vids-stage {
-  position: absolute !important;
-  inset: 0 !important;
+  position: relative !important;
   width: 100% !important;
   height: 100% !important;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
   box-sizing: border-box;
   overflow: hidden;
   pointer-events: auto;
-  z-index: 50;
 }
 .gvids-header {
   display: flex;
@@ -456,6 +438,15 @@ export function GoogleVidsStage(props) {
   const handleCloseStage = () => {
     if (typeof window !== 'undefined') {
       try {
+        if (typeof props?.layout?.selectPanel === 'function') {
+          props.layout.selectPanel(null)
+        } else if (typeof window.__omnimuxWorkbench?.layout?.selectPanel === 'function') {
+          window.__omnimuxWorkbench.layout.selectPanel(null)
+        } else if (typeof window.__omnimuxLayout?.selectPanel === 'function') {
+          window.__omnimuxLayout.selectPanel(null)
+        }
+      } catch {}
+      try {
         if (window.__omnimuxStage && typeof window.__omnimuxStage.release === 'function') {
           window.__omnimuxStage.release('omnimux-vids')
         }
@@ -806,11 +797,7 @@ export function GoogleVidsStage(props) {
     </div>
   )
 
-  const convTarget = typeof document !== 'undefined'
-    ? document.querySelector('.dshDesktopConversationSurface')
-    : null
-
-  return safePortal(content, convTarget)
+  return content
 }
 
 export default GoogleVidsStage
