@@ -28,10 +28,13 @@ import {
   waitForTerminal,
   summarizeNodes,
   WORKSPACE_ID_PARAM_DESC,
+  extractSessionContext,
 } from './agentToolShared.ts';
+import { sessionToWorkspaceId } from '../../shared/sessionWorkspaceId.ts';
+import type { WorkspaceSummary } from '../../shared/canvasTypes.ts';
 
 export function createWorkflowListTool(deps: WorkflowAgentDeps): AgentToolSpec {
-  const { store, executionManager } = deps;
+  const { store, executionManager, projectStore, resolveSessionWorkspaceDir } = deps;
   return {
     name: 'workflow_list',
     description:
@@ -43,8 +46,50 @@ export function createWorkflowListTool(deps: WorkflowAgentDeps): AgentToolSpec {
       },
     }),
     output: jsonOut,
-    async execute(args) {
-      const workspaces = store.list();
+    async execute(args, exec?: unknown) {
+      const sessionContext = extractSessionContext(exec);
+      let workspaceDir = sessionContext.workspaceDir;
+      if (!workspaceDir && sessionContext.sessionId && resolveSessionWorkspaceDir) {
+        try {
+          workspaceDir = resolveSessionWorkspaceDir(sessionContext.sessionId);
+        } catch {
+          // ignore
+        }
+      }
+
+      let workspaces: WorkspaceSummary[] = [];
+
+      if (projectStore && workspaceDir) {
+        const project = projectStore.findByRoot(workspaceDir);
+        if (project) {
+          const projectCanvasIds = new Set([
+            ...(project.canvasWorkspaceIds || []),
+            ...(project.pages || []).map((p) => p.canvasWorkspaceId).filter(Boolean),
+          ]);
+          const allWorkspaces = store.list();
+          workspaces = allWorkspaces.filter((w) => projectCanvasIds.has(w.id));
+          const foundIds = new Set(workspaces.map((w) => w.id));
+          for (const page of project.pages || []) {
+            if (page.canvasWorkspaceId && !foundIds.has(page.canvasWorkspaceId)) {
+              workspaces.push({
+                id: page.canvasWorkspaceId,
+                name: page.title || '创作页',
+                version: 0,
+                nodeCount: 0,
+                updatedAt: page.updatedAt || page.createdAt || new Date().toISOString(),
+              });
+            }
+          }
+        } else if (sessionContext.sessionId) {
+          const defWsId = sessionToWorkspaceId(sessionContext.sessionId);
+          if (defWsId) {
+            workspaces = store.list().filter((w) => w.id === defWsId);
+          }
+        }
+      } else {
+        workspaces = store.list();
+      }
+
       if (!readBoolean(args, 'include_executions')) {
         return { workspaces };
       }

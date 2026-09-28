@@ -224,6 +224,8 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
       disposers.push(
         registerWorkflowAgentSeats(ctx, {
           store,
+          projectStore,
+          resolveSessionWorkspaceDir: readSessionWorkspaceDir,
           resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
           executionManager,
           mediaDir: paths.mediaDir,

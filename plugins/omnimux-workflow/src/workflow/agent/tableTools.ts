@@ -9,7 +9,8 @@ import {
 import { buildTableDocument, tableDocumentToLlmContent, shortId } from '../../shared/types/htable.ts';
 import {
   errorBody, jsonOut, readString, readPosition, defaultNodePosition, withWorkspace,
-  resolveTargetWorkspaceId, WORKSPACE_ID_PARAM_DESC,
+  resolveTargetWorkspaceId, resolveWorkspace, WORKSPACE_ID_PARAM_DESC,
+  extractSessionContext, bindCanvasWorkspaceProject,
 } from './agentToolShared.ts';
 import { mutateWorkspaceGraph } from '../graph/GraphMutator.ts';
 
@@ -97,7 +98,7 @@ export function createCanvasWriteTableNodeTool(deps: WorkflowAgentDeps): AgentTo
       required: ['columns', 'rows'],
     },
     output: { schema: { type: 'object' }, render: jsonOut.render },
-    async execute(args) {
+    async execute(args, exec?: unknown) {
       const existingNodeId = readString(args, 'node_id');
       const isReplace = Boolean(existingNodeId);
       const nodeId = existingNodeId || `tbl_${shortId()}`;
@@ -112,7 +113,13 @@ export function createCanvasWriteTableNodeTool(deps: WorkflowAgentDeps): AgentTo
       } catch (err) {
         return errorBody('invalid-args', err instanceof Error ? err.message : String(err));
       }
-      const target = resolveTargetWorkspaceId(store, args, { getActiveView: deps.getActiveView });
+      const sessionContext = extractSessionContext(exec);
+      const target = resolveTargetWorkspaceId(store, args, {
+        getActiveView: deps.getActiveView,
+        projectStore: deps.projectStore,
+        resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
+        sessionContext,
+      });
       if ('error' in target) {
         return target.error === 'no-current-workspace'
           ? errorBody('no-current-workspace', '未指定 workspace_id 且未打开任何工作流') : target;
@@ -153,6 +160,8 @@ export function createCanvasWriteTableNodeTool(deps: WorkflowAgentDeps): AgentTo
             ? { nodePatches: [{ nodeId, data }] }
             : { addNodes: [{ id: nodeId, type: 'table', position: readPosition(args) ?? defaultNodePosition(snapshot), data }] });
           if (!result.ok) return errorBody(result.error, result.message);
+          // 会话默认画布上首次落内容时登记（Issue #2104）
+          void bindCanvasWorkspaceProject(deps, workspaceId, doc.title, sessionContext);
           return {
             ok: true, nodeId, tablePath: tableRelPath, title: doc.title,
             columnCount: doc.columns.length, rowCount: doc.rows.length,
@@ -182,10 +191,16 @@ export function createCanvasGetTableNodeTool(deps: WorkflowAgentDeps): AgentTool
       },
     },
     output: { schema: { type: 'object' }, render: jsonOut.render },
-    async execute(args) {
+    async execute(args, exec?: unknown) {
       try {
         const tableId = readTableId(readString(args, 'node_id'), readString(args, 'table_path'));
-        const target = resolveTargetWorkspaceId(store, args, { getActiveView: deps.getActiveView });
+        const sessionContext = extractSessionContext(exec);
+        const target = resolveTargetWorkspaceId(store, args, {
+          getActiveView: deps.getActiveView,
+          projectStore: deps.projectStore,
+          resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
+          sessionContext,
+        });
         if ('error' in target) {
           return target.error === 'no-current-workspace'
             ? errorBody('no-current-workspace', '未指定 workspace_id 且未打开任何工作流') : target;

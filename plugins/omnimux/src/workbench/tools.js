@@ -152,7 +152,14 @@ export function mountWorkbenchTools(ctx, deps) {
         return { ok: true, applied: false, code: 'panel-collapsed' }
       }
 
-      if (surface && surface.tabId === tabId) {
+      // 细粒度比对：如果请求携带了具体画布 ID 或过滤器变更，不能当作 already-active 拦截
+      const targetWorkspaceId = view?.extra?.workspaceId || view?.workspaceId || view?.canvasWorkspaceId
+      const currentWorkspaceId = currentView?.uiContext?.view?.extra?.workspaceId || currentView?.uiContext?.view?.workspaceId
+      const isWorkspaceSwitch = Boolean(targetWorkspaceId && (!currentWorkspaceId || targetWorkspaceId !== currentWorkspaceId))
+      const hasHighlights = Array.isArray(highlightIds) && highlightIds.length > 0
+      const hasFilterChange = Boolean(view?.filterType && view.filterType !== currentView?.uiContext?.view?.filterType)
+
+      if (surface && surface.tabId === tabId && !isWorkspaceSwitch && !hasHighlights && !hasFilterChange) {
         return { ok: true, applied: true, code: 'already-active' }
       }
 

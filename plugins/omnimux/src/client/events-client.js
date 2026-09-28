@@ -54,13 +54,20 @@ export function createEventsClient(options = {}) {
 
   async function handleRpc(payload) {
     const requestGeneration = generation
-    const { requestId, tabId, path } = payload
+    const { requestId, tabId, path, view, meta, highlightIds } = payload
     const wb = getWorkbench()
     let applied = false
     let code = 'no-workbench'
     if (wb && typeof wb.open === 'function') {
       try {
-        applied = Boolean(await wb.open({ tabId, path: path || tabId, preserveLayout: true }))
+        applied = Boolean(await wb.open({
+          tabId,
+          path: path || tabId,
+          view,
+          meta,
+          highlightIds,
+          preserveLayout: true,
+        }))
         code = applied ? 'opened' : 'open-failed'
       } catch (error) {
         console.error('[EventsClient] RPC open failed:', error)

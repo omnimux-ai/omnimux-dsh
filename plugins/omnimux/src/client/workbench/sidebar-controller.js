@@ -278,6 +278,10 @@ export async function openWorkbench(opts = {}) {
   if (typeof opts.id === 'string' && opts.id) payload.id = opts.id
   if (opts.meta && typeof opts.meta === 'object') payload.meta = opts.meta
   if (opts.extra && typeof opts.extra === 'object') payload.extra = opts.extra
+  if (opts.view && typeof opts.view === 'object') {
+    payload.view = opts.view
+    payload.meta = { ...payload.meta, ...opts.view }
+  }
   // A provider may have unloaded while session/registration readiness was awaited.
   if (getWorkbenchService() !== service || !contextIsCurrent()) return false
   if (await service.openTab(payload, openScope) === false) return false
@@ -285,6 +289,17 @@ export async function openWorkbench(opts = {}) {
     || service.getSnapshot?.()?.sessionId !== sessionId) return false
 
   // Commit only after the same provider has opened in the captured session.
+  if (payload.meta && typeof service.updateTab === 'function') {
+    try { service.updateTab(payload.id || tabId, { meta: payload.meta }) } catch {}
+  }
+  const targetWsId = opts.view?.extra?.workspaceId || opts.view?.workspaceId || opts.view?.canvasWorkspaceId || opts.meta?.canvasWorkspaceId
+  if (targetWsId && typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('omnimux:active-canvas-changed', {
+        detail: { workspaceId: targetWsId, sessionId },
+      }))
+    } catch {}
+  }
   for (const tab of listOpenTabs(service.getSnapshot?.()?.state)) {
     if (seedIds.has(tab.id) && tab.id !== payload.id && isSeedFilesTab(tab)) {
       try { service.closeTab?.(tab.id, openScope) } catch { /* ignore */ }
