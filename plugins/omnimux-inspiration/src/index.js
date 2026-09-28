@@ -194,7 +194,7 @@ export function apply(ctx) {
     return undefined
   }
 
-  const socialFetcher = createSocialFetcher({ getTool, fallback: ctx.fallback || fallbackResolveSocial })
+  const socialFetcher = createSocialFetcher({ getTool, fallback: fallbackResolveSocial })
 
   // Video analyze tool: exclusively consumes omnimux-video tool video_analyze
   const videoAnalyzeTool = {
