@@ -2,6 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { readVidsCenterBox } from './vids-stage-box.js'
 import { createVeoTask, fetchVeoTask } from './veo-api.js'
 import { resolveVeoMode, VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
+import { seedVeoTask } from '../shared/veoTaskSeed.js'
 
 const STAGE_STYLES_ID = 'omnimux-vids-stage-styles'
 const STAGE_STYLES = `
@@ -545,24 +546,33 @@ export function GoogleVidsStage(props) {
     setAttachedAsset(asset)
   }
 
+  const failOptimistic = (id, message) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? { ...t, status: 'failed', progress: 0, message, error: message }
+          : t
+      )
+    )
+  }
+
   // 触发生成任务：走 Host /omnimux-video/api/veo → opencli veoHeadlessDriver
   const handleSubmitTask = async () => {
     if (!isEditorReady || !promptText.trim()) return
 
     const prompt = promptText.trim()
     const optimisticId = `task_pending_${Date.now()}`
-    setTasks((prev) => [
-      {
-        id: optimisticId,
-        title: prompt.slice(0, 16),
-        status: 'generating',
-        progress: 2,
-        durationSec: VEO_TASK_SPEC.durationSec.fallback,
-        resolution: VEO_TASK_SPEC.resolution,
-        message: '正在提交生成任务…',
-      },
-      ...prev,
-    ])
+    const optimistic = seedVeoTask({
+      id: optimisticId,
+      prompt,
+      mode: currentMode,
+      durationSec: VEO_TASK_SPEC.durationSec.fallback,
+      status: 'generating',
+      progress: 2,
+      phase: 'submitting',
+      message: '正在提交生成任务…',
+    })
+    setTasks((prev) => [optimistic, ...prev])
 
     try {
       const created = await createVeoTask({
@@ -572,32 +582,27 @@ export function GoogleVidsStage(props) {
       })
       if (!created.ok || !created.body?.task?.id) {
         const message = created.body?.message || `提交失败（HTTP ${created.status}）`
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === optimisticId
-              ? { ...t, status: 'failed', progress: 0, message, error: message }
-              : t
-          )
-        )
+        failOptimistic(optimisticId, message)
         // 失败保留输入，便于微调后重试（PRD 异常防御）
         return
       }
 
       const remote = created.body.task
       setPromptText('')
+      // Replace optimistic placeholder with the remote snapshot (title/duration/resolution come from seed).
       setTasks((prev) =>
         prev.map((t) =>
           t.id === optimisticId
             ? {
-                ...t,
-                id: remote.id,
-                status: remote.status === 'completed' ? 'completed' : 'generating',
-                progress: remote.progress ?? 3,
-                title: remote.title || t.title,
-                message: remote.message,
-                videoUrl: remote.videoUrl,
-                durationSec: remote.durationSec || VEO_TASK_SPEC.durationSec.fallback,
-                resolution: remote.resolution || VEO_TASK_SPEC.resolution,
+                ...remote,
+                // Keep UI-only fields the Host does not own.
+                isUpscaled: t.isUpscaled,
+                isUpscaling: t.isUpscaling,
+                status: remote.status === 'completed'
+                  ? 'completed'
+                  : remote.status === 'failed'
+                    ? 'failed'
+                    : 'generating',
               }
             : t
         )
@@ -650,13 +655,7 @@ export function GoogleVidsStage(props) {
       activeTimersRef.current.set(taskId, timer)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === optimisticId
-            ? { ...t, status: 'failed', progress: 0, message, error: message }
-            : t
-        )
-      )
+      failOptimistic(optimisticId, message)
     }
   }
 
