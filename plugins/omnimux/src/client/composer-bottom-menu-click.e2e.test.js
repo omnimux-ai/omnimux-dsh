@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { JSDOM } from 'jsdom'
-import { ensurePlacementStyles, syncMenuPlacement } from './composer-commands-i18n.js'
+import {
+  ensurePlacementStyles,
+  syncMenuPlacement,
+  dismissPlusMenu,
+  installMenuAutoSync,
+  COMPOSER_OVERLAY_OPEN_EVENT,
+  COMPOSER_OVERLAY_DISMISS_EVENT,
+} from './composer-commands-i18n.js'
 
 describe('e2e: 首页沉底指令菜单可点', () => {
   it('沉底且菜单盖在灵感卡片上时，菜单项仍可接收点击', () => {
@@ -92,5 +99,86 @@ describe('e2e: 加号菜单跟随输入框位置', () => {
     assert.equal(anchor.dataset.overlayPlacement, undefined)
     assert.equal(anchor.style.pointerEvents, '')
     assert.equal(anchor.style.position, '')
+  })
+})
+
+describe('e2e: 输入框底栏浮层单例互斥 (Overlay Mutual Exclusion)', () => {
+  it('加号菜单展开时，点击技能按钮会自动触发加号菜单收起', () => {
+    const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
+      <div data-composer-card>
+        <button class="Q7WfXG_add" aria-haspopup="listbox" aria-expanded="true" aria-label="指令"></button>
+        <button data-omnimux-skill-picker class="sh-picker-trigger">技能</button>
+        <div class="overlayAnchor">
+          <div data-trigger-menu class="iRJKyq_menu">
+            <button role="option">上传媒体或文件</button>
+          </div>
+        </div>
+      </div>
+    </body></html>`)
+    const doc = dom.window.document
+    let dismissed = false
+    const plusBtn = doc.querySelector('button[aria-haspopup="listbox"]')
+    plusBtn.addEventListener('click', () => {
+      dismissed = true
+      plusBtn.setAttribute('aria-expanded', 'false')
+    })
+
+    const cleanup = installMenuAutoSync(doc)
+    const skillBtn = doc.querySelector('button[data-omnimux-skill-picker]')
+
+    // 模拟用户在技能按钮上触发 pointerdown（捕获阶段先于 click 运行）
+    const event = new dom.window.PointerEvent('pointerdown', { bubbles: true, cancelable: true })
+    skillBtn.dispatchEvent(event)
+
+    assert.equal(dismissed, true, '加号按钮的收起 click 必须被自动调用')
+    assert.equal(plusBtn.getAttribute('aria-expanded'), 'false', '加号按钮必须恢复未展开态')
+    cleanup()
+  })
+
+  it('收到其他浮层打开的广播事件时，展开态加号菜单自动收起', () => {
+    const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
+      <div data-composer-card>
+        <button class="Q7WfXG_add" aria-haspopup="listbox" aria-expanded="true" aria-label="指令"></button>
+      </div>
+    </body></html>`)
+    const doc = dom.window.document
+    let dismissed = false
+    const plusBtn = doc.querySelector('button[aria-haspopup="listbox"]')
+    plusBtn.addEventListener('click', () => {
+      dismissed = true
+      plusBtn.setAttribute('aria-expanded', 'false')
+    })
+
+    const cleanup = installMenuAutoSync(doc)
+
+    // 广播技能面板打开
+    dom.window.dispatchEvent(new dom.window.CustomEvent(COMPOSER_OVERLAY_OPEN_EVENT, {
+      detail: { id: 'skill-picker' }
+    }))
+
+    assert.equal(dismissed, true, '加号菜单必须响应广播并收起')
+    cleanup()
+  })
+
+  it('点击加号按钮时，会广播 plus-menu 打开事件以收起其它活跃浮层', () => {
+    const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body>
+      <div data-composer-card>
+        <button class="Q7WfXG_add" aria-haspopup="listbox" aria-expanded="false" aria-label="指令"></button>
+      </div>
+    </body></html>`)
+    const doc = dom.window.document
+    let receivedOverlayId = null
+    dom.window.addEventListener(COMPOSER_OVERLAY_OPEN_EVENT, (e) => {
+      receivedOverlayId = e.detail?.id
+    })
+
+    const cleanup = installMenuAutoSync(doc)
+    const plusBtn = doc.querySelector('button[aria-haspopup="listbox"]')
+
+    const event = new dom.window.PointerEvent('pointerdown', { bubbles: true, cancelable: true })
+    plusBtn.dispatchEvent(event)
+
+    assert.equal(receivedOverlayId, 'plus-menu', '点击加号必须广播 plus-menu 打开意图')
+    cleanup()
   })
 })

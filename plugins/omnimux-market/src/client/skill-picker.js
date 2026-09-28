@@ -528,6 +528,26 @@
         setOpen(false);
       }, []);
 
+      useEffect(() => {
+        if (typeof window === "undefined") return undefined;
+        const onOverlayOpen = (e) => {
+          if (e?.detail?.id !== "skill-picker") {
+            close();
+          }
+        };
+        const onOverlayDismiss = (e) => {
+          if (!e?.detail?.id || e?.detail?.id === "skill-picker") {
+            close();
+          }
+        };
+        window.addEventListener("omnimux:composer:overlay:open", onOverlayOpen);
+        window.addEventListener("omnimux:composer:overlay:dismiss", onOverlayDismiss);
+        return () => {
+          window.removeEventListener("omnimux:composer:overlay:open", onOverlayOpen);
+          window.removeEventListener("omnimux:composer:overlay:dismiss", onOverlayDismiss);
+        };
+      }, [close]);
+
       const clearActiveSkill = useCallback(() => {
         setActiveSkill(null);
         if (typeof window !== "undefined") {
@@ -628,7 +648,20 @@
             "aria-haspopup": "dialog",
             "aria-expanded": open ? "true" : "false",
             "data-omnimux-skill-picker": "",
-            onClick: () => { if (open) close(); else setOpen(true); },
+            onClick: () => {
+              if (open) {
+                close();
+              } else {
+                if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+                  try {
+                    window.dispatchEvent(new CustomEvent("omnimux:composer:overlay:open", {
+                      detail: { id: "skill-picker" },
+                    }));
+                  } catch {}
+                }
+                setOpen(true);
+              }
+            },
           },
             renderBookOpenIcon(16),
             h("span", { className: "sh-picker-trigger-label" }, tr("picker.title")),

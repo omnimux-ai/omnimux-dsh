@@ -279,6 +279,42 @@
       const btnRef = useRef(null);
       const sessions = typeof plazaSessions !== "undefined" ? plazaSessions : null;
 
+      const close = useCallback(() => setOpen(false), []);
+
+      useEffect(() => {
+        if (typeof window === "undefined") return undefined;
+        const onOverlayOpen = (e) => {
+          if (e?.detail?.id !== "model-picker") {
+            close();
+          }
+        };
+        const onOverlayDismiss = (e) => {
+          if (!e?.detail?.id || e?.detail?.id === "model-picker") {
+            close();
+          }
+        };
+        window.addEventListener("omnimux:composer:overlay:open", onOverlayOpen);
+        window.addEventListener("omnimux:composer:overlay:dismiss", onOverlayDismiss);
+        return () => {
+          window.removeEventListener("omnimux:composer:overlay:open", onOverlayOpen);
+          window.removeEventListener("omnimux:composer:overlay:dismiss", onOverlayDismiss);
+        };
+      }, [close]);
+
+      const toggleOpen = useCallback(() => {
+        setOpen((cur) => {
+          const next = !cur;
+          if (next && typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+            try {
+              window.dispatchEvent(new CustomEvent("omnimux:composer:overlay:open", {
+                detail: { id: "model-picker" },
+              }));
+            } catch {}
+          }
+          return next;
+        });
+      }, []);
+
       const [sessionId, setSessionId] = useState(() => {
         return (props && props.sessionId) ||
           (sessions && sessions.list && typeof sessions.list.getSnapshot === "function" && sessions.list.getSnapshot().current) ||
@@ -491,7 +527,7 @@
           "aria-haspopup": "dialog",
           "aria-expanded": open ? "true" : "false",
           "data-omnimux-model-capsule": "",
-          onClick: () => setOpen((v) => !v),
+          onClick: toggleOpen,
         },
           renderBrandIcon(selectedModel.icon || selectedModel.id, 14),
           h("span", { className: "sh-model-capsule-name" }, selectedModel.capsuleName || selectedModel.name),
@@ -504,7 +540,7 @@
           "aria-haspopup": "dialog",
           "aria-expanded": open ? "true" : "false",
           "data-omnimux-model-picker": "",
-          onClick: () => setOpen((v) => !v),
+          onClick: toggleOpen,
         },
           renderModelLayersIcon(16),
           h("span", { className: "sh-picker-trigger-label" }, tr("modelPicker.title") || "模型"),
@@ -518,7 +554,7 @@
           catalogStatus,
           onToggleAuto: handleToggleAuto,
           onSelectModel: handleSelectModel,
-          onClose: () => setOpen(false),
+          onClose: close,
           t: tr,
         }),
       );
