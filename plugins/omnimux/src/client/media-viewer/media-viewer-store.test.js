@@ -159,8 +159,8 @@ test('media-viewer-store: session binding, deduplication and session-scoped filt
   const sessionB = 'session-black-theme-456';
 
   // Add media in session A
-  const itemA1 = store.addMedia({ url: 'http://example.com/a1.jpg', title: 'A1关键帧', sessionId: sessionA });
-  const itemA2 = store.addMedia({ url: 'http://example.com/a2.jpg', title: 'A2关键帧', sessionId: sessionA });
+  const itemA1 = store.addMedia({ url: 'http://example.com/a1.jpg', title: 'A1关键帧', sessionId: sessionA, groupId: 'grp_A' });
+  const itemA2 = store.addMedia({ url: 'http://example.com/a2.jpg', title: 'A2关键帧', sessionId: sessionA, groupId: 'grp_A' });
 
   // Add media in session B
   const itemB1 = store.addMedia({ url: 'http://example.com/b1.jpg', title: 'B1黑色图表', sessionId: sessionB });
@@ -176,7 +176,7 @@ test('media-viewer-store: session binding, deduplication and session-scoped filt
   assert.equal(listB[0].id, itemB1.id);
 
   // Verify deduplication within same session
-  store.addMedia({ url: 'http://example.com/a1.jpg', title: 'A1更新标题', sessionId: sessionA });
+  store.addMedia({ url: 'http://example.com/a1.jpg', title: 'A1更新标题', sessionId: sessionA, groupId: 'grp_A' });
   assert.equal(store.getMediaList(sessionA).length, 2);
   assert.equal(store.getMediaList(sessionA)[0].title, 'A1更新标题');
 

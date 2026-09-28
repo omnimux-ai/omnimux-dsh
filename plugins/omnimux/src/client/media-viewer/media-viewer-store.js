@@ -33,6 +33,20 @@ export function formatTimelineDate(ts) {
   return `${y}年${m}月${d}日 ${hh}:${mm}`;
 }
 
+/**
+ * 解析并规范化媒体长宽比为 9:16, 16:9, 1:1 白名单
+ * @param {string} [raw]
+ * @returns {'9:16' | '16:9' | '1:1'}
+ */
+export function parseMediaRatio(raw) {
+  if (!raw || typeof raw !== 'string') return '1:1';
+  const trimmed = raw.trim();
+  if (trimmed === '9:16' || trimmed === '9/16' || trimmed === 'vertical' || trimmed === 'portrait') return '9:16';
+  if (trimmed === '16:9' || trimmed === '16/9' || trimmed === 'horizontal' || trimmed === 'landscape') return '16:9';
+  if (trimmed === '1:1' || trimmed === '1/1' || trimmed === 'square') return '1:1';
+  return '1:1';
+}
+
 export function createMediaViewerStore(initialState = {}) {
   let state = {
     mediaList: initialState.mediaList || [],
@@ -141,14 +155,22 @@ export function createMediaViewerStore(initialState = {}) {
       notify();
     },
 
-    /** @param {{ sessionId: string, requestId: string, status: string, media?: MediaItem[] }} task */
+    /** @param {{ sessionId: string, requestId: string, status: string, aspectRatio?: string, ratio?: string, params?: { aspectRatio?: string }, media?: MediaItem[] }} task */
     updateGeneration(task) {
       if (!task.sessionId || !task.requestId) return;
-      if (task.status === 'success' && !task.media?.some((item) => item.url || item.attachment?.attachmentId || (item.type === 'video' && typeof item.path === 'string' && item.path.length))) return;
       const index = state.generationTasks.findIndex((item) => item.sessionId === task.sessionId && item.requestId === task.requestId);
       const previous = state.generationTasks[index];
-      if (previous && ['success', 'failure', 'cancelled', 'unresolved'].includes(previous.status)) return;
-      const next = { ...previous, ...task };
+      const media = [...(previous?.media || [])];
+      const sourceKey = (item) => item.url || item.attachment?.attachmentId || (item.type === 'video' && item.path);
+      for (const item of task.media || []) {
+        const key = sourceKey(item);
+        if (key && !media.some((existing) => sourceKey(existing) === key)) media.push(item);
+      }
+      if (task.status === 'success' && !media.length) return;
+      const terminal = previous && ['success', 'failure', 'cancelled'].includes(previous.status);
+      const status = terminal ? previous.status : task.status || previous?.status;
+      const ratio = previous?.ratio || parseMediaRatio(task.ratio || task.aspectRatio || task.params?.aspectRatio);
+      const next = { ...previous, ...task, status, ratio, media };
       const tasks = [...state.generationTasks];
       if (index < 0) tasks.push(next);
       else tasks[index] = next;
@@ -157,10 +179,18 @@ export function createMediaViewerStore(initialState = {}) {
     },
 
     setGenerating(isGenerating, generatingTask = null) {
+      let resolvedTask = generatingTask;
+      if (generatingTask && typeof generatingTask === 'object') {
+        const rawRatio = generatingTask.ratio || generatingTask.aspectRatio || generatingTask.params?.aspectRatio;
+        resolvedTask = {
+          ...generatingTask,
+          ratio: parseMediaRatio(rawRatio),
+        };
+      }
       state = {
         ...state,
         isGenerating: Boolean(isGenerating),
-        generatingTask,
+        generatingTask: resolvedTask,
       };
       notify();
     },

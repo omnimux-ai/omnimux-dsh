@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from 'dsh-ui-kit';
-import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 
-const labels = {
-  pending: '已提交，等待生成工具启动',
-  running: '正在处理生成请求',
-  unresolved: '请在对话中查看结果',
-  failure: '未能生成',
-  cancelled: '已取消生成',
-  success: '生成完成',
-};
+import { InPlaceTaskSlot } from './InPlaceTaskSlot.jsx';
+
+const EMPTY_MEDIA = Object.freeze({});
 
 const MAX_VIDEO_BYTES = 32 * 1024 * 1024;
 
@@ -29,7 +22,7 @@ function videoBytes(value) {
   return Uint8Array.from(decoded, (char) => char.charCodeAt(0));
 }
 
-function GenerationMedia({ item, sessionId, imageUrl, readFile }) {
+function GenerationMedia({ item = EMPTY_MEDIA, sessionId, imageUrl, readFile, status, ratio }) {
   const [preview, setPreview] = useState(null);
   useEffect(() => {
     let live = true;
@@ -53,7 +46,7 @@ function GenerationMedia({ item, sessionId, imageUrl, readFile }) {
         publish({ url, failed: false });
       } else if (!item.url) throw new Error('Media source unavailable');
     }
-    load().catch(() => publish({ failed: true }));
+    if (item !== EMPTY_MEDIA) load().catch(() => publish({ failed: true }));
     return () => {
       live = false;
       controller.abort();
@@ -61,32 +54,27 @@ function GenerationMedia({ item, sessionId, imageUrl, readFile }) {
     };
   }, [item, sessionId, imageUrl, readFile]);
   const current = preview?.item === item && preview.sessionId === sessionId ? preview : null;
-  if (current?.failed) return <div role="alert">结果预览未能加载，文件可能不可读取或超过预览大小限制，请在对话中查看</div>;
-  if (!current?.url) return <div>正在读取生成结果</div>;
-  const fail = () => setPreview({ item, sessionId, failed: true });
-  return item.type === 'video' ? <video src={current.url} controls playsInline onError={fail} /> : <img src={current.url} alt="生成结果" onError={fail} />;
+  const url = current?.url || (!item.path && !item.attachment ? item.url : null);
+  return <InPlaceTaskSlot status={current?.failed ? 'failure' : status} ratio={ratio} media={url ? { ...item, url } : null} controls />;
 }
 
-/** @param {{ tasks: Array<{ requestId: string, status: string, message?: string, media?: Array<{ url: string, type: string }> }> }} props */
+/** Request identity persists while its media sources resolve. */
 export function GenerationTasks({ tasks, imageUrl, readFile }) {
-  const [copyStatus, setCopyStatus] = useState('');
-  async function copyPrompt(task) {
-    try { await navigator.clipboard.writeText(task.prompt); setCopyStatus('已复制，请检查参考素材后粘贴发送'); }
-    catch { setCopyStatus('未能复制，请从对话中复制原请求'); }
-  }
-  // 过滤未就绪状态：pending / running 且无媒体产出时不渲染黑色占位卡片，保持视口干净
-  const actionableTasks = (tasks || []).filter(
-    (task) => (task.media && task.media.length > 0) || ['failure', 'cancelled', 'unresolved'].includes(task.status)
-  );
-  if (!actionableTasks.length) return null;
-  return <div className="omx-mv-generation-tasks" aria-live="polite">
-    {actionableTasks.map((task) => <section key={JSON.stringify([task.sessionId, task.requestId])} className="omx-mv-generation-task" data-generation-request={task.requestId} data-generation-status={task.status}>
-      <div className="omx-mv-generation-task__label" role="status">{task.message || labels[task.status]}</div>
-      {task.status === 'pending' || task.status === 'running'
-        ? null
-        : task.media?.map((item) => <GenerationMedia key={item.attachment?.attachmentId || item.url || item.path} item={item} sessionId={task.sessionId} imageUrl={imageUrl} readFile={readFile} />)}
-      {task.prompt && ['failure', 'cancelled', 'unresolved'].includes(task.status) && <Button onClick={() => copyPrompt(task)}>复制原请求</Button>}
-    </section>)}
-    {copyStatus && <div role="status">{copyStatus}</div>}
-  </div>;
+  return (tasks || []).map((task) => (
+    <React.Fragment key={JSON.stringify([task.sessionId, task.requestId])}>
+      {(task.media?.length ? task.media : [EMPTY_MEDIA]).map((item, index) => (
+        <GenerationMedia
+          key={index}
+          item={item}
+          sessionId={task.sessionId}
+          status={task.status}
+          ratio={task.ratio}
+          imageUrl={imageUrl}
+          readFile={readFile}
+        />
+      ))}
+    </React.Fragment>
+  ));
 }
+
+export default GenerationTasks;
