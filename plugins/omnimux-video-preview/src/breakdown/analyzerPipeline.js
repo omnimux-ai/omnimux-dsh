@@ -442,7 +442,7 @@ export async function resolveVirtualTemplateVideoUrl(trimmed, options = {}) {
       join(HERE, '../../../omnimux/src/templates/creative-templates.json'),
       join(HERE, '../../../omnimux/src/client/session-guide/templates/creative-templates.json'),
       process.env.DSH_HOME ? join(process.env.DSH_HOME, 'profiles/omnimux/node_modules/omnimux/src/templates/creative-templates.json') : null,
-      process.env.HOME ? join(process.env.HOME, '.omnimux-dev/profiles/omnimux/node_modules/omnimux/src/templates/creative-templates.json') : null,
+      process.env.HOME ? join(process.env.HOME, '.dsh/profiles/omnimux/node_modules/omnimux/src/templates/creative-templates.json') : null,
       process.env.HOME ? join(process.env.HOME, '.omnimux/profiles/omnimux/node_modules/omnimux/src/templates/creative-templates.json') : null,
     ].filter(Boolean)
 
