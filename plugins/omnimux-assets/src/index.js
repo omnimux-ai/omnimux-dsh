@@ -7,7 +7,7 @@ import { resolveAssetsPaths } from './paths.js'
 import { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri } from './protocol.js'
 import { mountGenerationIngest } from './generation-ingest.js'
 
-export { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri }
+export { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri, createFallbackDefineTool }
 
 export const name = 'omnimux-assets'
 export const inject = ['tools', 'systemPrompt']
@@ -41,6 +41,96 @@ function objectParams(fields) {
   }
 }
 
+/**
+ * Lightweight fallback for defineTool when @deepseek-ai/dsh-tools is not available
+ * (e.g. offline unit testing in isolated test environments).
+ */
+function createFallbackDefineTool() {
+  class ToolArgsError extends Error {
+    constructor(violations) {
+      super(`invalid arguments: ${violations.join('; ')}`)
+      this.name = 'ToolArgsError'
+      this.code = 'INVALID_ARGS'
+      this.violations = violations
+    }
+  }
+
+  return function fallbackDefineTool(options) {
+    const { name, description, parameters: rawParams, output, execute } = options
+    const properties = {}
+    const required = []
+    if (rawParams && typeof rawParams === 'object') {
+      for (const [key, spec] of Object.entries(rawParams)) {
+        const { required: isRequired, ...rest } = spec
+        properties[key] = rest
+        if (isRequired) required.push(key)
+      }
+    }
+    const parameters = {
+      type: 'object',
+      properties,
+      ...(required.length > 0 ? { required } : {}),
+      additionalProperties: false,
+    }
+
+    return {
+      name,
+      description,
+      parameters,
+      output: {
+        schema: output?.schema,
+        render: output?.render,
+      },
+      async execute(args, exec) {
+        if (rawParams && typeof rawParams === 'object') {
+          const violations = []
+          if (args && typeof args === 'object' && !Array.isArray(args)) {
+            for (const key of Object.keys(args)) {
+              if (!Object.prototype.hasOwnProperty.call(rawParams, key)) {
+                violations.push(`unexpected extra property "${key}"`)
+              }
+            }
+          }
+          for (const [key, spec] of Object.entries(rawParams)) {
+            if (spec.required && (args == null || args[key] === undefined)) {
+              violations.push(`missing required property "${key}"`)
+            } else if (args && args[key] !== undefined && spec.type) {
+              if (spec.type === 'string' && typeof args[key] !== 'string') {
+                violations.push(`"${key}" must be a string`)
+              } else if (spec.type === 'number' && typeof args[key] !== 'number') {
+                violations.push(`"${key}" must be a number`)
+              } else if (spec.type === 'boolean' && typeof args[key] !== 'boolean') {
+                violations.push(`"${key}" must be a boolean`)
+              }
+            }
+          }
+          if (violations.length > 0) {
+            throw new ToolArgsError(violations)
+          }
+        }
+        return execute(args, exec)
+      },
+    }
+  }
+}
+
+let loadedDefineTool = null
+try {
+  const dshTools = await import('@deepseek-ai/dsh-tools')
+  loadedDefineTool = dshTools.defineTool
+} catch {
+  const hostToolsPath = process.env.DSH_TOOLS_PATH ||
+    '/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh-tools/lib/index.js'
+  try {
+    const dshTools = await import(hostToolsPath)
+    loadedDefineTool = dshTools.defineTool
+  } catch {
+    // Isolated environment fallback
+  }
+}
+
+const defaultDefineTool = loadedDefineTool ?? createFallbackDefineTool()
+
 const jsonOut = {
   schema: { type: 'object', additionalProperties: true },
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
@@ -55,6 +145,7 @@ const jsonOut = {
  * }} ctx
  */
 export function apply(ctx) {
+  const defineTool = ctx.defineTool ?? defaultDefineTool
   const paths = resolveAssetsPaths()
   const mappings = createMappingStore({ paths })
   const artifacts = createArtifactStore({ paths })
@@ -196,21 +287,23 @@ export function apply(ctx) {
     },
   })
 
-  ctx.tools.register({
-    name: 'assets_get',
-    description:
-      'Get one creative asset by id or handle, including description and currently visible file refs.',
-    parameters: objectParams({
-      id: { type: 'string', required: true, description: 'Asset id (ast_…) or handle' },
-    }),
-    output: jsonOut,
-    async execute(args) {
-      const id = typeof args.id === 'string' ? args.id : ''
-      const asset = library.getView(id)
-      if (!asset) throw new AssetsError('asset-not-found', `no asset ${id}`)
-      return { asset }
-    },
-  })
+  ctx.tools.register(
+    defineTool({
+      name: 'assets_get',
+      description:
+        'Get one creative asset by id or handle, including description and currently visible file refs.',
+      parameters: {
+        id: { type: 'string', required: true, description: 'Asset id (ast_…) or handle' },
+      },
+      output: jsonOut,
+      async execute(args) {
+        const id = typeof args.id === 'string' ? args.id : ''
+        const asset = library.getView(id)
+        if (!asset) throw new AssetsError('asset-not-found', `no asset ${id}`)
+        return { asset }
+      },
+    })
+  )
 
   ctx.tools.register({
     name: 'assets_create',

@@ -87,6 +87,14 @@ function fail(status, error) {
   return { status, body: { error } }
 }
 
+function createAbortError(message = 'This operation was aborted', cause) {
+  const err = new Error(message)
+  err.name = 'AbortError'
+  err.code = 'ABORT_ERR'
+  if (cause) err.cause = cause
+  return err
+}
+
 function okExisting(existing) {
   const body = { data: existing, existing: true, is_duplicate: true }
   return { status: 200, body }
@@ -1339,6 +1347,7 @@ export async function handleFetchMedia(ctx) {
 }
 
 export async function handleImportUrl(ctx) {
+  if (ctx.signal?.aborted) throw createAbortError()
   const parsed = parseImportBody(ctx)
   if (!parsed.rawUrl) return fail(400, 'url is required')
   const existing = ctx.store.findByUrl(parsed.rawUrl)
@@ -1412,11 +1421,13 @@ async function withImportLock(rawUrl, work) {
 }
 
 async function runImport(args) {
+  if (args.signal?.aborted) throw createAbortError()
   if (!args.socialFetcher) {
     return fail(500, '未注入 OmniMux 社媒解析能力 (socialFetcher 未就绪)')
   }
   const social = await fetchSocialMeta(args)
   if (social.error) return social.error
+  if (args.signal?.aborted) throw createAbortError()
   const dup = checkResolvedDuplicate(args, social.meta)
   if (dup) return dup
   return persistImportedItem(args, social.meta)
@@ -1447,6 +1458,7 @@ async function reportStage(args, stage) {
  * whole with the reason on `import_error`, and the caller sees it on the row.
  */
 async function persistImportedItem(args, meta) {
+  if (args.signal?.aborted) throw createAbortError()
   const videoUrl = HTTP_URL_RE.test(meta.video_url || '') ? meta.video_url : ''
   if (!videoUrl && !meta.has_metadata) {
     return fail(422, '未从该链接解析到可入库的内容（标题、文案、封面与视频直链均为空）')
@@ -1456,17 +1468,30 @@ async function persistImportedItem(args, meta) {
     ? await downloadImportMedia(args, meta, videoUrl)
     : await downloadImportCover(args, meta)
   if (media.error) return media.error
-  const analysis = await maybeAnalyze(args, media, meta)
-  await reportStage(args, IMPORT_STAGES.PERSISTING)
-  const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, analysis))
-  if (videoUrl) return { status: 200, body: { data: record } }
-  return {
-    status: 200,
-    body: {
-      data: record,
-      media_degraded: true,
-      degrade_reason: DEGRADE_REASON,
-    },
+
+  try {
+    if (args.signal?.aborted) throw createAbortError()
+    const analysis = await maybeAnalyze(args, media, meta)
+    if (args.signal?.aborted) throw createAbortError()
+
+    await reportStage(args, IMPORT_STAGES.PERSISTING)
+    const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, analysis))
+    if (videoUrl) return { status: 200, body: { data: record } }
+    return {
+      status: 200,
+      body: {
+        data: record,
+        media_degraded: true,
+        degrade_reason: DEGRADE_REASON,
+      },
+    }
+  } catch (err) {
+    if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR' || args.signal?.aborted) {
+      if (media.localPaths) {
+        for (const p of Object.values(media.localPaths)) removeQuietly(p)
+      }
+    }
+    throw err
   }
 }
 
@@ -1505,6 +1530,7 @@ async function persistImportedRecord(args, record) {
  * @returns {Promise<{ deconstruction: Record<string, any> | null, error: string }>}
  */
 async function maybeAnalyze(args, media, meta) {
+  if (args.signal?.aborted) throw createAbortError()
   if (!args.autoAnalyze || !media.localVideoPath) return { deconstruction: null, error: '' }
   await reportStage(args, IMPORT_STAGES.ANALYZING)
   // `args.analyzeInspiration` is undefined in production, so the real analyzer
@@ -1520,7 +1546,9 @@ async function maybeAnalyze(args, media, meta) {
     tags: args.customTags,
     platform: args.platform,
     videoAnalyzeTool: args.videoAnalyzeTool,
+    signal: args.signal,
   })
+  if (args.signal?.aborted) throw createAbortError()
   if (analysisResult.deconstruction) return { deconstruction: analysisResult.deconstruction, error: '' }
   return {
     deconstruction: null,
@@ -1607,17 +1635,27 @@ function describeFetchFailure(args, fetchErr) {
 }
 
 async function fetchSocialMeta(args) {
+  if (args.signal?.aborted) throw createAbortError()
   try {
     const fetched = await args.socialFetcher({
       platform: args.platform,
       capability: capabilityOf(args.platform),
       url: args.rawUrl,
+      signal: args.signal,
     })
     if (!fetched || !fetched.data) {
       return { error: fail(502, 'OmniMux 社媒解析接口未返回有效数据，请稍后重试') }
     }
     return { meta: parseSocialMeta(fetched.data) }
   } catch (fetchErr) {
+    if (args.signal?.aborted) {
+      throw (fetchErr?.name === 'AbortError' || fetchErr?.code === 'ABORT_ERR')
+        ? fetchErr
+        : createAbortError('This operation was aborted', fetchErr)
+    }
+    if (fetchErr?.name === 'AbortError' || fetchErr?.code === 'ABORT_ERR') {
+      throw fetchErr
+    }
     return { error: fail(502, describeFetchFailure(args, fetchErr)) }
   }
 }
@@ -1637,6 +1675,7 @@ function checkResolvedDuplicate(args, meta) {
 }
 
 async function downloadImportMedia(args, meta, rawVideoUrl) {
+  if (args.signal?.aborted) throw createAbortError()
   const localPaths = {}
   let localVideoPath = ''
   try {
@@ -1644,21 +1683,61 @@ async function downloadImportMedia(args, meta, rawVideoUrl) {
       prefix: 'video_',
       fetcher: args.fetcher,
       resolver: args.resolver,
+      signal: args.signal,
     })
     localPaths.video = localVideoPath
   } catch (downErr) {
+    if (args.signal?.aborted) {
+      throw (downErr?.name === 'AbortError' || downErr?.code === 'ABORT_ERR')
+        ? downErr
+        : createAbortError('This operation was aborted', downErr)
+    }
+    if (downErr?.name === 'AbortError' || downErr?.code === 'ABORT_ERR') {
+      throw downErr
+    }
     const message = `视频素材下载落盘失败: ${args.formatErrorMessage(downErr)}`
     return { error: fail(502, message) }
   }
-  let cover = await downloadCoverBestEffort(args, meta, localPaths)
+  if (args.signal?.aborted) {
+    if (localVideoPath) removeQuietly(localVideoPath)
+    throw createAbortError()
+  }
+  let cover = { path: '', renderable: null }
+  try {
+    cover = await downloadCoverBestEffort(args, meta, localPaths)
+  } catch (coverErr) {
+    if (localVideoPath) removeQuietly(localVideoPath)
+    if (cover?.path) removeQuietly(cover.path)
+    throw coverErr
+  }
+  if (args.signal?.aborted) {
+    if (localVideoPath) removeQuietly(localVideoPath)
+    if (cover.path) removeQuietly(cover.path)
+    throw createAbortError()
+  }
   if (!cover.path && localVideoPath) {
-    const poster = await extractVideoPosterBestEffort(args, localVideoPath, localPaths)
-    if (poster.path) cover = poster
+    try {
+      const poster = await extractVideoPosterBestEffort(args, localVideoPath, localPaths)
+      if (poster.path) cover = poster
+    } catch (posterErr) {
+      if (localVideoPath) removeQuietly(localVideoPath)
+      if (cover?.path) removeQuietly(cover.path)
+      throw posterErr
+    }
+  }
+  if (args.signal?.aborted) {
+    if (localVideoPath) removeQuietly(localVideoPath)
+    if (cover.path) removeQuietly(cover.path)
+    throw createAbortError()
   }
   return { localPaths, localVideoPath, localCoverPath: cover.path, coverRenderable: cover.renderable }
 }
 
 async function extractVideoPosterBestEffort(args, localVideoPath, localPaths) {
+  if (args.signal?.aborted) {
+    if (localVideoPath) removeQuietly(localVideoPath)
+    throw createAbortError()
+  }
   if (!localVideoPath || !existsSync(localVideoPath)) return { path: '', renderable: null }
   try {
     const coversDir = args.paths?.coversDir
@@ -1667,11 +1746,22 @@ async function extractVideoPosterBestEffort(args, localVideoPath, localPaths) {
       prefix: 'cover_',
       runFfmpeg: args.runFfmpeg,
     })
+    if (args.signal?.aborted) {
+      if (localVideoPath) removeQuietly(localVideoPath)
+      if (poster) removeQuietly(poster)
+      throw createAbortError()
+    }
     if (poster && existsSync(poster)) {
       localPaths.cover = poster
       return { path: poster, renderable: true }
     }
-  } catch {
+  } catch (err) {
+    if (args.signal?.aborted || err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
+      if (localVideoPath) removeQuietly(localVideoPath)
+      throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR')
+        ? err
+        : createAbortError('This operation was aborted', err)
+    }
     // Best-effort thumbnail extraction; fallback continues if ffmpeg fails
   }
   return { path: '', renderable: null }
@@ -1706,12 +1796,17 @@ function removeQuietly(filePath) {
  * @returns {Promise<{ path: string, renderable: boolean | null }>}
  */
 async function downloadCoverBestEffort(args, meta, localPaths) {
+  if (args.signal?.aborted) {
+    if (localPaths?.video) removeQuietly(localPaths.video)
+    throw createAbortError()
+  }
   if (!meta.cover_url || !HTTP_URL_RE.test(meta.cover_url)) return { path: '', renderable: null }
   try {
     const saved = await downloadMedia(meta.cover_url, args.paths.coversDir, {
       prefix: 'cover_',
       fetcher: args.fetcher,
       resolver: args.resolver,
+      signal: args.signal,
     })
     // The URL is only a hint; the bytes decide the stored name and whether any
     // browser can use the file at all.
@@ -1722,15 +1817,26 @@ async function downloadCoverBestEffort(args, meta, localPaths) {
     }
     localPaths.cover = aligned
     return { path: aligned, renderable: true }
-  } catch {
+  } catch (err) {
+    if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR' || args.signal?.aborted) {
+      if (localPaths?.video) removeQuietly(localPaths.video)
+      throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR')
+        ? err
+        : createAbortError('This operation was aborted', err)
+    }
     return { path: '', renderable: null }
   }
 }
 
 /** Degraded import: no video stream, so only the poster image is cached. */
 async function downloadImportCover(args, meta) {
+  if (args.signal?.aborted) throw createAbortError()
   const localPaths = {}
   const cover = await downloadCoverBestEffort(args, meta, localPaths)
+  if (args.signal?.aborted) {
+    if (cover.path) removeQuietly(cover.path)
+    throw createAbortError()
+  }
   return { localPaths, localVideoPath: '', localCoverPath: cover.path, coverRenderable: cover.renderable }
 }
 

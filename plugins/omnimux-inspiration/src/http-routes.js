@@ -203,10 +203,13 @@ async function dispatchRequest(ctx, req) {
     return ctx.rivalDispatcher.dispatch({ method, url, body: req.body })
   }
   const route = matchRoute(method, url.pathname)
-  const args = { ...ctx, req, url, id: route.id }
+  const args = { ...ctx, req, url, id: route.id, signal: req.signal }
   try {
     return await runRoute(route.name, args)
   } catch (error) {
+    if (error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
+      return { status: 499, body: { error: 'aborted' } }
+    }
     const status = error.status || 500
     const message = error.message || String(error)
     return { status, body: { error: message } }
