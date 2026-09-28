@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { resolveVeoMode, VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
 import { useVeoTaskFeed } from './useVeoTaskFeed.js'
+import {
+  clearAllTimersInMap,
+  clearTimerInMap,
+} from './veo-timers.js'
 
 function safePortal(node, container) {
   if (!container) return node
@@ -383,6 +387,8 @@ function injectGoogleVidsStyles() {
  * 100% 逐字对照 Spec 第 3 节白名单与文案字典，严禁自由发挥与装饰 Emoji。
  */
 export function GoogleVidsStage(props) {
+  // Local upscale fake-progress timers are kept separate from host poll timers
+  const upscaleTimersRef = useRef(new Map())
   const [everOpened, setEverOpened] = useState(false)
   const open = typeof props?.visible === 'boolean' ? props.visible : true
 
@@ -421,7 +427,7 @@ export function GoogleVidsStage(props) {
     tasks,
     setTasks,
     submitTask: handleSubmitTask,
-    removeTask: handleRemoveTask,
+    removeTask: removeFeedTask,
     clearPollTimer,
     pollTimersRef,
   } = useVeoTaskFeed({
@@ -449,6 +455,7 @@ export function GoogleVidsStage(props) {
       if (typeof window !== 'undefined') {
         window.removeEventListener('omnimux-clip:editor-status', handleStatus)
       }
+      clearAllTimersInMap(upscaleTimersRef.current)
     }
   }, [])
 
@@ -486,9 +493,9 @@ export function GoogleVidsStage(props) {
     setAttachedAsset(asset)
   }
 
-  // 触发升频（本地假进度；本单不拆 timer 表，仍复用 pollTimersRef，见 #2746）
+  // 触发升频（纯本地演示：不打 API；不得清掉同 taskId 的 Host 轮询）
   const handleUpscale = (taskId) => {
-    clearPollTimer(taskId)
+    clearTimerInMap(upscaleTimersRef.current, taskId)
     setTasks((prev) =>
       prev.map((t) =>
         t.id === taskId ? { ...t, status: 'generating', progress: 12, isUpscaling: true } : t
@@ -499,7 +506,7 @@ export function GoogleVidsStage(props) {
       p += 25
       if (p >= 100) {
         clearInterval(timer)
-        pollTimersRef.current.delete(taskId)
+        clearTimerInMap(upscaleTimersRef.current, taskId)
         setTasks((prev) =>
           prev.map((t) =>
             t.id === taskId
@@ -513,7 +520,7 @@ export function GoogleVidsStage(props) {
         )
       }
     }, 350)
-    pollTimersRef.current.set(taskId, timer)
+    upscaleTimersRef.current.set(taskId, timer)
   }
 
   // 插入到时间轴 (向右侧 Clip 追加)
@@ -540,6 +547,12 @@ export function GoogleVidsStage(props) {
     setTimeout(() => {
       setInsertedFeedbackId((cur) => (cur === task.id ? null : cur))
     }, 1500)
+  }
+
+  // 移除任务：清理本地升频定时器，同时通过 Hook 移除并清理轮询
+  const handleRemoveTask = (taskId) => {
+    clearTimerInMap(upscaleTimersRef.current, taskId)
+    removeFeedTask(taskId)
   }
 
   // 动态占位符（文案字典在 VEO_TASK_SPEC）
