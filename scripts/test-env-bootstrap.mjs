@@ -1,9 +1,10 @@
 import * as fs from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readDevDeepSeekCredential } from './test-env-credentials.mjs';
+import { parseDocument } from 'yaml';
+import { readDevDeepSeekCredential, readDevCredentialsBundle } from './test-env-credentials.mjs';
 
 const EXECUTABLE = '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux';
 const WRAPPER = '/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js';
@@ -196,15 +197,42 @@ export function createTestEnvironmentStarter(deps = {}) {
     })();
     try {
       // Authorization for live credential access must already cover this task; selecting a mode does not grant it.
-      const credential = mode === 'live' ? (deps.readCredential ?? readDevDeepSeekCredential)() : undefined;
+      let credential;
+      let credentialBundle = null;
+      if (mode === 'live') {
+        if (deps.readCredential) {
+          credential = deps.readCredential();
+        } else if (deps.readCredentialsBundle) {
+          credentialBundle = deps.readCredentialsBundle();
+          credential = credentialBundle?.DEEPSEEK_API_KEY || credentialBundle?.OMNIMUX_API_KEY;
+        } else {
+          credentialBundle = readDevCredentialsBundle();
+          credential = credentialBundle?.DEEPSEEK_API_KEY || credentialBundle?.OMNIMUX_API_KEY;
+        }
+      }
       if (mode === 'live' && (typeof credential !== 'string' || !credential.trim())) throw failure('CREDENTIAL_INVALID');
       privateDir = io.mkdtempSync(join(root, '.test-env-')); io.chmodSync(privateDir, 0o700);
       const paths = { HOME: 'home', DSH_HOME: 'dsh', DSH_AGENTS_HOME: 'agents', XDG_CONFIG_HOME: 'config', XDG_CACHE_HOME: 'cache', XDG_STATE_HOME: 'state', XDG_DATA_HOME: 'data', TMPDIR: 'tmp', TMP: 'tmp', TEMP: 'tmp' };
-      const env = { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--max-http-header-size=65536' };
+      const basePath = io === fs
+        ? `${dirname(process.execPath)}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`
+        : '/usr/bin:/bin:/usr/sbin:/sbin';
+      const env = { PATH: basePath, ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--max-http-header-size=65536' };
       for (const [name, leaf] of Object.entries(paths)) { env[name] = join(privateDir, leaf); io.mkdirSync(env[name], { recursive: true, mode: 0o700 }); }
       if (mode === 'ui') mock = await startMock();
       const endpoint = mode === 'ui' ? mock.origin : OFFICIAL_ENDPOINT;
-      if (mode !== 'onboarding') { env.DEEPSEEK_API_KEY = mode === 'ui' ? SYNTHETIC_KEY : credential; env.DEEPSEEK_BASE_URL = endpoint; }
+      if (mode !== 'onboarding') {
+        env.DEEPSEEK_API_KEY = mode === 'ui' ? SYNTHETIC_KEY : credential;
+        env.DEEPSEEK_BASE_URL = endpoint;
+        if (mode === 'live' && credentialBundle) {
+          if (credentialBundle.OMNIMUX_API_KEY) {
+            env.OMNIMUX_API_KEY = credentialBundle.OMNIMUX_API_KEY;
+            env.OMNIMUX_TOKEN = credentialBundle.OMNIMUX_API_KEY;
+          }
+          if (credentialBundle.CPA_API_KEY) {
+            env.CPA_API_KEY = credentialBundle.CPA_API_KEY;
+          }
+        }
+      }
       // JSON is YAML-compatible. The fresh fixed settings layer wins over bundle adapter defaults.
       const initialSettings = {
         'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: endpoint },
@@ -218,12 +246,26 @@ export function createTestEnvironmentStarter(deps = {}) {
           runtimeAgentVerified: true,
           runtimeMode: 'agent',
           runtimeAgentModel: '',
-          runtimeKeyVerified: true,
-          runtimeMediaProvider: 'fal',
-          runtimeMediaImage: true,
-          runtimeMediaVideo: true,
-          runtimeMediaAudio: true,
         };
+      }
+      const realUserHome = process.env.HOME || '';
+      const devHome = join(realUserHome, '.omnimux-dev');
+      if (mode !== 'onboarding') {
+        try {
+          const devSettingsPath = join(devHome, 'settings.yaml');
+          if (io.existsSync(devSettingsPath)) {
+            const parsedDoc = parseDocument(io.readFileSync(devSettingsPath, 'utf8'));
+            const devSettings = parsedDoc?.toJS?.() || {};
+            for (const key of ['locale', 'permission', 'agent-presets', 'dsh-better-sidebar', 'dsh-desktop', 'ui-theme']) {
+              if (devSettings[key] !== undefined) initialSettings[key] = devSettings[key];
+            }
+            if (mode === 'live') {
+              for (const key of ['llm-pi-ai', 'agent-default-model']) {
+                if (devSettings[key] !== undefined) initialSettings[key] = devSettings[key];
+              }
+            }
+          }
+        } catch {}
       }
       io.writeFileSync(join(env.DSH_HOME, 'settings.yaml'), JSON.stringify(initialSettings) + '\n', { mode: 0o600, flag: 'wx' });
 
@@ -262,17 +304,63 @@ export function createTestEnvironmentStarter(deps = {}) {
         }
       } catch {}
 
-      // 检测并挂载本地 OmniMux 完整插件 Profile（若存在）
-      const devProfile = join(process.env.HOME || '', '.omnimux-dev', 'profiles', 'omnimux');
+      // 检测并挂载本地 OmniMux 完整插件 Profile 与业务测试数据集（若存在）
+      const devProfile = join(devHome, 'profiles', 'omnimux');
       let profileName = 'web';
       let pluginsInstalled = false;
       let evidenceLevel = 'core-only';
+      let taskPluginsCount = 0;
+      let seededDataDomains = [];
 
       try {
         if (io.existsSync(devProfile) && io.existsSync(join(devProfile, 'package.json')) && io.existsSync(join(devProfile, 'node_modules'))) {
           profileName = 'omnimux';
           pluginsInstalled = true;
           evidenceLevel = 'full';
+
+          // 0. 挂载完整 Dev 业务测试数据集与预设（Copy-on-Write 元数据 + 软链媒体大目录，零污染主环境）
+          try {
+            if (typeof io.symlinkSync === 'function') {
+              try { io.symlinkSync(env.DSH_HOME, join(env.HOME, '.dsh')); } catch {}
+              try { io.symlinkSync(env.DSH_HOME, join(env.HOME, '.omnimux')); } catch {}
+              try { io.symlinkSync(env.DSH_HOME, join(env.HOME, '.omnimux-dev')); } catch {}
+              if (mode === 'live' && io.existsSync(join(devHome, '.credentials.yaml'))) {
+                try { io.symlinkSync(join(devHome, '.credentials.yaml'), join(env.DSH_HOME, '.credentials.yaml')); } catch {}
+              }
+              for (const sharedEntry of ['agent-presets-shipped', '.agent-presets', 'skills', 'omnimux-market', 'omnimux-social-harvest', '.dsh-viewer-asset-key', '.omnimux-video-preview-key']) {
+                const srcShared = join(devHome, sharedEntry);
+                if (io.existsSync(srcShared)) {
+                  try { io.symlinkSync(srcShared, join(env.DSH_HOME, sharedEntry)); } catch {}
+                }
+              }
+            }
+            const devOmnimuxData = join(devHome, 'omnimux');
+            if (io.existsSync(devOmnimuxData) && typeof io.cpSync === 'function') {
+              const targetOmnimuxData = join(env.DSH_HOME, 'omnimux');
+              io.mkdirSync(targetOmnimuxData, { recursive: true, mode: 0o700 });
+              const HEAVY_MEDIA_DIRS = new Set(['media', 'data', 'artifacts', 'projects', 'rival-accounts', 'exports', 'snapshots']);
+              for (const domain of io.readdirSync(devOmnimuxData)) {
+                const srcDomain = join(devOmnimuxData, domain);
+                const dstDomain = join(targetOmnimuxData, domain);
+                try {
+                  if (io.lstatSync(srcDomain).isDirectory()) {
+                    io.mkdirSync(dstDomain, { recursive: true, mode: 0o700 });
+                    for (const sub of io.readdirSync(srcDomain)) {
+                      const srcSub = join(srcDomain, sub);
+                      const dstSub = join(dstDomain, sub);
+                      if (HEAVY_MEDIA_DIRS.has(sub) && typeof io.symlinkSync === 'function') {
+                        try { io.symlinkSync(srcSub, dstSub); } catch {}
+                      } else {
+                        try { io.cpSync(srcSub, dstSub, { recursive: true }); } catch {}
+                      }
+                    }
+                    seededDataDomains.push(domain);
+                  }
+                } catch {}
+              }
+            }
+          } catch {}
+
           const omnimuxProfileDir = join(env.DSH_HOME, 'profiles', 'omnimux');
           io.mkdirSync(omnimuxProfileDir, { recursive: true, mode: 0o700 });
           for (const item of io.readdirSync(devProfile)) {
@@ -282,9 +370,36 @@ export function createTestEnvironmentStarter(deps = {}) {
             } catch {}
           }
 
-          const taskPlugins = new Set(['omnimux', 'omnimux-video', 'omnimux-clip']);
+          // 动态扫描工作树 plugins/* 下的全部 21 个插件（若测试桩返回空则回退核心集合）
+          const wtPluginsRoot = join(root, 'plugins');
+          const discoveredPlugins = [];
+          try {
+            if (io.existsSync(wtPluginsRoot)) {
+              for (const entry of io.readdirSync(wtPluginsRoot)) {
+                const name = typeof entry === 'string' ? entry : entry?.name;
+                if (name && !name.startsWith('.') && io.existsSync(join(wtPluginsRoot, name, 'package.json'))) {
+                  discoveredPlugins.push(name);
+                }
+              }
+            }
+          } catch {}
+          const taskPlugins = new Set(discoveredPlugins.length > 0 ? discoveredPlugins : ['omnimux', 'omnimux-video', 'omnimux-clip']);
+          taskPluginsCount = taskPlugins.size;
 
-          // 1. 处理 .materialize-snapshots/plugins 映射：待验插件优先软链至任务工作树源码
+          // 检测当前工作树有改动的插件集合（用于按需触发自动构建）
+          const modifiedPlugins = new Set();
+          if (io === fs) {
+            try {
+              const statusOut = spawnSync('git', ['-C', root, 'status', '--porcelain'], { encoding: 'utf8', timeout: 4000 }).stdout || '';
+              const diffOut = spawnSync('git', ['-C', root, 'diff', '--name-only', 'origin/main...HEAD'], { encoding: 'utf8', timeout: 4000 }).stdout || '';
+              for (const line of `${statusOut}\n${diffOut}`.split('\n')) {
+                const m = /(?:^|\s)plugins\/([^/\s]+)\//.exec(line);
+                if (m && m[1]) modifiedPlugins.add(m[1]);
+              }
+            } catch {}
+          }
+
+          // 1. 处理 .materialize-snapshots/plugins 映射：全部任务插件优先软链至任务工作树源码
           const devSnapshotsPlugins = join(devProfile, '.materialize-snapshots', 'plugins');
           if (io.existsSync(devSnapshotsPlugins)) {
             const targetSnapshotsPlugins = join(omnimuxProfileDir, '.materialize-snapshots', 'plugins');
@@ -304,18 +419,66 @@ export function createTestEnvironmentStarter(deps = {}) {
             }
           }
 
-          // 2. 处理 node_modules 映射
+          // 2. 处理 node_modules 映射：
+          //    非任务依赖直接软链至 devNodeModules；
+          //    工作树插件在真实文件系统中物化为实体目录（保持 realpath 位于 targetNodeModules 内，
+          //    从而 100% 继承 194 个同级依赖如 ws、dsh-ui-kit、react），并叠加工作树最新源码与构建产物。
           try {
             const targetNodeModules = join(omnimuxProfileDir, 'node_modules');
             io.mkdirSync(targetNodeModules, { recursive: true, mode: 0o700 });
             const devNodeModules = join(devProfile, 'node_modules');
+            const SYMLINK_DATA_DIRS = new Set(['catalog', 'cloud-catalog', 'assets', 'apps', 'node_modules']);
             if (io.existsSync(devNodeModules)) {
+              const repoEsbuild = join(deps.repositoryRoot ?? repositoryRoot, 'node_modules', 'esbuild');
+              if (io === fs && io.existsSync(repoEsbuild) && !io.existsSync(join(targetNodeModules, 'esbuild'))) {
+                try { io.symlinkSync(repoEsbuild, join(targetNodeModules, 'esbuild')); } catch {}
+              }
               for (const pkg of io.readdirSync(devNodeModules)) {
                 if (taskPlugins.has(pkg)) {
-                  try {
-                    io.symlinkSync(join(root, 'plugins', pkg), join(targetNodeModules, pkg));
-                  } catch {
-                    io.symlinkSync(join(devNodeModules, pkg), join(targetNodeModules, pkg));
+                  const wtPkgDir = join(root, 'plugins', pkg);
+                  const devPkgDir = join(devNodeModules, pkg);
+                  const dstPkgDir = join(targetNodeModules, pkg);
+                  if (io === fs && typeof io.cpSync === 'function' && io.existsSync(wtPkgDir)) {
+                    try {
+                      io.mkdirSync(dstPkgDir, { recursive: true, mode: 0o700 });
+                      for (const entry of io.readdirSync(devPkgDir)) {
+                        if (entry === 'node_modules' || entry === '.git') continue;
+                        const s = join(devPkgDir, entry);
+                        const d = join(dstPkgDir, entry);
+                        if (SYMLINK_DATA_DIRS.has(entry)) {
+                          try { io.symlinkSync(s, d); } catch {}
+                        } else {
+                          io.cpSync(s, d, { recursive: true, force: true });
+                        }
+                      }
+                      for (const entry of io.readdirSync(wtPkgDir)) {
+                        if (entry === 'node_modules' || entry === '.git' || entry === '.scratch') continue;
+                        const s = join(wtPkgDir, entry);
+                        const d = join(dstPkgDir, entry);
+                        if (SYMLINK_DATA_DIRS.has(entry)) {
+                          try { io.rmSync(d, { recursive: true, force: true }); io.symlinkSync(s, d); } catch {}
+                        } else {
+                          io.cpSync(s, d, { recursive: true, force: true });
+                        }
+                      }
+                      // 若该插件在工作树中有源码修改，或缺失关键构建产物，在 targetNodeModules/<pkg> 内就地自动编译
+                      const needsClient = !io.existsSync(join(dstPkgDir, 'lib', 'client.js'));
+                      if (modifiedPlugins.has(pkg) || needsClient) {
+                        for (const buildScript of ['scripts/build-host.mjs', 'scripts/build-client.mjs', 'scripts/build-canvas.mjs', 'scripts/build.mjs']) {
+                          if (io.existsSync(join(dstPkgDir, buildScript))) {
+                            spawnSync(process.execPath, [buildScript], { cwd: dstPkgDir, stdio: 'ignore', timeout: 30000 });
+                          }
+                        }
+                      }
+                    } catch {
+                      try { io.rmSync(dstPkgDir, { recursive: true, force: true }); io.symlinkSync(wtPkgDir, dstPkgDir); } catch {}
+                    }
+                  } else {
+                    try {
+                      io.symlinkSync(wtPkgDir, dstPkgDir);
+                    } catch {
+                      io.symlinkSync(devPkgDir, dstPkgDir);
+                    }
                   }
                 } else {
                   try {
@@ -356,7 +519,17 @@ export function createTestEnvironmentStarter(deps = {}) {
       });
       startupReject = undefined; releaseOutput();
       if (exited || child?.exitCode !== null || child?.signalCode !== null) throw failure('RUNTIME_EXIT');
-      const summary = Object.freeze({ mode, origin: url.origin, evidenceLevel, taskPluginsInstalled: pluginsInstalled, realModelRequest: false, modelConfiguration: mode === 'ui' ? 'QA模拟' : mode === 'live' ? 'authorized-dev-reference' : 'unconfigured', seededWorkspace: hasSeededFixture ? seededWorkspaceId : null });
+      const summary = Object.freeze({
+        mode,
+        origin: url.origin,
+        evidenceLevel,
+        taskPluginsInstalled: pluginsInstalled,
+        taskPluginsCount,
+        seededDataDomains,
+        realModelRequest: false,
+        modelConfiguration: mode === 'ui' ? 'QA模拟' : mode === 'live' ? 'authorized-dev-reference' : 'unconfigured',
+        seededWorkspace: hasSeededFixture ? seededWorkspaceId : null,
+      });
       const result = { origin: url.origin, summary, cleanup };
       Object.defineProperty(result, 'loginUrl', { value: url.href, enumerable: false });
       return result;

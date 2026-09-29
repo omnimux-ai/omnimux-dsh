@@ -31,3 +31,4 @@ deliverables/
 !/.tmp/
 /.tmp/*
 !/.tmp/AGENTS.md
+.test-env-*

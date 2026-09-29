@@ -1,39 +1,52 @@
 {
-  "runId": "f83175e1-509e-4050-8518-75ff7f41ffb0",
-  "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-browser-hub-path-qa-issue-2736",
-  "origin": "http://127.0.0.1:53838",
-  "appPort": 53838,
-  "cdpPort": 53840,
-  "startedAt": "2026-09-27T14:05:27.858Z",
-  "completedAt": "2026-09-27T14:05:37.282Z",
+  "runId": "c9c354bf-77df-48e8-9ada-3b32c9d2deea",
+  "mode": "live",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/full-dev-worktree-env",
+  "origin": "http://127.0.0.1:62416",
+  "appPort": 62416,
+  "cdpPort": 62419,
+  "startedAt": "2026-09-29T08:14:43.945Z",
+  "completedAt": "2026-09-29T08:15:50.976Z",
   "pass": true,
   "summary": {
-    "mode": "ui",
-    "origin": "http://127.0.0.1:53838",
+    "mode": "live",
+    "origin": "http://127.0.0.1:62416",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
+    "taskPluginsCount": 21,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
     "realModelRequest": false,
-    "modelConfiguration": "QA模拟",
+    "modelConfiguration": "authorized-dev-reference",
     "seededWorkspace": "ws_qa_media"
   },
   "assertions": [
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:53838",
+      "origin": "http://127.0.0.1:62416",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-TmpyHY2RN5U0oIibznEsoQskSchYAFOdqhaw7oCR8Yc"
+      "cookieName": "dsh-auth-dIr3DqMaWIoN_DNlIVoUinqsTngbrQGKg2dtR9gha7A"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 53840
+      "port": 62419
     },
     {
       "name": "auth-cookie-applied",
@@ -43,7 +56,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 119,
+        "visibleCount": 10,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -52,7 +65,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 112
+        "bodyTextLength": 24
       }
     },
     {
@@ -63,7 +76,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 119
+      "visibleCount": 10
     },
     {
       "name": "runtime-modal-bypassed",
@@ -72,17 +85,17 @@
     {
       "name": "blank-session-guide-visible",
       "pass": true,
-      "clickedNewSession": true
+      "clickedNewSession": false
     },
     {
       "name": "explore-section-visible",
       "pass": true,
-      "cardCount": 40
+      "cardCount": 16
     },
     {
       "name": "explore-cards-present",
       "pass": true,
-      "cardCount": 40
+      "cardCount": 16
     },
     {
       "name": "asset-hub-reachable-via-library",
@@ -92,32 +105,63 @@
       "usedWorkbenchFallback": true
     },
     {
+      "name": "live-model-catalog-ready",
+      "pass": true,
+      "imageModels": 3
+    },
+    {
+      "name": "live-image-generate-http-200",
+      "pass": true,
+      "httpStatus": 200,
+      "mode": "live",
+      "destBytes": 1552172,
+      "error": null
+    },
+    {
+      "name": "live-image-rendered-no-broken-img",
+      "pass": true,
+      "naturalWidth": 1254,
+      "naturalHeight": 1254,
+      "brokenImageCount": 0
+    },
+    {
       "name": "screenshot-png-verified",
       "pass": true,
       "dimensions": {
         "width": 1280,
         "height": 713
       },
-      "bytes": 104428
+      "bytes": 500457
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-browser-hub-path-qa-issue-2736/.workbuddy/evidence/app-qa/f83175e1-509e-4050-8518-75ff7f41ffb0/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/full-dev-worktree-env/.workbuddy/evidence/app-qa/c9c354bf-77df-48e8-9ada-3b32c9d2deea/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 104428
+    "bytes": 500457
   },
   "errors": [],
   "cleanup": {
     "cleaned": true
   },
   "hubPath": {
-    "clickedNewSession": true,
+    "guideVisibleBefore": true,
+    "clickedNewSession": false,
     "exploreVisible": true,
-    "exploreCardCount": 40,
-    "assetHubOpened": true,
-    "openedMenu": true,
-    "clickedLibrary": true,
-    "usedWorkbenchFallback": true
+    "exploreCardCount": 16,
+    "assetHubOpened": true
+  },
+  "liveMedia": {
+    "catalogImageModels": 3,
+    "viewerOpened": true,
+    "httpStatus": 200,
+    "generationMode": "live",
+    "destPath": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/full-dev-worktree-env/.test-env-F7PkEp/tmp/omnimux-generations/direct_image_1790669705235_hotco3.png",
+    "destBytes": 1552172,
+    "imageUrl": "[verified-url]",
+    "naturalWidth": 1254,
+    "naturalHeight": 1254,
+    "brokenImageCount": 0,
+    "screenshotPath": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/full-dev-worktree-env/.workbuddy/evidence/app-qa/c9c354bf-77df-48e8-9ada-3b32c9d2deea/live-image-generated-success.png"
   }
 }

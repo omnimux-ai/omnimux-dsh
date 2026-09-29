@@ -12,11 +12,11 @@ function failure(suffix) {
   return Object.assign(new Error(code), { code });
 }
 
-/** Parse a restricted credentials document without resolving aliases or exposing diagnostics.
+/**
+ * Parse and validate the YAML document and return the raw `refs` map.
  * @param {string} text
- * @returns {string} Secret for the selected child process only; never log this value.
  */
-export function parseDevDeepSeekCredential(text) {
+function parseRefsMap(text) {
   if (typeof text !== 'string') throw failure('INVALID');
   if (Buffer.byteLength(text, 'utf8') > LIMIT) throw failure('TOO_LARGE');
   try {
@@ -27,21 +27,53 @@ export function parseDevDeepSeekCredential(text) {
     });
     const refs = doc.contents.get('refs', true);
     if (!isMap(refs)) throw failure('INVALID');
-    const key = refs.get('DEEPSEEK_API_KEY', true);
-    if (!isScalar(key) || typeof key.value !== 'string' || !key.value.trim()) throw failure('INVALID');
-    return key.value.trim();
+    return refs;
   } catch {
     throw failure('INVALID');
   }
 }
 
-/**
- * Read only the operating-system user's fixed Dev credential path. Dependency overrides
- * are for in-memory tests, not CLI options. No environment or provider fallback is used.
- * @param {{fs?: Pick<typeof fs, 'lstatSync'|'realpathSync'|'openSync'|'fstatSync'|'readSync'|'closeSync'>, userInfo?: () => {homedir: string}}} [deps]
- * @returns {string}
+/** Parse a restricted credentials document without resolving aliases or exposing diagnostics.
+ * @param {string} text
+ * @returns {string} Secret for the selected child process only; never log this value.
  */
-export function readDevDeepSeekCredential(deps = {}) {
+export function parseDevDeepSeekCredential(text) {
+  const refs = parseRefsMap(text);
+  const key = refs.get('DEEPSEEK_API_KEY', true);
+  if (!isScalar(key) || typeof key.value !== 'string' || !key.value.trim()) throw failure('INVALID');
+  return key.value.trim();
+}
+
+/**
+ * Parse all string scalar credential references from `.credentials.yaml` (`DEEPSEEK_API_KEY`, `OMNIMUX_API_KEY`, `CPA_API_KEY`, etc.).
+ * @param {string} text
+ * @returns {Readonly<Record<string, string>>}
+ */
+export function parseDevCredentialsBundle(text) {
+  const refs = parseRefsMap(text);
+  /** @type {Record<string, string>} */
+  const bundle = {};
+  for (const pair of refs.items ?? []) {
+    if (!pair || !isScalar(pair.key) || typeof pair.key.value !== 'string') throw failure('INVALID');
+    const name = pair.key.value.trim();
+    if (!name || name === '__proto__' || name === 'constructor' || name === 'prototype') throw failure('INVALID');
+    if (!isScalar(pair.value) || typeof pair.value.value !== 'string' || !pair.value.value.trim()) {
+      throw failure('INVALID');
+    }
+    bundle[name] = pair.value.value.trim();
+  }
+  if (!bundle.DEEPSEEK_API_KEY && !bundle.OMNIMUX_API_KEY) {
+    throw failure('INVALID');
+  }
+  return Object.freeze(bundle);
+}
+
+/**
+ * Internal helper to safely read the raw `.credentials.yaml` file with `O_NOFOLLOW` and inode checks.
+ * @param {{fs?: Pick<typeof fs, 'lstatSync'|'realpathSync'|'openSync'|'fstatSync'|'readSync'|'closeSync'>, userInfo?: () => {homedir: string}}} [deps]
+ * @param {(rawText: string) => any} parser
+ */
+function readRawDevCredentialsFile(deps = {}, parser) {
   const io = deps.fs ?? fs;
   let fd;
   let bytes;
@@ -73,7 +105,7 @@ export function readDevDeepSeekCredential(deps = {}) {
       length += count;
     }
     if (length > LIMIT) throw failure('TOO_LARGE');
-    return parseDevDeepSeekCredential(bytes.subarray(0, length).toString('utf8'));
+    return parser(bytes.subarray(0, length).toString('utf8'));
   } catch (error) {
     if (error instanceof Error && /^TEST_ENV_CREDENTIAL_[A-Z_]+$/.test(error.message)) throw failure(error.message.slice(PREFIX.length));
     throw failure(error?.code === 'ENOENT' ? 'MISSING' : 'UNREADABLE');
@@ -83,4 +115,24 @@ export function readDevDeepSeekCredential(deps = {}) {
       try { io.closeSync(fd); } catch { throw failure('UNREADABLE'); }
     }
   }
+}
+
+/**
+ * Read only the operating-system user's fixed Dev credential path. Dependency overrides
+ * are for in-memory tests, not CLI options. No environment or provider fallback is used.
+ * @param {{fs?: Pick<typeof fs, 'lstatSync'|'realpathSync'|'openSync'|'fstatSync'|'readSync'|'closeSync'>, userInfo?: () => {homedir: string}}} [deps]
+ * @returns {string}
+ */
+export function readDevDeepSeekCredential(deps = {}) {
+  return readRawDevCredentialsFile(deps, parseDevDeepSeekCredential);
+}
+
+/**
+ * Read all scalar credential references (`DEEPSEEK_API_KEY`, `OMNIMUX_API_KEY`, `CPA_API_KEY`, etc.)
+ * from the operating-system user's fixed Dev credential path (`~/.omnimux-dev/.credentials.yaml`).
+ * @param {{fs?: Pick<typeof fs, 'lstatSync'|'realpathSync'|'openSync'|'fstatSync'|'readSync'|'closeSync'>, userInfo?: () => {homedir: string}}} [deps]
+ * @returns {Readonly<Record<string, string>>}
+ */
+export function readDevCredentialsBundle(deps = {}) {
+  return readRawDevCredentialsFile(deps, parseDevCredentialsBundle);
 }

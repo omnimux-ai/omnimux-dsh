@@ -214,3 +214,24 @@ test('immediate exit right after stdout login URL rejects and cleans up', async 
   await assert.rejects(createTestEnvironmentStarter(f.deps)({ root }), { code: 'TEST_ENV_RUNTIME_EXIT' });
   assert.equal(f.removed.length, 1);
 });
+
+test('live mode with readCredentialsBundle injects OMNIMUX_API_KEY and CPA_API_KEY into child env', async () => {
+  const { createTestEnvironmentStarter } = await load();
+  const f = fixture();
+  delete f.deps.readCredential;
+  f.deps.readCredentialsBundle = () => ({
+    DEEPSEEK_API_KEY: 'ds-unit-key',
+    OMNIMUX_API_KEY: 'omx-unit-key',
+    CPA_API_KEY: 'cpa-unit-key',
+  });
+  const run = await createTestEnvironmentStarter(f.deps)({ root, mode: 'live' });
+  try {
+    const childEnv = f.spawned[0].options.env;
+    assert.equal(childEnv.DEEPSEEK_API_KEY, 'ds-unit-key');
+    assert.equal(childEnv.OMNIMUX_API_KEY, 'omx-unit-key');
+    assert.equal(childEnv.OMNIMUX_TOKEN, 'omx-unit-key');
+    assert.equal(childEnv.CPA_API_KEY, 'cpa-unit-key');
+  } finally {
+    await run.cleanup();
+  }
+});

@@ -239,3 +239,53 @@ test('assertBlankSessionHubPath 菜单未命中时仍靠 workbench split 打开 
     rmSync(evidenceDir, { recursive: true, force: true });
   }
 });
+
+test('assertLiveImageGeneration 校验真实生图 HTTP 200、磁盘文件非空与 DOM 图片无裂图', async () => {
+  const { assertLiveImageGeneration } = await import('./worktree-app-qa.mjs');
+  const { mkdirSync, rmSync, writeFileSync } = await import('node:fs');
+  const evidenceDir = '/tmp/live-image-qa-unit';
+  mkdirSync(evidenceDir, { recursive: true });
+  const fakeDest = evidenceDir + '/generated.png';
+  writeFileSync(fakeDest, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+  const send = async (method, params = {}) => {
+    if (method === 'Runtime.evaluate') {
+      const expr = params.expression || '';
+      if (expr.includes('/omnimux/model-catalog')) {
+        return { result: { value: { httpCode: 200, imageCount: 12, videoCount: 8 } } };
+      }
+      if (expr.includes('/omnimux/api/media/generate')) {
+        return {
+          result: {
+            value: {
+              httpCode: 200,
+              body: { ok: true, mode: 'live', url: 'https://files.omnimux.ai/test.png', dest: fakeDest },
+              imgProbe: { loaded: true, width: 1024, height: 1024 },
+              brokenCount: 0,
+              hasViewer: true,
+            },
+          },
+        };
+      }
+      return { result: { value: { clickedTab: true } } };
+    }
+    if (method === 'Page.captureScreenshot') {
+      return { data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' };
+    }
+    return {};
+  };
+  try {
+    const res = await assertLiveImageGeneration({
+      send,
+      sleep: async () => {},
+      evidenceDir,
+    });
+    assert.equal(res.assertions.every(a => a.pass), true);
+    assert.equal(res.detail.httpStatus, 200);
+    assert.equal(res.detail.generationMode, 'live');
+    assert.ok(res.detail.destBytes > 0);
+    assert.equal(res.detail.naturalWidth, 1024);
+    assert.equal(res.detail.brokenImageCount, 0);
+  } finally {
+    rmSync(evidenceDir, { recursive: true, force: true });
+  }
+});
