@@ -201,6 +201,7 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
           files={localFiles}
           onAddFiles={handleAddFiles}
           onRemove={handleRemoveFile}
+          acceptedTypes={slotTarget?.acceptedTypes}
         />
       )}
     </CustomModal>

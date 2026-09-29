@@ -1,0 +1,41 @@
+{
+  "taskId": "workflow-feed-slots-model-cap",
+  "feature": "模型级素材卡槽借用与按能力筛选的素材选择器接入",
+  "verifiedAt": "2026-09-29T20:05:00.000Z",
+  "status": "PASS",
+  "scenarios": [
+    {
+      "id": "scenario-1",
+      "name": "模型级素材卡槽默认派生与借用",
+      "description": "当当前模型任意操作支持素材输入（如 first_last_frame），默认展示素材卡槽（借用首个有效操作能力），并标记 displayOnlyFromOperation",
+      "screenshot": "docs/evidence/2026-09-29-workflow-feed-slots-model-cap-02-video-pair-wells.png",
+      "result": "PASS"
+    },
+    {
+      "id": "scenario-2",
+      "name": "素材选择器按能力白名单过滤与弹窗渲染",
+      "description": "点击卡槽唤起 ResourcePickerModal，按当前卡槽的 acceptedTypes 白名单筛选候选素材，支持未连入画布素材的快捷选择",
+      "screenshot": "docs/evidence/2026-09-29-workflow-feed-slots-model-cap-03-picker-modal.png",
+      "result": "PASS"
+    },
+    {
+      "id": "scenario-3",
+      "name": "素材提交后自动建连线与操作升级",
+      "description": "选中素材提交后自动创建上游连线，若为借用展示卡槽，自动升级节点的 params.operation 到借出操作（如 first_last_frame），卡槽全部装填完成",
+      "screenshot": "docs/evidence/2026-09-29-workflow-feed-slots-model-cap-04-committed-slots.png",
+      "result": "PASS"
+    },
+    {
+      "id": "scenario-4",
+      "name": "纯文本/无素材模型零卡槽对照组",
+      "description": "对于完全无素材输入的模型（如 mock-img-hd），卡槽预设为 none，零卡槽渲染，不产生多余视觉干扰",
+      "screenshot": "docs/evidence/2026-09-29-workflow-feed-slots-model-cap-05-no-slot-control.png",
+      "result": "PASS"
+    }
+  ],
+  "e2e": {
+    "testFile": "plugins/omnimux-workflow/tests/e2e/modelSlotBorrow-material-picker.e2e.test.mjs",
+    "assertionsPassed": 7,
+    "status": "PASS"
+  }
+}

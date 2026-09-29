@@ -9,6 +9,7 @@ import type { MaterialType } from './canvasTypes.ts';
 const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'heic']);
 const VIDEO_EXT = new Set(['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v']);
 const AUDIO_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus']);
+const TEXT_EXT = new Set(['txt', 'md']);
 
 const MIME_BY_EXT: Record<string, string> = {
   png: 'image/png',
@@ -202,6 +203,7 @@ export function materialTypeFromFilename(filename: string, mime = ''): MaterialT
   if (IMAGE_EXT.has(ext)) return 'image';
   if (VIDEO_EXT.has(ext)) return 'video';
   if (AUDIO_EXT.has(ext)) return 'audio';
+  if (TEXT_EXT.has(ext)) return 'text';
   return null;
 }
 

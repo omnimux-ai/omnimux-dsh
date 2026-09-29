@@ -18,6 +18,7 @@ import {
 } from '../utils/resourcePickerPolicy.ts';
 import { draftsFromPickedPaths } from '../utils/localFileDraft.ts';
 import { buildImportedMediaData } from '../../../shared/localMedia.ts';
+import { setParamsOperation } from '../../../shared/validation/operationUi.ts';
 import type { MaterialType } from '../../../shared/graph/materialNode.ts';
 import type { NodeSlotEngineState } from '../../../shared/graph/slotContractTypes.ts';
 
@@ -29,6 +30,8 @@ export interface ResourcePickerSlotTarget {
   /** 槽位上限；null 表示官方未公布上限。 */
   max: number | null;
   replaceEdgeId?: string;
+  /** 借出型展示槽位：提交前须先把节点 operation 切到该 op。 */
+  displayOnlyFromOperation?: string;
 }
 
 export interface UseResourcePickerResult {
@@ -133,11 +136,25 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
         return false;
       }
 
+      // 借出型展示槽位：提交前先切换节点 operation 到借出 op。
+      // 同一 nodeId 的补丁必须并入已存在补丁，gateway 会拒绝 duplicate_node_patch。
+      let nodePatches = plan.nodePatches;
+      const borrowOp = slotTarget?.displayOnlyFromOperation;
+      if (borrowOp) {
+        const params = setParamsOperation(targetNode?.data?.params, borrowOp);
+        const existing = plan.nodePatches?.find((patch) => patch.nodeId === nodeId);
+        nodePatches = existing
+          ? plan.nodePatches!.map((patch) => patch.nodeId === nodeId
+              ? { ...patch, data: { ...patch.data, params } }
+              : patch)
+          : [...(plan.nodePatches ?? []), { nodeId, data: { params } }];
+      }
+
       if (slotTarget?.replaceEdgeId) state.pushHistory();
       const result = state.applyCanvasInputMutation({
         addNodes: plan.addNodes,
         addEdges: plan.addEdges,
-        nodePatches: plan.nodePatches,
+        nodePatches,
       });
 
       if (result.status !== 'allowed') {

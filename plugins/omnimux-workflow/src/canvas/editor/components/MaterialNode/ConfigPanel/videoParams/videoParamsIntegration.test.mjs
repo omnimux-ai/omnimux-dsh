@@ -254,7 +254,7 @@ test('Issue #986：ConfigPanel 为视频节点提供基于模型能力的卡槽�
     '视频节点应支持基于模型能力的卡槽逻辑',
   );
   assert.match(source, /resolveSlotOperation\(activeCatalog, modelValue, preferredOperationId, outputTypeForCompat, fingerprint\)/);
-  assert.match(source, /deriveSlotLayout\(activeCatalog, modelValue, currentOperationId\)/);
+  assert.match(source, /deriveModelSlotLayout\(activeCatalog, modelValue, currentOperationId\)/);
   assert.match(source, /fingerprint: consumedFingerprint/);
   assert.doesNotMatch(source, /updateParam\('operation', 'text_to_video'\)/, '断开供给不能重置已选模式');
 });

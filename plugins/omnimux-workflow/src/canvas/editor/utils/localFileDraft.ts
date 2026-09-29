@@ -49,3 +49,15 @@ export function draftsFromPickedPaths(paths: string[]): LocalFileDraft[] {
   }
   return drafts;
 }
+
+/**
+ * Slot-fill sessions only accept the slot's media types; any other draft is
+ * intercepted at ingest. An undefined or empty whitelist accepts everything.
+ */
+export function filterDraftsByTypes(
+  drafts: LocalFileDraft[],
+  acceptedTypes?: readonly string[],
+): LocalFileDraft[] {
+  if (!acceptedTypes?.length) return drafts;
+  return drafts.filter((draft) => acceptedTypes.includes(draft.materialType));
+}

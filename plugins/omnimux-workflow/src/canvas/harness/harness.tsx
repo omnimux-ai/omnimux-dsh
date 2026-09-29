@@ -44,6 +44,113 @@ const MOCK_CATALOG: CapabilityCatalog = {
   ],
   video: [{ id: 'mock-video-720p', label: 'Mock Video 720p' }],
   audio: [{ id: 'mock-tts-standard', label: 'Mock TTS Standard' }],
+  // 契约真源（buildContractView 只读 models[]）：驱动素材卡槽派生与借用。
+  // mock-video-720p 当前生成方式 text_to_video 无素材输入，借用兄弟操作
+  // first_last_frame 的 pair 卡槽；mock-img-fast 借 image_to_image 的 strip
+  // 卡槽；mock-img-hd 为对照组（无任何素材操作，不应出现卡槽）。
+  models: [
+    {
+      id: 'mock-video-720p',
+      label: 'Mock Video 720p',
+      operations: [
+        {
+          id: 'text_to_video',
+          label: '文生视频',
+          listed: true,
+          output: { type: 'video' },
+          inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 }],
+        },
+        {
+          id: 'first_last_frame',
+          label: '首尾帧',
+          listed: true,
+          output: { type: 'video' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'first_frame', type: 'image', role: 'reference', min: 0, max: 1 },
+            { slot: 'last_frame', type: 'image', role: 'reference', min: 0, max: 1 },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'mock-img-fast',
+      label: 'Mock Image Fast',
+      operations: [
+        {
+          id: 'text_to_image',
+          label: '文生图',
+          listed: true,
+          output: { type: 'image' },
+          inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 }],
+        },
+        {
+          id: 'image_to_image',
+          label: '参考图',
+          listed: true,
+          output: { type: 'image' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'reference_image', type: 'image', role: 'reference', min: 0, max: null },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'mock-img-hd',
+      label: 'Mock Image HD',
+      operations: [
+        {
+          id: 'text_to_image',
+          label: '文生图',
+          listed: true,
+          output: { type: 'image' },
+          inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 }],
+        },
+      ],
+    },
+    {
+      id: 'mock-tts-standard',
+      label: 'Mock TTS Standard',
+      operations: [
+        {
+          id: 'text_to_speech',
+          label: '语音合成',
+          listed: true,
+          output: { type: 'audio' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'reference_audio', type: 'audio', role: 'reference', min: 0, max: null },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'gemini-3.7-flash',
+      label: 'Gemini 3.7 Flash',
+      operations: [
+        {
+          id: 'chat',
+          label: '对话',
+          listed: true,
+          output: { type: 'text' },
+          inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 }],
+        },
+        {
+          id: 'vision_chat',
+          label: '多模态对话',
+          listed: true,
+          output: { type: 'text' },
+          inputs: [
+            { slot: 'prompt', type: 'text', role: 'prompt', min: 0, max: 1 },
+            { slot: 'reference_images', type: 'image', role: 'reference', min: 0, max: null },
+            { slot: 'reference_videos', type: 'video', role: 'reference', min: 0, max: null },
+            { slot: 'reference_documents', type: 'document', role: 'reference', min: 0, max: null },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 const MOCK_MEDIA: Record<Exclude<MaterialType, 'text'>, string> = {
@@ -56,9 +163,18 @@ function buildMockGraph(): { nodes: Node[]; edges: Edge[] } {
   const specs: Array<{ id: string; type: MaterialType; x: number; y: number; label: string }> = [
     { id: 'n-text', type: 'text', x: 80, y: 60, label: '文案脚本' },
     { id: 'n-image', type: 'image', x: 480, y: 40, label: '分镜图片' },
+    { id: 'n-asset-img', type: 'image', x: 480, y: 380, label: '候选尾帧' },
     { id: 'n-video', type: 'video', x: 880, y: 80, label: '成片视频' },
     { id: 'n-audio', type: 'audio', x: 880, y: 420, label: '配乐音频' },
   ];
+  // 预置 params.model 对齐 MOCK_CATALOG.defaults：素材卡槽的模型级派生需要
+  // modelValue 非空；不留空避免面板显示「待重新选择」遮蔽本特性的验收路径。
+  const DEFAULT_MODEL: Record<MaterialType, string> = {
+    text: 'gemini-3.7-flash',
+    image: 'mock-img-fast',
+    video: 'mock-video-720p',
+    audio: 'mock-tts-standard',
+  };
   const nodes = specs.map((spec) => ({
     id: spec.id,
     type: 'material',
@@ -75,6 +191,7 @@ function buildMockGraph(): { nodes: Node[]; edges: Edge[] } {
               : spec.type === 'video'
                 ? 'video-generation'
                 : 'text-to-music',
+        params: { model: DEFAULT_MODEL[spec.type] },
       }),
       // 预置一个已完成的图片节点，便于直接验收 MediaPreview。
       ...(spec.type === 'image'
@@ -173,8 +290,10 @@ const Harness: React.FC = () => {
   // 初始注入画布数据 + mock 执行桥（只挂一次）。
   useEffect(() => {
     injectCanvasStyles();
+    useCanvasStore.getState().setCatalogRuntime(MOCK_CATALOG);
     const { nodes, edges } = buildMockGraph();
     useCanvasStore.getState().hydrateGraph(nodes, edges);
+    (window as any).__canvasStore = useCanvasStore;
     useExecutionStore.getState().setStartNodeExecution((nodeId) => simulateNodeRun(nodeId));
     return () => {
       useExecutionStore.getState().setStartNodeExecution(null);
