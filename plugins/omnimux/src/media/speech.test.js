@@ -183,3 +183,34 @@ test('existing task IDs retain audio polling and download even with the new defa
   })
   assert.equal(polled.audio_url, result.url)
 })
+
+test('gemini-3.8-flash-tts dispatches to cliRunner without needing remote auth (#2801)', async (t) => {
+  const dest = destFor(t)
+  const cliCalls = []
+  const mockRunner = async (bin, args) => {
+    cliCalls.push({ bin, args })
+    writeFileSync(dest, Buffer.from('RIFF mock wav bytes'))
+    return {
+      stdout: JSON.stringify([{ Status: 'Success', Duration: '4.2s', OutputPath: dest }]),
+      stderr: '',
+    }
+  }
+
+  const result = await executeOmnimuxAudio({
+    dest,
+    model: 'gemini-3.8-flash-tts',
+    prompt: '你好，这是来自 Gemini TTS 的测试',
+    env: {},
+    cliRunner: mockRunner,
+  })
+
+  assert.equal(result.mode, 'live')
+  assert.equal(result.model, 'gemini-3.8-flash-tts')
+  assert.equal(result.duration, 4.2)
+  assert.equal(result.dest, dest)
+  assert.equal(cliCalls.length, 1)
+  assert.equal(cliCalls[0].bin, 'opencli')
+  assert.deepEqual(cliCalls[0].args.slice(0, 2), ['gemini', 'tts'])
+  assert.equal(cliCalls[0].args[2], '你好，这是来自 Gemini TTS 的测试')
+})
+

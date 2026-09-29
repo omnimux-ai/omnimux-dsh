@@ -328,6 +328,14 @@
       ]
     },
     {
+      "id": "gemini-3.8-flash-tts",
+      "disposition": "canonical",
+      "reason": "基于 opencli gemini tts (Google AI Studio) 本地驱动的拟真语音合成模型",
+      "evidence": [
+        "docs/evidence/2026-09-29-model-gemini-3-8-flash-tts-text_to_speech.md"
+      ]
+    },
+    {
       "id": "doubao-seed-audio-1.0",
       "disposition": "alias",
       "target": "seed-audio-1.0",

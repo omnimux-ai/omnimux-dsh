@@ -194,6 +194,16 @@
       "note": "2026-09-18 #2256：声音克隆（参考音 + 文稿）。渠道官方文档证据充分且已进入画布白名单，故按门禁要求 requiredInAuto；真实执行证据待补。"
     },
     {
+      "productId": "gemini-3.8-flash-tts",
+      "kind": "audio",
+      "priority": "P1",
+      "gatewayIds": [
+        "gemini-3.8-flash-tts"
+      ],
+      "requiredInAuto": true,
+      "note": "2026-09-29 #2801：本地 CLI 驱动的 Gemini 3.8 Flash TTS（基于 opencli / ego-browser）。"
+    },
+    {
       "productId": "suno",
       "kind": "audio",
       "priority": "P1",

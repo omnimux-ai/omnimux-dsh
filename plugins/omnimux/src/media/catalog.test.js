@@ -11,7 +11,8 @@ describe('hub media catalog facade (contract-derived)', () => {
     assert.equal(VIDEO_MODEL_SPECS.length, 11)
     // #1789: seedasr-auc is contracted in the audio management group (ASR, text output).
     // #2256: index-tts joins the audio group (voice clone, audio output).
-    assert.equal(AUDIO_MODEL_SPECS.length, 7)
+    // #2801: gemini-3.8-flash-tts joins the audio group (Google AI Studio TTS).
+    assert.equal(AUDIO_MODEL_SPECS.length, 8)
   })
 
   it('GPT Image 2.5 lists all 8 aspect ratios + auto', () => {
@@ -116,6 +117,8 @@ describe('hub media catalog facade (contract-derived)', () => {
   it('audio table includes suno and gpt-4o-mini-tts', () => {
     assert.ok(findMediaModel('audio', 'suno'))
     assert.ok(AUDIO_MODEL_SPECS.some((row) => row.id === 'gpt-4o-mini-tts'))
+    assert.ok(AUDIO_MODEL_SPECS.some((row) => row.id === 'gemini-3.8-flash-tts'))
+    assert.equal(findMediaModel('audio', 'gemini-3.8-flash-tts')?.label, 'Gemini 3.8 Flash TTS')
   })
 
   it('mediaModelIds matches the table rows', () => {

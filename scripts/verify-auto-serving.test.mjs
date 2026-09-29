@@ -25,13 +25,13 @@ test('manifest registers all whitelist IDs without claiming online supply', () =
     assert.ok(!manifest.models.some((row) => row.productId === removed), `${removed} must be deregistered`)
     assert.ok(!report.issues.some((issue) => issue.modelId === removed), `${removed} must not be reported`)
   }
-  assert.equal(report.registeredCount, 17)
-  assert.equal(report.requiredCount, 13)
+  assert.equal(report.registeredCount, 21)
+  assert.equal(report.requiredCount, 10)
   assert.equal(report.onlineVerified, false)
 })
 
 test('every whitelist model must be registered even when not listed', () => {
-  checkMutation((m) => { m.models = m.models.filter((row) => row.productId !== 'suno') }, 'missing')
+  checkMutation((m) => { m.models = m.models.filter((row) => row.productId !== 'seed-audio-1.0') }, 'missing')
 })
 
 test('alias IDs cannot replace canonical product registrations', () => {
@@ -64,7 +64,7 @@ test('required supply cannot include an unlisted model or exclude a listed white
 })
 
 test('wrong modality, duplicate products and wire-model drift fail closed', () => {
-  checkMutation((m) => { m.models[0].kind = 'image' }, 'not_allowed')
+  checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2.5').kind = 'video' }, 'not_allowed')
   checkMutation((m) => { m.models.push(m.models[0]) }, 'duplicate')
   checkMutation((m) => { m.models.find((row) => row.productId === 'minimax-h3').upstreamWireId = 'minimax-h3' }, 'wire_mismatch')
 })
