@@ -941,14 +941,34 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
 
         assert.ok(mountedApi)
 
-        // 1. 普通未指定渠道请求：不能因为存在 OMNIMUX_API_KEY 而穿透跳过校验，必须抛出“尚未配置图片、视频和音频”
+        // 1. 未在系统登记的非官方模型请求：不能因为存在 OMNIMUX_API_KEY 而穿透跳过校验，必须抛出“尚未配置图片、视频和音频”
         assert.throws(
-          () => mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0' }),
+          () => mountedApi.execute({ dest: '/tmp/out.png', model: 'unregistered-custom-model' }),
           /尚未配置图片、视频和音频/,
         )
         assert.equal(executed, false)
 
+        // 1b. 正交共存保证：在 Agent 模式下，未带渠道后缀的官方模型（画布默认场景：seedance-2-0、gpt-image-2.5、minimax-h3），具备官方 Token 时直接安全放行
+        executed = false
+        assert.doesNotThrow(() => {
+          mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0' })
+        })
+        assert.equal(executed, true)
+
+        executed = false
+        assert.doesNotThrow(() => {
+          mountedApi.execute({ dest: '/tmp/out.png', model: 'gpt-image-2.5' })
+        })
+        assert.equal(executed, true)
+
+        executed = false
+        assert.doesNotThrow(() => {
+          mountedApi.execute({ dest: '/tmp/out.png', model: 'minimax-h3' })
+        })
+        assert.equal(executed, true)
+
         // 2. 指定了 BYOK 渠道但本地未配置好：不能穿透跳过校验，必须抛出“尚未配置图片、视频和音频”
+        executed = false
         assert.throws(
           () => mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@byok-fal' }),
           /尚未配置图片、视频和音频/,
@@ -1011,13 +1031,13 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         assert.equal(executed, false)
 
         // 8. 官方凭据判定移至安全上下文，不信任调用方请求体自带的 req.env.OMNIMUX_API_KEY
-        // (a) 在未显式指定渠道且未开启官方兜底时，即使系统存在官方 Token，普通请求也坚决拦截
+        // (a) 在未显式指定渠道且未开启官方兜底时，未在系统登记的非官方模型请求坚决拦截
         currentSettings = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false, allowOfficialMediaFallback: false }
         executed = false
         assert.throws(
           () => mountedApi.execute({
             dest: '/tmp/out.png',
-            model: 'seedance-2-0',
+            model: 'unregistered-custom-model',
           }),
           /尚未配置图片、视频和音频/,
         )
@@ -1678,7 +1698,7 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         assert.throws(
           () => mountedApi.execute({
             dest: '/tmp/out.png',
-            model: 'seedance-2-0',
+            model: 'unregistered-custom-model',
           }),
           /尚未配置图片、视频和音频/,
         )
@@ -1693,7 +1713,7 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         assert.throws(
           () => mountedApi.execute({
             dest: '/tmp/out.png',
-            model: 'seedance-2-0',
+            model: 'unregistered-custom-model',
           }),
           /尚未配置图片、视频和音频/,
         )
