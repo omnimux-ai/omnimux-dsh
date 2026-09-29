@@ -27,5 +27,7 @@ deliverables/
 # 工作流运行期生成物（args 等）。脚本与池子是资产，out/ 是产物。
 /scripts/workflows/out/
 
-# 项目唯一临时沙盒目录（不跟踪、不物化、全链路脱敏、即用即焚，禁止别名兜底）
-.tmp/
+# 项目唯一临时沙盒目录（仅且唯一跟踪 AGENTS.md 规范契约，其余全量忽略、即用即焚）
+!/.tmp/
+/.tmp/*
+!/.tmp/AGENTS.md

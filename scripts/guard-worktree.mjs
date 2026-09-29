@@ -26,8 +26,6 @@ const EPHEMERAL_DIR_NAMES = new Set([
   'node_modules',
   'dist',
   'dist-harness',
-  'tmp',
-  'temp',
   '.tmp',
   '.cache',
   'coverage',
@@ -289,6 +287,13 @@ function commandSegments(command) {
     .filter(Boolean)
 }
 
+function rawCommandSegments(command) {
+  return String(command || '')
+    .split(/\s*(?:&&|\|\||;|\n)\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
 function looksLikeGitInvocation(segment) {
   return /(?:^|\s)git(?:\s|$)/i.test(segment)
 }
@@ -404,6 +409,18 @@ export function extractCommandWriteTargets(command) {
         const nonOptions = words.slice(1).filter((w) => !w.startsWith('-'))
         for (const f of nonOptions) {
           targets.push(f)
+        }
+      } else if (['mkdir', 'touch'].includes(verb)) {
+        const optionArgs = verb === 'mkdir'
+          ? new Set(['-m', '--mode'])
+          : new Set(['-r', '--reference', '-t', '-d', '--date'])
+        for (let i = 1; i < words.length; i++) {
+          const w = words[i]
+          if (w.startsWith('-')) {
+            if (optionArgs.has(w)) i++
+            continue
+          }
+          targets.push(w)
         }
       } else if (verb === 'sed' && words.some((w) => w === '-i' || w.startsWith('-i'))) {
         const nonOptions = words.slice(1).filter((w) => !w.startsWith('-'))
@@ -581,6 +598,93 @@ export function decideMainBranchGitOp(command, cwd) {
       }
     }
   }
+  return { decision: 'allow' }
+}
+
+export function decideMainCheckoutBuildCommand(command, cwd) {
+  if (!command || typeof command !== 'string') return { decision: 'allow' }
+  const sessionCwd = resolve(cwd || process.cwd())
+  let currentCwd = sessionCwd
+
+  const segments = rawCommandSegments(command)
+  for (const seg of segments) {
+    const words = tokenizeCommandLine(seg)
+    if (words.length === 0) continue
+
+    const verb = words[0].toLowerCase()
+    if (verb === 'git' || verb.endsWith('/git')) continue
+
+    // 0. 跨命令段追踪 cd 目标目录（如 cd .worktrees/task && pnpm build 合法放行）
+    if (verb === 'cd') {
+      const targetDir = words[1] ? words[1].replace(/^['"]|['"]$/g, '') : ''
+      if (targetDir) {
+        currentCwd = resolve(currentCwd, targetDir)
+      }
+      continue
+    }
+
+    // 若当前实际生效的工作目录处于 linked worktree 内，完全放行构建
+    if (isWorktreePath(currentCwd)) continue
+    const root = gitRoot(currentCwd)
+    if (root && isWorktreePath(root)) continue
+
+    const cleanWords = words.map((w) => w.replace(/^['"]|['"]$/g, ''))
+
+    // 1. tsc（严密校验 --noEmit，杜绝 --noEmit=false 或 --noEmit false 等篡改穿透，包含 pnpm/yarn/npm exec 包装）
+    const isTscInvocation =
+      verb === 'tsc' ||
+      (verb === 'npx' && cleanWords[1] === 'tsc') ||
+      (['pnpm', 'yarn', 'bun'].includes(verb) && cleanWords[1] === 'tsc') ||
+      (verb === 'npm' && cleanWords[1] === 'exec' && cleanWords.includes('tsc'))
+
+    if (isTscInvocation) {
+      let isNoEmit = false
+      for (let i = 0; i < cleanWords.length; i++) {
+        const w = cleanWords[i]
+        if (w === '--noEmit') {
+          const next = cleanWords[i + 1]
+          if (next !== 'false' && next !== '0') {
+            isNoEmit = true
+          }
+        } else if (w.startsWith('--noEmit=')) {
+          const val = w.slice('--noEmit='.length).toLowerCase()
+          if (val !== 'false' && val !== '0') {
+            isNoEmit = true
+          }
+        }
+      }
+      if (!isNoEmit) {
+        return {
+          decision: 'deny',
+          reason: 'forbidden-main-checkout-build',
+          command: seg,
+        }
+      }
+    }
+
+    // 2. build / compile / bundle / 包安装修改命令（剥离引号后稳健识别，如 pnpm run "build"）
+    if (['pnpm', 'npm', 'yarn', 'bun'].includes(verb)) {
+      const isBuild = cleanWords.some((w) => ['build', 'compile', 'bundle'].includes(w))
+      const isPkgMutation = cleanWords.some((w) => ['install', 'add', 'update', 'remove', 'uninstall'].includes(w))
+      if (isBuild || isPkgMutation) {
+        return {
+          decision: 'deny',
+          reason: 'forbidden-main-checkout-build',
+          command: seg,
+        }
+      }
+    }
+
+    // 3. direct vite build or esbuild
+    if ((verb === 'vite' && cleanWords.includes('build')) || verb === 'esbuild') {
+      return {
+        decision: 'deny',
+        reason: 'forbidden-main-checkout-build',
+        command: seg,
+      }
+    }
+  }
+
   return { decision: 'allow' }
 }
 
@@ -804,6 +908,12 @@ export function decideBashCommand({ command, cwd }) {
     }
   }
 
+  // 3.5. 检查主检出下执行修改性构建与编译命令（防编译器穿透与主目录变脏）
+  const buildDecision = decideMainCheckoutBuildCommand(command, cwd)
+  if (buildDecision.decision === 'deny') {
+    return buildDecision
+  }
+
   // 4. 检查在主仓本地 main 分支上执行 git merge 或 git commit
   const mainBranchOps = decideMainBranchGitOp(command, cwd)
   if (mainBranchOps.decision === 'deny') {
@@ -933,6 +1043,13 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
         '📌 事故防范守则：本地主分支堆积了未在云端合入的私有提交，若直接物化将导致未经评审的半成品脏代码流入共享开发环境。',
         '👉 强制标准流程：',
         '  请保持本地 main 与 origin/main 严格 1:1 对齐 (0 ahead, 0 behind)，所有改动走 PR 合并后再执行物化！',
+      ].join('\n')
+    } else if (reason === 'forbidden-main-checkout-build') {
+      output.permissionDecisionReason = [
+        '🚫【OmniMux 主检出硬隔离拦截】主目录除 .tmp/ 目录外严禁执行任何产生磁盘修改的构建/编译或包安装命令！',
+        `🎯 被拦截的命令：${extra.command || '构建命令'}`,
+        '📌 核心防线原则：主目录除 .tmp 外必须保持绝对只读与洁净，严禁在主检出直接运行 build/tsc 触发编译器副作用。',
+        '👉 正确流程：请先运行 ./scripts/worktree.sh new <task> 在专属 Worktree 内执行构建、编译与测试！',
       ].join('\n')
     } else if (reason === 'forbidden-main-branch-merge') {
       output.permissionDecisionReason = [

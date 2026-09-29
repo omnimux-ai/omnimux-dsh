@@ -83,7 +83,8 @@ describe('guard-worktree path classification', () => {
     )
     assert.equal(isEphemeralPath(`${mainRepoRoot}/plugins/omnimux/node_modules/foo/index.js`), true)
     assert.equal(isEphemeralPath(`${mainRepoRoot}/plugins/omnimux-workflow/dist-harness/app.js`), true)
-    assert.equal(isEphemeralPath(`${mainRepoRoot}/plugins/omnimux/tmp/scratch.js`), true)
+    assert.equal(isEphemeralPath(`${mainRepoRoot}/plugins/omnimux/.tmp/scratch.js`), true)
+    assert.equal(isEphemeralPath(`${mainRepoRoot}/plugins/omnimux/tmp/scratch.js`), false)
     assert.equal(isEphemeralPath(`${mainRepoRoot}/plugins/omnimux/src/index.js`), false)
     assert.equal(isEphemeralPath(`${mainRepoRoot}/package.json`), false)
   })
@@ -693,13 +694,45 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
     )
   })
 
-  it('allows standard build and package manager commands', () => {
+  it('denies build and package mutation commands on the main checkout while allowing in worktree', () => {
     assert.equal(
       decideBashCommand({ command: 'pnpm build', cwd: mainRepoRoot }).decision,
-      'allow',
+      'deny',
     )
     assert.equal(
       decideBashCommand({ command: 'npm run build', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm run "build"', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'tsc -p tsconfig.json', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'tsc --noEmit false', cwd: mainRepoRoot }).decision,
+      'deny',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'tsc --noEmit', cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'pnpm build', cwd: worktreeRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'tsc -p tsconfig.json', cwd: worktreeRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: `cd ${worktreeRoot} && pnpm build`, cwd: mainRepoRoot }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({ command: 'touch -r package.json .tmp/out.txt', cwd: mainRepoRoot }).decision,
       'allow',
     )
     assert.equal(
