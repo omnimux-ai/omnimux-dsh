@@ -33,11 +33,28 @@ export async function probeTextImage(source, deps) {
   if (!raw) {
     throw new OmnimuxError('omnimux-invalid-request', 'image is empty')
   }
-  const loaded = raw.startsWith('data:')
-    ? decodeDataUri(raw)
-    : /^https?:\/\//i.test(raw)
-      ? await fetchRemoteImage(raw, deps)
-      : await readLocalImage(raw, deps.signal)
+  let resolvedSource = raw
+  if (raw.startsWith('/omnimux-viewer/asset?') || (raw.includes('/omnimux-viewer/asset?') && /localhost|127\.0\.0\.1/i.test(raw))) {
+    try {
+      const u = new URL(raw, 'http://localhost')
+      const p = u.searchParams.get('p')
+      if (p) {
+        resolvedSource = Buffer.from(p, 'base64url').toString('utf8')
+      }
+    } catch {}
+  } else if (raw.startsWith('/api/local-file?') || raw.startsWith('/omnimux-workflow/api/local-file?') || ((raw.includes('/api/local-file?') || raw.includes('/omnimux-workflow/api/local-file?')) && /localhost|127\.0\.0\.1/i.test(raw))) {
+    try {
+      const u = new URL(raw, 'http://localhost')
+      const p = u.searchParams.get('path')
+      if (p) resolvedSource = p
+    } catch {}
+  }
+
+  const loaded = resolvedSource.startsWith('data:')
+    ? decodeDataUri(resolvedSource)
+    : /^https?:\/\//i.test(resolvedSource)
+      ? await fetchRemoteImage(resolvedSource, deps)
+      : await readLocalImage(resolvedSource, deps.signal)
   const probedMediaType = mediaFromMagic(loaded.data)
   if (!probedMediaType) {
     throw new OmnimuxError('omnimux-invalid-request', 'image format is not recognized')

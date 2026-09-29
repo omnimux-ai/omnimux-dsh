@@ -44,11 +44,28 @@ export async function probeTextVideo(source, opts = {}) {
   if (!raw) {
     throw new OmnimuxError('omnimux-invalid-request', 'video is empty')
   }
-  const loaded = raw.startsWith('data:')
-    ? decodeVideoDataUri(raw)
-    : /^https?:\/\//i.test(raw)
-      ? await fetchRemoteVideo(raw, opts)
-      : await readLocalVideo(raw, opts.signal)
+  let resolvedSource = raw
+  if (raw.startsWith('/omnimux-viewer/asset?') || (raw.includes('/omnimux-viewer/asset?') && /localhost|127\.0\.0\.1/i.test(raw))) {
+    try {
+      const u = new URL(raw, 'http://localhost')
+      const p = u.searchParams.get('p')
+      if (p) {
+        resolvedSource = Buffer.from(p, 'base64url').toString('utf8')
+      }
+    } catch {}
+  } else if (raw.startsWith('/api/local-file?') || raw.startsWith('/omnimux-workflow/api/local-file?') || ((raw.includes('/api/local-file?') || raw.includes('/omnimux-workflow/api/local-file?')) && /localhost|127\.0\.0\.1/i.test(raw))) {
+    try {
+      const u = new URL(raw, 'http://localhost')
+      const p = u.searchParams.get('path')
+      if (p) resolvedSource = p
+    } catch {}
+  }
+
+  const loaded = resolvedSource.startsWith('data:')
+    ? decodeVideoDataUri(resolvedSource)
+    : /^https?:\/\//i.test(resolvedSource)
+      ? await fetchRemoteVideo(resolvedSource, opts)
+      : await readLocalVideo(resolvedSource, opts.signal)
   const probedMediaType = mediaFromVideoMagic(loaded.data)
   if (!probedMediaType) {
     throw new OmnimuxError('omnimux-invalid-request', 'video must be MP4, WebM, or QuickTime')
