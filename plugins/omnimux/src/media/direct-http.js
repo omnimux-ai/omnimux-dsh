@@ -90,10 +90,15 @@ export function registerDirectMediaRoutes(webServer, deps) {
       }
 
       try {
+        const requestedGroup = (typeof body.group === 'string' && body.group.trim())
+          || (typeof body.channel === 'string' && body.channel.trim())
+          || undefined
         const executePayload = {
           prompt,
           dest,
           model: body.model,
+          group: requestedGroup,
+          channel: requestedGroup,
           operation,
           aspectRatio: body.aspectRatio,
           resolution: body.resolution,

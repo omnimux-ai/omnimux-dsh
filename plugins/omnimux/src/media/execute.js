@@ -261,7 +261,11 @@ export async function executeOmnimuxMedia(capability, input) {
     : null
   const implicitByokProvider = matchedImplicitByokItem ? matchedImplicitByokItem.provider.toLowerCase().trim() : ''
 
-  if (runtime.mode === 'agent' && !isOfficialChannel && !isByokChannel && !mediaChoice.ready && !implicitByokProvider) {
+  const inputModelId = typeof input.model === 'string' ? parseModelAndGroup(input.model).modelId : ''
+  const isOfficialMediaModel = Boolean(inputModelId && getModelChannelGroups(inputModelId).length > 0)
+  const isEffectivelyOfficial = isOfficialChannel || (!isByokChannel && isOfficialMediaModel)
+
+  if (runtime.mode === 'agent' && !isEffectivelyOfficial && !isByokChannel && !mediaChoice.ready && !implicitByokProvider) {
     throw new OmnimuxError('omnimux-unconfigured', '本机助手只承接文字，图片、视频和音频需要配置媒体生成提供商或改用官方')
   }
 
@@ -290,7 +294,7 @@ export async function executeOmnimuxMedia(capability, input) {
     && input.runtimeSettings.runtimeKeyEndpoint.trim().length > 0
     && input.runtimeSettings?.runtimeKeyVerified === true
   const hasReadyByokProvider = Boolean(implicitByokProvider)
-  const shouldRouteByok = isByokChannel || (!isOfficialChannel && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
+  const shouldRouteByok = isByokChannel || (!isEffectivelyOfficial && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
 
   if (shouldRouteByok) {
     let configuredMainProvider = ''
