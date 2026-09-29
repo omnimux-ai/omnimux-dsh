@@ -171,6 +171,37 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [activeSegmentId, setActiveSegmentId] = useState('')
   const [videoFailed, setVideoFailed] = useState(false)
   const [showSharePopover, setShowSharePopover] = useState(false)
+  const shareTriggerRef = useRef(null)
+  const sharePopoverRef = useRef(null)
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !showSharePopover) onClose?.()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose, showSharePopover])
+
+  useEffect(() => {
+    if (!showSharePopover) return
+    const dismiss = (event) => {
+      if (event.type === 'keydown') {
+        if (event.key !== 'Escape') return
+        event.preventDefault()
+        event.stopPropagation()
+        setShowSharePopover(false)
+        shareTriggerRef.current?.focus()
+      } else if (!sharePopoverRef.current?.contains(event.target) && !shareTriggerRef.current?.contains(event.target)) {
+        setShowSharePopover(false)
+      }
+    }
+    window.addEventListener('keydown', dismiss, true)
+    window.addEventListener('pointerdown', dismiss, true)
+    return () => {
+      window.removeEventListener('keydown', dismiss, true)
+      window.removeEventListener('pointerdown', dismiss, true)
+    }
+  }, [showSharePopover])
   const [sharing, setSharing] = useState(false)
   const [shareError, setShareError] = useState(null)
 
@@ -270,11 +301,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   // this reset the next row opened in the same modal would render its cover
   // under the previous row's "cannot be played" notice.
   useEffect(() => setVideoFailed(false), [videoSrc, item?.id])
-  useEffect(() => {
-    const handleKeyDown = (event) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+
 
   const data = useMemo(() => getInspirationPreviewData(item), [item])
   const currentShotIndex = useMemo(() => {
@@ -430,6 +457,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
               <Button
                 size="sm"
                 variant="ghost"
+                ref={shareTriggerRef}
                 leadingIcon={ICON_SHARE}
                 className={`omnimux-inspiration-share-trigger-btn ${showSharePopover ? 'is-active' : ''}`}
                 onClick={() => setShowSharePopover((prev) => !prev)}
@@ -441,7 +469,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
               </Button>
 
               {showSharePopover && (
-                <div className="omnimux-inspiration-share-popover" onClick={(e) => e.stopPropagation()}>
+                <div ref={sharePopoverRef} className="omnimux-inspiration-share-popover" onClick={(e) => e.stopPropagation()}>
                   <div className="omnimux-inspiration-share-popover-header">
                     <span className="omnimux-inspiration-share-popover-title">
                       {t('modal.share.title') || '分享灵感'}

@@ -3016,6 +3016,24 @@ export const INSPIRATION_CSS = `
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+dialog.omnimux-inspiration-preview-layer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+dialog.omnimux-inspiration-preview-layer::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
 `
 
 /**

@@ -3,6 +3,7 @@ import { NS, en, zh } from './locales.js'
 import { mountSidebarEntry } from './sidebar-entry.js'
 import { InspirationStage } from './InspirationStage.jsx'
 import { bindOfficialSessions } from './new-session-click.js'
+import { registerPreviewService } from './preview-service.jsx'
 export const name = 'omnimux-inspiration'
 export const inject = ['slots', 'locale']
 
@@ -42,6 +43,7 @@ function renderInspirationIcon(size = 16) {
 export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'omnimux-inspiration: dictionaries')
   const t = ctx.locale.bind(NS)
+  ctx.effect(() => registerPreviewService(t), 'omnimux-inspiration: shared preview')
 
   ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-inspiration: sidebar entry')
   const registerInspirationTab = (sidebar) => {
