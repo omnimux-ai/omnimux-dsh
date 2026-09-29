@@ -111,8 +111,6 @@ export function attachCardToConversation(cardOrItem, customWin) {
       detail: { sessionId: activeSessionId },
     })
   );
-  const composer = win.__omnimuxComposerActions;
-  composer?.revealAttachments?.();
 }
 
 /** 兼容保留旧方法签名 */
@@ -459,9 +457,6 @@ export function ExploreTemplatesSection({
     const prompt = promptForCard(card);
     const itemData = card.trending || card.raw || card;
 
-    // 关键！将卡片的素材主图/封面及深度结构化信息独占加载到素材卡槽，为 Agent 注入完整上下文
-    attachCardToConversation(card);
-
     if (card.lane === 'trending' && onApplyTrending) {
       onApplyTrending(itemData);
     } else if (onApplyTemplate) {
@@ -469,6 +464,7 @@ export function ExploreTemplatesSection({
         template: itemData,
         prompt,
         title: card.title,
+        card,
       });
     }
   };

@@ -17,7 +17,7 @@ export const COMPOSER_EDITOR_SELECTOR = [
 /** 显式作用域缺失时不回退到其他会话；无参数调用保留既有全局入口。
  * 兼容 Window / Document 类 scope，其余 scope 必须是已连接的 DOM 节点。
  */
-export function focusEditorElement(root?: ParentNode | Window | null): void {
+export function focusEditorElement(root?: ParentNode | Window | null, options: FocusOptions = { preventScroll: true }): void {
   const scope = arguments.length === 0
     ? (typeof document === 'undefined' ? null : document)
     : root;
@@ -29,5 +29,5 @@ export function focusEditorElement(root?: ParentNode | Window | null): void {
     : Boolean((container as Node).isConnected);
   if (!isConnected) return;
   const editor = container.querySelector(COMPOSER_EDITOR_SELECTOR) as HTMLElement | null;
-  editor?.focus();
+  editor?.focus({ preventScroll: true, ...options });
 }

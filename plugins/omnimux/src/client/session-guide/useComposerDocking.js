@@ -345,8 +345,8 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
 
     isIntentDrivenRef.current = true
     isCollapsedRef.current = false
-    // 再次点击同一张卡片：作为反悔动作解除吸底（强制吸底时不执行反悔）
-    if (!pinnedRef.current && !force && dockedItem && isSameItem(dockedItem, item)) {
+    // 再次点击同一张卡片：作为反悔动作解除吸底并清空已选项
+    if (!pinnedRef.current && dockedItem && isSameItem(dockedItem, item)) {
       undock()
       return false
     }
@@ -360,7 +360,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     savedScrollRef.current = currentScrollTop
 
     const { revealThreshold, leaveThreshold } = getComposerScrollThresholds(root, scroller)
-    // 顶部优先原则：当前顶部输入框可见且未显式指定 force 时才留在顶部原位
+    // 顶部优先原则：仅在未显式指定 force 且当前顶部输入框完全可见且未被 pin 时才留在顶部原位
     const isTopVisible = !force && currentScrollTop <= revealThreshold && !pinnedRef.current
 
     if (isTopVisible) {

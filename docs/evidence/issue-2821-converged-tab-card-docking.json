@@ -1,0 +1,26 @@
+{
+  "issue": 2821,
+  "spec": "specs/2821-converged-tab-card-docking.spec.md",
+  "feature": "converged-tab-card-docking",
+  "tabs": [
+    "featured",
+    "assets",
+    "inspiration",
+    "products",
+    "trending",
+    "skills"
+  ],
+  "verifiedBehaviors": {
+    "viewportScrollLock": "PASS (scrollTop remains at scroll target, zero jump to top)",
+    "dockedState": "PASS (host has data-omnimux-dock-open, fixed bottom 20px)",
+    "silentFocus": "PASS (focusEditorElement enforces preventScroll: true)",
+    "singleActionGateway": "PASS (handleUnifiedCardApply handles mutually exclusive attachment/skill)",
+    "toggleRevert": "PASS (second click on same card cleanly reverts dock and draft)"
+  },
+  "tests": {
+    "convergedE2E": "plugins/omnimux/src/client/session-guide/converged-tab-docking.e2e.test.js",
+    "totalPassing": 54,
+    "failing": 0
+  },
+  "timestamp": "2026-09-29T15:05:00Z"
+}

@@ -14,6 +14,7 @@ import { LIBRARY_STAGE_PROMPT_EVENT, mergeLibraryPrompt } from '../composer-add/
 import { useComposerDocking, ICON_CHEVRON_DOWN } from './useComposerDocking.js'
 import { getRightSidebarCollapsedSnapshot, getSplitCompactSnapshot, subscribeSplitCompactLayout } from '../split-compact-layout.js'
 import { publishActiveSkill, requestSkillAttach } from '../composer-add/skill-event.ts'
+import { focusEditorElement } from '../attachments/focusEditorElement.ts'
 
 /** 没有 workbench 注入时的空订阅，保持 useSyncExternalStore 的引用稳定。 */
 const NOOP_SUBSCRIBE = () => () => {}
@@ -183,10 +184,10 @@ function BlankSessionGuide({
   }
 
   function focusEditor() {
-    const root = guideRef.current?.closest('[data-omnimux-starter-host]')
-    // 必须 `preventScroll`：否则浏览器原生 focus 会把视口拉回输入框所在的原位，
-    // 让刚吸底到视口底部的输入框连同页面一起跳回顶部。
-    root?.querySelector('[data-composer-input="true"]')?.focus({ preventScroll: true })
+    const root = guideRef.current?.closest('[data-omnimux-starter-host]') ||
+      guideRef.current?.closest('[data-phase]') ||
+      guideRef.current
+    focusEditorElement(root, { preventScroll: true })
   }
 
   useEffect(() => {
@@ -323,6 +324,66 @@ function BlankSessionGuide({
   }
 
   /**
+   * 6 大 Tab 栏卡片与输入框交互统一收敛中枢：
+   * 无论来自爆款趋势、创意模板、技能、资产库、灵感库还是商品库：
+   * 统一执行：
+   * 1. 独占装载或重置附件 / 技能；
+   * 2. 调度输入框坚决吸底停靠（docked），传递 force: true 杜绝跳顶；
+   * 3. 延迟预填 Prompt，静默聚焦（preventScroll: true，消除跳顶）；
+   * 4. 再次点击同张卡片统一反悔撤销。
+   */
+  const handleUnifiedCardApply = useCallback(({
+    type = 'template',
+    payload,
+    prompt = '',
+    cleanSlug = '',
+    displayName = '',
+    attachmentItem = null,
+  }) => {
+    if (!payload) return
+
+    const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
+
+    // 1. 如果是 Skill 技能：必须清空素材卡槽，不残留旧图
+    if (type === 'skill') {
+      store?.clear?.(sessionId)
+    } else if (attachmentItem) {
+      // 2. 如果是素材类卡片：将卡片挂载为附件上下文
+      attachCardToConversation(attachmentItem)
+    }
+
+    // 3. 调度输入框停靠：显式传递 force: true 确保坚决吸底，不被误判为 inline
+    const docked = dock(payload, {
+      force: true,
+      onDocked: () => {
+        if (type === 'skill' && cleanSlug) {
+          requestSkillAttach({
+            id: payload.id || '',
+            slug: cleanSlug,
+            skill: cleanSlug,
+            name: displayName,
+            title: displayName,
+          })
+        }
+        applyDraftRef.current?.(prompt, {
+          toastKey: null,
+          restoreNotice: true,
+          copy: false,
+        })
+      },
+    })
+
+    // 4. 反悔处理：再次点击同卡片撤销选用
+    if (!docked) {
+      if (type === 'skill') {
+        publishActiveSkill(null)
+      }
+      applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
+      store?.clear?.(sessionId)
+    }
+  }, [sessionId, dock])
+
+  /**
    * 模板/应用类型复刻：如果为 AI 应用，直接直通；如果是常规模板则吸底就位后延迟预填 Prompt（零弹窗、零跳动）
    */
   function handleExploreTemplateApply(payload) {
@@ -330,19 +391,13 @@ function BlankSessionGuide({
       return
     }
     if (!payload?.prompt) return
-    const docked = dock(payload, () => {
-      applyDraftRef.current?.(payload.prompt, {
-        toastKey: null,
-        restoreNotice: true,
-        copy: false,
-      })
+    const template = payload.template || payload
+    handleUnifiedCardApply({
+      type: 'template',
+      payload,
+      prompt: payload.prompt,
+      attachmentItem: payload.card || template,
     })
-    if (!docked) {
-      // 再次点击同一卡片反悔：清空草稿与附件
-      applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
-      const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
-      store?.clear?.(sessionId)
-    }
   }
 
   /**
@@ -355,26 +410,17 @@ function BlankSessionGuide({
     const breakdown = payload.breakdown ? ` · 分镜拆解：${payload.breakdown}` : ''
     const prompt = `请基于灵感文件 #${id}（${title}${breakdown}），为我的产品对标还原其黄金节奏与分镜镜头。`
 
-    // 关键！将爆款视频封面、直链与结构化分镜作为附件加载至素材卡槽，为 Agent 注入完整上下文
-    attachCardToConversation({
-      lane: 'trending',
-      trending: payload,
-      raw: payload,
-      title,
+    handleUnifiedCardApply({
+      type: 'trending',
+      payload,
+      prompt,
+      attachmentItem: {
+        lane: 'trending',
+        trending: payload,
+        raw: payload,
+        title,
+      },
     })
-
-    const docked = dock(payload, () => {
-      applyDraftRef.current?.(prompt, {
-        toastKey: null,
-        restoreNotice: true,
-        copy: false,
-      })
-    })
-    if (!docked) {
-      applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
-      const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
-      store?.clear?.(sessionId)
-    }
   }
 
   /**
@@ -390,31 +436,13 @@ function BlankSessionGuide({
       ? 'Please explain the best way to use this skill.'
       : '为我解释下这个技能的最佳使用方式。'
 
-    // 关键！Skill 是专项能力角色，本身无预设主图。点击 Skill 时必须清空/移除素材卡槽，绝不残留旧图！
-    const store = typeof window !== 'undefined' ? window.__omnimuxAttachments : null
-    store?.clear?.(sessionId)
-
-    const docked = dock(payload, () => {
-      if (cleanSlug) {
-        requestSkillAttach({
-          id: payload.id || '',
-          slug: cleanSlug,
-          skill: cleanSlug,
-          name: displayName,
-          title: displayName,
-        })
-      }
-      applyDraftRef.current?.(prompt, {
-        toastKey: null,
-        restoreNotice: true,
-        copy: false,
-      })
+    handleUnifiedCardApply({
+      type: 'skill',
+      payload,
+      prompt,
+      cleanSlug,
+      displayName,
     })
-    if (!docked) {
-      publishActiveSkill(null)
-      applyDraftRef.current?.('', { toastKey: null, restoreNotice: true })
-      store?.clear?.(sessionId)
-    }
   }
 
   return (
