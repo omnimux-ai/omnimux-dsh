@@ -641,7 +641,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                     className="omx-media-slot"
                     data-ratio={activeItem?.aspectRatio || '1:1'}
                   >
-                    <div className="omx-media-slot__shimmer-wrap">
+                    <div className="omx-media-slot__shimmer-wrap omx-mv-generating-overlay" data-card="GeneratingStateCard">
                       <OrganicShimmerOverlay />
                     </div>
                   </div>
