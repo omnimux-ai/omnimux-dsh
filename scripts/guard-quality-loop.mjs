@@ -203,6 +203,17 @@ export function isE2ETestFile(fullPath, rootDir) {
   return isE2EPath(rel)
 }
 
+/** 端到端写入内容是否含强断言信号（测试剧场拦截）。assert.ok / toBeTruthy 不算强断言。 */
+export function hasStrongOracleSignal(content) {
+  if (!content || typeof content !== 'string') return false
+  const patterns = [
+    /\bassert\.(equal|strictEqual|deepEqual|deepStrictEqual|match|rejects|throws)\b/,
+    /\bexpect\([^)]*\)\.(toBe|toEqual|toStrictEqual|toMatch|toContain|toThrow)\b/,
+    /\bt\.(equal|strictEqual|deepEqual|match|throws)\b/,
+  ]
+  return patterns.some((p) => p.test(content))
+}
+
 /** 任务有效实测证据路径：必须在受控持久化目录且非通配首页冒烟图 */
 export function isTaskEvidencePath(relPath) {
   if (!relPath || typeof relPath !== 'string') return false
@@ -333,6 +344,10 @@ export function decideQualityGate({ toolName, toolInput, cwd }) {
     if (!hasEvidenceAfterSpec(root)) {
       return { decision: 'deny', reason: 'missing-verify-evidence-for-e2e' }
     }
+    const content = String(toolInput.content || toolInput.new_string || '')
+    if (!hasStrongOracleSignal(content)) {
+      return { decision: 'deny', reason: 'missing-strong-oracle-for-e2e' }
+    }
   }
 
   return { decision: 'allow' }
@@ -357,6 +372,11 @@ const REASONS = {
     '⛔ 严禁使用通用首页冒烟图（如 app-home.png）或 /tmp 临时文件充数：证据必须具备功能专属特征并持久化！',
     '💡【业务前置数据提示】：若功能依赖画布素材节点等前置数据，测试环境已自动预置带视频的标准工程（ID: ws_qa_media），直接可用！',
     '👉 正确流程：先在真实浏览器中跑通被测功能关键交互并留存专属截图证据，再固化端到端测试。',
+  ],
+  'missing-strong-oracle-for-e2e': () => [
+    '🚫【质量五步闭环硬门禁：端到端强断言拦截】拟写入的端到端测试缺少强断言信号，禁止落盘测试剧场！',
+    '📌 判定规则：端到端测试内容须至少包含一类强断言（如 assert.equal / expect(...).toEqual / t.equal），仅 assert.ok、toBeTruthy、mock 被调用或无断言一律拦截。',
+    '👉 正确流程：按规格写清期望值比较或错误路径断言后再写入端到端测试。',
   ],
   'missing-e2e-for-ui-change': (extra) => [
     '🚫【质量五步闭环硬门禁：端到端完整性拦截】本任务改动了界面代码，但改动集合中没有端到端测试，禁止提交/推送/建 PR！',
@@ -398,9 +418,16 @@ function main() {
     try {
       process.stdout.write(JSON.stringify(handle(raw)) + '\n')
     } catch (err) {
-      process.stderr.write(`[guard-quality-loop error] ${err.message}\n`)
+      process.stderr.write(`[guard-quality-loop error] ${err && err.message ? err.message : String(err)}\n`)
       process.stdout.write(
-        JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }) + '\n',
+        JSON.stringify({
+          hookSpecificOutput: {
+            hookEventName: 'PreToolUse',
+            permissionDecision: 'deny',
+            permissionDecisionReason:
+              '🚫【质量五步闭环硬门禁：异常 Fail-Closed】门禁执行异常，触发安全阻断。禁止在异常时放行。',
+          },
+        }) + '\n',
       )
     }
   })
