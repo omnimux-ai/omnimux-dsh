@@ -39,12 +39,18 @@ export async function generateCliSpeech(input) {
     throw new OmnimuxError('omnimux-invalid-request', 'cli speech text prompt cannot be empty')
   }
 
+  const voice = typeof input.payload?.voice === 'string' && input.payload.voice.trim()
+    ? input.payload.voice.trim()
+    : (typeof input.guardPlan?.voice === 'string' && input.guardPlan.voice.trim()
+      ? input.guardPlan.voice.trim()
+      : 'Nika')
+
   await mkdir(dirname(input.dest), { recursive: true })
 
   try {
     signal.throwIfAborted()
 
-    const args = ['gemini', 'tts', text, '--output', input.dest, '-f', 'json']
+    const args = ['gemini', 'tts', text, '--output', input.dest, '--voice', voice, '-f', 'json']
     const execOptions = {
       signal,
       timeout: timeoutMs,

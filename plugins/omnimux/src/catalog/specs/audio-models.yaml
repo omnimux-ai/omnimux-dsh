@@ -137,7 +137,118 @@ models:
       voice:
         defaultValue: "Nika"
         options:
-          - { value: "Nika", label: "Nika (AI Studio 默认角色)" }
+          - value: "Nika"
+            label: "Nika (知性女声 · 默认)"
+            meta:
+              display_name: "Nika"
+              name: "Nika"
+              voice_type: "Nika"
+              gender: "female"
+              category: "通用场景"
+              language: "中文,英语"
+              accent: "自然亲切"
+              tags: ["默认角色", "官方推荐"]
+              is_hot: true
+              hot_order: 1
+          - value: "Puck"
+            label: "Puck (明朗男声)"
+            meta:
+              display_name: "Puck"
+              name: "Puck"
+              voice_type: "Puck"
+              gender: "male"
+              category: "角色扮演"
+              language: "中文,英语"
+              accent: "明朗活力"
+              tags: ["官方音色"]
+          - value: "Charon"
+            label: "Charon (沉稳男声)"
+            meta:
+              display_name: "Charon"
+              name: "Charon"
+              voice_type: "Charon"
+              gender: "male"
+              category: "旁白解说"
+              language: "中文,英语"
+              accent: "沉稳厚重"
+              tags: ["官方音色"]
+          - value: "Kore"
+            label: "Kore (柔和女声)"
+            meta:
+              display_name: "Kore"
+              name: "Kore"
+              voice_type: "Kore"
+              gender: "female"
+              category: "通用场景"
+              language: "中文,英语"
+              accent: "柔和亲切"
+              tags: ["官方音色"]
+          - value: "Fenrir"
+            label: "Fenrir (威严男声)"
+            meta:
+              display_name: "Fenrir"
+              name: "Fenrir"
+              voice_type: "Fenrir"
+              gender: "male"
+              category: "角色扮演"
+              language: "中文,英语"
+              accent: "深沉威严"
+              tags: ["官方音色"]
+          - value: "Aoede"
+            label: "Aoede (优雅女声)"
+            meta:
+              display_name: "Aoede"
+              name: "Aoede"
+              voice_type: "Aoede"
+              gender: "female"
+              category: "有声阅读"
+              language: "中文,英语"
+              accent: "优雅知性"
+              tags: ["官方音色"]
+          - value: "Leda"
+            label: "Leda (清新女声)"
+            meta:
+              display_name: "Leda"
+              name: "Leda"
+              voice_type: "Leda"
+              gender: "female"
+              category: "通用场景"
+              language: "中文,英语"
+              accent: "清新自然"
+              tags: ["官方音色"]
+          - value: "Orus"
+            label: "Orus (从容男声)"
+            meta:
+              display_name: "Orus"
+              name: "Orus"
+              voice_type: "Orus"
+              gender: "male"
+              category: "通用场景"
+              language: "中文,英语"
+              accent: "从容自信"
+              tags: ["官方音色"]
+          - value: "Zephyr"
+            label: "Zephyr (清爽男声)"
+            meta:
+              display_name: "Zephyr"
+              name: "Zephyr"
+              voice_type: "Zephyr"
+              gender: "male"
+              category: "通用场景"
+              language: "中文,英语"
+              accent: "温和清爽"
+              tags: ["官方音色"]
+          - value: "Despina"
+            label: "Despina (舒缓女声)"
+            meta:
+              display_name: "Despina"
+              name: "Despina"
+              voice_type: "Despina"
+              gender: "female"
+              category: "角色扮演"
+              language: "中文,英语"
+              accent: "平缓舒展"
+              tags: ["官方音色"]
       format:
         options: ["wav"]
         defaultValue: "wav"

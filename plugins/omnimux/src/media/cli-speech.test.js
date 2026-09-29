@@ -25,8 +25,10 @@ describe('generateCliSpeech', () => {
       assert.equal(args[2], '测试语音生成')
       assert.equal(args[3], '--output')
       assert.equal(args[4], dest)
-      assert.equal(args[5], '-f')
-      assert.equal(args[6], 'json')
+      assert.equal(args[5], '--voice')
+      assert.equal(args[6], 'Puck')
+      assert.equal(args[7], '-f')
+      assert.equal(args[8], 'json')
 
       // Simulate opencli writing the output wav file
       await writeFile(dest, Buffer.from('RIFF mock wav data 1234567890'))
@@ -35,7 +37,7 @@ describe('generateCliSpeech', () => {
         stdout: JSON.stringify([
           {
             Status: 'Success',
-            Character: 'Nika',
+            Character: 'Puck',
             Duration: '3.5s',
             Size: '30 bytes',
             OutputPath: dest,
@@ -49,7 +51,7 @@ describe('generateCliSpeech', () => {
     const res = await generateCliSpeech({
       route: { modelId: 'gemini-3.8-flash-tts' },
       guardPlan: mockGuardPlan,
-      payload: { input: '测试语音生成' },
+      payload: { input: '测试语音生成', voice: 'Puck' },
       dest,
       runner: mockRunner,
     })
