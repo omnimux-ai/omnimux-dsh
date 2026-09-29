@@ -1,6 +1,6 @@
 /**
  * ContextMenu 与 useCanvasContextMenu 契约测试：
- * 验证画布选中节点时支持删除功能，以及右键识别选中节点逻辑。
+ * 验证画布右键菜单靶心归属性、单选/多选/画布上下文迁移，以及删除与工作流创建功能。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -38,29 +38,36 @@ test('ContextMenu 契约：pane 分支在 hasSelection 为 true 时必须包含 
   );
 });
 
-test('useCanvasContextMenu 契约：未传特定 node 时支持单选与多选节点的上下文智能识别', () => {
-  // 1. 验证根据选中的节点列表识别单选与多选
+test('useCanvasContextMenu 契约：严格遵循靶心归属性与原子化状态迁移（空白右键清空选择，节点右键精准聚焦）', () => {
+  // 1. 验证空白处右键必须原子化取消选中，并唤起 pane 菜单
   assert.match(
     useCanvasContextMenuSrc,
-    /const\s+selectedNodes\s*=\s*useCanvasStore\.getState\(\)\.nodes\.filter\(\(n\)\s*=>\s*n\.selected\);/,
-    '必须提取当前处于选中态的节点列表',
+    /const\s+handlePaneContextMenu\s*=\s*useCallback\(\s*\(event:[^)]*\)\s*=>\s*\{[\s\S]*?clearSelection\(\);[\s\S]*?context:\s*\{\s*type:\s*'pane'\s*\}[\s\S]*?\},/s,
+    'handlePaneContextMenu 必须原子化调用 clearSelection 并唤起 pane 上下文菜单',
   );
 
-  // 2. 验证单选节点时识别为 { type: 'node', nodeId: selectedNodes[0].id }
+  // 2. 验证节点右键时检测多选：若已属于多选集合则派发 selection 上下文
   assert.match(
     useCanvasContextMenuSrc,
-    /if\s*\(selectedNodes\.length\s*===\s*1\s*&&\s*selectedNodes\[0\]\)\s*\{\s*context\s*=\s*\{\s*type:\s*'node',\s*nodeId:\s*selectedNodes\[0\]\.id\s*\};/s,
-    '单选节点时必须识别为 node 上下文并绑定对应 nodeId',
+    /if\s*\(isAlreadySelected\s*&&\s*selectedNodes\.length\s*>\s*1\)\s*\{\s*setMenu\(\{[\s\S]*?context:\s*\{\s*type:\s*'selection'\s*\}[\s\S]*?\}\);/s,
+    '右键节点若属于多选集合，必须维持多选并激活 selection 批量菜单',
   );
 
-  // 3. 验证多选节点时识别为 selection 上下文
+  // 3. 验证节点右键未在多选集时，原子化将焦点转移并锁定为该节点（成为唯一选中）
   assert.match(
     useCanvasContextMenuSrc,
-    /else\s+if\s*\(selectedNodes\.length\s*>\s*1\)\s*\{\s*context\s*=\s*\{\s*type:\s*'selection'\s*\};/s,
-    '多选节点时必须识别为 selection 上下文',
+    /if\s*\(!isAlreadySelected\s*\|\|\s*selectedNodes\.length\s*!==\s*1\)\s*\{[\s\S]*?setSelectedElement\?\.\(('node'|"node"),\s*node\.id\);[\s\S]*?\}/s,
+    '右键节点未处于单选该节点时，必须原子化更新选中态并同步 setSelectedElement',
   );
 
-  // 4. 验证 delete 动作在 node、selection 以及 pane 下均有健全处理
+  // 4. 验证节点右键最终激活 node 菜单并绑定 nodeId
+  assert.match(
+    useCanvasContextMenuSrc,
+    /context:\s*\{\s*type:\s*'node',\s*nodeId:\s*node\.id\s*\}/,
+    '节点右键菜单上下文必须精准绑定到当前点击的 node.id',
+  );
+
+  // 5. 验证 delete 动作在 node、selection 以及 pane 下均有健全处理
   assert.match(
     useCanvasContextMenuSrc,
     /case\s+'delete':\s*\{.*deleteSelectedNodes\(\);/s,
