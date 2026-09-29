@@ -1017,7 +1017,7 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
       output.permissionDecisionReason = [
         `🚫【OmniMux 仓库 Hook】严禁通过命令行向主目录核心受保护路径（${extra.target || '目标路径'}）复制、移动或写入文件！`,
         '📌 核心防线原则：主目录仅允许通过 Git 进行常规合并与同步最新代码（如 git pull / git merge），严禁通过 cp/mv/重定向 越过版本管理篡改主干代码。',
-        '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 在独立 Worktree 中修改并提交，经 PR 合入后再同步到主目录！',
+        '👉 强制流程：主目录核心路径已被物理写保护。请暂停当前动作，向用户汇报当前阻断并等待用户下达工作区规划指示，严禁私自调用脚本绕行！',
         'ℹ️  豁免范围：独立 Worktree 目录内的操作、临时衍生目录（dist/、node_modules/、tmp/、*.log）与被 gitignore 忽略的文件。',
       ].join('\n')
     } else if (reason === 'forbidden-worktree-materialization') {
@@ -1049,7 +1049,7 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
         '🚫【OmniMux 主检出硬隔离拦截】主目录除 .tmp/ 目录外严禁执行任何产生磁盘修改的构建/编译或包安装命令！',
         `🎯 被拦截的命令：${extra.command || '构建命令'}`,
         '📌 核心防线原则：主目录除 .tmp 外必须保持绝对只读与洁净，严禁在主检出直接运行 build/tsc 触发编译器副作用。',
-        '👉 正确流程：请先运行 ./scripts/worktree.sh new <task> 在专属 Worktree 内执行构建、编译与测试！',
+        '👉 强制流程：主目录除 .tmp 外禁止编译构建。请向用户汇报当前阻断，并等待指示切入专属 Worktree 执行构建！',
       ].join('\n')
     } else if (reason === 'forbidden-main-branch-merge') {
       output.permissionDecisionReason = [
@@ -1061,26 +1061,26 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
       output.permissionDecisionReason = [
         '🚫【OmniMux 多 Agent 隔离守卫】严禁在本地主干直接执行 git commit！',
         '📌 核心守则：本地 main 分支为纯只读镜像，严禁直接提交代码。',
-        '👉 正确流程：请先调用: ./scripts/git-wt.sh start <plugin> <topic> 在独立工作树中开发并提交。',
+        '👉 强制流程：本地主干禁止直接提交代码。请向用户汇报当前阻断，并等待指示切入专属 Worktree 进行提交！',
       ].join('\n')
     } else if (reason === 'forbidden-non-origin-worktree-add') {
       output.permissionDecisionReason = [
         '🚫【OmniMux 多 Agent 隔离守卫】新建工作树必须显式以 origin/main 为唯一起点！',
         '📌 核心守则：严禁基于本地旧状态或未推送分支签出工作树，防止将他人半成品脏代码引入新环境。',
-        '👉 正确流程：请直接运行: ./scripts/git-wt.sh start <plugin> <topic>，或在命令末尾显式指定 origin/main。',
+        '👉 强制流程：新建工作树必须基于 origin/main。请检查命令入参，显式指定 origin/main 为起点！',
       ].join('\n')
     } else if (reason === 'untracked-protected-scope') {
       output.permissionDecisionReason = [
         '🚫【OmniMux 仓库 Hook】严禁在主仓库 plugins/、scripts/、docs/ 等核心目录下新建任何源码或配置文件！',
         '📌 核心防线原则：在主目录直接创建未跟踪源码文件会导致主干工作区被污染，并引发构建衍生与多 Agent 冲突覆盖。',
-        '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！',
+        '👉 强制流程：主目录核心路径已被物理写保护。请暂停当前写入，向用户汇报当前阻断并等待用户下达工作区规划指示，严禁私自调用脚本绕行！',
         'ℹ️  豁免范围：经 Git 元数据与注册表核实的 linked worktree、本地工作台记录 (.workbuddy/)、临时缓存目录 (tmp/、dist/、node_modules/)。',
       ].join('\n')
     } else {
       output.permissionDecisionReason = [
         '🚫【OmniMux 仓库 Hook】严禁在主 checkout 直接修改任何已加入版本管理（Git Tracked）的文件！',
         '📌 核心防线原则：版本管理的文件一旦在主目录被修改，将面临未经审核的脏提交，或者在同步拉取时被覆盖/丢弃。',
-        '👉 正确流程：请先调用 bash 运行: ./scripts/git-wt.sh start <plugin> <topic> <issue_id> 创建并切入独立 Worktree 工作区！',
+        '👉 强制流程：主目录 Git 受控文件禁止直接写入。请暂停当前写入，向用户汇报当前阻断并等待用户明确指示，严禁私自调用脚本绕行！',
         'ℹ️  豁免范围：独立 Worktree 目录、gitignore 规则文件、临时缓存（node_modules、dist、tmp、*.log）与非受保护草稿文件。',
       ].join('\n')
     }
