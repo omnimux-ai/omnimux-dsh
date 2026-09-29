@@ -11,16 +11,11 @@ export const root = resolve(here, '../../../..');
 const require = createRequire(resolve(root, 'plugins/omnimux/package.json'));
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
-export async function startFixture({ uiAuditKit = process.env.UI_AUDIT_KIT } = {}) {
+export async function startFixture() {
   // Resolve one physical React instance for both the viewer and UI kit.
   const alias = {};
   for (const name of ['react', 'react-dom']) alias[name] = dirname(await realpath(require.resolve(`${name}/package.json`)));
-  // Match the real-kit fixture contract: explicit checkout opt-in, never a UI shim.
-  const kitEntry = uiAuditKit
-    ? resolve(uiAuditKit, 'lib/index.js') : require.resolve('dsh-ui-kit');
-  alias['dsh-ui-kit'] = await realpath(kitEntry);
-  const kitRequire = createRequire(alias['dsh-ui-kit']);
-  alias['@deepseek-ai/dsh-client-ui-primitives'] = await realpath(kitRequire.resolve('@deepseek-ai/dsh-client-ui-primitives'));
+  alias['dsh-ui-kit'] = await realpath(require.resolve('dsh-ui-kit'));
   const built = await build({ absWorkingDir: root, entryPoints: [resolve(here, 'generation-feedback-fixture.jsx')],
     bundle: true, alias, write: false, outdir: resolve(here, 'memory-output'), format: 'esm', platform: 'browser',
     metafile: true, loader: { '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl', '.module.css': 'local-css' } });
@@ -43,16 +38,14 @@ export async function startFixture({ uiAuditKit = process.env.UI_AUDIT_KIT } = {
   sourceHashes[videoPath] = hash(video);
   const videoResponse = JSON.stringify({ ok: true, value: { offset: 0, eof: true, bytes: video.length, data: video.toString('base64') } });
   const server = http.createServer((req, res) => {
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'");
     const path = new URL(req.url, 'http://localhost').pathname;
     if (path === '/') { res.setHeader('content-type', 'text/html;charset=utf-8'); res.end(html); }
     else if (path === '/fixture.js') { res.setHeader('content-type', 'text/javascript'); res.end(bundle); }
-    else if (path === '/fixture-video.mp4') { res.setHeader('content-type', 'video/mp4'); res.end(video); }
     else if (path === '/fixture-video-result.json') { res.setHeader('content-type', 'application/json'); res.end(videoResponse); }
     else { res.statusCode = 404; res.end(); }
   });
   await new Promise((accept, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', accept); });
-  const manifest = { root, uiKitEntry: alias['dsh-ui-kit'], pid: process.pid, url: `http://127.0.0.1:${server.address().port}/`,
+  const manifest = { root, pid: process.pid, url: `http://127.0.0.1:${server.address().port}/`,
     sourceHashes, bundleSha256: hash(bundle), startedAt: new Date().toISOString() };
   return { manifest, async close() {
     server.closeAllConnections();

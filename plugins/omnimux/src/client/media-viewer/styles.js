@@ -6,62 +6,15 @@
 export const MEDIA_VIEWER_STYLE_ID = 'omnimux-media-viewer-styles';
 
 export const MEDIA_VIEWER_CSS = `
-.omx-mv-generation-tasks {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 16px;
-  width: 100%;
-  max-width: 640px;
-  margin: 0 auto;
-  box-sizing: border-box;
-}
+.omx-mv-generation-tasks { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 16px; width: 100%; box-sizing: border-box; flex: 0 0 auto; }
+.omx-mv-viewport[data-has-generation] { flex-direction: column; justify-content: flex-start; }
+.omx-mv-viewport[data-has-generation] > .omx-mv-single-stage { flex: 0 0 auto; }
 .omx-mv-generation-tasks:empty { display: none; }
-.omx-mv-generation-task {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-layer-2, #202020);
-  border: 1px solid var(--dsw-alias-border-l2, #333333);
-  font-size: 13px;
-  color: var(--dsw-alias-label-primary, #ffffff);
-}
-.omx-mv-generation-task[data-generation-status="failure"] {
-  border-color: rgba(239, 68, 68, 0.4); /* exempt-ui03: 异常任务告警高亮边框 */
-  background: rgba(239, 68, 68, 0.08); /* exempt-ui03: 异常任务告警高亮背景 */
-}
-.omx-mv-generation-task[data-generation-status="cancelled"] {
-  border-color: var(--dsw-alias-border-l1, #444444);
-  opacity: 0.85;
-}
-.omx-mv-generation-task__label {
-  font-size: 13px;
-  line-height: 1.4;
-  flex: 1;
-}
-.omx-mv-generation-task__btn {
-  background: transparent;
-  border: 1px solid var(--dsw-alias-border-l2, #444444);
-  color: var(--dsw-alias-label-primary, #ffffff);
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 120ms ease;
-}
-.omx-mv-generation-task__btn:hover {
-  background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.1));
-}
-.omx-mv-generation-task__status {
-  font-size: 12px;
-  color: var(--dsw-alias-label-secondary, #a0a0a0);
-  text-align: right;
-  padding-right: 4px;
-}
+.omx-mv-generation-task { width: min(100%, 480px); overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); }
+.omx-mv-generation-task__label { padding: 12px; font-size: 13px; color: var(--dsw-alias-label-primary); }
+.omx-mv-generation-task > .omx-generating-box { height: 240px; position: relative; }
+.omx-mv-generation-task > img, .omx-mv-generation-task > video { display: block; width: 100%; max-height: 480px; object-fit: contain; }
+.omx-generating-box[data-generation-phase="pending"] .omx-shimmer-overlay { display: none; }
 
 /* ========================================================
    1. 助手消息尾部图片预览卡片 (Message Tail Preview Card)
@@ -777,303 +730,57 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 /* ========================================================
-   7. 有机流体折射动效与原位任务卡片 (OrganicShimmer & InPlaceTaskSlot)
+   7. 生成中点阵与流体微光动效 (OrganicShimmer)
    ======================================================== */
-@keyframes wf-organic-shimmer-sweep {
-  0% {
-    transform: translate3d(-69.697%, -69.697%, 0);
-  }
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-.omx-media-viewer,
-.omx-media-slot,
-.omx-generating-box {
-  --wf-shimmer-dur: 4000ms;
-  --wf-shimmer-ease: linear;
-  --wf-shimmer-direction: alternate;
-  --wf-shimmer-band-factor: 26%;
-  --wf-shimmer-band: calc(var(--wf-shimmer-band-factor) * 0.848);
-  --wf-shimmer-bg-opacity: 1;
-  --wf-shimmer-glow-blur: 20px;
-  --wf-shimmer-glow-opacity: 0.75;
-  --wf-shimmer-border-opacity: 1;
-  --wf-shimmer-stage-bg: var(--dsw-alias-bg-layer-1, #181818);
-  --wf-shimmer-stage-rgb: 24, 24, 24;
-  --wf-shimmer-svg-url: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22600%22%20viewBox%3D%220%200%20600%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22wf_shm_g%22%20gradientUnits%3D%22userSpaceOnUse%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%22600%22%20y2%3D%22600%22%3E%3Cstop%20offset%3D%220.0000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.3236%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.4008%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.75%22%2F%3E%3Cstop%20offset%3D%220.4603%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.3%22%2F%3E%3Cstop%20offset%3D%220.5000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220%22%2F%3E%3Cstop%20offset%3D%220.5397%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.3%22%2F%3E%3Cstop%20offset%3D%220.5992%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.75%22%2F%3E%3Cstop%20offset%3D%220.6764%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%221.0000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3C%2FlinearGradient%3E%3Cfilter%20id%3D%22wf_shm_w%22%20x%3D%22-10%25%22%20y%3D%22-10%25%22%20width%3D%22120%25%22%20height%3D%22120%25%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.009%200.015%22%20numOctaves%3D%222%22%20seed%3D%227%22%20result%3D%22n%22%2F%3E%3CfeDisplacementMap%20in%3D%22SourceGraphic%22%20in2%3D%22n%22%20scale%3D%2246%22%20xChannelSelector%3D%22R%22%20yChannelSelector%3D%22G%22%2F%3E%3CfeGaussianBlur%20stdDeviation%3D%225%22%2F%3E%3C%2Ffilter%3E%3C%2Fdefs%3E%3Crect%20x%3D%22-70%22%20y%3D%22-70%22%20width%3D%22740%22%20height%3D%22740%22%20fill%3D%22url(%23wf_shm_g)%22%20filter%3D%22url(%23wf_shm_w)%22%2F%3E%3C%2Fsvg%3E");
-}
-
-.wf-organic-shimmer {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--wf-shimmer-stage-bg, var(--dsw-alias-bg-layer-1, #141414));
-  overflow: hidden;
-  isolation: isolate;
-  box-sizing: border-box;
-}
-
-.wf-organic-shimmer[data-playing="false"] .wf-organic-shimmer__distortion,
-.wf-organic-shimmer[data-playing="false"] .wf-organic-shimmer__mask {
-  animation-play-state: paused !important;
-}
-
-.wf-organic-shimmer__canvas {
-  position: absolute;
-  inset: -20px;
-  pointer-events: none;
-}
-
-.wf-organic-shimmer__field {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(90px 70px at 20% 15%, rgba(40, 140, 255, 0.18), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(80px 60px at 65% 25%, rgba(255, 50, 100, 0.16), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(70px 80px at 30% 55%, rgba(50, 200, 80, 0.15), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(90px 70px at 75% 65%, rgba(180, 40, 240, 0.16), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(70px 60px at 45% 85%, rgba(255, 120, 40, 0.15), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(60px 60px at 10% 85%, rgba(30, 185, 170, 0.14), transparent), /* exempt-ui03 organic shimmer */
-    linear-gradient(rgba(90, 90, 100, 0.05), rgba(90, 90, 100, 0.05)); /* exempt-ui03 organic shimmer */
-  opacity: var(--wf-shimmer-bg-opacity, 1);
-  pointer-events: none;
-}
-
-.wf-organic-shimmer__distortion {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 330%;
-  height: 330%;
-  background-image: var(--wf-shimmer-svg-url);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  transform: translate3d(-69.697%, -69.697%, 0);
-  animation: wf-organic-shimmer-sweep var(--wf-shimmer-dur, 4000ms) var(--wf-shimmer-ease, linear) infinite var(--wf-shimmer-direction, alternate);
-  will-change: transform;
-  pointer-events: none;
-}
-
-.wf-organic-shimmer__glow-layer {
-  position: absolute;
-  inset: -20px;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.wf-organic-shimmer__glow-wrap {
-  position: absolute;
-  inset: 0;
-  opacity: var(--wf-shimmer-glow-opacity, 0.75);
-  pointer-events: none;
-}
-
-.wf-organic-shimmer__glow-deep,
-.wf-organic-shimmer__glow-mid,
-.wf-organic-shimmer__glow-border {
-  position: absolute;
-  inset: 20px;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.wf-organic-shimmer__glow-deep {
-  background:
-    radial-gradient(55px 31px at 33% -7.4%, rgba(255, 50, 100, 0.4), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(47px 27px at 12% -5%, rgba(40, 140, 255, 0.34), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(31px 55px at 2.1% 68.3%, rgba(50, 200, 80, 0.38), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(140px 25px at 74.4% 100%, rgba(100, 70, 255, 0.4), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(66px 20px at 55% 100%, rgba(40, 140, 255, 0.35), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(58px 25px at 93.9% 0%, rgba(255, 120, 40, 0.44), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(40px 38px at 100% 27.1%, rgba(180, 40, 240, 0.38), transparent); /* exempt-ui03 organic shimmer */
-  box-shadow: inset 0 0 calc(var(--wf-shimmer-glow-blur, 20px) * 3) calc(var(--wf-shimmer-glow-blur, 20px) / 2) rgba(90, 90, 100, 0.1); /* exempt-ui03 organic shimmer */
-  filter: blur(var(--wf-shimmer-glow-blur, 20px));
-  mask-image:
-    linear-gradient(white, transparent 26px, transparent calc(100% - 26px), white),
-    linear-gradient(to right, white, transparent 26px, transparent calc(100% - 26px), white);
-  mask-composite: add;
-  -webkit-mask-composite: source-over;
-}
-
-.wf-organic-shimmer__glow-mid {
-  background:
-    radial-gradient(39px 21px at 33% -7.4%, rgba(255, 50, 100, 0.34), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(33px 18px at 12% -5%, rgba(40, 140, 255, 0.28), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(21px 39px at 2.1% 68.3%, rgba(50, 200, 80, 0.3), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(9px 18px at 2.1% 68.3%, rgba(30, 185, 170, 0.25), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(104px 17px at 74.4% 100%, rgba(100, 70, 255, 0.32), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(48px 13px at 55% 100%, rgba(40, 140, 255, 0.28), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(41px 17px at 93.9% 0%, rgba(255, 120, 40, 0.35), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(13px 23px at 100% 27.1%, rgba(240, 50, 180, 0.28), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(28px 26px at 100% 27.1%, rgba(180, 40, 240, 0.3), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(36px 36px at 0% 0%, rgba(90, 90, 100, 0.14), transparent 70%), /* exempt-ui03 organic shimmer */
-    radial-gradient(36px 36px at 100% 0%, rgba(90, 90, 100, 0.14), transparent 70%), /* exempt-ui03 organic shimmer */
-    radial-gradient(36px 36px at 0% 100%, rgba(90, 90, 100, 0.14), transparent 70%), /* exempt-ui03 organic shimmer */
-    radial-gradient(36px 36px at 100% 100%, rgba(90, 90, 100, 0.14), transparent 70%); /* exempt-ui03 organic shimmer */
-  box-shadow: rgba(90, 90, 100, 0.12) 0px 0px 14px 1px inset; /* exempt-ui03 organic shimmer */
-  filter: blur(2px);
-  mask-image:
-    linear-gradient(white, transparent 44px, transparent calc(100% - 44px), white),
-    linear-gradient(to right, white, transparent 44px, transparent calc(100% - 44px), white);
-  mask-composite: add;
-  -webkit-mask-composite: source-over;
-}
-
-.wf-organic-shimmer__glow-border {
-  padding: 1px;
-  opacity: var(--wf-shimmer-border-opacity, 1);
-  background:
-    radial-gradient(42px 24px at 33% -7.4%, rgba(255, 50, 100, 0.65), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(36px 21px at 12% -5%, rgba(40, 140, 255, 0.52), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(24px 42px at 2.1% 68.3%, rgba(50, 200, 80, 0.6), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(12px 21px at 2.1% 68.3%, rgba(30, 185, 170, 0.48), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(108px 19px at 74.4% 100%, rgba(100, 70, 255, 0.62), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(51px 16px at 55% 100%, rgba(40, 140, 255, 0.55), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(44px 19px at 93.9% 0%, rgba(255, 120, 40, 0.7), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(16px 25px at 100% 27.1%, rgba(240, 50, 180, 0.55), transparent), /* exempt-ui03 organic shimmer */
-    radial-gradient(31px 29px at 100% 27.1%, rgba(180, 40, 240, 0.6), transparent), /* exempt-ui03 organic shimmer */
-    linear-gradient(rgba(90, 90, 100, 0.25), rgba(90, 90, 100, 0.25)); /* exempt-ui03 organic shimmer */
-  mask:
-    linear-gradient(white 0 0) content-box exclude,
-    linear-gradient(white 0 0);
-  -webkit-mask:
-    linear-gradient(white 0 0) content-box,
-    linear-gradient(white 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-.wf-organic-shimmer__mask {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 330%;
-  height: 330%;
-  background-image: linear-gradient(
-    135deg,
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 1) 0%, /* exempt-ui03 organic shimmer */
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 1) calc(50% - var(--wf-shimmer-band, 22%) * 1.4), /* exempt-ui03 organic shimmer */
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0.94) calc(50% - var(--wf-shimmer-band, 22%) * 1), /* exempt-ui03 organic shimmer */
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0.82) calc(50% - var(--wf-shimmer-band, 22%) * 0.6), /* exempt-ui03 organic shimmer */
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0.55) calc(50% - var(--wf-shimmer-band, 22%) * 0.25), /* exempt-ui03 organic shimmer */
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0) 50%, /* exempt-ui03 organic shimmer */
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 0.5) calc(50% + var(--wf-shimmer-band, 22%) * 0.18), /* exempt-ui03 organic shimmer */
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 1) calc(50% + var(--wf-shimmer-band, 22%) * 0.35), /* exempt-ui03 organic shimmer */
-    rgba(var(--wf-shimmer-stage-rgb, 24, 24, 24), 1) 100% /* exempt-ui03 organic shimmer */
-  );
-  transform: translate3d(-69.697%, -69.697%, 0);
-  animation: wf-organic-shimmer-sweep var(--wf-shimmer-dur, 4000ms) var(--wf-shimmer-ease, linear) infinite var(--wf-shimmer-direction, alternate);
-  will-change: transform;
-  pointer-events: none;
+@keyframes omx-shimmer-sweep {
+  0% { transform: translate3d(-69.697%, -69.697%, 0); }
+  100% { transform: translate3d(0, 0, 0); }
 }
 
 .omx-generating-box {
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  background: var(--dsw-alias-bg-layer-1);
+  background: var(--dsw-alias-bg-layer-2);
   position: relative;
   overflow: hidden;
 }
 
-/* ========================================================
-   8. In-place Media Slot (原位任务占位卡片与平滑切换)
-   ======================================================== */
-.omx-media-slot {
-  position: relative;
-  overflow: hidden;
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-1);
-  border: 1px solid var(--dsw-alias-border-l2);
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 100%;
-}
-
-.omx-media-slot[data-ratio="9:16"] {
-  aspect-ratio: 9 / 16;
-  max-height: calc(100vh - 160px);
-  width: auto;
-}
-
-.omx-media-slot[data-ratio="16:9"] {
-  aspect-ratio: 16 / 9;
-  max-width: min(800px, 90vw);
-  height: auto;
-}
-
-.omx-media-slot[data-ratio="1:1"] {
-  aspect-ratio: 1 / 1;
-  max-width: min(520px, 85vw);
-  height: auto;
-}
-
-.omx-media-slot__shimmer-wrap {
+.omx-dot-matrix {
   position: absolute;
   inset: 0;
+  opacity: 0.85;
   z-index: 1;
-  transition: opacity 300ms ease;
 }
 
-.omx-media-slot__shimmer-wrap.fade-out {
-  opacity: 0;
-  pointer-events: none;
-}
-
-@keyframes omx-media-result-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.omx-media-result {
+.omx-shimmer-overlay {
   position: absolute;
   inset: 0;
-  opacity: 0;
-  transition: opacity 300ms ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: inherit;
+  overflow: hidden;
   z-index: 2;
-  border-radius: inherit;
-  overflow: hidden;
-}
-
-.omx-media-result.active {
-  opacity: 1;
-  animation: omx-media-result-fade-in 300ms ease forwards;
-}
-
-.omx-media-result__content {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-  border-radius: inherit;
-}
-
-.omx-media-result .result-badge {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background: var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.65)); /* exempt-ui03 */
-  color: var(--dsw-alias-label-primary, #ffffff);
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
   pointer-events: none;
-  z-index: 3;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+}
+
+.omx-shimmer-canvas {
+  position: absolute;
+  inset: -20px;
+}
+
+.omx-shimmer-field {
+  position: absolute;
+  inset: 0;
+}
+
+.omx-shimmer-distortion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 330%;
+  height: 330%;
+  background-size: 100% 100%;
+  transform: translate3d(-69.697%, -69.697%, 0);
+  animation: omx-shimmer-sweep 4000ms linear infinite alternate;
 }
 
 /* ========================================================
