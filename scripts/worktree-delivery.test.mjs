@@ -46,11 +46,54 @@ for (const scenario of ['missing-pr', 'open-pr', 'wrong-head', 'merged-pr']) {
       assert.equal(result.status, scenario === 'merged-pr' ? 0 : 1, `${result.stdout}\n${result.stderr}`)
       assert.equal(git('rev-parse', 'HEAD'), scenario === 'merged-pr' ? head : before)
       assert.equal(git('--git-dir', remote, 'rev-parse', 'main'), scenario === 'merged-pr' ? head : before, 'ship must never push main')
-      assert.ok(existsSync(join(worktree, 'feature.txt')), 'retain worktree through post-merge acceptance')
-      if (scenario === 'merged-pr') assert.match(result.stdout, /acceptance.*pending/i)
+      if (scenario === 'merged-pr') {
+        assert.equal(existsSync(worktree), false, 'ship defaults to automatically cleaning the merged worktree')
+        assert.match(result.stdout, /交付全链路闭环完成/i)
+      } else {
+        assert.ok(existsSync(join(worktree, 'feature.txt')), 'retain worktree when merge is not confirmed')
+      }
     } finally { rmSync(fixture, { recursive: true, force: true }) }
   })
 }
+
+test('worktree ship --keep-worktree: retain worktree when explicitly requested', () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'omnimux-ship-keep-'))
+  const repo = join(fixture, 'repo')
+  const remote = join(fixture, 'origin.git')
+  const bin = join(fixture, 'bin')
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  try {
+    mkdirSync(repo)
+    mkdirSync(bin)
+    git('init', '--bare', '-b', 'main', remote)
+    git('init', '-b', 'main')
+    git('config', 'user.name', 'delivery-test')
+    git('config', 'user.email', 'delivery@example.test')
+    mkdirSync(join(repo, 'scripts'))
+    copyFileSync(join(root, 'scripts/worktree.sh'), join(repo, 'scripts/worktree.sh'))
+    writeFileSync(join(repo, '.gitignore'), '.worktrees/\n')
+    git('add', '.')
+    git('commit', '-m', 'seed')
+    git('remote', 'add', 'origin', remote)
+    git('push', '-u', 'origin', 'main')
+    const worktree = join(repo, '.worktrees/keep-feature')
+    git('worktree', 'add', '-b', 'agent/keep-feature', worktree)
+    writeFileSync(join(worktree, 'feature.txt'), 'keep me\n')
+    git('-C', worktree, 'add', 'feature.txt')
+    git('-C', worktree, 'commit', '-m', 'feature')
+    const head = git('-C', worktree, 'rev-parse', 'HEAD')
+    git('push', 'origin', 'agent/keep-feature:main')
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *'--json state -q .state'*) echo 'MERGED' ;;\n  *) printf 'MERGED\\tagent/keep-feature\\t${head}\\tmain\\n' ;;\nesac\n`, { mode: 0o755 })
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'keep-feature', '--pr', '865', '--keep-worktree'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` }
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.ok(existsSync(join(worktree, 'feature.txt')), 'retain worktree when --keep-worktree is passed')
+    assert.match(result.stdout, /Worktree retained \(--keep-worktree\)/i)
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
 
 test('worktree ship auto-triggers materialization when plugins are modified', () => {
   const fixture = mkdtempSync(join(tmpdir(), 'omnimux-ship-auto-mat-'))

@@ -382,7 +382,7 @@ allow-skips: false
         assert.match(result.handoff.nextAction, /must not block, be waited on, or be claimed/)
         assert.match(result.handoff.nextAction, /Preserve evidence and worktree/)
         assert.doesNotMatch(result.handoff.nextAction, /awaiting Dev|pending Dev|materialize the merged main revision/)
-        if (materialize) assert.match(result.handoff.nextAction, /Materialization is optional/)
+        if (materialize) assert.match(result.handoff.nextAction, /Automatically materialize merged changes/)
         else assert.match(result.handoff.nextAction, /Do not materialize/)
       }
     } finally { rmSync(root, { recursive: true, force: true }) }

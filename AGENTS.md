@@ -106,6 +106,7 @@ Browser-required acceptance MUST be established by real-browser web verification
 ## Delivery
 
 - For implementation or shipping, load the [repository workflow skill](.agents/skills/omnimux-repo-workflow/SKILL.md). [Git/PR policy](docs/contracts/plugin-git-pr.md) owns risk, merge authority, and Merge Queue; [Issue lifecycle](docs/contracts/agent-issue-lifecycle.md) owns task metadata. Never push directly to `main` or bypass required checks.
-- Delivery completeness: 物化（sync）成功不等于交付完成。**Agent 侧交付门槛是本任务独立工作树的真实浏览器 Web 验证证据**（截图或结构化报告）；拿不到该证据不得宣布收尾。插件改动一经确认合并，收尾必须装进开发版（Dev 45120），开发版已经一致时不重复安装；正式版不写。开发版真机验收由**人工**执行，是可选的人工复核，**不是 Agent 的交付前提**：Agent 不得为它等待、阻塞或代签。物化必须遵守既有多 Agent 防覆盖守卫。
+- Delivery completeness: 物化（sync）成功不等于交付完成。**Agent 侧交付门槛是本任务独立工作树的真实浏览器 Web 验证证据**（截图或结构化报告）；拿不到该证据不得宣布收尾。插件改动一经确认合并，收尾必须自动装进开发版（Dev 45120），开发版已经一致时不重复安装；正式版不写。开发版真机验收由**人工**执行，是可选的人工复核，**不是 Agent 的交付前提**：Agent 不得为它等待、阻塞或代签。物化必须遵守既有多 Agent 防覆盖守卫。
+- 自动收尾闭环（Auto-Closeout）：经 PR 检查通过并合入 `main` 后，收尾必须默认自动执行主干同步（`git pull --ff-only`）、开发版物化（`~/.omnimux-dev`，已一致则跳过）与任务临时工作树/分支清理，无需人工二次授权或停顿等待验收。任务完结交付汇报必须按照大白话规范汇报【当前结果】、【收尾状态】（单行明确标注：合并请求、合入主干、同步本地、物化开发版、清理临时工作区五项的完成状态）、【实际效果】与【建议下一步】。
 - Report actual check results and reasons for skipped/inapplicable checks. Keep code, PR merge, worktree web verification, Dev materialization, and human Dev acceptance as distinct states.
 - Remove only task-owned temporary files and confirmed-merged worktrees after saving evidence. [Briefing](docs/briefing.md) is memory, not current code or runtime proof.
