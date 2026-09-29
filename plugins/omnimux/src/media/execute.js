@@ -533,6 +533,7 @@ export async function executeOmnimuxMedia(capability, input) {
       seam,
       capability,
       outputType: capability === 'video' || capability === 'image' || capability === 'audio' ? capability : undefined,
+      requireListed: input.requireListed,
     },
   )
   }
