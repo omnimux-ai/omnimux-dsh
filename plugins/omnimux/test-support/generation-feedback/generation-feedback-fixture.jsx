@@ -1,7 +1,5 @@
 // Transport controls promoted from the fixture observed in ego space 700 (#1759).
 import React from 'react';
-import { InPlaceTaskSlot } from '../../src/client/media-viewer/InPlaceTaskSlot.jsx';
-import { MEDIA_VIEWER_CSS } from '../../src/client/media-viewer/styles.js';
 import { createRoot } from 'react-dom/client';
 import { Button } from 'dsh-ui-kit';
 import { MediaViewerTab } from '../../src/client/media-viewer/MediaViewerTab.jsx';
@@ -104,14 +102,5 @@ function render() {
     <p>当前会话：{sessions.list.getSnapshot().current}</p></aside>
     <main><MediaViewerTab readFile={readFile} sessions={sessions} imageUrl={async () => image} scope={{ sessionId: sessions.list.getSnapshot().current }} /></main></>);
 }
-// Driver uses transport events only; no direct generation-store or slot-prop updates.
-window.qa = { submit: send, action(name) { if (!actions[name]) throw new Error(`Unknown fixture action: ${name}`); actions[name](); },
-  getState: () => store.getSnapshot(), log, dispose: () => { bridge.dispose(); root.unmount(); } };
-const query = new URLSearchParams(location.search);
-if (query.get('mode') === 'slot') {
-  bridge.dispose();
-  let props = { status: 'pending', ratio: query.get('ratio') || '1:1' };
-  const paint = () => root.render(<><MountProbe /><style>{MEDIA_VIEWER_CSS}</style><main data-qa-slot-host style={{ width: 360, height: 640, flex: 'none' }}><InPlaceTaskSlot {...props} /></main></>);
-  window.qaSlot = { set(next) { props = { ...props, ...next }; paint(); }, image, video: '/fixture-video.mp4' };
-  paint();
-} else render();
+window.qa = { getState: () => store.getSnapshot(), log, dispose: () => { bridge.dispose(); root.unmount(); } };
+render();

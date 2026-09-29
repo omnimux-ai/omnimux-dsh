@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
+import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 import { GenerationTasks } from './GenerationTasks.jsx';
 import { MediaViewerComposer } from './MediaViewerComposer.jsx';
 import { currentSessionId } from '../workbench/host-adapter.js';
@@ -83,15 +84,12 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const { mediaList, activeId, subViewMode, layoutMode, zoom, isGenerating, isAnnotating } = state;
 
   const sessionMediaList = React.useMemo(() => {
-    if (!sessionId) return [];
+    if (!sessionId) return mediaList;
     return mediaList.filter((m) => m.sessionId === sessionId);
   }, [mediaList, sessionId]);
 
   const activeItem = sessionMediaList.find((m) => m.id === activeId) || sessionMediaList[0];
   const timelineGroups = store.getTimelineGroups(sessionId);
-
-  const sessionTasks = state.generationTasks.filter((task) => sessionId && task.sessionId === sessionId);
-  const effectiveIsGenerating = sessionTasks.some((task) => task.status === 'pending' || task.status === 'running');
 
   // 会话切换时，若当前 activeId 不属于当前会话的媒体列表，自动联动选中该会话的第一张素材
   useEffect(() => {
@@ -108,16 +106,12 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const [draftText, setDraftText] = useState('');
 
   const handleDirectSubmit = async ({ prompt, kind, operation, model, channel, params, assets, annotations }) => {
-    if (!sessionId) return;
-    const requestId = crypto.randomUUID();
-    const request = { sessionId, requestId };
-    store.updateGeneration({ ...request, prompt, model, status: 'pending', ratio: params?.aspectRatio });
+    store.setGenerating(true, { prompt, model, status: 'running' });
     try {
       const materializedAssets = Array.isArray(assets)
         ? await Promise.all(assets.map(materializeAssetFile))
         : assets;
       const serializedReferences = serializeReferenceAssets(materializedAssets);
-      store.updateGeneration({ ...request, status: 'running' });
       const resp = await fetch('/omnimux/api/media/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,25 +134,16 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
       }
       const data = await resp.json();
       if (data.ok && (data.url || data.dest)) {
-        const mediaItem = {
+        const newItem = store.addMedia({
+          sessionId,
           type: kind === 'video' ? 'video' : 'image',
-          ...(kind === 'video' && !data.url ? { path: data.dest } : { url: data.url || `file://${data.dest}` }),
-        };
-        store.updateGeneration({ ...request, status: 'success', media: [mediaItem] });
-        if (typeof store.addMedia === 'function') {
-          store.addMedia({
-            url: mediaItem.url || mediaItem.path,
-            type: mediaItem.type,
-            sessionId,
-            title: prompt || 'AI 生成',
-            prompt,
-          });
-        }
-      } else {
-        store.updateGeneration({ ...request, status: 'unresolved' });
+          url: data.url || `file://${data.dest}`,
+          title: prompt.slice(0, 30),
+          timestamp: Date.now(),
+        });
+        store.setActiveId(newItem.id);
       }
     } catch (err) {
-      store.updateGeneration({ ...request, status: 'failure' });
       console.error('[MediaViewer] Direct generate failed:', err);
       const message = err?.message || '生成任务提交失败，请重试';
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
@@ -166,6 +151,8 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
           window.dispatchEvent(new CustomEvent('omnimux:toast', { detail: { message, type: 'error' } }));
         } catch {}
       }
+    } finally {
+      store.setGenerating(false);
     }
   };
 
@@ -491,6 +478,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
           className="omx-mv-viewport"
           data-has-generation={state.generationTasks.some((task) => task.sessionId === sessionId && task.media?.length > 0) || undefined}
         >
+          <GenerationTasks tasks={state.generationTasks.filter((task) => task.sessionId === sessionId)} imageUrl={imageUrl} readFile={readFile} />
           {subViewMode === 'grid' ? (
             /* 时间线瀑布流：同一时间线下多图横排 */
             <div className="omx-mv-timeline">
@@ -541,7 +529,13 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                   )}
                 </div>
               ))}
-              <GenerationTasks tasks={sessionTasks} imageUrl={imageUrl} readFile={readFile} />
+              {isGenerating ? (
+                <div className="omx-mv-timeline__group">
+                  <div className="omx-mv-timeline__card-single">
+                    <GeneratingStateCard />
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : (
             /* 单图大画布展示区与左上角 1:1 居中微型缩略图悬浮栏 */
@@ -598,7 +592,11 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                       </div>
                     );
                   })}
-
+                  {isGenerating ? (
+                    <div className="omx-mv-thumbnails-rail__item">
+                      <GeneratingStateCard />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -610,8 +608,14 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                   cursor: isDragging ? 'grabbing' : (zoomScale > 1.05 ? 'grab' : 'default'),
                 }}
               >
-                <GenerationTasks tasks={sessionTasks} imageUrl={imageUrl} readFile={readFile} />
-                {activeItem?.type === 'video' ? (
+                {isGenerating ? (
+                  <div className="omx-mv-generating-overlay">
+                    <GeneratingStateCard
+                      statusText={state.generatingTask?.model ? `${state.generatingTask.model} · 正在生成中…` : '正在向模型引擎直接派发运算…'}
+                      status="running"
+                    />
+                  </div>
+                ) : activeItem?.type === 'video' ? (
                   <video src={activeItem.url} controls playsInline />
                 ) : activeItem?.url ? (
                   <img
@@ -619,7 +623,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                     src={activeItem?.url}
                     alt={activeItem?.title || '预览'}
                   />
-                ) : !sessionTasks.some((task) => task.media?.length || task.status === 'pending' || task.status === 'running') ? (
+                ) : !state.generationTasks.some((task) => task.sessionId === sessionId && task.media?.length > 0) ? (
                   <div className="omx-mv-empty-state">
                     <svg className="omx-mv-empty-state__icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
@@ -700,7 +704,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
             </div>
           )}
           {subViewMode === 'single' ? (
-            <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={effectiveIsGenerating} />
+            <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={isGenerating} />
           ) : null}
         </div>
       </div>
