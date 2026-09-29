@@ -227,8 +227,12 @@ export function bashWritesSource(command) {
     /\btee\b[^\n]*(?:plugins|packages)\/[^\s'"]*\/src\//,
     /\bsed\b[^\n]*-i[^\n]*(?:plugins|packages)\/[^\s'"]*\/src\//,
     /\b(?:cp|mv|install)\b[^\n]*(?:plugins|packages)\/[^\s'"]*\/src\//,
-    /(?:writeFileSync|appendFileSync)/,
+    /(?:writeFileSync|appendFileSync|createWriteStream)/,
     /open\([^)]*['"][wa]/,
+    /\bdd\b[^\n]*\bof=(?:plugins|packages)\//,
+    /\bln\b[^\n]*(?:plugins|packages)\//,
+    /\b(?:node|nodejs)\b[^\n]*\b(?:-e|--eval)\b[^\n]*(?:plugins|packages)\//,
+    /\bpython3?\b[^\n]*\s-c\b[^\n]*(?:plugins|packages)\//,
   ]
   return patterns.some((p) => p.test(command))
 }

@@ -638,7 +638,7 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
       'git checkout main',
       'git checkout -b new-feature-branch',
       'git stash',
-      'git stash pop',
+      'git stash list',
       'git status -s',
       'git log -n 5 --oneline',
       'git diff origin/main',
@@ -651,6 +651,81 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
         `Expected command to be allowed: ${cmd}`,
       )
     }
+  })
+
+  it('G3: denies node/python/dd/ln/awk writers targeting protected paths on main checkout', () => {
+    const denyCmds = [
+      `node -e "require('fs').writeFileSync('plugins/omnimux/src/apply.js','x')"`,
+      `node --eval "require('fs').writeFileSync('plugins/omnimux/src/apply.js','x')"`,
+      `python3 -c "open('plugins/omnimux/src/apply.js','w').write('x')"`,
+      `dd if=/dev/zero of=plugins/omnimux/src/apply.js bs=1 count=1`,
+      `ln -s /tmp/payload.js plugins/omnimux/src/apply.js`,
+      `awk '{print}' /tmp/x > plugins/omnimux/src/apply.js`,
+    ]
+    for (const cmd of denyCmds) {
+      assert.equal(
+        decideBashCommand({ command: cmd, cwd: mainRepoRoot }).decision,
+        'deny',
+        `Expected command to be denied: ${cmd}`,
+      )
+    }
+  })
+
+  it('G3: allows node/python one-liners that do not write protected paths', () => {
+    assert.equal(
+      decideBashCommand({
+        command: `node -e "console.log('ok')"`,
+        cwd: mainRepoRoot,
+      }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: `python3 -c "print(1)"`,
+        cwd: mainRepoRoot,
+      }).decision,
+      'allow',
+    )
+  })
+
+  it('G4: denies git working-tree mutations on the main checkout', () => {
+    const denyCmds = [
+      'git apply /tmp/patch.diff',
+      'git am /tmp/0001.patch',
+      'git stash pop',
+      'git stash apply',
+      'git checkout -- plugins/omnimux/src/apply.js',
+      'git checkout stash@{0} -- plugins/omnimux/src/apply.js',
+      'git restore --worktree --source=HEAD -- plugins/omnimux/src/apply.js',
+      'git push --force origin main',
+      'git push -f origin HEAD',
+      'git cherry-pick abcdef1',
+      'git rebase origin/main',
+    ]
+    for (const cmd of denyCmds) {
+      assert.equal(
+        decideBashCommand({ command: cmd, cwd: mainRepoRoot }).decision,
+        'deny',
+        `Expected command to be denied: ${cmd}`,
+      )
+    }
+  })
+
+  it('G4: allows the same git mutations inside a registered worktree', () => {
+    assert.equal(
+      decideBashCommand({
+        command: 'git stash pop',
+        cwd: worktreeRoot,
+      }).decision,
+      'allow',
+    )
+    assert.equal(
+      decideBashCommand({
+        command: 'git apply /tmp/patch.diff',
+        cwd: worktreeRoot,
+      }).decision,
+      'allow',
+    )
   })
 
   it('allows cp / redirections inside a registered worktree directory', () => {
