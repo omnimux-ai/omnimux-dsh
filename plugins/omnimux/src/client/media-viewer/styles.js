@@ -1256,10 +1256,19 @@ export const MEDIA_VIEWER_CSS = `
 }
 .omx-mv-prompt-row {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
 }
-.omx-mv-prompt-row .omx-mv-prompt-box { flex: 1; min-width: 0; }
+.omx-mv-prompt-row .omx-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding-bottom: 4px;
+}
+.omx-mv-prompt-row .omx-mv-prompt-box { width: 100%; flex: 1 1 auto; min-width: 0; }
 
 .omx-mv-ref-row {
   display: flex;
@@ -2172,6 +2181,267 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-ref-picker-asset-card:hover .omx-ref-picker-asset-title {
   color: var(--dsw-alias-label-primary);
+}
+
+/* ========================================================
+   创作画布同款流体微光体系 (100% 零文字、纯视觉、无边框)
+   ======================================================== */
+@keyframes wf-organic-shimmer-sweep {
+  0% {
+    transform: translate3d(-69.697%, -69.697%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.omx-media-viewer {
+  --wf-shimmer-dur: 4200ms;
+  --wf-shimmer-ease: linear;
+  --wf-shimmer-direction: alternate;
+  --wf-shimmer-band-factor: 26%;
+  --wf-shimmer-band: calc(var(--wf-shimmer-band-factor) * 0.848);
+  --wf-shimmer-bg-opacity: 1;
+  --wf-shimmer-glow-blur: 24px;
+  --wf-shimmer-border-opacity: 1;
+  --wf-shimmer-stage-bg: var(--dsw-alias-bg-layer-1, #151517);
+  --wf-shimmer-stage-rgb: 21, 21, 23;
+  --wf-shimmer-svg-url: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22600%22%20viewBox%3D%220%200%20600%20600%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22wf_shm_g%22%20gradientUnits%3D%22userSpaceOnUse%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%22600%22%20y2%3D%22600%22%3E%3Cstop%20offset%3D%220.0000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.3236%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%220.4008%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.75%22%2F%3E%3Cstop%20offset%3D%220.4603%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.3%22%2F%3E%3Cstop%20offset%3D%220.5000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220%22%2F%3E%3Cstop%20offset%3D%220.5397%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.3%22%2F%3E%3Cstop%20offset%3D%220.5992%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%220.75%22%2F%3E%3Cstop%20offset%3D%220.6764%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3Cstop%20offset%3D%221.0000%22%20stop-color%3D%22%23222226%22%20stop-opacity%3D%221%22%2F%3E%3C%2FlinearGradient%3E%3Cfilter%20id%3D%22wf_shm_w%22%20x%3D%22-10%25%22%20y%3D%22-10%25%22%20width%3D%22120%25%22%20height%3D%22120%25%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.009%200.015%22%20numOctaves%3D%222%22%20seed%3D%227%22%20result%3D%22n%22%2F%3E%3CfeDisplacementMap%20in%3D%22SourceGraphic%22%20in2%3D%22n%22%20scale%3D%2246%22%20xChannelSelector%3D%22R%22%20yChannelSelector%3D%22G%22%2F%3E%3CfeGaussianBlur%20stdDeviation%3D%225%22%2F%3E%3C%2Ffilter%3E%3C%2Fdefs%3E%3Crect%20x%3D%22-70%22%20y%3D%22-70%22%20width%3D%22740%22%20height%3D%22740%22%20fill%3D%22url(%23wf_shm_g)%22%20filter%3D%22url(%23wf_shm_w)%22%2F%3E%3C%2Fsvg%3E");
+}
+
+.wf-organic-shimmer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--wf-shimmer-stage-bg);
+  overflow: hidden;
+  isolation: isolate;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__canvas {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__field {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(130px 90px at 20% 15%, rgba(40, 140, 255, 0.22), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(110px 80px at 65% 25%, rgba(255, 50, 100, 0.2), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(90px 110px at 30% 55%, rgba(50, 200, 80, 0.18), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(120px 90px at 75% 65%, rgba(180, 40, 240, 0.2), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(90px 80px at 45% 85%, rgba(255, 120, 40, 0.18), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(80px 80px at 10% 85%, rgba(30, 185, 170, 0.16), transparent); /* exempt-ui03 organic shimmer */
+  opacity: var(--wf-shimmer-bg-opacity, 1);
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__distortion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 330%;
+  height: 330%;
+  background-image: var(--wf-shimmer-svg-url);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  transform: translate3d(-69.697%, -69.697%, 0);
+  animation: wf-organic-shimmer-sweep var(--wf-shimmer-dur, 4200ms) var(--wf-shimmer-ease, linear) infinite var(--wf-shimmer-direction, alternate);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__glow-layer {
+  position: absolute;
+  inset: -20px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__glow-wrap {
+  position: absolute;
+  inset: 0;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__glow-deep,
+.wf-organic-shimmer__glow-border {
+  position: absolute;
+  inset: 20px;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.wf-organic-shimmer__glow-deep {
+  background:
+    radial-gradient(55px 31px at 33% -7.4%, rgba(255, 50, 100, 0.45), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(47px 27px at 12% -5%, rgba(40, 140, 255, 0.38), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(31px 55px at 2.1% 68.3%, rgba(50, 200, 80, 0.42), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(140px 25px at 74.4% 100%, rgba(100, 70, 255, 0.45), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(66px 20px at 55% 100%, rgba(40, 140, 255, 0.38), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(58px 25px at 93.9% 0%, rgba(255, 120, 40, 0.48), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(40px 38px at 100% 27.1%, rgba(180, 40, 240, 0.42), transparent); /* exempt-ui03 organic shimmer */
+  box-shadow: inset 0 0 calc(var(--wf-shimmer-glow-blur, 24px) * 3) calc(var(--wf-shimmer-glow-blur, 24px) / 2) rgba(90, 90, 100, 0.12); /* exempt-ui03 organic shimmer */
+  filter: blur(var(--wf-shimmer-glow-blur, 24px));
+  mask-image:
+    linear-gradient(white, transparent 26px, transparent calc(100% - 26px), white),
+    linear-gradient(to right, white, transparent 26px, transparent calc(100% - 26px), white);
+  mask-composite: add;
+  -webkit-mask-composite: source-over;
+}
+
+.wf-organic-shimmer__glow-border {
+  padding: 1.5px;
+  opacity: 1;
+  background:
+    radial-gradient(42px 24px at 33% -7.4%, rgba(255, 50, 100, 0.7), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(36px 21px at 12% -5%, rgba(40, 140, 255, 0.6), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(24px 42px at 2.1% 68.3%, rgba(50, 200, 80, 0.65), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(108px 19px at 74.4% 100%, rgba(100, 70, 255, 0.68), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(44px 19px at 93.9% 0%, rgba(255, 120, 40, 0.75), transparent), /* exempt-ui03 organic shimmer */
+    radial-gradient(31px 29px at 100% 27.1%, rgba(180, 40, 240, 0.65), transparent); /* exempt-ui03 organic shimmer */
+  mask:
+    linear-gradient(white 0 0) content-box exclude,
+    linear-gradient(white 0 0);
+  -webkit-mask:
+    linear-gradient(white 0 0) content-box,
+    linear-gradient(white 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.wf-organic-shimmer__mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 330%;
+  height: 330%;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 1) 0%, /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 1) calc(50% - var(--wf-shimmer-band, 22%) * 1.4), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 0.94) calc(50% - var(--wf-shimmer-band, 22%) * 1), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 0.82) calc(50% - var(--wf-shimmer-band, 22%) * 0.6), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 0.55) calc(50% - var(--wf-shimmer-band, 22%) * 0.25), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 0) 50%, /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 0.5) calc(50% + var(--wf-shimmer-band, 22%) * 0.18), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 1) calc(50% + var(--wf-shimmer-band, 22%) * 0.35), /* exempt-ui03 organic shimmer */
+    rgba(var(--wf-shimmer-stage-rgb, 21, 21, 23), 1) 100% /* exempt-ui03 organic shimmer */
+  );
+  transform: translate3d(-69.697%, -69.697%, 0);
+  animation: wf-organic-shimmer-sweep var(--wf-shimmer-dur, 4200ms) var(--wf-shimmer-ease, linear) infinite var(--wf-shimmer-direction, alternate);
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* 原位卡槽（自适应素材比例、绝对无边框线） */
+.omx-media-slot {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: none !important;
+  outline: none !important;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 20px 60px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 原位卡槽投影 */
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.omx-media-slot[data-ratio="1:1"] {
+  width: min(520px, calc(100vh - 220px));
+  height: min(520px, calc(100vh - 220px));
+}
+
+.omx-media-slot[data-ratio="16:9"] {
+  width: min(780px, 80vw);
+  height: calc(min(780px, 80vw) * 9 / 16);
+}
+
+.omx-media-slot[data-ratio="9:16"] {
+  height: calc(100vh - 220px);
+  width: calc((100vh - 220px) * 9 / 16);
+}
+
+.omx-media-slot[data-ratio="4:3"] {
+  width: min(640px, 75vw);
+  height: calc(min(640px, 75vw) * 3 / 4);
+}
+
+.omx-media-result {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  border-radius: inherit;
+  overflow: hidden;
+  border: none !important;
+  outline: none !important;
+}
+
+.omx-media-result.active {
+  opacity: 1;
+}
+
+.omx-media-result img,
+.omx-media-result video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border: none !important;
+  outline: none !important;
+}
+
+.omx-media-slot__shimmer-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.omx-media-slot__shimmer-wrap.fade-out {
+  opacity: 0;
+}
+
+/* 缩略图流光小卡槽 (无文字、无边框) */
+.omx-thumb-task-slot {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dsw-alias-bg-layer-2);
+  aspect-ratio: 1 / 1;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  border: none !important;
+  outline: none !important;
+}
+
+.omx-thumb-task-slot.active {
+  width: 50px;
+  height: 50px;
+  border-radius: 11px;
+  box-shadow: 0 0 0 2px var(--dsw-alias-brand) !important;
 }
 
 `;

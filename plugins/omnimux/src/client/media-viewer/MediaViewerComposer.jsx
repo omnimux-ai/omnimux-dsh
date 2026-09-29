@@ -776,9 +776,13 @@ export function MediaViewerComposer({
           </div>
         ) : null}
 
-        {/* 提示词与素材卡槽同一行 */}
+        {/* 提示词与素材卡槽上下分层自适应排布 */}
         <div className="omx-mv-prompt-row">
-          {slots.length > 0 ? (
+          {slots.length > 0 && (
+            (mode === 'image' && config.imageOpMode !== '文生图') ||
+            (mode === 'video' && videoModeId !== 'text_to_video') ||
+            slots.some((s) => (buckets[bucketKey(s)] ?? []).length > 0)
+          ) ? (
             <div className="omx-slot-row">
               {slots.map((slot) => (
                 <MediaSlotGroup

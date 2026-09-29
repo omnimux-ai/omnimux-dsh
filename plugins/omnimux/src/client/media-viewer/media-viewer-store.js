@@ -78,11 +78,13 @@ export function createMediaViewerStore(initialState = {}) {
         id,
         timestamp,
         type: item.type || 'image',
+        status: item.status || 'completed',
         url: item.url,
         title: item.title || '',
         duration: item.duration || '',
         groupId: item.groupId || String(timestamp),
         sessionId: resolvedSessionId,
+        aspectRatio: item.aspectRatio || '1:1',
         ...item,
       };
 
@@ -102,6 +104,20 @@ export function createMediaViewerStore(initialState = {}) {
       };
       notify();
       return newItem;
+    },
+
+    updateMedia(id, patch) {
+      if (!id) return null;
+      const idx = state.mediaList.findIndex((m) => m.id === id);
+      if (idx < 0) return null;
+      const nextList = [...state.mediaList];
+      nextList[idx] = { ...nextList[idx], ...patch };
+      state = {
+        ...state,
+        mediaList: nextList,
+      };
+      notify();
+      return nextList[idx];
     },
 
     getMediaList(targetSessionId) {

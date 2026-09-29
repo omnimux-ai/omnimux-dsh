@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getGlobalMediaViewerStore } from './media-viewer-store.js';
+import { OrganicShimmerOverlay } from './OrganicShimmerOverlay.jsx';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 import { GenerationTasks } from './GenerationTasks.jsx';
 import { MediaViewerComposer } from './MediaViewerComposer.jsx';
@@ -106,7 +107,20 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const [draftText, setDraftText] = useState('');
 
   const handleDirectSubmit = async ({ prompt, kind, operation, model, channel, params, assets, annotations }) => {
+    const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const taskItem = store.addMedia({
+      id: taskId,
+      sessionId,
+      status: 'generating',
+      type: kind === 'video' ? 'video' : 'image',
+      prompt,
+      aspectRatio: params?.aspectRatio || '1:1',
+      title: prompt.slice(0, 30),
+      timestamp: Date.now(),
+    });
+    store.setActiveId(taskItem.id);
     store.setGenerating(true, { prompt, model, status: 'running' });
+
     try {
       const materializedAssets = Array.isArray(assets)
         ? await Promise.all(assets.map(materializeAssetFile))
@@ -134,17 +148,18 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
       }
       const data = await resp.json();
       if (data.ok && (data.url || data.dest)) {
-        const newItem = store.addMedia({
-          sessionId,
-          type: kind === 'video' ? 'video' : 'image',
+        store.updateMedia(taskId, {
+          status: 'completed',
           url: data.url || `file://${data.dest}`,
           title: prompt.slice(0, 30),
           timestamp: Date.now(),
         });
-        store.setActiveId(newItem.id);
+      } else {
+        store.updateMedia(taskId, { status: 'failed' });
       }
     } catch (err) {
       console.error('[MediaViewer] Direct generate failed:', err);
+      store.updateMedia(taskId, { status: 'failed' });
       const message = err?.message || '生成任务提交失败，请重试';
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         try {
@@ -552,6 +567,23 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                 <div className="omx-mv-thumbnails-rail" title="点击切换图片 (保持当前缩放比例)">
                   {(sessionMediaList || mediaList).map((item) => {
                     const isSelected = item.id === activeItem?.id;
+                    if (item.status === 'generating') {
+                      return (
+                        <div
+                          key={item.id}
+                          className={`omx-thumb-task-slot ${isSelected ? 'active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectMedia(item);
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          title="正在生成任务"
+                        >
+                          <OrganicShimmerOverlay />
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={item.id}
@@ -592,11 +624,6 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                       </div>
                     );
                   })}
-                  {isGenerating ? (
-                    <div className="omx-mv-thumbnails-rail__item">
-                      <GeneratingStateCard />
-                    </div>
-                  ) : null}
                 </div>
               ) : null}
 
@@ -608,21 +635,37 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                   cursor: isDragging ? 'grabbing' : (zoomScale > 1.05 ? 'grab' : 'default'),
                 }}
               >
-                {isGenerating ? (
-                  <div className="omx-mv-generating-overlay">
-                    <GeneratingStateCard
-                      statusText={state.generatingTask?.model ? `${state.generatingTask.model} · 正在生成中…` : '正在向模型引擎直接派发运算…'}
-                      status="running"
-                    />
+                {activeItem?.status === 'generating' ? (
+                  <div
+                    className="omx-media-slot"
+                    data-ratio={activeItem?.aspectRatio || '1:1'}
+                  >
+                    <div className="omx-media-slot__shimmer-wrap">
+                      <OrganicShimmerOverlay />
+                    </div>
                   </div>
                 ) : activeItem?.type === 'video' ? (
-                  <video src={activeItem.url} controls playsInline />
+                  <div
+                    className="omx-media-slot"
+                    data-ratio={activeItem?.aspectRatio || '1:1'}
+                  >
+                    <div className="omx-media-result active">
+                      <video src={activeItem.url} controls playsInline />
+                    </div>
+                  </div>
                 ) : activeItem?.url ? (
-                  <img
-                    ref={imageRef}
-                    src={activeItem?.url}
-                    alt={activeItem?.title || '预览'}
-                  />
+                  <div
+                    className="omx-media-slot"
+                    data-ratio={activeItem?.aspectRatio || '1:1'}
+                  >
+                    <div className="omx-media-result active">
+                      <img
+                        ref={imageRef}
+                        src={activeItem?.url}
+                        alt={activeItem?.title || '预览'}
+                      />
+                    </div>
+                  </div>
                 ) : !state.generationTasks.some((task) => task.sessionId === sessionId && task.media?.length > 0) ? (
                   <div className="omx-mv-empty-state">
                     <svg className="omx-mv-empty-state__icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -704,7 +747,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
             </div>
           )}
           {subViewMode === 'single' ? (
-            <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={isGenerating} />
+            <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={false} />
           ) : null}
         </div>
       </div>
