@@ -658,6 +658,36 @@ export const WORKFLOW_CSS = `
   opacity: 0.5;
   cursor: not-allowed;
 }
+.omx-apptab-restore-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  border: 1px solid var(--dsw-alias-border-l1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.omx-apptab-restore-btn:hover:not(:disabled) {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-2);
+  border-color: var(--dsw-alias-border-l2);
+}
+.omx-apptab-restore-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.omx-apptab-restore-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-secondary);
+}
 .omx-apptab-edit-icon {
   width: 13px;
   height: 13px;

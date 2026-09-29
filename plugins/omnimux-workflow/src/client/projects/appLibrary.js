@@ -282,7 +282,8 @@ export function resetOpenAppTabs() {
  * 判断某个应用是否属于当前用户拥有的应用（拥有源工程可直接编辑）。
  *
  * 判定规则：
- * 1. 官方预置应用（OmniMux Official 或以 app-creatify- 开头等）为公共应用，不属于当前用户；
+ * 1. 官方预置应用（OmniMux Official 或以 app-creatify- 开头等）为公共应用，默认不属于当前用户；
+ *    例外：如果该官方应用已被用户覆盖发布（manifest.isUserOverridden === true），且本地存在有效源工程，则视同用户自有工程；
  * 2. 清单里记录的 projectId 或 workspaceId 必须在本地项目列表（projects）中存在；
  * 3. 满足上述条件时判定为当前用户的应用，否则判定为不同用户/模板应用。
  *
@@ -292,10 +293,14 @@ export function resetOpenAppTabs() {
  */
 export function isAppOwnedByUser(manifest, projects = []) {
   if (!manifest || typeof manifest !== 'object') return false
-  const author = textOf(manifest.metadata?.author)
-  if (author === 'OmniMux Official' || manifest.metadata?.isBuiltin) return false
-  const appId = textOf(manifest.appId)
-  if (appId.startsWith('app-creatify-')) return false
+  const isOverridden = manifest.isUserOverridden === true || manifest.metadata?.isUserOverridden === true
+
+  if (!isOverridden) {
+    const author = textOf(manifest.metadata?.author)
+    if (author === 'OmniMux Official' || manifest.metadata?.isBuiltin) return false
+    const appId = textOf(manifest.appId)
+    if (appId.startsWith('app-creatify-')) return false
+  }
 
   const target = resolveAppEditTarget(toPublishedAppEntry(manifest) || {
     projectId: manifest.workflowBinding?.projectId,
@@ -304,6 +309,79 @@ export function isAppOwnedByUser(manifest, projects = []) {
   })
   const project = resolveOwningProject(projects, target)
   return Boolean(project)
+}
+
+/**
+ * 检查应用名称是否存在重名冲突（排他性校验）。
+ * 对比范围：
+ * 1. 官方预置应用（PRESET_WORKFLOW_MAP 中的应用名）；
+ * 2. 已发布的应用清单（listPublishedApps / storage 中的应用名）。
+ *
+ * @param {string} rawName 要检查的新名称
+ * @param {string} [currentAppId] 当前正在编辑/发布的 appId（如果是编辑已有应用，排除自身）
+ * @param {Storage} [storage] 可选 storage 实例
+ * @param {Array<{ appId: string, name: string }>} [builtinApps] 可选自定义内置应用列表
+ * @returns {{
+ *   hasConflict: boolean,
+ *   isBuiltin: boolean,
+ *   targetApp: { appId: string, name: string, isBuiltin: boolean } | null,
+ * }}
+ */
+export function checkAppNameConflict(rawName, currentAppId = '', storage = defaultAppStorage(), builtinApps = null) {
+  const name = textOf(rawName)
+  if (!name) return { hasConflict: false, isBuiltin: false, targetApp: null }
+  const currentId = textOf(currentAppId)
+  const normName = name.toLowerCase()
+
+  // 1. 检查官方预置应用
+  const builtins = Array.isArray(builtinApps)
+    ? builtinApps
+    : Object.entries(PRESET_WORKFLOW_MAP).map(([appId, val]) => ({
+        appId,
+        name: textOf(val?.name),
+        isBuiltin: true,
+      }))
+
+  for (const b of builtins) {
+    if (b.appId && b.appId === currentId) continue
+    if (textOf(b.name).toLowerCase() === normName) {
+      return {
+        hasConflict: true,
+        isBuiltin: true,
+        targetApp: { appId: b.appId, name: b.name, isBuiltin: true },
+      }
+    }
+  }
+
+  // 2. 检查本地已发布的应用列表
+  const published = listPublishedApps(storage)
+  for (const p of published) {
+    if (p.appId && p.appId === currentId) continue
+    if (textOf(p.name).toLowerCase() === normName) {
+      const isOverriddenBuiltin = Boolean(p.manifest?.isUserOverridden)
+      return {
+        hasConflict: true,
+        isBuiltin: isOverriddenBuiltin,
+        targetApp: { appId: p.appId, name: p.name, isBuiltin: isOverriddenBuiltin },
+      }
+    }
+  }
+
+  return { hasConflict: false, isBuiltin: false, targetApp: null }
+}
+
+/**
+ * 将被用户覆盖发布的官方内置应用恢复为初始出厂设置。
+ * 操作：从本地已发布清单中移除该记录，恢复为使用底座原生预设。
+ *
+ * @param {string} appId
+ * @param {Storage} [storage]
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function restoreBuiltinAppDefault(appId, storage = defaultAppStorage()) {
+  const id = textOf(appId)
+  if (!id) return { ok: false, reason: 'invalid-app-id' }
+  return removePublishedApp(id, storage)
 }
 
 /**

@@ -82,6 +82,25 @@ export function createAppsRoutes(deps: {
         });
       };
 
+      // 0. POST /omnimux-apps/api/apps/manifest (保存应用清单至用户磁盘目录，实现物理隔离)
+      if (pathname === `${PREFIX}/manifest` && method === 'POST') {
+        const body = await readBody();
+        if (!body || typeof body !== 'object' || !body.appId) {
+          sendJson(400, { error: 'invalid_manifest', message: 'appId is required' });
+          return true;
+        }
+        try {
+          const res = await service.saveManifest(body);
+          sendJson(200, { success: true, filePath: res.filePath, appId: body.appId });
+        } catch (err: any) {
+          sendJson(err?.code === 'version_conflict' ? 409 : 500, {
+            error: err?.code || 'save_failed',
+            message: err?.message || '保存应用清单失败',
+          });
+        }
+        return true;
+      }
+
       // 1. POST /omnimux-apps/api/apps/:appId/executions
       const postMatch = EXECUTION_POST_RE.exec(pathname);
       if (postMatch && method === 'POST') {

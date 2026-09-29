@@ -44,6 +44,8 @@ import type {
   ShowcaseItem,
 } from './publishTypes.ts';
 import { resolveProjectIdForWorkspace } from './publishProjectBinding.ts';
+// @ts-ignore
+import { checkAppNameConflict } from '../../../../client/projects/appLibrary.js';
 
 export interface PublishWizardModalProps {
   isOpen: boolean;
@@ -161,6 +163,12 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
   const [showcaseItems, setShowcaseItems] = useState<ShowcaseItem[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [overrideConflict, setOverrideConflict] = useState<{
+    hasConflict: boolean;
+    isBuiltin: boolean;
+    targetApp: { appId: string; name: string; isBuiltin: boolean } | null;
+  } | null>(null);
+  const [showOverrideConfirm, setShowOverrideConfirm] = useState(false);
 
   // Initialize state from topology analysis
   useEffect(() => {
@@ -250,6 +258,24 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
       return;
     }
 
+    // 检查应用名称是否存在同名冲突
+    const conflict = checkAppNameConflict(appName.trim());
+    if (conflict.hasConflict && conflict.targetApp) {
+      setOverrideConflict(conflict);
+      setShowOverrideConfirm(true);
+      return;
+    }
+
+    await executePublish(undefined, false);
+  };
+
+  const handleConfirmOverride = () => {
+    const targetAppId = overrideConflict?.targetApp?.appId;
+    setShowOverrideConfirm(false);
+    void executePublish(targetAppId, true);
+  };
+
+  const executePublish = async (targetAppId?: string, isOverride?: boolean) => {
     setIsSubmitting(true);
     try {
       // 1. Generate standard restricted JSON schema, field mappings, and the fixed-field summary.
@@ -258,31 +284,40 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
       const generatedConfig = generateFormConfig(inputs);
 
       // 2. Derive stable appId (alphanumeric, underscore, dash)
-      const cleanSlug = appName
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9_-]+/g, '_')
-        .replace(/^_+|_+$/g, '')
-        .slice(0, 24) || 'app';
-      const randomSuffix = Math.random().toString(36).substring(2, 7);
-      const appId = `app_${cleanSlug}_${randomSuffix}`;
+      let appId = targetAppId;
+      if (!appId) {
+        const cleanSlug = appName
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]+/g, '_')
+          .replace(/^_+|_+$/g, '')
+          .slice(0, 24) || 'app';
+        const randomSuffix = Math.random().toString(36).substring(2, 7);
+        appId = `app_${cleanSlug}_${randomSuffix}`;
+      }
 
       // 2b. 反查画布所属项目：供「项目」页「AI应用」卡片的「编辑」直接定位。
       //     失败不阻断发布——卡片侧还能按 workspaceId 反查项目。
       const projectId = await resolveProjectIdForWorkspace(String(workspaceId || ''));
 
       // 3. Assemble complete ApplicationManifest conforming to L1 schema
-      const manifest: ApplicationManifest = {
+      const manifest: ApplicationManifest & { isUserOverridden?: boolean; overriddenAt?: string; baseAppId?: string } = {
         appId,
         version: '1.0.0',
         schemaVersion: '1.0',
         createdAt: new Date().toISOString(),
+        ...(isOverride ? {
+          isUserOverridden: true,
+          overriddenAt: new Date().toISOString(),
+          baseAppId: targetAppId,
+        } : {}),
         metadata: {
           name: appName.trim(),
           category,
           description: description.trim() || undefined,
           iconSvg: DEFAULT_CATEGORY_ICONS[category],
           coverUrl: coverUrl || DEFAULT_CATEGORY_COVERS[category],
+          ...(isOverride ? { isUserOverridden: true } : {}),
         },
         workflowBinding: {
           workspaceId: workspaceId || 'workspace_main',
@@ -326,6 +361,11 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(manifest),
           }).catch(() => {});
+          fetch('/omnimux-apps/api/apps/manifest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(manifest),
+          }).catch(() => {});
         }
       } catch {
         // Safe fallback
@@ -359,7 +399,7 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
       // 6. Invoke onPublished callback if provided
       onPublished?.(manifest);
 
-      toast.success(`AI 应用「${appName.trim()}」已成功发布！已自动开启侧栏 Tab。`);
+      toast.success(isOverride ? `已成功覆盖发布应用「${appName.trim()}」` : `AI 应用「${appName.trim()}」已成功发布！已自动开启侧栏 Tab。`);
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '发布应用失败，请检查配置');
@@ -507,7 +547,8 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
   };
 
   return (
-    <CustomModal
+    <>
+      <CustomModal
       open={isOpen}
       onCancel={onClose}
       title={
@@ -1041,6 +1082,56 @@ export const PublishWizardModal: React.FC<PublishWizardModalProps> = memo(({
         )}
       </div>
     </CustomModal>
+
+    {/* 同名覆盖确认弹窗 (SaaS 极简规范) */}
+    {showOverrideConfirm && overrideConflict?.targetApp && (
+      <CustomModal
+        open={showOverrideConfirm}
+        onCancel={() => setShowOverrideConfirm(false)}
+        title="覆盖已有应用"
+        width={460}
+      >
+        <div style={{ padding: '8px 0', fontSize: '13px', lineHeight: '1.6', color: 'var(--dsw-alias-label-secondary, #a1a1aa)' }}>
+          已存在同名应用「{overrideConflict.targetApp.name}」。继续发布将覆盖原应用的所有配置与工作流，后续将优先使用当前版本。
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
+          <button
+            type="button"
+            className="omx-btn omx-btn-secondary"
+            style={{
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              background: 'var(--dsw-alias-bg-layer-2, rgba(255,255,255,0.08))',
+              color: 'var(--dsw-alias-label-primary, #fff)',
+              border: '1px solid var(--dsw-alias-border-l1, rgba(255,255,255,0.12))',
+              cursor: 'pointer',
+            }}
+            onClick={() => setShowOverrideConfirm(false)}
+          >
+            返回修改
+          </button>
+          <button
+            type="button"
+            className="omx-btn omx-btn-primary"
+            style={{
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              backgroundColor: 'var(--dsw-alias-state-business-primary, #4c8dff)',
+              color: '#fff',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+            onClick={handleConfirmOverride}
+          >
+            确认覆盖
+          </button>
+        </div>
+      </CustomModal>
+    )}
+  </>
   );
 });
 

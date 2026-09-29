@@ -76,3 +76,20 @@ test('app launch retains other manifests while updating current identity', async
   assert.deepEqual(JSON.parse(saved), { other: { name: 'keep' }, 'app-test': item.manifest })
   assert.equal(env.opened[0].id, 'app_app-test')
 })
+
+test('app launch preserves user overridden manifest against baseline overwrite (upgrade-safe)', async () => {
+  let setItemCalled = false
+  const userOverriddenManifest = {
+    metadata: { name: '用户定制版应用' },
+    isUserOverridden: true,
+    workflowBinding: { snapshot: { nodes: [{ id: 'custom-node' }] } },
+  }
+  const env = harness({
+    getItem: () => JSON.stringify({ 'app-test': userOverriddenManifest }),
+    setItem() { setItemCalled = true },
+  })
+  await env.launch(item)
+  assert.equal(setItemCalled, false, '已覆盖的用户配置严禁被官方底座数据覆写')
+  assert.equal(env.opened[0].extra.manifest.metadata.name, '用户定制版应用', '打开应用必须使用用户覆盖版本')
+  assert.equal(env.events[0].detail.manifest.metadata.name, '用户定制版应用', '分发事件必须携带用户覆盖版本')
+})

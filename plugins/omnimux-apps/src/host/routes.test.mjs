@@ -165,4 +165,55 @@ describe('omnimux-apps Routes & Preset Snapshot Hydration', () => {
     assert.equal(parsed.status, 'COMPLETED');
     assert.equal(parsed.artifacts[0].url, 'https://example.com/out.mp4');
   });
+
+  test('R04: POST /omnimux-apps/api/apps/manifest 保存应用清单至本地用户目录实现物理持久化', async () => {
+    let savedManifest = null;
+    const fakeService = {
+      saveManifest: async (manifest) => {
+        savedManifest = manifest;
+        return { success: true, filePath: '/mock/path/manifest@1.0.0.json' };
+      },
+      getManifest: async () => null,
+      executeApp: async () => ({}),
+      getJobStatus: async () => null,
+      cancelJob: async () => ({ success: true, canceledAt: '' }),
+    };
+
+    const routes = createAppsRoutes({
+      service: fakeService,
+      getHeadlessSeam: () => null,
+    });
+
+    let statusCode = 0;
+    let responseBody = '';
+    const fakeRes = {
+      writeHead(status) {
+        statusCode = status;
+      },
+      end(chunk) {
+        responseBody = chunk;
+      },
+    };
+
+    const manifestToSave = {
+      appId: 'app-creatify-app-demo',
+      version: '1.0.0',
+      isUserOverridden: true,
+      metadata: { name: '手机与网页交互实机演示 (我的定制)' },
+    };
+
+    const fakeReq = {
+      url: '/omnimux-apps/api/apps/manifest',
+      method: 'POST',
+      body: manifestToSave,
+    };
+
+    const handled = await routes.handle(fakeReq, fakeRes);
+    assert.equal(handled, true);
+    assert.equal(statusCode, 200);
+    const parsed = JSON.parse(responseBody);
+    assert.equal(parsed.success, true);
+    assert.equal(parsed.appId, 'app-creatify-app-demo');
+    assert.equal(savedManifest.isUserOverridden, true);
+  });
 });

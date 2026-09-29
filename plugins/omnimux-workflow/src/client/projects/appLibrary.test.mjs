@@ -15,7 +15,9 @@ import {
   appIdFromTabId,
   appIdOfOpenAppTab,
   appTabIdFor,
+  checkAppNameConflict,
   forgetOpenAppTab,
+  isAppOwnedByUser,
   listPublishedApps,
   openAppTabIdFor,
   projectOwnsWorkspace,
@@ -25,6 +27,7 @@ import {
   resetOpenAppTabs,
   resolveAppEditTarget,
   resolveOwningProject,
+  restoreBuiltinAppDefault,
   toPublishedAppEntry,
 } from './appLibrary.js'
 
@@ -270,6 +273,98 @@ describe('appLibrary: 标签页 id 与卡片文案', () => {
       assert.equal(openAppTabIdFor(''), '')
       assert.equal(appIdOfOpenAppTab(undefined), '')
       assert.equal(openAppTabIdFor(undefined), '')
+    })
+  })
+
+  describe('checkAppNameConflict: 同名排他性与冲突判定', () => {
+    it('匹配官方预置应用名称时返回 hasConflict: true 且 isBuiltin: true', () => {
+      const storage = makeStorage()
+      const res = checkAppNameConflict('手机与网页交互实机演示', '', storage)
+      assert.equal(res.hasConflict, true)
+      assert.equal(res.isBuiltin, true)
+      assert.equal(res.targetApp?.appId, 'app-creatify-app-demo')
+    })
+
+    it('名称大小写不敏感且去除首尾空格', () => {
+      const storage = makeStorage()
+      const res = checkAppNameConflict('  手机与网页交互实机演示  ', '', storage)
+      assert.equal(res.hasConflict, true)
+      assert.equal(res.targetApp?.appId, 'app-creatify-app-demo')
+    })
+
+    it('匹配本地已发布的自建应用名称', () => {
+      const storage = storageWith([
+        manifest('app_custom_1', '2026-09-10T00:00:00.000Z', {
+          metadata: { name: '爆款美妆带货神器' },
+        }),
+      ])
+      const res = checkAppNameConflict('爆款美妆带货神器', '', storage)
+      assert.equal(res.hasConflict, true)
+      assert.equal(res.isBuiltin, false)
+      assert.equal(res.targetApp?.appId, 'app_custom_1')
+    })
+
+    it('正在编辑自身应用时传入 currentAppId 排除自身，不报冲突', () => {
+      const storage = storageWith([
+        manifest('app_custom_1', '2026-09-10T00:00:00.000Z', {
+          metadata: { name: '爆款美妆带货神器' },
+        }),
+      ])
+      const res = checkAppNameConflict('爆款美妆带货神器', 'app_custom_1', storage)
+      assert.equal(res.hasConflict, false)
+      assert.equal(res.targetApp, null)
+    })
+
+    it('无同名应用时返回 hasConflict: false', () => {
+      const storage = makeStorage()
+      const res = checkAppNameConflict('全新的独创智能体应用', '', storage)
+      assert.equal(res.hasConflict, false)
+      assert.equal(res.targetApp, null)
+    })
+  })
+
+  describe('isAppOwnedByUser 与用户覆盖分层', () => {
+    it('官方未覆盖应用在本地项目存在时依然判定为非当前用户 (isAppOwnedByUser === false)', () => {
+      const official = {
+        appId: 'app-creatify-app-demo',
+        metadata: { author: 'OmniMux Official', name: '手机与网页交互实机演示' },
+        workflowBinding: { projectId: 'p1', workspaceId: 'ws_demo' },
+      }
+      assert.equal(isAppOwnedByUser(official, [{ id: 'p1', canvasWorkspaceIds: ['ws_demo'] }]), false)
+    })
+
+    it('已标记 isUserOverridden 且本地项目存在的应用判定为当前用户 (isAppOwnedByUser === true)', () => {
+      const overridden = {
+        appId: 'app-creatify-app-demo',
+        isUserOverridden: true,
+        metadata: { author: 'OmniMux Official', name: '手机与网页交互实机演示' },
+        workflowBinding: { projectId: 'p1', workspaceId: 'ws_demo' },
+      }
+      assert.equal(isAppOwnedByUser(overridden, [{ id: 'p1', canvasWorkspaceIds: ['ws_demo'] }]), true)
+    })
+
+    it('已标记 isUserOverridden 但本地源工程已被删除时优雅降级为 false', () => {
+      const overridden = {
+        appId: 'app-creatify-app-demo',
+        isUserOverridden: true,
+        metadata: { author: 'OmniMux Official', name: '手机与网页交互实机演示' },
+        workflowBinding: { projectId: 'p1', workspaceId: 'ws_demo' },
+      }
+      assert.equal(isAppOwnedByUser(overridden, [{ id: 'other_proj' }]), false)
+    })
+  })
+
+  describe('restoreBuiltinAppDefault: 恢复出厂设置', () => {
+    it('成功从已发布存储中移除覆盖记录', () => {
+      const storage = storageWith([
+        manifest('app-creatify-app-demo', '2026-09-10T00:00:00.000Z', {
+          isUserOverridden: true,
+          metadata: { name: '手机与网页交互实机演示' },
+        }),
+      ])
+      const res = restoreBuiltinAppDefault('app-creatify-app-demo', storage)
+      assert.equal(res.ok, true)
+      assert.equal(listPublishedApps(storage).length, 0)
     })
   })
 })

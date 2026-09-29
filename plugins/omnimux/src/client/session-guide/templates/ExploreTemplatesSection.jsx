@@ -380,25 +380,32 @@ export function ExploreTemplatesSection({
         parsed = stored ? JSON.parse(stored) : {};
       } catch {}
       const manifestsMap = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-      if (item.manifest) {
+      const existing = manifestsMap[appId];
+      const isUserOverridden = Boolean(existing && (existing.isUserOverridden || existing.metadata?.isUserOverridden));
+      const effectiveManifest = isUserOverridden ? existing : (item.manifest || existing);
+
+      // 核心防线：仅当用户未自定义覆盖该应用时，才用官方基线数据写入本地缓存；
+      // 若已被用户覆盖，绝对保留用户本地资产，彻底免疫安装包升级冲刷
+      if (!isUserOverridden && item.manifest) {
         manifestsMap[appId] = item.manifest;
         window.localStorage.setItem('omnimux_apps_manifests', JSON.stringify(manifestsMap));
       }
-      const title = item.manifest?.metadata?.name || resolveTemplateCopy(item, currentLocale).title || 'AI 应用';
+
+      const title = effectiveManifest?.metadata?.name || resolveTemplateCopy(item, currentLocale).title || 'AI 应用';
       const opened = await openWorkbench({
         tabId: 'omnimux-workflow:app',
         id: `app_${appId}`,
         title,
         path: `app://${appId}`,
         meta: { appId },
-        extra: { manifest: item.manifest, appId },
+        extra: { manifest: effectiveManifest, appId },
       });
       if (!opened) {
         setAppLaunchError(failure);
         return;
       }
       window.dispatchEvent(new CustomEvent('omnimux-app-open', {
-        detail: { id: appId, appId, title, manifest: item.manifest },
+        detail: { id: appId, appId, title, manifest: effectiveManifest },
       }));
     } catch {
       setAppLaunchError(failure);
