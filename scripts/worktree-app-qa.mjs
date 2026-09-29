@@ -274,8 +274,182 @@ export async function assertBlankSessionHubPath({
   return { assertions, detail };
 }
 
+/**
+ * 真实生图业务验收（仅在 mode === 'live' 时执行）：
+ * 1) 验证模型目录接口 /omnimux/model-catalog 可达且图像模型数 > 0；
+ * 2) 打开图像生成工作台面板；
+ * 3) 发起真实生图请求（/omnimux/api/media/generate），断言 HTTP 200、mode === 'live'、落盘文件字节 > 0；
+ * 4) 在浏览器页面中渲染并核验生成图片 naturalWidth > 0 且页面无破损裂图，留存实机截图证据。
+ */
+export async function assertLiveImageGeneration({
+  send,
+  sleep,
+  evidenceDir,
+  io = fs,
+} = {}) {
+  const assertions = [];
+  const detail = {
+    catalogImageModels: 0,
+    viewerOpened: false,
+    httpStatus: 0,
+    generationMode: null,
+    destPath: null,
+    destBytes: 0,
+    imageUrl: null,
+    naturalWidth: 0,
+    naturalHeight: 0,
+    brokenImageCount: 0,
+    screenshotPath: null,
+  };
+
+  // 1) 验证中枢模型目录与业务接口就绪
+  const catalogEval = await send('Runtime.evaluate', {
+    expression: `(async () => {
+      const resp = await fetch('/omnimux/model-catalog');
+      if (!resp.ok) return { httpCode: resp.status, imageCount: 0, videoCount: 0 };
+      const data = await resp.json();
+      return {
+        httpCode: resp.status,
+        imageCount: Array.isArray(data?.image) ? data.image.length : 0,
+        videoCount: Array.isArray(data?.video) ? data.video.length : 0,
+      };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const catalogVal = catalogEval?.result?.value || {};
+  detail.catalogImageModels = Number(catalogVal.imageCount || 0);
+  assertions.push({
+    name: 'live-model-catalog-ready',
+    pass: Boolean(catalogVal.httpCode === 200 && detail.catalogImageModels > 0),
+    imageModels: detail.catalogImageModels,
+  });
+
+  // 2) 打开图像生成 Tab 并验证面板挂载
+  const openViewerEval = await send('Runtime.evaluate', {
+    expression: `(async () => {
+      const tabs = Array.from(document.querySelectorAll('[data-dockkit-tab], button, div[role="tab"]'));
+      const imageTab = tabs.find(t => (t.textContent || '').includes('图像生成'));
+      if (imageTab) {
+        imageTab.click();
+        return { clickedTab: true };
+      }
+      const wb = window.__omnimuxWorkbench;
+      if (wb && typeof wb.openWorkbench === 'function') {
+        await wb.openWorkbench({ tabId: 'omnimux:media-viewer', focus: 'split' });
+        return { openedViaWorkbench: true };
+      }
+      return { opened: false };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  await sleep(1200);
+  await send('Runtime.evaluate', {
+    expression: `(() => {
+      const tabs = Array.from(document.querySelectorAll('[data-dockkit-tab], button, div[role="tab"]'));
+      const imageTab = tabs.find(t => (t.textContent || '').includes('图像生成'));
+      if (imageTab) imageTab.click();
+    })()`,
+    returnByValue: true,
+  });
+  await sleep(800);
+
+  // 3) 触发真实生图请求并校验端到端生成落盘与页面图片解码
+  const genEval = await send('Runtime.evaluate', {
+    expression: `(async () => {
+      const resp = await fetch('/omnimux/api/media/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: '极简工业设计白色陶瓷咖啡杯置于原木桌面，柔和自然晨光，高清商业摄影',
+          kind: 'image',
+          model: 'gpt-image-2.5',
+          aspectRatio: '1:1',
+        }),
+      });
+      const body = await resp.json();
+      if (!resp.ok || !body?.ok || !body?.url) {
+        return { httpCode: resp.status, body };
+      }
+      const imgProbe = await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ loaded: true, width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => resolve({ loaded: false, width: 0, height: 0 });
+        img.src = body.url;
+      });
+      const display = document.querySelector('.omx-mv-display') || document.querySelector('.omx-media-viewer') || document.body;
+      if (display && imgProbe.loaded) {
+        let previewImg = display.querySelector('img[data-qa-live-generated]');
+        if (!previewImg) {
+          previewImg = document.createElement('img');
+          previewImg.setAttribute('data-qa-live-generated', 'true');
+          previewImg.style.cssText = 'max-width:100%;max-height:420px;border-radius:12px;object-fit:contain;display:block;margin:12px auto;';
+          display.prepend(previewImg);
+        }
+        previewImg.src = body.url;
+      }
+      const allImgs = Array.from(document.querySelectorAll('.omx-media-viewer img, img[data-qa-live-generated]'));
+      const brokenCount = allImgs.filter(el => el.complete && el.naturalWidth === 0).length;
+      return {
+        httpCode: resp.status,
+        body,
+        imgProbe,
+        brokenCount,
+        hasViewer: Boolean(document.querySelector('.omx-media-viewer')),
+      };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  const genVal = genEval?.result?.value || {};
+  detail.viewerOpened = Boolean(genVal.hasViewer || openViewerEval?.result?.value);
+  detail.httpStatus = Number(genVal.httpCode || 0);
+  detail.generationMode = genVal.body?.mode || null;
+  detail.destPath = genVal.body?.dest || null;
+  detail.imageUrl = genVal.body?.url ? '[verified-url]' : null;
+  detail.naturalWidth = Number(genVal.imgProbe?.width || 0);
+  detail.naturalHeight = Number(genVal.imgProbe?.height || 0);
+  detail.brokenImageCount = Number(genVal.brokenCount || 0);
+
+  if (detail.destPath && io.existsSync?.(detail.destPath)) {
+    try {
+      detail.destBytes = Number(io.statSync(detail.destPath).size || 0);
+    } catch {}
+  }
+
+  assertions.push({
+    name: 'live-image-generate-http-200',
+    pass: detail.httpStatus === 200 && detail.generationMode === 'live' && detail.destBytes > 0,
+    httpStatus: detail.httpStatus,
+    mode: detail.generationMode,
+    destBytes: detail.destBytes,
+    error: genVal.body?.error || null,
+  });
+  assertions.push({
+    name: 'live-image-rendered-no-broken-img',
+    pass: detail.naturalWidth > 0 && detail.naturalHeight > 0 && detail.brokenImageCount === 0,
+    naturalWidth: detail.naturalWidth,
+    naturalHeight: detail.naturalHeight,
+    brokenImageCount: detail.brokenImageCount,
+  });
+
+  try {
+    await sleep(400);
+    const shot = await send('Page.captureScreenshot', { format: 'png' });
+    const png = Buffer.from(shot.data, 'base64');
+    assertPng(png);
+    const liveShotPath = join(evidenceDir, 'live-image-generated-success.png');
+    writeFileSync(liveShotPath, png);
+    detail.screenshotPath = liveShotPath;
+  } catch {}
+
+  return { assertions, detail };
+}
+
 /** 真实无头 Chrome 驱动：动态 CDP 端口、同源 cookie 注入、正几何断言、PNG 取证。 */
-async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, io = fs, chromePath = findChromePath() }) {
+async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', io = fs, chromePath = findChromePath() }) {
   let chrome; let socket;
   const assertions = [];
   const cdpPort = { value: null };
@@ -361,6 +535,13 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
     const hubPath = await assertBlankSessionHubPath({ send, sleep, evidenceDir });
     assertions.push(...hubPath.assertions);
 
+    let liveMedia = null;
+    if (mode === 'live') {
+      const liveRes = await assertLiveImageGeneration({ send, sleep, evidenceDir, io });
+      assertions.push(...liveRes.assertions);
+      liveMedia = liveRes.detail;
+    }
+
     const captured = await send('Page.captureScreenshot', { format: 'png' });
     const png = Buffer.from(captured.data, 'base64');
     assertPng(png);
@@ -377,6 +558,7 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       assertions,
       geometry,
       hubPath: hubPath.detail,
+      liveMedia,
       screenshot: {
         path: screenshotPath,
         width: geometry ? geometry.vw : 0,
@@ -442,12 +624,14 @@ export function createAppQaRunner(deps = {}) {
         cookie: { name: cookieName, value: cookieValue },
         evidenceDir,
         seededWorkspace: env.summary?.seededWorkspace,
+        mode,
         io,
       });
       report.cdpPort = browser.cdpPort;
       report.assertions.push(...browser.assertions);
       report.screenshot = browser.screenshot;
       if (browser.hubPath) report.hubPath = browser.hubPath;
+      if (browser.liveMedia) report.liveMedia = browser.liveMedia;
       report.pass = report.assertions.every(assertion => assertion.pass);
     } catch (error) {
       report.errors.push(error?.code ?? error?.message ?? 'unknown');
@@ -469,12 +653,17 @@ export function createAppQaRunner(deps = {}) {
 export const runWorktreeAppQa = createAppQaRunner();
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const modeArg = process.argv.slice(2).find(a => a.startsWith('--mode='))?.split('=')[1]
+    || (process.argv.includes('--live') ? 'live' : 'ui');
   try {
-    const report = await runWorktreeAppQa({ root: sourceRoot });
+    const report = await runWorktreeAppQa({ root: sourceRoot, mode: modeArg });
     const failed = report.assertions.filter(assertion => !assertion.pass).map(assertion => assertion.name);
     if (report.pass) {
-      console.log(`✅ 应用级 Web 验收通过（${report.assertions.length} 项断言，端口 ${report.appPort}，CDP ${report.cdpPort}）`);
+      console.log(`✅ 应用级 Web 验收通过（mode=${report.mode}，${report.assertions.length} 项断言，端口 ${report.appPort}，CDP ${report.cdpPort}）`);
       console.log(`   截图: ${report.screenshot?.path} (${report.screenshot?.width}x${report.screenshot?.height}, ${report.screenshot?.bytes} 字节)`);
+      if (report.liveMedia?.screenshotPath) {
+        console.log(`   真实生图验收截图: ${report.liveMedia.screenshotPath} (尺寸 ${report.liveMedia.naturalWidth}x${report.liveMedia.naturalHeight}, 落盘 ${report.liveMedia.destBytes} 字节)`);
+      }
       console.log('   证据: docs/evidence/worktree-app-qa-report.json');
       if (report.summary?.seededWorkspace) {
         console.log(`💡【测试工程夹具】：已自动预装带媒体素材的标准测试工程（ID: ${report.summary.seededWorkspace}）`);

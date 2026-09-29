@@ -15,7 +15,7 @@ import { generateSpeech } from './speech.js'
 import { generateCliSpeech } from './cli-speech.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
 import { resolveRuntimeChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
-import { resolveRequestChannelIntent, parseModelAndGroup, isOfficialChannelId, getModelChannelGroups } from '../catalog/serving/channel-groups.js'
+import { getModelChannelGroups, resolveRequestChannelIntent, parseModelAndGroup, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
 import { DEFAULT_PROVIDER_ENDPOINTS, BYOK_KEY_REF } from '../byok/http.js'
 export { probeMediaAssets } from './asset-probe.js'
 export { hostLocalAssetsIfNeeded, uploadMediaToGateway, isLocalMediaSource } from './gateway-upload.js'
@@ -261,12 +261,11 @@ export async function executeOmnimuxMedia(capability, input) {
     : null
   const implicitByokProvider = matchedImplicitByokItem ? matchedImplicitByokItem.provider.toLowerCase().trim() : ''
 
-  const hasOfficialToken = typeof input.env?.OMNIMUX_API_KEY === 'string' && input.env.OMNIMUX_API_KEY.trim().length > 0
   const inputModelId = typeof input.model === 'string' ? parseModelAndGroup(input.model).modelId : ''
   const isOfficialMediaModel = Boolean(inputModelId && getModelChannelGroups(inputModelId).length > 0)
-  const isOfficialAllowed = isOfficialChannel || (!isByokChannel && isOfficialMediaModel && hasOfficialToken)
+  const isEffectivelyOfficial = isOfficialChannel || (!isByokChannel && isOfficialMediaModel)
 
-  if (runtime.mode === 'agent' && !isOfficialAllowed && !isByokChannel && !mediaChoice.ready && !implicitByokProvider) {
+  if (runtime.mode === 'agent' && !isEffectivelyOfficial && !isByokChannel && !mediaChoice.ready && !implicitByokProvider) {
     throw new OmnimuxError('omnimux-unconfigured', '本机助手只承接文字，图片、视频和音频需要配置媒体生成提供商或改用官方')
   }
 
@@ -295,7 +294,7 @@ export async function executeOmnimuxMedia(capability, input) {
     && input.runtimeSettings.runtimeKeyEndpoint.trim().length > 0
     && input.runtimeSettings?.runtimeKeyVerified === true
   const hasReadyByokProvider = Boolean(implicitByokProvider)
-  const shouldRouteByok = isByokChannel || (!isOfficialChannel && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
+  const shouldRouteByok = isByokChannel || (!isEffectivelyOfficial && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
 
   if (shouldRouteByok) {
     let configuredMainProvider = ''

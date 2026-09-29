@@ -69,3 +69,16 @@ test('invalid YAML still closes the descriptor', () => {
   fails(() => readDevDeepSeekCredential({ fs: f.io, userInfo: () => ({ homedir: f.home }) }), 'TEST_ENV_CREDENTIAL_INVALID');
   assert.deepEqual(f.calls.at(-1), ['close', 42]);
 });
+
+test('parseDevCredentialsBundle extracts all valid scalar references including OMNIMUX_API_KEY', async () => {
+  const { parseDevCredentialsBundle, readDevCredentialsBundle } = await import('./test-env-credentials.mjs');
+  const multi = 'refs:\n  DEEPSEEK_API_KEY: ds-val-1\n  OMNIMUX_API_KEY: omx-val-2\n  CPA_API_KEY: cpa-val-3\n';
+  const bundle = parseDevCredentialsBundle(multi);
+  assert.equal(bundle.DEEPSEEK_API_KEY, 'ds-val-1');
+  assert.equal(bundle.OMNIMUX_API_KEY, 'omx-val-2');
+  assert.equal(bundle.CPA_API_KEY, 'cpa-val-3');
+
+  const f = fixture();
+  const readBundle = readDevCredentialsBundle({ fs: f.io, userInfo: () => ({ homedir: f.home }) });
+  assert.equal(readBundle.DEEPSEEK_API_KEY, 'fixture-only-value');
+});
