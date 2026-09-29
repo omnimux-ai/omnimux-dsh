@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>GPT Image 2.5 三分组级联菜单验收 · Issue #2832</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b0b0c; --panel:#161618; --line:#2a2a2e; --text:#f5f5f7; --muted:#a1a1aa; --accent:#7c5cff; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 960px; margin: 32px auto; padding: 0 20px; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    .meta { color: var(--muted); margin-bottom: 20px; }
+    .composer { background: #1c1c1f; border:1px solid var(--line); border-radius: 16px; padding: 14px 16px; display:flex; align-items:center; gap:10px; }
+    .capsule { background:#2a2a30; border-radius:999px; padding:6px 12px; }
+    .cascade { margin-top: 14px; display:grid; grid-template-columns: 160px 220px 280px; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; min-height: 280px; }
+    .col { background: var(--panel); padding: 10px; }
+    .col h2 { font-size:12px; color:var(--muted); margin:0 0 8px; font-weight:600; letter-spacing:.02em; }
+    .item { padding:10px 12px; border-radius:10px; margin-bottom:6px; cursor:default; }
+    .item.active { background: rgba(124,92,255,.18); outline:1px solid rgba(124,92,255,.45); }
+    .item .title { font-weight:600; }
+    .item .badge { color:var(--muted); font-size:12px; margin-top:2px; }
+    .item .price { color:#d4d4d8; font-size:12px; margin-top:4px; }
+    .pass { margin-top:16px; padding:12px 14px; border-radius:12px; background:#10241a; border:1px solid #1f6b45; color:#b7f7d0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>GPT Image 2.5 · 三级渠道菜单已激活</h1>
+    <div class="meta">Issue #2832 · 验收路径：媒体查看器 / 画布节点 · 渠道数 = 3 &gt; 1</div>
+    <div class="composer">
+      <div class="capsule" data-model-capsule>GPT Image 2.5 · 标准版</div>
+      <div style="color:var(--muted)">1:1 · 1024×1024 · 约 0.1 积分</div>
+    </div>
+    <div class="cascade" data-cascade-menu data-show-channel-column="true">
+      <div class="col" data-col="brand">
+        <h2>品牌</h2>
+        <div class="item active"><div class="title">OpenAI</div></div>
+      </div>
+      <div class="col" data-col="model">
+        <h2>模型</h2>
+        <div class="item active" data-model-id="gpt-image-2.5"><div class="title">GPT Image 2.5</div><div class="badge">1k-4k · 照片级超清质感</div></div>
+      </div>
+      <div class="col" data-col="channel" data-testid="channel-column">
+        <h2>渠道 / 版本</h2>
+        <div class="item" data-channel-id="pro"><div class="title">旗舰版</div><div class="badge">满血出片 · 极致画质</div><div class="price">≈0.2 积分 · wire: gpt-image-2.5-pro</div></div>
+        <div class="item active" data-channel-id="standard"><div class="title">标准版</div><div class="badge">官方直签 · 标配出片</div><div class="price">≈0.1 积分 · wire: default</div></div>
+        <div class="item" data-channel-id="economy"><div class="title">经济版</div><div class="badge">经济走量 · 按次计费</div><div class="price">≈0.1 积分 · wire: gpt-image-2.5-economy</div></div>
+      </div>
+    </div>
+    <div class="pass" id="result">AC-4 PASS：第三列渠道菜单可见，含旗舰版 / 标准版 / 经济版。</div>
+  </div>
+</body>
+</html>
