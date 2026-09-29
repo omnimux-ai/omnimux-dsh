@@ -265,6 +265,32 @@ export function inspectUICode(codeContent, filePath = '', lineOffset = 0) {
         })
       }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // UI11: 新会话输入框全链路锁定 680px 紧凑黄金宽度 (防擅自改宽)
+    // ─────────────────────────────────────────────────────────────
+    if (
+      filePath.includes('session-guide/styles.js') ||
+      filePath.includes('session-guide/useComposerDocking.js')
+    ) {
+      // 拦截试图将卡片最大宽度写成 780px、952px、none 或 100% 的行为
+      const bannedWidthMatch = lineText.match(/max-width\s*:\s*(?:[^;]*(?:780px|952px|none|100%)[^;]*)/i)
+      // 拦截试图修改 DOCK_MAX_WIDTH 为非 680 的行为
+      const bannedConstMatch = lineText.match(/DOCK_MAX_WIDTH\s*=\s*(?!680\b)[0-9]+/i)
+
+      if (bannedWidthMatch || bannedConstMatch) {
+        const detected = bannedWidthMatch ? bannedWidthMatch[0] : bannedConstMatch[0]
+        violations.push({
+          ruleCode: 'UI11',
+          ruleName: '新会话输入框 680px 宽度铁律',
+          lineNum,
+          lineText,
+          message: `检测到试图破坏输入框 680px 紧凑黄金宽度的非法声明 [${detected}]`,
+          fix: '新会话顶部未吸底态与滚动吸底态输入框必须严格锁定为 680px（max-width: min(680px, calc(100% - 24px))!important），严禁擅自拉宽至 780px、952px 或 100%',
+          designSection: '~/.dsh/memory/MEMORY.md (新会话欢迎页输入框宽度铁律) & Issue #2830',
+        })
+      }
+    }
   })
 
   return violations
