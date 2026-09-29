@@ -1,0 +1,9 @@
+{
+  "id": "BLOCK-004",
+  "description": "换马甲变量名（dummy/fallback）伪造真实请求返回",
+  "intent": "business_code",
+  "filePath": "plugins/omnimux/src/pipeline/fetcher.ts",
+  "code": "export async function getRemoteRecords() {\n  const dummyBuffer = [{ recordId: 999, payload: 'test' }];\n  return dummyBuffer;\n}",
+  "expectedDecision": "deny",
+  "expectedReasonSnippet": "生产代码中检测到硬编码 Mock/Fake 数据注入"
+}

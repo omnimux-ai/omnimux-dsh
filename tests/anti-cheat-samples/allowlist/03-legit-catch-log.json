@@ -1,0 +1,8 @@
+{
+  "id": "ALLOW-003",
+  "description": "带有结构化告警日志的合法异常降级处理",
+  "intent": "fallback_infra",
+  "filePath": "plugins/omnimux/src/storage/cache.ts",
+  "code": "export function readCache(key: string) {\n  try {\n    return localStorage.getItem(key);\n  } catch (err) {\n    logger.warn('Storage unavailable, degrading to memory cache', { err, key });\n    return memoryStore.get(key);\n  }\n}",
+  "expectedDecision": "allow"
+}
