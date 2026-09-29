@@ -474,15 +474,40 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
   ],
   "gpt-image-2.5": [
     {
+      "id": "pro",
+      "label": "旗舰版",
+      "badge": "满血出片 · 极致画质",
+      "pricing": {
+        "pointsEstimate": 0.2,
+        "discountRate": 1.5,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "gpt-image-2.5-pro",
+      "enabled": true
+    },
+    {
       "id": "standard",
       "label": "标准版",
-      "badge": "官方最新生图专线",
+      "badge": "官方直签 · 标配出片",
       "pricing": {
         "pointsEstimate": 0.1,
         "discountRate": 1,
         "billingMode": "per_task"
       },
       "wireGroup": "default",
+      "default": true,
+      "enabled": true
+    },
+    {
+      "id": "economy",
+      "label": "经济版",
+      "badge": "经济走量 · 按次计费",
+      "pricing": {
+        "pointsEstimate": 0.1,
+        "discountRate": 0.8,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "gpt-image-2.5-economy",
       "enabled": true
     }
   ],

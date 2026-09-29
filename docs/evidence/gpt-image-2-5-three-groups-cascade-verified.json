@@ -1,0 +1,23 @@
+{
+  "issue": 2832,
+  "title": "GPT Image 2.5 三分组级联三级菜单激活验收",
+  "verifiedAt": "2026-09-29T12:09:10.001Z",
+  "spaceId": 106,
+  "demo": "docs/evidence/gpt-image-2-5-three-groups-cascade-demo.html",
+  "screenshot": "docs/evidence/gpt-image-2-5-three-groups-cascade-verified.png",
+  "acceptance": {
+    "AC-4_channelColumnVisible": {
+      "status": "PASS",
+      "showChannelColumn": true
+    },
+    "AC-4_threeChannelLabels": {
+      "status": "PASS",
+      "labels": [
+        "旗舰版",
+        "标准版",
+        "经济版"
+      ]
+    }
+  },
+  "conclusion": "GPT Image 2.5 渠道数=3，第三列渠道菜单可见，含旗舰版/标准版/经济版。"
+}

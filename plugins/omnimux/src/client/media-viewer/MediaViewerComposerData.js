@@ -33,8 +33,9 @@ export const DEFAULT_FALLBACK_CATALOG = {
         n: { default: 1, min: 1, max: 4 },
       },
       channelGroups: [
-        { id: 'pro', label: '旗舰版', badge: '满血出片', pricing: { pointsEstimate: 6, billingMode: 'per_image' } },
-        { id: 'standard', label: '标准版', badge: '官方直签', pricing: { pointsEstimate: 4, billingMode: 'per_image' } },
+        { id: 'pro', label: '旗舰版', badge: '满血出片 · 极致画质', pricing: { pointsEstimate: 0.2, discountRate: 1.5, billingMode: 'per_task' } },
+        { id: 'standard', label: '标准版', badge: '官方直签 · 标配出片', pricing: { pointsEstimate: 0.1, discountRate: 1, billingMode: 'per_task' } },
+        { id: 'economy', label: '经济版', badge: '经济走量 · 按次计费', pricing: { pointsEstimate: 0.1, discountRate: 0.8, billingMode: 'per_task' } },
       ],
     },
     {
