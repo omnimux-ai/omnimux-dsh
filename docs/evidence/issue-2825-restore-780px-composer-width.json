@@ -1,0 +1,24 @@
+{
+  "issue": 2825,
+  "spec": "specs/2825-restore-780px-composer-width.spec.md",
+  "feature": "restore-780px-composer-width",
+  "viewport": "2700x1553",
+  "metrics": {
+    "before": {
+      "maxWidth": "952px",
+      "actualWidth": 952,
+      "status": "overstretched"
+    },
+    "after": {
+      "maxWidth": "min(780px, calc(100% - 24px))",
+      "actualWidth": 780,
+      "status": "golden-comfort"
+    }
+  },
+  "tests": {
+    "e2e": "plugins/omnimux/src/client/session-guide/composer-width-780px.e2e.test.js",
+    "passed": 56,
+    "failed": 0
+  },
+  "timestamp": "2026-09-29T16:25:00Z"
+}
