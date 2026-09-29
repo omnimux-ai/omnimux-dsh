@@ -125,10 +125,52 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 45120 是 Dev Host 的 web 页面；它能证明 Dev 物化后的 Web/Stage 行为，但不能证明 Electron-only DOM 或 computed style，且按 2026-09-14 政策变更属人工验收范围，不作为 Agent 交付卡点。Electron-required 任务若 CDP 不可用应报告 BLOCKED，不得回退到截图猜测。
 
+## 本地最小命令选型（Agent 默认）
+
+本节是「变更面 → 最小命令」的唯一真源。[AGENTS.md](../../AGENTS.md) Verification 表只作索引；执行步骤见 [omnimux-repo-workflow](../../.agents/skills/omnimux-repo-workflow/SKILL.md)。`scripts/impact-matrix.mjs` 只判定是否需要浏览器/物化维度，不代替本表选命令。
+
+### 选型算法
+
+1. 列出相对仓库根、相对已核验 base（通常 `origin/main` 或 PR base）的变更路径。
+2. 运行或复用 `node scripts/impact-matrix.mjs --git-diff --base <base>`（或 `deriveImpactMatrix`），记下 `browser.required`。
+3. 按下表对触及面取**命令并集**并去重；每条记录「为何选 / 为何跳过」。
+4. 只跑该并集；通过后不要为了 commit/push 重复已绿项。
+5. `pnpm test:all` / `pnpm verify:all` **默认禁止**。仅当用户显式要求、诊断 CI 红灯、或变更跨多插件且无法缩窄时才允许全仓。
+
+### 变更面 → 最小命令
+
+| 变更面（路径/行为启发） | 必跑（最小） | 有触及再加跑 | 明确禁止 / 不适用 |
+| --- | --- | --- | --- |
+| 纯文档 / skill / 合同 Markdown | `git diff --check`；抽查改动链接、命令与边界句 | 触及配对或 skill 时：`pnpm doc:pairing` / `pnpm verify:skill-bilingual` | 不要求包测、浏览器、物化 |
+| 门禁 / CI / hooks / `scripts/*gate*` | 改动脚本所属 `node --test …`；触及 gates 集合时 `pnpm test:gates` | 改 impact/authorization/ci-verdict 时 `pnpm test:ci` | 不要无差别 `verify:all` |
+| 产品基线 / 路径 / 本地状态默认 | `pnpm verify:product-baseline` | 相关包测 | 不得把开发机私有状态写进默认路径 |
+| 单插件业务逻辑（非 UI） | `pnpm --filter <package> test` | 该插件边界/registry 小测 | 默认不跑 `pnpm -r test` / `test:all` |
+| Agent Tools / Schema | `pnpm test:agent-tools` | `pnpm verify:tools` | — |
+| DSH 合同 / inject / cordis 依赖声明 | `pnpm verify:dsh-contracts` + `pnpm test:dsh-contracts` | 触及的插件包测 | — |
+| 模型契约 / 路由 / 白名单 / 模型面定价 | `pnpm verify:model-contracts` | 下游：`pnpm verify:cross-plugin-models`、相关 submission/whitelist 检查；需要面板时 `pnpm hub:interfaces` | 禁止用真实付费探测发现能力 |
+| Client / Stage / 侧栏 / 文案 / CSS | 先读 design 与文案规范；`pnpm verify:stages`（及触及的 `verify:stage-scroll` / `verify:slots` / `test:ui`） | **必做**隔离工作树功能路径浏览器证据（`pnpm test:worktree-web` 或 ego-browser + 截图/结构化报告） | 禁止首页打卡冒充；禁止单测绿替代浏览器证据；Dev `verify:live@45120` 归人工，非 Agent 必做 |
+| 表单合同 | `pnpm verify:forms` | 相关包测 | — |
+| 壳层 / Electron 门控 | 相关静态/包测；若有页面则加隔离 Web | 仅 Electron-only 行为时 `pnpm verify:cdp` | 不能只用网页替代 Electron |
+| 多面混合 | 上表并集 | 仅对真实触及面加跑 | 仍禁止无差别全仓 |
+
+### 假绿与世界态
+
+- 带「无密钥 / 无浏览器则跳过」分支的检查：不得把「全部跳过」写成 PASS；须 preflight 硬失败、或显式 `not applicable` 并写明理由。
+- 验收优先断言外部世界：DOM/几何、导出文件、请求体、持久化状态；禁止只扫 Agent/UI 自夸文案关键词。
+- 证据须记录命令、退出码、真实用例数与 skip 数。行为代码有变更但命令缺失、`0 tests`、失败或未声明 skip，均不能通过。
+
+### 样例（走读）
+
+| 场景 | 期望并集（示例） |
+| --- | --- |
+| 只改 `docs/contracts/*.md` | `git diff --check` + 链接抽查 |
+| 只改 `plugins/omnimux-accounts` 非 UI 逻辑 | `pnpm --filter omnimux-accounts test` |
+| 改 Stage/client JSX | `pnpm verify:stages`（+ 触及静态门）+ 隔离工作树功能路径浏览器证据 |
+
 ## 静态与测试证据
 
-- 运行与 diff 匹配的最小测试集合，记录命令、退出码、真实用例数与 skip 数。代码变更但测试命令缺失、0 tests、失败或未声明 skip 均不能通过。
-- `pnpm verify:stages` 证明静态 Stage/adapter 合同，不替代 `verify:live`。实际 sidebar adapter 仍须覆盖 `getSnapshot`、`subscribe`、`open`、`close`、`set`、`readBox` 及会话隔离/关闭重开行为。
+- 按上一节选出的最小命令集合执行，记录命令、退出码、真实用例数与 skip 数。代码变更但测试命令缺失、0 tests、失败或未声明 skip 均不能通过。
+- `pnpm verify:stages` 证明静态 Stage/adapter 合同，不替代隔离工作树浏览器证据。实际 sidebar adapter 仍须覆盖 `getSnapshot`、`subscribe`、`open`、`close`、`set`、`readBox` 及会话隔离/关闭重开行为。
 - 模型研究和参数合同只使用官方文档与离线 `pnpm verify:model-contracts`；不得发真实模型请求探测支持情况。
 - 文档检查的实际能力边界见 [docs governance](docs-governance-standard.md)；没有执行的检查不得写进报告。
 
