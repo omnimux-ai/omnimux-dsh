@@ -13,15 +13,18 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve, dirname, basename } from 'node:path';
+import { resolve, dirname, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, '..');
 const ASSETS_DIR = resolve(REPO_ROOT, 'assets/builtin-presets');
 
-export const CDN_BASE = 'https://cdn.omnimux.ai/presets/builtin';
+export const R2_CDN_BASE = 'https://files.omnimux.ai/templates/explore-v1/sha256';
+export const LEGACY_CDN_BASE = 'https://cdn.omnimux.ai/presets/builtin';
+export const CDN_BASE = R2_CDN_BASE;
 
 // 资产映射注册表：从原始 URL 映射到语义化规范命名及替代策略
 export const ASSET_DEFINITIONS = [
@@ -191,17 +194,22 @@ export function generateManifest() {
 
   for (const item of ASSET_DEFINITIONS) {
     const filePath = resolve(ASSETS_DIR, item.name);
-    let sizeBytes = 0;
-    if (existsSync(filePath)) {
-      const stat = readFileSync(filePath);
-      sizeBytes = stat.byteLength;
+    if (!existsSync(filePath)) {
+      throw new Error(`缺少内置预置素材文件，无法计算内容寻址 R2 URL (Fail-Closed): ${filePath}`);
     }
 
-    const cdnUrl = `${CDN_BASE}/${item.name}`;
+    const stat = readFileSync(filePath);
+    const sizeBytes = stat.byteLength;
+    const sha256 = createHash('sha256').update(stat).digest('hex');
+    const prefix = sha256.slice(0, 2);
+    const ext = extname(item.name);
+    const cdnUrl = `${R2_CDN_BASE}/${prefix}/${sha256}${ext}`;
+
     manifest.assets[item.name] = {
       type: item.type,
       mimeType: item.mimeType,
       sizeBytes,
+      sha256,
       cdnUrl,
       originalUrl: item.originalUrl,
     };
@@ -219,6 +227,13 @@ export function generateManifest() {
         mimeType: item.mimeType,
       };
     }
+    // 关键：历史假域名 cdn.omnimux.ai 映射也要自动清洗替换
+    const legacyUrl = `${LEGACY_CDN_BASE}/${item.name}`;
+    manifest.urlMapping[legacyUrl] = {
+      targetUrl: cdnUrl,
+      sizeBytes,
+      mimeType: item.mimeType,
+    };
   }
 
   const manifestPath = resolve(ASSETS_DIR, 'manifest.json');

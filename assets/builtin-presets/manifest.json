@@ -1,200 +1,284 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-09-27T09:48:43.154Z",
-  "cdnBase": "https://cdn.omnimux.ai/presets/builtin",
+  "generatedAt": "2026-09-29T02:06:14.594Z",
+  "cdnBase": "https://files.omnimux.ai/templates/explore-v1/sha256",
   "assets": {
     "app-demo-poster.webp": {
       "type": "image",
       "mimeType": "image/webp",
       "sizeBytes": 30642,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+      "sha256": "563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
       "originalUrl": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp"
     },
     "app-demo-preview.mp4": {
       "type": "video",
       "mimeType": "video/mp4",
       "sizeBytes": 856774,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-preview.mp4",
+      "sha256": "7adca79d2d106411accf915a79a1b4a40868533f41272864a0ed37cdf20730af",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/7a/7adca79d2d106411accf915a79a1b4a40868533f41272864a0ed37cdf20730af.mp4",
       "originalUrl": "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_video_fc46dffa_compressed_v2.mp4"
     },
     "3d-cute-vfx-poster.webp": {
       "type": "image",
       "mimeType": "image/webp",
       "sizeBytes": 23520,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp",
+      "sha256": "ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp",
       "originalUrl": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp"
     },
     "3d-cute-vfx-preview.mp4": {
       "type": "video",
       "mimeType": "video/mp4",
       "sizeBytes": 1090511,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-preview.mp4",
+      "sha256": "3be607ed9780c9f5fd32d2d3fe8ec53bf91f48daa0e774c6d3162790b6cf044a",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3b/3be607ed9780c9f5fd32d2d3fe8ec53bf91f48daa0e774c6d3162790b6cf044a.mp4",
       "originalUrl": "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_video_e7e71f76_compressed_v2.mp4"
     },
     "chasing-product-poster.webp": {
       "type": "image",
       "mimeType": "image/webp",
       "sizeBytes": 32548,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp",
+      "sha256": "c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
       "originalUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp"
     },
     "chasing-product-preview.mp4": {
       "type": "video",
       "mimeType": "video/mp4",
       "sizeBytes": 987887,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-preview.mp4",
+      "sha256": "ea3fb5d23819086a2ffa88c598bf3728044cde636622a4340787ee10e280a2fd",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ea/ea3fb5d23819086a2ffa88c598bf3728044cde636622a4340787ee10e280a2fd.mp4",
       "originalUrl": "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_video_f049866c_compressed_v2.mp4"
     },
     "fall-down-durability-poster.webp": {
       "type": "image",
       "mimeType": "image/webp",
       "sizeBytes": 17726,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-poster.webp",
+      "sha256": "e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp",
       "originalUrl": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp"
     },
     "fall-down-durability-preview.mp4": {
       "type": "video",
       "mimeType": "video/mp4",
       "sizeBytes": 860669,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-preview.mp4",
+      "sha256": "8b4186752b7953ad7eb34102abe73ff4a6375f9280cca3eb0bcd22e224d5a351",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/8b/8b4186752b7953ad7eb34102abe73ff4a6375f9280cca3eb0bcd22e224d5a351.mp4",
       "originalUrl": "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_video_14eb8331_compressed_v2.mp4"
     },
     "apparel-tryon-poster.webp": {
       "type": "image",
       "mimeType": "image/webp",
       "sizeBytes": 29816,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-poster.webp",
+      "sha256": "36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp",
       "originalUrl": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp"
     },
     "apparel-tryon-preview.mp4": {
       "type": "video",
       "mimeType": "video/mp4",
       "sizeBytes": 256415,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-preview.mp4",
+      "sha256": "f5c2aff3e8f62c8a696d3ee3444b92368d62287eb0c3b84bd43eb6b14c34b7fb",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/f5/f5c2aff3e8f62c8a696d3ee3444b92368d62287eb0c3b84bd43eb6b14c34b7fb.mp4",
       "originalUrl": "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_video_083e3d55_compressed_v2.mp4"
     },
     "ugc-selfie-poster.webp": {
       "type": "image",
       "mimeType": "image/webp",
       "sizeBytes": 13080,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp",
+      "sha256": "3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp",
       "originalUrl": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp"
     },
     "ugc-selfie-preview.mp4": {
       "type": "video",
       "mimeType": "video/mp4",
       "sizeBytes": 1096887,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-preview.mp4",
+      "sha256": "24643db0f5a5527af731d822d4f8acb864b6316673eeb527f47bc45ce719b22e",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/24/24643db0f5a5527af731d822d4f8acb864b6316673eeb527f47bc45ce719b22e.mp4",
       "originalUrl": "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_video_c2f93f97_compressed_v2.mp4"
     },
     "product-spotlight-poster.webp": {
       "type": "image",
       "mimeType": "image/webp",
       "sizeBytes": 24724,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp",
+      "sha256": "de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp",
       "originalUrl": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp"
     },
     "product-spotlight-preview.mp4": {
       "type": "video",
       "mimeType": "video/mp4",
       "sizeBytes": 1259229,
-      "cdnUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-preview.mp4",
+      "sha256": "8520202af50b49c3fa7c9e3aadb22bc0a631a7bc22556247b99d1e439f51ef1c",
+      "cdnUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/85/8520202af50b49c3fa7c9e3aadb22bc0a631a7bc22556247b99d1e439f51ef1c.mp4",
       "originalUrl": "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_video_07f45334_compressed_v2.mp4"
     }
   },
   "urlMapping": {
     "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_image_35c9be15.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
       "sizeBytes": 30642,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/preview_image_35c9be15.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
       "sizeBytes": 30642,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/preview.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
       "sizeBytes": 30642,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/d4d983e2-108b-4b24-be0d-9fa6619eb608/preview_image_9ec543ab.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
+      "sizeBytes": 30642,
+      "mimeType": "image/webp"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
       "sizeBytes": 30642,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_video_fc46dffa_compressed_v2.mp4": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-preview.mp4",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/7a/7adca79d2d106411accf915a79a1b4a40868533f41272864a0ed37cdf20730af.mp4",
       "sizeBytes": 856774,
       "mimeType": "video/mp4"
     },
     "https://cdn.creatify.ai/community_creation/f23489b3-2ea5-41bb-9c2c-91d35d71e236/preview_video.mp4": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-preview.mp4",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/7a/7adca79d2d106411accf915a79a1b4a40868533f41272864a0ed37cdf20730af.mp4",
+      "sizeBytes": 856774,
+      "mimeType": "video/mp4"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/app-demo-preview.mp4": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/7a/7adca79d2d106411accf915a79a1b4a40868533f41272864a0ed37cdf20730af.mp4",
       "sizeBytes": 856774,
       "mimeType": "video/mp4"
     },
     "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_image_0b102b35.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp",
+      "sizeBytes": 23520,
+      "mimeType": "image/webp"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp",
       "sizeBytes": 23520,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/12dca4ee-0535-402c-9f57-f36fd4819157/preview_video_e7e71f76_compressed_v2.mp4": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-preview.mp4",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3b/3be607ed9780c9f5fd32d2d3fe8ec53bf91f48daa0e774c6d3162790b6cf044a.mp4",
+      "sizeBytes": 1090511,
+      "mimeType": "video/mp4"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-preview.mp4": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3b/3be607ed9780c9f5fd32d2d3fe8ec53bf91f48daa0e774c6d3162790b6cf044a.mp4",
       "sizeBytes": 1090511,
       "mimeType": "video/mp4"
     },
     "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_image_e97194d0.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
       "sizeBytes": 32548,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/8ab931cd-711e-451e-92b1-127eec12822a/preview_image_c8c7f3b8.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
+      "sizeBytes": 32548,
+      "mimeType": "image/webp"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
       "sizeBytes": 32548,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/dc1c50e1-f8cd-4120-a772-5a34730aeea4/preview_video_f049866c_compressed_v2.mp4": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-preview.mp4",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ea/ea3fb5d23819086a2ffa88c598bf3728044cde636622a4340787ee10e280a2fd.mp4",
+      "sizeBytes": 987887,
+      "mimeType": "video/mp4"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/chasing-product-preview.mp4": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ea/ea3fb5d23819086a2ffa88c598bf3728044cde636622a4340787ee10e280a2fd.mp4",
       "sizeBytes": 987887,
       "mimeType": "video/mp4"
     },
     "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_image_0b2932fe.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp",
+      "sizeBytes": 17726,
+      "mimeType": "image/webp"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-poster.webp": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp",
       "sizeBytes": 17726,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/73b5fb39-bcb1-48bc-a382-6de753fcb740/preview_video_14eb8331_compressed_v2.mp4": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-preview.mp4",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/8b/8b4186752b7953ad7eb34102abe73ff4a6375f9280cca3eb0bcd22e224d5a351.mp4",
+      "sizeBytes": 860669,
+      "mimeType": "video/mp4"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-preview.mp4": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/8b/8b4186752b7953ad7eb34102abe73ff4a6375f9280cca3eb0bcd22e224d5a351.mp4",
       "sizeBytes": 860669,
       "mimeType": "video/mp4"
     },
     "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_image_e825b0ff.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp",
+      "sizeBytes": 29816,
+      "mimeType": "image/webp"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-poster.webp": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp",
       "sizeBytes": 29816,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/9376553d-a10f-444a-99b3-c876de1f6481/preview_video_083e3d55_compressed_v2.mp4": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-preview.mp4",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/f5/f5c2aff3e8f62c8a696d3ee3444b92368d62287eb0c3b84bd43eb6b14c34b7fb.mp4",
+      "sizeBytes": 256415,
+      "mimeType": "video/mp4"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-preview.mp4": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/f5/f5c2aff3e8f62c8a696d3ee3444b92368d62287eb0c3b84bd43eb6b14c34b7fb.mp4",
       "sizeBytes": 256415,
       "mimeType": "video/mp4"
     },
     "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_image_d7f74acc.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp",
+      "sizeBytes": 13080,
+      "mimeType": "image/webp"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp",
       "sizeBytes": 13080,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/decc9021-4f2a-4d0c-8493-df845635716d/preview_video_c2f93f97_compressed_v2.mp4": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-preview.mp4",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/24/24643db0f5a5527af731d822d4f8acb864b6316673eeb527f47bc45ce719b22e.mp4",
+      "sizeBytes": 1096887,
+      "mimeType": "video/mp4"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-preview.mp4": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/24/24643db0f5a5527af731d822d4f8acb864b6316673eeb527f47bc45ce719b22e.mp4",
       "sizeBytes": 1096887,
       "mimeType": "video/mp4"
     },
     "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_image_3ac2faf7.webp": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp",
+      "sizeBytes": 24724,
+      "mimeType": "image/webp"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp",
       "sizeBytes": 24724,
       "mimeType": "image/webp"
     },
     "https://cdn.creatify.ai/community_creation/741d9f20-5d37-43b7-926b-935ebc9668db/preview_video_07f45334_compressed_v2.mp4": {
-      "targetUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-preview.mp4",
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/85/8520202af50b49c3fa7c9e3aadb22bc0a631a7bc22556247b99d1e439f51ef1c.mp4",
+      "sizeBytes": 1259229,
+      "mimeType": "video/mp4"
+    },
+    "https://cdn.omnimux.ai/presets/builtin/product-spotlight-preview.mp4": {
+      "targetUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/85/8520202af50b49c3fa7c9e3aadb22bc0a631a7bc22556247b99d1e439f51ef1c.mp4",
       "sizeBytes": 1259229,
       "mimeType": "video/mp4"
     }

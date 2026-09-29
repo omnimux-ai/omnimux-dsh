@@ -21,7 +21,7 @@
         "nodeKind": "import",
         "selectedTool": "import",
         "status": "completed",
-        "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+        "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
         "params": {
           "aspectRatio": "9:16"
         }
