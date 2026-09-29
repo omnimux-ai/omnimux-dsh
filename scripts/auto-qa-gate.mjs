@@ -32,7 +32,7 @@ import { validateLiveQaReport } from './live-qa-validation.mjs'
 export { maskNonCode }
 
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx'])
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.workbuddy', 'lib', 'openreel', 'coverage'])
+const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.workbuddy', 'lib', 'openreel', 'coverage', '.tmp'])
 
 export function parseArgs(argv = process.argv.slice(2)) {
   const options = {
