@@ -298,6 +298,86 @@ function looksLikeGitInvocation(segment) {
   return /(?:^|\s)git(?:\s|$)/i.test(segment)
 }
 
+/** 安全/只读类 git 子命令：整段放行，不进入写目标提取。 */
+const GIT_SAFE_SUBCOMMANDS = new Set([
+  'status', 'log', 'diff', 'show', 'branch', 'tag', 'remote', 'fetch', 'pull',
+  'ls-files', 'rev-parse', 'rev-list', 'describe', 'blame', 'shortlog',
+  'config', 'help', 'version', 'reflog', 'worktree',
+])
+
+/** 会改工作树/历史的 git 子命令：主 checkout 上需拦截。 */
+function classifyGitMutation(segment) {
+  if (!looksLikeGitInvocation(segment)) return null
+  const cleaned = String(segment)
+    .replace(/^(\s*[a-zA-Z_][a-zA-Z0-9_]*=(?:'[^']*'|"[^"]*"|\S+)\s+)+/, '')
+    .trim()
+  // strip git binary and global opts (-C/-c/--git-dir/--work-tree)
+  let rest = cleaned.replace(/^(?:[^\s]*\/)?git\b/i, '').trim()
+  rest = rest.replace(/^(?:(?:-C|--git-dir|--work-tree)(?:\s+(?:"[^"]*"|'[^']*'|\S+)|(?:=\S+))|-c\s+(?:"[^"]*"|'[^']*'|\S+)|--no-pager|--paginate)\s+/i, '')
+  // repeatedly strip leading global options
+  for (let i = 0; i < 8; i++) {
+    const next = rest.replace(/^(?:(?:-C|--git-dir|--work-tree)(?:\s+(?:"[^"]*"|'[^']*'|\S+)|(?:=\S+))|-c\s+(?:"[^"]*"|'[^']*'|\S+)|--no-pager|--paginate)\s+/i, '')
+    if (next === rest) break
+    rest = next
+  }
+  const words = tokenizeCommandLine(rest)
+  if (words.length === 0) return null
+  const sub = words[0].toLowerCase()
+  if (GIT_SAFE_SUBCOMMANDS.has(sub)) return null
+
+  // push --force / -f
+  if (sub === 'push' && words.some((w) => w === '--force' || w === '-f' || w.startsWith('--force='))) {
+    return { kind: 'force-push', segment }
+  }
+  if (['apply', 'am', 'cherry-pick', 'rebase', 'revert'].includes(sub)) {
+    return { kind: sub, segment }
+  }
+  if (sub === 'stash') {
+    const action = (words[1] || '').toLowerCase()
+    if (['pop', 'apply', 'drop', 'clear'].includes(action)) {
+      return { kind: `stash-${action}`, segment }
+    }
+    return null
+  }
+  if (sub === 'checkout') {
+    // branch switch / create stay allowed; path restore (`--` or trailing paths) is mutation
+    if (words.includes('--') || words.some((w) => w.includes('stash@{'))) {
+      return { kind: 'checkout-path', segment }
+    }
+    // `git checkout -f` already covered by destructive reset; keep path-less branch ops allowed
+    return null
+  }
+  if (sub === 'restore') {
+    // restore always mutates worktree/index when targeting paths; deny on main checkout
+    return { kind: 'restore', segment }
+  }
+  return null
+}
+
+export function decideGitWorkingTreeMutation(command, cwd) {
+  if (!command || typeof command !== 'string') return { decision: 'allow' }
+  const sessionCwd = resolve(cwd || process.cwd())
+  const rawTarget = resolveGitTargetPath(command, sessionCwd)
+  for (const seg of commandSegments(command)) {
+    if (!looksLikeGitInvocation(seg)) continue
+    const mutation = classifyGitMutation(seg)
+    if (!mutation) continue
+    const target = rawTarget || resolveGitTargetPath(seg, sessionCwd) || sessionCwd
+    if (isWorktreePath(target)) continue
+    const root = gitRoot(target)
+    if (root && isWorktreePath(root)) continue
+    return {
+      decision: 'deny',
+      reason: 'forbidden-main-checkout-git-mutation',
+      mutation: mutation.kind,
+      target,
+      segment: seg,
+    }
+  }
+  return { decision: 'allow' }
+}
+
+
 export function isDestructiveResetCommand(command) {
   if (!command || typeof command !== 'string') return false
   return commandSegments(command).some((seg) => {
@@ -354,7 +434,9 @@ function tokenizeCommandLine(cmd) {
 export function extractCommandWriteTargets(command) {
   if (!command || typeof command !== 'string') return []
   const targets = []
-  const segments = commandSegments(command)
+  // 必须保留引号内载荷：node -e / python -c 的写路径全在引号里；
+  // commandSegments() 会 stripQuotedSpans，导致解释器一句话写盘完全不可见。
+  const segments = rawCommandSegments(command)
 
   for (const seg of segments) {
     // 拆分管道符 | (避免管道下游命令如 tee 漏检)，避开 || 逻辑或
@@ -364,7 +446,10 @@ export function extractCommandWriteTargets(command) {
       const cleaned = sub.replace(/^(\s*[a-zA-Z_][a-zA-Z0-9_]*=(?:'[^']*'|"[^"]*"|\S+)\s+)+/, '').trim()
       if (!cleaned) continue
 
-      // 正常 Git 命令完全放行（绝不误杀主目录的合并与同步操作）
+      // 安全 git 子命令整段跳过；变异 git 由 decideGitWorkingTreeMutation 单独判定
+      if (looksLikeGitInvocation(cleaned) && !classifyGitMutation(cleaned)) {
+        continue
+      }
       if (looksLikeGitInvocation(cleaned)) {
         continue
       }
@@ -423,6 +508,44 @@ export function extractCommandWriteTargets(command) {
           targets.push(w)
         }
       } else if (verb === 'sed' && words.some((w) => w === '-i' || w.startsWith('-i'))) {
+        const nonOptions = words.slice(1).filter((w) => !w.startsWith('-'))
+        if (nonOptions.length >= 1) {
+          targets.push(nonOptions[nonOptions.length - 1])
+        }
+      } else if (verb === 'dd') {
+        for (const w of words.slice(1)) {
+          if (w.startsWith('of=')) {
+            targets.push(w.slice(3))
+          }
+        }
+      } else if (verb === 'ln') {
+        const nonOptions = words.slice(1).filter((w) => !w.startsWith('-'))
+        if (nonOptions.length >= 2) {
+          targets.push(nonOptions[nonOptions.length - 1])
+        } else if (nonOptions.length === 1) {
+          targets.push(nonOptions[0])
+        }
+      } else if (verb === 'node' || verb.endsWith('/node')) {
+        // node -e / --eval one-liners that embed writeFileSync('path'
+        // tokenizeCommandLine strips outer quotes, so joined looks like:
+        //   node -e require('fs').writeFileSync('path','x')
+        // Do NOT use \b around -e (hyphen is non-word; \b fails between space and '-').
+        const hasEval = words.some((w) => w === '-e' || w === '--eval' || w.startsWith('--eval='))
+        const joined = words.join(' ')
+        if (hasEval && /writeFileSync|appendFileSync|createWriteStream/.test(joined)) {
+          for (const m of joined.matchAll(/(?:writeFileSync|appendFileSync|createWriteStream)\(\s*['"]([^'"]+)['"]/g)) {
+            targets.push(m[1])
+          }
+        }
+      } else if (verb === 'python' || verb === 'python3' || verb.endsWith('/python') || verb.endsWith('/python3')) {
+        const hasC = words.some((w) => w === '-c')
+        const joined = words.join(' ')
+        if (hasC && /open\(/.test(joined)) {
+          for (const m of joined.matchAll(/open\(\s*['"]([^'"]+)['"]\s*,\s*['"][^'"]*[wa+][^'"]*['"]/g)) {
+            targets.push(m[1])
+          }
+        }
+      } else if (verb === 'perl' && words.some((w) => w === '-i' || w.startsWith('-i'))) {
         const nonOptions = words.slice(1).filter((w) => !w.startsWith('-'))
         if (nonOptions.length >= 1) {
           targets.push(nonOptions[nonOptions.length - 1])
@@ -914,6 +1037,12 @@ export function decideBashCommand({ command, cwd }) {
     return buildDecision
   }
 
+  // 3.75. 检查主 checkout 上会改工作树的 git 变异子命令（apply/am/stash pop/checkout -- 等）
+  const gitMutation = decideGitWorkingTreeMutation(command, cwd)
+  if (gitMutation.decision === 'deny') {
+    return gitMutation
+  }
+
   // 4. 检查在主仓本地 main 分支上执行 git merge 或 git commit
   const mainBranchOps = decideMainBranchGitOp(command, cwd)
   if (mainBranchOps.decision === 'deny') {
@@ -1049,6 +1178,12 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
         `🎯 被拦截的命令：${extra.command || '构建命令'}`,
         '📌 核心防线原则：主目录除 .tmp 外必须保持绝对只读与洁净，严禁在主检出直接运行 build/tsc 触发编译器副作用。',
         '👉 强制流程：主目录除 .tmp 外禁止编译构建。请向用户汇报当前阻断，并等待指示切入专属 Worktree 执行构建！',
+      ].join('\n')
+    } else if (reason === 'forbidden-main-checkout-git-mutation') {
+      output.permissionDecisionReason = [
+        '🚫【OmniMux 仓库 Hook】严禁在主 checkout 通过 git 变异子命令改写工作树！',
+        `📌 被拦截操作：${extra.mutation || 'git mutation'}`,
+        '👉 强制流程：请暂停当前动作，向用户汇报当前阻断并等待指示切入专属 Worktree；严禁私自绕行。',
       ].join('\n')
     } else if (reason === 'forbidden-main-branch-merge') {
       output.permissionDecisionReason = [
