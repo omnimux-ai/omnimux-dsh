@@ -86,7 +86,7 @@ The product baseline is a brand-new user's machine right after install and sign-
 
 For full-app worktree tests, use the shared [test environment bootstrap](docs/contracts/plugin-qa.md#工作树测试配置准备); default to synthetic `ui` mode, require task-specific credential authorization for `live`, and never solve onboarding by copying shared profiles or filling real keys into test pages.
 
-Choose checks by changed behavior, then satisfy required CI checks. Do not add tests that only restate a reversible, low-impact edit; rerun or expand checks only after a relevant change, failure, or unresolved doubt.
+Choose checks by changed behavior, then satisfy required CI checks. Do not add tests that only restate a reversible, low-impact edit; rerun or expand checks only after a relevant change, failure, or unresolved doubt. **完整选型算法、假绿防护与世界态规则**见 [plugin QA · 本地最小命令选型](docs/contracts/plugin-qa.md#本地最小命令选型agent-默认)；**执行五步**见 [omnimux-repo-workflow](.agents/skills/omnimux-repo-workflow/SKILL.md)。默认禁止 `pnpm test:all` / `pnpm verify:all`（用户显式要求、诊断 CI、或不可缩窄的跨面改动除外）。
 
 | Change | Required local evidence |
 | --- | --- |
@@ -97,7 +97,7 @@ Choose checks by changed behavior, then satisfy required CI checks. Do not add t
 | Plugin Agent Tools / Schema | `pnpm test:agent-tools` (all 4 layers: Schema Lint, isolated sandbox execution, intent eval & security gates passed) |
 | DSH Plugin Contracts & Inject | `pnpm verify:dsh-contracts` + `pnpm test:dsh-contracts`（Cordis inject 依赖闭环、defineTool Schema 格式规范与依赖声明门禁） |
 | Model contracts | `pnpm verify:model-contracts`（契约门禁严格校验）；`pnpm hub:interfaces` 实时生成/更新执行中枢接口全景面板 HTML（`docs/tools/hub-interfaces.html`，覆盖模型能力 / 智能体工具 / 账号接入平台 / 发布通道）供直观核验 |
-| Client / Stage / sidebar | [design.md](design.md) + [UI guidelines](docs/contracts/ui-design-guidelines.md) + [copy standards](docs/contracts/ui-copywriting-and-naming-standards.md) before editing; `pnpm verify:stages`, then real ego-browser evidence through [plugin QA](docs/contracts/plugin-qa.md) |
+| Client / Stage / sidebar | [design.md](design.md) + [UI guidelines](docs/contracts/ui-design-guidelines.md) + [copy standards](docs/contracts/ui-copywriting-and-naming-standards.md) before editing; `pnpm verify:stages`, then real worktree-isolated browser evidence through [plugin QA](docs/contracts/plugin-qa.md) |
 
 Task specs live in the task's **own** worktree repo (`specs/<feature>.spec.md`, uncommitted or ahead of `origin/main`) — the Spec gate resolves it against the repo that owns the edited file. **Never mirror or copy a spec draft into the primary checkout**: mirrored drafts neither satisfy the gate nor belong there; the primary checkout stays a read-only mirror. Materialization's cleanliness gate ignores untracked drafts under `specs/ docs/ tmp/ .workbuddy/ .agent-backups/ .worktrees/ .agent-reports/`, but still refuses any tracked-file change and any untracked file outside those paths.
 
