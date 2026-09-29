@@ -76,7 +76,6 @@ export function resolveSyncOfficialToken(env = process.env, opts = {}) {
     process.env.DSH_HOME,
     profileDirName,
     join(homedir(), '.omnimux'),
-    join(homedir(), '.omnimux-dev'),
     join(homedir(), '.dsh'),
   ].filter(Boolean)
 
