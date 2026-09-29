@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { evaluateAntiCheat } from './guard-anti-cheat.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -118,6 +119,72 @@ describe('AI Agent 防造假与自适应门禁系统测试 (guard-anti-cheat.tes
       assert.ok(
         found,
         'CRITICAL: .dsh/hooks.json 未在 PreToolUse 中注册 guard-anti-cheat.mjs！门禁无法在运行时自动生效。'
+      );
+    });
+  });
+
+  describe('5. CLI 运行时协议与契约测试 (Runtime Protocol & HookSpecificOutput Verification)', () => {
+    const SCRIPT_PATH = resolve(__dirname, 'guard-anti-cheat.mjs');
+
+    it('通过 stdin 传入作弊写入时，stdout 必须包含正确 hookSpecificOutput.permissionDecision === "deny"', () => {
+      const payload = JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'write',
+        tool_input: {
+          file_path: 'plugins/omnimux/src/test.ts',
+          content: 'const mockData = [{ id: 1 }];'
+        }
+      });
+
+      const proc = spawnSync('node', [SCRIPT_PATH], {
+        input: payload,
+        encoding: 'utf8'
+      });
+
+      assert.ok(proc.stdout, 'stdout 不得为空');
+      const parsed = JSON.parse(proc.stdout.trim());
+      assert.ok(parsed.hookSpecificOutput, '必须包含 hookSpecificOutput 顶层包装');
+      assert.equal(parsed.hookSpecificOutput.permissionDecision, 'deny');
+      assert.ok(
+        parsed.hookSpecificOutput.permissionDecisionReason?.includes('硬门禁拦截'),
+        '拦截原因必须清晰明了'
+      );
+    });
+
+    it('通过 stdin 传入合法文件写入时，stdout 必须输出 hookSpecificOutput.permissionDecision === "allow"', () => {
+      const payload = JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'write',
+        tool_input: {
+          file_path: 'plugins/omnimux/src/calculator.ts',
+          content: 'export function calculateTotal(a: number, b: number) { return a + b; }'
+        }
+      });
+
+      const proc = spawnSync('node', [SCRIPT_PATH], {
+        input: payload,
+        encoding: 'utf8'
+      });
+
+      assert.ok(proc.stdout, 'stdout 不得为空');
+      const parsed = JSON.parse(proc.stdout.trim());
+      assert.ok(parsed.hookSpecificOutput, '必须包含 hookSpecificOutput 顶层包装');
+      assert.equal(parsed.hookSpecificOutput.permissionDecision, 'allow');
+    });
+
+    it('Fail-Closed 契约：当 stdin 传入畸变数据无法解析时，必须拒绝放行 (deny)', () => {
+      const proc = spawnSync('node', [SCRIPT_PATH], {
+        input: '{ broken invalid json payload',
+        encoding: 'utf8'
+      });
+
+      assert.ok(proc.stdout, 'stdout 不得为空');
+      const parsed = JSON.parse(proc.stdout.trim());
+      assert.ok(parsed.hookSpecificOutput, '必须包含 hookSpecificOutput 顶层包装');
+      assert.equal(
+        parsed.hookSpecificOutput.permissionDecision,
+        'deny',
+        '畸变输入或异常情况下必须 Fail-Closed 判定为 deny，严禁静默 allow！'
       );
     });
   });

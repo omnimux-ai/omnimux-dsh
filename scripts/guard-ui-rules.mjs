@@ -146,7 +146,7 @@ export function inspectUICode(codeContent, filePath = '', lineOffset = 0) {
           lineNum,
           lineText,
           message: '使用了原生 <button> 控件，必须使用 dsh-ui-kit (Button/IconButton) 替代',
-          fix: "改用 `dsh-ui-kit` 的 `<Button>` 或 `<IconButton>`，或行尾添加 `// exempt-ui01 <业务原因>` 豁免",
+          fix: "改用 `dsh-ui-kit` 的 `<Button>` 或 `<IconButton>`",
           designSection: '[design.md](design.md) §2.1 (32px 控件高基准) & §2.4 (严禁裸用原生控件)',
         })
       }
@@ -159,7 +159,7 @@ export function inspectUICode(codeContent, filePath = '', lineOffset = 0) {
           lineNum,
           lineText,
           message: '使用了原生 <select> 控件，必须使用 dsh-ui-kit (DropdownSelect) 替代',
-          fix: "改用 `dsh-ui-kit` 的 `<DropdownSelect>`，或行尾添加 `// exempt-ui01 <业务原因>` 豁免",
+          fix: "改用 `dsh-ui-kit` 的 `<DropdownSelect>`",
           designSection: '[design.md](design.md) §2.4 (严禁裸用原生控件) & §5.1 (下拉选择菜单规范)',
         })
       }
@@ -184,7 +184,7 @@ export function inspectUICode(codeContent, filePath = '', lineOffset = 0) {
             lineNum,
             lineText,
             message: `禁止在 JSX 中使用内联业务样式属性 [${p}]，仅允许 CSS 变量 (--stage-*) 与关页保活 display:none`,
-            fix: "将业务样式移至样式表/CSS Modules，或仅通过 CSS 变量传参；特化场景添加 `// exempt-ui02 <业务原因>`",
+            fix: "将业务样式移至样式表/CSS Modules，或仅通过 CSS 变量传参",
             designSection: '[design.md](design.md) §1.1 (彻底弃用私有样式) & §2 (核心交互与几何铁律)',
           })
         }
@@ -216,7 +216,7 @@ export function inspectUICode(codeContent, filePath = '', lineOffset = 0) {
             lineNum,
             lineText,
             message: `存在未经 CSS 变量封装的裸色硬编码 [${detected.join(', ')}]，必须使用官方 --dsw-alias-* Token`,
-            fix: "使用官方语义 Token 包装，例如 `var(--dsw-alias-bg-base)`、`var(--dsw-alias-label-primary)`，或特化场景添加 `// exempt-ui03 <业务原因>`",
+            fix: "使用官方语义 Token 包装，例如 `var(--dsw-alias-bg-base)`、`var(--dsw-alias-label-primary)`",
             designSection: '[design.md](design.md) §1.1 (Token 规范) & §3 (色彩映射表与 Token 矩阵)',
           })
         }
@@ -239,7 +239,7 @@ export function inspectUICode(codeContent, filePath = '', lineOffset = 0) {
           lineNum,
           lineText,
           message: `检测到使用 Emoji 表情或 Unicode 字符 [${detected}] 充当图标/状态，必须统一使用矢量 SVG 图标`,
-          fix: "改用 `@deepseek-ai/dsh-client-ui-primitives` 原生图标（如 `IconCloseOutline16`）或 `lucide-react` 矢量 SVG 组件；特化场景添加 `// exempt-ui04 <业务原因>`",
+          fix: "改用 `@deepseek-ai/dsh-client-ui-primitives` 原生图标（如 `IconCloseOutline16`）或 `lucide-react` 矢量 SVG 组件",
           designSection: '[design.md](design.md) §2.5 (严禁使用字符与 Emoji 充当图标) & [docs/contracts/icon-design-standards.md](docs/contracts/icon-design-standards.md)',
         })
       }
@@ -259,8 +259,8 @@ export function inspectUICode(codeContent, filePath = '', lineOffset = 0) {
           ruleName: '遵循合规字阶白名单',
           lineNum,
           lineText,
-          message: `非标字号 [${matchedSize}px]，合规字阶白名单为 [${FONT_SIZE_WHITELIST.join(', ')}]px；特化场景请加 // exempt-ui10 <原因>`,
-          fix: `调整为标准字阶（如 Display 20px, Title 16px, Body 13px, Caption 12px）；特化展示请加 \`// exempt-ui10 <特化大字/微调原因>\``,
+          message: `非标字号 [${matchedSize}px]，合规字阶白名单为 [${FONT_SIZE_WHITELIST.join(', ')}]px`,
+          fix: `调整为标准字阶（如 Display 20px, Title 16px, Body 13px, Caption 12px）`,
           designSection: '[design.md](design.md) §4.2 (字阶与层级阶梯)',
         })
       }
