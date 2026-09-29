@@ -88,7 +88,7 @@ function slotGroups(operation) {
     const rawSlot = input.slot ?? role;
     let slotKeyPart = rawSlot;
     if (input.type === 'image') {
-      if (role === 'reference' && (rawSlot === 'reference_images' || rawSlot === 'reference')) {
+      if (role === 'reference' && (rawSlot === 'reference_images' || rawSlot === 'reference' || rawSlot === 'reference_image')) {
         slotKeyPart = 'reference';
       } else if (role === 'first_frame' || rawSlot === 'first_frame') {
         slotKeyPart = 'first_frame';
@@ -133,8 +133,35 @@ function firstNumber(...values) {
 
 /** 模型原始记录上、输出类型匹配的操作。 */
 export function operationsOf(model, kind) {
+  if (!model) return [];
   const raw = model?.raw ?? model;
-  return (raw?.operations ?? []).filter((operation) => operation?.output?.type === kind);
+  const direct = (raw?.operations ?? model?.operations ?? []).filter((operation) => operation?.output?.type === kind);
+  if (direct.length > 0) return direct;
+  // 当模型未显式携带 operations 时，为合法图像模型提供标准契约兜底
+  if (kind === 'image' && model.id && model.id !== 'unknown') {
+    return [
+      { id: 'text_to_image', label: '文生图', output: { type: 'image' }, inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 }] },
+      {
+        id: 'image_edit',
+        label: '垫图参考',
+        output: { type: 'image' },
+        inputs: [
+          { slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 },
+          { slot: 'reference_image', type: 'image', role: 'reference', min: 0, max: 1 },
+        ],
+      },
+      {
+        id: 'multi_reference',
+        label: '多图参考',
+        output: { type: 'image' },
+        inputs: [
+          { slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 },
+          { slot: 'reference_images', type: 'image', role: 'reference', min: 0, max: 4 },
+        ],
+      },
+    ];
+  }
+  return [];
 }
 
 /**

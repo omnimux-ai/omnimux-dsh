@@ -89,7 +89,7 @@ function parseMediaSource(source) {
   }
   if (/^(?:data:|file:|asset:)/i.test(value)) return { kind: value.slice(0, value.indexOf(':')).toLowerCase(), value }
   if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return { kind: 'invalid', value }
-  if (value.startsWith('/api/local-file?') || value.startsWith('/omnimux-workflow/api/local-file?')) {
+  if (value.startsWith('/api/local-file?') || value.startsWith('/omnimux-workflow/api/local-file?') || value.startsWith('/omnimux-viewer/asset?')) {
     return { kind: 'local-url', value, url: new URL(value, 'http://localhost') }
   }
   return { kind: 'path', value }
@@ -260,10 +260,17 @@ export async function resolveMediaDescriptor(source) {
     }
   } else if (parsedSource.kind === 'local-url') {
     const parsed = parsedSource.url
-    if (!['/api/local-file', '/omnimux-workflow/api/local-file'].includes(parsed.pathname) || !parsed.searchParams.get('path')) {
+    if (parsed.pathname === '/omnimux-viewer/asset' && parsed.searchParams.get('p')) {
+      try {
+        targetPath = Buffer.from(parsed.searchParams.get('p'), 'base64url').toString('utf8')
+      } catch {
+        throw new OmnimuxError('omnimux-invalid-request', '无法解析查看器素材地址')
+      }
+    } else if (['/api/local-file', '/omnimux-workflow/api/local-file'].includes(parsed.pathname) && parsed.searchParams.get('path')) {
+      targetPath = parsed.searchParams.get('path')
+    } else {
       throw new OmnimuxError('omnimux-invalid-request', '不支持的本地素材地址')
     }
-    targetPath = parsed.searchParams.get('path')
   } else if (trimmed.startsWith('asset://')) {
     const home = process.env.DSH_HOME || (process.env.HOME ? join(process.env.HOME, '.dsh') : '')
     const raw = trimmed.slice('asset://'.length)
