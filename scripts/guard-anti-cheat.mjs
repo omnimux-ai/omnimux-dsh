@@ -90,40 +90,82 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
   return { permissionDecision: 'allow' };
 }
 
+/* ------------------------------------------------------------------ 格式化与输出辅助 */
+function formatHookOutput(decision, hookEventName = 'PreToolUse') {
+  const output = {
+    hookEventName,
+    permissionDecision: decision.permissionDecision,
+  };
+  if (decision.permissionDecision === 'deny') {
+    output.permissionDecisionReason = decision.reason || '【硬门禁拦截】命中防造假与合规防御规则。';
+  }
+  return { hookSpecificOutput: output };
+}
+
+function failClosedHookOutput(err, hookEventName = 'PreToolUse') {
+  console.error('[guard-anti-cheat] 门禁执行异常 (Fail-Closed):', err);
+  return {
+    hookSpecificOutput: {
+      hookEventName,
+      permissionDecision: 'deny',
+      permissionDecisionReason: `【硬门禁异常拦截 (Fail-Closed)】防造假门禁执行异常: ${err?.message || '未知错误'}。触发安全阻断。`,
+    },
+  };
+}
+
+export function handle(rawInput) {
+  let input = {};
+  if (rawInput && rawInput.trim()) {
+    input = JSON.parse(rawInput.trim());
+  } else if (process.env.DSH_TOOL_INPUT) {
+    input = JSON.parse(process.env.DSH_TOOL_INPUT);
+  }
+
+  const hookEventName = input.hook_event_name || 'PreToolUse';
+  const rawTool = String(input.tool_name || process.env.DSH_TOOL_NAME || 'write').toLowerCase();
+  const toolName = rawTool.replace(/^.*:/, '');
+  const toolInput = input.tool_input || (input.file_path ? input : {});
+  const filePath = toolInput.file_path || input.file_path || '';
+  const content = toolInput.content || toolInput.new_string || input.content || input.new_string || '';
+  const intent = process.env.DSH_TASK_INTENT || 'business_code';
+
+  let exemptions = [];
+  const exemptionPath = resolve(process.cwd(), '.tmp/anti-cheat-exemptions.json');
+  if (existsSync(exemptionPath)) {
+    try {
+      exemptions = JSON.parse(readFileSync(exemptionPath, 'utf8'));
+    } catch {}
+  }
+
+  const decision = evaluateAntiCheat({
+    tool: toolName,
+    filePath,
+    content,
+    intent,
+    exemptions,
+  });
+
+  return formatHookOutput(decision, hookEventName);
+}
+
+function main() {
+  let rawInput = '';
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', (chunk) => {
+    rawInput += chunk;
+  });
+  process.stdin.on('end', () => {
+    try {
+      const output = handle(rawInput);
+      process.stdout.write(JSON.stringify(output) + '\n');
+    } catch (err) {
+      const fallback = failClosedHookOutput(err);
+      process.stdout.write(JSON.stringify(fallback) + '\n');
+    }
+  });
+}
+
 /* ------------------------------------------------------------------ CLI / Hook 运行时入口 */
 if (process.argv[1] && process.argv[1].endsWith('guard-anti-cheat.mjs')) {
-  try {
-    const rawInput = process.env.DSH_TOOL_INPUT || '{}';
-    const input = JSON.parse(rawInput);
-    const toolName = process.env.DSH_TOOL_NAME || 'write';
-    const intent = process.env.DSH_TASK_INTENT || 'business_code';
-
-    let exemptions = [];
-    const exemptionPath = resolve(process.cwd(), '.tmp/anti-cheat-exemptions.json');
-    if (existsSync(exemptionPath)) {
-      try {
-        exemptions = JSON.parse(readFileSync(exemptionPath, 'utf8'));
-      } catch {}
-    }
-
-    const decision = evaluateAntiCheat({
-      tool: toolName,
-      filePath: input.file_path,
-      content: input.content || input.new_string || '',
-      intent,
-      exemptions
-    });
-
-    console.log(JSON.stringify(decision));
-    if (decision.permissionDecision === 'deny') {
-      process.exit(1);
-    } else {
-      process.exit(0);
-    }
-  } catch (err) {
-    // 门禁自身出现解析异常时，Fail-Safe 策略：打印警报但不无故中断正常流水线
-    console.error('[guard-anti-cheat] 门禁执行异常:', err);
-    console.log(JSON.stringify({ permissionDecision: 'allow' }));
-    process.exit(0);
-  }
+  main();
 }

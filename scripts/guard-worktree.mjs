@@ -1016,9 +1016,8 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
     } else if (reason === 'forbidden-main-checkout-copy') {
       output.permissionDecisionReason = [
         `🚫【OmniMux 仓库 Hook】严禁通过命令行向主目录核心受保护路径（${extra.target || '目标路径'}）复制、移动或写入文件！`,
-        '📌 核心防线原则：主目录仅允许通过 Git 进行常规合并与同步最新代码（如 git pull / git merge），严禁通过 cp/mv/重定向 越过版本管理篡改主干代码。',
+        '📌 核心防线原则：主目录仅允许通过 Git 进行常规合并与同步最新代码，严禁通过 cp/mv/重定向越过版本管理篡改主干代码。',
         '👉 强制流程：主目录核心路径已被物理写保护。请暂停当前动作，向用户汇报当前阻断并等待用户下达工作区规划指示，严禁私自调用脚本绕行！',
-        'ℹ️  豁免范围：独立 Worktree 目录内的操作、临时衍生目录（dist/、node_modules/、tmp/、*.log）与被 gitignore 忽略的文件。',
       ].join('\n')
     } else if (reason === 'forbidden-worktree-materialization') {
       output.permissionDecisionReason = [
@@ -1071,17 +1070,15 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
       ].join('\n')
     } else if (reason === 'untracked-protected-scope') {
       output.permissionDecisionReason = [
-        '🚫【OmniMux 仓库 Hook】严禁在主仓库 plugins/、scripts/、docs/ 等核心目录下新建任何源码或配置文件！',
+        '🚫【OmniMux 仓库 Hook】严禁在主仓库核心目录下新建任何源码或配置文件！',
         '📌 核心防线原则：在主目录直接创建未跟踪源码文件会导致主干工作区被污染，并引发构建衍生与多 Agent 冲突覆盖。',
         '👉 强制流程：主目录核心路径已被物理写保护。请暂停当前写入，向用户汇报当前阻断并等待用户下达工作区规划指示，严禁私自调用脚本绕行！',
-        'ℹ️  豁免范围：经 Git 元数据与注册表核实的 linked worktree、本地工作台记录 (.workbuddy/)、临时缓存目录 (tmp/、dist/、node_modules/)。',
       ].join('\n')
     } else {
       output.permissionDecisionReason = [
         '🚫【OmniMux 仓库 Hook】严禁在主 checkout 直接修改任何已加入版本管理（Git Tracked）的文件！',
         '📌 核心防线原则：版本管理的文件一旦在主目录被修改，将面临未经审核的脏提交，或者在同步拉取时被覆盖/丢弃。',
         '👉 强制流程：主目录 Git 受控文件禁止直接写入。请暂停当前写入，向用户汇报当前阻断并等待用户明确指示，严禁私自调用脚本绕行！',
-        'ℹ️  豁免范围：独立 Worktree 目录、gitignore 规则文件、临时缓存（node_modules、dist、tmp、*.log）与非受保护草稿文件。',
       ].join('\n')
     }
   }
