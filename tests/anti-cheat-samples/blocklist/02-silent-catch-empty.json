@@ -1,0 +1,9 @@
+{
+  "id": "BLOCK-002",
+  "description": "在生产逻辑中空 catch 静默吞错并返回假空对象",
+  "intent": "business_code",
+  "filePath": "plugins/omnimux/src/api/gateway.ts",
+  "code": "export async function queryGatewayStatus() {\n  try {\n    return await client.check();\n  } catch (e) {\n    return { ok: true, status: 'mock_healthy' };\n  }\n}",
+  "expectedDecision": "deny",
+  "expectedReasonSnippet": "检测到静默吞错并返回虚假成功状态"
+}

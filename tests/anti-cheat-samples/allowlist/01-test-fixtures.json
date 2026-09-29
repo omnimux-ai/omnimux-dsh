@@ -1,0 +1,8 @@
+{
+  "id": "ALLOW-001",
+  "description": "合法的单元测试文件中的 Mock 数据定义",
+  "intent": "test_authoring",
+  "filePath": "tests/unit/user-service.test.ts",
+  "code": "describe('UserService', () => {\n  const mockUserData = [{ id: 1, name: 'Alice' }];\n  it('returns mocked list', () => {\n    expect(mockUserData).toHaveLength(1);\n  });\n});",
+  "expectedDecision": "allow"
+}

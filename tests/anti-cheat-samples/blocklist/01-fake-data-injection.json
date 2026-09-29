@@ -1,0 +1,9 @@
+{
+  "id": "BLOCK-001",
+  "description": "在生产业务代码中注入写死的 Mock 数据伪造返回",
+  "intent": "business_code",
+  "filePath": "plugins/omnimux/src/services/user-sync.ts",
+  "code": "export async function fetchRemoteUsers() {\n  const mockUsers = [{ id: 1, name: 'Fake Alice', role: 'admin' }];\n  return mockUsers;\n}",
+  "expectedDecision": "deny",
+  "expectedReasonSnippet": "生产代码中检测到硬编码 Mock/Fake 数据注入"
+}

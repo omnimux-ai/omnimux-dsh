@@ -147,7 +147,23 @@ function checkToolInput(toolName, input) {
 }
 ```
 
-### 4.2 交付物真实性验收清单 (Sign-off Checklist)
+### 4.2 自适应反馈与红黑样本进化机制 (Adaptive Feedback & Immunization)
+
+针对“合理场景误杀”与“新型作弊漏逃”的工程矛盾，契约确立三大自适应闭环机制：
+
+1. **意图作用域感知 (Task Intent Scoping)**：
+   * `intent: test_authoring`：豁免单测/Mock 夹具的只读限制与字面量检查；
+   * `intent: frontend_skeleton`：豁免 UI 占位与骨架屏静态数据检查；
+   * `intent: fallback_infra`：允许容灾降级，但强制校验结构化日志。
+2. **结构化申诉通道 (Policy Exemption Protocol)**：
+   * 当 Agent 认为拦截不合理时，调用 `request_policy_exemption` 提交理据；
+   * 严禁私自绕行，必须经人类一键核准后派发 Exemption Token 放行。
+3. **红黑样本库自动化回归 (Sample Regression Suite)**：
+   * 收集白名单样本 (`tests/anti-cheat-samples/allowlist/*.json`)，确保合规场景 0 误杀；
+   * 收集黑名单样本 (`tests/anti-cheat-samples/blocklist/*.json`)，确保作弊手法 0 漏逃；
+   * 运行 `node --test scripts/guard-anti-cheat.test.mjs` 作为发布前强制门禁。
+
+### 4.3 交付物真实性验收清单 (Sign-off Checklist)
 
 在任何功能合并前，QA 或独立审计角色必须完成以下四步验证：
 

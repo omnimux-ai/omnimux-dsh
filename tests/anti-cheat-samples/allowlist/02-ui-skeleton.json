@@ -1,0 +1,8 @@
+{
+  "id": "ALLOW-002",
+  "description": "合法的 UI 骨架屏占位数据",
+  "intent": "frontend_skeleton",
+  "filePath": "plugins/omnimux/src/client/components/SkeletonList.tsx",
+  "code": "export function SkeletonList() {\n  const placeholderItems = Array.from({ length: 5 }, (_, i) => ({ id: `skeleton-${i}` }));\n  return <div>{placeholderItems.map(item => <div key={item.id} className=\"shimmer\" />)}</div>;\n}",
+  "expectedDecision": "allow"
+}
