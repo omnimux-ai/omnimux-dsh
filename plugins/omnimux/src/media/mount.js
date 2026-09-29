@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { assertCapabilityEnabled, isMediaEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from './errors.js'
+import { DEFAULT_MEDIA } from './route.js'
 import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mode.js'
 import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent } from '../catalog/serving/channel-groups.js'
 import { objectParams, rethrow } from '../tools/schema.js'
@@ -169,7 +170,9 @@ export function mountMedia(ctx, opts) {
       const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
       const targetChannel = typeof rawTargetChannel === 'string' ? rawTargetChannel.toLowerCase().trim() : ''
       const { modelId: requestModelId } = parseModelAndGroup(req?.model)
-      const modelGroups = requestModelId ? getModelChannelGroups(requestModelId) : []
+      const defaultOfficialModel = DEFAULT_MEDIA?.providers?.omnimux?.models?.[kind] || ''
+      const effectiveModelId = requestModelId || defaultOfficialModel
+      const modelGroups = effectiveModelId ? getModelChannelGroups(effectiveModelId) : []
       const isKnownOfficial = targetChannel
         ? (targetChannel === 'official' || modelGroups.some((group) => {
             const gid = typeof group.id === 'string' ? group.id.toLowerCase().trim() : ''
@@ -180,14 +183,15 @@ export function mountMedia(ctx, opts) {
 
       // 渠道严格判定：
       // 1. 若显式指定渠道，必须为已知官方专线；
-      // 2. 常规官方请求未显式指定渠道组（targetChannel 为空）时，若为官方模式或已验证的兜底模式，识别为官方通道；
+      // 2. 常规官方请求未显式指定渠道组（targetChannel 为空）时，若为官方模式、已知官方媒体模型或已验证的兜底模式，识别为官方通道；
       // 3. 绝不能被未知自定义渠道或 BYOK 渠道冒领
+      const isOfficialModel = Boolean(effectiveModelId && modelGroups.length > 0)
       const hasVerifiedRuntime = Boolean(runtime.textReady || runtime.mediaReady)
       const isFallbackOfficial = !targetChannel && current?.allowOfficialMediaFallback === true && hasVerifiedRuntime
       const isOfficialRequest = !channelIntent.isByokChannel
         && (
           (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
-          || (!targetChannel && (runtime.mode === 'official' || isFallbackOfficial))
+          || (!targetChannel && (runtime.mode === 'official' || isOfficialModel || isFallbackOfficial))
         )
 
       // 正交共存架构：
