@@ -32,24 +32,31 @@ test('E2E: 画布右键菜单全链路支持选中节点删除与智能上下文
     'pane 分支的 delete 项必须有明确的视觉分组分割线',
   );
 
-  // 3. useCanvasContextMenu 在 openContextMenu 阶段能够自适应单选与多选
+  // 3. useCanvasContextMenu 在 handlePaneContextMenu 中原子化清空选择并激活 pane 菜单
   assert.match(
     hookSrc,
-    /const\s+selectedNodes\s*=\s*useCanvasStore\.getState\(\)\.nodes\.filter\(\(n\)\s*=>\s*n\.selected\);/,
-    'openContextMenu 必须从 store 提取实时选中的节点',
-  );
-  assert.match(
-    hookSrc,
-    /if\s*\(selectedNodes\.length\s*===\s*1\)\s*\{\s*context\s*=\s*\{\s*type:\s*'node',\s*nodeId:\s*selectedNodes\[0\]\.id\s*\};/,
-    '单选节点未传特定 node 时，智能绑定为该节点的 node 上下文',
-  );
-  assert.match(
-    hookSrc,
-    /else\s+if\s*\(selectedNodes\.length\s*>\s*1\)\s*\{\s*context\s*=\s*\{\s*type:\s*'selection'\s*\};/,
-    '多选节点未传特定 node 时，智能识别为 selection 上下文',
+    /const\s+handlePaneContextMenu\s*=\s*useCallback\(\s*\(event:[^)]*\)\s*=>\s*\{[\s\S]*?clearSelection\(\);[\s\S]*?context:\s*\{\s*type:\s*'pane'\s*\}[\s\S]*?\},/s,
+    'handlePaneContextMenu 必须原子化调用 clearSelection 并唤起 pane 菜单',
   );
 
-  // 4. delete 动作响应端到端链路
+  // 4. useCanvasContextMenu 在 handleNodeContextMenu 中自适应单选聚焦与多选维持
+  assert.match(
+    hookSrc,
+    /const\s+selectedNodes\s*=\s*state\.nodes\.filter\(\(n\)\s*=>\s*n\.selected\);/,
+    'handleNodeContextMenu 必须从 store 提取实时选中的节点',
+  );
+  assert.match(
+    hookSrc,
+    /if\s*\(isAlreadySelected\s*&&\s*selectedNodes\.length\s*>\s*1\)\s*\{\s*setMenu\(\{[\s\S]*?context:\s*\{\s*type:\s*'selection'\s*\}[\s\S]*?\}\);/s,
+    '多选集合内的节点右键，维持 selection 上下文',
+  );
+  assert.match(
+    hookSrc,
+    /context:\s*\{\s*type:\s*'node',\s*nodeId:\s*node\.id\s*\}/,
+    '单选或切换节点右键，精准绑定目标节点的 node 上下文',
+  );
+
+  // 5. delete 动作响应端到端链路
   assert.match(
     hookSrc,
     /case\s+'delete':\s*\{\s*if\s*\(context\.type\s*===\s*'node'\)\s*\{.*deleteSelectedNodes\(\);/s,

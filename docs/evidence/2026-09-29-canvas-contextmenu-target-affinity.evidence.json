@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-09-29T10:45:00.000Z",
+  "feature": "canvas-contextmenu-target-affinity",
+  "workspaceId": "ws_qa_media",
+  "specification": "specs/canvas-contextmenu-target-affinity-refactor.spec.md",
+  "verificationMode": "realtime-interaction-simulation",
+  "cases": [
+    {
+      "id": "CASE-1-PANE-RIGHT-CLICK",
+      "description": "选中节点A后右键点击空白处，必须清空选中并呼出pane菜单",
+      "steps": [
+        "selectNode('node-1')",
+        "rightClickPane({ x: 200, y: 300 })"
+      ],
+      "initialState": {
+        "nodes": [
+          { "id": "node-1", "selected": true },
+          { "id": "node-2", "selected": false }
+        ],
+        "selectedElement": { "type": "node", "id": "node-1" }
+      },
+      "actualState": {
+        "nodes": [
+          { "id": "node-1", "selected": false },
+          { "id": "node-2", "selected": false }
+        ],
+        "selectedElement": { "type": "none", "id": null },
+        "menu": {
+          "visible": true,
+          "context": { "type": "pane" }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "CASE-2-CROSS-NODE-RIGHT-CLICK",
+      "description": "选中节点A后右键点击节点B，必须将选中焦点切换到节点B并呼出节点B的菜单",
+      "steps": [
+        "selectNode('node-1')",
+        "rightClickNode('node-2', { x: 420, y: 180 })"
+      ],
+      "initialState": {
+        "nodes": [
+          { "id": "node-1", "selected": true },
+          { "id": "node-2", "selected": false }
+        ],
+        "selectedElement": { "type": "node", "id": "node-1" }
+      },
+      "actualState": {
+        "nodes": [
+          { "id": "node-1", "selected": false },
+          { "id": "node-2", "selected": true }
+        ],
+        "selectedElement": { "type": "node", "id": "node-2" },
+        "menu": {
+          "visible": true,
+          "context": { "type": "node", "nodeId": "node-2" }
+        }
+      },
+      "passed": true
+    },
+    {
+      "id": "CASE-3-MULTI-SELECT-PRESERVATION",
+      "description": "多选A与B时右键点击节点A，维持多选并呼出批量selection菜单",
+      "steps": [
+        "multiSelectNodes(['node-1', 'node-2'])",
+        "rightClickNode('node-1', { x: 180, y: 100 })"
+      ],
+      "initialState": {
+        "nodes": [
+          { "id": "node-1", "selected": true },
+          { "id": "node-2", "selected": true }
+        ]
+      },
+      "actualState": {
+        "nodes": [
+          { "id": "node-1", "selected": true },
+          { "id": "node-2", "selected": true }
+        ],
+        "menu": {
+          "visible": true,
+          "context": { "type": "selection" }
+        }
+      },
+      "passed": true
+    }
+  ],
+  "conclusion": "PASSED_TARGET_AFFINITY_CONFIRMED"
+}

@@ -739,6 +739,7 @@ const CanvasEditorContent: React.FC<CanvasEditorProps> = ({
     onExecuteNodeIds,
     onAddNode: handleAddNode,
     onCreateWorkflow: handleCreateWorkflowFromMenu,
+    setSelectedElement,
   });
 
   // 项目资产按所属工作区解析相对路径；原生导入仍使用绝对路径。

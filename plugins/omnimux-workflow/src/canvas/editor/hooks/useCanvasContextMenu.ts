@@ -1,7 +1,9 @@
 /**
- * Context-menu state + action dispatch extracted from CanvasEditor.
- * Behavior is the original M2/M4 right-click set (add / copy / paste /
- * duplicate / delete / undo / redo / select-all / execute).
+ * Context-menu state + action dispatch for CanvasEditor.
+ * Refactored to enforce target-centric affinity:
+ * - Right-click on node: selects that node exclusively (or preserves multi-selection if part of it) and opens node/selection menu.
+ * - Right-click on pane (canvas background): clears selection atomically and opens pane menu.
+ * - Right-click on selection box: opens multi-selection menu.
  */
 import { useCallback, useState } from 'react';
 import type { Node } from '@xyflow/react';
@@ -30,6 +32,7 @@ export interface CanvasContextMenuDeps {
   onExecuteNodeIds?: (nodeIds: string[]) => void;
   onAddNode?: (type: CanvasAddNodeType, position?: { x: number; y: number }) => void;
   onCreateWorkflow?: (position: { x: number; y: number }) => void;
+  setSelectedElement?: (type: 'none' | 'node', id: string | null) => void;
 }
 
 export function useCanvasContextMenu(deps: CanvasContextMenuDeps) {
@@ -47,6 +50,7 @@ export function useCanvasContextMenu(deps: CanvasContextMenuDeps) {
     onExecuteNodeIds,
     onAddNode,
     onCreateWorkflow,
+    setSelectedElement,
   } = deps;
 
   const [menu, setMenu] = useState<MenuState>({
@@ -56,49 +60,87 @@ export function useCanvasContextMenu(deps: CanvasContextMenuDeps) {
     context: { type: 'pane' },
   });
 
-  const openContextMenu = useCallback(
-    (event: React.MouseEvent | MouseEvent, node?: Node) => {
-      event.preventDefault();
-      let context: ContextMenuContext = { type: 'pane' };
-      if (node) {
-        context = { type: 'node', nodeId: node.id };
-      } else {
-        const selectedNodes = useCanvasStore.getState().nodes.filter((n) => n.selected);
-        if (selectedNodes.length === 1 && selectedNodes[0]) {
-          context = { type: 'node', nodeId: selectedNodes[0].id };
-        } else if (selectedNodes.length > 1) {
-          context = { type: 'selection' };
-        }
-      }
-      setMenu({ visible: true, x: event.clientX, y: event.clientY, context });
-    },
-    [],
-  );
-
-  const handleNodeContextMenu = useCallback(
-    (event: React.MouseEvent, node: Node) => {
-      openContextMenu(event, node);
-    },
-    [openContextMenu],
-  );
-
-  const handlePaneContextMenu = useCallback(
-    (event: React.MouseEvent | MouseEvent) => {
-      openContextMenu(event);
-    },
-    [openContextMenu],
-  );
-
-  const handleSelectionContextMenu = useCallback(
-    (event: React.MouseEvent) => {
-      openContextMenu(event);
-    },
-    [openContextMenu],
-  );
-
   const closeMenu = useCallback(() => {
     setMenu((prev) => ({ ...prev, visible: false }));
   }, []);
+
+  /**
+   * 右键点击单个节点卡片：
+   * 1. 若当前节点已属于多选集合中的一员，则维持多选上下文并打开批量菜单；
+   * 2. 否则，原子化将焦点转移并锁定为该节点（成为唯一选中节点），打开该节点的专属菜单。
+   */
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      const state = useCanvasStore.getState();
+      const selectedNodes = state.nodes.filter((n) => n.selected);
+      const isAlreadySelected = selectedNodes.some((n) => n.id === node.id);
+
+      if (isAlreadySelected && selectedNodes.length > 1) {
+        setMenu({
+          visible: true,
+          x: event.clientX,
+          y: event.clientY,
+          context: { type: 'selection' },
+        });
+        return;
+      }
+
+      // 切换为唯一选中该节点
+      if (!isAlreadySelected || selectedNodes.length !== 1) {
+        setNodes((current) =>
+          current.map((n) => ({
+            ...n,
+            selected: n.id === node.id,
+          })),
+        );
+        setSelectedElement?.('node', node.id);
+      }
+
+      setMenu({
+        visible: true,
+        x: event.clientX,
+        y: event.clientY,
+        context: { type: 'node', nodeId: node.id },
+      });
+    },
+    [setNodes, setSelectedElement],
+  );
+
+  /**
+   * 右键点击画布空白背景：
+   * 原子化取消所有选中的节点与元素，唤起纯净的画布背景菜单。
+   */
+  const handlePaneContextMenu = useCallback(
+    (event: React.MouseEvent | MouseEvent) => {
+      event.preventDefault();
+      clearSelection();
+      setMenu({
+        visible: true,
+        x: event.clientX,
+        y: event.clientY,
+        context: { type: 'pane' },
+      });
+    },
+    [clearSelection],
+  );
+
+  /**
+   * 右键点击框选区（多选集合）：
+   * 保持当前多选态，唤起批量操作菜单。
+   */
+  const handleSelectionContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      setMenu({
+        visible: true,
+        x: event.clientX,
+        y: event.clientY,
+        context: { type: 'selection' },
+      });
+    },
+    [],
+  );
 
   const handleMenuAction = useCallback(
     (action: ContextMenuAction, context: ContextMenuContext) => {
