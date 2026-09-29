@@ -41,8 +41,8 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
     }
   }
 
-  const isTestFile = /(\btest\b|\bspec\b|__tests__|\.test\.|\.spec\.)/i.test(normalizedPath);
-  const isFixtureFile = /(\bfixture\b|\bmock\b|\btest-data\b)/i.test(normalizedPath);
+  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|(\.|\/)(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
+  const isFixtureFile = /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
 
   // 1. 门禁 1：测试套件与评估资产只读守卫
   if (isTestFile && !isFixtureFile) {

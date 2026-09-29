@@ -43,6 +43,17 @@
           "timeout": 8
         }
       ]
+    },
+    {
+      "matcher": "edit|write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node scripts/guard-anti-cheat.mjs",
+          "statusMessage": "🛡️ 检查 AI Agent 防造假与防静默兜底硬门禁",
+          "timeout": 5
+        }
+      ]
     }
   ]
 }
