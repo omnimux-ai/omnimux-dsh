@@ -13,6 +13,7 @@ import { probeMediaAssets } from './asset-probe.js'
 import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
 import { generateCliSpeech } from './cli-speech.js'
+import { findMediaModel } from './catalog.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
 import { resolveRuntimeChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
 import { getModelChannelGroups, resolveRequestChannelIntent, parseModelAndGroup, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
@@ -262,7 +263,8 @@ export async function executeOmnimuxMedia(capability, input) {
   const implicitByokProvider = matchedImplicitByokItem ? matchedImplicitByokItem.provider.toLowerCase().trim() : ''
 
   const inputModelId = typeof input.model === 'string' ? parseModelAndGroup(input.model).modelId : ''
-  const isOfficialMediaModel = Boolean(inputModelId && getModelChannelGroups(inputModelId).length > 0)
+  const isCatalogOfficialModel = Boolean(inputModelId && findMediaModel(capability, inputModelId))
+  const isOfficialMediaModel = Boolean(inputModelId && (getModelChannelGroups(inputModelId).length > 0 || isCatalogOfficialModel))
   const isEffectivelyOfficial = isOfficialChannel || (!isByokChannel && isOfficialMediaModel)
 
   if (runtime.mode === 'agent' && !isEffectivelyOfficial && !isByokChannel && !mediaChoice.ready && !implicitByokProvider) {
@@ -294,7 +296,7 @@ export async function executeOmnimuxMedia(capability, input) {
     && input.runtimeSettings.runtimeKeyEndpoint.trim().length > 0
     && input.runtimeSettings?.runtimeKeyVerified === true
   const hasReadyByokProvider = Boolean(implicitByokProvider)
-  const shouldRouteByok = isByokChannel || (!isEffectivelyOfficial && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
+  const shouldRouteByok = isByokChannel || (!isOfficialChannel && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
 
   if (shouldRouteByok) {
     let configuredMainProvider = ''

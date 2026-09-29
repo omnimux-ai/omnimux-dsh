@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { assertCapabilityEnabled, isMediaEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from './errors.js'
 import { DEFAULT_MEDIA } from './route.js'
+import { findMediaModel } from './catalog.js'
 import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mode.js'
 import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent } from '../catalog/serving/channel-groups.js'
 import { objectParams, rethrow } from '../tools/schema.js'
@@ -185,7 +186,9 @@ export function mountMedia(ctx, opts) {
       // 1. 若显式指定渠道，必须为已知官方专线；
       // 2. 常规官方请求未显式指定渠道组（targetChannel 为空）时，若为官方模式、已知官方媒体模型或已验证的兜底模式，识别为官方通道；
       // 3. 绝不能被未知自定义渠道或 BYOK 渠道冒领
-      const isOfficialModel = Boolean(effectiveModelId && modelGroups.length > 0)
+      const isCatalogOfficialModel = Boolean(effectiveModelId && findMediaModel(kind, effectiveModelId))
+      const isOfficialModel = Boolean(effectiveModelId && (modelGroups.length > 0 || isCatalogOfficialModel))
+      const isCliLocalModel = kind === 'audio' && effectiveModelId === 'gemini-3.8-flash-tts'
       const hasVerifiedRuntime = Boolean(runtime.textReady || runtime.mediaReady)
       const isFallbackOfficial = !targetChannel && current?.allowOfficialMediaFallback === true && hasVerifiedRuntime
       const isOfficialRequest = !channelIntent.isByokChannel
@@ -196,8 +199,9 @@ export function mountMedia(ctx, opts) {
 
       // 正交共存架构：
       // 1. 凡目标渠道为官方专线的请求，只要具备权威官方 Token，彻底取消对全局 runtimeMode 的阻断，直接放行执行！
-      // 2. 其余未通过官方 Bypass 的请求（如未配置的自备渠道或未指定渠道的请求），严格校验本地运行方式就绪度。
-      const isOfficialBypass = isOfficialRequest && hasOfficialToken
+      // 2. 本地 CLI 语音模型（gemini-3.8-flash-tts）免鉴权，直接放行！
+      // 3. 其余未通过官方/本地 Bypass 的请求（如未配置的自备渠道或未指定渠道的请求），严格校验本地运行方式就绪度。
+      const isOfficialBypass = isOfficialRequest && (hasOfficialToken || isCliLocalModel)
       if (!isOfficialBypass) {
         assertRuntimeReady(current, kind)
       }
@@ -206,7 +210,7 @@ export function mountMedia(ctx, opts) {
         finalReq = {
           ...req,
           env: {
-            OMNIMUX_API_KEY: rawSystemToken.trim(),
+            OMNIMUX_API_KEY: (rawSystemToken || '').trim(),
           },
         }
       } else if (isOfficialRequest) {
