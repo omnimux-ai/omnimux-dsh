@@ -446,10 +446,11 @@ auto_materialize_and_reload() {
 cmd_ship() {
   local task="$1"
   shift || true
-  local pr_number=""
+  local pr_number="" keep_worktree=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --pr) shift; pr_number="${1:-}" ;;
+      --keep-worktree) keep_worktree=1 ;;
       *) die "unknown flag: $1" ;;
     esac
     shift
@@ -492,8 +493,17 @@ cmd_ship() {
   # 自动物化与桌面 Dev 应用热重载闭环
   auto_materialize_and_reload "HEAD~1" "HEAD"
 
-  say "PR MERGED; applicable Dev materialization auto-completed, human acceptance is pending. Worktree retained: ${wt}"
-  say "After acceptance, run: worktree.sh remove ${task} --pr ${pr_number}"
+  if [ "${keep_worktree}" -eq 1 ]; then
+    say "PR MERGED; applicable Dev materialization auto-completed. Worktree retained (--keep-worktree): ${wt}"
+  else
+    say "git worktree remove ${wt}"
+    git worktree remove "${wt}" 2>/dev/null || rm -rf "${wt}"
+    if [ -n "${branch}" ] && git show-ref --verify --quiet "refs/heads/${branch}"; then
+      git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null || true
+    fi
+    git worktree prune
+    say "✅ 交付全链路闭环完成：PR 已合入、主干已同步、开发版已物化、临时工作树 [${task}] 与分支已清理。"
+  fi
 }
 
 cmd_remove() {
@@ -711,11 +721,14 @@ Usage:
   worktree.sh new <task> [base] [--type ...] create .worktrees/<task>
   worktree.sh auto-new <issue_id>            fetch GitHub Issue and create worktree automatically
   worktree.sh list                           show active worktrees and dirty counts
-  worktree.sh ship <task> --pr <num>         verify matching PR MERGED, sync ${DEFAULT_BRANCH}, retain acceptance workspace
+  worktree.sh ship <task> --pr <num> [--keep-worktree] verify matching PR MERGED, sync ${DEFAULT_BRANCH}, materialize Dev, and clean worktree
   worktree.sh remove <task> [flags]          safely remove worktree (--discard, --abandon, --pr <num>)
   worktree.sh prune                          drop stale worktree records & list safe-to-delete branches
   worktree.sh clean                          batch clean merged & clean worktrees
   worktree.sh help
+
+Flags (ship):
+  --keep-worktree  preserve worktree directory and branch after successful merge and materialization
 
 Flags (remove / clean):
   --discard   drop uncommitted dirty changes
@@ -736,8 +749,8 @@ case "${cmd}" in
   new)      [ "$#" -ge 1 ] || die "usage: worktree.sh new <task> [base] [--type feat|fix|chore|agent] [--issue <id>]"; cmd_new "$@" ;;
   auto-new) [ "$#" -ge 1 ] || die "usage: worktree.sh auto-new <issue_id>"; cmd_auto_new "$@" ;;
   list)     cmd_list ;;
-  ship)     [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> --pr <num>"; cmd_ship "$@" ;;
-  finish)   [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> --pr <num>"; cmd_ship "$@" ;;
+  ship)     [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> --pr <num> [--keep-worktree]"; cmd_ship "$@" ;;
+  finish)   [ "$#" -ge 1 ] || die "usage: worktree.sh ship <task> --pr <num> [--keep-worktree]"; cmd_ship "$@" ;;
   remove)   [ "$#" -ge 1 ] || die "usage: worktree.sh remove <task> [--discard] [--abandon] [--pr <num>]"; cmd_remove "$@" ;;
   prune)    cmd_prune ;;
   clean)    cmd_clean "$@" ;;
