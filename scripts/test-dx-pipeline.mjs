@@ -48,6 +48,7 @@ test('active hooks preserve worktree and UI guards without the removed guard', (
     'node scripts/guard-ui-design.mjs',
     'node scripts/verify-product-baseline.mjs --hook',
     'node scripts/guard-quality-loop.mjs',
+    'node scripts/guard-anti-cheat.mjs',
   ])
   const { scripts } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
   assert.equal(scripts.dev, undefined)

@@ -103,4 +103,23 @@ describe('AI Agent 防造假与自适应门禁系统测试 (guard-anti-cheat.tes
     });
   });
 
+  describe('4. DSH PreToolUse 运行时装配集成验证 (Hooks Wiring Verification)', () => {
+    it('.dsh/hooks.json 必须在 PreToolUse 中显式挂载 guard-anti-cheat.mjs', () => {
+      const hooksPath = resolve(ROOT_DIR, '.dsh/hooks.json');
+      const hooksConfig = JSON.parse(readFileSync(hooksPath, 'utf8'));
+      assert.ok(Array.isArray(hooksConfig.PreToolUse), 'PreToolUse 必须是数组');
+
+      const found = hooksConfig.PreToolUse.some(item => {
+        const matchesTool = item.matcher && (item.matcher.includes('write') || item.matcher.includes('edit'));
+        const hasHook = Array.isArray(item.hooks) && item.hooks.some(h => h.command?.includes('guard-anti-cheat.mjs'));
+        return matchesTool && hasHook;
+      });
+
+      assert.ok(
+        found,
+        'CRITICAL: .dsh/hooks.json 未在 PreToolUse 中注册 guard-anti-cheat.mjs！门禁无法在运行时自动生效。'
+      );
+    });
+  });
+
 });
