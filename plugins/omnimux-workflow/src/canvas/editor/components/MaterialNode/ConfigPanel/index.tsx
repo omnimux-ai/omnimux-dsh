@@ -793,7 +793,9 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [t],
   );
   const missingRequiredSlots = useMemo(
-    () => displayedSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min),
+    () => (displayedSlotLayout.displayOnlyFromOperation
+      ? []
+      : displayedSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min)),
     [displayedSlotLayout, slotBindings],
   );
   const slotShortageReason = missingRequiredSlots.length > 0

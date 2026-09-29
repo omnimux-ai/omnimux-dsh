@@ -20,8 +20,13 @@ export function deriveModelSlotLayout(
   if (own.preset !== 'none' && own.slots.length) return own;
   const model = resolveModelView(buildContractView(catalog), modelId);
   if (!model) return own;
+  const currentOutputType = options?.outputType
+    ?? model.operations.find((op) => op.id === operationId)?.output.type;
   const borrowed = model.operations.find(
-    (op) => op.id !== operationId && op.listed && bindableSlots(op).length,
+    (op) => op.id !== operationId
+      && op.listed
+      && (!currentOutputType || op.output.type === currentOutputType)
+      && bindableSlots(op).length,
   );
   if (!borrowed) return own;
   const layout = deriveSlotLayout(catalog, modelId, borrowed.id, options);
