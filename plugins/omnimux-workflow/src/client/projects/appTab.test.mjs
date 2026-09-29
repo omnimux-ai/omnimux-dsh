@@ -44,6 +44,12 @@ describe('AppTab and AI App Workflow integration', () => {
     assert.match(src, /handleForkSubmit/)
     assert.match(src, /createProjectForkFromManifest/)
     assert.match(stylesSrc, /\.omx-apptab-edit-btn\s*\{/)
+    // 覆盖官方应用时展示「恢复默认」与弹窗
+    assert.match(src, /omx-apptab-restore-btn/)
+    assert.match(src, /恢复默认/)
+    assert.match(src, /restoreBuiltinAppDefault/)
+    assert.match(src, /恢复官方默认配置/)
+    assert.match(stylesSrc, /\.omx-apptab-restore-btn\s*\{/)
   })
 
   it('index.js: 源码契约向 betterSidebar 注册 APP_TAB_ID', () => {

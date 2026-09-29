@@ -96,8 +96,9 @@ export class AppStorage {
     const manifestPath = path.join(appDir, `manifest@${manifest.version}.json`);
     const indexPath = path.join(appDir, 'app.json');
 
-    // 2. Immutable version check (Fail-Closed)
-    if (fs.existsSync(manifestPath)) {
+    // 2. Immutable version check (Fail-Closed, allow overwrite if user explicitly overrides)
+    const isOverride = Boolean((manifest as any).isUserOverridden || (manifest as any).metadata?.isUserOverridden);
+    if (fs.existsSync(manifestPath) && !isOverride) {
       throw new AppStorageError(
         'version_conflict',
         `App version already exists and is immutable: ${manifest.appId}@${manifest.version}`,

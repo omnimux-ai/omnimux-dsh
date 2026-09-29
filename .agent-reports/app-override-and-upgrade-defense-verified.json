@@ -1,0 +1,12 @@
+{
+  "task": "feat: AI 应用同名排他性覆盖发布、升级防冲毁与恢复出厂设置闭环",
+  "verifiedAt": "2026-09-29T03:10:06.349Z",
+  "targetApp": "手机与网页交互实机演示",
+  "actionsVerified": [
+    "checkAppNameConflict",
+    "overrideDialog",
+    "isUserOverridden",
+    "restoreBuiltinAppDefault"
+  ],
+  "status": "VERIFIED_PASSED"
+}

@@ -127,6 +127,21 @@ test('T02.2: Version Immutability - Saving identical appId@version throws versio
       return true;
     },
   );
+
+  // If user explicitly overrides (isUserOverridden: true), allow overwrite and update index
+  const overriddenManifest = {
+    ...manifest,
+    isUserOverridden: true,
+    metadata: {
+      ...manifest.metadata,
+      description: '用户个性化定制描述',
+    },
+  };
+  const updateRes = await storage.saveManifest(overriddenManifest);
+  assert.equal(updateRes.success, true);
+  const readBack = await storage.getManifest('app_image_paint', '1.0.0');
+  assert.equal(readBack?.metadata?.description, '用户个性化定制描述');
+  assert.equal(readBack?.isUserOverridden, true);
 });
 
 test('T02.3: Multiple versions update app.json index and latestVersion', async (t) => {

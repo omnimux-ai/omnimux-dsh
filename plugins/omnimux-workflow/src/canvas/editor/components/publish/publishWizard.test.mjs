@@ -418,4 +418,19 @@ describe('T03: Canvas Workflow Publishing Wizard & Tab Dispatch', () => {
     assert.ok(bodyBlock.includes('overscroll-behavior: contain;'), '.wf-modal-body should have overscroll-behavior: contain');
     assert.ok(bodyBlock.includes('scrollbar-gutter: stable;'), '.wf-modal-body should have scrollbar-gutter: stable');
   });
+
+  it('T03.6: PublishWizardModal 源码契约支持同名冲突检测、覆盖确认弹窗与 isUserOverridden 标记', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const fileURLToPath = (await import('node:url')).fileURLToPath;
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+    const wizardSrc = fs.readFileSync(path.join(__dirname, 'PublishWizardModal.tsx'), 'utf-8');
+    assert.match(wizardSrc, /checkAppNameConflict/, '必须调用 checkAppNameConflict 进行同名排他性校验');
+    assert.match(wizardSrc, /覆盖已有应用/, '必须包含极简覆盖已有应用确认弹窗标题');
+    assert.match(wizardSrc, /已存在同名应用/, '弹窗说明文案必须准确');
+    assert.match(wizardSrc, /确认覆盖/, '必须包含主要操作按钮「确认覆盖」');
+    assert.match(wizardSrc, /isUserOverridden:\s*true/, '覆盖发布时必须在 manifest 注入 isUserOverridden 标记');
+    assert.match(wizardSrc, /baseAppId:\s*targetAppId/, '覆盖发布时必须记录 baseAppId');
+  });
 });

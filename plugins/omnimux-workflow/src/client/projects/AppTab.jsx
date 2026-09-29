@@ -20,6 +20,7 @@ import {
   friendlyForkError,
   resolveAppEditTarget,
   resolveOwningProject,
+  restoreBuiltinAppDefault,
   toPublishedAppEntry,
 } from './appLibrary.js'
 import { fetchSessionProjectBinding, listProjects } from '../api.js'
@@ -1259,6 +1260,43 @@ export function AppTab(props) {
   const [forkBusy, setForkBusy] = useState(false)
   const [forkError, setForkError] = useState('')
 
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
+  const isOverridden = Boolean(manifest?.isUserOverridden || manifest?.metadata?.isUserOverridden)
+
+  // 恢复官方初始出厂配置
+  const handleRestoreDefault = useCallback(async () => {
+    if (!manifest?.appId || isRestoring) return
+    setIsRestoring(true)
+    try {
+      const res = restoreBuiltinAppDefault(manifest.appId)
+      if (res.ok) {
+        showTemporaryNotice({ type: 'success', text: '已恢复官方初始配置' })
+        setShowRestoreConfirm(false)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('omnimux-app-tabs-changed'))
+        }
+        setManifest((prev) => {
+          if (!prev) return prev
+          const next = { ...prev }
+          delete next.isUserOverridden
+          if (next.metadata) {
+            const nextMeta = { ...next.metadata }
+            delete nextMeta.isUserOverridden
+            next.metadata = nextMeta
+          }
+          return next
+        })
+      } else {
+        showTemporaryNotice({ type: 'error', text: '恢复默认失败，请重试' })
+      }
+    } catch (err) {
+      showTemporaryNotice({ type: 'error', text: err?.message || '操作失败' })
+    } finally {
+      setIsRestoring(false)
+    }
+  }, [manifest, isRestoring, showTemporaryNotice])
+
   // 点击「编辑应用」：根据应用归属自适应分诊
   // 同一个用户的应用直接打开所属项目画布定位工作流组；不同用户/官方预设应用则弹出「创建副本」确认窗
   const handleEditApp = useCallback(async () => {
@@ -1421,6 +1459,17 @@ export function AppTab(props) {
             <span className={`omx-apptab-notice omx-apptab-notice--${editNotice.type}`}>
               {editNotice.text}
             </span>
+          )}
+          {isOverridden && (
+            <button // exempt-ui01 ai-app-ui-spec 顶栏恢复默认按钮
+              type="button"
+              className="omx-apptab-restore-btn"
+              onClick={() => setShowRestoreConfirm(true)}
+              disabled={isRestoring || isEditing}
+              title="恢复为官方初始配置"
+            >
+              <span>{isRestoring ? '恢复中...' : '恢复默认'}</span>
+            </button>
           )}
           <button // exempt-ui01 ai-app-ui-spec 右上角编辑应用按钮
             type="button"
@@ -2416,6 +2465,53 @@ export function AppTab(props) {
           onSubmit={handleForkSubmit}
         />
       ) : null}
+
+      {/* 恢复官方出厂默认确认弹窗 (SaaS 极简标准) */}
+      {showRestoreConfirm && (
+        <div
+          className="omx-apptab-modal-mask"
+          onClick={() => setShowRestoreConfirm(false)}
+        >
+          <div
+            className="omx-apptab-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="omx-apptab-modal-header">
+              <span className="omx-apptab-modal-title">恢复官方默认配置</span>
+              <button // exempt-ui01 ai-app-ui-spec 弹窗关闭按钮
+                type="button"
+                className="omx-apptab-modal-close"
+                aria-label="关闭"
+                onClick={() => setShowRestoreConfirm(false)}
+              >
+                <IconClose size={14} />
+              </button>
+            </div>
+            <div className="omx-apptab-modal-body">
+              <div className="omx-apptab-restore-desc">
+                确定还原为官方出厂配置？您的本地工程与画布仍会保留，但该应用将恢复为初始参数。
+              </div>
+            </div>
+            <div className="omx-apptab-modal-footer">
+              <button // exempt-ui01 ai-app-ui-spec 32px modal cancel button
+                type="button"
+                className="omx-apptab-btn-ghost"
+                onClick={() => setShowRestoreConfirm(false)}
+              >
+                取消
+              </button>
+              <button // exempt-ui01 ai-app-ui-spec 32px modal submit button
+                type="button"
+                className="omx-apptab-btn-primary"
+                onClick={handleRestoreDefault}
+                disabled={isRestoring}
+              >
+                {isRestoring ? '恢复中...' : '确认恢复'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
