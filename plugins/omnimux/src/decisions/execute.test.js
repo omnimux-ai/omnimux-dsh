@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { normalizeState, buildQuestions, executeJevDecision } from './execute.js'
-import { resolveOpenRouterApiKey } from './client.js'
+import { resolveGatewayApiKey, resolveDecisionsBaseUrl, DEFAULT_JEV_MODEL } from './client.js'
+import { OmnimuxError } from '../media/errors.js'
 
 test('normalizeState validates required state', () => {
   assert.throws(() => normalizeState(''), /state is required/)
@@ -40,65 +41,98 @@ test('buildQuestions fails when no questions provided', () => {
   assert.throws(() => buildQuestions({}), /At least one question must be specified/)
 })
 
-test('resolveOpenRouterApiKey resolves key precedence', async () => {
-  const fromResolver = await resolveOpenRouterApiKey({
+test('resolveDecisionsBaseUrl formats gateway base properly', () => {
+  assert.equal(resolveDecisionsBaseUrl(undefined), 'https://api.omnimux.ai/v1')
+  assert.equal(resolveDecisionsBaseUrl(''), 'https://api.omnimux.ai/v1')
+  assert.equal(resolveDecisionsBaseUrl('https://custom.gateway/v1'), 'https://custom.gateway/v1')
+  assert.equal(resolveDecisionsBaseUrl('https://custom.gateway'), 'https://custom.gateway/v1')
+})
+
+test('resolveGatewayApiKey resolves key precedence', async () => {
+  const fromResolver = await resolveGatewayApiKey({
     resolveApiKey: () => 'sk-from-resolver',
-    env: { OPENROUTER_API_KEY: 'sk-from-env' },
+    env: { OMNIMUX_API_KEY: 'sk-from-env' },
   })
   assert.equal(fromResolver, 'sk-from-resolver')
 
-  const fromEnv = await resolveOpenRouterApiKey({
-    env: { OPENROUTER_API_KEY: 'sk-from-env' },
+  const fromEnvKey = await resolveGatewayApiKey({
+    env: { OMNIMUX_API_KEY: 'sk-from-env' },
   })
-  assert.equal(fromEnv, 'sk-from-env')
+  assert.equal(fromEnvKey, 'sk-from-env')
 
-  const fromCred = await resolveOpenRouterApiKey({
+  const fromEnvToken = await resolveGatewayApiKey({
+    env: { OMNIMUX_TOKEN: 'sk-from-token' },
+  })
+  assert.equal(fromEnvToken, 'sk-from-token')
+
+  const fromCred = await resolveGatewayApiKey({
     credentials: {
-      resolve: async (ref) => (ref === 'OPENROUTER_API_KEY' ? { value: 'sk-from-cred' } : undefined),
+      resolve: async (ref) => (ref === 'OMNIMUX_API_KEY' ? { value: 'sk-from-cred' } : undefined),
     },
   })
   assert.equal(fromCred, 'sk-from-cred')
+
+  await assert.rejects(
+    () => resolveGatewayApiKey({ env: {}, credentialsPath: '/nonexistent/cred.yaml' }),
+    (err) => err instanceof OmnimuxError && err.code === 'omnimux-unconfigured',
+  )
 })
 
-test('executeJevDecision succeeds with mock response', async () => {
-  const mockFetcher = async () => ({
-    ok: true,
-    json: async () => ({
-      model: 'typesafe/jev-1.13-20260917',
-      answers: {
-        decision: {
-          type: 'choice',
-          choice: 'approve',
-          probabilities: { approve: 0.95, reject: 0.05 },
-          confidence: 0.9,
+test('executeJevDecision calls gateway decisions endpoint with default jev model', async () => {
+  let capturedUrl = null
+  let capturedHeaders = null
+  let capturedBody = null
+
+  const mockFetcher = async (url, init) => {
+    capturedUrl = url
+    capturedHeaders = init.headers
+    capturedBody = JSON.parse(init.body)
+    return {
+      ok: true,
+      json: async () => ({
+        model: 'jev-1.13.0',
+        answers: {
+          decision: {
+            type: 'choice',
+            choice: 'approve',
+            probabilities: { approve: 0.95, reject: 0.05 },
+            confidence: 0.9,
+          },
         },
-      },
-      usage: { input_tokens: 120, output_tokens: 10, cost: 0.000005 },
-      id: 'gen-test-123',
-      provider: 'TypeSafe',
-    }),
-  })
+        usage: { input_tokens: 120, output_tokens: 10 },
+        id: 'gen-test-123',
+        provider: 'OmniMux',
+      }),
+    }
+  }
 
   const res = await executeJevDecision(
-    { fetcher: mockFetcher, env: { OPENROUTER_API_KEY: 'sk-test' } },
+    { fetcher: mockFetcher, env: { OMNIMUX_API_KEY: 'sk-test-gateway' } },
     {
       state: 'All test suites passed with 100% code coverage.',
       choices: { approve: 'Approve', reject: 'Reject' },
     },
   )
 
+  assert.equal(capturedUrl, 'https://api.omnimux.ai/v1/decisions')
+  assert.equal(capturedHeaders['Authorization'], 'Bearer sk-test-gateway')
+  assert.equal(capturedHeaders['Accept'], 'application/json')
+  assert.equal(capturedBody.model, DEFAULT_JEV_MODEL)
+  assert.equal(capturedBody.model, 'jev')
+  assert.equal(capturedBody.state, 'All test suites passed with 100% code coverage.')
+
   assert.equal(res.mode, 'live')
-  assert.equal(res.model, 'typesafe/jev-1.13-20260917')
+  assert.equal(res.model, 'jev-1.13.0')
   assert.equal(res.decision, 'approve')
   assert.equal(res.confidence, 0.9)
-  assert.equal(res.provider, 'TypeSafe')
+  assert.equal(res.provider, 'OmniMux')
 })
 
 test('executeJevDecision handles score question correctly', async () => {
   const mockFetcher = async () => ({
     ok: true,
     json: async () => ({
-      model: 'typesafe/jev-1.13-20260917',
+      model: 'jev-1.13.0',
       answers: {
         score: {
           type: 'score',
@@ -107,14 +141,13 @@ test('executeJevDecision handles score question correctly', async () => {
           confidence: 0.8,
         },
       },
-      usage: { input_tokens: 150, output_tokens: 15, cost: 0.000006 },
+      usage: { input_tokens: 150, output_tokens: 15 },
       id: 'gen-test-456',
-      provider: 'TypeSafe',
     }),
   })
 
   const res = await executeJevDecision(
-    { fetcher: mockFetcher, env: { OPENROUTER_API_KEY: 'sk-test' } },
+    { fetcher: mockFetcher, env: { OMNIMUX_API_KEY: 'sk-test' } },
     {
       state: 'Quality evaluation',
       score_criteria: ['1', '2', '3', '4', '5'],
@@ -123,4 +156,24 @@ test('executeJevDecision handles score question correctly', async () => {
 
   assert.equal(res.score, 4.5)
   assert.equal(res.confidence, 0.8)
+})
+
+test('executeJevDecision handles gateway quota failure with classified error', async () => {
+  const mockFetcher = async () => ({
+    ok: false,
+    status: 402,
+    text: async () => JSON.stringify({ error: { message: 'insufficient user quota' } }),
+  })
+
+  await assert.rejects(
+    () =>
+      executeJevDecision(
+        { fetcher: mockFetcher, env: { OMNIMUX_API_KEY: 'sk-test' } },
+        {
+          state: 'Quota check',
+          choices: ['A', 'B'],
+        },
+      ),
+    (err) => err instanceof OmnimuxError && err.code === 'quota-exceeded',
+  )
 })

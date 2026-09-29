@@ -62,7 +62,7 @@ export function mountDecisions(ctx, deps) {
   ctx.tools.register({
     name: toolName,
     description:
-      'Execute high-speed structured decision-making or quantitative scoring using TypeSafe Jev latest model (~typesafe/jev-latest). This is a dedicated System One decision engine on OpenRouter for binary/multi-choice triage, policy gates, quality scoring, and routing. Pass state (context) and either choices (options dict/list) or score_criteria (scale list). Returns typed decision, confidence score, and full probability distribution.',
+      'Execute high-speed structured decision-making or quantitative scoring using TypeSafe Jev latest model (jev). This is a dedicated System One decision engine on OmniMux Gateway for binary/multi-choice triage, policy gates, quality scoring, and routing. Pass state (context) and either choices (options dict/list) or score_criteria (scale list). Returns typed decision, confidence score, and full probability distribution.',
     parameters: deps.objectParams({
       state: {
         type: 'string',
@@ -88,7 +88,7 @@ export function mountDecisions(ctx, deps) {
       },
       model: {
         type: 'string',
-        description: 'OpenRouter decision model id. Defaults to ~typesafe/jev-latest.',
+        description: 'Decision model id on OmniMux Gateway. Defaults to jev.',
       },
     }),
     output: deps.jsonOut,

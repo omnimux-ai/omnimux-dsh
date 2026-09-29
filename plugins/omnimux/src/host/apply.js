@@ -298,7 +298,7 @@ export function apply(ctx, config = {}) {
     jsonOut,
     rethrow,
     credentials: ctx.get?.('credentials'),
-    resolveApiKey: resolveOpenRouterApiKeyFromHub,
+    resolveApiKey: resolveOfficialApiKey,
   })
   mountWorkbenchTools(ctx, {
     mailbox,
@@ -344,21 +344,6 @@ export function apply(ctx, config = {}) {
       } catch {
         // next ref
       }
-    }
-    return undefined
-  }
-
-  async function resolveOpenRouterApiKeyFromHub() {
-    const fromEnv = String(process.env.OPENROUTER_API_KEY || '').trim()
-    if (fromEnv) return fromEnv
-    const credentials = ctx.get?.('credentials')
-    if (!credentials || typeof credentials.resolve !== 'function') return undefined
-    try {
-      const hit = await credentials.resolve('OPENROUTER_API_KEY')
-      const value = hit && typeof hit.value === 'string' ? hit.value.trim() : ''
-      if (value) return value
-    } catch {
-      // next
     }
     return undefined
   }
