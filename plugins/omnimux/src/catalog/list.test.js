@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 41)
+    assert.equal(catalog.models.length, 43)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical')
@@ -85,7 +85,11 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       'seedance-2-0',
       'seedance-2-5',
     ])
-    assert.deepEqual(catalog.audio.map((row) => row.id), ['seed-audio-1.0'])
+    assert.deepEqual(catalog.audio.map((row) => row.id), [
+      'gemini-3.8-flash-tts',
+      'index-tts',
+      'seed-audio-1.0',
+    ])
     // Text bucket includes implementation-ready models without requiring live history.
     assert.deepEqual(catalog.text.map((row) => row.id), [
       'gemini-3.8-flash',
@@ -264,7 +268,9 @@ describe('media facade tables (derived from contracts)', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 11)
     assert.equal(VIDEO_MODEL_SPECS.length, 11)
     // #1789: seedasr-auc joins the audio directory as a contracted model (ASR, text output).
-    assert.equal(AUDIO_MODEL_SPECS.length, 6)
+    // #2256: index-tts joins the audio directory (voice clone).
+    // #2801: gemini-3.8-flash-tts joins the audio directory (TTS).
+    assert.equal(AUDIO_MODEL_SPECS.length, 8)
   })
 })
 

@@ -121,6 +121,41 @@ models:
       seam: "audioGenerate"
       notes: "同步 POST /v1/audio/speech 管道（2026-09-18 实测 200 返回 MP3 音频与元数据）"
 
+  - id: "gemini-3.8-flash-tts"
+    label: "Gemini 3.8 Flash TTS"
+    family: "google"
+    badge: "语音合成"
+    subtitle: "Google AI Studio 拟真语音 · 角色 Nika"
+    operations:
+      - id: "text_to_speech"
+        label: "文本转语音"
+        listed: true
+        output: { type: "audio" }
+        inputs:
+          - { slot: "prompt", type: "text", role: "prompt", source: "node_field", min: 1, max: 1 }
+    parameters:
+      voice:
+        defaultValue: "Nika"
+        options:
+          - { value: "Nika", label: "Nika (AI Studio 默认角色)" }
+      format:
+        options: ["wav"]
+        defaultValue: "wav"
+    research:
+      status: "verified"
+      docUrl: "docs/evidence/2026-09-29-model-gemini-3-8-flash-tts-text_to_speech.md"
+      verifiedAt: "2026-09-29"
+      notes: "基于 opencli gemini tts (Google AI Studio) 本地驱动的拟真语音合成模型"
+    implementation:
+      status: "ready"
+      profileId: "audioGenerate"
+      seam: "audioGenerate"
+    execution:
+      status: "live"
+      profileId: "audioGenerate"
+      seam: "audioGenerate"
+      notes: "通过本地 opencli gemini tts 驱动（CLI 原生直通）"
+
   # #2256：Index TTS 声音克隆。渠道官方文档只声明「参考音 + 文稿」两个必填节点，
   # 且端点走视频任务通道（GxgenAI 任务共用 /v1/video/generations，即使产物是音频）。
   # 本行的 prompt 槽承载「要朗读的文稿」，对应文档节点 7/text；文档中非必填的顶层

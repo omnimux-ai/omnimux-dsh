@@ -12,6 +12,7 @@ import {
 import { probeMediaAssets } from './asset-probe.js'
 import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
+import { generateCliSpeech } from './cli-speech.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
 import { resolveRuntimeChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
 import { resolveRequestChannelIntent, parseModelAndGroup, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
@@ -532,13 +533,6 @@ export async function executeOmnimuxMedia(capability, input) {
   )
   }
 
-  const auth = await resolveMediaAuth(route, {
-    env: input.env,
-    store: input.store,
-    credentials: input.credentials,
-  })
-
-  const wait = input.wait !== false
   const mappedInput = mapOmnimuxInput(capability, {
     prompt: guardPlan.prompt,
     model: guardPlan.modelId,
@@ -557,6 +551,26 @@ export async function executeOmnimuxMedia(capability, input) {
     operation: guardPlan.operationId,
     guardPlan,
   })
+
+  // Local CLI speech models (gemini-3.8-flash-tts) run directly via opencli without remote auth
+  if (capability === 'audio' && guardPlan.operationId === 'text_to_speech' && guardPlan.modelId === 'gemini-3.8-flash-tts') {
+    return generateCliSpeech({
+      route,
+      guardPlan,
+      payload: mappedInput,
+      dest: input.dest,
+      signal: input.signal,
+      runner: input.cliRunner,
+    })
+  }
+
+  const auth = await resolveMediaAuth(route, {
+    env: input.env,
+    store: input.store,
+    credentials: input.credentials,
+  })
+
+  const wait = input.wait !== false
 
   if (capability === 'audio' && guardPlan.operationId === 'text_to_speech') {
     return generateSpeech({
