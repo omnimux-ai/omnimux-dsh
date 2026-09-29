@@ -219,4 +219,17 @@ describe('auto-qa-scan：事故反证与全仓回归', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  it('.tmp 目录被 SKIP_DIRS 物理忽略，不进入全仓与清单扫描集合', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'secret-gate-tmp-'))
+    try {
+      const tmpFolder = join(dir, '.tmp')
+      mkdirSync(tmpFolder, { recursive: true })
+      writeFileSync(join(tmpFolder, 'test-probe.js'), 'console.log("probe")')
+      const files = findFiles(dir)
+      assert.deepEqual(files, [], '.tmp 目录下的文件必须被完全忽略')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })
