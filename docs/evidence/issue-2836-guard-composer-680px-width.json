@@ -1,0 +1,12 @@
+{
+  "issue": 2836,
+  "spec": "specs/2836-guard-composer-680px-width.spec.md",
+  "feature": "guard-composer-680px-width",
+  "ruleCode": "UI11",
+  "tests": {
+    "suite": "scripts/guard-ui11-composer-width.test.mjs",
+    "passed": 3,
+    "failed": 0
+  },
+  "timestamp": "2026-09-29T20:50:00Z"
+}
