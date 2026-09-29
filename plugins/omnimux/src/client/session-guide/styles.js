@@ -43,10 +43,10 @@ body[data-ds-dark-theme] {
 }
 [data-omnimux-starter-host] [data-slot="conversation.composer.bar"] > * { order:2; }
 
-/* 输入框与工作区选择行独立收敛：优雅居中，780px 黄金舒适打字宽度，不与下方内容区生硬拉伸对齐两侧，形成清晰视觉层次 */
+/* 输入框与工作区选择行独立收敛：优雅居中，680px 紧凑黄金打字宽度，顶部与吸底态完全同宽 */
 [data-omnimux-starter-host] [data-composer-card] {
   width:100%!important;
-  max-width:min(780px, calc(100% - 24px))!important;
+  max-width:min(680px, calc(100% - 24px))!important;
   margin-inline:auto!important;
 }
 /* 素材导轨贴合输入框内壁，首张卡片由自身 padding-left: 12px 严格与底栏加号按钮垂直共线靠左对齐 */
@@ -64,7 +64,7 @@ body[data-ds-dark-theme] {
 }
 [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
-  max-width:min(780px, calc(100% - 24px))!important;
+  max-width:min(680px, calc(100% - 24px))!important;
   margin-inline:auto!important;
 }
 
@@ -3436,7 +3436,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   position:fixed!important;
   left:var(--omnimux-dock-left, 0px)!important;
   width:var(--omnimux-dock-width, 100%)!important;
-  max-width:var(--dsh-composer-card-max-width, 952px)!important;
+  max-width:min(680px, calc(100% - 24px))!important;
   margin:0!important;
   bottom:var(--omnimux-dock-bottom, 20px)!important;
   z-index:45!important;

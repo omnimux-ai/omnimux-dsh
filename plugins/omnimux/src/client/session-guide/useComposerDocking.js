@@ -137,6 +137,11 @@ export function resolveNativeComposerMaxWidth(card) {
   if (!win?.getComputedStyle) return DOCK_MAX_WIDTH
   const rootStyle = win.getComputedStyle(card)
 
+  // 处于新会话引导宿主中时，严格封顶 680px 紧凑打字宽度，消除扁平拉伸死区
+  if (card.closest?.('[data-omnimux-starter-host]')) {
+    return DOCK_MAX_WIDTH
+  }
+
   const computedMaxStr = rootStyle?.maxWidth
   if (computedMaxStr && computedMaxStr !== 'none') {
     const parsedComputed = parseFloat(computedMaxStr)
@@ -158,7 +163,7 @@ export function resolveNativeComposerMaxWidth(card) {
 
 /**
  * 计算吸底输入框的宽度与水平居中坐标。
- * 契约：严格以「会话栏目页面」内部水平居中，并对齐原生 952px 上限（方案 A）。
+ * 契约：严格以「会话栏目页面」内部水平居中，并对齐 680px 紧凑打字黄金宽度上限。
  */
 export function dockGeometry(card, band) {
   // 1. 获取会话工作台栏目页面的真实几何范围
@@ -169,10 +174,10 @@ export function dockGeometry(card, band) {
   const available = Math.max(0, column.width - 24)
   if (!available) return null
 
-  // 3. 读取原生配置的卡片最大宽度（精准支持 calc(...) 与像素数值，兜底 DOCK_MAX_WIDTH = 952px）
+  // 3. 读取配置的卡片最大宽度（默认 680px）
   const nativeMaxWidth = resolveNativeComposerMaxWidth(card)
 
-  // 4. 方案 A 核心计算：宽度上限完全对齐原生 nativeMaxWidth，自适应 available
+  // 4. 宽度上限对齐 nativeMaxWidth，自适应 available
   const demandWidth = measureInlineComposerDemand(card)
   const baseTargetWidth = Math.min(available, nativeMaxWidth)
   const width = Math.min(available, Math.max(baseTargetWidth, demandWidth))
@@ -193,8 +198,8 @@ export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
 /** 停靠后输入框距会话视口底边的距离（px）。 */
 export const DOCK_BOTTOM = 20
 
-/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 952px 原生上限一致。 */
-export const DOCK_MAX_WIDTH = 952
+/** 原生输入框在 Hero 中的舒适打字宽度（680px 紧凑打字宽）。 */
+export const DOCK_MAX_WIDTH = 680
 
 /** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
 export const SCROLLER_SELECTOR = '[class*="scrollBody"]'

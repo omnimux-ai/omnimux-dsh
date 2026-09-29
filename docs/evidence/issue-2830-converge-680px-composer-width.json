@@ -1,0 +1,25 @@
+{
+  "issue": 2830,
+  "spec": "specs/2830-converge-680px-composer-width.spec.md",
+  "feature": "converge-680px-composer-width",
+  "viewport": "2700x1553",
+  "metrics": {
+    "topCard": {
+      "maxWidth": "min(680px, calc(100% - 24px))",
+      "actualWidth": 680,
+      "status": "compact-golden"
+    },
+    "dockCard": {
+      "maxWidth": "min(680px, calc(100% - 24px))",
+      "dockMaxWidth": 680,
+      "actualWidth": 680,
+      "status": "compact-golden"
+    }
+  },
+  "tests": {
+    "e2e": "plugins/omnimux/src/client/session-guide/composer-width-680px.e2e.test.js",
+    "passed": 56,
+    "failed": 0
+  },
+  "timestamp": "2026-09-29T17:40:00Z"
+}
