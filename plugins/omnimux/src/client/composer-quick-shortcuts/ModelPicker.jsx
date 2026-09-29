@@ -461,6 +461,25 @@ export function ModelPicker({ sessionId }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
 
+  // 广播并协同处理全局浮层打开互斥事件
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('omnimux:composer:overlay:open', {
+        detail: { id: 'model-picker' },
+      }));
+    }
+    const onOverlayOpen = (e) => {
+      if (e?.detail?.id !== 'model-picker') {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('omnimux:composer:overlay:open', onOverlayOpen);
+    return () => {
+      window.removeEventListener('omnimux:composer:overlay:open', onOverlayOpen);
+    };
+  }, [open]);
+
   const [auto, setAuto] = useState(() => {
     try {
       const raw = window.sessionStorage.getItem(`omnimux:model:${sessionId}`);

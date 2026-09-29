@@ -46,9 +46,6 @@ test('client bundle keeps public slot keys and workbench tab registration', () =
     'conversation.input.left',
     'omnimux-market-skill-picker',
     'data-omnimux-skill-picker',
-    'omnimux-market-model-picker',
-    'data-omnimux-model-picker',
-    'data-omnimux-model-capsule',
     'omnimux-market:plaza-intent',
     'sk-omx-skill-creator',
     'data-omnimux-market-entry',
@@ -57,6 +54,7 @@ test('client bundle keeps public slot keys and workbench tab registration', () =
   ]) {
     assert.ok(client.includes(needle), `missing ${needle}`)
   }
+  assert.ok(!client.includes('data-omnimux-model-picker'), 'market bundle no longer bundles model-picker')
   assert.ok(!client.includes('PlazaFocusBar'), 'in-tab FocusBar removed')
   assert.ok(!client.includes('omnimux-workbench-focus'), 'in-tab FocusBar styles/markers removed')
   assert.ok(!client.includes('slots.inject("sidebar.footer.action"'), 'footer action removed')

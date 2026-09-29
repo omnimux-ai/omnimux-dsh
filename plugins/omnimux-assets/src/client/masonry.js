@@ -9,9 +9,13 @@
  */
 
 import { coverRatioCache } from './ratio-cache.js'
+import {
+  DEFAULT_ASPECT_RATIO,
+  distributeColumns as distributeColumnsCore,
+} from '../../../omnimux/src/client/components/library-flow/masonry-layout.js'
 
 /** 目录没有宽高字段、图片也还没到达时的兜底：角色立绘主流是 9:16。 */
-export const MASONRY_DEFAULT_RATIO = 9 / 16
+export const MASONRY_DEFAULT_RATIO = DEFAULT_ASPECT_RATIO
 
 /**
  * 纯语音色块的等效比例。色块高度固定 112px，按最小列宽 260px 反解，
@@ -64,26 +68,14 @@ export function cardHeightOf(ratio) {
 }
 
 /**
- * 最短列优先分列。
+ * 最短列优先分列（统一复用 library-flow 算法内核）。
  * @param {any[]} items
  * @param {number} columns
  * @param {(item: any) => number} [ratioOf]
  * @returns {any[][]}
  */
 export function distributeColumns(items, columns, ratioOf = coverRatioOf) {
-  const count = Math.max(1, Math.floor(Number(columns)) || 1)
-  const buckets = Array.from({ length: count }, () => [])
-  const heights = Array.from({ length: count }, () => 0)
-  const list = Array.isArray(items) ? items : []
-  for (const item of list) {
-    let target = 0
-    for (let index = 1; index < count; index += 1) {
-      if (heights[index] < heights[target]) target = index
-    }
-    buckets[target].push(item)
-    heights[target] += cardHeightOf(ratioOf(item))
-  }
-  return buckets
+  return distributeColumnsCore(items, columns, ratioOf)
 }
 
 /**

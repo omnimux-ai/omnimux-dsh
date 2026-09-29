@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Divider, FilterBar, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
+import { Button, ConfirmModal, Divider, FilterBar, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { createProduct, deleteProduct, getProductForEdit, getState, pickPath, updateProduct } from './api.js'
 import { deliverProductReference } from './reference.js'
-import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { CreateProductMenu } from './CreateProductMenu.jsx'
 import { ChatIcon } from './icons.jsx'
 import { ProductFormPage } from './ProductFormPage.jsx'
@@ -465,16 +464,23 @@ export function ProductsStage({ t, stage, store, visible = true }) {
       )}
 
       {pendingRemove && (
-        <ConfirmRemoveDialog
-          t={t}
-          name={String(pendingRemove.names[0] ?? '')}
+        <ConfirmModal
+          open
+          onClose={() => { setPendingRemove(null) }}
           title={
             pendingRemove.isBatch
               ? t('confirm.deleteSelected').replace('{n}', String(pendingRemove.ids.length))
               : t('confirm.deleteTitle').replace('{name}', String(pendingRemove.names[0] ?? ''))
           }
-          busy={busy}
-          onCancel={() => { setPendingRemove(null) }}
+          message={
+            String(pendingRemove.names[0] ?? '')
+              ? `${t('mapping.removeHint') || t('confirm.deleteHint') || '删除后无法恢复'}（关联资产: ${String(pendingRemove.names[0] ?? '')}）`
+              : (t('mapping.removeHint') || t('confirm.deleteHint') || '删除后无法恢复')
+          }
+          confirmLabel={t('confirm.deleteConfirm') || t('mapping.removeConfirm') || '确认删除'}
+          cancelLabel={t('confirm.deleteCancel') || t('mapping.cancel') || '取消'}
+          confirmVariant="danger"
+          confirmLoading={busy}
           onConfirm={handleConfirmDelete}
         />
       )}
