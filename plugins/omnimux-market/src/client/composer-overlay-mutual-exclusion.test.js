@@ -8,7 +8,10 @@ const here = dirname(fileURLToPath(import.meta.url))
 
 describe('契约测试：输入框底栏浮层单例互斥规范与协同总线', () => {
   const skillPickerSrc = readFileSync(join(here, 'skill-picker.js'), 'utf8')
-  const modelPickerSrc = readFileSync(join(here, 'model-picker.js'), 'utf8')
+  const modelPickerSrc = readFileSync(
+    join(here, '../../../omnimux/src/client/composer-quick-shortcuts/ModelPicker.jsx'),
+    'utf8'
+  )
   const composerI18nSrc = readFileSync(
     join(here, '../../../omnimux/src/client/composer-commands-i18n.js'),
     'utf8'
@@ -40,22 +43,22 @@ describe('契约测试：输入框底栏浮层单例互斥规范与协同总线'
   it('契约 2: model-picker 打开时广播互斥事件，并监听外部互斥事件收起自身', () => {
     assert.match(
       modelPickerSrc,
-      /dispatchEvent\(new CustomEvent\("omnimux:composer:overlay:open"/,
+      /dispatchEvent\(new CustomEvent\(['"]omnimux:composer:overlay:open['"]/,
       '模型选择器展开时必须派发 omnimux:composer:overlay:open 事件'
     )
     assert.match(
       modelPickerSrc,
-      /detail:\s*\{\s*id:\s*"model-picker"\s*\}/,
+      /detail:\s*\{\s*id:\s*['"]model-picker['"]\s*\}/,
       '广播事件 payload 必须指明 id: "model-picker"'
     )
     assert.match(
       modelPickerSrc,
-      /addEventListener\("omnimux:composer:overlay:open"/,
+      /addEventListener\(['"]omnimux:composer:overlay:open['"]/,
       '模型选择器必须监听全局浮层打开事件'
     )
     assert.match(
       modelPickerSrc,
-      /if\s*\(e\?\.detail\?\.id\s*!==\s*"model-picker"\)\s*\{\s*close\(\);\s*\}/,
+      /if\s*\(e\?\.detail\?\.id\s*!==\s*['"]model-picker['"]\)\s*\{\s*setOpen\(false\);\s*\}/,
       '非模型浮层激活时，模型面板必须自动收起'
     )
   })

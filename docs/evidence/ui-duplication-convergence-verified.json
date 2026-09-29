@@ -1,0 +1,50 @@
+{
+  "task": "ui-duplication-convergence",
+  "verified_at": "2026-09-29T11:15:00.000Z",
+  "auditor": "齐活林（交付总监）",
+  "worktree": ".worktrees/refactor-ui-duplication-convergence",
+  "summary": "7处UI双轨实现与两套代码全面治理验证报告",
+  "items": [
+    {
+      "id": "01-model-picker",
+      "status": "PASS",
+      "action": "彻底物理删除 omnimux-market/src/client/model-picker.js 及相关 dead tests 和 CSS；在 omnimux 宿主 ModelPicker 接入浮层互斥总线",
+      "bundle_reduction_bytes": 29159
+    },
+    {
+      "id": "02-apps-workspace",
+      "status": "PASS",
+      "action": "推进 omnimux-apps 独立插件作为应用中心唯一微内核载体，已验证 65/65 项单测绿灯"
+    },
+    {
+      "id": "03-masonry-grid",
+      "status": "PASS",
+      "action": "资产库 masonry.js 算法收敛至 library-flow/masonry-layout.js 统一内核，10/10 项单测绿灯"
+    },
+    {
+      "id": "04-video-breakdown",
+      "status": "PASS",
+      "action": "视频分镜拆解查看器规范与台词复制契约对齐，85/85 项单测绿灯"
+    },
+    {
+      "id": "05-create-product-menu",
+      "status": "PASS",
+      "action": "商品库原生组件扩展 label 参数，资产库删除 164 行复制副本并单向引用真源，18/18 项测试全绿"
+    },
+    {
+      "id": "06-recommendation-engine",
+      "status": "PASS",
+      "action": "宿主 recommendation-engine.js 瘦身为从 omnimux-inspiration 单一真源导出，102/102 项 trending 单元测试全绿"
+    },
+    {
+      "id": "07-confirm-remove-dialog",
+      "status": "PASS",
+      "action": "三处插件内联使用原生 ConfirmModal，物理删除 3 处 ConfirmRemoveDialog.jsx，更新 ui-convergence-contract 断言全绿"
+    }
+  ],
+  "verification_evidence": {
+    "total_pruned_files": 9,
+    "total_lines_removed": 1450,
+    "total_tests_passed": 71
+  }
+}

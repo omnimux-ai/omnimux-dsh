@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { Button, Divider, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
+import { Button, ConfirmModal, Divider, EmptyState, FilterBar, IconButton, PageHeader, SearchField, Tabs } from 'dsh-ui-kit'
 import { ChatIcon, GridIcon, ImportIcon, ListIcon, PlusIcon } from './icons.jsx'
 import { AddAssetDialog, ASSET_TYPE_KEYS } from './AddAssetDialog.jsx'
 import { AssetBrowse } from './AssetBrowse.jsx'
@@ -9,7 +9,6 @@ import { AssetPreviewModal } from './AssetPreviewModal.jsx'
 import { CloudAssetsView } from './CloudAssetsView.jsx'
 import { cloudAssetToPreviewItem } from './cloud-preview.js'
 import { useCloudSave } from './use-cloud-save.js'
-import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
 import { computeEmptyState } from './feed-helpers.js'
 import { injectAssetsStyles } from './styles.js'
 import { useAssetsFeed } from './use-assets-feed.js'
@@ -353,16 +352,21 @@ function AddAssetDialogItem(props) {
 function ConfirmRemoveDialogItem(props) {
   const { t, feed } = props
   const { pendingRemove, setPendingRemove, busy, handleConfirmDelete } = feed
+  const name = String(pendingRemove.names[0] ?? '')
   const removeTitle = pendingRemove.isBatch
     ? t('confirm.deleteSelected').replace('{n}', String(pendingRemove.ids.length))
-    : t('confirm.deleteTitle').replace('{name}', String(pendingRemove.names[0] ?? ''))
+    : (t('mapping.removeTitle')?.replace('{name}', name) || t('confirm.deleteTitle').replace('{name}', name))
+  const message = name ? `${t('mapping.removeHint')}（关联资产: ${name}）` : t('mapping.removeHint')
   return (
-    <ConfirmRemoveDialog
-      t={t}
-      name={String(pendingRemove.names[0] ?? '')}
+    <ConfirmModal
+      open
+      onClose={() => setPendingRemove(null)}
       title={removeTitle}
-      busy={busy}
-      onCancel={() => setPendingRemove(null)}
+      message={message}
+      confirmLabel={t('mapping.removeConfirm')}
+      cancelLabel={t('mapping.cancel')}
+      confirmVariant="danger"
+      confirmLoading={busy}
       onConfirm={handleConfirmDelete}
     />
   )

@@ -14,7 +14,6 @@ import { buildPayload, getInitialMedia } from './useProductFormState.js'
 // React's rendering hooks and unrelated visual components are substituted.
 const stubs = {
   './ProductFormPage.jsx': 'export function ProductFormPage() {}',
-  './ConfirmRemoveDialog.jsx': 'export function ConfirmRemoveDialog() {}',
   './styles.js': 'export function injectProductsStyles() {}',
 }
 const bundle = await build({

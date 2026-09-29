@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
-import { ConfirmRemoveDialog } from './ConfirmRemoveDialog.jsx'
+import { Button, ConfirmModal, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
 import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPanel.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
@@ -558,11 +557,15 @@ export function InspirationSection({ t, active }) {
           ) : null}
 
           {pendingRemove ? (
-            <ConfirmRemoveDialog
-              t={t}
-              count={pendingRemove.count}
-              busy={removing}
-              onCancel={() => setPendingRemove(null)}
+            <ConfirmModal
+              open
+              onClose={() => setPendingRemove(null)}
+              title={t('confirmRemove.title').replace('{n}', String(pendingRemove.count))}
+              message={t('confirmRemove.description')}
+              confirmLabel={removing ? t('confirmRemove.deleting') : t('confirmRemove.confirm')}
+              cancelLabel={t('confirmRemove.cancel')}
+              confirmVariant="danger"
+              confirmLoading={removing}
               onConfirm={handleConfirmBatchRemove}
             />
           ) : null}

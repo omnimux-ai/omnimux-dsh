@@ -43,10 +43,11 @@ const MENU_DESC_KEY = Object.freeze({
  *   t: (key: string) => string,
  *   onSelect: (kind: 'physical' | 'digital') => void,
  *   disabled?: boolean,
+ *   label?: string,
  * }} props
  */
 export function CreateProductMenu(props) {
-  const { t, onSelect, disabled = false } = props
+  const { t, onSelect, disabled = false, label } = props
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
   const openTimer = useRef(null)
@@ -137,7 +138,7 @@ export function CreateProductMenu(props) {
         onFocus={openSoon}
         onKeyDown={handleTriggerKeyDown}
       >
-        {t('add.button')}
+        {label || t('add.button')}
       </Button>
 
       {open ? (

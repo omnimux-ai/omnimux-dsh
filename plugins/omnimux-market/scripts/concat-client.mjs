@@ -36,7 +36,6 @@ const FRAGMENTS = [
   'plugins-column.js',
   'skill-plaza.js',
   'skill-picker.js',
-  'model-picker.js',
   'composer.js',
   'experts.js',
   'connectors.js',
