@@ -3041,12 +3041,66 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .omnimux-trending-playing-bar:last-child {
   height:8px;
 }
+
+/* 悬停态右上角平台标签 Badge (对标灵感社区) */
+.omnimux-trending-card-platform-badge {
+  position:absolute; right:12px; top:12px; z-index:2;
+  padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600;
+  color:var(--omnimux-trending-cover-text);
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 60%, transparent);
+  border:1px solid var(--omnimux-trending-cover-line);
+  backdrop-filter:blur(8px);
+  opacity:0; transform:translateY(-4px); pointer-events:none;
+  transition:opacity 200ms ease-out, transform 200ms ease-out;
+}
+.omnimux-trending-card:hover .omnimux-trending-card-platform-badge,
+.omnimux-trending-card:focus-within .omnimux-trending-card-platform-badge {
+  opacity:1; transform:translateY(0);
+}
+
+/* 悬停态居中半透明白色圆形播放按钮 (对标灵感社区) */
+.omnimux-trending-card-center-play {
+  position:absolute; top:50%; left:50%; z-index:3;
+  width:44px; height:44px; margin-top:-22px; margin-left:-22px;
+  border-radius:50%; border:none; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  background:#ffffff; /* exempt-ui03: 视频封面居中播放按钮特化高可见纯白底 */
+  color:#000000; /* exempt-ui03: 居中播放按钮黑色三角图标 */
+  box-shadow:0 4px 16px color-mix(in srgb, var(--dsw-static-neutral-1000) 25%, transparent);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  cursor:pointer;
+  opacity:0; transform:scale(0.85); pointer-events:none;
+  transition:opacity 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 240ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease;
+}
+.omnimux-trending-card:hover .omnimux-trending-card-center-play,
+.omnimux-trending-card:focus-within .omnimux-trending-card-center-play {
+  opacity:1; transform:scale(1); pointer-events:auto;
+}
+.omnimux-trending-card-center-play:hover {
+  background:rgba(255, 255, 255, 0.9); /* exempt-ui03: 悬停态高亮白底微光 */
+  transform:scale(1.08);
+}
+.omnimux-trending-center-play-icon {
+  display:inline-flex; width:22px; height:22px;
+  align-items:center; justify-content:center;
+  margin-left:2px; /* 视觉微调使三角居中 */
+  color:#000000; /* exempt-ui03: 黑色三角图标 */
+}
+.omnimux-trending-center-play-icon svg {
+  width:22px; height:22px;
+  fill:#000000; /* exempt-ui03: 黑色三角图标 */
+}
+
 .omnimux-trending-card-body {
   position:absolute; inset-inline:0; bottom:0; padding:12px;
-  transform:translateY(0); transition:transform 300ms ease-out;
+  opacity:1; transform:translateY(0);
+  transition:opacity 240ms ease-out, transform 240ms ease-out;
 }
 .omnimux-trending-card:hover .omnimux-trending-card-body,
-.omnimux-trending-card:focus-within .omnimux-trending-card-body { transform:translateY(-50px); }
+.omnimux-trending-card:focus-within .omnimux-trending-card-body {
+  opacity:0; transform:translateY(8px); pointer-events:none;
+}
 .omnimux-trending-card-metrics {
   display:grid; grid-template-columns:repeat(2, minmax(0, 1fr));
   border-bottom:1px solid var(--omnimux-trending-cover-line); padding-bottom:10px;
@@ -3066,37 +3120,271 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   font-size:12px; font-weight:500; line-height:17px; color:var(--omnimux-trending-cover-text);
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
+
+/* 兼容既有动作类名 */
 .omnimux-trending-card-action {
-  position:absolute; inset-inline:12px; bottom:12px;
-  opacity:0; transform:translateY(12px); pointer-events:none;
-  transition:opacity 300ms ease-out, transform 300ms ease-out;
+  display:none;
 }
-.omnimux-trending-card:hover .omnimux-trending-card-action,
-.omnimux-trending-card:focus-within .omnimux-trending-card-action {
+
+/* 悬停操作浮层（Overlay） */
+.omnimux-trending-card-overlay {
+  position:absolute; inset-inline:0; bottom:0; z-index:3;
+  padding:12px; box-sizing:border-box;
+  display:flex; flex-direction:column; gap:10px;
+  background:linear-gradient(to top, var(--omnimux-trending-card-scrim-strong) 0%, color-mix(in srgb, var(--dsw-static-neutral-1000) 65%, transparent) 60%, transparent 100%);
+  opacity:0; transform:translateY(12px); pointer-events:none;
+  transition:opacity 240ms ease-out, transform 240ms ease-out;
+}
+.omnimux-trending-card:hover .omnimux-trending-card-overlay,
+.omnimux-trending-card:focus-within .omnimux-trending-card-overlay {
   opacity:1; transform:translateY(0); pointer-events:auto;
 }
-.omnimux-trending-recreate-btn {
-  display:flex; align-items:center; justify-content:center; gap:6px;
-  width:100%; height:40px; box-sizing:border-box; cursor:pointer;
-  border-radius:12px; font:inherit; font-size:12px; font-weight:600;
+.omnimux-trending-card-overlay-actions {
+  display:flex; align-items:center; gap:6px; width:100%;
+}
+.omnimux-trending-overlay-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:4px;
+  flex:1 1 0; min-width:0; width:100%; white-space:nowrap;
+  height:28px; min-height:28px; max-height:28px;
+  padding:0 6px; box-sizing:border-box; cursor:pointer;
+  border-radius:9999px;
+  border:1px solid transparent;
+  font-size:12px; font-weight:550; line-height:16px;
+  transition:background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out, transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-app-region:no-drag;
+}
+.omnimux-trending-btn-icon {
+  display:inline-flex; width:14px; height:14px; flex:none;
+  align-items:center; justify-content:center;
+}
+.omnimux-trending-btn-icon svg {
+  width:14px; height:14px; flex:none;
+}
+.omnimux-trending-btn-label,
+.omnimux-trending-overlay-btn > span:not(.omnimux-trending-btn-icon) {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.omnimux-trending-overlay-btn.is-secondary {
+  flex:1 1 0; min-width:0; width:100%; white-space:nowrap;
+  height:28px; padding:0 6px; border-radius:9999px;
+  background:var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2));
+  color:var(--dsw-alias-label-primary);
+  border:1px solid var(--dsw-alias-border-l3);
+}
+.omnimux-trending-overlay-btn.is-secondary:hover:not(:disabled) {
+  background:color-mix(in srgb, var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2)) 92%, var(--dsw-alias-label-primary) 8%);
+  border-color:var(--dsw-alias-border-l4);
+}
+.omnimux-trending-overlay-btn.is-secondary:active:not(:disabled) {
+  background:color-mix(in srgb, var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2)) 86%, var(--dsw-alias-label-primary) 14%);
+  border-color:var(--dsw-alias-border-l4);
+}
+.omnimux-trending-overlay-btn.is-primary {
+  flex:1 1 0; min-width:0; width:100%; white-space:nowrap;
+  height:28px; padding:0 6px; border-radius:9999px;
+  background:var(--dsw-alias-label-primary);
+  color:var(--dsw-alias-bg-base);
+  border:1px solid transparent;
+  box-shadow:0 2px 8px color-mix(in srgb, var(--dsw-static-neutral-1000) 15%, transparent);
+}
+.omnimux-trending-overlay-btn .omnimux-trending-btn-icon,
+.omnimux-trending-overlay-btn .omnimux-trending-btn-icon svg {
+  color:inherit;
+  stroke:currentColor;
+}
+.omnimux-trending-overlay-btn.is-primary:hover:not(:disabled) {
+  background:color-mix(in srgb, var(--dsw-alias-label-primary) 92%, var(--dsw-alias-bg-base) 8%);
+}
+.omnimux-trending-overlay-btn.is-primary:active:not(:disabled) {
+  background:color-mix(in srgb, var(--dsw-alias-label-primary) 86%, var(--dsw-alias-bg-base) 14%);
+}
+.omnimux-trending-overlay-btn:focus-visible {
+  outline:2px solid var(--dsw-alias-label-primary) !important;
+  outline-offset:2px;
+  box-shadow:0 0 0 2px var(--dsw-alias-bg-base);
+}
+.omnimux-trending-overlay-btn:active:not(:disabled) {
+  transform:scale(0.96);
+}
+@media (prefers-reduced-motion:reduce) {
+  .omnimux-trending-overlay-btn,
+  .omnimux-trending-overlay-btn:active:not(:disabled) {
+    transition:none;
+    transform:none;
+  }
+}
+.omnimux-trending-card-overlay-title {
+  margin:0; font-size:12px; font-weight:500; line-height:16px;
   color:var(--omnimux-trending-cover-text);
-  background:var(--omnimux-trending-cover-soft);
-  border:1px solid var(--omnimux-trending-cover-line);
-  backdrop-filter:blur(10px);
-  transition:background-color 200ms ease-out, color 200ms ease-out;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.omnimux-trending-recreate-btn:hover:not(:disabled) {
-  background:var(--omnimux-trending-cover-hover);
-  color:var(--omnimux-trending-cover-text-strong);
+
+/* 视频详情弹窗 TrendingDetailModal 样式 */
+.omnimux-trending-modal-overlay {
+  position:fixed; inset:0; z-index:9999;
+  background:var(--dsw-alias-bg-mask-1);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px; box-sizing:border-box;
+  animation:omnimux-modal-fade-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.omnimux-trending-recreate-btn:disabled { cursor:not-allowed; opacity:0.55; }
-.omnimux-trending-card.is-active .omnimux-trending-recreate-btn {
-  background:var(--dsw-alias-button-primary-fill);
-  color:var(--dsw-alias-button-primary-text);
-  border-color:transparent;
+.omnimux-trending-modal-container {
+  position:relative; width:100%; max-width:760px; max-height:88vh;
+  display:flex; flex-direction:column;
+  background:var(--omnimux-surface-dialog);
+  border:1px solid var(--dsw-alias-border);
+  border-radius:16px;
+  box-shadow:0 12px 36px color-mix(in srgb, var(--dsw-static-neutral-1000) 35%, transparent);
+  overflow:hidden;
+  animation:omnimux-modal-scale-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.omnimux-trending-recreate-icon { display:inline-flex; width:13px; height:13px; }
-.omnimux-trending-recreate-icon > svg { width:13px; height:13px; }
+@keyframes omnimux-modal-fade-in {
+  from { opacity:0; }
+  to { opacity:1; }
+}
+@keyframes omnimux-modal-scale-in {
+  from { opacity:0; transform:scale(0.96); }
+  to { opacity:1; transform:scale(1); }
+}
+.omnimux-trending-modal-header {
+  padding:16px 20px; border-bottom:1px solid var(--dsw-alias-border-l1);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.omnimux-trending-modal-title {
+  margin:0; font-size:16px; font-weight:600; color:var(--dsw-alias-label-primary);
+}
+.omnimux-trending-modal-content {
+  display:grid; grid-template-columns:260px minmax(0, 1fr);
+  gap:20px; padding:20px; overflow-y:auto; flex:1 1 auto;
+}
+.omnimux-trending-modal-player-box {
+  width:100%; aspect-ratio:9/16; background:var(--omnimux-trending-cover-base);
+  border-radius:12px; overflow:hidden; position:relative;
+  border:1px solid var(--dsw-alias-border-l1);
+}
+.omnimux-trending-modal-video-wrap,
+.omnimux-trending-modal-carousel-wrap,
+.omnimux-trending-modal-cover-wrap,
+.omnimux-trending-modal-fallback-wrap {
+  width:100%; height:100%; position:relative;
+}
+.omnimux-trending-modal-video,
+.omnimux-trending-modal-cover {
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+.omnimux-trending-modal-slide-nav {
+  position:absolute; top:50%; margin-top:-16px;
+  width:32px; height:32px; border-radius:50%; border:none;
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 55%, transparent);
+  color:var(--dsw-static-neutral-00);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; backdrop-filter:blur(6px); z-index:2;
+  transition:background-color 150ms ease;
+}
+.omnimux-trending-modal-slide-nav:hover {
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 80%, transparent);
+}
+.omnimux-trending-modal-slide-nav.is-prev { left:8px; }
+.omnimux-trending-modal-slide-nav.is-next { right:8px; }
+.omnimux-trending-modal-slide-counter {
+  position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+  padding:2px 8px; border-radius:999px; font-size:11px;
+  background:color-mix(in srgb, var(--dsw-static-neutral-1000) 60%, transparent);
+  color:var(--dsw-static-neutral-00); backdrop-filter:blur(4px);
+}
+.omnimux-trending-modal-fallback-text {
+  width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  font-size:32px; /* exempt-ui10: 弹窗大画幅首字母兜底封面 */
+  font-weight:700; color:var(--dsw-alias-label-tertiary);
+}
+.omnimux-trending-modal-meta-box {
+  display:flex; flex-direction:column; gap:14px; min-width:0;
+}
+.omnimux-trending-modal-platform-row {
+  display:flex; align-items:center; gap:8px;
+}
+.omnimux-trending-modal-badge {
+  padding:3px 8px; border-radius:999px; font-size:11px; font-weight:600;
+  background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-primary);
+  border:1px solid var(--dsw-alias-border-l1);
+}
+.omnimux-trending-modal-region-badge {
+  padding:3px 8px; border-radius:999px; font-size:11px; font-weight:500;
+  background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-label-secondary);
+}
+.omnimux-trending-modal-video-title {
+  margin:0; font-size:15px; font-weight:600; line-height:1.45;
+  color:var(--dsw-alias-label-primary);
+  word-break:break-word;
+}
+.omnimux-trending-modal-metrics {
+  display:flex; gap:16px; padding:12px; border-radius:10px;
+  background:var(--dsw-alias-bg-layer-1); border:1px solid var(--dsw-alias-border-l1);
+}
+.omnimux-trending-modal-metric {
+  display:flex; flex-direction:column; gap:4px; flex:1 1 0;
+}
+.omnimux-trending-modal-metric-label {
+  font-size:11px; color:var(--dsw-alias-label-tertiary);
+}
+.omnimux-trending-modal-metric-val {
+  font-size:16px; font-weight:700; color:var(--dsw-alias-label-primary);
+}
+.omnimux-trending-modal-script-section {
+  display:flex; flex-direction:column; gap:8px; flex:1 1 auto;
+}
+.omnimux-trending-modal-script-header {
+  display:flex; align-items:center; justify-content:space-between;
+}
+.omnimux-trending-modal-script-title {
+  font-size:13px; font-weight:600; color:var(--dsw-alias-label-secondary);
+}
+.omnimux-trending-modal-copy-btn {
+  display:flex; align-items:center; gap:4px; padding:3px 8px;
+  border-radius:6px; border:1px solid var(--dsw-alias-border-l1);
+  background:transparent; color:var(--dsw-alias-label-secondary);
+  font:inherit; font-size:11px; cursor:pointer;
+  transition:all 150ms ease;
+}
+.omnimux-trending-modal-copy-btn:hover {
+  background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-label-primary);
+}
+.omnimux-trending-modal-script-body {
+  padding:12px; border-radius:8px; background:var(--dsw-alias-bg-layer-1);
+  border:1px solid var(--dsw-alias-border-l1); max-height:160px; overflow-y:auto;
+}
+.omnimux-trending-modal-script-body p {
+  margin:0; font-size:12px; line-height:1.5; color:var(--dsw-alias-label-secondary);
+  white-space:pre-wrap;
+}
+.omnimux-trending-modal-footer {
+  padding:14px 20px; border-top:1px solid var(--dsw-alias-border-l1);
+  display:flex; align-items:center; justify-content:flex-end; gap:10px;
+  background:var(--dsw-alias-bg-layer-1);
+}
+.omnimux-trending-modal-btn {
+  height:32px; padding-inline:14px; border-radius:8px; box-sizing:border-box;
+  font:inherit; font-size:13px; font-weight:500; cursor:pointer;
+  display:flex; align-items:center; gap:6px; border:1px solid transparent;
+  transition:all 150ms ease;
+}
+.omnimux-trending-modal-btn.is-secondary {
+  background:transparent; border-color:var(--dsw-alias-border);
+  color:var(--dsw-alias-label-primary);
+}
+.omnimux-trending-modal-btn.is-secondary:hover {
+  background:var(--dsw-alias-bg-layer-2);
+}
+.omnimux-trending-modal-btn.is-primary {
+  background:var(--dsw-alias-label-primary);
+  color:var(--dsw-alias-label-primary-inverted);
+}
+.omnimux-trending-modal-btn.is-primary:hover {
+  opacity:0.92;
+}
+
 
 /* 矢量封面：六个构图原型 */
 .omnimux-trending-cover-svg[data-accent="0"] { --omnimux-trending-accent:var(--omnimux-trending-accent-0); }
@@ -3299,15 +3587,20 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   border-radius:4px;
 }
 
-/* Tab 栏下方内容容器视口撑开规范：确保无论 0/5/50 卡片，都能滚动使 Tab 置顶 */
+/* Tab 栏下方内容容器视口规范：中间保持合理自适应高度，少则无法滚动避免被遮挡，多则正常平滑滚动 */
 .omnimux-explore-grid-view-wrap,
 .omnimux-explore-shelves-view {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   width: 100%;
-  min-height: calc(100vh - 96px);
-  padding-bottom: 120px;
+  min-height: calc(100vh - 152px);
+  padding-bottom: 0;
+}
+
+[data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-grid-view-wrap,
+[data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-shelves-view {
+  min-height: calc(100vh - 120px - (var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px));
 }
 .omnimux-explore-shelves-view {
   gap: 36px;

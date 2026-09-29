@@ -128,3 +128,71 @@ test('styles: 吸顶栏与双 Tab 导航头显式声明 no-drag 并严禁使用 
     'TrendingReplicateSection 严禁使用 <header> 标签（否则命中桌面端全局 header drag 导致滚轮死锁）',
   )
 })
+
+test('styles: 卡片双按钮遵循跨主题 token/state 合同并保留紧凑几何', () => {
+  const btnBase = ruleBody(GUIDE_CSS, '.omnimux-trending-overlay-btn')
+  assert.match(btnBase, /flex:1 1 0/, '双按钮必须对称均分 flex: 1 1 0')
+  assert.match(btnBase, /min-width:0/, '防止文字撑开卡片溢出')
+  assert.match(btnBase, /height:28px/, '高度必须统一为紧凑规范 28px')
+  assert.match(btnBase, /padding:0 6px/, '内边距紧凑 0 6px')
+  assert.match(btnBase, /border-radius:9999px/, '全胶囊圆角 9999px')
+  assert.match(btnBase, /white-space:nowrap/, '基础样式禁止折行')
+
+  const labelRule = ruleBody(GUIDE_CSS, '.omnimux-trending-btn-label')
+  assert.match(labelRule, /overflow:hidden/, '文字溢出隐藏')
+  assert.match(labelRule, /text-overflow:ellipsis/, '超长文字截断省略')
+  assert.match(labelRule, /white-space:nowrap/, '文字标签绝不折行')
+
+  assert.match(btnBase, /transition:background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out, transform 120ms cubic-bezier\(0\.16, 1, 0\.3, 1\)/)
+
+  const secBtn = ruleBody(GUIDE_CSS, '.omnimux-trending-overlay-btn.is-secondary {')
+  assert.match(secBtn, /background:var\(--dsw-alias-bg-elevated, var\(--dsw-alias-bg-layer-2\)\)/)
+  assert.match(secBtn, /color:var\(--dsw-alias-label-primary\)/)
+  assert.match(secBtn, /border:1px solid var\(--dsw-alias-border-l3\)/)
+
+  const priBtn = ruleBody(GUIDE_CSS, '.omnimux-trending-overlay-btn.is-primary {')
+  assert.match(priBtn, /background:var\(--dsw-alias-label-primary\)/)
+  assert.match(priBtn, /color:var\(--dsw-alias-bg-base\)/)
+
+  for (const [variant, background, foreground] of [
+    ['secondary', 'bg-elevated, var(--dsw-alias-bg-layer-2)', 'label-primary'],
+    ['primary', 'label-primary', 'bg-base'],
+  ]) {
+    for (const [state, basePercent, mixPercent] of [['hover', 92, 8], ['active', 86, 14]]) {
+      const body = ruleBody(GUIDE_CSS, `.omnimux-trending-overlay-btn.is-${variant}:${state}:not(:disabled) {`)
+      assert.ok(body.includes(`background:color-mix(in srgb, var(--dsw-alias-${background}) ${basePercent}%, var(--dsw-alias-${foreground}) ${mixPercent}%)`))
+      if (variant === 'secondary') assert.match(body, /border-color:var\(--dsw-alias-border-l4\)/)
+      assert.doesNotMatch(body, /transform:/, '状态底色规则不得覆盖公共按压缩放')
+    }
+  }
+
+  const icon = ruleBody(GUIDE_CSS, '.omnimux-trending-overlay-btn .omnimux-trending-btn-icon,')
+  assert.match(icon, /color:inherit/)
+  assert.match(icon, /stroke:currentColor/)
+  assert.doesNotMatch(icon, /fill:/, '保留 SVG 自身的 fill 语义')
+
+  const focus = ruleBody(GUIDE_CSS, '.omnimux-trending-overlay-btn:focus-visible {')
+  // Host 的 :focus-visible outline 带 !important；局部规则也必须提升该属性，不能改全局焦点。
+  assert.match(focus, /outline:2px solid var\(--dsw-alias-label-primary\)\s*!important\s*;/,
+    '趋势按钮双环必须抵抗 Host :focus-visible 的 1px outline !important 覆盖')
+  assert.doesNotMatch(focus, /(?:outline-offset|box-shadow):[^;]*!important/,
+    '只提升被 Host 压制的 outline，不扩大 important 范围')
+  assert.match(focus, /outline-offset:2px/)
+  assert.match(focus, /box-shadow:0 0 0 2px var\(--dsw-alias-bg-base\)/)
+  const active = ruleBody(GUIDE_CSS, '.omnimux-trending-overlay-btn:active:not(:disabled) {')
+  assert.match(active, /transform:scale\(0\.96\)/)
+
+  const reducedMotion = GUIDE_CSS.match(/@media\s*\(prefers-reduced-motion:reduce\)\s*\{\s*\.omnimux-trending-overlay-btn,\s*\.omnimux-trending-overlay-btn:active:not\(:disabled\)\s*\{([^}]+)\}/)
+  assert.ok(reducedMotion, '按钮必须有独立的 reduced-motion 规则')
+  assert.match(reducedMotion[1], /transition:none/)
+  assert.match(reducedMotion[1], /transform:none/)
+
+  const buttonRules = [...GUIDE_CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(([, selector]) => selector.includes('.omnimux-trending-overlay-btn'))
+    .map(([, , body]) => body).join('\n')
+  assert.doesNotMatch(buttonRules, /#[\da-f]{3,8}\b|rgba?\(|:\s*(?:white|black)\b|backdrop-filter|translateY|transition:all/i)
+
+  const centerPlay = ruleBody(GUIDE_CSS, '.omnimux-trending-card-center-play')
+  assert.match(centerPlay, /background:#ffffff/, '居中播放按钮底色必须为清晰纯白底')
+  assert.match(centerPlay, /color:#000000/, '居中播放按钮图标为黑色')
+})
