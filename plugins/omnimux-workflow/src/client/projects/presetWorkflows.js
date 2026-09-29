@@ -309,7 +309,7 @@ export const PRESET_WORKFLOW_MAP = {
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/3d-cute-vfx-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/ec/ec701a956f0be2d24dc4482ea815bed9129d15e26092f58961eed67232e84388.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -406,7 +406,7 @@ export const PRESET_WORKFLOW_MAP = {
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/app-demo-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/56/563bcc8673326ea1358efbc69e4fcfc549510d3c06cfe1eeeeb965007e573aa3.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -503,7 +503,7 @@ export const PRESET_WORKFLOW_MAP = {
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/apparel-tryon-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/36/36e32bd4d7f9f7ce8a1455729178967c2effce57a4df7c3cc4774beb441416fc.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -600,7 +600,7 @@ export const PRESET_WORKFLOW_MAP = {
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/chasing-product-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/c3/c39a91e4064def62675ea3cb9c253e67c2919b5886d373199a879c63a383af12.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -697,7 +697,7 @@ export const PRESET_WORKFLOW_MAP = {
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/fall-down-durability-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/e5/e56bb4263c329b23992d51a20496ad4822b62fa0d6195a5cf617c7b203eb027a.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -794,7 +794,7 @@ export const PRESET_WORKFLOW_MAP = {
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/product-spotlight-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/de/de868d4d2bbfc79b25fed342cb58ff096fe38b05cb9ec0f3d5a0e628586414e0.webp",
           "params": {
             "aspectRatio": "9:16"
           }
@@ -891,7 +891,7 @@ export const PRESET_WORKFLOW_MAP = {
           "nodeKind": "import",
           "selectedTool": "import",
           "status": "completed",
-          "mediaUrl": "https://cdn.omnimux.ai/presets/builtin/ugc-selfie-poster.webp",
+          "mediaUrl": "https://files.omnimux.ai/templates/explore-v1/sha256/3e/3ef5c3bcbc67c5d9b2262ba49541b7d665234367131d3b605423c3e89888b8bb.webp",
           "params": {
             "aspectRatio": "9:16"
           }

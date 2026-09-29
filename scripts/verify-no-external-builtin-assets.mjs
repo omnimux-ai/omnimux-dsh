@@ -2,8 +2,8 @@
  * verify-no-external-builtin-assets.mjs
  *
  * 工程防外联守卫门禁：
- * 扫描内置 App、预设工作流及项目模板，确保所有静态素材均走官方 R2 持久化存储 (cdn.omnimux.ai / api.omnimux.ai)，
- * 严格禁止引入第三方不可控 CDN 链接（如 cdn.creatify.ai）。
+ * 扫描内置 App、预设工作流及项目模板，确保所有静态素材均走官方 R2 持久化存储 (files.omnimux.ai / assets.omnimux.ai / api.omnimux.ai)，
+ * 严格禁止引入第三方不可控 CDN 链接（如 cdn.creatify.ai）或未分配 DNS 的虚假域名（如 cdn.omnimux.ai）。
  */
 
 import { readFileSync } from 'node:fs';
@@ -30,6 +30,7 @@ export const SCANNED_FILES = [
 
 export const FORBIDDEN_CDN_PATTERNS = [
   /https?:\/\/([a-zA-Z0-9-]+\.)?creatify\.ai[^\s"'`]*/gi,
+  /https?:\/\/cdn\.omnimux\.ai[^\s"'`]*/gi,
 ];
 
 export function auditBuiltinAssets() {
@@ -73,7 +74,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     for (const v of result.violations) {
       console.error(`  - ${v.file}: ${v.match}`);
     }
-    console.error('\n铁律要求：所有内置应用与工作流素材必须归档于官方 R2 存储桶 (cdn.omnimux.ai)。');
+    console.error('\n铁律要求：所有内置应用与工作流素材必须归档于官方 R2 存储桶持久化直链 (files.omnimux.ai / assets.omnimux.ai)。');
     process.exit(1);
   } else {
     console.log('✅ [Gate Pass] 内置工程资产防外联门禁检测通过，全部素材合规走官方 R2 持久化直链。');

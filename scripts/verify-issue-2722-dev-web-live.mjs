@@ -73,7 +73,7 @@ async function main() {
       }));
 
       const creatifyUrls = imgs.filter((i) => i.src && i.src.includes('cdn.creatify.ai'));
-      const omnimuxCdnUrls = imgs.filter((i) => i.src && i.src.includes('cdn.omnimux.ai'));
+      const omnimuxCdnUrls = imgs.filter((i) => i.src && (i.src.includes('files.omnimux.ai') || i.src.includes('assets.omnimux.ai')));
 
       return {
         url: window.location.href,
@@ -91,7 +91,7 @@ async function main() {
   console.log('[Dev Web QA] DOM 素材检查结果:');
   console.log(`  - 页面全部图片数: ${domCheck.totalImages}`);
   console.log(`  - 外部 creatify.ai 链接数: ${domCheck.creatifyCount} (预期必须为 0)`);
-  console.log(`  - 官方 cdn.omnimux.ai 链接数: ${domCheck.omnimuxCdnCount}`);
+  console.log(`  - 官方 files.omnimux.ai/assets.omnimux.ai 链接数: ${domCheck.omnimuxCdnCount}`);
 
   // 3. 在真实页面上下文中测试 App 预设元数据加载与 API 连通性
   console.log('[Dev Web QA] 验证真实宿主内置 App 预设数据中素材地址与元数据...');
@@ -110,7 +110,7 @@ async function main() {
           showcaseVideo,
           showcasePoster,
           hasCreatify: [defaultImage, showcaseVideo, showcasePoster].some(u => u && u.includes('creatify.ai')),
-          allOmnimuxCdn: [defaultImage, showcaseVideo, showcasePoster].every(u => u && u.startsWith('https://cdn.omnimux.ai/')),
+          allOmnimuxCdn: [defaultImage, showcaseVideo, showcasePoster].every(u => u && u.startsWith('https://files.omnimux.ai/')),
         };
       } catch (err) {
         return { ok: false, error: err.message };
