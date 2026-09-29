@@ -11,7 +11,7 @@ import {
   formatFileSize,
   type LocalFileDraft,
 } from '../../utils/resourcePickerPolicy.ts';
-import { draftFromRealPath, draftsFromPickedPaths, nativePathOf } from '../../utils/localFileDraft.ts';
+import { draftFromRealPath, draftsFromPickedPaths, filterDraftsByTypes, nativePathOf } from '../../utils/localFileDraft.ts';
 import { localFileMediaUrl } from '../../../../shared/localMedia.ts';
 import PreviewThumb from './PreviewThumb.tsx';
 import { useAsyncInstanceGuard } from '../../hooks/useAsyncInstanceGuard.ts';
@@ -21,9 +21,11 @@ export interface LocalUploadPaneProps {
   active: boolean;
   onAddFiles: (files: LocalFileDraft[]) => void;
   onRemove: (id: string) => void;
+  /** 卡槽装填会话：仅接受这些素材类型，其余在入口处拦截。 */
+  acceptedTypes?: string[];
 }
 
-const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddFiles, onRemove }) => {
+const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddFiles, onRemove, acceptedTypes }) => {
   const guard = useAsyncInstanceGuard(active);
   const t = useT();
   const [dragging, setDragging] = useState(false);
@@ -32,11 +34,12 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddF
   const ingestPaths = useCallback(
     (paths: string[]) => {
       const drafts = draftsFromPickedPaths(paths);
-      if (drafts.length > 0) onAddFiles(drafts);
-      if (drafts.length < paths.length) toast.warning(t('picker.unsupported'));
-      if (paths.length > 0 && drafts.length === 0) toast.warning(t('picker.unsupported'));
+      const filtered = filterDraftsByTypes(drafts, acceptedTypes);
+      if (filtered.length > 0) onAddFiles(filtered);
+      if (filtered.length < paths.length) toast.warning(t('picker.unsupported'));
+      if (paths.length > 0 && filtered.length === 0) toast.warning(t('picker.unsupported'));
     },
-    [onAddFiles, t],
+    [acceptedTypes, onAddFiles, t],
   );
 
   const chooseNative = useCallback(async () => {
@@ -61,7 +64,7 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddF
   const ingestFiles = useCallback(
     (list: FileList | File[]) => {
       const incoming = Array.from(list);
-      const accepted: LocalFileDraft[] = [];
+      const drafted: LocalFileDraft[] = [];
       let missingPath = 0;
       let rejected = 0;
       for (const file of incoming) {
@@ -75,14 +78,19 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddF
           mime: file.type,
           size: file.size,
         });
-        if (draft) accepted.push(draft);
-        else rejected += 1;
+        if (draft) {
+          drafted.push(draft);
+        } else {
+          rejected += 1;
+        }
       }
+      const accepted = filterDraftsByTypes(drafted, acceptedTypes);
+      rejected += drafted.length - accepted.length;
       if (accepted.length > 0) onAddFiles(accepted);
       if (missingPath > 0) toast.warning(t('picker.needPath'));
       if (rejected > 0) toast.warning(t('picker.unsupported'));
     },
-    [onAddFiles, t],
+    [acceptedTypes, onAddFiles, t],
   );
 
   const handleDrop = useCallback(

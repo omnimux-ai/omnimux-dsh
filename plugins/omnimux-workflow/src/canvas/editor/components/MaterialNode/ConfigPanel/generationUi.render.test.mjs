@@ -68,9 +68,10 @@ test('audio modes come from the selected model, with no fixed speech/music tabs'
   assert.doesNotMatch(single, /wf-cfg-summary-bar|data-show-mode/);
   assert.doesNotMatch(single, /data-testid="wf-slot-wells"|data-slot="reference_audio"/);
   const multi = render(node('audio', {prompt:'Music'}),fixture('audio'));
-  // 其他操作有图片槽，也不能借给当前 plain 操作。
+  // 模型级借用：同模型下存在可绑素材的 listed 操作时，plain 操作也显示卡槽便于直连素材。
   assert.doesNotMatch(multi, /wf-operation-mode-inline|advanced-drawer|wf-cfg-summary-bar/);
-  assert.doesNotMatch(multi, /data-testid="wf-slot-wells"/);
+  assert.match(multi, /data-testid="wf-slot-wells"/);
+  assert.match(multi, /data-slot="images"/);
   const musicCatalog = fixture('audio', false);
   musicCatalog.models[0].operations.push({id:'text_to_music',listed:true,output:{type:'audio'},inputs:[{slot:'reference_audio',type:'audio',role:'reference',source:'upstream_edge',min:0,max:1}]});
   const music = render(node('audio', {prompt:'Music',params:{model:'test-model',operation:'text_to_music'}}), musicCatalog);
@@ -87,10 +88,15 @@ test('text sources occupy the input header without creating media slots or copyi
   assert.match(supplied, /<textarea[^>]*><\/textarea>/);
 });
 
-test('image panel does not synthesize slots for a prompt-only listed operation', () => {
+test('image panel borrows sibling operation slots as display-only for a prompt-only operation', () => {
   const html = render(node('image', {prompt:'Draw'}), fixture('image'));
-  assert.doesNotMatch(html, /data-testid="wf-slot-wells"|data-slot="reference_image"/);
+  // 模型下存在支持素材输入的 listed 操作时，纯 prompt 操作默认显示借来的卡槽（displayOnly）。
+  assert.match(html, /data-testid="wf-slot-wells"/);
+  assert.match(html, /data-slot="images"/);
   assert.doesNotMatch(html, /aria-disabled="true"/);
+  // 单操作纯 prompt 模型不合成卡槽。
+  const solo = render(node('image', {prompt:'Draw'}), fixture('image', false));
+  assert.doesNotMatch(solo, /data-testid="wf-slot-wells"/);
 });
 
 test('automatic model adaptation is a status message, not an error', () => {

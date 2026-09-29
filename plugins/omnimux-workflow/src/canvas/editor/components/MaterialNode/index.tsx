@@ -1218,6 +1218,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           acceptedTypes: requestOrMode.acceptedTypes,
           max: requestOrMode.max,
           replaceEdgeId: requestOrMode.replaceEdgeId,
+          displayOnlyFromOperation: requestOrMode.displayOnlyFromOperation,
         });
         return;
       }

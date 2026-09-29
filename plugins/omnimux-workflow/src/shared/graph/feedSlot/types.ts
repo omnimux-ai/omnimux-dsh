@@ -50,6 +50,12 @@ export interface SlotLayout {
   /** True only when the selected operation declares a text/prompt input. */
   acceptsText?: boolean;
   operationId: string;
+  /**
+   * Set when the layout was borrowed from another listed operation of the same
+   * model (model-level material capability display). Submitting material through
+   * these slots must first switch the node's operation to this id.
+   */
+  displayOnlyFromOperation?: string;
   preset: SlotLayoutPreset;
   slots: SlotSpec[];
   swap: boolean;

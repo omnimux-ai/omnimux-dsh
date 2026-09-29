@@ -25,6 +25,8 @@ export interface SlotPickRequest {
   max: number | null;
   /** Stable occupant identity for replacement; absent for an empty well. */
   replaceEdgeId?: string;
+  /** Borrowed-capability display: commit must first switch the node to this operation. */
+  displayOnlyFromOperation?: string;
 }
 
 export interface SlotWellsProps {

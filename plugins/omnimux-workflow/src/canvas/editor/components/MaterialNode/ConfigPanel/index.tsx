@@ -81,6 +81,7 @@ import {
 import {
   hydrateSlotBindings,
   deriveSlotLayout,
+  deriveModelSlotLayout,
   swapNamedSlots,
   type SlotBindings,
   type SlotConflict,
@@ -249,7 +250,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const modelValue = typeof params?.model === 'string' ? params.model.trim() : '';
   const preferredOperationId = readPreferredOperationId(params as Record<string, unknown>);
   const currentOperationId = resolveSlotOperation(activeCatalog, modelValue, preferredOperationId, outputTypeForCompat, fingerprint);
-  const effectiveSlotLayout = useMemo(() => deriveSlotLayout(activeCatalog, modelValue, currentOperationId), [activeCatalog, modelValue, currentOperationId]);
+  const effectiveSlotLayout = useMemo(() => deriveModelSlotLayout(activeCatalog, modelValue, currentOperationId), [activeCatalog, modelValue, currentOperationId]);
 
   const fallbackState = useMemo<ChannelFallbackState>(() => {
     const family = (activeCatalog?.[materialType] as CapabilityModelItem[] | undefined)?.find((m) => m.id === modelValue)?.family;
@@ -712,7 +713,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           ) {
             if (nodeData.slotBindings && typeof nodeData.slotBindings === 'object') {
               const raw = nodeData.slotBindings as SlotBindings;
-              const nextSlotLayout = deriveSlotLayout(activeCatalog, newModelId, nextOperation);
+              const nextSlotLayout = deriveModelSlotLayout(activeCatalog, newModelId, nextOperation);
               const primarySlotKey = nextSlotLayout.slots[0]?.slot ?? '0';
               const keys = Object.keys(raw);
               const hasExtra = keys.some((k) => k !== primarySlotKey && (raw[k]?.length ?? 0) > 0);
@@ -774,8 +775,12 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   );
 
   const handlePickSlot = useCallback(
-    (request: SlotPickRequest) => onOpenResourcePicker?.(request),
-    [onOpenResourcePicker],
+    (request: SlotPickRequest) => onOpenResourcePicker?.(
+      displayedSlotLayout.displayOnlyFromOperation
+        ? { ...request, displayOnlyFromOperation: displayedSlotLayout.displayOnlyFromOperation }
+        : request,
+    ),
+    [onOpenResourcePicker, displayedSlotLayout],
   );
 
 
@@ -788,7 +793,9 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [t],
   );
   const missingRequiredSlots = useMemo(
-    () => displayedSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min),
+    () => (displayedSlotLayout.displayOnlyFromOperation
+      ? []
+      : displayedSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min)),
     [displayedSlotLayout, slotBindings],
   );
   const slotShortageReason = missingRequiredSlots.length > 0
