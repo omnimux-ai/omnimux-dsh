@@ -1,0 +1,37 @@
+{
+  "task": "Issue #2795 - 爆款趋势卡片复用灵感社区交互、详情弹窗与复刻入框优化",
+  "verifiedAt": "2026-09-29T08:38:00.000Z",
+  "environment": "OmniMux Dev App (Port 45120, CDP 9229)",
+  "results": {
+    "totalCards": 68,
+    "actions": {
+      "detail": {
+        "text": "详情",
+        "height": "28px",
+        "borderRadius": "9999px",
+        "bg": "rgb(44, 44, 46)",
+        "color": "rgb(249, 250, 251)",
+        "whiteSpace": "nowrap"
+      },
+      "recreate": {
+        "text": "复刻",
+        "height": "28px",
+        "borderRadius": "9999px",
+        "bg": "rgb(249, 250, 251)",
+        "color": "rgb(21, 21, 23)",
+        "whiteSpace": "nowrap"
+      }
+    },
+    "flows": {
+      "hover": "居中播放键 ▶ + 右上角 TikTok Badge + 底部详情/复刻浮层",
+      "detailModal": "唤起顶层弹窗，展示分镜与内容解构，ESC 正常关闭",
+      "recreateFlow": "精准预填会话输入框，挂载视频附件卡片与技能药丸，绝对零自动发送"
+    },
+    "screenshots": [
+      "trending-card-hovered.png",
+      "trending-modal-dialog.png",
+      "trending-replicate-active.png"
+    ]
+  },
+  "verdict": "PASS"
+}
