@@ -9,9 +9,11 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, utimesSync } from 'node:
 import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import {
   isBusinessSourceFile,
   isE2ETestFile,
+  hasStrongOracleSignal,
   isSpecPath,
   isE2EPath,
   isUiSourcePath,
@@ -20,6 +22,7 @@ import {
   taskChangeSet,
   taskSpecs,
   hasEvidenceAfterSpec,
+  findRepoRoot,
   decideQualityGate,
   handle,
 } from './guard-quality-loop.mjs'
@@ -61,6 +64,11 @@ function makeRepo(name) {
 
 function cleanup(root) {
   rmSync(root, { recursive: true, force: true })
+}
+
+
+function repoRootForSpawn() {
+  return findRepoRoot(fileURLToPath(new URL('.', import.meta.url)))
 }
 
 const SPEC_BODY =
@@ -265,13 +273,90 @@ test('fresh evidence produced after the spec satisfies the verify gate', () => {
 
     const res = decideQualityGate({
       toolName: 'default_api:write',
-      toolInput: { file_path: join(root, 'plugins/x/tests/e2e/login.spec.ts') },
+      toolInput: {
+        file_path: join(root, 'plugins/x/tests/e2e/login.spec.ts'),
+        content: "import assert from 'node:assert/strict'\nassert.equal(1, 1)\n",
+      },
       cwd: root,
     })
     assert.equal(res.decision, 'allow')
   } finally {
     cleanup(root)
   }
+})
+
+/* ------------------------------------------- 门禁二补充：强断言 / Fail-Closed */
+
+test('hasStrongOracleSignal accepts value comparisons and rejects weak oracles', () => {
+  assert.equal(hasStrongOracleSignal('assert.equal(a, b)'), true)
+  assert.equal(hasStrongOracleSignal('expect(x).toEqual(1)'), true)
+  assert.equal(hasStrongOracleSignal('t.equal(a, b)'), true)
+  assert.equal(hasStrongOracleSignal('assert.ok(x)'), false)
+  assert.equal(hasStrongOracleSignal('expect(x).toBeTruthy()'), false)
+  assert.equal(hasStrongOracleSignal(''), false)
+  assert.equal(hasStrongOracleSignal('// no asserts'), false)
+})
+
+test('E2E write with evidence but no strong oracle is denied', () => {
+  const root = makeRepo('weak-oracle')
+  try {
+    writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
+    const specAbs = join(root, 'specs/task.spec.md')
+    utimesSync(specAbs, (Date.now() - 10 * 60 * 1000) / 1000, (Date.now() - 10 * 60 * 1000) / 1000)
+    writeFileAt(root, '.workbuddy/evidence/run.json', '{"ok":true}')
+
+    for (const content of [
+      'test("x", () => {})\n',
+      'assert.ok(true)\n',
+      'expect(flag).toBeTruthy()\n',
+    ]) {
+      const res = decideQualityGate({
+        toolName: 'write',
+        toolInput: { file_path: join(root, 'plugins/x/tests/e2e/login.spec.ts'), content },
+        cwd: root,
+      })
+      assert.equal(res.decision, 'deny', JSON.stringify(content))
+      assert.equal(res.reason, 'missing-strong-oracle-for-e2e')
+    }
+  } finally {
+    cleanup(root)
+  }
+})
+
+test('E2E write with evidence and strong oracle is allowed', () => {
+  const root = makeRepo('strong-oracle')
+  try {
+    writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
+    const specAbs = join(root, 'specs/task.spec.md')
+    utimesSync(specAbs, (Date.now() - 10 * 60 * 1000) / 1000, (Date.now() - 10 * 60 * 1000) / 1000)
+    writeFileAt(root, '.workbuddy/evidence/run.json', '{"ok":true}')
+
+    const res = decideQualityGate({
+      toolName: 'write',
+      toolInput: {
+        file_path: join(root, 'plugins/x/tests/e2e/login.spec.ts'),
+        content: "import assert from 'node:assert/strict'\nassert.equal(status, 200)\n",
+      },
+      cwd: root,
+    })
+    assert.equal(res.decision, 'allow')
+  } finally {
+    cleanup(root)
+  }
+})
+
+test('CLI main fails closed on invalid JSON stdin', () => {
+  const script = join(repoRootForSpawn(), 'scripts/guard-quality-loop.mjs')
+  const r = spawnSync(process.execPath, [script], {
+    input: '{',
+    encoding: 'utf8',
+    timeout: 5000,
+  })
+  const out = String(r.stdout || '').trim()
+  assert.ok(out, 'stdout should contain deny JSON')
+  const parsed = JSON.parse(out)
+  assert.equal(parsed.hookSpecificOutput.permissionDecision, 'deny')
+  assert.match(String(parsed.hookSpecificOutput.permissionDecisionReason || ''), /Fail-Closed|安全阻断/)
 })
 
 /* ------------------------------------------- 门禁三：端到端完整性（新增） */
