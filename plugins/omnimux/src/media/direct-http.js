@@ -105,6 +105,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
           duration: body.duration,
           seed: body.seed,
           wait: body.wait !== false,
+          requireListed: false,
           references: Array.isArray(body.references) ? body.references : undefined,
           env: envKey ? { OMNIMUX_API_KEY: envKey } : undefined,
         }

@@ -24,6 +24,7 @@ export const LEGACY_OPERATION_MAP = Object.freeze({
   music: 'text_to_music',
   t2i: 'text_to_image',
   i2i: 'image_to_image',
+  image_edit: 'multi_reference',
 });
 
 /**
