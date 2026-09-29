@@ -563,9 +563,9 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
               onDoubleClick={handleDoubleClick}
             >
               {/* 左上角候选多图纵向微型 1:1 居中滚动切换栏 (对标参考图) */}
-              {(sessionMediaList || mediaList).length > 1 ? (
+              {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating')).length > 1 ? (
                 <div className="omx-mv-thumbnails-rail" title="点击切换图片 (保持当前缩放比例)">
-                  {(sessionMediaList || mediaList).map((item) => {
+                  {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating')).map((item) => {
                     const isSelected = item.id === activeItem?.id;
                     if (item.status === 'generating') {
                       return (
@@ -616,6 +616,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                             src={item.url}
                             alt={item.title || '缩略图'}
                             className="omx-mv-thumbnails-rail__img"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         )}
                         {item.type === 'video' && item.duration ? (
