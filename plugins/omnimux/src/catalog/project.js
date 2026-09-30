@@ -258,6 +258,7 @@ export function projectChannelGroups(modelId) {
         : {}),
       ...(group.sla && typeof group.sla === 'object' ? { sla: structuredClone(group.sla) } : {}),
       enabled: group.enabled !== false,
+      ...(group.default === true ? { default: true } : {}),
     };
   });
 }

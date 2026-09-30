@@ -34,7 +34,7 @@ export const DEFAULT_FALLBACK_CATALOG = {
       },
       channelGroups: [
         { id: 'pro', label: '旗舰版', badge: '满血出片 · 极致画质', pricing: { pointsEstimate: 0.2, discountRate: 1.5, billingMode: 'per_task' } },
-        { id: 'standard', label: '标准版', badge: '官方直签 · 标配出片', pricing: { pointsEstimate: 0.1, discountRate: 1, billingMode: 'per_task' } },
+        { id: 'standard', label: '标准版', default: true, badge: '官方直签 · 标配出片', pricing: { pointsEstimate: 0.1, discountRate: 1, billingMode: 'per_task' } },
         { id: 'economy', label: '经济版', badge: '经济走量 · 按次计费', pricing: { pointsEstimate: 0.1, discountRate: 0.8, billingMode: 'per_task' } },
       ],
     },
@@ -147,7 +147,8 @@ export function parseCatalogToCascade(rawList = []) {
 
     const brandEntry = brandMap.get(fam);
     const channels = (item.channelGroups || []).map((ch) => ({
-      id: ch.id === 'pro' && ch.label?.includes('旗舰') ? 'flagship' : ch.id,
+      id: ch.id,
+      default: ch.default === true,
       name: ch.label || ch.id,
       price: ch.pricing?.pointsEstimate ? `≈${ch.pricing.pointsEstimate} 积分` : '按量计费',
       tag: ch.badge || (ch.pricing?.billingMode === 'per_second' ? '按秒计费' : '按次专线'),
@@ -178,6 +179,11 @@ export function parseCatalogToCascade(rawList = []) {
   }
 
   return Array.from(brandMap.values());
+}
+
+/** Prefer the catalog's declared default without changing channel identity or order. */
+export function defaultMediaChannel(model) {
+  return model?.channels?.find((channel) => channel.default) || model?.channels?.[0];
 }
 
 export const DEFAULT_CASCADE_MODELS = [
