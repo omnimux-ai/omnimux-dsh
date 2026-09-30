@@ -143,10 +143,10 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
           annotations,
         }),
       });
-      if (!resp.ok) {
-        throw new Error(`Media generation failed with HTTP status ${resp.status}`);
-      }
       const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.error || `Media generation failed with HTTP status ${resp.status}`);
+      }
       if (data.ok && (data.url || data.dest)) {
         store.updateMedia(taskId, {
           status: 'completed',

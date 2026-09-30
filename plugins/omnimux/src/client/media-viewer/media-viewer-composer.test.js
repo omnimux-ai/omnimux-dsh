@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { describe, it } from 'node:test';
-import { DEFAULT_CASCADE_MODELS } from './MediaViewerComposerData.js';
+import { DEFAULT_CASCADE_MODELS, defaultMediaChannel, parseCatalogToCascade } from './MediaViewerComposerData.js';
+import { projectChannelGroups } from '../../catalog/project.js';
 import { cleanAnnotationPrefix, inferMimeType, isAllowedReferenceUrl, makeBucketKey, rejectionOf, serializeReferenceAssets } from './media-slot.js';
 import { PRESET_REFERENCE_ASSETS } from './reference-constants.js';
 import { MEDIA_VIEWER_CSS } from './styles.js';
@@ -19,9 +20,21 @@ describe('MediaViewerComposer Component Contract', () => {
     assert.ok(seedance20, 'Must include seedance-2.0 model');
     assert.ok(seedance20.channels.length >= 2, 'Must include channels/versions');
 
-    const flagship = seedance20.channels.find((c) => c.id === 'flagship');
+    const flagship = seedance20.channels.find((c) => c.id === 'pro');
     assert.ok(flagship, 'Must include flagship version');
     assert.equal(flagship.name, '旗舰版');
+  });
+
+  it('preserves declared channel identities and selects the authoritative default', () => {
+    const source = projectChannelGroups('gpt-image-2.5');
+    const [brand] = parseCatalogToCascade([{ id: 'gpt-image-2.5', family: 'openai', channelGroups: source }]);
+    const model = brand.models[0];
+    assert.deepEqual(model.channels.map((channel) => channel.id), source.map((channel) => channel.id));
+    assert.equal(model.channels.find((channel) => channel.name === '旗舰版').id, 'pro');
+    assert.equal(defaultMediaChannel(model).id, 'standard');
+    assert.equal(source.find((channel) => channel.id === 'standard').default, true);
+    assert.equal(defaultMediaChannel({ channels: [{ id: 'custom-first' }] }).id, 'custom-first');
+    assert.equal(defaultMediaChannel({ channels: [] }), undefined);
   });
 
   it('includes image and video brands in the cascade catalog', () => {

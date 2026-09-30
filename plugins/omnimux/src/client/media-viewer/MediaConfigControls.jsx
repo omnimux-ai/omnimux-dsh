@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_FALLBACK_CATALOG,
+  defaultMediaChannel,
   parseCatalogToCascade,
 } from './MediaViewerComposerData.js';
 
@@ -68,14 +69,14 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
 
   const [brand, setBrand] = useState(() => currentCascadeList[0]);
   const [model, setModel] = useState(() => currentCascadeList[0]?.models?.[0]);
-  const [channel, setChannel] = useState(() => currentCascadeList[0]?.models?.[0]?.channels?.[0]);
+  const [channel, setChannel] = useState(() => defaultMediaChannel(currentCascadeList[0]?.models?.[0]));
   const [hoveredBrand, setHoveredBrand] = useState(() => currentCascadeList[0]);
   const [hoveredModel, setHoveredModel] = useState(() => currentCascadeList[0]?.models?.[0]);
 
   useEffect(() => {
     const defaultBrand = currentCascadeList[0];
     const defaultModel = defaultBrand?.models?.[0];
-    const defaultChannel = defaultModel?.channels?.[0];
+    const defaultChannel = defaultMediaChannel(defaultModel);
     setBrand(defaultBrand);
     setModel(defaultModel);
     setChannel(defaultChannel);
@@ -194,7 +195,7 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
                 className={`omx-brand-tile ${hoveredBrand?.brandId === b.brandId ? 'is-active' : ''}`}
                 onMouseEnter={() => { setHoveredBrand(b); setHoveredModel(b.models[0]); }}
                 onFocus={() => { setHoveredBrand(b); setHoveredModel(b.models[0]); }}
-                onClick={() => pickChannel(b, b.models[0], b.models[0]?.channels?.[0])}
+                onClick={() => pickChannel(b, b.models[0], defaultMediaChannel(b.models[0]))}
               >
                 <span className="omx-brand-name">{b.brandName}</span>
                 {brand?.brandId === b.brandId && <CheckIcon />}
@@ -210,7 +211,7 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
                 className={`omx-model-card-tile ${hoveredModel?.id === m.id ? 'is-active' : ''}`}
                 onMouseEnter={() => setHoveredModel(m)}
                 onFocus={() => setHoveredModel(m)}
-                onClick={() => pickChannel(hoveredBrand, m, m.channels?.[0])}
+                onClick={() => pickChannel(hoveredBrand, m, defaultMediaChannel(m))}
               >
                 <div className="omx-model-card-head">
                   <span>{m.name}</span>
