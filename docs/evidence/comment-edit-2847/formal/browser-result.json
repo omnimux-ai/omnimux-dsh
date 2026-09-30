@@ -2,7 +2,7 @@
   "pass": true,
   "mode": "offline-simulated",
   "notLiveGeneration": true,
-  "spaceId": 170,
+  "spaceId": 176,
   "attached": {
     "badge": "标记 1",
     "image": "/original.png",
@@ -12,7 +12,7 @@
     "height": 64
   },
   "result": {
-    "id": "task_1790741658008_uqa81",
+    "id": "task_1790742414717_umb2a",
     "status": "completed",
     "url": "/result.png",
     "imgUrl": "/result.png",
@@ -22,8 +22,8 @@
   "positive": {
     "identity": {
       "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-comment-edit-issue-2847",
-      "head": "39c6449778c57d2b11451016e17cbb70b508f343",
-      "dirty": " M plugins/omnimux/src/catalog/project.js\n M plugins/omnimux/src/client/media-viewer/MediaConfigControls.jsx\n M plugins/omnimux/src/client/media-viewer/MediaViewerComposerData.js\n M plugins/omnimux/src/client/media-viewer/MediaViewerTab.jsx\n M plugins/omnimux/src/client/media-viewer/media-viewer-composer.test.js\n?? specs/comment-edit-submit-2847.spec.md\n?? tests/e2e/media-comment-edit-server.mjs\n?? tests/e2e/media-comment-edit.browser.mjs\n?? tests/e2e/media-comment-edit.e2e.test.mjs\n",
+      "head": "332bf5c2de5cb4c0d81979c3021b50e31d3f8dad",
+      "dirty": " M tests/e2e/media-comment-edit-server.mjs\n",
       "sourceHashes": {
         "plugins/omnimux/src/catalog/project.js": "38d2a7183546aa8990c9e74d679aab3a9243f4cf6caf1e306ad55ef3a92463ec",
         "plugins/omnimux/src/client/media-viewer/MediaViewerTab.jsx": "2c27b327041e8f600574e5d353f5384b7eea75ee403acb8a5725864769dc77fc",
@@ -34,10 +34,10 @@
         "plugins/omnimux/src/client/media-viewer/media-viewer-store.js": "f0322c45f5fc06ecb0aef6a52a910a2dae13b5f2c296097a3f16a3da07e225b6",
         "plugins/omnimux/src/client/media-viewer/styles.js": "e533d1700a53949411f2eb514efb07a5800f092738393368c2b81ee3ff6b3f0d"
       },
-      "bundleHash": "51949aa3a482f7dfc5543ec610c5f8e685b29eb631a102bf14106319bee4fa2f",
+      "bundleHash": "5cd592706d752e0e7e343ec02fb536d7856da4408efe096a8c0f877ed576e016",
       "mode": "offline-simulated",
-      "pid": 27313,
-      "url": "http://127.0.0.1:52202"
+      "pid": 66601,
+      "url": "http://127.0.0.1:56403"
     },
     "requests": [
       {
@@ -61,12 +61,12 @@
         ],
         "annotations": [
           {
-            "id": "ann_1790741654863_tcdl",
+            "id": "ann_1790742411575_kkkh",
             "index": 1,
             "normalized_x": 0.45,
             "normalized_y": 0.349,
             "comment": "把背景换成蓝绿色，保持主体不变",
-            "createdAt": 1790741654863
+            "createdAt": 1790742411576
           }
         ]
       }
@@ -75,8 +75,8 @@
   "negative": {
     "identity": {
       "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-comment-edit-issue-2847",
-      "head": "39c6449778c57d2b11451016e17cbb70b508f343",
-      "dirty": " M plugins/omnimux/src/catalog/project.js\n M plugins/omnimux/src/client/media-viewer/MediaConfigControls.jsx\n M plugins/omnimux/src/client/media-viewer/MediaViewerComposerData.js\n M plugins/omnimux/src/client/media-viewer/MediaViewerTab.jsx\n M plugins/omnimux/src/client/media-viewer/media-viewer-composer.test.js\n?? specs/comment-edit-submit-2847.spec.md\n?? tests/e2e/media-comment-edit-server.mjs\n?? tests/e2e/media-comment-edit.browser.mjs\n?? tests/e2e/media-comment-edit.e2e.test.mjs\n",
+      "head": "332bf5c2de5cb4c0d81979c3021b50e31d3f8dad",
+      "dirty": " M tests/e2e/media-comment-edit-server.mjs\n",
       "sourceHashes": {
         "plugins/omnimux/src/catalog/project.js": "38d2a7183546aa8990c9e74d679aab3a9243f4cf6caf1e306ad55ef3a92463ec",
         "plugins/omnimux/src/client/media-viewer/MediaViewerTab.jsx": "2c27b327041e8f600574e5d353f5384b7eea75ee403acb8a5725864769dc77fc",
@@ -87,10 +87,10 @@
         "plugins/omnimux/src/client/media-viewer/media-viewer-store.js": "f0322c45f5fc06ecb0aef6a52a910a2dae13b5f2c296097a3f16a3da07e225b6",
         "plugins/omnimux/src/client/media-viewer/styles.js": "e533d1700a53949411f2eb514efb07a5800f092738393368c2b81ee3ff6b3f0d"
       },
-      "bundleHash": "51949aa3a482f7dfc5543ec610c5f8e685b29eb631a102bf14106319bee4fa2f",
+      "bundleHash": "5cd592706d752e0e7e343ec02fb536d7856da4408efe096a8c0f877ed576e016",
       "mode": "offline-simulated",
-      "pid": 27313,
-      "url": "http://127.0.0.1:52202"
+      "pid": 66601,
+      "url": "http://127.0.0.1:56403"
     },
     "requests": [
       {
@@ -114,12 +114,12 @@
         ],
         "annotations": [
           {
-            "id": "ann_1790741654863_tcdl",
+            "id": "ann_1790742411575_kkkh",
             "index": 1,
             "normalized_x": 0.45,
             "normalized_y": 0.349,
             "comment": "把背景换成蓝绿色，保持主体不变",
-            "createdAt": 1790741654863
+            "createdAt": 1790742411576
           }
         ]
       },
