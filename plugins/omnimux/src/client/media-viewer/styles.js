@@ -1088,34 +1088,36 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 0 0 2px rgba(121, 97, 242, 0.25), 0 20px 48px rgba(0, 0, 0, 0.7); /* exempt-ui03: 极光紫微光焦点与深度阴影 */
 }
 
-/* 素材卡槽：默认 3:4 竖版比例 (48×64)。位置只通过 --slot-* 变量传入，不写内联尺寸。 */
+/* 素材卡槽：默认竖版比例 (40×56px 按钮边框线)。位置只通过 --slot-* 变量传入，不写内联尺寸。 */
 .omx-slot-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  min-height: 68px;
+  gap: 10px;
+  min-height: 60px;
 }
 .omx-slot-group {
   position: relative;
-  height: 68px;
+  height: 60px;
   flex: none;
 }
 .omx-slot-fan {
   position: relative;
-  height: 66px;
+  height: 58px;
   width: var(--slot-fan-width);
 }
 .omx-slot-card,
+.omx-slot-btn,
 .omx-slot-add {
   position: absolute;
   top: 2px;
   left: 0;
-  width: 48px;
-  height: 64px;
-  border-radius: 8px;
+  width: 40px !important;
+  height: 56px !important;
+  min-width: 40px !important;
+  border-radius: 8px !important;
   transform: translateX(var(--slot-shift, 0px));
   transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, opacity 180ms ease, border-color 180ms ease, background 180ms ease;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
 }
 .omx-slot-badge-mark {
   position: absolute;
@@ -1135,7 +1137,8 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 2px 5px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 角标微阴影 */
   pointer-events: none;
 }
-.omx-slot-group.is-piled:not(.is-open) .omx-slot-add { transform: translateX(74px); }
+.omx-slot-group.is-piled:not(.is-open) .omx-slot-btn,
+.omx-slot-group.is-piled:not(.is-open) .omx-slot-add { transform: translateX(62px); }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-0 { transform: translate(2px, 2px) rotate(0deg); }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-1 { transform: translate(-2px, 4px) rotate(-6deg); }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-2 { transform: translate(5px, 5px) rotate(5deg); }
@@ -1143,7 +1146,7 @@ export const MEDIA_VIEWER_CSS = `
   z-index: var(--slot-z, 1);
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 1px solid var(--dsw-alias-border-l2) !important;
   box-shadow: 0 4px 14px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 叠卡层次 */
 }
 .omx-slot-card:hover {
@@ -1158,7 +1161,7 @@ export const MEDIA_VIEWER_CSS = `
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 9px;
+  border-radius: 7px;
 }
 .omx-slot-audio {
   width: 100%;
@@ -1195,38 +1198,42 @@ export const MEDIA_VIEWER_CSS = `
   color: var(--dsw-alias-label-primary);
   transform: scale(1.1);
 }
+.omx-slot-btn,
 .omx-slot-add {
   z-index: 8;
-  border: 1px dashed var(--dsw-alias-border-l3);
-  background: var(--dsw-alias-bg-layer-2);
-  color: var(--dsw-alias-label-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  box-sizing: border-box;
+  border: 1px solid var(--dsw-alias-border-l2) !important;
+  background: var(--dsw-alias-bg-layer-2) !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
 }
+.omx-slot-btn:hover,
 .omx-slot-add:hover {
-  background: var(--dsw-alias-bg-layer-3);
-  border-color: var(--dsw-alias-border-l4);
-  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-3) !important;
+  border-color: var(--dsw-alias-border-l4) !important;
+  color: var(--dsw-alias-label-primary) !important;
   transform: translateY(-1px) translateX(var(--slot-shift, 0px));
   box-shadow: 0 4px 12px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 卡槽悬浮微光 */
 }
+.omx-slot-btn svg,
 .omx-slot-add svg {
-  width: 24px;
-  height: 24px;
-  color: var(--dsw-alias-label-tertiary);
+  width: 20px !important;
+  height: 20px !important;
+  color: var(--dsw-alias-label-secondary);
   transition: color 180ms ease, transform 180ms ease;
 }
+.omx-slot-btn:hover svg,
 .omx-slot-add:hover svg {
   color: var(--dsw-alias-label-primary);
   transform: scale(1.08);
 }
 .omx-slot-count {
   position: absolute;
-  left: 36px;
+  left: 30px;
   bottom: 0px;
   min-width: 20px;
   height: 20px;
@@ -1297,7 +1304,7 @@ export const MEDIA_VIEWER_CSS = `
   display: flex;
   align-items: flex-start;
   flex-shrink: 0;
-  min-height: 64px;
+  min-height: 56px;
   padding-bottom: 0;
 }
 .omx-mv-prompt-row .omx-mv-prompt-box {
@@ -1306,7 +1313,7 @@ export const MEDIA_VIEWER_CSS = `
   width: auto;
 }
 .omx-mv-prompt-textarea {
-  min-height: 64px;
+  min-height: 56px;
 }
 
 .omx-mv-ref-row {
