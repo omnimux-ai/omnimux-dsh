@@ -1201,12 +1201,10 @@ export const MEDIA_VIEWER_CSS = `
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   box-sizing: border-box;
 }
 .omx-slot-add:hover {
@@ -1217,32 +1215,15 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 4px 12px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 卡槽悬浮微光 */
 }
 .omx-slot-add svg {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   color: var(--dsw-alias-label-tertiary);
   transition: color 180ms ease, transform 180ms ease;
 }
 .omx-slot-add:hover svg {
   color: var(--dsw-alias-label-primary);
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
-.omx-slot-add span {
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 500;
-  color: var(--dsw-alias-label-tertiary);
-  white-space: nowrap;
-  letter-spacing: -0.2px;
-  text-align: center;
-  max-width: 58px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 180ms ease;
-}
-.omx-slot-add:hover span {
-  color: var(--dsw-alias-label-secondary);
-}
-.omx-slot-add:hover { border-color: var(--dsw-alias-border-l4); }
 .omx-slot-count {
   position: absolute;
   left: 50px;
