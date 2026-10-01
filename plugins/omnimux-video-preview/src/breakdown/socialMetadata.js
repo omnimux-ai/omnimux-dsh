@@ -193,6 +193,8 @@ function normalizeAwemePayload(aweme) {
   const videoUrl = resolveAwemeVideoUrl(videoObj)
   const durationMs = typeof videoObj.duration === 'number' ? videoObj.duration : 0
   const duration = durationMs > 1000 ? Math.round(durationMs / 1000) : durationMs
+  const width = typeof videoObj.width === 'number' && videoObj.width > 0 ? videoObj.width : null
+  const height = typeof videoObj.height === 'number' && videoObj.height > 0 ? videoObj.height : null
 
   return {
     title: desc || '短视频分析',
@@ -202,6 +204,8 @@ function normalizeAwemePayload(aweme) {
     cover_url: coverUrl,
     video_url: videoUrl,
     duration,
+    width,
+    height,
     stats: extractAwemeStats(aweme.statistics),
   }
 }
@@ -344,6 +348,8 @@ function normalizeFlatPayload(data) {
   const coverUrl = pickFirstNonEmptyString(data.cover_url, data.coverUrl, data.cover, data.display_url)
   const stats = extractFlatStats(data)
   const duration = resolveFlatDuration(data)
+  const width = typeof data.width === 'number' && data.width > 0 ? data.width : null
+  const height = typeof data.height === 'number' && data.height > 0 ? data.height : null
 
   return {
     title,
@@ -353,6 +359,8 @@ function normalizeFlatPayload(data) {
     cover_url: coverUrl,
     video_url: videoUrl,
     duration,
+    width,
+    height,
     stats: {
       likes: pickNumberMetric(stats.likes, stats.digg_count),
       comments: pickNumberMetric(stats.comments, stats.comment_count),

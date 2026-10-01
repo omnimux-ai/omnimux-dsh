@@ -18,12 +18,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 const args = process.argv.slice(2)
 const command = path.basename(process.argv[1])
-const phase = command === 'ffprobe' ? 'probe'
+const phase = command === 'ffprobe' ? (args.includes('-select_streams') ? 'dims' : 'probe')
   : args.includes('-vframes') ? 'cover'
   : args.includes('-crf') ? 'sample' : 'scenes'
 fs.appendFileSync(process.env.VIDEO_PROCESS_TRACE, JSON.stringify({ command, args, phase }) + '\\n')
 if (process.env.VIDEO_PROCESS_FAIL.split(',').includes(phase)) process.exit(1)
-if (phase === 'probe') process.stdout.write('12.8\\n')
+if (phase === 'dims') process.stdout.write('1920,1080\\n')
+else if (phase === 'probe') process.stdout.write('12.8\\n')
 else if (phase === 'scenes') process.stderr.write('pts_time:4.0\\npts_time:8.0\\n')
 else {
   const output = args.at(-1)
@@ -90,6 +91,11 @@ function expectedConversionCalls(videoPath) {
       args: ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', videoPath],
       options: { timeout: 5000, encoding: 'utf8' },
     },
+    {
+      file: 'ffprobe',
+      args: ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', videoPath],
+      options: { timeout: 5000 },
+    },
   ]
 }
 
@@ -104,7 +110,9 @@ for (const filename of [
     const run = runCase(t, { filename })
     const expected = expectedConversionCalls(run.videoPath)
     assert.deepEqual(run.calls, expected)
-    assert.deepEqual(run.processes.slice(0, 3).map(({ command, args }) => ({ file: command, args })),
+    // 进程实际顺序: cover → sample → duration-probe → scenes → dims-probe
+    assert.deepEqual(
+      [0, 1, 2, 4].map((i) => ({ file: run.processes[i].command, args: run.processes[i].args })),
       expected.map(({ file, args }) => ({ file, args })))
     assert.deepEqual(run.processes[3].args,
       ['-v', 'info', '-i', run.videoPath, '-map', '0:v:0', '-vf', 'select=gt(scene\\,0.35),showinfo', '-vsync', 'vfr', '-f', 'null', '-'])
@@ -114,12 +122,13 @@ for (const filename of [
     assert.deepEqual(run.analysisVideos, [run.videoPath.replace(/\.mp4$/i, '_sample.mp4')])
     assert.match(run.results[0].video.cover_url, /^\/omnimux\/video-preview\/stream\?grant=[^&]+&signature=[a-f0-9]{64}$/)
     assert.equal(run.results[0].is_video_breakdown, true)
+    assert.deepEqual([run.results[0].video.width, run.results[0].video.height], [1920, 1080])
   })
 }
 
 test('reuses cached cover and sample without re-running conversion', (t) => {
   const run = runCase(t, { repeat: 2 })
-  assert.deepEqual(run.processes.map(({ phase }) => phase), ['cover', 'sample', 'probe', 'scenes', 'probe', 'scenes'])
+  assert.deepEqual(run.processes.map(({ phase }) => phase), ['cover', 'sample', 'probe', 'scenes', 'dims', 'probe', 'scenes', 'dims'])
   assert.deepEqual(run.analysisVideos, [run.videoPath.replace(/\.mp4$/, '_sample.mp4'), run.videoPath.replace(/\.mp4$/, '_sample.mp4')])
   assert.equal(run.results[0].video.cover_url, run.results[1].video.cover_url)
 })
@@ -127,7 +136,7 @@ test('reuses cached cover and sample without re-running conversion', (t) => {
 for (const size of [1024, sampleLimit]) {
   test(`analyzes the original video without sampling at ${size} bytes`, (t) => {
     const run = runCase(t, { size })
-    assert.deepEqual(run.processes.map(({ phase }) => phase), ['cover', 'probe', 'scenes'])
+    assert.deepEqual(run.processes.map(({ phase }) => phase), ['cover', 'probe', 'scenes', 'dims'])
     assert.deepEqual(run.analysisVideos, [run.videoPath])
   })
 }

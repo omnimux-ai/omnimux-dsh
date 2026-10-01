@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import { PlayIcon } from '../icons.jsx'
 import { VideoPlayerModeBar, VideoControlsBar } from './VideoPlayerControls.jsx'
+import { pickAspectBucket, resolveDeclaredRatio } from './breakdownDataUtils.js'
 
 function VideoEmbedFrame({ embedUrl, title }) {
   return (
@@ -32,10 +33,14 @@ function VideoCentralPlayButton({ onTogglePlay }) {
   )
 }
 
-function handleLoadedMetadata(e, setDuration) {
-  const dur = e.target.duration
+function handleLoadedMetadata(e, setDuration, onRatioMeasured) {
+  const el = e.target
+  const dur = el.duration
   if (dur && Number.isFinite(dur)) {
     setDuration(dur)
+  }
+  if (onRatioMeasured && el.videoWidth > 0 && el.videoHeight > 0) {
+    onRatioMeasured(el.videoWidth / el.videoHeight)
   }
 }
 
@@ -52,7 +57,7 @@ function NativeVideoPlayer({ opts }) {
         onTimeUpdate={(e) => opts.setCurrentTime(e.target.currentTime)}
         onPlay={() => opts.setIsPlaying(true)}
         onPause={() => opts.setIsPlaying(false)}
-        onLoadedMetadata={(e) => handleLoadedMetadata(e, opts.setDuration)}
+        onLoadedMetadata={(e) => handleLoadedMetadata(e, opts.setDuration, opts.onRatioMeasured)}
       />
       {!opts.isPlaying ? (
         <VideoCentralPlayButton onTogglePlay={opts.onTogglePlay} />
@@ -71,6 +76,22 @@ function NativeVideoPlayer({ opts }) {
   )
 }
 
+function CoverOnlyImage({ coverUrl, onRatioMeasured }) {
+  return (
+    <img
+      className="omnimux-video-breakdown-video-el"
+      src={coverUrl}
+      alt="Video Cover"
+      onLoad={(e) => {
+        const el = e.target
+        if (onRatioMeasured && el.naturalWidth > 0 && el.naturalHeight > 0) {
+          onRatioMeasured(el.naturalWidth / el.naturalHeight)
+        }
+      }}
+    />
+  )
+}
+
 function renderPlayerContent(opts) {
   if (opts.isEmbedMode || (!opts.streamUrl && opts.embedUrl)) {
     return <VideoEmbedFrame embedUrl={opts.embedUrl} title={opts.title} />
@@ -79,7 +100,7 @@ function renderPlayerContent(opts) {
     return <NativeVideoPlayer opts={opts} />
   }
   if (opts.coverUrl) {
-    return <img className="omnimux-video-breakdown-video-el" src={opts.coverUrl} alt="Video Cover" />
+    return <CoverOnlyImage coverUrl={opts.coverUrl} onRatioMeasured={opts.onRatioMeasured} />
   }
   return null
 }
@@ -90,6 +111,11 @@ export function VideoPlayerCard(props) {
   const maxDuration = props.duration || video.duration_seconds || 100
   const showModeBar = Boolean(embedUrl && streamUrl)
   const isEmbedMode = Boolean(embedUrl && playerMode === 'embed')
+  const [measuredRatio, setMeasuredRatio] = useState(null)
+
+  const declaredRatio = useMemo(() => resolveDeclaredRatio(video), [video])
+  const effectiveRatio = declaredRatio !== null ? declaredRatio : measuredRatio
+  const cardStyle = { '--omnimux-player-aspect': pickAspectBucket(effectiveRatio) }
 
   const handleSliderChange = (e) => {
     const val = parseFloat(e.target.value)
@@ -117,6 +143,7 @@ export function VideoPlayerCard(props) {
     onTogglePlay: props.onTogglePlay,
     onToggleMute: props.onToggleMute,
     onSliderChange: handleSliderChange,
+    onRatioMeasured: setMeasuredRatio,
   }
 
   return (
@@ -124,7 +151,7 @@ export function VideoPlayerCard(props) {
       {showModeBar ? (
         <VideoPlayerModeBar playerMode={playerMode} setPlayerMode={setPlayerMode} />
       ) : null}
-      <div className="omnimux-video-breakdown-player-card">
+      <div className="omnimux-video-breakdown-player-card" style={cardStyle}>
         {renderPlayerContent(contentOpts)}
       </div>
     </React.Fragment>
