@@ -198,7 +198,12 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
         } catch {}
       }
     } finally {
-      store.setGenerating(false);
+      // 安全并发任务管理：仅当当前会话中没有其他正在生成的任务时才复位 isGenerating
+      const currentList = store.getSnapshot().mediaList || [];
+      const stillGenerating = currentList.some((m) => m.id !== taskId && m.status === 'generating');
+      if (!stillGenerating) {
+        store.setGenerating(false);
+      }
     }
   };
 
