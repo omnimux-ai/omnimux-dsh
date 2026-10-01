@@ -126,28 +126,59 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
         ? await Promise.all(assets.map(materializeAssetFile))
         : assets;
       const serializedReferences = serializeReferenceAssets(materializedAssets);
-      const resp = await fetch('/omnimux/api/media/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          kind,
-          operation,
-          model,
-          channel,
-          aspectRatio: params?.aspectRatio,
-          resolution: params?.resolution,
-          duration: params?.duration,
-          sessionId,
-          references: serializedReferences,
-          annotations,
-        }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data?.error || `Media generation failed with HTTP status ${resp.status}`);
+
+      // 客户端渠道平滑自愈与容灾候选集构建
+      const primaryChannel = (model === 'gpt-image-2.5' && (!channel || channel === 'standard'))
+        ? 'economy'
+        : channel;
+      const fallbackChannels = model === 'gpt-image-2.5'
+        ? [primaryChannel, 'economy', 'pro'].filter((ch, i, arr) => ch && arr.indexOf(ch) === i)
+        : [primaryChannel];
+
+      let lastError = null;
+      let data = null;
+
+      for (const candidateChannel of fallbackChannels) {
+        try {
+          const resp = await fetch('/omnimux/api/media/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt,
+              kind,
+              operation,
+              model,
+              channel: candidateChannel,
+              aspectRatio: params?.aspectRatio,
+              resolution: params?.resolution,
+              duration: params?.duration,
+              sessionId,
+              references: serializedReferences,
+              annotations,
+            }),
+          });
+          const resJson = await resp.json();
+          if (!resp.ok) {
+            lastError = new Error(resJson?.error || `Media generation failed with HTTP status ${resp.status}`);
+            const errMsg = String(resJson?.error || '');
+            if (!/分组|渠道|403|unauthorized|forbidden|channel/i.test(errMsg)) {
+              break;
+            }
+            continue;
+          }
+          if (resJson.ok) {
+            data = resJson;
+            break;
+          }
+        } catch (fetchErr) {
+          lastError = fetchErr;
+        }
       }
-      if (data.ok && (data.url || data.dest)) {
+
+      if (!data && lastError) {
+        throw lastError;
+      }
+      if (data?.ok && (data.url || data.dest)) {
         store.updateMedia(taskId, {
           status: 'completed',
           url: data.url || `file://${data.dest}`,
