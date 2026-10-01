@@ -5,13 +5,14 @@
  * - size budget (lines and bytes) so the file stays a thin entrypoint;
  * - every relative Markdown link resolves to an existing path, and `#anchor`
  *   links into Markdown files match a heading;
+ * - nested `plugins/<name>/AGENTS.md` files stay small and their links resolve;
  * - CLAUDE.md stays a pointer to AGENTS.md;
  * - hard bounds that must never be slimmed away keep their marker text.
  */
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -68,20 +69,50 @@ test('AGENTS.md stays within its always-on size budget', () => {
   assert.ok(bytes <= MAX_BYTES, `AGENTS.md has ${bytes} bytes (max ${MAX_BYTES}); move detail into contracts or skills`)
 })
 
-test('AGENTS.md relative links and anchors resolve', () => {
+/**
+ * Relative links in `markdown` (resolved against `baseDir`) whose path or
+ * Markdown heading anchor does not exist.
+ * @param {string} markdown
+ * @param {string} baseDir
+ * @returns {string[]}
+ */
+function brokenLinks(markdown, baseDir) {
   const failures = []
-  for (const [, target] of agents.matchAll(/\]\(([^)\s]+)\)/g)) {
+  for (const [, target] of markdown.matchAll(/\]\(([^)\s]+)\)/g)) {
     if (/^[a-z]+:/i.test(target)) continue
     const [rawPath, anchor] = target.split('#')
-    const full = join(root, decodeURIComponent(rawPath))
-    if (!existsSync(full)) {
+    const full = rawPath ? join(baseDir, decodeURIComponent(rawPath)) : null
+    if (full && !existsSync(full)) {
       failures.push(`missing path: ${target}`)
       continue
     }
-    if (anchor && rawPath.endsWith('.md') && statSync(full).isFile()) {
+    if (full && anchor && rawPath.endsWith('.md') && statSync(full).isFile()) {
       const slugs = headingSlugs(readFileSync(full, 'utf8'))
       if (!slugs.has(decodeURIComponent(anchor))) failures.push(`missing anchor: ${target}`)
     }
+  }
+  return failures
+}
+
+/** Nested always-on files: `plugins/<name>/AGENTS.md`. */
+const NESTED_MAX_LINES = 60
+const nestedAgents = readdirSync(join(root, 'plugins'), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && existsSync(join(root, 'plugins', entry.name, 'AGENTS.md')))
+  .map((entry) => join(root, 'plugins', entry.name, 'AGENTS.md'))
+
+test('AGENTS.md relative links and anchors resolve', () => {
+  assert.deepEqual(brokenLinks(agents, root), [])
+})
+
+test('nested plugin AGENTS.md files stay small and their links resolve', () => {
+  assert.ok(existsSync(join(root, 'plugins/omnimux/AGENTS.md')), 'the execution hub owns plugins/omnimux/AGENTS.md')
+  const failures = []
+  for (const file of nestedAgents) {
+    const text = readFileSync(file, 'utf8')
+    const rel = relative(root, file)
+    const lines = text.split('\n').length
+    if (lines > NESTED_MAX_LINES) failures.push(`${rel}: ${lines} lines (max ${NESTED_MAX_LINES})`)
+    for (const broken of brokenLinks(text, dirname(file))) failures.push(`${rel}: ${broken}`)
   }
   assert.deepEqual(failures, [])
 })

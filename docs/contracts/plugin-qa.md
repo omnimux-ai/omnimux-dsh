@@ -159,6 +159,18 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 - 验收优先断言外部世界：DOM/几何、导出文件、请求体、持久化状态；禁止只扫 Agent/UI 自夸文案关键词。
 - 证据须记录命令、退出码、真实用例数与 skip 数。行为代码有变更但命令缺失、`0 tests`、失败或未声明 skip，均不能通过。
 
+### 本机门禁前置条件
+
+本机跑 `pnpm test:gates` 前先确认以下两点，否则失败不代表改动有问题：
+
+| 前置条件 | 缺失时的现象 | 处理 |
+| --- | --- | --- |
+| 当前 `node` 自带 `corepack` 且在 PATH 上（如 nvm 安装的 Node；Homebrew 的 `node` 没有） | 同步类测试报 `corepack: command not found` 或 `corepack is not on PATH` | 把带 corepack 的 Node 放到 PATH 前面，或执行 `corepack enable` |
+| 不经 `pnpm <script>` 自动安装：在工作树里用 `node` 直接执行脚本里的命令 | 自动安装构建失败，或误删已跟踪的 `plugins/*/lib/` 文件 | 用 `git -C <worktree> checkout -- .` 恢复后改为直接执行 |
+| 新建工作树没有被忽略的构建产物（如 `plugins/omnimux-forms/assets/examples/`） | 表单准备与 `verify-package-files` 相关用例只在工作树里失败 | 在工作树里完成依赖安装和表单构建，或只在主检出对比这几项 |
+
+`scripts/verify-ci-gates.test.mjs` 会对全仓跑静态门禁，因此会暴露 `main` 上**已有**的问题（如插件边界越界、双语哈希过期、包文件声明缺失）。它不在 CI 必跑列表里，判断本次改动是否引入新问题，要与干净 `origin/main` 的同一命令结果对比。
+
 ### 样例（走读）
 
 | 场景 | 期望并集（示例） |
