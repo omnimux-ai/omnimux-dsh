@@ -19,25 +19,12 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, before, describe, it } from 'node:test'
 import { alphaPluginIds, alphaToolPrefixes } from './plugin-lifecycle.mjs'
-import { fakeGitPath, copySyncScripts } from './sync-fixtures.test.mjs'
+import { assertCorepackOnPath, fakeGitPath, copySyncScripts, syncStablePluginIds } from './sync-fixtures.test.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 let syncStable
 let gitPath
-const allPlugins = [...new Set([
-  'omnimux',
-  'omnimux-accounts',
-  'omnimux-assets',
-  'omnimux-products', 'omnimux-forms',
-  'omnimux-workflow',
-  'omnimux-market',
-  'omnimux-inspiration',
-  'omnimux-clip',
-  'omnimux-video',
-  'omnimux-analytics',
-  'omnimux-publish',
-  ...alphaPluginIds,
-])]
+const allPlugins = [...new Set([...syncStablePluginIds(), ...alphaPluginIds])]
 
 describe('Alpha release materialization policy', { concurrency: false }, () => {
   let fixtureRoot
@@ -137,6 +124,7 @@ describe('Alpha release materialization policy', { concurrency: false }, () => {
   }
 
   before(() => {
+    assertCorepackOnPath()
     fixtureRoot = mkdtempSync(join(tmpdir(), 'omnimux-alpha-release-'))
     fixturePlugins = join(fixtureRoot, 'plugins')
     copySyncScripts(fixtureRoot)

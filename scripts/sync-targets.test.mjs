@@ -6,7 +6,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { fakeGitPath, copySyncScripts } from './sync-fixtures.test.mjs'
+import { assertCorepackOnPath, fakeGitPath, copySyncScripts, syncStablePluginIds } from './sync-fixtures.test.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const syncToAppScript = join(root, 'scripts/sync-to-app.sh')
@@ -50,6 +50,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
   }
 
   before(() => {
+    assertCorepackOnPath()
     copySyncScripts(fakeHome)
     syncStableScript = join(fakeHome, 'scripts/sync-stable.sh')
     gitPath = fakeGitPath(fakeHome, fakeHome, '')
@@ -59,11 +60,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     cpSync(join(root, 'scripts/resolve-omnimux-profile.sh'), join(presetFixture, 'scripts/resolve-omnimux-profile.sh'))
     writeFileSync(syncPresetsScript, readFileSync(join(root, 'scripts/sync-agent-presets.sh'), 'utf8')
       .replaceAll('/Applications/', `${presetFixture}/Applications/`))
-    for (const name of [
-      'omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products', 'omnimux-forms',
-      'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip',
-      'omnimux-video', 'omnimux-analytics', 'omnimux-publish',
-    ]) writeFixturePlugin(name, '1.0.0')
+    for (const name of syncStablePluginIds()) writeFixturePlugin(name, '1.0.0')
     writeFixturePlugin('dsh-ui-kit', '1.0.0')
     // 创建包含 profiles/omnimux/package.json 的测试环境
     for (const sub of ['.omnimux-dev', '.omnimux', '.dsh']) {
@@ -324,12 +321,12 @@ describe('OmniMux Profile Target Selection Matrix', () => {
     writeFileSync(join(profile, 'package.json'), JSON.stringify({
       name: 'managed-full-kit-refresh', private: true,
       dependencies: Object.fromEntries([
-        ...['omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products', 'omnimux-forms', 'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip', 'omnimux-video', 'omnimux-analytics', 'omnimux-publish'],
+        ...syncStablePluginIds(),
         'dsh-ui-kit',
       ].map(name => [name, `file:.materialize-snapshots/plugins/${name}`])),
       dsh: { profile: { bundles: [] } },
     }, null, 2) + '\n')
-    for (const name of ['omnimux', 'omnimux-accounts', 'omnimux-assets', 'omnimux-products', 'omnimux-forms', 'omnimux-workflow', 'omnimux-market', 'omnimux-inspiration', 'omnimux-clip', 'omnimux-video', 'omnimux-analytics', 'omnimux-publish', 'dsh-ui-kit']) {
+    for (const name of [...syncStablePluginIds(), 'dsh-ui-kit']) {
       cpSync(join(fixturePlugins, name), join(snapshotPlugins, name), { recursive: true })
     }
     const assetManifestPath = join(snapshotPlugins, 'omnimux-assets', 'package.json')

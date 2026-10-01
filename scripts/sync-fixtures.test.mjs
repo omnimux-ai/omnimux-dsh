@@ -1,6 +1,36 @@
-import { chmodSync, copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { chmodSync, copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+/**
+ * Plugin ids a full `sync-stable.sh` run materializes, read from its
+ * `ALL_PLUGINS=(...)` array so fixtures cannot drift from the script.
+ * @returns {string[]}
+ */
+export function syncStablePluginIds() {
+  const here = dirname(fileURLToPath(import.meta.url))
+  const source = readFileSync(join(here, 'sync-stable.sh'), 'utf8')
+  const match = /^ALL_PLUGINS=\(([^)]*)\)/m.exec(source)
+  if (!match) throw new Error('sync-stable.sh: ALL_PLUGINS=(...) not found')
+  return match[1].trim().split(/\s+/)
+}
+
+/**
+ * Sync scripts install profile dependencies through `corepack pnpm`. Fail with
+ * an actionable message instead of a dozen opaque "corepack: command not
+ * found" assertion failures when the shell's node has no corepack shim.
+ */
+export function assertCorepackOnPath() {
+  const probe = spawnSync('corepack', ['--version'], { encoding: 'utf8' })
+  if (probe.status !== 0) {
+    throw new Error(
+      'corepack is not on PATH (`' + (probe.error?.message || probe.stderr || 'no output').trim() + '`). '
+      + 'Sync tests run `corepack pnpm`; put a Node install that ships corepack (e.g. nvm) first on PATH, '
+      + 'or run `corepack enable`. See docs/contracts/plugin-qa.md#本机门禁前置条件.',
+    )
+  }
+}
 
 export function copySyncScripts(root) {
   const here = dirname(fileURLToPath(import.meta.url))
