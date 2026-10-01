@@ -140,7 +140,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const stageRef = useRef(null);
   const [draftText, setDraftText] = useState('');
 
-  const handleDirectSubmit = async ({ prompt, kind, operation, model, channel, params, assets, annotations }) => {
+  const handleDirectSubmit = async ({ prompt, kind, operation, activeOperation, model, channel, params, assets, annotations }) => {
     const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const taskItem = store.addMedia({
       id: taskId,

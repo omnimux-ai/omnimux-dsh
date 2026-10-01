@@ -14,6 +14,7 @@ import {
   isAllowedReferenceUrl,
   makeBucketKey,
   operationsOf,
+  pruneAssetsOnModeSwitch,
   rejectionOf,
   slotPlan,
 } from './media-slot.js';
@@ -163,9 +164,18 @@ export function MediaViewerComposer({
       operationsOf(model, 'video').some((operation) => operation.id === option.id)
     ))
   ), [model]);
+
+  // 契约驱动当前选中的操作 ID（图像模式与视频模式统一规范）
+  const currentOperationId = useMemo(() => {
+    if (mode === 'video') return videoModeId;
+    if (config.imageOpMode === '编辑' || config.imageOpMode === '图片编辑') return 'image_edit';
+    if (config.imageOpMode === '参考' || config.imageOpMode === '多图参考') return 'multi_reference';
+    return 'text_to_image';
+  }, [mode, videoModeId, config.imageOpMode]);
+
   const slots = useMemo(
-    () => slotPlan(model, mode, videoModeId),
-    [model, mode, videoModeId]
+    () => slotPlan(model, mode, currentOperationId),
+    [model, mode, currentOperationId]
   );
 
   useEffect(() => {
@@ -225,7 +235,7 @@ export function MediaViewerComposer({
       return tabs;
     }
 
-    // 图像模式：动态根据执行中枢的 operations 契约分流
+    // 图像模式：动态根据执行中枢的 operations 契约分流（统一收敛为 文生图、参考、编辑，消除多图参考分裂）
     const tabs = [];
     if (modelOps.some((op) => op.id === 'text_to_image')) {
       tabs.push({
@@ -233,25 +243,51 @@ export function MediaViewerComposer({
         label: '文生图',
         icon: ICONS_MODE.text,
         active: config.imageOpMode === '文生图',
-        onClick: () => config.setImageOpMode?.('文生图'),
+        onClick: () => {
+          config.setImageOpMode?.('文生图');
+        },
       });
     }
-    if (modelOps.some((op) => op.id === 'multi_reference')) {
+    if (modelOps.some((op) => op.id === 'multi_reference' || op.id === 'image_to_image')) {
+      const refOp = modelOps.find((op) => op.id === 'multi_reference' || op.id === 'image_to_image');
       tabs.push({
         id: 'ref',
         label: '参考',
         icon: ICONS_MODE.ref,
-        active: config.imageOpMode === '多图参考',
-        onClick: () => config.setImageOpMode?.('多图参考'),
+        active: config.imageOpMode === '参考' || config.imageOpMode === '多图参考',
+        onClick: () => {
+          config.setImageOpMode?.('参考');
+          const scopedPrefix = makeBucketKey('image', model?.id, '');
+          const scopedBuckets = Object.fromEntries(
+            Object.entries(bucketsRef.current || {}).filter(([key]) => key.startsWith(scopedPrefix))
+          );
+          const { cleanBuckets, didPrune } = pruneAssetsOnModeSwitch(scopedBuckets, refOp, 'image');
+          if (didPrune) {
+            setBuckets((prev) => ({ ...prev, ...cleanBuckets }));
+            setNotice('已保留前 1 项');
+          }
+        },
       });
     }
     if (modelOps.some((op) => op.id === 'image_edit')) {
+      const editOp = modelOps.find((op) => op.id === 'image_edit');
       tabs.push({
         id: 'edit',
         label: '编辑',
         icon: ICONS_MODE.edit,
-        active: config.imageOpMode === '图片编辑',
-        onClick: () => config.setImageOpMode?.('图片编辑'),
+        active: config.imageOpMode === '编辑' || config.imageOpMode === '图片编辑',
+        onClick: () => {
+          config.setImageOpMode?.('编辑');
+          const scopedPrefix = makeBucketKey('image', model?.id, '');
+          const scopedBuckets = Object.fromEntries(
+            Object.entries(bucketsRef.current || {}).filter(([key]) => key.startsWith(scopedPrefix))
+          );
+          const { cleanBuckets, didPrune } = pruneAssetsOnModeSwitch(scopedBuckets, editOp, 'image');
+          if (didPrune) {
+            setBuckets((prev) => ({ ...prev, ...cleanBuckets }));
+            setNotice('已保留前 1 项');
+          }
+        },
       });
     }
     return tabs;
@@ -720,16 +756,19 @@ export function MediaViewerComposer({
     closePopovers();
     setPickerOpen(false);
 
+    const isTextOnlyMode = (mode === 'image' && config.imageOpMode === '文生图') ||
+      (mode === 'video' && videoModeId === 'text_to_video');
+
     const scopedPrefix = makeBucketKey(mode, model?.id, '');
     const scopedBuckets = Object.fromEntries(
       Object.entries(bucketsRef.current).filter(([key]) => key.startsWith(scopedPrefix))
     );
-    const activeOp = deriveAdaptiveOperation(model, mode, scopedBuckets);
+    const activeOp = activeOperation(model, mode, currentOperationId) || deriveAdaptiveOperation(model, mode, scopedBuckets);
     const submitSlots = slotPlan(model, mode, activeOp?.id);
     const opInputs = activeOp?.inputs || [];
 
     // 若当前模型操作不支持参考图且槽位为 guidedOnly：只要存在素材项（无论是否有打点），阻断提交并提示，严禁静默丢弃！
-    const hasUnsupportedGuidedWithItems = submitSlots.some((slot) => {
+    const hasUnsupportedGuidedWithItems = !isTextOnlyMode && submitSlots.some((slot) => {
       if (!slot.guidedOnly) return false;
       const items = buckets[bucketKey(slot)] ?? [];
       if (items.length === 0) return false;
@@ -748,7 +787,7 @@ export function MediaViewerComposer({
       return;
     }
 
-    const assets = submitSlots.flatMap((slot) => {
+    const assets = isTextOnlyMode ? [] : submitSlots.flatMap((slot) => {
       const items = buckets[bucketKey(slot)] ?? [];
       if (items.length === 0) return [];
       if (slot.guidedOnly) {
@@ -761,7 +800,9 @@ export function MediaViewerComposer({
         });
         if (!isAccepted) return [];
       }
-      return items.map((item) => ({
+      const allowedMax = (slot.max != null && Number.isFinite(slot.max)) ? slot.max : Infinity;
+      const validItems = items.slice(0, allowedMax);
+      return validItems.map((item) => ({
         slot: slot.slot,
         type: slot.type,
         role: slot.role,
@@ -823,6 +864,7 @@ export function MediaViewerComposer({
       rawPrompt: trimmed,
       kind: mode,
       operation: activeOp?.id,
+      activeOperation: activeOp,
       model: model?.id,
       channel: config.channel?.id,
       params: paramsRef.current,

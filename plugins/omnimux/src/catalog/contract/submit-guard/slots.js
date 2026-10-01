@@ -7,6 +7,25 @@
 import { isWithinDurationLimit, isWithinSizeLimit } from '../units.js'
 import { GUARD_CODES } from './codes.js'
 
+export const SLOT_ALIASES = Object.freeze({
+  reference_image: Object.freeze(['reference_images']),
+  reference_images: Object.freeze(['reference_image']),
+  first_frame: Object.freeze(['first_frame_image']),
+  first_frame_image: Object.freeze(['first_frame']),
+  last_frame: Object.freeze(['last_frame_image']),
+  last_frame_image: Object.freeze(['last_frame']),
+})
+
+/**
+ * Returns candidate slot aliases for singular/plural and frame naming compatibility.
+ * @param {string} [slotName]
+ * @returns {readonly string[]}
+ */
+export function getSlotAliases(slotName) {
+  if (!slotName || typeof slotName !== 'string') return []
+  return SLOT_ALIASES[slotName] || []
+}
+
 /**
  * @param {string} code
  * @param {string} message
@@ -33,9 +52,10 @@ export function validateAssetAgainstSlot(asset, slot) {
     }
   }
 
-  if (slot.role && asset.role && slot.role !== asset.role && asset.targetSlot !== slot.slot) {
+  const isTargetSlot = asset.targetSlot === slot.slot || getSlotAliases(asset.targetSlot).includes(slot.slot)
+  if (slot.role && asset.role && slot.role !== asset.role && !isTargetSlot) {
     // Role mismatch only when caller pinned a role that is not this slot's role
-    // and did not explicitly target this slot.
+    // and did not explicitly target this slot (or its alias).
     return {
       ok: false,
       rejection: rejection(GUARD_CODES.ROLE_CONFLICT, `asset role ${asset.role} does not match slot role ${slot.role}`, {
@@ -220,7 +240,13 @@ export function assignAndValidateSlots(op, assets, ctx = {}) {
 
   for (const asset of mediaAssets) {
     if (asset.targetSlot) {
-      const explicit = slots.filter((s) => s.slot === asset.targetSlot)
+      let explicit = slots.filter((s) => s.slot === asset.targetSlot)
+      if (explicit.length === 0) {
+        const aliases = getSlotAliases(asset.targetSlot)
+        if (aliases.length > 0) {
+          explicit = slots.filter((s) => aliases.includes(s.slot))
+        }
+      }
       if (explicit.length === 0) {
         rejections.push(
           rejection(GUARD_CODES.ROLE_CONFLICT, `explicit targetSlot ${asset.targetSlot} not found`, {
