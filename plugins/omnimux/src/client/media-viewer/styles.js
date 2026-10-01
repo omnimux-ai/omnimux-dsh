@@ -1088,34 +1088,36 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 0 0 2px rgba(121, 97, 242, 0.25), 0 20px 48px rgba(0, 0, 0, 0.7); /* exempt-ui03: 极光紫微光焦点与深度阴影 */
 }
 
-/* 素材卡槽：默认 3:4 竖版比例 (48×64)。位置只通过 --slot-* 变量传入，不写内联尺寸。 */
+/* 素材卡槽：默认竖版比例 (40×56px 按钮边框线)。位置只通过 --slot-* 变量传入，不写内联尺寸。 */
 .omx-slot-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  min-height: 68px;
+  gap: 10px;
+  min-height: 60px;
 }
 .omx-slot-group {
   position: relative;
-  height: 68px;
+  height: 60px;
   flex: none;
 }
 .omx-slot-fan {
   position: relative;
-  height: 66px;
+  height: 58px;
   width: var(--slot-fan-width);
 }
 .omx-slot-card,
+.omx-slot-btn,
 .omx-slot-add {
   position: absolute;
   top: 2px;
   left: 0;
-  width: 48px;
-  height: 64px;
-  border-radius: 8px;
+  width: 40px !important;
+  height: 56px !important;
+  min-width: 40px !important;
+  border-radius: 8px !important;
   transform: translateX(var(--slot-shift, 0px));
   transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, opacity 180ms ease, border-color 180ms ease, background 180ms ease;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
 }
 .omx-slot-badge-mark {
   position: absolute;
@@ -1135,7 +1137,8 @@ export const MEDIA_VIEWER_CSS = `
   box-shadow: 0 2px 5px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 角标微阴影 */
   pointer-events: none;
 }
-.omx-slot-group.is-piled:not(.is-open) .omx-slot-add { transform: translateX(74px); }
+.omx-slot-group.is-piled:not(.is-open) .omx-slot-btn,
+.omx-slot-group.is-piled:not(.is-open) .omx-slot-add { transform: translateX(62px); }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-0 { transform: translate(2px, 2px) rotate(0deg); }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-1 { transform: translate(-2px, 4px) rotate(-6deg); }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-card.is-depth-2 { transform: translate(5px, 5px) rotate(5deg); }
@@ -1143,7 +1146,7 @@ export const MEDIA_VIEWER_CSS = `
   z-index: var(--slot-z, 1);
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 1px solid var(--dsw-alias-border-l2) !important;
   box-shadow: 0 4px 14px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 叠卡层次 */
 }
 .omx-slot-card:hover {
@@ -1158,7 +1161,7 @@ export const MEDIA_VIEWER_CSS = `
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 9px;
+  border-radius: 7px;
 }
 .omx-slot-audio {
   width: 100%;
@@ -1195,38 +1198,52 @@ export const MEDIA_VIEWER_CSS = `
   color: var(--dsw-alias-label-primary);
   transform: scale(1.1);
 }
+button.omx-slot-btn,
+button.omx-slot-add,
+.omx-slot-btn,
 .omx-slot-add {
   z-index: 8;
-  border: 1px dashed var(--dsw-alias-border-l3);
-  background: var(--dsw-alias-bg-layer-2);
-  color: var(--dsw-alias-label-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  box-sizing: border-box;
+  width: 40px !important;
+  height: 56px !important;
+  min-width: 40px !important;
+  border-width: 1px !important;
+  border-style: dashed !important;
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.32)) !important;
+  border-radius: 8px !important;
+  background: var(--dsw-alias-bg-layer-2) !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
 }
+button.omx-slot-btn:hover,
+button.omx-slot-add:hover,
+.omx-slot-btn:hover,
 .omx-slot-add:hover {
-  background: var(--dsw-alias-bg-layer-3);
-  border-color: var(--dsw-alias-border-l4);
-  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-3) !important;
+  border-color: var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.65)) !important;
+  color: var(--dsw-alias-label-primary) !important;
   transform: translateY(-1px) translateX(var(--slot-shift, 0px));
   box-shadow: 0 4px 12px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 卡槽悬浮微光 */
 }
+.omx-slot-btn svg,
 .omx-slot-add svg {
-  width: 24px;
-  height: 24px;
-  color: var(--dsw-alias-label-tertiary);
+  width: 20px !important;
+  height: 20px !important;
+  color: var(--dsw-alias-label-secondary);
   transition: color 180ms ease, transform 180ms ease;
 }
+.omx-slot-btn:hover svg,
 .omx-slot-add:hover svg {
   color: var(--dsw-alias-label-primary);
   transform: scale(1.08);
 }
 .omx-slot-count {
   position: absolute;
-  left: 36px;
+  left: 30px;
   bottom: 0px;
   min-width: 20px;
   height: 20px;
@@ -1242,25 +1259,63 @@ export const MEDIA_VIEWER_CSS = `
   z-index: 9;
 }
 .omx-slot-file { display: none; }
+.omx-composer-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 6px;
+}
 .omx-slot-modes {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   flex-wrap: nowrap;
 }
 .omx-slot-mode {
-  height: 32px;
+  height: 28px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
-  padding: 0 12px;
+  padding: 0 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.omx-slot-mode:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.06));
 }
 .omx-slot-mode.is-active {
-  background: var(--dsw-alias-bg-layer-3);
+  background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.12));
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 1px 3px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 模式胶囊微阴影 */
+}
+.omx-slot-mode svg {
+  color: currentColor;
+  flex-shrink: 0;
+}
+.omx-composer-expand-btn {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.omx-composer-expand-btn:hover {
   color: var(--dsw-alias-label-primary);
 }
 .omx-slot-notice {
@@ -1297,7 +1352,7 @@ export const MEDIA_VIEWER_CSS = `
   display: flex;
   align-items: flex-start;
   flex-shrink: 0;
-  min-height: 64px;
+  min-height: 56px;
   padding-bottom: 0;
 }
 .omx-mv-prompt-row .omx-mv-prompt-box {
@@ -1306,7 +1361,7 @@ export const MEDIA_VIEWER_CSS = `
   width: auto;
 }
 .omx-mv-prompt-textarea {
-  min-height: 64px;
+  min-height: 56px;
 }
 
 .omx-mv-ref-row {
@@ -2134,13 +2189,14 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-ref-picker-body {
   padding: 12px 14px;
-  max-height: 210px;
+  min-height: 250px;
+  max-height: 310px;
   overflow-y: auto;
 }
 
 .omx-ref-picker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   gap: 10px;
 }
 
@@ -2151,6 +2207,7 @@ export const MEDIA_VIEWER_CSS = `
   justify-content: center;
   gap: 6px;
   aspect-ratio: 1 / 1;
+  height: 90px;
   border: 1px dashed var(--dsw-alias-border-l3);
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-1);
@@ -2158,6 +2215,7 @@ export const MEDIA_VIEWER_CSS = `
   cursor: pointer;
   transition: all 0.15s ease;
   padding: 8px;
+  box-sizing: border-box;
 }
 
 .omx-ref-picker-upload-card:hover {
@@ -2195,16 +2253,47 @@ export const MEDIA_VIEWER_CSS = `
 
 .omx-ref-picker-asset-thumb {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 90px;
   border-radius: 6px;
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l1);
+  box-sizing: border-box;
 }
 
-.omx-ref-picker-asset-thumb img {
+.omx-ref-picker-asset-thumb.is-ratio-square {
+  aspect-ratio: 1 / 1;
+}
+
+.omx-ref-picker-asset-thumb.is-ratio-square img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.omx-ref-picker-asset-thumb.is-ratio-natural {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.omx-ref-picker-asset-thumb.is-ratio-natural img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.omx-ref-picker-empty-tip {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+}
   object-fit: cover;
   display: block;
 }

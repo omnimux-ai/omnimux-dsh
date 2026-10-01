@@ -11,14 +11,14 @@ import { orderAfterRemoval, rejectionOf } from './media-slot.js';
  */
 
 const PILE_AT = 3;
-const CARD = 48;
-const STEP = 56;
-const PILE_WIDTH = 58;
-const GAP = 12;
+const CARD = 40;
+const STEP = 48;
+const PILE_WIDTH = 50;
+const GAP = 10;
 
 const ICONS = {
   image: (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M16 5h6" />
       <path d="M19 2v6" />
       <path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" />
@@ -27,7 +27,7 @@ const ICONS = {
     </svg>
   ),
   video: (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M16 5h6" />
       <path d="M19 2v6" />
       <rect x="2.5" y="6.5" width="12" height="12" rx="2" />
@@ -35,7 +35,7 @@ const ICONS = {
     </svg>
   ),
   audio: (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M16 5h6" />
       <path d="M19 2v6" />
       <path d="M4 10v4M8 7v10M12 4.5v15M16 8v8" />
@@ -179,9 +179,9 @@ export function MediaSlotGroup({
           );
         })}
         {canAdd ? (
-          <button // exempt-ui01: 1:1 虚线卡槽，尺寸 64x64，不是 32px 工具按钮
+          <button // exempt-ui01: 40×56px 按钮边框线卡槽，类名避免含 add 防宿主污染
             type="button"
-            className="omx-slot-add"
+            className="omx-slot-btn"
             style={{ '--slot-shift': `${adderAt}px` }}
             aria-label={addLabel}
             title={addLabel}

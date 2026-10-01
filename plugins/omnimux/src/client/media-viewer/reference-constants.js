@@ -15,6 +15,18 @@ function preset(id, title, isMine) {
 }
 
 export const PRESET_REFERENCE_ASSETS = {
+  local: [
+    preset('loc-1', '红发蓝眸女性', true),
+    preset('loc-2', 'Mariam outside', true),
+    preset('loc-3', 'Harajuku_Yuki', true),
+    preset('loc-4', '科技Vlogger-粉衣女郎Yuna', false),
+  ],
+  cloud: [
+    preset('cld-1', 'Judge Owl', false),
+    preset('cld-2', 'Ceo Orange Tabby', false),
+    preset('cld-3', 'Spy Siamese', false),
+    preset('cld-4', 'Lazy Garfield', false),
+  ],
   upload: [
     preset('up-1', '工作室布光参考图', true),
     preset('up-2', '质感羊绒面料材质', true),
@@ -27,6 +39,12 @@ export const PRESET_REFERENCE_ASSETS = {
     preset('ai-3', '柔光特写人像光影', false),
     preset('ai-4', '超广角建筑透视', false),
   ],
+  generations: [
+    preset('gen-1', '极简北欧真皮沙发', true),
+    preset('gen-2', '极光未来金属质感', true),
+    preset('gen-3', '柔光特写人像光影', false),
+    preset('gen-4', '超广角建筑透视', false),
+  ],
   avatar: [
     preset('av-1', '亚洲时尚青年模特', true),
     preset('av-2', '欧美商业职场肖像', true),
@@ -34,16 +52,16 @@ export const PRESET_REFERENCE_ASSETS = {
     preset('av-4', '自然生活随性街拍', false),
   ],
   product: [
-    preset('pr-1', '哑光磨砂便携水杯', true),
-    preset('pr-2', '真无线降噪耳机', true),
-    preset('pr-3', '极简机械腕表表盘', false),
-    preset('pr-4', '手工皮革复古背包', false),
+    preset('pr-1', '女士高级淡香水50ml', true),
+    preset('pr-2', '中老年纯棉前扣无钢圈薄款文胸', true),
+    preset('pr-3', '5ml便携迷你香水喷雾瓶', false),
+    preset('pr-4', 'OmniMux 品牌视觉', false),
   ],
 };
 
 export const REFERENCE_TABS = [
-  { id: 'upload', label: '上传资产' },
-  { id: 'ai', label: 'AI 生成' },
-  { id: 'avatar', label: '数字人' },
-  { id: 'product', label: '商品' },
+  { id: 'local', label: '本地' },
+  { id: 'cloud', label: '公共' },
+  { id: 'product', label: '产品库' },
+  { id: 'generations', label: 'AI 生成' },
 ];
