@@ -315,13 +315,19 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const storedSlotBindings = useMemo(() => {
     const raw = nodeData.slotBindings as SlotBindings | undefined;
     if (!raw) return undefined;
-    // 若当前有可用卡槽，但已保存的 slotBindings 为空对象且用户未在待命池中显式记录卸载边，
-    // 说明这是节点未装填状态或旧纯文本模式残留，应允许自动装填上游连线素材。
-    if (Object.keys(raw).length === 0 && (!nodeData.slotStandbyEdgeIds || nodeData.slotStandbyEdgeIds.length === 0)) {
+    const standby = (nodeData.slotStandbyEdgeIds ?? []) as string[];
+    // 1. 若已保存的 slotBindings 为空对象且待命池未记录卸载边，视为未装填态，触发 autoFillSlots
+    if (Object.keys(raw).length === 0 && standby.length === 0) {
+      return undefined;
+    }
+    // 2. 若当前 layout 需要槽位，但 raw 里的所有 key 均与当前 layout.slots 无交集（跨模式切换残留），且待命池未排除素材，
+    // 视为新模式槽位未装填，触发 autoFillSlots
+    const hasMatchingSlot = displayedSlotLayout.slots.some((slot) => raw[slot.slot] !== undefined);
+    if (displayedSlotLayout.slots.length > 0 && !hasMatchingSlot && standby.length === 0) {
       return undefined;
     }
     return raw;
-  }, [nodeData.slotBindings, nodeData.slotStandbyEdgeIds]);
+  }, [nodeData.slotBindings, nodeData.slotStandbyEdgeIds, displayedSlotLayout.slots]);
   const canvasEdges = useCanvasStore((state) => state.edges);
   const inputDisplay = useMemo(() => effectiveInputDisplay(displayedSlotLayout, feedAssets,
     storedSlotBindings, (nodeData.slotConflicts ?? []) as SlotConflict[],
@@ -578,7 +584,19 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   );
 
   useEffect(() => {
-    if (currentInputs || !isSingleImageChannel) return;
+    if (!currentInputs) return;
+    const currentBindings = (nodeData.slotBindings ?? {}) as SlotBindings;
+    const activeBindings = inputDisplay.bindings;
+    if (!activeBindings || typeof activeBindings !== 'object') return;
+    const missingKeys = Object.keys(activeBindings).filter((k) => (activeBindings[k]?.length ?? 0) > 0 && (currentBindings[k]?.length ?? 0) === 0);
+    if (missingKeys.length > 0) {
+      patchSlotBindings(activeBindings);
+    }
+  }, [currentInputs, inputDisplay.bindings, nodeData.slotBindings, patchSlotBindings]);
+
+  useEffect(() => {
+    if (!isSingleImageChannel) return;
+    if (currentInputs) return;
     const currentBindings = nodeData.slotBindings as SlotBindings | undefined;
     if (!currentBindings || typeof currentBindings !== 'object') return;
     const primarySlotKey = displayedSlotLayout.slots[0]?.slot ?? '0';
@@ -833,10 +851,10 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [t],
   );
   const missingRequiredSlots = useMemo(
-    () => (currentInputs || displayedSlotLayout.displayOnlyFromOperation
-      ? []
-      : displayedSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min)),
-    [displayedSlotLayout, slotBindings, currentInputs],
+    () => displayedSlotLayout.slots.filter((spec: SlotSpec) => (
+      !displayedSlotLayout.displayOnlyFromOperation && (slotBindings[spec.slot]?.length ?? 0) < spec.min
+    )),
+    [displayedSlotLayout, slotBindings],
   );
   const slotShortageReason = missingRequiredSlots.length > 0
     ? t('panel.slotMissing').replace('{slots}', missingRequiredSlots.map(slotLabelOf).join('、'))
@@ -935,7 +953,17 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const nodeCompat = (nodeData as Record<string, unknown>).compat as
     | { status?: string; readyToSubmit?: boolean; reasonCodes?: string[]; adaptation?: { toModelLabel: string; inputTypes: string[] } }
     | undefined;
-  const strictVerdict = currentInputs ? validateCanvasInputSelection({ nodes: useCanvasStore.getState().nodes, edges: canvasEdges }, {
+  const strictVerdict = currentInputs ? validateCanvasInputSelection({
+    nodes: useCanvasStore.getState().nodes.map((node) => node.id === nodeId ? {
+      ...node,
+      data: {
+        ...node.data,
+        slotBindings: inputDisplay.bindings,
+        params: { ...(params as Record<string, unknown>), operation: currentOperationId },
+      },
+    } : node),
+    edges: canvasEdges,
+  }, {
     targetNodeId: nodeId, chosenOperationId: currentOperationId ?? '',
   }, { catalog: activeCatalog }) : undefined;
   const blockGenerate =
