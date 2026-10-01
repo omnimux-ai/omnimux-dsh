@@ -176,55 +176,86 @@ export function MediaViewerComposer({
   }, [mode, videoChoices, videoModeId, setVideoGenMode]);
 
   const opModeTabs = useMemo(() => {
+    const modelOps = operationsOf(model, mode);
+    if (!modelOps || modelOps.length === 0) return [];
+
     if (mode === 'video') {
-      return [
-        {
+      const tabs = [];
+      // 1. 全能参考 / 参考图：基于执行中枢 video_multi_ref 动态识别
+      if (modelOps.some((op) => op.id === 'video_multi_ref')) {
+        tabs.push({
           id: 'ref',
           label: '参考',
           icon: ICONS_MODE.ref,
           active: videoModeId === 'video_multi_ref',
           onClick: () => setVideoGenMode('全能参考'),
-        },
-        {
+        });
+      }
+      // 2. 首帧 / 首尾帧：基于执行中枢 first_frame 或 first_last_frame 动态识别
+      if (modelOps.some((op) => op.id === 'first_frame' || op.id === 'first_last_frame')) {
+        const hasDouble = modelOps.some((op) => op.id === 'first_last_frame');
+        tabs.push({
           id: 'frames',
-          label: '首帧/首尾帧',
+          label: hasDouble ? '首帧/首尾帧' : '首帧',
           icon: ICONS_MODE.frames,
           active: videoModeId === 'first_frame' || videoModeId === 'first_last_frame',
-          onClick: () => setVideoGenMode('首尾帧'),
-        },
-        {
+          onClick: () => setVideoGenMode(hasDouble ? '首尾帧' : '首帧'),
+        });
+      }
+      // 3. 视频编辑：基于执行中枢 video_edit 动态识别
+      if (modelOps.some((op) => op.id === 'video_edit')) {
+        tabs.push({
           id: 'edit',
           label: '编辑',
           icon: ICONS_MODE.edit,
           active: videoModeId === 'video_edit',
           onClick: () => setVideoGenMode('视频编辑'),
-        },
-      ];
+        });
+      }
+      // 若仅有文生视频契约
+      if (tabs.length === 0 && modelOps.some((op) => op.id === 'text_to_video')) {
+        tabs.push({
+          id: 'text',
+          label: '文生视频',
+          icon: ICONS_MODE.text,
+          active: videoModeId === 'text_to_video',
+          onClick: () => setVideoGenMode('文生视频'),
+        });
+      }
+      return tabs;
     }
-    return [
-      {
+
+    // 图像模式：动态根据执行中枢的 operations 契约分流
+    const tabs = [];
+    if (modelOps.some((op) => op.id === 'text_to_image')) {
+      tabs.push({
         id: 'text',
         label: '文生图',
         icon: ICONS_MODE.text,
         active: config.imageOpMode === '文生图',
         onClick: () => config.setImageOpMode?.('文生图'),
-      },
-      {
+      });
+    }
+    if (modelOps.some((op) => op.id === 'multi_reference')) {
+      tabs.push({
         id: 'ref',
         label: '参考',
         icon: ICONS_MODE.ref,
         active: config.imageOpMode === '多图参考',
         onClick: () => config.setImageOpMode?.('多图参考'),
-      },
-      {
+      });
+    }
+    if (modelOps.some((op) => op.id === 'image_edit')) {
+      tabs.push({
         id: 'edit',
         label: '编辑',
         icon: ICONS_MODE.edit,
         active: config.imageOpMode === '图片编辑',
         onClick: () => config.setImageOpMode?.('图片编辑'),
-      },
-    ];
-  }, [mode, videoModeId, setVideoGenMode, config.imageOpMode, config.setImageOpMode]);
+      });
+    }
+    return tabs;
+  }, [model, mode, videoModeId, setVideoGenMode, config.imageOpMode, config.setImageOpMode]);
 
   const bucketKey = useCallback(
     (slot) => makeBucketKey(mode, model?.id, slot?.key),
