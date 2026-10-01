@@ -67,6 +67,40 @@ export async function materializeAssetFile(asset) {
       throw new Error('本地图片读取失败，请重试或先上传到资产库');
     }
   }
+  const urlStr = String(asset.url || asset.path || '');
+  const isLocalOriginUrl = urlStr.startsWith('/') ||
+    (typeof window !== 'undefined' && urlStr.startsWith(window.location?.origin || 'http://127.0.0.1:45120')) ||
+    urlStr.includes('/omnimux/assets/library/preview');
+
+  // 若为站内同源相对地址或本地预览地址，由前端浏览器直接 fetch 其二进制 Blob 并通过 FileReader 转为标准的 Base64 Data URL，彻底规避后端 Node 进程未重启导致的老网关上传报错
+  if (asset.type === 'image' && isLocalOriginUrl && !urlStr.startsWith('data:') && !urlStr.startsWith('blob:')) {
+    try {
+      if (typeof fetch === 'function' && typeof FileReader !== 'undefined') {
+        const resp = await fetch(urlStr);
+        if (resp.ok) {
+          const blob = await resp.blob();
+          if (blob.size <= MAX_MATERIALIZE_FILE_SIZE) {
+            const dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = (err) => reject(err);
+              reader.readAsDataURL(blob);
+            });
+            if (typeof dataUrl === 'string' && isAllowedReferenceUrl(dataUrl)) {
+              return {
+                ...asset,
+                url: dataUrl,
+                path: dataUrl,
+              };
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[MediaViewerTab] Failed to materialize local asset URL to base64 Data URL:', err);
+    }
+  }
+
   return asset;
 }
 
