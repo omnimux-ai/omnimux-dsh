@@ -28,6 +28,7 @@ export interface LocalUploadPaneProps {
 const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddFiles, onRemove, acceptedTypes }) => {
   const guard = useAsyncInstanceGuard(active);
   const t = useT();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [measured, setMeasured] = useState<Record<string, { width: number; height: number }>>({});
 
@@ -93,6 +94,31 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddF
     [acceptedTypes, onAddFiles, t],
   );
 
+  const handleClick = useCallback(() => {
+    if (!active) return;
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+      return;
+    }
+    void chooseNative();
+  }, [active, chooseNative]);
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const list = e.target.files;
+      if (list && list.length > 0) {
+        const hasPath = Boolean(nativePathOf(list[0]));
+        if (hasPath) {
+          ingestFiles(list);
+        } else {
+          void chooseNative();
+        }
+        e.target.value = '';
+      }
+    },
+    [chooseNative, ingestFiles],
+  );
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -105,10 +131,19 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddF
 
   return (
     <div className="wf-picker-pane">
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleInputChange}
+        aria-hidden="true"
+        tabIndex={-1}
+      />
       <button
         type="button"
         className={`wf-picker-dropzone ${dragging ? 'wf-picker-dropzone--active' : ''}`}
-        onClick={() => void chooseNative()}
+        onClick={handleClick}
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();

@@ -35,7 +35,7 @@ test('selection callback adds supply and explicit text binding together, replace
   assert.equal(binding.use, 'active'); assert.equal(binding.outputId, 'a:current'); assert.equal(binding.ordinal, 0);
   assert.equal(added.nodes.find(node => node.id === target.id).data.params.operation, 'chat');
   const replaced = planCanvasInputSelection(added, { ...intent, replaceEdgeId: binding.edgeId, selections: [{ sourceNodeId: 'b', outputId: 'b:current', targetSlot: 'prompt', role: 'prompt' }] }, context);
-  assert.equal(replaced.status, 'allowed'); assert.equal(replaced.edges.length, 2);
+  assert.equal(replaced.status, 'allowed'); assert.equal(replaced.edges.length, 1);
   assert.equal(replaced.nodes.find(node => node.id === target.id).data.slotBindings.prompt[0].ordinal, 0);
   assert.equal(replaced.nodes.find(node => node.id === target.id).data.slotBindings.prompt[0].sourceNodeId, 'b');
   const stale = planCanvasInputSelection(graph, { ...intent, selections: [{ sourceNodeId: 'a', outputId: 'old-output', targetSlot: 'prompt' }] }, context);

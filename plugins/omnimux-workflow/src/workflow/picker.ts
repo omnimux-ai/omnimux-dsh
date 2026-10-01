@@ -30,7 +30,10 @@ function pickScript(kind: PickKind): string {
   const prompt = PROMPTS[kind];
   const choose = kind === 'file' ? 'file' : 'folder';
   return [
-    `set theItems to choose ${choose} with prompt "${prompt}" with multiple selections allowed`,
+    'tell application "System Events"',
+    '  activate',
+    `  set theItems to choose ${choose} with prompt "${prompt}" with multiple selections allowed`,
+    'end tell',
     'set posixPaths to ""',
     'repeat with theItem in theItems',
     'set posixPaths to posixPaths & POSIX path of theItem & linefeed',

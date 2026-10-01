@@ -31,6 +31,19 @@ export interface ResourcePickerModalProps {
   }) => boolean;
 }
 
+const ModalCloseButton: React.FC<{ onClose: () => void; placement?: string; ariaLabel?: string }> = ({
+  onClose, placement = 'external', ariaLabel = 'Close',
+}) => (
+  <button
+    type="button"
+    className={`omnimux-modal-close-btn is-${placement} wf-picker-external-close`}
+    onClick={onClose}
+    aria-label={ariaLabel}
+  >
+    <X size={16} />
+  </button>
+);
+
 const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
   open, nodeId, title, initialTab = 'canvas', slotTarget = null, mode = 'add', targetSlotIndex,
   slotState, onCancel, onCommit,
@@ -223,14 +236,7 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
   const changeTab = (next: ResourcePickerTab) => { setTab(next); setSelectedIds([]); setLocalFiles([]); };
   return <CustomModal open={open} onCancel={handleCancel} title={<span id={titleId}>{modalTitle}</span>}
     width="min(88vw, 760px)" className="wf-picker-modal" bodyClassName="wf-picker-modal__body" footer={footer}>
-    <button
-      type="button"
-      className="omnimux-modal-close-btn is-external wf-picker-external-close"
-      onClick={handleCancel}
-      aria-label={t('app.close') || 'Close'}
-    >
-      <X size={16} />
-    </button>
+    <ModalCloseButton onClose={handleCancel} placement="external" ariaLabel={t('app.close') || 'Close'} />
     <div ref={bodyRef} className="wf-picker-content">
       <div className="wf-picker-tabs" role="tablist">
         {(['canvas', 'local'] as const).map(source => <button key={source} type="button" role="tab" id={`${titleId}-${source}-tab`}
