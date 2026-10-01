@@ -339,12 +339,13 @@ export function MediaParamsPanel({ config, open, onToggle }) {
               <div className="omx-param-group">
                 <div className="omx-param-title">生成方式</div>
                 <div className="omx-mode-track">
-                  {['文生图', '图生图', '多图参考'].map((op) => (
+                  {['文生图', '图片编辑', '多图参考'].map((op) => (
                     <button // exempt-ui01: 图像生成方式按钮
                       key={op}
                       type="button"
                       className={`omx-mode-pill ${imageOpMode === op ? 'is-active' : ''}`}
-                      onClick={() => setImageOpMode(op)}
+                      disabled
+                      title="由素材卡槽自动适配：空卡槽为文生图，单图为图片编辑，多图为多图参考"
                     >
                       {op}
                     </button>

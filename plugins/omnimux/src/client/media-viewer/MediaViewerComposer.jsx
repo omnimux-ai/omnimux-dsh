@@ -359,6 +359,30 @@ export function MediaViewerComposer({
     }
   }, [mode, model, videoBucketsDependencyKey, videoGenMode, setVideoGenMode]);
 
+  // 图像生成方式与素材卡槽消费端自适应算法：
+  // 空卡槽 -> 文生图 (text_to_image)
+  // 单图 -> 图片编辑 (image_edit)
+  // 多图 -> 多图参考 (multi_reference)
+  useEffect(() => {
+    if (mode !== 'image' || !model) return;
+    const prefix = makeBucketKey('image', model?.id, '');
+    const scopedImageBuckets = Object.fromEntries(
+      Object.entries(bucketsRef.current).filter(([k]) => k.startsWith(prefix))
+    );
+    const adaptiveOp = deriveAdaptiveOperation(model, 'image', scopedImageBuckets);
+    if (adaptiveOp) {
+      let targetLabel = '文生图';
+      if (adaptiveOp.id === 'image_edit') {
+        targetLabel = '图片编辑';
+      } else if (adaptiveOp.id === 'multi_reference') {
+        targetLabel = '多图参考';
+      }
+      if (config.imageOpMode !== targetLabel) {
+        config.setImageOpMode(targetLabel);
+      }
+    }
+  }, [mode, model, buckets, config.imageOpMode, config.setImageOpMode]);
+
   // 跨模态平滑迁移素材（从最新状态即时推导，避免闭包陈旧；有素材迁移才提示“已装配”，无素材仅提示“已切换模式”）
   const handleSwitchMode = useCallback((newMode) => {
     if (disabled || mode === newMode || isSwitchingRef.current) return;
@@ -779,6 +803,7 @@ export function MediaViewerComposer({
         {/* 提示词与素材卡槽上下分层自适应排布 */}
         <div className="omx-mv-prompt-row">
           {slots.length > 0 && (
+            (mode === 'image') ||
             (mode === 'image' && config.imageOpMode !== '文生图') ||
             (mode === 'video' && videoModeId !== 'text_to_video') ||
             slots.some((s) => (buckets[bucketKey(s)] ?? []).length > 0)

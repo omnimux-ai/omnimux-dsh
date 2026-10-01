@@ -165,6 +165,20 @@ export function operationsOf(model, kind) {
 }
 
 /**
+ * 根据图像卡槽中的素材数量自动推导生成方式标签
+ * 0 张图 -> 文生图
+ * 1 张图 -> 图片编辑
+ * 多张图 -> 多图参考
+ * @param {number} imageCount
+ * @returns {'文生图' | '图片编辑' | '多图参考'}
+ */
+export function deriveImageOpModeFromCount(imageCount) {
+  if (!imageCount || imageCount <= 0) return '文生图';
+  if (imageCount === 1) return '图片编辑';
+  return '多图参考';
+}
+
+/**
  * 方案 C 双轨打点自适应机制：根据当前模型与已入槽素材自适应推导最佳契约操作。
  * @param {object} model
  * @param {'image' | 'video'} kind
