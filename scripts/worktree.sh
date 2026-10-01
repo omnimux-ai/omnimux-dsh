@@ -396,6 +396,15 @@ auto_materialize_and_reload() {
   # 逐次提交收集：同一范围里先改后还原的文件，两端净差是空的，不能因此跳过。
   local changed_paths changed_plugins=() pending=()
   changed_paths="$(git -C "${ROOT}" log --name-only --pretty=format: "${base_ref}..${target_ref}" -- plugins 2>/dev/null | grep -E '^plugins/' | sort -u || true)"
+  # 插件根目录的 *.md（AGENTS.md / README*.md / PRD.md …）与 plugins/<name>/docs/ 只给人和 Agent 读，
+  # 运行时不加载，不进开发版也不触发重启。skills/、catalog/ 等运行时读取的 Markdown 不在此列。
+  local source_paths
+  source_paths="$(printf '%s\n' "${changed_paths}" | grep -vE '^plugins/[^/]+/[^/]+\.md$|^plugins/[^/]+/docs/' || true)"
+  if [ -n "${changed_paths}" ] && [ -z "${source_paths}" ]; then
+    say "ℹ️ 本次合入只改了插件文档，无需物化。"
+    return 0
+  fi
+  changed_paths="${source_paths}"
   while IFS= read -r p; do
     [ -n "${p}" ] && changed_plugins+=("${p}")
   done < <(printf '%s\n' "${changed_paths}" | cut -d'/' -f2 | sort -u)
