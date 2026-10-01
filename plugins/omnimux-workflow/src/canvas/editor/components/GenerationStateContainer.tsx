@@ -175,14 +175,14 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
       setTransitionPhase('idle');
     }
 
-    // 失败状态
-    if (status === 'failed') {
+    // 失败或受阻暂停状态
+    if (status === 'failed' || status === 'paused') {
       setShowSkeleton(false);
       setTransitionPhase('idle');
     }
 
-    // 初始挂载时就是 completed
-    if (prevStatus === status && status === 'completed') {
+    // 初始挂载时就是 completed，或从 paused 恢复后收取完成
+    if ((prevStatus === status || prevStatus === 'paused') && status === 'completed') {
       setTransitionPhase('complete');
       setContentOpacity(1);
       setShowSkeleton(false);
@@ -190,6 +190,7 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
   }, [status, transitionDuration]);
 
   const isLoading = status === 'pending' || status === 'generating';
+  const isPaused = status === 'paused';
   const isFailed = status === 'failed';
   const isCompleted = status === 'completed';
   const defaultLoadingText = status === 'pending' ? t('node.preparing') : t('node.generating');
@@ -254,6 +255,14 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
     </div>
   );
 
+  // 已暂停/受阻态（遵循 PM 冻结规范：沿用 wf-gsc__box 容器，无新组件、无重试按钮、无生成动效）
+  const renderPaused = () => (
+    <div className={`wf-gsc__box wf-gsc__failed ${aspectClass} ${className}`}>
+      <span className="wf-gsc__failed-label">{t('exec.status.paused') || '已暂停'}</span>
+      <span className="wf-gsc__failed-message">暂时无法继续。</span>
+    </div>
+  );
+
   // 完成状态（带淡入动画；crossfading 期间模糊，同 Gxgen generating-image）
   const renderCompleted = (blur: boolean) => (
     <div
@@ -268,9 +277,10 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
     // 加载态下骨架层是绝对定位，根容器需借 aspect class 获得固有高度，
     // 否则 square/video 骨架塌成 0 高（audio 靠 padding 撑高所以无恙）。
     <div className={`wf-gsc ${isLoading ? aspectClass : ''} ${className}`}>
-      {(isLoading || showSkeleton) && renderSkeleton()}
-      {isFailed && renderFailed()}
-      {(isCompleted || transitionPhase === 'crossfading') &&
+      {isPaused && renderPaused()}
+      {(isLoading || showSkeleton) && !isPaused && renderSkeleton()}
+      {isFailed && !isPaused && renderFailed()}
+      {(isCompleted || transitionPhase === 'crossfading') && !isPaused &&
         renderCompleted(transitionPhase === 'crossfading')}
     </div>
   );

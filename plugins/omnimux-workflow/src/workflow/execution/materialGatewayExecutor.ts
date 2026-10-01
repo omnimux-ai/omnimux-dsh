@@ -14,6 +14,7 @@ import { collectMaterialSlotInputs } from './materialSlotInputs.ts';
 import { resolveGenerationPrompt } from '../../shared/graph/generationPrompt.ts';
 import { compileMultimodalPrompt } from './multimodalCompiler.ts';
 import type { AwaitTaskResult, GenerationGateway, SubmitRequest } from '../seam/gateway';
+import { SeamGatewayError } from '../seam/SeamGatewayError.ts';
 import { resolveExecutorSubmission } from '../seam/submitGuard.ts';
 import { validateGeneratedResult } from '../seam/generatedResult.ts';
 import { reconcileUpstreamTask } from './upstreamReconcile.ts';
@@ -25,6 +26,15 @@ import type {
 /** Deterministic per-node fail switch for the M3 mock path (node data flag). */
 function readMockFail(nodeData: Record<string, unknown>): boolean {
   return nodeData.mockFail === true;
+}
+
+function isUpstreamTerminalError(error: unknown): boolean {
+  if (error instanceof SeamGatewayError) {
+    return error.code === 'omnimux-failed' || error.code === 'omnimux-task-timeout' || error.code === 'omnimux-invalid-response';
+  }
+  if (!error || typeof error !== 'object') return false;
+  const coded = error as { code?: unknown };
+  return coded.code === 'omnimux-failed' || coded.code === 'omnimux-task-timeout' || coded.code === 'omnimux-invalid-response';
 }
 
 function readString(source: Record<string, unknown> | undefined, key: string): string | undefined {
@@ -197,10 +207,15 @@ export function createMaterialGatewayExecutor(opts: {
             modelId: upstream.modelId ?? readString(params, 'model'),
           });
         }
-        // Either the hub cannot tell us about that task (resubmit, as before) or
-        // the task genuinely failed. Both are terminal for this reference.
+        // Only clear the reference for confirmed terminal upstream failures;
+        // keep it for transient network/auth interruptions so recovery can resume.
+        if (outcome.kind === 'failed') {
+          if (isUpstreamTerminalError(outcome.error)) {
+            ctx.clearUpstreamTask?.();
+          }
+          throw outcome.error;
+        }
         ctx.clearUpstreamTask?.();
-        if (outcome.kind === 'failed') throw outcome.error;
       }
 
       // Upstream reference mapping (multi-modal references + audioTrack + backward compatibility)
@@ -371,6 +386,7 @@ export function createMaterialGatewayExecutor(opts: {
           taskId: submitted.taskId,
           capability,
           submittedAt: Date.now(),
+          ...(submitted.taskRef ? { taskRef: submitted.taskRef } : {}),
           // #1386: persist which backend owns the task alongside its id, so the
           // recovery in a later process routes the reconcile back to that same
           // backend instead of assuming the hub.
@@ -386,9 +402,12 @@ export function createMaterialGatewayExecutor(opts: {
         ctx.clearUpstreamTask?.();
         return output;
       } catch (error) {
-        // The node is about to go terminal, so the reference must not survive:
-        // its window is either already closed or the hub gave a final answer.
-        ctx.clearUpstreamTask?.();
+        // 区分终态失败与瞬态/可恢复受阻：
+        // 仅在上游明确终态失败、超时或不可恢复响应时清除引用；
+        // 瞬态网络错误、401/403 鉴权中断保留 upstreamTask，供用户点击恢复继续收取！
+        if (isUpstreamTerminalError(error)) {
+          ctx.clearUpstreamTask?.();
+        }
         throw error;
       }
     },

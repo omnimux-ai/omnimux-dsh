@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { readJsonBody, sendJson } from '../auth/http-routes.js'
+import { resolveSyncOfficialToken } from './mount.js'
 
 export const DIRECT_MEDIA_GENERATE_ROUTE = '/omnimux/api/media/generate'
 
@@ -43,7 +44,13 @@ export function registerDirectMediaRoutes(webServer, deps) {
       }
 
       const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
-      if (!prompt) {
+      const hasTaskHandle = Boolean(
+        (typeof body.taskId === 'string' && body.taskId.trim())
+        || (typeof body.task_id === 'string' && body.task_id.trim())
+        || (typeof body.taskRef === 'string' && body.taskRef.trim())
+        || (typeof body.task_ref === 'string' && body.task_ref.trim())
+      )
+      if (!prompt && !hasTaskHandle) {
         sendJson(res, 400, { ok: false, error: 'prompt-required' })
         return
       }
@@ -71,28 +78,18 @@ export function registerDirectMediaRoutes(webServer, deps) {
       const ext = kind === 'video' ? 'mp4' : 'png'
       const dest = body.dest || path.join(destDir, `direct_${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`)
 
-      let envKey = process.env.OMNIMUX_API_KEY || process.env.OMNIMUX_TOKEN
-      if (!envKey) {
-        try {
-          const credPath = path.join(os.homedir(), '.dsh', '.credentials.yaml')
-          if (fs.existsSync(credPath)) {
-            const lines = fs.readFileSync(credPath, 'utf8').split('\n')
-            for (const line of lines) {
-              if (line.includes('OMNIMUX_API_KEY:')) {
-                const val = line.split('OMNIMUX_API_KEY:')[1]?.trim()
-                if (val) envKey = val.replace(/^['"]|['"]$/g, '')
-              }
-            }
-          }
-        } catch {
-          // ignore credential read error
-        }
-      }
+      const envKey = resolveSyncOfficialToken()
 
       try {
         const requestedGroup = (typeof body.group === 'string' && body.group.trim())
           || (typeof body.channel === 'string' && body.channel.trim())
           || undefined
+        const rawTaskId = body.taskId ?? body.task_id
+        const normalizedTaskId = typeof rawTaskId === 'string' && rawTaskId.trim() ? rawTaskId.trim() : undefined
+        const rawTaskRef = body.taskRef ?? body.task_ref
+        const normalizedTaskRef = typeof rawTaskRef === 'string' && rawTaskRef.trim() ? rawTaskRef.trim() : undefined
+        const normalizedRequestKey = typeof body.requestKey === 'string' && body.requestKey.trim() ? body.requestKey.trim() : undefined
+
         const executePayload = {
           prompt,
           dest,
@@ -107,6 +104,9 @@ export function registerDirectMediaRoutes(webServer, deps) {
           wait: body.wait !== false,
           requireListed: false,
           references: Array.isArray(body.references) ? body.references : undefined,
+          taskId: normalizedTaskId,
+          taskRef: normalizedTaskRef,
+          requestKey: normalizedRequestKey,
           env: envKey ? { OMNIMUX_API_KEY: envKey } : undefined,
         }
 
@@ -115,6 +115,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
           ok: true,
           mode: result?.mode || 'live',
           taskId: result?.taskId || null,
+          taskRef: result?.taskRef || null,
           url: result?.url || null,
           dest,
           kind,

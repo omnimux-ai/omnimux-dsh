@@ -7,8 +7,8 @@
 import type { MaterialStatus } from '../../types/materialNode';
 import type { NodeExecutionApiStatus } from '../../../shared/api';
 
-/** GenerationStateContainer 状态机（对齐 Gxgen GenerationStatus）。 */
-export type GenerationStatus = 'pending' | 'generating' | 'completed' | 'failed';
+/** GenerationStateContainer 状态机（对齐 Gxgen GenerationStatus，扩展 paused 支持受阻恢复）。 */
+export type GenerationStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'paused';
 
 /**
  * 反缩放公式（Gxgen NodeHeader）：zoom=1 → 1，zoom=0.5 → 2。
@@ -51,13 +51,15 @@ export function isConfigPanelVisible(
  * - 返回 null 表示空态：不渲染 GSC，走空素材占位。
  */
 export function mapNodeToGenerationStatus(
-  executionStatus: NodeExecutionApiStatus | undefined,
-  localStatus: MaterialStatus | undefined,
+  executionStatus: NodeExecutionApiStatus | 'paused' | undefined,
+  localStatus: MaterialStatus | 'paused' | undefined,
   hasMedia: boolean,
 ): GenerationStatus | null {
   switch (executionStatus) {
     case 'running':
       return 'generating';
+    case 'paused':
+      return 'paused';
     case 'error':
       return 'failed';
     case 'completed':
@@ -68,6 +70,8 @@ export function mapNodeToGenerationStatus(
   switch (localStatus) {
     case 'generating':
       return 'generating';
+    case 'paused':
+      return 'paused';
     case 'failed':
       return 'failed';
     case 'completed':

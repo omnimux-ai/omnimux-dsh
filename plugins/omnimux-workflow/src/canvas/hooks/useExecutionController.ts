@@ -368,10 +368,29 @@ export function dispatchExecutionEvent(
     }
     case 'execution_paused': {
       exec.patchRun(executionId, { status: 'paused' });
+      const targetNodeId = (data as { pausedAtNode?: string; nodeId?: string })?.pausedAtNode
+        || (data as { pausedAtNode?: string; nodeId?: string })?.nodeId;
+      if (typeof targetNodeId === 'string' && targetNodeId) {
+        const run = exec.runs.find((r) => r.executionId === executionId);
+        const currentStatus = run?.nodeStatuses?.[targetNodeId];
+        // 仅当节点处于进行中（running / pending）时才置为 paused，避免单步步后刚完成或已出错的节点被覆盖
+        if (currentStatus === 'running' || currentStatus === 'pending') {
+          writeNodeData(targetNodeId, { executionStatus: 'paused' });
+        }
+      }
       break;
     }
     case 'execution_resumed': {
       exec.patchRun(executionId, { status: 'running' });
+      const targetNodeId = (data as { pausedAtNode?: string; nodeId?: string })?.pausedAtNode
+        || (data as { pausedAtNode?: string; nodeId?: string })?.nodeId;
+      if (typeof targetNodeId === 'string' && targetNodeId) {
+        const run = exec.runs.find((r) => r.executionId === executionId);
+        const currentStatus = run?.nodeStatuses?.[targetNodeId];
+        if (currentStatus === 'running' || currentStatus === 'pending') {
+          writeNodeData(targetNodeId, { executionStatus: 'running' });
+        }
+      }
       break;
     }
     case 'execution_complete': {

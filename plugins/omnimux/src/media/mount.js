@@ -200,13 +200,19 @@ export function mountMedia(ctx, opts) {
       // 正交共存架构：
       // 1. 凡目标渠道为官方专线的请求，只要具备权威官方 Token，彻底取消对全局 runtimeMode 的阻断，直接放行执行！
       // 2. 本地 CLI 语音模型（gemini-3.8-flash-tts）免鉴权，直接放行！
-      // 3. 其余未通过官方/本地 Bypass 的请求（如未配置的自备渠道或未指定渠道的请求），严格校验本地运行方式就绪度。
+      // 3. 已提交任务的收取请求（taskRef/taskId）已处于上游执行阶段，严禁在等待出片时因全局模式被阻断！
+      // 4. 其余未通过官方/本地 Bypass 的请求（如未配置的自备渠道或未指定渠道的请求），严格校验本地运行方式就绪度。
+      const isTaskCollect = Boolean(req.taskRef || req.taskId)
       const isOfficialBypass = isOfficialRequest && (hasOfficialToken || isCliLocalModel)
-      if (!isOfficialBypass) {
+      const shouldBypassRuntimeReady = isOfficialBypass || isTaskCollect
+      if (!shouldBypassRuntimeReady) {
         assertRuntimeReady(current, kind)
       }
       let finalReq
-      if (isOfficialBypass) {
+      if (isTaskCollect) {
+        // 收取阶段保持调用方与提供商自身的原始凭据环境，严禁以官方 Token 覆盖 BYOK 渠道
+        finalReq = req
+      } else if (isOfficialBypass) {
         finalReq = {
           ...req,
           env: {
@@ -321,6 +327,7 @@ export function mountMedia(ctx, opts) {
       speed: { type: 'number', description: 'Speech speed multiplier. Optional.' },
       wait: { type: 'boolean', description: 'If false, return after submit. Default true.' },
       task_id: { type: 'string', description: 'Resume poll and download; skips submit and initial asset guard' },
+      task_ref: { type: 'string', description: 'Opaque task reference issued by the hub on submit; resumes poll and download.' },
     }),
     output: jsonOut,
     async execute(args, exec) {
@@ -359,6 +366,7 @@ export function mountMedia(ctx, opts) {
           ...(kind === 'audio' ? { format: args.format } : {}),
           wait: args.wait,
           taskId: args.task_id,
+          taskRef: args.task_ref,
           signal: exec?.signal,
         })
       } catch (error) {

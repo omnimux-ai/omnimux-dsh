@@ -1,3 +1,5 @@
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { OmnimuxError, unwrapAdapterError } from './errors.js'
 import { hasChannelEvidence, hasGroupFailoverEvidence } from '../errors/channel-classifier.js'
 import { classifyQuotaFailure } from '../errors/quota-classifier.js'
@@ -14,6 +16,15 @@ import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
 import { generateCliSpeech } from './cli-speech.js'
 import { findMediaModel } from './catalog.js'
+import {
+  getMediaTaskRecord,
+  findMediaTaskByUpstreamId,
+  findMediaTaskByRequestKey,
+  createMediaTaskRecord,
+  saveMediaTaskRecord,
+  updateMediaTaskRecord,
+  acquireMediaTaskLock,
+} from './task-store.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
 import { resolveRuntimeChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
 import { getModelChannelGroups, resolveRequestChannelIntent, parseModelAndGroup, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
@@ -225,7 +236,13 @@ export async function executeOmnimuxMedia(capability, input) {
   if (!input.dest) {
     throw new OmnimuxError('omnimux-invalid-request', 'dest is required')
   }
+  const taskRef = typeof input.taskRef === 'string' ? input.taskRef.trim() : ''
   const taskId = typeof input.taskId === 'string' ? input.taskId.trim() : ''
+  const isCollectRequest = Boolean(taskRef || taskId)
+  const taskRecord = taskRef
+    ? getMediaTaskRecord(taskRef)
+    : (taskId ? findMediaTaskByUpstreamId(taskId) : null)
+
   let media = parseMediaConfig(input.media)
 
   const runtime = resolveRuntimeChoice(input.runtimeSettings)
@@ -262,12 +279,13 @@ export async function executeOmnimuxMedia(capability, input) {
     : null
   const implicitByokProvider = matchedImplicitByokItem ? matchedImplicitByokItem.provider.toLowerCase().trim() : ''
 
-  const inputModelId = typeof input.model === 'string' ? parseModelAndGroup(input.model).modelId : ''
+  const rawInputModel = input.model || taskRecord?.model || ''
+  const inputModelId = typeof rawInputModel === 'string' ? parseModelAndGroup(rawInputModel).modelId : ''
   const isCatalogOfficialModel = Boolean(inputModelId && findMediaModel(capability, inputModelId))
   const isOfficialMediaModel = Boolean(inputModelId && (getModelChannelGroups(inputModelId).length > 0 || isCatalogOfficialModel))
   const isEffectivelyOfficial = isOfficialChannel || (!isByokChannel && isOfficialMediaModel)
 
-  if (runtime.mode === 'agent' && !isEffectivelyOfficial && !isByokChannel && !mediaChoice.ready && !implicitByokProvider) {
+  if (!isCollectRequest && runtime.mode === 'agent' && !isEffectivelyOfficial && !isByokChannel && !mediaChoice.ready && !implicitByokProvider) {
     throw new OmnimuxError('omnimux-unconfigured', '本机助手只承接文字，图片、视频和音频需要配置媒体生成提供商或改用官方')
   }
 
@@ -471,17 +489,115 @@ export async function executeOmnimuxMedia(capability, input) {
 
   const route = resolveMediaRoute(capability, input, media, input.env)
 
-  // taskId poll/finish: skip initial asset SubmitGuard and do not resubmit.
-  if (taskId) {
-    const auth = await resolveMediaAuth(route, {
+  // taskId / taskRef poll/finish: skip initial asset SubmitGuard and do not resubmit.
+  if (isCollectRequest) {
+    if (taskRef && !taskRecord && !taskId) {
+      throw new OmnimuxError('omnimux-task-not-found', '未找到对应的媒体任务记录，请重新提交生成')
+    }
+    const effectiveTaskId = taskRecord?.upstreamTaskId || taskId
+    if (!effectiveTaskId) {
+      throw new OmnimuxError('omnimux-invalid-request', '缺少有效的任务标识，无法轮询取回产物')
+    }
+    const effectiveRoute = taskRecord ? {
+      ...route,
+      modelId: taskRecord.model || route.modelId,
+      baseUrl: taskRecord.baseUrl || route.baseUrl,
+      group: taskRecord.group ?? route.group,
+      providerId: taskRecord.providerId || route.providerId,
+    } : route
+
+    const auth = await resolveMediaAuth(effectiveRoute, {
       env: input.env,
       store: input.store,
       credentials: input.credentials,
     })
-    return finishMediaTask(capability, route, { ...input, taskId, authKey: auth.apiKey })
+
+    const pollTaskPath = taskRecord?.taskPath || (typeof input.taskPath === 'string' && input.taskPath.trim()) || undefined
+    const res = await finishMediaTask(capability, effectiveRoute, {
+      ...input,
+      taskId: effectiveTaskId,
+      taskPath: pollTaskPath,
+      submittedAt: taskRecord?.submittedAt ?? input.submittedAt,
+      deadlineMs: taskRecord?.deadlineMs ?? input.deadlineMs,
+      authKey: auth.apiKey,
+    })
+
+    if (taskRecord && res?.mode === 'live') {
+      try {
+        updateMediaTaskRecord(taskRecord.taskRef, {
+          status: 'ready',
+          artifact: {
+            cachePath: input.dest,
+            mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`,
+            sizeBytes: 0,
+          },
+        })
+      } catch {
+        // 忽略状态回写非致命错误
+      }
+    }
+
+    return {
+      ...res,
+      taskRef: taskRecord?.taskRef || (taskRef.startsWith('mtask_') ? taskRef : undefined),
+    }
   }
 
-  const prompt = typeof input.prompt === 'string' ? input.prompt : ''
+  // 基于 requestKey 的幂等查重短路与原子排他占位：若账本中已存在相同调用意图，直接复用任务句柄，杜绝二次提交与扣费
+  const requestKey = typeof input.requestKey === 'string' ? input.requestKey.trim() : ''
+  let pendingTaskRecord = null
+  let taskLock = null
+  if (!isCollectRequest && requestKey) {
+    const existingRecord = findMediaTaskByRequestKey(requestKey)
+    if (existingRecord && existingRecord.capability === capability && existingRecord.model === route.modelId) {
+      if (existingRecord.status === 'ready' && existingRecord.artifact?.cachePath) {
+        let finalUrl = existingRecord.artifact.cachePath
+        if (input.dest && existingRecord.artifact.cachePath !== input.dest && existsSync(existingRecord.artifact.cachePath)) {
+          try {
+            mkdirSync(dirname(input.dest), { recursive: true })
+            copyFileSync(existingRecord.artifact.cachePath, input.dest)
+            finalUrl = input.dest
+          } catch {
+            // copy 失败仍回退 cachePath
+          }
+        }
+        return {
+          mode: 'live',
+          taskId: existingRecord.upstreamTaskId || existingRecord.taskRef,
+          taskRef: existingRecord.taskRef,
+          url: finalUrl,
+        }
+      }
+      if (existingRecord.status === 'submitted' || (existingRecord.status === 'submitting' && existingRecord.upstreamTaskId)) {
+        return {
+          mode: 'submitted',
+          taskId: existingRecord.upstreamTaskId || null,
+          taskRef: existingRecord.taskRef,
+          url: null,
+        }
+      }
+    }
+
+    // 审查意见 1 & 2 & 3: 建立确定性排他占位锁，防止高并发瞬时重复提交
+    taskLock = acquireMediaTaskLock(requestKey)
+    if (!taskLock.acquired) {
+      const concurrentRecord = findMediaTaskByRequestKey(requestKey)
+      if (concurrentRecord && concurrentRecord.capability === capability && concurrentRecord.model === route.modelId) {
+        if (concurrentRecord.status === 'submitted' || (concurrentRecord.status === 'submitting' && concurrentRecord.upstreamTaskId)) {
+          return {
+            mode: 'submitted',
+            taskId: concurrentRecord.upstreamTaskId || null,
+            taskRef: concurrentRecord.taskRef,
+            url: null,
+          }
+        }
+      }
+      throw new OmnimuxError('omnimux-task-conflict', 'A matching media task is already being submitted')
+    }
+  }
+
+  try {
+    const prompt = typeof input.prompt === 'string' ? input.prompt : ''
   const seam = CAPABILITY_SEAM[capability] ?? capability
   const assets = await probeMediaAssets(input, { capability, seam })
 
@@ -596,6 +712,26 @@ export async function executeOmnimuxMedia(capability, input) {
     })
     : mappedInput
 
+  if (!wait && requestKey) {
+    try {
+      pendingTaskRecord = createMediaTaskRecord({
+        capability,
+        model: route.modelId,
+        operation: input.operation,
+        providerId: route.providerId,
+        protocol: route.protocol || 'openai-media',
+        baseUrl: route.baseUrl,
+        wireModel: route.wireModel || route.modelId,
+        group: route.group,
+        taskPath: taskPathFor(capability, route.modelId),
+        requestKey,
+      })
+      saveMediaTaskRecord(pendingTaskRecord)
+    } catch {
+      pendingTaskRecord = null
+    }
+  }
+
   let result
   const isChannelRouting = Boolean(route.group || route.candidates?.some((c) => c.includes('@')))
   const candidates = (route.candidates && route.candidates.length > 0 ? route.candidates : [route.modelId])
@@ -653,8 +789,38 @@ export async function executeOmnimuxMedia(capability, input) {
     if (!submittedId) {
       throw new OmnimuxError('omnimux-invalid-response', 'submit returned no task_id')
     }
-    return { mode: 'submitted', taskId: submittedId, url: null }
+    let taskRef
+    try {
+      if (pendingTaskRecord) {
+        updateMediaTaskRecord(pendingTaskRecord.taskRef, {
+          status: 'submitted',
+          upstreamTaskId: submittedId,
+        })
+        taskRef = pendingTaskRecord.taskRef
+      } else {
+        const record = createMediaTaskRecord({
+          capability,
+          model: route.modelId,
+          operation: input.operation,
+          providerId: route.providerId,
+          protocol: route.protocol || 'openai-media',
+          baseUrl: route.baseUrl,
+          wireModel: route.wireModel || route.modelId,
+          group: route.group,
+          taskPath: taskPathFor(capability, route.modelId),
+          requestKey: typeof input.requestKey === 'string' ? input.requestKey : undefined,
+        })
+        record.upstreamTaskId = submittedId
+        record.status = 'submitted'
+        saveMediaTaskRecord(record)
+        taskRef = record.taskRef
+      }
+    } catch {
+      taskRef = pendingTaskRecord?.taskRef || undefined
+    }
+    return { mode: 'submitted', taskId: submittedId, taskRef, url: null }
   }
+
   if (!url) {
     throw new OmnimuxError('omnimux-invalid-response', `runtime completed without a ${capability} url`)
   }
@@ -666,7 +832,38 @@ export async function executeOmnimuxMedia(capability, input) {
     fetcher: input.fetcher,
     signal: input.signal,
   })
+
+  // wait: true 同步生成模式下，成功下载后同样持久化 ready 账本，确保相同 requestKey 命中完成态缓存
+  if (requestKey) {
+    try {
+      const readyRecord = createMediaTaskRecord({
+        capability,
+        model: route.modelId,
+        operation: input.operation,
+        providerId: route.providerId,
+        protocol: route.protocol || 'openai-media',
+        baseUrl: route.baseUrl,
+        wireModel: route.wireModel || route.modelId,
+        group: route.group,
+        taskPath: taskPathFor(capability, route.modelId),
+        requestKey,
+      })
+      readyRecord.status = 'ready'
+      readyRecord.upstreamTaskId = submittedId
+      readyRecord.artifact = {
+        cachePath: input.dest,
+        mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`,
+        sizeBytes: 0,
+      }
+      saveMediaTaskRecord(readyRecord)
+    } catch {
+      // 忽略缓存落盘错误
+    }
+  }
   return { mode: 'live', taskId: submittedId, url }
+} finally {
+  taskLock?.release()
+}
 }
 
 /**
@@ -715,7 +912,7 @@ export async function finishMediaTask(capability, route, input) {
     capability,
     // Submit and reconcile must address the same task route; an audio model
     // served on the shared video task endpoint carries its own path.
-    taskPath: taskPathFor(capability, route.modelId),
+    taskPath: input.taskPath ?? taskPathFor(capability, route.modelId),
     signal: input.signal,
     // This is the reconcile entry a canvas node reports through, so it opts into
     // the detail read that names a terminal failure's cause (Issue #2092).
