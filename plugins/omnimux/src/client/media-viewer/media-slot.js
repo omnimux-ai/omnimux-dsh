@@ -516,7 +516,11 @@ export function serializeReferenceAssets(assets) {
         if (isAllowedReferenceUrl(trimmed) && !trimmed.startsWith('blob:')) return trimmed;
         return undefined;
       };
-      const validUrl = normalizeReferenceUrl(item.url) || normalizeReferenceUrl(item.path);
+      const rawUrl = normalizeReferenceUrl(item.url) || normalizeReferenceUrl(item.path);
+      // 站内相对路径（以 / 开头且非 //）自动补全当前 window.location.origin，确保后端与外部探针可正确通过 HTTP 读取
+      const validUrl = (rawUrl && rawUrl.startsWith('/') && !rawUrl.startsWith('//') && typeof window !== 'undefined' && window.location?.origin)
+        ? `${window.location.origin}${rawUrl}`
+        : rawUrl;
       const validAssetId = item.assetId != null && String(item.assetId).trim() !== ''
         ? String(item.assetId)
         : undefined;
