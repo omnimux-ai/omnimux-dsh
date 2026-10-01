@@ -16,6 +16,7 @@ export { useVideoPlayback, extractTikTokEmbedUrl, findCurrentPlayingShotIndex } 
 export { useTranslation } from './useTranslation.js'
 export { BreakdownHeader } from './BreakdownHeader.jsx'
 export { VideoPlayerCard } from './VideoPlayerCard.jsx'
+export { CarouselPager } from './CarouselPager.jsx'
 export { VideoMetadataBox } from './VideoMetadataBox.jsx'
 export { ShotCard } from './ShotCard.jsx'
 export { ShotListPanel } from './ShotListPanel.jsx'
