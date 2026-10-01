@@ -46,9 +46,12 @@ test('stage selection and actual runtime discovery reject empty or unknown targe
   await assert.rejects(captureStageContracts(repo, []), /Zero stage/)
   const targets = await captureStageContracts(repo)
   assert.equal(targets.length, 8)
-  assert.equal(targets.filter((target) => target.adapter === 'six-methods-and-disposer').length, 7)
-  assert.ok(targets.every((target) => target.defaultFocus === 'split'))
-  assert.ok(targets.every((target) => target.activationModel === 'official-right-tab-with-session-precedence'))
+  assert.equal(targets.filter((target) => target.adapter === 'six-methods-and-disposer').length, 6)
+  // Products has no left-row since #1944; its Tab is reached from the assets library.
+  assert.equal(targets.find((target) => target.stage === 'products').adapter, 'workbench-tab-only')
+  // workbench-split.md Primary-entry intents (#2516): untouched Tabs open fullscreen.
+  assert.ok(targets.every((target) => target.defaultFocus === 'gui'))
+  assert.ok(targets.filter((target) => target.stage !== 'products').every((target) => target.activationModel === 'official-right-tab-with-session-precedence'))
   assert.equal(targets.find((target) => target.stage === 'workflow').selector, '[data-dsh-omnimux-workflow-entry]')
   const market = targets.find((target) => target.stage === 'market')
   assert.equal(market.adapter, 'sidebar-coordinator')

@@ -177,11 +177,15 @@ export async function captureStageContract(root, stage) {
       assert.ok(tabs.has(tabId) && api.isActive(tabId), 'Market action must activate its registered Tab')
       assert.equal(sidebarRight.isExpanded(), true, 'Market must expand the official right panel')
       assert.equal(sidebarRight.active()?.kind, tabId, 'Market must be the official current right Tab')
-      assert.equal(api.getFocus(), 'split', 'Market sidebar navigation must keep the conversation visible')
+      // workbench-split.md Primary-entry intents (#2516): an untouched left-row Tab opens fullscreen.
+      assert.equal(api.getFocus(), 'gui', 'Market first left-row open must be right-panel fullscreen')
       assert.equal(tabs.get(tabId).single, true)
       assert.equal(tabs.get(tabId).hidden, false)
       assert.equal(action.dataset.active, 'true')
       assert.ok(!win.document.documentElement.dataset.dshProductStage, 'Market must not claim an overlay')
+      // Session precedence applies only while the conversation is visible (not in fullscreen).
+      api.setFocus('split')
+      await settle()
       await setSessionSelected(true)
       assert.equal(api.getRailVerdict().winner, 'session', 'Selected conversation must own the single activation slot')
       assert.equal(api.isActive(tabId), false, 'Market row must yield to the selected conversation')
@@ -201,7 +205,7 @@ export async function captureStageContract(root, stage) {
       action.click()
       await settle()
       assert.ok(api.isActive(tabId), 'Market must reopen its collapsed panel')
-      assert.equal(api.getFocus(), 'split', 'Market reopen must preserve split focus')
+      assert.equal(api.getFocus(), 'split', 'Market reopen must restore the remembered split choice')
       sessionId = 'qa-session-b'
       emit()
       await settle()
@@ -225,7 +229,7 @@ export async function captureStageContract(root, stage) {
       return {
         stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage],
         ...STAGE_STATUS[stage], allowedStatusTexts, adapter: 'sidebar-coordinator', rank,
-        defaultFocus: 'split', activationModel: 'official-right-tab-with-session-precedence',
+        defaultFocus: 'gui', activationModel: 'official-right-tab-with-session-precedence',
       }
     }
     const hostStyles = [...win.document.head.querySelectorAll('style')]
@@ -236,21 +240,43 @@ export async function captureStageContract(root, stage) {
       const tab = tabs.get(tabId)
       assert.ok(tab && tab.single === true && tab.hidden === false && typeof tab.component === 'function', 'Studio must register its visible single community Tab')
       assert.equal(entries.length, 0, 'Studio must not manufacture a sidebar Stage')
-      await api.open({ tabId, title: tab.title() })
+      // Studio has no left-row, so rail activation stays 'none'; assert the official right Tab instead.
+      assert.equal(await api.open({ tabId, title: tab.title() }), true, 'Studio must open through the public workbench')
       await settle()
-      assert.ok(api.isActive(tabId), 'Studio must open through the public workbench')
+      assert.equal(sidebarRight.active()?.kind, tabId, 'Studio must be the official current right Tab')
+      assert.equal(api.getRailVerdict().reason, 'tab-has-no-rail-row', 'Studio must not light any left-row')
       api.closePanel()
       await settle()
-      assert.equal(api.isActive(tabId), false)
-      await api.open({ tabId, title: tab.title() })
+      assert.equal(sidebarRight.isExpanded(), false)
+      assert.equal(await api.open({ tabId, title: tab.title() }), true)
       await settle()
-      assert.ok(api.isActive(tabId), 'Studio must restore through the public workbench')
+      assert.equal(sidebarRight.active()?.kind, tabId, 'Studio must restore through the public workbench')
       assert.equal(state().splits.tabs.filter(item => item.id === tabId).length, 1)
       for (const dispose of disposers.splice(0).reverse()) dispose()
       assert.equal(tabs.has(tabId), false, 'Studio Tab disposer must unregister')
       assert.equal(win.document.querySelectorAll('#omnimux-studio-styles').length, 0, 'Studio must release its stylesheet')
       assert.ok(hostStyles.every(style => style.isConnected), 'Studio must preserve Host styles')
       return { stage, plugin, tabId, content: '[data-omnimux-studio].studio-root', adapter: 'community-tab' }
+    }
+    if (stage === 'products') {
+      // #1944/#1960: products folded into the assets library; no left-row entry, Tab stays registered.
+      const tabId = 'omnimux-products:library'
+      assert.equal(entries.length, 0, 'Products must not register a left-row sidebar entry')
+      const tab = tabs.get(tabId)
+      assert.ok(tab && tab.single === true && tab.hidden === false && typeof tab.component === 'function', 'Products must keep its single workbench Tab for in-library navigation')
+      assert.equal(await api.open({ tabId, title: tab.title() }), true, 'Products Tab must open through the public workbench')
+      await settle()
+      assert.ok(api.isActive(tabId), 'Products Tab must become the active right Tab')
+      assert.equal(sidebarRight.active()?.kind, tabId)
+      api.closePanel()
+      await settle()
+      assert.equal(api.isActive(tabId), false)
+      for (const dispose of disposers.splice(0).reverse()) dispose()
+      assert.equal(tabs.has(tabId), false, 'Products Tab disposer must unregister')
+      return {
+        stage, plugin, tabId, content: STAGE_CONTENT[stage], ...STAGE_STATUS[stage],
+        adapter: 'workbench-tab-only', defaultFocus: 'gui', activationModel: 'in-library-navigation',
+      }
     }
     assert.equal(entries.length, 1, `${plugin}: expected one actual kit sidebar entry`)
     const { stageStore: adapter, datasetKey } = entries[0]
@@ -265,13 +291,18 @@ export async function captureStageContract(root, stage) {
     adapter.open()
     await settle()
     assert.equal(adapter.getSnapshot(), true, `${plugin}: open must activate the registered Tab`)
-    assert.equal(api.getFocus(), 'split', `${plugin}: sidebar navigation must keep the conversation visible`)
+    // workbench-split.md Primary-entry intents (#2516): an untouched left-row Tab opens fullscreen.
+    assert.equal(api.getFocus(), 'gui', `${plugin}: first left-row open of an untouched Tab must be right-panel fullscreen`)
     const tabId = state().splits.active
     assert.ok(tabs.has(tabId), `${plugin}: opened an unregistered Tab ${tabId}`)
     assert.equal(sidebarRight.isExpanded(), true, `${plugin}: official right panel must be expanded`)
     assert.equal(sidebarRight.active()?.kind, tabId, `${plugin}: official right panel must expose the current Tab`)
     assert.ok(notifications > 0, `${plugin}: subscription did not observe open`)
     assert.ok(!win.document.documentElement.dataset.dshProductStage, 'sidebar must not claim an overlay')
+    // The user chooses three columns (chat-toggle); that choice is remembered per Tab.
+    api.setFocus('split')
+    await settle()
+    assert.equal(api.getFocus(), 'split', `${plugin}: an explicit split choice must apply`)
     await setSessionSelected(true)
     assert.equal(api.getRailVerdict().winner, 'session', `${plugin}: selected conversation must own the single activation slot`)
     assert.equal(adapter.getSnapshot(), false, `${plugin}: sidebar row must yield to the selected conversation`)
@@ -286,7 +317,7 @@ export async function captureStageContract(root, stage) {
     adapter.open()
     await settle()
     assert.equal(adapter.getSnapshot(), true, `${plugin}: explicit open must restore a collapsed panel`)
-    assert.equal(api.getFocus(), 'split', `${plugin}: sidebar reopen must restore split focus`)
+    assert.equal(api.getFocus(), 'split', `${plugin}: sidebar reopen must restore the remembered split choice`)
     api.setFocus('split')
     adapter.open()
     await settle()
@@ -350,7 +381,7 @@ export async function captureStageContract(root, stage) {
     assert.equal(notifications, afterUnsubscribe, `${plugin}: listener survived unsubscribe`)
     return {
       stage, plugin, selector: `[${datasetKey}]`, tabId, content: STAGE_CONTENT[stage],
-      ...STAGE_STATUS[stage], adapter: 'six-methods-and-disposer', defaultFocus: 'split',
+      ...STAGE_STATUS[stage], adapter: 'six-methods-and-disposer', defaultFocus: 'gui',
       activationModel: 'official-right-tab-with-session-precedence',
     }
   } finally {
