@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { deriveAdaptiveOperation, deriveImageOpModeFromCount, extractSlotKeyFromBucketKey, inferMimeType, isAllowedReferenceUrl, orderAfterRemoval, rejectionOf, serializeReferenceAssets, slotPlan } from './media-slot.js';
+import {
+  deriveAdaptiveOperation,
+  deriveImageOpModeFromCount,
+  extractSlotKeyFromBucketKey,
+  inferMimeType,
+  isAllowedReferenceUrl,
+  orderAfterRemoval,
+  rejectionOf,
+  serializeReferenceAssets,
+  slotPlan,
+  IMAGE_MODE_OPTIONS,
+  VIDEO_MODE_OPTIONS,
+  pruneAssetsOnModeSwitch,
+} from './media-slot.js';
 
 const imageModel = {
   id: 'grok-imagine-image-2-0',
@@ -562,6 +575,103 @@ describe('素材卡槽槽位与自适应推导', () => {
       assert.equal(resIdOnly[0].assetId, 'aid_only_123');
       assert.equal(resIdOnly[0].url, undefined, '杜绝编造不存在的虚拟 URL');
       assert.equal(resIdOnly[0].pathOrUrl, undefined);
+    });
+
+    it('Ticket 2: 规范生成方式选项与文案收敛（消除多图参考与单图参考分裂）', () => {
+      assert.deepEqual(
+        IMAGE_MODE_OPTIONS.map((o) => o.label),
+        ['文生图', '参考', '编辑'],
+        '图像生成方式严格收敛为：文生图、参考、编辑'
+      );
+      assert.deepEqual(
+        VIDEO_MODE_OPTIONS.map((o) => o.label),
+        ['文生视频', '首帧', '首尾帧', '全能参考', '编辑'],
+        '视频生成方式严格收敛为：文生视频、首帧、首尾帧、全能参考、编辑'
+      );
+    });
+
+    it('Ticket 2: slotPlan 基于契约真实 inputs.max 计算容量，支持 GPT-Image 单图与 Flux 多图', () => {
+      const gptImageModel = {
+        id: 'gpt-image-2.5',
+        operations: [
+          { id: 'text_to_image', inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 }] },
+          {
+            id: 'multi_reference',
+            label: '垫图参考',
+            inputs: [
+              { slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 },
+              { slot: 'reference_image', type: 'image', role: 'reference', min: 0, max: 1 },
+            ],
+          },
+        ],
+      };
+
+      const gptSlots = slotPlan(gptImageModel, 'image', 'multi_reference');
+      assert.equal(gptSlots.length, 1);
+      assert.equal(gptSlots[0].slot, 'reference_image');
+      assert.equal(gptSlots[0].max, 1, 'GPT Image 2.5 垫图参考最大容量严格为 1');
+
+      const fluxModel = {
+        id: 'flux-pro',
+        operations: [
+          {
+            id: 'multi_reference',
+            label: '多图垫图',
+            inputs: [
+              { slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 },
+              { slot: 'reference_images', type: 'image', role: 'reference', min: 0, max: 4 },
+            ],
+          },
+        ],
+      };
+      const fluxSlots = slotPlan(fluxModel, 'image', 'multi_reference');
+      assert.equal(fluxSlots.length, 1);
+      assert.equal(fluxSlots[0].slot, 'reference_images');
+      assert.equal(fluxSlots[0].max, 4, 'Flux Pro 垫图参考最大容量严格为 4');
+    });
+
+    it('Ticket 2: pruneAssetsOnModeSwitch 模式切换平滑裁剪超出容量的素材并自愈', () => {
+      const targetOp = {
+        id: 'multi_reference',
+        inputs: [
+          { slot: 'prompt', type: 'text', role: 'prompt', max: 1 },
+          { slot: 'reference_image', type: 'image', role: 'reference', max: 1 },
+        ],
+      };
+
+      const buckets = {
+        'image:gpt-image-2.5:reference': [
+          { url: 'https://example.com/1.png', type: 'image' },
+          { url: 'https://example.com/2.png', type: 'image' },
+          { url: 'https://example.com/3.png', type: 'image' },
+        ],
+      };
+
+      const { cleanBuckets, didPrune, prunedCount, keptCount } = pruneAssetsOnModeSwitch(buckets, targetOp, 'image');
+      assert.equal(didPrune, true, '素材超出 max:1 时必须触发平滑裁剪');
+      assert.equal(prunedCount, 2, '多余的 2 张素材应被截断丢弃');
+      assert.equal(keptCount, 1, '仅保留前 1 张合规素材');
+      assert.equal(cleanBuckets['image:gpt-image-2.5:reference'].length, 1);
+      assert.equal(cleanBuckets['image:gpt-image-2.5:reference'][0].url, 'https://example.com/1.png');
+    });
+
+    it('Ticket 2: serializeReferenceAssets 动态绑定当前 activeOperation 的合规 slot', () => {
+      const gptOp = {
+        id: 'multi_reference',
+        inputs: [
+          { slot: 'prompt', type: 'text', role: 'prompt' },
+          { slot: 'reference_image', type: 'image', role: 'reference', max: 1 },
+        ],
+      };
+
+      // 客户端之前可能由于旧缓存打上了复数 reference_images 标签
+      const rawAssets = [
+        { slot: 'reference_images', type: 'image', role: 'reference', url: 'https://example.com/item.png' },
+      ];
+
+      const serialized = serializeReferenceAssets(rawAssets, gptOp);
+      assert.equal(serialized.length, 1);
+      assert.equal(serialized[0].slot, 'reference_image', '必须自愈绑定为当前操作定义的真实 slot: reference_image');
     });
   });
 });
