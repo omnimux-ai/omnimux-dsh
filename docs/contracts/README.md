@@ -21,6 +21,7 @@ subsystem: "global"
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `living` | [mvp-scope.md](mvp-scope.md) | MVP scope: viral video replication | `global` | 2026-10-01 | 爆款复刻 MVP 目标与三步验证证据、默认排除范围、越界先停与四项说明、明确同意与授权继承；`AGENTS.md` 只保留摘要。 |
 | `living` | [omnimux-contracts-architecture.md](omnimux-contracts-architecture.md) | OmniMux 常驻行为契约系统架构与治理规范 | `global` | 2026-09-14 | 建立 Layer 1~4 渐进式知识金字塔，通过 `contracts-loader` 实现启动期与运行时的常驻行为契约动态缝合；含契约单一真源与「新增契约前先查既有归属」治理条款。 |
 | `living` | [omnimux-baseline-contract.md](omnimux-baseline-contract.md) | OmniMux 通用底线与交互契约 (Baseline Contract) | `global` | 2026-09-11 | 资产物理路径不可变性、最多 3 次异参重试熔断与 `working_language` 级联裁决协议栈。 |
 | `living` | [product-baseline.md](product-baseline.md) | 产品基线：新用户环境是唯一参考 (Product Baseline) | `global` | 2026-09-17 | 开发机不是基线：产品运行时代码不得出现开发版身份、本机配置选通道、回环模型端点、业务插件读 provider 密钥、开发机绝对路径；机械门禁 `pnpm verify:product-baseline` 强制，豁免须带理由。 |

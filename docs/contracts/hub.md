@@ -311,6 +311,16 @@ Workbench viewport, hub event WebSocket, and `workbench_*` tools: [agent-workben
 
 `omnimux` itself is not a shelf app. Official catalog rows: [apps-catalog.md](apps-catalog.md).
 
+## Channels and consumption scenarios (no exclusive modes)
+
+OmniMux is open source and BYOK-capable. Official account, local CLI, and user-supplied API are channels, not global modes.
+
+- MUST NOT model `official` / `key` / `agent` (or similar) as a mutually exclusive global runtime mode. Onboarding only checks that at least one usable channel exists.
+- Models bind per consumption scenario — chat, tool/multimodal analysis (vision, video understanding), and media generation (image/video/audio/TTS). Every registered channel's capabilities appear as options in each scenario; users may mix, e.g. a local CLI for chat with official or third-party API for video analysis and generation.
+- All channels register with the hub; domain plugins consume capabilities only through the hub.
+- When a scenario call needs a capability (e.g. video understanding), the hub resolves it across all registered channels and routes or offers a capable one. It MUST NOT disable the capability because the chat model is text-only, and MUST NOT tell the user to "switch runtime mode".
+- Upstream auth/capability errors propagate with their real cause. An empty `catch {}` MUST NOT swallow them or re-diagnose them as a business condition (e.g. "video too long").
+
 ## 客户端热更新
 
 Hub 复用官方 watcher，通过既有事件 WebSocket 分发客户端 rebuild，避免同源页面长期占用 HTTP 请求连接。默认插件装配、配置保留、重连与升级验证见 [HMR 合同](hmr.md)。
