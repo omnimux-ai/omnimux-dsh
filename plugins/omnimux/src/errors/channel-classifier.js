@@ -17,7 +17,7 @@ const CHANNEL_PATTERNS = [
  */
 const GROUP_SWITCH_PATTERNS = [
   ...CHANNEL_PATTERNS,
-  /无权访问该分组/,
+  /无权访问.*分组/,
   /model[_\s-]*not[_\s-]*found/i,
 ]
 
