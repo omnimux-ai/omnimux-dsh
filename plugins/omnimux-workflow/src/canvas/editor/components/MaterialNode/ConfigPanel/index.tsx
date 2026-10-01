@@ -314,7 +314,6 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const feedAssets = useMemo(() => feedFromFingerprint(fingerprint, nodeData.inputBindingVersion), [fingerprint, nodeData.inputBindingVersion]);
   const storedSlotBindings = useMemo(() => {
     const raw = nodeData.slotBindings as SlotBindings | undefined;
-    if (currentInputs) return raw ?? {};
     if (!raw) return undefined;
     // 若当前有可用卡槽，但已保存的 slotBindings 为空对象且用户未在待命池中显式记录卸载边，
     // 说明这是节点未装填状态或旧纯文本模式残留，应允许自动装填上游连线素材。
@@ -322,7 +321,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       return undefined;
     }
     return raw;
-  }, [nodeData.slotBindings, nodeData.slotStandbyEdgeIds, currentInputs]);
+  }, [nodeData.slotBindings, nodeData.slotStandbyEdgeIds]);
   const canvasEdges = useCanvasStore((state) => state.edges);
   const inputDisplay = useMemo(() => effectiveInputDisplay(displayedSlotLayout, feedAssets,
     storedSlotBindings, (nodeData.slotConflicts ?? []) as SlotConflict[],

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { autoFillSlots, deriveSlotLayout, hydrateSlotBindings, assembleEffectiveInputsFromSlots, swapNamedSlots, feedFromFingerprint } from './index.ts';
+import { effectiveInputDisplay } from './effectiveInputDisplay.ts';
 import { buildUpstreamFingerprint } from '../../validation/compatKernel.ts';
 import { effectiveSlotFingerprint } from './effectiveFingerprint.ts';
 import { createMaterialNode } from '../nodeFactory.ts';
@@ -726,3 +727,29 @@ test('R2 missing former slot never redirects retained role and same-edge inactiv
   const verdict = validateCanvasInputSelection(inactiveOnly, identityIntent2848, { catalog: identityCatalog2848 });
   assert.equal(verdict.ready, true); assert.deepEqual(verdict.records.map(r => r.state), ['inactive', 'inactive']);
 });
+
+test('effectiveInputDisplay auto-fills upstream feed into matching slots under inputBindingVersion=1 when saved is undefined', () => {
+  const l = {
+    operationId: 'digital_human',
+    preset: 'named',
+    slots: [
+      { slot: 'character', role: 'first_frame', type: 'image', min: 1, max: 1 },
+      { slot: 'driving_audio', role: 'audio_track', type: 'audio', min: 1, max: 1 },
+    ],
+  };
+  const imgFeed = {
+    edgeId: 'e-img',
+    sourceNodeId: 'node-img',
+    type: 'image',
+    availability: 'ready',
+    outputId: 'ast-1',
+    url: 'https://example.test/img.png',
+    ordinal: 0,
+  };
+  // 当 saved 未定义时（未初始化/空装填态），执行自动装填
+  const result = effectiveInputDisplay(l, [imgFeed], undefined, [], [], [], 1);
+  assert.equal(result.bindings.character?.length, 1, '图片连线必须自动装填进 character 卡槽');
+  assert.equal(result.bindings.character[0].edgeId, 'e-img');
+  assert.equal(result.bindings.driving_audio?.length ?? 0, 0, '音频卡槽无对应输入保持空态');
+});
+

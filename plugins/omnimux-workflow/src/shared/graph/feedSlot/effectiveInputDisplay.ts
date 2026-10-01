@@ -13,8 +13,9 @@ export function effectiveInputDisplay(layout: SlotLayout, feed: FeedAsset[], sav
     const values = explicit[conflict.slot] ??= [];
     if (!values.some((value) => value.edgeId === conflict.occupant.edgeId)) values.push(conflict.occupant);
   }
-  // An empty saved map is an intentional empty selection, not a request to hydrate.
-  const fill = inputBindingVersion === 1 ? { bindings: explicit ?? {}, conflicts: [] as SlotConflict[] }
+  // 当显式传入已保存的字典（含空对象）时严格保持不变；仅当 explicit === undefined（未初始化装填态）时执行 autoFillSlots
+  const fill = inputBindingVersion === 1
+    ? (explicit === undefined ? autoFillSlots(feed, layout, {}, standby) : { bindings: explicit, conflicts: [] as SlotConflict[] })
     : explicit === undefined ? hydrateSlotBindings(feed, layout, edges)
     : Object.keys(explicit).length > 0
       ? autoFillSlots(feed, layout, explicit, standby)
