@@ -19,6 +19,7 @@ interface SeamApi { execute(req: Record<string, unknown>): Promise<SeamExecuteRe
 interface SeamExecuteResult extends Partial<Omit<AwaitTaskResult, 'url'>> {
   mode?: string;
   taskId?: string | null;
+  taskRef?: string | null;
   url?: string | null;
   model?: string;
 }
@@ -48,7 +49,7 @@ function createSemaphore(limit: number) {
 
 type MediaCapability = 'image' | 'video' | 'audio';
 type TaskRecord = {
-  kind: 'media'; capability: MediaCapability; hubTaskId: string; settled?: AwaitTaskResult;
+  kind: 'media'; capability: MediaCapability; hubTaskId: string; hubTaskRef?: string; settled?: AwaitTaskResult;
 } | { kind: 'text'; request: Record<string, unknown> };
 
 function isSeamApi(value: unknown): value is SeamApi {
@@ -115,20 +116,21 @@ export function createOmnimuxSeamClient(opts: OmniumuxSeamClientOptions): Genera
         throw new SeamGatewayError('omnimux-invalid-response', '生成服务返回了不匹配的产物类型');
       }
       const hubTaskId = typeof result.taskId === 'string' ? result.taskId.trim() : '';
+      const hubTaskRef = typeof result.taskRef === 'string' ? result.taskRef.trim() : undefined;
       if (result.mode === 'live') {
         const metadata = validateGeneratedResult({ ...result, url: result.url ?? req.dest }, req.capability, req.dest);
         const localId = hubTaskId || `live_${randomUUID().slice(0, 12)}`;
-        tasks.set(localId, { kind: 'media', capability: req.capability, hubTaskId: localId,
+        tasks.set(localId, { kind: 'media', capability: req.capability, hubTaskId: localId, hubTaskRef,
           settled: { url: req.dest, type: req.capability, ...metadata } });
-        return { taskId: localId, mode: 'live', url: result.url ?? undefined, owner: 'omnimux' };
+        return { taskId: localId, taskRef: hubTaskRef, mode: 'live', url: result.url ?? undefined, owner: 'omnimux' };
       }
       if (result.mode !== 'submitted' || !hubTaskId) {
         throw new SeamGatewayError('omnimux-invalid-response', '提交结果无效或缺少 taskId（无法轮询）');
       }
-      tasks.set(hubTaskId, { kind: 'media', capability: req.capability, hubTaskId });
+      tasks.set(hubTaskId, { kind: 'media', capability: req.capability, hubTaskId, hubTaskRef });
       // #1386: name the owner explicitly so the persisted reference says "the
       // hub" rather than relying on the absent-field default.
-      return { taskId: hubTaskId, mode: 'submitted', owner: 'omnimux' };
+      return { taskId: hubTaskId, taskRef: hubTaskRef, mode: 'submitted', owner: 'omnimux' };
     },
     async awaitTask(taskId: string, dest: string, signal?: AbortSignal): Promise<AwaitTaskResult> {
       const record = tasks.get(taskId);
@@ -150,7 +152,12 @@ export function createOmnimuxSeamClient(opts: OmniumuxSeamClientOptions): Genera
       if (record.settled) { tasks.delete(taskId); return record.settled; }
       // Resume never revalidates sources or catalog: the hub already owns this task.
       const seam = requireSeam(opts.getSeam, record.capability);
-      const request = { dest, taskId: record.hubTaskId, ...(signal ? { signal } : {}) };
+      const request = {
+        dest,
+        taskId: record.hubTaskId,
+        ...(record.hubTaskRef ? { taskRef: record.hubTaskRef } : {}),
+        ...(signal ? { signal } : {}),
+      };
       const result = await guarded(() => seam.execute(request));
       if (result?.mode !== 'live') throw new SeamGatewayError('omnimux-invalid-response', '轮询未返回已完成的产物');
       const metadata = validateGeneratedResult({ ...result, url: result.url ?? dest }, record.capability, dest);
@@ -172,6 +179,7 @@ export function createOmnimuxSeamClient(opts: OmniumuxSeamClientOptions): Genera
       const request = {
         dest,
         taskId: ref.taskId,
+        ...(ref.taskRef ? { taskRef: ref.taskRef } : {}),
         submittedAt: ref.submittedAt,
         ...(signal ? { signal } : {}),
       };

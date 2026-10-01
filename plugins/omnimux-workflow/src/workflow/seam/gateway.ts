@@ -132,6 +132,8 @@ export type UpstreamTaskOwner = 'mock' | 'omnimux';
 
 export interface SubmitResult {
   taskId: string;
+  /** Hub-issued opaque task reference for safe resumption. */
+  taskRef?: string;
   /** Submitted-only (no immediate local file yet). */
   mode: 'live' | 'submitted';
   url?: string;
@@ -175,6 +177,8 @@ export interface AwaitTaskResult {
 export interface UpstreamTaskRef {
   /** Task id returned by the hub on submit. */
   taskId: string;
+  /** Hub-issued opaque task reference (persisted across restarts). */
+  taskRef?: string;
   /** Capability domain; selects which seam a reconcile goes through. */
   capability: GenerationCapability;
   /**
