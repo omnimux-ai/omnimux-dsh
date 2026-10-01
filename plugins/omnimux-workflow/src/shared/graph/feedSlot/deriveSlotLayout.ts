@@ -17,7 +17,9 @@ export function deriveSlotLayout(
   const model = resolveModelView(buildContractView(catalog), modelId);
   const operation = model?.operations.find((op) => op.id === operationId && op.listed);
   if (!operation) return { ...layout, acceptsText: false, implementationGaps: ['operation_unlisted'] };
-  layout.acceptsText = operation.inputs.some((input) => input.type === 'text' || input.role === 'prompt' || input.slot === 'prompt');
+  layout.acceptsText = operation.inputs.some((input) => input.type === 'text' || input.role === 'prompt' || input.slot === 'prompt')
+    || (operation.promptPolicy != null && operation.promptPolicy !== 'forbidden')
+    || operation.output?.type === 'video' || operation.output?.type === 'image';
   // Plain speech has no implemented reference-media mapping; verified text remains bindable.
   const inputs = bindableSlots(operation).filter(input => operation.output.type !== 'audio'
     || operation.id !== 'text_to_speech' || input.type === 'text');

@@ -1439,6 +1439,26 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-gsc__loading-overlay {
 .wf-effective-text--slot > span { display: block; width: 100%; text-align: center; }
 .wf-effective-text--slot strong { display: none; }
 .wf-effective-text--slot span > span { display: block; font-size: 10px; }
+.wf-effective-text__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.4));
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  flex-shrink: 0;
+  transition: color 150ms ease, background 150ms ease;
+}
+.wf-effective-text__remove:hover {
+  background: var(--dsw-alias-fill-tertiary, rgba(255, 255, 255, 0.1));
+  color: var(--dsw-alias-label-primary, #fff);
+}
 .wf-slot-hover-preview audio { width: 100%; }
 
 .wf-slot-well {

@@ -225,6 +225,7 @@ export interface ContractOperationView {
   inputGroups: Array<{ slots: string[]; min: number; hint?: string }>;
   parameters?: Record<string, unknown>;
   listed: boolean;
+  promptPolicy?: string;
 }
 
 export interface ContractModelView {

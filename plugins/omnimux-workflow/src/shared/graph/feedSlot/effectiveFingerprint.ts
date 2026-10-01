@@ -13,6 +13,7 @@ export function feedFromFingerprint(fingerprint: UpstreamFingerprint, inputBindi
 /** Readiness uses the same available occupant traversal as payload assembly. */
 export function effectiveSlotFingerprint(
   fingerprint: UpstreamFingerprint, layout: SlotLayout, bindings: SlotBindings, conflicts: SlotConflict[] = [], inputBindingVersion?: number,
+  standbyEdgeIds: readonly string[] = [],
 ): UpstreamFingerprint {
   const records = selectSlotOccupants(layout, bindings, feedFromFingerprint(fingerprint, inputBindingVersion), conflicts, inputBindingVersion);
   const selected = records.filter(record => record.state !== 'inactive');
@@ -23,14 +24,28 @@ export function effectiveSlotFingerprint(
     ...(asset && asset.type !== slot.type ? { availability: 'unavailable' as const } : {}),
   }));
   if (inputBindingVersion === 1) {
-    const texts = selected.filter(item => item.state === 'ready' && item.slot.type === 'text')
-      .sort((a, b) => (a.occupant.ordinal ?? a.asset?.ordinal ?? 0) - (b.occupant.ordinal ?? b.asset?.ordinal ?? 0))
-      .map(item => item.asset?.textContent);
+    const boundTextOccupants = selected.filter(item => item.state === 'ready' && item.slot.type === 'text')
+      .sort((a, b) => (a.occupant.ordinal ?? a.asset?.ordinal ?? 0) - (b.occupant.ordinal ?? b.asset?.ordinal ?? 0));
+    const boundTexts = boundTextOccupants.map(item => item.asset?.textContent);
     const textSlot = layout.slots.find(slot => slot.type === 'text' && slot.composition);
+
+    const standbySet = new Set(standbyEdgeIds);
+    // 若当前 layout.slots 中未声明专门的 text slot，但当前 operation 允许文本输入（layout.acceptsText !== false），
+    // 则上游连入的就绪文本资产（且未被用于媒体槽、未被用户明确设为待命的）作为自由上游提示词源消费
+    const freeTextAssets = (!textSlot && layout.acceptsText !== false)
+      ? selectGenerationTextSources(fingerprint.assets).filter(asset =>
+          !selected.some(sel => sel.asset?.edgeId === asset.edgeId) && (!asset.edgeId || !standbySet.has(asset.edgeId)))
+      : [];
+    const freeTexts = freeTextAssets.map(asset => asset.textContent);
+    const allTexts = [...boundTexts, ...freeTexts].filter((t): t is string => typeof t === 'string' && Boolean(t.trim()));
+
     const localText = textSlot && !textSlot.valueSources?.includes('local_field') ? '' : fingerprint.localText ?? '';
-    return buildUpstreamFingerprint({ ...fingerprint, localText,
-      prompt: layout.acceptsText === false ? '' : resolveGenerationPrompt({ prompt: localText }, texts,
-        textSlot?.composition), assets: media });
+    return buildUpstreamFingerprint({
+      ...fingerprint,
+      localText,
+      prompt: layout.acceptsText === false ? '' : resolveGenerationPrompt({ prompt: localText }, allTexts, textSlot?.composition),
+      assets: [...freeTextAssets, ...media],
+    });
   }
   return buildUpstreamFingerprint({
     ...fingerprint,
