@@ -191,9 +191,10 @@ export function validateCanvasInputSelection(graph: CanvasInputMutationState, in
   if (!operation) return fail('operation_incompatible');
   const layout = deriveSlotLayout(catalog, model.id, operation.id);
   const raw = buildCanvasUpstreamFingerprint(node.id, graph.nodes, graph.edges);
+  const standbyEdgeIds = (node.data.slotStandbyEdgeIds ?? []) as string[];
   const loaded = effectiveInputDisplay(layout, feedFromFingerprint(raw, 1), node.data.slotBindings as SlotBindings | undefined,
-    (node.data.slotConflicts ?? []) as SlotConflict[], [], [], 1);
-  const fingerprint = effectiveSlotFingerprint(raw, layout, loaded.bindings, loaded.conflicts, 1);
+    (node.data.slotConflicts ?? []) as SlotConflict[], [], standbyEdgeIds, 1);
+  const fingerprint = effectiveSlotFingerprint(raw, layout, loaded.bindings, loaded.conflicts, 1, standbyEdgeIds);
   const match = matchOperationInputs(operation, fingerprint);
   const invalid = loaded.records.find(record => record.state === 'invalid');
   const parameterFailure = findDeclaredParameterFailure(params, operation.parameters, catalog?.models?.find(item => item.id === model.id)?.parameters as Record<string, unknown> | undefined);
