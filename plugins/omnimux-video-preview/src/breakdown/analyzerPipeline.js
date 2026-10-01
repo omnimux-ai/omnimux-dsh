@@ -4,7 +4,7 @@ import { createVideoStreamUrl } from '../stream-capability.js'
  * Video breakdown multimodal analysis pipeline and artifact extraction.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, readdirSync, readSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -281,32 +281,71 @@ function extractVideoCoverFrame(localVideoPath) {
   return null
 }
 
+const SAMPLE_SIZE_LIMIT_BYTES = 20 * 1024 * 1024
+
 /**
- * Compress oversized video files (> 20MB) for multimodal models.
+ * ffmpeg transcode tiers for oversized analysis samples.
+ * Audio is always kept (the structure prompt requires verbatim speech quotes),
+ * so `-an` must never appear here.
+ */
+const SAMPLE_TRANSCODE_TIERS = [
+  ['-vf', 'fps=1,scale=720:-2', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28', '-c:a', 'aac', '-b:a', '64k'],
+  ['-vf', 'fps=1/2,scale=480:-2', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '32', '-c:a', 'aac', '-b:a', '64k'],
+]
+
+/**
+ * Compress oversized video files (> 20MiB) for multimodal models.
+ * Keeps the audio track and retries with a lower-quality tier when the first
+ * sample still exceeds the limit. Throws a Chinese guidance error instead of
+ * silently returning the original oversized path.
  * @param {string|null} localVideoPath
+ * @param {{ execFileSync?: Function }} [deps] injectable for tests
  * @returns {string|null}
  */
-function prepareAnalysisSampleVideo(localVideoPath) {
+export function prepareAnalysisSampleVideo(localVideoPath, deps = {}) {
   if (!localVideoPath || !existsSync(localVideoPath)) return null
-  try {
-    const stats = statSync(localVideoPath)
-    if (stats.size <= 20 * 1024 * 1024) {
-      return localVideoPath
-    }
+  const runFfmpeg = deps.execFileSync || execFileSync
 
-    const samplePath = localVideoPath.replace(/\.mp4$/i, '_sample.mp4')
-    if (!existsSync(samplePath)) {
-      execFileSync(
-        'ffmpeg',
-        ['-v', 'error', '-y', '-i', localVideoPath, '-vf', 'fps=1/3,scale=360:-2', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '32', '-an', samplePath],
-        { timeout: 15000 }
-      )
-    }
-    if (existsSync(samplePath)) {
+  let stats
+  try {
+    stats = statSync(localVideoPath)
+  } catch {
+    return null
+  }
+  if (stats.size <= SAMPLE_SIZE_LIMIT_BYTES) {
+    return localVideoPath
+  }
+
+  const ext = extname(localVideoPath)
+  const stem = ext ? localVideoPath.slice(0, -ext.length) : localVideoPath
+  const samplePath = `${stem}_sample.mp4`
+
+  // Reuse an already-valid sample produced by a previous run.
+  try {
+    if (existsSync(samplePath) && statSync(samplePath).size <= SAMPLE_SIZE_LIMIT_BYTES) {
       return samplePath
     }
   } catch {}
-  return localVideoPath
+
+  const sizeMiB = (stats.size / (1024 * 1024)).toFixed(1)
+  let lastError = null
+  for (const tierArgs of SAMPLE_TRANSCODE_TIERS) {
+    try {
+      runFfmpeg('ffmpeg', ['-v', 'error', '-y', '-i', localVideoPath, ...tierArgs, samplePath], { timeout: 30000 })
+      if (existsSync(samplePath) && statSync(samplePath).size <= SAMPLE_SIZE_LIMIT_BYTES) {
+        return samplePath
+      }
+    } catch (err) {
+      lastError = err
+    }
+    try {
+      if (existsSync(samplePath)) unlinkSync(samplePath)
+    } catch {}
+  }
+
+  throw new Error(
+    `视频样片生成失败或压缩后仍超过 20MiB 上限（原文件 ${sizeMiB}MiB，已尝试 ${SAMPLE_TRANSCODE_TIERS.length} 档压缩参数），请截取视频片段后再试。${lastError ? `底层原因：${lastError.message}` : ''}`
+  )
 }
 
 /**
@@ -495,12 +534,48 @@ export async function resolveVirtualTemplateVideoUrl(trimmed, options = {}) {
 }
 
 /**
+ * Classify the raw model response into a graded failure-reason hint.
+ * @param {string} reportText
+ * @returns {string}
+ */
+function classifyFailureContentHint(reportText) {
+  if (typeof reportText !== 'string' || reportText.trim().length === 0) {
+    return '模型未返回任何内容'
+  }
+  if (reportText.includes('|')) {
+    return '模型返回了表格但无合法分镜行'
+  }
+  return '模型返回了非结构化文本'
+}
+
+/**
+ * Persist the raw model response next to the video for diagnostics.
+ * Never throws — a failed write must not block the error path.
+ * @param {string|null} videoPath
+ * @param {string} reportText
+ * @returns {string|null} absolute path of the written diagnostic file
+ */
+function persistFailureDiagnosticReport(videoPath, reportText) {
+  if (!videoPath || typeof videoPath !== 'string') return null
+  try {
+    const ext = extname(videoPath)
+    const stem = ext ? videoPath.slice(0, -ext.length) : videoPath
+    const diagPath = `${stem}.breakdown-failed.md`
+    writeFileSync(diagPath, typeof reportText === 'string' ? reportText : '', 'utf8')
+    return diagPath
+  } catch {
+    return null
+  }
+}
+
+/**
  * Build structured breakdown failure guidance message with companion awareness and DSH prompt directives.
  * @param {string} videoPath
  * @param {number} [totalDuration]
+ * @param {{ reportText?: string, savedReportPath?: string|null }} [diagnostics]
  * @returns {string}
  */
-export function buildBreakdownFailureGuidance(videoPath, totalDuration) {
+export function buildBreakdownFailureGuidance(videoPath, totalDuration, diagnostics = {}) {
   const subtitle = detectCompanionSubtitle(videoPath)
   const isShort = typeof totalDuration === 'number' && totalDuration > 0 && totalDuration <= 120
   const subtitleNotice = subtitle
@@ -514,13 +589,16 @@ export function buildBreakdownFailureGuidance(videoPath, totalDuration) {
     ? `跳过逐镜头视觉拆解，直接根据全片字幕（${subtitle.filename}）提炼对话核心观点与大纲`
     : '跳过逐镜头视觉拆解，若有字幕文件可直接提炼对话核心观点与大纲'
 
+  const contentHint = typeof diagnostics.reportText === 'string'
+    ? `${classifyFailureContentHint(diagnostics.reportText)}；`
+    : ''
   const failureReason = isShort
-    ? '视频视听拆解失败：多模态模型未解析出有效分镜（请确认视觉大模型服务连通性后重试，或检查视频画面内容）。'
-    : '视频视听拆解失败：多模态模型未解析出有效分镜（当前视频时长或内容结构超出短视频逐镜头拉片规格，如访谈播客或长视频）。'
+    ? `视频视听拆解失败：多模态模型未解析出有效分镜（${contentHint}请确认视觉大模型服务连通性后重试，或检查视频画面内容）。`
+    : `视频视听拆解失败：多模态模型未解析出有效分镜（${contentHint}当前视频时长或内容结构超出短视频逐镜头拉片规格，如访谈播客或长视频）。`
 
   const opt3Label = isShort ? '检查模型服务后重试 (Recommended)' : '检查模型服务后重试'
 
-  return [
+  const lines = [
     failureReason,
     subtitleNotice,
     '【智能体行动准则（强制遵守）】：',
@@ -531,7 +609,11 @@ export function buildBreakdownFailureGuidance(videoPath, totalDuration) {
     '   - 选项 2：label: "截取前 2 分钟切片拆解", description: "提取片头精华短视频切片，重新发起逐镜头画面拉片与分镜分析"',
     `   - 选项 3：label: "${opt3Label}", description: "若原片本身即为短视频，请确认视觉大模型服务连通性后重试"`,
     '等待用户在界面点击选择后，严格根据用户的决策分支执行后续操作。',
-  ].join('\n')
+  ]
+  if (diagnostics.savedReportPath) {
+    lines.push(`诊断原始响应已保存至: ${diagnostics.savedReportPath}`)
+  }
+  return lines.join('\n')
 }
 
 /**
@@ -561,7 +643,12 @@ async function resolveBreakdownData(params) {
   alignPhysicalScenesToShots(shots, physicalScenes)
 
   if (shots.length === 0) {
-    const guidance = buildBreakdownFailureGuidance(localVideoPath || analysisVideoPath, totalDuration)
+    const diagVideoPath = localVideoPath || analysisVideoPath
+    const savedReportPath = persistFailureDiagnosticReport(diagVideoPath, analyzeReportText)
+    const guidance = buildBreakdownFailureGuidance(diagVideoPath, totalDuration, {
+      reportText: analyzeReportText,
+      savedReportPath,
+    })
     throw new Error(guidance)
   }
 
@@ -693,17 +780,126 @@ async function resolveLocalVideoTarget(isLocalFile, trimmed, videoPlayUrl, optio
 }
 
 /**
+ * Parse the mvhd movie-header duration inside a single ISO-BMFF box range.
+ * @param {number} fd open file descriptor
+ * @param {number} payloadStart absolute offset of the mvhd payload
+ * @param {number} boxEnd absolute end offset of the mvhd box
+ * @returns {number|undefined} duration in seconds, or undefined when malformed
+ */
+function readMvhdDurationSeconds(fd, payloadStart, boxEnd) {
+  if (payloadStart + 4 > boxEnd) return undefined
+  const probeSize = Math.min(32, boxEnd - payloadStart)
+  const buf = Buffer.alloc(probeSize)
+  if (readSync(fd, buf, 0, probeSize, payloadStart) < 4) return undefined
+  const version = buf[0]
+  let timescaleOffset = -1
+  let durationOffset = -1
+  let durationIs64Bit = false
+  if (version === 0) {
+    timescaleOffset = 12
+    durationOffset = 16
+  } else if (version === 1) {
+    timescaleOffset = 20
+    durationOffset = 24
+    durationIs64Bit = true
+  } else {
+    return undefined
+  }
+  if (timescaleOffset + 4 > probeSize || durationOffset + (durationIs64Bit ? 8 : 4) > probeSize) {
+    return undefined
+  }
+  const timescale = buf.readUInt32BE(timescaleOffset)
+  const duration = durationIs64Bit ? buf.readBigUInt64BE(durationOffset) : buf.readUInt32BE(durationOffset)
+  if (timescale === 0) return undefined
+  const seconds = typeof duration === 'bigint' ? Number(duration) / timescale : duration / timescale
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined
+}
+
+/**
+ * Scan ISO-BMFF boxes inside [start, end) looking for the mvhd box.
+ * @param {number} fd open file descriptor
+ * @param {number} start absolute start offset
+ * @param {number} end absolute end offset
+ * @returns {number|undefined}
+ */
+function scanIsoBmffDuration(fd, start, end) {
+  let offset = start
+  while (offset + 8 <= end) {
+    const header = Buffer.alloc(16)
+    if (readSync(fd, header, 0, 16, offset) < 8) return undefined
+    const size32 = header.readUInt32BE(0)
+    const type = header.toString('ascii', 4, 8)
+    let headerSize = 8
+    let boxSize = size32
+    if (size32 === 1) {
+      if (offset + 16 > end) return undefined
+      const size64 = header.readBigUInt64BE(8)
+      if (size64 > BigInt(Number.MAX_SAFE_INTEGER)) return undefined
+      boxSize = Number(size64)
+      headerSize = 16
+    } else if (size32 === 0) {
+      boxSize = end - offset
+    }
+    if (boxSize < headerSize || offset + boxSize > end) return undefined
+    const payloadStart = offset + headerSize
+    const boxEnd = offset + boxSize
+    if (type === 'mvhd') {
+      return readMvhdDurationSeconds(fd, payloadStart, boxEnd)
+    }
+    if (type === 'moov') {
+      const nested = scanIsoBmffDuration(fd, payloadStart, boxEnd)
+      if (nested !== undefined) return nested
+    }
+    offset = boxEnd
+  }
+  return undefined
+}
+
+/**
+ * Probe a local MP4/QuickTime file for its true duration by reading the
+ * ISO-BMFF mvhd movie-header box (equivalent of omnimux durationFromIsoBmff,
+ * reimplemented locally to avoid cross-plugin imports).
+ * Fails closed: any parse error returns undefined.
+ * @param {string} filePath
+ * @returns {number|undefined}
+ */
+function probeLocalVideoDurationSeconds(filePath) {
+  let fd
+  try {
+    fd = openSync(filePath, 'r')
+    const fileSize = fstatSync(fd).size
+    return scanIsoBmffDuration(fd, 0, fileSize)
+  } catch {
+    return undefined
+  } finally {
+    if (fd !== undefined) {
+      try {
+        closeSync(fd)
+      } catch {}
+    }
+  }
+}
+
+/**
  * Resolve total video duration in seconds.
+ * Priority: realMeta.duration -> meta.duration -> local ISO-BMFF mvhd probe -> 16.
  * @param {object|null} realMeta
  * @param {object} meta
+ * @param {string|null} [localVideoPath]
  * @returns {number}
  */
-function resolveTotalDuration(realMeta, meta) {
+function resolveTotalDuration(realMeta, meta, localVideoPath) {
   if (realMeta && typeof realMeta.duration === 'number') {
     return realMeta.duration
   }
   if (meta && typeof meta.duration === 'number') {
     return meta.duration
+  }
+  if (localVideoPath && typeof localVideoPath === 'string' && existsSync(localVideoPath)) {
+    const probed = probeLocalVideoDurationSeconds(localVideoPath)
+    if (typeof probed === 'number' && Number.isFinite(probed) && probed > 0) {
+      return probed
+    }
   }
   return 16
 }
@@ -786,7 +982,6 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   const coverUrl = resolveInitialCoverUrl(realMeta, options)
 
   const meta = options.meta || {}
-  const totalDuration = resolveTotalDuration(realMeta, meta)
 
   const localVideoPath = await resolveLocalVideoTarget(isLocalFile, trimmed, videoPlayUrl, options)
   if (!localVideoPath || !existsSync(localVideoPath)) {
@@ -794,6 +989,7 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
       `无法获取或下载可供分析的视频文件：${trimmed}。对于长视频或受限平台的视频，请先将视频下载到本地工作区，再传入本地文件路径进行拆解。`
     )
   }
+  const totalDuration = resolveTotalDuration(realMeta, meta, localVideoPath)
   const localCoverPath = extractVideoCoverFrame(localVideoPath)
   const analysisVideoPath = prepareAnalysisSampleVideo(localVideoPath)
   const physicalScenes = await tryDetectPhysicalScenes(localVideoPath, ctx)
