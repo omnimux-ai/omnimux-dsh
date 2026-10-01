@@ -224,7 +224,7 @@ async function sniffMimeType(filePath, filename) {
  *   readBuffer: () => Promise<Buffer>,
  * }>}
  */
-export async function resolveMediaDescriptor(source) {
+export async function resolveMediaDescriptor(source, options = {}) {
   const parsedSource = parseMediaSource(source)
   const trimmed = parsedSource.value
   if (parsedSource.kind === 'remote' || parsedSource.kind === 'invalid') {
@@ -269,6 +269,27 @@ export async function resolveMediaDescriptor(source) {
     } else if (['/api/local-file', '/omnimux-workflow/api/local-file'].includes(parsed.pathname) && parsed.searchParams.get('path')) {
       targetPath = parsed.searchParams.get('path')
     } else {
+      // 增强：对本地服务暴露的任意 HTTP/HTTPS 路由（如 /omnimux/assets/library/preview 等），尝试通过内部 fetch 读取
+      try {
+        const fetcher = typeof options?.fetcher === 'function' ? options.fetcher : fetch
+        const res = await fetcher(trimmed, options?.signal ? { signal: options.signal } : undefined)
+        if (res.ok) {
+          const arrayBuffer = await res.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
+          const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase() || 'application/octet-stream'
+          const ext = MIME_TO_EXT[contentType] || 'png'
+          return {
+            kind: 'data',
+            filename: `local_asset_${Date.now()}.${ext}`,
+            mimeType: contentType,
+            size: buffer.length,
+            createStream: () => Readable.toWeb(Readable.from([buffer])),
+            readBuffer: async () => buffer,
+          }
+        }
+      } catch {
+        // fetch 失败则向下抛出
+      }
       throw new OmnimuxError('omnimux-invalid-request', '不支持的本地素材地址')
     }
   } else if (trimmed.startsWith('asset://')) {
@@ -320,8 +341,8 @@ export async function resolveMediaDescriptor(source) {
  * @param {string} source
  * @returns {Promise<{ buffer: Buffer, mimeType: string, filename: string, filePath?: string, stat?: import('node:fs').Stats, createStream?: () => ReadableStream }>}
  */
-export async function resolveMediaBytes(source) {
-  const desc = await resolveMediaDescriptor(source)
+export async function resolveMediaBytes(source, options = {}) {
+  const desc = await resolveMediaDescriptor(source, options)
   const buffer = await desc.readBuffer()
   return {
     buffer,
@@ -528,7 +549,7 @@ export async function uploadMediaToGateway(source, options) {
   }
 
   const uploadPromise = (async () => {
-    const descriptor = await resolveMediaDescriptor(cacheKey)
+    const descriptor = await resolveMediaDescriptor(cacheKey, { fetcher, signal })
 
     // Direct upload first: the bytes go straight to object storage and the
     // gateway only issues a ticket and verifies the result. A deployment that

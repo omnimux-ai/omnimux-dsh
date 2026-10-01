@@ -187,6 +187,12 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
         });
       } else {
         store.updateMedia(taskId, { status: 'failed' });
+        const currentList = store.getSnapshot().mediaList || [];
+        const sessionList = sessionId ? currentList.filter((m) => m.sessionId === sessionId) : currentList;
+        const validCandidate = sessionList.find((m) => m.id !== taskId && (m.status === 'completed' || m.status === 'generating'));
+        if (validCandidate) {
+          store.setActiveId(validCandidate.id);
+        }
       }
     } catch (err) {
       console.error('[MediaViewer] Direct generate failed:', err);
@@ -196,6 +202,12 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
         try {
           window.dispatchEvent(new CustomEvent('omnimux:toast', { detail: { message, type: 'error' } }));
         } catch {}
+      }
+      const currentList = store.getSnapshot().mediaList || [];
+      const sessionList = sessionId ? currentList.filter((m) => m.sessionId === sessionId) : currentList;
+      const validCandidate = sessionList.find((m) => m.id !== taskId && (m.status === 'completed' || m.status === 'generating'));
+      if (validCandidate) {
+        store.setActiveId(validCandidate.id);
       }
     } finally {
       // 安全并发任务管理：仅当当前会话中没有其他正在生成的任务时才复位 isGenerating

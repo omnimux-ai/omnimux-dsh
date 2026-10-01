@@ -163,6 +163,41 @@ describe('gateway-upload: upload execution and caching', () => {
     assert.equal(fetchCalls, 2)
   })
 
+  it('uploads a local-url HTTP asset via fetcher successfully', async () => {
+    let fetchCalls = 0
+    const localAssetUrl = 'http://127.0.0.1:45120/omnimux/assets/library/preview?id=ast_123&file=fil_456'
+
+    const mockFetcher = async (url) => {
+      fetchCalls += 1
+      if (String(url) === localAssetUrl) {
+        return new Response(PNG_BYTES, {
+          status: 200,
+          headers: { 'content-type': 'image/png' },
+        })
+      }
+      if (String(url).endsWith('/files/upload/presign')) {
+        return new Response(JSON.stringify({ success: false, code: 501, msg: '当前存储后端不支持直传' }), { status: 501 })
+      }
+      return new Response(JSON.stringify({
+        success: true,
+        code: 200,
+        data: {
+          file_id: 'file_local_url_789',
+          file_url: 'https://api.omnimux.ai/api/v1/files/download/file_local_url_789',
+        },
+      }), { status: 200 })
+    }
+
+    const fileUrl = await uploadMediaToGateway(localAssetUrl, {
+      baseUrl: 'https://api.omnimux.ai/v1',
+      apiKey: 'sk-test-key',
+      fetcher: mockFetcher,
+    })
+
+    assert.equal(fileUrl, 'https://api.omnimux.ai/api/v1/files/download/file_local_url_789')
+    assert.equal(fetchCalls, 3) // 1 to fetch local URL + 1 presign probe + 1 relay upload
+  })
+
   it('throws typed asset-not-found when local file does not exist', async () => {
     await assert.rejects(
       () => uploadMediaToGateway('/non/existent/path/never_exists.png', {
