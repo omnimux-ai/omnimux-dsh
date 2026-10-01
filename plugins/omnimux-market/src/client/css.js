@@ -224,12 +224,15 @@ div[class*="modes"],.Q7WfXG_modes{gap:6px !important}
 .sh-active-skill-chip .sh-chip-close{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:none;background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08));color:inherit;cursor:pointer;padding:0;margin-left:4px;opacity:.8;transition:opacity .12s,background .12s,transform .12s;flex-shrink:0}
 .sh-active-skill-chip .sh-chip-close:hover{opacity:1;background:var(--dsw-alias-interactive-bg-active,rgba(255,255,255,.2));transform:scale(1.1)}
 .sh-active-skill-chip .sh-chip-close svg{display:block;flex-shrink:0}
-html:is([data-omnimux-composer-density='short'],[data-omnimux-composer-density='icon']) .sh-active-skill-chip{width:28px !important;min-width:28px !important;max-width:28px !important;padding:0 !important;justify-content:center !important;border-radius:24px !important;cursor:pointer !important}
-html:is([data-omnimux-composer-density='short'],[data-omnimux-composer-density='icon']) .sh-active-skill-chip .sh-chip-label,
-html:is([data-omnimux-composer-density='short'],[data-omnimux-composer-density='icon']) .sh-active-skill-chip .sh-chip-close{display:none !important}
-html:is([data-omnimux-composer-density='short'],[data-omnimux-composer-density='icon']) .sh-active-skill-chip:hover{background:var(--dsw-alias-interactive-bg-active,rgba(255,255,255,.2)) !important;border-color:var(--dsw-alias-border-l2,rgba(255,255,255,.25)) !important;color:var(--dsw-alias-label-danger,#f87171) !important}
-html:is([data-omnimux-composer-density='short'],[data-omnimux-composer-density='icon']) .sh-active-skill-chip:hover .sh-chip-icon{display:none !important}
-html:is([data-omnimux-composer-density='short'],[data-omnimux-composer-density='icon']) .sh-active-skill-chip:hover .sh-chip-icon-hover{display:block !important}
+/* short 档（460–559px）保留选中身份：图标 + 截短名称 + 关闭钮，避免用户误以为未选中（Issue #2896） */
+html[data-omnimux-composer-density='short'] .sh-active-skill-chip .sh-chip-label{max-width:88px}
+/* icon 档（<460px）才收敛为 28px 纯图标胶囊，点击整体即移除 */
+html[data-omnimux-composer-density='icon'] .sh-active-skill-chip{width:28px !important;min-width:28px !important;max-width:28px !important;padding:0 !important;justify-content:center !important;border-radius:24px !important;cursor:pointer !important}
+html[data-omnimux-composer-density='icon'] .sh-active-skill-chip .sh-chip-label,
+html[data-omnimux-composer-density='icon'] .sh-active-skill-chip .sh-chip-close{display:none !important}
+html[data-omnimux-composer-density='icon'] .sh-active-skill-chip:hover{background:var(--dsw-alias-interactive-bg-active,rgba(255,255,255,.2)) !important;border-color:var(--dsw-alias-border-l2,rgba(255,255,255,.25)) !important;color:var(--dsw-alias-label-danger,#f87171) !important}
+html[data-omnimux-composer-density='icon'] .sh-active-skill-chip:hover .sh-chip-icon{display:none !important}
+html[data-omnimux-composer-density='icon'] .sh-active-skill-chip:hover .sh-chip-icon-hover{display:block !important}
 @keyframes sh-chip-in{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
 button[class*="add"],.Q7WfXG_add,
 .sh-picker-trigger{display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:4px !important;height:28px !important;box-sizing:border-box !important;padding:0 8px !important;border:0 !important;box-shadow:none !important;border-radius:24px !important;background:transparent !important;color:var(--dsw-alias-label-secondary,inherit) !important;font:inherit !important;font-size:13px !important;font-weight:500 !important;line-height:20px !important;cursor:pointer !important;outline:none !important;transition:background-color .15s ease,color .15s ease,box-shadow .15s ease !important}
