@@ -13,7 +13,7 @@
  *   - 填入素材后展示完整圆角大方块预览，悬浮显示小叉号 ✕ 卸装填。
  */
 
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useRef, useState } from 'react';
 import SlotHoverPreview from './SlotHoverPreview.tsx';
 import { ArrowLeftRight, FileText, Image as ImageIcon, Loader2, Music, Play, Plus, X } from 'lucide-react';
 import type { MaterialType } from '../../../../../../shared/canvasTypes.ts';
@@ -37,6 +37,8 @@ interface WellModel {
   upstream?: UpstreamMediaItem;
   /** 必需槽位空着 → 强调空态（自解释缺素材）。 */
   requiredEmpty: boolean;
+  state?: 'ready' | 'inactive' | 'pending' | 'invalid';
+  reasonCode?: string;
 }
 
 function buildWellModels(spec: SlotSpec, props: SlotWellsProps, upstreamByEdge: Map<string, UpstreamMediaItem>): WellModel[] {
@@ -84,7 +86,7 @@ function WellThumb({ model }: { model: WellModel }) {
       <img
         className="wf-slot-well__media"
         src={upstream.url}
-        alt={upstream.label}
+        alt=""
       />
     );
   }
@@ -96,17 +98,13 @@ function WellThumb({ model }: { model: WellModel }) {
       </span>
     );
   }
+  if (upstream.materialType === 'text') {
+    return <span className="wf-slot-well__text"><FileText size={16} aria-hidden="true" /><span>{upstream.textContent}</span></span>;
+  }
   if (upstream.materialType === 'audio') {
     return (
       <span className="wf-slot-well__placeholder wf-slot-well__placeholder--audio">
         <Music size={18} aria-hidden="true" />
-      </span>
-    );
-  }
-  if (upstream.materialType === 'document') {
-    return (
-      <span className="wf-slot-well__placeholder wf-slot-well__placeholder--document">
-        <FileText size={18} aria-hidden="true" />
       </span>
     );
   }
@@ -121,14 +119,22 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
   const { layout, onPickSlot, onSwapSlots, onClearOccupant, onInsertToken } = props;
   const t = useT();
   const [hover, setHover] = useState<{ anchor: HTMLElement; model: WellModel } | null>(null);
+  const suppressFocus = useRef<HTMLElement | null>(null);
   const closeHover = useCallback(() => setHover(null), []);
+  const returnPreviewFocus = useCallback((anchor: HTMLElement) => {
+    suppressFocus.current = anchor;
+    anchor.focus();
+    setTimeout(() => {
+      if (suppressFocus.current === anchor) suppressFocus.current = null;
+    }, 300);
+  }, []);
   const slotLabel = useSlotLabel();
   const upstreamByEdge = new Map(
     props.upstreams.filter((item) => item.edgeId).map((item) => [item.edgeId as string, item]),
   );
   const conflictedEdges = new Set((props.conflicts ?? []).map((conflict) => conflict.occupant.edgeId));
 
-  if (layout.preset === 'none' || layout.slots.length === 0) return null;
+  if (layout.slots.length === 0 && !props.records?.length) return null;
 
   const pickRequest = (spec: SlotSpec): SlotPickRequest => ({
     targetSlot: spec.slot,
@@ -147,7 +153,11 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
       conflicted ? 'wf-slot-well--conflict' : '',
     ].filter(Boolean).join(' ');
 
-    const handleWellClick = () => {
+    const handleWellClick = (anchor?: HTMLElement) => {
+      if (props.records && occupant) {
+        if (anchor) setHover({ anchor, model });
+        return;
+      }
       if (occupant) {
         if (onInsertToken && model.upstream) {
           onInsertToken({
@@ -173,23 +183,28 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
         tabIndex={0}
         data-slot={spec.slot}
         data-slot-role={spec.role}
-        data-slot-state={occupant ? (conflicted ? 'conflict' : 'filled') : 'empty'}
+        data-slot-edge={occupant?.edgeId}
+        data-slot-state={model.state ?? (occupant ? (conflicted ? 'conflict' : 'filled') : 'empty')}
         aria-label={occupant ? (model.upstream?.label ?? label) : t('panel.slotPick').replace('{slot}', label)}
         onMouseEnter={(event) => { if (occupant) setHover({ anchor: event.currentTarget, model }); }}
-        onFocus={(event) => { if (occupant && event.target === event.currentTarget) setHover({ anchor: event.currentTarget, model }); }}
-        onClick={handleWellClick}
+        onFocus={(event) => { if (suppressFocus.current === event.currentTarget) return;
+          if (occupant && event.target === event.currentTarget) setHover({ anchor: event.currentTarget, model }); }}
+        onClick={event => handleWellClick(event.currentTarget)}
         onKeyDown={(event) => {
           if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault();
-            handleWellClick();
+            handleWellClick(event.currentTarget);
           }
         }}
       >
         <WellThumb model={model} />
         {hover?.anchor.dataset.slot === spec.slot && hover.model.occupant?.edgeId === occupant?.edgeId && occupant ? (
-          <SlotHoverPreview anchor={hover.anchor} upstream={model.upstream} onReplace={() => onPickSlot({ ...pickRequest(spec), replaceEdgeId: occupant.edgeId })} onClose={closeHover} />
+          <SlotHoverPreview anchor={hover.anchor} upstream={model.upstream} state={model.state} reasonCode={model.reasonCode}
+            onReturnFocus={returnPreviewFocus} onReplace={() => onPickSlot({ ...pickRequest(spec), replaceEdgeId: occupant.edgeId, openerAnchor: hover.anchor, onReturnFocus: returnPreviewFocus })}
+            use={model.state === 'inactive' ? 'inactive' : 'active'} onSetUse={props.onSetUse ? use => props.onSetUse!(spec.slot, occupant.edgeId, use) : undefined} onClose={closeHover} />
         ) : null}
-        {occupant ? (
+        {model.state && model.state !== 'ready' ? <span className="wf-slot-well__state">{t(model.state === 'inactive' ? 'input.state.inactive' : model.reasonCode === 'input_unavailable' ? 'input.state.unavailable' : model.state === 'pending' ? 'input.state.pending' : 'input.state.invalid')}</span> : null}
+        {occupant && !props.records ? (
           <button
             type="button"
             className="wf-slot-well__clear nodrag"
@@ -205,6 +220,22 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
       </div>
     );
   };
+
+  if (props.records) {
+    const models: WellModel[] = props.records.map(record => ({ spec: record.slot, occupant: record.occupant,
+      upstream: upstreamByEdge.get(record.occupant.edgeId), requiredEmpty: false, state: record.state, reasonCode: record.reasonCode }));
+    const canAdd = layout.slots.some(spec => spec.type === 'text' && Boolean(spec.composition) || spec.max === null
+      || props.records!.filter(record => record.slot.slot === spec.slot && record.state !== 'inactive').length < spec.max);
+    const frames = layout.slots.filter(spec => spec.role === 'first_frame' || spec.role === 'last_frame');
+    return <div className="wf-slot-wells wf-slot-wells--strip" data-testid="wf-slot-wells" data-preset={layout.preset}>
+      {models.map(renderWell)}
+      {frames.filter(spec => !models.some(model => model.spec.slot === spec.slot)).map(spec => <button key={spec.slot} type="button"
+        className="wf-slot-well wf-slot-well--empty nodrag" aria-label={t(spec.role === 'first_frame' ? 'input.first' : 'input.last')}
+        onClick={() => onPickSlot(pickRequest(spec))}><Plus size={20} aria-hidden="true" /></button>)}
+      {canAdd ? <button type="button" className="wf-slot-well wf-slot-well--append nodrag" title={t('input.add')} aria-label={t('input.add')}
+        onClick={() => onPickSlot({ acceptedTypes: [...new Set(layout.slots.map(spec => spec.type))], max: null })}><Plus size={20} aria-hidden="true" /></button> : null}
+    </div>;
+  }
 
   if (layout.preset === 'pair' && layout.slots.length === 2) {
     const [first, last] = layout.slots as [SlotSpec, SlotSpec];

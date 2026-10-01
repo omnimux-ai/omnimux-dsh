@@ -18,12 +18,12 @@ export function deriveSlotLayout(
   const operation = model?.operations.find((op) => op.id === operationId && op.listed);
   if (!operation) return { ...layout, acceptsText: false, implementationGaps: ['operation_unlisted'] };
   layout.acceptsText = operation.inputs.some((input) => input.type === 'text' || input.role === 'prompt' || input.slot === 'prompt');
-  // Plain speech submission intentionally accepts no reference media.
-  const inputs = operation.output.type === 'audio' && operation.id === 'text_to_speech'
-    ? [] : bindableSlots(operation);
+  // Plain speech has no implemented reference-media mapping; verified text remains bindable.
+  const inputs = bindableSlots(operation).filter(input => operation.output.type !== 'audio'
+    || operation.id !== 'text_to_speech' || input.type === 'text');
   const policy = SLOT_LAYOUT_TABLE[operation.id];
   if (!policy && inputs.length) layout.implementationGaps.push('missing_layout');
-  layout.preset = inputs.length ? (policy?.preset ?? 'strip') : 'none';
+  layout.preset = inputs.length ? (policy?.preset === 'none' ? 'strip' : policy?.preset ?? 'strip') : 'none';
   if (layout.preset === 'none') return layout;
   const ordered = [] as typeof inputs;
   for (const name of policy?.slots ?? []) {
@@ -40,6 +40,8 @@ export function deriveSlotLayout(
     labelKey: `panel.slot.${input.slot}`,
     maxSizeMb: input.maxSizeMb, maxSizeExclusive: input.maxSizeExclusive,
     minDurationSec: input.minDurationSec, maxDurationSec: input.maxDurationSec,
+    ...(input.valueSources ? { valueSources: [...input.valueSources] } : {}),
+    ...(input.composition ? { composition: { ...input.composition } } : {}),
     ...(input.allowedMimes ? { allowedMimes: [...input.allowedMimes] } : {}),
   }));
   layout.swap = policy?.swap === true && layout.slots.length === 2

@@ -1,3 +1,5 @@
+import type { TextComposition } from '../api.ts';
+
 /** Select available nonempty current text once, preserving connection order. */
 export function selectGenerationTextSources<T extends { sourceNodeId: string; type: string; textContent?: string; url?: string; availability?: string }>(sources: readonly T[]): T[] {
   const seen = new Set<string>();
@@ -13,6 +15,7 @@ export function selectGenerationTextSources<T extends { sourceNodeId: string; ty
 export function resolveGenerationPrompt(
   data: { prompt?: unknown; content?: unknown; materialType?: unknown },
   upstreamTexts: unknown[] = [],
+  composition?: TextComposition,
 ): string {
   const local = [data.prompt, data.content].find((value) => typeof value === 'string' && value.trim());
   // Text references annotate connected content; they are not additional instructions.
@@ -21,9 +24,10 @@ export function resolveGenerationPrompt(
     : '';
   const texts = upstreamTexts.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
     .map((value) => value.trim());
+  if (composition?.kind === 'single_body') return [...texts, instruction].filter(Boolean).join('\n\n');
   if (texts.length === 0) return instruction;
   // Audio text is a script/description, so source labels must never be spoken.
-  if (data.materialType === 'audio') return texts.join('\n\n');
+  if (!composition && data.materialType === 'audio') return texts.join('\n\n');
   if (texts.length === 1 && !instruction) return texts[0]!;
   const sources = texts.map((text, index) => `来源 ${index + 1}：\n${text}`).join('\n\n');
   return instruction ? `${sources}\n\n补充要求：\n${instruction}` : sources;

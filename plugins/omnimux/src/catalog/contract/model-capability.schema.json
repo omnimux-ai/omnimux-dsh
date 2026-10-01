@@ -81,6 +81,21 @@
           "type": "string",
           "enum": ["user", "upstream_edge", "node_field"]
         },
+        "valueSources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["local_field", "upstream_output"] }
+        },
+        "composition": {
+          "type": "object",
+          "required": ["kind", "localRole"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "type": "string", "enum": ["content_with_instruction", "single_body", "separate_roles"] },
+            "localRole": { "type": "string", "enum": ["body", "instruction", "lyrics", "style"] }
+          }
+        },
         "min": { "$ref": "#/$defs/nonNegativeNumber" },
         "max": {
           "anyOf": [
@@ -109,7 +124,11 @@
         "totalMaxExclusive": { "type": "boolean" },
         "limitSource": { "$ref": "#/$defs/limitSource" },
         "hint": { "type": "string" }
-      }
+      },
+      "allOf": [{
+        "if": { "required": ["composition"] },
+        "then": { "properties": { "type": { "const": "text" } } }
+      }]
     },
     "inputGroup": {
       "type": "object",

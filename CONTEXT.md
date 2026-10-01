@@ -22,3 +22,18 @@ This repo lands OmniMux on official dsh. `omnimux` is the execution hub, not a g
 - Hub I/O: `docs/contracts/hub.md`.
 - What is real vs stub: `docs/capabilities.md`.
 - UI Design System: `design.md` and `docs/contracts/ui-design-guidelines.md`.
+
+## Canvas input language
+
+**Upstream material（上游素材）**: Content supplied by another canvas node for generation, including text and supported media or documents. A material's input type is independent of the receiving node's output type.
+_Avoid_: Media-only attachment
+
+**Input contract（输入契约）**: The model, operation and channel's supported input sources, types, formats, roles, constraints and combinations.
+
+**Feed（供给）**: Content a connected upstream node can provide. Availability as feed does not imply selection for consumption.
+
+**Binding（使用绑定）**: A selected upstream output and its intended role in the receiving generation. A binding can be inactive without removing its source or connection.
+
+**Material slot（素材卡槽）**: The receiving generation's entry and representation for upstream bindings. Text-only upstream capability also qualifies for a material slot.
+
+**Local text（本节点文本）**: Text entered directly in the receiving node. It is distinct from upstream material even when both contribute to one final request field.

@@ -24,7 +24,7 @@ export interface NodeInputSource {
   metadata?: Pick<InputMediaAsset, 'mimeType' | 'sizeBytes' | 'durationSec'>;
   availability: InputAvailability;
   message?: string;
-  output: { text?: string; mediaAssets?: InputMediaAsset[] };
+  output: { text?: string; assetId?: string; mediaAssets?: InputMediaAsset[] };
 }
 
 function nonempty(value: unknown): string | undefined {
@@ -116,11 +116,11 @@ export function readNodeInputSource(
     ...(media ? { mediaAssets: [media] } : {}),
   };
   if (text?.trim() || media) {
+    const outputId = media?.assetId ?? media?.relativePath ?? media?.path ?? media?.url
+      ?? (materialType === 'table' ? nonempty(data.tableId) ?? `${node.id}:table` : undefined)
+      ?? nonempty(data.taskId) ?? `${node.id}:current`;
     return {
-      ...base, availability: 'ready', output,
-      outputId: media?.assetId ?? media?.relativePath ?? media?.path ?? media?.url
-        ?? (materialType === 'table' ? nonempty(data.tableId) ?? `${node.id}:table` : undefined)
-        ?? nonempty(data.taskId) ?? `${node.id}:current`,
+      ...base, availability: 'ready', output: text !== undefined && nonempty(data.taskId) ? { ...output, assetId: outputId } : output, outputId,
     };
   }
   const failed = ['error', 'failed'].includes(String(data.status))

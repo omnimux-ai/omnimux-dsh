@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { useNodes, useEdges } from '@xyflow/react';
-import type { MaterialNodeData, MaterialType } from '../../types/materialNode';
+import type { MaterialNodeData } from '../../types/materialNode';
 import { readNodeInputSource, type InputAvailability } from '../../../shared/graph/nodeInputSource.ts';
+import { canvasResourceDisplayName } from '../utils/resourcePickerPolicy.ts';
+import { useT } from '../../i18n';
 import {
   type UpstreamMediaSnapshot,
 } from '../../../shared/validation/operationUi.ts';
@@ -13,7 +15,7 @@ export interface UpstreamMediaItem {
   availabilityMessage?: string;
   outputId?: string;
   label: string;
-  materialType: MaterialType;
+  materialType: import('../../../shared/canvasTypes.ts').MaterialType;
   url?: string;
   hasMedia: boolean;
   textContent?: string;
@@ -32,6 +34,7 @@ export interface UpstreamMediaItem {
 export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
   const nodes = useNodes();
   const edges = useEdges();
+  const t = useT();
 
   return useMemo<UpstreamMediaItem[]>(() => {
     if (!nodeId || !edges || !nodes) return [];
@@ -45,6 +48,7 @@ export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
       const url = asset?.url;
       const textContent = source.output.text;
       const hasMedia = source.availability === 'ready';
+      const displayName = canvasResourceDisplayName(node, source);
       const { mimeType, sizeBytes, durationSec } = source.metadata ?? {};
       const edgeData = (edge.data ?? {}) as Record<string, unknown>;
       const role =
@@ -59,7 +63,8 @@ export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
           availability: source.availability,
           availabilityMessage: source.message,
           outputId: source.outputId,
-          label: data.label || node.id,
+          label: ['text', 'image', 'video', 'audio'].includes(source.materialType)
+            ? (displayName.titleKey ? t(displayName.titleKey) : displayName.title) : data.label || node.id,
           materialType: data.materialType || (node.type === 'table' ? 'table' : 'image'),
           url,
           hasMedia,
@@ -73,7 +78,7 @@ export function useUpstreamMedia(nodeId: string): UpstreamMediaItem[] {
         },
       ];
     });
-  }, [nodes, edges, nodeId]);
+  }, [nodes, edges, nodeId, t]);
 }
 
 /** Project UpstreamMediaItem[] into the fingerprint snapshot shape. */

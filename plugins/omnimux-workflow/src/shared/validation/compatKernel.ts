@@ -255,6 +255,9 @@ function normalizeSlot(raw: unknown): InputSlotDto | null {
     type: slot.type,
     role: typeof slot.role === 'string' ? slot.role : 'reference',
     ...(typeof slot.source === 'string' ? { source: slot.source as InputSlotDto['source'] } : {}),
+    ...(Array.isArray(slot.valueSources) ? { valueSources: slot.valueSources.filter((source): source is 'local_field' | 'upstream_output' => source === 'local_field' || source === 'upstream_output') } : {}),
+    ...(slot.type === 'text' && slot.composition && typeof slot.composition === 'object'
+      ? { composition: { ...slot.composition } as InputSlotDto['composition'] } : {}),
     min: Number.isFinite(slot.min) ? (slot.min as number) : 0,
     max: slot.max === null ? null : Number.isFinite(slot.max) ? (slot.max as number) : 0,
     ...(Array.isArray(slot.allowedMimes) ? { allowedMimes: slot.allowedMimes.map(String) } : {}),
@@ -417,11 +420,11 @@ function isRequiredNodeFieldPresent(slot: InputSlotDto, value: unknown): boolean
   }
 }
 
-/** Slots that upstream edges can bind into (prompt/node_field slots excluded). */
+/** Origin permission is distinct from the logical request field mapping. */
 export function bindableSlots(op: ContractOperationView): InputSlotDto[] {
-  return op.inputs.filter(
-    (slot) => slot.source !== 'node_field' && slot.role !== 'prompt' && isMediaInputType(slot.type),
-  );
+  return op.inputs.filter((slot) => slot.valueSources
+    ? slot.valueSources.includes('upstream_output')
+    : slot.source !== 'node_field' && slot.role !== 'prompt' && isMediaInputType(slot.type));
 }
 
 interface SlotAssignment {
@@ -473,7 +476,7 @@ export function matchOperationInputs(
       const state = assignments.get(slot);
       if (!state) continue;
       const max = slot.max === null ? Number.POSITIVE_INFINITY : slot.max;
-      if (state.assets.length >= max) {
+      if (!(slot.type === 'text' && slot.composition) && state.assets.length >= max) {
         attempts.push(rejection('slot_capacity', `槽位 ${slot.slot} 已满（max ${slot.max}）`, {
           operationId: op.id,
           slot: slot.slot,
@@ -539,7 +542,9 @@ export function matchOperationInputs(
     return { assigned: false, attempts };
   };
 
-  for (const asset of fingerprint.mediaAssets) {
+  const upstreamAssets = fingerprint.assets.filter(asset => isMediaInputType(asset.type)
+    || (asset.type === 'text' && op.inputs.some(slot => slot.valueSources !== undefined)));
+  for (const asset of upstreamAssets) {
     // 1. Explicit target slot wins above everything.
     if (asset.targetSlot) {
       const explicit = slots.filter((slot) => slot.slot === asset.targetSlot && slot.type === asset.type);
@@ -637,7 +642,7 @@ export function matchOperationInputs(
   // readyToSubmit: every slot min satisfied + required prompt present.
   const pending: CompatRejection[] = [];
   if (accepts) {
-    if (op.output.type === 'audio' && fingerprint.localText?.trim()
+    if (!op.inputs.some(slot => slot.composition) && op.output.type === 'audio' && fingerprint.localText?.trim()
       && fingerprint.assets.some((asset) => asset.type === 'text' && asset.textContent?.trim())) {
       pending.push(rejection('text_role_required', '当前音频任务不能分别表达上游正文和本地要求；请将正文保留在一个来源，并用已支持的音色、语速等参数调整表达', { operationId: op.id }));
     }
@@ -649,7 +654,19 @@ export function matchOperationInputs(
         }));
     }
     for (const state of assignments.values()) {
-      if (state.assets.length < state.slot.min) {
+      const localValue = state.slot.slot === 'prompt' || state.slot.role === 'prompt'
+        ? fingerprint.localText ?? fingerprint.prompt : readNodeField(state.slot, fingerprint);
+      const localPresent = state.slot.valueSources?.includes('local_field') && Boolean(String(localValue ?? '').trim());
+      const composition = state.slot.composition;
+      if (composition && localPresent && !(composition.kind === 'single_body' && composition.localRole === 'body')
+        && !(composition.kind === 'content_with_instruction' && composition.localRole === 'instruction')) {
+        pending.push(rejection('text_role_required', '当前方式不支持该文本角色', { operationId: op.id, slot: state.slot.slot }));
+      }
+      const count = state.slot.type === 'text' && composition
+        ? Number(localPresent
+          || (state.slot.valueSources?.includes('upstream_output') && state.assets.some(asset => asset.textContent?.trim())))
+        : state.assets.length;
+      if (count < state.slot.min) {
         pending.push(rejection('min_unsatisfied', `槽位 ${state.slot.slot} 需要至少 ${state.slot.min} 个输入（当前 ${state.assets.length}）`, {
           operationId: op.id,
           slot: state.slot.slot,

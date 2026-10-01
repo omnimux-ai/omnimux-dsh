@@ -609,6 +609,8 @@ models:
             type: "text"
             role: "prompt"
             source: "node_field"
+            valueSources: ["local_field", "upstream_output"]
+            composition: { kind: "content_with_instruction", localRole: "instruction" }
             min: 1
             max: 1
         research:

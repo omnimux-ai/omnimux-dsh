@@ -172,6 +172,34 @@ export function resolveUpstreamBindings(
     const kind = (node.data?.materialType ?? 'text') as keyof NonNullable<CapabilityCatalog['defaults']>;
     const layout = deriveSlotLayout(catalog, (params.model ?? catalog.defaults?.[kind]) as string | undefined, params.operation as string | undefined);
     const incoming = edges.filter((edge) => edge.target === node.id);
+    if (node.data?.inputBindingVersion === 1) {
+      const feed = incoming.map((edge, ordinal) => {
+        const rawOutput = context.getNodeOutput(edge.source);
+        const output = normalizeOutput(rawOutput);
+        const asset = output.mediaAssets?.[0];
+        const slot = layout.slots.find((item) => saved[item.slot]?.some((occupant) => occupant.edgeId === edge.id
+          && occupant.sourceNodeId === edge.source));
+        const type = asset?.type ?? (output.text !== undefined ? 'text' : undefined)
+          ?? String(edge.data?.feedType ?? slot?.type ?? 'text');
+        return { edgeId: edge.id ?? `feed-${edge.source}-${ordinal}`, sourceNodeId: edge.source, ordinal, type,
+          outputId: asset?.assetId ?? asset?.relativePath ?? asset?.path ?? asset?.url ?? output.assetId,
+          ...(type === 'text' ? { textContent: output.text } : {}),
+          url: asset?.url, pathOrUrl: asset?.relativePath || asset?.path, mimeType: asset?.mimeType,
+          sizeBytes: asset?.sizeBytes, durationSec: asset?.durationSec,
+          availability: rawOutput === undefined ? 'unavailable' as const
+            : asset || (type === 'text' && output.text?.trim()) ? 'ready' as const : 'waiting' as const };
+      });
+      const loaded = effectiveInputDisplay(layout, feed, saved, (node.data?.slotConflicts ?? []) as SlotConflict[], [],
+        (node.data?.slotStandbyEdgeIds ?? []) as string[], 1);
+      for (const { slot, occupant, state } of loaded.records) {
+        if (state !== 'ready' && state !== 'pending') continue;
+        const edge = incoming.find((item) => item.id === occupant.edgeId && item.source === occupant.sourceNodeId);
+        if (!edge) continue;
+        bindings.push({ edgeId: edge.id, sourceNodeId: edge.source, role: slot.role, targetSlot: slot.slot,
+          output: structuredClone(normalizeOutput(context.getNodeOutput(edge.source))) });
+      }
+      return bindings;
+    }
     for (const edge of incoming) {
       const output = normalizeOutput(context.getNodeOutput(edge.source));
       const isMedia = output.mediaAssets?.length || ['image', 'video', 'audio'].includes(String(edge.data?.feedType))

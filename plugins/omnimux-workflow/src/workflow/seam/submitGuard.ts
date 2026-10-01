@@ -1,5 +1,5 @@
 import type { CapabilityCatalog } from '../../shared/api.ts';
-import { buildContractView, matchOperationInputs, resolveModelView } from '../../shared/validation/compatKernel.ts';
+import { buildContractView, buildUpstreamFingerprint, matchOperationInputs, resolveModelView } from '../../shared/validation/compatKernel.ts';
 import { buildEffectiveOpsUiState } from '../../shared/validation/operationUi.ts';
 import type { ReferenceAssetPayload, SubmitRequest } from './gateway.ts';
 import { SeamGatewayError } from './SeamGatewayError.ts';
@@ -44,7 +44,12 @@ export function resolveCanvasSubmission(req: SubmitRequest, catalog: CapabilityC
   if (!operation?.listed || operation.output.type !== req.capability) {
     throw new SeamGatewayError('operation-not-allowed', '当前模型不支持所选生成方式，请重新选择');
   }
-  const fingerprint = submissionFingerprint(req);
+  const submitted = submissionFingerprint(req);
+  if (req.textInputs !== undefined && (!Array.isArray(req.textInputs) || req.textInputs.some(input => !input
+    || typeof input.sourceNodeId !== 'string' || typeof input.edgeId !== 'string' || typeof input.targetSlot !== 'string'
+    || typeof input.textContent !== 'string'))) throw new SeamGatewayError('input_unavailable', '文本输入无效，请替换或停用');
+  const fingerprint = buildUpstreamFingerprint({ ...submitted, localText: req.localText,
+    assets: [...submitted.assets, ...(req.textInputs ?? []).map(input => ({ ...input, type: 'text', availability: 'ready' as const }))] });
   // Limit the matcher to the requested operation; never replace an explicit creative choice.
   const match = matchOperationInputs(operation, fingerprint);
   const failure = !match.accepts ? match.rejections[0] : !match.ready ? match.pending[0] : undefined;

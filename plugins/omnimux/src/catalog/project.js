@@ -284,6 +284,8 @@ export function projectModelDto(model, dispositionsDoc) {
       output: structuredClone(op.output ?? {}),
       inputs: structuredClone(op.inputs ?? []),
       ...(op.parameters ? { parameters: structuredClone(op.parameters) } : {}),
+      ...(Array.isArray(op.inputGroups) ? { inputGroups: structuredClone(op.inputGroups) } : {}),
+      ...(op.implementation ? { implementation: structuredClone(op.implementation) } : {}),
       ...(Array.isArray(op.aliases) ? { aliases: [...op.aliases] } : {}),
       research: { ...(op.research ?? {}) },
       execution: { ...(op.execution ?? {}) },
@@ -294,6 +296,7 @@ export function projectModelDto(model, dispositionsDoc) {
       : {}),
     listed: model.listed === true,
     listedOperations: [...(model.listedOperations ?? [])],
+    ...(model.routing ? { routing: structuredClone(model.routing) } : {}),
     channelGroups: projectChannelGroups(model.id),
     disposition: typeof row?.disposition === 'string' ? row.disposition : 'draft',
   };

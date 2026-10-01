@@ -1,9 +1,11 @@
+import type { TextComposition, ValueSource } from '../../api.ts';
 import type { ReferenceAssetPayload } from '../../../workflow/seam/gateway.ts';
 
 export interface FeedAsset {
   edgeId: string;
   sourceNodeId: string;
   outputId?: string;
+  textContent?: string;
   type: string;
   availability: 'ready' | 'waiting' | 'unavailable';
   mimeType?: string;
@@ -23,6 +25,9 @@ export interface SlotOccupant {
   edgeId: string;
   outputId?: string;
   pinned: boolean;
+  ordinal?: number;
+  use?: 'active' | 'inactive';
+  role?: string;
 }
 
 export type SlotBindings = Record<string, SlotOccupant[]>;
@@ -40,6 +45,8 @@ export interface SlotSpec {
   min: number;
   max: number | null;
   labelKey: string;
+  valueSources?: ValueSource[];
+  composition?: TextComposition;
   allowedMimes?: string[];
   maxSizeMb?: number;
   maxSizeExclusive?: boolean;
@@ -74,5 +81,5 @@ export interface EffectiveSubmitInputs {
   unusedFeedEdgeIds: string[];
   emptyRequiredSlots: string[];
   /** Occupied but not usable, including optional slots: never silently skip them. */
-  blockedInputs: Array<{ slot: string; edgeId: string; sourceNodeId: string; reason: 'input_waiting' | 'input_unavailable' }>;
+  blockedInputs: Array<{ slot: string; edgeId: string; sourceNodeId: string; reason: 'input_waiting' | 'input_unavailable' | 'slot_removed' | 'role_conflict' | 'slot_capacity' }>;
 }

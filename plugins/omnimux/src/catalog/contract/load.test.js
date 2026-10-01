@@ -302,6 +302,26 @@ test('readYamlSnapshots sorts names', () => {
   assert.ok(snaps.every((s) => typeof s.content === 'string' && s.content.length > 0));
 });
 
+test('normalization preserves explicit origins/composition without expanding local-only fields or admission', () => {
+  const raw = { id: 'origins', label: 'Origins', research: { status: 'draft' }, operations: [{
+    id: 'chat', output: { type: 'text' }, inputs: [
+      { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+        valueSources: ['local_field', 'upstream_output'], composition: { kind: 'content_with_instruction', localRole: 'instruction' } },
+      { slot: 'url', type: 'text', role: 'url', source: 'node_field', min: 0, max: 1 },
+    ],
+  }] };
+  const normalized = normalizeModel(raw);
+  assert.deepEqual(normalized.operations[0].inputs[0].valueSources, ['local_field', 'upstream_output']);
+  assert.deepEqual(normalized.operations[0].inputs[0].composition,
+    { kind: 'content_with_instruction', localRole: 'instruction' });
+  assert.equal(normalized.operations[0].inputs[1].valueSources, undefined);
+  assert.equal(normalized.operations[0].listed, false);
+  normalized.operations[0].inputs[0].valueSources.push('local_field');
+  normalized.operations[0].inputs[0].composition.localRole = 'body';
+  assert.deepEqual(raw.operations[0].inputs[0].valueSources, ['local_field', 'upstream_output']);
+  assert.equal(raw.operations[0].inputs[0].composition.localRole, 'instruction');
+});
+
 test('prepareCanonicalDoc does not let malformed roots become soft-only warnings', () => {
   const bad = prepareCanonicalDoc({ schemaVersion: '1.1', version: '1.0', models: [] });
   assert.equal(bad.ok, false);

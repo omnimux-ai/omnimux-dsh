@@ -48,6 +48,25 @@ const syntheticDispositions = {
   ],
 };
 
+test('projection retains origins, composition, groups, implementation and routing without changing qualification', () => {
+  const op = { id: 'chat', listed: false, output: { type: 'text' },
+    inputs: [{ slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+      valueSources: ['local_field', 'upstream_output'], composition: { kind: 'content_with_instruction', localRole: 'instruction' } }],
+    inputGroups: [{ slots: ['prompt'], min: 1 }],
+    implementation: { status: 'ready', profileId: 'text-live-v1', seam: 'textComplete' },
+    research: { status: 'draft' }, execution: { status: 'stub' } };
+  const model = { id: 'asr-model', label: 'Model', operations: [op], listed: false,
+    listedOperations: [], routing: { channel: 'official', wireModel: 'wire', endpoint: '/v1/chat/completions' } };
+  const dto = projectCatalog(syntheticIndex([model]), syntheticDispositions).models[0];
+  assert.deepEqual(dto.operations[0], { ...op, label: undefined });
+  assert.deepEqual(dto.routing, model.routing);
+  assert.equal(dto.listed, false);
+  dto.operations[0].inputGroups[0].slots.push('other');
+  dto.routing.channel = 'changed';
+  assert.deepEqual(op.inputGroups, [{ slots: ['prompt'], min: 1 }]);
+  assert.equal(model.routing.channel, 'official');
+});
+
 test('speech_to_text outputs text → text bucket, never the audio output bucket', () => {
   const sttOp = {
     id: 'speech_to_text',

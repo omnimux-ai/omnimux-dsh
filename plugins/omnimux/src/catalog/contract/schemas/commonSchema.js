@@ -13,6 +13,9 @@ export const OUTPUT_TYPES = new Set(['text', 'image', 'video', 'audio']);
 export const MEDIA_TYPES = new Set(['text', 'image', 'video', 'audio', 'document']);
 export const LIMIT_KINDS = new Set(['official_docs', 'measured', 'policy_conservative']);
 export const SLOT_SOURCES = new Set(['user', 'upstream_edge', 'node_field']);
+export const VALUE_SOURCES = new Set(['local_field', 'upstream_output']);
+export const TEXT_COMPOSITION_KINDS = new Set(['content_with_instruction', 'single_body', 'separate_roles']);
+export const LOCAL_TEXT_ROLES = new Set(['body', 'instruction', 'lyrics', 'style']);
 export const PROMPT_POLICIES = new Set(['required', 'optional', 'none']);
 export const PROFILE_STATUSES = new Set(['live', 'stub', 'unavailable']);
 

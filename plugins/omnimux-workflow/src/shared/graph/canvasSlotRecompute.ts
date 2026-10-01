@@ -15,6 +15,7 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   // once here keeps the slot layout, the operation list and the parameter view aligned.
   const catalog = narrowCatalogByRouting(context.catalog, params.model, params.routing);
   const outputType = node.data.materialType as MaterialType;
+  const currentVersion = node.data.inputBindingVersion === 1;
   const raw = buildCanvasUpstreamFingerprint(node.id, graph.nodes, graph.edges);
   const view = buildContractView(catalog);
   if (!params.model && catalog) {
@@ -26,7 +27,7 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   }
   const model = resolveModelView(view, typeof params.model === 'string' ? params.model : undefined);
   if (model) params.model = model.id;
-  if ((!params.operation || (outputType === 'text' && params.operation === 'chat')) && model) {
+  if ((!params.operation || (!currentVersion && outputType === 'text' && params.operation === 'chat')) && model) {
     // A node without a saved mode starts in the catalog's recommended one — the mode that
     // consumes upstream media, so its slots exist from the first render. A saved mode, an
     // explicit connection or a user pick is never replaced here.
@@ -39,23 +40,23 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const policy = catalog?.generationPolicy?.[outputType];
   const permitted = !policy || policy.allowedModelIds.includes(String(model?.id ?? params.model));
   const layout = deriveSlotLayout(catalog, model?.id, operation?.id);
-  const feed = feedFromFingerprint(raw);
-  const plainSpeech = outputType === 'audio' && params.operation === 'text_to_speech';
+  const feed = feedFromFingerprint(raw, currentVersion ? 1 : undefined);
+  const plainSpeech = !currentVersion && outputType === 'audio' && params.operation === 'text_to_speech';
   let explicit = plainSpeech ? {} : node.data.slotBindings as SlotBindings | undefined;
-  if (outputType === 'text' && explicit && Object.keys(explicit).length === 0 && (!node.data.slotStandbyEdgeIds || (node.data.slotStandbyEdgeIds as unknown[]).length === 0)) {
+  if (!currentVersion && outputType === 'text' && explicit && Object.keys(explicit).length === 0 && (!node.data.slotStandbyEdgeIds || (node.data.slotStandbyEdgeIds as unknown[]).length === 0)) {
     explicit = undefined;
   }
   const priorParams = previous ? readCanvasParams(previous) : {};
   const modeChanged = previous && (priorParams.operation !== params.operation || priorParams.model !== params.model);
   if (explicit) {
     explicit = Object.fromEntries(Object.entries(explicit).map(([slot, occupants]) => [slot,
-      occupants.filter((occupant) => !modeChanged || occupant.pinned).map((occupant) => ({ ...occupant }))]));
+      occupants.filter((occupant) => currentVersion || !modeChanged || occupant.pinned).map((occupant) => ({ ...occupant }))]));
     for (const conflict of (plainSpeech ? [] : node.data.slotConflicts ?? []) as SlotConflict[]) {
       const occupants = explicit[conflict.slot] ??= [];
       if (!occupants.some((item) => item.edgeId === conflict.occupant.edgeId)) occupants.push({ ...conflict.occupant });
     }
     // Only new edges may carry a picker hint. Stale edge mirrors never override node slots.
-    const newEdges = graph.edges.filter((edge) => edge.target === node.id && newEdgeIds.has(edge.id));
+    const newEdges = currentVersion ? [] : graph.edges.filter((edge) => edge.target === node.id && newEdgeIds.has(edge.id));
     for (const edge of newEdges) {
       const asset = feed.find((item) => item.edgeId === edge.id);
       if (!asset?.targetSlot && !asset?.role) continue;
@@ -66,8 +67,9 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
       explicit[hint] = slot?.max === 1 ? [occupant] : [...(explicit[hint] ?? []), occupant];
     }
   }
-  const fill = explicit ? autoFillSlots(feed, layout, explicit, Array.isArray(node.data.slotStandbyEdgeIds) ? node.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : []) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
-  const fingerprint = effectiveSlotFingerprint(raw, layout, fill.bindings, fill.conflicts);
+  const fill = currentVersion ? { bindings: explicit ?? {}, conflicts: (node.data.slotConflicts ?? []) as SlotConflict[] }
+    : explicit ? autoFillSlots(feed, layout, explicit, Array.isArray(node.data.slotStandbyEdgeIds) ? node.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : []) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
+  const fingerprint = effectiveSlotFingerprint(raw, layout, fill.bindings, fill.conflicts, currentVersion ? 1 : undefined);
   const match = operation && permitted ? matchOperationInputs(operation, fingerprint) : undefined;
   const reasonCodes = !view.available ? ['catalog_unavailable'] : !permitted ? ['not_listed'] : !model ? ['unknown_model']
     : !operation ? ['operation_incompatible'] : [...(match?.rejections ?? []), ...(match?.pending ?? [])].map((item) => item.code);

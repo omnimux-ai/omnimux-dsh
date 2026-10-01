@@ -10,7 +10,17 @@ import type { Edge } from '@xyflow/react';
 import type { MaterialType } from '../../types/materialNode.ts';
 import { createImportNode } from '../../../shared/graph/nodeFactory.ts';
 import { isNodeConnectionValid } from '../../../shared/graph/connectionConfig.ts';
+import { planCanvasInputSelection, validateCanvasInputSelection } from '../../../shared/graph/canvasInputMutationGateway.ts';
+import { readNodeInputSource } from '../../../shared/graph/nodeInputSource.ts';
+import { deriveSlotLayout } from '../../../shared/graph/feedSlot/deriveSlotLayout.ts';
+import { resolveSlotOperation } from '../../../shared/graph/feedSlot/resolveSlotOperation.ts';
+import { buildCanvasUpstreamFingerprint } from '../../../shared/graph/canvasInputSources.ts';
+import { narrowCatalogByRouting } from '../../../shared/validation/lineConstraints.ts';
 import type {
+  CanvasInputSelectionRequest,
+  CanvasInputSelectionVerdict,
+  CanvasMutationRuntimeContext,
+  CanvasInputMutationState,
   CanvasInputMutation,
   CanvasInputNodePatch,
   CanvasNode,
@@ -29,7 +39,7 @@ import type {
 import { promoteOverflowAsset } from '../../../shared/graph/slotEngine.ts';
 import { normalizeCanvasEdge } from '../../../shared/graph/canvasConnectionUtils.ts';
 
-export type ResourceTypeFilter = 'all' | 'image' | 'video' | 'audio';
+export type ResourceTypeFilter = 'all' | 'text' | 'image' | 'video' | 'audio';
 export type ResourcePickerTab = 'canvas' | 'local';
 export type ResourcePickerView = 'grid' | 'list';
 export type ResourcePickerMode = 'add' | 'replace';
@@ -41,13 +51,32 @@ const IMPORT_STACK_Y = 40;
 
 export interface CanvasResourceItem {
   nodeId: string;
+  outputId?: string;
+  textContent?: string;
+  inUse?: boolean;
+  selectable?: boolean;
+  reasonCode?: string;
   materialType: MaterialType;
   title: string;
+  titleKey?: string;
   previewUrl?: string;
   alreadyConnected: boolean;
   subtitle: string;
   width?: number;
   height?: number;
+}
+
+export function pickerCandidateAvailability(item: Pick<CanvasResourceItem, 'inUse' | 'alreadyConnected' | 'selectable'>,
+  mode: ResourcePickerMode, allowConnectedSelection: boolean): { isAssigned: boolean; disabled: boolean } {
+  const isAssigned = item.inUse === true || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
+  return { isAssigned, disabled: isAssigned || item.selectable === false };
+}
+
+/** Source-selection intent: a cancelled file choice leaves the current selection intact. */
+export function updatePickerLocalDrafts(mode: ResourcePickerMode, selectedIds: string[], localFiles: LocalFileDraft[], incoming: LocalFileDraft[]) {
+  if (!incoming.length) return { selectedIds, localFiles };
+  return mode === 'replace' ? { selectedIds: [], localFiles: [incoming[incoming.length - 1]!] }
+    : { selectedIds, localFiles: [...localFiles, ...incoming] };
 }
 
 export interface LocalFileDraft {
@@ -267,12 +296,43 @@ function hasListableMedia(materialType: MaterialType, data: Record<string, unkno
   return status === 'ready' || status === 'completed';
 }
 
-/** 列出当前画布上可被当前节点引用的媒体资源（不含自身、不含文本/表格）。 */
+/** PM display projection of this current output; never persisted as source metadata. */
+export function canvasResourceDisplayName(node: CanvasNode, source = readNodeInputSource(node)): { title: string; titleKey?: string } {
+  const data = nodeData(node);
+  const currentAsset = Array.isArray(data.mediaAssets)
+    ? data.mediaAssets.find(asset => isRecord(asset) && asset.type === source.materialType) as Record<string, unknown> | undefined : undefined;
+  const nodeOwnsCurrent = !currentAsset || Boolean(currentAsset.url && currentAsset.url === data.mediaUrl)
+    || Boolean(currentAsset.assetId && currentAsset.assetId === data.assetId)
+    || Boolean(currentAsset.relativePath && currentAsset.relativePath === data.relativePath)
+    || Boolean(currentAsset.path && currentAsset.path === data.realPath);
+  const identities = new Set([node.id, source.outputId, data.assetId, data.taskId, currentAsset?.assetId, currentAsset?.outputId]);
+  const candidates = [data.label, currentAsset?.title, nodeOwnsCurrent ? data.title : undefined,
+    currentAsset?.originalName, nodeOwnsCurrent ? data.originalName : undefined,
+    currentAsset?.name, nodeOwnsCurrent ? data.name : undefined];
+  const title = candidates.find(value => typeof value === 'string' && value.trim() && !identities.has(value.trim())
+    && !/^(?:[a-z][a-z\d+.-]*:\/\/|data:|blob:|\/|[a-z]:[\\/])/i.test(value.trim())) as string | undefined;
+  if (title) return { title: title.trim() };
+  if (source.materialType === 'text' && source.output.text?.trim()) return { title: source.output.text.trim() };
+  return { title: '', titleKey: source.materialType === 'text' ? 'node.type.text' : `panel.slot.${source.materialType}` };
+}
+
+/** Current operation candidates are projections of the same strict selection planner. */
 export function listCanvasResources(
   nodes: CanvasNode[],
   edges: Edge[],
   targetNodeId: string,
+  context: CanvasMutationRuntimeContext = {},
+  selectionTarget?: { targetSlot?: string; role?: string; replaceEdgeId?: string; replaceSlot?: string;
+    selections?: NonNullable<CanvasInputSelectionRequest['selections']> },
 ): CanvasResourceItem[] {
+  const target = nodes.find(node => node.id === targetNodeId);
+  const params = target?.data.params as Record<string, unknown> | undefined;
+  const explicitOperation = typeof params?.operation === 'string' ? params.operation : '';
+  const catalog = narrowCatalogByRouting(context.catalog, params?.model, params?.routing);
+  const operation = explicitOperation || (target?.data.inputBindingVersion !== 1
+    ? resolveSlotOperation(catalog, typeof params?.model === 'string' ? params.model : undefined, undefined,
+      String(target?.data.materialType ?? ''), buildCanvasUpstreamFingerprint(targetNodeId, nodes, edges)) ?? '' : '');
+  const layout = deriveSlotLayout(catalog, typeof params?.model === 'string' ? params.model : undefined, operation);
   const connected = incomingSourceIds(edges, targetNodeId);
   const items: CanvasResourceItem[] = [];
   for (const node of nodes) {
@@ -280,25 +340,95 @@ export function listCanvasResources(
     if (node.type && node.type !== 'material') continue;
     const data = nodeData(node);
     const materialType = asMaterialType(data.materialType);
-    if (!materialType || !hasListableMedia(materialType, data)) continue;
-    const title = resourceTitle(data, node.id);
+    if (!materialType) continue;
+    const source = readNodeInputSource(node);
+    if (source.availability !== 'ready' || !source.outputId) continue;
+    const matchingSlots = layout.slots.filter(slot => slot.type === materialType && (!selectionTarget?.targetSlot || slot.slot === selectionTarget.targetSlot));
+    if (!matchingSlots.length) continue;
+    const bindings = (target?.data.slotBindings ?? {}) as SlotBindings;
+    const inUse = matchingSlots.some(slot => bindings[slot.slot]?.some(item => item.use !== 'inactive'
+      && item.sourceNodeId === source.nodeId && (item.role ?? slot.role) === slot.role
+      && edges.some(edge => edge.id === item.edgeId && edge.source === source.nodeId && edge.target === targetNodeId)));
+    const selected = selectionTarget?.selections ?? [];
+    const candidateRequest = { targetNodeId, chosenOperationId: operation,
+      selections: [...selected.filter(item => item.sourceNodeId !== source.nodeId), {
+        sourceNodeId: source.nodeId, outputId: source.outputId,
+        targetSlot: selectionTarget?.targetSlot, role: selectionTarget?.role,
+      }], replaceEdgeId: selectionTarget?.replaceEdgeId, replaceSlot: selectionTarget?.replaceSlot };
+    const candidate = target?.data.inputBindingVersion === 1
+      ? (inUse ? { status: 'allowed', verdict: validateCanvasInputSelection({ nodes, edges }, candidateRequest, context) }
+        : planPickerSelectionMutation({ nodes, edges }, candidateRequest, context)) : undefined;
+    const selectable = candidate ? candidate.status === 'allowed' && candidate.verdict?.accepts === true : true;
+    const displayName = canvasResourceDisplayName(node, source);
     const size = dimensionPair(data);
     items.push({
       nodeId: node.id,
+      outputId: source.outputId,
+      textContent: source.output.text,
+      inUse,
+      selectable,
+      reasonCode: candidate?.verdict?.reasonCode ?? candidate?.reasonCode,
       materialType,
-      title,
+      ...displayName,
       previewUrl: resolveMediaPreviewUrl(
         materialType,
         data.mediaAssets as MediaAssetLike[] | undefined,
         typeof data.mediaUrl === 'string' ? data.mediaUrl : undefined,
       ),
       alreadyConnected: connected.has(node.id),
-      subtitle: resourceSubtitle(data, title, node.id, size),
+      subtitle: materialType === 'text' ? source.output.text ?? '' : (size.width && size.height ? `${size.width} × ${size.height}` : ''),
       width: size.width,
       height: size.height,
     });
   }
   return items;
+}
+
+/** Translate an allowed graph plan into one strict store mutation; never replay selections. */
+export function planPickerSelectionMutation(current: CanvasInputMutationState, request: CanvasInputSelectionRequest, context: CanvasMutationRuntimeContext): {
+  status: 'allowed' | 'rejected' | 'configuration_error'; reasonCode?: string;
+  mutation?: CanvasInputMutation; verdict?: CanvasInputSelectionVerdict;
+} {
+  const plan = planCanvasInputSelection(current, request, context);
+  if (plan.status !== 'allowed') return { status: plan.status, reasonCode: plan.reasonCode };
+  const verdict = validateCanvasInputSelection(plan, request, context);
+  // The selection endpoint alone verifies the unique saved binding and reduction.
+  // Apply only its binding result, without claiming the remaining graph is ready.
+  if (request.setUse?.use === 'inactive' && !request.replaceEdgeId && !(request.selections?.length)) {
+    const target = plan.nodes.find(node => node.id === request.targetNodeId)!;
+    return { status: 'allowed', verdict, mutation: {
+      nodePatches: [{ nodeId: target.id, data: { slotBindings: target.data.slotBindings } }],
+    } };
+  }
+  if (!verdict.accepts) return { status: 'rejected', reasonCode: verdict.reasonCode, verdict };
+  const nodePatches = plan.nodes.flatMap(node => {
+    const previous = current.nodes.find(item => item.id === node.id);
+    return previous && previous.data !== node.data ? [{ nodeId: node.id, data: node.data }] : [];
+  });
+  // Derived edge mirrors are recomputed by the original gateway after these explicit bindings.
+  const addEdges = plan.edges.filter(edge => !current.edges.some(item => item.id === edge.id));
+  const removeEdgeIds = current.edges.filter(edge => !plan.edges.some(item => item.id === edge.id)).map(edge => edge.id);
+  return { status: 'allowed', verdict, mutation: { nodePatches, addEdges,
+    removeEdgeIds: removeEdgeIds.length ? removeEdgeIds : undefined,
+    strictConsumption: { targetNodeId: request.targetNodeId, chosenOperationId: request.chosenOperationId,
+      ...(request.chosenRouteId !== undefined ? { chosenRouteId: request.chosenRouteId } : {}) } } };
+}
+
+export function pickerReasonKey(reasonCode?: string): string {
+  switch (reasonCode) {
+    case 'catalog_unavailable': case 'unknown_model': case 'not_listed': return 'input.reason.catalog';
+    case 'input_waiting': return 'input.reason.waiting';
+    case 'input_unavailable': case 'missing_node': case 'input_changed': return 'input.reason.unavailable';
+    case 'slot_capacity': return 'input.reason.capacity';
+    case 'mime_unsupported': return 'input.reason.format';
+    case 'size_exceeded': return 'input.reason.size';
+    case 'duration_exceeded': return 'input.reason.duration';
+    case 'prompt_required': return 'input.reason.body';
+    case 'min_unsatisfied': return 'input.reason.required';
+    case 'mime_unknown': return 'input.reason.unknownFormat';
+    case 'route_plan_required': case 'operation_confirmation_required': return 'input.reason.sameMethod';
+    default: return 'input.reason.incompatible';
+  }
 }
 
 export function filterCanvasResources(

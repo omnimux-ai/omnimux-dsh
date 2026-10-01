@@ -33,7 +33,7 @@ export function buildCanvasUpstreamFingerprint(
     }];
   });
   return buildUpstreamFingerprint({
-    prompt: resolveGenerationPrompt(target?.data ?? {}, selectGenerationTextSources(assets).map((asset) => asset.textContent)),
+    prompt: resolveGenerationPrompt(target?.data ?? {}, target?.data.inputBindingVersion === 1 ? [] : selectGenerationTextSources(assets).map((asset) => asset.textContent)),
     localText: resolveGenerationPrompt(target?.data ?? {}), nodeFields: target ? readCanvasParams(target) : {}, assets,
   });
 }

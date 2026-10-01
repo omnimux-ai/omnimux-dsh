@@ -35,6 +35,8 @@ export function prepareExecutionSlotGraph<
     params.operation ??= resolveSlotOperation(catalog, model?.id, params.operation, kind,
       buildCanvasUpstreamFingerprint(node.id, nodes as unknown as CanvasNode[], nextEdges as unknown as Edge[]));
     data.params = params;
+    // Current bindings are explicit intent; preparation is not a migration or picker.
+    if (data.inputBindingVersion === 1) return { ...node, data } as N;
     if (kind === 'audio' && params.operation === 'text_to_speech') {
       data.slotBindings = {};
       data.slotConflicts = [];

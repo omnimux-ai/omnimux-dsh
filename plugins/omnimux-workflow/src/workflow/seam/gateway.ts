@@ -43,6 +43,9 @@ export interface SubmitRequest {
   capability: GenerationCapability;
   /** Prompt text (or upstream text content). */
   prompt?: string;
+  /** Resolved text origins for the workflow guard; never forwarded as provider fields. */
+  localText?: string;
+  textInputs?: Array<{ sourceNodeId: string; edgeId: string; outputId?: string; role?: string; targetSlot: string; textContent: string }>;
   /** Interleaved multimodal message parts (Issue #714 / T05). */
   interleavedParts?: Array<{
     type: 'text' | 'image_url' | 'video_url' | 'audio_url' | string;

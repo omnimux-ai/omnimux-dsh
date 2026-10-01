@@ -352,6 +352,10 @@ function normalizeSlot(slot) {
     min: Number(slot.min),
     max: slot.max === null ? null : Number(slot.max),
   };
+  if (Array.isArray(slot.valueSources)) out.valueSources = [...slot.valueSources];
+  if (slot.composition && typeof slot.composition === 'object') {
+    out.composition = { ...slot.composition };
+  }
   if (Array.isArray(slot.allowedMimes)) out.allowedMimes = [...slot.allowedMimes];
   if (slot.maxSizeMb != null) out.maxSizeMb = Number(slot.maxSizeMb);
   if (typeof slot.maxSizeExclusive === 'boolean') out.maxSizeExclusive = slot.maxSizeExclusive;

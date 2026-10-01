@@ -12,6 +12,8 @@ import { pickLocalFiles } from '../../bridge/apiClient.ts';
 import {
   planImportNodeFill,
   planResourcePickerCommit,
+  planPickerSelectionMutation,
+  pickerReasonKey,
   type LocalFileDraft,
   type ResourcePickerTab,
   type ResourcePickerMode,
@@ -24,12 +26,14 @@ import type { NodeSlotEngineState } from '../../../shared/graph/slotContractType
 
 export interface ResourcePickerSlotTarget {
   /** 目标 slot 名（内核 SlotSpec.slot）。 */
-  slot: string;
+  slot?: string;
   /** 该 slot 接受的素材类型。 */
   acceptedTypes: string[];
   /** 槽位上限；null 表示官方未公布上限。 */
   max: number | null;
   replaceEdgeId?: string;
+  openerAnchor?: HTMLElement;
+  onReturnFocus?: (anchor: HTMLElement) => void;
   /** 借出型展示槽位：提交前须先把节点 operation 切到该 op。 */
   displayOnlyFromOperation?: string;
 }
@@ -51,6 +55,9 @@ export interface UseResourcePickerResult {
   fillImportNode: () => Promise<boolean>;
   relinkLocalFile: (materialType: MaterialType) => Promise<boolean>;
   commit: (payload: {
+    selections?: Array<{ sourceNodeId: string; outputId: string; targetSlot?: string; role?: string }>;
+    chosenOperationId?: string;
+    chosenRouteId?: string;
     selectedCanvasNodeIds: string[];
     localFiles: LocalFileDraft[];
     mode?: ResourcePickerMode;
@@ -102,7 +109,10 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
 
   const commit = useCallback(
     (payload: {
-      selectedCanvasNodeIds: string[];
+      selections?: Array<{ sourceNodeId: string; outputId: string; targetSlot?: string; role?: string }>;
+    chosenOperationId?: string;
+    chosenRouteId?: string;
+    selectedCanvasNodeIds: string[];
       localFiles: LocalFileDraft[];
       mode?: ResourcePickerMode;
       targetSlotIndex?: number;
@@ -113,6 +123,31 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
       const commitSlotIndex = payload.targetSlotIndex ?? targetSlotIndex;
       const targetNode = state.nodes.find((n) => n.id === nodeId);
       const slotState = targetNode?.data?.slotState as NodeSlotEngineState | undefined;
+      if (targetNode?.data.inputBindingVersion === 1) {
+        const params = targetNode.data.params as Record<string, unknown> | undefined;
+        if (payload.localFiles.length || !payload.selections?.length) return false;
+        const prepared = planPickerSelectionMutation({ nodes: state.nodes, edges: state.edges }, {
+          targetNodeId: nodeId,
+          chosenOperationId: payload.chosenOperationId ?? String(params?.operation ?? ''),
+          chosenRouteId: payload.chosenRouteId,
+          selections: payload.selections,
+          replaceEdgeId: slotTarget?.replaceEdgeId,
+          replaceSlot: slotTarget?.replaceEdgeId ? slotTarget.slot : undefined,
+        }, { catalog: state.catalogRuntime });
+        if (prepared.status !== 'allowed' || !prepared.mutation) {
+          toast.error(t(pickerReasonKey(prepared.reasonCode)));
+          return false;
+        }
+        state.pushHistory();
+        const applied = state.applyCanvasInputMutation(prepared.mutation);
+        if (applied.status !== 'allowed') {
+          toast.error(t(pickerReasonKey(applied.reasonCode)));
+          return false;
+        }
+        state.pushHistory(true);
+        closePicker();
+        return true;
+      }
 
       const plan = planResourcePickerCommit({
         nodes: state.nodes,
@@ -141,7 +176,7 @@ export function useResourcePicker(nodeId: string, workspaceId?: string | null): 
       let nodePatches = plan.nodePatches;
       const borrowOp = slotTarget?.displayOnlyFromOperation;
       if (borrowOp) {
-        const params = setParamsOperation(targetNode?.data?.params, borrowOp);
+        const params = setParamsOperation(targetNode?.data?.params as Record<string, unknown> | undefined, borrowOp);
         const existing = plan.nodePatches?.find((patch) => patch.nodeId === nodeId);
         nodePatches = existing
           ? plan.nodePatches!.map((patch) => patch.nodeId === nodeId
