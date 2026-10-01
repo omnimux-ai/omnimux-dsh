@@ -102,6 +102,18 @@ const STYLES = `
 .sh-mfoot { display: flex; justify-content: flex-end; gap: 8px; }
 `
 
+const STYLE_ELEMENT_ID = 'omnimux-social-harvest-styles'
+
+/** Mount the page stylesheet once per document; repeated calls are no-ops. */
+function injectHarvestStyles() {
+  if (typeof document === 'undefined') return
+  if (document.getElementById(STYLE_ELEMENT_ID)) return
+  const style = document.createElement('style')
+  style.id = STYLE_ELEMENT_ID
+  style.textContent = STYLES
+  document.head.append(style)
+}
+
 const ChevronIcon = (
   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -257,6 +269,7 @@ export function HarvestStage({ t, visible = true }) {
   // 保活契约（auto-qa-scan guards）：页面切走时隐藏而不卸载，回来时不重拉状态。
   // 注意：判定在渲染前执行，所有 hooks 无条件调用，避免 hooks 顺序违规。
   const [everOpened, setEverOpened] = useState(false)
+  useEffect(() => { injectHarvestStyles() }, [])
   useEffect(() => { if (visible) setEverOpened(true) }, [visible])
   const hidden = !visible
 
@@ -328,7 +341,6 @@ export function HarvestStage({ t, visible = true }) {
 
   return (
     <div className="sh-root" style={hidden ? { display: 'none' } : undefined}>
-      <style>{STYLES}</style>
       <div className="sh-head">
         <div className="sh-brand"><span className="sh-brand-badge">OmniMux</span>{t('nav')}</div>
         <div className={`sh-env ${envPill.cls}`}><span className="dot" />{envPill.text}</div>
