@@ -1,4 +1,4 @@
-# 规格说明：素材卡槽增加 40×56px 按钮边框线与紧凑竖版对齐
+# 规格说明：素材卡槽增加 40×56px 虚线按钮边框线与紧凑竖版对齐
 
 **Issue**: #2863  
 **状态**: 实施中  
@@ -8,9 +8,9 @@
 
 ## 1. 目标与用户意图对齐
 
-根据用户需求指令及参考截图（输入框左侧素材卡槽红色箭头指示）：
+根据用户需求指令及反馈：
 1. **尺寸规范**：素材卡槽统一调整为 **40px 宽 × 56px 高**（`40*56px`）；
-2. **按钮边框线**：为素材卡槽赋予明确清晰的高品质 SaaS 按钮边框线（`1px solid` 微光边框搭配微妙底色与悬浮态高亮），摆脱此前悬浮裸图标或淡虚线感知不清的问题；
+2. **虚线按钮边框线（Dashed Border Line）**：为素材卡槽赋予标准清晰的现代科技 SaaS 虚线按钮边框线（`1px dashed var(--dsw-alias-border-l3)` 搭配微妙底色与悬浮态高亮），符合上传与素材卡槽的标准虚线交互语义；
 3. **视觉对齐与叠卡**：
    - 内部矢量图标（ImagePlus / Video / Audio）适配为 20px，在 40×56 容器内保持几何居中；
    - 叠卡计算步进（`CARD=40`, `STEP=48`, `PILE_WIDTH=50`, `GAP=10`）无缝适配；
@@ -20,19 +20,19 @@
 
 ## 2. 详细样式与几何契约
 
-### A. 按钮边框线与尺寸定义 (`styles.js`)
-- `.omx-slot-card, .omx-slot-add`:
-  - `width: 40px;`
-  - `height: 56px;`
-  - `border-radius: 8px;`
-- `.omx-slot-add` 按钮边框线外观：
-  - `border: 1px solid var(--dsw-alias-border-l3);`
-  - `background: var(--dsw-alias-bg-layer-2);`
-  - `color: var(--dsw-alias-label-secondary);`
-- `.omx-slot-add:hover` 交互高亮态：
-  - `border-color: var(--dsw-alias-border-l4);`
-  - `background: var(--dsw-alias-bg-layer-3);`
-  - `box-shadow: 0 2px 8px var(--dsw-alias-bg-layer-1);`
+### A. 虚线按钮边框线与尺寸定义 (`styles.js`)
+- `.omx-slot-card, .omx-slot-btn, .omx-slot-add`:
+  - `width: 40px !important;`
+  - `height: 56px !important;`
+  - `border-radius: 8px !important;`
+- `.omx-slot-btn, .omx-slot-add` 虚线边框线外观：
+  - `border: 1px dashed var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.28)) !important;`
+  - `background: var(--dsw-alias-bg-layer-2) !important;`
+  - `color: var(--dsw-alias-label-secondary) !important;`
+- `.omx-slot-btn:hover, .omx-slot-add:hover` 交互高亮态：
+  - `border-color: var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.5)) !important;`
+  - `background: var(--dsw-alias-bg-layer-3) !important;`
+  - `box-shadow: 0 4px 12px var(--dsw-alias-bg-layer-1);`
 - `.omx-slot-add svg`:
   - `width: 20px;`
   - `height: 20px;`

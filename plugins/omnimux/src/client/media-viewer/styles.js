@@ -1198,10 +1198,18 @@ export const MEDIA_VIEWER_CSS = `
   color: var(--dsw-alias-label-primary);
   transform: scale(1.1);
 }
+button.omx-slot-btn,
+button.omx-slot-add,
 .omx-slot-btn,
 .omx-slot-add {
   z-index: 8;
-  border: 1px solid var(--dsw-alias-border-l2) !important;
+  width: 40px !important;
+  height: 56px !important;
+  min-width: 40px !important;
+  border-width: 1px !important;
+  border-style: dashed !important;
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.32)) !important;
+  border-radius: 8px !important;
   background: var(--dsw-alias-bg-layer-2) !important;
   color: var(--dsw-alias-label-secondary) !important;
   display: flex !important;
@@ -1211,10 +1219,12 @@ export const MEDIA_VIEWER_CSS = `
   padding: 0 !important;
   box-sizing: border-box !important;
 }
+button.omx-slot-btn:hover,
+button.omx-slot-add:hover,
 .omx-slot-btn:hover,
 .omx-slot-add:hover {
   background: var(--dsw-alias-bg-layer-3) !important;
-  border-color: var(--dsw-alias-border-l4) !important;
+  border-color: var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.65)) !important;
   color: var(--dsw-alias-label-primary) !important;
   transform: translateY(-1px) translateX(var(--slot-shift, 0px));
   box-shadow: 0 4px 12px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 卡槽悬浮微光 */
