@@ -5,6 +5,57 @@
  */
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
+export const MEDIA_VIEWER_STORAGE_KEY = 'omnimux:media-viewer:store:v1';
+
+function getLocalStorage() {
+  try {
+    return typeof window !== 'undefined' && window.localStorage ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadPersistedState() {
+  const storage = getLocalStorage();
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(MEDIA_VIEWER_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch (err) {
+    return null;
+  }
+}
+
+function persistState(s) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  try {
+    const safeMediaList = (s.mediaList || [])
+      .filter((m) => m && m.status !== 'generating')
+      .slice(-100);
+    const payload = {
+      mediaList: safeMediaList,
+      annotationsByMediaId: s.annotationsByMediaId || {},
+      activeId: s.activeId,
+      subViewMode: s.subViewMode,
+      layoutMode: s.layoutMode,
+    };
+    storage.setItem(MEDIA_VIEWER_STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    // ignore quota error
+  }
+}
+
+export function clearPersistedMediaViewerStore() {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(MEDIA_VIEWER_STORAGE_KEY);
+  } catch {}
+}
 
 /**
  * @typedef {Object} MediaItem
@@ -34,23 +85,32 @@ export function formatTimelineDate(ts) {
 }
 
 export function createMediaViewerStore(initialState = {}) {
+  const persisted = loadPersistedState();
+  const initialMediaList = initialState.mediaList && initialState.mediaList.length > 0
+    ? initialState.mediaList
+    : (persisted?.mediaList || []);
+  const initialAnnotations = initialState.annotationsByMediaId && Object.keys(initialState.annotationsByMediaId).length > 0
+    ? initialState.annotationsByMediaId
+    : (persisted?.annotationsByMediaId || {});
+
   let state = {
-    mediaList: initialState.mediaList || [],
-    activeId: initialState.activeId || null,
-    subViewMode: initialState.subViewMode || 'single', // 'single' (大图浏览/画布模式) | 'grid' (时间线模式)
-    layoutMode: initialState.layoutMode || '3col',   // '3col' (三栏模式) | '2col' (两栏模式)
+    mediaList: initialMediaList,
+    activeId: initialState.activeId || persisted?.activeId || initialMediaList[0]?.id || null,
+    subViewMode: initialState.subViewMode || persisted?.subViewMode || 'single', // 'single' (大图浏览/画布模式) | 'grid' (时间线模式)
+    layoutMode: initialState.layoutMode || persisted?.layoutMode || '3col',   // '3col' (三栏模式) | '2col' (两栏模式)
     zoom: initialState.zoom || 100,                  // 50, 70, 100, 150
     isGenerating: Boolean(initialState.isGenerating),
     generatingTask: initialState.generatingTask || null,
     generationTasks: initialState.generationTasks || [],
     isAnnotating: Boolean(initialState.isAnnotating),  // 是否处于打点评论状态
-    annotationsByMediaId: initialState.annotationsByMediaId || {}, // mediaId -> AnnotationItem[]
+    annotationsByMediaId: initialAnnotations, // mediaId -> AnnotationItem[]
   };
 
   const listeners = new Set();
   let composerSessionId = null;
 
   function notify() {
+    persistState(state);
     for (const listener of listeners) {
       try {
         listener(state);

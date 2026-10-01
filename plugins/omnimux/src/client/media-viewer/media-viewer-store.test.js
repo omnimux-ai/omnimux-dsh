@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMediaViewerStore, formatTimelineDate } from './media-viewer-store.js';
+import { createMediaViewerStore, formatTimelineDate, clearPersistedMediaViewerStore } from './media-viewer-store.js';
 
 test('formatTimelineDate formats timestamp to YYYY年M月D日 HH:mm', () => {
   // 2026-09-13 20:29:00 local time
@@ -188,4 +188,47 @@ test('media-viewer-store: session binding, deduplication and session-scoped filt
   assert.equal(groupsB.length, 1);
   assert.equal(groupsB[0].items.length, 1);
   assert.equal(groupsB[0].items[0].id, itemB1.id);
+});
+
+test('media-viewer-store: localStorage persistence and restore', () => {
+  // Mock localStorage
+  const storage = new Map();
+  const mockLocalStorage = {
+    getItem: (key) => storage.get(key) || null,
+    setItem: (key, val) => storage.set(key, String(val)),
+    removeItem: (key) => storage.delete(key),
+    clear: () => storage.clear(),
+  };
+
+  const originalWindow = globalThis.window;
+  globalThis.window = { localStorage: mockLocalStorage };
+
+  try {
+    const store1 = createMediaViewerStore();
+    // 1. Add completed media and generating media
+    store1.addMedia({ id: 'm1', url: 'https://example.com/apple.png', title: '苹果', status: 'completed' });
+    store1.addMedia({ id: 'm_gen', url: 'https://example.com/temp.png', title: '生成中', status: 'generating' });
+    const draft = store1.addDraftAnnotation('m1', { xPercent: 45, yPercent: 35 });
+    store1.commitAnnotation('m1', draft.id, '加一个猕猴桃');
+
+    // Verify localStorage has persisted data without generating items
+    const raw = mockLocalStorage.getItem('omnimux:media-viewer:store:v1');
+    assert.ok(raw, 'localStorage must contain persisted state');
+    const parsed = JSON.parse(raw);
+    assert.equal(parsed.mediaList.length, 1);
+    assert.equal(parsed.mediaList[0].id, 'm1');
+    assert.equal(parsed.annotationsByMediaId['m1']?.[0]?.text, '加一个猕猴桃');
+
+    // 2. Initialize new store instance from persisted localStorage
+    const store2 = createMediaViewerStore();
+    assert.equal(store2.getSnapshot().mediaList.length, 1);
+    assert.equal(store2.getSnapshot().mediaList[0].title, '苹果');
+    assert.equal(store2.getAnnotations('m1')[0]?.text, '加一个猕猴桃');
+
+    // 3. Clear storage
+    clearPersistedMediaViewerStore();
+    assert.equal(mockLocalStorage.getItem('omnimux:media-viewer:store:v1'), null);
+  } finally {
+    globalThis.window = originalWindow;
+  }
 });
