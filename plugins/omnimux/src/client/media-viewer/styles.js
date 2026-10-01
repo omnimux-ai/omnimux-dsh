@@ -1259,25 +1259,63 @@ button.omx-slot-add:hover,
   z-index: 9;
 }
 .omx-slot-file { display: none; }
+.omx-composer-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 6px;
+}
 .omx-slot-modes {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   flex-wrap: nowrap;
 }
 .omx-slot-mode {
-  height: 32px;
+  height: 28px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
-  padding: 0 12px;
+  padding: 0 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.omx-slot-mode:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.06));
 }
 .omx-slot-mode.is-active {
-  background: var(--dsw-alias-bg-layer-3);
+  background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.12));
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 1px 3px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 模式胶囊微阴影 */
+}
+.omx-slot-mode svg {
+  color: currentColor;
+  flex-shrink: 0;
+}
+.omx-composer-expand-btn {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.omx-composer-expand-btn:hover {
   color: var(--dsw-alias-label-primary);
 }
 .omx-slot-notice {

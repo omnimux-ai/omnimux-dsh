@@ -254,7 +254,7 @@ export function MediaModelCascade({ config, open, onToggle, onPicked }) {
 }
 
 /** 参数触发器 + 参数面板（生成模式 / 比例 / 清晰度 / 有声 / 时长 / 张数）。 */
-export function MediaParamsPanel({ config, open, onToggle }) {
+export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) {
   const { mode } = config;
   const {
     imageOpMode, setImageOpMode, imageAspect, setImageAspect, imageRes, setImageRes, imageBatch, setImageBatch,
@@ -265,8 +265,8 @@ export function MediaParamsPanel({ config, open, onToggle }) {
   } = config;
 
   const parameterSummary = mode === 'image'
-    ? `${imageOpMode} · ${imageAspect} · ${imageRes} · ${imageBatch}`
-    : `${videoGenMode} · ${videoAspect} · ${videoRes} · ${hasSound ? '有声' : '无声'} · ${duration}s`;
+    ? (showOpMode ? `${imageOpMode} · ${imageAspect} · ${imageRes} · ${imageBatch}` : `${imageAspect} · ${imageRes} · ${imageBatch}`)
+    : (showOpMode ? `${videoGenMode} · ${videoAspect} · ${videoRes} · ${hasSound ? '有声' : '无声'} · ${duration}s` : `${videoRes.toUpperCase()} · ${videoAspect} · ${duration}s · ${hasSound ? '有声' : '无声'}`);
   const parameterLabel = `配置模型参数：${parameterSummary}`;
 
   const IMAGE_RATIOS = [
@@ -302,8 +302,12 @@ export function MediaParamsPanel({ config, open, onToggle }) {
         <span className="omx-param-compact-label" aria-hidden="true">参数</span>
         {mode === 'image' ? (
           <>
-            <span>{imageOpMode}</span>
-            <span className="omx-dot">·</span>
+            {showOpMode && (
+              <>
+                <span>{imageOpMode}</span>
+                <span className="omx-dot">·</span>
+              </>
+            )}
             <span>{imageAspect}</span>
             <span className="omx-dot">·</span>
             <span>{imageRes}</span>
@@ -312,8 +316,12 @@ export function MediaParamsPanel({ config, open, onToggle }) {
           </>
         ) : (
           <>
-            <span>{videoGenMode}</span>
-            <span className="omx-dot">·</span>
+            {showOpMode && (
+              <>
+                <span>{videoGenMode}</span>
+                <span className="omx-dot">·</span>
+              </>
+            )}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="6" width="18" height="12" rx="2" />
             </svg>
@@ -336,22 +344,24 @@ export function MediaParamsPanel({ config, open, onToggle }) {
         <div className="omx-popover-shell omx-params-panel" role="dialog" aria-label="模型参数配置">
           {mode === 'image' ? (
             <>
-              <div className="omx-param-group">
-                <div className="omx-param-title">生成方式</div>
-                <div className="omx-mode-track">
-                  {['文生图', '图片编辑', '多图参考'].map((op) => (
-                    <button // exempt-ui01: 图像生成方式按钮
-                      key={op}
-                      type="button"
-                      className={`omx-mode-pill ${imageOpMode === op ? 'is-active' : ''}`}
-                      disabled
-                      title="由素材卡槽自动适配：空卡槽为文生图，单图为图片编辑，多图为多图参考"
-                    >
-                      {op}
-                    </button>
-                  ))}
+              {showOpMode && (
+                <div className="omx-param-group">
+                  <div className="omx-param-title">生成方式</div>
+                  <div className="omx-mode-track">
+                    {['文生图', '图片编辑', '多图参考'].map((op) => (
+                      <button // exempt-ui01: 图像生成方式按钮
+                        key={op}
+                        type="button"
+                        className={`omx-mode-pill ${imageOpMode === op ? 'is-active' : ''}`}
+                        disabled
+                        title="由素材卡槽自动适配：空卡槽为文生图，单图为图片编辑，多图为多图参考"
+                      >
+                        {op}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="omx-param-group">
                 <div className="omx-param-title">比例</div>
@@ -409,21 +419,23 @@ export function MediaParamsPanel({ config, open, onToggle }) {
             </>
           ) : (
             <>
-              <div className="omx-param-group">
-                <div className="omx-param-title">生成方式</div>
-                <div className="omx-mode-track">
-                  {['文生视频', '首帧', '首尾帧', '全能参考', '视频编辑'].map((m) => (
-                    <button // exempt-ui01: 视频生成模式按钮
-                      key={m}
-                      type="button"
-                      className={`omx-mode-pill ${videoGenMode === m ? 'is-active' : ''}`}
-                      onClick={() => setVideoGenMode(m)}
-                    >
-                      {m}
-                    </button>
-                  ))}
+              {showOpMode && (
+                <div className="omx-param-group">
+                  <div className="omx-param-title">生成方式</div>
+                  <div className="omx-mode-track">
+                    {['文生视频', '首帧', '首尾帧', '全能参考', '视频编辑'].map((m) => (
+                      <button // exempt-ui01: 视频生成模式按钮
+                        key={m}
+                        type="button"
+                        className={`omx-mode-pill ${videoGenMode === m ? 'is-active' : ''}`}
+                        onClick={() => setVideoGenMode(m)}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="omx-param-group">
                 <div className="omx-param-title">比例</div>
@@ -540,7 +552,7 @@ export function MediaParamsPanel({ config, open, onToggle }) {
  *   onModelChange?: (selection: object) => void,
  * }} props
  */
-export function MediaConfigControls({ config, showModeSwitch = true, showModelSummary = false, compact = false, onModelChange }) {
+export function MediaConfigControls({ config, showModeSwitch = true, showModelSummary = false, compact = false, showOpMode = true, onModelChange }) {
   const [activePopover, setActivePopover] = useState(null);
   const containerRef = useRef(null);
 
@@ -643,6 +655,7 @@ export function MediaConfigControls({ config, showModeSwitch = true, showModelSu
         config={config}
         open={activePopover === 'params'}
         onToggle={() => handleTogglePopover('params')}
+        showOpMode={showOpMode}
       />
 
       {/* 当前模型与版本在快捷方式里是对外唯一的可读回执（免去打开面板确认）；

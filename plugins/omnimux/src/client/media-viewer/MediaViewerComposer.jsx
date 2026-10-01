@@ -29,6 +29,39 @@ const VIDEO_MODE_IDS = {
   视频编辑: 'video_edit',
 };
 
+const ICONS_MODE = {
+  ref: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="2" width="14" height="14" rx="2" />
+      <path d="M8 21h12a2 2 0 0 0 2-2V8" />
+      <circle cx="7" cy="7" r="1.5" />
+      <path d="m14 12-2.5-2.5-4.5 4.5" />
+    </svg>
+  ),
+  frames: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="2" width="20" height="20" rx="2.5" />
+      <line x1="7" y1="2" x2="7" y2="22" />
+      <line x1="17" y1="2" x2="17" y2="22" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <line x1="2" y1="7" x2="7" y2="7" />
+      <line x1="2" y1="17" x2="7" y2="17" />
+      <line x1="17" y1="17" x2="22" y2="17" />
+      <line x1="17" y1="7" x2="22" y2="7" />
+    </svg>
+  ),
+  edit: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+    </svg>
+  ),
+  text: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </svg>
+  ),
+};
+
 function isUrlReferencedElsewhere(url, excludeKey, currentBuckets) {
   if (!url || !currentBuckets) return false;
   for (const [k, items] of Object.entries(currentBuckets)) {
@@ -141,6 +174,57 @@ export function MediaViewerComposer({
       setVideoGenMode(videoChoices[0].label);
     }
   }, [mode, videoChoices, videoModeId, setVideoGenMode]);
+
+  const opModeTabs = useMemo(() => {
+    if (mode === 'video') {
+      return [
+        {
+          id: 'ref',
+          label: '参考',
+          icon: ICONS_MODE.ref,
+          active: videoModeId === 'video_multi_ref',
+          onClick: () => setVideoGenMode('全能参考'),
+        },
+        {
+          id: 'frames',
+          label: '首帧/首尾帧',
+          icon: ICONS_MODE.frames,
+          active: videoModeId === 'first_frame' || videoModeId === 'first_last_frame',
+          onClick: () => setVideoGenMode('首尾帧'),
+        },
+        {
+          id: 'edit',
+          label: '编辑',
+          icon: ICONS_MODE.edit,
+          active: videoModeId === 'video_edit',
+          onClick: () => setVideoGenMode('视频编辑'),
+        },
+      ];
+    }
+    return [
+      {
+        id: 'text',
+        label: '文生图',
+        icon: ICONS_MODE.text,
+        active: config.imageOpMode === '文生图',
+        onClick: () => config.setImageOpMode?.('文生图'),
+      },
+      {
+        id: 'ref',
+        label: '参考',
+        icon: ICONS_MODE.ref,
+        active: config.imageOpMode === '多图参考',
+        onClick: () => config.setImageOpMode?.('多图参考'),
+      },
+      {
+        id: 'edit',
+        label: '编辑',
+        icon: ICONS_MODE.edit,
+        active: config.imageOpMode === '图片编辑',
+        onClick: () => config.setImageOpMode?.('图片编辑'),
+      },
+    ];
+  }, [mode, videoModeId, setVideoGenMode, config.imageOpMode, config.setImageOpMode]);
 
   const bucketKey = useCallback(
     (slot) => makeBucketKey(mode, model?.id, slot?.key),
@@ -784,21 +868,35 @@ export function MediaViewerComposer({
 
         {notice ? <div className="omx-slot-notice" role="status">{notice}</div> : null}
 
-        {mode === 'video' && videoChoices.length > 0 ? (
-          <div className="omx-slot-modes" role="tablist" aria-label="视频生成模式">
-            {videoChoices.map((option) => (
+        {/* 输入框内侧顶栏：生成方式选项卡（素材卡槽上方） + 右侧展开全屏按钮 */}
+        <div className="omx-composer-header-row">
+          <div className="omx-slot-modes" role="tablist" aria-label="生成方式">
+            {opModeTabs.map((tab) => (
               <button // exempt-ui01: 模式切换单项
-                key={option.id}
+                key={tab.id}
                 type="button"
-                className={`omx-slot-mode${option.id === videoModeId ? ' is-active' : ''}`}
-                aria-pressed={option.id === videoModeId}
-                onClick={() => setVideoGenMode(option.label)}
+                role="tab"
+                className={`omx-slot-mode${tab.active ? ' is-active' : ''}`}
+                aria-pressed={tab.active}
+                onClick={tab.onClick}
               >
-                {option.label}
+                {tab.icon}
+                <span>{tab.label}</span>
               </button>
             ))}
           </div>
-        ) : null}
+
+          <button // exempt-ui01: 输入框全屏展开辅助按钮
+            type="button"
+            className="omx-composer-expand-btn"
+            title="展开全屏输入"
+            aria-label="展开全屏输入"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+            </svg>
+          </button>
+        </div>
 
         {/* 提示词与素材卡槽上下分层自适应排布 */}
         <div className="omx-mv-prompt-row">
@@ -855,10 +953,10 @@ export function MediaViewerComposer({
           </div>
         </div>
 
-        {/* 3. 底部操作工具栏 (单行流不折行：移除内部模式切换，仅保留模型与参数展示 ──► 发送) */}
+        {/* 3. 底部操作工具栏 (单行流不折行：移除内部模式切换与生成方式，仅保留模型与纯参数展示 ──► 发送) */}
         <div className="omx-mv-toolbar-bar">
           <div className="omx-mv-toolbar-left">
-            <MediaConfigControls config={config} showModeSwitch={false} />
+            <MediaConfigControls config={config} showModeSwitch={false} showOpMode={false} />
           </div>
 
           <div className="omx-mv-toolbar-right">
