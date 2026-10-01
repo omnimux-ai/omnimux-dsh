@@ -831,6 +831,7 @@ export async function executeOmnimuxMedia(capability, input) {
     apiKey: auth.apiKey,
     fetcher: input.fetcher,
     signal: input.signal,
+    sleep: input.sleep,
   })
 
   // wait: true 同步生成模式下，成功下载后同样持久化 ready 账本，确保相同 requestKey 命中完成态缓存
