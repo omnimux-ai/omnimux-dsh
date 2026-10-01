@@ -39,7 +39,7 @@ test('does not classify unrelated failures, status codes or user prompt content'
 })
 
 test('group failover evidence covers permission and unknown-model wording a routing plan can outlive', () => {
-  for (const message of ['无权访问该分组', 'model_not_found', 'Model not found', '无可用渠道']) {
+  for (const message of ['无权访问该分组', '无权访问 nano-banana 分组', 'model_not_found', 'Model not found', '无可用渠道']) {
     assert.equal(hasGroupFailoverEvidence({ message }), true, message)
     assert.equal(hasGroupFailoverEvidence({ error: { body: JSON.stringify({ error: { code: message } }) } }), true, message)
   }
