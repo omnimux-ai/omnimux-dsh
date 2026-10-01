@@ -532,3 +532,53 @@ test('只有文档改动时不安装开发版', () => {
     assert.equal(existsSync(join(repo, 'sync_receipt.txt')), false)
   } finally { rmSync(fixture, { recursive: true, force: true }) }
 })
+
+test('只改插件根目录文档与 docs/ 时不安装开发版也不重启', () => {
+  const { fixture, repo, bin, git } = mergedRepo('plugin-docs-only')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-docs')
+    git('worktree', 'add', '-b', 'agent/plugin-docs', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux/docs'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux/AGENTS.md'), '# hub rules\n')
+    writeFileSync(join(worktree, 'plugins/omnimux/docs/design.md'), '设计说明\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'docs(hub): rules')
+    git('push', 'origin', 'agent/plugin-docs:main')
+    git('pull', '--ff-only', 'origin', 'main')
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho MERGED\n', { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'remove', 'plugin-docs', '--pr', '2539'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev') },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stdout, /只改了插件文档，无需物化/)
+    assert.equal(existsSync(join(repo, 'sync_receipt.txt')), false)
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('插件文档与源码同时改时只安装有源码改动的插件', () => {
+  const { fixture, repo, bin, git } = mergedRepo('plugin-docs-and-src')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-mixed')
+    git('worktree', 'add', '-b', 'agent/plugin-mixed', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux/src'), { recursive: true })
+    mkdirSync(join(worktree, 'plugins/omnimux-workflow'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux/src/panel.jsx'), 'export const panel = 3\n')
+    writeFileSync(join(worktree, 'plugins/omnimux-workflow/README.md'), '只改说明\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat: panel + readme')
+    git('push', 'origin', 'agent/plugin-mixed:main')
+    git('pull', '--ff-only', 'origin', 'main')
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho MERGED\n', { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'remove', 'plugin-mixed', '--pr', '2539'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev') },
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(), 'omnimux')
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
