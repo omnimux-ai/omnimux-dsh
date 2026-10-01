@@ -163,6 +163,14 @@ visibility setting changes.
 3. Restart the app (patches resolve at every launch) and check the Settings →
    Models list shows the new set.
 
+### Cross-plugin closure
+
+Hub models are shared contracts. Adding, re-parameterizing, changing operations of, aliasing, or deprecating a model closes atomically across plugins:
+
+1. A hub operation is admitted downstream only after it is `listed: true` per [model API authority](model-api-authority.md).
+2. Search every consumer (`plugins/omnimux-workflow`, `plugins/omnimux-video`, `plugins/omnimux-apps`, …) and update in the same change: product whitelists (`generationPolicy.ts`), defaults (`catalog-defaults.json`, `route.js`), and UI presets (`aspectRatioGeometry.ts`).
+3. Run `pnpm verify:model-contracts` and the affected downstream submission tests.
+
 ## User layers
 
 A user-layer `cordis.patch.yml` MUST NOT declare `- id: llm-pi-ai`. It sets
