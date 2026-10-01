@@ -494,7 +494,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
         "discountRate": 1,
         "billingMode": "per_task"
       },
-      "wireGroup": "default",
+      "wireGroup": "gpt-image-2.5-economy",
       "default": true,
       "enabled": true
     },
