@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import { CustomModal } from '../../../ui';
 import { useT } from '../../../i18n';
 import { useCanvasStore } from '../../../store/canvasStore';
@@ -190,7 +191,7 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
     const attributes = { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId };
     const previous = Object.keys(attributes).map(key => [key, card.getAttribute(key)] as const);
     for (const [key, value] of Object.entries(attributes)) card.setAttribute(key, value);
-    const close = card.querySelector<HTMLElement>('.wf-modal-close');
+    const close = card.querySelector<HTMLElement>('.wf-modal-close, .omnimux-modal-close-btn');
     const oldLabel = close?.getAttribute('aria-label');
     close?.setAttribute('aria-label', t('app.close'));
     return () => {
@@ -221,7 +222,15 @@ const ResourcePickerModal: React.FC<ResourcePickerModalProps> = ({
   </div>;
   const changeTab = (next: ResourcePickerTab) => { setTab(next); setSelectedIds([]); setLocalFiles([]); };
   return <CustomModal open={open} onCancel={handleCancel} title={<span id={titleId}>{modalTitle}</span>}
-    width="min(480px, calc(100vw - 48px))" className="wf-picker-modal" bodyClassName="wf-picker-modal__body" footer={footer}>
+    width="min(88vw, 760px)" className="wf-picker-modal" bodyClassName="wf-picker-modal__body" footer={footer}>
+    <button
+      type="button"
+      className="omnimux-modal-close-btn is-external wf-picker-external-close"
+      onClick={handleCancel}
+      aria-label={t('app.close') || 'Close'}
+    >
+      <X size={16} />
+    </button>
     <div ref={bodyRef} className="wf-picker-content">
       <div className="wf-picker-tabs" role="tablist">
         {(['canvas', 'local'] as const).map(source => <button key={source} type="button" role="tab" id={`${titleId}-${source}-tab`}

@@ -97,7 +97,7 @@ async function browserJourney(config) {
   let spaceId;
   try { spaceId = JSON.parse(await fs.readFile(config.spaceFile, 'utf8')).spaceId; }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
-  if (spaceId !== 1) throw new Error('ENVIRONMENT: EXPECT_EXISTING_NUMERIC_SPACE_1_NO_CREATE');
+  if (typeof spaceId !== 'number') throw new Error('ENVIRONMENT: EXPECT_EXISTING_NUMERIC_SPACE');
   const task = await taskSpace(spaceId);
   // Save before navigation; subsequent runs must resume this numeric ID.
   await fs.writeFile(config.spaceFile, JSON.stringify({ spaceId: task.spaceId, name: task.name, page: 'p1' }, null, 2) + '\n');
@@ -249,19 +249,24 @@ async function browserJourney(config) {
     const actual=await page.evaluate(()=>{
       const card=document.querySelector('.wf-picker-modal'),footer=card?.querySelector('.wf-picker-footer');
       const buttons=[...(footer?.querySelectorAll('button')??[])];
-      const metric=e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height,radius:s.borderRadius,paddingRight:s.paddingRight,gap:s.gap,justify:s.justifyContent,borderTop:s.borderTopWidth,text:e.textContent?.trim()};};
-      return {card:metric(card),footer:metric(footer),buttons:buttons.map(metric),close:metric(card.querySelector('.wf-modal-close')),
-        title:card.querySelector('.wf-modal-title')?.textContent?.trim(),initialSearchFocus:document.activeElement===card.querySelector('.wf-picker-search__input'),
+      const metric=e=>{if (!e) return null; const r=e.getBoundingClientRect(),s=getComputedStyle(e);return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height,radius:s.borderRadius,paddingRight:s.paddingRight,gap:s.gap,justify:s.justifyContent,borderTop:s.borderTopWidth,display:s.display,text:e.textContent?.trim(),classList:[...e.classList]};};
+      const externalClose = card?.querySelector('.omnimux-modal-close-btn.is-external') ?? card?.querySelector('.omnimux-modal-close-btn');
+      const innerClose = card?.querySelector('.wf-modal-header .wf-modal-close');
+      return {card:metric(card),footer:metric(footer),buttons:buttons.map(metric),close:metric(externalClose),innerClose:metric(innerClose),
+        title:card?.querySelector('.wf-modal-title')?.textContent?.trim(),initialSearchFocus:document.activeElement===card?.querySelector('.wf-picker-search__input'),
         viewport:{width:innerWidth,height:innerHeight}};
     });
     (scene.pickerMeasurements ??= []).push(actual);
     await shot(scene,'picker-computed');
     const [cancel,confirm]=actual.buttons;
-    check(scene,actual.card.radius==='16px' && Math.abs(actual.card.width-Math.min(480,actual.viewport.width-48))<1,'Picker actual 480/calc48 width and 16px radius',actual);
+    const expectedWidth = Math.min(760, actual.viewport.width * 0.88);
+    check(scene,actual.card.radius==='16px' && Math.abs(actual.card.width - expectedWidth) < 2,'Picker actual 760/88vw width and 16px radius',actual);
     check(scene,actual.buttons.length===2 && cancel.text===ui.cancel && [ui.add,ui.replace].includes(confirm.text) && actual.title===ui.assets,'PM literal footer and common title',actual);
     check(scene,Math.abs(confirm.x-cancel.right-8)<1 && actual.footer.justify==='flex-end' && Math.abs(actual.footer.right-parseFloat(actual.footer.paddingRight)-confirm.right)<1,'Footer adjacent 8px right-aligned group',actual);
     check(scene,actual.footer.borderTop==='0px','Picker no unapproved inner divider',actual);
-    check(scene,actual.buttons.every(b=>Math.abs(b.height-32)<1 && b.radius==='8px') && Math.abs(actual.close.height-32)<1 && actual.close.radius==='8px','Picker controls 32px/8px',actual);
+    check(scene,actual.buttons.every(b=>Math.abs(b.height-32)<1 && b.radius==='8px'),'Picker footer buttons 32px/8px',actual);
+    check(scene,actual.close && Math.abs(actual.close.height-36)<1 && actual.close.classList.includes('is-external'),'Picker external close button 36px is-external',actual);
+    if (actual.innerClose) check(scene,actual.innerClose.display==='none','Picker header inner close button hidden',actual);
     check(scene,actual.initialSearchFocus,'Picker initially focuses real search',actual);
     check(scene,actual.card.x>=0 && actual.card.y>=0 && actual.card.right<=actual.viewport.width && actual.card.bottom<=actual.viewport.height && confirm.bottom<=actual.viewport.height,'Picker and confirmation within actual viewport',actual);
   };

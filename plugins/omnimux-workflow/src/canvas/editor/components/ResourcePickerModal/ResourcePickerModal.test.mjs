@@ -18,9 +18,11 @@ const nodeSrc = readFileSync(join(here, '../MaterialNode/index.tsx'), 'utf8');
 const editorSrc = readFileSync(join(here, '../../CanvasEditor.tsx'), 'utf8');
 const cssSrc = readFileSync(join(here, '../../../theme/components.css'), 'utf8');
 
-test('V1 Picker confirms only the strict whole selection and uses exact default design width', () => {
+test('Picker confirms only the strict whole selection, uses舒展 width min(88vw, 760px), and mounts external ModalCloseButton', () => {
   assert.match(modalSrc, /planPickerSelectionMutation/);
-  assert.match(modalSrc, /min\(480px, calc\(100vw - 48px\)\)/);
+  assert.match(modalSrc, /min\(88vw, 760px\)/);
+  assert.match(modalSrc, /ModalCloseButton/);
+  assert.match(modalSrc, /placement="external"/);
   assert.doesNotMatch(modalSrc, /picker\.replaceTitle|picker\.items/);
   assert.doesNotMatch(modalSrc, /canvasItems\.length\}\)/);
   assert.match(modalSrc, /aria-labelledby/);
@@ -190,4 +192,12 @@ test('ResourcePickerModal 属性契约：解构声明包含 title，杜绝未定
   // 核心防线：必须在参数中正确解构 title，严禁遗漏导致 ReferenceError: title is not defined
   assert.match(modalSrc, /const ResourcePickerModal: React\.FC<ResourcePickerModalProps> = \(\{\s*[\s\S]*?\btitle\b[\s\S]*?\}\) =>/);
   assert.match(modalSrc, /const modalTitle =\s*title \|\|/);
+});
+
+test('Issue #2848 弹窗舒展尺寸、外置关闭按钮与自适应网格契约', () => {
+  assert.match(cssSrc, /\.wf-picker-modal\s*\{[\s\S]*?width:\s*min\(88vw,\s*760px\)\s*!important/);
+  assert.match(cssSrc, /\.wf-picker-modal\s*\{[\s\S]*?overflow:\s*visible\s*!important/);
+  assert.match(cssSrc, /\.wf-picker-modal \.wf-modal-header \.wf-modal-close\s*\{\s*display:\s*none\s*!important/);
+  assert.match(cssSrc, /\.wf-picker-modal \.wf-picker-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(160px,\s*1fr\)\)/);
+  assert.match(cssSrc, /\.omnimux-modal-close-btn\.is-external\s*\{[\s\S]*?right:\s*-50px/);
 });
