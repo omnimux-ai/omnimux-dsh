@@ -94,10 +94,11 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
   // A narrow line accepts far less than the contract publishes; narrowing before any
   // control is derived keeps the panel, the operation list and the slot layout honest.
   const routingIntent = args.routing === undefined ? args.params.routing : args.routing;
+  const lineConstraints = resolveLineConstraints(args.targetModelItem.id, routingIntent, args.runtimeSettings);
   const target = narrowModelByLineConstraints(
     args.targetModelItem,
     args.targetModelItem.id,
-    resolveLineConstraints(args.targetModelItem.id, routingIntent, args.runtimeSettings),
+    lineConstraints,
   );
   const currentId = typeof args.params.model === 'string' ? args.params.model : '';
   const resolvedCurrent = args.catalog.models?.find(model => model.id === currentId || model.aliases?.includes(currentId));
@@ -116,7 +117,17 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
   const current = currentMatches ? args.currentModelItem : undefined;
   const currentBranch = current ? branch(current, readPreferredOperationId(args.params)) : undefined;
   const sameModel = current?.id === target.id;
-  const preferred = args.nextOperationId ?? (sameModel ? readPreferredOperationId(args.params) : history.byModel[target.id]?.lastOperationId);
+  let preferred = args.nextOperationId ?? (sameModel ? readPreferredOperationId(args.params) : history.byModel[target.id]?.lastOperationId);
+  // 1. 若渠道线明确限制了允许的操作集（例如口型版仅允许 digital_human），且原首选不在此范围内，自适应到渠道允许的操作
+  if (preferred && lineConstraints?.operations && lineConstraints.operations.length > 0 && !lineConstraints.operations.includes(preferred)) {
+    preferred = lineConstraints.operations[0];
+  }
+  // 2. 若跨模型切换且历史记录的操作在新模型中不存在，平滑回退
+  const targetDecl = args.catalog.models?.find(m => m.id === target.id || m.aliases?.includes(target.id));
+  const targetOps = target.operations ?? targetDecl?.operations;
+  if (!sameModel && preferred && targetOps && !targetOps.some(op => op.id === preferred)) {
+    preferred = undefined;
+  }
   const targetBranch = branch(target, preferred);
   if (!targetBranch) return unchanged('当前生成方式不可用，请重新选择');
   const notices: string[] = [];

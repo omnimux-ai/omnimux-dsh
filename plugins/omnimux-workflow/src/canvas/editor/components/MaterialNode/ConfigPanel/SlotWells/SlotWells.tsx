@@ -222,6 +222,114 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
   };
 
   if (props.records) {
+    if (layout.preset === 'named') {
+      const recordsBySlot = new Map<string, typeof props.records>();
+      for (const record of props.records) {
+        const list = recordsBySlot.get(record.slot.slot) ?? [];
+        list.push(record);
+        recordsBySlot.set(record.slot.slot, list);
+      }
+      return (
+        <div className="wf-slot-wells wf-slot-wells--named" data-testid="wf-slot-wells" data-preset="named">
+          {layout.slots.flatMap((spec) => {
+            const slotRecords = recordsBySlot.get(spec.slot) ?? [];
+            const models: WellModel[] = slotRecords.map((record) => ({
+              spec: record.slot,
+              occupant: record.occupant,
+              upstream: upstreamByEdge.get(record.occupant.edgeId),
+              requiredEmpty: false,
+              state: record.state,
+              reasonCode: record.reasonCode,
+            }));
+            const needed = Math.max((spec.min ?? 1) - models.length, models.length < (spec.max ?? 1) ? 1 : 0);
+            const emptyWells = [];
+            for (let i = 0; i < needed; i++) {
+              emptyWells.push(
+                <button
+                  key={`${spec.slot}:empty-${i}`}
+                  type="button"
+                  className={`wf-slot-well wf-slot-well--empty nodrag${models.length < (spec.min ?? 0) ? ' wf-slot-well--required' : ''}`}
+                  data-slot={spec.slot}
+                  data-slot-role={spec.role}
+                  aria-label={t('panel.slotPick').replace('{slot}', slotLabel(spec))}
+                  title={t('panel.slotPick').replace('{slot}', slotLabel(spec))}
+                  onClick={() => onPickSlot(pickRequest(spec))}
+                >
+                  <Plus size={20} aria-hidden="true" />
+                </button>
+              );
+            }
+            return [...models.map(renderWell), ...emptyWells];
+          })}
+        </div>
+      );
+    }
+
+    if (layout.preset === 'pair' && layout.slots.length === 2) {
+      const [first, last] = layout.slots as [SlotSpec, SlotSpec];
+      const recordsFirst = props.records.filter((r) => r.slot.slot === first.slot);
+      const recordsLast = props.records.filter((r) => r.slot.slot === last.slot);
+      const modelsFirst: WellModel[] = recordsFirst.map((record) => ({
+        spec: record.slot,
+        occupant: record.occupant,
+        upstream: upstreamByEdge.get(record.occupant.edgeId),
+        requiredEmpty: false,
+        state: record.state,
+        reasonCode: record.reasonCode,
+      }));
+      const modelsLast: WellModel[] = recordsLast.map((record) => ({
+        spec: record.slot,
+        occupant: record.occupant,
+        upstream: upstreamByEdge.get(record.occupant.edgeId),
+        requiredEmpty: false,
+        state: record.state,
+        reasonCode: record.reasonCode,
+      }));
+      return (
+        <div className="wf-slot-wells wf-slot-wells--pair" data-testid="wf-slot-wells" data-preset="pair">
+          {modelsFirst.length ? modelsFirst.map(renderWell) : (
+            <button
+              type="button"
+              className="wf-slot-well wf-slot-well--empty nodrag"
+              data-slot={first.slot}
+              data-slot-role={first.role}
+              aria-label={t('input.first')}
+              title={t('input.first')}
+              onClick={() => onPickSlot(pickRequest(first))}
+            >
+              <Plus size={20} aria-hidden="true" />
+            </button>
+          )}
+          <button
+            type="button"
+            className="wf-slot-wells__swap nodrag"
+            title={t('panel.slotSwap')}
+            aria-label={t('panel.slotSwap')}
+            disabled={!layout.swap}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSwapSlots?.(first.slot, last.slot);
+            }}
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+          {modelsLast.length ? modelsLast.map(renderWell) : (
+            <button
+              type="button"
+              className="wf-slot-well wf-slot-well--empty nodrag"
+              data-slot={last.slot}
+              data-slot-role={last.role}
+              aria-label={t('input.last')}
+              title={t('input.last')}
+              onClick={() => onPickSlot(pickRequest(last))}
+            >
+              <Plus size={20} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      );
+    }
+
     const models: WellModel[] = props.records.map(record => ({ spec: record.slot, occupant: record.occupant,
       upstream: upstreamByEdge.get(record.occupant.edgeId), requiredEmpty: false, state: record.state, reasonCode: record.reasonCode }));
     const canAdd = layout.slots.some(spec => spec.type === 'text' && Boolean(spec.composition) || spec.max === null
