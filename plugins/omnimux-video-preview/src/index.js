@@ -63,13 +63,13 @@ export function apply(ctx) {
   // 2. Register video breakdown & shots analysis tool
   ctx.tools?.register?.({
     name: 'video_breakdown_analyze',
-    description: 'Understand and deconstruct a video into granular shots (景别/机位/角度/动态/描述) and structural stages via multimodal AI. For non-direct stream platforms (e.g. YouTube, X), download the video to local workspace first. If breakdown produces no shots (e.g. long videos/podcasts), returns structured recovery guidance to trigger native ask_user_question choices. Only opens sidebar preview upon verified analysis success.',
+    description: 'Understand and deconstruct a video into granular shots (景别/机位/角度/动态/描述) and structural stages via multimodal AI. Image carousels (图文轮播, e.g. @inspiration image-type items) are supported too and produce a page-by-page breakdown with a paged preview. For non-direct stream platforms (e.g. YouTube, X), download the video to local workspace first. If breakdown produces no shots (e.g. long videos/podcasts), returns structured recovery guidance to trigger native ask_user_question choices. Only opens sidebar preview upon verified analysis success.',
     parameters: {
       type: 'object',
       properties: {
         url: {
           type: 'string',
-          description: 'Video direct URL, local file path, or virtual reference (e.g. @inspiration/insp_xxxx.mp4, @asset/xxxx). For non-direct stream videos (YouTube, X), provide the downloaded local file path.',
+          description: 'Video direct URL, local file path, or virtual reference (e.g. @inspiration/insp_xxxx.mp4, @asset/xxxx). For non-direct stream videos (YouTube, X), provide the downloaded local file path. For inspiration items of type image (图文轮播), the pages are analyzed individually and shown as a pageable carousel.',
         },
         dest: {
           type: 'string',

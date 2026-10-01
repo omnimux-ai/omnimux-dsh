@@ -144,6 +144,177 @@ export async function executeDedicatedStructureAnalyze(options) {
 }
 
 /**
+ * Build the carousel (image-list) variant of the breakdown instruction.
+ * Page-oriented: one table row per page; the time column becomes the page label.
+ * @param {string} systemPrompt
+ * @param {number} pageCount
+ * @returns {string}
+ */
+function buildCarouselInstruction(systemPrompt, pageCount) {
+  return `${systemPrompt}\n\n---\n【图文轮播 (Carousel) 逐页拆解任务执行指令（严格遵守）】：\n本次输入为共 ${pageCount} 页的有序图片集（图文轮播/图片卡片），请按图片呈现顺序逐页执行深度解构：\n1. 【叙事结构链路】：与视频同款五阶段链路：Hook → Product Intro → Usage Detail → Proof Effect → Cta，严禁自行编造阶段名或加序数前缀！\n2. 【结构阶段解构】：每阶段使用标准英文阶段名作 ### 标头，标头下方必须包含一条以 > 开头的该阶段页面核心文案/标语引用（无文字则写 (无)），随后紧跟 40~80 字专业中文策略意图与转化心理机制解析！\n3. 【逐页分镜脚本表】：表头严格为“| 页码 | 分镜标题 | 所属阶段 | 画面属性标签 | 画面与文案描述 | 页面文字/标语 |”；第一列页码必须写「第N页」（如 第1页、第2页），每页有且仅有一行，严禁合并多页！\n4. 【画面属性标签规范】：第 4 列由 3 个正交维度组成（以逗号分隔）：[景别], [构图/视角], [画面风格]（例如：特写, 正面俯拍, 扁平插画风），严禁使用斜杠“/”！\n5. 【严禁机械词】：分镜标题必须是具体的画面事件或版式（如“痛点场景封面图”、“成分对比信息图”），严禁出现 Page 1、第1页等机械词作为标题！\n6. 【直接输出规范】：请直接从“## 1. 叙事结构链路 (Narrative Pipeline)”作为首行开始输出，严禁输出任何开场白、英文思考草稿或前置客套话！`
+}
+
+/**
+ * Execute dedicated carousel (image-list) structure breakdown.
+ * @param {{ pages: Array<{ index: number, image_url: string, local_path: string|null }>, ctx?: object, options?: object, signal?: AbortSignal }} params
+ * @returns {Promise<string>}
+ */
+async function executeCarouselStructureAnalyze(params) {
+  const { pages, ctx, options = {}, signal } = params
+  const systemPrompt = loadStructurePrompt()
+  const textComplete = resolveTextCompleteService(ctx, options)
+  if (!textComplete || typeof textComplete.execute !== 'function') {
+    throw new Error('多模态分析服务未就绪：当前中枢未提供 textComplete 能力')
+  }
+
+  const prompt = buildCarouselInstruction(systemPrompt, pages.length)
+  const references = pages
+    .filter((p) => p.local_path || p.image_url)
+    .map((p) => ({ type: 'image', role: 'reference', pathOrUrl: p.local_path || p.image_url }))
+
+  return invokeTextComplete(textComplete, {
+    prompt,
+    system: systemPrompt,
+    references,
+    reason: 'carousel_breakdown_structure_analyze',
+    maxTokens: 4096,
+    signal,
+  })
+}
+
+/**
+ * Resolve the page index (1-based) a parsed shot row belongs to.
+ * Reads 「第N页」from the row title when the model included it; falls back to
+ * sequential order clamped to the page count.
+ * @param {object} shot
+ * @param {number} ordinal
+ * @param {number} pageCount
+ * @returns {number}
+ */
+function resolveShotPageIndex(shot, ordinal, pageCount) {
+  const text = `${shot.title || ''} ${shot.time_range || ''}`
+  const m = text.match(/第\s*(\d+)\s*页/)
+  if (m) {
+    const n = parseInt(m[1], 10)
+    if (n >= 1 && n <= pageCount) return n
+  }
+  return Math.min(Math.max(ordinal, 1), pageCount)
+}
+
+/**
+ * Annotate parsed shots with page semantics for a carousel artifact.
+ * @param {Array<object>} shots
+ * @param {Array<object>} pages
+ * @returns {Array<object>}
+ */
+export function mapShotsToCarouselPages(shots, pages) {
+  const pageCount = pages.length
+  return shots.map((shot, idx) => {
+    const pageIndex = resolveShotPageIndex(shot, idx + 1, pageCount)
+    const page = pages[pageIndex - 1] || null
+    return {
+      ...shot,
+      page_index: pageIndex,
+      // start_seconds 复用为 0 基页索引：分镜卡点击回调透传它做翻页定位
+      start_seconds: pageIndex - 1,
+      end_seconds: pageIndex,
+      time_range: `第${pageIndex}页`,
+      ...(page && page.stream_url ? { frame_url: page.stream_url } : {}),
+    }
+  })
+}
+
+/**
+ * Download carousel page images into the workspace cache (best effort).
+ * A page that fails to download keeps only its remote image_url; the breakdown
+ * still proceeds and the viewer falls back to the remote URL.
+ * @param {string[]} imageUrls
+ * @param {object} options
+ * @returns {Promise<Array<{ index: number, image_url: string, local_path: string|null, stream_url: string|null }>>}
+ */
+async function downloadCarouselPages(imageUrls, options) {
+  const wsDir = resolveWorkspaceDirectory(options)
+  const baseDir = wsDir || process.env.HOME || process.cwd()
+  const cacheDir = join(baseDir, '.omnimux', 'cache')
+  const pages = []
+  for (const [i, url] of imageUrls.entries()) {
+    const page = { index: i + 1, image_url: url, local_path: null, stream_url: null }
+    try {
+      const localPath = await downloadMedia(url, cacheDir, { prefix: 'cimg_', ext: '.jpg' })
+      page.local_path = localPath
+      page.stream_url = createVideoStreamUrl(localPath)
+    } catch {}
+    pages.push(page)
+  }
+  return pages
+}
+
+/**
+ * Full carousel (image-list) breakdown pipeline for inspiration items.
+ * @param {{ item: object, itemId: string, pages: string[] }} carousel
+ * @param {object} [options={}]
+ * @returns {Promise<object>}
+ */
+export async function extractCarouselBreakdown(carousel, options = {}) {
+  const { item, itemId, pages: imageUrls } = carousel
+  const pages = await downloadCarouselPages(imageUrls, options)
+
+  const analyzeReportText = await executeCarouselStructureAnalyze({
+    pages,
+    ctx: options.ctx,
+    options,
+    signal: options.signal,
+  })
+
+  const parsed = parsePipelineAndStructureFromMarkdown(analyzeReportText)
+  let { shots, structure, pipeline } = parsed
+  if (shots.length === 0) {
+    const firstPath = pages.find((p) => p.local_path)?.local_path || null
+    const savedReportPath = persistFailureDiagnosticReport(firstPath, analyzeReportText)
+    throw new Error(buildBreakdownFailureGuidance(firstPath, 0, {
+      reportText: analyzeReportText,
+      savedReportPath,
+    }))
+  }
+  if (isStructureResultDegenerate(structure)) {
+    structure = deriveStructureFromShots(shots)
+    pipeline = structure.map((s) => s.stage)
+  }
+  shots = mapShotsToCarouselPages(shots, pages)
+
+  const author = item.author || {}
+  const stats = item.stats || {}
+  return {
+    schema_version: '1.0.0',
+    is_video_breakdown: true,
+    media_type: 'carousel',
+    analyzed_at: new Date().toISOString(),
+    video: {
+      title: item.title || item.text || '图文轮播分析',
+      author_name: author.name || '',
+      author_handle: author.handle || '',
+      author_avatar: author.avatar || '',
+      caption: item.text || item.caption || '',
+      platform: 'carousel',
+      source_url: '',
+      cover_url: pages[0]?.stream_url || imageUrls[0] || '',
+      duration_seconds: 0,
+      duration_text: `共${pages.length}页`,
+      scene_count: shots.length,
+      views: stats.views || 0,
+      likes: stats.likes || 0,
+      comments: stats.comments || 0,
+      shares: stats.shares || 0,
+      ai_labeled: true,
+    },
+    carousel: { item_id: itemId, page_count: pages.length, pages },
+    pipeline,
+    shots,
+    structure,
+  }
+}
+
+/**
  * Read and return already analyzed .vbreakdown file if valid.
  * @param {string} filePath
  * @returns {object|null}
@@ -501,36 +672,66 @@ export async function resolveVirtualTemplateVideoUrl(trimmed, options = {}) {
   }
 
   // 2. 匹配爆款/灵感条目 ID (@trending/2789.mp4 或 @inspiration/2789)
-  const trendingMatch = trimmed.match(/(?:@?materials\/trending\/|@?trending\/|@?inspiration\/)([a-zA-Z0-9_-]+)(?:\.[a-zA-Z0-9]+)?$/i)
-  if (trendingMatch) {
-    const itemId = trendingMatch[1]
-    try {
-      const port = process.env.DSH_PORT || '45120'
-      const res = await fetch(`http://127.0.0.1:${port}/omnimux/inspiration/${itemId}`)
-      if (res.ok) {
-        const json = await res.json()
-        const item = json.data || json
-        if (item) {
-          if (item.type === 'image') {
-            throw new Error(`所选素材「${item.title || itemId}」为图文轮播（Carousel 图片卡片，共 ${item.media_keys?.length || 1} 页），不是视频文件，无法执行逐镜头视听拉片。请直接查看图文分屏解析或使用图文分析技能。`)
-          }
-          if (item.video_url && isDirectVideoUrl(item.video_url)) {
-            return item.video_url
-          }
-          if (Array.isArray(item.media_keys)) {
-            const vid = item.media_keys.find((k) => /\.(mp4|mov|webm)/i.test(k))
-            if (vid) {
-              return vid.startsWith('http') ? vid : `http://127.0.0.1:${port}${vid.startsWith('/') ? '' : '/'}${vid}`
-            }
-          }
-        }
+  const ref = await fetchInspirationReference(trimmed)
+  if (ref && ref.item) {
+    const { item, port } = ref
+    if (item.video_url && isDirectVideoUrl(item.video_url)) {
+      return item.video_url
+    }
+    if (Array.isArray(item.media_keys)) {
+      const vid = item.media_keys.find((k) => /\.(mp4|mov|webm)/i.test(k))
+      if (vid) {
+        return vid.startsWith('http') ? vid : `http://127.0.0.1:${port}${vid.startsWith('/') ? '' : '/'}${vid}`
       }
-    } catch (err) {
-      if (err.message && err.message.includes('图文轮播')) throw err
     }
   }
 
   return null
+}
+
+/**
+ * Fetch an inspiration/trending item record by virtual reference.
+ * @param {string} trimmed
+ * @returns {Promise<{ item: object, port: string, itemId: string }|null>}
+ */
+async function fetchInspirationReference(trimmed) {
+  if (typeof trimmed !== 'string') return null
+  const match = trimmed.match(/(?:@?materials\/trending\/|@?trending\/|@?inspiration\/)([a-zA-Z0-9_-]+)(?:\.[a-zA-Z0-9]+)?$/i)
+  if (!match) return null
+  const itemId = match[1]
+  const port = process.env.DSH_PORT || '45120'
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/omnimux/inspiration/${itemId}`)
+    if (!res.ok) return null
+    const json = await res.json()
+    const item = json.data || json
+    if (!item || typeof item !== 'object') return null
+    return { item, port, itemId }
+  } catch {
+    return null
+  }
+}
+
+const CAROUSEL_IMAGE_EXT_REGEX = /\.(jpe?g|png|webp|gif|bmp|avif)(\?|#|$)/i
+
+/**
+ * Resolve a virtual reference to a carousel (image-list) item when it points at
+ * an inspiration record whose type is image. media_keys entries that are not
+ * image files are ignored; relative keys are rebased onto the local host port.
+ * @param {string} trimmed
+ * @returns {Promise<{ item: object, itemId: string, pages: string[] }|null>}
+ */
+export async function resolveCarouselReference(trimmed) {
+  const ref = await fetchInspirationReference(trimmed)
+  if (!ref || !ref.item || ref.item.type !== 'image') return null
+  const { item, port, itemId } = ref
+  const keys = Array.isArray(item.media_keys) ? item.media_keys : []
+  const imageKeys = keys.filter((k) => typeof k === 'string' && CAROUSEL_IMAGE_EXT_REGEX.test(k))
+  const pages = imageKeys.map((k) => (k.startsWith('http') ? k : `http://127.0.0.1:${port}${k.startsWith('/') ? '' : '/'}${k}`))
+  if (pages.length === 0 && typeof item.cover_url === 'string' && item.cover_url.startsWith('http')) {
+    pages.push(item.cover_url)
+  }
+  return pages.length > 0 ? { item, itemId, pages } : null
 }
 
 /**
@@ -1020,6 +1221,12 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   const trimmed = String(inputUrl || '').trim()
   const existing = readExistingBreakdownFile(trimmed)
   if (existing) return existing
+
+  // 图文轮播（灵感 type:image 条目）走独立的逐页拆解流水线
+  const carousel = await resolveCarouselReference(trimmed)
+  if (carousel) {
+    return extractCarouselBreakdown(carousel, options)
+  }
 
   const isLocalFile = trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../')
   const isHttp = /^https?:\/\//i.test(trimmed)

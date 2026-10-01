@@ -1040,6 +1040,72 @@ export const VIDEO_BREAKDOWN_CSS = `
 .omx-rich-video-card:hover .omx-rich-card-action-icon {
   color: var(--dsw-alias-label-primary);
 }
+
+/* Carousel Pager (图文轮播翻页器) */
+.omnimux-video-breakdown-player-card.is-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.omnimux-carousel-pager-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-mask-1);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--dsw-alias-border-l3);
+}
+
+.omnimux-carousel-pager-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-size: 16px;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.omnimux-carousel-pager-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+.omnimux-carousel-pager-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.omnimux-carousel-pager-count {
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.omnimux-carousel-page-empty {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
 `
 
 export function ensureBreakdownStyles() {

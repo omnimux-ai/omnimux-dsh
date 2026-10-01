@@ -11,6 +11,7 @@ import {
   useTranslation,
   BreakdownHeader,
   VideoPlayerCard,
+  CarouselPager,
   VideoMetadataBox,
   ShotListPanel,
   StructurePipelineView,
@@ -53,7 +54,9 @@ function extractBreakdownContext(data, path) {
   const streamUrl = video.stream_url || video.video_url || ''
   const coverUrl = video.cover_url || ''
   const filePath = path || data?.filePath || ''
-  return { video, streamUrl, coverUrl, filePath }
+  const isCarousel = data?.media_type === 'carousel'
+  const pages = isCarousel && Array.isArray(data?.carousel?.pages) ? data.carousel.pages : []
+  return { video, streamUrl, coverUrl, filePath, isCarousel, pages }
 }
 
 function useBreakdownParsedModel(data) {
@@ -142,12 +145,17 @@ function buildViewerLayoutProps(state) {
     pipeline: state.model.pipeline,
     scriptCopyContent: state.copyTexts.scriptCopy,
     shotsCopyContent: state.copyTexts.shotsCopy,
+    isCarousel: state.ctx.isCarousel,
+    carouselPageIndex: state.carouselPageIndex,
+    onCarouselSeek: state.onCarouselSeek,
   }
   return { playerCardProps, mainProps }
 }
 
 function BreakdownMainContent(props) {
-  const { activeTab, setActiveTab, isZh, playback, translation, shots, structure, pipeline, scriptCopyContent, shotsCopyContent } = props
+  const { activeTab, setActiveTab, isZh, playback, translation, shots, structure, pipeline, scriptCopyContent, shotsCopyContent, isCarousel, carouselPageIndex, onCarouselSeek } = props
+  const seekHandler = isCarousel && typeof onCarouselSeek === 'function' ? onCarouselSeek : playback.handleSeek
+  const highlightIndex = isCarousel ? carouselPageIndex : playback.currentPlayingShotIndex
   return (
     <main className="omnimux-video-breakdown-right">
       <SegmentedTabsBar activeTab={activeTab} setActiveTab={setActiveTab} isZh={isZh} />
@@ -155,13 +163,13 @@ function BreakdownMainContent(props) {
         {activeTab === 'shots' ? (
           <ShotListPanel
             shots={shots}
-            currentPlayingShotIndex={playback.currentPlayingShotIndex}
+            currentPlayingShotIndex={highlightIndex}
             isPlaying={playback.isPlaying}
             isZh={isZh}
             selectedLang={translation.selectedLang}
             translations={translation.translations}
             isTranslating={translation.isTranslating}
-            onSeekShot={playback.handleSeek}
+            onSeekShot={seekHandler}
           />
         ) : (
           <StructurePipelineView pipeline={pipeline} structure={structure} isZh={isZh} />
@@ -199,6 +207,14 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
   const playback = useVideoPlayback({ video: ctx.video, shots: model.shots, activeTab, streamUrl: ctx.streamUrl })
   const translation = useTranslation({ shots: model.shots, initialTranslations: data?.translations, filePath: ctx.filePath })
   const copyTexts = useBreakdownCopyTexts(model.shots, isZh, translation)
+  const [carouselPageIndex, setCarouselPageIndex] = useState(0)
+
+  const handleCarouselSeek = (sec) => {
+    // 分镜卡点击：参数保持 start_seconds 约定；轮播里按下标跳页
+    const idx = Math.round(Number(sec) || 0)
+    const max = ctx.pages.length - 1
+    setCarouselPageIndex(Math.min(Math.max(idx, 0), Math.max(max, 0)))
+  }
 
   if (!data) {
     return <BreakdownEmptyState isZh={isZh} />
@@ -213,6 +229,8 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
     model,
     copyTexts,
     ctx,
+    carouselPageIndex,
+    onCarouselSeek: handleCarouselSeek,
   })
 
   return (
@@ -227,7 +245,16 @@ export function VideoBreakdownViewer({ content, path, title, onClose }) {
           {ctx.streamUrl.startsWith('/omnimux/video-preview/stream?path=') && (
             <p role="status">此旧分析文件需要重新授权本机视频。请让助手使用此分析文件及您确认的视频、封面路径恢复播放，无需重新分析。</p>
           )}
-          <VideoPlayerCard {...playerCardProps} />
+          {ctx.isCarousel ? (
+            <CarouselPager
+              pages={ctx.pages}
+              pageIndex={carouselPageIndex}
+              onPageChange={setCarouselPageIndex}
+              isZh={isZh}
+            />
+          ) : (
+            <VideoPlayerCard {...playerCardProps} />
+          )}
           <VideoMetadataBox video={ctx.video} shotsCount={model.shots.length} isZh={isZh} />
         </aside>
         <BreakdownMainContent {...mainProps} />
