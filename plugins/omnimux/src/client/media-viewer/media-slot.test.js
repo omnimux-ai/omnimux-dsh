@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { deriveAdaptiveOperation, extractSlotKeyFromBucketKey, inferMimeType, isAllowedReferenceUrl, orderAfterRemoval, rejectionOf, serializeReferenceAssets, slotPlan } from './media-slot.js';
+import { deriveAdaptiveOperation, deriveImageOpModeFromCount, extractSlotKeyFromBucketKey, inferMimeType, isAllowedReferenceUrl, orderAfterRemoval, rejectionOf, serializeReferenceAssets, slotPlan } from './media-slot.js';
 
 const imageModel = {
   id: 'grok-imagine-image-2-0',
@@ -132,6 +132,13 @@ describe('素材卡槽槽位与自适应推导', () => {
         ],
       });
       assert.equal(op.id, 'multi_reference');
+    });
+
+    it('deriveImageOpModeFromCount：0图->文生图，1图->图片编辑，多图->多图参考', () => {
+      assert.equal(deriveImageOpModeFromCount(0), '文生图');
+      assert.equal(deriveImageOpModeFromCount(1), '图片编辑');
+      assert.equal(deriveImageOpModeFromCount(2), '多图参考');
+      assert.equal(deriveImageOpModeFromCount(5), '多图参考');
     });
 
     it('视频模式：0 素材 -> 文生视频', () => {
