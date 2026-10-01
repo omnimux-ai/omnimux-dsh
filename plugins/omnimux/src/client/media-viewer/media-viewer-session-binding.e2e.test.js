@@ -32,6 +32,14 @@ const ignoreCssPlugin = {
       contents: 'export default {};',
       loader: 'js',
     }));
+    build.onResolve({ filter: /dsh-ui-kit/ }, (args) => ({
+      path: args.path,
+      namespace: 'mock-ui-kit',
+    }));
+    build.onLoad({ filter: /.*/, namespace: 'mock-ui-kit' }, () => ({
+      contents: 'export const Button = (props) => props.children || null;',
+      loader: 'js',
+    }));
   },
 };
 

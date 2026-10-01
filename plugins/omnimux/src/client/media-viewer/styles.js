@@ -1112,23 +1112,27 @@ export const MEDIA_VIEWER_CSS = `
   left: 0;
   width: 64px;
   height: 64px;
-  border-radius: 8px;
+  border-radius: 10px;
   transform: translateX(var(--slot-shift, 0px));
-  transition: transform 220ms ease, opacity 180ms ease;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, opacity 180ms ease, border-color 180ms ease, background 180ms ease;
+  box-sizing: border-box;
 }
 .omx-slot-badge-mark {
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 4px;
+  left: 4px;
   z-index: 6;
   font-size: 10px;
   line-height: 1.2;
   font-weight: 600;
-  padding: 1px 4px;
+  padding: 2px 6px;
   border-radius: 4px;
   background: var(--dsw-alias-bg-mask-1);
   color: var(--dsw-alias-label-primary);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  box-shadow: 0 2px 5px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 角标微阴影 */
   pointer-events: none;
 }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-add { transform: translateX(92px); }
@@ -1140,7 +1144,10 @@ export const MEDIA_VIEWER_CSS = `
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l2);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35); /* exempt-ui03: 叠卡层次 */
+  box-shadow: 0 4px 14px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 叠卡层次 */
+}
+.omx-slot-card:hover {
+  box-shadow: 0 6px 18px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 叠卡层次 */
 }
 .omx-slot-card.is-depth-1 { transform: translate(var(--slot-shift), 5px) rotate(-6deg); }
 .omx-slot-card.is-depth-2 { transform: translate(var(--slot-shift), 6px) rotate(5deg); }
@@ -1151,6 +1158,7 @@ export const MEDIA_VIEWER_CSS = `
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 9px;
 }
 .omx-slot-audio {
   width: 100%;
@@ -1164,37 +1172,75 @@ export const MEDIA_VIEWER_CSS = `
   position: absolute;
   top: 4px;
   right: 4px;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border: 0;
   border-radius: 999px;
   padding: 0;
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.62); /* exempt-ui03: 缩略图上的移除按钮 */
+  background: var(--dsw-alias-bg-mask-1); /* exempt-ui03: 缩略图上的移除按钮 */
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 0.5px solid var(--dsw-alias-border-l3);
   color: var(--dsw-alias-label-primary);
   cursor: pointer;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .omx-slot-card:hover .omx-slot-remove,
 .omx-slot-card:focus-within .omx-slot-remove { display: flex; }
+.omx-slot-remove:hover {
+  background: var(--dsw-alias-danger, #ef4444); /* exempt-ui03: 移除按钮危险态悬浮 */
+  color: var(--dsw-alias-label-primary);
+  transform: scale(1.1);
+}
 .omx-slot-add {
   z-index: 8;
   border: 1px dashed var(--dsw-alias-border-l3);
-  background: transparent;
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   cursor: pointer;
-  padding: 0;
+  padding: 4px;
+  box-sizing: border-box;
+}
+.omx-slot-add:hover {
+  background: var(--dsw-alias-bg-layer-3);
+  border-color: var(--dsw-alias-border-l4);
+  color: var(--dsw-alias-label-primary);
+  transform: translateY(-1px) translateX(var(--slot-shift, 0px));
+  box-shadow: 0 4px 12px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 卡槽悬浮微光 */
+}
+.omx-slot-add svg {
+  width: 18px;
+  height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+  transition: color 180ms ease, transform 180ms ease;
+}
+.omx-slot-add:hover svg {
+  color: var(--dsw-alias-label-primary);
+  transform: scale(1.06);
 }
 .omx-slot-add span {
   font-size: 11px;
-  line-height: 1;
+  line-height: 1.2;
+  font-weight: 500;
   color: var(--dsw-alias-label-tertiary);
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+  text-align: center;
+  max-width: 58px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 180ms ease;
+}
+.omx-slot-add:hover span {
+  color: var(--dsw-alias-label-secondary);
 }
 .omx-slot-add:hover { border-color: var(--dsw-alias-border-l4); }
 .omx-slot-count {
