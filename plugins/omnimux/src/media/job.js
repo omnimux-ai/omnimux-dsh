@@ -77,7 +77,79 @@ export async function getJson(fetcher, url, apiKey, callerSignal, options = {}) 
 }
 
 /**
- * @param {{ dest: string, url: string, capability?: 'video' | 'image' | 'audio', apiKey?: string, fetcher?: typeof fetch, signal?: AbortSignal }} options
+ * Detect transient / propagation delay errors during media artifact download.
+ *
+ * Upstream video/media content endpoints (e.g. omnimux.ai/v1/videos/:id/content)
+ * may take several seconds after coordinator status 'succeeded' before the file
+ * is fully transcoded/propagated on the CDN or storage, returning 400
+ * {"error":{"message":"Task is not completed yet, current status: NOT_START","type":"invalid_request_error"}}
+ * or 404. Transient network issues and 408/429/5xx status codes are also retryable.
+ *
+ * @param {{ status?: number, body?: unknown, error?: unknown }} failure
+ * @returns {boolean}
+ */
+export function isDownloadRetryable({ status, body, error } = {}) {
+  if (error) {
+    if (error && typeof error === 'object' && (error.name === 'AbortError' || error.code === 'omnimux-aborted')) {
+      return false
+    }
+    return true
+  }
+  if (status === 404) return true
+  if (status === 400) {
+    const msg = String(
+      (typeof body === 'object' && body !== null && (body?.error?.message ?? body?.message))
+      || (typeof body === 'string' ? body : '')
+    ).toLowerCase()
+    return (
+      msg.includes('not completed')
+      || msg.includes('not_start')
+      || msg.includes('processing')
+      || msg.includes('queued')
+      || msg.includes('pending')
+      || msg.includes('task is not')
+    )
+  }
+  if (typeof status === 'number' && RETRYABLE_STATUS.has(status)) return true
+  return false
+}
+
+/**
+ * @param {number} ms
+ * @param {AbortSignal | undefined} signal
+ * @returns {Promise<void>}
+ */
+function sleepWithSignal(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      return reject(new OmnimuxError('omnimux-aborted', 'download aborted', { cause: signal.reason }))
+    }
+    const timer = setTimeout(() => {
+      if (signal) signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    const onAbort = () => {
+      clearTimeout(timer)
+      reject(new OmnimuxError('omnimux-aborted', 'download aborted', { cause: signal.reason }))
+    }
+    if (signal) {
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+  })
+}
+
+/**
+ * @param {{
+ *   dest: string,
+ *   url: string,
+ *   capability?: 'video' | 'image' | 'audio',
+ *   apiKey?: string,
+ *   fetcher?: typeof fetch,
+ *   signal?: AbortSignal,
+ *   maxRetries?: number,
+ *   retryDelayMs?: number,
+ *   sleep?: (ms: number) => Promise<void>,
+ * }} options
  */
 export async function downloadMediaFile(options) {
   const url = options.url
@@ -99,31 +171,67 @@ export async function downloadMediaFile(options) {
     if (options.apiKey?.trim() && (url.includes('omnimux.ai') || url.startsWith('/'))) {
       headers.authorization = `Bearer ${options.apiKey.trim()}`
     }
-    const response = await fetcher(url, {
-      headers,
-      ...(options.signal ? { signal: options.signal } : {}),
-    })
-    if (!response.ok) {
-      let body = null
-      try { body = await response.clone().json() } catch {
-        try { body = await response.clone().text() } catch { body = null }
+
+    const maxRetries = Number.isFinite(options.maxRetries) && options.maxRetries >= 0 ? options.maxRetries : 30
+    const retryDelayMs = Number.isFinite(options.retryDelayMs) && options.retryDelayMs >= 0 ? options.retryDelayMs : 1500
+    const sleep = options.sleep ?? ((ms) => sleepWithSignal(ms, options.signal))
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (options.signal?.aborted) {
+        throw new OmnimuxError('omnimux-aborted', 'download aborted', { cause: options.signal.reason })
       }
-      const classified = classifyQuotaFailure({ status: response.status, body })
-      if (classified.kind === 'channel-unavailable') {
-        throw new OmnimuxError(classified.code, classified.message, { status: response.status })
+      try {
+        const response = await fetcher(url, {
+          headers,
+          ...(options.signal ? { signal: options.signal } : {}),
+        })
+        if (!response.ok) {
+          let body = null
+          try { body = await response.clone().json() } catch {
+            try { body = await response.clone().text() } catch { body = null }
+          }
+          const classified = classifyQuotaFailure({ status: response.status, body })
+          if (classified.kind === 'channel-unavailable') {
+            throw new OmnimuxError(classified.code, classified.message, { status: response.status })
+          }
+          if (classified.kind === 'quota-exceeded') {
+            throw new OmnimuxError('quota-exceeded', classified.message, { status: response.status, details: classified })
+          }
+          if (classified.kind === 'needs-omnimux') {
+            throw new OmnimuxError('needs-omnimux', classified.message, { status: response.status })
+          }
+          if (attempt < maxRetries && isDownloadRetryable({ status: response.status, body })) {
+            await sleep(retryDelayMs)
+            continue
+          }
+          const failureDetail = typeof body === 'object' && body !== null && body?.error?.message ? ` (${body.error.message})` : ''
+          throw new OmnimuxError('omnimux-download-failed', `download failed: ${response.status}${failureDetail}`, {
+            status: response.status,
+            details: body,
+          })
+        }
+        contentType = typeof response.headers?.get === 'function'
+          ? String(response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+          : ''
+        buffer = Buffer.from(await response.arrayBuffer())
+        break
+      } catch (err) {
+        if (err?.code === 'omnimux-aborted' || options.signal?.aborted) {
+          throw err
+        }
+        if (err?.code === 'quota-exceeded' || err?.code === 'needs-omnimux' || err?.code === 'channel-unavailable') {
+          throw err
+        }
+        if (err instanceof OmnimuxError && err.code === 'omnimux-download-failed') {
+          throw err
+        }
+        if (attempt < maxRetries && isDownloadRetryable({ error: err })) {
+          await sleep(retryDelayMs)
+          continue
+        }
+        throw new OmnimuxError('omnimux-download-failed', `download failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err })
       }
-      if (classified.kind === 'quota-exceeded') {
-        throw new OmnimuxError('quota-exceeded', classified.message, { status: response.status, details: classified })
-      }
-      if (classified.kind === 'needs-omnimux') {
-        throw new OmnimuxError('needs-omnimux', classified.message, { status: response.status })
-      }
-      throw new OmnimuxError('omnimux-download-failed', `download failed: ${response.status}`, { status: response.status })
     }
-    contentType = typeof response.headers?.get === 'function'
-      ? String(response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
-      : ''
-    buffer = Buffer.from(await response.arrayBuffer())
   }
   if (buffer.byteLength === 0) {
     throw new OmnimuxError('omnimux-invalid-response', `${options.capability ?? 'media'} download contained no bytes`)
