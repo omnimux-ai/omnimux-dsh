@@ -20,7 +20,7 @@ const args = process.argv.slice(2)
 const command = path.basename(process.argv[1])
 const phase = command === 'ffprobe' ? 'probe'
   : args.includes('-vframes') ? 'cover'
-  : args.includes('fps=1/3,scale=360:-2') ? 'sample' : 'scenes'
+  : args.includes('-crf') ? 'sample' : 'scenes'
 fs.appendFileSync(process.env.VIDEO_PROCESS_TRACE, JSON.stringify({ command, args, phase }) + '\\n')
 if (process.env.VIDEO_PROCESS_FAIL.split(',').includes(phase)) process.exit(1)
 if (phase === 'probe') process.stdout.write('12.8\\n')
@@ -48,21 +48,28 @@ function runCase(t, config = {}) {
   writeFileSync(videoPath, 'local input fixture')
   truncateSync(videoPath, config.size ?? sampleLimit + 1)
   const trace = join(dir, 'trace.jsonl')
-  const output = execFileSync(process.execPath, [runner, JSON.stringify({ ...config, videoPath })], {
-    cwd: dir,
-    env: {
-      ...process.env,
-      DSH_HOME: join(dir, 'home'),
-      PATH: config.missingPrograms ? bin : `${bin}:${process.env.PATH || ''}`,
-      VIDEO_PROCESS_TRACE: trace,
-      VIDEO_PROCESS_FAIL: (config.fail || []).join(','),
-    },
-    encoding: 'utf8',
-    timeout: 15000,
-  })
+  let output
+  let error = null
+  try {
+    output = execFileSync(process.execPath, [runner, JSON.stringify({ ...config, videoPath })], {
+      cwd: dir,
+      env: {
+        ...process.env,
+        DSH_HOME: join(dir, 'home'),
+        PATH: config.missingPrograms ? bin : `${bin}:${process.env.PATH || ''}`,
+        VIDEO_PROCESS_TRACE: trace,
+        VIDEO_PROCESS_FAIL: (config.fail || []).join(','),
+      },
+      encoding: 'utf8',
+      timeout: 15000,
+    })
+  } catch (err) {
+    error = err
+  }
   const processes = existsSync(trace)
     ? readFileSync(trace, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
     : []
+  if (error) return { error, processes, videoPath, dir, results: [], calls: [], analysisVideos: [], sceneInputs: [] }
   return { ...JSON.parse(output), processes, videoPath, dir }
 }
 
@@ -75,8 +82,8 @@ function expectedConversionCalls(videoPath) {
     },
     {
       file: 'ffmpeg',
-      args: ['-v', 'error', '-y', '-i', videoPath, '-vf', 'fps=1/3,scale=360:-2', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '32', '-an', videoPath.replace(/\.mp4$/i, '_sample.mp4')],
-      options: { timeout: 15000 },
+      args: ['-v', 'error', '-y', '-i', videoPath, '-vf', 'fps=1,scale=720:-2', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28', '-c:a', 'aac', '-b:a', '64k', videoPath.replace(/\.mp4$/i, '_sample.mp4')],
+      options: { timeout: 30000 },
     },
     {
       file: 'ffprobe',
@@ -125,12 +132,18 @@ for (const size of [1024, sampleLimit]) {
   })
 }
 
-test('retains original input and fallback cover after conversion failures', (t) => {
-  const run = runCase(t, { fail: ['cover', 'sample'] })
-  assert.deepEqual(run.calls, expectedConversionCalls(run.videoPath))
-  assert.deepEqual(run.analysisVideos, [run.videoPath])
+test('retains fallback cover and still analyzes the sample after cover conversion failure', (t) => {
+  const run = runCase(t, { fail: ['cover'] })
+  assert.deepEqual(run.analysisVideos, [run.videoPath.replace(/\.mp4$/i, '_sample.mp4')])
   assert.equal(run.results[0].video.cover_url, 'fallback-cover.jpg')
   assert.equal(run.results[0].is_video_breakdown, true)
+})
+
+test('throws Chinese guidance instead of silently sending the oversized original when sample conversion fails', (t) => {
+  const run = runCase(t, { fail: ['sample'] })
+  assert.ok(run.error, 'extractVideoBreakdown must reject when all sample tiers fail')
+  assert.match(String(run.error.stderr || run.error.message), /请截取视频片段/)
+  assert.equal(run.error.stderr?.includes('video exceeds'), false)
 })
 
 test('uses probed duration and scene-filter cut points', (t) => {
@@ -157,10 +170,16 @@ test('still prefers professional scene results while probing the literal path', 
   assert.deepEqual(run.results[0].map(({ startSec, endSec }) => [startSec, endSec]), [[0, 3], [3, 7], [7, 13]])
 })
 
-test('preserves breakdown fallback when media programs are absent', (t) => {
-  const run = runCase(t, { missingPrograms: true })
+test('preserves breakdown fallback when media programs are absent for a small video', (t) => {
+  const run = runCase(t, { missingPrograms: true, size: 1024 })
   assert.deepEqual(run.processes, [])
   assert.deepEqual(run.analysisVideos, [run.videoPath])
   assert.equal(run.results[0].video.cover_url, 'fallback-cover.jpg')
   assert.equal(run.results[0].is_video_breakdown, true)
+})
+
+test('rejects oversized video with Chinese guidance when ffmpeg is absent', (t) => {
+  const run = runCase(t, { missingPrograms: true })
+  assert.ok(run.error, 'extractVideoBreakdown must reject when ffmpeg is absent for a > 20MiB video')
+  assert.match(String(run.error.stderr || run.error.message), /请截取视频片段/)
 })
