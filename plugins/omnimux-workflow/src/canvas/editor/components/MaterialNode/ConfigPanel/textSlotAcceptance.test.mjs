@@ -605,4 +605,37 @@ describe('场景 5 验收：DOM 渲染与交互表现端到端验证', async () 
     // 因为 max 为 10，已填入 1，所以尾部添加加号框依然保留
     assert.match(html, /wf-slot-well--append/);
   });
+
+  it('TC-T05-03: 具名卡槽 named preset 在 records 模式下完整呈现各个专属槽位，且带有正确的 data-slot', () => {
+    const layout = {
+      operationId: 'digital_human',
+      preset: 'named',
+      slots: [
+        { slot: 'character', role: 'first_frame', type: 'image', min: 1, max: 1, labelKey: 'panel.slot.character' },
+        { slot: 'driving_audio', role: 'audio_track', type: 'audio', min: 1, max: 1, labelKey: 'panel.slot.driving_audio' },
+      ],
+      swap: false,
+      addButton: false,
+      acceptsText: true,
+      implementationGaps: [],
+    };
+    const html = renderSlotWells({
+      layout,
+      bindings: {},
+      records: [],
+      conflicts: [],
+      upstreams: [],
+      onPickSlot() {},
+      onSwapSlots() {},
+      onClearOccupant() {},
+      onInsertToken() {},
+    });
+
+    // 必须保留 wf-slot-wells--named
+    assert.match(html, /wf-slot-wells--named/);
+    // 两个具名空槽必须分别带明确的 data-slot，不能降级为通用的 append
+    assert.match(html, /data-slot="character"/);
+    assert.match(html, /data-slot="driving_audio"/);
+    assert.doesNotMatch(html, /wf-slot-well--append/);
+  });
 });
