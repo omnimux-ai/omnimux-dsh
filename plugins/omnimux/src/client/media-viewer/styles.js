@@ -1127,12 +1127,12 @@ export const MEDIA_VIEWER_CSS = `
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #ffffff;
+  background: var(--dsw-alias-bg-mask-1);
+  color: var(--dsw-alias-label-primary);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 0.5px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  box-shadow: 0 2px 5px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 角标微阴影 */
   pointer-events: none;
 }
 .omx-slot-group.is-piled:not(.is-open) .omx-slot-add { transform: translateX(92px); }
@@ -1142,12 +1142,12 @@ export const MEDIA_VIEWER_CSS = `
 .omx-slot-card {
   z-index: var(--slot-z, 1);
   overflow: hidden;
-  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); /* exempt-ui03: 叠卡层次 */
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: 0 4px 14px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 叠卡层次 */
 }
 .omx-slot-card:hover {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.48);
+  box-shadow: 0 6px 18px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 叠卡层次 */
 }
 .omx-slot-card.is-depth-1 { transform: translate(var(--slot-shift), 5px) rotate(-6deg); }
 .omx-slot-card.is-depth-2 { transform: translate(var(--slot-shift), 6px) rotate(5deg); }
@@ -1180,25 +1180,25 @@ export const MEDIA_VIEWER_CSS = `
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.72); /* exempt-ui03: 缩略图上的移除按钮 */
+  background: var(--dsw-alias-bg-mask-1); /* exempt-ui03: 缩略图上的移除按钮 */
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  border: 0.5px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  color: var(--dsw-alias-label-primary);
   cursor: pointer;
   transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .omx-slot-card:hover .omx-slot-remove,
 .omx-slot-card:focus-within .omx-slot-remove { display: flex; }
 .omx-slot-remove:hover {
-  background: rgba(239, 68, 68, 0.9);
-  color: #ffffff;
+  background: var(--dsw-alias-danger, #ef4444); /* exempt-ui03: 移除按钮危险态悬浮 */
+  color: var(--dsw-alias-label-primary);
   transform: scale(1.1);
 }
 .omx-slot-add {
   z-index: 8;
-  border: 1px dashed var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.16));
-  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.035));
+  border: 1px dashed var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
   display: flex;
   flex-direction: column;
@@ -1210,11 +1210,11 @@ export const MEDIA_VIEWER_CSS = `
   box-sizing: border-box;
 }
 .omx-slot-add:hover {
-  background: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.07));
-  border-color: var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.3));
+  background: var(--dsw-alias-bg-layer-3);
+  border-color: var(--dsw-alias-border-l4);
   color: var(--dsw-alias-label-primary);
   transform: translateY(-1px) translateX(var(--slot-shift, 0px));
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 4px 12px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 卡槽悬浮微光 */
 }
 .omx-slot-add svg {
   width: 18px;
