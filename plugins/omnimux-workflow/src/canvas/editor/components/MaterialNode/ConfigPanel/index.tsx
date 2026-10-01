@@ -329,8 +329,10 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   [storedSlotBindings, displayedSlotLayout, feedAssets, canvasEdges, nodeId, nodeData.slotConflicts, nodeData.slotStandbyEdgeIds, nodeData.inputBindingVersion]);
   const slotBindings = inputDisplay.bindings;
   const slotConflicts = inputDisplay.conflicts;
-  const consumedFingerprint = useMemo(() => effectiveSlotFingerprint(fingerprint, displayedSlotLayout, slotBindings, slotConflicts, nodeData.inputBindingVersion),
-    [fingerprint, displayedSlotLayout, slotBindings, slotConflicts, nodeData.inputBindingVersion]);
+  const consumedFingerprint = useMemo(() => effectiveSlotFingerprint(
+    fingerprint, displayedSlotLayout, slotBindings, slotConflicts, nodeData.inputBindingVersion,
+    (nodeData.slotStandbyEdgeIds ?? []) as string[],
+  ), [fingerprint, displayedSlotLayout, slotBindings, slotConflicts, nodeData.inputBindingVersion, nodeData.slotStandbyEdgeIds]);
 
   const textSources = useMemo(() => selectGenerationTextSources(currentInputs ? consumedFingerprint.assets : displayedSlotLayout.acceptsText === false ? [] : fingerprint.assets), [currentInputs, consumedFingerprint, displayedSlotLayout, fingerprint]);
 
@@ -800,6 +802,18 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [nodeId, nodeData.slotStandbyEdgeIds, slotBindings, slotConflicts],
   );
 
+  const handleClearTextSource = useCallback((sourceNodeId: string) => {
+    const edge = canvasEdges.find((e) => e.source === sourceNodeId && e.target === nodeId);
+    if (edge) {
+      const standby = Array.isArray(nodeData.slotStandbyEdgeIds) ? nodeData.slotStandbyEdgeIds : [];
+      useCanvasStore.getState().applyCanvasInputMutation({
+        nodePatches: [{ nodeId, data: {
+          slotStandbyEdgeIds: [...new Set([...standby, edge.id])],
+        } }],
+      });
+    }
+  }, [canvasEdges, nodeId, nodeData.slotStandbyEdgeIds]);
+
   const handlePickSlot = useCallback(
     (request: SlotPickRequest) => onOpenResourcePicker?.(
       displayedSlotLayout.displayOnlyFromOperation
@@ -1075,7 +1089,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
         <div className={`wf-config-panel__prompt-header${!hasSlots && !textSources.length ? ' wf-config-panel__prompt-header--empty-slots' : ''}`}>
-          {!currentInputs && textSources.length > 0 && (
+          {textSources.length > 0 && (
             <div className="wf-slot-wells wf-slot-wells--strip" data-testid="wf-text-inputs">
               {textSources.map((source) => (
                 <div key={source.sourceNodeId} className="wf-effective-text wf-effective-text--slot" data-source-node-id={source.sourceNodeId}
@@ -1087,6 +1101,17 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
                     <span>{source.availability === 'ready' && source.textContent?.trim()
                       ? source.textContent : t(source.availability === 'unavailable' ? 'mention.unavailable' : 'mention.waiting')}</span>
                   </span>
+                  <button
+                    type="button"
+                    className="wf-effective-text__remove nodrag"
+                    title={t('mention.unbind')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClearTextSource(source.sourceNodeId);
+                    }}
+                  >
+                    <X size={12} aria-hidden="true" />
+                  </button>
                 </div>
               ))}
             </div>

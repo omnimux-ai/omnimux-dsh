@@ -753,3 +753,52 @@ test('effectiveInputDisplay auto-fills upstream feed into matching slots under i
   assert.equal(result.bindings.driving_audio?.length ?? 0, 0, '音频卡槽无对应输入保持空态');
 });
 
+test('UIA: 视频节点（digital_human / first_frame）在 inputBindingVersion=1 连入上游文本时，文本自动注入消费指纹并保留在 assets', () => {
+  const l = {
+    operationId: 'digital_human',
+    preset: 'named',
+    acceptsText: true,
+    slots: [
+      { slot: 'character', role: 'first_frame', type: 'image', min: 1, max: 1 },
+      { slot: 'driving_audio', role: 'audio_track', type: 'audio', min: 1, max: 1 },
+    ],
+  };
+  const textAsset = {
+    edgeId: 'e-text',
+    sourceNodeId: 'node-text',
+    type: 'text',
+    availability: 'ready',
+    textContent: 'Hello! How can I help you today?',
+    ordinal: 0,
+  };
+  const imgAsset = {
+    edgeId: 'e-img',
+    sourceNodeId: 'node-img',
+    type: 'image',
+    availability: 'ready',
+    outputId: 'ast-1',
+    url: 'https://example.test/img.png',
+    ordinal: 1,
+  };
+  const rawFingerprint = {
+    localText: '1dog',
+    prompt: '1dog',
+    assets: [textAsset, imgAsset],
+  };
+  const bindings = {
+    character: [{ edgeId: 'e-img', sourceNodeId: 'node-img', outputId: 'ast-1', pinned: false }],
+    driving_audio: [],
+  };
+
+  const fp = effectiveSlotFingerprint(rawFingerprint, l, bindings, [], 1);
+  assert.ok(fp.prompt.includes('Hello! How can I help you today?'), '导出的提示词必须包含上游文本');
+  assert.ok(fp.prompt.includes('1dog'), '导出的提示词必须包含本地输入的 1dog');
+  assert.ok(fp.assets.some(a => a.type === 'text' && a.sourceNodeId === 'node-text'), '导出的 assets 必须包含文本资产，供前端渲染文本胶囊');
+  assert.ok(fp.assets.some(a => a.type === 'image' && a.sourceNodeId === 'node-img'), '导出的 assets 必须包含图片资产');
+
+  // 当用户主动将文本连线加入待命池 (standby) 时：
+  const fpStandby = effectiveSlotFingerprint(rawFingerprint, l, bindings, [], 1, ['e-text']);
+  assert.equal(fpStandby.prompt, '1dog', '待命状态下上游文本不进入提示词');
+  assert.ok(!fpStandby.assets.some(a => a.type === 'text'), '待命状态下文本不作为活跃资产');
+});
+
