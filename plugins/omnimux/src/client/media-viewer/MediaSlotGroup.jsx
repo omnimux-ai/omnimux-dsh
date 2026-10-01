@@ -11,10 +11,10 @@ import { orderAfterRemoval, rejectionOf } from './media-slot.js';
  */
 
 const PILE_AT = 3;
-const CARD = 64;
-const STEP = 74;
-const PILE_WIDTH = 78;
-const GAP = 14;
+const CARD = 48;
+const STEP = 56;
+const PILE_WIDTH = 58;
+const GAP = 12;
 
 const ICONS = {
   image: (
