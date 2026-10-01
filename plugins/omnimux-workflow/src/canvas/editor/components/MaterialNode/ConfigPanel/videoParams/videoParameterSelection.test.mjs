@@ -87,3 +87,25 @@ test('schema controls do not capture prompt/media/routing and non-scalar runtime
   const result = transition({model:'a',operation:'text_to_video',resolution:'480p',prompt:'keep',routing:{allowedGroups:['a']},firstFrameUrl:'https://example.test/a'},b);
   assert.deepEqual(Object.keys(result.parameterSelections.byModel.a.byOperation.text_to_video).sort(),['duration','resolution']);
 });
+
+test('operation adapts to line constraints when preferred operation is not supported by target channel group', () => {
+  const h3 = { id:'minimax-h3', label:'Hailuo H3', parameters:{resolution:resolution('720p')} };
+  const restrictedModel = {
+    ...h3,
+    operations: [
+      { id:'first_frame', listed:true, output:{type:'video'}, inputs:[{slot:'first_frame',type:'image',source:'upstream_edge',min:1,max:1}] },
+      { id:'digital_human', listed:true, output:{type:'video'}, inputs:[{slot:'character',type:'image',source:'upstream_edge',min:1,max:1},{slot:'driving_audio',type:'audio',source:'upstream_edge',min:1,max:1}] }
+    ]
+  };
+  const currentParams = { model:'minimax-h3', operation:'first_frame', resolution:'720p' };
+  const result = buildVideoParameterSelection({
+    params: currentParams,
+    currentModelItem: h3,
+    targetModelItem: restrictedModel,
+    catalog: { video:[restrictedModel], models:[restrictedModel] },
+    routing: { allowedGroups: ['lipsync'] },
+  });
+  assert.equal(result.params.operation, 'digital_human');
+  assert.deepEqual(result.errors, []);
+});
+
