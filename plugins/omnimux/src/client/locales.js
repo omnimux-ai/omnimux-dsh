@@ -1,5 +1,9 @@
 export const zh = {
   'composer.product': '产品',
+  // 「优化提示词」图标按钮（文案逐字锁定，见 docs/product/prompt-optimizer-copy.md）
+  'promptOptimize.tooltip': '优化提示词',
+  'promptOptimize.noKey': '配置 API Key 后可用',
+  'promptOptimize.failed': '优化失败，请重试',
   'composer.character': '角色',
   // 输入框下方四条快捷方式（名称逐字，不得改写）
   'quickShortcuts.group': '快捷方式',
@@ -318,6 +322,10 @@ export const zh = {
 
 export const en = {
   'composer.product': 'Product',
+  // Prompt optimizer icon button (copy locked, see docs/product/prompt-optimizer-copy.md)
+  'promptOptimize.tooltip': 'Optimize prompt',
+  'promptOptimize.noKey': 'Requires API key',
+  'promptOptimize.failed': "Couldn't optimize. Try again.",
   'composer.character': 'Character',
   // Composer quick shortcuts (names are fixed copy, never reworded)
   'quickShortcuts.group': 'Quick start',

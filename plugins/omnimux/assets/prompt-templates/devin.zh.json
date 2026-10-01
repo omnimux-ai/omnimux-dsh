@@ -1,0 +1,207 @@
+{
+  "$schema": "omnimux/prompt-templates@1",
+  "source": {
+    "name": "Devin Docs — 提示模板速查表 (Prompt Templates Cheat Sheet)",
+    "url": "https://docs.devin.ai/zh/essential-guidelines/prompt-templates-cheat-sheet",
+    "fetchedAt": "2026-10-01",
+    "license_note": "官方公开文档；方括号 [like this] 为待填充占位符。"
+  },
+  "usage": {
+    "matcher": "jev",
+    "match_primitive": "choice",
+    "fallback_id": "generic-optimize",
+    "note": "Jev 对每条指令做单选裁决：state=用户原始指令，choices=模板候选(含 generic-optimize)。命中模板则按模板骨架回填用户内容；未命中或置信度低于阈值则走通用优化模板。"
+  },
+  "templates": [
+    {
+      "id": "bugfix-specific",
+      "category": "Bug 修复",
+      "title": "修复特定 Bug",
+      "title_en": "Fix a Specific Bug",
+      "summary": "针对一个可描述、可复现的缺陷：给出复现步骤、预期/实际行为，定位根因、修复并补回归测试。",
+      "placeholders": ["describe the bug behavior", "Step 1", "Step 2", "Step 3", "what should happen", "what actually happens", "relevant file/directory"],
+      "template": "修复 `[describe the bug behavior]` 的问题。\n\n复现步骤：\n1. `[Step 1]`\n2. `[Step 2]`\n3. `[Step 3]`\n\n预期行为：`[what should happen]`\n实际行为：`[what actually happens]`\n\n请：\n1. 在 `[relevant file/directory]` 中排查根本原因\n2. 实现针对根本原因的修复方案\n3. 添加回归测试，防止该问题再次出现\n4. 运行现有测试套件，确保没有引入回归问题"
+    },
+    {
+      "id": "bugfix-production",
+      "category": "Bug 修复",
+      "title": "排查生产环境问题",
+      "title_en": "Debug a Production Issue",
+      "summary": "生产环境用户反馈类问题：拉取监控/日志工具中的错误与堆栈，定位根因、修复、补错误处理与回归测试。",
+      "placeholders": ["describe the issue", "Sentry/DataDog/Log monitoring tool"],
+      "template": "用户在生产环境中反馈了 `[describe the issue]` 问题。\n\n请执行以下操作：\n1. 使用 `[Sentry/DataDog/Log monitoring tool]` MCP 拉取近期错误日志和堆栈跟踪\n2. 定位问题根本原因\n3. 进行修复\n4. 添加适当的错误处理，以防止类似问题再次发生\n5. 创建回归测试\n6. 在 PR 描述中附上监控/告警链接"
+    },
+    {
+      "id": "feature-api-endpoint",
+      "category": "功能实现",
+      "title": "新增 API 端点",
+      "title_en": "Add a New API Endpoint",
+      "summary": "新增 REST/RPC 接口：声明方法、请求/响应结构、鉴权要求，按现有规范实现、加校验、写单测、更新文档。",
+      "placeholders": ["endpoint path", "describe what it does", "GET/POST/PUT/DELETE", "describe request structure", "describe response structure", "describe auth requirements", "similar endpoint file"],
+      "template": "创建一个新的 API 端点 `[endpoint path]`，用于 `[describe what it does]`。\n\n要求：\n- 方法：`[GET/POST/PUT/DELETE]`\n- 请求体：`[describe request structure]`\n- 响应格式：`[describe response structure]`\n- 身份验证：`[describe auth requirements]`\n\n请：\n1. 参考现有的 `[similar endpoint file]` 了解实现模式\n2. 按照现有规范实现该端点\n3. 添加输入验证和错误处理\n4. 为新端点编写单元测试\n5. 如适用，更新 API 文档\n6. 运行测试套件以确保所有测试均通过"
+    },
+    {
+      "id": "feature-ui-component",
+      "category": "功能实现",
+      "title": "新增 UI 组件",
+      "title_en": "Add a New UI Component",
+      "summary": "新增前端组件：明确组件名、Props 类型与功能，遵循设计系统，补单测并集成到父页面。",
+      "placeholders": ["file/location", "component type", "ComponentName", "list props and their types", "describe what it should do", "existing component/library", "parent component/page"],
+      "template": "在 `[file/location]` 中添加一个新的 `[component type]` 组件。\n\n要求：\n- 组件名称：`[ComponentName]`\n- Props：`[list props and their types]`\n- 功能：`[describe what it should do]`\n- 样式：以 `[existing component/library]` 为参考\n\n请：\n1. 按照现有模式创建组件\n2. 实现所需功能\n3. 添加正确的 TypeScript 类型\n4. 调整样式以符合我们的设计系统\n5. 为组件添加单元测试\n6. 将其集成到 `[parent component/page]` 中\n7. 启动开发服务器进行手动测试"
+    },
+    {
+      "id": "feature-from-design",
+      "category": "功能实现",
+      "title": "根据设计实现功能",
+      "title_en": "Implement Feature from Design",
+      "summary": "按 Figma/设计稿落地功能：复用组件库、遵循样式规范、双断点响应式、截图比对到一致再提 PR。",
+      "placeholders": ["feature name", "Figma/link to design", "specific frame/section", "component library path", "design system file", "breakpoint 1", "breakpoint 2"],
+      "template": "从此设计文件实现 `[feature name]` 功能：`[Figma/link to design]`\n\n重点关注 `[specific frame/section]` 框架。\n\n要求：\n- 使用 `[component library path]` 中的现有组件\n- 遵循 `[design system file]` 中的样式规范\n- 确保在 `[breakpoint 1]` 和 `[breakpoint 2]` 断点下实现响应式设计\n\n请完成以下事项：\n1. 按照设计规范实现该功能\n2. 尽可能复用现有组件\n3. 在桌面端（1440px）和移动端（375px）宽度下进行测试\n4. 截图验证实现效果与设计稿一致\n5. 在视觉效果与设计稿完全匹配之前，请勿提交 PR"
+    },
+    {
+      "id": "refactor-module",
+      "category": "代码重构",
+      "title": "重构模块",
+      "title_en": "Refactor a Module",
+      "summary": "针对某模块/文件做可维护性、性能或可读性重构：列出现有问题，保持功能不变并补齐测试。",
+      "placeholders": ["module/file name", "specific aspect", "Issue 1..3", "reference file", "specific metric"],
+      "template": "Refactor the `[module/file name]` to improve `[specific aspect: maintainability/performance/readability]`.\n\nCurrent issues:\n- `[Issue 1]`\n- `[Issue 2]`\n- `[Issue 3]`\n\nRequirements:\n- Keep all existing functionality intact\n- Follow the patterns in `[reference file]`\n- Improve `[specific metric: code complexity/performance]`\n\nPlease:\n1. Analyze the current implementation\n2. Refactor following best practices\n3. Ensure all existing tests still pass\n4. Add tests for any new functions introduced\n5. Run the full test suite\n6. Measure and report performance improvements if applicable"
+    },
+    {
+      "id": "refactor-migrate-pattern",
+      "category": "代码重构",
+      "title": "迁移到新模式",
+      "title_en": "Migrate to a New Pattern",
+      "summary": "把某文件/目录迁移到新模式、新库或新框架：参照示例逐步转换、更新依赖、跑构建验证。",
+      "placeholders": ["file/directory", "new pattern/library/framework", "link to documentation or example file", "example file", "build command"],
+      "template": "将 `[file/directory]` 转换为使用 `[new pattern/library/framework]`。\n\n参考：`[link to documentation or example file]`\n\n要求：\n- 保留所有现有功能\n- 遵循 `[example file]` 中的规范\n- 更新所有依赖代码\n\n请：\n1. 查阅文档和示例\n2. 逐步转换代码\n3. 更新导入项和依赖\n4. 确保所有测试通过\n5. 运行 `[build command]` 以验证无错误\n6. 手动测试功能"
+    },
+    {
+      "id": "test-coverage",
+      "category": "测试",
+      "title": "补充测试覆盖",
+      "title_en": "Add Test Coverage",
+      "summary": "为指定文件/模块/函数补齐单测与集成测试，设定当前/目标覆盖率并验证达标。",
+      "placeholders": ["file/module/function", "current coverage %", "target coverage %", "existing test file"],
+      "template": "为 `[file/module/function]` 添加全面的测试覆盖。\n\n当前覆盖率：`[current coverage %]`\n目标覆盖率：`[target coverage %]`\n\n请：\n1. 分析现有代码以识别边界用例\n2. 为所有公共方法编写单元测试\n3. 如适用，添加集成测试\n4. 参考 `[existing test file]` 中的测试模式\n5. 运行 `npm test -- --coverage` 并验证覆盖率是否达到目标\n6. 确保所有测试通过"
+    },
+    {
+      "id": "test-fix-failing",
+      "category": "测试",
+      "title": "调试未通过的测试",
+      "title_en": "Debug Failing Tests",
+      "summary": "修复失败测试：列出失败用例与报错，判定改测试还是改实现，修根因并跑全量防回归。",
+      "placeholders": ["test file or directory", "Test name 1", "error message", "Test name 2"],
+      "template": "修复 `[test file or directory]` 中失败的测试。\n\n测试失败情况：\n- `[Test name 1]`：`[error message]`\n- `[Test name 2]`：`[error message]`\n\n请执行以下操作：\n1. 排查测试失败的原因\n2. 判断需要修复测试本身还是实现代码\n3. 修复根本原因\n4. 确保测试套件中的所有测试均通过\n5. 运行完整测试套件，检查是否存在回归问题"
+    },
+    {
+      "id": "docs-module",
+      "category": "文档",
+      "title": "编写模块文档",
+      "title_en": "Write Module Documentation",
+      "summary": "为文件/模块补全 JSDoc/TypeDoc、参数返回值异常说明、使用示例与 README。",
+      "placeholders": ["file/module", "style guide link"],
+      "template": "为 `[file/module]` 添加完整的文档。\n\n请：\n1. 为所有公共函数添加 JSDoc/TypeDoc 注释\n2. 记录参数、返回值和异常\n3. 为复杂函数添加使用示例\n4. 如果这是新模块，请创建 README\n5. 遵循 `[style guide link]` 中的文档风格指南\n6. 如适用，更新主 API 文档"
+    },
+    {
+      "id": "docs-api",
+      "category": "文档",
+      "title": "更新 API 文档",
+      "title_en": "Update API Documentation",
+      "summary": "随接口/函数变更同步更新 OpenAPI/Swagger、内联注释与文档文件，并验证文档可构建。",
+      "placeholders": ["endpoint/function", "Change 1", "Change 2", "OpenAPI/Swagger", "documentation file"],
+      "template": "更新 `[endpoint/function]` 的 API 文档。\n\n所做更改：\n- `[Change 1]`\n- `[Change 2]`\n\n请执行以下操作：\n1. 更新 `[OpenAPI/Swagger]` 规范\n2. 更新所有内联代码注释\n3. 如行为有变更，请添加使用示例\n4. 更新 `[documentation file]`\n5. 验证文档可成功构建"
+    },
+    {
+      "id": "perf-db-query",
+      "category": "性能优化",
+      "title": "优化数据库查询",
+      "title_en": "Optimize Database Queries",
+      "summary": "治理慢查询与 N+1：分析执行计划、加索引、改 join、前后基准对比并记录收益。",
+      "placeholders": ["file/module", "Specific query", "time", "Specific operation", "table/column"],
+      "template": "Optimize the database queries in `[file/module]`.\n\nPerformance issues:\n- `[Specific query]` is slow (takes `[time]`)\n- `[Specific operation]` causes N+1 queries\n\nPlease:\n1. Analyze the query execution plans\n2. Add appropriate indexes to `[table/column]`\n3. Refactor queries to use joins instead of N+1\n4. Benchmark before and after performance\n5. Ensure all tests still pass\n6. Document the performance improvements"
+    },
+    {
+      "id": "perf-frontend",
+      "category": "性能优化",
+      "title": "优化前端性能",
+      "title_en": "Optimize Frontend Performance",
+      "summary": "治理首屏慢、包体大、无效重渲染：bundle 分析、代码分割、记忆化、图片优化、懒加载、Lighthouse 量化。",
+      "placeholders": ["component/page", "bundle analyzer", "large module"],
+      "template": "优化 `[component/page]` 的性能。\n\n性能问题：\n- 初始加载时间过慢\n- 打包体积过大\n- 不必要的重新渲染\n\n请执行以下操作：\n1. 使用 `[bundle analyzer]` 分析打包体积\n2. 对 `[large module]` 实现代码分割\n3. 在适当位置添加记忆化处理\n4. 优化图片和静态资源\n5. 对首屏以下的组件实现懒加载\n6. 使用 Lighthouse 衡量性能提升效果\n7. 确保功能保持完整"
+    },
+    {
+      "id": "security-vuln",
+      "category": "安全性",
+      "title": "修复安全漏洞",
+      "title_en": "Fix a Security Vulnerability",
+      "summary": "修复 SQL 注入/XSS/CSRF 等漏洞：对照安全公告实施修复、加输入校验与安全回归测试、跑审计。",
+      "placeholders": ["file/module", "e.g., SQL injection, XSS, CSRF", "High/Medium/Low", "link to advisory", "audit command"],
+      "template": "修复在 `[file/module]` 中发现的安全漏洞。\n\n漏洞类型：`[e.g., SQL injection, XSS, CSRF]`\n严重程度：`[High/Medium/Low]`\n\n请执行以下操作：\n1. 查阅安全公告：`[link to advisory]`\n2. 实施建议的修复方案\n3. 添加输入验证和数据清理\n4. 添加安全测试以防止回归\n5. 运行安全审计：`[audit command]`\n6. 确保不存在其他类似漏洞"
+    },
+    {
+      "id": "security-headers",
+      "category": "安全性",
+      "title": "添加安全标头",
+      "title_en": "Add Security Headers",
+      "summary": "为应用/API 配置安全响应头：写入配置文件、验证生效、不破坏现有功能并记录改进。",
+      "placeholders": ["application/API", "Header 1..3", "value", "config file", "tool/method"],
+      "template": "Add security headers to the `[application/API]`.\n\nRequired headers:\n- `[Header 1]`: `[value]`\n- `[Header 2]`: `[value]`\n- `[Header 3]`: `[value]`\n\nPlease:\n1. Configure the headers in `[config file]`\n2. Test that headers are set correctly using `[tool/method]`\n3. Ensure existing functionality is not broken\n4. Document the security improvements"
+    },
+    {
+      "id": "upgrade-dependency",
+      "category": "迁移与升级",
+      "title": "升级依赖",
+      "title_en": "Upgrade a Dependency",
+      "summary": "升级包/库版本：查变更日志破坏性变更、改依赖与弃用 API、跑迁移脚本与全量测试。",
+      "placeholders": ["package/library", "old version", "new version", "changelog link", "package.json/requirements.txt", "migration command"],
+      "template": "将 `[package/library]` 从版本 `[old version]` 升级至版本 `[new version]`。\n\n请执行以下步骤：\n1. 查阅变更日志以了解破坏性变更：`[changelog link]`\n2. 更新 `[package.json/requirements.txt]` 中的依赖项\n3. 更新所有已弃用的 API 用法\n4. 如适用，运行迁移脚本：`[migration command]`\n5. 运行所有测试以确保兼容性\n6. 手动测试应用\n7. 如 API 有变更，更新相关文档"
+    },
+    {
+      "id": "migrate-service",
+      "category": "迁移与升级",
+      "title": "迁移至新服务",
+      "title_en": "Migrate to a New Service",
+      "summary": "从旧服务整体迁移到新服务：配置、迁移数据、改代码、集成测试、灰度发布并下线旧服务。",
+      "placeholders": ["old service", "new service", "link to new service docs", "example file"],
+      "template": "从 `[old service]` 迁移到 `[new service]`。\n\n参考文档：`[link to new service docs]`\n\n请：\n1. 按照文档配置新服务\n2. 迁移现有数据/配置\n3. 更新所有代码以使用新服务\n4. 参考 `[example file]` 了解实现模式\n5. 运行集成测试以验证功能\n6. 逐步发布并监控是否出现问题\n7. 验证完成后停用旧服务"
+    },
+    {
+      "id": "review-pr",
+      "category": "代码评审",
+      "title": "审查拉取请求",
+      "title_en": "Review a Pull Request",
+      "summary": "审查 PR：逐文件检查质量/性能/安全/测试覆盖/文档，给出可执行意见并明确批准或要求修改。",
+      "placeholders": ["PR link or number"],
+      "template": "审查此拉取请求（PR）：`[PR link or number]`\n\n重点关注：\n- 代码质量与可维护性\n- 性能影响\n- 安全性考量\n- 测试覆盖率\n- 文档\n\n请：\n1. 审查每个已更改的文件\n2. 提出具体、可操作的意见\n3. 验证所做更改是否符合 PR 描述\n4. 检查边界情况和错误处理\n5. 确保测试充分\n6. 提供明确的反馈，批准或请求更改"
+    },
+    {
+      "id": "general-research-implement",
+      "category": "总体目的",
+      "title": "调研并实现",
+      "title_en": "Research and Implement",
+      "summary": "用某技术/库实现某功能：先调研最佳实践与文档、先提方案再实现、补测试文档并验证。",
+      "placeholders": ["technology/library", "feature/functionality", "expected doc sources"],
+      "template": "我需要使用 `[technology/library]` 实现 `[feature/functionality]`。\n\n请：\n1. 研究 `[technology/library]` 的最佳实践\n2. 查找并查阅文档：`[expected doc sources]`\n3. 如适用，参考开源示例\n4. 在实现之前提出方案\n5. 按照最佳实践实现解决方案\n6. 添加测试和文档\n7. 验证其是否按预期运行"
+    },
+    {
+      "id": "general-debug-fix",
+      "category": "总体目的",
+      "title": "调试与修复",
+      "title_en": "Debug and Fix",
+      "summary": "现象不明的排障：列症状、加日志定位根因、修复、清理临时代码、确认无回归。",
+      "placeholders": ["feature/component", "Symptom 1", "Symptom 2", "relevant files"],
+      "template": "Something is wrong with `[feature/component]`.\n\nSymptoms:\n- `[Symptom 1]`\n- `[Symptom 2]`\n\nPlease:\n1. Investigate the issue in `[relevant files]`\n2. Add logging/debugging statements as needed\n3. Identify the root cause\n4. Implement a fix\n5. Test the fix thoroughly\n6. Remove any temporary debugging code\n7. Ensure no regressions"
+    },
+    {
+      "id": "generic-optimize",
+      "category": "兜底",
+      "title": "通用提示词优化",
+      "title_en": "Generic Prompt Optimizer",
+      "summary": "兜底模板：当指令与任何快捷指令均不匹配时使用。把模糊诉求改写为「角色/背景-目标-约束-步骤-验收标准」结构。",
+      "placeholders": ["input"],
+      "template": "{input}\n\n要求：\n1. 目标明确，可直接执行\n2. 步骤具体，无歧义\n3. 给出验收标准",
+      "copy_signoff": "PM 终审（docs/product/prompt-optimizer-copy.md）：最小骨架=原指令+三条优化要求"
+    }
+  ]
+}

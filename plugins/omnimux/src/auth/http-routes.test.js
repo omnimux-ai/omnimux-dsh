@@ -285,10 +285,18 @@ describe('auth http dispatcher', () => {
       'prefix:/omnimux/forms/attachments',
       'prefix:/omnimux/composer/attachments',
       'exact:/omnimux/text/complete',
+      'exact:/omnimux/byok/config',
+      'exact:/omnimux/runtime/mode',
+      'exact:/omnimux/byok/test',
+      'exact:/omnimux/agents',
+      'exact:/omnimux/agents/select',
+      'prefix:/omnimux/templates',
       // #453: workbench routes register via webServer.register in the same inject
       'exact:/omnimux/workbench/viewport',
       'exact:/omnimux/workbench/rpc/ack',
+      'exact:/omnimux/prompt-optimizer',
       'exact:/omnimux/session-model',
+      'exact:/omnimux/api/media/generate',
     ])
     // #522 regression: drive a composer attachments request and prove the
     // injected sentinel is the sessionQuery the route dispatcher holds.

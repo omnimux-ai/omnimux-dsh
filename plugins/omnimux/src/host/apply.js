@@ -42,6 +42,7 @@ import { mountWebSocketHmr } from '../hmr/host.js'
 import { mountPresetsTools } from '../presets/tools.js'
 import { mountTemplatesTools } from '../templates/tools.js'
 import { mountDecisions } from '../decisions/mount.js'
+import { mountPromptOptimizer, registerPromptOptimizerRoutes } from '../prompt-optimizer/mount.js'
 
 /**
  * @param {{
@@ -148,6 +149,10 @@ export function apply(ctx, config = {}) {
       const server = httpCtx.webServer ?? httpCtx.get?.('webServer')
       if (server && typeof server.register === 'function') {
         httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox, getConnection: () => ctx.get?.('connection') }), 'omnimux: workbench HTTP')
+        httpCtx.effect(() => registerPromptOptimizerRoutes(server, {
+          credentials: ctx.get?.('credentials'),
+          getConnection: () => ctx.get?.('connection'),
+        }), 'omnimux: prompt optimizer HTTP')
         httpCtx.effect(() => registerSessionModelRoutes(server, { preference: sessionModelPreference }), 'omnimux: session model HTTP')
         httpCtx.effect(() => registerDirectMediaRoutes(server, {
           executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
@@ -299,6 +304,9 @@ export function apply(ctx, config = {}) {
     rethrow,
     credentials: ctx.get?.('credentials'),
     resolveApiKey: resolveOfficialApiKey,
+  })
+  mountPromptOptimizer(ctx, {
+    credentials: ctx.get?.('credentials'),
   })
   mountWorkbenchTools(ctx, {
     mailbox,
