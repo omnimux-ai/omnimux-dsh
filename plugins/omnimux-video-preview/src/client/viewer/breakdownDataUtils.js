@@ -331,3 +331,36 @@ export function computeStructureCopyText(structure) {
     return `【${title}】\n${item.description || ''}`
   }).join('\n\n')
 }
+
+/**
+ * 播放器卡片画幅分档阈值（宽/高）：<0.8 竖屏，0.8~1.25 方形，>1.25 横屏。
+ */
+export const ASPECT_PORTRAIT = '9 / 16'
+export const ASPECT_SQUARE = '1 / 1'
+export const ASPECT_LANDSCAPE = '16 / 9'
+
+/**
+ * 依据真实宽高比选择卡片画幅档位。
+ * @param {number|null} ratio 宽/高
+ * @returns {string} CSS aspect-ratio 值
+ */
+export function pickAspectBucket(ratio) {
+  if (typeof ratio !== 'number' || !Number.isFinite(ratio) || ratio <= 0) return ASPECT_PORTRAIT
+  if (ratio < 0.8) return ASPECT_PORTRAIT
+  if (ratio > 1.25) return ASPECT_LANDSCAPE
+  return ASPECT_SQUARE
+}
+
+/**
+ * 解析落库的视频宽高（.vbreakdown 的 video.width/height），返回宽/高比。
+ * @param {object} video
+ * @returns {number|null}
+ */
+export function resolveDeclaredRatio(video) {
+  const w = video && video.width
+  const h = video && video.height
+  if (typeof w === 'number' && w > 0 && typeof h === 'number' && h > 0) {
+    return w / h
+  }
+  return null
+}

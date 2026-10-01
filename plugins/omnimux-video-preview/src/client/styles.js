@@ -83,7 +83,8 @@ export const VIDEO_BREAKDOWN_CSS = `
 .omnimux-video-breakdown-player-card {
   position: relative;
   width: 100%;
-  aspect-ratio: 9 / 16;
+  /* 画幅由 JS 按视频真实宽高写入 --omnimux-player-aspect，默认竖屏 9:16 */
+  aspect-ratio: var(--omnimux-player-aspect, 9 / 16);
   max-height: 540px;
   border-radius: 12px;
   overflow: hidden;
@@ -101,7 +102,9 @@ export const VIDEO_BREAKDOWN_CSS = `
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* 完整显示不裁切，画面不足处以底色填充 */
+  object-fit: contain;
+  background: var(--dsw-alias-bg-surface-1, #000000);
 }
 
 /* Top Overlay on Player */

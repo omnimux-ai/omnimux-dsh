@@ -881,6 +881,55 @@ function probeLocalVideoDurationSeconds(filePath) {
 }
 
 /**
+ * Probe local video stream dimensions with ffprobe.
+ * Fails closed: missing tool or unparseable output returns null fields.
+ * @param {string|null} filePath
+ * @returns {{ width: number|null, height: number|null }}
+ */
+function probeLocalVideoDimensions(filePath) {
+  const empty = { width: null, height: null }
+  if (!filePath || typeof filePath !== 'string' || !existsSync(filePath)) return empty
+  try {
+    const out = execFileSync(
+      'ffprobe',
+      ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', filePath],
+      { timeout: 5000 }
+    ).toString().trim()
+    const m = out.match(/^(\d+)\s*,\s*(\d+)/m)
+    if (!m) return empty
+    const width = parseInt(m[1], 10)
+    const height = parseInt(m[2], 10)
+    if (width > 0 && height > 0) return { width, height }
+    return empty
+  } catch {
+    return empty
+  }
+}
+
+/**
+ * Resolve video pixel dimensions.
+ * Priority: realMeta.width/height -> meta.width/height -> local ffprobe probe.
+ * @param {object|null} realMeta
+ * @param {object} meta
+ * @param {string|null} [localVideoPath]
+ * @returns {{ width: number|null, height: number|null }}
+ */
+function resolveVideoDimensions(realMeta, meta, localVideoPath) {
+  const rw = realMeta && realMeta.width
+  const rh = realMeta && realMeta.height
+  if (typeof rw === 'number' && rw > 0 && typeof rh === 'number' && rh > 0) {
+    return { width: rw, height: rh }
+  }
+  const mw = meta && meta.width
+  const mh = meta && meta.height
+  if (typeof mw === 'number' && mw > 0 && typeof mh === 'number' && mh > 0) {
+    return { width: mw, height: mh }
+  }
+  if (localVideoPath) return probeLocalVideoDimensions(localVideoPath)
+  return { width: null, height: null }
+}
+
+/**
  * Resolve total video duration in seconds.
  * Priority: realMeta.duration -> meta.duration -> local ISO-BMFF mvhd probe -> 16.
  * @param {object|null} realMeta
@@ -926,7 +975,7 @@ function buildVideoPayload(config) {
   const {
     authorInfo, platform, isHttp, trimmed, videoPlayUrl,
     localVideoPath, localCoverPath, coverUrl, durationSeconds,
-    shots, stats, realMeta, isModelGenerated,
+    shots, stats, realMeta, isModelGenerated, dimensions,
   } = config
 
   let displayTitle = authorInfo.title
@@ -951,6 +1000,7 @@ function buildVideoPayload(config) {
     cover_url: localCoverPath ? createVideoStreamUrl(localCoverPath) : coverUrl,
     duration_seconds: durationSeconds,
     duration_text: formatTime(durationSeconds),
+    ...(dimensions && dimensions.width ? { width: dimensions.width, height: dimensions.height } : {}),
     scene_count: shots.length,
     views: stats.views,
     likes: stats.likes,
@@ -1009,11 +1059,12 @@ export async function extractVideoBreakdown(inputUrl, options = {}) {
   const lastShot = shots[shots.length - 1]
   const durationSeconds = resolveDurationSeconds(lastShot, totalDuration)
   const stats = resolveDisplayStats(realMeta ? realMeta.stats : null, meta)
+  const dimensions = resolveVideoDimensions(realMeta, meta, localVideoPath)
 
   const video = buildVideoPayload({
     authorInfo, platform, isHttp, trimmed, videoPlayUrl,
     localVideoPath, localCoverPath, coverUrl, durationSeconds,
-    shots, stats, realMeta, isModelGenerated,
+    shots, stats, realMeta, isModelGenerated, dimensions,
   })
 
   return {
