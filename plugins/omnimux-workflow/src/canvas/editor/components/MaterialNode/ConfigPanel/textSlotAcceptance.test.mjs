@@ -262,7 +262,17 @@ describe('场景 1 验收：多模态模型空态未连线时正确展示卡槽�
     assert.equal(layout.slots[1].slot, 'reference_videos');
   });
 
-  it('TC-T01-05: 纯文本模型在未显式指定 operation 时，resolveSlotOperation 保持解析为 chat，派生 none 预设', () => {
+  it('TC-T01-05: qualified upstream text has a slot; local-only node_field does not grant upstream', () => {
+    const qualified = structuredClone(mockCatalog);
+    const model = qualified.models.find(model => model.id === 'deepseek-v4-pro');
+    const prompt = model.operations.find(op => op.id === 'chat').inputs.find(slot => slot.type === 'text');
+    prompt.min = 1; prompt.max = 1;
+    prompt.valueSources = ['local_field', 'upstream_output'];
+    prompt.composition = { kind: 'content_with_instruction', localRole: 'instruction' };
+    const qualifiedLayout = deriveSlotLayout(qualified, model.id, 'chat', 'text');
+    assert.equal(qualifiedLayout.preset, 'strip');
+    assert.equal(qualifiedLayout.slots[0].type, 'text');
+    assert.equal(qualifiedLayout.addButton, true);
     const emptyFingerprint = { prompt: '', assets: [], mediaAssets: [] };
     for (const modelId of ['deepseek-v4-pro', 'claude-opus-5', 'glm-5.3']) {
       const op = resolveSlotOperation(mockCatalog, modelId, undefined, 'text', emptyFingerprint);
@@ -297,19 +307,31 @@ describe('场景 1 验收：多模态模型空态未连线时正确展示卡槽�
     assert.equal(layout.slots.length, 2);
   });
 
-  it('TC-T01-07: 老节点残留 operation: "chat" 时，多模态模型依然优先派生 vision_chat，不被旧数据锁死', () => {
-    const emptyFingerprint = { prompt: '', assets: [], mediaAssets: [] };
-    const op = resolveSlotOperation(mockCatalog, 'gemini-3.8-flash', 'chat', 'text', emptyFingerprint);
-    assert.equal(op, 'vision_chat', '老节点残留 chat 仍应解析为 vision_chat');
-
-    const layout = deriveSlotLayout(mockCatalog, 'gemini-3.8-flash', op, 'text');
-    assert.equal(layout.preset, 'strip');
-    assert.equal(layout.slots.length, 2);
+  it('TC-T01-07: current explicit chat remains chat and cannot confirm a different method', async () => {
+    const { validateCanvasInputSelection } = await import('../../../../../shared/graph/canvasInputMutationGateway.ts');
+    const target = { id: 'explicit', type: 'material', position: { x: 0, y: 0 }, data: { materialType: 'text', nodeKind: 'generate',
+      inputBindingVersion: 1, slotBindings: {}, prompt: 'Local', params: { model: 'gemini-3.8-flash', operation: 'chat' } } };
+    const graph = { nodes: [target], edges: [] };
+    const verdict = validateCanvasInputSelection(graph, { targetNodeId: target.id, chosenOperationId: 'chat' }, { catalog: mockCatalog });
+    assert.equal(verdict.operationId, 'chat');
+    assert.equal(target.data.params.operation, 'chat');
+    const changed = validateCanvasInputSelection(graph, { targetNodeId: target.id, chosenOperationId: 'vision_chat' }, { catalog: mockCatalog });
+    assert.equal(changed.accepts, false);
+    assert.equal(changed.reasonCode, 'operation_confirmation_required');
   });
 });
 
 describe('场景 2 验收：纯文本模型卡槽不展示（none 预设），消除 44px 死高', () => {
-  it('TC-T02-01: DeepSeek V4 Pro、Claude Opus 5、GLM-5.3 派生 none 预设且无卡槽', () => {
+  it('TC-T02-01: only declared upstream origin creates text empty wells; source-only and missing catalog do not', () => {
+    const qualified = structuredClone(mockCatalog);
+    const model = qualified.models.find(model => model.id === 'deepseek-v4-pro');
+    const input = model.operations.find(op => op.id === 'chat').inputs.find(slot => slot.type === 'text');
+    input.valueSources = ['local_field', 'upstream_output'];
+    input.composition = { kind: 'content_with_instruction', localRole: 'instruction' };
+    assert.equal(deriveSlotLayout(qualified, model.id, 'chat', 'text').slots.length, 1);
+    assert.equal(deriveSlotLayout(null, model.id, 'chat', 'text').slots.length, 0);
+    input.valueSources = ['local_field'];
+    assert.equal(deriveSlotLayout(qualified, model.id, 'chat', 'text').slots.length, 0);
     for (const modelId of ['deepseek-v4-pro', 'claude-opus-5', 'glm-5.3']) {
       const layout = deriveSlotLayout(mockCatalog, modelId, 'chat', 'text');
       assert.equal(layout.preset, 'none', `${modelId} 纯文本模型预设必须为 none`);

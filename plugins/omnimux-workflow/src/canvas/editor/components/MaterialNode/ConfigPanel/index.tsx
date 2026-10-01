@@ -66,6 +66,8 @@ import { feedFromFingerprint, effectiveSlotFingerprint } from '../../../../../sh
 import { resolveSlotOperation } from '../../../../../shared/graph/feedSlot/resolveSlotOperation.ts';
 import SlotHoverPreview from './SlotWells/SlotHoverPreview.tsx';
 import { effectiveInputDisplay } from '../../../../../shared/graph/feedSlot/effectiveInputDisplay.ts';
+import { planPickerSelectionMutation, pickerReasonKey } from '../../../utils/resourcePickerPolicy.ts';
+import { validateCanvasInputSelection } from '../../../../../shared/graph/canvasInputMutationGateway.ts';
 import { filterWrite } from './videoParams/paramSchemaFilter.ts';
 import { ImageTriggerBar } from './imageParams/ImageTriggerBar';
 import { ImageParamPopover } from './imageParams/ImageParamPopover';
@@ -212,6 +214,11 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const handleCommitReference = useCallback((token: { nodeId: string }, nextPrompt: string) => {
     const store = useCanvasStore.getState();
+    if (nodeData.inputBindingVersion === 1) {
+      // Token annotations cannot establish consumption outside the approved picker.
+      onOpenResourcePicker?.('add');
+      return false;
+    }
     store.pushHistory();
     const plan = store.applyCanvasInputMutation(referenceMutation(nodeId, token.nodeId, nextPrompt, store.edges));
     if (plan.status !== 'allowed') {
@@ -249,8 +256,12 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   const modelValue = typeof params?.model === 'string' ? params.model.trim() : '';
   const preferredOperationId = readPreferredOperationId(params as Record<string, unknown>);
-  const currentOperationId = resolveSlotOperation(activeCatalog, modelValue, preferredOperationId, outputTypeForCompat, fingerprint);
-  const effectiveSlotLayout = useMemo(() => deriveModelSlotLayout(activeCatalog, modelValue, currentOperationId), [activeCatalog, modelValue, currentOperationId]);
+  const currentInputs = nodeData.inputBindingVersion === 1;
+  const currentOperationId = currentInputs && preferredOperationId ? preferredOperationId
+    : resolveSlotOperation(activeCatalog, modelValue, preferredOperationId, outputTypeForCompat, fingerprint);
+  const effectiveSlotLayout = useMemo(() => currentInputs
+    ? deriveSlotLayout(activeCatalog, modelValue, currentOperationId)
+    : deriveModelSlotLayout(activeCatalog, modelValue, currentOperationId), [activeCatalog, modelValue, currentOperationId, currentInputs]);
 
   const fallbackState = useMemo<ChannelFallbackState>(() => {
     const family = (activeCatalog?.[materialType] as CapabilityModelItem[] | undefined)?.find((m) => m.id === modelValue)?.family;
@@ -291,7 +302,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   }, [allChannelGroups]);
 
   const displayedSlotLayout = useMemo(() => {
-    if (!isSingleImageChannel || !effectiveSlotLayout?.slots || effectiveSlotLayout.slots.length <= 1) {
+    if (currentInputs || !isSingleImageChannel || !effectiveSlotLayout?.slots || effectiveSlotLayout.slots.length <= 1) {
       return effectiveSlotLayout;
     }
     return {
@@ -299,11 +310,11 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       preset: 'strip' as const,
       slots: effectiveSlotLayout.slots.slice(0, 1),
     };
-  }, [effectiveSlotLayout, isSingleImageChannel]);
-  const textSources = useMemo(() => displayedSlotLayout.acceptsText === false ? [] : selectGenerationTextSources(fingerprint.assets), [fingerprint, displayedSlotLayout]);
-  const feedAssets = useMemo(() => feedFromFingerprint(fingerprint), [fingerprint]);
+  }, [effectiveSlotLayout, isSingleImageChannel, currentInputs]);
+  const feedAssets = useMemo(() => feedFromFingerprint(fingerprint, nodeData.inputBindingVersion), [fingerprint, nodeData.inputBindingVersion]);
   const storedSlotBindings = useMemo(() => {
     const raw = nodeData.slotBindings as SlotBindings | undefined;
+    if (currentInputs) return raw ?? {};
     if (!raw) return undefined;
     // 若当前有可用卡槽，但已保存的 slotBindings 为空对象且用户未在待命池中显式记录卸载边，
     // 说明这是节点未装填状态或旧纯文本模式残留，应允许自动装填上游连线素材。
@@ -311,17 +322,18 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       return undefined;
     }
     return raw;
-  }, [nodeData.slotBindings, nodeData.slotStandbyEdgeIds]);
+  }, [nodeData.slotBindings, nodeData.slotStandbyEdgeIds, currentInputs]);
   const canvasEdges = useCanvasStore((state) => state.edges);
   const inputDisplay = useMemo(() => effectiveInputDisplay(displayedSlotLayout, feedAssets,
-    materialType === 'audio' && currentOperationId === 'text_to_speech' ? {} : storedSlotBindings,
-    materialType === 'audio' && currentOperationId === 'text_to_speech' ? [] : (nodeData.slotConflicts ?? []) as SlotConflict[],
-    canvasEdges.filter((edge) => edge.target === nodeId), (nodeData.slotStandbyEdgeIds ?? []) as string[]),
-  [storedSlotBindings, displayedSlotLayout, feedAssets, canvasEdges, nodeId, nodeData.slotConflicts, nodeData.slotStandbyEdgeIds, materialType, currentOperationId]);
+    storedSlotBindings, (nodeData.slotConflicts ?? []) as SlotConflict[],
+    canvasEdges.filter((edge) => edge.target === nodeId), (nodeData.slotStandbyEdgeIds ?? []) as string[], nodeData.inputBindingVersion),
+  [storedSlotBindings, displayedSlotLayout, feedAssets, canvasEdges, nodeId, nodeData.slotConflicts, nodeData.slotStandbyEdgeIds, nodeData.inputBindingVersion]);
   const slotBindings = inputDisplay.bindings;
   const slotConflicts = inputDisplay.conflicts;
-  const consumedFingerprint = useMemo(() => effectiveSlotFingerprint(fingerprint, displayedSlotLayout, slotBindings, slotConflicts),
-    [fingerprint, displayedSlotLayout, slotBindings, slotConflicts]);
+  const consumedFingerprint = useMemo(() => effectiveSlotFingerprint(fingerprint, displayedSlotLayout, slotBindings, slotConflicts, nodeData.inputBindingVersion),
+    [fingerprint, displayedSlotLayout, slotBindings, slotConflicts, nodeData.inputBindingVersion]);
+
+  const textSources = useMemo(() => selectGenerationTextSources(currentInputs ? consumedFingerprint.assets : displayedSlotLayout.acceptsText === false ? [] : fingerprint.assets), [currentInputs, consumedFingerprint, displayedSlotLayout, fingerprint]);
 
   const consumedUpstreams = useMemo(() => consumedFingerprint.assets.map((asset) => ({
     ...asset, nodeId: asset.sourceNodeId, materialType: asset.type,
@@ -530,7 +542,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
 
   // TTS 双模式状态机：判断是否存在有效上游音频连线
   const hasUpstreamAudio = useMemo(() => {
-    return upstreams.some((u) => u.materialType === 'audio' && (u.hasMedia || u.hasContent));
+    return upstreams.some((u) => u.materialType === 'audio' && u.hasMedia);
   }, [upstreams]);
 
   const isCloneMode = (nodeData.tool === 'voice-clone')
@@ -565,7 +577,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   );
 
   useEffect(() => {
-    if (!isSingleImageChannel) return;
+    if (currentInputs || !isSingleImageChannel) return;
     const currentBindings = nodeData.slotBindings as SlotBindings | undefined;
     if (!currentBindings || typeof currentBindings !== 'object') return;
     const primarySlotKey = displayedSlotLayout.slots[0]?.slot ?? '0';
@@ -711,7 +723,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
             matchedGroup.constraints?.inputs?.image?.max === 1 ||
             contract.constraints.maxReferenceImages === 1
           ) {
-            if (nodeData.slotBindings && typeof nodeData.slotBindings === 'object') {
+            if (!currentInputs && nodeData.slotBindings && typeof nodeData.slotBindings === 'object') {
               const raw = nodeData.slotBindings as SlotBindings;
               const nextSlotLayout = deriveModelSlotLayout(activeCatalog, newModelId, nextOperation);
               const primarySlotKey = nextSlotLayout.slots[0]?.slot ?? '0';
@@ -759,6 +771,21 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [patchSlotBindings, slotBindings],
   );
 
+  const handleSetUse = useCallback((slot: string, edgeId: string, use: 'active' | 'inactive') => {
+    const store = useCanvasStore.getState();
+    const live = store.nodes.find(node => node.id === nodeId);
+    const liveParams = live?.data.params as Record<string, unknown> | undefined;
+    const prepared = planPickerSelectionMutation({ nodes: store.nodes, edges: store.edges }, {
+      targetNodeId: nodeId, chosenOperationId: String(liveParams?.operation ?? ''), setUse: { slot, edgeId, use },
+    }, { catalog: store.catalogRuntime });
+    if (!prepared.mutation || prepared.status !== 'allowed') { toast.error(t(pickerReasonKey(prepared.reasonCode))); return; }
+    store.pushHistory();
+    const result = store.applyCanvasInputMutation(prepared.mutation);
+    if (result.status !== 'allowed') { toast.error(t(pickerReasonKey(result.reasonCode))); return; }
+    store.pushHistory(true);
+  }, [nodeId, t]);
+
+  // Legacy unversioned supply unloading remains separate from explicit current use.
   // 卸装填：只摘除槽位占用，供给边保留，素材回到 Feed。
   const handleClearOccupant = useCallback(
     (slot: string, edgeId: string) => {
@@ -793,16 +820,16 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [t],
   );
   const missingRequiredSlots = useMemo(
-    () => (displayedSlotLayout.displayOnlyFromOperation
+    () => (currentInputs || displayedSlotLayout.displayOnlyFromOperation
       ? []
       : displayedSlotLayout.slots.filter((spec: SlotSpec) => (slotBindings[spec.slot]?.length ?? 0) < spec.min)),
-    [displayedSlotLayout, slotBindings],
+    [displayedSlotLayout, slotBindings, currentInputs],
   );
   const slotShortageReason = missingRequiredSlots.length > 0
     ? t('panel.slotMissing').replace('{slots}', missingRequiredSlots.map(slotLabelOf).join('、'))
     : undefined;
 
-  const hasSlots = effectiveSlotLayout.preset !== 'none' && effectiveSlotLayout.slots.length > 0;
+  const hasSlots = effectiveSlotLayout.slots.length > 0 || currentInputs && inputDisplay.records.length > 0;
 
   // T05：切换模式/模型导致已有供给不再被消费 → 画板 Banner（5s 自动淡出）。
   const boundEdgeIds = useMemo(
@@ -853,6 +880,14 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   }, [materialType, upstreams, params, opsState.selectedOperationId, activeCatalog, modelValue, updateParam]);
 
   const placeholder = useMemo(() => {
+    if (currentInputs) {
+      const composition = displayedSlotLayout.slots.find(spec => spec.composition)?.composition;
+      if (composition?.kind === 'single_body' || composition?.localRole === 'body') return t('input.body');
+      if (composition?.localRole === 'lyrics') return t('input.lyrics');
+      if (composition?.localRole === 'style') return t('input.music');
+      if (composition?.kind === 'separate_roles' && composition.localRole === 'instruction') return t('input.instructions');
+      return t(textSources.length > 0 ? 'input.supplement' : 'input.prompt');
+    }
     if (isAsrTool) return t('panel.promptPlaceholder');
     if (materialType !== 'audio' && textSources.some((item) => item.availability === 'ready' && item.textContent?.trim()))
       return t('panel.supplementOptional');
@@ -868,7 +903,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       default:
         return t('panel.promptPlaceholder');
     }
-  }, [materialType, isMusicOperation, isAsrTool, textSources, t]);
+  }, [materialType, isMusicOperation, isAsrTool, textSources, t, currentInputs, displayedSlotLayout]);
 
   const videoValidationErrors = useMemo(
     () => materialType === 'video' && videoEffectiveParams
@@ -887,8 +922,12 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const nodeCompat = (nodeData as Record<string, unknown>).compat as
     | { status?: string; readyToSubmit?: boolean; reasonCodes?: string[]; adaptation?: { toModelLabel: string; inputTypes: string[] } }
     | undefined;
+  const strictVerdict = currentInputs ? validateCanvasInputSelection({ nodes: useCanvasStore.getState().nodes, edges: canvasEdges }, {
+    targetNodeId: nodeId, chosenOperationId: currentOperationId ?? '',
+  }, { catalog: activeCatalog }) : undefined;
   const blockGenerate =
-    opsState.blockGenerate
+    Boolean(strictVerdict && !strictVerdict.ready)
+    || opsState.blockGenerate
     || filteredModels.zeroCandidates
     || nodeCompat?.status === 'configuration_error'
     || videoValidationErrors.length > 0
@@ -900,7 +939,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const reasonCode = opsState.reasonCode || filteredModels.reasonCode
     || (nodeCompat?.status === 'configuration_error' ? nodeCompat.reasonCodes?.[0] || 'no_compatible_model' : undefined);
   const blockReason =
-    (fallbackState?.isFallback ? (fallbackState.runBlockedReason || undefined) : undefined)
+    (strictVerdict && !strictVerdict.ready ? t(pickerReasonKey(strictVerdict.reasonCode)) : undefined)
+    || (fallbackState?.isFallback ? (fallbackState.runBlockedReason || undefined) : undefined)
     || (cloneMissingAudio ? '参考音频模式需先连接上游音频输入' : undefined)
     || (audioPromptGate?.exceeded ? `朗读正文不能超过 ${AUDIO_PROMPT_MAX_CHARS} 字符` : undefined)
     || generationReasonText(t, reasonCode, opsState.reason || filteredModels.reason)
@@ -1036,7 +1076,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
       {/* 2. Prompt 输入区容器 */}
       <div className="wf-config-panel__prompt-container">
         <div className={`wf-config-panel__prompt-header${!hasSlots && !textSources.length ? ' wf-config-panel__prompt-header--empty-slots' : ''}`}>
-          {textSources.length > 0 && (
+          {!currentInputs && textSources.length > 0 && (
             <div className="wf-slot-wells wf-slot-wells--strip" data-testid="wf-text-inputs">
               {textSources.map((source) => (
                 <div key={source.sourceNodeId} className="wf-effective-text wf-effective-text--slot" data-source-node-id={source.sourceNodeId}
@@ -1052,7 +1092,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               ))}
             </div>
           )}
-          {[...slotConflicts, ...inputDisplay.unloaded].map((conflict, index) => (
+          {(!currentInputs ? [...slotConflicts, ...inputDisplay.unloaded] : []).map((conflict, index) => (
             <button key={`${conflict.slot}-${conflict.occupant.edgeId}-${index}`} type="button"
               className="wf-effective-text nodrag" data-testid="wf-input-conflict"
               onClick={() => handleClearOccupant(conflict.slot, conflict.occupant.edgeId)}
@@ -1065,13 +1105,15 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           {hasSlots && (
             <SlotWells
               layout={displayedSlotLayout}
-              bindings={inputDisplay.visibleBindings}
+              bindings={currentInputs ? slotBindings : inputDisplay.visibleBindings}
+               records={currentInputs ? inputDisplay.records : undefined}
+               onSetUse={currentInputs ? handleSetUse : undefined}
               conflicts={slotConflicts}
               upstreams={upstreams}
               onPickSlot={handlePickSlot}
               onSwapSlots={handleSwapSlots}
               onClearOccupant={handleClearOccupant}
-              onInsertToken={handleInsertToken}
+              onInsertToken={currentInputs ? undefined : handleInsertToken}
             />
           )}
 

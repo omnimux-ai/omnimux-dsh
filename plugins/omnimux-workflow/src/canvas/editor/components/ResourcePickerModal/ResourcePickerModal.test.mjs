@@ -18,7 +18,15 @@ const nodeSrc = readFileSync(join(here, '../MaterialNode/index.tsx'), 'utf8');
 const editorSrc = readFileSync(join(here, '../../CanvasEditor.tsx'), 'utf8');
 const cssSrc = readFileSync(join(here, '../../../theme/components.css'), 'utf8');
 
-test('弹窗基于 CustomModal，含画布/本地 Tab 与 Footer 使用 N 项', () => {
+test('V1 Picker confirms only the strict whole selection and uses exact default design width', () => {
+  assert.match(modalSrc, /planPickerSelectionMutation/);
+  assert.match(modalSrc, /min\(480px, calc\(100vw - 48px\)\)/);
+  assert.doesNotMatch(modalSrc, /picker\.replaceTitle|picker\.items/);
+  assert.doesNotMatch(modalSrc, /canvasItems\.length\}\)/);
+  assert.match(modalSrc, /aria-labelledby/);
+});
+
+ test('弹窗基于 CustomModal，含画布/本地 Tab 与 Footer 使用 N 项', () => {
   assert.match(modalSrc, /CustomModal/);
   assert.match(modalSrc, /picker\.tab\.canvas/);
   assert.match(modalSrc, /picker\.tab\.local/);
@@ -158,6 +166,23 @@ test('预览卡比例适配：media contain + 分档 class + 高度钳制', () =
 test('画布面板与本地面板接入 PreviewThumb', () => {
   assert.match(canvasPaneSrc, /PreviewThumb/);
   assert.match(localPaneSrc, /PreviewThumb/);
+});
+
+test('OCR10 replace local intent is latest-only and mutually exclusive with canvas, while add retains its batch', async () => {
+  const { updatePickerLocalDrafts } = await import('../../utils/resourcePickerPolicy.ts');
+  const old = { id: 'old' }, first = { id: 'first' }, last = { id: 'last' };
+  assert.deepEqual(updatePickerLocalDrafts('replace', ['canvas-a'], [old], [first, last]), { selectedIds: [], localFiles: [last] });
+  assert.deepEqual(updatePickerLocalDrafts('replace', ['canvas-a'], [old], []), { selectedIds: ['canvas-a'], localFiles: [old] });
+  assert.deepEqual(updatePickerLocalDrafts('add', ['canvas-a'], [old], [first, last]), { selectedIds: ['canvas-a'], localFiles: [old, first, last] });
+});
+
+test('OCR15 connected legacy cards are disabled in both views unless authorized, while V1 supply is selectable', async () => {
+  const { pickerCandidateAvailability } = await import('../../utils/resourcePickerPolicy.ts');
+  const supply = { alreadyConnected: true, inUse: false, selectable: true };
+  assert.deepEqual(pickerCandidateAvailability(supply, 'add', false), { isAssigned: true, disabled: true });
+  assert.deepEqual(pickerCandidateAvailability(supply, 'add', true), { isAssigned: false, disabled: false });
+  assert.equal(pickerCandidateAvailability({ ...supply, inUse: true }, 'add', true).disabled, true);
+  assert.equal(pickerCandidateAvailability({ ...supply, selectable: false }, 'add', true).disabled, true);
 });
 
 test('ResourcePickerModal 属性契约：解构声明包含 title，杜绝未定义变量运行时异常', () => {

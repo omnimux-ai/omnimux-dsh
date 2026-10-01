@@ -3,13 +3,13 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { Check, LayoutGrid, List, Search } from 'lucide-react';
+import { Check, FileText, LayoutGrid, List, Search } from 'lucide-react';
 import { CustomSelect } from '../../../ui';
 import { useT } from '../../../i18n';
 import type { MaterialType } from '../../../types/materialNode';
 import {
   filterCanvasResources,
-  evaluateResourcePickerAvailability,
+  pickerCandidateAvailability,
   type CanvasResourceItem,
   type ResourceTypeFilter,
   type ResourcePickerView,
@@ -31,19 +31,6 @@ export interface CanvasResourcePaneProps {
   allowConnectedSelection?: boolean;
 }
 
-function typeLabelKey(type: MaterialType): string {
-  switch (type) {
-    case 'image':
-      return 'node.type.image';
-    case 'video':
-      return 'node.type.video';
-    case 'audio':
-      return 'node.type.audio';
-    default:
-      return 'node.type.text';
-  }
-}
-
 const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
   items,
   selectedIds,
@@ -63,20 +50,22 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
   const scopedItems = useMemo(
     () => (acceptedTypes?.length
       ? items.filter((item) => acceptedTypes.includes(item.materialType))
-      : items),
-    [items, acceptedTypes],
+      : items).map(item => ({ ...item, title: item.titleKey ? t(item.titleKey) : item.title })),
+    [items, acceptedTypes, t],
   );
-  const lockedFilter = acceptedTypes?.length === 1 ? acceptedTypes[0] as ResourceTypeFilter : null;
+  const qualifiedTypes = [...new Set(scopedItems.map(item => item.materialType))];
+  const lockedFilter = qualifiedTypes.length === 1 ? qualifiedTypes[0] as ResourceTypeFilter : null;
   const effectiveFilter = lockedFilter ?? typeFilter;
 
   const filterOptions = useMemo(
     () => [
       { value: 'all' as const, label: t('picker.filter.all') },
-      { value: 'image' as const, label: t('picker.filter.image') },
-      { value: 'video' as const, label: t('picker.filter.video') },
+      { value: 'text' as const, label: t('node.type.text') },
+      { value: 'image' as const, label: t('panel.slot.image') },
+      { value: 'video' as const, label: t('panel.slot.video') },
       { value: 'audio' as const, label: t('picker.filter.audio') },
-    ],
-    [t],
+    ].filter(option => option.value === 'all' || qualifiedTypes.includes(option.value as MaterialType)),
+    [t, qualifiedTypes.join(',')],
   );
 
   const visible = useMemo(
@@ -99,12 +88,13 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
-        {!lockedFilter && (
+        {qualifiedTypes.length > 1 && (
           <CustomSelect
             className="wf-picker-filter"
             variant="standard"
             value={typeFilter}
-            options={filterOptions}
+            placeholder={t('picker.type')}
+            options={filterOptions.map(option => option.value === 'all' ? { ...option, triggerLabel: t('picker.type') } : option)}
             onChange={(value) => setTypeFilter(value)}
           />
         )}
@@ -136,15 +126,10 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
         <div className="wf-picker-grid">
           {visible.map((item) => {
             const selected = selectedIds.includes(item.nodeId);
-            const availability = evaluateResourcePickerAvailability({
-              item: { nodeId: item.nodeId, mediaUrl: item.previewUrl },
-              mode,
-              targetSlotIndex,
-              slotState,
-            });
+            const availability = { isCurrentSlot: false, badgeLabel: undefined };
 
-            const isAssigned = availability.isAssigned || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
-            const isDisabled = availability.disabled || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
+            const { isAssigned, disabled } = pickerCandidateAvailability(item, mode, allowConnectedSelection);
+            const isDisabled = isAssigned || (!selected && disabled);
 
             return (
               <button
@@ -159,25 +144,27 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
                 }`}
                 onClick={() => onToggle(item.nodeId, isAssigned, isDisabled)}
                 disabled={isDisabled}
-                title={availability.badgeLabel ? `${item.title} (${availability.badgeLabel})` : item.title}
+                aria-pressed={selected}
+                aria-label={item.title}
+                title={item.title}
               >
-                <PreviewThumb
+                {item.materialType === 'text' ? <span className="wf-picker-text-preview"><FileText size={18} aria-hidden="true" /><span>{item.textContent}</span>{selected ? <Check size={14} aria-hidden="true" /> : null}</span> : <PreviewThumb
                   layout="grid"
                   materialType={item.materialType}
                   previewUrl={item.previewUrl}
                   width={measured[item.nodeId]?.width ?? item.width}
                   height={measured[item.nodeId]?.height ?? item.height}
                   badge={isAssigned ? 'added' : selected ? 'selected' : 'none'}
-                  addedLabel={availability.badgeLabel || t('picker.added')}
-                  fallbackLabel={t(typeLabelKey(item.materialType))}
+                  addedLabel={t('picker.added')}
+                  fallbackLabel=""
                   mimeOrName={item.previewUrl}
                   onNaturalSize={(s) =>
                     setMeasured((prev) => ({ ...prev, [item.nodeId]: s }))
                   }
-                />
+                />}
                 <div className="wf-picker-card__meta">
                   <span className="wf-picker-card__name">{item.title}</span>
-                  <span className="wf-picker-type-tag">{t(typeLabelKey(item.materialType))}</span>
+                  {isAssigned && item.materialType === 'text' ? <span className="wf-picker-added-badge">{t('picker.added')}</span> : null}
                 </div>
               </button>
             );
@@ -187,15 +174,10 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
         <div className="wf-picker-list">
           {visible.map((item) => {
             const selected = selectedIds.includes(item.nodeId);
-            const availability = evaluateResourcePickerAvailability({
-              item: { nodeId: item.nodeId, mediaUrl: item.previewUrl },
-              mode,
-              targetSlotIndex,
-              slotState,
-            });
+            const availability = { isCurrentSlot: false, badgeLabel: undefined };
 
-            const isAssigned = availability.isAssigned || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
-            const isDisabled = availability.disabled || (mode === 'add' && item.alreadyConnected && !allowConnectedSelection);
+            const { isAssigned, disabled } = pickerCandidateAvailability(item, mode, allowConnectedSelection);
+            const isDisabled = isAssigned || (!selected && disabled);
 
             return (
               <button
@@ -210,33 +192,33 @@ const CanvasResourcePane: React.FC<CanvasResourcePaneProps> = ({
                 }`}
                 onClick={() => onToggle(item.nodeId, isAssigned, isDisabled)}
                 disabled={isDisabled}
+                aria-pressed={selected}
+                aria-label={item.title}
               >
-                <PreviewThumb
+                {item.materialType === 'text' ? <span className="wf-picker-row__thumb wf-picker-text-preview"><FileText size={18} aria-hidden="true" /></span> : <PreviewThumb
                   layout="list"
                   materialType={item.materialType}
                   previewUrl={item.previewUrl}
                   width={measured[item.nodeId]?.width ?? item.width}
                   height={measured[item.nodeId]?.height ?? item.height}
                   badge="none"
-                  fallbackLabel={t(typeLabelKey(item.materialType))}
+                  fallbackLabel=""
                   mimeOrName={item.previewUrl}
                   className="wf-picker-row__thumb"
                   onNaturalSize={(s) =>
                     setMeasured((prev) => ({ ...prev, [item.nodeId]: s }))
                   }
-                />
+                />}
                 <div className="wf-picker-row__body">
                   <span className="wf-picker-card__name">{item.title}</span>
                   <span className="wf-picker-row__sub">
-                    {item.subtitle || item.nodeId}
-                    {' · '}
-                    {t(typeLabelKey(item.materialType))}
+                    {item.subtitle}
                   </span>
                 </div>
                 {isAssigned || availability.badgeLabel ? (
                   <span className="wf-picker-added-badge wf-picker-added-badge--inline">
                     {isAssigned ? <Check size={11} /> : null}
-                    {availability.badgeLabel || t('picker.added')}
+                    {t('picker.added')}
                   </span>
                 ) : (
                   <span className={`wf-picker-check ${selected ? 'wf-picker-check--on' : ''}`}>

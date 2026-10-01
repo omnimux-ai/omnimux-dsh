@@ -88,6 +88,7 @@ export function findExecutionReadinessFailure(
           ...(input.materialType === 'text' ? { textContent: '__scheduled_text__' } : { url: 'scheduled:pending' }) }
       : input);
     const data = node.data ?? {};
+    const inputBindingVersion = data.inputBindingVersion === 1 ? 1 : undefined;
     const params = data.params && typeof data.params === 'object'
       ? data.params as Record<string, unknown>
       : {};
@@ -104,16 +105,19 @@ export function findExecutionReadinessFailure(
       nodeFields: params,
     });
     const outputType = typeof data.materialType === 'string' ? data.materialType : undefined;
-    const chosenId = resolveSlotOperation(catalog, model.id, params.operation, outputType, rawFingerprint);
+    const chosenId = inputBindingVersion === 1 && readString(params.operation)
+      ? readString(params.operation) : resolveSlotOperation(catalog, model.id, params.operation, outputType, rawFingerprint);
     const layout = deriveSlotLayout(catalog, model.id, chosenId);
-    const loaded = effectiveInputDisplay(layout, feedFromFingerprint(rawFingerprint), data.slotBindings as SlotBindings | undefined,
+    const loaded = effectiveInputDisplay(layout, feedFromFingerprint(rawFingerprint, inputBindingVersion), data.slotBindings as SlotBindings | undefined,
       (data.slotConflicts ?? []) as SlotConflict[], graph?.edges.filter((edge) => edge.target === node.id) ?? [],
-      (data.slotStandbyEdgeIds ?? []) as string[]);
+      (data.slotStandbyEdgeIds ?? []) as string[], inputBindingVersion);
     const { bindings, conflicts } = loaded;
     if (loaded.requiredUnavailable && !deferred.has(loaded.requiredUnavailable.occupant.sourceNodeId)) return {
-      nodeId: node.id, reasonCode: 'input_unavailable', message: `来源 ${loaded.requiredUnavailable.occupant.sourceNodeId} 的必需素材不可用，请替换或移除引用`,
+      nodeId: node.id, reasonCode: inputBindingVersion === 1
+        ? loaded.records.find(record => record.occupant.edgeId === loaded.requiredUnavailable!.occupant.edgeId)?.reasonCode ?? 'input_unavailable' : 'input_unavailable',
+      message: `来源 ${loaded.requiredUnavailable.occupant.sourceNodeId} 的素材尚不可用，请替换或停用`,
     };
-    const fingerprint = effectiveSlotFingerprint(rawFingerprint, layout, bindings, conflicts);
+    const fingerprint = effectiveSlotFingerprint(rawFingerprint, layout, bindings, conflicts, inputBindingVersion);
     const unavailable = fingerprint.assets.find((asset) => asset.availability !== 'ready' && !deferred.has(asset.sourceNodeId));
     if (unavailable) return { nodeId: node.id, reasonCode: unavailable.availability === 'unavailable' ? 'input_unavailable' : 'input_waiting',
       message: unavailable.availabilityMessage ?? `等待来源 ${unavailable.sourceNodeId} 的内容` };

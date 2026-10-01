@@ -259,6 +259,28 @@ test('parity: registry requires promptPolicy on all ops; keeps own version field
   assert.ok(validateOperationRegistry(broken).length >= 1);
 });
 
+test('upstream origins and text composition are validated without granting arbitrary fields', () => {
+  const schema = loadJsonSchema();
+  assert.deepEqual(schema.$defs.inputSlot.properties.valueSources.items.enum, ['local_field', 'upstream_output']);
+  assert.deepEqual(schema.$defs.inputSlot.properties.composition.properties.kind.enum,
+    ['content_with_instruction', 'single_body', 'separate_roles']);
+  const model = (input) => ({ id: 'origin-check', label: 'Origin', operations: [{
+    id: 'chat', output: { type: 'text' }, inputs: [{
+      slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1, ...input,
+    }],
+  }] });
+  assert.equal(validateModel(model({ valueSources: ['local_field', 'upstream_output'],
+    composition: { kind: 'single_body', localRole: 'body' } })).filter(i => i.level === 'error').length, 0);
+  for (const input of [
+    { valueSources: [] }, { valueSources: ['file_asset'] }, { valueSources: ['local_field', 'local_field'] },
+    { composition: { kind: 'unknown', localRole: 'body' } },
+    { composition: { kind: 'single_body', localRole: 'unknown' } },
+    { type: 'image', role: 'reference', composition: { kind: 'single_body', localRole: 'body' } },
+  ]) {
+    assert.ok(validateModel(model(input)).some(i => i.level === 'error'), JSON.stringify(input));
+  }
+});
+
 test('parity: schema $defs.research status enum matches JS', () => {
   const schema = loadJsonSchema();
   assert.deepEqual(schema.$defs.researchStatus.enum, ['draft', 'verified', 'rejected']);

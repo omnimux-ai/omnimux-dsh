@@ -1,9 +1,25 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildModelCatalog } from '../../../omnimux/src/catalog/list.js';
+import { readCanvasCatalog } from '../workflow/seam/canvasCatalog.ts';
 import { projectCanvasCatalog } from './generationPolicy.ts';
 import { buildFilteredModelOptions, isZeroCandidateEmptyState } from './validation/operationUi.ts';
 import { buildUpstreamFingerprint, planAutoAdaptation } from './validation/compatKernel.ts';
+
+test('host catalog bridge preserves authoritative default operations and nested contract data', () => {
+  const hub = buildModelCatalog({ env: {} });
+  const canvas = readCanvasCatalog(name => name === 'modelCatalog' ? { list: () => hub } : undefined);
+  assert.deepEqual(canvas.defaultOperations, hub.defaultOperations);
+  for (const model of canvas.models) {
+    const original = hub.models.find(row => row.id === model.id);
+    assert.deepEqual(model.operations, original.operations.filter(op => op.listed === true));
+    assert.ok(model.operations.every(op => op.listed === true), 'curation must not admit drafts');
+    assert.deepEqual(model.routing, original.routing);
+    assert.deepEqual(model.channelGroups, original.channelGroups);
+  }
+  assert.equal(canvas.fingerprint, projectCanvasCatalog(hub).fingerprint);
+  assert.ok(canvas.fingerprint.startsWith(`${hub.fingerprint}:canvas:`));
+});
 
 test('real Hub catalog exposes the curated text models and selects Gemini 3.8 for video', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));

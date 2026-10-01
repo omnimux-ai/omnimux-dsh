@@ -33,6 +33,29 @@ function img(overrides = {}) {
   return { sourceNodeId: 'src-1', type: 'image', mimeType: 'image/png', sizeBytes: 1 * MB, ...overrides };
 }
 
+for (const kind of ['text', 'image', 'video', 'audio']) {
+  test(`qualified upstream prompt uses common matcher for ${kind}, local-only never grants binding`, () => {
+    const input = { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+      valueSources: ['local_field', 'upstream_output'],
+      composition: { kind: kind === 'audio' ? 'single_body' : 'content_with_instruction', localRole: kind === 'audio' ? 'body' : 'instruction' } };
+    const catalog = { source: 'omnimux', text: [], image: [], video: [], audio: [], models: [{
+      id: 'qualified', label: 'Qualified', operations: [{ id: 'generate', listed: true, output: { type: kind }, inputs: [input] }],
+    }] };
+    const operation = buildContractView(catalog).models[0].operations[0];
+    const fingerprint = buildUpstreamFingerprint({ prompt: '第一段。', localText: '最后一段。', assets: [
+      { sourceNodeId: 'a', edgeId: 'ea', type: 'text', textContent: '第一段。', targetSlot: 'prompt', availability: 'ready' },
+    ] });
+    const matched = matchOperationInputs(operation, fingerprint);
+    assert.equal(matched.accepts, true);
+    assert.equal(matched.ready, true);
+    assert.deepEqual(matched.bindings, [{ edgeId: 'ea', sourceNodeId: 'a', type: 'text', role: 'prompt', slot: 'prompt' }]);
+    const localOnly = { ...operation, inputs: [{ ...input, valueSources: ['local_field'] }] };
+    assert.equal(matchOperationInputs(localOnly, fingerprint).accepts, false);
+    assert.equal(matchOperationInputs(operation, buildUpstreamFingerprint({ prompt: '' })).ready, false);
+    assert.equal(matchOperationInputs(operation, buildUpstreamFingerprint({ prompt: '本地。', localText: '本地。' })).ready, true);
+  });
+}
+
 // ============================================================================
 // Fingerprint
 // ============================================================================
@@ -503,4 +526,21 @@ test('merged capability：只合并 listed ops（unlisted 的 max 8 不外泄）
   assert.equal(merged.referenceImages.max, 2);
   assert.deepEqual(merged.referenceImages.allowedMimeTypes, ['image/png', 'image/jpeg']);
   assert.deepEqual(merged.referenceImages.supportedRoles, ['reference']);
+});
+
+test('OCR8 composed prompt readiness counts permitted origins, not an unrelated final prompt or node field', () => {
+  for (const composition of [{ kind: 'single_body', localRole: 'body' }, { kind: 'content_with_instruction', localRole: 'instruction' }]) {
+    const input = { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+      valueSources: ['local_field', 'upstream_output'], composition };
+    const op = buildContractView({ models: [{ id: 'qualified', operations: [{ id: 'chat', listed: true, output: { type: 'text' }, inputs: [input] }] }] }).models[0].operations[0];
+    const local = buildUpstreamFingerprint({ prompt: 'Local', localText: 'Local', nodeFields: { voice: 'Not body' } });
+    assert.equal(matchOperationInputs(op, local).ready, true);
+    const upstreamOnly = { ...op, inputs: [{ ...input, valueSources: ['upstream_output'] }] };
+    const denied = matchOperationInputs(upstreamOnly, local);
+    assert.equal(denied.accepts, true); assert.equal(denied.ready, false);
+    assert.ok(denied.pending.some(item => item.code === 'min_unsatisfied'));
+    const upstream = buildUpstreamFingerprint({ prompt: 'A', localText: '', assets: [{ sourceNodeId: 'a', type: 'text', textContent: 'A', availability: 'ready', targetSlot: 'prompt' }] });
+    assert.equal(matchOperationInputs(upstreamOnly, upstream).ready, true);
+    assert.equal(matchOperationInputs(op, buildUpstreamFingerprint({ prompt: 'Unrelated composed field', localText: '', nodeFields: { voice: 'Not body' } })).ready, false);
+  }
 });

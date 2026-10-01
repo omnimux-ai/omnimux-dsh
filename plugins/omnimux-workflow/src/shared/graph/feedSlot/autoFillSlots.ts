@@ -11,6 +11,7 @@ export function acceptsFeedAsset(slot: SlotSpec, asset: FeedAsset): boolean {
 
 /** Content eligibility is shared by loading, display and submission. */
 export function isReadyFeedAsset(asset: FeedAsset | undefined): asset is FeedAsset {
+  if (asset?.type === 'text') return asset.availability === 'ready' && Boolean(asset.textContent?.trim());
   const path = asset?.pathOrUrl ?? asset?.url;
   return asset?.availability === 'ready' && Boolean(path?.trim()) && !path!.trim().startsWith('blob:');
 }

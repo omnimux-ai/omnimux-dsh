@@ -6,6 +6,9 @@ import {
   MEDIA_TYPES,
   OUTPUT_TYPES,
   SLOT_SOURCES,
+  VALUE_SOURCES,
+  TEXT_COMPOSITION_KINDS,
+  LOCAL_TEXT_ROLES,
   issue,
   validateAllowedMimes,
   validateMinMaxPair,
@@ -73,6 +76,23 @@ export function validateSlot(slot, basePath, modelId, file) {
   const s = /** @type {Record<string, unknown>} */ (slot);
   validateSlotRequiredFields(s, basePath, context, out);
   validateSlotEnums(s, basePath, context, out);
+  if (s.valueSources !== undefined) {
+    if (!Array.isArray(s.valueSources) || s.valueSources.length === 0 ||
+        s.valueSources.some(value => !VALUE_SOURCES.has(value)) ||
+        new Set(s.valueSources).size !== s.valueSources.length) {
+      out.push(issue('schema_invalid', 'valueSources must contain unique supported origins',
+        { modelId, file, path: `${basePath}.valueSources` }));
+    }
+  }
+  if (s.composition !== undefined) {
+    const composition = s.composition;
+    if (s.type !== 'text' || !composition || typeof composition !== 'object' || Array.isArray(composition) ||
+        !TEXT_COMPOSITION_KINDS.has(composition.kind) || !LOCAL_TEXT_ROLES.has(composition.localRole) ||
+        Object.keys(composition).some(key => key !== 'kind' && key !== 'localRole')) {
+      out.push(issue('schema_invalid', 'composition requires a text slot, supported kind and localRole',
+        { modelId, file, path: `${basePath}.composition` }));
+    }
+  }
 
   const hasMin = s.min !== undefined && s.min !== null;
   if (hasMin && Object.prototype.hasOwnProperty.call(s, 'max')) {

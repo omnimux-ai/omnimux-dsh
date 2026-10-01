@@ -218,6 +218,12 @@ export type { ModelInputCapability };
 // These shapes mirror the seam / HTTP DTO only. Operation ids are plain
 // `string` + metadata — workflow must NOT copy the registry N-entry union.
 
+export type ValueSource = 'local_field' | 'upstream_output';
+export interface TextComposition {
+  kind: 'content_with_instruction' | 'single_body' | 'separate_roles';
+  localRole: 'body' | 'instruction' | 'lyrics' | 'style';
+}
+
 /** One operation input slot (contract v1.1). */
 export interface InputSlotDto {
   slot: string;
@@ -225,6 +231,8 @@ export interface InputSlotDto {
   type: string;
   role: string;
   source?: 'user' | 'upstream_edge' | 'node_field';
+  valueSources?: ValueSource[];
+  composition?: TextComposition;
   min: number;
   /** null means the official source does not publish an upper bound. */
   max: number | null;

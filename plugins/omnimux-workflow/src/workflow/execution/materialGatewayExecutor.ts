@@ -118,7 +118,7 @@ export function createMaterialGatewayExecutor(opts: {
 
       // Generative: gateway submit -> await -> output
       const capability = readMaterialType(data);
-      if (capability === 'audio' && upstream.texts.length && resolveGenerationPrompt(data).trim()) {
+      if (data.inputBindingVersion !== 1 && capability === 'audio' && upstream.texts.length && resolveGenerationPrompt(data).trim()) {
         throw new Error('当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源并调整音色、语速等参数');
       }
       const rawPrompt = upstream.prompt;
@@ -271,6 +271,7 @@ export function createMaterialGatewayExecutor(opts: {
       const request: SubmitRequest = {
         capability,
         prompt,
+        ...(data.inputBindingVersion === 1 ? { localText: upstream.localText, textInputs: upstream.textInputs } : {}),
         interleavedParts: compiled.interleavedParts && compiled.interleavedParts.length > 0
           ? compiled.interleavedParts
           : undefined,

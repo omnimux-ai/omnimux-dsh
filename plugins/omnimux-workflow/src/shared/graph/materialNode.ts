@@ -116,7 +116,9 @@ export interface MaterialNodeData {
   prompt?: string;
   params: Record<string, unknown>;
   failStrategy?: NodeFailStrategy;
-  /** Media consumption authority; absent only on graphs awaiting hydration. */
+  inputBindingVersion?: 1;
+  localTextRole?: 'body' | 'instruction' | 'lyrics' | 'style';
+  /** Upstream consumption authority; absent on legacy graphs awaiting migration. */
   slotBindings?: SlotBindings;
   slotConflicts?: SlotConflict[];
   /** Incoming edge IDs explicitly kept outside the active input slots. */
@@ -153,6 +155,8 @@ export function createDefaultMaterialNodeData(
     selectedTool: DEFAULT_MATERIAL_TOOL[materialType],
     params: {},
     failStrategy: 'abort',
+    inputBindingVersion: 1,
+    slotBindings: {},
     ...overrides,
   };
 }

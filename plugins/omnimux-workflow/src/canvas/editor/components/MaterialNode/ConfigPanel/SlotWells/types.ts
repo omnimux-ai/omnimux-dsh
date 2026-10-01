@@ -18,13 +18,17 @@ export type { SlotBindings, SlotConflict, SlotLayout };
 /** 唤起 ResourcePicker 的目标卡槽请求。 */
 export interface SlotPickRequest {
   /** 目标 slot 名（内核 SlotSpec.slot）。 */
-  targetSlot: string;
+  targetSlot?: string;
   /** 该 slot 接受的素材类型（SlotSpec.type 展开）。 */
   acceptedTypes: string[];
   /** 槽位上限；null 表示官方未公布上限。 */
   max: number | null;
   /** Stable occupant identity for replacement; absent for an empty well. */
   replaceEdgeId?: string;
+  /** Original well owns focus even when its preview action lives in a portal. */
+  openerAnchor?: HTMLElement;
+  /** Session-only focus return owned by the original well. */
+  onReturnFocus?: (anchor: HTMLElement) => void;
   /** Borrowed-capability display: commit must first switch the node to this operation. */
   displayOnlyFromOperation?: string;
 }
@@ -32,6 +36,8 @@ export interface SlotPickRequest {
 export interface SlotWellsProps {
   /** deriveSlotLayout 派生的布局预设与槽位定义。 */
   layout: SlotLayout;
+  records?: import('../../../../../../shared/graph/feedSlot/assembleEffectiveInputs.ts').SlotSelection[];
+  onSetUse?: (slot: string, edgeId: string, use: 'active' | 'inactive') => void;
   /** 节点当前 slotBindings（媒体消费真源）。 */
   bindings: SlotBindings;
   /** 冲突列表（类型错误 / 角色非法 / 槽位移除），用于卡片警示态。 */
