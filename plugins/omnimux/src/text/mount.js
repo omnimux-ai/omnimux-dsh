@@ -197,6 +197,8 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
           credentials: ctx.get?.('credentials'),
           settings: ctx.get?.('settings'),
           env: process.env,
+          specsDir: exec?.specsDir,
+          catalogIndex: exec?.catalogIndex,
         })
       } catch (error) {
         if (error instanceof OmnimuxError) throw error
