@@ -49,7 +49,10 @@ export function helpText() {
  * @returns {{ registered: boolean }}
  */
 export function apply(ctx) {
-  const add = ctx?.commands?.add
+  // commands is an optional seam: ctx.get() reads it without the inject gate; a bare
+  // ctx.commands access throws `cannot get property without inject` on Cordis ≥ 4 and
+  // crashes Host boot (same crash class fixed in #2788/#2791 for other plugins).
+  const add = typeof ctx?.get === 'function' ? ctx.get('commands')?.add : undefined
   if (typeof add !== 'function') {
     return { registered: false }
   }

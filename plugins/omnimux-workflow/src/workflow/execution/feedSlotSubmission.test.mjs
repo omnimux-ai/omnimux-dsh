@@ -147,7 +147,9 @@ test('only occupied frames pass through dispatch, standby missing and bad URLs a
   assert.equal(gw.requests.length, 1); assert.equal(catalogReads, 1);
   assert.deepEqual(gw.requests[0].references.map((ref) => [ref.sourceNodeId, ref.role]), [['a', 'first_frame'], ['b', 'last_frame']]);
 });
-test('media-only operation never restores excluded upstream or local prompt at gateway submission', async () => {
+// f10735c6c (#2873 统一上游输入): 无专用 text 卡槽的媒体操作仍按契约接受文本——
+// 未绑定连通上游文本 + 本地补充要求组合进 prompt，文本只作提示词不进 references。
+test('media-only operation composes unbound upstream text with local prompt at gateway submission', async () => {
   const mediaOnly = { ...op, inputs: op.inputs.filter((input) => input.type !== 'text') };
   const gw = gateway(catalogFor('video', 'frames', [mediaOnly]));
   const target = node({ first_frame: [occupant('a')], last_frame: [occupant('b')] });
@@ -160,8 +162,9 @@ test('media-only operation never restores excluded upstream or local prompt at g
     ],
   }));
   assert.equal(gw.requests.length, 1);
-  assert.equal(gw.requests[0].prompt ?? '', '');
+  assert.equal(gw.requests[0].prompt, '来源 1：\nupstream-must-not-leak\n\n补充要求：\nlocal-must-not-leak');
   assert.equal(gw.requests[0].references.length, 2);
+  assert.ok(gw.requests[0].references.every((ref) => ref.type === 'image'));
 });
 
 test('execution preparation fills valid slots beside retained removed intent without mutating saved graph', () => {

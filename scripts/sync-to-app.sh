@@ -280,17 +280,11 @@ fi
 # ---------------------------------------------------------------------------
 MANAGED_DSH_UI_KIT_RELATIVE_PATH='.materialize-snapshots/plugins/dsh-ui-kit'
 
+# 权威 dsh-ui-kit 自 2026-10 起固定在仓内 packages/dsh-ui-kit（Issue #2891：
+# 仓库外 file: 依赖让 CI 与干净检出无法安装）。旧的个人目录路径不再作为候选；
+# 需要临时覆盖时用 OMNIMUX_DSH_UI_KIT_DIR 显式指定。
 if [ -z "${OMNIMUX_DSH_UI_KIT_DIR:-}" ]; then
-  for candidate in \
-    "$ROOT/../personal/dsh-ui-kit" \
-    "$ROOT/../../personal/dsh-ui-kit" \
-    "$ROOT/../../../personal/dsh-ui-kit"; do
-    if [ -d "$candidate" ]; then
-      DSH_UI_KIT_DIR="$candidate"
-      break
-    fi
-  done
-  DSH_UI_KIT_DIR="${DSH_UI_KIT_DIR:-$ROOT/../personal/dsh-ui-kit}"
+  DSH_UI_KIT_DIR="$ROOT/packages/dsh-ui-kit"
 else
   DSH_UI_KIT_DIR="$OMNIMUX_DSH_UI_KIT_DIR"
 fi

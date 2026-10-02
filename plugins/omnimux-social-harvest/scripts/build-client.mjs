@@ -34,9 +34,9 @@ try {
   esbuild = await import(fallback)
 }
 
-const uiKit = findUp(join('personal', 'dsh-ui-kit', 'lib', 'index.js'))
+const uiKit = findUp(join('packages', 'dsh-ui-kit', 'lib', 'index.js'))
   ?? findUp(join('node_modules', 'dsh-ui-kit', 'lib', 'index.js'))
-if (!uiKit) throw new Error('dsh-ui-kit not found; expected at <repo>/../personal/dsh-ui-kit')
+if (!uiKit) throw new Error('dsh-ui-kit not found; expected packages/dsh-ui-kit or node_modules/dsh-ui-kit')
 
 const result = await esbuild.build({
   absWorkingDir: root,

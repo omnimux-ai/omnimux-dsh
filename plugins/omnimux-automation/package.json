@@ -35,7 +35,7 @@
     }
   },
   "dependencies": {
-    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit",
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
     "luxon": "^3.7.2",
     "zod": "^4.1.5"
   },
@@ -54,6 +54,8 @@
     }
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-tools": "^0.1.5-rc.2",
+    "@deepseek-ai/schemastery": "^3.18.1",
     "esbuild": "^0.25.0",
     "jsdom": "^30.0.1",
     "react": "^18.2.0",

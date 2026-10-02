@@ -1360,10 +1360,6 @@ button.omx-slot-add:hover,
   min-width: 0;
   width: auto;
 }
-.omx-mv-prompt-textarea {
-  min-height: 56px;
-}
-
 .omx-mv-ref-row {
   display: flex;
   align-items: center;

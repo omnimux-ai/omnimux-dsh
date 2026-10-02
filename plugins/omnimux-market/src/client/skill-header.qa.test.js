@@ -63,7 +63,7 @@ test('QA: category-bar is removed in My Skills; discover tab keeps category-bar'
 test('QA: featured My Skills retains a recommended skill returned by real listInstalled', async () => {
   const catalog = JSON.parse(readFileSync(new URL('../../catalog/index.json', import.meta.url), 'utf8'))
   const installed = await listInstalled(new URL('../../catalog/skills', import.meta.url).pathname)
-  const clip = installed.find(item => item.slug === 'clip-export')
+  const clip = installed.find(item => item.slug === 'replicate-carousel')
   assert.ok(clip, 'bundled installed-shape fixture exists')
   assert.equal(catalog.items.find(item => item.skill === clip.slug).recommended, true)
   const ui = workshop({ 0: 'mine', 1: 'featured', 10: [{ ...clip, installed: true, enabled: true }] })
@@ -83,7 +83,7 @@ test('QA: rejected confirm install must not mark a skill installed or close conf
 })
 
 test('regression: installed featured identity survives tab/category reentry and rejects unknown flags', () => {
-  const clip = { slug: 'clip-export', name: 'Clip export', installed: true }
+  const clip = { slug: 'replicate-carousel', name: 'Replicate Carousel', installed: true }
   const unknown = { slug: 'not-in-catalog', name: 'Unknown', recommended: true, tags: ['精选'] }
   // 从 discover 发现页开始
   const ui = workshop({ 0: 'discover', 1: 'featured', 10: [clip, unknown] })
@@ -99,13 +99,14 @@ test('regression: installed featured identity survives tab/category reentry and 
   assert.equal(cards().length, 2)
   assert.equal(nodes(ui.render(), n => n.props.className === 'category-bar').length, 0)
 
-  // 切回 discover 发现页并切换到 featured
+  // 切回 discover 发现页并切到全部（featured 页签已随 013fcb898 收敛移除）
   nodes(ui.render(), n => n.type === 'button' && (n.props.role === 'tab' || n.props.className?.startsWith('nav-tab')))[0].props.onClick()
-  categories().children.find(n => n.props.key === 'featured').props.onClick()
+  categories().children.find(n => n.props.key === '').props.onClick()
 
-  // 再次切回 mine
+  // 再次切回 mine：伪造 recommended 标记的未知条目仍不得混入
   nodes(ui.render(), n => n.type === 'button' && (n.props.role === 'tab' || n.props.className?.startsWith('nav-tab')))[1].props.onClick()
-  assert.equal(cards().length, 1)
+  assert.equal(cards().length, 2)
+  assert.equal(SkillShelf.isRecommendedInstalledSkill(clip), true)
   assert.equal(SkillShelf.isRecommendedInstalledSkill(unknown), false)
   assert.equal(SkillShelf.isRecommendedInstalledSkill({}), false)
 

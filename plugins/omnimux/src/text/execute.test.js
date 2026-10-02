@@ -6,14 +6,8 @@ import { describe, it } from 'node:test'
 import { apply } from '../index.js'
 import { OmnimuxError } from '../media/errors.js'
 import { decodeDataUri, mediaFromMagic } from './image.js'
-import { executeOmnimuxText as runText } from './execute.js'
+import { executeOmnimuxText } from './execute.js'
 import { loadTextVideo, toVideoImageUrlPart } from './video.js'
-import { dirname, join as joinPath } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const executeOmnimuxText = (input) => runText({ specsDir: FIXTURE_SPECS_DIR, ...input })
-
-const FIXTURE_SPECS_DIR = joinPath(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'catalog')
 
 const PNG = Uint8Array.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -49,7 +43,7 @@ describe('textComplete execute', () => {
 
   it('throws needs-provider without llm', async () => {
     await assert.rejects(
-      () => executeOmnimuxText({ prompt: 'hello', model: 'claude-opus-5' }),
+      () => executeOmnimuxText({ prompt: 'hello', model: 'gemini-3.8-flash' }),
       (error) => error instanceof OmnimuxError && error.code === 'needs-provider',
     )
   })
@@ -58,14 +52,14 @@ describe('textComplete execute', () => {
     const seen = []
     const result = await executeOmnimuxText({
       prompt: 'summarize this contract',
-      model: 'claude-opus-5',
+      model: 'gemini-3.8-flash',
       system: 'return one sentence',
       llm: collectStream(seen),
     })
-    assert.deepEqual(result, { mode: 'live', model: 'claude-opus-5', text: 'a cat' })
+    assert.deepEqual(result, { mode: 'live', model: 'gemini-3.8-flash', text: 'a cat' })
     assert.equal(seen.length, 1)
     assert.equal(seen[0].provider, 'omnimux')
-    assert.equal(seen[0].model, 'claude-opus-5')
+    assert.equal(seen[0].model, 'gemini-3.8-flash')
     assert.equal(seen[0].system, 'return one sentence')
     assert.equal(seen[0].maxTokens, 4096)
     assert.equal('tools' in seen[0], false)
@@ -116,7 +110,7 @@ describe('textComplete execute', () => {
     await assert.rejects(
       () => executeOmnimuxText({
         prompt: 'hello',
-        model: 'kimi-k3',
+        model: 'gemini-3.8-flash',
         llm: {
           async * stream() {
             yield { type: 'finish', reason: { kind: 'error', failure: { message: 'gateway 500' } } }
@@ -407,12 +401,12 @@ describe('omnimux_text_complete tool', () => {
     assert.ok(tools.omnimux_text_complete.parameters.properties.video)
     assert.match(tools.omnimux_text_complete.description, /image_url\(data:video\)/)
     const result = await tools.omnimux_text_complete.execute({
-      model: 'glm-5.3',
+      model: 'gemini-3.8-flash',
       prompt: 'one line',
-      reason: 'user asked for GLM wording',
-    }, { signal: undefined, specsDir: FIXTURE_SPECS_DIR })
-    assert.equal(result.model, 'glm-5.3')
-    assert.equal(seen[0].model, 'glm-5.3')
+      reason: 'user asked for Gemini wording',
+    }, { signal: undefined })
+    assert.equal(result.model, 'gemini-3.8-flash')
+    assert.equal(seen[0].model, 'gemini-3.8-flash')
   })
 
   it('hides a disabled whitelist model from the tool enum', () => {
@@ -536,8 +530,8 @@ describe('omnimux_text_complete tool', () => {
     const requests = []
     const result = await executeOmnimuxText({
       prompt: 'hello',
-      model: 'claude-opus-4-6',
-      allowedGroups: ['standard'],
+      model: 'gemini-3.8-flash',
+      allowedGroups: ['cheap'],
       strategy: 'cost_first',
       env: { OMNIMUX_API_KEY: 'sk-test', OMNIMUX_BASE_URL: 'https://gateway.test/v1' },
       fetcher: async (url, options) => {
@@ -555,9 +549,9 @@ describe('omnimux_text_complete tool', () => {
 
     assert.equal(streamCalls, 0)
     assert.equal(requests.length, 1)
-    assert.equal(requests[0].body.model, 'claude-opus-4-6@standard')
+    assert.equal(requests[0].body.model, 'gemini-3.8-flash@gemini-cheap')
     assert.equal(result.text, 'routed reply')
-    assert.equal(result.model, 'claude-opus-4-6')
+    assert.equal(result.model, 'gemini-3.8-flash')
   })
 
   it('keeps an unrouted text request on llm.stream with the bare model id', async () => {
@@ -565,7 +559,7 @@ describe('omnimux_text_complete tool', () => {
     const seen = []
     const result = await executeOmnimuxText({
       prompt: 'hello',
-      model: 'claude-opus-4-6',
+      model: 'gemini-3.8-flash',
       env: { OMNIMUX_API_KEY: 'sk-test', OMNIMUX_BASE_URL: 'https://gateway.test/v1' },
       fetcher: async () => {
         fetcherCalls += 1
@@ -576,7 +570,7 @@ describe('omnimux_text_complete tool', () => {
 
     assert.equal(fetcherCalls, 0)
     assert.equal(seen.length, 1)
-    assert.equal(seen[0].model, 'claude-opus-4-6')
+    assert.equal(seen[0].model, 'gemini-3.8-flash')
     assert.equal(seen[0].provider, 'omnimux')
     assert.equal(result.text, 'a cat')
   })
@@ -586,8 +580,8 @@ describe('omnimux_text_complete tool', () => {
     const requests = []
     const result = await executeOmnimuxText({
       prompt: 'describe',
-      model: 'deepseek-v4-flash-vision-exp', // documented alias of deepseek-v4-flash
-      allowedGroups: ['deepseek-official'],
+      model: 'gemini-3.8-flash',
+      allowedGroups: ['cheap'],
       image: `data:image/png;base64,${Buffer.from(PNG).toString('base64')}`,
       attachments: { saveImage: async () => ({ id: 'unused' }) },
       env: { OMNIMUX_API_KEY: 'sk-test', OMNIMUX_BASE_URL: 'https://gateway.test/v1' },
@@ -605,7 +599,7 @@ describe('omnimux_text_complete tool', () => {
 
     assert.equal(streamCalls, 0)
     assert.equal(requests.length, 1)
-    assert.equal(requests[0].body.model, 'deepseek-v4-flash@deepseek-official')
+    assert.equal(requests[0].body.model, 'gemini-3.8-flash@gemini-cheap')
     const parts = requests[0].body.messages.at(-1).content
     assert.equal(parts[0].type, 'text')
     const imagePart = parts.find((part) => part.type === 'image_url')

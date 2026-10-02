@@ -1,0 +1,249 @@
+/* Base container */
+.tabs {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  user-select: none;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Pill variant (classic capsule) */
+.pill {
+  gap: 2px;
+  padding: 2px;
+  height: 32px;
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+}
+
+.pill.sm {
+  height: 28px;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.pill .tabItem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition:
+    background-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pill.sm .tabItem {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  gap: 4px;
+}
+
+.pill .tabItem:hover:not(:disabled):not([aria-selected="true"]) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.pill .tabItem:focus {
+  outline: none;
+}
+
+.pill .tabItem:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.pill .tabItem:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.pill .tabItem.active {
+  background: var(--dsw-alias-bg-elevated);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 2px var(--dsw-alias-border-l1);
+}
+
+.pill .tabItem.active:hover {
+  background: var(--dsw-alias-bg-elevated);
+  color: var(--dsw-alias-label-primary);
+}
+
+.pill .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.pill.sm .badge {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 10px;
+}
+
+.pill .tabItem.active .badge {
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* Underline variant (pure text + 2px bottom highlight line) */
+.underline {
+  /* 标签左右热区宽度。容器两端用等量负边距抵消它，首末标签的文字才落在容器
+     内容边缘、与所在页面的内容基准线对齐；激活下划线也用同一变量内缩，保证
+     与文字等宽。改热区只改这一个值。 */
+  --underline-tab-pad-x: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 !important;
+  margin-inline: calc(-1 * var(--underline-tab-pad-x));
+  height: 44px;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.underline.sm {
+  height: 36px;
+  gap: 16px;
+}
+
+.underline .tabItem {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 var(--underline-tab-pad-x) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition:
+    color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    font-weight 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.underline.sm .tabItem {
+  font-size: 13px;
+  line-height: 18px;
+  gap: 4px;
+}
+
+.underline .tabItem:hover {
+  color: var(--dsw-alias-label-primary) !important;
+  background: transparent !important;
+}
+
+.underline .tabItem:focus {
+  outline: none;
+}
+
+.underline .tabItem:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}
+
+.underline .tabItem:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.underline .tabItem.active {
+  color: var(--dsw-alias-label-primary) !important;
+  font-weight: 600;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.underline .tabItem.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: var(--underline-tab-pad-x);
+  right: var(--underline-tab-pad-x);
+  height: 2px;
+  background: var(--dsw-alias-label-primary);
+  border-radius: 1px;
+}
+
+.underline .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  transition:
+    background-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.underline.sm .badge {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 10px;
+}
+
+.underline .tabItem.active .badge {
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* Shared element styles */
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

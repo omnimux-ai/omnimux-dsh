@@ -1,0 +1,169 @@
+.tableWrap {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Horizontal scroll indicators via pseudo-elements */
+.tableWrap::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16px;
+  background: linear-gradient(90deg, var(--dsw-alias-border-l2), transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 150ms ease;
+}
+
+.tableWrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  background: linear-gradient(270deg, var(--dsw-alias-border-l2), transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 150ms ease;
+}
+
+.hasScrollLeft::before {
+  opacity: 1;
+}
+
+.hasScrollRight::after {
+  opacity: 1;
+}
+
+.scrollContainer {
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+/* Custom accessible checkbox/radio indicator for table rows */
+.selectCell {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  text-align: center;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+.checkboxIndicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 4px;
+  background-color: var(--dsw-alias-bg-layer-2);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    background-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.radioIndicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 9999px;
+  background-color: var(--dsw-alias-bg-layer-2);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    background-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.checkboxIndicator:focus-visible,
+.radioIndicator:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.checkboxSelected,
+.radioSelected {
+  background-color: var(--dsw-alias-brand-primary);
+  border-color: var(--dsw-alias-brand-primary);
+}
+
+.checkboxIndeterminate {
+  background-color: var(--dsw-alias-brand-primary);
+  border-color: var(--dsw-alias-brand-primary);
+}
+
+.checkmark {
+  width: 10px;
+  height: 10px;
+  stroke: var(--dsw-alias-label-primary-foreground);
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.minusMark {
+  width: 8px;
+  height: 2px;
+  background-color: var(--dsw-alias-label-primary-foreground);
+  border-radius: 1px;
+}
+
+.radioDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: var(--dsw-alias-label-primary-foreground);
+}
+
+/* Empty container */
+.emptyContainer {
+  padding: 32px 16px;
+  text-align: center;
+}
+
+/* Skeleton loader */
+.skeletonRow td {
+  padding: 12px;
+}
+
+.skeletonBar {
+  height: 14px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-2);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}

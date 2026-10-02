@@ -79,8 +79,16 @@ export function assembleEffectiveInputsFromSlots(args: {
   const composition = textSlot?.composition;
   if (args.nodeData.inputBindingVersion === 1) {
     const local = textSlot && !textSlot.valueSources?.includes('local_field') ? {} : args.nodeData;
+    // Free-text contract parity with effectiveFingerprint: unbound ready text
+    // feed assets (connected but occupying no slot, not on standby) join bound
+    // texts into the generation prompt.
+    const boundEdgeIds = new Set(selections.map((item) => item.occupant.edgeId));
+    const freeTexts = !textSlot && args.layout.acceptsText !== false
+      ? args.feedAssets.filter((asset) => asset.type === 'text' && asset.availability === 'ready'
+        && asset.textContent?.trim() && !boundEdgeIds.has(asset.edgeId))
+      : [];
     result.prompt = args.layout.acceptsText === false ? '' : resolveGenerationPrompt(local,
-      textSelections.map(item => item.asset?.textContent), composition);
+      [...textSelections.map(item => item.asset?.textContent), ...freeTexts.map(asset => asset.textContent)], composition);
   }
   const counts = new Map<string, number>();
   const used = new Set(selections.map((item) => item.occupant.edgeId));

@@ -1,0 +1,130 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  user-select: none;
+  border: 1px solid transparent;
+  transition:
+    background-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Shapes */
+.capsule {
+  border-radius: 9999px;
+}
+
+.square {
+  border-radius: 4px;
+}
+
+.dotShape {
+  border-radius: 9999px;
+  padding: 0;
+  min-width: 0;
+}
+
+/* Sizes for text/capsule/square */
+.sm {
+  height: 16px;
+  padding: 0 6px;
+  font-size: 11px;
+  gap: 3px;
+}
+
+.md {
+  height: 20px;
+  padding: 0 8px;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.lg {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 13px;
+  gap: 6px;
+}
+
+/* Dot sizes when standalone */
+.dotShape.sm {
+  width: 6px;
+  height: 6px;
+}
+
+.dotShape.md {
+  width: 8px;
+  height: 8px;
+}
+
+.dotShape.lg {
+  width: 10px;
+  height: 10px;
+}
+
+/* Inline dot indicator inside badge */
+.statusDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: currentColor;
+  flex-shrink: 0;
+}
+
+.iconSlot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Semantic Variants */
+.default {
+  background-color: var(--dsw-alias-bg-layer-2);
+  border-color: var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.neutral {
+  background-color: var(--dsw-alias-bg-layer-1);
+  border-color: var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.brand {
+  background-color: var(--dsw-alias-brand-secondary);
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
+}
+
+.success {
+  background-color: var(--dsw-alias-state-success-subtle);
+  border-color: var(--dsw-alias-state-success-primary);
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.warning {
+  background-color: var(--dsw-alias-state-warning-subtle);
+  border-color: var(--dsw-alias-state-warning-primary);
+  color: var(--dsw-alias-state-warning-primary);
+}
+
+.error {
+  background-color: var(--dsw-alias-state-error-subtle);
+  border-color: var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.info {
+  background-color: var(--dsw-alias-state-info-subtle);
+  border-color: var(--dsw-alias-state-info-primary);
+  color: var(--dsw-alias-state-info-primary);
+}

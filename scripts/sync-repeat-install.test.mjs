@@ -45,6 +45,9 @@ function createFixture(t, linker) {
     ...process.env, HOME: home, OMNIMUX_SYNC_VIA: 'internal', OMNIMUX_PLUGINS_DIR: plugins,
     PATH: fakeGitPath(home, home),
     COREPACK_ENABLE_NETWORK: '0', COREPACK_ENABLE_AUTO_PIN: '0', COREPACK_DEFAULT_TO_LATEST: '0',
+    // Isolated HOME has no pnpm tarball; point corepack at the developer cache so
+    // COREPACK_ENABLE_NETWORK=0 still resolves the pinned 11.7.0 shim.
+    COREPACK_HOME: process.env.COREPACK_HOME ?? `${process.env.HOME}/.cache/node/corepack`,
     npm_config_offline: 'true', npm_config_ignore_scripts: 'true', npm_config_ignore_pnpmfile: 'true',
     npm_config_verify_deps_before_run: 'false', npm_config_manage_package_manager_versions: 'false',
     npm_config_store_dir: join(home, 'store'), npm_config_cache: join(home, 'cache'),

@@ -146,7 +146,7 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 | 产品基线 / 路径 / 本地状态默认 | `pnpm verify:product-baseline` | 相关包测 | 不得把开发机私有状态写进默认路径 |
 | 单插件业务逻辑（非 UI） | `pnpm --filter <package> test` | 该插件边界/registry 小测 | 默认不跑 `pnpm -r test` / `test:all` |
 | Agent Tools / Schema | `pnpm test:agent-tools` | `pnpm verify:tools` | — |
-| DSH 合同 / inject / cordis 依赖声明 | `pnpm verify:dsh-contracts` + `pnpm test:dsh-contracts` | 触及的插件包测 | — |
+| DSH 合同 / inject（运行时加载校验） | `pnpm verify:plugin-load` + `pnpm test:plugin-load` | 触及的插件包测 | — |
 | 模型契约 / 路由 / 白名单 / 模型面定价 | `pnpm verify:model-contracts` | 下游：`pnpm verify:cross-plugin-models`、相关 submission/whitelist 检查；需要面板时 `pnpm hub:interfaces` | 禁止用真实付费探测发现能力 |
 | Client / Stage / 侧栏 / 文案 / CSS | 先读 design 与文案规范；`pnpm verify:stages`（及触及的 `verify:stage-scroll` / `verify:slots` / `test:ui`） | **必做**隔离工作树功能路径浏览器证据（`pnpm test:worktree-web` 或 ego-browser + 截图/结构化报告） | 禁止首页打卡冒充；禁止单测绿替代浏览器证据；Dev `verify:live@45120` 归人工，非 Agent 必做 |
 | 表单合同 | `pnpm verify:forms` | 相关包测 | — |

@@ -118,11 +118,9 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 [class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
-  /* 宽度上限与居中一律交还原生 token：这里曾写死 max-width:100% / margin-inline:0，
-     把原生 .card { max-width: var(--dsh-composer-card-max-width) } 整条压掉，
-     输入框于是随窗口无限变宽（实测会话列 1446px 时卡片 1406px，几乎占满整列）。
-     还原本地 token 后同条件封顶 952px 并居中，与官方 DSH 观感一致。 */
-  max-width:var(--dsh-composer-card-max-width, 952px)!important;
+  /* 宽度铁律：工作区选择行与输入框同宽 680px（0b917e92e #2830），
+     顶部未吸底态与滚动吸底态严格一致。原 952px 原生 token 封顶已废。 */
+  max-width:min(680px, calc(100% - 24px))!important;
   margin-inline:auto!important;
 }
 html[data-omnimux-split-compact] [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
@@ -3431,7 +3429,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 
 /* 复刻接管：不复制任何控件，只把原生输入框搬到会话视口底部。
    附件、专家、模型、发送仍全部来自官方 Host，行为与 Hero 完全一致。
-   方案 A：最大宽度严格对齐顶部原生上限 var(--dsh-composer-card-max-width, 952px)。 */
+   宽度铁律：吸底输入框与顶部同宽 680px（0b917e92e #2830）。 */
 [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card] {
   position:fixed!important;
   left:var(--omnimux-dock-left, 0px)!important;
@@ -3584,8 +3582,8 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   border-radius:4px;
 }
 
-/* Tab 栏下方内容容器视口规范：中间保持合理自适应高度，少则无法滚动避免被遮挡，多则正常平滑滚动 */
-.omnimux-explore-grid-view-wrap,
+/* Tab 栏下方内容容器视口规范：shelves 保持最小高度撑开；grid-view-wrap 严禁硬编码 min-height，
+   采用视口上限 + 内部滚动——卡片少时高度由内容撑开、无法过度滚动进入 Tab 栏背后，卡片多时内部自如滚动 */
 .omnimux-explore-shelves-view {
   display: flex;
   flex-direction: column;
@@ -3594,10 +3592,20 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
   min-height: calc(100vh - 152px);
   padding-bottom: 0;
 }
+.omnimux-explore-grid-view-wrap {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
 
-[data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-grid-view-wrap,
 [data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-shelves-view {
   min-height: calc(100vh - 120px - (var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px));
+}
+[data-omnimux-starter-host][data-omnimux-dock-open] .omnimux-explore-grid-view-wrap {
+  max-height: calc(100vh - 120px - (var(--omnimux-dock-bottom, 20px) + var(--omnimux-dock-card-height, 168px) + 56px));
 }
 .omnimux-explore-shelves-view {
   gap: 36px;

@@ -17,16 +17,17 @@
  */
 
 import { basename, extname } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import { AttachmentError, AttachmentId } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { MessageId } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { GenericCallView, ToolExecution } from '@deepseek-ai/dsh-tools'
+import type { GenericCallView, ToolExecution, ToolRunContext } from '@deepseek-ai/dsh-tools'
 import type { FsTarget } from '@deepseek-ai/dsh-fs'
 import {
-  DISPLAY_TOOL, classifyPath, formatBytes, modelImageMediaTypeForPath,
+  DISPLAY_TOOL, classifyPath, formatDisplayOutput, modelImageMediaTypeForPath,
   type DisplayValue, type ModelImage, type ModelImageMediaType,
 } from './contract.ts'
 import { assetUrlFor } from './asset-token.ts'
@@ -104,41 +105,6 @@ export function attachmentRefOf(image: ModelImage): ImageAttachmentRef {
     height: image.height,
     ...image.name === undefined ? {} : { name: image.name },
   }
-}
-
-/**
- * Format the model-facing envelope. Pure, and — for every medium except an
- * in-context raster — the only thing the model receives, so it states plainly
- * what is on the user's screen and that the model itself cannot see it.
- * @param value - the canonical outcome.
- * @returns the envelope body.
- */
-export function formatDisplayOutput(value: DisplayValue): string {
-  const size = formatBytes(value.bytes)
-  const dimensions = value.image === undefined ? '' : `, ${value.image.width}x${value.image.height} px`
-  const facts = [value.mediaType, size].filter(part => part.length > 0).join(', ')
-  const note = value.inContext
-    ? 'The image is attached below and is also displayed in the web UI.'
-    : 'It is displayed in the web UI for the user. You cannot see its content — do not describe or summarize it unless the user tells you what it shows.'
-  // The three machine fields exist for one specific case: a NESTED dispatch.
-  // The registry projects `presentationMeta` only for top-level calls
-  // (`exec.parent === undefined`), so a `display_file` called from inside
-  // `run_code` reaches the card with no metadata at all and would render as a
-  // bare header. Content blocks are persisted for nested calls too, so the
-  // envelope carries what the card needs to rebuild itself — this is the card
-  // parsing its own structured envelope, not prose.
-  const machine = [
-    `<media>${value.mediaType}</media>`,
-    `<bytes>${value.bytes}</bytes>`,
-    ...value.assetUrl === undefined ? [] : [`<asset>${value.assetUrl}</asset>`],
-  ].join('\n')
-  return `<path>${value.path}</path>
-<type>${value.kind}</type>
-${machine}
-<content>
-${facts}${dimensions}
-${note}
-</content>`
 }
 
 /**
@@ -304,12 +270,27 @@ export function applyDisplayTool(ctx: Context, options: DisplayToolOptions): () 
         ...conversionError === undefined ? {} : { unavailable: conversionError },
       }
       // A nested (run_code) dispatch produces no model message of its own, so an
-      // image that belongs in context has to be deferred explicitly.
+      // image that belongs in context has to be deferred explicitly. The message
+      // type is derived from `deferContext` itself, never from this package's
+      // own `dsh-llm` copy: the host links a `dsh-session` built against a newer
+      // `dsh-llm` (`CallId` renamed to `ToolCallId`), so `createUserMessage`
+      // typed against the bundled copy no longer satisfies the parameter. The
+      // blocks this tool emits are text and image only, and both `dsh-llm`
+      // copies resolve `ImageAttachmentRef` and the `MessageId` brand from the
+      // same `dsh-attachment`/`dsh-brand` instances, so the literal below is the
+      // honest construction of the very shape `deferContext` declares.
       if (exec.parent !== undefined && value.inContext) {
-        exec.deferContext(createUserMessage({
-          content: displayContent(value),
+        type DeferredContextMessage = Parameters<ToolRunContext['deferContext']>[0]
+        const content: DeferredContextMessage['content'] = [
+          { type: 'text', text: formatDisplayOutput(value) },
+          ...value.image === undefined ? [] : [{ type: 'image' as const, attachment: attachmentRefOf(value.image) }],
+        ]
+        exec.deferContext({
+          id: MessageId(randomUUID()),
+          role: 'user',
+          content,
           source: { kind: 'plugin', plugin: PLUGIN },
-        }))
+        })
       }
       return value
     },

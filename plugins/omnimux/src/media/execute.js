@@ -537,10 +537,14 @@ export async function executeOmnimuxMedia(capability, input) {
       }
     }
 
-    return {
-      ...res,
-      taskRef: taskRecord?.taskRef || (taskRef.startsWith('mtask_') ? taskRef : undefined),
-    }
+    // taskRef must never be present-but-undefined: host tool results go through a lossless-JSON
+    // check that rejects `key: undefined`, so resume paths without a ledger record must omit it
+    // (and must also clear an undefined taskRef leaking through ...res).
+    const resolvedTaskRef = taskRecord?.taskRef || (taskRef.startsWith('mtask_') ? taskRef : undefined)
+    const result = { ...res }
+    if (resolvedTaskRef) result.taskRef = resolvedTaskRef
+    else delete result.taskRef
+    return result
   }
 
   // 基于 requestKey 的幂等查重短路与原子排他占位：若账本中已存在相同调用意图，直接复用任务句柄，杜绝二次提交与扣费

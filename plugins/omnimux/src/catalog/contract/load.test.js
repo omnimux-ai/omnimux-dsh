@@ -33,7 +33,8 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   // 2026-09-14 #1789: seedasr-auc is registered as its own model → 39.
   // 2026-09-15 #1861: gpt-image-2.5-flare and sunburst registered → 41.
   // 2026-09-18 #2256: index-tts (voice clone) registered → 42.
-  assert.equal(index.all().length, 42, `expected 42 models, got ${index.all().length}`);
+  // 2026-09-29 #2804: gemini-3.8-flash-tts registered → 43.
+  assert.equal(index.all().length, 43, `expected 43 models, got ${index.all().length}`);
   assert.ok(index.get('whisper-1'));
   assert.ok(index.get('nano-banana-2'));
   assert.ok(index.get('mj-v7'));
@@ -41,7 +42,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 25);
+  assert.equal(index.listedOperations.length, 26); // #2804 gemini-3.8-flash-tts 新增 text_to_speech → 26
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   // #2256: the voice-clone operation reaches listed through its own contract row.
   assert.ok(index.listedOperations.includes('index-tts#voice_clone'));

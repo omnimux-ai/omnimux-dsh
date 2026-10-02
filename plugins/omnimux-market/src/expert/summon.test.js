@@ -19,11 +19,11 @@ test('summon installs then returns a slash gesture', () => {
   const roots = env()
   const result = summonItem({
     catalog: loadCatalog(),
-    id: 'esc-demo-skill',
+    id: 'sk-omx-ugc-confessional',
     sessionState: 'locked',
     ...roots,
   })
-  assert.equal(result.gesture, '/esc-demo-note')
+  assert.equal(result.gesture, '/ugc-confessional')
   assert.equal(result.stagePreset, null)
 })
 
@@ -33,12 +33,12 @@ test('blank session stages expert-mode when the preset exists', () => {
   writeFileSync(join(roots.home, '.agent-presets', 'expert-mode', 'agent.cordis.yml'), '- []\n')
   const result = summonItem({
     catalog: loadCatalog(),
-    id: 'esc-demo-skill',
+    id: 'sk-omx-ugc-confessional',
     sessionState: 'blank',
     ...roots,
   })
   assert.equal(result.stagePreset, 'expert-mode')
-  assert.equal(result.gesture, '/esc-demo-note')
+  assert.equal(result.gesture, '/ugc-confessional')
 })
 
 test('summons the social-engagement-team agent pack from bundled catalog', () => {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { OmnimuxError } from './errors.js'
-import { parseMediaConfig, resolveMediaAuth, resolveMediaRoute, toMediaWireModelId } from './route.js'
+import { gatewayCandidates, parseMediaConfig, resolveMediaAuth, resolveMediaRoute, toMediaWireModelId } from './route.js'
 import { mapOmnimuxInput } from './vendors/omnimux.js'
 
 describe('media route', () => {
@@ -357,9 +357,12 @@ describe('resolveMediaAuth (dual-track auth)', () => {
 
   it('models without a pinned default line retain legacy bare candidates under empty intent', () => {
     const media = parseMediaConfig(undefined)
-    const baseRoute = resolveMediaRoute('image', { model: 'gpt-image-2.5' }, media)
+    // nano-banana-2 has channel groups but none flagged `default: true`, so an
+    // empty intent must keep the legacy bare candidate list instead of pinning.
+    const baseRoute = resolveMediaRoute('image', { model: 'nano-banana-2' }, media)
     assert.equal(baseRoute.group, undefined)
-    assert.deepEqual(baseRoute.candidates, ['gpt-image-2.5'])
+    assert.deepEqual(baseRoute.candidates, gatewayCandidates('nano-banana-2'))
+    assert.ok(baseRoute.candidates.every((candidate) => !candidate.includes('@')))
   })
 })
 

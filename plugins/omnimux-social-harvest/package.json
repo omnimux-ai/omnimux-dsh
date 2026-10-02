@@ -35,7 +35,7 @@
     }
   },
   "dependencies": {
-    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit"
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit"
   },
   "peerDependencies": {
     "react": "^18.2.0",

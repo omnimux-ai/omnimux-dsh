@@ -36,16 +36,18 @@ export default ${JSON.stringify(css)};
   },
 };
 
-let cur = root;
+// Resolve the in-repo workspace kit (packages/dsh-ui-kit) for bundling.
 let kitDir = null;
-while (cur && cur !== dirname(cur)) {
-  const candidate = join(cur, 'personal', 'dsh-ui-kit');
+for (const candidate of [
+  join(root, '../../packages/dsh-ui-kit/lib/index.js'),
+  join(root, 'node_modules/dsh-ui-kit/lib/index.js'),
+]) {
   if (existsSync(candidate)) {
     kitDir = candidate;
     break;
   }
-  cur = dirname(cur);
 }
+if (!kitDir) throw new Error('dsh-ui-kit not found; expected packages/dsh-ui-kit or node_modules/dsh-ui-kit')
 
 const result = await esbuild.build({
   absWorkingDir: root,

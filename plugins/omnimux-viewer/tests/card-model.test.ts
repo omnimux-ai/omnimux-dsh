@@ -10,7 +10,7 @@ import { equal, ok } from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
 import { argumentPathOf, cardModel, contentImageOf, envelopeValueOf } from '../src/client/card-model.ts'
-import { formatDisplayOutput } from '../src/display-file.ts'
+import { formatDisplayOutput } from '../src/contract.ts'
 import { ASSET_ROUTE, DISPLAY_TOOL, READ_IMAGE_TOOL } from '../src/contract.ts'
 
 const IMAGE = { attachmentId: 'att-1', mediaType: 'image/png', bytes: 100, width: 20, height: 10 }

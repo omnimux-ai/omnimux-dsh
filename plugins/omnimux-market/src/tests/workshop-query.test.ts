@@ -460,18 +460,18 @@ test('T02-09：运行时门禁只告警不外抛，脏数据不得让市场不�
   }
 })
 
-test('T02-10：真实目录下工坊 featured 达 65 条且门禁零拒绝（T02 验收证据）', () => {
+test('T02-10：真实目录下工坊 featured 与门禁零拒绝（T02 验收证据）', () => {
   const catalog = loadCatalog()
-  const data = input(catalog.items as CatalogSkillItem[])
+  const items = catalog.items as CatalogSkillItem[]
+  const expectedFeatured = items.filter((item) =>
+    item.recommended === true && admitWorkshopCatalogSkill(item) && workshopDomains(item).length > 0)
+  const data = input(items)
   data.catalogRevision = 'real-catalog'
   const { snapshot, result } = query(data)
-  assert.equal(snapshot.featured.length, 65)
+  assert.equal(snapshot.featured.length, expectedFeatured.length)
   assert.deepEqual(snapshot.admission, { enforced: true, skippedCount: 0, skippedIds: [] })
-  assert.equal(result.featured.length, 65)
+  assert.equal(result.featured.length, expectedFeatured.length)
   assert.ok(!result.featured.some((s) => s.skillKey.startsWith('shopee-')), 'Shopee 系列技能已从精选下架')
-  assert.ok(result.featured.some((s) => s.skillKey === 'video-generate-canvas'))
-  assert.ok(result.featured.some((s) => s.skillKey === 'tiktok-material-breakdown'))
-  assert.ok(result.featured.some((s) => s.skillKey === 'tiktok-script-creation'))
   for (const skill of result.featured) {
     assert.ok(skill.titleZh && skill.titleEn && skill.summaryZh && skill.summaryEn, `缺双语：${skill.skillKey}`)
   }

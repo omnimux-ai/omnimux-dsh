@@ -18,14 +18,20 @@ export function collectMaterialSlotInputs(data: Record<string, unknown>, ctx: Ex
   let operationId = typeof params.operation === 'string' ? params.operation : undefined;
   let layout = deriveSlotLayout(catalog, model?.id, operationId);
   const currentVersion = data.inputBindingVersion === 1;
+  const boundOccupants = Object.entries((data.slotBindings ?? {}) as SlotBindings).flatMap(([targetSlot, occupants]) => occupants
+    .filter(occupant => occupant.use !== 'inactive').map(occupant => ({
+      edgeId: occupant.edgeId, sourceNodeId: occupant.sourceNodeId, targetSlot, role: occupant.role,
+      output: ctx.upstreamBindings !== undefined
+        ? ctx.upstreamBindings.find(binding => binding.edgeId === occupant.edgeId && binding.sourceNodeId === occupant.sourceNodeId)?.output ?? {}
+        : ctx.upstreamOutputs.get(occupant.sourceNodeId) ?? {},
+    })))
   const ordered: NonNullable<ExecutionContext['upstreamBindings']> = currentVersion
-    ? Object.entries((data.slotBindings ?? {}) as SlotBindings).flatMap(([targetSlot, occupants]) => occupants
-      .filter(occupant => occupant.use !== 'inactive').map(occupant => ({
-        edgeId: occupant.edgeId, sourceNodeId: occupant.sourceNodeId, targetSlot, role: occupant.role,
-        output: ctx.upstreamBindings !== undefined
-          ? ctx.upstreamBindings.find(binding => binding.edgeId === occupant.edgeId && binding.sourceNodeId === occupant.sourceNodeId)?.output ?? {}
-          : ctx.upstreamOutputs.get(occupant.sourceNodeId) ?? {},
-      })))
+    ? [
+      ...boundOccupants,
+      // Free-text contract: unbound connected edges (not in slotBindings, not
+      // standby) stay in feed so assemble picks them up as freeTextAssets.
+      ...(ctx.upstreamBindings ?? []).filter((binding) => !boundOccupants.some((item) => item.edgeId === binding.edgeId && item.sourceNodeId === binding.sourceNodeId)),
+    ]
     : ctx.upstreamBindings ?? [...ctx.upstreamOutputs].map(([sourceNodeId, output]) => ({ sourceNodeId, output }));
   const texts: string[] = [];
   const seenText = new Set<string>();

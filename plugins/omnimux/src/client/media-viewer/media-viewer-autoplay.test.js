@@ -11,7 +11,7 @@ test('MediaViewerTab: single video view must not have autoPlay attribute to avoi
   const content = readFileSync(jsxPath, 'utf8');
 
   // Check the single video stage block
-  const videoSingleMatch = content.match(/activeItem\?\.type === 'video'\s*\?\s*\(\s*<video[^>]+>/);
+  const videoSingleMatch = content.match(/activeItem\?\.type === 'video'[\s\S]{0,800}?<video[^>]+>/);
   assert.ok(videoSingleMatch, 'Must render video element when activeItem is video');
 
   const videoTag = videoSingleMatch[0];

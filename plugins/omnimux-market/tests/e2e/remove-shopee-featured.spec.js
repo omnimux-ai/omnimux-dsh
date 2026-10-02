@@ -1,5 +1,6 @@
 /**
  * E2E：Shopee 系列技能从精选下架端到端验证（Issue 2334）
+ * 013fcb898 后 Shopee 系列整体下架；断言其不在目录、推荐配置与精选快照中出现。
  */
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
@@ -16,22 +17,19 @@ const SHOPEE_IDS = [
   'sk-shopee-keyword-analysis',
 ]
 
+const recommendedIds = catalog.items.filter((row) => row.kind === 'skill' && row.recommended === true).map((row) => row.id)
+
 test('E2E: 推荐配置列表中已彻底移除所有 Shopee 系列技能', () => {
   for (const id of SHOPEE_IDS) {
     assert.equal(recommendations.featuredSkills.includes(id), false, `featuredSkills 不得包含 ${id}`)
     assert.equal(recommendations.homeRecommendations.includes(id), false, `homeRecommendations 不得包含 ${id}`)
   }
-  assert.equal(recommendations.featuredSkills.length, 65)
-  assert.equal(recommendations.homeRecommendations.length, 15)
+  assert.deepEqual(recommendations.featuredSkills, recommendedIds)
 })
 
-test('E2E: 市场基础目录中 Shopee 系列技能不再标记为 recommended，且移除精选标签', () => {
+test('E2E: 市场基础目录中 Shopee 系列技能已全部下架', () => {
   for (const id of SHOPEE_IDS) {
-    const item = catalog.items.find((row) => row.id === id)
-    assert.ok(item, `目录中必须保留普通技能项 ${id}`)
-    assert.equal(item.recommended, false, `${id} 的 recommended 属性必须为 false`)
-    const tags = Array.isArray(item.tags) ? item.tags : []
-    assert.equal(tags.includes('精选'), false, `${id} 的 tags 中不得包含精选`)
+    assert.equal(catalog.items.some((row) => row.id === id), false, `目录中不得保留 ${id}`)
   }
 })
 
@@ -40,7 +38,7 @@ test('E2E: 会话精选技能快照中不再包含 Shopee 系列卡片', () => {
   for (const id of SHOPEE_IDS) {
     assert.equal(snapshotIds.includes(id), false, `精选快照中不得包含 ${id}`)
   }
-  assert.equal(snapshot.skills.length, 65)
+  assert.deepEqual([...snapshotIds].sort(), [...recommendedIds].sort())
 })
 
 test('E2E: 货架与发现页精选分节结果中彻底排除 Shopee 系列技能', () => {
@@ -49,12 +47,12 @@ test('E2E: 货架与发现页精选分节结果中彻底排除 Shopee 系列技�
   for (const id of SHOPEE_IDS) {
     assert.equal(homeFeaturedIds.includes(id), false, `首页精选中不得出现 ${id}`)
   }
-  assert.equal(home.featured.length, 15)
+  assert.equal(home.featured.length, recommendations.homeRecommendations.length)
 
   const featuredTab = SkillShelf.plazaDiscoverySections([], { category: 'featured' })
   const featuredTabIds = featuredTab.featured.map((s) => s.id)
   for (const id of SHOPEE_IDS) {
     assert.equal(featuredTabIds.includes(id), false, `精选分类下不得出现 ${id}`)
   }
-  assert.equal(featuredTab.featured.length, 65)
+  assert.equal(featuredTab.featured.length, recommendations.featuredSkills.length)
 })

@@ -100,7 +100,8 @@ export function SkillsPanel({
     if (isAllCategory) {
       return {
         hotPicks: allSkills.filter(s => s.isHot),
-        newArrivals: allSkills.filter(s => s.isNew),
+        // 同时命中热门与新品的技能只进热门精选分区，杜绝同卡片跨分区重复渲染
+        newArrivals: allSkills.filter(s => s.isNew && !s.isHot),
         exploreMore: allSkills.filter(s => !s.isHot && !s.isNew),
         filteredSkills: allSkills
       }

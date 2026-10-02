@@ -15,6 +15,9 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
 function inputFor(t, extra = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-group-header-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
+  // The submit path persists a task ledger under hubHomeDir(); keep it out of
+  // the developer machine's real $DSH_HOME.
+  process.env.DSH_HOME = dir
   return {
     prompt: 'a lamp',
     dest: join(dir, 'out.png'),
@@ -88,6 +91,22 @@ test('a routing group reaches the wire as a header while the body keeps the bare
 test('without a routing group no X-Omnimux-Group header is sent', async (t) => {
   let headerValue = 'unset'
   const input = inputFor(t, {
+    // gpt-image-2.5 的所有图像型号都已被官方默认线路锁定（channel-groups.js
+    // `default: true`），官方路由下空意图也会带分组头 —— 这里用 BYOK 自定义
+    // provider 走非官方路由，天然无分组，验证未路由请求绝不伪造 X-Omnimux-Group。
+    model: 'custom-image-model',
+    provider: 'custom',
+    media: {
+      defaultProvider: 'custom',
+      providers: {
+        custom: {
+          protocol: 'openai-media',
+          baseUrl: 'https://custom.example/v1',
+          apiKey: 'none',
+          models: { image: 'custom-image-model' },
+        },
+      },
+    },
     fetcher: async (_url, init) => {
       headerValue = new Headers(init.headers).get('X-Omnimux-Group')
       return json({ data: [{ b64_json: 'cG5n' }] })

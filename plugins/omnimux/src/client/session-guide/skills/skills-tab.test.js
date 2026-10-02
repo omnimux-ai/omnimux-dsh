@@ -107,7 +107,7 @@ test('featured-skills-data: 快照文件格式与约束', () => {
   assert.equal(snapshot.schema, 'omnimux.session-guide.featured-skills/v1')
   assert.ok(Array.isArray(snapshot.skills))
   assert.ok(Array.isArray(snapshot.categories))
-  assert.equal(snapshot.skills.length, 112, '精选技能必须有 112 条（全量营销技能库入库）')
+  assert.equal(snapshot.skills.length, 113, '精选技能必须有 113 条（全量营销技能库入库）')
   assert.equal(snapshot.categories.length, 7, '在册细分类必须为 7 个')
   for (const s of snapshot.skills) {
     assert.ok(s.id && s.title, '技能条目必须包含 id 与 title')
@@ -241,7 +241,7 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
 
     // 4. 验证技能卡片渲染与图 2 规范对齐
     const cards = host.querySelectorAll('.omnimux-skill-card')
-    assert.equal(cards.length, 112, '全部分类下展示 112 张精选卡片')
+    assert.equal(cards.length, snapshot.skills.length, '全部分类下展示与快照条目数一致的精选卡片（每技能恰好渲染一次）')
 
     // 验证前 3 张置顶热门精选与前 6 张置顶新品上市
     const expectedTop3Titles = [
@@ -267,7 +267,7 @@ test('TrendingReplicateSection: 头部渲染「创作灵感 / Skill」双 Tab �
     await click(chips[1]) // 第一个业务分类（UGC 和用户评价）
     await flush()
     const filteredCards = host.querySelectorAll('.omnimux-skill-card')
-    assert.ok(filteredCards.length > 0 && filteredCards.length < 112, '点击分类胶囊后数量减少')
+    assert.ok(filteredCards.length > 0 && filteredCards.length < snapshot.skills.length, '点击分类胶囊后数量减少')
 
     // 6. 点击卡片触发指令预填与激活态
     const useBtn = filteredCards[0].querySelector('.omnimux-skill-card-btn')

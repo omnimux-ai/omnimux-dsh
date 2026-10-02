@@ -26,9 +26,9 @@ test('catalog DTO and contract expose the same 509 rich options with one canonic
   const catalog = buildModelCatalog({ env: {} });
   assert.equal(catalog.defaults.audio, 'seed-audio-1.0');
   assert.equal(catalog.defaultsByOperation.text_to_speech, 'seed-audio-1.0');
-  assert.deepEqual(catalog.audio[0].parameters.voice, voice);
+  assert.deepEqual(catalog.audio.find((model) => model.id === 'seed-audio-1.0').parameters.voice, voice);
   assert.deepEqual(catalog.models.find((model) => model.id === 'seed-audio-1.0').parameters.voice, voice);
-  assert.notEqual(catalog.audio[0].parameters.voice.options, voice.options);
+  assert.notEqual(catalog.audio.find((model) => model.id === 'seed-audio-1.0').parameters.voice.options, voice.options);
 });
 
 test('options source resolution is pure and supports operation-level declarations', () => {

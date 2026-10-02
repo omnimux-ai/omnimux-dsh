@@ -75,7 +75,11 @@ test('video fallback uses the documented gateway alias without switching provide
     bodies.push(JSON.parse(init.body))
     return bodies.length === 1 ? json({ error: { message: channelMessage } }, 503) : json({ task_id: 'video-alias-task' })
   } })
-  assert.deepEqual(await executeOmnimuxMedia('video', input), { mode: 'submitted', taskId: 'video-alias-task', url: null })
+  const aliasResult = await executeOmnimuxMedia('video', input)
+  assert.equal(aliasResult.mode, 'submitted')
+  assert.equal(aliasResult.taskId, 'video-alias-task')
+  assert.equal(aliasResult.url, null)
+  assert.match(aliasResult.taskRef, /^mtask_/)
   assert.deepEqual(bodies.map((body) => body.model), ['seedance-2-5', 'seedance-2.5'])
   assert.deepEqual({ ...bodies[0], model: bodies[1].model }, bodies[1])
   assert.equal(input.model, 'seedance-2-5')
@@ -99,15 +103,17 @@ test('two channel failures exhaust the gateway alias list', async (t) => {
   assert.equal(existsSync(input.dest), false)
 })
 
-test('a model with a single gateway candidate is not retried', async (t) => {
+// #2682 (866905473) narrowed executeOmnimuxMedia to image/video/audio; STT has its own
+// path (stt.js). The surviving contract here is: doubao-asr-bigmodel exposes only itself
+// as a gateway candidate — no upstream-recognised alias exists.
+test('a model with a single gateway candidate exposes only itself', async (t) => {
   assert.deepEqual(gatewayCandidates('doubao-asr-bigmodel'), ['doubao-asr-bigmodel'])
   let calls = 0
   const input = inputFor(t, {
-    model: 'doubao-asr-bigmodel',
-    audio: `data:audio/mpeg;base64,${AUDIO_BYTES.toString('base64')}`,
+    model: 'gpt-image-2.5',
     runtime: { execute: async () => { calls++; throw channelError() } },
   })
-  await assert.rejects(() => executeOmnimuxMedia('stt', input), assertChannel)
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
   assert.equal(calls, 1)
 })
 
@@ -225,7 +231,11 @@ test('wait=false returns the task submitted by the single gateway candidate', as
     models.push(JSON.parse(init.body).model)
     return json({ task_id: 'single-candidate-task' })
   } })
-  assert.deepEqual(await executeOmnimuxMedia('image', input), { mode: 'submitted', taskId: 'single-candidate-task', url: null })
+  const singleResult = await executeOmnimuxMedia('image', input)
+  assert.equal(singleResult.mode, 'submitted')
+  assert.equal(singleResult.taskId, 'single-candidate-task')
+  assert.equal(singleResult.url, null)
+  assert.match(singleResult.taskRef, /^mtask_/)
   assert.deepEqual(models, [productId])
   assert.equal(existsSync(input.dest), false)
 })
@@ -303,10 +313,14 @@ test('BYOK media for an unselected kind throws, never falls back to official', a
   assert.equal(calls, 0, 'no request may leave for any channel')
 })
 
-// Local agent mode never covers media.
-test('agent mode rejects media without touching any channel', async (t) => {
+// #2817 (6127da0a): agent mode no longer blocks media outright — when the selected
+// model is an official media model (getModelChannelGroups non-empty), the official
+// channel is allowed through. This test now pins the remaining boundary: a non-official,
+// non-BYOK, non-listed media model in agent mode is still rejected before any request.
+test('agent mode rejects a non-official media model without touching any channel', async (t) => {
   let calls = 0
   const input = inputFor(t, {
+    model: 'not-a-listed-media-model',
     runtimeSettings: {
       runtimeMode: 'agent',
       runtimeAgentId: 'claude',

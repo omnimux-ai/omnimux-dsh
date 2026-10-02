@@ -1,0 +1,21 @@
+.copySuccessIcon {
+  color: var(--dsw-alias-state-success-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copyErrorIcon {
+  color: var(--dsw-alias-state-error-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copyButtonSuccess {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.copyButtonError {
+  color: var(--dsw-alias-state-error-primary);
+}

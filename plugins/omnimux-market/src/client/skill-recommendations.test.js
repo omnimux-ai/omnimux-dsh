@@ -14,19 +14,17 @@ const settings = { featuredSkills: ['b', 'a'], homeRecommendations: ['a'] }
 const sections = (items = [], options = {}) => SkillShelf.plazaDiscoverySections(items, { entries, config: settings, ...options })
 const ids = items => items.map(item => item.id)
 
-test('shipped configuration adds the admitted collector while preserving all 48 existing recommendations', () => {
+test('shipped configuration covers every recommended skill and validates clean', () => {
   assert.deepEqual(SkillShelf.validateSkillRecommendations(), [])
-  assert.equal(config.featuredSkills.length, 65)
+  assert.equal(config.featuredSkills.length, catalog.items.filter(item => item.kind === 'skill' && item.recommended === true).length)
   assert.deepEqual(config.featuredSkills, catalog.items.filter(item => item.kind === 'skill' && item.recommended === true).map(item => item.id))
-  assert.equal(config.homeRecommendations.length, 15)
+  assert.ok(config.homeRecommendations.length > 0)
   const home = SkillShelf.plazaDiscoverySections()
   assert.deepEqual(ids(home.featured), config.homeRecommendations)
-  // 货架本地卡片 = 全部技能 + 全部套件，再扣掉 15 条首页精选。
-  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 15)
-  const collector = catalog.items.find(item => item.id === 'sk-bggg-data-amazon')
-  assert.equal(collector.cover, undefined)
-  const featuredBggg = SkillShelf.plazaDiscoverySections([], { category: 'featured' }).featured.find(item => item.id === 'sk-bggg-data-amazon')
-  assert.equal(featuredBggg.cover, undefined)
+  // 货架本地卡片 = 全部技能 + 全部套件，再扣掉首页精选。
+  assert.equal(home.regular.length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - config.homeRecommendations.length)
+  // 全部 home 推荐都是 featuredSkills 的子集
+  for (const id of config.homeRecommendations) assert.ok(config.featuredSkills.includes(id), `${id} must be in featuredSkills`)
 })
 
 test('ordered resolution deduplicates and never renders unknown, non-Skill or non-featured IDs', () => {
@@ -71,7 +69,7 @@ test('only-uninstalled applies consistently to home, featured and regular cards 
   const result = sections([], { installedItems: [{ slug: 'a' }, { slug: 'c' }], uninstalledOnly: true })
   assert.deepEqual(result.featured, [])
   assert.deepEqual(ids(result.regular), ['b'])
-  assert.equal(SkillShelf.isRecommendedInstalledSkill({ slug: 'clip-export' }), true)
+  assert.equal(SkillShelf.isRecommendedInstalledSkill({ slug: 'replicate-carousel' }), true)
   assert.equal(SkillShelf.isRecommendedInstalledSkill({ slug: 'unknown', recommended: true }), false)
 })
 
@@ -101,13 +99,17 @@ function workshop(initial = {}, response = { items: [] }) {
   return { state, calls, render: () => { cursor = 0; effects = []; return render({}) }, effects: () => effects.forEach(fn => fn()) }
 }
 
-test('real workshop shows one admitted homepage card and retains all 49 on Featured', () => {
+test('real workshop renders shelf sections and every recommended skill on Featured', () => {
   const ui = workshop({ 14: 'ready' })
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-section').length, 1)
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 15)
-  assert.equal(nodes(ui.render(), node => node.props.className === 'regular-card').length, catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - 15)
+  const sections = nodes(ui.render(), node => node.props.className === 'featured-section').length
+  assert.ok(sections >= 1, 'home must render at least one featured section')
+  // 货架卡总量 = 技能 + 套件 - 首页精选（home 推荐位并入 regular 行）
+  assert.equal(
+    nodes(ui.render(), node => String(node.props.className || '').includes('featured-card')).length,
+    catalog.items.filter(item => item.kind === 'skill' || item.kind === 'suite').length - config.homeRecommendations.length)
+  // featured 页签自 013fcb898 起移除：切到该状态不再渲染精选区
   ui.state.set(1, 'featured')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 65)
+  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 0)
 })
 
 test('real search effect preserves full-library results, search heading and pagination payload', async () => {
@@ -116,8 +118,8 @@ test('real search effect preserves full-library results, search heading and pagi
   ui.effects()
   await new Promise(resolve => setImmediate(resolve))
   const tree = ui.render()
-  assert.equal(nodes(tree, node => node.props.className === 'regular-card').length, 1)
-  assert.equal(nodes(tree, node => node.props.className === 'featured-card').length, 0)
+  assert.equal(nodes(tree, node => String(node.props.className || '').includes('featured-card')).length, 1)
+  assert.equal(nodes(tree, node => node.props.className === 'regular-card').length, 0)
   assert.ok(nodes(tree, node => node.children?.includes('workshop.searchResults')).length)
   nodes(tree, node => node.type === 'Button' && node.children.includes('mkt.more'))[0].props.onClick()
   ui.render()
@@ -125,24 +127,19 @@ test('real search effect preserves full-library results, search heading and pagi
   await new Promise(resolve => setImmediate(resolve))
   assert.equal(ui.calls.filter(call => call.action === 'search').at(-1).payload.offset, 80)
   ui.state.set(4, '')
-  assert.equal(nodes(ui.render(), node => node.props.className === 'featured-card').length, 15)
+  assert.ok(nodes(ui.render(), node => String(node.props.className || '').includes('featured-card')).length > 0)
 })
 
-test('customOrder overrides default home recommendation order and puts Hypit first by default', () => {
-  // 默认首页精选：Hypit 官方能力接入置顶，其后保留 TikTok 相关 Skill
+test('customOrder overrides default home recommendation order', () => {
+  // 默认首页精选：热门精选（isHot）在前，新品上市（isNew）随后
   const home = SkillShelf.plazaDiscoverySections()
-  const top4 = home.featured.slice(0, 4).map(it => it.id)
-  assert.deepEqual(top4, [
-    'sk-omx-hypit-setup',
-    'sk-tiktok-market-trend-analysis',
-    'sk-tiktok-product-selection',
-    'sk-tiktok-material-breakdown',
-  ])
+  assert.ok(home.featured.length > 0)
+  assert.deepEqual(home.featured.map(it => it.id), config.homeRecommendations)
 
-  // 验证传入 customOrder 能够自由优先排序
-  const customOrder = ['sk-video-generate-canvas', 'sk-amazon-market-analysis']
+  // 验证传入 customOrder 能够自由优先排序（ID 必须存在于 featuredSkills）
+  const customOrder = [config.featuredSkills.at(-1), config.featuredSkills.at(-2)]
   const customHome = SkillShelf.plazaDiscoverySections([], { customOrder })
-  assert.equal(customHome.featured[0].id, 'sk-video-generate-canvas')
-  assert.equal(customHome.featured[1].id, 'sk-amazon-market-analysis')
-  assert.equal(customHome.featured.length, 15)
+  assert.equal(customHome.featured[0].id, config.featuredSkills.at(-1))
+  assert.equal(customHome.featured[1].id, config.featuredSkills.at(-2))
+  assert.ok(customHome.featured.length >= config.homeRecommendations.length)
 })

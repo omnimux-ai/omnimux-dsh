@@ -54,7 +54,7 @@
     "@lezer/highlight": "^1.2.3",
     "@types/marked": "^6.0.0",
     "@xyflow/react": "12.11.3",
-    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit",
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
     "lucide-react": "1.33.0",
     "marked": "^18.0.11",
     "react": "19.2.8",

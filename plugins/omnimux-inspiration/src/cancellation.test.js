@@ -44,6 +44,7 @@ function scanAllFiles(dir) {
 
 describe('#2779 Inspiration collaborative cancellation', () => {
   let savedDshHome
+  let savedFallbackSwitch
   let testRoot
   let registeredTools
   let mockCtx
@@ -51,11 +52,18 @@ describe('#2779 Inspiration collaborative cancellation', () => {
 
   before(() => {
     savedDshHome = process.env.DSH_HOME
+    // `apply` hardcodes the real scraper fallback (a product feature with its
+    // own kill-switch), so a test that never wires one would still reach
+    // publish.twitter.com. The suite runs under deny-network: switch it off.
+    savedFallbackSwitch = process.env.OMNIMUX_INSPIRATION_SOCIAL_FALLBACK
+    process.env.OMNIMUX_INSPIRATION_SOCIAL_FALLBACK = 'off'
   })
 
   after(() => {
     if (savedDshHome === undefined) delete process.env.DSH_HOME
     else process.env.DSH_HOME = savedDshHome
+    if (savedFallbackSwitch === undefined) delete process.env.OMNIMUX_INSPIRATION_SOCIAL_FALLBACK
+    else process.env.OMNIMUX_INSPIRATION_SOCIAL_FALLBACK = savedFallbackSwitch
   })
 
   beforeEach(() => {
@@ -82,8 +90,14 @@ describe('#2779 Inspiration collaborative cancellation', () => {
           return undefined
         },
       },
-      resolver: offlineResolver,
-      fetcher: opts.fetcher,
+      // `ctx.get` is the hub seam `apply` reads for `fetcher`/`resolver` since
+      // the direct `ctx.fetcher` properties were retired; without it the
+      // dispatcher falls back to the real `fetch` and tests hit the network.
+      get(capability) {
+        if (capability === 'fetcher') return opts.fetcher
+        if (capability === 'resolver') return offlineResolver
+        return undefined
+      },
       fallback: async (params) => {
         fallbackCalls.push(params)
         return null

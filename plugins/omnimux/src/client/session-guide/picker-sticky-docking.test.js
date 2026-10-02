@@ -198,13 +198,17 @@ test('抗竞态与意图防御测试：无真实实体载荷的外部 dock-inten
   }
 })
 
-test('样式契约验证：.omnimux-explore-grid-view-wrap 与 .omnimux-explore-shelves-view 统一设置视口最小高度与留白', () => {
+test('样式契约验证：.omnimux-explore-grid-view-wrap 视口上限内滚，.omnimux-explore-shelves-view 视口撑开', () => {
   const stylesSource = readFileSync(new URL('./styles.js', import.meta.url), 'utf8')
-  
-  // 必须为包裹层统一提供视口撑开与底部安全避让间距
-  assert.match(stylesSource, /\.omnimux-explore-grid-view-wrap,\s*\.omnimux-explore-shelves-view\s*\{[^}]*min-height:\s*calc\(100vh\s*-\s*96px\)/i, '必须配置 min-height: calc(100vh - 96px)')
-  assert.match(stylesSource, /\.omnimux-explore-grid-view-wrap,\s*\.omnimux-explore-shelves-view\s*\{[^}]*padding-bottom:\s*120px/i, '必须为吸底输入框预留 padding-bottom: 120px 避让空间')
-  assert.match(stylesSource, /\.omnimux-explore-grid-view-wrap,\s*\.omnimux-explore-shelves-view\s*\{[^}]*box-sizing:\s*border-box/i, '必须配置 box-sizing: border-box')
+
+  // 卡片网格容器：严禁硬 min-height，采用 max-height + 内部滚动（卡片少则内容撑开不进 Tab 背后，多则内部滚动）
+  assert.match(stylesSource, /\.omnimux-explore-grid-view-wrap\s*\{[^}]*max-height:\s*calc\(100vh\s*-\s*120px\)[^}]*overflow-y:\s*auto/i, '网格容器必须配置 max-height: calc(100vh - 120px) 与 overflow-y: auto')
+  assert.doesNotMatch(stylesSource, /\.omnimux-explore-grid-view-wrap\s*\{[^}]*min-height/i, '网格容器严禁硬编码 min-height')
+  assert.match(stylesSource, /\.omnimux-explore-grid-view-wrap\s*\{[^}]*box-sizing:\s*border-box/i, '网格容器必须配置 box-sizing: border-box')
+
+  // 货架视图保持视口撑开与底部安全避让
+  assert.match(stylesSource, /\.omnimux-explore-shelves-view\s*\{[^}]*min-height:\s*calc\(100vh/i, '货架视图必须配置视口 min-height')
+  assert.match(stylesSource, /\.omnimux-explore-shelves-view\s*\{[^}]*box-sizing:\s*border-box/i, '货架视图必须配置 box-sizing: border-box')
 
   // 空态与状态指示器 .omnimux-library-stage-status
   assert.match(stylesSource, /\.omnimux-library-stage-status\s*\{[^}]*margin:\s*40px\s+auto\s+0/i, '状态提示必须水平居中')
@@ -225,74 +229,46 @@ test('探索专区解耦契约验证：ExploreTemplatesSection 彻底消除全�
   assert.doesNotMatch(exploreSource, /omnimux:composer:dock-intent/i, '严禁在跳转 Tab 时盲目派发 dock-intent 强制吸底')
 })
 
-test('视口几何仿真断言：在 0 张、5 张与多张卡片下，Tab 栏 100% 滚动贴顶无截断', () => {
-  // 仿真全屏会话滚动容器几何模型
+test('视口几何仿真断言：网格容器上限 100vh-120px 内部滚动，少卡不超额撑高、多卡内部可滚', () => {
+  // 仿真新会话探索区几何模型（max-height: calc(100vh - 120px); overflow-y: auto）
   const viewportHeight = 800 // clientHeight = 800px (100vh)
-  const headerOffset = 320 // 欢迎区及上方高度 = 320px
-  const tabBarHeight = 96 // filterBar 自身高度 = 96px
+  const wrapMaxHeight = viewportHeight - 120 // 680px
 
-  function simulateScrollToTop(cardCount, cardHeightPerItem = 220) {
-    // 根据 CSS 规则：min-height = calc(100vh - 96px) = 800 - 96 = 704px; padding-bottom = 120px
-    const minContentHeight = viewportHeight - tabBarHeight // 704px
-    const paddingBottom = 120
-
+  function simulateGridWrap(cardCount, cardHeightPerItem = 220) {
     // 真实内容自然高度
     let naturalContentHeight = 0
     if (cardCount === 0) {
       naturalContentHeight = 120 // 空态 min-height: 120px
     } else if (cardCount <= 5) {
-      naturalContentHeight = cardHeightPerItem // 首行 5 张卡片高 220px
+      naturalContentHeight = cardHeightPerItem // 首行卡片
     } else {
       const rows = Math.ceil(cardCount / 5)
       naturalContentHeight = rows * cardHeightPerItem // 多行展开
     }
 
-    // CSS min-height 生效机制：总容器高度 = Math.max(naturalHeight, minContentHeight) + paddingBottom
-    const containerHeight = Math.max(naturalContentHeight, minContentHeight) + paddingBottom
-
-    // 整个滚动容器的 scrollHeight
-    const scrollHeight = headerOffset + tabBarHeight + containerHeight
-    const clientHeight = viewportHeight
-
-    // 目标跳转位置：将 filterBar 顶贴滚动容器顶边缘
-    const targetOffset = headerOffset
-
-    // 浏览器物理可滚动的最大高度
-    const maxScrollTop = Math.max(0, scrollHeight - clientHeight)
-
-    // 0ms 跳转计算出来的最终 scrollTop
-    const actualScrollTop = Math.min(targetOffset, maxScrollTop)
-
-    // filterBar 相对视口顶部的最终可见位置：elRect.top - scrollerRect.top
-    const finalTopOffset = targetOffset - actualScrollTop
+    // CSS max-height 生效机制：容器高度 = min(natural, maxHeight)，超出部分转入内部滚动
+    const containerHeight = Math.min(naturalContentHeight, wrapMaxHeight)
+    const innerScrollable = Math.max(0, naturalContentHeight - wrapMaxHeight)
 
     return {
-      scrollHeight,
-      clientHeight,
-      maxScrollTop,
-      targetOffset,
-      actualScrollTop,
-      finalTopOffset,
+      naturalContentHeight,
       containerHeight,
+      innerScrollable,
     }
   }
 
-  // 1. 0 张卡片场景（空数据 / 加载态）
-  const zeroCards = simulateScrollToTop(0)
-  assert.ok(zeroCards.maxScrollTop >= zeroCards.targetOffset, '0 张卡片下必须撑开足够的 scrollHeight 供完全滚动')
-  assert.equal(zeroCards.actualScrollTop, zeroCards.targetOffset, '0 张卡片下实际滚动位置必须精确到达 targetOffset')
-  assert.equal(zeroCards.finalTopOffset, 0, '0 张卡片下 Tab 栏必须绝对贴顶 (top: 0)')
+  // 1. 0 张卡片场景（空数据 / 加载态）：高度由空态内容撑开，不产生冗余滚动空间
+  const zeroCards = simulateGridWrap(0)
+  assert.equal(zeroCards.containerHeight, 120, '0 张卡片下容器高度必须等于空态 120px')
+  assert.equal(zeroCards.innerScrollable, 0, '0 张卡片下内部不可滚动')
 
-  // 2. 5 张卡片场景（少量数据，核心痛点场景）
-  const fiveCards = simulateScrollToTop(5)
-  assert.ok(fiveCards.maxScrollTop >= fiveCards.targetOffset, '5 张卡片下必须撑开足够的 scrollHeight 供完全滚动')
-  assert.equal(fiveCards.actualScrollTop, fiveCards.targetOffset, '5 张卡片下实际滚动位置必须精确到达 targetOffset')
-  assert.equal(fiveCards.finalTopOffset, 0, '5 张卡片下 Tab 栏必须绝对贴顶 (top: 0)')
-  assert.ok(fiveCards.containerHeight >= 824, '卡片下方保证至少具备足够现代 SaaS 留白空间')
+  // 2. 5 张卡片场景（少量数据，核心痛点场景）：内容自然撑开，绝不制造把 Tab 栏顶到背后的超额滚动
+  const fiveCards = simulateGridWrap(5)
+  assert.equal(fiveCards.containerHeight, 220, '5 张单行卡片下容器高度必须等于内容 220px')
+  assert.equal(fiveCards.innerScrollable, 0, '5 张单行卡片下内部不可滚动，页面无法过度滚动')
 
-  // 3. 50 张卡片场景（海量瀑布流）
-  const fiftyCards = simulateScrollToTop(50)
-  assert.ok(fiftyCards.maxScrollTop >= fiftyCards.targetOffset, '50 张卡片下自然满足置顶滚动条件')
-  assert.equal(fiftyCards.actualScrollTop, fiftyCards.targetOffset, '50 张卡片下精确贴顶')
-  assert.equal(fiftyCards.finalTopOffset, 0, '50 张卡片下 Tab 栏贴顶 (top: 0)')
+  // 3. 50 张卡片场景（海量瀑布流）：封顶视口上限并内部滚动
+  const fiftyCards = simulateGridWrap(50)
+  assert.equal(fiftyCards.containerHeight, wrapMaxHeight, '50 张卡片下容器必须封顶 100vh - 120px')
+  assert.ok(fiftyCards.innerScrollable > 0, '50 张卡片下容器内部必须具备滚动余量')
 })

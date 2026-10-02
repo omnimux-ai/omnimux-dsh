@@ -70,7 +70,7 @@ describe('official mount', () => {
     assert.ok(capture.names.includes('omnimux_analytics_posts'))
     assert.ok(capture.names.includes('omnimux_analytics_sync_external'))
     assert.ok(capture.names.includes('omnimux_analytics_inbox'))
-    assert.equal(capture.names.length, 23)
+    assert.equal(capture.names.length, 41) // #2391 (+14)、#2396 (+4) 之后官方工具共 41 个
   })
 
   it('skips official tools when official.mount is false (master switch)', () => {
@@ -94,7 +94,7 @@ describe('official mount', () => {
     assert.equal(capture.names.includes('omnimux_social_data'), false)
     assert.equal(capture.names.includes('omnimux_analytics_inbox'), false)
     assert.ok(capture.names.includes('omnimux_accounts_list'))
-    assert.equal(capture.names.length, 21)
+    assert.equal(capture.names.length, 39) // 41 - 2（两个被 gate.tools.<name> 关闭的工具）
   })
 
   it('execution-time enforcement throws capability-disabled if gate is disabled', async () => {

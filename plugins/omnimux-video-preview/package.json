@@ -34,7 +34,7 @@
     }
   },
   "dependencies": {
-    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit"
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-client-ui-primitives": ">=0.1.0-rc.6",

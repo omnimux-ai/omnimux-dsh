@@ -53,7 +53,7 @@ Select the minimal sufficient checks for the changed surfaces using [plugin QA Â
 | Product paths / model routing / local state | `pnpm verify:product-baseline` |
 | Plugin behavior | `pnpm --filter <package> test` plus relevant boundary/registry checks from [package.json](package.json) |
 | Agent tools / schema | `pnpm test:agent-tools` |
-| DSH contracts / inject | `pnpm verify:dsh-contracts` + `pnpm test:dsh-contracts` |
+| DSH contracts / inject | `pnpm verify:plugin-load` + `pnpm test:plugin-load` |
 | Model contracts | `pnpm verify:model-contracts`; refresh `pnpm hub:interfaces` |
 | Client / Stage / sidebar | Read [design.md](design.md), [UI guidelines](docs/contracts/ui-design-guidelines.md), and [copy standards](docs/contracts/ui-copywriting-and-naming-standards.md) first; `pnpm verify:stages` + `node --test scripts/verify-anti-slop.test.mjs`, then worktree browser evidence |
 

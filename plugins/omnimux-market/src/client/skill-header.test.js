@@ -48,11 +48,11 @@ test('install action opens existing modal and category row precedes content', ()
   walk(tree, (node) => node.props.className === 'btn-install').props.onClick()
   assert.ok(stateWrites.some(([, value]) => value === true))
   const categories = walk(tree, (node) => node.props.className === 'category-bar')
-  assert.equal(categories.children.length, 13)
-  // 「套件」紧跟「全部」，先于「精选」与各技能领域。
+  assert.equal(categories.children.length, 8)
+  // 013fcb898 后分类栏收敛：「全部」+ 7 个营销分类，顺序由 buildWorkshopCategories 固定。
   assert.deepEqual(
     categories.children.slice(0, 5).map((node) => node.props.key),
-    ['', '套件', 'featured', 'AIGC 创作', '短剧漫剧'],
+    ['', 'ugc-testimonial', 'storytelling-script', 'image-static', 'video-ads'],
   )
   // 骨架契约 §二·补：标题/动作行随页面滚走，一级/二级 Tab 行吸附在顶部。
   assert.equal(tree.children[0].props.className, 'workshop-intro')

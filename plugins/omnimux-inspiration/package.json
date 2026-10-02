@@ -34,7 +34,7 @@
     }
   },
   "dependencies": {
-    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit",
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
     "lucide-react": "^1.33.0"
   },
   "peerDependencies": {

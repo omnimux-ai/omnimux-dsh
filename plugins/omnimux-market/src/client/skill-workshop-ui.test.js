@@ -219,7 +219,12 @@ describe('Skill Workshop UI & Session Contract (Issue #773 / #776)', () => {
         clearTimeout,
         Date,
         Event: class Event { constructor(type, opts) { this.type = type; Object.assign(this, opts); } },
-        window: { __omnimuxWorkbench: fakeWorkbench },
+        window: {
+          __omnimuxWorkbench: fakeWorkbench,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => true,
+        },
         document: {
           querySelector: (sel) => (sel.includes('textarea') ? fakeComposer : null),
           querySelectorAll: (sel) => (sel.includes('textarea') ? [fakeComposer] : []),
