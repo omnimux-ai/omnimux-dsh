@@ -1205,8 +1205,8 @@ describe('MediaViewerComposer Component Contract', () => {
       '必须提取 scopedVideoBuckets 过滤当前作用域下的 buckets'
     );
     assert.ok(
-      composerSrc.includes("const adaptiveOp = deriveAdaptiveOperation(model, 'video', scopedVideoBuckets);"),
-      '必须将 scopedVideoBuckets 传入 deriveAdaptiveOperation 进行精准推导'
+      composerSrc.includes("const adaptiveOp = deriveAdaptiveOperation(model, 'video', scopedVideoBuckets, videoModeId);"),
+      '必须将 scopedVideoBuckets 与当前页签提示传入 deriveAdaptiveOperation 进行精准推导'
     );
   });
 
