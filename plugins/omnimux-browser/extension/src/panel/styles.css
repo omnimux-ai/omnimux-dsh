@@ -3396,10 +3396,6 @@ textarea:focus-visible {
   list-style: none;
 }
 
-.session-list li + li {
-  border-top: 1px solid var(--line);
-}
-
 .session-list button {
   display: grid;
   width: 100%;
@@ -3459,27 +3455,11 @@ textarea:focus-visible {
 .session-list li {
   display: flex;
   align-items: center;
-  gap: 2px;
 }
 
-.session-list li > button:not(.session-delete) {
+.session-list li > button {
   min-width: 0;
   flex: 1;
-}
-
-.session-list .session-delete {
-  flex: 0 0 auto;
-  align-self: center;
-  width: 26px;
-  height: 26px;
-  margin-right: 4px;
-  color: var(--faint);
-  opacity: .75;
-}
-
-.session-list .session-delete:hover {
-  color: var(--danger);
-  opacity: 1;
 }
 
 .relay-config {
@@ -5350,64 +5330,63 @@ textarea:focus-visible {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
-.session-list li {
+.session-picker.youmind-style .session-list li {
   display: flex;
   align-items: center;
-  gap: 4px;
   width: 100%;
   border-radius: 8px;
   position: relative;
 }
 
-.session-item-row {
+.session-picker.youmind-style .session-item-row {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 34px;
-  padding: 6px 8px;
+  min-height: 30px;
+  padding: 0 8px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--ink);
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   min-width: 0;
   flex: 1;
 }
 
-.session-item-row:hover {
+.session-picker.youmind-style .session-item-row:hover {
   background: var(--canvas-deep);
   color: var(--ink-strong);
 }
 
-:root[data-theme="dark"] .session-item-row:hover {
+:root[data-theme="dark"] .session-picker.youmind-style .session-item-row:hover {
   background: #27272a !important;
   color: #ffffff !important;
 }
 
-.session-item-row.active {
+.session-picker.youmind-style .session-item-row.active {
   background: var(--canvas-deep);
   border-color: var(--line-strong);
   color: var(--ink-strong);
   font-weight: 600;
 }
 
-:root[data-theme="dark"] .session-item-row.active {
+:root[data-theme="dark"] .session-picker.youmind-style .session-item-row.active {
   background: #27272a !important;
   border-color: rgba(255, 255, 255, 0.25) !important;
   color: #ffffff !important;
 }
 
-.session-icon {
+.session-picker.youmind-style .session-icon {
   color: var(--muted);
   flex-shrink: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  line-height: 0;
 }
 
 .session-title {
@@ -5420,37 +5399,11 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-.session-active-check {
+.session-picker.youmind-style .session-active-check {
   font-size: calc(11px * var(--ui-scale));
   color: var(--ink-strong);
   margin-left: 4px;
   flex-shrink: 0;
-}
-
-.session-list .session-delete {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  opacity: 0;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-  margin-right: 4px;
-}
-
-.session-list li:hover .session-delete {
-  opacity: 1;
-}
-
-.session-list .session-delete:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444 !important;
 }
 
 .session-picker-footer {

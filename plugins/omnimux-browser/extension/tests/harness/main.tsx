@@ -105,6 +105,11 @@ if (panelMode) {
       setTimeout(() => {
         push({ type: 'status', state: 'connected', caps: null })
         push({ type: 'session.resume-hint', sessionId: null })
+        if (params.get('picker') === '1') {
+          setTimeout(() => {
+            document.querySelector<HTMLButtonElement>('.session-menu-trigger')?.click()
+          }, 400)
+        }
       }, 0)
     })
   })

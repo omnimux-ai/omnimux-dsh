@@ -183,10 +183,6 @@ export interface PanelCopy {
     newSession: string
     sessionPickerLoading: string
     sessionPickerEmpty: string
-    deleteSession: string
-    deleteSessionConfirm: (title: string) => string
-    deleteSessionFailed: (reason: string) => string
-    deletePurgeFailed: (reason: string) => string
     emptyTitle: string
     emptyDescription: string
     overviewPage: string
@@ -441,10 +437,6 @@ const EN: PanelCopy = {
     newSession: 'New chat',
     sessionPickerLoading: 'Loading…',
     sessionPickerEmpty: 'No past sessions yet',
-    deleteSession: 'Delete session',
-    deleteSessionConfirm: (title) => `Delete “${title}”? Its conversation history will be removed permanently.`,
-    deleteSessionFailed: (reason) => `Delete failed: ${reason}`,
-    deletePurgeFailed: (reason) => `Removed from the list, but file cleanup failed (it may reappear after dsh restarts): ${reason}`,
     emptyTitle: 'Hand me the current page',
     emptyDescription: 'I can read the page, find information, and click, fill, or navigate for you.',
     overviewPage: 'Give me an overview',
@@ -699,10 +691,6 @@ const ZH: PanelCopy = {
     newSession: '新对话',
     sessionPickerLoading: '加载中…',
     sessionPickerEmpty: '暂无历史会话',
-    deleteSession: '删除会话',
-    deleteSessionConfirm: (title) => `确定删除「${title}」吗？对话历史将被永久移除。`,
-    deleteSessionFailed: (reason) => `删除失败：${reason}`,
-    deletePurgeFailed: (reason) => `已从列表移除，但文件清理失败（dsh 重启后可能再次出现）：${reason}`,
     emptyTitle: '把当前页面交给我',
     emptyDescription: '我可以阅读页面、查找信息，也可以替你点击、填写和导航。',
     overviewPage: '先概览这个页面',
