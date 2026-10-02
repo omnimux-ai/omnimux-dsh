@@ -241,6 +241,19 @@ export interface PanelCopy {
     taskFailedTitle: string
     taskDoneMessage: (preview: string) => string
   }
+  /** Issue #2966 会话栏「自动/手动」模型选择器逐字稿（PM 字典 modelPicker.*） */
+  modelPicker: {
+    triggerAuto: string
+    triggerAriaLabel: string
+    panelTitle: string
+    autoLabel: string
+    autoHelp: string
+    listEmpty: string
+    listUnavailable: string
+    rowSelectedAria: string
+    fallbackSubtitle: string
+    modelSubtitles: Record<string, string>
+  }
 }
 
 const EN: PanelCopy = {
@@ -505,6 +518,32 @@ const EN: PanelCopy = {
     taskFailedTitle: 'Task failed',
     taskDoneMessage: (preview) => preview,
   },
+  modelPicker: {
+    triggerAuto: 'Auto',
+    triggerAriaLabel: 'Choose model',
+    panelTitle: 'Model',
+    autoLabel: 'Auto',
+    autoHelp: 'Picks a model for each message',
+    listEmpty: 'No models available',
+    listUnavailable: 'Model list unavailable',
+    rowSelectedAria: 'In use',
+    fallbackSubtitle: 'General chat model',
+    modelSubtitles: {
+      'gpt-6-astra': 'Flagship general model',
+      'gpt-5.6-sol': 'Fast general model',
+      'gpt-5.6-terra': 'Balanced general model',
+      'gpt-5.6-luna': 'Balanced general model',
+      'gpt-5.5': 'General model',
+      'gpt-5.3-codex-spark': 'Code generation model',
+      'grok-4.20-0309-non-reasoning': 'Direct chat model',
+      'grok-4.20-0309-reasoning': 'Reasoning chat model',
+      'grok-4.20-multi-agent-0309': 'Multi-agent collaboration',
+      'grok-4.3': 'General chat model',
+      'grok-4.5': 'General chat model',
+      'grok-4.6': 'General chat model',
+      'grok-build-0.1': 'Build assistance model',
+    },
+  },
 }
 
 const ZH: PanelCopy = {
@@ -768,6 +807,32 @@ const ZH: PanelCopy = {
     taskDoneTitle: '任务完成',
     taskFailedTitle: '任务未完成',
     taskDoneMessage: (preview) => preview,
+  },
+  modelPicker: {
+    triggerAuto: '自动',
+    triggerAriaLabel: '选择模型',
+    panelTitle: '模型',
+    autoLabel: '自动',
+    autoHelp: '每条消息自动选择模型',
+    listEmpty: '暂无可用模型',
+    listUnavailable: '模型列表暂不可用',
+    rowSelectedAria: '当前使用',
+    fallbackSubtitle: '通用对话模型',
+    modelSubtitles: {
+      'gpt-6-astra': '旗舰通用模型',
+      'gpt-5.6-sol': '快速通用模型',
+      'gpt-5.6-terra': '均衡通用模型',
+      'gpt-5.6-luna': '均衡通用模型',
+      'gpt-5.5': '通用模型',
+      'gpt-5.3-codex-spark': '代码生成模型',
+      'grok-4.20-0309-non-reasoning': '直接对话模型',
+      'grok-4.20-0309-reasoning': '推理对话模型',
+      'grok-4.20-multi-agent-0309': '多智能体协作',
+      'grok-4.3': '通用对话模型',
+      'grok-4.5': '通用对话模型',
+      'grok-4.6': '通用对话模型',
+      'grok-build-0.1': '构建辅助模型',
+    },
   },
 }
 

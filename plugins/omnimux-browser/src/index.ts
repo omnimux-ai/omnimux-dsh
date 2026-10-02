@@ -40,6 +40,13 @@ import {
   MIN_SNAPSHOT_MAX_CHARS,
 } from './protocol.ts'
 import { createPairingRoutes } from './pairing-routes.ts'
+import {
+  flattenModelCandidates,
+  normalizeMode,
+  withAutoModelRouting,
+  type AutoModelEvaluate,
+  type SubscriptionModelGroup,
+} from './auto-model.ts'
 import { withSessionDeferral } from './session-deferral.ts'
 import { withSessionWorkspace } from './session-workspace.ts'
 import { purgeSessionFiles, type SessionPurgeDeps } from './session-purge.ts'
@@ -148,20 +155,54 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   }
   if (connection === undefined) throw new Error('bridge-browser: dsh connection service is required')
   const tokenRes = await resolveToken(resolved.token)
-  mountBridge(ctx, resolved, tokenRes, createRemoteHostApi(gateway, connection))
+  mountBridge(ctx, resolved, tokenRes, gateway, createRemoteHostApi(gateway, connection))
 }
 
 function mountBridge(
   ctx: Context,
   resolved: ResolvedConfig,
   tokenRes: Awaited<ReturnType<typeof resolveToken>>,
+  gateway: TypertGatewayLike,
   hostApi: BrowserHostApi,
 ): void {
-  // Workspace grouping wraps the gateway create; session deferral wraps the
-  // result so materialization at first prompt still flows through grouping.
+  // Process-level composer model mode, pushed by the panel via
+  // `bridge.modelMode`. Never persisted; defaults to auto so a fresh host
+  // routes prompts through Jev until the panel says otherwise.
+  let modelMode = { auto: true }
+  const getMode = (): { auto: boolean } => modelMode
+  const setModelMode = (mode: { auto: boolean }): void => {
+    modelMode = normalizeMode(mode)
+  }
+
+  const routerDeps = {
+    // Resolved per call: the hub's `decisions` seam may mount after this
+    // plugin, and a missing seam must degrade to passthrough, not an error.
+    evaluate: (args: Parameters<AutoModelEvaluate>[0], options?: { signal?: AbortSignal }) =>
+      ctx.get('decisions')?.evaluate?.(args, options) as ReturnType<AutoModelEvaluate>,
+    selectModel: async (input: { sessionId: string; model: string; provider?: string }) => {
+      await gateway.invoke({
+        namespace: 'session',
+        method: 'selectModel',
+        args: { request: input },
+      })
+    },
+    candidates: () => flattenModelCandidates(loadSubscriptionModelGroups()),
+    getMode,
+    onRouted: (info: { sessionId: string; model?: string; outcome: 'routed' | 'fallback'; reason?: string }) => {
+      ctx.logger.info(
+        info.outcome === 'routed'
+          ? `browser bridge: auto-routed session ${info.sessionId} to model ${info.model ?? '?'}`
+          : `browser bridge: auto-routing fell back for session ${info.sessionId} (${info.reason ?? 'unknown'})`,
+      )
+    },
+  }
+
+  // Auto-model routing wraps the gateway adapter directly; session deferral
+  // stays outermost so a provisional session materializes before selectModel
+  // runs, and workspace grouping sits between the two.
   const api = withSessionDeferral(
     withSessionWorkspace(
-      hostApi,
+      withAutoModelRouting(hostApi, routerDeps),
       resolved.sessionWorkspacePath,
       message => { ctx.logger.warn(message) },
     ),
@@ -254,6 +295,7 @@ function mountBridge(
       if (typeof service?.execute !== 'function') throw new Error('Text completion service unavailable')
       return service.execute(request)
     },
+    setModelMode,
   })
 
   const route: WebUpgradeRoute = {
@@ -263,52 +305,6 @@ function mountBridge(
   ctx.effect(() => ctx.webServer.registerUpgrade(route), 'bridge-browser: /ext/bridge upgrade route')
   // 异步 disposer：HMR/卸载时先等桥完全关闭（socket/泵/acceptor 静默）再继续。
   ctx.effect(() => () => server.close(), 'bridge-browser: bridge server')
-
-  function loadSubscriptionModelGroups(): Array<{ group: string; models: Array<{ id: string; name: string }> }> {
-    const candidateHomes = [
-      dshHomePath(),
-      process.env.DSH_HOME,
-      join(homedir(), '.dsh'),
-      join(homedir(), '.omnimux'),
-    ].filter(Boolean) as string[]
-
-    for (const home of candidateHomes) {
-      const modelsPath = join(home, 'plugins', 'subscriptions', 'models.json')
-      try {
-        if (existsSync(modelsPath)) {
-          const raw = JSON.parse(readFileSync(modelsPath, 'utf8'))
-          const groups: Array<{ group: string; models: Array<{ id: string; name: string }> }> = []
-
-          if (Array.isArray(raw.codex?.models) && raw.codex.models.length > 0) {
-            groups.push({
-              group: 'ChatGPT (Codex)',
-              models: raw.codex.models.map((m: any) => ({
-                id: m.id,
-                name: m.name || m.id,
-                reasoning: m.reasoning,
-              })),
-            })
-          }
-
-          if (Array.isArray(raw.grok?.models) && raw.grok.models.length > 0) {
-            groups.push({
-              group: 'Grok (Subscription)',
-              models: raw.grok.models.map((m: any) => ({
-                id: m.id,
-                name: m.name || m.id,
-                reasoning: m.reasoning,
-              })),
-            })
-          }
-
-          if (groups.length > 0) return groups
-        }
-      } catch {
-        // Ignore
-      }
-    }
-    return []
-  }
 
   // Zero-config discovery endpoint: the extension fetches this to learn the
   // bridge WebSocket URL without any manual configuration. The URL carries no
@@ -371,6 +367,76 @@ function mountBridge(
       : `browser bridge: using token from ${tokenRes.file}`,
   )
   ctx.logger.info(`browser bridge: listening on ${BRIDGE_PATH}`)
+}
+
+/**
+ * Load the host's subscription model groups (`~/.dsh/plugins/subscriptions/
+ * models.json` and its documented fallback homes). Exported at module scope
+ * so the routing candidate list and the discovery endpoint share one source.
+ * @returns subscription groups, or an empty list when none are readable.
+ */
+/** Cache for {@link loadSubscriptionModelGroups}: the routing path calls this
+ * on every auto-mode prompt, so the file is only re-read after `TTL_MS`. */
+const SUBSCRIPTION_MODELS_CACHE_TTL_MS = 30_000
+let subscriptionModelsCache: { readonly at: number; readonly groups: SubscriptionModelGroup[] } | null = null
+
+export function loadSubscriptionModelGroups(): SubscriptionModelGroup[] {
+  const now = Date.now()
+  if (subscriptionModelsCache !== null && now - subscriptionModelsCache.at < SUBSCRIPTION_MODELS_CACHE_TTL_MS) {
+    return subscriptionModelsCache.groups
+  }
+  const groups = readSubscriptionModelGroups()
+  subscriptionModelsCache = { at: now, groups }
+  return groups
+}
+
+function readSubscriptionModelGroups(): SubscriptionModelGroup[] {
+  const candidateHomes = [
+    dshHomePath(),
+    process.env.DSH_HOME,
+    join(homedir(), '.dsh'),
+    join(homedir(), '.omnimux'),
+  ].filter(Boolean) as string[]
+
+  for (const home of candidateHomes) {
+    const modelsPath = join(home, 'plugins', 'subscriptions', 'models.json')
+    try {
+      if (existsSync(modelsPath)) {
+        const raw = JSON.parse(readFileSync(modelsPath, 'utf8')) as {
+          codex?: { models?: Array<{ id: string; name?: string; reasoning?: unknown }> }
+          grok?: { models?: Array<{ id: string; name?: string; reasoning?: unknown }> }
+        }
+        const groups: SubscriptionModelGroup[] = []
+
+        if (Array.isArray(raw.codex?.models) && raw.codex.models.length > 0) {
+          groups.push({
+            group: 'ChatGPT (Codex)',
+            models: raw.codex.models.map(m => ({
+              id: m.id,
+              name: m.name || m.id,
+              reasoning: m.reasoning,
+            })),
+          })
+        }
+
+        if (Array.isArray(raw.grok?.models) && raw.grok.models.length > 0) {
+          groups.push({
+            group: 'Grok (Subscription)',
+            models: raw.grok.models.map(m => ({
+              id: m.id,
+              name: m.name || m.id,
+              reasoning: m.reasoning,
+            })),
+          })
+        }
+
+        if (groups.length > 0) return groups
+      }
+    } catch {
+      // Ignore
+    }
+  }
+  return []
 }
 
 type GatewayCandidate = Pick<TypertGatewayLike, 'invoke'> & {

@@ -77,6 +77,7 @@ beforeAll(async () => {
     caps: { textOnly: true, snapshotMaxChars: 32_000, maxInteractiveItems: 60 },
     injectBrowserSnapshot: () => {},
     purgeSession: async () => {},
+    setModelMode: () => {},
   })
   http = createServer((req, res) => {
     if (req.url === '/ext/bridge-config') {

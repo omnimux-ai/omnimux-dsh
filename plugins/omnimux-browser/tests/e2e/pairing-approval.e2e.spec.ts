@@ -83,6 +83,7 @@ describe.skipIf(!runnable)('one-click pairing (#2110)', () => {
       caps: { textOnly: true, snapshotMaxChars: 12_000, maxInteractiveItems: 60 },
       injectBrowserSnapshot: () => {},
       purgeSession: async () => {},
+    setModelMode: () => {},
     })
     const routes = createPairingRoutes({ port: () => port, token: () => TOKEN, isLoopback: isLoopbackAddress })
     server = createServer((req, res) => {

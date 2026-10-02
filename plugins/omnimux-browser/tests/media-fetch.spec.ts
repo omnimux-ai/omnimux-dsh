@@ -396,6 +396,7 @@ async function startBridge(overrides: Partial<ConstructorParameters<typeof Bridg
     caps: CAPS,
     injectBrowserSnapshot: vi.fn(),
     purgeSession: vi.fn(async () => {}),
+    setModelMode: () => {},
     ...overrides,
   })
   const server = createServer()

@@ -27,6 +27,7 @@ import {
   BRIDGE_FETCH_MEDIA_METHOD,
   BRIDGE_COMPLETE_TEXT_METHOD,
   BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD,
+  BRIDGE_MODEL_MODE_METHOD,
   BRIDGE_SESSION_PURGE_METHOD,
   HELLO_TIMEOUT_MS,
   PING_INTERVAL_MS,
@@ -108,6 +109,11 @@ export interface BridgeServerDeps {
   fetchMedia?: (url: unknown) => Promise<MediaFetchOutcome>
   /** Unary Hub text completion; never a session submission receipt. */
   completeText?: (request: { prompt: string; system: string; maxTokens: number; signal: AbortSignal }) => Promise<unknown>
+  /**
+   * Record the composer's model mode for {@link BRIDGE_MODEL_MODE_METHOD}.
+   * Process-level state held by the mount; the host never persists it.
+   */
+  setModelMode: (mode: { auto: boolean }) => void
   /**
    * Test seam: force the remote address seen by the privilege gate. The
    * sandbox cannot bind arbitrary loopback literals, so the non-loopback
@@ -491,6 +497,32 @@ export class BridgeServer {
       }
       return
     }
+    if (frame.method === BRIDGE_MODEL_MODE_METHOD) {
+      // Set-only: `auto` decides routing; `modelId` is reserved for the manual
+      // selection and intentionally not consumed by this method version.
+      const mode = modelModePayload(frame.payload)
+      if (mode === undefined) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: { code: 'bad-request', message: 'auto must be a boolean' },
+        })
+        return
+      }
+      try {
+        this.deps.setModelMode(mode)
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: { applied: true } })
+      } catch (error: unknown) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: { code: 'internal', message: String(error) },
+        })
+      }
+      return
+    }
     if (frame.method === BRIDGE_FETCH_MEDIA_METHOD) {
       // The outcome travels as a SUCCESSFUL frame on purpose: a 404 or a timeout
       // on a third-party server is an expected answer to "fetch this", and the
@@ -565,6 +597,13 @@ function browserSnapshotPayload(payload: unknown): { sessionId: string; snapshot
   if (typeof sessionId !== 'string' || sessionId.trim() === '') return undefined
   if (typeof snapshot !== 'string' || snapshot.trim() === '') return undefined
   return { sessionId, snapshot }
+}
+
+function modelModePayload(payload: unknown): { auto: boolean } | undefined {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
+  const { auto } = payload as Record<string, unknown>
+  if (typeof auto !== 'boolean') return undefined
+  return { auto }
 }
 
 function purgeSessionPayload(payload: unknown): string | undefined {

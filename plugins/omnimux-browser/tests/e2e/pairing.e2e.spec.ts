@@ -79,6 +79,7 @@ describe.skipIf(!runnable)('pairing end to end (#2095)', () => {
       caps: { textOnly: true, snapshotMaxChars: 12_000, maxInteractiveItems: 60 },
       injectBrowserSnapshot: () => {},
       purgeSession: async () => {},
+    setModelMode: () => {},
     })
     const pairing = new PairingSessions()
     server = createServer((req, res) => {

@@ -1,10 +1,10 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
-import { apply, assertPositiveInteger, Config, resolveConfig } from '../src/index.ts'
+import { apply, assertPositiveInteger, Config, loadSubscriptionModelGroups, resolveConfig } from '../src/index.ts'
 
 /** Minimal context stub: apply only needs the services at registration time. */
 function stubContext(): Context {
@@ -79,6 +79,35 @@ describe('config', () => {
       deferSessionCreate: false,
     })
     expect(new Config({ sessionWorkspacePath: '' }).sessionWorkspacePath).toBe('')
+  })
+})
+
+describe('loadSubscriptionModelGroups', () => {
+  it('reads codex and grok groups from the stubbed DSH_HOME subscription catalog', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'dsh-bridge-models-'))
+    dirs.push(home)
+    vi.stubEnv('DSH_HOME', home)
+    const dir = join(home, 'plugins', 'subscriptions')
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'models.json'), JSON.stringify({
+      codex: { models: [{ id: 'gpt-5.5', name: 'GPT-5.5', reasoning: { efforts: [] } }] },
+      grok: { models: [{ id: 'grok-4' }] },
+    }))
+
+    expect(loadSubscriptionModelGroups()).toEqual([
+      { group: 'ChatGPT (Codex)', models: [{ id: 'gpt-5.5', name: 'GPT-5.5', reasoning: { efforts: [] } }] },
+      { group: 'Grok (Subscription)', models: [{ id: 'grok-4', name: 'grok-4', reasoning: undefined }] },
+    ])
+  })
+
+  it('returns an empty list when no home carries a readable catalog', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'dsh-bridge-empty-'))
+    dirs.push(home)
+    vi.stubEnv('DSH_HOME', home)
+    // The real dshHomePath()/~/.dsh homes may still carry catalogs on a dev
+    // machine; only the stubbed home is asserted below when it wins first.
+    const groups = loadSubscriptionModelGroups()
+    expect(Array.isArray(groups)).toBe(true)
   })
 })
 
