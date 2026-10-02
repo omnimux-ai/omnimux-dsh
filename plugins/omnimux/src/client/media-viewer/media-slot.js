@@ -324,14 +324,16 @@ export function slotPlan(model, kind, selectedOperationId) {
   const groups = slotGroups(operation);
 
   if (kind === 'image') {
-    // 纯文生图常驻提供 1 个 1:1 虚线空卡槽
+    // 纯文生图常驻提供 1 个 1:1 虚线空卡槽；
+    // 上限与参考契约对齐（multi_reference 兜底 max:4），
+    // 允许连续粘贴多图后自适应推导进入参考模式，不能 1 张就锁死。
     if (groups.length === 0) {
       return [{
         key: 'image:reference:reference',
         slot: 'reference',
         type: 'image',
         role: 'reference',
-        max: 1,
+        max: 4,
         durationMax: null,
         allowedMimes: [],
         guidedOnly: true,

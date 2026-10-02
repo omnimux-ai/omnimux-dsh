@@ -86,7 +86,7 @@ describe('素材卡槽槽位与自适应推导', () => {
     const plan = slotPlan({ operations: [imageModel.operations[0]] }, 'image');
     assert.equal(plan.length, 1);
     assert.equal(plan[0].type, 'image');
-    assert.equal(plan[0].max, 1);
+    assert.equal(plan[0].max, 4);
     assert.equal(plan[0].slot, 'reference');
     assert.equal(plan[0].role, 'reference');
     assert.equal(plan[0].key, 'image:reference:reference');
@@ -253,7 +253,7 @@ describe('素材卡槽槽位与自适应推导', () => {
       assert.equal(plan[0].slot, 'reference');
       assert.equal(plan[0].role, 'reference');
       assert.equal(plan[0].key, 'image:reference:reference');
-      assert.equal(plan[0].max, 1);
+      assert.equal(plan[0].max, 4);
     });
 
     it('slotPlan 仅在 groups.length === 0 时启用降级，不覆盖模型已有合法 slots', () => {

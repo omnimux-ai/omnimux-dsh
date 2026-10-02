@@ -789,7 +789,7 @@ export function MediaViewerComposer({
       const adaptiveOp = deriveAdaptiveOperation(model, mode, scoped);
       const candidateOps = [...new Set([adaptiveOp, ...(operationsOf(model, mode) || [])].filter(Boolean))];
       const stillRejected = [];
-      for (const { file } of rejected) {
+      for (const { file, reason: firstReason } of rejected) {
         const mediaType = (file.type || '').split('/')[0];
         let placed = false;
         for (const op of candidateOps) {
@@ -811,18 +811,21 @@ export function MediaViewerComposer({
             }
           }
         }
-        if (!placed) stillRejected.push(file);
+        if (!placed) stillRejected.push({ file, reason: firstReason });
       }
       rejected.length = 0;
-      rejected.push(...stillRejected.map((f) => ({ file: f, reason: 'no-slot' })));
+      rejected.push(...stillRejected);
     }
 
     if (accepted.length > 0) {
       setBuckets(nextBuckets);
-      const extra = rejected.length > 0 ? `，${rejected.length} 项不符合当前生成方式` : '';
+      const extra = rejected.length > 0 ? `，${rejected.length} 项未入槽` : '';
       setNotice(`已粘贴 ${accepted.length} 项素材${extra}`);
     } else {
-      setNotice(rejected[0]?.reason === 'full' ? '卡槽已满，无法再添加素材' : '当前生成方式不支持粘贴该类型素材');
+      // 满载识别：首轮已有 'full'，或所有可用卡槽都已达到上限（不再误报“不支持”）
+      const slotFull = slots && slots.length > 0 && slots.every((s) => ((nextBuckets[bucketKey(s)] || []).length >= (s.max == null ? Infinity : s.max)));
+      const anyFull = rejected.some((r) => r.reason === 'full') || slotFull;
+      setNotice(anyFull ? '卡槽已满，无法再添加素材' : '当前生成方式不支持粘贴该类型素材');
     }
   }, [disabled, model, slots, mode, videoGenMode, config, bucketKey, setVideoGenMode, setNotice]);
 
