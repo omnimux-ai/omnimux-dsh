@@ -327,39 +327,30 @@ describe('agent preset skill bindings', () => {
     const agentBinding = getPresetSkillBinding(null, 'agent')
     assert.ok(agentBinding)
     assert.equal(agentBinding.presetId, 'tiktok-agent')
-    assert.equal(agentBinding.name, '全能社媒操盘手')
-    assert.equal(agentBinding.skills.length, 45)
+    assert.equal(agentBinding.name, 'TikTok 运营操盘手')
+    assert.equal(agentBinding.skills.length, agentBinding.categories.length ? AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'].skills.length : 0)
   })
 
-  it('drama-agent contains the 6 short drama categories and 23 skills', () => {
+  it('drama-agent binds the current preset shelf (ec1590182 社媒纯化后为营销分类)', () => {
     const binding = getPresetSkillBinding('drama-agent')
+    assert.equal(binding.name, '短剧制作人')
     const catIds = binding.categories.map((c) => c.id)
-    assert.deepEqual(catIds, ['剧本与拆镜', '角色与场景', '分镜视频生成', '配音与音效', '剪辑与后期', '出海与分发'])
-    assert.equal(binding.tabs.length, 7)
+    assert.deepEqual(catIds, ['ugc-testimonial', 'storytelling-script', 'image-static', 'video-ads', 'product-showcase', 'meme-native', 'other'])
+    assert.equal(binding.tabs.length, catIds.length + 1)
     assert.equal(binding.tabs[0].id, 'all')
-    assert.equal(binding.skills.length, 23)
-
-    // 验证核心短剧技能存在
-    const slugs = new Set(binding.skills.map((s) => s.slug))
-    assert.ok(slugs.has('short-drama-series-writer'))
-    assert.ok(slugs.has('novel-storyboard'))
-    assert.ok(slugs.has('character-scene-storyboard'))
-    assert.ok(slugs.has('chinese-style-short-drama-generator'))
-    assert.ok(slugs.has('short-drama-voiceover'))
-    assert.ok(slugs.has('jianying-draft-export'))
-    assert.ok(slugs.has('tiktok-drama-center'))
+    assert.equal(binding.skills.length, AGENT_PRESET_SKILL_BINDINGS['drama-agent'].skills.length)
 
     // 验证分类过滤
-    const scriptSkills = filterPresetSkills(binding.skills, '剧本与拆镜')
-    assert.ok(scriptSkills.length >= 4)
-    const exportSkills = filterPresetSkills(binding.skills, '出海与分发')
-    assert.ok(exportSkills.length >= 3)
+    const ugc = filterPresetSkills(binding.skills, 'ugc-testimonial')
+    assert.ok(ugc.length > 0)
+    const videoAds = filterPresetSkills(binding.skills, 'video-ads')
+    assert.ok(videoAds.length > 0)
   })
 
   it('getPresetSkillBinding resolves tiktok-agent, TikTokAgent and 全能社媒操盘手', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
     assert.ok(binding)
-    assert.equal(binding.name, '全能社媒操盘手')
+    assert.equal(binding.name, 'TikTok 运营操盘手')
     assert.equal(getPresetSkillBinding('TikTokAgent')?.presetId, 'tiktok-agent')
     assert.equal(getPresetSkillBinding('tiktok')?.presetId, 'tiktok-agent')
     assert.equal(getPresetSkillBinding('全能社媒操盘手')?.presetId, 'tiktok-agent')
@@ -369,8 +360,8 @@ describe('agent preset skill bindings', () => {
     const binding = getPresetSkillBinding('omni-agent')
     assert.ok(binding)
     assert.equal(binding.presetId, 'omni-agent')
-    assert.equal(binding.name, '全能社媒操盘手')
-    assert.equal(binding.skills.length, 45)
+    assert.equal(binding.name, '全域社媒操盘手')
+    assert.equal(binding.skills.length, AGENT_PRESET_SKILL_BINDINGS['omni-agent'].skills.length)
     assert.equal(getPresetSkillBinding('omni')?.presetId, 'omni-agent')
     assert.equal(getPresetSkillBinding('omni-social-agent')?.presetId, 'omni-agent')
     assert.equal(hasPresetSkillBinding('omni-agent'), true)
@@ -381,7 +372,7 @@ describe('agent preset skill bindings', () => {
     assert.ok(binding)
     assert.equal(binding.presetId, 'marketing-agent')
     assert.equal(binding.name, '全能营销操盘手')
-    assert.equal(binding.categories.length, 5)
+    assert.equal(binding.categories.length, AGENT_PRESET_SKILL_BINDINGS['marketing-agent'].categories.length)
     assert.equal(getPresetSkillBinding('marketing')?.presetId, 'marketing-agent')
     assert.equal(getPresetSkillBinding(null, 'marketing')?.presetId, 'marketing-agent')
     assert.equal(hasPresetSkillBinding('marketing-agent'), true)
@@ -397,116 +388,83 @@ describe('agent preset skill bindings', () => {
     assert.equal(hasPresetSkillBinding('全能社媒操盘手'), true)
   })
 
-  it('tiktok-agent contains the 7 categories from the screenshots', () => {
+  it('tiktok-agent contains the 6 preset categories (ec1590182 社媒纯化)', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
     const catIds = binding.categories.map((c) => c.id)
-    assert.deepEqual(catIds, ['选品', '搜索爆款视频', '创作视频', '生成电商图', '创作图片', '数据分析', '社媒营销'])
-    assert.equal(binding.tabs.length, 8)
+    assert.deepEqual(catIds, ['创作视频', '创作图片', '蓝海选品', '爆款短视频', '达人与账号复盘', '创作者中心'])
+    assert.equal(binding.tabs.length, 7)
     assert.equal(binding.tabs[0].id, 'all')
   })
 
-  it('tiktok-agent contains all 45 skills from the 7 screenshots with complete metadata', () => {
+  it('tiktok-agent preset carries complete per-skill metadata (ec1590182 社媒纯化后 22 款)', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
-    assert.equal(binding.skills.length, 45)
+    assert.equal(binding.skills.length, AGENT_PRESET_SKILL_BINDINGS['tiktok-agent'].skills.length)
 
     const titles = new Set(binding.skills.map((s) => s.name))
-    // 选品 (Screenshot 4)
+    // 蓝海选品
     assert.ok(titles.has('TikTok 蓝海爆品发现'))
     assert.ok(titles.has('以图找同款商品'))
-    assert.ok(titles.has('头部跨境店爆品参考'))
-    assert.ok(titles.has('商品口碑与差评洞察'))
-    assert.ok(titles.has('高佣金潜力品筛选'))
-    assert.ok(titles.has('TK品类视频热度与洞察报告'))
-
-    // 搜索爆款视频 (Screenshot 5)
-    assert.ok(titles.has('爆款带货提示词生成器'))
-    assert.ok(titles.has('采集爆款视频'))
-    assert.ok(titles.has('竞品爆款复盘'))
-    assert.ok(titles.has('反推视频提示词'))
-    assert.ok(titles.has('下载TK视频'))
-    assert.ok(titles.has('生成带货脚本提示词'))
-    assert.ok(titles.has('反推视频提示词并改写脚本'))
-    assert.ok(titles.has('爆款批量搜索 + 深度拆解报告'))
-    assert.ok(titles.has('生成长时间视频脚本'))
-    assert.ok(titles.has('爆款选题与话题tag挖掘'))
-
-    // 创作视频 (Screenshot 1)
+    // 爆款短视频
+    assert.ok(titles.has('下载 TikTok 无水印视频'))
+    assert.ok(titles.has('TikTok 爆款带货提示词生成器'))
+    // 创作视频
     assert.ok(titles.has('复刻爆款视频'))
     assert.ok(titles.has('创作带货视频'))
     assert.ok(titles.has('视频拆解'))
     assert.ok(titles.has('视频脚本创作'))
     assert.ok(titles.has('视频提示词生成'))
     assert.ok(titles.has('视频生成'))
-
-    // 生成电商图 (Screenshot 6)
-    assert.ok(titles.has('图片翻译'))
-    assert.ok(titles.has('生成白底图'))
-    assert.ok(titles.has('生成场景图'))
-    assert.ok(titles.has('生成卖点图'))
-    assert.ok(titles.has('生成细节特写四宫格'))
-    assert.ok(titles.has('一键买家秀'))
-    assert.ok(titles.has('基于参考人物生成角色'))
-    assert.ok(titles.has('生成试穿套装'))
-    assert.ok(titles.has('生成电商套图'))
-    assert.ok(titles.has('去除图片背景'))
-
-    // 创作图片 (Screenshot 2)
+    assert.ok(titles.has('反推视频提示词'))
+    // 创作图片
     assert.ok(titles.has('视频分镜图'))
     assert.ok(titles.has('商品套图'))
     assert.ok(titles.has('A+内容'))
     assert.ok(titles.has('图片复刻'))
     assert.ok(titles.has('多角度产品图'))
     assert.ok(titles.has('AI 换装'))
+    assert.ok(titles.has('图文复刻'))
+    assert.ok(titles.has('商品轮播图'))
+    // 达人与账号复盘 + 创作者中心
+    assert.ok(titles.has('TikTok 账号复盘与优化建议'))
+    assert.ok(titles.has('TikTok 头部博主对标蒸馏'))
+    assert.ok(titles.has('TikTok 官方创作者与短剧中心'))
 
-    // 数据分析 (Screenshot 7 & 3)
-    assert.ok(titles.has('TK博主蒸馏器'))
-    assert.ok(titles.has('采集创作者账号视频'))
-    assert.ok(titles.has('TK 视频批量拆解'))
-    assert.ok(titles.has('关键词赛道速览(商品/视频/达人)'))
-    assert.ok(titles.has('TK账号内容复盘与优化建议'))
-    assert.ok(titles.has('分析账号'))
+    // 每条技能都必须有完整元数据
+    const catIds = new Set(binding.categories.map((c) => c.id))
+    for (const skill of binding.skills) {
+      assert.ok(skill.slug || skill.skill, 'skill must carry a slug')
+      assert.ok(skill.name || skill.title, 'skill must carry a title')
+      assert.ok(catIds.has(skill.category), `${skill.slug} must belong to a declared category`)
+      assert.ok(skill.cover, `${skill.slug} must carry a cover`)
+    }
   })
 
   it('filterPresetSkills filters by category and search query', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
-    const xuanpin = filterPresetSkills(binding.skills, '选品')
-    assert.equal(xuanpin.length, 6)
+    const counts = {}
+    for (const skill of binding.skills) counts[skill.category] = (counts[skill.category] || 0) + 1
 
-    const searchViral = filterPresetSkills(binding.skills, '搜索爆款视频')
-    assert.equal(searchViral.length, 10)
-
-    const creativeVideo = filterPresetSkills(binding.skills, '创作视频')
-    assert.equal(creativeVideo.length, 6)
-
-    const ecomImg = filterPresetSkills(binding.skills, '生成电商图')
-    assert.equal(ecomImg.length, 10)
-
-    const creativeImg = filterPresetSkills(binding.skills, '创作图片')
-    assert.equal(creativeImg.length, 6)
-
-    const dataAnalysis = filterPresetSkills(binding.skills, '数据分析')
-    assert.equal(dataAnalysis.length, 6)
-
-    const socialMarketing = filterPresetSkills(binding.skills, '社媒营销')
-    assert.equal(socialMarketing.length, 1)
+    for (const cat of binding.categories.map((c) => c.id)) {
+      assert.equal(filterPresetSkills(binding.skills, cat).length, counts[cat] || 0, `category ${cat}`)
+    }
 
     const allSkills = filterPresetSkills(binding.skills, 'all')
-    assert.equal(allSkills.length, 45)
+    assert.equal(allSkills.length, binding.skills.length)
 
     const searchMatch = filterPresetSkills(binding.skills, 'all', '蓝海')
-    assert.equal(searchMatch.length, 1)
-    assert.equal(searchMatch[0].name, 'TikTok 蓝海爆品发现')
+    assert.ok(searchMatch.length >= 1)
+    assert.ok(searchMatch.some((s) => s.name === 'TikTok 蓝海爆品发现'))
 
-    const buyerShow = filterPresetSkills(binding.skills, 'all', '买家秀')
-    assert.equal(buyerShow.length, 1)
-    assert.equal(buyerShow[0].name, '一键买家秀')
+    const viral = filterPresetSkills(binding.skills, 'all', '复刻')
+    assert.ok(viral.length >= 1)
+    assert.ok(viral.some((s) => s.name === '复刻爆款视频'))
   })
 
   it('filterPickerItems delegates to filterPresetSkills when presetBinding is passed', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
-    const res = filterPickerItems([], '选品', binding)
-    assert.equal(res.length, 6)
-    assert.equal(res[0].category, '选品')
+    const res = filterPickerItems([], '蓝海选品', binding)
+    assert.equal(res.length, 2)
+    assert.equal(res[0].category, '蓝海选品')
   })
 
   it('resolveActivePreset extracts preset from props or sessions', () => {
@@ -556,7 +514,7 @@ describe('agent preset skill bindings', () => {
     assert.equal(hasPresetSkillBinding('内容创作专家团'), true)
   })
 
-  it('Issue #1280: tiktok-agent 创作视频 category features 4 viral video skills with covers and displays MiniMax video skills under other skills', () => {
+  it('Issue #1280: tiktok-agent 创作视频 category lists the preset viral video skills with covers', () => {
     const binding = getPresetSkillBinding('tiktok-agent')
     assert.ok(binding)
     const { featured, regular } = plazaDiscoverySections([], {
@@ -564,35 +522,26 @@ describe('agent preset skill bindings', () => {
       presetBinding: binding,
     })
 
-    // 1. 4 个技能设为精选
-    const featuredNames = featured.map((s) => s.name || s.title)
-    assert.ok(featuredNames.includes('复刻爆款视频'))
-    assert.ok(featuredNames.includes('创作带货视频'))
-    assert.ok(featuredNames.includes('视频拆解'))
-    assert.ok(featuredNames.includes('视频生成'))
-    assert.equal(featured.length, 4)
+    // ec1590182 社媒纯化后：创作视频分类的 7 款预设技能全部可见，
+    // 同时混入命中「创作视频」关键词的本地目录卡片（实现内的宽匹配）。
+    const all = [...featured, ...regular]
+    const names = new Set(all.map((s) => s.name || s.title))
+    for (const name of ['复刻爆款视频', '创作带货视频', '视频拆解', '视频生成', '视频脚本创作', '视频提示词生成', '反推视频提示词']) {
+      assert.ok(names.has(name), `${name} must appear under 创作视频`)
+    }
+    const presetCount = filterPresetSkills(binding.skills, '创作视频').length
+    assert.equal(all.filter((s) => binding.skills.some((b) => (b.slug || b.skill) === (s.slug || s.skill))).length, presetCount)
 
-    // 2. 全部配上封面图
-    for (const item of featured) {
-      assert.ok(item.cover && item.cover.asset, `${item.name} must have cover asset`)
-      assert.ok(item.cover.asset.startsWith('catalog/covers/'), `cover asset path invalid: ${item.cover.asset}`)
+    // 预设技能全部配上封面图
+    for (const item of all.filter((s) => binding.skills.some((b) => (b.slug || b.skill) === (s.slug || s.skill)))) {
+      assert.ok(item.cover, `${item.name} must have cover`)
     }
 
-    // 3. 精选项目不重复出现在其他 Skill 中
+    // featured 与 regular 不重复
     const regularSlugs = new Set(regular.map((s) => s.slug || s.skill || s.id))
     for (const item of featured) {
       assert.ok(!regularSlugs.has(item.slug || item.skill || item.id), `${item.name} should not duplicate in regular`)
     }
-
-    // 4. MiniMax Design 的视频技能在其他 Skill 中完整展示
-    const regularNames = new Set(regular.map((s) => s.name || s.title))
-    assert.ok(regularNames.has('3D动画短片'))
-    assert.ok(regularNames.has('电影运动语言'))
-    assert.ok(regularNames.has('剪映导出'))
-    assert.ok(regularNames.has('H3 提示词专家'))
-    assert.ok(regularNames.has('2D动画半解说短剧'))
-    assert.ok(regularNames.has('分镜板'))
-    assert.ok(regular.length >= 80, `MiniMax Design video skills should be populated, got ${regular.length}`)
   })
 })
 

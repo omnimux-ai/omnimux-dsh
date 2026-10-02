@@ -124,8 +124,8 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
   }
   // 2. 若跨模型切换且历史记录的操作在新模型中不存在，平滑回退
   const targetDecl = args.catalog.models?.find(m => m.id === target.id || m.aliases?.includes(target.id));
-  const targetOps = target.operations ?? targetDecl?.operations;
-  if (!sameModel && preferred && targetOps && !targetOps.some(op => op.id === preferred)) {
+  const targetOps = (target as CapabilityModelItem & { operations?: Array<{ id: string }> }).operations ?? targetDecl?.operations;
+  if (!sameModel && preferred && targetOps && !targetOps.some((op: { id: string }) => op.id === preferred)) {
     preferred = undefined;
   }
   const targetBranch = branch(target, preferred);

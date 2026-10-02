@@ -4,43 +4,29 @@ import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import catalog from '../../catalog/index.json' with { type: 'json' }
-import recommendations from '../../catalog/skill-recommendations.json' with { type: 'json' }
 
 const here = dirname(fileURLToPath(import.meta.url))
 const sessionCreateSrc = readFileSync(join(here, 'session-create.js'), 'utf8')
 const skillsUiSrc = readFileSync(join(here, 'skills-ui.js'), 'utf8')
 const plazaUtilsSrc = readFileSync(join(here, 'plaza/plazaUtils.js'), 'utf8')
-const skillMd = readFileSync(join(here, '../../catalog/skills/hypit-setup/SKILL.md'), 'utf8')
 
-const ENTRY_ID = 'sk-omx-hypit-setup'
-const SLUG = 'hypit-setup'
+// 013fcb898 后 hypit-setup 下架；session-guide 契约以当前目录中的真实条目验证。
+const guideItems = catalog.items.filter((row) => row.kind === 'skill' && row.installFlow === 'session-guide')
+const ENTRY = guideItems.find((row) => row.id === 'sk-omx-ugc-confessional') || guideItems[0]
 
-describe('Hypit optional session-guide skill (issue 2160)', () => {
-  it('catalog lists discoverable session-guide entry with bilingual fields', () => {
-    const item = catalog.items.find((row) => row.id === ENTRY_ID)
-    assert.ok(item, 'catalog must include sk-omx-hypit-setup')
+describe('session-guide skill contract (issue 2160 lineage)', () => {
+  it('catalog lists discoverable session-guide entries with bilingual fields', () => {
+    assert.ok(guideItems.length > 0, 'catalog must carry session-guide entries')
+    const item = ENTRY
     assert.equal(item.kind, 'skill')
     assert.equal(item.tab, 'skills')
-    assert.equal(item.skill, SLUG)
-    assert.equal(item.title, 'Hypit-克隆爆款视频')
-    assert.equal(item.titleZh, 'Hypit-克隆爆款视频')
+    assert.ok(item.skill, 'entry must carry a skill slug')
     assert.equal(item.installFlow, 'session-guide')
     assert.equal(item.source?.type, 'bundled')
-    assert.match(String(item.source?.path || ''), /catalog\/skills\/hypit-setup/)
+    assert.match(String(item.source?.path || ''), /^catalog\/skills\//)
     assert.equal(item.recommended, true)
     assert.ok(item.titleZh && item.titleEn && item.summaryZh && item.summaryEn)
-    assert.match(String(item.sessionPrefill || ''), /npx skills add hypit-ai\/hypit -g/)
-    assert.match(String(item.sessionPrefill || ''), /@hypit\/hypit/)
-    assert.ok(recommendations.featuredSkills.includes(ENTRY_ID))
-  })
-
-  it('guide skill body is OmniMux-owned and forbids bundling Hypit engine', () => {
-    assert.match(skillMd, /name:\s*hypit-setup/)
-    assert.match(skillMd, /不捆绑/)
-    assert.match(skillMd, /npx skills add hypit-ai\/hypit -g/)
-    assert.match(skillMd, /@hypit\/hypit/)
-    assert.doesNotMatch(skillMd, /tmp\/hypit-upstream/)
-    assert.doesNotMatch(skillMd, /\/Users\//)
+    assert.ok(String(item.sessionPrefill || '').length > 0, 'sessionPrefill must be present')
   })
 
   it('session helper activates shared-tool pill and uses sessionPrefill for guide flow', () => {
@@ -60,11 +46,11 @@ describe('Hypit optional session-guide skill (issue 2160)', () => {
     assert.match(plazaUtilsSrc, /installFlow === ['"]session-guide['"]/)
   })
 
-  it('search fields include hypit token for discovery', () => {
-    const item = catalog.items.find((row) => row.id === ENTRY_ID)
+  it('search fields include the skill token for discovery', () => {
+    const item = ENTRY
     const hay = [item.title, item.titleZh, item.titleEn, item.summary, item.summaryZh, item.skill, ...(item.tags || [])]
       .join(' ')
       .toLowerCase()
-    assert.match(hay, /hypit/)
+    assert.match(hay, new RegExp(item.skill.split('-')[0].toLowerCase()))
   })
 })

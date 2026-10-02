@@ -69,7 +69,7 @@ test('veoContracts 与 veoHeadlessDriver 测试套件', async (t) => {
     assert.equal(env.bridgeConnected, false)
   })
 
-  await t.test('detectOpenCliEnvironment 环境就绪探测', () => {
+  await t.test('detectOpenCliEnvironment 环境就绪探测', { skip: !detectOpenCliEnvironment().installed }, () => {
     const env = detectOpenCliEnvironment()
     assert.equal(typeof env.installed, 'boolean')
     assert.equal(typeof env.bridgeConnected, 'boolean')

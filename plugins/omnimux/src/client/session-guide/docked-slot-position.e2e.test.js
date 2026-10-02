@@ -94,7 +94,7 @@ test('e2e: 输入框吸底态长列表安全避让垫高样式验证', () => {
   domCompact.window.close()
 })
 
-test('e2e: 吸底输入框最大宽度严格对齐顶部原生上限 952px (方案 A 样式红线白名单)', () => {
+test('e2e: 吸底输入框最大宽度严格对齐 680px 紧凑上限 (#2846 样式红线白名单)', () => {
   const start = styles.indexOf('[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card]')
   const end = styles.indexOf('/* 工作区行留在 Hero', start)
   assert.ok(start > 0 && end > start)
@@ -104,9 +104,9 @@ test('e2e: 吸底输入框最大宽度严格对齐顶部原生上限 952px (方�
   assert.equal(cardRule.includes('max-width:none'), false, '红线：严禁 max-width:none')
   assert.equal(cardRule.includes('max-width: none'), false, '红线：严禁 max-width: none')
 
-  // 2. 白名单检查：必须对齐原生变量且兜底 952px
-  assert.ok(cardRule.includes('max-width:var(--dsh-composer-card-max-width, 952px)!important;') ||
-    cardRule.includes('max-width: var(--dsh-composer-card-max-width, 952px)!important;'))
+  // 2. 白名单检查：必须声明 680px 紧凑上限，与顶部未吸底态完全同宽
+  assert.ok(cardRule.includes('max-width:min(680px, calc(100% - 24px))!important;') ||
+    cardRule.includes('max-width: min(680px, calc(100% - 24px))!important;'))
   assert.ok(cardRule.includes('position:fixed!important;') || cardRule.includes('position: fixed!important;'))
   assert.ok(cardRule.includes('width:var(--omnimux-dock-width, 100%)!important;') || cardRule.includes('width: var(--omnimux-dock-width, 100%)!important;'))
   assert.ok(cardRule.includes('margin:0!important;') || cardRule.includes('margin: 0!important;'))
@@ -119,7 +119,7 @@ test('e2e: 吸底输入框最大宽度严格对齐顶部原生上限 952px (方�
   </body>`)
   const card = dom.window.document.querySelector('[data-composer-card]')
   const computed = dom.window.getComputedStyle(card)
-  assert.equal(computed.maxWidth, 'var(--dsh-composer-card-max-width, 952px)')
+  assert.equal(computed.maxWidth, 'min(680px, 100% - 24px)')
   assert.equal(computed.position, 'fixed')
   assert.equal(computed.margin, '0px')
   dom.window.close()
@@ -145,21 +145,21 @@ test('e2e: 吸底输入框声明平滑位移过渡 transition，杜绝侧边栏�
   assert.ok(undockRule.includes('transition:left 200ms cubic-bezier(0.16, 1, 0.3, 1)') || undockRule.includes('transition: left 200ms cubic-bezier(0.16, 1, 0.3, 1)'))
 })
 
-test('e2e: 吸底输入框在 calc(...) 动态卡片最大宽度下与原生计算样式保持一致且居中', () => {
+test('e2e: 吸底输入框在 680px 紧凑上限下与停靠几何变量一致且居中', () => {
   const start = styles.indexOf('[data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card]')
   const end = styles.indexOf('/* 工作区行留在 Hero', start)
   assert.ok(start > 0 && end > start)
   const cardRule = styles.slice(start, end)
 
   const dom = new JSDOM(`<!doctype html><head><style>${cardRule}</style></head><body>
-    <div data-omnimux-starter-host data-omnimux-dock-open style="--omnimux-dock-width: 672px; --omnimux-dock-left: 668px;">
-      <div data-composer-card style="--dsh-composer-card-max-width: calc(640px + 32px);"></div>
+    <div data-omnimux-starter-host data-omnimux-dock-open style="--omnimux-dock-width: 680px; --omnimux-dock-left: 560px;">
+      <div data-composer-card></div>
     </div>
   </body>`)
   const card = dom.window.document.querySelector('[data-composer-card]')
   const computed = dom.window.getComputedStyle(card)
   assert.equal(computed.position, 'fixed')
-  assert.equal(computed.maxWidth, 'var(--dsh-composer-card-max-width, 952px)')
+  assert.equal(computed.maxWidth, 'min(680px, 100% - 24px)')
   assert.equal(computed.width, 'var(--omnimux-dock-width, 100%)')
   dom.window.close()
 })

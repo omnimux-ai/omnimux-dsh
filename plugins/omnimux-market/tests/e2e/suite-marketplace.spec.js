@@ -44,18 +44,30 @@ const h = (type, props, ...children) => ({
   children: children.flat(Infinity).filter((child) => child !== null && child !== undefined && child !== false),
 })
 
+/** 假 vdom 与真实 React 元素混形：子节点可能在 .children 或 .props.children。 */
+const childList = (node) => {
+  if (!node || typeof node !== 'object') return []
+  const own = Array.isArray(node.children) && node.children.length ? node.children : null
+  const raw = own || node.props?.children
+  return Array.isArray(raw) ? raw : raw == null ? [] : [raw]
+}
+
 function nodes(node, predicate) {
   if (!node || typeof node !== 'object') return []
   if (Array.isArray(node)) return node.flatMap((child) => nodes(child, predicate))
-  return [...(predicate(node) ? [node] : []), ...(node.children || []).flatMap((child) => nodes(child, predicate))]
+  return [...(predicate(node) ? [node] : []), ...childList(node).flatMap((child) => nodes(child, predicate))]
 }
 
 const byClass = (node, className) => nodes(node, (n) => {
   const cls = n.props && n.props.className
   return typeof cls === 'string' && cls.split(' ').includes(className)
 })
-const texts = (node) => nodes(node, (n) => typeof n.children?.[0] === 'string').map((n) => n.children[0])
-const findSwitch = (card) => nodes(card, (n) => n.type === plazaUtils.WorkshopSwitch || (n.props && n.props.className === 'toggle-wrap'))[0]
+/** 节点首个字符串后代：假节点 .children[0] 与 React 元素 props.children 通吃。 */
+const firstText = (node) => {
+  for (const child of childList(node)) if (typeof child === 'string') return child
+  return undefined
+}
+const texts = (node) => nodes(node, (n) => firstText(n) !== undefined).map((n) => firstText(n))
 
 const OK_SESSIONS = { list: { getSnapshot: () => ({ current: 's1', byId: { s1: { cwd: '/work/current-project' } } }) } }
 const defaultRespond = (action) => (action === 'search'
@@ -161,8 +173,9 @@ function createPlaza(opts = {}) {
   }
 }
 
-const findSuiteCard = (tree, suite) => byClass(tree, 'regular-card')
-  .find((card) => byClass(card, 'regular-card-title').some((title) => title.children[0] === suite.title))
+// 013fcb898 后普通卡统一为 Creatify 卡片；套件卡以居中大标题匹配。
+const findSuiteCard = (tree, suite) => byClass(tree, 'featured-card')
+  .find((card) => texts(card).some((t) => t === suite.title))
 const findModal = (tree) => nodes(tree, (n) => typeof n.type === 'function' && n.type.name === 'SuiteDetailModal')[0]
 
 /** 旅程公共起点：分类栏切到「套件」。 */
@@ -200,7 +213,7 @@ async function confirmInstall(suite = SOCIAL, opts) {
 
 const installButton = (view) => byClass(view, 'ws-detail-header-actions')[0].children[0]
 
-test('E2E 旅程一：套件分类只列真实套件，8 张卡的构成计数与目录一致', async () => {
+test('E2E 旅程一：套件分类只列真实套件，8 张卡与目录一致', async () => {
   assert.equal(SUITES.length, 8)
   assert.ok(AMAZON, '平铺仓库套件必须在货架上')
   assert.ok(TIKTOK, 'TikTok 预装套件必须在货架上')
@@ -210,21 +223,13 @@ test('E2E 旅程一：套件分类只列真实套件，8 张卡的构成计数�
   assert.equal(ui.searchCalls(), 0)
   assert.equal(byClass(tree, 'featured-section').length, 0)
 
-  const cards = byClass(tree, 'regular-card')
+  const cards = byClass(tree, 'featured-card')
   assert.equal(cards.length, SUITES.length)
   for (const suite of SUITES) {
     const card = findSuiteCard(tree, suite)
     assert.ok(card, `card for ${suite.id}`)
-    const composition = byClass(card, 'regular-card-composition')
-    assert.equal(composition.length, 1, `${suite.id} must render composition`)
     const counts = plazaUtils.resolveSuiteCounts(suite)
-    assert.equal(
-      composition[0].children[0],
-      `技能 ${counts.skills} · 规则 ${counts.rules} · Agent ${counts.agents}`,
-      `${suite.id} composition`,
-    )
-    // 套件卡右侧统一挂载 WorkshopSwitch 开关，与普通技能卡片保持 100% 视觉一致。
-    assert.ok(findSwitch(card), `${suite.id} must mount a switch`)
+    assert.equal(plazaUtils.suiteCompositionText(suite, lookup), `技能 ${counts.skills} · 规则 ${counts.rules} · Agent ${counts.agents}`)
   }
 })
 
@@ -234,15 +239,13 @@ test('E2E 旅程一（边界）：全部含套件、技能领域分类不含套�
   ui.setCategory('')
   const all = ui.draw()
   await ui.runEffects()
-  const allTitles = texts(byClass(all, 'regular-card-title'))
+  const allTitles = texts(byClass(all, 'omnimux-creatify-center-title'))
   for (const suite of SUITES) assert.ok(allTitles.includes(suite.title), `${suite.id} must appear under 全部`)
 
-  ui.setCategory('动画')
-  const animation = ui.draw()
-  await ui.runEffects()
-  assert.ok(byClass(animation, 'regular-card').length > 0)
-  assert.equal(byClass(animation, 'regular-card-composition').length, 0, '技能领域分类不得混入套件')
-  assert.equal(byClass(tree, 'regular-card').length, SUITES.length)
+  // 数据层：技能领域分类的套件成员数为 0（不含「全部」时套件仍完整）
+  const domain = SkillShelf.plazaDiscoverySections([], { category: '视频广告' })
+  assert.equal(domain.regular.filter((item) => item.kind === 'suite').length, 0, '技能领域分类不得混入套件')
+  assert.equal(byClass(tree, 'featured-card').length, SUITES.length)
 
   // 组合器选择器页签：本地专属分类（套件）不进选择器。
   assert.equal([...SkillShelf.PICKER_TABS].some((row) => row.id === '套件'), false)
@@ -433,32 +436,13 @@ test('E2E 旅程三：TikTok 预装套件出厂默认展示「卸载」，点击
   assert.equal(installButton(afterView).props.disabled, false)
 })
 
-test('E2E 旅程四：套件卡片开关点击分别打开安装/卸载确认框并阻断冒泡', async () => {
-  // 1. 点击未安装套件开关：弹出安装确认弹窗
-  const { ui: ui1, tree: tree1 } = await browseSuiteCategory()
-  const amazonCard = findSuiteCard(tree1, AMAZON)
+test('E2E 旅程四：套件卡片点击打开详情模态', async () => {
+  // 013fcb898 后卡片不再挂载 WorkshopSwitch；详情仍由卡片点击进入。
+  const { ui, tree } = await browseSuiteCategory()
+  const amazonCard = findSuiteCard(tree, AMAZON)
   assert.ok(amazonCard)
-  const amazonSwitch = findSwitch(amazonCard)
-  assert.ok(amazonSwitch, '亚马逊卡片开关必须挂载')
-  assert.equal(amazonSwitch.props.checked, false)
-  amazonSwitch.props.onChange(true)
-  await ui1.settle()
-  const installModal = ui1.mountModal(findModal(ui1.draw()))
-  const installDialog = byClass(installModal, 'ws-suite-install-dialog')[0]
-  assert.ok(installDialog, '必须弹出套件安装确认弹窗')
-  assert.equal(byClass(installDialog, 'modal-title')[0].children[0], lookup('suite.install.title'))
-
-  // 2. 点击已安装套件开关：弹出卸载确认弹窗
-  const { ui: ui2, tree: tree2 } = await browseSuiteCategory()
-  const tiktokCard = findSuiteCard(tree2, TIKTOK)
-  assert.ok(tiktokCard)
-  const tiktokSwitch = findSwitch(tiktokCard)
-  assert.ok(tiktokSwitch, 'TikTok 卡片开关必须挂载')
-  assert.equal(tiktokSwitch.props.checked, true)
-  tiktokSwitch.props.onChange(false)
-  await ui2.settle()
-  const uninstallModal = ui2.mountModal(findModal(ui2.draw()))
-  const uninstallDialog = byClass(uninstallModal, 'ws-suite-install-dialog')[0]
-  assert.ok(uninstallDialog, '必须弹出套件卸载确认弹窗')
-  assert.equal(byClass(uninstallDialog, 'modal-title')[0].children[0], lookup('suite.uninstall.title'))
+  amazonCard.props.onClick()
+  const modal = findModal(ui.draw())
+  assert.ok(modal, '点击套件卡必须打开详情模态')
+  assert.equal(modal.props.item.id, AMAZON.id)
 })

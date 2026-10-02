@@ -167,8 +167,7 @@ test('queryCreativeTemplates: 迁移后同步搜索合同不变', () => {
       'sourcePlatform',
       'title',
       'titleEn',
-      'workflowSummary',
-    ].sort(),
+    ].sort(), // #2760：workflowSummary 从摘要字段集移除（空值破坏宿主无损 JSON 校验）
     '摘要字段集合不得变化'
   );
 

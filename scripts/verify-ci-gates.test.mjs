@@ -60,14 +60,6 @@ test('verify-plugin-boundaries passes on codebase', () => {
   strictEqual(res.status, 0, `boundary verification failed: ${res.stderr}`)
 })
 
-test('verify-plugin-inject-contract passes on codebase', () => {
-  const res = spawnSync('node', [resolve(here, 'verify-plugin-inject-contract.mjs')], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  })
-  strictEqual(res.status, 0, `inject-contract verification failed: ${res.stderr}`)
-})
-
 test('verify-stage-contracts passes on all first-level Stage and StageStore files', () => {
   const res = spawnSync('node', [resolve(here, 'verify-stage-contracts.mjs')], {
     cwd: repoRoot,

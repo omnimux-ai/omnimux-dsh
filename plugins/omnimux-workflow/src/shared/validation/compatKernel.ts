@@ -1011,6 +1011,7 @@ export function deriveMergedInputCapability(model: ContractModelView): MergedInp
     image: undefined,
     video: undefined,
     audio: undefined,
+    document: undefined,
   };
 
   const addModality = (modality: string) => {

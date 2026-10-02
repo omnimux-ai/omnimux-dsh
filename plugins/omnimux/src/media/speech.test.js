@@ -13,6 +13,12 @@ const voice = 'zh_male_guanggaojieshuo_uranus_bigtts'
 const env = { OMNIMUX_API_KEY: 'sk-fixture', OMNIMUX_BASE_URL: 'https://speech.example/v1/' }
 const bytes = Buffer.from([0x49, 0x44, 0x33, 0, 1, 255])
 const response = (headers = {}, body = bytes) => new Response(body, { headers: { 'content-type': 'audio/mpeg', ...headers } })
+
+// Keep the media task ledger (resolveMediaTasksDir → hubHomeDir) out of the
+// developer machine's real $DSH_HOME; node:test runs this file in its own
+// process, so the override cannot leak into sibling test files.
+process.env.DSH_HOME = mkdtempSync(join(tmpdir(), 'omnimux-speech-home-'))
+
 function destFor(t) {
   const dir = mkdtempSync(join(tmpdir(), 'seed-audio-test-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))

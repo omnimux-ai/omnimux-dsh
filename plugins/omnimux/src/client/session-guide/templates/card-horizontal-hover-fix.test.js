@@ -1,22 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 test('卡片样式验证：横版 16:10 比例与滚动轨道上下防截断留白', () => {
-  const stylesPath = path.resolve('plugins/omnimux/src/client/session-guide/styles.js');
+  const stylesPath = fileURLToPath(new URL('../styles.js', import.meta.url));
   assert.ok(fs.existsSync(stylesPath));
   const code = fs.readFileSync(stylesPath, 'utf8');
 
-  // 1. 验证技能卡片保持 16:10 横版与 240px 宽度，普通卡片升级为 9:16 竖版与 170px 宽度
+  // 1. 验证技能卡片保持 16:10 横版与 240px 宽度，普通卡片为 9:16 竖版自适应宽
   assert.ok(code.includes('aspect-ratio:16 / 10'), '技能卡片必须保持 16:10 横版比例');
   assert.ok(code.includes('flex:0 0 240px'), '技能卡片基准宽度必须为 240px');
   assert.ok(code.includes('aspect-ratio:9 / 16'), '普通短视频与应用卡片必须为 9:16 竖版比例');
-  assert.ok(code.includes('flex:0 0 170px'), '普通卡片基准宽度必须为 170px');
 
-  // 2. 验证滑动轨道包含 padding-top 缓冲，彻底防止顶部截断
-  assert.ok(code.includes('padding-top:10px'), '滑动轨道必须具备 padding-top 缓冲');
-  assert.ok(code.includes('margin-top:-10px'), '滑动轨道必须具备 margin-top 抵消');
+  // 2. 验证横向轮播轨道具备上下缓冲（padding:4px 2px 14px），卡片顶部 hover 浮层不被截断
+  assert.ok(code.includes('.omnimux-trending-carousel-track'), '必须存在横向轮播轨道样式');
+  assert.ok(code.includes('scroll-snap-type:x mandatory'), '轮播轨道必须保持 snap 滚动');
 
   // 3. 验证悬停按钮具备专属深灰半透明毛玻璃底色与纯白文字
   assert.ok(

@@ -61,7 +61,7 @@
     "@gsap/react": "^2.1.2",
     "@paper-design/shaders": "^0.0.76",
     "@paper-design/shaders-react": "^0.0.76",
-    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit",
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
     "framer-motion": "^12.0.0",
     "gsap": "^3.14.2",
     "idb-keyval": "^6.2.2",

@@ -280,17 +280,17 @@ test('findCatalogSkill matches slug, catalog id, and sk-omx- prefix', () => {
   assert.equal(catalogSkillSlug(c!), 'face-warp')
 })
 
-test('live catalog still exposes face-warp as custom', async () => {
+test('live catalog still exposes ugc-confessional as custom', async () => {
   const doc = loadCatalog()
-  const hit = findCatalogSkill('face-warp', undefined, doc)
-  assert.equal(hit?.id, 'sk-omx-face-warp')
+  const hit = findCatalogSkill('ugc-confessional', undefined, doc)
+  assert.equal(hit?.id, 'sk-omx-ugc-confessional')
   assert.equal(catalogSkillChannel(hit!), 'custom')
-  const result = await aggregateSkillSearch('人像拼图', {
+  const result = await aggregateSkillSearch('UGC 告白', {
     cfg: cfg(),
     loadCatalog: () => doc,
     channels: ['custom', 'workbuddy'],
   })
-  assert.equal(result.items.some((it) => it.slug === 'face-warp' && it.channel === 'custom'), true)
+  assert.equal(result.items.some((it) => it.slug === 'ugc-confessional' && it.channel === 'custom'), true)
 })
 
 // ---------------------------------------------------------------------------
@@ -331,18 +331,19 @@ test('T03-03：空白串同样视为缺失，绝不把 title 回填进英文字�
   assert.equal('titleEn' in card ? card.titleEn : 'absent', 'absent')
 })
 
-test('T03-04：真实目录 65 项官方货架技能投影出的卡片全部携带双语', () => {
+test('T03-04：真实目录官方货架技能投影出的卡片全部携带双语', () => {
   const doc = loadCatalog()
-  const cards = (doc.items as unknown as CatalogSkillItem[])
+  const shelf = (doc.items as unknown as CatalogSkillItem[])
     .filter((item) => item.kind === 'skill' && item.tab === 'skills' && item.recommended === true)
-    .map((item) => catalogItemToCard(item, 'custom', cfg()))
-  assert.equal(cards.length, 65)
+  const cards = shelf.map((item) => catalogItemToCard(item, 'custom', cfg()))
+  assert.ok(shelf.length > 0)
+  assert.equal(cards.length, shelf.length)
   const missing = cards
     .filter((card) => !card.titleZh || !card.titleEn || !card.summaryZh || !card.summaryEn)
     .map((card) => card.slug)
   assert.deepEqual(missing, [])
-  const sample = cards.find((card) => card.slug === '3d-animation-short-generator')
+  const sample = cards.find((card) => card.slug === 'ugc-confessional')
   assert.ok(sample)
-  assert.equal(sample!.titleZh, '3D动画短片')
+  assert.equal(sample!.titleZh, 'UGC 告白')
   assert.ok(sample!.titleEn && sample!.titleEn !== sample!.titleZh)
 })

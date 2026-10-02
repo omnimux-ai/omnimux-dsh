@@ -1,0 +1,209 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 6px;
+  box-sizing: border-box;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary);
+  background: transparent;
+  padding: 0 12px;
+  height: 32px;
+  vertical-align: middle;
+  user-select: none;
+  transition:
+    background-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.button:focus {
+  outline: none;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}
+
+.button:disabled,
+.button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.button:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(0.96);
+}
+
+.sm {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.xs {
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  gap: 4px;
+}
+
+.iconOnly {
+  padding: 0;
+  width: 32px;
+}
+
+.iconOnly.sm {
+  width: 28px;
+}
+
+.iconOnly.xs {
+  width: 24px;
+}
+
+.primary {
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+
+.primary:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-button-primary-hover);
+}
+
+.secondary {
+  background: var(--dsw-alias-bg-layer-1);
+  border-color: var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary);
+}
+
+.secondary:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+}
+
+.ghost:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ghost:active:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-interactive-bg-active);
+}
+
+.outline {
+  background: transparent;
+  border-color: var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-primary);
+}
+
+.outline:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.danger {
+  background: var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+
+.danger:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-state-error-secondary);
+}
+
+.ghost[aria-pressed="true"],
+.secondary[aria-pressed="true"] {
+  background: var(--dsw-alias-button-ghost-active-fill);
+  box-shadow: inset 0 0 0 1px var(--dsw-alias-button-ghost-active-border);
+}
+
+/* Outline already owns a real 1px border. Keep pressed fill/border as
+ * declarations — do not share the ghost/secondary inset box-shadow or the
+ * pressed state would double-stroke. */
+.outline[aria-pressed="true"] {
+  background: var(--dsw-alias-button-ghost-active-fill);
+  border-color: var(--dsw-alias-button-ghost-active-border);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* Hover specificity defense: `.outline:hover` (and ghost/secondary hover)
+ * would otherwise wash the pressed fill/border back to the idle hover tokens. */
+.ghost[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
+.secondary[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]),
+.outline[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--dsw-alias-button-ghost-active-hover);
+}
+
+.outline[aria-pressed="true"]:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--dsw-alias-button-ghost-active-border);
+}
+
+.slot {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.xs .slot {
+  width: 14px;
+  height: 14px;
+}
+
+.spinner {
+  animation: dshUkSpin 0.7s linear infinite;
+}
+
+.label {
+  min-width: 0;
+}
+
+.loadingLabel {
+  opacity: 0.84;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .button:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: none;
+  }
+
+  .spinner {
+    animation: none;
+  }
+}
+
+@keyframes dshUkSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

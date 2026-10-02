@@ -1,0 +1,33 @@
+.dialog {
+  width: min(480px, 100%);
+  max-height: min(80vh, 720px);
+  border-radius: 16px;
+}
+
+.sm {
+  width: min(380px, 100%);
+}
+
+.lg {
+  width: min(640px, 100%);
+}
+
+.body {
+  overflow: auto;
+  max-height: min(56vh, 480px);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--dsw-alias-label-primary);
+}

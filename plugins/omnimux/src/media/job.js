@@ -219,7 +219,7 @@ export async function downloadMediaFile(options) {
         if (err?.code === 'omnimux-aborted' || options.signal?.aborted) {
           throw err
         }
-        if (err?.code === 'quota-exceeded' || err?.code === 'needs-omnimux' || err?.code === 'channel-unavailable') {
+        if (err?.code === 'quota-exceeded' || err?.code === 'needs-omnimux' || err?.code === 'CHANNEL_UNAVAILABLE') {
           throw err
         }
         if (err instanceof OmnimuxError && err.code === 'omnimux-download-failed') {

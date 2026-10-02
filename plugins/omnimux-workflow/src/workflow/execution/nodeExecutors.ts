@@ -198,6 +198,14 @@ export function resolveUpstreamBindings(
         bindings.push({ edgeId: edge.id, sourceNodeId: edge.source, role: slot.role, targetSlot: slot.slot,
           output: structuredClone(normalizeOutput(context.getNodeOutput(edge.source))) });
       }
+      // Unbound connected edges still flow: the free-text contract consumes ready
+      // upstream text that occupies no slot (effectiveFingerprint parity).
+      const bound = new Set(bindings.map((item) => `${item.edgeId}:${item.sourceNodeId}`));
+      for (const item of feed) {
+        if (bound.has(`${item.edgeId}:${item.sourceNodeId}`)) continue;
+        bindings.push({ edgeId: item.edgeId, sourceNodeId: item.sourceNodeId,
+          output: structuredClone(normalizeOutput(context.getNodeOutput(item.sourceNodeId))) });
+      }
       return bindings;
     }
     for (const edge of incoming) {

@@ -181,13 +181,24 @@ test('local pane ignores selection after closing, while a new selection still ad
   const f = setup(t); const added = [];
   const props = { files: [], onAddFiles: files => added.push(...files), onRemove() {} };
   await f.render(f.api.LocalUploadPane, { ...props, active: true });
-  await f.flush(() => f.win.document.querySelector('.wf-picker-dropzone').click());
+  // #2860: dropzone click now goes through the hidden <input type=file> →
+  // handleInputChange; a File without .path falls back to chooseNative. Drive the
+  // stale pick through chooseNative (no .path) then a fresh File with .path.
+  const fileInput = () => f.win.document.querySelector('input[type="file"]');
+  const fireFiles = (files) => {
+    const input = fileInput();
+    Object.defineProperty(input, 'files', { value: files, configurable: true });
+    input.dispatchEvent(new f.win.Event('change', { bubbles: true }));
+  };
+  const pathless = () => Object.assign(new f.win.File(['x'], 'old.png'), {});
+  const withPath = (p) => Object.assign(new f.win.File(['x'], p.split('/').pop()), { path: p });
+  // First selection goes through chooseNative (File without .path → pick())
+  await f.flush(() => fireFiles([pathless()]));
   await f.render(f.api.LocalUploadPane, { ...props, active: false });
   await f.render(f.api.LocalUploadPane, { ...props, active: true });
   await f.flush(() => f.picks[0].resolve(picked('/old.png')));
   assert.equal(added.length, 0); assert.equal(f.toasts.length, 0);
-  await f.flush(() => f.win.document.querySelector('.wf-picker-dropzone').click());
-  await f.flush(() => f.picks[1].resolve(picked('/new.png')));
+  await f.flush(() => fireFiles([withPath('/new.png')]));
   assert.equal(added[0].realPath, '/new.png');
 });
 

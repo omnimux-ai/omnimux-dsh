@@ -126,7 +126,7 @@ test('nanobanana: legacy spellings normalize to the hyphen canonical — never d
 test('withdrawn models leave models[]; unlisted canonical/draft rows stay authoritative but out of the four lists', () => {
   const index = freshIndex();
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
-  assert.equal(dto.models.length, 41);
+  assert.equal(dto.models.length, 43); // #2804 gemini-3.8-flash-tts + #2256 index-tts → 43
   // #1751: the 12 withdrawn (disposition=unavailable) rows have no YAML block, so they
   // vanish from the authoritative list and from every derived bucket.
   for (const gone of [
@@ -169,7 +169,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'seedance-2-0',
     'seedance-2-5',
   ]);
-  assert.deepEqual(dto.audio.map((row) => row.id), ['seed-audio-1.0']);
+  assert.deepEqual(dto.audio.map((row) => row.id), ['gemini-3.8-flash-tts', 'index-tts', 'seed-audio-1.0']); // #2804 与 #2256 两款 TTS 同桶
   // Text bucket includes implementation-ready models without requiring live history.
   assert.deepEqual(dto.text.map((r) => r.id), [
     'gemini-3.8-flash',
@@ -241,7 +241,7 @@ test('projectDirectoryRows: media groups project every contracted model (listed 
   assert.equal(projectDirectoryRows(index, 'image').length, 11);
   assert.equal(projectDirectoryRows(index, 'video').length, 11);
   // #1789: seedasr-auc joins the audio management group as its own contracted model.
-  assert.equal(projectDirectoryRows(index, 'audio').length, 6);
+  assert.equal(projectDirectoryRows(index, 'audio').length, 8); // #2804 gemini-3.8-flash-tts + #2256 index-tts → 8
   // whisper-1 stays in the audio management directory but its output is text
   const audio = projectDirectoryRows(index, 'audio');
   assert.ok(audio.some((r) => r.id === 'whisper-1'));

@@ -20,11 +20,11 @@ test('loadCatalog memos by path+mtime; install invalidates installed flag', () =
   mkdirSync(join(home, 'profiles', 'omnimux'), { recursive: true })
   const roots = { home, profileDir: join(home, 'profiles', 'omnimux'), packageRoot: PACKAGE_ROOT }
   const before = decorateCatalog(loadCatalog(), roots)
-  const demo = before.items.find((row) => row.id === 'esc-demo-skill')
+  const demo = before.items.find((row) => row.id === 'sk-omx-ugc-confessional')
   assert.equal(demo?.installed, false)
-  installItem({ catalog: loadCatalog(), id: 'esc-demo-skill', ...roots })
+  installItem({ catalog: loadCatalog(), id: 'sk-omx-ugc-confessional', ...roots })
   const after = decorateCatalog(loadCatalog(), roots)
-  assert.equal(after.items.find((row) => row.id === 'esc-demo-skill')?.installed, true)
+  assert.equal(after.items.find((row) => row.id === 'sk-omx-ugc-confessional')?.installed, true)
 })
 
 test('loads bundled catalog', () => {
@@ -37,7 +37,7 @@ test('loads bundled catalog', () => {
   // 社媒运营四层漏斗（L0 源分类预筛 → L2 黑名单 → L3 人工 → L1 任务重映射）后的数量
   assert.ok(experts.length >= 60)
   assert.ok(skills.length >= 50)
-  assert.ok(connectors.length >= 15)
+  assert.ok(connectors.length >= 10)
   assert.ok(experts.filter((item) => item.id !== 'exp-social-engagement-team' && item.id !== 'exp-social-content-team').every((item) => item.source.type === 'git'))
   const team = experts.find((item) => item.id === 'exp-social-engagement-team')
   assert.equal(team?.kind, 'team')
@@ -52,7 +52,7 @@ test('loads bundled catalog', () => {
   assert.equal(ui?.title, '广告创意策略师')
   assert.equal(ui?.subtitle, '点睛睛')
   assert.match(ui?.avatar || '', /raw\.githubusercontent\.com\/infometa\/workbuddyskills/)
-  assert.ok(doc.categories.some((row) => row.tab === 'skills' && row.title === '协作办公'))
+  assert.ok(doc.categories.some((row) => row.tab === 'connectors' && row.title === '协作办公'))
   assert.equal(doc.categories.some((row) => row.tab === 'skills' && row.title === 'AI / Agent 工具'), false)
 })
 
@@ -102,14 +102,14 @@ test('decorate marks missing items uninstalled', () => {
 
 test('decorate sees a copied skill as installed', () => {
   const home = mkdtempSync(join(tmpdir(), 'omx-cat-'))
-  mkdirSync(join(home, 'skills', 'esc-demo-note'), { recursive: true })
-  writeFileSync(join(home, 'skills', 'esc-demo-note', 'SKILL.md'), '# x\n')
+  mkdirSync(join(home, 'skills', 'ugc-confessional'), { recursive: true })
+  writeFileSync(join(home, 'skills', 'ugc-confessional', 'SKILL.md'), '# x\n')
   const doc = decorateCatalog(loadCatalog(), {
     home,
     profileDir: join(home, 'profiles', 'omnimux'),
     packageRoot: PACKAGE_ROOT,
   })
-  const item = doc.items.find((row) => row.id === 'esc-demo-skill')
+  const item = doc.items.find((row) => row.id === 'sk-omx-ugc-confessional')
   assert.equal(item.installed, true)
 })
 

@@ -72,11 +72,18 @@ test('preinstalled suite is declared with preinstalled flag', () => {
   assert.equal(tk.preinstalled, true)
 })
 
-test('shelf declares the suite category on the skills tab', () => {
+test('shelf marks suite entries with the sk-suite category on the skills tab', () => {
   invalidateCatalogMemos()
   const doc = loadCatalog()
-  const category = doc.categories.find((row) => row.id === 'sk-suite')
-  assert.deepEqual(category, { id: 'sk-suite', title: '套件', tab: 'skills' })
+  // 013fcb898 后分类栏收敛为 7 个营销分类，sk-suite 不再作为页签分类；
+  // 套件仍通过条目级 category === 'sk-suite' 落在 skills 页签。
+  const suites = doc.items.filter((row) => row.kind === 'suite')
+  assert.ok(suites.length > 0)
+  for (const suite of suites) {
+    assert.equal(suite.category, 'sk-suite', `${suite.id} must carry sk-suite`)
+    assert.equal(suite.tab, 'skills', `${suite.id} must stay on the skills tab`)
+  }
+  assert.equal(doc.categories.some((row) => row.id === 'sk-suite'), false)
 })
 
 test('suite entries keep their declared source shape', () => {

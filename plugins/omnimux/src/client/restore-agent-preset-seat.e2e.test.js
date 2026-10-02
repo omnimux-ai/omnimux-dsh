@@ -47,5 +47,5 @@ test('E2E: 验证会话上方切换 Agent 按钮与选择器不再被全局强�
   assert.ok(seat, '必须能够识别到会话顶部的 Agent 切换按钮')
 
   installAgentPresetAvatarEnhancer(doc)
-  assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'TikTok运营专家团', '席位应正确绑定当前专家标识')
+  assert.equal(seat.getAttribute(PRESET_SEAT_ATTR), 'tiktok-agent', '席位应正确绑定当前专家标识（#2785 不可逆退役契约：seat 键为预设 id）')
 })

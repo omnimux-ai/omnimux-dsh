@@ -287,6 +287,14 @@
       const { featured: featuredItems, regular: regularItems } = SkillShelf.plazaDiscoverySections(state.items, {
         category: state.category, query: state.submitted, uninstalledOnly: state.uninstalledOnly, installedItems: state.installedItems, presetBinding, customOrder: state.customOrder,
       });
+      // 013fcb898 后 renderFeaturedSection 恒返回 null，单分类页（非「全部」/非「精选」）
+      // 唯一卡片区是 renderRegularSection：把本分类的 featured 成员合回展示集合，
+      // 否则推荐项占主体的营销分类整页「没有结果」。featured/regular 逻辑划分不动，
+      // 仅并展示集，featuredKeys 契约不变。
+      const isSingleCategory = Boolean(state.category) && state.category !== 'featured' && !hasQuery;
+      const displayedRegular = isSingleCategory
+        ? [...new Map([...featuredItems, ...regularItems].map((it) => [(it.slug || it.skill || it.catalogId || it.id), it])).values()]
+        : regularItems;
       const isEn = tr("locale") === "en";
       const isExpertTab = state.mainTab === "experts-market";
       const isPluginsTab = state.mainTab === "plugins";
@@ -305,7 +313,7 @@
         featuredItems,
         mineToolbarOpts: { mineCategory: state.mineCategory, setMineCategory: state.setMineCategory, mineSource: state.mineSource, setMineSource: state.setMineSource, availableSources, autoUpdate: state.autoUpdate, setAutoUpdate: state.setAutoUpdate, tr },
         featuredSectionOpts: { featuredItems, tr, setOpen: state.setOpen },
-        regularSectionOpts: { category: state.category, hasQuery, regularItems, uninstalledOnly: state.uninstalledOnly, setUninstalledOnly: state.setUninstalledOnly, status: state.status, page: state.page, err: state.err, tr, setOpen: state.setOpen, onToggle: onToggleSwitch },
+        regularSectionOpts: { category: state.category, hasQuery, regularItems: displayedRegular, uninstalledOnly: state.uninstalledOnly, setUninstalledOnly: state.setUninstalledOnly, status: state.status, page: state.page, err: state.err, tr, setOpen: state.setOpen, onToggle: onToggleSwitch },
       };
       return {
         isExpertTab,

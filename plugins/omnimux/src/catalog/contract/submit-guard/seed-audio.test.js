@@ -18,7 +18,7 @@ test('Seed Audio canonical and aliases share a listed speech contract and wire d
   const index = getContractIndex()
   const contract = index.get(model)
   assert.deepEqual(contract.listedOperations, [`${model}#text_to_speech`])
-  assert.equal(contract.research.verifiedAt, '2026-09-07')
+  assert.equal(contract.research.verifiedAt, '2026-09-18') // #2277 live 验收更新证据日期
   for (const id of [model, ...contract.aliases]) {
     const plan = assertGuardSubmit({ ...request, model: id }, options)
     assert.equal(plan.modelId, model)

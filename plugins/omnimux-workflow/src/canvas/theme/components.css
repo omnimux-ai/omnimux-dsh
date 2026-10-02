@@ -5588,7 +5588,7 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 .wf-picker-modal .wf-picker-view-btn { width: 32px; height: 32px; border-radius: 8px; color: var(--dsw-alias-label-secondary); }
 .wf-picker-modal .wf-picker-view-btn--active { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-label-primary); }
 .wf-picker-modal .wf-picker-card, .wf-picker-modal .wf-picker-row { background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); }
-.wf-picker-modal .wf-picker-card--selected, .wf-picker-modal .wf-picker-row--selected { border-color: var(--dsw-alias-border-l4); background: var(--dsw-alias-interactive-bg-active); }
+.wf-picker-modal .wf-picker-card--selected, .wf-picker-modal .wf-picker-row--selected { border-color: var(--wb-node-ring); background: color-mix(in srgb, var(--wb-node-ring) 8%, transparent); }
 .wf-picker-modal .wf-picker-card__name, .wf-picker-modal .wf-picker-row__sub, .wf-picker-modal .wf-picker-empty { color: var(--dsw-alias-label-secondary); }
 .wf-picker-modal .wf-picker-btn { height: 32px; border-radius: 8px; font-size: 13px; line-height: 18px; }
 .wf-picker-modal .wf-modal-footer .wf-picker-footer { justify-content: flex-end; gap: 8px; border-top: none; }

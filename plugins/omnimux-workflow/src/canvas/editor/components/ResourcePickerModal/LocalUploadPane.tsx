@@ -107,7 +107,7 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddF
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const list = e.target.files;
       if (list && list.length > 0) {
-        const hasPath = Boolean(nativePathOf(list[0]));
+        const hasPath = Boolean(list[0] && nativePathOf(list[0]));
         if (hasPath) {
           ingestFiles(list);
         } else {

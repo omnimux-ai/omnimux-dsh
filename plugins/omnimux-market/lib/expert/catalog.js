@@ -233,11 +233,15 @@ function parseSuiteManifest(raw, id) {
   }
 }
 
-/** Only controlled relative raster asset references; no URL proxy or inline SVG. */
+/**
+ * Only controlled relative raster asset references; no URL proxy or inline SVG.
+ * 7720f7a5f 起封面收纳进子目录（catalog/covers/skills/*.webp）：允许任意层
+ * slug 目录段，仍拒绝 ..、大写、非位图扩展名。
+ */
 function parseSkillCover(raw) {
   if (!raw || typeof raw !== 'object') return undefined
   const { asset, alt } = raw
-  if (typeof asset !== 'string' || !/^catalog\/covers\/[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(asset)) return undefined
+  if (typeof asset !== 'string' || !/^catalog\/covers\/(?:[a-z0-9][a-z0-9-]*\/)*[a-z0-9][a-z0-9-]*\.(png|jpg|jpeg|webp)$/.test(asset)) return undefined
   return { asset, alt: typeof alt === 'string' ? alt.slice(0, 200) : '' }
 }
 

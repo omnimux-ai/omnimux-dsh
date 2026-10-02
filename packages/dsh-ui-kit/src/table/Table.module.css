@@ -1,0 +1,125 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-primary);
+  background-color: var(--dsw-alias-bg-layer-1);
+  text-align: left;
+}
+
+.bordered {
+  border: 1px solid var(--dsw-alias-border-l1);
+}
+
+.bordered th,
+.bordered td {
+  border: 1px solid var(--dsw-alias-border-l1);
+}
+
+.tableHeader {
+  background-color: var(--dsw-alias-bg-layer-2);
+}
+
+.stickyHeader .headCell {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--dsw-alias-bg-layer-2);
+}
+
+.headCell {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  user-select: none;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.dense .headCell {
+  padding: 6px 8px;
+}
+
+.headCellSortable {
+  cursor: pointer;
+  transition:
+    background-color 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.headCellSortable:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.headCellContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sortIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary);
+  transition: color 120ms ease;
+}
+
+.sortIconActive {
+  color: var(--dsw-alias-brand-primary);
+}
+
+.tableBody {
+  background-color: var(--dsw-alias-bg-layer-1);
+}
+
+.row {
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.row:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+.rowSelected {
+  background-color: var(--dsw-alias-interactive-bg-selected);
+}
+
+.rowSelected:hover {
+  background-color: var(--dsw-alias-interactive-bg-selected);
+}
+
+.cell {
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-primary);
+  box-sizing: border-box;
+}
+
+.dense .cell {
+  padding: 6px 8px;
+}
+
+.alignLeft {
+  text-align: left;
+}
+
+.alignCenter {
+  text-align: center;
+}
+
+.alignRight {
+  text-align: right;
+}

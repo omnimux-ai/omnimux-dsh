@@ -359,9 +359,17 @@ describe('rival-accounts-store: budget ledger', () => {
     // so the assertion holds in any zone that shares the reported behaviour
     // while a UTC-dated ledger still answers 2026-09-12.
     const clock = Date.parse('2026-09-12T16:30:00.000Z')
-    const { store } = sandbox({ nowMs: () => clock })
-    assert.equal(store.readBudget().day, '2026-09-13')
-    assert.notEqual(store.readBudget().day, new Date(clock).toISOString().slice(0, 10))
+    // The assertion is meaningful only where local and UTC dates diverge;
+    // pin the zone so it holds on every CI box, not just a UTC+8 dev machine.
+    const previous = process.env.TZ
+    process.env.TZ = 'Asia/Shanghai'
+    try {
+      const { store } = sandbox({ nowMs: () => clock })
+      assert.equal(store.readBudget().day, '2026-09-13')
+      assert.notEqual(store.readBudget().day, new Date(clock).toISOString().slice(0, 10))
+    } finally {
+      if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous
+    }
   })
 
   it('does not roll the ledger over at UTC midnight when the local day has not changed', () => {

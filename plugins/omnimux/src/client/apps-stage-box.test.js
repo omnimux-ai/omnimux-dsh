@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import { JSDOM } from 'jsdom'
 import { PRODUCT_STAGE_CHROME, ensureProductStageChrome, readConversationBox } from './conversation-box.js'
+import { persistSessionThreeColumn, resetConversationCollapseForTests } from './conversation-collapse.js'
 
 function fakeEl(rect, parent = null) {
   return {
@@ -162,6 +163,11 @@ describe('session-row closer', () => {
     globalThis.CustomEvent = dom.window.CustomEvent
     document.documentElement.dataset.dshProductStage = 'omnimux-assets'
     delete document.documentElement.dataset.dshSessionCloser
+    // #2520：会话行点击只有该会话有三栏记忆才恢复 split；测试在行 id 上预置记忆，
+    // 覆盖恢复三栏分支（无记忆 → 会话全屏 'chat' 由别的用例覆盖）。
+    resetConversationCollapseForTests()
+    persistSessionThreeColumn(true, 'other')
+    persistSessionThreeColumn(true, 'current')
   }
 
   it('rewrites injected chrome that has window-drag but not scoped better-sidebar panel rule', () => {
@@ -293,7 +299,7 @@ describe('session-row closer', () => {
     assert.deepEqual(focusChanges, ['split'])
   })
 
-  it('does not call setFocus when conversation is already visible', () => {
+  it('session click while conversation is already visible keeps the split session focused', () => {
     setup()
     delete document.documentElement.dataset.dshProductStage
     const focusChanges = []
@@ -306,7 +312,8 @@ describe('session-row closer', () => {
     }
     ensureProductStageChrome()
     document.getElementById('other').click()
-    assert.deepEqual(focusChanges, [])
+    // #2520：有三栏记忆 → 恢复 split（全屏退出）而非跳过。
+    assert.deepEqual(focusChanges, ['split'])
   })
 
   it('does not reveal conversation when a pin button inside a session row is clicked', () => {

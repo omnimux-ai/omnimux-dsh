@@ -9,11 +9,29 @@ import catalog from '../../catalog/index.json' with { type: 'json' }
 import * as SkillShelf from './skill-picker-logic.js'
 import { buildWorkshopCategories, usePlazaSearchEffect } from './plaza/usePlazaFilter.js'
 import * as plazaUtils from './plaza/plazaUtils.js'
+import * as cardCoversData from './plaza/cardCoversData.js'
+import * as auroraGradients from './plaza/auroraGradients.js'
 
 const req = createRequire(import.meta.url)
 const { SuiteDetailModal } = req('./plaza/SuiteDetailModal.jsx')
 
 // PlazaCardGrid.jsx 经 esbuild 转 CJS 执行（与 mine-filter-dropdown.test.js 同法）。
+// 013fcb898 后 renderRegularCard 委托真实 renderFeaturedCard（Creatify 卡），
+// 这里同样经 esbuild 编译 FeaturedCard.jsx 接真实现，不再用 null 桩。
+const featuredCardSrc = readFileSync(new URL('./plaza/FeaturedCard.jsx', import.meta.url), 'utf8')
+const compiledFeaturedCard = esbuild.transformSync(featuredCardSrc, { loader: 'jsx', format: 'cjs' }).code
+const featuredCardModule = { exports: {} }
+new Function('require', 'module', 'exports', compiledFeaturedCard)(
+  (id) => {
+    if (id === 'react') return React
+    if (id.includes('plazaUtils')) return plazaUtils
+    if (id.includes('cardCoversData')) return cardCoversData
+    if (id.includes('auroraGradients')) return auroraGradients
+    return {}
+  },
+  featuredCardModule,
+  featuredCardModule.exports,
+)
 const plazaCardGridSrc = readFileSync(new URL('./plaza/PlazaCardGrid.jsx', import.meta.url), 'utf8')
 const compiledPlazaCardGrid = esbuild.transformSync(plazaCardGridSrc, { loader: 'jsx', format: 'cjs' }).code
 const plazaCardGridModule = { exports: {} }
@@ -21,7 +39,7 @@ new Function('require', 'module', 'exports', compiledPlazaCardGrid)(
   (id) => {
     if (id === 'react') return React
     if (id.includes('plazaUtils')) return plazaUtils
-    if (id.includes('FeaturedCard')) return { renderFeaturedCard: () => null }
+    if (id.includes('FeaturedCard')) return featuredCardModule.exports
     return {}
   },
   plazaCardGridModule,
@@ -128,15 +146,14 @@ const suiteCard = (item) => ({
   installed: false,
 })
 
-test('A1 分类栏：套件紧跟「全部」，位于「精选」与各技能领域之前', () => {
+test('A1 分类栏：013fcb898 后收敛为「全部」+ 7 个营销分类', () => {
   const categories = buildWorkshopCategories(null, tr)
-  assert.equal(categories.length, 13)
-  assert.deepEqual(categories.slice(0, 3).map((c) => c.id), ['', '套件', 'featured'])
-  assert.deepEqual(categories.slice(3, 5).map((c) => c.id), ['AIGC 创作', '短剧漫剧'])
-  assert.equal(categories.at(-1).id, '平台工具')
-  // 预设绑定模式保持既有形态：不新增套件分类
-  assert.deepEqual(buildWorkshopCategories({ categories: [{ id: '选品', name: '选品' }] }, tr).map((c) => c.id), ['', '选品'])
-  // 标签来自 taxonomy + i18n 真源
+  assert.equal(categories.length, 8)
+  assert.deepEqual(categories.map((c) => c.id), ['', 'ugc-testimonial', 'storytelling-script', 'image-static', 'video-ads', 'product-showcase', 'meme-native', 'other'])
+  // 013fcb898 后分类栏固定为 Creatify 8 项，预设绑定不再注入套件/自定义分类
+  assert.deepEqual(buildWorkshopCategories({ categories: [{ id: '选品', name: '选品' }] }, tr).map((c) => c.id),
+    ['', 'ugc-testimonial', 'storytelling-script', 'image-static', 'video-ads', 'product-showcase', 'meme-native', 'other'])
+  // 「套件」仍保留在 taxonomy 真源中，供 matchesDomainTag 判定套件条目
   const taxonomy = SkillShelf.SKILL_SHELF_TAXONOMY.find((row) => row.id === '套件')
   assert.equal(taxonomy.labelKey, 'picker.tab.suite')
 })
@@ -154,30 +171,23 @@ test('A1 列表：套件只落「套件」分类，其他分类不混入套件',
     assert.ok(item.suite && Array.isArray(item.suite.rules), `${item.id} must carry the structured manifest`)
   }
 
+  // RC1 货架换装后推荐项落 featured 段：动画分类成员在 featured 而非 regular。
   const animation = SkillShelf.plazaDiscoverySections([], { category: '动画' })
-  assert.ok(animation.regular.length > 0)
-  assert.ok(animation.regular.every((item) => item.kind !== 'suite'))
+  const animationAll = [...animation.featured, ...animation.regular]
+  assert.ok(animationAll.length > 0)
+  assert.ok(animationAll.every((item) => item.kind !== 'suite'))
 })
 
-test('A2 套件卡：复用 .regular-card 骨架并显示三项真实计数（0 也显示）', () => {
-  const card = renderRegularCard(suiteCard(SOCIAL_CONTENT), { tr, h, onOpen: () => {} })
-  assert.equal(card.props.className, 'regular-card')
-  const composition = withClass(card, 'regular-card-composition')
-  assert.equal(composition.length, 1)
-  assert.equal(composition[0].children[0], '技能 0 · 规则 5 · Agent 7')
-  // 套件卡右侧统一挂载开关，与普通技能卡片保持一致
-  assert.equal(card.children.length, 2)
-  assert.equal(card.children.some((node) => node && node.type && node.type.name === 'WorkshopSwitch'), true)
-
-  const distribution = renderRegularCard(suiteCard(DISTRIBUTION), { tr, h, onOpen: () => {} })
-  assert.equal(withClass(distribution, 'regular-card-composition')[0].children[0], '技能 6 · 规则 0 · Agent 5')
-
-  const skillCard = renderRegularCard({ kind: 'skill', slug: 'demo', name: '示例技能', summary: '说明' }, { tr, h, onOpen: () => {} })
-  assert.equal(withClass(skillCard, 'regular-card-composition').length, 0)
-  assert.equal(skillCard.children.some((node) => node && node.type && node.type.name === 'WorkshopSwitch'), true)
-
+test('A2 套件卡：构成计数真源完备且普通卡可渲染', () => {
+  // 013fcb898 后普通卡统一为 Creatify 卡片（renderFeaturedCard 路径），
+  // 套件构成计数不再渲染在卡片上，由 plazaUtils 真源供详情页消费。
   assert.deepEqual(plazaUtils.resolveSuiteCounts({}), { skills: 0, rules: 0, agents: 0 })
   assert.deepEqual(plazaUtils.resolveSuiteCounts(SOCIAL_CONTENT), { skills: 0, rules: 5, agents: 7 })
+  assert.equal(plazaUtils.suiteCompositionText(SOCIAL_CONTENT, tr), '技能 0 · 规则 5 · Agent 7')
+  assert.equal(plazaUtils.suiteCompositionText(DISTRIBUTION, tr), '技能 6 · 规则 0 · Agent 5')
+
+  const skillCard = renderRegularCard({ kind: 'skill', slug: 'demo', name: '示例技能', summary: '说明' }, { tr, h, onOpen: () => {} })
+  assert.ok(skillCard, 'regular card must render a tree')
 })
 
 test('A3 详情：标题 / 来源 / 描述 / 三块，空块整块省略', () => {

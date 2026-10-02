@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, mkdir, writeFile, readFile, rm, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -25,7 +25,17 @@ function command(binary, args, options = {}) {
   });
 }
 
-test('1756 official native comment ready, full-text pre-step expansion, and removal', { timeout: 180000 }, async () => {
+const hasEgoBrowser = (() => {
+  try {
+    execFileSync('ego-browser', ['--version'], { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+})()
+
+test('1756 official native comment ready, full-text pre-step expansion, and removal', { timeout: 180000, skip: !hasEgoBrowser && 'ego-browser binary not on PATH (opt-in browser harness)' }, async () => {
+  await mkdir(resolve(root, 'tmp'), { recursive: true });
   const temp = await mkdtemp(resolve(root, 'tmp/comment-native-e2e-'));
   const evidence = resolve(root, '.agent-reports/comment-only-send/formal', temp.split('/').pop());
   await mkdir(evidence, { recursive: true });

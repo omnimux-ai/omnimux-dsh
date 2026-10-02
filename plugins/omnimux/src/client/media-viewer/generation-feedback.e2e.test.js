@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
@@ -9,6 +9,15 @@ import { fileURLToPath } from 'node:url';
 import { lateReadyRegression, frozenInputRegression } from '../../../test-support/generation-feedback/generation-feedback-regressions.mjs';
 
 // Bridge contract regressions are explicitly separate from the real-browser journey.
+const hasEgoBrowser = (() => {
+  try {
+    execFileSync('ego-browser', ['--version'], { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+})()
+
 test('bridge regression: late single request consumes retained turn end', () => lateReadyRegression(false));
 test('bridge regression: two real candidates resolve without cross-request media', () => lateReadyRegression(true));
 test('bridge regression: submitted input is frozen and questions do not generate', frozenInputRegression);
@@ -19,7 +28,7 @@ const root = resolve(here, '../../../../..');
 // Real browser; unavailable ego capabilities fail rather than skip.
 // Independent command: node --test plugins/omnimux/src/client/media-viewer/generation-feedback.e2e.test.js
 // Grounded in #1759 space700 and tmp/canvas-generation-feedback/video-browser.json.
-test('generation feedback: real browser transport-to-viewer journeys', async (t) => {
+test('generation feedback: real browser transport-to-viewer journeys', { skip: !hasEgoBrowser && 'ego-browser binary not on PATH (opt-in browser harness)' }, async (t) => {
   const evidence = resolve(root, '.agent-reports/canvas-generation-feedback/e2e-runs', randomUUID());
   await mkdir(evidence, { recursive: true });
   t.diagnostic(`retained evidence: ${evidence}`);

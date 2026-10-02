@@ -38,8 +38,8 @@ test('E2E: 图像生成大橱窗与队列双向纯视觉同步及无边框自适
     '中央大橱窗必须根据 activeItem 状态同步激活大卡片执行态'
   );
   assert.ok(
-    !tabSource.includes('omx-mv-generating-overlay'),
-    '中央大橱窗必须彻底移除粗暴的全屏黑屏遮罩 omx-mv-generating-overlay'
+    !tabSource.includes('<div className="omx-mv-generating-overlay">'),
+    '中央大橱窗严禁重新出现独立的全屏黑屏遮罩节点（#2827 后该类名只作为卡槽内标记，不得独立成块覆盖）'
   );
 
   // 3. 验证 MediaViewerComposer.jsx 上下分层与全宽输入契约

@@ -1,0 +1,19 @@
+.stageContainer {
+  position: absolute;
+  top: var(--stage-top, 0px);
+  left: var(--stage-left, 56px);
+  width: var(--stage-width, calc(100vw - 56px));
+  height: var(--stage-height, 100vh);
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.stageContainer[data-visible="false"] {
+  display: none !important;
+  pointer-events: none !important;
+}

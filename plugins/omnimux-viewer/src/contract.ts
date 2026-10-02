@@ -315,6 +315,44 @@ function isPositiveInteger(value: unknown): value is number {
 }
 
 /**
+ * Format the model-facing envelope. Pure, and — for every medium except an
+ * in-context raster — the only thing the model receives, so it states plainly
+ * what is on the user's screen and that the model itself cannot see it.
+ *
+ * Lives here, not in the host module that emits it: the card replays the same
+ * envelope format in tests and this module is the only one both halves import.
+ * @param value - the canonical outcome.
+ * @returns the envelope body.
+ */
+export function formatDisplayOutput(value: DisplayValue): string {
+  const size = formatBytes(value.bytes)
+  const dimensions = value.image === undefined ? '' : `, ${value.image.width}x${value.image.height} px`
+  const facts = [value.mediaType, size].filter(part => part.length > 0).join(', ')
+  const note = value.inContext
+    ? 'The image is attached below and is also displayed in the web UI.'
+    : 'It is displayed in the web UI for the user. You cannot see its content — do not describe or summarize it unless the user tells you what it shows.'
+  // The three machine fields exist for one specific case: a NESTED dispatch.
+  // The registry projects `presentationMeta` only for top-level calls
+  // (`exec.parent === undefined`), so a `display_file` called from inside
+  // `run_code` reaches the card with no metadata at all and would render as a
+  // bare header. Content blocks are persisted for nested calls too, so the
+  // envelope carries what the card needs to rebuild itself — this is the card
+  // parsing its own structured envelope, not prose.
+  const machine = [
+    `<media>${value.mediaType}</media>`,
+    `<bytes>${value.bytes}</bytes>`,
+    ...value.assetUrl === undefined ? [] : [`<asset>${value.assetUrl}</asset>`],
+  ].join('\n')
+  return `<path>${value.path}</path>
+<type>${value.kind}</type>
+${machine}
+<content>
+${facts}${dimensions}
+${note}
+</content>`
+}
+
+/**
  * Render a byte count the way a file manager does.
  * @param bytes - non-negative byte count.
  * @returns a short human string, or an empty string when the size is unknown.

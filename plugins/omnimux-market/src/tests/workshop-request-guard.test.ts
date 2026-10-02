@@ -77,7 +77,9 @@ test('authorized public Host and actual local API consume real fixture files and
     assert.equal(capture.res.statusCode, 200); assert.equal(body.status, 'complete')
     assert.equal((body.records as unknown[]).length, 1); assert(!JSON.stringify(body).includes(root))
     const result = await host.workshopQuery(request(), query)
-    assert(result.count.value > 0); assert.equal(result.count.mode, 'exact')
+    // RC1 目录换装后官方货架全部 recommended（013fcb898、8fa971988）：
+    // count 只计非推荐清单项，故为 0；精选段 length > 0 才是当前契约。
+    assert(result.featured.length > 0); assert.equal(result.count.value, 0); assert.equal(result.count.mode, 'exact')
     const mine = await host.workshopQuery(request(), { ...query, view: 'mine' })
     assert.equal(mine.items[0].token, 'fixture'); assert.equal(mine.items[0].enabled, null)
     const detail = await host.workshopDetail(request(), { skillKey: 'fixture', sourceRef: null, installId: (await host.workshopInventory(request())).records[0].installId })

@@ -11,6 +11,7 @@ import {
   workspaceSummary,
   withWorkspace,
   resolveTargetWorkspaceId,
+  extractSessionContext,
   WORKSPACE_ID_PARAM_DESC,
 } from './agentToolShared.ts';
 

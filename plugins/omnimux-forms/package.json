@@ -27,7 +27,7 @@
     "react-dom": "^18.2.0",
     "@chakra-ui/react": "3.37.0",
     "@emotion/react": "11.14.0",
-    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit",
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
     "@omnimux/form-contract": "file:../../packages/form-contract"
   },
   "dsh": {

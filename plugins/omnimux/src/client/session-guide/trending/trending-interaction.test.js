@@ -610,9 +610,9 @@ test('TrendingReplicateSection：复刻吸底给出停靠几何，只有滑回�
     await scrollTo(view.scroller, 900)
     await view.recreate()
     assert.equal(view.docked(), true, '复刻必须吸底')
-    // 952 = min(952, 1200-24)，518 = 394 + (1200-952)/2：输入框宽度与位置与顶部原生上限 952px 完全一致
-    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-width'), '952px')
-    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-left'), '518px')
+    // 680 = min(680, 1200-24)，654 = 394 + (1200-680)/2：输入框宽度与位置对齐 680px 紧凑上限 (#2846)
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-width'), '680px')
+    assert.equal(view.host.style.getPropertyValue('--omnimux-dock-left'), '654px')
     assert.equal(view.host.style.getPropertyValue('--omnimux-dock-bottom'), '20px')
     assert.equal(view.host.style.getPropertyValue('--omnimux-dock-card-height'), '166px')
 

@@ -159,7 +159,8 @@ test('E2E: 场景 3 & 4 - 应用归属自适应分诊、副本创建与工作流
 
   // 验证子节点与组的归属关系
   const childNodes = writtenCanvasPayload.nodes.filter((n) => n.id !== groupNode.id)
-  assert.ok(childNodes.length >= 4, '子节点数应完整继承预置工作流')
+  const presetCount = getPresetWorkflowSnapshot('app-creatify-app-demo').nodes.length
+  assert.equal(childNodes.length, presetCount, '子节点数应完整继承预置工作流快照')
   for (const child of childNodes) {
     assert.equal(child.parentId, groupNode.id, '子节点 parentId 必须指向该组')
     assert.equal(child.extent, 'parent', '子节点边界限制在组内')

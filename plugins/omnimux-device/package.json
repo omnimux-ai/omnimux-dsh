@@ -39,7 +39,7 @@
     }
   },
   "dependencies": {
-    "dsh-ui-kit": "file:../../../../personal/dsh-ui-kit"
+    "dsh-ui-kit": "file:../../packages/dsh-ui-kit"
   },
   "peerDependencies": {
     "cordis": "^3.18.1"

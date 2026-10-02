@@ -31,7 +31,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.18.1
 
       - name: Clear stale QA label
         if: ${{ github.event_name == 'pull_request' }}
@@ -45,25 +45,20 @@ jobs:
           if (!result.ok) throw new Error(result.errors.join('; '));
           JS
 
-      - name: Install QA verifier dependencies
-        run: |
-          set -euo pipefail
-          QA_DEPS="$(mktemp -d)"
-          export QA_DEPS
-          node --input-type=module - <<'JS'
-          import { readFileSync, writeFileSync } from 'node:fs';
-          const { devDependencies } = JSON.parse(readFileSync('package.json', 'utf8'));
-          const formContract = JSON.parse(readFileSync('packages/form-contract/package.json', 'utf8'));
-          const formRuntime = JSON.parse(readFileSync('plugins/omnimux-forms/package.json', 'utf8')).devDependencies;
-          writeFileSync(process.env.QA_DEPS + '/package.json', JSON.stringify({
-            private: true,
-            overrides: { 'whatwg-url': '17.1.0' },
-            dependencies: { ...formContract.dependencies, ...formContract.devDependencies, '@chakra-ui/react': formRuntime['@chakra-ui/react'], '@emotion/react': formRuntime['@emotion/react'], acorn: devDependencies.acorn, esbuild: devDependencies.esbuild, pngjs: devDependencies.pngjs, yaml: devDependencies.yaml, jsdom: devDependencies.jsdom, react: devDependencies.react, 'react-dom': devDependencies['react-dom'] },
-          }));
-          JS
-          npm --prefix "$QA_DEPS" install --ignore-scripts --no-audit --no-fund
-          test ! -e node_modules
-          ln -s "$QA_DEPS/node_modules" node_modules
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      # 真实工作区安装：QA_DEPS 临时目录方案无法解析 file: 工作区依赖
+      # （packages/dsh-ui-kit），且与锁文件漂移；prepare 脚本产物均已入库，
+      # --ignore-scripts 安全且避开 prepare=build 全量重编。
+      - name: Install workspace dependencies
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build all plugin bundles
+        run: node scripts/build-all.mjs
 
       - name: Run syntax & contract gates
         run: |
@@ -127,12 +122,6 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Setup fixed pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.7.0
-          run_install: false
-
       - name: Test managed tarball unit suite
         run: |
           set -euo pipefail
@@ -171,43 +160,23 @@ jobs:
           node --test scripts/verify-dsh-lockfile-uniform.test.mjs
 
       - name: Verify model contracts (admission + dispositions strict)
-        run: |
-          set -euo pipefail
-          # Isolate yaml install: full monorepo pnpm install needs local file: dsh-ui-kit.
-          # trap ensures symlink/tmpdir cleanup even when verifier fails.
-          TMP="$(mktemp -d)"
-          YAML_LINK=""
-          cleanup() {
-            if [[ -n "${YAML_LINK}" && -L "${YAML_LINK}" ]]; then
-              rm -f "${YAML_LINK}"
-            fi
-            rm -rf "${TMP}"
-          }
-          trap cleanup EXIT
-          printf '%s\n' '{"type":"module","dependencies":{"yaml":"2.9.0"}}' > "$TMP/package.json"
-          npm --prefix "$TMP" install --ignore-scripts --no-audit --no-fund
-          mkdir -p plugins/omnimux/node_modules
-          YAML_LINK="plugins/omnimux/node_modules/yaml"
-          # Prefer NODE_PATH when a real yaml install already exists; never clobber it.
-          if [[ -e "${YAML_LINK}" && ! -L "${YAML_LINK}" ]]; then
-            export NODE_PATH="${TMP}/node_modules${NODE_PATH:+:$NODE_PATH}"
-            YAML_LINK=""
-            node scripts/verify-model-contracts.mjs --strict
-          else
-            ln -sfn "$TMP/node_modules/yaml" "${YAML_LINK}"
-            node scripts/verify-model-contracts.mjs --strict
-          fi
+        run: node scripts/verify-model-contracts.mjs --strict
 
-      - name: Rebuild omnimux-workflow host bundle from src
+      - name: Rebuild omnimux-workflow host + canvas bundles from src
         run: |
-          TMP="$(mktemp -d)"
-          printf '%s\n' '{"type":"module"}' > "$TMP/package.json"
-          npm --prefix "$TMP" install --ignore-scripts --no-audit --no-fund esbuild@0.28.2 zod @xyflow/react uuid
-          ln -sfn "$TMP/node_modules" plugins/omnimux-workflow/node_modules
           node plugins/omnimux-workflow/scripts/build-host.mjs
+          node plugins/omnimux-workflow/scripts/build-canvas.mjs
           test -s plugins/omnimux-workflow/dist/index.js
-          rm -f plugins/omnimux-workflow/node_modules
-          rm -rf "$TMP"
+          test -s plugins/omnimux-workflow/lib/canvas.js
+
+      # 每个插件的测试在合并前必须全绿：run-workspace-tests 按包 scripts.test
+      # 逐一执行并 TAP 汇总；verify-plugin-load 在真实 Cordis 内加载每个插件
+      # （声明的 inject 由兄弟桩纤维提供），替代原静态 verify-dsh-contracts。
+      - name: Plugin unit suites (all packages)
+        run: node scripts/run-workspace-tests.mjs
+
+      - name: Plugin load check (Cordis runtime)
+        run: node scripts/verify-plugin-load.mjs
 
       - name: Isolated right-sidebar chrome geometry gate
         run: |

@@ -19,7 +19,7 @@ import { composeComposerModels } from '../catalog/composer-list.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '../../../..')
-const evidenceDir = join(repoRoot, 'docs/evidence')
+const evidenceDir = join(repoRoot, '.tmp/evidence')
 
 /** Shipped rows: what the profile says each model looks like. */
 const SHIPPED = [

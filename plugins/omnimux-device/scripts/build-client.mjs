@@ -8,13 +8,12 @@ let esbuild
 try {
   esbuild = await import('esbuild')
 } catch {
-  const fallback = '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/node_modules/esbuild/lib/main.js'
-  esbuild = await import(fallback)
+  esbuild = await import('esbuild')
 }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outFile = join(root, 'lib', 'client.js')
-const uiKitDistPath = '/Users/x/Desktop/Project/dsh-plugin/personal/dsh-ui-kit/lib/index.js'
+const uiKitDistPath = join(root, '../../packages/dsh-ui-kit/lib/index.js')
 
 const result = await esbuild.build({
   absWorkingDir: root,

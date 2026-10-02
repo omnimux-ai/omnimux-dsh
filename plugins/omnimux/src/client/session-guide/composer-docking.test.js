@@ -157,15 +157,15 @@ test('dock owner expands for inline demand, clamps to column and restores defaul
       card.querySelector('[data-omx-quick-shortcut-controls]').remove()
       await Promise.resolve()
     })
-    // 移除需求后，此时 availableWidth 仍为 900（available 为 900 - 24 = 876px），输入框自适应可用宽度 876px
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '876px')
+    // 移除需求后回退至 680px 紧凑上限（min(900 - 24, 680) = 680）
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '680px')
     assert.equal(card.style.width, '')
 
-    // 视口再次展开至宽屏 1200px 时，恢复至原生上限 952px 且居中对齐
+    // 视口再次展开至宽屏 1200px 时，仍封顶 680px 且居中对齐
     availableWidth = 1200
     await act(async () => window.dispatchEvent(new window.Event('resize')))
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '952px')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '518px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '680px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '654px')
   } finally {
     await act(async () => root.unmount())
     env.restore()
@@ -580,7 +580,7 @@ test('getComposerScrollThresholds: 滚动容器不是定位父级时按视口矩
   assert.equal(thresholds.leaveThreshold, 350)
 })
 
-test('AC-1: 侧边栏展开态（280px）在 2700px 宽屏下，输入框严格居中于栏目内部（left = 1014px，两侧等距 734px）', () => {
+test('AC-1: 侧边栏展开态（280px）在 2700px 宽屏下，输入框严格居中于栏目内部（left = 1150px，两侧等距 870px）', () => {
   const dom = new JSDOM(`<!doctype html>
     <div id="root">
       <div class="dshDesktopSidebar" style="width: 280px;"></div>
@@ -617,21 +617,21 @@ test('AC-1: 侧边栏展开态（280px）在 2700px 宽屏下，输入框严格�
   // 2. 测试停靠几何计算
   const geo = dockGeometry(card, band)
   assert.ok(geo, '必须计算出有效停靠几何')
-  assert.equal(geo.width, 952, '宽度必须对齐原生上限 952px (方案 A)')
-  // 核心居中坐标计算验证：280 + (2420 - 952) / 2 = 1014px
-  assert.equal(geo.left, 1014, 'left 坐标必须严格为 1014px，严禁全屏居中的 874px')
+  assert.equal(geo.width, 680, '宽度必须对齐 680px 紧凑上限 (#2846)')
+  // 核心居中坐标计算验证：280 + (2420 - 680) / 2 = 1150px
+  assert.equal(geo.left, 1150, 'left 坐标必须严格为 1150px，严禁全屏居中的 1010px')
 
   // 3. 几何对称性严格断言：left - columnLeft === columnRight - (left + width)
   const leftSpace = geo.left - column.left
   const rightSpace = column.right - (geo.left + geo.width)
-  assert.equal(leftSpace, 734, '栏目内左侧留白必须精确等于 734px')
-  assert.equal(rightSpace, 734, '栏目内右侧留白必须精确等于 734px')
+  assert.equal(leftSpace, 870, '栏目内左侧留白必须精确等于 870px')
+  assert.equal(rightSpace, 870, '栏目内右侧留白必须精确等于 870px')
   assert.equal(leftSpace, rightSpace, '栏目内部两侧留白必须 100% 绝对对称 1:1')
 
   dom.window.close()
 })
 
-test('AC-2: 侧边栏扩展态（440px）在 2700px 宽屏下，输入框自适应居中（left = 1094px，两侧等距 654px）', () => {
+test('AC-2: 侧边栏扩展态（440px）在 2700px 宽屏下，输入框自适应居中（left = 1230px，两侧等距 790px）', () => {
   const dom = new JSDOM(`<!doctype html>
     <div id="root">
       <div data-conversation-scroll style="left: 440px; width: 2260px;">
@@ -655,20 +655,20 @@ test('AC-2: 侧边栏扩展态（440px）在 2700px 宽屏下，输入框自适�
 
   const geo = dockGeometry(card, card)
   assert.ok(geo)
-  assert.equal(geo.width, 952)
-  // 440 + (2260 - 952) / 2 = 1094px
-  assert.equal(geo.left, 1094)
+  assert.equal(geo.width, 680)
+  // 440 + (2260 - 680) / 2 = 1230px
+  assert.equal(geo.left, 1230)
 
   const leftSpace = geo.left - 440
   const rightSpace = 2700 - (geo.left + geo.width)
-  assert.equal(leftSpace, 654)
-  assert.equal(rightSpace, 654)
+  assert.equal(leftSpace, 790)
+  assert.equal(rightSpace, 790)
   assert.equal(leftSpace, rightSpace)
 
   dom.window.close()
 })
 
-test('AC-3: 侧边栏折叠收起态（0px / data-omnimux-left-collapsed），输入框居中于全屏（left = 874px，两侧等距 874px）', () => {
+test('AC-3: 侧边栏折叠收起态（0px / data-omnimux-left-collapsed），输入框居中于全屏（left = 1010px，两侧等距 1010px）', () => {
   const dom = new JSDOM(`<!doctype html>
     <html data-omnimux-left-collapsed="">
       <body>
@@ -691,20 +691,20 @@ test('AC-3: 侧边栏折叠收起态（0px / data-omnimux-left-collapsed），�
 
   const geo = dockGeometry(card, card)
   assert.ok(geo)
-  assert.equal(geo.width, 952)
-  // (2700 - 952) / 2 = 874px
-  assert.equal(geo.left, 874)
+  assert.equal(geo.width, 680)
+  // (2700 - 680) / 2 = 1010px
+  assert.equal(geo.left, 1010)
 
   const leftSpace = geo.left - 0
   const rightSpace = 2700 - (geo.left + geo.width)
-  assert.equal(leftSpace, 874)
-  assert.equal(rightSpace, 874)
+  assert.equal(leftSpace, 1010)
+  assert.equal(rightSpace, 1010)
   assert.equal(leftSpace, rightSpace)
 
   dom.window.close()
 })
 
-test('AC-4: 窄屏/分栏紧凑态（栏目宽 712px <= 952px），输入框自适应为 688px 且居中（两侧等距 12px 呼吸缓冲）', () => {
+test('AC-4: 窄屏/分栏紧凑态（栏目宽 712px，available 688 > 680），输入框封顶 680px 且居中（两侧等距 16px）', () => {
   const dom = new JSDOM(`<!doctype html>
     <div class="dshDesktopConversationSurface" style="left: 0px; width: 712px;">
       <div data-omnimux-starter-host="">
@@ -726,15 +726,15 @@ test('AC-4: 窄屏/分栏紧凑态（栏目宽 712px <= 952px），输入框自�
 
   const geo = dockGeometry(card, card)
   assert.ok(geo)
-  // available = 712 - 24 = 688px
-  assert.equal(geo.width, 688, '窄屏紧凑态下宽度必须自适应为 712 - 24 = 688px')
-  // left = 0 + (712 - 688) / 2 = 12px
-  assert.equal(geo.left, 12, 'left 坐标必须严格留出 12px 呼吸间距')
+  // available = 712 - 24 = 688px，超过 680px 上限，封顶为 680px
+  assert.equal(geo.width, 680, '窄屏紧凑态下宽度封顶 680px（min(688, 680)）')
+  // left = 0 + (712 - 680) / 2 = 16px
+  assert.equal(geo.left, 16, 'left 坐标必须严格居中留出 16px 间距')
 
   const leftSpace = geo.left - 0
   const rightSpace = 712 - (geo.left + geo.width)
-  assert.equal(leftSpace, 12)
-  assert.equal(rightSpace, 12)
+  assert.equal(leftSpace, 16)
+  assert.equal(rightSpace, 16)
   assert.equal(leftSpace, rightSpace)
 
   dom.window.close()
@@ -871,8 +871,8 @@ test('useComposerDocking: transitionend 事件安全过滤——仅响应几何�
     await act(async () => hookApi.pin({ id: 'test-transition' }))
 
     // 初始停靠状态
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '952px')
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '424px') // 300 + (1200 - 952) / 2 = 424
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-width'), '680px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '560px') // 300 + (1200 - 680) / 2 = 560
 
     // 1. 模拟非几何属性（如 background-color）过渡完成，即使尺寸模拟变化，也不会触发重新计算
     currentWidth = 1000
@@ -882,8 +882,8 @@ test('useComposerDocking: transitionend 事件安全过滤——仅响应几何�
       Object.defineProperty(colorEvent, 'target', { value: host })
       window.dispatchEvent(colorEvent)
     })
-    // 依然维持之前的 424px，没有被无关 transitionend 触发重算
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '424px')
+    // 依然维持之前的 560px，没有被无关 transitionend 触发重算
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '560px')
 
     // 1b. 模拟非关联元素即使完成几何属性（如 width）过渡，也被安全拦截，不会触发重算
     await act(async () => {
@@ -896,7 +896,7 @@ test('useComposerDocking: transitionend 事件安全过滤——仅响应几何�
       window.dispatchEvent(unrelatedEvent)
       unrelatedEl.remove()
     })
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '424px')
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '560px')
 
     // 2. 模拟宿主/关联元素完成几何属性（如 width）过渡，准确触发重算更新
     await act(async () => {
@@ -905,8 +905,8 @@ test('useComposerDocking: transitionend 事件安全过滤——仅响应几何�
       Object.defineProperty(widthEvent, 'target', { value: host })
       window.dispatchEvent(widthEvent)
     })
-    // 300 + (1000 - 952) / 2 = 324px
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '324px')
+    // 300 + (1000 - 680) / 2 = 460px
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '460px')
 
     // 3. 模拟侧边栏子元素冒泡完成非 width 属性过渡（如 opacity），closest 穿透判定命中侧边栏目标，安全触发更新
     currentWidth = 1100
@@ -925,8 +925,8 @@ test('useComposerDocking: transitionend 事件安全过滤——仅响应几何�
 
       sidebarEl.remove()
     })
-    // 300 + (1100 - 952) / 2 = 374px
-    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '374px')
+    // 300 + (1100 - 680) / 2 = 510px
+    assert.equal(host.style.getPropertyValue('--omnimux-dock-left'), '510px')
   } finally {
     await act(async () => root.unmount())
     env.restore()
@@ -934,9 +934,11 @@ test('useComposerDocking: transitionend 事件安全过滤——仅响应几何�
 })
 
 test('resolveNativeComposerMaxWidth: 精准支持 calc(...) 表达式求值，消除 NaN 导致误回退为 952px 的偏左畸变', () => {
+  // 非新会话引导宿主卡片（data-phase="conversation" 但无 data-omnimux-starter-host）：
+  // 走 --dsh-composer-card-max-width 变量求值分支，验证 calc 不会被误判回退 952px。
   const env = withDom(`
     <div id="root">
-      <div data-phase="conversation" data-omnimux-starter-host="">
+      <div data-phase="conversation">
         <main class="dshDesktopConversationSurface" style="position: absolute; left: 280px; width: 1448px;">
           <div class="uPhUma_scrollBody" data-conversation-scroll style="width: 1448px;">
             <div class="hero-band">
@@ -958,7 +960,7 @@ test('resolveNativeComposerMaxWidth: 精准支持 calc(...) 表达式求值，�
     column.getBoundingClientRect = () => ({ left: 280, right: 1728, width: 1448, height: 900 })
 
     const resolvedMax = resolveNativeComposerMaxWidth(card)
-    assert.equal(resolvedMax, 672, 'calc expression resolves to 672px, never NaN or fallback 952px')
+    assert.equal(resolvedMax, 672, 'calc expression resolves to 672px, never NaN or fallback 680px')
 
     const geo = dockGeometry(card, band)
     assert.ok(geo)

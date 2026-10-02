@@ -70,29 +70,29 @@ test('catalog provider list returns candidates with 0 token modelInvocable: fals
   }
 
   const names = new Set(result.candidates.map(c => c.name))
-  assert.ok(names.has('ad-creative'), 'should contain ad-creative')
-  assert.ok(names.has('content-strategy'), 'should contain content-strategy')
-  assert.ok(names.has('social-caption'), 'should contain social-caption')
-  assert.ok(names.has('dynamic-poster'), 'should contain dynamic-poster')
-  assert.ok(names.has('ecommerce-image'), 'should contain ecommerce-image')
-  assert.ok(names.has('character-scene-storyboard'), 'should contain character-scene-storyboard')
-  assert.ok(names.has('cinematic-motion-language'), 'should contain cinematic-motion-language')
-  assert.ok(names.has('clip-export'), 'should contain clip-export')
+  assert.ok(names.has('ugc-confessional'), 'should contain ugc-confessional')
+  assert.ok(names.has('cinematic'), 'should contain cinematic')
+  assert.ok(names.has('ugc-showcase'), 'should contain ugc-showcase')
+  assert.ok(names.has('ecommerce'), 'should contain ecommerce')
+  assert.ok(names.has('static-image'), 'should contain static-image')
+  assert.ok(names.has('replicate-carousel'), 'should contain replicate-carousel')
+  assert.ok(names.has('shoppable-carousel'), 'should contain shoppable-carousel')
+  assert.ok(names.has('carousel'), 'should contain carousel')
 })
 
 test('catalog provider loads a previously listed candidate with the official provider.get shape', async () => {
   const roots = env()
-  writeBundledSkill(roots, 'ad-creative', '# Ad Creative\n\nBundled fixture.')
+  writeBundledSkill(roots, 'ugc-confessional', '# Ugc Confessional\n\nBundled fixture.')
   const provider = createCatalogSkillProvider({
     catalog: loadCatalog(),
     ...roots,
   })
 
-  const def = await getListedDefinition(provider, 'ad-creative')
-  assert.equal(def.name, 'ad-creative')
+  const def = await getListedDefinition(provider, 'ugc-confessional')
+  assert.equal(def.name, 'ugc-confessional')
   assert.equal(def.invocation.modelInvocable, false)
   assert.equal(def.invocation.userInvocable, true)
-  assert.ok(def.content.includes('Ad Creative') || def.content.includes('ad-creative'))
+  assert.ok(def.content.includes('Ugc Confessional') || def.content.includes('ugc-confessional'))
 })
 
 test('catalog provider returns undefined when a candidate has no definition', async () => {
@@ -104,12 +104,12 @@ test('catalog provider returns undefined when a candidate has no definition', as
 
 test('catalog provider returns valid definition metadata for an installed candidate', async () => {
   const roots = env()
-  const dir = join(roots.home, 'skills', 'ad-creative')
+  const dir = join(roots.home, 'skills', 'ugc-confessional')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'SKILL.md'), '---\ndescription: Installed fixture\n---\n\nInstalled body.', 'utf8')
   const provider = createCatalogSkillProvider({ catalog: loadCatalog(), ...roots })
 
-  const definition = await getListedDefinition(provider, 'ad-creative')
+  const definition = await getListedDefinition(provider, 'ugc-confessional')
   validateDefinition(definition)
   assert.equal(definition.source, 'omnimux-market')
   assert.equal(definition.provider, provider.name)
@@ -214,9 +214,9 @@ test('catalog rank loses to filesystem so installed skills stay model-invocable'
 
 test('resolved definitions satisfy official validateDefinition', async () => {
   const roots = env()
-  writeBundledSkill(roots, 'ad-creative', '# Ad Creative\n\nBundled fixture.')
+  writeBundledSkill(roots, 'ugc-confessional', '# Ugc Confessional\n\nBundled fixture.')
   const provider = createCatalogSkillProvider({ catalog: loadCatalog(), ...roots })
-  const definition = await getListedDefinition(provider, 'ad-creative')
+  const definition = await getListedDefinition(provider, 'ugc-confessional')
   validateDefinition(definition)
   assert.equal(definition.provider, provider.name)
   assert.equal(definition.source, 'omnimux-market')

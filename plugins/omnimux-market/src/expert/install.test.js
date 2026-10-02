@@ -1,9 +1,10 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { loadCatalog } from './catalog.js'
+import { loadCatalog, parseCatalog } from './catalog.js'
 import { formatMcpRow, installItem, removeMcpRow, spliceManaged, withConnectorPatchLock } from './install.js'
 
 const PACKAGE_ROOT = join(import.meta.dirname, '..', '..')
@@ -18,54 +19,59 @@ function roots() {
 test('installs a bundled skill once', () => {
   const env = roots()
   const catalog = loadCatalog()
-  const first = installItem({ catalog, id: 'esc-demo-skill', ...env })
-  const second = installItem({ catalog, id: 'esc-demo-skill', ...env })
+  const first = installItem({ catalog, id: 'sk-omx-ugc-confessional', ...env })
+  const second = installItem({ catalog, id: 'sk-omx-ugc-confessional', ...env })
   assert.equal(first.already, undefined)
   assert.equal(second.already, true)
-  assert.equal(existsSync(join(env.home, 'skills', 'esc-demo-note', 'SKILL.md')), true)
+  assert.equal(existsSync(join(env.home, 'skills', 'ugc-confessional', 'SKILL.md')), true)
 })
 
-test('installs Blotato git suite (brand-brief, post-writer, post-grader)', () => {
+test('installs a git-source skill from a local fixture remote (no network)', () => {
+  // 冷数据：自 013fcb898 起目录不再带 git 技能条目，用合成目录覆盖 git 安装路径。
+  // GIT_CONFIG_* 环境变量把 github.com/owner/repo 重写到本地裸仓，全程离线。
   const env = roots()
-  const catalog = loadCatalog()
-  const suite = [
-    {
-      id: 'sk-omx-brand-brief',
-      skill: 'brand-brief',
-      path: 'blotato/skills/brand-brief',
-      needle: /Capture or update a small business owner's brand brief/,
-    },
-    {
-      id: 'sk-omx-post-writer',
-      skill: 'post-writer',
-      path: 'blotato/skills/post-writer',
-      needle: /Write a complete social media post/,
-    },
-    {
-      id: 'sk-omx-post-grader',
-      skill: 'post-grader',
-      path: 'blotato/skills/post-grader',
-      needle: /Grade a social media post for VIRALITY/,
-    },
-  ]
-  for (const entry of suite) {
-    const row = catalog.items.find((item) => item.id === entry.id)
-    assert.ok(row, `catalog must list ${entry.id}`)
-    assert.equal(row.kind, 'skill')
-    assert.equal(row.skill, entry.skill)
-    assert.equal(row.source?.type, 'git')
-    assert.equal(row.source?.repo, 'Blotato-Inc/blotato-skills')
-    assert.equal(row.source?.path, entry.path)
-    const first = installItem({ catalog, id: entry.id, ...env })
-    const second = installItem({ catalog, id: entry.id, ...env })
-    assert.equal(first.already, undefined, entry.id)
-    assert.equal(first.source, 'git', entry.id)
-    assert.equal(second.already, true, entry.id)
-    const skillMd = join(env.home, 'skills', entry.skill, 'SKILL.md')
-    assert.equal(existsSync(skillMd), true, skillMd)
-    const body = readFileSync(skillMd, 'utf8')
-    assert.match(body, new RegExp(`^---[\\s\\S]*name:\\s*${entry.skill}`, 'm'))
-    assert.match(body, entry.needle)
+  const repoDir = join(env.home, 'fixture-repo')
+  spawnSync('git', ['init', '-b', 'main', repoDir])
+  const skillDir = join(repoDir, 'pack', 'git-skill')
+  mkdirSync(skillDir, { recursive: true })
+  writeFileSync(join(skillDir, 'SKILL.md'), '---\nname: git-skill\n---\n\n# Git Skill Fixture\n')
+  spawnSync('git', ['-C', repoDir, 'add', '.'])
+  spawnSync('git', ['-C', repoDir, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-m', 'init'])
+  const catalog = parseCatalog({
+    schema: 1,
+    generated_at: 'fixture',
+    items: [{
+      id: 'sk-git-fixture',
+      tab: 'skills',
+      kind: 'skill',
+      title: 'Git Skill',
+      summary: 'fixture',
+      category: 'fixture',
+      skill: 'git-skill',
+      source: { type: 'git', repo: 'owner/git-fixture', path: 'pack/git-skill', ref: 'main' },
+    }],
+  })
+  const prev = {
+    count: process.env.GIT_CONFIG_COUNT,
+    key0: process.env.GIT_CONFIG_KEY_0,
+    val0: process.env.GIT_CONFIG_VALUE_0,
+  }
+  process.env.GIT_CONFIG_COUNT = '1'
+  process.env.GIT_CONFIG_KEY_0 = `url.${repoDir}.insteadOf`
+  process.env.GIT_CONFIG_VALUE_0 = 'https://github.com/owner/git-fixture.git'
+  try {
+    const first = installItem({ catalog, id: 'sk-git-fixture', ...env })
+    const second = installItem({ catalog, id: 'sk-git-fixture', ...env })
+    assert.equal(first.already, undefined)
+    assert.equal(first.source, 'git')
+    assert.equal(second.already, true)
+    const body = readFileSync(join(env.home, 'skills', 'git-skill', 'SKILL.md'), 'utf8')
+    assert.match(body, /Git Skill Fixture/)
+  } finally {
+    for (const [key, name] of [['count', 'GIT_CONFIG_COUNT'], ['key0', 'GIT_CONFIG_KEY_0'], ['val0', 'GIT_CONFIG_VALUE_0']]) {
+      if (prev[key] === undefined) delete process.env[name]
+      else process.env[name] = prev[key]
+    }
   }
 })
 
