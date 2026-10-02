@@ -174,20 +174,20 @@ test('抗竞态与意图防御测试：无真实实体载荷的外部 dock-inten
     // 初始状态处于顶部 (scrollTop = 0)
     assert.equal(hookApi.placement, 'inline')
 
-    // 1. 发送无载荷或虚构 jump_dock_active 的恶意/空意图，必须被防御守卫直接忽略，严禁切换为 docked！
+    // 1. 空载/无 id 的幽灵意图在 dock() 入口即被守卫拒收（dock-intent 事件通道已移除，唯一入口为 dock()）
     await act(async () => {
-      dom.window.dispatchEvent(new dom.window.CustomEvent('omnimux:composer:dock-intent', {
-        detail: { tab: 'inspiration', force: true }
-      }))
+      hookApi.dock({ tab: 'inspiration' }, { force: true })
     })
-    assert.equal(hookApi.placement, 'inline', '无真实实体的空载事件严禁触发吸底')
+    assert.equal(hookApi.placement, 'inline', '无真实实体 id 的空载意图严禁触发吸底')
     assert.equal(hookApi.isDocked, false)
-
-    // 2. 发送携带真实合法卡片 Payload 的操作事件，正常切换为 docked
     await act(async () => {
-      dom.window.dispatchEvent(new dom.window.CustomEvent('omnimux:composer:dock-intent', {
-        detail: { item: { id: 'card_real_template_123', prompt: '真实复刻内容' }, force: true }
-      }))
+      hookApi.dock({ id: 'jump_dock_active' }, { force: true })
+    })
+    assert.equal(hookApi.isDocked, false, 'jump_dock_active 幽灵标记一律拒收')
+
+    // 2. 携带真实合法卡片 Payload 的调用，正常切换为 docked
+    await act(async () => {
+      hookApi.dock({ id: 'card_real_template_123', prompt: '真实复刻内容' }, { force: true })
     })
     assert.equal(hookApi.placement, 'docked', '真实业务卡片实体允许进入 docked 态')
     assert.equal(hookApi.isDocked, true)
