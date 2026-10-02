@@ -10,13 +10,16 @@
  * Packages run without proxy variables so a test that silently depends on a reachable proxy
  * fails locally the same way it fails on a clean CI runner. HOME is left alone: headless Chrome
  * on macOS aborts when HOME points at an empty directory, and the CI runner already has a clean
- * HOME of its own.
+ * HOME of its own. Each package instead gets its own throwaway DSH_HOME so code paths that
+ * resolve hubHomeDir() (media task ledger, auth store, plugin manage routes, …) can never
+ * touch the developer machine's real ~/.dsh.
  *
  * Usage: node scripts/run-workspace-tests.mjs [--json <file>] [--logs <dir>] [package-name ...]
  */
 
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -113,27 +116,36 @@ export function judge({ exitCode, tap }) {
   return reasons
 }
 
-/** Environment for one package run: TAP reporter, repo-local bins first, no proxy. */
-export function packageEnv(pkgDir, base = process.env) {
+/** Environment for one package run: TAP reporter, repo-local bins first, no proxy, isolated DSH_HOME. */
+export function packageEnv(pkgDir, base = process.env, dshHome) {
   const env = { ...base }
   for (const key of PROXY_VARIABLES) delete env[key]
   env.NODE_OPTIONS = [base.NODE_OPTIONS, '--test-reporter=tap'].filter(Boolean).join(' ')
   env.PATH = [join(pkgDir, 'node_modules', '.bin'), join(repoRoot, 'node_modules', '.bin'), base.PATH].filter(Boolean).join(delimiter)
+  env.DSH_HOME = dshHome
   return env
 }
 
 function runPackage(pkg, logsDir) {
   const started = Date.now()
-  const result = spawnSync('bash', ['-c', pkg.command], {
-    cwd: pkg.dir,
-    env: packageEnv(pkg.dir),
-    encoding: 'utf8',
-    maxBuffer: 512 * 1024 * 1024,
-  })
-  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+  // Fresh per-package ledger home; a test may still override DSH_HOME inside its
+  // own process, which always wins over the inherited environment.
+  const dshHome = mkdtempSync(join(tmpdir(), 'omnimux-test-home-'))
+  let output, exitCode, tap
+  try {
+    const result = spawnSync('bash', ['-c', pkg.command], {
+      cwd: pkg.dir,
+      env: packageEnv(pkg.dir, process.env, dshHome),
+      encoding: 'utf8',
+      maxBuffer: 512 * 1024 * 1024,
+    })
+    output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+    tap = parseTap(output)
+    exitCode = result.error ? -1 : result.status
+  } finally {
+    rmSync(dshHome, { recursive: true, force: true })
+  }
   if (logsDir) writeFileSync(join(logsDir, `${pkg.name.replaceAll('/', '__')}.log`), output)
-  const tap = parseTap(output)
-  const exitCode = result.error ? -1 : result.status
   return { name: pkg.name, exitCode, seconds: Math.round((Date.now() - started) / 1000), tap, reasons: judge({ exitCode, tap }) }
 }
 
