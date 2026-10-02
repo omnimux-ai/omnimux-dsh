@@ -53,11 +53,13 @@ describe('rowFromEvent', () => {
         attachmentId: 'image-1', mediaType: 'image/png', bytes: 10, width: 20, height: 30, name: 'page.png',
       },
     }
+    // Row.images 升级为 ProducedMediaRef：attachment 块经 attachmentProduced 加 source 标记。
+    const produced = [{ source: 'attachment' as const, ...image.attachment }]
     expect(rowFromEvent(ev('user/message', { content: [image], source: { kind: 'user' } }))).toEqual({
       seq: 0,
       kind: 'user',
       text: '',
-      images: [image.attachment],
+      images: produced,
     })
     expect(rowFromEvent(ev('assistant/message', {
       message: { content: [{ type: 'text', text: 'I see it' }, image] },
@@ -67,7 +69,7 @@ describe('rowFromEvent', () => {
       status: 'complete',
       sourceSeq: undefined,
       text: 'I see it',
-      images: [image.attachment],
+      images: produced,
     })
   })
 
@@ -136,11 +138,14 @@ describe('mergeHistoryRows', () => {
       ev('turn/end', {}),
     ]
     const rows = mergeHistoryRows(events, nextSeq, 'zh')
-    expect(rows.map((r) => r.kind)).toEqual(['user', 'tool', 'assistant'])
+    // tool/result 会 flush 未决工具行（给可能的产物行让位），真实事件流里
+    // 交替的 call/result 各成一行，不再跨 result 归并。
+    expect(rows.map((r) => r.kind)).toEqual(['user', 'tool', 'tool', 'tool', 'assistant'])
     expect(rows[0]!.text).toBe('操作页面')
-    expect(rows[2]!.text).toBe('已点击')
-    // 连续工具调用归并一行（不逐条刷屏）
-    expect(rows[1]).toMatchObject({ text: '读取页面 → 点击元素 #7 → 点击元素 #8', status: 'complete' })
+    expect(rows[4]!.text).toBe('已点击')
+    expect(rows[1]).toMatchObject({ text: '读取页面', status: 'complete' })
+    expect(rows[2]).toMatchObject({ text: '点击元素 #7', status: 'complete' })
+    expect(rows[3]).toMatchObject({ text: '点击元素 #8', status: 'complete' })
   })
 
   it('does not restore empty assistant rows from history', () => {
@@ -155,6 +160,43 @@ describe('mergeHistoryRows', () => {
 
   it('handles empty history', () => {
     expect(mergeHistoryRows([], () => 0)).toEqual([])
+  })
+
+  it('pairs a submit tool call with its result and emits one produced-media assistant row', () => {
+    let seq = 0
+    const rows = mergeHistoryRows([
+      ev('tool/call', { callId: 'call-1', name: 'omnimux_image_submit', arguments: '{"prompt":"a cat"}' }),
+      ev('tool/result', {
+        message: {
+          toolCallId: 'call-1',
+          content: [{ type: 'text', text: '{"mode":"live","dest":"/d/x.png"}' }],
+        },
+      }),
+    ], () => { seq += 1; return seq }, 'zh')
+
+    // 工具行照常 flush，随后一条 assistant 行携带 path 源产物。
+    expect(rows.map((r) => r.kind)).toEqual(['tool', 'assistant'])
+    expect(rows[0]!.text).toBe('omnimux_image_submit')
+    const images = rows[1]!.images
+    expect(images).toHaveLength(1)
+    expect(images![0]).toMatchObject({ source: 'path', path: '/d/x.png', kind: 'image', name: 'x.png' })
+    expect(rows[1]!.status).toBe('complete')
+  })
+
+  it('flushes the tool line without adding a row when a tool/result produced nothing', () => {
+    let seq = 0
+    const rows = mergeHistoryRows([
+      ev('tool/call', { callId: 'call-2', name: 'omnimux_image_submit', arguments: '{}' }),
+      // mode:'submitted' 无 dest —— 除工具行外不新增任何行。
+      ev('tool/result', {
+        message: {
+          toolCallId: 'call-2',
+          content: [{ type: 'text', text: '{"mode":"submitted","taskId":"t1"}' }],
+        },
+      }),
+    ], () => { seq += 1; return seq }, 'zh')
+
+    expect(rows).toEqual([{ seq: 1, kind: 'tool', text: 'omnimux_image_submit', status: 'complete' }])
   })
 })
 

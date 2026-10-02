@@ -225,6 +225,10 @@ export interface PanelCopy {
     attachMediaDownloadFailed: (name: string) => string
     attachMediaTimeout: (name: string, seconds: number) => string
     attachMediaSummary: (failed: number, total: number, first: string) => string
+    /** 产物文件卡的类型名：document → 文档，pdf → PDF，其余 → 文件。 */
+    fileKindDocument: string
+    fileKindPdf: string
+    fileKindFile: string
     selectionChip: string
     selectionAttached: string
     selectionTruncated: string
@@ -503,6 +507,9 @@ const EN: PanelCopy = {
     attachMediaDownloadFailed: (name) => `${name} could not be downloaded, so it is not in your message.`,
     attachMediaTimeout: (name, seconds) => `${name} did not download within ${seconds}s, so it is not in your message.`,
     attachMediaSummary: (failed, total, first) => `${failed} of ${total} page media are not in your message — ${first}`,
+    fileKindDocument: 'Document',
+    fileKindPdf: 'PDF',
+    fileKindFile: 'File',
     selectionChip: '1 selection',
     selectionAttached: 'Selected text',
     selectionTruncated: '(truncated)',
@@ -793,6 +800,9 @@ const ZH: PanelCopy = {
     attachMediaDownloadFailed: (name) => `${name} 下载失败，未加入待发区。`,
     attachMediaTimeout: (name, seconds) => `${name} 下载超过 ${seconds} 秒，未加入待发区。`,
     attachMediaSummary: (failed, total, first) => `${total} 个素材中有 ${failed} 个未加入待发区 —— ${first}`,
+    fileKindDocument: '文档',
+    fileKindPdf: 'PDF',
+    fileKindFile: '文件',
     selectionChip: '1 处选中内容',
     selectionAttached: '选中的网页内容',
     selectionTruncated: '（已截断）',

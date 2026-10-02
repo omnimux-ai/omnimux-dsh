@@ -37,3 +37,11 @@ _Avoid_: Media-only attachment
 **Material slot（素材卡槽）**: The receiving generation's entry and representation for upstream bindings. Text-only upstream capability also qualifies for a material slot.
 
 **Local text（本节点文本）**: Text entered directly in the receiving node. It is distinct from upstream material even when both contribute to one final request field.
+
+## Browser side-panel media language（#2973）
+
+**Produced media（产物媒体）**: Media an assistant turn placed on screen — `display_file`/`read_image` results and `omnimux_*_submit` written files. It lives in `tool/result` event payloads (meta / content image blocks / `<path>` envelope / JSON `dest`), not in durable message image blocks.
+
+**Produced registry（产物登记处）**: The bridge's per-session whitelist of produced absolute paths, accumulated while relaying `session/event` frames and backfilled from `session.history`. It is the sole authorization source for `omnimux.producedMedia` byte fetches.
+
+**ProducedMediaRef**: The panel's media reference union — `attachment` source (bytes via `session.attachment`) or `path` source (bytes via `omnimux.producedMedia`). `kind` follows the viewer's `ViewerKind` vocabulary.

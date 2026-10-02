@@ -5,6 +5,7 @@ import {
   ImageInputError,
   imageRefsFromBlocks,
   parseImageAttachmentLimits,
+  parseMediaAttachmentRef,
   prepareImageFiles,
   promptContent,
   type ImageAttachmentLimits,
@@ -137,5 +138,13 @@ describe('durable attachment rendering', () => {
     expect(attachmentResponseDataUrl({ attachment, data: 'AQID' }, attachment)).toBe('data:image/png;base64,AQID')
     expect(attachmentResponseDataUrl({ attachment: { ...attachment, attachmentId: 'other' }, data: 'AQID' }, attachment)).toBeNull()
     expect(attachmentResponseDataUrl({ attachment, data: '<script>' }, attachment)).toBeNull()
+  })
+
+  it('parseMediaAttachmentRef admits audio and video media types (widened pattern)', () => {
+    const audio = { attachmentId: 'au-1', mediaType: 'audio/mpeg', bytes: 8, width: 1, height: 1 }
+    const video = { attachmentId: 'vi-1', mediaType: 'video/mp4', bytes: 9, width: 16, height: 9 }
+    expect(parseMediaAttachmentRef(audio)).toEqual(audio)
+    expect(parseMediaAttachmentRef(video)).toEqual(video)
+    expect(parseMediaAttachmentRef({ ...audio, mediaType: 'audio/<bad>' })).toBeNull()
   })
 })

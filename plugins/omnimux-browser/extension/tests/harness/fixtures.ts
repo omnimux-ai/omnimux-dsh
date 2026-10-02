@@ -5,9 +5,9 @@
  * bytes to hand back and the browser has real dimensions to lay out.
  */
 
-import type { MediaAttachmentRef } from '../../src/panel/attachments.ts'
+import type { ProducedAttachmentRef } from '../../src/panel/produced-media.ts'
 
-export interface HarnessAttachment extends MediaAttachmentRef {
+export interface HarnessAttachment extends ProducedAttachmentRef {
   /** Path served from the harness static root. */
   readonly file: string
   /** Fail the first `session.attachment` call, so the retry path is reachable. */
@@ -30,7 +30,7 @@ function attachment(
   bytes: number,
   name: string,
 ): HarnessAttachment {
-  return { attachmentId, file, mediaType, bytes, width, height, name }
+  return { source: 'attachment', attachmentId, file, mediaType, bytes, width, height, name }
 }
 
 const LAND = ['media/photo_land.jpg', 'image/jpeg', 480, 270, 28990, '关键帧 01 · 微笑'] as const

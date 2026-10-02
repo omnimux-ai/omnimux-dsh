@@ -46,7 +46,7 @@ export interface MediaAttachmentRef extends Omit<ImageAttachmentRef, 'mediaType'
 }
 
 /** A conservative `type/subtype` shape, so a type may never inject a data-URL delimiter. */
-const MEDIA_TYPE_PATTERN = /^(?:image|video)\/[a-z0-9][a-z0-9.+-]*$/
+const MEDIA_TYPE_PATTERN = /^(?:image|video|audio)\/[a-z0-9][a-z0-9.+-]*$/
 
 /** Uppercase format badge for a media type, e.g. `image/jpeg` → `JPG`. */
 const FORMAT_TAGS: Record<string, string> = {
@@ -406,7 +406,7 @@ export function mediaFormatTag(mediaType: string): string {
   return FORMAT_TAGS[subtype] ?? subtype.toUpperCase()
 }
 
-function parseMediaAttachmentRef(value: unknown): MediaAttachmentRef | null {
+export function parseMediaAttachmentRef(value: unknown): MediaAttachmentRef | null {
   if (!isRecord(value)
     || typeof value.attachmentId !== 'string'
     || value.attachmentId === ''

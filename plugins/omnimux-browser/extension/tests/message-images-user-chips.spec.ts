@@ -25,7 +25,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MessageImages } from '../src/panel/MessageImages.tsx'
 import { PANEL_COPY } from '../src/panel/strings.ts'
 import type { PanelApi } from '../src/panel/api.ts'
-import type { MediaAttachmentRef } from '../src/panel/attachments.ts'
+import type { ProducedAttachmentRef, ProducedMediaRef } from '../src/panel/produced-media.ts'
 
 const CSS = readFileSync(resolve(__dirname, '../src/panel/styles.css'), 'utf8')
 
@@ -37,8 +37,9 @@ function ruleBody(selector: string): string {
   return match![1]!
 }
 
-function attachment(index: number): MediaAttachmentRef {
+function attachment(index: number): ProducedAttachmentRef {
   return {
+    source: 'attachment',
     attachmentId: `a${index}`,
     mediaType: 'image/png',
     bytes: 3,
@@ -48,11 +49,11 @@ function attachment(index: number): MediaAttachmentRef {
   }
 }
 
-function bodyFor(entry: MediaAttachmentRef): string {
+function bodyFor(entry: ProducedAttachmentRef): string {
   return btoa(String.fromCharCode(Number(/\d+/.exec(entry.attachmentId)?.[0] ?? '0')))
 }
 
-function srcFor(entry: MediaAttachmentRef): string {
+function srcFor(entry: ProducedAttachmentRef): string {
   return `data:${entry.mediaType};base64,${bodyFor(entry)}`
 }
 
@@ -62,7 +63,7 @@ interface Harness {
 }
 
 /** A `PanelApi` whose only job is `session.attachment`, counting every call. */
-function fakeApi(images: readonly MediaAttachmentRef[]): Harness {
+function fakeApi(images: readonly ProducedAttachmentRef[]): Harness {
   const byId = new Map(images.map((entry) => [entry.attachmentId, entry]))
   const calls: string[] = []
   const api = {
@@ -94,7 +95,7 @@ describe('message images: user receipt vs assistant gallery', () => {
   })
 
   async function render(
-    images: readonly MediaAttachmentRef[],
+    images: readonly ProducedMediaRef[],
     api: PanelApi,
     align: 'start' | 'end',
   ): Promise<void> {

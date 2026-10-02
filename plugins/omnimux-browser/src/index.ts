@@ -56,6 +56,7 @@ import {
   type HostConnectionLike,
   type TypertGatewayLike,
 } from './remote-host-api.ts'
+import { createProducedRegistry, type ProducedRegistry } from './produced-registry.ts'
 import { isRecord, type BrowserHostApi } from './host-api.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
@@ -155,7 +156,11 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   }
   if (connection === undefined) throw new Error('bridge-browser: dsh connection service is required')
   const tokenRes = await resolveToken(resolved.token)
-  mountBridge(ctx, resolved, tokenRes, gateway, createRemoteHostApi(gateway, connection))
+  // One registry shared by both halves: the Host adapter writes it from the
+  // event stream and history, the WebSocket server reads it for
+  // `omnimux.producedMedia`. Two instances would silently disagree.
+  const produced = createProducedRegistry()
+  mountBridge(ctx, resolved, tokenRes, gateway, createRemoteHostApi(gateway, connection, produced), produced)
 }
 
 function mountBridge(
@@ -164,6 +169,7 @@ function mountBridge(
   tokenRes: Awaited<ReturnType<typeof resolveToken>>,
   gateway: TypertGatewayLike,
   hostApi: BrowserHostApi,
+  produced: ProducedRegistry,
 ): void {
   // Process-level composer model mode, pushed by the panel via
   // `bridge.modelMode`. Never persisted; defaults to auto so a fresh host
@@ -290,6 +296,7 @@ function mountBridge(
     },
     injectBrowserSnapshot: (sessionId, snapshot) => { browserContext.inject(sessionId, snapshot) },
     purgeSession,
+    produced,
     completeText: async (request) => {
       const service = ctx.get('textComplete') as { execute?: (input: typeof request) => Promise<unknown> } | undefined
       if (typeof service?.execute !== 'function') throw new Error('Text completion service unavailable')
