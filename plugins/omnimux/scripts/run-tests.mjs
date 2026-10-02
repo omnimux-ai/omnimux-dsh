@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process'
-import { globSync } from 'node:fs'
+import { globSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const TEST_GLOBS = [
@@ -38,24 +40,37 @@ export function runTests(cwd = process.cwd()) {
   }
   console.log(`[omnimux:test] discovered ${files.length} test files`)
 
+  // Throwaway DSH_HOME per spawned test process: code paths that resolve
+  // hubHomeDir() (media task ledger, auth store, plugin manage routes, …)
+  // must never write the developer machine's real ~/.dsh. A test may still
+  // override DSH_HOME inside its own process, which wins over this inherit.
+  const dshHome = mkdtempSync(join(tmpdir(), 'omnimux-test-home-'))
+  const env = { ...process.env, DSH_HOME: dshHome }
+  const cleanup = () => rmSync(dshHome, { recursive: true, force: true })
+
   const preload = new URL('./test-network-guard.mjs', import.meta.url).href
   const run = (testFiles) => spawnSync(process.execPath, ['--import', preload, '--test', ...testFiles], {
     cwd,
     stdio: 'inherit',
+    env,
   })
-  const guardResult = run([NETWORK_GUARD_TEST])
-  if (guardResult.error) throw guardResult.error
-  if (guardResult.signal) {
-    throw new Error(`Hub network guard test terminated by ${guardResult.signal}`)
-  }
-  if (guardResult.status !== 0) return guardResult.status ?? 1
+  try {
+    const guardResult = run([NETWORK_GUARD_TEST])
+    if (guardResult.error) throw guardResult.error
+    if (guardResult.signal) {
+      throw new Error(`Hub network guard test terminated by ${guardResult.signal}`)
+    }
+    if (guardResult.status !== 0) return guardResult.status ?? 1
 
-  const result = run(files.filter((file) => file !== NETWORK_GUARD_TEST))
-  if (result.error) throw result.error
-  if (result.signal) {
-    throw new Error(`Hub test runner terminated by ${result.signal}`)
+    const result = run(files.filter((file) => file !== NETWORK_GUARD_TEST))
+    if (result.error) throw result.error
+    if (result.signal) {
+      throw new Error(`Hub test runner terminated by ${result.signal}`)
+    }
+    return result.status ?? 1
+  } finally {
+    cleanup()
   }
-  return result.status ?? 1
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
