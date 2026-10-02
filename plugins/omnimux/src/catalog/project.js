@@ -155,6 +155,18 @@ export function projectRow(model, ops) {
   if (typeof model.family === 'string') row.family = model.family;
   const inputCapability = mergeInputCapability(ops);
   if (inputCapability) row.inputCapability = inputCapability;
+  // Per-kind slot planning consumes op ids + inputs; carry the same slim
+  // operation shape projectModelDto uses so client rows expose the real
+  // contract instead of forcing callers to guess from inputCapability.
+  row.operations = (ops ?? []).map((op) => ({
+    id: op.id,
+    label: op.label,
+    output: structuredClone(op.output ?? {}),
+    inputs: structuredClone(op.inputs ?? []),
+    ...(op.parameters ? { parameters: structuredClone(op.parameters) } : {}),
+    ...(Array.isArray(op.inputGroups) ? { inputGroups: structuredClone(op.inputGroups) } : {}),
+    listed: op.listed === true,
+  }));
   if (model.parameters && typeof model.parameters === 'object') {
     row.parameters = structuredClone(model.parameters);
   }

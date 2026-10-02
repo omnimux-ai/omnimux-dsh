@@ -131,4 +131,23 @@ describe('Direct Media Generate HTTP Route', () => {
     assert.equal(calls[0].kind, 'video')
     assert.equal(calls[0].req.duration, 5)
   })
+
+  it('forwards a boolean sound flag and drops non-boolean values', async () => {
+    const { route, calls } = fixture()
+    await route.handler(post({
+      kind: 'video',
+      prompt: 'mute video',
+      model: 'kling-v2',
+      sound: false,
+    }), response())
+    assert.equal(calls[0].req.sound, false)
+
+    await route.handler(post({
+      kind: 'video',
+      prompt: 'loud video',
+      model: 'kling-v2',
+      sound: 'yes',
+    }), response())
+    assert.equal(calls[1].req.sound, undefined)
+  })
 })
