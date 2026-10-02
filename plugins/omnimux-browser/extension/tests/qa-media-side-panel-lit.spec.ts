@@ -121,6 +121,7 @@ describe('QA gate: media delivered to an open side panel', () => {
       onSelection: vi.fn(() => unsubscribe),
       onMediaAttach: vi.fn((callback) => { onMediaAttach = callback; return unsubscribe }),
       onSessionResumeHint: vi.fn((callback) => { onResumeHint = callback; return unsubscribe }),
+      onTaskLocate: vi.fn(() => () => {}),
       respondToApproval: vi.fn(async () => {}),
       resolveTabAffinity: vi.fn(async () => {}),
       rebindTabAffinity: vi.fn(async () => {}),

@@ -120,7 +120,13 @@ interface MediaAttachMessage {
   media: unknown
 }
 
-type BackgroundMessage = RpcResultMessage | RespondResultMessage | SettingsResultMessage | StatusMessage | EventMessage | ApprovalRequestMessage | ApprovalResolvedMessage | TabAffinityMessage | TabAffinityRebindResultMessage | SelectionMessage | SessionResumeHintMessage | MediaAttachMessage
+interface TaskLocateMessage {
+  type: 'task.locate'
+  sessionId: string
+  turn: number
+}
+
+type BackgroundMessage = RpcResultMessage | RespondResultMessage | SettingsResultMessage | StatusMessage | EventMessage | ApprovalRequestMessage | ApprovalResolvedMessage | TabAffinityMessage | TabAffinityRebindResultMessage | SelectionMessage | SessionResumeHintMessage | MediaAttachMessage | TaskLocateMessage
 
 /**
  * One page media element a capsule sent into this conversation.
@@ -185,6 +191,8 @@ export interface PanelApi {
   onTabAffinity(callback: (state: TabAffinityState) => void): () => void
   onSelection(callback: (selection: PageSelection | null) => void): () => void
   onSessionResumeHint(callback: (sessionId: string | null) => void): () => void
+  /** Background-delivered task-completion locate request (session + turn). */
+  onTaskLocate(callback: (target: { sessionId: string; turn: number }) => void): () => void
   /**
    * Page media the capsule sent into the conversation this panel is showing.
    *
@@ -229,6 +237,7 @@ export function connectPanel(): PanelApi {
   const tabAffinityListeners = new Set<(state: TabAffinityState) => void>()
   const selectionListeners = new Set<(selection: PageSelection | null) => void>()
   const sessionResumeHintListeners = new Set<(sessionId: string | null) => void>()
+  const taskLocateListeners = new Set<(target: { sessionId: string; turn: number }) => void>()
   const mediaAttachListeners = new Set<(media: HoveredMediaMessage) => void>()
 
   let port: chrome.runtime.Port | null = null
@@ -307,6 +316,13 @@ export function connectPanel(): PanelApi {
       case 'session.resume-hint':
         for (const listener of sessionResumeHintListeners) listener(msg.sessionId)
         break
+      case 'task.locate': {
+        const target = msg as { sessionId?: unknown; turn?: unknown }
+        if (typeof target.sessionId === 'string' && typeof target.turn === 'number') {
+          for (const listener of taskLocateListeners) listener({ sessionId: target.sessionId, turn: target.turn })
+        }
+        break
+      }
       case 'media.attach': {
         // The page owns this payload; validate it again on the way into the UI.
         const media = parseHoveredMediaMessage(msg.media)
@@ -486,6 +502,10 @@ export function connectPanel(): PanelApi {
     onSessionResumeHint(callback) {
       sessionResumeHintListeners.add(callback)
       return () => { sessionResumeHintListeners.delete(callback) }
+    },
+    onTaskLocate(callback) {
+      taskLocateListeners.add(callback)
+      return () => { taskLocateListeners.delete(callback) }
     },
     onMediaAttach(callback) {
       mediaAttachListeners.add(callback)

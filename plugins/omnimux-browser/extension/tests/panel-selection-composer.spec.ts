@@ -59,6 +59,7 @@ describe('attaching a page selection in the composer', () => {
       onSelection: vi.fn((callback) => { onSelection = callback; return unsubscribe }),
       onMediaAttach: vi.fn(() => unsubscribe),
       onSessionResumeHint: vi.fn((callback) => { onResumeHint = callback; return unsubscribe }),
+      onTaskLocate: vi.fn(() => () => {}),
       respondToApproval: vi.fn(async () => {}),
       resolveTabAffinity: vi.fn(async () => {}),
       rebindTabAffinity: vi.fn(async () => {}),

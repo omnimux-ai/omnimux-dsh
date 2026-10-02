@@ -89,6 +89,7 @@ describe('the page-surface switches in the settings view', () => {
       onSelection: vi.fn(() => unsubscribe),
       onMediaAttach: vi.fn(() => unsubscribe),
       onSessionResumeHint: vi.fn(() => unsubscribe),
+      onTaskLocate: vi.fn(() => () => {}),
       respondToApproval: vi.fn(async () => {}),
       resolveTabAffinity: vi.fn(async () => {}),
       rebindTabAffinity: vi.fn(async () => {}),

@@ -241,6 +241,18 @@ const panelPorts = new Set<chrome.runtime.Port>()
 const BRIDGE_KEEPALIVE_ALARM = 'bridge-keepalive'
 /** Invalidates an asynchronous discovery attempt when its panel lease ends. */
 let bridgeStartRevision = 0
+/** Whether any lease ever started the bridge: the keepalive only restarts claimed connections. */
+let bridgeClaimedOnce = false
+/**
+ * Service-worker restarts wipe module state. Persist the claim so a worker
+ * recycled while queued submissions still run on the host can rejoin the
+ * bridge without waiting for a panel.
+ */
+const bridgeClaimReady = Promise.resolve(chrome.storage.session.get('omnimux_bridge_claimed'))
+  .then((stored) => {
+    if ((stored as { omnimux_bridge_claimed?: unknown }).omnimux_bridge_claimed === true) bridgeClaimedOnce = true
+  })
+  .catch(() => {})
 const interactionResponses = new InteractionResponseRouter()
 const transientEvents = new TransientEventCache()
 const tabAffinity = new TabAffinityController()
@@ -556,6 +568,99 @@ function recordSelection(tab: chrome.tabs.Tab, frameId: number, value: unknown):
 function broadcastEvent(frame: ServerFrame): void {
   for (const port of panelPorts) {
     try { port.postMessage({ type: 'event', frame }) } catch { /* port already closed */ }
+  }
+}
+
+// ---- Task completion notifications (F3) ----
+
+const TASK_NOTIFICATION_PREFIX = 'dsh-browser-task:'
+/** sessionId → last user prompt + current turn; bounded so stale entries die. */
+const taskPrompts = new Map<string, { prompt: string; turn: number }>()
+/** Session + turn waiting for a panel to consume after a notification click. */
+let pendingTaskLocate: { sessionId: string; turn: number } | null = null
+
+function taskNotificationId(sessionId: string, turn: number): string {
+  return `${TASK_NOTIFICATION_PREFIX}${sessionId}:${turn}`
+}
+
+function eventMessageText(event: { data?: unknown }): string {
+  const data = event.data
+  if (typeof data !== 'object' || data === null) return ''
+  const message = (data as { message?: unknown }).message ?? data
+  if (typeof message !== 'object' || message === null) return ''
+  const source = (message as { source?: { kind?: unknown } }).source
+  if (source?.kind !== 'user') return ''
+  const content = (message as { content?: unknown }).content
+  if (!Array.isArray(content)) return ''
+  return content
+    .filter((block): block is { type: string; text: string } =>
+      typeof block === 'object' && block !== null
+      && (block as { type?: unknown }).type === 'text'
+      && typeof (block as { text?: unknown }).text === 'string')
+    .map((block) => block.text)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function clipText(text: string, limit: number): string {
+  const normalized = text.replace(/\s+/g, ' ').trim()
+  return normalized.length <= limit ? normalized : `${normalized.slice(0, limit - 1).trimEnd()}…`
+}
+
+/**
+ * Watch session events for task lifecycle facts the panel cannot see with no
+ * window open: user prompts seed the notification copy, turn/end fires it.
+ */
+function observeSessionEvent(frame: ServerFrame): void {
+  const payload = (frame as { frame?: { method?: string; payload?: unknown } }).frame
+  if (payload?.method !== 'session/event' || typeof payload.payload !== 'object' || payload.payload === null) return
+  const record = payload.payload as { sessionId?: unknown; event?: { type?: string; seq?: number; data?: unknown } }
+  const sessionId = record.sessionId
+  const event = record.event
+  if (typeof sessionId !== 'string' || event === undefined || event.type === undefined) return
+  if (event.type === 'user/message') {
+    const text = eventMessageText(event)
+    if (text !== '') taskPrompts.set(sessionId, { prompt: text, turn: taskPrompts.get(sessionId)?.turn ?? 0 })
+    // Bound unbounded session churn: keep the newest 64 prompt records.
+    if (taskPrompts.size > 64) {
+      const oldest = taskPrompts.keys().next().value
+      if (oldest !== undefined) taskPrompts.delete(oldest)
+    }
+    return
+  }
+  if (event.type === 'turn/start') {
+    const turn = (event.data as { turn?: unknown } | undefined)?.turn
+    const current = taskPrompts.get(sessionId)
+    taskPrompts.set(sessionId, {
+      prompt: current?.prompt ?? '',
+      turn: typeof turn === 'number' ? turn : (current?.turn ?? 0) + 1,
+    })
+    return
+  }
+  if (event.type === 'turn/end') {
+    // A panel showing the conversation already sees the row land; the system
+    // notification exists only for the no-panel case.
+    if (panelPorts.size > 0) return
+    const info = taskPrompts.get(sessionId)
+    const turn = info?.turn ?? 0
+    const reason = (event.data as { reason?: { kind?: unknown } } | undefined)?.reason
+    const failed = reason?.kind === 'error' || reason?.kind === 'canceled'
+    const zh = getUiLocale() === 'zh'
+    const title = failed
+      ? (zh ? '任务未完成' : 'Task failed')
+      : (zh ? '任务完成' : 'Task completed')
+    const preview = info !== undefined && info.prompt !== ''
+      ? clipText(info.prompt, 60)
+      : (zh ? `第 ${turn} 个任务` : `Task ${turn}`)
+    pendingTaskLocate = { sessionId, turn }
+    void Promise.resolve(chrome.notifications.create(taskNotificationId(sessionId, turn), {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('assets/icons/icon128.png'),
+      title,
+      message: preview,
+      requireInteraction: true,
+    })).catch(() => {})
   }
 }
 
@@ -1318,14 +1423,17 @@ function cancelAllToolCalls(): void {
 /** (Re)start the bridge with the current settings. 零配置：地址留空时自动探测；回环连接无需 token。 */
 async function startBridge(): Promise<void> {
   const revision = ++bridgeStartRevision
-  if (panelPorts.size === 0) return
+  // Another browser owns the single bridge slot (close 4000) until the user
+  // reconnects by saving settings or switching the dsh instance; an evicted
+  // client must never auto-reclaim it.
+  if (bridge?.evicted === true) return
   let url = settings.bridgeUrl
   if (url === '') {
-    url = await discoverBridge(() => revision === bridgeStartRevision && panelPorts.size > 0) ?? ''
+    url = await discoverBridge(() => revision === bridgeStartRevision) ?? ''
   }
-  // Discovery is asynchronous. A panel may have closed or a newer settings
-  // update may have started while its fetches were in flight.
-  if (revision !== bridgeStartRevision || panelPorts.size === 0) return
+  // Discovery is asynchronous; a newer settings update may have started while
+  // its fetches were in flight.
+  if (revision !== bridgeStartRevision) return
   if (url === '') {
     bridge?.stop()
     bridge = null
@@ -1352,12 +1460,12 @@ async function startBridge(): Promise<void> {
         }
         broadcastStatus()
         if (state === 'stopped') refreshPanelResumeHints()
-        if (state === 'stopped' && panelPorts.size === 0) disarmBridgeKeepalive()
       },
       onFrame: (frame) => {
         if (frame.t === 'event') {
           transientEvents.ingest(frame)
           broadcastEvent(frame)
+          observeSessionEvent(frame)
         }
         else if (frame.t === 'tool.call') routeToolCall(frame)
         else if (frame.t === 'tool.cancel') cancelToolCall(frame.id)
@@ -1369,10 +1477,14 @@ async function startBridge(): Promise<void> {
         broadcastStatus()
         void pushBudgetToControlledTab(negotiated)
       },
-    }, probeBridge, () => panelPorts.size > 0)
+      // The connection serves queued task submissions and completion
+      // notifications, not just open panels: keep reconnecting with no panel.
+    }, probeBridge, () => true)
     bridge = client
     rpc = createRpc(client)
   }
+  bridgeClaimedOnce = true
+  void Promise.resolve(chrome.storage.session.set({ omnimux_bridge_claimed: true })).catch(() => {})
   bridge.start(url, settings.token)
 }
 
@@ -1862,11 +1974,17 @@ chrome.runtime.onConnect.addListener((port) => {
   }>()
   panelPorts.add(port)
   if (wasIdle) armBridgeKeepalive()
+  // A reconnecting or stopped bridge leaves a queued task blind: the panel's
+  // own lease already triggered startBridge, and the keepalive keeps retrying.
   void settingsReady.then(syncSelectionWatch)
   void settingsReady.then(() => {
     if (!panelPorts.has(port)) return
     if (bridge === null || bridge.state === 'stopped') return startBridge()
   })
+  // Deliver a locate queued while no panel was open (notification click path).
+  if (pendingTaskLocate !== null) {
+    try { port.postMessage({ type: 'task.locate', ...pendingTaskLocate }) } catch { /* port closed */ }
+  }
   try { port.postMessage({ type: 'status', state: bridge?.state ?? ('stopped' as BridgeState), caps }) } catch { /* port closed */ }
   void affinityReady.then(async () => {
     await syncActiveTab()
@@ -1944,21 +2062,11 @@ chrome.runtime.onConnect.addListener((port) => {
             await persistSettings(settingsMsg.settings)
             const connectionChanged = settings.bridgeUrl !== previousConnection.bridgeUrl
               || settings.token !== previousConnection.token
-            if (panelPorts.size > 0) {
-              if (connectionChanged) await startBridge()
-              broadcastStatus()
-            } else if (connectionChanged) {
-              // The settings write outlived its originating panel. Do not keep a
-              // healthy socket authenticated with stale connection settings: make
-              // the next explicit panel lease start from the persisted values.
-              bridgeStartRevision += 1
-              bridge?.stop()
-              bridge = null
-              rpc = null
-              caps = null
-              broadcastStatus()
-              disarmBridgeKeepalive()
-            }
+            // Connection settings are live for the background bridge, not just
+            // open panels: restart now so queued submissions and notifications
+            // move to the new endpoint without waiting for a panel reopen.
+            if (connectionChanged) await startBridge()
+            broadcastStatus()
             if (requestId !== undefined) {
               try { port.postMessage({ type: 'settings.result', id: requestId, ok: true }) } catch { /* port closed */ }
             }
@@ -2123,6 +2231,11 @@ chrome.runtime.onConnect.addListener((port) => {
           })
           const resumeWindowId = panelPresence.windowOf(port)
           if (resumeWindowId !== undefined) void postResumeHint(port, resumeWindowId)
+          // A task-completion notification click while no panel was open
+          // queues a locate: deliver it once this panel asks for its state.
+          if (pendingTaskLocate !== null) {
+            try { port.postMessage({ type: 'task.locate', ...pendingTaskLocate }) } catch { /* port closed */ }
+          }
         } catch { /* port closed */ }
         break
     }
@@ -2147,16 +2260,37 @@ chrome.runtime.onConnect.addListener((port) => {
     }
     syncSelectionWatch()
     if (panelPorts.size === 0) {
-      bridgeStartRevision += 1
-      bridge?.suspendReconnect()
       sessionTrustedActionOrigins.clear()
       approvals.notifyPending()
-      if (bridge?.state !== 'connected') disarmBridgeKeepalive()
+      // The bridge stays up for queued submissions and turn/end notifications;
+      // the keepalive keeps the service worker's reconnect path reachable.
+      armBridgeKeepalive()
     }
   })
 })
 
 chrome.notifications.onClicked.addListener((notificationId) => {
+  if (notificationId.startsWith(TASK_NOTIFICATION_PREFIX)) {
+    const rest = notificationId.slice(TASK_NOTIFICATION_PREFIX.length)
+    const splitAt = rest.lastIndexOf(':')
+    const sessionId = splitAt === -1 ? rest : rest.slice(0, splitAt)
+    const turn = splitAt === -1 ? (pendingTaskLocate?.turn ?? 0) : (Number(rest.slice(splitAt + 1)) || 0)
+    void Promise.resolve(chrome.notifications.clear(notificationId)).catch(() => {})
+    // Notification clicks are extension user gestures; the panel APIs require
+    // the call to remain inside this handler. The panel consumes
+    // pendingTaskLocate on connect (or immediately if one is already open).
+    pendingTaskLocate = { sessionId, turn }
+    void Promise.resolve(chrome.windows.getLastFocused()).then((win) => {
+      openAssistantPanel(win?.id)
+      for (const port of panelPorts) {
+        try {
+          port.postMessage({ type: 'task.locate', sessionId, turn })
+        } catch { /* port already closed */ }
+      }
+      if (panelPorts.size > 0) pendingTaskLocate = null
+    }).catch(() => {})
+    return
+  }
   if (!notificationId.startsWith(APPROVAL_NOTIFICATION_PREFIX)) return
   const id = notificationId.slice(APPROVAL_NOTIFICATION_PREFIX.length)
   const windowId = approvals.windowId(id)
@@ -2258,15 +2392,21 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== BRIDGE_KEEPALIVE_ALARM) return
-  if (panelPorts.size === 0) {
-    if (bridge === null || bridge.state !== 'connected') disarmBridgeKeepalive()
+  // An evicted client (close 4000) lost the single bridge slot to another
+  // browser; the keepalive must not reclaim it — disarm until a settings save
+  // or panel action starts the bridge again.
+  if (bridge?.evicted === true) {
+    disarmBridgeKeepalive()
     return
   }
-  // `stopped` is intentionally terminal until an explicit panel reopen or
-  // settings save. In particular, code 4000 means another browser owns the
-  // single bridge slot and the keepalive must not reclaim it.
-  if (bridge === null || bridge.state === 'reconnecting') {
-    void settingsReady.then(() => startBridge())
+  // Panels may all be closed while queued submissions still run on the host:
+  // restart a lost connection so turn/end notifications and the next panel
+  // session see live state instead of a dead bridge. The keepalive never
+  // creates a first claim — only a panel open or settings save does that.
+  if (bridge === null || bridge.state === 'reconnecting' || bridge.state === 'stopped') {
+    void Promise.all([settingsReady, bridgeClaimReady]).then(() => {
+      if (bridgeClaimedOnce) void startBridge()
+    })
   }
 })
 
@@ -2313,9 +2453,10 @@ chrome.runtime.onInstalled?.addListener((details) => {
   }
 })
 
-// Alarms survive some extension/service-worker restarts. Remove any stale
-// schedule left by an older eager-connection build; onConnect re-arms it.
-disarmBridgeKeepalive()
+// Arm the keepalive on every worker start: panel connections, settings saves
+// and this line all share the same alarm, so a worker restarted while tasks
+// still run on the host finds its way back to the bridge without a panel.
+armBridgeKeepalive()
 
 // 监听来自前台面板的实例切换与设置更新消息，彻底打通连接业务逻辑
 chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
@@ -2329,10 +2470,9 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       const patch: Partial<Settings> = { bridgeUrl }
       if (token !== undefined) patch.token = token
       void persistSettings(patch).then(async () => {
-        if (panelPorts.size > 0) {
-          bridgeStartRevision += 1
-          await startBridge()
-        }
+        bridgeStartRevision += 1
+        armBridgeKeepalive()
+        await startBridge()
         broadcastStatus()
         sendResponse({ ok: true })
       })
@@ -2341,10 +2481,9 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
   } else if (m?.type === 'SETTINGS_UPDATED') {
     const nextSettings = (m.payload ?? {}) as Partial<Settings>
     void persistSettings(nextSettings).then(async () => {
-      if (panelPorts.size > 0) {
-        bridgeStartRevision += 1
-        await startBridge()
-      }
+      bridgeStartRevision += 1
+      armBridgeKeepalive()
+      await startBridge()
       broadcastStatus()
       sendResponse({ ok: true })
     })

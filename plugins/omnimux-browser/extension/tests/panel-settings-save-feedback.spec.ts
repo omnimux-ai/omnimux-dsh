@@ -87,6 +87,7 @@ describe('the settings save button', () => {
       onSelection: vi.fn(() => unsubscribe),
       onMediaAttach: vi.fn(() => unsubscribe),
       onSessionResumeHint: vi.fn(() => unsubscribe),
+      onTaskLocate: vi.fn(() => () => {}),
       respondToApproval: vi.fn(async () => {}),
       resolveTabAffinity: vi.fn(async () => {}),
       rebindTabAffinity: vi.fn(async () => {}),
