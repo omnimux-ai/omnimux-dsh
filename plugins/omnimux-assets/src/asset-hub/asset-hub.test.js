@@ -7,7 +7,7 @@ import {
   isAssetHubActive,
   workbenchDefaultWidthPx,
   workbenchSplitMaxPanelPx,
-} from './geometry.js'
+} from '../../../omnimux/src/client/workbench/geometry.js'
 import {
   PRIMARY_TABS,
   SECONDARY_FILTER_WHITELIST,
@@ -27,12 +27,12 @@ import {
   FILTER_PILL_ENUM_MAP,
   loadAssetHubData,
 } from './asset-hub-data.js'
-import { SHARED_SUB_CATEGORIES } from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
-import { createAttachmentStore } from '../attachments/store.ts'
-import { createComposerAddController } from '../composer-add/controller.js'
-import { installComposerAddCapture } from '../composer-add/install.js'
-import { promptForCard } from '../composer-add/library-stage-model.js'
-import { zh } from '../locales.js'
+import { SHARED_SUB_CATEGORIES } from '../../../omnimux/src/client/shared/asset-hub-tabs/shared-tabs-catalog.js'
+import { createAttachmentStore } from '../../../omnimux/src/client/attachments/store.ts'
+import { createComposerAddController } from '../../../omnimux/src/client/composer-add/controller.js'
+import { installComposerAddCapture } from '../../../omnimux/src/client/composer-add/install.js'
+import { promptForCard } from '../../../omnimux/src/client/composer-add/library-stage-model.js'
+import { zh } from '../client/locales.js'
 
 describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测试', () => {
   it('T01: 三栏几何契约升级与中栏 380px 保宽锁定', () => {

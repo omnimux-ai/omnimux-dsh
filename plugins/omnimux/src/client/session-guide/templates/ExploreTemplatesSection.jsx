@@ -16,7 +16,7 @@ import { TemplateDetailDrawer } from './TemplateDetailDrawer.jsx';
 import FEATURED_SKILLS_JSON from '../skills/featured-skills.json' with { type: 'json' };
 import { openWorkbench } from '../../workbench/sidebar-controller.js';
 import { loadLibraryCards, promptForCard } from '../../composer-add/library-stage-model.js';
-import { FILTER_PILL_ENUM_MAP, adaptCardToAttachmentPayload } from '../../workbench/asset-hub-data.js';
+import { FILTER_PILL_ENUM_MAP, adaptCardToAttachmentPayload } from '../../../../../omnimux-assets/src/asset-hub/asset-hub-data.js';
 import { ensureAssetCardStyles } from '../../components/asset-picker/AssetPickerCard.jsx';
 import { ensureProductCardStyles } from '../../components/product-picker/ProductPickerCard.jsx';
 import { ensureInspirationCardStyles } from '../../components/inspiration-picker/InspirationPickerCard.jsx';

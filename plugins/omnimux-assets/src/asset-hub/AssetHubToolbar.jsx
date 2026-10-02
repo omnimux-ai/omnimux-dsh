@@ -1,7 +1,7 @@
 import React from 'react'
 import { ASSET_HUB_I18N_SPEC } from './asset-hub-store.js'
-import { SharedSubTabs } from '../shared/asset-hub-tabs/SharedSubTabs.jsx'
-import { SearchIcon, UploadIcon, PlusIcon } from '../shared/asset-hub-tabs/SharedTabIcons.jsx'
+import { SharedSubTabs } from '../../../omnimux/src/client/shared/asset-hub-tabs/SharedSubTabs.jsx'
+import { SearchIcon, UploadIcon, PlusIcon } from '../../../omnimux/src/client/shared/asset-hub-tabs/SharedTabIcons.jsx'
 
 /**
  * 筛选栏（AssetHubToolbar）

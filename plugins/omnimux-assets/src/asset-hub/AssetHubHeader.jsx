@@ -1,11 +1,11 @@
 import React from 'react'
 import { ASSET_HUB_I18N_SPEC } from './asset-hub-store.js'
-import { SharedPrimaryTabs } from '../shared/asset-hub-tabs/SharedPrimaryTabs.jsx'
+import { SharedPrimaryTabs } from '../../../omnimux/src/client/shared/asset-hub-tabs/SharedPrimaryTabs.jsx'
 import {
   FullscreenEnterIcon,
   FullscreenExitIcon,
   CollapseIcon,
-} from '../shared/asset-hub-tabs/SharedTabIcons.jsx'
+} from '../../../omnimux/src/client/shared/asset-hub-tabs/SharedTabIcons.jsx'
 
 /**
  * 右栏顶栏（AssetHubHeader）
