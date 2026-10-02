@@ -231,6 +231,13 @@ export interface PanelCopy {
     removeSelection: string
     /** 任务刻度轨与排队坞文案。 */
     queueDockBadge: (count: number) => string
+    queueEdit: string
+    queueRemove: string
+    queueSave: string
+    queueCancelEdit: string
+    queueSending: string
+    queueEditFailed: string
+    queueRemoveFailed: string
     railQueued: string
     railRunning: string
     railDone: string
@@ -507,7 +514,14 @@ const EN: PanelCopy = {
     selectionAttached: 'Selected text',
     selectionTruncated: '(truncated)',
     removeSelection: 'Remove the selected text',
-    queueDockBadge: (count) => `Queued (${count})`,
+    queueDockBadge: (count) => `${count} queued messages`,
+    queueEdit: 'Edit queued message',
+    queueRemove: 'Remove queued message',
+    queueSave: 'Save queued message',
+    queueCancelEdit: 'Cancel editing',
+    queueSending: 'Sending…',
+    queueEditFailed: 'Edit failed: this message may have already started sending.',
+    queueRemoveFailed: 'Removal failed: this message may have already started sending.',
     railQueued: 'Queued',
     railRunning: 'Running',
     railDone: 'Done',
@@ -797,7 +811,14 @@ const ZH: PanelCopy = {
     selectionAttached: '选中的网页内容',
     selectionTruncated: '（已截断）',
     removeSelection: '移除选中内容',
-    queueDockBadge: (count) => `排队中（${count}）`,
+    queueDockBadge: (count) => `${count} 条排队消息`,
+    queueEdit: '编辑排队消息',
+    queueRemove: '删除排队消息',
+    queueSave: '保存排队消息',
+    queueCancelEdit: '取消编辑',
+    queueSending: '发送中…',
+    queueEditFailed: '编辑失败：这条消息可能已经开始发送。',
+    queueRemoveFailed: '删除失败：这条消息可能已经开始发送。',
     railQueued: '排队中',
     railRunning: '进行中',
     railDone: '已完成',

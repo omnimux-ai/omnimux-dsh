@@ -182,20 +182,77 @@ async function main() {
     report.assertions.push({ name: 'click-locate', pass: true });
     await shot('taskrail-locate-flash.png');
 
-    // 4) 排队坞存在且徽标/文案正确
-    const dock = await evalJson(`(() => {
-      const items = [...document.querySelectorAll('.queue-dock-item')];
+    // 4) 排队坞：官方同款折叠面板——默认收起只显示「N 条排队消息」头部
+    const dockCollapsed = await evalJson(`(() => {
+      const panel = document.querySelector('.queue-dock-panel');
+      const header = document.querySelector('.queue-dock-header');
+      const count = document.querySelector('.queue-dock-count')?.textContent ?? '';
+      const list = document.querySelector('.queue-dock-list');
+      const lead = document.querySelector('.queue-dock-header .queue-dock-lead svg');
       return {
-        count: items.length,
-        badge: items[0]?.querySelector('.queue-dock-badge')?.textContent ?? '',
-        text: items[0]?.querySelector('.queue-dock-text')?.textContent ?? '',
+        panel: !!panel,
+        header: !!header,
+        count,
+        listVisible: !!list,
+        icon: !!lead,
+        expanded: header?.getAttribute('aria-expanded') ?? null,
       };
     })()`);
-    report.dock = dock;
-    assert.equal(dock.count, 2, '排队坞应有 2 条');
-    assert.match(dock.badge, /排队|Queue/, '排队坞徽标缺失');
-    assert.match(dock.text, /回复角度/, '排队坞第一条应为排队任务文本');
-    report.assertions.push({ name: 'queue-dock', pass: true });
+    report.dockCollapsed = dockCollapsed;
+    assert.equal(dockCollapsed.panel, true, '排队坞面板未渲染');
+    assert.equal(dockCollapsed.header, true, '多条排队应有可折叠头部');
+    assert.match(dockCollapsed.count, /2.*(排队|queued)/i, '头部应显示「2 条排队消息」');
+    assert.equal(dockCollapsed.listVisible, false, '默认应收起队列列表');
+    assert.equal(dockCollapsed.icon, true, '头部应显示队列图标');
+    report.assertions.push({ name: 'queue-dock-collapsed', pass: true });
+    await shot('taskrail-queue-dock-collapsed.png');
+
+    // 5) 点击头部展开 → 列表行 + 分隔线 + 行内编辑/删除按钮
+    const headerBox = await evalJson(`(() => {
+      const r = document.querySelector('.queue-dock-header').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    })()`);
+    await sendCdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: headerBox.x, y: headerBox.y, button: 'left', clickCount: 1 });
+    await sendCdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: headerBox.x, y: headerBox.y, button: 'left', clickCount: 1 });
+    await new Promise((r) => setTimeout(r, 300));
+    const dockExpanded = await evalJson(`(() => {
+      const rows = [...document.querySelectorAll('.queue-dock-row')];
+      const sep = rows.length > 1 ? getComputedStyle(rows[1]).boxShadow : 'none';
+      return {
+        rows: rows.length,
+        texts: rows.map((r) => r.querySelector('.queue-dock-preview')?.textContent ?? ''),
+        sepWidth: sep,
+        actions: rows[0] ? [...rows[0].querySelectorAll('.queue-dock-action')].map((b) => b.getAttribute('aria-label') ?? '') : [],
+      };
+    })()`);
+    report.dockExpanded = dockExpanded;
+    assert.equal(dockExpanded.rows, 2, '展开后应有 2 行');
+    assert.match(dockExpanded.texts[0] ?? '', /回复角度/, '第一行应为排队任务文本');
+    assert.match(dockExpanded.sepWidth, /inset.*0px 1px|1px.*inset|inset 0(px)? 1px/, '行之间应有 1px inset 分隔线');
+    assert.equal(dockExpanded.actions.length, 2, '每行应有编辑/删除两个操作钮');
+    report.assertions.push({ name: 'queue-dock-expanded', pass: true });
+    await shot('taskrail-queue-dock-expanded.png');
+
+    // 6) 点击删除 → 真实 rpc session.updateQueue{kind:'remove'}，行数减 1
+    const removeBox = await evalJson(`(() => {
+      const b = [...document.querySelectorAll('.queue-dock-row')][0].querySelectorAll('.queue-dock-action')[1];
+      const r = b.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    })()`);
+    await sendCdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: removeBox.x, y: removeBox.y, button: 'left', clickCount: 1 });
+    await sendCdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: removeBox.x, y: removeBox.y, button: 'left', clickCount: 1 });
+    await new Promise((r) => setTimeout(r, 300));
+    const afterRemove = await evalJson(`(() => {
+      const rows = [...document.querySelectorAll('.queue-dock-row')];
+      const rpc = window.__harnessRpc ?? [];
+      const last = rpc[rpc.length - 1];
+      return { rows: rows.length, method: last?.method ?? '', kind: last?.payload?.action?.kind ?? '' };
+    })()`);
+    report.afterRemove = afterRemove;
+    assert.equal(afterRemove.method, 'session.updateQueue', '删除应走 session.updateQueue');
+    assert.equal(afterRemove.kind, 'remove', '动作应为 remove');
+    assert.equal(afterRemove.rows, 1, '删除后应剩 1 行');
+    report.assertions.push({ name: 'queue-dock-remove', pass: true });
     await shot('taskrail-queue-dock.png');
 
     writeFileSync(join(EVIDENCE, 'report.json'), JSON.stringify(report, null, 2));

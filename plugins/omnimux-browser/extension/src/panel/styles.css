@@ -6184,35 +6184,137 @@ textarea:focus-visible {
 
 /* ===== 排队坞：输入框上方显示排队中的任务 ===== */
 
+/* ===== 排队坞（QueueDock）：对齐 dsh 官方 QueueDock 形态 ===== */
+
 .queue-dock {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
-.queue-dock-item {
+.queue-dock-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.queue-dock-header {
   display: flex;
+  width: 100%;
+  min-height: 36px;
+  padding: 4px 12px;
+  border: 0;
+  background: transparent;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 8px;
-  background: var(--blue-wash);
-  font-size: calc(12px * var(--ui-scale));
-  color: var(--muted);
+  gap: 10px;
+  color: var(--ink);
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
 }
-.queue-dock-badge {
-  flex-shrink: 0;
-  font-size: calc(10px * var(--ui-scale));
-  font-weight: 600;
-  color: var(--blue);
-  white-space: nowrap;
+.queue-dock-header:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
 }
-.queue-dock-text {
+.queue-dock-header:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.queue-dock-lead {
+  display: grid;
+  flex: none;
+  color: var(--faint);
+  place-items: center;
+}
+.queue-dock-count {
+  flex: auto;
   min-width: 0;
+  line-height: 24px;
+}
+.queue-dock-chevron {
+  display: grid;
+  flex: none;
+  color: var(--faint);
+  place-items: center;
+  transition: transform 0.15s ease;
+}
+.queue-dock-chevron.open {
+  transform: rotate(180deg);
+}
+.queue-dock-list {
+  margin: 0;
+  max-height: 180px;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+.queue-dock-row {
+  display: flex;
+  min-height: 36px;
+  padding: 4px 5px 4px 12px;
+  align-items: center;
+  gap: 10px;
+}
+.queue-dock-row + .queue-dock-row,
+.queue-dock-header + .queue-dock-list .queue-dock-row:first-child,
+.queue-dock-list > .queue-dock-row:first-child:nth-last-child(n+2) {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.queue-dock-preview {
+  flex: auto;
+  min-width: 0;
+  color: var(--muted);
+  font-size: calc(13px * var(--ui-scale));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.queue-dock-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+.queue-dock-action {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  place-items: center;
+}
+.queue-dock-action:hover:not(:disabled) {
+  background: var(--blue-wash);
+  color: var(--ink);
+}
+.queue-dock-action:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+.queue-dock-action:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.queue-dock-editor {
+  flex: auto;
+  min-width: 0;
+  min-height: 28px;
+  max-height: 96px;
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--canvas);
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(13px * var(--ui-scale));
+  resize: none;
+  outline: none;
+  overflow-y: auto;
+}
+.queue-dock-editor:focus {
+  border-color: var(--blue);
 }
 
 /* ------------------------------------------------------------------ */

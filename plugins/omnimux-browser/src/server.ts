@@ -66,6 +66,7 @@ const ORDERED_SESSION_METHODS = new Set([
   BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD,
   'session.prompt',
   'session.cancel',
+  'session.updateQueue',
 ])
 
 /** Loopback IPv4/IPv6 literals (IPv4-mapped included). Exported for tests and reuse. */
