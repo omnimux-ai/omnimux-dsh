@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { BridgeState } from '../src/background/bridge.ts'
 import type { PanelApi } from '../src/panel/api.ts'
-import { BRIDGE_SESSION_PURGE_METHOD, type ServerFrame } from 'omnimux-browser/src/protocol.ts'
+import { type ServerFrame } from 'omnimux-browser/src/protocol.ts'
 
 let panelApi: PanelApi
 
@@ -171,7 +171,7 @@ describe('panel session transitions', () => {
 
     const selectSession = async (index: number): Promise<void> => {
       await act(async () => { document.querySelector<HTMLButtonElement>('.session-menu-trigger')!.click() })
-      const sessions = document.querySelectorAll<HTMLButtonElement>('.session-list li > button:not(.session-delete)')
+      const sessions = document.querySelectorAll<HTMLButtonElement>('.session-list li > button')
       expect(sessions).toHaveLength(2)
       await act(async () => { sessions[index]!.click() })
     }
@@ -189,25 +189,6 @@ describe('panel session transitions', () => {
       'Settled while away',
       ...(activeText === undefined ? [] : [activeText]),
     ])
-  })
-
-  it('keeps a session in the picker when the Host storage lock refuses deletion', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    const original = rpc.getMockImplementation()!
-    rpc.mockImplementation(async (method, payload) => {
-      if (method === BRIDGE_SESSION_PURGE_METHOD) throw new Error('session storage is locked')
-      return original(method, payload)
-    })
-    await renderConnected(null)
-    const menu = document.querySelector<HTMLButtonElement>('.session-menu-trigger')!
-    await act(async () => { menu.click() })
-    const buttons = document.querySelectorAll<HTMLButtonElement>('.session-delete')
-    expect(buttons).toHaveLength(2)
-    await act(async () => { buttons[1]!.click() })
-    expect(rpc).toHaveBeenCalledWith(BRIDGE_SESSION_PURGE_METHOD, { sessionId: 'session-saved' })
-    expect(rpc.mock.calls.some(([method]) => method === 'workspace.archiveSession')).toBe(false)
-    expect(document.querySelectorAll('.session-delete')).toHaveLength(2)
-    expect(document.querySelector('.error')?.textContent).toContain('session storage is locked')
   })
 
   it('waits for the matching stream baseline when a replacement history RPC arrives first', async () => {
@@ -360,10 +341,10 @@ describe('panel session transitions', () => {
     const originalSessionTitle = sessionMenu.textContent
     await act(async () => { sessionMenu.click() })
     await vi.waitFor(() => {
-      expect(document.querySelectorAll('.session-list li > button:not(.session-delete)')).toHaveLength(2)
+      expect(document.querySelectorAll('.session-list li > button')).toHaveLength(2)
     })
 
-    const savedSession = document.querySelectorAll<HTMLButtonElement>('.session-list li > button:not(.session-delete)')[1]
+    const savedSession = document.querySelectorAll<HTMLButtonElement>('.session-list li > button')[1]
     await act(async () => { savedSession.click() })
     await vi.waitFor(() => {
       expect(document.querySelector('.error')?.textContent).toBe('runtime port unavailable')

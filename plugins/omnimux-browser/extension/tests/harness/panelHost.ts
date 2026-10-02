@@ -99,6 +99,18 @@ export function installHarnessHost(): HarnessHostState {
       case 'session.create':
         state.creates += 1
         return { sessionId: 'harness-session' }
+      case 'session.list':
+        return {
+          items: [
+            { sessionId: 's-greet', updatedAt: 1, running: false, blank: false, cwd: '/tmp/s1', projections: { asOfSeq: 1, values: { title: '初次问候与对话开启' } } },
+            { sessionId: 's-twitter', updatedAt: 2, running: false, blank: false, cwd: '/tmp/s2', projections: { asOfSeq: 1, values: { title: '推特高频转发评论策略' } } },
+            { sessionId: 's-video', updatedAt: 3, running: false, blank: false, cwd: '/tmp/s3', projections: { asOfSeq: 1, values: { title: '反推视频实现原理' } } },
+            { sessionId: 's-sleep', updatedAt: 4, running: false, blank: false, cwd: '/tmp/s4', projections: { asOfSeq: 1, values: { title: '助眠歌单黄金开头分镜' } } },
+            { sessionId: 's-trend', updatedAt: 5, running: false, blank: false, cwd: '/tmp/s5', projections: { asOfSeq: 1, values: { title: '灵感社区爆款数据查询' } } },
+          ],
+        }
+      case 'workspace.list':
+        return { archivedSessionIds: [] }
       case 'session.history':
         return {
           events: [],

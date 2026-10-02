@@ -8,7 +8,7 @@
  */
 
 import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
-import { BRIDGE_FETCH_MEDIA_METHOD, BRIDGE_SESSION_PURGE_METHOD, DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
+import { BRIDGE_FETCH_MEDIA_METHOD, DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeCaps } from 'omnimux-browser/src/protocol.ts'
 import type { ServerFrame } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeState } from '../background/bridge.ts'
@@ -252,14 +252,6 @@ function SettingsIcon(): React.JSX.Element {
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <path d="M10 7.35A2.65 2.65 0 1 0 10 12.65 2.65 2.65 0 0 0 10 7.35Z" />
       <path d="M16.15 11.2a6.4 6.4 0 0 0 0-2.4l1.18-.91-1.5-2.6-1.4.57a6.3 6.3 0 0 0-2.08-1.2L12.15 3h-3l-.2 1.66a6.3 6.3 0 0 0-2.08 1.2l-1.4-.57-1.5 2.6 1.18.91a6.4 6.4 0 0 0 0 2.4l-1.18.91 1.5 2.6 1.4-.57a6.3 6.3 0 0 0 2.08 1.2l.2 1.66h3l.2-1.66a6.3 6.3 0 0 0 2.08-1.2l1.4.57 1.5-2.6-1.18-.91Z" />
-    </svg>
-  )
-}
-
-function TrashIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6m-7 0 .7 9.1A2 2 0 0 0 7.7 17h4.6a2 2 0 0 0 2-1.9L15 6M8.25 9v4.5M11.75 9v4.5" />
     </svg>
   )
 }
@@ -2143,23 +2135,6 @@ export function App(): React.JSX.Element {
     }
   }
 
-  /** 删除历史会话：由桥接在存储锁内归档并清理，拒绝时保留重试入口。 */
-  async function deleteSession(entry: SessionPickerEntry): Promise<void> {
-    if (entry.running || sessionSwitchBlocked || sessionChangingRef.current) return
-    const title = projectedSessionTitle(entry) ?? sessionDisplayTitle(entry)
-    if (!window.confirm(copy.app.deleteSessionConfirm(title))) return
-    try {
-      await api.rpc(BRIDGE_SESSION_PURGE_METHOD, { sessionId: entry.sessionId })
-      setSessionList((prev) => prev.filter((item) => item.sessionId !== entry.sessionId))
-      if (sessionRef.current === entry.sessionId) {
-        setShowSessionPicker(false)
-        await startNewSession()
-      }
-    } catch (cause) {
-      setError(copy.app.deleteSessionFailed(cause instanceof Error ? cause.message : String(cause)))
-    }
-  }
-
   /** Load the session that owns an approval before exposing its decision UI. */
   async function focusApprovalSession(request: ApprovalRequest): Promise<void> {
     const sessionId = request.sessionId
@@ -3344,19 +3319,6 @@ export function App(): React.JSX.Element {
                           <span className="session-title" title={title}>{title}</span>
                           {isCurrent && <span className="session-active-check">✓</span>}
                         </button>
-                        {!entry.running && (
-                          <button
-                            type="button"
-                            className="icon-button session-delete"
-                            aria-label={copy.app.deleteSession}
-                            title={copy.app.deleteSession}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              void deleteSession(entry)
-                            }}>
-                            <TrashIcon />
-                          </button>
-                        )}
                       </li>
                     )
                   })}
