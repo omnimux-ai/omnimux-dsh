@@ -55,6 +55,11 @@
 - **必须**统一使用矢量 SVG 图标（优先使用 `@deepseek-ai/dsh-client-ui-primitives` 内置图标，缺省时使用 `lucide-react`）。
 - **硬性门禁卡点 (UI04)**：由 `scripts/guard-ui-rules.mjs` 与 CI `scripts/scan-ui-gates.mjs` 自动强校验，违规代码在编辑时被 PreToolUse Hook 打断，在 CI 时直接阻断构建。特化场景须使用 `// exempt-ui04 <业务原因>`。
 
+### 2.6a 输入框宽度基准（Composer Width）
+- **新会话欢迎页输入框**：顶部未吸底态与滚动吸底态输入框及工作区选择行严格统一锁定 **`680px`** 紧凑黄金比例——`max-width: min(680px, calc(100% - 24px))!important`，保持优雅水平居中；顶部到底部 100% 绝对等宽。
+- **吸底 Dock 上限**：`DOCK_MAX_WIDTH = 680`（`session-guide/useComposerDocking.js` 单源）。
+- **严禁**：任何后续任务或 Agent 以「对齐宿主聊天气泡底座」为由改宽（780px / 952px / `100%` / `none`）；吸底状态的宽度计算必须走同一 680px 令牌，严禁 fallback 到旧的 952px。
+
 ### 2.6 WCAG AA 无障碍对比度（Accessibility & Contrast）
 - 正文及关键交互文本对背景的对比度必须 ≥ **4.5:1**。
 - 大号文本（≥ 18px 或加粗 ≥ 14px）对比度必须 ≥ **3.0:1**。
