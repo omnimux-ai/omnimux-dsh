@@ -1254,6 +1254,15 @@ describe('MediaViewerComposer Component Contract', () => {
     );
   });
 
+  it('粘贴入槽回归: composer 根容器捕获剪贴板媒体文件并按 slotPlan 正式卡槽归位', () => {
+    const composerSrc = fs.readFileSync(new URL('./MediaViewerComposer.jsx', import.meta.url), 'utf-8');
+    assert.ok(composerSrc.includes('onPaste'), '根容器必须捕获 onPaste 事件');
+    assert.ok(composerSrc.includes('clipboardData?.files'), '必须读取 clipboardData.files');
+    assert.ok(composerSrc.includes('slotPlan(model, mode, op.id)'), '推导操作后必须用 slotPlan 取正式归一化卡槽，严禁手造虚拟 key');
+    assert.ok(composerSrc.includes('deriveAdaptiveOperation'), '当前操作装不下时必须按素材推导适配操作重试');
+    assert.ok(composerSrc.includes('isLocalUpload: true'), '粘贴素材必须标记 isLocalUpload 走本地物化路径');
+  });
+
   it('缺陷3回归: MediaViewerComposer.jsx 保护槽位用户素材，容量已满且无 isCanvasModel 时不强行挤出', () => {
     const composerSrc = fs.readFileSync(new URL('./MediaViewerComposer.jsx', import.meta.url), 'utf-8');
     assert.ok(
