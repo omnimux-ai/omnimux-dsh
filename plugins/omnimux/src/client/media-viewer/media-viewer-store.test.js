@@ -187,10 +187,13 @@ test('media-viewer-store: session binding, deduplication and session-scoped filt
   // buckets on slow runners — assert the session-scoped content, not bucket count.
   const groupIdsA = groupsA.flatMap((g) => g.items.map((item) => item.id))
   const groupIdsB = groupsB.flatMap((g) => g.items.map((item) => item.id))
-  assert.deepEqual(groupIdsA, store.getMediaList(sessionA).map((item) => item.id))
+  // group buckets sort by the dedup refresh timestamp, not insert order —
+  // a millisecond tick on a slow runner can reshuffle buckets, so compare
+  // session-scoped membership, not positional order.
+  assert.deepEqual([...groupIdsA].sort(), store.getMediaList(sessionA).map((item) => item.id).sort())
   assert.equal(new Set(groupIdsA).size, 2)
   assert.ok(groupIdsA.includes(itemA2.id))
-  assert.deepEqual(groupIdsB, store.getMediaList(sessionB).map((item) => item.id))
+  assert.deepEqual([...groupIdsB].sort(), store.getMediaList(sessionB).map((item) => item.id).sort())
   assert.deepEqual(groupIdsB, [itemB1.id])
 });
 
