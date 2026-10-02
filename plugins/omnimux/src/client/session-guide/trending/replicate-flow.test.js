@@ -25,7 +25,7 @@ async function loadComponent(entry) {
 
 const SECTION_FIXTURE = [
   '<div id="root" data-omnimux-starter-host data-phase="hero">',
-  '<div class="scrollBody">',
+  '<div data-conversation-scroll>',
   '<div data-composer-seat><div class="band"><div data-composer-card>',
   '<button data-send-button>Send</button>',
   '</div></div></div>',
@@ -155,7 +155,7 @@ async function renderSection({ rows = SOURCE_ROWS, sessionId = 'sess-replicate' 
 
   const root = createRoot(host.querySelector('#seat'))
   // 宿主的滚动发生在 scrollBody 上；停靠判定只认它的 scrollTop
-  const scroller = host.querySelector('.scrollBody')
+  const scroller = host.querySelector('[data-conversation-scroll]')
   stubLayout(env, host)
   const paint = () => act(async () => {
     root.render(React.createElement(sectionModule.TrendingReplicateSection, {

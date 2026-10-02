@@ -17,7 +17,7 @@ import {
   DOCK_LEAVE_MAX,
 } from './useComposerDocking.js'
 
-function withDom(html = '<div id="root"><div data-phase="conversation" data-omnimux-starter-host=""><div class="hero-band"><div data-composer-card="" style="height: 120px;"></div></div><div class="scrollBody" style="height: 600px; overflow-y: auto;"></div><div id="seat"></div></div></div>') {
+function withDom(html = '<div id="root"><div data-phase="conversation" data-omnimux-starter-host=""><div class="hero-band"><div data-composer-card="" style="height: 120px;"></div></div><div data-conversation-scroll style="height: 600px; overflow-y: auto;"></div><div id="seat"></div></div></div>') {
   const dom = new JSDOM(html, { url: 'http://localhost/' })
   dom.window.Element.prototype.getBoundingClientRect = function stub() {
     return {
@@ -80,7 +80,7 @@ test('useComposerDocking: 初始状态为 inline，且宿主未打上 dock-open 
 test('useComposerDocking: 顶部输入框可见时触发业务事件保持 inline，滚出视口后自动吸底设置几何变量', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
-  const scroller = host.querySelector('.scrollBody')
+  const scroller = host.querySelector('[data-conversation-scroll]')
   const root = createRoot(document.querySelector('#seat'))
   let hookApi = null
 
@@ -129,7 +129,7 @@ test('dock owner expands for inline demand, clamps to column and restores defaul
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
   const card = host.querySelector('[data-composer-card]')
-  host.classList.add('centerCol')
+  host.setAttribute('data-conversation-content', '')
   let availableWidth = 1200
   host.getBoundingClientRect = () => ({ left: 394, right: 394 + availableWidth, width: availableWidth })
   card.innerHTML = '<div class="row" style="display:flex"><div class="tools"><div data-omx-quick-shortcut-controls><button>Model</button></div></div></div>'
@@ -254,7 +254,7 @@ test('useComposerDocking: 再次点击同一卡片触发反悔收起', async () 
 test('useComposerDocking: 滚动迟滞判定：滑离顶部吸底，滑回最顶部自动归还原位', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
-  const scroller = host.querySelector('.scrollBody')
+  const scroller = host.querySelector('[data-conversation-scroll]')
   const root = createRoot(document.querySelector('#seat'))
   let hookApi = null
 
@@ -349,7 +349,7 @@ test('useComposerDocking: 组件卸载时安全清理所有宿主样式与标记
 test('useComposerDocking: dock(item, onDocked) 延迟交付回调且锁定视口滚动位置保持 0 位移', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
-  const scroller = host.querySelector('.scrollBody')
+  const scroller = host.querySelector('[data-conversation-scroll]')
   const root = createRoot(document.querySelector('#seat'))
   let hookApi = null
 
@@ -390,7 +390,7 @@ test('useComposerDocking: dock(item, onDocked) 延迟交付回调且锁定视口
 test('useComposerDocking: 吸底先手——dock() 同一帧同步写入停靠 DOM，不等渲染周期', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
-  const scroller = host.querySelector('.scrollBody')
+  const scroller = host.querySelector('[data-conversation-scroll]')
   const root = createRoot(document.querySelector('#seat'))
   let hookApi = null
 
@@ -437,7 +437,7 @@ test('useComposerDocking: 吸底先手——dock() 同一帧同步写入停靠 D
 test('useComposerDocking: 意图驱动模式——纯向下滚动默认不吸底，显式意图触发后才吸底', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
-  const scroller = host.querySelector('.scrollBody')
+  const scroller = host.querySelector('[data-conversation-scroll]')
   const root = createRoot(document.querySelector('#seat'))
   let hookApi = null
 
@@ -853,7 +853,7 @@ test('resolveConversationColumn: 多会话切换或抽屉残留存在多个可�
 test('useComposerDocking: transitionend 事件安全过滤——仅响应几何属性（width/transform）或侧边栏目标', async () => {
   const env = withDom()
   const host = document.querySelector('[data-omnimux-starter-host]')
-  host.classList.add('centerCol')
+  host.setAttribute('data-conversation-content', '')
   let currentWidth = 1200
   host.getBoundingClientRect = () => ({ left: 300, right: 300 + currentWidth, width: currentWidth, height: 800 })
 

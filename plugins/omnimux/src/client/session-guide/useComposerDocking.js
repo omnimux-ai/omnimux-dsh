@@ -26,15 +26,15 @@ export function resolveConversationColumn(card, band) {
     return false
   }
 
-  // Level 1: 优先探测权威的会话工作台主容器
-  // 覆盖原生会话表面、会话滚动容器、宿主内置滚动体以及三栏架构下的中间列 centerCol
+  // Level 1: 优先探测权威的会话工作台主容器。
+  // 宿主只读官方稳定锚点：dshDesktop* 语义类与 data-* 属性（audit I2），
+  // 不再匹配任何 class*= 通配（含 scrollBody/centerCol/conversation）。
   const surfaceSelectors = [
     '.dshDesktopConversationSurface',
+    '[data-conversation-content]',
     '[data-conversation-scroll]',
-    '[class*="centerCol"]',
-    '.dshDesktopFrame > [class*="conversation"]',
-    '[data-omnimux-starter-host] [class*="scrollBody"]',
-    '[class*="scrollBody"]',
+    '[data-omnimux-starter-host]',
+    '[data-omnimux-starter-host] [data-conversation-scroll]',
   ]
 
   const seen = new Set()
@@ -202,7 +202,7 @@ export const DOCK_BOTTOM = 20
 export const DOCK_MAX_WIDTH = 680
 
 /** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
-export const SCROLLER_SELECTOR = '[class*="scrollBody"]'
+export const SCROLLER_SELECTOR = '[data-conversation-scroll]'
 
 /** 真正回到页面最顶部 fallback 阈值（px）。 */
 export const READ_TOP_MAX = 10
@@ -595,6 +595,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     observer?.observe(root)
     if (card) observer?.observe(card)
     const toolbar = card?.querySelector?.(':scope > [class*="row"]:has(> [class*="tools"])')
+    // composer-card 内部工具行属于自有渲染子树，保留 class* 匹配；宿主只读 data-*
     const contentObserver = typeof window.MutationObserver === 'function'
       ? new window.MutationObserver(writeGeometry) : null
     if (toolbar) contentObserver?.observe(toolbar, { childList: true, characterData: true, subtree: true })
@@ -622,7 +623,7 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       )
       const transitionTarget = event?.target
       const isSidebarOrHostTarget = Boolean(
-        transitionTarget?.closest?.('.dshDesktopSidebar, [data-sidebar], aside, [class*="sidebar"]')
+        transitionTarget?.closest?.('.dshDesktopSidebar, [data-sidebar-right-panel], [data-sidebar], aside')
       )
       const isNode = Boolean(transitionTarget && typeof transitionTarget.nodeType === 'number')
       const relatedTransitionTarget = Boolean(

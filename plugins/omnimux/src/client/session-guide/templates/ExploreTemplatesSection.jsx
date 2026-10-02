@@ -164,8 +164,8 @@ export function ExploreTemplatesSection({
       // 平滑滚动定位到 Tab 栏，给用户完整的大屏浏览与选材视野
       const targetEl = filterBarRef.current || sectionRootRef.current;
       if (!targetEl) return;
-      const scroller = targetEl.closest?.('[class*="scrollBody"], [data-conversation-scroll]') ||
-        (typeof document !== 'undefined' ? document.querySelector('[class*="scrollBody"]') : null);
+      const scroller = targetEl.closest?.('[data-conversation-scroll]') ||
+        (typeof document !== 'undefined' ? document.querySelector('[data-conversation-scroll]') : null);
 
       if (scroller && typeof scroller.getBoundingClientRect === 'function') {
         const elRect = targetEl.getBoundingClientRect();
