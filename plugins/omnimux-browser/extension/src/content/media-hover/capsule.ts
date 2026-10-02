@@ -4,12 +4,12 @@
  * The capsule is a two-stage control, and the DOM mirrors the two stages:
  *
  * ```
- * stage one (collapsed, 32 x 32)     stage two (expanded, 92 x 32)
+ * stage one (collapsed, 24 x 24)     stage two (expanded, 128 x 24)
  *   ( OmniMux brand mark )             [ inspiration ] [ copy ] [ attach ]
  * ```
  *
  * Both stages are mounted at once and absolutely centred inside the pill, and
- * both occupy the same 32px band, so the width animation never reflows a row and
+ * both occupy the same 24px band, so the width animation never reflows a row and
  * the pill never jumps vertically: `is-collapsed` / `is-expanded` swap which
  * of the two layers is visible, and the stylesheet owns the cross-fade. The
  * overlay decides *when* to move between the stages and `actions.ts` performs the

@@ -76,19 +76,24 @@ export const CAPSULE_SPEC = {
   background: 'rgba(30,32,38,0.95)',
   backgroundColor: '#1e2026',
   backgroundAlpha: 0.95,
-  /** Expanded-row radius; `height / 2` keeps both of its ends perfectly round. */
-  borderRadius: 12,
+  /**
+   * Fully rounded pill ends on every stage; `999px` reads as `height / 2` at any
+   * band height, which is the same rounding the reference implementation (the
+   * YouMind image toolbar) uses.
+   */
+  borderRadius: 999,
   /**
    * Stage-two height, and the band the placement reserves for *both* stages: the
    * collapsed circle is drawn inside it, so opening the pill grows sideways into
    * space the geometry has already accounted for and never crosses a viewport edge.
    *
-   * 24px micro-baseline: aligns comfortably with player time tags and small media.
+   * 24px micro-baseline: identical to the YouMind hover button, so both pills sit
+   * at the same height over the same media.
    */
   height: 24,
   /**
    * Stage one, the collapsed circle: the brand trigger alone.
-   * `24 × 24` with a `12px` radius is a perfect circle.
+   * `24 × 24`, matching the YouMind idle button exactly.
    *
    * The drawn box is 24px while {@link haloWidth} adds 2.5px on every side, so the
    * circle's *total* span — ring included — is exactly 29px.
@@ -97,14 +102,12 @@ export const CAPSULE_SPEC = {
   collapsedHeight: 24,
   collapsedRadius: 12,
   /**
-   * Stage two, the expanded row: 3 x 16px circular icon buttons + 2 x 4px gaps +
-   * 2 x 4px row padding = 64px.
-   * Every gap, padding, and vertical margin is strictly 4px:
-   * (24 - 16) / 2 = 4px above and below, 4px at left/right edges, and 4px between
-   * buttons.
+   * Stage two, the expanded row, sized to the YouMind toolbar:
+   * 3 x 24px circular icon buttons + 2 x 4px gaps + 2 x 24px row padding = 128px.
+   * The icon buttons touch the band edges like the reference pill does.
    */
-  width: 64,
-  paddingX: 4,
+  width: 128,
+  paddingX: 24,
   /**
    * Width of the translucent halo the pill casts on every side.
    */
@@ -112,9 +115,10 @@ export const CAPSULE_SPEC = {
   /**
    * The `collapsedWidth → width` opening animation. The stylesheet owns the
    * transition; this is the same duration on the JavaScript side, where it ends
-   * the window in which the action row may not take the pointer.
+   * the window in which the action row may not take the pointer. Matches the
+   * reference toolbar's 250ms ease-out-expo.
    */
-  openMs: 220,
+  openMs: 250,
   /** Gap between two action icons in the expanded row: strictly 4px. */
   iconGap: 4,
   blur: 'blur(24px) saturate(140%)',
@@ -128,24 +132,30 @@ export const CAPSULE_SPEC = {
   sheen: 'inset 0 1px 0 rgba(255,255,255,0.35)',
   shadow:
     '0 0 0 2.5px rgba(255,255,255,0.22), 0 2px 8px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.35)',
-  /** Inset from the media's bottom-left corner. */
-  inset: 8,
   /**
-   * Action-button hit box: strictly a 16px perfect circle (`border-radius: 50%`).
-   * Inside the 24px band (R=12), a 16px circle (r=8) centered at (12, 12)
-   * creates a constant 4px breathing margin in EVERY direction.
+   * Inset from the media's bottom-left corner. 14px matches the reference
+   * implementation's `left + 14` / `bottom - 38` anchor, so our pill lands in
+   * the same spot over the same media.
    */
-  iconSize: 16,
-  /** Rendered size of the glyph inside an action button: 11px. */
-  iconGlyphSize: 11,
+  inset: 14,
   /**
-   * Hit box of the stage-one brand trigger inside the circle.
+   * Action-button hit box: strictly a 24px perfect circle (`border-radius: 50%`),
+   * the same `sm` icon button the reference toolbar uses.
    */
-  brandSize: 18,
+  iconSize: 24,
+  /** Rendered size of the glyph inside an action button: 14px. */
+  iconGlyphSize: 14,
   /**
-   * Rendered size of the brand silhouette, centred in the 18px hit box.
+   * Hit box of the stage-one brand trigger inside the circle: the full 24px pill
+   * face, like the reference's fully-clickable 24px button.
    */
-  brandIconSize: 13,
+  brandSize: 24,
+  /**
+   * Rendered size of the brand silhouette, centred in the 24px hit box. At 18px
+   * the ghost's ink fills roughly 71% of the circle, matching the reference
+   * icon's visual weight.
+   */
+  brandIconSize: 18,
   /** Flips the capsule left when the media sits against the right edge. */
   edgeMargin: 8,
 } as const
@@ -215,8 +225,6 @@ export const HOVER_REGION = {
 
 /** Timing budget. Values are rendered in the tooltip labels and copy. */
 export const TIMING = {
-  /** Pointer must rest this long on a media element before the capsule shows. */
-  enterDebounce: 150,
   /** Grace period after `mouseleave` during which entering the capsule cancels the hide. */
   leaveGrace: 150,
   /**

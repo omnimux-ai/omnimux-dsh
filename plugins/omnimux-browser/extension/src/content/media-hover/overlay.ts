@@ -39,9 +39,10 @@ const TOOLTIP_ACTIONS: readonly MediaActionKind[] = ['inspiration', 'copy', 'att
 /**
  * Mounts and drives the hover overlay.
  *
- * Timing lives here rather than in the capsule: entering is debounced, leaving
- * keeps a grace period so the pointer can travel from the media onto the
- * capsule, and a scroll follows the media instead of dismissing the capsule.
+ * Timing lives here rather than in the capsule: entering paints instantly once
+ * the detector settles on a candidate (no pre-show wait), leaving keeps a grace
+ * period so the pointer can travel from the media onto the capsule, and a
+ * scroll follows the media instead of dismissing the capsule.
  */
 export class MediaOverlay {
   private readonly doc: Document
@@ -77,7 +78,6 @@ export class MediaOverlay {
   private lastPointerX = -1
   private lastPointerY = -1
 
-  private enterTimer: number | null = null
   private leaveTimer: number | null = null
   private collapseTimer: number | null = null
   private flashTimer: number | null = null
@@ -184,9 +184,8 @@ export class MediaOverlay {
     })
   }
 
-  /** Tears everything down: listeners, timers, nodes and pending waits. */
+  /** Tears everything down: listeners, timers and nodes. */
   dispose(): void {
-    this.clearEnterTimer()
     this.clearLeaveTimer()
     this.clearCollapseTimer()
     this.clearFlashTimer()
@@ -233,16 +232,12 @@ export class MediaOverlay {
     }
 
     this.hideNow(true)
-    this.state.phase = 'pending'
     this.anchorElement = candidate.element
-
-    this.clearEnterTimer()
-    this.enterTimer = this.setTimer(() => {
-      this.enterTimer = null
-      // The pointer may have moved on during the debounce; re-resolve first.
-      this.detector?.refresh()
-      this.showNow(candidate)
-    }, TIMING.enterDebounce)
+    // Instant reveal: the candidate is already settled by the detector, so the
+    // stage-one brand mark paints on this same event. Flicker protection lives
+    // entirely on the leave side (leaveGrace + card-region checks), never as a
+    // pre-show wait — parity with competitor hover buttons.
+    this.showNow(candidate)
   }
 
   private handleInvalidate(reason: 'scroll' | 'resize' | 'detach' | 'leftmedia'): void {
@@ -309,7 +304,6 @@ export class MediaOverlay {
   }
 
   private hideNow(clear: boolean): void {
-    this.clearEnterTimer()
     this.clearCollapseTimer()
     this.clearDismissTimer()
     this.clearIdleTimer()
@@ -413,21 +407,6 @@ export class MediaOverlay {
       this.state.phase = 'shown'
       this.capsule?.setInteractive(false)
       this.scheduleCollapse()
-    }
-
-    // Pending 阶段：鼠标正在防抖倒计时中，若滑出卡片区域立即取消，绝不闪烁
-    if (this.state.phase === 'pending' && this.anchorElement !== null) {
-      if (!this.anchorElement.isConnected) {
-        this.hideNow(true)
-        return
-      }
-      const pEvent = event as PointerEvent
-      if (typeof pEvent.clientX === 'number' && typeof pEvent.clientY === 'number') {
-        if (!this.isPointerInsideCard(pEvent.clientX, pEvent.clientY)) {
-          this.hideNow(true)
-          return
-        }
-      }
     }
 
     if (this.state.phase === 'shown' && this.anchorElement !== null) {
@@ -763,12 +742,6 @@ export class MediaOverlay {
 
   private setTimer(handler: () => void, delay: number): number {
     return window.setTimeout(handler, delay)
-  }
-
-  private clearEnterTimer(): void {
-    if (this.enterTimer === null) return
-    window.clearTimeout(this.enterTimer)
-    this.enterTimer = null
   }
 
   private clearLeaveTimer(): void {

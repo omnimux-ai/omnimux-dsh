@@ -350,7 +350,7 @@ describe('pointer loss and idle dismiss optimizations', () => {
     overlay.dispose()
   })
 
-  it('cancels pending presentation immediately when pointer moves outside media bounds', () => {
+  it('shows instantly on candidate, then hides through the leave grace when the pointer moves outside media bounds', () => {
     vi.useFakeTimers()
     const { overlay, capsule } = mountedCapsule()
     overlay.setEnabled(true)
@@ -372,22 +372,22 @@ describe('pointer loss and idle dismiss optimizations', () => {
     const candidate = {
       element: img,
       payload: {
-        id: 'test-media-pending',
-        src: 'https://cdn.example.com/pending.jpg',
+        id: 'test-media-instant',
+        src: 'https://cdn.example.com/instant.jpg',
         type: 'image' as const,
-        title: 'pending',
+        title: 'instant',
         pageUrl: 'https://example.com',
       },
     }
-    // Simulate candidate hover (enters pending)
+    // Instant reveal: the stage-one mark paints on the same call, no timer advance.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(overlay as any).handleCandidate(candidate)
+    expect(capsule.classList.contains('is-visible')).toBe(true)
 
-    // Pointer slips to blank area (600, 200) during enter debounce
+    // Pointer slips to blank area (600, 200): the leave grace still protects the
+    // capsule from an instant hide, then it goes away.
     document.dispatchEvent(new MouseEvent('pointermove', { clientX: 600, clientY: 200 }))
-
-    // Advance debounce time
-    vi.advanceTimersByTime(TIMING.enterDebounce)
+    vi.advanceTimersByTime(TIMING.leaveGrace + 50)
     expect(capsule.classList.contains('is-visible')).toBe(false)
     overlay.dispose()
   })

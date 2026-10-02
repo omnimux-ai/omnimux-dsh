@@ -193,7 +193,7 @@ describe('overlay card-region visibility contract', () => {
       disabled: false,
     }
     overlay['handleCandidate'](candidate)
-    vi.advanceTimersByTime(TIMING.enterDebounce + 50)
+    // Instant reveal: the capsule paints on the same event, no timer needed.
     expect(capsule.classList.contains('is-visible')).toBe(true)
 
     // 1. Pointer moves to right padding area (outside video rect, inside card rect)
@@ -266,7 +266,7 @@ describe('overlay card-region visibility contract', () => {
       disabled: false,
     }
     overlay['handleCandidate'](candidate)
-    vi.advanceTimersByTime(TIMING.enterDebounce + 50)
+    // Instant reveal: the capsule paints on the same event, no timer needed.
     expect(capsule.classList.contains('is-visible')).toBe(true)
 
     // User rests cursor at (300, 200) inside video
