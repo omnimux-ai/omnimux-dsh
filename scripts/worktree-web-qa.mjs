@@ -986,19 +986,30 @@ export async function runRightbarSeatQa(options = {}) {
   const profileDir = join(root, 'tmp', `worktree-qa-chrome-${process.pid}-${runId.slice(0, 8)}`);
 
   try {
-    // 1. 生产模块与其真实依赖按源文件提供，页面直接 import（不复制、不打补丁）
+    // 1. 生产模块连同其源内相对引用打成一份 ESM 供给页面直接 import；外部位件
+    //    （dsh-ui-kit / react / 原语包）仍走页面桩，不复制、不打补丁。
+    const hubRequire = createRequire(join(root, 'plugins/omnimux/package.json'));
+    const { build } = hubRequire('esbuild');
+    const bundleResult = await build({
+      entryPoints: [join(root, SIDEBAR_CHROME_SOURCE_PATH)],
+      bundle: true,
+      format: 'esm',
+      platform: 'browser',
+      write: false,
+      logLevel: 'error',
+      external: ['dsh-ui-kit', 'react', 'react-dom', 'lucide-react', '@deepseek-ai/*'],
+    });
+    const moduleText = bundleResult.outputFiles[0].text;
     const html = buildRightbarSeatHarnessHtml();
     const routes = new Map([
-      [RIGHTBAR_SEAT_MODULE_URL, { file: join(root, SIDEBAR_CHROME_SOURCE_PATH), type: 'text/javascript; charset=utf-8' }],
-      ['/src/client/sidebar-coordinator.js', { file: join(root, 'plugins/omnimux/src/client/sidebar-coordinator.js'), type: 'text/javascript; charset=utf-8' }],
-      ['/src/plugin-lifecycle.json', { file: join(root, 'plugins/omnimux/src/plugin-lifecycle.json'), type: 'application/json; charset=utf-8' }],
+      [RIGHTBAR_SEAT_MODULE_URL, { text: moduleText, type: 'text/javascript; charset=utf-8' }],
     ]);
     server = http.createServer((req, res) => {
       const path = (req.url || '/').split('?')[0];
       const route = routes.get(path);
       if (route) {
         res.writeHead(200, { 'Content-Type': route.type });
-        res.end(readFileSync(route.file));
+        res.end(route.file ? readFileSync(route.file) : route.text);
         return;
       }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
