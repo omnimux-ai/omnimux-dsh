@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const gridSource = readFileSync(new URL('./UnifiedLibraryGrid.jsx', import.meta.url), 'utf8');
-const exploreSectionSource = readFileSync(new URL('../../session-guide/templates/ExploreTemplatesSection.jsx', import.meta.url), 'utf8');
+const exploreSectionSource = readFileSync(new URL('../../../../../omnimux-inspiration/src/explore/templates/ExploreTemplatesSection.jsx', import.meta.url), 'utf8');
 
 test('UnifiedLibraryGrid 无限滚动与状态分流契约', () => {
   // 1. Props 必须声明无限滚动与状态解耦字段
