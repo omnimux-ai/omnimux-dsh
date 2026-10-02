@@ -6225,35 +6225,41 @@ textarea:focus-visible {
   flex: 0 0 auto;
 }
 
-/* 触发胶囊：高 28px 紧凑变体、999px 胶囊圆角、0 10px 内边距、6px 间距 */
+/* 上浮面板是 .amp-wrap 的绝对定位子节点：.composer-actions-start > span 的
+   overflow:hidden 会把它整体裁掉，必须在同级更靠后的选择器里放行。 */
+.composer-actions-start > .amp-wrap {
+  overflow: visible;
+}
+
+/* 文本触发器：无边框无底块，仅「品牌图标(手动态)/文本 + chevron」 */
 .composer-actions button.amp-trigger {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 6px !important;
+  gap: 4px !important;
   width: auto !important;
   height: 28px !important;
   min-width: 0 !important;
-  padding: 0 10px !important;
-  border-radius: 999px !important;
-  border: 1px solid var(--line-strong) !important;
-  background: var(--canvas-deep) !important;
+  padding: 0 4px !important;
+  border: none !important;
+  border-radius: 8px !important;
+  background: transparent !important;
   color: var(--muted) !important;
   font-size: calc(13px * var(--ui-scale)) !important;
   font-weight: 500 !important;
   line-height: 1 !important;
   cursor: pointer !important;
   box-shadow: none !important;
-  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.12s ease !important;
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.12s ease !important;
 }
 
 .composer-actions button.amp-trigger:hover:not(:disabled) {
-  border-color: var(--faint) !important;
-  background: var(--surface) !important;
+  color: var(--ink-strong) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   transform: none !important;
 }
 
 .composer-actions button.amp-trigger.open {
-  background: var(--blue-soft) !important;
+  color: var(--ink-strong) !important;
 }
 
 .composer-actions button.amp-trigger:active:not(:disabled) {

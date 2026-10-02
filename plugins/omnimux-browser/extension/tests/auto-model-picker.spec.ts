@@ -399,3 +399,24 @@ describe('Issue #2966 会话栏「自动/手动」模型选择器', () => {
     })
   })
 })
+
+// Issue #2972: 面板防裁剪与纯文本触发器
+describe('Issue #2972 面板裁剪修复与触发器纯文本样式', () => {
+  it('composer-actions-start > .amp-wrap 必须放行 overflow:visible，否则绝对定位面板被裁剪', () => {
+    const css = require('node:fs').readFileSync(
+      require('node:path').resolve(__dirname, '../src/panel/styles.css'), 'utf8')
+    expect(css).toMatch(/\.composer-actions-start > \.amp-wrap \{[^}]*overflow:\s*visible/)
+  })
+
+  it('.amp-trigger 必须为纯文本触发器：无胶囊边框、无 999px 圆角、无底块色', () => {
+    const css = require('node:fs').readFileSync(
+      require('node:path').resolve(__dirname, '../src/panel/styles.css'), 'utf8')
+    const triggerRule = css.match(/\.composer-actions button\.amp-trigger \{[^}]*\}/)
+    expect(triggerRule).not.toBeNull()
+    const body = triggerRule![0]
+    expect(body).toContain('border: none')
+    expect(body).not.toMatch(/border-radius:\s*999px/)
+    expect(body).not.toMatch(/background:\s*var\(--canvas-deep\)/)
+    expect(body).toContain('background: transparent')
+  })
+})
