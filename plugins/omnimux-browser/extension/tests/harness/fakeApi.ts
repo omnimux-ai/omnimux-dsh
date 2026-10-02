@@ -1,20 +1,20 @@
 /**
  * Fake `PanelApi` for the harness: the real gallery component talks to a real
- * `session.attachment` call shape, but the bytes come from the harness's own
- * static media instead of a dsh host. No host, no extension, no network beyond
- * the harness origin.
+ * `session.attachment` / `omnimux.producedMedia` call shape, but the bytes come
+ * from the harness's own static media instead of a dsh host. No host, no
+ * extension, no network beyond the harness origin.
  */
 
 import type { PanelApi } from '../../src/panel/api.ts'
 import type { MediaAttachmentRef } from '../../src/panel/attachments.ts'
-import type { HarnessAttachment } from './fixtures.ts'
+import type { HarnessAttachment, HarnessMedia, HarnessPathMedia } from './fixtures.ts'
 
 export interface HarnessApiOptions {
   /** Latency before every response, so the loading placeholder is observable. */
   readonly delayMs?: number
 }
 
-/** Attachment ids the harness was asked for, in call order. */
+/** Attachment ids and produced paths the harness was asked for, in call order. */
 export const rpcLog: string[] = []
 
 async function readBase64(file: string): Promise<string> {
@@ -36,34 +36,55 @@ function toRef(attachment: HarnessAttachment): MediaAttachmentRef {
 }
 
 export function createHarnessApi(
-  attachments: readonly HarnessAttachment[],
+  items: readonly HarnessMedia[],
   options: HarnessApiOptions = {},
 ): PanelApi {
-  const byId = new Map(attachments.map((attachment) => [attachment.attachmentId, attachment]))
+  const byId = new Map<string, HarnessAttachment>()
+  const byPath = new Map<string, HarnessPathMedia>()
+  for (const item of items) {
+    if (item.source === 'path') byPath.set(item.path, item)
+    else byId.set(item.attachmentId, item)
+  }
   const encoded = new Map<string, Promise<string>>()
   const attempts = new Map<string, number>()
   const delayMs = options.delayMs ?? 0
 
-  const rpc = async (method: string, payload?: unknown): Promise<unknown> => {
-    if (method !== 'session.attachment') throw new Error(`harness: unexpected rpc ${method}`)
-    const attachmentId = String((payload as { attachmentId?: unknown } | null)?.attachmentId ?? '')
-    const attachment = byId.get(attachmentId)
-    if (attachment === undefined) throw new Error(`harness: unknown attachment ${attachmentId}`)
-    rpcLog.push(attachmentId)
-
+  const wait = async (): Promise<void> => {
     if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs))
-    if (attachment.failFirst === true) {
-      const seen = (attempts.get(attachmentId) ?? 0) + 1
-      attempts.set(attachmentId, seen)
-      if (seen === 1) throw new Error(`harness: simulated attachment failure for ${attachmentId}`)
-    }
+  }
 
-    let pending = encoded.get(attachment.file)
+  const bytesOf = async (file: string): Promise<string> => {
+    let pending = encoded.get(file)
     if (pending === undefined) {
-      pending = readBase64(attachment.file)
-      encoded.set(attachment.file, pending)
+      pending = readBase64(file)
+      encoded.set(file, pending)
     }
-    return { attachment: toRef(attachment), data: await pending }
+    return pending
+  }
+
+  const rpc = async (method: string, payload?: unknown): Promise<unknown> => {
+    if (method === 'session.attachment') {
+      const attachmentId = String((payload as { attachmentId?: unknown } | null)?.attachmentId ?? '')
+      const attachment = byId.get(attachmentId)
+      if (attachment === undefined) throw new Error(`harness: unknown attachment ${attachmentId}`)
+      rpcLog.push(attachmentId)
+      await wait()
+      if (attachment.failFirst === true) {
+        const seen = (attempts.get(attachmentId) ?? 0) + 1
+        attempts.set(attachmentId, seen)
+        if (seen === 1) throw new Error(`harness: simulated attachment failure for ${attachmentId}`)
+      }
+      return { attachment: toRef(attachment), data: await bytesOf(attachment.file) }
+    }
+    if (method === 'omnimux.producedMedia') {
+      const path = String((payload as { path?: unknown } | null)?.path ?? '')
+      const item = byPath.get(path)
+      if (item === undefined) throw new Error(`harness: unregistered produced path ${path}`)
+      rpcLog.push(path)
+      await wait()
+      return { mediaType: item.mediaType, bytes: item.bytes ?? 0, data: await bytesOf(item.file) }
+    }
+    throw new Error(`harness: unexpected rpc ${method}`)
   }
 
   return { rpc } as unknown as PanelApi

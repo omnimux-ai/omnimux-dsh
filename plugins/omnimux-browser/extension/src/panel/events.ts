@@ -8,7 +8,8 @@
  */
 
 import { getUiLocale, type UiLocale } from '../i18n.ts'
-import { imageRefsFromBlocks, type ImageAttachmentRef } from './attachments.ts'
+import { imageRefsFromBlocks } from './attachments.ts'
+import { attachmentProduced, producedMediaFromToolResult, toolResultCallId, type ProducedMediaRef } from './produced-media.ts'
 import { PANEL_COPY } from './strings.ts'
 
 /** One rendered conversation row. */
@@ -19,7 +20,7 @@ export interface Row {
   turn?: number
   kind: 'user' | 'assistant' | 'tool' | 'info'
   text: string
-  images?: ImageAttachmentRef[]
+  images?: ProducedMediaRef[]
   status?: 'running' | 'complete'
 }
 
@@ -31,9 +32,16 @@ export interface SessionEventView {
   data?: {
     content?: unknown
     source?: { kind?: string }
-    message?: { content?: unknown; source?: { kind?: string } }
+    message?: {
+      content?: unknown
+      source?: { kind?: string; callId?: string }
+      toolCallId?: string
+      isError?: boolean
+    }
+    meta?: unknown
     turn?: number
     step?: number
+    callId?: string
     name?: string
     arguments?: string
     title?: unknown
@@ -159,7 +167,7 @@ export function rowFromEvent(event: SessionEventView): Row | null {
       if (source?.kind !== 'user') return null
       const blocks = message?.content
       const text = textFromBlocks(blocks)
-      const images = imageRefsFromBlocks(blocks)
+      const images = imageRefsFromBlocks(blocks).map(attachmentProduced)
       return text.trim() === '' && images.length === 0
         ? null
         : { seq: 0, kind: 'user', text, ...(images.length === 0 ? {} : { images }) }
@@ -169,7 +177,7 @@ export function rowFromEvent(event: SessionEventView): Row | null {
       // 等非文本块。不要为这种中间事件渲染一个空的 AI 气泡。
       const blocks = event.data?.message?.content
       const text = textFromBlocks(blocks)
-      const images = imageRefsFromBlocks(blocks)
+      const images = imageRefsFromBlocks(blocks).map(attachmentProduced)
       return text.trim() === '' && images.length === 0
         ? null
         : { seq: 0, kind: 'assistant', text, status: 'complete', sourceSeq: event.seq, ...(images.length === 0 ? {} : { images }) }
@@ -199,7 +207,7 @@ export function appendLiveRow(
   kind: Row['kind'],
   text: string,
   seq: number,
-  images?: ImageAttachmentRef[],
+  images?: ProducedMediaRef[],
   provenance?: Pick<Row, 'status' | 'sourceSeq'>,
   turn?: number,
 ): Row[] {
@@ -221,6 +229,18 @@ export function completeLastTool(rows: Row[], seq: number): Row[] {
     return [...rows.slice(0, -1), { ...last, seq, status: 'complete' }]
   }
   return rows
+}
+
+/** Collect `callId → tool name` pairs from tool/call events; results cite them back. */
+export function collectToolCallNames(events: readonly SessionEventView[]): Map<string, string> {
+  const names = new Map<string, string>()
+  for (const ev of events) {
+    if (ev.type !== 'tool/call') continue
+    if (typeof ev.data?.callId === 'string' && typeof ev.data?.name === 'string') {
+      names.set(ev.data.callId, ev.data.name)
+    }
+  }
+  return names
 }
 
 /** 历史渲染：连续工具调用归并成一行（tool/call..result 不逐条刷屏；超 3 个折叠计数）。 */
@@ -245,6 +265,10 @@ export function mergeHistoryRows(
     rows.push({ seq: nextSeq(), kind: 'tool', text: label, status: 'complete', ...turnTag() })
     pendingTool = null
   }
+  // tool/result carries the artifact but not the tool name; pair it through the
+  // callId its message cites so the submit-tool line can fire. The pairing is
+  // collected up front so a replay can also seed the live pairing map.
+  const toolNames = collectToolCallNames(events)
   for (const ev of events) {
     if (ev.type === 'turn/start') {
       const declared = ev.data?.turn
@@ -262,7 +286,16 @@ export function mergeHistoryRows(
       }
       continue
     }
-    if (ev.type === 'tool/result') continue
+    if (ev.type === 'tool/result') {
+      flushTool()
+      const callId = toolResultCallId(ev)
+      const toolName = callId === null ? undefined : toolNames.get(callId)
+      const produced = producedMediaFromToolResult(ev, toolName)
+      if (produced.length > 0) {
+        rows.push({ seq: nextSeq(), kind: 'assistant', text: '', status: 'complete', images: produced, ...turnTag() })
+      }
+      continue
+    }
     flushTool()
     const row = rowFromEvent(ev)
     if (row !== null) rows.push({ ...row, seq: nextSeq(), ...turnTag() })

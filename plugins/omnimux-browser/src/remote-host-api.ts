@@ -21,6 +21,7 @@ import {
   ExtensionSessionRegistry,
   shouldBridgeOwnQuestion,
 } from './extension-sessions.ts'
+import { NULL_PRODUCED_REGISTRY, type ProducedRegistry } from './produced-registry.ts'
 import type { RespondResult } from './protocol.ts'
 
 /** Structural subset of dsh 0.1.5's Host TypertGateway service. */
@@ -66,12 +67,20 @@ interface PendingQuestion {
   settled: boolean
 }
 
-/** Build the dsh 0.1.5 Host implementation. */
+/**
+ * Build the dsh 0.1.5 Host implementation.
+ * @param gateway - Host TypertGateway service.
+ * @param connection - Host Connection service ($events/result carrier).
+ * @param produced - the produced-media allowlist this adapter feeds from the
+ *   event stream and session history; the SAME instance the WebSocket server
+ *   serves `omnimux.producedMedia` against. Absent, observation is skipped.
+ */
 export function createRemoteHostApi(
   gateway: TypertGatewayLike,
   connection: HostConnectionLike,
+  produced?: ProducedRegistry,
 ): BrowserHostApi {
-  return new RemoteHostApi(gateway, connection)
+  return new RemoteHostApi(gateway, connection, produced)
 }
 
 class RemoteHostApi implements BrowserHostApi {
@@ -84,9 +93,13 @@ class RemoteHostApi implements BrowserHostApi {
   constructor(
     private readonly gateway: TypertGatewayLike,
     connection: HostConnectionLike,
+    produced?: ProducedRegistry,
   ) {
     this.fetchHandler = connection.createSharedFetchHandler('/api')
+    this.produced = produced ?? NULL_PRODUCED_REGISTRY
   }
+
+  private readonly produced: ProducedRegistry
 
   async call(call: HostRpcCall): Promise<HostRpcResult> {
     if (call.method === 'session.history') return this.sessionHistory(call)
@@ -136,11 +149,27 @@ class RemoteHostApi implements BrowserHostApi {
     await previous?.dispose()
     generation.start()
     try {
-      yield * generation.events()
+      for await (const frame of generation.events()) {
+        this.observeProduced(frame)
+        yield frame
+      }
     } finally {
       if (this.activeEvents === generation) this.activeEvents = undefined
       await generation.dispose()
     }
+  }
+
+  /**
+   * Feed one outgoing event frame into the produced-media registry. Only
+   * `session/event` frames carry session disclosure; the observation must
+   * happen at THIS seam (not inside EventGeneration) so the same rules cover
+   * events produced by every stream this generation pumps.
+   */
+  private observeProduced(frame: HostEventFrame): void {
+    if (frame.method !== 'session/event' || !isRecord(frame.payload)) return
+    const { sessionId, event } = frame.payload
+    if (typeof sessionId !== 'string' || sessionId.length === 0) return
+    this.produced.observeEvent(sessionId, event)
   }
 
   async respond(rpcId: string, result: RespondResult, signal: AbortSignal): Promise<unknown> {
@@ -176,14 +205,21 @@ class RemoteHostApi implements BrowserHostApi {
           },
           signal: call.signal,
         })
-        return { ok: true, value: historyPageValue(page) }
+        const pageValue = historyPageValue(page)
+        this.produced.observeHistory(sessionId, pageValue)
+        return { ok: true, value: pageValue }
       }
 
       const snapshot = this.activeEvents === undefined
         ? await oneShotSessionSnapshot(this.gateway, sessionId, call.signal, maxMessages)
         : await this.activeEvents.openSessionHistory(sessionId, call.signal, maxMessages)
       this.noteHistoryCursor(sessionId, snapshot.cursor)
-      return { ok: true, value: historyValue(snapshot) }
+      const value = historyValue(snapshot)
+      // Replayed events are the only way the panel learns of media produced
+      // before this bridge process started; scan them here so reopened
+      // sessions can be served just like live ones.
+      this.produced.observeHistory(sessionId, value)
+      return { ok: true, value }
     } catch (error: unknown) {
       return { ok: false, error: this.failure(error) }
     }

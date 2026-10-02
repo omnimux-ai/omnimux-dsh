@@ -24,7 +24,7 @@ import { MessageImages } from '../src/panel/MessageImages.tsx'
 import { PANEL_COPY } from '../src/panel/strings.ts'
 import { renderMarkdown } from '../src/panel/markdown.ts'
 import type { PanelApi } from '../src/panel/api.ts'
-import type { MediaAttachmentRef } from '../src/panel/attachments.ts'
+import type { ProducedAttachmentRef, ProducedMediaRef } from '../src/panel/produced-media.ts'
 
 const GALLERY_CSS = readFileSync(resolve(__dirname, '../src/panel/styles.css'), 'utf8')
 
@@ -36,8 +36,9 @@ function ruleBody(selector: string): string {
   return match![1]!
 }
 
-function imageAttachment(index: number, overrides: Partial<MediaAttachmentRef> = {}): MediaAttachmentRef {
+function imageAttachment(index: number, overrides: Partial<ProducedAttachmentRef> = {}): ProducedAttachmentRef {
   return {
+    source: 'attachment',
     attachmentId: `a${index}`,
     mediaType: 'image/png',
     bytes: 3,
@@ -48,7 +49,7 @@ function imageAttachment(index: number, overrides: Partial<MediaAttachmentRef> =
   }
 }
 
-function videoAttachment(index: number): MediaAttachmentRef {
+function videoAttachment(index: number): ProducedAttachmentRef {
   return imageAttachment(index, { mediaType: 'video/mp4', width: 520, height: 318, name: `视频 ${index}` })
 }
 
@@ -59,46 +60,91 @@ function videoAttachment(index: number): MediaAttachmentRef {
  * "the stage changes to the third one" would pass no matter which thumb was
  * clicked.
  */
-function bodyFor(attachment: MediaAttachmentRef): string {
+function bodyFor(attachment: ProducedAttachmentRef): string {
   const index = Number(/\d+/.exec(attachment.attachmentId)?.[0] ?? '0')
   return btoa(String.fromCharCode(index))
 }
 
 /** The exact `src` the panel must build for a given attachment. */
-function srcFor(attachment: MediaAttachmentRef): string {
+function srcFor(attachment: ProducedAttachmentRef): string {
   return `data:${attachment.mediaType};base64,${bodyFor(attachment)}`
+}
+
+/** A distinct base64 body per path-sourced item, so src assertions stay per-item. */
+function producedBodyFor(item: ProducedMediaRef): string {
+  const path = item.source === 'path' ? item.path : ''
+  return btoa(`produced:${path.split('/').pop() ?? path}`)
+}
+
+/** The exact `src` the panel must build for a path-sourced item. */
+function producedSrcFor(item: ProducedMediaRef): string {
+  return `data:${item.mediaType};base64,${producedBodyFor(item)}`
+}
+
+interface ProducedCall {
+  sessionId: string
+  path: string
 }
 
 interface Harness {
   api: PanelApi
+  /** attachmentId values handed to `session.attachment`, in call order. */
   calls: string[]
+  /** `{sessionId, path}` payloads handed to `omnimux.producedMedia`, in call order. */
+  producedCalls: ProducedCall[]
 }
 
 /**
- * A `PanelApi` whose only job is `session.attachment`. `handler` decides
- * whether a given attachment resolves, rejects, or never settles.
+ * A `PanelApi` stub split by method: `session.attachment` serves attachment
+ * refs via `handler`; `omnimux.producedMedia` serves path refs via `produced`.
  */
-function fakeApi(handler: (attachmentId: string) => Promise<unknown>): Harness {
+function fakeApi(
+  handler: (attachmentId: string) => Promise<unknown>,
+  produced?: (path: string) => Promise<unknown>,
+): Harness {
   const calls: string[] = []
+  const producedCalls: ProducedCall[] = []
   const api = {
     rpc(method: string, payload?: unknown): Promise<unknown> {
-      if (method !== 'session.attachment') throw new Error(`unexpected rpc ${method}`)
-      const attachmentId = String((payload as { attachmentId?: unknown } | undefined)?.attachmentId ?? '')
-      calls.push(attachmentId)
-      return handler(attachmentId)
+      if (method === 'session.attachment') {
+        const attachmentId = String((payload as { attachmentId?: unknown } | undefined)?.attachmentId ?? '')
+        calls.push(attachmentId)
+        return handler(attachmentId)
+      }
+      if (method === 'omnimux.producedMedia') {
+        const entry = payload as { sessionId?: unknown; path?: unknown } | undefined
+        producedCalls.push({ sessionId: String(entry?.sessionId ?? ''), path: String(entry?.path ?? '') })
+        if (produced === undefined) return Promise.reject(new Error('produced media not stubbed'))
+        return produced(String(entry?.path ?? ''))
+      }
+      throw new Error(`unexpected rpc ${method}`)
     },
   }
-  return { api: api as unknown as PanelApi, calls }
+  return { api: api as unknown as PanelApi, calls, producedCalls }
 }
 
-/** Resolve every attachment with its own valid base64 body. */
-function resolvesAll(images: readonly MediaAttachmentRef[]): Harness {
-  const byId = new Map(images.map((image) => [image.attachmentId, image]))
-  return fakeApi(async (attachmentId) => {
-    const attachment = byId.get(attachmentId)
-    if (attachment === undefined) throw new Error(`unknown attachment ${attachmentId}`)
-    return { attachment, data: bodyFor(attachment) }
-  })
+/** Resolve every item with its own valid base64 body, on whichever RPC its source uses. */
+function resolvesAll(images: readonly ProducedMediaRef[]): Harness {
+  const byId = new Map(
+    images.filter((i): i is ProducedAttachmentRef => i.source === 'attachment')
+      .map((image) => [image.attachmentId, image]),
+  )
+  const byPath = new Map(
+    images.filter((i): i is Extract<ProducedMediaRef, { source: 'path' }> => i.source === 'path')
+      .map((item) => [item.path, item]),
+  )
+  return fakeApi(
+    async (attachmentId) => {
+      const attachment = byId.get(attachmentId)
+      if (attachment === undefined) throw new Error(`unknown attachment ${attachmentId}`)
+      return { attachment, data: bodyFor(attachment) }
+    },
+    async (path) => {
+      const item = byPath.get(path)
+      if (item === undefined) throw new Error(`not-produced ${path}`)
+      return { mediaType: item.mediaType, bytes: item.bytes ?? 0, data: producedBodyFor(item) }
+    },
+  )
 }
 
 describe('conversation media gallery', () => {
@@ -127,7 +173,7 @@ describe('conversation media gallery', () => {
    * `message-images-user-chips.spec.ts`.
    */
   async function render(
-    images: readonly MediaAttachmentRef[],
+    images: readonly ProducedMediaRef[],
     api: PanelApi,
     align: 'start' | 'end' = 'start',
   ): Promise<void> {
@@ -401,5 +447,116 @@ describe('conversation media gallery', () => {
     expect(calls).toEqual(['a1', 'a2'])
     await render([...images], api)
     expect(calls).toEqual(['a1', 'a2'])
+  })
+
+  it('a path-sourced item fetches bytes over omnimux.producedMedia and stages a playable video', async () => {
+    const item: ProducedMediaRef = {
+      source: 'path', path: '/tmp/m.mp4', mediaType: 'video/mp4', kind: 'video', name: 'm.mp4',
+    }
+    const images: ProducedMediaRef[] = [item]
+    const { api, calls, producedCalls } = resolvesAll(images)
+    await render(images, api)
+
+    // Path references reach a different RPC: {sessionId, path}, not attachmentId.
+    expect(producedCalls).toEqual([{ sessionId: 's1', path: '/tmp/m.mp4' }])
+    expect(calls).toEqual([])
+
+    const video = stage().querySelector('video')
+    expect(video).not.toBeNull()
+    expect(video!.getAttribute('src')).toBe(producedSrcFor(item))
+    expect(video!.hasAttribute('controls')).toBe(true)
+    expect(video!.hasAttribute('autoplay')).toBe(false)
+    expect(container.querySelector('.stage-kind')!.textContent).toBe('MP4')
+  })
+
+  it('an audio item renders a controls strip and never enters the stage count', async () => {
+    const audio: ProducedMediaRef = {
+      source: 'path', path: '/tmp/voice.mp3', mediaType: 'audio/mpeg', kind: 'audio', name: 'voice.mp3',
+    }
+    const images: ProducedMediaRef[] = [audio, imageAttachment(1)]
+    const { api, producedCalls } = resolvesAll(images)
+    await render(images, api)
+
+    expect(producedCalls).toEqual([{ sessionId: 's1', path: '/tmp/voice.mp3' }])
+
+    const strip = container.querySelector('.audio-strip')
+    expect(strip).not.toBeNull()
+    const player = strip!.querySelector('audio')
+    expect(player).not.toBeNull()
+    expect(player!.hasAttribute('controls')).toBe(true)
+    expect(player!.getAttribute('src')).toBe(producedSrcFor(audio))
+
+    // The stage holds only the image: no counter claims the audio item.
+    expect(thumbs()).toHaveLength(0)
+    expect(container.querySelector('.stage-count')).toBeNull()
+    expect(stage().querySelector('img')!.getAttribute('src')).toBe(srcFor(images[1] as ProducedAttachmentRef))
+  })
+
+  it('a file-kind item renders a file card and asks for zero produced bytes', async () => {
+    const file: ProducedMediaRef = {
+      source: 'path', path: '/tmp/spec.pdf', mediaType: 'application/pdf', kind: 'pdf', bytes: 2048, name: 'spec.pdf',
+    }
+    const images: ProducedMediaRef[] = [file]
+    const { api, calls, producedCalls } = resolvesAll(images)
+    await render(images, api)
+
+    const card = container.querySelector('.file-card')
+    expect(card).not.toBeNull()
+    expect(card!.querySelector('.file-card-name')!.textContent).toBe('spec.pdf')
+    expect(card!.querySelector('.file-card-kind')!.textContent).toBe(PANEL_COPY.zh.app.fileKindPdf)
+
+    // File cards carry no bytes and never reach either RPC.
+    expect(producedCalls).toEqual([])
+    expect(calls).toEqual([])
+    // Nothing is staged: a file-only message shows no gallery at all.
+    expect(container.querySelector('.gallery')).toBeNull()
+  })
+
+  it('empty-stage stepping never poisons the selection with NaN', async () => {
+    // align="end" chips call setSelected(position)+setOpen(true) even for a
+    // file-kind item whose stage is empty; a stray ArrowRight against an open
+    // lightbox state used to compute `% 0` → NaN, then `stageItems[NaN]` read
+    // as undefined and the component crashed on render.
+    const file: ProducedMediaRef = {
+      source: 'path', path: '/tmp/spec.pdf', mediaType: 'application/pdf', kind: 'pdf', bytes: 2048, name: 'spec.pdf',
+    }
+    const { api } = resolvesAll([file])
+    await render([file], api, 'end')
+
+    const chip = container.querySelector('.media-chip')
+    expect(chip).not.toBeNull()
+    await click(chip)
+    // 空 stage 永远开不出灯箱（对话框门在 active !== null 上）。
+    expect(dialog()).toBeNull()
+    // step() 空 stage 早退：按键不再写入 NaN。
+    await press('ArrowRight')
+    await press('ArrowLeft')
+    expect(dialog()).toBeNull()
+
+    // 同一行换上有舞台的图像：选中位必须是干净的 0，不残留 NaN。
+    const images = [imageAttachment(1), imageAttachment(2)]
+    await render(images, resolvesAll(images).api)
+    expect(count()).toBe('1 / 2')
+    expect(stageSrc()).toBe(srcFor(images[0]!))
+  })
+
+  it('a lightbox left open releases when the stage empties and stays closed', async () => {
+    const image = imageAttachment(1)
+    const { api } = resolvesAll([image])
+    await render([image], api)
+    await click(stage())
+    expect(dialog()).not.toBeNull()
+
+    // 极端重渲染：同一条消息换成只有文件卡，舞台为空。
+    const file: ProducedMediaRef = {
+      source: 'path', path: '/tmp/spec.pdf', mediaType: 'application/pdf', kind: 'pdf', bytes: 2048, name: 'spec.pdf',
+    }
+    await render([file], resolvesAll([file]).api)
+    expect(dialog()).toBeNull()
+
+    // open 标志必须被释放：之后图像回来也不能复活旧灯箱。
+    const images = [imageAttachment(1)]
+    await render(images, resolvesAll(images).api)
+    expect(dialog()).toBeNull()
   })
 })

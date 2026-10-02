@@ -28,6 +28,7 @@ import {
   BRIDGE_COMPLETE_TEXT_METHOD,
   BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD,
   BRIDGE_MODEL_MODE_METHOD,
+  BRIDGE_PRODUCED_MEDIA_METHOD,
   BRIDGE_SESSION_PURGE_METHOD,
   HELLO_TIMEOUT_MS,
   PING_INTERVAL_MS,
@@ -36,9 +37,12 @@ import {
   type BridgeCaps,
   type ClientFrame,
   type MediaFetchOutcome,
+  type ProducedMediaOutcome,
+  type ProducedMediaRequest,
   type ToolErrorCode,
 } from './protocol.ts'
 import { fetchMediaBytes } from './media-fetch.ts'
+import { NULL_PRODUCED_REGISTRY, readProducedMedia, type ProducedRegistry } from './produced-registry.ts'
 import { SessionPurgeError } from './session-purge.ts'
 import { verifyToken } from './token.ts'
 
@@ -107,6 +111,20 @@ export interface BridgeServerDeps {
    * the seam exists so the routing can be exercised without a live network.
    */
   fetchMedia?: (url: unknown) => Promise<MediaFetchOutcome>
+  /**
+   * The produced-media allowlist shared with the Host adapter's event feed,
+   * backing {@link BRIDGE_PRODUCED_MEDIA_METHOD}. Also consulted after a
+   * successful session purge: the deleted session's grants die with it.
+   * Absent, every produced-media read answers `not-produced` (closed by
+   * default).
+   */
+  produced?: ProducedRegistry
+  /**
+   * Read one produced file's bytes for {@link BRIDGE_PRODUCED_MEDIA_METHOD}.
+   * Defaults to {@link readProducedMedia}; the seam exists so the routing can
+   * be exercised without a live filesystem.
+   */
+  readProduced?: (request: ProducedMediaRequest) => Promise<ProducedMediaOutcome>
   /** Unary Hub text completion; never a session submission receipt. */
   completeText?: (request: { prompt: string; system: string; maxTokens: number; signal: AbortSignal }) => Promise<unknown>
   /**
@@ -172,9 +190,12 @@ export class BridgeServer {
   private current: ReadyConnection | null = null
   private readonly pendingTools = new Map<string, PendingTool>()
   private readonly orderedSessionRpcs = new Map<string, Promise<void>>()
+  private readonly produced: ProducedRegistry
   private closed = false
 
-  constructor(private readonly deps: BridgeServerDeps) {}
+  constructor(private readonly deps: BridgeServerDeps) {
+    this.produced = deps.produced ?? NULL_PRODUCED_REGISTRY
+  }
 
   /**
    * Handle one HTTP upgrade for the bridge path.
@@ -458,6 +479,10 @@ export class BridgeServer {
       }
       try {
         await this.deps.purgeSession(sessionId)
+        // Durable storage is gone, so every produced-media grant the session
+        // accumulated must die with it — a leftover path could otherwise serve
+        // a recycled file under a stale session id.
+        this.produced.drop(sessionId)
         sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: { purged: true } })
       } catch (error: unknown) {
         const code = error instanceof SessionPurgeError ? error.code : 'internal'
@@ -513,6 +538,37 @@ export class BridgeServer {
       try {
         this.deps.setModelMode(mode)
         sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: { applied: true } })
+      } catch (error: unknown) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: { code: 'internal', message: String(error) },
+        })
+      }
+      return
+    }
+    if (frame.method === BRIDGE_PRODUCED_MEDIA_METHOD) {
+      // Local plugin method (like fetchMedia): it never reaches the gateway,
+      // and it is not a privileged method — the produced registry is the gate.
+      const request = producedMediaPayload(frame.payload)
+      if (request === undefined) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: { code: 'bad-request', message: 'sessionId and path must be non-empty strings' },
+        })
+        return
+      }
+      const readProduced = this.deps.readProduced
+        ?? ((payload: ProducedMediaRequest) => readProducedMedia(this.produced, payload))
+      try {
+        const outcome = await readProduced(request)
+        // Outcomes ride a SUCCESSFUL frame for the same reason fetchMedia's do:
+        // the extension port flattens carrier errors into one code, and the
+        // panel must still tell not-produced apart from too-large.
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: outcome })
       } catch (error: unknown) {
         sendFrame(conn.ws, {
           t: 'rpc.result',
@@ -624,6 +680,19 @@ function purgeSessionPayload(payload: unknown): string | undefined {
 function mediaFetchUrl(payload: unknown): unknown {
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
   return (payload as Record<string, unknown>).url
+}
+
+/**
+ * The `{sessionId, path}` pair out of a {@link BRIDGE_PRODUCED_MEDIA_METHOD}
+ * payload. Both fields must be non-empty strings; anything else is
+ * `bad-request`, before the registry is ever consulted.
+ */
+function producedMediaPayload(payload: unknown): ProducedMediaRequest | undefined {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
+  const { sessionId, path } = payload as Record<string, unknown>
+  if (typeof sessionId !== 'string' || sessionId.trim() === '') return undefined
+  if (typeof path !== 'string' || path.trim() === '') return undefined
+  return { sessionId, path }
 }
 
 function orderedSessionId(frame: Extract<ClientFrame, { t: 'rpc' }>): string | undefined {

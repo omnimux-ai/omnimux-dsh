@@ -100,6 +100,7 @@ import {
 import {
   appendLiveRow,
   applyInboxSplice,
+  collectToolCallNames,
   completeLastTool,
   errorFromTurnEnd,
   inboxQueuedMessages,
@@ -120,6 +121,7 @@ import {
   type SessionEventView,
   type TurnOutlineEntry,
 } from './events.ts'
+import { producedMediaFromToolResult, toolResultCallId } from './produced-media.ts'
 
 import { TurnRail, buildRailItems } from './TurnRail.tsx'
 
@@ -1023,6 +1025,9 @@ export function App(): React.JSX.Element {
     overflow?: true
   }>())
   const pendingHistoriesRef = useRef(new Map<string, { sessionId: string; history: HistoryPage }>())
+  // tool/result 不携带工具名——用它引用的 callId 配回 tool/call 的名字，
+  // 否则 omnimux_*_submit 的 JSON 结果无法被提取层识别。
+  const toolCallNamesRef = useRef(new Map<string, string>())
   const streamRefreshRef = useRef(new Set<string>())
   const seqRef = useRef(0)
   const sessionRef = useRef<string | null>(null)
@@ -1697,6 +1702,7 @@ export function App(): React.JSX.Element {
         sessionRef.current = null
         setResumeHint({ ready: false, sessionId: null })
         sessionRuntimeRef.current.clear()
+        toolCallNamesRef.current.clear()
         assistantStreamsRef.current.clear()
         followSnapshotsRef.current.clear()
         pendingHistoriesRef.current.clear()
@@ -2006,6 +2012,11 @@ export function App(): React.JSX.Element {
     }
     if (payload.event.type === 'tool/call') {
       setWorking(true)
+      const callId = payload.event.data?.callId
+      const toolName = payload.event.data?.name
+      if (typeof callId === 'string' && typeof toolName === 'string') {
+        toolCallNamesRef.current.set(callId, toolName)
+      }
       const summary = toolSummary(payload.event.data?.name ?? 'tool', payload.event.data?.arguments, locale)
       setRows((prev) => appendLiveRow(prev, 'tool', summary, nextSeq(), undefined, undefined, liveTurnRef.current || undefined))
       return
@@ -2013,6 +2024,14 @@ export function App(): React.JSX.Element {
     if (payload.event.type === 'tool/result') {
       // 并入最后一行工具行：调用已完成（不新增行）。
       setRows((prev) => completeLastTool(prev, nextSeq()))
+      // 工具结果里产出的媒体（display_file / read_image / omnimux_*_submit）
+      // 落成一条独立的助手画廊行；无产物的结果维持原有的只合并不新增。
+      const callId = toolResultCallId(payload.event)
+      const toolName = callId === null ? undefined : toolCallNamesRef.current.get(callId)
+      const produced = producedMediaFromToolResult(payload.event, toolName)
+      if (produced.length > 0) {
+        setRows((prev) => appendLiveRow(prev, 'assistant', '', nextSeq(), produced, undefined, liveTurnRef.current || undefined))
+      }
       return
     }
   }
@@ -2125,6 +2144,11 @@ export function App(): React.JSX.Element {
     }
     liveTurnRef.current = lastTurn
     setLiveTurn(lastTurn)
+    // 同会话 refresh/rebaseline 也走这里：不能把 live 阶段登记的配对清掉，
+    // 只把历史（含 follower suffix）里的 callId→工具名重建进 map。
+    for (const [callId, toolName] of collectToolCallNames(events)) {
+      toolCallNamesRef.current.set(callId, toolName)
+    }
     const historyTitle = latestSessionTitle(events)
     if (historyTitle !== undefined) setSessionTitle(historyTitle)
     setRows(mergeHistoryRows(events, nextSeq, locale))
@@ -2363,6 +2387,7 @@ export function App(): React.JSX.Element {
     inboxRawRef.current = []
     liveTurnRef.current = 0
     setLiveTurn(0)
+    toolCallNamesRef.current.clear()
     updateDraft(() => emptyComposerDraft())
     if (!preserveSelection) {
       setSelection(null)

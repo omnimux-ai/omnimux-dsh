@@ -54,6 +54,18 @@ export const BRIDGE_FETCH_MEDIA_METHOD = 'bridge.fetchMedia'
 export const BRIDGE_COMPLETE_TEXT_METHOD = 'bridge.completeText'
 
 /**
+ * Internal RPC the panel uses to read back one media file the assistant
+ * produced (display_file, read_image rasters, omnimux_*_submit outputs).
+ *
+ * The payload names `{sessionId, path}`; the host only serves paths its own
+ * produced-media registry saw in that session's events or history, so the
+ * panel can never turn this into an arbitrary file read. Bytes return base64
+ * because the frame is JSON and the panel's CSP cannot reach the host's HTTP
+ * asset routes cross-origin.
+ */
+export const BRIDGE_PRODUCED_MEDIA_METHOD = 'omnimux.producedMedia'
+
+/**
  * Internal RPC the panel uses to push the composer model mode to the host.
  *
  * Set semantics only: the payload carries `{auto: boolean}` (with a reserved,
@@ -118,6 +130,63 @@ export function parseMediaFetchOutcome(value: unknown): MediaFetchOutcome | null
       return isPositiveInteger(value.statusCode) ? { status: 'http-error', statusCode: value.statusCode } : null
     case 'failed':
       return typeof value.message === 'string' ? { status: 'failed', message: value.message } : null
+    default:
+      return null
+  }
+}
+
+/** Payload of {@link BRIDGE_PRODUCED_MEDIA_METHOD}. */
+export interface ProducedMediaRequest {
+  /** Session whose events produced the file. */
+  sessionId: string
+  /** The produced file's path as the session event disclosed it. */
+  path: string
+}
+
+/**
+ * How one {@link BRIDGE_PRODUCED_MEDIA_METHOD} call settled.
+ *
+ * Like {@link MediaFetchOutcome}, every outcome is a tagged **success** at the
+ * carrier level: a path the registry never saw or a file that vanished is an
+ * expected answer, and the extension port collapses carrier-level errors into
+ * a single code, which would erase the distinctions the card needs.
+ */
+export type ProducedMediaOutcome =
+  /** The file's bytes, base64, with the media type its extension maps to. */
+  | { code: 'ok'; mediaType: string; bytes: number; data: string }
+  /** The path was never registered for this session (or vanished since). */
+  | { code: 'not-produced'; message: string }
+  /** The file exceeds the served byte ceiling. */
+  | { code: 'too-large'; message: string; limit: number }
+  /** The extension maps to no servable media type. */
+  | { code: 'unsupported'; message: string }
+  /** The read itself failed. */
+  | { code: 'internal'; message: string }
+
+/**
+ * Validate a {@link ProducedMediaOutcome} that arrived over the bridge.
+ * @param value - the decoded `rpc.result` payload.
+ * @returns the outcome, or `null` when the payload is not one.
+ */
+export function parseProducedMediaOutcome(value: unknown): ProducedMediaOutcome | null {
+  if (!isRecord(value)) return null
+  switch (value.code) {
+    case 'ok':
+      return typeof value.mediaType === 'string'
+        && typeof value.bytes === 'number' && Number.isSafeInteger(value.bytes) && value.bytes >= 0
+        && typeof value.data === 'string' && /^[A-Za-z0-9+/]*={0,2}$/.test(value.data)
+        ? { code: 'ok', mediaType: value.mediaType, bytes: value.bytes, data: value.data }
+        : null
+    case 'not-produced':
+    case 'unsupported':
+    case 'internal':
+      return typeof value.message === 'string'
+        ? { code: value.code, message: value.message }
+        : null
+    case 'too-large':
+      return typeof value.message === 'string' && isPositiveInteger(value.limit)
+        ? { code: 'too-large', message: value.message, limit: value.limit }
+        : null
     default:
       return null
   }

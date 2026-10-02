@@ -1,6 +1,7 @@
 /** dsh 0.1.5 transient Assistant presentation, kept separate from durable seqs. */
 
 import { imageRefsFromBlocks } from './attachments.ts'
+import { attachmentProduced } from './produced-media.ts'
 import { textFromBlocks, type Row, type SessionEventView } from './events.ts'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -120,7 +121,7 @@ export class AssistantStreamView {
     if (attempt === undefined || attempt.settlement !== undefined) return null
     const blocks = [...attempt.blocks.values()].map(block => block.closed ?? { type: block.type, text: block.text })
     const text = textFromBlocks(blocks)
-    const images = imageRefsFromBlocks(blocks)
+    const images = imageRefsFromBlocks(blocks).map(attachmentProduced)
     return text.trim() === '' && images.length === 0 ? null : {
       seq: -1,
       kind: 'assistant',
