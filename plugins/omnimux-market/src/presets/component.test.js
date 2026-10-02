@@ -6,12 +6,14 @@ import { JSDOM } from 'jsdom'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 
+const modalPath = new URL('../../../omnimux/src/client/presets/CreativePresetsModal.jsx', import.meta.url).pathname
 const output = await build({
-  entryPoints: [new URL('./CreativePresetsModal.jsx', import.meta.url).pathname],
+  entryPoints: [modalPath],
   bundle: true,
   write: false,
   format: 'cjs',
   platform: 'node',
+  absWorkingDir: new URL('../../../omnimux/src/client/presets', import.meta.url).pathname,
   external: ['react', 'react-dom', '../components/SplitModalDialog.jsx']
 })
 

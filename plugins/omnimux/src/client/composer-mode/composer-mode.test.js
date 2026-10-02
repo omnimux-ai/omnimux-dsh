@@ -89,7 +89,7 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
   )
 
   // 2. 验证 ComposerPresetsTriggers 在非 marketing 模式下 return null
-  const triggersPath = path.resolve(import.meta.dirname, '../presets/ComposerPresetsTriggers.jsx')
+  const triggersPath = path.resolve(import.meta.dirname, '../../../../omnimux-market/src/presets/ComposerPresetsTriggers.jsx')
   const triggersContent = fs.readFileSync(triggersPath, 'utf-8')
   assert.ok(
     triggersContent.includes("if (activeMode !== 'marketing')"),
@@ -97,7 +97,7 @@ test('ComposerMode Contract: 插槽与组件联动架构校验', () => {
   )
 
   // 3. 验证 ComposerPresetsChips 彻底收敛为 return null，输入框左上角不渲染多余选项胶囊
-  const chipsPath = path.resolve(import.meta.dirname, '../presets/ComposerPresetsChips.jsx')
+  const chipsPath = path.resolve(import.meta.dirname, '../../../../omnimux-market/src/presets/ComposerPresetsChips.jsx')
   const chipsContent = fs.readFileSync(chipsPath, 'utf-8')
   assert.ok(
     chipsContent.includes('return null'),
