@@ -229,6 +229,17 @@ export interface PanelCopy {
     selectionAttached: string
     selectionTruncated: string
     removeSelection: string
+    /** 任务刻度轨与排队坞文案。 */
+    queueDockBadge: (count: number) => string
+    railQueued: string
+    railRunning: string
+    railDone: string
+    railFailed: string
+    railTaskN: (index: number) => string
+    railJumpTo: (index: number) => string
+    taskDoneTitle: string
+    taskFailedTitle: string
+    taskDoneMessage: (preview: string) => string
   }
 }
 
@@ -483,6 +494,16 @@ const EN: PanelCopy = {
     selectionAttached: 'Selected text',
     selectionTruncated: '(truncated)',
     removeSelection: 'Remove the selected text',
+    queueDockBadge: (count) => `Queued (${count})`,
+    railQueued: 'Queued',
+    railRunning: 'Running',
+    railDone: 'Done',
+    railFailed: 'Failed',
+    railTaskN: (index) => `Task ${index}`,
+    railJumpTo: (index) => `Jump to task ${index}`,
+    taskDoneTitle: 'Task completed',
+    taskFailedTitle: 'Task failed',
+    taskDoneMessage: (preview) => preview,
   },
 }
 
@@ -737,6 +758,16 @@ const ZH: PanelCopy = {
     selectionAttached: '选中的网页内容',
     selectionTruncated: '（已截断）',
     removeSelection: '移除选中内容',
+    queueDockBadge: (count) => `排队中（${count}）`,
+    railQueued: '排队中',
+    railRunning: '进行中',
+    railDone: '已完成',
+    railFailed: '未完成',
+    railTaskN: (index) => `第 ${index} 个任务`,
+    railJumpTo: (index) => `跳转到第 ${index} 个任务`,
+    taskDoneTitle: '任务完成',
+    taskFailedTitle: '任务未完成',
+    taskDoneMessage: (preview) => preview,
   },
 }
 

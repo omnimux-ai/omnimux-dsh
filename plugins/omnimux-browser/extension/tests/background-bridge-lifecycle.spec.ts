@@ -140,7 +140,7 @@ afterEach(() => {
 })
 
 describe('background bridge lifecycle', () => {
-  it('does not probe, connect, or arm keepalive just because the extension loads', async () => {
+  it('arms the keepalive on load but still makes no connection attempt until a lease claims the bridge', async () => {
     const chromeMock = mockChrome()
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({
       wsUrl: 'ws://127.0.0.1:3080/ext/bridge',
@@ -151,13 +151,14 @@ describe('background bridge lifecycle', () => {
     await import('../src/background/index.ts')
     await vi.waitFor(() => { expect(chrome.storage.local.get).toHaveBeenCalled() })
 
+    // The keepalive is armed so a worker restarted mid-queue can rejoin the
+    // bridge; loading alone must still not open a socket.
+    expect(chromeMock.alarms.create).toHaveBeenCalledWith('bridge-keepalive', { periodInMinutes: 0.5 })
     expect(fetchMock).not.toHaveBeenCalled()
     expect(FakeWebSocket.instances).toHaveLength(0)
-    expect(chromeMock.alarms.create).not.toHaveBeenCalled()
-    expect(chromeMock.alarms.clear).toHaveBeenCalledWith('bridge-keepalive')
   })
 
-  it('abandons an in-flight discovery when the last panel closes', async () => {
+  it('keeps the bridge claim and keepalive when the last panel closes mid-discovery', async () => {
     const chromeMock = mockChrome()
     let finishDiscovery!: (response: Response) => void
     const fetchMock = vi.fn(async () => await new Promise<Response>((resolve) => {
@@ -175,9 +176,14 @@ describe('background bridge lifecycle', () => {
 
     panel.onDisconnect.emit()
     finishDiscovery(new Response(null, { status: 503 }))
-    await vi.waitFor(() => { expect(chromeMock.alarms.clear).toHaveBeenCalledWith('bridge-keepalive') })
+    await new Promise((resolve) => { setTimeout(resolve, 0) })
 
-    expect(fetchMock).toHaveBeenCalledOnce()
+    // Closing the panel no longer abandons the bridge claim: the keepalive
+    // stays armed so queued submissions and turn/end notifications keep a path
+    // back. The failed discovery itself still opens no socket.
+    // Config probe + root fallback: both may run now that no panel-close
+    // cancels the claim.
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(1)
     expect(FakeWebSocket.instances).toHaveLength(0)
   })
 

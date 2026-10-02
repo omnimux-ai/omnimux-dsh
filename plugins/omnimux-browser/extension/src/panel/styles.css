@@ -198,6 +198,7 @@ textarea:focus-visible {
   flex-direction: column;
   overflow: hidden;
   background: var(--canvas);
+  position: relative;
 }
 
 .topbar {
@@ -6040,4 +6041,176 @@ textarea:focus-visible {
 .probe-refresh-icon-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ===== 任务刻度轨（Turn Rail）：每轮一条横线，悬停预览，点击定位 ===== */
+
+.turn-rail-wrap {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  z-index: 6;
+}
+.turn-rail {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  max-height: min(60vh, 320px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  pointer-events: auto;
+}
+.turn-rail::-webkit-scrollbar { display: none; }
+
+.turn-rail-marks {
+  position: relative;
+  height: 100%;
+  min-height: 40px;
+}
+
+.turn-rail-mark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.turn-rail-mark::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--faint);
+  opacity: 0.55;
+  transform: translateY(-50%) scaleX(0.6);
+  transform-origin: right center;
+  transition: transform 0.14s, background-color 0.14s, opacity 0.14s;
+}
+.turn-rail-mark:hover::before,
+.turn-rail-mark:focus-visible::before {
+  transform: translateY(-50%) scaleX(0.9);
+  opacity: 0.9;
+}
+.turn-rail-mark.is-active::before {
+  background: var(--ink-strong);
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+}
+.turn-rail-mark.is-busy::before {
+  background: var(--blue);
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+  animation: turn-rail-busy 1s ease-in-out infinite;
+}
+.turn-rail-mark.is-queued::before {
+  opacity: 0.35;
+  transform: translateY(-50%) scaleX(0.4);
+}
+.turn-rail-mark.is-failed::before {
+  background: var(--danger);
+  opacity: 0.8;
+  transform: translateY(-50%) scaleX(0.9);
+}
+.turn-rail-mark:focus-visible {
+  outline: none;
+}
+.turn-rail-mark:focus-visible::before {
+  background: var(--ink-strong);
+  transform: translateY(-50%) scaleX(1);
+}
+@keyframes turn-rail-busy {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .turn-rail-mark.is-busy::before { animation: none; }
+}
+
+.turn-rail-preview {
+  position: absolute;
+  right: 34px;
+  width: min(240px, calc(100vw - 72px));
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+  z-index: 30;
+  font-size: calc(12px * var(--ui-scale));
+  line-height: 1.5;
+}
+.turn-rail-preview-prompt {
+  font-weight: 600;
+  color: var(--ink-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.turn-rail-preview-response {
+  margin-top: 4px;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.turn-rail-preview-status {
+  margin-top: 6px;
+  font-size: calc(10.5px * var(--ui-scale));
+  color: var(--faint);
+}
+
+/* 定位落点高亮：点击刻度跳转后短暂描边目标气泡。 */
+.row.landed-flash {
+  animation: row-landed-flash 1.6s ease-out 1;
+}
+@keyframes row-landed-flash {
+  0% { box-shadow: 0 0 0 2px var(--blue); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ===== 排队坞：输入框上方显示排队中的任务 ===== */
+
+.queue-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.queue-dock-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: var(--blue-wash);
+  font-size: calc(12px * var(--ui-scale));
+  color: var(--muted);
+}
+.queue-dock-badge {
+  flex-shrink: 0;
+  font-size: calc(10px * var(--ui-scale));
+  font-weight: 600;
+  color: var(--blue);
+  white-space: nowrap;
+}
+.queue-dock-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

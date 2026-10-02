@@ -98,18 +98,29 @@ import {
 /** One rendered conversation row. */
 import {
   appendLiveRow,
+  applyInboxSplice,
   completeLastTool,
   errorFromTurnEnd,
+  inboxQueuedMessages,
+  inboxSpliceFromEvent,
+  isRecord,
   mergeHistoryRows,
   pendingQuestionFromFrame,
+  previewClip,
   resolvedQuestionFromFrame,
   rowFromEvent,
   toolSummary,
+  turnNumberOf,
+  turnOutlineEntries,
+  type QueuedMessage,
   type Row,
   type PendingQuestion,
   type ResolvedQuestion,
   type SessionEventView,
+  type TurnOutlineEntry,
 } from './events.ts'
+
+import { TurnRail, buildRailItems } from './TurnRail.tsx'
 
 function normalizeWebOrigin(value: string): string | null {
   return normalizeTrustedOrigin(value) ?? null
@@ -977,6 +988,15 @@ export function App(): React.JSX.Element {
   const [resumeHint, setResumeHint] = useState<{ ready: boolean; sessionId: string | null }>({ ready: false, sessionId: null })
   const [questions, setQuestions] = useState<PendingQuestion[]>([])
   const [questionSubmissions, setQuestionSubmissions] = useState<ResolvedQuestion[]>([])
+  // 任务刻度轨：宿主持久化 inbox 的 next-turn 排队消息、turnOutline 摘要、
+  // 当前轮次与失败轮次；点击刻度定位的行序号。
+  const [queuedItems, setQueuedItems] = useState<QueuedMessage[]>([])
+  const [turnOutline, setTurnOutline] = useState<TurnOutlineEntry[]>([])
+  const [liveTurn, setLiveTurn] = useState(0)
+  const [failedTurn, setFailedTurn] = useState<number | null>(null)
+  const [landedSeq, setLandedSeq] = useState<number | null>(null)
+  const inboxRawRef = useRef<unknown[]>([])
+  const liveTurnRef = useRef(0)
   const approvalQueueRef = useRef<ApprovalRequest[]>([])
   const questionsRef = useRef<PendingQuestion[]>([])
   const questionSubmissionsRef = useRef<ResolvedQuestion[]>([])
@@ -1748,6 +1768,100 @@ export function App(): React.JSX.Element {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [rows, streamRow, working])
 
+  // ===== 任务刻度轨 =====
+
+  const [activeRailTurn, setActiveRailTurn] = useState<number | undefined>(undefined)
+  const [pendingLocate, setPendingLocate] = useState<{ sessionId: string; turn: number } | null>(null)
+
+  const railItems = useMemo(
+    () => buildRailItems(
+      rows,
+      turnOutline,
+      queuedItems,
+      working && liveTurn > 0 ? liveTurn : null,
+      failedTurn,
+    ),
+    [rows, turnOutline, queuedItems, working, liveTurn, failedTurn],
+  )
+  const railCopy = useMemo(() => ({
+    queued: copy.app.railQueued,
+    running: copy.app.railRunning,
+    done: copy.app.railDone,
+    failed: copy.app.railFailed,
+    taskN: copy.app.railTaskN,
+    jumpTo: copy.app.railJumpTo,
+  }), [copy])
+
+  /** 消息区滚动时推算视口内最近轮次，驱动刻度「当前轮」高亮。 */
+  function handleMessagesScroll(): void {
+    const scroller = scrollRef.current
+    if (scroller === null) return
+    const marks = scroller.querySelectorAll<HTMLElement>('[data-turn]')
+    let active: number | undefined
+    marks.forEach((el) => {
+      if (el.offsetTop <= scroller.scrollTop + scroller.clientHeight * 0.4) {
+        const turn = Number(el.dataset.turn)
+        if (Number.isSafeInteger(turn)) active = turn
+      }
+    })
+    setActiveRailTurn((prev) => (prev === active ? prev : active))
+  }
+
+  /** 点击刻度：滚动定位到该轮首个 assistant 行并短暂高亮。 */
+  function locateTurn(turn: number): void {
+    const target = rows.find((row) => row.turn === turn && row.kind === 'assistant')
+      ?? [...rows].reverse().find((row) => row.turn === turn)
+    if (target === undefined) return
+    const scroller = scrollRef.current
+    const el = scroller?.querySelector<HTMLElement>(`[data-turn="${turn}"]`)
+    if (el !== null && el !== undefined) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setLandedSeq(target.seq)
+    setActiveRailTurn(turn)
+    window.setTimeout(() => {
+      setLandedSeq((current) => (current === target.seq ? null : current))
+    }, 1800)
+  }
+
+  /** 后台通知点击 → 打开面板并定位到完成任务的轮次结果。 */
+  useEffect(() => {
+    return api.onTaskLocate(({ sessionId, turn }) => {
+      setPendingLocate({ sessionId, turn })
+      if (sessionId === sessionRef.current) return
+      // 目标会话未打开：切过去，pendingLocate 效果在历史落地后定位。
+      const transition = beginSessionTransition()
+      void (async () => {
+        try {
+          await api.setActiveSession(sessionId)
+          if (sessionTransitionRef.current !== transition) return
+          const runtime = sessionRuntimeRef.current.snapshot(sessionId)
+          prepareSessionSwitch(runtime.running, runtime.questions)
+          sessionRef.current = sessionId
+          setSessionTitle(sessionId)
+          await refreshHistory(sessionId)
+        } catch (cause) {
+          if (sessionTransitionRef.current === transition) {
+            setError(cause instanceof Error ? cause.message : String(cause))
+            setPendingLocate(null)
+          }
+        } finally {
+          finishSessionTransition(transition)
+        }
+      })()
+    })
+    // resumeSession/beginSessionTransition 均为函数声明提升；仅需注册一次。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // pendingLocate 落定：目标会话的行加载完成后滚动定位该轮结果。
+  useEffect(() => {
+    if (pendingLocate === null) return
+    if (sessionRef.current !== pendingLocate.sessionId) return
+    locateTurn(pendingLocate.turn)
+    setPendingLocate(null)
+    // rows 变化触发一次即可；locateTurn 自身读取最新 rows。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingLocate, rows])
+
   function applyImageProjection(sessionId: string, seq: number, value: unknown): void {
     if (sessionRef.current !== sessionId || !Number.isSafeInteger(seq)) return
     const previous = imageProjectionRef.current
@@ -1850,6 +1964,10 @@ export function App(): React.JSX.Element {
     if (payload.event.type === 'turn/start') {
       sessionRuntimeRef.current.startTurn(payload.sessionId)
       if (payload.sessionId !== sessionRef.current) return
+      const declared = turnNumberOf(payload.event)
+      liveTurnRef.current = declared ?? liveTurnRef.current + 1
+      setLiveTurn(liveTurnRef.current)
+      setFailedTurn(null)
       stoppingRef.current = false
       setStopping(false)
       setWorking(true)
@@ -1865,20 +1983,30 @@ export function App(): React.JSX.Element {
       const turnError = errorFromTurnEnd(payload.event, locale)
       if (turnError) {
         setError(turnError)
+        setFailedTurn(liveTurnRef.current === 0 ? null : liveTurnRef.current)
       }
       await refreshHistory(payload.sessionId)
+      return
+    }
+    // 宿主持久化队列的增删改：排队坞与刻度的唯一事实源。
+    const splice = inboxSpliceFromEvent(payload.event)
+    if (splice !== null) {
+      if (payload.sessionId === sessionRef.current) {
+        inboxRawRef.current = applyInboxSplice(inboxRawRef.current, splice)
+        setQueuedItems(inboxQueuedMessages({ 'next-turn': inboxRawRef.current }))
+      }
       return
     }
     if (payload.sessionId !== sessionRef.current) return
     const row = rowFromEvent(payload.event)
     if (row !== null) {
-      setRows((prev) => appendLiveRow(prev, row.kind, row.text, nextSeq(), row.images))
+      setRows((prev) => appendLiveRow(prev, row.kind, row.text, nextSeq(), row.images, undefined, liveTurnRef.current || undefined))
       return
     }
     if (payload.event.type === 'tool/call') {
       setWorking(true)
       const summary = toolSummary(payload.event.data?.name ?? 'tool', payload.event.data?.arguments, locale)
-      setRows((prev) => appendLiveRow(prev, 'tool', summary, nextSeq()))
+      setRows((prev) => appendLiveRow(prev, 'tool', summary, nextSeq(), undefined, undefined, liveTurnRef.current || undefined))
       return
     }
     if (payload.event.type === 'tool/result') {
@@ -1976,6 +2104,26 @@ export function App(): React.JSX.Element {
       followed.suffix = []
     }
     applyHistoryImageProjection(id, history.projections)
+    // 任务轨数据源：turnOutline 轮次摘要与 inbox 排队都来自同一份会话投影。
+    const projectionValues = history.projections?.values
+    setTurnOutline(turnOutlineEntries(projectionValues?.turnOutline))
+    const inboxProjection = isRecord(projectionValues?.inbox) && Array.isArray(projectionValues.inbox['next-turn'])
+      ? projectionValues.inbox['next-turn']
+      : []
+    inboxRawRef.current = inboxProjection
+    setQueuedItems(inboxQueuedMessages({ 'next-turn': inboxProjection }))
+    // turn/start 事件携带轮次号；历史里没有时以 turnOutline 最大值兜底。
+    let lastTurn = 0
+    for (const ev of events) {
+      if (ev.type === 'turn/start') lastTurn = turnNumberOf(ev) ?? lastTurn + 1
+    }
+    if (lastTurn === 0 && Array.isArray(projectionValues?.turnOutline)) {
+      for (const raw of projectionValues.turnOutline) {
+        if (isRecord(raw) && typeof raw.turn === 'number' && raw.turn > lastTurn) lastTurn = raw.turn
+      }
+    }
+    liveTurnRef.current = lastTurn
+    setLiveTurn(lastTurn)
     const historyTitle = latestSessionTitle(events)
     if (historyTitle !== undefined) setSessionTitle(historyTitle)
     setRows(mergeHistoryRows(events, nextSeq, locale))
@@ -2207,6 +2355,13 @@ export function App(): React.JSX.Element {
   ): void {
     setRows([])
     setStreamRow(null)
+    setQueuedItems([])
+    setTurnOutline([])
+    setFailedTurn(null)
+    setLandedSeq(null)
+    inboxRawRef.current = []
+    liveTurnRef.current = 0
+    setLiveTurn(0)
     updateDraft(() => emptyComposerDraft())
     if (!preserveSelection) {
       setSelection(null)
@@ -3339,7 +3494,7 @@ export function App(): React.JSX.Element {
           </div>
         </section>
       )}
-      <div className="messages" ref={scrollRef}>
+      <div className="messages" ref={scrollRef} onScroll={handleMessagesScroll}>
         {pageScene && (
           <div className="empty empty-hero-layout" style={{ width: '100%', margin: '8px auto 16px' }}>
             <div className="hero-card-stack-wrapper">
@@ -3399,7 +3554,7 @@ export function App(): React.JSX.Element {
           </div>
         )}
         {rows.map((row) => (
-          <div key={row.seq} className={`row ${row.kind}`}>
+          <div key={row.seq} className={`row ${row.kind}${landedSeq === row.seq ? ' landed-flash' : ''}`} {...(row.turn === undefined ? {} : { 'data-turn': row.turn })}>
             {row.kind === 'assistant' && <span className="assistant-avatar"><img src={whaleUrl} alt={copy.app.assistant} /></span>}
             {row.kind === 'tool'
               ? <ToolActivity row={row} copy={copy} />
@@ -3420,6 +3575,12 @@ export function App(): React.JSX.Element {
           </div>
         )}
       </div>
+      <TurnRail
+        items={railItems}
+        activeTurn={activeRailTurn}
+        onLocate={locateTurn}
+        copy={railCopy}
+      />
       {question !== null && (
         <QuestionCard
           key={`${question.sessionId}:${question.rpcId}`}
@@ -3471,6 +3632,16 @@ export function App(): React.JSX.Element {
             attachedIds={attachedMediaIds}
             onAttachMedia={attachLitMedia}
           />
+        )}
+        {queuedItems.length > 0 && (
+          <div className="queue-dock" aria-live="polite">
+            {queuedItems.map((item, index) => (
+              <div className="queue-dock-item" key={item.id || `q${index}`}>
+                <span className="queue-dock-badge">{copy.app.queueDockBadge(index + 1)}</span>
+                <span className="queue-dock-text" title={item.text}>{item.text === '' ? copy.app.railTaskN(index + 1) : previewClip(item.text, 80)}</span>
+              </div>
+            ))}
+          </div>
         )}
         <div className="composer-box clean-chat-box">
           {selection !== null && (
@@ -3548,7 +3719,16 @@ export function App(): React.JSX.Element {
                 <PaperclipIcon size={18} />
               </button>
             </span>
-            {working ? (
+            <button
+              className={`clean-send-btn ${input.trim() || draftImages.length > 0 ? 'active' : ''}`}
+              onClick={() => void send()}
+              disabled={sendDisabled}
+              aria-label={copy.app.sendMessage}
+              title={copy.app.sendMessage}
+            >
+              <ArrowUpIcon size={15} />
+            </button>
+            {working && (
               <button
                 className="stop-button clean-send-btn"
                 onClick={() => { void stopTurn() }}
@@ -3557,16 +3737,6 @@ export function App(): React.JSX.Element {
                 title={stopping ? copy.app.stoppingTurn : copy.app.stopTurn}
               >
                 <span className="stop-glyph" aria-hidden="true" />
-              </button>
-            ) : (
-              <button
-                className={`clean-send-btn ${input.trim() || draftImages.length > 0 ? 'active' : ''}`}
-                onClick={() => void send()}
-                disabled={sendDisabled}
-                aria-label={copy.app.sendMessage}
-                title={copy.app.sendMessage}
-              >
-                <ArrowUpIcon size={15} />
               </button>
             )}
           </div>

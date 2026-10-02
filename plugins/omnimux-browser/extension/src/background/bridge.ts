@@ -57,6 +57,13 @@ export class BridgeClient {
   state: BridgeState = 'stopped'
 
   /**
+   * The bridge handed this client's slot to another browser (close 4000).
+   * An evicted client must never reclaim the slot: keepalive and reconnect
+   * callers check this flag before starting a new connection attempt.
+   */
+  evicted = false
+
+  /**
    * Connect (or reconnect) to the bridge. Idempotent: calling again with the
    * same url/token restarts the loop from attempt 0.
    * @param url - bridge WebSocket URL (e.g. ws://127.0.0.1:3080/ext/bridge).
@@ -66,6 +73,7 @@ export class BridgeClient {
     this.stop()
     this.url = url
     this.token = token
+    this.evicted = false
     this.running = true
     this.attempt = 0
     this.generation += 1
@@ -136,6 +144,7 @@ export class BridgeClient {
       // tight loop and repeatedly evict one another.
       socket.addEventListener('close', (event) => {
         try { console.warn(`[OmniMux Bridge] WebSocket 已关闭: code=${event.code}, reason=${event.reason || '无'}`) } catch {}
+        if (event.code === 4000) this.evicted = true
         if (event.code !== 4000 || this.ws !== socket || !this.running) return
         this.running = false
         this.clearAckTimer()

@@ -144,6 +144,7 @@ describe('QA: the hover capsule pushes media into the conversation', () => {
       onSelection: vi.fn(() => unsubscribe),
       onMediaAttach: vi.fn(() => unsubscribe),
       onSessionResumeHint: vi.fn((callback) => { onResumeHint = callback; return unsubscribe }),
+      onTaskLocate: vi.fn(() => () => {}),
       respondToApproval: vi.fn(async () => {}),
       resolveTabAffinity: vi.fn(async () => {}),
       rebindTabAffinity: vi.fn(async () => {}),
