@@ -96,8 +96,11 @@ export async function executeOmnimuxText(input) {
     ?? input.settings?.get?.('omnimux')?.toolModel)
   if (toolModel !== null) {
     if (!toolModel.provider || !toolModel.model) {
+      const storedRaw = typeof input.toolModel === 'string' ? input.toolModel
+        : input.settings?.get?.('omnimux')?.toolModel
+      const stored = typeof storedRaw === 'string' ? storedRaw.trim() : ''
       throw new OmnimuxError('omnimux-unconfigured',
-        '工具模型不可用，请在设置中重新选择')
+        `工具模型不可用${stored ? `（${stored}）` : ''}，请在设置中重新选择`)
     }
     if (references.some((asset) => asset.type !== 'image')) {
       throw new OmnimuxError('omnimux-invalid-request',

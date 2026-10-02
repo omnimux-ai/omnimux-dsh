@@ -1,6 +1,20 @@
 import { requestRejection } from '../host/request-authorization.js'
 import { completeTextViaChat } from './chat.js'
 
+/**
+ * Whether `omnimux.toolModel` pins requests to one session model pair.
+ * A configured value (anything except ''/'auto') means the request may only
+ * run on that model — a failure must surface, never silently fall back.
+ * @param {unknown} settings
+ */
+function hasToolModelPin(settings) {
+  const section = typeof settings?.get === 'function' ? settings.get('omnimux') : undefined
+  const raw = section && typeof section === 'object' ? section.toolModel : undefined
+  if (typeof raw !== 'string') return false
+  const trimmed = raw.trim()
+  return trimmed !== '' && trimmed !== 'auto'
+}
+
 function sendJsonResponse(res, status, body) {
   const text = JSON.stringify(body)
   res.writeHead(status, {
@@ -74,6 +88,10 @@ export function registerTextCompleteRoutes(webServer, deps = {}) {
               return sendJsonResponse(res, 200, { ok: true, text: text.trim() })
             }
           } catch (execErr) {
+            // A pinned tool model owns the request: falling back to a
+            // different model would hide a configuration error and silently
+            // run the prompt on an engine the user did not choose.
+            if (hasToolModelPin(deps.settings)) throw execErr
             console.warn('[TextComplete HTTP] textComplete.execute failed, fallback to completeTextViaChat:', execErr?.message)
           }
         }
