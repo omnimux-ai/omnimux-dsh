@@ -62,7 +62,11 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
         )
 
       const isOfficialBypass = isOfficialRequest && hasOfficialToken
-      if (!isOfficialBypass) {
+      // A configured tool model pins execution to the session LLM stack, so the
+      // runtime-mode readiness check must not stand between it and the wire.
+      const toolModel = typeof current?.toolModel === 'string' ? current.toolModel.trim() : ''
+      const hasToolModel = Boolean(toolModel && toolModel !== 'auto')
+      if (!isOfficialBypass && !hasToolModel) {
         assertRuntimeReady(current, 'text')
       }
       if (req.model) {

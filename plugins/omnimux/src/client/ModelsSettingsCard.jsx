@@ -16,6 +16,7 @@ const GROUPS = [
     rows: [
       { key: 'defaultTextModel', labelKey: 'models.rowModel' },
       { key: 'defaultTextReasoning', labelKey: 'models.rowReasoning', reasoning: true },
+      { key: 'toolModel', labelKey: 'models.rowToolModel', tool: true },
     ],
   },
   {
@@ -137,12 +138,28 @@ export function ModelsSettingsCard({ t, scope }) {
       return listedOperationsFor(group.kind, currentModelIdFor(group.kind))
         .map((op) => ({ value: op.id, label: op.label || op.id }))
     }
+    if (row.tool) {
+      // Session-reachable provider:model pairs; 'auto' means "not configured".
+      const stored = typeof value.toolModel === 'string' ? value.toolModel.trim() : ''
+      const tools = Array.isArray(catalog?.tools) ? catalog.tools : []
+      const options = [{ value: 'auto', label: t('models.toolAuto') }]
+      for (const item of tools) {
+        if (item && item.id) options.push({ value: item.id, label: item.label || item.id })
+      }
+      // A stored pair no longer listed must stay visible — hide it and the
+      // user cannot see what their tools are running on.
+      if (stored && !tools.some((item) => item.id === stored)) {
+        options.push({ value: stored, label: stored })
+      }
+      return options
+    }
     const rows = Array.isArray(catalog?.[group.kind]) ? catalog[group.kind] : []
     return rows.map((item) => ({ value: item.id, label: item.label || item.id }))
   }, [catalog, currentModelIdFor, listedOperationsFor, t])
 
   const currentValueForRow = useCallback((group, row, options) => {
     const stored = typeof value[row.key] === 'string' && value[row.key] ? value[row.key] : ''
+    if (row.tool) return stored || 'auto'
     if (row.reasoning) return stored || DEFAULT_REASONING
     if (row.mode) return effectiveOperationId(group.kind) || stored || ''
     return stored || catalog?.defaults?.[group.kind] || options[0]?.value || ''
@@ -153,7 +170,13 @@ export function ModelsSettingsCard({ t, scope }) {
     setBusy(true)
     setError('')
     try {
-      await scope.set(field, next)
+      // 'auto' restores the unconfigured state: unset the field rather than
+      // persisting the sentinel.
+      if (next === 'auto' && typeof scope.unset === 'function') {
+        await scope.unset(field)
+      } else {
+        await scope.set(field, next)
+      }
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('omnimux:model-catalog-updated'))
       }

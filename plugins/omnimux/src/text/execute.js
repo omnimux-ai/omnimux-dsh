@@ -58,6 +58,22 @@ const REASONING_PREAMBLE_RE = /^(?:i['’]?m\s+thinking\s+through|let\s+me\s+thi
  *   assetMeta?: object,
  * }} input
  */
+/**
+ * Parse a stored `omnimux.toolModel` value ('provider:modelId').
+ * @param {unknown} value
+ * @returns {{ provider: string, model: string } | null}
+ */
+function parseToolModel(value) {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed || trimmed === 'auto') return null
+  const sep = trimmed.indexOf(':')
+  // A second colon or a missing half means the stored value is not a session
+  // pair — fail loud below instead of misrouting onto the official whitelist.
+  if (sep < 0 || sep !== trimmed.lastIndexOf(':')) return { provider: '', model: '' }
+  return { provider: trimmed.slice(0, sep).trim(), model: trimmed.slice(sep + 1).trim() }
+}
+
 export async function executeOmnimuxText(input) {
   const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : ''
   if (!prompt) {
@@ -71,6 +87,52 @@ export async function executeOmnimuxText(input) {
   const hasDocument = references.some((asset) => asset.type === 'document')
   const hasComplexMedia = hasVideo || hasAudio || hasDocument
   const gate = input.gate ?? input.hub?.gate
+
+  // Tool-model bypass: a configured `omnimux.toolModel` pins the request to one
+  // session-reachable provider:model pair and streams through ctx.llm — the
+  // same stack a conversation uses — instead of the runtimeMode routing below.
+  const toolModel = parseToolModel(input.toolModel
+    ?? input.settings?.get?.('omnimux')?.toolModel)
+  if (toolModel !== null) {
+    if (!toolModel.provider || !toolModel.model) {
+      throw new OmnimuxError('omnimux-unconfigured',
+        '工具模型不可用，请在设置中重新选择')
+    }
+    if (references.some((asset) => asset.type !== 'image')) {
+      throw new OmnimuxError('omnimux-invalid-request',
+        'tool model only accepts text and image input')
+    }
+    if (!input.llm || typeof input.llm.stream !== 'function') {
+      throw new OmnimuxError('needs-provider', 'textComplete requires ctx.llm')
+    }
+    const probedTool = []
+    for (const asset of references) {
+      if (!input.attachments || typeof input.attachments.saveImage !== 'function') {
+        throw new OmnimuxError('needs-provider', 'image input requires ctx.attachments')
+      }
+      probedTool.push(await probeTextImage(asset.pathOrUrl, {
+        attachments: input.attachments, fetcher: input.fetcher, signal: input.signal,
+      }))
+    }
+    const toolContent = [{ type: 'text', text: prompt }]
+    for (const media of probedTool) {
+      const attachment = await saveProbedTextImage(media, input.attachments)
+      toolContent.push({ type: 'image', attachment })
+    }
+    const toolResult = await streamTextReply(input.llm, {
+      provider: toolModel.provider,
+      model: toolModel.model,
+      prompt,
+      system: typeof input.system === 'string' ? input.system.trim() : '',
+      maxTokens: typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
+        ? input.maxTokens : text.maxTokens,
+      content: toolContent,
+      signal: input.signal,
+      sessionId: input.sessionId,
+    })
+    // Report the stored composite so callers can see which provider ran it.
+    return { ...toolResult, model: `${toolModel.provider}:${toolModel.model}` }
+  }
 
   // BYOK: the user configured their own key and it tested OK. Text runs
   // directly against their endpoint; the official channel is not consulted.
@@ -342,19 +404,44 @@ export async function executeOmnimuxText(input) {
     const attachment = await saveProbedTextImage(media, input.attachments)
     content.push({ type: 'image', attachment })
   }
-  const options = {
+  const result = await streamTextReply(input.llm, {
     provider: route.providerId,
     model: route.modelId,
-    messages: [{ role: 'user', content }],
+    prompt,
+    system,
     maxTokens,
-    ...(system ? { system } : {}),
+    content,
+    signal: input.signal,
+    sessionId: input.sessionId,
+  })
+  assertGuardOutput(guardPlan, result, { capability: 'text' })
+  return result
+}
+
+/**
+ * Collect one ctx.llm.stream completion into the textComplete result shape.
+ *
+ * Shared by the catalog route (provider=hub default) and the tool-model bypass
+ * (provider=session provider key) so reasoning-channel filtering, finish-error
+ * mapping, and the empty-body guard stay identical on both paths.
+ *
+ * @param {{ stream: (options: object) => AsyncIterable<object> }} llm
+ * @param {{ provider: string, model: string, prompt: string, system: string, maxTokens: number, content: Array<object>, signal?: AbortSignal, sessionId?: unknown }} input
+ */
+async function streamTextReply(llm, input) {
+  const options = {
+    provider: input.provider,
+    model: input.model,
+    messages: [{ role: 'user', content: input.content }],
+    maxTokens: input.maxTokens,
+    ...(input.system ? { system: input.system } : {}),
     ...(input.signal ? { signal: input.signal } : {}),
     ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId }),
   }
   let assembled = ''
   let sawReasoning = false
   let finish
-  for await (const chunk of input.llm.stream(options)) {
+  for await (const chunk of llm.stream(options)) {
     if (!chunk || typeof chunk !== 'object') continue
     const row = /** @type {Record<string, unknown>} */ (chunk)
     // Reasoning is a separate channel: it must never accumulate into the body,
@@ -401,7 +488,5 @@ export async function executeOmnimuxText(input) {
       ? '模型只返回了思考过程，没有给出正文，请重试或降低推理等级'
       : 'text complete produced no text')
   }
-  const result = { mode: 'live', model: route.modelId, text: assembled }
-  assertGuardOutput(guardPlan, result, { capability: 'text' })
-  return result
+  return { mode: 'live', model: input.model, text: assembled }
 }

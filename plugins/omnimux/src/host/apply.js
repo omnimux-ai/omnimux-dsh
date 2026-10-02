@@ -33,6 +33,7 @@ import { mountAudioVoices } from '../media/voices-mount.js'
 import { executeOmnimuxSpeechToText } from '../media/stt.js'
 import { mountTextComplete } from '../text/mount.js'
 import { buildModelCatalog } from '../catalog/list.js'
+import { listSessionModels } from '../catalog/session-models.js'
 import { createComposerListSync } from '../catalog/composer-sync.js'
 import { SettingsConfig } from '../settings/schema.js'
 import { mountHubHttp } from './http.js'
@@ -101,13 +102,17 @@ export function apply(ctx, config = {}) {
     const settingsDefaults = settingsService && typeof settingsService.get === 'function'
       ? settingsService.get('omnimux')
       : undefined
-    return buildModelCatalog({
-      text: hub.text,
-      media: hub.media,
-      gate: hub.gate,
-      env: process.env,
-      settingsDefaults,
-    })
+    return {
+      ...buildModelCatalog({
+        text: hub.text,
+        media: hub.media,
+        gate: hub.gate,
+        env: process.env,
+        settingsDefaults,
+      }),
+      // Session-reachable provider:model pairs for the tool-model picker.
+      tools: listSessionModels(settingsService),
+    }
   }
 
   const httpDeps = {
