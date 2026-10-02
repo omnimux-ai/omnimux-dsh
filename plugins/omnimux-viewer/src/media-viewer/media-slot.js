@@ -196,7 +196,7 @@ export function deriveImageOpModeFromCount(imageCount) {
  * @param {object | Array} [buckets]
  * @returns {object | null}
  */
-export function deriveAdaptiveOperation(model, kind, buckets = {}) {
+export function deriveAdaptiveOperation(model, kind, buckets = {}, hintOpId = '') {
   const operations = operationsOf(model, kind);
   if (operations.length === 0) return null;
 
@@ -282,7 +282,17 @@ export function deriveAdaptiveOperation(model, kind, buckets = {}) {
       // 孤立尾帧因模型不支持单尾帧，优雅降级为 text_to_video 或合适操作，不映射到强制双帧的 first_last_frame
       targetId = operations.some((op) => op.id === 'text_to_video') ? 'text_to_video' : (operations[0]?.id ?? null);
     } else if (refVideosCount > 0 && !hasFirstFrame && !hasLastFrame) {
-      targetId = operations.some((op) => op.id === 'video_edit') ? 'video_edit' : 'video_multi_ref';
+      // 视频素材按页签分流：编辑页签归 video_edit，参考页签归 video_multi_ref。
+      // 无页签提示（hintOpId 未给/非编辑）默认收敛 video_multi_ref——同接口全能入口。
+      if (hintOpId === 'video_edit' && operations.some((op) => op.id === 'video_edit')) {
+        targetId = 'video_edit';
+      } else if (operations.some((op) => op.id === 'video_multi_ref')) {
+        targetId = 'video_multi_ref';
+      } else if (operations.some((op) => op.id === 'video_edit')) {
+        targetId = 'video_edit';
+      } else {
+        targetId = operations[0]?.id ?? null;
+      }
     } else {
       targetId = 'video_multi_ref';
     }

@@ -181,10 +181,10 @@ describe('素材卡槽槽位与自适应推导', () => {
       assert.equal(op.id, 'text_to_video');
     });
 
-    it('视频模式：参考视频 -> 视频编辑', () => {
+    it('视频模式：参考视频 -> 视频编辑（编辑页签源视频）', () => {
       const op = deriveAdaptiveOperation(videoModel, 'video', {
         refVideos: [{ id: 'rv', name: 'clip.mp4' }],
-      });
+      }, 'video_edit');
       assert.equal(op.id, 'video_edit');
     });
 
@@ -211,15 +211,40 @@ describe('素材卡槽槽位与自适应推导', () => {
       assert.equal(op.id, 'image_edit');
     });
 
-    it('视频模式：修复 refVideosCount 双重重复计数，单视频 slot 统一统计一次', () => {
-      // 传入 1 个视频文件，其包含 type: 'video' 且位于包含 video 的 key 下
+    it('视频模式：参考页签贴视频归全能参考（同接口参考素材），非编辑', () => {
+      // 回归检查点：video_multi_ref 与 video_edit 同上游接口，页签只分消费场景。
+      // 参考页签贴视频必须收敛 video_multi_ref，避免把参考素材错归为视频编辑源。
+      const op = deriveAdaptiveOperation(videoModel, 'video', {
+        'video:seedance-2-0-fast:reference_videos': [
+          { id: 'v1', name: 'clip.mp4', type: 'video' },
+        ],
+      }, 'video_multi_ref');
+      assert.equal(op.id, 'video_multi_ref');
+    });
+
+    it('视频模式：编辑页签贴视频归 video_edit（视频编辑源）', () => {
+      const op = deriveAdaptiveOperation(videoModel, 'video', {
+        'video:seedance-2-0-fast:source_videos': [
+          { id: 'v1', name: 'clip.mp4', type: 'video' },
+        ],
+      }, 'video_edit');
+      assert.equal(op.id, 'video_edit');
+    });
+
+    it('视频模式：无页签提示时视频素材默认收敛全能参考', () => {
       const op = deriveAdaptiveOperation(videoModel, 'video', {
         'video:seedance-2-0-fast:reference_videos': [
           { id: 'v1', name: 'clip.mp4', type: 'video' },
         ],
       });
-      // 只有 1 个视频且无首尾帧时，应自适应收敛到单个视频的 video_edit
-      assert.equal(op.id, 'video_edit');
+      assert.equal(op.id, 'video_multi_ref');
+    });
+
+    it('视频模式：参考页签空素材推导文生视频（同接口空参考=文生）', () => {
+      // 回归检查点：文生视频并入参考后，空素材参考模式必须落回 text_to_video，
+      // 不允许被推导为 video_multi_ref 空载荷。
+      const op = deriveAdaptiveOperation(videoModel, 'video', {}, 'video_multi_ref');
+      assert.equal(op.id, 'text_to_video');
     });
 
     it('槽位 Key 统一稳定化：彻底消除引导槽与真实操作槽的 Key 不一致问题', () => {

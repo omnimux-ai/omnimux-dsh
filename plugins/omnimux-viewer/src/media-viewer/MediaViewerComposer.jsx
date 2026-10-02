@@ -180,6 +180,14 @@ export function MediaViewerComposer({
 
   useEffect(() => {
     if (mode !== 'video' || videoChoices.length === 0) return;
+    const hasMultiRef = videoChoices.some((option) => option.id === 'video_multi_ref');
+    if (hasMultiRef && videoModeId === 'text_to_video') {
+      // 文生页签已并入参考：初始/残余 text_to_video 状态吸附到全能参考，
+      // 空素材提交时由推导回落 text_to_video，用户无感。
+      const refOpt = videoChoices.find((option) => option.id === 'video_multi_ref');
+      setVideoGenMode(refOpt.label);
+      return;
+    }
     if (!videoChoices.some((option) => option.id === videoModeId)) {
       setVideoGenMode(videoChoices[0].label);
     }
@@ -222,9 +230,11 @@ export function MediaViewerComposer({
           onClick: () => setVideoGenMode('视频编辑'),
         });
       }
-      // 文生视频始终作为可回切的基准页签（模型声明 text_to_video 契约时），
-      // 否则切到参考/首帧后无法回切文本生成——属于页签体系缺陷。
-      if (modelOps.some((op) => op.id === 'text_to_video')) {
+      // 文生视频基准页签：仅当模型没有 video_multi_ref 契约时才需要单列——
+      // 同上游接口（/v1/videos/generations），空素材的参考模式即文生，
+      // 具备全能参考时参考页签已覆盖文生路径，单列会造成两入口同果。
+      const hasMultiRef = modelOps.some((op) => op.id === 'video_multi_ref');
+      if (modelOps.some((op) => op.id === 'text_to_video') && !hasMultiRef) {
         tabs.unshift({
           id: 'text',
           label: '文生视频',
@@ -516,7 +526,7 @@ export function MediaViewerComposer({
     const scopedVideoBuckets = Object.fromEntries(
       Object.entries(bucketsRef.current).filter(([k]) => k.startsWith(prefix))
     );
-    const adaptiveOp = deriveAdaptiveOperation(model, 'video', scopedVideoBuckets);
+    const adaptiveOp = deriveAdaptiveOperation(model, 'video', scopedVideoBuckets, videoModeId);
     if (adaptiveOp) {
       const matchOpt = VIDEO_MODE_OPTIONS.find((opt) => opt.id === adaptiveOp.id);
       if (matchOpt && matchOpt.label !== videoGenMode) {
@@ -802,7 +812,7 @@ export function MediaViewerComposer({
       const scoped = Object.fromEntries(
         Object.entries(nextBuckets).filter(([k]) => k.startsWith(scopedPrefix))
       );
-      const adaptiveOp = deriveAdaptiveOperation(model, effectiveMode, scoped);
+      const adaptiveOp = deriveAdaptiveOperation(model, effectiveMode, scoped, currentOperationId);
       const candidateOps = [...new Set([adaptiveOp, ...(operationsOf(model, effectiveMode) || [])].filter(Boolean))];
       const stillRejected = [];
       for (const { file, reason: firstReason } of rejected) {
@@ -879,14 +889,24 @@ export function MediaViewerComposer({
     closePopovers();
     setPickerOpen(false);
 
-    const isTextOnlyMode = (mode === 'image' && config.imageOpMode === '文生图') ||
-      (mode === 'video' && videoModeId === 'text_to_video');
-
     const scopedPrefix = makeBucketKey(mode, model?.id, '');
     const scopedBuckets = Object.fromEntries(
       Object.entries(bucketsRef.current).filter(([key]) => key.startsWith(scopedPrefix))
     );
-    const activeOp = activeOperation(model, mode, currentOperationId) || deriveAdaptiveOperation(model, mode, scopedBuckets);
+    let activeOp = activeOperation(model, mode, currentOperationId) || deriveAdaptiveOperation(model, mode, scopedBuckets);
+
+    // 参考页签空素材 = 文生视频（同上游接口按参数区分）：
+    // 停留在 multi_ref 且无素材时回退 text_to_video，而非按参考拦空请求。
+    if (mode === 'video' && currentOperationId === 'video_multi_ref') {
+      const hasAnyMaterial = Object.values(scopedBuckets).some((val) => Array.isArray(val) && val.length > 0);
+      if (!hasAnyMaterial) {
+        const textOp = (operationsOf(model, 'video') || []).find((op) => op.id === 'text_to_video');
+        if (textOp) activeOp = textOp;
+      }
+    }
+
+    const isTextOnlyMode = (mode === 'image' && config.imageOpMode === '文生图') ||
+      (mode === 'video' && activeOp?.id === 'text_to_video');
     const submitSlots = slotPlan(model, mode, activeOp?.id);
     const opInputs = activeOp?.inputs || [];
 
