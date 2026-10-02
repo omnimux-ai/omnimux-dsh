@@ -188,7 +188,13 @@ for (const kind of ['success', 'malformed', 'cancel'] as const) test(`QA actual 
     if (kind === 'cancel') setImmediate(() => controller.abort());
     const result = await pending;
     if (kind === 'success') assert(result.ok); else denied(result, kind === 'cancel' ? 'VALIDATION_ABORTED' : 'INVALID_SKILL');
-    await immediate(); assert.equal(ids.size, 1); for (const id of ids) assert(destroyed.has(id));
+    await immediate(); assert.equal(ids.size, 1);
+    // Worker teardown is scheduler-bound: the destroy callback can land later
+    // than one macrotask on slow runners — poll briefly instead of a single tick.
+    for (const id of ids) {
+      for (let spin = 0; spin < 50 && !destroyed.has(id); spin++) await immediate();
+      assert(destroyed.has(id), `worker ${id} did not exit within the polling window`);
+    }
     controller.abort(); await immediate();
   } finally { hook.disable(); }
 });

@@ -116,8 +116,11 @@ describe('website screenshots · file naming', () => {
   })
 
   it('never repeats a name for the same host and viewport', () => {
+    // rand is injectable: uniqueness across repeated calls is the contract,
+    // and asserting it through a deterministic tail keeps the test off the
+    // 1-in-~2000 collision the 4-hex default suffix can produce on CI.
     const names = new Set()
-    for (let i = 0; i < 50; i += 1) names.add(buildScreenshotName('example.com', 'desktop'))
+    for (let i = 0; i < 50; i += 1) names.add(buildScreenshotName('example.com', 'desktop', undefined, `${i}`))
     assert.equal(names.size, 50)
   })
 
