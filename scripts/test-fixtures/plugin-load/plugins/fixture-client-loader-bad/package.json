@@ -1,0 +1,1 @@
+{ "name": "fixture-client-loader-bad", "type": "module", "exports": { "./client": "./lib/client.js" } }

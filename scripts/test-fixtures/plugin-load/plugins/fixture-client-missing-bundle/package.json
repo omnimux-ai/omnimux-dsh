@@ -1,0 +1,1 @@
+{ "name": "fixture-client-missing-bundle", "type": "module", "exports": { "./client": "./lib/client.js" } }
