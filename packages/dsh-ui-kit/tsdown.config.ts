@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { basename, dirname, resolve } from "node:path";
+import { basename, dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "tsdown";
@@ -46,7 +46,9 @@ function cssModulesPlugin() {
     resolveId(source: string, importer?: string) {
       if (!source.endsWith(".module.css")) return null;
       const file = importer === undefined ? source : resolve(dirname(importer), source);
-      return `${CSS_PREFIX}${file}${CSS_SUFFIX}`;
+      // 产物的 #region 注释走包根相对路径：任意工作树构建产出与主检出逐字节一致。
+      const rel = relative(dirname(fileURLToPath(import.meta.url)), file).split(sep).join('/');
+      return `${CSS_PREFIX}${rel}${CSS_SUFFIX}`;
     },
     async load(id: string) {
       if (!id.startsWith(CSS_PREFIX)) return null;
