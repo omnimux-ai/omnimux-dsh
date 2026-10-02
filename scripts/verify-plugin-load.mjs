@@ -421,7 +421,7 @@ const FIBER_FAILED = 3
  * `services` is the union of declared inject names; each becomes a sibling-provided stub.
  * @returns {{ok: boolean, reason?: string, declared: string[], fiberState?: number}}
  */
-export async function checkPlugin({ module, services, config, label, timeoutMs = 8000, cordisPath, tolerantApply = false }) {
+export async function checkPlugin({ module, services, config, label, timeoutMs = 8000, cordisPath, tolerantApply = false, localeRegistry = null, localeSide = 'client' }) {
   const cordisModule = await import(pathToFileURL(cordisPath).href)
   const { Context } = cordisModule
   // Plugins legitimately read DSH_HOME during apply (forms opens a store there);
@@ -469,7 +469,7 @@ export async function checkPlugin({ module, services, config, label, timeoutMs =
     inject: [],
     apply(c) {
       for (const name of declared) {
-        c.provide(name, stubFor(name))
+        c.provide(name, stubFor(name, { localeRegistry, localeSide, label }))
       }
       // Common built-in-ish services that real hosts make available; stubs let apply() run.
       for (const extra of ['logger']) {
@@ -530,7 +530,7 @@ export async function checkPlugin({ module, services, config, label, timeoutMs =
  * validates against; `storageDomain` must resolve .open() to a domain whose
  * .table(name) is Map-like ({get, set, put, delete, entries}).
  */
-function stubFor(name) {
+function stubFor(name, opts = {}) {
   if (name === 'permissionPresets') {
     return { names: ['read-only', 'ask'], defaultPreset: 'read-only', optionOf: (n) => n, set: () => {} }
   }
@@ -561,8 +561,20 @@ function stubFor(name) {
     }
   }
   if (name === 'locale') {
+    const registry = opts?.localeRegistry
+    const side = opts?.localeSide || 'client'
+    const registrant = opts?.label || 'unknown'
     return {
-      register: () => () => {},
+      register: (ns, dict) => {
+        if (registry && typeof ns === 'string' && ns) {
+          let sideMap = registry.get(side)
+          if (!sideMap) { sideMap = new Map(); registry.set(side, sideMap) }
+          const entry = { package: registrant, locales: dict && typeof dict === 'object' ? Object.keys(dict) : [] }
+          if (!sideMap.has(ns)) sideMap.set(ns, [])
+          sideMap.get(ns).push(entry)
+        }
+        return () => {}
+      },
       bind: (ns) => () => ns,
       t: (key) => key,
       dicts: { get: () => new Map(), set: () => {}, has: () => false },
@@ -595,7 +607,7 @@ function stubFor(name) {
  * Run the check for one plugin package: host entry first, then client bundle.
  * Returns a list of failure strings (empty = pass).
  */
-export async function checkPackage(pkg, { verbose = false, skipMissingClient = false } = {}) {
+export async function checkPackage(pkg, { verbose = false, skipMissingClient = false, localeRegistry = null } = {}) {
   const failures = []
   const manifest = JSON.parse(readFileSync(join(pkg.dir, 'package.json'), 'utf8'))
   const config = patchConfig(pkg.dir, manifest)
@@ -616,7 +628,7 @@ export async function checkPackage(pkg, { verbose = false, skipMissingClient = f
         if (!pluginModule.apply && !pluginModule.inject) {
           failures.push(`${pkg.name}: host entry exposes no apply/inject (not a Cordis plugin)`)
         } else {
-          const result = await checkPlugin({ module: pluginModule, config, label: pkg.name, cordisPath })
+          const result = await checkPlugin({ module: pluginModule, config, label: pkg.name, cordisPath, localeRegistry, localeSide: 'host' })
           if (!result.ok) failures.push(`${pkg.name} (host): ${result.reason}`)
         }
       }
@@ -640,7 +652,7 @@ export async function checkPackage(pkg, { verbose = false, skipMissingClient = f
       } else {
         const pluginModule = exports_.apply ? exports_ : (exports_.default ?? exports_)
         if (pluginModule.apply || pluginModule.inject) {
-          const result = await checkPlugin({ module: pluginModule, config, label: pkg.name, cordisPath, tolerantApply: true })
+          const result = await checkPlugin({ module: pluginModule, config, label: pkg.name, cordisPath, tolerantApply: true, localeRegistry, localeSide: 'client' })
           if (!result.ok) failures.push(`${pkg.name} (client): ${result.reason}`)
           else if (result.warnings?.length) {
             for (const w of result.warnings) console.log(`    ⚠ ${pkg.name} (client) apply warning: ${w}`)
@@ -675,20 +687,43 @@ export async function main(argv = process.argv.slice(2)) {
     packages = packages.filter((p) => opts.only.includes(p.name))
   }
 
+  const localeRegistry = new Map()
   const results = []
   for (const pkg of packages) {
-    const failures = await checkPackage(pkg, { skipMissingClient: opts.skipMissingClient })
+    const failures = await checkPackage(pkg, { skipMissingClient: opts.skipMissingClient, localeRegistry })
     results.push({ name: pkg.name, failures })
     const status = failures.length ? `FAIL (${failures.length})` : 'ok'
     console.log(`${pkg.name.padEnd(26)} ${status}`)
     for (const f of failures) console.log(`    ✖ ${f}`)
   }
+  const duplicates = collectLocaleDuplicates(localeRegistry)
+  if (duplicates.length) {
+    for (const dup of duplicates) {
+      const pkgs = [...new Set(dup.entries.map((e) => e.package))]
+      const locales = [...new Set(dup.entries.flatMap((e) => e.locales))]
+      for (const r of results) {
+        if (pkgs.includes(r.name)) {
+          r.failures.push(`locale namespace "${dup.namespace}" 重复注册（${dup.side} 侧，由 ${pkgs.join('、')} 注册，重复 locale: ${locales.join(', ') || 'unknown'}）`)
+        }
+      }
+    }
+  }
   if (opts.json) {
-    writeFileSync(opts.json, `${JSON.stringify(results, null, 2)}\n`)
+    writeFileSync(opts.json, `${JSON.stringify({ results, duplicates }, null, 2)}\n`)
   }
   const failed = results.filter((r) => r.failures.length)
   console.log(`\n${results.length - failed.length}/${results.length} package(s) passed plugin load check`)
   return failed.length ? 1 : 0
+}
+
+export function collectLocaleDuplicates(registry) {
+  const out = []
+  for (const [side, sideMap] of registry) {
+    for (const [namespace, entries] of sideMap) {
+      if (entries.length > 1) out.push({ side, namespace, entries })
+    }
+  }
+  return out
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

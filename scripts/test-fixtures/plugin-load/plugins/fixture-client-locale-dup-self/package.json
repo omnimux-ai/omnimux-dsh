@@ -1,0 +1,1 @@
+{ "name": "fixture-client-locale-dup-self", "type": "module", "exports": { "./client": "./lib/client.js" } }
