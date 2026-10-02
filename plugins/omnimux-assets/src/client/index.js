@@ -4,11 +4,14 @@ import { createElement } from 'react'
 import { NS, en, zh } from './locales.js'
 import { mountSidebarEntry } from './sidebar-entry.js'
 import { AssetsStage } from './AssetsStage.jsx'
+import { AssetHubPanel } from '../asset-hub/AssetHubPanel.jsx'
+import { ASSET_HUB_TAB_ID } from '../../../omnimux/src/client/workbench/geometry.js'
 
 export const name = 'omnimux-assets'
 export const inject = ['slots', 'locale']
 
 export const ASSETS_TAB_ID = 'omnimux-assets:library'
+// 素材工作台：领域页归属本插件（hub 拆分，Issue 2933）
 
 function renderAssetsIcon(size = 16) {
   return createElement('svg', {
@@ -44,7 +47,7 @@ export function apply(ctx) {
 
   const registerAssetsTab = (sidebar) => {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}
-    return sidebar.registerTab({
+    const unregisterAssets = sidebar.registerTab({
       id: ASSETS_TAB_ID,
       title: () => {
         try {
@@ -59,6 +62,18 @@ export function apply(ctx) {
       single: true,
       component: (props) => createElement(AssetsStage, { ...props, t }),
     })
+    const unregisterAssetHub = sidebar.registerTab({
+      id: ASSET_HUB_TAB_ID,
+      title: () => t('assetHub.tabTitle') || '素材工作台',
+      order: 6,
+      hidden: false,
+      single: true,
+      component: (props) => createElement(AssetHubPanel, { ...props, t, sessions: ctx.get?.('sessions') }),
+    })
+    return () => {
+      unregisterAssets?.()
+      unregisterAssetHub?.()
+    }
   }
 
   const bindWorkbench = (patch) => {

@@ -7,13 +7,13 @@ import {
   isAssetHubActive,
   workbenchDefaultWidthPx,
   workbenchSplitMaxPanelPx,
-} from './geometry.js'
+} from '../../../omnimux/src/client/workbench/geometry.js'
 import {
   PRIMARY_TABS,
   SECONDARY_FILTER_WHITELIST,
   ASSET_HUB_I18N_SPEC,
   createAssetHubNavStore,
-} from './asset-hub-store.js'
+} from '../../../omnimux/src/client/workbench/asset-hub-store.js'
 import {
   normalizeAssetItem,
   normalizeInspirationItem,
@@ -26,13 +26,13 @@ import {
   resolveSkillCover,
   FILTER_PILL_ENUM_MAP,
   loadAssetHubData,
-} from './asset-hub-data.js'
-import { SHARED_SUB_CATEGORIES } from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
-import { createAttachmentStore } from '../attachments/store.ts'
-import { createComposerAddController } from '../composer-add/controller.js'
-import { installComposerAddCapture } from '../composer-add/install.js'
-import { promptForCard } from '../composer-add/library-stage-model.js'
-import { zh } from '../locales.js'
+} from '../../../omnimux/src/client/workbench/asset-hub-data.js'
+import { SHARED_SUB_CATEGORIES } from '../../../omnimux/src/client/shared/asset-hub-tabs/shared-tabs-catalog.js'
+import { createAttachmentStore } from '../../../omnimux/src/client/attachments/store.ts'
+import { createComposerAddController } from '../../../omnimux/src/client/composer-add/controller.js'
+import { installComposerAddCapture } from '../../../omnimux/src/client/composer-add/install.js'
+import { promptForCard } from '../../../omnimux/src/client/composer-add/library-stage-model.js'
+import { zh } from '../client/locales.js'
 
 describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测试', () => {
   it('T01: 三栏几何契约升级与中栏 380px 保宽锁定', () => {
@@ -709,7 +709,7 @@ describe('Asset Hub (三栏状态右侧素材工作台) 前端架构与规格测
     assert.equal(navStore.getSnapshot().secondaryFilters.products, '数码影音')
 
     // 10. asset-hub-data.js 兼容安全读取 featured-skills.json（彻底杜绝 new Function 动态执行）
-    const assetHubDataSrc = fs.readFileSync(new URL('./asset-hub-data.js', import.meta.url), 'utf8')
+    const assetHubDataSrc = fs.readFileSync(new URL('../../../omnimux/src/client/workbench/asset-hub-data.js', import.meta.url), 'utf8')
     assert.ok(!assetHubDataSrc.includes('new Function'), '严禁使用 new Function 违规动态执行')
     const skillsList = await loadAssetHubData('skills')
     assert.ok(Array.isArray(skillsList))

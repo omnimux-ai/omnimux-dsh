@@ -2,21 +2,21 @@ import React, { useState, useEffect, useSyncExternalStore, useCallback, useMemo,
 import { AssetHubHeader } from './AssetHubHeader.jsx'
 import { AssetHubToolbar } from './AssetHubToolbar.jsx'
 import { AssetHubGrid } from './AssetHubGrid.jsx'
-import { getGlobalAssetHubNavStore } from './asset-hub-store.js'
-import { loadAssetHubData, filterAssetHubItems, adaptCardToAttachmentPayload } from './asset-hub-data.js'
-import { getGlobalAttachmentStore } from '../attachments/store.ts'
-import { LIBRARY_STAGE_PROMPT_EVENT, promptForCard } from '../composer-add/library-stage-model.js'
+import { getGlobalAssetHubNavStore } from '../../../omnimux/src/client/workbench/asset-hub-store.js'
+import { loadAssetHubData, filterAssetHubItems, adaptCardToAttachmentPayload } from '../../../omnimux/src/client/workbench/asset-hub-data.js'
+import { getGlobalAttachmentStore } from '../../../omnimux/src/client/attachments/store.ts'
+import { LIBRARY_STAGE_PROMPT_EVENT, promptForCard } from '../../../omnimux/src/client/composer-add/library-stage-model.js'
 import {
   isHostRightSidebarFullscreen,
   enterHostRightSidebarFullscreen,
   exitHostRightSidebarFullscreen,
-} from './host-fullscreen.js'
-import { hostDocument } from './host-adapter.js'
+} from '../../../omnimux/src/client/workbench/host-fullscreen.js'
+import { hostDocument } from '../../../omnimux/src/client/workbench/host-adapter.js'
 import { installAssetHubStyles } from './styles/asset-hub-styles.js'
-import { ensureAssetCardStyles } from '../components/asset-picker/AssetPickerCard.jsx'
-import { ensureProductCardStyles } from '../components/product-picker/ProductPickerCard.jsx'
-import { ensureInspirationCardStyles } from '../components/inspiration-picker/InspirationPickerCard.jsx'
-import { ensureLibraryFlowStyles } from '../components/library-flow/UnifiedLibraryGrid.jsx'
+import { ensureAssetCardStyles } from '../../../omnimux/src/client/components/asset-picker/AssetPickerCard.jsx'
+import { ensureProductCardStyles } from '../../../omnimux/src/client/components/product-picker/ProductPickerCard.jsx'
+import { ensureInspirationCardStyles } from '../../../omnimux/src/client/components/inspiration-picker/InspirationPickerCard.jsx'
+import { ensureLibraryFlowStyles } from '../../../omnimux/src/client/components/library-flow/UnifiedLibraryGrid.jsx'
 
 function getAssetHubCardPrompt(item) {
   const title = String(item?.title || item?.name || '').trim()

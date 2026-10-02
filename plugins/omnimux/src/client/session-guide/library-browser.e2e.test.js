@@ -9,7 +9,7 @@ import { zh } from '../locales.js'
 
 const guideSource = readFileSync(new URL('./SessionGuide.jsx', import.meta.url), 'utf8')
 const styleSource = readFileSync(new URL('./styles.js', import.meta.url), 'utf8')
-const assetHubSource = readFileSync(new URL('../workbench/AssetHubPanel.jsx', import.meta.url), 'utf8')
+const assetHubSource = readFileSync(new URL('../../../../omnimux-assets/src/asset-hub/AssetHubPanel.jsx', import.meta.url), 'utf8')
 const geometrySource = readFileSync(new URL('../workbench/geometry.js', import.meta.url), 'utf8')
 
 function mountStage() {

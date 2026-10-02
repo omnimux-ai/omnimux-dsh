@@ -1,5 +1,5 @@
 import React from 'react'
-import { UniversalLibraryCard } from '../components/library-flow/UniversalLibraryCard.jsx'
+import { UniversalLibraryCard } from '../../../omnimux/src/client/components/library-flow/UniversalLibraryCard.jsx'
 
 /**
  * 极简素材卡片（AssetHubCard）代理

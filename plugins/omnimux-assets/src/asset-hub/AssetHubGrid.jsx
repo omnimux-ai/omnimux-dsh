@@ -1,6 +1,6 @@
 import React from 'react'
-import { ASSET_HUB_I18N_SPEC } from './asset-hub-store.js'
-import { UnifiedLibraryGrid } from '../components/library-flow/UnifiedLibraryGrid.jsx'
+import { ASSET_HUB_I18N_SPEC } from '../../../omnimux/src/client/workbench/asset-hub-store.js'
+import { UnifiedLibraryGrid } from '../../../omnimux/src/client/components/library-flow/UnifiedLibraryGrid.jsx'
 
 function RefreshIcon() {
   return (

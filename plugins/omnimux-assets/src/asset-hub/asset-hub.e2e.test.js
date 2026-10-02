@@ -11,21 +11,21 @@ import {
   ASSET_HUB_CHAT_PX,
   isAssetHubActive,
   workbenchDefaultWidthPx,
-} from './geometry.js'
+} from '../../../omnimux/src/client/workbench/geometry.js'
 import {
   createAssetHubNavStore,
   PRIMARY_TABS,
   SECONDARY_FILTER_WHITELIST,
-} from './asset-hub-store.js'
+} from '../../../omnimux/src/client/workbench/asset-hub-store.js'
 import {
   normalizeAssetItem,
   normalizeInspirationItem,
   filterAssetHubItems,
   adaptCardToAttachmentPayload,
-} from './asset-hub-data.js'
-import { createAttachmentStore } from '../attachments/store.ts'
-import { createComposerAddController } from '../composer-add/controller.js'
-import { zh } from '../locales.js'
+} from '../../../omnimux/src/client/workbench/asset-hub-data.js'
+import { createAttachmentStore } from '../../../omnimux/src/client/attachments/store.ts'
+import { createComposerAddController } from '../../../omnimux/src/client/composer-add/controller.js'
+import { zh } from '../client/locales.js'
 
 describe('Asset Hub E2E: 三栏右侧素材工作台端到端全链路', () => {
   it('E2E-01: 加号菜单唤起 Asset Hub 并联动 Tab 切换与分栏展开', () => {
