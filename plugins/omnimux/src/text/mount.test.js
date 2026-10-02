@@ -154,3 +154,59 @@ describe('mountTextComplete capability gate', () => {
     assert.equal(vendorCalls, 0)
   })
 })
+
+describe('mountTextComplete toolModel bypass', () => {
+  it('execute() skips the runtime-mode gate when omnimux.toolModel is configured', async () => {
+    const tools = []
+    const provided = {}
+    const seen = []
+    const ctx = {
+      tools: { register(t) { tools.push(t) } },
+      provide(name, api) { provided[name] = api },
+      get(name) {
+        if (name === 'llm') {
+          return {
+            async * stream(options) {
+              seen.push(options)
+              yield { type: 'text-delta', text: 'tool answer' }
+              yield { type: 'finish', reason: { kind: 'stop' } }
+            },
+          }
+        }
+        if (name === 'settings') {
+          return {
+            get(key) {
+              return key === 'omnimux'
+                ? { runtimeMode: 'agent', runtimeAgentId: '', runtimeAgentVerified: false, toolModel: 'cpa:gpt-6.1-sol' }
+                : undefined
+            },
+          }
+        }
+        return undefined
+      },
+    }
+    const hub = { text: parseTextConfig(undefined), gate: parseGateConfig(undefined) }
+    mountTextComplete(ctx, hub, {}, (error) => { throw error })
+
+    const result = await provided.textComplete.execute({ prompt: 'say hi' })
+    assert.equal(result.model, 'cpa:gpt-6.1-sol')
+    assert.equal(result.text, 'tool answer')
+    assert.equal(seen[0].provider, 'cpa')
+    assert.equal(seen[0].model, 'gpt-6.1-sol')
+  })
+
+  it('gate-disabled tool still intercepts before any model routing', async () => {
+    const provided = {}
+    const ctx = {
+      tools: { register() {} },
+      provide(name, api) { provided[name] = api },
+      get(name) {
+        if (name === 'settings') return { get: () => ({ runtimeMode: 'agent', toolModel: 'cpa:x' }) }
+        return undefined
+      },
+    }
+    const hub = { text: parseTextConfig(undefined), gate: parseGateConfig({ tools: { omnimux_text_complete: false } }) }
+    mountTextComplete(ctx, hub, {}, () => {})
+    assert.equal(provided.textComplete, undefined)
+  })
+})

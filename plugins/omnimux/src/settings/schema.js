@@ -19,6 +19,13 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   defaultVideoOperation: DEFAULT_OPERATION_AUTO,
   /** Route default declared in cordis.patch.yml (reasoning: max). */
   defaultTextReasoning: 'max',
+  /**
+   * One-shot tool completions (Twitter copilot, canvas text nodes, the
+   * omnimux_text_complete tool) ride the session LLM stack when set:
+   * 'provider:modelId' picked from the llm-pi-ai provider list — the exact
+   * models the session composer offers. Empty keeps the runtimeMode routing.
+   */
+  toolModel: '',
   allowAgentSwitchTab: true,
   allowAutoSurfaceFollow: true,
   /**
@@ -70,6 +77,7 @@ const FIELD_META = Object.freeze({
   runtimeMode: '运行方式（官方、本机助手、媒体生成提供商）',
   runtimeAgentId: '本机助手',
   runtimeAgentModel: '本机助手模型',
+  toolModel: '工具模型（会话同款通道执行文本补全）',
   runtimeAgentReasoning: '本机助手推理等级',
   runtimeAgentVerified: '本机助手是否已测试通过',
   runtimeMediaProvider: '媒体生成提供商',
@@ -106,6 +114,7 @@ const RUNTIME_DICT = Object.freeze({
   runtimeMode: stringNode('runtimeMode'),
   runtimeAgentId: stringNode('runtimeAgentId'),
   runtimeAgentModel: stringNode('runtimeAgentModel'),
+  toolModel: stringNode('toolModel'),
   runtimeAgentReasoning: stringNode('runtimeAgentReasoning'),
   runtimeAgentVerified: boolNode('runtimeAgentVerified'),
   runtimeMediaProvider: stringNode('runtimeMediaProvider'),

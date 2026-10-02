@@ -839,3 +839,61 @@ describe('omnimux_text_complete tool', () => {
     )
   })
 })
+
+describe('textComplete toolModel bypass', () => {
+  it('routes a configured tool model straight to ctx.llm.stream with its provider', async () => {
+    const seen = []
+    const result = await executeOmnimuxText({
+      prompt: 'write a reply',
+      system: 'be brief',
+      env: {},
+      settings: {
+        get(key) {
+          if (key === 'omnimux') return { runtimeMode: 'agent', toolModel: 'cpa:gpt-6.1-sol' }
+          return undefined
+        },
+      },
+      llm: collectStream(seen),
+    })
+    assert.deepEqual(result, { mode: 'live', model: 'cpa:gpt-6.1-sol', text: 'a cat' })
+    assert.equal(seen.length, 1)
+    assert.equal(seen[0].provider, 'cpa')
+    assert.equal(seen[0].model, 'gpt-6.1-sol')
+    assert.equal(seen[0].system, 'be brief')
+  })
+
+  it('keeps the legacy route when toolModel is unset', async () => {
+    const seen = []
+    const result = await executeOmnimuxText({
+      prompt: 'hello',
+      model: 'gemini-3.8-flash',
+      settings: { get(key) { return key === 'omnimux' ? { toolModel: '' } : undefined } },
+      llm: collectStream(seen),
+    })
+    assert.equal(result.model, 'gemini-3.8-flash')
+    assert.equal(seen[0].provider, 'omnimux')
+  })
+
+  it('a malformed toolModel (not a provider:model pair) fails loudly instead of falling back', async () => {
+    await assert.rejects(
+      () => executeOmnimuxText({
+        prompt: 'hello',
+        settings: { get(key) { return key === 'omnimux' ? { toolModel: 'not-a-pair' } : undefined } },
+        llm: collectStream([]),
+      }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+  })
+
+  it('a stale toolModel fails loudly instead of silently falling back', async () => {
+    await assert.rejects(
+      () => executeOmnimuxText({
+        prompt: 'hi',
+        env: {},
+        settings: { get(key) { return key === 'omnimux' ? { toolModel: 'cpa:' } : undefined } },
+        llm: collectStream([]),
+      }),
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+    )
+  })
+})

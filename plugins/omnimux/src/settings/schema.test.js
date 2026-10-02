@@ -58,3 +58,16 @@ describe('SettingsConfig', () => {
     assert.equal('key' in parsed.byokProviders[1], false)
   })
 })
+
+describe('toolModel setting', () => {
+  it('defaults to unset and round-trips a provider:model pair', () => {
+    assert.equal(SETTINGS_DEFAULTS.toolModel, '')
+    assert.ok(SettingsConfig.dict.toolModel)
+    const parsed = parseSettingsSection({ toolModel: '  cpa:gpt-6.1-sol  ' })
+    assert.equal(parsed.toolModel, 'cpa:gpt-6.1-sol')
+    const blank = parseSettingsSection({ toolModel: 123 })
+    assert.equal(blank.toolModel, '')
+    const json = SettingsConfig.toJSON()
+    assert.ok(json.properties.toolModel)
+  })
+})
