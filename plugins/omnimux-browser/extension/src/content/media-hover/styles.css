@@ -36,20 +36,22 @@
 }
 
 /* --- Capsule: deep-black frosted pill -------------------------------------
-   Two stages share one pill. Stage one is a 32px circle carrying the brand
-   mark; stage two is the 92px row of three shortcuts. The width is the only
-   thing that animates between them — both stages sit in the same 32px band, so
+   Two stages share one pill. Stage one is a 24px circle carrying the brand
+   mark; stage two is the 128px row of three shortcuts — the same collapsed and
+   expanded geometry the YouMind image toolbar uses. The width is the only
+   thing that animates between them — both stages sit in the same 24px band, so
    the row never reflows and the pill never jumps while it opens.
 
    The pill sits on top of arbitrary artwork, so its edge cannot rely on the
-   frosted fill: a translucent rim plus a 4px outer halo and a deep drop shadow
-   keep it legible over a white studio shot and a black night frame alike.
-   A video is the harder case — the artwork moves and swings from blown-out
-   highlight to near-black within a second — which is what the extra halo width
-   is for: the ring is the one edge that never depends on what is underneath.
+   frosted fill: a translucent rim plus a 2.5px outer halo and a deep drop
+   shadow keep it legible over a white studio shot and a black night frame
+   alike. A video is the harder case — the artwork moves and swings from
+   blown-out highlight to near-black within a second — which is what the extra
+   halo width is for: the ring is the one edge that never depends on what is
+   underneath.
 
-   The halo is also the geometry: it adds 4px on every side, so the collapsed
-   circle's total span across the page is 32 + 4 + 4 = exactly 40px. */
+   The halo is also the geometry: it adds 2.5px on every side, so the collapsed
+   circle's total span across the page is 24 + 2.5 + 2.5 = exactly 29px. */
 .omnimux-capsule-bar {
   position: fixed;
   display: flex;
@@ -57,9 +59,8 @@
   justify-content: center;
   box-sizing: border-box;
   height: 24px;
-  padding: 0 4px;
   border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 12px;
+  border-radius: 999px;
   background: rgba(30, 32, 38, 0.95);
   box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.22), 0 2px 8px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
@@ -76,8 +77,8 @@
   transform: translateY(6px) scale(0.96);
   transition: opacity 140ms cubic-bezier(0.16, 1, 0.3, 1),
     transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
-    width 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    height 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    width 250ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 250ms cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 2147483646;
 }
 
@@ -85,15 +86,13 @@
 .omnimux-capsule-bar.is-collapsed {
   width: 24px;
   height: 24px;
-  border-radius: 12px;
 }
 
-/* Stage two: the three shortcuts, 64px wide.
-   3 x 16px buttons + 2 x 4px gaps + 2 x 4px padding = 64px. */
+/* Stage two: the three shortcuts, 128px wide — the YouMind toolbar width.
+   3 x 24px buttons + 2 x 4px gaps + 2 x 24px padding = 128px. */
 .omnimux-capsule-bar.is-expanded {
-  width: 64px;
+  width: 128px;
   height: 24px;
-  border-radius: 12px;
   opacity: 1 !important;
   visibility: visible !important;
   transform: translateY(0) scale(1);
@@ -125,8 +124,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   margin: 0;
   border: 0;
@@ -156,8 +155,8 @@
 
 .omnimux-capsule-brand svg {
   display: block;
-  width: 13px;
-  height: 13px;
+  width: 18px;
+  height: 18px;
   pointer-events: none;
 }
 
@@ -209,15 +208,14 @@
    See `.omnimux-capsule-bar.is-collapsed .omnimux-capsule-icon` below. */
 
 /* --- Icon buttons --------------------------------------------------------- */
-/* A 20px circular hit box (border-radius: 50%) inside the 32px band.
-   The 6px margin on every side eliminates all corner clipping against the
-   capsule rounded cap. */
+/* A 24px circular hit box (border-radius: 50%) that fills the 24px band
+   edge-to-edge — the same `sm` icon button the reference toolbar uses. */
 .omnimux-capsule-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   margin: 0;
   border: 0;
@@ -259,8 +257,8 @@
 
 .omnimux-capsule-icon svg {
   display: block;
-  width: 11px;
-  height: 11px;
+  width: 14px;
+  height: 14px;
   pointer-events: none;
 }
 

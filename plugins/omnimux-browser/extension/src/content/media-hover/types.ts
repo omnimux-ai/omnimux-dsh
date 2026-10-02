@@ -97,7 +97,7 @@ export interface CapsuleAnchorPolicy {
 export type MediaActionKind = 'inspiration' | 'copy' | 'attach'
 
 /** Lifecycle of one hover session. */
-export type OverlayPhase = 'idle' | 'pending' | 'shown' | 'interactive' | 'hidden'
+export type OverlayPhase = 'idle' | 'shown' | 'interactive' | 'hidden'
 
 /** Outcome discriminator returned by every action handler. */
 export type ActionStatus = 'saved' | 'copied' | 'attached' | 'failed'

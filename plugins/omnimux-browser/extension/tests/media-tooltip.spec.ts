@@ -253,11 +253,12 @@ describe('overlay structure', () => {
   })
 
   it('exposes the two-stage capsule geometry from the single spec source', () => {
-    expect(CAPSULE_SPEC.borderRadius).toBe(12)
+    expect(CAPSULE_SPEC.borderRadius).toBe(999)
     expect(CAPSULE_SPEC.height).toBe(24)
-    expect(CAPSULE_SPEC.inset).toBe(8)
+    expect(CAPSULE_SPEC.inset).toBe(14)
     expect(CAPSULE_SPEC.collapsedWidth).toBe(24)
-    expect(CAPSULE_SPEC.width).toBe(64)
+    // YouMind parity: toolbar = 3 x 24px buttons + 2 x 4px gaps + 2 x 24px padding.
+    expect(CAPSULE_SPEC.width).toBe(128)
     expect(CAPSULE_SPEC.collapsedWidth).toBe(CAPSULE_SPEC.collapsedHeight)
     expect(CAPSULE_SPEC.collapsedRadius).toBe(CAPSULE_SPEC.collapsedWidth / 2)
     expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.height)
@@ -265,8 +266,8 @@ describe('overlay structure', () => {
     expect(CAPSULE_SPEC.width).toBe(
       2 * CAPSULE_SPEC.paddingX + 3 * CAPSULE_SPEC.iconSize + 2 * CAPSULE_SPEC.iconGap,
     )
-    expect(CAPSULE_SPEC.iconSize).toBe(16)
-    expect((CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize) / 2).toBe(4)
+    expect(CAPSULE_SPEC.iconSize).toBe(24)
+    expect(CAPSULE_SPEC.iconSize).toBe(CAPSULE_SPEC.height)
     expect(CAPSULE_SPEC.iconGlyphSize).toBeLessThan(CAPSULE_SPEC.iconSize)
     expect(TOOLTIP_SPEC.background).toBe('#FFFFFF')
     expect(TOOLTIP_SPEC.offsetY).toBe(8)
