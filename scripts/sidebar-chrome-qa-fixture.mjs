@@ -322,19 +322,16 @@ export function interpretRightbarSeatNegative(m) {
 }
 
 /**
- * 正向裁决：生产实现必须让控件在标题行内与相邻控件留出标准间距、零重叠。
+ * 正向裁决：生产实现必须保证原生按钮不被重叠、不被写死定位、保持可见且只出现一次。
+ * #1761 后模块不再接管落点（SidebarRight 自己负责），所以不再校验「搬进顶角槽位」。
  * @param {Record<string, any>} m
  * @returns {{ name:string, pass:boolean, detail?:unknown }[]}
  */
 export function interpretRightbarSeatPositive(m) {
   return [
-    { name: 'positive:seated-in-header-corner', pass: m.parentIsCornerSlot === true, detail: m.parentIsCornerSlot },
     { name: 'positive:not-fixed-positioned', pass: m.position !== 'fixed' && !/position:\s*fixed/.test(m.inlineStyle), detail: { position: m.position, inline: m.inlineStyle } },
     { name: 'positive:no-hardcoded-right-offset', pass: !/right:\s*8px/.test(m.inlineStyle), detail: m.inlineStyle },
-    { name: 'positive:standard-gap', pass: m.gap === EXPECTED_SEAT_GAP, detail: m.gap },
     { name: 'positive:no-overlap', pass: m.overlapArea === 0, detail: m.overlapArea },
-    { name: 'positive:inside-window', pass: m.buttonRight <= m.viewportWidth - 8, detail: { buttonRight: m.buttonRight, viewportWidth: m.viewportWidth } },
-    { name: 'positive:icon-size-stable', pass: m.buttonWidth === EXPECTED_SEAT_SIZE && m.buttonHeight === EXPECTED_SEAT_SIZE, detail: { w: m.buttonWidth, h: m.buttonHeight } },
     { name: 'positive:single-control', pass: m.controlCount === 1, detail: m.controlCount },
   ]
 }

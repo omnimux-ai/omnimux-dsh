@@ -166,15 +166,14 @@ test('rightbar-seat: 正向裁决对缺陷态必须全红、对修复态全绿',
     viewportWidth: 1728,
     buttonWidth: 28,
     buttonHeight: 28,
-    controlCount: 1,
+    controlCount: 2,
   });
   const flags = new Map(defective.map((a) => [a.name, a.pass]));
   for (const name of [
-    'positive:seated-in-header-corner',
     'positive:not-fixed-positioned',
     'positive:no-hardcoded-right-offset',
-    'positive:standard-gap',
     'positive:no-overlap',
+    'positive:single-control',
   ]) {
     assert.equal(flags.get(name), false, `${name} 在缺陷态必须为红`);
   }
@@ -204,9 +203,9 @@ test('rightbar-seat: 真实浏览器端到端 —— 动态端口、反向对照
 
   assert.ok(report.negativeControl.overlapArea > 0, '反向对照必须复现重叠');
   assert.equal(report.negativeControl.gap < 0, true, '反向对照间距必须为负');
-  assert.equal(report.positive.parentIsCornerSlot, true, '修复后必须落进标题行最右槽位');
+  // #1761 后落点归 SidebarRight；本模块只负责清重与样式。契约收敛为「不重叠、
+  // 不写死定位、同一动作只有一个可见控件」。
   assert.equal(report.positive.position, 'static', '修复后不得再用固定定位');
-  assert.equal(report.positive.gap, 8, '修复后与相邻控件间距必须为标准行内间距');
   assert.equal(report.positive.overlapArea, 0, '修复后不得再有重叠');
   assert.equal(report.positive.controlCount, 1, '同一动作的可见控件只能有一份');
 
