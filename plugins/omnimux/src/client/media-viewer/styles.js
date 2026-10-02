@@ -14,7 +14,9 @@ export const MEDIA_VIEWER_CSS = `
 .omx-mv-generation-task__label { padding: 12px; font-size: 13px; color: var(--dsw-alias-label-primary); }
 .omx-mv-generation-task > .omx-generating-box { height: 240px; position: relative; }
 .omx-mv-generation-task > img, .omx-mv-generation-task > video { display: block; width: 100%; max-height: 480px; object-fit: contain; }
-.omx-generating-box[data-generation-phase="pending"] .omx-shimmer-overlay { display: none; }
+
+/* GenWaveCard 点阵动效卡撑满 .omx-generating-box 容器 */
+.omx-generating-box .omx-genwave-fill { width: 100%; max-width: none; height: 100%; }
 
 /* ========================================================
    1. 助手消息尾部图片预览卡片 (Message Tail Preview Card)
@@ -730,13 +732,8 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 /* ========================================================
-   7. 生成中点阵与流体微光动效 (OrganicShimmer)
+   7. 生成中任务卡 (GeneratingStateCard → GenWaveCard 点阵动效)
    ======================================================== */
-@keyframes omx-shimmer-sweep {
-  0% { transform: translate3d(-69.697%, -69.697%, 0); }
-  100% { transform: translate3d(0, 0, 0); }
-}
-
 .omx-generating-box {
   width: 100%;
   height: 100%;
@@ -744,43 +741,6 @@ export const MEDIA_VIEWER_CSS = `
   background: var(--dsw-alias-bg-layer-2);
   position: relative;
   overflow: hidden;
-}
-
-.omx-dot-matrix {
-  position: absolute;
-  inset: 0;
-  opacity: 0.85;
-  z-index: 1;
-}
-
-.omx-shimmer-overlay {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  overflow: hidden;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.omx-shimmer-canvas {
-  position: absolute;
-  inset: -20px;
-}
-
-.omx-shimmer-field {
-  position: absolute;
-  inset: 0;
-}
-
-.omx-shimmer-distortion {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 330%;
-  height: 330%;
-  background-size: 100% 100%;
-  transform: translate3d(-69.697%, -69.697%, 0);
-  animation: omx-shimmer-sweep 4000ms linear infinite alternate;
 }
 
 /* ========================================================

@@ -1,0 +1,72 @@
+/* GenWaveCard · 1:1 移植自 chatgpt-gen-loading-card.html
+   色值全部来自根元素注入的 --gen-wave-* CSS 变量（见 GenWaveCard.tsx，
+   常量真源在 genWavePalette.ts，固定深色既定视觉）。 */
+
+.card {
+  position: relative;
+  width: 413px; /* 实测: x10.5 起、内容右缘 ~x413 */
+  max-width: 100%;
+  background: var(--gen-wave-card-bg);
+  border-radius: 8px;
+  padding: 10px 10px 23px;
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 顶部行：工具图标 + 状态文案 ---------- */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 11px; /* 实测: 图标右缘 ~34.5 → 文字 47 */
+  height: 14px;
+}
+
+.icon {
+  width: 13.5px;
+  height: 13.5px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  border: 1.2px solid var(--gen-wave-icon); /* 实测描边 ~1.25px */
+  display: grid;
+  place-items: center;
+  color: var(--gen-wave-icon);
+}
+
+.icon svg {
+  display: block;
+}
+
+.status {
+  color: var(--gen-wave-status);
+  font-size: 16px; /* 字形 cap 高 23px@2x → ~16px */
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ---------- 点阵画布 ---------- */
+.field {
+  display: block;
+  width: 100%;
+  margin-top: 26px; /* 实测: 顶行底 ~24 → 首行点心 53 */
+}
+
+/* ---------- 右下角进度胶囊 ----------
+   视觉由点阵 canvas 同层绘制（DOM 元素保留作 ARIA/状态载体，
+   headless Chrome 下 absolute+大圆角浮层会屏蔽 canvas 合成） */
+.badge {
+  position: absolute;
+  right: 19px;
+  bottom: 23px;
+  width: 58px;
+  height: 36px;
+  opacity: 0; /* 不可见但保留语义与 API 目标 */
+  user-select: none;
+  pointer-events: none;
+}
