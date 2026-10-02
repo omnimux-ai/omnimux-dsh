@@ -120,3 +120,51 @@ describe('registerTextCompleteRoutes HTTP gateway', () => {
     assert.equal(json.ok, false)
   })
 })
+
+describe('toolModel fail-loud at the HTTP route', () => {
+  it('does not fall back to completeTextViaChat when toolModel is configured and execute throws', async () => {
+    const server = createMockWebServer()
+    const textComplete = {
+      execute: async () => {
+        const error = new Error('工具模型不可用（cpa:x），请在设置中重新选择')
+        error.code = 'omnimux-unconfigured'
+        throw error
+      },
+    }
+    // Even with a working hub credential present, a configured toolModel means
+    // the request may only run on that model — no silent fallback.
+    registerTextCompleteRoutes(server, {
+      textComplete,
+      settings: { get: (key) => key === 'omnimux' ? { toolModel: 'cpa:x' } : undefined },
+      credentials: { async resolve() { return { value: 'sk-real' } } },
+      env: { OMNIMUX_API_KEY: 'sk-real' },
+    })
+    const handler = server.routes.get('exact:/omnimux/text/complete')
+    const payload = JSON.stringify({ prompt: 'hi' })
+    const req = Object.assign(createStream([payload]), { method: 'POST', headers: { 'content-type': 'application/json' } })
+    const res = createMockRes()
+    await handler(req, res)
+    assert.equal(res.statusCode, 500)
+    const json = JSON.parse(res.body)
+    assert.equal(json.ok, false)
+    assert.match(json.error, /cpa:x/)
+  })
+
+  it('still falls back when toolModel is not configured', async () => {
+    const server = createMockWebServer()
+    const textComplete = { execute: async () => { throw new Error('llm down') } }
+    registerTextCompleteRoutes(server, {
+      textComplete,
+      settings: { get: () => undefined },
+      env: { OMNIMUX_API_KEY: '' },
+    })
+    const handler = server.routes.get('exact:/omnimux/text/complete')
+    const payload = JSON.stringify({ prompt: 'hi' })
+    const req = Object.assign(createStream([payload]), { method: 'POST', headers: { 'content-type': 'application/json' } })
+    const res = createMockRes()
+    await handler(req, res)
+    // Fallback attempted and failed on missing key → error, not silent 200.
+    assert.notEqual(res.statusCode, 200)
+    assert.equal(JSON.parse(res.body).ok, false)
+  })
+})
