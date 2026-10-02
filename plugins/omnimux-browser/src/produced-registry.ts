@@ -20,15 +20,19 @@
  *   2. `<path>x</path>` envelopes inside the result's text blocks register `x`
  *      — the degraded carrier `formatDisplayOutput` emits for nested calls that
  *      never get `meta`.
- *   3. When the result pairs (via `message.content[].toolCallId`, not the
- *      event's own fields) to a same-session `tool/call` whose name sits in
- *      {@link SUBMIT_TOOL_NAMES}, the first JSON-parseable text block's `dest`
- *      registers as the submission's landing file.
+ *   3. When the result pairs (via {@link resultCallId} — `data.callId` →
+ *      `message.toolCallId` → `message.source.callId`, or the block-level
+ *      `toolCallId` of a tool-result content block) to a same-session
+ *      `tool/call` whose name sits in {@link SUBMIT_TOOL_NAMES}, the first
+ *      JSON-parseable text block's `dest` registers as the submission's
+ *      landing file.
  *
- * A result carrying `isError` (block flag or the event's `error` identity)
- * registers nothing. Non-absolute paths register nothing. `lookup` normalizes
- * the queried path exactly like registration normalizes candidates, so
- * `..` segments and separator quirks cannot widen the grant.
+ * A result carrying `isError` (`data.isError` or `message.isError` — the same
+ * gate the panel's `producedMediaFromToolResult` applies — plus the
+ * block-level flag and the event's `error` identity) registers nothing.
+ * Non-absolute paths register nothing. `lookup` normalizes the queried path
+ * exactly like registration normalizes candidates, so `..` segments and
+ * separator quirks cannot widen the grant.
  *
  * The registry is process-local on purpose: after a bridge restart it rebuilds
  * from the history scan on the panel's first `session.history`, which is the
@@ -37,8 +41,8 @@
  * @module
  */
 
-import { readFile, stat } from 'node:fs/promises'
-import type { Stats } from 'node:fs'
+import { open, readFile } from 'node:fs/promises'
+import { constants, type Stats } from 'node:fs'
 import path from 'node:path'
 import type { ProducedMediaOutcome } from './protocol.ts'
 
@@ -96,7 +100,14 @@ function isAbsolutePath(value: string): boolean {
   return /^[A-Za-z]:[\\/]/.test(value)
 }
 
-/** Canonical form both registration and lookup agree on. */
+/**
+ * Canonical form both registration and lookup agree on. Deliberately stronger
+ * than the panel's `normalizePath` (which only unifies separators and strips
+ * trailing slashes): the allowlist is the security gate, so it additionally
+ * resolves `..` segments and roots everything absolute. Registration is the
+ * authority — lookup re-normalizes through this same function, never through
+ * the panel's lighter variant.
+ */
 function normalizeProducedPath(value: string): string {
   return path.resolve(path.normalize(value))
 }
@@ -148,6 +159,23 @@ function textBlocks(content: unknown): string[] {
     }
   }
   return texts
+}
+
+/**
+ * The callId a tool/result event cites — the same three levels the panel's
+ * `toolResultCallId` reads: `data.callId` → `message.toolCallId` →
+ * `message.source.callId`. Shared by `observeEvent` and `observeHistory`
+ * (which folds every event through `observeEvent`), so the grant can never
+ * pair a result to a call the panel would not have paired.
+ */
+function resultCallId(data: Record<string, unknown>, message: Record<string, unknown>): string | undefined {
+  if (typeof data.callId === 'string' && data.callId.length > 0) return data.callId
+  if (typeof message.toolCallId === 'string' && message.toolCallId.length > 0) return message.toolCallId
+  const source = isRecord(message.source) ? message.source : undefined
+  if (source !== undefined && typeof source.callId === 'string' && source.callId.length > 0) {
+    return source.callId
+  }
+  return undefined
 }
 
 /** The `dest` of the first JSON-parseable text block, when it is a string. */
@@ -225,6 +253,9 @@ export function createProducedRegistry(): ProducedRegistry {
     if (event.type !== 'tool/result') return
     const message = isRecord(data.message) ? data.message : {}
     const content = Array.isArray(message.content) ? message.content : []
+    // The panel's isError gate: a result flagged at either level renders no
+    // card, so it must register no path.
+    if (data.isError === true || message.isError === true) return
     for (const block of content) {
       // A failed call produced nothing viewable; registering its `dest` or
       // envelope would later let the panel read bytes for an output that does
@@ -246,13 +277,26 @@ export function createProducedRegistry(): ProducedRegistry {
       for (const candidate of envelopePaths(text)) registerPath(session, candidate)
     }
 
+    // Submit-dest pairing cites the callId at whichever level the frame
+    // carries it: the event-level resultCallId (panel parity) plus the
+    // block-level toolCallId each tool-result block may still declare.
+    const pairedCallIds = new Set<string>()
+    const eventCallId = resultCallId(data, message)
+    if (eventCallId !== undefined) pairedCallIds.add(eventCallId)
     for (const block of content) {
-      if (!isRecord(block)) continue
-      const callId = block.toolCallId
-      if (typeof callId !== 'string') continue
+      if (!isRecord(block) || typeof block.toolCallId !== 'string' || block.toolCallId.length === 0) continue
+      pairedCallIds.add(block.toolCallId)
+    }
+    for (const callId of pairedCallIds) {
       const toolName = session.toolNames.get(callId)
       if (toolName === undefined || !SUBMIT_TOOL_NAMES.has(toolName)) continue
-      const dest = submittedDest(textBlocks(block.content))
+      // The dest text may sit directly in message.content or inside the
+      // tool-result block that cites the call; both shapes register.
+      const dest = submittedDest(textBlocks(content))
+        ?? content
+          .filter((block): block is Record<string, unknown> => isRecord(block))
+          .map(block => submittedDest(textBlocks(block.content)))
+          .find((value): value is string => value !== undefined)
       if (dest !== undefined) registerPath(session, dest)
     }
   }
@@ -298,12 +342,26 @@ export const NULL_PRODUCED_REGISTRY: ProducedRegistry = {
   drop(): void {},
 }
 
+/** Injectable fs seams for tests; the handle stays open for the whole read. */
+export interface ReadProducedSeams {
+  open?: typeof open
+  readFile?: typeof readFile
+}
+
 /**
  * Read one produced file's bytes.
  *
  * The registry decides which paths are servable; this seam then enforces the
  * physical contract — a real regular file, within the byte ceiling, and of a
  * media type the panel can meaningfully render.
+ *
+ * The path is opened with `O_NOFOLLOW` so a registered path swapped for a
+ * symlink (to `/etc/hosts`, say) fails at `open` with `ELOOP` instead of
+ * dereferencing, and `fstat`/`readFile` run on the SAME descriptor — the file
+ * that was judged is the file that was read, closing the stat-then-read
+ * TOCTOU window. The byte ceiling is checked twice: once on `fstat.size`
+ * before reading and once on the actual `data.byteLength` after, so a file
+ * that grows between the two still settles as `too-large`.
  *
  * @param produced - the shared allowlist.
  * @param request - validated RPC payload.
@@ -313,34 +371,41 @@ export const NULL_PRODUCED_REGISTRY: ProducedRegistry = {
 export async function readProducedMedia(
   produced: ProducedRegistry,
   request: { sessionId: string; path: string },
-  seams: { stat?: typeof stat; readFile?: typeof readFile } = {},
+  seams: ReadProducedSeams = {},
 ): Promise<ProducedMediaOutcome> {
   const filePath = produced.lookup(request.sessionId, request.path)
   if (filePath === undefined) {
     return { code: 'not-produced', message: 'the session did not produce this path' }
   }
-  const statImpl = seams.stat ?? stat
+  const openImpl = seams.open ?? open
   const readFileImpl = seams.readFile ?? readFile
-  let info: Stats
-  try {
-    info = await statImpl(filePath)
-  } catch {
-    // A registered path that no longer exists is answered as unproduced: the
-    // panel shows its retryable failure state instead of a transport error.
-    return { code: 'not-produced', message: 'the produced file is no longer present' }
-  }
-  if (!info.isFile()) {
-    return { code: 'not-produced', message: 'the produced path is not a regular file' }
-  }
-  if (info.size > PRODUCED_MEDIA_MAX_BYTES) {
-    return { code: 'too-large', message: `the produced file exceeds ${String(PRODUCED_MEDIA_MAX_BYTES)} bytes`, limit: PRODUCED_MEDIA_MAX_BYTES }
-  }
   const mediaType = producedMediaType(filePath)
   if (mediaType === undefined) {
     return { code: 'unsupported', message: 'the produced file type is not servable' }
   }
+  let handle: Awaited<ReturnType<typeof open>> | undefined
   try {
-    const data = await readFileImpl(filePath)
+    handle = await openImpl(filePath, constants.O_RDONLY | constants.O_NOFOLLOW)
+  } catch {
+    // ELOOP (the registered path now resolves to a symlink), ENOENT, EACCES —
+    // whatever denies the open means there is nothing servable: the panel
+    // shows its retryable failure state instead of a transport error.
+    return { code: 'not-produced', message: 'the produced file is no longer present' }
+  }
+  try {
+    const info: Stats = await handle.stat()
+    if (!info.isFile()) {
+      return { code: 'not-produced', message: 'the produced path is not a regular file' }
+    }
+    if (info.size > PRODUCED_MEDIA_MAX_BYTES) {
+      return { code: 'too-large', message: `the produced file exceeds ${String(PRODUCED_MEDIA_MAX_BYTES)} bytes`, limit: PRODUCED_MEDIA_MAX_BYTES }
+    }
+    const data = await readFileImpl(handle)
+    // Re-check after the read: fstat judged the size the file claimed at open,
+    // the bytes actually returned can be larger when the file grew meanwhile.
+    if (data.byteLength > PRODUCED_MEDIA_MAX_BYTES) {
+      return { code: 'too-large', message: `the produced file exceeds ${String(PRODUCED_MEDIA_MAX_BYTES)} bytes`, limit: PRODUCED_MEDIA_MAX_BYTES }
+    }
     return {
       code: 'ok',
       mediaType,
@@ -352,6 +417,8 @@ export async function readProducedMedia(
       code: 'internal',
       message: error instanceof Error ? error.message : String(error),
     }
+  } finally {
+    await handle.close().catch(() => {})
   }
 }
 

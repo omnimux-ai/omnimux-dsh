@@ -511,4 +511,52 @@ describe('conversation media gallery', () => {
     // Nothing is staged: a file-only message shows no gallery at all.
     expect(container.querySelector('.gallery')).toBeNull()
   })
+
+  it('empty-stage stepping never poisons the selection with NaN', async () => {
+    // align="end" chips call setSelected(position)+setOpen(true) even for a
+    // file-kind item whose stage is empty; a stray ArrowRight against an open
+    // lightbox state used to compute `% 0` → NaN, then `stageItems[NaN]` read
+    // as undefined and the component crashed on render.
+    const file: ProducedMediaRef = {
+      source: 'path', path: '/tmp/spec.pdf', mediaType: 'application/pdf', kind: 'pdf', bytes: 2048, name: 'spec.pdf',
+    }
+    const { api } = resolvesAll([file])
+    await render([file], api, 'end')
+
+    const chip = container.querySelector('.media-chip')
+    expect(chip).not.toBeNull()
+    await click(chip)
+    // 空 stage 永远开不出灯箱（对话框门在 active !== null 上）。
+    expect(dialog()).toBeNull()
+    // step() 空 stage 早退：按键不再写入 NaN。
+    await press('ArrowRight')
+    await press('ArrowLeft')
+    expect(dialog()).toBeNull()
+
+    // 同一行换上有舞台的图像：选中位必须是干净的 0，不残留 NaN。
+    const images = [imageAttachment(1), imageAttachment(2)]
+    await render(images, resolvesAll(images).api)
+    expect(count()).toBe('1 / 2')
+    expect(stageSrc()).toBe(srcFor(images[0]!))
+  })
+
+  it('a lightbox left open releases when the stage empties and stays closed', async () => {
+    const image = imageAttachment(1)
+    const { api } = resolvesAll([image])
+    await render([image], api)
+    await click(stage())
+    expect(dialog()).not.toBeNull()
+
+    // 极端重渲染：同一条消息换成只有文件卡，舞台为空。
+    const file: ProducedMediaRef = {
+      source: 'path', path: '/tmp/spec.pdf', mediaType: 'application/pdf', kind: 'pdf', bytes: 2048, name: 'spec.pdf',
+    }
+    await render([file], resolvesAll([file]).api)
+    expect(dialog()).toBeNull()
+
+    // open 标志必须被释放：之后图像回来也不能复活旧灯箱。
+    const images = [imageAttachment(1)]
+    await render(images, resolvesAll(images).api)
+    expect(dialog()).toBeNull()
+  })
 })

@@ -154,6 +154,71 @@ describe('producedMediaFromToolResult — 产线3 <path>/<media> 信封', () => 
     expect(producedMediaFromToolResult(event('tool/result', data))).toEqual([])
     expect(producedMediaFromToolResult(event('tool/result', { message: { content: 'plain' } }))).toEqual([])
   })
+
+  it('同一文本块内多个 <path> 信封逐个产出', () => {
+    const data = {
+      message: {
+        content: [{
+          type: 'text',
+          text: '<path>/x/a.png</path><path>/x/b.mp4</path>',
+        }],
+      },
+    }
+    const produced = producedMediaFromToolResult(event('tool/result', data))
+    expect(produced).toEqual([
+      { source: 'path', path: '/x/a.png', mediaType: 'image/png', kind: 'image', name: 'a.png' },
+      { source: 'path', path: '/x/b.mp4', mediaType: 'video/mp4', kind: 'video', name: 'b.mp4' },
+    ])
+  })
+
+  it('多个 <path> 与同序位的 <media>/<type> 逐个配对', () => {
+    const data = {
+      message: {
+        content: [{
+          type: 'text',
+          text: '<path>/x/a.png</path><media>image/png</media><type>image</type>'
+            + '<path>/x/b.wav</path><media>audio/wav</media><type>audio</type>',
+        }],
+      },
+    }
+    const produced = producedMediaFromToolResult(event('tool/result', data))
+    expect(produced).toEqual([
+      { source: 'path', path: '/x/a.png', mediaType: 'image/png', kind: 'image', name: 'a.png' },
+      { source: 'path', path: '/x/b.wav', mediaType: 'audio/wav', kind: 'audio', name: 'b.wav' },
+    ])
+  })
+
+  it('media/type 数量不齐时该 path 回落到扩展名推断', () => {
+    const data = {
+      message: {
+        content: [{
+          type: 'text',
+          // 只有一个 <media>：第二个 path 按 .wav 扩展名兜底。
+          text: '<path>/x/a.png</path><media>image/png</media><path>/x/b.wav</path>',
+        }],
+      },
+    }
+    const produced = producedMediaFromToolResult(event('tool/result', data))
+    expect(produced).toEqual([
+      { source: 'path', path: '/x/a.png', mediaType: 'image/png', kind: 'image', name: 'a.png' },
+      { source: 'path', path: '/x/b.wav', mediaType: 'audio/wav', kind: 'audio', name: 'b.wav' },
+    ])
+  })
+
+  it('中间的非法 path 不吞掉后续信封', () => {
+    const data = {
+      message: {
+        content: [{
+          type: 'text',
+          text: '<path>rel/nope.png</path><media>image/png</media><path>/x/b.mp4</path><media>video/mp4</media>',
+        }],
+      },
+    }
+    const produced = producedMediaFromToolResult(event('tool/result', data))
+    expect(produced).toEqual([
+      { source: 'path', path: '/x/b.mp4', mediaType: 'video/mp4', kind: 'video', name: 'b.mp4' },
+    ])
+  })
 })
 
 describe('producedMediaFromToolResult — 产线4 omnimux_*_submit JSON result', () => {

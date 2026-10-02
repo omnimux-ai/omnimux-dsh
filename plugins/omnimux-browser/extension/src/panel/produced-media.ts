@@ -220,6 +220,14 @@ function producedFromMeta(data: Record<string, unknown>): ProducedMediaRef[] {
   }]
 }
 
+/** Every `<media>…</media>` payload in a text block, in document order. */
+function envelopeValues(text: string, tag: 'media' | 'type'): string[] {
+  const pattern = tag === 'media' ? /<media>([\s\S]*?)<\/media>/gi : /<type>([\s\S]*?)<\/type>/gi
+  const values: string[] = []
+  for (const match of text.matchAll(pattern)) values.push(match[1]!.trim())
+  return values
+}
+
 /** Lines 2–3: image attachment blocks and `<path>/<media>/<type>` envelopes. */
 function producedFromContent(content: unknown): ProducedMediaRef[] {
   if (!Array.isArray(content)) return []
@@ -232,26 +240,34 @@ function producedFromContent(content: unknown): ProducedMediaRef[] {
       continue
     }
     if (block.type !== 'text' || typeof block.text !== 'string') continue
-    const path = /<path>([\s\S]*?)<\/path>/i.exec(block.text)?.[1].trim()
-    if (path === undefined || path === '' || !isAbsolutePath(path)) continue
-    const declaredMedia = /<media>([\s\S]*?)<\/media>/i.exec(block.text)?.[1].trim()
-    const declaredKind = /<type>([\s\S]*?)<\/type>/i.exec(block.text)?.[1].trim()
-    const extension = extensionOf(path)
-    const mediaType = declaredMedia !== undefined && MEDIA_TYPE_PATTERN.test(declaredMedia)
-      ? declaredMedia
-      : EXTENSION_MEDIA_TYPES[extension] ?? 'application/octet-stream'
-    const kind = declaredKind !== undefined && PRODUCED_KINDS.has(declaredKind as ProducedMediaKind)
-      ? declaredKind as ProducedMediaKind
-      : declaredMedia !== undefined && MEDIA_TYPE_PATTERN.test(declaredMedia)
-        ? kindOfMediaType(declaredMedia)
-        : EXTENSION_KINDS[extension] ?? 'file'
-    refs.push({
-      source: 'path',
-      path,
-      mediaType,
-      kind,
-      ...(baseName(path) === '' ? {} : { name: baseName(path) }),
-    })
+    // One block may carry several envelopes; <media>/<type> pair with <path>
+    // by position, and a shortfall falls back to that path's extension.
+    const media = envelopeValues(block.text, 'media')
+    const types = envelopeValues(block.text, 'type')
+    let position = 0
+    for (const match of block.text.matchAll(/<path>([\s\S]*?)<\/path>/gi)) {
+      const path = match[1]!.trim()
+      const declaredMedia = media[position]
+      const declaredKind = types[position]
+      position += 1
+      if (path === '' || !isAbsolutePath(path)) continue
+      const extension = extensionOf(path)
+      const mediaType = declaredMedia !== undefined && MEDIA_TYPE_PATTERN.test(declaredMedia)
+        ? declaredMedia
+        : EXTENSION_MEDIA_TYPES[extension] ?? 'application/octet-stream'
+      const kind = declaredKind !== undefined && PRODUCED_KINDS.has(declaredKind as ProducedMediaKind)
+        ? declaredKind as ProducedMediaKind
+        : declaredMedia !== undefined && MEDIA_TYPE_PATTERN.test(declaredMedia)
+          ? kindOfMediaType(declaredMedia)
+          : EXTENSION_KINDS[extension] ?? 'file'
+      refs.push({
+        source: 'path',
+        path,
+        mediaType,
+        kind,
+        ...(baseName(path) === '' ? {} : { name: baseName(path) }),
+      })
+    }
   }
   return refs
 }

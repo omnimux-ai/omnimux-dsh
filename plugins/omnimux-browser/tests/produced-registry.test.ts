@@ -118,6 +118,129 @@ test('skips isError results entirely', () => {
   assert.equal(registry.lookup(SESSION, PNG), undefined)
 })
 
+test('data/message level isError refuses registration like the panel', () => {
+  const registry = createProducedRegistry()
+  // data.isError === true: the panel renders no card, so no path registers.
+  registry.observeEvent(SESSION, {
+    type: 'tool/result',
+    seq: 3,
+    data: {
+      isError: true,
+      meta: meta(PNG),
+      message: { role: 'user', content: [{ type: 'text', text: `<path>${MP4}</path>` }] },
+    },
+  })
+  assert.equal(registry.lookup(SESSION, PNG), undefined)
+  assert.equal(registry.lookup(SESSION, MP4), undefined)
+  // message.isError === true: same gate one level deeper.
+  registry.observeEvent(SESSION, {
+    type: 'tool/result',
+    seq: 4,
+    data: {
+      meta: meta(DEST),
+      message: { role: 'user', isError: true, content: [{ type: 'text', text: `<path>${MP4}</path>` }] },
+    },
+  })
+  assert.equal(registry.lookup(SESSION, DEST), undefined)
+  assert.equal(registry.lookup(SESSION, MP4), undefined)
+  // A failed submit call must not register its dest either.
+  registry.observeEvent(SESSION, toolCall('c-fail', 'omnimux_image_submit'))
+  registry.observeEvent(SESSION, {
+    type: 'tool/result',
+    seq: 5,
+    data: {
+      callId: 'c-fail',
+      message: { role: 'user', isError: true, content: [{ type: 'text', text: JSON.stringify({ dest: PNG }) }] },
+    },
+  })
+  assert.equal(registry.lookup(SESSION, PNG), undefined)
+})
+
+test('pairs submit results via the panel three-level callId', () => {
+  const registry = createProducedRegistry()
+  const flat = '/media/out/flat.png'
+  const mid = '/media/out/mid.mp4'
+  const nested = '/media/out/nested.mp3'
+
+  // Level 1: data.callId (flat field on the event payload).
+  registry.observeEvent(SESSION, toolCall('c-flat', 'omnimux_image_submit'))
+  registry.observeEvent(SESSION, {
+    type: 'tool/result',
+    seq: 2,
+    data: {
+      callId: 'c-flat',
+      message: { role: 'user', content: [{ type: 'text', text: JSON.stringify({ dest: flat }) }] },
+    },
+  })
+  assert.ok(registry.lookup(SESSION, flat) !== undefined)
+
+  // Level 2: message.toolCallId.
+  registry.observeEvent(SESSION, toolCall('c-mid', 'omnimux_video_submit'))
+  registry.observeEvent(SESSION, {
+    type: 'tool/result',
+    seq: 3,
+    data: {
+      message: { role: 'user', toolCallId: 'c-mid', content: [{ type: 'text', text: JSON.stringify({ dest: mid }) }] },
+    },
+  })
+  assert.ok(registry.lookup(SESSION, mid) !== undefined)
+
+  // Level 3: message.source.callId.
+  registry.observeEvent(SESSION, toolCall('c-src', 'omnimux_audio_submit'))
+  registry.observeEvent(SESSION, {
+    type: 'tool/result',
+    seq: 4,
+    data: {
+      message: { role: 'user', source: { callId: 'c-src' }, content: [{ type: 'text', text: JSON.stringify({ dest: nested }) }] },
+    },
+  })
+  assert.ok(registry.lookup(SESSION, nested) !== undefined)
+
+  // An unpaired callId or a call paired to a non-whitelisted tool still
+  // registers nothing, whichever level the callId sits at.
+  registry.observeEvent(SESSION, {
+    type: 'tool/result',
+    seq: 5,
+    data: {
+      callId: 'unknown',
+      message: { role: 'user', content: [{ type: 'text', text: JSON.stringify({ dest: '/media/out/x.png' }) }] },
+    },
+  })
+  registry.observeEvent(SESSION, toolCall('c-click', 'browser_click'))
+  registry.observeEvent(SESSION, {
+    type: 'tool/result',
+    seq: 6,
+    data: {
+      message: { role: 'user', toolCallId: 'c-click', content: [{ type: 'text', text: JSON.stringify({ dest: '/media/out/y.png' }) }] },
+    },
+  })
+  assert.equal(registry.lookup(SESSION, '/media/out/x.png'), undefined)
+  assert.equal(registry.lookup(SESSION, '/media/out/y.png'), undefined)
+})
+
+test('observeHistory pairs three-level callIds across the whole page', () => {
+  const registry = createProducedRegistry()
+  const dest = '/media/out/history.png'
+  registry.observeHistory(SESSION, {
+    events: [
+      // Result precedes its call; message.source.callId level pairing must
+      // still resolve because calls are collected in one pre-pass.
+      {
+        event: {
+          type: 'tool/result',
+          seq: 2,
+          data: {
+            message: { role: 'user', source: { callId: 'hc' }, content: [{ type: 'text', text: JSON.stringify({ dest }) }] },
+          },
+        },
+      },
+      { event: toolCall('hc', 'omnimux_image_submit') },
+    ],
+    hasMore: false,
+  })
+  assert.ok(registry.lookup(SESSION, dest) !== undefined)
+})
+
 test('ignores non-tool events and malformed event shapes', () => {
   const registry = createProducedRegistry()
   registry.observeEvent(SESSION, { type: 'user/message', data: { message: { content: [{ type: 'text', text: `<path>${PNG}</path>` }] } } })

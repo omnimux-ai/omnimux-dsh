@@ -100,6 +100,7 @@ import {
 import {
   appendLiveRow,
   applyInboxSplice,
+  collectToolCallNames,
   completeLastTool,
   errorFromTurnEnd,
   inboxQueuedMessages,
@@ -1701,6 +1702,7 @@ export function App(): React.JSX.Element {
         sessionRef.current = null
         setResumeHint({ ready: false, sessionId: null })
         sessionRuntimeRef.current.clear()
+        toolCallNamesRef.current.clear()
         assistantStreamsRef.current.clear()
         followSnapshotsRef.current.clear()
         pendingHistoriesRef.current.clear()
@@ -2142,8 +2144,11 @@ export function App(): React.JSX.Element {
     }
     liveTurnRef.current = lastTurn
     setLiveTurn(lastTurn)
-    // 历史重放已经重建了 callId→工具名 配对，会话切换后旧 map 不再有效。
-    toolCallNamesRef.current.clear()
+    // 同会话 refresh/rebaseline 也走这里：不能把 live 阶段登记的配对清掉，
+    // 只把历史（含 follower suffix）里的 callId→工具名重建进 map。
+    for (const [callId, toolName] of collectToolCallNames(events)) {
+      toolCallNamesRef.current.set(callId, toolName)
+    }
     const historyTitle = latestSessionTitle(events)
     if (historyTitle !== undefined) setSessionTitle(historyTitle)
     setRows(mergeHistoryRows(events, nextSeq, locale))
@@ -2382,6 +2387,7 @@ export function App(): React.JSX.Element {
     inboxRawRef.current = []
     liveTurnRef.current = 0
     setLiveTurn(0)
+    toolCallNamesRef.current.clear()
     updateDraft(() => emptyComposerDraft())
     if (!preserveSelection) {
       setSelection(null)

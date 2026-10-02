@@ -194,6 +194,39 @@ test('reports reader failures as internal', async () => {
   await teardown(h, ws)
 })
 
+test('serves a submit dest paired via message.source.callId', async () => {
+  const produced = createProducedRegistry()
+  produced.observeEvent('s3', {
+    type: 'tool/call',
+    data: { turn: 1, step: 0, callId: 'src-call', name: 'omnimux_video_submit', arguments: '{}' },
+  })
+  produced.observeEvent('s3', {
+    type: 'tool/result',
+    data: {
+      message: {
+        role: 'user',
+        // The only callId this result carries sits three levels deep — the
+        // panel's toolResultCallId reads it, so the registry must pair it too.
+        source: { callId: 'src-call' },
+        content: [{ type: 'text', text: JSON.stringify({ dest: '/media/src-dest.mp4' }) }],
+      },
+    },
+  })
+  const h = await startBridge({
+    produced,
+    // Lookup through the real registry so the wire answer reflects the grant.
+    readProduced: async (request) =>
+      produced.lookup(request.sessionId, request.path) !== undefined
+        ? { code: 'ok', mediaType: 'video/mp4', bytes: 1, data: 'AA==' }
+        : { code: 'not-produced', message: 'the session did not produce this path' },
+  })
+  const { ws, frames } = await authenticated(h)
+  const result = await rpcResult(ws, frames, 'pm-src', { sessionId: 's3', path: '/media/src-dest.mp4' })
+  assert.equal(result.ok, true)
+  if (result.ok) assert.equal((result.result as ProducedMediaOutcome).code, 'ok')
+  await teardown(h, ws)
+})
+
 test('drops a session grant after a successful purge', async () => {
   const produced = createProducedRegistry()
   produced.observeEvent('doomed', {

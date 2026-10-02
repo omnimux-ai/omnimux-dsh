@@ -231,6 +231,18 @@ export function completeLastTool(rows: Row[], seq: number): Row[] {
   return rows
 }
 
+/** Collect `callId → tool name` pairs from tool/call events; results cite them back. */
+export function collectToolCallNames(events: readonly SessionEventView[]): Map<string, string> {
+  const names = new Map<string, string>()
+  for (const ev of events) {
+    if (ev.type !== 'tool/call') continue
+    if (typeof ev.data?.callId === 'string' && typeof ev.data?.name === 'string') {
+      names.set(ev.data.callId, ev.data.name)
+    }
+  }
+  return names
+}
+
 /** 历史渲染：连续工具调用归并成一行（tool/call..result 不逐条刷屏；超 3 个折叠计数）。 */
 export function mergeHistoryRows(
   events: SessionEventView[],
@@ -254,8 +266,9 @@ export function mergeHistoryRows(
     pendingTool = null
   }
   // tool/result carries the artifact but not the tool name; pair it through the
-  // callId its message cites so the submit-tool line can fire.
-  const toolNames = new Map<string, string>()
+  // callId its message cites so the submit-tool line can fire. The pairing is
+  // collected up front so a replay can also seed the live pairing map.
+  const toolNames = collectToolCallNames(events)
   for (const ev of events) {
     if (ev.type === 'turn/start') {
       const declared = ev.data?.turn
@@ -265,9 +278,6 @@ export function mergeHistoryRows(
       continue
     }
     if (ev.type === 'tool/call') {
-      if (typeof ev.data?.callId === 'string' && typeof ev.data?.name === 'string') {
-        toolNames.set(ev.data.callId, ev.data.name)
-      }
       const summary = toolSummary(ev.data?.name ?? 'tool', ev.data?.arguments, locale)
       if (pendingTool === null) pendingTool = { items: [summary], total: 1 }
       else {

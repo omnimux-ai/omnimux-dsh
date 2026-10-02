@@ -107,6 +107,9 @@ export const MessageImages = memo(function MessageImages({
   }, [])
 
   const step = useCallback((delta: number): void => {
+    // An empty stage has nothing to page through; % 0 would poison the
+    // selection with NaN and `stageItems[NaN]` reads as undefined.
+    if (stageItems.length === 0) return
     setSelected((value) => (value + delta + stageItems.length) % stageItems.length)
   }, [stageItems.length])
 
@@ -142,6 +145,14 @@ export const MessageImages = memo(function MessageImages({
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [open, step])
+
+  // A file-only swap under an open lightbox leaves no stage item to show:
+  // close it rather than hold `open` across the empty render (the lightbox
+  // itself is gated on `active !== null`, so nothing renders meanwhile, but
+  // releasing the flag keeps a later image row from resurrecting the dialog).
+  useEffect(() => {
+    if (open && stageItems.length === 0) setOpen(false)
+  }, [open, stageItems.length])
 
   if (images.length === 0) return null
 

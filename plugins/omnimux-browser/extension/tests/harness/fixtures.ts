@@ -5,7 +5,7 @@
  * bytes to hand back and the browser has real dimensions to lay out.
  */
 
-import type { ProducedAttachmentRef } from '../../src/panel/produced-media.ts'
+import type { ProducedAttachmentRef, ProducedMediaKind, ProducedMediaRef } from '../../src/panel/produced-media.ts'
 
 export interface HarnessAttachment extends ProducedAttachmentRef {
   /** Path served from the harness static root. */
@@ -14,11 +14,25 @@ export interface HarnessAttachment extends ProducedAttachmentRef {
   readonly failFirst?: boolean
 }
 
+/** A path-sourced produced item: bytes arrive through `omnimux.producedMedia`. */
+export interface HarnessPathMedia {
+  readonly source: 'path'
+  readonly path: string
+  readonly mediaType: string
+  readonly kind: ProducedMediaKind
+  readonly bytes?: number
+  readonly name?: string
+  /** Path served from the harness static root. */
+  readonly file: string
+}
+
+export type HarnessMedia = HarnessAttachment | HarnessPathMedia
+
 export interface HarnessCase {
   readonly id: string
   readonly title: string
   readonly align: 'start' | 'end'
-  readonly images: readonly HarnessAttachment[]
+  readonly images: readonly HarnessMedia[]
 }
 
 function attachment(
@@ -85,6 +99,89 @@ export const CASES: readonly HarnessCase[] = [
     align: 'start',
     images: [make('flaky-1', LAND, true)],
   },
+  {
+    id: 'produced-image',
+    title: '产物 · display_file 图片（附件源画廊卡）',
+    align: 'start',
+    images: [make('produced-1', LAND)],
+  },
+  {
+    id: 'produced-video',
+    title: '产物 · display_file 视频（path 源 controls 播放）',
+    align: 'start',
+    images: [{
+      source: 'path',
+      path: '/omnimux/products/clip.mp4',
+      mediaType: 'video/mp4',
+      kind: 'video',
+      bytes: 61686,
+      name: 'clip.mp4',
+      file: 'media/clip.mp4',
+    }],
+  },
+  {
+    id: 'produced-audio',
+    title: '产物 · 语音条（audio controls 条，不进灯箱）',
+    align: 'start',
+    images: [{
+      source: 'path',
+      path: '/omnimux/products/clip.mp4',
+      mediaType: 'video/mp4',
+      kind: 'audio',
+      bytes: 61686,
+      name: 'voice.mp4',
+      file: 'media/clip.mp4',
+    }],
+  },
+  {
+    id: 'produced-file',
+    title: '产物 · PDF 文件卡（类型徽标+文件名+大小）',
+    align: 'start',
+    images: [{
+      source: 'path',
+      path: '/omnimux/products/report.pdf',
+      mediaType: 'application/pdf',
+      kind: 'pdf',
+      bytes: 12480,
+      name: 'report.pdf',
+      file: 'media/report.pdf',
+    }],
+  },
+  {
+    id: 'produced-mixed',
+    title: '产物 · 图 + 视频 + 音频 + 文件（同回合多产物）',
+    align: 'start',
+    images: [
+      make('pm-1', SQUARE),
+      {
+        source: 'path',
+        path: '/omnimux/products/clip.mp4',
+        mediaType: 'video/mp4',
+        kind: 'video',
+        bytes: 61686,
+        name: 'clip.mp4',
+        file: 'media/clip.mp4',
+      },
+      {
+        source: 'path',
+        path: '/omnimux/products/voice.mp4',
+        mediaType: 'video/mp4',
+        kind: 'audio',
+        bytes: 61686,
+        name: 'voice.mp4',
+        file: 'media/clip.mp4',
+      },
+      {
+        source: 'path',
+        path: '/omnimux/products/report.pdf',
+        mediaType: 'application/pdf',
+        kind: 'pdf',
+        bytes: 12480,
+        name: 'report.pdf',
+        file: 'media/report.pdf',
+      },
+    ],
+  },
 ]
 
-export const ATTACHMENTS: readonly HarnessAttachment[] = CASES.flatMap((testCase) => testCase.images)
+export const ATTACHMENTS: readonly HarnessMedia[] = CASES.flatMap((testCase) => testCase.images)

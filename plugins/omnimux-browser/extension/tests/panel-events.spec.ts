@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   appendLiveRow,
+  collectToolCallNames,
   completeLastTool,
   mergeHistoryRows,
   pendingQuestionFromFrame,
@@ -197,6 +198,43 @@ describe('mergeHistoryRows', () => {
     ], () => { seq += 1; return seq }, 'zh')
 
     expect(rows).toEqual([{ seq: 1, kind: 'tool', text: 'omnimux_image_submit', status: 'complete' }])
+  })
+})
+
+describe('collectToolCallNames', () => {
+  it('collects callId → name from tool/call events, ignoring others', () => {
+    const names = collectToolCallNames([
+      ev('tool/call', { callId: 'c1', name: 'omnimux_image_submit', arguments: '{}' }),
+      ev('tool/result', { message: { toolCallId: 'c1', content: [] } }),
+      ev('tool/call', { callId: 'c2', name: 'browser_click' }),
+      // 缺 callId 或缺 name 的残缺事件不进配对表。
+      ev('tool/call', { name: 'browser_snapshot' }),
+      ev('tool/call', { callId: 'c3' }),
+      ev('user/message', { content: [{ type: 'text', text: 'hi' }] }),
+    ])
+
+    const first = names.get('c1')
+    const second = names.get('c2')
+    expect(first).toBe('omnimux_image_submit')
+    expect(second).toBe('browser_click')
+    expect(names.size).toBe(2)
+  })
+
+  it('is the same pairing mergeHistoryRows uses for produced media', () => {
+    let seq = 0
+    const events = [
+      ev('tool/call', { callId: 'c9', name: 'omnimux_video_submit', arguments: '{}' }),
+      ev('tool/result', {
+        message: {
+          toolCallId: 'c9',
+          content: [{ type: 'text', text: '{"mode":"live","dest":"/d/v.mp4"}' }],
+        },
+      }),
+    ]
+    const rows = mergeHistoryRows(events, () => { seq += 1; return seq }, 'zh')
+    const images = rows[1]?.images
+    expect(images).toHaveLength(1)
+    expect(images![0]).toMatchObject({ path: '/d/v.mp4', kind: 'video' })
   })
 })
 

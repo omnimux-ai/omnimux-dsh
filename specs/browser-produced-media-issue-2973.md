@@ -1,6 +1,29 @@
 # Spec: 浏览器插件会话栏展示助手产出的媒体（produced media）
 
 - Issue: #2973
+
+## 复审修订（OCR 桥侧修复单，2026-10-02）
+
+`src/produced-registry.ts` 复审命中 1 高 3 中，验收口径如下修订：
+
+1. **symlink TOCTOU（高）**：`readProducedMedia` 的 `stat()`+`readFile()` 两步
+   允许已登记路径在判定后被换成符号链接。改为 `fs/promises.open(path,
+   O_RDONLY | O_NOFOLLOW)` 取得 FileHandle，同一 fd 上 `fstat` 校验普通文件
+   与 ≤64MB、`readFile` 读取、`finally` 关闭；`open` 抛 `ELOOP` 与 ENOENT
+   同答 `not-produced`。
+2. **大小复查（中）**：`fstat.size > 64MB` 先拒；读完 `data.byteLength > 64MB`
+   同样回 `too-large`（防 stat 后放大）。
+3. **isError 门对齐面板（中）**：`data.isError===true` 或
+   `message.isError===true` 的 tool/result 一律不登记（保留块级 isError 与
+   `data.error` 拒绝）。
+4. **callId 配对对齐面板（中）**：result 配对 callId 提取与面板
+   `toolResultCallId` 三级一致——`data.callId` → `message.toolCallId` →
+   `message.source.callId`，observeEvent/observeHistory 共用；块级
+   `toolCallId` 形状兼容保留。
+5. 路径规范化以登记侧 `path.resolve(path.normalize())` 为准（面板
+   `normalizePath` 只统一分隔符/去尾斜杠），注释说明差异。
+6. 测试增补：symlink 拒绝（临时目录 symlink → /etc/hosts）、stat 后超限、
+   isError 不登记、三级 callId 配对；三件套测试命令退出码 0。
 - 风险级别: R2（插件边界内扩展：面板渲染 + 桥端新增一条授权 RPC，不改宿主核心、不改 CSP）
 - 依据: 用户报障截图——`display_file` 在侧栏只剩「页面操作 · 完成」工具行，媒体不可见
 
