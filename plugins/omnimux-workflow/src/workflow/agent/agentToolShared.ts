@@ -295,7 +295,7 @@ export function readUiContextSessionId(
   if (typeof getActiveView !== 'function') return undefined;
   try {
     const active = getActiveView();
-    const id = active?.uiContext?.sessionId ?? active?.sessionId;
+    const id = (active?.uiContext as { sessionId?: string } | null | undefined)?.sessionId ?? active?.sessionId;
     if (typeof id !== 'string' || id.trim().length === 0) return undefined;
     return id.trim();
   } catch {

@@ -118,7 +118,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 .dshDesktopFrame:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"],
 [class*="frame"]:not([data-rightbar-collapsed="true"]):has([data-sidebar-right-panel][data-sidebar-right-open]:not([data-sidebar-right-panel="fullscreen"])) [data-omnimux-starter-host] [class*="heroWorkspaceRow"] {
   width:100%!important;
-  /* 宽度铁律：工作区选择行与输入框同宽 680px（0b917e92e #2830），
+  /* 宽度铁律：工作区选择行与输入框同宽 680px（Issue 2830，提交 0b917e92e），
      顶部未吸底态与滚动吸底态严格一致。原 952px 原生 token 封顶已废。 */
   max-width:min(680px, calc(100% - 24px))!important;
   margin-inline:auto!important;
@@ -3429,7 +3429,7 @@ html:is([data-omnimux-composer-density='short'], [data-omnimux-composer-density=
 
 /* 复刻接管：不复制任何控件，只把原生输入框搬到会话视口底部。
    附件、专家、模型、发送仍全部来自官方 Host，行为与 Hero 完全一致。
-   宽度铁律：吸底输入框与顶部同宽 680px（0b917e92e #2830）。 */
+   宽度铁律：吸底输入框与顶部同宽 680px（Issue 2830，提交 0b917e92e）。 */
 [data-omnimux-starter-host][data-omnimux-dock-open] [data-composer-card] {
   position:fixed!important;
   left:var(--omnimux-dock-left, 0px)!important;

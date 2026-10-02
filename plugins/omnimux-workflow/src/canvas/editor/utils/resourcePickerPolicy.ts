@@ -367,7 +367,7 @@ export function listCanvasResources(
       textContent: source.output.text,
       inUse,
       selectable,
-      reasonCode: candidate?.verdict?.reasonCode ?? candidate?.reasonCode,
+      reasonCode: candidate?.verdict?.reasonCode ?? (candidate && 'reasonCode' in candidate ? candidate.reasonCode : undefined),
       materialType,
       ...displayName,
       previewUrl: resolveMediaPreviewUrl(

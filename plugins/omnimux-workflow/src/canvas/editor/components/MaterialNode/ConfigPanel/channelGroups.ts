@@ -42,6 +42,8 @@ export interface ChannelGroupItem {
   };
   /** Gateway group appended as `model@wireGroup`; falls back to `id`. */
   wireGroup?: string;
+  /** Marks the line pre-selected when the model offers several parameter tiers. */
+  default?: boolean;
   /**
    * Upstream model this line is actually served by, when it differs from the
    * product id (MiniMax H3 的固定 15 秒任务版是独立在售型号）。The routing candidate
@@ -1091,7 +1093,7 @@ export function resolveModelChannelGroups(
     const norm = sanitizeProviderKey(providerKey);
     if (!norm) return;
     const meta = Object.prototype.hasOwnProperty.call(BYOK_PROVIDER_DISPLAY_MAP, norm)
-      ? BYOK_PROVIDER_DISPLAY_MAP[norm]
+      ? BYOK_PROVIDER_DISPLAY_MAP[norm]!
       : {
           id: `byok-${norm}`,
           label: `我的 ${norm}`,
