@@ -3,11 +3,12 @@ import { readFileSync } from 'node:fs'
 import { it } from 'node:test'
 
 // Execute the production registration callback without loading unrelated UI modules.
-const source = readFileSync(new URL('./index.js', import.meta.url), 'utf8')
-const start = source.indexOf("      ctx.inject(['betterSidebar', 'sessions', 'uiConversation'], (inner) => {")
-const end = source.indexOf("\n    }\n    ctx.inject(['commandUi'", start)
+const source = readFileSync(new URL('./mount.js', import.meta.url), 'utf8')
+const start = source.indexOf("  ctx.inject(['betterSidebar', 'sessions', 'uiConversation'], (inner) => {")
+const end = source.indexOf("\n  })", start)
 assert.ok(start >= 0 && end > start, 'production media registration must exist')
-const register = new Function('ctx', 'MEDIA_VIEWER_TAB_ID', 't', 'createElement', 'MediaViewerTab', source.slice(start, end))
+// Function 体内为完整 ctx.inject(...) 调用表达式
+const register = new Function('ctx', 'MEDIA_VIEWER_TAB_ID', 't', 'createElement', 'MediaViewerTab', source.slice(start, end + 5))
 
 function mount() {
   let tab, fileMount, dependencies
@@ -19,6 +20,7 @@ function mount() {
     uiConversation: { imageUrl: (...args) => args },
     inject(keys, callback) { dependencies = keys; fileMount = callback },
     effect(setup) { cleanups.push(setup()) },
+    get() { return undefined },
   }
   Object.defineProperty(inner, 'remote', { get() { throw new Error('remote without inject') } })
   const ctx = {
@@ -27,8 +29,10 @@ function mount() {
       callback(inner)
     },
     effect() { throw new Error('registration belongs to inner lifecycle') },
+    locale: { bind: () => (key) => key },
+    get() { return undefined },
   }
-  register(ctx, 'omnimux:media-viewer', () => '', (_component, props) => props, () => {})
+  register(ctx, 'omnimux:media-viewer', (key) => key, (C, props) => props, () => null)
   return {
     props: tab.component({}),
     hasTab: () => Boolean(tab),

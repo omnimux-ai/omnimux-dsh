@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { MediaConfigControls, useMediaGenerationConfig } from './MediaConfigControls.jsx';
 import { MediaSlotGroup, readDuration } from './MediaSlotGroup.jsx';
 import { ReferencePickerPopover } from './ReferencePickerPopover.jsx';
-import { peekComposerPrefill, subscribeComposerPrefill, takeComposerPrefill } from './composer-prefill.js';
+import { peekComposerPrefill, subscribeComposerPrefill, takeComposerPrefill } from '../../../omnimux/src/client/media-viewer/composer-prefill.js';
 import { clampPromptTextareaHeight } from './prompt-textarea-height.js';
 import {
   VIDEO_MODE_OPTIONS,
@@ -18,7 +18,7 @@ import {
   rejectionOf,
   slotPlan,
 } from './media-slot.js';
-import { getGlobalMediaViewerStore } from './media-viewer-store.js';
+import { getGlobalMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
 
 export { makeBucketKey, cleanAnnotationPrefix, isAllowedReferenceUrl };
 

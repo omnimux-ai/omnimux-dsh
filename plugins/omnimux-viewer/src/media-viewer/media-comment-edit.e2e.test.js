@@ -8,7 +8,7 @@ import {
   serializeReferenceAssets,
   slotPlan,
 } from './media-slot.js';
-import { isLocalMediaSource } from '../../media/gateway-upload.js';
+import { isLocalMediaSource } from '../../../omnimux/src/media/gateway-upload.js';
 
 describe('E2E: 媒体查看器局部评论标注与图片编辑生成契约验证 (Issue #2827)', () => {
   const mockImageModel = {

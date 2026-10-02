@@ -25,6 +25,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import { ViewerCard, type ViewerCardInjected } from './ViewerCard.tsx'
+import { mountMediaViewerTab } from '../media-viewer/mount.js'
 import { en, zh, type ViewerKey } from './locales.ts'
 import { TOOLVIEW_REGISTRATIONS } from './registration.ts'
 import { installViewerStyles } from './styles.ts'
@@ -139,6 +140,8 @@ export const name = 'omnimux-viewer'
  * @param ctx - client cordis context.
  */
 export function apply(ctx: ClientContext): void {
+  mountMediaViewerTab(ctx as unknown as Parameters<typeof mountMediaViewerTab>[0])
+
   installViewerStyles(ctx)
 
   const urls = new AttachmentUrls(ctx)

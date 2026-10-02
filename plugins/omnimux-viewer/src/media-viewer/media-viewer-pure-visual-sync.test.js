@@ -7,8 +7,8 @@ import * as esbuild from 'esbuild';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 
-import { createMediaViewerStore } from './media-viewer-store.js';
-import { MEDIA_VIEWER_CSS } from './styles.js';
+import { createMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
+import { MEDIA_VIEWER_CSS } from '../../../omnimux/src/client/media-viewer/styles.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const tempOut = join(here, `.temp-visual-sync-${Date.now()}.mjs`);
@@ -19,7 +19,7 @@ test.before(async () => {
   await esbuild.build({
     stdin: {
       contents: `
-        export * from '${join(here, 'OrganicShimmerOverlay.jsx')}';
+        export * from '${join(here, './OrganicShimmerOverlay.jsx')}';
       `,
       resolveDir: here,
       loader: 'js',

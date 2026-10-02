@@ -29,7 +29,7 @@ function extractRule(source, selector) {
 }
 
 test('E2E: 图像生成输入框移除分割线并按面板宽度自适应契约验证', async () => {
-  const stylesSource = await readFile(resolve(here, 'styles.js'), 'utf8');
+  const stylesSource = await readFile(resolve(here, '../../../omnimux/src/client/media-viewer/styles.js'), 'utf8');
 
   // 1. 输入框根容器：留白收窄、底部间距收窄、宽画布上限保持
   const rootRule = extractRule(stylesSource, '.omx-mv-composer-root {');
@@ -68,7 +68,7 @@ test('E2E: 图像生成输入框移除分割线并按面板宽度自适应契约
   );
 
   // 4. 组件结构未变：提示词区与工具栏挂载关系保持
-  const composerSource = await readFile(resolve(here, 'MediaViewerComposer.jsx'), 'utf8');
+  const composerSource = await readFile(resolve(here, './MediaViewerComposer.jsx'), 'utf8');
   assert.ok(
     composerSource.includes('omx-mv-prompt-box') && composerSource.includes('omx-mv-toolbar-bar'),
     'MediaViewerComposer 必须保留提示词区与工具栏结构'

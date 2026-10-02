@@ -725,6 +725,9 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: ^3.0.0
         version: 3.18.2
+      dsh-ui-kit:
+        specifier: file:../../packages/dsh-ui-kit
+        version: file:packages/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: ^4.0.2

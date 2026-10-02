@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 test('MediaViewerTab: single video view must not have autoPlay attribute to avoid unrequested playback', () => {
-  const jsxPath = resolve(__dirname, 'MediaViewerTab.jsx');
+  const jsxPath = resolve(__dirname, './MediaViewerTab.jsx');
   const content = readFileSync(jsxPath, 'utf8');
 
   // Check the single video stage block

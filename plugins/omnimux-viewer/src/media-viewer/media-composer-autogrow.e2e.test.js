@@ -51,7 +51,7 @@ test('高度夹取：不足一行保持矮高度，正好 10 行顶满，第 11 
 });
 
 test('样式上限与高度函数是同一个 10 行数字，超出后在框内滚动', async () => {
-  const stylesSource = await readFile(resolve(here, 'styles.js'), 'utf8');
+  const stylesSource = await readFile(resolve(here, '../../../omnimux/src/client/media-viewer/styles.js'), 'utf8');
   const rule = extractRule(stylesSource, '.omx-mv-prompt-textarea {');
   const max = promptTextareaMaxHeightPx();
   assert.match(rule, new RegExp(`max-height:\\s*${max}px`));
@@ -62,7 +62,7 @@ test('样式上限与高度函数是同一个 10 行数字，超出后在框内�
 });
 
 test('输入变化、粘贴填入和发送清空都会重算高度', async () => {
-  const source = await readFile(resolve(here, 'MediaViewerComposer.jsx'), 'utf8');
+  const source = await readFile(resolve(here, './MediaViewerComposer.jsx'), 'utf8');
   assert.match(source, /clampPromptTextareaHeight\(node\.scrollHeight\)/);
   assert.match(source, /useLayoutEffect\([\s\S]*\[prompt\]\)/);
   assert.match(source, /new ResizeObserver\(\(\) => \{/);

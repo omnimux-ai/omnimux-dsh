@@ -34,7 +34,7 @@ test('E2E: 直连生成路由渠道透传与官方多模态自适应契约验证
   );
 
   // 3. 验证 MediaViewerTab.jsx 过滤空 url 脏数据防裂图
-  const tabSource = await readFile(resolve(here, '../client/media-viewer/MediaViewerTab.jsx'), 'utf8');
+  const tabSource = await readFile(resolve(here, '../../../omnimux-viewer/src/media-viewer/MediaViewerTab.jsx'), 'utf8');
   assert.ok(
     tabSource.includes('.filter((item) => item && (item.url || item.status === \'generating\'))'),
     'MediaViewerTab.jsx 必须过滤无 url 且非生成中的破损条目'

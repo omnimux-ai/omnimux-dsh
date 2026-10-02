@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createMediaViewerStore } from './media-viewer-store.js';
+import { createMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -17,8 +17,8 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
   // 由媒体面板与输入框快捷方式共同消费（Issue #2562）。
   // 两个文件**分别**断言：媒体面板断言使用形态，共享控件断言自身结构；
   // 把两份源码拼成一个字符串会让「媒体面板是否仍渲染三件套」失去判据。
-  const composerSource = await readFile(resolve(here, 'MediaViewerComposer.jsx'), 'utf8');
-  const controlsSource = await readFile(resolve(here, 'MediaConfigControls.jsx'), 'utf8');
+  const composerSource = await readFile(resolve(here, './MediaViewerComposer.jsx'), 'utf8');
+  const controlsSource = await readFile(resolve(here, './MediaConfigControls.jsx'), 'utf8');
 
   assert.ok(
     /<MediaConfigControls[^>]*showModeSwitch/.test(composerSource),
@@ -63,7 +63,7 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
 
   // 2b. 共享控件的容器必须仍是单行弹性布局：三个子节点都是 .omx-popover-anchor
   // （块级盒），容器不声明弹性布局就会把工具条拆成竖排。
-  const mvStyles = await readFile(resolve(here, 'styles.js'), 'utf8');
+  const mvStyles = await readFile(resolve(here, '../../../omnimux/src/client/media-viewer/styles.js'), 'utf8');
   const containerRule = mvStyles.match(/\.omx-media-config-controls\s*\{[^}]*\}/);
   assert.ok(containerRule, '必须存在 .omx-media-config-controls 样式规则');
   for (const declaration of ['display: flex', 'align-items: center', 'gap: 8px', 'flex-wrap: nowrap', 'min-width: 0']) {
@@ -78,7 +78,7 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
   );
 
   // 3. 验证 MediaViewerTab.jsx 接入与直连通道契约
-  const tabSource = await readFile(resolve(here, 'MediaViewerTab.jsx'), 'utf8');
+  const tabSource = await readFile(resolve(here, './MediaViewerTab.jsx'), 'utf8');
   assert.ok(
     tabSource.includes('MediaViewerComposer'),
     'MediaViewerTab 必须接入 MediaViewerComposer 组件'

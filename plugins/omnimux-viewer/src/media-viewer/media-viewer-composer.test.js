@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { describe, it } from 'node:test';
 import { DEFAULT_CASCADE_MODELS, defaultMediaChannel, parseCatalogToCascade } from './MediaViewerComposerData.js';
-import { projectChannelGroups } from '../../catalog/project.js';
+import { projectChannelGroups } from '../../../omnimux/src/catalog/project.js';
 import { cleanAnnotationPrefix, inferMimeType, isAllowedReferenceUrl, makeBucketKey, rejectionOf, serializeReferenceAssets } from './media-slot.js';
 import { PRESET_REFERENCE_ASSETS } from './reference-constants.js';
-import { MEDIA_VIEWER_CSS } from './styles.js';
+import { MEDIA_VIEWER_CSS } from '../../../omnimux/src/client/media-viewer/styles.js';
 
 describe('MediaViewerComposer Component Contract', () => {
   it('supplies structured cascade models with brand -> model -> channel', () => {
@@ -1291,8 +1291,9 @@ describe('MediaViewerComposer Component Contract', () => {
 
   it('MediaViewerComposer.jsx 统一消费 media-slot.js 权威 isAllowedReferenceUrl 白名单，受控放行同源路径、https、base64，blob 只作预览', () => {
     const composerSrc = fs.readFileSync(new URL('./MediaViewerComposer.jsx', import.meta.url), 'utf-8');
+    // 包内相对引入（包已迁 omnimux-viewer）
     assert.ok(
-      composerSrc.includes('isAllowedReferenceUrl') && composerSrc.includes("from './media-slot.js'"),
+      composerSrc.includes('isAllowedReferenceUrl') && /from '\.\/media-slot\.js'/.test(composerSrc),
       '必须从 media-slot.js 统一引入权威 isAllowedReferenceUrl'
     );
     assert.ok(
@@ -1602,8 +1603,9 @@ describe('MediaViewerComposer Component Contract', () => {
         const tabSrc = fs.readFileSync(new URL('./MediaViewerTab.jsx', import.meta.url), 'utf-8');
 
         assert.ok(slotSrc.includes('export function isAllowedReferenceUrl(url)'), 'media-slot.js 必须导出权威单一真源 isAllowedReferenceUrl');
-        assert.ok(composerSrc.includes('isAllowedReferenceUrl') && composerSrc.includes("from './media-slot.js'"), 'MediaViewerComposer.jsx 必须从 media-slot.js 统一引入');
-        assert.ok(tabSrc.includes('isAllowedReferenceUrl') && tabSrc.includes("from './media-slot.js'"), 'MediaViewerTab.jsx 必须从 media-slot.js 统一引入');
+        // composer/tab 的 media-slot 引入可以是包内相对 './media-slot.js'（包已迁 omnimux-viewer）
+        assert.ok(composerSrc.includes('isAllowedReferenceUrl') && /from '\.\/media-slot\.js'/.test(composerSrc), 'MediaViewerComposer.jsx 必须从 media-slot.js 统一引入');
+        assert.ok(tabSrc.includes('isAllowedReferenceUrl') && /from '\.\/media-slot\.js'/.test(tabSrc), 'MediaViewerTab.jsx 必须从 media-slot.js 统一引入');
 
         // 单一真源规则验证：支持同源相对路径 /、https://、合法图片 base64 Data URL；blob 不可提交
         assert.strictEqual(isAllowedReferenceUrl('/local/path.jpg'), true);

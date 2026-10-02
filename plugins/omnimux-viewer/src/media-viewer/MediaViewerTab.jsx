@@ -1,13 +1,13 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { getGlobalMediaViewerStore } from './media-viewer-store.js';
+import { getGlobalMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
 import { OrganicShimmerOverlay } from './OrganicShimmerOverlay.jsx';
 import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 import { GenerationTasks } from './GenerationTasks.jsx';
 import { MediaViewerComposer } from './MediaViewerComposer.jsx';
-import { currentSessionId } from '../workbench/host-adapter.js';
-import { injectMediaViewerStyles } from './styles.js';
-import { syncImageCanvasStage } from './image-canvas-stage.js';
-import { registerContextContributor } from '../workbench/context.js';
+import { currentSessionId } from '../../../omnimux/src/client/workbench/host-adapter.js';
+import { injectMediaViewerStyles } from '../../../omnimux/src/client/media-viewer/styles.js';
+import { syncImageCanvasStage } from '../../../omnimux/src/client/media-viewer/image-canvas-stage.js';
+import { registerContextContributor } from '../../../omnimux/src/client/workbench/context.js';
 
 import { serializeReferenceAssets, isAllowedReferenceUrl } from './media-slot.js';
 
