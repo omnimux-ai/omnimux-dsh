@@ -167,6 +167,8 @@ jobs:
           node --test scripts/sync-bypass.test.mjs scripts/resolve-omnimux-profile.test.mjs scripts/sync-plugin-scope.test.mjs scripts/sync-agent-presets-targets.test.mjs scripts/verify-cross-plugin-model-alignment.test.mjs scripts/verify-profile-preflight.test.mjs scripts/test-agent-tools.test.mjs
           node --test scripts/verify-skill-bilingual.test.mjs scripts/generate-featured-skills.test.mjs
           node scripts/verify-skill-bilingual.mjs
+          node scripts/verify-dsh-lockfile-uniform.mjs
+          node --test scripts/verify-dsh-lockfile-uniform.test.mjs
 
       - name: Verify model contracts (admission + dispositions strict)
         run: |
