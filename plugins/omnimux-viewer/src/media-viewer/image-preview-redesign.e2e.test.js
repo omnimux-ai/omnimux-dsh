@@ -8,8 +8,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createMediaViewerStore } from './media-viewer-store.js';
-import { MEDIA_VIEWER_CSS } from './styles.js';
+import { createMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
+import { MEDIA_VIEWER_CSS } from '../../../omnimux/src/client/media-viewer/styles.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../../../../..');

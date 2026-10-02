@@ -98,7 +98,7 @@ test('E2E: Video breakdown priority and exclusivity gate', async (t) => {
 
   await t.test('AC-3: MediaViewerTab video element does not autoPlay', () => {
     const tabSource = readFileSync(
-      resolve(__dirname, '../media-viewer/MediaViewerTab.jsx'),
+      resolve(__dirname, '../../../../omnimux-viewer/src/media-viewer/MediaViewerTab.jsx'),
       'utf8'
     );
     const videoSnippet = tabSource.match(/activeItem\?\.type === 'video'[\s\S]*?<video[^>]+>/);

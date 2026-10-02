@@ -8,8 +8,8 @@
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createMediaViewerStore } from './media-viewer-store.js';
-import { MEDIA_VIEWER_CSS } from './styles.js';
+import { createMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
+import { MEDIA_VIEWER_CSS } from '../../../omnimux/src/client/media-viewer/styles.js';
 
 describe('大图预览与左上角 1:1 居中缩略图契约测试 (Issue #1844)', () => {
   it('AC-1: 单图视口无死板黑边，无限制等比自适应', () => {

@@ -8,13 +8,13 @@ import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createMediaViewerStore } from './media-viewer-store.js';
+import { createMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 test('E2E: 媒体查看器视口移除未完成生成状态黑色占位卡片契约验证', async () => {
   // 1. 验证 GenerationTasks.jsx 契约
-  const tasksSource = await readFile(resolve(here, 'GenerationTasks.jsx'), 'utf8');
+  const tasksSource = await readFile(resolve(here, './GenerationTasks.jsx'), 'utf8');
 
   // 必须对任务做可操作/有产物过滤，未就绪的 pending/running 必须被剔除
   assert.ok(
@@ -27,7 +27,7 @@ test('E2E: 媒体查看器视口移除未完成生成状态黑色占位卡片契
   );
 
   // 2. 验证 MediaViewerTab.jsx 视口破坏消除
-  const tabSource = await readFile(resolve(here, 'MediaViewerTab.jsx'), 'utf8');
+  const tabSource = await readFile(resolve(here, './MediaViewerTab.jsx'), 'utf8');
   
   // 视口容器 data-has-generation 不得在仅有 pending/running 时激活
   assert.ok(

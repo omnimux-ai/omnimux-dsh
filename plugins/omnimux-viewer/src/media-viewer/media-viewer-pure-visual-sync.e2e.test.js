@@ -8,13 +8,13 @@ import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createMediaViewerStore } from './media-viewer-store.js';
+import { createMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 test('E2E: 图像生成大橱窗与队列双向纯视觉同步及无边框自适应契约验证', async () => {
   // 1. 验证 OrganicShimmerOverlay.jsx 纯视觉契约
-  const shimmerSource = await readFile(resolve(here, 'OrganicShimmerOverlay.jsx'), 'utf8');
+  const shimmerSource = await readFile(resolve(here, './OrganicShimmerOverlay.jsx'), 'utf8');
   assert.ok(shimmerSource.includes('wf-organic-shimmer__field'), '必须包含光谱弥散底场');
   assert.ok(shimmerSource.includes('wf-organic-shimmer__distortion'), '必须包含液体波浪折射层');
   assert.ok(shimmerSource.includes('wf-organic-shimmer__glow-layer'), '必须包含微光边缘系统');
@@ -24,7 +24,7 @@ test('E2E: 图像生成大橱窗与队列双向纯视觉同步及无边框自适
   assert.ok(!shimmerSource.includes('<button'), 'OrganicShimmerOverlay 纯视觉组件严禁包含 button 操作按钮');
 
   // 2. 验证 MediaViewerTab.jsx 大小卡片同步契约与零文字执行态
-  const tabSource = await readFile(resolve(here, 'MediaViewerTab.jsx'), 'utf8');
+  const tabSource = await readFile(resolve(here, './MediaViewerTab.jsx'), 'utf8');
   assert.ok(
     tabSource.includes("item.status === 'generating'"),
     '缩略图栏必须识别并渲染 generating 执行态的小卡槽'
@@ -43,7 +43,7 @@ test('E2E: 图像生成大橱窗与队列双向纯视觉同步及无边框自适
   );
 
   // 3. 验证 MediaViewerComposer.jsx 上下分层与全宽输入契约
-  const composerSource = await readFile(resolve(here, 'MediaViewerComposer.jsx'), 'utf8');
+  const composerSource = await readFile(resolve(here, './MediaViewerComposer.jsx'), 'utf8');
   assert.ok(
     composerSource.includes('omx-mv-prompt-row'),
     '输入框必须使用 omx-mv-prompt-row 进行排布'
@@ -54,7 +54,7 @@ test('E2E: 图像生成大橱窗与队列双向纯视觉同步及无边框自适
   );
 
   // 4. 验证 styles.js 样式层绝对无边框与自适应比例契约
-  const stylesSource = await readFile(resolve(here, 'styles.js'), 'utf8');
+  const stylesSource = await readFile(resolve(here, '../../../omnimux/src/client/media-viewer/styles.js'), 'utf8');
   assert.ok(
     stylesSource.includes('.omx-media-slot') && stylesSource.includes('border: none !important'),
     '原位卡槽必须声明 border: none !important 彻底消除边框线'

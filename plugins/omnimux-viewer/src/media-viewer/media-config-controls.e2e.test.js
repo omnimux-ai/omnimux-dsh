@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { MEDIA_VIEWER_CSS } from './styles.js';
+import { MEDIA_VIEWER_CSS } from '../../../omnimux/src/client/media-viewer/styles.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,7 +62,7 @@ describe('MediaViewer UI Polish & Spec Compliance', () => {
   });
 
   it('Step 5: MediaConfigControls.jsx 文案白名单与 DOM 结构契约', () => {
-    const jsxPath = path.join(__dirname, 'MediaConfigControls.jsx');
+    const jsxPath = path.join(__dirname, './MediaConfigControls.jsx');
     const jsxContent = fs.readFileSync(jsxPath, 'utf8');
 
     // 严禁存在英文括号废话

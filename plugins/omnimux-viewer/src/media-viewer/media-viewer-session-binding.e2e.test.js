@@ -7,16 +7,16 @@ import { JSDOM } from 'jsdom';
 import * as esbuild from 'esbuild';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { getGlobalMediaViewerStore } from './media-viewer-store.js';
-import { bindWorkbenchDeps, resetWorkbenchHostAdapter } from '../workbench/host-adapter.js';
+import { getGlobalMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
+import { bindWorkbenchDeps, resetWorkbenchHostAdapter } from '../../../omnimux/src/client/workbench/host-adapter.js';
 
 const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>');
 globalThis.window = dom.window;
 globalThis.document = dom.window.document;
 
 const here = dirname(fileURLToPath(import.meta.url));
-const sourcePath = join(here, 'MediaViewerTab.jsx');
-const rootDir = join(here, '../../../../..');
+const sourcePath = join(here, './MediaViewerTab.jsx');
+const rootDir = join(here, '../../../..'); // worktree 仓库根
 const workbuddyDir = join(rootDir, '.workbuddy');
 mkdirSync(workbuddyDir, { recursive: true });
 const tempFile = join(workbuddyDir, `temp-media-viewer-tab-test-${Date.now()}.mjs`);

@@ -45,10 +45,6 @@ import { installUserMessageAttachmentsEnhancer } from './attachments/userMessage
 import { installAssistantMessageMediaEnhancer } from './attachments/assistantMessageMediaEnhancer.ts'
 import { installPromptFenceGenerate } from './attachments/promptFenceGenerate.ts'
 import { resetCreativeTemplates } from './session-guide/templates/creative-templates-client.js'
-import { MediaViewerTab, MEDIA_VIEWER_TAB_ID } from './media-viewer/MediaViewerTab.jsx'
-import { injectMediaViewerStyles } from './media-viewer/styles.js'
-import { getGlobalMediaViewerStore } from './media-viewer/media-viewer-store.js'
-import { createGenerationFeedback } from './media-viewer/generation-feedback.js'
 import { getSubmittedCanvasText, subscribeSubmittedCanvasText } from './attachments/useCommentAttachment.ts'
 import { getUiContext } from './workbench/context.js'
 import { readActiveSkill, subscribeSkillChanged } from './composer-add/skill-event.ts'
@@ -306,28 +302,6 @@ export function apply(ctx) {
       ctx.inject(['betterSidebar', 'sessions', 'uiConversation'], (inner) => {
         const sidebar = inner.betterSidebar ?? inner.get?.('betterSidebar')
         if (sidebar && typeof sidebar.registerTab === 'function') {
-          const imageUrl = (sessionId, attachment) => inner.uiConversation.imageUrl(sessionId, attachment)
-          let fileReader = null
-          const readFile = async (sessionId, path, signal) => {
-            if (!fileReader) throw new Error('File preview unavailable')
-            return fileReader(sessionId, path, signal)
-          }
-          inner.inject(['remote', 'remote.workspaceFiles'], (fileCtx) => {
-            fileCtx.effect(() => {
-              const reader = (sessionId, path, signal) => fileCtx.remote.workspaceFiles.readAll(sessionId, path, signal)
-              fileReader = reader
-              return () => { if (fileReader === reader) fileReader = null }
-            }, 'omnimux: media file reader')
-          })
-          const registerMediaViewer = () => sidebar.registerTab({
-            id: MEDIA_VIEWER_TAB_ID,
-            title: () => t('mediaViewer.tabTitle') || '图像生成',
-            order: 7,
-            hidden: false,
-            single: true,
-            component: (props) => createElement(MediaViewerTab, { ...props, sessions: inner.sessions, imageUrl, readFile }),
-          })
-          inner.effect(registerMediaViewer, 'omnimux: media viewer tab')
         }
       })
     }
