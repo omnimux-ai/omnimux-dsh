@@ -2480,6 +2480,13 @@ button.omx-slot-add:hover,
   transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 1;
   pointer-events: none;
+  border-radius: inherit; /* 把 .omx-media-slot 的 14px 圆角传给内部 .omx-generating-box */
+}
+
+/* 生成中卡槽不投影：投影在父级 .omx-media-slot 上，只移除含 shimmer-wrap
+   的生成中态，不动生成完成态大图卡槽的投影（Chromium 105+ 支持 :has） */
+.omx-media-slot:has(> .omx-media-slot__shimmer-wrap) {
+  box-shadow: none;
 }
 
 .omx-media-slot__shimmer-wrap.fade-out {

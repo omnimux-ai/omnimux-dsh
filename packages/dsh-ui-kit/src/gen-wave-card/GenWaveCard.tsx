@@ -24,13 +24,16 @@ export interface GenWaveCardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * 固定深色既定视觉：色值不消费 --dsw-alias-* 动态主题，
+ * 固定深色既定视觉：点阵/文案/胶囊色值不消费 --dsw-alias-* 动态主题，
  * 真源为 genWavePalette.ts（实测色，见该文件注释），
  * 以 CSS 变量注入根元素供 GenWaveCard.module.css 使用
  *（色值字面量一律集中在 genWavePalette.ts，本文件与 module.css 不得出现）。
+ * 唯一例外是卡片底色：.card background 声明为
+ * var(--gen-wave-card-bg, var(--dsw-alias-bg-layer-2))，不再注入固定值，
+ * 默认跟随宿主 layer-2 层级底色与页面底色拉开层次；
+ * 需要自定义时由宿主在卡片上写 --gen-wave-card-bg 覆盖。
  */
 const THEME_VARS = {
-  "--gen-wave-card-bg": GEN_WAVE_COLORS.cardBg,
   "--gen-wave-status": GEN_WAVE_COLORS.status,
   "--gen-wave-icon": GEN_WAVE_COLORS.icon,
 } as CSSProperties;
@@ -42,7 +45,9 @@ const THEME_VARS = {
  * 叠加亮度场 sigmoid 单向锋面（s = col − 0.35·row，T 在 [-10,31] 往返），
  * 左上 r0c0 / 右上 r0c27 / 左下 r28c0 三角位缺位；右下角 58×35 椭圆
  * 进度胶囊与点阵同层绘制（DOM badge 保留为 ARIA/状态载体）。
- * 自适应容器宽度（点距收窄、水平居中）；prefers-reduced-motion 定格参考帧。
+ * 自适应容器尺寸：画布撑满卡片剩余高度（.card 为 flex 列，.field flex:1），
+ * 点距取水平/垂直两个方向可容点距的较小值，点阵在画布内双向居中；
+ * prefers-reduced-motion 定格参考帧。
  */
 export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
   function GenWaveCard({ statusText, progress, autoProgress, className, style, ...rest }, ref) {
@@ -71,20 +76,25 @@ export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
       let cssH = 0;
       let spacing: number = C.SPACING;
       let gridOffX = 0;
+      let gridOffY = 0;
       let rafId = 0;
 
-      /* 按容器宽反算点距并水平居中，行高随之确定。 */
+      /* 画布实测尺寸反算点距：水平/垂直两个方向各算一个可容点距取较小值，
+         点阵在画布内双向居中，铺满卡片可用空间（不再 clamp 到 C.SPACING 上限）。 */
       const layout = () => {
         const rect = canvas.getBoundingClientRect();
         cssW = rect.width;
-        spacing = Math.min(C.SPACING, (cssW - 2) / (C.COLS - 1));
+        cssH = rect.height;
+        spacing = Math.min(
+          (cssW - C.PAD_X * 2) / (C.COLS - 1),
+          (cssH - C.PAD_Y - C.PAD_Y_BOT) / (C.ROWS - 1),
+        );
         const gridW = spacing * (C.COLS - 1);
         const gridH = spacing * (C.ROWS - 1);
         gridOffX = (cssW - gridW) / 2;
-        cssH = C.PAD_Y + gridH + C.PAD_Y_BOT;
+        gridOffY = (cssH - gridH) / 2;
 
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.style.height = cssH + "px";
         canvas.width = Math.round(cssW * dpr);
         canvas.height = Math.round(cssH * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -123,7 +133,7 @@ export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
             const kb = brightWave(c, r, T); // 亮度锋面
             const radius = lerp(C.DOT_R_MIN, C.DOT_R_MAX, ks);
             const x = gridOffX + c * spacing;
-            const y = C.PAD_Y + r * spacing;
+            const y = gridOffY + r * spacing;
 
             ctx.fillStyle = dotFillStyle(kb);
             ctx.beginPath();
@@ -132,8 +142,8 @@ export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
           }
         }
 
-        /* 进度胶囊：椭圆 58×35 CSS，右缘贴画布右缘、下缘贴画布底
-           （页面坐标实测 x346.5–404 / y396.5–432 → 画布坐标系换算）。 */
+        /* 进度胶囊：椭圆 58×35 CSS，右缘距画布右缘 BADGE_X_OFF、
+           下缘贴画布底（BADGE_BOTTOM_GAP=0），始终落在右下角画布区内。 */
         const bw = C.BADGE_W;
         const bh = C.BADGE_H;
         const bx = cssW - C.BADGE_X_OFF - bw;
