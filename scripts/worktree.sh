@@ -397,11 +397,12 @@ auto_materialize_and_reload() {
   local changed_paths changed_plugins=() pending=()
   changed_paths="$(git -C "${ROOT}" log --name-only --pretty=format: "${base_ref}..${target_ref}" -- plugins 2>/dev/null | grep -E '^plugins/' | sort -u || true)"
   # 插件根目录的 *.md（AGENTS.md / README*.md / PRD.md …）与 plugins/<name>/docs/ 只给人和 Agent 读，
-  # 运行时不加载，不进开发版也不触发重启。skills/、catalog/ 等运行时读取的 Markdown 不在此列。
+  # 运行时不加载；测试文件（*.test.* 与 tests/、test/、test-support/、__tests__/）同样不进开发版运行时，
+  # 两类改动都不物化也不触发重启。skills/、catalog/ 等运行时读取的 Markdown 不在此列。
   local source_paths
-  source_paths="$(printf '%s\n' "${changed_paths}" | grep -vE '^plugins/[^/]+/[^/]+\.md$|^plugins/[^/]+/docs/' || true)"
+  source_paths="$(printf '%s\n' "${changed_paths}" | grep -vE '^plugins/[^/]+/[^/]+\.md$|^plugins/[^/]+/docs/|^plugins/[^/]+/(tests?|test-support|__tests__)/|\.test\.(js|mjs|ts|jsx|tsx|cjs)$' || true)"
   if [ -n "${changed_paths}" ] && [ -z "${source_paths}" ]; then
-    say "ℹ️ 本次合入只改了插件文档，无需物化。"
+    say "ℹ️ 本次合入只改了插件文档或测试文件，无需物化。"
     return 0
   fi
   changed_paths="${source_paths}"
