@@ -1,12 +1,17 @@
 /* GenWaveCard · 1:1 移植自 chatgpt-gen-loading-card.html
    色值全部来自根元素注入的 --gen-wave-* CSS 变量（见 GenWaveCard.tsx，
-   常量真源在 genWavePalette.ts，固定深色既定视觉）。 */
+   常量真源在 genWavePalette.ts，固定深色既定视觉）；
+   唯一例外是卡片底色：不再封装固定色，走 var(--gen-wave-card-bg,
+   var(--dsw-alias-bg-layer-2)) 跟随宿主层级底色，保证卡片与页面
+   （--dsw-alias-bg-base）有可区分的层次差。 */
 
 .card {
   position: relative;
-  width: 413px; /* 实测: x10.5 起、内容右缘 ~x413 */
-  max-width: 100%;
-  background: var(--gen-wave-card-bg);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--gen-wave-card-bg, var(--dsw-alias-bg-layer-2));
   border-radius: 8px;
   padding: 10px 10px 23px;
   overflow: hidden;
@@ -54,6 +59,8 @@
 .field {
   display: block;
   width: 100%;
+  flex: 1;
+  min-height: 0;
   margin-top: 26px; /* 实测: 顶行底 ~24 → 首行点心 53 */
 }
 

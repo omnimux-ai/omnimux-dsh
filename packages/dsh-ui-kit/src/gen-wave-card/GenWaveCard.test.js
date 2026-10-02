@@ -35,14 +35,17 @@ describe('GenWaveCard component contract', () => {
     assert.match(palette, /\[0,\s*28\]/)
   })
 
-  it('keeps measured colors as encapsulated constants (fixed dark visual, no dynamic tokens)', () => {
-    assert.match(palette, /cardBg: "#0e0e0e"/)
+  it('keeps measured colors as encapsulated constants (fixed dark visual, card bg follows host layer-2)', () => {
+    // 卡片底色不再封装固定值：.card 走 var(--gen-wave-card-bg, var(--dsw-alias-bg-layer-2))
+    assert.doesNotMatch(palette, /cardBg/)
+    assert.doesNotMatch(tsx, /"--gen-wave-card-bg":/)
     assert.match(palette, /status: "#b6b6b8"/)
     assert.match(palette, /icon: "#cdcdcd"/)
     assert.match(palette, /badgeBg: "rgb\(33,33,33\)"/)
     assert.match(palette, /badgeFg: "rgb\(226,226,226\)"/)
     assert.match(palette, /dimRgb: \[62, 62, 62\]/)
     assert.match(palette, /litRgb: \[224, 224, 224\]/)
+    assert.match(css, /background:\s*var\(--gen-wave-card-bg,\s*var\(--dsw-alias-bg-layer-2\)\)/)
   })
 
   it('draws the progress badge on the same canvas layer (ellipse + centered text)', () => {
@@ -73,8 +76,27 @@ describe('GenWaveCard component contract', () => {
     assert.doesNotMatch(css, /rgba?\(/)
   })
 
+  it('fills the card with the dot field and centers it both axes', () => {
+    // .card 撑满宿主容器并以 flex 列布局，.field flex:1 承接剩余高度
+    assert.match(css, /\.card\s*\{[^}]*width:\s*100%/s)
+    assert.match(css, /\.card\s*\{[^}]*height:\s*100%/s)
+    assert.match(css, /\.card\s*\{[^}]*display:\s*flex/s)
+    assert.match(css, /\.card\s*\{[^}]*flex-direction:\s*column/s)
+    assert.match(css, /\.field\s*\{[^}]*flex:\s*1/s)
+    // 不再有 413px 宽度上限
+    assert.doesNotMatch(css, /width:\s*413px/)
+    // layout 用画布实测宽高双向反算点距，不再 clamp 到 SPACING 上限
+    assert.match(tsx, /cssH = rect\.height/)
+    assert.match(tsx, /\(cssW - C\.PAD_X \* 2\) \/ \(C\.COLS - 1\)/)
+    assert.match(tsx, /\(cssH - C\.PAD_Y - C\.PAD_Y_BOT\) \/ \(C\.ROWS - 1\)/)
+    assert.doesNotMatch(tsx, /Math\.min\(C\.SPACING/)
+    // 点阵双向居中
+    assert.match(tsx, /gridOffX = \(cssW - gridW\) \/ 2/)
+    assert.match(tsx, /gridOffY = \(cssH - gridH\) \/ 2/)
+    assert.match(tsx, /const y = gridOffY \+ r \* spacing/)
+  })
+
   it('applies measured geometry in the module css', () => {
-    assert.match(css, /width:\s*413px/)
     assert.match(css, /padding:\s*10px 10px 23px/)
     assert.match(css, /gap:\s*11px/)
     assert.match(css, /width:\s*13\.5px/)

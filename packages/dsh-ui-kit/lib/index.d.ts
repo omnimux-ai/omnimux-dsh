@@ -621,7 +621,9 @@ interface GenWaveCardProps extends HTMLAttributes<HTMLDivElement> {
  * 叠加亮度场 sigmoid 单向锋面（s = col − 0.35·row，T 在 [-10,31] 往返），
  * 左上 r0c0 / 右上 r0c27 / 左下 r28c0 三角位缺位；右下角 58×35 椭圆
  * 进度胶囊与点阵同层绘制（DOM badge 保留为 ARIA/状态载体）。
- * 自适应容器宽度（点距收窄、水平居中）；prefers-reduced-motion 定格参考帧。
+ * 自适应容器尺寸：画布撑满卡片剩余高度（.card 为 flex 列，.field flex:1），
+ * 点距取水平/垂直两个方向可容点距的较小值，点阵在画布内双向居中；
+ * prefers-reduced-motion 定格参考帧。
  */
 declare const GenWaveCard: import("react").ForwardRefExoticComponent<GenWaveCardProps & import("react").RefAttributes<HTMLDivElement>>;
 //#endregion
