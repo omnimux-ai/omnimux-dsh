@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import WebSocket from 'ws'
 import { BridgeServer, BridgeToolError, isLoopbackAddress, messageToText, payloadCode, payloadMessage } from '../src/server.ts'
-import { BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD, BRIDGE_SESSION_PURGE_METHOD, type BridgeFrame } from '../src/protocol.ts'
+import { BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD, BRIDGE_MODEL_MODE_METHOD, BRIDGE_SESSION_PURGE_METHOD, type BridgeFrame } from '../src/protocol.ts'
 import { SessionPurgeError } from '../src/session-purge.ts'
 import type { BrowserHostApi, HostEventFrame } from '../src/host-api.ts'
 
@@ -45,6 +45,7 @@ async function startBridge(overrides: Partial<ConstructorParameters<typeof Bridg
     caps: { textOnly: true, snapshotMaxChars: 12_000, maxInteractiveItems: 60 },
     injectBrowserSnapshot: vi.fn(),
     purgeSession: vi.fn(async () => {}),
+    setModelMode: vi.fn(),
     ...overrides,
   })
   const server = createServer()
@@ -786,6 +787,58 @@ describe('BridgeServer', () => {
     const countBefore = frames.filter((f) => f.t === 'event').length
     await new Promise((resolve) => { setTimeout(resolve, 80) })
     expect(frames.filter((f) => f.t === 'event').length).toBe(countBefore)
+  })
+})
+
+describe('bridge.modelMode', () => {
+  it('applies set payloads through the injected setter without touching the gateway', async () => {
+    const setModelMode = vi.fn()
+    const h = await startBridge({ setModelMode })
+    harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some((f) => f.t === 'hello.ok'))
+
+    send(ws, {
+      t: 'rpc', id: 'mode-1', method: BRIDGE_MODEL_MODE_METHOD,
+      payload: { auto: false, modelId: 'gpt-5.5' },
+    })
+    await waitFor(() => frames.some((f) => f.t === 'rpc.result' && f.id === 'mode-1'))
+    expect(setModelMode).toHaveBeenCalledWith({ auto: false })
+    expect(frames).toContainEqual({
+      t: 'rpc.result', id: 'mode-1', ok: true, result: { applied: true },
+    })
+    expect(h.callMock).not.toHaveBeenCalled()
+
+    send(ws, {
+      t: 'rpc', id: 'mode-2', method: BRIDGE_MODEL_MODE_METHOD,
+      payload: { auto: true },
+    })
+    await waitFor(() => frames.some((f) => f.t === 'rpc.result' && f.id === 'mode-2'))
+    expect(setModelMode).toHaveBeenLastCalledWith({ auto: true })
+    ws.close()
+  })
+
+  it.each([
+    ['string payload', 'auto'],
+    ['missing auto', { modelId: 'gpt-5.5' }],
+    ['non-boolean auto', { auto: 'yes' }],
+    ['null payload', null],
+  ])('rejects %s as bad-request without calling the setter', async (_label, payload) => {
+    const setModelMode = vi.fn()
+    const h = await startBridge({ setModelMode })
+    harnesses.push(h)
+    const { ws, frames } = await connect(h.url)
+    send(ws, { t: 'hello', token: TOKEN, caps: CAPS })
+    await waitFor(() => frames.some((f) => f.t === 'hello.ok'))
+
+    send(ws, { t: 'rpc', id: 'mode-bad', method: BRIDGE_MODEL_MODE_METHOD, payload })
+    await waitFor(() => frames.some((f) => f.t === 'rpc.result' && f.id === 'mode-bad'))
+    expect(frames).toContainEqual(expect.objectContaining({
+      t: 'rpc.result', id: 'mode-bad', ok: false, error: expect.objectContaining({ code: 'bad-request' }),
+    }))
+    expect(setModelMode).not.toHaveBeenCalled()
+    ws.close()
   })
 })
 

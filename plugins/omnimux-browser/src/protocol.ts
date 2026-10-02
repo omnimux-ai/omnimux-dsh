@@ -54,6 +54,15 @@ export const BRIDGE_FETCH_MEDIA_METHOD = 'bridge.fetchMedia'
 export const BRIDGE_COMPLETE_TEXT_METHOD = 'bridge.completeText'
 
 /**
+ * Internal RPC the panel uses to push the composer model mode to the host.
+ *
+ * Set semantics only: the payload carries `{auto: boolean}` (with a reserved,
+ * unconsumed `modelId` for the manual selection); the host keeps the mode in
+ * process memory — like the session model, it never touches durable storage.
+ */
+export const BRIDGE_MODEL_MODE_METHOD = 'bridge.modelMode'
+
+/**
  * How one {@link BRIDGE_FETCH_MEDIA_METHOD} call settled.
  *
  * Every outcome is a tagged **success** at the carrier level, because a 404 or a

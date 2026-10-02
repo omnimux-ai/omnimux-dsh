@@ -618,6 +618,14 @@ class AsyncEventQueue {
 }
 
 function invokeTarget(call: HostRpcCall): InvokeTarget | { readonly error: HostRpcFailure } {
+  // No-argument Host methods are whitelisted before the record check so an
+  // absent payload is legal; a present one must still be an object.
+  if (call.method === 'session.modelCatalog') {
+    if (call.payload !== undefined && !isRecord(call.payload)) {
+      return { error: badRequestFailure('session.modelCatalog payload must be an object') }
+    }
+    return { namespace: 'session', method: 'modelCatalog', args: {} }
+  }
   if (!isRecord(call.payload)) return { error: badRequestFailure(`${call.method} payload must be an object`) }
   switch (call.method) {
     case 'session.list':

@@ -145,6 +145,35 @@ describe('dsh 0.1.5 Remote Host adapter', () => {
     }))
   })
 
+  it('maps session.modelCatalog to a no-args session invoke, with or without a payload', async () => {
+    const catalog = {
+      default: { provider: 'chatgpt', model: 'gpt-5.5' },
+      routableProviders: ['chatgpt'],
+      groups: [{ id: 'chatgpt', name: 'ChatGPT (Codex)', models: [{ id: 'gpt-5.5', name: 'GPT-5.5' }] }],
+      failures: [],
+    }
+    const { api, invoke } = harness({
+      invoke: async ({ namespace, method }) => {
+        if (`${namespace}/${method}` === 'session/modelCatalog') return catalog
+        return { accepted: true }
+      },
+    })
+
+    await expect(api.call(call('session.modelCatalog', {}))).resolves.toEqual({
+      ok: true, value: catalog,
+    })
+    await expect(api.call(call('session.modelCatalog', undefined))).resolves.toEqual({
+      ok: true, value: catalog,
+    })
+    expect(invoke).toHaveBeenCalledTimes(2)
+    expect(invoke).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      namespace: 'session', method: 'modelCatalog', args: {},
+    }))
+    expect(invoke).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      namespace: 'session', method: 'modelCatalog', args: {},
+    }))
+  })
+
   it('uses a session/follow snapshot for history and keeps that iterator for live events', async () => {
     const { api, open } = harness({
       open: async (endpoint, _payload, signal) => {

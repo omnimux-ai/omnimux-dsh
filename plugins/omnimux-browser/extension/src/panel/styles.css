@@ -6214,3 +6214,282 @@ textarea:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ------------------------------------------------------------------ */
+/* Issue #2966 会话栏「自动/手动」模型选择器（clean-* 体系，PM §2 几何）  */
+/* ------------------------------------------------------------------ */
+
+.amp-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+/* 触发胶囊：高 28px 紧凑变体、999px 胶囊圆角、0 10px 内边距、6px 间距 */
+.composer-actions button.amp-trigger {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: auto !important;
+  height: 28px !important;
+  min-width: 0 !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--line-strong) !important;
+  background: var(--canvas-deep) !important;
+  color: var(--muted) !important;
+  font-size: calc(13px * var(--ui-scale)) !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.12s ease !important;
+}
+
+.composer-actions button.amp-trigger:hover:not(:disabled) {
+  border-color: var(--faint) !important;
+  background: var(--surface) !important;
+  transform: none !important;
+}
+
+.composer-actions button.amp-trigger.open {
+  background: var(--blue-soft) !important;
+}
+
+.composer-actions button.amp-trigger:active:not(:disabled) {
+  transform: scale(0.96) !important;
+}
+
+.composer-actions button.amp-trigger:focus-visible {
+  outline: none !important;
+  box-shadow: var(--focus-ring) !important;
+}
+
+.composer-actions button.amp-trigger .amp-trigger-label {
+  display: inline-block;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 面板展开时 chevron 旋转 180°；覆盖全局 button svg 的 14px 尺寸 */
+.composer-actions button.amp-trigger svg.amp-chevron {
+  width: 12px !important;
+  height: 12px !important;
+  flex: 0 0 12px;
+  transition: transform 0.15s ease;
+}
+
+.composer-actions button.amp-trigger.open svg.amp-chevron {
+  transform: rotate(180deg);
+}
+
+.composer-actions button.amp-trigger svg.amp-brand-icon {
+  width: 14px !important;
+  height: 14px !important;
+  flex: 0 0 14px;
+}
+
+/* 上浮面板：向上展开、左对齐按钮左缘、280px、毛玻璃浮层 */
+.amp-panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 60;
+  width: min(280px, calc(100vw - 16px));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: amp-panel-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes amp-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amp-panel {
+    animation: none;
+  }
+}
+
+.amp-panel-inner {
+  padding: 4px;
+}
+
+.amp-title {
+  padding: 8px 10px 4px;
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--muted);
+}
+
+.amp-auto-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
+.amp-auto-label {
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: 500;
+  color: var(--ink-strong);
+}
+
+/* 开关：轨道 32×18px，拇指 14px；ON 态品牌紫 */
+.amp-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 32px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  cursor: pointer;
+  flex: 0 0 32px;
+  transition: background-color 0.15s ease;
+}
+
+/* extension 面板为黑白主行动色体系（紫色被 no-purple-theme 门禁禁止）；
+   brand-primary 在此映射为面板的墨水主色 token。 */
+.amp-switch.on {
+  background: var(--blue);
+}
+
+.amp-switch:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.amp-switch-thumb {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.amp-switch.on .amp-switch-thumb {
+  transform: translateX(14px);
+}
+
+.amp-help {
+  padding: 0 10px 8px;
+  font-size: calc(12px * var(--ui-scale));
+  line-height: 16px;
+  color: var(--faint);
+}
+
+.amp-divider {
+  height: 1px;
+  margin: 0 10px;
+  background: var(--line);
+}
+
+.amp-list {
+  max-height: 264px;
+  overflow-y: auto;
+  padding-top: 4px;
+}
+
+/* 模型行：44px 高、[20px 图标][名称+副标题][check] */
+.amp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-strong);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.amp-row:hover {
+  background: var(--blue-soft);
+}
+
+.amp-row:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus-ring);
+}
+
+.amp-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  color: var(--muted);
+}
+
+.amp-row-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.amp-row-text {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.amp-row-name {
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--ink-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amp-row-sub {
+  font-size: calc(12px * var(--ui-scale));
+  line-height: 14px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amp-row .amp-check {
+  flex: 0 0 12px;
+  color: var(--ink-strong);
+}
+
+.amp-empty {
+  padding: 16px 10px;
+  font-size: calc(12px * var(--ui-scale));
+  line-height: 16px;
+  color: var(--faint);
+}

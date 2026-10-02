@@ -25,6 +25,7 @@ import type { DraftField } from '../shared/draft.ts'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
+import { AutoModelPicker } from './components/AutoModelPicker.tsx'
 import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, PaperclipIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
@@ -3718,6 +3719,14 @@ export function App(): React.JSX.Element {
               >
                 <PaperclipIcon size={18} />
               </button>
+              <AutoModelPicker
+                locale={locale}
+                port={targetPort}
+                rpc={api.rpc}
+                selectedModel={selectedDefaultModel}
+                onSelectModel={handleSelectModel}
+                disabled={composerDisabled}
+              />
             </span>
             <button
               className={`clean-send-btn ${input.trim() || draftImages.length > 0 ? 'active' : ''}`}
