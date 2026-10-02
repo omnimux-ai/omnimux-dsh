@@ -26,10 +26,11 @@
  */
 
 import { spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { tmpdir as osTmpdir } from 'node:os'
 
 export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -318,6 +319,11 @@ const FIBER_FAILED = 3
 export async function checkPlugin({ module, services, config, label, timeoutMs = 8000, cordisPath }) {
   const cordisModule = await import(pathToFileURL(cordisPath).href)
   const { Context } = cordisModule
+  // Plugins legitimately read DSH_HOME during apply (forms opens a store there);
+  // give the check a scratch home so load-time config validation runs the real path.
+  const dshHome = process.env.DSH_HOME ?? mkdtempSync(join(osTmpdir(), 'verify-load-dsh-home-'))
+  const savedHome = process.env.DSH_HOME
+  process.env.DSH_HOME = dshHome
   const ctx = new Context()
   const declared = normalizeInject(module.inject)
 
@@ -362,6 +368,7 @@ export async function checkPlugin({ module, services, config, label, timeoutMs =
   try {
     await fiber.dispose?.()
   } catch { /* disposal best-effort */ }
+  if (savedHome === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = savedHome
   return { ok: true, declared, fiberState: fiber.state }
 }
 
