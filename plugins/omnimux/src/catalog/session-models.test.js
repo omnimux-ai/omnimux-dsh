@@ -80,3 +80,32 @@ describe('listSessionModels', () => {
     )
   })
 })
+
+describe('listSessionModels overlay merge', () => {
+  it('keeps base models when the user entry only overlays other fields', () => {
+    const settings = settingsStub(descriptorWith(
+      { cpa: { apiKeyEnv: 'CPA_API_KEY', baseURL: 'http://127.0.0.1:8317/v1' } },
+      { cpa: { displayName: 'CPA', models: [{ id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol' }] } },
+    ))
+    assert.deepEqual(listSessionModels(settings), [{ id: 'cpa:gpt-6.1-sol', label: 'GPT-6.1 Sol · CPA' }])
+  })
+
+  it('parses a model id that itself contains a colon tag', async () => {
+    const { executeOmnimuxText } = await import('../text/execute.js')
+    const seen = []
+    const result = await executeOmnimuxText({
+      prompt: 'hi',
+      settings: { get: (k) => k === 'omnimux' ? { toolModel: 'ollama:llama3.1:8b' } : undefined },
+      llm: {
+        async * stream(options) {
+          seen.push(options)
+          yield { type: 'text-delta', text: 'ok' }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+        },
+      },
+    })
+    assert.equal(seen[0].provider, 'ollama')
+    assert.equal(seen[0].model, 'llama3.1:8b')
+    assert.equal(result.text, 'ok')
+  })
+})

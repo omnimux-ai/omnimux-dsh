@@ -77,8 +77,14 @@ export function listSessionModels(settingsService) {
 
   const rows = []
   for (const providerId of providerIds) {
-    const profile = (userProviders && userProviders[providerId])
-      ?? (baseProviders && baseProviders[providerId])
+    // User entries can be partial overlays (endpoint/key without models):
+    // merge per field so base models/displayName survive a thin user entry.
+    const baseProfile = baseProviders && baseProviders[providerId]
+    const userProfile = userProviders && userProviders[providerId]
+    const profile = {
+      ...(baseProfile && typeof baseProfile === 'object' ? baseProfile : {}),
+      ...(userProfile && typeof userProfile === 'object' ? userProfile : {}),
+    }
     rows.push(...providerRows(providerId, profile))
   }
   return rows

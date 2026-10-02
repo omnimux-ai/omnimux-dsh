@@ -68,9 +68,10 @@ function parseToolModel(value) {
   const trimmed = value.trim()
   if (!trimmed || trimmed === 'auto') return null
   const sep = trimmed.indexOf(':')
-  // A second colon or a missing half means the stored value is not a session
-  // pair — fail loud below instead of misrouting onto the official whitelist.
-  if (sep < 0 || sep !== trimmed.lastIndexOf(':')) return { provider: '', model: '' }
+  // The provider key never contains a colon, but a session model id can
+  // (Ollama-style tags like 'llama3.1:8b'): split on the FIRST separator only
+  // and let the non-empty halves decide validity.
+  if (sep < 0) return { provider: '', model: '' }
   return { provider: trimmed.slice(0, sep).trim(), model: trimmed.slice(sep + 1).trim() }
 }
 

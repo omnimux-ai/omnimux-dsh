@@ -155,7 +155,7 @@ export function ModelsSettingsCard({ t, scope }) {
     }
     const rows = Array.isArray(catalog?.[group.kind]) ? catalog[group.kind] : []
     return rows.map((item) => ({ value: item.id, label: item.label || item.id }))
-  }, [catalog, currentModelIdFor, listedOperationsFor, t])
+  }, [catalog, currentModelIdFor, listedOperationsFor, t, value])
 
   const currentValueForRow = useCallback((group, row, options) => {
     const stored = typeof value[row.key] === 'string' && value[row.key] ? value[row.key] : ''
