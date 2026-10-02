@@ -108,7 +108,6 @@ import {
   isRecord,
   mergeHistoryRows,
   pendingQuestionFromFrame,
-  previewClip,
   resolvedQuestionFromFrame,
   rowFromEvent,
   toolSummary,
@@ -124,6 +123,7 @@ import {
 import { producedMediaFromToolResult, toolResultCallId } from './produced-media.ts'
 
 import { TurnRail, buildRailItems } from './TurnRail.tsx'
+import { QueueDock } from './QueueDock.tsx'
 
 function normalizeWebOrigin(value: string): string | null {
   return normalizeTrustedOrigin(value) ?? null
@@ -1797,6 +1797,17 @@ export function App(): React.JSX.Element {
     failed: copy.app.railFailed,
     taskN: copy.app.railTaskN,
     jumpTo: copy.app.railJumpTo,
+  }), [copy])
+  const queueDockCopy = useMemo(() => ({
+    count: copy.app.queueDockBadge,
+    sending: copy.app.queueSending,
+    edit: copy.app.queueEdit,
+    remove: copy.app.queueRemove,
+    save: copy.app.queueSave,
+    cancelEdit: copy.app.queueCancelEdit,
+    editFailed: copy.app.queueEditFailed,
+    removeFailed: copy.app.queueRemoveFailed,
+    taskN: copy.app.railTaskN,
   }), [copy])
 
   /** 消息区滚动时推算视口内最近轮次，驱动刻度「当前轮」高亮。 */
@@ -3659,16 +3670,13 @@ export function App(): React.JSX.Element {
             onAttachMedia={attachLitMedia}
           />
         )}
-        {queuedItems.length > 0 && (
-          <div className="queue-dock" aria-live="polite">
-            {queuedItems.map((item, index) => (
-              <div className="queue-dock-item" key={item.id || `q${index}`}>
-                <span className="queue-dock-badge">{copy.app.queueDockBadge(index + 1)}</span>
-                <span className="queue-dock-text" title={item.text}>{item.text === '' ? copy.app.railTaskN(index + 1) : previewClip(item.text, 80)}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        <QueueDock
+          items={queuedItems}
+          sessionId={sessionRef.current}
+          api={api}
+          copy={queueDockCopy}
+          onError={setError}
+        />
         <div className="composer-box clean-chat-box">
           {selection !== null && (
             <SelectionQuote

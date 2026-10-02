@@ -1,0 +1,81 @@
+{
+  "page": "taskrail.html?theme=light&width=400",
+  "assertions": [
+    {
+      "name": "rail-marks-states",
+      "pass": true
+    },
+    {
+      "name": "hover-preview",
+      "pass": true
+    },
+    {
+      "name": "click-locate",
+      "pass": true
+    },
+    {
+      "name": "queue-dock-collapsed",
+      "pass": true
+    },
+    {
+      "name": "queue-dock-expanded",
+      "pass": true
+    },
+    {
+      "name": "queue-dock-remove",
+      "pass": true
+    }
+  ],
+  "shots": [
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-queue-dock-issue-2974/.agent-reports/task-rail-qa/taskrail-hover-preview.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-queue-dock-issue-2974/.agent-reports/task-rail-qa/taskrail-locate-flash.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-queue-dock-issue-2974/.agent-reports/task-rail-qa/taskrail-queue-dock-collapsed.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-queue-dock-issue-2974/.agent-reports/task-rail-qa/taskrail-queue-dock-expanded.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-queue-dock-issue-2974/.agent-reports/task-rail-qa/taskrail-queue-dock.png"
+  ],
+  "rail": {
+    "exists": true,
+    "count": 6,
+    "busy": 1,
+    "queued": 2,
+    "active": 1,
+    "railWidth": 26,
+    "railRight": 394
+  },
+  "preview": {
+    "exists": true,
+    "prompt": "总结这条帖子",
+    "response": "帖子核心观点：作者认为 AI 视频生成的分水岭不是画质，而是「可导演性」——分镜可控、角色一致、节奏可剪。",
+    "status": "已完成"
+  },
+  "landed": {
+    "dataTurn": "1",
+    "scrollTop": 0,
+    "flashed": true
+  },
+  "dockCollapsed": {
+    "panel": true,
+    "header": true,
+    "count": "2 条排队消息",
+    "listVisible": false,
+    "icon": true,
+    "expanded": "false"
+  },
+  "dockExpanded": {
+    "rows": 2,
+    "texts": [
+      "再帮我写 3 个回复角度",
+      "把生成结果导出成 markdown 发给我"
+    ],
+    "sepWidth": "rgba(0, 0, 0, 0.08) 0px 1px 0px 0px inset",
+    "actions": [
+      "编辑排队消息",
+      "删除排队消息"
+    ]
+  },
+  "afterRemove": {
+    "rows": 1,
+    "method": "session.updateQueue",
+    "kind": "remove"
+  }
+}

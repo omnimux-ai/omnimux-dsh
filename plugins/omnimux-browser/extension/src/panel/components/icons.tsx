@@ -451,3 +451,25 @@ export function PaperclipIcon({ size = 19, className }: { size?: number; classNa
   )
 }
 
+
+/** Queue list icon: three stacked horizontal lines matching the official queue glyph. */
+export function QueueIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="4" y1="12" x2="16" y2="12" />
+      <line x1="4" y1="18" x2="12" y2="18" />
+    </SvgIcon>
+  )
+}
+
+/** Trash icon for removing a queued message. */
+export function TrashIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <path d="M4 7h16" />
+      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+      <path d="M6.5 7l1 12a1 1 0 0 0 1 .9h7a1 1 0 0 0 1-.9l1-12" />
+    </SvgIcon>
+  )
+}
