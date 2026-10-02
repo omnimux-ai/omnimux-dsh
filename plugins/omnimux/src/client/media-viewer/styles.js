@@ -1262,22 +1262,6 @@ button.omx-slot-add:hover,
   color: currentColor;
   flex-shrink: 0;
 }
-.omx-composer-expand-btn {
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--dsw-alias-label-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-.omx-composer-expand-btn:hover {
-  color: var(--dsw-alias-label-primary);
-}
 .omx-slot-notice {
   position: fixed;
   top: 22px;
