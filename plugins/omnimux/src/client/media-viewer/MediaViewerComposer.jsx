@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { MediaConfigControls, useMediaGenerationConfig } from './MediaConfigControls.jsx';
-import { MediaSlotGroup } from './MediaSlotGroup.jsx';
+import { MediaSlotGroup, readDuration } from './MediaSlotGroup.jsx';
 import { ReferencePickerPopover } from './ReferencePickerPopover.jsx';
 import { peekComposerPrefill, subscribeComposerPrefill, takeComposerPrefill } from './composer-prefill.js';
 import { clampPromptTextareaHeight } from './prompt-textarea-height.js';
@@ -736,6 +736,96 @@ export function MediaViewerComposer({
     return true;
   }, [disabled, slots, targetSlot, bucketKey, setNotice]);
 
+  // 粘贴图片/视频/音频进素材卡槽：优先当前操作能装的卡槽；
+  // 装不下时按 deriveAdaptiveOperation 推导适配操作（单图→编辑、多图→参考）后重试。
+  const handlePasteFiles = useCallback(async (files) => {
+    if (disabled || !model || !files?.length) return;
+    const mediaFiles = [...files].filter((file) => /^(image|video|audio)\//.test(file?.type || ''));
+    if (mediaFiles.length === 0) return;
+
+    const tryAdd = async (slot, file, existing) => {
+      const key = bucketKey(slot);
+      const list = existing[key] || [];
+      const room = slot.max == null ? Infinity : slot.max;
+      if (list.length >= room) return 'full';
+      const needsDuration = slot.durationMax != null && (slot.type === 'video' || slot.type === 'audio');
+      const duration = needsDuration ? await readDuration(file) : null;
+      if (needsDuration && !Number.isFinite(duration)) return '这个文件读不出来';
+      const reason = rejectionOf(file, slot, duration);
+      if (reason) return reason;
+      existing[key] = [...list, {
+        id: `paste-${Date.now()}-${list.length}-${file.name || 'clip'}`,
+        name: file.name || `粘贴${slot.type === 'video' ? '视频' : '图片'}`,
+        type: file.type,
+        url: URL.createObjectURL(file),
+        file,
+        isLocalUpload: true,
+      }];
+      return 'ok';
+    };
+
+    const nextBuckets = { ...(bucketsRef.current || {}) };
+    const accepted = [];
+    const rejected = [];
+
+    for (const file of mediaFiles) {
+      const mediaType = (file.type || '').split('/')[0];
+      // 1) 当前操作 slots 里按类型+容量找首个可用卡槽
+      let target = (slots || []).find((s) => s.type === mediaType && ((nextBuckets[bucketKey(s)] || []).length < (s.max == null ? Infinity : s.max)));
+      let outcome = 'no-slot';
+      if (target) outcome = await tryAdd(target, file, nextBuckets);
+      if (outcome === 'ok') { accepted.push(file); continue; }
+      rejected.push({ file, reason: outcome === 'full' ? 'full' : outcome });
+    }
+
+    // 2) 当前操作装不下的媒体文件：按素材推导适配操作，用其正式卡槽再匹配一次。
+    // 必须用 slotPlan 取正式归一化卡槽（reference/first_frame 等），不能手造虚拟 key，
+    // 否则粘贴物落进不渲染的 bucket——界面看不到但占着位。
+    if (rejected.length > 0) {
+      const scopedPrefix = makeBucketKey(mode, model?.id, '');
+      const scoped = Object.fromEntries(
+        Object.entries(nextBuckets).filter(([k]) => k.startsWith(scopedPrefix))
+      );
+      const adaptiveOp = deriveAdaptiveOperation(model, mode, scoped);
+      const candidateOps = [...new Set([adaptiveOp, ...(operationsOf(model, mode) || [])].filter(Boolean))];
+      const stillRejected = [];
+      for (const { file } of rejected) {
+        const mediaType = (file.type || '').split('/')[0];
+        let placed = false;
+        for (const op of candidateOps) {
+          if (placed) break;
+          const opSlots = slotPlan(model, mode, op.id).filter((s) => s.type === mediaType);
+          for (const slot of opSlots) {
+            if (placed) break;
+            const outcome = await tryAdd(slot, file, nextBuckets);
+            if (outcome !== 'ok') continue;
+            accepted.push(file);
+            placed = true;
+            // 同步操作模式让页签与素材一致
+            if (mode === 'image') {
+              const label = op.id === 'image_edit' ? '编辑' : op.id === 'multi_reference' ? '参考' : config.imageOpMode;
+              if (label && label !== config.imageOpMode) config.setImageOpMode?.(label);
+            } else {
+              const opt = VIDEO_MODE_OPTIONS.find((o) => o.id === op.id);
+              if (opt && opt.label !== videoGenMode) setVideoGenMode?.(opt.label);
+            }
+          }
+        }
+        if (!placed) stillRejected.push(file);
+      }
+      rejected.length = 0;
+      rejected.push(...stillRejected.map((f) => ({ file: f, reason: 'no-slot' })));
+    }
+
+    if (accepted.length > 0) {
+      setBuckets(nextBuckets);
+      const extra = rejected.length > 0 ? `，${rejected.length} 项不符合当前生成方式` : '';
+      setNotice(`已粘贴 ${accepted.length} 项素材${extra}`);
+    } else {
+      setNotice(rejected[0]?.reason === 'full' ? '卡槽已满，无法再添加素材' : '当前生成方式不支持粘贴该类型素材');
+    }
+  }, [disabled, model, slots, mode, videoGenMode, config, bucketKey, setVideoGenMode, setNotice]);
+
   // 按内容行数变高，最多露出 10 行；再多的字在框里滚动。
   useLayoutEffect(() => {
     const node = promptRef.current;
@@ -949,8 +1039,16 @@ export function MediaViewerComposer({
         </button>
       </div>
 
-      {/* 2. 输入框主卡片容器 */}
-      <div className="omx-mv-composer-root">
+      {/* 2. 输入框主卡片容器（捕获粘贴图片/视频/音频进素材卡槽；文本照常走原生粘贴） */}
+      <div
+        className="omx-mv-composer-root"
+        onPaste={(event) => {
+          const files = [...(event.clipboardData?.files || [])].filter((f) => /^(image|video|audio)\//.test(f?.type || ''));
+          if (files.length === 0) return;
+          event.preventDefault();
+          handlePasteFiles(files);
+        }}
+      >
         {/* 选择参考浮层面板（正上方 8px 弹出） */}
         <ReferencePickerPopover
           open={pickerOpen}
