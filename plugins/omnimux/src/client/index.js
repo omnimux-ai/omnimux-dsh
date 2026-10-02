@@ -2,10 +2,6 @@ import { createElement } from 'react'
 import { mountFormsBridge } from './forms/mount.js'
 /** Registers OmniMux profile in Settings and Apps under 新会话. */
 import { NS } from './locales.js'
-import { SessionGuide } from './session-guide/SessionGuide.jsx'
-import { createGuideStore } from './session-guide/state.js'
-import { guideZh, guideEn } from './session-guide/catalog.js'
-import { installGuideStyles } from './session-guide/styles.js'
 import { ProfileSection } from './ProfileSection.jsx'
 import { DshPluginsSection } from './DshPluginsSection.jsx'
 import { ModelsSettingsCard } from './ModelsSettingsCard.jsx'
@@ -44,7 +40,6 @@ import { installUserMessageLinkEnhancer } from './attachments/userMessageLinkEnh
 import { installUserMessageAttachmentsEnhancer } from './attachments/userMessageAttachmentsEnhancer.ts'
 import { installAssistantMessageMediaEnhancer } from './attachments/assistantMessageMediaEnhancer.ts'
 import { installPromptFenceGenerate } from './attachments/promptFenceGenerate.ts'
-import { resetCreativeTemplates } from './session-guide/templates/creative-templates-client.js'
 import { getSubmittedCanvasText, subscribeSubmittedCanvasText } from './attachments/useCommentAttachment.ts'
 import { getUiContext } from './workbench/context.js'
 import { readActiveSkill, subscribeSkillChanged } from './composer-add/skill-event.ts'
@@ -175,28 +170,15 @@ export function apply(ctx) {
     inject: () => ({ t }),
   }, SidebarUpdateAction))
 
-  const guideStore = createGuideStore()
-  let guideSessions = null
-  const guideFace = {
-    store: guideStore,
-    workbench: installWorkbenchGlobal(),
-    getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
-  }
+  installWorkbenchGlobal()
   installGlobalReferenceApi()
-  ctx.effect(() => ctx.locale.register('omnimux-session-guide', { zh: guideZh, en: guideEn }), 'omnimux: starter locale')
-  ctx.effect(() => () => guideStore.dispose(), 'omnimux: starter state')
-  // 插件卸载清空创意模板快照缓存并中止进行中请求（spec §3.4）。
-  ctx.effect(() => () => resetCreativeTemplates(), 'omnimux: creative templates snapshot')
-  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
-    name: 'conversation.input.dock', id: 'omnimux:session-guide', order: 110,
-    locale: 'omnimux-session-guide', inject: () => guideFace,
-  }, SessionGuide))
+  let guideSessions = null
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock',
     id: 'omnimux-composer-mode-tabs',
     order: 115,
     locale: NS,
-    inject: () => ({ workbench: guideFace.workbench }),
+    inject: () => ({ workbench: window.__omnimuxWorkbench }),
   }, ComposerModeTabs))
   // 输入框**下方**的四条快捷方式：提示语 + 链接胶囊 + 技能一次到位。
   // 只在新对话（空会话）渲染；技能经 `window.__omnimuxSkillLibrary` 通道解析，
@@ -240,7 +222,7 @@ export function apply(ctx) {
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'omnimux:attachment-submit', order: 120, locale: NS,
     inject: (sessionId) => ({
-      attachmentStore, attachmentAdmission, getCurrentSessionId: guideFace.getCurrentSessionId,
+      attachmentStore, attachmentAdmission, getCurrentSessionId: () => guideSessions?.list.getSnapshot().current,
       insertText: (text, span) => {
         const scope = sessionId && guideSessions?.scope(sessionId)
         return scope?.bail(scope, 'slash/input-insert-text', { text, span }) === true
@@ -291,7 +273,6 @@ export function apply(ctx) {
     }
   }, 'omnimux: hub event client')
   if (typeof document !== 'undefined') {
-    ctx.effect(() => installGuideStyles(document), 'omnimux: starter styles')
     ctx.effect(() => { injectUiContextStyle(document) }, 'omnimux: composer context style')
     ctx.effect(() => installUserMessageLinkEnhancer(document), 'omnimux: user message link pill enhancer')
     ctx.effect(() => installUserMessageAttachmentsEnhancer(document), 'omnimux: user message attachments enhancer')

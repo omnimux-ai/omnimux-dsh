@@ -18,7 +18,7 @@
   "scripts": {
     "build": "node scripts/build-client.mjs",
     "prepare": "npm run build",
-    "test": "node --import ./scripts/deny-network.mjs --test src/*.test.js src/rival/*.test.js src/radar/*.test.js src/client/*.test.js src/client/*.e2e.test.js"
+    "test": "node --import ./scripts/deny-network.mjs --test src/*.test.js src/rival/*.test.js src/radar/*.test.js src/client/*.test.js src/client/*.e2e.test.js && node --test src/explore/*.test.js src/explore/*.e2e.test.js src/explore/trending/*.test.js src/explore/templates/*.test.js src/explore/skills/*.test.js"
   },
   "dsh": {
     "bundle": {

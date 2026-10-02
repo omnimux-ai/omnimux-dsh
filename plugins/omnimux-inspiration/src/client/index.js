@@ -4,6 +4,8 @@ import { mountSidebarEntry } from './sidebar-entry.js'
 import { InspirationStage } from './InspirationStage.jsx'
 import { bindOfficialSessions } from './new-session-click.js'
 import { registerPreviewService } from './preview-service.jsx'
+import { mountSessionGuide } from '../explore/mount.js'
+
 export const name = 'omnimux-inspiration'
 export const inject = ['slots', 'locale']
 
@@ -45,6 +47,8 @@ export function apply(ctx) {
   const t = ctx.locale.bind(NS)
   ctx.effect(() => registerPreviewService(t), 'omnimux-inspiration: shared preview')
 
+
+  mountSessionGuide(ctx)
   ctx.effect(() => mountSidebarEntry(null, t, ctx.locale), 'omnimux-inspiration: sidebar entry')
   const registerInspirationTab = (sidebar) => {
     if (!sidebar || typeof sidebar.registerTab !== 'function') return () => {}
