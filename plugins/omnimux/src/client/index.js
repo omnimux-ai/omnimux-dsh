@@ -295,7 +295,6 @@ export function apply(ctx) {
     ctx.effect(() => { injectUiContextStyle(document) }, 'omnimux: composer context style')
     ctx.effect(() => installUserMessageLinkEnhancer(document), 'omnimux: user message link pill enhancer')
     ctx.effect(() => installUserMessageAttachmentsEnhancer(document), 'omnimux: user message attachments enhancer')
-    ctx.effect(() => { injectMediaViewerStyles(document) }, 'omnimux: media viewer styles')
     ctx.effect(() => installAssistantMessageMediaEnhancer(document), 'omnimux: assistant message media enhancer')
     ctx.effect(() => installPromptFenceGenerate(document), 'omnimux: prompt fence generate')
     if (typeof ctx.inject === 'function') {
