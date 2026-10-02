@@ -100,6 +100,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
           aspectRatio: body.aspectRatio,
           resolution: body.resolution,
           duration: body.duration,
+          sound: typeof body.sound === 'boolean' ? body.sound : undefined,
           seed: body.seed,
           wait: body.wait !== false,
           requireListed: false,

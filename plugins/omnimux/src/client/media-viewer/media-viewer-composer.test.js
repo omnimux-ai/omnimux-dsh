@@ -1210,6 +1210,50 @@ describe('MediaViewerComposer Component Contract', () => {
     );
   });
 
+  it('模式弹回回归: 自适应 effect 不再订阅模式状态本身，手动点「参考/编辑」不被回弹', () => {
+    const composerSrc = fs.readFileSync(new URL('./MediaViewerComposer.jsx', import.meta.url), 'utf-8');
+    // 图像自适应 effect 只能随素材签名 imageBucketsDependencyKey 变化，
+    // 严禁把 config.imageOpMode 写回依赖数组——那会在手动点击后立刻重算并覆盖。
+    assert.ok(
+      composerSrc.includes('imageBucketsDependencyKey'),
+      '必须引入 imageBucketsDependencyKey 作为图像素材签名'
+    );
+    const depArrays = composerSrc.match(/\}, \[[^\]]*\]\);/g) || [];
+    const leakyDeps = depArrays.filter((deps) =>
+      (deps.includes('config.imageOpMode') || deps.includes('videoGenMode')) && deps.includes('deriveAdaptiveOperation') === false
+    );
+    const imageEffectDeps = composerSrc.match(/\}, \[mode, model, imageBucketsDependencyKey[^\]]*\]\);/);
+    assert.ok(imageEffectDeps, '图像自适应 effect 依赖必须为 [mode, model, imageBucketsDependencyKey, ...]');
+    const videoEffectDeps = composerSrc.match(/\}, \[mode, model, videoBucketsDependencyKey, setVideoGenMode\]\);/);
+    assert.ok(videoEffectDeps, '视频自适应 effect 依赖必须为 [mode, model, videoBucketsDependencyKey, setVideoGenMode]');
+    for (const leaky of leakyDeps) {
+      assert.ok(
+        leaky.includes('videoGenMode, setVideoGenMode') === false,
+        `残留模式状态依赖会回弹手动切换: ${leaky}`
+      );
+    }
+  });
+
+  it('参数透传回归: 提交链路必须把张数与有声标志带进真实请求体', () => {
+    const tabSrc = fs.readFileSync(new URL('./MediaViewerTab.jsx', import.meta.url), 'utf-8');
+    assert.ok(tabSrc.includes('params?.batch'), 'handleDirectSubmit 必须读取 params.batch');
+    assert.ok(tabSrc.includes('Promise.allSettled'), '批量任务必须 Promise.allSettled 并发');
+    assert.ok(tabSrc.includes('groupId'), '批量任务必须共享 groupId 归并时间线');
+    assert.ok(tabSrc.includes('sound: params?.hasSound'), '请求体必须携带 sound 字段');
+  });
+
+  it('页签回切回归: 文生视频页签必须在 text_to_video 契约声明时始终存在，切到参考/首帧后可回切', () => {
+    const composerSrc = fs.readFileSync(new URL('./MediaViewerComposer.jsx', import.meta.url), 'utf-8');
+    assert.ok(
+      composerSrc.includes('tabs.unshift'),
+      '文生视频必须以 unshift 置于页签首位常驻，不能只在没有其它页签时兜底'
+    );
+    assert.ok(
+      !composerSrc.includes('tabs.length === 0 && modelOps.some'),
+      '严禁退回「仅当无其它页签才显示文生视频」的旧兜底逻辑'
+    );
+  });
+
   it('缺陷3回归: MediaViewerComposer.jsx 保护槽位用户素材，容量已满且无 isCanvasModel 时不强行挤出', () => {
     const composerSrc = fs.readFileSync(new URL('./MediaViewerComposer.jsx', import.meta.url), 'utf-8');
     assert.ok(

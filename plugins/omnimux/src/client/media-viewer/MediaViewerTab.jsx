@@ -141,18 +141,28 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const [draftText, setDraftText] = useState('');
 
   const handleDirectSubmit = async ({ prompt, kind, operation, activeOperation, model, channel, params, assets, annotations }) => {
-    const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const taskItem = store.addMedia({
-      id: taskId,
-      sessionId,
-      status: 'generating',
-      type: kind === 'video' ? 'video' : 'image',
-      prompt,
-      aspectRatio: params?.aspectRatio || '1:1',
-      title: prompt.slice(0, 30),
-      timestamp: Date.now(),
-    });
-    store.setActiveId(taskItem.id);
+    // 张数（仅图像）：一次提交产出 batchCount 条同组任务记录与独立请求；
+    // 同 groupId 让时间线/缩略图栏把它们归并为同一批次。
+    const batchCount = kind === 'image'
+      ? Math.max(1, Math.min(4, Number.parseInt(params?.batch, 10) || 1))
+      : 1;
+    const groupId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const taskIds = Array.from({ length: batchCount }, (_, i) => `${groupId}:${i}`);
+
+    for (const taskId of taskIds) {
+      store.addMedia({
+        id: taskId,
+        sessionId,
+        groupId,
+        status: 'generating',
+        type: kind === 'video' ? 'video' : 'image',
+        prompt,
+        aspectRatio: params?.aspectRatio || '1:1',
+        title: prompt.slice(0, 30),
+        timestamp: Date.now(),
+      });
+    }
+    store.setActiveId(taskIds[0]);
     store.setGenerating(true, { prompt, model, status: 'running' });
 
     try {
@@ -169,68 +179,88 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
         ? [primaryChannel, 'economy', 'pro'].filter((ch, i, arr) => ch && arr.indexOf(ch) === i)
         : [primaryChannel];
 
-      let lastError = null;
-      let data = null;
+      const runTask = async (taskId) => {
+        let lastError = null;
+        let data = null;
 
-      for (const candidateChannel of fallbackChannels) {
-        try {
-          const resp = await fetch('/omnimux/api/media/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt,
-              kind,
-              operation,
-              model,
-              channel: candidateChannel,
-              aspectRatio: params?.aspectRatio,
-              resolution: params?.resolution,
-              duration: params?.duration,
-              sessionId,
-              references: serializedReferences,
-              annotations,
-            }),
-          });
-          const resJson = await resp.json();
-          if (!resp.ok) {
-            lastError = new Error(resJson?.error || `Media generation failed with HTTP status ${resp.status}`);
-            const errMsg = String(resJson?.error || '');
-            if (!/分组|渠道|403|unauthorized|forbidden|channel/i.test(errMsg)) {
+        for (const candidateChannel of fallbackChannels) {
+          try {
+            const resp = await fetch('/omnimux/api/media/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt,
+                kind,
+                operation,
+                model,
+                channel: candidateChannel,
+                aspectRatio: params?.aspectRatio,
+                resolution: params?.resolution,
+                duration: params?.duration,
+                sound: params?.hasSound,
+                sessionId,
+                taskId,
+                references: serializedReferences,
+                annotations,
+              }),
+            });
+            const resJson = await resp.json();
+            if (!resp.ok) {
+              lastError = new Error(resJson?.error || `Media generation failed with HTTP status ${resp.status}`);
+              const errMsg = String(resJson?.error || '');
+              if (!/分组|渠道|403|unauthorized|forbidden|channel/i.test(errMsg)) {
+                break;
+              }
+              continue;
+            }
+            if (resJson.ok) {
+              data = resJson;
               break;
             }
-            continue;
+          } catch (fetchErr) {
+            lastError = fetchErr;
           }
-          if (resJson.ok) {
-            data = resJson;
-            break;
-          }
-        } catch (fetchErr) {
-          lastError = fetchErr;
         }
+
+        if (!data && lastError) {
+          throw lastError;
+        }
+        if (data?.ok && (data.url || data.dest)) {
+          store.updateMedia(taskId, {
+            status: 'completed',
+            url: data.url || `file://${data.dest}`,
+            title: prompt.slice(0, 30),
+            timestamp: Date.now(),
+          });
+        } else {
+          store.updateMedia(taskId, { status: 'failed' });
+        }
+      };
+
+      const results = await Promise.allSettled(taskIds.map(runTask));
+      const firstRejection = results.find((r) => r.status === 'rejected');
+      if (firstRejection) {
+        throw firstRejection.reason;
       }
 
-      if (!data && lastError) {
-        throw lastError;
-      }
-      if (data?.ok && (data.url || data.dest)) {
-        store.updateMedia(taskId, {
-          status: 'completed',
-          url: data.url || `file://${data.dest}`,
-          title: prompt.slice(0, 30),
-          timestamp: Date.now(),
-        });
-      } else {
-        store.updateMedia(taskId, { status: 'failed' });
-        const currentList = store.getSnapshot().mediaList || [];
+      // 批次结束后：若当前活跃项失败，联动选中会话内其他可用素材
+      const currentList = store.getSnapshot().mediaList || [];
+      const activeStill = currentList.find((m) => m.id === store.getSnapshot().activeId);
+      if (activeStill?.status === 'failed') {
         const sessionList = sessionId ? currentList.filter((m) => m.sessionId === sessionId) : currentList;
-        const validCandidate = sessionList.find((m) => m.id !== taskId && (m.status === 'completed' || m.status === 'generating'));
+        const validCandidate = sessionList.find((m) => (m.status === 'completed' || m.status === 'generating'));
         if (validCandidate) {
           store.setActiveId(validCandidate.id);
         }
       }
     } catch (err) {
       console.error('[MediaViewer] Direct generate failed:', err);
-      store.updateMedia(taskId, { status: 'failed' });
+      for (const taskId of taskIds) {
+        const item = (store.getSnapshot().mediaList || []).find((m) => m.id === taskId);
+        if (item?.status === 'generating') {
+          store.updateMedia(taskId, { status: 'failed' });
+        }
+      }
       const message = err?.message || '生成任务提交失败，请重试';
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         try {
@@ -239,15 +269,18 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
       }
       const currentList = store.getSnapshot().mediaList || [];
       const sessionList = sessionId ? currentList.filter((m) => m.sessionId === sessionId) : currentList;
-      const validCandidate = sessionList.find((m) => m.id !== taskId && (m.status === 'completed' || m.status === 'generating'));
+      const taskSet = new Set(taskIds);
+      const validCandidate = sessionList.find((m) => !taskSet.has(m.id) && (m.status === 'completed' || m.status === 'generating'))
+        || sessionList.find((m) => taskSet.has(m.id) && m.status === 'completed');
       if (validCandidate) {
         store.setActiveId(validCandidate.id);
       }
     } finally {
       // 安全并发任务管理：仅当当前会话中没有其他正在生成的任务时才复位 isGenerating
       const currentList = store.getSnapshot().mediaList || [];
-      const stillGenerating = currentList.some((m) => m.id !== taskId && m.status === 'generating');
-      if (!stillGenerating) {
+      const taskSet = new Set(taskIds);
+      const stillGenerating = currentList.some((m) => m.status === 'generating' && !taskSet.has(m.id));
+      if (!stillGenerating && !currentList.some((m) => taskSet.has(m.id) && m.status === 'generating')) {
         store.setGenerating(false);
       }
     }
