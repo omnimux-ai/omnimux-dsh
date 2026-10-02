@@ -224,6 +224,9 @@ export async function executeOmnimuxText(input) {
       capability: 'text',
     },
     {
+      // Tests may inject a fixture catalog; production callers pass nothing.
+      index: input.catalogIndex,
+      specsDir: input.specsDir,
       seam: 'textComplete',
       capability: 'text',
       outputType: 'text',

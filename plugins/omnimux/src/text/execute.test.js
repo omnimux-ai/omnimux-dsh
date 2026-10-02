@@ -6,8 +6,14 @@ import { describe, it } from 'node:test'
 import { apply } from '../index.js'
 import { OmnimuxError } from '../media/errors.js'
 import { decodeDataUri, mediaFromMagic } from './image.js'
-import { executeOmnimuxText } from './execute.js'
+import { executeOmnimuxText as runText } from './execute.js'
 import { loadTextVideo, toVideoImageUrlPart } from './video.js'
+import { dirname, join as joinPath } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const executeOmnimuxText = (input) => runText({ specsDir: FIXTURE_SPECS_DIR, ...input })
+
+const FIXTURE_SPECS_DIR = joinPath(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'catalog')
 
 const PNG = Uint8Array.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -404,7 +410,7 @@ describe('omnimux_text_complete tool', () => {
       model: 'glm-5.3',
       prompt: 'one line',
       reason: 'user asked for GLM wording',
-    }, { signal: undefined })
+    }, { signal: undefined, specsDir: FIXTURE_SPECS_DIR })
     assert.equal(result.model, 'glm-5.3')
     assert.equal(seen[0].model, 'glm-5.3')
   })
@@ -739,7 +745,7 @@ describe('omnimux_text_complete tool', () => {
         model: 'gemini-3.8-flash',
         env: {},
         settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
-        credentials: { async resolve() { return { value: 'sk-x' } } },
+        credentials: { async resolve(ref) { return ref === 'OMNIMUX_BYOK_API_KEY' ? { value: 'sk-x' } : undefined } },
         fetcher: async () => ({ ok: true, json: async () => ({}) }),
         llm: { async * stream() { yield {} } },
       }),
