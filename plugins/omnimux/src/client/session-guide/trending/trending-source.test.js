@@ -328,7 +328,7 @@ test('source: peekTrendingCache 只看缓存不发请求，key 由入参自己�
   assert.ok(hit, '写过缓存后必须能 peek 到')
   assert.equal(hit.isStale, false)
   assert.deepEqual(hit.page.items.map((item) => item.id), ['peek_1'])
-  assert.equal(fetchCount, 2, 'peek 自身不得触发任何网络调用')
+  assert.equal(fetchCount, 1, 'peek 自身不得触发任何网络调用')
 
   // 换一组筛选条件就该是另一把 key，不能蹭到别人的缓存
   assert.equal(peekTrendingCache({ filters: { region: 'TH' } }), null)
@@ -455,34 +455,54 @@ test('source: 兼容解析云端精选灵感库结构（数字 id、analysis 结
   assert.ok(item.structure.includes('开场反转展示相册清理 App'))
 })
 
-test('source: 双源聚合拉取（本地库 + 云端库合并去重）', async () => {
-  const localRow = makeRow({ id: 'local_1', title: 'Local video 1' })
-  const cloudRow = {
+test('source: 默认只拉云端目录，绝不请求本地灵感库接口', async () => {
+  clearTrendingCache()
+  const calls = []
+  const result = await loadTrendingPage({
+    fetchImpl: async (url) => {
+      calls.push(String(url))
+      return fakeResponse({ data: { items: [makeRow({ id: 'cloud_only_1' })], total: 1 } })
+    },
+    cache: false,
+  })
+
+  assert.equal(result.status, TRENDING_SOURCE_STATUS.ready)
+  assert.equal(result.items.length, 1)
+  assert.equal(calls.length, 1, '云端单源一页一次请求')
+  assert.ok(calls[0].startsWith('/omnimux/inspiration?'), '请求必须发向云端目录')
+  assert.ok(!calls[0].startsWith('/omnimux/inspiration/local'), '不得请求本地灵感库')
+})
+
+test('source: 多源合并去重（同一 id 只保留先到的源）', async () => {
+  const firstRow = makeRow({ id: 'dup_1', title: 'First source row' })
+  const secondRow = {
     id: 2690,
-    title: 'Cloud viral video 1',
+    title: 'Second source row',
     views: 78200000,
     cover_key: '/omnimux/inspiration/media/inspiration-covers/2690',
   }
-  const duplicateCloudRow = {
-    id: 'local_1',
-    title: 'Duplicate in cloud',
+  const duplicateRow = {
+    id: 'dup_1',
+    title: 'Duplicate in second source',
     views: 500000,
   }
 
   const result = await loadTrendingPage({
+    sourcePaths: ['/source-a', '/source-b'],
     fetchImpl: async (url) => {
       const u = String(url)
-      if (u.includes('/local')) {
-        return fakeResponse({ data: { items: [localRow], total: 1 } })
+      if (u.startsWith('/source-a')) {
+        return fakeResponse({ data: { items: [firstRow], total: 1 } })
       }
-      return fakeResponse({ data: { items: [cloudRow, duplicateCloudRow], total: 2 } })
+      return fakeResponse({ data: { items: [secondRow, duplicateRow], total: 2 } })
     },
+    cache: false,
   })
 
   assert.equal(result.status, TRENDING_SOURCE_STATUS.ready)
   assert.equal(result.items.length, 2, '必须合并且按 ID 去重')
-  assert.equal(result.items[0].id, 'local_1', '本地源项目优先保留')
-  assert.equal(result.items[1].id, '2690', '云端项目顺利合并排入')
+  assert.equal(result.items[0].id, 'dup_1', '先到的源优先保留')
+  assert.equal(result.items[1].id, '2690', '第二个源的项目顺利合并排入')
 })
 
 test('source: 数据内存缓存命中（TTL 有效期内 0ms 返回、不重复发网络请求）', async () => {
@@ -499,18 +519,18 @@ test('source: 数据内存缓存命中（TTL 有效期内 0ms 返回、不重复
   const res1 = await loadTrendingPage({ fetchImpl, filters: { region: 'US' }, cache: true })
   assert.equal(res1.status, TRENDING_SOURCE_STATUS.ready)
   assert.equal(res1.items[0].id, 'cache_test_1')
-  assert.equal(fetchCount, 2, '双源聚合共请求 2 个端点')
+  assert.equal(fetchCount, 1, '云端单源一页一次请求')
 
   // 第二次相同参数请求：命中新鲜缓存，网络请求次数不增加
   const res2 = await loadTrendingPage({ fetchImpl, filters: { region: 'US' }, cache: true })
   assert.equal(res2.status, TRENDING_SOURCE_STATUS.ready)
   assert.equal(res2.items[0].id, 'cache_test_1')
-  assert.equal(fetchCount, 2, '命中缓存，不得再次发起网络调用')
+  assert.equal(fetchCount, 1, '命中缓存，不得再次发起网络调用')
 
   // 第三次使用 forceRefresh: true，强制绕过缓存重新拉取
   const res3 = await loadTrendingPage({ fetchImpl, filters: { region: 'US' }, forceRefresh: true, cache: true })
   assert.equal(res3.status, TRENDING_SOURCE_STATUS.ready)
-  assert.equal(fetchCount, 4, '强制刷新必须重新触发网络请求')
+  assert.equal(fetchCount, 2, '强制刷新必须重新触发网络请求')
 })
 
 test('source: 网络拉取失败时如存在陈旧缓存则平滑降级使用陈旧缓存', async () => {
@@ -561,10 +581,10 @@ test('source: getInspirationFingerprints 稳健提取真实 TikTok ID、作者�
   assert.ok(fpsB.includes('cov:omnimux/inspiration/media/covers/kob.jpg'))
 })
 
-test('source: 双源聚合时彻底识别并剔除换皮/重复爆款', async () => {
+test('source: 多源合并时彻底识别并剔除换皮/重复爆款', async () => {
   clearTrendingCache()
   const fetchImpl = async (url) => {
-    if (url.includes('/omnimux/inspiration/local')) {
+    if (String(url).startsWith('/source-a')) {
       return {
         ok: true,
         status: 200,
@@ -572,7 +592,7 @@ test('source: 双源聚合时彻底识别并剔除换皮/重复爆款', async ()
           data: {
             items: [
               {
-                id: 'local_1',
+                id: 'first_1',
                 title: 'AI 播客咳嗽引发的“恐怖谷”反应',
                 source_url: 'https://www.tiktok.com/@kob.studys/video/7558617674939452703',
                 stats: { views: 16200000 },
@@ -582,7 +602,7 @@ test('source: 双源聚合时彻底识别并剔除换皮/重复爆款', async ()
         }),
       }
     }
-    // 云端库返回了同一视频的另一个换皮版本（不同 id、不同 url，但相同博主与播放量）
+    // 第二个源返回了同一视频的另一个换皮版本（不同 id、不同 url，但相同博主与播放量）
     return {
       ok: true,
       status: 200,
@@ -590,13 +610,13 @@ test('source: 双源聚合时彻底识别并剔除换皮/重复爆款', async ()
         data: {
           items: [
             {
-              id: 'cloud_dup_1',
+              id: 'dup_1',
               title: 'AI 播客“太像人”的惊愕瞬间',
               source_url: 'https://www.tiktok.com/@kob.studys/video/gxgen-33032957-5ffd-4c15',
               stats: { views: 16200000 },
             },
             {
-              id: 'cloud_distinct_2',
+              id: 'distinct_2',
               title: '全新独立视频',
               source_url: 'https://www.tiktok.com/@other/video/9999999999999999',
               stats: { views: 500000 },
@@ -607,12 +627,12 @@ test('source: 双源聚合时彻底识别并剔除换皮/重复爆款', async ()
     }
   }
 
-  const res = await loadTrendingPage({ fetchImpl, cache: false })
+  const res = await loadTrendingPage({ fetchImpl, sourcePaths: ['/source-a', '/source-b'], cache: false })
   assert.equal(res.status, TRENDING_SOURCE_STATUS.ready)
-  // 必须成功去重：原本 3 条数据，去重后只保留 2 条（重复的 cloud_dup_1 被剔除）
+  // 必须成功去重：原本 3 条数据，去重后只保留 2 条（重复的 dup_1 被剔除）
   assert.equal(res.items.length, 2)
-  assert.equal(res.items[0].id, 'local_1')
-  assert.equal(res.items[1].id, 'cloud_distinct_2')
+  assert.equal(res.items[0].id, 'first_1')
+  assert.equal(res.items[1].id, 'distinct_2')
 })
 
 test('source: 视频路径归一覆盖本地媒体 / 云目录 / 绝对 URL / 相对路径', () => {

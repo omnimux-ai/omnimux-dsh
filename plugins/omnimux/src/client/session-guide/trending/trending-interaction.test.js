@@ -279,8 +279,12 @@ test('trending 真源：卡片渲染真实封面与真实读数，工具栏不�
 
   try {
     assert.ok(
-      stub.calls.some((url) => url.startsWith('/omnimux/inspiration/local?')),
-      '必须向灵感库要数据',
+      stub.calls.every((url) => url.startsWith('/omnimux/inspiration?')),
+      '必须向云端精选目录要数据',
+    )
+    assert.ok(
+      !stub.calls.some((url) => url.startsWith('/omnimux/inspiration/local')),
+      '绝不向本地灵感库要数据',
     )
     assert.equal(view.cards().length, SOURCE_ROWS.length, '有几条就渲染几张')
     assert.equal(host.querySelector('[data-omnimux-trending]')?.getAttribute('data-omnimux-trending-source'), 'ready')
