@@ -444,7 +444,10 @@ export function useInspirationFeed({ active }) {
    */
   const handleImportSuccess = useCallback((newItem) => {
     if (!newItem) return
-    setItems((prev) => [newItem, ...prev.filter((row) => String(row?.id) !== String(newItem.id))])
+    // A local row must never sit in the list currently on screen: on 爆款趋势
+    // (a cloud-only feed) a prepended row would render until the tab switch's
+    // refetch finishes. `landedItem` + `withLandedItem` is the one mechanism
+    // that shows the imported card, and only on tabs that can hold local rows.
     setLandedItem(newItem)
     // 爆款趋势 cannot show a local row, so the grid follows the import to 灵感库.
     setTab((prev) => tabAfterContentImport(prev))
@@ -454,7 +457,7 @@ export function useInspirationFeed({ active }) {
       const canonical = plat === 'twitter' ? 'x' : plat
       setImportedPlatforms((prev) => (prev.includes(canonical) ? prev : [...prev, canonical]))
     }
-  }, [setItems, setTab, watch.pollerRef])
+  }, [setTab, watch.pollerRef])
 
   /**
    * An account import landed in the 对标账号 workbench. The panel mounts fresh on

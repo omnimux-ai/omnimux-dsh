@@ -1,22 +1,22 @@
 /**
- * 爆款对标真源接入：从灵感库（omnimux-inspiration）拉取可复刻的对标视频。
+ * 爆款对标真源接入：只从云端精选目录（`/omnimux/inspiration`）拉取可复刻的对标视频。
  *
- * 数据只走 Host HTTP 这一层（`/omnimux/inspiration/local`），不 import 灵感库内部模块——
- * 插件之间没有私有导入，且灵感库没装时这条链路必须能干净地降级。
+ * 数据只走 Host HTTP 这一层，不 import 灵感库内部模块——插件之间没有私有导入。
+ * 本地导入素材属于「灵感库」，不进本板块；灵感库没装时这条链路照样成立。
  *
- * 这里只做两件事：把灵感库行**如实**映射成卡片行（缺字段就是缺，不补默认值），
+ * 这里只做两件事：把云端行**如实**映射成卡片行（缺字段就是缺，不补默认值），
  * 以及从真实数据推导「哪些筛选维度真的有数据」。没有数据的维度不得出现在工具栏里。
  */
 import { TRENDING_VIEW_BUCKETS } from './trending-data.js'
 
-/** 灵感库本地库列表接口。 */
+/** 灵感库本地库列表接口：本板块不再拉取，仅保留常量供历史调用方解析。 */
 export const TRENDING_LOCAL_PATH = '/omnimux/inspiration/local'
-/** 灵感社区云端精选灵感库接口（包含全量海量对标视频）。 */
+/** 云端精选灵感库接口（包含全量海量对标视频）。 */
 export const TRENDING_CLOUD_PATH = '/omnimux/inspiration'
-/** 兼容既有单路径常量的别名。 */
-export const TRENDING_SOURCE_PATH = TRENDING_LOCAL_PATH
-/** 默认双源聚合：同时拉取本地录入库与云端精选库，对齐灵感社区「全部」大盘数据。 */
-export const DEFAULT_TRENDING_SOURCES = Object.freeze([TRENDING_LOCAL_PATH, TRENDING_CLOUD_PATH])
+/** 兼容既有单路径常量的别名：云端目录。 */
+export const TRENDING_SOURCE_PATH = TRENDING_CLOUD_PATH
+/** 爆款对标只加载云端数据：本地导入素材永远属于灵感库，不混入本板块。 */
+export const DEFAULT_TRENDING_SOURCES = Object.freeze([TRENDING_CLOUD_PATH])
 /**
  * 一次拉取的窗口大小。
  *
@@ -547,10 +547,10 @@ async function fetchSourcePayload(fetchImpl, url, signal, basePath = '') {
 }
 
 /**
- * 从灵感库拉取可复刻对标视频（双源聚合：本地库 + 云端精选库）。
+ * 从云端精选目录拉取可复刻对标视频（单源：只打 `/omnimux/inspiration`）。
  *
- * 三种结果都要能被调用方区分：`ready`（有数据）/ `empty`（接口通但库里没有）/
- * `unavailable`（接口不通、灵感库没装或未登录）。任何异常都收敛成 `unavailable`，
+ * 三种结果都要能被调用方区分：`ready`（有数据）/ `empty`（接口通但目录里没有）/
+ * `unavailable`（接口不通或未登录）。任何异常都收敛成 `unavailable`，
  * 绝不让板块崩，也绝不回落到编造的样本。
  *
  * 单页语义：`page` 决定取第几窗口，`hasMore` 由「本页拿到的条数是否填满窗口」判定——

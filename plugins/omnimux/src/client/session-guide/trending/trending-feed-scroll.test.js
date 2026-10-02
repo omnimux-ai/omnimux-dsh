@@ -199,7 +199,7 @@ async function renderSection({ rows, stubOptions } = {}) {
     source: () => host.querySelector('[data-omnimux-trending]')?.getAttribute('data-omnimux-trending-source'),
     sentinel: () => host.querySelector('[data-omnimux-trending-sentinel]'),
     feedState: () => host.querySelector('[data-omnimux-trending-sentinel]')?.getAttribute('data-omnimux-trending-feed'),
-    /** 一次「加载一批」= 每个真源各一次请求（本地库 + 云端库），按页号统计才稳。 */
+    /** 一次「加载一批」= 云端目录一次请求，按页号统计才稳。 */
     callsForPage: (page) => stub.calls.filter((href) => href.includes(`page=${page}`)),
     async settle() {
       await flush()
@@ -227,7 +227,7 @@ test('无限滚动：首屏只拉第 1 页，哨兵报告「还能加载」', as
     assert.equal(cards.length, 48, '首屏只渲染第 1 页窗口')
     assert.equal(cards[0], 'insp_47', '按播放量降序：窗口内播放量最高的一条排最前')
     assert.equal(cards[47], 'insp_0')
-    assert.equal(view.stub.calls.length, 2, '首屏只加载第 1 批（本地库 + 云端库各一次）')
+    assert.equal(view.stub.calls.length, 1, '首屏只加载第 1 批（云端目录一次请求）')
     assert.equal(view.callsForPage(2).length, 0, '未滚动前不得预取第 2 页')
     assert.ok(view.sentinel(), '哨兵必须留在 DOM 里，否则观察器再也看不到它')
     assert.equal(view.feedState(), 'idle')
@@ -255,7 +255,7 @@ test('无限滚动：哨兵进入视口即追加下一批，卡片只增不重',
     assert.equal(new Set(cards).size, 52, '同一支片不得出现两次')
     assert.ok(new Set(cards).has('insp_48'), '第 2 页的新卡片必须上屏')
     assert.ok(new Set(cards).has('insp_51'))
-    assert.equal(view.callsForPage(2).length, 2, '第 2 批只取一次（本地库 + 云端库各一次）')
+    assert.equal(view.callsForPage(2).length, 1, '第 2 批只取一次')
     assert.equal(view.callsForPage(3).length, 0, '取满一批后不得继续连着取下一页')
   } finally {
     await view.teardown()
@@ -275,7 +275,7 @@ test('无限滚动：全部取完后哨兵给出温和的末尾提示，且不�
 
     assert.equal(view.cards().length, 50)
     assert.equal(view.feedState(), 'exhausted')
-    assert.equal(view.callsForPage(2).length, 2, '第 2 批只取一次')
+    assert.equal(view.callsForPage(2).length, 1, '第 2 批只取一次')
 
     // 已经到底：观察器必须注销，滑到底不再空转
     assert.equal(view.observer.liveCount(), 0)
@@ -368,7 +368,7 @@ test('无限滚动：追加失败后点重试真的再取一次，把第 2 页�
       view.stub.calls.length > before,
       `点重试必须真的再取一次数（点击前 ${before} 次请求，点击后 ${view.stub.calls.length} 次）`,
     )
-    assert.equal(view.callsForPage(2).length, 4, '重试取的是失败的那一页：失败两次 + 重试两次')
+    assert.equal(view.callsForPage(2).length, 2, '重试取的是失败的那一页：失败一次 + 重试一次')
     assert.equal(view.cards().length, 60, '重试成功后第 2 页补上，前面 48 张一张不少')
   } finally {
     await view.teardown()
