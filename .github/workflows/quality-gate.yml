@@ -162,10 +162,12 @@ jobs:
       - name: Verify model contracts (admission + dispositions strict)
         run: node scripts/verify-model-contracts.mjs --strict
 
-      - name: Rebuild omnimux-workflow host bundle from src
+      - name: Rebuild omnimux-workflow host + canvas bundles from src
         run: |
           node plugins/omnimux-workflow/scripts/build-host.mjs
+          node plugins/omnimux-workflow/scripts/build-canvas.mjs
           test -s plugins/omnimux-workflow/dist/index.js
+          test -s plugins/omnimux-workflow/lib/canvas.js
 
       # 每个插件的测试在合并前必须全绿：run-workspace-tests 按包 scripts.test
       # 逐一执行并 TAP 汇总；verify-plugin-load 在真实 Cordis 内加载每个插件

@@ -183,11 +183,15 @@ test('media-viewer-store: session binding, deduplication and session-scoped filt
   // Verify timeline grouping scoped by session
   const groupsA = store.getTimelineGroups(sessionA);
   const groupsB = store.getTimelineGroups(sessionB);
-  assert.equal(groupsA.length, 1);
-  assert.equal(groupsA[0].items.length, 2);
-  assert.equal(groupsB.length, 1);
-  assert.equal(groupsB[0].items.length, 1);
-  assert.equal(groupsB[0].items[0].id, itemB1.id);
+  // groupId = per-add timestamp; items may split into several minute/group
+  // buckets on slow runners — assert the session-scoped content, not bucket count.
+  const groupIdsA = groupsA.flatMap((g) => g.items.map((item) => item.id))
+  const groupIdsB = groupsB.flatMap((g) => g.items.map((item) => item.id))
+  assert.deepEqual(groupIdsA, store.getMediaList(sessionA).map((item) => item.id))
+  assert.equal(new Set(groupIdsA).size, 2)
+  assert.ok(groupIdsA.includes(itemA2.id))
+  assert.deepEqual(groupIdsB, store.getMediaList(sessionB).map((item) => item.id))
+  assert.deepEqual(groupIdsB, [itemB1.id])
 });
 
 test('media-viewer-store: localStorage persistence and restore', () => {

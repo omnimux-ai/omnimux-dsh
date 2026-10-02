@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
 
-const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+const CHROME_PATH = process.env.OMNIMUX_QA_CHROME
+  || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+const HAS_CHROME = existsSync(CHROME_PATH)
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '../../../..')
 
