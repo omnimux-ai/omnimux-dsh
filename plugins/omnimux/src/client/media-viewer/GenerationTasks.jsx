@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from 'dsh-ui-kit';
-import { GeneratingStateCard } from './GeneratingStateCard.jsx';
 
 const labels = {
   pending: '已提交，等待生成工具启动',

@@ -1,49 +1,17 @@
 import React from 'react';
+import { GenWaveCard } from 'dsh-ui-kit';
 
 /**
  * GeneratingStateCard
- * Replicates the canvas-node organic shimmer & dot matrix animation.
+ * 生成中任务卡：内部动效为 GenWaveCard 点阵双波场（dsh-ui-kit），
+ * 状态文案由 GenWaveCard 顶部行承载（statusText 透传）。
  *
- * @param {{ statusText?: string, className?: string }} props
+ * @param {{ statusText?: string, className?: string, status?: string }} props
  */
 export function GeneratingStateCard({ statusText = '等待生成工具启动', className = '', status = 'pending' }) {
   return (
     <div className={`omx-generating-box ${className}`} data-generation-phase={status}>
-      <div className="omx-dot-matrix" aria-hidden="true" />
-      <div className="omx-shimmer-overlay" aria-hidden="true">
-        <div className="omx-shimmer-canvas">
-          <div className="omx-shimmer-field" />
-          <div className="omx-shimmer-distortion" />
-        </div>
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '14px',
-          left: '14px',
-          zIndex: 10,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          background: 'var(--dsw-alias-bg-layer-2)',
-          padding: '4px 10px',
-          borderRadius: '9999px',
-          fontSize: '12px',
-          color: 'var(--dsw-alias-label-primary)',
-          border: '1px solid var(--dsw-alias-border-l2)',
-        }}
-      >
-        <span
-          style={{
-            width: '6px',
-            height: '6px',
-            borderRadius: '50%',
-            background: 'var(--dsw-alias-brand-primary)',
-            boxShadow: '0 0 8px var(--dsw-alias-brand-primary)',
-          }}
-        />
-        <span>{statusText}</span>
-      </div>
+      <GenWaveCard statusText={statusText} className="omx-genwave-fill" />
     </div>
   );
 }

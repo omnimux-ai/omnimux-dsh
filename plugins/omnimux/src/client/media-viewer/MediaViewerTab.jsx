@@ -730,7 +730,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                     data-ratio={activeItem?.aspectRatio || '1:1'}
                   >
                     <div className="omx-media-slot__shimmer-wrap omx-mv-generating-overlay" data-card="GeneratingStateCard">
-                      <OrganicShimmerOverlay />
+                      <GeneratingStateCard />
                     </div>
                   </div>
                 ) : activeItem?.type === 'video' ? (

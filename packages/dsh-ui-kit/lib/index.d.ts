@@ -603,6 +603,28 @@ interface ActionRowProps extends HTMLAttributes<HTMLDivElement> {
  */
 declare const ActionRow: import("react").ForwardRefExoticComponent<ActionRowProps & import("react").RefAttributes<HTMLDivElement>>;
 //#endregion
+//#region src/gen-wave-card/GenWaveCard.d.ts
+interface GenWaveCardProps extends HTMLAttributes<HTMLDivElement> {
+  /** 顶部任务文案，外部供给。 */
+  statusText: string;
+  /** 0–100；传入后由外部接管进度显示并停用内置演示缓动。 */
+  progress?: number;
+  /** 是否启用内置 0→96% 演示缓动；默认 progress 未提供时为 true。 */
+  autoProgress?: boolean;
+  /** Custom class name. */
+  className?: string;
+}
+/**
+ * 点阵 Loading 卡片（1:1 移植自 chatgpt-gen-loading-card.html）。
+ *
+ * canvas 绘 28×29 点阵：尺寸场 |cos|^0.5 周期波（s = col + 0.8·row）
+ * 叠加亮度场 sigmoid 单向锋面（s = col − 0.35·row，T 在 [-10,31] 往返），
+ * 左上 r0c0 / 右上 r0c27 / 左下 r28c0 三角位缺位；右下角 58×35 椭圆
+ * 进度胶囊与点阵同层绘制（DOM badge 保留为 ARIA/状态载体）。
+ * 自适应容器宽度（点距收窄、水平居中）；prefers-reduced-motion 定格参考帧。
+ */
+declare const GenWaveCard: import("react").ForwardRefExoticComponent<GenWaveCardProps & import("react").RefAttributes<HTMLDivElement>>;
+//#endregion
 //#region src/stage/createSidebarEntry.d.ts
 interface SidebarCoordinatorApi {
   register: (row: {
@@ -658,5 +680,5 @@ declare function trapFocus(container: HTMLElement, event: KeyboardEvent): void;
  */
 declare function focusFirstDescendant(container: HTMLElement): boolean;
 //#endregion
-export { ActionRow, type ActionRowProps, Badge, type BadgeProps, type BadgeShape, type BadgeSize, type BadgeVariant, Button, type ButtonProps, type ButtonSize, type ButtonVariant, CardGrid, type CardGridProps, type CellContext, type ColumnDef, ConfirmModal, type ConfirmModalProps, CopyButton, type CopyButtonProps, type CopyState, DataTable, type DataTableProps, type DialogSize, Divider, type DividerProps, Drawer, type DrawerPlacement, DrawerPortal, type DrawerPortalProps, type DrawerProps, type DropdownOption, DropdownSelect, type DropdownSelectProps, EmptyState, type EmptyStateProps, FilterBar, type FilterBarProps, type HeaderContext, IconButton, type IconButtonProps, InputField, type InputFieldProps, type MediaAspectRatio, MediaCard, type MediaCardProps, ModalDialog, type ModalDialogProps, PageHeader, type PageHeaderProps, type PageHeaderTabItem, type PortalContainer, SearchField, type SearchFieldHandle, type SearchFieldProps, SelectableTile, type SelectableTileProps, type SidebarCoordinatorApi, type SidebarEntryOptions, type SortDirection, type StageBox, StageContainer, type StageContainerProps, StageHeader, type StageHeaderProps, type StageHostSingleton, type StageStore, StatBar, type StatBarProps, type StatItem, Table, TableBody, type TableBodyProps, TableCell, type TableCellProps, TableHead, type TableHeadProps, TableHeader, type TableHeaderProps, type TableProps, TableRow, type TableRowProps, Tabs, type TabsProps, type TabsVariant, type TileSelectionMode, Toolbar, type ToolbarProps, copyToClipboard, createPortalSafe, createSidebarEntry, createStageStore, focusFirstDescendant, resolvePortalContainer, trapFocus };
+export { ActionRow, type ActionRowProps, Badge, type BadgeProps, type BadgeShape, type BadgeSize, type BadgeVariant, Button, type ButtonProps, type ButtonSize, type ButtonVariant, CardGrid, type CardGridProps, type CellContext, type ColumnDef, ConfirmModal, type ConfirmModalProps, CopyButton, type CopyButtonProps, type CopyState, DataTable, type DataTableProps, type DialogSize, Divider, type DividerProps, Drawer, type DrawerPlacement, DrawerPortal, type DrawerPortalProps, type DrawerProps, type DropdownOption, DropdownSelect, type DropdownSelectProps, EmptyState, type EmptyStateProps, FilterBar, type FilterBarProps, GenWaveCard, type GenWaveCardProps, type HeaderContext, IconButton, type IconButtonProps, InputField, type InputFieldProps, type MediaAspectRatio, MediaCard, type MediaCardProps, ModalDialog, type ModalDialogProps, PageHeader, type PageHeaderProps, type PageHeaderTabItem, type PortalContainer, SearchField, type SearchFieldHandle, type SearchFieldProps, SelectableTile, type SelectableTileProps, type SidebarCoordinatorApi, type SidebarEntryOptions, type SortDirection, type StageBox, StageContainer, type StageContainerProps, StageHeader, type StageHeaderProps, type StageHostSingleton, type StageStore, StatBar, type StatBarProps, type StatItem, Table, TableBody, type TableBodyProps, TableCell, type TableCellProps, TableHead, type TableHeadProps, TableHeader, type TableHeaderProps, type TableProps, TableRow, type TableRowProps, Tabs, type TabsProps, type TabsVariant, type TileSelectionMode, Toolbar, type ToolbarProps, copyToClipboard, createPortalSafe, createSidebarEntry, createStageStore, focusFirstDescendant, resolvePortalContainer, trapFocus };
 //# sourceMappingURL=index.d.ts.map

@@ -37,7 +37,7 @@ const ignoreCssPlugin = {
       namespace: 'mock-ui-kit',
     }));
     build.onLoad({ filter: /.*/, namespace: 'mock-ui-kit' }, () => ({
-      contents: 'export const Button = (props) => props.children || null;',
+      contents: 'export const Button = (props) => props.children || null; export const GenWaveCard = (props) => null;',
       loader: 'js',
     }));
   },

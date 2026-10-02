@@ -261,6 +261,26 @@ import { IconPlusOutline16, IconRefreshOutline16 } from '@deepseek-ai/dsh-client
 
 ---
 
+### 10. GenWaveCard
+
+1:1 移植自 `omnimux-dsh/.tmp/chatgpt-gen-loading-card.html` 的点阵生成动效卡（canvas 绘制 28×29 点阵 + 尺寸/亮度双波场 + 同层椭圆进度胶囊）。**固定深色既定视觉**：色值封装在 `genWavePalette.ts`（实测色），不消费 `--dsw-alias-*`；深色宿主直接放置即可。
+
+```tsx
+import { GenWaveCard } from 'dsh-ui-kit'
+
+<GenWaveCard statusText="Listing uploaded files and workspace path" />
+<GenWaveCard statusText={task.label} progress={task.pct} />
+```
+
+| Prop | 类型 | 说明 |
+|---|---|---|
+| `statusText` | `string` | 顶部任务文案（外部供给） |
+| `progress` | `number` | 0–100；传入后外部接管，停演示缓动 |
+| `autoProgress` | `boolean` | 默认 `progress === undefined` 时跑 0→96% 演示缓动 |
+| `className` / `style` | — | 根元素透传；`prefers-reduced-motion` 下定格参考帧 |
+
+---
+
 ## 本地开发与构建
 
 ```bash

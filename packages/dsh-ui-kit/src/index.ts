@@ -91,6 +91,9 @@ export type { StatBarProps, StatItem } from "./stat/StatBar.tsx";
 export { ActionRow } from "./action/ActionRow.tsx";
 export type { ActionRowProps } from "./action/ActionRow.tsx";
 
+export { GenWaveCard } from "./gen-wave-card/GenWaveCard.tsx";
+export type { GenWaveCardProps } from "./gen-wave-card/GenWaveCard.tsx";
+
 export { createStageStore } from "./stage/createStageStore.ts";
 export type {
   StageBox,

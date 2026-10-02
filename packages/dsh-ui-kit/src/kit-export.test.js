@@ -27,6 +27,7 @@ const EXPECTED_EXPORTS = [
   "PageHeader",
   "StatBar",
   "ActionRow",
+  "GenWaveCard",
   "Tabs",
   "createStageStore",
   "createSidebarEntry",
