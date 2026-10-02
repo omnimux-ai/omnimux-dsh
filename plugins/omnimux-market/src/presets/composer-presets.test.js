@@ -2,9 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { getCreativePresetsStore } from './presets-store.js'
-import { compileCreativePrompt } from './compiler.js'
-import { CREATIVE_VIDEO_FORMATS, CREATIVE_HOOKS, CREATIVE_VISUAL_STYLES } from './catalog.js'
+import { getCreativePresetsStore } from '../../../omnimux/src/client/presets/presets-store.js'
+import { compileCreativePrompt } from '../../../omnimux/src/client/presets/compiler.js'
+import { CREATIVE_VIDEO_FORMATS, CREATIVE_HOOKS, CREATIVE_VISUAL_STYLES } from '../../../omnimux/src/client/presets/catalog.js'
 
 test('PresetsStore: handles multi-session isolated state, subscription, and reset', () => {
   const store = getCreativePresetsStore()

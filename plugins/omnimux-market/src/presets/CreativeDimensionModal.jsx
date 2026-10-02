@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from 'dsh-ui-kit'
-import { ModalCloseButton } from '../components/ModalCloseButton.jsx'
-import { CREATIVE_HOOKS, CREATIVE_VISUAL_STYLES, CREATIVE_VIDEO_FORMATS } from './catalog.js'
-import { PresetCard } from './PresetCard.jsx'
-import { ensurePresetsStyles } from './styles.js'
-import { getCreativePresetsStore } from './presets-store.js'
-import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
+import { ModalCloseButton } from '../../../omnimux/src/client/components/ModalCloseButton.jsx'
+import { CREATIVE_HOOKS, CREATIVE_VISUAL_STYLES, CREATIVE_VIDEO_FORMATS } from '../../../omnimux/src/client/presets/catalog.js'
+import { PresetCard } from '../../../omnimux/src/client/presets/PresetCard.jsx'
+import { ensurePresetsStyles } from '../../../omnimux/src/client/presets/styles.js'
+import { getCreativePresetsStore } from '../../../omnimux/src/client/presets/presets-store.js'
+import { FormatIcon, HookIcon, StyleIcon } from '../../../omnimux/src/client/presets/icons.jsx'
 
 export const DIMENSION_CONFIG = {
   format: {

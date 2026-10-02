@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveMediaUrl, hasVideoPreview, hasPosterPreview } from './media-resolver.js'
+import { resolveMediaUrl, hasVideoPreview, hasPosterPreview } from '../../../omnimux/src/client/presets/media-resolver.js'
 
 test('resolveMediaUrl: returns empty string for falsy or invalid input', () => {
   assert.equal(resolveMediaUrl(null), '')

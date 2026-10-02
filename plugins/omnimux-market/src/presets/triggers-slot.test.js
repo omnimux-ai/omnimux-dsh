@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { getCreativePresetsStore } from './presets-store.js'
+import { getCreativePresetsStore } from '../../../omnimux/src/client/presets/presets-store.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const clientIndex = fs.readFileSync(path.resolve(__dirname, '../index.js'), 'utf8')
+const clientIndex = fs.readFileSync(path.resolve(__dirname, '../../../omnimux/src/client/index.js'), 'utf8')
 
 test('composer left rail no longer mounts creative preset pills', () => {
   assert.doesNotMatch(clientIndex, /omnimux-creative-presets-triggers/)

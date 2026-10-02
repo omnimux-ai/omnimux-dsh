@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { getCreativePresetsStore } from './presets-store.js'
-import { getComposerModeStore } from '../composer-mode/composer-mode-store.js'
+import { getCreativePresetsStore } from '../../../omnimux/src/client/presets/presets-store.js'
+import { getComposerModeStore } from '../../../omnimux/src/client/composer-mode/composer-mode-store.js'
 import { CreativeDimensionModal } from './CreativeDimensionModal.jsx'
-import { ensurePresetsStyles } from './styles.js'
-import { FormatIcon, HookIcon, StyleIcon } from './icons.jsx'
+import { ensurePresetsStyles } from '../../../omnimux/src/client/presets/styles.js'
+import { FormatIcon, HookIcon, StyleIcon } from '../../../omnimux/src/client/presets/icons.jsx'
 
 /**
  * 营销视频三大创意预设 —— 工具栏 3 独立触发按钮组件
