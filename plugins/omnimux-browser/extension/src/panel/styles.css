@@ -3870,7 +3870,7 @@ textarea:focus-visible {
   flex-shrink: 0;
 }
 .engine-dot.online { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
-.engine-dot.connecting { background: #f59e0b; }
+.engine-dot.standby { background: #f59e0b; }
 .engine-dot.offline { background: #ef4444; }
 
 .ws-icon {
@@ -4288,19 +4288,6 @@ textarea:focus-visible {
 .instance-health-dot.online { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
 .instance-health-dot.standby { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
 .instance-health-dot.offline { background: #71717a; }
-.instance-health-dot.checking { background: #3b82f6; animation: dotPulse 1s infinite alternate; }
-
-@keyframes dotPulse {
-  from { opacity: 0.4; }
-  to { opacity: 1; }
-}
-
-.inst-icon {
-  display: flex;
-  align-items: center;
-  color: var(--muted);
-}
-
 .inst-label {
   flex: 1;
   text-align: left;
@@ -4309,18 +4296,13 @@ textarea:focus-visible {
   text-overflow: ellipsis;
 }
 
-.inst-port-badge {
+.inst-port,
+.ws-port {
   font-size: calc(11px * var(--ui-scale));
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--canvas-deep);
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.inst-arrow {
-  font-size: calc(9px * var(--ui-scale));
-  opacity: 0.6;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .dsh-instance-dropdown-menu {
@@ -4443,28 +4425,16 @@ textarea:focus-visible {
   margin-left: 8px;
 }
 
+/* 状态文本：纯文本次要色（spec §3.1 item.status），仅字色区分状态，去胶囊化。 */
 .health-pill {
-  font-size: calc(10px * var(--ui-scale));
-  padding: 1.5px 6px;
-  border-radius: 999px;
-  font-weight: 550;
+  font-size: calc(11px * var(--ui-scale));
+  font-weight: 500;
+  color: var(--muted);
   white-space: nowrap;
 }
-.health-pill.online {
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-}
-.health-pill.standby {
-  background: rgba(245, 158, 11, 0.12);
-  color: #d97706;
-  border: 1px solid rgba(245, 158, 11, 0.25);
-}
-.health-pill.offline {
-  background: rgba(113, 113, 122, 0.12);
-  color: #71717a;
-  border: 1px solid rgba(113, 113, 122, 0.2);
-}
+.health-pill.online { color: #10b981; }
+.health-pill.standby { color: #d97706; }
+.health-pill.offline { color: var(--muted); }
 
 .instance-check-mark {
   color: var(--ink-strong);
@@ -6083,4 +6053,38 @@ textarea:focus-visible {
 .draft-image:focus-within > button,
 .draft-image > button:focus-visible {
   opacity: 1;
+}
+
+/* ---- instance dynamic discovery (spec: instance-dynamic-discovery) ---- */
+
+.instance-item-row.disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.instance-item-row.disabled:hover {
+  border-color: transparent;
+  background: var(--canvas-deep);
+}
+
+.instance-empty {
+  padding: 20px 8px;
+  text-align: center;
+  font-size: calc(12px * var(--ui-scale));
+  color: var(--muted);
+}
+
+.instance-footer-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.instance-footer-row .custom-port-trigger-btn {
+  flex: 1;
+}
+
+.probe-refresh-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

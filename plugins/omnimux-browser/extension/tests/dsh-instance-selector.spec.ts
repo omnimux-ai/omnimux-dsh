@@ -5,16 +5,32 @@ import { createRoot } from 'react-dom/client'
 import { act } from 'react'
 import {
   WorkspaceSelector,
-  PRESET_INSTANCES,
-  probeInstanceHealth,
 } from '../src/panel/components/WorkspaceSelector.tsx'
+import {
+  KNOWN_INSTANCE_NAMES,
+} from '../src/shared/instance-discovery.ts'
 import {
   ModelSelector,
   REAL_LOCAL_SUBSCRIPTION_GROUPS,
-  getDefaultModelForInstance,
 } from '../src/panel/components/ModelSelector.tsx'
 
-describe('WorkspaceSelector (Unified Default Workspace & Instance Engine) Suite', () => {
+/** 指定端口在线（返回合法 wsUrl 的 bridge-config），其余端口一律拒绝。 */
+function mockOnlyPortsOnline(ports: number[]) {
+  globalThis.fetch = vi.fn(async (input: unknown) => {
+    const url = typeof input === 'string' ? input : String((input as Request).url)
+    const port = Number(new URL(url).port)
+    if (ports.includes(port)) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ wsUrl: `ws://127.0.0.1:${port}/ext/bridge` }),
+      } as Response
+    }
+    throw new Error('Failed to fetch')
+  }) as unknown as typeof fetch
+}
+
+describe('WorkspaceSelector (Dynamic Instance Discovery) Suite', () => {
   let container: HTMLDivElement
   let root: ReturnType<typeof createRoot>
 
@@ -26,48 +42,8 @@ describe('WorkspaceSelector (Unified Default Workspace & Instance Engine) Suite'
     vi.restoreAllMocks()
   })
 
-  it('defines the 3 official preset instances with OmniMux Dev 45120 as default recommended', () => {
-    expect(PRESET_INSTANCES.length).toBe(3)
-    const dev = PRESET_INSTANCES.find((p) => p.id === 'omnimux-dev')
-    expect(dev?.port).toBe(45120)
-    expect(dev?.isRecommended).toBe(true)
-
-    const desktop = PRESET_INSTANCES.find((p) => p.id === 'dsh-desktop')
-    expect(desktop?.port).toBe(43120)
-
-    const prd = PRESET_INSTANCES.find((p) => p.id === 'omnimux-prd')
-    expect(prd?.port).toBe(43128)
-  })
-
-  it('probes port health correctly: online for 200/401/403, offline on network refusal', async () => {
-    // 1. Mock 200 OK
-    const fetchMock = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-    })
-    globalThis.fetch = fetchMock
-
-    const resOnline = await probeInstanceHealth(45120)
-    expect(resOnline.status).toBe('online')
-
-    // 2. Mock 401 Unauthorized (DSH app alive and listening -> treated as active online)
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-    })
-    const resStandby = await probeInstanceHealth(45120)
-    expect(resStandby.status).toBe('online')
-    expect(resStandby.messageZh).toContain('就绪')
-
-    // 3. Mock Network Error (Port offline)
-    fetchMock.mockRejectedValueOnce(new Error('Failed to fetch'))
-    const resOffline = await probeInstanceHealth(99999)
-    expect(resOffline.status).toBe('offline')
-    expect(resOffline.messageZh).toContain('离线')
-  })
-
-  it('renders default workspace trigger with green dot for active OmniMux Dev 45120 and ChevronDown arrow', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 })
+  it('renders trigger with selected instance name and port; green dot when that port is online', async () => {
+    mockOnlyPortsOnline([45120])
 
     await act(async () => {
       root.render(
@@ -78,19 +54,22 @@ describe('WorkspaceSelector (Unified Default Workspace & Instance Engine) Suite'
         })
       )
     })
+    // 等待首轮探测 settle
+    await act(async () => {})
 
-    const trigger = container.querySelector('.workspace-selector-trigger, .workspace-selector-pill')
+    const trigger = container.querySelector('.workspace-selector-trigger')
     expect(trigger).not.toBeNull()
     expect(trigger?.textContent).toContain('45120')
     expect(trigger?.textContent).toContain('OmniMux Dev')
-    expect(container.querySelector('.ws-chevron-arrow')).not.toBeNull()
-    // Must be online (green dot) because 45120 responded healthy
+    // spec §3.1 selector.trigger 白名单：无 chevron、无独立端口胶囊
+    expect(container.querySelector('.ws-chevron-arrow')).toBeNull()
+    expect(container.querySelector('.ws-port-tag')).toBeNull()
     const dot = container.querySelector('.engine-dot')
     expect(dot?.classList.contains('online')).toBe(true)
   })
 
-  it('opens dropdown menu, lists instances and triggers onSelectWorkspace', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 })
+  it('opens dropdown listing all known ports, Dev carries 推荐 badge, offline rows are disabled', async () => {
+    mockOnlyPortsOnline([45120])
     const onSelect = vi.fn()
 
     await act(async () => {
@@ -103,27 +82,67 @@ describe('WorkspaceSelector (Unified Default Workspace & Instance Engine) Suite'
         })
       )
     })
+    await act(async () => {})
 
-    // Click to open dropdown
-    const trigger = container.querySelector<HTMLButtonElement>('.workspace-selector-trigger, .workspace-selector-pill')!
+    const trigger = container.querySelector<HTMLButtonElement>('.workspace-selector-trigger')!
     await act(async () => {
       trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
+    await act(async () => {})
 
     const dropdown = container.querySelector('.workspace-dropdown-menu')
     expect(dropdown).not.toBeNull()
 
-    // 3 preset items
     const items = container.querySelectorAll('.instance-item-row')
-    expect(items.length).toBe(3)
+    // 仅 45120 在线 + 映射表内离线端口（43128/43120）；映射表外端口离线不渲染
+    expect(items.length).toBe(1 + Object.keys(KNOWN_INSTANCE_NAMES).length - 1)
+    expect(items[0].textContent).toContain('OmniMux Dev')
+    expect(items[0].textContent).toContain('推荐')
+    expect(items[0].textContent).toMatch(/在线 · \d+ms/)
 
-    // Select DSH Desktop (43120)
+    // 离线行禁用且点击不触发选择
+    const offlineRow = Array.from(items).find((el) => el.textContent?.includes('43128'))!
+    expect(offlineRow.classList.contains('disabled')).toBe(true)
     await act(async () => {
-      items[1].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      offlineRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
+    expect(onSelect).not.toHaveBeenCalled()
 
+    // 点击在线的 Dev 条目：写 localStorage 并回调 {id, port, name}
+    await act(async () => {
+      items[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
     expect(onSelect).toHaveBeenCalled()
-    expect(localStorage.getItem('omnimux_target_port')).toBe('43120')
+    expect(onSelect.mock.calls[0][0].port).toBe(45120)
+    expect(localStorage.getItem('omnimux_target_port')).toBe('45120')
+  })
+
+  it('shows empty state copy when nothing is reachable and no custom port saved', async () => {
+    // 所有端口离线：已知端口仍显示为离线条目（spec：映射表内端口离线也显示）
+    globalThis.fetch = vi.fn(async () => { throw new Error('Failed to fetch') }) as unknown as typeof fetch
+
+    await act(async () => {
+      root.render(
+        createElement(WorkspaceSelector, {
+          bridgeConnected: false,
+          locale: 'zh',
+          targetPort: 43128,
+        })
+      )
+    })
+    await act(async () => {})
+
+    const trigger = container.querySelector<HTMLButtonElement>('.workspace-selector-trigger')!
+    await act(async () => {
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {})
+
+    const rows = container.querySelectorAll('.instance-item-row')
+    // 全部离线时仅映射表内已知端口渲染离线条目
+    expect(rows.length).toBe(Object.keys(KNOWN_INSTANCE_NAMES).length)
+    expect(Array.from(rows).every((r) => r.classList.contains('disabled'))).toBe(true)
+    expect(container.textContent).toContain('自定义端口')
   })
 })
 

@@ -1,5 +1,13 @@
-import { memo, useEffect, useState } from 'react'
-import { ServerIcon, RefreshIcon, CheckIcon } from './icons.tsx'
+import { memo, useEffect, useRef, useState } from 'react'
+import { RefreshIcon, CheckIcon } from './icons.tsx'
+import {
+  discoverInstances,
+  instanceStatusText,
+  INSTANCE_SELECTOR_COPY,
+  KNOWN_INSTANCE_NAMES,
+  type DiscoveredInstance,
+  type UiLocale,
+} from '../../shared/instance-discovery.ts'
 
 export interface DshInstance {
   id: string
@@ -9,129 +17,57 @@ export interface DshInstance {
   isRecommended?: boolean
 }
 
-export type HealthStatus = 'online' | 'standby' | 'offline' | 'checking'
-
-export interface InstanceHealth {
-  status: HealthStatus
-  latencyMs?: number
-  messageZh: string
-  messageEn: string
-}
-
-export const PRESET_INSTANCES: DshInstance[] = [
-  {
-    id: 'omnimux-prd',
-    nameZh: 'OmniMux PRD',
-    nameEn: 'OmniMux PRD',
-    port: 43128,
-    isRecommended: true,
-  },
-  {
-    id: 'dsh-desktop',
-    nameZh: 'DSH Desktop',
-    nameEn: 'DSH Desktop',
-    port: 43120,
-  },
-]
-
-export async function probeInstanceHealth(port: number): Promise<InstanceHealth> {
-  const start = Date.now()
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 1200)
-
-    const resp = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
-      signal: controller.signal,
-    }).catch(async () => {
-      return fetch(`http://127.0.0.1:${port}/`, {
-        signal: controller.signal,
-      })
-    })
-
-    clearTimeout(timer)
-    const latency = Date.now() - start
-
-    if (resp.ok) {
-      return {
-        status: 'online',
-        latencyMs: latency,
-        messageZh: `已就绪 (${latency}ms)`,
-        messageEn: `Ready (${latency}ms)`,
-      }
-    }
-
-    if (resp.status === 401 || resp.status === 403) {
-      return {
-        status: 'standby',
-        latencyMs: latency,
-        messageZh: `运行中 · 待连接 (${latency}ms)`,
-        messageEn: `Running · Standby (${latency}ms)`,
-      }
-    }
-
-    return {
-      status: 'online',
-      latencyMs: latency,
-      messageZh: `在线 (${latency}ms)`,
-      messageEn: `Online (${latency}ms)`,
-    }
-  } catch {
-    const latency = Date.now() - start
-    return {
-      status: 'offline',
-      latencyMs: latency,
-      messageZh: '离线',
-      messageEn: 'Offline',
-    }
-  }
-}
-
 export const DshInstanceSelector = memo(function DshInstanceSelector({
   locale = 'zh',
   activePort = 43128,
   onSelectInstance,
 }: {
-  locale?: 'zh' | 'en'
+  locale?: UiLocale
   activePort?: number
   onSelectInstance?: (instance: { id: string; port: number; name: string }) => void
 }) {
-  const isEn = locale === 'en'
+  const copy = INSTANCE_SELECTOR_COPY[locale]
   const [isOpen, setIsOpen] = useState(false)
   const [selectedPort, setSelectedPort] = useState<number>(activePort)
   const [customPortInput, setCustomPortInput] = useState<string>('')
   const [showCustomInput, setShowCustomInput] = useState(false)
-  const [healthMap, setHealthMap] = useState<Record<number, InstanceHealth>>({})
+  const [instances, setInstances] = useState<DiscoveredInstance[]>([])
   const [probing, setProbing] = useState(false)
+  const discoverySeq = useRef(0)
 
-  const refreshAllHealth = async () => {
+  const refreshInstances = async (ports?: readonly number[]) => {
+    const seq = ++discoverySeq.current
     setProbing(true)
-    const targets = [...PRESET_INSTANCES.map((p) => p.port)]
-    if (selectedPort && !targets.includes(selectedPort)) {
-      targets.push(selectedPort)
+    try {
+      const found = await discoverInstances(ports ?? [selectedPort])
+      if (seq !== discoverySeq.current) return
+      setInstances(found)
+    } finally {
+      if (seq === discoverySeq.current) setProbing(false)
     }
-
-    const results: Record<number, InstanceHealth> = {}
-    await Promise.all(
-      targets.map(async (port) => {
-        results[port] = await probeInstanceHealth(port)
-      })
-    )
-    setHealthMap(results)
-    setProbing(false)
   }
 
   useEffect(() => {
-    void refreshAllHealth()
+    void refreshInstances()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     setSelectedPort(activePort)
   }, [activePort])
 
-  const currentPreset = PRESET_INSTANCES.find((p) => p.port === selectedPort)
-  const activeHealth = healthMap[selectedPort]
+  const selected = instances.find((i) => i.port === selectedPort)
+  // 触发按钮只显示已解析的选中实例名（名称映射表内端口按映射名）；未解析一律回退占位文案。
+  const resolved = selected ?? (KNOWN_INSTANCE_NAMES[selectedPort] ? {
+    ...KNOWN_INSTANCE_NAMES[selectedPort],
+    port: selectedPort,
+    status: 'offline' as const,
+    isRecommended: KNOWN_INSTANCE_NAMES[selectedPort].isRecommended ?? false,
+    isCustom: false,
+  } : undefined)
 
-  const handleSelect = (inst: DshInstance) => {
+  const handleSelect = (inst: DiscoveredInstance) => {
+    if (inst.status === 'offline') return
     setSelectedPort(inst.port)
     setShowCustomInput(false)
     setIsOpen(false)
@@ -141,7 +77,7 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
     } catch {
       // Ignore
     }
-    onSelectInstance?.({ id: inst.id, port: inst.port, name: isEn ? inst.nameEn : inst.nameZh })
+    onSelectInstance?.({ id: inst.id, port: inst.port, name: locale === 'en' ? inst.nameEn : inst.nameZh })
   }
 
   const handleApplyCustomPort = () => {
@@ -159,11 +95,9 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
       onSelectInstance?.({
         id: 'custom',
         port: p,
-        name: isEn ? `Custom (${p})` : `自定义 (${p})`,
+        name: `${copy.localInstance} :${p}`,
       })
-      void probeInstanceHealth(p).then((res) => {
-        setHealthMap((prev) => ({ ...prev, [p]: res }))
-      })
+      void refreshInstances([p])
     }
   }
 
@@ -172,91 +106,78 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
       <button
         type="button"
         className="dsh-instance-pill-btn"
-        onClick={() => setIsOpen(!isOpen)}
-        title={isEn ? 'Switch DSH / OmniMux engine instance' : '切换本地 DSH / OmniMux 运行实例'}
+        onClick={() => {
+          const next = !isOpen
+          setIsOpen(next)
+          if (next) void refreshInstances()
+        }}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        title={copy.selectInstance}
       >
         <span
           className={`instance-health-dot ${
-            activeHealth?.status === 'online'
+            resolved?.status === 'online'
               ? 'online'
-              : activeHealth?.status === 'standby'
+              : resolved?.status === 'unavailable'
                 ? 'standby'
                 : 'offline'
           }`}
         />
-        <span className="inst-icon"><ServerIcon size={13} /></span>
         <span className="inst-label">
-          {currentPreset
-            ? (isEn ? currentPreset.nameEn : currentPreset.nameZh)
-            : `${isEn ? 'Port' : '端口'} ${selectedPort}`}
+          {resolved ? (locale === 'en' ? resolved.nameEn : resolved.nameZh) : copy.selectInstance}
         </span>
-        <span className="inst-port-badge">{selectedPort}</span>
-        <span className="inst-arrow">▾</span>
+        {resolved && <span className="inst-port"> :{resolved.port}</span>}
       </button>
 
       {isOpen && (
-        <div className="dsh-instance-dropdown-menu">
-          <div className="instance-dropdown-header">
-            <span>{isEn ? 'DSH / OmniMux Instances' : '本地 DSH / OmniMux 实例'}</span>
-            <button
-              type="button"
-              className="probe-refresh-icon-btn"
-              onClick={(e) => {
-                e.stopPropagation()
-                void refreshAllHealth()
-              }}
-              title={isEn ? 'Re-check all ports' : '重新探测全部端口状态'}
-            >
-              <RefreshIcon size={12} className={probing ? 'spinning' : ''} />
-            </button>
-          </div>
-
+        <div className="dsh-instance-dropdown-menu" role="listbox">
           <div className="instance-list">
-            {PRESET_INSTANCES.map((inst) => {
+            {instances.length === 0 && probing && (
+              <div className="instance-empty">{copy.detecting}</div>
+            )}
+            {instances.length === 0 && !probing && (
+              <div className="instance-empty">{copy.emptyInstances}</div>
+            )}
+            {instances.map((inst) => {
               const isChosen = inst.port === selectedPort
-              const health = healthMap[inst.port]
-              const latencyText = health?.latencyMs !== undefined ? `${health.latencyMs}ms` : ''
-              const statusLabel = health?.status === 'online'
-                ? (latencyText || (isEn ? 'Online' : '在线'))
-                : health?.status === 'standby'
-                  ? (isEn ? `Ready ${latencyText}` : `就绪 ${latencyText}`)
-                  : health?.status === 'offline'
-                    ? (isEn ? 'Offline' : '离线')
-                    : '...'
-
+              const disabled = inst.status === 'offline'
               return (
                 <div
                   key={inst.id}
-                  className={`instance-item-row ${isChosen ? 'active' : ''}`}
+                  role="option"
+                  aria-selected={isChosen}
+                  aria-disabled={disabled || undefined}
+                  className={`instance-item-row ${isChosen ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
                   onClick={() => handleSelect(inst)}
                 >
                   <div className="instance-row-left">
                     <span
                       className={`instance-health-dot ${
-                        health?.status === 'online'
+                        inst.status === 'online'
                           ? 'online'
-                          : health?.status === 'standby'
+                          : inst.status === 'unavailable'
                             ? 'standby'
-                            : health ? 'offline' : 'checking'
+                            : 'offline'
                       }`}
                     />
-                    <span className="instance-name">{isEn ? inst.nameEn : inst.nameZh}</span>
+                    <span className="instance-name">{locale === 'en' ? inst.nameEn : inst.nameZh}</span>
                     <span className="instance-port-tag">:{inst.port}</span>
                     {inst.isRecommended && (
-                      <span className="instance-rec-pill">{isEn ? 'REC' : '推荐'}</span>
+                      <span className="instance-rec-pill">{copy.recommended}</span>
                     )}
                   </div>
                   <div className="instance-row-right">
                     <span
                       className={`health-pill ${
-                        health?.status === 'online'
+                        inst.status === 'online'
                           ? 'online'
-                          : health?.status === 'standby'
+                          : inst.status === 'unavailable'
                             ? 'standby'
                             : 'offline'
                       }`}
                     >
-                      {statusLabel}
+                      {instanceStatusText(inst, locale)}
                     </span>
                     {isChosen && (
                       <span className="instance-check-mark"><CheckIcon size={12} /></span>
@@ -269,18 +190,32 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
 
           <div className="instance-custom-footer">
             {!showCustomInput ? (
-              <button
-                type="button"
-                className="custom-port-trigger-btn"
-                onClick={() => setShowCustomInput(true)}
-              >
-                ＋ {isEn ? 'Custom Port...' : '自定义端口...'}
-              </button>
+              <div className="instance-footer-row">
+                <button
+                  type="button"
+                  className="custom-port-trigger-btn"
+                  onClick={() => setShowCustomInput(true)}
+                >
+                  {copy.customPort}
+                </button>
+                <button
+                  type="button"
+                  className="probe-refresh-icon-btn"
+                  disabled={probing}
+                  aria-label={copy.refresh}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void refreshInstances()
+                  }}
+                >
+                  <RefreshIcon size={12} className={probing ? 'spinning' : ''} />
+                </button>
+              </div>
             ) : (
               <div className="custom-port-input-row">
                 <input
                   type="number"
-                  placeholder={isEn ? 'Port (e.g. 3080)' : '端口号 (如 3080)'}
+                  placeholder={copy.customPortPlaceholder}
                   value={customPortInput}
                   onChange={(e) => setCustomPortInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -294,14 +229,7 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
                   className="custom-port-apply-btn"
                   onClick={handleApplyCustomPort}
                 >
-                  {isEn ? 'OK' : '确认'}
-                </button>
-                <button
-                  type="button"
-                  className="custom-port-cancel-btn"
-                  onClick={() => setShowCustomInput(false)}
-                >
-                  {isEn ? 'Cancel' : '取消'}
+                  {copy.customConfirm}
                 </button>
               </div>
             )}
