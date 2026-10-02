@@ -233,7 +233,8 @@ export function MediaViewerComposer({
           onClick: () => setVideoGenMode('文生视频'),
         });
       }
-      return tabs;
+      // 页签只剩 1 个时没有切换价值，隐藏整行避免死开关。
+      return tabs.length > 1 ? tabs : [];
     }
 
     // 图像模式：动态根据执行中枢的 operations 契约分流（统一收敛为 文生图、参考、编辑，消除多图参考分裂）
@@ -291,7 +292,8 @@ export function MediaViewerComposer({
         },
       });
     }
-    return tabs;
+    // 页签只剩 1 个时没有切换价值，隐藏整行避免死开关。
+    return tabs.length > 1 ? tabs : [];
   }, [model, mode, videoModeId, setVideoGenMode, config.imageOpMode, config.setImageOpMode]);
 
   const bucketKey = useCallback(
@@ -743,8 +745,20 @@ export function MediaViewerComposer({
     const mediaFiles = [...files].filter((file) => /^(image|video|audio)\//.test(file?.type || ''));
     if (mediaFiles.length === 0) return;
 
+    // 贴素材按主导类型分模态：视频/音频 → 视频模式，纯图片 → 图像模式。
+    // 直接用目标模态算 bucketKey，不走 mode 变量（setMode 后当前 render 的 mode 仍是旧值）。
+    const hasVideoOrAudio = mediaFiles.some((f) => /^(video|audio)\//.test(f.type || ''));
+    const hasImage = mediaFiles.some((f) => /^image\//.test(f.type || ''));
+    const intendedMode = hasVideoOrAudio && !hasImage ? 'video' : (hasImage && !hasVideoOrAudio ? 'image' : mode);
+    const effectiveBucketKey = (slot) => makeBucketKey(intendedMode, model?.id, slot?.key);
+    // 目标模态必须真的存在可容纳该媒体类型的卡槽才切换；否则不切，让原模式照常提示。
+    const effectiveSlots = mode === intendedMode
+      ? slots
+      : slotPlan(model, intendedMode).filter((slot) =>
+          mediaFiles.some((f) => (f.type || '').split('/')[0] === slot.type));
+    const effectiveMode = effectiveSlots.length > 0 ? intendedMode : mode;
     const tryAdd = async (slot, file, existing) => {
-      const key = bucketKey(slot);
+      const key = effectiveBucketKey(slot);
       const list = existing[key] || [];
       const room = slot.max == null ? Infinity : slot.max;
       if (list.length >= room) return 'full';
@@ -764,37 +778,39 @@ export function MediaViewerComposer({
       return 'ok';
     };
 
+    if (mode !== effectiveMode) setMode(effectiveMode);
+
     const nextBuckets = { ...(bucketsRef.current || {}) };
     const accepted = [];
     const rejected = [];
 
     for (const file of mediaFiles) {
       const mediaType = (file.type || '').split('/')[0];
-      // 1) 当前操作 slots 里按类型+容量找首个可用卡槽
-      let target = (slots || []).find((s) => s.type === mediaType && ((nextBuckets[bucketKey(s)] || []).length < (s.max == null ? Infinity : s.max)));
+      // 1) 当前（目标）操作 slots 里按类型+容量找首个可用卡槽
+      let target = (effectiveSlots || []).find((s) => s.type === mediaType && ((nextBuckets[effectiveBucketKey(s)] || []).length < (s.max == null ? Infinity : s.max)));
       let outcome = 'no-slot';
       if (target) outcome = await tryAdd(target, file, nextBuckets);
       if (outcome === 'ok') { accepted.push(file); continue; }
       rejected.push({ file, reason: outcome === 'full' ? 'full' : outcome });
     }
 
-    // 2) 当前操作装不下的媒体文件：按素材推导适配操作，用其正式卡槽再匹配一次。
+    // 2) 目标操作装不下的媒体文件：按素材推导适配操作，用其正式卡槽再匹配一次。
     // 必须用 slotPlan 取正式归一化卡槽（reference/first_frame 等），不能手造虚拟 key，
     // 否则粘贴物落进不渲染的 bucket——界面看不到但占着位。
     if (rejected.length > 0) {
-      const scopedPrefix = makeBucketKey(mode, model?.id, '');
+      const scopedPrefix = makeBucketKey(effectiveMode, model?.id, '');
       const scoped = Object.fromEntries(
         Object.entries(nextBuckets).filter(([k]) => k.startsWith(scopedPrefix))
       );
-      const adaptiveOp = deriveAdaptiveOperation(model, mode, scoped);
-      const candidateOps = [...new Set([adaptiveOp, ...(operationsOf(model, mode) || [])].filter(Boolean))];
+      const adaptiveOp = deriveAdaptiveOperation(model, effectiveMode, scoped);
+      const candidateOps = [...new Set([adaptiveOp, ...(operationsOf(model, effectiveMode) || [])].filter(Boolean))];
       const stillRejected = [];
       for (const { file, reason: firstReason } of rejected) {
         const mediaType = (file.type || '').split('/')[0];
         let placed = false;
         for (const op of candidateOps) {
           if (placed) break;
-          const opSlots = slotPlan(model, mode, op.id).filter((s) => s.type === mediaType);
+          const opSlots = slotPlan(model, effectiveMode, op.id).filter((s) => s.type === mediaType);
           for (const slot of opSlots) {
             if (placed) break;
             const outcome = await tryAdd(slot, file, nextBuckets);
@@ -802,7 +818,7 @@ export function MediaViewerComposer({
             accepted.push(file);
             placed = true;
             // 同步操作模式让页签与素材一致
-            if (mode === 'image') {
+            if (effectiveMode === 'image') {
               const label = op.id === 'image_edit' ? '编辑' : op.id === 'multi_reference' ? '参考' : config.imageOpMode;
               if (label && label !== config.imageOpMode) config.setImageOpMode?.(label);
             } else {
@@ -823,11 +839,11 @@ export function MediaViewerComposer({
       setNotice(`已粘贴 ${accepted.length} 项素材${extra}`);
     } else {
       // 满载识别：首轮已有 'full'，或所有可用卡槽都已达到上限（不再误报“不支持”）
-      const slotFull = slots && slots.length > 0 && slots.every((s) => ((nextBuckets[bucketKey(s)] || []).length >= (s.max == null ? Infinity : s.max)));
+      const slotFull = effectiveSlots && effectiveSlots.length > 0 && effectiveSlots.every((s) => ((nextBuckets[effectiveBucketKey(s)] || []).length >= (s.max == null ? Infinity : s.max)));
       const anyFull = rejected.some((r) => r.reason === 'full') || slotFull;
       setNotice(anyFull ? '卡槽已满，无法再添加素材' : '当前生成方式不支持粘贴该类型素材');
     }
-  }, [disabled, model, slots, mode, videoGenMode, config, bucketKey, setVideoGenMode, setNotice]);
+  }, [disabled, model, slots, mode, videoGenMode, config, bucketKey, setVideoGenMode, setMode, setNotice]);
 
   // 按内容行数变高，最多露出 10 行；再多的字在框里滚动。
   useLayoutEffect(() => {
