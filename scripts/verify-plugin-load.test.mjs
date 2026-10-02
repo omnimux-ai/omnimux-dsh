@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
   checkPackage,
+  collectLocaleDuplicates,
   discoverPlugins,
   normalizeInject,
   pluginEntries,
@@ -71,4 +72,32 @@ test('declared-but-missing client bundle fails unless skipped', async () => {
   assert.match(failures[0], /bundle is missing/)
   const skipped = await checkPackage(pkg, { skipMissingClient: true })
   assert.deepEqual(skipped, [])
+})
+
+// Regression for #2970: same locale namespace registered twice on one side must be
+// caught — cordis throws "already has locale" at runtime and crashes the whole
+// plugin load page; the per-package isolation used to hide it.
+test('same-package duplicate locale namespace registers twice and is collected', async () => {
+  const localeRegistry = new Map()
+  const pkg = clientFixturePkg('fixture-client-locale-dup-self')
+  await checkPackage(pkg, { localeRegistry })
+  const dups = collectLocaleDuplicates(localeRegistry)
+  assert.equal(dups.length, 1)
+  assert.equal(dups[0].side, 'client')
+  assert.equal(dups[0].namespace, 'omnimux-dup-ns')
+  assert.deepEqual(dups[0].entries.map((e) => e.package), ['fixture-client-locale-dup-self', 'fixture-client-locale-dup-self'])
+})
+
+test('cross-package duplicate locale namespace reports both registrants', async () => {
+  const localeRegistry = new Map()
+  const pkgA = clientFixturePkg('fixture-client-locale-dup-a')
+  const pkgB = clientFixturePkg('fixture-client-locale-dup-b')
+  await checkPackage(pkgA, { localeRegistry })
+  await checkPackage(pkgB, { localeRegistry })
+  const dups = collectLocaleDuplicates(localeRegistry)
+  assert.equal(dups.length, 1)
+  assert.equal(dups[0].side, 'client')
+  assert.equal(dups[0].namespace, 'omnimux-shared-ns')
+  const pkgs = dups[0].entries.map((e) => e.package).sort()
+  assert.deepEqual(pkgs, ['fixture-client-locale-dup-a', 'fixture-client-locale-dup-b'])
 })
