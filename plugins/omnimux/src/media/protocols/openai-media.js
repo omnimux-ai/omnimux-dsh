@@ -7,7 +7,7 @@ import {
 } from 'aigc-provider-runtime-kit/runtime'
 import { OmnimuxError } from '../errors.js'
 import { classifyQuotaFailure } from '../../errors/quota-classifier.js'
-import { getJson } from '../job.js'
+import { getJson, credentialRejectedError } from '../job.js'
 import {
   describeTaskFailure,
   pickMediaUrl,
@@ -228,6 +228,11 @@ export function createOpenAiMediaRuntime(options) {
         const failure = classifyQuotaFailure({ status: response.status, body })
         if (failure.kind === 'channel-unavailable') {
           throw new OmnimuxError(failure.code, failure.message, { status: response.status })
+        }
+        // A credential was sent and rejected — surface the type mismatch, never
+        // the misleading "请先登录" for a signed-in user (Issue #2975).
+        if (failure.kind === 'needs-omnimux' && options.apiKey && String(options.apiKey).trim()) {
+          throw credentialRejectedError(options.apiKey, response.status)
         }
       }
       return response

@@ -33,6 +33,18 @@ export function unwrapAdapterError(error) {
   if (!error || typeof error !== 'object') return error
   const coded = /** @type {{ code?: unknown, message?: unknown, cause?: unknown }} */ (error)
   if (coded.code !== 'ADAPTER_FAILED') return error
+  // #2975: a domain error thrown inside the adapter fetcher (the
+  // credential-type rejection) must keep its own code — flattening it into
+  // ADAPTER_FAILED loses the guidance the canvas is supposed to show. The
+  // runtime nests it one level deeper (ADAPTER_FAILED → HTTP adapter error →
+  // domain error), so look through one wrapper. Only OmnimuxError penetrates;
+  // runtime-kit's own typed failures keep ADAPTER_FAILED.
+  const nested = coded.cause && typeof coded.cause === 'object' ? /** @type {{ cause?: unknown }} */ (coded.cause).cause : undefined
+  for (const candidate of [coded.cause, nested]) {
+    if (candidate instanceof OmnimuxError && candidate.code !== 'ADAPTER_FAILED') {
+      return candidate
+    }
+  }
   const detail = collectCauseMessages(coded.cause)
   const base = typeof coded.message === 'string' && coded.message.trim()
     ? coded.message.trim()
