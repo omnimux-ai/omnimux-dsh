@@ -1,5 +1,5 @@
 import React from 'react'
-import { ASSET_HUB_I18N_SPEC } from './asset-hub-store.js'
+import { ASSET_HUB_I18N_SPEC } from '../../../omnimux/src/client/workbench/asset-hub-store.js'
 import { SharedPrimaryTabs } from '../../../omnimux/src/client/shared/asset-hub-tabs/SharedPrimaryTabs.jsx'
 import {
   FullscreenEnterIcon,

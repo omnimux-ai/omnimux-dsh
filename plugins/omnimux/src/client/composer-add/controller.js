@@ -1,7 +1,7 @@
 import { inferKindFromName, MAX_ATTACHMENTS } from './kind.js'
 import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
 import { promptForCard, tabForKind } from './library-stage-model.js'
-import { getGlobalAssetHubNavStore } from '../../../../omnimux-assets/src/asset-hub/asset-hub-store.js'
+import { getGlobalAssetHubNavStore } from '../workbench/asset-hub-store.js'
 import { ASSET_HUB_TAB_ID } from '../workbench/geometry.js'
 
 /**

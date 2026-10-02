@@ -16,13 +16,13 @@ import {
   createAssetHubNavStore,
   PRIMARY_TABS,
   SECONDARY_FILTER_WHITELIST,
-} from './asset-hub-store.js'
+} from '../../../omnimux/src/client/workbench/asset-hub-store.js'
 import {
   normalizeAssetItem,
   normalizeInspirationItem,
   filterAssetHubItems,
   adaptCardToAttachmentPayload,
-} from './asset-hub-data.js'
+} from '../../../omnimux/src/client/workbench/asset-hub-data.js'
 import { createAttachmentStore } from '../../../omnimux/src/client/attachments/store.ts'
 import { createComposerAddController } from '../../../omnimux/src/client/composer-add/controller.js'
 import { zh } from '../client/locales.js'

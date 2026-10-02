@@ -4,12 +4,12 @@
  * 彻底拔除 canvas，对齐 6 大主库，以共享契约层为单一真源。
  */
 
-import { ASSET_HUB_TAB_ID } from '../../../omnimux/src/client/workbench/geometry.js'
+import { ASSET_HUB_TAB_ID } from './geometry.js'
 import {
   SHARED_PRIMARY_TABS,
   SHARED_SUB_CATEGORIES,
   SHARED_I18N_SPEC,
-} from '../../../omnimux/src/client/shared/asset-hub-tabs/shared-tabs-catalog.js'
+} from '../shared/asset-hub-tabs/shared-tabs-catalog.js'
 
 export { ASSET_HUB_TAB_ID }
 

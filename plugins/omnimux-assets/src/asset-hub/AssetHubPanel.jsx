@@ -2,8 +2,8 @@ import React, { useState, useEffect, useSyncExternalStore, useCallback, useMemo,
 import { AssetHubHeader } from './AssetHubHeader.jsx'
 import { AssetHubToolbar } from './AssetHubToolbar.jsx'
 import { AssetHubGrid } from './AssetHubGrid.jsx'
-import { getGlobalAssetHubNavStore } from './asset-hub-store.js'
-import { loadAssetHubData, filterAssetHubItems, adaptCardToAttachmentPayload } from './asset-hub-data.js'
+import { getGlobalAssetHubNavStore } from '../../../omnimux/src/client/workbench/asset-hub-store.js'
+import { loadAssetHubData, filterAssetHubItems, adaptCardToAttachmentPayload } from '../../../omnimux/src/client/workbench/asset-hub-data.js'
 import { getGlobalAttachmentStore } from '../../../omnimux/src/client/attachments/store.ts'
 import { LIBRARY_STAGE_PROMPT_EVENT, promptForCard } from '../../../omnimux/src/client/composer-add/library-stage-model.js'
 import {

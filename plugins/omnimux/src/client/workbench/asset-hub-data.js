@@ -4,10 +4,10 @@
  * 遵循 specs/asset-hub-shared-tabs.spec.md、specs/asset-hub-shared-tabs-architecture.md 与 design.md 规范。
  */
 
-import { inferExtension } from '../../../omnimux/src/client/attachments/store.ts'
-import { resolveProductPreview } from '../../../omnimux/src/client/components/product-picker/product-attachment-sync.js'
-import { loadCreativeTemplates } from '../../../omnimux/src/client/session-guide/templates/creative-templates-client.js'
-import FEATURED_SKILLS_JSON from '../../../omnimux/src/client/session-guide/skills/featured-skills.json' with { type: 'json' }
+import { inferExtension } from '../attachments/store.ts'
+import { resolveProductPreview } from '../components/product-picker/product-attachment-sync.js'
+import { loadCreativeTemplates } from '../session-guide/templates/creative-templates-client.js'
+import FEATURED_SKILLS_JSON from '../session-guide/skills/featured-skills.json' with { type: 'json' }
 
 /**
  * 安全加载精选技能数据代理（对齐 library-stage-model.js 使用标准 ESM 静态导入，严禁动态执行）

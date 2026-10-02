@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { resolveProductPreview } from './product-attachment-sync.js'
-import { adaptCardToAttachmentPayload } from '../../../../../omnimux-assets/src/asset-hub/asset-hub-data.js'
+import { adaptCardToAttachmentPayload } from '../../workbench/asset-hub-data.js'
 
 test('resolveProductPreview: 各种商品封面形态与严格字符串类型保证 (SSOT)', () => {
   // 1. 空输入兜底
