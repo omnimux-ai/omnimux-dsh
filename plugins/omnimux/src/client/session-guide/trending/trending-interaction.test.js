@@ -158,7 +158,7 @@ const SECTION_FIXTURE = [
  */
 const DOCK_FIXTURE = [
   '<div id="root" data-omnimux-starter-host data-phase="hero">',
-  '<div class="scrollBody">',
+  '<div data-conversation-scroll>',
   '<div data-composer-seat><div class="band"><div data-composer-card>',
   '<button data-send-button>Send</button>',
   '</div></div></div>',
@@ -202,7 +202,7 @@ async function renderDockSection({ slotTop = 100, collapse = 0, onApplyPrompt = 
   const { TrendingReplicateSection, DOCK_OPEN_ATTR } = await loadComponent('./TrendingReplicateSection.jsx')
   const env = withDom(DOCK_FIXTURE)
   const host = document.querySelector('#root')
-  const scroller = host.querySelector('.scrollBody')
+  const scroller = host.querySelector('[data-conversation-scroll]')
   const band = host.querySelector('[data-composer-card]').parentElement
   stubLayout(env, host, slotTop, collapse)
   const stub = stubFetch(SOURCE_ROWS)
