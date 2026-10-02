@@ -98,6 +98,13 @@ jobs:
       - name: Forbid tracked omnimux-workflow artifacts
         run: node scripts/check-tracked-artifacts.mjs
 
+      # 仓库静态门禁：插件边界、双语配对、AGENTS.md 预算与链接（侧栏契约需 dsh-ui-kit 实物依赖，暂不入此环境）。
+      - name: Repo gate scripts (boundaries, bilingual, AGENTS.md)
+        run: |
+          node scripts/verify-plugin-boundaries.mjs
+          node scripts/verify-bilingual-docs.mjs
+          node --test scripts/verify-agents-md.test.mjs
+
       # 产品基线：产品路径不得依赖开发机私有状态（合同 docs/contracts/product-baseline.md）。
       - name: Product baseline gate (no dev-machine state in product paths)
         run: |
