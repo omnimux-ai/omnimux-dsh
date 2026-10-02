@@ -1,5 +1,14 @@
-import { memo, useEffect, useState } from 'react'
-import { FolderIcon, RefreshIcon, CheckIcon, ChevronDownIcon } from './icons.tsx'
+import { memo, useEffect, useRef, useState } from 'react'
+import { RefreshIcon, CheckIcon } from './icons.tsx'
+import {
+  discoverInstances,
+  instanceStatusText,
+  INSTANCE_SELECTOR_COPY,
+  KNOWN_INSTANCE_NAMES,
+  type DiscoveredInstance,
+  type InstanceStatus,
+  type UiLocale,
+} from '../../shared/instance-discovery.ts'
 
 export interface WorkspaceItem {
   id: string
@@ -8,87 +17,54 @@ export interface WorkspaceItem {
   port: number
   instanceNameZh: string
   instanceNameEn: string
+  status: InstanceStatus
+  latencyMs?: number
   isRecommended?: boolean
   isActive?: boolean
 }
 
-export type HealthStatus = 'online' | 'standby' | 'offline'
-
-export interface InstanceHealth {
-  status: HealthStatus
-  latencyMs?: number
-  messageZh: string
-  messageEn: string
+function toWorkspaceItem(inst: DiscoveredInstance, selectedPort: number): WorkspaceItem {
+  return {
+    id: inst.id,
+    name: inst.nameZh,
+    path: `http://127.0.0.1:${inst.port}`,
+    port: inst.port,
+    instanceNameZh: inst.nameZh,
+    instanceNameEn: inst.nameEn,
+    status: inst.status,
+    latencyMs: inst.latencyMs,
+    isRecommended: inst.isRecommended,
+    isActive: inst.port === selectedPort,
+  }
 }
 
-export const PRESET_INSTANCES = [
-  {
-    id: 'omnimux-prd',
-    port: 43128,
-    nameZh: 'OmniMux PRD',
-    nameEn: 'OmniMux PRD',
-    defaultPath: '~/.omnimux',
-    isRecommended: true,
-  },
-  {
-    id: 'dsh-desktop',
-    port: 43120,
-    nameZh: 'DSH Desktop',
-    nameEn: 'DSH Desktop',
-    defaultPath: '~/.dsh',
-  },
-]
-
-export async function probeInstanceHealth(port: number): Promise<InstanceHealth> {
-  const start = Date.now()
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 1200)
-
-    const resp = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
-      signal: controller.signal,
-    }).catch(async () => {
-      return fetch(`http://127.0.0.1:${port}/`, {
-        signal: controller.signal,
-      })
-    })
-
-    clearTimeout(timer)
-    const latency = Date.now() - start
-
-    if (resp.ok) {
-      return {
-        status: 'online',
-        latencyMs: latency,
-        messageZh: `${latency}ms`,
-        messageEn: `${latency}ms`,
-      }
-    }
-
-    if (resp.status === 401 || resp.status === 403) {
-      return {
-        status: 'online', // 本地端口监听中且响应，属于真实可用在线状态
-        latencyMs: latency,
-        messageZh: `就绪 ${latency}ms`,
-        messageEn: `Ready ${latency}ms`,
-      }
-    }
-
-    return {
-      status: 'online',
-      latencyMs: latency,
-      messageZh: `${latency}ms`,
-      messageEn: `${latency}ms`,
-    }
-  } catch {
-    const latency = Date.now() - start
-    return {
-      status: 'offline',
-      latencyMs: latency,
-      messageZh: '离线',
-      messageEn: 'Offline',
-    }
+/**
+ * 触发按钮的选中实例：本轮发现结果优先；已知端口本轮离线被过滤时
+ * 回退名称映射表（避免已知实例闪成占位文案）。无法解析视为未选中。
+ */
+function resolveSelected(
+  instances: DiscoveredInstance[],
+  selectedPort: number,
+): DiscoveredInstance | undefined {
+  const hit = instances.find((i) => i.port === selectedPort)
+  if (hit) return hit
+  const known = KNOWN_INSTANCE_NAMES[selectedPort]
+  if (!known) return undefined
+  return {
+    id: known.id,
+    port: selectedPort,
+    nameZh: known.nameZh,
+    nameEn: known.nameEn,
+    status: 'offline',
+    isRecommended: known.isRecommended ?? false,
+    isCustom: false,
   }
+}
+
+function dotClass(status: InstanceStatus | undefined, bridgeConnected: boolean): string {
+  if (bridgeConnected || status === 'online') return 'online'
+  if (status === 'unavailable') return 'standby'
+  return 'offline'
 }
 
 export const WorkspaceSelector = memo(function WorkspaceSelector({
@@ -98,90 +74,60 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
   onSelectWorkspace,
 }: {
   bridgeConnected: boolean
-  locale?: 'zh' | 'en'
+  locale?: UiLocale
   targetPort?: number
   onSelectWorkspace?: (ws: WorkspaceItem) => void
 }) {
-  const isEn = locale === 'en'
+  const copy = INSTANCE_SELECTOR_COPY[locale]
   const [selectedPort, setSelectedPort] = useState<number>(() => {
     const saved = localStorage.getItem('omnimux_target_port')
     const p = saved ? parseInt(saved, 10) : targetPort
     return !isNaN(p) && p > 0 ? p : 43128
   })
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([])
-  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceItem | null>(null)
-  const [healthMap, setHealthMap] = useState<Record<number, InstanceHealth>>({})
+  const [instances, setInstances] = useState<DiscoveredInstance[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [probing, setProbing] = useState(false)
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customPortInput, setCustomPortInput] = useState('')
+  // 竞态护栏：以最后一次打开/刷新的探测结果为准，stale response 直接丢弃。
+  const discoverySeq = useRef(0)
 
   const refreshInstances = async () => {
+    const seq = ++discoverySeq.current
     setProbing(true)
-    const targets = Array.from(new Set([...PRESET_INSTANCES.map((p) => p.port), selectedPort]))
-    const healthResults: Record<number, InstanceHealth> = {}
-
-    await Promise.all(
-      targets.map(async (port) => {
-        healthResults[port] = await probeInstanceHealth(port)
-      })
-    )
-    setHealthMap(healthResults)
-
-    // 构建各实例对应的工作区列表
-    const list: WorkspaceItem[] = PRESET_INSTANCES.map((inst) => {
-      const h = healthResults[inst.port]
-      return {
-        id: inst.id,
-        name: inst.nameZh,
-        path: inst.defaultPath,
-        port: inst.port,
-        instanceNameZh: inst.nameZh,
-        instanceNameEn: inst.nameEn,
-        isRecommended: inst.isRecommended,
-        healthStatus: h?.status || 'offline',
-        latencyMs: h?.latencyMs,
-        isActive: inst.port === selectedPort,
-      }
-    })
-
-    if (!PRESET_INSTANCES.some((p) => p.port === selectedPort)) {
-      const h = healthResults[selectedPort]
-      list.push({
-        id: 'custom',
-        name: isEn ? `Custom Port (${selectedPort})` : `自定义实例 (${selectedPort})`,
-        path: `http://127.0.0.1:${selectedPort}`,
-        port: selectedPort,
-        instanceNameZh: `自定义 (${selectedPort})`,
-        instanceNameEn: `Custom (${selectedPort})`,
-        healthStatus: h?.status || 'offline',
-        latencyMs: h?.latencyMs,
-        isActive: true,
-      })
+    try {
+      const found = await discoverInstances([selectedPort])
+      if (seq !== discoverySeq.current) return
+      setInstances(found)
+    } finally {
+      if (seq === discoverySeq.current) setProbing(false)
     }
-
-    setWorkspaces(list)
-    const cur = list.find((w) => w.port === selectedPort) || list[0]
-    setActiveWorkspace(cur)
-    setProbing(false)
   }
 
+  // 首次挂载先探一轮；之后每次打开下拉重新探测，关闭期间不轮询。
   useEffect(() => {
     void refreshInstances()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPort])
 
-  const handleSelect = (ws: WorkspaceItem) => {
-    setSelectedPort(ws.port)
-    setActiveWorkspace(ws)
+  const handleToggleOpen = () => {
+    const next = !isOpen
+    setIsOpen(next)
+    if (next) void refreshInstances()
+  }
+
+  const handleSelect = (inst: DiscoveredInstance) => {
+    if (inst.status === 'offline') return
+    setSelectedPort(inst.port)
     setIsOpen(false)
     setShowCustomInput(false)
     try {
-      localStorage.setItem('omnimux_target_port', String(ws.port))
-      localStorage.setItem('omnimux_target_instance', ws.id)
+      localStorage.setItem('omnimux_target_port', String(inst.port))
+      localStorage.setItem('omnimux_target_instance', inst.id)
     } catch {
       // Ignore
     }
-    onSelectWorkspace?.(ws)
+    onSelectWorkspace?.(toWorkspaceItem(inst, inst.port))
   }
 
   const handleApplyCustom = () => {
@@ -196,97 +142,73 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
       } catch {
         // Ignore
       }
-      onSelectWorkspace?.({
+      const existing = instances.find((i) => i.port === p)
+      onSelectWorkspace?.(toWorkspaceItem(existing ?? {
         id: 'custom',
-        name: isEn ? `Custom (${p})` : `自定义实例 (${p})`,
-        path: `http://127.0.0.1:${p}`,
         port: p,
-        instanceNameZh: `自定义 (${p})`,
-        instanceNameEn: `Custom (${p})`,
-        isActive: true,
-      })
+        nameZh: INSTANCE_SELECTOR_COPY.zh.localInstance,
+        nameEn: INSTANCE_SELECTOR_COPY.en.localInstance,
+        status: 'offline',
+        isRecommended: false,
+        isCustom: true,
+      }, p))
     }
   }
 
-  // 状态指示点：只要本地探活为 online，或者 WebSocket 已连接，均点亮为绿色在线；避免红点误导
-  const currentHealth = healthMap[selectedPort]
-  const isOnline = bridgeConnected || currentHealth?.status === 'online'
+  const resolved = resolveSelected(instances, selectedPort)
+  const engineDot = dotClass(resolved?.status, bridgeConnected)
 
   return (
     <div className="workspace-selector-container">
       <button
         type="button"
         className="workspace-selector-trigger"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleOpen}
         aria-expanded={isOpen}
-        title={isEn ? 'Switch connected service instance' : '选择连接的本地服务实例与端口'}
+        aria-haspopup="listbox"
+        title={copy.selectInstance}
       >
         <div className="ws-trigger-left">
-          <span className={`engine-dot ${isOnline ? 'online' : probing ? 'connecting' : 'offline'}`} />
-          <span className="ws-icon"><FolderIcon size={14} /></span>
+          <span className={`engine-dot ${engineDot}`} />
           <span className="ws-name">
-            {activeWorkspace?.instanceNameZh || activeWorkspace?.name || (isEn ? 'Select Instance' : '选择实例')}
+            {resolved ? (locale === 'en' ? resolved.nameEn : resolved.nameZh) : copy.selectInstance}
           </span>
-          <span className="ws-port-tag">:{selectedPort}</span>
+          {resolved && <span className="ws-port"> :{resolved.port}</span>}
         </div>
-        <span className="ws-chevron-arrow">
-          <ChevronDownIcon size={14} />
-        </span>
       </button>
 
       {isOpen && (
-        <div className="workspace-dropdown-menu">
-          <div className="dropdown-header">
-            <span>{isEn ? 'Available Service Instances' : '可用服务实例'}</span>
-            <button
-              type="button"
-              className="probe-refresh-icon-btn"
-              onClick={(e) => {
-                e.stopPropagation()
-                void refreshInstances()
-              }}
-              title={isEn ? 'Refresh all ports' : '重新探测实例状态'}
-            >
-              <RefreshIcon size={12} className={probing ? 'spinning' : ''} />
-            </button>
-          </div>
-
+        <div className="workspace-dropdown-menu" role="listbox">
           <div className="instance-list">
-            {workspaces.map((ws) => {
-              const isChosen = ws.port === selectedPort
-              const health = healthMap[ws.port]
-              const latencyText = health?.latencyMs !== undefined ? `${health.latencyMs}ms` : ''
-              const statusLabel = health?.status === 'online'
-                ? (latencyText ? `${isEn ? 'Online' : '在线'} ${latencyText}` : (isEn ? 'Online' : '在线'))
-                : (isEn ? 'Offline' : '离线')
-
+            {instances.length === 0 && probing && (
+              <div className="instance-empty">{copy.detecting}</div>
+            )}
+            {instances.length === 0 && !probing && (
+              <div className="instance-empty">{copy.emptyInstances}</div>
+            )}
+            {instances.map((inst) => {
+              const isChosen = inst.port === selectedPort
+              const disabled = inst.status === 'offline'
               return (
                 <div
-                  key={ws.id}
-                  className={`instance-item-row ${isChosen ? 'active' : ''}`}
-                  onClick={() => handleSelect(ws)}
+                  key={inst.id}
+                  role="option"
+                  aria-selected={isChosen}
+                  aria-disabled={disabled || undefined}
+                  className={`instance-item-row ${isChosen ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
+                  onClick={() => handleSelect(inst)}
                 >
                   <div className="instance-row-left">
-                    <span
-                      className={`instance-health-dot ${
-                        health?.status === 'online'
-                          ? 'online'
-                          : health ? 'offline' : 'checking'
-                      }`}
-                    />
-                    <span className="instance-name">{isEn ? ws.instanceNameEn : ws.instanceNameZh}</span>
-                    <span className="instance-port-tag">:{ws.port}</span>
-                    {ws.isRecommended && (
-                      <span className="instance-rec-pill">{isEn ? 'REC' : '推荐'}</span>
+                    <span className={`instance-health-dot ${inst.status === 'online' ? 'online' : inst.status === 'unavailable' ? 'standby' : 'offline'}`} />
+                    <span className="instance-name">{locale === 'en' ? inst.nameEn : inst.nameZh}</span>
+                    <span className="instance-port-tag">:{inst.port}</span>
+                    {inst.isRecommended && (
+                      <span className="instance-rec-pill">{copy.recommended}</span>
                     )}
                   </div>
                   <div className="instance-row-right">
-                    <span
-                      className={`health-pill ${
-                        health?.status === 'online' ? 'online' : 'offline'
-                      }`}
-                    >
-                      {statusLabel}
+                    <span className={`health-pill ${inst.status === 'online' ? 'online' : inst.status === 'unavailable' ? 'standby' : 'offline'}`}>
+                      {instanceStatusText(inst, locale)}
                     </span>
                     {isChosen && (
                       <span className="instance-check-mark"><CheckIcon size={12} /></span>
@@ -299,18 +221,32 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
 
           <div className="instance-custom-footer">
             {!showCustomInput ? (
-              <button
-                type="button"
-                className="custom-port-trigger-btn"
-                onClick={() => setShowCustomInput(true)}
-              >
-                ＋ {isEn ? 'Custom Port...' : '自定义端口...'}
-              </button>
+              <div className="instance-footer-row">
+                <button
+                  type="button"
+                  className="custom-port-trigger-btn"
+                  onClick={() => setShowCustomInput(true)}
+                >
+                  {copy.customPort}
+                </button>
+                <button
+                  type="button"
+                  className="probe-refresh-icon-btn"
+                  disabled={probing}
+                  aria-label={copy.refresh}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void refreshInstances()
+                  }}
+                >
+                  <RefreshIcon size={12} className={probing ? 'spinning' : ''} />
+                </button>
+              </div>
             ) : (
               <div className="custom-port-input-row">
                 <input
                   type="number"
-                  placeholder={isEn ? 'Port (e.g. 3080)' : '端口号 (如 3080)'}
+                  placeholder={copy.customPortPlaceholder}
                   value={customPortInput}
                   onChange={(e) => setCustomPortInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -324,14 +260,7 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
                   className="custom-port-apply-btn"
                   onClick={handleApplyCustom}
                 >
-                  {isEn ? 'OK' : '确认'}
-                </button>
-                <button
-                  type="button"
-                  className="custom-port-cancel-btn"
-                  onClick={() => setShowCustomInput(false)}
-                >
-                  {isEn ? 'Cancel' : '取消'}
+                  {copy.customConfirm}
                 </button>
               </div>
             )}
