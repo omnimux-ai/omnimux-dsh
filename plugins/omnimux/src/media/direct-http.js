@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { readJsonBody, sendJson } from '../auth/http-routes.js'
-import { resolveSyncOfficialToken } from './mount.js'
+import { resolveExecutionPlan } from './execution-plan.js'
 
 export const DIRECT_MEDIA_GENERATE_ROUTE = '/omnimux/api/media/generate'
 
@@ -14,6 +14,7 @@ export const DIRECT_MEDIA_GENERATE_ROUTE = '/omnimux/api/media/generate'
  * @param {{
  *   executeImage: (req: object) => Promise<any>,
  *   executeVideo: (req: object) => Promise<any>,
+ *   runtimeSettings?: object,
  * }} deps
  */
 export function registerDirectMediaRoutes(webServer, deps) {
@@ -78,8 +79,6 @@ export function registerDirectMediaRoutes(webServer, deps) {
       const ext = kind === 'video' ? 'mp4' : 'png'
       const dest = body.dest || path.join(destDir, `direct_${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`)
 
-      const envKey = resolveSyncOfficialToken()
-
       try {
         const requestedGroup = (typeof body.group === 'string' && body.group.trim())
           || (typeof body.channel === 'string' && body.channel.trim())
@@ -90,12 +89,24 @@ export function registerDirectMediaRoutes(webServer, deps) {
         const normalizedTaskRef = typeof rawTaskRef === 'string' && rawTaskRef.trim() ? rawTaskRef.trim() : undefined
         const normalizedRequestKey = typeof body.requestKey === 'string' && body.requestKey.trim() ? body.requestKey.trim() : undefined
 
+        // 与 mount 同一条放行链：官方/BYOK 判定、凭据注入、requireListed
+        // 全部由 resolveExecutionPlan 决定（BYOK → requireListed false 保持可用）。
+        const plan = resolveExecutionPlan({
+          kind,
+          req: {
+            prompt,
+            model: body.model,
+            group: requestedGroup,
+            channel: requestedGroup,
+            taskId: normalizedTaskId,
+            taskRef: normalizedTaskRef,
+          },
+          current: deps?.runtimeSettings,
+        })
         const executePayload = {
+          ...plan.finalReq,
           prompt,
           dest,
-          model: body.model,
-          group: requestedGroup,
-          channel: requestedGroup,
           operation,
           aspectRatio: body.aspectRatio,
           resolution: body.resolution,
@@ -103,12 +114,11 @@ export function registerDirectMediaRoutes(webServer, deps) {
           sound: typeof body.sound === 'boolean' ? body.sound : undefined,
           seed: body.seed,
           wait: body.wait !== false,
-          requireListed: false,
+          requireListed: plan.requireListed,
           references: Array.isArray(body.references) ? body.references : undefined,
           taskId: normalizedTaskId,
           taskRef: normalizedTaskRef,
           requestKey: normalizedRequestKey,
-          env: envKey ? { OMNIMUX_API_KEY: envKey } : undefined,
         }
 
         const result = await executor(executePayload)

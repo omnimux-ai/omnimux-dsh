@@ -9,7 +9,17 @@ import { useTrendingFeed } from './use-trending-feed.js'
 import { SkillsPanel } from '../skills/SkillsPanel.jsx'
 import { isLocaleEn, resolveSkillTitle } from '../skills/featured-skills-data.js'
 import { EMPTY_CAPABILITIES, TRENDING_SOURCE_STATUS, mergeCapabilities } from './trending-source.js'
-import { getComposerScrollThresholds, dockGeometry } from '../useComposerDocking.js'
+import {
+  getComposerScrollThresholds,
+  dockGeometry,
+  DOCK_BOTTOM,
+  SCROLLER_SELECTOR,
+  READ_TOP_MAX,
+  DOCK_LEAVE_MAX,
+  scheduleFrame,
+  cancelFrame,
+  readPageScrollTop,
+} from '../useComposerDocking.js'
 import { getGlobalAttachmentStore } from '../../attachments/store.ts'
 import {
   RECREATE_PROMPT,
@@ -25,51 +35,11 @@ import { publishActiveSkill, readActiveSkill, requestSkillAttach, subscribeSkill
 /** 宿主上标记「原生输入框已停靠到会话视口底部」。 */
 export const DOCK_OPEN_ATTR = 'data-omnimux-dock-open'
 
-/** 停靠后输入框距会话视口底边的距离（px）。 */
-const DOCK_BOTTOM = 20
-
-/** 原生输入框在 Hero 中的舒适打字宽度，与宿主 `[data-composer-card]` 的 952px 原生上限一致。 */
-const DOCK_MAX_WIDTH = 952
-
-/** 承载 Hero 的滚动容器；页面「有没有滑到最顶部」以此为准。 */
-const SCROLLER_SELECTOR = '[class*="scrollBody"]'
-
-/** 真正回到页面最顶部：滚动位置不超过这个值，才允许把输入框还原回原位（px）。 */
-const READ_TOP_MAX = 10
-
-/** 已经滑离页面顶部：超过这个值必须吸底；与上面的阈值拉开成迟滞区，边界上不来回横跳（px）。 */
-const DOCK_LEAVE_MAX = 20
-
 const ICON_CHEVRON_DOWN = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m6 9 6 6 6-6" />
   </svg>
 )
-
-/** rAF 在无布局环境（JSDOM / SSR）可能不存在，退化成宏任务即可。 */
-const scheduleFrame = typeof requestAnimationFrame === 'function'
-  ? requestAnimationFrame
-  : (fn) => setTimeout(fn, 0)
-const cancelFrame = typeof cancelAnimationFrame === 'function'
-  ? cancelAnimationFrame
-  : (id) => clearTimeout(id)
-
-/**
- * 读取页面真实的滚动位置：宿主用 `scrollBody` 容器滚动，整页滚动则是 window / documentElement。
- * 取三者最大值——只要其中任何一个真的滚动过，用户就不在页面最顶部，
- * 输入框就该留在底部，而不是被一次空读数顶回页首。
- *
- * @param {Element | null} scroller 滚动容器（可能不存在）
- * @returns {number} 已滚动的像素数；无布局信息时为 0
- */
-function readPageScrollTop(scroller) {
-  const scrollerTop = Number(scroller?.scrollTop)
-  const windowTop = Number(window?.scrollY ?? window?.pageYOffset)
-  const documentTop = Number(document?.documentElement?.scrollTop)
-  return [scrollerTop, windowTop, documentTop]
-    .filter((value) => Number.isFinite(value))
-    .reduce((max, value) => Math.max(max, value), 0)
-}
 
 /**
  * 「Trending Videos, Ready to Replicate」爆款对标与一键复刻板块。

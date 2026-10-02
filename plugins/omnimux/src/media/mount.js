@@ -3,10 +3,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { assertCapabilityEnabled, isMediaEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from './errors.js'
-import { DEFAULT_MEDIA } from './route.js'
-import { findMediaModel } from './catalog.js'
-import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mode.js'
-import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent } from '../catalog/serving/channel-groups.js'
+import { resolveExecutionPlan } from './execution-plan.js'
 import { objectParams, rethrow } from '../tools/schema.js'
 
 /**
@@ -160,76 +157,16 @@ export function mountMedia(ctx, opts) {
     execute(req) {
       assertCapabilityEnabled(gate, kind, 'media')
       const current = ctx.get?.('settings')?.get?.('omnimux')
-      const channelIntent = resolveRequestChannelIntent(req)
-
-      // 官方凭据判定移至服务侧安全上下文，不信任调用方请求体自带的 req.env.OMNIMUX_API_KEY
-      // 严格核验宿主环境权威凭据真实性（支持 process.env、profile 凭据文件与 secrets.json 多层级回退）
-      const rawSystemToken = resolveSyncOfficialToken(process.env)
-      const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
-
-      const runtime = resolveRuntimeChoice(current)
-      const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
-      const targetChannel = typeof rawTargetChannel === 'string' ? rawTargetChannel.toLowerCase().trim() : ''
-      const { modelId: requestModelId } = parseModelAndGroup(req?.model)
-      const defaultOfficialModel = DEFAULT_MEDIA?.providers?.omnimux?.models?.[kind] || ''
-      const effectiveModelId = requestModelId || defaultOfficialModel
-      const modelGroups = effectiveModelId ? getModelChannelGroups(effectiveModelId) : []
-      const isKnownOfficial = targetChannel
-        ? (targetChannel === 'official' || modelGroups.some((group) => {
-            const gid = typeof group.id === 'string' ? group.id.toLowerCase().trim() : ''
-            const wire = typeof group.wireGroup === 'string' ? group.wireGroup.toLowerCase().trim() : ''
-            return gid === targetChannel || wire === targetChannel
-          }))
-        : (runtime.mode === 'official')
-
-      // 渠道严格判定：
-      // 1. 若显式指定渠道，必须为已知官方专线；
-      // 2. 常规官方请求未显式指定渠道组（targetChannel 为空）时，若为官方模式、已知官方媒体模型或已验证的兜底模式，识别为官方通道；
-      // 3. 绝不能被未知自定义渠道或 BYOK 渠道冒领
-      const isCatalogOfficialModel = Boolean(effectiveModelId && findMediaModel(kind, effectiveModelId))
-      const isOfficialModel = Boolean(effectiveModelId && (modelGroups.length > 0 || isCatalogOfficialModel))
-      const isCliLocalModel = kind === 'audio' && effectiveModelId === 'gemini-3.8-flash-tts'
-      const hasVerifiedRuntime = Boolean(runtime.textReady || runtime.mediaReady)
-      const isFallbackOfficial = !targetChannel && current?.allowOfficialMediaFallback === true && hasVerifiedRuntime
-      const isOfficialRequest = !channelIntent.isByokChannel
-        && (
-          (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
-          || (!targetChannel && (runtime.mode === 'official' || isOfficialModel || isFallbackOfficial))
-        )
-
-      // 正交共存架构：
-      // 1. 凡目标渠道为官方专线的请求，只要具备权威官方 Token，彻底取消对全局 runtimeMode 的阻断，直接放行执行！
-      // 2. 本地 CLI 语音模型（gemini-3.8-flash-tts）免鉴权，直接放行！
-      // 3. 已提交任务的收取请求（taskRef/taskId）已处于上游执行阶段，严禁在等待出片时因全局模式被阻断！
-      // 4. 其余未通过官方/本地 Bypass 的请求（如未配置的自备渠道或未指定渠道的请求），严格校验本地运行方式就绪度。
-      const isTaskCollect = Boolean(req.taskRef || req.taskId)
-      const isOfficialBypass = isOfficialRequest && (hasOfficialToken || isCliLocalModel)
-      const shouldBypassRuntimeReady = isOfficialBypass || isTaskCollect
-      if (!shouldBypassRuntimeReady) {
-        assertRuntimeReady(current, kind)
-      }
-      let finalReq
-      if (isTaskCollect) {
-        // 收取阶段保持调用方与提供商自身的原始凭据环境，严禁以官方 Token 覆盖 BYOK 渠道
-        finalReq = req
-      } else if (isOfficialBypass) {
-        finalReq = {
-          ...req,
-          env: {
-            OMNIMUX_API_KEY: (rawSystemToken || '').trim(),
-          },
-        }
-      } else if (isOfficialRequest) {
-        finalReq = { ...req, env: {} }
-      } else {
-        finalReq = req
-      }
+      // 放行/渠道判定唯一拥有者：resolveExecutionPlan（见 media/execution-plan.js）。
+      // 本处只做能力门禁 + 调用判定；execute 消费 RouteDecision.finalReq 不再重复判定。
+      const plan = resolveExecutionPlan({ kind, req, current })
       return execute({
-        ...finalReq,
+        ...plan.finalReq,
         media,
         store: opts.store,
         credentials: ctx.get?.('credentials'),
         runtimeSettings: current,
+        requireListed: plan.requireListed,
       })
     },
   }

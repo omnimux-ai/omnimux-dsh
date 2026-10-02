@@ -343,7 +343,9 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
   }, [onUndock])
 
   const dock = useCallback((item, onDockedOrOptions) => {
-    if (!item) return false
+    // 唯一入口的载荷守卫：吸底必须由真实卡片实体触发，
+    // 空载与 jump_dock_active 幽灵意图一律拒收（原为 dock-intent 监听内守卫）。
+    if (!item || !item.id || item.id === 'jump_dock_active') return false
     const options = typeof onDockedOrOptions === 'object' && onDockedOrOptions !== null ? onDockedOrOptions : {}
     const onDocked = typeof onDockedOrOptions === 'function' ? onDockedOrOptions : options.onDocked
     const force = options.force === true
@@ -703,25 +705,6 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
       })
     }
 
-    const onDockIntent = (event) => {
-      const item = event?.detail?.item
-      // 架构防御收紧：严禁空载虚构的 jump_dock_active 触发强制吸底。
-      // 必须具备明确的真实实体载荷（id/slug/prompt）
-      if (!item || !item.id || item.id === 'jump_dock_active') {
-        return
-      }
-      const force = event?.detail?.force !== false
-      isIntentDrivenRef.current = true
-      isCollapsedRef.current = false
-      isJumpingRef.current = true
-      dock(item, { force })
-      if (jumpingTimerRef.current) clearTimeout(jumpingTimerRef.current)
-      jumpingTimerRef.current = setTimeout(() => {
-        isJumpingRef.current = false
-        jumpingTimerRef.current = null
-      }, 150)
-    }
-
     const onScroll = () => {
       if (frame) return
       frame = scheduleFrame(evaluate)
@@ -735,13 +718,11 @@ export function useComposerDocking({ hostRef, onUndock } = {}) {
     const targets = [scroller, window].filter(Boolean)
     for (const target of targets) target.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onResize)
-    window.addEventListener('omnimux:composer:dock-intent', onDockIntent)
     return () => {
       if (frame) cancelFrame(frame)
       if (jumpingTimerRef.current) clearTimeout(jumpingTimerRef.current)
       for (const target of targets) target.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onResize)
-      window.removeEventListener('omnimux:composer:dock-intent', onDockIntent)
     }
   }, [hostRef, dockedItem])
 

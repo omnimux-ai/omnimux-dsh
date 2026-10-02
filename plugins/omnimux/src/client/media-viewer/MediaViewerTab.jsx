@@ -171,60 +171,33 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
         : assets;
       const serializedReferences = serializeReferenceAssets(materializedAssets);
 
-      // 客户端渠道平滑自愈与容灾候选集构建
-      const primaryChannel = (model === 'gpt-image-2.5' && (!channel || channel === 'standard'))
-        ? 'economy'
-        : channel;
-      const fallbackChannels = model === 'gpt-image-2.5'
-        ? [primaryChannel, 'economy', 'pro'].filter((ch, i, arr) => ch && arr.indexOf(ch) === i)
-        : [primaryChannel];
-
+      // 渠道选择与容灾唯一拥有者在服务端（resolveExecutionPlan + execute 分组容灾）；
+      // 客户端透传用户选择的渠道，不自行换道或按错误文本正则重试。
       const runTask = async (taskId) => {
-        let lastError = null;
-        let data = null;
-
-        for (const candidateChannel of fallbackChannels) {
-          try {
-            const resp = await fetch('/omnimux/api/media/generate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                prompt,
-                kind,
-                operation,
-                model,
-                channel: candidateChannel,
-                aspectRatio: params?.aspectRatio,
-                resolution: params?.resolution,
-                duration: params?.duration,
-                sound: params?.hasSound,
-                sessionId,
-                taskId,
-                references: serializedReferences,
-                annotations,
-              }),
-            });
-            const resJson = await resp.json();
-            if (!resp.ok) {
-              lastError = new Error(resJson?.error || `Media generation failed with HTTP status ${resp.status}`);
-              const errMsg = String(resJson?.error || '');
-              if (!/分组|渠道|403|unauthorized|forbidden|channel/i.test(errMsg)) {
-                break;
-              }
-              continue;
-            }
-            if (resJson.ok) {
-              data = resJson;
-              break;
-            }
-          } catch (fetchErr) {
-            lastError = fetchErr;
-          }
+        const resp = await fetch('/omnimux/api/media/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            kind,
+            operation,
+            model,
+            channel,
+            aspectRatio: params?.aspectRatio,
+            resolution: params?.resolution,
+            duration: params?.duration,
+            sound: params?.hasSound,
+            sessionId,
+            taskId,
+            references: serializedReferences,
+            annotations,
+          }),
+        });
+        const resJson = await resp.json();
+        if (!resp.ok) {
+          throw new Error(resJson?.error || `Media generation failed with HTTP status ${resp.status}`);
         }
-
-        if (!data && lastError) {
-          throw lastError;
-        }
+        const data = resJson;
         if (data?.ok && (data.url || data.dest)) {
           store.updateMedia(taskId, {
             status: 'completed',
