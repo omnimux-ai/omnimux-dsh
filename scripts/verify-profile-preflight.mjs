@@ -58,6 +58,12 @@ const HOST_PACKAGE_STUB_SOURCE = [
   '});',
   'const def = Object.assign(defineTool, { defineTool, Schema, object: Schema.object, string: Schema.string, number: Schema.number, boolean: Schema.boolean, array: Schema.array, union: Schema.union });',
   'export function createUserMessage(options) { return options; };',
+  'export function createAssistantMessage(options) { return options; };',
+  'export function createSystemMessage(options) { return options; };',
+  'export function createMessage(options) { return options; };',
+  'export function MessageId(id) { return id; };',
+  'export function ToolCallId(id) { return id; };',
+  'export function CallId(id) { return id; };',
   'export function dshHomePath(...args) { return ""; };',
   'export function dshProfilePath(...args) { return ""; };',
   // 宿主包具名导出必须逐条声明：替身是静态 ESM，缺一条就会让 import 在解析期失败。
