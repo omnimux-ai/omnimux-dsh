@@ -5,6 +5,25 @@ import { classifyQuotaFailure } from '../errors/quota-classifier.js'
 import { DEFAULT_REQUEST_TIMEOUT_MS, RETRYABLE_STATUS } from './task-deadline.js'
 
 /**
+ * Upstream 401s on media /v1 endpoints do NOT mean "not signed in": the console
+ * login token (access_token) is accepted by /api/* account endpoints but rejected
+ * by the media gateway, which requires an `sk-` API key. Keep the established
+ * `needs-omnimux` code (callers key off it) but report the real cause so a
+ * signed-in user is no longer told "请先登录" (Issue #2975).
+ *
+ * @param {string | undefined} apiKey The credential actually placed on the request.
+ * @param {number} status
+ * @returns {OmnimuxError}
+ */
+export function credentialRejectedError(apiKey, status) {
+  const key = typeof apiKey === 'string' ? apiKey.trim() : ''
+  const message = key.startsWith('sk-')
+    ? '生成服务拒绝了当前 API 密钥（401），请检查密钥是否有效或已过期'
+    : '生成服务不接受登录凭证（需要 sk- 开头的 API 密钥），请在凭证中配置 OMNIMUX_API_KEY 后重试'
+  return new OmnimuxError('needs-omnimux', message, { status })
+}
+
+/**
  * One poll request, bounded.
  *
  * Issue #1382: the composed signal **must** reach `fetcher`. A post-hoc
@@ -65,6 +84,9 @@ export async function getJson(fetcher, url, apiKey, callerSignal, options = {}) 
       throw new OmnimuxError('quota-exceeded', classified.message, { status: response.status, details: classified })
     }
     if (classified.kind === 'needs-omnimux') {
+      // A credential was sent and the gateway rejected it — report the type
+      // mismatch truthfully instead of telling a signed-in user to log in.
+      if (apiKey && apiKey.trim()) throw credentialRejectedError(apiKey, response.status)
       throw new OmnimuxError('needs-omnimux', classified.message, { status: response.status })
     }
     throw new OmnimuxError('omnimux-request-failed', `GET request failed (HTTP ${response.status})`, {
