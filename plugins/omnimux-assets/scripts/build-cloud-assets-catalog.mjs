@@ -1802,23 +1802,11 @@ function collectVoiceSamples(ctx, add) {
    * official bucket. Anything not in this allow-list — cloned voices, clips of
    * unknown origin, adult folders — never reaches the public shelf.
    * The key is the R2 object key under https://assets.omnimux.ai/.
+   * #3028 续：全部本地录音样本按「无可证明来源」下架，白名单清空；
+   * 后续要上架先确认授权并补传，再在这里补回条目。
    * @type {Map<string, string>} relative `dir/file` → object key
    */
-  const PUBLISHED = new Map(Object.entries({
-    '纯音乐/e7d287030eee468baab6ea801556b99c.mp3': 'audio/bgm/e7d287030eee468baab6ea801556b99c.mp3',
-    '纯音乐/338b08a3c941489e8df9d12e7b527f0d.mp3': 'audio/bgm/338b08a3c941489e8df9d12e7b527f0d.mp3',
-    '纯音乐/045ac79fbcaa42d79adc6df98de9e06f.mp3': 'audio/bgm/045ac79fbcaa42d79adc6df98de9e06f.mp3',
-    '女声/6月5日.MP3': 'audio/voiceover/女声/6月5日.MP3',
-    '女声/456087e02ca946328ecc31d7662bfab7.mp3': 'audio/voiceover/女声/456087e02ca946328ecc31d7662bfab7.mp3',
-    '女声/e714b20eca8945d4805e32996bdca719.mp3': 'audio/voiceover/女声/e714b20eca8945d4805e32996bdca719.mp3',
-    '女声/oszQolKoxAQIUBiswAoMoGYGk5WSwlfnYwmBiK.mp3': 'audio/voiceover/女声/oszQolKoxAQIUBiswAoMoGYGk5WSwlfnYwmBiK.mp3',
-    '女声/0608(2).MP3': 'audio/voiceover/女声/0608(2).MP3',
-    '男声/6月21日.MP3': 'audio/voiceover/男声/6月21日.MP3',
-    '男声/boznoz.mp3': 'audio/voiceover/男声/boznoz.mp3',
-    '播客女.MP3': 'audio/voiceover/播客女.MP3',
-    '播客男.MP3': 'audio/voiceover/播客男.MP3',
-    'TK 口播女.mp3': 'audio/voiceover/TK 口播女.mp3',
-  }))
+  const PUBLISHED = new Map()
 
   /** @type {[string, string, string][]} folder -> [sub_category, tag] */
   const groups = [
