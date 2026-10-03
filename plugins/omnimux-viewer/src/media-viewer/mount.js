@@ -27,7 +27,13 @@ export function mountMediaViewerTab(ctx) {
     })
     inner.effect?.(() => sidebar.registerTab({
       id: MEDIA_VIEWER_TAB_ID,
-      title: () => ctx.locale?.bind?.('tool.viewer')?.('mediaViewer.tabTitle') || '图像生成',
+      title: () => {
+        try {
+          const value = ctx.locale?.bind?.('tool.viewer')?.('mediaViewer.tabTitle')
+          if (value && value !== 'mediaViewer.tabTitle') return value
+        } catch {}
+        return '图像生成'
+      },
       order: 7,
       hidden: false,
       single: true,

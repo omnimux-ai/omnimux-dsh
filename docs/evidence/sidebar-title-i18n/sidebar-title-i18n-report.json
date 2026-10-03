@@ -1,0 +1,19 @@
+{
+  "startedAt": "2026-10-03T07:19:00.161Z",
+  "scenario": "sidebar-title-i18n",
+  "titles": [
+    {
+      "id": "omnimux-assets:library",
+      "title": "资产库"
+    },
+    {
+      "id": "omnimux:asset-hub",
+      "title": "素材工作台"
+    },
+    {
+      "id": "omnimux:media-viewer",
+      "title": "图像生成"
+    }
+  ],
+  "pass": true
+}

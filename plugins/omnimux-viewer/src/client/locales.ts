@@ -13,6 +13,7 @@ export type ViewerKey =
   | 'badge.inContext' | 'badge.screenOnly'
   | 'action.open' | 'action.openNew' | 'action.close' | 'action.expand' | 'action.collapse'
   | 'media.noVideo' | 'media.noAudio'
+  | 'mediaViewer.tabTitle'
 
 /** Simplified Chinese copy. */
 export const zh: Record<ViewerKey, string> = {
@@ -39,6 +40,7 @@ export const zh: Record<ViewerKey, string> = {
   'action.collapse': '收起',
   'media.noVideo': '当前浏览器无法播放该视频格式',
   'media.noAudio': '当前浏览器无法播放该音频格式',
+  'mediaViewer.tabTitle': '图像生成',
 }
 
 /** English copy. */
@@ -66,4 +68,5 @@ export const en: Record<ViewerKey, string> = {
   'action.collapse': 'Collapse',
   'media.noVideo': 'This browser cannot play that video format',
   'media.noAudio': 'This browser cannot play that audio format',
+  'mediaViewer.tabTitle': 'Image Generation',
 }
