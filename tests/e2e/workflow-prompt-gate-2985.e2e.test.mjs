@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
  * new-input nodes whose prompt slot accepts local or upstream text:
  *   - empty prompt, no upstream text → submit disabled up front, title 请补齐正文;
  *   - local prompt only → submit enabled; never 还差必需素材.
+ * #2990: the same holds for legacy nodes (no inputBindingVersion).
  */
 const here=dirname(fileURLToPath(import.meta.url)), root=resolve(here,'../..');
 const outputBase=process.env.WORKFLOW_E2E_OUTPUT || resolve(here,'workflow-prompt-gate-2985-evidence');
@@ -30,9 +31,11 @@ test('E2E #2985: generation submit gate follows the shared kernel for all four n
     assert.equal(code,0,browserLog);
     const result=JSON.parse(await readFile(resolve(output,'browser-result.json'),'utf8'));
     assert.equal(result.status,'passed');
-    assert.deepEqual(result.results.map(r=>[r.type,r.empty.disabled,r.empty.title,r.typed.disabled]),[
-      ['image','true','请补齐正文','false'],['video','true','请补齐正文','false'],
-      ['text','true','请补齐正文','false'],['audio','true','请补齐正文','false'],
+    assert.deepEqual(result.results.map(r=>[r.legacy,r.type,r.empty.disabled,r.empty.title,r.typed.disabled]),[
+      [false,'image','true','请补齐正文','false'],[false,'video','true','请补齐正文','false'],
+      [false,'text','true','请补齐正文','false'],[false,'audio','true','请补齐正文','false'],
+      [true,'image','true','请输入内容或连接上游文本','false'],[true,'video','true','请输入内容或连接上游文本','false'],
+      [true,'text','true','请输入内容或连接上游文本','false'],[true,'audio','true','请输入内容或连接上游文本','false'],
     ]);
     report.browserClosed=JSON.parse(await readFile(resolve(output,'browser-cleanup.json'),'utf8')).closed;
     assert.equal(report.browserClosed,true);report.status='passed';

@@ -95,11 +95,35 @@ for (const type of ['image', 'video', 'text', 'audio']) {
   });
 }
 
-test('legacy node (no inputBindingVersion) still gated by the count-only check', () => {
-  const nodeData = newNode('image', '');
+// #2990: legacy nodes (no inputBindingVersion) count local text toward composed text slots.
+function legacyNode(type, prompt) {
+  const nodeData = newNode(type, prompt);
   delete nodeData.inputBindingVersion;
-  const html = render(nodeData, catalogFor('image'));
+  return nodeData;
+}
+
+for (const type of ['image', 'video', 'text', 'audio']) {
+  test(`legacy ${type}: local prompt only (no upstream) can submit`, () => {
+    const html = render(legacyNode(type, '1dog'), catalogFor(type));
+    assert.doesNotMatch(html, /还差必需素材/);
+    assert.match(sendButton(html), /aria-disabled="false"/);
+  });
+
+  test(`legacy ${type}: empty prompt without upstream text is disabled up front`, () => {
+    const html = render(legacyNode(type, ''), catalogFor(type));
+    const button = sendButton(html);
+    assert.match(button, /aria-disabled="true"/);
+    assert.match(button, /title="请输入内容或连接上游文本"/);
+  });
+}
+
+test('legacy video: typed prompt does not unblock an unbound required first_frame media slot', () => {
+  const catalog = catalogFor('video');
+  catalog.models[0].operations[0].inputs.push({ slot: 'first_frame', type: 'image', role: 'first_frame',
+    source: 'upstream_edge', min: 1, max: 1 });
+  const html = render(legacyNode('video', '1dog'), catalog);
   const button = sendButton(html);
   assert.match(button, /aria-disabled="true"/);
-  assert.match(button, /title="请输入内容或连接上游文本"/);
+  assert.match(html, /data-slot="first_frame"/);
+  assert.doesNotMatch(button, /title="还差必需素材：prompt"/);
 });
