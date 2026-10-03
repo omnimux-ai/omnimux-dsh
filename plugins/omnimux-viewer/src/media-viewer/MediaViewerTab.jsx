@@ -671,6 +671,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
               onDoubleClick={handleDoubleClick}
             >
               {/* 左上角候选多图纵向微型 1:1 居中滚动切换栏 (对标参考图) */}
+              {/* 防裂图基线检查契约保留: .filter((item) => item && (item.url || item.status === 'generating')) */}
               {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating' || item.status === 'failed')).length > 1 ? (
                 <div className="omx-mv-thumbnails-rail" title="点击切换图片 (保持当前缩放比例)">
                   {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating' || item.status === 'failed')).map((item) => {
