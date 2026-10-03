@@ -1,0 +1,5 @@
+   1       Tests  8 passed (8)
+   1      Errors  6 errors
+   6 ReferenceError: chrome is not defined
+   6 This error originated in "tests/background-panel-window-ownership.spec.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+   1 ⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯

@@ -146,7 +146,11 @@ function mediaAttachMessages(postMessage: ReturnType<typeof vi.fn>): unknown[] {
     .map((message) => message.media)
 }
 
-afterEach(() => {
+afterEach(async () => {
+  // A connected panel claims the bridge, and the worker's port discovery is
+  // still settling when a test finishes. Let it run to completion against the
+  // stubs: removing `chrome` first makes it throw outside any test.
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
   vi.resetModules()
   vi.unstubAllGlobals()
 })
