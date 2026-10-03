@@ -11,6 +11,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { BRIDGE_COMPLETE_TEXT_METHOD } from 'omnimux-browser/src/protocol.ts'
 
 const EXTENSION_ROOT = join(import.meta.dirname, '..')
 
@@ -81,10 +82,13 @@ describe('the extension network boundary', () => {
     expect(offenders).toEqual([])
   })
 
-  it('keeps the local completion channel and its bridge fallback in place', () => {
+  it('routes text completion through the local bridge and nowhere else', () => {
+    // #1991: the copilot completion is one bridge RPC to the local host; the
+    // former HTTP endpoint and its session.prompt fallback are gone.
     const background = readFileSync(join(EXTENSION_ROOT, 'src/background/index.ts'), 'utf8')
-    expect(background).toContain('/omnimux/text/complete')
-    expect(background).toContain('session.prompt')
+    expect(BRIDGE_COMPLETE_TEXT_METHOD).toBe('bridge.completeText')
+    expect(background).toContain('gatewayRpc(BRIDGE_COMPLETE_TEXT_METHOD, { prompt: userMessage, system: systemPrompt })')
+    expect(background).not.toContain('/omnimux/text/complete')
   })
 
   it('has no credential material in a built bundle when one is present', () => {

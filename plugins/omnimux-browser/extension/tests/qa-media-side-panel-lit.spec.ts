@@ -217,11 +217,17 @@ describe('QA gate: media delivered to an open side panel', () => {
     await startPanel()
     expect(chips()).toEqual([])
 
-    await deliver(FIRST)
+    await act(async () => { onMediaAttach?.(FIRST) })
 
-    // Half one: no click was needed for the highlight.
-    expect(chips()[0].classList.contains('active')).toBe(true)
-    expect(chips()[0].getAttribute('data-tooltip')).toBe('已点亮激活')
+    // Half one: no click was needed for the highlight. Lit media lands in the
+    // composer as a lit draft image, and the outer shelf stops listing what the
+    // composer already holds (#2134).
+    await vi.waitFor(() => {
+      const lit = [...document.querySelectorAll<HTMLImageElement>('.draft-images .draft-image.lit img')]
+      expect(lit).toHaveLength(1)
+      expect(lit[0].getAttribute('alt')).toContain(FIRST.id)
+    })
+    expect(chips()).toEqual([])
 
     await typedText('照着这个素材做一版')
     await submit()

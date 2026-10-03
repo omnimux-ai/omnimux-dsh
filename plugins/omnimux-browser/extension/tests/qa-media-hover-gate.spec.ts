@@ -749,26 +749,27 @@ describe('E. cross-module contract agreement', () => {
 // ------------------------------------------------- F. 两段式悬停展开 ---
 
 describe('F. two-stage hover expansion', () => {
-  it('paints stage one as a 24px circle spanning 29px, and stage two as the 64px row', () => {
+  it('paints stage one as a 24px circle spanning 29px, and stage two as the 128px row', () => {
+    // Geometry of the YouMind toolbar (specs/media-hover-instant-reveal.spec.md).
     expect(CAPSULE_SPEC.collapsedWidth).toBe(24)
     expect(CAPSULE_SPEC.collapsedHeight).toBe(24)
-    expect(CAPSULE_SPEC.width).toBe(64)
+    expect(CAPSULE_SPEC.width).toBe(128)
     expect(CAPSULE_SPEC.height).toBe(24)
     // The circle must be exactly that: a 24px box with a 12px radius.
     expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.collapsedWidth)
     expect(CAPSULE_SPEC.collapsedRadius).toBe(CAPSULE_SPEC.collapsedWidth / 2)
-    // The opened row is a 24px box with a 12px radius, so both ends stay round.
-    expect(CAPSULE_SPEC.borderRadius).toBe(CAPSULE_SPEC.height / 2)
+    // 999px rounds both ends fully at any band height, so the 24px circle and
+    // the 128px row share one radius rule.
+    expect(CAPSULE_SPEC.borderRadius).toBe(999)
     expect(CAPSULE_SPEC.collapsedHeight).toBe(CAPSULE_SPEC.height)
 
     const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
     expect(base).toContain('height:24px')
-    expect(base).toContain('border-radius:12px')
+    expect(base).toContain('border-radius:999px')
     const collapsed = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-collapsed')
     expect(collapsed).toContain('width:24px')
     expect(collapsed).toContain('height:24px')
-    expect(collapsed).toContain('border-radius:12px')
-    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:64px')
+    expect(declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar.is-expanded')).toContain('width:128px')
   })
 
   it('spans exactly 29px once the translucent halo is included', () => {
@@ -798,19 +799,20 @@ describe('F. two-stage hover expansion', () => {
   })
 
   it('centres the stage-one brand mark inside its hit box', () => {
-    expect(CAPSULE_SPEC.brandSize).toBe(18)
-    expect(CAPSULE_SPEC.brandIconSize).toBe(13)
+    // The whole 24px face is the hit box; the 18px ghost sits centred in it.
+    expect(CAPSULE_SPEC.brandSize).toBe(24)
+    expect(CAPSULE_SPEC.brandIconSize).toBe(18)
     expect(CAPSULE_SPEC.brandIconSize).toBeLessThan(CAPSULE_SPEC.brandSize)
-    expect(CAPSULE_SPEC.brandSize).toBeLessThanOrEqual(CAPSULE_SPEC.collapsedWidth)
+    expect(CAPSULE_SPEC.brandSize).toBe(CAPSULE_SPEC.collapsedWidth)
 
     const brand = stripComments(OVERLAY_STYLES)
       .match(/\.omnimux-capsule-brand \{([^}]*)\}/)?.[1]
       ?.replace(/\s+/g, '') ?? ''
-    expect(brand).toContain('width:18px')
-    expect(brand).toContain('height:18px')
+    expect(brand).toContain('width:24px')
+    expect(brand).toContain('height:24px')
     const mark = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-brand svg')
-    expect(mark).toContain('width:13px')
-    expect(mark).toContain('height:13px')
+    expect(mark).toContain('width:18px')
+    expect(mark).toContain('height:18px')
   })
 
   it('lines the collapsed circle up with the row it folds into', () => {
@@ -826,15 +828,25 @@ describe('F. two-stage hover expansion', () => {
   })
 
   it('floats every hover fill clear of the pill it sits in', () => {
-    const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
-    expect(base).toContain(`padding:0${CAPSULE_SPEC.paddingX}px`)
+    // The row is centred in the band, so its 24px side margins come from the
+    // width budget rather than a padding declaration: the row is 3 x 24px
+    // icons with 4px gaps, centred in 128px.
+    // The selector is declared twice (layer placement, then row layout); read both.
+    const actions = [...stripComments(OVERLAY_STYLES).matchAll(/\.omnimux-capsule-actions \{([^}]*)\}/g)]
+      .map((match) => match[1].replace(/\s+/g, ''))
+      .join(';')
+    expect(actions).toContain(`gap:${CAPSULE_SPEC.iconGap}px`)
+    expect(actions).toContain('display:flex')
+    expect(CAPSULE_SPEC.paddingX).toBe(24)
     const icons = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon')
     expect(icons).toContain(`width:${CAPSULE_SPEC.iconSize}px`)
     expect(icons).toContain(`height:${CAPSULE_SPEC.iconSize}px`)
     expect(icons).toContain('border-radius:50%')
-    expect(CAPSULE_SPEC.iconSize).toBe(16)
-    expect(CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize).toBe(8)
-    expect((CAPSULE_SPEC.height - CAPSULE_SPEC.iconSize) / 2).toBe(4)
+    // Each hover fill is a full-band circle, so it never spills past the pill
+    // vertically and stays inside the round ends horizontally.
+    expect(CAPSULE_SPEC.iconSize).toBe(24)
+    expect(CAPSULE_SPEC.iconSize).toBe(CAPSULE_SPEC.height)
+    expect(CAPSULE_SPEC.iconGlyphSize).toBe(14)
     expect(CAPSULE_SPEC.iconGlyphSize).toBeLessThan(CAPSULE_SPEC.iconSize)
     const glyph = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-icon svg')
     expect(glyph).toContain(`width:${CAPSULE_SPEC.iconGlyphSize}px`)
@@ -846,8 +858,10 @@ describe('F. two-stage hover expansion', () => {
 
   it('animates the width between the stages instead of snapping', () => {
     const base = declarationsOf(OVERLAY_STYLES, '.omnimux-capsule-bar')
-    // 0.22s on the shared ease-out curve, in the pill's own transition list.
-    expect(base).toContain('width220mscubic-bezier(0.16,1,0.3,1)')
+    // The opening duration (openMs) on the shared ease-out curve, in the
+    // pill's own transition list.
+    expect(CAPSULE_SPEC.openMs).toBe(250)
+    expect(base).toContain(`width${CAPSULE_SPEC.openMs}mscubic-bezier(0.16,1,0.3,1)`)
   })
 
   it('keeps both stage layers mounted and swaps them by opacity', () => {

@@ -1,0 +1,10 @@
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  tests/extension-network-policy.spec.ts > the extension network boundary > keeps the local completion channel and its bridge fallback in place
+ FAIL  tests/media-post-classifier.spec.ts > social platform whitelist gate > admits whitelisted major social platforms on post/work cards
+ FAIL  tests/qa-media-hover-gate.spec.ts > F. two-stage hover expansion > paints stage one as a 24px circle spanning 29px, and stage two as the 64px row
+ FAIL  tests/qa-media-hover-gate.spec.ts > F. two-stage hover expansion > centres the stage-one brand mark inside its hit box
+ FAIL  tests/qa-media-hover-gate.spec.ts > F. two-stage hover expansion > floats every hover fill clear of the pill it sits in
+ FAIL  tests/qa-media-hover-gate.spec.ts > F. two-stage hover expansion > animates the width between the stages instead of snapping
+ FAIL  tests/qa-media-hover-round2.spec.ts > cross-check · one size gate covers every admitting branch > admits tiktok item media at exactly 120x120
+ FAIL  tests/qa-media-side-panel-lit.spec.ts > QA gate: media delivered to an open side panel > lights the chip on its own and carries the media when the prompt is sent
+      Tests  8 failed | 170 passed | 1 expected fail (179)
