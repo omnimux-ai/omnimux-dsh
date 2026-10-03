@@ -1,6 +1,43 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PRESET_REFERENCE_ASSETS, REFERENCE_TABS } from './reference-constants.js';
 import { readDuration } from './MediaSlotGroup.jsx';
+import {
+  ensureReferenceTab,
+  peekReferenceTab,
+  subscribeReferenceAssets,
+} from './reference-asset-cache.js';
+
+function normalizeMediaType(type) {
+  if (type === 'video') return 'video';
+  if (type === 'audio') return 'audio';
+  return 'image';
+}
+
+/** 首次加载骨架卡数量：铺满两行可视格 */
+const SKELETON_COUNT = 8;
+
+/**
+ * 素材缩略图：加载完成前保留骨架底色，onLoad 后约 200ms 淡入。
+ */
+function ReferenceAssetThumb({ url, square }) {
+  const [loadedUrl, setLoadedUrl] = useState('');
+  const loaded = loadedUrl === url;
+  return (
+    <div className={`omx-ref-picker-asset-thumb ${square ? 'is-ratio-square' : 'is-ratio-natural'}`}>
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        ref={(img) => {
+          if (img && img.complete && !loaded) setLoadedUrl(url);
+        }}
+        className={loaded ? 'is-loaded' : ''}
+        onLoad={() => setLoadedUrl(url)}
+      />
+    </div>
+  );
+}
 
 /**
  * 图 3「选择参考面板」
@@ -16,10 +53,10 @@ export function ReferencePickerPopover({
 }) {
   const [activeTab, setActiveTab] = useState('local');
   const [onlyMine, setOnlyMine] = useState(false);
-  const [realData, setRealData] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [, setCacheTick] = useState(0);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
+  const gridRef = useRef(null);
   const pendingBlobUrlRef = useRef(null);
   const selectingRef = useRef(false);
 
@@ -44,110 +81,126 @@ export function ReferencePickerPopover({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
+  // 缓存数据变化时触发重渲染（数据未变的静默刷新不会通知）
+  useEffect(() => subscribeReferenceAssets(() => {
+    setCacheTick((t) => t + 1);
+  }), []);
+
+  // 切换 Tab 时网格滚动位置回到顶部；同一 Tab 的静默刷新不重置滚动
+  useEffect(() => {
+    if (gridRef.current) gridRef.current.scrollTop = 0;
+  }, [activeTab]);
+
   // 动态加载对应分类的资产库真实数据
+  const fetchTabAssets = async (tab) => {
+    try {
+      if (tab === 'local') {
+        const res = await fetch('/omnimux/assets/state');
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data.assets || []).map((a) => {
+            const coverFile = a.cover?.id ? a.cover : (a.files && a.files[0]);
+            const coverUrl = coverFile?.id
+              ? `/omnimux/assets/library/preview?id=${encodeURIComponent(a.id)}&file=${encodeURIComponent(coverFile.id)}`
+              : '';
+            return {
+              id: a.id,
+              title: a.name || a.handle || a.id,
+              name: a.name || a.handle || a.id,
+              url: coverUrl,
+              type: normalizeMediaType(a.type),
+              isMine: true,
+              raw: a,
+            };
+          }).filter((item) => item.url);
+          return items;
+        }
+        return null;
+      }
+      if (tab === 'cloud') {
+        const res = await fetch('/omnimux/assets/cloud/search?q=&limit=24');
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data.items || []).map((c) => {
+            const coverUrl = c.meta?.source_cover_url || `/omnimux/assets/cloud/media?id=${encodeURIComponent(c.id)}&which=cover`;
+            return {
+              id: c.id,
+              title: c.name || c.id,
+              name: c.name || c.id,
+              url: coverUrl,
+              type: normalizeMediaType(c.media_type),
+              isMine: false,
+              raw: c,
+            };
+          }).filter((item) => item.url);
+          return items;
+        }
+        return null;
+      }
+      if (tab === 'product') {
+        const res = await fetch('/omnimux/products/state');
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data.products || []).map((p) => {
+            const coverMediaId = p.cover_media_id || p.cover?.id;
+            const coverUrl = coverMediaId
+              ? `/omnimux/products/${encodeURIComponent(p.id)}?preview=${encodeURIComponent(coverMediaId)}`
+              : '';
+            return {
+              id: p.id,
+              title: p.name || p.id,
+              name: p.name || p.id,
+              url: coverUrl,
+              type: 'image',
+              isMine: true,
+              raw: p,
+            };
+          }).filter((item) => item.url);
+          return items;
+        }
+        return null;
+      }
+      if (tab === 'generations') {
+        const res = await fetch('/omnimux/assets/artifacts');
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data.artifacts || []).map((art) => {
+            const coverUrl = `/omnimux/assets/artifacts/preview?id=${encodeURIComponent(art.id)}`;
+            return {
+              id: art.id,
+              title: art.title || art.id,
+              name: art.title || art.id,
+              url: coverUrl,
+              type: normalizeMediaType(art.type),
+              isMine: true,
+              raw: art,
+            };
+          }).filter((item) => item.url);
+          return items;
+        }
+        return null;
+      }
+      return null;
+    } catch (err) {
+      console.warn?.('[ReferencePickerPopover] loadData failed:', tab, err);
+      return null;
+    }
+  };
+
+  // 首次加载走 loading；已有缓存的 Tab 在后台静默刷新（stale-while-revalidate）
   useEffect(() => {
     if (!open) return undefined;
-    let cancelled = false;
-
-    const loadData = async (tab) => {
-      if (realData[tab]) return;
-      try {
-        setLoading(true);
-        if (tab === 'local') {
-          const res = await fetch('/omnimux/assets/state');
-          if (res.ok) {
-            const data = await res.json();
-            const items = (data.assets || []).map((a) => {
-              const coverFile = a.cover?.id ? a.cover : (a.files && a.files[0]);
-              const coverUrl = coverFile?.id
-                ? `/omnimux/assets/library/preview?id=${encodeURIComponent(a.id)}&file=${encodeURIComponent(coverFile.id)}`
-                : '';
-              return {
-                id: a.id,
-                title: a.name || a.handle || a.id,
-                name: a.name || a.handle || a.id,
-                url: coverUrl,
-                type: a.type === 'video' ? 'video' : (a.type === 'audio' ? 'audio' : 'image'),
-                isMine: true,
-                raw: a,
-              };
-            }).filter((item) => item.url);
-            if (!cancelled) setRealData((prev) => ({ ...prev, local: items }));
-          }
-        } else if (tab === 'cloud') {
-          const res = await fetch('/omnimux/assets/cloud/search?q=&limit=24');
-          if (res.ok) {
-            const data = await res.json();
-            const items = (data.items || []).map((c) => {
-              const coverUrl = c.meta?.source_cover_url || `/omnimux/assets/cloud/media?id=${encodeURIComponent(c.id)}&which=cover`;
-              return {
-                id: c.id,
-                title: c.name || c.id,
-                name: c.name || c.id,
-                url: coverUrl,
-                type: c.media_type === 'video' ? 'video' : (c.media_type === 'audio' ? 'audio' : 'image'),
-                isMine: false,
-                raw: c,
-              };
-            }).filter((item) => item.url);
-            if (!cancelled) setRealData((prev) => ({ ...prev, cloud: items }));
-          }
-        } else if (tab === 'product') {
-          const res = await fetch('/omnimux/products/state');
-          if (res.ok) {
-            const data = await res.json();
-            const items = (data.products || []).map((p) => {
-              const coverMediaId = p.cover_media_id || p.cover?.id;
-              const coverUrl = coverMediaId
-                ? `/omnimux/products/${encodeURIComponent(p.id)}?preview=${encodeURIComponent(coverMediaId)}`
-                : '';
-              return {
-                id: p.id,
-                title: p.name || p.id,
-                name: p.name || p.id,
-                url: coverUrl,
-                type: 'image',
-                isMine: true,
-                raw: p,
-              };
-            }).filter((item) => item.url);
-            if (!cancelled) setRealData((prev) => ({ ...prev, product: items }));
-          }
-        } else if (tab === 'generations') {
-          const res = await fetch('/omnimux/assets/artifacts');
-          if (res.ok) {
-            const data = await res.json();
-            const items = (data.artifacts || []).map((art) => {
-              const coverUrl = `/omnimux/assets/artifacts/preview?id=${encodeURIComponent(art.id)}`;
-              return {
-                id: art.id,
-                title: art.title || art.id,
-                name: art.title || art.id,
-                url: coverUrl,
-                type: art.type === 'video' ? 'video' : (art.type === 'audio' ? 'audio' : 'image'),
-                isMine: true,
-                raw: art,
-              };
-            }).filter((item) => item.url);
-            if (!cancelled) setRealData((prev) => ({ ...prev, generations: items }));
-          }
-        }
-      } catch (err) {
-        console.warn?.('[ReferencePickerPopover] loadData failed:', tab, err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    loadData(activeTab);
-    return () => {
-      cancelled = true;
-    };
+    ensureReferenceTab(activeTab, fetchTabAssets);
+    return undefined;
   }, [open, activeTab]);
 
   if (!open) return null;
 
-  const currentList = realData[activeTab] || PRESET_REFERENCE_ASSETS[activeTab] || PRESET_REFERENCE_ASSETS.upload || [];
+  const tabSnapshot = peekReferenceTab(activeTab);
+  const hasItems = tabSnapshot.items !== null && tabSnapshot.items !== undefined;
+  const usePresetFallback = !hasItems && tabSnapshot.status === 'error';
+  const showSkeleton = !hasItems && !usePresetFallback;
+  const currentList = hasItems ? tabSnapshot.items : (usePresetFallback ? (PRESET_REFERENCE_ASSETS[activeTab] || PRESET_REFERENCE_ASSETS.upload || []) : []);
   const displayList = onlyMine ? currentList.filter((item) => item.isMine ?? true) : currentList;
   const isSquareRatio = activeTab === 'local' || activeTab === 'generations';
 
@@ -288,51 +341,55 @@ export function ReferencePickerPopover({
         </div>
       </div>
 
-      {/* 内容网格：本地 Tab 首格固定从本地上传，后跟资产卡片 */}
+      {/* 内容区：本地 Tab 左侧固定「从本地上传」，右侧网格独立纵向滚动（两行可视高度） */}
       <div className="omx-ref-picker-body">
-        <div className="omx-ref-picker-grid">
-          {/* 首格固定：从本地上传（仅本地 Tab 呈现） */}
-          {activeTab === 'local' ? (
-            <button // exempt-ui01: 上传素材触发卡片
-              type="button"
-              className="omx-ref-picker-upload-card"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <div className="omx-ref-picker-upload-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              </div>
-              <span className="omx-ref-picker-upload-text">从本地上传</span>
-            </button>
-          ) : null}
-
-          {/* 素材卡片列表 */}
-          {displayList.map((asset) => (
-            <div
-              key={asset.id}
-              className="omx-ref-picker-asset-card"
-              role="button"
-              tabIndex={0}
-              aria-label={asset.title}
-              title={asset.title}
-              onClick={() => handlePresetSelect(asset)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handlePresetSelect(asset);
-                }
-              }}
-            >
-              <div className={`omx-ref-picker-asset-thumb ${isSquareRatio ? 'is-ratio-square' : 'is-ratio-natural'}`}>
-                <img src={asset.url} alt="" loading="lazy" />
-              </div>
+        {/* 左侧固定：从本地上传（仅本地 Tab 呈现，脱离网格不随其滚动） */}
+        {activeTab === 'local' ? (
+          <button // exempt-ui01: 上传素材触发卡片
+            type="button"
+            className="omx-ref-picker-upload-card"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className="omx-ref-picker-upload-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
             </div>
-          ))}
+            <span className="omx-ref-picker-upload-text">从本地上传</span>
+          </button>
+        ) : null}
 
-          {displayList.length === 0 && activeTab !== 'local' && (
+        <div className="omx-ref-picker-grid" ref={gridRef}>
+          {/* 首次加载且无缓存：骨架卡铺满两行可视格 */}
+          {showSkeleton
+            ? Array.from({ length: SKELETON_COUNT }, (_, i) => (
+              <div key={`skeleton-${i}`} className="omx-ref-picker-asset-card" aria-hidden="true">
+                <div className="omx-ref-picker-asset-thumb is-skeleton" />
+              </div>
+            ))
+            : displayList.map((asset) => (
+              <div
+                key={asset.id}
+                className="omx-ref-picker-asset-card"
+                role="button"
+                tabIndex={0}
+                aria-label={asset.title}
+                title={asset.title}
+                onClick={() => handlePresetSelect(asset)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handlePresetSelect(asset);
+                  }
+                }}
+              >
+                <ReferenceAssetThumb url={asset.url} square={isSquareRatio} />
+              </div>
+            ))}
+
+          {!showSkeleton && displayList.length === 0 && activeTab !== 'local' && (
             <div className="omx-ref-picker-empty-tip">暂无可用素材</div>
           )}
         </div>

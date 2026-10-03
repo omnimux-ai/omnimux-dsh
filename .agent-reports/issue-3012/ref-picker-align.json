@@ -1,0 +1,28 @@
+{
+  "geometry": {
+    "popover": {
+      "left": 147,
+      "right": 1005,
+      "top": 247,
+      "bottom": 566,
+      "width": 858
+    },
+    "composerRoot": {
+      "left": 146,
+      "right": 1006,
+      "top": 573,
+      "bottom": 748,
+      "width": 860
+    },
+    "rail": {
+      "left": 90,
+      "right": 136,
+      "top": 650,
+      "bottom": 746,
+      "width": 46
+    },
+    "deltaLeft": 1,
+    "deltaRight": 1,
+    "gapAboveComposer": 7
+  }
+}
