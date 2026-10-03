@@ -221,7 +221,8 @@ export function CloudAssetCard(props) {
   const addedTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
   // 用户显式接管标记：点击/键盘 toggle 之后，同一次悬停内 hover 副作用把
   // 播放权交还给用户——不得把显式暂停又翻回播放，也不得把显式启动的播放
-  // 在指针移出时强行停掉。指针再入再出时重置，hover 试听重新接管。
+  // 在指针移出时强行停掉。只在指针再次进入时重置：离开那一次渲染的副作用必须
+  // 仍看到「已接管」并跳过，否则用户显式启动的播放会被移出强停。
   const userControlledRef = useRef(false)
 
   useEffect(() => { setBroken(false) }, [asset.id])
@@ -292,10 +293,7 @@ export function CloudAssetCard(props) {
       userControlledRef.current = false
       setHovering(true)
     }}
-      onMouseLeave={() => {
-      userControlledRef.current = false
-      setHovering(false)
-    }}
+      onMouseLeave={() => { setHovering(false) }}
       onClick={openPreview}
     >
       {kind === 'text' ? null : (

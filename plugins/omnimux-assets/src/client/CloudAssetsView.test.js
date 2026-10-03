@@ -299,7 +299,7 @@ describe('Cloud video tile keeps its own frame and plays on hover', () => {
   it('binds the pointer surface on the card and hands it down to the tile', () => {
     assert.match(viewJsx, /const \[hovering, setHovering\] = useState\(false\)/)
     assert.match(viewJsx, /onMouseEnter=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(true\)\n    \}\}/)
-    assert.match(viewJsx, /onMouseLeave=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(false\)\n    \}\}/)
+    assert.match(viewJsx, /onMouseLeave=\{\(\) => \{ setHovering\(false\) \}\}/)
     assert.match(viewJsx, /\{showArt \? <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/> : null\}/)
     // The one effect that turns the pointer state into playback.
     assert.match(viewJsx, /if \(hovering\) \{\n      void element\.play\(\)\.catch/)
@@ -382,13 +382,14 @@ describe('Cloud voice card plays from its colour plate', () => {
     }
   })
 
-  it('lets an explicit pause own the card until the pointer leaves (#2989)', () => {
+  it('lets an explicit toggle own the card until the pointer comes back (#2989, #3002)', () => {
     // 点击/键盘 toggle 是用户显式接管：同一次悬停内 hover 副作用不得把
     // 暂停又翻回播放，也不得把用户显式启动的播放在移出时强行停掉。
+    // 标记只在 mouseenter 重置；mouseleave 重置会让离开那次渲染的副作用把播放停掉。
     assert.match(viewJsx, /const userControlledRef = useRef\(false\)/)
     assert.match(viewJsx, /const togglePlay = useCallback\(\(\) => \{\n    userControlledRef\.current = true\n    onTogglePlay\(asset\)\n  \}/)
     assert.match(viewJsx, /onMouseEnter=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(true\)\n    \}\}/)
-    assert.match(viewJsx, /onMouseLeave=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(false\)\n    \}\}/)
+    assert.match(viewJsx, /onMouseLeave=\{\(\) => \{ setHovering\(false\) \}\}/)
     assert.match(viewJsx, /if \(!canPlay \|\| userControlledRef\.current\) return/)
   })
 

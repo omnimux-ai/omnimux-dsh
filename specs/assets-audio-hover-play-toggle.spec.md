@@ -34,14 +34,17 @@
 ## 实现约束
 
 - 用一个 per-card ref 记录「本次悬停内播放归属」：点击/键盘 toggle 时标记为
-  用户已显式接管；`mouseenter`/`mouseleave` 重置标记，副作用见到标记则跳过
-  自动启动与自动停止。
+  用户已显式接管；副作用见到标记则跳过自动启动与自动停止。
+- 标记**只在 `mouseenter` 重置**，`mouseleave` 不重置（Issue #3002）：离开渲染
+  的副作用必须仍看到「已接管」并跳过，否则第 4 条中用户显式启动的播放会在移出
+  时被 `!hovering && playing` 分支停止。下一次进入时重置，hover 试听重新接管。
 - 最小改动，不重构组件。
 
 ## 验收
 
-- 源码断言测试：`CloudAssetsView.test.js` 新增用例，断言显式接管标记的存在与
-  `mouseenter`/`mouseleave` 重置、副作用跳过条件。
+- 源码断言测试：`CloudAssetsView.test.js` 断言显式接管标记的存在、仅
+  `mouseenter` 重置、副作用跳过条件。
+- 行为级 e2e：暂停 → 再点击播放 → 移出，`onTogglePlay` 不再被调用（#3002）。
 - 真机复测（Dev 45120 CDP）：悬停→点击→音频保持暂停、aria-pressed=false、
   不新增 Audio 实例。
 - 回归：`pnpm --filter omnimux-assets test`（或该插件单测最小集）。
