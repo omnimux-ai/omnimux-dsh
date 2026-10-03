@@ -232,4 +232,22 @@ describe('auto-qa-scan：事故反证与全仓回归', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  it('docs/specs 下的示例源码被忽略，plugins 下同名 specs 目录不受影响', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'secret-gate-docs-specs-'))
+    try {
+      const example = join(dir, 'docs/specs/omnimux-device/src')
+      mkdirSync(example, { recursive: true })
+      writeFileSync(join(example, 'DeviceStage.jsx'), 'export default function() {}')
+      const product = join(dir, 'plugins/omnimux-workflow/src/shared/specs')
+      mkdirSync(product, { recursive: true })
+      const productFile = join(product, 'registry.ts')
+      writeFileSync(productFile, 'export const x = 1')
+      const files = findFiles(dir)
+      assert.deepEqual(files.map((f) => relative(dir, f)), [relative(dir, productFile)],
+        'docs/specs 下的文件必须被忽略，plugins 下的 specs 源码必须保留')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })
