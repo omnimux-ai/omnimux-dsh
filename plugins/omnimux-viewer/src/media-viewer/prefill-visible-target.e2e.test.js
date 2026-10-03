@@ -70,23 +70,25 @@ test('端到端：点「使用提示词生成」，隐藏的图像生成页不�
   const unmountShown = mountComposer(win, shownTa, shownMode);
 
   const stop = installPromptFenceGenerate(doc);
-  await new Promise((r) => setTimeout(r, 80));
-  const button = doc.querySelector('.omx-prompt-generate');
-  assert.equal(button?.textContent, '使用提示词生成');
-  button.click();
-  await new Promise((r) => setTimeout(r, 20));
+  try {
+    await new Promise((r) => setTimeout(r, 80));
+    const button = doc.querySelector('.omx-prompt-generate');
+    assert.equal(button?.textContent, '使用提示词生成');
+    button.click();
+    await new Promise((r) => setTimeout(r, 20));
 
-  assert.equal(shownTa.value, '15s vertical street interview');
-  assert.equal(shownMode.value, 'video');
-  assert.equal(hiddenTa.value, '');
-  assert.equal(hiddenMode.value, 'image');
-  assert.equal(peekComposerPrefill(), null);
-  assert.equal(button.textContent, '已填入');
-
-  stop();
-  unmountHidden();
-  unmountShown();
-  resetComposerPrefill();
+    assert.equal(shownTa.value, '15s vertical street interview');
+    assert.equal(shownMode.value, 'video');
+    assert.equal(hiddenTa.value, '');
+    assert.equal(hiddenMode.value, 'image');
+    assert.equal(peekComposerPrefill(), null);
+    assert.equal(button.textContent, '已填入');
+  } finally {
+    stop();
+    unmountHidden();
+    unmountShown();
+    resetComposerPrefill();
+  }
 });
 
 test('图像生成页经可见性判定取走请求，不再直接取走', async () => {

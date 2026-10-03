@@ -44,3 +44,20 @@ test('两个插件各打一份模块时，写入方与读取方仍共用同一�
   assert.equal(seen.at(-1), null)
   stop()
 })
+
+test('一个订阅者出错时，其余订阅者仍收到通知（Issue #3013）', () => {
+  resetComposerPrefill()
+  const seen = []
+  const stopBad = subscribeComposerPrefill(() => { throw new Error('closed page') })
+  const stopGood = subscribeComposerPrefill((value) => seen.push(value))
+  try {
+    queueComposerPrefill({ prompt: 'still delivered', kind: 'image', token: 'e1' })
+    assert.equal(seen.at(-1)?.prompt, 'still delivered')
+    assert.equal(takeComposerPrefill('e1')?.prompt, 'still delivered')
+    assert.equal(seen.at(-1), null)
+  } finally {
+    stopBad()
+    stopGood()
+    resetComposerPrefill()
+  }
+})

@@ -29,24 +29,27 @@ test('端到端：点「使用提示词生成」后，另一份打包副本的�
   const received = []
   const stopListen = viewerCopy.subscribeComposerPrefill((value) => received.push(value))
   const stop = installPromptFenceGenerate(doc)
-  await new Promise((resolve) => setTimeout(resolve, 80))
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 80))
 
-  const button = doc.querySelector('.omx-prompt-generate')
-  assert.equal(button?.textContent, '使用提示词生成')
-  assert.equal(doc.querySelector('.omx-prompt-foot-kind')?.textContent, '视频')
+    const button = doc.querySelector('.omx-prompt-generate')
+    assert.equal(button?.textContent, '使用提示词生成')
+    assert.equal(doc.querySelector('.omx-prompt-foot-kind')?.textContent, '视频')
 
-  button.click()
-  await new Promise((resolve) => setTimeout(resolve, 0))
+    button.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
-  assert.deepEqual(opened, ['omnimux:media-viewer'])
-  assert.equal(received.length, 1)
-  assert.equal(received[0]?.kind, 'video')
-  const pending = viewerCopy.peekComposerPrefill()
-  assert.equal(pending?.prompt, '15s vertical 9:16 phone-shot street interview')
-  assert.equal(viewerCopy.takeComposerPrefill(pending.token)?.kind, 'video')
-  assert.equal(viewerCopy.peekComposerPrefill(), null)
-  assert.equal(button.textContent, '已填入')
-
-  stop()
-  stopListen()
+    assert.deepEqual(opened, ['omnimux:media-viewer'])
+    assert.equal(received.length, 1)
+    assert.equal(received[0]?.kind, 'video')
+    const pending = viewerCopy.peekComposerPrefill()
+    assert.equal(pending?.prompt, '15s vertical 9:16 phone-shot street interview')
+    assert.equal(viewerCopy.takeComposerPrefill(pending.token)?.kind, 'video')
+    assert.equal(viewerCopy.peekComposerPrefill(), null)
+    assert.equal(button.textContent, '已填入')
+  } finally {
+    stop()
+    stopListen()
+    viewerCopy.resetComposerPrefill()
+  }
 })
