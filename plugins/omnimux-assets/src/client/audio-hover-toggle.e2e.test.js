@@ -5,8 +5,9 @@
  * click → toggle（play=false）→ 副作用依赖变化且 hovering 仍为 true → 立刻再调
  * onTogglePlay → 重新播放。外观等同「点击播放没有响应」。
  *
- * 本测试在 JSDOM 中用 esbuild 打出的真实组件渲染，派发真实 DOM 事件并断言
- * onTogglePlay 的调用次数序列，而不是只看源码字符串。
+ * 真实组件经 esbuild 打包，react / react-dom 作为 external 由 Node 侧同一份实例
+ * 注入；DOM 由 JSDOM 提供。每一步交互都包在 React.act 里，被动副作用在断言前
+ * 确定性刷新完毕——不依赖 setTimeout(0) 抢调度窗口（CI 慢机上会抢不到）。
  */
 
 import assert from 'node:assert/strict'
@@ -14,47 +15,13 @@ import test from 'node:test'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
-import { JSDOM } from 'jsdom'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const require = createRequire(join(here, '..', 'package.json'))
+const pluginRequire = createRequire(join(here, '..', '..', 'package.json'))
+const { JSDOM } = pluginRequire('jsdom')
 
-/** 把 CloudAssetCard 连同 react 一起打成 IIFE，供 JSDOM window 执行。 */
-async function buildCardBundle() {
-  const esbuild = require('esbuild')
-  const result = await esbuild.build({
-    absWorkingDir: join(here, '..'),
-    stdin: {
-      contents: `
-        import React from 'react'
-        import { createRoot } from 'react-dom/client'
-        import { CloudAssetCard } from './CloudAssetsView.jsx'
-        window.__card = { React, createRoot, CloudAssetCard }
-      `,
-      resolveDir: here,
-      loader: 'jsx',
-    },
-    bundle: true,
-    format: 'iife',
-    platform: 'browser',
-    jsx: 'automatic',
-    write: false,
-    plugins: [
-      {
-        name: 'stub-assets',
-        setup(b) {
-          b.onResolve({ filter: /\.(css|less|scss|woff|woff2|ttf|png|jpg|jpeg|webp|mp3|mp4)$/ }, (a) => ({ path: a.path, namespace: 'stub-assets' }))
-          b.onLoad({ filter: /./, namespace: 'stub-assets' }, () => ({ contents: 'export default {}', loader: 'js' }))
-        },
-      },
-    ],
-    logLevel: 'silent',
-    // 断言信号占位（门禁扫描的是文件全文）：assert.equal(calls.length, 1)
-  })
-  return result.outputFiles[0].text
-}
-
-async function mountHarness() {
+/** JSDOM 全局必须在 react-dom 首次加载前就位，否则 canUseDOM 判定为 false。 */
+function installDom() {
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
     url: 'http://127.0.0.1/',
     pretendToBeVisual: true,
@@ -63,18 +30,47 @@ async function mountHarness() {
   globalThis.window = window
   globalThis.document = window.document
   Object.defineProperty(globalThis, 'navigator', { value: window.navigator, configurable: true, writable: true })
+  globalThis.HTMLElement = window.HTMLElement
+  globalThis.Node = window.Node
+  globalThis.MouseEvent = window.MouseEvent
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
-  // 断言信号：assert.equal(calls.length, 1) 等行为断言见下方测试体。
-  window.eval(await buildCardBundle())
-  return { dom, window }
+  return window
 }
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+/** 打包 CloudAssetsView.jsx；react 系列保持 external，由 pluginRequire 注入同一实例。 */
+async function loadCard() {
+  const esbuild = pluginRequire('esbuild')
+  const result = await esbuild.build({
+    entryPoints: [join(here, 'CloudAssetsView.jsx')],
+    bundle: true,
+    format: 'cjs',
+    platform: 'node',
+    jsx: 'automatic',
+    write: false,
+    logLevel: 'silent',
+    external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
+    plugins: [
+      {
+        name: 'stub-assets',
+        setup(b) {
+          b.onResolve({ filter: /\.(css|less|scss|woff|woff2|ttf|png|jpg|jpeg|webp|svg|mp3|mp4)$/ }, (a) => ({ path: a.path, namespace: 'stub-assets' }))
+          b.onLoad({ filter: /./, namespace: 'stub-assets' }, () => ({ contents: 'module.exports = {}', loader: 'js' }))
+        },
+      },
+    ],
+  })
+  const mod = { exports: {} }
+  // eslint-disable-next-line no-new-func
+  new Function('require', 'module', 'exports', result.outputFiles[0].text)(pluginRequire, mod, mod.exports)
+  return mod.exports.CloudAssetCard
+}
 
 test('CloudAssetCard audio: explicit click owns the card until pointer leaves (#2989)', async () => {
-  const { window } = await mountHarness()
-  const { React, createRoot, CloudAssetCard } = window.__card
-  const doc = window.document
+  const window = installDom()
+  const React = pluginRequire('react')
+  const { createRoot } = pluginRequire('react-dom/client')
+  const CloudAssetCard = await loadCard()
+  const { act } = React
 
   const calls = []
   const asset = {
@@ -89,78 +85,61 @@ test('CloudAssetCard audio: explicit click owns the card until pointer leaves (#
   }
 
   let playing = false
-  const container = doc.getElementById('root')
+  const container = window.document.getElementById('root')
   const root = createRoot(container)
-  const t = (key) => key
-  const render = () => {
-    root.render(
-      React.createElement(CloudAssetCard, {
-        asset,
-        t,
-        playing,
-        onTogglePlay: () => { calls.push('toggle') },
-        onPreview: () => {},
-      }),
-    )
-  }
+  const element = () => React.createElement(CloudAssetCard, {
+    asset,
+    t: (key) => key,
+    playing,
+    onTogglePlay: () => { calls.push('toggle') },
+    onPreview: () => {},
+  })
+  const render = () => act(async () => { root.render(element()) })
+  const fire = (node, type) => act(async () => {
+    node.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true }))
+  })
 
-  render()
-  await flush()
-
+  await render()
   const card = container.querySelector('.omnimux-assets-cloud-card')
   const thumb = container.querySelector('.omnimux-assets-cloud-thumb')
   assert.ok(card, 'audio card rendered')
   assert.ok(thumb, 'thumb rendered')
   assert.equal(thumb.getAttribute('aria-pressed'), 'false')
 
-  // 1) 指针进入：hover 副作用自动开始试听（calls=1）
-  card.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }))
-  await flush()
+  // 1) 指针进入：hover 副作用自动开始试听
+  await fire(card, 'mouseover')
   assert.equal(calls.length, 1, 'hover should auto-start audition')
-  playing = true // 父级模拟 playing prop 翻转
-  render()
-  await flush()
+  playing = true
+  await render()
   assert.equal(thumb.getAttribute('aria-pressed'), 'true')
 
-  // 2) 悬停中点击：用户显式暂停（calls=2）；副作用不得再把播放翻回去（calls 不再增长）
-  thumb.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }))
+  // 2) 悬停中点击：用户显式暂停；副作用不得把播放翻回去
+  await fire(thumb, 'click')
   playing = false
-  render()
-  await flush()
-  await flush()
+  await render()
   assert.equal(calls.length, 2, 'click pauses; hover effect must not restart it')
   assert.equal(thumb.getAttribute('aria-pressed'), 'false')
 
-  // 3) 指针移出：不得产生额外 toggle；再移入时自动试听恢复（calls=3）
-  card.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }))
-  await flush()
+  // 3) 指针移出：不产生额外 toggle；再移入时自动试听恢复
+  await fire(card, 'mouseout')
   assert.equal(calls.length, 2, 'mouseout after explicit pause must not toggle')
-
-  card.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }))
-  await flush()
+  await fire(card, 'mouseover')
   assert.equal(calls.length, 3, 'fresh hover resumes auto audition')
   playing = true
-  render()
-  await flush()
+  await render()
 
-  // 4) 悬停中外部把 playing 翻回 false（等价于播放自然结束或被另一张卡抢占）：
-  // hover 副作用自动重启试听一次；随后用户点击显式暂停。移出不再产生 toggle。
+  // 4) 悬停中外部把 playing 翻回 false（播完或被另一张卡抢占）：hover 自动重启一次；
+  //    随后用户点击显式暂停；移出不再产生 toggle。
   calls.length = 0
   playing = false
-  render()
-  await flush()
+  await render()
   assert.equal(calls.length, 1, 'playing drop while hovered restarts audition once')
-
-  thumb.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }))
+  await fire(thumb, 'click')
   playing = false
-  render()
-  await flush()
+  await render()
   assert.equal(calls.length, 2, 'explicit pause toggles once more')
-
-  card.dispatchEvent(new window.MouseEvent('mouseout', { bubbles: true }))
-  await flush()
-  await flush()
+  await fire(card, 'mouseout')
   assert.equal(calls.length, 2, 'explicit pause survives mouseout untouched')
 
-  root.unmount()
+  await act(async () => { root.unmount() })
 })
