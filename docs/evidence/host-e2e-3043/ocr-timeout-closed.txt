@@ -1,0 +1,57 @@
+Review complete: 5 finding(s) across 8 selected item(s).
+
+─── plugins/omnimux/src/client/comment-native.e2e.test.js:5-5 ───
+[maintainability · low] `access` is imported but never referenced in this test. Please remove the
+unused import to avoid lint failures and keep the dependency list accurate.
+
+- import { mkdtemp, mkdir, writeFile, readFile, rm, readdir, access } from 'node:fs/promises';
++ import { mkdtemp, mkdir, writeFile, readFile, rm, readdir } from 'node:fs/promises';
+
+
+─── plugins/omnimux/src/client/comment-native.e2e.test.js:10-10 ───
+[maintainability · low] `EnvironmentError` is imported but not used anywhere in this file. Please
+drop it from the import list.
+
+
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:53-55 ───
+[test · low] `hashTree()` is documented and used as a content hash, but including the resolved
+symlink target path makes the recorded sidebar hash differ across machines or pnpm store locations
+even when the package bytes are identical. Consider hashing a stable link marker plus target
+contents instead of the absolute target path.
+
+          if ((await stat(target)).isDirectory()) {
+-           hash.update('L' + target + '\0');
++           hash.update('L');
+            await walk(target);
+
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:146-149 ───
+[bug · low] This fast path does not verify that the resolved `dsh-better-sidebar` version matches
+the version declared by the importer, while the fallback store path does. If a stale or hoisted link
+resolves a different package version, the E2E can run against the wrong bridge but still report
+`source: 'declared-dependency'`. Please apply the same `exactVersionSatisfies(pkg.version, wanted)`
+check before returning here.
+
+        const require = createRequire(manifestPath);
+        const dir = dirname(require.resolve('dsh-better-sidebar/package.json'));
+        const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
++       if (wanted && !exactVersionSatisfies(pkg.version, wanted)) {
++         throw new EnvironmentError(
++           `declared sidebar ${wanted} (${declaredBy}) does not match installed ${pkg.version}; ` +
++           'declare the right version or pass OMNIMUX_E2E_SIDEBAR=<dir> explicitly.'
++         );
++       }
+        return { dir, version: pkg.version || 'unknown', declaredBy, source: 'declared-dependency', hash: await hashTree(dir) };
+
+
+─── plugins/omnimux/test-support/generation-feedback/generation-feedback-browser.mjs:50-52 ───
+[test · low] The assertion message says empty execution tasks must not occupy the viewport, but the
+check only verifies zero width. A regression that renders a zero-width element with non-zero
+height/margins would still pass while occupying vertical space. Since `height` is already captured
+in `value`, assert it as well to keep the coverage aligned with the stated invariant.
+
+        if (['pending', 'running'].includes(status) && value.mediaCount === 0) {
+          assert.equal(value.width, 0, 'empty execution tasks must not occupy the viewport');
++         assert.equal(value.height, 0, 'empty execution tasks must not occupy the viewport');
+        }
