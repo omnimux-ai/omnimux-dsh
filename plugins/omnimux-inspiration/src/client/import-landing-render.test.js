@@ -458,8 +458,10 @@ describe('import landing — content URL', () => {
 
       // The reload that the tab switch triggers is answered without the new row:
       // page 1 of a `hot`-sorted list need not contain a row created a second ago.
+      // Identical in-flight loads are shared (Issue #2988), so the switch issues
+      // one refetch; what matters is that it happened, not how many copies.
       const reloads = mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?'))
-      assert.ok(reloads.length >= 2, 'the tab switch must have refetched the local list')
+      assert.ok(reloads.length >= 1, 'the tab switch must have refetched the local list')
       assert.equal(
         cardIds(mounted.container).includes('local-new-1'),
         true,

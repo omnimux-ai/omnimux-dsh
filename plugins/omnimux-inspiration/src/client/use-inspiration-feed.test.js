@@ -745,3 +745,136 @@ describe('formatPlatformName', () => {
     ])
   })
 })
+
+describe('useInspirationFeed request ordering (Issue #2988)', () => {
+  function mountFeed(fetchImpl, extraWindow = {}) {
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
+    const previous = {
+      window: globalThis.window,
+      document: globalThis.document,
+      fetch: globalThis.fetch,
+      IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT,
+    }
+    Object.assign(dom.window, extraWindow)
+    Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true })
+    invalidateInspirationCache()
+    globalThis.fetch = (input) => fetchImpl(new URL(String(input), dom.window.location.href))
+    const state = { feed: null }
+    function Harness() {
+      state.feed = useInspirationFeed({ active: true })
+      return null
+    }
+    const root = createRoot(dom.window.document.getElementById('root'))
+    const cleanup = async () => {
+      await act(async () => root.unmount())
+      invalidateInspirationCache()
+      dom.window.close()
+      Object.assign(globalThis, previous)
+    }
+    return { state, root, Harness, cleanup }
+  }
+
+  it('keeps the local library when a slower 爆款趋势 response lands after switching to 灵感库', async () => {
+    let releaseCloud
+    const cloudGate = new Promise((resolve) => { releaseCloud = resolve })
+    const { state, root, Harness, cleanup } = mountFeed(async (url) => {
+      if (url.pathname === '/omnimux/inspiration/local') {
+        return jsonResponse(200, { data: { items: inspirationRows('local', 1, 3), total: 3 } })
+      }
+      await cloudGate
+      return jsonResponse(200, { data: { items: inspirationRows('cloud', 1, 20), total: 40 } })
+    })
+    try {
+      await act(async () => root.render(React.createElement(Harness)))
+      assert.equal(state.feed.tab, 'public')
+      await act(async () => state.feed.setTab('local'))
+      await waitFor(() => state.feed.items[0]?.id === 'local-1', 'local rows should render first')
+      await act(async () => {
+        releaseCloud()
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      assert.equal(state.feed.tab, 'local')
+      assert.deepEqual(
+        state.feed.items.map((row) => row.id),
+        ['local-1', 'local-2', 'local-3'],
+        'a stale 爆款趋势 response must not overwrite 灵感库',
+      )
+      assert.equal(state.feed.hasMore, false, 'stale response must not leak its hasMore either')
+    } finally {
+      await cleanup()
+    }
+  })
+})
+
+describe('useInspirationFeed request deduplication (Issue #2988)', () => {
+  it('sends one first-page request per filter state even when auth readiness fires', async () => {
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' })
+    const previous = {
+      window: globalThis.window,
+      document: globalThis.document,
+      fetch: globalThis.fetch,
+      IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT,
+    }
+    // Auth ready on mount is exactly what the app does: the effect must not
+    // fire a second copy of the same first-page load.
+    dom.window.__omnimuxAuth = { ensureLogin: () => {} }
+    Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true })
+    const requests = []
+    let feed
+    invalidateInspirationCache()
+    globalThis.fetch = async (input) => {
+      const url = new URL(String(input), dom.window.location.href)
+      requests.push({ path: url.pathname, page: url.searchParams.get('page') })
+      return jsonResponse(200, { data: { items: [], total: 0 } })
+    }
+    function Harness() {
+      feed = useInspirationFeed({ active: true })
+      return null
+    }
+    const root = createRoot(dom.window.document.getElementById('root'))
+    try {
+      await act(async () => root.render(React.createElement(Harness)))
+      const publicCalls = requests.filter((row) => row.path === '/omnimux/inspiration' && row.page === '1')
+      assert.equal(publicCalls.length, 1, `initial mount must load 爆款趋势 once, got ${publicCalls.length}`)
+      await act(async () => feed.setTab('local'))
+      const localCalls = requests.filter((row) => row.path === '/omnimux/inspiration/local' && row.page === '1')
+      assert.equal(localCalls.length, 1, `switching to 灵感库 must load once, got ${localCalls.length}`)
+    } finally {
+      await act(async () => root.unmount())
+      invalidateInspirationCache()
+      dom.window.close()
+      Object.assign(globalThis, previous)
+    }
+  })
+})
+
+describe('executeFeedLoad cache-hit cleanup (Issue #2988 review)', () => {
+  it('clears loadingMore when a fresh cached first page supersedes a pending next page', async () => {
+    const { executeFeedLoad: run } = await import('./feed-helpers.js')
+    const { setInspirationCache } = await import('./api.js')
+    invalidateInspirationCache()
+    setInspirationCache(
+      cacheKeyOf({ tab: 'local', q: '', type: '', sort: 'new', favorite: '0' }),
+      { items: [{ id: 'cached-1' }], hasMore: false, phase: 'ready' },
+    )
+    assert.equal(cacheKeyOf({ tab: 'local', q: '', type: '', sort: 'new', favorite: '0' }), 'insp:local:::new:0')
+    const state = { loadingMore: true, items: null }
+    await run(
+      { isNextPage: false, tab: 'local', q: '', type: '', sort: 'new', favorite: '0', page: 2, hasExistingItems: true },
+      {
+        setItems: (v) => { state.items = v },
+        setPage: () => {},
+        setHasMore: () => {},
+        setPhase: () => {},
+        setError: () => {},
+        setLoading: () => {},
+        setLoadingMore: (v) => { state.loadingMore = v },
+        setPlatforms: () => {},
+      },
+      { isCurrent: () => true },
+    )
+    invalidateInspirationCache()
+    assert.deepEqual(state.items, [{ id: 'cached-1' }], 'the cached page paints')
+    assert.equal(state.loadingMore, false, 'a superseded next-page spinner must not stay on')
+  })
+})

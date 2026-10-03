@@ -1,0 +1,30 @@
+{
+  "label": "before",
+  "srcRoot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh",
+  "serverPort": 64041,
+  "cdpPort": "64044",
+  "timeline": [
+    {
+      "ms": 10,
+      "tab": "local",
+      "local": 6,
+      "cloud": 0
+    },
+    {
+      "ms": 1189,
+      "tab": "local",
+      "local": 0,
+      "cloud": 6
+    }
+  ],
+  "final": {
+    "tab": "local",
+    "local": 0,
+    "cloud": 6
+  },
+  "requestCounts": {
+    "/omnimux/inspiration": 2,
+    "/omnimux/inspiration/local": 2
+  },
+  "pass": false
+}
