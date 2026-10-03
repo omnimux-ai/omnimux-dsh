@@ -8,7 +8,19 @@ const session = { current: 'media-generation-3054' };
 const sessions = { list: { getSnapshot: () => session, subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); } } };
 const store = getGlobalMediaViewerStore();
 function Mounted() {
-  React.useEffect(() => { window.qaBoot.mounted = true; }, []);
+  React.useEffect(() => {
+    window.qaBoot.mounted = true;
+    const unsubscribe = store.subscribe(() => record('store-update'));
+    const beforeUnload = () => record('beforeunload');
+    const pageHide = () => record('pagehide');
+    window.addEventListener('beforeunload', beforeUnload);
+    window.addEventListener('pagehide', pageHide);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('beforeunload', beforeUnload);
+      window.removeEventListener('pagehide', pageHide);
+    };
+  }, []);
   return <MediaViewerTab sessions={sessions} scope={{ sessionId: session.current }} />;
 }
 const trace = [];
@@ -17,8 +29,5 @@ const record = (event) => {
   sessionStorage.setItem('qa3054-trace', JSON.stringify(trace));
 };
 const previousTrace = JSON.parse(sessionStorage.getItem('qa3054-trace') || '[]');
-store.subscribe(() => record('store-update'));
-window.addEventListener('beforeunload', () => record('beforeunload'));
-window.addEventListener('pagehide', () => record('pagehide'));
 window.qa = { getState: () => store.getSnapshot(), getTrace: () => ({ previousTrace, trace }) };
 createRoot(document.getElementById('root')).render(<Mounted />);
