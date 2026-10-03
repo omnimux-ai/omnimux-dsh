@@ -28,5 +28,13 @@ Spec→Code→隔离环境执行前置走读Verify→固化精准回归Test→Gr
 需停受影响动作：真实付款/订阅、生产发布、其他仓库修改、凭据创建、无法安全恢复的并发占用。
 绝不：改官方DSH源码、直推main、本地合并绕PR、未合入进入共享Dev、记录密钥、把上游拒绝解释为未登录、虚构成功。
 
+## Formal test lanes / 正式测试能力分轨
+离线单元检查与真实浏览器验收证明不同事实，执行环境必须明确分轨，不能以缺少能力的运行环境跳过浏览器测试后报绿。
+
+- 单元轨：`plugins/omnimux/package.json` 的 `test` 继续调用已有 `scripts/run-tests.mjs`，发现范围保持 `src/**/*.test.js`、`src/**/*.test.ts`、`src/**/*.test.mjs`；`plugins/omnimux-viewer/package.json` 的 `test` 保持已有非递归单元范围。迁入 `tests/e2e/` 的真实浏览器入口自然不在单元发现范围，不增加 skip、条件放行或新的运行器。Hub 原 `src/client/media-viewer/generation-feedback.e2e.test.js` 保留三个桥接单元回归并继续被发现；单元测试必须实际执行非零用例。
+- 浏览器轨：两个包均提供 `test:e2e`，精确执行 `node --test tests/e2e/*.e2e.test.js`。Hub 原生评论完整迁至 `plugins/omnimux/tests/e2e/comment-native.e2e.test.js`，生成反馈中的真实浏览器旅程完整迁至 `plugins/omnimux/tests/e2e/generation-feedback.e2e.test.js`；查看器恢复与播放旅程完整迁至 `plugins/omnimux-viewer/tests/e2e/media-generation-3054.e2e.test.js`。迁移只修正入口相对路径及对应说明，保留全部强断言、场景、截图、来源身份与清理要求。
+- 能力场景：GitHub Linux 的离线单元环境没有本机 ego-browser 或已安装的 macOS 桌面运行时，不能执行这三个真实浏览器入口；具备相应能力的本地隔离工作树独立执行浏览器轨，仍是合入前强验收。缺少浏览器能力时该轨硬失败，不 skip；必须保留真实结果与执行身份。单元轨通过或必需静态检查通过不表示浏览器已执行、通过或业务生成成功。
+- 门禁边界：不修改 CI 工作流、必需 Static checks、根门禁或业务/helper 实现；不降低 required、不伪造浏览器报告。本轮仅迁移入口、补包命令与精准单元/语法验证，不重新执行浏览器；协调 Agent 待共享 helper 修复完成后独占正式浏览器验收。
+
 ## Documentation impact / 文档影响
 本规格与执行证据记录本次授权、链路事实和回归；若任务状态或凭证契约改变，更新对应中枢契约，不新增平行规则来源。
