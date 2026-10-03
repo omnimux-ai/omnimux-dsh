@@ -28,6 +28,7 @@ const FIELD_SELECTOR = 'input, textarea, select, [contenteditable]'
 
 /** The deepest focused element, following shadow roots the page may use. */
 function deepActiveElement(): Element | null {
+  if (typeof document === 'undefined') return null
   let active: Element | null = document.activeElement
   while (active?.shadowRoot?.activeElement != null) active = active.shadowRoot.activeElement
   return active

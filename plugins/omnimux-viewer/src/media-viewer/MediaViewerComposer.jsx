@@ -950,6 +950,29 @@ export function MediaViewerComposer({
       }
     }
 
+    // 首尾帧模式允许单首帧常驻，但提交时若仅首帧或仅尾帧，需按实际素材降级为合法操作（Issue #3045）
+    if (mode === 'video' && (currentOperationId === 'first_last_frame' || activeOp?.id === 'first_last_frame')) {
+      const videoOps = operationsOf(model, 'video') || [];
+      const hasFirst = Object.entries(scopedBuckets).some(([k, v]) => {
+        const slotKey = extractSlotKeyFromBucketKey(k).toLowerCase();
+        return (slotKey.includes('first_frame') || slotKey.includes('firstframe')) && Array.isArray(v) && v.length > 0;
+      });
+      const hasLast = Object.entries(scopedBuckets).some(([k, v]) => {
+        const slotKey = extractSlotKeyFromBucketKey(k).toLowerCase();
+        return (slotKey.includes('last_frame') || slotKey.includes('lastframe')) && Array.isArray(v) && v.length > 0;
+      });
+      if (hasFirst && !hasLast) {
+        const ffOp = videoOps.find((op) => op.id === 'first_frame');
+        activeOp = ffOp || videoOps.find((op) => op.id === 'text_to_video') || activeOp;
+      } else if (!hasFirst && hasLast) {
+        const textOp = videoOps.find((op) => op.id === 'text_to_video');
+        activeOp = textOp || activeOp;
+      } else if (!hasFirst && !hasLast) {
+        const textOp = videoOps.find((op) => op.id === 'text_to_video');
+        activeOp = textOp || activeOp;
+      }
+    }
+
     const isTextOnlyMode = (mode === 'image' && config.imageOpMode === '文生图') ||
       (mode === 'video' && activeOp?.id === 'text_to_video');
     const submitSlots = slotPlan(model, mode, activeOp?.id);

@@ -1,0 +1,19 @@
+{
+  "slots": {
+    "groupCount": 2,
+    "groups": [
+      {
+        "cls": "omx-slot-group is-frame is-frame-first is-open",
+        "hasCard": true,
+        "hasBtn": false,
+        "btnLabel": null
+      },
+      {
+        "cls": "omx-slot-group is-frame is-frame-last is-open",
+        "hasCard": false,
+        "hasBtn": true,
+        "btnLabel": "尾帧"
+      }
+    ]
+  }
+}
