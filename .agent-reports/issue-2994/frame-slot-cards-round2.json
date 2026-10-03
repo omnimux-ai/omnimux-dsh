@@ -1,0 +1,56 @@
+{
+  "rows": [
+    {
+      "id": "pair",
+      "groups": [
+        "omx-slot-group is-frame is-frame-first is-open",
+        "omx-slot-group is-frame is-frame-last is-open"
+      ],
+      "labels": [
+        "首帧",
+        "尾帧"
+      ],
+      "swap": true,
+      "btnTransform": [
+        "matrix(0.996195, -0.0871557, 0.0871557, 0.996195, 0, 0)",
+        "matrix(0.996195, 0.0871557, -0.0871557, 0.996195, 0, 0)"
+      ]
+    },
+    {
+      "id": "filled",
+      "groups": [
+        "omx-slot-group is-frame is-frame-first is-open",
+        "omx-slot-group is-frame is-frame-last is-open"
+      ],
+      "labels": [
+        "尾帧"
+      ],
+      "swap": false,
+      "btnTransform": [
+        "matrix(0.996195, 0.0871557, -0.0871557, 0.996195, 0, 0)"
+      ]
+    },
+    {
+      "id": "single",
+      "groups": [
+        "omx-slot-group is-open"
+      ],
+      "labels": [],
+      "swap": false,
+      "btnTransform": [
+        "matrix(1, 0, 0, 1, 0, 0)"
+      ]
+    },
+    {
+      "id": "ref",
+      "groups": [
+        "omx-slot-group is-open"
+      ],
+      "labels": [],
+      "swap": false,
+      "btnTransform": [
+        "matrix(1, 0, 0, 1, 0, 0)"
+      ]
+    }
+  ]
+}

@@ -1994,3 +1994,50 @@ describe('MediaViewerComposer Component Contract', () => {
     });
   });
 });
+
+describe('Issue #2994 首帧/尾帧成对空卡槽视觉适配契约', () => {
+  const slotGroupSrc = fs.readFileSync(new URL('./MediaSlotGroup.jsx', import.meta.url), 'utf-8');
+  const composerSrc = fs.readFileSync(new URL('./MediaViewerComposer.jsx', import.meta.url), 'utf-8');
+
+  it('MediaSlotGroup 按 slot.role 挂成对帧槽 modifier，空态按钮渲染 lucide plus 与槽名 span', () => {
+    assert.ok(slotGroupSrc.includes('is-frame-first'), '必须存在 is-frame-first modifier');
+    assert.ok(slotGroupSrc.includes('is-frame-last'), '必须存在 is-frame-last modifier');
+    assert.ok(slotGroupSrc.includes("slot.role === 'first_frame'"), '帧槽判定必须基于 slot.role');
+    assert.ok(slotGroupSrc.includes("slot.role === 'last_frame'"), '帧槽判定必须基于 slot.role');
+    assert.ok(slotGroupSrc.includes('isFrameSlot'), '必须有 isFrameSlot 门控');
+    assert.ok(slotGroupSrc.includes('omx-slot-btn-label'), '槽名 span 类名必须为 omx-slot-btn-label');
+    assert.ok(slotGroupSrc.includes('M12 5v14M5 12h14'), '空态按钮必须使用 lucide plus 图标');
+    // 槽名渲染受 isFrameSlot 门控，非帧槽不渲染文字
+    assert.ok(/isFrameSlot\s*\?[\s\S]*?omx-slot-btn-label[\s\S]*?:\s*\([\s\S]*?ICONS\[slot\.type\]/.test(slotGroupSrc), '槽名仅帧槽渲染，非帧槽保留类型图标');
+    // aria-label 仍走既有 addLabel 逻辑
+    assert.ok(slotGroupSrc.includes('aria-label={addLabel}'), 'aria-label 必须保持 addLabel');
+  });
+
+  it('MediaViewerComposer 在相邻 first_frame+last_frame 且两槽均空时插入 omx-slot-swap 分隔箭头', () => {
+    assert.ok(composerSrc.includes('omx-slot-swap'), '必须存在 omx-slot-swap 分隔元素');
+    assert.ok(/slot\.role === 'first_frame'/.test(composerSrc), '分隔条件须含 first_frame');
+    assert.ok(/nextSlot\?\.role === 'last_frame'/.test(composerSrc), '分隔条件须含相邻 last_frame');
+    assert.ok(/slotItems\.length === 0/.test(composerSrc), '分隔条件须含本槽为空');
+    assert.ok(/nextItems\.length === 0/.test(composerSrc), '分隔条件须含邻槽为空');
+    // 分隔为纯装饰：aria-hidden 且无交互属性
+    const swapBlock = composerSrc.slice(composerSrc.indexOf('omx-slot-swap') - 80, composerSrc.indexOf('omx-slot-swap') + 600);
+    assert.ok(/aria-hidden="true"/.test(swapBlock), 'omx-slot-swap 必须 aria-hidden');
+    // lucide arrow-left-right 图标路径
+    assert.ok(composerSrc.includes('M4 7h16') && composerSrc.includes('M20 17H4'), '必须使用 arrow-left-right 图标');
+  });
+
+  it('styles.js 提供成对倾斜、槽名与分隔箭头样式，且悬浮覆盖保留既有位移分量', () => {
+    assert.ok(MEDIA_VIEWER_CSS.includes('.omx-slot-group.is-frame-first .omx-slot-btn'), '须有 is-frame-first 倾斜规则');
+    assert.ok(MEDIA_VIEWER_CSS.includes('.omx-slot-group.is-frame-last .omx-slot-btn'), '须有 is-frame-last 倾斜规则');
+    assert.ok(MEDIA_VIEWER_CSS.includes('rotate(-5deg)') && MEDIA_VIEWER_CSS.includes('rotate(5deg)'), '须含对称倾斜角度');
+    assert.ok(MEDIA_VIEWER_CSS.includes('.omx-slot-btn-label'), '须有槽名 span 样式');
+    assert.ok(MEDIA_VIEWER_CSS.includes('.omx-slot-swap'), '须有 omx-slot-swap 样式');
+    // hover 态覆盖必须保留 translateX(var(--slot-shift)) 与 translateY(-1px)，否则悬浮回正跳变
+    const firstHover = /is-frame-first \.omx-slot-btn:hover \{\s*transform: translateY\(-1px\) translateX\(var\(--slot-shift, 0px\)\) rotate\(-5deg\)/;
+    const lastHover = /is-frame-last \.omx-slot-btn:hover \{\s*transform: translateY\(-1px\) translateX\(var\(--slot-shift, 0px\)\) rotate\(5deg\)/;
+    assert.ok(firstHover.test(MEDIA_VIEWER_CSS), '首帧 hover 必须保留位移分量并叠加 rotate(-5deg)');
+    assert.ok(lastHover.test(MEDIA_VIEWER_CSS), '尾帧 hover 必须保留位移分量并叠加 rotate(5deg)');
+    // 倾斜只在空态按钮上，不污染已填卡片
+    assert.ok(!/is-frame-(first|last) \.omx-slot-card/.test(MEDIA_VIEWER_CSS), '倾斜不得作用于已填入素材卡');
+  });
+});

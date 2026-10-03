@@ -1218,6 +1218,50 @@ button.omx-slot-add:hover,
   color: var(--dsw-alias-label-secondary);
   transform: none;
 }
+
+/* 视频模式首帧/尾帧成对空卡槽：加号上置 + 槽名下置 + 微倾斜（仅空态 add 按钮，填入素材后回正） */
+.omx-slot-group.is-frame-first .omx-slot-btn,
+.omx-slot-group.is-frame-last .omx-slot-btn {
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+.omx-slot-group.is-frame-first .omx-slot-btn {
+  transform: translateX(var(--slot-shift, 0px)) rotate(-5deg);
+}
+.omx-slot-group.is-frame-last .omx-slot-btn {
+  transform: translateX(var(--slot-shift, 0px)) rotate(5deg);
+}
+.omx-slot-group.is-frame-first .omx-slot-btn:hover {
+  transform: translateY(-1px) translateX(var(--slot-shift, 0px)) rotate(-5deg);
+}
+.omx-slot-group.is-frame-last .omx-slot-btn:hover {
+  transform: translateY(-1px) translateX(var(--slot-shift, 0px)) rotate(5deg);
+}
+.omx-slot-group.is-frame .omx-slot-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+.omx-slot-btn-label {
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 500;
+  color: var(--dsw-alias-label-tertiary);
+  pointer-events: none;
+}
+.omx-slot-group.is-frame .omx-slot-btn:hover .omx-slot-btn-label {
+  color: var(--dsw-alias-label-primary);
+}
+.omx-slot-swap {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  color: var(--dsw-alias-label-dimmed);
+  flex: none;
+  pointer-events: none;
+}
+.omx-slot-swap svg {
+  display: block;
+}
 .omx-slot-count {
   position: absolute;
   left: 30px;
