@@ -116,3 +116,26 @@ test('video: first_frame and last_frame each render exactly one named empty well
   assert.equal((html.match(/aria-label="添加首帧"/g) || []).length, 1);
   assert.equal((html.match(/aria-label="添加尾帧"/g) || []).length, 1);
 });
+
+test('new image: bound prompt slot with composition renders occupant + exactly 1 append well (PM adjudication A: capacity-exempt)', () => {
+  const html = render(
+    node('image', {
+      legacy: false,
+      slotBindings: { prompt: [{ edgeId: 'e-text', sourceNodeId: 'text1', pinned: true }] },
+    }),
+    catalogFor('image'),
+    [{ edgeId: 'e-text', nodeId: 'text1', label: '正文', materialType: 'text', textContent: '上游正文内容', hasMedia: true, availability: 'ready' }],
+    [{ id: 'e-text', source: 'text1', target: 'target', targetHandle: 'in' }],
+  );
+  assert.equal(totalEmptyWells(html), 1, `composition prompt keeps exactly 1 append well, got ${totalEmptyWells(html)}`);
+  assert.match(html, /wf-slot-well--filled/);
+  assert.match(html, /data-slot-state="ready"/);
+  assert.match(html, /wf-slot-well--append/);
+});
+
+test('legacy image: slot with min=2 unbound renders at most 1 empty well (capped at 1 per OCR finding)', () => {
+  const doubleSlot = { slot: 'multi_refs', type: 'image', role: 'reference', source: 'upstream_edge', min: 2, max: 4 };
+  const html = render(node('image', { legacy: true }), catalogFor('image', [doubleSlot]));
+  assert.equal(emptyWellsOf(html, 'multi_refs'), 1, `even with min:2, at most 1 empty well is rendered, got ${emptyWellsOf(html, 'multi_refs')}`);
+});
+

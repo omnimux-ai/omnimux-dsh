@@ -49,10 +49,9 @@ function buildWellModels(spec: SlotSpec, props: SlotWellsProps, upstreamByEdge: 
     upstream: upstreamByEdge.get(occupant.edgeId),
     requiredEmpty: false,
   }));
-  // One slot definition renders at most one empty well (placeholder and append merged):
-  // occupied shows the card; unfilled shows exactly one empty well; full shows none.
+  // 同一槽位定义至多渲染 1 个空卡（占位与追加合一）：已绑显示素材卡，未满给 1 个空卡，绑满隐藏。
   const capacity = spec.max ?? occupants.length + 1;
-  const target = Math.max(Math.min(capacity, occupants.length + 1), spec.min, occupants.length);
+  const target = Math.max(Math.min(capacity, occupants.length + 1), Math.min(spec.min ?? 0, occupants.length + 1), occupants.length);
   while (models.length < target) {
     models.push({ spec, requiredEmpty: models.length < spec.min });
   }
@@ -335,9 +334,8 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
 
     const models: WellModel[] = props.records.map(record => ({ spec: record.slot, occupant: record.occupant,
       upstream: upstreamByEdge.get(record.occupant.edgeId), requiredEmpty: false, state: record.state, reasonCode: record.reasonCode }));
-    // One slot definition renders at most one empty well: frame wells are the named
-    // empty cards for their definitions; the append button covers everything else and
-    // only exists while some definition is unfilled.
+    // 同一槽位定义至多 1 个空卡：具名帧空卡覆盖各自定义；追加按钮只覆盖其余未满定义，
+    // 且不与已渲染的具名空卡重复。组合正文槽（composition）允许多来源，始终可追加。
     const frameDefs = new Set(
       layout.slots.filter(spec => spec.role === 'first_frame' || spec.role === 'last_frame').map(spec => spec.slot),
     );
@@ -349,7 +347,8 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
     return <div className="wf-slot-wells wf-slot-wells--strip" data-testid="wf-slot-wells" data-preset={layout.preset}>
       {models.map(renderWell)}
       {frames.filter(spec => !models.some(model => model.spec.slot === spec.slot)).map(spec => <button key={spec.slot} type="button"
-        className="wf-slot-well wf-slot-well--empty nodrag" aria-label={t(spec.role === 'first_frame' ? 'input.first' : 'input.last')}
+        className="wf-slot-well wf-slot-well--empty nodrag" data-slot={spec.slot} data-slot-role={spec.role}
+        aria-label={t(spec.role === 'first_frame' ? 'input.first' : 'input.last')}
         onClick={() => onPickSlot(pickRequest(spec))}><Plus size={20} aria-hidden="true" /></button>)}
       {canAdd ? <button type="button" className="wf-slot-well wf-slot-well--append nodrag" title={t('input.add')} aria-label={t('input.add')}
         onClick={() => onPickSlot({ acceptedTypes: [...new Set(layout.slots.map(spec => spec.type))], max: null })}><Plus size={20} aria-hidden="true" /></button> : null}
