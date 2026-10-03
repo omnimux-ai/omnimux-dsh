@@ -95,6 +95,20 @@ describe('MediaViewer UI Polish & Spec Compliance', () => {
     assert.match(jsxContent, /\$\{imageOpMode\}\s*·\s*\$\{imageAspect\}\s*·\s*\$\{imageRes\}\s*·\s*\$\{imageBatch\}(?!张)/, '参数摘要字符串必须包含生成方式且末尾无“张”字');
   });
 
+  it('Step 7: 视频时长滑块刻度两端对齐（4s/15s 不得堆叠左侧）', () => {
+    // 结构契约：JSX 必须渲染刻度容器与左右两个刻度
+    const jsxPath = path.join(__dirname, './MediaConfigControls.jsx');
+    const jsxContent = fs.readFileSync(jsxPath, 'utf8');
+    assert.match(jsxContent, /className="omx-duration-limits"/, '时长滑块下方必须渲染 omx-duration-limits 刻度容器');
+    assert.match(jsxContent, /className="omx-duration-header"/, '时长区域必须渲染 omx-duration-header 标题行');
+
+    // 样式契约：刻度容器必须 flex 两端对齐，缺规则会导致 4s15s 堆叠左侧
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-duration-limits\s*\{[^}]*display:\s*flex;/);
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-duration-limits\s*\{[^}]*justify-content:\s*space-between;/);
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-duration-header\s*\{[^}]*justify-content:\s*space-between;/);
+    assert.match(MEDIA_VIEWER_CSS, /\.omx-duration-range-input\s*\{[^}]*width:\s*100%;/);
+  });
+
   it('Step 6: 图像参数子列弹性伸缩与药丸防折行规范', () => {
     // 子列等分且允许压缩
     assert.match(MEDIA_VIEWER_CSS, /\.omx-param-subcol\s*\{[^}]*flex:\s*1;/);

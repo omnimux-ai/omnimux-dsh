@@ -1903,6 +1903,34 @@ button.omx-slot-add:hover,
   gap: 6px;
 }
 
+.omx-duration-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.omx-duration-val-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.omx-duration-range-input {
+  width: 100%;
+  accent-color: var(--dsw-alias-accent-primary, var(--dsw-alias-label-primary));
+  cursor: pointer;
+}
+
+.omx-duration-limits {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--dsw-alias-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
 .omx-mv-toolbar-right {
   display: flex;
   align-items: center;
