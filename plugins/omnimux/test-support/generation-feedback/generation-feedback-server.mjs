@@ -1,6 +1,7 @@
 import { build } from 'esbuild';
 import http from 'node:http';
-import { readFile, realpath } from 'node:fs/promises';
+import { readFile, realpath, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { stagePlugins, boundedCommand } from '../comment-native-environment.mjs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -11,11 +12,24 @@ export const root = resolve(here, '../../../..');
 const require = createRequire(resolve(root, 'plugins/omnimux/package.json'));
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
-export async function startFixture() {
+export async function startFixture({ nodeExecutable } = {}) {
+  if (!nodeExecutable) throw new Error('A Node executable must be supplied by the test runner');
+  await mkdir(resolve(root, '.tmp'), { recursive: true });
+  const privateDir = await mkdtemp(resolve(root, '.tmp/generation-feedback-'));
+  try { return await assembleFixture(privateDir, nodeExecutable); }
+  catch (error) { await rm(privateDir, { recursive: true, force: true }); throw error; }
+}
+
+async function assembleFixture(privateDir, nodeExecutable) {
+  const staged = await stagePlugins(root, privateDir, { dir: '' });
+  await boundedCommand(nodeExecutable, [staged.buildScripts.viewer], { cwd: staged.viewer, deadlineMs: 60000 });
+  const viewerRequire = createRequire(resolve(staged.viewer, 'package.json'));
+  const publicClient = viewerRequire.resolve('omnimux-viewer/client');
   // Resolve one physical React instance for both the viewer and UI kit.
   const alias = {};
   for (const name of ['react', 'react-dom']) alias[name] = dirname(await realpath(require.resolve(`${name}/package.json`)));
   alias['dsh-ui-kit'] = await realpath(require.resolve('dsh-ui-kit'));
+  alias['omnimux-viewer/client'] = publicClient;
   const built = await build({ absWorkingDir: root, entryPoints: [resolve(here, 'generation-feedback-fixture.jsx')],
     bundle: true, alias, write: false, outdir: resolve(here, 'memory-output'), format: 'esm', platform: 'browser',
     metafile: true, loader: { '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl', '.module.css': 'local-css' } });
@@ -37,23 +51,33 @@ export async function startFixture() {
   const video = await readFile(resolve(root, videoPath));
   sourceHashes[videoPath] = hash(video);
   const videoResponse = JSON.stringify({ ok: true, value: { offset: 0, eof: true, bytes: video.length, data: video.toString('base64') } });
-  const server = http.createServer((req, res) => {
+  const server = http.createServer({ maxHeaderSize: 64 * 1024 }, (req, res) => {
     const path = new URL(req.url, 'http://localhost').pathname;
     if (path === '/') { res.setHeader('content-type', 'text/html;charset=utf-8'); res.end(html); }
     else if (path === '/fixture.js') { res.setHeader('content-type', 'text/javascript'); res.end(bundle); }
     else if (path === '/fixture-video-result.json') { res.setHeader('content-type', 'application/json'); res.end(videoResponse); }
     else { res.statusCode = 404; res.end(); }
   });
-  await new Promise((accept, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', accept); });
+  try {
+    await new Promise((accept, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', accept); });
+  } catch (error) {
+    server.closeAllConnections();
+    server.close();
+    throw error;
+  }
   const manifest = { root, pid: process.pid, url: `http://127.0.0.1:${server.address().port}/`,
     sourceHashes, bundleSha256: hash(bundle), startedAt: new Date().toISOString() };
   return { manifest, async close() {
-    server.closeAllConnections();
-    await new Promise((accept, reject) => server.close((error) => error ? reject(error) : accept()));
-    const changedSources = [];
-    for (const [path, digest] of Object.entries(sourceHashes)) {
-      if (hash(await readFile(resolve(root, path))) !== digest) changedSources.push(path);
+    try {
+      server.closeAllConnections();
+      await new Promise((accept, reject) => server.close((error) => error ? reject(error) : accept()));
+      const changedSources = [];
+      for (const [path, digest] of Object.entries(sourceHashes)) {
+        if (hash(await readFile(resolve(root, path))) !== digest) changedSources.push(path);
+      }
+      return { closed: true, changedSources };
+    } finally {
+      await rm(privateDir, { recursive: true, force: true });
     }
-    return { closed: true, changedSources };
   } };
 }

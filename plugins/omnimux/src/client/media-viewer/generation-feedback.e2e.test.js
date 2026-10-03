@@ -28,16 +28,16 @@ const root = resolve(here, '../../../../..');
 // Real browser; unavailable ego capabilities fail rather than skip.
 // Independent command: node --test plugins/omnimux/src/client/media-viewer/generation-feedback.e2e.test.js
 // Grounded in #1759 space700 and tmp/canvas-generation-feedback/video-browser.json.
-test('generation feedback: real browser transport-to-viewer journeys', { skip: !hasEgoBrowser && 'ego-browser binary not on PATH (opt-in browser harness)' }, async (t) => {
+test('generation feedback: real browser transport-to-viewer journeys', { timeout: 180000, skip: !hasEgoBrowser && 'ego-browser binary not on PATH (opt-in browser harness)' }, async (t) => {
   const evidence = resolve(root, '.agent-reports/canvas-generation-feedback/e2e-runs', randomUUID());
   await mkdir(evidence, { recursive: true });
   t.diagnostic(`retained evidence: ${evidence}`);
   const moduleUrl = new URL('../../../test-support/generation-feedback/generation-feedback-browser.mjs', import.meta.url).href;
   const script = `const { runGenerationFeedbackBrowser } = await import(${JSON.stringify(moduleUrl)});
-await runGenerationFeedbackBrowser(taskSpace, ${JSON.stringify(evidence)});`;
+await runGenerationFeedbackBrowser(taskSpace, ${JSON.stringify(evidence)}, ${JSON.stringify(process.execPath)});`;
   const { NODE_TEST_CONTEXT: _testContext, ...env } = process.env;
   const output = await new Promise((accept, reject) => {
-    const child = spawn('ego-browser', ['nodejs'], { cwd: root, env, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn('ego-browser', ['nodejs'], { cwd: root, env, timeout: 150000, killSignal: 'SIGTERM', stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8');

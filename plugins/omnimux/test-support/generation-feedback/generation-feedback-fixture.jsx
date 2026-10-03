@@ -2,7 +2,9 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Button } from 'dsh-ui-kit';
-import { MediaViewerTab } from '../../src/client/media-viewer/MediaViewerTab.jsx';
+import * as jsxRuntime from 'react/jsx-runtime';
+import * as ReactDOM from 'react-dom';
+import * as primitives from '@deepseek-ai/dsh-client-ui-primitives';
 import { getGlobalMediaViewerStore } from '../../src/client/media-viewer/media-viewer-store.js';
 import { createGenerationFeedback } from '../../src/client/media-viewer/generation-feedback.js';
 import { bindWorkbenchDeps } from '../../src/client/workbench/host-adapter.js';
@@ -31,7 +33,9 @@ let seq = 0;
 let active;
 function send(text = '生成一张蓝色山峰图片') {
   const sessionId = sessions.list.getSnapshot().current;
-  active = { sessionId, requestId: `request-${++request}`, turn: request, callId: `call-${request}` };
+  request += 1;
+  // Request identifiers are scoped to a session; deliberately reuse qa-a's first id.
+  active = { sessionId, requestId: sessionId === 'qa-b' ? 'request-1' : `request-${request}`, turn: request, callId: `call-${request}` };
   const binding = bindings.get(sessionId);
   const row = { requestId: active.requestId, text };
   log.push({ type: 'pendingSubmissions', sessionId, row });
@@ -60,8 +64,11 @@ function result(isError = false, includeCall = true) {
 }
 async function readFile(sessionId, path, signal) {
   log.push({ type: 'workspaceFiles.readAll', sessionId, path });
-  if (path !== '/fixture/output.mp4') return { ok: false, error: { message: 'fixture denied' } };
-  return (await fetch('/fixture-video-result.json', { signal })).json();
+  const result = path === '/fixture/output.mp4'
+    ? await (await fetch('/fixture-video-result.json', { signal })).json()
+    : { ok: false, error: { message: 'fixture denied' } };
+  log.push({ type: 'workspaceFiles.readComplete', sessionId, path, ok: result.ok });
+  return result;
 }
 function extraResult(name, content) {
   active.callId = `call-extra-${++seq}`;
@@ -94,6 +101,34 @@ const actions = {
   '切换会话': () => { sessions.list.set({ current: sessions.list.getSnapshot().current === 'qa-a' ? 'qa-b' : 'qa-a' }); render(); },
   '重复执行事件': () => phase('running'),
 };
+const disposers = [];
+let MediaViewerTab;
+const previousLoader = window.__ModuleLoader__;
+window.__ModuleLoader__ = { load({ id, factory }) {
+  if (id !== 'omnimux-viewer') throw new Error(`Unexpected fixture plugin ${id}`);
+  const modules = { react: React, 'react/jsx-runtime': jsxRuntime, 'react-dom': ReactDOM,
+    '@deepseek-ai/dsh-client-ui-primitives': primitives };
+  const plugin = factory((name) => {
+    if (!(name in modules)) throw new Error(`Unregistered public dependency ${name}`);
+    return modules[name];
+  });
+  const ctx = { sessions,
+    betterSidebar: { registerTab(tab) {
+      if (tab.id === 'omnimux:media-viewer') MediaViewerTab = tab.component;
+      return () => {};
+    } },
+    uiConversation: { imageUrl: async () => image },
+    remote: { workspaceFiles: { readAll: readFile } },
+    locale: { register: () => () => {}, bind: () => (key) => key },
+    slots: { inject: (_name, fn) => fn(), register: () => () => {} },
+    inject: (_deps, fn) => { fn(ctx); return { dispose() {} }; },
+    effect: (fn) => { const dispose = fn(); if (typeof dispose === 'function') disposers.push(dispose); },
+  };
+  plugin.apply(ctx);
+  if (!MediaViewerTab) throw new Error('Public viewer registration did not publish its tab');
+} };
+try { await import('omnimux-viewer/client'); }
+finally { if (previousLoader) window.__ModuleLoader__ = previousLoader; else delete window.__ModuleLoader__; }
 function MountProbe() { React.useEffect(() => { window.qaBoot.mounted = true; }, []); return null; }
 const root = createRoot(document.getElementById('root'));
 function render() {
@@ -102,5 +137,5 @@ function render() {
     <p>当前会话：{sessions.list.getSnapshot().current}</p></aside>
     <main><MediaViewerTab readFile={readFile} sessions={sessions} imageUrl={async () => image} scope={{ sessionId: sessions.list.getSnapshot().current }} /></main></>);
 }
-window.qa = { getState: () => store.getSnapshot(), log, dispose: () => { bridge.dispose(); root.unmount(); } };
+window.qa = { getState: () => store.getSnapshot(), log, dispose: () => { bridge.dispose(); root.unmount(); for (const dispose of disposers.reverse()) dispose(); } };
 render();
