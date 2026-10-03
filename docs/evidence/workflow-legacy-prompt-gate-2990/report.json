@@ -1,0 +1,117 @@
+{
+  "status": "passed",
+  "results": [
+    {
+      "type": "image",
+      "legacy": false,
+      "empty": {
+        "disabled": "true",
+        "title": "请补齐正文",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "video",
+      "legacy": false,
+      "empty": {
+        "disabled": "true",
+        "title": "请补齐正文",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "text",
+      "legacy": false,
+      "empty": {
+        "disabled": "true",
+        "title": "请补齐正文",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "audio",
+      "legacy": false,
+      "empty": {
+        "disabled": "true",
+        "title": "请补齐正文",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "image",
+      "legacy": true,
+      "empty": {
+        "disabled": "true",
+        "title": "请输入内容或连接上游文本",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "video",
+      "legacy": true,
+      "empty": {
+        "disabled": "true",
+        "title": "请输入内容或连接上游文本",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "text",
+      "legacy": true,
+      "empty": {
+        "disabled": "true",
+        "title": "请输入内容或连接上游文本",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "audio",
+      "legacy": true,
+      "empty": {
+        "disabled": "true",
+        "title": "请输入内容或连接上游文本",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    }
+  ]
+}

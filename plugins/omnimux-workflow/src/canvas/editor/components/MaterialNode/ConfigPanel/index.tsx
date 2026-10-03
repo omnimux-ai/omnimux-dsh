@@ -852,12 +852,17 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   );
   // Current input nodes are gated solely by the shared kernel verdict (strictVerdict), which
   // also counts local text toward composed text slots; this count-only check is legacy-only.
+  // Like execution (assembleEffectiveInputsFromSlots), a composed text slot that accepts local
+  // text is satisfied by a non-empty final prompt rather than by bound upstream occupants.
+  const hasConsumedPrompt = Boolean(consumedFingerprint.prompt?.trim());
   const missingRequiredSlots = useMemo(
     () => displayedSlotLayout.slots.filter((spec: SlotSpec) => (
       !currentInputs && !displayedSlotLayout.displayOnlyFromOperation
-      && (slotBindings[spec.slot]?.length ?? 0) < spec.min
+      && (spec.type === 'text' && spec.composition && spec.valueSources?.includes('local_field')
+        ? Number(hasConsumedPrompt) < spec.min
+        : (slotBindings[spec.slot]?.length ?? 0) < spec.min)
     )),
-    [displayedSlotLayout, slotBindings, currentInputs],
+    [displayedSlotLayout, slotBindings, currentInputs, hasConsumedPrompt],
   );
   const slotShortageReason = missingRequiredSlots.length > 0
     ? t('panel.slotMissing').replace('{slots}', missingRequiredSlots.map(slotLabelOf).join('、'))
