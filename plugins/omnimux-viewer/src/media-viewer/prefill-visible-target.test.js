@@ -76,6 +76,71 @@ test('等待期间请求被换掉或取走就停止，取消函数可停止重�
   resetComposerPrefill();
 });
 
+function fakeTimers() {
+  const pending = new Map();
+  let next = 1;
+  return {
+    setTimer: (fn) => { const id = next++; pending.set(id, fn); return id; },
+    clearTimer: (id) => { pending.delete(id); },
+    get size() { return pending.size; },
+    tick(n = 1) {
+      for (let i = 0; i < n; i += 1) {
+        const batch = [...pending.entries()];
+        pending.clear();
+        batch.forEach(([, fn]) => fn());
+      }
+    },
+  };
+}
+
+test('页面超过逐帧重试时长才变可见，仍能取走请求（Issue #3013）', () => {
+  resetComposerPrefill();
+  const req = queueComposerPrefill({ prompt: 'very late panel', kind: 'video', token: 'v5' });
+  const frames = fakeFrames();
+  const timers = fakeTimers();
+  let visible = false;
+  const got = [];
+  claimPrefillWhenVisible(req, {
+    isVisible: () => visible, onClaim: (r) => got.push(r),
+    raf: frames.raf, caf: frames.caf, setTimer: timers.setTimer, clearTimer: timers.clearTimer,
+  });
+  frames.flush(500);
+  timers.tick(40);
+  assert.equal(got.length, 0);
+  assert.equal(peekComposerPrefill()?.token, 'v5');
+  visible = true;
+  frames.flush(1);
+  timers.tick(1);
+  assert.equal(got[0]?.prompt, 'very late panel');
+  assert.equal(peekComposerPrefill(), null);
+  assert.equal(timers.size, 0);
+});
+
+test('慢速等待期间请求被替换或取消，均停止且不留定时器（Issue #3013）', () => {
+  resetComposerPrefill();
+  const frames = fakeFrames();
+  const timers = fakeTimers();
+  const got = [];
+  const opts = {
+    isVisible: () => false, onClaim: (r) => got.push(r),
+    raf: frames.raf, caf: frames.caf, setTimer: timers.setTimer, clearTimer: timers.clearTimer,
+  };
+  claimPrefillWhenVisible(queueComposerPrefill({ prompt: 'a', kind: 'image', token: 'v6' }), opts);
+  frames.flush(500);
+  queueComposerPrefill({ prompt: 'b', kind: 'image', token: 'v7' });
+  timers.tick(3);
+  assert.equal(timers.size, 0);
+
+  const cancel = claimPrefillWhenVisible(peekComposerPrefill(), opts);
+  frames.flush(500);
+  timers.tick(2);
+  cancel();
+  assert.equal(timers.size, 0);
+  assert.equal(got.length, 0);
+  assert.equal(peekComposerPrefill()?.token, 'v7');
+  resetComposerPrefill();
+});
+
 test('可见性判断：无节点为不可见，无判断能力时按可见处理', () => {
   assert.equal(isElementShown(null), false);
   assert.equal(isElementShown({}), true);

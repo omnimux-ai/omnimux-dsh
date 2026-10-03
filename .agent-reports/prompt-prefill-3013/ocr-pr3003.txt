@@ -1,0 +1,26 @@
+Review complete: 2 finding(s) across 2 selected item(s).
+
+─── plugins/omnimux/src/client/media-viewer/composer-prefill.js:51-51 ───
+[maintainability · low] Project rules prohibit non-strict equality checks. This null-or-undefined
+guard is functionally intentional, but using `!=` may still fail lint/review standards; please make
+the check explicit with strict comparisons.
+
+-   if (token != null && shared.pending.token !== String(token)) return null
++   if (token !== null && token !== undefined && shared.pending.token !== String(token)) return null
+
+
+─── plugins/omnimux/src/client/attachments/promptFenceCrossBundle.e2e.test.mjs:50-51 ───
+[test · low] The listener and installed prompt-fence behavior are only cleaned up on the happy path.
+If an assertion fails before these lines, the shared window store/listener or DOM observer can leak
+into later tests and cause flakiness. Wrap the assertions after setup in `try/finally` so both
+cleanup callbacks always run.
+
++   try {
++     // assertions and interactions after setup
++   } finally {
+-   stop()
++     stop()
+-   stopListen()
++     stopListen()
++   }
+

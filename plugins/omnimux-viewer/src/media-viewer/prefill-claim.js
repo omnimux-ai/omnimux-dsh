@@ -3,13 +3,17 @@
  *
  * The host can mount the generation page twice (a visible tab and a hidden
  * bottom panel). Both subscribe to the same queue, so only a composer the user
- * can see may take the request. A composer that is still appearing retries for
- * a short while before giving up.
+ * can see may take the request. A composer that is not visible yet keeps
+ * waiting until it shows, the request is replaced or taken, or it unmounts.
  */
 
 import { peekComposerPrefill, takeComposerPrefill } from '../../../omnimux/src/client/media-viewer/composer-prefill.js';
 
-const MAX_FRAMES = 90;
+// A freshly opened tab normally shows within a few frames: check every frame
+// for about 1.5 s at 60 fps, then fall back to a slow check so a panel that
+// shows much later still receives the request without spinning per frame.
+const FAST_FRAMES = 90;
+const SLOW_INTERVAL_MS = 250;
 
 /** No node means not shown; an environment without checkVisibility counts as shown. */
 export function isElementShown(node) {
@@ -27,15 +31,18 @@ export function claimPrefillWhenVisible(request, {
   onClaim,
   raf = globalThis.requestAnimationFrame?.bind(globalThis),
   caf = globalThis.cancelAnimationFrame?.bind(globalThis),
-  maxFrames = MAX_FRAMES,
+  setTimer = globalThis.setTimeout?.bind(globalThis),
+  clearTimer = globalThis.clearTimeout?.bind(globalThis),
 } = {}) {
   if (!request) return () => {};
   let frame = null;
-  let left = maxFrames;
+  let timer = null;
+  let fastLeft = FAST_FRAMES;
   let done = false;
 
   const attempt = () => {
     frame = null;
+    timer = null;
     if (done) return;
     if (peekComposerPrefill()?.token !== request.token) { done = true; return; }
     if (isVisible()) {
@@ -44,15 +51,24 @@ export function claimPrefillWhenVisible(request, {
       if (taken) onClaim(taken);
       return;
     }
-    if (left <= 0 || typeof raf !== 'function') { done = true; return; }
-    left -= 1;
-    frame = raf(attempt);
+    if (fastLeft > 0 && typeof raf === 'function') {
+      fastLeft -= 1;
+      frame = raf(attempt);
+      return;
+    }
+    if (typeof setTimer === 'function') {
+      timer = setTimer(attempt, SLOW_INTERVAL_MS);
+      return;
+    }
+    done = true;
   };
 
   attempt();
   return () => {
     done = true;
-    if (frame != null && typeof caf === 'function') caf(frame);
+    if (frame !== null && typeof caf === 'function') caf(frame);
+    if (timer !== null && typeof clearTimer === 'function') clearTimer(timer);
     frame = null;
+    timer = null;
   };
 }
