@@ -294,7 +294,6 @@ describe('auth http dispatcher', () => {
       // #453: workbench routes register via webServer.register in the same inject
       'exact:/omnimux/workbench/viewport',
       'exact:/omnimux/workbench/rpc/ack',
-      'exact:/omnimux/prompt-optimizer',
       'exact:/omnimux/session-model',
       'exact:/omnimux/api/media/generate',
     ])

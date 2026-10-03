@@ -324,7 +324,6 @@
     "inspect-gxgen-tiktok.mjs",
     "list-tables.mjs",
     "market-try-skill-chip-qa.mjs",
-    "optimize-button-qa.mjs",
     "patch-asar-agent-presets.test.mjs",
     "qa-verify-preset-workflow-standards.mjs",
     "resolve-covers.mjs",
