@@ -80,6 +80,7 @@ export function MediaSlotGroup({
   disabled = false,
   onOpenReferencePicker,
   lockReason = '',
+  framePair = null,
 }) {
   const [open, setOpen] = useState(false);
   const inputRef = useRef(null);
@@ -88,6 +89,15 @@ export function MediaSlotGroup({
   const expanded = open || !piled;
   const room = slot.max == null ? Infinity : slot.max;
   const canAdd = count < room && !disabled;
+  // 视频模式首帧/尾帧成对空卡槽：加号上置 + 槽名下置 + 微倾斜（样式见 styles.js 的 is-frame-*）。
+  // 成对由父级按相邻槽判定后传入 framePair；单首帧/单尾帧方式不挂样式，与现状一致。
+  let frameRole = '';
+  if (framePair === 'first' && slot.role === 'first_frame') {
+    frameRole = 'is-frame-first';
+  } else if (framePair === 'last' && slot.role === 'last_frame') {
+    frameRole = 'is-frame-last';
+  }
+  const isFrameSlot = frameRole !== '';
   const adderAt = piled && !expanded ? PILE_WIDTH + GAP : count * STEP;
   const fanWidth = canAdd ? adderAt + CARD : (expanded ? Math.max(count, 1) * STEP : PILE_WIDTH);
 
@@ -132,7 +142,7 @@ export function MediaSlotGroup({
 
   return (
     <div
-      className={`omx-slot-group${piled ? ' is-piled' : ''}${expanded ? ' is-open' : ''}`}
+      className={`omx-slot-group${isFrameSlot ? ` is-frame ${frameRole}` : ''}${piled ? ' is-piled' : ''}${expanded ? ' is-open' : ''}`}
       style={{ '--slot-fan-width': `${fanWidth}px` }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
@@ -200,7 +210,16 @@ export function MediaSlotGroup({
               }
             }}
           >
-            {ICONS[slot.type] || ICONS.image}
+            {isFrameSlot ? (
+              <>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                {slot.label ? <span className="omx-slot-btn-label" aria-hidden="true">{slot.label}</span> : null}
+              </>
+            ) : (
+              ICONS[slot.type] || ICONS.image
+            )}
           </button>
         ) : null}
       </div>

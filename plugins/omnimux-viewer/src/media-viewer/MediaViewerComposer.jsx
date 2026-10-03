@@ -1167,11 +1167,28 @@ export function MediaViewerComposer({
             slots.some((s) => (buckets[bucketKey(s)] ?? []).length > 0)
           ) ? (
             <div className="omx-slot-row">
-              {visibleSlots(slots, slotOperation, (member) => (buckets || {})[bucketKey(member)] || []).map((slot) => (
-                <MediaSlotGroup
-                  key={bucketKey(slot)}
+              {visibleSlots(slots, slotOperation, (member) => (buckets || {})[bucketKey(member)] || []).map((slot, index, shown) => {
+                const slotItems = buckets[bucketKey(slot)] ?? [];
+                const prevSlot = shown[index - 1];
+                const nextSlot = shown[index + 1];
+                const nextItems = nextSlot ? (buckets[bucketKey(nextSlot)] ?? []) : [];
+                // 首帧槽后紧跟尾帧槽才算成对；单首帧/单尾帧方式保持原样
+                const pairedFirst = slot.role === 'first_frame' && nextSlot?.role === 'last_frame';
+                const pairedLast = slot.role === 'last_frame' && prevSlot?.role === 'first_frame';
+                let framePair = null;
+                if (pairedFirst) {
+                  framePair = 'first';
+                } else if (pairedLast) {
+                  framePair = 'last';
+                }
+                // 成对两槽均空时，在两卡之间插入纯装饰换向分隔箭头
+                const showFrameSwap = pairedFirst && slotItems.length === 0 && nextItems.length === 0;
+                return (
+                  <React.Fragment key={bucketKey(slot)}>
+                    <MediaSlotGroup
+                  framePair={framePair}
                   slot={slot}
-                  items={buckets[bucketKey(slot)] ?? []}
+                  items={slotItems}
                   disabled={disabled}
                   onChange={(items) => {
                     const key = bucketKey(slot);
@@ -1194,8 +1211,20 @@ export function MediaViewerComposer({
                   onReject={setNotice}
                   onOpenReferencePicker={handleOpenPicker}
                   lockReason={slotLockReason(slot, buckets)}
-                />
-              ))}
+                    />
+                    {showFrameSwap ? (
+                      <span className="omx-slot-swap" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M8 3 4 7l4 4" />
+                          <path d="M4 7h16" />
+                          <path d="m16 21 4-4-4-4" />
+                          <path d="M20 17H4" />
+                        </svg>
+                      </span>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })}
             </div>
           ) : null}
           <div className="omx-mv-prompt-box" ref={promptBoxRef}>
