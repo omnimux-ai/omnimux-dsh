@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict'
+import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { Readable } from 'node:stream'
-import { describe, it } from 'node:test'
+import { describe, it, beforeEach, afterEach } from 'node:test'
 import { DIRECT_MEDIA_GENERATE_ROUTE, registerDirectMediaRoutes } from './direct-http.js'
+import {
+  createMediaTaskRecord,
+  saveMediaTaskRecord,
+  getMediaTaskRecord,
+} from './task-store.js'
 
 function fixture(overrides = {}) {
   let route = null
@@ -149,5 +157,338 @@ describe('Direct Media Generate HTTP Route', () => {
       sound: 'yes',
     }), response())
     assert.equal(calls[1].req.sound, undefined)
+  })
+})
+
+describe('Direct Media Generate · requestKey/taskRef 账本契约（Issue #3011）', () => {
+  let tempDir
+  let cacheDir
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'omx-direct-http-ledger-'))
+    cacheDir = mkdtempSync(join(tmpdir(), 'omx-direct-http-cache-'))
+  })
+
+  afterEach(() => {
+    for (const dir of [tempDir, cacheDir]) {
+      if (dir && existsSync(dir)) rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  const makeRecord = (overrides = {}) => {
+    const record = createMediaTaskRecord({
+      capability: 'image',
+      model: 'gpt-image-2.5',
+      providerId: 'omnimux',
+      protocol: 'openai-media',
+      baseUrl: 'https://api.omnimux.ai/v1',
+      wireModel: 'gpt-image-2.5',
+      taskPath: 'images/generations',
+      requestKey: 'req-key-1',
+      ...overrides,
+    })
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+    return record
+  }
+
+  it('提交请求透传 requestKey 与 wait:false，并把响应中的 taskRef 返回给前端', async () => {
+    const { route, calls } = fixture({
+      storageDir: tempDir,
+      executeImage: async (req) => {
+        calls.push({ kind: 'image', req })
+        return { mode: 'submitted', taskId: 'upstream_abc', taskRef: 'mtask_ref12345', url: null }
+      },
+    })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      prompt: 'a cyberpunk cat',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      wait: false,
+    }), res)
+
+    assert.equal(res.status, 200)
+    const data = res.json()
+    assert.equal(data.ok, true)
+    assert.equal(data.mode, 'submitted')
+    assert.equal(data.taskRef, 'mtask_ref12345')
+    assert.equal(data.url, null)
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].req.requestKey, 'req-key-1')
+    assert.equal(calls[0].req.wait, false)
+    assert.equal(calls[0].req.taskRef, undefined)
+  })
+
+  it('执行器抛出带 code/status 的错误时，500 响应携带 code 与 status', async () => {
+    const { route } = fixture({
+      storageDir: tempDir,
+      executeImage: async () => {
+        const err = new Error('quota exceeded for this key')
+        err.code = 'quota-exceeded'
+        err.status = 429
+        throw err
+      },
+    })
+    const res = response()
+    await route.handler(post({ kind: 'image', prompt: 'x', model: 'gpt-image-2.5' }), res)
+
+    assert.equal(res.status, 500)
+    const data = res.json()
+    assert.equal(data.ok, false)
+    assert.equal(data.error, 'quota exceeded for this key')
+    assert.equal(data.code, 'quota-exceeded')
+    assert.equal(data.status, 429)
+  })
+
+  it('执行器抛出无 code 的普通错误时，500 响应不带 code/status', async () => {
+    const { route } = fixture({
+      storageDir: tempDir,
+      executeImage: async () => { throw new Error('plain failure') },
+    })
+    const res = response()
+    await route.handler(post({ kind: 'image', prompt: 'x', model: 'gpt-image-2.5' }), res)
+
+    assert.equal(res.status, 500)
+    const data = res.json()
+    assert.equal(data.ok, false)
+    assert.equal(data.error, 'plain failure')
+    assert.equal(data.code, undefined)
+    assert.equal(data.status, undefined)
+  })
+
+  it('取回：ready 记录且产物文件存在时直接返回 cachePath，不再轮询上游', async () => {
+    const cacheFile = join(cacheDir, 'artifact.png')
+    writeFileSync(cacheFile, 'png-bytes')
+    const record = makeRecord()
+    record.status = 'ready'
+    record.upstreamTaskId = 'upstream_done'
+    record.artifact = { cachePath: cacheFile, mimeType: 'image/png', sizeBytes: 9 }
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+
+    const { route, calls } = fixture({
+      storageDir: tempDir,
+      executeImage: async () => { throw new Error('should never be called') },
+    })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      taskRef: record.taskRef,
+      wait: true,
+    }), res)
+
+    assert.equal(res.status, 200)
+    const data = res.json()
+    assert.equal(data.ok, true)
+    assert.equal(data.mode, 'live')
+    assert.equal(data.url, cacheFile)
+    assert.equal(data.dest, cacheFile)
+    assert.equal(data.taskRef, record.taskRef)
+    assert.equal(calls.length, 0)
+  })
+
+  it('取回：ready 记录但产物文件已被清理时，继续走执行器轮询', async () => {
+    const record = makeRecord()
+    record.status = 'ready'
+    record.upstreamTaskId = 'upstream_done'
+    record.artifact = { cachePath: join(cacheDir, 'gone.png'), mimeType: 'image/png', sizeBytes: 9 }
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+
+    const { route, calls } = fixture({
+      storageDir: tempDir,
+      executeImage: async (req) => {
+        calls.push({ kind: 'image', req })
+        return { mode: 'live', taskId: 'upstream_done', taskRef: record.taskRef, url: 'https://example.com/redone.png' }
+      },
+    })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      taskRef: record.taskRef,
+      wait: true,
+    }), res)
+
+    assert.equal(res.status, 200)
+    assert.equal(res.json().url, 'https://example.com/redone.png')
+    assert.equal(calls.length, 1)
+  })
+
+  it('取回：failed 记录直接返回 500，带记录中的 error 与 errorCode，不再轮询', async () => {
+    const record = makeRecord()
+    record.status = 'failed'
+    record.upstreamTaskId = 'upstream_bad'
+    record.error = '生成服务暂时不可用，请稍后重试'
+    record.errorCode = 'omnimux-request-failed'
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+
+    const { route, calls } = fixture({
+      storageDir: tempDir,
+      executeImage: async () => { throw new Error('should never be called') },
+    })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      taskRef: record.taskRef,
+      wait: true,
+    }), res)
+
+    assert.equal(res.status, 500)
+    const data = res.json()
+    assert.equal(data.ok, false)
+    assert.equal(data.error, '生成服务暂时不可用，请稍后重试')
+    assert.equal(data.code, 'omnimux-request-failed')
+    assert.equal(calls.length, 0)
+  })
+
+  it('取回：failed 记录缺 errorCode 时回落 omnimux-failed', async () => {
+    const record = makeRecord()
+    record.status = 'failed'
+    record.error = 'raw provider error'
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+
+    const { route } = fixture({ storageDir: tempDir })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      taskRef: record.taskRef,
+      wait: true,
+    }), res)
+
+    assert.equal(res.status, 500)
+    assert.equal(res.json().code, 'omnimux-failed')
+    assert.equal(res.json().error, 'raw provider error')
+  })
+
+  it('取回：taskRef 对应记录不存在时返回 500 omnimux-task-not-found', async () => {
+    const { route, calls } = fixture({ storageDir: tempDir })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      taskRef: 'mtask_missing001',
+      wait: true,
+    }), res)
+
+    assert.equal(res.status, 500)
+    const data = res.json()
+    assert.equal(data.ok, false)
+    assert.equal(data.code, 'omnimux-task-not-found')
+    assert.equal(data.error, '未找到对应的媒体任务记录，请重新提交生成')
+    assert.equal(calls.length, 0)
+  })
+
+  it('取回：记录仍是 submitting 且无 upstreamTaskId 时返回 omnimux-task-interrupted', async () => {
+    const record = makeRecord() // status: 'submitting', upstreamTaskId: undefined
+
+    const { route, calls } = fixture({ storageDir: tempDir })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      taskRef: record.taskRef,
+      wait: true,
+    }), res)
+
+    assert.equal(res.status, 500)
+    const data = res.json()
+    assert.equal(data.ok, false)
+    assert.equal(data.code, 'omnimux-task-interrupted')
+    assert.equal(data.error, '任务已中断，请重新提交')
+    assert.equal(calls.length, 0)
+  })
+
+  it('取回：submitted 记录交给执行器轮询，成功后把同一 taskRef 返回', async () => {
+    const record = makeRecord()
+    record.status = 'submitted'
+    record.upstreamTaskId = 'upstream_poll'
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+
+    const { route, calls } = fixture({
+      storageDir: tempDir,
+      executeImage: async (req) => {
+        calls.push({ kind: 'image', req })
+        return { mode: 'live', taskId: 'upstream_poll', taskRef: record.taskRef, url: 'https://example.com/final.png' }
+      },
+    })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      taskRef: record.taskRef,
+      wait: true,
+    }), res)
+
+    assert.equal(res.status, 200)
+    const data = res.json()
+    assert.equal(data.ok, true)
+    assert.equal(data.mode, 'live')
+    assert.equal(data.taskRef, record.taskRef)
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].req.taskRef, record.taskRef)
+  })
+
+  it('取回轮询抛错时把账本记录标记为 failed 并回写 error', async () => {
+    const record = makeRecord()
+    record.status = 'submitted'
+    record.upstreamTaskId = 'upstream_will_fail'
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+
+    const { route } = fixture({
+      storageDir: tempDir,
+      executeImage: async () => {
+        const err = new Error('upstream task failed: nsfw')
+        err.code = 'omnimux-request-failed'
+        throw err
+      },
+    })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      taskRef: record.taskRef,
+      wait: true,
+    }), res)
+
+    assert.equal(res.status, 500)
+    assert.equal(res.json().code, 'omnimux-request-failed')
+    const stored = getMediaTaskRecord(record.taskRef, { storageDir: tempDir })
+    assert.equal(stored.status, 'failed')
+    assert.equal(stored.error, 'upstream task failed: nsfw')
+    assert.equal(stored.errorCode, 'omnimux-request-failed')
+  })
+
+  it('带 requestKey 提交且执行器返回 taskRef 缺省时，从账本回捞 taskRef 返回前端', async () => {
+    const record = makeRecord()
+    record.status = 'submitted'
+    record.upstreamTaskId = 'upstream_known'
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+
+    const { route } = fixture({
+      storageDir: tempDir,
+      executeImage: async () => ({ mode: 'submitted', taskId: 'upstream_known', url: null }),
+    })
+    const res = response()
+    await route.handler(post({
+      kind: 'image',
+      prompt: 'a cyberpunk cat',
+      model: 'gpt-image-2.5',
+      requestKey: 'req-key-1',
+      wait: false,
+    }), res)
+
+    assert.equal(res.status, 200)
+    assert.equal(res.json().taskRef, record.taskRef)
   })
 })

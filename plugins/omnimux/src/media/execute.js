@@ -513,14 +513,31 @@ export async function executeOmnimuxMedia(capability, input) {
     })
 
     const pollTaskPath = taskRecord?.taskPath || (typeof input.taskPath === 'string' && input.taskPath.trim()) || undefined
-    const res = await finishMediaTask(capability, effectiveRoute, {
-      ...input,
-      taskId: effectiveTaskId,
-      taskPath: pollTaskPath,
-      submittedAt: taskRecord?.submittedAt ?? input.submittedAt,
-      deadlineMs: taskRecord?.deadlineMs ?? input.deadlineMs,
-      authKey: auth.apiKey,
-    })
+    let res
+    try {
+      res = await finishMediaTask(capability, effectiveRoute, {
+        ...input,
+        taskId: effectiveTaskId,
+        taskPath: pollTaskPath,
+        submittedAt: taskRecord?.submittedAt ?? input.submittedAt,
+        deadlineMs: taskRecord?.deadlineMs ?? input.deadlineMs,
+        authKey: auth.apiKey,
+      })
+    } catch (collectError) {
+      // 收取失败必须写回账本：前端凭记录状态决定是否展示失败原因而不是无限轮询（#3011）
+      if (taskRecord) {
+        try {
+          updateMediaTaskRecord(taskRecord.taskRef, {
+            status: 'failed',
+            error: collectError instanceof Error ? collectError.message : String(collectError),
+            errorCode: typeof collectError?.code === 'string' ? collectError.code : undefined,
+          })
+        } catch {
+          // 账本回写失败不改变原始错误语义
+        }
+      }
+      throw collectError
+    }
 
     if (taskRecord && res?.mode === 'live') {
       try {
@@ -838,34 +855,68 @@ export async function executeOmnimuxMedia(capability, input) {
     sleep: input.sleep,
   })
 
-  // wait: true 同步生成模式下，成功下载后同样持久化 ready 账本，确保相同 requestKey 命中完成态缓存
+  // wait: true 同步生成模式下，成功下载后同样持久化 ready 账本，确保相同 requestKey 命中完成态缓存。
+  // 上游同步出图时（wait:false 也直接拿到 url）：更新提交前创建的 pendingTaskRecord 同一条记录为
+  // ready，不再另起孤儿 submitting 记录，并把 taskRef 返回给前端续传（#3011）。
+  let liveTaskRef
   if (requestKey) {
     try {
-      const readyRecord = createMediaTaskRecord({
-        capability,
-        model: route.modelId,
-        operation: input.operation,
-        providerId: route.providerId,
-        protocol: route.protocol || 'openai-media',
-        baseUrl: route.baseUrl,
-        wireModel: route.wireModel || route.modelId,
-        group: route.group,
-        taskPath: taskPathFor(capability, route.modelId),
-        requestKey,
-      })
-      readyRecord.status = 'ready'
-      readyRecord.upstreamTaskId = submittedId
-      readyRecord.artifact = {
-        cachePath: input.dest,
-        mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`,
-        sizeBytes: 0,
+      if (pendingTaskRecord) {
+        updateMediaTaskRecord(pendingTaskRecord.taskRef, {
+          status: 'ready',
+          upstreamTaskId: submittedId || undefined,
+          artifact: {
+            cachePath: input.dest,
+            mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`,
+            sizeBytes: 0,
+          },
+        })
+        liveTaskRef = pendingTaskRecord.taskRef
+      } else {
+        const readyRecord = createMediaTaskRecord({
+          capability,
+          model: route.modelId,
+          operation: input.operation,
+          providerId: route.providerId,
+          protocol: route.protocol || 'openai-media',
+          baseUrl: route.baseUrl,
+          wireModel: route.wireModel || route.modelId,
+          group: route.group,
+          taskPath: taskPathFor(capability, route.modelId),
+          requestKey,
+        })
+        readyRecord.status = 'ready'
+        readyRecord.upstreamTaskId = submittedId
+        readyRecord.artifact = {
+          cachePath: input.dest,
+          mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`,
+          sizeBytes: 0,
+        }
+        saveMediaTaskRecord(readyRecord)
+        liveTaskRef = readyRecord.taskRef
       }
-      saveMediaTaskRecord(readyRecord)
     } catch {
       // 忽略缓存落盘错误
     }
   }
-  return { mode: 'live', taskId: submittedId, url }
+  const liveResult = { mode: 'live', taskId: submittedId, url }
+  if (liveTaskRef) liveResult.taskRef = liveTaskRef
+  return liveResult
+} catch (submitError) {
+  // 提交链路任何失败都要把占位记录标为 failed：否则账本永远停在 submitting，
+  // 前端刷新续传时会误判为“已中断”（#3011）
+  if (pendingTaskRecord) {
+    try {
+      updateMediaTaskRecord(pendingTaskRecord.taskRef, {
+        status: 'failed',
+        error: submitError instanceof Error ? submitError.message : String(submitError),
+        errorCode: typeof submitError?.code === 'string' ? submitError.code : undefined,
+      })
+    } catch {
+      // 账本回写失败不改变原始错误语义
+    }
+  }
+  throw submitError
 } finally {
   taskLock?.release()
 }

@@ -49,8 +49,9 @@ function buildWellModels(spec: SlotSpec, props: SlotWellsProps, upstreamByEdge: 
     upstream: upstreamByEdge.get(occupant.edgeId),
     requiredEmpty: false,
   }));
+  // 同一槽位定义至多渲染 1 个空卡（占位与追加合一）：已绑显示素材卡，未满给 1 个空卡，绑满隐藏。
   const capacity = spec.max ?? occupants.length + 1;
-  const target = Math.max(capacity, spec.min, occupants.length);
+  const target = Math.max(Math.min(capacity, occupants.length + 1), Math.min(spec.min ?? 0, occupants.length + 1), occupants.length);
   while (models.length < target) {
     models.push({ spec, requiredEmpty: models.length < spec.min });
   }
@@ -241,7 +242,8 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
               state: record.state,
               reasonCode: record.reasonCode,
             }));
-            const needed = Math.max((spec.min ?? 1) - models.length, models.length < (spec.max ?? 1) ? 1 : 0);
+            // Same rule: at most one empty well per slot definition.
+            const needed = Math.min(1, Math.max((spec.min ?? 1) - models.length, models.length < (spec.max ?? 1) ? 1 : 0));
             const emptyWells = [];
             for (let i = 0; i < needed; i++) {
               emptyWells.push(
@@ -332,13 +334,21 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
 
     const models: WellModel[] = props.records.map(record => ({ spec: record.slot, occupant: record.occupant,
       upstream: upstreamByEdge.get(record.occupant.edgeId), requiredEmpty: false, state: record.state, reasonCode: record.reasonCode }));
-    const canAdd = layout.slots.some(spec => spec.type === 'text' && Boolean(spec.composition) || spec.max === null
+    // 同一槽位定义至多 1 个空卡：具名帧空卡覆盖各自定义；追加按钮只覆盖其余未满定义，
+    // 且不与已渲染的具名空卡重复。组合正文槽（composition）允许多来源，始终可追加。
+    const frameDefs = new Set(
+      layout.slots.filter(spec => spec.role === 'first_frame' || spec.role === 'last_frame').map(spec => spec.slot),
+    );
+    const unfilledDefs = layout.slots.filter(spec =>
+      spec.type === 'text' && Boolean(spec.composition) || spec.max === null
       || props.records!.filter(record => record.slot.slot === spec.slot && record.state !== 'inactive').length < spec.max);
     const frames = layout.slots.filter(spec => spec.role === 'first_frame' || spec.role === 'last_frame');
+    const canAdd = unfilledDefs.some(spec => !frameDefs.has(spec.slot));
     return <div className="wf-slot-wells wf-slot-wells--strip" data-testid="wf-slot-wells" data-preset={layout.preset}>
       {models.map(renderWell)}
       {frames.filter(spec => !models.some(model => model.spec.slot === spec.slot)).map(spec => <button key={spec.slot} type="button"
-        className="wf-slot-well wf-slot-well--empty nodrag" aria-label={t(spec.role === 'first_frame' ? 'input.first' : 'input.last')}
+        className="wf-slot-well wf-slot-well--empty nodrag" data-slot={spec.slot} data-slot-role={spec.role}
+        aria-label={t(spec.role === 'first_frame' ? 'input.first' : 'input.last')}
         onClick={() => onPickSlot(pickRequest(spec))}><Plus size={20} aria-hidden="true" /></button>)}
       {canAdd ? <button type="button" className="wf-slot-well wf-slot-well--append nodrag" title={t('input.add')} aria-label={t('input.add')}
         onClick={() => onPickSlot({ acceptedTypes: [...new Set(layout.slots.map(spec => spec.type))], max: null })}><Plus size={20} aria-hidden="true" /></button> : null}
@@ -375,8 +385,13 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
       (total, spec) => total + (props.bindings[spec.slot]?.length ?? 0),
       0,
     );
-    const addSpec = layout.slots.find((spec) => spec.max === null)
-      ?? layout.slots.find((spec) => (props.bindings[spec.slot]?.length ?? 0) < (spec.max ?? 0));
+    // The append well exists only for a definition that is bound at least to its
+    // minimum and still has capacity; unbound definitions already show their own
+    // required-empty well, so the append button never duplicates a slot's empty card.
+    const addSpec = layout.slots.find((spec) => {
+      const bound = props.bindings[spec.slot]?.length ?? 0;
+      return bound >= (spec.min ?? 0) && (spec.max === null || bound < spec.max);
+    });
     const showAdd = layout.addButton && addSpec
       && (addSpec.max === null || filled < layout.slots.reduce((total, spec) => total + (spec.max ?? Number.MAX_SAFE_INTEGER), 0));
     return (
