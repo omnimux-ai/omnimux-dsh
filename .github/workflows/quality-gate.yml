@@ -181,6 +181,12 @@ jobs:
       - name: Plugin unit suites (all packages)
         run: node scripts/run-workspace-tests.mjs
 
+      # The browser-extension vitest suite lives in a nested workspace package
+      # and does not emit TAP, so run-workspace-tests cannot judge it; it runs
+      # as its own step. Fails the gate on any red test or unhandled error.
+      - name: Browser extension vitest suite
+        run: corepack pnpm --filter dsh-browser-extension test
+
       - name: Plugin load check (Cordis runtime)
         run: node scripts/verify-plugin-load.mjs
 
