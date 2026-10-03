@@ -110,6 +110,9 @@ function slotGroups(operation) {
     if (found) {
       found.max = mergeMax(found.max, input.max);
       found.durationMax = firstNumber(found.durationMax, input.maxDurationSec, input.totalMaxDurationSec);
+      found.minDurationSec = firstNumber(found.minDurationSec, input.minDurationSec);
+      found.totalDurationMax = firstNumber(found.totalDurationMax, input.totalMaxDurationSec);
+      found.maxSizeMb = firstNumber(found.maxSizeMb, input.maxSizeMb);
       continue;
     }
     groups.push({
@@ -119,6 +122,9 @@ function slotGroups(operation) {
       role,
       max: finiteMax(input.max),
       durationMax: firstNumber(input.maxDurationSec, input.totalMaxDurationSec),
+      minDurationSec: firstNumber(input.minDurationSec),
+      totalDurationMax: firstNumber(input.totalMaxDurationSec),
+      maxSizeMb: firstNumber(input.maxSizeMb),
       allowedMimes: Array.isArray(input.allowedMimes) ? [...input.allowedMimes] : [],
     });
   }
@@ -442,8 +448,17 @@ export function inferMimeType(asset) {
   return '';
 }
 
-/** 这个文件能不能进这个槽。时长只在读得到时判断。 */
-export function rejectionOf(file, slot, durationSec) {
+/** 契约大小口径与提交校验一致：MiB。 */
+const BYTES_PER_MB = 1024 * 1024;
+
+/**
+ * 这个文件能不能进这个槽。大小、时长只在读得到时判断，读不到交给提交校验。
+ * @param {object} file
+ * @param {object} slot
+ * @param {number|null} [durationSec]
+ * @param {{ existing?: Array<object> }} [context] 同卡槽已入槽素材，用于累计总时长
+ */
+export function rejectionOf(file, slot, durationSec, context = {}) {
   if (!file || !slot) return '请选择文件';
   let fileType = file.type || '';
   if (!fileType || fileType.endsWith('/')) {
@@ -467,8 +482,62 @@ export function rejectionOf(file, slot, durationSec) {
       return '当前文件格式不符合要求';
     }
   }
+  const mediaName = slot.type === 'audio' ? '音频' : '视频';
+  const sizeBytes = sizeOf(file);
+  if (Number.isFinite(slot.maxSizeMb) && Number.isFinite(sizeBytes) && sizeBytes > slot.maxSizeMb * BYTES_PER_MB) {
+    return `文件不能超过 ${formatSeconds(slot.maxSizeMb)}MB`;
+  }
   if (slot.durationMax != null && Number.isFinite(durationSec) && durationSec > slot.durationMax) {
-    return `${slot.type === 'audio' ? '音频' : '视频'}时长不能超过 ${formatSeconds(slot.durationMax)} 秒`;
+    return `${mediaName}时长不能超过 ${formatSeconds(slot.durationMax)} 秒`;
+  }
+  if (Number.isFinite(slot.minDurationSec) && Number.isFinite(durationSec) && durationSec < slot.minDurationSec) {
+    return `${mediaName}时长不能少于 ${formatSeconds(slot.minDurationSec)} 秒`;
+  }
+  if (Number.isFinite(slot.totalDurationMax) && Number.isFinite(durationSec)) {
+    const used = (context.existing ?? []).reduce((sum, item) => {
+      const value = durationOf(item);
+      return Number.isFinite(value) ? sum + value : sum;
+    }, 0);
+    if (used + durationSec > slot.totalDurationMax) {
+      return `${mediaName}总时长不能超过 ${formatSeconds(slot.totalDurationMax)} 秒`;
+    }
+  }
+  return '';
+}
+
+/** 素材的字节数：本地文件取 File.size，资产库素材取元数据。读不到返回 NaN。 */
+export function sizeOf(item) {
+  const raw = item?.size ?? item?.sizeBytes ?? item?.file?.size ?? item?.raw?.size ?? item?.raw?.sizeBytes;
+  const value = typeof raw === 'string' ? Number(raw) : raw;
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : Number.NaN;
+}
+
+/** 已入槽素材的时长（秒）。读不到返回 NaN。 */
+export function durationOf(item) {
+  const raw = item?.durationSec ?? item?.duration ?? item?.metadata?.durationSec ?? item?.metadata?.duration;
+  const value = typeof raw === 'string' ? Number(raw) : raw;
+  return typeof value === 'number' && Number.isFinite(value) ? value : Number.NaN;
+}
+
+/**
+ * 组合规则锁：契约 inputGroups 中 min≥1 的组还没有任何素材时，组外卡槽不可单独添加。
+ * 例：MiniMax H3 参考模式「音频不能单独输入」——无图/视频时锁音频卡槽。
+ * @param {object|null} operation 当前生效的契约操作
+ * @param {object} slot 待判断卡槽（slotPlan 产物）
+ * @param {Array<object>} slots 当前全部卡槽
+ * @param {(slot: object) => Array<object>} itemsOf 读取某卡槽已入槽素材
+ * @returns {string} 锁定时返回契约提示，否则空串
+ */
+export function groupLockOf(operation, slot, slots, itemsOf) {
+  const groups = Array.isArray(operation?.inputGroups) ? operation.inputGroups : [];
+  if (!slot || groups.length === 0) return '';
+  if (groups.some((group) => (group.slots ?? []).includes(slot.slot))) return '';
+  for (const group of groups) {
+    const min = Number.isFinite(group.min) ? group.min : 0;
+    if (min < 1) continue;
+    const members = (slots ?? []).filter((candidate) => (group.slots ?? []).includes(candidate.slot));
+    const count = members.reduce((sum, member) => sum + (itemsOf(member)?.length ?? 0), 0);
+    if (count < min) return group.hint || '请先添加必需的素材';
   }
   return '';
 }

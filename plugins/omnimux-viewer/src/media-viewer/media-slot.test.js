@@ -13,6 +13,7 @@ import {
   IMAGE_MODE_OPTIONS,
   VIDEO_MODE_OPTIONS,
   pruneAssetsOnModeSwitch,
+  groupLockOf,
 } from './media-slot.js';
 
 const imageModel = {
@@ -698,5 +699,66 @@ describe('素材卡槽槽位与自适应推导', () => {
       assert.equal(serialized.length, 1);
       assert.equal(serialized[0].slot, 'reference_image', '必须自愈绑定为当前操作定义的真实 slot: reference_image');
     });
+  });
+});
+
+describe('选素材入槽即按契约拦截（#2987）', () => {
+  const h3 = {
+    id: 'minimax-h3',
+    operations: [
+      {
+        id: 'video_multi_ref',
+        output: { type: 'video' },
+        inputs: [
+          { slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 },
+          { slot: 'reference_images', type: 'image', role: 'reference', max: 9, allowedMimes: ['image/png', 'image/jpeg'], maxSizeMb: 30 },
+          { slot: 'reference_videos', type: 'video', role: 'reference', max: 3, allowedMimes: ['video/mp4'], maxSizeMb: 50, minDurationSec: 2, maxDurationSec: 15, totalMaxDurationSec: 15 },
+          { slot: 'reference_audios', type: 'audio', role: 'reference', max: 3, allowedMimes: ['audio/mp3', 'audio/wav'], maxSizeMb: 15, minDurationSec: 2, maxDurationSec: 15, totalMaxDurationSec: 15 },
+        ],
+        inputGroups: [
+          { slots: ['reference_images', 'reference_videos'], min: 1, hint: 'MiniMax H3 参考模式至少需要一张图片或一个视频；音频不能单独输入' },
+        ],
+      },
+    ],
+  };
+  const plan = slotPlan(h3, 'video', 'video_multi_ref');
+  const [imageSlot, videoSlot, audioSlot] = plan;
+  const MB = 1024 * 1024;
+
+  it('卡槽计划携带契约的大小、最短时长与总时长', () => {
+    assert.equal(imageSlot.maxSizeMb, 30);
+    assert.equal(videoSlot.minDurationSec, 2);
+    assert.equal(videoSlot.totalDurationMax, 15);
+  });
+
+  it('超过 maxSizeMb 入槽即拒绝，等于上限放行', () => {
+    assert.match(rejectionOf({ type: 'image/png', size: 31 * MB }, imageSlot), /30MB/);
+    assert.equal(rejectionOf({ type: 'image/png', size: 30 * MB }, imageSlot), '');
+    assert.equal(rejectionOf({ type: 'image/png' }, imageSlot), '', '读不到大小时不拦，交给提交校验');
+  });
+
+  it('短于 minDurationSec 入槽即拒绝', () => {
+    assert.match(rejectionOf({ type: 'video/mp4' }, videoSlot, 1.5), /不能少于 2 秒/);
+    assert.equal(rejectionOf({ type: 'video/mp4' }, videoSlot, 2), '');
+  });
+
+  it('同卡槽累计时长超过 totalMaxDurationSec 入槽即拒绝', () => {
+    const existing = [{ durationSec: 6 }, { durationSec: 6 }];
+    assert.match(rejectionOf({ type: 'video/mp4' }, videoSlot, 4, { existing }), /总时长不能超过 15 秒/);
+    assert.equal(rejectionOf({ type: 'video/mp4' }, videoSlot, 3, { existing }), '');
+  });
+
+  it('组合规则：组内无图/视频时音频卡槽被锁并给出契约提示', () => {
+    const op = h3.operations[0];
+    const bucketsOf = (map) => (slot) => map[slot.slot] ?? [];
+    assert.equal(groupLockOf(op, audioSlot, plan, bucketsOf({})), op.inputGroups[0].hint);
+    assert.equal(groupLockOf(op, audioSlot, plan, bucketsOf({ reference_images: [{}] })), '');
+    assert.equal(groupLockOf(op, imageSlot, plan, bucketsOf({})), '', '组内卡槽自身不锁');
+    assert.equal(groupLockOf(null, audioSlot, plan, bucketsOf({})), '');
+  });
+
+  it('组合规则：Seedance 2.5 这类音频在组内的模型不锁音频', () => {
+    const op = { inputGroups: [{ slots: ['reference_images', 'reference_videos', 'reference_audios'], min: 1 }] };
+    assert.equal(groupLockOf(op, audioSlot, plan, () => []), '');
   });
 });

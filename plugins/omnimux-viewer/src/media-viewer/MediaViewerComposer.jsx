@@ -17,6 +17,8 @@ import {
   pruneAssetsOnModeSwitch,
   rejectionOf,
   slotPlan,
+  groupLockOf,
+  sizeOf,
 } from './media-slot.js';
 import { getGlobalMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
 
@@ -309,6 +311,17 @@ export function MediaViewerComposer({
   const bucketKey = useCallback(
     (slot) => makeBucketKey(mode, model?.id, slot?.key),
     [mode, model?.id]
+  );
+
+  // 契约组合规则（inputGroups）：组内必需素材未放入时，组外卡槽不可单独添加。
+  const slotOperation = useMemo(
+    () => activeOperation(model, mode, currentOperationId),
+    [model, mode, currentOperationId]
+  );
+  const slotLockReason = useCallback(
+    (slot, sourceBuckets = bucketsRef.current, keyOf = bucketKey, opSlots = slots, op = slotOperation) =>
+      groupLockOf(op, slot, opSlots, (member) => (sourceBuckets || {})[keyOf(member)] || []),
+    [bucketKey, slots, slotOperation]
   );
 
   const handleClosePicker = useCallback(() => {
@@ -720,14 +733,21 @@ export function MediaViewerComposer({
       }
     }
 
-    const reason = rejectionOf(pseudoFile, activeSlot, duration);
+    const key = bucketKey(activeSlot);
+    const currentList = bucketsRef.current[key] || [];
+
+    const lock = slotLockReason(activeSlot);
+    if (lock) {
+      setNotice(lock);
+      return false;
+    }
+
+    const sizedFile = Number.isFinite(sizeOf(asset)) ? { ...pseudoFile, size: sizeOf(asset) } : pseudoFile;
+    const reason = rejectionOf(sizedFile, activeSlot, duration, { existing: currentList });
     if (reason) {
       setNotice(reason);
       return false;
     }
-
-    const key = bucketKey(activeSlot);
-    const currentList = bucketsRef.current[key] || [];
     const room = activeSlot.max == null ? Infinity : activeSlot.max;
     if (currentList.length >= room) {
       setNotice(room === Infinity ? '卡槽已满，无法再添加素材' : `最多添加 ${room} 个`);
@@ -741,12 +761,18 @@ export function MediaViewerComposer({
       const isLocalUpload = Boolean(asset.file) && !asset.assetId && String(asset.url || '').startsWith('blob:');
       return {
         ...prev,
-        [key]: [...list, { ...asset, id: itemId, isLocalUpload, markBadge: activeSlot.label || undefined }],
+        [key]: [...list, {
+          ...asset,
+          id: itemId,
+          isLocalUpload,
+          markBadge: activeSlot.label || undefined,
+          ...(Number.isFinite(duration) ? { durationSec: duration } : {}),
+        }],
       };
     });
     setNotice(`素材 [${asset.title || asset.name}] 已入槽`);
     return true;
-  }, [disabled, slots, targetSlot, bucketKey, setNotice]);
+  }, [disabled, slots, targetSlot, bucketKey, setNotice, slotLockReason]);
 
   // 粘贴图片/视频/音频进素材卡槽：优先当前操作能装的卡槽；
   // 装不下时按 deriveAdaptiveOperation 推导适配操作（单图→编辑、多图→参考）后重试。
@@ -767,15 +793,22 @@ export function MediaViewerComposer({
       : slotPlan(model, intendedMode).filter((slot) =>
           mediaFiles.some((f) => (f.type || '').split('/')[0] === slot.type));
     const effectiveMode = effectiveSlots.length > 0 ? intendedMode : mode;
-    const tryAdd = async (slot, file, existing) => {
+    const tryAdd = async (slot, file, existing, op = null, opSlots = null) => {
       const key = effectiveBucketKey(slot);
       const list = existing[key] || [];
+      const lock = groupLockOf(
+        op || activeOperation(model, effectiveMode, effectiveMode === mode ? currentOperationId : undefined),
+        slot,
+        opSlots || effectiveSlots,
+        (member) => existing[effectiveBucketKey(member)] || [],
+      );
+      if (lock) return lock;
       const room = slot.max == null ? Infinity : slot.max;
       if (list.length >= room) return 'full';
       const needsDuration = slot.durationMax != null && (slot.type === 'video' || slot.type === 'audio');
       const duration = needsDuration ? await readDuration(file) : null;
       if (needsDuration && !Number.isFinite(duration)) return '这个文件读不出来';
-      const reason = rejectionOf(file, slot, duration);
+      const reason = rejectionOf(file, slot, duration, { existing: list });
       if (reason) return reason;
       existing[key] = [...list, {
         id: `paste-${Date.now()}-${list.length}-${file.name || 'clip'}`,
@@ -784,6 +817,7 @@ export function MediaViewerComposer({
         url: URL.createObjectURL(file),
         file,
         isLocalUpload: true,
+        ...(Number.isFinite(duration) ? { durationSec: duration } : {}),
       }];
       return 'ok';
     };
@@ -794,7 +828,10 @@ export function MediaViewerComposer({
     const accepted = [];
     const rejected = [];
 
-    for (const file of mediaFiles) {
+    // 组合规则下音频常依赖图/视频先入槽：同批粘贴时音频排在最后。
+    const orderedFiles = [...mediaFiles].sort((a, b) =>
+      Number(/^audio\//.test(a.type || '')) - Number(/^audio\//.test(b.type || '')));
+    for (const file of orderedFiles) {
       const mediaType = (file.type || '').split('/')[0];
       // 1) 当前（目标）操作 slots 里按类型+容量找首个可用卡槽
       let target = (effectiveSlots || []).find((s) => s.type === mediaType && ((nextBuckets[effectiveBucketKey(s)] || []).length < (s.max == null ? Infinity : s.max)));
@@ -820,10 +857,11 @@ export function MediaViewerComposer({
         let placed = false;
         for (const op of candidateOps) {
           if (placed) break;
-          const opSlots = slotPlan(model, effectiveMode, op.id).filter((s) => s.type === mediaType);
+          const allOpSlots = slotPlan(model, effectiveMode, op.id);
+          const opSlots = allOpSlots.filter((s) => s.type === mediaType);
           for (const slot of opSlots) {
             if (placed) break;
-            const outcome = await tryAdd(slot, file, nextBuckets);
+            const outcome = await tryAdd(slot, file, nextBuckets, op, allOpSlots);
             if (outcome !== 'ok') continue;
             accepted.push(file);
             placed = true;
@@ -851,9 +889,10 @@ export function MediaViewerComposer({
       // 满载识别：首轮已有 'full'，或所有可用卡槽都已达到上限（不再误报“不支持”）
       const slotFull = effectiveSlots && effectiveSlots.length > 0 && effectiveSlots.every((s) => ((nextBuckets[effectiveBucketKey(s)] || []).length >= (s.max == null ? Infinity : s.max)));
       const anyFull = rejected.some((r) => r.reason === 'full') || slotFull;
-      setNotice(anyFull ? '卡槽已满，无法再添加素材' : '当前生成方式不支持粘贴该类型素材');
+      const firstReason = rejected.find((r) => typeof r.reason === 'string' && r.reason !== 'full' && r.reason !== 'no-slot')?.reason;
+      setNotice(anyFull ? '卡槽已满，无法再添加素材' : (firstReason || '当前生成方式不支持粘贴该类型素材'));
     }
-  }, [disabled, model, slots, mode, videoGenMode, config, bucketKey, setVideoGenMode, setMode, setNotice]);
+  }, [disabled, model, slots, mode, videoGenMode, currentOperationId, config, bucketKey, setVideoGenMode, setMode, setNotice]);
 
   // 按内容行数变高，最多露出 10 行；再多的字在框里滚动。
   useLayoutEffect(() => {
@@ -1153,6 +1192,7 @@ export function MediaViewerComposer({
                   }}
                   onReject={setNotice}
                   onOpenReferencePicker={handleOpenPicker}
+                  lockReason={slotLockReason(slot, buckets)}
                 />
               ))}
             </div>

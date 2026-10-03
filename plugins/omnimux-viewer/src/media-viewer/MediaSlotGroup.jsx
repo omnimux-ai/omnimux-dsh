@@ -79,6 +79,7 @@ export function MediaSlotGroup({
   onReject,
   disabled = false,
   onOpenReferencePicker,
+  lockReason = '',
 }) {
   const [open, setOpen] = useState(false);
   const inputRef = useRef(null);
@@ -104,7 +105,7 @@ export function MediaSlotGroup({
         onReject?.('这个文件读不出来');
         continue;
       }
-      const reason = rejectionOf(file, slot, duration);
+      const reason = rejectionOf(file, slot, duration, { existing: next });
       if (reason) {
         onReject?.(reason);
         continue;
@@ -116,6 +117,7 @@ export function MediaSlotGroup({
         url: URL.createObjectURL(file),
         file,
         isLocalUpload: true,
+        ...(Number.isFinite(duration) ? { durationSec: duration } : {}),
       });
     }
     if (next.length !== items.length) onChange(next);
@@ -181,11 +183,16 @@ export function MediaSlotGroup({
         {canAdd ? (
           <button // exempt-ui01: 40×56px 按钮边框线卡槽，类名避免含 add 防宿主污染
             type="button"
-            className="omx-slot-btn"
+            className={`omx-slot-btn${lockReason ? ' is-locked' : ''}`}
             style={{ '--slot-shift': `${adderAt}px` }}
             aria-label={addLabel}
-            title={addLabel}
+            aria-disabled={lockReason ? 'true' : undefined}
+            title={lockReason || addLabel}
             onClick={() => {
+              if (lockReason) {
+                onReject?.(lockReason);
+                return;
+              }
               if (onOpenReferencePicker) {
                 onOpenReferencePicker(slot);
               } else {
