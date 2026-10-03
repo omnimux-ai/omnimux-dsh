@@ -1,0 +1,15 @@
+[
+ {
+  "toast": {
+   "message": "GET request failed (HTTP 400)",
+   "type": "error"
+  }
+ },
+ {
+  "u": "/omnimux/api/media/generate",
+  "s": 500,
+  "ms": 1278,
+  "body": "{\"prompt\":\"一只橘猫坐在窗台上，极简风格\",\"kind\":\"image\",\"operation\":\"text_to_image\",\"model\":\"gpt-image-2.5\",\"channel\":\"standard\",\"aspectRatio\":\"1:1\",\"resolution\":\"1K\",\"sessionId\":\"session-121e4104-a1b9-4e2d-96d2-e0b76b884c07\",\"taskId\":\"1791013715834_46q71:0\",\"references\":[],\"annotations\":[]}",
+  "resp": "{\"ok\":false,\"error\":\"GET request failed (HTTP 400)\"}"
+ }
+]
