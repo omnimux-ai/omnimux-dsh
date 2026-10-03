@@ -219,6 +219,10 @@ export function CloudAssetCard(props) {
   const [hovering, setHovering] = useState(false)
   const [added, setAdded] = useState(false)
   const addedTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
+  // 用户显式接管标记：点击/键盘 toggle 之后，同一次悬停内 hover 副作用把
+  // 播放权交还给用户——不得把显式暂停又翻回播放，也不得把显式启动的播放
+  // 在指针移出时强行停掉。指针再入再出时重置，hover 试听重新接管。
+  const userControlledRef = useRef(false)
 
   useEffect(() => { setBroken(false) }, [asset.id])
   useEffect(() => () => {
@@ -230,7 +234,10 @@ export function CloudAssetCard(props) {
   const canPlay = asset?.mediaType === 'audio' && asset?.hasMedia === true && asset?.playable !== false
   const showArt = asset?.hasCover === true || (asset?.hasMedia === true && asset?.mediaType !== 'audio')
   const handleBroken = useCallback(() => { setBroken(true) }, [])
-  const togglePlay = useCallback(() => { onTogglePlay(asset) }, [asset, onTogglePlay])
+  const togglePlay = useCallback(() => {
+    userControlledRef.current = true
+    onTogglePlay(asset)
+  }, [asset, onTogglePlay])
   const openPreview = useCallback(() => { onPreview?.(asset) }, [asset, onPreview])
 
   const handleAdd = (event) => {
@@ -252,7 +259,7 @@ export function CloudAssetCard(props) {
 
   // 悬停直接播放试听（音频/角色卡）
   useEffect(() => {
-    if (!canPlay) return
+    if (!canPlay || userControlledRef.current) return
     if (hovering && !playing) {
       onTogglePlay(asset)
     } else if (!hovering && playing) {
@@ -281,8 +288,14 @@ export function CloudAssetCard(props) {
       data-media-type={asset.mediaType}
       data-theme={theme}
       data-aspect={aspect}
-      onMouseEnter={() => { setHovering(true) }}
-      onMouseLeave={() => { setHovering(false) }}
+      onMouseEnter={() => {
+      userControlledRef.current = false
+      setHovering(true)
+    }}
+      onMouseLeave={() => {
+      userControlledRef.current = false
+      setHovering(false)
+    }}
       onClick={openPreview}
     >
       {kind === 'text' ? null : (

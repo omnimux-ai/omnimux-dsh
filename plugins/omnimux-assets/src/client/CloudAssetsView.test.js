@@ -298,8 +298,8 @@ describe('Cloud avatar card paints the portrait under its play control', () => {
 describe('Cloud video tile keeps its own frame and plays on hover', () => {
   it('binds the pointer surface on the card and hands it down to the tile', () => {
     assert.match(viewJsx, /const \[hovering, setHovering\] = useState\(false\)/)
-    assert.match(viewJsx, /onMouseEnter=\{\(\) => \{ setHovering\(true\) \}\}/)
-    assert.match(viewJsx, /onMouseLeave=\{\(\) => \{ setHovering\(false\) \}\}/)
+    assert.match(viewJsx, /onMouseEnter=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(true\)\n    \}\}/)
+    assert.match(viewJsx, /onMouseLeave=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(false\)\n    \}\}/)
     assert.match(viewJsx, /\{showArt \? <CloudTileMedia asset=\{asset\} broken=\{broken\} onBroken=\{handleBroken\} hovering=\{hovering\} \/> : null\}/)
     // The one effect that turns the pointer state into playback.
     assert.match(viewJsx, /if \(hovering\) \{\n      void element\.play\(\)\.catch/)
@@ -380,6 +380,16 @@ describe('Cloud voice card plays from its colour plate', () => {
       const rule = ruleBody(ASSETS_CSS, `.omnimux-assets-cloud-card--audio[data-theme="${theme}"]`)
       assert.match(rule, /background-image: linear-gradient/, `${theme} needs its own wash`)
     }
+  })
+
+  it('lets an explicit pause own the card until the pointer leaves (#2989)', () => {
+    // 点击/键盘 toggle 是用户显式接管：同一次悬停内 hover 副作用不得把
+    // 暂停又翻回播放，也不得把用户显式启动的播放在移出时强行停掉。
+    assert.match(viewJsx, /const userControlledRef = useRef\(false\)/)
+    assert.match(viewJsx, /const togglePlay = useCallback\(\(\) => \{\n    userControlledRef\.current = true\n    onTogglePlay\(asset\)\n  \}/)
+    assert.match(viewJsx, /onMouseEnter=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(true\)\n    \}\}/)
+    assert.match(viewJsx, /onMouseLeave=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(false\)\n    \}\}/)
+    assert.match(viewJsx, /if \(!canPlay \|\| userControlledRef\.current\) return/)
   })
 
   it('keeps the voice description to one line and no labelled bottom bar', () => {
