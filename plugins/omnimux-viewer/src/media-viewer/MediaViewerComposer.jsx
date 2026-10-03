@@ -19,6 +19,7 @@ import {
   slotPlan,
   groupLockOf,
   sizeOf,
+  visibleSlots,
 } from './media-slot.js';
 import { getGlobalMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
 
@@ -1166,7 +1167,7 @@ export function MediaViewerComposer({
             slots.some((s) => (buckets[bucketKey(s)] ?? []).length > 0)
           ) ? (
             <div className="omx-slot-row">
-              {slots.map((slot) => (
+              {visibleSlots(slots, slotOperation, (member) => (buckets || {})[bucketKey(member)] || []).map((slot) => (
                 <MediaSlotGroup
                   key={bucketKey(slot)}
                   slot={slot}

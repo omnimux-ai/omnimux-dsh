@@ -14,6 +14,7 @@ import {
   VIDEO_MODE_OPTIONS,
   pruneAssetsOnModeSwitch,
   groupLockOf,
+  visibleSlots,
 } from './media-slot.js';
 
 const imageModel = {
@@ -760,5 +761,41 @@ describe('选素材入槽即按契约拦截（#2987）', () => {
   it('组合规则：Seedance 2.5 这类音频在组内的模型不锁音频', () => {
     const op = { inputGroups: [{ slots: ['reference_images', 'reference_videos', 'reference_audios'], min: 1 }] };
     assert.equal(groupLockOf(op, audioSlot, plan, () => []), '');
+  });
+});
+
+describe('锁定的空卡槽直接不显示（#2997）', () => {
+  const h3 = {
+    id: 'minimax-h3',
+    operations: [
+      {
+        id: 'video_multi_ref',
+        output: { type: 'video' },
+        inputs: [
+          { slot: 'prompt', type: 'text', role: 'prompt', min: 1, max: 1 },
+          { slot: 'reference_images', type: 'image', role: 'reference', max: 9 },
+          { slot: 'reference_videos', type: 'video', role: 'reference', max: 3 },
+          { slot: 'reference_audios', type: 'audio', role: 'reference', max: 3 },
+        ],
+        inputGroups: [
+          { slots: ['reference_images', 'reference_videos'], min: 1, hint: 'MiniMax H3 参考模式至少需要一张图片或一个视频；音频不能单独输入' },
+        ],
+      },
+    ],
+  };
+  const plan = slotPlan(h3, 'video', 'video_multi_ref');
+  const op = h3.operations[0];
+  const audioSlot = plan[2];
+
+  it('空态下音频槽被锁 → visibleSlots 不含它；放图后出现', () => {
+    const empty = visibleSlots(plan, op, () => []);
+    assert.deepEqual(empty.map((s) => s.type), ['image', 'video'], '组锁定的空槽必须隐藏');
+    const withImage = visibleSlots(plan, op, (s) => (s.slot === 'reference_images' ? [{}] : []));
+    assert.deepEqual(withImage.map((s) => s.type), ['image', 'video', 'audio'], '组满足后音频槽恢复显示');
+  });
+
+  it('锁中但有素材的卡槽不隐藏（避免丢素材）', () => {
+    const withAudio = visibleSlots(plan, op, (s) => (s.slot === 'reference_audios' ? [{}] : []));
+    assert.deepEqual(withAudio.map((s) => s.type), ['image', 'video', 'audio'], '有素材的被锁槽仍显示');
   });
 });
