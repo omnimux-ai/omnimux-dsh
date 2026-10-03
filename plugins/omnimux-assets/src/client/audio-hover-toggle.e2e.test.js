@@ -141,5 +141,25 @@ test('CloudAssetCard audio: explicit click owns the card until pointer leaves (#
   await fire(card, 'mouseout')
   assert.equal(calls.length, 2, 'explicit pause survives mouseout untouched')
 
+  // 5) #3002：再次进入（hover 自动试听）→ 点击暂停 → 再点击播放 → 移出。
+  //    用户显式启动的播放归用户所有，移出时不得被 hover 副作用停止。
+  calls.length = 0
+  playing = false
+  await render()
+  await fire(card, 'mouseover')
+  assert.equal(calls.length, 1, 'fresh hover auto-starts again')
+  playing = true
+  await render()
+  await fire(thumb, 'click')
+  playing = false
+  await render()
+  assert.equal(calls.length, 2, 'explicit pause')
+  await fire(thumb, 'click')
+  playing = true
+  await render()
+  assert.equal(calls.length, 3, 'explicit resume')
+  await fire(card, 'mouseout')
+  assert.equal(calls.length, 3, 'user-started playback must survive mouseout (#3002)')
+
   await act(async () => { root.unmount() })
 })
