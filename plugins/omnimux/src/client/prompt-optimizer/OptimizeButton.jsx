@@ -52,10 +52,34 @@ function resolveCopy(t, key, fallback) {
   return typeof resolved === 'string' && resolved && resolved !== key ? resolved : fallback
 }
 
+/**
+ * 宿主草稿订阅缺位时的兜底：input.* 槽位没注入 useInput 时，
+ * `readDraft()` 只是挂载瞬间的快照——之后打字不再触发组件重渲染，
+ * 空草稿判定永久为真，按钮看上去永远不可点。这里订阅编辑器
+ * input 事件与草稿回写事件，让置灰判定跟随真实输入框。
+ */
+function useDomDraft() {
+  const [draft, setDraft] = useState(() => readDraft())
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined
+    const refresh = () => setDraft(readDraft())
+    document.addEventListener('input', refresh, true)
+    document.addEventListener('omnimux:composer:set-draft', refresh, true)
+    refresh()
+    return () => {
+      document.removeEventListener('input', refresh, true)
+      document.removeEventListener('omnimux:composer:set-draft', refresh, true)
+    }
+  }, [])
+  return draft
+}
+
 export function OptimizeButton(props) {
   const { t } = props || {}
-  // host 原生草稿订阅（input.* 槽位注入）；缺省时退回 DOM/桥读快照。
-  const input = typeof props?.useInput === 'function' ? props.useInput((value) => value) : null
+  // host 原生草稿订阅（input.* 槽位注入）；缺省时退回 DOM 草稿订阅。
+  const hasInputHook = typeof props?.useInput === 'function'
+  const input = hasInputHook ? props.useInput((value) => value) : null
+  const domDraft = useDomDraft()
   const configured = useSyncExternalStore(
     subscribePromptOptimizerConfigured,
     getPromptOptimizerConfigured,
@@ -66,7 +90,7 @@ export function OptimizeButton(props) {
   useEffect(() => acquirePromptOptimizerStyles(), [])
   const { visible: noticeVisible, notify: notifyFailed, dismiss: dismissNotice } = useQuickWriteNotice()
 
-  const draft = typeof input?.draft === 'string' ? input.draft : readDraft()
+  const draft = typeof input?.draft === 'string' ? input.draft : domDraft
   const emptyDraft = !draft || draft.trim() === ''
   const disabled = running || emptyDraft || !configured
 
@@ -89,18 +113,22 @@ export function OptimizeButton(props) {
 
   return (
     <>
-      <button /* exempt-ui01: conversation.input.right 列表槽位只渲染一枚图标按钮 */
-        type="button"
-        className="omx-optimize-btn"
-        aria-label={resolveCopy(t, 'promptOptimize.tooltip', '优化提示词')}
-        title={title}
-        disabled={disabled}
-        aria-busy={running || undefined}
-        data-state={running ? 'running' : 'idle'}
-        onClick={handleClick}
-      >
-        {running ? <SpinnerIcon /> : <SparklesIcon />}
-      </button>
+      {/* disabled 按钮不派发任何事件，title 必须放在外层 span 上，
+          否则「配置 API Key 后可用」在悬停时永远不可见。 */}
+      <span className="omx-optimize-seat" title={title}>
+        <button /* exempt-ui01: conversation.input.right 列表槽位只渲染一枚图标按钮 */
+          type="button"
+          className="omx-optimize-btn"
+          aria-label={resolveCopy(t, 'promptOptimize.tooltip', '优化提示词')}
+          title={title}
+          disabled={disabled}
+          aria-busy={running || undefined}
+          data-state={running ? 'running' : 'idle'}
+          onClick={handleClick}
+        >
+          {running ? <SpinnerIcon /> : <SparklesIcon />}
+        </button>
+      </span>
       {noticeVisible && typeof document !== 'undefined' && createPortal(
         <div className="omx-optimize-notice-float">
           <QuickWriteNotice visible={noticeVisible} t={t}

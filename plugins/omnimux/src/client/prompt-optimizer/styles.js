@@ -13,6 +13,12 @@
 export const PROMPT_OPTIMIZER_STYLE_ID = 'omnimux-prompt-optimizer-style'
 
 export const PROMPT_OPTIMIZER_CSS = `
+/* 包裹层只承担悬停提示：disabled 按钮不派发事件，title 挂在外层才可见。 */
+.omx-optimize-seat {
+  display: inline-flex;
+  flex: none;
+}
+
 .omx-optimize-btn {
   box-sizing: border-box;
   display: inline-flex;
