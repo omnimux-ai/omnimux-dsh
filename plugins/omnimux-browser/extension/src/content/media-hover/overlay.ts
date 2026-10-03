@@ -23,7 +23,14 @@ import { MediaCapsule } from './capsule.ts'
 import { CardRegionProbe, boxContains } from './card-region.ts'
 import { hoverCopy, type HoverCopy } from './copy.ts'
 import { MediaDetector } from './detector.ts'
-import { CAPSULE_SPEC, OVERLAY_Z, TIMING, computeCapsuleGeometry, type CapsuleGeometry } from './messages.ts'
+import {
+  CAPSULE_SPEC,
+  MEDIA_OVERLAY_HOST_ID,
+  OVERLAY_Z,
+  TIMING,
+  computeCapsuleGeometry,
+  type CapsuleGeometry,
+} from './messages.ts'
 import { OVERLAY_STYLES } from './styles.ts'
 import { MediaTooltip, readViewportBox } from './tooltip.ts'
 import { UNMEASURED_CONTROL, VideoAnchorProbe, resolveCapsuleAnchor } from './video-anchor.ts'
@@ -31,7 +38,7 @@ import { FEATURE_FLAG, readFlag, subscribeFlag } from '../../feature-flags.ts'
 import type { ActionOutcome, AnchorRect, HoverCandidate, HoveredMedia, MediaActionKind, OverlayState } from './types.ts'
 
 /** Id of the host element; also how a duplicate injection is detected. */
-export const MEDIA_OVERLAY_HOST_ID = 'omnimux-media-hover-root'
+export { MEDIA_OVERLAY_HOST_ID }
 
 /** Icon slots that own a tooltip. */
 const TOOLTIP_ACTIONS: readonly MediaActionKind[] = ['inspiration', 'copy', 'attach']
@@ -704,27 +711,42 @@ export class MediaOverlay {
     }
 
     const box = capsule.element.getBoundingClientRect()
-    // A video's bottom-left corner belongs to the player, so the pill is pushed
-    // clear of the control cluster instead of being drawn over the play button.
+    // A video's bottom-left corner belongs to the player's play control, so a
+    // video pill hugs the top-right corner instead.
     const policy = resolveCapsuleAnchor(
       rect,
       payload.type,
       payload.type === 'video' ? this.videoProbe.probe(element, rect) : UNMEASURED_CONTROL,
     )
     // Both stages are measured as the expanded row. The smaller circle is drawn
-    // inside that footprint, so opening stage two grows right and downward into
+    // inside that footprint at its pinned edge, so opening stage two grows into
     // space the geometry already reserved and can never cross the viewport edge.
+    const reserved = Math.max(box.width, CAPSULE_SPEC.width)
+    // A right-pinned pill is placed with CSS `right`, which is measured against
+    // the layout viewport (no scrollbar), so its geometry is clamped against
+    // that same width; `innerWidth` includes the scrollbar and would let the
+    // pill run past the visible edge.
+    const layoutWidth = policy.corner === 'top-right'
+      ? (this.doc.documentElement?.clientWidth || viewport.width)
+      : viewport.width
     const geometry = computeCapsuleGeometry(
       rect,
       {
-        width: Math.max(box.width, CAPSULE_SPEC.width),
+        width: reserved,
         height: Math.max(box.height, CAPSULE_SPEC.height),
       },
-      viewport.width,
+      layoutWidth,
       viewport.height,
       policy,
     )
-    capsule.element.style.left = `${Math.round(geometry.left)}px`
+    if (geometry.edge === 'right') {
+      // Pinned by its right edge, the pill opens leftwards out of the corner.
+      capsule.element.style.left = 'auto'
+      capsule.element.style.right = `${Math.round(layoutWidth - (geometry.left + reserved))}px`
+    } else {
+      capsule.element.style.right = ''
+      capsule.element.style.left = `${Math.round(geometry.left)}px`
+    }
     capsule.element.style.top = `${Math.round(geometry.top)}px`
 
     const icon = this.activeIcon

@@ -2,12 +2,11 @@
 /**
  * Video / image anchor differentiation.
  *
- * The user requirement is literal: the video capsule must sit *just to the right
- * of the play button*, on the play button's own row. A video's bottom-left corner
- * belongs to the player, so these cases pin the left inset into the required
- * 48-96px band, the bottom inset into 6-12px, the collapsed circle that the
- * vertical centring is computed against, and the fact that an image keeps the
- * placement it has always had.
+ * A video's bottom-left corner belongs to the player's play control, so the
+ * video capsule lives in the top-right corner instead: these cases pin that
+ * corner, its 14px insets, the bounded step left of a measured top-right
+ * control, the right-edge pinning that makes stage two open leftwards, and the
+ * fact that an image keeps the placement it has always had.
  */
 import { describe, expect, it } from 'vitest'
 import { CAPSULE_SPEC, IMAGE_ANCHOR_POLICY, VIDEO_ANCHOR_SPEC, computeCapsuleGeometry } from '../src/content/media-hover/messages.ts'
@@ -48,131 +47,42 @@ function appendControl(left: number, top: number, width: number, height: number,
 describe('video anchor policy', () => {
   const video = rect(0, 0, 640, 360)
 
-  it('clears the play button by default', () => {
+  it('anchors the video pill to the top-right corner by default', () => {
     const policy = resolveCapsuleAnchor(video, 'video', UNMEASURED_CONTROL)
-    expect(policy.offsetX).toBe(VIDEO_ANCHOR_SPEC.offsetX)
-    expect(policy.offsetY).toBe(VIDEO_ANCHOR_SPEC.offsetY)
+    expect(policy.corner).toBe('top-right')
+    expect(policy.offsetX).toBe(14)
+    expect(policy.offsetY).toBe(14)
     expect(policy.overflow).toBe('clamp')
+    expect(VIDEO_ANCHOR_SPEC.offsetX).toBe(14)
+    expect(VIDEO_ANCHOR_SPEC.offsetY).toBe(14)
+    expect(VIDEO_ANCHOR_SPEC.offsetXRange).toEqual([14, 96])
   })
 
-  it('keeps the default inset a close, comfortable step past a 48px control', () => {
-    // The pill is meant to sit *next to* the play button, not marooned beside
-    // it: 52px clears a typical 48px control by a comfortable step, and the band
-    // is wide enough to absorb a wider cluster without letting either end drift.
-    expect(VIDEO_ANCHOR_SPEC.offsetX).toBe(52)
-    expect(VIDEO_ANCHOR_SPEC.offsetXRange).toEqual([48, 96])
-    expect(VIDEO_ANCHOR_SPEC.offsetY).toBe(8)
-    expect(VIDEO_ANCHOR_SPEC.offsetYRange).toEqual([6, 12])
-    expect(VIDEO_ANCHOR_SPEC.offsetX).toBeGreaterThanOrEqual(VIDEO_ANCHOR_SPEC.offsetXRange[0])
-    expect(VIDEO_ANCHOR_SPEC.offsetX).toBeLessThanOrEqual(VIDEO_ANCHOR_SPEC.offsetXRange[1])
+  it('steps left of a measured top-right control without overlapping it', () => {
+    // A 32px control at x 596..628 sits under the probe point: the pill's right
+    // edge lands at 596 - clearance, i.e. an inset of 44 + clearance.
+    const policy = resolveCapsuleAnchor(video, 'video', {
+      controlLeft: 596,
+      measured: true,
+    })
+    expect(policy.offsetX).toBe(video.right - 596 + VIDEO_ANCHOR_SPEC.minClearance)
+    expect(VIDEO_ANCHOR_SPEC.minClearance).toBeGreaterThan(0)
   })
 
-  it('never places the pill over the left-hand control cluster', () => {
-    // A 48px control at x 8..52 leaves the pill free from x = 52, and the band's
-    // floor is the guarantee: no probe result can go below it.
-    for (const playButtonRight of [0, 24, 52, 60, 66, 80, 200]) {
-      const policy = resolveCapsuleAnchor(video, 'video', {
-        playButtonRight,
-        controlCenterY: 320,
-        measured: true,
-      })
-      const [min, max] = VIDEO_ANCHOR_SPEC.offsetXRange
+  it('keeps the right inset inside the band whatever a probe reports', () => {
+    const [min, max] = VIDEO_ANCHOR_SPEC.offsetXRange
+    for (const controlLeft of [640, 630, 600, 560, 400, 0]) {
+      const policy = resolveCapsuleAnchor(video, 'video', { controlLeft, measured: true })
       expect(policy.offsetX).toBeGreaterThanOrEqual(min)
       expect(policy.offsetX).toBeLessThanOrEqual(max)
-      // The clearance is the only rule that can lift the inset off the floor, and
-      // it stays a step rather than a gap: the pill belongs next to the button.
-      expect(policy.offsetX).toBeGreaterThanOrEqual(
-        min + VIDEO_ANCHOR_SPEC.minClearance,
-      )
-      expect(VIDEO_ANCHOR_SPEC.minClearance).toBeLessThanOrEqual(
-        VIDEO_ANCHOR_SPEC.offsetX - VIDEO_ANCHOR_SPEC.offsetXRange[0],
-      )
+      expect(policy.offsetY).toBe(VIDEO_ANCHOR_SPEC.offsetY)
     }
-  })
-
-  it('floats right when the measured control is wider than usual', () => {
-    const wide = resolveCapsuleAnchor(video, 'video', {
-      playButtonRight: 70,
-      controlCenterY: 320,
-      measured: true,
-    })
-    // 70 + 0 = 70, still inside the band.
-    expect(wide.offsetX).toBe(70)
-
-    const narrow = resolveCapsuleAnchor(video, 'video', {
-      playButtonRight: 30,
-      controlCenterY: 320,
-      measured: true,
-    })
-    // 30 + 0 = 30 would sit over the control: the band floor wins.
-    expect(narrow.offsetX).toBe(VIDEO_ANCHOR_SPEC.offsetXRange[0])
-  })
-
-  it('keeps the bottom inset inside the required band', () => {
-    const [min, max] = VIDEO_ANCHOR_SPEC.offsetYRange
-    expect(min).toBe(6)
-    expect(max).toBe(12)
-
-    const plain = resolveCapsuleAnchor(video, 'video', UNMEASURED_CONTROL)
-    expect(plain.offsetY).toBe(VIDEO_ANCHOR_SPEC.offsetY)
-    expect(plain.offsetY).toBeGreaterThanOrEqual(min)
-    expect(plain.offsetY).toBeLessThanOrEqual(max)
-
-    for (const controlCenterY of [300, 320, 336, 360, 1000]) {
-      const measured = resolveCapsuleAnchor(video, 'video', {
-        playButtonRight: 52,
-        controlCenterY,
-        measured: true,
-      })
-      expect(measured.offsetY).toBeGreaterThanOrEqual(min)
-      expect(measured.offsetY).toBeLessThanOrEqual(max)
-    }
-  })
-
-  it('centres the collapsed circle on the measured control row', () => {
-    // The circle is the box stage one paints, so it is the box the centring is
-    // measured against. A row whose centre sits 30px above the media's bottom
-    // edge needs a 30 - 32/2 = 14px inset, which the band caps at 12px: the
-    // circle ends up centred 28px up against the row's 30px, 2px below the row's
-    // line and never above it.
-    const rowCentreY = 330
-    const policy = resolveCapsuleAnchor(video, 'video', {
-      playButtonRight: 52,
-      controlCenterY: rowCentreY,
-      measured: true,
-    })
-    const rowCentreOffset = video.bottom - rowCentreY
-
-    expect(policy.offsetY).toBe(VIDEO_ANCHOR_SPEC.offsetYRange[1])
-    expect(policy.offsetY).toBe(
-      rowCentreOffset - CAPSULE_SPEC.collapsedHeight / 2 > VIDEO_ANCHOR_SPEC.offsetYRange[1]
-        ? VIDEO_ANCHOR_SPEC.offsetYRange[1]
-        : rowCentreOffset - CAPSULE_SPEC.collapsedHeight / 2,
-    )
-
-    // ...and a row that sits inside the band is centred exactly: its own centre
-    // line becomes the circle's centre line.
-    //
-    // `16px` from the bottom edge is where that stops being possible: centring a
-    // 24px circle on a row 16px up needs a 16 - 12 = 4px inset, and the band floor
-    // is 6px — so the clamp wins and the circle settles 6px up instead.
-    const rowOffsetY = 16
-    const lowRow = resolveCapsuleAnchor(video, 'video', {
-      playButtonRight: 52,
-      controlCenterY: video.bottom - rowOffsetY,
-      measured: true,
-    })
-    expect(lowRow.offsetY).toBe(VIDEO_ANCHOR_SPEC.offsetYRange[0])
-    expect(lowRow.offsetY).toBe(
-      rowOffsetY - CAPSULE_SPEC.collapsedHeight / 2 < VIDEO_ANCHOR_SPEC.offsetYRange[0]
-        ? VIDEO_ANCHOR_SPEC.offsetYRange[0]
-        : rowOffsetY - CAPSULE_SPEC.collapsedHeight / 2,
-    )
   })
 
   it('leaves the image placement untouched', () => {
     const policy = resolveCapsuleAnchor(video, 'image')
     expect(policy).toEqual(IMAGE_ANCHOR_POLICY)
+    expect(policy.corner ?? 'bottom-left').toBe('bottom-left')
     expect(policy.offsetX).toBe(CAPSULE_SPEC.inset)
     expect(policy.offsetY).toBe(CAPSULE_SPEC.inset)
     expect(policy.overflow).toBe('mirror')
@@ -182,8 +92,8 @@ describe('video anchor policy', () => {
 describe('geometry with an anchor policy', () => {
   const metrics = { width: CAPSULE_SPEC.width, height: CAPSULE_SPEC.height }
 
-  it('paints the video pill beside the play button, on the control row', () => {
-    const anchor = rect(0, 100, 640, 360)
+  it('paints the video pill in the top-right corner, pinned by its right edge', () => {
+    const anchor = rect(100, 100, 640, 360)
     const geometry = computeCapsuleGeometry(
       anchor,
       metrics,
@@ -191,45 +101,27 @@ describe('geometry with an anchor policy', () => {
       VIEWPORT.height,
       resolveCapsuleAnchor(anchor, 'video', UNMEASURED_CONTROL),
     )
-    // The left edge lands a comfortable step past a typical 48px play control,
-    // and the band floor keeps it there whatever a probe reports.
-    expect(geometry.left).toBe(VIDEO_ANCHOR_SPEC.offsetX)
-    expect(geometry.left).toBeGreaterThanOrEqual(VIDEO_ANCHOR_SPEC.offsetXRange[0])
-    expect(geometry.alignment).toBe('left')
-    // The pill sits against the bottom control row, not on top of it.
-    const bottomInset = anchor.bottom - (geometry.top + CAPSULE_SPEC.height)
-    expect(bottomInset).toBe(VIDEO_ANCHOR_SPEC.offsetY)
-    expect(bottomInset).toBeGreaterThanOrEqual(VIDEO_ANCHOR_SPEC.offsetYRange[0])
-    expect(bottomInset).toBeLessThanOrEqual(VIDEO_ANCHOR_SPEC.offsetYRange[1])
-
-    // The circle that stage one actually paints is the middle of that band.
-    const circleCentre = anchor.bottom - bottomInset - CAPSULE_SPEC.collapsedHeight / 2
-    expect(circleCentre).toBe(anchor.bottom - VIDEO_ANCHOR_SPEC.offsetY - CAPSULE_SPEC.collapsedHeight / 2)
+    expect(geometry.edge).toBe('right')
+    expect(geometry.alignment).toBe('right')
+    // Right edge of the reserved footprint sits 14px in from the media's right edge.
+    expect(geometry.left + CAPSULE_SPEC.width).toBe(anchor.right - 14)
+    // Top edge sits 14px below the media's top edge, far from the bottom controls.
+    expect(geometry.top).toBe(anchor.top + 14)
+    expect(geometry.top + CAPSULE_SPEC.height).toBeLessThan(anchor.bottom - 48)
   })
 
-  it('reserves the expanded row so stage two cannot overflow', () => {
-    for (const left of [0, 100, 1000, 1180, 1260]) {
-      const anchor = rect(left, 100, 640, 360)
+  it('keeps the top-right pill inside the viewport', () => {
+    for (const [left, top] of [[0, 100], [700, -200], [1200, 100], [-500, 50]]) {
+      const anchor = rect(left, top, 640, 360)
       const policy = resolveCapsuleAnchor(anchor, 'video', UNMEASURED_CONTROL)
       const geometry = computeCapsuleGeometry(anchor, metrics, VIEWPORT.width, VIEWPORT.height, policy)
       expect(geometry.left).toBeGreaterThanOrEqual(CAPSULE_SPEC.edgeMargin)
       expect(geometry.left + CAPSULE_SPEC.width)
         .toBeLessThanOrEqual(VIEWPORT.width - CAPSULE_SPEC.edgeMargin)
-      // The collapsed circle is drawn inside the reserved row, on both axes.
-      expect(CAPSULE_SPEC.collapsedWidth).toBeLessThanOrEqual(CAPSULE_SPEC.width)
-      expect(CAPSULE_SPEC.collapsedHeight).toBeLessThanOrEqual(CAPSULE_SPEC.height)
+      expect(geometry.top).toBeGreaterThanOrEqual(CAPSULE_SPEC.edgeMargin)
+      expect(geometry.top + CAPSULE_SPEC.height)
+        .toBeLessThanOrEqual(VIEWPORT.height - CAPSULE_SPEC.edgeMargin)
     }
-  })
-
-  it('clamps a video instead of mirroring it onto the right-hand controls', () => {
-    const anchor = rect(1240, 100, 36, 300)
-    const policy = resolveCapsuleAnchor(anchor, 'video', UNMEASURED_CONTROL)
-    expect(policy.overflow).toBe('clamp')
-    const geometry = computeCapsuleGeometry(anchor, metrics, VIEWPORT.width, VIEWPORT.height, policy)
-    // Mirrored to the right edge would land on volume/settings/fullscreen.
-    expect(geometry.left).toBeLessThan(anchor.left)
-    expect(geometry.left + CAPSULE_SPEC.width)
-      .toBeLessThanOrEqual(VIEWPORT.width - CAPSULE_SPEC.edgeMargin)
   })
 
   it('keeps the historical image placement byte-for-byte', () => {
@@ -238,36 +130,35 @@ describe('geometry with an anchor policy', () => {
     expect(geometry.left).toBe(anchor.left + CAPSULE_SPEC.inset)
     expect(geometry.top).toBe(anchor.bottom - CAPSULE_SPEC.inset - CAPSULE_SPEC.height)
     expect(geometry.alignment).toBe('left')
+    expect(geometry.edge).toBe('left')
   })
 
   it('still mirrors an image at the right edge', () => {
     const anchor = rect(1240, 100, 36, 300)
     const geometry = computeCapsuleGeometry(anchor, metrics, VIEWPORT.width, VIEWPORT.height)
     expect(geometry.alignment).toBe('right')
+    expect(geometry.edge).toBe('left')
     expect(geometry.left).toBe(anchor.right - CAPSULE_SPEC.inset - CAPSULE_SPEC.width)
   })
 })
 
-describe('play control probe', () => {
-  it('reads the control under the bottom-left probe point', () => {
+describe('top-right control probe', () => {
+  it('probes the top-right corner and reads the control under it', () => {
     const media = document.createElement('video')
     document.body.appendChild(media)
     const anchor = rect(100, 100, 600, 340)
-    const play = appendControl(108, 400, 44, 44)
+    const help = appendControl(660, 108, 32, 32)
+    const points: Array<[number, number]> = []
 
-    const probe = probePlayControl(media, anchor, () => play)
+    const probe = probePlayControl(media, anchor, (x, y) => { points.push([x, y]); return help })
+    expect(points).toEqual([[anchor.right - VIDEO_ANCHOR_SPEC.probeInsetX, anchor.top + VIDEO_ANCHOR_SPEC.probeInsetY]])
     expect(probe.measured).toBe(true)
-    expect(probe.playButtonRight).toBe(152)
-    expect(probe.controlCenterY).toBe(422)
+    expect(probe.controlLeft).toBe(660)
   })
 
   it('reports nothing when the hit is the media itself', () => {
     const media = document.createElement('video')
     document.body.appendChild(media)
-    media.getBoundingClientRect = () => ({
-      x: 0, y: 0, left: 0, top: 0, right: 600, bottom: 340,
-      width: 600, height: 340, toJSON: () => ({}),
-    }) as DOMRect
     const probe = probePlayControl(media, rect(0, 0, 600, 340), () => media)
     expect(probe.measured).toBe(false)
   })
@@ -279,7 +170,7 @@ describe('play control probe', () => {
     poster.setAttribute('src', 'https://cdn.example.com/p.png')
     document.body.appendChild(poster)
     poster.getBoundingClientRect = () => ({
-      x: 200, y: 200, left: 200, top: 200, right: 600, bottom: 500,
+      x: 200, y: 0, left: 200, top: 0, right: 600, bottom: 300,
       width: 400, height: 300, toJSON: () => ({}),
     }) as DOMRect
     expect(probePlayControl(media, rect(0, 0, 600, 340), () => poster).measured).toBe(false)

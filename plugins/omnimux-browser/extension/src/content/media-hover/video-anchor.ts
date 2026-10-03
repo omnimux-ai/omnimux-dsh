@@ -1,45 +1,37 @@
 /**
  * Video-only capsule anchoring: keep the pill off the player's own controls.
  *
- * A video's bottom-left corner belongs to the player, not to the page. Twitter,
- * YouTube and Bilibili all park their play/pause control there, so anchoring the
- * pill the way an image is anchored paints it straight over the button the user
- * is aiming at. Two things fix that, and this module owns both:
+ * A video's bottom-left corner belongs to the player's play control, so the
+ * video pill hugs the top-right corner instead. Two things keep it there
+ * cleanly, and this module owns both:
  *
- * 1. a fixed, control-clearing inset pair ({@link VIDEO_ANCHOR_SPEC}) that also
- *    keeps the pill close to the button instead of marooned beside it, and
- * 2. one bounded hit test that reads the *measured* control, so a player with a
- *    wider cluster pushes the pill further right instead of being ignored, and a
- *    measured row pulls the pill onto its own centre line.
+ * 1. a fixed inset pair ({@link VIDEO_ANCHOR_SPEC}) measured from the media's
+ *    top-right corner to the pill's top-right corner, and
+ * 2. one bounded hit test that reads a *measured* top-right control (a help or
+ *    "more" button some players park there), so the pill steps left of it
+ *    instead of covering it.
  *
- * Both insets are read as the gap between the media's bottom-left corner and the
- * pill's own bottom-left corner, so the pill's left edge and its bottom edge move
- * by the same numbers no matter which branch produced them.
- *
- * The probe is deliberately cheap and cached: it runs once per media element per
+ * The probe is cheap and cached: it runs once per media element per
  * {@link VIDEO_ANCHOR_SPEC.cacheMs}, never once per scroll frame.
  *
  * @module
  */
 
-import { CAPSULE_SPEC, IMAGE_ANCHOR_POLICY, VIDEO_ANCHOR_SPEC } from './messages.ts'
+import { IMAGE_ANCHOR_POLICY, MEDIA_OVERLAY_HOST_ID, VIDEO_ANCHOR_SPEC } from './messages.ts'
 import { measureElement } from './payload.ts'
 import type { AnchorRect, CapsuleAnchorPolicy, MediaKind } from './types.ts'
 
-/** What one probe learned about a media element's own control row. */
+/** What one probe learned about the control in a media's top-right corner. */
 export interface ControlProbe {
-  /** Right edge of the control sitting under the probe point, in viewport px. */
-  playButtonRight: number
-  /** Vertical centre of that control, in viewport px. */
-  controlCenterY: number
+  /** Left edge of the control sitting under the probe point, in viewport px. */
+  controlLeft: number
   /** `false` when nothing control-shaped was under the probe point. */
   measured: boolean
 }
 
-/** The probe result for a media element with no readable control row. */
+/** The probe result for a media element with no readable corner control. */
 export const UNMEASURED_CONTROL: ControlProbe = {
-  playButtonRight: 0,
-  controlCenterY: 0,
+  controlLeft: 0,
   measured: false,
 }
 
@@ -80,16 +72,15 @@ export function isControlSizedElement(element: Element): boolean {
 }
 
 /**
- * Hit tests the media's bottom-left corner for the player's own control.
+ * Hit tests the media's top-right corner for a player control.
  *
- * The probe point is `(left + probeInsetX, bottom - probeInsetY)` — inside the
- * control cluster but clear of its rounded edge. A hit only counts when it is
- * control-shaped *and* sits inside the media box; anything else reads as "no
- * probe", which is what makes the fixed default safe on an unknown player.
+ * The probe point is `(right - probeInsetX, top + probeInsetY)`. A hit only
+ * counts when it is control-shaped *and* sits inside the media box; anything
+ * else reads as "no probe", which keeps the fixed default on an unknown player.
  *
  * @param media - The media element being anchored.
  * @param rect - The media element's current bounding rect.
- * @param hitTest - `document.elementFromPoint`, or `null` outside a document.
+ * @param hitTest - Page hit test that skips the overlay, or `null` outside a document.
  */
 export function probePlayControl(
   media: Element,
@@ -98,9 +89,9 @@ export function probePlayControl(
 ): ControlProbe {
   if (hitTest === null) return UNMEASURED_CONTROL
 
-  const x = rect.left + VIDEO_ANCHOR_SPEC.probeInsetX
-  const y = rect.bottom - VIDEO_ANCHOR_SPEC.probeInsetY
-  if (x >= rect.right || y <= rect.top) return UNMEASURED_CONTROL
+  const x = rect.right - VIDEO_ANCHOR_SPEC.probeInsetX
+  const y = rect.top + VIDEO_ANCHOR_SPEC.probeInsetY
+  if (x <= rect.left || y >= rect.bottom) return UNMEASURED_CONTROL
 
   let hit: Element | null
   try {
@@ -119,26 +110,16 @@ export function probePlayControl(
   if (box.right <= rect.left || box.left >= rect.right) return UNMEASURED_CONTROL
   if (box.bottom <= rect.top || box.top >= rect.bottom) return UNMEASURED_CONTROL
 
-  return {
-    playButtonRight: box.right,
-    controlCenterY: box.top + box.height / 2,
-    measured: true,
-  }
+  return { controlLeft: box.left, measured: true }
 }
 
 /**
  * Resolves the anchor policy for one media element.
  *
- * An image keeps {@link IMAGE_ANCHOR_POLICY} verbatim. A video is pushed clear
- * of the measured control when there is one, and clear of a typical ~48px
- * control when there is not: both `offsetX` and `offsetY` are clamped into the
- * required bands, so no probe result can park the pill back on the play button.
- *
- * Vertically the pill is centred on the control row it shares, which is what puts
- * the stage-one circle on the same line as the play button rather than floating
- * above it. The centring is computed against the *collapsed* circle, the box that
- * is actually painted in stage one: the reserved band and the opened row are both
- * taller, so measuring against those would leave the circle sitting high.
+ * An image keeps {@link IMAGE_ANCHOR_POLICY} verbatim. A video hugs the
+ * top-right corner, stepping left of a measured corner control; the right
+ * inset is clamped into its band so no probe result can push the pill toward
+ * the middle of the frame.
  *
  * @param rect - The media element's current bounding rect.
  * @param kind - Media kind resolved by the detector.
@@ -153,21 +134,13 @@ export function resolveCapsuleAnchor(
 
   const [minX, maxX] = VIDEO_ANCHOR_SPEC.offsetXRange
   const measuredX = probe.measured
-    ? (probe.playButtonRight - rect.left) + VIDEO_ANCHOR_SPEC.minClearance
+    ? (rect.right - probe.controlLeft) + VIDEO_ANCHOR_SPEC.minClearance
     : VIDEO_ANCHOR_SPEC.offsetX
 
-  const [minY, maxY] = VIDEO_ANCHOR_SPEC.offsetYRange
-  // `offsetY` is the gap between the media's bottom edge and the pill's bottom
-  // edge in both branches, so the measured and unmeasured placements agree on
-  // what the number means: centring the drawn box on the measured row means
-  // leaving that row's own bottom inset minus half the box.
-  const centredY = probe.measured
-    ? (rect.bottom - probe.controlCenterY) - CAPSULE_SPEC.collapsedHeight / 2
-    : VIDEO_ANCHOR_SPEC.offsetY
-
   return {
+    corner: 'top-right',
     offsetX: clamp(measuredX, minX, maxX),
-    offsetY: clamp(centredY, minY, maxY),
+    offsetY: VIDEO_ANCHOR_SPEC.offsetY,
     overflow: 'clamp',
   }
 }
@@ -228,12 +201,34 @@ function clamp(value: number, min: number, max: number): number {
   return value
 }
 
-/** `document.elementFromPoint`, or `null` where no document exists. */
+/**
+ * `document.elementsFromPoint` minus the overlay's own host, or `null` where no
+ * document exists. Once the pill is visible it covers the probe point, so the
+ * first hit would otherwise always be the overlay itself.
+ */
 function defaultHitTest(): ((x: number, y: number) => Element | null) | null {
   if (typeof document === 'undefined') return null
+  if (typeof document.elementsFromPoint === 'function') {
+    return (x, y) => {
+      for (const hit of document.elementsFromPoint(x, y)) {
+        if (isOverlayNode(hit)) continue
+        return hit
+      }
+      return null
+    }
+  }
   if (typeof document.elementFromPoint !== 'function') return null
   return (x, y) => {
     const hit = document.elementFromPoint(x, y)
-    return hit instanceof Element ? hit : null
+    if (!(hit instanceof Element) || isOverlayNode(hit)) return null
+    return hit
   }
+}
+
+/** Whether a hit belongs to the overlay: its host, or a node inside its shadow tree. */
+function isOverlayNode(node: Element): boolean {
+  if (node.id === MEDIA_OVERLAY_HOST_ID) return true
+  if (node.closest(`#${MEDIA_OVERLAY_HOST_ID}`) !== null) return true
+  const root = node.getRootNode()
+  return typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot && root.host.id === MEDIA_OVERLAY_HOST_ID
 }

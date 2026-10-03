@@ -1,0 +1,12 @@
+{
+  "issue": 3017,
+  "page": "https://www.bilibili.com/video/BV1GJ411x7h7",
+  "method": "ego-browser real page; worktree overlay bundle (esbuild of src/content/media-hover/overlay.ts) injected after removing the installed extension host; pointer hover over video",
+  "video": { "right": 1283, "top": 172 },
+  "collapsed": { "right": 1268, "top": 186, "width": 23 },
+  "expanded": { "left": 1140, "right": 1268, "width": 128 },
+  "insetRightPx": 15,
+  "note": "Capsule visibility was pinned for the screenshot only: a pre-existing flicker (is-visible toggled every ~1000ms, removed ~3ms later) reproduces identically on origin/main and is tracked in #3018.",
+  "tests": { "media-video-anchor.spec.ts": "15/15", "extensionSuiteFailuresVsMain": "identical (47 pre-existing)", "tscErrorsVsMain": "22 = 22" },
+  "ocrReview": "2 low findings fixed (layout width for right pin; skip overlay shadow nodes)"
+}
