@@ -860,7 +860,6 @@ describe('social platform whitelist gate', () => {
       'weibo.com',
       'bilibili.com',
       'youtube.com',
-      'tiktok.com',
       'douyin.com',
       'kuaishou.com',
       'instagram.com',
@@ -879,6 +878,13 @@ describe('social platform whitelist gate', () => {
     for (const host of socialHosts) {
       expect(isPostOrWorkMedia(postMedia, host), `host ${host} must be admitted`).toBe(true)
       expect(detectOnce(postMedia, host), `detector on ${host} must yield candidate`).toHaveLength(1)
+    }
+
+    // TikTok is whitelisted but owns its page entries (scene button and card
+    // trigger, specs/browser-surfaces.spec.md), so the hover capsule stays off it.
+    for (const host of ['tiktok.com', 'www.tiktok.com']) {
+      expect(isPostOrWorkMedia(postMedia, host), `host ${host} must not grow the capsule`).toBe(false)
+      expect(detectOnce(postMedia, host)).toHaveLength(0)
     }
   })
 })

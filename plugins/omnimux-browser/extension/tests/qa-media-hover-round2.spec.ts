@@ -419,7 +419,6 @@ describe('cross-check · one size gate covers every admitting branch', () => {
     ['youtube card', '<ytd-rich-item-renderer><img src="https://i.ytimg.com/vi/x.jpg" alt=""></ytd-rich-item-renderer>', 'img', 'www.youtube.com'],
     ['xiaohongshu note', '<section class="note-item"><img src="https://sns-img.xhscdn.com/a.jpg" alt=""></section>', 'img', 'www.xiaohongshu.com'],
     ['weibo card', '<div class="card-wrap"><img src="https://wx.example.com/a.jpg" alt=""></div>', 'img', 'www.weibo.com'],
-    ['tiktok item', '<div data-e2e="recommend-list-item-container"><img src="https://p.example.com/a.jpg" alt=""></div>', 'img', 'www.tiktok.com'],
     ['work container', '<article class="post"><img src="https://cdn.example.com/w.png" alt="作品"></article>', 'img', X_HOST],
   ]
 
@@ -441,6 +440,14 @@ describe('cross-check · one size gate covers every admitting branch', () => {
     stubBox(element, 120, 120)
 
     expectAdmitted(element, host)
+  })
+
+  it('never admits tiktok item media, at any size: tiktok has its own page entries', () => {
+    // specs/browser-surfaces.spec.md: feeds carry the scene button and grids the
+    // card trigger, so the hover capsule would be a second entry on one picture.
+    const element = mount('<div data-e2e="recommend-list-item-container"><img src="https://p.example.com/a.jpg" alt=""></div>', 'img')
+    stubBox(element, 600, 600)
+    expectRejected(element, 'www.tiktok.com')
   })
 
   it('pins the gate constant the whole matrix rests on', () => {
