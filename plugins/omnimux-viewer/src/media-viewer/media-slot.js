@@ -542,6 +542,20 @@ export function groupLockOf(operation, slot, slots, itemsOf) {
   return '';
 }
 
+/**
+ * 实际渲染的卡槽：被组合规则锁定且自身为空的卡槽不显示（不支持的直接不出现）。
+ * 锁中但已有素材的卡槽保留显示，避免丢素材。
+ * @param {Array<object>} slots
+ * @param {object|null} operation
+ * @param {(slot: object) => Array<object>} itemsOf
+ */
+export function visibleSlots(slots, operation, itemsOf) {
+  return (slots ?? []).filter((slot) => {
+    if (!groupLockOf(operation, slot, slots, itemsOf)) return true;
+    return (itemsOf(slot)?.length ?? 0) > 0;
+  });
+}
+
 function formatSeconds(value) {
   return Number.isInteger(value) ? String(value) : String(Math.round(value * 10) / 10);
 }

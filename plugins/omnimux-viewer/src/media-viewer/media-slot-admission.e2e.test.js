@@ -79,4 +79,17 @@ test('E2E: 素材入槽契约拦截的三入口与锁定样式契约', async () 
     composerSource.includes("音频排在最后"),
     '批量粘贴必须把音频排到最后处理以兼容组依赖'
   );
+
+  // 7. #2997 锁定的空卡槽直接不渲染：渲染用 visibleSlots 过滤，
+  //    被锁且 items.length===0 的槽不出现在 .omx-slot-row
+  const mediaSlotSource2 = mediaSlotSource;
+  assert.ok(
+    mediaSlotSource2.includes('export function visibleSlots') &&
+      mediaSlotSource2.includes('itemsOf(slot)?.length ?? 0) > 0'),
+    'media-slot 必须导出「锁中且空才隐藏」的 visibleSlots'
+  );
+  assert.ok(
+    composerSource.includes('visibleSlots(slots, slotOperation'),
+    '渲染路径必须用 visibleSlots 过滤被锁的空卡槽'
+  );
 });
