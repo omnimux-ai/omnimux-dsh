@@ -16,12 +16,18 @@ const rows = [
   ['video', 'seedance-2-5', 'text_to_video'],
   ['audio', 'seed-audio-1.0', 'text_to_speech'],
 ];
-const env = { OMNIMUX_API_KEY: 'fixture-offline-only', OMNIMUX_BASE_URL: 'https://fixture.invalid/v1' };
+const env = { OMNIMUX_API_KEY: 'sk-fixture-offline-only', OMNIMUX_BASE_URL: 'https://fixture.invalid/v1' };
 
 for (const [kind, modelId, operationId] of rows) {
   test(`production ${kind} contract/executor/gateway/Hub/mapper sends A only and restores once`, async t => {
     const dir = mkdtempSync(join(tmpdir(), 'omnimux-2848-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const previousHome = process.env.DSH_HOME;
+    process.env.DSH_HOME = dir;
+    t.after(() => {
+      if (previousHome === undefined) delete process.env.DSH_HOME;
+      else process.env.DSH_HOME = previousHome;
+      rmSync(dir, { recursive: true, force: true });
+    });
     const bodies = [];
     const catalog = buildModelCatalog({ env: {} });
     const op = catalog.models.find(model => model.id === modelId).operations.find(op => op.id === operationId);

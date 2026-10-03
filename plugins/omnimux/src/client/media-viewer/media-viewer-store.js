@@ -31,17 +31,21 @@ function loadPersistedState() {
 
 /**
  * 内嵌 data: 参考图可达数 MB，落盘会撑爆 localStorage 配额并让整份持久化失败；
- * 这类 request 只留在内存（当次会话仍可重试），刷新后续传只依赖 taskRef。
+ * 只剥离素材字节，保留原模型、渠道、操作与参数；收取原 taskRef 不依赖完整输入。
  */
 function withoutInlineRequest(m) {
   const refs = m.request?.references;
   if (!Array.isArray(refs) || !refs.some((r) => typeof r?.url === 'string' && r.url.startsWith('data:'))) return m;
-  const { request: _request, ...rest } = m;
-  // request 被剥离后无法重试：失败项同步关掉重试标记，避免恢复后出现点了没反应的按钮
-  if (rest.status === 'failed') {
-    return { ...rest, failure: { ...(rest.failure || {}), retryable: false } };
+  const references = refs.map((ref) => {
+    if (typeof ref?.url !== 'string' || !ref.url.startsWith('data:')) return ref;
+    return Object.fromEntries(Object.entries(ref).filter(([, value]) => !(typeof value === 'string' && value.startsWith('data:'))));
+  });
+  const projected = { ...m, request: { ...m.request, references }, requestReplayable: false };
+  const terminal = m.recoverable === false && m.failure?.code === 'omnimux-failed';
+  if (m.status === 'failed' && (!m.taskRef || terminal)) {
+    projected.failure = { ...(m.failure || {}), retryable: false };
   }
-  return rest;
+  return projected;
 }
 
 function persistState(s) {

@@ -1,9 +1,35 @@
 import { randomUUID, createHash } from 'node:crypto'
-import { readdirSync, readFileSync, existsSync, openSync, closeSync, rmSync, mkdirSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, existsSync, openSync, closeSync, rmSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { hubHomeDir } from '../host/paths.js'
 import { atomicWriteFileSync } from '../auth/atomic-write.js'
 import { DEFAULT_TASK_DEADLINE_MS } from './task-deadline.js'
+
+/** Only a provider's explicit terminal failure permits a new paid submission. */
+export function isTerminalMediaFailure(error) {
+  return error?.code === 'omnimux-failed'
+}
+
+/** Old transport failures are recoverable handles, not provider terminal facts. */
+export function canRecoverMediaTask(record) {
+  if (!record?.upstreamTaskId && !record?.artifact?.sourceUrl) return false
+  if (record.status !== 'failed') return true
+  return ['needs-omnimux', 'omnimux-unconfigured', 'omnimux-request-failed',
+    'omnimux-download-failed', 'omnimux-aborted', 'omnimux-task-timeout',
+    'quota-exceeded', 'CHANNEL_UNAVAILABLE', 'omnimux-invalid-response'].includes(record.errorCode)
+}
+
+/** Persist collection diagnostics without replacing an upstream task's truth. */
+export function recordMediaCollectionFailure(taskRef, error, opts = {}) {
+  const terminal = isTerminalMediaFailure(error)
+  return updateMediaTaskRecord(taskRef, {
+    status: terminal ? 'failed' : 'submitted',
+    error: terminal ? String(error?.message || error) : undefined,
+    errorCode: terminal ? error?.code : undefined,
+    collectionError: terminal ? undefined : String(error?.message || error),
+    collectionErrorCode: terminal ? undefined : error?.code,
+  }, opts)
+}
 
 /**
  * 获取媒体任务持久化账本目录。
@@ -209,6 +235,9 @@ export function updateMediaTaskRecord(taskRef, patch, opts = {}) {
     throw new Error(`Media task not found: ${taskRef}`)
   }
 
+  // A late collector cannot erase an artifact another collector has finished.
+  if (current.status === 'ready' && patch.status && patch.status !== 'ready') return current
+
   const updated = {
     ...current,
     ...patch,
@@ -260,24 +289,10 @@ export function acquireMediaTaskLock(requestKey, opts = {}) {
     }
   } catch (err) {
     if (err && typeof err === 'object' && 'code' in err && err.code === 'EEXIST') {
-      try {
-        const stat = statSync(lockFile)
-        if (Date.now() - stat.mtimeMs > 60_000) {
-          rmSync(lockFile, { force: true })
-          const fd = openSync(lockFile, 'wx', 0o600)
-          closeSync(fd)
-          return {
-            acquired: true,
-            release: () => {
-              try {
-                rmSync(lockFile, { force: true })
-              } catch {}
-            },
-          }
-        }
-      } catch {}
+      // Time alone cannot prove the owner has stopped: slow accepted tasks may
+      // still be running. Their persisted handle is reused before this lock.
       return { acquired: false, release: () => {} }
     }
-    return { acquired: true, release: () => {} }
+    throw err
   }
 }

@@ -112,16 +112,8 @@ export function createMaterialGatewayExecutor(opts: {
     async execute(node, ctx): Promise<NodeOutput> {
       const data = structuredClone(node.data ?? {});
       const params = data.params as Record<string, unknown> | undefined;
-      const inputs = { ...ctx, upstreamOutputs: structuredClone(ctx.upstreamOutputs), upstreamBindings: structuredClone(ctx.upstreamBindings) };
-      const catalog = structuredClone(ctx.catalog ?? await gateway.capabilities());
-      const upstream = collectMaterialSlotInputs(data, inputs, catalog, opts.resolveProjectFile);
-
-      // Generative: gateway submit -> await -> output
+      // A persisted task belongs to the hub; collecting it needs no source or catalog.
       const capability = readMaterialType(data);
-      if (data.inputBindingVersion !== 1 && capability === 'audio' && upstream.texts.length && resolveGenerationPrompt(data).trim()) {
-        throw new Error('当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源并调整音色、语速等参数');
-      }
-      const rawPrompt = upstream.prompt;
       const fileId = createHash('sha256').update(node.id).digest('hex');
       const dest = join(ctx.mediaDir, `${fileId}-${randomUUID()}.${extFor(capability)}`);
       assertProjectWriteSafe(dest, ctx.mediaDir);
@@ -201,11 +193,12 @@ export function createMaterialGatewayExecutor(opts: {
           capability,
         });
         if (outcome.kind === 'downloaded') {
-          ctx.clearUpstreamTask?.();
-          return finalizeMedia(outcome.result, {
-            prompt: rawPrompt,
-            modelId: upstream.modelId ?? readString(params, 'model'),
+          const output = await finalizeMedia(outcome.result, {
+            prompt: resolveGenerationPrompt(data),
+            modelId: readString(params, 'model'),
           });
+          ctx.clearUpstreamTask?.();
+          return output;
         }
         // Only clear the reference for confirmed terminal upstream failures;
         // keep it for transient network/auth interruptions so recovery can resume.
@@ -216,7 +209,16 @@ export function createMaterialGatewayExecutor(opts: {
           throw outcome.error;
         }
         ctx.clearUpstreamTask?.();
+        throw new Error('原生成任务无法取回；请重新确认完整输入后创建新的生成任务');
       }
+
+      const inputs = { ...ctx, upstreamOutputs: structuredClone(ctx.upstreamOutputs), upstreamBindings: structuredClone(ctx.upstreamBindings) };
+      const catalog = structuredClone(ctx.catalog ?? await gateway.capabilities());
+      const upstream = collectMaterialSlotInputs(data, inputs, catalog, opts.resolveProjectFile);
+      if (data.inputBindingVersion !== 1 && capability === 'audio' && upstream.texts.length && resolveGenerationPrompt(data).trim()) {
+        throw new Error('当前音频任务不能分别表达上游正文和本地要求；请保留一个正文来源并调整音色、语速等参数');
+      }
+      const rawPrompt = upstream.prompt;
 
       // Upstream reference mapping (multi-modal references + audioTrack + backward compatibility)
       const references = [...upstream.references];

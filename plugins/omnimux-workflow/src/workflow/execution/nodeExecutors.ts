@@ -97,10 +97,11 @@ export function createDispatchingNodeExecutor(
     node = structuredClone(node);
     const edges = structuredClone(opts.edges);
     const upstreamOutputs = structuredClone(resolveUpstreamOutputs(node, edges, context));
-    const catalog = executorKey === 'material:generate' ? structuredClone(await opts.gateway.capabilities()) : undefined;
-    const upstreamBindings = resolveUpstreamBindings(node, edges, { getNodeOutput: (id) => upstreamOutputs.get(id) }, catalog);
+    const collecting = executorKey === 'material:generate' && Boolean(context.readNodeUpstreamTask?.(node.id));
+    const catalog = executorKey === 'material:generate' && !collecting ? structuredClone(await opts.gateway.capabilities()) : undefined;
+    const upstreamBindings = collecting ? [] : resolveUpstreamBindings(node, edges, { getNodeOutput: (id) => upstreamOutputs.get(id) }, catalog);
 
-    if (executorKey === 'material:generate') {
+    if (executorKey === 'material:generate' && !collecting) {
       const resolvedInputs = new Map([...upstreamOutputs].map(([id, output]) => {
         const media = (output.mediaAssets ?? []).map((asset) => ({
           nodeId: id, materialType: asset.type, availability: 'ready' as const,
