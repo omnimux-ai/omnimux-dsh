@@ -74,6 +74,9 @@ export interface MediaSourceResolution {
   attachable: boolean
 }
 
+/** Media corner a capsule is anchored to. */
+export type CapsuleCorner = 'bottom-left' | 'top-right'
+
 /** What to do when the capsule does not fit at its preferred corner. */
 export type CapsuleOverflowPolicy = 'mirror' | 'clamp'
 
@@ -85,9 +88,15 @@ export type CapsuleOverflowPolicy = 'mirror' | 'clamp'
  * one more policy instead of one more branch inside the geometry.
  */
 export interface CapsuleAnchorPolicy {
-  /** Horizontal inset from the anchor corner. */
+  /**
+   * Which corner of the media the pill hugs. `bottom-left` (the default) is the
+   * image placement; `top-right` keeps a video's pill off the player's
+   * bottom-left play control.
+   */
+  corner?: CapsuleCorner
+  /** Horizontal inset from the anchor corner's vertical edge. */
   offsetX: number
-  /** Vertical inset from the media's bottom edge. */
+  /** Vertical inset from the anchor corner's horizontal edge. */
   offsetY: number
   /** `mirror` flips to the opposite corner; `clamp` slides back inside instead. */
   overflow: CapsuleOverflowPolicy

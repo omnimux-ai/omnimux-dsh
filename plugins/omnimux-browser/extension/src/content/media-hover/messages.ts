@@ -163,35 +163,21 @@ export const CAPSULE_SPEC = {
 /**
  * Video-only capsule anchoring.
  *
- * A video's bottom-left corner belongs to the player, not to the page: the
- * native or custom control cluster (play/pause, mute, elapsed time) sits there,
- * so the image anchor would paint the pill straight over the play button. Every
- * constant below exists to push the pill clear of that cluster.
+ * A video's bottom-left corner belongs to the player: Bilibili, YouTube and X
+ * all park the play/pause control there, so a pill drawn anywhere near it is
+ * one slip away from swallowing the click meant for "play". The video pill lives
+ * in the top-right corner instead, the quietest corner of most players.
  */
 export const VIDEO_ANCHOR_SPEC = {
-  /**
-   * Default left inset: clears a typical ~48px play control and lands 52px from
-   * the media's left edge, which is the close, comfortable gap the shot demands.
-   */
-  offsetX: 52,
-  /**
-   * Gap kept past a measured play control's right edge.
-   *
-   * Zero is deliberate. A player's control box is mostly padding around its
-   * glyph, so a pill starting at the box's right edge already reads as clear of
-   * the button, and the wider gap an oversized clearance used to force was what
-   * pushed the pill away from the button it belongs next to. It also keeps the
-   * band floor real: the inset can still reach `offsetXRange[0]` when a probe
-   * reports a control that ends at the media's 48px mark.
-   */
-  minClearance: 0,
-  /** Band the left inset is allowed to move within, whatever a probe reports. */
-  offsetXRange: [48, 96] as const,
-  /** Default gap between the media's bottom edge and the capsule's bottom edge. */
-  offsetY: 8,
-  /** Band the bottom inset is allowed to move within, whatever a probe reports. */
-  offsetYRange: [6, 12] as const,
-  /** Play-control probe point: media `(left + probeInsetX, bottom - probeInsetY)`. */
+  /** Default gap between the media's right edge and the pill's right edge. */
+  offsetX: 14,
+  /** Gap kept past the left edge of a measured top-right control. */
+  minClearance: 4,
+  /** Band the right inset may move within, whatever a probe reports. */
+  offsetXRange: [14, 96] as const,
+  /** Gap between the media's top edge and the pill's top edge. */
+  offsetY: 14,
+  /** Control probe point: media `(right - probeInsetX, top + probeInsetY)`. */
   probeInsetX: 24,
   probeInsetY: 24,
   /** Largest edge length that still counts as player chrome rather than content. */
@@ -199,6 +185,9 @@ export const VIDEO_ANCHOR_SPEC = {
   /** How long one element's probe result stays valid. */
   cacheMs: 1000,
 } as const
+
+/** Id of the page-level host the overlay mounts; hit tests skip it. */
+export const MEDIA_OVERLAY_HOST_ID = 'omnimux-media-hover-root'
 
 /**
  * Hover-region contract: the card area that keeps the capsule alive.
@@ -254,7 +243,7 @@ export const INSPIRATION_STORE = {
   limit: 500,
 } as const
 
-/** Ghost-capsule placement relative to the media's bottom-left corner. */
+/** Which side the capsule opens from: its transform origin. */
 export type CapsuleAlignment = 'left' | 'right'
 
 /**
@@ -272,9 +261,15 @@ export const IMAGE_ANCHOR_POLICY: CapsuleAnchorPolicy = {
 
 /** Computed capsule geometry in viewport coordinates. */
 export interface CapsuleGeometry {
+  /** Left edge of the reserved (expanded) footprint. */
   left: number
   top: number
   alignment: CapsuleAlignment
+  /**
+   * Which edge of the footprint is pinned. `right` means the pill must be
+   * positioned by its right edge so stage two grows leftwards from the corner.
+   */
+  edge: CapsuleAlignment
 }
 
 /**
@@ -302,18 +297,29 @@ export function computeCapsuleGeometry(
   const width_ = Math.max(0, metrics.width)
   const height_ = Math.max(0, metrics.height)
   const margin = CAPSULE_SPEC.edgeMargin
+  const maxLeft = Math.max(margin, width - width_ - margin)
+  const maxTop = Math.max(margin, height - height_ - margin)
+
+  if (policy.corner === 'top-right') {
+    const preferredLeft = anchor.right - policy.offsetX - width_
+    return {
+      left: clamp(preferredLeft, margin, maxLeft),
+      top: clamp(anchor.top + policy.offsetY, margin, maxTop),
+      alignment: 'right',
+      edge: 'right',
+    }
+  }
 
   const preferredLeft = anchor.left + policy.offsetX
   const fitsAtAnchor = preferredLeft + width_ <= width - margin
 
-  // `mirror` flips the pill to the media's opposite edge. `clamp` keeps the
-  // left-hand bias the video anchor asks for and slides the pill back inside
-  // instead, because a video's right edge is the other half of its control bar.
+  // `mirror` flips the pill to the media's opposite edge; `clamp` slides it back
+  // inside instead.
   const targetLeft = fitsAtAnchor || policy.overflow === 'clamp'
     ? preferredLeft
     : anchor.right - policy.offsetX - width_
 
-  const left = clamp(targetLeft, margin, Math.max(margin, width - width_ - margin))
+  const left = clamp(targetLeft, margin, maxLeft)
   const top = anchor.bottom - policy.offsetY - height_
 
   // The transform origin follows the pill: it only reads as "right" once the
@@ -323,8 +329,9 @@ export function computeCapsuleGeometry(
 
   return {
     left,
-    top: clamp(top, margin, Math.max(margin, height - height_ - margin)),
+    top: clamp(top, margin, maxTop),
     alignment,
+    edge: 'left',
   }
 }
 

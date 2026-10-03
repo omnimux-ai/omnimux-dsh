@@ -1,0 +1,34 @@
+{
+  "issue": 3017,
+  "page": "https://www.bilibili.com/video/BV1GJ411x7h7",
+  "method": "ego-browser real page; worktree overlay bundle injected after removing installed extension host; real pointer hover on video, then on capsule (no class pinning)",
+  "video": {
+    "right": 1283,
+    "top": 172
+  },
+  "collapsed": {
+    "left": 1245,
+    "right": 1268,
+    "top": 193,
+    "width": 23,
+    "class": "is-collapsed is-visible"
+  },
+  "expanded": {
+    "left": 1140,
+    "right": 1268,
+    "width": 128,
+    "class": "is-visible is-expanded is-interactive"
+  },
+  "insetRightPx": 15,
+  "note": "ego-browser dispatches visibilitychange hidden->visible on simulated pointer actions (reproduced on example.com: none while idle, one pair per mouse move), which the overlay correctly treats as tab-hidden. For these screenshots only that automation signal was swallowed at capture phase; overlay code unchanged. Same artifact explains #3018 (identical on origin/main).",
+  "tests": {
+    "media-video-anchor.spec.ts": "15/15",
+    "extensionSuiteFailuresVsMain": "identical (47 pre-existing)",
+    "tscErrorsVsMain": "22 = 22"
+  },
+  "ocrReview": "2 low findings fixed (layout width for right pin; skip overlay shadow nodes)",
+  "review": {
+    "independent": "APPROVE (3 low; probePlayControl renamed to probeCornerControl)",
+    "ocr": "2 low fixed"
+  }
+}
