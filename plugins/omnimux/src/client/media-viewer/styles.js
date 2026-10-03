@@ -2596,6 +2596,92 @@ button.omx-slot-add:hover,
   box-shadow: 0 0 0 2px var(--dsw-alias-brand) !important;
 }
 
+/* 失败缩略块：静态弱化错误色纯色块，无流光、无文字图标（Issue #3011） */
+.omx-thumb-task-slot--failed {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);
+}
+
+/* 失败任务卡（Issue #3011）：与生成中卡同槽位，原因 ≤2 行省略 + 可选「重试」 */
+.omx-mv-failure-card {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: var(--dsw-alias-bg-layer-2);
+  border-radius: inherit;
+  box-sizing: border-box;
+}
+
+/* 时间线卡片无固定高度：失败卡改为相对定位并给最小高度，避免卡槽塌陷 */
+.omx-mv-timeline__card-single > .omx-mv-failure-card,
+.omx-mv-timeline__card-multi > .omx-mv-failure-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+}
+
+/* 失败卡槽不投影：与生成中态一致，投影只留在完成态大图卡槽 */
+.omx-media-slot:has(> .omx-mv-failure-card) {
+  box-shadow: none;
+}
+
+.omx-mv-failure-card__reason {
+  margin: 0;
+  max-width: 80%;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--dsw-alias-label-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+
+.omx-mv-failure-card__retry {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+  border: 1px solid var(--dsw-alias-border-l2);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.omx-mv-failure-card__retry:hover:not(:disabled) {
+  background: var(--dsw-alias-bg-layer-3);
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.omx-mv-failure-card__retry:focus-visible {
+  outline: none;
+  border-color: var(--dsw-alias-brand-primary);
+  box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary);
+}
+
+.omx-mv-failure-card__retry:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.omx-mv-failure-card__retry:active:not(:disabled) {
+  transform: scale(0.96);
+  transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 `;
 
 export function injectMediaViewerStyles(doc = typeof document !== 'undefined' ? document : undefined) {

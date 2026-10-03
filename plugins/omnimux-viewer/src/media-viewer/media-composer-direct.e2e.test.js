@@ -77,8 +77,9 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
     '模型回执默认不渲染，只有快捷方式消费方显式打开'
   );
 
-  // 3. 验证 MediaViewerTab.jsx 接入与直连通道契约
+  // 3. 验证 MediaViewerTab.jsx 接入与直连通道契约（提交/取回请求体由 generation-runner.js 承载）
   const tabSource = await readFile(resolve(here, './MediaViewerTab.jsx'), 'utf8');
+  const runnerSource = await readFile(resolve(here, '../../../omnimux/src/client/media-viewer/generation-runner.js'), 'utf8');
   assert.ok(
     tabSource.includes('MediaViewerComposer'),
     'MediaViewerTab 必须接入 MediaViewerComposer 组件'
@@ -88,19 +89,21 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
     'MediaViewerTab 必须实现 handleDirectSubmit 直连提交逻辑'
   );
   assert.ok(
-    tabSource.includes('/omnimux/api/media/generate'),
+    runnerSource.includes('/omnimux/api/media/generate'),
     'handleDirectSubmit 必须直投后端 /omnimux/api/media/generate 生成路由'
   );
   // Issue #2986：路由的 taskId/taskRef 表示「取回已存在的上游任务」，
   // 新提交带本地占位 id 会被当作轮询请求，上游回 400 task_not_exist。
-  const submitBody = tabSource.match(/fetch\('\/omnimux\/api\/media\/generate'[\s\S]*?body: JSON\.stringify\(\{([\s\S]*?)\}\),/);
+  const submitBody = runnerSource.match(/\{[^\}]*requestKey:\s*taskId[^\}]*\}/);
   assert.notEqual(submitBody, null, '必须能定位直连提交请求体');
   assert.deepEqual(
-    submitBody[1].match(/^\s*task(Id|_id|Ref|_ref)\b/gm),
+    submitBody[0].match(/^\s*task(Id|_id|Ref|_ref)\b/gm),
     null,
     '新提交请求体不得携带 taskId/taskRef（否则服务端只轮询不提交）'
   );
-  assert.match(submitBody[1], /requestKey:\s*taskId/, '每个批次请求以本地任务 id 作为 requestKey 幂等键');
+  assert.match(submitBody[0], /requestKey:\s*taskId/, '每个批次请求以本地任务 id 作为 requestKey 幂等键');
+  // Issue #3011：提交必须异步 wait:false，服务端落账本并返回 taskRef，随后按 taskRef 取回
+  assert.match(submitBody[0], /wait:\s*false/, '直连提交必须走异步 wait:false（服务端落账本返回 taskRef）');
   assert.ok(
     tabSource.includes('GeneratingStateCard') && tabSource.includes('omx-mv-generating-overlay'),
     '大画布中央在生成时必须挂载 GeneratingStateCard 炫彩流光动画'

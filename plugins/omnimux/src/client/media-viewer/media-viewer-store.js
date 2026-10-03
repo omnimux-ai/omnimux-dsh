@@ -29,13 +29,31 @@ function loadPersistedState() {
   }
 }
 
+/**
+ * 内嵌 data: 参考图可达数 MB，落盘会撑爆 localStorage 配额并让整份持久化失败；
+ * 这类 request 只留在内存（当次会话仍可重试），刷新后续传只依赖 taskRef。
+ */
+function withoutInlineRequest(m) {
+  const refs = m.request?.references;
+  if (!Array.isArray(refs) || !refs.some((r) => typeof r?.url === 'string' && r.url.startsWith('data:'))) return m;
+  const { request: _request, ...rest } = m;
+  // request 被剥离后无法重试：失败项同步关掉重试标记，避免恢复后出现点了没反应的按钮
+  if (rest.status === 'failed') {
+    return { ...rest, failure: { ...(rest.failure || {}), retryable: false } };
+  }
+  return rest;
+}
+
 function persistState(s) {
   const storage = getLocalStorage();
   if (!storage) return;
   try {
+    // Issue #3011：generating（含 requestKey/taskRef/request）与 failed 项同样持久化，
+    // 刷新后可按服务端任务记录续传或展示失败原因，不再静默丢弃。
     const safeMediaList = (s.mediaList || [])
-      .filter((m) => m && m.status !== 'generating')
-      .slice(-100);
+      .filter((m) => m && (m.url || m.status === 'generating' || m.status === 'failed'))
+      .slice(-100)
+      .map(withoutInlineRequest);
     const payload = {
       mediaList: safeMediaList,
       annotationsByMediaId: s.annotationsByMediaId || {},

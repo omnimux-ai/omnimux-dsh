@@ -1691,11 +1691,16 @@ describe('MediaViewerComposer Component Contract', () => {
       const slotGroupSrc = fs.readFileSync(new URL('./MediaSlotGroup.jsx', import.meta.url), 'utf-8');
       const popoverSrc = fs.readFileSync(new URL('./ReferencePickerPopover.jsx', import.meta.url), 'utf-8');
 
-      it('项 2: MediaViewerTab.jsx handleDirectSubmit 增加 if (!resp.ok) 状态码校验', () => {
+      it('项 2: handleDirectSubmit 直连通道对非 2xx 响应状态码校验（Issue #3011 校验迁至 generation-runner.js）', () => {
+        const runnerSrc = fs.readFileSync(new URL('../../../omnimux/src/client/media-viewer/generation-runner.js', import.meta.url), 'utf-8');
+        // 非 2xx 与 fetch reject 一律映射为失败卡文案（describeGenerationFailure），不允许静默吞错
         assert.ok(
-          tabSrc.includes('if (!resp.ok) {') &&
-          tabSrc.includes('Media generation failed with HTTP status'),
-          'handleDirectSubmit 必须对非 2xx 响应抛出异常，避免静默吞异常'
+          runnerSrc.includes('res.ok') && runnerSrc.includes('resp.ok'),
+          'runner 必须校验 resp.ok 并据此分流失败路径'
+        );
+        assert.ok(
+          runnerSrc.includes('describeGenerationFailure'),
+          'runner 必须通过 describeGenerationFailure 把错误映射为白名单文案'
         );
       });
 
@@ -1800,9 +1805,14 @@ describe('MediaViewerComposer Component Contract', () => {
           tabSrc.includes("console.error('[MediaViewer] Direct generate failed:', err);"),
           'handleDirectSubmit 发生错误时必须记录日志'
         );
+        // Issue #3011：失败改为主画布原位失败卡提示，严禁再派发 toast
         assert.ok(
-          tabSrc.includes("window.dispatchEvent(new CustomEvent('omnimux:toast', { detail: { message, type: 'error' } }));"),
-          '有通知通道时向用户派发失败提示'
+          !tabSrc.includes('omnimux:toast'),
+          '失败后严禁再派发 omnimux:toast（改为主画布原位失败卡）'
+        );
+        assert.ok(
+          tabSrc.includes('omx-mv-failure-card'),
+          '失败提示必须为主画布原位失败卡（.omx-mv-failure-card）'
         );
 
         // 8. media-slot.js: 支持 gif 与 bmp
