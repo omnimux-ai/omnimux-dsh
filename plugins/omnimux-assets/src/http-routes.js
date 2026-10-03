@@ -312,10 +312,19 @@ export function createAssetsDispatcher(deps) {
     const which = url.searchParams.get('which') === 'cover' ? 'cover' : 'media'
     const resolved = cloud.resolveRowMedia(id, which)
     if (!resolved) throw new AssetsError('cloud-media-unavailable', 'cloud asset media is not available')
+    // Remote assets are already public CDN URLs; the browser loads them
+    // directly instead of the Host proxying the bytes. Object keys keep the
+    // library's original spelling (中文、空格、括号), which is not a legal
+    // Location header value: the redirect must carry the percent-encoded form
+    // or writeHead throws ERR_INVALID_CHAR and the route reports a fake 500.
     if (resolved.kind === 'remote') {
-      // Remote assets are already public CDN URLs; the browser loads them
-      // directly instead of the Host proxying the bytes.
-      return { status: 302, redirect: resolved.url }
+      let location
+      try {
+        location = new URL(resolved.url).href
+      } catch {
+        throw new AssetsError('cloud-media-unavailable', 'cloud asset media is not available')
+      }
+      return { status: 302, redirect: location }
     }
     return {
       status: 200,
