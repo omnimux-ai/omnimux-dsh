@@ -64,7 +64,13 @@ export function apply(ctx) {
     })
     const unregisterAssetHub = sidebar.registerTab({
       id: ASSET_HUB_TAB_ID,
-      title: () => t('assetHub.tabTitle') || '素材工作台',
+      title: () => {
+        try {
+          const value = t('assetHub.tabTitle')
+          if (value && value !== 'assetHub.tabTitle') return value
+        } catch {}
+        return '素材工作台'
+      },
       order: 6,
       hidden: false,
       single: true,
