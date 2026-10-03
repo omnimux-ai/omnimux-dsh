@@ -13,18 +13,16 @@ const require = createRequire(resolve(root, 'plugins/omnimux/package.json'));
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 export async function startFixture({ nodeExecutable } = {}) {
-  if (!nodeExecutable) throw new Error('A Node executable must be supplied by the test runner');
+  if (!nodeExecutable) throw new Error('Supply the test runner Node executable, not the browser Electron executable');
   await mkdir(resolve(root, '.tmp'), { recursive: true });
   const privateDir = await mkdtemp(resolve(root, '.tmp/generation-feedback-'));
   try { return await assembleFixture(privateDir, nodeExecutable); }
   catch (error) { await rm(privateDir, { recursive: true, force: true }); throw error; }
 }
-
 async function assembleFixture(privateDir, nodeExecutable) {
-  const staged = await stagePlugins(root, privateDir, { dir: '' });
-  await boundedCommand(nodeExecutable, [staged.buildScripts.viewer], { cwd: staged.viewer, deadlineMs: 60000 });
-  const viewerRequire = createRequire(resolve(staged.viewer, 'package.json'));
-  const publicClient = viewerRequire.resolve('omnimux-viewer/client');
+  const staged = await stagePlugins(root, privateDir);
+  await boundedCommand(nodeExecutable, [staged.buildScripts.viewer], { cwd: staged.viewer });
+  const publicClient = createRequire(resolve(staged.viewer, 'package.json')).resolve('omnimux-viewer/client');
   // Resolve one physical React instance for both the viewer and UI kit.
   const alias = {};
   for (const name of ['react', 'react-dom']) alias[name] = dirname(await realpath(require.resolve(`${name}/package.json`)));
@@ -35,6 +33,7 @@ async function assembleFixture(privateDir, nodeExecutable) {
     metafile: true, loader: { '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl', '.module.css': 'local-css' } });
   const sourceHashes = {};
   for (const path of Object.keys(built.metafile.inputs)) sourceHashes[path] = hash(await readFile(resolve(root, path)));
+  for (const path of ['plugins/omnimux/test-support/generation-feedback/generation-feedback-server.mjs', 'plugins/omnimux/test-support/generation-feedback/generation-feedback-browser.mjs', 'plugins/omnimux/test-support/comment-native-environment.mjs', 'plugins/omnimux/src/client/media-viewer/generation-feedback-bridge.test.js', 'plugins/omnimux/tests/e2e/generation-feedback.e2e.test.js', 'plugins/omnimux-viewer/src/media-viewer/GenerationTasks.jsx', 'plugins/omnimux-viewer/src/media-viewer/MediaViewerTab.jsx', 'plugins/omnimux-viewer/src/media-viewer/mount.js', 'plugins/omnimux-viewer/scripts/build.mjs']) sourceHashes[path] = hash(await readFile(resolve(root, path)));
   const bundle = built.outputFiles.find((file) => file.path.endsWith('.js')).contents;
   const css = built.outputFiles.find((file) => file.path.endsWith('.css'))?.text || '';
   const html = `<!doctype html><html data-theme="light"><meta charset="utf-8"><title>1759 离线画布验证</title>
@@ -51,21 +50,19 @@ async function assembleFixture(privateDir, nodeExecutable) {
   const video = await readFile(resolve(root, videoPath));
   sourceHashes[videoPath] = hash(video);
   const videoResponse = JSON.stringify({ ok: true, value: { offset: 0, eof: true, bytes: video.length, data: video.toString('base64') } });
-  const server = http.createServer({ maxHeaderSize: 64 * 1024 }, (req, res) => {
+  const server = http.createServer({ maxHeaderSize: 65536 }, (req, res) => {
     const path = new URL(req.url, 'http://localhost').pathname;
     if (path === '/') { res.setHeader('content-type', 'text/html;charset=utf-8'); res.end(html); }
     else if (path === '/fixture.js') { res.setHeader('content-type', 'text/javascript'); res.end(bundle); }
     else if (path === '/fixture-video-result.json') { res.setHeader('content-type', 'application/json'); res.end(videoResponse); }
     else { res.statusCode = 404; res.end(); }
   });
+  const publicViewerBundleSha256 = hash(await readFile(publicClient));
   try {
     await new Promise((accept, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', accept); });
-  } catch (error) {
-    server.closeAllConnections();
-    server.close();
-    throw error;
-  }
+  } catch (error) { server.closeAllConnections(); server.close(); throw error; }
   const manifest = { root, pid: process.pid, url: `http://127.0.0.1:${server.address().port}/`,
+    publicViewerBundleSha256,
     sourceHashes, bundleSha256: hash(bundle), startedAt: new Date().toISOString() };
   return { manifest, async close() {
     try {
@@ -76,8 +73,6 @@ async function assembleFixture(privateDir, nodeExecutable) {
         if (hash(await readFile(resolve(root, path))) !== digest) changedSources.push(path);
       }
       return { closed: true, changedSources };
-    } finally {
-      await rm(privateDir, { recursive: true, force: true });
-    }
+    } finally { await rm(privateDir, { recursive: true, force: true }); }
   } };
 }

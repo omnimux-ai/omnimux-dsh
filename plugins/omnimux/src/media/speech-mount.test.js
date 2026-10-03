@@ -16,11 +16,11 @@ test('audio tool and seam send identical selected speech parameters through the 
   mountMedia({
     tools: { register(tool) { tools.push(tool) } },
     provide(name, api) { provided[name] = api },
+    get(name) { return name === 'credentials' ? { async resolve(ref) { return ref === 'OMNIMUX_API_KEY' ? { value: 'sk-fixture' } : undefined } } : undefined },
   }, {
     kind: 'audio', jsonOut: {}, media: {},
-    store: { async resolve() { return 'fixture-login-token' } },
     execute: (input) => executeOmnimuxAudio({ ...input, env: {}, fetcher: async (_url, request) => {
-      assert.equal(request.headers.authorization, 'Bearer fixture-login-token')
+      assert.equal(request.headers.authorization, 'Bearer sk-fixture')
       captured.push(JSON.parse(request.body))
       return new Response(Buffer.from('RIFF fixture bytes'), { headers: { 'content-type': 'audio/wav' } })
     } }),

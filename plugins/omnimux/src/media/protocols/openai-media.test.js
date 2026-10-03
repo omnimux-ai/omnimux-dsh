@@ -22,7 +22,7 @@ function inputFor(t, extra = {}) {
     prompt: 'a lamp',
     dest: join(dir, 'out.png'),
     model: 'gpt-image-2.5',
-    env: { OMNIMUX_API_KEY: 'fixture-key' },
+    env: { OMNIMUX_API_KEY: 'sk-fixture' },
     ...extra,
   }
 }

@@ -166,10 +166,12 @@ function sleepWithSignal(ms, signal) {
  *   url: string,
  *   capability?: 'video' | 'image' | 'audio',
  *   apiKey?: string,
+ *   providerId?: string,
  *   fetcher?: typeof fetch,
  *   signal?: AbortSignal,
  *   maxRetries?: number,
  *   retryDelayMs?: number,
+ *   requestTimeoutMs?: number,
  *   sleep?: (ms: number) => Promise<void>,
  * }} options
  */
@@ -190,7 +192,15 @@ export async function downloadMediaFile(options) {
     const fetcher = options.fetcher ?? fetch
     /** @type {Record<string, string>} */
     const headers = {}
-    if (options.apiKey?.trim() && (url.includes('omnimux.ai') || url.startsWith('/'))) {
+    let isOfficialDownload = false
+    try {
+      const target = new URL(url)
+      isOfficialDownload = target.protocol === 'https:' && !target.port && !target.username && !target.password
+        && (target.hostname === 'api.omnimux.ai' || target.hostname === 'omnimux.ai')
+    } catch {
+      // Relative or malformed URLs have no verified official credential recipient.
+    }
+    if (options.apiKey?.trim() && (!options.providerId || options.providerId === 'omnimux') && isOfficialDownload) {
       headers.authorization = `Bearer ${options.apiKey.trim()}`
     }
 
@@ -202,11 +212,11 @@ export async function downloadMediaFile(options) {
       if (options.signal?.aborted) {
         throw new OmnimuxError('omnimux-aborted', 'download aborted', { cause: options.signal.reason })
       }
+      const timeoutMs = Number.isFinite(options.requestTimeoutMs) && options.requestTimeoutMs > 0 ? options.requestTimeoutMs : 60_000
+      const timer = AbortSignal.timeout(timeoutMs)
+      const signal = options.signal ? AbortSignal.any([options.signal, timer]) : timer
       try {
-        const response = await fetcher(url, {
-          headers,
-          ...(options.signal ? { signal: options.signal } : {}),
-        })
+        const response = await fetcher(url, { headers, signal })
         if (!response.ok) {
           let body = null
           try { body = await response.clone().json() } catch {
@@ -220,6 +230,7 @@ export async function downloadMediaFile(options) {
             throw new OmnimuxError('quota-exceeded', classified.message, { status: response.status, details: classified })
           }
           if (classified.kind === 'needs-omnimux') {
+            if (headers.authorization) throw credentialRejectedError(options.apiKey, response.status)
             throw new OmnimuxError('needs-omnimux', classified.message, { status: response.status })
           }
           if (attempt < maxRetries && isDownloadRetryable({ status: response.status, body })) {

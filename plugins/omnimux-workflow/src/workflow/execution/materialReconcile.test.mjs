@@ -110,35 +110,31 @@ test('无引用时按既有路径提交，并在提交成功后立即登记引�
   assert.equal(calls.clear, 1);
 });
 
-test('hub 判为不可复核（未知任务）时回退重投', async () => {
+test('hub 无法复核原任务时明确拒绝自动重投，保留重新准备完整输入的边界', async () => {
   const gw = gateway({
     reconcile: () => { throw new SeamGatewayError('omnimux-invalid-request', '未知任务 task-inflight'); },
   });
   const { state, calls, ctx } = contextWithRef(REF);
-
-  await createMaterialGatewayExecutor({ gateway: gw }).execute(NODE, ctx);
-
+  await assert.rejects(createMaterialGatewayExecutor({ gateway: gw }).execute(NODE, ctx), /原生成任务无法取回/);
   assert.equal(gw.counts.reconcile, 1);
-  assert.equal(gw.counts.submit, 1, 'an unreconcilable reference falls back to submitting');
-  assert.equal(gw.seen.submit.length, 1);
-  // Two clears, both intended: the first drops the unusable reference before
-  // resubmitting, the second drops the fresh one when the node goes terminal.
-  assert.equal(calls.clear, 2);
-  assert.equal(state.upstreamTask, undefined, 'a terminal node keeps no reference');
-  assert.equal(calls.record.at(-1).taskId, 'task-fresh', 'the record tracks the new task, not the stale one');
+  assert.equal(gw.counts.submit, 0, 'collection cannot silently become a new paid submission');
+  assert.equal(gw.seen.submit.length, 0);
+  assert.equal(calls.clear, 1);
+  assert.equal(state.upstreamTask, undefined);
+  assert.equal(calls.record.length, 0);
 });
 
-test('mock 网关不可复核时同样回退重投（与今天行为一致，不劣化）', async () => {
+test('模拟网关无法复核时同样明确报错，不用模拟行为绕过自动重投保护', async () => {
   const gw = gateway({
     reconcile: () => {
       throw new SeamGatewayError('omnimux-invalid-request', 'mock gateway: task t does not survive a restart (nothing to reconcile)');
     },
   });
   const { ctx } = contextWithRef({ taskId: 'task-inflight', capability: 'video', submittedAt: Date.now() - 1000 });
-
-  await createMaterialGatewayExecutor({ gateway: gw }).execute(NODE, ctx);
-
-  assert.equal(gw.counts.submit, 1);
+  await assert.rejects(createMaterialGatewayExecutor({ gateway: gw }).execute(NODE, ctx), /原生成任务无法取回/);
+  assert.equal(gw.counts.submit, 0);
+  assert.equal(gw.counts.reconcile, 1);
+  assert.equal(gw.counts.awaitTask, 0);
 });
 
 test('上游真的失败时节点报错，且不再重投', async () => {

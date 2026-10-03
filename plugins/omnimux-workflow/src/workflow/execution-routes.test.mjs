@@ -607,7 +607,20 @@ test('execution API: single mode runs only the target node and seeds upstream ou
 });
 
 test('execution recovery: paused run survives dispose + remount and resumes', async () => {
-  const slowGateway = { gatewayLatency: { minLatencyMs: 150, maxLatencyMs: 250 } };
+  const persistentGateway = host.createMockGateway({ minLatencyMs: 150, maxLatencyMs: 250 });
+  const submitted = new Set();
+  const submit = persistentGateway.submit.bind(persistentGateway);
+  persistentGateway.submit = async request => {
+    const result = await submit(request);
+    submitted.add(result.taskId);
+    return result;
+  };
+  persistentGateway.reconcileTask = async (ref, dest, signal) => {
+    assert.ok(submitted.has(ref.taskId), 'restart collection must keep the original accepted task');
+    return persistentGateway.awaitTask(ref.taskId, dest, signal);
+  };
+  const slowGateway = { gateway: persistentGateway };
+  let sseRes;
   let h = makeHarness(slowGateway);
   try {
     const wsId = await h.createLinearWorkspace(3);
@@ -636,7 +649,8 @@ test('execution recovery: paused run survives dispose + remount and resumes', as
 
     // SSE attach (recovered run, replay log covers pre-crash events), then
     // resume finishes it end-to-end.
-    const sseRes = new FakeRes();
+    sseRes = new FakeRes();
+    assert.equal(sseRes.destroyed, false);
     const sseHandler = (async () => {
       // Reach into the harness: same handler both prefixes register.
       const handler = h.registered[0].handler;
@@ -674,7 +688,9 @@ test('execution recovery: paused run survives dispose + remount and resumes', as
     const finalStatus = await h.executionStatus(wsId, execId);
     assert.equal(finalStatus.body.execution.status, 'completed');
     assert.equal(finalStatus.body.execution.completedNodes, 3);
+    assert.equal(submitted.size, 3, 'exactly one accepted task per node; recovered node never resubmits');
   } finally {
+    sseRes?.destroy();
     h.dispose();
     rmSync(h.dir, { recursive: true, force: true });
   }

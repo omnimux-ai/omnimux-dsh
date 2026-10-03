@@ -19,7 +19,8 @@
   "scripts": {
     "build": "node scripts/build-client.mjs",
     "prepare": "npm run build",
-    "test": "node scripts/run-tests.mjs"
+    "test": "node scripts/run-tests.mjs",
+    "test:e2e": "node --test tests/e2e/*.e2e.test.js"
   },
   "dependencies": {
     "aigc-provider-runtime-kit": "^0.2.0",

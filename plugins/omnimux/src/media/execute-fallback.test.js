@@ -28,7 +28,7 @@ const assertChannel = (error) => {
 function inputFor(t, extra = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-fallback-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
-  return { prompt: 'a lamp', dest: join(dir, 'out.png'), model: productId, env: { OMNIMUX_API_KEY: 'fixture-key' }, ...extra }
+  return { prompt: 'a lamp', dest: join(dir, 'out.png'), model: productId, env: { OMNIMUX_API_KEY: 'sk-fixture' }, ...extra }
 }
 
 // 2026-09-14 #1751（评审次要-2）：gpt-image-2.5 无上游承认的别名 —— `gpt-image-2-5` 拼写被上游

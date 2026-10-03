@@ -5,7 +5,7 @@ import { startFixture } from './generation-feedback-server.mjs';
 import { assertPng } from '../../../../scripts/worktree-web-qa.mjs';
 
 /** Runs only inside ego-browser nodejs; never launches an alternative browser. */
-export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, nodeExecutable) {
+export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, options) {
   await mkdir(evidenceDir, { recursive: true });
   const report = { status: 'FAIL', checks: [], screenshots: [], closed: false, server: null };
   let fixture;
@@ -14,7 +14,7 @@ export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, nodeE
   let failure;
   const save = () => writeFile(resolve(evidenceDir, 'result.json'), JSON.stringify(report, null, 2));
   try {
-    fixture = await startFixture({ nodeExecutable });
+    fixture = await startFixture(options);
     report.manifest = fixture.manifest;
     await save();
     task = await taskSpace('1759 formal generation feedback E2E');
@@ -32,24 +32,27 @@ export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, nodeE
       await page.click(`loc=role:button[name='${name}']`);
     }
     async function card(id, status, sessionId = 'qa-a') {
-      // Task lifecycle is observable even when the viewer has no media to display.
-      await page.waitForFunction(({ id, status, sessionId }) => {
-        const row = window.qa.getState().generationTasks.find((task) => task.requestId === id && task.sessionId === sessionId);
-        return row?.status === status;
-      }, { id, status, sessionId }, { timeout: 10000 });
-      const value = await page.evaluate(({ id, sessionId }) => {
-        const row = window.qa.getState().generationTasks.find((task) => task.requestId === id && task.sessionId === sessionId);
-        const node = document.querySelector(`[data-generation-request="${id}"]`);
-        const rect = node?.getBoundingClientRect();
-        return { id, status: row.status, sessionId: row.sessionId, mediaCount: row.media?.length || 0,
-          width: rect?.width || 0, height: rect?.height || 0 };
-      }, { id, sessionId });
-      assert.equal(value.status, status);
-      assert.equal(value.sessionId, sessionId);
-      if (status === 'success') assert.ok(value.mediaCount > 0 && value.width > 0 && value.height > 0);
-      if (['pending', 'running'].includes(status) && value.mediaCount === 0) {
-        assert.equal(value.width, 0, 'empty execution tasks must not occupy the viewport');
+      // Existing product hides only pending/running rows without produced media.
+      // Terminal errors and partial output still require visible text and geometry.
+      await page.waitForFunction(({ id, status, sessionId }) => window.qa.getState().generationTasks.some(row => row.requestId === id && row.sessionId === sessionId && row.status === status), { id, status, sessionId }, { timeout: 10000 });
+      const taskState = await page.evaluate(({ id, sessionId }) => window.qa.getState().generationTasks.find(row => row.requestId === id && row.sessionId === sessionId), { id, sessionId });
+      assert.equal(taskState.sessionId, sessionId);
+      if (['pending', 'running'].includes(status) && !taskState.media?.length) {
+        assert.equal(await page.evaluate(id => document.querySelector(`[data-generation-request="${id}"]`) === null, id), true, 'no empty generation placeholder occupies the viewport');
+        report.checks.push({ id, status, emptyPlaceholderAbsent: true });
+        return;
       }
+      await page.waitForFunction(({ id, status }) => {
+        const node = document.querySelector(`[data-generation-request="${id}"]`);
+        return node?.dataset.generationStatus === status && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      }, { id, status }, { timeout: 10000 });
+      const value = await page.evaluate((id) => {
+        const node = document.querySelector(`[data-generation-request="${id}"]`);
+        const rect = node.getBoundingClientRect();
+        return { id, status: node.dataset.generationStatus, text: node.textContent, width: rect.width, height: rect.height };
+      }, id);
+      assert.equal(value.status, status);
+      assert.ok(value.text.trim() && value.width > 0 && value.height > 0);
       report.checks.push(value);
     }
     async function screenshot(name) {
@@ -63,6 +66,11 @@ export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, nodeE
     await click('接纳请求');
     await click('开始执行');
     await card('request-1', 'running');
+    await click('重复执行事件');
+    const repeated = await page.evaluate(() => window.qa.getState().generationTasks.filter(row => row.requestId === 'request-1'));
+    assert.equal(repeated.length, 1, 'duplicate execution event must not create a second task');
+    assert.equal(repeated[0].status, 'running');
+    report.checks.push({ repeatedExecutionIdempotent: true });
     await click('返回图片');
     await click('结束回合');
     await card('request-1', 'running');
@@ -88,36 +96,34 @@ export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, nodeE
     await click('返回图片'); await click('结束回合'); await click('多请求映射');
     await card('request-5', 'unresolved');
     await screenshot('terminal');
-    // Product compliance is a separate verdict; transport PASS cannot sign off existing UI.
-    report.productCompliance = await page.evaluate(() => {
-      const recoveryRows = ['request-2', 'request-3', 'request-5'].filter((id) => {
-        const node = document.querySelector(`[data-generation-request="${id}"]`);
-        return node && node.getBoundingClientRect().width > 0;
-      });
-      const copyActions = [...document.querySelectorAll('main button')].filter((node) => node.textContent.includes('复制原请求')).length;
-      return { status: recoveryRows.length || copyActions ? 'FAIL' : 'PASS',
-        expected: { recoveryRows: [], copyActions: 0 }, actual: { recoveryRows, copyActions } };
-    });
     await click('普通提问'); await click('停止文字');
     const negative = await page.evaluate(() => ({
       tasks: window.qa.getState().generationTasks.map((row) => row.requestId),
       cards: [...document.querySelectorAll('main [data-generation-request]')].map((node) => node.dataset.generationRequest),
     }));
     assert.deepEqual(negative.tasks, ['request-1', 'request-2', 'request-3', 'request-4', 'request-5']);
-    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('main [data-generation-request] img')].map((node) => node.closest('[data-generation-request]').dataset.generationRequest)), ['request-1', 'request-4']);
+    assert.deepEqual(negative.cards, negative.tasks);
     report.checks.push({ negativeNoTask: true });
     await click('切换会话');
     await page.waitForFunction(() => document.querySelectorAll('main [data-generation-request]').length === 0);
     await click('提交生成'); await card('request-1', 'pending', 'qa-b');
-    assert.deepEqual(await page.evaluate(() => window.qa.getState().generationTasks.filter((row) => row.sessionId === 'qa-b').map((row) => row.requestId)), ['request-1']);
-    assert.equal(await page.evaluate(() => document.querySelectorAll('main [data-generation-request]').length), 0);
+    assert.deepEqual(await page.evaluate(() => window.qa.getState().generationTasks.filter(row => row.sessionId === 'qa-b').map(row => row.requestId)), ['request-1']);
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('main [data-generation-request]')].map((node) => node.dataset.generationRequest)), [], 'the other session has only a pending request and no visible placeholder');
     await click('切换会话');
-    await page.waitForFunction(() => document.querySelector('[data-generation-request="request-1"] img')?.naturalWidth > 0);
+    await page.waitForFunction(() => document.querySelectorAll('main [data-generation-request]').length === 5);
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('main [data-generation-request]')].map((node) => node.dataset.generationRequest)), negative.cards);
     report.checks.push({ sessionIsolation: true });
+    // A regression on any product-facing terminal state cannot remain scoped green.
+    const productCompliance = await page.evaluate(() => ['request-2', 'request-3', 'request-5'].map(id => {
+      const node = document.querySelector(`[data-generation-request="${id}"]`);
+      const rect = node?.getBoundingClientRect();
+      return { id, visible: !!rect && rect.width > 0 && rect.height > 0, text: node?.textContent || '', copyOriginal: [...(node?.querySelectorAll('button') || [])].some(button => button.textContent.includes('复制原请求')) };
+    }));
+    report.productCompliance = { status: productCompliance.every(row => row.visible && row.text.trim() && row.copyOriginal) ? 'PASS' : 'FAIL', rows: productCompliance };
+    assert.equal(report.productCompliance.status, 'PASS', 'terminal state visibility and recovery action must pass');
     report.errors = await page.evaluate(() => window.qaBoot.errors);
     assert.deepEqual(report.errors, []);
-    assert.equal(report.checks.length, 12);
+    assert.equal(report.checks.length, 13);
     await click('提交生成'); await click('接纳请求'); await click('开始执行');
     await click('返回视频'); await click('结束回合'); await click('最终映射');
     await card('request-9', 'success');
@@ -142,15 +148,10 @@ export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, nodeE
     await click('提交生成'); await click('接纳请求'); await click('开始执行');
     await click('返回不可读视频'); await click('最终映射'); await click('结束回合');
     await card('request-10', 'success');
-    await page.waitForFunction(() => {
-      const node = document.querySelector('[data-generation-request="request-10"]');
-      return window.qa.log.some((event) => event.type === 'workspaceFiles.readComplete'
-        && event.sessionId === 'qa-a' && event.path === '/fixture/denied.mp4' && event.ok === false)
-        && !!node && !node.querySelector('video');
-    }, undefined, { timeout: 10000 });
-    await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+    await page.waitForFunction(() => window.qa.log.some(event => event.type === 'workspaceFiles.readComplete' && event.sessionId === 'qa-a' && event.path === '/fixture/denied.mp4' && event.ok === false)
+      && document.querySelector('[data-generation-request="request-10"] [role="alert"]')?.textContent.includes('结果预览未能加载'));
     assert.equal(await page.evaluate(() => !!document.querySelector('[data-generation-request="request-10"] video')), false, 'unreadable results must not become playable media');
-    report.checks.push({ unreadableVideoRejected: true });
+    report.checks.push({ unreadableVideoAlert: true });
     await screenshot('video-unreadable');
     await click('提交生成'); await click('接纳请求'); await click('开始执行');
     await click('返回附件图'); await click('最终映射'); await click('结束回合');
@@ -163,11 +164,11 @@ export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, nodeE
     await card('request-12', 'cancelled');
     await page.waitForFunction(() => {
       const card = document.querySelector('[data-generation-request="request-12"]');
-      return card?.querySelector('img')?.naturalWidth > 0;
+      return card?.textContent.includes('已返回部分结果') && card.querySelector('img')?.naturalWidth > 0;
     });
     report.checks.push({ partialCancelRetainsImage: true });
     await screenshot('partial-cancel');
-    assert.equal(report.checks.length, 20);
+    assert.equal(report.checks.length, 21);
     assert.deepEqual(await page.evaluate(() => window.qaBoot.errors), []);
   } catch (error) {
     failure = error;
@@ -179,7 +180,7 @@ export async function runGenerationFeedbackBrowser(taskSpace, evidenceDir, nodeE
   } finally {
     // Both cleanup actions live in this same ego invocation, including assertion failures.
     try {
-      if (page) await page.evaluate(() => window.qa?.dispose()).catch((error) => { report.disposeError = String(error); failure ||= error; });
+      if (page) await page.evaluate(() => window.qa?.dispose()).catch(error => { report.disposeError = String(error); failure ||= error; });
       if (task) { await task.finish({ keep: [] }); report.closed = true; }
     } catch (error) { report.closeError = String(error); failure ||= error; }
     finally {

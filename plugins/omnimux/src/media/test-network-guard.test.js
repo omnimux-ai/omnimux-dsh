@@ -25,7 +25,7 @@ describe('test network guard', () => {
           omnimux: {
             protocol: 'openai-media',
             baseUrl: 'https://external.test/v1',
-            apiKey: 'test-network-guard-key',
+            apiKey: 'sk-fixture-network-guard',
             models: { video: 'seedance-2-5' },
           },
         },

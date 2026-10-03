@@ -5,13 +5,13 @@ import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent 
 import { DEFAULT_MEDIA } from './route.js'
 import { findMediaModel } from './catalog.js'
 import { resolveRuntimeChoice, assertRuntimeReady } from '../settings/runtime-mode.js'
-import { isAuthenticOfficialToken, resolveSyncOfficialToken } from './mount.js'
+import { isAuthenticOfficialToken } from './mount.js'
 
 /**
  * @typedef {object} RouteDecision
  * @property {string} modelId            最终使用的模型 id（请求指定或官方默认）
  * @property {boolean} isOfficialRequest 该请求命中官方专线语义
- * @property {boolean} isOfficialBypass  官方专线且已具备权威官方凭据
+ * @property {boolean} isOfficialBypass  官方目录/服务端覆盖放行，凭证由操作执行时解析
  * @property {boolean} isTaskCollect     taskRef/taskId 收取态（上游已执行）
  * @property {boolean} isByok            显式 BYOK / 自定义渠道
  * @property {boolean} requireListed     是否要求操作已被收录（BYOK 恒 false）
@@ -24,8 +24,11 @@ import { isAuthenticOfficialToken, resolveSyncOfficialToken } from './mount.js'
  */
 export function resolveExecutionPlan({ kind, req, current }) {
   const channelIntent = resolveRequestChannelIntent(req)
-  const rawSystemToken = resolveSyncOfficialToken(process.env)
-  const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
+  // Planning never reads profiles or login stores. Only an explicit server override
+  // may be carried into the request; operation-time auth resolves current credentials.
+  const rawSystemToken = [process.env.OMNIMUX_API_KEY, process.env.OMNIMUX_TOKEN]
+    .find((value) => isAuthenticOfficialToken(value) && value.trim().startsWith('sk-'))
+  const hasOfficialToken = Boolean(rawSystemToken)
 
   const runtime = resolveRuntimeChoice(current)
   const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
@@ -48,29 +51,27 @@ export function resolveExecutionPlan({ kind, req, current }) {
   const isCliLocalModel = kind === 'audio' && effectiveModelId === 'gemini-3.8-flash-tts'
   const hasVerifiedRuntime = Boolean(runtime.textReady || runtime.mediaReady)
   const isFallbackOfficial = !targetChannel && current?.allowOfficialMediaFallback === true && hasVerifiedRuntime
-  const isOfficialRequest = !channelIntent.isByokChannel
+  const explicitProvider = typeof req.provider === 'string' && req.provider.trim() ? req.provider.trim() : ''
+  const isOfficialRequest = !channelIntent.isByokChannel && (!explicitProvider || explicitProvider === 'omnimux')
     && (
       (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
       || (!targetChannel && (runtime.mode === 'official' || isOfficialModel || isFallbackOfficial))
     )
 
   const isTaskCollect = Boolean(req.taskRef || req.taskId)
-  const isOfficialBypass = isOfficialRequest && (hasOfficialToken || isCliLocalModel)
+  const isOfficialBypass = isOfficialRequest && (isOfficialModel || hasOfficialToken || isCliLocalModel)
   const shouldBypassRuntimeReady = isOfficialBypass || isTaskCollect
   if (!shouldBypassRuntimeReady) {
     assertRuntimeReady(current, kind)
   }
 
   let finalReq
-  if (isTaskCollect) {
-    finalReq = req
-  } else if (isOfficialBypass) {
+  if (isOfficialRequest) {
     finalReq = {
       ...req,
-      env: { OMNIMUX_API_KEY: (rawSystemToken || '').trim() },
+      provider: 'omnimux',
+      env: hasOfficialToken ? { OMNIMUX_API_KEY: rawSystemToken.trim() } : {},
     }
-  } else if (isOfficialRequest) {
-    finalReq = { ...req, env: {} }
   } else {
     finalReq = req
   }
