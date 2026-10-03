@@ -429,29 +429,29 @@ export function InspirationSection({ t, active }) {
             />
           </div>
 
-          {selecting ? (
-            <div className="omnimux-inspiration-selection-bar">
-              <div className="omnimux-inspiration-selection-count">
-                <span>{t('select.count').replace('{n}', String(selectedCount))}</span>
-              </div>
-              <div className="omnimux-inspiration-selection-actions">
-                <Button variant="ghost" size="sm" onClick={selectAllLocal}>
-                  {t('select.selectAll')}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={clearSelection}>
-                  {t('select.clear')}
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  disabled={removing}
-                  onClick={() => setPendingRemove({ ids: [...selectedIds], count: selectedCount })}
-                >
-                  {t('select.delete').replace('{n}', String(selectedCount))}
-                </Button>
-              </div>
-            </div>
-          ) : null}
+        </div>
+      ) : null}
+      {!rivalTab && selecting ? (
+        <div className="omnimux-inspiration-selection-bar">
+          <div className="omnimux-inspiration-selection-count">
+            <span>{t('select.count').replace('{n}', String(selectedCount))}</span>
+          </div>
+          <div className="omnimux-inspiration-selection-actions">
+            <Button variant="ghost" size="sm" onClick={selectAllLocal}>
+              {t('select.selectAll')}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              {t('select.clear')}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={removing}
+              onClick={() => setPendingRemove({ ids: [...selectedIds], count: selectedCount })}
+            >
+              {t('select.delete').replace('{n}', String(selectedCount))}
+            </Button>
+          </div>
         </div>
       ) : null}
       </div>
