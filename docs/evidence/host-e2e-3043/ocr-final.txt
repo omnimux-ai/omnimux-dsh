@@ -1,0 +1,55 @@
+Review complete: 4 finding(s) across 6 selected item(s).
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:30-30 ───
+[bug · medium] `resolveSidebarBridge` calls `require.resolve(...)` below, but this ESM module never
+creates a `require` from `createRequire`. In clean setups where the plugin-local dependency link
+should be used, that branch always throws `ReferenceError` and falls through to the shared-store
+probe, which can incorrectly fail even though the declared dependency is available. Initialize
+`require` once from `createRequire(import.meta.url)` before using `require.resolve`.
+
+  import { createRequire } from 'node:module';
++ const require = createRequire(import.meta.url);
+
+
+─── plugins/omnimux/src/client/comment-native.e2e.test.js:5-10 ───
+[maintainability · low] `access` and `EnvironmentError` are imported but not referenced in this test
+file. Removing the unused imports avoids lint failures/noise in the E2E test.
+
+- import { mkdtemp, mkdir, writeFile, readFile, rm, readdir, access } from 'node:fs/promises';
++ import { mkdtemp, mkdir, writeFile, readFile, rm, readdir } from 'node:fs/promises';
+  import { resolve } from 'node:path';
+  import { fileURLToPath } from 'node:url';
+  import { commentFixturePng, commentSeedSource } from '../../test-support/comment-native-seed.mjs';
+  import {
+-   EnvironmentError,
+
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:145-147 ───
+[bug · low] This successful `require.resolve` path skips the version check that the shared-store
+path performs below. If the importer's `node_modules` link points at a stale or mismatched
+`dsh-better-sidebar`, the helper will accept it even though the declared dependency version was
+recorded in `wanted`. Apply the same validation before returning so both resolution paths enforce
+the declared bridge version consistently.
+
+        const dir = dirname(require.resolve('dsh-better-sidebar/package.json', { paths: [dirname(manifestPath)] }));
+        const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
++       if (wanted && !exactVersionSatisfies(pkg.version, wanted)) {
++         throw new EnvironmentError(
++           `declared sidebar ${wanted} (${declaredBy}) does not match installed ${pkg.version}; ` +
++           'declare the right version or pass OMNIMUX_E2E_SIDEBAR=<dir> explicitly.'
++         );
++       }
+        return { dir, version: pkg.version || 'unknown', declaredBy, source: 'declared-dependency', hash: await hashTree(dir) };
+
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:292-292 ───
+[bug · low] `boundedCommand` rejects as soon as the deadline fires, before the child has actually
+exited. The caller can then continue cleanup (including removing the staging/temp directory) while
+the timed-out build/plugin process is still running, which can leave stray processes or race with
+filesystem cleanup. Wait for the owned child to close (after SIGTERM/SIGKILL escalation) before
+rejecting so the helper's completion means the process is no longer active.
+
+-       fail(new Error(output.replace(/([?&]token=)\S+/g, '$1[REDACTED]')));
++       once(child, 'close')
++         .then(() => fail(new Error(output.replace(/([?&]token=)\S+/g, '$1[REDACTED]'))))
++         .catch(error => fail(error));
