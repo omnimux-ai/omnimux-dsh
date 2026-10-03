@@ -1,0 +1,53 @@
+Review complete: 4 finding(s) across 6 selected item(s).
+
+─── plugins/omnimux/src/client/comment-native.e2e.test.js:5-5 ───
+[maintainability · low] `access` is imported but not referenced in this test file. Please remove the
+unused import to avoid lint/no-unused-vars failures and keep the test setup clear.
+
+- import { mkdtemp, mkdir, writeFile, readFile, rm, readdir, access } from 'node:fs/promises';
++ import { mkdtemp, mkdir, writeFile, readFile, rm, readdir } from 'node:fs/promises';
+
+
+─── plugins/omnimux/src/client/comment-native.e2e.test.js:10-10 ───
+[maintainability · low] `EnvironmentError` is imported but not used in this file. Please drop it
+from the import list.
+
+
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:288-295 ───
+[bug · low] On timeout this rejects immediately after sending SIGTERM, while the child may still be
+running until it exits or the SIGKILL escalation fires. Callers can then enter their cleanup and
+remove the temp/staging directories while the owned process is still writing to them, which can make
+timeout cases flaky. Consider waiting for `close` (or the SIGKILL escalation) before rejecting.
+
+      const timer = setTimeout(() => {
+        if (settled) return;
+        output += `\n[boundedCommand] deadline ${deadlineMs}ms reached; SIGTERM to owned pid ${child.pid}`;
+        try { child.kill('SIGTERM'); } catch { /* already gone */ }
+        const killer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already gone */ } }, killGraceMs);
+-       once(child, 'close').then(() => clearTimeout(killer)).catch(() => clearTimeout(killer));
++       once(child, 'close')
++         .catch(() => {})
++         .finally(() => {
++           clearTimeout(killer);
+-       fail(new Error(output.replace(/([?&]token=)\S+/g, '$1[REDACTED]')));
++           fail(new Error(output.replace(/([?&]token=)\S+/g, '$1[REDACTED]')));
++         });
+      }, deadlineMs);
+
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:148-149 ───
+[bug · low] This early return skips the same declared-version validation that the shared-store
+fallback performs below. If the importer's node_modules link is present but points at a different
+dsh-better-sidebar version, the resolver will silently accept it even though the environment
+contract says the bridge must match the workspace declaration. Please apply the
+`wanted`/`exactVersionSatisfies` check before returning here as well.
+
+        const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
++       if (wanted && !exactVersionSatisfies(pkg.version, wanted)) {
++         throw new EnvironmentError(
++           `declared sidebar ${wanted} (${declaredBy}) does not match installed ${pkg.version}; ` +
++           'declare the right version or pass OMNIMUX_E2E_SIDEBAR=<dir> explicitly.'
++         );
++       }
+        return { dir, version: pkg.version || 'unknown', declaredBy, source: 'declared-dependency', hash: await hashTree(dir) };

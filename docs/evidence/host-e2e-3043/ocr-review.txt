@@ -1,0 +1,101 @@
+{
+  "status": "complete",
+  "llm": {
+    "provider": "dsh-cpa",
+    "model": "gpt-5.5"
+  },
+  "message": "Review complete: 0 finding(s) across 3 selected item(s).",
+  "summary": {
+    "files_reviewed": 3,
+    "comments": 0,
+    "total_tokens": 18262,
+    "input_tokens": 17308,
+    "output_tokens": 954,
+    "cache_read_tokens": 6144,
+    "elapsed": "24s"
+  },
+  "tool_calls": {
+    "total": 4,
+    "by_tool": {
+      "file_find": 1,
+      "file_read": 3
+    },
+    "failure": 0,
+    "failure_by_tool": {},
+    "failure_details": []
+  },
+  "comments": [],
+  "groups": [
+    {
+      "label": "small change set",
+      "files": [
+        "plugins/omnimux/test-support/generation-feedback/generation-feedback-browser.mjs",
+        "plugins/omnimux/test-support/generation-feedback/generation-feedback-fixture.jsx",
+        "plugins/omnimux/test-support/generation-feedback/generation-feedback-server.mjs"
+      ]
+    }
+  ],
+  "session_id": "37d391b6-2c7f-4de9-864c-1e28cee1748e",
+  "manifest": {
+    "schema_version": "ocr.run-manifest/v1",
+    "run_id": "37d391b6-2c7f-4de9-864c-1e28cee1748e",
+    "operation": "review",
+    "terminal_state": "complete",
+    "repository": {
+      "identity_sha256": "72a4299b0cafc9688d8dfc1929645d8f103e3c696008f4d6323179f137dba672"
+    },
+    "input": {
+      "mode": "workspace",
+      "resolved_base": "d95764912e36da01d879ab65d6340469b48a4625",
+      "source_artifact_sha256": "40be5d86cff30e5fdeb81f7c8af54c3a1a90c82283d391b96a2c03ebef66e9ec"
+    },
+    "execution": {
+      "ocr_version": "v1.12.11",
+      "provider": "dsh-cpa",
+      "model": "gpt-5.5",
+      "configured_concurrency": 8,
+      "rule_config_sha256": "7455b6684243044c3e20d8d7d8b302212e7dd556647c96221110b1e594f6755e",
+      "runtime_config_sha256": "f9fe9c9667dda16ce8346b636caa4a7b90178e88d6a8f1b03dc8c86f878803d3"
+    },
+    "coverage": {
+      "selected": [
+        {
+          "item_id": "aa2979d6f9fb0317f92b0eb62a82a04adf5faadc1d9704f86df490676b13fd3d",
+          "path": "plugins/omnimux/test-support/generation-feedback/generation-feedback-browser.mjs",
+          "fingerprint": "0fcd133fb564ef8b3999deb6065a773f25f4ac8ac5a2b82df47176dc0f5ff8d8"
+        },
+        {
+          "item_id": "d3b01bc18177a320be54ce9bba80b377ee1a5d8b3abb3660ea1ac4b3c9d49d13",
+          "path": "plugins/omnimux/test-support/generation-feedback/generation-feedback-fixture.jsx",
+          "fingerprint": "94c2cee012e4135bf5d6f5dfcae5d8dd537d84610278557b8ca767f1405f7b21"
+        },
+        {
+          "item_id": "f34c0436a43be0516f22558dec4b078564b43df7a6bec8d9fc827d139fb36b1f",
+          "path": "plugins/omnimux/test-support/generation-feedback/generation-feedback-server.mjs",
+          "fingerprint": "44149ef5ee71d32a1b6ecf0a7a48e6799521d9f5ab81032f555b74a42942c482"
+        }
+      ],
+      "completed": [
+        {
+          "item_id": "aa2979d6f9fb0317f92b0eb62a82a04adf5faadc1d9704f86df490676b13fd3d",
+          "path": "plugins/omnimux/test-support/generation-feedback/generation-feedback-browser.mjs",
+          "fingerprint": "0fcd133fb564ef8b3999deb6065a773f25f4ac8ac5a2b82df47176dc0f5ff8d8"
+        },
+        {
+          "item_id": "d3b01bc18177a320be54ce9bba80b377ee1a5d8b3abb3660ea1ac4b3c9d49d13",
+          "path": "plugins/omnimux/test-support/generation-feedback/generation-feedback-fixture.jsx",
+          "fingerprint": "94c2cee012e4135bf5d6f5dfcae5d8dd537d84610278557b8ca767f1405f7b21"
+        },
+        {
+          "item_id": "f34c0436a43be0516f22558dec4b078564b43df7a6bec8d9fc827d139fb36b1f",
+          "path": "plugins/omnimux/test-support/generation-feedback/generation-feedback-server.mjs",
+          "fingerprint": "44149ef5ee71d32a1b6ecf0a7a48e6799521d9f5ab81032f555b74a42942c482"
+        }
+      ],
+      "reused": [],
+      "failed": [],
+      "waived": []
+    },
+    "elapsed_ms": 23635
+  }
+}

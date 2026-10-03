@@ -1,0 +1,200 @@
+{
+  "status": "PASS_SCOPED",
+  "checks": [
+    {
+      "id": "request-1",
+      "status": "pending",
+      "sessionId": "qa-a",
+      "mediaCount": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "request-1",
+      "status": "running",
+      "sessionId": "qa-a",
+      "mediaCount": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "request-1",
+      "status": "running",
+      "sessionId": "qa-a",
+      "mediaCount": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "request-1",
+      "status": "success",
+      "sessionId": "qa-a",
+      "mediaCount": 1,
+      "width": 480,
+      "height": 363.1640625
+    },
+    {
+      "id": "request-2",
+      "status": "failure",
+      "sessionId": "qa-a",
+      "mediaCount": 0,
+      "width": 480,
+      "height": 363.1640625
+    },
+    {
+      "id": "request-3",
+      "status": "cancelled",
+      "sessionId": "qa-a",
+      "mediaCount": 0,
+      "width": 480,
+      "height": 363.1640625
+    },
+    {
+      "id": "request-4",
+      "status": "running",
+      "sessionId": "qa-a",
+      "mediaCount": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "request-4",
+      "status": "success",
+      "sessionId": "qa-a",
+      "mediaCount": 1,
+      "width": 480,
+      "height": 363.1640625
+    },
+    {
+      "id": "request-5",
+      "status": "unresolved",
+      "sessionId": "qa-a",
+      "mediaCount": 0,
+      "width": 480,
+      "height": 363.1640625
+    },
+    {
+      "negativeNoTask": true
+    },
+    {
+      "id": "request-1",
+      "status": "pending",
+      "sessionId": "qa-b",
+      "mediaCount": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "sessionIsolation": true
+    },
+    {
+      "id": "request-9",
+      "status": "success",
+      "sessionId": "qa-a",
+      "mediaCount": 1,
+      "width": 480,
+      "height": 403
+    },
+    {
+      "videoPlayback": {
+        "currentTime": 0.003083,
+        "duration": 1,
+        "videoWidth": 160,
+        "controls": true,
+        "width": 478,
+        "height": 358.5
+      }
+    },
+    {
+      "id": "request-10",
+      "status": "success",
+      "sessionId": "qa-a",
+      "mediaCount": 1,
+      "width": 480,
+      "height": 64.5
+    },
+    {
+      "unreadableVideoRejected": true
+    },
+    {
+      "id": "request-11",
+      "status": "success",
+      "sessionId": "qa-a",
+      "mediaCount": 1,
+      "width": 480,
+      "height": 363.1640625
+    },
+    {
+      "attachmentImageLoaded": true
+    },
+    {
+      "id": "request-12",
+      "status": "cancelled",
+      "sessionId": "qa-a",
+      "mediaCount": 1,
+      "width": 480,
+      "height": 395.1640625
+    },
+    {
+      "partialCancelRetainsImage": true
+    }
+  ],
+  "closed": true,
+  "server": {
+    "closed": true,
+    "changedSources": []
+  },
+  "productCompliance": {
+    "status": "FAIL",
+    "expected": {
+      "recoveryRows": [],
+      "copyActions": 0
+    },
+    "actual": {
+      "recoveryRows": [
+        "request-2",
+        "request-3",
+        "request-5"
+      ],
+      "copyActions": 3
+    }
+  },
+  "errors": [],
+  "screenshots": [
+    {
+      "name": "pending.png",
+      "width": 1920,
+      "height": 929
+    },
+    {
+      "name": "success.png",
+      "width": 1920,
+      "height": 929
+    },
+    {
+      "name": "terminal.png",
+      "width": 1920,
+      "height": 929
+    },
+    {
+      "name": "video-playing.png",
+      "width": 1920,
+      "height": 929
+    },
+    {
+      "name": "video-unreadable.png",
+      "width": 1920,
+      "height": 929
+    },
+    {
+      "name": "attachment-image.png",
+      "width": 1920,
+      "height": 929
+    },
+    {
+      "name": "partial-cancel.png",
+      "width": 1920,
+      "height": 929
+    }
+  ]
+}

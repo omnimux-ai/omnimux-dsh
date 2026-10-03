@@ -1,0 +1,17 @@
+HEAD=9f04011e8c2de4e754a64ebc12d4ce8a71f3a98c
+BASE=0deb18ee3f6e6f0448db874d05872238a273c73e
+REAL_EXIT=0
+✔ 1756 official native comment ready, full-text pre-step expansion, and removal (25903.324625ms)
+✔ bridge regression: late single request consumes retained turn end (1.651458ms)
+✔ bridge regression: two real candidates resolve without cross-request media (0.513542ms)
+✔ bridge regression: submitted input is frozen and questions do not generate (0.144667ms)
+✔ generation feedback: real browser transport-to-viewer journeys (16016.585542ms)
+ℹ retained evidence: /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-host-e2e-issue-3043/.agent-reports/canvas-generation-feedback/e2e-runs/3fca91d9-d879-4665-a1c4-e330f4f08d94
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 42110.309708

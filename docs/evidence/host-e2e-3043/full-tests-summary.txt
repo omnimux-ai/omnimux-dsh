@@ -1,0 +1,13 @@
+REAL_EXIT=0
+ℹ tests 2
+ℹ pass 2
+ℹ fail 0
+ℹ skipped 0
+ℹ duration_ms 153.643292
+✔ 1756 official native comment ready, full-text pre-step expansion, and removal (31263.629083ms)
+✔ generation feedback: real browser transport-to-viewer journeys (20584.847291ms)
+ℹ tests 3057
+ℹ pass 3057
+ℹ fail 0
+ℹ skipped 0
+ℹ duration_ms 34182.1255

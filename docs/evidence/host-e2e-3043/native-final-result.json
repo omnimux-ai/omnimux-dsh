@@ -1,0 +1,74 @@
+{
+  "assertions": {
+    "uploadedCoordinatesExactlyMatch": true,
+    "outerRejectedBeforeRequest": true,
+    "browserChecks": [
+      "draft cannot send",
+      "ready with empty body",
+      "exact-session outer reject registered",
+      "remove clears comment and disables empty send"
+    ],
+    "entryNamingCompliant": false,
+    "entryNamingObserved": {
+      "title": "点击进入画布",
+      "ariaLabel": null,
+      "text": "画布"
+    },
+    "environmentManifest": {
+      "staging": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-host-e2e-issue-3043/.tmp/comment-native-e2e-OwSRTO/staging",
+      "inputs": {
+        "host": {
+          "executable": "/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux",
+          "cli": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js",
+          "version": "2.0.9",
+          "source": "app-bundle-verified"
+        },
+        "sidebar": {
+          "dir": "/Users/x/.omnimux-dev/profiles/omnimux/.materialize-snapshots/plugins/dsh-better-sidebar",
+          "version": "0.19.1",
+          "source": "env",
+          "declaredBy": null,
+          "hash": "sha256:84bfaacd6e0aa69d66760ef488051afbc2e758c899466e637922f4689c1ababc"
+        }
+      },
+      "artifacts": {
+        "hub.buildScriptHash": "sha256:e47d904cba609483dc39007a82950ceead37dfc5ec30a33233242ba714cb0475",
+        "viewer.buildScriptHash": "sha256:9c897e1ac2d0bfbcc7f0a4b53a20a22b28ddd78be112a0a1f3c0f162cd2ea685",
+        "omnimux/lib/client.js": "sha256:2a735d76a697851dc9559b68cb85fcafbada6107ee4ae6532401743ec5daa54a",
+        "omnimux-viewer/lib/index.js": "sha256:273685d3a85bc15a275335498979fa42d6cd77124e761971db33db81ee8465ef",
+        "omnimux-viewer/lib/client.js": "sha256:b7c65a2603c52f3b445f2e25def6d678a07f78631264ba59b90012bbfeb8c261"
+      }
+    }
+  },
+  "cleanup": {
+    "hostStopped": true,
+    "exitCode": 0,
+    "signalCode": null,
+    "temp": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-host-e2e-issue-3043/.tmp/comment-native-e2e-OwSRTO",
+    "envManifest": {
+      "staging": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-host-e2e-issue-3043/.tmp/comment-native-e2e-OwSRTO/staging",
+      "inputs": {
+        "host": {
+          "executable": "/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux",
+          "cli": "/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js",
+          "version": "2.0.9",
+          "source": "app-bundle-verified"
+        },
+        "sidebar": {
+          "dir": "/Users/x/.omnimux-dev/profiles/omnimux/.materialize-snapshots/plugins/dsh-better-sidebar",
+          "version": "0.19.1",
+          "source": "env",
+          "declaredBy": null,
+          "hash": "sha256:84bfaacd6e0aa69d66760ef488051afbc2e758c899466e637922f4689c1ababc"
+        }
+      },
+      "artifacts": {
+        "hub.buildScriptHash": "sha256:e47d904cba609483dc39007a82950ceead37dfc5ec30a33233242ba714cb0475",
+        "viewer.buildScriptHash": "sha256:9c897e1ac2d0bfbcc7f0a4b53a20a22b28ddd78be112a0a1f3c0f162cd2ea685",
+        "omnimux/lib/client.js": "sha256:2a735d76a697851dc9559b68cb85fcafbada6107ee4ae6532401743ec5daa54a",
+        "omnimux-viewer/lib/index.js": "sha256:273685d3a85bc15a275335498979fa42d6cd77124e761971db33db81ee8465ef",
+        "omnimux-viewer/lib/client.js": "sha256:b7c65a2603c52f3b445f2e25def6d678a07f78631264ba59b90012bbfeb8c261"
+      }
+    }
+  }
+}
