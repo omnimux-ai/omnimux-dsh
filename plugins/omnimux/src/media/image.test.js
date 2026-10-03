@@ -43,34 +43,25 @@ describe('omnimux image helpers', () => {
     )
   })
 
-  it('测试用例 6：executeOmnimuxImage 在传入 Mock store 的情况下，无需 OMNIMUX_API_KEY 也能顺利调用 mock runtime 执行成功', async () => {
+  it('仅登录 PAT 时拒绝图片生成，提供方提交与 fetch 均为零且不写产物', async (t) => {
     const dir = mkdtempSync(join(tmpdir(), 'omnimux-img-pat-'))
+    t.after(() => rmSync(dir, { recursive: true, force: true }))
     const dest = join(dir, 'out.png')
-    const result = await executeOmnimuxImage({
+    let storeCalls = 0
+    let submitCalls = 0
+    let fetchCalls = 0
+    await assert.rejects(() => executeOmnimuxImage({
       prompt: 'a lamp at night with pat',
       dest,
       env: {},
-      store: {
-        resolve: async () => 'pat-login-token',
-      },
-      runtime: {
-        async execute(req) {
-          assert.equal(req.modelId, 'omnimux-image')
-          return {
-            taskId: 'img-pat-1',
-            outputs: [{ type: 'image', url: 'https://cdn.example/out-pat.png' }],
-          }
-        },
-      },
-      fetcher: async (url) => {
-        assert.equal(String(url), 'https://cdn.example/out-pat.png')
-        return { ok: true, headers: { get: () => 'image/png' }, arrayBuffer: async () => Buffer.from('pat-png-bytes') }
-      },
-    })
-    assert.equal(result.mode, 'live')
-    assert.equal(result.taskId, 'img-pat-1')
-    assert.equal(readFileSync(dest, 'utf8'), 'pat-png-bytes')
-    rmSync(dir, { recursive: true, force: true })
+      store: { resolve: async () => { storeCalls += 1; return 'pat-login-token' } },
+      runtime: { async execute() { submitCalls += 1; throw new Error('PAT must not submit') } },
+      fetcher: async () => { fetchCalls += 1; throw new Error('PAT must not fetch') },
+    }), { code: 'needs-omnimux', message: '生成服务需要 API 密钥，请在当前凭证中配置 OMNIMUX_API_KEY；登录凭证不能用于生成' })
+    assert.equal(storeCalls, 0)
+    assert.equal(submitCalls, 0)
+    assert.equal(fetchCalls, 0)
+    assert.equal(existsSync(dest), false)
   })
 
   it('sends authorization when downloading an omnimux.ai image url', async () => {

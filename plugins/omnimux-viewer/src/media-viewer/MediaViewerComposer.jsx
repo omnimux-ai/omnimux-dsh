@@ -138,6 +138,9 @@ export function MediaViewerComposer({
 
   const promptRef = useRef(null);
   const promptBoxRef = useRef(null);
+  const submittingRef = useRef(false);
+  const currentDraftRef = useRef(prompt);
+  currentDraftRef.current = prompt;
   const isSwitchingRef = useRef(false);
   const config = useMediaGenerationConfig({ initialMode });
   const { mode, setMode, closePopovers, model, videoGenMode, setVideoGenMode } = config;
@@ -930,7 +933,7 @@ export function MediaViewerComposer({
 
   const handleSend = useCallback(() => {
     const trimmed = prompt.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled || submittingRef.current) return;
     closePopovers();
     setPickerOpen(false);
 
@@ -1050,11 +1053,16 @@ export function MediaViewerComposer({
       };
     });
 
-    setPrompt('');
-    setUserPromptSuffix('');
-    userPromptSuffixRef.current = '';
-
-    onDirectSubmit?.({
+    submittingRef.current = true;
+    const submission = onDirectSubmit?.({
+      onAccepted: () => {
+        submittingRef.current = false;
+        if (currentDraftRef.current !== prompt) return;
+        setPrompt('');
+        setUserPromptSuffix('');
+        userPromptSuffixRef.current = '';
+      },
+      onRejected: () => { submittingRef.current = false; },
       prompt: synthesizedPrompt,
       rawPrompt: trimmed,
       kind: mode,
@@ -1066,6 +1074,7 @@ export function MediaViewerComposer({
       assets,
       annotations: annotationsPayload,
     });
+    Promise.resolve(submission).finally(() => { submittingRef.current = false; });
   }, [
     prompt,
     disabled,
@@ -1079,6 +1088,8 @@ export function MediaViewerComposer({
     model,
     videoModeId,
     config.channel?.id,
+    config.imageOpMode,
+    currentOperationId,
   ]);
 
   const handleKeyDown = useCallback((e) => {

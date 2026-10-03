@@ -1,0 +1,2433 @@
+{"spaceId":113,"url":"http://127.0.0.1:57677/"}
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        svg_root
+        text "当前会话暂无生成的图片或视频"
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=12, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=13]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        svg_root
+        text "当前会话暂无生成的图片或视频"
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=12, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=13]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        svg_root
+        text "当前会话暂无生成的图片或视频"
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=12, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=13]
+              text "蓝色山峰恢复验证"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      tablist "生成类型切换"
+        tab [ref=8]
+          svg_root
+          text "图像"
+        tab [ref=9]
+          svg_root
+          text "视频"
+      container
+        tablist "生成方式"
+          tab [ref=10]
+            svg_root
+            text "文生图"
+          tab [ref=11]
+            svg_root
+            text "参考"
+        container
+          button "添加图片" [ref=12, loc=css:button[aria-label="添加图片"]]
+            svg_root
+          textbox [ref=13]
+            text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+        container
+          container
+            button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+              svg_root
+              text "离线图片验证"
+              text "离线通道"
+              svg_root
+            button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+              text "1:1"
+              text "·"
+              text "1K"
+              text "·"
+              text "1"
+              svg_root
+          button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+            svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      image
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=12, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=13]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      image
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=12, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=13]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      image
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=12, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=13]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      image
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          dialog "选择参考素材" [ref=19, loc=role:dialog[name="选择参考素材"]]
+            container
+              tablist
+                tab [ref=20]
+                  text "本地"
+                tab [ref=21]
+                  text "公共"
+                tab [ref=22]
+                  text "产品库"
+                tab [ref=23]
+                  text "AI 生成"
+              container
+                container
+                  text "只看我的"
+                  switch "只看我的" [ref=24]
+                button "关闭" [ref=25, loc=css:button[aria-label="关闭"]]
+                  svg_root
+            container
+              button [ref=26]
+                svg_root
+                text "从本地上传"
+              button "读取失败参考图" [ref=27, loc=role:button[name="读取失败参考图"]]
+                image
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=12, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=13]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      image
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [fixture-image.png] 已入槽"
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            container
+              image
+              button "添加参考" [ref=12, loc=css:button[aria-label="添加参考"]]
+                svg_root
+            textbox [ref=13]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=1, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=2, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=3]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=4]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=5]
+          text "打开"
+        button "下载原图" [ref=6, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=7, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      image
+      container
+        tablist "生成类型切换"
+          tab [ref=8]
+            svg_root
+            text "图像"
+          tab [ref=9]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [fixture-image.png] 已入槽"
+          tablist "生成方式"
+            tab [ref=10]
+              svg_root
+              text "文生图"
+            tab [ref=11]
+              svg_root
+              text "参考"
+          container
+            container
+              container
+                image
+                button "移除" [ref=28, loc=css:button[aria-label="移除"]]
+                  svg_root
+              button "添加参考" [ref=12, loc=css:button[aria-label="添加参考"]]
+                svg_root
+            textbox [ref=13]
+              text "参考图刷新收取验证"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=14, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=15, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=16, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=17]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=18]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+        container
+          svg_root
+          text "正在恢复任务"
+          canvas
+          text "1%"
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=40]
+              svg_root
+              text "文生图"
+            tab [ref=41]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=42, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=43]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+        image
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=40]
+              svg_root
+              text "文生图"
+            tab [ref=41]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=42, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=43]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+        image
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          tablist "生成方式"
+            tab [ref=40]
+              svg_root
+              text "文生图"
+            tab [ref=41]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=42, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=43]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+        image
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "已切换模式"
+          textbox [ref=43]
+            text "描述视频画面内容和动态过程，使用 @ 指定参考图或参考视频"
+          container
+            container
+              button "模型：离线视频验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线视频验证 · 离线通道"]]
+                svg_root
+                text "离线视频验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：720P · 16:9 · 5s · 有声" [ref=45, loc=css:button[aria-label="配置模型参数：720P · 16:9 · 5s · 有声"]]
+                svg_root
+                text "·"
+                text "720P"
+                text "·"
+                container
+                  svg_root
+                  container
+                    text "5"
+                    text "s"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+        image
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "已切换模式"
+          textbox [ref=43]
+            text "短视频播放验证"
+          container
+            container
+              button "模型：离线视频验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线视频验证 · 离线通道"]]
+                svg_root
+                text "离线视频验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：720P · 16:9 · 5s · 有声" [ref=45, loc=css:button[aria-label="配置模型参数：720P · 16:9 · 5s · 有声"]]
+                svg_root
+                text "·"
+                text "720P"
+                text "·"
+                container
+                  svg_root
+                  container
+                    text "5"
+                    text "s"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+        video [ref=50]
+          container
+            container
+              button "播放" [ref=51]
+              text "0:00"
+              text "/ 0:01"
+              button "静音" [ref=52]
+              button "进入全屏模式" [ref=53]
+              button "显示更多媒体控件" [ref=54]
+            spinbutton "视频时间进度条" [ref=55]
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "已切换模式"
+          textbox [ref=43]
+            text "描述视频画面内容和动态过程，使用 @ 指定参考图或参考视频"
+          container
+            container
+              button "模型：离线视频验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线视频验证 · 离线通道"]]
+                svg_root
+                text "离线视频验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：720P · 16:9 · 5s · 有声" [ref=45, loc=css:button[aria-label="配置模型参数：720P · 16:9 · 5s · 有声"]]
+                svg_root
+                text "·"
+                text "720P"
+                text "·"
+                container
+                  svg_root
+                  container
+                    text "5"
+                    text "s"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+        video [ref=50]
+          container
+            container
+              button "暂停" [ref=51]
+              text "0:00"
+              text "/ 0:01"
+              button "取消静音" [ref=52]
+              button "进入全屏模式" [ref=53]
+              button "显示更多媒体控件" [ref=54]
+            spinbutton "视频时间进度条" [ref=55]
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "已切换模式"
+          textbox [ref=43]
+            text "描述视频画面内容和动态过程，使用 @ 指定参考图或参考视频"
+          container
+            container
+              button "模型：离线视频验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线视频验证 · 离线通道"]]
+                svg_root
+                text "离线视频验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：720P · 16:9 · 5s · 有声" [ref=45, loc=css:button[aria-label="配置模型参数：720P · 16:9 · 5s · 有声"]]
+                svg_root
+                text "·"
+                text "720P"
+                text "·"
+                container
+                  svg_root
+                  container
+                    text "5"
+                    text "s"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+        video [ref=50]
+          container
+            container
+              button "暂停" [ref=51]
+              text "0:00"
+              text "/ 0:01"
+              button "取消静音" [ref=52]
+              button "进入全屏模式" [ref=53]
+              button "显示更多媒体控件" [ref=54]
+            spinbutton "视频时间进度条" [ref=55]
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "已切换模式"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=58, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=43]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+        video [ref=50]
+          container
+            container
+              button "暂停" [ref=51]
+              text "0:00"
+              text "/ 0:01"
+              button "取消静音" [ref=52]
+              button "进入全屏模式" [ref=53]
+              button "显示更多媒体控件" [ref=54]
+            spinbutton "视频时间进度条" [ref=55]
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "已切换模式"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=58, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=43]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+        video [ref=50]
+          container
+            container
+              button "暂停" [ref=51]
+              text "0:00"
+              text "/ 0:01"
+              button "取消静音" [ref=52]
+              button "进入全屏模式" [ref=53]
+              button "显示更多媒体控件" [ref=54]
+            spinbutton "视频时间进度条" [ref=55]
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          dialog "选择参考素材" [ref=59, loc=role:dialog[name="选择参考素材"]]
+            container
+              tablist
+                tab [ref=60]
+                  text "本地"
+                tab [ref=61]
+                  text "公共"
+                tab [ref=62]
+                  text "产品库"
+                tab [ref=63]
+                  text "AI 生成"
+              container
+                container
+                  text "只看我的"
+                  switch "只看我的" [ref=64]
+                button "关闭" [ref=65, loc=css:button[aria-label="关闭"]]
+                  svg_root
+            container
+              button [ref=66]
+                svg_root
+                text "从本地上传"
+              button "读取失败参考图" [ref=67, loc=role:button[name="读取失败参考图"]]
+                image
+          status
+            text "已切换模式"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=58, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=43]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+        video [ref=50]
+          container
+            container
+              button "暂停" [ref=51]
+              text "0:00"
+              text "/ 0:01"
+              button "取消静音" [ref=52]
+              button "进入全屏模式" [ref=53]
+              button "显示更多媒体控件" [ref=54]
+            spinbutton "视频时间进度条" [ref=55]
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [fixture-image.png] 已入槽"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            container
+              image
+              button "添加参考" [ref=58, loc=css:button[aria-label="添加参考"]]
+                svg_root
+            textbox [ref=43]
+              text "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+        video [ref=50]
+          container
+            container
+              button "暂停" [ref=51]
+              text "0:00"
+              text "/ 0:01"
+              button "取消静音" [ref=52]
+              button "进入全屏模式" [ref=53]
+              button "显示更多媒体控件" [ref=54]
+            spinbutton "视频时间进度条" [ref=55]
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [fixture-image.png] 已入槽"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            container
+              container
+                image
+                button "移除" [ref=68, loc=css:button[aria-label="移除"]]
+                  svg_root
+              button "添加参考" [ref=58, loc=css:button[aria-label="添加参考"]]
+                svg_root
+            textbox [ref=43]
+              text "文件读取失败草稿保留"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+          button [ref=69]
+        paragraph
+          text "本地图片读取失败，请重试或先上传到资产库"
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [fixture-image.png] 已入槽"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            container
+              image
+              button "添加参考" [ref=58, loc=css:button[aria-label="添加参考"]]
+                svg_root
+            textbox [ref=43]
+              text "文件读取失败草稿保留"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+          button [ref=69]
+        paragraph
+          text "本地图片读取失败，请重试或先上传到资产库"
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [fixture-image.png] 已入槽"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            container
+              container
+                image
+                button "移除" [ref=68, loc=css:button[aria-label="移除"]]
+                  svg_root
+              button "添加参考" [ref=58, loc=css:button[aria-label="添加参考"]]
+                svg_root
+            textbox [ref=43]
+              text "文件读取失败草稿保留"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+          button [ref=69]
+        paragraph
+          text "本地图片读取失败，请重试或先上传到资产库"
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [fixture-image.png] 已入槽"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=58, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=43]
+              text "文件读取失败草稿保留"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+          button [ref=69]
+        paragraph
+          text "本地图片读取失败，请重试或先上传到资产库"
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          dialog "选择参考素材" [ref=70, loc=role:dialog[name="选择参考素材"]]
+            container
+              tablist
+                tab [ref=71]
+                  text "本地"
+                tab [ref=72]
+                  text "公共"
+                tab [ref=73]
+                  text "产品库"
+                tab [ref=74]
+                  text "AI 生成"
+              container
+                container
+                  text "只看我的"
+                  switch "只看我的" [ref=75]
+                button "关闭" [ref=76, loc=css:button[aria-label="关闭"]]
+                  svg_root
+            container
+              button [ref=77]
+                svg_root
+                text "从本地上传"
+              button "读取失败参考图" [ref=78, loc=role:button[name="读取失败参考图"]]
+                image
+          status
+            text "素材 [fixture-image.png] 已入槽"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            button "添加图片" [ref=58, loc=css:button[aria-label="添加图片"]]
+              svg_root
+            textbox [ref=43]
+              text "文件读取失败草稿保留"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+          button [ref=69]
+        paragraph
+          text "本地图片读取失败，请重试或先上传到资产库"
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [读取失败参考图] 已入槽"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            container
+              image
+              button "添加参考" [ref=58, loc=css:button[aria-label="添加参考"]]
+                svg_root
+            textbox [ref=43]
+              text "文件读取失败草稿保留"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root
+
+[p1 "3054 媒体生成隔离验证" | space "3054 browser successor 1791045522044"(113): 1 managed, 0 untracked — p1* "3054 媒体生成隔离验证"]
+root
+  container
+    container
+      container
+        button "大图浏览模式" [ref=29, loc=css:button[aria-label="大图浏览模式"]]
+          svg_root
+        button "四宫格时间线模式" [ref=30, loc=css:button[aria-label="四宫格时间线模式"]]
+          svg_root
+      button [ref=31]
+        svg_root
+        text "添加评论"
+      container
+        button [ref=32]
+          container
+            text "100"
+            text "%"
+          svg_root
+        button [ref=33]
+          text "打开"
+        button "下载原图" [ref=34, loc=css:button[aria-label="下载原图"]]
+          svg_root
+        button "切换两栏/三栏" [ref=35, loc=css:button[aria-label="切换两栏/三栏"]]
+          svg_root
+    container
+      container
+        container
+          button [ref=36]
+            image
+          button [ref=37]
+            image
+          button [ref=49]
+            video
+            svg_root
+          button [ref=69]
+        paragraph
+          text "本地图片读取失败，请重试或先上传到资产库"
+      container
+        tablist "生成类型切换"
+          tab [ref=38]
+            svg_root
+            text "图像"
+          tab [ref=39]
+            svg_root
+            text "视频"
+        container
+          status
+            text "素材 [读取失败参考图] 已入槽"
+          tablist "生成方式"
+            tab [ref=56]
+              svg_root
+              text "文生图"
+            tab [ref=57]
+              svg_root
+              text "参考"
+          container
+            container
+              image
+              button "添加参考" [ref=58, loc=css:button[aria-label="添加参考"]]
+                svg_root
+            textbox [ref=43]
+              text "本地素材失败草稿保留"
+          container
+            container
+              button "模型：离线图片验证 · 离线通道" [ref=44, loc=css:button[aria-label="模型：离线图片验证 · 离线通道"]]
+                svg_root
+                text "离线图片验证"
+                text "离线通道"
+                svg_root
+              button "配置模型参数：1:1 · 1K · 1" [ref=45, loc=css:button[aria-label="配置模型参数：1:1 · 1K · 1"]]
+                text "1:1"
+                text "·"
+                text "1K"
+                text "·"
+                text "1"
+                svg_root
+            button "立即直连生成" [ref=46, loc=css:button[aria-label="立即直连生成"]]
+              svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=47]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=48]
+      svg_root

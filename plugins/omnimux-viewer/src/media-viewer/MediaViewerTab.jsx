@@ -10,7 +10,7 @@ import { syncImageCanvasStage } from '../../../omnimux/src/client/media-viewer/i
 import { registerContextContributor } from '../../../omnimux/src/client/workbench/context.js';
 
 import { serializeReferenceAssets, isAllowedReferenceUrl } from './media-slot.js';
-import { runGenerationTask, resumePendingGenerations } from './generation-runner.js';
+import { runGenerationTask, resumePendingGenerations, canRetryGeneration } from './generation-runner.js';
 import { describeGenerationFailure } from './generation-failure.js';
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
@@ -79,8 +79,10 @@ export async function materializeAssetFile(asset) {
     try {
       if (typeof fetch === 'function' && typeof FileReader !== 'undefined') {
         const resp = await fetch(urlStr);
+        if (!resp.ok) throw new Error('参考图片读取失败，请重新选择素材');
         if (resp.ok) {
           const blob = await resp.blob();
+          if (blob.size > MAX_MATERIALIZE_FILE_SIZE) throw new Error('本地图片超过 5MB，请压缩后重试或先上传到资产库');
           if (blob.size <= MAX_MATERIALIZE_FILE_SIZE) {
             const dataUrl = await new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -98,8 +100,10 @@ export async function materializeAssetFile(asset) {
           }
         }
       }
+      throw new Error('参考图片读取失败，请重新选择素材');
     } catch (err) {
       console.warn('[MediaViewerTab] Failed to materialize local asset URL to base64 Data URL:', err);
+      throw err;
     }
   }
 
@@ -115,7 +119,7 @@ const noSubscription = () => () => {};
  */
 function FailureCard({ item, retryingIds, onRetry }) {
   const reason = item?.failure?.reason || '生成失败，请稍后重试';
-  const retryable = item?.failure?.retryable !== false;
+  const retryable = canRetryGeneration(item);
   return (
     <div className="omx-mv-failure-card">
       <p className="omx-mv-failure-card__reason" title={reason}>{reason}</p>
@@ -174,7 +178,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const [retryingIds, setRetryingIds] = useState(() => new Set());
 
   const handleRetryFailure = (item) => {
-    if (!item?.id || item.failure?.retryable === false) return;
+    if (!item?.id || !canRetryGeneration(item)) return;
     if (retryingIds.has(item.id)) return;
     setRetryingIds((prev) => new Set(prev).add(item.id));
     // 提交被接受后该项回到 generating，失败卡（含按钮）随之消失；
@@ -196,7 +200,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleDirectSubmit = async ({ prompt, kind, operation, activeOperation, model, channel, params, assets, annotations }) => {
+  const handleDirectSubmit = async ({ prompt, kind, operation, activeOperation, model, channel, params, assets, annotations, onAccepted, onRejected }) => {
     // 张数（仅图像）：一次提交产出 batchCount 条同组任务记录与独立请求；
     // 同 groupId 让时间线/缩略图栏把它们归并为同一批次。
     const batchCount = kind === 'image'
@@ -244,6 +248,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
       }
       store.setActiveId(taskIds[0]);
       store.setGenerating(true, { prompt, model, status: 'running' });
+      onAccepted?.();
 
       // 渠道选择与容灾唯一拥有者在服务端（resolveExecutionPlan + execute 分组容灾）；
       // 客户端透传用户选择的渠道，不自行换道或按错误文本正则重试。
@@ -251,17 +256,25 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
       await Promise.allSettled(taskIds.map((taskId) => runGenerationTask(taskId, { store })));
     } catch (err) {
       // 素材预物化等提交前置步骤失败：所有任务原位标失败，不切走不弹 toast
+      onRejected?.();
       console.error('[MediaViewer] Direct generate failed:', err);
       for (const taskId of taskIds) {
         const item = (store.getSnapshot().mediaList || []).find((m) => m.id === taskId);
-        if (item?.status === 'generating') {
-          store.updateMedia(taskId, {
-            status: 'failed',
-            resuming: false,
-            failure: describeGenerationFailure({ error: err?.message }),
+        const failure = { ...describeGenerationFailure({ error: err?.message }), retryable: false };
+        if (!item) {
+          // 原素材仍在输入框：复用既有失败出口，不以缺素材的请求重放。
+          store.addMedia({
+            id: taskId, sessionId, groupId, status: 'failed',
+            type: kind === 'video' ? 'video' : 'image',
+            prompt, title: prompt.slice(0, 30),
+            aspectRatio: params?.aspectRatio || '1:1',
+            requestReplayable: false, failure,
           });
+        } else if (item.status === 'generating') {
+          store.updateMedia(taskId, { status: 'failed', resuming: false, failure });
         }
       }
+      store.setActiveId(taskIds[0]);
     } finally {
       // 安全并发任务管理：仅当当前会话中没有其他正在生成的任务时才复位 isGenerating
       const currentList = store.getSnapshot().mediaList || [];

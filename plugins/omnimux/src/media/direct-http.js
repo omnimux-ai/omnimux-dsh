@@ -3,11 +3,14 @@ import os from 'node:os'
 import path from 'node:path'
 import { readJsonBody, sendJson } from '../auth/http-routes.js'
 import { resolveExecutionPlan } from './execution-plan.js'
+import { requestRejection } from '../host/request-authorization.js'
+import { assertCapabilityEnabled } from '../gate/guard.js'
 import {
   getMediaTaskRecord,
   findMediaTaskByUpstreamId,
   findMediaTaskByRequestKey,
-  updateMediaTaskRecord,
+  recordMediaCollectionFailure,
+  canRecoverMediaTask,
 } from './task-store.js'
 
 export const DIRECT_MEDIA_GENERATE_ROUTE = '/omnimux/api/media/generate'
@@ -38,6 +41,10 @@ export function registerDirectMediaRoutes(webServer, deps) {
         return
       }
 
+      if (deps.getConnection) {
+        const rejected = requestRejection(req, deps.getConnection)
+        if (rejected) { sendJson(res, rejected, { ok: false, error: 'request-not-authorized' }); return }
+      }
       let body
       try {
         body = await readJsonBody(req)
@@ -91,6 +98,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
       let ledgerRecord = null
 
       try {
+        if (deps.gate) assertCapabilityEnabled(deps.gate, kind, 'media')
         const requestedGroup = (typeof body.group === 'string' && body.group.trim())
           || (typeof body.channel === 'string' && body.channel.trim())
           || undefined
@@ -106,10 +114,20 @@ export function registerDirectMediaRoutes(webServer, deps) {
           ledgerRecord = getMediaTaskRecord(normalizedTaskRef, ledgerOpts)
         } else if (normalizedTaskId) {
           ledgerRecord = findMediaTaskByUpstreamId(normalizedTaskId, ledgerOpts)
+        } else if (normalizedRequestKey) {
+          ledgerRecord = findMediaTaskByRequestKey(normalizedRequestKey, ledgerOpts)
         } else {
           ledgerRecord = null
         }
 
+        if (ledgerRecord && ledgerRecord.capability !== kind) {
+          sendJson(res, 409, { ok: false, error: '任务媒体类型与请求不一致', code: 'omnimux-task-conflict' })
+          return
+        }
+        if (!normalizedTaskRef && !normalizedTaskId && ledgerRecord && body.model && ledgerRecord.model !== body.model.split('@')[0]) {
+          sendJson(res, 409, { ok: false, error: '请求标识已绑定其他模型', code: 'omnimux-task-conflict' })
+          return
+        }
         if (normalizedTaskRef && !ledgerRecord && !normalizedTaskId) {
           sendJson(res, 500, {
             ok: false,
@@ -131,9 +149,11 @@ export function registerDirectMediaRoutes(webServer, deps) {
           })
           return
         }
-        if (ledgerRecord && ledgerRecord.status === 'failed') {
+        if (ledgerRecord && ledgerRecord.status === 'failed' && !canRecoverMediaTask(ledgerRecord)) {
           sendJson(res, 500, {
             ok: false,
+            taskRef: ledgerRecord.taskRef,
+            recoverable: false,
             error: typeof ledgerRecord.error === 'string' && ledgerRecord.error.trim()
               ? ledgerRecord.error
               : '生成失败，请稍后重试',
@@ -144,7 +164,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
           return
         }
         if (ledgerRecord && (ledgerRecord.status === 'submitting' || ledgerRecord.status === 'submitted')
-          && !ledgerRecord.upstreamTaskId) {
+          && !ledgerRecord.upstreamTaskId && !ledgerRecord.artifact?.sourceUrl) {
           sendJson(res, 500, {
             ok: false,
             error: '任务已中断，请重新提交',
@@ -165,8 +185,9 @@ export function registerDirectMediaRoutes(webServer, deps) {
             taskId: normalizedTaskId,
             taskRef: normalizedTaskRef,
           },
-          current: deps?.runtimeSettings,
+          current: deps?.getRuntimeSettings?.() ?? deps?.runtimeSettings,
         })
+        const recoveredHandle = (ledgerRecord?.upstreamTaskId || ledgerRecord?.artifact?.sourceUrl) && canRecoverMediaTask(ledgerRecord)
         const executePayload = {
           ...plan.finalReq,
           prompt,
@@ -177,12 +198,12 @@ export function registerDirectMediaRoutes(webServer, deps) {
           duration: body.duration,
           sound: typeof body.sound === 'boolean' ? body.sound : undefined,
           seed: body.seed,
-          wait: body.wait !== false,
           requireListed: plan.requireListed,
           references: Array.isArray(body.references) ? body.references : undefined,
-          taskId: normalizedTaskId,
-          taskRef: normalizedTaskRef,
+          taskId: recoveredHandle ? ledgerRecord.upstreamTaskId : normalizedTaskId,
+          taskRef: recoveredHandle ? ledgerRecord.taskRef : normalizedTaskRef,
           requestKey: normalizedRequestKey,
+          wait: recoveredHandle ? true : body.wait !== false,
         }
 
         const result = await executor(executePayload)
@@ -204,19 +225,19 @@ export function registerDirectMediaRoutes(webServer, deps) {
         })
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
-        // 取回请求失败时把账本记录标记为 failed，刷新后能读到原因而不再盲轮询
-        if (ledgerRecord && ledgerRecord.status !== 'ready') {
+        if (ledgerRecord?.upstreamTaskId || ledgerRecord?.artifact?.sourceUrl) {
           try {
-            updateMediaTaskRecord(ledgerRecord.taskRef, {
-              status: 'failed',
-              error: message,
-              errorCode: typeof err?.code === 'string' ? err.code : undefined,
-            }, ledgerOpts)
-          } catch {
-            // 账本回写失败不影响错误响应
+            recordMediaCollectionFailure(ledgerRecord.taskRef, err, ledgerOpts)
+          } catch (ledgerError) {
+            console.warn('[media] collection diagnostic could not be persisted:', ledgerError.message)
           }
         }
+        const latest = ledgerRecord ? getMediaTaskRecord(ledgerRecord.taskRef, ledgerOpts) : null
         const failure = { ok: false, error: message }
+        if (latest) {
+          failure.taskRef = latest.taskRef
+          failure.recoverable = canRecoverMediaTask(latest)
+        }
         if (typeof err?.code === 'string' && err.code.trim()) failure.code = err.code
         if (typeof err?.status === 'number' && Number.isFinite(err.status)) failure.status = err.status
         sendJson(res, 500, failure)

@@ -139,53 +139,59 @@ test('A2 失败项保留列表且 status=failed，activeId 不切走，failure �
   const snap = store.getSnapshot();
   const item = snap.mediaList.find((m) => m.id === 'gen_1');
   assert.equal(item.status, 'failed', '失败项留在列表内');
-  assert.deepEqual(item.failure, { reason: '生成服务暂时不可用，请稍后重试', retryable: true });
+  assert.deepEqual(item.failure, { reason: '生成服务暂时不可用，请稍后重试', retryable: true, code: 'upstream' });
   assert.equal(snap.activeId, 'gen_1', '失败后不得切走 activeId');
   assert.ok(snap.mediaList.find((m) => m.id === ok1.id), '其它素材不受影响');
 });
 
-test('取回失败 code=omnimux-task-interrupted → 「任务已中断，请重新提交」不可重试', async () => {
+test('取回失败 code=omnimux-task-interrupted 未声明上游终态 → 保留原因且只收取原任务', async () => {
   const store = createMediaViewerStore();
   store.addMedia({
-    id: 'm_int',
-    status: 'generating',
-    type: 'image',
-    taskRef: 'task_dead',
-    requestKey: 'm_int',
+    id: 'm_int', status: 'generating', type: 'image', taskRef: 'task_dead', requestKey: 'm_int',
     request: { prompt: 'p', kind: 'image', model: 'm', channel: 'c', sessionId: 's' },
   });
   const { calls, impl } = makeFetch([
-    failResp(500, { ok: false, error: 'task record gone', code: 'omnimux-task-interrupted' }),
+    failResp(500, { ok: false, error: 'task record gone', code: 'omnimux-task-interrupted', recoverable: false }),
+    okResp({ ok: true, mode: 'live', url: 'https://cdn/interrupted.png', taskRef: 'task_dead' }),
   ]);
   await runGenerationTask('m_int', { store, fetchImpl: impl });
-
   assert.equal(calls.length, 1, '有 taskRef 时直接取回不提交');
-  assert.equal(calls[0].body.wait, true);
   const item = store.getSnapshot().mediaList.find((m) => m.id === 'm_int');
   assert.equal(item.status, 'failed');
-  assert.equal(item.failure.reason, '任务已中断，请重新提交');
-  assert.equal(item.failure.retryable, false);
+  assert.deepEqual(item.failure, { reason: '任务已中断，请重新提交', retryable: true, code: 'omnimux-task-interrupted' });
+  assert.equal(item.taskRef, 'task_dead');
+  assert.equal(item.requestKey, 'm_int');
   assert.equal(item.resuming, false, '续传结束必须清除 resuming 标记');
+  await runGenerationTask('m_int', { store, fetchImpl: impl });
+  assert.deepEqual(calls.map(({ body }) => body), Array(2).fill({
+    kind: 'image', model: 'm', channel: 'c', requestKey: 'm_int', taskRef: 'task_dead', wait: true,
+  }));
+  assert.equal(calls.filter(({ body }) => body.wait === false).length, 0, '禁止新付费提交');
+  assert.equal(store.getSnapshot().mediaList.find((m) => m.id === 'm_int').status, 'completed');
 });
 
-test('取回失败 code=omnimux-task-not-found 同样不可重试', async () => {
+test('取回失败 code=omnimux-task-not-found 未声明上游终态 → 保留原身份仅收取', async () => {
   const store = createMediaViewerStore();
   store.addMedia({
-    id: 'm_nf',
-    status: 'generating',
-    type: 'image',
-    taskRef: 'task_gone',
-    requestKey: 'm_nf',
+    id: 'm_nf', status: 'generating', type: 'image', taskRef: 'task_gone', requestKey: 'm_nf',
     request: { prompt: 'p', kind: 'image', model: 'm', channel: 'c', sessionId: 's' },
   });
-  const { impl } = makeFetch([
-    failResp(500, { ok: false, error: 'task not exist', code: 'omnimux-task-not-found' }),
+  const { calls, impl } = makeFetch([
+    failResp(500, { ok: false, error: 'task not exist', code: 'omnimux-task-not-found', recoverable: false }),
+    okResp({ ok: true, mode: 'live', url: 'https://cdn/not-found.png', taskRef: 'task_gone' }),
   ]);
   await runGenerationTask('m_nf', { store, fetchImpl: impl });
   const item = store.getSnapshot().mediaList.find((m) => m.id === 'm_nf');
   assert.equal(item.status, 'failed');
-  assert.equal(item.failure.reason, '任务已中断，请重新提交');
-  assert.equal(item.failure.retryable, false);
+  assert.deepEqual(item.failure, { reason: '任务已中断，请重新提交', retryable: true, code: 'omnimux-task-not-found' });
+  assert.equal(item.taskRef, 'task_gone');
+  assert.equal(item.requestKey, 'm_nf');
+  await runGenerationTask('m_nf', { store, fetchImpl: impl });
+  assert.deepEqual(calls.map(({ body }) => body), Array(2).fill({
+    kind: 'image', model: 'm', channel: 'c', requestKey: 'm_nf', taskRef: 'task_gone', wait: true,
+  }));
+  assert.equal(calls.filter(({ body }) => body.wait === false).length, 0);
+  assert.equal(store.getSnapshot().mediaList.find((m) => m.id === 'm_nf').status, 'completed');
 });
 
 test('fetch 连接层 reject → 网关文案，可重试', async () => {
@@ -270,21 +276,18 @@ test('A4 生成中/失败项随存储持久化并可恢复', () => {
 });
 
 test('A4 续传路径：无 taskRef 的生成中项 → 「任务已中断，请重新提交」不可重试且不请求', async () => {
-  // 模拟组件挂载续传判定（与 MediaViewerTab mount effect 同一契约）：
-  // status==='generating' 且无 taskRef → 标记失败，文案逐字
+  const { resumePendingGenerations } = await import('./generation-runner.js');
   const store = createMediaViewerStore();
   store.addMedia({ id: 'm_orphan', status: 'generating', type: 'image', requestKey: 'm_orphan' });
   const orphan = store.getSnapshot().mediaList.find((m) => m.id === 'm_orphan');
   assert.equal(orphan.taskRef, undefined);
-  // mount 逻辑契约：无 taskRef → failed + 中断文案
-  store.updateMedia('m_orphan', {
-    status: 'failed',
-    resuming: false,
-    failure: { reason: '任务已中断，请重新提交', retryable: false },
-  });
+  const { calls, impl } = makeFetch([okResp({ mode: 'live', url: 'https://cdn/unexpected.png' })]);
+  resumePendingGenerations({ store, fetchImpl: impl });
   const item = store.getSnapshot().mediaList.find((m) => m.id === 'm_orphan');
   assert.equal(item.status, 'failed');
+  assert.equal(item.resuming, false);
   assert.deepEqual(item.failure, { reason: '任务已中断，请重新提交', retryable: false });
+  assert.equal(calls.length, 0, '真实挂载恢复不得为无 taskRef 项提交新任务');
 });
 
 test('A5 runGenerationTask 有 taskRef 时不重复提交：首请求即取回（wait:true）', async () => {
@@ -324,9 +327,17 @@ test('主画布失败卡 DOM 结构契约：原因 + 可选「重试」，无标
   assert.ok(tabSource.includes('生成失败'), '失败缩略块 title 必须是「生成失败」');
   assert.ok(tabSource.includes('正在恢复任务'), '续传期间状态文案必须是「正在恢复任务」');
   assert.ok(!tabSource.includes('omnimux:toast'), '失败后严禁再 dispatch omnimux:toast');
-  assert.ok(!tabSource.includes('生成服务暂时不可用') || true);
-  // 失败卡不得出现错误码与额外按钮：retry 之外只有原因
-  assert.ok(tabSource.includes('failure?.retryable'), 'retryable=false 时不得渲染重试按钮');
+  const failureCard = tabSource.slice(tabSource.indexOf('function FailureCard('), tabSource.indexOf('export function MediaViewerTab('));
+  assert.equal(failureCard.startsWith('function FailureCard('), true, '必须定位真实失败卡');
+  assert.match(failureCard, /const retryable = canRetryGeneration\(item\);/, '资格必须消费真实恢复策略');
+  assert.match(failureCard, /\{retryable \? \([\s\S]*<button[\s\S]*\) : null\}/, '只有有资格时渲染按钮');
+  assert.equal((failureCard.match(/<button\b/g) || []).length, 1, '只能存在唯一重试按钮');
+  assert.equal((failureCard.match(/<p\b/g) || []).length, 1, '只保留一段原因');
+  assert.equal((failureCard.match(/<div\b/g) || []).length, 1, '不得新增包装卡片');
+  assert.equal(/<(?:h[1-6]|svg|img|i|a|span)\b/.test(failureCard), false, '无额外标题、图标、链接或错误码节点');
+  assert.equal(/failure\?\.code|item\?\.code|错误码|errorCode/.test(failureCard), false, '错误码不得出现在失败卡');
+  assert.match(failureCard, /<p[^>]*title=\{reason\}>\{reason\}<\/p>/, '原因正文和全文 title 必须完全一致');
+  assert.match(failureCard, />\s*重试\s*<\/button>/, '唯一按钮只能显示重试');
 });
 
 test('缩略图栏过滤契约：generating 与 failed 均保留', async () => {
@@ -356,29 +367,49 @@ test('取回体契约：wait:true + taskRef 逐项校验', async () => {
 
 // ── 主理人核验补测（Issue #3011）──────────────────────────────────────────
 
-test('持久化：request 含 data: 参考图时不落盘 request（防 localStorage 超额导致全量持久化失效），其余字段照常', () => {
+test('持久化：内联参考仅剥字节，保留模型渠道操作及参数；HTTPS 与内存不变', () => {
   const storage = new Map();
   const originalWindow = globalThis.window;
   globalThis.window = { localStorage: { getItem: (k) => storage.get(k) || null, setItem: (k, v) => storage.set(k, String(v)), removeItem: (k) => storage.delete(k) } };
   try {
     const store = createMediaViewerStore();
+    const dataUrl = 'data:image/png;base64,' + 'A'.repeat(1024 * 1024);
+    const request = {
+      prompt: 'p', kind: 'image', model: 'original-model', channel: 'original-channel', operation: 'edit',
+      aspectRatio: '16:9', sessionId: 's', params: { strength: 0.7 },
+      references: [
+        { url: dataUrl, data: dataUrl, role: 'reference', slot: 'first', mimeType: 'image/png' },
+        { url: 'https://cdn.example.com/second.png', role: 'last-frame', slot: 'last' },
+      ],
+    };
+    store.addMedia({ id: 'm_big', status: 'generating', type: 'image', requestKey: 'm_big', taskRef: 'task_big', request });
+    const smallRequest = { prompt: 'q', kind: 'image', references: [{ url: 'https://cdn.example.com/a.png' }] };
     store.addMedia({
-      id: 'm_big', status: 'generating', type: 'image', requestKey: 'm_big', taskRef: 'task_big',
-      request: { prompt: 'p', kind: 'image', references: [{ url: 'data:image/png;base64,' + 'A'.repeat(64) }] },
-    });
-    store.addMedia({
-      id: 'm_small', status: 'failed', type: 'image', requestKey: 'm_small',
-      request: { prompt: 'q', kind: 'image', references: [{ url: 'https://cdn.example.com/a.png' }] },
+      id: 'm_small', status: 'failed', type: 'image', requestKey: 'm_small', request: smallRequest,
       failure: { reason: '生成失败，请稍后重试', retryable: true },
     });
-    const parsed = JSON.parse(storage.get('omnimux:media-viewer:store:v1'));
+    const raw = storage.get('omnimux:media-viewer:store:v1');
+    const parsed = JSON.parse(raw);
     const big = parsed.mediaList.find((m) => m.id === 'm_big');
     assert.equal(big.taskRef, 'task_big');
-    assert.equal(big.request, undefined, '含 data: 参考图的 request 不得落盘');
+    assert.equal(big.requestKey, 'm_big');
+    assert.equal(big.requestReplayable, false, '已剥字节不可发起新提交');
+    assert.deepEqual(big.request, {
+      ...request,
+      references: [
+        { role: 'reference', slot: 'first', mimeType: 'image/png' },
+        { url: 'https://cdn.example.com/second.png', role: 'last-frame', slot: 'last' },
+      ],
+    });
+    assert.equal(raw.includes('data:'), false, '大载荷不得落盘');
+    assert.equal(raw.length < 4096, true, '大载荷不得撑满持久化');
     const small = parsed.mediaList.find((m) => m.id === 'm_small');
-    assert.deepEqual(small.request.references, [{ url: 'https://cdn.example.com/a.png' }]);
-    // 内存中的 request 不受影响（当次会话重试仍可用）
-    assert.equal(store.getSnapshot().mediaList.find((m) => m.id === 'm_big').request.references.length, 1);
+    assert.deepEqual(small.request, smallRequest);
+    assert.equal(small.requestReplayable, undefined);
+    assert.deepEqual(store.getSnapshot().mediaList.find((m) => m.id === 'm_big').request, request, '内存原载荷完全不变');
+    const restored = createMediaViewerStore().getSnapshot().mediaList.find((m) => m.id === 'm_big');
+    assert.deepEqual(restored.request, big.request, '新实例保留实际路由与操作身份');
+    assert.equal(restored.requestReplayable, false);
   } finally {
     globalThis.window = originalWindow;
   }
@@ -436,15 +467,23 @@ test('取回循环：mode=submitted 时间隔等待后再取回，不紧循环',
   assert.equal(store.getSnapshot().mediaList.find((m) => m.id === 'm_wait').status, 'completed');
 });
 
-test('重试：新 requestKey 写回媒体项', async () => {
+test('重试：明确 omnimux-failed + recoverable=false 才产生新 requestKey 并写回', async () => {
   const store = createMediaViewerStore();
-  store.addMedia({ id: 'm_rk', status: 'failed', type: 'image', requestKey: 'm_rk', request: { prompt: 'p', kind: 'image' }, failure: { reason: '生成失败，请稍后重试', retryable: true } });
+  const request = { prompt: 'p', kind: 'image', model: 'original-model', channel: 'original-channel', operation: 'edit' };
+  store.addMedia({
+    id: 'm_rk', status: 'failed', type: 'image', requestKey: 'm_rk', taskRef: 'old-terminal-ref', recoverable: false,
+    request, failure: { reason: '生成失败，请稍后重试', retryable: true, code: 'omnimux-failed' },
+  });
   const { calls, impl } = makeFetch([okResp({ ok: true, mode: 'live', url: 'https://x/r.png', taskRef: 'mtask_r' })]);
   await runGenerationTask('m_rk', { store, fetchImpl: impl });
   const item = store.getSnapshot().mediaList.find((m) => m.id === 'm_rk');
   assert.equal(item.status, 'completed');
+  assert.equal(calls.length, 1);
   assert.equal(item.requestKey, calls[0].body.requestKey);
   assert.notEqual(item.requestKey, 'm_rk');
+  assert.deepEqual(calls[0].body, { ...request, requestKey: item.requestKey, wait: false });
+  assert.equal(calls[0].body.taskRef, undefined, '新意图不得重用旧终态句柄');
+  assert.equal(item.taskRef, 'mtask_r');
 });
 
 test('取回穷尽 RETRIEVE_MAX_ATTEMPTS 后标失败（非中断、可重试），不停留在 generating', async () => {
@@ -458,7 +497,8 @@ test('取回穷尽 RETRIEVE_MAX_ATTEMPTS 后标失败（非中断、可重试）
   assert.equal(item.failure.retryable, true);
 });
 
-test('持久化含 data: 参考图的 failed 项，恢复后标记不可重试（request 已剥离）', () => {
+test('持久化含内联参考的 failed 项：无原任务句柄不可重交，但路由及原因保留', async () => {
+  const { canRetryGeneration } = await import('./generation-runner.js');
   const storage = new Map();
   const originalWindow = globalThis.window;
   globalThis.window = { localStorage: { getItem: (k) => storage.get(k) || null, setItem: (k, v) => storage.set(k, String(v)), removeItem: (k) => storage.delete(k) } };
@@ -466,14 +506,177 @@ test('持久化含 data: 参考图的 failed 项，恢复后标记不可重试�
     const store = createMediaViewerStore();
     store.addMedia({
       id: 'm_df', status: 'failed', type: 'image', requestKey: 'm_df',
-      request: { prompt: 'p', kind: 'image', references: [{ url: 'data:image/png;base64,AAAA' }] },
-      failure: { reason: '生成服务暂时不可用，请稍后重试', retryable: true },
+      request: { prompt: 'p', kind: 'image', model: 'original-model', channel: 'original-channel', operation: 'edit', references: [{ url: 'data:image/png;base64,AAAA', role: 'reference', slot: 'first' }] },
+      failure: { reason: '生成服务暂时不可用，请稍后重试', retryable: true, code: 'download-error' },
     });
-    const parsed = JSON.parse(storage.get('omnimux:media-viewer:store:v1'));
-    const restored = parsed.mediaList.find((m) => m.id === 'm_df');
-    assert.equal(restored.request, undefined, '含 data: 的 request 不落盘');
-    assert.equal(restored.failure.retryable, false, '无 request 的 failed 项不得保留可重试标记');
+    const store2 = createMediaViewerStore();
+    const restored = store2.getSnapshot().mediaList.find((m) => m.id === 'm_df');
+    assert.deepEqual(restored.request, { prompt: 'p', kind: 'image', model: 'original-model', channel: 'original-channel', operation: 'edit', references: [{ role: 'reference', slot: 'first' }] });
+    assert.equal(restored.requestReplayable, false);
+    assert.deepEqual(restored.failure, { reason: '生成服务暂时不可用，请稍后重试', retryable: false, code: 'download-error' });
+    assert.equal(canRetryGeneration(restored), false);
+    const { calls, impl } = makeFetch([okResp({ ok: true, mode: 'live', url: 'https://cdn/unexpected.png' })]);
+    await runGenerationTask('m_df', { store: store2, fetchImpl: impl });
+    assert.equal(calls.length, 0, '不可重放且无 taskRef 必须零请求');
+    assert.equal(store2.getSnapshot().mediaList.find((m) => m.id === 'm_df').status, 'failed');
   } finally {
     globalThis.window = originalWindow;
   }
+});
+
+// #3054：临时失败与明确终态成对验证，执行生产 runner/store 而非副本逻辑。
+test('已有 taskRef 的认证、下载、HTTP500、网络失败：原因与列表保留且重试只收取原任务', async () => {
+  const cases = [
+    { id: 'auth', response: failResp(401, { code: 'upstream-auth', recoverable: true, error: '上游认证暂时失败，请重试' }), reason: '上游认证暂时失败，请重试', code: 'upstream-auth' },
+    { id: 'download', response: failResp(502, { code: 'download-error', recoverable: true, error: '产物下载中断，请重试' }), reason: '产物下载中断，请重试', code: 'download-error' },
+    { id: 'http500', response: failResp(500, { code: 'omnimux-failed', error: 'internal error' }), reason: '生成服务暂时不可用，请稍后重试', code: 'omnimux-failed' },
+    { id: 'network', response: new Error('fetch failed'), reason: '生成服务暂时不可用，请稍后重试', code: undefined },
+  ];
+  for (const scenario of cases) {
+    const store = createMediaViewerStore();
+    const id = `m_temporary_${scenario.id}`;
+    store.addMedia({ id: `${id}_keep`, status: 'completed', url: 'https://cdn/keep.png' });
+    store.addMedia({ id, status: 'generating', type: 'image', taskRef: 'original-ref', requestKey: 'original-key', request: { prompt: 'p', kind: 'image', model: 'original-model', channel: 'original-channel' } });
+    store.setActiveId(id);
+    const { calls, impl } = makeFetch([scenario.response, okResp({ ok: true, mode: 'live', url: 'https://cdn/recovered.png', taskRef: 'original-ref' })]);
+    await runGenerationTask(id, { store, fetchImpl: impl });
+    const snapshot = store.getSnapshot();
+    const failed = snapshot.mediaList.find((m) => m.id === id);
+    assert.equal(failed.status, 'failed', scenario.id);
+    assert.deepEqual(failed.failure, { reason: scenario.reason, retryable: true, code: scenario.code }, scenario.id);
+    assert.equal(snapshot.activeId, id);
+    assert.equal(snapshot.mediaList.length, 2);
+    assert.equal(snapshot.mediaList.find((m) => m.id === `${id}_keep`).url, 'https://cdn/keep.png');
+    await runGenerationTask(id, { store, fetchImpl: impl });
+    assert.deepEqual(calls.map(({ body }) => body), Array(2).fill({ kind: 'image', model: 'original-model', channel: 'original-channel', taskRef: 'original-ref', requestKey: 'original-key', wait: true }), scenario.id);
+    assert.equal(calls.filter(({ body }) => body.wait === false).length, 0, scenario.id);
+    const completed = store.getSnapshot().mediaList.find((m) => m.id === id);
+    assert.equal(completed.status, 'completed');
+    assert.equal(completed.requestKey, 'original-key');
+    assert.equal(completed.taskRef, 'original-ref');
+    assert.equal(store.getSnapshot().activeId, id);
+  }
+});
+
+test('无 taskRef 且没有明确终态：HTTP500 或网络异常重试不得换 requestKey', async () => {
+  const cases = [failResp(500, { code: 'omnimux-failed', error: 'internal error' }), new Error('fetch failed')];
+  for (const [index, response] of cases.entries()) {
+    const store = createMediaViewerStore();
+    const id = `m_unknown_${index}`;
+    const request = { prompt: 'p', kind: 'image', model: 'm', channel: 'c' };
+    store.addMedia({ id, status: 'generating', type: 'image', requestKey: 'original-key', request });
+    const { calls, impl } = makeFetch([response, okResp({ ok: true, mode: 'live', url: 'https://cdn/same-key.png' })]);
+    await runGenerationTask(id, { store, fetchImpl: impl });
+    assert.equal(store.getSnapshot().mediaList.find((m) => m.id === id).status, 'failed');
+    await runGenerationTask(id, { store, fetchImpl: impl });
+    assert.deepEqual(calls.map(({ body }) => body), Array(2).fill({ ...request, requestKey: 'original-key', wait: false }));
+    assert.equal(store.getSnapshot().mediaList.find((m) => m.id === id).requestKey, 'original-key');
+    assert.equal(store.getSnapshot().mediaList.find((m) => m.id === id).status, 'completed');
+  }
+});
+
+test('真实收取明确终态后新意图换 key；新提交响应丢失再重试仍沿用已写回的新 key', async () => {
+  const store = createMediaViewerStore();
+  const request = { prompt: 'p', kind: 'image', model: 'original-model', channel: 'original-channel', operation: 'edit' };
+  store.addMedia({ id: 'm_terminal', status: 'generating', type: 'image', requestKey: 'old-key', taskRef: 'old-ref', request });
+  const { calls, impl } = makeFetch([
+    failResp(500, { code: 'omnimux-failed', recoverable: false, error: '上游已明确生成失败' }),
+    failResp(502, { code: 'upstream', error: 'Bad Gateway' }),
+    okResp({ ok: true, mode: 'live', url: 'https://cdn/new-intent.png', taskRef: 'new-ref' }),
+  ]);
+  await runGenerationTask('m_terminal', { store, fetchImpl: impl });
+  const terminal = store.getSnapshot().mediaList.find((m) => m.id === 'm_terminal');
+  assert.deepEqual(terminal.failure, { reason: '上游已明确生成失败', retryable: true, code: 'omnimux-failed' });
+  assert.equal(terminal.recoverable, false);
+  assert.equal(terminal.taskRef, 'old-ref');
+  await runGenerationTask('m_terminal', { store, fetchImpl: impl });
+  const rejected = store.getSnapshot().mediaList.find((m) => m.id === 'm_terminal');
+  const newKey = rejected.requestKey;
+  assert.notEqual(newKey, 'old-key');
+  assert.equal(rejected.status, 'failed');
+  assert.equal(rejected.taskRef, null);
+  assert.deepEqual(rejected.failure, { reason: '生成服务暂时不可用，请稍后重试', retryable: true, code: 'upstream' });
+  await runGenerationTask('m_terminal', { store, fetchImpl: impl });
+  assert.equal(calls.length, 3);
+  assert.deepEqual(calls[0].body, { kind: 'image', model: 'original-model', channel: 'original-channel', requestKey: 'old-key', taskRef: 'old-ref', wait: true });
+  assert.deepEqual(calls.slice(1).map(({ body }) => body), Array(2).fill({ ...request, requestKey: newKey, wait: false }));
+  const completed = store.getSnapshot().mediaList.find((m) => m.id === 'm_terminal');
+  assert.equal(completed.status, 'completed');
+  assert.equal(completed.requestKey, newKey);
+  assert.equal(completed.taskRef, 'new-ref');
+});
+
+test('刷新恢复真实 resumePendingGenerations：内联字节已剥仍按原路由收取；明确终态禁止重交', async () => {
+  const { resumePendingGenerations, canRetryGeneration, isGenerationInFlight } = await import('./generation-runner.js');
+  const storage = new Map();
+  const originalWindow = globalThis.window;
+  globalThis.window = { localStorage: { getItem: (k) => storage.get(k) || null, setItem: (k, v) => storage.set(k, String(v)), removeItem: (k) => storage.delete(k) } };
+  try {
+    const store = createMediaViewerStore();
+    store.addMedia({
+      id: 'm_reload_inline', status: 'generating', type: 'image', requestKey: 'original-key', taskRef: 'original-ref',
+      request: { prompt: 'p', kind: 'image', model: 'original-model', channel: 'original-channel', operation: 'edit', references: [{ url: 'data:image/png;base64,AAAA', role: 'reference', slot: 'first' }] },
+    });
+    const restored = createMediaViewerStore();
+    const before = restored.getSnapshot().mediaList.find((m) => m.id === 'm_reload_inline');
+    assert.equal(before.requestReplayable, false);
+    assert.equal(canRetryGeneration(before), true, '原任务收取不依赖可重放输入');
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    const { calls, impl } = makeFetch([failResp(502, { code: 'download-error', recoverable: true, error: '产物下载中断，请重试' }), failResp(500, { code: 'omnimux-failed', recoverable: false, error: '上游已明确生成失败' })]);
+    restored.setGenerating(true);
+    let settled;
+    const finished = new Promise((resolve) => { settled = resolve; });
+    const unsubscribe = restored.subscribe((snapshot) => {
+      if (!snapshot.isGenerating && snapshot.mediaList.find((m) => m.id === 'm_reload_inline')?.status === 'failed') settled();
+    });
+    try {
+      resumePendingGenerations({ store: restored, fetchImpl: async (...args) => { await gate; return impl(...args); } });
+      const resuming = restored.getSnapshot().mediaList.find((m) => m.id === 'm_reload_inline');
+      assert.equal(resuming.resuming, true);
+      assert.equal(isGenerationInFlight('m_reload_inline'), true);
+      release();
+      await finished;
+      await Promise.resolve();
+      assert.equal(isGenerationInFlight('m_reload_inline'), false, '真实挂载恢复必须释放在途登记');
+      assert.equal(calls.length, 1, '挂载只发出一次原任务收取');
+    } finally {
+      unsubscribe();
+    }
+    const temporary = restored.getSnapshot().mediaList.find((m) => m.id === 'm_reload_inline');
+    assert.deepEqual(temporary.failure, { reason: '产物下载中断，请重试', retryable: true, code: 'download-error' });
+    assert.equal(temporary.requestKey, 'original-key');
+    assert.equal(temporary.taskRef, 'original-ref');
+    assert.equal(canRetryGeneration(temporary), true);
+    const reloadedFailure = createMediaViewerStore().getSnapshot().mediaList.find((m) => m.id === 'm_reload_inline');
+    assert.deepEqual(reloadedFailure.failure, temporary.failure, '暂时失败刷新后原因与恢复资格不丢');
+    assert.deepEqual(reloadedFailure.request, temporary.request);
+    assert.equal(reloadedFailure.requestReplayable, false);
+    assert.equal(reloadedFailure.taskRef, 'original-ref');
+    assert.equal(reloadedFailure.requestKey, 'original-key');
+    assert.equal(canRetryGeneration(reloadedFailure), true);
+    await runGenerationTask('m_reload_inline', { store: restored, fetchImpl: impl });
+    const terminal = restored.getSnapshot().mediaList.find((m) => m.id === 'm_reload_inline');
+    assert.deepEqual(terminal.failure, { reason: '上游已明确生成失败', retryable: false, code: 'omnimux-failed' });
+    assert.equal(terminal.recoverable, false);
+    assert.equal(canRetryGeneration(terminal), false, '明确终态加不可重放才禁止重交');
+    await runGenerationTask('m_reload_inline', { store: restored, fetchImpl: impl });
+    assert.deepEqual(calls.map(({ body }) => body), Array(2).fill({ kind: 'image', model: 'original-model', channel: 'original-channel', requestKey: 'original-key', taskRef: 'original-ref', wait: true }));
+    assert.equal(calls.filter(({ body }) => body.wait === false).length, 0);
+    assert.equal(restored.getSnapshot().mediaList.find((m) => m.id === 'm_reload_inline').status, 'failed');
+  } finally {
+    globalThis.window = originalWindow;
+  }
+});
+
+test('失败卡恢复资格：原任务句柄优先；新提交必须有可重放请求与重试资格', async () => {
+  const { canRetryGeneration } = await import('./generation-runner.js');
+  const item = { taskRef: 'original-ref', requestReplayable: false, failure: { retryable: false, code: 'omnimux-task-not-found' }, recoverable: false };
+  assert.equal(canRetryGeneration(item), true);
+  assert.equal(canRetryGeneration({ ...item, failure: { retryable: true, code: 'omnimux-failed' } }), false);
+  assert.equal(canRetryGeneration({ ...item, recoverable: true, failure: { retryable: false, code: 'omnimux-failed' } }), true);
+  assert.equal(canRetryGeneration({ request: { kind: 'image' }, failure: { retryable: true } }), true);
+  assert.equal(canRetryGeneration({ request: { kind: 'image' }, requestReplayable: false, failure: { retryable: true } }), false);
+  assert.equal(canRetryGeneration({ request: { kind: 'image' }, failure: { retryable: false } }), false);
+  assert.equal(canRetryGeneration({ failure: { retryable: true } }), false);
 });

@@ -48,7 +48,7 @@ function run(args, options = {}) {
     calls,
     promise: executeOmnimuxAudio({
       ...args,
-      env: { OMNIMUX_API_KEY: 'fixture-key' },
+      env: { OMNIMUX_API_KEY: 'sk-fixture' },
       store: { async resolve() { return 'fixture-token' } },
       fetcher,
       media: {},

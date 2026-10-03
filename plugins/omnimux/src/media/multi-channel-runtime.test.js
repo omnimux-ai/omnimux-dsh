@@ -9,6 +9,9 @@ import {
 import { DEFAULT_PROVIDER_ENDPOINTS } from '../byok/http.js'
 import { mountMedia } from './mount.js'
 import { assertRuntimeReady } from '../settings/runtime-mode.js'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 describe('Multi-Channel Runtime & Effective Media Model', () => {
   describe('resolveEffectiveMediaModel', () => {
@@ -894,7 +897,7 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
   })
 
   describe('mountMedia channel intent and hasOfficialToken anti-penetration', () => {
-    it('blocks unconfigured requests in agent mode even if OMNIMUX_API_KEY is present', () => {
+    it('官方目录在 agent 模式独立放行并剥离客户端 env，未知模型与组仍拒绝', () => {
       const origKey = process.env.OMNIMUX_API_KEY
       try {
         process.env.OMNIMUX_API_KEY = 'sk-mock-official-token'
@@ -908,6 +911,7 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         }
 
         let executed = false
+        let capturedOfficialReq
         const fakeCtx = {
           get: (key) => (key === 'settings' ? { get: () => currentSettings } : undefined),
           tools: { register: () => {} },
@@ -917,8 +921,9 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         let mountedApi = null
         mountMedia(fakeCtx, {
           kind: 'image',
-          execute: async () => {
+          execute: async (req) => {
             executed = true
+            capturedOfficialReq = req
             return { ok: true }
           },
           media: {},
@@ -930,8 +935,9 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         }
         mountMedia(fakeCtx, {
           kind: 'image',
-          execute: async () => {
+          execute: async (req) => {
             executed = true
+            capturedOfficialReq = req
             return { ok: true }
           },
           media: {},
@@ -1004,19 +1010,18 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         })
         assert.equal(executed, true)
 
-        // 6. 伪造环境变量越权拦截：即使 req.env 传入了伪造的 OMNIMUX_API_KEY，但系统环境被清除时必须严格拦截
+        // 官方目录不依赖 process.env 密钥；客户端伪造 env 不进入执行器。
         executed = false
         delete process.env.OMNIMUX_API_KEY
         currentSettings = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false }
-        assert.throws(
-          () => mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'seedance-2-0@official',
-            env: { OMNIMUX_API_KEY: 'sk-forged-token' },
-          }),
-          /尚未配置图片、视频和音频/,
-        )
-        assert.equal(executed, false)
+        assert.doesNotThrow(() => mountedApi.execute({
+          dest: '/tmp/out.png',
+          model: 'seedance-2-0@official',
+          env: { OMNIMUX_API_KEY: 'sk-forged-token', UNTRUSTED_CLIENT_VAR: 'forged-value' },
+        }))
+        assert.equal(executed, true)
+        assert.deepEqual(capturedOfficialReq.env, {})
+        executed = false
 
         // 7. 渠道严格判定：非已知官方专线且非 byok- 的未知自定义渠道，绝不能误判为官方放行
         process.env.OMNIMUX_API_KEY = 'sk-mock-official-token'
@@ -1065,17 +1070,14 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
         })
         assert.equal(executed, true)
 
-        // 9. 官方 Token 真实性防伪：当环境变量仅包含占位符（undefined/null/false 等伪造字符串）时，严格判定为无官方凭据并拦截越权
+        // 占位值不作为 API key 注入；官方目录的规划放行仍独立于凭据。
         for (const placeholder of ['undefined', 'null', 'false', 'none', '0', '  ']) {
           process.env.OMNIMUX_API_KEY = placeholder
           currentSettings = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false }
-          assert.throws(
-            () => mountedApi.execute({
-              dest: '/tmp/out.png',
-              model: 'seedance-2-0@official',
-            }),
-            /尚未配置图片、视频和音频/,
-          )
+          executed = false
+          assert.doesNotThrow(() => mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' }))
+          assert.equal(executed, true)
+          assert.deepEqual(capturedOfficialReq.env, {})
         }
       } finally {
         if (origKey === undefined) {
@@ -1848,10 +1850,52 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
       assert.equal(result.taskId, 'task-key-direct-image-1')
     })
 
-    it('allows authentic Bearer Token with internal space while blocking control characters', async () => {
+    it('agent 官方目录无服务端 env 密钥仍规划放行，下层只解析当前 credentials', async (t) => {
+      const previousKey = process.env.OMNIMUX_API_KEY
+      const dir = mkdtempSync(join(tmpdir(), 'official-agent-creds-'))
+      t.after(() => rmSync(dir, { recursive: true, force: true }))
+      let api
+      const refs = []
+      const requests = []
+      try {
+        delete process.env.OMNIMUX_API_KEY
+        mountMedia({
+          get: (key) => key === 'settings' ? { get: () => ({ runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false }) }
+            : key === 'credentials' ? { async resolve(ref) { refs.push(ref); return ref === 'OMNIMUX_API_KEY' ? { value: 'sk-fixture-current' } : undefined } } : undefined,
+          tools: { register() {} },
+          provide(name, value) { if (name === 'imageGenerate') api = value },
+        }, {
+          kind: 'image', media: {}, jsonOut: {},
+          execute: (req) => {
+            assert.deepEqual(req.env, {})
+            assert.deepEqual(refs, [], 'planning must not resolve credentials')
+            return executeOmnimuxMedia('image', { ...req, fetcher: async (url, init) => {
+              requests.push({ url: String(url), method: init.method, authorization: new Headers(init.headers).get('authorization'), body: JSON.parse(init.body) })
+              return new Response(JSON.stringify({ data: [{ b64_json: 'cG5n' }] }), { headers: { 'content-type': 'application/json' } })
+            } })
+          },
+        })
+        const dest = join(dir, 'image.png')
+        const result = await api.execute({ prompt: 'a lamp', dest, model: 'gpt-image-2.5', env: { OMNIMUX_API_KEY: 'sk-forged-client', UNTRUSTED_CLIENT_VAR: 'forged-value' } })
+        assert.equal(result.mode, 'live')
+        assert.deepEqual(refs, ['OMNIMUX_API_KEY'])
+        assert.equal(requests.length, 1)
+        assert.equal(requests[0].method, 'POST')
+        assert.match(requests[0].url, /^https:\/\/api\.omnimux\.ai\/v1\/images\/generations$/)
+        assert.equal(requests[0].authorization, 'Bearer sk-fixture-current')
+        assert.equal(requests[0].body.model, 'gpt-image-2.5')
+        assert.equal(existsSync(dest), true)
+        assert.equal(readFileSync(dest, 'utf8'), 'png')
+      } finally {
+        if (previousKey === undefined) delete process.env.OMNIMUX_API_KEY
+        else process.env.OMNIMUX_API_KEY = previousKey
+      }
+    })
+
+    it('非 sk Bearer 与含控制字符的服务端值均不注入官方 API key', async () => {
       const origKey = process.env.OMNIMUX_API_KEY
       try {
-        // 1. 合法的 Bearer Token 中间包含空格，必须正常放行不被误杀
+        // 带 Bearer 前缀的非 sk 值不是官方 API key；规划放行但不得注入。
         process.env.OMNIMUX_API_KEY = 'Bearer valid-long-secret-key-12345'
         let capturedReq = null
         let mountedApi = null
@@ -1880,7 +1924,7 @@ describe('Multi-Channel Runtime & Effective Media Model', () => {
           model: 'gpt-image-2.5@official',
         })
         assert.ok(capturedReq)
-        assert.equal(capturedReq.env?.OMNIMUX_API_KEY, 'Bearer valid-long-secret-key-12345')
+        assert.equal(capturedReq.env?.OMNIMUX_API_KEY, undefined)
 
         // 2. 含有控制字符 (\r, \n, \t) 的 Token 坚决拦截
         for (const badToken of ['token\rwithcr', 'token\nwithlf', 'token\twithtab']) {

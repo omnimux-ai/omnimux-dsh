@@ -11,7 +11,11 @@
 
 import { ExecutionContext } from './ExecutionContext';
 import { ExecutionScheduler } from './ExecutionScheduler';
-import { loadExecutionRecord, type PersistedExecutionRecord } from './executionStore';
+import { loadExecutionRecord, listPersistedExecutionIds, buildExecutionRecord, type PersistedExecutionRecord } from './executionStore';
+import { readUpstreamTaskRef } from './upstreamTask.ts';
+import { resolveExecutorKey } from './nodeExecutors.ts';
+import { canonicalJson } from '../../shared/validation/compatKernel.ts';
+import type { UpstreamTaskRef } from '../seam/gateway.ts';
 import { createDispatchingNodeExecutor } from './nodeExecutors';
 import { createMaterialGatewayExecutor } from './materialGatewayExecutor';
 import { createImportExecutor } from './importExecutor';
@@ -27,6 +31,8 @@ import {
   type ExecutionEventLogEntry,
   type ExecutionEntry,
   EXECUTION_TIMEOUT_MS,
+  executionInputSignatures,
+  executionSourceIdentities,
 } from './executionTypes';
 import {
   persistRecord,
@@ -163,6 +169,52 @@ function setupAndRunExecution(
   continueExecutionLoop(entry, { isRecovery: false });
 }
 
+function findRecoverableTasks(
+  deps: ExecutionManagerDeps,
+  entries: Map<string, ExecutionEntry>,
+  opts: CreateExecutionOptions,
+): { tasks: Record<string, UpstreamTaskRef>; inputsChanged: Record<string, boolean> } {
+  const records = new Map<string, PersistedExecutionRecord>();
+  for (const id of listPersistedExecutionIds(deps.executionsDir)) {
+    const record = loadExecutionRecord(deps.executionsDir, id);
+    if (record) records.set(id, record);
+  }
+  for (const entry of entries.values()) {
+    records.set(entry.context.id, buildExecutionRecord({ context: entry.context.toJSON(), nodes: entry.nodes,
+      edges: entry.edges, maxParallel: entry.maxParallel, createdAt: entry.createdAt,
+      progress: entry.scheduler.getProgress(), eventLog: entry.eventLog }));
+  }
+  const ordered = [...records.values()].reverse().filter(record => record.workspaceId === opts.workspaceId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const signatures = opts.inputSignatures ?? executionInputSignatures(opts);
+  const tasks: Record<string, UpstreamTaskRef> = {};
+  const inputsChanged: Record<string, boolean> = {};
+  for (const node of opts.nodes) {
+    if (resolveExecutorKey(node) !== 'material:generate') continue;
+    // Re-running a scheduled dependency can change its output after admission.
+    if (opts.edges.some(edge => edge.target === node.id && opts.nodes.some(source => source.id === edge.source))) continue;
+    const previous = ordered.find(record => record.nodes.some(candidate => candidate.id === node.id));
+    if (!previous) continue;
+    const saved = previous.variables.executionInputSignatures as Record<string, string> | undefined;
+    inputsChanged[node.id] = !saved?.[node.id] || saved[node.id] !== signatures[node.id];
+    const savedBytes = previous.variables.executionSourceIdentities as Record<string, Record<string, string>> | undefined;
+    const currentBytes = (opts.sourceIdentities ?? executionSourceIdentities(opts))[node.id] ?? {};
+    if (Object.entries(currentBytes).some(([path, digest]) => savedBytes?.[node.id]?.[path] && savedBytes?.[node.id]?.[path] !== digest)) inputsChanged[node.id] = true;
+    if (inputsChanged[node.id] || previous.status !== 'error') continue;
+    const state = previous.nodeStates[node.id];
+    const ref = readUpstreamTaskRef(state?.upstreamTask);
+    if (state?.status !== 'error' || !ref || ref.owner === 'mock') continue;
+    const kind = node.data?.materialType ?? 'text';
+    if (ref.capability !== kind) continue;
+    // Direct callers additionally prove unchanged pre-seeded outputs.
+    if (!opts.inputSignatures && canonicalJson(opts.initialOutputs ?? {}) !== canonicalJson(
+      Object.fromEntries(Object.entries(previous.nodeOutputs).filter(([id]) => !previous.nodes.some(candidate => candidate.id === id))),
+    )) { inputsChanged[node.id] = true; continue; }
+    tasks[node.id] = ref;
+  }
+  return { tasks, inputsChanged };
+}
+
 function createExecutionInstance(
   deps: ExecutionManagerDeps,
   entries: Map<string, ExecutionEntry>,
@@ -174,6 +226,11 @@ function createExecutionInstance(
     edges: structuredClone(opts.edges),
     initialOutputs: structuredClone(opts.initialOutputs),
   };
+  const checked = findRecoverableTasks(deps, entries, opts);
+  const recovery = opts.recoveryTasks ? {
+    tasks: opts.recoveryTasks,
+    inputsChanged: { ...checked.inputsChanged, ...Object.fromEntries(Object.keys(opts.recoveryTasks).map(id => [id, false])) },
+  } : checked;
   const breakpointsList = opts.breakpoints || [];
   const breakpoints = new Set(breakpointsList);
   const context = new ExecutionContext({
@@ -181,6 +238,12 @@ function createExecutionInstance(
     breakpoints,
     initialOutputs: opts.initialOutputs,
   });
+  context.set('executionInputSignatures', opts.inputSignatures ?? executionInputSignatures(opts));
+  context.set('executionInputsChanged', recovery.inputsChanged);
+  context.set('executionSourceIdentities', opts.sourceIdentities ?? executionSourceIdentities(opts));
+  for (const [nodeId, upstreamTask] of Object.entries(recovery.tasks)) {
+    context.nodeStates.set(nodeId, { status: 'pending', startedAt: null, completedAt: null, error: null, upstreamTask });
+  }
   const abortController = new AbortController();
   const persistGenerated = deps.persistGenerated
     ? (input: {
@@ -311,6 +374,7 @@ export function createExecutionManager(deps: ExecutionManagerDeps) {
 
   return {
     createExecution: (opts: CreateExecutionOptions) => createExecutionInstance(deps, entries, opts),
+    findRecoverableTasks: (opts: CreateExecutionOptions) => findRecoverableTasks(deps, entries, opts).tasks,
     getEntry: (executionId: string) => lookupEntryById(entries, executionId),
     listExecutions: (workspaceId?: string) => listExecutionSummaries(entries, workspaceId),
     getSnapshot: (executionId: string) => readExecutionSnapshot(executionsDir, entries, executionId),
