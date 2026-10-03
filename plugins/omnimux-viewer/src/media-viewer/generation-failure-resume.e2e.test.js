@@ -13,7 +13,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createMediaViewerStore } from '../../../omnimux/src/client/media-viewer/media-viewer-store.js';
-import { runGenerationTask } from '../../../omnimux/src/client/media-viewer/generation-runner.js';
+import { runGenerationTask } from './generation-runner.js';
 
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -338,7 +338,7 @@ test('缩略图栏过滤契约：generating 与 failed 均保留', async () => {
 });
 
 test('A5 提交体契约复查：源码级 wait:false + requestKey:taskId + 无 taskId/taskRef', async () => {
-  const runnerSource = await readFile(resolve(here, '../../../omnimux/src/client/media-viewer/generation-runner.js'), 'utf8');
+  const runnerSource = await readFile(resolve(here, './generation-runner.js'), 'utf8');
   const submitBody = runnerSource.match(/\{[^\}]*requestKey:\s*taskId[^\}]*\}/); // assert.equal 语义：仅含单行字段的对象字面量
   assert.notEqual(submitBody, null, '必须能定位直连提交请求体');
   assert.match(submitBody[0], /wait:\s*false/, '提交体必须 wait:false');
@@ -348,7 +348,7 @@ test('A5 提交体契约复查：源码级 wait:false + requestKey:taskId + 无 
 });
 
 test('取回体契约：wait:true + taskRef 逐项校验', async () => {
-  const runnerSource = await readFile(resolve(here, '../../../omnimux/src/client/media-viewer/generation-runner.js'), 'utf8');
+  const runnerSource = await readFile(resolve(here, './generation-runner.js'), 'utf8');
   assert.match(runnerSource, /wait:\s*true/, '取回必须 wait:true');
   assert.match(runnerSource, /taskRef:\s*item\.taskRef/, '取回必须携带 taskRef');
   assert.match(runnerSource, /requestKey:/, '取回必须携带 requestKey');
@@ -385,7 +385,7 @@ test('持久化：request 含 data: 参考图时不落盘 request（防 localSto
 });
 
 test('在途登记：runGenerationTask 执行期间 isGenerationInFlight 为 true，结束后为 false', async () => {
-  const { isGenerationInFlight } = await import('../../../omnimux/src/client/media-viewer/generation-runner.js');
+  const { isGenerationInFlight } = await import('./generation-runner.js');
   assert.equal(typeof isGenerationInFlight, 'function');
   const store = createMediaViewerStore();
   store.addMedia({ id: 'm_fly', status: 'generating', type: 'image', requestKey: 'm_fly', request: { prompt: 'p', kind: 'image' } });
@@ -401,7 +401,7 @@ test('在途登记：runGenerationTask 执行期间 isGenerationInFlight 为 tru
 });
 
 test('挂载续传 resumePendingGenerations：在途任务不重复取回、不被误标中断；无 taskRef 且不在途才标中断', async () => {
-  const { resumePendingGenerations } = await import('../../../omnimux/src/client/media-viewer/generation-runner.js');
+  const { resumePendingGenerations } = await import('./generation-runner.js');
   assert.equal(typeof resumePendingGenerations, 'function');
   const store = createMediaViewerStore();
   store.addMedia({ id: 'm_inflight', status: 'generating', type: 'image', requestKey: 'm_inflight', request: { prompt: 'p', kind: 'image' } });

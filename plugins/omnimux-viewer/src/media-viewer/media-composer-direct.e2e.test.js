@@ -79,7 +79,7 @@ test('E2E: 图像生成专用输入面板直连执行中枢契约验证', async 
 
   // 3. 验证 MediaViewerTab.jsx 接入与直连通道契约（提交/取回请求体由 generation-runner.js 承载）
   const tabSource = await readFile(resolve(here, './MediaViewerTab.jsx'), 'utf8');
-  const runnerSource = await readFile(resolve(here, '../../../omnimux/src/client/media-viewer/generation-runner.js'), 'utf8');
+  const runnerSource = await readFile(resolve(here, './generation-runner.js'), 'utf8');
   assert.ok(
     tabSource.includes('MediaViewerComposer'),
     'MediaViewerTab 必须接入 MediaViewerComposer 组件'

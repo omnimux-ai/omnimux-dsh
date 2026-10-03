@@ -6,7 +6,7 @@
  *   - 取回：{ kind, model, channel, requestKey, taskRef, wait:true } → { ok, mode:'live', url, dest, taskRef }
  */
 
-import { describeGenerationFailure, INTERRUPTED_REASON } from '../../../../omnimux-viewer/src/media-viewer/generation-failure.js';
+import { describeGenerationFailure, INTERRUPTED_REASON } from './generation-failure.js';
 
 const RETRIEVE_MAX_ATTEMPTS = 200;
 // 服务端取回本身会阻塞轮询直至终态；仍回 submitted 时退避，避免紧循环打满路由。

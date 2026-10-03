@@ -1692,7 +1692,7 @@ describe('MediaViewerComposer Component Contract', () => {
       const popoverSrc = fs.readFileSync(new URL('./ReferencePickerPopover.jsx', import.meta.url), 'utf-8');
 
       it('项 2: handleDirectSubmit 直连通道对非 2xx 响应状态码校验（Issue #3011 校验迁至 generation-runner.js）', () => {
-        const runnerSrc = fs.readFileSync(new URL('../../../omnimux/src/client/media-viewer/generation-runner.js', import.meta.url), 'utf-8');
+        const runnerSrc = fs.readFileSync(new URL('./generation-runner.js', import.meta.url), 'utf-8');
         // 非 2xx 与 fetch reject 一律映射为失败卡文案（describeGenerationFailure），不允许静默吞错
         assert.ok(
           runnerSrc.includes('res.ok') && runnerSrc.includes('resp.ok'),

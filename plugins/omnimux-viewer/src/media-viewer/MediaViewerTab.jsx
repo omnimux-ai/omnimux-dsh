@@ -10,7 +10,7 @@ import { syncImageCanvasStage } from '../../../omnimux/src/client/media-viewer/i
 import { registerContextContributor } from '../../../omnimux/src/client/workbench/context.js';
 
 import { serializeReferenceAssets, isAllowedReferenceUrl } from './media-slot.js';
-import { runGenerationTask, resumePendingGenerations } from '../../../omnimux/src/client/media-viewer/generation-runner.js';
+import { runGenerationTask, resumePendingGenerations } from './generation-runner.js';
 import { describeGenerationFailure } from './generation-failure.js';
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
