@@ -1,0 +1,4 @@
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  tests/no-purple-theme.spec.ts > 扩展主题硬门禁：源码不得出现紫色 > T1: 全量扫描 src/**/*.{ts,tsx,css} 无紫色字面量
+ FAIL  tests/tool-activity-card.spec.ts > 页面操作卡片 ToolActivity 视觉与结构规范 > 浏览器几何证据：修复前基线已留存，且证明修复前确实抖动
+      Tests  2 failed | 19 passed (21)

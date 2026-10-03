@@ -70,6 +70,10 @@ function walk(dir: string, acc: string[] = []): string[] {
  */
 const BRAND_MARK_ALLOW: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ['content/tiktok-scene/styles.css', new Set(['#b8b7ff'])],
+  // The card trigger button draws the same brand ghost on third-party pages;
+  // its light-purple glyph is the confirmed brand mark (browser-surfaces spec),
+  // not the extension's own accent color.
+  ['content/surfaces/media-trigger.ts', new Set(['#b8b7ff'])],
 ])
 
 function hexToRgb(hex: string): [number, number, number] | null {
@@ -167,8 +171,9 @@ describe('扩展主题硬门禁：源码不得出现紫色', () => {
 
   it('T1b: 品牌标记的放行面只有那一个值、那一个文件', () => {
     // 放行一旦变宽就失去意义，所以把它本身也锁住。
-    expect([...BRAND_MARK_ALLOW.keys()]).toEqual(['content/tiktok-scene/styles.css'])
+    expect([...BRAND_MARK_ALLOW.keys()]).toEqual(['content/tiktok-scene/styles.css', 'content/surfaces/media-trigger.ts'])
     expect([...BRAND_MARK_ALLOW.get('content/tiktok-scene/styles.css') ?? []]).toEqual(['#b8b7ff'])
+    expect([...BRAND_MARK_ALLOW.get('content/surfaces/media-trigger.ts') ?? []]).toEqual(['#b8b7ff'])
 
     // denylist 里的历史值在任何文件都不放行，包括放行文件自己。
     const banned: PurpleHit = { token: '#a855f7', reason: '禁用值 #a855f7' }
