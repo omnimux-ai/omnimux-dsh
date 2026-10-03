@@ -1,0 +1,148 @@
+{
+  "local": {
+    "popover": {
+      "left": 147,
+      "right": 1005,
+      "top": 307,
+      "bottom": 566,
+      "width": 858,
+      "height": 259
+    },
+    "composerRoot": {
+      "left": 146,
+      "right": 1006,
+      "top": 573,
+      "bottom": 748,
+      "width": 860,
+      "height": 175
+    },
+    "body": {
+      "left": 148,
+      "right": 1004,
+      "top": 351,
+      "bottom": 565,
+      "width": 856,
+      "height": 214
+    },
+    "uploadCard": {
+      "left": 162,
+      "right": 282,
+      "top": 363,
+      "bottom": 553,
+      "width": 120,
+      "height": 190
+    },
+    "gridRect": {
+      "left": 292,
+      "right": 990,
+      "top": 363,
+      "bottom": 553,
+      "width": 698,
+      "height": 190
+    },
+    "firstAssetRect": {
+      "left": 292,
+      "top": 363,
+      "height": 90
+    },
+    "scroll": {
+      "gridScrollHeight": 290,
+      "gridClientHeight": 190,
+      "gridScrollWidth": 698,
+      "gridClientWidth": 698,
+      "popScrollHeight": 257,
+      "popClientHeight": 257,
+      "bodyScrollHeight": 214,
+      "bodyClientHeight": 214
+    },
+    "deltaLeft": 1,
+    "deltaRight": 1,
+    "counts": {
+      "assets": 14,
+      "skeletons": 0,
+      "thumbs": 14
+    },
+    "uploadGap": 10,
+    "uploadHeightVsTwoRows": 0,
+    "bodyBottomSpace": 1
+  },
+  "scrolled": {
+    "gridScrollTop": 100,
+    "popScrollTop": 0,
+    "bodyScrollTop": 0,
+    "uploadRect": {
+      "top": 363,
+      "bottom": 553,
+      "height": 190
+    }
+  },
+  "cloud": {
+    "popover": {
+      "left": 147,
+      "right": 1005,
+      "top": 307,
+      "bottom": 566,
+      "width": 858,
+      "height": 259
+    },
+    "composerRoot": {
+      "left": 146,
+      "right": 1006,
+      "top": 573,
+      "bottom": 748,
+      "width": 860,
+      "height": 175
+    },
+    "body": {
+      "left": 148,
+      "right": 1004,
+      "top": 351,
+      "bottom": 565,
+      "width": 856,
+      "height": 214
+    },
+    "uploadCard": null,
+    "gridRect": {
+      "left": 162,
+      "right": 990,
+      "top": 363,
+      "bottom": 553,
+      "width": 828,
+      "height": 190
+    },
+    "firstAssetRect": {
+      "left": 162,
+      "top": 363,
+      "height": 90
+    },
+    "scroll": {
+      "gridScrollHeight": 190,
+      "gridClientHeight": 190,
+      "gridScrollWidth": 828,
+      "gridClientWidth": 828,
+      "popScrollHeight": 257,
+      "popClientHeight": 257,
+      "bodyScrollHeight": 214,
+      "bodyClientHeight": 214
+    },
+    "deltaLeft": 0,
+    "deltaRight": 0,
+    "counts": {
+      "assets": 3,
+      "skeletons": 0,
+      "thumbs": 3
+    }
+  },
+  "skeleton": {
+    "skeletons": 8,
+    "assets": 8,
+    "hasUploadCard": true,
+    "gridRect": {
+      "height": 190
+    }
+  },
+  "failed": {
+    "assets": 4,
+    "skeletons": 0
+  }
+}

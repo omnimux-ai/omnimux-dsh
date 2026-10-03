@@ -842,9 +842,11 @@ describe('MediaViewerComposer Component Contract', () => {
     assert.ok(MEDIA_VIEWER_CSS.includes('max-width: 920px;'));
     assert.ok(MEDIA_VIEWER_CSS.includes('z-index: 60;'));
     assert.ok(MEDIA_VIEWER_CSS.includes('.omx-mv-composer-outer .omx-mv-composer-root {'));
-    assert.ok(MEDIA_VIEWER_CSS.includes('position: static;'));
-    assert.ok(MEDIA_VIEWER_CSS.includes('transform: none;'));
-    assert.ok(MEDIA_VIEWER_CSS.includes('flex: 1;'));
+    // Issue #3012：输入框卡片须是选择素材弹层的定位容器，弹层左右才与输入框对齐（不含左侧切换栏）
+    assert.match(
+      MEDIA_VIEWER_CSS,
+      /\.omx-mv-composer-outer \.omx-mv-composer-root \{\s*position: relative;\s*transform: none;\s*width: auto;\s*flex: 1;/,
+    );
   });
 
   it('handleSend 生成前放宽本地上传原生 file 对象放行，拦截无 file/assetId 的纯 blob 引用与非法残片素材', () => {

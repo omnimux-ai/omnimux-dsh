@@ -2039,11 +2039,15 @@ button.omx-slot-add:hover,
   z-index: 60;
 }
 
+/* 输入框卡片作为选择素材弹层的定位容器：弹层 left/right:0 与输入框左右对齐，不含左侧切换栏 */
 .omx-mv-composer-outer .omx-mv-composer-root {
-  position: static;
+  position: relative;
   transform: none;
   width: auto;
   flex: 1;
+  /* 基础规则的居中偏移在 relative 下会生效，必须归零，否则输入框被推离切换栏 */
+  left: auto;
+  bottom: auto;
 }
 
 .omx-external-mode-rail {
@@ -2216,17 +2220,26 @@ button.omx-slot-add:hover,
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+/* 内容区：本地 Tab 上传卡固定在左侧，右侧网格为独立两行高滚动区；
+   高度刚好容纳两行（90px×2 + 行距 10px = 190px），不留多余空白 */
 .omx-ref-picker-body {
   padding: 12px 14px;
-  min-height: 250px;
-  max-height: 310px;
-  overflow-y: auto;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
 }
 
 .omx-ref-picker-grid {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  grid-auto-rows: 90px;
   gap: 10px;
+  align-content: start;
+  height: 190px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .omx-ref-picker-upload-card {
@@ -2238,10 +2251,11 @@ button.omx-slot-add:hover,
   grid-row: span 2;
   grid-column: span 1;
   align-self: stretch;
-  width: 100%;
+  width: 120px;
   min-width: 120px;
   min-height: 190px;
   height: auto;
+  flex-shrink: 0;
   border: 1px dashed var(--dsw-alias-border-l3);
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-1);
@@ -2316,6 +2330,49 @@ button.omx-slot-add:hover,
   max-height: 100%;
   object-fit: contain;
   display: block;
+}
+
+/* 缩略图：加载完成前保留骨架底色，加载完成后 200ms 淡入 */
+.omx-ref-picker-asset-thumb img {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.omx-ref-picker-asset-thumb img.is-loaded {
+  opacity: 1;
+}
+
+/* 首次加载骨架卡：与素材卡同尺寸、同圆角、同间距，灰底 + 轻微扫光 */
+.omx-ref-picker-asset-thumb.is-skeleton {
+  position: relative;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.omx-ref-picker-asset-thumb.is-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, var(--dsw-alias-bg-layer-3) 50%, transparent 80%);
+  animation: omx-ref-picker-skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes omx-ref-picker-skeleton-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omx-ref-picker-asset-thumb.is-skeleton::after {
+    animation: none;
+  }
+  .omx-ref-picker-asset-thumb img {
+    transition: none;
+    opacity: 1;
+  }
 }
 
 .omx-ref-picker-empty-tip {
