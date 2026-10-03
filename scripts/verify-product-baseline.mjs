@@ -66,7 +66,7 @@ const PROVIDER_MARKER_RE = /\bproviders\b|baseURL|baseUrl|apiKeyEnv|llm-pi-ai/
 const LOOPBACK_V1_RE = /https?:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?\/v1(?:\/|\b)/
 const DEV_MACHINE_PATH_RE = /\/Users\/[^/'"\s]+\/Desktop\/|~\/Desktop\/Project\//
 /** R6：随产品分发的 JSON（资产、目录清单、构建配置）不得携带任何绝对家目录路径。 */
-const SHIPPED_ASSET_PATH_RE = /\/Users\/[^/'"\s]+\//
+const SHIPPED_ASSET_PATH_RE = /\/Users\/[^/'"\s]+\/|~\/Desktop\//
 const PROVIDER_KEY_ENV_RE = /process\.env\.([A-Z][A-Z0-9_]*)/g
 const PROVIDER_KEY_EXEMPT_PREFIX = /^(?:OMNIMUX_|DSH_)/
 const HUB_SEAM_RE = /\bvideoGenerate\b|\bimageGenerate\b|\bvideoProcess\b|\bspeechToText\b|\btextComplete\b|\bmodelCatalog\b|omnimux_[a-z_]+|catalog-defaults/
