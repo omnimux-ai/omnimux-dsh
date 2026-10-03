@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { MediaConfigControls, useMediaGenerationConfig } from './MediaConfigControls.jsx';
 import { MediaSlotGroup, readDuration } from './MediaSlotGroup.jsx';
 import { ReferencePickerPopover } from './ReferencePickerPopover.jsx';
-import { peekComposerPrefill, subscribeComposerPrefill, takeComposerPrefill } from '../../../omnimux/src/client/media-viewer/composer-prefill.js';
+import { peekComposerPrefill, subscribeComposerPrefill } from '../../../omnimux/src/client/media-viewer/composer-prefill.js';
+import { claimPrefillWhenVisible, isElementShown } from './prefill-claim.js';
 import { clampPromptTextareaHeight } from './prompt-textarea-height.js';
 import {
   VIDEO_MODE_OPTIONS,
@@ -144,15 +145,19 @@ export function MediaViewerComposer({
   paramsRef.current = config.params;
 
   // 聊天提示词块一键填入：只写文本 + 切模式并收起浮层，不自动提交。
+  // 宿主可能同时挂着一个隐藏的图像生成页，只有用户看得见的这一份才取走请求。
   useEffect(() => {
-    if (!handedOff) return;
-    const request = takeComposerPrefill(handedOff.token);
-    if (!request) return;
-    setPrompt(request.prompt);
-    setUserPromptSuffix(request.prompt);
-    userPromptSuffixRef.current = request.prompt;
-    setMode(request.kind === 'video' ? 'video' : 'image');
-    closePopovers();
+    if (!handedOff) return undefined;
+    return claimPrefillWhenVisible(handedOff, {
+      isVisible: () => isElementShown(promptRef.current),
+      onClaim: (request) => {
+        setPrompt(request.prompt);
+        setUserPromptSuffix(request.prompt);
+        userPromptSuffixRef.current = request.prompt;
+        setMode(request.kind === 'video' ? 'video' : 'image');
+        closePopovers();
+      },
+    });
   }, [handedOff, setMode, closePopovers]);
 
   useEffect(() => {
