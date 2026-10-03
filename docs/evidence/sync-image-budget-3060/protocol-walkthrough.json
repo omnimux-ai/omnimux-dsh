@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "noNetwork": true,
+  "observed": [
+    {
+      "capability": "image",
+      "timeouts": [
+        600000
+      ],
+      "outputType": "image"
+    },
+    {
+      "capability": "video",
+      "timeouts": [
+        120000
+      ],
+      "outputType": "video"
+    }
+  ]
+}
