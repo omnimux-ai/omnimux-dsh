@@ -42,7 +42,7 @@ export function render(nodeData, catalog) {
   },
   bundle: true, jsx: 'automatic', platform: 'node', format: 'cjs', outfile: output, logLevel: 'silent',
   plugins: [{ name: 'prompt-gate-boundaries', setup(b) {
-    b.onResolve({ filter: /(?:useUpstreamMedia|useModelParameterSchema|canvasStore|generationPreferencesStore|\/i18n|\/ui)$/ }, (args) => {
+    b.onResolve({ filter: /(?:useUpstreamMedia|useModelParameterSchema|\/canvasStore|generationPreferencesStore|\/i18n|\/ui)$/ }, (args) => {
       const name = args.path.split('/').pop();
       return name in stubs ? { path: name, namespace: 'prompt-gate' } : undefined;
     });
@@ -94,3 +94,12 @@ for (const type of ['image', 'video', 'text', 'audio']) {
     assert.match(button, /title="请补齐正文"/);
   });
 }
+
+test('legacy node (no inputBindingVersion) still gated by the count-only check', () => {
+  const nodeData = newNode('image', '');
+  delete nodeData.inputBindingVersion;
+  const html = render(nodeData, catalogFor('image'));
+  const button = sendButton(html);
+  assert.match(button, /aria-disabled="true"/);
+  assert.match(button, /title="请输入内容或连接上游文本"/);
+});
