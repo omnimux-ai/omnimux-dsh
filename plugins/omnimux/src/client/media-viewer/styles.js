@@ -2191,8 +2191,13 @@ button.omx-slot-add:hover,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  aspect-ratio: 1 / 1;
-  height: 90px;
+  grid-row: span 2;
+  grid-column: span 1;
+  align-self: stretch;
+  width: 100%;
+  min-width: 120px;
+  min-height: 190px;
+  height: auto;
   border: 1px dashed var(--dsw-alias-border-l3);
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-1);
@@ -2225,7 +2230,6 @@ button.omx-slot-add:hover,
 .omx-ref-picker-asset-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   cursor: pointer;
   border-radius: 8px;
   overflow: hidden;
@@ -2278,22 +2282,6 @@ button.omx-slot-add:hover,
   min-height: 120px;
   color: var(--dsw-alias-label-tertiary);
   font-size: 13px;
-}
-  object-fit: cover;
-  display: block;
-}
-
-.omx-ref-picker-asset-title {
-  font-size: 11px;
-  color: var(--dsw-alias-label-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.2;
-}
-
-.omx-ref-picker-asset-card:hover .omx-ref-picker-asset-title {
-  color: var(--dsw-alias-label-primary);
 }
 
 /* ========================================================

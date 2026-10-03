@@ -316,6 +316,8 @@ export function ReferencePickerPopover({
               className="omx-ref-picker-asset-card"
               role="button"
               tabIndex={0}
+              aria-label={asset.title}
+              title={asset.title}
               onClick={() => handlePresetSelect(asset)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -325,10 +327,7 @@ export function ReferencePickerPopover({
               }}
             >
               <div className={`omx-ref-picker-asset-thumb ${isSquareRatio ? 'is-ratio-square' : 'is-ratio-natural'}`}>
-                <img src={asset.url} alt={asset.title} loading="lazy" />
-              </div>
-              <div className="omx-ref-picker-asset-title" title={asset.title}>
-                {asset.title}
+                <img src={asset.url} alt="" loading="lazy" />
               </div>
             </div>
           ))}
