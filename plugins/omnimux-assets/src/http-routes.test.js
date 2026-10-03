@@ -779,6 +779,41 @@ describe('Cloud catalog metadata routes', () => {
     assert.equal(response.status, 404)
     assert.match(response.body.message, /catalog page path/)
   })
+
+  it('percent-encodes non-ASCII media URLs in the 302 Location header (#3028)', async () => {
+    // Object keys keep the library's original spelling, which is not a legal
+    // header value: an unencoded Location throws in writeHead and reports a
+    // fake 500. The voiceover shelf is the real-world carrier.
+    const catalogDir = join(root, 'catalog')
+    mkdirSync(catalogDir, { recursive: true })
+    const rows = [{
+      id: 'audio-voiceover-zh',
+      category: 'audio',
+      sub_category: 'voiceover',
+      name: '中文音',
+      description: '',
+      media_type: 'audio',
+      media_url: 'https://cdn.example.com/audio/voiceover/女声/6月5日.MP3',
+      cover_url: '',
+      tags: [],
+      meta: {},
+    }]
+    writeFileSync(join(catalogDir, 'manifest.json'), JSON.stringify({
+      version: 1, pageSize: 24, totalAssets: 1, sourceRoot: '',
+      categories: [{ id: 'audio', zh: '声音', en: 'Audio', total: 1, pages: 1 }],
+    }))
+    writeFileSync(join(catalogDir, 'index.json'), JSON.stringify(rows))
+    const { mappings, artifacts, library } = makeDispatcher()
+    const dispatcher = createAssetsDispatcher({
+      mappings, artifacts, library,
+      cloud: createCloudCatalog({ catalogDir }),
+    })
+    const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/media?id=audio-voiceover-zh' })
+    assert.equal(result.status, 302)
+    assert.match(result.redirect, /^https:\/\/cdn\.example\.com\/audio\/voiceover\//)
+    assert.doesNotMatch(result.redirect, /[\u4e00-\u9fff ]/, 'Location must be percent-encoded')
+    assert.equal(decodeURIComponent(result.redirect.split('audio/voiceover/')[1]), '女声/6月5日.MP3')
+  })
 })
 
 /**
