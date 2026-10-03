@@ -667,7 +667,10 @@ export function matchOperationInputs(
         ? Number(localPresent
           || (state.slot.valueSources?.includes('upstream_output') && state.assets.some(asset => asset.textContent?.trim())))
         : state.assets.length;
-      if (count < state.slot.min) {
+      if (count < state.slot.min && state.slot.type === 'text' && composition && state.slot.valueSources?.includes('local_field')) {
+        // Typing locally would satisfy this slot, so the missing item is the body text itself.
+        pending.push(rejection('prompt_required', '请提供正文或补充要求，也可连接已有文本', { operationId: op.id, slot: state.slot.slot }));
+      } else if (count < state.slot.min) {
         pending.push(rejection('min_unsatisfied', `槽位 ${state.slot.slot} 需要至少 ${state.slot.min} 个输入（当前 ${state.assets.length}）`, {
           operationId: op.id,
           slot: state.slot.slot,
@@ -690,7 +693,7 @@ export function matchOperationInputs(
     const promptRequired = op.inputs.some(
       (slot) => (slot.role === 'prompt' || slot.slot === 'prompt') && slot.min >= 1,
     );
-    if (promptRequired && !fingerprint.prompt.trim()) {
+    if (promptRequired && !fingerprint.prompt.trim() && !pending.some((item) => item.code === 'prompt_required')) {
       pending.push(rejection('prompt_required', '请提供正文或补充要求，也可连接已有文本', { operationId: op.id }));
     }
     for (const slot of op.inputs) {

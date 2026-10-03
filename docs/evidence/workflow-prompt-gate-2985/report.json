@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "results": [
+    {
+      "type": "image",
+      "empty": {
+        "disabled": "true",
+        "title": "请补齐正文",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "video",
+      "empty": {
+        "disabled": "true",
+        "title": "请补齐正文",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "text",
+      "empty": {
+        "disabled": "true",
+        "title": "请补齐正文",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    },
+    {
+      "type": "audio",
+      "empty": {
+        "disabled": "true",
+        "title": "请补齐正文",
+        "slotMissing": false
+      },
+      "typed": {
+        "disabled": "false",
+        "title": "生成",
+        "slotMissing": false
+      }
+    }
+  ]
+}
