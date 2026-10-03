@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Issue #3000 ReferencePicker 视觉验收</title>
+  <style>
+    :root {
+      --dsw-alias-border-l1: #e5e5e5;
+      --dsw-alias-border-l3: #cfcfcf;
+      --dsw-alias-border-l4: #a3a3a3;
+      --dsw-alias-bg-layer-1: #fafafa;
+      --dsw-alias-bg-layer-2: #f0f0f0;
+      --dsw-alias-interactive-bg-hover: #f3f3f3;
+      --dsw-alias-label-primary: #111;
+      --dsw-alias-label-secondary: #666;
+      --dsw-alias-label-tertiary: #999;
+    }
+    body { margin: 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff; color: #111; }
+    h1 { font-size: 16px; margin: 0 0 12px; }
+    .panel { width: 420px; border: 1px solid #e5e5e5; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+    .header { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #eee; }
+    .tabs { display:flex; gap:8px; font-size:13px; }
+    .tab { padding:4px 8px; border-radius:6px; color:#666; }
+    .tab.active { background:#111; color:#fff; }
+    .body { padding:12px 14px; }
+    .omx-ref-picker-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap:10px; }
+    .omx-ref-picker-upload-card {
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+      grid-row: span 2; grid-column: span 1; align-self:stretch; width:100%; min-width:120px; min-height:190px; height:auto;
+      border:1px dashed var(--dsw-alias-border-l3); border-radius:8px; background:var(--dsw-alias-bg-layer-1);
+      color:var(--dsw-alias-label-secondary); padding:8px; box-sizing:border-box;
+    }
+    .omx-ref-picker-upload-text { font-size:11px; line-height:1.2; text-align:center; font-weight:500; }
+    .omx-ref-picker-asset-card { display:flex; flex-direction:column; border-radius:8px; overflow:hidden; }
+    .omx-ref-picker-asset-thumb { width:100%; height:90px; border-radius:6px; overflow:hidden; background:var(--dsw-alias-bg-layer-2); border:1px solid var(--dsw-alias-border-l1); box-sizing:border-box; }
+    .omx-ref-picker-asset-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .note { margin-top:12px; font-size:12px; color:#666; max-width:420px; }
+  </style>
+</head>
+<body>
+  <h1>选择首帧 · Issue #3000（无卡片名称 + 本地上传两行占位）</h1>
+  <div class="panel" role="dialog" aria-label="选择参考素材">
+    <div class="header">
+      <div class="tabs"><span class="tab active">本地</span><span class="tab">AI 生成</span><span class="tab">数字人</span><span class="tab">商品</span></div>
+      <div style="font-size:12px;color:#666">只看我的</div>
+    </div>
+    <div class="body">
+      <div class="omx-ref-picker-grid">
+        <button type="button" class="omx-ref-picker-upload-card">
+          <div>⬆</div>
+          <span class="omx-ref-picker-upload-text">从本地上传</span>
+        </button>
+        <div class="omx-ref-picker-asset-card" role="button" aria-label="素材 A" title="素材 A"><div class="omx-ref-picker-asset-thumb"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect fill='%23ddd' width='180' height='180'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23666' font-size='14'%3EA%3C/text%3E%3C/svg%3E" /></div></div>
+        <div class="omx-ref-picker-asset-card" role="button" aria-label="素材 B" title="素材 B"><div class="omx-ref-picker-asset-thumb"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect fill='%23cfc' width='180' height='180'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23666' font-size='14'%3EB%3C/text%3E%3C/svg%3E" /></div></div>
+        <div class="omx-ref-picker-asset-card" role="button" aria-label="素材 C" title="素材 C"><div class="omx-ref-picker-asset-thumb"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect fill='%23ccf' width='180' height='180'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23666' font-size='14'%3EC%3C/text%3E%3C/svg%3E" /></div></div>
+        <div class="omx-ref-picker-asset-card" role="button" aria-label="素材 D" title="素材 D"><div class="omx-ref-picker-asset-thumb"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect fill='%23fcc' width='180' height='180'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23666' font-size='14'%3ED%3C/text%3E%3C/svg%3E" /></div></div>
+        <div class="omx-ref-picker-asset-card" role="button" aria-label="素材 E" title="素材 E"><div class="omx-ref-picker-asset-thumb"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect fill='%23ffc' width='180' height='180'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23666' font-size='14'%3EE%3C/text%3E%3C/svg%3E" /></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="note">验收点：1) 素材卡无可见名称；2) 「从本地上传」跨两行并加宽；3) 顶底与两行缩略图对齐。文案「从本地上传」未改写。</p>
+</body>
+</html>

@@ -792,6 +792,48 @@ describe('MediaViewerComposer Component Contract', () => {
     assert.notEqual(itemId, list[0].id);
   });
 
+  it('Issue #3000: ReferencePickerPopover 素材卡片不渲染可见名称（全 Tab 统一），名称仅保留无障碍属性', () => {
+    const popoverSrc = fs.readFileSync(new URL('./ReferencePickerPopover.jsx', import.meta.url), 'utf8');
+    assert.ok(
+      !popoverSrc.includes('omx-ref-picker-asset-title'),
+      '素材卡片严禁渲染可见名称节点 .omx-ref-picker-asset-title'
+    );
+    assert.ok(
+      !/className="omx-ref-picker-asset-title"/.test(popoverSrc),
+      '禁止恢复 className="omx-ref-picker-asset-title"'
+    );
+    assert.ok(
+      /aria-label=\{asset\.title\}/.test(popoverSrc) || /title=\{asset\.title\}/.test(popoverSrc),
+      '卡片必须保留 aria-label 或 title 承载素材名称，供无障碍访问'
+    );
+    assert.ok(
+      !/<div className="omx-ref-picker-asset-title"[\s\S]*?\{asset\.title\}/.test(popoverSrc),
+      '禁止把 asset.title 作为可见文案渲染在卡片下方'
+    );
+  });
+
+  it('Issue #3000: 本地上传占位改为两行高并适当加宽，与两行素材卡对齐', () => {
+    assert.match(
+      MEDIA_VIEWER_CSS,
+      /\.omx-ref-picker-upload-card\s*\{[^}]*grid-row:\s*span\s*2;/s,
+      '上传卡必须 grid-row: span 2，占两行素材卡高度'
+    );
+    assert.match(
+      MEDIA_VIEWER_CSS,
+      /\.omx-ref-picker-upload-card\s*\{[^}]*(?:min-width:\s*(?:1[1-9]\d|[2-9]\d{2})px|width:\s*(?:1[1-9]\d|[2-9]\d{2})px)/s,
+      '上传卡宽度须适当加宽（min-width/width ≥ 110px）'
+    );
+    assert.doesNotMatch(
+      MEDIA_VIEWER_CSS,
+      /\.omx-ref-picker-upload-card\s*\{[^}]*aspect-ratio:\s*1\s*\/\s*1;/s,
+      '上传卡不得再使用 1/1 单行方卡比例'
+    );
+    assert.ok(
+      !MEDIA_VIEWER_CSS.includes('.omx-ref-picker-asset-title'),
+      '隐藏名称后应移除 .omx-ref-picker-asset-title 样式，防止回潮'
+    );
+  });
+
   it('styles.js 校验 .omx-mv-composer-outer 与 .omx-mv-composer-root 定位契约', () => {
     assert.ok(MEDIA_VIEWER_CSS.includes('.omx-mv-composer-outer {'));
     assert.ok(MEDIA_VIEWER_CSS.includes('position: absolute;'));
