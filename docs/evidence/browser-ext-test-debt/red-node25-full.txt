@@ -1,0 +1,57 @@
+   1       Tests  47 failed | 1258 passed | 1 expected fail (1306)
+   1      Errors  6 errors
+  10     at performUnitOfWork (node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26599:12) TypeError: localStorage.getItem is not a function
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > DOM 渲染与交互 > Esc 关闭并回焦触发按钮；外点关闭
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > DOM 渲染与交互 > rpc modelCatalog 失败 → 回落 bridge-config 的 modelGroups；两级均空 → 空态文案
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > DOM 渲染与交互 > 关闭 switch → 分隔线+模型列表出现；点选行 → 收起、按钮变模型名、回调带 provider、写入模式键
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > DOM 渲染与交互 > 展开面板：标题「模型」、自动行+switch(ON)、说明文案、无列表/分隔线
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > DOM 渲染与交互 > 手动态重开面板：当前生效行带 aria-selected 与 check，开关 OFF 状态保持
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > DOM 渲染与交互 > 挂载时下发 bridge.modelMode { auto: true }（fire-and-forget，失败静默）
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > DOM 渲染与交互 > 未登记模型：不渲染图标槽位，副标题回退通用文案
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > DOM 渲染与交互 > 默认态：「自动」胶囊按钮带 aria-haspopup=dialog、aria-expanded=false、无品牌图标
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > 挂载与源码契约 > App.tsx 在 .composer-actions-start 内回形针按钮之后挂载 AutoModelPicker
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > 挂载与源码契约 > strings.ts 的 modelPicker 文案与 PM 字典逐字一致（zh/en）
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > 挂载与源码契约 > styles.css 定义 clean 体系内的 picker 胶囊与浮层样式
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > 纯函数接缝 > flattenCatalogGroups：groups[].models[] 拍平且 provider 取 group.id
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > 纯函数接缝 > flattenCatalogGroups：容忍非法载荷
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > 纯函数接缝 > flattenModelGroupsFallback：沿用 ModelSelector 的 group→provider 规则
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > 纯函数接缝 > normalizeModelMode：合法值原样、非法/缺省回退 auto
+   1  FAIL  tests/auto-model-picker.spec.ts > Issue #2966 会话栏「自动/手动」模型选择器 > 纯函数接缝 > resolveModelBrandKey：字典命中 → 前缀回退（gpt*/grok*）→ 未登记不渲染
+   1  FAIL  tests/dsh-instance-selector.spec.ts > ModelSelector Component & Real Subscription Models Suite > matches real local subscription models from ChatGPT (Codex) and Grok
+   1  FAIL  tests/dsh-instance-selector.spec.ts > ModelSelector Component & Real Subscription Models Suite > renders reasoning effort selector on the right and allows changing effort
+   1  FAIL  tests/dsh-instance-selector.spec.ts > ModelSelector Component & Real Subscription Models Suite > renders select with real local models grouped by provider and switches model
+   1  FAIL  tests/dsh-instance-selector.spec.ts > ModelSelector Component & Real Subscription Models Suite > supports custom model entry and persistence
+   1  FAIL  tests/dsh-instance-selector.spec.ts > WorkspaceSelector (Dynamic Instance Discovery) Suite > opens dropdown listing all known ports, Dev carries 推荐 badge, offline rows are disabled
+   1  FAIL  tests/dsh-instance-selector.spec.ts > WorkspaceSelector (Dynamic Instance Discovery) Suite > renders trigger with selected instance name and port; green dot when that port is online
+   1  FAIL  tests/dsh-instance-selector.spec.ts > WorkspaceSelector (Dynamic Instance Discovery) Suite > shows empty state copy when nothing is reachable and no custom port saved
+   1  FAIL  tests/e2e/instance-presets.e2e.spec.ts > E2E: 实例选择器动态发现 > DSH Desktop 有响应但无 wsUrl 时状态为未开放且仍可点选
+   1  FAIL  tests/e2e/instance-presets.e2e.spec.ts > E2E: 实例选择器动态发现 > DshInstanceSelector 复用同一发现逻辑：动态列表、Dev 徽章、离线禁用
+   1  FAIL  tests/e2e/instance-presets.e2e.spec.ts > E2E: 实例选择器动态发现 > OmniMux Dev 在线时出现于列表首位、带推荐徽章与实测延迟，可选中
+   1  FAIL  tests/e2e/instance-presets.e2e.spec.ts > E2E: 实例选择器动态发现 > OmniMux PRD 无进程时条目存在、状态离线、不可点选
+   1  FAIL  tests/e2e/instance-presets.e2e.spec.ts > E2E: 实例选择器动态发现 > 无意外元素：不出现 spec 白名单之外的徽章与括号解释文案
+   1  FAIL  tests/extension-network-policy.spec.ts > the extension network boundary > keeps the local completion channel and its bridge fallback in place
+   1  FAIL  tests/media-post-classifier.spec.ts > social platform whitelist gate > admits whitelisted major social platforms on post/work cards
+   1  FAIL  tests/no-purple-theme.spec.ts > 扩展主题硬门禁：源码不得出现紫色 > T1: 全量扫描 src/**/*.{ts,tsx,css} 无紫色字面量
+   1  FAIL  tests/panel-settings-save-feedback.spec.ts > the settings save button > confirms a successful save and then closes the settings view
+   1  FAIL  tests/panel-settings-save-feedback.spec.ts > the settings save button > keeps the form usable and saving when the settings store cannot be read
+   1  FAIL  tests/panel-settings-save-feedback.spec.ts > the settings save button > locks the button while the save is in flight
+   1  FAIL  tests/panel-settings-save-feedback.spec.ts > the settings save button > reports a failed save in place, keeps the view open, and retries
+   1  FAIL  tests/panel-settings-save-feedback.spec.ts > the settings save button > shows a blocked relay draft next to the button instead of only in the relay section
+   2  FAIL  tests/panel-settings-switches-ui.spec.ts > the page-surface switches in the settings view > opens on the stored decision rather than the default
+   2  FAIL  tests/panel-settings-switches-ui.spec.ts > the page-surface switches in the settings view > persists the switch and tells the active tab when the floating ball is turned off
+   2  FAIL  tests/panel-settings-switches-ui.spec.ts > the page-surface switches in the settings view > persists the switch and tells the active tab when the image toolbar is turned off
+   2  FAIL  tests/panel-settings-switches-ui.spec.ts > the page-surface switches in the settings view > shows a floating-ball card and an image-toolbar card, both switched on
+   1  FAIL  tests/qa-media-hover-gate.spec.ts > F. two-stage hover expansion > animates the width between the stages instead of snapping
+   1  FAIL  tests/qa-media-hover-gate.spec.ts > F. two-stage hover expansion > centres the stage-one brand mark inside its hit box
+   1  FAIL  tests/qa-media-hover-gate.spec.ts > F. two-stage hover expansion > floats every hover fill clear of the pill it sits in
+   1  FAIL  tests/qa-media-hover-gate.spec.ts > F. two-stage hover expansion > paints stage one as a 24px circle spanning 29px, and stage two as the 64px row
+   1  FAIL  tests/qa-media-hover-round2.spec.ts > cross-check · one size gate covers every admitting branch > admits tiktok item media at exactly 120x120
+   1  FAIL  tests/qa-media-side-panel-lit.spec.ts > QA gate: media delivered to an open side panel > lights the chip on its own and carries the media when the prompt is sent
+   1  FAIL  tests/tool-activity-card.spec.ts > 页面操作卡片 ToolActivity 视觉与结构规范 > 浏览器几何证据：修复前基线已留存，且证明修复前确实抖动
+   1  Test Files  12 failed | 110 passed (122)
+  10 Error: Uncaught [TypeError: localStorage.getItem is not a function]
+   6 ReferenceError: chrome is not defined
+   5 TypeError: localStorage.clear is not a function
+   1 TypeError: localStorage.getItem is not a function
+   1 ⎯⎯⎯⎯⎯⎯ Failed Tests 47 ⎯⎯⎯⎯⎯⎯⎯
+   1 ⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯

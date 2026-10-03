@@ -4,6 +4,25 @@
  * does not implement CSS.escape. Stub both with browser-equivalent behavior.
  */
 
+/**
+ * Node 25 enables Web Storage by default and installs its own global
+ * `localStorage` / `sessionStorage`. That global shadows the jsdom window's
+ * storage, and without `--localstorage-file` its methods are missing, so every
+ * spec that touches storage fails with "localStorage.getItem is not a function".
+ * Point both names back at the jsdom document's implementation, which is what a
+ * browser page sees.
+ */
+const jsdomWindow = (globalThis as { jsdom?: { window: Window } }).jsdom?.window
+if (jsdomWindow !== undefined) {
+  for (const name of ['localStorage', 'sessionStorage'] as const) {
+    Object.defineProperty(globalThis, name, {
+      configurable: true,
+      enumerable: true,
+      get: () => jsdomWindow[name],
+    })
+  }
+}
+
 const FAKE_RECT: DOMRect = {
   x: 0,
   y: 0,
