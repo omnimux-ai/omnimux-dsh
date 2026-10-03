@@ -3,6 +3,12 @@ import os from 'node:os'
 import path from 'node:path'
 import { readJsonBody, sendJson } from '../auth/http-routes.js'
 import { resolveExecutionPlan } from './execution-plan.js'
+import {
+  getMediaTaskRecord,
+  findMediaTaskByUpstreamId,
+  findMediaTaskByRequestKey,
+  updateMediaTaskRecord,
+} from './task-store.js'
 
 export const DIRECT_MEDIA_GENERATE_ROUTE = '/omnimux/api/media/generate'
 
@@ -15,6 +21,7 @@ export const DIRECT_MEDIA_GENERATE_ROUTE = '/omnimux/api/media/generate'
  *   executeImage: (req: object) => Promise<any>,
  *   executeVideo: (req: object) => Promise<any>,
  *   runtimeSettings?: object,
+ *   storageDir?: string,
  * }} deps
  */
 export function registerDirectMediaRoutes(webServer, deps) {
@@ -79,6 +86,10 @@ export function registerDirectMediaRoutes(webServer, deps) {
       const ext = kind === 'video' ? 'mp4' : 'png'
       const dest = body.dest || path.join(destDir, `direct_${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`)
 
+      // 账本引用需提升到 try 外：catch 分支要按记录回写 failed 状态（#3011）
+      const ledgerOpts = deps?.storageDir ? { storageDir: deps.storageDir } : {}
+      let ledgerRecord = null
+
       try {
         const requestedGroup = (typeof body.group === 'string' && body.group.trim())
           || (typeof body.channel === 'string' && body.channel.trim())
@@ -88,6 +99,59 @@ export function registerDirectMediaRoutes(webServer, deps) {
         const rawTaskRef = body.taskRef ?? body.task_ref
         const normalizedTaskRef = typeof rawTaskRef === 'string' && rawTaskRef.trim() ? rawTaskRef.trim() : undefined
         const normalizedRequestKey = typeof body.requestKey === 'string' && body.requestKey.trim() ? body.requestKey.trim() : undefined
+
+        // 账本短路（Issue #3011）：取回请求先读任务记录，ready/failed/中断
+        // 状态在路由层直接裁决，不再把已终结的任务交给执行器轮询。
+        if (normalizedTaskRef) {
+          ledgerRecord = getMediaTaskRecord(normalizedTaskRef, ledgerOpts)
+        } else if (normalizedTaskId) {
+          ledgerRecord = findMediaTaskByUpstreamId(normalizedTaskId, ledgerOpts)
+        } else {
+          ledgerRecord = null
+        }
+
+        if (normalizedTaskRef && !ledgerRecord && !normalizedTaskId) {
+          sendJson(res, 500, {
+            ok: false,
+            error: '未找到对应的媒体任务记录，请重新提交生成',
+            code: 'omnimux-task-not-found',
+          })
+          return
+        }
+        if (ledgerRecord && ledgerRecord.status === 'ready' && ledgerRecord.artifact?.cachePath
+          && fs.existsSync(ledgerRecord.artifact.cachePath)) {
+          sendJson(res, 200, {
+            ok: true,
+            mode: 'live',
+            taskId: ledgerRecord.upstreamTaskId || ledgerRecord.taskRef,
+            taskRef: ledgerRecord.taskRef,
+            url: ledgerRecord.artifact.cachePath,
+            dest: ledgerRecord.artifact.cachePath,
+            kind,
+          })
+          return
+        }
+        if (ledgerRecord && ledgerRecord.status === 'failed') {
+          sendJson(res, 500, {
+            ok: false,
+            error: typeof ledgerRecord.error === 'string' && ledgerRecord.error.trim()
+              ? ledgerRecord.error
+              : '生成失败，请稍后重试',
+            code: typeof ledgerRecord.errorCode === 'string' && ledgerRecord.errorCode.trim()
+              ? ledgerRecord.errorCode
+              : 'omnimux-failed',
+          })
+          return
+        }
+        if (ledgerRecord && (ledgerRecord.status === 'submitting' || ledgerRecord.status === 'submitted')
+          && !ledgerRecord.upstreamTaskId) {
+          sendJson(res, 500, {
+            ok: false,
+            error: '任务已中断，请重新提交',
+            code: 'omnimux-task-interrupted',
+          })
+          return
+        }
 
         // 与 mount 同一条放行链：官方/BYOK 判定、凭据注入、requireListed
         // 全部由 resolveExecutionPlan 决定（BYOK → requireListed false 保持可用）。
@@ -122,21 +186,40 @@ export function registerDirectMediaRoutes(webServer, deps) {
         }
 
         const result = await executor(executePayload)
+        // 只要带了 requestKey，响应必须能找回对应任务（Issue #3011）：
+        // 执行器漏回 taskRef 时按 requestKey 从账本补捞同一记录。
+        let responseTaskRef = result?.taskRef || null
+        if (!responseTaskRef && normalizedRequestKey) {
+          const keyed = findMediaTaskByRequestKey(normalizedRequestKey, ledgerOpts)
+          if (keyed) responseTaskRef = keyed.taskRef
+        }
         sendJson(res, 200, {
           ok: true,
           mode: result?.mode || 'live',
           taskId: result?.taskId || null,
-          taskRef: result?.taskRef || null,
+          taskRef: responseTaskRef,
           url: result?.url || null,
           dest,
           kind,
         })
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
-        sendJson(res, 500, {
-          ok: false,
-          error: message,
-        })
+        // 取回请求失败时把账本记录标记为 failed，刷新后能读到原因而不再盲轮询
+        if (ledgerRecord && ledgerRecord.status !== 'ready') {
+          try {
+            updateMediaTaskRecord(ledgerRecord.taskRef, {
+              status: 'failed',
+              error: message,
+              errorCode: typeof err?.code === 'string' ? err.code : undefined,
+            }, ledgerOpts)
+          } catch {
+            // 账本回写失败不影响错误响应
+          }
+        }
+        const failure = { ok: false, error: message }
+        if (typeof err?.code === 'string' && err.code.trim()) failure.code = err.code
+        if (typeof err?.status === 'number' && Number.isFinite(err.status)) failure.status = err.status
+        sendJson(res, 500, failure)
       }
     },
   })

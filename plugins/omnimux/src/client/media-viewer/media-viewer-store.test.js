@@ -213,23 +213,42 @@ test('media-viewer-store: localStorage persistence and restore', () => {
   try {
     const store1 = createMediaViewerStore();
     // 1. Add completed media and generating media
+    // Issue #3011：generating（含 requestKey/taskRef/request）与 failed 项必须随存储持久化，
+    // 刷新后才能按服务端任务记录续传或展示失败原因。
     store1.addMedia({ id: 'm1', url: 'https://example.com/apple.png', title: '苹果', status: 'completed' });
-    store1.addMedia({ id: 'm_gen', url: 'https://example.com/temp.png', title: '生成中', status: 'generating' });
+    store1.addMedia({
+      id: 'm_gen',
+      title: '生成中',
+      status: 'generating',
+      requestKey: 'm_gen',
+      taskRef: 'task_gen_1',
+      request: { prompt: 'a cat', kind: 'image', model: 'm', channel: 'c' },
+    });
+    store1.addMedia({ id: 'm_fail', title: '失败项', status: 'failed', failure: { reason: '生成失败，请稍后重试', retryable: true } });
     const draft = store1.addDraftAnnotation('m1', { xPercent: 45, yPercent: 35 });
     store1.commitAnnotation('m1', draft.id, '加一个猕猴桃');
 
-    // Verify localStorage has persisted data without generating items
+    // Verify localStorage retains completed + generating + failed items
     const raw = mockLocalStorage.getItem('omnimux:media-viewer:store:v1');
     assert.ok(raw, 'localStorage must contain persisted state');
     const parsed = JSON.parse(raw);
-    assert.equal(parsed.mediaList.length, 1);
-    assert.equal(parsed.mediaList[0].id, 'm1');
+    assert.deepEqual(
+      parsed.mediaList.map((m) => `${m.id}:${m.status}`).sort(),
+      ['m1:completed', 'm_gen:generating', 'm_fail:failed'].sort(),
+      'generating 与 failed 项必须随存储持久化'
+    );
+    const persistedGen = parsed.mediaList.find((m) => m.id === 'm_gen');
+    assert.equal(persistedGen.taskRef, 'task_gen_1', 'taskRef 随持久化保留以便刷新续传');
+    assert.equal(persistedGen.request?.prompt, 'a cat', '提交参数随持久化保留以便重试');
     assert.equal(parsed.annotationsByMediaId['m1']?.[0]?.text, '加一个猕猴桃');
 
     // 2. Initialize new store instance from persisted localStorage
     const store2 = createMediaViewerStore();
-    assert.equal(store2.getSnapshot().mediaList.length, 1);
+    assert.equal(store2.getSnapshot().mediaList.length, 3);
     assert.equal(store2.getSnapshot().mediaList[0].title, '苹果');
+    const restoredGen = store2.getSnapshot().mediaList.find((m) => m.id === 'm_gen');
+    assert.equal(restoredGen?.status, 'generating');
+    assert.equal(restoredGen?.taskRef, 'task_gen_1');
     assert.equal(store2.getAnnotations('m1')[0]?.text, '加一个猕猴桃');
 
     // 3. Clear storage

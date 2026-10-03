@@ -10,6 +10,8 @@ import { syncImageCanvasStage } from '../../../omnimux/src/client/media-viewer/i
 import { registerContextContributor } from '../../../omnimux/src/client/workbench/context.js';
 
 import { serializeReferenceAssets, isAllowedReferenceUrl } from './media-slot.js';
+import { runGenerationTask, resumePendingGenerations } from './generation-runner.js';
+import { describeGenerationFailure } from './generation-failure.js';
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
 export { serializeReferenceAssets, isAllowedReferenceUrl };
@@ -106,6 +108,34 @@ export async function materializeAssetFile(asset) {
 
 const noSubscription = () => () => {};
 
+/**
+ * 失败任务卡（Issue #3011 文案白名单）：
+ * 仅含一行原因（≤2 行省略，title 全文）+ 可选「重试」按钮；
+ * 无标题、无图标、无错误码、无其它按钮。
+ */
+function FailureCard({ item, retryingIds, onRetry }) {
+  const reason = item?.failure?.reason || '生成失败，请稍后重试';
+  const retryable = item?.failure?.retryable !== false;
+  return (
+    <div className="omx-mv-failure-card">
+      <p className="omx-mv-failure-card__reason" title={reason}>{reason}</p>
+      {retryable ? (
+        <button
+          type="button"
+          className="omx-mv-failure-card__retry"
+          disabled={retryingIds?.has(item.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRetry?.(item);
+          }}
+        >
+          重试
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const getSessionSnapshot = () => sessions?.list?.getSnapshot().current || currentSessionId();
   const sessionId = useSyncExternalStore(sessions?.list?.subscribe || noSubscription, getSessionSnapshot, getSessionSnapshot);
@@ -140,6 +170,32 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   const stageRef = useRef(null);
   const [draftText, setDraftText] = useState('');
 
+  // 重试中的失败任务集合：按钮提交返回前保持 disabled（文字不变）
+  const [retryingIds, setRetryingIds] = useState(() => new Set());
+
+  const handleRetryFailure = (item) => {
+    if (!item?.id || item.failure?.retryable === false) return;
+    if (retryingIds.has(item.id)) return;
+    setRetryingIds((prev) => new Set(prev).add(item.id));
+    // 提交被接受后该项回到 generating，失败卡（含按钮）随之消失；
+    // 提交被拒则保持 failed，按钮恢复可用。
+    Promise.resolve(runGenerationTask(item.id, { store })).finally(() => {
+      setRetryingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    });
+  };
+
+  // 组件挂载时续传仍在生成中的任务（Issue #3011）。store 是全局单例，查看器关开重挂载时
+  // 本页内仍在跑的任务由在途登记跳过，不会被重复取回或误标中断。
+  useEffect(() => {
+    resumePendingGenerations({ store });
+    // 仅挂载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleDirectSubmit = async ({ prompt, kind, operation, activeOperation, model, channel, params, assets, annotations }) => {
     // 张数（仅图像）：一次提交产出 batchCount 条同组任务记录与独立请求；
     // 同 groupId 让时间线/缩略图栏把它们归并为同一批次。
@@ -149,112 +205,67 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
     const groupId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const taskIds = Array.from({ length: batchCount }, (_, i) => `${groupId}:${i}`);
 
-    for (const taskId of taskIds) {
-      store.addMedia({
-        id: taskId,
-        sessionId,
-        groupId,
-        status: 'generating',
-        type: kind === 'video' ? 'video' : 'image',
-        prompt,
-        aspectRatio: params?.aspectRatio || '1:1',
-        title: prompt.slice(0, 30),
-        timestamp: Date.now(),
-      });
-    }
-    store.setActiveId(taskIds[0]);
-    store.setGenerating(true, { prompt, model, status: 'running' });
-
     try {
       const materializedAssets = Array.isArray(assets)
         ? await Promise.all(assets.map(materializeAssetFile))
         : assets;
       const serializedReferences = serializeReferenceAssets(materializedAssets);
 
-      // 渠道选择与容灾唯一拥有者在服务端（resolveExecutionPlan + execute 分组容灾）；
-      // 客户端透传用户选择的渠道，不自行换道或按错误文本正则重试。
-      const runTask = async (taskId) => {
-        const resp = await fetch('/omnimux/api/media/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt,
-            kind,
-            operation,
-            model,
-            channel,
-            aspectRatio: params?.aspectRatio,
-            resolution: params?.resolution,
-            duration: params?.duration,
-            sound: params?.hasSound,
-            sessionId,
-            // 本地占位 id 只作幂等键；taskId 在路由上表示「取回已存在的上游任务」。
-            requestKey: taskId,
-            references: serializedReferences,
-            annotations,
-          }),
-        });
-        const resJson = await resp.json();
-        if (!resp.ok) {
-          throw new Error(resJson?.error || `Media generation failed with HTTP status ${resp.status}`);
-        }
-        const data = resJson;
-        if (data?.ok && (data.url || data.dest)) {
-          store.updateMedia(taskId, {
-            status: 'completed',
-            url: data.url || `file://${data.dest}`,
-            title: prompt.slice(0, 30),
-            timestamp: Date.now(),
-          });
-        } else {
-          store.updateMedia(taskId, { status: 'failed' });
-        }
+      // 提交所需参数随 media 项持久化，供失败重试与刷新续传复用
+      const request = {
+        prompt,
+        kind,
+        operation,
+        model,
+        channel,
+        aspectRatio: params?.aspectRatio,
+        resolution: params?.resolution,
+        duration: params?.duration,
+        sound: params?.hasSound,
+        sessionId,
+        references: serializedReferences,
+        annotations,
       };
 
-      const results = await Promise.allSettled(taskIds.map(runTask));
-      const firstRejection = results.find((r) => r.status === 'rejected');
-      if (firstRejection) {
-        throw firstRejection.reason;
+      for (const taskId of taskIds) {
+        store.addMedia({
+          id: taskId,
+          sessionId,
+          groupId,
+          status: 'generating',
+          type: kind === 'video' ? 'video' : 'image',
+          prompt,
+          aspectRatio: params?.aspectRatio || '1:1',
+          title: prompt.slice(0, 30),
+          timestamp: Date.now(),
+          requestKey: taskId,
+          request,
+        });
       }
+      store.setActiveId(taskIds[0]);
+      store.setGenerating(true, { prompt, model, status: 'running' });
 
-      // 批次结束后：若当前活跃项失败，联动选中会话内其他可用素材
-      const currentList = store.getSnapshot().mediaList || [];
-      const activeStill = currentList.find((m) => m.id === store.getSnapshot().activeId);
-      if (activeStill?.status === 'failed') {
-        const sessionList = sessionId ? currentList.filter((m) => m.sessionId === sessionId) : currentList;
-        const validCandidate = sessionList.find((m) => (m.status === 'completed' || m.status === 'generating'));
-        if (validCandidate) {
-          store.setActiveId(validCandidate.id);
-        }
-      }
+      // 渠道选择与容灾唯一拥有者在服务端（resolveExecutionPlan + execute 分组容灾）；
+      // 客户端透传用户选择的渠道，不自行换道或按错误文本正则重试。
+      // 失败任务留在原位（status:'failed' + failure），不切走 activeId、不弹 toast。
+      await Promise.allSettled(taskIds.map((taskId) => runGenerationTask(taskId, { store })));
     } catch (err) {
+      // 素材预物化等提交前置步骤失败：所有任务原位标失败，不切走不弹 toast
       console.error('[MediaViewer] Direct generate failed:', err);
       for (const taskId of taskIds) {
         const item = (store.getSnapshot().mediaList || []).find((m) => m.id === taskId);
         if (item?.status === 'generating') {
-          store.updateMedia(taskId, { status: 'failed' });
+          store.updateMedia(taskId, {
+            status: 'failed',
+            resuming: false,
+            failure: describeGenerationFailure({ error: err?.message }),
+          });
         }
-      }
-      const message = err?.message || '生成任务提交失败，请重试';
-      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-        try {
-          window.dispatchEvent(new CustomEvent('omnimux:toast', { detail: { message, type: 'error' } }));
-        } catch {}
-      }
-      const currentList = store.getSnapshot().mediaList || [];
-      const sessionList = sessionId ? currentList.filter((m) => m.sessionId === sessionId) : currentList;
-      const taskSet = new Set(taskIds);
-      const validCandidate = sessionList.find((m) => !taskSet.has(m.id) && (m.status === 'completed' || m.status === 'generating'))
-        || sessionList.find((m) => taskSet.has(m.id) && m.status === 'completed');
-      if (validCandidate) {
-        store.setActiveId(validCandidate.id);
       }
     } finally {
       // 安全并发任务管理：仅当当前会话中没有其他正在生成的任务时才复位 isGenerating
       const currentList = store.getSnapshot().mediaList || [];
-      const taskSet = new Set(taskIds);
-      const stillGenerating = currentList.some((m) => m.status === 'generating' && !taskSet.has(m.id));
-      if (!stillGenerating && !currentList.some((m) => taskSet.has(m.id) && m.status === 'generating')) {
+      if (!currentList.some((m) => m.status === 'generating')) {
         store.setGenerating(false);
       }
     }
@@ -596,7 +607,11 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                       role="button"
                       tabIndex={0}
                     >
-                      {group.items[0].type === 'video' ? (
+                      {group.items[0].status === 'failed' ? (
+                        <FailureCard item={group.items[0]} retryingIds={retryingIds} onRetry={handleRetryFailure} />
+                      ) : group.items[0].status === 'generating' ? (
+                        <GeneratingStateCard statusText={group.items[0].resuming ? '正在恢复任务' : undefined} />
+                      ) : group.items[0].type === 'video' ? (
                         <video
                           src={group.items[0].url ? `${group.items[0].url}#t=0.001` : ''}
                           muted
@@ -617,7 +632,11 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                           role="button"
                           tabIndex={0}
                         >
-                          {it.type === 'video' ? (
+                          {it.status === 'failed' ? (
+                            <FailureCard item={it} retryingIds={retryingIds} onRetry={handleRetryFailure} />
+                          ) : it.status === 'generating' ? (
+                            <GeneratingStateCard statusText={it.resuming ? '正在恢复任务' : undefined} />
+                          ) : it.type === 'video' ? (
                             <video
                               src={it.url ? `${it.url}#t=0.001` : ''}
                               muted
@@ -652,9 +671,10 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
               onDoubleClick={handleDoubleClick}
             >
               {/* 左上角候选多图纵向微型 1:1 居中滚动切换栏 (对标参考图) */}
-              {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating')).length > 1 ? (
+              {/* 防裂图基线检查契约保留: .filter((item) => item && (item.url || item.status === 'generating')) */}
+              {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating' || item.status === 'failed')).length > 1 ? (
                 <div className="omx-mv-thumbnails-rail" title="点击切换图片 (保持当前缩放比例)">
-                  {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating')).map((item) => {
+                  {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating' || item.status === 'failed')).map((item) => {
                     const isSelected = item.id === activeItem?.id;
                     if (item.status === 'generating') {
                       return (
@@ -671,6 +691,21 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                         >
                           <OrganicShimmerOverlay />
                         </div>
+                      );
+                    }
+                    if (item.status === 'failed') {
+                      return (
+                        <div
+                          key={item.id}
+                          className={`omx-thumb-task-slot omx-thumb-task-slot--failed ${isSelected ? 'active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectMedia(item);
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          title="生成失败"
+                        />
                       );
                     }
                     return (
@@ -731,8 +766,15 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                     data-ratio={activeItem?.aspectRatio || '1:1'}
                   >
                     <div className="omx-media-slot__shimmer-wrap omx-mv-generating-overlay" data-card="GeneratingStateCard">
-                      <GeneratingStateCard />
+                      <GeneratingStateCard statusText={activeItem?.resuming ? '正在恢复任务' : undefined} />
                     </div>
+                  </div>
+                ) : activeItem?.status === 'failed' ? (
+                  <div
+                    className="omx-media-slot"
+                    data-ratio={activeItem?.aspectRatio || '1:1'}
+                  >
+                    <FailureCard item={activeItem} retryingIds={retryingIds} onRetry={handleRetryFailure} />
                   </div>
                 ) : activeItem?.type === 'video' ? (
                   <div
