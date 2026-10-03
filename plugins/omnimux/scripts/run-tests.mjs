@@ -7,6 +7,8 @@ import { pathToFileURL } from 'node:url'
 const TEST_GLOBS = [
   'src/**/*.test.js',
   'src/**/*.test.ts',
+  // *.test.mjs 也在收集范围：曾有 6 个测试因后缀漏掉从未执行（Issue #3014）
+  'src/**/*.test.mjs',
 ]
 
 const EXCLUDED_GLOBS = [

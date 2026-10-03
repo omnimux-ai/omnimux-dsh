@@ -198,32 +198,32 @@ test('QA-2661 场景 6：视频切片切换代次守卫（generation counter）�
   assert.match(mainStage.style.aspectRatio, /^1(\.0+)?(\s*\/\s*1)?$/, '代次守卫必须彻底拦截过期视频 error 事件');
 });
 
-test('QA-2661 场景 7：缩略图轨道 8px 弱化遮罩与 padding: 4px 3px 不切断边框', async () => {
-  // 1. 验证 padding 从旧版 2px 3px 规范为 4px 3px
-  assert.match(MEDIA_VIEWER_CSS, /\.omx-chat-media-tail__rail\s*\{[^}]*padding:\s*4px 3px;/, '缩图轨道内边距必须严格对齐为 padding: 4px 3px;');
+test('QA-2661 场景 7：缩略图轨道滚动渐隐遮罩与内边距符合当前规范', async () => {
+  // padding 与遮罩尺寸：#2676（Issue #2106，缩略图栏锁在主图高度内滚动）
+  // 有意改为 padding: 2px 3px 2px 3px 与 16px 渐隐，替换 #2671 的 4px/8px。
+  assert.match(MEDIA_VIEWER_CSS, /\.omx-chat-media-tail__rail\s*\{[^}]*padding:\s*2px 3px 2px 3px;/, '缩图轨道内边距必须严格对齐为 padding: 2px 3px 2px 3px;');
 
-  // 2. 验证滚动渐隐遮罩由 16px 收敛弱化为 8px
   assert.match(
     MEDIA_VIEWER_CSS,
-    /\.omx-chat-media-tail__rail\.cs-down\s*\{[^}]*linear-gradient\(to bottom,\s*black 0,\s*black calc\(100% - 8px\),\s*transparent 100%\)/,
-    '向下滚动遮罩必须弱化为 8px'
+    /\.omx-chat-media-tail__rail\.cs-down\s*\{[^}]*linear-gradient\(to bottom,\s*black 0,\s*black calc\(100% - 16px\),\s*transparent 100%\)/,
+    '向下滚动遮罩必须为 16px 渐隐'
   );
   assert.match(
     MEDIA_VIEWER_CSS,
-    /\.omx-chat-media-tail__rail\.cs-up\s*\{[^}]*linear-gradient\(to bottom,\s*transparent 0,\s*black 8px,\s*black 100%\)/,
-    '向上滚动遮罩必须弱化为 8px'
+    /\.omx-chat-media-tail__rail\.cs-up\s*\{[^}]*linear-gradient\(to bottom,\s*transparent 0,\s*black 16px,\s*black 100%\)/,
+    '向上滚动遮罩必须为 16px 渐隐'
   );
   assert.match(
     MEDIA_VIEWER_CSS,
-    /\.omx-chat-media-tail__rail\.cs-up\.cs-down\s*\{[^}]*linear-gradient\(to bottom,\s*transparent 0,\s*black 8px,\s*black calc\(100% - 8px\),\s*transparent 100%\)/,
-    '双向滚动遮罩必须弱化为 8px'
+    /\.omx-chat-media-tail__rail\.cs-up\.cs-down\s*\{[^}]*linear-gradient\(to bottom,\s*transparent 0,\s*black 16px,\s*black calc\(100% - 16px\),\s*transparent 100%\)/,
+    '双向滚动遮罩必须为 16px 渐隐'
   );
 
-  // 3. 验证不再残留任何 16px 渐隐遮罩
+  // 缩图栏遮罩不得退回到 #2671 的 8px 值（只查遮罩，rail 块内 gap: 8px 合法）
   assert.doesNotMatch(
     MEDIA_VIEWER_CSS,
-    /\.omx-chat-media-tail__rail[^{]*\{[^}]*16px/,
-    '缩图栏遮罩严禁残留旧版 16px 粗暴遮罩'
+    /\.omx-chat-media-tail__rail\.cs-[^{]*\{[^}]*8px/,
+    '缩图栏遮罩不得退回旧版 8px 值'
   );
 });
 
