@@ -188,7 +188,8 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
             duration: params?.duration,
             sound: params?.hasSound,
             sessionId,
-            taskId,
+            // 本地占位 id 只作幂等键；taskId 在路由上表示「取回已存在的上游任务」。
+            requestKey: taskId,
             references: serializedReferences,
             annotations,
           }),
