@@ -1201,6 +1201,23 @@ button.omx-slot-add:hover,
   color: var(--dsw-alias-label-primary);
   transform: scale(1.08);
 }
+
+/* 组合规则锁定（如 H3 音频不能单独输入）：保持可见可悬停，title 给契约提示 */
+.omx-slot-btn.is-locked {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+}
+.omx-slot-btn.is-locked:hover {
+  background: var(--dsw-alias-bg-layer-2) !important;
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.32)) !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  transform: translateX(var(--slot-shift, 0px));
+  box-shadow: none;
+}
+.omx-slot-btn.is-locked:hover svg {
+  color: var(--dsw-alias-label-secondary);
+  transform: none;
+}
 .omx-slot-count {
   position: absolute;
   left: 30px;
