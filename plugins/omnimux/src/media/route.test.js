@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import { OmnimuxError } from './errors.js'
 import { gatewayCandidates, parseMediaConfig, resolveMediaAuth, resolveMediaRoute, toMediaWireModelId } from './route.js'
 import { mapOmnimuxInput } from './vendors/omnimux.js'
+import { resetTestNetworkAttempts, testNetworkAttempts } from '../../scripts/test-network-guard.mjs'
 
 describe('media route', () => {
   it('defaults to the OmniMux openai-media video row', () => {
@@ -190,24 +191,36 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     assert.deepEqual(auth, { apiKey: 'sk-env-key', authType: 'api-key' })
   })
 
-  it('测试用例 2：无环境变量但 store.resolve() 返回 PAT 时，成功解析并返回 authType: access-token', async () => {
+  it('仅登录 store PAT 时明确拒绝，不读取 store 或发送网络请求', async () => {
     const media = parseMediaConfig(undefined)
     const route = resolveMediaRoute('image', {}, media, {})
-    const auth = await resolveMediaAuth(route, {
+    let storeCalls = 0
+    resetTestNetworkAttempts()
+    await assert.rejects(() => resolveMediaAuth(route, {
       env: {},
-      store: { resolve: async () => 'pat-from-store' },
-    })
-    assert.deepEqual(auth, { apiKey: 'pat-from-store', authType: 'access-token' })
+      store: { resolve: async () => { storeCalls += 1; return 'pat-from-store' } },
+    }), { code: 'needs-omnimux', message: '生成服务需要 API 密钥，请在当前凭证中配置 OMNIMUX_API_KEY；登录凭证不能用于生成' })
+    assert.equal(storeCalls, 0)
+    assert.deepEqual(testNetworkAttempts(), [])
   })
 
-  it('测试用例 3：无环境变量但 credentials.resolve("OMNIMUX_ACCESS_TOKEN") 返回 PAT 时，成功解析', async () => {
+  it('仅登录 credentials PAT 时明确拒绝，不读取登录引用或 store，不发送网络请求', async () => {
     const media = parseMediaConfig(undefined)
     const route = resolveMediaRoute('image', {}, media, {})
-    const auth = await resolveMediaAuth(route, {
+    const refs = []
+    let storeCalls = 0
+    resetTestNetworkAttempts()
+    await assert.rejects(() => resolveMediaAuth(route, {
       env: {},
-      credentials: { resolve: async (ref) => (ref === 'OMNIMUX_ACCESS_TOKEN' ? { value: 'pat-from-cred' } : undefined) },
-    })
-    assert.deepEqual(auth, { apiKey: 'pat-from-cred', authType: 'access-token' })
+      store: { resolve: async () => { storeCalls += 1; return 'pat-from-store' } },
+      credentials: { resolve: async (ref) => {
+        refs.push(ref)
+        return ref === 'OMNIMUX_ACCESS_TOKEN' ? { value: 'pat-from-cred' } : undefined
+      } },
+    }), { code: 'needs-omnimux', message: '生成服务需要 API 密钥，请在当前凭证中配置 OMNIMUX_API_KEY；登录凭证不能用于生成' })
+    assert.deepEqual(refs, ['OMNIMUX_API_KEY', 'OMNIMUX_TOKEN'])
+    assert.equal(storeCalls, 0)
+    assert.deepEqual(testNetworkAttempts(), [])
   })
 
   it('credentials OMNIMUX_API_KEY 优先于登录 PAT，避免 PAT 401 /v1/images/generations', async () => {
@@ -255,7 +268,7 @@ describe('resolveMediaAuth (dual-track auth)', () => {
       (error) => {
         assert(error instanceof OmnimuxError)
         assert.equal(error.code, 'needs-omnimux')
-        assert.match(error.message, /请先在侧边栏登录 OmniMux 账号，或配置 OMNIMUX_API_KEY/)
+        assert.equal(error.message, '生成服务需要 API 密钥，请在当前凭证中配置 OMNIMUX_API_KEY；登录凭证不能用于生成')
         return true
       },
     )

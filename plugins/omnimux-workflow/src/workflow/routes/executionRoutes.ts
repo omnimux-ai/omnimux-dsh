@@ -20,6 +20,7 @@ import { notFound, type RouteTry, type WorkflowDispatchRequest } from './dispatc
 import type { EnsureProjectBoundFn } from '../../projects/ensureProjectBound';
 import type { CapabilityCatalog } from '../../shared/api';
 import { findExecutionReadinessFailure } from '../../shared/validation/executionReadiness.ts';
+import { executionInputSignatures, executionSourceIdentities } from '../execution/executionTypes.ts';
 
 const STATUS_BY_CODE: Record<string, number> = {
   'invalid-json': 400,
@@ -46,6 +47,7 @@ export function createExecutionRoutes(opts: {
   getCatalog?: () => Promise<CapabilityCatalog | null>;
 }): { tryHandle: RouteTry } {
   const { store, executionManager, ensureProjectBound, getCatalog } = opts;
+  const findRecoverableTasks: ExecutionManager['findRecoverableTasks'] | undefined = executionManager?.findRecoverableTasks;
   const executionsRouteRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/executions$`);
   const executionItemRouteRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/executions/([^/]+)$`);
   const executionActionRouteRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/executions/([^/]+)/(pause|resume|cancel)$`);
@@ -111,7 +113,7 @@ export function createExecutionRoutes(opts: {
         } catch (error) {
           return { status: 400, body: { error: 'invalid-mode', message: messageOf(error) } };
         }
-        let snapshot;
+        let snapshot: ReturnType<WorkspaceStore['get']>;
         try {
           snapshot = store.get(workspaceId);
           if (body.expectedVersion !== undefined && body.expectedVersion !== snapshot.version) {
@@ -127,8 +129,22 @@ export function createExecutionRoutes(opts: {
           throw error;
         }
         try {
-          const catalog = getCatalog ? await getCatalog() : null;
-          snapshot = { ...snapshot, ...prepareExecutionSlotGraph(snapshot.nodes, snapshot.edges, catalog) };
+          const inputSignatures = executionInputSignatures(snapshot);
+          const sourceIdentities = executionSourceIdentities(snapshot);
+          const rawSubgraph = resolveExecutionSubgraph({
+            nodes: snapshot.nodes, edges: snapshot.edges, executionMode: mode, nodeIds: normalizeNodeIds(body.nodeIds),
+          });
+          const recovering = findRecoverableTasks?.({
+            workspaceId, nodes: rawSubgraph.nodes as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
+            edges: rawSubgraph.edges, inputSignatures, sourceIdentities,
+          }) ?? {};
+          const newNodeIds = new Set(rawSubgraph.nodes.filter(node => !recovering[node.id]).map(node => node.id));
+          const catalog = newNodeIds.size && getCatalog ? await getCatalog() : null;
+          if (newNodeIds.size) {
+            const prepared = prepareExecutionSlotGraph(snapshot.nodes, snapshot.edges, catalog);
+            snapshot = { ...snapshot, nodes: prepared.nodes.map(node => recovering[node.id]
+              ? snapshot.nodes.find(original => original.id === node.id)! : node), edges: prepared.edges };
+          }
           const subgraph = resolveExecutionSubgraph({
             nodes: snapshot.nodes as Array<{ id: string; [key: string]: unknown }>,
             edges: snapshot.edges as Array<{ source: string; target: string; [key: string]: unknown }>,
@@ -137,7 +153,7 @@ export function createExecutionRoutes(opts: {
           });
 
           const readiness = findExecutionReadinessFailure(
-            subgraph.nodes as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
+            subgraph.nodes.filter(node => !recovering[node.id]) as Array<{ id: string; type: string; data?: Record<string, unknown> }>,
             catalog,
             { nodes: snapshot.nodes, edges: snapshot.edges, workspaceId, scheduledNodeIds: mode === 'single' ? undefined : subgraph.nodeIdSet },
           );
@@ -172,7 +188,7 @@ export function createExecutionRoutes(opts: {
           if (store.get(workspaceId).version !== snapshot.version) {
             return { status: 409, body: { error: 'version_conflict', message: '输入已更新，请确认当前内容后重新生成' } };
           }
-          const initialOutputs = buildInitialOutputs(snapshot, subgraph.nodeIdSet, { mediaDir: opts.mediaDir ?? '', resolveProjectFile: opts.resolveProjectFile });
+          const initialOutputs = buildInitialOutputs({ ...snapshot, edges: snapshot.edges.filter(edge => !recovering[edge.target]) }, subgraph.nodeIdSet, { mediaDir: opts.mediaDir ?? '', resolveProjectFile: opts.resolveProjectFile });
 
           const entry = executionManager.createExecution({
             workspaceId: snapshot.id,
@@ -180,6 +196,7 @@ export function createExecutionRoutes(opts: {
             edges: subgraph.edges as unknown as Array<{ source: string; target: string }>,
             maxParallel: snapshot.settings.maxParallel,
             initialOutputs,
+            ...(typeof findRecoverableTasks === 'function' ? { inputSignatures, sourceIdentities, recoveryTasks: recovering } : {}),
           });
           return {
             status: 200,

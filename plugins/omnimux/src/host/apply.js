@@ -157,7 +157,9 @@ export function apply(ctx, config = {}) {
         httpCtx.effect(() => registerDirectMediaRoutes(server, {
           executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
           executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
-          runtimeSettings: ctx.get?.('settings')?.get?.('omnimux'),
+          getRuntimeSettings: () => ctx.get?.('settings')?.get?.('omnimux'),
+          getConnection: () => ctx.get?.('connection'),
+          gate: hub.gate,
         }), 'omnimux: direct media generate HTTP')
       }
     })

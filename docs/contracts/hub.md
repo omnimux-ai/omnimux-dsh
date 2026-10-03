@@ -80,7 +80,11 @@ vertical / omnimux_* tool
 | `{ prompt, dest, wait: false }` | submit only → `{ mode: "submitted", taskId }` unless the provider already returned a URL (then `live` + download) |
 | `{ dest, taskId }` | skip submit; poll + download → `{ mode: "live", taskId, url }` |
 
-Session-visible background work stays on dsh `ctx.jobs`. The hub does not store a task ledger. The vertical writes `taskId` to its own disk as soon as `submitted` (or `live`) returns.
+Session-visible background work stays on dsh `ctx.jobs`. The hub owns the media execution ledger at `$DSH_HOME/omnimux/media-tasks`: it persists the accepted upstream task and actual provider/protocol/origin/model/group/credential reference before waiting or downloading. It never stores credential values. Domain plugins persist the returned `taskRef`/`taskId` only as references and UI projections, not as a second source of provider terminal state.
+
+Collection uses the recorded execution route and resolves its current credential through the official credentials seam before any new-submission configuration, source-asset or catalog checks. Console login access tokens are not renamed into media API keys. Official media uses `OMNIMUX_API_KEY` / `OMNIMUX_TOKEN` API credentials in the current environment; no cross-profile disk search supplies media auth. A missing media API credential fails explicitly without submitting a paid request.
+
+Only an explicit upstream terminal failure ends an accepted task as `failed`; authentication, transport, cancellation, timeout and artifact-download interruptions retain its handle and collection diagnostics. Direct HTTP errors include the original `taskRef` and `recoverable` fact. Consumers may collect an uncertain task again but may not infer a new paid intent from HTTP status or translated message text. Completed artifacts cannot be overwritten by a late collector error. Reusing a request key recovers existing work rather than submitting again; synchronous and asynchronous paths persist accepted handles alike.
 
 `t2v`, `i2v`, talking-head are **variants** of `videoGenerate` (optional `image` and speech fields). They are not new seams and not new providers.
 

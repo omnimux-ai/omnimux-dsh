@@ -87,6 +87,10 @@ async function resolveFailureReason(options, json) {
   })
   if (!detailUrl) return undefined
   try {
+    const target = new URL(detailUrl)
+    const base = new URL(options.baseUrl)
+    const officialOrigin = base.origin === 'https://api.omnimux.ai' || base.origin === 'https://omnimux.ai'
+    if (target.origin !== base.origin && !(officialOrigin && (target.origin === 'https://api.omnimux.ai' || target.origin === 'https://omnimux.ai'))) return undefined
     const detail = await getJson(options.fetcher, detailUrl, options.apiKey, options.signal, {
       requestTimeoutMs: options.requestTimeoutMs,
     })

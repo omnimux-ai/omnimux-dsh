@@ -317,32 +317,52 @@ describe('Direct Media Generate · requestKey/taskRef 账本契约（Issue #3011
     assert.equal(calls.length, 1)
   })
 
-  it('取回：failed 记录直接返回 500，带记录中的 error 与 errorCode，不再轮询', async () => {
+  it('取回：旧 transport failed 记录恢复同一上游任务，不新提交', async () => {
     const record = makeRecord()
     record.status = 'failed'
-    record.upstreamTaskId = 'upstream_bad'
+    record.upstreamTaskId = 'upstream_recoverable'
     record.error = '生成服务暂时不可用，请稍后重试'
     record.errorCode = 'omnimux-request-failed'
     saveMediaTaskRecord(record, { storageDir: tempDir })
 
     const { route, calls } = fixture({
       storageDir: tempDir,
-      executeImage: async () => { throw new Error('should never be called') },
+      executeImage: async (req) => {
+        calls.push({ kind: 'image', req })
+        assert.equal(req.taskRef, record.taskRef)
+        assert.equal(req.taskId, 'upstream_recoverable')
+        assert.equal(req.prompt, '')
+        return { mode: 'live', taskId: req.taskId, taskRef: req.taskRef, url: 'https://example.com/recovered.png' }
+      },
     })
     const res = response()
     await route.handler(post({
-      kind: 'image',
-      model: 'gpt-image-2.5',
-      requestKey: 'req-key-1',
-      taskRef: record.taskRef,
-      wait: true,
+      kind: 'image', model: 'gpt-image-2.5', requestKey: 'req-key-1', taskRef: record.taskRef, wait: true,
     }), res)
 
+    assert.equal(res.status, 200)
+    assert.equal(res.json().ok, true)
+    assert.equal(res.json().mode, 'live')
+    assert.equal(res.json().taskRef, record.taskRef)
+    assert.equal(res.json().taskId, 'upstream_recoverable')
+    assert.equal(calls.length, 1)
+    assert.equal(calls.filter(({ req }) => !req.taskRef && !req.taskId).length, 0)
+  })
+
+  it('取回：明确上游 failed 记录返回原终态错误，不再轮询', async () => {
+    const record = makeRecord()
+    Object.assign(record, { status: 'failed', upstreamTaskId: 'upstream_bad', error: 'upstream task failed: nsfw', errorCode: 'omnimux-failed' })
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+    const { route, calls } = fixture({ storageDir: tempDir, executeImage: async (req) => {
+      calls.push({ kind: 'image', req })
+      throw new Error('terminal task must not execute')
+    } })
+    const res = response()
+    await route.handler(post({ kind: 'image', model: 'gpt-image-2.5', requestKey: 'req-key-1', taskRef: record.taskRef, wait: true }), res)
     assert.equal(res.status, 500)
-    const data = res.json()
-    assert.equal(data.ok, false)
-    assert.equal(data.error, '生成服务暂时不可用，请稍后重试')
-    assert.equal(data.code, 'omnimux-request-failed')
+    assert.equal(res.json().ok, false)
+    assert.equal(res.json().error, 'upstream task failed: nsfw')
+    assert.equal(res.json().code, 'omnimux-failed')
     assert.equal(calls.length, 0)
   })
 
@@ -438,17 +458,18 @@ describe('Direct Media Generate · requestKey/taskRef 账本契约（Issue #3011
     assert.equal(calls[0].req.taskRef, record.taskRef)
   })
 
-  it('取回轮询抛错时把账本记录标记为 failed 并回写 error', async () => {
+  it('取回上游明确终态失败时持久化 failed 和原错误，后续不执行', async () => {
     const record = makeRecord()
     record.status = 'submitted'
     record.upstreamTaskId = 'upstream_will_fail'
     saveMediaTaskRecord(record, { storageDir: tempDir })
-
+    let collections = 0
     const { route } = fixture({
       storageDir: tempDir,
       executeImage: async () => {
+        collections += 1
         const err = new Error('upstream task failed: nsfw')
-        err.code = 'omnimux-request-failed'
+        err.code = 'omnimux-failed'
         throw err
       },
     })
@@ -462,11 +483,55 @@ describe('Direct Media Generate · requestKey/taskRef 账本契约（Issue #3011
     }), res)
 
     assert.equal(res.status, 500)
-    assert.equal(res.json().code, 'omnimux-request-failed')
+    assert.equal(res.json().code, 'omnimux-failed')
+    assert.equal(res.json().recoverable, false)
     const stored = getMediaTaskRecord(record.taskRef, { storageDir: tempDir })
     assert.equal(stored.status, 'failed')
     assert.equal(stored.error, 'upstream task failed: nsfw')
-    assert.equal(stored.errorCode, 'omnimux-request-failed')
+    assert.equal(stored.errorCode, 'omnimux-failed')
+    const again = response()
+    await route.handler(post({ kind: 'image', taskRef: record.taskRef, wait: true }), again)
+    assert.equal(again.status, 500)
+    assert.equal(again.json().code, 'omnimux-failed')
+    assert.equal(again.json().error, stored.error)
+    assert.equal(collections, 1)
+  })
+
+  it('收取暂时 transport 失败保留同一任务，随后恢复不新提交', async () => {
+    const record = makeRecord()
+    Object.assign(record, { status: 'submitted', upstreamTaskId: 'upstream_transport' })
+    saveMediaTaskRecord(record, { storageDir: tempDir })
+    const collected = []
+    const { route } = fixture({ storageDir: tempDir, executeImage: async (req) => {
+      collected.push(req)
+      assert.equal(req.taskRef, record.taskRef)
+      assert.equal(req.taskId, 'upstream_transport')
+      if (collected.length === 1) throw Object.assign(new Error('temporary transport interruption'), { code: 'omnimux-request-failed', status: 503 })
+      return { mode: 'live', taskId: req.taskId, taskRef: req.taskRef, url: 'https://example.com/recovered.png' }
+    } })
+    const body = { kind: 'image', taskRef: record.taskRef, requestKey: 'req-key-1', wait: true }
+    const interrupted = response()
+    await route.handler(post(body), interrupted)
+    assert.equal(interrupted.status, 500)
+    assert.equal(interrupted.json().error, 'temporary transport interruption')
+    assert.equal(interrupted.json().code, 'omnimux-request-failed')
+    assert.equal(interrupted.json().status, 503)
+    assert.equal(interrupted.json().recoverable, true)
+    assert.equal(interrupted.json().taskRef, record.taskRef)
+    const stored = getMediaTaskRecord(record.taskRef, { storageDir: tempDir })
+    assert.equal(stored.status, 'submitted')
+    assert.equal(stored.upstreamTaskId, 'upstream_transport')
+    assert.equal(stored.error, undefined)
+    assert.equal(stored.errorCode, undefined)
+    assert.equal(stored.collectionError, 'temporary transport interruption')
+    assert.equal(stored.collectionErrorCode, 'omnimux-request-failed')
+    const recovered = response()
+    await route.handler(post(body), recovered)
+    assert.equal(recovered.status, 200)
+    assert.equal(recovered.json().mode, 'live')
+    assert.equal(recovered.json().taskRef, record.taskRef)
+    assert.equal(collected.length, 2)
+    assert.equal(collected.filter((req) => !req.taskRef && !req.taskId).length, 0)
   })
 
   it('带 requestKey 提交且执行器返回 taskRef 缺省时，从账本回捞 taskRef 返回前端', async () => {

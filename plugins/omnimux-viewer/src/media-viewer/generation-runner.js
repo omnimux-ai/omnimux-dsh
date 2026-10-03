@@ -27,7 +27,13 @@ export function isGenerationInFlight(mediaId) {
 export function resumePendingGenerations(deps) {
   const { store } = deps;
   for (const item of store.getSnapshot().mediaList || []) {
-    if (item?.status !== 'generating' || inFlight.has(item.id)) continue;
+    if (item?.status === 'completed' && item.url) {
+      const url = resultUrl(item);
+      if (url && url !== item.url) store.updateMedia(item.id, { url });
+    }
+    const pendingCollection = item?.status === 'generating'
+      || (item?.status === 'failed' && item.taskRef && item.recoverable === true);
+    if (!pendingCollection || inFlight.has(item.id)) continue;
     if (item.taskRef) {
       store.updateMedia(item.id, { resuming: true });
       runGenerationTask(item.id, deps);
@@ -58,9 +64,33 @@ async function postGenerate(body, fetchImpl) {
   return { ok: resp.ok, status: resp.status, json };
 }
 
-function resultUrl(data) {
-  if (!data) return '';
-  return data.url || (data.dest ? `file://${data.dest}` : '');
+export function resultUrl(data) {
+  const value = data?.url || data?.dest || '';
+  if (!value) return '';
+  if (/^file:\/\//i.test(value)) {
+    try {
+      const path = decodeURIComponent(new URL(value).pathname).replace(/^\/(?=[a-z]:\/)/i, '');
+      return `/omnimux-workflow/api/local-file?path=${encodeURIComponent(path)}`;
+    } catch {
+      return '';
+    }
+  }
+  // 已有公共 HTTP 引用保持原样；缓存绝对路径统一经过现有文件流。
+  if (value.startsWith('/omnimux') || /^(?:https?:|blob:|data:)/i.test(value)) return value;
+  if (value.startsWith('/') || /^[a-z]:[\\/]/i.test(value)) {
+    return `/omnimux-workflow/api/local-file?path=${encodeURIComponent(value)}`;
+  }
+  return '';
+}
+
+/** 上游终态只消费中枢明确声明，不从网络/HTTP 状态推断。 */
+function isUpstreamTerminal(item) {
+  return item?.recoverable === false && item?.failure?.code === 'omnimux-failed';
+}
+
+export function canRetryGeneration(item) {
+  if (item?.taskRef && !isUpstreamTerminal(item)) return true;
+  return Boolean(item?.request && item.requestReplayable !== false && item.failure?.retryable !== false);
 }
 
 /**
@@ -93,32 +123,49 @@ async function runGenerationTaskOnce(mediaId, { store, fetchImpl = fetch, sleep 
     });
   };
 
-  const failureOf = (res) => res?.failure || describeGenerationFailure({
-    status: res?.status,
-    code: res?.json?.code,
-    error: res?.json?.error,
-  });
+  const failResponse = (res) => {
+    const current = lookup();
+    const taskRef = res?.json?.taskRef || current?.taskRef || null;
+    const recoverable = res?.json?.recoverable;
+    const code = res?.json?.code;
+    const terminal = recoverable === false && code === 'omnimux-failed';
+    const failure = describeGenerationFailure({ status: res?.status, code, error: res?.json?.error });
+    markFailed({ taskRef, recoverable }, {
+      ...failure,
+      code,
+      retryable: taskRef && !terminal ? true : failure.retryable && current?.requestReplayable !== false,
+    });
+  };
 
   try {
+    if (item.status === 'failed' && item.taskRef && !isUpstreamTerminal(item)) {
+      // 暂时失败或结果未知：只收取原任务，即使原输入已无法重放。
+      store.updateMedia(mediaId, { status: 'generating', resuming: true, failure: null });
+      store.setGenerating(true);
+      item = lookup();
+    }
     if (item.status === 'failed') {
-      // 重试路径：用保存的 request 与新 requestKey 重新提交，提交被接受前保持 failed
       const req = item.request;
-      if (!req) {
+      if (!canRetryGeneration(item)) {
         markFailed({}, { reason: INTERRUPTED_REASON, retryable: false });
         return;
       }
-      const retryKey = `${mediaId}:retry-${Date.now()}`;
+      const retryKey = isUpstreamTerminal(item)
+        ? `${mediaId}:retry-${Date.now()}`
+        : item.requestKey || mediaId;
+      // 在提交前切换意图身份，响应丢失也只能按本次 key 核对，不沿用旧终态再改号。
+      store.updateMedia(mediaId, { requestKey: retryKey, taskRef: null, recoverable: undefined, failure: null });
       const res = await postGenerate({
         ...req,
         requestKey: retryKey,
         wait: false,
       }, fetchImpl);
       if (!res.ok) {
-        markFailed({}, failureOf(res));
+        failResponse(res);
         return;
       }
       // 提交被接受：回到生成中并写回 taskRef 与本次 requestKey，取回与刷新续传都按新任务走
-      store.updateMedia(mediaId, { status: 'generating', resuming: false, failure: null, requestKey: retryKey, taskRef: res.json?.taskRef || null });
+      store.updateMedia(mediaId, { status: 'generating', resuming: false, failure: null, recoverable: undefined, requestKey: retryKey, taskRef: res.json?.taskRef || null });
       if (res.json?.mode !== 'submitted' && resultUrl(res.json)) {
         store.updateMedia(mediaId, {
           status: 'completed',
@@ -138,7 +185,7 @@ async function runGenerationTaskOnce(mediaId, { store, fetchImpl = fetch, sleep 
       const taskId = item.requestKey || item.id;
       const res = await postGenerate({ ...item.request, requestKey: taskId, wait: false }, fetchImpl);
       if (!res.ok) {
-        markFailed({}, failureOf(res));
+        failResponse(res);
         return;
       }
       const data = res.json;
@@ -173,7 +220,7 @@ async function runGenerationTaskOnce(mediaId, { store, fetchImpl = fetch, sleep 
         wait: true,
       }, fetchImpl);
       if (!res.ok) {
-        markFailed({}, failureOf(res));
+        failResponse(res);
         return;
       }
       const data = res.json;
@@ -202,7 +249,8 @@ async function runGenerationTaskOnce(mediaId, { store, fetchImpl = fetch, sleep 
     console.warn('[generation-runner] 生成请求异常:', err?.message || err);
     const current = lookup();
     if (current && current.status !== 'completed') {
-      markFailed({}, describeGenerationFailure({ error: err?.message || String(err) }));
+      const failure = describeGenerationFailure({ error: err?.message || String(err) });
+      markFailed({ recoverable: current.taskRef ? true : current.recoverable }, { ...failure, code: current.failure?.code, retryable: canRetryGeneration(current) });
     }
   } finally {
     const list = store.getSnapshot().mediaList || [];
