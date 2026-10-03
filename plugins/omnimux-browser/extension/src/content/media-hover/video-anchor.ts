@@ -82,7 +82,7 @@ export function isControlSizedElement(element: Element): boolean {
  * @param rect - The media element's current bounding rect.
  * @param hitTest - Page hit test that skips the overlay, or `null` outside a document.
  */
-export function probePlayControl(
+export function probeCornerControl(
   media: Element,
   rect: AnchorRect,
   hitTest: ((x: number, y: number) => Element | null) | null = defaultHitTest(),
@@ -183,7 +183,7 @@ export class VideoAnchorProbe {
       && cached.height === height) {
       return cached.probe
     }
-    const probe = probePlayControl(media, rect, this.hitTest)
+    const probe = probeCornerControl(media, rect, this.hitTest)
     this.cache.set(media, { probe, at, width, height })
     return probe
   }

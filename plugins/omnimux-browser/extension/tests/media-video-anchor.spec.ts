@@ -14,7 +14,7 @@ import {
   UNMEASURED_CONTROL,
   VideoAnchorProbe,
   isControlSizedElement,
-  probePlayControl,
+  probeCornerControl,
   resolveCapsuleAnchor,
 } from '../src/content/media-hover/video-anchor.ts'
 import type { AnchorRect } from '../src/content/media-hover/types.ts'
@@ -150,7 +150,7 @@ describe('top-right control probe', () => {
     const help = appendControl(660, 108, 32, 32)
     const points: Array<[number, number]> = []
 
-    const probe = probePlayControl(media, anchor, (x, y) => { points.push([x, y]); return help })
+    const probe = probeCornerControl(media, anchor, (x, y) => { points.push([x, y]); return help })
     expect(points).toEqual([[anchor.right - VIDEO_ANCHOR_SPEC.probeInsetX, anchor.top + VIDEO_ANCHOR_SPEC.probeInsetY]])
     expect(probe.measured).toBe(true)
     expect(probe.controlLeft).toBe(660)
@@ -159,7 +159,7 @@ describe('top-right control probe', () => {
   it('reports nothing when the hit is the media itself', () => {
     const media = document.createElement('video')
     document.body.appendChild(media)
-    const probe = probePlayControl(media, rect(0, 0, 600, 340), () => media)
+    const probe = probeCornerControl(media, rect(0, 0, 600, 340), () => media)
     expect(probe.measured).toBe(false)
   })
 
@@ -173,7 +173,7 @@ describe('top-right control probe', () => {
       x: 200, y: 0, left: 200, top: 0, right: 600, bottom: 300,
       width: 400, height: 300, toJSON: () => ({}),
     }) as DOMRect
-    expect(probePlayControl(media, rect(0, 0, 600, 340), () => poster).measured).toBe(false)
+    expect(probeCornerControl(media, rect(0, 0, 600, 340), () => poster).measured).toBe(false)
     expect(isControlSizedElement(poster)).toBe(false)
   })
 
@@ -181,13 +181,13 @@ describe('top-right control probe', () => {
     const media = document.createElement('video')
     document.body.appendChild(media)
     const far = appendControl(900, 700, 40, 40)
-    expect(probePlayControl(media, rect(0, 0, 600, 340), () => far).measured).toBe(false)
+    expect(probeCornerControl(media, rect(0, 0, 600, 340), () => far).measured).toBe(false)
   })
 
   it('treats a missing hit test as no measurement', () => {
     const media = document.createElement('video')
     document.body.appendChild(media)
-    expect(probePlayControl(media, rect(0, 0, 600, 340), null).measured).toBe(false)
+    expect(probeCornerControl(media, rect(0, 0, 600, 340), null).measured).toBe(false)
   })
 })
 
