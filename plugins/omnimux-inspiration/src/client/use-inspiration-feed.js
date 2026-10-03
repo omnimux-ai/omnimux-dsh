@@ -251,6 +251,15 @@ function useFeedData(options) {
   const [error, setError] = useState(null)
   const pageRef = useRef(page)
   const itemsRef = useRef(items)
+  // Generation counter for the feed pipeline: every load stamps its own id, and
+  // executeFeedLoad drops writes whose id is no longer the newest. This is what
+  // stops a slow 爆款趋势 response (quota gate + fetch ≈ 3.5s) from landing on
+  // top of the 灵感库 rows the user already sees (Issue #2988).
+  const loadSeqRef = useRef(0)
+  // Same-request dedupe: the active effect and the auth-ready effect both call
+  // loadData for the same filter state, so an identical in-flight request is
+  // shared instead of issued twice.
+  const inFlightRef = useRef(null)
 
   useEffect(() => {
     pageRef.current = page
@@ -260,16 +269,39 @@ function useFeedData(options) {
     itemsRef.current = items
   }, [items])
 
-  const loadData = useCallback((isNextPage = false) => {
-    if (!isNextPage) {
-      pageRef.current = 1
-      setPage(1)
+  // Writes after unmount can only paint a dead tree: invalidate every in-flight
+  // load so its late result is dropped instead.
+  useEffect(() => {
+    return () => {
+      loadSeqRef.current += 1
+      inFlightRef.current = null
     }
+  }, [])
+
+  const loadData = useCallback((isNextPage = false) => {
     const { duration_min, duration_max } = resolveDurationRange(duration)
     const { views_min, views_max } = resolveViewsRange(views)
     const { posted_after, posted_before } = resolveDateRange(dateRange)
 
-    return executeFeedLoad(
+    const targetPage = isNextPage ? pageRef.current + 1 : 1
+    const requestKey = [
+      isNextPage ? 'next' : 'first', tab, q, platform, type, sort, favorite,
+      country, category, duration_min, duration_max, views_min, views_max,
+      trafficType, posted_after, posted_before, targetPage,
+    ].join('\x00')
+    const inFlight = inFlightRef.current
+    if (inFlight && inFlight.key === requestKey) {
+      return inFlight.promise
+    }
+    inFlightRef.current = null
+
+    if (!isNextPage) {
+      pageRef.current = 1
+      setPage(1)
+    }
+
+    const seq = ++loadSeqRef.current
+    const promise = executeFeedLoad(
       {
         isNextPage,
         tab,
@@ -291,7 +323,14 @@ function useFeedData(options) {
         hasExistingItems: itemsRef.current.length > 0,
       },
       { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore, setPlatforms: setBackendPlatforms },
+      { isCurrent: () => loadSeqRef.current === seq },
     )
+    const clearInFlight = () => {
+      if (inFlightRef.current?.promise === promise) inFlightRef.current = null
+    }
+    inFlightRef.current = { key: requestKey, promise }
+    void promise.then(clearInFlight, clearInFlight)
+    return promise
   }, [tab, q, platform, type, sort, favorite, country, category, duration, views, trafficType, dateRange])
 
   useEffect(() => {

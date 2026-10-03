@@ -322,13 +322,39 @@ export function checkCacheEarlyReturn(cacheKey, setters) {
   return false
 }
 
-export async function executeFeedLoad(params, setters) {
+/**
+ * Run one feed page load and paint its result.
+ *
+ * `lifecycle.isCurrent()` tells whether this load is still the newest request:
+ * the slower 爆款趋势 cloud call (quota gate + fetch) used to resolve after the
+ * user had already switched to 灵感库, and its result overwrote the local rows
+ * on screen (Issue #2988). Once stale, every state write is dropped — items,
+ * hasMore, phase, error and the loading flags all belong to the newer load.
+ * The SWR cache write still happens: a stale response is a valid warm-up for
+ * its own cacheKey, it just must not paint.
+ * @param {object} params
+ * @param {object} setters
+ * @param {{ isCurrent?: () => boolean }} [lifecycle]
+ */
+export async function executeFeedLoad(params, setters, lifecycle = {}) {
   const {
     isNextPage, tab, q, platform, type, sort, favorite, page, hasExistingItems,
     country, category, duration_min, duration_max,
     views_min, views_max, traffic_type, posted_after, posted_before,
   } = params
   const { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore, setPlatforms } = setters
+  const { isCurrent } = lifecycle
+  const isStale = () => typeof isCurrent === 'function' && !isCurrent()
+  const live = {
+    setItems: (v) => { if (!isStale()) setItems(v) },
+    setPage: (v) => { if (!isStale()) setPage(v) },
+    setHasMore: (v) => { if (!isStale()) setHasMore(v) },
+    setPhase: (v) => { if (!isStale()) setPhase(v) },
+    setError: (v) => { if (!isStale()) setError(v) },
+    setLoading: (v) => { if (!isStale()) setLoading(v) },
+    setLoadingMore: (v) => { if (!isStale()) setLoadingMore(v) },
+    setPlatforms: (v) => { if (!isStale()) setPlatforms(v) },
+  }
   const targetPage = isNextPage ? page + 1 : 1
   const cacheKey = cacheKeyOf({
     tab, q, platform, type, sort, favorite,
@@ -337,10 +363,17 @@ export async function executeFeedLoad(params, setters) {
   })
 
   if (!isNextPage) {
-    const hitFresh = checkCacheEarlyReturn(cacheKey, { setItems, setHasMore, setPhase, setLoading })
-    if (hitFresh) return
+    const hitFresh = checkCacheEarlyReturn(cacheKey, {
+      setItems: live.setItems, setHasMore: live.setHasMore, setPhase: live.setPhase, setLoading: live.setLoading,
+    })
+    if (hitFresh) {
+      // A superseded next-page load drops its own `finally`, so the cache-hit
+      // path is the one that must turn the load-more spinner off.
+      live.setLoadingMore(false)
+      return
+    }
   } else {
-    setLoadingMore(true)
+    live.setLoadingMore(true)
   }
 
   try {
@@ -350,14 +383,21 @@ export async function executeFeedLoad(params, setters) {
         country, category, duration_min, duration_max,
         views_min, views_max, traffic_type, posted_after, posted_before,
       },
-      { isNextPage, cacheKey, setters: { setItems, setPage, setHasMore, setPhase, setError, setPlatforms } },
+      {
+        isNextPage,
+        cacheKey,
+        setters: {
+          setItems: live.setItems, setPage: live.setPage, setHasMore: live.setHasMore,
+          setPhase: live.setPhase, setError: live.setError, setPlatforms: live.setPlatforms,
+        },
+      },
     )
   } catch (err) {
-    setError(String(err?.message || err))
+    live.setError(String(err?.message || err))
     const shouldResetPhase = !isNextPage && !hasExistingItems
-    if (shouldResetPhase) setPhase('ready')
+    if (shouldResetPhase) live.setPhase('ready')
   } finally {
-    setLoading(false)
-    setLoadingMore(false)
+    live.setLoading(false)
+    live.setLoadingMore(false)
   }
 }

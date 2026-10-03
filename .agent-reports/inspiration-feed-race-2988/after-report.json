@@ -1,0 +1,30 @@
+{
+  "label": "after",
+  "srcRoot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-feed-race-issue-2988",
+  "serverPort": 53880,
+  "cdpPort": "53881",
+  "timeline": [
+    {
+      "ms": 5,
+      "tab": "local",
+      "local": 0,
+      "cloud": 0
+    },
+    {
+      "ms": 57,
+      "tab": "local",
+      "local": 6,
+      "cloud": 0
+    }
+  ],
+  "final": {
+    "tab": "local",
+    "local": 6,
+    "cloud": 0
+  },
+  "requestCounts": {
+    "/omnimux/inspiration": 1,
+    "/omnimux/inspiration/local": 1
+  },
+  "pass": true
+}
