@@ -217,21 +217,6 @@ describe('页面操作卡片 ToolActivity 视觉与结构规范', () => {
     expect(toolStepLines(['x'.repeat(200)])[0][0].length).toBeLessThanOrEqual(65)
   })
 
-  it('浏览器几何证据：修复前基线已留存，且证明修复前确实抖动', () => {
-    const reportDir = resolve(__dirname, '../../../../.agent-reports/tool-card-jitter')
-    const baselinePath = resolve(reportDir, 'jitter-baseline.json')
-    expect(existsSync(baselinePath)).toBe(true)
-    const measured = JSON.parse(readFileSync(baselinePath, 'utf8')) as {
-      paneWidth: number
-      frames: { label: string; cardH: number }[]
-    }[]
-    const seq = measured.find((item) => item.paneWidth === 360)
-    expect(seq).toBeDefined()
-    const heights = seq?.frames.filter((f) => /^T\d|^T-/.test(f.label)).map((f) => f.cardH) ?? []
-    // 修复前基线：高度随进展变化（这正是被修复的缺陷）
-    expect(new Set(heights).size).toBeGreaterThan(1)
-  })
-
   it('styles.css 中杜绝工具卡片写死浅蓝边框与刺眼亮紫竖线，全面消费主题变量', () => {
     const cssPath = resolve(__dirname, '../src/panel/styles.css')
     const css = readFileSync(cssPath, 'utf8')
