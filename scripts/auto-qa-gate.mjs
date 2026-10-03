@@ -24,7 +24,7 @@ import {
   readdirSync,
   writeFileSync,
 } from 'node:fs'
-import { extname, join, resolve, sep } from 'node:path'
+import { extname, join, relative, resolve, sep } from 'node:path'
 import { isExtensionManifestPath, maskNonCode, normalizedRelative, staticScan } from './auto-qa-scan.mjs'
 import { isForbiddenWorkflowArtifact } from './check-tracked-artifacts.mjs'
 import { validateLiveQaReport } from './live-qa-validation.mjs'
@@ -33,6 +33,19 @@ export { maskNonCode }
 
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx'])
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.workbuddy', 'lib', 'openreel', 'coverage', '.tmp'])
+
+/**
+ * Path-based exclusions, matched against the forward-slash path relative to
+ * the scanned root. Name-based SKIP_DIRS cannot express these: `specs` also
+ * names real product-source directories (plugins/omnimux-workflow/src/shared/
+ * specs), so the exclusion must say `docs/specs` exactly. The directory holds
+ * spec documents and their example fixtures, never product code.
+ */
+const SKIP_PATH_PREFIXES = ['docs/specs/']
+
+function isSkippedPath(relativePath) {
+  return SKIP_PATH_PREFIXES.some((prefix) => relativePath === prefix.slice(0, -1) || relativePath.startsWith(prefix))
+}
 
 export function parseArgs(argv = process.argv.slice(2)) {
   const options = {
@@ -86,6 +99,7 @@ function isInside(parent, candidate) {
 export function findFiles(dir, extensions = SOURCE_EXTENSIONS, extraMatcher = null) {
   const results = []
   if (!existsSync(dir)) return results
+  const root = resolve(dir)
   function walk(current) {
     let entries
     try {
@@ -96,13 +110,13 @@ export function findFiles(dir, extensions = SOURCE_EXTENSIONS, extraMatcher = nu
     for (const entry of entries) {
       const fullPath = join(current, entry.name)
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) walk(fullPath)
+        if (!SKIP_DIRS.has(entry.name) && !isSkippedPath(relative(root, fullPath).replaceAll('\\', '/'))) walk(fullPath)
       } else if (entry.isFile() && (extensions.has(extname(entry.name)) || extraMatcher?.(fullPath))) {
         results.push(fullPath)
       }
     }
   }
-  walk(resolve(dir))
+  walk(root)
   return results.sort()
 }
 
@@ -131,6 +145,7 @@ function parseGitNames(output, { porcelain = false } = {}) {
 
 export function isScannableSourceFile(root, file) {
   const rel = normalizedRelative(root, file)
+  if (isSkippedPath(rel)) return false
   if (isForbiddenWorkflowArtifact(rel)) return false
   if (!existsSync(file)) return false
   return SOURCE_EXTENSIONS.has(extname(file))
