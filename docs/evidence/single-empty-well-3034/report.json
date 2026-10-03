@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "results": [
+    {
+      "tag": "new-unbound",
+      "emptyWells": 1
+    },
+    {
+      "tag": "legacy-unbound",
+      "emptyWells": 1
+    }
+  ]
+}
