@@ -1,21 +1,21 @@
 /**
  * Cloud asset catalog: read-only reader for the prebuilt static pagination
- * directory (`cloud-catalog/`), plus the two things the static files cannot do
- * on their own — resolving a `file:` locator back to disk, and materializing a
- * catalog row into the local library on "save to local".
+ * directory (`cloud-catalog/`), plus the one thing the static files cannot do
+ * on their own — materializing a catalog row into the local library on
+ * "save to local".
  *
  * The catalog itself is produced by `scripts/build-cloud-assets-catalog.mjs` and
  * committed, so this module never writes to it. See that script for the
  * manifest / page / row contract.
  *
- * The builder resolves every local media path against the asset root it was run
- * with. That root is machine-specific, so it is recorded in `manifest.json` as
- * `sourceRoot` and re-verified on load: a catalog built on another machine still
- * serves its metadata and remote URLs, and simply reports local media as
- * unavailable instead of reading whatever happens to sit at that path here.
+ * The shipped catalog is portable: every locator it carries is a public
+ * `https://assets.omnimux.ai` URL, so media resolves identically on any
+ * machine. Local `file:` locators are a legacy shape that always resolves to
+ * nothing — the product never depends on paths that exist only on the machine
+ * that built the catalog.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { basename, dirname, join, resolve, sep } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AssetsError } from './mappings.js'
 
@@ -92,10 +92,6 @@ function mimeOf(value) {
 }
 
 /** @param {string} value */
-function locatorPath(value) {
-  return value.startsWith(FILE_LOCATOR) ? value.slice(FILE_LOCATOR.length) : ''
-}
-
 /**
  * @typedef {{ id: string, category: string, sub_category: string,
  *   sub_categories?: string[], name: string,
@@ -136,7 +132,6 @@ export function createCloudCatalog(deps = {}) {
   let manifest = null
   /** @type {Map<string, CatalogIndexRow> | null} */
   let index = null
-  let sourceRoot = ''
   let loaded = false
   /** Monotonic part of a staging slice name: the clock alone can repeat. */
   let stagingSeq = 0
@@ -151,7 +146,6 @@ export function createCloudCatalog(deps = {}) {
     if (!parsedManifest || !Array.isArray(parsedIndex)) return
     loaded = true
     manifest = parsedManifest
-    sourceRoot = typeof parsedManifest.sourceRoot === 'string' ? parsedManifest.sourceRoot : ''
     index = new Map()
     for (const row of parsedIndex) {
       if (row && typeof row.id === 'string') index.set(row.id, /** @type {CatalogIndexRow} */ (row))
@@ -163,7 +157,6 @@ export function createCloudCatalog(deps = {}) {
     loaded = false
     manifest = null
     index = null
-    sourceRoot = ''
     load()
   }
 
@@ -186,42 +179,16 @@ export function createCloudCatalog(deps = {}) {
   }
 
   /**
-   * Absolute on-disk path for a local locator, or `''` when the catalog was
-   * built elsewhere or the file has since moved.
+   * Resolve one locator into a redirect target, or `null` when the locator is
+   * empty, a legacy `file:` locator, or not an http(s) URL. The shipped catalog
+   * carries no `file:` locators; one that arrives from an older catalog simply
+   * resolves to nothing rather than reading whatever sits at that path here.
    * @param {string} locator
-   */
-  function resolveLocal(locator) {
-    const rel = locatorPath(locator)
-    if (rel === '' || sourceRoot === '') return ''
-    const abs = resolve(sourceRoot, rel)
-    // The builder writes the locator as a path relative to its own root, so the
-    // resolved path must stay inside that root: `..` in a tampered catalog must
-    // not become an arbitrary file read.
-    const rootAbs = resolve(sourceRoot)
-    if (abs !== rootAbs && !abs.startsWith(rootAbs + sep)) return ''
-    if (!existsSync(abs)) return ''
-    try {
-      if (!statSync(abs).isFile()) return ''
-    } catch {
-      return ''
-    }
-    return abs
-  }
-
-  /**
-   * Resolve one locator into either a stream descriptor or a redirect target.
-   * @param {string} locator
-   * @returns {{ kind: 'local', absolutePath: string, mime: string, size: number }
-   *   | { kind: 'remote', url: string } | null}
+   * @returns {{ kind: 'remote', url: string } | null}
    */
   function resolveMedia(locator) {
     const value = String(locator ?? '')
-    if (value === '') return null
-    if (value.startsWith(FILE_LOCATOR)) {
-      const abs = resolveLocal(value)
-      if (abs === '') return null
-      return { kind: 'local', absolutePath: abs, mime: mimeOf(abs), size: statSync(abs).size }
-    }
+    if (value === '' || value.startsWith(FILE_LOCATOR)) return null
     if (/^https?:\/\//i.test(value)) return { kind: 'remote', url: value }
     return null
   }
@@ -248,10 +215,7 @@ export function createCloudCatalog(deps = {}) {
     if (which === 'cover') {
       for (const candidate of [primary, sourceFallback]) {
         const resolved = resolveMedia(candidate)
-        if (resolved === null) continue
-        // A remote locator is served by the browser itself, so any URL is fine.
-        if (resolved.kind === 'remote') return resolved
-        if (mimeOf(resolved.absolutePath).startsWith('image/')) return resolved
+        if (resolved !== null) return resolved
       }
       return null
     }
@@ -413,10 +377,7 @@ export function createCloudCatalog(deps = {}) {
       // 1. 优先解析并下载封面图片 (cover)
       if (coverPrimary || coverFallback) {
         const resolvedCover = resolveResource(coverPrimary, coverFallback)
-        if (resolvedCover?.kind === 'local' && !seenPaths.has(resolvedCover.absolutePath)) {
-          files.push({ real_path: resolvedCover.absolutePath, original_name: basename(resolvedCover.absolutePath) })
-          seenPaths.add(resolvedCover.absolutePath)
-        } else if (resolvedCover?.kind === 'remote') {
+        if (resolvedCover !== null) {
           try {
             const stagedCover = await stageRemote(resolvedCover.url, `${targetName}-cover`, stagingScope)
             if (stagedCover && !seenPaths.has(stagedCover)) {
@@ -440,10 +401,7 @@ export function createCloudCatalog(deps = {}) {
           if (resolvedMedia === null) {
             // 声明了主媒体却连定位符都解析不出内容 —— 主媒体槽同样是空的。
             mediaStagingFailed = new AssetsError('cloud-media-unavailable', 'cloud asset media is not available')
-          } else if (resolvedMedia.kind === 'local' && !seenPaths.has(resolvedMedia.absolutePath)) {
-            files.push({ real_path: resolvedMedia.absolutePath, original_name: basename(resolvedMedia.absolutePath) })
-            seenPaths.add(resolvedMedia.absolutePath)
-          } else if (resolvedMedia.kind === 'remote') {
+          } else {
             try {
               const stagedMedia = await stageRemote(resolvedMedia.url, targetName, stagingScope)
               if (stagedMedia && !seenPaths.has(stagedMedia)) {
@@ -598,8 +556,6 @@ export function createCloudCatalog(deps = {}) {
     saveToLocal,
     clearStaging,
     catalogDir,
-    /** Diagnostic only: never used to build a path the caller chooses. */
-    getSourceRoot: () => sourceRoot,
   }
 }
 

@@ -167,6 +167,11 @@ test('R6 正例：家目录下的绝对路径（非 Desktop）同样红灯', () 
   assert.ok(rulesOf(asset, '{"sourcePath":"/Users/x/.dsh/plugins/images/a.png"}\n').includes('R6'))
 })
 
+test('R6 正例：~/Desktop/ 形态同样红灯（#3028）', () => {
+  const asset = 'plugins/omnimux/assets/demo/cards.json'
+  assert.ok(rulesOf(asset, '{"evidence":"~/Desktop/Project/OmniMux/docs/a.json"}\n').includes('R6'))
+})
+
 test('R6 反例：测试、夹具、docs 下的 JSON → 不报', () => {
   const content = '{"localPath":"/Users/x/Desktop/Project/OPC/资产库/skills/a"}\n'
   for (const rel of [

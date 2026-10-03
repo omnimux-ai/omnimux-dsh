@@ -47,8 +47,8 @@ function writeCatalog(opts = {}) {
       name: 'Bedroom',
       description: '卧室氛围',
       media_type: 'video',
-      media_url: 'file:素材/卧室.mp4',
-      cover_url: 'file:素材/卧室-poster.jpg',
+      media_url: 'https://cdn.example.com/bedroom.mp4',
+      cover_url: 'https://cdn.example.com/bedroom-poster.jpg',
       tags: ['自然山水'],
     },
     {
@@ -73,15 +73,26 @@ function writeCatalog(opts = {}) {
       cover_url: '',
       tags: ['自然山水'],
     },
+    {
+      id: 'scene-nature-legacy',
+      category: 'scene',
+      sub_category: 'nature',
+      name: 'Legacy Local',
+      description: '旧目录的本地定位符',
+      media_type: 'video',
+      media_url: 'file:素材/卧室.mp4',
+      cover_url: 'file:素材/卧室-poster.jpg',
+      tags: ['自然山水'],
+    },
   ]
   const categories = opts.categories ?? [
     {
       id: 'scene',
       zh: '场景',
       en: 'Scenes',
-      total: 2,
+      total: 3,
       pages: 1,
-      sub_categories: [{ id: 'nature', zh: '自然山水', en: 'Nature', total: 2, pages: 1 }],
+      sub_categories: [{ id: 'nature', zh: '自然山水', en: 'Nature', total: 3, pages: 1 }],
     },
     {
       id: 'audio',
@@ -97,7 +108,7 @@ function writeCatalog(opts = {}) {
     generatedAt: '2026-09-13T00:00:00.000Z',
     pageSize: 24,
     totalAssets: rows.length,
-    sourceRoot: opts.sourceRoot ?? sourceRoot,
+    sourceRoot: '',
     categories,
   }))
   writeFileSync(join(catalogDir, 'index.json'), JSON.stringify(rows))
@@ -187,7 +198,7 @@ describe('createCloudCatalog: manifest and index', () => {
     writeCatalog()
     const cloud = makeCatalog()
     assert.equal(cloud.ready(), true)
-    assert.equal(cloud.getManifest().totalAssets, 3)
+    assert.equal(cloud.getManifest().totalAssets, 4)
     assert.equal(cloud.getRow('scene-nature-aaa').name, 'Bedroom')
     assert.equal(cloud.getRow('missing'), null)
   })
@@ -195,7 +206,7 @@ describe('createCloudCatalog: manifest and index', () => {
   it('re-reads the catalog after reload()', () => {
     writeCatalog()
     const cloud = makeCatalog()
-    assert.equal(cloud.getManifest().totalAssets, 3)
+    assert.equal(cloud.getManifest().totalAssets, 4)
     writeCatalog({ rows: [] })
     cloud.reload()
     assert.equal(cloud.getManifest().totalAssets, 0)
@@ -203,17 +214,23 @@ describe('createCloudCatalog: manifest and index', () => {
 })
 
 describe('createCloudCatalog: media resolution', () => {
-  it('resolves a file: locator to an on-disk stream inside the source root', () => {
-    writeMedia('素材/卧室.mp4', 'video-bytes')
+  it('reports remote locators as redirects instead of proxying them', () => {
     writeCatalog()
     const cloud = makeCatalog()
     const resolved = cloud.resolveRowMedia('scene-nature-aaa', 'media')
-    assert.equal(resolved.kind, 'local')
-    assert.equal(resolved.mime, 'video/mp4')
-    assert.equal(resolved.size, 'video-bytes'.length)
+    assert.deepEqual(resolved, { kind: 'remote', url: 'https://cdn.example.com/bedroom.mp4' })
   })
 
-  it('reports remote locators as redirects instead of proxying them', () => {
+  it('resolves no local bytes for a legacy file: locator (#3028)', () => {
+    // 随包目录已经不含 file: 定位符；真有人塞进来也必须一律解析为空，
+    // 绝不能把「构建机路径上恰好存在的文件」流给另一个环境的用户。
+    writeMedia('素材/卧室.mp4', 'video-bytes')
+    writeCatalog()
+    const cloud = makeCatalog()
+    assert.equal(cloud.resolveRowMedia('scene-nature-legacy', 'media'), null)
+  })
+
+  it('reports a plain remote locator as a redirect instead of proxying it', () => {
     writeCatalog()
     const cloud = makeCatalog()
     const resolved = cloud.resolveRowMedia('scene-nature-ccc', 'media')
@@ -251,40 +268,39 @@ describe('createCloudCatalog: media resolution', () => {
     assert.equal(cloud.resolveRowMedia('scene-nature-evil', 'media'), null)
   })
 
-  it('refuses a catalog built for a different machine instead of guessing', () => {
+  it('never resolves a file: locator, whatever the catalog was built against', () => {
     writeMedia('素材/卧室.mp4')
-    writeCatalog({ sourceRoot: '/somewhere/else/资产库' })
-    const cloud = makeCatalog()
-    assert.equal(cloud.resolveRowMedia('scene-nature-aaa', 'media'), null)
-  })
-
-  it('reports a missing file as unavailable rather than throwing', () => {
     writeCatalog()
     const cloud = makeCatalog()
-    assert.equal(cloud.resolveRowMedia('scene-nature-aaa', 'media'), null)
+    assert.equal(cloud.resolveRowMedia('scene-nature-legacy', 'media'), null)
   })
 
   it('reports no cover rather than handing a video to an <img>', () => {
-    writeMedia('素材/卧室.mp4')
-    writeCatalog()
+    writeCatalog({
+      rows: [{
+        id: 'scene-nature-posterless',
+        category: 'scene',
+        sub_category: 'nature',
+        name: 'Posterless',
+        description: '',
+        media_type: 'video',
+        media_url: 'https://cdn.example.com/clip.mp4',
+        cover_url: '',
+        tags: [],
+      }],
+    })
     const cloud = makeCatalog()
-    // The row's cover locator points at a poster that does not exist, so the
-    // only real media left is the video. A cover request must stay image-or-
-    // nothing instead of streaming 2 MB into an image slot.
-    assert.equal(cloud.resolveRowMedia('scene-nature-aaa', 'cover'), null)
+    assert.equal(cloud.resolveRowMedia('scene-nature-posterless', 'cover'), null)
   })
 
   it('resolves a cover when the row really has a poster', () => {
-    writeMedia('素材/卧室.mp4')
-    writeMedia('素材/卧室-poster.jpg')
     writeCatalog()
     const cloud = makeCatalog()
     const resolved = cloud.resolveRowMedia('scene-nature-aaa', 'cover')
-    assert.equal(resolved.kind, 'local')
-    assert.equal(resolved.mime, 'image/jpeg')
+    assert.deepEqual(resolved, { kind: 'remote', url: 'https://cdn.example.com/bedroom-poster.jpg' })
   })
 
-  it('falls back to the recorded remote URL when the local copy is gone', () => {
+  it('ignores a stale file: locator even when a remote fallback is recorded', () => {
     // No local files at all: the catalog was built here but the library moved.
     writeCatalog()
     const rows = JSON.parse(JSON.stringify([
@@ -316,7 +332,7 @@ describe('createCloudCatalog: search', () => {
     const cloud = makeCatalog()
     assert.equal(cloud.search({ q: 'bedroom' }).total, 1)
     assert.equal(cloud.search({ q: '厨房' }).total, 1)
-    assert.equal(cloud.search({ q: '自然山水' }).total, 2)
+    assert.equal(cloud.search({ q: '自然山水' }).total, 3)
   })
 
   it('scopes to a category and a sub-category', () => {
@@ -330,16 +346,16 @@ describe('createCloudCatalog: search', () => {
   it('reads the 全部 scope as the whole catalog rather than an empty category', () => {
     writeCatalog()
     const cloud = makeCatalog()
-    assert.equal(cloud.search({ q: '', category: 'all' }).total, 3)
+    assert.equal(cloud.search({ q: '', category: 'all' }).total, 4)
     assert.equal(cloud.search({ q: '卧室', category: 'all' }).total, 1)
-    assert.equal(cloud.search({ q: '', category: 'all', subCategory: 'nature' }).total, 2)
+    assert.equal(cloud.search({ q: '', category: 'all', subCategory: 'nature' }).total, 3)
   })
 
   it('pages the result set', () => {
     writeCatalog()
     const cloud = makeCatalog()
     const first = cloud.search({ q: '', category: 'scene', limit: 1, offset: 0 })
-    assert.equal(first.total, 2)
+    assert.equal(first.total, 3)
     assert.equal(first.items.length, 1)
     const second = cloud.search({ q: '', category: 'scene', limit: 1, offset: 1 })
     assert.equal(second.items.length, 1)
@@ -383,11 +399,10 @@ describe('createCloudCatalog: search', () => {
 })
 
 describe('createCloudCatalog: save to local', () => {
-  it('copies a local asset into the library', async () => {
-    writeMedia('素材/卧室.mp4', 'video-bytes')
+  it('downloads a cloud asset into the library', async () => {
     writeCatalog()
     const { library } = makeStores()
-    const cloud = makeCatalog({ library })
+    const cloud = makeCatalog({ library, fetchImpl: remoteOk })
     const asset = await cloud.saveToLocal('scene-nature-aaa')
     assert.equal(asset.name, 'Bedroom')
     assert.equal(asset.type, 'scene')
@@ -434,8 +449,8 @@ describe('createCloudCatalog: save to local', () => {
           name: 'Angel Influencer',
           description: 'AI 角色测试',
           media_type: 'audio',
-          media_url: 'file:library/non-existent-local/audio.wav',
-          cover_url: 'file:library/non-existent-local/cover.png',
+          media_url: 'https://cdn.example.com/Angel%20Influencer.wav',
+          cover_url: 'https://cdn.example.com/Angel%20Influencer.png',
           tags: ['AI数字人'],
           meta: {
             source_cover_url: 'https://cdn.example.com/Angel%20Influencer.png',
@@ -474,10 +489,9 @@ describe('createCloudCatalog: save to local', () => {
   })
 
   it('reuses the row already saved from the same cloud id', async () => {
-    writeMedia('素材/卧室.mp4', 'video-bytes')
     writeCatalog()
     const { library } = makeStores()
-    const cloud = makeCatalog({ library })
+    const cloud = makeCatalog({ library, fetchImpl: remoteOk })
     const first = await cloud.saveToLocal('scene-nature-aaa')
     const second = await cloud.saveToLocal('scene-nature-aaa')
     assert.equal(second.id, first.id)
@@ -594,7 +608,6 @@ describe('createCloudCatalog: a save whose remote media never landed fails visib
   })
 
   it('fails an oversize remote asset immediately, even with a cover already collected', async () => {
-    writeMedia('素材/studio-poster.jpg', 'poster-bytes')
     writeCatalog({
       rows: [{
         id: 'scene-nature-huge',
@@ -604,7 +617,7 @@ describe('createCloudCatalog: a save whose remote media never landed fails visib
         description: '影棚氛围',
         media_type: 'video',
         media_url: 'https://cdn.example.com/huge.mp4',
-        cover_url: 'file:素材/studio-poster.jpg',
+        cover_url: 'https://cdn.example.com/studio-poster.jpg',
         tags: [],
       }],
     })
@@ -926,7 +939,7 @@ describe('cloud routes', () => {
     const dispatcher = makeDispatcher(makeCatalog())
     const result = await dispatcher.dispatch({ method: 'GET', url: '/omnimux/assets/cloud/manifest' })
     assert.equal(result.status, 200)
-    assert.equal(result.body.totalAssets, 3)
+    assert.equal(result.body.totalAssets, 4)
   })
 
   it('streams a page file from disk', async () => {
@@ -968,16 +981,16 @@ describe('cloud routes', () => {
     assert.equal(result.status, 404)
   })
 
-  it('streams local media', async () => {
+  it('404s a legacy file: locator instead of streaming local bytes (#3028)', async () => {
     writeMedia('素材/卧室.mp4', 'video-bytes')
     writeCatalog()
     const dispatcher = makeDispatcher(makeCatalog())
     const result = await dispatcher.dispatch({
       method: 'GET',
-      url: '/omnimux/assets/cloud/media?id=scene-nature-aaa&which=media',
+      url: '/omnimux/assets/cloud/media?id=scene-nature-legacy&which=media',
     })
-    assert.equal(result.status, 200)
-    assert.equal(result.stream.mime, 'video/mp4')
+    assert.equal(result.status, 404)
+    assert.equal(result.body.error, 'cloud-media-unavailable')
   })
 
   it('redirects remote media to its CDN URL', async () => {
@@ -1010,14 +1023,13 @@ describe('cloud routes', () => {
       url: '/omnimux/assets/cloud/search?q=&category=scene',
     })
     assert.equal(result.status, 200)
-    assert.equal(result.body.total, 2)
+    assert.equal(result.body.total, 3)
   })
 
   it('saves a cloud asset into the local library', async () => {
-    writeMedia('素材/卧室.mp4', 'video-bytes')
     writeCatalog()
     const stores = makeStores()
-    const cloud = makeCatalog({ library: stores.library })
+    const cloud = makeCatalog({ library: stores.library, fetchImpl: remoteOk })
     const dispatcher = createAssetsDispatcher({ ...stores, cloud })
     const result = await dispatcher.dispatch({
       method: 'POST',

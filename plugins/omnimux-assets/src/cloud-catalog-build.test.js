@@ -139,6 +139,14 @@ before(() => {
   outDir = join(workDir, 'out')
 
   const avatar = '素材库/gxgen-data/character-library/pippit-local-avatars-source/Agnes_Home_Selfie'
+  writeJson('素材库/gxgen-data/character-library/pippit-local-avatars-source/cloud-index.json', {
+    folders: {
+      Agnes_Home_Selfie: {
+        video: 'avatars/pippit/Agnes_Home_Selfie/video.mp4',
+        cover: 'avatars/pippit/Agnes_Home_Selfie/cover.jpg',
+      },
+    },
+  })
   writeJson(`${avatar}/metadata.json`, {
     name: 'Agnes-Home-Selfie',
     tags: ['Home', 'Selfie'],
@@ -148,6 +156,18 @@ before(() => {
   })
   writeFile(join(assetsRoot, avatar, 'video.mp4'), 'video')
   writeFile(join(assetsRoot, avatar, 'cover.jpg'), 'cover')
+
+  // A second digital human whose files exist locally but has no cloud-index
+  // entry: the catalog must not ship a row nobody else can ever play (#3028).
+  const noRemote = '素材库/gxgen-data/character-library/pippit-local-avatars-source/No_Remote'
+  writeJson(`${noRemote}/metadata.json`, {
+    name: 'No Remote',
+    tags: ['Office'],
+    index: 2,
+    total: 329,
+  })
+  writeFile(join(assetsRoot, noRemote, 'video.mp4'), 'video')
+  writeFile(join(assetsRoot, noRemote, 'cover.jpg'), 'cover')
 
   // The archive that must stay off the shelf: unnamed portraits with no gender
   // or scene recorded anywhere.
@@ -339,10 +359,12 @@ describe('cloud catalog builder · Loomi classes land on the shelves they descri
     }
   })
 
-  it('serves the downloaded copy and keeps the remote original as the fallback', () => {
+  it('points every locator at a public URL and keeps the remote original as the fallback', () => {
     const row = loomiRowOf('pet')
-    assert.match(String(row.media_url), /^file:素材库\/gxgen-data\/inspiration-library\/loomi\/media\//)
-    assert.match(String(row.cover_url), /^file:素材库\/gxgen-data\/inspiration-library\/loomi\/media\//)
+    // #3028：随包目录不再产生 file: 定位符——有本地副本的行走官方域名，
+    // 本地文件是否存在都不影响任何机器上的可播放性。
+    assert.equal(row.media_url, 'https://cdn.test/loomi/mat-orange-cat.bin')
+    assert.equal(row.cover_url, 'https://cdn.test/loomi/mat-orange-cat-thumb.bin')
     assert.match(String(row.meta.source_media_url), /^https:\/\/cdn\.test\//)
     assert.equal(row.meta.license, 'Pexels License')
     assert.equal(row.meta.provider, 'Pexels')
@@ -394,7 +416,7 @@ describe('cloud catalog builder · the image gallery names the discipline it was
     const row = allRows().find((entry) => entry?.meta?.source === 'gpt-image-2-skill'
       && entry.meta.category === 'anime')
     assert.match(String(row.meta.prompt_text), /anime frame/)
-    assert.match(String(row.cover_url), /^file:素材库\/gxgen-data\/inspiration-library\/image\/media\//)
+    assert.equal(row.cover_url, 'https://cdn.test/gallery/2.jpg')
   })
 })
 
@@ -436,6 +458,26 @@ describe('cloud catalog builder · 全部 pages the whole catalog', () => {
     const second = readJson('all/page-0001.json')
     assert.equal(second.page, 1)
     assert.equal(second.items.length, manifest.totalAssets - manifest.pageSize)
+  })
+
+  it('carries no file: locators anywhere in the shipped tree (#3028)', () => {
+    for (const row of index) {
+      assert.doesNotMatch(String(row.media_url ?? ''), /^file:/, row.id)
+      assert.doesNotMatch(String(row.cover_url ?? ''), /^file:/, row.id)
+    }
+    assert.equal(manifest.sourceRoot, '')
+    for (const page of readdirSync(join(outDir, 'all')).filter((name) => name.endsWith('.json'))) {
+      for (const row of readJson(`all/${page}`).items) {
+        assert.doesNotMatch(String(row.media_url ?? ''), /^file:/, row.id)
+        assert.doesNotMatch(String(row.cover_url ?? ''), /^file:/, row.id)
+      }
+    }
+  })
+
+  it('drops a row whose media exists only on the build machine (#3028)', () => {
+    // 没有本地映射（cloud-index 缺失）且无远端地址的素材不得出现在目录里：
+    // 那种行在别的安装上永远放不出来。
+    assert.equal(index.some((row) => row.id === 'character-pippit-no-remote'), false)
   })
 
   it('covers every catalogued row exactly once, across more than one category', () => {

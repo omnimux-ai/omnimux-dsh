@@ -11,7 +11,7 @@
  *
  * ## Inputs (read-only, all outside this repo)
  *
- *   --assets-root=<dir>   Default /Users/x/Desktop/Project/OPC/资产库
+ *   --assets-root=<dir>   Required. The OPC asset library root to scan.
  *
  * Every source is optional: a missing source yields an empty section and never
  * fails the build, so the catalog can be regenerated on a machine that holds
@@ -92,7 +92,6 @@ import { dirname, extname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const DEFAULT_ASSETS_ROOT = '/Users/x/Desktop/Project/OPC/资产库'
 const DEFAULT_OUT = join(PLUGIN_ROOT, 'cloud-catalog')
 const PAGE_SIZE = 24
 /** Scope id of the cross-category shards the client's 全部 tab pages through. */
@@ -419,9 +418,15 @@ function makeAsset(ctx, spec) {
   const remoteMedia = text(spec.remoteMedia)
   const remoteCover = text(spec.remoteCover)
 
-  // Local media wins so playback costs no network. When a portable remote URL
-  // also exists it rides along in `meta`, which is what lets the Host serve the
-  // same row on a machine that has no local copy of the library.
+  // A row whose media exists only on the build machine is not catalogued at
+  // all — shipping it as a text card would advertise an asset that can never
+  // be played on a real install.
+  if (localMedia !== '' && remoteMedia === '') return null
+
+  // The shipped catalog is cloud-only: every row's locators must resolve on any
+  // install, so a file that exists only on the build machine is not catalogued
+  // as media. The remote URL stays in meta too, marking the row's upstream copy
+  // for provenance and the add-to-chat URL preference.
   const meta = { ...(spec.meta ?? {}) }
   if (localMedia !== '' && remoteMedia !== '') meta.source_media_url = remoteMedia
   if (localCover !== '' && remoteCover !== '') meta.source_cover_url = remoteCover
@@ -442,8 +447,8 @@ function makeAsset(ctx, spec) {
     sub_categories: shelves,
     name: clamp(spec.name, 80) || '未命名',
     description: clamp(spec.description, MAX_DESCRIPTION),
-    cover_url: localCover ? `file:${relTo(ctx.assetsRoot, localCover)}` : remoteCover,
-    media_url: localMedia ? `file:${relTo(ctx.assetsRoot, localMedia)}` : remoteMedia,
+    cover_url: remoteCover,
+    media_url: remoteMedia,
     media_type: bucketOf(extOf(localMedia || remoteMedia)),
     tags: uniqTags(spec.tags ?? []),
     meta: {
@@ -1792,6 +1797,29 @@ function collectVoices(ctx, add) {
 /** Recorded samples under `素材库/音频/**`. */
 function collectVoiceSamples(ctx, add) {
   const audioRoot = join(ctx.assetsRoot, '素材库', '音频')
+  /**
+   * Voice samples are only catalogued when the file has been uploaded to the
+   * official bucket. Anything not in this allow-list — cloned voices, clips of
+   * unknown origin, adult folders — never reaches the public shelf.
+   * The key is the R2 object key under https://assets.omnimux.ai/.
+   * @type {Map<string, string>} relative `dir/file` → object key
+   */
+  const PUBLISHED = new Map(Object.entries({
+    '纯音乐/e7d287030eee468baab6ea801556b99c.mp3': 'audio/bgm/e7d287030eee468baab6ea801556b99c.mp3',
+    '纯音乐/338b08a3c941489e8df9d12e7b527f0d.mp3': 'audio/bgm/338b08a3c941489e8df9d12e7b527f0d.mp3',
+    '纯音乐/045ac79fbcaa42d79adc6df98de9e06f.mp3': 'audio/bgm/045ac79fbcaa42d79adc6df98de9e06f.mp3',
+    '女声/6月5日.MP3': 'audio/voiceover/女声/6月5日.MP3',
+    '女声/456087e02ca946328ecc31d7662bfab7.mp3': 'audio/voiceover/女声/456087e02ca946328ecc31d7662bfab7.mp3',
+    '女声/e714b20eca8945d4805e32996bdca719.mp3': 'audio/voiceover/女声/e714b20eca8945d4805e32996bdca719.mp3',
+    '女声/oszQolKoxAQIUBiswAoMoGYGk5WSwlfnYwmBiK.mp3': 'audio/voiceover/女声/oszQolKoxAQIUBiswAoMoGYGk5WSwlfnYwmBiK.mp3',
+    '女声/0608(2).MP3': 'audio/voiceover/女声/0608(2).MP3',
+    '男声/6月21日.MP3': 'audio/voiceover/男声/6月21日.MP3',
+    '男声/boznoz.mp3': 'audio/voiceover/男声/boznoz.mp3',
+    '播客女.MP3': 'audio/voiceover/播客女.MP3',
+    '播客男.MP3': 'audio/voiceover/播客男.MP3',
+    'TK 口播女.mp3': 'audio/voiceover/TK 口播女.mp3',
+  }))
+
   /** @type {[string, string, string][]} folder -> [sub_category, tag] */
   const groups = [
     ['女声', 'voiceover', '女声'],
@@ -1810,6 +1838,8 @@ function collectVoiceSamples(ctx, add) {
       const abs = join(dir, file.name)
       const kind = bucketOf(extOf(file.name))
       if (kind !== 'audio' && kind !== 'video') continue
+      const remoteKey = PUBLISHED.get(`${dirName}/${file.name}`) ?? ''
+      if (remoteKey === '') continue
       add(makeAsset(ctx, {
         key: `sample/${dirName}/${file.name}`,
         category: 'audio',
@@ -1818,7 +1848,7 @@ function collectVoiceSamples(ctx, add) {
         description: `实录音频样本 · ${tag}`,
         tags: [tag, '实录音频'],
         localMedia: abs,
-        localCover: join(dir, '封面.jpg'),
+        remoteMedia: cdnUrl(remoteKey),
         meta: { source: '音频', source_path: relTo(ctx.assetsRoot, abs) },
       }))
     }
@@ -1834,11 +1864,12 @@ function collectVoiceSamples(ctx, add) {
     ['播客女.MP3', 'voiceover', '播客', '实录音频样本 · 播客女声'],
     ['播客男.MP3', 'voiceover', '播客', '实录音频样本 · 播客男声'],
     ['TK 口播女.mp3', 'voiceover', '口播', '实录音频样本 · 口播女声'],
-    ['口播博主声音克隆.WAV', 'voiceover', '音频克隆', '声音克隆样本'],
   ]
   for (const [fileName, subCategory, tag, description] of loose) {
     const abs = join(audioRoot, fileName)
     if (!isFile(abs)) continue
+    const remoteKey = PUBLISHED.get(fileName) ?? ''
+    if (remoteKey === '') continue
     add(makeAsset(ctx, {
       key: `sample/${fileName}`,
       category: 'audio',
@@ -1847,6 +1878,7 @@ function collectVoiceSamples(ctx, add) {
       description,
       tags: [tag, '实录音频'],
       localMedia: abs,
+      remoteMedia: cdnUrl(remoteKey),
       meta: { source: '音频', source_path: relTo(ctx.assetsRoot, abs) },
     }))
   }
@@ -1879,6 +1911,7 @@ function collectSfx(ctx, add) {
       description: known?.description ?? '短视频转场 / 界面音效素材',
       tags: ['音效', '转场', ...(known ? [] : ['未收录说明'])],
       localMedia: abs,
+      remoteMedia: cdnUrl(`audio/sfx/${file.name}`),
       meta: {
         source: 'skill-sfx-pack',
         source_path: relTo(ctx.assetsRoot, abs),
@@ -2119,7 +2152,11 @@ function pageSpecs(items, scope) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
-  const assetsRoot = resolve(typeof args['assets-root'] === 'string' ? args['assets-root'] : DEFAULT_ASSETS_ROOT)
+  // 资产源目录是构建参数而非默认值：目录必须能在任意机器重建，且产物永不携带本机路径。
+  const assetsRoot = typeof args['assets-root'] === 'string' ? resolve(args['assets-root']) : ''
+  if (assetsRoot === '') {
+    throw new Error('assets root is required: pass --assets-root=<dir> pointing at the OPC asset library')
+  }
   const outDir = resolve(typeof args.out === 'string' ? args.out : DEFAULT_OUT)
   const dryRun = args['dry-run'] === true
   const generatedAt = typeof args['generated-at'] === 'string' ? args['generated-at'] : new Date().toISOString()
@@ -2210,7 +2247,7 @@ async function main() {
     // The root every `file:` locator is relative to. Recorded so the Host can
     // tell "built here, media present" from "built elsewhere, media missing"
     // instead of reading an unrelated path on this machine.
-    sourceRoot: assetsRoot,
+    sourceRoot: '',
     categories: categoryMeta,
   }
 
