@@ -55,6 +55,9 @@ const shared = {
   target: 'es2024',
   logLevel: 'info',
   logOverride: { 'empty-import-meta': 'silent' },
+  alias: {
+    'dsh-ui-kit': fileURLToPath(new URL('../../../packages/dsh-ui-kit/lib/index.js', import.meta.url)),
+  },
 }
 
 // Declarations first: `package.json` points `types` at lib/types, so a build
