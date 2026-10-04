@@ -1,0 +1,19 @@
+{
+  "time": "2026-10-03T17:13:24.078Z",
+  "report": "docs/qa/browser-image-assets-v1-qa-round2.md",
+  "frontmatterOK": true,
+  "brokenLinks": [],
+  "frozenDrift": [],
+  "additionalCurrentFingerprints": [
+    {
+      "path": "plugins/omnimux-browser/src/server.ts",
+      "sha256": "80c9d31fee7a2aae293f8c99d3a9acb12bfa8a02edf6820d22bb104dd088a5d6",
+      "scope": "current at report closure; no before measurement"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/protocol.ts",
+      "sha256": "fcc329501aa5853867896802238f87554a66fcc519dc6ad29699bfb0c77cf3de",
+      "scope": "current at report closure; no before measurement"
+    }
+  ]
+}

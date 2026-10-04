@@ -45,3 +45,14 @@ _Avoid_: Media-only attachment
 **Produced registry（产物登记处）**: The bridge's per-session whitelist of produced absolute paths, accumulated while relaying `session/event` frames and backfilled from `session.history`. It is the sole authorization source for `omnimux.producedMedia` byte fetches.
 
 **ProducedMediaRef**: The panel's media reference union — `attachment` source (bytes via `session.attachment`) or `path` source (bytes via `omnimux.producedMedia`). `kind` follows the viewer's `ViewerKind` vocabulary.
+
+## Browser collected media language
+
+**Collected image（网页采集图片）**: A picture the user explicitly selects for reuse in the asset library. Its saved form contains a usable image file, not only a page or media link.
+
+**Video cover（视频封面）**: A still image representing a video work. The work remains a video when its on-page preview is a picture.
+_Avoid_: Collected image
+
+**Asset save（加入资产库）**: A completed save of reusable material into the user's asset library. An extension-only record or inspiration entry is not an asset save.
+
+**Inspiration save（加入灵感库）**: A save of a creative reference into the inspiration library; video works retain this destination.

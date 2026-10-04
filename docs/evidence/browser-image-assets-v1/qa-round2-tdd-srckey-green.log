@@ -1,0 +1,14 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✔ 同 sourceKey 重复保存返回 duplicate，不新增资产、不抬 revision、不发事件 (8.653125ms)
+  ✔ 同 sourceKey 的并发保存合并为一次入库 (3.260208ms)
+  ✔ sourceKey 去首尾空白后入库，且必须是 64 位 hex（QA #3052 OCR） (3.929375ms)
+  ✔ 拒绝非法输入：空字节、非图片 mime、空 sourceKey (0.43575ms)
+✔ ingestDownloadedImage · 真实入库（#3052） (16.943542ms)
+ℹ tests 4
+ℹ suites 1
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 67.13525

@@ -61,6 +61,13 @@ export interface MediaFetchOptions {
   fetchImpl?: typeof fetch
   timeoutMs?: number
   maxBytes?: number
+  /**
+   * Optional caller cancellation (Issue #3052). It shares the same wire
+   * signal as the wall-clock budget but is distinguishable from it: an
+   * external abort surfaces through the caller's own signal, not as the
+   * `timeout` outcome reserved for this module's own budget.
+   */
+  signal?: AbortSignal | undefined
 }
 
 /** Whether a hostname is outside the public network policy. */
@@ -157,8 +164,33 @@ export async function fetchMediaBytes(
   const maxBytes = options.maxBytes ?? MEDIA_FETCH_MAX_BYTES
 
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const external = options.signal
+  // 外部取消与内部预算共用同一条拨号线：任一终止都中断传输，但
+  // `timedOut` 只在本模块自己的计时器触发时才置位，调用层不会把
+  // 连接代次取消误报成下载超时。
+  let timedOut = false
+  // 终止归因取第一个真实来源（first-wins）：外部取消先行时，底层 fetch
+  // 若拖到自己的计时器触发后才 reject，也不能被改报成 timeout；反过来，
+  // 模块自己的 timeout 已先触发后，迟到的外部 abort 同样不能把已发生的
+  // timeout 覆盖成「调用方取消」（OCR R2-3）。
+  let externallyAborted = external?.aborted === true
+  const timer = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
+  const onExternalAbort = (): void => {
+    if (!timedOut) externallyAborted = true
+    controller.abort()
+  }
+  if (external?.aborted) onExternalAbort()
+  else external?.addEventListener('abort', onExternalAbort, { once: true })
   try {
+    // A signal already dead before the first dial must not dial at all: the
+    // thrown abort lands in fetchFailureOutcome as a generic failure, never
+    // as this module's own timeout.
+    if (controller.signal.aborted) {
+      throw controller.signal.reason ?? new DOMException('Aborted', 'AbortError')
+    }
     let target = url
     for (let hop = 0; hop <= MEDIA_FETCH_MAX_REDIRECTS; hop += 1) {
       const response = await fetchImpl(target, { signal: controller.signal, redirect: 'manual' })
@@ -212,13 +244,27 @@ export async function fetchMediaBytes(
     // Every hop was a redirect: the chain never reached a body.
     return { status: 'bad-request', message: MEDIA_FETCH_BAD_REQUEST_MESSAGE }
   } catch (error: unknown) {
-    if (error instanceof NonPublicAddressError) return { status: 'bad-request', message: MEDIA_FETCH_BAD_REQUEST_MESSAGE }
-    if (controller.signal.aborted) return { status: 'timeout', timeoutMs }
-    // The cause stays host-side: it can name internal hosts, and the panel writes
-    // its own localized copy from the outcome status rather than showing this.
-    console.warn('[omnimux-browser] media fetch failed', error)
-    return { status: 'failed', message: MEDIA_FETCH_FAILED_MESSAGE }
+    const outcome = fetchFailureOutcome(error, timedOut && !externallyAborted, timeoutMs)
+    return outcome
   } finally {
     clearTimeout(timer)
+    external?.removeEventListener('abort', onExternalAbort)
   }
+}
+
+/**
+ * Map an unexpected transport failure to its tagged outcome. Kept outside the
+ * catch body so the failure vocabulary lives in one place: private-address
+ * refusal, this module's own wall-clock budget, and everything else — which
+ * includes an external caller abort. That abort is reported as a generic
+ * failure; the caller owning the signal (the image-asset save) tells
+ * 'cancelled' apart from the outcome.
+ */
+function fetchFailureOutcome(error: unknown, timedOut: boolean, timeoutMs: number): MediaFetchOutcome {
+  if (error instanceof NonPublicAddressError) return { status: 'bad-request', message: MEDIA_FETCH_BAD_REQUEST_MESSAGE }
+  if (timedOut) return { status: 'timeout', timeoutMs }
+  // The cause stays host-side: it can name internal hosts, and the panel writes
+  // its own localized copy from the outcome status rather than showing this.
+  console.warn('[omnimux-browser] media fetch failed', error)
+  return { status: 'failed', message: MEDIA_FETCH_FAILED_MESSAGE }
 }

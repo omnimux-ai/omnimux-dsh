@@ -1,0 +1,52 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✖ 来源记录缺文件的旧资产不算 duplicate：保留旧记录另建新条目 (11.98325ms)
+  ✖ 缺文件旧记录在后续保存持久化失败时不被删除：账本、内存、revision 原样 (7.115291ms)
+✖ ingestDownloadedImage · 真实入库（#3052） (19.787583ms)
+ℹ tests 2
+ℹ suites 1
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 69.09725
+
+✖ failing tests:
+
+test at plugins/omnimux-assets/src/image-ingest-v1.test.js:165:3
+✖ 来源记录缺文件的旧资产不算 duplicate：保留旧记录另建新条目 (11.98325ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest-v1.test.js:180:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Promise.all (index 5)
+      at async Suite.run (node:internal/test_runner/test:1619:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at plugins/omnimux-assets/src/image-ingest-v1.test.js:194:3
+✖ 缺文件旧记录在后续保存持久化失败时不被删除：账本、内存、revision 原样 (7.115291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest-v1.test.js:224:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,53 @@
+{
+  "time": "2026-10-03T17:05:51.403Z",
+  "files": [
+    {
+      "path": ".tmp/qa3052-real.mjs",
+      "sha256": "51d65b096c5de1c4e6e2ea76162d037b9391779c58e7c0a6da37050b21a8a4f7"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "sha256": "da9f049a4f4dd269f4a1faed2e2141a56bea5d374b82176e4fb1c4f5fbb6d717"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/ingest.js",
+      "sha256": "3a32105b67fab58dadff42aee40830b69e53f3e1e7082a2f655c5ae9c2b49a3f"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/library.js",
+      "sha256": "dc616a2fce115ee10175d120736e4264aff302d414c460cb05eede977a625c81"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/index.js",
+      "sha256": "722cc387adbfd7e11fc6dd774232a3d302bb29d7f1b29a2d1f3c754e2308e93c"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/index.ts",
+      "sha256": "4ae9ce0f13dc525eab99fa580921f2b9d507e56da1b8c461e96d6a0ad74535e8"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/image-assets.ts",
+      "sha256": "ad57095adeca555d9a10b87036ca0491f5dc8584e8f62e82e9d9a97ca159bf8f"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/media-fetch.ts",
+      "sha256": "101c7e4849a4c6e564e55cdb66281999048ae498cb6cfceb65f086798054416b"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest-v1.test.js",
+      "sha256": "cad3f54443bb34fdc7a69cd5960de028825584f36e85e793af332a67e0d7eb06"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/library-image-transaction-v1.test.js",
+      "sha256": "38d20be6beff27c334e4112aa11e25e526d595335c7eda4a85f78abf42faeba7"
+    },
+    {
+      "path": "plugins/omnimux-browser/tests/image-assets-v1.spec.ts",
+      "sha256": "24abb2d2f10abc024e8f3cbb81d87da0ca709a668673020151ff9ed8956b6ef1"
+    },
+    {
+      "path": "plugins/omnimux-browser/tests/image-assets-rpc-v1.spec.ts",
+      "sha256": "ecf0eee2d76bc82f4eeefce4df06786b33b9fc48a4942ac6e803947ea4a0d222"
+    }
+  ]
+}

@@ -1,0 +1,244 @@
+{
+  "status": "complete",
+  "llm": {
+    "provider": "dsh-cpa",
+    "model": "gpt-5.5"
+  },
+  "message": "Review complete: 8 finding(s) across 8 selected item(s).",
+  "summary": {
+    "files_reviewed": 8,
+    "comments": 8,
+    "total_tokens": 1098806,
+    "input_tokens": 1077049,
+    "output_tokens": 21757,
+    "cache_read_tokens": 895488,
+    "elapsed": "6m4s"
+  },
+  "tool_calls": {
+    "total": 57,
+    "by_tool": {
+      "code_comment": 4,
+      "code_search": 18,
+      "file_read": 32,
+      "file_read_diff": 3
+    },
+    "failure": 0,
+    "failure_by_tool": {},
+    "failure_details": []
+  },
+  "comments": [
+    {
+      "path": "plugins/omnimux-browser/src/index.ts",
+      "content": "The comment says both host seams are resolved per call, but `attachments` and `imageLimits` are captured once at bridge mount. If the attachments service mounts after this plugin (the same late-mount case handled for `assetLibrary`), image saves will keep returning `unavailable` or keep using stale media limits until the bridge is remounted. Please resolve the attachments service inside the save path as well, so validation availability and limits reflect the live host service.",
+      "suggestion_code": "  const assetLibrary = (): AssetLibraryLike | undefined =\u003e {\n    const service = ctx.get('assetLibrary') as unknown as AssetLibraryLike | undefined\n    return typeof service?.ingestDownloadedImage === 'function' ? service : undefined\n  }\n  const attachments = () =\u003e ctx.get('attachments')\n  const imageSaveDeps = {\n    validateImage: async (input: { data: Uint8Array; mediaType: Parameters\u003cNonNullable\u003cReturnType\u003ctypeof attachments\u003e\u003e['validateImage']\u003e[0]['mediaType'] }) =\u003e {\n      const service = attachments()\n      if (typeof service?.validateImage !== 'function') throw new Error('image validation unavailable')\n      await service.validateImage(input)\n    },\n    imageMediaTypes: attachments()?.imageLimits?.mediaTypes,\n    assetLibrary,\n  }",
+      "existing_code": "  const attachments = ctx.get('attachments')\n  const assetLibrary = (): AssetLibraryLike | undefined =\u003e {\n    const service = ctx.get('assetLibrary') as unknown as AssetLibraryLike | undefined\n    return typeof service?.ingestDownloadedImage === 'function' ? service : undefined\n  }\n  const imageSaveDeps = {\n    validateImage: attachments?.validateImage === undefined\n      ? undefined\n      : (input: { data: Uint8Array; mediaType: Parameters\u003ctypeof attachments.validateImage\u003e[0]['mediaType'] }) =\u003e\n          attachments.validateImage(input),\n    imageMediaTypes: attachments?.imageLimits?.mediaTypes,\n    assetLibrary,\n  }",
+      "start_line": 294,
+      "end_line": 306,
+      "category": "bug",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/image-assets.ts",
+      "content": "Cancellation is checked before starting persistence, but not after `runIngest` returns. Because the ingest API does not accept a signal, a connection-generation abort that happens while the asset is being written can still produce a `saved`/`duplicate` receipt here, contrary to the method contract that mid-flight connection death reports `cancelled`. Add an abort check immediately after the ingest settles before returning any receipt, so retries do not observe a lost connection as a delivered success.",
+      "suggestion_code": "  const ingest = await runIngest(service, {\n    bytes,\n    mime,\n    displayName: request.title,\n    sourceKey: imageAssetSourceKey(request.url),\n    description: `来源：${request.pageUrl}`,\n  })\n  if (aborted()) return { status: 'cancelled' }\n  if (ingest.failed) {",
+      "existing_code": "  const ingest = await runIngest(service, {\n    bytes,\n    mime,\n    displayName: request.title,\n    sourceKey: imageAssetSourceKey(request.url),\n    description: `来源：${request.pageUrl}`,\n  })\n  if (ingest.failed) {",
+      "start_line": 272,
+      "end_line": 279,
+      "category": "bug",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/media-fetch.ts",
+      "content": "Expected external aborts now flow through this generic failure branch, so normal connection-generation cancellation can be logged as a media fetch failure. That makes diagnostics noisy and can obscure real transport failures. Consider suppressing or downgrading `AbortError`/aborted-signal logging when `timedOut` is false.",
+      "suggestion_code": "  if (!(error instanceof DOMException \u0026\u0026 error.name === 'AbortError')) {\n    console.warn('[omnimux-browser] media fetch failed', error)\n  }\n  return { status: 'failed', message: MEDIA_FETCH_FAILED_MESSAGE }",
+      "existing_code": "  console.warn('[omnimux-browser] media fetch failed', error)\n  return { status: 'failed', message: MEDIA_FETCH_FAILED_MESSAGE }",
+      "start_line": 260,
+      "end_line": 261,
+      "category": "maintainability",
+      "severity": "low"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "content": "The containment check is lexical and runs after `mkdirSync` has already followed any existing symlink in `.image-ingest`. If `vaultRoot/.image-ingest` (or another path component) is a symlink to an external directory, this code will create/write the staging file outside the assets vault while `isInsideDir(slice, vaultRoot)` still returns true for the string path; the later cleanup can also recursively delete that external staging directory. Please resolve/verify the real path of the staging root/slice (or reject symlinked staging components) before writing into it.",
+      "suggestion_code": "      fs.mkdirSync(slice, { recursive: true, mode: 0o700 })\n      const rootReal = fs.realpathSync(vaultRoot)\n      const sliceReal = fs.realpathSync(slice)\n      if (!isInsideDir(sliceReal, rootReal)) {\n        throw new AssetsError('path-denied', 'staging slice escapes assets vault')\n      }",
+      "existing_code": "      fs.mkdirSync(slice, { recursive: true, mode: 0o700 })\n      if (!isInsideDir(slice, vaultRoot)) {\n        throw new AssetsError('path-denied', 'staging slice escapes assets vault')\n      }",
+      "start_line": 218,
+      "end_line": 221,
+      "category": "security",
+      "severity": "high"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "content": "This regex only replaces the literal hyphen and DEL character, so non-whitespace control characters such as `\\u0001` remain in the display name and are later rejected by `normalizeName`. That makes otherwise saveable images fail when a page title contains those controls. Use the same control-character range that the library validator rejects instead of the malformed range.",
+      "suggestion_code": "  const cleaned = raw\n    .replace(/[\\u0000-\\u001f\\u007f]/g, ' ')\n    .replace(/[/\\\\]/g, ' ')",
+      "existing_code": "  const cleaned = raw\n    .replace(/[-]/g, ' ')\n    .replace(/[/\\\\]/g, ' ')",
+      "start_line": 60,
+      "end_line": 62,
+      "category": "bug",
+      "severity": "low"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "content": "`sourceKey` is validated with `trim()`, but the normalized value is not passed into `runSave`. A caller that includes leading/trailing whitespace will share the same in-flight key as the trimmed source while persisting `browser-image:\u003cuntrimmed\u003e`, so later calls with the normalized key will not dedupe against the saved asset. Use the trimmed `sourceKey` when starting the save.",
+      "suggestion_code": "    if (!pending) {\n      pending = runSave({ ...input, sourceKey }).finally(() =\u003e {\n        if (inFlight.get(sourceKey) === pending) inFlight.delete(sourceKey)\n      })",
+      "existing_code": "    if (!pending) {\n      pending = runSave(input).finally(() =\u003e {\n        if (inFlight.get(sourceKey) === pending) inFlight.delete(sourceKey)\n      })",
+      "start_line": 292,
+      "end_line": 295,
+      "category": "bug",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "content": "When `baseName` is already 40 characters, the first conflict produces `\"\u003c40 chars\u003e (2)\"`, which `library.add()` rejects as `name-invalid`. This makes saving a different image with the same max-length page title fail instead of creating a unique asset. Truncate the base to reserve room for the suffix before returning the candidate.",
+      "suggestion_code": "  function uniqueDisplayName(baseName) {\n    let candidate = baseName\n    let suffix = 2\n    while (typeof library.get === 'function' \u0026\u0026 library.get(candidate)) {\n      const suffixText = ` (${suffix})`\n      candidate = `${baseName.slice(0, DISPLAY_NAME_MAX - suffixText.length).replace(/[.\\s]+$/, '')}${suffixText}`\n      suffix += 1\n    }\n    return candidate\n  }",
+      "existing_code": "  function uniqueDisplayName(baseName) {\n    let candidate = baseName\n    let suffix = 2\n    while (typeof library.get === 'function' \u0026\u0026 library.get(candidate)) {\n      candidate = `${baseName} (${suffix})`\n      suffix += 1\n    }\n    return candidate\n  }",
+      "start_line": 184,
+      "end_line": 192,
+      "category": "bug",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/media-fetch.ts",
+      "content": "An external abort can still be reported as this module's timeout if the caller aborts first but the underlying fetch/read does not reject until after the timeout callback has also fired. At that point `timedOut` is `true`, so `fetchFailureOutcome` returns `timeout`, even though the first cancellation came from the caller. Track the first abort source (external vs timeout), or clear/disable the timeout when the external signal aborts, so caller cancellation remains distinguishable under delayed abort propagation.",
+      "suggestion_code": "  let abortSource: 'timeout' | 'external' | undefined\n  const timer = setTimeout(() =\u003e {\n    if (abortSource === undefined) abortSource = 'timeout'\n    controller.abort()\n  }, timeoutMs)\n  const onExternalAbort = (): void =\u003e {\n    if (abortSource === undefined) abortSource = 'external'\n    controller.abort()\n  }\n  if (external?.aborted) onExternalAbort()\n  else external?.addEventListener('abort', onExternalAbort, { once: true })",
+      "existing_code": "  let timedOut = false\n  const timer = setTimeout(() =\u003e {\n    timedOut = true\n    controller.abort()\n  }, timeoutMs)\n  const onExternalAbort = (): void =\u003e { controller.abort() }\n  if (external?.aborted) onExternalAbort()\n  else external?.addEventListener('abort', onExternalAbort, { once: true })",
+      "start_line": 171,
+      "end_line": 178,
+      "category": "bug",
+      "severity": "medium"
+    }
+  ],
+  "groups": [
+    {
+      "label": "asset library exports and image ingestion",
+      "files": [
+        "plugins/omnimux-assets/src/index.js",
+        "plugins/omnimux-assets/src/library.js",
+        "plugins/omnimux-assets/src/image-ingest.js"
+      ]
+    },
+    {
+      "label": "browser image asset protocol, fetching, and server integration",
+      "files": [
+        "plugins/omnimux-browser/src/index.ts",
+        "plugins/omnimux-browser/src/media-fetch.ts",
+        "plugins/omnimux-browser/src/protocol.ts",
+        "plugins/omnimux-browser/src/server.ts",
+        "plugins/omnimux-browser/src/image-assets.ts"
+      ]
+    }
+  ],
+  "session_id": "02fe3e49-bbd6-4d53-b853-1e783ef05480",
+  "manifest": {
+    "schema_version": "ocr.run-manifest/v1",
+    "run_id": "02fe3e49-bbd6-4d53-b853-1e783ef05480",
+    "operation": "review",
+    "terminal_state": "complete",
+    "repository": {
+      "identity_sha256": "72a4299b0cafc9688d8dfc1929645d8f103e3c696008f4d6323179f137dba672"
+    },
+    "input": {
+      "mode": "workspace",
+      "resolved_base": "d95764912e36da01d879ab65d6340469b48a4625",
+      "source_artifact_sha256": "e5fe2f5c55ded62afcd8bb72e73c28b1637e193242d9e68a8ce1f289fae838bb"
+    },
+    "execution": {
+      "ocr_version": "v1.12.11",
+      "provider": "dsh-cpa",
+      "model": "gpt-5.5",
+      "configured_concurrency": 8,
+      "rule_config_sha256": "414d4d727dd60672664e81bce25a8f37801c2c2e123bfa96e46e1cb0ccf0658f",
+      "runtime_config_sha256": "f9fe9c9667dda16ce8346b636caa4a7b90178e88d6a8f1b03dc8c86f878803d3"
+    },
+    "coverage": {
+      "selected": [
+        {
+          "item_id": "11874a3f3719f9151e6ebb52f204ab0bfe5fa240bc14184a3587fbfb0b849a84",
+          "path": "plugins/omnimux-browser/src/index.ts",
+          "fingerprint": "eedf70907d5b30ae7d391077ebd93e5b8bbc17f22c2454fe0f6831ce460120bd"
+        },
+        {
+          "item_id": "39dd51d21a58f76303aec76e63ce996bcded89b9fd9aeafa54f07aeba7054bc0",
+          "path": "plugins/omnimux-assets/src/library.js",
+          "fingerprint": "0e193a96c95956b5ecaeb82a1675cfcaaa83b1ea11e33624af8fd96c0fdf07dd"
+        },
+        {
+          "item_id": "577f8f262da8f7200f4a0c15fe071b9984622b10908c39b13d60a1638b06aa7a",
+          "path": "plugins/omnimux-browser/src/server.ts",
+          "fingerprint": "948d9e1e110605c8ed4142f7a0d9f8e1eb6f338a0a63ed89fc6564a0c20d75a3"
+        },
+        {
+          "item_id": "5f75ea07fe7a7717ff216be54221acb6745ce2915c430103378666b2655a73f4",
+          "path": "plugins/omnimux-assets/src/index.js",
+          "fingerprint": "77c19e1616e3939086837861b1e542e803c50d5f703cebb514973ea29c7af1ea"
+        },
+        {
+          "item_id": "85876a3fbd7e525a06b1630132cab98af4088caca5507e5d37780f4f235f1bbb",
+          "path": "plugins/omnimux-browser/src/image-assets.ts",
+          "fingerprint": "20dbad442804e2c7b749a728a32c19a299b1c98ed3cc5beb23c84adf90a26c53"
+        },
+        {
+          "item_id": "c37a626dbcb6729d90c801c8e1a58345e59ddd06570a2e8d8ac00b5220bad2f8",
+          "path": "plugins/omnimux-browser/src/protocol.ts",
+          "fingerprint": "b42ffe0e3d4d60647a3ce0a2dc2a0ef584fd494584a0813b4156074024056256"
+        },
+        {
+          "item_id": "e25a9f14137b46680a85f8489ae9741c22732e7b85f25da917da79a66410d20c",
+          "path": "plugins/omnimux-assets/src/image-ingest.js",
+          "fingerprint": "5ccb1f5b01d05d7c4bd97de3d816ff7c9a489bd32ea8b377391622068c800ba5"
+        },
+        {
+          "item_id": "fa74e323c7229b5fdee85f91fc1833132b09cecdfca5d7492bbcba6f80d4da69",
+          "path": "plugins/omnimux-browser/src/media-fetch.ts",
+          "fingerprint": "32372abfb4419d638d2363dff2cb11b8302f67b985d4acb9455c77134207076a"
+        }
+      ],
+      "completed": [
+        {
+          "item_id": "11874a3f3719f9151e6ebb52f204ab0bfe5fa240bc14184a3587fbfb0b849a84",
+          "path": "plugins/omnimux-browser/src/index.ts",
+          "fingerprint": "eedf70907d5b30ae7d391077ebd93e5b8bbc17f22c2454fe0f6831ce460120bd"
+        },
+        {
+          "item_id": "39dd51d21a58f76303aec76e63ce996bcded89b9fd9aeafa54f07aeba7054bc0",
+          "path": "plugins/omnimux-assets/src/library.js",
+          "fingerprint": "0e193a96c95956b5ecaeb82a1675cfcaaa83b1ea11e33624af8fd96c0fdf07dd"
+        },
+        {
+          "item_id": "577f8f262da8f7200f4a0c15fe071b9984622b10908c39b13d60a1638b06aa7a",
+          "path": "plugins/omnimux-browser/src/server.ts",
+          "fingerprint": "948d9e1e110605c8ed4142f7a0d9f8e1eb6f338a0a63ed89fc6564a0c20d75a3"
+        },
+        {
+          "item_id": "5f75ea07fe7a7717ff216be54221acb6745ce2915c430103378666b2655a73f4",
+          "path": "plugins/omnimux-assets/src/index.js",
+          "fingerprint": "77c19e1616e3939086837861b1e542e803c50d5f703cebb514973ea29c7af1ea"
+        },
+        {
+          "item_id": "85876a3fbd7e525a06b1630132cab98af4088caca5507e5d37780f4f235f1bbb",
+          "path": "plugins/omnimux-browser/src/image-assets.ts",
+          "fingerprint": "20dbad442804e2c7b749a728a32c19a299b1c98ed3cc5beb23c84adf90a26c53"
+        },
+        {
+          "item_id": "c37a626dbcb6729d90c801c8e1a58345e59ddd06570a2e8d8ac00b5220bad2f8",
+          "path": "plugins/omnimux-browser/src/protocol.ts",
+          "fingerprint": "b42ffe0e3d4d60647a3ce0a2dc2a0ef584fd494584a0813b4156074024056256"
+        },
+        {
+          "item_id": "e25a9f14137b46680a85f8489ae9741c22732e7b85f25da917da79a66410d20c",
+          "path": "plugins/omnimux-assets/src/image-ingest.js",
+          "fingerprint": "5ccb1f5b01d05d7c4bd97de3d816ff7c9a489bd32ea8b377391622068c800ba5"
+        },
+        {
+          "item_id": "fa74e323c7229b5fdee85f91fc1833132b09cecdfca5d7492bbcba6f80d4da69",
+          "path": "plugins/omnimux-browser/src/media-fetch.ts",
+          "fingerprint": "32372abfb4419d638d2363dff2cb11b8302f67b985d4acb9455c77134207076a"
+        }
+      ],
+      "reused": [],
+      "failed": [],
+      "waived": []
+    },
+    "elapsed_ms": 363931
+  }
+}

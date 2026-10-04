@@ -1,0 +1,82 @@
+
+ RUN  v4.1.11 /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser
+
+ ❯ tests/image-assets-v1.spec.ts (48 tests | 1 failed | 47 skipped) 5ms
+     ↓ accepts the frozen wire shape
+     ↓ rejects non-object
+     ↓ rejects missing requestId
+     ↓ rejects empty url
+     ↓ rejects missing pageUrl
+     ↓ rejects non-string url
+     ↓ rejects non-string title
+     ↓ rejects requestId over 128
+     ↓ rejects url over 8192
+     ↓ rejects pageUrl over 8192
+     ↓ rejects title over 200
+     ↓ rejects local path smuggled in
+     ↓ rejects credential smuggled in
+     ↓ accepts the frozen raster set with parameters stripped
+     ↓ rejects image/svg+xml without guessing a suffix
+     ↓ rejects application/octet-stream without guessing a suffix
+     ↓ rejects text/html without guessing a suffix
+     ↓ rejects image/heic without guessing a suffix
+     ↓ rejects  without guessing a suffix
+     ↓ rejects IMAGE/PNG2 without guessing a suffix
+     ↓ rejects image/png/x without guessing a suffix
+     ↓ drops the fragment but keeps the signed query
+     ↓ returns unavailable when the asset service is absent
+     ↓ returns unavailable when host image validation is absent
+     ↓ rejects non-public and non-string urls before dialing
+     ↓ maps fetch timeout into the frozen outcome vocabulary
+     ↓ maps fetch too-large into the frozen outcome vocabulary
+     ↓ maps fetch http-error into the frozen outcome vocabulary
+     ↓ maps fetch bad-request into the frozen outcome vocabulary
+     ↓ maps fetch failed into the frozen outcome vocabulary
+     ↓ rejects non-image and missing content types without magic sniffing
+     ↓ intersects the frozen types with the host imageLimits mediaTypes
+     ↓ maps validation error UNSUPPORTED_IMAGE_TYPE to unsupported-image
+     ↓ maps validation error INVALID_IMAGE to unsupported-image
+     ↓ maps validation error IMAGE_TYPE_MISMATCH to mime-mismatch
+     ↓ maps validation error IMAGE_TOO_LARGE to too-large
+     ↓ maps validation error IMAGE_TOO_MANY_PIXELS to too-large
+     ↓ maps validation error IMAGE_DIMENSION_TOO_LARGE to too-large
+     ↓ maps validation error ATTACHMENT_CORRUPT to unavailable
+     ↓ calls validateImage with the downloaded bytes and normalized mime — never saving attachments
+     ↓ passes the source digest, bytes, mime and bounded provenance to the asset service
+     ↓ maps a duplicate receipt through unchanged
+     ↓ turns ingest failure or a malformed receipt into storage-failed
+     ↓ reports cancelled when the connection generation dies mid-save
+     × attachments 在桥挂载之后才就位时，下一次调用能拿到新 provider 4ms
+     ↓ distinguishes the caller abort from the own timeout budget
+     ↓ still reports its own timeout the same way
+     ↓ 成功回执必须含非空 assetId/fileId 与有限 lrev
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/image-assets-v1.spec.ts > createImageAssetSaveDeps · 按调用解析宿主能力（QA #3052 Q5） > attachments 在桥挂载之后才就位时，下一次调用能拿到新 provider
+AssertionError: expected { status: 'unavailable' } to deeply equal { status: 'invalid-url' }
+
+- Expected
++ Received
+
+  {
+-   "status": "invalid-url",
++   "status": "unavailable",
+  }
+
+ ❯ tests/image-assets-v1.spec.ts:293:19
+    291|     const after = await saveImageAsset(payload({ url: 'http://127.0.0.…
+    292|     // 能力已恢复：私有 URL 走到 invalid-url 而不是 unavailable。
+    293|     expect(after).toEqual({ status: 'invalid-url' })
+       |                   ^
+    294|
+    295|     // HMR 换掉 provider：新 provider 的 limits 立即生效。
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 47 skipped (48)
+   Start at  00:39:20
+   Duration  135ms (transform 35ms, setup 17ms, import 30ms, tests 5ms, environment 0ms)
+

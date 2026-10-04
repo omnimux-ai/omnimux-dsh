@@ -1,0 +1,37 @@
+# browser 新测试绿（vitest，含 stderr 诊断摘录）
+# 命令: node node_modules/vitest/vitest.mjs run tests/image-assets-v1.spec.ts tests/image-assets-rpc-v1.spec.ts
+# REAL_EXIT=0
+ ✓ tests/image-assets-v1.spec.ts (47 tests)
+ ✓ tests/image-assets-rpc-v1.spec.ts (14 tests)
+ Test Files  2 passed (2)
+      Tests  61 passed (61)
+
+# browser 定向回归 + 新测试（同跑）
+# node node_modules/vitest/vitest.mjs run tests/media-fetch.spec.ts tests/public-media-transport.spec.ts
+#   tests/public-media-request.spec.ts tests/pairing.spec.ts tests/server.spec.ts tests/protocol.spec.ts
+#   tests/image-assets-v1.spec.ts tests/image-assets-rpc-v1.spec.ts
+# REAL_EXIT=0
+ ✓ tests/protocol.spec.ts (11 tests)
+ ✓ tests/pairing.spec.ts (8 tests)
+ ✓ tests/public-media-request.spec.ts (10 tests)
+ ✓ tests/media-fetch.spec.ts (26 tests)
+ ✓ tests/image-assets-v1.spec.ts (47 tests)
+ ✓ tests/image-assets-rpc-v1.spec.ts (14 tests)
+ ✓ tests/public-media-transport.spec.ts (38 tests)
+ ✓ tests/server.spec.ts (51 tests)
+ Test Files  8 passed (8)
+      Tests  205 passed (205)
+
+# browser 其余可跑项
+# REAL_EXIT=0
+ Test Files  10 passed (10)
+      Tests  85 passed (85)
+
+# tsc
+# node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit --tsBuildInfoFile /tmp/3052-tsbuild/browser.tsbuildinfo
+# REAL_EXIT=0（无输出）
+
+# 环境缺项（真实记录，非回归）：
+# composition.spec.ts / session-purge.spec.ts / e2e/bridge-extension.e2e.spec.ts
+# 因工作树 node_modules 缺 @deepseek-ai/cordis-plugin-loader / @deepseek-ai/dsh-session / playwright-core
+# 收集失败；全仓 vitest：292 passed / 6 skipped / 3 files collection-failed。

@@ -23,6 +23,7 @@ import { MediaCapsule } from './capsule.ts'
 import { CardRegionProbe, boxContains } from './card-region.ts'
 import { hoverCopy, type HoverCopy } from './copy.ts'
 import { MediaDetector } from './detector.ts'
+import { resolveSaveIntent } from './save-intent.ts'
 import {
   CAPSULE_SPEC,
   MEDIA_OVERLAY_HOST_ID,
@@ -77,6 +78,20 @@ export class MediaOverlay {
   }
   private payload: HoveredMedia | null = null
   private anchorElement: Element | null = null
+  /**
+   * Renders the capsule served this media session. Every accepted candidate
+   * starts a new generation, so a receipt from an earlier press on the same
+   * payload id (after the pointer visited another media) is dropped as stale.
+   */
+  private mediaGeneration = 0
+  /**
+   * Actions with a request in flight. `OverlayState.busyAction` is a single
+   * field shared with the capsule paint contract, so concurrent slots are
+   * tracked here and the visible busy slot prefers the primary action — the
+   * image save is the only long-running request (UI-Spec §3.1: a pending
+   * primary action must not lock copy or attach).
+   */
+  private readonly pendingActions = new Set<MediaActionKind>()
   /** Shared probe cache: one player is measured once, not once per frame. */
   private readonly videoProbe = new VideoAnchorProbe()
   /** Shared card-region probe: enclosing card container is walked and cached. */
@@ -301,6 +316,11 @@ export class MediaOverlay {
     if (!candidate.element.isConnected) return
     this.payload = candidate.payload
     this.anchorElement = candidate.element
+    this.mediaGeneration += 1
+    // A new media owns a new busy ledger: its presses were issued against a
+    // payload that is gone, so a stale in-flight marker must not freeze this
+    // media's primary action.
+    this.pendingActions.clear()
     capsule.render(candidate.payload)
     this.state = { ...this.state, ...capsule.snapshot(), phase: 'shown' }
     // Placement and the flip both come out of the one geometry call, so the
@@ -579,9 +599,31 @@ export class MediaOverlay {
     this.scheduleCollapse()
   }
 
+  /**
+   * The hover/focus hint a slot should read right now.
+   *
+   * The primary slot is intent-aware: an image advertises the asset-library
+   * action across its idle/busy/done states, a video keeps the baseline
+   * inspiration hint, and copy/chat never change. An outcome message is never
+   * re-derived here — `applyOutcome` paints it once and `repositionNow`
+   * repaints this same resolver so a scroll cannot resurrect stale words.
+   */
+  private resolveHint(action: MediaActionKind): string {
+    if (action === 'inspiration' && this.payload !== null) {
+      const intent = resolveSaveIntent(this.payload)
+      if (intent === 'image-asset') {
+        if (this.state.busyAction === action) return this.copy.image.busy
+        if (this.state.saved) return this.copy.image.done
+        return this.copy.image.idle
+      }
+      if (intent === 'unknown') return this.copy.image.typeUnknown
+    }
+    return this.copy.hint[action]
+  }
+
   private showHint(action: MediaActionKind): void {
     this.activeIcon = action
-    this.showMessage(this.copy.hint[action], action)
+    this.showMessage(this.resolveHint(action), action)
   }
 
   private clearHint(action: MediaActionKind): void {
@@ -598,8 +640,31 @@ export class MediaOverlay {
 
   private async runAction(action: MediaActionKind): Promise<void> {
     const payload = this.payload
-    if (payload === null || this.state.busyAction !== null) return
+    // Only the action that is actually in flight is blocked: a pending save
+    // must not freeze the copy and attach slots (UI-Spec §3.1).
+    if (payload === null || this.pendingActions.has(action)) return
 
+    // A media session that already holds a confirmed save answers the done
+    // message in place and sends nothing — re-pressing is not a new request
+    // and never an un-toggle.
+    if (action === 'inspiration' && this.state.saved) {
+      const intent = resolveSaveIntent(payload)
+      if (intent === 'image-asset') {
+        this.applyOutcome(action, { ok: true, status: 'saved', message: this.copy.image.done })
+      } else {
+        this.applyOutcome(action, { ok: true, status: 'saved', message: this.copy.done.inspiration })
+      }
+      return
+    }
+
+    // The payload is immutable, but the overlay's payload can be swapped out
+    // while the request is in flight (SPA card reuse, pointer moving to the
+    // next media). Capture the render generation now: a late receipt may only
+    // mark the media it was issued for, even when a re-rendered media reuses
+    // the same payload id (switching away and back must not light up the
+    // press that happened before the switch).
+    const issuedFor = payload.id
+    const issuedAt = this.mediaGeneration
     this.setBusy(action, true)
     let outcome: ActionOutcome
     try {
@@ -607,14 +672,23 @@ export class MediaOverlay {
     } catch {
       outcome = { ok: false, status: 'failed', message: this.copy.failed }
     }
+    if (this.state.activeId !== issuedFor || this.mediaGeneration !== issuedAt) return
     this.setBusy(action, false)
     this.applyOutcome(action, outcome)
   }
 
   private dispatch(action: MediaActionKind, payload: HoveredMedia): Promise<ActionOutcome> {
     switch (action) {
-      case 'inspiration':
+      case 'inspiration': {
+        // The primary action re-resolves the work type at press time: the
+        // painted label and the write destination come from one derivation.
+        const intent = resolveSaveIntent(payload)
+        if (intent === 'image-asset') return this.bridge.saveImageToAssets(payload)
+        if (intent === 'unknown') {
+          return Promise.resolve({ ok: false, status: 'failed', message: this.copy.image.typeUnknown })
+        }
         return this.bridge.saveToInspiration(payload)
+      }
       case 'copy':
         return this.bridge.copyToClipboard(payload)
       case 'attach':
@@ -659,10 +733,23 @@ export class MediaOverlay {
   }
 
   private setBusy(action: MediaActionKind | null, busy: boolean): void {
-    const next = busy ? action : null
+    if (busy && action !== null) this.pendingActions.add(action)
+    else this.pendingActions.delete(action)
+    // The capsule paints one busy slot; the primary action owns it while a
+    // save is pending so its busy label/aria stays put until the real receipt.
+    const next: MediaActionKind | null = this.pendingActions.has('inspiration')
+      ? 'inspiration'
+      : (busy && action !== null ? action : null)
     this.state.busyAction = next
     this.state.phase = busy ? 'interactive' : 'shown'
     this.capsule?.setState({ busyAction: next })
+    // The busy feedback does not wait for a hover on the primary slot: the
+    // press itself anchors the single in-place hint (UI-Spec §3.1 busy is
+    // title/aria/tooltip too). Secondary slots keep their baseline feedback.
+    if (busy && action === 'inspiration') {
+      this.activeIcon = action
+      this.showMessage(this.resolveHint(action), action)
+    }
   }
 
   // ---- Geometry ----------------------------------------------------------
@@ -750,7 +837,7 @@ export class MediaOverlay {
     capsule.element.style.top = `${Math.round(geometry.top)}px`
 
     const icon = this.activeIcon
-    if (icon !== null) this.showMessage(this.copy.hint[icon], icon)
+    if (icon !== null) this.showMessage(this.resolveHint(icon), icon)
     return geometry
   }
 

@@ -1,0 +1,125 @@
+{
+  "scope": "Byte-identical original logs, not newly executed history; no inferred shell exit codes",
+  "files": [
+    {
+      "source": ".tmp/fix3052-q1-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q1-red.log",
+      "sha256": "841c9c31fb5b27f6350b0fbcc16721dd7774d8a278a963a05e5945b32b5c53cf",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q1-green.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q1-green.log",
+      "sha256": "cd170f5f1a8ae2b5a734a9a8b880d59a7a35fdc0ca728c8d3f1e9c589baaeff5",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q2-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q2-red.log",
+      "sha256": "67ea0c0ea6385a3aac8f4bb19cff0780b17cfe2ab41e7c0d4119a11acb68c8ba",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q2-green.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q2-green.log",
+      "sha256": "aae1c9aaa48986b0dbeac44742f29b847b652ef5ece7ca210132d8c18977006a",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q3-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q3-red.log",
+      "sha256": "8eaf4068e58919a98116752f381502217a38cf1082d88d9cfcc00f23370997fd",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q3-green.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q3-green.log",
+      "sha256": "778ef8bcd2b2fbf4add9285d93a70d2a18024e1e9bd3b3d251ac9add4c0be92f",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q4-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q4-red.log",
+      "sha256": "0c7b383ec58af9d6c8f0af21821fa3bd71ee6347e40a89cc49739fcbf2190e4a",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q4-green.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q4-green.log",
+      "sha256": "6d0b287ba0259796324f0a8a7acd82177abd96b117a04c19be51178e8109a4f4",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q5-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q5-red.log",
+      "sha256": "a163371f2654b372c118aa179c33fec613355ef2c8cc04fa85116e624c1666bc",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q5-green.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q5-green.log",
+      "sha256": "3203f8bd4e251d6fb0eaf88f557510223d353bc515e41522e745c45ae3135a96",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q5-green2.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q5-green2.log",
+      "sha256": "b60e4272820687673e40312e1763766a004561bd146c576ec7cc9ffe5e38899a",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-q5-suite.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-q5-suite.log",
+      "sha256": "dfa1e970ae9d62baf5962e0b30ce7c8bd5c10c5dabc51ae983dcd36686549791",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-srckey-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-srckey-red.log",
+      "sha256": "343ba85685be1e592a19372ebbcad4d648542aa1b1d23164f35d87dcc43e9ad2",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-srckey-green.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-srckey-green.log",
+      "sha256": "45782e2bfdbcd791e0a1c2445584c48e64b4d1ccee66661bfbb3114149bcd374",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-abort-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-abort-red.log",
+      "sha256": "03378f4da5cbf4bf84194939fe92940032a7519a9f04254d7988720e9f4ed0af",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-abort-green.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-abort-green.log",
+      "sha256": "6d492c4d12046712afe5ba97f4a60cfbc9935742802278fb5d6b547acbeef603",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-fetch-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-fetch-red.log",
+      "sha256": "cdd37a9ef5ff2019e986d4431bc870f70cc220889337c486d34624e4cd38630a",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": ".tmp/fix3052-fetch-green.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-fetch-green.log",
+      "sha256": "afcab6f3f43740ef70098f01973291bfb3ac055f74788b7de9387563cefd4523",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": "/tmp/3052-assets-red.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-initial-assets-red.log",
+      "sha256": "247512d19bd36fe46ae4fb6931e1afb0c575c02f8e8021b754ed2c71e9f9eec8",
+      "originalExitCodeRecorded": false
+    },
+    {
+      "source": "/tmp/3052-browser-green1.log",
+      "evidence": "docs/evidence/browser-image-assets-v1/qa-round2-tdd-initial-browser-green1.log",
+      "sha256": "bb0344d860470b83d76932392cce7afabc17b7eeba2e32283ff7673c30ae2990",
+      "originalExitCodeRecorded": false
+    }
+  ]
+}

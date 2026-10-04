@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>OmniMux 素材识别与角标工具栏两入口分流演示</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #f0f2f5;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    p.subtitle {
+      color: #8a8f9d;
+      font-size: 13px;
+      margin-top: 0;
+      margin-bottom: 32px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 320px);
+      gap: 32px;
+    }
+    .card {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #1a1c24;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+    .card img, .card video {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      display: block;
+    }
+    .card-info {
+      padding: 12px 14px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .card-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #a0a5b5;
+    }
+    /* Toolbar trigger mock inside shadow-like layer */
+    .omt-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+    }
+    .omt-trigger {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: rgba(30, 32, 38, 0.95);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+      color: #b8b7ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 0;
+    }
+    .omt-toolbar {
+      position: absolute;
+      top: 50%;
+      right: calc(100% + 6px);
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: row;
+      gap: 2px;
+      padding: 4px;
+      border-radius: 12px;
+      background: rgba(30, 32, 38, 0.95);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+    }
+    .omt-action {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.82);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .omt-action:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+    .omt-action svg {
+      width: 15px;
+      height: 15px;
+    }
+    .status-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>OmniMux 媒体识别与角标工具栏两入口分流</h1>
+  <p class="subtitle">实机预演：图片类型（Photo 作品/单图）真实进入资产库，视频类型（Video 作品/封面）严格保持加入灵感库</p>
+
+  <div class="grid">
+    <!-- Card 1: Photo 作品 -->
+    <div class="card" id="card-photo" data-e2e="user-post-item">
+      <a href="https://www.tiktok.com/@creator/photo/7412345678901234567">
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='220' viewBox='0 0 320 220'><rect width='320' height='220' fill='%23222530'/><circle cx='160' cy='110' r='40' fill='%23383d4f'/><text x='160' y='180' fill='%238890a6' font-size='14' text-anchor='middle' font-family='sans-serif'>TikTok Photo 作品</text></svg>" alt="photo post">
+      </a>
+      <div class="omt-container">
+        <div class="omt-toolbar" id="toolbar-photo" role="toolbar" aria-label="OmniMux">
+          <button type="button" class="omt-action" data-action="inspiration" title="加入资产库" aria-label="加入资产库">
+            <svg viewBox="0 0 22 22" fill="currentColor" stroke="none" aria-hidden="true">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="m7.249 11.552-1.691.323A2.335 2.335 0 0 0 6 16.5h10a2.333 2.333 0 0 0 .443-4.625l-1.691-.323.216-1.708a4 4 0 1 0-7.936 0l.217 1.708ZM5.167 9.333a5.833 5.833 0 1 1 11.62.741 4.168 4.168 0 0 1-.787 8.26H6a4.167 4.167 0 0 1-.787-8.26 5.89 5.89 0 0 1-.046-.74Z"/>
+            </svg>
+          </button>
+          <button type="button" class="omt-action" data-action="copy" title="复制" aria-label="复制">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="11.5" height="11.5" rx="2.5"/>
+              <path d="M5.5 15H5A1.5 1.5 0 0 1 3.5 13.5V5A1.5 1.5 0 0 1 5 3.5h8.5A1.5 1.5 0 0 1 15 5v.5"/>
+            </svg>
+          </button>
+          <button type="button" class="omt-action" data-action="attach" title="加入对话" aria-label="加入对话">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.5 12.25v8.25h-5.6"/><path d="M14.9 20.5v-5.2h5.6"/>
+              <path d="M20.5 12.25a8.5 8.5 0 0 0-4.06-7.29"/><path d="M12 3.75a8.5 8.5 0 1 0 4.44 15.75"/>
+            </svg>
+          </button>
+        </div>
+        <button type="button" class="omt-trigger" aria-label="OmniMux 快捷操作">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><circle cx="12" cy="12" r="8"/></svg>
+        </button>
+      </div>
+      <div class="card-info">
+        <div class="card-title">TikTok Photo 作品卡片</div>
+        <span class="card-tag">/photo/ 页面</span>
+        <br>
+        <div class="status-badge" id="photo-status">第 1 动作：加入资产库 (22×22 资产云图标)</div>
+      </div>
+    </div>
+
+    <!-- Card 2: Video 作品 (含 img 封面) -->
+    <div class="card" id="card-video" data-e2e="user-post-item">
+      <a href="https://www.tiktok.com/@creator/video/7498765432109876543">
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='220' viewBox='0 0 320 220'><rect width='320' height='220' fill='%231f242e'/><polygon points='145,95 185,110 145,125' fill='%236366f1'/><text x='160' y='180' fill='%238890a6' font-size='14' text-anchor='middle' font-family='sans-serif'>TikTok Video 视频封面</text></svg>" alt="video cover thumbnail">
+      </a>
+      <div class="omt-container">
+        <div class="omt-toolbar" id="toolbar-video" role="toolbar" aria-label="OmniMux">
+          <button type="button" class="omt-action" data-action="inspiration" title="加入灵感库" aria-label="加入灵感库">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 18h6"/><path d="M10 21.5h4"/>
+              <path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.77c.5.36.8.94.8 1.55V18h6v-2.18c0-.61.3-1.19.8-1.55A6.5 6.5 0 0 0 12 2.5Z"/>
+            </svg>
+          </button>
+          <button type="button" class="omt-action" data-action="copy" title="复制" aria-label="复制">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="11.5" height="11.5" rx="2.5"/>
+              <path d="M5.5 15H5A1.5 1.5 0 0 1 3.5 13.5V5A1.5 1.5 0 0 1 5 3.5h8.5A1.5 1.5 0 0 1 15 5v.5"/>
+            </svg>
+          </button>
+          <button type="button" class="omt-action" data-action="attach" title="加入对话" aria-label="加入对话">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.5 12.25v8.25h-5.6"/><path d="M14.9 20.5v-5.2h5.6"/>
+              <path d="M20.5 12.25a8.5 8.5 0 0 0-4.06-7.29"/><path d="M12 3.75a8.5 8.5 0 1 0 4.44 15.75"/>
+            </svg>
+          </button>
+        </div>
+        <button type="button" class="omt-trigger" aria-label="OmniMux 快捷操作">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><circle cx="12" cy="12" r="8"/></svg>
+        </button>
+      </div>
+      <div class="card-info">
+        <div class="card-title">TikTok Video 作品封面</div>
+        <span class="card-tag">/video/ 页面</span>
+        <br>
+        <div class="status-badge" id="video-status">第 1 动作：加入灵感库 (24×24 灯泡图标)</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

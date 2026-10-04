@@ -1,0 +1,2 @@
+✅ verify-plugin-boundaries: 3882 source file(s) across plugins verified for dependency and runtime boundaries.
+REAL_EXIT=0

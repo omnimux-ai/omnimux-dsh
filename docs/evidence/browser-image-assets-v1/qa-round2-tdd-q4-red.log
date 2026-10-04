@@ -1,0 +1,46 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✔ displayName 缺失/非法/超长时回退到产品默认名「网页图片」并截断 40 字 (9.980792ms)
+  ✖ sanitizeDisplayName 清真实控制字符但保留普通连字符（QA #3052 Q4） (0.745792ms)
+  ✖ 40 字名称重名时为递增后缀预留长度，第二来源仍可保存（QA #3052 Q4） (4.980583ms)
+✖ ingestDownloadedImage · 真实入库（#3052） (16.404625ms)
+ℹ tests 3
+ℹ suites 1
+ℹ pass 1
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 65.868958
+
+✖ failing tests:
+
+test at plugins/omnimux-assets/src/image-ingest-v1.test.js:190:3
+✖ sanitizeDisplayName 清真实控制字符但保留普通连字符（QA #3052 Q4） (0.745792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'a\x01b c'
+  - 'a b-c'
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest-v1.test.js:193:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'a\x01b c',
+    expected: 'a b-c',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at plugins/omnimux-assets/src/image-ingest-v1.test.js:201:3
+✖ 40 字名称重名时为递增后缀预留长度，第二来源仍可保存（QA #3052 Q4） (4.980583ms)
+  Error [AssetsError]: display name must be at most 40 characters
+      at normalizeName (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library.js:70:40)
+      at Object.add (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library.js:529:18)
+      at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest.js:315:55
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+    code: 'name-invalid'
+  }

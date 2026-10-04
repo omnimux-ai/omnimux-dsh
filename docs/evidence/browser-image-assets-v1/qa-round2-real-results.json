@@ -1,0 +1,152 @@
+{
+  "scope": "Real Cordis/plugin/WebSocket/decoder/library; only adapter-fixture downloads replaced at external fetch seam; no browser",
+  "results": [
+    {
+      "name": "real Cordis assets apply publishes registered active service",
+      "status": "PASS",
+      "detail": {
+        "serviceType": "service",
+        "cordis": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+cordis@4.0.2_@deepseek-ai+cordis-plugin-include@1.0.7_@deepseek-ai+cordis-plugin-loader@1.0.3/node_modules/@deepseek-ai/cordis/lib/index.js",
+        "validator": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js"
+      }
+    },
+    {
+      "name": "actual raster decoder accepts complete PNG and refuses header-only/mismatched MIME",
+      "status": "PASS",
+      "detail": {
+        "pngBytes": 104,
+        "noAttachmentCopy": true
+      }
+    },
+    {
+      "name": "real pairing routes approve exact loopback origin and consume ephemeral token once",
+      "status": "PASS",
+      "detail": {
+        "approved": true,
+        "oneTime": true,
+        "realSocket": true
+      }
+    },
+    {
+      "name": "wrong token fails without asset write",
+      "status": "PASS"
+    },
+    {
+      "name": "production Host RPC public download -> real decoder -> same assets list/preview",
+      "status": "PASS",
+      "detail": {
+        "receipt": {
+          "status": "saved",
+          "assetId": "ast_7f99b898",
+          "fileId": "fil_15f18a11",
+          "lrev": 2
+        },
+        "event": {
+          "type": "omnimux:assets:changed",
+          "payload": {
+            "lrev": 2,
+            "arev": 0,
+            "op": "create",
+            "ids": [
+              "ast_7f99b898"
+            ],
+            "assetType": "custom",
+            "at": 1791047154297
+          }
+        },
+        "listCount": 1
+      }
+    },
+    {
+      "name": "authenticated Host rejects private URL and extra path before persistence",
+      "status": "PASS"
+    },
+    {
+      "name": "actual adapter decoder refuses corrupt PNG, mismatched MIME and octet-stream; state unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "same source concurrent and fragment repeat preserve file/ledger/revision/event",
+      "status": "PASS",
+      "detail": {
+        "requests": 8,
+        "assetsDelta": 1,
+        "revisionDelta": 1
+      }
+    },
+    {
+      "name": "different source same title sequential succeeds without overwrite",
+      "status": "PASS"
+    },
+    {
+      "name": "different source same title concurrent cannot duplicate handles",
+      "status": "PASS",
+      "detail": {
+        "outcomes": [
+          {
+            "status": "saved",
+            "assetId": "ast_2b5bbde4",
+            "fileId": "fil_80059797",
+            "lrev": 7
+          },
+          {
+            "status": "saved",
+            "assetId": "ast_e9724131",
+            "fileId": "fil_0a4d5ada",
+            "lrev": 6
+          }
+        ],
+        "names": [
+          "race title (2)",
+          "race title"
+        ]
+      }
+    },
+    {
+      "name": "40-char title repeated save remains usable",
+      "status": "PASS",
+      "detail": {
+        "a": {
+          "status": "saved",
+          "assetId": "ast_51d3f248",
+          "fileId": "fil_ed44f2d7",
+          "lrev": 8
+        },
+        "b": {
+          "status": "saved",
+          "assetId": "ast_0f606ec0",
+          "fileId": "fil_873bc467",
+          "lrev": 9
+        }
+      }
+    },
+    {
+      "name": "missing-file duplicate does not delete existing record when subsequent persistence fails",
+      "status": "PASS"
+    },
+    {
+      "name": "symlink stage root rejected without writing outside vault",
+      "status": "PASS"
+    },
+    {
+      "name": "filesystem persistence failure leaves list/revision/ledger/files unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "second isolated profile remains empty; first active service retains original home",
+      "status": "PASS"
+    },
+    {
+      "name": "service missing then real assets mounted later resolves dynamically",
+      "status": "PASS"
+    },
+    {
+      "name": "real attachments mounted after browser become available for save",
+      "status": "PASS"
+    },
+    {
+      "name": "assets dispose and remount reconstructs durable list/preview through same plugin",
+      "status": "PASS"
+    }
+  ]
+}

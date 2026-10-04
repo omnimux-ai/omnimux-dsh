@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser
+
+ ✓ tests/image-assets-v1.spec.ts (50 tests | 48 skipped) 5ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 48 skipped (50)
+   Start at  00:42:59
+   Duration  125ms (transform 35ms, setup 15ms, import 30ms, tests 5ms, environment 0ms)
+

@@ -1,0 +1,126 @@
+
+ RUN  v4.1.11 /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error UNSUPPORTED_IMAGE_TYPE to unsupported-image
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'UNSUPPORTED_IMAGE_TYPE'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error INVALID_IMAGE to unsupported-image
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'INVALID_IMAGE'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error IMAGE_TYPE_MISMATCH to mime-mismatch
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'IMAGE_TYPE_MISMATCH'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error IMAGE_TOO_LARGE to too-large
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'IMAGE_TOO_LARGE'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error IMAGE_TOO_MANY_PIXELS to too-large
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'IMAGE_TOO_MANY_PIXELS'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error IMAGE_DIMENSION_TOO_LARGE to too-large
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'IMAGE_DIMENSION_TOO_LARGE'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error ATTACHMENT_CORRUPT to unavailable
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'ATTACHMENT_CORRUPT'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest failed after validation Error: disk gone
+    at Object.<anonymous> (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:241:79)
+    at Object.Mock [as ingestDownloadedImage] (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runIngest (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:227:51)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:302:24)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:240:22
+    at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt { status: 'saved', assetId: '', fileId: 'fil_1', lrev: 1 }
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt { status: 'saved', assetId: 'ast_1', fileId: 'fil_1', lrev: -1 }
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt { status: 'unknown', assetId: 'ast_1', fileId: 'fil_1', lrev: 1 }
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt {}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt null
+
+stderr | tests/image-assets-v1.spec.ts > fetchMediaBytes · 外部取消信号 > distinguishes the caller abort from the own timeout budget
+[omnimux-browser] media fetch failed DOMException [AbortError]: This operation was aborted
+    at new DOMException (node:internal/per_context/domexception:76:18)
+    at AbortController.abort (node:internal/abort_controller:506:18)
+    at onExternalAbort (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/media-fetch.ts:176:52)
+    at fetchMediaBytes (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/media-fetch.ts:177:26)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:321:27
+    at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+    at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26
+    at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)
+
+ ✓ tests/image-assets-v1.spec.ts (48 tests) 20ms
+ ✓ tests/image-assets-rpc-v1.spec.ts (14 tests) 350ms
+
+ Test Files  2 passed (2)
+      Tests  62 passed (62)
+   Start at  00:40:54
+   Duration  500ms (transform 94ms, setup 33ms, import 96ms, tests 370ms, environment 0ms)
+

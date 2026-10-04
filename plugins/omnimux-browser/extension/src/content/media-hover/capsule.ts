@@ -20,6 +20,7 @@
 
 import { CAPSULE_SPEC } from './messages.ts'
 import { ICON_BY_ACTION, STATE_ICON, svgIcon, type CapsuleIcon } from './overlay-icons.ts'
+import { resolveSaveIntent, type SaveIntent } from './save-intent.ts'
 import type { CapsuleActionEvent, HoveredMedia, MediaActionKind, OverlayState } from './types.ts'
 import type { HoverCopy } from './copy.ts'
 
@@ -33,11 +34,11 @@ export type CapsuleStage = 'collapsed' | 'expanded'
 type IconState = 'idle' | 'busy' | 'done' | 'saved' | 'error'
 
 /** Resolves the icon a slot shows for the current overlay state. */
-function iconFor(action: MediaActionKind, state: IconState): CapsuleIcon {
-  if (action === 'inspiration' && state === 'saved') return 'star'
-  if (state === 'done') return STATE_ICON.done
+function iconFor(action: MediaActionKind, state: IconState, primaryIcon: CapsuleIcon): CapsuleIcon {
+  if (action === 'inspiration' && state === 'saved' && primaryIcon === 'bulb') return 'star'
+  if (state === 'done' || (state === 'saved' && primaryIcon !== 'bulb')) return STATE_ICON.done
   if (state === 'busy') return STATE_ICON.busy
-  if (state === 'error') return ICON_BY_ACTION[action]
+  if (action === 'inspiration') return primaryIcon
   return ICON_BY_ACTION[action]
 }
 
@@ -58,6 +59,12 @@ export class MediaCapsule {
   /** The stage-two wrapper holding the three action slots. */
   private readonly actions: HTMLDivElement
   private readonly hints: HoverCopy
+  /**
+   * The save destination the primary slot currently advertises. Re-derived on
+   * every `render`, so a recycled media card can never leave a stale asset
+   * glyph on a video payload or the other way round.
+   */
+  private saveIntent: SaveIntent = 'video-inspiration'
   private state: OverlayState = {
     phase: 'idle',
     activeId: '',
@@ -117,6 +124,7 @@ export class MediaCapsule {
   render(payload: HoveredMedia): void {
     this.element.setAttribute('data-media-id', payload.id)
     this.element.setAttribute('data-media-kind', payload.type)
+    this.saveIntent = resolveSaveIntent(payload)
     this.state = {
       phase: 'shown',
       activeId: payload.id,
@@ -265,22 +273,65 @@ export class MediaCapsule {
   }
 
   private paint(): void {
+    const primaryIcon = this.primaryIcon()
     for (const action of ACTION_ORDER) {
       const button = this.buttons.get(action)
       if (button === null || button === undefined) continue
       const iconState = this.iconState(action)
-      const markup = svgIcon(iconFor(action, iconState), CAPSULE_SPEC.iconGlyphSize)
+      const icon = iconFor(action, iconState, primaryIcon)
+      const markup = svgIcon(icon, CAPSULE_SPEC.iconGlyphSize)
       if (button.innerHTML !== markup) button.innerHTML = markup
+      button.setAttribute('data-icon', icon)
       button.classList.toggle('is-saved', iconState === 'saved')
       button.classList.toggle('is-done', iconState === 'done')
       button.classList.toggle('is-busy', iconState === 'busy' || this.state.busyAction === action)
       button.classList.toggle('is-error', iconState === 'error')
       button.setAttribute('aria-pressed', action === 'inspiration' ? String(this.state.saved) : 'false')
+      button.setAttribute('aria-busy', String(this.state.busyAction === action))
+      const label = this.labelFor(action)
+      button.setAttribute('aria-label', label)
+      // UI-Spec §3.1: the image primary slot's title, aria-label and tooltip
+      // share the one verbatim string per state; §2 *.primary.unknown gives
+      // the unresolvable slot the typeUnknown line on the same channels.
+      // Other slots keep the baseline tooltip-only channel.
+      if (action === 'inspiration' && (this.saveIntent === 'image-asset' || this.saveIntent === 'unknown')) {
+        button.setAttribute('title', label)
+      } else {
+        button.removeAttribute('title')
+      }
     }
   }
 
+  /** The glyph the primary slot rests on for the current save intent. */
+  private primaryIcon(): CapsuleIcon {
+    return this.saveIntent === 'image-asset' ? 'asset' : 'bulb'
+  }
+
+  /**
+   * The accessible name a slot advertises right now.
+   *
+   * Copy and chat keep their frozen action names; the primary slot is
+   * intent-aware: image copy comes from the UI-spec matrix (idle / busy /
+   * done), while video and unresolvable types keep the baseline label so
+   * nothing claims an asset save it cannot perform.
+   */
+  private labelFor(action: MediaActionKind): string {
+    if (action !== 'inspiration') return this.hints.action[action]
+    if (this.saveIntent === 'image-asset') {
+      if (this.state.busyAction === action) return this.hints.image.busy
+      if (this.state.saved) return this.hints.image.done
+      return this.hints.image.idle
+    }
+    // The unresolvable type must not borrow the inspiration name: UI-Spec §2
+    // freezes title, aria-label and tooltip on typeUnknown for this slot.
+    if (this.saveIntent === 'unknown') return this.hints.image.typeUnknown
+    return this.hints.action[action]
+  }
+
   private iconState(action: MediaActionKind): IconState {
-    if (this.state.busyAction !== null && this.state.busyAction !== action) return 'busy'
+    // Only the slot whose request is actually in flight is busy: UI-Spec §3.1
+    // keeps copy and attach live while the image save runs.
+    if (this.state.busyAction === action) return 'busy'
     if (action === 'inspiration' && this.state.saved) return 'saved'
     if (action === 'copy' && this.state.copied) return 'done'
     if (action === 'attach' && this.state.attached) return 'done'

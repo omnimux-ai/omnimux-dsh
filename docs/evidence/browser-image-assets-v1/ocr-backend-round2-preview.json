@@ -1,0 +1,345 @@
+{
+  "files": [
+    {
+      "path": "CONTEXT.md",
+      "status": "modified",
+      "insertions": 11,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/index.js",
+      "status": "modified",
+      "insertions": 28,
+      "deletions": 0,
+      "will_review": true
+    },
+    {
+      "path": "plugins/omnimux-assets/src/library.js",
+      "status": "modified",
+      "insertions": 12,
+      "deletions": 1,
+      "will_review": true
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/background/index.ts",
+      "status": "modified",
+      "insertions": 62,
+      "deletions": 2,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/content/media-hover/actions.ts",
+      "status": "modified",
+      "insertions": 81,
+      "deletions": 2,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/content/media-hover/capsule.ts",
+      "status": "modified",
+      "insertions": 53,
+      "deletions": 6,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/content/media-hover/copy.ts",
+      "status": "modified",
+      "insertions": 56,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/content/media-hover/messages.ts",
+      "status": "modified",
+      "insertions": 6,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/content/media-hover/overlay-icons.ts",
+      "status": "modified",
+      "insertions": 23,
+      "deletions": 2,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/content/media-hover/overlay.ts",
+      "status": "modified",
+      "insertions": 92,
+      "deletions": 5,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/index.ts",
+      "status": "modified",
+      "insertions": 11,
+      "deletions": 0,
+      "will_review": true
+    },
+    {
+      "path": "plugins/omnimux-browser/src/media-fetch.ts",
+      "status": "modified",
+      "insertions": 51,
+      "deletions": 7,
+      "will_review": true
+    },
+    {
+      "path": "plugins/omnimux-browser/src/protocol.ts",
+      "status": "modified",
+      "insertions": 94,
+      "deletions": 0,
+      "will_review": true
+    },
+    {
+      "path": "plugins/omnimux-browser/src/server.ts",
+      "status": "modified",
+      "insertions": 50,
+      "deletions": 0,
+      "will_review": true
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-plan-notes.md",
+      "status": "added",
+      "insertions": 193,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v1-backend-fixes.md",
+      "status": "added",
+      "insertions": 57,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v1-backend-report.md",
+      "status": "added",
+      "insertions": 100,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v1-frontend-report.md",
+      "status": "added",
+      "insertions": 84,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v1-logs/assets-green.txt",
+      "status": "added",
+      "insertions": 23,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v1-logs/assets-red.txt",
+      "status": "added",
+      "insertions": 23,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v1-logs/assets-regression.txt",
+      "status": "added",
+      "insertions": 10,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v1-logs/browser-new-specs.txt",
+      "status": "added",
+      "insertions": 37,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v1-ticket.md",
+      "status": "added",
+      "insertions": 40,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-v2-ticket.md",
+      "status": "added",
+      "insertions": 38,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/implementation/browser-image-assets-wire-contract.md",
+      "status": "added",
+      "insertions": 36,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/product/browser-image-assets/PM_PREFLIGHT.md",
+      "status": "added",
+      "insertions": 120,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/product/browser-image-assets/PRD.md",
+      "status": "added",
+      "insertions": 122,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/product/browser-image-assets/Plan.md",
+      "status": "added",
+      "insertions": 79,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/product/browser-image-assets/Prototype.md",
+      "status": "added",
+      "insertions": 98,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/product/browser-image-assets/UI-Spec.md",
+      "status": "added",
+      "insertions": 146,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/qa/browser-image-assets-v1-ocr.md",
+      "status": "added",
+      "insertions": 140,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "docs/qa/browser-image-assets-v1-qa.md",
+      "status": "added",
+      "insertions": 146,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest-v1.test.js",
+      "status": "added",
+      "insertions": 379,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "default_path"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "status": "added",
+      "insertions": 392,
+      "deletions": 0,
+      "will_review": true
+    },
+    {
+      "path": "plugins/omnimux-assets/src/library-image-transaction-v1.test.js",
+      "status": "added",
+      "insertions": 142,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "default_path"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/background/save-image-assets.ts",
+      "status": "added",
+      "insertions": 167,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/src/content/media-hover/save-intent.ts",
+      "status": "added",
+      "insertions": 43,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/tests/image-assets-background-v1.spec.ts",
+      "status": "added",
+      "insertions": 515,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/extension/tests/image-assets-capsule-v1.spec.ts",
+      "status": "added",
+      "insertions": 539,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/image-assets.ts",
+      "status": "added",
+      "insertions": 322,
+      "deletions": 0,
+      "will_review": true
+    },
+    {
+      "path": "plugins/omnimux-browser/tests/image-assets-rpc-v1.spec.ts",
+      "status": "added",
+      "insertions": 256,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "default_path"
+    },
+    {
+      "path": "plugins/omnimux-browser/tests/image-assets-v1.spec.ts",
+      "status": "added",
+      "insertions": 395,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "default_path"
+    },
+    {
+      "path": "specs/browser-image-assets.spec.md",
+      "status": "added",
+      "insertions": 84,
+      "deletions": 0,
+      "will_review": false,
+      "exclude_reason": "user_exclude"
+    }
+  ],
+  "total_insertions": 5356,
+  "total_deletions": 25,
+  "total_files": 43,
+  "reviewable_count": 8,
+  "excluded_count": 35
+}

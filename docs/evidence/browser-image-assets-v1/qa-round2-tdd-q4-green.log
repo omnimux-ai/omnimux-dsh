@@ -1,0 +1,13 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✔ displayName 缺失/非法/超长时回退到产品默认名「网页图片」并截断 40 字 (9.831875ms)
+  ✔ sanitizeDisplayName 清真实控制字符但保留普通连字符（QA #3052 Q4） (2.723292ms)
+  ✔ 40 字名称重名时为递增后缀预留长度，第二来源仍可保存（QA #3052 Q4） (4.637667ms)
+✔ ingestDownloadedImage · 真实入库（#3052） (17.778917ms)
+ℹ tests 3
+ℹ suites 1
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 66.352

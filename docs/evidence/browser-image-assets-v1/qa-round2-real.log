@@ -1,0 +1,84 @@
+(node:75590) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS real Cordis assets apply publishes registered active service {"serviceType":"service","cordis":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+cordis@4.0.2_@deepseek-ai+cordis-plugin-include@1.0.7_@deepseek-ai+cordis-plugin-loader@1.0.3/node_modules/@deepseek-ai/cordis/lib/index.js","validator":"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js"}
+PASS actual raster decoder accepts complete PNG and refuses header-only/mismatched MIME {"pngBytes":104,"noAttachmentCopy":true}
+PASS real pairing routes approve exact loopback origin and consume ephemeral token once {"approved":true,"oneTime":true,"realSocket":true}
+PASS wrong token fails without asset write {}
+PASS production Host RPC public download -> real decoder -> same assets list/preview {"receipt":{"status":"saved","assetId":"ast_7f99b898","fileId":"fil_15f18a11","lrev":2},"event":{"type":"omnimux:assets:changed","payload":{"lrev":2,"arev":0,"op":"create","ids":["ast_7f99b898"],"assetType":"custom","at":1791047154297}},"listCount":1}
+PASS authenticated Host rejects private URL and extra path before persistence {}
+[omnimux-browser] image validation refused the downloaded bytes AttachmentError: Unsupported or malformed image data.
+    at detectImage (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:192:9)
+    at async inspectMetadata (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:294:19)
+    at async prepareImageFile (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:322:19)
+    at async validateImageFile (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:311:2) {
+  code: 'INVALID_IMAGE',
+  [cause]: Error: Input buffer has corrupt header:
+      at Sharp.metadata (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/sharp@0.35.5_@types+node@25.9.5/node_modules/sharp/dist/input.mjs:651:17)
+      at imageMetadata (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:139:31)
+      at detectImage (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:185:26)
+      at inspectMetadata (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:294:25)
+      at prepareImageFile (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:322:25)
+      at validateImageFile (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:311:8)
+      at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:1011:36
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+}
+[omnimux-browser] image validation refused the downloaded bytes AttachmentError: Declared image type does not match its bytes.
+    at inspectMetadata (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:298:54)
+    at async prepareImageFile (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:322:19)
+    at async validateImageFile (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@deepseek-ai+dsh-attachment-local@0.1.5-rc.3_@deepseek-ai+cordis@4.0.2_@deepseek-ai+dsh_96da0adbd6db350d9d0903981049a27f/node_modules/@deepseek-ai/dsh-attachment-local/lib/index.js:311:2) {
+  code: 'IMAGE_TYPE_MISMATCH'
+}
+PASS actual adapter decoder refuses corrupt PNG, mismatched MIME and octet-stream; state unchanged {}
+PASS same source concurrent and fragment repeat preserve file/ledger/revision/event {"requests":8,"assetsDelta":1,"revisionDelta":1}
+PASS different source same title sequential succeeds without overwrite {}
+OBSERVATION concurrent-name {"outcomes":[{"status":"saved","assetId":"ast_2b5bbde4","fileId":"fil_80059797","lrev":7},{"status":"saved","assetId":"ast_e9724131","fileId":"fil_0a4d5ada","lrev":6}],"names":["race title (2)","race title"]}
+PASS different source same title concurrent cannot duplicate handles {"outcomes":[{"status":"saved","assetId":"ast_2b5bbde4","fileId":"fil_80059797","lrev":7},{"status":"saved","assetId":"ast_e9724131","fileId":"fil_0a4d5ada","lrev":6}],"names":["race title (2)","race title"]}
+PASS 40-char title repeated save remains usable {"a":{"status":"saved","assetId":"ast_51d3f248","fileId":"fil_ed44f2d7","lrev":8},"b":{"status":"saved","assetId":"ast_0f606ec0","fileId":"fil_873bc467","lrev":9}}
+[omnimux-browser] asset ingest failed after validation Error: EISDIR: illegal operation on a directory, rename '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real-run-gEApKh/home-A/omnimux/assets/library.json.tmp' -> '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real-run-gEApKh/home-A/omnimux/assets/library.json'
+    at Object.renameSync (node:fs:1008:11)
+    at atomicWrite (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library.js:50:6)
+    at persist (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library.js:338:5)
+    at Object.add (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library.js:556:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -21,
+  code: 'EISDIR',
+  syscall: 'rename',
+  path: '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real-run-gEApKh/home-A/omnimux/assets/library.json.tmp',
+  dest: '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real-run-gEApKh/home-A/omnimux/assets/library.json'
+}
+OBSERVATION stale-rollback {"receipt":{"status":"storage-failed"},"id":"ast_e625622a","beforeRevision":10,"afterRevision":10,"recordRemains":true}
+PASS missing-file duplicate does not delete existing record when subsequent persistence fails {}
+[omnimux-browser] asset ingest failed after validation AssetsError: staging root must be a real directory inside the vault
+    at realStagingRoot (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest.js:156:13)
+    at runSave (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest.js:272:5)
+    at Object.ingestDownloadedImage (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest.js:383:17)
+    at Object.ingestDownloadedImage (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/index.js:181:53)
+    at runIngest (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:227:51)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:302:24)
+    at async file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real.mjs:69:484
+    at async check (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real.mjs:24:48)
+    at async file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real.mjs:69:1 {
+  code: 'path-denied'
+}
+OBSERVATION symlink-stage {"out":{"status":"storage-failed"},"externalEntries":["old-slice"],"stageStillExists":true}
+PASS symlink stage root rejected without writing outside vault {}
+[omnimux-browser] asset ingest failed after validation Error: EISDIR: illegal operation on a directory, rename '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real-run-gEApKh/home-A/omnimux/assets/library.json.tmp' -> '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real-run-gEApKh/home-A/omnimux/assets/library.json'
+    at Object.renameSync (node:fs:1008:11)
+    at atomicWrite (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library.js:50:6)
+    at persist (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library.js:338:5)
+    at Object.add (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library.js:556:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -21,
+  code: 'EISDIR',
+  syscall: 'rename',
+  path: '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real-run-gEApKh/home-A/omnimux/assets/library.json.tmp',
+  dest: '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/.tmp/qa3052-real-run-gEApKh/home-A/omnimux/assets/library.json'
+}
+PASS filesystem persistence failure leaves list/revision/ledger/files unchanged {}
+PASS second isolated profile remains empty; first active service retains original home {}
+PASS service missing then real assets mounted later resolves dynamically {}
+OBSERVATION late-attachments {"serviceExists":true,"outcome":{"status":"invalid-url"}}
+PASS real attachments mounted after browser become available for save {}
+PASS assets dispose and remount reconstructs durable list/preview through same plugin {}
+SUMMARY {"PASS":18}
+REAL_EXIT=0

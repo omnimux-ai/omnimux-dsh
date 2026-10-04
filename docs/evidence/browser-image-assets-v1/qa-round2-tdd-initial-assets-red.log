@@ -1,0 +1,78 @@
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest.js' imported from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest-v1.test.js
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:861:10)
+    at defaultResolve (node:internal/modules/esm/resolve:988:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:697:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:714:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:746:52)
+    at #resolve (node:internal/modules/esm/loader:679:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:599:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33)
+    at ModuleJob.link (node:internal/modules/esm/module_job:245:17) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest.js'
+}
+
+Node.js v25.8.0
+✖ plugins/omnimux-assets/src/image-ingest-v1.test.js (51.279167ms)
+▶ LibraryStore add() 持久化失败一致性（#3052）
+  ✖ persist 失败不残留可列表的幽灵资产、不抬 revision、回收已复制文件 (8.159667ms)
+  ✖ 一次 persist 失败不影响既有资产，下一次提交仍成功 (10.385833ms)
+  ✔ persist 失败前的既有记录原样保留（revision 不前进也不损坏账本） (4.717375ms)
+✖ LibraryStore add() 持久化失败一致性（#3052） (23.93275ms)
+ℹ tests 4
+ℹ suites 1
+ℹ pass 1
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 83.129292
+
+✖ failing tests:
+
+test at plugins/omnimux-assets/src/image-ingest-v1.test.js:1:1
+✖ plugins/omnimux-assets/src/image-ingest-v1.test.js (51.279167ms)
+  'test failed'
+
+test at plugins/omnimux-assets/src/library-image-transaction-v1.test.js:81:3
+✖ persist 失败不残留可列表的幽灵资产、不抬 revision、回收已复制文件 (8.159667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library-image-transaction-v1.test.js:87:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1619:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at plugins/omnimux-assets/src/library-image-transaction-v1.test.js:102:3
+✖ 一次 persist 失败不影响既有资产，下一次提交仍成功 (10.385833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/library-image-transaction-v1.test.js:118:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

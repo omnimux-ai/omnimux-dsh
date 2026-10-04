@@ -1,0 +1,23 @@
+# RED 日志（真实记录，保留失败事实）
+# 命令: node --test plugins/omnimux-assets/src/library-image-transaction-v1.test.js plugins/omnimux-assets/src/image-ingest-v1.test.js
+# 真实退出码 REAL_EXIT=1
+# 原始文件: /tmp/3052-assets-red.log
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../plugins/omnimux-assets/src/image-ingest.js' imported from '.../plugins/omnimux-assets/src/image-ingest-v1.test.js'
+  code: 'ERR_MODULE_NOT_FOUND'
+
+✖ plugins/omnimux-assets/src/image-ingest-v1.test.js (51.279167ms)
+▶ LibraryStore add() 持久化失败一致性（#3052）
+  ✖ persist 失败不残留可列表的幽灵资产、不抬 revision、回收已复制文件 (8.159667ms)
+  ✖ 一次 persist 失败不影响既有资产，下一次提交仍成功 (10.385833ms)
+  ✔ persist 失败前的既有记录原样保留（revision 不前进也不损坏账本） (4.717375ms)
+✖ LibraryStore add() 持久化失败一致性（#3052） (23.93275ms)
+ℹ tests 4
+ℹ pass 1
+ℹ fail 3
+
+关键失败证据（修复前幽灵资产实证）：
+✖ persist 失败不残留可列表的幽灵资产、不抬 revision、回收已复制文件
+  AssertionError: 1 !== 0  —— add() 的 persist 失败后，store.list() 仍列出该资产（幽灵资产）
+✖ 一次 persist 失败不影响既有资产，下一次提交仍成功
+  AssertionError: 2 !== 1 —— 失败的 add() 把 revision 推进到 2，账本却只有 1
