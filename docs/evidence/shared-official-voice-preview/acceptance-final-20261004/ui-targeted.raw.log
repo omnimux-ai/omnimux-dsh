@@ -1,0 +1,57 @@
+Error: ElementResolutionError: page.click timed out after 3000ms: page.click failed: element is not connected
+    at #retryElementAction (file:////[eval1]:18884:27)
+    at async file:////[eval1]:18968:29
+    at async file:////[eval1]:16691:28
+    at file:////[eval2]:19:339
+{ status: 'FAIL', checks: 1, fail: [], menus: [], shots: [ '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/light-1280x800-single-current.png', '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/dark-1280x800-single-current.png' ] }
+[p1 "Issue 3058 canvas QA" | space "3058 acceptance 20261004 authorized restart of task space"(2): 1 managed, 0 untracked — p1* "Issue 3058 canvas QA"]
+root
+  container
+    application
+      svg_root
+      anchor "React Flow attribution" [ref=155, loc=css:a[aria-label="React Flow attribution"], url=https://reactflow.dev/attribution]
+        text "React Flow"
+    container
+      svg_root
+      text "创作页 1"
+      svg_root
+    container
+      container
+        button [ref=156]
+          svg_root
+        button [ref=157]
+          svg_root
+        container
+          text "100"
+          text "%"
+        button [ref=158]
+          svg_root
+      container
+        button [ref=159]
+          svg_root
+        button [ref=160]
+          svg_root
+    container
+      button [ref=161]
+        svg_root
+      button [ref=162]
+        svg_root
+      button [ref=163]
+        svg_root
+        svg_root
+      button [ref=164]
+        svg_root
+      button [ref=165]
+        svg_root
+  dialog "OmniMux工作台"
+    iframe
+      root
+        toolbar "OmniMux"
+          button "OmniMux" [ref=166]
+            svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=167]
+      svg_root
+
+
+ego's nodejs process exited with code 1.

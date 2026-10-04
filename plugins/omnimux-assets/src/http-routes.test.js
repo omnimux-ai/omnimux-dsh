@@ -1182,6 +1182,58 @@ describe('Cloud save route', () => {
     assert.equal(library.list().length, 2)
     assert.equal(stagedCount(), 0, '两次保存都结束后暂存区不得留下残片')
   })
+
+  it('answers a preview-only voice row with 403 before any fetch, write, or staging sweep (#3058)', async () => {
+    let fetches = 0
+    const catalogDir = join(root, 'catalog')
+    mkdirSync(catalogDir, { recursive: true })
+    writeFileSync(join(catalogDir, 'manifest.json'), JSON.stringify({
+      version: 1, pageSize: 24, totalAssets: 1, sourceRoot: '',
+      categories: [{ id: 'audio', zh: '声音', en: 'Audio', total: 1, pages: 1 }],
+    }))
+    writeFileSync(join(catalogDir, 'index.json'), JSON.stringify([{
+      id: 'audio-voiceover-preview',
+      category: 'audio',
+      sub_category: 'voiceover',
+      name: '林潇',
+      description: '火山引擎官方音色',
+      media_type: 'audio',
+      media_url: 'https://cdn.example.com/voices/linxiao.mp3',
+      cover_url: '',
+      tags: ['火山引擎'],
+      meta: {
+        source: 'volcengine',
+        voice_type: 'saturn_zh_female_linxiao_tob',
+        playable: true,
+        preview: {
+          purpose: 'official-voice-preview',
+          state: 'verified-file',
+          primary_url: 'https://cdn.example.com/voices/linxiao.mp3',
+          candidates: [],
+          checked_at: '2026-10-02T00:00:00.000Z',
+          evidence_ref: 'audit#124',
+        },
+      },
+    }]))
+    const { mappings, artifacts, library } = makeDispatcher()
+    const cloud = createCloudCatalog({
+      catalogDir,
+      library,
+      fetchImpl: async () => { fetches += 1; return remoteOkResponse('x') },
+    })
+    let sweeps = 0
+    const originalClear = cloud.clearStaging
+    cloud.clearStaging = (...args) => { sweeps += 1; return originalClear(...args) }
+    const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud })
+
+    const response = await dispatcher.dispatch(post('/omnimux/assets/cloud/save', { id: 'audio-voiceover-preview' }))
+    assert.equal(response.status, 403)
+    assert.equal(response.body.error, 'voice-preview-only')
+    assert.equal(fetches, 0, '用途拒绝不得发出任何网络请求')
+    assert.equal(stagedCount(), 0, '用途拒绝不得产生暂存文件')
+    assert.equal(sweeps, 0, '用途拒绝后路由 finally 不得继续清理暂存区')
+    assert.equal(library.list().length, 0, 'preview-only 行不得入库')
+  })
 })
 
 /** @param {{ status: number, contentType: string, text: string, body: unknown }} response @param {string} original */

@@ -214,6 +214,8 @@ export function buildModelCatalog(opts = {}) {
       ]),
     }),
     contractFingerprint: index.contentFingerprint,
+    /** Raw sha256 of the official voice preview mapping from the same loaded snapshot. */
+    preview_fingerprint: index.previewFingerprint,
     models: dto.models,
     defaults,
     defaultsByOperation: dto.defaultsByOperation,

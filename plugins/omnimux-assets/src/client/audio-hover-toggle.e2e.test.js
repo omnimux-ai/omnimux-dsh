@@ -163,3 +163,117 @@ test('CloudAssetCard audio: explicit click owns the card until pointer leaves (#
 
   await act(async () => { root.unmount() })
 })
+
+/**
+ * Issue #3058 sol-spec medium：普通音频「悬停试听 → 按下保存/会话 → 移出」。
+ * 修复前缺陷链路：卡根 onMouseDown 无差别标记 userControlled，保存/会话按钮的
+ * mousedown 也命中同一标记 → mouseleave 那次渲染的悬停副作用被 userControlled
+ * 拦下 → 自动试听在移出后继续播放（违反「背景音乐/音效/普通素材不变」规格）。
+ *
+ * 核定语义：接管标记只属于两类动作——详情入口（卡体按下 / 键盘激活，即会打开
+ * 预览的那次按下）与播放键显式动作。动作簇（保存/会话）的按下不算接管，
+ * 移出照旧停掉悬停试听；详情按下仍先标记，保证 audition.stop 后悬停不复活。
+ */
+test('CloudAssetCard audio: save/chat press does not own the card; detail press still marks (#3058)', async () => {
+  const window = installDom()
+  const React = pluginRequire('react')
+  const { createRoot } = pluginRequire('react-dom/client')
+  const CloudAssetCard = await loadCard()
+  const { act } = React
+
+  const calls = []
+  const asset = {
+    id: 'audio-bgm-test-2',
+    name: 'loop bed',
+    description: '环境底噪 · 0:30',
+    mediaType: 'audio',
+    hasMedia: true,
+    hasCover: false,
+    playable: true,
+    category: 'audio',
+  }
+
+  let playing = false
+  const container = window.document.getElementById('root')
+  const root = createRoot(container)
+  const element = () => React.createElement(CloudAssetCard, {
+    asset,
+    t: (key) => key,
+    playing,
+    onTogglePlay: () => { calls.push('toggle') },
+    onPreview: () => {},
+    onSave: () => {},
+  })
+  const render = () => act(async () => { root.render(element()) })
+  const fire = (node, type) => act(async () => {
+    node.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true }))
+  })
+
+  await render()
+  const card = container.querySelector('.omnimux-assets-cloud-card')
+  const body = container.querySelector('.omnimux-assets-card-body')
+  const saveBtn = container.querySelector('.omnimux-assets-cloud-save')
+  const chatBtn = container.querySelector('.omnimux-assets-cloud-chat')
+  assert.ok(card && body && saveBtn && chatBtn, 'card, body and both action buttons rendered')
+  assert.equal(card.querySelectorAll('button').length, 2, 'exactly the save and chat buttons sit in the cluster')
+
+  // 1) 悬停自动开始试听
+  await fire(card, 'mouseover')
+  assert.equal(calls.length, 1, 'hover auto-starts audition')
+  playing = true
+  await render()
+
+  // 2) 悬停中按下保存钮：动作簇的 mousedown 不得把卡片标记为已接管，
+  //    随后移出指针时悬停试听必须照常停止（修复前此处不产生 toggle → 缺陷）。
+  await fire(saveBtn, 'mousedown')
+  await fire(saveBtn, 'click')
+  await fire(card, 'mouseout')
+  assert.equal(calls.length, 2, 'mouseleave after save press must stop the hover audition')
+  playing = false
+  await render()
+
+  // 3) 再次进入恢复自动试听；会话钮按下同样不接管，移出照旧停止。
+  calls.length = 0
+  await fire(card, 'mouseover')
+  assert.equal(calls.length, 1, 'fresh hover resumes auto audition')
+  playing = true
+  await render()
+  await fire(chatBtn, 'mousedown')
+  await fire(chatBtn, 'click')
+  await fire(card, 'mouseout')
+  assert.equal(calls.length, 2, 'mouseleave after chat press must stop the hover audition')
+  playing = false
+  await render()
+
+  // 4) 会话钮上的键盘按下也不算接管（Enter 激活按钮而非打开详情）。
+  calls.length = 0
+  await fire(card, 'mouseover')
+  assert.equal(calls.length, 1, 'hover restarts once more')
+  playing = true
+  await render()
+  await act(async () => {
+    chatBtn.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+  })
+  await fire(card, 'mouseout')
+  assert.equal(calls.length, 2, 'mouseleave after chat keydown must stop the hover audition')
+  playing = false
+  await render()
+
+  // 5) 反向语义保留：详情入口（卡体）按下仍先接管——audition.stop 把 playing
+  //    翻回 false 后，悬停副作用不得把试听复活（F4 不退化）。
+  calls.length = 0
+  await fire(card, 'mouseover')
+  assert.equal(calls.length, 1, 'hover auto-starts before detail press')
+  playing = true
+  await render()
+  await fire(body, 'mousedown')
+  await fire(body, 'click')
+  calls.length = 0
+  playing = false // 详情打开前视图层 stop 掉试听
+  await render()
+  assert.equal(calls.length, 0, 'detail press keeps the card marked: hover must not resurrect after stop')
+  await fire(card, 'mouseout')
+  assert.equal(calls.length, 0, 'leaving after a detail press adds no toggle')
+
+  await act(async () => { root.unmount() })
+})

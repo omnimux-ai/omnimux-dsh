@@ -56,3 +56,16 @@ _Avoid_: Collected image
 **Asset save（加入资产库）**: A completed save of reusable material into the user's asset library. An extension-only record or inspiration entry is not an asset save.
 
 **Inspiration save（加入灵感库）**: A save of a creative reference into the inspiration library; video works retain this destination.
+
+## Official voice preview language
+
+**Voice identity（音色身份）**: The provider's stable voice identifier used to select a synthesis voice. A display name or sample filename is not its identity.
+
+**Official voice preview（官方音色试听）**: A provider-hosted sample that demonstrates a voice; it is not a user-generated output, a reusable media asset, or permission to redistribute the sample.
+_Avoid_: Generated speech, cloned voice, local recording
+
+**Verified sample file（已验证样音文件）**: A sample URL whose anonymous response, audio MIME and audio file header were observed at a recorded time. This status does not establish playback in every browser, voice-version identity or redistribution rights.
+
+**Unverified preview（未验证试听）**: A voice with no verified sample URL in the shared mapping. It remains a selectable voice and does not imply the provider has no sample.
+
+**Preview-only（仅试听）**: A sample's permitted product use is audition and viewing its details, not adding media to a conversation or saving it into the asset library.

@@ -69,13 +69,16 @@ export function extractPinyinInitials(input: string): string {
 export function voiceMatchesQuery(option: VoiceCatalogOption, rawQuery: string): boolean {
   const query = rawQuery.trim().toLowerCase().replace(/\s+/g, '');
   if (!query) return true;
+  // 语料与查询同侧空白归一（Issue #3058 QA-R3-FE-03）：
+  // 用户输入完整显示名「林潇 2.0」时 query 已去空格，corpus 必须同步去空格才能命中；
+  // 版本号本身不抹除（'林潇 3.0' 仍不命中 '林潇 2.0'）。
   const meta = option.meta;
   const zhCorpus = meta
-    ? [meta.display_name, meta.name, meta.category, ...meta.tags].join('\n').toLowerCase()
-    : `${option.label}\n${option.value}`.toLowerCase();
+    ? [meta.display_name, meta.name, meta.category, ...meta.tags].join('\n').toLowerCase().replace(/\s+/g, '')
+    : `${option.label}\n${option.value}`.toLowerCase().replace(/\s+/g, '');
   if (zhCorpus.includes(query)) return true;
   // 官方代码原样匹配（含下划线/数字），再走纯字母的拼音全拼与首字母
-  const voiceTypeLower = (meta?.voice_type ?? option.value).toLowerCase();
+  const voiceTypeLower = (meta?.voice_type ?? option.value).toLowerCase().replace(/\s+/g, '');
   if (voiceTypeLower.includes(query)) return true;
   if (!/^[a-z0-9]+$/.test(query)) return false;
   const letters = voiceTypeLower.replace(/[^a-z]/g, '');
@@ -185,71 +188,59 @@ export function resolveVoiceLabel(option: VoiceCatalogOption | undefined): strin
   return option.meta?.display_name || option.label || option.value;
 }
 
-/** 列表项特色行：标签 + 首个场景分类，如「剪映同款 · 角色扮演」 */
+/**
+ * 列表项次级行：仅首个客观场景分类（Issue #3058 白名单 §3.3 canvas.voice.meta）。
+ * 营销 tags（抖音同款/剪映同款/豆包同款）不进入次级行——它们仍参与热门排序与搜索，
+ * 只是不再作为行内文案。
+ */
 export function voiceTagLine(option: VoiceCatalogOption): string {
   const meta = option.meta;
   if (!meta) return '';
-  const segments = [...meta.tags, ...splitLabels(meta.category).slice(0, 1)];
-  return segments.join(' · ');
+  return splitLabels(meta.category).slice(0, 1).join(' · ');
 }
 
-/** 火山引擎大模型官方公开 CDN：预置音色 3~5 秒 MP3 试听样音（已开 CORS） */
-export const VOLCENGINE_SAMPLE_CDN_BASE = 'https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts';
+/** 官方试听 preview DTO 的固定用途（与 hub `meta.preview.purpose` 契约一致）。 */
+export const OFFICIAL_VOICE_PREVIEW_PURPOSE = 'official-voice-preview';
+/** preview.state 中唯一代表「文件探测已通过」的值。 */
+export const OFFICIAL_VOICE_PREVIEW_VERIFIED = 'verified-file';
 
-/** 按 voice_type 生成官方试听样音 URL（向下兼容单个 URL 导出） */
-export function getVoiceSampleUrl(voiceType: string): string {
-  return `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(voiceType)}.mp3`;
+/**
+ * 该音色行是否具备试听资格。
+ * 三件套齐备才可播：preview 用途为 official-voice-preview、state 为 verified-file、
+ * primary_url 非空。不依据 hasMedia、扩展名或名字推导——未验证条目保留行与选择，
+ * 但不渲染播放键。
+ */
+export function isOfficialVoicePreviewPlayable(option: VoiceCatalogOption | undefined): boolean {
+  const preview = option?.meta?.preview;
+  return Boolean(
+    preview
+      && preview.purpose === OFFICIAL_VOICE_PREVIEW_PURPOSE
+      && preview.state === OFFICIAL_VOICE_PREVIEW_VERIFIED
+      && typeof preview.primary_url === 'string'
+      && preview.primary_url !== '',
+  );
 }
 
 /**
- * 计算音色试听候选样音文件名列表（按匹配优先级排序，解决火山官方对英文/别名音色命名差异）：
- * 1. 英文/外语音色（或含英文别名的音色）：如 Charlie 2.0 -> Charlie.mp3、Frosty Man -> Frosty_Man.mp3、爽快思思/Skye -> Skye.mp3
- * 2. 官方标准代号名：voice_type.mp3
- * 3. 中文名（去除斜杠等）：如 解说小明.mp3、枕边低语.mp3
- * 4. 去除 2.0 后缀后的名称
+ * 消费 hub 下发的 preview DTO：primary 置顶，candidates 按序补充，去重且不重发同一 URL。
+ * 前端不拼 URL、不维护别名规则——候选顺序由 hub 唯一决定；DTO 缺失时返回空列表，
+ * 调用方（弹窗播放键）此时已按 isOfficialVoicePreviewPlayable 门控不会走到这里。
  */
-export function getVoiceSampleCandidates(optionOrVoiceType: VoiceCatalogOption | string): string[] {
-  const isString = typeof optionOrVoiceType === 'string';
-  const voiceType = isString ? optionOrVoiceType : optionOrVoiceType.value;
-  const option = isString ? null : optionOrVoiceType;
-  const rawName = option?.meta?.name || '';
-  const displayName = option?.meta?.display_name || option?.label || '';
-
-  const fileNames: string[] = [];
-
-  // 1. 英文名 / 拼写（如 Charlie, Frosty_Man, The_Grinch 等）或带斜杠别名（爽快思思/Skye）
-  if (rawName) {
-    if (rawName.includes('/')) {
-      const parts = rawName.split('/').map((s) => s.trim().replace(/ /g, '_'));
-      if (parts[1]) fileNames.push(`${parts[1]}.mp3`);
-      if (parts[0]) fileNames.push(`${parts[0]}.mp3`);
-    } else {
-      const cleanName = rawName.replace(/ /g, '_');
-      if (/^[A-Za-z0-9_ -]+$/.test(rawName)) {
-        fileNames.push(`${cleanName}.mp3`);
-      }
-    }
+export function voicePreviewCandidates(option: VoiceCatalogOption | undefined): string[] {
+  const preview = option?.meta?.preview;
+  if (!preview) return [];
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  const push = (url: unknown): void => {
+    if (typeof url !== 'string' || url === '' || seen.has(url)) return;
+    seen.add(url);
+    urls.push(url);
+  };
+  push(preview.primary_url);
+  for (const candidate of Array.isArray(preview.candidates) ? preview.candidates : []) {
+    push(candidate);
   }
-
-  // 2. 官方标准代号：voice_type.mp3
-  fileNames.push(`${voiceType}.mp3`);
-
-  // 3. 中文名或常规名
-  if (rawName && !rawName.includes('/')) {
-    const cleanName = rawName.replace(/ /g, '_');
-    fileNames.push(`${cleanName}.mp3`);
-  }
-
-  // 4. 去除 2.0 后缀的名称（如 枕边低语 2.0 -> 枕边低语.mp3）
-  if (displayName) {
-    const noVer = displayName.replace(/[_ ]?2\.0$/, '').replace(/ /g, '_');
-    if (noVer && !fileNames.includes(`${noVer}.mp3`)) {
-      fileNames.push(`${noVer}.mp3`);
-    }
-  }
-
-  const unique = Array.from(new Set(fileNames));
-  return unique.map((name) => `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(name)}`);
+  return urls;
 }
 
 export type { VoiceOptionMeta };

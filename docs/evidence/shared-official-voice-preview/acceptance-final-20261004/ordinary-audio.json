@@ -1,0 +1,392 @@
+{
+  "status": "PASS",
+  "spaceId": 2,
+  "page": "p1",
+  "assetId": "audio-bgm-00e9e6c5a3b1",
+  "official": false,
+  "url": "http://127.0.0.1:59192/assets",
+  "saveClick": false,
+  "chatClick": false,
+  "playing": [
+    {
+      "id": 1,
+      "paused": true,
+      "currentTime": 0,
+      "src": "http://127.0.0.1:59192/assets",
+      "ended": false,
+      "connected": false
+    },
+    {
+      "id": 2,
+      "paused": false,
+      "currentTime": 0.419528,
+      "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+      "ended": false,
+      "connected": false
+    }
+  ],
+  "saveControl": {
+    "enabled": true,
+    "registry": [
+      {
+        "id": 1,
+        "paused": true,
+        "currentTime": 0,
+        "src": "http://127.0.0.1:59192/assets",
+        "ended": false,
+        "connected": false
+      },
+      {
+        "id": 2,
+        "paused": false,
+        "currentTime": 0.961005,
+        "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+        "ended": false,
+        "connected": false
+      }
+    ]
+  },
+  "stop": {
+    "samples": [
+      {
+        "t": 0,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 130.59999999962747,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 273.7000000011176,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 386.30000000074506,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 498.2000000011176,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 700.9000000003725,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 898.0999999996275,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1016.3000000007451,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1111.2000000011176,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1214.4000000003725,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1301.5,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1401.800000000745,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1599.300000000745,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1747.4000000003725,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1801.0999999996275,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      {
+        "t": 1924.2000000011176,
+        "states": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/assets",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      }
+    ],
+    "spanMs": 1924.2000000011176,
+    "stopped": true
+  },
+  "snapshot": "[p1 \"3058 final ordinary QA\" | space \"3058 acceptance 20261004 authorized restart of task space\"(2): 1 managed, 0 untracked — p1* \"3058 final ordinary QA\"]\nroot\n  region \"资产中心\"\n    container\n      heading\n        text \"资产中心\"\n      paragraph\n        text \"沉淀可复用的角色、场景、风格包、道具等素材，在新的创作页空间中快速调用\"\n    container\n      button [ref=227]\n        svg_root\n        text \"添加资产\"\n      button [ref=228]\n        svg_root\n        text \"导入资产包\"\n    splitter\n    toolbar\n      tablist\n        tab [ref=229]\n          text \"本地\"\n        tab [ref=230]\n          text \"公共\"\n        tab [ref=231]\n          text \"产品库\"\n        tab [ref=232]\n          text \"AI生成\"\n      container\n        container\n          svg_root\n          searchbox [ref=233, loc=css:input[placeholder=\"搜索资产\"]]\n            text \"apple x supercut\"\n          button \"Clear\" [ref=234, loc=css:button[aria-label=\"Clear\"]]\n            svg_root\n        container\n          button \"网格视图\" [ref=235, loc=css:button[aria-label=\"网格视图\"]]\n            svg_root\n          button \"列表视图\" [ref=236, loc=css:button[aria-label=\"列表视图\"]]\n            svg_root\n    container\n      group \"云端素材分类\"\n        button [ref=237]\n          text \"全部\"\n        button [ref=238]\n          text \"角色\"\n        button [ref=239]\n          text \"场景\"\n        button [ref=240]\n          text \"道具\"\n        button [ref=241]\n          text \"素材\"\n        button [ref=242]\n          text \"风格\"\n        button [ref=243]\n          text \"声音\"\n      container\n        button \"apple x supercut · 试听\" [ref=244, loc=role:button[name=\"apple x supercut · 试听\"]]\n          svg_root\n        container\n          button \"保存到本地\" [ref=245, loc=css:button[aria-label=\"保存到本地\"]]\n            svg_root\n          button \"添加到会话\" [ref=246, loc=css:button[aria-label=\"添加到会话\"]]\n            svg_root\n        button \"apple x supercut · 查看详情\" [ref=247, loc=role:button[name=\"apple x supercut · 查看详情\"]]\n          paragraph\n            text \"apple x supercut\"\n          paragraph\n            text \"短视频卡点配乐 · 0:15\"\n      paragraph\n        text \"已加载全部素材\"\n  container\n    svg_root\n    dialog \"OmniMux工作台\"\n      iframe\n        root\n          toolbar \"OmniMux\"\n            button \"OmniMux\" [ref=248]\n              svg_root\n  toolbar \"OmniMux\"\n    button \"OmniMux\" [ref=249]\n      svg_root\n  text \"复制素材链接\"\n"
+}

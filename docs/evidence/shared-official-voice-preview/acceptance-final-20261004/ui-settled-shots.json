@@ -1,0 +1,42 @@
+[
+  {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/light-1280x800-single-settled.png",
+    "actual": {
+      "at": "2026-10-04T05:01:09.962Z",
+      "theme": "light",
+      "bg": "rgb(255, 255, 255)",
+      "color": "rgb(15, 17, 21)",
+      "modal": {
+        "x": 399,
+        "y": 120,
+        "width": 482,
+        "height": 278,
+        "top": 120,
+        "right": 881,
+        "bottom": 398,
+        "left": 399
+      }
+    },
+    "sha256": "299875e5390fca7afe87a5f9627cb07a6d616c7f0954bf70f8ff769af8a24da2"
+  },
+  {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/dark-1280x800-single-settled.png",
+    "actual": {
+      "at": "2026-10-04T05:01:13.170Z",
+      "theme": "dark",
+      "bg": "rgb(35, 35, 36)",
+      "color": "rgb(249, 250, 251)",
+      "modal": {
+        "x": 399,
+        "y": 120,
+        "width": 482,
+        "height": 278,
+        "top": 120,
+        "right": 881,
+        "bottom": 398,
+        "left": 399
+      }
+    },
+    "sha256": "1093bb30c0c833fb5198db0fe9b02f96aae76d555b0862e8e977790594534605"
+  }
+]

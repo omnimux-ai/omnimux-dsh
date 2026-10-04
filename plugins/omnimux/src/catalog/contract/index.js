@@ -5,6 +5,7 @@
  * @property {"1.1"} schemaVersion canonical Contract v1.1 only (never root version)
  * @property {string} contentFingerprint
  * @property {string} [contentCacheKey]
+ * @property {string} [previewFingerprint] sha256 of the voice preview mapping snapshot loaded with this index
  * @property {Map<string, object>} byId
  * @property {string} [specsDir]
  * @property {object[]} [issues]

@@ -1,0 +1,76 @@
+{
+  "at": "2026-10-04T04:54:08.366Z",
+  "oldInputs": 2696,
+  "diskInputs": 2694,
+  "virtualInputs": [
+    "assets:<stdin>",
+    "canvas:<stdin>"
+  ],
+  "changed": [
+    {
+      "key": "assets:src/client/CloudAssetsView.jsx",
+      "old": "639fb1e19bc20a3513932a981883d6100274edc2ade2acb810f5c6ad5635db79",
+      "current": "a828ead0706f7b1b364119f92fd1c9bd338cc492774dd7e01afacb7fa5503d72",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/plugins/omnimux-assets/src/client/CloudAssetsView.jsx"
+    },
+    {
+      "key": "canvas:src/canvas/ui/CustomSelect.tsx",
+      "old": "0351cbdd8829b1d9b957e67c3a60a4977dc452d907e11f2c18d231a733aca305",
+      "current": "cd4fec8415b179a0df1e4043063186cf92ae4265826db1f21603f76a71f786d1",
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/plugins/omnimux-workflow/src/canvas/ui/CustomSelect.tsx"
+    }
+  ],
+  "missing": [],
+  "protectedSources": [
+    {
+      "path": "tests/e2e/official-voice-preview.browser.mjs",
+      "old": "d7be8e3d7c7574265cf5a8d2f77f98fcfa0a3953da3c952950b5ab45abe1fa2b",
+      "current": "d7be8e3d7c7574265cf5a8d2f77f98fcfa0a3953da3c952950b5ab45abe1fa2b"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/canvas/theme/components.css",
+      "old": "dc734e5769c3c3a0e7705233e7839b062d510442730980e1e27e9107e34ce2be",
+      "current": "dc734e5769c3c3a0e7705233e7839b062d510442730980e1e27e9107e34ce2be"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/audioParams/VoicePickerDialog.tsx",
+      "old": "bad943e22efec4b42296a79540fde8fdec7fd2b9b786829fd5ddd4eeb5a11c85",
+      "current": "bad943e22efec4b42296a79540fde8fdec7fd2b9b786829fd5ddd4eeb5a11c85"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/canvas/ui/CustomModal.tsx",
+      "old": "0c4928b40a11bf859ba00b0b26a59fa91cc7b72f472034462465ab6641124c98",
+      "current": "0c4928b40a11bf859ba00b0b26a59fa91cc7b72f472034462465ab6641124c98"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/canvas/ui/CustomSelect.tsx",
+      "old": "0351cbdd8829b1d9b957e67c3a60a4977dc452d907e11f2c18d231a733aca305",
+      "current": "cd4fec8415b179a0df1e4043063186cf92ae4265826db1f21603f76a71f786d1"
+    },
+    {
+      "path": "plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/index.tsx",
+      "old": "1e91c5cff5126d5600e564ef27c496d3d2e164a13fab93a0f16e016eb2c028c8",
+      "current": "1e91c5cff5126d5600e564ef27c496d3d2e164a13fab93a0f16e016eb2c028c8"
+    },
+    {
+      "path": "plugins/omnimux/src/catalog/voices/official-preview-mapping.json",
+      "old": "9cf52c8f9a3d1b68319d5c9ac70b6a74d315e7ef0fd6e3696c3af4d5c8ccb50c",
+      "current": "9cf52c8f9a3d1b68319d5c9ac70b6a74d315e7ef0fd6e3696c3af4d5c8ccb50c"
+    },
+    {
+      "path": "plugins/omnimux-assets/cloud-catalog/voice-preview-snapshot.json",
+      "old": "128bf44587b3ddb6852da3b0665a4754bed5581f1b8e111d5737961ea8312dda",
+      "current": "128bf44587b3ddb6852da3b0665a4754bed5581f1b8e111d5737961ea8312dda"
+    },
+    {
+      "path": "design.md",
+      "old": "ce1bdf283a12c9831497835757e068660255b5a132308ba7e0b94da89cd7ae86",
+      "current": "ce1bdf283a12c9831497835757e068660255b5a132308ba7e0b94da89cd7ae86"
+    },
+    {
+      "path": "docs/product/voice-picker-ui-polish-3058.md",
+      "old": "025f17db603eeec75d150a40f3103e912dd0508a223f49847f1962dac007109c",
+      "current": "025f17db603eeec75d150a40f3103e912dd0508a223f49847f1962dac007109c"
+    }
+  ]
+}

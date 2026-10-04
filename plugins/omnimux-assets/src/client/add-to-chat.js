@@ -335,6 +335,12 @@ function sendPayloadToConversation(payload, io = {}) {
  */
 export function addAssetToConversation(asset, io = {}) {
   if (!asset || !asset.id) return { ok: false, error: 'no-asset' }
+  // Issue #3058：官方试听样音 preview-only——普通会话投递入口直接拒绝；
+  // 隐藏按钮之外旁路同样关闭，控制端硬拒绝另有 Host save 侧兜底。
+  if (asset.preview?.purpose === 'official-voice-preview'
+    || asset.meta?.preview?.purpose === 'official-voice-preview') {
+    return { ok: false, error: 'voice-preview-only' }
+  }
   const payload = buildAssetPayload(asset)
   if (!payload) return { ok: false, error: 'invalid-payload' }
   return sendPayloadToConversation(payload, io)
@@ -352,6 +358,11 @@ export function addAssetToConversation(asset, io = {}) {
  */
 export function addMediaToConversation(mediaItem, io = {}) {
   if (!mediaItem) return { ok: false, error: 'no-media' }
+  // Issue #3058：详情项携带官方试听用途时同样拒绝会话投递。
+  if (mediaItem.preview?.purpose === 'official-voice-preview'
+    || mediaItem.sourceAsset?.preview?.purpose === 'official-voice-preview') {
+    return { ok: false, error: 'voice-preview-only' }
+  }
   const payload = buildMediaPayload(mediaItem)
   if (!payload) return { ok: false, error: 'invalid-payload' }
   return sendPayloadToConversation(payload, io)

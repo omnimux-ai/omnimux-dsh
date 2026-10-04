@@ -1,0 +1,10 @@
+QA3058_BROWSER_EVIDENCE=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/.tmp/shared-official-voice-preview-qa/2026-10-04T04-53-48.224Z-c4731bf5
+✔ Issue #3058 真实浏览器试听旅程（QA 授权后运行） (74426.564459ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 74480.579917

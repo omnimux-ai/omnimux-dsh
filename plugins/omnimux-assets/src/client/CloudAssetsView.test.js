@@ -12,6 +12,7 @@ const viewJsx = readFileSync(join(here, 'CloudAssetsView.jsx'), 'utf8')
 const rowJsx = readFileSync(join(here, 'CloudCategoryRow.jsx'), 'utf8')
 const feedJs = readFileSync(join(here, 'use-cloud-assets-feed.js'), 'utf8')
 const saveJs = readFileSync(join(here, 'use-cloud-save.js'), 'utf8')
+const helpersJs = readFileSync(join(here, 'cloud-feed-helpers.js'), 'utf8')
 
 /**
  * The declaration block of the first rule whose selector matches `selector`,
@@ -199,7 +200,7 @@ describe('every shelf in the shipped catalog has a label', () => {
  */
 describe('Cloud text card renders the text, not a placeholder plate', () => {
   it('branches the card body on the row kind', () => {
-    assert.match(viewJsx, /import \{ cloudAudioTheme, cloudCardKind \} from '\.\/cloud-feed-helpers\.js'/)
+    assert.match(viewJsx, /import \{ cloudAudioTheme, cloudCardKind, isOfficialVoicePreviewAsset, isOfficialVoicePreviewPlayable \} from '\.\/cloud-feed-helpers\.js'/)
     assert.match(viewJsx, /const kind = cloudCardKind\(asset\)/)
     assert.match(viewJsx, /className=\{`omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-card--\$\{kind\}`\}/)
     assert.match(viewJsx, /data-kind=\{kind\}/)
@@ -335,7 +336,10 @@ describe('Cloud video tile keeps its own frame and plays on hover', () => {
  */
 describe('Cloud voice card plays from its colour plate', () => {
   it('makes the colour plate the play control', () => {
-    assert.match(viewJsx, /const canPlay = asset\?\.mediaType === 'audio' && asset\?\.hasMedia === true && asset\?\.playable !== false/)
+    // 官方音色的资格由 preview DTO（verified-file + primary）裁定，不再要求
+    // hasMedia 前置——DTO-only 行也有播放键；legacy playable 门只作用于普通资产，
+    // 官方行即使误带 meta.playable=false 也照样出播放键（ocr-final #3058）。
+    assert.match(viewJsx, /const canPlay = asset\?\.mediaType === 'audio'\n?\s*&& \(isOfficialVoice \? isOfficialVoicePreviewPlayable\(asset\) : asset\?\.playable !== false && asset\?\.hasMedia === true\)/)
     assert.match(viewJsx, /role=\{canPlay \? 'button' : undefined\}/)
     assert.match(viewJsx, /aria-pressed=\{canPlay \? \(playing \? 'true' : 'false'\) : undefined\}/)
     assert.match(viewJsx, /onKeyDown=\{canPlay \? activateRowKeydown\(togglePlay\) : undefined\}/)
@@ -386,11 +390,13 @@ describe('Cloud voice card plays from its colour plate', () => {
     // 点击/键盘 toggle 是用户显式接管：同一次悬停内 hover 副作用不得把
     // 暂停又翻回播放，也不得把用户显式启动的播放在移出时强行停掉。
     // 标记只在 mouseenter 重置；mouseleave 重置会让离开那次渲染的副作用把播放停掉。
+    // 显式动作同时向 hook 传递 explicit=true（解除 autoplay 抑制，OCR #12）。
     assert.match(viewJsx, /const userControlledRef = useRef\(false\)/)
-    assert.match(viewJsx, /const togglePlay = useCallback\(\(\) => \{\n    userControlledRef\.current = true\n    onTogglePlay\(asset\)\n  \}/)
+    assert.match(viewJsx, /const togglePlay = useCallback\(\(\) => \{\n    userControlledRef\.current = true\n    onTogglePlay\(asset, true\)\n  \}/)
     assert.match(viewJsx, /onMouseEnter=\{\(\) => \{\n      userControlledRef\.current = false\n      setHovering\(true\)\n    \}\}/)
     assert.match(viewJsx, /onMouseLeave=\{\(\) => \{ setHovering\(false\) \}\}/)
-    assert.match(viewJsx, /if \(!canPlay \|\| userControlledRef\.current\) return/)
+    // OCR #12：autoplaySuppressed 同样挡下悬停副作用的自动重启。
+    assert.match(viewJsx, /if \(!canPlay \|\| userControlledRef\.current \|\| autoplaySuppressed\) return/)
   })
 
   it('keeps the voice description to one line and no labelled bottom bar', () => {
@@ -528,7 +534,7 @@ describe('Cloud card opens the preview', () => {
   it('hands the preview handler down from the view to every card', () => {
     assert.match(viewJsx, /const \{ t, open = true, onPreview, savedIds = NO_IDS, savingIds = NO_IDS, onSave \} = props/)
     assert.match(viewJsx, /useCloudAssetsFeed\(\{ t, open/)
-    assert.match(viewJsx, /onPreview=\{onPreview\}/)
+    assert.match(viewJsx, /onPreview=\{handleOpenPreview\}/)
   })
 
   it('hands the save state to the card in both grid forms', () => {
@@ -678,5 +684,64 @@ describe('Cloud character filter bar', () => {
     assert.match(viewJsx, /const filtered = feed\.characterFilters\.active > 0/)
     assert.match(viewJsx, /t\('dim\.empty\.title'\)/)
     assert.equal(zh['dim.empty.title'], '没有符合这组条件的角色')
+  })
+})
+
+/**
+ * Issue #3058：官方音色 preview-only 动作边界。
+ * purpose='official-voice-preview' 的卡片不渲染保存/会话动作簇，handler 也不
+ * 执行保存或会话投递；播放资格由 preview.state 裁定而非 hasMedia 推导。
+ * 普通资产动作不变——断言不删既有契约，只追加该用途的硬规则。
+ */
+describe('Official voice preview action boundary (Issue #3058)', () => {
+  it('reads purpose from the normalized row, never the display name or id', () => {
+    assert.match(viewJsx, /isOfficialVoicePreviewAsset\(asset\)/)
+    assert.match(helpersJs, /preview\?\.purpose === OFFICIAL_VOICE_PREVIEW_PURPOSE/)
+    // No name/id blacklists: purpose comes only from the DTO.
+    assert.doesNotMatch(viewJsx, /asset\.name\.includes\('official'\)/)
+    assert.doesNotMatch(viewJsx, /VOICE_ID_BLACKLIST|VOICEOVER_IDS/)
+  })
+
+  it('hides the whole save/chat action cluster for every official voice preview row', () => {
+    // The cluster renders only for rows that are NOT official voice previews.
+    assert.match(viewJsx, /!isOfficialVoicePreviewAsset\(asset\)\s*\?\s*\(|!isOfficialVoicePreviewAsset\(asset\)\s*&&\s*\(/)
+  })
+
+  it('guards both handlers so a stray call cannot save or deliver the row', () => {
+    assert.match(viewJsx, /const handleAdd = \(event\) => \{[\s\S]*?isOfficialVoicePreviewAsset\(asset\)/)
+    assert.match(viewJsx, /const handleSave = \(event\) => \{[\s\S]*?isOfficialVoicePreviewAsset\(asset\)/)
+  })
+
+  it('lets preview.state arbitrate play eligibility, not hasMedia alone', () => {
+    assert.match(viewJsx, /isOfficialVoicePreviewPlayable\(asset\)/)
+    assert.match(viewJsx, /canPlay[\s\S]{0,300}isOfficialVoicePreviewPlayable\(asset\)/)
+    // OCR #11：官方行不再被 hasMedia 前置阻断；hasMedia 只属于普通资产分支。
+    // ocr-final #3058：legacy playable 门同样只属于普通分支，官方行只看 DTO。
+    assert.match(viewJsx, /isOfficialVoice \? isOfficialVoicePreviewPlayable\(asset\) : asset\?\.playable !== false && asset\?\.hasMedia === true/)
+  })
+
+  it('suppresses hover auto-restart after an autoplay denial until an explicit action (OCR #12)', () => {
+    // hook 上报 suppressedIds；卡片悬停副作用在被抑制的资产上不再自动 toggle，
+    // 显式点击则带 explicit 标记解除抑制。不是「清 playingId 又 auto-hover」的旧循环。
+    assert.match(feedJs, /suppressedIds/)
+    assert.match(feedJs, /markSuppressed|setSuppressedIds/)
+    assert.match(feedJs, /explicit/)
+    assert.match(viewJsx, /autoplaySuppressed/)
+    assert.match(viewJsx, /onTogglePlay\(asset, true\)/)
+    assert.match(viewJsx, /if \(!canPlay \|\| userControlledRef\.current \|\| autoplaySuppressed\) return/)
+    assert.match(viewJsx, /audition\.suppressedIds\.has\(asset\.id\)/)
+  })
+
+  it('stops card audition before opening the detail', () => {
+    assert.match(viewJsx, /audition\.stop\(\)[\s\S]{0,80}onPreview|handleOpenPreview|openCloudPreview/)
+  })
+})
+
+describe('Cloud card play surface tooltip (Issue #3058 PM copy fix)', () => {
+  it('mirrors the approved aria template onto title so hover shows 名称 · 试听/停止', () => {
+    // PM 核定：title 与 aria-label 同一逐字模板 `${name} · 试听|停止`，
+    // 播放中模板切「停止」，未出播放键的行不带 title。
+    assert.match(viewJsx, /aria-label=\{canPlay \? `\$\{asset\.name\} · \$\{playing \? t\('cloud\.action\.pause'\) : t\('cloud\.action\.play'\)\}` : undefined\}/)
+    assert.match(viewJsx, /title=\{canPlay \? `\$\{asset\.name\} · \$\{playing \? t\('cloud\.action\.pause'\) : t\('cloud\.action\.play'\)\}` : undefined\}/)
   })
 })

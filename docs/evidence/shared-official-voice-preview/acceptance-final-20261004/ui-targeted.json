@@ -1,0 +1,221 @@
+{
+  "spaceId": 2,
+  "page": "p1",
+  "runId": "2026-10-04T04-53-48.224Z-c4731bf5",
+  "bundleSha": {
+    "assets": "08bdc8bd42775737ddbe3e55b5c5d1cff19677997ffcb992eb23fd8db5f9ffaf",
+    "canvas": "f2a1b9edc6d6d941e5e29489be8160deaeba8b8d6fee863c32a4e9230d0a0bf1",
+    "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+    "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+    "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+  },
+  "theme": {
+    "source": "/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js",
+    "preference": "light",
+    "cssSha": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908"
+  },
+  "checks": [
+    {
+      "name": "same latest frozen loaded canvas",
+      "ok": true,
+      "actual": "http://127.0.0.1:55645/canvas"
+    }
+  ],
+  "shots": [
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/light-1280x800-single-current.png",
+      "sha256": "ccfe698770c9035a5c374229e8a57095463874962cecdd8926e0baa9c0ab09dd",
+      "actual": {
+        "at": "2026-10-04T04:56:46.986Z",
+        "url": "http://127.0.0.1:55645/canvas",
+        "viewport": [
+          1280,
+          800
+        ],
+        "theme": {
+          "source": "light",
+          "dark": false
+        },
+        "modal": {
+          "x": 399,
+          "y": 120,
+          "width": 482,
+          "height": 278,
+          "top": 120,
+          "right": 881,
+          "bottom": 398,
+          "left": 399
+        },
+        "input": {
+          "x": 454,
+          "y": 209.5,
+          "width": 391,
+          "height": 17,
+          "top": 209.5,
+          "right": 845,
+          "bottom": 226.5,
+          "left": 454
+        },
+        "rowCount": 1,
+        "footer": "当前音色林潇 2.0",
+        "params": [
+          {
+            "id": "de62e4b8-77b3-4665-ba2c-d5d094b9a739",
+            "params": {
+              "model": "seed-audio-1.0",
+              "operation": "text_to_speech",
+              "prompt": "QA 试听样例",
+              "voice": "zh_female_linxiao_uranus_bigtts"
+            }
+          }
+        ],
+        "registry": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "ended": false,
+            "connected": false,
+            "readyState": 0
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+            "ended": false,
+            "connected": false,
+            "readyState": 0
+          },
+          {
+            "id": 3,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+            "ended": false,
+            "connected": false,
+            "readyState": 0
+          },
+          {
+            "id": 4,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "ended": false,
+            "connected": false,
+            "readyState": 0
+          }
+        ]
+      },
+      "runId": "2026-10-04T04-53-48.224Z-c4731bf5",
+      "bundleSha": {
+        "assets": "08bdc8bd42775737ddbe3e55b5c5d1cff19677997ffcb992eb23fd8db5f9ffaf",
+        "canvas": "f2a1b9edc6d6d941e5e29489be8160deaeba8b8d6fee863c32a4e9230d0a0bf1",
+        "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+        "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+        "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+      }
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/dark-1280x800-single-current.png",
+      "sha256": "f84a3a5e45d0fef9d5e5d56693c056c2b667e1aee3d3efb967df23147e6320df",
+      "actual": {
+        "at": "2026-10-04T04:56:48.907Z",
+        "url": "http://127.0.0.1:55645/canvas",
+        "viewport": [
+          1280,
+          800
+        ],
+        "theme": {
+          "source": "dark",
+          "dark": true
+        },
+        "modal": {
+          "x": 399,
+          "y": 120,
+          "width": 482,
+          "height": 278,
+          "top": 120,
+          "right": 881,
+          "bottom": 398,
+          "left": 399
+        },
+        "input": {
+          "x": 454,
+          "y": 209.5,
+          "width": 391,
+          "height": 17,
+          "top": 209.5,
+          "right": 845,
+          "bottom": 226.5,
+          "left": 454
+        },
+        "rowCount": 1,
+        "footer": "当前音色林潇 2.0",
+        "params": [
+          {
+            "id": "de62e4b8-77b3-4665-ba2c-d5d094b9a739",
+            "params": {
+              "model": "seed-audio-1.0",
+              "operation": "text_to_speech",
+              "prompt": "QA 试听样例",
+              "voice": "zh_female_linxiao_uranus_bigtts"
+            }
+          }
+        ],
+        "registry": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "ended": false,
+            "connected": false,
+            "readyState": 0
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+            "ended": false,
+            "connected": false,
+            "readyState": 0
+          },
+          {
+            "id": 3,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+            "ended": false,
+            "connected": false,
+            "readyState": 0
+          },
+          {
+            "id": 4,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "ended": false,
+            "connected": false,
+            "readyState": 0
+          }
+        ]
+      },
+      "runId": "2026-10-04T04-53-48.224Z-c4731bf5",
+      "bundleSha": {
+        "assets": "08bdc8bd42775737ddbe3e55b5c5d1cff19677997ffcb992eb23fd8db5f9ffaf",
+        "canvas": "f2a1b9edc6d6d941e5e29489be8160deaeba8b8d6fee863c32a4e9230d0a0bf1",
+        "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+        "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+        "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+      }
+    }
+  ],
+  "menus": [],
+  "error": "ElementResolutionError: page.click timed out after 3000ms: page.click failed: element is not connected\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28",
+  "status": "FAIL",
+  "finalSnapshot": "[p1 \"Issue 3058 canvas QA\" | space \"3058 acceptance 20261004 authorized restart of task space\"(2): 1 managed, 0 untracked — p1* \"Issue 3058 canvas QA\"]\nroot\n  container\n    application\n      svg_root\n      anchor \"React Flow attribution\" [ref=155, loc=css:a[aria-label=\"React Flow attribution\"], url=https://reactflow.dev/attribution]\n        text \"React Flow\"\n    container\n      svg_root\n      text \"创作页 1\"\n      svg_root\n    container\n      container\n        button [ref=156]\n          svg_root\n        button [ref=157]\n          svg_root\n        container\n          text \"100\"\n          text \"%\"\n        button [ref=158]\n          svg_root\n      container\n        button [ref=159]\n          svg_root\n        button [ref=160]\n          svg_root\n    container\n      button [ref=161]\n        svg_root\n      button [ref=162]\n        svg_root\n      button [ref=163]\n        svg_root\n        svg_root\n      button [ref=164]\n        svg_root\n      button [ref=165]\n        svg_root\n  dialog \"OmniMux工作台\"\n    iframe\n      root\n        toolbar \"OmniMux\"\n          button \"OmniMux\" [ref=166]\n            svg_root\n  toolbar \"OmniMux\"\n    button \"OmniMux\" [ref=167]\n      svg_root\n",
+  "finishedAt": "2026-10-04T04:56:56.208Z"
+}

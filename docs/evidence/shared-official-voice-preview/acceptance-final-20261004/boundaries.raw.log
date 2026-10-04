@@ -1,0 +1,26 @@
+(node:91347) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ CloudAssetCard audio: explicit click owns the card until pointer leaves (#2989) (302.165417ms)
+✔ CloudAssetCard audio: save/chat press does not own the card; detail press still marks (#3058) (144.914166ms)
+✔ #3058 宽度：回归设计指引 min(480px, calc(100vw - 48px))，540px 暂留退出 (0.417292ms)
+✔ #3058 顶部锚定：overlay 仅本弹窗 :has 限定，15vh 顶部锚定 (0.154167ms)
+✔ #3058 FE-01：overlay 强制 row 轴 + border-box + 视口高，修正错轴与溢出 (0.157791ms)
+✔ #3058 列表：内容自适应 + 320px 上限，移除 160px 底槽与 flex-fill (0.139334ms)
+✔ #3058 搜索：32px 高、8px 圆角、16px 图标、10px 横向内边距 (0.122583ms)
+✔ #3058 四维筛选：一行四等分 + 窄态 88px 横向滚动不折行 (0.107ms)
+✔ #3058 行：min-height 48px、padding 6px 10px、名称可换行不尾截 (0.237125ms)
+✔ #3058 试听按钮：32x32、8px 圆角，播放反馈只属于按钮 (0.236083ms)
+✔ #3058 空态：紧凑反馈区 padding 24px，清除筛选按钮 32px/8px (0.219459ms)
+✔ #3058 底栏：当前名称 13px/500 主信息可换行，标签 12px 次级 (0.337792ms)
+✔ #3058 字典与结构不变量：零新文案、零 badge/icon、试听不改选中 (0.288167ms)
+✔ #3058 FE-02：Escape 先菜单后弹窗，弹窗事件与画布失选隔离 (0.10325ms)
+✔ #3058 FE-03：CustomSelect 菜单定位钳进视口，窄态不横向外溢 (0.089333ms)
+✔ #3058 FE-03 actual：按菜单实宽钳位 left，maxWidth 保留 300 封顶且受 vw-16 限 (477.972125ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 857.975125

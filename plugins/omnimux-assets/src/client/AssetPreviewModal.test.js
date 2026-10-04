@@ -157,3 +157,36 @@ describe('AssetPreviewModal media kinds', () => {
     assert.match(text, /white-space: pre-wrap/)
   })
 })
+
+/**
+ * Issue #3058：官方音色详情 preview-only 边界。
+ * purpose='official-voice-preview' 的详情不渲染「加入对话」与「保存到本地」，
+ * 不调用默认 addMediaToConversation 或自定义加入回调，也不留空 footer 占位。
+ * 普通资产动作不变——只追加用途断言，不删既有契约。
+ */
+describe('AssetPreviewModal - official voice preview boundary (Issue #3058)', () => {
+  it('derives preview-only from item.preview.purpose or the carried source row', () => {
+    assert.match(modalJsx, /isOfficialVoicePreview|officialVoicePreview|preview\?\.purpose|sourceAsset\?\.preview\?\.purpose/)
+  })
+
+  it('renders no footer actions at all for an official voice preview item', () => {
+    // 加入对话与保存按钮整簇不渲染（无空占位）
+    assert.match(modalJsx, /isOfficialVoicePreview \? null : \(\s*<footer/)
+  })
+
+  it('the add handler refuses an official voice preview before dispatching', () => {
+    assert.match(modalJsx, /const handleAdd = \(event\) => \{[\s\S]{0,400}isOfficialVoicePreview|officialVoicePreview|preview\?\.purpose/)
+  })
+})
+
+describe('AssetPreviewModal - official voice audio failure copy (Issue #3058 PM copy fix)', () => {
+  it('shows the approved 试听暂不可用 copy on audio error, never the format unsupported text', () => {
+    // PM 核定：verified 详情 audio onError 走既有提示载体 +
+    // 'cloud.preview.failed'（试听暂不可用，请稍后重试。），不落入
+    // modal.unsupportedMedia 格式错误空态；未验证空描述同样不出格式提示；
+    // header title 维持原 name，不新增 badge/errorbar/button。
+    assert.match(modalJsx, /const officialPreviewFailed = isOfficialVoicePreview/)
+    assert.match(modalJsx, /officialPreviewFailed \? \([\s\S]{0,400}t\('cloud\.preview\.failed'\)/)
+    assert.match(modalJsx, /title=\{item\.title\}/)
+  })
+})

@@ -20,7 +20,10 @@ test('catalog DTO and contract expose the same 509 rich options with one canonic
   const voice = index.get('seed-audio-1.0').parameters.voice;
   assert.equal(voice.options.length, 509);
   assert.equal('optionsFrom' in voice, false);
-  assert.deepEqual(voice.options, records.map((row) => ({ value: row.voice_type, label: row.display_name, meta: row })));
+  assert.deepEqual(
+    voice.options.map((option) => ({ ...option, meta: option.meta && (({ preview, ...rest }) => rest)(option.meta) })),
+    records.map((row) => ({ value: row.voice_type, label: row.display_name, meta: row })),
+  );
   assert.equal(voice.defaultValue, records[0].voice_type);
   assert.equal(loadCatalogDefaults().byOperation.text_to_speech, 'seed-audio-1.0');
   const catalog = buildModelCatalog({ env: {} });
@@ -36,7 +39,9 @@ test('options source resolution is pure and supports operation-level declaration
   const result = materializeVoiceOptions(declaration, source);
   assert.deepEqual(declaration, original);
   result.models[0].parameters.voice.options[0].meta.tags.push('changed');
-  assert.deepEqual(materializeVoiceOptions(declaration, source).models[0].parameters.voice.options[0].meta, records[0]);
+  const remade = materializeVoiceOptions(declaration, source).models[0].parameters.voice.options[0].meta;
+  const { preview: _preview, ...metaWithoutPreview } = remade;
+  assert.deepEqual(metaWithoutPreview, records[0]);
   const operationDoc = { models: [{ operations: [{ parameters: declaration.models[0].parameters }] }] };
   assert.equal(materializeVoiceOptions(operationDoc, source).models[0].operations[0].parameters.voice.options.length, 509);
 });

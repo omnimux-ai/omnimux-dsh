@@ -1,0 +1,173 @@
+{
+  "scenes": [
+    {
+      "kind": "assets",
+      "status": "PASS_COMPONENT_JOURNEY",
+      "assertionCount": 34,
+      "pass": 34,
+      "stopProofs": [
+        {
+          "name": "assets-last-voice-stop: stopped proof",
+          "ok": true,
+          "spanMs": 1560,
+          "stopped": true,
+          "sampleCount": 16,
+          "reasons": []
+        },
+        {
+          "name": "detail-open-stops-card: stopped proof",
+          "ok": true,
+          "spanMs": 1581,
+          "stopped": true,
+          "sampleCount": 16,
+          "reasons": []
+        },
+        {
+          "name": "detail-close-stops-native: stopped proof",
+          "ok": true,
+          "spanMs": 1564,
+          "stopped": true,
+          "sampleCount": 16,
+          "reasons": []
+        },
+        {
+          "name": "local-source-unmount-stops-card: stopped proof",
+          "ok": true,
+          "spanMs": 1562,
+          "stopped": true,
+          "sampleCount": 16,
+          "reasons": []
+        }
+      ],
+      "detailNativeInput": {
+        "inst": 6,
+        "actionT0": 1791087587273,
+        "target": {
+          "id": 6,
+          "paused": true,
+          "currentTime": 0,
+          "connected": true,
+          "controls": true
+        },
+        "state": {
+          "id": 6,
+          "paused": false,
+          "currentTime": 0.549411,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+          "ended": false,
+          "connected": true
+        },
+        "keys": [
+          {
+            "key": " ",
+            "code": "Space",
+            "trusted": true,
+            "targetAudio": true,
+            "t": 1791087587276
+          }
+        ],
+        "events": [
+          {
+            "id": 6,
+            "kind": "play",
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "detail": {
+              "paused": false,
+              "currentTime": 0
+            },
+            "t": 1791087587329
+          },
+          {
+            "id": 6,
+            "kind": "playing",
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "detail": {
+              "paused": false,
+              "currentTime": 0
+            },
+            "t": 1791087587329
+          },
+          {
+            "id": 6,
+            "kind": "timeupdate",
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "detail": {
+              "paused": false,
+              "currentTime": 0.229633
+            },
+            "t": 1791087587532
+          },
+          {
+            "id": 6,
+            "kind": "timeupdate",
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "detail": {
+              "paused": false,
+              "currentTime": 0.494146
+            },
+            "t": 1791087587797
+          }
+        ]
+      }
+    },
+    {
+      "kind": "canvas",
+      "status": "PASS_COMPONENT_JOURNEY",
+      "assertionCount": 22,
+      "pass": 22,
+      "stopProofs": [
+        {
+          "name": "canvas-close-while-playing: stopped proof",
+          "ok": true,
+          "spanMs": 1564,
+          "stopped": true,
+          "sampleCount": 16,
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "kind": "n1-continued-play-negative",
+      "status": "PASS_NEGATIVE_GATE_RED",
+      "assertionCount": 6,
+      "pass": 6,
+      "stopProofs": [
+        {
+          "name": "n1-cleanup-stop: stopped proof",
+          "ok": true,
+          "spanMs": 1558,
+          "stopped": true,
+          "sampleCount": 16,
+          "reasons": []
+        }
+      ],
+      "n1": {
+        "stopped": false,
+        "spanMs": 1562,
+        "reasons": [
+          "target-not-paused-zero-in-16-samples:t0={paused:false,ct:0.014516}|t1={paused:false,ct:0.12093}|t2={paused:false,ct:0.224968}|t3={paused:false,ct:0.329361}|t4={paused:false,ct:0.433791}|t5={paused:false,ct:0.537761}|t6={paused:false,ct:0.640741}|t7={paused:false,ct:0.744658}",
+          "target-play-revived-after-action"
+        ],
+        "times": [
+          0.014516,
+          0.12093,
+          0.224968,
+          0.329361,
+          0.433791,
+          0.537761,
+          0.640741,
+          0.744658,
+          0.848113,
+          0.952371,
+          1.056244,
+          1.15884,
+          1.263268,
+          1.367001,
+          1.472046,
+          1.575406
+        ]
+      }
+    }
+  ],
+  "actualAssertions": 62
+}

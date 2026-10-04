@@ -1,0 +1,374 @@
+[
+  {
+    "key": "light-1280x800",
+    "inputDrift": [
+      {
+        "state": "single",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "state": "empty",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "state": "restored",
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "top": 120,
+    "center": 640,
+    "fullHeight": 320,
+    "singleHeight": 48,
+    "emptyHeight": 110,
+    "stop": {
+      "samples": 12,
+      "span": 1462.2999999988824,
+      "allPausedZero": true
+    },
+    "focus": {
+      "trigger": true,
+      "active": "<button type=\"button\" class=\"wf-voice-trigger \" data-testid=\"wf-voice-trigger\" title=\"音色：林潇 2.0\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucid",
+      "triggerExists": true,
+      "selectedNodes": 1,
+      "modal": false
+    },
+    "menuRects": [
+      {
+        "x": 420,
+        "y": 284,
+        "width": 140,
+        "height": 254,
+        "top": 284,
+        "right": 560,
+        "bottom": 538,
+        "left": 420
+      },
+      {
+        "x": 530.75,
+        "y": 284,
+        "width": 140,
+        "height": 254,
+        "top": 284,
+        "right": 670.75,
+        "bottom": 538,
+        "left": 530.75
+      },
+      {
+        "x": 641.5,
+        "y": 284,
+        "width": 140,
+        "height": 109.5,
+        "top": 284,
+        "right": 781.5,
+        "bottom": 393.5,
+        "left": 641.5
+      },
+      {
+        "x": 752.25,
+        "y": 284,
+        "width": 140,
+        "height": 254,
+        "top": 284,
+        "right": 892.25,
+        "bottom": 538,
+        "left": 752.25
+      }
+    ],
+    "longRows": [
+      {
+        "name": "かずね（和音）/JavierorÁlvaro",
+        "height": 48,
+        "overlap": [],
+        "escaped": []
+      },
+      {
+        "name": "Kevin McCallister 2.0",
+        "height": 48,
+        "overlap": [],
+        "escaped": []
+      }
+    ]
+  },
+  {
+    "key": "light-1920x929",
+    "inputDrift": [
+      {
+        "state": "single",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "state": "empty",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "state": "restored",
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "top": 139.34375,
+    "center": 960,
+    "fullHeight": 320,
+    "singleHeight": 48,
+    "emptyHeight": 110,
+    "stop": {
+      "samples": 8,
+      "span": 1461.4000000003725,
+      "allPausedZero": true
+    },
+    "focus": {
+      "trigger": true,
+      "active": "<button type=\"button\" class=\"wf-voice-trigger \" data-testid=\"wf-voice-trigger\" title=\"音色：Kevin McCallister 2.0\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" clas",
+      "triggerExists": true,
+      "selectedNodes": 1,
+      "modal": false
+    },
+    "menuRects": [
+      {
+        "x": 740,
+        "y": 303.34375,
+        "width": 140,
+        "height": 254,
+        "top": 303.34375,
+        "right": 880,
+        "bottom": 557.34375,
+        "left": 740
+      },
+      {
+        "x": 850.75,
+        "y": 303.34375,
+        "width": 140,
+        "height": 254,
+        "top": 303.34375,
+        "right": 990.75,
+        "bottom": 557.34375,
+        "left": 850.75
+      },
+      {
+        "x": 961.5,
+        "y": 303.34375,
+        "width": 140,
+        "height": 109.5,
+        "top": 303.34375,
+        "right": 1101.5,
+        "bottom": 412.84375,
+        "left": 961.5
+      },
+      {
+        "x": 1072.25,
+        "y": 303.34375,
+        "width": 140,
+        "height": 254,
+        "top": 303.34375,
+        "right": 1212.25,
+        "bottom": 557.34375,
+        "left": 1072.25
+      }
+    ],
+    "longRows": [
+      {
+        "name": "かずね（和音）/JavierorÁlvaro",
+        "height": 48,
+        "overlap": [],
+        "escaped": []
+      },
+      {
+        "name": "Kevin McCallister 2.0",
+        "height": 48,
+        "overlap": [],
+        "escaped": []
+      }
+    ]
+  },
+  {
+    "key": "dark-1280x800",
+    "inputDrift": [
+      {
+        "state": "single",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "state": "empty",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "state": "restored",
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "top": 120,
+    "center": 640,
+    "fullHeight": 320,
+    "singleHeight": 48,
+    "emptyHeight": 110,
+    "stop": {
+      "samples": 9,
+      "span": 1698.800000000745,
+      "allPausedZero": true
+    },
+    "focus": {
+      "trigger": true,
+      "active": "<button type=\"button\" class=\"wf-voice-trigger \" data-testid=\"wf-voice-trigger\" title=\"音色：Kevin McCallister 2.0\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" clas",
+      "triggerExists": true,
+      "selectedNodes": 1,
+      "modal": false
+    },
+    "menuRects": [
+      {
+        "x": 420,
+        "y": 284,
+        "width": 140,
+        "height": 254,
+        "top": 284,
+        "right": 560,
+        "bottom": 538,
+        "left": 420
+      },
+      {
+        "x": 530.75,
+        "y": 284,
+        "width": 140,
+        "height": 254,
+        "top": 284,
+        "right": 670.75,
+        "bottom": 538,
+        "left": 530.75
+      },
+      {
+        "x": 641.5,
+        "y": 284,
+        "width": 140,
+        "height": 109.5,
+        "top": 284,
+        "right": 781.5,
+        "bottom": 393.5,
+        "left": 641.5
+      },
+      {
+        "x": 752.25,
+        "y": 284,
+        "width": 140,
+        "height": 254,
+        "top": 284,
+        "right": 892.25,
+        "bottom": 538,
+        "left": 752.25
+      }
+    ],
+    "longRows": [
+      {
+        "name": "かずね（和音）/JavierorÁlvaro",
+        "height": 48,
+        "overlap": [],
+        "escaped": []
+      },
+      {
+        "name": "Kevin McCallister 2.0",
+        "height": 48,
+        "overlap": [],
+        "escaped": []
+      }
+    ]
+  },
+  {
+    "key": "dark-1920x929",
+    "inputDrift": [
+      {
+        "state": "single",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "state": "empty",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "state": "restored",
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "top": 139.34375,
+    "center": 960,
+    "fullHeight": 320,
+    "singleHeight": 48,
+    "emptyHeight": 110,
+    "stop": {
+      "samples": 8,
+      "span": 1555.4000000003725,
+      "allPausedZero": true
+    },
+    "focus": {
+      "trigger": true,
+      "active": "<button type=\"button\" class=\"wf-voice-trigger \" data-testid=\"wf-voice-trigger\" title=\"音色：Kevin McCallister 2.0\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" clas",
+      "triggerExists": true,
+      "selectedNodes": 1,
+      "modal": false
+    },
+    "menuRects": [
+      {
+        "x": 740,
+        "y": 303.34375,
+        "width": 140,
+        "height": 254,
+        "top": 303.34375,
+        "right": 880,
+        "bottom": 557.34375,
+        "left": 740
+      },
+      {
+        "x": 850.75,
+        "y": 303.34375,
+        "width": 140,
+        "height": 254,
+        "top": 303.34375,
+        "right": 990.75,
+        "bottom": 557.34375,
+        "left": 850.75
+      },
+      {
+        "x": 961.5,
+        "y": 303.34375,
+        "width": 140,
+        "height": 109.5,
+        "top": 303.34375,
+        "right": 1101.5,
+        "bottom": 412.84375,
+        "left": 961.5
+      },
+      {
+        "x": 1072.25,
+        "y": 303.34375,
+        "width": 140,
+        "height": 254,
+        "top": 303.34375,
+        "right": 1212.25,
+        "bottom": 557.34375,
+        "left": 1072.25
+      }
+    ],
+    "longRows": [
+      {
+        "name": "かずね（和音）/JavierorÁlvaro",
+        "height": 48,
+        "overlap": [],
+        "escaped": []
+      },
+      {
+        "name": "Kevin McCallister 2.0",
+        "height": 48,
+        "overlap": [],
+        "escaped": []
+      }
+    ]
+  }
+]

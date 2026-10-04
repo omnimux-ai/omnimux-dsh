@@ -1,16 +1,36 @@
 import { readFileSync } from 'node:fs';
+import { parsePreviewMapping, readVoicePreviewSnapshot, voicePreviewMeta } from './preview.js';
 
 const INDEX_URL = new URL('./volcengine-voice-index.json', import.meta.url);
 const SOURCE_ID = 'volcengine-voice-index';
 
-/** Snapshot content participates in the same cache key as the YAML contracts. */
+/**
+ * Snapshot content participates in the same cache key as the YAML contracts.
+ * The `preview` field carries the registered verified-mapping snapshot;
+ * callers must pass it to buildContentCacheKey alongside this snapshot.
+ */
 export function readVoiceIndexSnapshot() {
-  return { name: 'volcengine-voice-index.json', content: readFileSync(INDEX_URL, 'utf8') };
+  return {
+    name: 'volcengine-voice-index.json',
+    content: readFileSync(INDEX_URL, 'utf8'),
+    preview: readVoicePreviewSnapshot(),
+  };
 }
 
 function voiceOptions(snapshot) {
   const records = JSON.parse(snapshot.content);
   if (!Array.isArray(records) || records.length === 0) throw new Error('voice index must be a nonempty array');
+  if (!snapshot.preview) throw new Error('voice options require the registered preview snapshot');
+  const preview = parsePreviewMapping(snapshot.preview);
+  // The official voice index is the only identity source: every verified
+  // voice_type in the mapping must join a registered record, fail closed.
+  const voiceTypes = new Set(records.map((voice) => voice?.voice_type)
+    .filter((voiceType) => typeof voiceType === 'string'));
+  for (const voiceType of preview.verified.keys()) {
+    if (!voiceTypes.has(voiceType)) {
+      throw new Error(`preview mapping contains unknown voice_type: ${voiceType}`);
+    }
+  }
   const seen = new Set();
   return records.map((voice) => {
     if (typeof voice?.voice_type !== 'string' || !voice.voice_type.trim()
@@ -19,7 +39,11 @@ function voiceOptions(snapshot) {
     }
     if (seen.has(voice.voice_type)) throw new Error(`duplicate voice_type: ${voice.voice_type}`);
     seen.add(voice.voice_type);
-    return { value: voice.voice_type, label: voice.display_name, meta: structuredClone(voice) };
+    return {
+      value: voice.voice_type,
+      label: voice.display_name,
+      meta: { ...structuredClone(voice), preview: voicePreviewMeta(voice, preview) },
+    };
   });
 }
 
@@ -27,7 +51,7 @@ function voiceOptions(snapshot) {
  * Resolve a registered data source, never a caller-supplied filesystem path.
  * Guard and Catalog DTO receive the same options, including picker metadata.
  * @param {object} doc
- * @param {{ name: string, content: string }} [snapshot]
+ * @param {{ name: string, content: string, preview?: { name: string, content: string } }} [snapshot]
  * @returns {object}
  */
 export function materializeVoiceOptions(doc, snapshot) {

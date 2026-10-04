@@ -1,0 +1,35 @@
+{
+  "sourceChanged": false,
+  "formalRerun": false,
+  "corrections": [
+    {
+      "step": "390 resize",
+      "error": "element is not connected",
+      "cause": "fit-view shortcut before resized React node remount",
+      "resolution": "snapshot + same-page fit-view and visible-node wait; 19 checks PASS"
+    },
+    {
+      "step": "dark single screenshot",
+      "error": "mixed light controls captured during theme transition",
+      "resolution": "public theme attrs + computed background wait; settled PNG used, transient PNG retained not deliverable"
+    },
+    {
+      "step": "ordinary server first navigation",
+      "error": "ERR_HTTP_RESPONSE_CODE_FAILURE",
+      "cause": "Node default header limit vs existing profile cookie volume",
+      "resolution": "same finite 128KiB as formal transport; no profile/cookie change"
+    },
+    {
+      "step": "ordinary server page",
+      "error": "SyntaxError Invalid regular expression; CSP inline blocked",
+      "cause": "missing UTF8 charset and raw template observer not evaluated",
+      "resolution": "UTF8 response + exact JS template evaluation, no business changes"
+    },
+    {
+      "step": "ordinary media hover",
+      "error": "NotSupportedError repeated; currentTime0",
+      "cause": "QA media-src missing self for production same-origin media redirect",
+      "resolution": "move pointer out; all 1871 native instances paused, add self CSP in task transport only; not claimed actual playback PASS"
+    }
+  ]
+}

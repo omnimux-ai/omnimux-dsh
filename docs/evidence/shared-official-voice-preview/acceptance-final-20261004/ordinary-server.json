@@ -1,0 +1,335 @@
+{
+  "origin": "http://127.0.0.1:59192",
+  "libraryDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/.tmp/shared-official-voice-preview-qa/final-ordinary-library",
+  "bundleReuse": "exact formal assets/canvas artifacts",
+  "observerSha": "RdDeY7uwBbO3gfdJ/Lz/OU3Nm6b0dCAT74lA866rV5g=",
+  "requests": [
+    {
+      "at": "2026-10-04T05:07:47.469Z",
+      "method": "GET",
+      "url": "/assets"
+    },
+    {
+      "at": "2026-10-04T05:07:47.485Z",
+      "method": "GET",
+      "url": "/official-theme.css"
+    },
+    {
+      "at": "2026-10-04T05:07:47.485Z",
+      "method": "GET",
+      "url": "/assets-page.css"
+    },
+    {
+      "at": "2026-10-04T05:07:47.485Z",
+      "method": "GET",
+      "url": "/assets-page.js"
+    },
+    {
+      "at": "2026-10-04T05:07:47.773Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state"
+    },
+    {
+      "at": "2026-10-04T05:07:47.819Z",
+      "method": "GET",
+      "url": "/favicon.ico"
+    },
+    {
+      "at": "2026-10-04T05:07:48.051Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/manifest.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.115Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/character/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.115Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/scene/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.116Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/prop/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.116Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/material/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.116Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/style/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.117Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/bgm/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.118Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/all/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.122Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/scene/page-0128.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.122Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/character/page-0014.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.122Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/prop/page-0030.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.122Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/material/page-0001.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.123Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/style/page-0003.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.123Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/bgm/page-0002.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.128Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-760ea98f68ac&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.128Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-79037e3939ae&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.128Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-9bbaf5f5c39e&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.128Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-9f0e5759b48c&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.128Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-afd3097855cd&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.129Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-b13b05355da6&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.134Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/character/page-0007.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.134Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/material/page-0018.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.136Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/scene/page-0002.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.136Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/prop/page-0006.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.136Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/bgm/page-0004.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.137Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/style/page-0005.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.139Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-b907e3590829&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.140Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-ba3e86010ceb&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.141Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-e2e50cb09bfd&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.141Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-f982d9c601ba&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.141Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-ff7f88c4f90f&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.142Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-digital-human-02b8dc03504e&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.146Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-digital-human-0b72f2d96bd5&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.146Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-digital-human-20edb80ad312&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.146Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-digital-human-283b11c86c77&which=cover"
+    },
+    {
+      "at": "2026-10-04T05:07:48.148Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/sfx/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:48.438Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=apple+x+supercut&category=all&limit=15&offset=0"
+    },
+    {
+      "at": "2026-10-04T05:07:49.056Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/all/page-0000.json"
+    },
+    {
+      "at": "2026-10-04T05:07:52.776Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:07:57.776Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:02.776Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:08.036Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:13.224Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:17.919Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:26.780Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:27.820Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:32.876Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:37.809Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:42.825Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:47.786Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:52.778Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:08:55.392Z",
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media"
+    },
+    {
+      "at": "2026-10-04T05:08:57.776Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:09:02.846Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:09:07.814Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:09:12.785Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:09:17.870Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:09:22.870Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "at": "2026-10-04T05:09:27.841Z",
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    }
+  ],
+  "serverClosed": true,
+  "finishedAt": "2026-10-04T05:09:31.184Z"
+}

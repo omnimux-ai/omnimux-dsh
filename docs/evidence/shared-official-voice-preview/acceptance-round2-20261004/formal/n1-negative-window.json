@@ -1,0 +1,628 @@
+{
+  "stopped": false,
+  "reasons": [
+    "target-not-paused-zero-in-16-samples:t0={paused:false,ct:0.014516}|t1={paused:false,ct:0.12093}|t2={paused:false,ct:0.224968}|t3={paused:false,ct:0.329361}|t4={paused:false,ct:0.433791}|t5={paused:false,ct:0.537761}|t6={paused:false,ct:0.640741}|t7={paused:false,ct:0.744658}",
+    "target-play-revived-after-action"
+  ],
+  "times": [
+    0.014516,
+    0.12093,
+    0.224968,
+    0.329361,
+    0.433791,
+    0.537761,
+    0.640741,
+    0.744658,
+    0.848113,
+    0.952371,
+    1.056244,
+    1.15884,
+    1.263268,
+    1.367001,
+    1.472046,
+    1.575406
+  ],
+  "actionT0": 1791087636491,
+  "spanMs": 1562,
+  "firstT": 1791087636553,
+  "lastT": 1791087638115,
+  "samples": [
+    {
+      "t": 1791087636553,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.014516,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087636661,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.12093,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087636764,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.224968,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087636869,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.329361,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087636973,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.433791,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637076,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.537761,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637180,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.640741,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637284,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.744658,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637387,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.848113,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637491,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 0.952371,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637595,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 1.056244,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637698,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 1.15884,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637802,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 1.263268,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087637906,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 1.367001,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087638012,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 1.472046,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    },
+    {
+      "t": 1791087638115,
+      "states": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3"
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3"
+        },
+        {
+          "id": 4,
+          "paused": false,
+          "currentTime": 1.575406,
+          "ended": false,
+          "connected": false,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3"
+        }
+      ]
+    }
+  ],
+  "diagnostics": {
+    "pauseEvents": 0,
+    "errorEvents": 0,
+    "revived": true
+  }
+}

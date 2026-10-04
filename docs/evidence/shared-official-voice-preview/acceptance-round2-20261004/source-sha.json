@@ -1,0 +1,12 @@
+{
+  "tests/e2e/official-voice-preview.browser.mjs": "d7be8e3d7c7574265cf5a8d2f77f98fcfa0a3953da3c952950b5ab45abe1fa2b",
+  "plugins/omnimux-workflow/src/canvas/theme/components.css": "dc734e5769c3c3a0e7705233e7839b062d510442730980e1e27e9107e34ce2be",
+  "plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/audioParams/VoicePickerDialog.tsx": "bad943e22efec4b42296a79540fde8fdec7fd2b9b786829fd5ddd4eeb5a11c85",
+  "plugins/omnimux-workflow/src/canvas/ui/CustomModal.tsx": "0c4928b40a11bf859ba00b0b26a59fa91cc7b72f472034462465ab6641124c98",
+  "plugins/omnimux-workflow/src/canvas/ui/CustomSelect.tsx": "0351cbdd8829b1d9b957e67c3a60a4977dc452d907e11f2c18d231a733aca305",
+  "plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/index.tsx": "1e91c5cff5126d5600e564ef27c496d3d2e164a13fab93a0f16e016eb2c028c8",
+  "plugins/omnimux/src/catalog/voices/official-preview-mapping.json": "9cf52c8f9a3d1b68319d5c9ac70b6a74d315e7ef0fd6e3696c3af4d5c8ccb50c",
+  "plugins/omnimux-assets/cloud-catalog/voice-preview-snapshot.json": "128bf44587b3ddb6852da3b0665a4754bed5581f1b8e111d5737961ea8312dda",
+  "design.md": "ce1bdf283a12c9831497835757e068660255b5a132308ba7e0b94da89cd7ae86",
+  "docs/product/voice-picker-ui-polish-3058.md": "025f17db603eeec75d150a40f3103e912dd0508a223f49847f1962dac007109c"
+}

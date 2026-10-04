@@ -57,7 +57,8 @@ describe('cloud -> local bridge', () => {
     assert.doesNotMatch(stageJsx, /<CloudAssetsView[^>]*\bcloudSave=\{cloudSave\}/)
     assert.match(stageJsx, /saved=\{previewCloudId !== '' && cloudSave\.savedIds\.has\(previewCloudId\)\}/)
     assert.match(stageJsx, /saving=\{previewCloudId !== '' && cloudSave\.savingIds\.has\(previewCloudId\)\}/)
-    assert.match(stageJsx, /onSaveToLocal=\{previewCloudId !== '' \? savePreviewItem : undefined\}/)
+    // Issue #3058：preview-only 用途不再拿到可用保存回调。
+    assert.match(stageJsx, /onSaveToLocal=\{previewCloudId !== '' && !previewIsOfficialVoice \? savePreviewItem : undefined\}/)
     // 全插件只有一处控制器实例：卡片入口不得自建第二个。
     assert.equal((stageJsx.match(/useCloudSave\(/g) ?? []).length, 1)
   })
