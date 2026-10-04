@@ -18,14 +18,46 @@ export const SPEECH_PATH = 'audio/speech'
 export const AUDIO_VIDEO_TASK_MODEL_IDS = Object.freeze(['index-tts'])
 
 /**
- * Task endpoint for one submit/poll, honouring the model override above.
+ * Audio-capability models served by the channel's AutoDL task lane
+ * (`/v1/tasks/*`). Their submit path carries an extra `autodl` segment that the
+ * poll endpoint does not, so submit and poll paths are recorded separately.
+ */
+export const AUDIO_AUTODL_TASK_MODEL_IDS = Object.freeze(['indextts-2'])
+export const AUTODL_SUBMIT_PATH = 'tasks/autodl'
+export const AUTODL_POLL_PATH = 'tasks'
+
+/**
+ * Submit endpoint for one task submission, honouring the model overrides above.
  * @param {string} capability
  * @param {unknown} [modelId]
  * @returns {string | undefined}
  */
 export function taskPathFor(capability, modelId) {
+  if (modelId && AUDIO_AUTODL_TASK_MODEL_IDS.includes(String(modelId))) return AUTODL_SUBMIT_PATH
   if (modelId && AUDIO_VIDEO_TASK_MODEL_IDS.includes(String(modelId))) return TASK_PATH.video
   return TASK_PATH[capability]
+}
+
+/**
+ * Poll base path for one task reconcile/finish, honouring the model overrides
+ * above. The AutoDL lane submits to `tasks/autodl` but polls `tasks/{id}`;
+ * every other model polls the same path it submitted to.
+ * @param {string} capability
+ * @param {unknown} [modelId]
+ * @returns {string | undefined}
+ */
+export function taskPollPathFor(capability, modelId) {
+  if (modelId && AUDIO_AUTODL_TASK_MODEL_IDS.includes(String(modelId))) return AUTODL_POLL_PATH
+  return taskPathFor(capability, modelId)
+}
+
+/**
+ * True when the persisted submit path belongs to the AutoDL lane.
+ * @param {unknown} taskPath
+ * @returns {boolean}
+ */
+export function isAutodlTaskPath(taskPath) {
+  return String(taskPath || '') === AUTODL_SUBMIT_PATH
 }
 
 /** Speech-to-text is synchronous: one multipart POST, no task poll. */
@@ -115,6 +147,19 @@ export function pickMediaUrl(raw) {
   if (Array.isArray(outputs)) {
     for (const item of outputs) {
       if (item && typeof item === 'object' && typeof item.url === 'string') return item.url
+    }
+  }
+  // AutoDL lane (`/v1/tasks/{id}/artifacts`): produced files are listed under
+  // `artifacts`, each carrying a downloadable url.
+  const artifacts = Array.isArray(row.artifacts) ? row.artifacts
+    : Array.isArray(data?.artifacts) ? data.artifacts : undefined
+  if (Array.isArray(artifacts)) {
+    for (const item of artifacts) {
+      if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item
+      if (item && typeof item === 'object') {
+        const link = item.url ?? item.download_url ?? item.downloadUrl ?? item.file_url ?? item.fileUrl
+        if (typeof link === 'string' && /^https?:\/\//i.test(link)) return link
+      }
     }
   }
   return undefined

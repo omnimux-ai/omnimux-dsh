@@ -169,7 +169,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'seedance-2-0',
     'seedance-2-5',
   ]);
-  assert.deepEqual(dto.audio.map((row) => row.id), ['gemini-3.8-flash-tts', 'index-tts', 'seed-audio-1.0']); // #2804 与 #2256 两款 TTS 同桶
+  assert.deepEqual(dto.audio.map((row) => row.id), ['gemini-3.8-flash-tts', 'indextts-2', 'seed-audio-1.0']); // #3063 indextts-2 声音克隆
   // Text bucket includes implementation-ready models without requiring live history.
   assert.deepEqual(dto.text.map((r) => r.id), [
     'gemini-3.8-flash',
