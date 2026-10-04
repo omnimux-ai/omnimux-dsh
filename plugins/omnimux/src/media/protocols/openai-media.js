@@ -10,6 +10,8 @@ import { classifyQuotaFailure } from '../../errors/quota-classifier.js'
 import { getJson, credentialRejectedError } from '../job.js'
 import {
   describeTaskFailure,
+  isAutodlTaskPath,
+  AUTODL_POLL_PATH,
   pickMediaUrl,
   pickTaskFailureReason,
   pickTaskId,
@@ -144,10 +146,13 @@ export async function pollOpenAiMediaTask(options) {
     : DEFAULT_POLL_INTERVAL_MS
   const sleep = options.sleep
     ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)))
-  const path = options.taskPath ?? TASK_PATH[options.capability]
-  if (!path) {
+  const submitPath = options.taskPath ?? TASK_PATH[options.capability]
+  if (!submitPath) {
     throw new OmnimuxError('unknown-protocol', `openai-media has no task path for ${options.capability}`)
   }
+  // The AutoDL lane submits to `tasks/autodl` but polls `tasks/{id}` (Issue
+  // #3063); every other lane polls the same path it submitted to.
+  const path = options.taskPollPath ?? (isAutodlTaskPath(submitPath) ? AUTODL_POLL_PATH : submitPath)
   const url = `${options.baseUrl}/${path}/${options.taskId}`
   // Anchored at the persisted submit time when the caller supplied one, so a
   // restart cannot hand the task a second, fresh window.
@@ -181,7 +186,29 @@ export async function pollOpenAiMediaTask(options) {
     }
     if (json !== null) {
       const status = pickTaskStatus(json)
-      if (status === 'completed' || status === 'success' || status === 'succeeded') return json
+      if (status === 'completed' || status === 'success' || status === 'succeeded') {
+        // The AutoDL lane answers the poll with status only; the produced file
+        // lives behind `tasks/{id}/artifacts` (Issue #3063). Fetch and merge it
+        // so the caller's pickMediaUrl sees one envelope.
+        if (isAutodlTaskPath(submitPath) && !pickMediaUrl(json)) {
+          try {
+            const artifacts = await getJson(
+              options.fetcher,
+              `${options.baseUrl}/${AUTODL_POLL_PATH}/${options.taskId}/artifacts`,
+              options.apiKey,
+              options.signal,
+              { requestTimeoutMs: options.requestTimeoutMs },
+            )
+            if (artifacts && typeof artifacts === 'object') {
+              return { ...json, artifacts: artifacts.artifacts ?? artifacts.data ?? artifacts }
+            }
+          } catch {
+            // Fall through: return the completed body as-is and let the caller
+            // report the missing url with the task id attached.
+          }
+        }
+        return json
+      }
       if (status === 'failed' || status === 'error' || status === 'failure') {
         const classified = classifyQuotaFailure({ body: json })
         if (classified.kind === 'channel-unavailable') throw new OmnimuxError(classified.code, classified.message)

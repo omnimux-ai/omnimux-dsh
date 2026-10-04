@@ -44,8 +44,8 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.contentFingerprint.length, 16);
   assert.equal(index.listedOperations.length, 26); // #2804 gemini-3.8-flash-tts 新增 text_to_speech → 26
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
-  // #2256: the voice-clone operation reaches listed through its own contract row.
-  assert.ok(index.listedOperations.includes('index-tts#voice_clone'));
+  // #3063: indextts-2 voice-clone operation reaches listed through its own contract row.
+  assert.ok(index.listedOperations.includes('indextts-2#voice_clone'));
   // #1789: the ASR pair are two independent models; neither declares the other as an alias.
   assert.ok(index.listedOperations.includes('seedasr-auc#speech_to_text'));
   assert.deepEqual(index.get('seedasr-auc').aliases ?? [], []);
