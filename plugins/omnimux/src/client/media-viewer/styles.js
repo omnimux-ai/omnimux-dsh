@@ -349,27 +349,23 @@ export const MEDIA_VIEWER_CSS = `
   user-select: none;
 }
 
+/* 去胶囊外壳：缩略图列贴画布左侧从顶到底，超出时自身纵向滚动（滚轮由 stage 监听放行） */
 .omx-mv-thumbnails-rail {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 0;
+  left: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   width: 68px;
-  max-height: calc(100vh - 180px);
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 6px;
+  padding: 12px 6px;
   z-index: 30;
   scrollbar-width: none;
-  background: var(--dsw-alias-bg-layer-2);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 18px;
-  box-shadow: 0 12px 36px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 悬浮胶囊外阴影 */
+  overscroll-behavior-y: contain;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

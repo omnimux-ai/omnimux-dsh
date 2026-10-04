@@ -32,9 +32,16 @@ test('E2E: 图像生成大图预览消除黑边、手势缩放记忆与左上角
   const noMaxWidth90 = !/\.omx-mv-display\s*\{[^}]*max-width:\s*90%/s.test(css);
   record('AC-1_DISPLAY_UNCONSTRAINED', noMaxWidth90, '大图展示容器彻底解除 max-width: 90% 硬限制');
 
-  // 2. 验证 AC-2 & AC-3: 左上角 1:1 水平居中悬浮缩略图栏
-  const isTopLeftFloating = /\.omx-mv-thumbnails-rail\s*\{[^}]*top:\s*20px;[^}]*left:\s*20px;/s.test(css);
-  record('AC-3_RAIL_TOP_LEFT_POSITION', isTopLeftFloating, '缩略图工具栏正确定位在视口左上角');
+  // 2. 验证 AC-2 & AC-3: 左侧贴边 1:1 水平居中缩略图栏（去胶囊外壳，从顶到底）
+  const isLeftEdgeFlush = /\.omx-mv-thumbnails-rail\s*\{[^}]*top:\s*0;[^}]*left:\s*0;[^}]*bottom:\s*0;/s.test(css);
+  assert.equal(isLeftEdgeFlush, true, '缩略图栏必须贴画布左缘从顶到底');
+  record('AC-3_RAIL_LEFT_EDGE_FLUSH', isLeftEdgeFlush, '缩略图栏贴画布左缘从顶到底，无悬浮偏移');
+  const noCapsuleShell = !/\.omx-mv-thumbnails-rail\s*\{[^}]*(border:|backdrop-filter|box-shadow|background:)/s.test(css);
+  assert.equal(noCapsuleShell, true, '缩略图栏严禁保留胶囊外壳');
+  record('AC-3_RAIL_NO_CAPSULE', noCapsuleShell, '缩略图栏彻底移除胶囊外壳（背景/边框/磨砂/投影）');
+  const railScrollable = /\.omx-mv-thumbnails-rail\s*\{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior-y:\s*contain;/s.test(css);
+  assert.equal(railScrollable, true, '缩略图栏必须自身可纵向滚动且滚轮不外泄');
+  record('AC-3_RAIL_SCROLLABLE', railScrollable, '缩略图栏自身可纵向滚动且滚轮不外泄');
 
   const isRailCentered = /\.omx-mv-thumbnails-rail\s*\{[^}]*align-items:\s*center;/s.test(css);
   record('AC-3_RAIL_HORIZONTAL_CENTER', isRailCentered, '缩略图容器内子项同轴水平居中对齐');

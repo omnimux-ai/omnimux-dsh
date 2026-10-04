@@ -1,0 +1,24 @@
+{
+  "initial": {
+    "top": 0,
+    "bottom": 760,
+    "scrollTop": 0,
+    "scrollH": 904,
+    "clientH": 760,
+    "overflowY": "auto",
+    "bg": "rgba(0, 0, 0, 0)",
+    "border": "0px"
+  },
+  "afterRailWheel": {
+    "scrollTop": 144,
+    "zoom": "zoom=100"
+  },
+  "afterRailWheelUp": {
+    "scrollTop": 0,
+    "zoom": "zoom=100"
+  },
+  "afterCanvasWheel": {
+    "scrollTop": 0,
+    "zoom": "zoom=500"
+  }
+}
