@@ -34,11 +34,13 @@ describe('生成中任务卡去头行契约', () => {
     );
     assert.match(tsx, /statusText\?:\s*string/, 'statusText 必须为可选参数');
     assert.match(tsx, /\{statusText \? \(/, '头行必须按 statusText 条件渲染');
+    assert.match(tsx, /statusText \? "" : cssClass\(css\.cardFull, "cardFull"\)/, '无头行时必须切换卡片为铺满变体');
     assert.match(tsx, /statusText \? "" : cssClass\(css\.fieldFull, "fieldFull"\)/, '无头行时必须切换画布为铺满变体');
     const css = readFileSync(
       join(repoRoot, 'packages/dsh-ui-kit/src/gen-wave-card/GenWaveCard.module.css'),
       'utf8'
     );
     assert.match(css, /\.fieldFull\s*\{[^}]*margin-top:\s*0/s, '铺满变体必须清零顶部间距');
+    assert.match(css, /\.cardFull\s*\{[^}]*padding:\s*0/s, '铺满变体必须清零四周 padding');
   });
 });

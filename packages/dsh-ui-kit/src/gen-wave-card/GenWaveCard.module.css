@@ -64,9 +64,16 @@
   margin-top: 26px; /* 实测: 顶行底 ~24 → 首行点心 53 */
 }
 
-/* 无头行变体：点阵画布铺满整卡 */
+/* 无头行变体：点阵画布铺满整卡，彻底清除四周内缩空白间距 */
+.cardFull {
+  padding: 0 !important;
+  border-radius: inherit !important;
+}
+
 .fieldFull {
-  margin-top: 0;
+  margin-top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* ---------- 右下角进度胶囊 ----------

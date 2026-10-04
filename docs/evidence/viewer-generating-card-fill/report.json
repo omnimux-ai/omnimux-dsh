@@ -1,0 +1,19 @@
+{
+  "cardPadding": "0px",
+  "cardRect": {
+    "width": 520,
+    "height": 520,
+    "top": 20,
+    "left": 20
+  },
+  "canvasRect": {
+    "width": 520,
+    "height": 520,
+    "top": 20,
+    "left": 20
+  },
+  "gapLeft": 0,
+  "gapTop": 0,
+  "gapRight": 0,
+  "gapBottom": 0
+}
