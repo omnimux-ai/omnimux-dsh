@@ -21,7 +21,7 @@
         "claude-sonnet-4-6"
       ],
       "requiredInAuto": false,
-      "canvasExcluded": true,
+      "canvasExcluded": false,
       "note": "2026-10-04: 自建号池畅享档上线接入"
     },
     {
