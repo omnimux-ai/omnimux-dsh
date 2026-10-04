@@ -11,7 +11,10 @@ const palette = readFileSync(join(here, 'genWavePalette.ts'), 'utf8')
 
 describe('GenWaveCard component contract', () => {
   it('declares the minimal props surface (statusText / progress / autoProgress)', () => {
-    assert.match(tsx, /statusText: string/)
+    // statusText 可选：缺省时不渲染头行，点阵铺满整卡
+    assert.match(tsx, /statusText\?: string/)
+    assert.match(tsx, /statusText \? \(\s*<div className=\{cssClass\(css\.head, "head"\)\}>/s)
+    assert.match(css, /\.fieldFull\s*\{[^}]*margin-top:\s*0/s)
     assert.match(tsx, /progress\?: number/)
     assert.match(tsx, /autoProgress\?: boolean/)
     assert.match(tsx, /autoProgress \?\? progress === undefined/)

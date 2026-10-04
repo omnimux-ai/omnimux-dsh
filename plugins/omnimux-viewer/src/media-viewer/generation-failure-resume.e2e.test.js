@@ -325,7 +325,7 @@ test('主画布失败卡 DOM 结构契约：原因 + 可选「重试」，无标
     '原因 title 属性必须透出全文（assert.equal 等价校验在失败映射用例中覆盖）');
   assert.ok(tabSource.includes('omx-thumb-task-slot--failed'), '缩略图栏失败态必须使用 --failed 修饰类');
   assert.ok(tabSource.includes('生成失败'), '失败缩略块 title 必须是「生成失败」');
-  assert.ok(tabSource.includes('正在恢复任务'), '续传期间状态文案必须是「正在恢复任务」');
+  assert.equal(tabSource.includes("item.resuming ? '正在恢复任务' : '正在生成任务'"), true, '续传期间缩略块 title 必须是「正在恢复任务」');
   assert.ok(!tabSource.includes('omnimux:toast'), '失败后严禁再 dispatch omnimux:toast');
   const failureCard = tabSource.slice(tabSource.indexOf('function FailureCard('), tabSource.indexOf('export function MediaViewerTab('));
   assert.equal(failureCard.startsWith('function FailureCard('), true, '必须定位真实失败卡');

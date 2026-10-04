@@ -64,6 +64,11 @@
   margin-top: 26px; /* 实测: 顶行底 ~24 → 首行点心 53 */
 }
 
+/* 无头行变体：点阵画布铺满整卡 */
+.fieldFull {
+  margin-top: 0;
+}
+
 /* ---------- 右下角进度胶囊 ----------
    视觉由点阵 canvas 同层绘制（DOM 元素保留作 ARIA/状态载体，
    headless Chrome 下 absolute+大圆角浮层会屏蔽 canvas 合成） */

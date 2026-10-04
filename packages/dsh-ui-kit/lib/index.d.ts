@@ -605,8 +605,8 @@ declare const ActionRow: import("react").ForwardRefExoticComponent<ActionRowProp
 //#endregion
 //#region src/gen-wave-card/GenWaveCard.d.ts
 interface GenWaveCardProps extends HTMLAttributes<HTMLDivElement> {
-  /** 顶部任务文案，外部供给。 */
-  statusText: string;
+  /** 顶部任务文案，外部供给；缺省时不渲染头行，点阵画布铺满整卡。 */
+  statusText?: string;
   /** 0–100；传入后由外部接管进度显示并停用内置演示缓动。 */
   progress?: number;
   /** 是否启用内置 0→96% 演示缓动；默认 progress 未提供时为 true。 */

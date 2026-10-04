@@ -1908,7 +1908,7 @@ const ActionRow = forwardRef(function ActionRow({ primaryAction, secondaryAction
 });
 //#endregion
 //#region \0dsh-ui-kit-css:src/gen-wave-card/GenWaveCard.module.css.mjs
-injectCss("GenWaveCard.module.css", "/* GenWaveCard · 1:1 移植自 chatgpt-gen-loading-card.dshUk-GenWaveCard-html\n   色值全部来自根元素注入的 --gen-wave-* CSS 变量（见 GenWaveCard.dshUk-GenWaveCard-tsx，\n   常量真源在 genWavePalette.dshUk-GenWaveCard-ts，固定深色既定视觉）；\n   唯一例外是卡片底色：不再封装固定色，走 var(--gen-wave-card-bg,\n   var(--dsw-alias-bg-layer-2)) 跟随宿主层级底色，保证卡片与页面\n   （--dsw-alias-bg-base）有可区分的层次差。 */\n\n.dshUk-GenWaveCard-card {\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  width: 100%;\n  height: 100%;\n  background: var(--gen-wave-card-bg, var(--dsw-alias-bg-layer-2));\n  border-radius: 8px;\n  padding: 10px 10px 23px;\n  overflow: hidden;\n  box-sizing: border-box;\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto,\n    \"PingFang SC\", \"Microsoft YaHei\", \"Hiragino Sans GB\", sans-serif;\n  -webkit-font-smoothing: antialiased;\n}\n\n/* ---------- 顶部行：工具图标 + 状态文案 ---------- */\n.dshUk-GenWaveCard-head {\n  display: flex;\n  align-items: center;\n  gap: 11px; /* 实测: 图标右缘 ~34.5 → 文字 47 */\n  height: 14px;\n}\n\n.dshUk-GenWaveCard-icon {\n  width: 13.5px;\n  height: 13.5px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  border: 1.2px solid var(--gen-wave-icon); /* 实测描边 ~1.25px */\n  display: grid;\n  place-items: center;\n  color: var(--gen-wave-icon);\n}\n\n.dshUk-GenWaveCard-icon svg {\n  display: block;\n}\n\n.dshUk-GenWaveCard-status {\n  color: var(--gen-wave-status);\n  font-size: 16px; /* 字形 cap 高 23px@2x → ~16px */\n  font-weight: 400;\n  line-height: 1;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  min-width: 0;\n}\n\n/* ---------- 点阵画布 ---------- */\n.dshUk-GenWaveCard-field {\n  display: block;\n  width: 100%;\n  flex: 1;\n  min-height: 0;\n  margin-top: 26px; /* 实测: 顶行底 ~24 → 首行点心 53 */\n}\n\n/* ---------- 右下角进度胶囊 ----------\n   视觉由点阵 canvas 同层绘制（DOM 元素保留作 ARIA/状态载体，\n   headless Chrome 下 absolute+大圆角浮层会屏蔽 canvas 合成） */\n.dshUk-GenWaveCard-badge {\n  position: absolute;\n  right: 19px;\n  bottom: 23px;\n  width: 58px;\n  height: 36px;\n  opacity: 0; /* 不可见但保留语义与 API 目标 */\n  user-select: none;\n  pointer-events: none;\n}\n");
+injectCss("GenWaveCard.module.css", "/* GenWaveCard · 1:1 移植自 chatgpt-gen-loading-card.dshUk-GenWaveCard-html\n   色值全部来自根元素注入的 --gen-wave-* CSS 变量（见 GenWaveCard.dshUk-GenWaveCard-tsx，\n   常量真源在 genWavePalette.dshUk-GenWaveCard-ts，固定深色既定视觉）；\n   唯一例外是卡片底色：不再封装固定色，走 var(--gen-wave-card-bg,\n   var(--dsw-alias-bg-layer-2)) 跟随宿主层级底色，保证卡片与页面\n   （--dsw-alias-bg-base）有可区分的层次差。 */\n\n.dshUk-GenWaveCard-card {\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  width: 100%;\n  height: 100%;\n  background: var(--gen-wave-card-bg, var(--dsw-alias-bg-layer-2));\n  border-radius: 8px;\n  padding: 10px 10px 23px;\n  overflow: hidden;\n  box-sizing: border-box;\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto,\n    \"PingFang SC\", \"Microsoft YaHei\", \"Hiragino Sans GB\", sans-serif;\n  -webkit-font-smoothing: antialiased;\n}\n\n/* ---------- 顶部行：工具图标 + 状态文案 ---------- */\n.dshUk-GenWaveCard-head {\n  display: flex;\n  align-items: center;\n  gap: 11px; /* 实测: 图标右缘 ~34.5 → 文字 47 */\n  height: 14px;\n}\n\n.dshUk-GenWaveCard-icon {\n  width: 13.5px;\n  height: 13.5px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  border: 1.2px solid var(--gen-wave-icon); /* 实测描边 ~1.25px */\n  display: grid;\n  place-items: center;\n  color: var(--gen-wave-icon);\n}\n\n.dshUk-GenWaveCard-icon svg {\n  display: block;\n}\n\n.dshUk-GenWaveCard-status {\n  color: var(--gen-wave-status);\n  font-size: 16px; /* 字形 cap 高 23px@2x → ~16px */\n  font-weight: 400;\n  line-height: 1;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  min-width: 0;\n}\n\n/* ---------- 点阵画布 ---------- */\n.dshUk-GenWaveCard-field {\n  display: block;\n  width: 100%;\n  flex: 1;\n  min-height: 0;\n  margin-top: 26px; /* 实测: 顶行底 ~24 → 首行点心 53 */\n}\n\n/* 无头行变体：点阵画布铺满整卡 */\n.dshUk-GenWaveCard-fieldFull {\n  margin-top: 0;\n}\n\n/* ---------- 右下角进度胶囊 ----------\n   视觉由点阵 canvas 同层绘制（DOM 元素保留作 ARIA/状态载体，\n   headless Chrome 下 absolute+大圆角浮层会屏蔽 canvas 合成） */\n.dshUk-GenWaveCard-badge {\n  position: absolute;\n  right: 19px;\n  bottom: 23px;\n  width: 58px;\n  height: 36px;\n  opacity: 0; /* 不可见但保留语义与 API 目标 */\n  user-select: none;\n  pointer-events: none;\n}\n");
 var GenWaveCard_module_css_default = {
 	"html": "dshUk-GenWaveCard-html",
 	"tsx": "dshUk-GenWaveCard-tsx",
@@ -1918,6 +1918,7 @@ var GenWaveCard_module_css_default = {
 	"icon": "dshUk-GenWaveCard-icon",
 	"status": "dshUk-GenWaveCard-status",
 	"field": "dshUk-GenWaveCard-field",
+	"fieldFull": "dshUk-GenWaveCard-fieldFull",
 	"badge": "dshUk-GenWaveCard-badge"
 };
 //#endregion
@@ -2175,7 +2176,7 @@ const GenWaveCard = forwardRef(function GenWaveCard({ statusText, progress, auto
 			...style
 		},
 		children: [
-			/* @__PURE__ */ jsxs("div", {
+			statusText ? /* @__PURE__ */ jsxs("div", {
 				className: cssClass(GenWaveCard_module_css_default.head, "head"),
 				children: [/* @__PURE__ */ jsx("span", {
 					className: cssClass(GenWaveCard_module_css_default.icon, "icon"),
@@ -2195,10 +2196,10 @@ const GenWaveCard = forwardRef(function GenWaveCard({ statusText, progress, auto
 					className: cssClass(GenWaveCard_module_css_default.status, "status"),
 					children: statusText
 				})]
-			}),
+			}) : null,
 			/* @__PURE__ */ jsx("canvas", {
 				ref: canvasRef,
-				className: cssClass(GenWaveCard_module_css_default.field, "field"),
+				className: cx(cssClass(GenWaveCard_module_css_default.field, "field"), statusText ? "" : cssClass(GenWaveCard_module_css_default.fieldFull, "fieldFull")),
 				"aria-hidden": "true"
 			}),
 			/* @__PURE__ */ jsx("span", {
