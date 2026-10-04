@@ -1,0 +1,29 @@
+{
+  "orderValidation": "PASS",
+  "itemCount": 4,
+  "itemsRenderedTopToBottom": [
+    {
+      "className": "omx-thumb-task-slot ",
+      "isGenerating": true,
+      "title": "正在生成任务"
+    },
+    {
+      "className": "omx-mv-thumbnails-rail__item inactive",
+      "isGenerating": false,
+      "title": "最新生成图"
+    },
+    {
+      "className": "omx-mv-thumbnails-rail__item inactive",
+      "isGenerating": false,
+      "title": "中间生成图"
+    },
+    {
+      "className": "omx-mv-thumbnails-rail__item active",
+      "isGenerating": false,
+      "title": "最早生成图"
+    }
+  ],
+  "rule": "newest_first_descending_by_timestamp",
+  "topItemIsGeneratingTask": true,
+  "secondItemIsLatestImage": true
+}

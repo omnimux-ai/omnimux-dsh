@@ -157,17 +157,34 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
     return mediaList.filter((m) => m.sessionId === sessionId);
   }, [mediaList, sessionId]);
 
-  const activeItem = sessionMediaList.find((m) => m.id === activeId) || sessionMediaList[0];
+  // 左侧缩略图栏专用列表：按时间倒序排列（最新生成的任务或成品优先置于顶部开头第一位）
+  const thumbnailsList = React.useMemo(() => {
+    const list = (sessionMediaList || mediaList).filter(
+      (item) => item && (item.url || item.status === 'generating' || item.status === 'failed')
+    );
+    return [...list].sort((a, b) => {
+      const tb = b.timestamp ?? 0;
+      const ta = a.timestamp ?? 0;
+      if (tb !== ta) return tb - ta;
+      return list.indexOf(b) - list.indexOf(a);
+    });
+  }, [sessionMediaList, mediaList]);
+
+  // 默认选中缩略图栏首项（最新项），回退为 session 列表首项
+  const activeItem = sessionMediaList.find((m) => m.id === activeId) || thumbnailsList[0] || sessionMediaList[0];
   const timelineGroups = store.getTimelineGroups(sessionId);
 
-  // 会话切换时，若当前 activeId 不属于当前会话的媒体列表，自动联动选中该会话的第一张素材
+  // 会话切换时，若当前 activeId 不属于当前会话的媒体列表，自动联动选中该会话最新的一张素材
   useEffect(() => {
     if (!sessionId || sessionMediaList.length === 0) return;
     const exists = sessionMediaList.some((m) => m.id === activeId);
     if (!exists) {
-      store.setActiveId(sessionMediaList[0].id);
+      const defaultTarget = thumbnailsList[0] || sessionMediaList[0];
+      if (defaultTarget) {
+        store.setActiveId(defaultTarget.id);
+      }
     }
-  }, [sessionId, sessionMediaList, activeId]);
+  }, [sessionId, sessionMediaList, activeId, thumbnailsList]);
 
   const imageRef = useRef(null);
   const viewerRootRef = useRef(null);
@@ -687,9 +704,9 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
             >
               {/* 左上角候选多图纵向微型 1:1 居中滚动切换栏 (对标参考图) */}
               {/* 防裂图基线检查契约保留: .filter((item) => item && (item.url || item.status === 'generating')) */}
-              {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating' || item.status === 'failed')).length > 1 ? (
+              {thumbnailsList.length > 1 ? (
                 <div className="omx-mv-thumbnails-rail" title="点击切换图片 (保持当前缩放比例)">
-                  {(sessionMediaList || mediaList).filter((item) => item && (item.url || item.status === 'generating' || item.status === 'failed')).map((item) => {
+                  {thumbnailsList.map((item) => {
                     const isSelected = item.id === activeItem?.id;
                     if (item.status === 'generating') {
                       return (
