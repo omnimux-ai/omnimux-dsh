@@ -137,11 +137,13 @@ export function pickMediaUrl(raw) {
   if (typeof providerUrl === 'string' && /^https?:\/\//i.test(providerUrl)) return providerUrl
   const direct = row.videoUrl ?? row.video_url ?? row.imageUrl ?? row.image_url
     ?? row.audioUrl ?? row.audio_url
+    ?? row.contentUrl ?? row.content_url
     ?? row.url ?? row.result_url
     ?? data?.videoUrl ?? data?.video_url ?? data?.imageUrl ?? data?.image_url
     ?? data?.audioUrl ?? data?.audio_url
+    ?? data?.contentUrl ?? data?.content_url
     ?? data?.url ?? data?.result_url
-    ?? firstData?.url
+    ?? firstData?.content_url ?? firstData?.contentUrl ?? firstData?.url
   if (typeof direct === 'string' && direct) return direct
   const b64 = firstData?.b64_json ?? row.b64_json ?? data?.b64_json
   if (typeof b64 === 'string' && b64.trim()) return `data:image/png;base64,${b64.trim()}`
@@ -153,7 +155,10 @@ export function pickMediaUrl(raw) {
   const outputs = row.outputs
   if (Array.isArray(outputs)) {
     for (const item of outputs) {
-      if (item && typeof item === 'object' && typeof item.url === 'string') return item.url
+      if (item && typeof item === 'object') {
+        const link = item.content_url ?? item.contentUrl ?? item.url
+        if (typeof link === 'string' && /^https?:\/\//i.test(link)) return link
+      }
     }
   }
   // AutoDL lane (`/v1/tasks/{id}/artifacts`): produced files are listed under
@@ -164,7 +169,7 @@ export function pickMediaUrl(raw) {
     for (const item of artifacts) {
       if (typeof item === 'string' && /^https?:\/\//i.test(item)) return item
       if (item && typeof item === 'object') {
-        const link = item.url ?? item.download_url ?? item.downloadUrl ?? item.file_url ?? item.fileUrl
+        const link = item.content_url ?? item.contentUrl ?? item.url ?? item.download_url ?? item.downloadUrl ?? item.file_url ?? item.fileUrl
         if (typeof link === 'string' && /^https?:\/\//i.test(link)) return link
       }
     }

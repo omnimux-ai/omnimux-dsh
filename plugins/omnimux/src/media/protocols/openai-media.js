@@ -191,20 +191,24 @@ export async function pollOpenAiMediaTask(options) {
         // lives behind `tasks/{id}/artifacts` (Issue #3063). Fetch and merge it
         // so the caller's pickMediaUrl sees one envelope.
         if (isAutodlTaskPath(submitPath) && !pickMediaUrl(json)) {
-          try {
-            const artifacts = await getJson(
-              options.fetcher,
-              `${options.baseUrl}/${AUTODL_POLL_PATH}/${options.taskId}/artifacts`,
-              options.apiKey,
-              options.signal,
-              { requestTimeoutMs: options.requestTimeoutMs },
-            )
-            if (artifacts && typeof artifacts === 'object') {
-              return { ...json, artifacts: artifacts.artifacts ?? artifacts.data ?? artifacts }
+          const artifactsUrl = `${options.baseUrl}/${AUTODL_POLL_PATH}/${options.taskId}/artifacts`
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const artifacts = await getJson(
+                options.fetcher,
+                artifactsUrl,
+                options.apiKey,
+                options.signal,
+                { requestTimeoutMs: options.requestTimeoutMs },
+              )
+              if (artifacts && typeof artifacts === 'object') {
+                const merged = { ...json, artifacts: artifacts.artifacts ?? artifacts.data ?? artifacts }
+                if (pickMediaUrl(merged)) return merged
+              }
+            } catch {
+              // Transient poll lag before artifacts propagate.
             }
-          } catch {
-            // Fall through: return the completed body as-is and let the caller
-            // report the missing url with the task id attached.
+            if (attempt < 2) await sleep(500)
           }
         }
         return json
