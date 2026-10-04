@@ -625,7 +625,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                       {group.items[0].status === 'failed' ? (
                         <FailureCard item={group.items[0]} retryingIds={retryingIds} onRetry={handleRetryFailure} />
                       ) : group.items[0].status === 'generating' ? (
-                        <GeneratingStateCard statusText={group.items[0].resuming ? '正在恢复任务' : undefined} />
+                        <GeneratingStateCard />
                       ) : group.items[0].type === 'video' ? (
                         <video
                           src={group.items[0].url ? `${group.items[0].url}#t=0.001` : ''}
@@ -650,7 +650,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                           {it.status === 'failed' ? (
                             <FailureCard item={it} retryingIds={retryingIds} onRetry={handleRetryFailure} />
                           ) : it.status === 'generating' ? (
-                            <GeneratingStateCard statusText={it.resuming ? '正在恢复任务' : undefined} />
+                            <GeneratingStateCard />
                           ) : it.type === 'video' ? (
                             <video
                               src={it.url ? `${it.url}#t=0.001` : ''}
@@ -702,7 +702,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                           }}
                           role="button"
                           tabIndex={0}
-                          title="正在生成任务"
+                          title={item.resuming ? '正在恢复任务' : '正在生成任务'}
                         >
                           <OrganicShimmerOverlay />
                         </div>
@@ -781,7 +781,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
                     data-ratio={activeItem?.aspectRatio || '1:1'}
                   >
                     <div className="omx-media-slot__shimmer-wrap omx-mv-generating-overlay" data-card="GeneratingStateCard">
-                      <GeneratingStateCard statusText={activeItem?.resuming ? '正在恢复任务' : undefined} />
+                      <GeneratingStateCard />
                     </div>
                   </div>
                 ) : activeItem?.status === 'failed' ? (

@@ -13,8 +13,8 @@ import {
 } from "./genWavePalette.ts";
 
 export interface GenWaveCardProps extends HTMLAttributes<HTMLDivElement> {
-  /** 顶部任务文案，外部供给。 */
-  statusText: string;
+  /** 顶部任务文案，外部供给；缺省时不渲染头行，点阵画布铺满整卡。 */
+  statusText?: string;
   /** 0–100；传入后由外部接管进度显示并停用内置演示缓动。 */
   progress?: number;
   /** 是否启用内置 0→96% 演示缓动；默认 progress 未提供时为 true。 */
@@ -245,27 +245,29 @@ export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
         className={cx(cssClass(css.card, "card"), className)}
         style={{ ...THEME_VARS, ...style }}
       >
-        <div className={cssClass(css.head, "head")}>
-          {/* 终端/工具图标：圆角描边方框 + ›_ 符号（按参考截图逐像素形状绘制） */}
-          <span className={cssClass(css.icon, "icon")} aria-hidden="true">
-            <svg
-              width="8"
-              height="8"
-              viewBox="0 0 8 8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M1.8 2 4.8 4 1.8 6" />
-              <path d="M5.6 6h1.6" />
-            </svg>
-          </span>
-          <span className={cssClass(css.status, "status")}>{statusText}</span>
-        </div>
+        {statusText ? (
+          <div className={cssClass(css.head, "head")}>
+            {/* 终端/工具图标：圆角描边方框 + ›_ 符号（按参考截图逐像素形状绘制） */}
+            <span className={cssClass(css.icon, "icon")} aria-hidden="true">
+              <svg
+                width="8"
+                height="8"
+                viewBox="0 0 8 8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M1.8 2 4.8 4 1.8 6" />
+                <path d="M5.6 6h1.6" />
+              </svg>
+            </span>
+            <span className={cssClass(css.status, "status")}>{statusText}</span>
+          </div>
+        ) : null}
 
-        <canvas ref={canvasRef} className={cssClass(css.field, "field")} aria-hidden="true" />
+        <canvas ref={canvasRef} className={cx(cssClass(css.field, "field"), statusText ? "" : cssClass(css.fieldFull, "fieldFull"))} aria-hidden="true" />
 
         <span ref={badgeRef} className={cssClass(css.badge, "badge")}>
           0%
