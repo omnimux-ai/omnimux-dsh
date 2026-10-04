@@ -26,7 +26,7 @@ import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
 import { AutoModelPicker } from './components/AutoModelPicker.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, PaperclipIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, SquareIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, PaperclipIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
@@ -3761,16 +3761,7 @@ export function App(): React.JSX.Element {
                 disabled={composerDisabled}
               />
             </span>
-            <button
-              className={`clean-send-btn ${input.trim() || draftImages.length > 0 ? 'active' : ''}`}
-              onClick={() => void send()}
-              disabled={sendDisabled}
-              aria-label={copy.app.sendMessage}
-              title={copy.app.sendMessage}
-            >
-              <ArrowUpIcon size={15} />
-            </button>
-            {working && (
+            {working ? (
               <button
                 className="stop-button clean-send-btn"
                 onClick={() => { void stopTurn() }}
@@ -3778,7 +3769,17 @@ export function App(): React.JSX.Element {
                 aria-label={stopping ? copy.app.stoppingTurn : copy.app.stopTurn}
                 title={stopping ? copy.app.stoppingTurn : copy.app.stopTurn}
               >
-                <span className="stop-glyph" aria-hidden="true" />
+                <SquareIcon size={14} />
+              </button>
+            ) : (
+              <button
+                className={`clean-send-btn ${input.trim() || draftImages.length > 0 ? 'active' : ''}`}
+                onClick={() => void send()}
+                disabled={sendDisabled}
+                aria-label={copy.app.sendMessage}
+                title={copy.app.sendMessage}
+              >
+                <ArrowUpIcon size={15} />
               </button>
             )}
           </div>

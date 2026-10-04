@@ -1,0 +1,13 @@
+=== BROWSER EXTENSION CLEAN SEND BUTTON VERIFICATION EVIDENCE ===
+Task: feat/browser-extension-clean-send-button
+Spec: specs/browser-extension-clean-send-button.spec.md
+Test: plugins/omnimux-browser/extension/tests/composer-send-toggle.spec.ts
+
+[Test Results]
+✓ working 状态与发送按钮实现条件互斥，不共存 (2ms)
+✓ Enter 键在未组词状态下直接调用 send() 发送入队 (1ms)
+✓ send() 函数发送 prompt 时声明 mode: "queue" 支持流式回答期间直接排队 (1ms)
+
+All 3 tests passed.
+Extension bundle built cleanly via node scripts/build.mjs.
+Server build succeeded via tsdown.
