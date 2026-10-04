@@ -7,6 +7,7 @@ AC2 正式guard/mapper/route健康，显式group economy与allowedGroups economy
 AC3 当前用户明确测试可用覆盖最小一次n1、1K、1:1无参考图真实提交，正式executeOmnimuxMedia；出站创建POST硬上限1，锁分组、不收费fallback/retry。已有CLI令牌40仅进程注入，cross_group_retry=false，不改账户/凭据。
 AC4 mode live并下载完整可解码图且display目检才标本次单图可用；HTTP200或task受理不足。全部异常保真实状态/taskID。有task只收原任务GET，没有ID不重提；不凭样本证明高分/多图/参考上限。
 AC5 实际差异才最小修改、consumer闭合，无差异给无需更新结论不造代码。源码改需独审/回归/PR/MQ→Dev静默安装清理，无源码不重复安装。
+AC6 当前单次task_K6Q75DXrvjzteEEHwtNxycZJyBX1zyaC返回终态failed但图片浅查询error=null、content删后详情404；官方GET /v1/tasks/同原ID明确fail_reason为速率限制。仅官方图片失败详情补正确通用任务查询，保持taskId、group和原omnimux-failed终态，不新POST、不把限速归账户额度/登录。custom/BYOK及video旧路径不改；详情失败仍保原错误。正式原终态只读复验必须显示已记录的原因。
 新用户需官方可用生成凭据/额度，缺失明确needs-omnimux；不依本机私有服务。
 
 ## 2 命令

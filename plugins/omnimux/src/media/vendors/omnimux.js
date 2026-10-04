@@ -267,6 +267,15 @@ export function pickTaskFailureReason(raw) {
  * @returns {string | undefined}
  */
 export function taskDetailUrl(raw, options) {
+  // Official image polls omit failure details; the generic task record owns them.
+  if (options.capability === 'image' && options.taskId && options.baseUrl) {
+    try {
+      const base = new URL(options.baseUrl)
+      if (['https://api.omnimux.ai', 'https://omnimux.ai'].includes(base.origin) && /^\/v1\/?$/.test(base.pathname)) {
+        return `${base.origin}/v1/tasks/${encodeURIComponent(options.taskId)}`
+      }
+    } catch { /* Invalid bases retain the existing detail-resolution path. */ }
+  }
   const row = asRecord(raw)
   const data = asRecord(row?.data)
   const candidate = firstNonEmptyString(row?.url, row?.result_url, data?.url, data?.result_url)
