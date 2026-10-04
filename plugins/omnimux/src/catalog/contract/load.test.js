@@ -34,7 +34,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   // 2026-09-15 #1861: gpt-image-2.5-flare and sunburst registered → 41.
   // 2026-09-18 #2256: index-tts (voice clone) registered → 42.
   // 2026-09-29 #2804: gemini-3.8-flash-tts registered → 43.
-  assert.equal(index.all().length, 43, `expected 43 models, got ${index.all().length}`);
+  assert.equal(index.all().length, 44, `expected 43 models, got ${index.all().length}`);
   assert.ok(index.get('whisper-1'));
   assert.ok(index.get('nano-banana-2'));
   assert.ok(index.get('mj-v7'));

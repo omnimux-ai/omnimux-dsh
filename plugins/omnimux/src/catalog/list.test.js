@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 43)
+    assert.equal(catalog.models.length, 44)
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical')

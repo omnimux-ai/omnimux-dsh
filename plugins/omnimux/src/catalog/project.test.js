@@ -126,7 +126,7 @@ test('nanobanana: legacy spellings normalize to the hyphen canonical — never d
 test('withdrawn models leave models[]; unlisted canonical/draft rows stay authoritative but out of the four lists', () => {
   const index = freshIndex();
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
-  assert.equal(dto.models.length, 43); // #2804 gemini-3.8-flash-tts + #2256 index-tts → 43
+  assert.equal(dto.models.length, 44); // #2804 gemini-3.8-flash-tts + #2256 index-tts → 43
   // #1751: the 12 withdrawn (disposition=unavailable) rows have no YAML block, so they
   // vanish from the authoritative list and from every derived bucket.
   for (const gone of [
@@ -223,7 +223,7 @@ test('mergeInputCapability: union roles, min floor, max ceiling, mimes union', (
 test('projectChatRows: full text directory with brand/role/input derived from ops', () => {
   const index = freshIndex();
   const rows = projectChatRows(index);
-  assert.equal(rows.length, 12);
+  assert.equal(rows.length, 13);
   const gemini = rows.find((r) => r.id === 'gemini-3.7-flash');
   assert.deepEqual([...gemini.input], ['text', 'image', 'video']);
   assert.equal(gemini.brand, 'google');

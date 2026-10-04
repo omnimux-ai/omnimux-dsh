@@ -2,6 +2,7 @@
 export const TEXT_MODEL_LABELS = Object.freeze({
   'claude-opus-5': 'Claude Opus 5',
   'claude-opus-4-6': 'Claude Opus 4.6',
+  'claude-sonnet-4-6': 'Claude Sonnet 4.6',
   'gpt-5.6-sol': 'GPT 5.6 Sol',
   'gpt-5.5': 'GPT 5.5',
   'grok-4.6': 'Grok 4.6',

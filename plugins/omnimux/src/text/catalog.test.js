@@ -17,7 +17,7 @@ describe('text whitelist', () => {
     assert.equal(parsed.defaultModel, 'gemini-3.8-flash')
     assert.equal(parsed.maxTokens, 4096)
     assert.deepEqual(parsed.models.map((row) => row.id), [...CHAT_MODEL_IDS])
-    assert.equal(enabledTextModels(parsed).length, 12)
+    assert.equal(enabledTextModels(parsed).length, 13)
     assert.equal(parsed.models.find((row) => row.id === 'deepseek-v4-flash')?.role, 'classic')
     assert.equal(parsed.models.find((row) => row.id === 'grok-4.6')?.brand, 'xai')
     assert.equal(parsed.models.find((row) => row.id === 'gpt-5.5')?.brand, 'openai')
@@ -157,7 +157,7 @@ describe('text whitelist', () => {
   })
 
   it('keeps the default table frozen identity for omitted config', () => {
-    assert.equal(DEFAULT_TEXT.models.length, 12)
+    assert.equal(DEFAULT_TEXT.models.length, 13)
     assert.equal(DEFAULT_TEXT.models.find((row) => row.id === 'grok-4.6')?.id, 'grok-4.6')
     assert.equal(DEFAULT_TEXT.defaultModel, 'gemini-3.8-flash')
   })

@@ -41,6 +41,7 @@ export const ALLOWED_LABELS = Object.freeze([
   '高清版',
   '长片版',
   '口型版',
+  '畅享版',
 ])
 
 /** 同一模型族内至多出现一次的档位词。 */

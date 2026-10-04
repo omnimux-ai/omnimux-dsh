@@ -12,7 +12,7 @@ import { loadDispositions } from './dispositions.js';
 test('collectRuntimeModelIds returns the universe (contracts + wire aliases)', () => {
   resetContractCache();
   const ids = collectRuntimeModelIds();
-  assert.equal(ids.length, 69, `expected 69 runtime ids, got ${ids.length}`); // #2804 +1 → 69
+  assert.equal(ids.length, 70, `expected 69 runtime ids, got ${ids.length}`); // #2804 +1 → 69
   assert.equal(ids.length, new Set(ids).size);
   assert.deepEqual(ids, [...ids].sort((a, b) => a.localeCompare(b)));
   assert.ok(ids.includes('whisper-1'));
@@ -97,7 +97,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
     'wan-3.0-ref',
     'wan3.0-video',
   ]);
-  assert.equal(cov.contractIds.length, 43); // #2804 gemini-3.8-flash-tts 注册后 42→43
+  assert.equal(cov.contractIds.length, 44); // #2804 gemini-3.8-flash-tts 注册后 42→43
   assert.ok(cov.contractIds.includes('indextts-2'));
   assert.ok(cov.contractIds.includes('whisper-1'));
   assert.ok(cov.contractIds.includes('gpt-image-2.5-flare'));
@@ -154,7 +154,7 @@ test('verifyContracts: audit ok; strict ok once 81 dispositions resolve', () => 
   assert.equal(strict.ok, true, JSON.stringify(strict.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(strict.exitCode, 0);
   assert.equal(strict.admission.errorCount, 0, 'strict must not invent admission errors');
-  assert.equal(strict.dispositions.total, 81);
+  assert.equal(strict.dispositions.total, 82);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
   assert.equal(strict.listedOperations.length, 26); // #2804 +1 → 26

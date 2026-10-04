@@ -238,6 +238,26 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "enabled": true
     }
   ],
+  "claude-sonnet-4-6": [
+    {
+      "id": "standard",
+      "label": "标准版",
+      "badge": "Anthropic 官方专线",
+      "pricing": { "pointsEstimate": 1500, "discountRate": 1.0, "billingMode": "per_token" },
+      "sla": { "stability24h": 98, "avgWaitTimeSec": 12 },
+      "wireGroup": "default",
+      "enabled": true
+    },
+    {
+      "id": "pool",
+      "label": "畅享版",
+      "badge": "自建集群 · 随取随用",
+      "pricing": { "pointsEstimate": 428, "discountRate": 0.2857, "billingMode": "per_token" },
+      "sla": { "stability24h": 95, "avgWaitTimeSec": 15 },
+      "wireGroup": "pool",
+      "enabled": true
+    }
+  ],
   "deepseek-v4-flash": [
     {
       "id": "deepseek-official",
@@ -448,6 +468,22 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "billingMode": "per_token"
       },
       "wireGroup": "gemini-cheap",
+      "enabled": true
+    },
+    {
+      "id": "pool",
+      "label": "畅享版",
+      "badge": "自建集群 · 随取随用",
+      "pricing": {
+        "pointsEstimate": 28,
+        "discountRate": 0.2857,
+        "billingMode": "per_token"
+      },
+      "sla": {
+        "stability24h": 96,
+        "avgWaitTimeSec": 10
+      },
+      "wireGroup": "pool",
       "enabled": true
     }
   ],

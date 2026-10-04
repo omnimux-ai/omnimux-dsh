@@ -57,6 +57,89 @@ models:
       profileId: "textComplete"
       seam: "textComplete"
 
+  - id: "claude-sonnet-4-6"
+    label: "Claude Sonnet 4.6"
+    family: "anthropic"
+    role: "classic"
+    operations:
+      - id: "chat"
+        label: "文本对话"
+        output:
+          type: "text"
+        inputs:
+          - slot: "prompt"
+            type: "text"
+            role: "prompt"
+            source: "node_field"
+            min: 1
+            max: 1
+        research:
+          status: "draft"
+          docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-chat.md"
+          verifiedAt: "2026-10-04"
+          notes: "生产网关基线已同步，Channel 76 [自建号池-Magpie] 实测通过"
+        implementation:
+          status: "ready"
+          profileId: "textComplete"
+          seam: "textComplete"
+          notes: "复用 textComplete 适配与 chat 路线"
+        execution:
+          status: "stub"
+          profileId: "textComplete"
+          seam: "textComplete"
+          notes: "生产网关基线与自建号池在线"
+      - id: "vision_chat"
+        label: "图文对话"
+        output:
+          type: "text"
+        inputs:
+          - slot: "prompt"
+            type: "text"
+            role: "prompt"
+            source: "node_field"
+            min: 1
+            max: 1
+          - slot: "reference_images"
+            type: "image"
+            role: "reference"
+            source: "upstream_edge"
+            min: 0
+            max: 10
+            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
+            maxSizeMb: 20
+            limitSource:
+              kind: "policy_conservative"
+              note: "Claude Sonnet 多模态图文输入保守限额"
+        research:
+          status: "draft"
+          docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-vision_chat.md"
+          verifiedAt: "2026-10-04"
+          notes: "生产网关基线已同步，Channel 76 [自建号池-Magpie] 实测通过"
+        implementation:
+          status: "ready"
+          profileId: "textComplete"
+          seam: "textComplete"
+          notes: "复用 textComplete 适配与 vision_chat 路线"
+        execution:
+          status: "stub"
+          profileId: "textComplete"
+          seam: "textComplete"
+          notes: "生产网关基线与自建号池在线"
+    research:
+      status: "verified"
+      docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-chat.md"
+      verifiedAt: "2026-10-04"
+    implementation:
+      status: "ready"
+      profileId: "textComplete"
+      seam: "textComplete"
+      notes: "复用 textComplete 适配与 chat/vision_chat 路线"
+    execution:
+      status: "stub"
+      profileId: "textComplete"
+      seam: "textComplete"
+      notes: "生产网关基线与自建号池在线"
+
   - id: "claude-opus-4-6"
     label: "Claude Opus 4.6"
     family: "anthropic"

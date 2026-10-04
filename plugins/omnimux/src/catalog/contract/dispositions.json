@@ -110,6 +110,17 @@
       "notes": "2026-09-05 #530 PR-A：chat, vision_chat 四要素齐全 → research verified + execution live → listed"
     },
     {
+      "id": "claude-sonnet-4-6",
+      "disposition": "canonical",
+      "reason": "runtime + cordis 在列；生产网关基线与自建号池覆盖 chat+vision_chat",
+      "evidence": [
+        "docs/evidence/2026-08-23-omnimux-brand-four.md",
+        "docs/evidence/2026-09-05-model-claude-opus-4-6-chat.md",
+        "docs/evidence/2026-09-05-model-claude-opus-4-6-vision_chat.md"
+      ],
+      "notes": "2026-10-04：生产网关与自建号池已上线，chat/vision_chat 具备调用能力"
+    },
+    {
       "id": "gpt-5.6-sol",
       "disposition": "canonical",
       "reason": "runtime + cordis 在列；2026-09-05 dated live 证据覆盖 chat+vision_chat",
