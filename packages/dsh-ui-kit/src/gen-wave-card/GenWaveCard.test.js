@@ -96,7 +96,7 @@ describe('GenWaveCard component contract', () => {
     // 点阵双向居中
     assert.match(tsx, /gridOffX = \(cssW - gridW\) \/ 2/)
     assert.match(tsx, /gridOffY = \(cssH - gridH\) \/ 2/)
-    assert.match(tsx, /const y = gridOffY \+ r \* spacing/)
+    assert.match(tsx, /const y = gridOffY \+ r \* spacingY/)
   })
 
   it('applies measured geometry in the module css', () => {

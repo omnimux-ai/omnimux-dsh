@@ -74,25 +74,36 @@ export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
       const C = GEN_WAVE_CONFIG;
       let cssW = 0;
       let cssH = 0;
-      let spacing: number = C.SPACING;
+      let spacingX: number = C.SPACING;
+      let spacingY: number = C.SPACING;
       let gridOffX = 0;
       let gridOffY = 0;
       let rafId = 0;
 
-      /* 画布实测尺寸反算点距：水平/垂直两个方向各算一个可容点距取较小值，
-         点阵在画布内双向居中，铺满卡片可用空间（不再 clamp 到 C.SPACING 上限）。 */
+      /* 画布实测尺寸反算点距：铺满模式下双向贴满卡片四边（微距 6px）；
+         带文案模式下等比居中。 */
       const layout = () => {
         const rect = canvas.getBoundingClientRect();
         cssW = rect.width;
         cssH = rect.height;
-        spacing = Math.min(
-          (cssW - C.PAD_X * 2) / (C.COLS - 1),
-          (cssH - C.PAD_Y - C.PAD_Y_BOT) / (C.ROWS - 1),
-        );
-        const gridW = spacing * (C.COLS - 1);
-        const gridH = spacing * (C.ROWS - 1);
-        gridOffX = (cssW - gridW) / 2;
-        gridOffY = (cssH - gridH) / 2;
+        if (!statusText) {
+          const pad = 6;
+          spacingX = (cssW - pad * 2) / (C.COLS - 1);
+          spacingY = (cssH - pad * 2) / (C.ROWS - 1);
+          gridOffX = pad;
+          gridOffY = pad;
+        } else {
+          const spacing = Math.min(
+            (cssW - C.PAD_X * 2) / (C.COLS - 1),
+            (cssH - C.PAD_Y - C.PAD_Y_BOT) / (C.ROWS - 1),
+          );
+          spacingX = spacing;
+          spacingY = spacing;
+          const gridW = spacing * (C.COLS - 1);
+          const gridH = spacing * (C.ROWS - 1);
+          gridOffX = (cssW - gridW) / 2;
+          gridOffY = (cssH - gridH) / 2;
+        }
 
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.round(cssW * dpr);
@@ -132,8 +143,8 @@ export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
             const ks = sizeWave(c, r, phi); // 尺寸波
             const kb = brightWave(c, r, T); // 亮度锋面
             const radius = lerp(C.DOT_R_MIN, C.DOT_R_MAX, ks);
-            const x = gridOffX + c * spacing;
-            const y = gridOffY + r * spacing;
+            const x = gridOffX + c * spacingX;
+            const y = gridOffY + r * spacingY;
 
             ctx.fillStyle = dotFillStyle(kb);
             ctx.beginPath();
@@ -146,8 +157,8 @@ export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
            下缘贴画布底（BADGE_BOTTOM_GAP=0），始终落在右下角画布区内。 */
         const bw = C.BADGE_W;
         const bh = C.BADGE_H;
-        const bx = cssW - C.BADGE_X_OFF - bw;
-        const by = cssH - C.BADGE_BOTTOM_GAP - bh;
+        const bx = cssW - (statusText ? C.BADGE_X_OFF : 12) - bw;
+        const by = cssH - (statusText ? C.BADGE_BOTTOM_GAP : 12) - bh;
         ctx.fillStyle = GEN_WAVE_COLORS.badgeBg;
         ctx.beginPath();
         ctx.ellipse(bx + bw / 2, by + bh / 2, bw / 2, bh / 2, 0, 0, Math.PI * 2);
@@ -242,7 +253,11 @@ export const GenWaveCard = forwardRef<HTMLDivElement, GenWaveCardProps>(
         role="status"
         aria-live="polite"
         aria-label="Generation in progress"
-        className={cx(cssClass(css.card, "card"), className)}
+        className={cx(
+          cssClass(css.card, "card"),
+          statusText ? "" : cssClass(css.cardFull, "cardFull"),
+          className,
+        )}
         style={{ ...THEME_VARS, ...style }}
       >
         {statusText ? (
