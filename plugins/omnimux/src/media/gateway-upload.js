@@ -693,5 +693,10 @@ export async function hostLocalAssetsIfNeeded(payload, options) {
     }
   }
 
+  // 9. voice_clone reference audio (indextts-2 via AutoDL tasks, Issue #3063)
+  if (typeof cloned.prompt_simple === 'string' && isLocalMediaSource(cloned.prompt_simple)) {
+    cloned.prompt_simple = await hostOne(cloned.prompt_simple)
+  }
+
   return cloned
 }
