@@ -488,10 +488,6 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
         "discountRate": 0.2857,
         "billingMode": "per_token"
       },
-      "sla": {
-        "stability24h": 96,
-        "avgWaitTimeSec": 10
-      },
       "wireGroup": "pool",
       "enabled": true
     }
