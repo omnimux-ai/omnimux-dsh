@@ -233,6 +233,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
         <button
           type="button"
           className="wf-audio__button wf-audio__play nodrag"
+          title={t(playing ? 'audio.pause' : 'audio.play')}
           aria-label={t(playing ? 'audio.pause' : 'audio.play')}
           onClick={(event) => {
             event.stopPropagation();
@@ -299,20 +300,6 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
             )}
             <div className="wf-audio__status" role="status" title={statusText || undefined}>
               <span className="wf-audio__status-text">{statusText}</span>
-              {waveFailed && !error ? (
-                <button
-                  type="button"
-                  className="wf-audio__button wf-audio__retry nodrag"
-                  aria-label={t('audio.retry')}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setRetry((value) => value + 1);
-                  }}
-                  onPointerDown={(event) => event.stopPropagation()}
-                >
-                  <RefreshCw size={14} aria-hidden="true" />
-                </button>
-              ) : null}
             </div>
           </div>
           {onReplace && (
