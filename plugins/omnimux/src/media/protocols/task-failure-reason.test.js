@@ -94,14 +94,14 @@ test('taskDetailUrl falls back to the capability detail endpoint', () => {
     }),
     'https://api.omnimux.ai/v1/videos/task_fixture',
   )
-  // Only `videos` is evidenced; an unevidenced capability yields no URL.
+  // Official image failures expose their reason on the generic task record.
   assert.equal(
     taskDetailUrl({ data: { status: 'failed' } }, {
       capability: 'image',
       baseUrl: 'https://api.omnimux.ai/v1',
       taskId: 'task_fixture',
     }),
-    undefined,
+    'https://api.omnimux.ai/v1/tasks/task_fixture',
   )
   assert.equal(TASK_DETAIL_PATH.video, 'videos')
 })
