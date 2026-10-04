@@ -233,6 +233,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
         <button
           type="button"
           className="wf-audio__button wf-audio__play nodrag"
+          title={t(playing ? 'audio.pause' : 'audio.play')}
           aria-label={t(playing ? 'audio.pause' : 'audio.play')}
           onClick={(event) => {
             event.stopPropagation();
@@ -303,7 +304,9 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
                 <button
                   type="button"
                   className="wf-audio__button wf-audio__retry nodrag"
+                  title={t('audio.retry')}
                   aria-label={t('audio.retry')}
+                  style={{ display: 'none' }}
                   onClick={(event) => {
                     event.stopPropagation();
                     setRetry((value) => value + 1);
