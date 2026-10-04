@@ -4,7 +4,7 @@ import { OmnimuxError, unwrapAdapterError } from './errors.js'
 import { hasChannelEvidence, hasGroupFailoverEvidence } from '../errors/channel-classifier.js'
 import { classifyQuotaFailure } from '../errors/quota-classifier.js'
 import { downloadMediaFile } from './job.js'
-import { createOpenAiMediaRuntime, pollOpenAiMediaTask } from './protocols/openai-media.js'
+import { createOpenAiMediaRuntime, pollOpenAiMediaTask, withRoutingGroup } from './protocols/openai-media.js'
 import { parseMediaConfig, resolveMediaAuth, resolveMediaRoute } from './route.js'
 import { mapOmnimuxInput, pickMediaUrl, taskPathFor } from './vendors/omnimux.js'
 import {
@@ -24,6 +24,7 @@ import {
   saveMediaTaskRecord,
   updateMediaTaskRecord,
   acquireMediaTaskLock,
+  recordMediaCollectionFailure,
 } from './task-store.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
 import { resolveRuntimeChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
@@ -245,6 +246,81 @@ export async function executeOmnimuxMedia(capability, input) {
 
   let media = parseMediaConfig(input.media)
 
+  // Collection belongs to the persisted provider, never today's composer settings.
+  if (isCollectRequest) {
+    if (taskRef && !taskRecord && !taskId) {
+      throw new OmnimuxError('omnimux-task-not-found', '未找到对应的媒体任务记录，请重新提交生成')
+    }
+    if (taskRecord && taskRecord.capability !== capability) {
+      throw new OmnimuxError('omnimux-invalid-request', '任务媒体类型与取回请求不一致')
+    }
+    const effectiveTaskId = taskRecord?.upstreamTaskId || taskId
+    if (!effectiveTaskId && !taskRecord?.artifact?.sourceUrl) throw new OmnimuxError('omnimux-invalid-request', '缺少有效的任务标识，无法轮询取回产物')
+    let route
+    if (taskRecord) {
+      const providerId = taskRecord.providerId
+      const row = media.providers[providerId]
+      const credentialRef = taskRecord.credentialRef || row?.apiKeyEnv
+        || (providerId === 'omnimux' ? 'OMNIMUX_API_KEY' : `OMNIMUX_MEDIA_KEY_${String(providerId).toUpperCase()}`)
+      route = {
+        capability,
+        providerId,
+        protocol: taskRecord.protocol,
+        baseUrl: taskRecord.baseUrl,
+        modelId: taskRecord.model,
+        group: taskRecord.group,
+        apiKeyEnv: credentialRef,
+        // Inline credentials are read only from the same configured provider/origin.
+        apiKey: row?.baseUrl === taskRecord.baseUrl && row?.protocol === taskRecord.protocol ? row?.apiKey : undefined,
+      }
+      if (providerId !== 'omnimux' && input.credentials?.resolve) {
+        const hit = await input.credentials.resolve(credentialRef)
+        if (hit?.value?.trim()) route.apiKey = hit.value.trim()
+        else if (providerId === 'custom' || providerId === 'fal') {
+          const legacy = await input.credentials.resolve(BYOK_KEY_REF)
+          if (legacy?.value?.trim()) route.apiKey = legacy.value.trim()
+        }
+      }
+    } else {
+      route = resolveMediaRoute(capability, input, media, input.env)
+    }
+    const auth = await resolveMediaAuth(route, { env: input.env, store: input.store, credentials: input.credentials })
+    if (taskRecord?.artifact?.sourceUrl) {
+      try {
+        await downloadMediaFile({ dest: input.dest, url: taskRecord.artifact.sourceUrl, capability, apiKey: auth.apiKey, providerId: route.providerId, fetcher: input.fetcher, signal: input.signal })
+      } catch (error) {
+        recordMediaCollectionFailure(taskRecord.taskRef, error)
+        throw error
+      }
+      updateMediaTaskRecord(taskRecord.taskRef, { status: 'ready', collectionError: undefined, collectionErrorCode: undefined,
+        artifact: { ...taskRecord.artifact, cachePath: input.dest } })
+      return { mode: 'live', taskId: effectiveTaskId || null, taskRef: taskRecord.taskRef, url: taskRecord.artifact.sourceUrl }
+    }
+    let result
+    try {
+      result = await finishMediaTask(capability, route, {
+        ...input,
+        taskId: effectiveTaskId,
+        taskPath: taskRecord?.taskPath || input.taskPath,
+        submittedAt: taskRecord?.submittedAt ?? input.submittedAt,
+        deadlineMs: taskRecord?.deadlineMs ?? input.deadlineMs,
+        authKey: auth.apiKey,
+      })
+    } catch (error) {
+      if (taskRecord) recordMediaCollectionFailure(taskRecord.taskRef, error)
+      throw error
+    }
+    if (taskRecord && result.mode === 'live') {
+      updateMediaTaskRecord(taskRecord.taskRef, {
+        status: 'ready', error: undefined, errorCode: undefined,
+        collectionError: undefined, collectionErrorCode: undefined,
+        artifact: { cachePath: input.dest, mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`, sizeBytes: 0 },
+      })
+      result.taskRef = taskRecord.taskRef
+    }
+    return result
+  }
+
   const runtime = resolveRuntimeChoice(input.runtimeSettings)
   const mediaChoice = resolveMediaProviderChoice(input.runtimeSettings, capability)
 
@@ -314,7 +390,7 @@ export async function executeOmnimuxMedia(capability, input) {
     && input.runtimeSettings.runtimeKeyEndpoint.trim().length > 0
     && input.runtimeSettings?.runtimeKeyVerified === true
   const hasReadyByokProvider = Boolean(implicitByokProvider)
-  const shouldRouteByok = isByokChannel || (!isOfficialChannel && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
+  const shouldRouteByok = isByokChannel || (!isOfficialChannel && input.provider !== 'omnimux' && runtime.mode !== 'official' && (mediaChoice.ready || isCustomKeyReady || hasReadyByokProvider))
 
   if (shouldRouteByok) {
     let configuredMainProvider = ''
@@ -489,64 +565,6 @@ export async function executeOmnimuxMedia(capability, input) {
 
   const route = resolveMediaRoute(capability, input, media, input.env)
 
-  // taskId / taskRef poll/finish: skip initial asset SubmitGuard and do not resubmit.
-  if (isCollectRequest) {
-    if (taskRef && !taskRecord && !taskId) {
-      throw new OmnimuxError('omnimux-task-not-found', '未找到对应的媒体任务记录，请重新提交生成')
-    }
-    const effectiveTaskId = taskRecord?.upstreamTaskId || taskId
-    if (!effectiveTaskId) {
-      throw new OmnimuxError('omnimux-invalid-request', '缺少有效的任务标识，无法轮询取回产物')
-    }
-    const effectiveRoute = taskRecord ? {
-      ...route,
-      modelId: taskRecord.model || route.modelId,
-      baseUrl: taskRecord.baseUrl || route.baseUrl,
-      group: taskRecord.group ?? route.group,
-      providerId: taskRecord.providerId || route.providerId,
-    } : route
-
-    const auth = await resolveMediaAuth(effectiveRoute, {
-      env: input.env,
-      store: input.store,
-      credentials: input.credentials,
-    })
-
-    const pollTaskPath = taskRecord?.taskPath || (typeof input.taskPath === 'string' && input.taskPath.trim()) || undefined
-    const res = await finishMediaTask(capability, effectiveRoute, {
-      ...input,
-      taskId: effectiveTaskId,
-      taskPath: pollTaskPath,
-      submittedAt: taskRecord?.submittedAt ?? input.submittedAt,
-      deadlineMs: taskRecord?.deadlineMs ?? input.deadlineMs,
-      authKey: auth.apiKey,
-    })
-
-    if (taskRecord && res?.mode === 'live') {
-      try {
-        updateMediaTaskRecord(taskRecord.taskRef, {
-          status: 'ready',
-          artifact: {
-            cachePath: input.dest,
-            mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`,
-            sizeBytes: 0,
-          },
-        })
-      } catch {
-        // 忽略状态回写非致命错误
-      }
-    }
-
-    // taskRef must never be present-but-undefined: host tool results go through a lossless-JSON
-    // check that rejects `key: undefined`, so resume paths without a ledger record must omit it
-    // (and must also clear an undefined taskRef leaking through ...res).
-    const resolvedTaskRef = taskRecord?.taskRef || (taskRef.startsWith('mtask_') ? taskRef : undefined)
-    const result = { ...res }
-    if (resolvedTaskRef) result.taskRef = resolvedTaskRef
-    else delete result.taskRef
-    return result
-  }
-
   // 基于 requestKey 的幂等查重短路与原子排他占位：若账本中已存在相同调用意图，直接复用任务句柄，杜绝二次提交与扣费
   const requestKey = typeof input.requestKey === 'string' ? input.requestKey.trim() : ''
   let pendingTaskRecord = null
@@ -554,7 +572,7 @@ export async function executeOmnimuxMedia(capability, input) {
   if (!isCollectRequest && requestKey) {
     const existingRecord = findMediaTaskByRequestKey(requestKey)
     if (existingRecord && existingRecord.capability === capability && existingRecord.model === route.modelId) {
-      if (existingRecord.status === 'ready' && existingRecord.artifact?.cachePath) {
+      if (existingRecord.status === 'ready' && existingRecord.artifact?.cachePath && existsSync(existingRecord.artifact.cachePath)) {
         let finalUrl = existingRecord.artifact.cachePath
         if (input.dest && existingRecord.artifact.cachePath !== input.dest && existsSync(existingRecord.artifact.cachePath)) {
           try {
@@ -571,6 +589,13 @@ export async function executeOmnimuxMedia(capability, input) {
           taskRef: existingRecord.taskRef,
           url: finalUrl,
         }
+      }
+      if (existingRecord.status === 'ready') {
+        if (!existingRecord.upstreamTaskId && !existingRecord.artifact?.sourceUrl) throw new OmnimuxError('omnimux-artifact-unavailable', '原生成文件已不可用；不会自动重新生成')
+        return executeOmnimuxMedia(capability, { ...input, taskRef: existingRecord.taskRef, taskId: existingRecord.upstreamTaskId })
+      }
+      if (existingRecord.status === 'failed' && existingRecord.upstreamTaskId) {
+        throw new OmnimuxError('omnimux-task-conflict', '原任务结果需按任务引用核实，不能以相同请求标识重新提交')
       }
       if (existingRecord.status === 'submitted' || (existingRecord.status === 'submitting' && existingRecord.upstreamTaskId)) {
         return {
@@ -716,8 +741,7 @@ export async function executeOmnimuxMedia(capability, input) {
     })
     : mappedInput
 
-  if (!wait && requestKey) {
-    try {
+  {
       pendingTaskRecord = createMediaTaskRecord({
         capability,
         model: route.modelId,
@@ -729,14 +753,13 @@ export async function executeOmnimuxMedia(capability, input) {
         group: route.group,
         taskPath: taskPathFor(capability, route.modelId),
         requestKey,
+        credentialRef: route.apiKeyEnv,
       })
       saveMediaTaskRecord(pendingTaskRecord)
-    } catch {
-      pendingTaskRecord = null
-    }
   }
 
   let result
+  let acceptedRoute = route
   const isChannelRouting = Boolean(route.group || route.candidates?.some((c) => c.includes('@')))
   const candidates = (route.candidates && route.candidates.length > 0 ? route.candidates : [route.modelId])
     .slice(0, isChannelRouting ? 4 : 2)
@@ -746,11 +769,19 @@ export async function executeOmnimuxMedia(capability, input) {
     // as its own header, so the model id sent upstream must be the bare id — not
     // the candidate string, which the gateway would read as an unknown model.
     const { modelId: candidateModelId, group: candidateGroup } = splitRoutingCandidate(candidate)
-    const runtime = input.runtime ?? createProtocolRuntime(
-      { ...route, modelId: candidateModelId || route.modelId, group: candidateGroup ?? route.group, taskPath: taskPathFor(capability, route.modelId) },
-      input.fetcher, auth.apiKey, () => { submitted = true },
-    )
+    const candidateRoute = { ...route, modelId: candidateModelId || route.modelId, group: candidateGroup ?? route.group, taskPath: taskPathFor(capability, route.modelId) }
+    const onSubmitted = (upstreamTaskId) => {
+      submitted = true
+      acceptedRoute = candidateRoute
+      updateMediaTaskRecord(pendingTaskRecord.taskRef, {
+        status: 'submitted', upstreamTaskId,
+        wireModel: candidateRoute.modelId, group: candidateRoute.group,
+        credentialRef: candidateRoute.apiKeyEnv,
+      })
+    }
+    const runtime = input.runtime ?? createProtocolRuntime(candidateRoute, input.fetcher, auth.apiKey, onSubmitted)
     try {
+      acceptedRoute = candidateRoute
       result = await runtime.execute({
         providerId: route.providerId,
         modelId: `${route.providerId}-${capability}`,
@@ -759,7 +790,7 @@ export async function executeOmnimuxMedia(capability, input) {
         // (`metadata.wait`): the outer budget must sit above the poll deadline,
         // otherwise runtime-kit's own abort replaces `omnimux-task-timeout`.
         timeoutMs: MEDIA_EXECUTION_BUDGET_MS,
-        metadata: { wait },
+        metadata: { wait, onSubmitted },
         ...(input.signal ? { signal: input.signal } : {}),
       })
       break
@@ -789,40 +820,20 @@ export async function executeOmnimuxMedia(capability, input) {
 
   const url = result.outputs.find((item) => item.type === capability)?.url
   const submittedId = result.taskId ?? null
+  if (url) updateMediaTaskRecord(pendingTaskRecord.taskRef, {
+    status: 'submitted', artifact: { sourceUrl: url }, wireModel: acceptedRoute.modelId, group: acceptedRoute.group,
+  })
+  if (submittedId) {
+    updateMediaTaskRecord(pendingTaskRecord.taskRef, {
+      status: 'submitted', upstreamTaskId: submittedId,
+      wireModel: acceptedRoute.modelId, group: acceptedRoute.group,
+    })
+  }
   if (!wait && !url) {
     if (!submittedId) {
       throw new OmnimuxError('omnimux-invalid-response', 'submit returned no task_id')
     }
-    let taskRef
-    try {
-      if (pendingTaskRecord) {
-        updateMediaTaskRecord(pendingTaskRecord.taskRef, {
-          status: 'submitted',
-          upstreamTaskId: submittedId,
-        })
-        taskRef = pendingTaskRecord.taskRef
-      } else {
-        const record = createMediaTaskRecord({
-          capability,
-          model: route.modelId,
-          operation: input.operation,
-          providerId: route.providerId,
-          protocol: route.protocol || 'openai-media',
-          baseUrl: route.baseUrl,
-          wireModel: route.wireModel || route.modelId,
-          group: route.group,
-          taskPath: taskPathFor(capability, route.modelId),
-          requestKey: typeof input.requestKey === 'string' ? input.requestKey : undefined,
-        })
-        record.upstreamTaskId = submittedId
-        record.status = 'submitted'
-        saveMediaTaskRecord(record)
-        taskRef = record.taskRef
-      }
-    } catch {
-      taskRef = pendingTaskRecord?.taskRef || undefined
-    }
-    return { mode: 'submitted', taskId: submittedId, taskRef, url: null }
+    return { mode: 'submitted', taskId: submittedId, taskRef: pendingTaskRecord.taskRef, url: null }
   }
 
   if (!url) {
@@ -833,39 +844,42 @@ export async function executeOmnimuxMedia(capability, input) {
     url,
     capability,
     apiKey: auth.apiKey,
+    providerId: route.providerId,
     fetcher: input.fetcher,
     signal: input.signal,
     sleep: input.sleep,
   })
 
-  // wait: true 同步生成模式下，成功下载后同样持久化 ready 账本，确保相同 requestKey 命中完成态缓存
-  if (requestKey) {
+  // wait: true 同步生成模式下，成功下载后同样持久化 ready 账本，确保相同 requestKey 命中完成态缓存。
+  // 上游同步出图时（wait:false 也直接拿到 url）：更新提交前创建的 pendingTaskRecord 同一条记录为
+  // ready，不再另起孤儿 submitting 记录，并把 taskRef 返回给前端续传（#3011）。
+  updateMediaTaskRecord(pendingTaskRecord.taskRef, {
+    status: 'ready',
+    upstreamTaskId: submittedId || undefined,
+    artifact: {
+      cachePath: input.dest,
+      mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`,
+      sizeBytes: 0,
+    },
+  })
+  return { mode: 'live', taskId: submittedId, url, taskRef: pendingTaskRecord.taskRef }
+} catch (submitError) {
+  // 提交链路任何失败都要把占位记录标为 failed：否则账本永远停在 submitting，
+  // 前端刷新续传时会误判为“已中断”（#3011）
+  if (pendingTaskRecord) {
     try {
-      const readyRecord = createMediaTaskRecord({
-        capability,
-        model: route.modelId,
-        operation: input.operation,
-        providerId: route.providerId,
-        protocol: route.protocol || 'openai-media',
-        baseUrl: route.baseUrl,
-        wireModel: route.wireModel || route.modelId,
-        group: route.group,
-        taskPath: taskPathFor(capability, route.modelId),
-        requestKey,
+      const current = getMediaTaskRecord(pendingTaskRecord.taskRef)
+      if (current?.upstreamTaskId || current?.artifact?.sourceUrl) recordMediaCollectionFailure(pendingTaskRecord.taskRef, submitError)
+      else updateMediaTaskRecord(pendingTaskRecord.taskRef, {
+        status: 'failed',
+        error: submitError instanceof Error ? submitError.message : String(submitError),
+        errorCode: typeof submitError?.code === 'string' ? submitError.code : undefined,
       })
-      readyRecord.status = 'ready'
-      readyRecord.upstreamTaskId = submittedId
-      readyRecord.artifact = {
-        cachePath: input.dest,
-        mimeType: `${capability}/${input.dest.split('.').pop() || 'octet-stream'}`,
-        sizeBytes: 0,
-      }
-      saveMediaTaskRecord(readyRecord)
-    } catch {
-      // 忽略缓存落盘错误
+    } catch (ledgerError) {
+      console.warn('[media] failure diagnostic could not be persisted:', ledgerError.message)
     }
   }
-  return { mode: 'live', taskId: submittedId, url }
+  throw submitError
 } finally {
   taskLock?.release()
 }
@@ -910,7 +924,7 @@ export async function finishMediaTask(capability, route, input) {
     apiKey = auth.apiKey
   }
   const done = await pollOpenAiMediaTask({
-    fetcher: input.fetcher ?? fetch,
+    fetcher: withRoutingGroup(input.fetcher ?? fetch, route.group).fetcher,
     baseUrl: route.baseUrl,
     apiKey,
     taskId: input.taskId,
@@ -945,6 +959,7 @@ export async function finishMediaTask(capability, route, input) {
     url,
     capability,
     apiKey,
+    providerId: route.providerId,
     fetcher: input.fetcher,
     signal: input.signal,
   })

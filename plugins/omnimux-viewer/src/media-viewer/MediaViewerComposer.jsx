@@ -138,6 +138,9 @@ export function MediaViewerComposer({
 
   const promptRef = useRef(null);
   const promptBoxRef = useRef(null);
+  const submittingRef = useRef(false);
+  const currentDraftRef = useRef(prompt);
+  currentDraftRef.current = prompt;
   const isSwitchingRef = useRef(false);
   const config = useMediaGenerationConfig({ initialMode });
   const { mode, setMode, closePopovers, model, videoGenMode, setVideoGenMode } = config;
@@ -930,7 +933,7 @@ export function MediaViewerComposer({
 
   const handleSend = useCallback(() => {
     const trimmed = prompt.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled || submittingRef.current) return;
     closePopovers();
     setPickerOpen(false);
 
@@ -947,6 +950,29 @@ export function MediaViewerComposer({
       if (!hasAnyMaterial) {
         const textOp = (operationsOf(model, 'video') || []).find((op) => op.id === 'text_to_video');
         if (textOp) activeOp = textOp;
+      }
+    }
+
+    // 首尾帧模式允许单首帧常驻，但提交时若仅首帧或仅尾帧，需按实际素材降级为合法操作（Issue #3045）
+    if (mode === 'video' && (currentOperationId === 'first_last_frame' || activeOp?.id === 'first_last_frame')) {
+      const videoOps = operationsOf(model, 'video') || [];
+      const hasFirst = Object.entries(scopedBuckets).some(([k, v]) => {
+        const slotKey = extractSlotKeyFromBucketKey(k).toLowerCase();
+        return (slotKey.includes('first_frame') || slotKey.includes('firstframe')) && Array.isArray(v) && v.length > 0;
+      });
+      const hasLast = Object.entries(scopedBuckets).some(([k, v]) => {
+        const slotKey = extractSlotKeyFromBucketKey(k).toLowerCase();
+        return (slotKey.includes('last_frame') || slotKey.includes('lastframe')) && Array.isArray(v) && v.length > 0;
+      });
+      if (hasFirst && !hasLast) {
+        const ffOp = videoOps.find((op) => op.id === 'first_frame');
+        activeOp = ffOp || videoOps.find((op) => op.id === 'text_to_video') || activeOp;
+      } else if (!hasFirst && hasLast) {
+        const textOp = videoOps.find((op) => op.id === 'text_to_video');
+        activeOp = textOp || activeOp;
+      } else if (!hasFirst && !hasLast) {
+        const textOp = videoOps.find((op) => op.id === 'text_to_video');
+        activeOp = textOp || activeOp;
       }
     }
 
@@ -1050,11 +1076,16 @@ export function MediaViewerComposer({
       };
     });
 
-    setPrompt('');
-    setUserPromptSuffix('');
-    userPromptSuffixRef.current = '';
-
-    onDirectSubmit?.({
+    submittingRef.current = true;
+    const submission = onDirectSubmit?.({
+      onAccepted: () => {
+        submittingRef.current = false;
+        if (currentDraftRef.current !== prompt) return;
+        setPrompt('');
+        setUserPromptSuffix('');
+        userPromptSuffixRef.current = '';
+      },
+      onRejected: () => { submittingRef.current = false; },
       prompt: synthesizedPrompt,
       rawPrompt: trimmed,
       kind: mode,
@@ -1066,6 +1097,7 @@ export function MediaViewerComposer({
       assets,
       annotations: annotationsPayload,
     });
+    Promise.resolve(submission).finally(() => { submittingRef.current = false; });
   }, [
     prompt,
     disabled,
@@ -1079,6 +1111,8 @@ export function MediaViewerComposer({
     model,
     videoModeId,
     config.channel?.id,
+    config.imageOpMode,
+    currentOperationId,
   ]);
 
   const handleKeyDown = useCallback((e) => {

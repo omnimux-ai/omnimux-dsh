@@ -1,0 +1,73 @@
+Review complete: 4 finding(s) across 8 selected item(s).
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:288-295 ───
+[bug · medium] On timeout this rejects as soon as SIGTERM is sent, before the child has actually
+closed and before the SIGKILL grace period finishes. Callers then enter cleanup and may delete the
+staging/temp directory while an owned build/browser/plugin-add process is still running, which is
+the lifecycle race this helper is meant to prevent. Please wait for `close` (or for the SIGKILL wait
+to expire) before rejecting, and only report failure after the process exit was observed or the
+final deadline elapsed.
+
+      const timer = setTimeout(() => {
+        if (settled) return;
+        output += `\n[boundedCommand] deadline ${deadlineMs}ms reached; SIGTERM to owned pid ${child.pid}`;
+        try { child.kill('SIGTERM'); } catch { /* already gone */ }
+-       const killer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already gone */ } }, killGraceMs);
+-       once(child, 'close').then(() => clearTimeout(killer)).catch(() => clearTimeout(killer));
++       const killer = setTimeout(() => {
++         output += `\n[boundedCommand] SIGKILL to owned pid ${child.pid}`;
++         try { child.kill('SIGKILL'); } catch { /* already gone */ }
++       }, killGraceMs);
++       once(child, 'close').then(() => {
++         clearTimeout(killer);
+-       fail(new Error(output.replace(/([?&]token=)\S+/g, '$1[REDACTED]')));
++         fail(new Error(output.replace(/([?&]token=)\S+/g, '$1[REDACTED]')));
++       }).catch(error => {
++         clearTimeout(killer);
++         fail(error);
++       });
+      }, deadlineMs);
+
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:148-149 ───
+[bug · low] The importer-link path returns the resolved sidebar package without checking that its
+package version matches the version declared by the importer, while the shared-store fallback
+performs that validation. If a stale or mismatched link exists, the evidence can record a
+`declared-dependency` sidebar that does not actually satisfy the declared input. Apply the same
+`wanted`/`pkg.version` validation before returning here.
+
+        const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
++       if (wanted && !exactVersionSatisfies(pkg.version, wanted)) {
++         throw new EnvironmentError(
++           `declared sidebar ${wanted} (${declaredBy}) does not match installed ${pkg.version}; ` +
++           'declare the right version or pass OMNIMUX_E2E_SIDEBAR=<dir> explicitly.'
++         );
++       }
+        return { dir, version: pkg.version || 'unknown', declaredBy, source: 'declared-dependency', hash: await hashTree(dir) };
+
+
+─── plugins/omnimux/src/client/comment-native.e2e.test.js:5-10 ───
+[maintainability · low] These imports are not referenced in this file, which leaves dead code and
+can trip lint rules for unused imports. Please remove the unused `access` and `EnvironmentError`
+imports.
+
+- import { mkdtemp, mkdir, writeFile, readFile, rm, readdir, access } from 'node:fs/promises';
++ import { mkdtemp, mkdir, writeFile, readFile, rm, readdir } from 'node:fs/promises';
+  import { resolve } from 'node:path';
+  import { fileURLToPath } from 'node:url';
+  import { commentFixturePng, commentSeedSource } from '../../test-support/comment-native-seed.mjs';
+  import {
+-   EnvironmentError,
+
+
+─── plugins/omnimux/test-support/comment-native-environment.mjs:53-55 ───
+[bug · low] This adds the absolute symlink target path into the tree hash before walking it. That
+makes the recorded sidebar hash depend on the local pnpm store/worktree path, even when the package
+bytes are identical, so evidence from different machines cannot be compared reliably. If the goal is
+to fingerprint content, hash a stable link marker or just the target contents/relative entry names
+instead of `target`.
+
+          if ((await stat(target)).isDirectory()) {
+-           hash.update('L' + target + '\0');
++           hash.update('L\0');
+            await walk(target);

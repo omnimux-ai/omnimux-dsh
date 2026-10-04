@@ -281,7 +281,8 @@ export function deriveAdaptiveOperation(model, kind, buckets = {}, hintOpId = ''
     if (!hasFirstFrame && !hasLastFrame && refVideosCount === 0) {
       targetId = 'text_to_video';
     } else if (hasFirstFrame && !hasLastFrame && refVideosCount === 0) {
-      targetId = 'first_frame';
+      // 页签明确指向首尾帧时保持双帧操作：尾帧槽继续显示供补齐，不把双槽降成单槽（Issue #3045；提交时由调用方按实际素材再降级）
+      targetId = hintOpId === 'first_last_frame' ? 'first_last_frame' : 'first_frame';
     } else if (hasFirstFrame && hasLastFrame && refVideosCount === 0) {
       targetId = 'first_last_frame';
     } else if (!hasFirstFrame && hasLastFrame && refVideosCount === 0) {

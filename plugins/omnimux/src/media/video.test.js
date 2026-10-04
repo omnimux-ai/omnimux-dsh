@@ -58,36 +58,28 @@ describe('omnimux video helpers', () => {
     )
   })
 
-  it('executes through mock store token without OMNIMUX_API_KEY', async () => {
+  it('仅登录 PAT 时拒绝视频生成，提供方提交与 fetch 均为零且不写产物', async (t) => {
     const dir = mkdtempSync(join(tmpdir(), 'omnimux-vid-pat-'))
+    t.after(() => rmSync(dir, { recursive: true, force: true }))
     const dest = join(dir, 'out.mp4')
-    const result = await executeOmnimuxVideo({
+    let storeCalls = 0
+    let submitCalls = 0
+    let fetchCalls = 0
+    await assert.rejects(() => executeOmnimuxVideo({
       prompt: 'a wall with pat',
       dest,
       model: 'seedance-2-5',
       operation: 'text_to_video',
       duration: 5,
       env: {},
-      store: {
-        resolve: async () => 'pat-video-token',
-      },
-      runtime: {
-        async execute() {
-          return {
-            taskId: 'task-vid-pat',
-            outputs: [{ type: 'video', url: 'https://cdn.example/out-pat.mp4' }],
-          }
-        },
-      },
-      fetcher: async (url) => {
-        assert.equal(String(url), 'https://cdn.example/out-pat.mp4')
-        return { ok: true, headers: { get: () => 'video/mp4' }, arrayBuffer: async () => Buffer.from('mp4-pat-bytes') }
-      },
-    })
-    assert.equal(result.mode, 'live')
-    assert.equal(result.taskId, 'task-vid-pat')
-    assert.equal(readFileSync(dest, 'utf8'), 'mp4-pat-bytes')
-    rmSync(dir, { recursive: true, force: true })
+      store: { resolve: async () => { storeCalls += 1; return 'pat-video-token' } },
+      runtime: { async execute() { submitCalls += 1; throw new Error('PAT must not submit') } },
+      fetcher: async () => { fetchCalls += 1; throw new Error('PAT must not fetch') },
+    }), { code: 'needs-omnimux', message: '生成服务需要 API 密钥，请在当前凭证中配置 OMNIMUX_API_KEY；登录凭证不能用于生成' })
+    assert.equal(storeCalls, 0)
+    assert.equal(submitCalls, 0)
+    assert.equal(fetchCalls, 0)
+    assert.equal(existsSync(dest), false)
   })
 
   it('sends authorization when downloading an omnimux.ai video url', async () => {

@@ -233,64 +233,57 @@ function readProviderKey(providerId, apiKeyEnv, inlineApiKey, env) {
  *   store?: { resolve: () => Promise<string | undefined> },
  *   credentials?: { resolve: (ref: string) => Promise<{ value?: string } | undefined> },
  * }} [deps]
- * @returns {Promise<{ apiKey: string, authType: 'api-key' | 'access-token' | 'none' }>}
+ * @returns {Promise<{ apiKey: string, authType: 'api-key' | 'none' }>}
  */
 export async function resolveMediaAuth(route, deps = {}) {
   const env = deps.env !== undefined ? deps.env : process.env
 
-  // 1. 检查环境变量：env[route.apiKeyEnv] 或（若 providerId === 'omnimux'）env.OMNIMUX_API_KEY / env.OMNIMUX_TOKEN
-  const envKey = (route.apiKeyEnv ? env?.[route.apiKeyEnv] : undefined) ||
-    (route.providerId === 'omnimux' ? (env?.OMNIMUX_API_KEY || env?.OMNIMUX_TOKEN) : undefined)
-  if (typeof envKey === 'string' && envKey.trim()) {
+  // The official media API accepts API keys, not console access tokens.
+  // Custom providers retain their own credential format without prefix inference.
+  const isUsableKey = (value) => typeof value === 'string' && Boolean(value.trim())
+    && (route.providerId !== 'omnimux' || value.trim().startsWith('sk-'))
+  const envKeys = [
+    route.apiKeyEnv ? env?.[route.apiKeyEnv] : undefined,
+    ...(route.providerId === 'omnimux' ? [env?.OMNIMUX_API_KEY, env?.OMNIMUX_TOKEN] : []),
+  ]
+  const envKey = envKeys.find(isUsableKey)
+  if (envKey) {
     return { apiKey: envKey.trim(), authType: 'api-key' }
   }
 
-  // 2. 检查内联 route.apiKey：若为 'none'，返回 { apiKey: '', authType: 'none' }；若有非空字符串则返回 { apiKey: route.apiKey, authType: 'api-key' }
+  // Inline provider configuration follows the same policy; only custom providers
+  // may explicitly opt out of authentication with 'none'.
   if (typeof route.apiKey === 'string') {
-    if (route.apiKey.trim() === 'none') {
+    if (route.providerId !== 'omnimux' && route.apiKey.trim() === 'none') {
       return { apiKey: '', authType: 'none' }
     }
-    if (route.apiKey.trim()) {
+    if (isUsableKey(route.apiKey)) {
       return { apiKey: route.apiKey.trim(), authType: 'api-key' }
     }
   }
 
-  // 3. OmniMux: credentials sk- (same refs as chat / official tools), then login PAT.
-  // Desktop login writes a console access_token that 401s /v1/images/generations.
+  // Resolve only API-key references from the current operation's credential service.
+  // Login PATs and account stores are not media API credentials.
   if (route.providerId === 'omnimux' && deps.credentials && typeof deps.credentials.resolve === 'function') {
+    let resolutionError
     for (const ref of ['OMNIMUX_API_KEY', 'OMNIMUX_TOKEN']) {
       try {
         const hit = await deps.credentials.resolve(ref)
-        if (hit && typeof hit.value === 'string' && hit.value.trim()) {
+        if (isUsableKey(hit?.value)) {
           return { apiKey: hit.value.trim(), authType: 'api-key' }
         }
-      } catch {
-        // next ref
+      } catch (cause) {
+        resolutionError ??= cause
       }
     }
-    try {
-      const hit = await deps.credentials.resolve('OMNIMUX_ACCESS_TOKEN')
-      if (hit && typeof hit.value === 'string' && hit.value.trim()) {
-        return { apiKey: hit.value.trim(), authType: 'access-token' }
-      }
-    } catch {
-      // fall through to login store
-    }
-  }
-  if (route.providerId === 'omnimux' && deps.store && typeof deps.store.resolve === 'function') {
-    try {
-      const token = await deps.store.resolve()
-      if (typeof token === 'string' && token.trim()) {
-        return { apiKey: token.trim(), authType: 'access-token' }
-      }
-    } catch {
-      // store resolution fallback
+    if (resolutionError) {
+      throw new OmnimuxError('needs-omnimux', '读取生成服务 API 密钥失败，请检查当前凭证配置', { cause: resolutionError })
     }
   }
 
   // 4. 若均未获取到：
   if (route.providerId === 'omnimux') {
-    throw new OmnimuxError('needs-omnimux', '请先在侧边栏登录 OmniMux 账号，或配置 OMNIMUX_API_KEY')
+    throw new OmnimuxError('needs-omnimux', '生成服务需要 API 密钥，请在当前凭证中配置 OMNIMUX_API_KEY；登录凭证不能用于生成')
   }
   throw new OmnimuxError('omnimux-unconfigured', `media provider '${route.providerId}' has no apiKey configured`)
 }

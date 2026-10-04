@@ -1,0 +1,7 @@
+{
+  "issue": 3062,
+  "timestamp": 1791081563424,
+  "rootCause": "direct-http.js line 166 prematurely returned 500 omnimux-task-interrupted when receiving retrieval requests for in-flight tasks in submitting/submitted state without upstreamTaskId.",
+  "verifiedInDev": true,
+  "observedBehavior": "Frontend generation-runner polls with wait:true + taskRef immediately after submission. When backend is generating upstream synchronously (e.g. gpt-image-2.5), upstreamTaskId is not yet available, triggering premature 500 error and causing failure card to render while backend eventually completes successfully in background."
+}

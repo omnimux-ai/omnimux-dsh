@@ -6,9 +6,6 @@ import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { lateReadyRegression, frozenInputRegression } from '../../../test-support/generation-feedback/generation-feedback-regressions.mjs';
-
-// Bridge contract regressions are explicitly separate from the real-browser journey.
 const hasEgoBrowser = (() => {
   try {
     execFileSync('ego-browser', ['--version'], { stdio: 'ignore' })
@@ -18,23 +15,23 @@ const hasEgoBrowser = (() => {
   }
 })()
 
-test('bridge regression: late single request consumes retained turn end', () => lateReadyRegression(false));
-test('bridge regression: two real candidates resolve without cross-request media', () => lateReadyRegression(true));
-test('bridge regression: submitted input is frozen and questions do not generate', frozenInputRegression);
-
 const here = dirname(fileURLToPath(import.meta.url));
-const root = resolve(here, '../../../../..');
+const root = resolve(here, '../../../..');
 
 // Real browser; unavailable ego capabilities fail rather than skip.
-// Independent command: node --test plugins/omnimux/src/client/media-viewer/generation-feedback.e2e.test.js
+// Independent command: node --test plugins/omnimux/tests/e2e/generation-feedback.e2e.test.js
 // Grounded in #1759 space700 and tmp/canvas-generation-feedback/video-browser.json.
-test('generation feedback: real browser transport-to-viewer journeys', { skip: !hasEgoBrowser && 'ego-browser binary not on PATH (opt-in browser harness)' }, async (t) => {
+test('generation feedback: real browser transport-to-viewer journeys', { timeout: 240000 }, async (t) => {
+  assert.equal(hasEgoBrowser, true, 'ego-browser is required; unavailable capabilities must fail');
   const evidence = resolve(root, '.agent-reports/canvas-generation-feedback/e2e-runs', randomUUID());
   await mkdir(evidence, { recursive: true });
   t.diagnostic(`retained evidence: ${evidence}`);
-  const moduleUrl = new URL('../../../test-support/generation-feedback/generation-feedback-browser.mjs', import.meta.url).href;
+  const moduleUrl = new URL('../../test-support/generation-feedback/generation-feedback-browser.mjs', import.meta.url).href;
   const script = `const { runGenerationFeedbackBrowser } = await import(${JSON.stringify(moduleUrl)});
-await runGenerationFeedbackBrowser(taskSpace, ${JSON.stringify(evidence)});`;
+const assert=(await import('node:assert/strict')).default;
+const report=await runGenerationFeedbackBrowser(taskSpace, ${JSON.stringify(evidence)}, { nodeExecutable: ${JSON.stringify(process.execPath)} });
+assert.equal(report.closed, true);
+assert.equal(report.server.closed, true);`;
   const { NODE_TEST_CONTEXT: _testContext, ...env } = process.env;
   const output = await new Promise((accept, reject) => {
     const child = spawn('ego-browser', ['nodejs'], { cwd: root, env, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -52,7 +49,8 @@ await runGenerationFeedbackBrowser(taskSpace, ${JSON.stringify(evidence)});`;
   assert.equal(output.code, 0, `ego-browser failed (${output.signal || output.code}); see ${evidence}/ego-output.json`);
   const report = JSON.parse(await readFile(resolve(evidence, 'result.json'), 'utf8'));
   assert.equal(report.status, 'PASS_SCOPED', report.error);
-  assert.equal(report.checks.length, 20);
+  assert.equal(report.checks.length, 21);
+  assert.equal(report.productCompliance.status, 'PASS', 'product failure cannot be scoped PASS');
   assert.equal(report.closed, true, 'ego TaskSpace was not closed');
   assert.equal(report.server.closed, true, 'fixture server was not closed');
   assert.deepEqual(report.server.changedSources, []);

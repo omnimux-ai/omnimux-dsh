@@ -87,6 +87,10 @@ async function resolveFailureReason(options, json) {
   })
   if (!detailUrl) return undefined
   try {
+    const target = new URL(detailUrl)
+    const base = new URL(options.baseUrl)
+    const officialOrigin = base.origin === 'https://api.omnimux.ai' || base.origin === 'https://omnimux.ai'
+    if (target.origin !== base.origin && !(officialOrigin && (target.origin === 'https://api.omnimux.ai' || target.origin === 'https://omnimux.ai'))) return undefined
     const detail = await getJson(options.fetcher, detailUrl, options.apiKey, options.signal, {
       requestTimeoutMs: options.requestTimeoutMs,
     })
@@ -219,6 +223,9 @@ export function createOpenAiMediaRuntime(options) {
   const client = createOpenAICompatibleClient({
     baseUrl: options.baseUrl,
     apiKey: options.apiKey,
+    // Image submission may return synchronously; runtime-kit's two-minute
+    // default aborts before a valid result. Its supported maximum stays bounded.
+    ...(capability === 'image' ? { requestTimeoutMs: 600_000 } : {}),
     fetcher: async (...args) => {
       const response = await routing.fetcher(...args)
       // runtime-kit keeps only error.message; classify code-only envelopes first.

@@ -29,13 +29,35 @@ function loadPersistedState() {
   }
 }
 
+/**
+ * 内嵌 data: 参考图可达数 MB，落盘会撑爆 localStorage 配额并让整份持久化失败；
+ * 只剥离素材字节，保留原模型、渠道、操作与参数；收取原 taskRef 不依赖完整输入。
+ */
+function withoutInlineRequest(m) {
+  const refs = m.request?.references;
+  if (!Array.isArray(refs) || !refs.some((r) => typeof r?.url === 'string' && r.url.startsWith('data:'))) return m;
+  const references = refs.map((ref) => {
+    if (typeof ref?.url !== 'string' || !ref.url.startsWith('data:')) return ref;
+    return Object.fromEntries(Object.entries(ref).filter(([, value]) => !(typeof value === 'string' && value.startsWith('data:'))));
+  });
+  const projected = { ...m, request: { ...m.request, references }, requestReplayable: false };
+  const terminal = m.recoverable === false && m.failure?.code === 'omnimux-failed';
+  if (m.status === 'failed' && (!m.taskRef || terminal)) {
+    projected.failure = { ...(m.failure || {}), retryable: false };
+  }
+  return projected;
+}
+
 function persistState(s) {
   const storage = getLocalStorage();
   if (!storage) return;
   try {
+    // Issue #3011：generating（含 requestKey/taskRef/request）与 failed 项同样持久化，
+    // 刷新后可按服务端任务记录续传或展示失败原因，不再静默丢弃。
     const safeMediaList = (s.mediaList || [])
-      .filter((m) => m && m.status !== 'generating')
-      .slice(-100);
+      .filter((m) => m && (m.url || m.status === 'generating' || m.status === 'failed'))
+      .slice(-100)
+      .map(withoutInlineRequest);
     const payload = {
       mediaList: safeMediaList,
       annotationsByMediaId: s.annotationsByMediaId || {},
