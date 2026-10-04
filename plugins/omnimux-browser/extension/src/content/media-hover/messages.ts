@@ -34,6 +34,12 @@ export const RUNTIME_MESSAGE = {
   /** Content → background: persist one media record into the inspiration library. */
   mediaToInspiration: 'DSH_MEDIA_TO_INSPIRATION',
   /**
+   * Content → background: persist the current image as a real file in the
+   * paired host's asset library. Sent only when the save intent resolved to
+   * an image; videos and unknown types never ride this message.
+   */
+  mediaToAssets: 'DSH_MEDIA_TO_ASSETS',
+  /**
    * Content → background: is the native side panel already connected in this
    * window? Answered before anything opens, so the floating workstation is only
    * ever used when the side panel is not.

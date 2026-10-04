@@ -18,8 +18,9 @@
  * @module
  */
 
-import { MediaActionBridge, browserTransport } from '../media-hover/actions.ts'
-import { hoverCopy } from '../media-hover/copy.ts'
+import { MediaActionBridge, browserTransport, type ActionOutcome } from '../media-hover/actions.ts'
+import { hoverCopy, resolveHoverLocale } from '../media-hover/copy.ts'
+import { resolveSaveIntent } from '../media-hover/save-intent.ts'
 import type { HoveredMedia, MediaKind } from '../media-hover/types.ts'
 import { mediaTriggerFor, type SurfacePageFacts } from './registry.ts'
 import {
@@ -118,6 +119,9 @@ interface TriggerEntry {
   /** Pending close, so crossing the gap does not shut the toolbar. */
   closeTimer: number | null
   readonly listeners: Array<() => void>
+  saved?: boolean
+  busyAction?: string | null
+  updatePrimary?: () => void
 }
 
 /** The live trigger layer. */
@@ -130,9 +134,12 @@ export interface MediaTriggerHandle {
   dispose(): void
 }
 
-/** Whether a card's asset is a picture or a moving one. */
-function kindOf(element: Element): MediaKind {
-  return element instanceof HTMLVideoElement ? 'video' : 'image'
+/** Whether a card's asset is a picture or a moving one, respecting work semantics. */
+function kindOf(card: Element, media: Element): MediaKind {
+  const link = card.querySelector<HTMLAnchorElement>('a[href*="/video/"], a[href*="/photo/"]')
+  if (link !== null && link.href.includes('/video/')) return 'video'
+  if (link !== null && link.href.includes('/photo/')) return 'image'
+  return media instanceof HTMLVideoElement ? 'video' : 'image'
 }
 
 /** A payload for one card, or `null` when the card holds nothing to act on. */
@@ -145,10 +152,11 @@ function payloadFor(card: Element, doc: Document): HoveredMedia | null {
   if (!src) return null
   const box = media.getBoundingClientRect()
   const pageUrl = link?.href ?? doc.location.href
+  const kind = kindOf(card, media)
 
   return {
-    id: `${kindOf(media)}:${pageUrl}`.slice(0, 512),
-    type: kindOf(media),
+    id: `${kind}:${pageUrl}`.slice(0, 512),
+    type: kind,
     src,
     previewSrc: src,
     pageUrl,
@@ -279,6 +287,9 @@ const ACTION_ICON = {
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
     + '<path d="M9 18h6"/><path d="M10 21.5h4"/>'
     + '<path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.77c.5.36.8.94.8 1.55V18h6v-2.18c0-.61.3-1.19.8-1.55A6.5 6.5 0 0 0 12 2.5Z"/></svg>',
+  asset:
+    '<svg viewBox="0 0 22 22" fill="currentColor" stroke="none" aria-hidden="true">'
+    + '<path fill-rule="evenodd" clip-rule="evenodd" d="m7.249 11.552-1.691.323A2.335 2.335 0 0 0 6 16.5h10a2.333 2.333 0 0 0 .443-4.625l-1.691-.323.216-1.708a4 4 0 1 0-7.936 0l.217 1.708ZM5.167 9.333a5.833 5.833 0 1 1 11.62.741 4.168 4.168 0 0 1-.787 8.26H6a4.167 4.167 0 0 1-.787-8.26 5.89 5.89 0 0 1-.046-.74Z"/></svg>',
   copy:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
     + '<rect x="9" y="9" width="11.5" height="11.5" rx="2.5"/>'
@@ -388,8 +399,45 @@ export function initMediaTrigger(
       open: false,
       closeTimer: null,
       listeners: [],
+      saved: false,
+      busyAction: null,
     }
     const entryPair = entry
+
+    const updatePrimary = (): void => {
+      const primaryBtn = toolbar.querySelector<HTMLButtonElement>('.omt-action[data-action="inspiration"]')
+      if (primaryBtn === null) return
+      const payload = payloadFor(card, doc)
+      const intent = payload !== null ? resolveSaveIntent(payload) : 'unknown'
+      const isEn = resolveHoverLocale() === 'en' && typeof localStorage !== 'undefined' && localStorage.getItem('omnimux_manual_locale') === 'en'
+      const copy = hoverCopy(isEn ? 'en' : 'zh')
+      if (entryPair.saved) {
+        if (primaryBtn.innerHTML !== ACTION_ICON.check) primaryBtn.innerHTML = ACTION_ICON.check
+        const label = intent === 'image-asset' ? copy.image.done : copy.done.inspiration
+        primaryBtn.title = label
+        primaryBtn.setAttribute('aria-label', label)
+        primaryBtn.setAttribute('aria-pressed', 'true')
+        return
+      }
+      if (intent === 'image-asset') {
+        if (primaryBtn.innerHTML !== ACTION_ICON.asset) primaryBtn.innerHTML = ACTION_ICON.asset
+        primaryBtn.title = copy.image.idle
+        primaryBtn.setAttribute('aria-label', copy.image.idle)
+        primaryBtn.setAttribute('aria-pressed', 'false')
+      } else if (intent === 'unknown') {
+        if (primaryBtn.innerHTML !== ACTION_ICON.inspiration) primaryBtn.innerHTML = ACTION_ICON.inspiration
+        primaryBtn.title = copy.image.typeUnknown
+        primaryBtn.setAttribute('aria-label', copy.image.typeUnknown)
+        primaryBtn.setAttribute('aria-pressed', 'false')
+      } else {
+        if (primaryBtn.innerHTML !== ACTION_ICON.inspiration) primaryBtn.innerHTML = ACTION_ICON.inspiration
+        primaryBtn.title = ACTION_LABEL.inspiration
+        primaryBtn.setAttribute('aria-label', ACTION_LABEL.inspiration)
+        primaryBtn.setAttribute('aria-pressed', 'false')
+      }
+    }
+    entry.updatePrimary = updatePrimary
+    updatePrimary()
 
     const onCardEnter = (): void => {
       entryPair.cardHovered = true
@@ -446,11 +494,65 @@ export function initMediaTrigger(
 
   async function runAction(entry: TriggerEntry, action: string): Promise<void> {
     const payload = payloadFor(entry.card, doc)
-    if (payload === null) return
-    if (action === 'inspiration') await bridge.saveToInspiration(payload)
-    else if (action === 'copy') await bridge.copyToClipboard(payload)
-    else if (action === 'attach') await bridge.attachToConversation(payload)
-    closeToolbar(entry)
+    if (payload === null || (entry.busyAction !== null && entry.busyAction !== undefined)) return
+    const primaryBtn = entry.toolbar.querySelector<HTMLButtonElement>('.omt-action[data-action="inspiration"]')
+    const copy = hoverCopy()
+
+    if (action === 'inspiration' && entry.saved) {
+      const intent = resolveSaveIntent(payload)
+      const msg = intent === 'image-asset' ? copy.image.done : copy.done.inspiration
+      if (primaryBtn) {
+        primaryBtn.title = msg
+        primaryBtn.setAttribute('aria-label', msg)
+      }
+      closeToolbarSoon(entry)
+      return
+    }
+
+    entry.busyAction = action
+    if (primaryBtn && action === 'inspiration') {
+      primaryBtn.setAttribute('aria-busy', 'true')
+      const intent = resolveSaveIntent(payload)
+      if (intent === 'image-asset') {
+        primaryBtn.title = copy.image.busy
+        primaryBtn.setAttribute('aria-label', copy.image.busy)
+      }
+    }
+
+    try {
+      if (action === 'inspiration') {
+        const intent = resolveSaveIntent(payload)
+        let outcome: ActionOutcome
+        if (intent === 'image-asset') {
+          outcome = await bridge.saveImageToAssets(payload)
+        } else if (intent === 'video-inspiration') {
+          outcome = await bridge.saveToInspiration(payload)
+        } else {
+          outcome = { ok: false, status: 'failed', message: copy.image.typeUnknown }
+        }
+        if (primaryBtn) {
+          primaryBtn.removeAttribute('aria-busy')
+          if (outcome.ok) {
+            entry.saved = true
+            primaryBtn.innerHTML = ACTION_ICON.check
+            primaryBtn.title = outcome.message
+            primaryBtn.setAttribute('aria-label', outcome.message)
+            primaryBtn.setAttribute('aria-pressed', 'true')
+          } else {
+            primaryBtn.title = outcome.message
+            primaryBtn.setAttribute('aria-label', outcome.message)
+          }
+        }
+      } else if (action === 'copy') {
+        await bridge.copyToClipboard(payload)
+      } else if (action === 'attach') {
+        await bridge.attachToConversation(payload)
+      }
+    } finally {
+      entry.busyAction = null
+      if (primaryBtn) primaryBtn.removeAttribute('aria-busy')
+      closeToolbarSoon(entry)
+    }
   }
 
   function placeEntry(entry: TriggerEntry): void {
@@ -559,6 +661,7 @@ function render(entry: TriggerEntry): void {
 
 /** Open one mark's toolbar. */
 function openToolbar(entry: TriggerEntry): void {
+  entry.updatePrimary?.()
   entry.open = true
   render(entry)
 }

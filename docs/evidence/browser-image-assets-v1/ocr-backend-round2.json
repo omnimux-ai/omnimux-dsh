@@ -1,0 +1,198 @@
+{
+  "status": "complete",
+  "llm": {
+    "provider": "dsh-cpa",
+    "model": "gpt-5.5"
+  },
+  "message": "Review complete: 4 finding(s) across 8 selected item(s).",
+  "summary": {
+    "files_reviewed": 8,
+    "comments": 4,
+    "total_tokens": 1405307,
+    "input_tokens": 1385069,
+    "output_tokens": 20238,
+    "cache_read_tokens": 1254400,
+    "elapsed": "11m26s"
+  },
+  "tool_calls": {
+    "total": 57,
+    "by_tool": {
+      "code_comment": 4,
+      "code_search": 20,
+      "file_read": 33
+    },
+    "failure": 0,
+    "failure_by_tool": {},
+    "failure_details": []
+  },
+  "comments": [
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "content": "`sweepStaleSlices()` validates the staging root earlier in `runSave()`, but then reads and deletes through `root` without revalidating it at the point of use. If `.image-ingest` is swapped to a symlink between `realStagingRoot()` and this cleanup, `readdirSync(root)` follows the symlink and the later `rmSync(join(root, entry.name), { recursive: true })` can delete directories outside the vault. Revalidate the root inside this function and skip cleanup unless the root is still the real vault staging directory before enumerating/removing children.",
+      "suggestion_code": "  function sweepStaleSlices() {\n    const root = stagingRoot()\n    try {\n      realStagingRoot()\n    } catch {\n      return\n    }\n    let entries = []\n    try {\n      entries = fs.readdirSync(root, { withFileTypes: true })\n    } catch {\n      return\n    }",
+      "existing_code": "  function sweepStaleSlices() {\n    const root = stagingRoot()\n    let entries = []\n    try {\n      entries = fs.readdirSync(root, { withFileTypes: true })\n    } catch {\n      return\n    }",
+      "start_line": 197,
+      "end_line": 204,
+      "category": "security",
+      "severity": "high"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/image-assets.ts",
+      "content": "Cancellation is not observed while `validateImage()` is in flight. A connection-generation abort during a slow or stuck decoder keeps this RPC pending until validation eventually resolves/rejects, so it does not promptly settle as `cancelled` for the validation phase. Consider racing validation with the abort signal (while still treating any later validator result as background cleanup) so the save outcome can return `cancelled` as soon as the owning connection dies.",
+      "suggestion_code": "  const validation = await runValidation(validateImage, bytes, mime, signal)\n  if (validation === 'aborted' || aborted()) return { status: 'cancelled' }\n  if (validation.failed) {\n    console.warn('[omnimux-browser] image validation refused the downloaded bytes', validation.error)\n    return validationOutcomeOf(validation.error)\n  }",
+      "existing_code": "  const validation = await runValidation(validateImage, bytes, mime)\n  if (validation.failed) {\n    console.warn('[omnimux-browser] image validation refused the downloaded bytes', validation.error)\n    return validationOutcomeOf(validation.error)\n  }",
+      "start_line": 294,
+      "end_line": 298,
+      "category": "bug",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/media-fetch.ts",
+      "content": "This does not preserve first-wins attribution when the module timeout fires first. After `timedOut = true` aborts the controller, a later caller abort before `fetch` rejects sets `externallyAborted = true`, causing the catch path to report `failed`/caller-cancelled instead of the original `timeout`. Guard the external handler so it only claims attribution before this module's timeout has fired.",
+      "suggestion_code": "  const onExternalAbort = (): void =\u003e {\n    if (!timedOut) externallyAborted = true\n    controller.abort()\n  }",
+      "existing_code": "  const onExternalAbort = (): void =\u003e {\n    externallyAborted = true\n    controller.abort()\n  }",
+      "start_line": 179,
+      "end_line": 182,
+      "category": "bug",
+      "severity": "medium"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "content": "There is still a TOCTOU window before this recursive mkdir: `realStagingRoot()` may return `null` when `.image-ingest` is absent, but if that path is replaced with a symlink before `mkdirSync(slice)`, the recursive mkdir follows it and creates the scope directory outside the vault before the later realpath check throws. That violates the staging invariant that unsafe `.image-ingest` paths must be rejected before any external write. Create and validate the staging root itself as a real directory immediately before creating the scope (or mkdir the root non-recursively and lstat/realpath it), then create the child only after that validation.",
+      "suggestion_code": "      const root = stagingRoot()\n      fs.mkdirSync(root, { recursive: true, mode: 0o700 })\n      realStagingRoot()\n      fs.mkdirSync(slice, { mode: 0o700 })\n      if (!isInsideDir(slice, vaultRoot)) {\n        throw new AssetsError('path-denied', 'staging slice escapes assets vault')\n      }",
+      "existing_code": "      fs.mkdirSync(slice, { recursive: true, mode: 0o700 })\n      if (!isInsideDir(slice, vaultRoot)) {\n        throw new AssetsError('path-denied', 'staging slice escapes assets vault')\n      }",
+      "start_line": 292,
+      "end_line": 295,
+      "category": "security",
+      "severity": "medium"
+    }
+  ],
+  "groups": [
+    {
+      "label": "image asset ingestion, indexing, and browser serving integration",
+      "files": [
+        "plugins/omnimux-assets/src/index.js",
+        "plugins/omnimux-assets/src/library.js",
+        "plugins/omnimux-browser/src/index.ts",
+        "plugins/omnimux-browser/src/media-fetch.ts",
+        "plugins/omnimux-browser/src/protocol.ts",
+        "plugins/omnimux-browser/src/server.ts",
+        "plugins/omnimux-assets/src/image-ingest.js",
+        "plugins/omnimux-browser/src/image-assets.ts"
+      ]
+    }
+  ],
+  "session_id": "70b4c284-0aed-48f6-a9cc-166d3697f4da",
+  "manifest": {
+    "schema_version": "ocr.run-manifest/v1",
+    "run_id": "70b4c284-0aed-48f6-a9cc-166d3697f4da",
+    "operation": "review",
+    "terminal_state": "complete",
+    "repository": {
+      "identity_sha256": "72a4299b0cafc9688d8dfc1929645d8f103e3c696008f4d6323179f137dba672"
+    },
+    "input": {
+      "mode": "workspace",
+      "resolved_base": "d95764912e36da01d879ab65d6340469b48a4625",
+      "source_artifact_sha256": "ec0344022ee8feff3b5c389a5fa65dc842ea0679207a8e89995f1e2ddea6a4d0"
+    },
+    "execution": {
+      "ocr_version": "v1.12.11",
+      "provider": "dsh-cpa",
+      "model": "gpt-5.5",
+      "configured_concurrency": 8,
+      "rule_config_sha256": "414d4d727dd60672664e81bce25a8f37801c2c2e123bfa96e46e1cb0ccf0658f",
+      "runtime_config_sha256": "f9fe9c9667dda16ce8346b636caa4a7b90178e88d6a8f1b03dc8c86f878803d3"
+    },
+    "coverage": {
+      "selected": [
+        {
+          "item_id": "11874a3f3719f9151e6ebb52f204ab0bfe5fa240bc14184a3587fbfb0b849a84",
+          "path": "plugins/omnimux-browser/src/index.ts",
+          "fingerprint": "05036ed5cf649c0428348f1dc0f93a995a6e374556eaea86212d40fa14cbf5e1"
+        },
+        {
+          "item_id": "39dd51d21a58f76303aec76e63ce996bcded89b9fd9aeafa54f07aeba7054bc0",
+          "path": "plugins/omnimux-assets/src/library.js",
+          "fingerprint": "0e193a96c95956b5ecaeb82a1675cfcaaa83b1ea11e33624af8fd96c0fdf07dd"
+        },
+        {
+          "item_id": "577f8f262da8f7200f4a0c15fe071b9984622b10908c39b13d60a1638b06aa7a",
+          "path": "plugins/omnimux-browser/src/server.ts",
+          "fingerprint": "948d9e1e110605c8ed4142f7a0d9f8e1eb6f338a0a63ed89fc6564a0c20d75a3"
+        },
+        {
+          "item_id": "5f75ea07fe7a7717ff216be54221acb6745ce2915c430103378666b2655a73f4",
+          "path": "plugins/omnimux-assets/src/index.js",
+          "fingerprint": "77c19e1616e3939086837861b1e542e803c50d5f703cebb514973ea29c7af1ea"
+        },
+        {
+          "item_id": "85876a3fbd7e525a06b1630132cab98af4088caca5507e5d37780f4f235f1bbb",
+          "path": "plugins/omnimux-browser/src/image-assets.ts",
+          "fingerprint": "aa82187ae531043498b7007bb2225034bdf8949a74d63da35ab89dc35bee995c"
+        },
+        {
+          "item_id": "c37a626dbcb6729d90c801c8e1a58345e59ddd06570a2e8d8ac00b5220bad2f8",
+          "path": "plugins/omnimux-browser/src/protocol.ts",
+          "fingerprint": "b42ffe0e3d4d60647a3ce0a2dc2a0ef584fd494584a0813b4156074024056256"
+        },
+        {
+          "item_id": "e25a9f14137b46680a85f8489ae9741c22732e7b85f25da917da79a66410d20c",
+          "path": "plugins/omnimux-assets/src/image-ingest.js",
+          "fingerprint": "527faee59bd6e0082a508579d61e8479930d02bb714ec21bd749b3d93cbf49b0"
+        },
+        {
+          "item_id": "fa74e323c7229b5fdee85f91fc1833132b09cecdfca5d7492bbcba6f80d4da69",
+          "path": "plugins/omnimux-browser/src/media-fetch.ts",
+          "fingerprint": "60ebb594235abbe58dd191d8eff765e440cdc0a1e1ff1d8b219f6996ce460abf"
+        }
+      ],
+      "completed": [
+        {
+          "item_id": "11874a3f3719f9151e6ebb52f204ab0bfe5fa240bc14184a3587fbfb0b849a84",
+          "path": "plugins/omnimux-browser/src/index.ts",
+          "fingerprint": "05036ed5cf649c0428348f1dc0f93a995a6e374556eaea86212d40fa14cbf5e1"
+        },
+        {
+          "item_id": "39dd51d21a58f76303aec76e63ce996bcded89b9fd9aeafa54f07aeba7054bc0",
+          "path": "plugins/omnimux-assets/src/library.js",
+          "fingerprint": "0e193a96c95956b5ecaeb82a1675cfcaaa83b1ea11e33624af8fd96c0fdf07dd"
+        },
+        {
+          "item_id": "577f8f262da8f7200f4a0c15fe071b9984622b10908c39b13d60a1638b06aa7a",
+          "path": "plugins/omnimux-browser/src/server.ts",
+          "fingerprint": "948d9e1e110605c8ed4142f7a0d9f8e1eb6f338a0a63ed89fc6564a0c20d75a3"
+        },
+        {
+          "item_id": "5f75ea07fe7a7717ff216be54221acb6745ce2915c430103378666b2655a73f4",
+          "path": "plugins/omnimux-assets/src/index.js",
+          "fingerprint": "77c19e1616e3939086837861b1e542e803c50d5f703cebb514973ea29c7af1ea"
+        },
+        {
+          "item_id": "85876a3fbd7e525a06b1630132cab98af4088caca5507e5d37780f4f235f1bbb",
+          "path": "plugins/omnimux-browser/src/image-assets.ts",
+          "fingerprint": "aa82187ae531043498b7007bb2225034bdf8949a74d63da35ab89dc35bee995c"
+        },
+        {
+          "item_id": "c37a626dbcb6729d90c801c8e1a58345e59ddd06570a2e8d8ac00b5220bad2f8",
+          "path": "plugins/omnimux-browser/src/protocol.ts",
+          "fingerprint": "b42ffe0e3d4d60647a3ce0a2dc2a0ef584fd494584a0813b4156074024056256"
+        },
+        {
+          "item_id": "e25a9f14137b46680a85f8489ae9741c22732e7b85f25da917da79a66410d20c",
+          "path": "plugins/omnimux-assets/src/image-ingest.js",
+          "fingerprint": "527faee59bd6e0082a508579d61e8479930d02bb714ec21bd749b3d93cbf49b0"
+        },
+        {
+          "item_id": "fa74e323c7229b5fdee85f91fc1833132b09cecdfca5d7492bbcba6f80d4da69",
+          "path": "plugins/omnimux-browser/src/media-fetch.ts",
+          "fingerprint": "60ebb594235abbe58dd191d8eff765e440cdc0a1e1ff1d8b219f6996ce460abf"
+        }
+      ],
+      "reused": [],
+      "failed": [],
+      "waived": []
+    },
+    "elapsed_ms": 686490
+  }
+}

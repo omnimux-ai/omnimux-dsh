@@ -1,0 +1,38 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✖ 不同来源同名的并发保存得到唯一递增名称，不出现重名 handle (21.323542ms)
+✖ ingestDownloadedImage · 真实入库（#3052） (22.439459ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 77.719958
+
+✖ failing tests:
+
+test at plugins/omnimux-assets/src/image-ingest-v1.test.js:149:3
+✖ 不同来源同名的并发保存得到唯一递增名称，不出现重名 handle (21.323542ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      '同名海报',
+  +   '同名海报'
+  -   '同名海报 (2)'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest-v1.test.js:169:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Promise.all (index 4)
+      at async Suite.run (node:internal/test_runner/test:1619:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '同名海报', '同名海报' ],
+    expected: [ '同名海报', '同名海报 (2)' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

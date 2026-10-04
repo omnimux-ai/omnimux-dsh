@@ -1,0 +1,56 @@
+{
+  "captured_at": "2026-10-04T00:03:21.914546+08:00",
+  "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets",
+  "head": "d95764912e36da01d879ab65d6340469b48a4625",
+  "branch": "agent/cross-browser-image-assets-issue-3051",
+  "files": [
+    {
+      "path": "plugins/omnimux-assets/src/index.js",
+      "sha256": "722cc387adbfd7e11fc6dd774232a3d302bb29d7f1b29a2d1f3c754e2308e93c"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/library.js",
+      "sha256": "dc616a2fce115ee10175d120736e4264aff302d414c460cb05eede977a625c81"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest.js",
+      "sha256": "c88abeaceefcf2ae3b47d1f71314672711f94f900a6092cb38741d1385ca358a"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/index.ts",
+      "sha256": "4db596965905653007ac5654f89828e1648ebf1bb778ef977245de33685cae31"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/server.ts",
+      "sha256": "80c9d31fee7a2aae293f8c99d3a9acb12bfa8a02edf6820d22bb104dd088a5d6"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/protocol.ts",
+      "sha256": "fcc329501aa5853867896802238f87554a66fcc519dc6ad29699bfb0c77cf3de"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/image-assets.ts",
+      "sha256": "242c73146506a826e5da039cd29a0cf50c019be559845b604364bb202ac1e4ef"
+    },
+    {
+      "path": "plugins/omnimux-browser/src/media-fetch.ts",
+      "sha256": "15c89116fb66e36250e4a5313dc46a0e49727caf9dd083ce2bec7898ba614968"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/image-ingest-v1.test.js",
+      "sha256": "e7a20dce0f51f6373250cd7ab0a127f8279f2e9492192bb342063ccb3a150d66"
+    },
+    {
+      "path": "plugins/omnimux-assets/src/library-image-transaction-v1.test.js",
+      "sha256": "38d20be6beff27c334e4112aa11e25e526d595335c7eda4a85f78abf42faeba7"
+    },
+    {
+      "path": "plugins/omnimux-browser/tests/image-assets-rpc-v1.spec.ts",
+      "sha256": "ecf0eee2d76bc82f4eeefce4df06786b33b9fc48a4942ac6e803947ea4a0d222"
+    },
+    {
+      "path": "plugins/omnimux-browser/tests/image-assets-v1.spec.ts",
+      "sha256": "618b8ad0209be8c4992e1b8a3267365543e3ca6d9b5ee2d593510179c51bd48e"
+    }
+  ]
+}

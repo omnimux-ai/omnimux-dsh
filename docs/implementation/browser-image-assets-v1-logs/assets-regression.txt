@@ -1,0 +1,10 @@
+# assets 既有回归（library.test.js cloud-catalog.test.js http-routes.test.js generation-ingest.test.js）
+# 命令: node --test <上述四文件>，REAL_EXIT=0
+ℹ tests 121
+ℹ suites 27
+ℹ pass 121
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 737.907125

@@ -1,0 +1,11 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✔ 不同来源同名的并发保存得到唯一递增名称，不出现重名 handle (24.495917ms)
+✔ ingestDownloadedImage · 真实入库（#3052） (25.216542ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 73.222709

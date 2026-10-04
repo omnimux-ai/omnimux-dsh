@@ -29,6 +29,7 @@ import {
   BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD,
   BRIDGE_MODEL_MODE_METHOD,
   BRIDGE_PRODUCED_MEDIA_METHOD,
+  BRIDGE_SAVE_IMAGE_ASSET_METHOD,
   BRIDGE_SESSION_PURGE_METHOD,
   HELLO_TIMEOUT_MS,
   PING_INTERVAL_MS,
@@ -36,12 +37,15 @@ import {
   type BridgeFrame,
   type BridgeCaps,
   type ClientFrame,
+  type ImageAssetSaveOutcome,
+  type ImageAssetSaveRequest,
   type MediaFetchOutcome,
   type ProducedMediaOutcome,
   type ProducedMediaRequest,
   type ToolErrorCode,
 } from './protocol.ts'
 import { fetchMediaBytes } from './media-fetch.ts'
+import { parseImageAssetPayload } from './image-assets.ts'
 import { NULL_PRODUCED_REGISTRY, readProducedMedia, type ProducedRegistry } from './produced-registry.ts'
 import { SessionPurgeError } from './session-purge.ts'
 import { verifyToken } from './token.ts'
@@ -112,6 +116,12 @@ export interface BridgeServerDeps {
    * the seam exists so the routing can be exercised without a live network.
    */
   fetchMedia?: (url: unknown) => Promise<MediaFetchOutcome>
+  /**
+   * Save one confirmed page image into the host asset library, for
+   * {@link BRIDGE_SAVE_IMAGE_ASSET_METHOD} (Issue #3052). Loopback-only in
+   * addition to the token handshake. Absent, the RPC answers `unavailable`.
+   */
+  saveImageAsset?: (request: ImageAssetSaveRequest, ctx: { signal: AbortSignal }) => Promise<ImageAssetSaveOutcome>
   /**
    * The produced-media allowlist shared with the Host adapter's event feed,
    * backing {@link BRIDGE_PRODUCED_MEDIA_METHOD}. Also consulted after a
@@ -578,6 +588,46 @@ export class BridgeServer {
           error: { code: 'internal', message: String(error) },
         })
       }
+      return
+    }
+    if (frame.method === BRIDGE_SAVE_IMAGE_ASSET_METHOD) {
+      // A disk write is strictly loopback beyond the token handshake: the
+      // media read may tolerate remote clients, this method never may.
+      if (!isLoopbackAddress(conn.remoteAddress)) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: { code: 'forbidden', message: 'method is loopback-only' },
+        })
+        return
+      }
+      const request = parseImageAssetPayload(frame.payload)
+      if (request === undefined) {
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: false,
+          error: { code: 'bad-request', message: 'requestId, url, pageUrl and optional title must be bounded strings; no extra fields' },
+        })
+        return
+      }
+      const save = this.deps.saveImageAsset
+      let outcome: ImageAssetSaveOutcome
+      if (save === undefined) {
+        outcome = { status: 'unavailable' }
+      } else {
+        try {
+          outcome = await save(request, { signal: conn.abort.signal })
+        } catch (error: unknown) {
+          // The adapter returns its outcome for every expected refusal; a throw
+          // means the save itself broke, which is a storage failure to the
+          // caller — never an internal detail.
+          console.error('[omnimux-browser] saveImageAsset threw', error)
+          outcome = { status: 'storage-failed' }
+        }
+      }
+      sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: outcome })
       return
     }
     if (frame.method === BRIDGE_FETCH_MEDIA_METHOD) {

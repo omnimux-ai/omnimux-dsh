@@ -57,6 +57,7 @@ import {
   type TypertGatewayLike,
 } from './remote-host-api.ts'
 import { createProducedRegistry, type ProducedRegistry } from './produced-registry.ts'
+import { createImageAssetSaveDeps, saveImageAsset } from './image-assets.ts'
 import { isRecord, type BrowserHostApi } from './host-api.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
@@ -284,6 +285,14 @@ function mountBridge(
 
   const hostLocale = getDshHostLocale()
 
+  // Issue #3052: the image-asset save reuses the host's own seams — the
+  // attachments validateImage for real raster decoding, and the assets
+  // plugin's `assetLibrary` service for the one live LibraryStore. All of
+  // them resolve per call so a plugin mounting after the bridge can still
+  // serve (Q5); when either is absent the RPC answers `unavailable`, never
+  // a degraded check and never a second store.
+  const imageSaveDeps = createImageAssetSaveDeps(ctx)
+
   const server = new BridgeServer({
     token: tokenRes.token,
     api,
@@ -293,10 +302,12 @@ function mountBridge(
       snapshotMaxChars: resolved.snapshotMaxChars,
       maxInteractiveItems: resolved.maxInteractiveItems,
       locale: hostLocale,
+      imageAssetSave: true,
     },
     injectBrowserSnapshot: (sessionId, snapshot) => { browserContext.inject(sessionId, snapshot) },
     purgeSession,
     produced,
+    saveImageAsset: (request, { signal }) => saveImageAsset(request, imageSaveDeps, signal),
     completeText: async (request) => {
       const service = ctx.get('textComplete') as { execute?: (input: typeof request) => Promise<unknown> } | undefined
       if (typeof service?.execute !== 'function') throw new Error('Text completion service unavailable')

@@ -552,7 +552,18 @@ export function createLibraryStore(opts = {}) {
     asset.cover_file_id = asset.files[0]?.id ?? null
     state.assets.push(asset)
     state.revision += 1
-    persist()
+    try {
+      persist()
+    } catch (error) {
+      // 提交失败不留幽灵资产：撤回本次内存变更并回收已复制的受管文件，
+      // 账本保持上一次成功状态。不借 remove()/persist() 二次落盘 ——
+      // 落盘刚才已证明不可用，再写一次只会再次失败并掩盖原错。
+      const index = state.assets.indexOf(asset)
+      if (index >= 0) state.assets.splice(index, 1)
+      state.revision -= 1
+      recycleManagedDir(asset.id)
+      throw error
+    }
     return viewOf(asset, fs, vaultRoot)
   }
 

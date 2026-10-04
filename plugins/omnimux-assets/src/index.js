@@ -6,6 +6,7 @@ import { createMappingStore, AssetsError } from './mappings.js'
 import { resolveAssetsPaths } from './paths.js'
 import { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri } from './protocol.js'
 import { mountGenerationIngest } from './generation-ingest.js'
+import { createImageIngest } from './image-ingest.js'
 
 export { formatAssetUri, isAssetUri, parseAssetUri, resolveAssetUri, toAssetUri, createFallbackDefineTool }
 
@@ -153,6 +154,33 @@ export function apply(ctx) {
   library.migrateMappings(mappings)
   const cloud = createCloudCatalog({ library })
   const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud, paths })
+
+  // 浏览器图片真实入库的宿主内窄服务（#3052）：同一个活跃 library 实例
+  // 持有物化/登记/changed 事件的唯一所有权。omnimux-browser 只经
+  // ctx.get('assetLibrary') 调用 ingestDownloadedImage，不触碰私有实现；
+  // 服务缺失时调用方必须返回 unavailable，而不是另起一个库。
+  const imageIngest = createImageIngest({
+    library,
+    vaultRoot: paths.dir,
+    emitChanged: (asset) => {
+      ctx.get?.('hubEvents')?.emit({
+        type: 'omnimux:assets:changed',
+        payload: {
+          lrev: library.revision(),
+          arev: artifacts.revision(),
+          op: 'create',
+          ids: [asset.id],
+          assetType: asset.type,
+          at: Date.now(),
+        },
+      })
+    },
+  })
+  if (typeof ctx.provide === 'function') {
+    ctx.provide('assetLibrary', {
+      ingestDownloadedImage: (input) => imageIngest.ingestDownloadedImage(input),
+    })
+  }
 
   const unmountIngest = mountGenerationIngest(ctx, { artifacts })
   if (typeof ctx.effect === 'function') {

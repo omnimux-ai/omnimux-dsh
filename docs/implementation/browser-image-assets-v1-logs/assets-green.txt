@@ -1,0 +1,23 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✔ 把经校验的字节落成受管文件并登记，成功回执含 saved/assetId/fileId/lrev (10.280041ms)
+  ✔ 同 sourceKey 重复保存返回 duplicate，不新增资产、不抬 revision、不发事件 (3.440166ms)
+  ✔ 同 sourceKey 的并发保存合并为一次入库 (4.067709ms)
+  ✔ 同名不同图递增命名而不覆盖，两个资产都保留 (11.785125ms)
+  ✔ displayName 缺失/非法/超长时回退到产品默认名「网页图片」并截断 40 字 (5.593292ms)
+  ✔ 来源记录缺文件的旧资产不算 duplicate：移除残骸后按新保存入库 (5.066667ms)
+  ✔ 持久化失败不残留可列表资产：错误上抛为失败而非半截成功 (3.156167ms)
+  ✔ 拒绝非法输入：空字节、非图片 mime、空 sourceKey (0.426792ms)
+✔ ingestDownloadedImage · 真实入库（#3052） (44.628333ms)
+▶ LibraryStore add() 持久化失败一致性（#3052）
+  ✔ persist 失败不残留可列表的幽灵资产、不抬 revision、回收已复制文件 (7.595583ms)
+  ✔ 一次 persist 失败不影响既有资产，下一次提交仍成功 (5.20825ms)
+  ✔ persist 失败前的既有记录原样保留（revision 不前进也不损坏账本） (3.480292ms)
+✔ LibraryStore add() 持久化失败一致性（#3052） (16.82675ms)
+ℹ tests 11
+ℹ suites 2
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 103.615916

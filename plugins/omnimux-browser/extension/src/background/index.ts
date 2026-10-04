@@ -84,6 +84,7 @@ import {
 } from './session-continuity.ts'
 import { appendMediaInspiration } from './media-library.ts'
 import { PanelPresence } from './panel-presence.ts'
+import { normalizeSaveRequestId, saveImageAssetRpc } from './save-image-assets.ts'
 import type { HoveredMedia } from '../content/media-hover/types.ts'
 import { TIKTOK_RUNTIME_MESSAGE } from '../content/tiktok-scene/messages.ts'
 import {
@@ -342,6 +343,11 @@ async function loadSettings(): Promise<Settings> {
 }
 
 async function persistSettings(next: Partial<Settings>): Promise<void> {
+  // Merge on top of the loaded settings, never on top of the defaults: a cold
+  // boot where loadSettings() is still in flight must not let this write be
+  // overwritten by the default-shaped base — the pairing approval's address
+  // and token would revert to empty if the load landed afterwards.
+  await settingsReady
   const changesUnrestrictedAccess = typeof next.unrestrictedBrowserAccess === 'boolean'
   const accessRevision = changesUnrestrictedAccess ? ++unrestrictedAccessRevision : unrestrictedAccessRevision
   const updated = normalizeSettings({ ...settings, ...next })
@@ -1455,8 +1461,13 @@ async function startBridge(): Promise<void> {
       onStateChange: (state) => {
         if (state !== 'connected') {
           cancelAllToolCalls()
+          failPendingImageAssetSaves()
           interactionResponses.failAll(responseMessages().disconnected)
           transientEvents.clear()
+          // The caps record belongs to the socket that negotiated it: a new
+          // connection (or a re-targeted one) proves nothing until its own
+          // hello.ok lands, so no write may ride stale capabilities.
+          caps = null
         }
         broadcastStatus()
         if (state === 'stopped') refreshPanelResumeHints()
@@ -1617,8 +1628,11 @@ async function startPairing(): Promise<{ ok: true; approveUrl: string; code: str
             stopPairing()
             return
           }
-          settings.token = token
-          await persistSettings({ token }).catch(() => {})
+          // Pairing binds the extension to the instance the user approved:
+          // the persisted pair is the approved address AND its token, not a
+          // token that later reconnects may drift to another discovered host.
+          const approvedBridgeUrl = `ws://127.0.0.1:${port}/ext/bridge`
+          await persistSettings({ bridgeUrl: approvedBridgeUrl, token }).catch(() => {})
           startBridge()
           // Go back first, then close the detour.
           if (originTabId !== null) await chrome.tabs.update(originTabId, { active: true }).catch(() => {})
@@ -1812,6 +1826,43 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     return true
   }
 
+  if (type === 'DSH_MEDIA_TO_ASSETS') {
+    const payload = readHoveredMedia(message)
+    if (payload === null || payload.type !== 'image' || !/^https?:/i.test(payload.src)) {
+      sendResponse({ ok: false, error: { code: 'invalid-media' } })
+      return
+    }
+    const requestId = normalizeSaveRequestId((message as { requestId?: unknown }).requestId)
+    pendingImageAssetSaves.set(requestId, sendResponse)
+    const localTarget = bridge?.localTarget ?? null
+    void saveImageAssetRpc(
+      {
+        rpc,
+        localTarget: localTarget === null
+          ? null
+          : { generation: localTarget.generation, url: localTarget.url, caps: caps === null ? null : (caps as unknown as Record<string, unknown>) },
+        currentHelloGeneration: () => bridge?.helloGeneration ?? 0,
+        locale: getUiLocale() === 'en' ? 'en' : 'zh',
+      },
+      payload,
+      requestId,
+    ).then(
+      (answer) => {
+        const respond = pendingImageAssetSaves.get(requestId)
+        if (respond === undefined) return
+        pendingImageAssetSaves.delete(requestId)
+        respond(answer)
+      },
+      () => {
+        const respond = pendingImageAssetSaves.get(requestId)
+        if (respond === undefined) return
+        pendingImageAssetSaves.delete(requestId)
+        respond({ ok: false, error: { code: 'save-unconfirmed' } })
+      },
+    )
+    return true
+  }
+
   if (type === 'DSH_OPEN_ASSISTANT_WITH_MEDIA') {
     const payload = readHoveredMedia(message)
     if (payload === null) {
@@ -1851,6 +1902,23 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
   if (type !== 'DSH_SELECTION' || sender.tab === undefined) return
   recordSelection(sender.tab, sender.frameId ?? 0, (message as { selection?: unknown }).selection)
 })
+
+/**
+ * Image saves waiting for their host receipt, keyed by requestId.
+ *
+ * A save whose carrying socket dies before the receipt answers promptly with
+ * `save-unconfirmed`: the request may or may not have committed on the host,
+ * so the honest verdict is "unknown" rather than "sent to another host" —
+ * the reconnect generation must never re-target the write.
+ */
+const pendingImageAssetSaves = new Map<string, (response: unknown) => void>()
+
+function failPendingImageAssetSaves(): void {
+  for (const respond of pendingImageAssetSaves.values()) {
+    respond({ ok: false, error: { code: 'save-unconfirmed' } })
+  }
+  pendingImageAssetSaves.clear()
+}
 
 /** Pending page media per window, waiting for a side panel to collect it. */
 const pendingMediaByWindow = new Map<number, HoveredMedia>()

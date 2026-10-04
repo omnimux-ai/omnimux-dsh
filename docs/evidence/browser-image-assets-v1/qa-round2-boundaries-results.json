@@ -1,0 +1,176 @@
+{
+  "scope": "Additional real Cordis/services/decoder/list/preview boundaries; deterministic scope naming only for slice symlink; actual commit observed at public seam; transport timing fixtures explicit; no browser",
+  "results": [
+    {
+      "name": "stage slice lstat symlink refusal preserves outside and library",
+      "status": "PASS",
+      "detail": {
+        "code": "path-denied",
+        "sliceRetained": true,
+        "outsideUnchanged": true
+      }
+    },
+    {
+      "name": "stale record retained then same source third request duplicates complete replacement",
+      "status": "PASS",
+      "detail": {
+        "first": {
+          "status": "saved",
+          "assetId": "ast_582e3b96",
+          "fileId": "fil_823ca425",
+          "lrev": 2
+        },
+        "second": {
+          "status": "saved",
+          "assetId": "ast_e6a566c2",
+          "fileId": "fil_3a7f5988",
+          "lrev": 3
+        },
+        "third": {
+          "status": "duplicate",
+          "assetId": "ast_e6a566c2",
+          "fileId": "fil_3a7f5988",
+          "lrev": 3
+        },
+        "oldRecordRetained": true
+      }
+    },
+    {
+      "name": "six cross-source same-name commits agree on ledger files revisions events preview",
+      "status": "PASS",
+      "detail": {
+        "receipts": [
+          {
+            "status": "saved",
+            "assetId": "ast_a2a815a9",
+            "fileId": "fil_7928a4c5",
+            "lrev": 4
+          },
+          {
+            "status": "saved",
+            "assetId": "ast_dd15a21c",
+            "fileId": "fil_b88e9b1a",
+            "lrev": 5
+          },
+          {
+            "status": "saved",
+            "assetId": "ast_f2bec3a1",
+            "fileId": "fil_1c1a6852",
+            "lrev": 6
+          },
+          {
+            "status": "saved",
+            "assetId": "ast_03485407",
+            "fileId": "fil_b6659c02",
+            "lrev": 7
+          },
+          {
+            "status": "saved",
+            "assetId": "ast_d60fbbbb",
+            "fileId": "fil_c8f68619",
+            "lrev": 8
+          },
+          {
+            "status": "saved",
+            "assetId": "ast_31af4556",
+            "fileId": "fil_72cb6458",
+            "lrev": 9
+          }
+        ],
+        "names": [
+          "cross-source",
+          "cross-source (2)",
+          "cross-source (3)",
+          "cross-source (4)",
+          "cross-source (5)",
+          "cross-source (6)"
+        ],
+        "revision": 9,
+        "eventCount": 6
+      }
+    },
+    {
+      "name": "trimmed source key stored canonically and repeat stays duplicate",
+      "status": "PASS",
+      "detail": {
+        "first": {
+          "status": "saved",
+          "assetId": "ast_21e293d6",
+          "fileId": "fil_e79c4924",
+          "lrev": 10
+        },
+        "next": {
+          "status": "duplicate",
+          "assetId": "ast_21e293d6",
+          "fileId": "fil_e79c4924",
+          "lrev": 10
+        },
+        "canonicalSource": true
+      }
+    },
+    {
+      "name": "real commit during abort returns cancelled without deleting committed bytes retry duplicates",
+      "status": "PASS",
+      "detail": {
+        "outcome": {
+          "status": "cancelled"
+        },
+        "committed": {
+          "status": "saved",
+          "assetId": "ast_21fbe451",
+          "fileId": "fil_7c4024f9",
+          "lrev": 11
+        },
+        "retry": {
+          "status": "duplicate",
+          "assetId": "ast_21fbe451",
+          "fileId": "fil_7c4024f9",
+          "lrev": 11
+        }
+      }
+    },
+    {
+      "name": "control chars normalize but normal hyphen survives real save",
+      "status": "PASS",
+      "detail": {
+        "receipt": {
+          "status": "saved",
+          "assetId": "ast_af9490cc",
+          "fileId": "fil_4849baa1",
+          "lrev": 12
+        },
+        "name": "a b-c"
+      }
+    },
+    {
+      "name": "external abort before timer with delayed transport reject stays failed",
+      "status": "PASS",
+      "detail": {
+        "out": {
+          "status": "failed",
+          "message": "the media request failed"
+        },
+        "externalFirst": true,
+        "transportReplaced": true
+      }
+    },
+    {
+      "name": "own timer alone retains timeout attribution",
+      "status": "PASS",
+      "detail": {
+        "out": {
+          "status": "timeout",
+          "timeoutMs": 10
+        },
+        "transportReplaced": true
+      }
+    },
+    {
+      "name": "assets remount keeps boundary results and preview bytes",
+      "status": "PASS",
+      "detail": {
+        "reconstructed": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+
+ RUN  v4.1.11 /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser
+
+ ❯ tests/e2e/bridge-extension.e2e.spec.ts (0 test)
+ ❯ tests/session-purge.spec.ts (0 test)
+ ✓ tests/tools.spec.ts (12 tests) 15ms
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error UNSUPPORTED_IMAGE_TYPE to unsupported-image
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'UNSUPPORTED_IMAGE_TYPE'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error INVALID_IMAGE to unsupported-image
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'INVALID_IMAGE'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error IMAGE_TYPE_MISMATCH to mime-mismatch
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'IMAGE_TYPE_MISMATCH'
+}
+
+ ✓ tests/token.spec.ts (6 tests) 32ms
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error IMAGE_TOO_LARGE to too-large
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'IMAGE_TOO_LARGE'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error IMAGE_TOO_MANY_PIXELS to too-large
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'IMAGE_TOO_MANY_PIXELS'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error IMAGE_DIMENSION_TOO_LARGE to too-large
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'IMAGE_DIMENSION_TOO_LARGE'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > maps validation error ATTACHMENT_CORRUPT to unavailable
+[omnimux-browser] image validation refused the downloaded bytes Error: attachment refused
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:184:21
+    at Mock (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runValidation (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:214:11)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:294:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:188:21 {
+  code: 'ATTACHMENT_CORRUPT'
+}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest failed after validation Error: disk gone
+    at Object.<anonymous> (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:241:79)
+    at Object.Mock [as ingestDownloadedImage] (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+spy@4.1.11/node_modules/@vitest/spy/dist/index.js:332:34)
+    at runIngest (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:227:51)
+    at saveImageAsset (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/image-assets.ts:302:24)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:240:22
+    at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt { status: 'saved', assetId: '', fileId: 'fil_1', lrev: 1 }
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt { status: 'saved', assetId: 'ast_1', fileId: 'fil_1', lrev: -1 }
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt { status: 'unknown', assetId: 'ast_1', fileId: 'fil_1', lrev: 1 }
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt {}
+
+stderr | tests/image-assets-v1.spec.ts > saveImageAsset · 下载/校验/入库编排 > turns ingest failure or a malformed receipt into storage-failed
+[omnimux-browser] asset ingest returned a malformed receipt null
+
+stderr | tests/image-assets-v1.spec.ts > fetchMediaBytes · 外部取消信号 > distinguishes the caller abort from the own timeout budget
+[omnimux-browser] media fetch failed DOMException [AbortError]: This operation was aborted
+    at new DOMException (node:internal/per_context/domexception:76:18)
+    at AbortController.abort (node:internal/abort_controller:506:18)
+    at onExternalAbort (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/media-fetch.ts:181:16)
+    at fetchMediaBytes (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/src/media-fetch.ts:183:26)
+    at /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:346:27
+    at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+    at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26
+    at file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)
+
+ ✓ tests/session-workspace.spec.ts (5 tests) 34ms
+stderr | tests/image-assets-v1.spec.ts > fetchMediaBytes · 外部取消信号 > external abort first-wins: a late rejection after the own timer still reports failed, not timeout
+[omnimux-browser] media fetch failed DOMException [AbortError]: Aborted
+    at new DOMException (node:internal/per_context/domexception:76:18)
+    at Timeout._onTimeout (/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/image-assets-v1.spec.ts:362:31)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)
+
+ ✓ tests/auto-model.spec.ts (15 tests) 71ms
+ ✓ tests/image-assets-v1.spec.ts (51 tests) 86ms
+ ✓ tests/public-media-request.spec.ts (10 tests) 97ms
+ ✓ tests/session-deferral.spec.ts (8 tests) 6ms
+ ✓ tests/e2e/media-lit-transition.e2e.spec.ts (3 tests | 1 skipped) 6ms
+ ✓ tests/media-fetch.spec.ts (26 tests) 104ms
+ ✓ tests/index.spec.ts (12 tests) 39ms
+ ✓ tests/bridge-url.spec.ts (4 tests) 5ms
+ ✓ tests/pairing.spec.ts (8 tests) 3ms
+ ✓ tests/browser-context.spec.ts (5 tests) 3ms
+ ✓ tests/extension-sessions.spec.ts (3 tests) 2ms
+ ✓ tests/protocol.spec.ts (11 tests) 3ms
+ ↓ tests/e2e/pairing-approval.e2e.spec.ts (1 test | 1 skipped)
+ ↓ tests/e2e/pairing-page.e2e.spec.ts (2 tests | 2 skipped)
+ ↓ tests/e2e/pairing.e2e.spec.ts (2 tests | 2 skipped)
+ ✓ tests/remote-host-api.spec.ts (15 tests) 275ms
+ ❯ tests/composition.spec.ts (4 tests | 1 failed) 212ms
+     ✓ rejects an extension without its token while preserving the paired connection 68ms
+     ✓ delivers only the latest followed page through the durable inbox without waking an idle Agent 50ms
+     × boots the bridge, authenticates over a real socket, and drives real gateway RPCs 31ms
+     ✓ unregisters the browser tools when the bridge fiber disposes (HMR safety) 61ms
+ ✓ tests/image-assets-rpc-v1.spec.ts (14 tests) 319ms
+ ✓ tests/public-media-transport.spec.ts (38 tests) 875ms
+ ✓ tests/server.spec.ts (51 tests) 2030ms
+     ✓ closes sockets that never present hello  502ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/session-purge.spec.ts [ tests/session-purge.spec.ts ]
+Error: Cannot find package '@deepseek-ai/dsh-workspace' imported from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/session-purge.spec.ts
+ ❯ tests/session-purge.spec.ts:14:1
+     12| import * as StorageJson from '@deepseek-ai/dsh-storage-json'
+     13| import { DomainFacility } from '@deepseek-ai/dsh-storage-domain'
+     14| import WorkspaceRegistry from '@deepseek-ai/dsh-workspace'
+       | ^
+     15| import { afterEach, describe, expect, it, vi } from 'vitest'
+     16| import { SessionPurgeError, assertPurgeableSessionId, purgeSessionFile…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/e2e/bridge-extension.e2e.spec.ts [ tests/e2e/bridge-extension.e2e.spec.ts ]
+Error: Cannot find package 'playwright-core' imported from /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser/tests/e2e/bridge-extension.e2e.spec.ts
+ ❯ tests/e2e/bridge-extension.e2e.spec.ts:14:1
+     12| import { join, resolve } from 'node:path'
+     13| import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+     14| import { chromium, type BrowserContext } from 'playwright-core'
+       | ^
+     15| import { BridgeServer } from '../../src/server.ts'
+     16| import type { BrowserHostApi, HostRpcCall, HostRpcResult } from '../..…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/composition.spec.ts > real Loader composition > boots the bridge, authenticates over a real socket, and drives real gateway RPCs
+AssertionError: expected { t: 'hello.ok', …(1) } to deeply equal { t: 'hello.ok', …(1) }
+
+- Expected
++ Received
+
+@@ -1,7 +1,8 @@
+  {
+    "caps": {
++     "imageAssetSave": true,
+      "locale": "zh",
+      "maxInteractiveItems": 60,
+      "snapshotMaxChars": 32000,
+      "textOnly": true,
+    },
+
+ ❯ tests/composition.spec.ts:322:59
+    320|     // The real Loader composition authenticates using its configured …
+    321|     const client = await connectReady(port)
+    322|     expect(client.frames.find((f) => f.t === 'hello.ok')).toEqual({
+       |                                                           ^
+    323|       t: 'hello.ok',
+    324|       caps: { textOnly: true, snapshotMaxChars: 32_000, maxInteractive…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed | 19 passed | 3 skipped (25)
+      Tests  1 failed | 299 passed | 6 skipped (306)
+   Start at  01:07:29
+   Duration  2.37s (transform 1.61s, setup 287ms, import 2.13s, tests 4.22s, environment 1ms)
+
+REAL_EXIT=1

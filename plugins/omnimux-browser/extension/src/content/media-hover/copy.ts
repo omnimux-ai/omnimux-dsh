@@ -17,6 +17,36 @@ export type HoverLocale = 'zh' | 'en'
 /** Locale keys that can already be localised by the user. */
 const MANUAL_LOCALE_KEY = 'omnimux_manual_locale'
 
+/**
+ * The image primary action's full state matrix.
+ *
+ * Verbatim strings from the product UI spec: title, aria-label, hover/focus
+ * tooltip and the single result feedback share these words, so nothing else in
+ * the codebase may paraphrase them.
+ */
+export interface ImagePrimaryCopy {
+  /** Idle: title / aria-label / hover hint. */
+  idle: string
+  /** While the host save is in flight. */
+  busy: string
+  /** After the host confirmed the real save. */
+  done: string
+  /** No trusted host is connected for the write. */
+  hostUnavailable: string
+  /** The host reported the image could not be downloaded. */
+  downloadFailed: string
+  /** The host was connected but refused/failed the save itself. */
+  saveFailed: string
+  /** The source cannot be turned into a real image file. */
+  unavailable: string
+  /** The media type could not be confirmed at press time. */
+  typeUnknown: string
+  /** The request may have reached the host but the receipt never came back. */
+  unconfirmed: string
+  /** Host-side asset name when the page offers no real title. */
+  defaultName: string
+}
+
 /** Every user-facing string this feature can render. */
 export interface HoverCopy {
   hint: Record<MediaActionKind, string>
@@ -32,6 +62,8 @@ export interface HoverCopy {
   /** Accessible name of the capsule toolbar. */
   brand: string
   action: Record<MediaActionKind, string>
+  /** Image primary action's verbatim state matrix. */
+  image: ImagePrimaryCopy
 }
 
 const ZH: HoverCopy = {
@@ -54,6 +86,18 @@ const ZH: HoverCopy = {
     copy: '复制',
     attach: '加入对话',
   },
+  image: {
+    idle: '加入资产库',
+    busy: '正在加入资产库',
+    done: '已加入资产库',
+    hostUnavailable: '宿主未连接，请打开 OmniMux 后重试',
+    downloadFailed: '图片下载失败，请重试',
+    saveFailed: '资产保存失败，请重试',
+    unavailable: '该图片无法保存',
+    typeUnknown: '无法确认素材类型，请刷新后重试',
+    unconfirmed: '未确认保存结果，请稍后查看资产库',
+    defaultName: '网页图片',
+  },
 }
 
 const EN: HoverCopy = {
@@ -75,6 +119,18 @@ const EN: HoverCopy = {
     inspiration: 'Add to library',
     copy: 'Copy',
     attach: 'Add to chat',
+  },
+  image: {
+    idle: 'Add to asset library',
+    busy: 'Adding to asset library',
+    done: 'Added to asset library',
+    hostUnavailable: 'Host not connected. Open OmniMux and try again.',
+    downloadFailed: 'Image download failed. Try again.',
+    saveFailed: 'Asset could not be saved. Try again.',
+    unavailable: 'This image cannot be saved',
+    typeUnknown: 'Media type could not be confirmed. Refresh and try again.',
+    unconfirmed: 'Save result not confirmed. Check the asset library shortly.',
+    defaultName: 'Web image',
   },
 }
 

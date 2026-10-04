@@ -212,6 +212,45 @@ export class MediaActionBridge {
   }
 
   /**
+   * Saves the hovered image into the current host's asset library.
+   *
+   * The worker relays the request to the single paired local host over the
+   * authenticated bridge; the success shape it must return is the frozen
+   * `saved`/`duplicate` receipt with real asset and file ids. Anything else —
+   * an empty result, a bare `ok: true`, a status this build does not know —
+   * is an unconfirmed save, never a done mark. The user-facing wording stays
+   * verbatim on this side of the wire.
+   */
+  async saveImageToAssets(payload: HoveredMedia): Promise<ActionOutcome> {
+    const hints = this.transport.copy()
+    const requestId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `save-${Date.now()}-${Math.floor(Math.random() * 1e9)}`
+    const record = asRecord(await this.transport.postToBackground({
+      type: RUNTIME_MESSAGE.mediaToAssets,
+      payload,
+      requestId,
+    }))
+    if (record === null) {
+      return { ok: false, status: 'failed', message: hints.image.hostUnavailable }
+    }
+    if (record.ok !== true) {
+      const code = asRecord(record.error)?.code
+      if (code === 'host-unavailable') {
+        return { ok: false, status: 'failed', message: hints.image.hostUnavailable }
+      }
+      if (code === 'invalid-media' || code === 'invalid-request') {
+        return { ok: false, status: 'failed', message: hints.image.unavailable }
+      }
+      // `save-unconfirmed` and every other transport-level miss land here: the
+      // receipt never proved the outcome either way, so the UI must not claim
+      // a failure the host may not have seen — or a save it may have done.
+      return { ok: false, status: 'failed', message: hints.image.unconfirmed }
+    }
+    return mapAssetSaveOutcome(record.result, hints)
+  }
+
+  /**
    * Copies the media address to the system clipboard.
    *
    * A page-scoped video is copied as its page address: the `blob:` handle it
@@ -264,6 +303,46 @@ export class MediaActionBridge {
   }
 }
 
-function asRecord(value: unknown): { ok?: unknown; result?: unknown; active?: unknown } | null {
-  return typeof value === 'object' && value !== null ? value as { ok?: unknown; result?: unknown; active?: unknown } : null
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? value as Record<string, unknown> : null
+}
+
+/**
+ * Maps a worker business outcome to the action result the capsule renders.
+ *
+ * Only a strict `saved`/`duplicate` receipt — non-empty `assetId` and
+ * `fileId`, a safe non-negative integer `lrev` (parallel to the host parser
+ * in protocol.ts) — counts as a save. Every known failure status
+ * resolves to its frozen copy, and anything unrecognised is honestly reported
+ * as unconfirmed rather than guessed at.
+ */
+function mapAssetSaveOutcome(result: unknown, hints: HoverCopy): ActionOutcome {
+  const body = asRecord(result)
+  const statusName = typeof body?.status === 'string' ? (body.status as string) : ''
+  if (statusName === 'saved' || statusName === 'duplicate') {
+    const confirmed = body !== null
+      && typeof body.assetId === 'string' && body.assetId.trim() !== ''
+      && typeof body.fileId === 'string' && body.fileId.trim() !== ''
+      && typeof body.lrev === 'number' && Number.isSafeInteger(body.lrev) && body.lrev >= 0
+    if (confirmed) {
+      return { ok: true, status: 'saved', message: hints.image.done }
+    }
+    return { ok: false, status: 'failed', message: hints.image.unconfirmed }
+  }
+  switch (statusName) {
+    case 'http-error':
+    case 'timeout':
+      return { ok: false, status: 'failed', message: hints.image.downloadFailed }
+    case 'invalid-url':
+    case 'unsupported-image':
+    case 'mime-mismatch':
+    case 'too-large':
+      return { ok: false, status: 'failed', message: hints.image.unavailable }
+    case 'unavailable':
+    case 'storage-failed':
+    case 'cancelled':
+      return { ok: false, status: 'failed', message: hints.image.saveFailed }
+    default:
+      return { ok: false, status: 'failed', message: hints.image.unconfirmed }
+  }
 }

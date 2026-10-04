@@ -1,0 +1,29 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✖ 暂存根是指向 vault 外的 symlink 时拒绝保存，不写入也不清扫外部目录 (13.746458ms)
+✖ ingestDownloadedImage · 真实入库（#3052） (14.595459ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 85.297375
+
+✖ failing tests:
+
+test at plugins/omnimux-assets/src/image-ingest-v1.test.js:226:3
+✖ 暂存根是指向 vault 外的 symlink 时拒绝保存，不写入也不清扫外部目录 (13.746458ms)
+  Error: ENOENT: no such file or directory, lstat '/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/assets-image-ingest-k5Yja9/store/.image-ingest'
+      at lstatSync (node:fs:1686:25)
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest-v1.test.js:251:59)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Promise.all (index 8)
+      at async Suite.run (node:internal/test_runner/test:1619:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'lstat',
+    path: '/var/folders/s4/bq231_q12pg5k216kgk882d80000gn/T/assets-image-ingest-k5Yja9/store/.image-ingest'
+  }

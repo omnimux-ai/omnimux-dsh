@@ -1,0 +1,59 @@
+独立 QA 观察摘录，非完整 stdout；完整原件位置见各段。2026-10-03 / base d95764912。
+
+[真实接缝 .tmp/qa3052-real-expanded.txt，REAL_EXIT=1；18 项 13 PASS / 5 FAIL]
+真实 Context/plugin 挂载 assets index.js / browser index.ts；serviceType=service。
+真实 dsh-attachment-local 0.1.5-rc.3 / sharp 0.35.5；未替身 validateImage。
+配对 request/approve/status 经真实 HTTP；普通 https 网页 Origin request=403；批准精确 loopback Origin=200；单次领取后 unknown；真实 socket hello.ok 包含 imageAssetSave:true。
+错误测试 token close=4002；库状态无变化。token 为本次临时生成且不归档。
+生产下载 URL=https://www.w3.org/People/mimasa/test/imgformat/img/w3c_home.png。
+生产 RPC saved: assetId=ast_dc7e6eda, fileId=fil_70ae0bf0, lrev=2。
+文件 897 bytes；sha256=2b77bd4345f8db03932c3d002e0f52fa9e7989deb4e85a7c12f7f5f8c81cfe89。
+relative_path=data/files/ast_dc7e6eda/image-2b77bd4345f8db03.png。
+现有 HTTP library 返回同 id/revision；preview=200/image/png 且再次实际解码；匹配 omnimux:assets:changed create/custom。
+
+[业务失败，同源码、两次独立新 home 复现；摘录最后一次的观察]
+OBSERVATION concurrent-name：两个结果均 saved、assetId/fileId 不同；names=["race title","race title"]。
+40 字名称首张 saved，第二来源同标题 storage-failed；AssetsError code=name-invalid，display name must be at most 40 characters。
+OBSERVATION stale-rollback：receipt=storage-failed，旧记录 recordRemains=false，revision 增加一（前一轮原值 9→10）。
+OBSERVATION symlink-stage：out.status=saved，externalEntries=[]，stageStillExists=false。
+独立检查 EXTERNAL_SENTINEL_REMAINS=false；vault 外 external-stage/old-slice/outside-sentinel.txt 由 sweep 删除。
+OBSERVATION late-attachments：serviceExists=true，outcome={status:"unavailable"}；browser 在 attachments 挂载前启动且永远捕获 undefined。
+缺 assets→真实 assets 后挂载→RPC 从 unavailable 变 invalid-url；此项 PASS。
+assets dispose/remount 重建 list/preview PASS（探针早期跨 Context 句柄误用已由 QA 修正，不计业务缺陷）。
+
+[实际 decoder 补验 .tmp/qa3052-decoder.txt，REAL_EXIT=0]
+REAL_DECODE_PASS png 137
+REAL_DECODE_PASS jpeg 274
+REAL_DECODE_PASS webp 78
+REAL_DECODE_PASS gif 71
+TRUNCATED_METADATA 100
+TRUNCATED_FULL_DECODE_REJECT INVALID_IMAGE
+完整 PNG/MIME 错误输入：INVALID_IMAGE / IMAGE_TYPE_MISMATCH；octet-stream 无入库。
+
+[源码名称清理补充观察；Node exit0]
+sanitizeDisplayName("a\u0001b-c") = "a\u0001b c"。
+控制字符 U+0001 未清掉，普通 '-' 被换为空格；后续 normalizeName 会拒绝控制字符。
+
+[回归]
+.tmp/qa3052-host-suite.txt：8 files, Tests 205 passed，REAL_EXIT=0。
+.tmp/qa3052-assets-suite.txt：tests 132 / pass132 / fail0 / skipped0，REAL_EXIT=0。
+.tmp/qa3052-extension-suite.txt：6 matched files, Tests97 passed，REAL_EXIT=0；只属临时前端快照，无浏览器。
+.tmp/qa3052-tsc.txt：无输出，REAL_EXIT=0。
+.tmp/qa3052-boundaries.txt：3882 source files verified，REAL_EXIT=0。
+.tmp/qa3052-host-all.txt：18 passed files / 2 failed files；293 passed / 1 failed；REAL_EXIT=1。
+真实 Loader composition 4项：3 PASS，1 FAIL 于旧 exact hello caps 断言缺 imageAssetSave:true。
+session-purge 收集缺 @deepseek-ai/dsh-workspace；只找到 0.1.1-rc.2，未冒充当前 0.1.5-rc.3 注入。
+
+[TDD 原始日志核验]
+/tmp/3052-assets-red.log：ingest 模块不存在而未收集；两个已存在 library 行为断言真实 RED：1!==0、2!==1；pass1/fail3。
+/tmp/3052-browser-green1.log：23:41:26 首跑已有 image-assets 实现堆栈；47项中4失败，另RPC14项全绿；57pass/4fail。
+4红点：缺省 title 断言误把 absent 与 undefined 混同；两点 Buffer/Uint8Array strict 深等断言差别；外部取消超时5s。
+因此 browser 此日志不是「实现缺失」初始 RED，也没有逐条 red→minimal implementation 的时序证据。
+已归档实施者 .txt 是摘要，不能冒充完整机器 stdout；本文件同样显式标记摘录。
+
+[护栏/权限/运行限制]
+QA只改 docs/qa/browser-image-assets-v1-qa.md、此 evidence 目录下 qa-*；新脚本仅 .tmp/qa3052-real.mjs。
+业务实现与既有测试未改。未 pnpm exec/installprepare；未读真实凭据；临时 sandbox HOME/DSH_HOME。
+使用已有 .pnpm 内合法依赖入口；额外 ignored node_modules 链接只指向现有安装，不改根 manifest/lock。
+无新浏览器/space/Playwright launch；无 App 重启/付费/公共 Dev/Prod 修改；无 git commit/push/关票。
+早期探针 syntax/API/unused remote boundary 错误已由 QA 修正，属 QA 自身准备问题，不计实现失败。

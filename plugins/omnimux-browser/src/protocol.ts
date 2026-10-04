@@ -54,6 +54,18 @@ export const BRIDGE_FETCH_MEDIA_METHOD = 'bridge.fetchMedia'
 export const BRIDGE_COMPLETE_TEXT_METHOD = 'bridge.completeText'
 
 /**
+ * Internal RPC the extension uses to save ONE confirmed page image into the
+ * current host's asset library (Issue #3052).
+ *
+ * Loopback-only beyond the token handshake: the bridge itself further refuses
+ * the method for non-loopback remotes even with a valid token, because a
+ * media READ may tolerate remote clients while a disk WRITE never may.
+ * Input is the frozen narrow shape `{requestId,url,pageUrl,title?}` — no
+ * local paths, target directories, request headers, or site credentials.
+ */
+export const BRIDGE_SAVE_IMAGE_ASSET_METHOD = 'omnimux.saveImageAsset'
+
+/**
  * Internal RPC the panel uses to read back one media file the assistant
  * produced (display_file, read_image rasters, omnimux_*_submit outputs).
  *
@@ -192,6 +204,81 @@ export function parseProducedMediaOutcome(value: unknown): ProducedMediaOutcome 
   }
 }
 
+/** Payload of {@link BRIDGE_SAVE_IMAGE_ASSET_METHOD} (Issue #3052 frozen input). */
+export interface ImageAssetSaveRequest {
+  /** One explicit click's retry identity. */
+  requestId: string
+  /** The page image address to download. */
+  url: string
+  /** Page the image was captured on; provenance only. */
+  pageUrl: string
+  /** Optional display name hint (alt text / page title), bounded to 200 chars. */
+  title?: string
+}
+
+/**
+ * How one {@link BRIDGE_SAVE_IMAGE_ASSET_METHOD} call settled.
+ *
+ * Like {@link MediaFetchOutcome}, every outcome rides a **successful** carrier
+ * frame: an expected answer to "save this image" (unavailable service,
+ * rejected bytes, a 404 upstream) must stay distinguishable from a transport
+ * fault. A `saved`/`duplicate` receipt is only real with non-empty
+ * assetId/fileId and a finite lrev; anything else is failure evidence.
+ */
+export type ImageAssetSaveOutcome =
+  | { status: 'saved'; assetId: string; fileId: string; lrev: number }
+  | { status: 'duplicate'; assetId: string; fileId: string; lrev: number }
+  /** The assets write seam or host validation capability is not mounted. */
+  | { status: 'unavailable' }
+  /** The address is not a public http(s) image URL. */
+  | { status: 'invalid-url' }
+  /** Declared or decoded content is not an acceptable raster image. */
+  | { status: 'unsupported-image' }
+  /** Declared MIME and decoded bytes disagree. */
+  | { status: 'mime-mismatch' }
+  | { status: 'too-large' }
+  | { status: 'timeout' }
+  | { status: 'http-error'; statusCode?: number }
+  /** Persistence failed after validation succeeded. */
+  | { status: 'storage-failed' }
+  /** The owning connection generation died before the save settled. */
+  | { status: 'cancelled' }
+
+/**
+ * Validate an {@link ImageAssetSaveOutcome} that arrived over the bridge.
+ * Only the frozen vocabulary is accepted; a malformed success (empty ids,
+ * non-integer revision, unknown status) is not a receipt.
+ * @param value - the decoded `rpc.result` payload.
+ * @returns the outcome, or `null` when the payload is not one.
+ */
+export function parseImageAssetSaveOutcome(value: unknown): ImageAssetSaveOutcome | null {
+  if (!isRecord(value)) return null
+  switch (value.status) {
+    case 'saved':
+    case 'duplicate':
+      return typeof value.assetId === 'string' && value.assetId !== ''
+        && typeof value.fileId === 'string' && value.fileId !== ''
+        && typeof value.lrev === 'number' && Number.isSafeInteger(value.lrev) && value.lrev >= 0
+        ? { status: value.status, assetId: value.assetId, fileId: value.fileId, lrev: value.lrev }
+        : null
+    case 'unavailable':
+    case 'invalid-url':
+    case 'unsupported-image':
+    case 'mime-mismatch':
+    case 'too-large':
+    case 'timeout':
+    case 'storage-failed':
+    case 'cancelled':
+      return { status: value.status }
+    case 'http-error':
+      return value.statusCode === undefined || isPositiveInteger(value.statusCode)
+        ? { status: 'http-error', ...(isPositiveInteger(value.statusCode) ? { statusCode: value.statusCode } : {}) }
+        : null
+    default:
+      return null
+  }
+}
+
 /** Seconds a fresh socket may take to present `hello` before it is closed. */
 export const HELLO_TIMEOUT_MS = 5_000
 
@@ -238,6 +325,13 @@ export interface BridgeCaps {
   maxInteractiveItems: number
   /** Host DSH language preference ('zh' | 'en') read from settings.yaml. */
   locale?: 'zh' | 'en'
+  /**
+   * Host-side image-asset save exists (Issue #3052). Absent on older hosts:
+   * the extension must not offer the asset-library action against them.
+   * The asset service itself can still be missing at call time, which the
+   * RPC answers with `unavailable`.
+   */
+  imageAssetSave?: true
 }
 
 /** Frames sent by the extension to the bridge plugin. */

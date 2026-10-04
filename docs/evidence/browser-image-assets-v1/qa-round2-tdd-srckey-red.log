@@ -1,0 +1,36 @@
+▶ ingestDownloadedImage · 真实入库（#3052）
+  ✔ 同 sourceKey 重复保存返回 duplicate，不新增资产、不抬 revision、不发事件 (8.0105ms)
+  ✔ 同 sourceKey 的并发保存合并为一次入库 (2.780375ms)
+  ✖ sourceKey 去首尾空白后入库，且必须是 64 位 hex（QA #3052 OCR） (3.746917ms)
+  ✔ 拒绝非法输入：空字节、非图片 mime、空 sourceKey (0.724042ms)
+✖ ingestDownloadedImage · 真实入库（#3052） (15.807333ms)
+ℹ tests 4
+ℹ suites 1
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 64.244584
+
+✖ failing tests:
+
+test at plugins/omnimux-assets/src/image-ingest-v1.test.js:312:3
+✖ sourceKey 去首尾空白后入库，且必须是 64 位 hex（QA #3052 OCR） (3.746917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'browser-image:  0718e4966ee03e50868be826ca7457b546ad0b42f8a64229d9bfa81b29475ceb '
+  - 'browser-image:0718e4966ee03e50868be826ca7457b546ad0b42f8a64229d9bfa81b29475ceb'
+  
+      at TestContext.<anonymous> (file:///Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-assets/src/image-ingest-v1.test.js:318:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'browser-image:  0718e4966ee03e50868be826ca7457b546ad0b42f8a64229d9bfa81b29475ceb ',
+    expected: 'browser-image:0718e4966ee03e50868be826ca7457b546ad0b42f8a64229d9bfa81b29475ceb',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -45,6 +45,12 @@ export class BridgeClient {
   private url = ''
   private token = ''
   private ackTimer: ReturnType<typeof setTimeout> | undefined
+  /**
+   * Number of hello generations this client completed. A write that captured
+   * its target under generation N may only ride the socket of generation N —
+   * a later generation proves the socket (and possibly the host) changed.
+   */
+  private helloCount = 0
 
   constructor(
     readonly sinks: BridgeSinks,
@@ -77,6 +83,9 @@ export class BridgeClient {
     this.running = true
     this.attempt = 0
     this.generation += 1
+    // A re-target invalidates every previously completed hello: nothing may
+    // ride caps or receipts from a socket aimed at a different host.
+    this.helloCount = 0
     void this.loop(this.generation)
   }
 
@@ -102,6 +111,24 @@ export class BridgeClient {
   /** Whether a frame can be sent right now. */
   get connected(): boolean {
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN
+  }
+
+  /** Hello generation of the current target (0 before the first hello.ok). */
+  get helloGeneration(): number {
+    return this.helloCount
+  }
+
+  /**
+   * The local target bound at the current hello generation: the socket that
+   * completed hello, its url, and the generation it negotiated under. `null`
+   * whenever no authenticated socket is live, so a caller capturing this can
+   * never ride stale capabilities or a different host.
+   */
+  get localTarget(): { generation: number; url: string } | null {
+    if (this.helloCount === 0 || this.ws === null || this.ws.readyState !== WebSocket.OPEN) {
+      return null
+    }
+    return { generation: this.helloCount, url: this.url }
   }
 
   /**
@@ -183,6 +210,11 @@ export class BridgeClient {
             if (frame.t === 'hello.ok') {
               authed = true
               this.clearAckTimer()
+              // A hello.ok on a socket a newer start() already replaced does
+              // not advance the live generation.
+              if (this.generation === generation && this.ws === socket) {
+                this.helloCount += 1
+              }
               try { console.log(`[OmniMux Bridge] 握手成功，服务通道已就绪！`, frame.caps) } catch {}
               resolve(true)
               this.sinks.onHelloOk(frame.caps)

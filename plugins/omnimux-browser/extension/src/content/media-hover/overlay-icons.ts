@@ -12,7 +12,26 @@
  */
 
 /** Marks drawn as outlines; the checked/active look is a CSS fill. */
-export type CapsuleIcon = 'brand' | 'bulb' | 'copy' | 'bubble' | 'plus' | 'check' | 'external' | 'star'
+export type CapsuleIcon = 'brand' | 'bulb' | 'copy' | 'bubble' | 'plus' | 'check' | 'external' | 'star' | 'asset'
+
+/**
+ * The asset-library glyph approved for the image primary action.
+ *
+ * Verbatim geometry from the host asset library sidebar
+ * (`omnimux-assets/src/client/sidebar-entry.js` `ICON`): a single
+ * `fill="currentColor"` path on a 22-unit grid. It is drawn on its own
+ * viewBox rather than rescaled onto the stroked 24-unit set — the PM frozen
+ * rule is same path, no redrawing, no added "plus" or arrow marks.
+ */
+const ASSET_ROOT_ATTRS =
+  'viewBox="0 0 22 22" fill="currentColor" stroke="none" ' +
+  'aria-hidden="true" focusable="false"'
+
+const ASSET_LIBRARY_PATH =
+  'm7.249 11.552-1.691.323A2.335 2.335 0 0 0 6 16.5h10a2.333 2.333 0 0 0 ' +
+  '.443-4.625l-1.691-.323.216-1.708a4 4 0 1 0-7.936 0l.217 1.708ZM5.167 9.333' +
+  'a5.833 5.833 0 1 1 11.62.741 4.168 4.168 0 0 1-.787 8.26H6a4.167 4.167 ' +
+  '0 0 1-.787-8.26 5.89 5.89 0 0 1-.046-.74Z'
 
 /** Shared root attributes. `aria-hidden` keeps the mark out of the a11y tree. */
 export const SVG_ROOT_ATTRS =
@@ -110,6 +129,8 @@ const ICON_PATHS: Record<CapsuleIcon, string> = {
   ].join(''),
   // Star: the filled "kept" state of the lightbulb button.
   star: '<path d="M12 3.6l2.6 5.3 5.9.86-4.25 4.14 1 5.9L12 17.02l-5.25 2.78 1-5.9L3.5 9.76l5.9-.86Z"/>',
+  // Asset library mark: the approved image save glyph (verbatim geometry).
+  asset: `<path fill-rule="evenodd" clip-rule="evenodd" d="${ASSET_LIBRARY_PATH}"/>`,
 }
 
 /**
@@ -119,7 +140,7 @@ const ICON_PATHS: Record<CapsuleIcon, string> = {
  * @param size - Rendered square size in CSS pixels; defaults to the icon box.
  */
 export function svgIcon(name: CapsuleIcon, size = 18): string {
-  const root = name === 'brand' ? SVG_FILLED_ROOT_ATTRS : SVG_ROOT_ATTRS
+  const root = name === 'brand' ? SVG_FILLED_ROOT_ATTRS : (name === 'asset' ? ASSET_ROOT_ATTRS : SVG_ROOT_ATTRS)
   return `<svg ${root} width="${size}" height="${size}">${ICON_PATHS[name]}</svg>`
 }
 

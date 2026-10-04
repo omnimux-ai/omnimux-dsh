@@ -1,0 +1,125 @@
+
+ RUN  v4.1.11 /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-browser-image-assets/plugins/omnimux-browser
+
+ ❯ tests/image-assets-v1.spec.ts (50 tests | 2 failed | 48 skipped) 10ms
+     ↓ accepts the frozen wire shape
+     ↓ rejects non-object
+     ↓ rejects missing requestId
+     ↓ rejects empty url
+     ↓ rejects missing pageUrl
+     ↓ rejects non-string url
+     ↓ rejects non-string title
+     ↓ rejects requestId over 128
+     ↓ rejects url over 8192
+     ↓ rejects pageUrl over 8192
+     ↓ rejects title over 200
+     ↓ rejects local path smuggled in
+     ↓ rejects credential smuggled in
+     ↓ accepts the frozen raster set with parameters stripped
+     ↓ rejects image/svg+xml without guessing a suffix
+     ↓ rejects application/octet-stream without guessing a suffix
+     ↓ rejects text/html without guessing a suffix
+     ↓ rejects image/heic without guessing a suffix
+     ↓ rejects  without guessing a suffix
+     ↓ rejects IMAGE/PNG2 without guessing a suffix
+     ↓ rejects image/png/x without guessing a suffix
+     ↓ drops the fragment but keeps the signed query
+     ↓ returns unavailable when the asset service is absent
+     ↓ returns unavailable when host image validation is absent
+     ↓ rejects non-public and non-string urls before dialing
+     ↓ maps fetch timeout into the frozen outcome vocabulary
+     ↓ maps fetch too-large into the frozen outcome vocabulary
+     ↓ maps fetch http-error into the frozen outcome vocabulary
+     ↓ maps fetch bad-request into the frozen outcome vocabulary
+     ↓ maps fetch failed into the frozen outcome vocabulary
+     ↓ rejects non-image and missing content types without magic sniffing
+     ↓ intersects the frozen types with the host imageLimits mediaTypes
+     ↓ maps validation error UNSUPPORTED_IMAGE_TYPE to unsupported-image
+     ↓ maps validation error INVALID_IMAGE to unsupported-image
+     ↓ maps validation error IMAGE_TYPE_MISMATCH to mime-mismatch
+     ↓ maps validation error IMAGE_TOO_LARGE to too-large
+     ↓ maps validation error IMAGE_TOO_MANY_PIXELS to too-large
+     ↓ maps validation error IMAGE_DIMENSION_TOO_LARGE to too-large
+     ↓ maps validation error ATTACHMENT_CORRUPT to unavailable
+     ↓ calls validateImage with the downloaded bytes and normalized mime — never saving attachments
+     ↓ passes the source digest, bytes, mime and bounded provenance to the asset service
+     ↓ maps a duplicate receipt through unchanged
+     ↓ turns ingest failure or a malformed receipt into storage-failed
+     ↓ reports cancelled when the connection generation dies mid-save
+     ↓ attachments 在桥挂载之后才就位时，下一次调用能拿到新 provider
+     × 连接代次在 ingest 提交期间死亡时回 cancelled，不回 saved 7ms
+     × 提交前死亡已是 cancelled；存活则回执照常送达 2ms
+     ↓ distinguishes the caller abort from the own timeout budget
+     ↓ still reports its own timeout the same way
+     ↓ 成功回执必须含非空 assetId/fileId 与有限 lrev
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/image-assets-v1.spec.ts > saveImageAsset · 提交后取消回执（QA #3052 OCR） > 连接代次在 ingest 提交期间死亡时回 cancelled，不回 saved
+AssertionError: expected { status: 'saved', …(3) } to deeply equal { status: 'cancelled' }
+
+- Expected
++ Received
+
+  {
+-   "status": "cancelled",
++   "assetId": "ast_1",
++   "fileId": "fil_1",
++   "lrev": 1,
++   "status": "saved",
+  }
+
+ ❯ tests/image-assets-v1.spec.ts:328:21
+    326|     }), abort.signal)
+    327|     expect(committed).toBe(true)
+    328|     expect(outcome).toEqual({ status: 'cancelled' })
+       |                     ^
+    329|   })
+    330|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/image-assets-v1.spec.ts > saveImageAsset · 提交后取消回执（QA #3052 OCR） > 提交前死亡已是 cancelled；存活则回执照常送达
+AssertionError: expected { status: 'saved', …(4) } to deeply equal { status: 'saved', …(3) }
+
+- Expected
++ Received
+
+  {
+    "assetId": "ast_1",
+    "fileId": "fil_1",
++   "input": {
++     "bytes": {
++       "data": [
++         137,
++         80,
++         78,
++         71,
++       ],
++       "type": "Buffer",
++     },
++     "description": "来源：https://news.example.com/article",
++     "displayName": "页面图",
++     "mime": "image/png",
++     "sourceKey": "f25841182feecc4b5b810fd32b1df06537fd2f93905d29d9913a85af51c03740",
++   },
+    "lrev": 3,
+    "status": "saved",
+  }
+
+ ❯ tests/image-assets-v1.spec.ts:334:19
+    332|     const abort = new AbortController()
+    333|     const alive = await saveImageAsset(payload() as never, deps(), abo…
+    334|     expect(alive).toEqual({ status: 'saved', assetId: 'ast_1', fileId:…
+       |                   ^
+    335|   })
+    336| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 48 skipped (50)
+   Start at  00:42:15
+   Duration  151ms (transform 41ms, setup 20ms, import 32ms, tests 10ms, environment 0ms)
+
