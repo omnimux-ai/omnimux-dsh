@@ -108,7 +108,10 @@ export function mapValidatedPlanToVendor(args) {
   const logical = {}
   let targetModelId
   const prompt = typeof args.prompt === 'string' ? args.prompt : ''
-  if (prompt && profileId !== 'speechToText') {
+  // Issue #3063: indextts-2 voice_clone keeps the script in `prompt_text` —
+  // the AutoDL contract has no bare `prompt` field, so skip the generic write.
+  const suppressGenericPrompt = profileId === 'audioGenerate' && opId === 'voice_clone'
+  if (prompt && profileId !== 'speechToText' && !suppressGenericPrompt) {
     vendor[speech ? 'input' : 'prompt'] = prompt
     logical.prompt = prompt
   }
@@ -207,15 +210,30 @@ export function mapValidatedPlanToVendor(args) {
       }
     }
   } else if (profileId === 'audioGenerate' && opId === 'voice_clone') {
-    // 网关文档（index-tts）：克隆参考音与朗读文稿都在 metadata.nodeInfoList 里，
-    // 节点 4/audio = 参考音、节点 7/text = 文稿。顶层 prompt 文档标注为「仅作标签」，
-    // 保留上游写入的 vendor.prompt 以满足媒体运行时的输入契约，真实内容以节点 7 为准。
+    // 网关文档（indextts-2，Issue #3063）：克隆走 AutoDL 任务通道
+    // POST /v1/tasks/autodl。朗读文稿进 prompt_text、参考音链接进
+    // prompt_simple，emo_control_method 必填且文档推荐
+    // 「与音色参考音频相同」；emo_* 强度可选，仅在上游显式给值时透传。
     const sampleUrl = audioTracks[0] || genericAudio[0] || sources[0]
-    const nodeInfoList = []
-    if (sampleUrl) nodeInfoList.push({ nodeId: '4', fieldName: 'audio', fieldValue: sampleUrl })
-    if (prompt) nodeInfoList.push({ nodeId: '7', fieldName: 'text', fieldValue: prompt })
-    vendor.metadata = { nodeInfoList }
-    if (sampleUrl) logical.voiceSample = sampleUrl
+    if (prompt) {
+      vendor.prompt_text = prompt
+      logical.prompt_text = prompt
+    }
+    if (sampleUrl) {
+      vendor.prompt_simple = sampleUrl
+      logical.prompt_simple = sampleUrl
+      logical.voiceSample = sampleUrl
+    }
+    vendor.emo_control_method = typeof extras.emo_control_method === 'string' && extras.emo_control_method
+      ? extras.emo_control_method
+      : '与音色参考音频相同'
+    for (const key of ['emo_happy', 'emo_sad', 'emo_angry']) {
+      const value = Number(extras[key])
+      if (Number.isFinite(value)) {
+        vendor[key] = value
+        logical[key] = value
+      }
+    }
     vendor.model = args.modelId
     logical.model = args.modelId
   } else if (profileId === 'textComplete') {

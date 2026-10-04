@@ -224,16 +224,16 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       assert.equal(plan.vendorPayload.response_format, 'json')
     })
 
-    // #2256: voice_clone now has its own operationVendorShapes entry, so it no
-    // longer falls back to the profile-wide vendorFields list. The channel
-    // documents exactly three fields (model, prompt, metadata.nodeInfoList) and
+    // #3063: indextts-2 voice_clone has its own operationVendorShapes entry, so it
+    // no longer falls back to the profile-wide vendorFields list. The channel
+    // documents prompt_text/prompt_simple/emo_control_method (AutoDL lane) and
     // no output-format parameter, so an undocumented format must not be emitted.
-    it('audioGenerate gives voice_clone its own shape: nodeInfoList in, no undocumented format field', () => {
+    it('audioGenerate gives voice_clone its own shape: AutoDL fields in, no undocumented format field', () => {
       const op = { id: 'voice_clone', output: { type: 'audio' }, inputs: [] }
       const mapped = mapValidatedPlanToVendor({
         operation: op,
         profile: audioProfile,
-        modelId: 'index-tts',
+        modelId: 'indextts-2',
         prompt: '你好，这是一段声音克隆测试。',
         bindings: [{
           slot: 'voice_sample', role: 'audio_track', type: 'audio',
@@ -244,11 +244,11 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       })
       assert.equal(mapped.ok, true)
       assert.equal(mapped.vendorPayload.format, undefined)
-      assert.equal(mapped.vendorPayload.model, 'index-tts')
-      assert.deepEqual(mapped.vendorPayload.metadata.nodeInfoList, [
-        { nodeId: '4', fieldName: 'audio', fieldValue: 'https://cdn.example.com/voice-sample.wav' },
-        { nodeId: '7', fieldName: 'text', fieldValue: '你好，这是一段声音克隆测试。' },
-      ])
+      assert.equal(mapped.vendorPayload.metadata, undefined)
+      assert.equal(mapped.vendorPayload.model, 'indextts-2')
+      assert.equal(mapped.vendorPayload.prompt_text, '你好，这是一段声音克隆测试。')
+      assert.equal(mapped.vendorPayload.prompt_simple, 'https://cdn.example.com/voice-sample.wav')
+      assert.equal(mapped.vendorPayload.emo_control_method, '与音色参考音频相同')
     })
   })
 })

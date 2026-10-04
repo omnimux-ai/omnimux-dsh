@@ -87,7 +87,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     ])
     assert.deepEqual(catalog.audio.map((row) => row.id), [
       'gemini-3.8-flash-tts',
-      'index-tts',
+      'indextts-2',
       'seed-audio-1.0',
     ])
     // Text bucket includes implementation-ready models without requiring live history.

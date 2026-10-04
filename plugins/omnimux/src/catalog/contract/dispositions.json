@@ -364,9 +364,9 @@
       "reason": "命中 runtime；H1 已有契约；无 dated 证据保持 draft"
     },
     {
-      "id": "index-tts",
+      "id": "indextts-2",
       "disposition": "canonical",
-      "reason": "2026-09-18 #2256 登记：渠道官方文档 docs/zh/api-reference/audio-series/models/index-tts.mdx 声明 index-tts 为 Index TTS 声音克隆（POST /v1/video/generations + metadata.nodeInfoList 节点 4/audio、7/text），changelog 2026-08-16-index-tts-ltx-docs 记为已上架",
+      "reason": "2026-10-04 #3063 更新：上游官方文档 docs/zh/api-reference/audio-series/models/index-tts.mdx 已将 canonical 型号升级为 indextts-2（POST /v1/tasks/autodl + prompt_text/prompt_simple/emo_control_method；旧型号 index-tts 已从上游模型列表下线，保留为 alias）",
       "notes": "文档证据充分故 listed；execution 保持 stub，未取得真实执行证据前不声明 live"
     },
     {

@@ -184,14 +184,14 @@
       "requiredInAuto": true
     },
     {
-      "productId": "index-tts",
+      "productId": "indextts-2",
       "kind": "audio",
       "priority": "P1",
       "gatewayIds": [
-        "index-tts"
+        "indextts-2"
       ],
       "requiredInAuto": true,
-      "note": "2026-09-18 #2256：声音克隆（参考音 + 文稿）。渠道官方文档证据充分且已进入画布白名单，故按门禁要求 requiredInAuto；真实执行证据待补。"
+      "note": "2026-10-04 #3063：上游将声音克隆从 index-tts 升级为 indextts-2 并下线旧名；新提交契约 POST /v1/tasks/autodl，真实执行证据待补。"
     },
     {
       "productId": "gemini-3.8-flash-tts",

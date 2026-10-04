@@ -98,7 +98,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
     'wan3.0-video',
   ]);
   assert.equal(cov.contractIds.length, 43); // #2804 gemini-3.8-flash-tts 注册后 42→43
-  assert.ok(cov.contractIds.includes('index-tts'));
+  assert.ok(cov.contractIds.includes('indextts-2'));
   assert.ok(cov.contractIds.includes('whisper-1'));
   assert.ok(cov.contractIds.includes('gpt-image-2.5-flare'));
   assert.ok(cov.contractIds.includes('gpt-image-2.5-sunburst'));

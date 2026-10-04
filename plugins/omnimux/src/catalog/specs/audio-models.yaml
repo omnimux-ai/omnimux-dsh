@@ -267,11 +267,14 @@ models:
       seam: "audioGenerate"
       notes: "通过本地 opencli gemini tts 驱动（CLI 原生直通）"
 
-  # #2256：Index TTS 声音克隆。渠道官方文档只声明「参考音 + 文稿」两个必填节点，
-  # 且端点走视频任务通道（GxgenAI 任务共用 /v1/video/generations，即使产物是音频）。
-  # 本行的 prompt 槽承载「要朗读的文稿」，对应文档节点 7/text；文档中非必填的顶层
-  # `prompt`（"仅作标签"）不是本槽，登记时不发送。参考音对应节点 4/audio。
-  - id: "index-tts"
+  # #3063：Index TTS 声音克隆，上游契约已升级为 indextts-2（AutoDL 任务通道），
+  # 旧型号 index-tts 已从上游模型列表下线，保留为 alias 兼容存量画布与账本记录。
+  # 文档硬约束（zh/api-reference/audio-series/models/index-tts.mdx，2026-10-04 复核）：
+  # POST /v1/tasks/autodl，必填 model=prompt_text（朗读文稿）/prompt_simple（参考音
+  # 公网 URL）/emo_control_method（文档推荐「与音色参考音频相同」）；emo_happy/
+  # emo_sad/emo_angry ∈ [0,1] 可选；轮询 GET /v1/tasks/{task_id}，产物经
+  # GET /v1/tasks/{task_id}/artifacts 收取 WAV 直链。
+  - id: "indextts-2"
     label: "Index TTS2 声音克隆"
     family: "indextts"
     badge: "声音克隆"
@@ -288,8 +291,8 @@ models:
     research:
       status: "verified"
       docUrl: "https://docs.omnimux.ai/zh/api-reference/audio-series/models/index-tts"
-      verifiedAt: "2026-09-18"
-      notes: "渠道官方文档 docs/zh/api-reference/audio-series/models/index-tts.mdx（本机 OmniMux-docs 仓）；changelog 2026-08-16-index-tts-ltx-docs 记为已上架。文档硬约束：必填 metadata.nodeInfoList，节点 4/audio 为克隆参考音（服务端自动截取前约 15 秒）、节点 7/text 为朗读文字；参考音须公网 URL 或上游 fileName，不得传 data: URI；轮询用 GET /v1/video/generations/{task_id}，不得使用 *-async / *-query 模型名。输出格式与参考音时长上限文档未写，不推断。"
+      verifiedAt: "2026-10-04"
+      notes: "渠道官方文档 zh/api-reference/audio-series/models/index-tts.mdx（OmniMux-docs 仓，2026-10-04 离线复核）：canonical 型号 indextts-2；POST /v1/tasks/autodl；必填 prompt_text（文稿）、prompt_simple（参考音 URL，不得 data: URI）、emo_control_method（推荐「与音色参考音频相同」）；可选 emo_happy/emo_sad/emo_angry ∈ [0,1]；轮询 GET /v1/tasks/{id}，产物 GET /v1/tasks/{id}/artifacts 取 WAV。旧型号 index-tts 已下线，保留 alias 兼容存量画布/账本。"
     implementation:
       status: "ready"
       profileId: "audioGenerate"
@@ -298,7 +301,7 @@ models:
       status: "stub"
       profileId: "audioGenerate"
       seam: "audioGenerate"
-      notes: "本轮只做离线请求构造与轮询夹具验证，未发起真实模型调用；上线前按模型接口准据补真实执行证据。"
+      notes: "离线请求构造与轮询/artifacts 夹具验证完成；上线前按模型接口准据补真实执行证据（画布语音克隆验收）。"
 
   - id: "suno"
     label: "Suno Music"
