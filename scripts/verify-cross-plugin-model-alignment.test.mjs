@@ -20,7 +20,7 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   assert.equal(report.issues.length, 0);
   // #2256: index-tts joins the canvas audio whitelist
   // #2801: gemini-3.8-flash-tts joins the canvas audio whitelist
-  assert.equal(report.alignment.whitelistModelsChecked, 10);
+  assert.equal(report.alignment.whitelistModelsChecked, 11);
   assert.equal(report.alignment.defaultModelsChecked, 4);
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
   // #1789: the capability seam behind audio transcription admits the two ASR contracts.

@@ -22,7 +22,7 @@ describe('mountTextComplete capability gate', () => {
     assert.equal(tools.length, 1)
     assert.equal(tools[0].name, 'omnimux_text_complete')
     assert.ok(provided.textComplete)
-    assert.equal(tools[0].parameters.properties.model.enum.length, 12)
+    assert.equal(tools[0].parameters.properties.model.enum.length, 13)
     assert.equal(tools[0].parameters.properties.metadata, undefined)
     assert.ok(tools[0].parameters.properties.strategy)
     assert.ok(tools[0].parameters.properties.group)
@@ -67,7 +67,7 @@ describe('mountTextComplete capability gate', () => {
     mountTextComplete(ctx, hub, {}, () => {})
     assert.equal(tools.length, 1)
     const enumModels = tools[0].parameters.properties.model.enum
-    assert.equal(enumModels.length, 10)
+    assert.equal(enumModels.length, 11)
     assert.ok(!enumModels.includes('grok-4.6'))
     assert.ok(!enumModels.includes('claude-opus-5'))
     assert.ok(enumModels.includes('gemini-3.7-flash'))

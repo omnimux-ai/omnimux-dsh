@@ -14,6 +14,17 @@
       "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
     },
     {
+      "productId": "claude-sonnet-4-6",
+      "kind": "text",
+      "priority": "P0",
+      "gatewayIds": [
+        "claude-sonnet-4-6"
+      ],
+      "requiredInAuto": false,
+      "canvasExcluded": false,
+      "note": "2026-10-04: 自建号池畅享档上线接入"
+    },
+    {
       "productId": "gemini-3.8-flash",
       "kind": "text",
       "priority": "P0",

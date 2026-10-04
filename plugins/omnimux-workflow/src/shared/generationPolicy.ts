@@ -10,10 +10,10 @@ export interface GenerationPolicy {
 
 export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationPolicy>> = {
   text: {
-    // 网关生产基线已收敛，仅保留谷歌 Gemini 3.8 Flash 主力文本模型
-    allowedModelIds: ['gemini-3.8-flash'],
+    // 开放谷歌 Gemini 3.8 Flash 与 Claude Sonnet 4.6
+    allowedModelIds: ['gemini-3.8-flash', 'claude-sonnet-4-6'],
     defaultModelId: 'gemini-3.8-flash',
-    modeSelection: 'automatic',
+    modeSelection: 'model',
   },
   image: {
     // 官方价目表在售生图模型全量准入：GPT Image 2.5 标准版、极速版 (Flare)、画质版 (Sunburst)
