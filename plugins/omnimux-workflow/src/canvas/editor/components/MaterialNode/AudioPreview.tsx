@@ -264,7 +264,6 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
                 onPointerDown={(event) => event.stopPropagation()}
               >
                 <Download size={18} aria-hidden="true" />
-                <span className="wf-audio__btn-text">{t('audio.save')}</span>
               </button>
             ) : (
               <>
@@ -298,9 +297,9 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
                 </button>
               </>
             )}
-            <div className="wf-audio__status" role="status">
-              {statusText ? <span>{statusText}</span> : null}
-              {waveFailed && !error && (
+            <div className="wf-audio__status" role="status" title={statusText || undefined}>
+              <span className="wf-audio__status-text">{statusText}</span>
+              {waveFailed && !error ? (
                 <button
                   type="button"
                   className="wf-audio__button wf-audio__retry nodrag"
@@ -313,7 +312,7 @@ export default function AudioPreview({ source, workspaceId, label, onSave, onRep
                 >
                   <RefreshCw size={14} aria-hidden="true" />
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
           {onReplace && (

@@ -1,0 +1,6 @@
+{
+  "issue": 3081,
+  "verified": true,
+  "timestamp": 1791108248091,
+  "description": "音频卡片底部控制栏内联文本移除后保持稳定居中"
+}
