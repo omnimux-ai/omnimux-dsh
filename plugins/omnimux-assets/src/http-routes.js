@@ -34,6 +34,7 @@ const STATUS_BY_CODE = {
   'catalog-unavailable': 503,
   'catalog-filter-invalid': 400,
   'cloud-media-unavailable': 404,
+  'voice-preview-only': 403,
   'remote-fetch-failed': 502,
   'name-conflict': 409,
   'type-invalid': 400,
@@ -339,14 +340,22 @@ export function createAssetsDispatcher(deps) {
     const problem = jsonBodyProblem(req)
     if (problem) return problem
     const body = /** @type {{ id?: string, name?: string, type?: string }} */ (req.body)
+    let refusedForPurpose = false
     try {
       const asset = await cloud.saveToLocal(String(body.id ?? ''), { name: body.name, type: body.type })
       return { status: 200, body: { asset, lrev: library.revision() } }
+    } catch (error) {
+      // 用途拒绝发生在任何暂存动作之前：此时再跑一遍清扫毫无意义，而且会把
+      // 别的在途保存当成「崩溃残留」扫掉。
+      if (error instanceof AssetsError && error.code === 'voice-preview-only') refusedForPurpose = true
+      throw error
     } finally {
-      // The save already dropped its own staging slice; this bare sweep only
-      // collects what a crashed save left behind and never touches a live slice,
-      // so a second save running at the same time keeps its staged files.
-      cloud.clearStaging()
+      if (!refusedForPurpose) {
+        // The save already dropped its own staging slice; this bare sweep only
+        // collects what a crashed save left behind and never touches a live slice,
+        // so a second save running at the same time keeps its staged files.
+        cloud.clearStaging()
+      }
     }
   }
 

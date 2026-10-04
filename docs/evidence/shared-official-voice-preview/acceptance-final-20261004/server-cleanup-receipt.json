@@ -1,0 +1,31 @@
+{
+  "rows": [
+    {
+      "port": 55645,
+      "closed": true,
+      "code": "ECONNREFUSED"
+    },
+    {
+      "port": 57933,
+      "closed": true,
+      "code": "ECONNREFUSED"
+    },
+    {
+      "port": 58201,
+      "closed": true,
+      "code": "ECONNREFUSED"
+    },
+    {
+      "port": 58503,
+      "closed": true,
+      "code": "ECONNREFUSED"
+    },
+    {
+      "port": 59192,
+      "closed": true,
+      "code": "ECONNREFUSED"
+    }
+  ],
+  "ordinaryServerClosed": true,
+  "at": "2026-10-04T05:10:10.493Z"
+}

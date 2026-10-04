@@ -152,6 +152,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const imageTriggerRef = useRef<HTMLDivElement | null>(null);
   // T04：音色选择弹窗（schema 提供音色选项时由底栏 VoiceTrigger 唤起）
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
+  /** Issue #3058 FE-02：关闭弹窗后焦点恢复的真实 trigger 元素 */
+  const voiceTriggerRef = useRef<HTMLButtonElement>(null);
   const promptEditorRef = useRef<PromptTokenEditorRef | null>(null);
 
   const [envSettings, setEnvSettings] = useState<RuntimeByokChannelSettings | undefined>(() => {
@@ -465,12 +467,25 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     [activeCatalog, materialType, modelItem, onUpdateNodeData, params, localPrompt, upstreamSnapshots, parameterSelections, commitVideoSelection, effectiveRuntimeSettings],
   );
 
+  /**
+   * Issue #3058 FE-02：统一关闭路径。微任务聚焦 trigger——React 提交后
+   * 弹窗已卸载、原生事件已结算，Element.focus 对已断开的节点是 no-op。
+   * Escape 已由弹窗组件在 capture 阶段隔离，宿主节点不再被顺带失选，
+   * trigger 仍挂在 DOM 上可聚焦。
+   */
+  const closeVoicePicker = useCallback(() => {
+    setVoicePickerOpen(false);
+    queueMicrotask(() => {
+      voiceTriggerRef.current?.focus();
+    });
+  }, []);
+
   const handleSelectVoice = useCallback(
     (voiceType: string) => {
       updateParam('voice', voiceType);
-      setVoicePickerOpen(false);
+      closeVoicePicker();
     },
-    [updateParam],
+    [updateParam, closeVoicePicker],
   );
 
   // Effective ops for the currently selected model (all modalities).
@@ -1258,6 +1273,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           {/* T04：音色触发入口（模型下拉右侧），唤起 VoicePickerDialog */}
           {showVoicePicker ? (
             <button
+              ref={voiceTriggerRef}
               type="button"
               className={`wf-voice-trigger ${hasUpstreamAudio ? 'is-locked-by-upstream' : ''}`}
               data-testid="wf-voice-trigger"
@@ -1364,7 +1380,7 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
           open={voicePickerOpen}
           options={voiceCatalogOptions}
           {...(audioEffectiveParams?.voice ? { value: audioEffectiveParams.voice } : {})}
-          onClose={() => setVoicePickerOpen(false)}
+          onClose={closeVoicePicker}
           onSelect={handleSelectVoice}
         />
       ) : null}

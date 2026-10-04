@@ -1,0 +1,82 @@
+[
+  {
+    "scene": "assets",
+    "name": "assets-last-voice-stop: stopped proof",
+    "ok": true,
+    "stopped": true,
+    "reasons": [],
+    "span": 1566,
+    "count": 16,
+    "first": 0,
+    "last": 0
+  },
+  {
+    "scene": "assets",
+    "name": "detail-open-stops-card: stopped proof",
+    "ok": true,
+    "stopped": true,
+    "reasons": [],
+    "span": 1555,
+    "count": 16,
+    "first": 0,
+    "last": 0
+  },
+  {
+    "scene": "assets",
+    "name": "detail-close-stops-native: stopped proof",
+    "ok": true,
+    "stopped": true,
+    "reasons": [],
+    "span": 1556,
+    "count": 16,
+    "first": 0,
+    "last": 0
+  },
+  {
+    "scene": "assets",
+    "name": "local-source-unmount-stops-card: stopped proof",
+    "ok": true,
+    "stopped": true,
+    "reasons": [],
+    "span": 1560,
+    "count": 16,
+    "first": 0,
+    "last": 0
+  },
+  {
+    "scene": "canvas",
+    "name": "canvas-close-while-playing: stopped proof",
+    "ok": true,
+    "stopped": true,
+    "reasons": [],
+    "span": 1553,
+    "count": 16,
+    "first": 0,
+    "last": 0
+  },
+  {
+    "scene": "n1-continued-play-negative",
+    "name": "n1: gate correctly red on real continued play",
+    "ok": true,
+    "stopped": false,
+    "reasons": [
+      "target-not-paused-zero-in-16-samples:t0={paused:false,ct:0.02014}|t1={paused:false,ct:0.100593}|t2={paused:false,ct:0.20348}|t3={paused:false,ct:0.305502}|t4={paused:false,ct:0.408531}|t5={paused:false,ct:0.511088}|t6={paused:false,ct:0.616728}|t7={paused:false,ct:0.719747}",
+      "target-play-revived-after-action"
+    ],
+    "span": 1562,
+    "count": 16,
+    "first": 0.02014,
+    "last": 1.559882
+  },
+  {
+    "scene": "n1-continued-play-negative",
+    "name": "n1-cleanup-stop: stopped proof",
+    "ok": true,
+    "stopped": true,
+    "reasons": [],
+    "span": 1581,
+    "count": 16,
+    "first": 0,
+    "last": 0
+  }
+]

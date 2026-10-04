@@ -3,7 +3,8 @@
  * Issue #763 / #771 更新）。
  *
  * 源码契约（readFileSync + node:test）锁定：
- *  - VoicePickerDialog：CustomModal 540px、标题「选择音色」、搜索占位、四维筛选、
+ *  - VoicePickerDialog：CustomModal min(480px, calc(100vw-48px))（#3058 UI polish，
+ *    暂留 540px 退出）、标题「选择音色」、搜索占位、四维筛选、
  *    空态「未找到匹配音色 + 清除筛选」、选中即 onSelect(voice_type)、底部常驻选中条；
  *  - Issue #771 试听：原生 Audio 对象经 getVoiceSampleUrl 加载火山官方 CDN 样音
  *    （零 fetch / TTS 请求），playingVoice + audioRef 单例控制，play/pause 切换，
@@ -39,7 +40,9 @@ const stripComments = (src) => src
 test('VoicePickerDialog：结构契约（标题 / 搜索 / 四维筛选 / 空态 / 底部选中条）', () => {
   assert.match(dialogSrc, /CustomModal/);
   assert.match(dialogSrc, /选择音色/);
-  assert.match(dialogSrc, /width=\{540\}/);
+  // Issue #3058 UI polish：宽度由暂留 540px 回归设计指引公式（附录 §3.1 替代 §3.6 基线）
+  assert.match(dialogSrc, /width="min\(480px, calc\(100vw - 48px\)\)"/);
+  assert.doesNotMatch(dialogSrc, /width=\{540\}/);
   assert.match(dialogSrc, /搜索音色\.\.\./);
   // 四维筛选器
   for (const label of ['语言', '口音', '性别', '场景']) {
@@ -53,14 +56,26 @@ test('VoicePickerDialog：结构契约（标题 / 搜索 / 四维筛选 / 空态
   assert.match(dialogSrc, /当前音色/);
 });
 
-test('VoicePickerDialog：试听安全（原生 Audio 加载官方 CDN 样音，零 fetch / TTS 请求）', () => {
-  // Issue #771 / Issue #923：火山官方公开 CDN 样音 URL 生成与自适应候选重试
-  assert.match(dialogSrc, /VOLCENGINE_SAMPLE_CDN_BASE/);
-  assert.match(dialogSrc, /lf3-static\.bytednsdoc\.com/);
-  assert.match(dialogSrc, /export function getVoiceSampleUrl\(voiceType: string\): string/);
-  assert.match(dialogSrc, /export function getVoiceSampleCandidates\(/);
-  assert.match(dialogSrc, /encodeURIComponent\(voiceType\)/);
-  assert.match(dialogSrc, /new Audio\(candidateUrls\[0\]\)/);
+test('VoicePickerDialog：试听安全（原生 Audio 消费 hub preview DTO，零 fetch / TTS / 本地拼 URL）', () => {
+  // Issue #3058：运行时候选唯一来源为 meta.preview DTO；前端不拼 URL、不维护 CDN 常量
+  assert.doesNotMatch(dialogSrc, /VOLCENGINE_SAMPLE_CDN_BASE/);
+  assert.doesNotMatch(dialogSrc, /bytednsdoc/);
+  assert.doesNotMatch(dialogSrc, /getVoiceSampleUrl/);
+  assert.doesNotMatch(dialogSrc, /getVoiceSampleCandidates/);
+  assert.match(dialogSrc, /voicePreviewCandidates/);
+  assert.match(dialogSrc, /isOfficialVoicePreviewPlayable/);
+  // OCR #1/#3 + Sol 规格轴 HIGH：每次 play() 捕获自身候选下标
+  // （playCandidate(attemptIndex)），每个 attempt 独立原生 Audio element，
+  // error 事件由 attempt 令牌归属自己的 element，不再读共享可变 candidateIndex
+  // 或共享 element 的 armedIndex（error 无 URL 身份会误算新候选）。
+  assert.match(dialogSrc, /new Audio\(\)/);
+  assert.match(dialogSrc, /playCandidate\(0\)/);
+  assert.match(dialogSrc, /armedAttempt/);
+  assert.match(dialogSrc, /candidateFailed\(attemptIndex\)/);
+  assert.doesNotMatch(dialogSrc, /candidateFailed\(candidateIndex\)/);
+  assert.doesNotMatch(dialogSrc, /armedIndex/);
+  // 播放资格门在 seam 本身：非播放键调用方也不许探测未验证候选
+  assert.match(dialogSrc, /if \(!isOfficialVoicePreviewPlayable\(option\)\) return;/);
   // 单例控制与 play/pause 切换
   assert.match(dialogSrc, /playingVoice/);
   assert.match(dialogSrc, /audioRef/);
@@ -71,13 +86,18 @@ test('VoicePickerDialog：试听安全（原生 Audio 加载官方 CDN 样音，
   assert.match(dialogSrc, /audio\.onended/);
   assert.match(dialogSrc, /audio\.onerror/);
   assert.match(dialogSrc, /event\.stopPropagation\(\)/);
-  // 候选降级自适应
-  assert.match(dialogSrc, /tryNextOrReportError/);
+  // 播放键仅 verified-file 渲染（未验证行完全不渲染，无死键）
+  assert.match(dialogSrc, /isOfficialVoicePreviewPlayable\(option\)/);
+  // 每候选一次结算 + 请求令牌隔离旧回调
+  assert.match(dialogSrc, /requestToken|tokenRef|settled|candidateFailed/);
+  // NotAllowedError（自动播放拒绝）不换 URL、不伪装文件不存在
+  assert.match(dialogSrc, /NotAllowedError/);
   // 弹窗关闭 / 组件卸载时停止播放并清理
   assert.match(dialogSrc, /if \(!open\) stopPlayback\(\)/);
   assert.match(dialogSrc, /useEffect\(\(\) => stopPlayback, \[\]\)/);
-  // 加载失败兜底 Toast，绝不冒充试听
-  assert.match(dialogSrc, /toast\.info\('该音色暂无官方试听音频'\)/);
+  // 核定失败文案（双语锁定 zh），旧文案清零
+  assert.match(dialogSrc, /toast\.info\('试听暂不可用，请稍后重试。'\)/);
+  assert.doesNotMatch(dialogSrc, /该音色暂无官方试听音频/);
   // 播放/暂停按钮状态与无障碍文案
   assert.match(dialogSrc, /wf-voice-picker__preview--playing/);
   assert.match(dialogSrc, /暂停试听/);
@@ -92,8 +112,11 @@ test('VoicePickerDialog：选中写回契约（onSelect(voice_type)，宿主负�
   assert.match(dialogSrc, /role="listbox"/);
   assert.match(dialogSrc, /role="option"/);
   assert.match(dialogSrc, /aria-selected/);
-  // 热门徽标与选中勾选
-  assert.match(dialogSrc, /wf-voice-picker__hot/);
+  // Issue #3058 §2.3/§3.3：「热门」徽章不在首版白名单、明确禁渲染；
+  // 热门置顶排序保留（见 voicePickerModel.test.mjs），仅删除 em 元素与专用样式类。
+  const dialogCode = stripComments(dialogSrc);
+  assert.doesNotMatch(dialogCode, /wf-voice-picker__hot/);
+  assert.doesNotMatch(dialogCode, /<em[^>]*>热门/);
   assert.match(dialogSrc, /Check\s+size=\{16\}/);
 });
 
@@ -147,4 +170,17 @@ test('样式门禁：新增源码零 raw hex/rgba、零违禁 tokens', () => {
   assert.match(promptEditorCss, /\.wf-prompt-token-meta-count--exceeded/);
   assert.doesNotMatch(cssSrc, /--omx-/);
   assert.doesNotMatch(promptEditorCss, /--omx-/);
+});
+
+test('VoicePickerDialog：四维筛选首项菜单 label 为逐字「全部」，触发器复用 triggerLabel 显示维度名（#3058 PM copy fix）', () => {
+  // PM 核定：菜单首项 label 全部是「全部」（语言/口音/性别/场景），
+  // 触发器经现有 CustomSelect triggerLabel 维持维度名，不新增组件。
+  assert.match(dialogSrc, /\{ value: '', label: '全部', triggerLabel: dimensionLabel \}/);
+  assert.match(dialogSrc, /\{ value: '', label: '全部', triggerLabel: '性别' \}/);
+  for (const label of ['语言', '口音', '场景']) {
+    assert.ok(dialogSrc.includes(`dimensionOptions('${label}'`), `维度「${label}」未走参数化 triggerLabel`);
+  }
+  // 4 个维度共享 dimensionOptions：源码 2 处字面「全部」覆盖语言/口音/场景 + 性别
+  const allCount = (dialogSrc.match(/label: '全部'/g) || []).length;
+  assert.equal(allCount, 2, `首项「全部」需 dimensionOptions + gender 共 2 处，实际 ${allCount} 处`);
 });

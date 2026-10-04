@@ -3,7 +3,7 @@
  * Replaces antd `Select` with a modern, high-performance, dark-glass component.
  */
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 
@@ -67,13 +67,36 @@ export function CustomSelect<T extends string | number = string>({
 
     const width = popupMatchSelectWidth ? rect.width : undefined;
 
+    /**
+     * Issue #3058 FE-03：菜单左缘横向钳进视口。trigger 贴右缘（如 390px 窄态
+     * 音色筛选）时 minWidth(≥140/180) 曾使菜单越出右边界；统一在定位 seam
+     * 钳位 [8px, vw-8-menuWidth]，不改组件 API 与视觉。
+     * final-review-closure medium：菜单 CSS 是 width:max-content，实际渲染宽
+     * 可能大于 minWidth 估宽（200px 菜单按 140px 钳位仍越界）——菜单已挂载时
+     * 按实测量宽钳位，未挂载（首帧前）退回 minWidth 同口径估宽。
+     */
+    const viewportWidth = window.innerWidth;
+    // 与 portal inline minWidth 同口径：matchWidth 时 ≥140，否则 180
+    const estimatedMenuWidth = width ? Math.max(width, 140) : 180;
+    const measuredMenuWidth = menuRef.current?.getBoundingClientRect().width;
+    const menuWidth = measuredMenuWidth && measuredMenuWidth > 0 ? measuredMenuWidth : estimatedMenuWidth;
+    const maxLeft = Math.max(8, viewportWidth - 8 - menuWidth);
+    const left = Math.max(8, Math.min(rect.left, maxLeft));
+
     setCoords({
       top,
-      left: rect.left,
+      left,
       width,
       placement: placeTop ? 'top' : 'bottom',
     });
   }, [options.length, popupMatchSelectWidth]);
+
+  // 菜单挂载后、绘制前按实际渲染宽重算一次 left——width:max-content 的实宽
+  // 此刻才读得到（updatePosition 内部测 menuRef）。
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [open, updatePosition]);
 
   useEffect(() => {
     if (!open) return;
@@ -91,7 +114,11 @@ export function CustomSelect<T extends string | number = string>({
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Issue #3058 FE-02：菜单自己吃 Escape——capture 阶段关闭并隔离传播，
+      // 宿主弹窗（CustomModal 同级 window 监听已让位）与其他 window 监听
+      // 不再收到本次按键；同一 Escape 只关闭菜单这一层。
       if (e.key === 'Escape') {
+        e.stopPropagation();
         setOpen(false);
       }
     };
@@ -101,13 +128,13 @@ export function CustomSelect<T extends string | number = string>({
     };
 
     window.addEventListener('mousedown', handlePointerDown, true);
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', updatePosition);
 
     return () => {
       window.removeEventListener('mousedown', handlePointerDown, true);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', updatePosition);
     };
@@ -171,6 +198,9 @@ export function CustomSelect<T extends string | number = string>({
                 bottom: coords.placement === 'top' ? window.innerHeight - coords.top : undefined,
                 left: coords.left,
                 minWidth: coords.width ? Math.max(coords.width, 140) : 180,
+                // Issue #3058 FE-03：极端窄视口兜底，菜单不越右边界（8px 内边距）；
+                // 保留既有 CSS 300px 封顶——取两者较小值，不覆盖原上限。
+                maxWidth: Math.min(300, window.innerWidth - 16),
                 zIndex: 9999,
               }}
               role="listbox"

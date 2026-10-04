@@ -155,6 +155,7 @@ export function normalizeCloudAsset(row) {
   const mediaType = ['image', 'video', 'audio', 'document', 'other'].includes(row?.media_type)
     ? row.media_type
     : 'other'
+  const preview = row?.meta?.preview
   return {
     id: String(row?.id ?? ''),
     category: String(row?.category ?? ''),
@@ -168,7 +169,66 @@ export function normalizeCloudAsset(row) {
     playable: row?.meta?.playable !== false,
     hasCover: String(row?.cover_url ?? '') !== '',
     hasMedia: String(row?.media_url ?? '') !== '',
+    // Issue #3058: stable voice identity and the hub preview DTO travel through
+    // paging, search and detail untouched — play eligibility and action gating
+    // read `preview`, never the display name or the row id.
+    voiceType: typeof row?.meta?.voice_type === 'string' ? row.meta.voice_type : '',
+    resourceId: typeof row?.meta?.resource_id === 'string' ? row.meta.resource_id : '',
+    preview: preview && typeof preview === 'object' ? preview : null,
   }
+}
+
+/** The hub preview DTO's fixed purpose for official voice auditions. */
+export const OFFICIAL_VOICE_PREVIEW_PURPOSE = 'official-voice-preview'
+/** The only preview.state that means a file probe has passed. */
+export const OFFICIAL_VOICE_PREVIEW_VERIFIED = 'verified-file'
+
+/**
+ * Whether a normalized cloud row is an official voice preview row.
+ * Reads `preview.purpose` only — never the display name, the id, or `media_url`.
+ * @param {any} asset normalized cloud row
+ */
+export function isOfficialVoicePreviewAsset(asset) {
+  return asset?.preview?.purpose === OFFICIAL_VOICE_PREVIEW_PURPOSE
+}
+
+/**
+ * Whether an official voice preview row may show a play control.
+ * The row must be verified and carry a non-empty primary URL — never inferred
+ * from `hasMedia`, a `.mp3` suffix or `source=volcengine`.
+ * @param {any} asset normalized cloud row
+ */
+export function isOfficialVoicePreviewPlayable(asset) {
+  const preview = asset?.preview
+  return Boolean(
+    isOfficialVoicePreviewAsset(asset)
+      && preview?.state === OFFICIAL_VOICE_PREVIEW_VERIFIED
+      && typeof preview?.primary_url === 'string'
+      && preview.primary_url !== '',
+  )
+}
+
+/**
+ * Ordered preview candidates from the hub DTO: the primary locator first,
+ * then its fallbacks in hub order, de-duplicated so one URL is never retried.
+ * @param {any} asset normalized cloud row
+ * @returns {string[]}
+ */
+export function voicePreviewCandidateUrls(asset) {
+  const preview = asset?.preview
+  if (!preview || typeof preview !== 'object') return []
+  const seen = new Set()
+  const urls = []
+  const push = (url) => {
+    if (typeof url !== 'string' || url === '' || seen.has(url)) return
+    seen.add(url)
+    urls.push(url)
+  }
+  push(preview.primary_url)
+  for (const candidate of Array.isArray(preview.candidates) ? preview.candidates : []) {
+    push(candidate)
+  }
+  return urls
 }
 
 /**
@@ -183,6 +243,10 @@ export function normalizeCloudAsset(row) {
  *
  * A voice row with no audio file (the descriptor-only 音色 catalogue) is text as
  * well: there is nothing to play, so a play control would be a dead one.
+ *
+ * Issue #3058（OCR #11）：官方音色 preview 行的可播性由 preview DTO
+ * （verified-file + primary_url）裁定，不依赖 `hasMedia`——一行只有
+ * `preview.primary_url` 的 DTO-only 已验证行仍是音频卡；未验证行仍是文本卡。
  * @param {any} asset normalized cloud row (see `normalizeCloudAsset`)
  * @returns {'audio' | 'media' | 'text'}
  */
@@ -191,7 +255,15 @@ export function cloudCardKind(asset) {
   // 立绘优先：数字人 / 拟人角色的素材是语音样本，但卡片门面是那张立绘。
   // 只有「没有立绘的纯语音行」才走语音色块版式。
   if (asset?.hasCover === true) return 'media'
-  if (asset?.mediaType === 'audio') return hasMedia && asset?.playable !== false ? 'audio' : 'text'
+  if (asset?.mediaType === 'audio') {
+    // 官方音色的资格看 preview DTO 而不是 media_url：DTO-only 已验证行
+    // （media_url 为空但 primary_url 有效）照样是音频卡；legacy playable 门
+    // 只作用于普通行，官方行由 preview DTO 单独裁定（ocr-final #3058）。
+    const playable = isOfficialVoicePreviewAsset(asset)
+      ? isOfficialVoicePreviewPlayable(asset)
+      : hasMedia && asset?.playable !== false
+    return playable ? 'audio' : 'text'
+  }
   if (hasMedia) return 'media'
   return 'text'
 }

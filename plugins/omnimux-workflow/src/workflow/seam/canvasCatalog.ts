@@ -36,6 +36,7 @@ export function readCanvasCatalog(getSeam: Getter): CapabilityCatalog {
     source: body.source === 'omnimux' || body.source === 'static-stub' ? body.source : source,
     schemaVersion: typeof body.schemaVersion === 'string' ? body.schemaVersion : undefined,
     fingerprint: typeof body.fingerprint === 'string' ? body.fingerprint : undefined,
+    preview_fingerprint: typeof body.preview_fingerprint === 'string' ? body.preview_fingerprint : undefined,
     defaults: body.defaults, models, defaultsByOperation, defaultOperations: body.defaultOperations,
     text: rows(body.text), image: rows(body.image), video: rows(body.video), audio: rows(body.audio),
   });

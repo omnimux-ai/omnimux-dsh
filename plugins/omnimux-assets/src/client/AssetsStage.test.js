@@ -112,3 +112,17 @@ describe('Assets search field contract and cloud integration', () => {
     assert.match(stageJsx, /<CloudAssetsView\b[^>]*query=\{feed\.query\}/)
   })
 })
+
+/**
+ * Issue #3058：详情保存接线对 preview-only 的前置拒绝。
+ * official-voice-preview 详情不传可用保存回调，savePreviewItem 遇到该用途
+ * 在任何请求发出前直接返回——不能仅凭 cloud ID 放行。
+ */
+describe('Cloud preview save wiring - official voice preview (Issue #3058)', () => {
+  it('refuses the save callback for preview-only purpose before any request', () => {
+    assert.match(stageJsx, /savePreviewItem[\s\S]{0,400}official-voice-preview|savePreviewItem[\s\S]{0,400}preview\?\.purpose/)
+    assert.match(stageJsx, /preview\?\.purpose === 'official-voice-preview'|isOfficialVoicePreview/)
+    // 不传可用保存回调：onSaveToLocal 对 preview-only 为 undefined
+    assert.match(stageJsx, /onSaveToLocal=\{[\s\S]{0,200}preview|onSaveToLocal=\{previewCloudId !== ''[\s\S]{0,200}\}/)
+  })
+})

@@ -1,0 +1,969 @@
+{
+  "spaceId": 2,
+  "page": "p1",
+  "runId": "2026-10-04T04-53-48.224Z-c4731bf5",
+  "bundleSha": {
+    "assets": "08bdc8bd42775737ddbe3e55b5c5d1cff19677997ffcb992eb23fd8db5f9ffaf",
+    "canvas": "f2a1b9edc6d6d941e5e29489be8160deaeba8b8d6fee863c32a4e9230d0a0bf1",
+    "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+    "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+    "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+  },
+  "checks": [
+    {
+      "name": "light:top and input stable",
+      "ok": true,
+      "actual": {
+        "full": {
+          "at": "2026-10-04T04:58:29.022Z",
+          "viewport": [
+            390,
+            844
+          ],
+          "theme": "light",
+          "modal": {
+            "x": 24,
+            "y": 126.59375,
+            "width": 342,
+            "height": 550,
+            "top": 126.59375,
+            "right": 366,
+            "bottom": 676.59375,
+            "left": 24
+          },
+          "input": {
+            "x": 79,
+            "y": 216.09375,
+            "width": 251,
+            "height": 17,
+            "top": 216.09375,
+            "right": 330,
+            "bottom": 233.09375,
+            "left": 79
+          },
+          "rows": 509,
+          "footer": "当前音色林潇 2.0",
+          "registry": [
+            {
+              "id": 1,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 2,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 3,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 4,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            }
+          ]
+        },
+        "single": {
+          "at": "2026-10-04T04:58:29.163Z",
+          "viewport": [
+            390,
+            844
+          ],
+          "theme": "light",
+          "modal": {
+            "x": 24,
+            "y": 126.59375,
+            "width": 342,
+            "height": 278,
+            "top": 126.59375,
+            "right": 366,
+            "bottom": 404.59375,
+            "left": 24
+          },
+          "input": {
+            "x": 79,
+            "y": 216.09375,
+            "width": 251,
+            "height": 17,
+            "top": 216.09375,
+            "right": 330,
+            "bottom": 233.09375,
+            "left": 79
+          },
+          "rows": 1,
+          "footer": "当前音色林潇 2.0",
+          "registry": [
+            {
+              "id": 1,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 2,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 3,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 4,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            }
+          ]
+        },
+        "empty": {
+          "at": "2026-10-04T04:58:29.293Z",
+          "viewport": [
+            390,
+            844
+          ],
+          "theme": "light",
+          "modal": {
+            "x": 24,
+            "y": 126.59375,
+            "width": 342,
+            "height": 340,
+            "top": 126.59375,
+            "right": 366,
+            "bottom": 466.59375,
+            "left": 24
+          },
+          "input": {
+            "x": 79,
+            "y": 216.09375,
+            "width": 251,
+            "height": 17,
+            "top": 216.09375,
+            "right": 330,
+            "bottom": 233.09375,
+            "left": 79
+          },
+          "rows": 0,
+          "footer": "当前音色林潇 2.0",
+          "registry": [
+            {
+              "id": 1,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 2,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 3,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 4,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "light:menu 0 within viewport",
+      "ok": true,
+      "actual": {
+        "rect": {
+          "x": 45,
+          "y": 290.59375,
+          "width": 140,
+          "height": 254,
+          "top": 290.59375,
+          "right": 185,
+          "bottom": 544.59375,
+          "left": 45
+        },
+        "maxWidth": "300px",
+        "minWidth": "140px",
+        "text": "全部中文美式英语澳洲英语英式英语阿拉伯语德语西班牙语法语印尼语日语韩语马来语墨西哥西语巴西葡萄牙语俄语泰语菲律宾语越南语意大利语",
+        "theme": "light"
+      }
+    },
+    {
+      "name": "light:Escape only closes menu",
+      "ok": true
+    },
+    {
+      "name": "light:menu 1 within viewport",
+      "ok": true,
+      "actual": {
+        "rect": {
+          "x": 141,
+          "y": 290.59375,
+          "width": 140,
+          "height": 254,
+          "top": 290.59375,
+          "right": 281,
+          "bottom": 544.59375,
+          "left": 141
+        },
+        "maxWidth": "300px",
+        "minWidth": "140px",
+        "text": "全部普通话美式澳洲英式未知墨西哥巴西粤语河南口音四川口音广西口音台湾口音广东口音青岛口音北京口音长沙口音",
+        "theme": "light"
+      }
+    },
+    {
+      "name": "light:Escape only closes menu",
+      "ok": true
+    },
+    {
+      "name": "light:menu 2 within viewport",
+      "ok": true,
+      "actual": {
+        "rect": {
+          "x": 202,
+          "y": 290.59375,
+          "width": 140,
+          "height": 109.5,
+          "top": 290.59375,
+          "right": 342,
+          "bottom": 400.09375,
+          "left": 202
+        },
+        "maxWidth": "300px",
+        "minWidth": "140px",
+        "text": "全部男声女声",
+        "theme": "light"
+      }
+    },
+    {
+      "name": "light:Escape only closes menu",
+      "ok": true
+    },
+    {
+      "name": "light:menu 3 within viewport",
+      "ok": true,
+      "actual": {
+        "rect": {
+          "x": 202,
+          "y": 290.59375,
+          "width": 140,
+          "height": 254,
+          "top": 290.59375,
+          "right": 342,
+          "bottom": 544.59375,
+          "left": 202
+        },
+        "maxWidth": "300px",
+        "minWidth": "140px",
+        "text": "全部通用场景角色扮演外语音色有声阅读客服场景视频配音趣味口音教学场景S2S-OmniSC 2.0版本多情感教育场景",
+        "theme": "light"
+      }
+    },
+    {
+      "name": "light:Escape only closes menu",
+      "ok": true
+    },
+    {
+      "name": "dark:top and input stable",
+      "ok": true,
+      "actual": {
+        "full": {
+          "at": "2026-10-04T04:58:44.930Z",
+          "viewport": [
+            390,
+            844
+          ],
+          "theme": "dark",
+          "modal": {
+            "x": 24,
+            "y": 126.59375,
+            "width": 342,
+            "height": 550,
+            "top": 126.59375,
+            "right": 366,
+            "bottom": 676.59375,
+            "left": 24
+          },
+          "input": {
+            "x": 79,
+            "y": 216.09375,
+            "width": 251,
+            "height": 17,
+            "top": 216.09375,
+            "right": 330,
+            "bottom": 233.09375,
+            "left": 79
+          },
+          "rows": 509,
+          "footer": "当前音色林潇 2.0",
+          "registry": [
+            {
+              "id": 1,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 2,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 3,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 4,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            }
+          ]
+        },
+        "single": {
+          "at": "2026-10-04T04:58:50.050Z",
+          "viewport": [
+            390,
+            844
+          ],
+          "theme": "dark",
+          "modal": {
+            "x": 24,
+            "y": 126.59375,
+            "width": 342,
+            "height": 278,
+            "top": 126.59375,
+            "right": 366,
+            "bottom": 404.59375,
+            "left": 24
+          },
+          "input": {
+            "x": 79,
+            "y": 216.09375,
+            "width": 251,
+            "height": 17,
+            "top": 216.09375,
+            "right": 330,
+            "bottom": 233.09375,
+            "left": 79
+          },
+          "rows": 1,
+          "footer": "当前音色林潇 2.0",
+          "registry": [
+            {
+              "id": 1,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 2,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 3,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 4,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            }
+          ]
+        },
+        "empty": {
+          "at": "2026-10-04T04:58:50.630Z",
+          "viewport": [
+            390,
+            844
+          ],
+          "theme": "dark",
+          "modal": {
+            "x": 24,
+            "y": 126.59375,
+            "width": 342,
+            "height": 340,
+            "top": 126.59375,
+            "right": 366,
+            "bottom": 466.59375,
+            "left": 24
+          },
+          "input": {
+            "x": 79,
+            "y": 216.09375,
+            "width": 251,
+            "height": 17,
+            "top": 216.09375,
+            "right": 330,
+            "bottom": 233.09375,
+            "left": 79
+          },
+          "rows": 0,
+          "footer": "当前音色林潇 2.0",
+          "registry": [
+            {
+              "id": 1,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 2,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 3,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+              "ended": false,
+              "connected": false
+            },
+            {
+              "id": 4,
+              "paused": true,
+              "currentTime": 0,
+              "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+              "ended": false,
+              "connected": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "dark:menu 0 within viewport",
+      "ok": true,
+      "actual": {
+        "rect": {
+          "x": 45,
+          "y": 290.59375,
+          "width": 140,
+          "height": 254,
+          "top": 290.59375,
+          "right": 185,
+          "bottom": 544.59375,
+          "left": 45
+        },
+        "maxWidth": "300px",
+        "minWidth": "140px",
+        "text": "全部中文美式英语澳洲英语英式英语阿拉伯语德语西班牙语法语印尼语日语韩语马来语墨西哥西语巴西葡萄牙语俄语泰语菲律宾语越南语意大利语",
+        "theme": "dark"
+      }
+    },
+    {
+      "name": "dark:Escape only closes menu",
+      "ok": true
+    },
+    {
+      "name": "dark:menu 1 within viewport",
+      "ok": true,
+      "actual": {
+        "rect": {
+          "x": 141,
+          "y": 290.59375,
+          "width": 140,
+          "height": 254,
+          "top": 290.59375,
+          "right": 281,
+          "bottom": 544.59375,
+          "left": 141
+        },
+        "maxWidth": "300px",
+        "minWidth": "140px",
+        "text": "全部普通话美式澳洲英式未知墨西哥巴西粤语河南口音四川口音广西口音台湾口音广东口音青岛口音北京口音长沙口音",
+        "theme": "dark"
+      }
+    },
+    {
+      "name": "dark:Escape only closes menu",
+      "ok": true
+    },
+    {
+      "name": "dark:menu 2 within viewport",
+      "ok": true,
+      "actual": {
+        "rect": {
+          "x": 237,
+          "y": 290.59375,
+          "width": 140,
+          "height": 109.5,
+          "top": 290.59375,
+          "right": 377,
+          "bottom": 400.09375,
+          "left": 237
+        },
+        "maxWidth": "300px",
+        "minWidth": "140px",
+        "text": "全部男声女声",
+        "theme": "dark"
+      }
+    },
+    {
+      "name": "dark:Escape only closes menu",
+      "ok": true
+    },
+    {
+      "name": "dark:menu 3 within viewport",
+      "ok": true,
+      "actual": {
+        "rect": {
+          "x": 242,
+          "y": 290.59375,
+          "width": 140,
+          "height": 254,
+          "top": 290.59375,
+          "right": 382,
+          "bottom": 544.59375,
+          "left": 242
+        },
+        "maxWidth": "300px",
+        "minWidth": "140px",
+        "text": "全部通用场景角色扮演外语音色有声阅读客服场景视频配音趣味口音教学场景S2S-OmniSC 2.0版本多情感教育场景",
+        "theme": "dark"
+      }
+    },
+    {
+      "name": "dark:Escape only closes menu",
+      "ok": true
+    },
+    {
+      "name": "native instances remain stopped",
+      "ok": true,
+      "actual": [
+        {
+          "id": 1,
+          "paused": true,
+          "currentTime": 0,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+          "ended": false,
+          "connected": false
+        },
+        {
+          "id": 2,
+          "paused": true,
+          "currentTime": 0,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+          "ended": false,
+          "connected": false
+        },
+        {
+          "id": 3,
+          "paused": true,
+          "currentTime": 0,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+          "ended": false,
+          "connected": false
+        },
+        {
+          "id": 4,
+          "paused": true,
+          "currentTime": 0,
+          "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+          "ended": false,
+          "connected": false
+        }
+      ]
+    }
+  ],
+  "menus": [
+    {
+      "rect": {
+        "x": 45,
+        "y": 290.59375,
+        "width": 140,
+        "height": 254,
+        "top": 290.59375,
+        "right": 185,
+        "bottom": 544.59375,
+        "left": 45
+      },
+      "maxWidth": "300px",
+      "minWidth": "140px",
+      "text": "全部中文美式英语澳洲英语英式英语阿拉伯语德语西班牙语法语印尼语日语韩语马来语墨西哥西语巴西葡萄牙语俄语泰语菲律宾语越南语意大利语",
+      "theme": "light"
+    },
+    {
+      "rect": {
+        "x": 141,
+        "y": 290.59375,
+        "width": 140,
+        "height": 254,
+        "top": 290.59375,
+        "right": 281,
+        "bottom": 544.59375,
+        "left": 141
+      },
+      "maxWidth": "300px",
+      "minWidth": "140px",
+      "text": "全部普通话美式澳洲英式未知墨西哥巴西粤语河南口音四川口音广西口音台湾口音广东口音青岛口音北京口音长沙口音",
+      "theme": "light"
+    },
+    {
+      "rect": {
+        "x": 202,
+        "y": 290.59375,
+        "width": 140,
+        "height": 109.5,
+        "top": 290.59375,
+        "right": 342,
+        "bottom": 400.09375,
+        "left": 202
+      },
+      "maxWidth": "300px",
+      "minWidth": "140px",
+      "text": "全部男声女声",
+      "theme": "light"
+    },
+    {
+      "rect": {
+        "x": 202,
+        "y": 290.59375,
+        "width": 140,
+        "height": 254,
+        "top": 290.59375,
+        "right": 342,
+        "bottom": 544.59375,
+        "left": 202
+      },
+      "maxWidth": "300px",
+      "minWidth": "140px",
+      "text": "全部通用场景角色扮演外语音色有声阅读客服场景视频配音趣味口音教学场景S2S-OmniSC 2.0版本多情感教育场景",
+      "theme": "light"
+    },
+    {
+      "rect": {
+        "x": 45,
+        "y": 290.59375,
+        "width": 140,
+        "height": 254,
+        "top": 290.59375,
+        "right": 185,
+        "bottom": 544.59375,
+        "left": 45
+      },
+      "maxWidth": "300px",
+      "minWidth": "140px",
+      "text": "全部中文美式英语澳洲英语英式英语阿拉伯语德语西班牙语法语印尼语日语韩语马来语墨西哥西语巴西葡萄牙语俄语泰语菲律宾语越南语意大利语",
+      "theme": "dark"
+    },
+    {
+      "rect": {
+        "x": 141,
+        "y": 290.59375,
+        "width": 140,
+        "height": 254,
+        "top": 290.59375,
+        "right": 281,
+        "bottom": 544.59375,
+        "left": 141
+      },
+      "maxWidth": "300px",
+      "minWidth": "140px",
+      "text": "全部普通话美式澳洲英式未知墨西哥巴西粤语河南口音四川口音广西口音台湾口音广东口音青岛口音北京口音长沙口音",
+      "theme": "dark"
+    },
+    {
+      "rect": {
+        "x": 237,
+        "y": 290.59375,
+        "width": 140,
+        "height": 109.5,
+        "top": 290.59375,
+        "right": 377,
+        "bottom": 400.09375,
+        "left": 237
+      },
+      "maxWidth": "300px",
+      "minWidth": "140px",
+      "text": "全部男声女声",
+      "theme": "dark"
+    },
+    {
+      "rect": {
+        "x": 242,
+        "y": 290.59375,
+        "width": 140,
+        "height": 254,
+        "top": 290.59375,
+        "right": 382,
+        "bottom": 544.59375,
+        "left": 242
+      },
+      "maxWidth": "300px",
+      "minWidth": "140px",
+      "text": "全部通用场景角色扮演外语音色有声阅读客服场景视频配音趣味口音教学场景S2S-OmniSC 2.0版本多情感教育场景",
+      "theme": "dark"
+    }
+  ],
+  "shots": [
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/light-390x844-menu-current.png",
+      "sha256": "35eaee54921c47de38295d66aab8d00e3ac1a31e05cd7c5184563de061a1a6a2",
+      "actual": {
+        "at": "2026-10-04T04:58:38.912Z",
+        "viewport": [
+          390,
+          844
+        ],
+        "theme": "light",
+        "modal": {
+          "x": 24,
+          "y": 126.59375,
+          "width": 342,
+          "height": 278,
+          "top": 126.59375,
+          "right": 366,
+          "bottom": 404.59375,
+          "left": 24
+        },
+        "input": {
+          "x": 79,
+          "y": 216.09375,
+          "width": 251,
+          "height": 17,
+          "top": 216.09375,
+          "right": 330,
+          "bottom": 233.09375,
+          "left": 79
+        },
+        "rows": 1,
+        "footer": "当前音色林潇 2.0",
+        "registry": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 3,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 4,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      "runId": "2026-10-04T04-53-48.224Z-c4731bf5",
+      "bundleSha": {
+        "assets": "08bdc8bd42775737ddbe3e55b5c5d1cff19677997ffcb992eb23fd8db5f9ffaf",
+        "canvas": "f2a1b9edc6d6d941e5e29489be8160deaeba8b8d6fee863c32a4e9230d0a0bf1",
+        "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+        "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+        "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+      }
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/dark-390x844-menu-current.png",
+      "sha256": "63b8eef5f15bc0db297b7d10bc04923d225eb1c98c88d12322799fef58d4587c",
+      "actual": {
+        "at": "2026-10-04T04:59:16.196Z",
+        "viewport": [
+          390,
+          844
+        ],
+        "theme": "dark",
+        "modal": {
+          "x": 24,
+          "y": 126.59375,
+          "width": 342,
+          "height": 278,
+          "top": 126.59375,
+          "right": 366,
+          "bottom": 404.59375,
+          "left": 24
+        },
+        "input": {
+          "x": 79,
+          "y": 216.09375,
+          "width": 251,
+          "height": 17,
+          "top": 216.09375,
+          "right": 330,
+          "bottom": 233.09375,
+          "left": 79
+        },
+        "rows": 1,
+        "footer": "当前音色林潇 2.0",
+        "registry": [
+          {
+            "id": 1,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 2,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 3,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+            "ended": false,
+            "connected": false
+          },
+          {
+            "id": 4,
+            "paused": true,
+            "currentTime": 0,
+            "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+            "ended": false,
+            "connected": false
+          }
+        ]
+      },
+      "runId": "2026-10-04T04-53-48.224Z-c4731bf5",
+      "bundleSha": {
+        "assets": "08bdc8bd42775737ddbe3e55b5c5d1cff19677997ffcb992eb23fd8db5f9ffaf",
+        "canvas": "f2a1b9edc6d6d941e5e29489be8160deaeba8b8d6fee863c32a4e9230d0a0bf1",
+        "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+        "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+        "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+      }
+    }
+  ],
+  "final": {
+    "at": "2026-10-04T04:59:16.324Z",
+    "viewport": [
+      390,
+      844
+    ],
+    "theme": "dark",
+    "rows": 0,
+    "registry": [
+      {
+        "id": 1,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+        "ended": false,
+        "connected": false
+      },
+      {
+        "id": 2,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+        "ended": false,
+        "connected": false
+      },
+      {
+        "id": 3,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false
+      },
+      {
+        "id": 4,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+        "ended": false,
+        "connected": false
+      }
+    ]
+  },
+  "status": "PASS",
+  "finalSnapshot": "[p1 \"Issue 3058 canvas QA\" | space \"3058 acceptance 20261004 authorized restart of task space\"(2): 1 managed, 0 untracked — p1* \"Issue 3058 canvas QA\"]\nroot\n  container\n    application\n      group [ref=168]\n        button \"导入音频\" [ref=169]\n          svg_root\n          text \"导入音频\"\n        svg_root\n        svg_root\n        container\n          svg_root\n          text \"音频\"\n        svg_root\n        container\n          container\n            container\n              button \"添加素材\" [ref=170, loc=css:button[aria-label=\"添加素材\"]]\n                svg_root\n              button [ref=171]\n            container\n              textfield \"输入正文…\" [ref=172]\n                text \"输入正文…\"\n              container\n                button \"提示词助手\" [ref=173, loc=css:button[aria-label=\"提示词助手\"]]\n                  svg_root\n                text \"T\"\n                text \"|\"\n                container\n                  text \"0\"\n                  text \"/\"\n                  text \"10000\"\n          container\n            container\n              button [ref=174]\n                text \"seed-audio-1.0\"\n                svg_root\n              button [ref=175]\n                svg_root\n                text \"林潇 2.0\"\n            button [ref=176]\n              button \"生成\" [ref=177, loc=css:button[aria-label=\"生成\"]]\n      svg_root\n      anchor \"React Flow attribution\" [ref=155, loc=css:a[aria-label=\"React Flow attribution\"], url=https://reactflow.dev/attribution]\n        text \"React Flow\"\n    container\n      svg_root\n      text \"创作页 1\"\n      svg_root\n    container\n      container\n        button [ref=156]\n          svg_root\n        button [ref=157]\n          svg_root\n        container\n          text \"100\"\n          text \"%\"\n        button [ref=158]\n          svg_root\n      container\n        button [ref=159]\n          svg_root\n        button [ref=160]\n          svg_root\n    container\n      button [ref=161]\n        svg_root\n      button [ref=162]\n        svg_root\n      button [ref=163]\n        svg_root\n        svg_root\n      button [ref=164]\n        svg_root\n      button [ref=165]\n        svg_root\n  dialog \"OmniMux工作台\"\n    iframe\n      root\n        toolbar \"OmniMux\"\n          button \"OmniMux\" [ref=166]\n            svg_root\n  toolbar \"OmniMux\"\n    button \"OmniMux\" [ref=167]\n      svg_root\n"
+}

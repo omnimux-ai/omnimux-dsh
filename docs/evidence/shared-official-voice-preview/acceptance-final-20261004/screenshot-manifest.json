@@ -1,0 +1,141 @@
+{
+  "runId": "2026-10-04T04-53-48.224Z-c4731bf5",
+  "pngs": [
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/dark-1280x800-single-current.png",
+      "bytes": 58320,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "f84a3a5e45d0fef9d5e5d56693c056c2b667e1aee3d3efb967df23147e6320df"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/dark-1280x800-single-settled.png",
+      "bytes": 58922,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "1093bb30c0c833fb5198db0fe9b02f96aae76d555b0862e8e977790594534605"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/dark-390x844-menu-current.png",
+      "bytes": 55152,
+      "width": 390,
+      "height": 844,
+      "format": "image/png",
+      "sha256": "63b8eef5f15bc0db297b7d10bc04923d225eb1c98c88d12322799fef58d4587c"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/assets-detail-native-playing.png",
+      "bytes": 78190,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "b3373b37e43c0ae3eb523702c3b6722d30ce3e52325563b9b594a4778a2351d5"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/assets-playing-ICL_uranus_en_female_charlie_tob.png",
+      "bytes": 55601,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "25309044018cb478da1b1679e6fab3a695725955c8245fd0beb9deee7f18b3c0"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/assets-playing-zh_female_linxiao_uranus_bigtts.png",
+      "bytes": 56556,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "e3b3a68a49f3d7c94ca27eb0a5232e55aa79ce69f5b013848eff49e094053d69"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/assets-playing-zh_male_qingyiyuxuan_mars_bigtts.png",
+      "bytes": 54543,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "34f4fb8c8a6657ec0c97de0139659f22431361d2ec9a6c72a1cf7b03fa035e7a"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/assets-voiceover-grid.png",
+      "bytes": 53563,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "37c9564044958f466576de8eb34f4d57805c7453fbf214c6c12de5ab9bac71fe"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/canvas-dialog-closed-playing-stopped.png",
+      "bytes": 50666,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "4b51c13bca60999cc30afb095689a52c435e16a57e7f1a5f1a2e824c0451fb14"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/canvas-dialog-closed.png",
+      "bytes": 49730,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "42bd05d1b6c0ff2476637eead4687c067e074ddc1a538b025b7e13e0037daf2e"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/canvas-dialog-open.png",
+      "bytes": 79599,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "64e6f65bd1fa65cee21f074dd5b015668a70e7a3ec4133f8188f940770f69361"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/canvas-dialog-playing.png",
+      "bytes": 76155,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "5139d88839a07cb02e4adf3e4b51a3e1bf54aeb9506c4c3e771cf805603d2d78"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/formal/n1-continued-play-negative-expected-red-continued-play.png",
+      "bytes": 50270,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "0876958e2cb9d82f2b7a7ae2a19ee636551e91dc26d612cf655c019e99965529"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/light-1280x800-single-current.png",
+      "bytes": 75218,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "ccfe698770c9035a5c374229e8a57095463874962cecdd8926e0baa9c0ab09dd"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/light-1280x800-single-settled.png",
+      "bytes": 75233,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "299875e5390fca7afe87a5f9627cb07a6d616c7f0954bf70f8ff769af8a24da2"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/light-390x844-menu-current.png",
+      "bytes": 75302,
+      "width": 390,
+      "height": 844,
+      "format": "image/png",
+      "sha256": "35eaee54921c47de38295d66aab8d00e3ac1a31e05cd7c5184563de061a1a6a2"
+    },
+    {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058/docs/evidence/shared-official-voice-preview/acceptance-final-20261004/ordinary-audio-save-control-hover.png",
+      "bytes": 55873,
+      "width": 1280,
+      "height": 800,
+      "format": "image/png",
+      "sha256": "d5bbed72f4980e2cedc2dcea333f1c4709e21a238926fea695e65fa6e2593147"
+    }
+  ]
+}

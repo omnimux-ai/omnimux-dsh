@@ -1,16 +1,20 @@
 /**
  * VoicePickerDialog — 音色选择弹窗（Issue #735 / T04；Issue #771 试听接入）。
  *
- * 结构（基于现网 CustomModal，540px / ≤70vh / 16px 圆角）：
+ * 结构（基于现网 CustomModal；Issue #3058 UI polish 附录：
+ *   min(480px, calc(100vw-48px)) / ≤70vh / 15vh 顶部锚定 / 16px 圆角）：
  *   Header  标题「选择音色」+ X 关闭（CustomModal 内建）
  *   Search  「搜索音色...」即时模糊搜索（中文名 / 拼音全拼 / 首字母 /
  *           voice_type / 场景 / 标签，逻辑见 voicePickerModel）
  *   Filters 语言 / 口音 / 性别 / 场景 四维紧凑下拉，选项由 meta 动态聚合，
  *           AND 关系，空值即「全部」
  *   List    热门置顶（hot_order 1–10 → 热门标签 → 目录原序）；行内 ▶ 试听
- *           Issue #771：原生 Audio 对象加载火山官方 CDN 样音（见
- *           getVoiceSampleUrl），单例播放（同时只有一个音色发声），
- *           播放中切 ⏸ 可暂停；加载失败兜底 Toast「该音色暂无官方试听音频」，
+ *           Issue #3058：原生 Audio 对象按序消费 hub 下发的 meta.preview
+ *           候选（primary 置顶，前端不拼 URL），仅 verified-file 行渲染播放键；
+ *           每个 attempt 独立 Audio element（error 无 URL 身份，旧 attempt
+ *           迟到 error/rejection 由 attempt 令牌短路，不误算新候选）；
+ *           单例播放（同时只有一个音色发声），播放中切 ⏸ 可停止；
+ *           全部候选失败兜底 Toast「试听暂不可用，请稍后重试。」，
  *           绝不发起 TTS 请求；点击行直接 onSelect(voice_type) 并由宿主
  *           关闭弹窗；空结果 → 友好空态 + 清除筛选
  *   Footer  常驻当前选中音色条
@@ -27,69 +31,12 @@ import {
   VOICE_GENDER_LABELS,
   collectVoiceFacets,
   filterAndSortVoices,
+  isOfficialVoicePreviewPlayable,
   resolveVoiceLabel,
+  voicePreviewCandidates,
   voiceTagLine,
   type VoiceFilterState,
 } from './voicePickerModel.ts';
-
-/** 火山引擎大模型官方公开 CDN：预置音色 3~5 秒 MP3 试听样音（已开 CORS） */
-export const VOLCENGINE_SAMPLE_CDN_BASE = 'https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts';
-
-/** 按 voice_type 生成官方试听样音 URL（纯前端 Audio 播放，零 TTS 请求） */
-export function getVoiceSampleUrl(voiceType: string): string {
-  return `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(voiceType)}.mp3`;
-}
-
-/**
- * 计算音色试听候选样音文件名列表（按匹配优先级排序，解决火山官方对英文/别名音色命名差异）：
- * 1. 英文/外语音色（或含英文别名的音色）：如 Charlie 2.0 -> Charlie.mp3、Frosty Man -> Frosty_Man.mp3、爽快思思/Skye -> Skye.mp3
- * 2. 官方标准代号名：voice_type.mp3
- * 3. 中文名（去除斜杠等）：如 解说小明.mp3、枕边低语.mp3
- * 4. 去除 2.0 后缀后的名称
- */
-export function getVoiceSampleCandidates(optionOrVoiceType: VoiceCatalogOption | string): string[] {
-  const isString = typeof optionOrVoiceType === 'string';
-  const voiceType = isString ? optionOrVoiceType : optionOrVoiceType.value;
-  const option = isString ? null : optionOrVoiceType;
-  const rawName = option?.meta?.name || '';
-  const displayName = option?.meta?.display_name || option?.label || '';
-
-  const fileNames: string[] = [];
-
-  // 1. 英文名 / 拼写（如 Charlie, Frosty_Man, The_Grinch 等）或带斜杠别名（爽快思思/Skye）
-  if (rawName) {
-    if (rawName.includes('/')) {
-      const parts = rawName.split('/').map((s) => s.trim().replace(/ /g, '_'));
-      if (parts[1]) fileNames.push(`${parts[1]}.mp3`);
-      if (parts[0]) fileNames.push(`${parts[0]}.mp3`);
-    } else {
-      const cleanName = rawName.replace(/ /g, '_');
-      if (/^[A-Za-z0-9_ -]+$/.test(rawName)) {
-        fileNames.push(`${cleanName}.mp3`);
-      }
-    }
-  }
-
-  // 2. 官方标准代号：voice_type.mp3
-  fileNames.push(`${voiceType}.mp3`);
-
-  // 3. 中文名或常规名
-  if (rawName && !rawName.includes('/')) {
-    const cleanName = rawName.replace(/ /g, '_');
-    fileNames.push(`${cleanName}.mp3`);
-  }
-
-  // 4. 去除 2.0 后缀的名称（如 枕边低语 2.0 -> 枕边低语.mp3）
-  if (displayName) {
-    const noVer = displayName.replace(/[_ ]?2\.0$/, '').replace(/ /g, '_');
-    if (noVer && !fileNames.includes(`${noVer}.mp3`)) {
-      fileNames.push(`${noVer}.mp3`);
-    }
-  }
-
-  const unique = Array.from(new Set(fileNames));
-  return unique.map((name) => `${VOLCENGINE_SAMPLE_CDN_BASE}/${encodeURIComponent(name)}`);
-}
 
 export interface VoicePickerDialogProps {
   /** 弹窗是否打开 */
@@ -114,19 +61,28 @@ export function VoicePickerDialog({
   const [filters, setFilters] = useState<VoiceFilterState>(EMPTY_VOICE_FILTERS);
   /** 当前正在播放试听的 voice_type；无播放为 null */
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
-  /** 全局单例 Audio 实例：同一时刻弹窗内只有一个音色发声 */
+  /** 当前有效 attempt 的 Audio 实例：同一时刻弹窗内只有一个音色发声 */
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  /** 当前请求创建的全部 attempt element：停止/切换/卸载时逐一清理。 */
+  const elementsRef = useRef<Set<HTMLAudioElement>>(new Set());
+  /**
+   * 试听请求令牌：每次开始/停止试听递增。旧请求的 error/play rejection 回调
+   * 携带过期令牌，落在此判定上被丢弃——绝不覆盖新试听的状态或重复 Toast。
+   */
+  const requestTokenRef = useRef(0);
 
-  /** 立即停止并清理当前试听实例，重置播放状态 */
+  /** 立即停止并清理当前试听的所有 attempt 实例，重置播放状态；同时使在途回调令牌全部作废 */
   const stopPlayback = (): void => {
-    const audio = audioRef.current;
-    if (audio) {
+    requestTokenRef.current += 1;
+    for (const audio of elementsRef.current) {
       audio.pause();
+      audio.currentTime = 0;
       audio.onended = null;
       audio.onerror = null;
       audio.src = '';
-      audioRef.current = null;
     }
+    elementsRef.current.clear();
+    audioRef.current = null;
     setPlayingVoice(null);
   };
 
@@ -141,55 +97,136 @@ export function VoicePickerDialog({
   /** 试听/暂停切换：stopPropagation 防止触发行选择 */
   const togglePreview = (
     event: ReactMouseEvent<HTMLButtonElement>,
-    optionOrVoiceType: VoiceCatalogOption | string,
+    option: VoiceCatalogOption,
   ): void => {
     event.stopPropagation();
-    const voiceType = typeof optionOrVoiceType === 'string' ? optionOrVoiceType : optionOrVoiceType.value;
+    const voiceType = option.value;
     if (playingVoice === voiceType) {
-      // 当前音色正在播放 → 暂停
+      // 当前音色正在播放 → 停止并归零（非断点续播语义）
       stopPlayback();
       return;
     }
     // 正在播放其他音色 → 先停掉再播当前
     stopPlayback();
-    const candidateUrls = getVoiceSampleCandidates(optionOrVoiceType);
-    if (candidateUrls.length === 0) {
-      toast.info('该音色暂无官方试听音频');
-      return;
-    }
 
-    let candidateIndex = 0;
-    const audio = new Audio(candidateUrls[0]);
-    audioRef.current = audio;
+    // Issue #3058：候选项只读 hub preview DTO，前端不拼 URL、不猜别名。
+    // 播放资格门放在 seam 本身：未验证行没有播放键，但点击路径之外的
+    // 任何调用方/陈旧路径也不许对未验证音色发起候选探测。
+    if (!isOfficialVoicePreviewPlayable(option)) return;
+    const candidateUrls = voicePreviewCandidates(option);
+    if (candidateUrls.length === 0) return;
 
-    const clearPlayback = (): void => {
+    const requestToken = requestTokenRef.current + 1;
+    requestTokenRef.current = requestToken;
+    /** 本请求创建的全部 attempt element：停止/切换/卸载逐一清理。 */
+    const attemptElements = new Set<HTMLAudioElement>();
+    elementsRef.current = attemptElements;
+    /** attempt 下标 → 对应 element：穷尽清理时定位到失败的 element。 */
+    const attemptAudios: HTMLAudioElement[] = [];
+    /** 本请求内已结算过失败的候选下标：onerror 与 play().catch 同一候选只推进一次 */
+    const settledCandidates = new Set<number>();
+    /** 最新发起（仍在结算中）的候选下标 */
+    let armedAttempt = -1;
+
+    /** 旧请求回调一律拒绝处理 */
+    const isCurrent = (): boolean => requestToken === requestTokenRef.current;
+    /**
+     * 回调仍归属当前有效 attempt 的判据：旧 attempt（或旧请求）迟到的
+     * error/rejection 先经此短路，绝不结算或清理新 attempt。
+     */
+    const isCurrentAttempt = (attemptIndex: number): boolean =>
+      isCurrent() && attemptIndex === armedAttempt && !settledCandidates.has(attemptIndex);
+
+    /**
+     * OCR closure F3：请求终态（ended / 穷尽失败 / NotAllowedError）释放
+     * 该请求全部 attempt element——pause、归零、摘监听、清 src、清集合。
+     * 早先失败的 attempt 不再滞留 elementsRef；清理发生在当前请求的闭包里，
+     * 请求令牌守卫不变：新请求的 attemptElements 是另一个集合，旧请求的
+     * 清理触不到新试听的 element。
+     */
+    const releaseRequestElements = (): void => {
+      for (const attempt of attemptElements) {
+        attempt.pause();
+        attempt.currentTime = 0;
+        attempt.onended = null;
+        attempt.onerror = null;
+        attempt.src = '';
+      }
+      attemptElements.clear();
+      if (elementsRef.current === attemptElements) elementsRef.current.clear();
+    };
+
+    /**
+     * 当前 attempt 结束试听：释放本请求全部 attempt element（含已回退的
+     * 旧 element）再回空闲，不留仍在播放或挂起回调的孤儿 element；
+     * ref 丢失判断前先比对自己的 element。
+     */
+    const clearPlayback = (audio: HTMLAudioElement): void => {
+      releaseRequestElements();
       if (audioRef.current === audio) audioRef.current = null;
       setPlayingVoice(null);
     };
 
-    const tryNextOrReportError = (): void => {
-      candidateIndex += 1;
-      if (candidateIndex < candidateUrls.length && audioRef.current === audio) {
-        audio.src = candidateUrls[candidateIndex]!;
-        void audio.play().catch(() => {
-          tryNextOrReportError();
-        });
-        return;
-      }
-      clearPlayback();
-      toast.info('该音色暂无官方试听音频');
+    const reportFailure = (audio: HTMLAudioElement): void => {
+      if (!isCurrent()) return;
+      clearPlayback(audio);
+      toast.info('试听暂不可用，请稍后重试。');
     };
 
-    audio.onended = clearPlayback;
-    audio.onerror = () => {
-      // 当前候选 URL 加载失败（如 404），自动降级尝试下一候选，全部候选穷尽后才优雅提示
-      tryNextOrReportError();
+    /**
+     * 每次 attempt 使用独立原生 Audio element 并闭包自己的下标：
+     * error 事件不携带 URL 身份，复用同一 element 换 src 时旧候选的迟到
+     * error 会被误算到新候选（Sol 规格轴 HIGH #1）；独立 element 让 error
+     * 天然只能来自自己的那次 attempt，加上 attempt 令牌双重短路。
+     */
+    const playCandidate = (attemptIndex: number): void => {
+      const audio = new Audio();
+      audio.src = candidateUrls[attemptIndex]!;
+      attemptElements.add(audio);
+      attemptAudios[attemptIndex] = audio;
+      armedAttempt = attemptIndex;
+      audioRef.current = audio;
+      audio.onended = () => {
+        if (!isCurrentAttempt(attemptIndex)) return;
+        settledCandidates.add(attemptIndex);
+        clearPlayback(audio);
+      };
+      audio.onerror = () => {
+        // 该候选 URL 加载失败（如 404），自动降级尝试下一候选，穷尽后才提示
+        candidateFailed(attemptIndex);
+      };
+      void audio.play().catch((error: unknown) => {
+        if (!isCurrentAttempt(attemptIndex)) return;
+        if ((error as { name?: string } | null)?.name === 'NotAllowedError') {
+          // 自动播放策略拒绝 ≠ 文件不存在：不轮换候选，如实提示一次。
+          settledCandidates.add(attemptIndex);
+          reportFailure(audio);
+          return;
+        }
+        candidateFailed(attemptIndex);
+      });
+    };
+
+    const tryNextOrReportError = (index: number): void => {
+      if (!isCurrent()) return;
+      const nextIndex = armedAttempt + 1;
+      if (nextIndex < candidateUrls.length) {
+        playCandidate(nextIndex);
+        return;
+      }
+      const audio = attemptAudios[index];
+      if (audio) reportFailure(audio);
+    };
+
+    /** 当前候选已失败且仅此一次结算：onerror 与 play rejection 不双推进 */
+    const candidateFailed = (index: number): void => {
+      if (!isCurrentAttempt(index)) return;
+      settledCandidates.add(index);
+      tryNextOrReportError(index);
     };
 
     setPlayingVoice(voiceType);
-    void audio.play().catch(() => {
-      tryNextOrReportError();
-    });
+    playCandidate(0);
   };
 
   const patchFilters = (patch: Partial<VoiceFilterState>): void => {
@@ -207,15 +244,17 @@ export function VoicePickerDialog({
     filters.query.trim() || filters.language || filters.accent || filters.gender || filters.category,
   );
 
+  // Issue #3058（PM copy fix）：菜单首项 label 逐字「全部」，触发器经
+  // CustomSelect.triggerLabel 维持维度名，不新增组件。
   const dimensionOptions = (
     dimensionLabel: string,
     values: ReadonlyArray<string>,
-  ): Array<{ value: string; label: string }> => [
-    { value: '', label: dimensionLabel },
+  ): Array<{ value: string; label: string; triggerLabel?: string }> => [
+    { value: '', label: '全部', triggerLabel: dimensionLabel },
     ...values.map((item) => ({ value: item, label: item })),
   ];
   const genderOptions = [
-    { value: '', label: '性别' },
+    { value: '', label: '全部', triggerLabel: '性别' },
     ...facets.genders.map((key) => ({ value: key, label: VOICE_GENDER_LABELS[key] ?? key })),
   ];
 
@@ -224,7 +263,7 @@ export function VoicePickerDialog({
       open={open}
       onCancel={onClose}
       title="选择音色"
-      width={540}
+      width="min(480px, calc(100vw - 48px))"
       className="wf-voice-picker-modal"
       bodyClassName="wf-voice-picker-modal__body"
       footer={(
@@ -238,7 +277,7 @@ export function VoicePickerDialog({
       )}
     >
       <div className="wf-voice-picker__search">
-        <Search size={14} aria-hidden="true" />
+        <Search size={16} aria-hidden="true" />
         <input
           type="text"
           value={filters.query}
@@ -294,8 +333,9 @@ export function VoicePickerDialog({
             const label = resolveVoiceLabel(option);
             const tagLine = voiceTagLine(option);
             const isSelected = option.value === value;
-            const isHot = Boolean(option.meta?.is_hot);
             const isPlaying = playingVoice === option.value;
+            // Issue #3058：仅 hub 已验证 preview 才渲染播放键；未验证行保留选择但无死键。
+            const canPreview = isOfficialVoicePreviewPlayable(option);
             return (
               <div
                 key={option.value}
@@ -306,29 +346,33 @@ export function VoicePickerDialog({
                 data-voice-type={option.value}
                 onClick={() => onSelect(option.value)}
                 onKeyDown={(event) => {
+                  // Issue #3058 Sol 复核：只处理落在行本体（currentTarget）的按键。
+                  // 事件从子元素（试听 button）冒泡时交给原生处理——否则行的
+                  // preventDefault 会吞掉 button Enter→click / Space→keyup 的
+                  // 原生激活，且 onSelect 误选音色（试听不得改变当前生成音色）。
+                  if (event.target !== event.currentTarget) return;
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
                   onSelect(option.value);
                 }}
               >
-                <button
-                  type="button"
-                  className={`wf-voice-picker__preview${isPlaying ? ' wf-voice-picker__preview--playing' : ''}`}
-                  aria-label={isPlaying ? `暂停试听 ${label}` : `试听 ${label}`}
-                  title={isPlaying ? '暂停试听' : '试听'}
-                  onClick={(event) => togglePreview(event, option)}
-                >
-                  {isPlaying ? (
-                    <Pause size={12} aria-hidden="true" />
-                  ) : (
-                    <Play size={12} aria-hidden="true" />
-                  )}
-                </button>
+                {canPreview ? (
+                  <button
+                    type="button"
+                    className={`wf-voice-picker__preview${isPlaying ? ' wf-voice-picker__preview--playing' : ''}`}
+                    aria-label={isPlaying ? `暂停试听 ${label}` : `试听 ${label}`}
+                    title={isPlaying ? '暂停试听' : '试听'}
+                    onClick={(event) => togglePreview(event, option)}
+                  >
+                    {isPlaying ? (
+                      <Pause size={12} aria-hidden="true" />
+                    ) : (
+                      <Play size={12} aria-hidden="true" />
+                    )}
+                  </button>
+                ) : null}
                 <span className="wf-voice-picker__row-main">
-                  <span className="wf-voice-picker__row-name">
-                    {label}
-                    {isHot ? <em className="wf-voice-picker__hot">热门</em> : null}
-                  </span>
+                  <span className="wf-voice-picker__row-name">{label}</span>
                   {tagLine ? (
                     <span className="wf-voice-picker__row-tags">{tagLine}</span>
                   ) : null}

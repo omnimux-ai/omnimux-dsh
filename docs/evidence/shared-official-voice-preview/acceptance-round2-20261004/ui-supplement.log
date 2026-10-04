@@ -1,0 +1,341 @@
+ElementResolutionError: page.click timed out after 3000ms: Selector button[data-testid="wf-voice-trigger"] matched 0 elements
+    at #retryElementAction (file:////[eval1]:18884:27)
+    at async file:////[eval1]:18968:29
+    at async file:////[eval1]:16691:28
+[p1 "Issue 3058 canvas QA" | space "3058 acceptance 20261004 authorized restart of task space"(2): 1 managed, 0 untracked — p1* "Issue 3058 canvas QA"]
+root
+  container
+    container
+      application
+        group [ref=109]
+          button "导入音频" [ref=110]
+            svg_root
+            text "导入音频"
+          svg_root
+          svg_root
+          container
+            svg_root
+            text "音频"
+          svg_root
+          container
+            container
+              container
+                button "添加素材" [ref=111, loc=css:button[aria-label="添加素材"]]
+                  svg_root
+                button [ref=112]
+                  svg_root
+              container
+                textfield "输入正文…" [ref=113]
+                  text "输入正文…"
+                container
+                  button "提示词助手" [ref=114, loc=css:button[aria-label="提示词助手"]]
+                    svg_root
+                  text "T"
+                  text "|"
+                  container
+                    text "0"
+                    text "/"
+                    text "10000"
+            container
+              container
+                button [ref=115]
+                  svg_root
+                  text "seed-audio-1.0"
+                  svg_root
+                button [ref=116]
+                  svg_root
+                  text "Kevin McCallister 2.0"
+              button [ref=117]
+                button "生成" [ref=118, loc=css:button[aria-label="生成"]]
+                  svg_root
+        svg_root
+        anchor "React Flow attribution" [ref=96, loc=css:a[aria-label="React Flow attribution"], url=https://reactflow.dev/attribution]
+          text "React Flow"
+      container
+        svg_root
+        text "创作页 1"
+        svg_root
+      container
+        container
+          button [ref=97]
+            svg_root
+          button [ref=98]
+            svg_root
+          container
+            text "100"
+            text "%"
+          button [ref=99]
+            svg_root
+        container
+          button [ref=100]
+            svg_root
+          button [ref=101]
+            svg_root
+      container
+        button [ref=102]
+          svg_root
+        button [ref=103]
+          svg_root
+        button [ref=104]
+          svg_root
+          svg_root
+        button [ref=105]
+          svg_root
+        button [ref=106]
+          svg_root
+    container
+      container
+        text "选择音色"
+        button "Close" [ref=119, loc=css:button[aria-label="Close"]]
+          svg_root
+      container
+        container
+          svg_root
+          textbox "搜索音色" [ref=120, loc=css:input[placeholder="搜索音色..."]]
+            text "Charlie 2.0"
+        container
+          button [ref=121]
+            text "语言"
+            svg_root
+          button [ref=122]
+            text "口音"
+            svg_root
+          button [ref=123]
+            text "性别"
+            svg_root
+          button [ref=124]
+            text "场景"
+            svg_root
+        listbox "音色列表"
+          listboxoption [ref=125]
+            button "试听 Charlie 2.0" [ref=126, loc=css:button[aria-label="试听 Charlie 2.0"]]
+              svg_root
+            container
+              text "Charlie 2.0"
+              text "外语音色"
+      container
+        svg_root
+        text "当前音色"
+        text "Kevin McCallister 2.0"
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=107]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=108]
+      svg_root
+
+{"key":"light-1280x800-supplement","failed":[]}
+{"key":"light-1920x929-supplement","failed":[]}
+[p1 "Issue 3058 canvas QA" | space "3058 acceptance 20261004 authorized restart of task space"(2): 1 managed, 0 untracked — p1* "Issue 3058 canvas QA"]
+root
+  container
+    application
+      svg_root
+      anchor "React Flow attribution" [ref=96, loc=css:a[aria-label="React Flow attribution"], url=https://reactflow.dev/attribution]
+        text "React Flow"
+    container
+      svg_root
+      text "创作页 1"
+      svg_root
+    container
+      container
+        button [ref=97]
+          svg_root
+        button [ref=98]
+          svg_root
+        container
+          text "100"
+          text "%"
+        button [ref=99]
+          svg_root
+      container
+        button [ref=100]
+          svg_root
+        button [ref=101]
+          svg_root
+    container
+      button [ref=102]
+        svg_root
+      button [ref=103]
+        svg_root
+      button [ref=104]
+        svg_root
+        svg_root
+      button [ref=105]
+        svg_root
+      button [ref=106]
+        svg_root
+  dialog "OmniMux工作台"
+    iframe
+      root
+        toolbar "OmniMux"
+          button "OmniMux" [ref=107]
+            svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=108]
+      svg_root
+
+{"key":"light-390x844-supplement","error":"Error: JavaScript evaluation failed at line 0, column 0: TypeError: Cannot read properties of null (reading 'scrollTop')\n    at <anonymous>:1:127\n    at __egoWaitForFunction (<anonymous>:1:142)\n    at <anonymous>:1:194; expression: (async function __egoWaitForFunction() { return { matched: Boolean(await (()=>document.querySelector('.wf-voice-picker__list').scrollTop===0)()), url: locati...\n    at runtimeValue (file:////[eval1]:9139:15)\n    at file:////[eval1]:18532:39\n    at async file:////[eval1]:16691:28","failed":[]}
+[p1 "Issue 3058 canvas QA" | space "3058 acceptance 20261004 authorized restart of task space"(2): 1 managed, 0 untracked — p1* "Issue 3058 canvas QA"]
+root
+  container
+    application
+      svg_root
+      anchor "React Flow attribution" [ref=96, loc=css:a[aria-label="React Flow attribution"], url=https://reactflow.dev/attribution]
+        text "React Flow"
+    container
+      svg_root
+      text "创作页 1"
+      svg_root
+    container
+      container
+        button [ref=97]
+          svg_root
+        button [ref=98]
+          svg_root
+        container
+          text "100"
+          text "%"
+        button [ref=99]
+          svg_root
+      container
+        button [ref=100]
+          svg_root
+        button [ref=101]
+          svg_root
+    container
+      button [ref=102]
+        svg_root
+      button [ref=103]
+        svg_root
+      button [ref=104]
+        svg_root
+        svg_root
+      button [ref=105]
+        svg_root
+      button [ref=106]
+        svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=107]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=108]
+      svg_root
+
+{"key":"dark-1280x800-supplement","error":"ElementResolutionError: page.click timed out after 3000ms: Selector .wf-material-node--audio matched 0 elements\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28","failed":[]}
+[p1 "Issue 3058 canvas QA" | space "3058 acceptance 20261004 authorized restart of task space"(2): 1 managed, 0 untracked — p1* "Issue 3058 canvas QA"]
+root
+  container
+    application
+      svg_root
+      anchor "React Flow attribution" [ref=96, loc=css:a[aria-label="React Flow attribution"], url=https://reactflow.dev/attribution]
+        text "React Flow"
+    container
+      svg_root
+      text "创作页 1"
+      svg_root
+    container
+      container
+        button [ref=97]
+          svg_root
+        button [ref=98]
+          svg_root
+        container
+          text "100"
+          text "%"
+        button [ref=99]
+          svg_root
+      container
+        button [ref=100]
+          svg_root
+        button [ref=101]
+          svg_root
+    container
+      button [ref=102]
+        svg_root
+      button [ref=103]
+        svg_root
+      button [ref=104]
+        svg_root
+        svg_root
+      button [ref=105]
+        svg_root
+      button [ref=106]
+        svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=107]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=108]
+      svg_root
+
+{"key":"dark-1920x929-supplement","error":"ElementResolutionError: page.click timed out after 3000ms: Selector .wf-material-node--audio matched 0 elements\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28","failed":[]}
+[p1 "Issue 3058 canvas QA" | space "3058 acceptance 20261004 authorized restart of task space"(2): 1 managed, 0 untracked — p1* "Issue 3058 canvas QA"]
+root
+  container
+    application
+      svg_root
+      anchor "React Flow attribution" [ref=96, loc=css:a[aria-label="React Flow attribution"], url=https://reactflow.dev/attribution]
+        text "React Flow"
+    container
+      svg_root
+      text "创作页 1"
+      svg_root
+    container
+      container
+        button [ref=97]
+          svg_root
+        button [ref=98]
+          svg_root
+        container
+          text "100"
+          text "%"
+        button [ref=99]
+          svg_root
+      container
+        button [ref=100]
+          svg_root
+        button [ref=101]
+          svg_root
+    container
+      button [ref=102]
+        svg_root
+      button [ref=103]
+        svg_root
+      button [ref=104]
+        svg_root
+        svg_root
+      button [ref=105]
+        svg_root
+      button [ref=106]
+        svg_root
+  container
+    svg_root
+    dialog "OmniMux工作台"
+      iframe
+        root
+          toolbar "OmniMux"
+            button "OmniMux" [ref=107]
+              svg_root
+  toolbar "OmniMux"
+    button "OmniMux" [ref=108]
+      svg_root
+
+{"key":"dark-390x844-supplement","error":"ElementResolutionError: page.click timed out after 3000ms: Selector .wf-material-node--audio matched 0 elements\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28","failed":[]}
+
+ego's nodejs process exited with code 1.

@@ -10,11 +10,14 @@ import {
   cloudCardKind,
   cloudScope,
   findCategory,
+  isOfficialVoicePreviewAsset,
+  isOfficialVoicePreviewPlayable,
   mediaLabelOf,
   normalizeCloudAsset,
   pageCountOf,
   subCategoryTabs,
   totalOf,
+  voicePreviewCandidateUrls,
 } from './cloud-feed-helpers.js'
 
 /** A manifest shaped exactly like the builder's output. */
@@ -402,5 +405,130 @@ describe('mediaLabelOf', () => {
 
   it('falls back to the generic label when the dictionary has no entry', () => {
     assert.equal(mediaLabelOf({ t, mediaType: 'document' }), '素材')
+  })
+})
+
+/**
+ * Issue #3058：官方音色 preview DTO 无损透传。
+ * voice_type / resource_id / preview（purpose/state/candidates）经 normalizer
+ * 不丢失——分页、搜索索引与详情都消费同一份身份与用途，不靠显示名或 id 黑名单。
+ */
+describe('normalizeCloudAsset - official voice preview identity (Issue #3058)', () => {
+  const PREVIEW = {
+    purpose: 'official-voice-preview',
+    state: 'verified-file',
+    primary_url: 'https://cdn.example.com/voice.mp3',
+    candidates: ['https://cdn.example.com/voice.mp3', 'https://cdn.example.com/alt.mp3'],
+    checked_at: '2026-10-03T00:00:00.000Z',
+    evidence_ref: 'audit-20261003',
+  }
+  const VOICE_ROW = {
+    id: 'audio-voiceover-abc',
+    category: 'audio',
+    sub_category: 'voiceover',
+    name: '林潇 2.0',
+    description: '通用场景 · 中文',
+    cover_url: '',
+    media_url: 'https://cdn.example.com/voice.mp3',
+    media_type: 'audio',
+    tags: ['火山引擎', '中文'],
+    meta: {
+      source: 'volcengine',
+      voice_type: 'zh_male_linxiao_mars_bigtts',
+      resource_id: 'seed-tts-2.0',
+      playable: true,
+      preview: PREVIEW,
+    },
+  }
+
+  it('keeps voice_type / resource_id / preview intact', () => {
+    const row = normalizeCloudAsset(VOICE_ROW)
+    assert.equal(row.voiceType, 'zh_male_linxiao_mars_bigtts')
+    assert.equal(row.resourceId, 'seed-tts-2.0')
+    assert.deepEqual(row.preview, PREVIEW)
+    assert.equal(row.playable, true)
+  })
+
+  it('isOfficialVoicePreviewAsset reads purpose, never the display name or id', () => {
+    assert.equal(isOfficialVoicePreviewAsset(normalizeCloudAsset(VOICE_ROW)), true)
+    const renamed = { ...normalizeCloudAsset(VOICE_ROW), name: 'not a voice' }
+    assert.equal(isOfficialVoicePreviewAsset(renamed), true)
+    assert.equal(isOfficialVoicePreviewAsset(normalizeCloudAsset({ id: 'bgm-1', media_type: 'audio' })), false)
+    assert.equal(isOfficialVoicePreviewAsset({}), false)
+  })
+
+  it('isOfficialVoicePreviewPlayable requires purpose + verified-file + primary', () => {
+    assert.equal(isOfficialVoicePreviewPlayable(normalizeCloudAsset(VOICE_ROW)), true)
+    const unverified = normalizeCloudAsset({
+      ...VOICE_ROW,
+      media_url: '',
+      meta: { ...VOICE_ROW.meta, preview: { ...PREVIEW, state: 'unverified', primary_url: null } },
+    })
+    assert.equal(isOfficialVoicePreviewPlayable(unverified), false)
+    const noPrimary = normalizeCloudAsset({
+      ...VOICE_ROW,
+      meta: { ...VOICE_ROW.meta, preview: { ...PREVIEW, primary_url: null } },
+    })
+    assert.equal(isOfficialVoicePreviewPlayable(noPrimary), false)
+    const wrongPurpose = normalizeCloudAsset({
+      ...VOICE_ROW,
+      meta: { ...VOICE_ROW.meta, preview: { ...PREVIEW, purpose: 'other' } },
+    })
+    assert.equal(isOfficialVoicePreviewPlayable(wrongPurpose), false)
+  })
+
+  it('voicePreviewCandidateUrls yields primary first, deduped, ordered', () => {
+    const urls = voicePreviewCandidateUrls(normalizeCloudAsset(VOICE_ROW))
+    assert.deepEqual(urls, ['https://cdn.example.com/voice.mp3', 'https://cdn.example.com/alt.mp3'])
+    assert.deepEqual(voicePreviewCandidateUrls(normalizeCloudAsset({ id: 'x' })), [])
+  })
+
+  it('an unverified voice row stays a text card with identity preserved', () => {
+    const row = normalizeCloudAsset({
+      ...VOICE_ROW,
+      media_url: '',
+      meta: { ...VOICE_ROW.meta, playable: false, preview: { ...PREVIEW, state: 'unverified', primary_url: null } },
+    })
+    assert.equal(row.hasMedia, false)
+    assert.equal(cloudCardKind(row), 'text')
+    assert.equal(row.voiceType, 'zh_male_linxiao_mars_bigtts')
+  })
+
+  it('a DTO-only verified row (preview.primary_url but no media_url) stays an audio card (OCR #11)', () => {
+    // 资格只由 preview DTO（verified-file + primary）裁定：hasMedia 缺失不得
+    // 把一张合法可播的官方音色卡压成文本卡。
+    const row = normalizeCloudAsset({ ...VOICE_ROW, media_url: '' })
+    assert.equal(row.hasMedia, false)
+    assert.equal(isOfficialVoicePreviewPlayable(row), true)
+    assert.equal(cloudCardKind(row), 'audio')
+    // DTO-only 未验证行仍是文本卡：用途保留但没有可播面。
+    const unverified = normalizeCloudAsset({
+      ...VOICE_ROW,
+      media_url: '',
+      meta: { ...VOICE_ROW.meta, preview: { ...PREVIEW, state: 'unverified', primary_url: null } },
+    })
+    assert.equal(cloudCardKind(unverified), 'text')
+    // 带立绘的官方音色仍立绘优先。
+    const covered = normalizeCloudAsset({ ...VOICE_ROW, media_url: '', cover_url: 'file:素材库/p.png' })
+    assert.equal(cloudCardKind(covered), 'media')
+  })
+
+  it('lets the DTO arbitrate an official row even when legacy meta.playable is false (ocr-final #3058)', () => {
+    // 官方行的可播性只由 preview DTO（verified-file + primary_url）裁定；
+    // 普通行专用的 legacy playable 门不得把一张已验证官方卡降成文本卡。
+    const row = normalizeCloudAsset({
+      ...VOICE_ROW,
+      media_url: '',
+      meta: { ...VOICE_ROW.meta, playable: false, preview: PREVIEW },
+    })
+    assert.equal(row.playable, false)
+    assert.equal(isOfficialVoicePreviewPlayable(row), true)
+    assert.equal(cloudCardKind(row), 'audio')
+    // 未验证官方行即使误带 media_url 也仍是文本卡。
+    const unverified = normalizeCloudAsset({
+      ...VOICE_ROW,
+      meta: { ...VOICE_ROW.meta, playable: false, preview: { ...PREVIEW, state: 'unverified', primary_url: null } },
+    })
+    assert.equal(cloudCardKind(unverified), 'text')
   })
 })

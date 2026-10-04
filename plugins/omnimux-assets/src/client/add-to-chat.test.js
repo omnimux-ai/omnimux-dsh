@@ -8,6 +8,7 @@ import {
   buildAssetPayload,
   buildMediaPayload,
   addAssetToConversation,
+  addMediaToConversation,
 } from './add-to-chat.js'
 
 describe('add-to-chat helpers', () => {
@@ -359,5 +360,49 @@ describe('add-to-chat helpers', () => {
       assert.equal(deliveredRef.context.metadata.is_cloud, true)
       assert.match(deliveredRef.context.summary, /公共素材: Angel Influencer/)
     })
+  })
+})
+
+/**
+ * Issue #3058：preview-only 用途的会话投递防御。
+ * 卡片/详情已不渲染会话按钮，但公共入口本身仍要在投递前拒绝
+ * official-voice-preview 行——隐藏按钮不等于关闭旁路。
+ */
+describe('add-to-chat - official voice preview guard (Issue #3058)', () => {
+  it('refuses addAssetToConversation for purpose=official-voice-preview before any dispatch', () => {
+    const res = addAssetToConversation({
+      id: 'audio-voiceover-abc',
+      name: '林潇 2.0',
+      media_url: 'https://cdn.example.com/voice.mp3',
+      media_type: 'audio',
+      preview: { purpose: 'official-voice-preview', state: 'verified-file' },
+      meta: { preview: { purpose: 'official-voice-preview', state: 'verified-file' } },
+    }, { window: { dispatchEvent() { throw new Error('must not dispatch') } } })
+    assert.equal(res.ok, false)
+    assert.equal(res.error, 'voice-preview-only')
+  })
+
+  it('refuses addMediaToConversation when the preview item carries the purpose', () => {
+    const res = addMediaToConversation({
+      id: 'cloud:audio-voiceover-abc',
+      title: '林潇 2.0',
+      kind: 'audio',
+      previewUrl: 'https://cdn.example.com/voice.mp3',
+      preview: { purpose: 'official-voice-preview', state: 'verified-file' },
+    }, { window: { dispatchEvent() { throw new Error('must not dispatch') } } })
+    assert.equal(res.ok, false)
+    assert.equal(res.error, 'voice-preview-only')
+  })
+
+  it('still delivers an ordinary cloud asset', () => {
+    const delivered = []
+    const res = addAssetToConversation({
+      id: 'audio-bgm-1',
+      name: 'beat',
+      media_url: 'https://assets.omnimux.ai/audio/bgm/x.mp3',
+      media_type: 'audio',
+    }, { window: { dispatchEvent(evt) { delivered.push(evt) } } })
+    assert.equal(res.ok, true)
+    assert.equal(delivered.length, 1)
   })
 })

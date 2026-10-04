@@ -1,0 +1,223 @@
+{
+  "conclusion": "PASS_SCOPED",
+  "scope": "Formal A/B/details/local-unmount/N1 plus actual existing-catalog voice picker six theme/viewport configurations; not PM_SIGN_OFF, OCR closure or all voices",
+  "counts": {
+    "formalNodeTest": 1,
+    "formalAssertions": 62,
+    "initialAccepted": 94,
+    "compactAccepted": 43,
+    "desktopStopWindows": 4
+  },
+  "initialInvalidChecks": [
+    {
+      "name": "light-1280x800:Space stops zero full window",
+      "disposition": "QA sampling count fault; raw native samples all paused zero; replaced by complete observed windows"
+    },
+    {
+      "name": "light-1920x929:Space stops zero full window",
+      "disposition": "QA sampling count fault; raw native samples all paused zero; replaced by complete observed windows"
+    },
+    {
+      "name": "dark-1280x800:Space stops zero full window",
+      "disposition": "QA sampling count fault; raw native samples all paused zero; replaced by complete observed windows"
+    },
+    {
+      "name": "dark-1920x929:Space stops zero full window",
+      "disposition": "QA sampling count fault; raw native samples all paused zero; replaced by complete observed windows"
+    },
+    {
+      "name": "native composition trusted keeps focus",
+      "disposition": "native CDP compositionend trusted=false; OS IME remains unknown"
+    }
+  ],
+  "initialErrors": [
+    {
+      "key": "light-390x844",
+      "error": "ElementResolutionError: page.click timed out after 3000ms: Selector button[data-testid=\"wf-voice-trigger\"] matched 0 elements\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28"
+    },
+    {
+      "key": "dark-390x844",
+      "error": "ElementResolutionError: page.click timed out after 3000ms: Selector button[data-testid=\"wf-voice-trigger\"] matched 0 elements\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28"
+    }
+  ],
+  "supplementErrors": [
+    {
+      "key": "light-390x844-supplement",
+      "error": "Error: JavaScript evaluation failed at line 0, column 0: TypeError: Cannot read properties of null (reading 'scrollTop')\n    at <anonymous>:1:127\n    at __egoWaitForFunction (<anonymous>:1:142)\n    at <anonymous>:1:194; expression: (async function __egoWaitForFunction() { return { matched: Boolean(await (()=>document.querySelector('.wf-voice-picker__list').scrollTop===0)()), url: locati...\n    at runtimeValue (file:////[eval1]:9139:15)\n    at file:////[eval1]:18532:39\n    at async file:////[eval1]:16691:28"
+    },
+    {
+      "key": "dark-1280x800-supplement",
+      "error": "ElementResolutionError: page.click timed out after 3000ms: Selector .wf-material-node--audio matched 0 elements\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28"
+    },
+    {
+      "key": "dark-1920x929-supplement",
+      "error": "ElementResolutionError: page.click timed out after 3000ms: Selector .wf-material-node--audio matched 0 elements\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28"
+    },
+    {
+      "key": "dark-390x844-supplement",
+      "error": "ElementResolutionError: page.click timed out after 3000ms: Selector .wf-material-node--audio matched 0 elements\n    at #retryElementAction (file:////[eval1]:18884:27)\n    at async file:////[eval1]:18968:29\n    at async file:////[eval1]:16691:28"
+    }
+  ],
+  "sourceInputs": 2696,
+  "sourceDrift": [],
+  "bundleSha": {
+    "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+    "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+    "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+    "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+    "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+  },
+  "theme": {
+    "source": "/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js",
+    "preference": "light",
+    "cssSha": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908"
+  },
+  "final": {
+    "readyState": "complete",
+    "viewport": [
+      1280,
+      800
+    ],
+    "theme": "light",
+    "selectedNodes": 1,
+    "params": [
+      {
+        "id": "c087f761-90de-455a-b8ae-6abd6db0c97d",
+        "params": {
+          "model": "seed-audio-1.0",
+          "operation": "text_to_speech",
+          "prompt": "QA 试听样例",
+          "voice": "ICL_uranus_en_female_charlie_tob"
+        }
+      }
+    ],
+    "registry": [
+      {
+        "id": 1,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 2,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 3,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 4,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 5,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 6,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 7,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 8,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 9,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 10,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 11,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 12,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 13,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      },
+      {
+        "id": 14,
+        "paused": true,
+        "currentTime": 0,
+        "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/Charlie.mp3",
+        "ended": false,
+        "connected": false,
+        "readyState": 0
+      }
+    ]
+  }
+}

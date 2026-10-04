@@ -28,6 +28,7 @@ import {
 } from './status.js';
 import { mapLegacyOperation } from './legacy-operation-map.js';
 import { materializeVoiceOptions, readVoiceIndexSnapshot } from '../voices/options.js';
+import { voicePreviewFingerprint } from '../voices/preview.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_SPECS_DIR = join(__dirname, '..', 'specs');
@@ -654,7 +655,7 @@ export function loadAll(specsDir = DEFAULT_SPECS_DIR, opts = {}) {
 
   const snapshots = readYamlSnapshots(specsDir);
   const voiceSnapshot = readVoiceIndexSnapshot();
-  const cacheKey = buildContentCacheKey(specsDir, [...snapshots, voiceSnapshot]);
+  const cacheKey = buildContentCacheKey(specsDir, [...snapshots, voiceSnapshot, voiceSnapshot.preview]);
 
   if (useCache && memoCache && memoCache.key === cacheKey) {
     return memoCache.index;
@@ -770,6 +771,8 @@ export function loadAll(specsDir = DEFAULT_SPECS_DIR, opts = {}) {
     schemaVersion: CANONICAL_SCHEMA_VERSION,
     contentFingerprint: fp,
     contentCacheKey: cacheKey,
+    /** Raw content hash of the preview mapping snapshot loaded above (same load, no re-read). */
+    previewFingerprint: voicePreviewFingerprint(voiceSnapshot.preview.content),
     byId,
     specsDir,
     issues: allIssues,

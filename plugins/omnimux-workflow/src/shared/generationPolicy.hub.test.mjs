@@ -21,6 +21,32 @@ test('host catalog bridge preserves authoritative default operations and nested 
   assert.ok(canvas.fingerprint.startsWith(`${hub.fingerprint}:canvas:`));
 });
 
+test('readCanvasCatalog passes the hub preview_fingerprint through verbatim (#3058)', () => {
+  const hub = buildModelCatalog({ env: {} });
+  assert.match(hub.preview_fingerprint, /^[0-9a-f]{64}$/);
+  const canvas = readCanvasCatalog(name => name === 'modelCatalog' ? { list: () => hub } : undefined);
+  // The preview hash is a raw mapping hash, not a canvas-curated fingerprint.
+  assert.equal(canvas.preview_fingerprint, hub.preview_fingerprint);
+  assert.ok(!canvas.preview_fingerprint.includes(':canvas:'));
+  // The public capabilities seam carries the same value through the spread projection.
+  const projected = projectCanvasCatalog({ ...hub });
+  assert.equal(projected.preview_fingerprint, hub.preview_fingerprint);
+});
+
+test('readCanvasCatalog tolerates catalogs without preview_fingerprint (old hub / static stubs)', () => {
+  const hub = buildModelCatalog({ env: {} });
+  const stripped = { ...hub };
+  delete stripped.preview_fingerprint;
+  const canvas = readCanvasCatalog(name => name === 'modelCatalog' ? { list: () => stripped } : undefined);
+  assert.equal(canvas.preview_fingerprint, undefined);
+  const stub = readCanvasCatalog(() => undefined);
+  assert.equal(stub.source, 'static-stub');
+  assert.equal(stub.preview_fingerprint, undefined);
+  // Non-string values are never forwarded as a fingerprint.
+  const weird = readCanvasCatalog(name => name === 'modelCatalog' ? { list: () => ({ ...hub, preview_fingerprint: null }) } : undefined);
+  assert.equal(weird.preview_fingerprint, undefined);
+});
+
 test('real Hub catalog exposes the curated text models and selects Gemini 3.8 for video', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
   assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);

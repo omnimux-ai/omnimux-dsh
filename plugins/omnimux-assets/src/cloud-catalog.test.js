@@ -1056,3 +1056,144 @@ describe('cloud routes', () => {
     assert.equal(result.status, 403)
   })
 })
+
+describe('createCloudCatalog: official voice preview rows (#3058)', () => {
+  /**
+   * The index row the builder emits for a Volcengine voice once the shared
+   * snapshot feed exists: the voice's own metadata plus the preview projection.
+   * @param {object} [preview] snapshot preview block, or a partial override
+   */
+  function voiceRow(preview = {}) {
+    return {
+      id: 'audio-voiceover-v1',
+      category: 'audio',
+      sub_category: 'voiceover',
+      sub_categories: ['voiceover'],
+      name: '林潇',
+      description: '通用场景 · 中文 · 音色列表',
+      media_type: preview.state === 'verified-file' ? 'audio' : 'other',
+      media_url: preview.state === 'verified-file' ? preview.primary_url : '',
+      cover_url: '',
+      tags: ['火山引擎', '中文'],
+      meta: {
+        source: 'volcengine',
+        voice_type: 'saturn_zh_female_linxiao_tob',
+        resource_id: 'seed-tts-2.0',
+        playable: preview.state === 'verified-file',
+        preview: {
+          purpose: 'official-voice-preview',
+          state: 'unverified',
+          primary_url: null,
+          candidates: [],
+          checked_at: null,
+          evidence_ref: null,
+          ...preview,
+        },
+      },
+    }
+  }
+
+  it('matches a search needle against meta.voice_type', () => {
+    writeCatalog({ rows: [voiceRow({ state: 'verified-file', primary_url: 'https://cdn.example.com/voices/linxiao.mp3' })] })
+    const cloud = makeCatalog()
+    const hit = cloud.search({ q: 'linxiao_tob' })
+    assert.equal(hit.total, 1)
+    assert.equal(hit.items[0].id, 'audio-voiceover-v1')
+    assert.equal(cloud.search({ q: 'linxiao_tob', category: 'audio' }).total, 1)
+    assert.equal(cloud.search({ q: 'saturn_zh_female' }).total, 1)
+  })
+
+  it('keeps meta.preview on the row the search returns', () => {
+    const preview = {
+      state: 'verified-file',
+      primary_url: 'https://cdn.example.com/voices/linxiao.mp3',
+      candidates: ['https://cdn.example.com/voices/linxiao-b.mp3'],
+      checked_at: '2026-10-02T00:00:00.000Z',
+      evidence_ref: 'audit#124',
+    }
+    writeCatalog({ rows: [voiceRow(preview)] })
+    const cloud = makeCatalog()
+    const row = cloud.search({ q: 'linxiao_tob' }).items[0]
+    assert.equal(row.meta.preview.purpose, 'official-voice-preview')
+    assert.equal(row.meta.preview.state, 'verified-file')
+    assert.equal(row.meta.preview.primary_url, 'https://cdn.example.com/voices/linxiao.mp3')
+    assert.deepEqual(row.meta.preview.candidates, ['https://cdn.example.com/voices/linxiao-b.mp3'])
+  })
+
+  it('redirects a verified preview row to exactly its primary_url', () => {
+    writeCatalog({ rows: [voiceRow({ state: 'verified-file', primary_url: 'https://cdn.example.com/voices/linxiao.mp3' })] })
+    const cloud = makeCatalog()
+    assert.deepEqual(cloud.resolveRowMedia('audio-voiceover-v1', 'media'), {
+      kind: 'remote',
+      url: 'https://cdn.example.com/voices/linxiao.mp3',
+    })
+  })
+
+  it('never guesses a URL for an unverified preview row', () => {
+    writeCatalog({ rows: [voiceRow({
+      state: 'unverified',
+      primary_url: null,
+      candidates: ['https://cdn.example.com/voices/maybe-a.mp3', 'https://cdn.example.com/voices/maybe-b.mp3'],
+    })] })
+    const cloud = makeCatalog()
+    assert.equal(cloud.resolveRowMedia('audio-voiceover-v1', 'media'), null)
+  })
+
+  it('refuses to save a preview-only row before any fetch or disk write', async () => {
+    writeCatalog({ rows: [voiceRow({ state: 'verified-file', primary_url: 'https://cdn.example.com/voices/linxiao.mp3' })] })
+    const { library } = makeStores()
+    let fetches = 0
+    const fetchImpl = async () => {
+      fetches += 1
+      return remoteOk('x')
+    }
+    const cloud = makeCatalog({ library, fetchImpl })
+    await assert.rejects(
+      () => cloud.saveToLocal('audio-voiceover-v1'),
+      (error) => error?.code === 'voice-preview-only',
+    )
+    assert.equal(fetches, 0, 'a preview-only row must never reach the network')
+    assert.deepEqual(stagedPaths(), [], 'a preview-only row must leave no staging files')
+    assert.equal(library.list().length, 0, 'a preview-only row must never enter the library')
+  })
+
+  it('refuses an unverified preview row the same way', async () => {
+    writeCatalog({ rows: [voiceRow({ state: 'unverified' })] })
+    const { library } = makeStores()
+    const cloud = makeCatalog({ library, fetchImpl: remoteOk })
+    await assert.rejects(
+      () => cloud.saveToLocal('audio-voiceover-v1'),
+      (error) => error?.code === 'voice-preview-only',
+    )
+    assert.equal(library.list().length, 0)
+  })
+
+  it('still saves a descriptor-only voiceover row that carries no preview block', async () => {
+    // 未走预览映射的普通 voiceover 行不受拒绝影响（与首票之前的既有行为一致）。
+    writeCatalog()
+    const { library } = makeStores()
+    const cloud = makeCatalog({ library })
+    const asset = await cloud.saveToLocal('audio-voiceover-bbb')
+    assert.equal(asset.name, '林潇 2.0')
+    assert.equal(library.list().length, 1)
+  })
+
+  it('reports the preview-only refusal over HTTP as 403, without fetching', async () => {
+    writeCatalog({ rows: [voiceRow({ state: 'verified-file', primary_url: 'https://cdn.example.com/voices/linxiao.mp3' })] })
+    const stores = makeStores()
+    let fetches = 0
+    const cloud = makeCatalog({ library: stores.library, fetchImpl: async () => { fetches += 1; return remoteOk('x') } })
+    const dispatcher = createAssetsDispatcher({ ...stores, cloud })
+    const result = await dispatcher.dispatch({
+      method: 'POST',
+      url: '/omnimux/assets/cloud/save',
+      body: { id: 'audio-voiceover-v1' },
+      secFetchSite: 'same-origin',
+      origin: 'http://127.0.0.1:45120',
+    })
+    assert.equal(result.status, 403)
+    assert.equal(result.body.error, 'voice-preview-only')
+    assert.equal(fetches, 0)
+    assert.equal(stores.library.list().length, 0)
+  })
+})

@@ -40,9 +40,10 @@ const ROW_SAMPLE_SCOPES = { audio: ['audio/bgm', 'audio/sfx'] }
  *   category: { id: string, zh?: string, en?: string, total?: number },
  *   t: (key: string) => string,
  *   onSelectCategory: (categoryId: string) => void,
- *   onTogglePlay: (asset: any) => void,
+ *   onTogglePlay: (asset: any, explicit?: boolean) => void,
  *   onPreview?: (asset: any) => void,
  *   playingId?: string,
+ *   suppressedIds?: Set<string>,
  *   refreshKey?: number,
  *   savedIds?: Set<string>,
  *   savingIds?: Set<string>,
@@ -50,7 +51,7 @@ const ROW_SAMPLE_SCOPES = { audio: ['audio/bgm', 'audio/sfx'] }
  * }} props
  */
 export function CloudCategoryRow(props) {
-  const { category, t, onSelectCategory, onTogglePlay, onPreview, playingId, refreshKey = 0, savedIds = NO_IDS, savingIds = NO_IDS, onSave } = props
+  const { category, t, onSelectCategory, onTogglePlay, onPreview, playingId, suppressedIds = NO_IDS, refreshKey = 0, savedIds = NO_IDS, savingIds = NO_IDS, onSave } = props
   const [items, setItems] = useState(/** @type {any[]} */ ([]))
   const [loading, setLoading] = useState(false)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -190,6 +191,7 @@ export function CloudCategoryRow(props) {
                 t={t}
                 aspect={category.id === 'style' || category.id === 'audio' ? 'horizontal' : undefined}
                 playing={playingId === asset.id}
+                autoplaySuppressed={suppressedIds.has(asset.id)}
                 onTogglePlay={onTogglePlay}
                 onPreview={onPreview}
                 saved={savedIds.has(asset.id)}

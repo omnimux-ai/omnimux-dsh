@@ -17,7 +17,7 @@ import { addAssetToConversation } from './add-to-chat.js'
 import { cloudMediaUrl } from './api.js'
 import { preloadMedia } from './media-cache.js'
 import { activeDimensionCount, dimensionLabelOf, optionLabelOf } from './character-dimensions.js'
-import { cloudAudioTheme, cloudCardKind } from './cloud-feed-helpers.js'
+import { cloudAudioTheme, cloudCardKind, isOfficialVoicePreviewAsset, isOfficialVoicePreviewPlayable } from './cloud-feed-helpers.js'
 import { CLOUD_ALL_CATEGORY } from './cloud-feed-helpers.js'
 import { useCloudAssetsFeed } from './use-cloud-assets-feed.js'
 import { useGridColumns } from './use-grid-columns.js'
@@ -205,16 +205,17 @@ function CloudTileMedia(props) {
  *   asset: any,
  *   t: (key: string) => string,
  *   playing: boolean,
- *   onTogglePlay: (asset: any) => void,
+ *   onTogglePlay: (asset: any, explicit?: boolean) => void,
  *   onPreview?: (asset: any) => void,
  *   aspect?: string,
+ *   autoplaySuppressed?: boolean,
  *   saved?: boolean,
  *   saving?: boolean,
  *   onSave?: (asset: any) => void,
  * }} props
  */
 export function CloudAssetCard(props) {
-  const { asset, t, playing, onTogglePlay, onPreview, aspect, saved = false, saving = false, onSave } = props
+  const { asset, t, playing, onTogglePlay, onPreview, aspect, autoplaySuppressed = false, saved = false, saving = false, onSave } = props
   const [broken, setBroken] = useState(false)
   const [hovering, setHovering] = useState(false)
   const [added, setAdded] = useState(false)
@@ -231,18 +232,59 @@ export function CloudAssetCard(props) {
   }, [])
 
   const kind = cloudCardKind(asset)
-  // 能播的语音行都挂播放键；有立绘时它浮在立绘上，没有立绘才是纯语音色块。
-  const canPlay = asset?.mediaType === 'audio' && asset?.hasMedia === true && asset?.playable !== false
+  // Issue #3058：官方音色 preview-only——卡片不渲染保存/会话动作簇，handler
+  // 同样早退；播放资格由 preview DTO（verified-file + primary）裁定，
+  // 未验证行即使误带 media_url 也不出播放键，DTO-only 已验证行（无 media_url）
+  // 照样出播放键——hasMedia 与 legacy playable 门只属于普通资产分支，
+  // 官方行误带 meta.playable=false 同样出播放键（ocr-final #3058）。普通资产行为不变。
+  const isOfficialVoice = isOfficialVoicePreviewAsset(asset)
+  const canPlay = asset?.mediaType === 'audio'
+    && (isOfficialVoice ? isOfficialVoicePreviewPlayable(asset) : asset?.playable !== false && asset?.hasMedia === true)
   const showArt = asset?.hasCover === true || (asset?.hasMedia === true && asset?.mediaType !== 'audio')
   const handleBroken = useCallback(() => { setBroken(true) }, [])
   const togglePlay = useCallback(() => {
     userControlledRef.current = true
-    onTogglePlay(asset)
+    onTogglePlay(asset, true)
   }, [asset, onTogglePlay])
   const openPreview = useCallback(() => { onPreview?.(asset) }, [asset, onPreview])
+  /**
+   * OCR round2 F4：悬停自动试听后打开详情（点击卡体/卡片或键盘标题），
+   * 视图的 stop 清掉 playingId 后，指针仍悬停会让 hover 副作用立刻把
+   * toggle 再打回去——详情开着卡片又自动重启试听、与详情音频并播。
+   * 详情入口与显式播放键同一接管语义：先标记 user-controlled 再走
+   * openPreview；指针再次进入卡片时 hover 入口照常重置该标记。
+   * 指针路径由卡片 onMouseDown 标记（先于 click）；键盘路径由卡片上的
+   * Enter/Space keydown 侦听器标记（注册序先于 body 的激活 handler）。
+   * sol-spec-final：接管只认详情入口与显式播放键——落在保存/会话动作簇上的
+   * 按下不算接管，否则「悬停试听 → 点保存/会话 → 移出」会把自动播放留在
+   * 卡片上继续播，改变普通音频的旧语义（修复前 mousedown 无差别标记）。
+   */
+  const cardRef = useRef(/** @type {HTMLDivElement | null} */ (null))
+  const markUserControlled = useCallback(() => {
+    userControlledRef.current = true
+  }, [])
+  const markOnCardMouseDown = useCallback((event) => {
+    if (event.target?.closest?.('.omnimux-assets-cloud-actions')) return
+    markUserControlled()
+  }, [markUserControlled])
+
+  useEffect(() => {
+    const node = cardRef.current
+    if (!node) return undefined
+    const markOnActivateKey = (event) => {
+      if ((event.key === 'Enter' || event.key === ' ')
+        && !event.target?.closest?.('.omnimux-assets-cloud-actions')) {
+        markUserControlled()
+      }
+    }
+    node.addEventListener('keydown', markOnActivateKey)
+    return () => { node.removeEventListener('keydown', markOnActivateKey) }
+  }, [markUserControlled])
 
   const handleAdd = (event) => {
     event.stopPropagation()
+    // 防御性早退：官方试听样音没有「添加到会话」语义，按钮不渲染之外再拦一手。
+    if (isOfficialVoicePreviewAsset(asset)) return
     if (added) return
     addAssetToConversation(asset)
     setAdded(true)
@@ -254,19 +296,23 @@ export function CloudAssetCard(props) {
   // click, and stops it from reaching the card's own preview handler.
   const handleSave = (event) => {
     event.stopPropagation()
+    // 防御性早退：preview-only 用途不进入普通保存链路。
+    if (isOfficialVoicePreviewAsset(asset)) return
     if (saved || saving) return
     onSave?.(asset)
   }
 
-  // 悬停直接播放试听（音频/角色卡）
+  // 悬停直接播放试听（音频/角色卡）。
+  // autoplaySuppressed（hook 上报：自动播放被拒/候选穷尽）期间不自动重启——
+  // 否则 playingId 清空与 hovering 会制造「重试 + 重复提示」循环（OCR #12）。
   useEffect(() => {
-    if (!canPlay || userControlledRef.current) return
+    if (!canPlay || userControlledRef.current || autoplaySuppressed) return
     if (hovering && !playing) {
       onTogglePlay(asset)
     } else if (!hovering && playing) {
       onTogglePlay(asset)
     }
-  }, [hovering, canPlay, playing, asset, onTogglePlay])
+  }, [hovering, canPlay, playing, asset, onTogglePlay, autoplaySuppressed])
 
   // The control sits over the card's top-right corner, so it claims its own
   // pointer event: without that, using it would also open the preview behind it.
@@ -284,6 +330,7 @@ export function CloudAssetCard(props) {
 
   return (
     <div
+      ref={cardRef}
       className={`omnimux-assets-card omnimux-assets-cloud-card omnimux-assets-cloud-card--${kind}`}
       data-kind={kind}
       data-media-type={asset.mediaType}
@@ -294,6 +341,7 @@ export function CloudAssetCard(props) {
       setHovering(true)
     }}
       onMouseLeave={() => { setHovering(false) }}
+      onMouseDown={markOnCardMouseDown}
       onClick={openPreview}
     >
       {kind === 'text' ? null : (
@@ -302,6 +350,7 @@ export function CloudAssetCard(props) {
           role={canPlay ? 'button' : undefined}
           tabIndex={canPlay ? 0 : undefined}
           aria-label={canPlay ? `${asset.name} · ${playing ? t('cloud.action.pause') : t('cloud.action.play')}` : undefined}
+          title={canPlay ? `${asset.name} · ${playing ? t('cloud.action.pause') : t('cloud.action.play')}` : undefined}
           aria-pressed={canPlay ? (playing ? 'true' : 'false') : undefined}
           onClick={canPlay ? handlePlayClick : undefined}
           onKeyDown={canPlay ? activateRowKeydown(togglePlay) : undefined}
@@ -316,32 +365,34 @@ export function CloudAssetCard(props) {
       )}
       {/* 悬停暗化遮罩蒙层（对标图 3） */}
       <div className="omnimux-assets-cloud-card-mask" aria-hidden="true" />
-      <div className="omnimux-assets-cloud-actions">
-        {/* FIRST in the cluster, so the save plate sits to the LEFT of the bubble. */}
-        <IconButton
-          variant="ghost"
-          size="sm"
-          className="omnimux-assets-cloud-action omnimux-assets-cloud-save"
-          aria-label={saveLabel}
-          title={saveLabel}
-          disabled={saved}
-          loading={saving}
-          onClick={handleSave}
-        >
-          {saved ? <CheckIcon size={16} /> : <IconDownloadOutline16 size={16} />}
-        </IconButton>
-        <IconButton
-          variant="ghost"
-          size="sm"
-          className="omnimux-assets-cloud-action omnimux-assets-cloud-chat"
-          aria-label={addLabel}
-          title={addLabel}
-          disabled={added}
-          onClick={handleAdd}
-        >
-          {added ? <CheckIcon size={16} /> : <ChatIcon size={16} />}
-        </IconButton>
-      </div>
+      {!isOfficialVoicePreviewAsset(asset) ? (
+        <div className="omnimux-assets-cloud-actions">
+          {/* FIRST in the cluster, so the save plate sits to the LEFT of the bubble. */}
+          <IconButton
+            variant="ghost"
+            size="sm"
+            className="omnimux-assets-cloud-action omnimux-assets-cloud-save"
+            aria-label={saveLabel}
+            title={saveLabel}
+            disabled={saved}
+            loading={saving}
+            onClick={handleSave}
+          >
+            {saved ? <CheckIcon size={16} /> : <IconDownloadOutline16 size={16} />}
+          </IconButton>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            className="omnimux-assets-cloud-action omnimux-assets-cloud-chat"
+            aria-label={addLabel}
+            title={addLabel}
+            disabled={added}
+            onClick={handleAdd}
+          >
+            {added ? <CheckIcon size={16} /> : <ChatIcon size={16} />}
+          </IconButton>
+        </div>
+      ) : null}
       <div
         className="omnimux-assets-card-body"
         role="button"
@@ -608,7 +659,12 @@ export function CloudAssetsView(props) {
     return () => { observer.disconnect() }
   }, [hasMore, loadMore])
 
-  const onTogglePlay = useCallback((asset) => { audition.toggle(asset) }, [audition])
+  const onTogglePlay = useCallback((asset, explicit = false) => { audition.toggle(asset, explicit) }, [audition])
+  // 打开详情前先停卡片试听，避免卡片与详情音频并行发声（Issue #3058 A6）。
+  const handleOpenPreview = useCallback((asset) => {
+    audition.stop()
+    onPreview?.(asset)
+  }, [audition, onPreview])
   const searchActive = feed.query.trim() !== ''
   const filtered = feed.characterFilters.active > 0
   const isAllCategory = feed.category === CLOUD_ALL_CATEGORY
@@ -652,8 +708,9 @@ export function CloudAssetsView(props) {
             t={t}
             onSelectCategory={feed.selectCategory}
             onTogglePlay={onTogglePlay}
-            onPreview={onPreview}
+            onPreview={handleOpenPreview}
             playingId={audition.playingId}
+            suppressedIds={audition.suppressedIds}
             refreshKey={feed.refreshKey}
             savedIds={savedIds}
             savingIds={savingIds}
@@ -700,8 +757,9 @@ export function CloudAssetsView(props) {
               asset={asset}
               t={t}
               playing={audition.playingId === asset.id}
+              autoplaySuppressed={audition.suppressedIds.has(asset.id)}
               onTogglePlay={onTogglePlay}
-              onPreview={onPreview}
+              onPreview={handleOpenPreview}
               saved={savedIds.has(asset.id)}
               saving={savingIds.has(asset.id)}
               onSave={onSave}
@@ -738,6 +796,8 @@ export function CloudAssetsView(props) {
         onResetDimensions={feed.resetDimensions}
       />
       {feed.error !== '' ? <p className="omnimux-assets-error">{feed.error}</p> : null}
+      {/* 官方试听失败一次核定提示：复用既有 notice 载体，不新造组件（Issue 3058） */}
+      {audition.notice !== '' ? <p className="omnimux-assets-cloud-notice">{audition.notice}</p> : null}
       {body}
     </div>
   )

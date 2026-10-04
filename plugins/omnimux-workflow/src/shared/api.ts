@@ -305,6 +305,8 @@ export interface CapabilityCatalog {
   schemaVersion?: string;
   /** Hub content hash; used by canvas cache invalidation. */
   fingerprint?: string;
+  /** SHA-256 of the voice-preview mapping snapshot from the loaded index. Optional for old hubs and static stubs. */
+  preview_fingerprint?: string;
   /** Per-type default model ids (env → settings → config → first sorted). */
   defaults?: {
     text?: string;

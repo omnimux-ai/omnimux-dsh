@@ -1,0 +1,435 @@
+{
+  "runId": "2026-10-04T04-53-48.224Z-c4731bf5",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-official-voice-preview-issue-3058",
+  "requests": [
+    {
+      "method": "GET",
+      "url": "/assets"
+    },
+    {
+      "method": "GET",
+      "url": "/official-theme.css"
+    },
+    {
+      "method": "GET",
+      "url": "/assets-page.css"
+    },
+    {
+      "method": "GET",
+      "url": "/assets-page.js"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/state"
+    },
+    {
+      "method": "GET",
+      "url": "/favicon.ico"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/manifest.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/character/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/scene/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/prop/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/material/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/style/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/bgm/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/all/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/scene/page-0082.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/character/page-0017.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/prop/page-0028.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/material/page-0020.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/style/page-0001.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/bgm/page-0003.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-760ea98f68ac&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-79037e3939ae&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-9bbaf5f5c39e&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-9f0e5759b48c&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-afd3097855cd&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-b13b05355da6&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/scene/page-0047.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/character/page-0007.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/style/page-0003.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/prop/page-0015.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/material/page-0007.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/sfx/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-b907e3590829&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-ba3e86010ceb&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-e2e50cb09bfd&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-f982d9c601ba&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-animal-character-ff7f88c4f90f&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-digital-human-02b8dc03504e&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-digital-human-0b72f2d96bd5&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-digital-human-20edb80ad312&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-digital-human-283b11c86c77&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-meme-characters-2ae899221c58&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-female-96860a9b4115&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-meme-characters-3bc016a80811&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-meme-characters-bbeca0eb4883&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-female-8811afeace93&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-female-90299177cdaa&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-female-7b5bd5715d1f&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-female-76186ae402a2&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-female-976284877dd8&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=character-female-870f5ad2ee19&which=cover"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-f376fbf12540&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-fb11c26f21ce&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-fa8849d6a52e&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-f3fe7b664b27&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-f693f1cb5da5&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-f2ebc40e87f0&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-f9d2774f7054&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-29eb69d872f3&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-2d6c9482ef07&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=scene-leisure-f43d9396c65a&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-books-stationery-8a2d8a19da08&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-digital-3c-6e1f3109e631&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-books-stationery-8d54d0072880&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-digital-3c-634003e560af&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-digital-3c-5985dc7b65b4&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-digital-3c-627b9ebb8cb6&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-digital-3c-701e3bcfda27&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-digital-3c-64d83b3fb892&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-digital-3c-6651fb1378dc&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/media?id=prop-books-stationery-8f9ba58cc978&which=media"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/audio/voiceover/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=%E6%9E%97%E6%BD%87+2.0&category=audio&sub_category=voiceover&limit=12&offset=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=%E9%98%B3%E5%85%89%E9%98%BF%E8%BE%B0&category=audio&sub_category=voiceover&limit=12&offset=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=Charlie+2.0&category=audio&sub_category=voiceover&limit=12&offset=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=%E7%9F%A5%E6%80%A7%E6%B8%A9%E5%A9%89+2.0&category=audio&sub_category=voiceover&limit=12&offset=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=Jamie&category=audio&sub_category=voiceover&limit=12&offset=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=Rosa&category=audio&sub_category=voiceover&limit=12&offset=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=%E6%9E%97%E6%BD%87+2.0&category=audio&sub_category=voiceover&limit=12&offset=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/state?lrev=0&arev=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/search?q=%E6%9E%97%E6%BD%87+2.0&category=all&limit=15&offset=0"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux/assets/cloud/all/page-0000.json"
+    },
+    {
+      "method": "GET",
+      "url": "/canvas"
+    },
+    {
+      "method": "GET",
+      "url": "/official-theme.css"
+    },
+    {
+      "method": "GET",
+      "url": "/canvas-page.js"
+    },
+    {
+      "method": "GET",
+      "url": "/omnimux-workflow/api/templates"
+    },
+    {
+      "method": "GET",
+      "url": "/favicon.ico"
+    }
+  ],
+  "serverClosed": true,
+  "evidenceLevel": "REAL_COMPONENT_REAL_CATALOG_REAL_MEDIA",
+  "head": "0deb18ee3f6e6f0448db874d05872238a273c73e",
+  "dirtyPaths": " M CONTEXT.md\nA  docs/evidence/shared-official-voice-preview/initial-candidate-audit.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0244.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0245.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0246.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0247.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0248.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0249.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0250.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0251.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0252.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0253.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0254.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0255.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0256.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0257.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0258.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0259.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0260.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0261.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0262.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0263.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0264.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0265.json\n M plugins/omnimux-assets/cloud-catalog/all/page-0266.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0004.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0005.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0006.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0007.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0008.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0009.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0010.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0011.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0012.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0013.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0014.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0015.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0016.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0017.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0018.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0019.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0020.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0021.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0022.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0023.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0024.json\n M plugins/omnimux-assets/cloud-catalog/audio/page-0025.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0000.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0001.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0002.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0003.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0004.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0005.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0006.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0007.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0008.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0009.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0010.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0011.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0012.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0013.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0014.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0015.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0016.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0017.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0018.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0019.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0020.json\n M plugins/omnimux-assets/cloud-catalog/audio/voiceover/page-0021.json\n M plugins/omnimux-assets/cloud-catalog/index.json\n M plugins/omnimux-assets/cloud-catalog/manifest.json\n M plugins/omnimux-assets/scripts/build-cloud-assets-catalog.mjs\n M plugins/omnimux-assets/src/client/AssetPreviewModal.jsx\n M plugins/omnimux-assets/src/client/AssetPreviewModal.test.js\n M plugins/omnimux-assets/src/client/AssetsStage.jsx\n M plugins/omnimux-assets/src/client/AssetsStage.test.js\n M plugins/omnimux-assets/src/client/CloudAssetsView.jsx\n M plugins/omnimux-assets/src/client/CloudAssetsView.test.js\n M plugins/omnimux-assets/src/client/CloudCategoryRow.jsx\n M plugins/omnimux-assets/src/client/add-to-chat.js\n M plugins/omnimux-assets/src/client/add-to-chat.test.js\n M plugins/omnimux-assets/src/client/audio-hover-toggle.e2e.test.js\n M plugins/omnimux-assets/src/client/cloud-feed-helpers.js\n M plugins/omnimux-assets/src/client/cloud-feed-helpers.test.js\n M plugins/omnimux-assets/src/client/cloud-local-bridge.test.js\n M plugins/omnimux-assets/src/client/cloud-preview.js\n M plugins/omnimux-assets/src/client/cloud-preview.test.js\n M plugins/omnimux-assets/src/client/locales.js\n M plugins/omnimux-assets/src/client/use-cloud-assets-feed.js\n M plugins/omnimux-assets/src/cloud-catalog-build.test.js\n M plugins/omnimux-assets/src/cloud-catalog.js\n M plugins/omnimux-assets/src/cloud-catalog.test.js\n M plugins/omnimux-assets/src/http-routes.js\n M plugins/omnimux-assets/src/http-routes.test.js\n M plugins/omnimux-assets/src/index.js\n M plugins/omnimux-assets/src/tools.test.js\n M plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/audioParams/VoicePickerDialog.tsx\n M plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/audioParams/voicePickerDialog.test.mjs\n M plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/audioParams/voicePickerModel.test.mjs\n M plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/audioParams/voicePickerModel.ts\n M plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/index.tsx\n M plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/videoParams/VideoParamPopover.test.mjs\n M plugins/omnimux-workflow/src/canvas/theme/components.css\n M plugins/omnimux-workflow/src/canvas/ui/CustomModal.tsx\n M plugins/omnimux-workflow/src/canvas/ui/CustomSelect.tsx\n M plugins/omnimux-workflow/src/shared/api.ts\n M plugins/omnimux-workflow/src/shared/generationPolicy.hub.test.mjs\n M plugins/omnimux-workflow/src/shared/voiceCatalog.ts\n M plugins/omnimux-workflow/src/workflow/seam/canvasCatalog.ts\n M plugins/omnimux/package.json\n M plugins/omnimux/src/catalog/contract/index.js\n M plugins/omnimux/src/catalog/contract/load.js\n M plugins/omnimux/src/catalog/list.js\n M plugins/omnimux/src/catalog/voices/options.js\n M plugins/omnimux/src/catalog/voices/options.test.js\n?? docs/implementation/shared-official-voice-preview-plan-notes.md\n?? docs/implementation/voice-preview-implementation-coordination.md\n?? docs/implementation/voice-preview-ticket-3058.md\n?? docs/product/shared-official-voice-preview-pm-sign-off-20261004.md\n?? docs/product/shared-official-voice-preview-ui.md\n?? docs/product/voice-picker-ui-polish-3058.md\n?? plugins/omnimux-assets/cloud-catalog/voice-preview-snapshot.json\n?? plugins/omnimux-assets/src/client/AssetPreviewModal-media-lifecycle.e2e.test.js\n?? plugins/omnimux-assets/src/client/AssetPreviewModal-official-audio-fallback.e2e.test.js\n?? plugins/omnimux-assets/src/client/audio-hover-autoplay-suppression.e2e.test.js\n?? plugins/omnimux-assets/src/client/voice-preview-audition.e2e.test.js\n?? plugins/omnimux-assets/src/client/voice-preview-ordinary-failure.e2e.test.js\n?? plugins/omnimux-assets/src/client/voice-preview-terminal-release.e2e.test.js\n?? plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/audioParams/voicePickerUiPolish3058.test.mjs\n?? plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/audioParams/voicePreviewContract.test.mjs\n?? plugins/omnimux-workflow/src/canvas/theme/voicePickerTheme.test.mjs\n?? plugins/omnimux-workflow/tests/voice-picker-terminal-dispose.e2e.test.mjs\n?? plugins/omnimux-workflow/tests/voice-preview-playback.e2e.test.mjs\n?? plugins/omnimux/scripts/export-voice-previews.mjs\n?? plugins/omnimux/src/catalog/voices/official-preview-mapping.json\n?? plugins/omnimux/src/catalog/voices/preview.js\n?? plugins/omnimux/src/catalog/voices/preview.test.js\n?? specs/3058-ocr-closure-media-fixes.spec.md\n?? specs/3058-ocr-frontend-fixes.spec.md\n?? specs/3058-ocr-round2-frontend-fixes.spec.md\n?? specs/3058-workflow-preview-fingerprint.spec.md\n?? specs/shared-official-voice-preview.spec.md\n?? specs/voice-picker-ui-polish-3058-impl.spec.md\n?? tests/e2e/official-voice-preview.browser.mjs\n",
+  "catalogFingerprint": "30e8eabf27de5950",
+  "voiceCount": {
+    "total": 509,
+    "verified": 124,
+    "unverified": 385
+  },
+  "mediaOrigins": [
+    "https://lf3-static.bytednsdoc.com"
+  ],
+  "bundleSha": {
+    "assets": "08bdc8bd42775737ddbe3e55b5c5d1cff19677997ffcb992eb23fd8db5f9ffaf",
+    "canvas": "f2a1b9edc6d6d941e5e29489be8160deaeba8b8d6fee863c32a4e9230d0a0bf1",
+    "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+    "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+    "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+  },
+  "theme": {
+    "source": "/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js",
+    "preference": "light",
+    "cssSha": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908"
+  },
+  "sourceInputs": 2696,
+  "origin": "http://127.0.0.1:55645",
+  "egoExit": 0,
+  "spaceId": 2,
+  "scenes": [
+    {
+      "kind": "assets",
+      "status": "PASS_COMPONENT_JOURNEY"
+    },
+    {
+      "kind": "canvas",
+      "status": "PASS_COMPONENT_JOURNEY"
+    },
+    {
+      "kind": "n1-continued-play-negative",
+      "status": "PASS_NEGATIVE_GATE_RED"
+    }
+  ],
+  "sourceFreeze": {
+    "inputs": 2696,
+    "drifted": 0
+  },
+  "nonGetRequests": [],
+  "finishedAt": "2026-10-04T04:55:02.648Z"
+}

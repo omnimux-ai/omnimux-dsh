@@ -144,15 +144,21 @@ const jsonOut = {
  *   effect?: (fn: () => unknown, label?: string) => unknown,
  *   inject?: (deps: string[], callback: (inner: object) => void) => void,
  * }} ctx
+ * @param {{ catalogDir?: string }} [config] `catalogDir` points the cloud
+ *   catalog at another directory (tests stage in a private copy); unset keeps
+ *   the shipped `cloud-catalog/` path.
  */
-export function apply(ctx) {
+export function apply(ctx, config) {
   const defineTool = defaultDefineTool
   const paths = resolveAssetsPaths()
   const mappings = createMappingStore({ paths })
   const artifacts = createArtifactStore({ paths })
   const library = createLibraryStore({ paths })
   library.migrateMappings(mappings)
-  const cloud = createCloudCatalog({ library })
+  const cloud = createCloudCatalog({
+    library,
+    catalogDir: typeof config?.catalogDir === 'string' ? config.catalogDir : undefined,
+  })
   const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud, paths })
 
   // 浏览器图片真实入库的宿主内窄服务（#3052）：同一个活跃 library 实例
@@ -292,6 +298,7 @@ export function apply(ctx) {
       const id = typeof args.id === 'string' ? args.id.trim() : ''
       if (!id) throw new AssetsError('invalid-argument', 'id is required')
       if (!cloud) throw new AssetsError('catalog-unavailable', 'cloud catalog is not mounted')
+      let refusedForPurpose = false
       try {
         const asset = await cloud.saveToLocal(id, { name: args.name, type: args.type })
         const hubEvents = ctx.get?.('hubEvents')
@@ -307,10 +314,17 @@ export function apply(ctx) {
           },
         })
         return { ok: true, asset }
+      } catch (error) {
+        // 用途拒绝发生在任何暂存动作之前：此时再跑一遍清扫毫无意义，而且会把
+        // 别的在途或过期暂存切片当成「崩溃残留」扫掉——调用方已批准 0 磁盘变更。
+        if (error instanceof AssetsError && error.code === 'voice-preview-only') refusedForPurpose = true
+        throw error
       } finally {
-        // The save already dropped its own staging slice; this bare sweep only
-        // collects what a crashed save left behind and never touches a live slice.
-        cloud.clearStaging()
+        if (!refusedForPurpose) {
+          // The save already dropped its own staging slice; this bare sweep only
+          // collects what a crashed save left behind and never touches a live slice.
+          cloud.clearStaging()
+        }
       }
     },
   })

@@ -34,12 +34,16 @@ import {
   CLOUD_PAGE_SIZE,
   allCategoryEntry,
   appendUniqueAssets,
+  isOfficialVoicePreviewAsset,
+  isOfficialVoicePreviewPlayable,
   normalizeCloudAsset,
   pageCountOf,
   subCategoryTabs,
+  voicePreviewCandidateUrls,
 } from './cloud-feed-helpers.js'
 import { errText, messageOf } from './feed-helpers.js'
 import { useCloudManifest } from './use-cloud-manifest.js'
+import { CLOUD_NOTICE_MS } from './use-cloud-save.js'
 import { globalShuffleCache } from './category-shuffle-cache.js'
 
 /** Debounce before a keystroke turns into a catalog-wide search request. */
@@ -58,72 +62,249 @@ function rowsOf(body) {
  * Keep exactly one audition playing at a time across the whole feed.
  * The element is owned here rather than by a card, so a card unmounting (paging,
  * category switch) always stops its audio instead of leaking a hidden player.
+ *
+ * Issue #3058: an official voice preview row plays its hub DTO candidates in
+ * order (primary first, never retrying the same URL); every candidate settles
+ * once — an error event and the play() rejection for the same candidate do not
+ * double-advance — and a request token drops callbacks from superseded requests.
+ * Every attempt owns a fresh Audio element with its own closed-over attempt
+ * index: an error event carries no URL identity, so a late mediaerror on a
+ * superseded element — or a deferred play() rejection from an old attempt —
+ * is short-circuited by the attempt token and can never be attributed to the
+ * candidate that just took over (Sol 规格轴 HIGH #1/#2). Stopping, switching
+ * assets or unmounting pauses every attempt element of the current request,
+ * not only the latest. Only verified rows reach candidates at all: the hook
+ * is the playback seam, so an unverified official row is refused here (no
+ * element, no fetch), not merely hidden in the card. A NotAllowedError
+ * rejection means autoplay was refused, not a missing file, so it never
+ * rotates candidates and never shows the file-failure notice: it pauses and
+ * rewinds its element, returns to idle, and suppresses the hover loop's
+ * automatic restarts until the next explicit action (exhausted candidates
+ * still surface the approved notice exactly once, then suppress auto-retries
+ * the same way). Ordinary assets keep the single cloudMediaUrl play.
+ * @param {{ t?: (key: string) => string }} [options]
  */
-export function useCloudAudition() {
+export function useCloudAudition(options = {}) {
+  const { t } = options
   const audioRef = useRef(/** @type {HTMLAudioElement | null} */ (null))
+  const requestTokenRef = useRef(0)
+  /** 当前在途请求的清理函数：stop/切换/unmount 时暂停该请求所有 attempt。 */
+  const stopAttemptsRef = useRef(() => {})
   const [playingId, setPlayingId] = useState('')
+  const [notice, setNotice] = useState('')
+  /**
+   * Assets whose last audition was refused (autoplay denial) or failed (all
+   * candidates exhausted). The hover side-effect calls `toggle` again while the
+   * pointer stays over the card; suppressed rows keep those implicit calls
+   * ignored so one denial cannot loop playback attempts and notices. Only an
+   * explicit action (`explicit === true`) or a state cleanup re-arms them.
+   */
+  const [suppressedIds, setSuppressedIds] = useState(() => new Set())
+  const markSuppressed = useCallback((id) => {
+    setSuppressedIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)))
+  }, [])
+  const clearSuppressed = useCallback((id) => {
+    setSuppressedIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
+
+  /** 使在途请求回调全部作废并暂停其所有 attempt element。 */
+  const stopActiveRequest = useCallback(() => {
+    requestTokenRef.current += 1
+    stopAttemptsRef.current()
+    stopAttemptsRef.current = () => {}
+    audioRef.current = null
+  }, [])
 
   const stop = useCallback(() => {
-    const element = audioRef.current
-    if (element) {
-      element.pause()
-      element.currentTime = 0
-      audioRef.current = null
-    }
+    stopActiveRequest()
     setPlayingId('')
-  }, [])
+    // Stopping is the next explicit action: auto-start may resume afterwards.
+    setSuppressedIds((prev) => (prev.size === 0 ? prev : new Set()))
+  }, [stopActiveRequest])
 
-  const toggle = useCallback((asset) => {
+  const toggle = useCallback((asset, explicit = false) => {
     const id = asset?.id ?? ''
     if (id === '') return
-    const current = audioRef.current
-    if (playingId === id && current) {
-      current.pause()
-      current.currentTime = 0
-      audioRef.current = null
+    if (explicit) clearSuppressed(id)
+    else if (suppressedIds.has(id)) return
+    if (playingId === id && audioRef.current) {
+      stopActiveRequest()
       setPlayingId('')
+      setSuppressedIds((prev) => (prev.size === 0 ? prev : new Set()))
       return
     }
-    if (current) {
-      current.pause()
-      current.currentTime = 0
+    stopActiveRequest()
+    // A fresh audition supersedes the previous failure notice.
+    setNotice('')
+
+    // 官方试听走 hub DTO 候选；普通资产走既有 media 路由单 URL。
+    // 资格门放在 seam 本身（OCR #8）：未验证官方行在此 fail-closed，
+    // 连 Audio 实例都不构造——卡片藏播放键只是 UI 一层，挡不住别的调用方。
+    const isOfficialVoice = isOfficialVoicePreviewAsset(asset)
+    const candidateUrls = isOfficialVoice
+      ? (isOfficialVoicePreviewPlayable(asset) ? voicePreviewCandidateUrls(asset) : [])
+      : [cloudMediaUrl(id, 'media')]
+    if (candidateUrls.length === 0) return
+
+    const requestToken = requestTokenRef.current + 1
+    requestTokenRef.current = requestToken
+    /** 本请求创建的全部 attempt element：stop/切换/unmount 时逐一暂停清理。 */
+    const attemptElements = new Set()
+    /** 本请求内已结算失败的候选下标：error 事件与 play() 拒绝同候选只推一次 */
+    const settledCandidates = new Set()
+    /** 最新发起（仍在结算中）的候选下标 */
+    let armedAttempt = -1
+
+    const isCurrentRequest = () => requestToken === requestTokenRef.current
+    /**
+     * 回调仍归属当前有效 attempt 的判据：旧 attempt（或旧请求）迟到的
+     * error/rejection 先经此短路，绝不结算或清理新 attempt。
+     */
+    const isCurrentAttempt = (attemptIndex) =>
+      isCurrentRequest() && attemptIndex === armedAttempt && !settledCandidates.has(attemptIndex)
+
+    /**
+     * 停止并清理本请求所有 attempt element（含已回退的旧 element）：
+     * 旧 element 可能仍持有挂起 promise/延迟 error，不能留在后台发声。
+     */
+    const stopRequest = () => {
+      for (const audio of attemptElements) {
+        audio.pause()
+        audio.currentTime = 0
+        audio.removeEventListener('ended', audio.__endedHandler)
+        audio.removeEventListener('error', audio.__errorHandler)
+        audio.src = ''
+      }
+      attemptElements.clear()
+    }
+    stopAttemptsRef.current = stopRequest
+
+    /**
+     * OCR round2 F3：请求终态（自然 ended / 候选穷尽）释放整请求资源，
+     * 不止暂停最新 element——否则没有后续 stop/切换/unmount 时
+     * attemptElements 集、监听与 stopRequest 闭包被无限期持有。
+     * 先校验 ownership 再 token+1：迟到回调自此被 isCurrentRequest 短路，
+     * 新请求也不再被这个已终态请求的清理路径误伤；stopAttemptsRef 复位
+     * 后后续 stop() 对它是无害空转。notice/suppression 语义由各终态调用方
+     * 保留（仅官方分支），本函数只管资源释放。
+     */
+    const releaseRequest = () => {
+      if (!isCurrentRequest()) return
+      requestTokenRef.current += 1
+      stopRequest()
+      if (stopAttemptsRef.current === stopRequest) stopAttemptsRef.current = () => {}
       audioRef.current = null
     }
-    const element = new Audio(cloudMediaUrl(id, 'media'))
-    element.preload = 'auto'
-    element.addEventListener('ended', () => {
-      // Only clear when this element is still the active one: a later audition
-      // may already have replaced it.
-      if (audioRef.current === element) {
-        audioRef.current = null
+
+    /**
+     * 候选穷尽：提示一次核定文案并把本资产列入悬停自动重试抑制。
+     * 没有这一步，playingId 清空会让 hover 副作用立刻重播并重复提示。
+     * OCR closure F4：提示与抑制仅官方试听分支——普通素材的单地址候选也
+     * 走到这里，但它保持旧静默停止语义，不出文案、不入抑制。
+     */
+    const reportFailure = () => {
+      if (!isCurrentRequest()) return
+      // F3：穷尽即终态——释放本请求全部 attempt element 并失效清理 ref。
+      releaseRequest()
+      setPlayingId('')
+      if (isOfficialVoice) {
+        if (typeof t === 'function') setNotice(t('cloud.preview.failed'))
+        markSuppressed(id)
+      }
+    }
+
+    /**
+     * 自动播放权限拒绝 ≠ 文件不可用：不轮换候选、不出失败文案。
+     * 当前 attempt 的权限失败先 pause/归零清理自己的 element 再回空闲，
+     * 不留仍在播放的孤儿 element；抑制悬停自动重启直到下一次显式动作——
+     * 同 F4 仅官方试听分支执行，普通素材不武装抑制。
+     * 调用方必须先经 isCurrentAttempt 判定——旧 attempt 的迟到拒绝到不了这里。
+     */
+    const reportAutoplayDenied = () => {
+      if (!isCurrentRequest()) return
+      // OCR last-rereview M3：权限拒绝同样是请求终态——走 releaseRequest 全
+      // 请求释放（pause/归零/摘监听/清 src/解除 stopRequest 闭包），不留仍
+      // 加载中的孤儿 element；否则除非后续 stop/切换/unmount，本请求的
+      // attempt 集合与监听被无限期持有。抑制与无文案语义仍仅限官方分支。
+      releaseRequest()
+      setPlayingId('')
+      if (isOfficialVoice) markSuppressed(id)
+    }
+
+    const tryNextOrReportError = () => {
+      if (!isCurrentRequest()) return
+      const nextIndex = armedAttempt + 1
+      if (nextIndex < candidateUrls.length) {
+        attemptPlay(nextIndex)
+        return
+      }
+      reportFailure()
+    }
+
+    const candidateFailed = (index) => {
+      if (!isCurrentAttempt(index)) return
+      settledCandidates.add(index)
+      tryNextOrReportError()
+    }
+
+    /**
+     * 每次 attempt 使用独立原生 Audio element 并闭包自己的下标：
+     * error 事件不携带 URL 身份，复用同一 element 换 src 时旧候选的迟到
+     * error 会被误算到新候选（Sol 规格轴 HIGH #1）；独立 element 让
+     * error 天然只能来自自己加载的那次 attempt，加上 attempt 令牌双重短路。
+     */
+    const attemptPlay = (attemptIndex) => {
+      const element = new Audio()
+      element.preload = 'auto'
+      element.src = candidateUrls[attemptIndex]
+      attemptElements.add(element)
+      armedAttempt = attemptIndex
+      audioRef.current = element
+      element.__endedHandler = () => {
+        if (!isCurrentAttempt(attemptIndex)) return
+        settledCandidates.add(attemptIndex)
+        // F3：自然播完即终态——整请求释放（全部 attempt、监听、src）。
+        releaseRequest()
         setPlayingId('')
       }
-    })
-    element.addEventListener('error', () => {
-      if (audioRef.current === element) {
-        audioRef.current = null
-        setPlayingId('')
+      element.__errorHandler = () => {
+        candidateFailed(attemptIndex)
       }
-    })
-    audioRef.current = element
+      element.addEventListener('ended', element.__endedHandler)
+      element.addEventListener('error', element.__errorHandler)
+      void element.play().catch((error) => {
+        if (!isCurrentAttempt(attemptIndex)) return
+        if (error?.name === 'NotAllowedError') {
+          settledCandidates.add(attemptIndex)
+          reportAutoplayDenied()
+          return
+        }
+        candidateFailed(attemptIndex)
+      })
+    }
+
     setPlayingId(id)
-    void element.play().catch(() => {
-      if (audioRef.current === element) {
-        audioRef.current = null
-        setPlayingId('')
-      }
-    })
-  }, [playingId])
+    attemptPlay(0)
+  }, [playingId, suppressedIds, t, clearSuppressed, markSuppressed, stopActiveRequest])
 
   useEffect(() => () => {
-    const element = audioRef.current
-    if (element) {
-      element.pause()
-      audioRef.current = null
-    }
-  }, [])
+    stopActiveRequest()
+    setSuppressedIds((prev) => (prev.size === 0 ? prev : new Set()))
+  }, [stopActiveRequest])
 
-  return { playingId, toggle, stop }
+  // Same lifetime as the save notice: the failure line clears itself.
+  useEffect(() => {
+    if (notice === '') return undefined
+    const timer = setTimeout(() => { setNotice('') }, CLOUD_NOTICE_MS)
+    return () => { clearTimeout(timer) }
+  }, [notice])
+
+  return { playingId, notice, suppressedIds, toggle, stop }
 }
 
 /**
@@ -178,7 +359,7 @@ export function useCloudAssetsFeed(options) {
     }
   }, [externalQuery])
 
-  const audition = useCloudAudition()
+  const audition = useCloudAudition({ t })
   const { stop: stopAudition } = audition
   const requestRef = useRef(0)
 

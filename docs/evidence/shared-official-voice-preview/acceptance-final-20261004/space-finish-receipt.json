@@ -1,0 +1,37 @@
+{
+  "spaceId": 2,
+  "page": "p1",
+  "calledOnce": true,
+  "keep": [],
+  "actual": {
+    "registry": [
+      {
+        "id": 1,
+        "paused": true,
+        "currentTime": 0,
+        "src": "http://127.0.0.1:59192/assets",
+        "ended": false,
+        "connected": false
+      },
+      {
+        "id": 2,
+        "paused": true,
+        "currentTime": 0,
+        "src": "http://127.0.0.1:59192/omnimux/assets/cloud/media?id=audio-bgm-00e9e6c5a3b1&which=media",
+        "ended": false,
+        "connected": false
+      }
+    ],
+    "nonPaused": 0
+  },
+  "receipt": {
+    "spaceId": 2,
+    "closedSpace": true,
+    "keptManagedLabels": [],
+    "closedManagedLabels": [
+      "p1"
+    ],
+    "preservedUnmanagedCount": 0
+  },
+  "finishedAt": "2026-10-04T05:09:44.757Z"
+}

@@ -1,0 +1,860 @@
+[
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-empty.png",
+    "bytes": 58160,
+    "sha256": "0fa6beab87a2e836af9c243fa47079fe1ce272c104f6e1ceed4af461a3767664",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-full-first.png",
+    "bytes": 65020,
+    "sha256": "c26408424bb5e94ddcf2227bd177885b3c7930ed9ce6d0d549cbcf6acf420e15",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-full-last.png",
+    "bytes": 60566,
+    "sha256": "b496ac7acff8d0cee72cfd8f516d17090eac1d641eece42e431954440e2346a2",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-long-1.png",
+    "bytes": 62788,
+    "sha256": "aa9390bcc20eb49913d262c3943e524f19146023893b598ae03ea3c32a50a4c5",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-long-2.png",
+    "bytes": 60435,
+    "sha256": "d7f39c810c6e25a70e8094957a516239186c35e5744b8452c8bb30607f788fd4",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-long-selected.png",
+    "bytes": 62221,
+    "sha256": "f82e6e129421fabdf0297a92a2294c6fffe881b8d371f1b11706190ff8017293",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-menu.png",
+    "bytes": 78745,
+    "sha256": "0c11288b23b55c8351051aad66427e98144a8d482810809b4e049bcbea7c97c5",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-playing-independent.png",
+    "bytes": 60223,
+    "sha256": "09586774223540cf8ee6db1cb10f0022fd92e71821b3450888c9bc1cc16245c4",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1280x800-single.png",
+    "bytes": 59847,
+    "sha256": "055bb87fa5301b6d04cdcf4c7cd0dd0b61591c5e8d87cbeccf23579c34c3615a",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-empty.png",
+    "bytes": 73480,
+    "sha256": "20cd03c80cf71b68b83a461c0ab05fcfc6a76e0464f2624ddfa8bc839174fd5c",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-full-first.png",
+    "bytes": 88557,
+    "sha256": "d2cd63996a3b8c4786e127bcab148f77b3cb9e358636076db351d599d9ffb0b9",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-full-last.png",
+    "bytes": 84050,
+    "sha256": "b837bf612b9c4985c35948a37962ab6881707ae34e53089bd609b2b9cef43dca",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-long-1.png",
+    "bytes": 73357,
+    "sha256": "1d5c4ade500d0d7d72f6654995c3d7107723424bbfc3d4fd8b3ab333a49fd66c",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-long-2.png",
+    "bytes": 71082,
+    "sha256": "f57385f2c729ec5fc66883e7c22476725a4b0c80005801ad62d5f3f9d047c86b",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-long-selected.png",
+    "bytes": 72973,
+    "sha256": "80eef088f128e341518ad9f8b77c79af14e88c103dffb578fa1f59ef6555919c",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-menu.png",
+    "bytes": 102756,
+    "sha256": "26203e52696de0ae9cc1a57555b2b2dec162c391234242ad399281d3aacc5874",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-playing-independent.png",
+    "bytes": 70917,
+    "sha256": "975a7ead64890c5447fc61aab81d91826064381cac9b88366b4c995cd9356c9c",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-1920x929-single.png",
+    "bytes": 70793,
+    "sha256": "5fb4abfb3f4eed0a9ff4fe635a64a46ceef3328f66f2c3908f1b583170e68bbf",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-empty.png",
+    "bytes": 45013,
+    "sha256": "b439219584cb609a7a39d3fc142e5070a50a83abb58992a61b1479f3d12540ff",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-full-first.png",
+    "bytes": 57248,
+    "sha256": "ebe907ca4cc93afa77a3ddcc34eb6974a1219782815f791a775cde7d7df81cc3",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-full-last.png",
+    "bytes": 53348,
+    "sha256": "9d43172c3b0947bdfcaef7c832ad1a3c70b716d57148eee51ff92e388c3d1815",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-long-1.png",
+    "bytes": 48826,
+    "sha256": "1f320e8e2609cf1469bf1c990173f9b5d5b21a4a33e5777f81d18aaef67e2998",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-long-2.png",
+    "bytes": 46613,
+    "sha256": "fc368bea372cb03cdeb92eb86cb6ce0d16db1dbe7169c90501342e65c24b6934",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-long-selected.png",
+    "bytes": 47886,
+    "sha256": "f2ee26f50c7a9dac5c09f490bf650727bd84796dacd7213a9f58881de7d1bf11",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-menu.png",
+    "bytes": 69533,
+    "sha256": "d8955b80bb92ab3801c43a2806107c899a1a0e915234b89992a812d8415a9527",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-playing-independent.png",
+    "bytes": 45860,
+    "sha256": "5e445f479536bf5c32e38e6ec457d00fe76d5433c345c52c87cc20aee92b90ab",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/dark-390x844-final-single.png",
+    "bytes": 44920,
+    "sha256": "83094ad841aa9541b30a1c4d6dd7f4b99c7f974dd9bd23ca713dabb0fe36cd15",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/assets-detail-native-playing.png",
+    "bytes": 78503,
+    "sha256": "b77d255452b319d935e552a0c3f8a6fd809627029caccb4c8544a40788238434",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/assets-playing-ICL_uranus_en_female_charlie_tob.png",
+    "bytes": 55601,
+    "sha256": "25309044018cb478da1b1679e6fab3a695725955c8245fd0beb9deee7f18b3c0",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/assets-playing-zh_female_linxiao_uranus_bigtts.png",
+    "bytes": 56490,
+    "sha256": "6bd56f2de77a429127144209b2b7c28583b699376b74adc7d3d0f16d36c72ea4",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/assets-playing-zh_male_qingyiyuxuan_mars_bigtts.png",
+    "bytes": 56264,
+    "sha256": "3af5289cf3327dc390c8b3b1c12f5ec6b1253a2eda215221734b4874dc4d2306",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/assets-voiceover-grid.png",
+    "bytes": 53518,
+    "sha256": "8cbf51bf4a029e8c1431478318e5aa38f459f0c37909107effc0185050cd221f",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/canvas-dialog-closed-playing-stopped.png",
+    "bytes": 50666,
+    "sha256": "4b51c13bca60999cc30afb095689a52c435e16a57e7f1a5f1a2e824c0451fb14",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/canvas-dialog-closed.png",
+    "bytes": 49730,
+    "sha256": "42bd05d1b6c0ff2476637eead4687c067e074ddc1a538b025b7e13e0037daf2e",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/canvas-dialog-open.png",
+    "bytes": 77691,
+    "sha256": "bb336e58ef5b33f552d6260fe3997ae8c0078794a33a69dac402127c95848209",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/canvas-dialog-playing.png",
+    "bytes": 76155,
+    "sha256": "5139d88839a07cb02e4adf3e4b51a3e1bf54aeb9506c4c3e771cf805603d2d78",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/formal/n1-continued-play-negative-expected-red-continued-play.png",
+    "bytes": 50270,
+    "sha256": "0876958e2cb9d82f2b7a7ae2a19ee636551e91dc26d612cf655c019e99965529",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-empty.png",
+    "bytes": 71284,
+    "sha256": "31c3e3ebbdfcfee7b4b3623480144e5a658675784e01ff1ddcb0bf7bc84b1dfe",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-full-first.png",
+    "bytes": 77188,
+    "sha256": "65935722b0d6eb138d8118543056386681498807c1516a384843764038844449",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-full-last.png",
+    "bytes": 73150,
+    "sha256": "722ffb47ea095023a7d18fe7b8521e3f675289344754926f2c98882a4e8cf992",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-long-1.png",
+    "bytes": 79128,
+    "sha256": "ac64e33d14d73a3f914fdf6a27d4035617fd9dbfc52974add61a0157cdd28a78",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-long-2.png",
+    "bytes": 76835,
+    "sha256": "abb3cf71f71e6fa4c558d1f5a2e8b76671c74c42b1712a044b3a20ecd5e55337",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-long-selected.png",
+    "bytes": 78581,
+    "sha256": "3312af9cbccca681689fa210a7292a2900a8586e19ea445156636d8eb2ceaea3",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-menu.png",
+    "bytes": 95563,
+    "sha256": "cdfd7b601284a0e01e24b9676f047d52feed874773b3448b0e4f6ae4143664fe",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-playing-independent.png",
+    "bytes": 75592,
+    "sha256": "db80920fc6beb12890e147aba0a2607da4c892340b600704596b8d786c6f6272",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-single.png",
+    "bytes": 75396,
+    "sha256": "9cabb9ff4f18084800a51e92a07b847b2948e664be1ce406d40161ba4031b438",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1280x800-supplement-space-playing.png",
+    "bytes": 76297,
+    "sha256": "cb45ed234198de2a6f9f3fe68ba9b25b78da7eca195da1d47fd27f7449672803",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-empty.png",
+    "bytes": 97512,
+    "sha256": "c4e7f4aab00925b632f43409bdec57a0bdfa9905900576f88824b455073300de",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-full-first.png",
+    "bytes": 113366,
+    "sha256": "ad010a42fbeb20ead22def9d90c1ba89e8e1fad1066cfa330b81b19cd63730ab",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-full-last.png",
+    "bytes": 108947,
+    "sha256": "14756d87db2a71c51a76b5e376df1aa1cacf2fb72831e864130e9f9beb56f7ef",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-long-1.png",
+    "bytes": 98423,
+    "sha256": "66cb53aaf807aac0457c1fe52b0bc9bba856e186468a644c6bd5706c054b2425",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-long-2.png",
+    "bytes": 95903,
+    "sha256": "49ad0df18c12764dcbab9037ee5536cf3915a8894fb2918899ef8cf5e12dcb2d",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-long-selected.png",
+    "bytes": 97681,
+    "sha256": "e43aa9a4d3802b4f1c20f6b1d08ae3ef8d8bf0cd1e6178b9e0c2ec9d26077deb",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-menu.png",
+    "bytes": 132569,
+    "sha256": "04cad4a79ccc04f0bf1337063db2b34ebdbf9b3960a40fcb6ec2e3daa19f5f0f",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-playing-independent.png",
+    "bytes": 95856,
+    "sha256": "9acb143e5e3448a7df02447e81371cfc70d695b9cbadb2a34157a62f32963ec5",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-single.png",
+    "bytes": 95619,
+    "sha256": "f8d1ad62c97289458338b3b2dbdffd7ab2c0a5769f644db37146e202afa4bb7b",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-1920x929-supplement-space-playing.png",
+    "bytes": 95480,
+    "sha256": "04d4e0d2310eee4f396ade85c2397d82237ca2c78d684f1836bbc375407f4a77",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-empty.png",
+    "bytes": 56141,
+    "sha256": "1f6411f7b1c57857b72175cd2d1a493e808e8c2e03d1d549ae15d9cc2d188b7f",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-full-first.png",
+    "bytes": 66924,
+    "sha256": "aa75bee450bde3e289c969bb9119428825162d13d15f2b4cccb1e4d0a59ccfdc",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-full-last.png",
+    "bytes": 63457,
+    "sha256": "961c0e4ada771b65979f97d781c5135d7c558425b549b8318e983e174df1f7c6",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-long-1.png",
+    "bytes": 61171,
+    "sha256": "17155058b857a218809890d6af0448b63578ec77da64f6aa440e78bfdd65745d",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-long-2.png",
+    "bytes": 58850,
+    "sha256": "4472afc39bd203bf9c55cdc9d776bc72a8f81ccf3b055ee86cb1a15c7a4f5145",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-long-selected.png",
+    "bytes": 60045,
+    "sha256": "28e2dfeffbc6fa75ee8cfdbdc1b24705d47dbad2ac3f37362f0a36b5f18ed1b4",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-menu.png",
+    "bytes": 82515,
+    "sha256": "8fe196261e53d7ba3ae459f4b457cc59c664b8d87a5fea16f2c12397f9b59cff",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-playing-independent.png",
+    "bytes": 57899,
+    "sha256": "c5185f825cb6dd193b1454e16bac1850ad4070b7a8796a12fdabd7ad422aaed3",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  },
+  {
+    "path": "docs/evidence/shared-official-voice-preview/acceptance-round2-20261004/light-390x844-final-single.png",
+    "bytes": 56928,
+    "sha256": "b7616f9fc6f1ce403c213321d9a94fa73389462d06bc933917a6eabf991e9b54",
+    "runId": "2026-10-04T04-19-14.961Z-87f8826e",
+    "bundleSha": {
+      "assets": "baf0ac081a39dc262a8dda9b929238fe9be6e2c3589d5ca11b947be8854264bc",
+      "canvas": "e52c86d52428fb7a7c8c76538d1dde04bbeb82636c9d18e3f97b4d46038cb546",
+      "assetsCss": "ea9f66c84b9ff275653638a3185884ee417faf7c0209deb0a5bd2f3361138afd",
+      "themeCss": "aea270d0715a605274deb91794968516a9e6e7b79ae083c8ac00461091199908",
+      "themeScript": "ff78cfc69a4ae10d68e04d98776522a6fceeb7acdd44f497af5e430713e42aa5"
+    }
+  }
+]

@@ -10,6 +10,7 @@
  * Kept free of React and `fetch` so the translation is testable on its own.
  */
 import { cloudMediaUrl } from './api.js'
+import { isOfficialVoicePreviewAsset, isOfficialVoicePreviewPlayable } from './cloud-feed-helpers.js'
 
 /**
  * Media type -> the kind the preview modal switches on.
@@ -44,19 +45,31 @@ export function previewKindOf(mediaType) {
 export function cloudAssetToPreviewItem(asset) {
   const rowId = String(asset?.id ?? '')
   if (rowId === '') return null
-  const kind = previewKindOf(asset?.mediaType)
+  // Issue #3058: an unverified official voice preview is a text detail — its
+  // body is the row description, never an unsupported-media placeholder even
+  // if a stray media locator slipped in. Verified rows stream as audio.
+  const unverifiedVoice = isOfficialVoicePreviewAsset(asset) && !isOfficialVoicePreviewPlayable(asset)
+  const kind = unverifiedVoice ? 'file' : previewKindOf(asset?.mediaType)
   const description = String(asset?.description ?? '')
+  // Issue #3058（OCR #11）：已验证官方音色直接读 DTO primary 官方 CDN 直链——
+  // 详情不绕 media 路由的 302，DTO-only 行（media_url 为空）同样可播。
+  const officialAudioUrl = kind === 'audio' && isOfficialVoicePreviewPlayable(asset)
+    ? String(asset.preview.primary_url)
+    : ''
   return {
     id: `cloud:${rowId}`,
     title: String(asset?.name ?? ''),
     kind,
     // A text row has nothing to stream: its body is the description.
-    previewUrl: kind === 'file' ? '' : cloudMediaUrl(rowId, 'media'),
+    previewUrl: kind === 'file' ? '' : (officialAudioUrl || cloudMediaUrl(rowId, 'media')),
     extension: '',
     pathInfo: '',
     text: kind === 'file' ? description : '',
     sourceAssetId: rowId,
     cloud: true,
     sourceAsset: asset,
+    // The preview DTO must reach the modal so its actions can be gated on
+    // purpose — never on the display name or the row id.
+    preview: asset?.preview ?? null,
   }
 }

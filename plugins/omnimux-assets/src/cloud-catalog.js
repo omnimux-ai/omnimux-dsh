@@ -257,6 +257,9 @@ export function createCloudCatalog(deps = {}) {
         row.name.toLowerCase().includes(needle)
         || row.description.toLowerCase().includes(needle)
         || (row.tags ?? []).some((tag) => String(tag).toLowerCase().includes(needle))
+        // 音色按其稳定标识可搜：display name 之外，voice_type（代号/别名键）是
+        // 画布与资产库共用的同一身份。
+        || String(row.meta?.voice_type ?? '').toLowerCase().includes(needle)
       )
     })
 
@@ -340,6 +343,12 @@ export function createCloudCatalog(deps = {}) {
     if (!library) throw new AssetsError('catalog-unavailable', 'local library is not available')
     const row = getRow(id)
     if (!row) throw new AssetsError('catalog-not-found', 'cloud asset not found')
+
+    // 官方音色试听是 preview-only 用途：在任何网络请求、暂存目录、入库写入
+    // 之前整行拒绝，不是只在 UI 藏按钮。已验证链接只允许播放，不允许落盘。
+    if (row.meta?.preview?.purpose === 'official-voice-preview') {
+      throw new AssetsError('voice-preview-only', 'official voice previews are listen-only and cannot be saved')
+    }
 
     const baseName = String(options.name ?? '').trim() || row.name
     // 若已存过该云端行且未指定重命名，直接复用返回现有资产

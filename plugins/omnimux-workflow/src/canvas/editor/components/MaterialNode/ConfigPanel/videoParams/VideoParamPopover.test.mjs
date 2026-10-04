@@ -242,8 +242,15 @@ test('components.css 新样式块含 overflow-y:auto 与关键设计规格（32p
   assert.match(videoCssBlock, /\.wf-video-choice-tile--active \{[\s\S]*?brand-primary/);
   // Compact Toggle：160px 定宽（禁止通栏）
   assert.match(videoCssBlock, /\.wf-video-compact-toggle \{[\s\S]*?width:\s*160px/);
-  // 画幅网格 4 列、卡片 56px、激活 brand 描边、标签 12px
-  assert.match(videoCssBlock, /\.wf-video-aspect-grid \{[\s\S]*?repeat\(4,\s*1fr\)/);
+  // 画幅网格：单行自适应平铺（flex 等分）——断言精确到本规则块，
+  // 不再用 [\s\S]*? 跨块惰性匹配（历史上曾误吃无关 .wf-voice-picker__filters 的
+  // repeat(4, 1fr) 形成假阳性）；卡片 56px、激活 brand 描边、标签 12px
+  const aspectGrid = extractRuleBlock('.wf-video-aspect-grid');
+  assert.match(aspectGrid, /display:\s*flex/);
+  assert.match(aspectGrid, /flex-direction:\s*row/);
+  const aspectCard = extractRuleBlock('.wf-video-aspect-card');
+  assert.match(aspectCard, /flex:\s*1 1 0/);
+  assert.match(aspectCard, /min-width:\s*0/);
   assert.match(videoCssBlock, /\.wf-video-aspect-card \{[\s\S]*?height:\s*56px/);
   assert.match(videoCssBlock, /\.wf-video-aspect-card--active \{[\s\S]*?brand-primary/);
   assert.match(videoCssBlock, /\.wf-video-aspect-card__label \{[\s\S]*?font-size:\s*12px/);

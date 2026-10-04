@@ -1,0 +1,70 @@
+{
+  "inst": 6,
+  "actionT0": 1791089657056,
+  "target": {
+    "id": 6,
+    "paused": true,
+    "currentTime": 0,
+    "connected": true,
+    "controls": true
+  },
+  "state": {
+    "id": 6,
+    "paused": false,
+    "currentTime": 0.544304,
+    "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+    "ended": false,
+    "connected": true
+  },
+  "keys": [
+    {
+      "key": " ",
+      "code": "Space",
+      "trusted": true,
+      "targetAudio": true,
+      "t": 1791089657058
+    }
+  ],
+  "events": [
+    {
+      "id": 6,
+      "kind": "play",
+      "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+      "detail": {
+        "paused": false,
+        "currentTime": 0
+      },
+      "t": 1791089657112
+    },
+    {
+      "id": 6,
+      "kind": "playing",
+      "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+      "detail": {
+        "paused": false,
+        "currentTime": 0
+      },
+      "t": 1791089657112
+    },
+    {
+      "id": 6,
+      "kind": "timeupdate",
+      "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+      "detail": {
+        "paused": false,
+        "currentTime": 0.233548
+      },
+      "t": 1791089657318
+    },
+    {
+      "id": 6,
+      "kind": "timeupdate",
+      "src": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/zh_female_linxiao_uranus_bigtts.mp3",
+      "detail": {
+        "paused": false,
+        "currentTime": 0.500041
+      },
+      "t": 1791089657584
+    }
+  ]
+}

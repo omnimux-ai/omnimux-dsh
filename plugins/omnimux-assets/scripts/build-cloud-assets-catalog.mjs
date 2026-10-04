@@ -87,8 +87,8 @@
  *   node scripts/build-cloud-assets-catalog.mjs --out=/tmp/catalog --dry-run
  */
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, extname, join, resolve, sep } from 'node:path'
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -97,6 +97,77 @@ const PAGE_SIZE = 24
 /** Scope id of the cross-category shards the client's 全部 tab pages through. */
 const ALL_SCOPE = 'all'
 const CATALOG_VERSION = 1
+/**
+ * The voice-preview snapshot shipped inside this package. The hub exporter
+ * writes it; the catalog builder only consumes it — the OPC voice registry is
+ * never read, so a catalog rebuild needs no developer-machine asset library.
+ */
+const DEFAULT_VOICE_SNAPSHOT = join(DEFAULT_OUT, 'voice-preview-snapshot.json')
+const VOICE_SNAPSHOT_SCHEMA = 1
+const VOICE_PREVIEW_PURPOSE = 'official-voice-preview'
+// The one registered official preview CDN the hub mapping and exporter
+// publish under (mirrors DEFAULT_CDN_BASE in the hub preview module — a
+// constant contract, not a shared registry). Every snapshot preview URL the
+// builder ships must parse as HTTPS on this exact origin + base path; any
+// other host, scheme, userinfo, query/hash, traversal or encoded separator
+// fails closed before a row is emitted (#3058 OCR #6).
+const VOICE_PREVIEW_CDN_BASE = 'https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/bigtts/'
+const VOICE_PREVIEW_CDN_URL = new URL(VOICE_PREVIEW_CDN_BASE)
+
+/**
+ * Snapshot preview-URL contract, shared by primary_url and candidates: a
+ * string that parses as `https://<registered-origin><registered-base-path><file>`
+ * with no userinfo, query or hash, whose percent-decoded key still resolves
+ * strictly under the registered base path.
+ *
+ * Two strictness tiers:
+ *  - `strict: true` (primary_url — audited, verified filenames only): every
+ *    decoded path segment must be a plain filename; a decoded `/` or `\`
+ *    inside a segment is rejected, the same fail-closed rule the hub mapping
+ *    parser applies to mapping files (#3058 OCR #5/#6).
+ *  - `strict: false` (candidates — rule-derived guesses): slash-alias names
+ *    legitimately encode the separator inside one filename (`name%2FAlias.mp3`),
+ *    so a decoded separator is allowed — but the fully decoded path is still
+ *    checked against the base, and `.`/`..`/empty segments are refused, so a
+ *    decoder-downstream CDN can never resolve the key outside the subtree.
+ * @param {unknown} value @param {{ strict?: boolean }} [opts]
+ */
+function isOfficialPreviewUrl(value, { strict = true } = {}) {
+  if (typeof value !== 'string' || value === '') return false
+  let url
+  try {
+    url = new URL(value)
+  } catch {
+    return false
+  }
+  if (url.protocol !== 'https:' || url.origin !== VOICE_PREVIEW_CDN_URL.origin) return false
+  if (url.username !== '' || url.password !== '' || url.search !== '' || url.hash !== '') return false
+  // The key must point strictly below the registered base path — the bare
+  // base itself (or anything outside it) is not a file.
+  if (!url.pathname.startsWith(VOICE_PREVIEW_CDN_URL.pathname)
+    || url.pathname.length <= VOICE_PREVIEW_CDN_URL.pathname.length) return false
+  const key = url.pathname.slice(VOICE_PREVIEW_CDN_URL.pathname.length)
+  for (const segment of key.split('/')) {
+    let decoded = segment
+    try {
+      decoded = decodeURIComponent(segment)
+    } catch {
+      return false
+    }
+    if (decoded === '..' || decoded === '.' || decoded === '') return false
+    if (decoded.includes('/') || decoded.includes('\\')) {
+      // strict: a decoded separator inside one segment is refused outright.
+      if (strict) return false
+      // relaxed: split the decoded segment on its own separators — a `..`
+      // hidden behind an encoded separator (safe%2F..%2Fescape) must not
+      // resolve outside the base on a decoder-downstream CDN either.
+      for (const sub of decoded.split(/[/\\]/)) {
+        if (sub === '..' || sub === '.' || sub === '') return false
+      }
+    }
+  }
+  return true
+}
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.bmp'])
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.ogv'])
@@ -274,6 +345,19 @@ function readJsonSafe(file) {
   }
 }
 
+/**
+ * Silent variant of readJsonSafe: used where an absent or corrupt file is one
+ * valid branch of a fail-closed check rather than a warning worth logging.
+ * @param {string} file
+ */
+function readJsonQuiet(file) {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
 /** @param {string} dir */
 function listDirSafe(dir) {
   try {
@@ -298,6 +382,131 @@ function isFile(abs) {
     return statSync(abs).isFile()
   } catch {
     return false
+  }
+}
+
+/**
+ * Canonical absolute path for overlap and identity decisions: every symlink on
+ * the way down is resolved, so two spellings of one directory (`--base` through
+ * an alias, `--out` through the real path) compare equal (#3058 OCR #2). A
+ * path that does not exist yet resolves through its nearest existing ancestor,
+ * then re-appends the still-missing tail.
+ * @param {string} abs
+ */
+function canonicalPath(abs) {
+  let missing = ''
+  let current = resolve(abs)
+  while (!existsSync(current)) {
+    missing = join(basename(current), missing)
+    const parent = dirname(current)
+    if (parent === current) break
+    current = parent
+  }
+  const realBase = existsSync(current) ? realpathSync(current) : current
+  return missing === '' ? realBase : join(realBase, missing)
+}
+
+/**
+ * Is `dir` strictly inside `container` (canonical paths, descendant direction
+ * only — equality is the supported in-place scenario, not containment).
+ * @param {string} dir @param {string} container
+ */
+function pathWithin(dir, container) {
+  const rel = relative(container, dir)
+  return rel !== '' && rel !== '..' && !rel.startsWith(`..${sep}`)
+}
+
+/**
+ * The builder must never let its output wipe eat one of its inputs. Call before
+ * the first rm/cp/write: exact same canonical path is the supported in-place
+ * refresh; any other ancestor/descendant overlap between input and output is
+ * refused rather than deleting source files the copy still needs (#3058 OCR #2).
+ * @param {string} input @param {string} output @param {string} inputLabel
+ *   @param {string} outputLabel
+ */
+function assertNoPathOverlap(input, output, inputLabel, outputLabel) {
+  if (canonicalPath(input) === canonicalPath(output)) return
+  if (pathWithin(canonicalPath(input), canonicalPath(output))) {
+    throw new Error(`${inputLabel} sits inside ${outputLabel} — refusing to wipe output over its own source: ${input}`)
+  }
+  if (pathWithin(canonicalPath(output), canonicalPath(input))) {
+    throw new Error(`${outputLabel} sits inside ${inputLabel} — refusing to write the output into the source tree: ${output}`)
+  }
+}
+
+/**
+ * Fail-closed layout gate for the consumed voice snapshot, called before the
+ * first rm/cp/write of a build or refresh (#3058 final OCR).
+ *
+ * Two refusal classes, nothing else is guessed or auto-restored:
+ *
+ * - snapshot-input-conflict: the snapshot's position inside the deleted or
+ *   rewritten tree collides with a path the build itself generates —
+ *   manifest.json, index.json, a `<scope>/page-NNNN.json` shard (directly
+ *   or as a parent of the snapshot path), or a generated scope directory
+ *   itself. Restoring the input at that spot would silently corrupt the
+ *   freshly written catalog or EISDIR against a directory the build owns,
+ *   so the refusal keeps the original tree untouched. `generatedScopes`
+ *   is every scope the run writes (`all`, category and category/sub ids);
+ *   each scope directory and every ancestor of one is a reserved path —
+ *   an empty list disables the generated-path checks. A snapshot nested
+ *   inside a scope directory stays supported: only occupying the reserved
+ *   directory path itself is refused.
+ * - not-supported: a path component of the consumed input that the wipe
+ *   deletes is itself a symlink. The alias is unrecoverable once removed and
+ *   the builder does not extend itself to recreate links — external symlink
+ *   inputs that merely resolve inside the wiped tree stay supported because
+ *   their spelled path survives the wipe.
+ *
+ * @param {string} inputPath the consumed --voice-snapshot path as spelled
+ * @param {string} wipedCanonical the canonical dir whose contents get deleted
+ *   (--out for a full build or a copied refresh, --base in place)
+ * @param {string[]} generatedScopes scope ids the run writes page shards for
+ */
+function assertSupportedSnapshotLayout(inputPath, wipedCanonical, generatedScopes) {
+  const generated = new RegExp(
+    `^(?:${generatedScopes.map((scope) => toRel(scope).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})/page-\\d{4}\\.json$`,
+  )
+  const pageCheck = generatedScopes.length > 0
+  // The mkdir side of generation: every scope directory the run creates and
+  // every ancestor of one is a reserved path. A snapshot file parked exactly
+  // at one of them passes the page-file check yet still collides — the shard
+  // mkdir fails on the file or the restore EISDIRs against the directory —
+  // so equality with a reserved path refuses the same way (#3058 final OCR).
+  const reservedDirs = new Set()
+  for (const scope of generatedScopes) {
+    const parts = toRel(scope).split('/')
+    for (let i = 1; i <= parts.length; i += 1) {
+      reservedDirs.add(parts.slice(0, i).join('/'))
+    }
+  }
+  const rel = toRel(relative(wipedCanonical, canonicalPath(inputPath)))
+  let current = ''
+  for (const segment of rel.split('/')) {
+    current = current === '' ? segment : `${current}/${segment}`
+    if (current === 'manifest.json' || current === 'index.json' || (pageCheck && generated.test(current))) {
+      throw new Error(`snapshot-input-conflict: the consumed snapshot's position inside --out collides with generated catalog output (${current}) — refusing before any rm/write`)
+    }
+  }
+  // Reserved directories refuse on equality only: an input nested inside a
+  // scope directory stays supported, but occupying the directory's own path
+  // collides with the mkdir the build performs for it.
+  if (reservedDirs.has(rel)) {
+    throw new Error(`snapshot-input-conflict: the consumed snapshot's position inside --out collides with generated catalog output (${rel}) — refusing before any rm/write`)
+  }
+
+  // Any spelled component whose resolved position lands inside the wiped tree
+  // is removed with it; if that component is a symlink the consumed input's
+  // own path dies unrecoverably — refuse rather than report success while the
+  // same command can never run again (#3058 final OCR medium).
+  for (let part = resolve(inputPath); ;) {
+    const spelled = join(canonicalPath(dirname(part)), basename(part))
+    if (pathWithin(spelled, wipedCanonical) && existsSync(part) && lstatSync(part).isSymbolicLink()) {
+      throw new Error(`not-supported: the consumed snapshot path traverses a symlink inside the deleted tree (${part}) — refusing to wipe an input alias it cannot restore`)
+    }
+    const parent = dirname(part)
+    if (parent === part) break
+    part = parent
   }
 }
 
@@ -1764,33 +1973,170 @@ function collectStyle(ctx, add) {
 // audio — voices / sfx / bgm
 // ---------------------------------------------------------------------------
 
-/** Official Volcengine voice catalogue. Descriptor-only: no sample audio ships. */
+/**
+ * One snapshot voice's preview projection.
+ *
+ * `verified-file` is the only state that ships a playable URL: `primary_url`
+ * is the single primary link the media route redirects to, and `candidates`
+ * is the ordered, deduplicated fallback list the client may copy for its own
+ * retry — the Host never probes candidates itself. An `unverified` row keeps
+ * its name and its generate option but carries no URL: a link is never
+ * guessed, and a primary that failed checking never leaks back in.
+ * @param {{ purpose?: unknown, state?: unknown, primary_url?: unknown,
+ *   candidates?: unknown, checked_at?: unknown, evidence_ref?: unknown }} preview
+ * @returns {Record<string, unknown>}
+ */
+function voicePreviewOf(preview) {
+  const state = preview.state === 'verified-file' ? 'verified-file' : 'unverified'
+  const primary = state === 'verified-file' ? text(preview.primary_url) : null
+  // 候选按上游规则原样传递：exporter 已按序去重，前端把它当回退列表直接
+  // 消费；builder 不在这里二次加工或重排，避免两套候选规则分叉。
+  const candidates = Array.isArray(preview.candidates)
+    ? preview.candidates.map((candidate) => text(candidate)).filter((url) => url !== '')
+    : []
+  return {
+    purpose: VOICE_PREVIEW_PURPOSE,
+    state,
+    primary_url: primary,
+    candidates,
+    checked_at: typeof preview.checked_at === 'string' && preview.checked_at !== '' ? preview.checked_at : null,
+    evidence_ref: typeof preview.evidence_ref === 'string' && preview.evidence_ref !== '' ? preview.evidence_ref : null,
+  }
+}
+
+/**
+ * One catalog row for one snapshot voice.
+ *
+ * The row is the same serializer output the OPC-registry feed produced —
+ * `key: volcengine/<voice_type>` keeps the content-hash id stable across
+ * feed swaps — plus the preview projection on meta and a playable
+ * `media_url`/`media_type` for verified rows only.
+ * @param {{ assetsRoot: string }} ctx
+ * @param {Record<string, unknown>} row a validated `voices[]` entry
+ * @returns {CatalogAsset}
+ */
+function voiceAssetOf(ctx, row) {
+  const voiceType = text(row.voice_type)
+  const language = text(row.language)
+  const preview = voicePreviewOf(row.preview ?? {})
+  return makeAsset(ctx, {
+    key: `volcengine/${voiceType}`,
+    category: 'audio',
+    subCategory: 'voiceover',
+    name: text(row.display_name) || text(row.name) || voiceType,
+    description: [text(row.category), language, text(row.section)].filter(Boolean).join(' · ')
+      || '火山引擎官方音色',
+    tags: ['火山引擎', language, ...(Array.isArray(row.tags) ? row.tags : [])],
+    remoteMedia: preview.primary_url ?? '',
+    meta: {
+      source: 'volcengine',
+      voice_type: voiceType,
+      voice_name: text(row.name),
+      language,
+      voice_category: text(row.category),
+      resource_id: text(row.resource_id),
+      section: text(row.section),
+      playable: preview.state === 'verified-file',
+      preview,
+    },
+  })
+}
+
+/**
+ * Official Volcengine voice catalogue, read from the shared snapshot the hub
+ * exports — not from the OPC registry file (`素材库/音频/volcengine-voices.json`),
+ * which only ever existed on the asset-library developer machine.
+ */
 function collectVoices(ctx, add) {
-  const rows = readJsonSafe(join(ctx.assetsRoot, '素材库', '音频', 'volcengine-voices.json'))
-  if (!Array.isArray(rows)) return
-  for (const row of rows) {
-    const voiceType = text(row.voice_type)
-    if (!voiceType) continue
-    const language = text(row.language)
-    add(makeAsset(ctx, {
-      key: `volcengine/${voiceType}`,
-      category: 'audio',
-      subCategory: 'voiceover',
-      name: text(row.display_name) || text(row.name) || voiceType,
-      description: [text(row.category), language, text(row.section)].filter(Boolean).join(' · ')
-        || '火山引擎官方音色',
-      tags: ['火山引擎', language, ...(Array.isArray(row.tags) ? row.tags : [])],
-      meta: {
-        source: 'volcengine',
-        voice_type: voiceType,
-        voice_name: text(row.name),
-        language,
-        voice_category: text(row.category),
-        resource_id: text(row.resource_id),
-        section: text(row.section),
-        playable: false,
-      },
-    }))
+  for (const row of ctx.voices ?? []) {
+    const asset = voiceAssetOf(ctx, row)
+    if (asset) add(asset)
+  }
+}
+
+/**
+ * Read and validate the hub voice-preview snapshot.
+ *
+ * The contract, produced by `plugins/omnimux/scripts/export-voice-previews.mjs`:
+ * `{ schema_version: 1, catalog_fingerprint, preview_fingerprint, voices: [...] }`
+ * where every voice is a registry record plus a `preview` block —
+ * `{ purpose: 'official-voice-preview', state: 'verified-file'|'unverified',
+ *    primary_url, candidates, checked_at, evidence_ref }`.
+ *
+ * Validation is fail-closed: a snapshot that is missing, unreadable, the wrong
+ * schema, or that marks a voice verified without a primary on the registered
+ * official CDN is refused outright rather than silently producing an empty or
+ * lying voice slice. `primary_url` and every `candidates` entry must be string
+ * URLs on the registered HTTPS origin and base path — a hand-edited snapshot
+ * can never smuggle a non-official media URL into a catalog row (#3058 OCR #6).
+ * @param {string} file absolute snapshot path
+ * @returns {{ schema_version: number, catalog_fingerprint: string,
+ *   preview_fingerprint: string, voices: Record<string, unknown>[] }}
+ */
+function loadVoiceSnapshot(file) {
+  if (!isFile(file)) {
+    throw new Error(`voice snapshot not found: ${file}\nPass --voice-snapshot=<path> or ship cloud-catalog/voice-preview-snapshot.json`)
+  }
+  let snapshot
+  try {
+    snapshot = JSON.parse(readFileSync(file, 'utf8'))
+  } catch (error) {
+    throw new Error(`voice snapshot is not valid JSON (${file}): ${error instanceof Error ? error.message : String(error)}`)
+  }
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+    throw new Error(`voice snapshot must be a JSON object (${file})`)
+  }
+  if (snapshot.schema_version !== VOICE_SNAPSHOT_SCHEMA) {
+    throw new Error(`voice snapshot schema_version must be ${VOICE_SNAPSHOT_SCHEMA}, got ${JSON.stringify(snapshot.schema_version)} (${file})`)
+  }
+  if (!Array.isArray(snapshot.voices)) {
+    throw new Error(`voice snapshot must carry a voices[] array (${file})`)
+  }
+  const voices = []
+  const seenTypes = new Set()
+  for (const [position, voice] of snapshot.voices.entries()) {
+    const label = `voice snapshot voices[${position}]`
+    if (!voice || typeof voice !== 'object' || Array.isArray(voice)) {
+      throw new Error(`${label} must be an object`)
+    }
+    const voiceType = text(voice.voice_type)
+    if (voiceType === '') throw new Error(`${label} must carry a voice_type`)
+    if (seenTypes.has(voiceType)) throw new Error(`${label} duplicates voice_type ${voiceType}`)
+    seenTypes.add(voiceType)
+    const preview = voice.preview
+    if (!preview || typeof preview !== 'object' || Array.isArray(preview)) {
+      throw new Error(`${label} (${voiceType}) must carry a preview block`)
+    }
+    if (preview.purpose !== VOICE_PREVIEW_PURPOSE) {
+      throw new Error(`${label} (${voiceType}) preview.purpose must be ${VOICE_PREVIEW_PURPOSE}`)
+    }
+    if (preview.state !== 'verified-file' && preview.state !== 'unverified') {
+      throw new Error(`${label} (${voiceType}) preview.state must be verified-file or unverified`)
+    }
+    // A verified row publishes one playable URL; an unverified row publishes
+    // none at all — a primary on an unverified row is a contradiction, not a
+    // fallback, so it fails closed like a missing one.
+    if (preview.state === 'verified-file' && !isOfficialPreviewUrl(preview.primary_url)) {
+      throw new Error(`${label} (${voiceType}) is verified-file but primary_url is not a string URL on the registered official CDN`)
+    }
+    if (preview.state === 'unverified' && preview.primary_url != null) {
+      throw new Error(`${label} (${voiceType}) is unverified but carries a primary_url — unverified voices never publish a link`)
+    }
+    if (!Array.isArray(preview.candidates)) {
+      throw new Error(`${label} (${voiceType}) preview.candidates must be an array`)
+    }
+    for (const candidate of preview.candidates) {
+      if (!isOfficialPreviewUrl(candidate, { strict: false })) {
+        throw new Error(`${label} (${voiceType}) preview.candidates entry is not a string URL on the registered official CDN`)
+      }
+    }
+    voices.push(voice)
+  }
+  return {
+    schema_version: VOICE_SNAPSHOT_SCHEMA,
+    catalog_fingerprint: text(snapshot.catalog_fingerprint),
+    preview_fingerprint: text(snapshot.preview_fingerprint),
+    voices,
   }
 }
 
@@ -2111,6 +2457,54 @@ function sortItems(items) {
   return items.slice().sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 }
 
+/**
+ * The `index.json` entry for one full row — the single serializer both the
+ * full build and the `--voices-only` refresh use, so a voice slice can never
+ * drift from what a rebuild would emit.
+ *
+ * `meta` stays a whitelist: the portable remote fallbacks and the character
+ * dimensions it has always carried, plus — for voice rows only — the identity
+ * fields the Host searches by and the preview projection the two frontends
+ * read. Voice keys never leak onto non-voice rows, which is what keeps a
+ * refresh byte-equivalent on the 5879 untouched rows.
+ * @param {CatalogAsset | Record<string, unknown>} row
+ * @returns {Record<string, unknown>}
+ */
+function indexEntryOf(row) {
+  /** @type {Record<string, unknown>} */
+  const meta = {}
+  if (row.meta?.source_media_url) meta.source_media_url = row.meta.source_media_url
+  if (row.meta?.source_cover_url) meta.source_cover_url = row.meta.source_cover_url
+  // The professional dimensions ride along on the server index too, so the
+  // 收藏到本地 path can describe a row with the same vocabulary the chips use.
+  if (row.meta?.dims) meta.dims = row.meta.dims
+  if (row.meta?.voice_type) {
+    meta.voice_type = row.meta.voice_type
+    if (typeof row.meta.resource_id === 'string' && row.meta.resource_id !== '') {
+      meta.resource_id = row.meta.resource_id
+    }
+    if (typeof row.meta.source === 'string' && row.meta.source !== '') {
+      meta.source = row.meta.source
+    }
+    meta.playable = row.meta.playable === true
+    if (row.meta.preview) meta.preview = row.meta.preview
+  }
+  const entry = {
+    id: row.id,
+    category: row.category,
+    sub_category: row.sub_category,
+    sub_categories: shelfListOf(row),
+    name: row.name,
+    description: row.description,
+    media_type: row.media_type,
+    media_url: row.media_url,
+    cover_url: row.cover_url,
+    tags: row.tags,
+  }
+  if (Object.keys(meta).length > 0) entry.meta = meta
+  return entry
+}
+
 /** @param {string} dir @param {string} relPath @param {unknown} body */
 function writeJson(dir, relPath, body) {
   const file = join(dir, relPath)
@@ -2138,25 +2532,366 @@ function pageSpecs(items, scope) {
   return out
 }
 
+/**
+ * The voice identities a shipped catalog's page shards already hold.
+ *
+ * Page rows carry the full `meta` — including the `voice_type` the registry
+ * keyed — even on catalogs whose `index.json` predates voice meta. That makes
+ * the shards the independent lineage the completeness gate verifies a new
+ * snapshot against: a schema-valid, truncated snapshot can sit inside `--out`
+ * and even be the file at `voice-preview-snapshot.json`, but it cannot rewrite
+ * these rows before the gate reads them (#3058 OCR 2026-10-04 medium). A voice
+ * row is identified by the shelf it ships on — `category: audio` +
+ * `sub_category: voiceover` — so legacy rows qualify without carrying the
+ * newer preview block. Only non-empty string voice_types are collected, and
+ * `all/` plus the narrower voice scopes are scanned so catalogs that never
+ * wrote `all/` still contribute their shard rows.
+ * @param {string} catalogDir the existing --out, before any wipe
+ * @returns {Set<string>}
+ */
+function pageShardVoiceTypes(catalogDir) {
+  const types = new Set()
+  for (const scope of ['audio/voiceover', 'audio', ALL_SCOPE]) {
+    const dir = join(catalogDir, scope)
+    for (const file of listDirSafe(dir)) {
+      if (!file.isFile() || !/^page-\d{4}\.json$/.test(file.name)) continue
+      const page = readJsonQuiet(join(dir, file.name))
+      if (!page || !Array.isArray(page.items)) continue
+      for (const item of page.items) {
+        if (item?.category !== 'audio' || item?.sub_category !== 'voiceover') continue
+        const voiceType = item && item.meta ? text(item.meta.voice_type) : ''
+        if (voiceType !== '') types.add(voiceType)
+      }
+    }
+  }
+  return types
+}
+
+/**
+ * `--voices-only` refresh: rebuild the voice slice of an existing catalog
+ * against a new snapshot, reusing every untouched row verbatim.
+ *
+ * The refresh reads the committed catalog — never the OPC library — keeps all
+ * 6388 ids stable, re-serializes the voice rows through the same `makeAsset` +
+ * `indexEntryOf` the full build uses, and leaves every non-voice row
+ * content-equal. `--out` defaults to the base catalog itself; passing a
+ * different directory copies the whole catalog there first, then refreshes.
+ * @param {{ baseDir: string, outDir: string, voiceSnapshot: ReturnType<typeof loadVoiceSnapshot>,
+ *   voiceSnapshotPath: string, generatedAt: string, dryRun: boolean }} opts
+ */
+function refreshVoicesOnly(opts) {
+  const { baseDir, outDir, voiceSnapshot, voiceSnapshotPath, generatedAt, dryRun } = opts
+  // Refuse every ancestor/descendant overlap before the first rm/cp/write; the
+  // one supported overlap is base and out resolving to the same directory —
+  // the in-place refresh — and that has to hold through symlink aliases too
+  // (#3058 OCR #2).
+  assertNoPathOverlap(baseDir, outDir, '--base', '--out')
+  const inPlace = canonicalPath(outDir) === canonicalPath(baseDir)
+  const manifest = readJsonSafe(join(baseDir, 'manifest.json'))
+  const index = readJsonSafe(join(baseDir, 'index.json'))
+  if (!manifest || !Array.isArray(manifest.categories)) {
+    throw new Error(`base catalog has no readable manifest.json: ${baseDir}`)
+  }
+  if (!Array.isArray(index)) {
+    throw new Error(`base catalog has no readable index.json: ${baseDir}`)
+  }
+
+  // Fail closed before the first rm/cp/write when the consumed snapshot's own
+  // position is unrecoverable: a generated file path, or a path that crosses
+  // a symlink the wipe deletes. The scope list mirrors the shard rewrite loop
+  // below exactly (#3058 final OCR).
+  {
+    const scopes = [ALL_SCOPE]
+    for (const category of manifest.categories) {
+      scopes.push(category.id)
+      for (const sub of Array.isArray(category.sub_categories) ? category.sub_categories : []) {
+        if (sub.id === CHARACTER_FILTER_SCOPE) continue
+        if (!isDir(join(baseDir, category.id, sub.id))) continue
+        scopes.push(`${category.id}/${sub.id}`)
+      }
+    }
+    assertSupportedSnapshotLayout(
+      voiceSnapshotPath,
+      canonicalPath(inPlace ? baseDir : outDir),
+      scopes,
+    )
+  }
+
+  // Every page file's rows, in the order the full builder emitted them. The
+  // `all/` scope is the canonical row set: it covers each row exactly once.
+  const allDir = join(baseDir, ALL_SCOPE)
+  const allItems = []
+  for (const file of listDirSafe(allDir)) {
+    if (!file.isFile() || !/^page-\d{4}\.json$/.test(file.name)) continue
+    const page = readJsonSafe(join(allDir, file.name))
+    if (!page || !Array.isArray(page.items)) {
+      throw new Error(`base catalog has a corrupt page file: ${file.name}`)
+    }
+    allItems.push(...page.items)
+  }
+  if (allItems.length !== Number(manifest.totalAssets)) {
+    throw new Error(`base catalog all/ shards hold ${allItems.length} rows but manifest.json declares ${manifest.totalAssets}`)
+  }
+
+  // A voice row is a row the shared snapshot owns; everything else is copied
+  // verbatim so a refresh can never rewrite another slice.
+  const voices = voiceSnapshot.voices
+  const baseVoiceByType = new Map()
+  for (const row of allItems) {
+    const voiceType = row?.meta?.voice_type
+    if (typeof voiceType === 'string' && voiceType !== '' && !baseVoiceByType.has(voiceType)) {
+      baseVoiceByType.set(voiceType, row)
+    }
+  }
+  const snapshotTypes = new Set(voices.map((row) => text(row.voice_type)))
+  // Fail closed in both directions before any output is written: a snapshot
+  // missing baseline voices would silently delist the rest, and a snapshot
+  // carrying a voice_type the base catalog never registered would mint a row
+  // nobody verified — the refresh owns neither decision (#3058 OCR #7). The
+  // default refresh contract is therefore id-set equality between snapshot
+  // and baseline; a future incremental registry lands through a full build.
+  const missingVoices = [...baseVoiceByType.keys()].filter((voiceType) => !snapshotTypes.has(voiceType))
+  if (missingVoices.length > 0) {
+    throw new Error(`voice snapshot is missing ${missingVoices.length} baseline voice(s): ${missingVoices.slice(0, 5).join(', ')}${missingVoices.length > 5 ? '…' : ''} — refusing to delist`)
+  }
+  const unknownVoices = [...snapshotTypes].filter((voiceType) => !baseVoiceByType.has(voiceType))
+  if (unknownVoices.length > 0) {
+    throw new Error(`voice snapshot carries ${unknownVoices.length} voice_type(s) not registered in the base catalog: ${unknownVoices.slice(0, 5).join(', ')}${unknownVoices.length > 5 ? '…' : ''} — refusing to mint unregistered voices`)
+  }
+  const voiceItems = sortItems(voices.map((row) => {
+    const baseline = baseVoiceByType.get(text(row.voice_type))
+    // 原音色行全部保留：id/名称/描述/tags/既有 meta 一律沿用基线，快照只合入
+    // preview 投影与它的可播派生字段——规范化的注册表字段不得反向覆盖掉
+    // 目录里更全的音色档案。
+    const preview = voicePreviewOf(row.preview ?? {})
+    return {
+      ...baseline,
+      media_url: preview.primary_url ?? '',
+      media_type: preview.primary_url ? 'audio' : baseline.media_type,
+      meta: {
+        ...baseline.meta,
+        playable: preview.state === 'verified-file',
+        preview,
+      },
+    }
+  }).filter(Boolean))
+  const keptItems = allItems.filter((row) => !(row?.meta?.voice_type))
+  const merged = [...keptItems, ...voiceItems]
+  const byId = new Map()
+  for (const row of merged) {
+    if (!byId.has(row.id)) byId.set(row.id, row)
+  }
+  const items = [...byId.values()]
+
+  log(`[cloud-catalog] voices-only base : ${baseDir}`)
+  log(`[cloud-catalog] voice snapshot   : ${voiceSnapshot.voices.length} voice(s) · fp ${voiceSnapshot.preview_fingerprint || '(none)'}`)
+  log(`[cloud-catalog] output           : ${outDir}${dryRun ? ' (dry run)' : ''}`)
+
+  if (dryRun) {
+    log(`[cloud-catalog] dry run: ${items.length} rows · ${voiceItems.length} refreshed voice row(s)`)
+    return
+  }
+
+  // A different --out starts from a full copy so unchanged shards survive
+  // byte-for-byte; the voice scopes are then rewritten in place. A consumed
+  // snapshot that lives inside --out is captured before the wipe and restored
+  // at its own relative path afterwards (#3058 OCR #5).
+  const consumedRel = inPlace ? '' : toRel(relative(canonicalPath(outDir), canonicalPath(voiceSnapshotPath)))
+  const preserve = !inPlace && consumedRel !== '' && pathWithin(canonicalPath(voiceSnapshotPath), canonicalPath(outDir))
+  const preservedBytes = preserve ? readFileSync(voiceSnapshotPath) : null
+  if (!inPlace) {
+    if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true })
+    cpSync(baseDir, outDir, { recursive: true })
+  }
+  if (preservedBytes) {
+    const restore = join(outDir, consumedRel)
+    mkdirSync(dirname(restore), { recursive: true })
+    writeFileSync(restore, preservedBytes)
+  }
+
+  // The manifest keeps the base's shape: only generatedAt, the voice
+  // fingerprint, and the audio category's totals move — everything else is the
+  // same rows, so their declared counts cannot change.
+  const rowsByCategory = new Map()
+  for (const category of manifest.categories) {
+    rowsByCategory.set(
+      category.id,
+      sortItems(items.filter((row) => row.category === category.id)),
+    )
+  }
+  const categories = manifest.categories.map((category) => {
+    const rows = rowsByCategory.get(category.id) ?? []
+    const next = {
+      ...category,
+      total: rows.length,
+      pages: Math.max(1, Math.ceil(rows.length / PAGE_SIZE)),
+    }
+    if (Array.isArray(category.sub_categories)) {
+      next.sub_categories = category.sub_categories.map((sub) => {
+        const total = sub.id === CHARACTER_FILTER_SCOPE
+          ? rows.length
+          : rows.filter((row) => shelfListOf(row).includes(sub.id)).length
+        return { ...sub, total, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) }
+      })
+    }
+    return next
+  })
+  const nextManifest = {
+    ...manifest,
+    generatedAt,
+    totalAssets: items.length,
+    voice_preview_fingerprint: voiceSnapshot.preview_fingerprint,
+    categories,
+  }
+
+  // The `all/` scope is categories in nav order, rows sorted inside each —
+  // never a global id sort, which would reshuffle every shard file.
+  const allOrdered = []
+  for (const category of categories) allOrdered.push(...(rowsByCategory.get(category.id) ?? []))
+
+  writeJson(outDir, 'manifest.json', nextManifest)
+  writeJson(outDir, 'index.json', allOrdered.map(indexEntryOf))
+
+  // Rewrite every page scope: `all/`, each category, and each sub-category the
+  // base actually shipped (manifest entries without a shard directory — like
+  // the filtered character scope — are answer-only and untouched).
+  const scopeItems = new Map([[ALL_SCOPE, allOrdered]])
+  for (const category of categories) {
+    const rows = rowsByCategory.get(category.id) ?? []
+    scopeItems.set(category.id, rows)
+    for (const sub of Array.isArray(category.sub_categories) ? category.sub_categories : []) {
+      if (sub.id === CHARACTER_FILTER_SCOPE) continue
+      if (!isDir(join(outDir, category.id, sub.id))) continue
+      scopeItems.set(`${category.id}/${sub.id}`, rows.filter((row) => shelfListOf(row).includes(sub.id)))
+    }
+  }
+
+  let pageFiles = 0
+  for (const [scope, scopeRows] of scopeItems) {
+    const dir = join(outDir, scope)
+    for (const file of listDirSafe(dir)) {
+      if (file.isFile() && /^page-\d{4}\.json$/.test(file.name)) rmSync(join(dir, file.name))
+    }
+    const sorted = scope === ALL_SCOPE ? scopeRows : sortItems(scopeRows)
+    for (const page of pageSpecs(sorted, scope)) {
+      writeJson(outDir, page.relPath, page.body)
+      pageFiles += 1
+    }
+  }
+
+  log(`[cloud-catalog] refreshed ${voiceItems.length} voice row(s) · ${items.length} total · ${pageFiles} page file(s) + manifest.json + index.json`)
+  log(`[cloud-catalog] done in ${outDir}`)
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
+  const voicesOnly = args['voices-only'] === true || args['voice-only'] === true
+  const generatedAt = typeof args['generated-at'] === 'string' ? args['generated-at'] : new Date().toISOString()
+  const dryRun = args['dry-run'] === true
+
+  if (voicesOnly) {
+    // 明示输入：离线音色切片刷新必须声明它消费哪份快照；包内默认路径只服务
+    // 全量构建，避免一条不带来源的 refresh 悄悄吃错文件。
+    if (typeof args['voice-snapshot'] !== 'string' || args['voice-snapshot'] === '') {
+      throw new Error('voices-only refresh requires --voice-snapshot=<path>')
+    }
+    const voiceSnapshotPath = resolve(args['voice-snapshot'])
+    const voiceSnapshot = loadVoiceSnapshot(voiceSnapshotPath)
+    const baseDir = resolve(typeof args.base === 'string' && args.base !== '' ? args.base : DEFAULT_OUT)
+    const outDir = resolve(typeof args.out === 'string' && args.out !== '' ? args.out : baseDir)
+    refreshVoicesOnly({ baseDir, outDir, voiceSnapshot, voiceSnapshotPath, generatedAt, dryRun })
+    return
+  }
+
   // 资产源目录是构建参数而非默认值：目录必须能在任意机器重建，且产物永不携带本机路径。
   const assetsRoot = typeof args['assets-root'] === 'string' ? resolve(args['assets-root']) : ''
   if (assetsRoot === '') {
     throw new Error('assets root is required: pass --assets-root=<dir> pointing at the OPC asset library')
   }
   const outDir = resolve(typeof args.out === 'string' ? args.out : DEFAULT_OUT)
-  const dryRun = args['dry-run'] === true
-  const generatedAt = typeof args['generated-at'] === 'string' ? args['generated-at'] : new Date().toISOString()
 
   if (!existsSync(assetsRoot)) {
     throw new Error(`assets root does not exist: ${assetsRoot}\nPass --assets-root=<dir>`)
   }
 
+  // The voice feed is the shared snapshot, not the OPC registry: the catalog
+  // builds on any machine that holds the snapshot the hub exporter wrote. The
+  // snapshot is read before the output wipe on purpose — the default snapshot
+  // ships inside the default output dir, so the consumed file is what a full
+  // build deletes (#3058 OCR #5). Its raw bytes and canonical path are both
+  // captured here and rewritten after the build (its own relative path when
+  // it sat inside --out — including through an external symlink whose target
+  // the wipe would otherwise orphan — the default filename otherwise), so
+  // consecutive builds keep finding it and an input nested under --out is
+  // never destroyed (#3058 last OCR).
+  const voiceSnapshotPath = typeof args['voice-snapshot'] === 'string' && args['voice-snapshot'] !== ''
+    ? resolve(args['voice-snapshot'])
+    : DEFAULT_VOICE_SNAPSHOT
+  const voiceSnapshot = loadVoiceSnapshot(voiceSnapshotPath)
+  const voiceSnapshotBytes = readFileSync(voiceSnapshotPath)
+
+  // The consumed snapshot's canonical position is captured alongside its
+  // bytes, before anything is deleted: an external path may be a symlink whose
+  // target lives inside --out, and once the wipe runs the link dangles and
+  // canonicalPath can no longer see the target it pointed at (#3058 last OCR).
+  const outCanonical = canonicalPath(outDir)
+  const voiceSnapshotCanonical = canonicalPath(voiceSnapshotPath)
+  const consumedInsideOut = pathWithin(voiceSnapshotCanonical, outCanonical)
+
+  // Completeness gate, before any rm/write and independent of the schema: a
+  // snapshot that merely parses must not wipe a richer catalog. The baseline
+  // identity set is the lineage already on disk — the out dir's own index.json
+  // voice rows, the voice rows its page shards hold (the evidence that still
+  // answers on a legacy index without voice meta), and shipped
+  // voice-preview-snapshot.json — plus the packaged snapshot when it is the
+  // input being consumed. The consumed input itself counts as lineage only
+  // when it lives inside --out or is the packaged snapshot (in both cases it
+  // is the catalog's own previous generation), and it can never be the only
+  // evidence: a truncated input inside --out would otherwise certify itself
+  // complete (#3058 OCR 2026-10-04 medium). No count is hardcoded, so the
+  // registry can grow; a first build with no lineage to verify against fails
+  // closed (#3058 last OCR).
+  const baselineVoiceTypes = new Set()
+  const priorIndex = isFile(join(outDir, 'index.json')) ? readJsonSafe(join(outDir, 'index.json')) : null
+  if (Array.isArray(priorIndex)) {
+    for (const row of priorIndex) {
+      const voiceType = row && row.meta ? text(row.meta.voice_type) : ''
+      if (voiceType !== '') baselineVoiceTypes.add(voiceType)
+    }
+  }
+  for (const voiceType of pageShardVoiceTypes(outDir)) {
+    baselineVoiceTypes.add(voiceType)
+  }
+  const shippedSnapshotFile = join(outDir, 'voice-preview-snapshot.json')
+  if (isFile(shippedSnapshotFile)) {
+    const shipped = readJsonQuiet(shippedSnapshotFile)
+    if (shipped && Array.isArray(shipped.voices)) {
+      for (const voice of shipped.voices) {
+        const voiceType = voice && typeof voice === 'object' ? text(voice.voice_type) : ''
+        if (voiceType !== '') baselineVoiceTypes.add(voiceType)
+      }
+    }
+  }
+  if (consumedInsideOut || voiceSnapshotCanonical === canonicalPath(DEFAULT_VOICE_SNAPSHOT)) {
+    for (const voice of voiceSnapshot.voices) {
+      const voiceType = text(voice.voice_type)
+      if (voiceType !== '') baselineVoiceTypes.add(voiceType)
+    }
+  }
+  if (baselineVoiceTypes.size === 0) {
+    throw new Error(`voice baseline is empty — no verifiable lineage in --out (index.json / page shards / voice-preview-snapshot.json) and the consumed snapshot is not part of it: refusing a first build that cannot be verified (${outDir})`)
+  }
+  const snapshotTypes = new Set(voiceSnapshot.voices.map((row) => text(row.voice_type)))
+  const missingVoices = [...baselineVoiceTypes].filter((voiceType) => !snapshotTypes.has(voiceType))
+  if (missingVoices.length > 0) {
+    throw new Error(`voice snapshot is missing ${missingVoices.length} baseline voice(s): ${missingVoices.slice(0, 5).join(', ')}${missingVoices.length > 5 ? '…' : ''} — refusing to delist`)
+  }
+
   log(`[cloud-catalog] assets root : ${assetsRoot}`)
+  log(`[cloud-catalog] voice snap  : ${voiceSnapshot.voices.length} voice(s) · fp ${voiceSnapshot.preview_fingerprint || '(none)'}`)
   log(`[cloud-catalog] output      : ${outDir}${dryRun ? ' (dry run)' : ''}`)
 
-  const ctx = { assetsRoot }
+  const ctx = { assetsRoot, voices: voiceSnapshot.voices }
   /** @type {CatalogAsset[]} */
   const all = []
   /** @type {Map<string, CatalogAsset[]>} */
@@ -2236,6 +2971,9 @@ async function main() {
     // tell "built here, media present" from "built elsewhere, media missing"
     // instead of reading an unrelated path on this machine.
     sourceRoot: '',
+    // The voice-preview snapshot this catalog's voice slice came from, so a
+    // host can tell two catalogs' preview mappings apart without diffing rows.
+    voice_preview_fingerprint: voiceSnapshot.preview_fingerprint,
     categories: categoryMeta,
   }
 
@@ -2244,33 +2982,25 @@ async function main() {
   // catalog search matches on it; `meta` carries only the portable remote
   // media fallback, which is what keeps the file small enough to commit.
   /** @type {Record<string, unknown>[]} */
-  const index = all.map((row) => {
-    /** @type {Record<string, unknown>} */
-    const meta = {}
-    if (row.meta.source_media_url) meta.source_media_url = row.meta.source_media_url
-    if (row.meta.source_cover_url) meta.source_cover_url = row.meta.source_cover_url
-    // The professional dimensions ride along on the server index too, so the
-    // 收藏到本地 path can describe a row with the same vocabulary the chips use.
-    if (row.meta.dims) meta.dims = row.meta.dims
-    const entry = {
-      id: row.id,
-      category: row.category,
-      sub_category: row.sub_category,
-      sub_categories: shelfListOf(row),
-      name: row.name,
-      description: row.description,
-      media_type: row.media_type,
-      media_url: row.media_url,
-      cover_url: row.cover_url,
-      tags: row.tags,
-    }
-    if (Object.keys(meta).length > 0) entry.meta = meta
-    return entry
-  })
+  const index = all.map(indexEntryOf)
 
   if (dryRun) {
     log(`[cloud-catalog] dry run: ${all.length} rows across ${categoryMeta.length} categories`)
     return
+  }
+
+  // Fail closed before the wipe when the consumed snapshot's position inside
+  // --out is unrecoverable: a generated file path (manifest.json, index.json,
+  // <scope>/page-NNNN.json or below one of them), or a path that crosses a
+  // symlink the wipe deletes. The scope list mirrors the write loop below
+  // exactly (#3058 final OCR).
+  {
+    const scopes = [ALL_SCOPE]
+    for (const spec of categories) {
+      scopes.push(spec.id)
+      for (const sub of spec.subCategories) scopes.push(`${spec.id}/${sub.id}`)
+    }
+    assertSupportedSnapshotLayout(voiceSnapshotPath, outCanonical, scopes)
   }
 
   if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true })
@@ -2303,6 +3033,21 @@ async function main() {
         pageFiles += 1
       }
     }
+  }
+
+  // Rewrite the consumed snapshot into the fresh output: back at the relative
+  // path its canonical position occupied before the wipe when it was nested
+  // inside --out (a symlinked input resolves to its target, so the real
+  // nested file comes back and the external link stays usable), at the
+  // default shipped filename when it came from anywhere else (#3058 OCR #5,
+  // last OCR).
+  {
+    const rel = consumedInsideOut
+      ? toRel(relative(outCanonical, voiceSnapshotCanonical))
+      : 'voice-preview-snapshot.json'
+    const restore = join(outDir, rel)
+    mkdirSync(dirname(restore), { recursive: true })
+    writeFileSync(restore, voiceSnapshotBytes)
   }
 
   log(`[cloud-catalog] wrote ${all.length} rows · ${pageFiles} page file(s) + manifest.json + index.json`)

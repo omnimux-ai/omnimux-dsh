@@ -455,7 +455,15 @@ export function AssetsStage(props) {
     if (next) setPreviewTarget(next)
   }, [])
 
+  // Issue #3058：官方试听用途没有保存语义——前置判定用途而非仅凭 cloud ID。
+  const previewIsOfficialVoice = previewTarget?.preview?.purpose === 'official-voice-preview'
+    || previewTarget?.sourceAsset?.preview?.purpose === 'official-voice-preview'
+
   const savePreviewItem = useCallback((item) => {
+    if (item?.preview?.purpose === 'official-voice-preview'
+      || item?.sourceAsset?.preview?.purpose === 'official-voice-preview') {
+      return
+    }
     const id = String(item?.sourceAssetId ?? '')
     if (id === '') return
     void cloudSave.save({ id, name: String(item?.title ?? '') })
@@ -591,7 +599,7 @@ export function AssetsStage(props) {
           onClose={() => setPreviewTarget(null)}
           saved={previewCloudId !== '' && cloudSave.savedIds.has(previewCloudId)}
           saving={previewCloudId !== '' && cloudSave.savingIds.has(previewCloudId)}
-          onSaveToLocal={previewCloudId !== '' ? savePreviewItem : undefined}
+          onSaveToLocal={previewCloudId !== '' && !previewIsOfficialVoice ? savePreviewItem : undefined}
         />
       )}
     </div>
