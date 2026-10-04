@@ -227,6 +227,19 @@ export function guardSubmit(request, opts = {}) {
     })
   }
 
+  const standardGptImage = modelAdmit.modelId === 'gpt-image-2.5'
+    && (request?.group === 'default' || request?.group === 'standard')
+  if (standardGptImage) {
+    const field = parameterResult.values.resolution !== '1K' ? 'resolution'
+      : parameterResult.values.n !== 1 ? 'n'
+      : request?.quality ? 'quality' : null
+    if (field) return reject({
+      code: GUARD_CODES.PARAMETER_UNSUPPORTED,
+      message: 'GPT Image 2.5 标准版仅支持 1K、单张生成，不提供质量档；请重新选择参数或渠道。',
+      modelId: modelAdmit.modelId, field, diagnostics,
+    })
+  }
+
   const slotResult = assignAndValidateSlots(opAdmit.operation, normalized.assets, {
     prompt: normalized.prompt,
     duration: parameterResult.values.duration,
@@ -277,6 +290,7 @@ export function guardSubmit(request, opts = {}) {
     profile: opAdmit.profile,
     modelId: modelAdmit.modelId,
     model: modelAdmit.model,
+    group: request?.group,
     family: modelAdmit.model?.family,
     prompt: normalized.prompt,
     bindings: slotResult.bindings,

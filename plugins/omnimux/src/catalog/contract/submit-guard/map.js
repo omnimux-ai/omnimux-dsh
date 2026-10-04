@@ -91,6 +91,7 @@ export function mapOpenAiImageSize(aspectRatio = '16:9', resolution = '2K') {
  *   operation: object,
  *   profile: object,
  *   modelId: string,
+ *   group?: string,
  *   prompt: string,
  *   bindings: Array<{ slot: string, role?: string, type: string, pathOrUrl: string, asset: object }>,
  *   bySlot: Map<string, object[]>,
@@ -249,7 +250,14 @@ export function mapValidatedPlanToVendor(args) {
       || args.model?.family === 'openai'
       || String(args.modelId ?? '').startsWith('gpt-image')
 
-    if (isOpneAi) {
+    const standardGptImage = args.modelId === 'gpt-image-2.5'
+      && (args.group === 'default' || args.group === 'standard')
+    if (standardGptImage) {
+      vendor.size = extras.aspectRatio || 'auto'
+      if (vendor.size !== 'auto') vendor.resolution = '1K'
+      logical.aspectRatio = vendor.size
+      logical.resolution = '1K'
+    } else if (isOpneAi) {
       const openAiMapped = mapOpenAiImageSize(extras.aspectRatio, extras.resolution)
       vendor.size = openAiMapped.size
 

@@ -1,0 +1,125 @@
+{
+  "scope": "Production shared parameter component, not full app",
+  "spaceId": 18,
+  "verifiedAt": "2026-10-04T06:59:36.121Z",
+  "state": {
+    "selection": {
+      "model": "gpt-image-2.5",
+      "channel": "standard",
+      "params": {
+        "aspectRatio": "3:2",
+        "resolution": "1K",
+        "batch": "1",
+        "operation": "文生图"
+      }
+    },
+    "buttons": [
+      {
+        "text": "文生图",
+        "pressed": null,
+        "w": 142.6640625,
+        "h": 26,
+        "y": 199.359375
+      },
+      {
+        "text": "图片编辑",
+        "pressed": null,
+        "w": 142.671875,
+        "h": 26,
+        "y": 199.359375
+      },
+      {
+        "text": "多图参考",
+        "pressed": null,
+        "w": 142.6640625,
+        "h": 26,
+        "y": 199.359375
+      },
+      {
+        "text": "自适应",
+        "pressed": "false",
+        "w": 55.7109375,
+        "h": 64,
+        "y": 266.859375
+      },
+      {
+        "text": "1:1",
+        "pressed": "false",
+        "w": 55.7109375,
+        "h": 64,
+        "y": 266.859375
+      },
+      {
+        "text": "16:9",
+        "pressed": "false",
+        "w": 55.71875,
+        "h": 64,
+        "y": 266.859375
+      },
+      {
+        "text": "9:16",
+        "pressed": "false",
+        "w": 55.7109375,
+        "h": 64,
+        "y": 266.859375
+      },
+      {
+        "text": "4:3",
+        "pressed": "false",
+        "w": 55.71875,
+        "h": 64,
+        "y": 266.859375
+      },
+      {
+        "text": "3:4",
+        "pressed": "false",
+        "w": 55.7109375,
+        "h": 64,
+        "y": 266.859375
+      },
+      {
+        "text": "3:2",
+        "pressed": "true",
+        "w": 55.71875,
+        "h": 64,
+        "y": 266.859375
+      },
+      {
+        "text": "2:3",
+        "pressed": "false",
+        "w": 55.7109375,
+        "h": 64,
+        "y": 338.859375
+      },
+      {
+        "text": "21:9",
+        "pressed": "false",
+        "w": 55.7109375,
+        "h": 64,
+        "y": 338.859375
+      },
+      {
+        "text": "1K",
+        "pressed": null,
+        "w": 203,
+        "h": 26,
+        "y": 444.359375
+      },
+      {
+        "text": "1",
+        "pressed": null,
+        "w": 203,
+        "h": 26,
+        "y": 444.359375
+      }
+    ],
+    "image": [
+      {
+        "complete": true,
+        "w": 1312,
+        "h": 1199
+      }
+    ],
+    "origin": "http://127.0.0.1:64674"
+  }
+}

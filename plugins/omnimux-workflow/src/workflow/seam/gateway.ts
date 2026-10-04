@@ -78,6 +78,10 @@ export interface SubmitRequest {
   operation?: string;
   /** Media resolution hint (e.g. '720P' | '1080P' | '4K'). */
   resolution?: string;
+  /** Explicit image quality when the selected line exposes it. */
+  quality?: string;
+  /** Image count when declared by the selected line. */
+  n?: number;
   /** Aspect ratio hint (e.g. '16:9' | '9:16' | '1:1'). */
   aspectRatio?: string;
   /** Speech audio for talking-head, or background audio. */

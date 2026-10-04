@@ -97,7 +97,7 @@ models:
     label: "GPT Image 2.5"
     family: "openai"
     badge: "新品"
-    subtitle: "1k-4k"
+    subtitle: "标准版 1K · 高分档依渠道"
     # 2026-09-14 #1751：撤销别名 `gpt-image-2-5` —— 上游 2026-09-10 变更日志明写
     # 「旧 ID 不是兼容别名，也不支持 gpt-image-2-5 拼写」，与同时撤销的 gpt-image-2-hd /
     # gpt-image2-hd 同源同口径，故本仓不再声明任何上游未承认的拼写。
@@ -193,9 +193,9 @@ models:
         defaultValue: 1
     research:
       status: "verified"
-      docUrl: "docs/evidence/2026-09-10-omnimux-image-2-5.md"
-      verifiedAt: "2026-09-10"
-      notes: "官方统一端点；原生支持 1K/2K/4K；已入库 dated live 证据"
+      docUrl: "https://docs.omnimux.ai/en/api-reference/image-series/gpt-image/generate.md"
+      verifiedAt: "2026-10-04"
+      notes: "统一公开 ID，尺寸依所选线路；default 标准线为 beta 1K、比例/auto；本次真实出图证据 docs/evidence/gpt-image-25-gateway-3071/upstream-and-live.md"
     implementation:
       status: "ready"
       profileId: "imageGenerate"

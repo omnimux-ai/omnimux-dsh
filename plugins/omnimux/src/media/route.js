@@ -165,7 +165,11 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
   const pinned = callerIntent || providerId !== 'omnimux' ? undefined : defaultChannelGroup(modelId)
   const pinnedWire = pinned ? (pinned.wireGroup || pinned.id) : undefined
   const group = requestedGroup ?? pinnedWire
-  const effectiveAllowedGroups = allowedGroups ?? (pinnedWire ? [pinnedWire] : undefined)
+  // This model's lines use incompatible size protocols; an explicitly selected
+  // line cannot silently fail over with a body built for another line.
+  const effectiveAllowedGroups = allowedGroups
+    ?? (modelId === 'gpt-image-2.5' && ['standard', 'default', 'economy', 'pro', 'gpt-image-2.5-economy', 'gpt-image-2.5-pro'].includes(requestedGroup) ? [requestedGroup] : undefined)
+    ?? (pinnedWire ? [pinnedWire] : undefined)
   const hasRoutingIntent = Boolean(group || effectiveAllowedGroups || explicitStrategy)
 
   const plan = providerId === 'omnimux' && hasRoutingIntent

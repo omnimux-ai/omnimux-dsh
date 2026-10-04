@@ -36,7 +36,7 @@ function inputFor(t, extra = {}) {
 test('gpt-image-2.5 declares no upstream-recognised alias, so the real protocol sends one request', async (t) => {
   const bodies = []
   const signal = new AbortController().signal
-  const input = inputFor(t, { signal, aspectRatio: '16:9', resolution: '2K',
+  const input = inputFor(t, { signal, aspectRatio: '16:9', resolution: '1K',
     fetcher: async (url, init) => {
       assert.match(String(url), /images\/generations$/)
       assert.equal(init.method, 'POST')
@@ -49,7 +49,7 @@ test('gpt-image-2.5 declares no upstream-recognised alias, so the real protocol 
   assert.equal(input.model, productId)
   // 单次请求锁死 payload：vendor 字段映射完毕，model 由协议持有，不存在第二次别名改写。
   assert.deepEqual(bodies, [
-    { prompt: 'a lamp', size: '1792x1024', quality: 'standard', n: 1, model: productId },
+    { prompt: 'a lamp', size: '16:9', resolution: '1K', n: 1, model: productId },
   ])
   assert.deepEqual(gatewayCandidates(productId), [productId])
   assert.equal(readFileSync(input.dest, 'utf8'), 'png')

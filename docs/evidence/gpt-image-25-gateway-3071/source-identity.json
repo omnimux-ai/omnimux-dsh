@@ -1,0 +1,8 @@
+{
+  "verifiedComponentSource": {
+    "plugins/omnimux-viewer/src/media-viewer/MediaConfigControls.jsx": "945adff0fd87370520e3c0a49ff87fa5994514f49b85c94a3f071d73d9781d9e",
+    "plugins/omnimux-viewer/src/media-viewer/MediaViewerComposerData.js": "df6154ff7b1b3502d16076f9025fe2336fd237a22ab9a96dc091e44a3e41fa2f"
+  },
+  "catalogFingerprint": "36b45fec887b332a",
+  "scope": "Task worktree shared media config component; action evidence browser-standard/flagship/final; not full app"
+}

@@ -285,6 +285,8 @@ export function createMaterialGatewayExecutor(opts: {
         operation: upstream.operationId,
         model: upstream.modelId,
         resolution: readString(params, 'resolution'),
+        quality: readString(params, 'quality'),
+        n: readNumber(params, 'n'),
         aspectRatio: readString(params, 'aspectRatio'),
         voice: readString(params, 'voice'),
         style: readString(params, 'style'),

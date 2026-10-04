@@ -478,10 +478,10 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     {
       "id": "pro",
       "label": "旗舰版",
-      "badge": "满血出片 · 极致画质",
+      "badge": "原生高分 · 独立线路",
       "pricing": {
-        "pointsEstimate": 0.2,
-        "discountRate": 1.5,
+        "pointsEstimate": 0.036765,
+        "discountRate": 0.281248,
         "billingMode": "per_task"
       },
       "wireGroup": "gpt-image-2.5-pro",
@@ -490,23 +490,30 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
     {
       "id": "standard",
       "label": "标准版",
-      "badge": "官方直签 · 标配出片",
+      "badge": "基础清晰度 · 异步出图",
       "pricing": {
-        "pointsEstimate": 0.1,
+        "pointsEstimate": 0.13072,
         "discountRate": 1,
         "billingMode": "per_task"
       },
-      "wireGroup": "gpt-image-2.5-economy",
+      "wireGroup": "default",
+      "constraints": {
+        "parameters": {
+          "resolution": { "fixed": "1K" },
+          "quality": { "supported": false },
+          "n": { "fixed": 1 }
+        }
+      },
       "default": true,
       "enabled": true
     },
     {
       "id": "economy",
       "label": "经济版",
-      "badge": "经济走量 · 按次计费",
+      "badge": "经济走量 · 独立线路",
       "pricing": {
-        "pointsEstimate": 0.1,
-        "discountRate": 0.8,
+        "pointsEstimate": 0.0147,
+        "discountRate": 0.112455,
         "billingMode": "per_task"
       },
       "wireGroup": "gpt-image-2.5-economy",
@@ -1436,7 +1443,11 @@ export function resolveLineConstraints(
   const groups = resolveModelChannelGroups(id, effectiveSettings);
   const availableGroupIds = new Set(groups.map((g) => g.id));
   const selected = selectedGroupIds(routing, availableGroupIds);
-  if (selected.size === 0) return {};
+  if (selected.size === 0) {
+    const defaultGroup = groups.find((group) => group.default === true && group.enabled !== false);
+    if (!defaultGroup || id !== 'gpt-image-2.5') return {};
+    selected.add(defaultGroup.id);
+  }
   const declarations = groups
     .filter((group) => selected.has(group.id) || (group.wireGroup ? selected.has(group.wireGroup) : false))
     .map((group) => group.constraints)

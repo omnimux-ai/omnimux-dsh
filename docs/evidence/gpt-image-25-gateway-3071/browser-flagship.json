@@ -1,0 +1,36 @@
+{
+  "scope": "Component parameter domain, not live flagship generation",
+  "spaceId": 18,
+  "state": {
+    "selection": {
+      "model": "gpt-image-2.5",
+      "channel": "pro",
+      "params": {
+        "aspectRatio": "2:3",
+        "resolution": "4K",
+        "batch": "4",
+        "operation": "文生图"
+      }
+    },
+    "options": [
+      "文生图",
+      "图片编辑",
+      "多图参考",
+      "自适应",
+      "1:1",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "21:9",
+      "1K",
+      "2K",
+      "4K",
+      "1",
+      "2",
+      "4"
+    ]
+  }
+}

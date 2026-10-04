@@ -24,18 +24,28 @@ export const DEFAULT_FALLBACK_CATALOG = {
       id: 'gpt-image-2.5',
       label: 'GPT Image 2.5',
       badge: '新品',
-      subtitle: '1k-4k · 照片级超清质感',
+      subtitle: '标准版 1K · 高分档依渠道',
       family: 'openai',
       parameters: {
-        aspectRatio: { default: '1:1', options: ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9'] },
-        resolution: { default: '1024x1024', options: ['1024x1024', '1792x1024', '1024x1792'] },
-        quality: { default: 'standard', options: ['standard', 'hd'] },
-        n: { default: 1, min: 1, max: 4 },
+        aspectRatio: {
+          defaultValue: '16:9',
+          options: [
+            { value: 'auto', label: '自适应' },
+            '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9',
+          ],
+        },
+        resolution: { defaultValue: '1K', options: ['1K', '2K', '4K'] },
+        quality: { defaultValue: 'standard', options: ['standard', 'hd'] },
+        n: { defaultValue: 1, options: [1, 2, 4] },
       },
       channelGroups: [
-        { id: 'pro', label: '旗舰版', badge: '满血出片 · 极致画质', pricing: { pointsEstimate: 0.2, discountRate: 1.5, billingMode: 'per_task' } },
-        { id: 'standard', label: '标准版', default: true, badge: '官方直签 · 标配出片', pricing: { pointsEstimate: 0.1, discountRate: 1, billingMode: 'per_task' } },
-        { id: 'economy', label: '经济版', badge: '经济走量 · 按次计费', pricing: { pointsEstimate: 0.1, discountRate: 0.8, billingMode: 'per_task' } },
+        { id: 'pro', label: '旗舰版', badge: '原生高分 · 独立线路', wireGroup: 'gpt-image-2.5-pro', pricing: { pointsEstimate: 0.036765, discountRate: 0.281248, billingMode: 'per_task' } },
+        {
+          id: 'standard', label: '标准版', default: true, badge: '基础清晰度 · 异步出图', wireGroup: 'default',
+          constraints: { parameters: { resolution: { fixed: '1K' }, quality: { supported: false }, n: { fixed: 1 } } },
+          pricing: { pointsEstimate: 0.13072, discountRate: 1, billingMode: 'per_task' },
+        },
+        { id: 'economy', label: '经济版', badge: '经济走量 · 独立线路', wireGroup: 'gpt-image-2.5-economy', pricing: { pointsEstimate: 0.0147, discountRate: 0.112455, billingMode: 'per_task' } },
       ],
     },
     {
@@ -46,10 +56,10 @@ export const DEFAULT_FALLBACK_CATALOG = {
       family: 'openai',
       parameters: {
         aspectRatio: { default: '1:1', options: ['1:1', '16:9', '9:16', '4:3', '3:4'] },
-        resolution: { default: '1024x1024', options: ['1024x1024'] },
+        resolution: { defaultValue: '1K', options: ['1K', '2K', '4K'] },
       },
       channelGroups: [
-        { id: 'flare', label: '极速专线', badge: '低延迟', pricing: { pointsEstimate: 3, billingMode: 'per_image' } },
+        { id: 'standard', label: '标准版', default: true, wireGroup: 'gpt-image-2.5-flare-std', badge: '极速专线 · 快速迭代', pricing: { pointsEstimate: 0.2, discountRate: 1.125, billingMode: 'per_task' } },
       ],
     },
     {
@@ -60,10 +70,10 @@ export const DEFAULT_FALLBACK_CATALOG = {
       family: 'openai',
       parameters: {
         aspectRatio: { default: '1:1', options: ['1:1', '16:9', '9:16', '4:3', '21:9'] },
-        resolution: { default: '1792x1024', options: ['1024x1024', '1792x1024'] },
+        resolution: { defaultValue: '1K', options: ['1K', '2K', '4K'] },
       },
       channelGroups: [
-        { id: 'sunburst', label: '画质专线', badge: '精细打磨', pricing: { pointsEstimate: 8, billingMode: 'per_image' } },
+        { id: 'standard', label: '标准版', default: true, wireGroup: 'gpt-image-2.5-sunburst-std', badge: '画质专线 · 精细成品', pricing: { pointsEstimate: 0.2, discountRate: 1.125, billingMode: 'per_task' } },
       ],
     },
   ],
@@ -148,6 +158,8 @@ export function parseCatalogToCascade(rawList = []) {
     const brandEntry = brandMap.get(fam);
     const channels = (item.channelGroups || []).map((ch) => ({
       id: ch.id,
+      wireGroup: ch.wireGroup,
+      constraints: ch.constraints,
       default: ch.default === true,
       name: ch.label || ch.id,
       price: ch.pricing?.pointsEstimate ? `≈${ch.pricing.pointsEstimate} 积分` : '按量计费',
@@ -179,6 +191,46 @@ export function parseCatalogToCascade(rawList = []) {
   }
 
   return Array.from(brandMap.values());
+}
+
+/**
+ * Project image option domains from the model and the selected channel, keeping catalog order.
+ * @param {{ raw?: { parameters?: Record<string, object> } }} [model]
+ * @param {{ constraints?: { parameters?: Record<string, object> } }} [channel]
+ * @returns {Record<'aspectRatio' | 'resolution' | 'n', { options: Array<{ value: string, label: string }>, defaultValue: string | undefined }>}
+ */
+export function imageParameterOptions(model, channel) {
+  const parameters = model?.raw?.parameters || {};
+  const constraints = channel?.constraints?.parameters || {};
+  const fallback = DEFAULT_FALLBACK_CATALOG.image[0].parameters;
+  const domains = {};
+  for (const field of ['aspectRatio', 'resolution', 'n']) {
+    const definition = parameters[field] || fallback[field];
+    let source = definition.options;
+    if (!Array.isArray(source) && field === 'n') {
+      const range = definition.range || definition;
+      if (Number.isInteger(range.min) && Number.isInteger(range.max) && range.min <= range.max) {
+        source = Array.from({ length: range.max - range.min + 1 }, (_, index) => range.min + index);
+      }
+    }
+    const constraint = constraints[field] || {};
+    const options = (Array.isArray(source) ? source : fallback[field].options)
+      .map((option) => {
+        const value = String(option && typeof option === 'object' ? option.value : option);
+        const label = option && typeof option === 'object' ? option.label : undefined;
+        return { value, label: label || (value === 'auto' ? '自适应' : value) };
+      })
+      .filter(({ value }) => (
+        (constraint.fixed === undefined || value === String(constraint.fixed))
+        && (!Array.isArray(constraint.only) || constraint.only.some((allowed) => value === String(allowed)))
+      ));
+    const preferred = String(definition.defaultValue ?? definition.default ?? '');
+    domains[field] = {
+      options,
+      defaultValue: options.find(({ value }) => value === preferred)?.value ?? options[0]?.value,
+    };
+  }
+  return domains;
 }
 
 /** Prefer the catalog's declared default without changing channel identity or order. */

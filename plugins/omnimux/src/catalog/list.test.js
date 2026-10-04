@@ -70,7 +70,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     ])
     const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
     assert.equal(imageRow.label, 'GPT Image 2.5')
-    assert.equal(imageRow.subtitle, '1k-4k')
+    assert.equal(imageRow.subtitle, '标准版 1K · 高分档依渠道')
     // 2026-09-14 评审次要-2：上游明写不支持 `gpt-image-2-5` 拼写，该别名已撤销 —— 默认图片型号
     // 现在没有任何别名，YAML 里也不再声明 `aliases:`。
     assert.equal(catalog.models.find((row) => row.id === 'gpt-image-2.5').aliases, undefined)
