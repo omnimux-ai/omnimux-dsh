@@ -10,6 +10,7 @@ import {
   findMediaTaskByUpstreamId,
   findMediaTaskByRequestKey,
   recordMediaCollectionFailure,
+  updateMediaTaskRecord,
   canRecoverMediaTask,
 } from './task-store.js'
 
@@ -93,9 +94,10 @@ export function registerDirectMediaRoutes(webServer, deps) {
       const ext = kind === 'video' ? 'mp4' : 'png'
       const dest = body.dest || path.join(destDir, `direct_${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`)
 
-      // 账本引用需提升到 try 外：catch 分支要按记录回写 failed 状态（#3011）
+      // 账本引用需提升到 try 外：catch 分支要按记录回写 failed 状态（#3011, #3062）
       const ledgerOpts = deps?.storageDir ? { storageDir: deps.storageDir } : {}
       let ledgerRecord = null
+      let normalizedRequestKey = undefined
 
       try {
         if (deps.gate) assertCapabilityEnabled(deps.gate, kind, 'media')
@@ -106,7 +108,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
         const normalizedTaskId = typeof rawTaskId === 'string' && rawTaskId.trim() ? rawTaskId.trim() : undefined
         const rawTaskRef = body.taskRef ?? body.task_ref
         const normalizedTaskRef = typeof rawTaskRef === 'string' && rawTaskRef.trim() ? rawTaskRef.trim() : undefined
-        const normalizedRequestKey = typeof body.requestKey === 'string' && body.requestKey.trim() ? body.requestKey.trim() : undefined
+        normalizedRequestKey = typeof body.requestKey === 'string' && body.requestKey.trim() ? body.requestKey.trim() : undefined
 
         // 账本短路（Issue #3011）：取回请求先读任务记录，ready/failed/中断
         // 状态在路由层直接裁决，不再把已终结的任务交给执行器轮询。
@@ -163,7 +165,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
           })
           return
         }
-        if (ledgerRecord && (ledgerRecord.status === 'submitting' || ledgerRecord.status === 'submitted')
+        if (normalizedTaskRef && ledgerRecord && (ledgerRecord.status === 'submitting' || ledgerRecord.status === 'submitted')
           && !ledgerRecord.upstreamTaskId && !ledgerRecord.artifact?.sourceUrl) {
           sendJson(res, 500, {
             ok: false,
@@ -225,14 +227,31 @@ export function registerDirectMediaRoutes(webServer, deps) {
         })
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
-        if (ledgerRecord?.upstreamTaskId || ledgerRecord?.artifact?.sourceUrl) {
+        let targetRecord = ledgerRecord
+        if (!targetRecord && normalizedRequestKey) {
           try {
-            recordMediaCollectionFailure(ledgerRecord.taskRef, err, ledgerOpts)
+            targetRecord = findMediaTaskByRequestKey(normalizedRequestKey, ledgerOpts)
+          } catch {}
+        }
+        if (targetRecord?.upstreamTaskId || targetRecord?.artifact?.sourceUrl) {
+          try {
+            recordMediaCollectionFailure(targetRecord.taskRef, err, ledgerOpts)
           } catch (ledgerError) {
             console.warn('[media] collection diagnostic could not be persisted:', ledgerError.message)
           }
+        } else if (targetRecord && (targetRecord.status === 'submitting' || targetRecord.status === 'submitted')) {
+          try {
+            const failCode = err?.code || (err?.status ? `HTTP_${err.status}` : 'omnimux-failed')
+            updateMediaTaskRecord(targetRecord.taskRef, {
+              status: 'failed',
+              error: message,
+              errorCode: failCode,
+            }, ledgerOpts)
+          } catch (upErr) {
+            console.error('[media] updateMediaTaskRecord failed:', upErr)
+          }
         }
-        const latest = ledgerRecord ? getMediaTaskRecord(ledgerRecord.taskRef, ledgerOpts) : null
+        const latest = targetRecord ? getMediaTaskRecord(targetRecord.taskRef, ledgerOpts) : null
         const failure = { ok: false, error: message }
         if (latest) {
           failure.taskRef = latest.taskRef
