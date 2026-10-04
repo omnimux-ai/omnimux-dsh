@@ -2,7 +2,7 @@
  * 图像生成大图预览与缩略图优化设计契约测试 (Issue #1844, specs/image-preview-redesign.spec.md)
  * 验证：
  * 1. 消除黑边：单图视口 padding: 0，大图 display 具备全景等比铺展能力；
- * 2. 左上角 1:1 居中缩略图：位置位于 top/left 20px，aspect-ratio 为 1:1，同轴水平居中对齐；
+ * 2. 左侧贴边 1:1 居中缩略图：列贴画布左缘从顶到底（top/left/bottom 0），aspect-ratio 为 1:1，同轴水平居中对齐；
  * 3. 视觉层级：当前选中项为大尺寸纯白强发光边框，候选项目为微型暗色半透明；
  * 4. 跨图缩放锁定：切换素材时 zoom 状态保持锁定不自动重置。
  */
@@ -33,11 +33,16 @@ describe('大图预览与左上角 1:1 居中缩略图契约测试 (Issue #1844)
   it('AC-2 & AC-3: 左上角 1:1 居中微型缩略图悬浮工具栏契约', () => {
     const css = MEDIA_VIEWER_CSS;
 
-    // 验证缩略图栏位于左上角并居中对齐
+    // 验证缩略图栏贴画布左缘从顶到底（去胶囊外壳）
     assert.match(
       css,
-      /\.omx-mv-thumbnails-rail\s*\{[^}]*top:\s*20px;[^}]*left:\s*20px;/s,
-      '缩略图悬浮栏必须定位在视口左上角'
+      /\.omx-mv-thumbnails-rail\s*\{[^}]*top:\s*0;[^}]*left:\s*0;[^}]*bottom:\s*0;/s,
+      '缩略图栏必须贴画布左缘从顶到底，严禁悬浮偏移'
+    );
+    assert.doesNotMatch(
+      css,
+      /\.omx-mv-thumbnails-rail\s*\{[^}]*(border:|backdrop-filter|box-shadow|background:)/s,
+      '缩略图栏严禁保留胶囊外壳（背景/边框/磨砂/投影）'
     );
     assert.match(
       css,

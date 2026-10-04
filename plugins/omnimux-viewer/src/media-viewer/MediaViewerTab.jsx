@@ -298,6 +298,8 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
     const stage = stageRef.current;
     if (!stage) return;
     const handleWheel = (e) => {
+      // 缩略图栏自身的上下滚动优先：栏内滚轮不再被画布缩放拦截
+      if (e.target.closest && e.target.closest('.omx-mv-thumbnails-rail')) return;
       e.preventDefault();
       const zoomFactor = e.ctrlKey ? 0.04 : 0.0015;
       const delta = -e.deltaY * zoomFactor;
