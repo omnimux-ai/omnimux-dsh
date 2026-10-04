@@ -14,6 +14,8 @@
  */
 
 export interface LineParameterConstraint {
+  /** Explicitly remove a parameter the selected line does not expose. */
+  supported?: boolean;
   /** The line accepts exactly this value. */
   fixed?: unknown;
   /** Restrict to these values; values the contract does not publish are never introduced. */
@@ -59,6 +61,7 @@ function restrictOptions(options: unknown[], allowed: unknown[]): unknown[] {
  * Returns `null` when the constraint cannot be honoured, so the caller keeps the contract.
  */
 function applyParameterConstraint(definition: AnyRecord, constraint: LineParameterConstraint): AnyRecord | null {
+  if (constraint.supported === false) return { supported: false, options: [] };
   const options = Array.isArray(definition.options) ? definition.options : [];
   const range = asRecord(definition.range);
 

@@ -45,4 +45,5 @@
 绝不：真实付款/充值、修改生产、修改上游仓库、重启桌面、伪造可用性、静默换线路、按单样本收窄/扩大官方能力。
 
 阶段：Spec → 文档/真实可用性 → Code → Verify → Test → Green → PR/MQ → Dev 物化/清理。
-当前假设：线上官方文档存在历史与现行内容混杂，需要精确定位最新分组契约；不会依据模型名字或旧脚本默认值猜字段。
+已核定实施边界：2026-10-04 标准 default 真实原任务由 gpt-image-2-beta 完成，单提交生成 PNG 1312×1199；经济/旗舰两次单提交均 HTTP524，不重试。EvoLink 官方 beta 文档明确 auto/比例+1K、n=1、不开放quality。保留模型跨线路1K/2K/4K并集，不按beta压缩其他线路；标准线约束与映射按所选实际分组执行，界面消费该约束。返回包络为 data.status=SUCCESS、data.data.results[]/result_data[].url，需要优先提取实际产物直链，避免只取本网关content代理。不新增真实提交；改完后仅使用原任务收取证明中枢闭环。
+精确参考：https://evolink.ai/docs/en/api-manual/image-series/gpt-image-2/gpt-image-2-beta-image-generation.md；https://omnimux.ai/api/pricing；https://docs.omnimux.ai/en/api-reference/image-series/gpt-image/generate.md。

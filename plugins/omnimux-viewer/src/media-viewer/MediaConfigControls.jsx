@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_FALLBACK_CATALOG,
   defaultMediaChannel,
+  imageParameterOptions,
   parseCatalogToCascade,
 } from './MediaViewerComposerData.js';
 
@@ -86,9 +87,21 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
 
   // 图像参数
   const [imageOpMode, setImageOpMode] = useState('文生图');
-  const [imageAspect, setImageAspect] = useState('1:1');
-  const [imageRes, setImageRes] = useState('1K');
-  const [imageBatch, setImageBatch] = useState('1');
+  const [imageAspect, setImageAspect] = useState(() => imageParameterOptions(model, channel).aspectRatio.defaultValue);
+  const [imageRes, setImageRes] = useState(() => imageParameterOptions(model, channel).resolution.defaultValue);
+  const [imageBatch, setImageBatch] = useState(() => imageParameterOptions(model, channel).n.defaultValue);
+  const imageOptions = useMemo(() => imageParameterOptions(model, channel), [model, channel]);
+
+  // 只在模式、模型或线路目录切换后复核；参数输入本身不触发校准。
+  useEffect(() => {
+    if (mode !== 'image') return;
+    for (const [field, setter] of [
+      ['aspectRatio', setImageAspect], ['resolution', setImageRes], ['n', setImageBatch],
+    ]) {
+      const domain = imageOptions[field];
+      setter((value) => domain.options.some((option) => option.value === value) ? value : domain.defaultValue);
+    }
+  }, [mode, imageOptions]);
 
   // 视频参数
   const [videoGenMode, setVideoGenMode] = useState('文生视频');
@@ -126,6 +139,7 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
     imageAspect, setImageAspect,
     imageRes, setImageRes,
     imageBatch, setImageBatch,
+    imageOptions,
     videoGenMode, setVideoGenMode,
     videoAspect, setVideoAspect,
     videoRes, setVideoRes,
@@ -269,14 +283,14 @@ export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) 
     : (showOpMode ? `${videoGenMode} · ${videoAspect} · ${videoRes} · ${hasSound ? '有声' : '无声'} · ${duration}s` : `${videoRes.toUpperCase()} · ${videoAspect} · ${duration}s · ${hasSound ? '有声' : '无声'}`);
   const parameterLabel = `配置模型参数：${parameterSummary}`;
 
-  const IMAGE_RATIOS = [
-    { r: '1:1', cls: 'ratio-1-1' },
-    { r: '16:9', cls: 'ratio-16-9' },
-    { r: '9:16', cls: 'ratio-9-16' },
-    { r: '4:3', cls: 'ratio-4-3' },
-    { r: '3:4', cls: 'ratio-3-4' },
-    { r: '21:9', cls: 'ratio-21-9' },
-  ];
+  const imageOptions = config.imageOptions || imageParameterOptions(config.model, config.channel);
+  const IMAGE_RATIOS = imageOptions.aspectRatio.options.map(({ value, label }) => {
+    const [width, height] = value.split(':').map(Number);
+    const style = value === '3:2' || value === '2:3'
+      ? { width: 20 * width / Math.max(width, height), height: 20 * height / Math.max(width, height) }
+      : undefined;
+    return { r: value, label, cls: `ratio-${value.replace(':', '-')}`, style };
+  });
   const VIDEO_RATIOS = [
     { r: '16:9', cls: 'ratio-16-9' },
     { r: '9:16', cls: 'ratio-9-16' },
@@ -375,9 +389,9 @@ export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) 
                       onClick={() => setImageAspect(item.r)}
                     >
                       <span className="omx-ratio-wire-box">
-                        <span className={`omx-ratio-wire ${item.cls}`} />
+                        <span className={`omx-ratio-wire ${item.cls}`} style={item.style} />
                       </span>
-                      <span className="omx-ratio-label">{item.r}</span>
+                      <span className="omx-ratio-label">{item.label}</span>
                     </button>
                   ))}
                 </div>
@@ -387,14 +401,14 @@ export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) 
                 <div className="omx-param-subcol omx-subcol-clarity">
                   <div className="omx-param-title">清晰度</div>
                   <div className="omx-mode-track">
-                    {['1K', '2K', '4K'].map((res) => (
+                    {imageOptions.resolution.options.map(({ value: res, label }) => (
                       <button // exempt-ui01: 图像清晰度按钮
                         key={res}
                         type="button"
                         className={`omx-mode-pill ${imageRes === res ? 'is-active' : ''}`}
                         onClick={() => setImageRes(res)}
                       >
-                        {res}
+                        {label}
                       </button>
                     ))}
                   </div>
@@ -403,7 +417,7 @@ export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) 
                 <div className="omx-param-subcol omx-subcol-sound">
                   <div className="omx-param-title">张数</div>
                   <div className="omx-mode-track">
-                    {['1', '2', '4'].map((cnt) => (
+                    {imageOptions.n.options.map(({ value: cnt }) => (
                       <button // exempt-ui01: 生成张数按钮
                         key={cnt}
                         type="button"

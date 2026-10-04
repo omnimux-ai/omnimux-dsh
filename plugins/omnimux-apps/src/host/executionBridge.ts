@@ -382,6 +382,7 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
   },
   'gpt-image-2.5': {
     id: 'gpt-image-2.5',
+    channelGroups: [{ id: 'standard', default: true, constraints: { parameters: { resolution: { fixed: '1K' }, n: { fixed: 1 } } } }, { id: 'economy' }, { id: 'pro' }],
     parameters: {
       aspectRatio: {
         options: ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'],
@@ -390,6 +391,10 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
       resolution: {
         options: ['1K', '2K', '4K'],
         defaultValue: '1K',
+      },
+      n: {
+        options: [1, 2, 4],
+        defaultValue: 1,
       },
     },
   },
@@ -427,9 +432,85 @@ export const KNOWN_MODEL_CAPABILITY_CONTRACTS: Record<string, ModelCapabilityCon
   },
 };
 
+type DefaultParameterConstraint = { fixed?: unknown; only?: unknown[]; supported?: boolean };
+
+function defaultParameterConstraints(contract: ModelCapabilityContract, routing?: unknown): Record<string, DefaultParameterConstraint> {
+  const channels = (contract.channelGroups ?? contract.channels) as Array<{
+    default?: boolean;
+    constraints?: { parameters?: Record<string, DefaultParameterConstraint> };
+    id?: string;
+    wireGroup?: string;
+  }> | undefined;
+  const intent = routing as { allowedGroups?: string[]; group?: string } | undefined;
+  const requested = intent?.allowedGroups?.length ? intent.allowedGroups : intent?.group ? [intent.group] : [];
+  if (requested.length > 0) {
+    const selected = channels?.filter(channel => requested.includes(channel.id ?? '') || requested.includes(channel.wireGroup ?? '')) ?? [];
+    if (selected.length > 0) {
+      // The standard restriction applies when it is in the selected pool. A
+      // dedicated high-resolution line must never inherit the default limits.
+      return Object.assign({}, ...selected.map(channel => channel.constraints?.parameters ?? {}));
+    }
+    if (contract.id === 'gpt-image-2.5' && requested.every(group => ['economy', 'pro', 'gpt-image-2.5-economy', 'gpt-image-2.5-pro'].includes(group))) return {};
+  }
+  const defaultChannel = Array.isArray(channels)
+    ? channels.find((channel) => channel?.default === true)
+    : undefined;
+  if (defaultChannel) return defaultChannel.constraints?.parameters || {};
+  return contract.id.toLowerCase().replace(/[-_.]/g, '') === 'gptimage25'
+    ? { resolution: { fixed: '1K' }, n: { fixed: 1 } }
+    : {};
+}
+
+/** Apps submits without a channel, so only default resolution/count constraints apply. */
+function projectDefaultParameters(contract: ModelCapabilityContract, routing?: unknown): ModelCapabilityContract {
+  const constraints = defaultParameterConstraints(contract, routing);
+  const parameters = { ...contract.parameters };
+  let changed = false;
+  for (const field of ['resolution', 'n']) {
+    const constraint = constraints[field];
+    const definition = parameters[field] as {
+      options?: unknown[];
+      range?: { min?: number; max?: number };
+      defaultValue?: unknown;
+      [key: string]: unknown;
+    } | undefined;
+    if (!constraint || !definition) continue;
+    const fixed = constraint.fixed !== undefined;
+    const allowed = fixed ? [constraint.fixed] : constraint.only;
+    if (!Array.isArray(allowed)) continue;
+    const options = definition.options;
+    const kept = Array.isArray(options) && options.length > 0
+      ? options.filter((option) => allowed.some((value) => Object.is(value, optionValue(option))))
+      : fixed && (!definition.range || (typeof constraint.fixed === 'number'
+        && (definition.range.min === undefined || constraint.fixed >= definition.range.min)
+        && (definition.range.max === undefined || constraint.fixed <= definition.range.max)))
+        ? [{ value: constraint.fixed }]
+        : [];
+    if (kept.length === 0) {
+      throw new ExecutionBridgeError('validation_failed', `模型目录与默认线路的 ${field} 参数不一致，请刷新模型目录`);
+    }
+    const keepsDefault = kept.some((option) => Object.is(optionValue(option), definition.defaultValue));
+    parameters[field] = {
+      ...definition,
+      options: kept,
+      defaultValue: fixed ? constraint.fixed : keepsDefault ? definition.defaultValue : optionValue(kept[0]),
+      ...(fixed ? { range: undefined, allowAuto: undefined } : {}),
+    } as typeof parameters[typeof field];
+    changed = true;
+  }
+  return changed ? { ...contract, parameters } : contract;
+}
+
+function optionValue(option: unknown): unknown {
+  return option && typeof option === 'object' && 'value' in option
+    ? (option as { value: unknown }).value
+    : option;
+}
+
 export function resolveModelContract(
   modelId: string,
   customCatalog?: ModelCatalogLike | ModelCapabilityContract[] | null,
+  routing?: unknown,
 ): ModelCapabilityContract | null {
   if (!modelId || typeof modelId !== 'string') return null;
   const normalizedId = modelId.trim().toLowerCase();
@@ -473,23 +554,23 @@ export function resolveModelContract(
       const dynParams = found.parameters && typeof found.parameters === 'object' ? found.parameters : {};
       const hasDynParams = Object.keys(dynParams).length > 0;
       if (fallbackContract?.parameters) {
-        return {
+        return projectDefaultParameters({
           ...fallbackContract,
           ...found,
           parameters: {
             ...fallbackContract.parameters,
             ...dynParams,
           },
-        };
+        }, routing);
       }
       if (hasDynParams) {
-        return found;
+        return projectDefaultParameters(found, routing);
       }
     }
   }
 
   if (fallbackContract) {
-    return fallbackContract;
+    return projectDefaultParameters(fallbackContract, routing);
   }
 
   return null;
@@ -782,7 +863,7 @@ export function prepareAndInjectWorkflowSnapshot(
 
       // 未公开隐藏参数的契约自愈 (Issue #2642)
       // 遍历未在表单公开由作者固定的后台参数（node.data.params）并进行安全校准
-      const contract = resolveModelContract(selectedModel, options?.modelCatalog);
+      const contract = resolveModelContract(selectedModel, options?.modelCatalog, generatorNode.data.params.routing);
       if (contract && contract.parameters) {
         const exposedParamKeys = new Set<string>();
         for (const mapping of Object.values(fieldMappings)) {
@@ -878,8 +959,8 @@ export function prepareAndInjectWorkflowSnapshot(
           }
         }
 
-        // 3. 分辨率校准：未在表单公开且存在时，若不被新模型支持，自动收敛为新模型默认分辨率
-        if (!exposedParamKeys.has('resolution') && params.resolution !== undefined && params.resolution !== null) {
+        // Default-line restrictions are validated below without rewriting saved values.
+        if (!defaultParameterConstraints(contract, params.routing).resolution && !exposedParamKeys.has('resolution') && params.resolution !== undefined && params.resolution !== null) {
           const resSpec = contract.parameters.resolution;
           if (resSpec && Array.isArray(resSpec.options) && resSpec.options.length > 0) {
             const validRes = resSpec.options.map((o: unknown) =>
@@ -904,6 +985,29 @@ export function prepareAndInjectWorkflowSnapshot(
       console.warn(
         `[omnimux:executionBridge] 指定了模型 ${selectedModel}，但在工作流快照中未定位到主生成引擎节点，无法执行模型动态穿透`,
       );
+    }
+  }
+
+  // Validate default-line values before execution, including exposed fields and saved defaults.
+  for (const node of nodes) {
+    const params = node.data?.params;
+    const modelId = node.data?.model || params?.model;
+    if (typeof modelId !== 'string' || !params) continue;
+    const contract = resolveModelContract(modelId, options?.modelCatalog, params.routing);
+    if (!contract) continue;
+    const constraints = defaultParameterConstraints(contract, params.routing);
+    for (const field of ['resolution', 'n']) {
+      const value = params[field];
+      if (!constraints[field] || value === undefined || value === null || value === '') continue;
+      const constraint = constraints[field];
+      const allowed = constraint.fixed !== undefined ? [constraint.fixed] : constraint.only;
+      if (!allowed?.length) continue;
+      const supported = allowed.some((candidate) => field === 'resolution'
+        ? String(candidate).toLowerCase() === String(value).toLowerCase()
+        : Number(candidate) === Number(value));
+      if (!supported) {
+        throw new ExecutionBridgeError('validation_failed', `当前默认线路不支持${field === 'resolution' ? '分辨率' : '图片数量'} ${value}，请选择 ${allowed.join('、')}`, { nodeId: node.id, field });
+      }
     }
   }
 

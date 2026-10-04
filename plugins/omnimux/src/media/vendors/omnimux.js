@@ -128,6 +128,13 @@ export function pickMediaUrl(raw) {
   const firstData = dataRows && dataRows[0] && typeof dataRows[0] === 'object'
     ? /** @type {Record<string, unknown>} */ (dataRows[0])
     : undefined
+  // Image task records contain the provider's actual output beneath data.data;
+  // prefer it over the gateway content proxy, which may lag the ready artifact.
+  const providerResult = data?.data && typeof data.data === 'object' && !Array.isArray(data.data)
+    ? data.data : undefined
+  const providerUrl = providerResult?.result_data?.[0]?.url ?? providerResult?.results?.[0]
+    ?? data?.result_data?.[0]?.url ?? data?.results?.[0] ?? row.result_data?.[0]?.url ?? row.results?.[0]
+  if (typeof providerUrl === 'string' && /^https?:\/\//i.test(providerUrl)) return providerUrl
   const direct = row.videoUrl ?? row.video_url ?? row.imageUrl ?? row.image_url
     ?? row.audioUrl ?? row.audio_url
     ?? row.url ?? row.result_url

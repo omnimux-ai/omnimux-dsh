@@ -1,0 +1,200 @@
+{
+  "scope": "Production AppTab form and production ImageParamPopover/adapter in task-isolated browser; not complete App/Dev acceptance",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-gpt-image-25-issue-3071",
+  "assertions": [
+    {
+      "name": "AppTab mounts",
+      "pass": true
+    },
+    {
+      "name": "app standard exposes only 1K",
+      "pass": true,
+      "detail": {
+        "text": "清晰度1K",
+        "buttons": [
+          "1K"
+        ]
+      }
+    },
+    {
+      "name": "identified-visible-click #app-economy-tab",
+      "pass": true,
+      "detail": {
+        "x": 154,
+        "y": 33,
+        "w": 100,
+        "h": 26
+      }
+    },
+    {
+      "name": "app economy union ready",
+      "pass": true
+    },
+    {
+      "name": "app saved economy exposes high resolution",
+      "pass": true,
+      "detail": "清晰度1K2K4K"
+    },
+    {
+      "name": "identified-visible-click #canvas-tab",
+      "pass": true,
+      "detail": {
+        "x": 252,
+        "y": 33,
+        "w": 72,
+        "h": 26
+      }
+    },
+    {
+      "name": "canvas view mounted",
+      "pass": true
+    },
+    {
+      "name": "identified-visible-click #canvas-param-trigger",
+      "pass": true,
+      "detail": {
+        "x": 240,
+        "y": 202.84375,
+        "w": 72,
+        "h": 26
+      }
+    },
+    {
+      "name": "canvas image popover mounted",
+      "pass": true
+    },
+    {
+      "name": "canvas standard 1K only and no quality",
+      "pass": true,
+      "detail": {
+        "radios": [
+          "自适应",
+          "1:1",
+          "16:9",
+          "9:16",
+          "4:3",
+          "3:4",
+          "3:2",
+          "2:3",
+          "21:9",
+          "1K"
+        ],
+        "hasQuality": false,
+        "state": "{\"resolution\":\"1K\",\"qualityOptions\":[],\"resolutions\":[{\"value\":\"1K\",\"label\":\"1K\"}]}"
+      }
+    },
+    {
+      "name": "identified-visible-click #canvas-param-trigger",
+      "pass": true,
+      "detail": {
+        "x": 240,
+        "y": 202.84375,
+        "w": 72,
+        "h": 26
+      }
+    },
+    {
+      "name": "identified-visible-click #economy-line",
+      "pass": true,
+      "detail": {
+        "x": 168,
+        "y": 202.84375,
+        "w": 72,
+        "h": 26
+      }
+    },
+    {
+      "name": "identified-visible-click #canvas-param-trigger",
+      "pass": true,
+      "detail": {
+        "x": 240,
+        "y": 202.84375,
+        "w": 72,
+        "h": 26
+      }
+    },
+    {
+      "name": "canvas economy restores resolution and quality union",
+      "pass": true,
+      "detail": {
+        "radios": [
+          "自适应",
+          "1:1",
+          "16:9",
+          "9:16",
+          "4:3",
+          "3:4",
+          "3:2",
+          "2:3",
+          "21:9",
+          "1K",
+          "2K",
+          "4K",
+          "标准",
+          "高清 HD"
+        ],
+        "hasQuality": true
+      }
+    }
+  ],
+  "cleanup": {
+    "serverClosed": true,
+    "browserTerminated": true,
+    "profileRemoved": true
+  },
+  "origin": "http://127.0.0.1:53358",
+  "cdpPort": 53362,
+  "observedApp": [
+    {
+      "text": "生成模型选择生成底座模型，智能推荐为当前场景最优模型GPT Image 2.5",
+      "buttons": []
+    },
+    {
+      "text": "提示词*一只橘猫",
+      "buttons": []
+    },
+    {
+      "text": "清晰度1K",
+      "buttons": [
+        "1K"
+      ]
+    }
+  ],
+  "appEconomy": "清晰度1K2K4K",
+  "canvasStandard": {
+    "radios": [
+      "自适应",
+      "1:1",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "21:9",
+      "1K"
+    ],
+    "hasQuality": false,
+    "state": "{\"resolution\":\"1K\",\"qualityOptions\":[],\"resolutions\":[{\"value\":\"1K\",\"label\":\"1K\"}]}"
+  },
+  "canvasEconomy": {
+    "radios": [
+      "自适应",
+      "1:1",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "21:9",
+      "1K",
+      "2K",
+      "4K",
+      "标准",
+      "高清 HD"
+    ],
+    "hasQuality": true
+  },
+  "pass": true
+}

@@ -21,6 +21,8 @@ import {
   type EffectiveOpsUiState,
   type UpstreamMediaSnapshot,
 } from '../../../../../../shared/validation/operationUi.ts';
+import { narrowModelByLineConstraints } from '../../../../../../shared/validation/lineConstraints.ts';
+import { resolveLineConstraints } from '../channelGroups.ts';
 import type {
   EffectiveImageParams,
   ImageNodeParams,
@@ -102,7 +104,10 @@ export function resolveEffectiveImageParams(
     ? opsState.effectiveOps.find((option) => option.id === preferredOperation)
     : opsState.effectiveOps.find((option) => option.id === selectedId);
   const operation = preferredOperation ?? operationOption?.id ?? '';
-  const schema = args.schema ?? {};
+  const schema: ModelParameterSchema = model === 'gpt-image-2.5'
+    ? narrowModelByLineConstraints({ id: model, parameters: args.schema ?? {} }, model,
+      resolveLineConstraints(model, params?.routing)).parameters
+    : args.schema ?? {};
 
   const ratioOptions = schema.aspectRatio?.options ?? [];
   const aspectRatio = resolveOptionValue(

@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { injectWorkflowStyles } from '../styles.js'
+import { narrowModelByLineConstraints } from '../../shared/validation/lineConstraints.ts'
 import {
   appIdFromTabId,
   forgetOpenAppTab,
@@ -41,6 +42,7 @@ import {
   displayValueOf,
   sanitizePreviewUrl,
   resolveDefaultNodeModelId,
+  isSlotOrImportNode,
 } from './appTabWidgets.js'
 
 export {
@@ -218,7 +220,8 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
       id: 'gpt-image-2.5',
       name: 'GPT Image 2.5',
       label: 'GPT Image 2.5',
-      subtitle: '1k-4k · 超清摄影质感',
+      subtitle: '标准版 1K · 高分档依渠道',
+      channelGroups: [{ id: 'standard', default: true, constraints: { parameters: { resolution: { fixed: '1K' }, n: { fixed: 1 } } } }, { id: 'economy' }, { id: 'pro' }],
       parameters: {
         aspectRatio: {
           defaultValue: '16:9',
@@ -236,11 +239,11 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
         },
         resolution: {
           defaultValue: '1K',
-          options: [
-            { label: '1K', value: '1K' },
-            { label: '2K', value: '2K' },
-            { label: '4K', value: '4K' },
-          ],
+          options: ['1K', '2K', '4K'].map(value => ({ label: value, value })),
+        },
+        n: {
+          defaultValue: 1,
+          options: [1, 2, 4].map(value => ({ value })),
         },
       },
     },
@@ -272,7 +275,7 @@ export const KNOWN_OFFICIAL_MODELS = Object.freeze({
   ],
 })
 
-export function normalizeCatalogModels(catalogData, category = 'video') {
+export function normalizeCatalogModels(catalogData, category = 'video', routingByModel = {}) {
   const targetCategory = category === 'image' ? 'image' : 'video'
   let rawList = []
   if (Array.isArray(catalogData)) {
@@ -292,7 +295,18 @@ export function normalizeCatalogModels(catalogData, category = 'video') {
       if (m.type && m.type !== targetCategory) return false
       return true
     })
-    .map((m) => {
+    .map((rawModel) => {
+      const channels = rawModel.channelGroups ?? rawModel.channels
+      const defaultChannel = Array.isArray(channels)
+        ? channels.find((channel) => channel?.default === true)
+        : undefined
+      const routing = routingByModel[rawModel.id]
+      const selectedIds = routing?.allowedGroups?.length ? routing.allowedGroups : routing?.group ? [routing.group] : []
+      const selectedChannels = selectedIds.length > 0 && Array.isArray(channels)
+        ? channels.filter(channel => selectedIds.includes(channel.id) || selectedIds.includes(channel.wireGroup))
+        : defaultChannel ? [defaultChannel] : []
+      const constraints = { parameters: Object.assign({}, ...selectedChannels.map(channel => channel.constraints?.parameters || {})) }
+      const m = narrowModelByLineConstraints(rawModel, rawModel.id, constraints)
       const id = m.id === 'seedance-2-0' ? 'seedance-2.0' : m.id
       const name = m.name || m.label || id
       const subtitle = m.subtitle || m.desc || m.badge || ''
@@ -307,15 +321,18 @@ export function normalizeCatalogModels(catalogData, category = 'video') {
         })
       }
       const defaultValue =
-        m.parameters?.aspectRatio?.default ||
         m.parameters?.aspectRatio?.defaultValue ||
+        m.parameters?.aspectRatio?.default ||
         (options[0]?.value ?? (targetCategory === 'image' ? '1:1' : '16:9'))
       return {
         id,
         name,
         label: name,
         subtitle,
+        channels,
+        defaultParameterConstraints: constraints.parameters,
         parameters: {
+          ...m.parameters,
           aspectRatio: {
             defaultValue,
             options,
@@ -327,7 +344,7 @@ export function normalizeCatalogModels(catalogData, category = 'video') {
     })
 
   if (normalized.length === 0) {
-    return KNOWN_OFFICIAL_MODELS[targetCategory] || KNOWN_OFFICIAL_MODELS.video
+    return normalizeCatalogModels(KNOWN_OFFICIAL_MODELS[targetCategory] || KNOWN_OFFICIAL_MODELS.video, targetCategory, routingByModel)
   }
   return normalized
 }
@@ -364,7 +381,7 @@ export function resolveKnownModelSpec(modelId, availableModels = []) {
 /**
  * 统一推导单选下拉与分段切换控件的模型动态选项（分辨率 / 时长）
  */
-export function resolveFieldModelOptions(prop, activeModelObj, isRes, isDur) {
+export function resolveFieldModelOptions(prop, activeModelObj, isRes, isDur, isCount = false) {
   let opts = resolveOptions(prop)
   if (isRes) {
     const modelResolutions = resolveModelResolutions(activeModelObj, prop)
@@ -376,6 +393,9 @@ export function resolveFieldModelOptions(prop, activeModelObj, isRes, isDur) {
     if (durSpec.options && durSpec.options.length > 0) {
       opts = durSpec.options
     }
+  } else if (isCount) {
+    const countOptions = resolveOptions(activeModelObj?.parameters?.n)
+    if (countOptions.length > 0) opts = countOptions
   }
   return opts
 }
@@ -734,8 +754,17 @@ export function AppTab(props) {
   const currentCategory =
     manifest?.metadata?.category === 'image' || manifest?.category === 'image' ? 'image' : 'video'
   const availableModels = useMemo(() => {
-    return normalizeCatalogModels(modelCatalog, currentCategory)
-  }, [modelCatalog, currentCategory])
+    const nodes = manifest?.workflowBinding?.snapshot?.nodes || []
+    const primary = nodes.find(node => {
+      if (isSlotOrImportNode(node)) return false
+      const data = node.data || {}
+      return data.tool === `omnimux_${currentCategory}_submit` || data.materialType === currentCategory || data.type === currentCategory || node.type === currentCategory
+    })
+    const primaryModel = primary?.data?.model || primary?.data?.params?.model
+    const primaryRouting = primary?.data?.params?.routing
+    const routingByModel = primaryModel && primaryRouting ? { [primaryModel]: primaryRouting } : {}
+    return normalizeCatalogModels(modelCatalog, currentCategory, routingByModel)
+  }, [modelCatalog, currentCategory, manifest?.workflowBinding?.snapshot])
 
   const defaultNodeModelId = useMemo(() => {
     return resolveDefaultNodeModelId(manifest)
@@ -875,6 +904,8 @@ export function AppTab(props) {
         }
         // 3. 分辨率自愈校验
         else if (isResolutionField(key, prop, mapping)) {
+          // Default-line restrictions project options, never rewrite a saved request.
+          if (activeModelObj.id === 'gpt-image-2.5' || (Array.isArray(activeModelObj.channels) && activeModelObj.channels.some((channel) => channel?.default === true && channel.constraints?.parameters?.resolution))) continue
           const currentVal = next[key]
           if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
             const sanitized = sanitizeModelResolution(activeModelObj, currentVal)
@@ -1044,6 +1075,22 @@ export function AppTab(props) {
       const val = formValues[reqKey]
       if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
         newErrors[reqKey] = '此项为必填项'
+      }
+    }
+    for (const [key, prop] of Object.entries(properties)) {
+      const mapping = manifest?.fieldMappings?.[key]
+      const value = formValues[key]
+      if (value === undefined || value === null || value === '') continue
+      if (isResolutionField(key, prop, mapping)) {
+        const options = resolveModelResolutions(activeModelObj, null)
+        if (options.length > 0 && !options.some((option) => String(option.value).toLowerCase() === String(value).toLowerCase())) {
+          newErrors[key] = `当前默认线路不支持 ${value}，请选择 ${options.map((option) => option.value).join('、')}`
+        }
+      } else if (key === 'n' || /^(data\.)?params\.n$/.test(mapping?.targetPath || mapping?.targetField || '')) {
+        const options = activeModelObj?.parameters?.n?.options
+        if (Array.isArray(options) && options.length > 0 && !options.some((option) => Number(option?.value ?? option) === Number(value))) {
+          newErrors[key] = '当前默认线路不支持此图片数量'
+        }
       }
     }
     if (Object.keys(newErrors).length > 0) {
@@ -1230,7 +1277,7 @@ export function AppTab(props) {
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, manifest, requiredList, formValues, tasks, selectedModel])
+  }, [isSubmitting, manifest, requiredList, formValues, tasks, selectedModel, properties, activeModelObj])
 
   // Apply demo snapshot
   const handleApplyDemo = useCallback((snapshot) => {
@@ -1581,6 +1628,7 @@ export function AppTab(props) {
 
                 const isDur = isDurationField(key, prop, mapping)
                 const isRes = isResolutionField(key, prop, mapping)
+                const isCount = key === 'n' || /^(data\.)?params\.n$/.test(mapping?.targetPath || mapping?.targetField || '')
 
                 const isDropdownOpen = openDropdownKey === key
 
@@ -1633,7 +1681,7 @@ export function AppTab(props) {
                       ) : widget === 'select-single' ? (
                       /* 2. 定制下拉选择器 */
                       (() => {
-                        const opts = resolveFieldModelOptions(prop, activeModelObj, isRes, isDur)
+                        const opts = resolveFieldModelOptions(prop, activeModelObj, isRes, isDur, isCount)
                         const currentOpt = opts.find((o) => String(o.value) === String(val))
                         const displayLabel = currentOpt ? currentOpt.label : (val || prop.placeholder || '请选择')
                         const isOpen = openDropdownKey === key
@@ -1673,7 +1721,7 @@ export function AppTab(props) {
                     ) : widget === 'segmented-tabs' ? (
                       /* 3. 选项卡分段切换 */
                       (() => {
-                        const opts = resolveFieldModelOptions(prop, activeModelObj, isRes, isDur)
+                        const opts = resolveFieldModelOptions(prop, activeModelObj, isRes, isDur, isCount)
                         return (
                           <div className="omx-apptab-seg-tabs" role="tablist">
                             {opts.map((opt) => {

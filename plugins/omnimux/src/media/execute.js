@@ -634,6 +634,7 @@ export async function executeOmnimuxMedia(capability, input) {
   // Skip the submit guard for them; the endpoint decides what it accepts.
   const isByok = isExternalMediaProvider(route.providerId)
   let guardPlan = null
+  let guardRequest = null
   if (isByok) {
     guardPlan = {
       plan: null,
@@ -647,10 +648,12 @@ export async function executeOmnimuxMedia(capability, input) {
         : (capability === 'audio' ? 'text_to_speech' : undefined),
     }
   } else {
-    guardPlan = assertGuardSubmit(
-    {
+    guardRequest = {
       prompt,
       model: route.modelId,
+      group: splitRoutingCandidate(route.candidates[0] || route.modelId).group ?? route.group,
+      quality: input.quality,
+      n: input.n,
       operation: input.operation,
       speech: input.speech,
       duration: input.duration,
@@ -675,7 +678,8 @@ export async function executeOmnimuxMedia(capability, input) {
       assets,
       capability,
       seam,
-    },
+    }
+    guardPlan = assertGuardSubmit(guardRequest,
     {
       seam,
       capability,
@@ -782,10 +786,25 @@ export async function executeOmnimuxMedia(capability, input) {
     const runtime = input.runtime ?? createProtocolRuntime(candidateRoute, input.fetcher, auth.apiKey, onSubmitted)
     try {
       acceptedRoute = candidateRoute
+      // Pools may cross image protocols. Re-admit each candidate against the
+      // original logical intent; never reuse beta size fields on a pixel line.
+      let candidateInput = finalInput
+      if (!isByok && route.modelId === 'gpt-image-2.5') {
+        const remapped = assertGuardSubmit({ ...guardRequest, group: candidateRoute.group }, {
+          seam, capability, outputType: capability, requireListed: input.requireListed,
+        }).vendorPayload
+        // Asset hosting is independent of the line's size protocol. Preserve its
+        // public URLs and remap only the line-dependent generation parameters.
+        candidateInput = { ...finalInput }
+        for (const key of ['size', 'resolution', 'quality', 'n']) {
+          delete candidateInput[key]
+          if (remapped[key] !== undefined) candidateInput[key] = remapped[key]
+        }
+      }
       result = await runtime.execute({
         providerId: route.providerId,
         modelId: `${route.providerId}-${capability}`,
-        input: { ...finalInput, model: candidateModelId || candidate },
+        input: { ...candidateInput, model: candidateModelId || candidate },
         // Covers submit *and* the poll this same call performs when it waits
         // (`metadata.wait`): the outer budget must sit above the poll deadline,
         // otherwise runtime-kit's own abort replaces `omnimux-task-timeout`.

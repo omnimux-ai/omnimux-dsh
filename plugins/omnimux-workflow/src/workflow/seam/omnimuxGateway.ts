@@ -104,7 +104,7 @@ export function createOmnimuxSeamClient(opts: OmniumuxSeamClientOptions): Genera
       }
       const request: Record<string, unknown> = { prompt: req.prompt ?? '', dest: req.dest, wait: false };
       for (const key of [
-        'image', 'video', 'references', 'audioTrack', 'duration', 'operation', 'resolution', 'aspectRatio',
+        'image', 'video', 'references', 'audioTrack', 'duration', 'operation', 'resolution', 'quality', 'n', 'aspectRatio',
         'speech', 'audio', 'voice', 'style', 'instrumental', 'speed', 'sound', 'seed', 'watermark',
         'outputFormat', 'referenceTaskType', 'generationType', 'returnLastFrame', 'webSearch',
         'nsfwCheck', 'fileUrl', 'linkUrl', 'model', 'strategy', 'allowedGroups', 'signal',
