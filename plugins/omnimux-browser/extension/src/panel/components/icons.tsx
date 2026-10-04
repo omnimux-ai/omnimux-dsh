@@ -289,6 +289,14 @@ export function MessageSquareIcon({ size = 13, className }: { size?: number; cla
   )
 }
 
+export function SquareIcon({ size = 14, className }: { size?: number; className?: string }) {
+  return (
+    <SvgIcon size={size} className={className}>
+      <rect width="18" height="18" x="3" y="3" rx="2" fill="currentColor" stroke="none" />
+    </SvgIcon>
+  )
+}
+
 export function PlusIcon({ size = 14, className }: { size?: number; className?: string }) {
   return (
     <SvgIcon size={size} className={className}>
