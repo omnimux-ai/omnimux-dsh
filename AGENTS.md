@@ -57,6 +57,7 @@ Select the minimal sufficient checks for the changed surfaces using [plugin QA �
 | Model contracts | `pnpm verify:model-contracts`; refresh `pnpm hub:interfaces` |
 | Client / Stage / sidebar | Read [design.md](design.md), [UI guidelines](docs/contracts/ui-design-guidelines.md), and [copy standards](docs/contracts/ui-copywriting-and-naming-standards.md) first; `pnpm verify:stages` + `node --test scripts/verify-anti-slop.test.mjs`, then worktree browser evidence |
 
+- **Quality Loop (Spec → Code → Verify → Test → Green)**: Enforced mechanically by `scripts/guard-quality-loop.mjs`. Modifying business code requires an active task spec in `specs/`; E2E tests require prior live verification evidence.
 - **Specs** live in the task's own worktree (`specs/<feature>.spec.md`, uncommitted or ahead of `origin/main`); never mirror drafts into the primary checkout, which stays a read-only mirror.
 - **Browser acceptance** is real-browser verification inside the task's own worktree (ego-browser or the worktree web QA runner on `port: 0`, self-cleaning) with retained screenshots or reports. Unit tests, HTTP 200, CI `qa:pass`, or private harnesses do not count. Missing ego capability is BLOCKED; never fall back to IAB. Shell-specific behavior also needs Electron evidence.
 - **Test environments** use the [worktree bootstrap](docs/contracts/plugin-qa.md#工作树测试配置准备): synthetic `ui` mode by default; `live` needs task-specific credential authorization; never copy shared profiles or type real keys into test pages.
