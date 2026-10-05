@@ -49,7 +49,7 @@ test('readCanvasCatalog tolerates catalogs without preview_fingerprint (old hub 
 
 test('real Hub catalog exposes the curated text models and selects Gemini 3.8 for video', () => {
   const catalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
-  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
+  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash', 'claude-sonnet-4-6']); // #3086 Anthropic 品牌上新
   assert.equal(catalog.defaults.text, 'gemini-3.8-flash');
   const select = (assets = [], currentModelId) => planAutoAdaptation({ catalog, outputType: 'text', currentModelId,
     fingerprint: buildUpstreamFingerprint({ prompt: 'analyze', assets }) });
@@ -72,7 +72,7 @@ test('real Hub catalog: both ASR contracts are selectable in the audio-transcrip
     assert.deepEqual(row.listedOperations, [`${id}#speech_to_text`]);
   }
   // ...and never through a generative bucket: the chat whitelist stays chat-only.
-  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash']);
+  assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash', 'claude-sonnet-4-6']); // #3086 Anthropic 品牌上新
 
   const withAudio = buildUpstreamFingerprint({
     prompt: '',
@@ -85,7 +85,7 @@ test('real Hub catalog: both ASR contracts are selectable in the audio-transcrip
   assert.equal(isZeroCandidateEmptyState(transcription), false);
 
   // Every other tool keeps the curated whitelist: a chat node never offers an ASR model.
-  const CHAT = ['gemini-3.8-flash'];
+  const CHAT = ['gemini-3.8-flash', 'claude-sonnet-4-6']; // #3086 Anthropic 品牌上新
   const chat = buildFilteredModelOptions({ catalog, fingerprint: buildUpstreamFingerprint({ prompt: '请润色这段文字' }), outputType: 'text', tool: 'text-to-text' });
   assert.deepEqual(chat.options.map((row) => row.id).sort(), [...CHAT].sort());
   // Callers that pass no tool keep the pre-#1789 behaviour (whitelist only).
