@@ -180,6 +180,39 @@ materialize_into() {
   done
 }
 
+# 预设自带技能落盘：把 presets/<id>/skills/<skill> 复制到 <home>/skills/<skill>。
+#
+# 打包后的预设目录位于 app.asar 内部；DSH fs 服务读取目录时走 stat({bigint:true})
+# 再做 `mode & 0o777n`，而 Electron 的 asar stat 忽略 bigint 返回 Number，直接抛
+# "Cannot mix BigInt and other types" —— 预设自带的那条 skill-filesystem 行会被
+# skill-registry 整条跳过，技能永不入库（#3130）。技能因此改由真实目录（Harness
+# Home 的技能根）被发现。同名技能已存在时跳过，绝不覆盖用户或既有技能库的内容。
+stage_preset_skills() {
+  local home="$1"
+  [ -d "$home" ] || return 0
+  local skills_root="$home/skills"
+  local staged=0 skipped=0
+  local k skill_dir name
+  for k in "${ALL_PRESETS[@]}"; do
+    [ -d "$SRC/$k/skills" ] || continue
+    for skill_dir in "$SRC/$k/skills"/*; do
+      [ -d "$skill_dir" ] || continue
+      name=$(basename "$skill_dir")
+      if [ -e "$skills_root/$name" ]; then
+        skipped=$((skipped + 1))
+        continue
+      fi
+      mkdir -p "$skills_root/$name"
+      cp -R "$skill_dir/." "$skills_root/$name/"
+      staged=$((staged + 1))
+      echo "  + skill $k/$name"
+    done
+  done
+  if [ "$staged" -gt 0 ] || [ "$skipped" -gt 0 ]; then
+    echo "==> 预设自带技能 → $skills_root (新增 $staged · 跳过同名 $skipped)"
+  fi
+}
+
 # 1) profiles under target homes that vendor @deepseek-ai/dsh
 shopt -s nullglob
 for home_dir in "${TARGET_HOMES[@]}"; do
@@ -192,6 +225,7 @@ for home_dir in "${TARGET_HOMES[@]}"; do
         cp -R "$SRC/$alias_id/." "$home_dir/.agent-presets/$alias_id/"
       fi
     done
+    stage_preset_skills "$home_dir"
   fi
 
   for profile_home in "$home_dir/profiles"/*; do
@@ -204,6 +238,7 @@ for home_dir in "${TARGET_HOMES[@]}"; do
     materialize_into "$dest"
     mkdir -p "$profile_home/agent-presets-shipped"
     materialize_into "$profile_home/agent-presets-shipped"
+    stage_preset_skills "$profile_home"
   done
 done
 

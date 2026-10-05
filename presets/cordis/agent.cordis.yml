@@ -245,18 +245,13 @@
 - id: tool-cordis
   name: '@deepseek-ai/dsh-tool-cordis'
 
-# The composition-authoring skill travels with this preset rather than living
-# in the user's skill root: it documents THIS deployment's two planes, and a
-# preset is the unit that gets copied and edited. `baseUrl` is the preset's
-# own directory, so the root resolves wherever the preset is installed.
-# Both rows register into THIS preset's layer of the host skill registry, so
-# they need no realm; the agent's merged catalog also carries whatever the
-# deployment registered globally (repository plugins).
-- id: skill-filesystem
-  name: '@deepseek-ai/dsh-skill-filesystem'
-  config:
-    customSkillDirs:
-      - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
-
+# The two composition-authoring skills travel with this preset in `skills/`, but
+# the preset does NOT register that directory itself. A packaged preset lives
+# inside the app archive, and the filesystem skill provider cannot list a
+# directory there: it stats with `{ bigint: true }` and Electron's asar `stat`
+# ignores that option, so the whole provider is skipped and neither skill ever
+# reaches the catalog. The materializer (`scripts/sync-agent-presets.sh`) copies
+# `skills/<id>` into the Harness Home's own skill root instead — a real
+# directory the deployment already discovers. See issue #3130.
 - id: tool-skill
   name: '@deepseek-ai/dsh-tool-skill'

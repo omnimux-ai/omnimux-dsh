@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-02",
+  "updated": "2026-10-05",
   "description": "scripts/ 三分法：ciRequired=quality-gate/package scripts 链路（含被引用测试）；manual=排查/取证/一次性验证脚本（保留、按需手动跑）；deprecated=未登记，禁引用。",
   "ciRequired": [
     "a.mjs",
@@ -263,6 +263,7 @@
     "verify-plugin-inject-contract.mjs",
     "verify-plugin-load.mjs",
     "verify-plugin-load.test.mjs",
+    "verify-preset-skills-materialization.test.mjs",
     "verify-pricing-points-integrity.test.mjs",
     "verify-private-package.mjs",
     "verify-product-baseline.mjs",
@@ -353,6 +354,7 @@
     "verify-dev-cdp.test.mjs",
     "verify-dev-smoke.test.mjs",
     "verify-explore-grid-browser.mjs",
+    "verify-explore-registration-browser.mjs",
     "verify-first-level-header-align.mjs",
     "verify-fix-modal-shot-index.mjs",
     "verify-fork-dialog-labels.mjs",
