@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>悬停放大预览 · 原素材比例演示</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b0b0c; --panel:#141416; --card:#18181b; --border:rgba(255,255,255,.14); --muted:#a1a1aa; --text:#fafafa; }
+    *{box-sizing:border-box} body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    .shell{display:grid;grid-template-columns:1fr 320px;min-height:100vh}
+    .stage{padding:28px 32px;position:relative}
+    h1{margin:0 0 8px;font-size:22px;font-weight:650} .sub{color:var(--muted);margin-bottom:24px}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+    .pill{border:1px solid var(--border);background:#111;border-radius:999px;padding:6px 12px;color:var(--muted);font-size:12px}
+    .canvas{height:calc(100vh - 140px);border:1px dashed rgba(255,255,255,.08);border-radius:16px;background:radial-gradient(circle at 30% 20%, #1a1a1f, #0d0d0f 60%);position:relative;overflow:hidden}
+    .hint{position:absolute;left:24px;bottom:20px;color:var(--muted);font-size:12px}
+    .drawer{border-left:1px solid var(--border);background:var(--panel);padding:16px 14px;display:flex;flex-direction:column;gap:10px}
+    .drawer h2{margin:0 0 6px;font-size:14px;font-weight:600}
+    .item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;border:1px solid transparent;cursor:default}
+    .item:hover{background:rgba(255,255,255,.04);border-color:var(--border)}
+    .thumb{width:44px;height:44px;border-radius:8px;overflow:hidden;background:#222;flex:0 0 auto}
+    .thumb img,.thumb canvas{width:100%;height:100%;object-fit:cover;display:block}
+    .meta{min-width:0} .name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .dim{font-size:11px;color:var(--muted)}
+    .preview{position:fixed;z-index:20;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card);box-shadow:0 16px 40px rgba(0,0,0,.65);display:none;pointer-events:none}
+    .preview img,.preview canvas{display:block;width:100%;height:100%;object-fit:contain;background:#111}
+    .badge{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.7);color:#fff;font:10px/1 monospace;padding:2px 6px;border-radius:4px}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="stage">
+      <h1>悬停放大预览 · 按原素材比例</h1>
+      <p class="sub">最大边 360px，横图更宽更扁、竖图更高更窄，完整呈现不裁切。</p>
+      <div class="legend">
+        <span class="pill">横图 1920×1080 → 360×203</span>
+        <span class="pill">竖图 1080×1920 → 203×360</span>
+        <span class="pill">方图 1024×1024 → 360×360</span>
+        <span class="pill">旧版固定 260×140 已移除</span>
+      </div>
+      <div class="canvas"><div class="hint">把鼠标移到右侧素材条目上查看放大预览</div></div>
+    </section>
+    <aside class="drawer" id="drawer">
+      <h2>资产</h2>
+      <div class="item" data-w="1920" data-h="1080" data-kind="landscape" data-name="横图样例">
+        <div class="thumb" data-paint="landscape"></div>
+        <div class="meta"><div class="name">海边横构图</div><div class="dim">1920 × 1080</div></div>
+      </div>
+      <div class="item" data-w="1080" data-h="1920" data-kind="portrait" data-name="竖图样例">
+        <div class="thumb" data-paint="portrait"></div>
+        <div class="meta"><div class="name">人像竖构图</div><div class="dim">1080 × 1920</div></div>
+      </div>
+      <div class="item" data-w="1024" data-h="1024" data-kind="square" data-name="方图样例">
+        <div class="thumb" data-paint="square"></div>
+        <div class="meta"><div class="name">产品方构图</div><div class="dim">1024 × 1024</div></div>
+      </div>
+    </aside>
+  </div>
+  <div class="preview" id="preview"><canvas id="previewCanvas"></canvas><span class="badge" id="badge"></span></div>
+  <script>
+    const MAX=360;
+    function paint(canvas, kind){
+      const ctx=canvas.getContext('2d');
+      const w=canvas.width, h=canvas.height;
+      const g=ctx.createLinearGradient(0,0,w,h);
+      if(kind==='landscape'){g.addColorStop(0,'#1d4ed8');g.addColorStop(1,'#67e8f9');}
+      else if(kind==='portrait'){g.addColorStop(0,'#7c3aed');g.addColorStop(1,'#f472b6');}
+      else {g.addColorStop(0,'#0f766e');g.addColorStop(1,'#fbbf24');}
+      ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='rgba(255,255,255,.9)'; ctx.font='600 28px sans-serif';
+      ctx.fillText(kind==='landscape'?'16:9':kind==='portrait'?'9:16':'1:1', 24, 48);
+      ctx.font='14px sans-serif'; ctx.fillStyle='rgba(255,255,255,.75)';
+      ctx.fillText(w+' × '+h, 24, 78);
+      // subject block to show cropping risk
+      ctx.fillStyle='rgba(0,0,0,.25)';
+      if(kind==='landscape') ctx.fillRect(w*0.08,h*0.28,w*0.84,h*0.44);
+      else if(kind==='portrait') ctx.fillRect(w*0.18,h*0.12,w*0.64,h*0.76);
+      else ctx.fillRect(w*0.18,h*0.18,w*0.64,h*0.64);
+    }
+    document.querySelectorAll('[data-paint]').forEach(el=>{
+      const kind=el.getAttribute('data-paint');
+      const c=document.createElement('canvas');
+      c.width=kind==='landscape'?176:kind==='portrait'?99:120;
+      c.height=kind==='landscape'?99:kind==='portrait'?176:120;
+      paint(c, kind); el.appendChild(c);
+    });
+    function fit(w,h){const s=Math.min(1, MAX/Math.max(w,h)); return {w:Math.round(w*s), h:Math.round(h*s)};}
+    const preview=document.getElementById('preview');
+    const canvas=document.getElementById('previewCanvas');
+    const badge=document.getElementById('badge');
+    const drawer=document.getElementById('drawer');
+    document.querySelectorAll('.item').forEach(item=>{
+      item.addEventListener('mouseenter',()=>{
+        const nw=+item.dataset.w, nh=+item.dataset.h; const f=fit(nw,nh);
+        canvas.width=nw; canvas.height=nh; paint(canvas, item.dataset.kind);
+        preview.style.width=f.w+'px'; preview.style.height=f.h+'px';
+        badge.textContent=f.w+'×'+f.h;
+        const rect=item.getBoundingClientRect();
+        const drawerLeft=drawer.getBoundingClientRect().left;
+        let left=drawerLeft-f.w-8; let top=rect.top;
+        if(left<10) left=10; const maxTop=window.innerHeight-f.h-12; if(top>maxTop) top=maxTop; if(top<12) top=12;
+        preview.style.left=left+'px'; preview.style.top=top+'px'; preview.style.display='block';
+      });
+      item.addEventListener('mouseleave',()=>{ preview.style.display='none'; });
+    });
+  </script>
+</body>
+</html>
