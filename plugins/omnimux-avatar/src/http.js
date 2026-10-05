@@ -149,7 +149,9 @@ export function registerAvatarRoutes(webServer, deps = {}) {
           const kind = body.kind === 'multiview' || body.kind === 'both' ? body.kind : 'sheet'
           const sheet = kind === 'multiview' ? null : await librarySync.syncSheet(body.avatarId)
           const multiView = kind === 'sheet' ? null : await librarySync.syncMultiView(body.avatarId)
-          return send(200, { success: true, sheet, multiView, status: librarySync.status(body.avatarId) })
+          // 补偿成功后必须清掉任务的未入库标记，否则界面会一直显示「尚未保存到资产库」。
+          const cleared = generation.clearSyncError(body.avatarId, kind)
+          return send(200, { success: true, sheet, multiView, cleared, status: librarySync.status(body.avatarId) })
         }
         case '/tasks/delete': {
           if (typeof body.avatarId !== 'string' || typeof body.taskId !== 'string') {

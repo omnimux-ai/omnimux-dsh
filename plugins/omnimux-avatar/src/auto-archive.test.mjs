@@ -75,8 +75,35 @@ test('live 主图 → 触发一次 sheet 归档，任务 ready 且 syncError 为
   assert.equal(result.task.syncError, null)
 })
 
-test('排队中的任务不触发归档（只有 ready 才入库）', async (t) => {
+// 手动补偿（POST /sync）成功后必须清掉未入库标记，否则界面会一直显示「尚未保存到资产库」。
+test('clearSyncError：补偿成功清掉 syncError，无标记时不误报', async (t) => {
   const { paths, store } = await withEnv(t)
+  const avatar = store.create({ name: '补偿形象' })
+  const generation = createGeneration({
+    ctx: { get: () => undefined },
+    store,
+    paths,
+    imageGenerate: liveSeam(),
+    onReady: recorder(async () => {
+      throw new Error('资产库不可用')
+    }),
+  })
+
+  const result = await generation.submitSheet({ avatarId: avatar.id, model: 'm', ...SHEET_INPUT })
+  assert.equal(result.task.status, 'ready', '归档失败不得把已产出的图改成失败任务')
+  assert.equal(result.task.syncError, '资产库不可用')
+  // readyTaskOf 只认产物仍在盘上的任务（与自动归档同一判据），所以这里要把主图落到盘上。
+  putMainImage(paths, avatar.id)
+
+  assert.equal(generation.clearSyncError(avatar.id, 'sheet'), 1)
+  const after = store.get(avatar.id).tasks.find((task) => task.taskId === result.task.taskId)
+  assert.equal(after.syncError, null, '补偿成功后必须清掉未入库标记')
+  assert.equal(after.status, 'ready', '清标记不得改任务状态')
+
+  assert.equal(generation.clearSyncError(avatar.id, 'sheet'), 0, '没有标记时不应重复计数')
+})
+
+test('排队中的任务不触发归档（只有 ready 才入库）', async (t) => {  const { paths, store } = await withEnv(t)
   const avatar = store.create({ name: '排队形象' })
   const onReady = recorder()
   const generation = createGeneration({ ctx: { get: () => undefined }, store, paths, imageGenerate: queuedSeam(), onReady })

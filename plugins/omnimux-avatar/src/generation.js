@@ -141,6 +141,23 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
     }
   }
 
+  /**
+   * 手动补偿（POST /sync）成功后清掉任务的 syncError。
+   * 与 archiveReady 的成功分支同一口径：只有真的归档成功才清，清的是任务的未入库标记。
+   * @returns {number} 实际清掉标记的任务数
+   */
+  function clearSyncError(avatarId, kind) {
+    const avatar = store.get(avatarId)
+    const kinds = kind === 'both' ? ['sheet', 'multiview'] : [kind === 'multiview' ? 'multiview' : 'sheet']
+    let cleared = 0
+    for (const one of kinds) {
+      const task = readyTaskOf(avatar, avatarId, paths, one)
+      if (!task || !task.syncError) continue
+      if (store.updateTask(avatarId, task.taskId, { syncError: null })) cleared += 1
+    }
+    return cleared
+  }
+
   async function submitSheet(input = {}) {
     const { avatarId, model, group, tier, selection, brief = '', seed = 0, image_url = '' } = input
     store.get(avatarId)
@@ -290,5 +307,5 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
     }
   }
 
-  return { submitSheet, submitMultiView, refreshTask }
+  return { submitSheet, submitMultiView, refreshTask, clearSyncError }
 }
