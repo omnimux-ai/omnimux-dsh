@@ -220,7 +220,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     const catalog = buildModelCatalog({ text: h.text, media: h.media, gate: h.gate, env: {} })
     // #530 PR-A listed text set is contract-driven, not gate-invented
     assert.ok(catalog.text.some((row) => row.id === 'gemini-3.8-flash'))
-    assert.equal(catalog.text.length, 1)
+    assert.equal(catalog.text.length, 2) // #3086 claude-sonnet-4-6 上架
     assert.equal(catalog.text.some((row) => row.id === 'whisper-1'), false)
   })
 
