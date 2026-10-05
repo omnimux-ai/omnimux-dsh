@@ -1,6 +1,14 @@
 import { requestRejection } from './request-authorization.js'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import {
+  createWriteStream,
+  existsSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { dirname, join } from 'node:path'
 import {
   CLIP_STATUS_BY_CODE,
   ClipDomainError,
@@ -16,7 +24,24 @@ import { createProjectStore } from '../store/projectStore.js'
 export const CLIP_API_PREFIX = '/omnimux-clip/api'
 export const CLIP_VERSION = '0.1.0'
 
-const DEFAULT_FS = { existsSync, readFileSync, writeFileSync }
+const DEFAULT_FS = {
+  createWriteStream,
+  existsSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+}
+
+/**
+ * 画布导出上传原始编码字节的 Content-Type。
+ * 走 JSON + base64 会把体积膨胀 1/3，并撞上 8 MiB 的 JSON body 上限。
+ */
+export const RAW_EXPORT_CONTENT_TYPE = 'application/octet-stream'
+/** 单次导出上传硬上限（字节）。 */
+export const EXPORT_UPLOAD_MAX_BYTES = 2 * 1024 * 1024 * 1024
+const SAVE_EXPORT_PATH_RE = /^(?:\/omnimux-clip\/api)?\/projects\/[^/]+\/save-export$/
 
 /**
  * @param {import('node:http').ServerResponse} res
@@ -96,6 +121,69 @@ export function decodeExportPayload(body, paths, fs = DEFAULT_FS) {
 }
 
 /**
+ * 把导出字节落到 `<exportsDir>/<id>.mp4`。
+ * - `{ path }`（原始上传留下的临时文件）：同卷 rename，零拷贝、零整段内存；
+ * - `base64` / `data` / `blob`（兼容旧通道）：解码后写入。
+ * @returns {number} 写入字节数
+ */
+export function persistExportBytes(body, paths, fs, dest) {
+  const tempPath = body && typeof body.path === 'string' ? body.path.trim() : ''
+  if (tempPath) {
+    const source = assertInsideClipRoot(paths.dir, tempPath)
+    if (!fs.existsSync(source)) {
+      throw ClipDomainError.notFound(`export temp file not found: ${source}`)
+    }
+    fs.renameSync(source, dest)
+    return fs.statSync(dest).size
+  }
+  const bytes = decodeExportPayload(body, paths, fs)
+  fs.writeFileSync(dest, bytes, { mode: 0o600 })
+  return bytes.length
+}
+
+/** 画布导出：POST save-export + application/octet-stream。 */
+function isRawExportUpload(req) {
+  if ((req.method || 'GET').toUpperCase() !== 'POST') return false
+  const contentType = String(req.headers?.['content-type'] || '').toLowerCase()
+  if (!contentType.startsWith(RAW_EXPORT_CONTENT_TYPE)) return false
+  const pathname = String(req.url || '').split('?')[0].replace(/\/+$/, '')
+  return SAVE_EXPORT_PATH_RE.test(pathname)
+}
+
+/**
+ * 把原始上传体流式写入 clip 临时目录（不整段驻留内存），返回临时文件绝对路径。
+ * @returns {Promise<string>}
+ */
+async function writeRawUpload(req, tmpDir, fs) {
+  const tempPath = join(
+    tmpDir,
+    `upload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.bin`,
+  )
+  const out = fs.createWriteStream(tempPath, { mode: 0o600 })
+  let size = 0
+  try {
+    for await (const chunk of req) {
+      size += chunk.length
+      if (size > EXPORT_UPLOAD_MAX_BYTES) {
+        throw new Error(`export upload exceeds ${EXPORT_UPLOAD_MAX_BYTES} bytes`)
+      }
+      if (!out.write(chunk)) {
+        await new Promise((resolve, reject) => {
+          out.once('drain', resolve)
+          out.once('error', reject)
+        })
+      }
+    }
+    await new Promise((resolve, reject) => out.end((err) => (err ? reject(err) : resolve())))
+  } catch (error) {
+    out.destroy()
+    fs.rmSync(tempPath, { force: true })
+    throw error
+  }
+  return tempPath
+}
+
+/**
  * @param {{
  *   paths: ReturnType<typeof import('../paths.js').resolveClipPaths>,
  *   fs?: typeof DEFAULT_FS,
@@ -154,16 +242,15 @@ export function createClipDispatcher(deps) {
       }
 
       if (method === 'POST' && action === 'save-export') {
-        const bytes = decodeExportPayload(req.body, paths, fs)
         const dest = exportMp4Path(paths, id)
-        fs.writeFileSync(dest, bytes, { mode: 0o600 })
+        const bytes = persistExportBytes(req.body, paths, fs, dest)
         return {
           status: 200,
           body: {
             id,
             saved: true,
             path: dest,
-            bytes: bytes.length,
+            bytes,
           },
         }
       }
@@ -196,6 +283,8 @@ export function createClipDispatcher(deps) {
  * @param {{ dispatch: (req: object) => Promise<{ status: number, body: unknown }> }} dispatcher
  */
 export function registerClipRoutes(webServer, dispatcher, deps = {}) {
+  const paths = deps.paths ?? dispatcher.paths
+  const fs = deps.fs ?? DEFAULT_FS
   const dispose = webServer.register({
     kind: 'prefix',
     path: CLIP_API_PREFIX,
@@ -208,6 +297,37 @@ export function registerClipRoutes(webServer, dispatcher, deps = {}) {
           return
         }
         const method = (req.method || 'GET').toUpperCase()
+
+        // 画布导出：编码后的视频以原始字节上传，流式落到 clip 临时目录，
+        // 再由 dispatcher 原子改名到 exports/<projectId>.mp4。
+        if (isRawExportUpload(req)) {
+          if (!paths) {
+            sendJson(res, 500, { error: 'internal', message: 'clip paths unavailable' })
+            return
+          }
+          let tempPath
+          try {
+            tempPath = await writeRawUpload(req, paths.tmpDir, fs)
+          } catch (error) {
+            sendJson(res, 413, {
+              error: 'export-upload-failed',
+              message: error instanceof Error ? error.message : 'export upload failed',
+            })
+            return
+          }
+          try {
+            const result = await dispatcher.dispatch({
+              method,
+              url: req.url || CLIP_API_PREFIX,
+              body: { path: tempPath },
+            })
+            sendJson(res, result.status, result.body)
+          } finally {
+            fs.rmSync(tempPath, { force: true })
+          }
+          return
+        }
+
         const wantsBody = method === 'POST' || method === 'PUT'
         const body = wantsBody ? await readJsonBody(req) : undefined
         if (wantsBody && body === null) {

@@ -311,26 +311,30 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+/**
+ * Persist encoded export bytes through the clip host.
+ *
+ * The bytes travel as `application/octet-stream`: a real composition is far
+ * larger than the host's JSON body cap, and base64 would inflate it by a
+ * third. `metadata` stays in the signature for existing callers but is not
+ * part of the wire payload — the host derives the destination from the
+ * project id.
+ */
 export async function persistExportBlobToHost(
   projectId: string,
   blob: Blob,
   metadata: { durationMs?: number; width?: number; height?: number } = {},
 ): Promise<{ path?: string; bytes?: number }> {
+  void metadata;
   try {
-    const base64 = await blobToBase64(blob);
-    if (!base64) return {};
+    if (!blob || blob.size === 0) return {};
     const res = await fetch(`/omnimux-clip/api/projects/${encodeURIComponent(projectId)}/save-export`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        base64,
-        mime: "video/mp4",
-        durationMs: metadata.durationMs,
-        width: metadata.width,
-        height: metadata.height,
-      }),
+      headers: { "Content-Type": "application/octet-stream" },
+      body: blob,
     });
     if (!res.ok) {
+      console.warn("[export-runner] persistExportBlobToHost rejected:", res.status);
       return {};
     }
     return await res.json();
@@ -591,51 +595,38 @@ export function useExportRunner(options: ExportRunnerOptions): UseExportRunner {
 
         // If in Canvas mode, persist to host and notify canvas save
         if (isCanvas && session?.nodeId) {
-          try {
-            const projectId = session.projectId || project.id || `clip_${Date.now()}`;
-            const durationMs = Math.round((project.timeline?.duration ?? 0) * 1000);
-            const width = videoSettings.width ?? project.settings?.width ?? 1920;
-            const height = videoSettings.height ?? project.settings?.height ?? 1080;
+          const projectId = session.projectId || project.id || `clip_${Date.now()}`;
+          const durationMs = Math.round((project.timeline?.duration ?? 0) * 1000);
+          const width = videoSettings.width ?? project.settings?.width ?? 1920;
+          const height = videoSettings.height ?? project.settings?.height ?? 1080;
 
-            const thumbnailPath = await captureProjectThumbnail(project, 320, Math.round(320 * (height / width)));
+          const thumbnailPath = await captureProjectThumbnail(project, 320, Math.round(320 * (height / width)));
 
-            let videoPath = (window as { __openreelExportPath?: string }).__openreelExportPath;
-
-            if (capturedBlob) {
-              try {
-                const persistRes = await persistExportBlobToHost(projectId, capturedBlob, {
-                  durationMs,
-                  width,
-                  height,
-                });
-                if (persistRes?.path) {
-                  videoPath = persistRes.path;
-                }
-              } catch (persistErr) {
-                console.warn("[export-runner] Failed to persist export to host API:", persistErr);
-              }
-            }
-
-            if (!videoPath) {
-              videoPath = `/omnimux-workflow/api/local-file?path=${encodeURIComponent(`clip/exports/${projectId}.${ext}`)}`;
-            }
-
-            notifyCanvasSave({
-              nodeId: session.nodeId,
-              projectId,
-              schema: project as unknown as Record<string, unknown>,
-              createDownstreamNode: true,
-              output: {
-                videoPath,
-                thumbnailPath,
-                durationMs,
-                width,
-                height,
-              },
-            });
-          } catch (canvasSaveErr) {
-            console.error("[export-runner] notifyCanvasSave failed:", canvasSaveErr);
+          // The canvas node must point at the bytes rendered just now.
+          // `window.__openreelExportPath` belongs to a manual Save-dialog export
+          // and would silently attach an unrelated file to the canvas node.
+          const persistRes = capturedBlob
+            ? await persistExportBlobToHost(projectId, capturedBlob, { durationMs, width, height })
+            : null;
+          const videoPath = persistRes?.path;
+          if (!videoPath) {
+            console.error("[export-runner] canvas export was not persisted to the local library");
+            throw new Error("Canvas export was not persisted to the local library");
           }
+
+          notifyCanvasSave({
+            nodeId: session.nodeId,
+            projectId,
+            schema: project as unknown as Record<string, unknown>,
+            createDownstreamNode: true,
+            output: {
+              videoPath,
+              thumbnailPath,
+              durationMs,
+              width,
+              height,
+            },
+          });
         }
       } else {
         throw new Error(finalResult?.error?.message || "Export failed");

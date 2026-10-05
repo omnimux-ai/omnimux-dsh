@@ -64,7 +64,10 @@ export function apply(ctx) {
   const mountHttp = (httpCtx) => {
     const webServer = httpCtx.webServer ?? httpCtx.get?.('webServer')
     if (!webServer || typeof webServer.register !== 'function') return
-    const mount = () => registerClipRoutes(webServer, dispatcher, { getConnection: () => httpCtx.get?.('connection') ?? httpCtx.connection })
+    const mount = () => registerClipRoutes(webServer, dispatcher, {
+      paths,
+      getConnection: () => httpCtx.get?.('connection') ?? httpCtx.connection,
+    })
     if (typeof httpCtx.effect === 'function') httpCtx.effect(mount, 'omnimux-clip: http routes')
     else mount()
   }
