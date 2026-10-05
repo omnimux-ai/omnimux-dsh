@@ -149,14 +149,14 @@ models:
             maxSizeMb: 10
             limitSource:
               kind: "policy_conservative"
-              note: "继承 runtime 表行 max1；官方审计前保守"
+              note: "本仓保守策略而非上游公布值：上游能力合同只给 reference_images {min:0,max:16}，未公布格式清单与单文件大小上限；此处 max 1、mimes 与 10MB 均为保守选择"
         research:
           status: "draft"
         implementation:
           status: "ready"
           profileId: "imageGenerate"
           seam: "imageGenerate"
-          notes: "已落地 Edits 路由与发包映射"
+          notes: "发包走官方已公布的 POST /v1/images/generations，参考图落在 images 字段（OpenAI 家族分支当前只取首图）；官方未公布 GPT Image edits 端点"
         execution:
           status: "stub"
           profileId: "imageGenerate"
