@@ -46,9 +46,11 @@ export function effectiveInputDisplay(layout: SlotLayout, feed: FeedAsset[], sav
       && !consumedEdges.has(asset.edgeId) && !standbyEdges.has(asset.edgeId))
     .map((asset) => {
       const accepting = layout.slots.filter((spec) => acceptsFeedAsset(spec, asset));
+      // 容量只算会被本次生成消费的占位者：待命（inactive）占位不算「已满」，与 selectSlotOccupants 口径一致。
+      const occupied = (slot: string) => (bindings[slot] ?? []).filter((occupant) => occupant.use !== 'inactive').length;
       const reasonCode: UnusedSupply['reasonCode'] = !isReadyFeedAsset(asset) ? 'input_unavailable'
         : accepting.length === 0 ? 'no_matching_slot'
-        : accepting.every((spec) => (bindings[spec.slot]?.length ?? 0) >= (spec.max ?? Infinity)) ? 'slot_capacity'
+        : accepting.every((spec) => occupied(spec.slot) >= (spec.max ?? Infinity)) ? 'slot_capacity'
         : 'not_bound';
       return {
         occupant: { sourceNodeId: asset.sourceNodeId, edgeId: asset.edgeId, outputId: asset.outputId, pinned: false, ordinal: asset.ordinal },

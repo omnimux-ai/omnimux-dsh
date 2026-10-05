@@ -54,3 +54,9 @@ test('#3109 未就绪来源与文本供给不属于未使用列表（各自有�
 test('#3109 legacy 节点同样上报未使用供给（不因新旧绑定版本而静默）', () => {
   assert.deepEqual(reasons([image('e1')], layout([spec({})])), [['e1', 'no_matching_slot']]);
 });
+
+test('#3109 待命（inactive）占位不算「卡槽已满」→ 报 not_bound 而不是 slot_capacity', () => {
+  const l = layout([spec({}), spec({ slot: 'reference_image', role: 'reference', type: 'image', min: 0, max: 1 })]);
+  const saved = { reference_image: [{ edgeId: 'e1', sourceNodeId: 'src-e1', outputId: 'out-e1', pinned: true, use: 'inactive' }] };
+  assert.deepEqual(reasons([image('e2')], l, saved, [], 1), [['e2', 'not_bound']]);
+});
