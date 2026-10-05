@@ -7,8 +7,8 @@
 - **红**：断言 `CJK 上下文不抑制断后：<CJK>？<拉丁词> 行数与 Chrome 一致` 在守卫存在下 REAL_EXIT=1（fail 1）。
 - **绿**：删 `:202`（charWidthFactor 的 `cp > 0x2e7f` 特例，词分支不再含 >0x2E7F 码位故为死码）、`:286` 的 `&& !BREAK_AFTER.has(cp)`、`breakAfterAllowed` 的 `!(prevCp > 0x2e7f)` 后 REAL_EXIT=0（49/49）。
 - **机理**：守卫把 `？`（FF1F，EX）粘进后续拉丁词 `？word`；Chrome 对 FF1F 仍按 EX 断后（探针 `中文？abc def`@60=2、@50=2，`中文？aa中文bb？cc`@50=3，`中文？bbbbbbbbbbbbbbbb`@40=3，`中文？word word word`@40=5、`中文？word word word`@80=2）。
-- **衍生修复（同票，探针发现）**：`﹖`（U+FE56，小号问号，CL 类）在行首禁则集缺失——5 词夹具 Chrome 5 行 / 模型 6 行。Chrome 对 CL 标的执行的是**行尾悬挂溢出**（hang，w1+mark+w2@50=2），不是「前字符拉下」。行首禁则的 wrap 分支由「拉回 1 原子」改为「悬挂占满本行行尾」，集合补 `﹗﹖”｡､･`（FE57/FE56/201D/FF61/FF64/FF65）；`〉】〕` 补齐、`［` 去重属 ⑥。
-- **探针**：`r8-codepoints.json` = **0 mismatches**（40+ 码位模型 vs Chrome 全一致）。
+- **衍生修复（同票，探针发现）**：`﹖`（U+FE56，小号问号，EX 类）在行首禁则集缺失——5 词夹具 Chrome 5 行 / 模型 6 行。~~Chrome 对 CL 标的执行的是行尾悬挂溢出~~ **R9 复核证伪**：155 夹具宽度扫描首行溢出 0 例、111 夹具 A/B 悬挂低估 49 vs 拉回低估 4 → 行首禁则恢复「拉回」语义（前驱 CJK 字随标点下行；前驱不可断词时标点留行尾，行数同悬挂），集合补 `﹗﹖｡､･`（FE57/FE56/FF61/FF64/FF65——官方类 EX/EX/CL/CL/NS，均禁行首）；`〉】〕` 补齐、`［` 去重属 ⑥；死条目 ‥…‰” 已删（≤0x2E7F 走 word 原子、恒不可达）。
+- **探针**：`r8-codepoints.json` = **0 mismatches**（40+ 码位模型 vs Chrome 全一致；R9 追加 FE57/201D/FF61/FF64/FF65/2E3B 后仍 0）。
 
 ## 决策二 · 胶囊对比度（像素法）
 
@@ -17,7 +17,7 @@
 | 组合 | 修前 | 修后 |
 |---|---|---|
 | dark on-media hot | 3.84（bg 240,64,64 → #f0453a） | 4.59（#d92d20） |
-| dark on-media rising | 4.20 | 5.29（深琥珀底 rgba(120,53,15,0.9) + #fbbf24） |
+| dark on-media rising | 4.20 | 5.29（深琥珀底 #78350f + #fbbf24；R9 去 alpha） |
 | dark on-surface rising | 6.52 | 6.52（未动） |
 | dark on-surface hot | —（e4 卡实测） | 4.59 |
 | light on-media hot | 4.82 | 4.82（#dc2626 未动） |
@@ -27,7 +27,8 @@
 | dark/light watch·average·relative on-media | 4.77–11.57 | 不变 |
 | dark/light watch on-surface | 8.96 / 7.01 | 不变 |
 
-全部组合 ≥4.5:1。色相与层级不变：hot 仍最热、rising 次之；仅调明度/底深。
+夹具实测全部 ≥4.5:1。色相与层级不变：hot 仍最热、rising 次之；仅调明度/底深。
+**R9 追记**：α=0.9 的半透明底在纯白封面最劣处实测 4.15:1（封面色透上来），已改不透明 `#78350f`，同一最劣点位真 Chrome 复测 **5.43:1**。
 让步说明：on-media rising 的半透明琥珀底在亮封面下数学上无法达标（α=0.20 叠任意封面色对比度受封面支配），**最小让步**为媒体上的胶囊改用暗房深色琥珀底（两主题同值），保留琥珀色相与 1px ring；on-surface 半透明琥珀底+深琥珀字 5.56 达标。
 规格 §9.1 已写入「胶囊文字与实际承载背景 ≥4.5:1（像素法实测）」底线与三处调整值。
 截图：`pills-dark.png` / `pills-light.png`（修后）、`pills-dark-before.png` / `pills-light-before.png`（修前）、`contrast-results.json`。

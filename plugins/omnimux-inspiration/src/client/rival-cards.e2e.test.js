@@ -312,7 +312,7 @@ const WORD_WIDTH_E2E = (word, unit) => [...word].reduce((sum, c) => {
   if (cp > 0x2e7f) return sum + unit
   return sum + unit * (SPACE_FACTOR_E2E[cp] ?? GLYPH_WIDTH_FACTOR_E2E[c] ?? 0.592)
 }, 0)
-const LINE_START_FORBIDDEN_E2E = /[，。、；：？！）］｝》」』〞〟‥…‰％]/
+const LINE_START_FORBIDDEN_E2E = /[，。、；：？！）］｝》」』〞〟％〉】〕﹗﹖｡､･]/
 // drift guard: GLYPH_WIDTH_FACTOR_E2E must stay identical to
 // GLYPH_WIDTH_FACTOR in rival-masonry.js (assert.equal'd below).
 assert.equal(GLYPH_WIDTH_FACTOR_E2E['#'], 0.619, 'glyph table smoke')
@@ -388,9 +388,11 @@ function specWrapLines(text, unit, lineWidth) {
     }
     lines += 1
     if (atom.cjk && lastAtomW > 0 && LINE_START_FORBIDDEN_E2E.test(atom.cjk)) {
-      // kinsoku: a closing punctuation cannot open a line — the previous
-      // character drops down with it (assert.equal'd in the pin test).
-      used = Math.min(lastAtomW + w, width)
+      // kinsoku 拉回（R9 与实现对齐）：前一 CJK 字与标点一起下行；
+      // 前驱是不可断词原子时标点留行尾（与悬挂同形）。
+      used = atoms[i - 1] && atoms[i - 1].cjk
+        ? Math.min(lastAtomW + w, width)
+        : Math.min(w, width)
     } else {
       used = Math.min(w, width)
     }

@@ -56,10 +56,11 @@ export const RIVAL_TOKENS_CSS = `
   --dsw-specific-media-overlay: linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.30) 45%, rgba(0,0,0,0.82) 100%); /* exempt-ui03 token definition */
   --dsw-specific-media-glow-hot: rgba(240,69,58,0.12); /* exempt-ui03 token definition */
   /* #3166 决策二：on-media rising 的暗房色（两主题同值、不在 light 重定义）——
-     半透明琥珀底在亮封面上对亮琥珀字仅 ~1.6:1，深色琥珀底保底 ≥4.5:1，
-     色相仍为琥珀系。 */
+     半透明琥珀底在亮封面上对亮琥珀字仅 ~1.6:1；深色不透明琥珀底在纯白
+     封面最劣处实测 5.46:1（α=0.9 时封面色透上来只剩 4.15:1，R9 去
+     alpha），色相仍为琥珀系。 */
   --dsw-specific-velocity-rising-fg-media: #fbbf24; /* exempt-ui03 token definition */
-  --dsw-specific-velocity-rising-bg-media: rgba(120,53,15,0.9); /* exempt-ui03 token definition */
+  --dsw-specific-velocity-rising-bg-media: #78350f; /* exempt-ui03 token definition */
   --dsw-specific-velocity-rising-ring-media: rgba(251,191,36,0.40); /* exempt-ui03 token definition */
 }
 html[data-theme="light"] {

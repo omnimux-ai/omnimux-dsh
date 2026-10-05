@@ -628,6 +628,32 @@ describe('rival-masonry — R7 断行判据迁入套件（QA Q1/Q4 阻塞）', (
   })
 })
 
+describe('rival-masonry — R9 行首禁则「拉回」语义（R8 悬挂前提被真机证伪）', () => {
+  // R8 把行首禁则由「前一字随标点下行（拉回）」改成「悬挂占满行尾」，
+  // 依据是探针观察到溢出；复审用 155 夹具 × 14 宽度扫描证伪：Chrome 首行
+  // 溢出 >0.5px 的条数为 0——放不下时前一 CJK 字与标点一起下行。
+  // A/B（111 夹具 × 真 Chrome）：悬挂 mismatch 52（低估 49）、拉回 22（低估 4），
+  // 低估=卡片高度不足=同列重叠，正是本线一直在打的缺陷族。
+  // 注意适用域：拉回只在前一原子是 CJK 字时发生；前驱是不可断词原子时
+  // Chrome 让标点留在行尾（词整体下行），行数与悬挂同形——word+﹖ 夹具
+  // 两模型同给 5 行，不能用作鉴别夹具。
+  it('行首禁则拉回：标点放不下时前一 CJK 字随之下行（悬挂给 2、真机 3）', () => {
+    // 每条都在悬挂/拉回间有鉴别力：悬挂 2 行、拉回/Chrome 3 行。
+    assert.equal(rivalWrapLines('中中中中，文文文文', 14, 63), 3,
+      'Chrome 3 行：，放不下时第 4 个「中」随之下行；悬挂只占满行尾会少算一整行')
+    assert.equal(rivalWrapLines('中中中中中。文文文文', 14, 77), 3,
+      'Chrome 3 行：句号触发同一拉回机理')
+    assert.equal(rivalWrapLines('中中中中，，，文文文文', 14, 63), 3,
+      'Chrome 3 行：连续禁则标点按前一原子逐个拉回，不得再少算')
+  })
+  it('防回退：行首禁则不是悬挂——溢出形态在夹具宽度扫描中为 0 例', () => {
+    // 与上一条同一形态单独成 it：若有人把分支改回「used += glue + atomW
+    // 悬挂」而不改其它，此断言立刻变红（悬挂输出 2、拉回输出 3）。
+    assert.equal(rivalWrapLines('中中中中，文文文文', 14, 63), 3,
+      'hang model gives 2, pull-back (Chrome-verified) gives 3 — regression guard')
+  })
+})
+
 describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () => {
   // 与 QA B-4 / PM M1 同源：样式字符串是产物本身，断言其契约即可在套件内
   // 鉴别「回退到无显式字体/无 :not(:disabled)」的错误实现。
@@ -650,7 +676,13 @@ describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () =>
       'omnimux-rival-filter-jump',
     ]
     for (const cls of DISABLED_CAPABLE) {
-      const hoverRules = RIVAL_CSS.match(new RegExp(`[^{}]*\\.${cls}:hover[^{]*`, 'g')) || []
+      // R9 放宽匹配（逃逸通路修补）：hover 相关选择器有两种形态——
+      // 自身 hover `.cls:hover`（含 [attr] 等复合形态）与祖先驱动
+      // `:hover .cls`（如生产 .filter-row:hover .filter-jump）。任一
+      // 含 .cls 与 :hover 的选择器行都收进来逐条查 :not(:disabled)。
+      const hoverRules = RIVAL_CSS.match(
+        new RegExp(`[^{}]*(?:\\.${cls}(?![\\w-])[^{]*:hover|:hover[^{]*\\.${cls}(?![\\w-]))[^{]*`, 'g'),
+      ) || []
       assert.ok(hoverRules.length > 0, `${cls} should have hover rules in the stylesheet`)
       for (const rule of hoverRules) {
         assert.ok(

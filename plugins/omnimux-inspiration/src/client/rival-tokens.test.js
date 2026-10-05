@@ -45,6 +45,12 @@ const EXPECTED_VELOCITY_TOKENS = [
   '--dsw-specific-velocity-rising-fg',
   '--dsw-specific-velocity-rising-bg',
   '--dsw-specific-velocity-rising-ring',
+  // #3166 决策二追加的暗房 on-media rising 三 token（两主题同值）：
+  // R8 引入时两个护栏都漏了——不在本清单、也不含 -media- 中缀，
+  // 本行把它们钉回来（R9-⑤）。
+  '--dsw-specific-velocity-rising-fg-media',
+  '--dsw-specific-velocity-rising-bg-media',
+  '--dsw-specific-velocity-rising-ring-media',
 ]
 
 describe('rival-tokens — 两族 token 覆盖', () => {
@@ -80,6 +86,19 @@ describe('rival-tokens — 两族 token 覆盖', () => {
       lightSection.includes('--dsw-specific-velocity-hot-bg'),
       'light theme must carry the hot pill colour of the prototype',
     )
+    // …except the on-media rising triplet: dark-room tokens are
+    // theme-agnostic by design and must NOT be redefined in light (R9-⑤).
+    for (const name of [
+      '--dsw-specific-velocity-rising-fg-media',
+      '--dsw-specific-velocity-rising-bg-media',
+      '--dsw-specific-velocity-rising-ring-media',
+    ]) {
+      assert.equal(
+        lightSection.includes(`${name}:`),
+        false,
+        `${name} is a dark-room token and must stay out of the light theme`,
+      )
+    }
   })
 
   it('injects exactly once under its own style id', () => {

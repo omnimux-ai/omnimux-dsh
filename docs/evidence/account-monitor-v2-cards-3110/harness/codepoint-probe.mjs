@@ -43,6 +43,10 @@ const CASES = [
   ['b2-emdash', '2014'], ['ba-vline', '007c'], ['ba-ethiopic', '1361'],
   ['ba-figure-dash', '2012'], ['ba-endash', '2013'], ['ba-hyphen-pt', '2027'],
   ['ex-bang', '0021'], ['ff', '000c'],
+  // R9 补齐：行首禁则新增成员与双向断点。
+  ['ex-tiny-excl', 'fe57'], ['qu-close-dq', '201d'], ['cl-ideographic-stop', 'ff61'],
+  ['cl-ideographic-comma', 'ff64'], ['ns-halfwidth-mid', 'ff65'],
+  ['b2-three-em', '2e3b'],
 ]
 
 // Equal-length words at a width that admits exactly one per line: the model's

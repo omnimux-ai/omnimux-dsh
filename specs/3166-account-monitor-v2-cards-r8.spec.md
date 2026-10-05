@@ -62,3 +62,15 @@ node docs/evidence/account-monitor-v2-cards-3110/harness/build-demo.mjs
 ## 8. 跟进票（本票不做）
 
 生产 `dsh-ui-kit` 字体下字宽复测；`rival-card-stage.jsx` 夹具漏传 `busyId`；`RivalPostCard.jsx` 拆解按钮无 busy 守卫；`rival-filter.js` import 位置；指标行第 4 项最小列宽不可见；`card-compact-cta.e2e.test.js` flaky；`ratio` 生产链路；`.clamp-*`/`.t-*` 类名与 `attachFailed` 文案复用。
+
+## R9 修整追加段（第九轮复审必修，2026-10-05）
+
+第九轮双轴复审用真 Chrome 证伪了 R8「行首禁则悬挂占满行尾」的建模前提：155 夹具宽度扫描首行溢出 0 条、111 夹具 A/B 中悬挂 mismatch 52（其中低估 49）而拉回 mismatch 22（低估 4）。本轮照裁定照做，不开新方向。
+
+- **R9-①（核心）**：`rivalWrapLines` 行首禁则恢复「拉回」语义——放不下时 `lines += 1` 且新行 `used = 前一原子宽 + 本标点宽`（前置原子留在行首）。拉回只在前一原子为 CJK 字符时发生（word 原子不可断，拉回整词等价于把标点留在行尾、行数同悬挂）。钉行断言：`中×4+，+文×4@63`、`中×5+。+文×4@77`、`中×4+，，，+文×4@63` 均 = 3（悬挂给 2，具鉴别力）。先写红后绿。
+- **R9-②**：`BREAK_AFTER` 里 >0x2E7F 的 172 条成员恒不可达（CJK 分支先命中），删除并把计数口径改为「仅 ≤0x2E7F 成员」。理由：前移 `BREAK_AFTER` 判定会踩 `<CJK>？<拉丁词>` 断言（行数 2→3，高估方向），故选删死码不选改序。
+- **R9-③**：on-media rising 胶囊底 `rgba(120,53,15,0.9)` → 不透明 `#78350f`：纯白封面最劣 4.15→5.46（真 Chrome 复测）。报告与注释口径改为「夹具实测 ≥4.5:1；纯白封面最劣经修后 5.46:1」。
+- **R9-④**：disabled×hover 类级断言匹配式放宽为「同时覆盖 `.cls:hover`（自身）与 `:hover .cls`（祖先驱动）两种形态」，并给生产 `.filter-row:hover .filter-jump` 规则补 `:not(:disabled)`（该揭示规则本身就要被断言看见）。
+- **R9-⑤ 小项**：行首禁则注释按官方类表重写（FE56/FE57=EX、201D=QU、FF65=NS、FF61/FF64=CL）；正则删 3 条恒不可达死条目（‥2025/…2026/‰2030——≤0x2E7F 码位进 word 原子、禁则分支有 cjk 守卫），”201D 改走 word 原子路径恢复断后（QU 码位回 BREAK_AFTER；Chrome 5 词夹具 5 行，否则不可断整词估 1 行）；`charWidthFactor` 删死参数 `cp`；`EXPECTED_VELOCITY_TOKENS` 补 3 个 `-media` token 并断言它们不在 light 段重定义。
+- **R9-⑥ 装置**：shim `Button` 补 `loading` 语义（isDisabled=disabled||loading、aria-busy、label loading 类）；`IconButton` 补生产 slot span 结构。
+- **R9-⑦ 探针**：`codepoint-probe.mjs` CASES 补 FE57/201D/FF61/FF64/FF65/2E3B 六码位；复跑仍须 0 mismatches（2E3B 为双向断点、须按 CJK 原子建模才对得上 Chrome）。
