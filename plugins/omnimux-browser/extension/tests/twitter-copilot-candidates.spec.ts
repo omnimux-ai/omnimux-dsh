@@ -107,8 +107,8 @@ describe('#3100 候选池采集与评分', () => {
 
     const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-perspective-post')!
     const { userMessage } = item.generatePrompt(ctx, 'zh')
-    expect(userMessage).toContain('没有达到评分门槛')
-    expect(userMessage).toContain('延迟')
+    expect(userMessage).toContain('请围绕以下赛道，挑一个具体场景原创一条推文：延迟')
+    expect(userMessage).not.toMatch(/评分|门槛|信息流/)
 
     const entry = buildCopilotLogEntry({ traceId: 'tw_1_abc', ctx, itemId: item.id, locale: 'zh', outcome: { status: 'injected' } })
     expect(entry).toMatchObject({ inputMode: 'PURE_ORIGINAL', candidatesScanned: 1, qualifiedCount: 0, keywords: ['延迟'] })

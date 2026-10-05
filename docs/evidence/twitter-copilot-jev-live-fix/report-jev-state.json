@@ -1,0 +1,11 @@
+{
+  "spaceId": 159,
+  "before_emptyState": {
+    "ok": false,
+    "message": "bad-request: state (≤4000 chars), 1–10 choices and instructions are required"
+  },
+  "after_fixedState": {
+    "ok": false,
+    "message": "decision-failed: Invalid URL (POST /v1/decisions)"
+  }
+}

@@ -43,14 +43,15 @@ function formatFeedHotTweets(tweets?: Array<{ author: string; text: string; stat
 function freshMaterial(ctx: TwitterContext, locale: 'zh' | 'en' = 'zh'): string {
   if (ctx.feedHotTweets && ctx.feedHotTweets.length > 0) return formatFeedHotTweets(ctx.feedHotTweets, locale)
   const kw = (ctx.keywords || []).join(locale === 'en' ? ', ' : '、')
+  // 只给写作任务，不向模型透露内部筛选过程，避免「没有热帖达标」之类的话被写进文案。
   if (locale === 'en') {
     return kw
-      ? `No feed tweet reached the quality bar. Write an original tweet within this niche: ${kw}.`
-      : 'No feed tweet reached the quality bar. Write an original tweet from a working practitioner’s everyday observation.'
+      ? `Write an original tweet about one concrete, specific moment within this niche: ${kw}.`
+      : 'Write an original tweet about one concrete moment from a working practitioner’s everyday job.'
   }
   return kw
-    ? `当前信息流没有达到评分门槛的热帖。请围绕以下赛道原创一条推文：${kw}。`
-    : '当前信息流没有达到评分门槛的热帖。请从一线从业者的日常观察出发原创一条推文。'
+    ? `请围绕以下赛道，挑一个具体场景原创一条推文：${kw}。`
+    : '请从一线从业者日常工作里的一个具体场景出发，原创一条推文。'
 }
 
 /**

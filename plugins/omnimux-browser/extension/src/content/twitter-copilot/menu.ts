@@ -235,7 +235,7 @@ export async function decidePerspective(ctx: TwitterContext): Promise<Perspectiv
   try {
     const res = await chrome.runtime.sendMessage({
       type: 'DSH_TWITTER_COPILOT_DECIDE',
-      args: buildJevDecisionArgs(seeds, ctx.draftText || '', ctx.quotedTweetText || ''),
+      args: buildJevDecisionArgs(seeds, ctx.draftText || '', ctx.quotedTweetText || '', ctx.keywords || []),
     })
     if (res?.ok && getPerspective(res.decision)) {
       return {
