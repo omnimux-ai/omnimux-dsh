@@ -1861,6 +1861,8 @@ export function App(): React.JSX.Element {
   }), [copy])
   const queueDockCopy = useMemo(() => ({
     count: copy.app.queueDockBadge,
+    steer: copy.app.queueSteer,
+    steerFailed: copy.app.queueSteerFailed,
     sending: copy.app.queueSending,
     edit: copy.app.queueEdit,
     remove: copy.app.queueRemove,

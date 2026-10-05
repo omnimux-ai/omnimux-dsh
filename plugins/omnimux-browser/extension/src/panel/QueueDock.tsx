@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PanelApi } from './api.ts'
 import type { QueuedMessage } from './events.ts'
 import {
+  ArrowUpIcon,
   CheckMarkIcon,
   ChevronDownIcon,
   CloseIcon,
@@ -25,6 +26,8 @@ interface QueueDockProps {
   api: PanelApi
   copy: {
     count: (n: number) => string
+    steer: string
+    steerFailed: string
     sending: string
     edit: string
     remove: string
@@ -78,7 +81,7 @@ function QueueEditRow({
       <div className="queue-dock-actions">
         <button
           type="button"
-          className="queue-dock-action"
+          className="queue-dock-action queue-dock-action-save"
           aria-label={copy.save}
           title={copy.save}
           disabled={busy || text.trim() === ''}
@@ -88,7 +91,7 @@ function QueueEditRow({
         </button>
         <button
           type="button"
-          className="queue-dock-action"
+          className="queue-dock-action queue-dock-action-cancel"
           aria-label={copy.cancelEdit}
           title={copy.cancelEdit}
           disabled={busy}
@@ -175,6 +178,20 @@ export function QueueDock({ items, sessionId, api, copy, onError }: QueueDockPro
                       {item.text === '' ? copy.taskN(index + 1) : item.text}
                     </span>
                     <div className="queue-dock-actions">
+                      {item.steerable && (
+                        <button
+                          type="button"
+                          className="queue-dock-action queue-dock-action-steer"
+                          aria-label={copy.steer}
+                          title={copy.steer}
+                          disabled={busy !== null}
+                          onClick={() => {
+                            void applyAction(item.id, { kind: 'steer' }, copy.steerFailed)
+                          }}
+                        >
+                          <ArrowUpIcon size={13} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="queue-dock-action"
