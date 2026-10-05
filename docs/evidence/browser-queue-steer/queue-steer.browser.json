@@ -1,0 +1,97 @@
+{
+  "task": "browser-queue-steer",
+  "surface": "omnimux-browser extension side panel (real App bundle)",
+  "url": "http://127.0.0.1:51068/",
+  "browser": "Google Chrome (headless, CDP)",
+  "bridge": "stubbed by .tmp/qa-steer/api-shim.ts (no DSH host in the worktree)",
+  "screenshots": [
+    "01-idle-steer-disabled.png",
+    "02-running-steer-enabled.png",
+    "03-after-steer.png"
+  ],
+  "assertions": [
+    {
+      "name": "排队行渲染「插话发送」按钮（原生同款入口）",
+      "pass": true,
+      "detail": {
+        "label": "插话发送",
+        "title": "插话发送",
+        "disabled": false,
+        "rows": 2
+      }
+    },
+    {
+      "name": "运行中：插话发送按钮可用",
+      "pass": true,
+      "detail": {
+        "label": "插话发送",
+        "title": "插话发送",
+        "disabled": false,
+        "rows": 2
+      }
+    },
+    {
+      "name": "运行中：按钮提示为「插话发送」",
+      "pass": true,
+      "detail": "插话发送"
+    },
+    {
+      "name": "点击后发出 session.updateQueue",
+      "pass": true,
+      "detail": "session.updateQueue"
+    },
+    {
+      "name": "动作载荷为 { kind: \"steer\" }",
+      "pass": true,
+      "detail": {
+        "kind": "steer"
+      }
+    },
+    {
+      "name": "携带被点击条目的 id 与会话 id",
+      "pass": true,
+      "detail": {
+        "sessionId": "qa-session",
+        "itemId": "qa-q1",
+        "action": {
+          "kind": "steer"
+        }
+      }
+    },
+    {
+      "name": "插话窗口已关闭时不提示失败（原生静默语义）",
+      "pass": true,
+      "detail": null
+    },
+    {
+      "name": "其他失败仍提示「插话发送失败，请重试。」",
+      "pass": true,
+      "detail": "插话发送失败，请重试。"
+    },
+    {
+      "name": "任务结束后：插话发送按钮置灰",
+      "pass": true,
+      "detail": {
+        "label": "插话发送",
+        "title": "仅运行中可插话发送",
+        "disabled": true,
+        "rows": 2
+      }
+    },
+    {
+      "name": "任务结束后：提示「仅运行中可插话发送」",
+      "pass": true,
+      "detail": "仅运行中可插话发送"
+    },
+    {
+      "name": "置灰时点击不再发请求",
+      "pass": true,
+      "detail": {
+        "before": 3,
+        "after": 3
+      }
+    }
+  ],
+  "pass": true,
+  "at": "2026-10-05T08:59:52.929Z"
+}

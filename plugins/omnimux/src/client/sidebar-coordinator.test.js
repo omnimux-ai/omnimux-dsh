@@ -883,3 +883,106 @@ test('探索菜单运行时注册接缝：action 优先于 tabId，非法形状�
   assert.equal(resolveExploreMenuItems().length, 11, '全部注销后回到 11 项')
   delete window.__omnimuxWorkbench
 })
+
+test('探索入口悬停即展开：意图延时后出现，扫过不误触，移入菜单不闪断', async (t) => {
+  setup()
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const {
+    installSidebarGlobal,
+    SIDEBAR_GLOBAL,
+    EXPLORE_HOVER_OPEN_DELAY,
+    EXPLORE_HOVER_CLOSE_DELAY,
+  } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  for (let i = 0; i < 3; i++) api.place()
+  const btn = document.querySelector('[data-omnimux-explore-entry]')
+  const hover = (el, type) => el.dispatchEvent(new dom.window.MouseEvent(type))
+
+  // AC2：扫过不误触 —— 意图延时未到就离开，不产生菜单
+  hover(btn, 'mouseenter')
+  t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY - 1)
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '延时未到不展开')
+  hover(btn, 'mouseleave')
+  t.mock.timers.tick(EXPLORE_HOVER_CLOSE_DELAY)
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '扫过不误触')
+
+  // AC1：悬停即展开（全程没有点击）
+  hover(btn, 'mouseenter')
+  t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY)
+  const menu = document.getElementById('omnimux-explore-menu')
+  assert.ok(menu, '仅悬停即出现菜单')
+  assert.equal(btn.getAttribute('aria-expanded'), 'true')
+
+  // AC3：指针从按钮斜向移进菜单，菜单不闪断
+  hover(menu, 'mouseenter')
+  hover(btn, 'mouseleave')
+  t.mock.timers.tick(EXPLORE_HOVER_CLOSE_DELAY)
+  assert.ok(document.getElementById('omnimux-explore-menu'), '指针移入菜单后保持展开')
+
+  // 移出菜单后收起
+  hover(menu, 'mouseleave')
+  t.mock.timers.tick(EXPLORE_HOVER_CLOSE_DELAY)
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '移出后收起')
+  assert.equal(btn.getAttribute('aria-expanded'), 'false')
+})
+
+test('探索入口：点击仍可开关，点击收起后悬停不立即重开', async (t) => {
+  setup()
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const { installSidebarGlobal, SIDEBAR_GLOBAL, EXPLORE_HOVER_OPEN_DELAY } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  for (let i = 0; i < 3; i++) api.place()
+  const btn = document.querySelector('[data-omnimux-explore-entry]')
+  const hover = (el, type) => el.dispatchEvent(new dom.window.MouseEvent(type))
+
+  btn.click()
+  assert.ok(document.getElementById('omnimux-explore-menu'), '点击可展开')
+  btn.click()
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '再次点击可收起')
+
+  // AC4：指针仍停在按钮上，悬停不得立刻重开
+  hover(btn, 'mouseenter')
+  t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY * 3)
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '点击收起后悬停不重开')
+
+  // 指针离开后悬停能力恢复
+  hover(btn, 'mouseleave')
+  hover(btn, 'mouseenter')
+  t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY)
+  assert.ok(document.getElementById('omnimux-explore-menu'), '指针离开后悬停恢复')
+})
+
+test('探索入口：Esc 与焦点移出收起，收起时不留挂起定时器', async (t) => {
+  setup()
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const { installSidebarGlobal, SIDEBAR_GLOBAL, EXPLORE_HOVER_OPEN_DELAY, EXPLORE_HOVER_CLOSE_DELAY } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  for (let i = 0; i < 3; i++) api.place()
+  const btn = document.querySelector('[data-omnimux-explore-entry]')
+  const hover = (el, type) => el.dispatchEvent(new dom.window.MouseEvent(type))
+  const openByHover = () => {
+    hover(btn, 'mouseenter')
+    t.mock.timers.tick(EXPLORE_HOVER_OPEN_DELAY)
+  }
+
+  // AC5：Esc 收起
+  openByHover()
+  assert.ok(document.getElementById('omnimux-explore-menu'))
+  document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, 'Esc 收起')
+
+  // AC5：焦点移出按钮与菜单之外收起
+  openByHover()
+  assert.ok(document.getElementById('omnimux-explore-menu'))
+  btn.dispatchEvent(new dom.window.FocusEvent('focusout', { relatedTarget: document.body }))
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '焦点移出收起')
+
+  // AC6：收起已清空挂起定时器 —— 再推进时间不产生新的开合
+  hover(btn, 'mouseleave')
+  t.mock.timers.tick(EXPLORE_HOVER_CLOSE_DELAY * 4)
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '无残留定时器')
+  assert.equal(btn.getAttribute('aria-expanded'), 'false')
+})

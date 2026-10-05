@@ -1862,6 +1862,7 @@ export function App(): React.JSX.Element {
   const queueDockCopy = useMemo(() => ({
     count: copy.app.queueDockBadge,
     steer: copy.app.queueSteer,
+    steerUnavailable: copy.app.queueSteerUnavailable,
     steerFailed: copy.app.queueSteerFailed,
     sending: copy.app.queueSending,
     edit: copy.app.queueEdit,
@@ -3780,6 +3781,7 @@ export function App(): React.JSX.Element {
           items={queuedItems}
           sessionId={sessionRef.current}
           api={api}
+          steerAvailable={working && !stopping}
           copy={queueDockCopy}
           onError={setError}
         />
