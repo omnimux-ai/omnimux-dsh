@@ -192,6 +192,7 @@ const EXPLORE_STYLES = `
 
 .omnimux-explore-menu {
   position: fixed; z-index: 500; min-width: 180px; width: max-content; max-width: 240px;
+  max-height: calc(100vh - 16px); overflow-y: auto;
   box-sizing: border-box; padding: 5px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 12px;
@@ -351,6 +352,32 @@ export const EXPLORE_MENU_ITEMS = [
   },
 ]
 
+/**
+ * 运行时注册的探索菜单项（第三方 / 个人插件经 `registerExploreItem` 注册）。
+ * 内置白名单保持只读；未注册即不渲染 —— 产品基线不会出现指向未安装插件的死条目。
+ */
+const EXTRA_EXPLORE_ITEMS = []
+
+/** 菜单项身份键：非空字符串 id，其余一律视为非法。 */
+function exploreItemId(item) {
+  return typeof item?.id === 'string' ? item.id.trim() : ''
+}
+
+/** 最小形状校验：缺 id / label / iconSvg 一律拒绝，非法输入不抛错。 */
+function isValidExploreItem(item) {
+  if (!item || typeof item !== 'object') return false
+  if (!exploreItemId(item)) return false
+  if (typeof item.label !== 'string' || !item.label.trim()) return false
+  if (typeof item.iconSvg !== 'string' || !item.iconSvg.trim()) return false
+  return true
+}
+
+/** 合并内置白名单与运行时注册项；id 冲突时内置项优先，注册项被忽略。 */
+export function resolveExploreMenuItems() {
+  const builtin = new Set(EXPLORE_MENU_ITEMS.map((item) => item.id))
+  return [...EXPLORE_MENU_ITEMS, ...EXTRA_EXPLORE_ITEMS.filter((item) => !builtin.has(item.id))]
+}
+
 let exploreEntryElement = null
 let exploreDocCleanup = null
 let currentExploreAnchor = null
@@ -389,14 +416,16 @@ function ensureExploreRow() {
  * 计算探索浮动菜单位置，带视口边界防溢出定位。
  * @param {HTMLElement} anchor
  * @param {{ innerWidth: number, innerHeight: number }} [viewport]
+ * @param {{ width: number, height: number }} [menuSize] 实测菜单尺寸；缺省回落到保守常量
  * @returns {{ left: number, top: number }}
  */
-export function computeExploreMenuPosition(anchor, viewport = typeof window !== 'undefined' ? window : undefined) {
+export function computeExploreMenuPosition(anchor, viewport = typeof window !== 'undefined' ? window : undefined, menuSize) {
   const rect = anchor?.getBoundingClientRect?.() ?? { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }
   const vw = viewport?.innerWidth ?? 1280
   const vh = viewport?.innerHeight ?? 800
-  const menuW = 180
-  const menuH = 380
+  // 运行时注册项让菜单高度不再固定：优先用实测尺寸，避免「按常量判定放得下」把末项裁到视口外。
+  const menuW = menuSize?.width > 0 ? menuSize.width : 180
+  const menuH = menuSize?.height > 0 ? menuSize.height : 380
   const gap = 6
 
   let left = Math.round(rect.right + gap)
@@ -424,6 +453,13 @@ export function closeExploreMenu() {
     currentExploreAnchor = null
   }
   document.getElementById('omnimux-explore-menu')?.remove()
+}
+
+/** 注册集合发生变化时收起已展开的菜单，避免展示陈旧项。 */
+function closeExploreMenuIfOpen() {
+  if (typeof document === 'undefined') return
+  if (!document.getElementById('omnimux-explore-menu')) return
+  closeExploreMenu()
 }
 
 /**
@@ -465,14 +501,21 @@ export function openExploreMenu(anchor) {
   menu.setAttribute('role', 'menu')
   menu.setAttribute('aria-label', '探索')
 
-  for (const item of EXPLORE_MENU_ITEMS) {
+  for (const item of resolveExploreMenuItems()) {
     const btn = document.createElement('button')
     btn.type = 'button'
     btn.className = 'omnimux-explore-menu-item'
     btn.setAttribute('role', 'menuitem')
     btn.dataset.exploreId = item.id
     btn.setAttribute('aria-label', item.label)
-    btn.innerHTML = `<span class="omnimux-explore-menu-item-icon">${item.iconSvg}</span><span class="omnimux-explore-menu-item-label">${item.label}</span>`
+    // iconSvg 是受信 HTML（契约要求纯矢量）；label 一律按纯文本渲染，绝不拼进 innerHTML。
+    const icon = document.createElement('span')
+    icon.className = 'omnimux-explore-menu-item-icon'
+    icon.innerHTML = item.iconSvg
+    const label = document.createElement('span')
+    label.className = 'omnimux-explore-menu-item-label'
+    label.textContent = item.label
+    btn.append(icon, label)
     btn.addEventListener('click', (event) => {
       event.preventDefault()
       event.stopPropagation()
@@ -488,7 +531,8 @@ export function openExploreMenu(anchor) {
   }
 
   document.body.append(menu)
-  const { left, top } = computeExploreMenuPosition(anchor)
+  const measured = menu.getBoundingClientRect()
+  const { left, top } = computeExploreMenuPosition(anchor, undefined, { width: measured.width, height: measured.height })
   menu.style.left = `${left}px`
   menu.style.top = `${top}px`
 
@@ -977,6 +1021,29 @@ function createApi() {
       }
     },
     place: runPlaceAll,
+    /**
+     * 把一项注册进「探索」菜单（第三方 / 个人插件唯一合法入口，替代自挂一级行）。
+     * 非法形状或与内置 id 冲突时不注册且不抛错；返回注销函数。
+     * 只接受白名单字段（id / label / iconSvg / tabId / action）：注册项不得借
+     * `entryId` / `pluginId` 委托到已挂载行，避免冒充其它插件的入口。
+     */
+    registerExploreItem(item) {
+      if (!isValidExploreItem(item)) return () => {}
+      const id = exploreItemId(item)
+      if (EXPLORE_MENU_ITEMS.some((builtin) => builtin.id === id)) return () => {}
+      const previous = EXTRA_EXPLORE_ITEMS.findIndex((extra) => extra.id === id)
+      if (previous >= 0) EXTRA_EXPLORE_ITEMS.splice(previous, 1)
+      const record = { id, label: item.label, iconSvg: item.iconSvg }
+      if (typeof item.tabId === 'string' && item.tabId.trim()) record.tabId = item.tabId
+      if (typeof item.action === 'function') record.action = item.action
+      EXTRA_EXPLORE_ITEMS.push(record)
+      closeExploreMenuIfOpen()
+      return () => {
+        const index = EXTRA_EXPLORE_ITEMS.indexOf(record)
+        if (index >= 0) EXTRA_EXPLORE_ITEMS.splice(index, 1)
+        closeExploreMenuIfOpen()
+      }
+    },
   }
 }
 
@@ -1047,6 +1114,7 @@ export function resetSidebarCoordinatorForTests() {
   ROWS.length = 0
   INLINE_ROWS.length = 0
   CONVERGED_ROWS.clear()
+  EXTRA_EXPLORE_ITEMS.length = 0
   seen.clear()
   closeNewMenu()
   closeExploreMenu()
