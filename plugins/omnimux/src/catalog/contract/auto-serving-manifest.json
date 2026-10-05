@@ -20,9 +20,9 @@
       "gatewayIds": [
         "claude-sonnet-4-6"
       ],
-      "requiredInAuto": false,
+      "requiredInAuto": true,
       "canvasExcluded": false,
-      "note": "2026-10-04: 自建号池畅享档上线接入"
+      "note": "2026-10-05: 生产网关实测通过，chat/vision_chat 上架为 listed"
     },
     {
       "productId": "gemini-3.8-flash",

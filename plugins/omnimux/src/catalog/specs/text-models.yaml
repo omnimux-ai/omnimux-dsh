@@ -74,10 +74,10 @@ models:
             min: 1
             max: 1
         research:
-          status: "draft"
-          docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-chat.md"
-          verifiedAt: "2026-10-04"
-          notes: "生产网关基线已同步，Channel 76 [自建号池-Magpie] 实测通过"
+          status: "verified"
+          docUrl: "docs/evidence/2026-10-05-model-claude-sonnet-4-6-chat.md"
+          verifiedAt: "2026-10-05"
+          notes: "生产网关实测 200：id chatcmpl-req_vrtx_011CfiPiyWDMENUoDzjrYwaF，usage 15+5=20"
         implementation:
           status: "ready"
           profileId: "textComplete"
@@ -111,10 +111,10 @@ models:
               kind: "policy_conservative"
               note: "Claude Sonnet 多模态图文输入保守限额"
         research:
-          status: "draft"
-          docUrl: "docs/evidence/2026-09-05-model-claude-opus-4-6-vision_chat.md"
-          verifiedAt: "2026-10-04"
-          notes: "生产网关基线已同步，Channel 76 [自建号池-Magpie] 实测通过"
+          status: "verified"
+          docUrl: "docs/evidence/2026-10-05-model-claude-sonnet-4-6-vision_chat.md"
+          verifiedAt: "2026-10-05"
+          notes: "生产网关实测 200：id chatcmpl-req_vrtx_011CfiPmNi33kpeF5oJ33tB3，图像理解回答非空"
         implementation:
           status: "ready"
           profileId: "textComplete"

@@ -65,7 +65,7 @@ test('H2: 处置表 82 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 26); // #2804 +1
+  assert.equal(index.listedOperations.length, 28); // #3086 claude-sonnet-4-6 chat+vision_chat +2 → 28
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {

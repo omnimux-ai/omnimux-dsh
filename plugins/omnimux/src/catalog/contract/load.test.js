@@ -42,7 +42,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 26); // #2804 gemini-3.8-flash-tts 新增 text_to_speech → 26
+  assert.equal(index.listedOperations.length, 28); // #3086 claude-sonnet-4-6 chat+vision_chat 上架 → 28
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   // #3063: indextts-2 voice-clone operation reaches listed through its own contract row.
   assert.ok(index.listedOperations.includes('indextts-2#voice_clone'));

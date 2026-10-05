@@ -92,6 +92,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     ])
     // Text bucket includes implementation-ready models without requiring live history.
     assert.deepEqual(catalog.text.map((row) => row.id), [
+      'claude-sonnet-4-6',
       'gemini-3.8-flash',
     ])
 
@@ -120,7 +121,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.defaultsByOperation.text_to_image, 'gpt-image-2.5')
     assert.equal(catalog.defaultsByOperation.chat, 'gemini-3.8-flash')
 
-    assert.equal(catalog.text.length, 1)
+    assert.equal(catalog.text.length, 2) // #3086 claude-sonnet-4-6 上架
   })
 
   it('forbids ASCII hyphen-minus in every catalog model label', () => {
