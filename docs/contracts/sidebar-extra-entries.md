@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-09-25"
+updated: "2026-10-05"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-assets"
 ---
@@ -72,6 +72,32 @@ Derivation order is fixed and exclusive:
 | `[data-omnimux-device-entry]` | `omnimux-device` | 手机管理（收敛至「探索」菜单） |
 | `[data-omnimux-clip-entry]` | `omnimux-clip` | 视频剪辑（收敛至「探索」菜单） |
 | `[data-omnimux-forms-entry]` | `omnimux-forms` | 任务表单（收敛至「探索」菜单） |
+
+### 探索菜单运行时注册（第三方 / 个人插件唯一合法入口）
+
+内置白名单是只读的产品清单。**不在本仓插件树内的插件**（个人沙箱、外部包）要进「探索」，只能经单一协调器的运行时接缝注册，**禁止**克隆侧栏按钮自插一级行，也**禁止**自挂 `MutationObserver` / `setInterval` 去改写菜单 DOM。
+
+```js
+const unregister = window.__omnimuxSidebar.registerExploreItem({
+  id: 'fast-news-workbench',    // 必填，稳定唯一键；与内置 id 冲突时不注册
+  label: '快讯中枢',             // 必填，菜单文案（按纯文本渲染）
+  iconSvg: '<svg …/>',           // 必填，14×14 纯矢量（按受信 HTML 注入）
+  tabId: 'fast-news-workbench',  // 可选，点击兜底 __omnimuxWorkbench.open({ tabId })
+  action: (converged) => {},     // 可选，优先于 tabId；返回非 false 即终止后续委托
+})
+```
+
+| Rule | Detail |
+|---|---|
+| 渲染集合 | `openExploreMenu` 渲染 `内置 11 项 + 运行时注册项`；注册项一律追加在末尾，度量与样式复用 `.omnimux-explore-menu-item`，不得引入第二套字阶或图标尺寸 |
+| 未注册即不渲染 | 产品基线不得出现指向未安装插件的死条目：接缝是运行时注册，**不是**把某个具体插件 id 写进内置白名单 |
+| 形状校验 | 缺 `id` / `label` / `iconSvg` 或类型非法 → 不注册、不抛错，仍返回可调用注销函数 |
+| 字段白名单 | 只接受 `id` / `label` / `iconSvg` / `tabId` / `action`；`entryId`、`pluginId` 等一律被剥离，注册项**不得**借委托通道冒充已挂载插件的入口 |
+| 文本与 HTML 边界 | `iconSvg` 按受信 HTML 注入（契约要求 14×14 纯矢量）；`label` 一律按**纯文本**渲染，不得拼进 `innerHTML` |
+| 幂等 | 同 id 二次注册覆盖前一项，覆盖后该项位于**末尾**；旧注销函数随即失效。注销后菜单立即不再包含该项 |
+| 长菜单防溢出 | 菜单高度随注册项增长：定位必须用**实测**菜单尺寸（`getBoundingClientRect`）而非固定常量，且 `.omnimux-explore-menu` 带 `max-height: calc(100vh - 16px)` + `overflow-y: auto`，末项必须可达 |
+| 点击语义 | 复用 `activateExploreItem` 既有三段委托（`action` → 已挂载行 click → `__omnimuxWorkbench.open({ tabId })`），不得另写导航 |
+| 展开中变更 | 注册 / 注销时若菜单已展开，收起菜单，下次展开即最新集合 |
 
 ## Alpha 内测标记
 

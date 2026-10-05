@@ -730,3 +730,156 @@ test('computeExploreMenuPosition 具备视口防溢出几何计算', async () =>
   const posBottomOverflow = computeExploreMenuPosition(anchor, { innerWidth: 1280, innerHeight: 800 })
   assert.ok(posBottomOverflow.top <= 800 - 380 - 8, '底部溢出时向上翻转贴合')
 })
+
+test('computeExploreMenuPosition 用实测菜单尺寸定位：长菜单底边必须留在视口内', async () => {
+  setup()
+  const { computeExploreMenuPosition } = await import('./sidebar-coordinator.js')
+  const anchor = document.createElement('button')
+  document.body.append(anchor)
+
+  // 运行时注册项会让菜单长到远超旧的 380px 常量
+  anchor.getBoundingClientRect = () => ({
+    x: 50, y: 700, left: 50, top: 700, width: 36, height: 36, right: 86, bottom: 736,
+  })
+
+  const viewport = { innerWidth: 1280, innerHeight: 800 }
+  const measured = computeExploreMenuPosition(anchor, viewport, { width: 200, height: 700 })
+  assert.equal(measured.top, 800 - 700 - 8, '按实测高度向上贴合视口下沿')
+  assert.ok(measured.top + 700 <= 800 - 8, '实测 700px 高菜单的底边必须留在视口内')
+  assert.ok(measured.top >= 8, '不得越过视口上沿')
+
+  // 缺省或零尺寸仍回落保守常量，既有行为不变
+  const fallback = computeExploreMenuPosition(anchor, viewport)
+  assert.equal(fallback.top, 800 - 380 - 8, '未提供实测尺寸时沿用保守常量')
+  assert.equal(
+    computeExploreMenuPosition(anchor, viewport, { width: 0, height: 0 }).top,
+    fallback.top,
+    '零尺寸回落保守常量',
+  )
+})
+
+test('探索菜单运行时注册接缝：未注册与内置 11 项完全一致，注册后追加且可注销', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL, EXPLORE_MENU_ITEMS, resolveExploreMenuItems } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+
+  // AC1：未注册时合并结果 === 内置白名单（同长度、同序、同 id）
+  assert.equal(EXPLORE_MENU_ITEMS.length, 11, '内置白名单 11 项')
+  assert.deepEqual(
+    resolveExploreMenuItems().map((item) => item.id),
+    EXPLORE_MENU_ITEMS.map((item) => item.id),
+    '未注册时菜单项 id 序列与内置完全一致',
+  )
+
+  api.place()
+  const root = document.querySelector('[data-pane="sidebar"]')
+  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+
+  // AC2：注册后打开菜单，注册项追加在末尾且沿用既有菜单项结构
+  const unregister = api.registerExploreItem({
+    id: 'fast-news-workbench',
+    label: '快讯中枢',
+    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>',
+    tabId: 'fast-news-workbench',
+  })
+  assert.equal(typeof unregister, 'function', '注册返回注销函数')
+
+  exploreBtn.click()
+  let menu = document.getElementById('omnimux-explore-menu')
+  assert.ok(menu, '探索菜单已打开')
+  const ids = [...menu.querySelectorAll('[data-explore-id]')].map((el) => el.dataset.exploreId)
+  assert.equal(ids.length, 12, '注册后共 12 项')
+  assert.equal(ids[ids.length - 1], 'fast-news-workbench', '注册项追加在末尾')
+
+  const registered = menu.querySelector('[data-explore-id="fast-news-workbench"]')
+  assert.equal(registered.getAttribute('aria-label'), '快讯中枢')
+  assert.equal(registered.querySelector('.omnimux-explore-menu-item-label').textContent, '快讯中枢')
+  assert.ok(registered.querySelector('.omnimux-explore-menu-item-icon svg'), '注册项复用既有图标容器')
+
+  // AC3：点击注册项走 tabId 兜底打开对应 Workbench Tab
+  const opened = []
+  window.__omnimuxWorkbench = { open: (opts) => { opened.push(opts); return true } }
+  registered.click()
+  assert.deepEqual(opened, [{ tabId: 'fast-news-workbench', title: '快讯中枢' }], 'tabId 兜底打开一次')
+  assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
+
+  // AC6：注销后菜单不再包含该项
+  unregister()
+  exploreBtn.click()
+  menu = document.getElementById('omnimux-explore-menu')
+  assert.equal(menu.querySelectorAll('[data-explore-id]').length, 11, '注销后回到 11 项')
+  assert.equal(menu.querySelector('[data-explore-id="fast-news-workbench"]'), null, '注销项不再渲染')
+  delete window.__omnimuxWorkbench
+})
+
+test('探索菜单运行时注册接缝：action 优先于 tabId，非法形状与 id 冲突不产生脏项', async () => {
+  setup()
+  const { installSidebarGlobal, SIDEBAR_GLOBAL, resolveExploreMenuItems } = await import('./sidebar-coordinator.js')
+  installSidebarGlobal()
+  const api = SIDEBAR_GLOBAL()
+  api.place()
+  const root = document.querySelector('[data-pane="sidebar"]')
+  const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
+
+  // AC7：非法形状不注册、不抛错，仍返回可调用注销函数
+  const invalid = [
+    null,
+    undefined,
+    'fast-news-workbench',
+    {},
+    { id: 'x' },
+    { id: 'x', label: '' },
+    { id: 'x', label: '快讯中枢' },
+    { id: 'x', label: '快讯中枢', iconSvg: '   ' },
+    { id: '   ', label: '快讯中枢', iconSvg: '<svg></svg>' },
+  ]
+  for (const bad of invalid) {
+    const dispose = api.registerExploreItem(bad)
+    assert.equal(typeof dispose, 'function', '非法输入仍返回注销函数')
+    dispose()
+  }
+  assert.equal(resolveExploreMenuItems().length, 11, '非法输入不改变菜单集合')
+
+  // AC5：与内置 id 冲突时不注册
+  const conflict = api.registerExploreItem({ id: 'apps', label: '伪装应用', iconSvg: '<svg></svg>' })
+  assert.equal(resolveExploreMenuItems().length, 11, '内置 id 冲突项被忽略')
+  conflict()
+
+  // AC5：同 id 二次注册覆盖，不产生重复项
+  let actionCalls = 0
+  const unregisterFirst = api.registerExploreItem({
+    id: 'fast-news-workbench',
+    label: '快讯中枢',
+    iconSvg: '<svg></svg>',
+    tabId: 'fast-news-workbench',
+  })
+  const unregisterSecond = api.registerExploreItem({
+    id: 'fast-news-workbench',
+    label: '快讯中枢',
+    iconSvg: '<svg></svg>',
+    action: () => {
+      actionCalls += 1
+      return true
+    },
+  })
+  assert.equal(
+    resolveExploreMenuItems().filter((item) => item.id === 'fast-news-workbench').length,
+    1,
+    '同 id 仅保留一项',
+  )
+
+  // AC4：action 返回 true 时不再走 tabId 兜底
+  const opened = []
+  window.__omnimuxWorkbench = { open: (opts) => { opened.push(opts); return true } }
+  exploreBtn.click()
+  const menu = document.getElementById('omnimux-explore-menu')
+  menu.querySelector('[data-explore-id="fast-news-workbench"]').click()
+  assert.equal(actionCalls, 1, 'action 被调用一次')
+  assert.deepEqual(opened, [], 'action 返回 true 时不走 tabId 兜底')
+
+  unregisterFirst()
+  unregisterSecond()
+  assert.equal(resolveExploreMenuItems().length, 11, '全部注销后回到 11 项')
+  delete window.__omnimuxWorkbench
+})

@@ -1,0 +1,362 @@
+{
+  "runId": "0a2e90fd-ee1a-4b27-89e6-42ff58f2ebf4",
+  "issue": "3108",
+  "title": "探索菜单运行时注册接缝 · 真实浏览器验收",
+  "startedAt": "2026-10-05T08:05:13.010Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-explore-registration-issue-3108/",
+  "source": "plugins/omnimux/src/client/sidebar-coordinator.js",
+  "chrome": {
+    "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "product": "Chrome/154.0.8037.95",
+    "protocolVersion": "1.3",
+    "jsVersion": "15.4.80.19"
+  },
+  "page": {
+    "url": "http://127.0.0.1:51892/index.html",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    }
+  },
+  "bundle": {
+    "bytes": 40888,
+    "outfile": "bundle.js"
+  },
+  "assertions": [
+    {
+      "name": "boot：探索行已挂载（[data-omnimux-explore-entry] 存在）",
+      "pass": true,
+      "actual": {
+        "bootReturned": true,
+        "exploreEntryExists": true
+      }
+    },
+    {
+      "name": "打开菜单：11 项，id 序列与内置白名单完全一致",
+      "pass": true,
+      "actual": {
+        "opened": true,
+        "count": 11,
+        "ids": [
+          "apps",
+          "clip",
+          "google-vids",
+          "products",
+          "publish",
+          "accounts",
+          "device",
+          "analytics",
+          "automation",
+          "forms",
+          "social-harvest"
+        ],
+        "builtinIds": [
+          "apps",
+          "clip",
+          "google-vids",
+          "products",
+          "publish",
+          "accounts",
+          "device",
+          "analytics",
+          "automation",
+          "forms",
+          "social-harvest"
+        ],
+        "builtinCount": 11
+      }
+    },
+    {
+      "name": "注册运行时项：返回注销函数，且菜单展开时自动收起",
+      "pass": true,
+      "actual": {
+        "returnedFunction": true,
+        "menuAfterRegister": {
+          "open": false,
+          "count": 0,
+          "ids": [],
+          "labels": []
+        }
+      }
+    },
+    {
+      "name": "重新打开菜单：12 项，末项 data-explore-id='fast-news-workbench' 且文案为「快讯中枢」",
+      "pass": true,
+      "actual": {
+        "opened": true,
+        "count": 12,
+        "lastId": "fast-news-workbench",
+        "lastLabel": "快讯中枢",
+        "ids": [
+          "apps",
+          "clip",
+          "google-vids",
+          "products",
+          "publish",
+          "accounts",
+          "device",
+          "analytics",
+          "automation",
+          "forms",
+          "social-harvest",
+          "fast-news-workbench"
+        ]
+      }
+    },
+    {
+      "name": "截图就绪：注册项完整落在视口内（功能专属证据，非首页冒烟）",
+      "pass": true,
+      "actual": {
+        "settled": {
+          "opacity": "1",
+          "transform": "none"
+        },
+        "rect": {
+          "x": 323,
+          "y": 477,
+          "width": 168,
+          "height": 32,
+          "top": 461,
+          "bottom": 493,
+          "left": 239,
+          "right": 407,
+          "viewportWidth": 1280,
+          "viewportHeight": 900
+        },
+        "screenshot": {
+          "path": "docs/evidence/explore-registration-3108/explore-registration-browser.png",
+          "width": 1280,
+          "height": 900,
+          "bytes": 42563,
+          "capturedAtStep": "step-4-registered-menu"
+        }
+      }
+    },
+    {
+      "name": "点击注册项（真实鼠标）：__opened 深等于 {tabId,title}，且菜单已关闭",
+      "pass": true,
+      "actual": {
+        "opened": {
+          "tabId": "fast-news-workbench",
+          "title": "快讯中枢"
+        },
+        "expected": {
+          "tabId": "fast-news-workbench",
+          "title": "快讯中枢"
+        },
+        "menuOpen": false,
+        "menuCount": 0,
+        "clickRect": {
+          "x": 323,
+          "y": 477,
+          "width": 168,
+          "height": 32,
+          "top": 461,
+          "bottom": 493,
+          "left": 239,
+          "right": 407,
+          "viewportWidth": 1280,
+          "viewportHeight": 900
+        }
+      }
+    },
+    {
+      "name": "注销：菜单展开时自动收起，重新打开后回到 11 项且不含该项",
+      "pass": true,
+      "actual": {
+        "reopened": true,
+        "beforeUnregisterCount": 12,
+        "removed": true,
+        "menuOpenAfterUnregister": false,
+        "reopenedAgain": true,
+        "count": 11,
+        "ids": [
+          "apps",
+          "clip",
+          "google-vids",
+          "products",
+          "publish",
+          "accounts",
+          "device",
+          "analytics",
+          "automation",
+          "forms",
+          "social-harvest"
+        ]
+      }
+    },
+    {
+      "name": "非法形状输入（null / {} / 缺 label / 缺 iconSvg / id 为空白）不抛错且不改变菜单项数",
+      "pass": true,
+      "actual": {
+        "results": [
+          {
+            "input": "null",
+            "threw": false,
+            "returnedFunction": true
+          },
+          {
+            "input": "{}",
+            "threw": false,
+            "returnedFunction": true
+          },
+          {
+            "input": "缺 label",
+            "threw": false,
+            "returnedFunction": true
+          },
+          {
+            "input": "缺 iconSvg",
+            "threw": false,
+            "returnedFunction": true
+          },
+          {
+            "input": "id 为空白",
+            "threw": false,
+            "returnedFunction": true
+          },
+          {
+            "input": "label 为空白",
+            "threw": false,
+            "returnedFunction": true
+          },
+          {
+            "input": "非对象（字符串）",
+            "threw": false,
+            "returnedFunction": true
+          }
+        ],
+        "menuOpen": true,
+        "count": 11,
+        "ids": [
+          "apps",
+          "clip",
+          "google-vids",
+          "products",
+          "publish",
+          "accounts",
+          "device",
+          "analytics",
+          "automation",
+          "forms",
+          "social-harvest"
+        ]
+      }
+    },
+    {
+      "name": "与内置 11 项 id 冲突时不注册（菜单仍 11 项）",
+      "pass": true,
+      "actual": {
+        "outcome": {
+          "threw": false,
+          "returnedFunction": true
+        },
+        "count": 11,
+        "ids": [
+          "apps",
+          "clip",
+          "google-vids",
+          "products",
+          "publish",
+          "accounts",
+          "device",
+          "analytics",
+          "automation",
+          "forms",
+          "social-harvest"
+        ],
+        "firstLabel": "应用"
+      }
+    },
+    {
+      "name": "同 id 二次注册覆盖（仍 12 项，末项为后一次注册的文案）",
+      "pass": true,
+      "actual": {
+        "opened": true,
+        "count": 12,
+        "lastId": "dup-probe",
+        "lastLabel": "二次",
+        "ids": [
+          "apps",
+          "clip",
+          "google-vids",
+          "products",
+          "publish",
+          "accounts",
+          "device",
+          "analytics",
+          "automation",
+          "forms",
+          "social-harvest",
+          "dup-probe"
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "label": "step-1-boot",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 20291
+      }
+    },
+    {
+      "label": "step-2-builtin-menu",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 45850
+      }
+    },
+    {
+      "label": "step-4-registered-menu",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 42563
+      }
+    },
+    {
+      "label": "step-5-after-click",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 20291
+      }
+    },
+    {
+      "label": "step-6-unregistered",
+      "screenshot": {
+        "width": 1280,
+        "height": 900,
+        "bytes": 45194
+      }
+    }
+  ],
+  "screenshot": {
+    "path": "docs/evidence/explore-registration-3108/explore-registration-browser.png",
+    "width": 1280,
+    "height": 900,
+    "bytes": 42563,
+    "capturedAtStep": "step-4-registered-menu"
+  },
+  "diagnostics": {
+    "pageErrors": [],
+    "registeredItem": {
+      "id": "fast-news-workbench",
+      "label": "快讯中枢",
+      "iconSvg": "<svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 3.5h12v9H2z\"/><path d=\"M4.5 6.5h7M4.5 9h4.5\"/></svg>",
+      "tabId": "fast-news-workbench"
+    },
+    "expectedOpened": {
+      "tabId": "fast-news-workbench",
+      "title": "快讯中枢"
+    },
+    "chromeStderrTail": "ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[20652:9878974:1005/160513.649806:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[20652:9878785:1005/160513.649891:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[20652:9878974:1005/160513.649914:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[20652:9878785:1005/160513.656681:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n[20652:9878974:1005/160513.656720:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670\n"
+  },
+  "finishedAt": "2026-10-05T08:05:14.317Z",
+  "passed": true,
+  "failed": []
+}
