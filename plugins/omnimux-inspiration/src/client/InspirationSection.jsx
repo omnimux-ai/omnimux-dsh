@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ConfirmModal, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
 import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPanel.jsx'
+import { RivalPoolStatusBar, RivalRefreshButton } from './RivalPoolStatusBar.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
@@ -11,6 +12,14 @@ import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 import { useRivalFeed } from './use-rival-feed.js'
+import {
+  accountHealth,
+  manualCooldownMinutesLeft,
+  poolFreshnessMinutes,
+  poolQuota,
+  poolTally,
+} from './rival-health.js'
+import { accountIds, selectedAccountIds } from './rival-filter.js'
 
 export { formatPlatformName }
 
@@ -134,6 +143,38 @@ export function InspirationSection({ t, active }) {
     platform: rivalPlatform,
   })
   const { reload: reloadRivalFeed } = rivalFeed
+
+  /**
+   * R3 监控池状态条与 R4 刷新置灰的共享事实（#3111）。
+   *
+   * 五段计数、额度与新鲜度都来自 `rival-health.js` 的同一组纯函数；
+   * 「存在已停止账号」只看**当前筛选集**——所以这里必须同时见到
+   * `selection` 与 `accounts`，判据放在外壳而不是组件里。
+   */
+  const rivalTally = useMemo(
+    () => poolTally(rivalFeed.accounts),
+    [rivalFeed.accounts],
+  )
+  const rivalQuota = useMemo(
+    () => poolQuota(rivalFeed.status, rivalFeed.configSummary),
+    [rivalFeed.status, rivalFeed.configSummary],
+  )
+  const rivalFreshness = useMemo(
+    () => poolFreshnessMinutes(rivalFeed.accounts),
+    [rivalFeed.accounts],
+  )
+  const rivalStoppedInSelection = useMemo(() => {
+    const selected = new Set(selectedAccountIds(accountIds(rivalFeed.accounts), rivalFeed.selection))
+    return (rivalFeed.accounts || []).some(
+      (account) => selected.has(String(account?.id ?? '')) && accountHealth(account) === 'stopped',
+    )
+  }, [rivalFeed.accounts, rivalFeed.selection])
+  const rivalCooldownLeft = manualCooldownMinutesLeft(rivalFeed.lastManualRefreshAt, Date.now(), 30)
+  const rivalRefreshGate = {
+    quotaLeft: rivalQuota?.left,
+    stoppedInSelection: rivalStoppedInSelection,
+    cooldownLeft: rivalCooldownLeft,
+  }
 
   /**
    * 导入结果的统一出口：顶部气泡。
@@ -293,7 +334,19 @@ export function InspirationSection({ t, active }) {
               onToggle={rivalFeed.toggleAccount}
               onInvert={rivalFeed.invertAccounts}
               onReset={rivalFeed.resetAccounts}
+              onRetry={rivalFeed.retryAccount}
+              quotaLeft={rivalQuota?.left}
             />
+            {rivalFeed.accounts.length > 0 ? (
+              <RivalRefreshButton
+                t={t}
+                gate={rivalRefreshGate}
+                quota={rivalQuota}
+                cooldownLeft={rivalCooldownLeft}
+                fresh={rivalFreshness === 1}
+                onRefresh={rivalFeed.refreshPool}
+              />
+            ) : null}
             <DropdownSelect
               value={rivalPlatform}
               aria-label={t('filter.platform')}
@@ -458,6 +511,17 @@ export function InspirationSection({ t, active }) {
 
       {/* Content area — the one region a tab switch replaces. */}
       {rivalTab ? (
+        <>
+        {/* R3 监控池状态条：五段计数一行，额度与新鲜度一行。
+            规格 B9：E1 空态（无监控账号）不显示状态条。 */}
+        {rivalFeed.accounts.length > 0 ? (
+          <RivalPoolStatusBar
+            t={t}
+            tally={rivalTally}
+            quota={rivalQuota}
+            freshnessMinutes={rivalFreshness}
+          />
+        ) : null}
         <RivalAccountsPanel
           t={t}
           active={active !== false}
@@ -471,6 +535,7 @@ export function InspirationSection({ t, active }) {
           onAccountImported={handleAccountImported}
           onBrowseTrend={() => setTab('public')}
         />
+        </>
       ) : (
         <>
           {loading && items.length === 0 ? (

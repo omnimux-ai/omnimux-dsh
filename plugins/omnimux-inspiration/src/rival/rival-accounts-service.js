@@ -422,6 +422,13 @@ export function createRivalAccountsService(deps) {
   }
 
   /**
+   * One E1 row: the whole account plus derived counts.
+   *
+   * The spread is the wire contract, not a convenience: `refresh_state`,
+   * `error_code`, `consecutive_failures`, `next_auto_refresh_at` and
+   * `last_refresh_at` must reach the client unchanged, because the pool
+   * status bar and the account health marks judge from exactly these fields
+   * (#3111). Host reports facts; the verdict lives in one client function.
    * @param {Record<string, any>} account
    */
   function withSummary(account) {

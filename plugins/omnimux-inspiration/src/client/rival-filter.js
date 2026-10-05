@@ -156,6 +156,15 @@ export function toAccountFilterRow(account, state) {
     initial: nickname.replace(/^@/, '').slice(0, 1).toUpperCase(),
     postCount: Number(account?.post_count) || 0,
     checked: selected,
+    // Host 的健康态事实字段（#3111）：行上的四态判据读它们，组件不直接读
+    // Host 行——筛选行是唯一的数据出口。
+    refresh_state: typeof account?.refresh_state === 'string' ? account.refresh_state : '',
+    error_code: typeof account?.error_code === 'string' ? account.error_code : null,
+    consecutive_failures: typeof account?.consecutive_failures === 'number' && Number.isFinite(account.consecutive_failures)
+      ? account.consecutive_failures
+      : undefined,
+    next_auto_refresh_at: typeof account?.next_auto_refresh_at === 'string' ? account.next_auto_refresh_at : null,
+    last_refresh_at: typeof account?.last_refresh_at === 'string' ? account.last_refresh_at : null,
   }
 }
 

@@ -1,0 +1,306 @@
+{
+  "fixture": "http://localhost:53520/",
+  "stamp": "20261005-165913",
+  "steps": [
+    "fixture-loaded",
+    "pool-bar-dark",
+    "account-pop-dark",
+    "refresh-blocked-dark",
+    "after-retry-dark",
+    "light-theme"
+  ],
+  "states": {
+    "pool-bar-dark": {
+      "poolSummary": "监控池 4 个账号 · 正常 1 · 冷却 1 · 待重导入 1 · 已停止 1",
+      "poolQuota": "今日剩余刷新额度 46/50",
+      "poolFreshness": "数据更新于 3 分钟前",
+      "refreshLabel": "刷新46/50",
+      "refreshBlocked": true,
+      "reason": null,
+      "filterOpen": false,
+      "rows": [],
+      "calls": [
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local?sort=hot&page=1&page_size=20&projection=lean",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/status",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/posts?sort=posted_at&page=1",
+          "method": "GET"
+        }
+      ]
+    },
+    "account-pop-dark": {
+      "poolSummary": "监控池 4 个账号 · 正常 1 · 冷却 1 · 待重导入 1 · 已停止 1",
+      "poolQuota": "今日剩余刷新额度 46/50",
+      "poolFreshness": "数据更新于 3 分钟前",
+      "refreshLabel": "刷新46/50",
+      "refreshBlocked": true,
+      "reason": null,
+      "filterOpen": true,
+      "rows": [
+        {
+          "id": "ra_ok",
+          "health": "normal",
+          "text": "喵喵星日常正常@meow_daily3 个作品",
+          "hasRetry": false,
+          "hasReason": false
+        },
+        {
+          "id": "ra_cool",
+          "health": "cooling",
+          "text": "毛毛孩子食堂冷却中 · 42 分钟后恢复@fur_kitchen1 个作品",
+          "hasRetry": false,
+          "hasReason": false
+        },
+        {
+          "id": "ra_reimport",
+          "health": "reimport",
+          "text": "科科技小辛需要重新导入@tech_xin0 个作品该 YouTube 频道尚未验证身份，请改用 channel/UC… 链接重新导入",
+          "hasRetry": false,
+          "hasReason": true
+        },
+        {
+          "id": "ra_stopped",
+          "health": "stopped",
+          "text": "穿穿搭研究所已停止重试@ootd_lab1 个作品连续 3 次刷新失败",
+          "hasRetry": true,
+          "hasReason": true
+        }
+      ],
+      "calls": [
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local?sort=hot&page=1&page_size=20&projection=lean",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/status",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/posts?sort=posted_at&page=1",
+          "method": "GET"
+        }
+      ]
+    },
+    "refresh-blocked-dark": {
+      "poolSummary": "监控池 4 个账号 · 正常 1 · 冷却 1 · 待重导入 1 · 已停止 1",
+      "poolQuota": "今日剩余刷新额度 46/50",
+      "poolFreshness": "数据更新于 3 分钟前",
+      "refreshLabel": "刷新46/50",
+      "refreshBlocked": true,
+      "reason": "该账号自动刷新已停止，请在账号筛选中处理。",
+      "filterOpen": false,
+      "rows": [],
+      "calls": [
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local?sort=hot&page=1&page_size=20&projection=lean",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/status",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/posts?sort=posted_at&page=1",
+          "method": "GET"
+        }
+      ]
+    },
+    "after-retry-dark": {
+      "poolSummary": "监控池 4 个账号 · 正常 2 · 冷却 1 · 待重导入 1 · 已停止 0",
+      "poolQuota": "今日剩余刷新额度 46/50",
+      "poolFreshness": "数据更新于 3 分钟前",
+      "refreshLabel": "刷新46/50",
+      "refreshBlocked": false,
+      "reason": null,
+      "filterOpen": true,
+      "rows": [
+        {
+          "id": "ra_ok",
+          "health": "normal",
+          "text": "喵喵星日常正常@meow_daily3 个作品",
+          "hasRetry": false,
+          "hasReason": false
+        },
+        {
+          "id": "ra_cool",
+          "health": "cooling",
+          "text": "毛毛孩子食堂冷却中 · 42 分钟后恢复@fur_kitchen1 个作品",
+          "hasRetry": false,
+          "hasReason": false
+        },
+        {
+          "id": "ra_reimport",
+          "health": "reimport",
+          "text": "科科技小辛需要重新导入@tech_xin0 个作品该 YouTube 频道尚未验证身份，请改用 channel/UC… 链接重新导入",
+          "hasRetry": false,
+          "hasReason": true
+        },
+        {
+          "id": "ra_stopped",
+          "health": "normal",
+          "text": "穿穿搭研究所正常@ootd_lab1 个作品",
+          "hasRetry": false,
+          "hasReason": false
+        }
+      ],
+      "calls": [
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local?sort=hot&page=1&page_size=20&projection=lean",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/status",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/posts?sort=posted_at&page=1",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/ra_stopped/refresh",
+          "method": "POST"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/status",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/posts?sort=posted_at&page=1",
+          "method": "GET"
+        }
+      ]
+    },
+    "light-theme": {
+      "poolSummary": "监控池 4 个账号 · 正常 1 · 冷却 1 · 待重导入 1 · 已停止 1",
+      "poolQuota": "今日剩余刷新额度 46/50",
+      "poolFreshness": "数据更新于 3 分钟前",
+      "refreshLabel": "刷新46/50",
+      "refreshBlocked": true,
+      "reason": null,
+      "filterOpen": true,
+      "rows": [
+        {
+          "id": "ra_ok",
+          "health": "normal",
+          "text": "喵喵星日常正常@meow_daily3 个作品",
+          "hasRetry": false,
+          "hasReason": false
+        },
+        {
+          "id": "ra_cool",
+          "health": "cooling",
+          "text": "毛毛孩子食堂冷却中 · 42 分钟后恢复@fur_kitchen1 个作品",
+          "hasRetry": false,
+          "hasReason": false
+        },
+        {
+          "id": "ra_reimport",
+          "health": "reimport",
+          "text": "科科技小辛需要重新导入@tech_xin0 个作品该 YouTube 频道尚未验证身份，请改用 channel/UC… 链接重新导入",
+          "hasRetry": false,
+          "hasReason": true
+        },
+        {
+          "id": "ra_stopped",
+          "health": "stopped",
+          "text": "穿穿搭研究所已停止重试@ootd_lab1 个作品连续 3 次刷新失败",
+          "hasRetry": true,
+          "hasReason": true
+        }
+      ],
+      "calls": [
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local?sort=hot&page=1&page_size=20&projection=lean",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration?sort=hot&page=1&page_size=20",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/status",
+          "method": "GET"
+        },
+        {
+          "path": "/omnimux/inspiration/local/rival-accounts/posts?sort=posted_at&page=1",
+          "method": "GET"
+        }
+      ]
+    }
+  },
+  "errors": [],
+  "screenshots": [
+    "r2-20261005-165913-01-pool-bar-dark.png",
+    "r2-20261005-165913-02-account-pop-health-dark.png",
+    "r2-20261005-165913-03-refresh-blocked-reason-dark.png",
+    "r2-20261005-165913-04-after-retry-dark.png",
+    "r2-20261005-165913-05-pool-bar-light.png",
+    "r2-20261005-165913-06-account-pop-health-light.png"
+  ]
+}

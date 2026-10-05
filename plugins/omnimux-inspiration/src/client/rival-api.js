@@ -171,9 +171,13 @@ export function ensureRivalPostMedia(id, postId, kind = 'cover') {
 /**
  * Re-enqueue one account's refresh (E-account-refresh, existing endpoint).
  *
- * Used by #3112's failure retry only: the Host decides whether the queue
- * accepts it, and a re-enqueued first fetch costs exactly the same budget the
- * import already pays — the client never collects anything itself.
+ * Two lines grew this seam independently, so it carries two names: #3112's
+ * failure retry calls it as `refreshRivalAccount(id, { manual })` — a
+ * re-enqueued first fetch must cost exactly the same budget the import already
+ * pays, and the client never collects anything itself — while #3111's「已停止」
+ * row calls it as `retryRivalAccount(id)`, where the flag is always manual.
+ * Both share this one wire path, so the endpoint and its guard cannot drift
+ * apart into two differently-guarded calls.
  * @param {string} id
  * @param {{ manual?: boolean }} [opts]
  */
@@ -183,6 +187,35 @@ export function refreshRivalAccount(id, opts = {}) {
       method: 'POST',
       body: { manual: opts.manual === true },
     }),
+    'inspiration-rival',
+  )()
+}
+
+/**
+ * Manual refresh of one account (E7) — the「已停止」row's「重试」.
+ * @param {string} id
+ */
+export function retryRivalAccount(id) {
+  return refreshRivalAccount(id, { manual: true })
+}
+
+/**
+ * Scheduler snapshot (E9): running jobs, the daily budget ledger and paused
+ * reasons. The pool status bar reads「今日剩余刷新额度」from here — the one
+ * place the used side of the ledger is already on the wire.
+ */
+export function fetchRivalStatus() {
+  return guarded(() => request('/status', {}), 'inspiration-rival')()
+}
+
+/**
+ * Manual refresh of every monitored account (E8).
+ * The Host answer names what it skipped and why; the caller decides what to
+ * show instead of guessing from status codes.
+ */
+export function refreshAllRivalAccounts() {
+  return guarded(
+    () => request('/refresh-all', { method: 'POST', body: { manual: true } }),
     'inspiration-rival',
   )()
 }

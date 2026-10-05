@@ -127,6 +127,11 @@ export const RIVAL_CSS = `
   cursor: pointer;
   transition: background 120ms ease;
 }
+/* 终态行（带原因行）昵称列至少保留两行文字宽，否则长原因把昵称挤没。 */
+.omnimux-rival-filter-row.is-reimport .omnimux-rival-filter-info,
+.omnimux-rival-filter-row.is-stopped .omnimux-rival-filter-info {
+  min-width: 96px;
+}
 .omnimux-rival-filter-row:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
@@ -234,6 +239,7 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-filter-count {
   flex: none;
+  margin-left: auto;
   font-size: 11px;
   color: var(--dsw-alias-label-secondary);
 }
@@ -380,6 +386,116 @@ export const RIVAL_CSS = `
   margin: 0;
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
+}
+
+/* ── R3 监控池状态条（#3111） ──────────────────────────────────────── */
+.omnimux-rival-pool {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+.omnimux-rival-pool-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 20px;
+}
+.omnimux-rival-pool-summary {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  white-space: nowrap;
+}
+.omnimux-rival-pool-quota {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.omnimux-rival-pool-freshness {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ── R4 刷新按钮 + 额度角标 + D4 原因弹层（#3111） ─────────────────── */
+.omnimux-rival-refresh-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.omnimux-rival-refresh.is-blocked {
+  opacity: 0.55;
+}
+.omnimux-rival-refresh.is-fresh {
+  opacity: 0.75;
+}
+.omnimux-rival-refresh-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 5px;
+  margin-left: 7px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.omnimux-rival-reason {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 248px;
+  z-index: 110;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-elevated);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: var(--dsw-specific-shadow-pop, 0 10px 28px rgba(0, 0, 0, 0.5));
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* ── D1 账号行健康态（#3111） ─────────────────────────────────────── */
+.omnimux-rival-health {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  white-space: nowrap;
+}
+.omnimux-rival-health.is-cooling {
+  color: var(--dsw-alias-state-warn-primary, var(--dsw-alias-label-warning));
+}
+.omnimux-rival-health.is-reimport,
+.omnimux-rival-health.is-stopped {
+  color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-danger));
+}
+.omnimux-rival-filter-reason {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
+  margin-top: 2px;
+  white-space: normal;
+}
+.omnimux-rival-filter-row.is-reimport .omnimux-rival-filter-reason,
+.omnimux-rival-filter-row.is-stopped .omnimux-rival-filter-reason {
+  color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-danger));
+}
+.omnimux-rival-retry-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.omnimux-rival-retry.is-blocked {
+  opacity: 0.55;
 }
 
 /* ── 导入弹窗 ───────────────────────────────────────────────────────── */

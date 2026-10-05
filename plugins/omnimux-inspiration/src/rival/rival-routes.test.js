@@ -276,6 +276,24 @@ describe('E1/E2/E3 + G4: import, dedup and classification', () => {
     assert.equal(account.next_auto_refresh_at, null)
     assert.equal(world.service.identityHintKey, 'rivalAccounts.identity.handleUnverifiedHint')
   })
+
+  it('reports the health fact fields on E1 (the #3111 wire contract)', async () => {
+    // 四态判据在 Client——E1 必须稳定带上 `refresh_state` / `error_code` /
+    // `consecutive_failures` / `next_auto_refresh_at`。这条断言锁住的是
+    // `withSummary` 整行展开的意外约定，不是某一行的取值。
+    const world = makeWorld()
+    await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url: 'https://www.youtube.com/@foo' })
+    await world.scheduler.settled()
+
+    const list = await call(world.dispatcher, 'GET', RIVAL_PREFIX)
+    assert.equal(list.status, 200)
+    const row = list.body.data.items[0]
+    assert.equal(typeof row.refresh_state, 'string')
+    assert.equal(typeof row.consecutive_failures, 'number')
+    assert.ok('error_code' in row, 'E1 must carry error_code even when null')
+    assert.ok('next_auto_refresh_at' in row, 'E1 must carry next_auto_refresh_at even when null')
+    assert.ok('last_refresh_at' in row, 'E1 must carry last_refresh_at for pool.freshness')
+  })
 })
 
 describe('E4/E5/E6: detail, patch and delete', () => {
