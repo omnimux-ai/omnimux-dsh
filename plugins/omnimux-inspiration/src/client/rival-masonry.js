@@ -131,6 +131,9 @@ const SPACE_FACTOR = {
  * 它们走前面的空格原子分支，宽度按 SPACE_FACTOR 计。
  * 集合按「断后」语义使用：并入左侧词段、段后允许断行（与连字符同形）。
  * 类归属与 Chrome 实测对照见 harness/codepoint-probe.mjs（R7 扩到全集）。
+ * 计数口径（#3166-⑤）：实收 304 条 = LineBreak.txt **18.0.0** 官方
+ * EX∪HH∪HY∪B2∪BA 非空格全集 306 减 Chrome 定制 {0x0021, 0x007C}；
+ * 审查员按 18.0.0 集合差验证通过（0 缺 0 多），版本漂移须重跑差集。
  */
 const BREAK_AFTER = new Set([
   0x002d, 0x003f, 0x00ad, 0x058a, 0x05be, 0x05c6, 0x061b, 0x061d, 0x061e,
@@ -197,9 +200,8 @@ function textWidthPx(text, unitPx) {
   return px
 }
 
-/** 半宽字符的逐字形宽度系数；>0x2E7F 返回 1（整宽），表外回落均宽。 */
+/** 半宽字符的逐字形宽度系数；表外回落均宽（词段不含 >0x2E7F 码位）。 */
 function charWidthFactor(ch, cp) {
-  if (cp > 0x2e7f) return 1
   return RIVAL_GLYPH_WIDTH_FACTOR[ch] ?? ASCII_WIDTH_FACTOR
 }
 
@@ -233,10 +235,16 @@ function charWidthFactor(ch, cp) {
  * 已知偏差（文档化上界，不假装精确）：
  *   - 行尾空格宽度被吞 → 模型可能少算一点点宽度（行数不受影响的情况
  *     远多于受影响）；
- *   - 行首禁则只覆盖 CJK 收类标点（，。、；：？！…）且只带回 1 个原子：
- *     连续多个禁则标点、行尾禁则（开类标点）未模拟 → 仍可能少算；
+ *   - 行首禁则只覆盖 CJK 收类标点（，。、；：？！… 等）且只带回 1 个原子：
+ *     连续多个禁则标点仍可能少算；行尾禁则（开类标点）已实现——该旧注
+ *     曾误写「行尾禁则未模拟」（#3166-⑥ 修正）；
  *   - 宽度模型按字符分类近似 → 双向偏差：41 卡夹具里 e5 估算 182 vs
- *     实测 162（多算 20px，安全方向），e4 同向（多算 20px）。
+ *     实测 162（多算 20px，安全方向），e4 同向（多算 20px）；
+ *   - U+2E3B ⸻（THREE-EM DASH）Chrome 实测双向可断（前后都可折）——
+ *     5 词夹具 Chrome 9 vs 模型 6（低估方向，罕见码位，#3166-⑦ 登记）；
+ *     社交内容常见 U+2764 ❤（−4.454）、U+2192 →（−4.242）、emoji（−4.0）
+ *     为低估方向，U+200D ZWJ（+8.288）与 U+2011（+1.835）为安全方向，
+ *     最坏低估是 U+2E3B 自身宽度差 −28.271px（#3166-④ 实测口径）。
  * @param {string} text
  * @returns {Array<{space?:boolean, collapsible?:boolean, w?:number, cjk?:boolean, word?:boolean, text?:string}>}
  *   原子形状：空白 {space, collapsible, w=unitPx 宽度系数}；
@@ -283,18 +291,11 @@ function wrapAtoms(text) {
       open.text += ch
       continue
     }
-    if (cp > 0x2e7f && !BREAK_AFTER.has(cp)) {
+    if (cp > 0x2e7f) {
       open = null
       atoms.push({ cjk: true, ch })
       continue
     }
-    // 断后码位只有在「非 CJK 字符之后」才断行：EX/BA 断后规则在 CJK
-    // 上下文中被禁则覆盖（全角 ？！ 等收类标点在 CJK 后不断后，
-    // Chrome 实测 zwj-emoji/punct 夹具卡仍按整词断——R7 复测发现
-    // 把 FF01/FF1F 与 ASCII EX 一视同仁会多算 1 行=高估 20px）。
-    const prevCp = atoms.length && atoms[atoms.length - 1].cjk
-      ? atoms[atoms.length - 1].ch.codePointAt(0) : 0
-    const breakAfterAllowed = BREAK_AFTER.has(cp) && !(prevCp > 0x2e7f)
     if (!open) {
       open = { word: true, text: '' }
       atoms.push(open)
@@ -302,10 +303,12 @@ function wrapAtoms(text) {
     open.text += ch
     // 断后码位并入本段、段后允许断行（BREAK AFTER HYPHEN 泛化到
     // UAX#14 断后全集：EX{!} ∪ HH/HY/B2 ∪ BA 非空格成员，见 BREAK_AFTER）。
-    // CJK 之后的断后码位不生效（全角 ？！ 等收类标点禁则优先）。
+    // 断后语义不区分 CJK/非 CJK 上下文——R7 的「非 CJK 守卫」经 QA 反证
+    // 既无益于其声称要修的 20px 高估（无夹具可复现）、又是新高估成因
+    //（把全角 ？！ 粘进后续拉丁词），R8 已整条移除（#3166 决策一）。
     // 反例钉住：'/' ',' ':' '.' '#' '@' '%' 与 '!'(0x0021) 之后 Chrome
     // 实测不断行，绝不加进来（Q1 实验：换 '/'、'+' 仍少算，换 '-' 才一致）。
-    if (breakAfterAllowed) open = null
+    if (BREAK_AFTER.has(cp)) open = null
   }
   return atoms
 }
@@ -372,16 +375,18 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
       lastAtomW = atomW
       continue
     }
-    lines += 1
     if (atom.cjk && lastAtomW > 0 && isLineStartForbidden(atom.ch)) {
-      // 行首禁则：CJK 收类标点不允许出现在行首——浏览器把前一个字符
-      // 一并带到下一行（p11 在 600px 档实测 8 行、无禁则模型算 7 行，
-      // 正是这条规则缺位的少算）。只带回 1 个原子：连续禁则标点与
-      // 词末尾的禁则场景在偏差清单里说明。
-      used = Math.min(lastAtomW + atomW, width)
-    } else {
-      used = Math.min(atomW, width)
+      // 行首禁则（Chrome 悬挂语义，R8 实测）：收类标点不允许落新行首，
+      // 放不下时**悬挂在行尾溢出**（hang），不把前一个字符带回下行——
+      // w1+﹖+w2 @50px Chrome 实测 2 行（悬挂），拉回模型 3 行；
+      // 5 词 ﹖ 夹具 Chrome 5 行（悬挂），允许行首 6 行、拉回 6 行。
+      // 标点占满本行行尾：used 记上 glue+atomW，下一原子自然换行。
+      used += glue + atomW
+      lastAtomW = atomW
+      continue
     }
+    lines += 1
+    used = Math.min(atomW, width)
     lastAtomW = atomW
   }
   return lines
@@ -391,10 +396,13 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
  * 行首禁则字符（CJK 收类标点）：浏览器断行时不允许它们落在新行首，
  * 会把前一个字符带回本行。半角 ')' ']' 等未列入——它们在 CJK 文本
  * 场景里同样禁行首，但出现率低且与词内位置耦合，留在已知偏差。
+ * #3166-⑦/R8 探针补齐 CL 同族：小号叹问号 ﹗﹖（FE57/FE56——BREAK_AFTER
+ * 断后生效后它若可落行首会多算行：5 词夹具模型 6 vs Chrome 5）、右双引
+ * ”（U+201D）与半角句读 ｡､･（FF61/FF64/FF65）。
  */
 function isLineStartForbidden(ch) {
   return typeof ch === 'string'
-    && /[，。、；：？！）］｝》」』〞〟‥…‰％]/.test(ch)
+    && /[，。、；：？！）］｝》」』〞〟‥…‰％〉】〕﹗﹖”｡､･]/.test(ch)
 }
 
 /**
@@ -403,7 +411,7 @@ function isLineStartForbidden(ch) {
  */
 function isLineEndForbidden(ch) {
   return typeof ch === 'string'
-    && /[（［｛《〈「『【〔［]/.test(ch)
+    && /[（［｛《〈「『【〔]/.test(ch)
 }
 
 /**

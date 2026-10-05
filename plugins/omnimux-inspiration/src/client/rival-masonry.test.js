@@ -611,6 +611,21 @@ describe('rival-masonry — R7 断行判据迁入套件（QA Q1/Q4 阻塞）', (
     const lines = rivalWrapLines(title, 14, 194)
     assert.equal(lines, 3, `Chrome 实测 3 行（? 后断出 "ref=qa" 一行），got ${lines}`)
   })
+
+  it('CJK 上下文不抑制断后：<CJK>？<拉丁词> 行数与 Chrome 一致（#3166 决策一）', () => {
+    // R8 收口：R7 引入的「非 CJK 守卫」（断后码位仅在非 CJK 字符之后生效，
+    // 附带 :286 例外与 charWidthFactor 特例）把全角 ？！ 粘进后续拉丁词——
+    // QA 反证它既无益于其声称要修的 20px 高估（按任何夹具复现不出），
+    // 又是新高估的成因；去掉守卫后 9 个坏例回到 Chrome 行数，而 ?-in-URL
+    // 的修复不受影响（上面 qa39 断言不变红）。以下形态钉死 Chrome 行数，
+    // 防止守卫被加回来。
+    assert.equal(rivalWrapLines('中文？abc def', 14, 60), 2,
+      'Chrome 2 行：？ 后可断、"abc def" 排第二行；守卫把 ？ 粘进 abc 后多算 1 行')
+    assert.equal(rivalWrapLines('中文？abc def', 14, 50), 2,
+      'Chrome 2 行（更窄列宽同形）')
+    assert.equal(rivalWrapLines('中文？aa中文bb？cc', 14, 50), 3,
+      'Chrome 3 行：两个 ？ 都在 CJK 后仍按断后语义断开')
+  })
 })
 
 describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () => {
@@ -622,12 +637,27 @@ describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () =>
     assert.ok(/\.omnimux-rival-card-title\s*\{[^}]*font-family:/s.test(RIVAL_CSS),
       'card-title must declare font-family explicitly')
   })
-  it('主按钮 hover 两条选择器都带 :not(:disabled)（PM M1）', () => {
-    for (const scope of ['on-media', 'on-surface']) {
-      assert.ok(
-        RIVAL_CSS.includes(`.${scope} .omnimux-rival-act-primary:hover:not(:disabled)`),
-        `${scope} act-primary hover must exclude :disabled like the act-btn rules`,
-      )
+  it('会 disabled 的元素全集 × 其每条 hover 规则都带 :not(:disabled)（PM M1 → #3166 类级）', () => {
+    // 同类缺陷第三次逃逸（R5 act-btn → R6 act-primary → R7 filter-jump）
+    // 证明断言必须钉在「类」上而不是实例上：本枚举覆盖生产里所有真的会
+    // disabled 的元素——act-btn（原帖按钮 source_url 不安全时 disabled）、
+    // act-primary（复刻按钮 busy 时 disabled）、filter-jump（账号行跳转
+    // profileUrl 不安全时 disabled）。新增 disabled 元素须同步扩此表；
+    // 断言按类逐条校验 RIVAL_CSS 里该类的**每一条** :hover 规则。
+    const DISABLED_CAPABLE = [
+      'omnimux-rival-act-btn',
+      'omnimux-rival-act-primary',
+      'omnimux-rival-filter-jump',
+    ]
+    for (const cls of DISABLED_CAPABLE) {
+      const hoverRules = RIVAL_CSS.match(new RegExp(`[^{}]*\\.${cls}:hover[^{]*`, 'g')) || []
+      assert.ok(hoverRules.length > 0, `${cls} should have hover rules in the stylesheet`)
+      for (const rule of hoverRules) {
+        assert.ok(
+          rule.includes(':not(:disabled)'),
+          `${cls} hover rule lacks :not(:disabled) — disabled ${cls} still shows hover affordance (rule: ${rule.trim()})`,
+        )
+      }
     }
   })
   it('省略号挂在 label 元素而非按钮容器（PM M2/M3）', () => {
@@ -648,7 +678,9 @@ describe('rival-masonry — R7 逐字形字宽表锁表断言（QA Q3 阻塞）'
   //（同 build-demo.mjs --font-family）一致。换字体族须用 codepoint-probe.mjs
   // 重新标定；表外 ASCII 回落 ASCII_WIDTH_FACTOR，>0x2E7F 按整宽。
   // 锁表 = 断言表内代表值与统一系数 0.592 显著不同，使「整体退回 0.592」
-  // 立即变红。
+  // 立即变红。计数口径（#3166-⑤）：EXPECT 实收 18 个字形（非 17）；
+  // 断后集合 BREAK_AFTER 实收 304 条（LineBreak.txt 18.0.0 官方 306 减
+  // Chrome 定制 {0021,007C}），版本漂移须重跑集合差。
   const EXPECT = {
     '1': 0.453, 'i': 0.236, 'l': 0.242, 'f': 0.351, 'r': 0.370,
     'a': 0.541, 'e': 0.561, 'w': 0.764, 'm': 0.859, 'A': 0.663,
@@ -675,10 +707,13 @@ describe('rival-masonry — R7 逐字形字宽表锁表断言（QA Q3 阻塞）'
     assert.ok(wide > narrow, `per-glyph widths must rank 'w' wider than 'i' (narrow=${narrow} wide=${wide})`)
     assert.equal(narrow, 2, `narrow glyph rows: got ${narrow} (uniform 0.592 would give 3+)`)
   })
-  it('表外回落语义钉住：未覆盖 ASCII → 0.592；>0x2E7F → 整宽；已知偏差边界', () => {
-    // DEL(0x7F) 未在表内 → 统一系数且不断行；边界已登记（复审 F-2/Q6）：
-    // 非 ASCII 回落系数在 ZWJ/2011 等码位与真机最大偏差 −5.15px（低估
-    // 方向），列为已知偏差，不改模型。
+  it('表外回落语义钉住：未覆盖 ASCII → 0.592；已知偏差边界', () => {
+    // DEL(0x7F) 未在表内 → 统一系数且不断行；边界已登记（复审 F-2/Q6，
+    // #3166-④ 修正方向）：真机实测 U+200D ZWJ → Chrome 0px vs 模型 8.288
+    //（+8.288 安全方向）、U+2011 → +1.835（安全）；真正的最坏低估是
+    // U+2E3B −28.271px，社媒常见 U+2764 ❤ −4.454、U+2192 → −4.242、
+    // emoji −4.0；扫 11,751 个表外码位中 8,443 个是低估——旧注记的
+    //「ZWJ/2011 最大偏差 −5.15px（低估）」方向与码位都错，已按实测重写。
     assert.equal(rivalWrapLines('aa\x7fbbbbbbbb', 14, 60), 1, 'DEL falls back to the uniform factor and stays glued')
   })
 })

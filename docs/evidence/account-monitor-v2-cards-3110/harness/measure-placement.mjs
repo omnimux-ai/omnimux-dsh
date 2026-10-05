@@ -104,7 +104,13 @@ try {
 
   // If the demo didn't publish descriptors, fall back to id -> est via DOM + est fn arg list.
   // (demo-entry publishes cards on __RIVAL_QA__ — added alongside the estimator.)
-  const measured = ONLY ? data.cards.filter((c) => ONLY.has(c.id)) : data.cards
+  //
+  // #3166-③ ONLY 语义：白名单只影响**报告呈现**（rows/maxAbsDiff 与逐卡
+  // 输出），不影响**计算输入**——replay 最短列重放与同列重叠统计必须恒
+  // 基于全量 data.cards：子集会丢掉「前面卡的占位高度」，replayMismatches
+  // 与 adjacentOverlaps 失真（该缺陷连续三轮未修）。allCards 恒为全量。
+  const allCards = data.cards
+  const measured = ONLY ? allCards.filter((c) => ONLY.has(c.id)) : allCards
   const rows = measured.map((c) => {
     const est = estimates[c.id]
     return {
@@ -122,9 +128,11 @@ try {
   const GAP = 16
   let replayMismatches = 0
   const replay = []
-  for (const c of measured) {
+  for (const c of allCards) {
     let k = 0
     for (let i = 1; i < data.cols; i += 1) if (bottoms[i] < bottoms[k] - 0.5) k = i
+    // ONLY 模式下 replay 数组同样记录全部卡片（计算忠实于全量），
+    // 白名单筛选只落在下面的 rows 报告行上。
     replay.push({ id: c.id, expectedCol: k, actualCol: c.col })
     if (k !== c.col) replayMismatches += 1
     bottoms[k] += c.measured + GAP
@@ -135,7 +143,7 @@ try {
   // above the previous card's real bottom, they physically overlap — the case
   // replayMismatches cannot see (the placement agreed with itself).
   const byCol = new Map()
-  for (const c of measured) {
+  for (const c of allCards) {
     if (!byCol.has(c.col)) byCol.set(c.col, [])
     byCol.get(c.col).push(c)
   }

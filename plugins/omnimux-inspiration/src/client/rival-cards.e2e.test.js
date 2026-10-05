@@ -675,6 +675,26 @@ describe('account-monitor card shapes and waterfall (#3110)', () => {
       assert.ok(pill, `the velocity pill is default-visible; card html: ${card.outerHTML.slice(0, 900)}`)
     })
 
+    it('renders kit Buttons with a real label span and pills in the production shape (#3166-②)', async () => {
+      // R8 装置整改：shim Button 此前渲染裸文本节点，省略号规则
+      //（.omnimux-rival-act-btn > span:text-overflow）在装置里匹配不到任何
+      // 元素——该修复曾连续两轮不可见。此用例把生产 DOM 形状钉在渲染层：
+      // 每个 act 按钮必须有一个 .label span（生产 Button.tsx 同构）。
+      const mounted = await mountMasonry(1440)
+      open.push(mounted)
+      const card = cardsOf(mounted.container)[0]
+      const actions = [...card.querySelectorAll('.omnimux-rival-act-btn, .omnimux-rival-act-primary')]
+      assert.ok(actions.length > 0, 'the hover layer must render action buttons')
+      for (const btn of actions) {
+        const label = btn.querySelector('span.label')
+        assert.ok(label, `${btn.className} must render its text inside a .label span (production kit DOM)`)
+        assert.equal(label.textContent, btn.textContent, 'the label span carries the whole button text')
+      }
+      const pill = card.querySelector('.omnimux-rival-vpill')
+      assert.ok(pill, 'the velocity pill must render')
+      assert.match(pill.className, /\bon-(media|surface)\b/, 'the pill carries its surface class for the contrast tokens')
+    })
+
     it('renders an interacted row in the processed state', async () => {
       const mounted = await mountMasonry(1440)
       open.push(mounted)

@@ -439,6 +439,16 @@ describe('RivalPostCard — 外链与 locale（第三轮整改）', () => {
       const desc = mounted.document.getElementById(describedBy)
       assert.ok(desc, `aria-describedby target ${describedBy} must resolve in the DOM`)
       assert.match(desc.textContent, /原帖链接不可用/, 'the description carries the same copy as the title')
+      // R8-⑦（QA 实测「vh 移回 <button> 内」零鉴别力）：隐藏节点的 DOM
+      // 位置本身是判据——必须是 <button> 的兄弟（同在 act-slot 下），
+      // 不能是按钮子节点（子节点文本会被并入可及名称，读屏念两遍）。
+      assert.ok(desc.classList.contains('omnimux-rival-vh'), 'the describedby node carries the visually-hidden class')
+      assert.equal(desc.parentElement, original.closest('.omnimux-rival-act-slot'),
+        'the hidden note must be a sibling of the <button> inside act-slot, never a button child',
+      )
+      assert.equal(original.contains(desc), false,
+        'vh inside <button> folds its text into the accessible name (QA R8 反例)',
+      )
       await act(async () => {
         original.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
       })

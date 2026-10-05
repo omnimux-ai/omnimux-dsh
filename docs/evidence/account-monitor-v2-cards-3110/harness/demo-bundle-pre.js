@@ -1,3 +1,12 @@
+/**
+ * PROVENANCE (#3166-⑥)：旧估算器快照 bundle——供 demo-pre.html 复现
+ * R5 之前的高度估算行为（r5-placement-measure-pre.json 的对照基线）。
+ * 内含 R5 之前的 rival-masonry 估算器（半宽统一常量 ASCII_WIDTH_FACTOR
+ * = 0.55，见 :24630；当前实现已改为逐字形标定表 + UAX#14 断后全集，
+ * 勿把此文件的模型当作现状）。
+ * 重建命令：node docs/evidence/account-monitor-v2-cards-3110/harness/build-demo.mjs --pre
+ *（从被保留的 R5 之前 demo 构建产物快照落盘，非每次自动生成）。
+ */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;

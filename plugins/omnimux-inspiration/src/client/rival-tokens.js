@@ -14,6 +14,13 @@
  * family IS redefined for light because the spec's pill colours differ there
  * (#f0453a → #dc2626, amber ring adjusts).
  *
+ * #3166 决策二（WCAG AA ≥4.5:1，像素法实测）：hot 暗色底 #f0453a 实测仅
+ * 3.84:1，改为 #d92d20（同色相更深明度）→ 4.78:1；rising 叠在媒体上的
+ * 胶囊文字在亮封面下最劣仅 1.6:1——半透明琥珀底无法保底，on-media 统一
+ * 改用暗房深色琥珀底（--dsw-specific-velocity-rising-*-media，两主题同值，
+ * 与 B15 暗房原则一致）；亮色 surface 的 rising 前景 #d97706 → #92400e
+ *（同为琥珀 600→800，仅降明度）。层级语义不变：hot 仍最热、rising 次之。
+ *
  * Raw colour values are token definitions, not component colours — the
  * UI03 bare-colour rule is exempted per line for exactly this file purpose.
  */
@@ -22,7 +29,7 @@ export const RIVAL_TOKENS_ID = 'omnimux-rival-tokens'
 
 export const RIVAL_TOKENS_CSS = `
 :root {
-  --dsw-specific-velocity-hot-bg: #f0453a; /* exempt-ui03 token definition */
+  --dsw-specific-velocity-hot-bg: #d92d20; /* exempt-ui03 token definition · #3166: was #f0453a (3.84:1 fail) */
   --dsw-specific-velocity-hot-fg: #ffffff; /* exempt-ui03 token definition */
   --dsw-specific-velocity-hot-ring: rgba(240,69,58,0.45); /* exempt-ui03 token definition */
   --dsw-specific-velocity-rising-fg: #fbbf24; /* exempt-ui03 token definition */
@@ -48,12 +55,18 @@ export const RIVAL_TOKENS_CSS = `
   --dsw-specific-media-scrim: linear-gradient(180deg, rgba(0,0,0,0.02) 40%, rgba(0,0,0,0.62) 100%); /* exempt-ui03 token definition */
   --dsw-specific-media-overlay: linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.30) 45%, rgba(0,0,0,0.82) 100%); /* exempt-ui03 token definition */
   --dsw-specific-media-glow-hot: rgba(240,69,58,0.12); /* exempt-ui03 token definition */
+  /* #3166 决策二：on-media rising 的暗房色（两主题同值、不在 light 重定义）——
+     半透明琥珀底在亮封面上对亮琥珀字仅 ~1.6:1，深色琥珀底保底 ≥4.5:1，
+     色相仍为琥珀系。 */
+  --dsw-specific-velocity-rising-fg-media: #fbbf24; /* exempt-ui03 token definition */
+  --dsw-specific-velocity-rising-bg-media: rgba(120,53,15,0.9); /* exempt-ui03 token definition */
+  --dsw-specific-velocity-rising-ring-media: rgba(251,191,36,0.40); /* exempt-ui03 token definition */
 }
 html[data-theme="light"] {
   --dsw-specific-velocity-hot-bg: #dc2626; /* exempt-ui03 token definition */
   --dsw-specific-velocity-hot-fg: #ffffff; /* exempt-ui03 token definition */
   --dsw-specific-velocity-hot-ring: rgba(220,38,38,0.30); /* exempt-ui03 token definition */
-  --dsw-specific-velocity-rising-fg: #d97706; /* exempt-ui03 token definition */
+  --dsw-specific-velocity-rising-fg: #92400e; /* exempt-ui03 token definition · #3166: was #d97706 (2.51:1 fail) */
   --dsw-specific-velocity-rising-bg: rgba(217,119,6,0.16); /* exempt-ui03 token definition */
   --dsw-specific-velocity-rising-ring: rgba(217,119,6,0.30); /* exempt-ui03 token definition */
 }

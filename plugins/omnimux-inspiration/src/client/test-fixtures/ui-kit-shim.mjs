@@ -18,7 +18,19 @@ import React from 'react'
 
 const h = React.createElement
 
-export const Button = ({ children, leadingIcon, ...rest }) => h('button', { type: 'button', ...rest }, leadingIcon ?? null, children)
+// 生产 Button 的 DOM 形状（packages/dsh-ui-kit/src/button/Button.tsx）：
+// <button><span class="slot" aria-hidden>{icon}</span>
+//         <span class="label">{children}</span></button>
+// 裸文本节点会让「label span 上挂省略号」的规则在装置里匹配不到任何
+// 元素（该缺陷曾连续两轮逃逸，QA 自己改 shim 才测出来）——#3166-②
+// 把 label span 补齐；class 名沿用生产的语义名（css-modules 在生产
+// 里是哈希名，装置断言按结构/类名语义匹配）。
+export const Button = ({ children, leadingIcon, ...rest }) => h(
+  'button',
+  { type: 'button', ...rest },
+  leadingIcon != null ? h('span', { className: 'slot', 'aria-hidden': 'true' }, leadingIcon) : null,
+  children != null && children !== '' ? h('span', { className: 'label' }, children) : null,
+)
 
 export const Divider = () => h('hr', null)
 

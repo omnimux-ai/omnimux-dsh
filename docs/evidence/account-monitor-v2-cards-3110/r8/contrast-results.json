@@ -1,0 +1,470 @@
+[
+ {
+  "theme": "dark",
+  "cardId": "ra_1:p1",
+  "tier": "hot",
+  "onMedia": true,
+  "label": "爆款 23k/h",
+  "bg": [
+   224,
+   48,
+   32
+  ],
+  "text": [
+   256,
+   256,
+   256
+  ],
+  "ratio": 4.59
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_3:p3",
+  "tier": "rising",
+  "onMedia": true,
+  "label": "飙升 3.4k/h",
+  "bg": [
+   112,
+   64,
+   16
+  ],
+  "text": [
+   256,
+   192,
+   32
+  ],
+  "ratio": 5.29
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_4:p11",
+  "tier": "rising",
+  "onMedia": false,
+  "label": "飙升 2.6k/h",
+  "bg": [
+   64,
+   64,
+   32
+  ],
+  "text": [
+   256,
+   192,
+   32
+  ],
+  "ratio": 6.52
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_6:p5",
+  "tier": "average",
+  "onMedia": true,
+  "label": "均速 1.8k/h",
+  "bg": [
+   64,
+   48,
+   32
+  ],
+  "text": [
+   160,
+   160,
+   144
+  ],
+  "ratio": 4.77
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_7:p7",
+  "tier": "watch",
+  "onMedia": true,
+  "label": "观察 320/h",
+  "bg": [
+   48,
+   32,
+   48
+  ],
+  "text": [
+   224,
+   224,
+   224
+  ],
+  "ratio": 11.57
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_1:p8",
+  "tier": "relative",
+  "onMedia": true,
+  "label": "该号 4.2x",
+  "bg": [
+   48,
+   48,
+   32
+  ],
+  "text": [
+   160,
+   160,
+   160
+  ],
+  "ratio": 5.12
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_3:p10",
+  "tier": "hot",
+  "onMedia": true,
+  "label": "爆款 21k/h",
+  "bg": [
+   224,
+   48,
+   32
+  ],
+  "text": [
+   256,
+   256,
+   256
+  ],
+  "ratio": 4.59
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_4:e1",
+  "tier": "rising",
+  "onMedia": false,
+  "label": "rising 1.9k/h",
+  "bg": [
+   64,
+   64,
+   32
+  ],
+  "text": [
+   256,
+   192,
+   32
+  ],
+  "ratio": 6.52
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_5:e2",
+  "tier": "watch",
+  "onMedia": false,
+  "label": "watch 210/h",
+  "bg": [
+   32,
+   32,
+   32
+  ],
+  "text": [
+   192,
+   192,
+   192
+  ],
+  "ratio": 8.96
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_4:e4",
+  "tier": "hot",
+  "onMedia": false,
+  "label": "hot 5.1k/h",
+  "bg": [
+   224,
+   48,
+   32
+  ],
+  "text": [
+   256,
+   256,
+   256
+  ],
+  "ratio": 4.59
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_4:e5",
+  "tier": "rising",
+  "onMedia": false,
+  "label": "rising 900/h",
+  "bg": [
+   64,
+   64,
+   32
+  ],
+  "text": [
+   256,
+   192,
+   32
+  ],
+  "ratio": 6.52
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_5:e6",
+  "tier": "watch",
+  "onMedia": false,
+  "label": "watch 80/h",
+  "bg": [
+   32,
+   32,
+   32
+  ],
+  "text": [
+   192,
+   192,
+   192
+  ],
+  "ratio": 8.96
+ },
+ {
+  "theme": "dark",
+  "cardId": "ra_4:e7",
+  "tier": "watch",
+  "onMedia": false,
+  "label": "watch 60/h",
+  "bg": [
+   32,
+   32,
+   32
+  ],
+  "text": [
+   192,
+   192,
+   192
+  ],
+  "ratio": 8.96
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_1:p1",
+  "tier": "hot",
+  "onMedia": true,
+  "label": "爆款 23k/h",
+  "bg": [
+   224,
+   32,
+   32
+  ],
+  "text": [
+   256,
+   256,
+   256
+  ],
+  "ratio": 4.82
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_3:p3",
+  "tier": "rising",
+  "onMedia": true,
+  "label": "飙升 3.4k/h",
+  "bg": [
+   112,
+   64,
+   16
+  ],
+  "text": [
+   256,
+   192,
+   32
+  ],
+  "ratio": 5.29
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_4:p11",
+  "tier": "rising",
+  "onMedia": false,
+  "label": "飙升 2.6k/h",
+  "bg": [
+   240,
+   224,
+   208
+  ],
+  "text": [
+   144,
+   64,
+   16
+  ],
+  "ratio": 5.56
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_6:p5",
+  "tier": "average",
+  "onMedia": true,
+  "label": "均速 1.8k/h",
+  "bg": [
+   64,
+   48,
+   32
+  ],
+  "text": [
+   160,
+   160,
+   144
+  ],
+  "ratio": 4.77
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_7:p7",
+  "tier": "watch",
+  "onMedia": true,
+  "label": "观察 320/h",
+  "bg": [
+   48,
+   32,
+   48
+  ],
+  "text": [
+   224,
+   224,
+   224
+  ],
+  "ratio": 11.57
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_1:p8",
+  "tier": "relative",
+  "onMedia": true,
+  "label": "该号 4.2x",
+  "bg": [
+   48,
+   48,
+   32
+  ],
+  "text": [
+   160,
+   160,
+   160
+  ],
+  "ratio": 5.12
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_3:p10",
+  "tier": "hot",
+  "onMedia": true,
+  "label": "爆款 21k/h",
+  "bg": [
+   224,
+   32,
+   32
+  ],
+  "text": [
+   256,
+   256,
+   256
+  ],
+  "ratio": 4.82
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_4:e1",
+  "tier": "rising",
+  "onMedia": false,
+  "label": "rising 1.9k/h",
+  "bg": [
+   240,
+   224,
+   208
+  ],
+  "text": [
+   144,
+   64,
+   16
+  ],
+  "ratio": 5.56
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_5:e2",
+  "tier": "watch",
+  "onMedia": false,
+  "label": "watch 210/h",
+  "bg": [
+   240,
+   240,
+   256
+  ],
+  "text": [
+   80,
+   80,
+   96
+  ],
+  "ratio": 7.01
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_4:e4",
+  "tier": "hot",
+  "onMedia": false,
+  "label": "hot 5.1k/h",
+  "bg": [
+   224,
+   32,
+   32
+  ],
+  "text": [
+   256,
+   256,
+   256
+  ],
+  "ratio": 4.82
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_4:e5",
+  "tier": "rising",
+  "onMedia": false,
+  "label": "rising 900/h",
+  "bg": [
+   240,
+   224,
+   208
+  ],
+  "text": [
+   144,
+   64,
+   16
+  ],
+  "ratio": 5.56
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_5:e6",
+  "tier": "watch",
+  "onMedia": false,
+  "label": "watch 80/h",
+  "bg": [
+   240,
+   240,
+   256
+  ],
+  "text": [
+   80,
+   80,
+   96
+  ],
+  "ratio": 7.01
+ },
+ {
+  "theme": "light",
+  "cardId": "ra_4:e7",
+  "tier": "watch",
+  "onMedia": false,
+  "label": "watch 60/h",
+  "bg": [
+   240,
+   240,
+   256
+  ],
+  "text": [
+   80,
+   80,
+   96
+  ],
+  "ratio": 7.01
+ }
+]
