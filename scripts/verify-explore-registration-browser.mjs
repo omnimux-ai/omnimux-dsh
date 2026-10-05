@@ -7,12 +7,13 @@
  * single ESM file, served from a throw-away static server on 127.0.0.1:0, loaded into a
  * headless Chrome page that carries a minimal official sidebar skeleton, and driven step
  * by step over CDP (`Runtime.evaluate` / `Input.dispatchMouseEvent` / `Page.captureScreenshot`).
+ * 悬停展开也走真实鼠标事件（`mouseMoved`），不靠脚本 `.click()`。
  *
  * Journey: boot → menu has the 11 builtin items → register a runtime item → 12 items with
  * the new one last → a REAL mouse click opens the workbench tab → unregister → back to 11
  * → malformed input is rejected without throwing or changing the menu.
  *
- * Artifacts land in `docs/evidence/explore-registration-3108/`:
+ * Artifacts land in `docs/evidence/explore-registration-3124/`:
  *   - explore-registration-browser.png   (the registered item visible in the open menu)
  *   - explore-registration-browser.json  (runId, chrome version, per-assertion pass/actual)
  *
@@ -32,7 +33,7 @@ import { randomUUID } from 'node:crypto'
 /** Worktree root, derived from this file — never a hardcoded checkout path. */
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const COORDINATOR_SOURCE = path.join(ROOT, 'plugins/omnimux/src/client/sidebar-coordinator.js')
-const EVIDENCE_DIR = path.join(ROOT, 'docs/evidence/explore-registration-3108')
+const EVIDENCE_DIR = path.join(ROOT, 'docs/evidence/explore-registration-3124')
 const PNG_PATH = path.join(EVIDENCE_DIR, 'explore-registration-browser.png')
 const JSON_PATH = path.join(EVIDENCE_DIR, 'explore-registration-browser.json')
 
@@ -171,7 +172,21 @@ window.addEventListener('unhandledrejection', (event) => window.__QA_ERRORS.push
 const q = (selector) => document.querySelector(selector)
 let lastUnregister = null
 
+// 未捕获错误计数：收起菜单会让获得焦点的项触发 blur/focusout，
+// 若收起逻辑不是幂等的，这里就会记到异常 —— 用于回归该竞态。
+window.__qaErrors = []
+window.addEventListener('error', (event) => {
+  window.__qaErrors.push(String((event && event.message) || event))
+})
+window.addEventListener('unhandledrejection', (event) => {
+  window.__qaErrors.push(String((event && event.reason) || event))
+})
+
 window.__QA = {
+  errors() {
+    return window.__qaErrors.slice()
+  },
+
   module: mod,
   installSidebarGlobal: mod.installSidebarGlobal,
   builtinIds: () => mod.EXPLORE_MENU_ITEMS.map((item) => item.id),
@@ -247,6 +262,20 @@ window.__QA = {
       lastLabel: last ? labels[labels.length - 1] : null,
       dividerCount: menu.querySelectorAll('.omnimux-explore-menu-divider').length,
       anchorExpanded: q('[data-omnimux-explore-entry]')?.getAttribute('aria-expanded') ?? null,
+    }
+  },
+
+  entryRect() {
+    const el = q('[data-omnimux-explore-entry]')
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+      width: rect.width,
+      height: rect.height,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
     }
   },
 
@@ -569,6 +598,46 @@ async function main() {
     })
     await capture('step-1-boot')
 
+    // ---- step 1b: hover-only open (no click at all) -----------------------------
+    await assert('悬停即展开：只派发真实鼠标移动（不点击）即出现菜单', async () => {
+      const entryRect = await evalIn(`window.__QA.entryRect()`)
+      if (!entryRect) throw fail('探索行 rect 不可读', null)
+      const base = { x: entryRect.x, y: entryRect.y, modifiers: 0 }
+      await cdp.send('Input.dispatchMouseEvent', { ...base, type: 'mouseMoved', button: 'none' }, sessionId)
+      let opened = false
+      try {
+        await waitFor(async () => await evalIn(`window.__QA.readMenu().open === true`), 4_000, '悬停展开菜单')
+        opened = true
+      } catch {
+        opened = false
+      }
+      const menu = await evalIn(`window.__QA.readMenu()`)
+      const actual = { opened, count: menu.count, anchorExpanded: menu.anchorExpanded, clicked: false }
+      if (!opened || !menu.open) throw fail('仅悬停未展开菜单', actual)
+      if (menu.anchorExpanded !== 'true') throw fail('悬停展开后 aria-expanded 应为 true', actual)
+      return actual
+    })
+    await capture('step-1b-hover-open')
+
+    await assert('移出即收起：指针移到按钮与菜单之外后菜单关闭', async () => {
+      await cdp.send(
+        'Input.dispatchMouseEvent',
+        { x: VIEWPORT.width - 4, y: VIEWPORT.height - 4, modifiers: 0, type: 'mouseMoved', button: 'none' },
+        sessionId,
+      )
+      let closed = false
+      try {
+        await waitFor(async () => await evalIn(`window.__QA.readMenu().open === false`), 4_000, '移出收起')
+        closed = true
+      } catch {
+        closed = false
+      }
+      const menu = await evalIn(`window.__QA.readMenu()`)
+      const actual = { closed, open: menu.open, anchorExpanded: menu.anchorExpanded }
+      if (!closed || menu.open) throw fail('指针移出后菜单仍展开', actual)
+      return actual
+    })
+
     // ---- step 2: builtin menu ---------------------------------------------------
     await assert('打开菜单：11 项，id 序列与内置白名单完全一致', async () => {
       const opened = await evalIn(`window.__QA.openMenu()`)
@@ -638,12 +707,14 @@ async function main() {
       await realClick(rect)
       await waitFor(async () => (await evalIn(`window.__QA.opened()`)) !== null, 4_000, '__opened 被写入')
       const opened = await evalIn(`window.__QA.opened()`)
+      const pageErrors = await evalIn(`window.__QA.errors()`)
       const menu = await evalIn(`window.__QA.readMenu()`)
-      const actual = { opened, expected: EXPECTED_OPENED, menuOpen: menu.open, menuCount: menu.count, clickRect: rect }
+      const actual = { opened, expected: EXPECTED_OPENED, menuOpen: menu.open, menuCount: menu.count, pageErrors, clickRect: rect }
       if (!deepEqual(opened, EXPECTED_OPENED)) {
         throw fail(`__opened 应为 ${normalize(EXPECTED_OPENED)}，实际 ${normalize(opened)}`, actual)
       }
       if (menu.open !== false) throw fail('点击后菜单应已关闭', actual)
+      if (pageErrors.length > 0) throw fail('点击菜单项时页面抛出未捕获错误（收起竞态）', actual)
       return actual
     })
     await capture('step-5-after-click')
@@ -770,6 +841,17 @@ async function main() {
 
     if (report.assertions.length > 0) {
       await fs.mkdir(EVIDENCE_DIR, { recursive: true })
+      // 头图取「仅悬停即展开」那一帧：本任务的证据必须是悬停态，而不是点击态。
+      const hoverShot = captured.get('step-1b-hover-open')
+      if (hoverShot) {
+        requiredShot = hoverShot
+        report.screenshot = {
+          path: path.relative(ROOT, PNG_PATH),
+          ...pngSize(hoverShot),
+          bytes: hoverShot.length,
+          capturedAtStep: 'step-1b-hover-open',
+        }
+      }
       if (requiredShot) await fs.writeFile(PNG_PATH, requiredShot)
       await fs.writeFile(JSON_PATH, `${JSON.stringify(report, null, 2)}\n`)
     }

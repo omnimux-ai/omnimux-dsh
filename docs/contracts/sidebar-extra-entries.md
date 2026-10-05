@@ -99,6 +99,18 @@ const unregister = window.__omnimuxSidebar.registerExploreItem({
 | 点击语义 | 复用 `activateExploreItem` 既有三段委托（`action` → 已挂载行 click → `__omnimuxWorkbench.open({ tabId })`），不得另写导航 |
 | 展开中变更 | 注册 / 注销时若菜单已展开，收起菜单，下次展开即最新集合 |
 
+### 探索入口的展开方式（悬停为主，点击与键盘保留）
+
+| Rule | Detail |
+|---|---|
+| 悬停即展开 | 指针进入「探索」按钮后经**意图延时**（`EXPLORE_HOVER_OPEN_DELAY`）展开，不需要点击；延时是模块常量，不得读环境变量或本机配置 |
+| 扫过不误触 | 意图延时未到就移出，不得展开 |
+| 不闪断 | 指针从按钮移向菜单（含斜向）时不得中途收起：移出后有一段**宽限延时**（`EXPLORE_HOVER_CLOSE_DELAY`），且收起判定只看**指针当前位置**（在按钮内 / 在菜单内），与 `mouseenter` / `mouseleave` 的到达顺序无关 |
+| 点击仍可用 | 点击开关行为不变；点击收起后指针若仍停在按钮上，**不得**被悬停逻辑立刻重开，直到指针真正离开 |
+| 键盘仍可用 | 保留原生 button 语义：Enter / Space 展开，`Escape` 收起，焦点移出按钮与菜单后收起 |
+| 幂等收起 | 移除菜单会让其中获得焦点的项触发 blur / focusout 并重入收起：收起必须防重入，且只移除仍挂载（`isConnected`）的节点，重复收起不得抛错 |
+| 不新增全局监听 | 除既有文档级按下 / 按键监听外，只允许按钮与菜单自身的悬停与焦点事件；禁止为悬停再挂文档级 `mousemove` 轮询 |
+
 ## Alpha 内测标记
 
 中枢协调器按 [Alpha release policy](alpha-release.md) 为已有 Alpha 行添加状态标记，不改变 rank、点击或登录处理。禁止域插件各自维护 Alpha 名单或重复添加标记。

@@ -382,6 +382,57 @@ let exploreEntryElement = null
 let exploreDocCleanup = null
 let currentExploreAnchor = null
 
+/** 悬停展开意图延时：扫过不误触，同时保持「移上去就出来」的手感。 */
+export const EXPLORE_HOVER_OPEN_DELAY = 100
+/** 移出后的收起宽限：允许指针从按钮斜向移入菜单而不闪断。 */
+export const EXPLORE_HOVER_CLOSE_DELAY = 220
+
+let exploreHoverTimer = null
+/** 点击收起后指针仍停在按钮上：抑制悬停重开，直到指针离开。 */
+let exploreHoverSuppressed = false
+/** 指针当前位置：按钮 / 菜单。收起判定必须与事件到达顺序无关。 */
+let explorePointerInEntry = false
+let explorePointerInMenu = false
+let exploreMenuClosing = false
+
+function clearExploreHoverTimer() {
+  if (exploreHoverTimer === null) return
+  clearTimeout(exploreHoverTimer)
+  exploreHoverTimer = null
+}
+
+function scheduleExploreHover(action, delay) {
+  clearExploreHoverTimer()
+  exploreHoverTimer = setTimeout(() => {
+    exploreHoverTimer = null
+    action()
+  }, delay)
+}
+
+/** 指针已不在按钮与菜单内时才真正收起；与 mouseenter/mouseleave 到达顺序无关。 */
+function scheduleExploreHoverClose() {
+  if (!exploreMenuElement()) {
+    clearExploreHoverTimer()
+    return
+  }
+  scheduleExploreHover(() => {
+    if (explorePointerInEntry || explorePointerInMenu) return
+    closeExploreMenu()
+  }, EXPLORE_HOVER_CLOSE_DELAY)
+}
+
+function exploreMenuElement() {
+  return typeof document === 'undefined' ? null : document.getElementById('omnimux-explore-menu')
+}
+
+/** 焦点移出按钮与菜单之外时收起；移入菜单内部则保持展开。 */
+function handleExploreFocusOut(event) {
+  const next = event?.relatedTarget
+  const isNode = typeof Node !== 'undefined' && next instanceof Node
+  if (isNode && (exploreEntryElement?.contains(next) || exploreMenuElement()?.contains(next))) return
+  closeExploreMenu()
+}
+
 function createExploreIcon() {
   return '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><polygon points="10.8 5.2 8.8 8.8 5.2 10.8 7.2 7.2" fill="currentColor" stroke="none"/></svg>'
 }
@@ -405,8 +456,28 @@ function ensureExploreRow() {
     btn.addEventListener('click', (event) => {
       event.preventDefault()
       event.stopPropagation()
+      clearExploreHoverTimer()
+      const wasOpen = Boolean(exploreMenuElement())
       toggleExploreMenu(btn)
+      // 点击收起后指针通常还停在按钮上：抑制悬停重开，直到指针真正离开。
+      exploreHoverSuppressed = wasOpen
     })
+    // 悬停即展开（不点击）；移出按钮给一段宽限，让指针能斜向移进菜单。
+    btn.addEventListener('mouseenter', () => {
+      explorePointerInEntry = true
+      if (exploreMenuElement()) clearExploreHoverTimer()
+      if (exploreHoverSuppressed) return
+      if (exploreMenuElement()) return
+      scheduleExploreHover(() => {
+        if (!exploreMenuElement()) openExploreMenu(btn)
+      }, EXPLORE_HOVER_OPEN_DELAY)
+    })
+    btn.addEventListener('mouseleave', () => {
+      explorePointerInEntry = false
+      exploreHoverSuppressed = false
+      scheduleExploreHoverClose()
+    })
+    btn.addEventListener('focusout', handleExploreFocusOut)
     exploreEntryElement = btn
   }
   ROWS.push({ id: 'omnimux-explore-entry', rank: 7.2, element: exploreEntryElement })
@@ -445,14 +516,25 @@ export function computeExploreMenuPosition(anchor, viewport = typeof window !== 
 }
 
 export function closeExploreMenu() {
-  exploreDocCleanup?.()
-  exploreDocCleanup = undefined
-  if (currentExploreAnchor) {
-    currentExploreAnchor.setAttribute('aria-expanded', 'false')
-    delete currentExploreAnchor.dataset.active
-    currentExploreAnchor = null
+  // 移除菜单会让其中获得焦点的项触发 blur/focusout，进而重入本函数；
+  // 这里用重入闸门 + isConnected 双重保护，保证收起是幂等的（重复收起不得抛错）。
+  if (exploreMenuClosing) return
+  exploreMenuClosing = true
+  try {
+    clearExploreHoverTimer()
+    explorePointerInMenu = false
+    exploreDocCleanup?.()
+    exploreDocCleanup = undefined
+    if (currentExploreAnchor) {
+      currentExploreAnchor.setAttribute('aria-expanded', 'false')
+      delete currentExploreAnchor.dataset.active
+      currentExploreAnchor = null
+    }
+    const menu = document.getElementById('omnimux-explore-menu')
+    if (menu?.isConnected) menu.remove()
+  } finally {
+    exploreMenuClosing = false
   }
-  document.getElementById('omnimux-explore-menu')?.remove()
 }
 
 /** 注册集合发生变化时收起已展开的菜单，避免展示陈旧项。 */
@@ -491,6 +573,7 @@ export function activateExploreItem(item) {
 export function openExploreMenu(anchor) {
   if (!(anchor instanceof HTMLElement)) return false
   closeExploreMenu()
+  explorePointerInMenu = false
   currentExploreAnchor = anchor
   anchor.setAttribute('aria-expanded', 'true')
   anchor.dataset.active = 'true'
@@ -543,6 +626,17 @@ export function openExploreMenu(anchor) {
   const onKey = (event) => {
     if (event.key === 'Escape') closeExploreMenu()
   }
+
+  // 指针进入菜单即取消待收起；离开菜单再给一次宽限，回到按钮同样能续上。
+  menu.addEventListener('mouseenter', () => {
+    explorePointerInMenu = true
+    clearExploreHoverTimer()
+  })
+  menu.addEventListener('mouseleave', () => {
+    explorePointerInMenu = false
+    scheduleExploreHoverClose()
+  })
+  menu.addEventListener('focusout', handleExploreFocusOut)
 
   document.addEventListener('mousedown', onDoc, true)
   document.addEventListener('keydown', onKey, true)
@@ -1118,6 +1212,8 @@ export function resetSidebarCoordinatorForTests() {
   seen.clear()
   closeNewMenu()
   closeExploreMenu()
+  exploreHoverSuppressed = false
+  explorePointerInEntry = false
   exploreEntryElement = null
   if (typeof window !== 'undefined') {
     try {
