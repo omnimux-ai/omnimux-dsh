@@ -1,0 +1,216 @@
+{
+  "total": 42,
+  "fail": 0,
+  "results": [
+    {
+      "name": "三 Tab 文案与顺序",
+      "ok": true,
+      "detail": "爆款趋势/灵感库/账号监控"
+    },
+    {
+      "name": "监控池状态条",
+      "ok": true,
+      "detail": "监控池 8 个账号 · 正常 5 · 冷却 2 · 待重导入 1"
+    },
+    {
+      "name": "额度",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "新鲜度",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10 张卡",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "筛选行单行",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "增速胶囊文案",
+      "ok": true,
+      "detail": "爆款 23k/h | 爆款 42k/h | 飙升 3.4k/h | 飙升 1.2k/h | 均速 1.8k/h | 观察 480/h | 观察 320/h | 该号 4.2x | 飙升 6.8k/h | 爆款 21k/h"
+    },
+    {
+      "name": "「该号 4.2x」为中性色",
+      "ok": true,
+      "detail": "rgba(0, 0, 0, 0.3) / rgba(255, 255, 255, 0.55)"
+    },
+    {
+      "name": "全页无 Emoji",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "无「全部平台/全部账号」违规词",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "处理状态常驻底部信息条",
+      "ok": true,
+      "detail": "4 张"
+    },
+    {
+      "name": "卡片操作栏四项",
+      "ok": true,
+      "detail": "原帖直达/AI 拆解/标为已处理/立即复刻"
+    },
+    {
+      "name": "标为已处理 → Toast",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "超强爆款 → 3 卡",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D1 三态健康",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D1 待重导入原因行常驻",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Esc 关闭 Popover",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E3 筛选空态",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D3 详情含口径说明",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D3 无右上角关闭图标",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D3 封面无平台角标",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D3 指标行不复用卡片 overlay 样式",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D3 立即复刻为主按钮且在最右",
+      "ok": true,
+      "detail": "关闭:S | 查看原帖:S | 立即复刻:P"
+    },
+    {
+      "name": "刷新扣额度",
+      "ok": true,
+      "detail": "今日剩余刷新额度 5/8"
+    },
+    {
+      "name": "新鲜度最小 1 分钟",
+      "ok": true,
+      "detail": "数据更新于 1 分钟前"
+    },
+    {
+      "name": "二次刷新 → 冷却原因",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D4 无字典外标题",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T2 确认三要素",
+      "ok": true,
+      "detail": "本次消耗 3 次额度 · 今日剩余 6 次 · 预计 2 分钟"
+    },
+    {
+      "name": "额度归零显示 0/8",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "额度耗尽原因",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "账号停止原因",
+      "ok": true,
+      "detail": "该账号自动刷新已停止，请在账号筛选中处理。"
+    },
+    {
+      "name": "D2 两个必备行",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "非白名单报错",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "报错时 YouTube 提示行仍可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "D2 无右上角关闭图标",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "账号识别回显",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "导入成功 Toast",
+      "ok": true,
+      "detail": "已添加监控账号 @new_creator，首次采集约需 1 分钟"
+    },
+    {
+      "name": "监控池 +1",
+      "ok": true,
+      "detail": "监控池 9 个账号 · 正常 6 · 冷却 2 · 待重导入 1"
+    },
+    {
+      "name": "E1 时间承诺 + 分流出口",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E1 不渲染筛选行与状态条",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "E2 首采中",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "分流出口切到爆款趋势",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
