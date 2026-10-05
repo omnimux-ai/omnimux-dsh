@@ -498,6 +498,25 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
     )
     add('j3-sheet-artifact-decoded-in-ui', sheetDecoded.decoded > 0, `卡片图 ${sheetDecoded.total} 张，解码 ${sheetDecoded.decoded} 张`)
 
+    // 第一次多视角的入口：此刻该形象还没有任何派生任务，成品卡片必须自己给出「生成多视角」，
+    // 否则用户永远开不出第一份多视角（徽标只在已有多视角时才渲染）。
+    const mvEntry = await evaluate(`(() => {
+      const nodes = Array.from(document.querySelectorAll('.omx-avatar-mv-tile--add'))
+      const visible = nodes.filter((n) => n.getClientRects().length > 0)
+      const first = visible[0] || null
+      return {
+        total: nodes.length,
+        visible: visible.length,
+        label: first ? (first.getAttribute('aria-label') || '') : '',
+        text: first ? (first.textContent || '').trim() : '',
+      }
+    })()`)
+    add(
+      'j3-first-multiview-entry-present',
+      mvEntry.visible >= 1 && mvEntry.label === '生成多视角' && mvEntry.text === '生成多视角',
+      `入口 ${mvEntry.visible}/${mvEntry.total} 可见，label=「${mvEntry.label}」，文案=「${mvEntry.text}」`,
+    )
+
     // 应用自己的资产库 HTTP 面：这条资产必须落在「角色」分类下，且引用键是该形象。
     const archivedAsset = await waitFor(
       evaluate,

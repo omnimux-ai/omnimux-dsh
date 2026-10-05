@@ -1,16 +1,16 @@
 {
-  "runId": "9e40128e-107c-4ace-91d7-29a0ec231d88",
+  "runId": "239bb894-f896-426b-8675-3a672dd429b8",
   "mode": "ui",
   "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176",
-  "origin": "http://127.0.0.1:55883",
-  "appPort": 55883,
-  "cdpPort": 55887,
-  "startedAt": "2026-10-05T21:43:37.837Z",
-  "completedAt": "2026-10-05T21:43:57.600Z",
+  "origin": "http://127.0.0.1:61520",
+  "appPort": 61520,
+  "cdpPort": 61522,
+  "startedAt": "2026-10-05T21:59:00.316Z",
+  "completedAt": "2026-10-05T21:59:20.245Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:55883",
+    "origin": "http://127.0.0.1:61520",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "taskPluginsCount": 22,
@@ -35,19 +35,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:55883",
+      "origin": "http://127.0.0.1:61520",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-JgMKctQhHMsATQVmxw5MWBa9zEAB3GsherRFI8HN4ew"
+      "cookieName": "dsh-auth-wFs52JySmUrYHPQo_BF5xpxPbCdBetzDD31eVGMyS50"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 55887
+      "port": 61522
     },
     {
       "name": "auth-cookie-applied",
@@ -218,7 +218,7 @@
     {
       "name": "journey:j3-avatar-present-in-plugin-ledger",
       "pass": true,
-      "detail": "HTTP 200，形象 1 个（验收形象3176），id=avt_550b4fb0"
+      "detail": "HTTP 200，形象 1 个（验收形象3176），id=avt_3b130844"
     },
     {
       "name": "journey:j3-generate-cta-clickable",
@@ -233,7 +233,7 @@
     {
       "name": "journey:j3-sheet-task-reached-ready",
       "pass": true,
-      "detail": "taskId=avt_task_175a8090，destPath=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.test-env-TgZMC5/dsh/omnimux/avatar/data/avt_550b4fb0/main.png，归档失败原因=无"
+      "detail": "taskId=avt_task_8751c56c，destPath=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.test-env-eTfPZs/dsh/omnimux/avatar/data/avt_3b130844/main.png，归档失败原因=无"
     },
     {
       "name": "journey:j3-sheet-archive-had-no-error",
@@ -246,6 +246,11 @@
       "detail": "卡片图 1 张，解码 1 张"
     },
     {
+      "name": "journey:j3-first-multiview-entry-present",
+      "pass": true,
+      "detail": "入口 1/1 可见，label=「生成多视角」，文案=「生成多视角」"
+    },
+    {
       "name": "journey:j3-asset-archived-under-character-category",
       "pass": true,
       "detail": "type=character，name=验收形象3176，cite=@角色/验收形象3176"
@@ -253,7 +258,7 @@
     {
       "name": "journey:j3-asset-carries-the-sheet-file",
       "pass": true,
-      "detail": "资产 ast_b8ce5f73 引用文件 1 个"
+      "detail": "资产 ast_00fec614 引用文件 1 个"
     },
     {
       "name": "journey:j3-role-category-entry-clickable",
@@ -268,12 +273,12 @@
     {
       "name": "journey:j4-multiview-generation-submitted",
       "pass": true,
-      "detail": "HTTP 200，taskId=avt_task_95e48caf，mode=live，error=null"
+      "detail": "HTTP 200，taskId=avt_task_21627c5f，mode=live，error=null"
     },
     {
       "name": "journey:j4-multiview-task-reached-ready",
       "pass": true,
-      "detail": "taskId=avt_task_95e48caf，destPath=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.test-env-TgZMC5/dsh/omnimux/avatar/data/avt_550b4fb0/多视角/turnaround.png，归档失败原因=无"
+      "detail": "taskId=avt_task_21627c5f，destPath=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.test-env-eTfPZs/dsh/omnimux/avatar/data/avt_3b130844/多视角/turnaround.png，归档失败原因=无"
     },
     {
       "name": "journey:j4-multiview-archive-had-no-error",
@@ -283,7 +288,7 @@
     {
       "name": "journey:j4-multiview-folder-attached-to-avatar-asset",
       "pass": true,
-      "detail": "目录引用 id=fil_22c8e213，kind=directory，资产下共 2 个引用"
+      "detail": "目录引用 id=fil_2f098f7e，kind=directory，资产下共 2 个引用"
     },
     {
       "name": "journey:j4-multiview-sheet-listed-inside-folder",
@@ -312,14 +317,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 109885
+      "bytes": 110527
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.workbuddy/evidence/app-qa/9e40128e-107c-4ace-91d7-29a0ec231d88/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.workbuddy/evidence/app-qa/239bb894-f896-426b-8675-3a672dd429b8/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 109885
+    "bytes": 110527
   },
   "errors": [],
   "cleanup": {

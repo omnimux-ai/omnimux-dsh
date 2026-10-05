@@ -657,6 +657,17 @@ ${CANONICAL_SCROLL_DECL}
 .omx-avatar-mv-tile--ready {
   border-color: var(--dsw-alias-brand-primary);
 }
+/* 「生成多视角」入口：与徽标同格同尺寸，虚线边框表示这一格还是空的。 */
+.omx-avatar-mv-tile--add {
+  border-style: dashed;
+}
+.omx-avatar-mv-add {
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--dsw-alias-label-secondary);
+}
 .omx-avatar-mv-ring {
   position: absolute;
   inset: 0;

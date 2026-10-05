@@ -484,6 +484,23 @@ export function AvatarStage(props) {
     }
   }, [b.group, b.model, currentId, multiViewApi, openMultiView])
 
+  // 第一次多视角：卡片上还没有派生任务，必须由这里发起，否则用户永远开不出第一份多视角。
+  const onGenerateMultiView = useCallback(
+    async (parent) => {
+      if (!parent || !currentId) return
+      const meta = parseTaskMeta(parent)
+      const record = await multiViewApi.submit({
+        avatarId: currentId,
+        parentTaskId: taskKey(parent),
+        model: meta?.model || b.model,
+        group: meta?.group || b.group,
+      })
+      // 提交后立刻打开弹窗：进度与结果都落在同一处，不需要用户再找一遍入口。
+      if (record) setOpenMultiView({ parent, child: record })
+    },
+    [b.group, b.model, currentId, multiViewApi]
+  )
+
   const onDeleteMultiView = useCallback(async () => {
     if (!openMultiView?.child || !currentId) return
     const parentId = openMultiView.parent ? taskKey(openMultiView.parent) : ''
@@ -596,6 +613,7 @@ export function AvatarStage(props) {
                 onSync={onSync}
                 syncingKey={syncingKey}
                 onOpenMultiView={onOpenMultiView}
+                onGenerateMultiView={onGenerateMultiView}
                 t={t}
               />
             )}

@@ -67,7 +67,7 @@ function SyncAlertIcon() {
  * }} props
  */
 export function TaskCard(props) {
-  const { task, viewMode, child, syncing, onView, onRetry, onSync, onOpenMultiView, t } = props
+  const { task, viewMode, child, syncing, onView, onRetry, onSync, onOpenMultiView, onGenerateMultiView, t } = props
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
 
@@ -184,6 +184,22 @@ export function TaskCard(props) {
               onOpen={() => onOpenMultiView(task, child)}
               t={t}
             />
+          </div>
+        ) : /* 还没有多视角的成品卡片必须给出第一个入口：否则用户永远开不出第一份多视角。 */
+        state === 'done' && onGenerateMultiView ? (
+          <div className='omx-avatar-mv-slot'>
+            <button /* exempt-ui01: 与多视角徽标同格同形的浮层按钮，外观由 omx-avatar-mv-tile 类族独占 */
+              type='button'
+              aria-label={t('multiview.generate')}
+              title={t('multiview.generate')}
+              className='omx-avatar-mv-tile omx-avatar-mv-tile--add'
+              onClick={(event) => {
+                event.stopPropagation()
+                onGenerateMultiView(task)
+              }}
+            >
+              <span className='omx-avatar-mv-add'>{t('multiview.generate')}</span>
+            </button>
           </div>
         ) : null}
       </div>

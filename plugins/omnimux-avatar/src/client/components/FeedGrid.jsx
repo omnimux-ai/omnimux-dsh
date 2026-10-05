@@ -87,6 +87,7 @@ export function FeedGrid(props) {
     onSync,
     syncingKey,
     onOpenMultiView,
+    onGenerateMultiView,
     t,
   } = props
 
@@ -165,6 +166,7 @@ export function FeedGrid(props) {
           onRetry={onRetry}
           onSync={onSync}
           onOpenMultiView={onOpenMultiView}
+          onGenerateMultiView={onGenerateMultiView}
           t={t}
         />
       ))}
