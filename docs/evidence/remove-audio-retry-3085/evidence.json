@@ -1,0 +1,6 @@
+{
+  "issue": 3087,
+  "verified": true,
+  "timestamp": 1791119800000,
+  "description": "彻底移除音频节点重试旋转图标，重试统一由右侧模型配置面板负责"
+}

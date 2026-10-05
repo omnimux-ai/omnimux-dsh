@@ -87,7 +87,7 @@ export const MediaCardBody: React.FC<MediaCardBodyProps> = ({
         loadingAspectRatio={loadingAspectRatio}
         errorMessage={executionError ?? errorMessage}
         taskId={nodeData.taskId}
-        onRetry={onRetry}
+        onRetry={materialType === 'audio' ? undefined : onRetry}
       >
         {previewUrl ? (
           <MediaPreview

@@ -20,10 +20,11 @@ test('E2E: 纯图标按钮鼠标悬停提示与冗余重试移除契约 (Issue #
     '核心播放/暂停按钮必须具备对应的 title 悬停提示',
   );
 
-  // 2. 波形重试按钮必须隐藏，不可作为并排可见图标干扰用户
-  assert.ok(
-    previewSrc.includes("style={{ display: 'none' }}"),
-    '波形重试按钮必须隐藏，避免两个旋转图标并排',
+  // 2. 波形重试按钮必须彻底移除，不可作为图标干扰用户
+  assert.equal(
+    previewSrc.includes("wf-audio__retry"),
+    false,
+    '波形重试按钮必须彻底移除，避免旋转图标混淆',
   );
 
   // 3. 替换素材按钮必须具备悬停提示
