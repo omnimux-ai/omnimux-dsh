@@ -2,10 +2,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildJevDecisionArgs,
+  buildSeedPickArgs,
   classifyPerspectiveByRules,
   JEV_STATE_MAX,
   PERSPECTIVES,
+  SEED_PICK_NONE,
 } from '../src/content/twitter-copilot/perspectives.ts'
+const NONE_KEY_PINNED = () => expect(SEED_PICK_NONE).toEqual('none')
 import { COPILOT_MENU_ITEMS } from '../src/content/twitter-copilot/prompts.ts'
 import type { PerspectiveId, ScoredCandidate } from '../src/content/twitter-copilot/types.ts'
 import {
@@ -39,9 +42,22 @@ describe('#3100 推特赛道关键词标签', () => {
 function seed(text: string, controversy = 10): ScoredCandidate {
   return {
     author: 'a', text, replies: 5, reposts: 5, likes: 5, ageHours: 1,
-    scores: { keyword: 50, controversy, infoDelta: 50, velocity: 50 }, total: 80,
+    scores: { keyword: 50, controversy, infoDelta: 50, velocity: 50, reach: 50 }, total: 80, heat: 60,
   }
 }
+
+describe('#3100 决策模型挑爆款（AC-13）', () => {
+  it('候选作为选项、赛道作为状态，另设「都不贴合」', () => {
+    const quote = { ...seed('这才是重点'), isQuote: true, quotedText: '原帖：推理成本下降 40%' }
+    const args = buildSeedPickArgs([seed('Claude 新功能实测'), quote], ['ai工具', '出海'])
+    expect(Object.keys(args.choices)).toEqual(['t0', 't1', SEED_PICK_NONE])
+    expect(args.state).toContain('ai工具, 出海')
+    expect(args.choices.t0).toContain('Claude 新功能实测')
+    expect(args.choices.t1).toContain('quoting: 原帖：推理成本下降 40%')
+    expect(args.choices.t0.length).toBeLessThanOrEqual(500)
+    NONE_KEY_PINNED()
+  })
+})
 
 const LABELED: Array<[string, ScoredCandidate[], string, PerspectiveId]> = [
   ['争议-评论区对立', [seed('远程办公到底提不提效？', 90)], '', 'P1_CONTRARIAN'],

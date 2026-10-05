@@ -15,6 +15,10 @@ export const SEED_THRESHOLD = 65
 /** Minimum own-comment length for a quote tweet (the quoted post carries the rest). */
 export const MIN_QUOTE_COMMENT_LENGTH = 4
 export const MAX_SEEDS = 3
+/** Candidates offered to the decision model for the semantic pick. */
+export const SHORTLIST_SIZE = 8
+/** Minimum heat (keyword-free score) for a shortlist candidate. */
+export const SHORTLIST_MIN_HEAT = 40
 /** 爆款优先：互动规模与爆发力占六成，赛道/争议/信息密度做加分（爆款原帖本身可以不在赛道内，复刻时换成自己的赛道）。 */
 export const SCORE_WEIGHTS = { keyword: 0.15, controversy: 0.15, infoDelta: 0.1, velocity: 0.25, reach: 0.35 } as const
 
@@ -51,7 +55,7 @@ function authorHandle(article: Element): string {
   return (link?.getAttribute('href') || '').replace(/^\//, '').split('/')[0] || ''
 }
 
-type RawCandidate = Omit<ScoredCandidate, 'scores' | 'total'>
+type RawCandidate = Omit<ScoredCandidate, 'scores' | 'total' | 'heat'>
 
 /** The embedded quoted-post card of a quote tweet, if any. */
 function quoteCard(article: Element): Element | null {
@@ -171,7 +175,23 @@ export function scoreCandidate(c: RawCandidate, keywords: string[]): ScoredCandi
       velocity * SCORE_WEIGHTS.velocity +
       reach * SCORE_WEIGHTS.reach,
   )
-  return { ...c, scores, total }
+  // 热度：不含关键词的加权分（按剩余权重归一），只回答「够不够热」，「对不对路」交给决策模型
+  const heatWeight = 1 - SCORE_WEIGHTS.keyword
+  const heat = clamp100(
+    (controversy * SCORE_WEIGHTS.controversy +
+      infoDelta * SCORE_WEIGHTS.infoDelta +
+      velocity * SCORE_WEIGHTS.velocity +
+      reach * SCORE_WEIGHTS.reach) / heatWeight,
+  )
+  return { ...c, scores, total, heat }
+}
+
+/** Hottest candidates for the semantic pick: heat ≥ min, quote tweets first on ties, at most `max`. */
+export function shortlistForPick(list: ScoredCandidate[], max = SHORTLIST_SIZE, minHeat = SHORTLIST_MIN_HEAT): ScoredCandidate[] {
+  return list
+    .filter((c) => c.heat >= minHeat)
+    .sort((a, b) => b.heat - a.heat || Number(Boolean(b.isQuote)) - Number(Boolean(a.isQuote)))
+    .slice(0, max)
 }
 
 /** Seeds above the threshold: quote tweets first (they show a proven remix angle), then by total. */

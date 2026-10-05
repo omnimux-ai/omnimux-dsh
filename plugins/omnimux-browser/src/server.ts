@@ -794,7 +794,7 @@ export function parseDecisionArgs(payload: unknown):
 
 const COPILOT_LOG_MAX_BYTES = 16 * 1024
 const COPILOT_LOG_STRING_FIELDS = ['traceId', 'ts', 'scene', 'itemId', 'locale', 'inputMode'] as const
-const COPILOT_LOG_OBJECT_FIELDS = ['perspective', 'generation', 'outcome'] as const
+const COPILOT_LOG_OBJECT_FIELDS = ['perspective', 'seedPick', 'generation', 'outcome'] as const
 const COPILOT_FEED_SOURCES = ['for_you', 'following', 'page'] as const
 
 /**

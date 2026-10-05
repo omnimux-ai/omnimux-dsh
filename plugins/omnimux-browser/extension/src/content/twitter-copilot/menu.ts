@@ -4,12 +4,12 @@
  */
 
 import { COPILOT_MENU_ITEMS } from './prompts.ts'
-import { enrichWithFeedSources, extractTwitterContext } from './extractor.ts'
+import { applyPickedSeed, enrichWithFeedSources, extractTwitterContext } from './extractor.ts'
 import { injectTweetText, showCopilotToast } from './injector.ts'
 import { COPILOT_KEYWORDS_STORAGE_KEY } from './settings.ts'
-import { buildJevDecisionArgs, classifyPerspectiveByRules, getPerspective } from './perspectives.ts'
+import { buildJevDecisionArgs, classifyPerspectiveByRules, getPerspective, buildSeedPickArgs, SEED_PICK_NONE } from './perspectives.ts'
 import { findHumanizeViolations, sanitizeTweetText } from './sanitizer.ts'
-import type { CopilotMenuItem, PerspectiveDecision, TwitterCopilotScene, TwitterContext } from './types.ts'
+import type { CopilotMenuItem, PerspectiveDecision, SeedPickDecision, TwitterCopilotScene, TwitterContext } from './types.ts'
 
 declare const chrome: any
 
@@ -252,6 +252,40 @@ export async function decidePerspective(ctx: TwitterContext): Promise<Perspectiv
   return { id: ruleId, source: 'rules', latencyMs: Date.now() - started, fallbackReason: reason.slice(0, 200) }
 }
 
+/**
+ * Semantic seed pick: let the decision model choose, among the hottest
+ * shortlisted tweets, the one that best fits the niche. On success the pick
+ * becomes the only remix seed; otherwise the rule-score seeds stay as they are.
+ */
+export async function decideSeedPick(ctx: TwitterContext): Promise<SeedPickDecision | undefined> {
+  const shortlist = ctx.shortlist || []
+  if (shortlist.length === 0) return undefined
+  const started = Date.now()
+  let reason = 'no response'
+  try {
+    const res = await chrome.runtime.sendMessage({
+      type: 'DSH_TWITTER_COPILOT_DECIDE',
+      args: buildSeedPickArgs(shortlist, ctx.keywords || []),
+    })
+    const key = res?.ok ? String(res.decision) : ''
+    const index = /^t\d+$/.test(key) ? Number(key.slice(1)) : -1
+    if (index >= 0 && index < shortlist.length) {
+      applyPickedSeed(ctx, shortlist[index])
+      return {
+        source: 'jev',
+        candidates: shortlist.length,
+        pickedIndex: index,
+        latencyMs: Date.now() - started,
+        ...(typeof res.confidence === 'number' ? { confidence: res.confidence } : {}),
+      }
+    }
+    reason = !res?.ok ? String(res?.message || reason) : key === SEED_PICK_NONE ? 'none fits the niche' : `off-list decision: ${key}`
+  } catch (e) {
+    reason = e instanceof Error ? e.message : String(e)
+  }
+  return { source: 'rules', candidates: shortlist.length, latencyMs: Date.now() - started, fallbackReason: reason.slice(0, 200) }
+}
+
 function newTraceId(): string {
   return `tw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
@@ -269,6 +303,7 @@ export function buildCopilotLogEntry(input: {
   itemId: string
   locale: 'zh' | 'en'
   perspective?: PerspectiveDecision
+  seedPick?: SeedPickDecision
   generation?: { latencyMs: number; rawLength: number; finalLength: number; retried: boolean; humanizeViolations: string[] }
   outcome: { status: 'injected' | 'failed' | 'blocked'; reason?: string }
 }): Record<string, unknown> {
@@ -292,6 +327,7 @@ export function buildCopilotLogEntry(input: {
       ...(s.source ? { source: s.source } : {}),
       ...(s.isQuote ? { isQuote: true } : {}),
     })),
+    ...(input.seedPick ? { seedPick: input.seedPick } : {}),
     ...(input.perspective ? { perspective: input.perspective } : {}),
     ...(input.generation ? { generation: input.generation } : {}),
     outcome: input.outcome.reason ? { ...input.outcome, reason: input.outcome.reason.slice(0, 200) } : input.outcome,
@@ -341,7 +377,10 @@ async function handleExecuteItem(
   )
 
   let perspective: PerspectiveDecision | undefined
+  let seedPick: SeedPickDecision | undefined
   try {
+    // 先让决策模型从最热的候选里挑一条最贴合赛道的爆款，再按它选写作视角
+    if (item.usesPerspective && isFreshInspiration) seedPick = await decideSeedPick(ctx)
     if (item.usesPerspective) perspective = await decidePerspective(ctx)
     const { systemPrompt, userMessage } = item.generatePrompt(ctx, locale, getPerspective(perspective?.id))
 
@@ -380,7 +419,7 @@ async function handleExecuteItem(
     console.error('[OmniMux Twitter Copilot] Generation failed:', err)
     showCopilotToast(locale === 'en' ? 'Generation failed, check engine status.' : '生成遇到异常，请检查本地引擎状态。', 'error')
     sendCopilotLog(buildCopilotLogEntry({
-      traceId, ctx, itemId: item.id, locale, perspective,
+      traceId, ctx, itemId: item.id, locale, perspective, seedPick,
       outcome: { status: 'failed', reason: err instanceof Error ? err.message : String(err) },
     }))
   } finally {

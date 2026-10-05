@@ -116,3 +116,33 @@ export function buildJevDecisionArgs(seeds: ScoredCandidate[], draft: string, qu
     instructions: 'Pick the single writing perspective most likely to earn replies for a tweet about this material. Answer with the choice key only.',
   }
 }
+
+/** Choice key for "none of the candidates fits the niche". */
+export const SEED_PICK_NONE = 'none'
+
+/**
+ * Bounded Jev request for the semantic seed pick: each shortlisted hot tweet is
+ * one choice, the niche is the state, plus an explicit "none fits" choice.
+ */
+export function buildSeedPickArgs(shortlist: ScoredCandidate[], keywords: string[]): {
+  state: string
+  choices: Record<string, string>
+  instructions: string
+} {
+  const niche = keywords.length > 0 ? keywords.join(', ') : 'general creator / working professional'
+  const state = `My niche: ${niche}. I want to remix one trending tweet below into a brand new original tweet for my audience, reusing what made it take off.`
+  const choices: Record<string, string> = {}
+  shortlist.forEach((c, i) => {
+    const quoted = c.quotedText ? ` | quoting: ${c.quotedText}` : ''
+    const stat = ` [${c.replies} replies, ${c.reposts} reposts, ${c.likes} likes]`
+    const body = `${c.text}${quoted}`
+    choices[`t${i}`] = `${body.slice(0, 500 - stat.length - 1)}${stat}`
+  })
+  choices[SEED_PICK_NONE] = 'None of these fits my niche or is worth remixing.'
+  return {
+    state,
+    choices,
+    instructions:
+      'Pick the one trending tweet whose topic best fits my niche and whose hook or angle I could most convincingly remix for my audience. Prefer quote tweets that add a sharp take. Pick "none" only if every tweet is unrelated to my niche. Answer with the choice key only.',
+  }
+}

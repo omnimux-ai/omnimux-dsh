@@ -1,0 +1,138 @@
+{
+ "where": "真实浏览器 · x.com/home · 已登录 · 工作树代码打包探针 + 开发版决策模型（Jev）",
+ "keywords": [
+  "ai工具",
+  "出海",
+  "独立开发者"
+ ],
+ "runs": [
+  {
+   "sourcesScanned": {
+    "for_you": 12,
+    "following": 6
+   },
+   "merged": 18,
+   "ruleSeedsAt65": 0,
+   "shortlist": [
+    {
+     "key": "t0",
+     "heat": 72,
+     "isQuote": false,
+     "interactions": 458,
+     "text": "昨天164万收官， 427.7增加到了494， 净增加66.3K。 有效转化率4%。",
+     "quoted": ""
+    },
+    {
+     "key": "t1",
+     "heat": 71,
+     "isQuote": false,
+     "interactions": 523,
+     "text": "哥几个，我想退出了 我感觉我像个无情的回复、评论机器。",
+     "quoted": ""
+    },
+    {
+     "key": "t2",
+     "heat": 54,
+     "isQuote": false,
+     "interactions": 35,
+     "text": "gNucleus Fam Didn’t expect to care this much about",
+     "quoted": ""
+    },
+    {
+     "key": "t3",
+     "heat": 48,
+     "isQuote": false,
+     "interactions": 25,
+     "text": "这是我今年买的最爽的电子产品！388元人民币，2.5K 便携显示屏。 用一根 USB-C 线和我 1",
+     "quoted": ""
+    },
+    {
+     "key": "t4",
+     "heat": 46,
+     "isQuote": false,
+     "interactions": 30,
+     "text": "VIBE CODERS, what are you building right this week",
+     "quoted": ""
+    },
+    {
+     "key": "t5",
+     "heat": 43,
+     "isQuote": false,
+     "interactions": 16,
+     "text": "亲自用了几天 Grok，终于明白它为什么适合个人用户了： 回答短、直接、不绕弯； 能结合 X 上的内",
+     "quoted": ""
+    }
+   ],
+   "decision": {
+    "ok": true,
+    "decision": "t5",
+    "confidence": 0.58
+   },
+   "decisionMs": 1687
+  },
+  {
+   "sourcesScanned": {
+    "for_you": 12,
+    "following": 15
+   },
+   "merged": 27,
+   "ruleSeedsAt65": 0,
+   "shortlist": [
+    {
+     "key": "t0",
+     "heat": 58,
+     "isQuote": false,
+     "interactions": 24,
+     "text": "Looking to #connect with people interested in: - T",
+     "quoted": ""
+    },
+    {
+     "key": "t1",
+     "heat": 47,
+     "isQuote": true,
+     "interactions": 33,
+     "text": "making VIRAL AI characters is SO easy it feels ill",
+     "quoted": "AI 网红正在席卷 TikTok 和 Instagram。 现在，你可以在 10"
+    },
+    {
+     "key": "t2",
+     "heat": 44,
+     "isQuote": true,
+     "interactions": 7,
+     "text": "我 100 粉丝的时候，大家就说我要被封号 后来我 200 粉丝了，大家还说我要被封号 今天 900",
+     "quoted": "接下来就要封号了，朋友"
+    },
+    {
+     "key": "t3",
+     "heat": 42,
+     "isQuote": false,
+     "interactions": 37,
+     "text": "把这几年做事的方式抽象了一下，发现就两步： 1. 有问题，问 AI，得到方案 2. 去执行，执行中冒",
+     "quoted": ""
+    },
+    {
+     "key": "t4",
+     "heat": 41,
+     "isQuote": false,
+     "interactions": 10,
+     "text": "AI 名词扫盲第三期来了。 这次聊聊，AI 是怎么从回答问题，变成能调用工具、操作软件的。 API、",
+     "quoted": ""
+    },
+    {
+     "key": "t5",
+     "heat": 40,
+     "isQuote": false,
+     "interactions": 41,
+     "text": "大家都是怎么构建自己的被动收入管道的？我刷了一上午x了都焦虑坏了",
+     "quoted": ""
+    }
+   ],
+   "decision": {
+    "ok": true,
+    "decision": "t1",
+    "confidence": 0.73
+   },
+   "decisionMs": 450
+  }
+ ]
+}
