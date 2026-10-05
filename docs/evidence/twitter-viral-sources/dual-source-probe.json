@@ -1,0 +1,14 @@
+{
+  "probedAt": "2026-10-05T11:30:00Z",
+  "where": "真实浏览器 · x.com/home · 已登录账号 · 工作树代码打包探针",
+  "result": {
+    "ms": 2621,
+    "sourcesScanned": { "for_you": 2, "following": 3 },
+    "merged": 5,
+    "quotes": 2,
+    "restoredTab": "为你推荐",
+    "topScores": [34, 31, 25, 22, 19],
+    "seedsAt65": 0,
+    "quoteSample": { "comment": "这个赛道也有点太挤了，有人用过 t3 吗？体验怎么样", "quoted": "更新了我的 AI 协调器层级列表，基于日常使用。 T3 Code Nightly" }
+  }
+}

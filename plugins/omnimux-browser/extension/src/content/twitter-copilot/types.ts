@@ -19,16 +19,30 @@ export interface TwitterContext {
   /** Tweet URL or ID if available */
   tweetUrl?: string
   /** Hot tweets extracted from feed for inspiration when draft is empty */
-  feedHotTweets?: Array<{ author: string; text: string; stat?: string }>
+  feedHotTweets?: FeedHotTweet[]
   /** Scored seeds behind `feedHotTweets` (empty-composer POST_NEW only) */
   seeds?: ScoredCandidate[]
   /** Feed tweets examined before scoring (empty-composer POST_NEW only) */
   candidatesScanned?: number
   /** Normalized keywords used for keyword-fit scoring */
   keywords?: string[]
+  /** Candidates collected per feed source (empty-composer POST_NEW only) */
+  sourcesScanned?: Partial<Record<CandidateSource, number>>
 }
 
-/** One feed tweet with its four 0–100 dimension scores and weighted total. */
+/** Where a feed candidate came from: the home「为你推荐」/「正在关注」tabs, or whatever page is open. */
+export type CandidateSource = 'for_you' | 'following' | 'page'
+
+/** One feed tweet for inspiration; quote tweets carry the quoted post apart from the comment. */
+export interface FeedHotTweet {
+  author: string
+  text: string
+  stat?: string
+  quotedAuthor?: string
+  quotedText?: string
+}
+
+/** One feed tweet with its five 0–100 dimension scores and weighted total. */
 export interface ScoredCandidate {
   author: string
   text: string
@@ -36,7 +50,12 @@ export interface ScoredCandidate {
   reposts: number
   likes: number
   ageHours: number
-  scores: { keyword: number; controversy: number; infoDelta: number; velocity: number }
+  source?: CandidateSource
+  /** True when the tweet quotes another post; `text` is then the quoter's own comment */
+  isQuote?: boolean
+  quotedAuthor?: string
+  quotedText?: string
+  scores: { keyword: number; controversy: number; infoDelta: number; velocity: number; reach: number }
   total: number
 }
 

@@ -1,0 +1,8 @@
+{
+  "where": "真实浏览器 · x.com/home · 工作树代码打包探针（滚动 5 屏 / 来源，评分含互动规模）",
+  "runs": [
+    { "ms": 25001, "sourcesScanned": { "for_you": 6, "following": 7 }, "merged": 12, "quotes": 2, "seeds": [{ "author": "elonmusk", "source": "for_you", "isQuote": true, "total": 65, "replies": 943, "reposts": 1118, "likes": 12816 }], "restoredTab": "为你推荐", "scrollY": 0 },
+    { "ms": 20817, "sourcesScanned": { "for_you": 7, "following": 7 }, "merged": 14, "quotes": 5, "seeds": [], "topTotal": 59, "restoredTab": "为你推荐", "scrollY": 0 }
+  ],
+  "earlierFinding": "不滚动时每个来源只能读到 2–3 条（推特只渲染可视区附近帖子），因此改为边滚边收"
+}
