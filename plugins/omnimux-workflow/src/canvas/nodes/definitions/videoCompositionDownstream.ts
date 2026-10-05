@@ -4,11 +4,35 @@
  *
  * Handle ids MUST match `CanvasNodeHandle` (`in` / `out`). Using
  * `input` / `output` stores an edge that React Flow cannot draw.
+ *
+ * The exported file lives outside the workspace
+ * (`<DSH_HOME>/omnimux/clip/exports/<projectId>.mp4`), so the node carries:
+ * - `mediaUrl`: the sanctioned `/omnimux-workflow/api/local-file?path=…` URL
+ *   the material node streams from — a bare absolute host path 404s in the
+ *   browser because it is resolved against the app origin;
+ * - `origin` + `sourceCompositionNodeId`: the stable reuse identity. It
+ *   survives `persistSanitize` (which strips `realPath` on save) and reloads,
+ *   so re-exporting refreshes the same node instead of adding a duplicate.
  */
 
 export const CLIP_EXPORT_SOURCE_HANDLE = 'out';
 export const CLIP_EXPORT_TARGET_HANDLE = 'in';
 export const CLIP_EXPORT_DOWNSTREAM_GAP = 80;
+export const CLIP_EXPORT_ORIGIN = 'clip_export';
+
+const LOCAL_FILE_MEDIA_URL = '/omnimux-workflow/api/local-file';
+
+/**
+ * Absolute host path → the host media URL the canvas can stream.
+ * Already-resolved URLs (`/api/local-file`, `blob:`, `data:`, `http:`) and
+ * relative paths pass through untouched.
+ */
+export function clipExportMediaUrl(videoPath: string): string {
+  if (!videoPath) return videoPath;
+  if (videoPath.includes('/api/local-file')) return videoPath;
+  if (!videoPath.startsWith('/')) return videoPath;
+  return `${LOCAL_FILE_MEDIA_URL}?path=${encodeURIComponent(videoPath)}`;
+}
 
 export interface ClipExportOutput {
   videoPath: string;
@@ -51,17 +75,7 @@ export interface ClipExportDownstreamNode {
   type: 'material';
   position: { x: number; y: number };
   selected: boolean;
-  data: {
-    materialType: 'video';
-    label: string;
-    status: 'ready';
-    selectedTool: 'import';
-    realPath: string;
-    mediaUrl: string;
-    thumbnailUrl?: string;
-    duration?: number;
-    size: { width: number; height: number };
-  };
+  data: Record<string, unknown>;
 }
 
 export interface ClipExportDownstreamEdge {
@@ -72,20 +86,85 @@ export interface ClipExportDownstreamEdge {
   targetHandle: typeof CLIP_EXPORT_TARGET_HANDLE;
 }
 
+/** Refresh payload for an existing 成片 node (structurally a CanvasInputNodePatch). */
+export interface ClipExportDownstreamPatch {
+  nodeId: string;
+  data: Record<string, unknown>;
+}
+
 export interface ClipExportDownstreamPlan {
   addNodes: ClipExportDownstreamNode[];
   addEdges: ClipExportDownstreamEdge[];
   removeEdgeIds: string[];
+  nodePatches: ClipExportDownstreamPatch[];
 }
 
+function nodeDataOf(node: ClipExportGraphNode): Record<string, unknown> {
+  return (node.data as Record<string, unknown> | undefined) ?? {};
+}
+
+/**
+ * Reuse identity: the origin marker + source composition node id (stable across
+ * sanitization), the raw host path, or the resolved media URL.
+ */
 function existingDownstreamNode(
   nodes: ClipExportGraphNode[],
   videoPath: string,
+  sourceNodeId: string,
 ): ClipExportGraphNode | undefined {
-  return nodes.find((node) => (
-    node.type === 'material'
-    && (node.data as Record<string, unknown> | undefined)?.realPath === videoPath
-  ));
+  const mediaUrl = clipExportMediaUrl(videoPath);
+  return nodes.find((node) => {
+    if (node.type !== 'material') return false;
+    const data = nodeDataOf(node);
+    if (data.origin === CLIP_EXPORT_ORIGIN && data.sourceCompositionNodeId === sourceNodeId) return true;
+    if (data.realPath === videoPath) return true;
+    return data.mediaUrl === videoPath || data.mediaUrl === mediaUrl;
+  });
+}
+
+function desiredData(input: ClipExportDownstreamInput): Record<string, unknown> {
+  const videoPath = input.output.videoPath;
+  return {
+    materialType: 'video',
+    label: `${input.sourceLabel}_成片`,
+    status: 'ready',
+    selectedTool: 'import',
+    origin: CLIP_EXPORT_ORIGIN,
+    sourceCompositionNodeId: input.sourceNodeId,
+    realPath: videoPath,
+    mediaUrl: clipExportMediaUrl(videoPath),
+    thumbnailUrl: input.output.thumbnailPath,
+    duration: input.output.durationMs ? Math.round(input.output.durationMs / 1000) : undefined,
+    size: {
+      width: input.output.width || 1920,
+      height: input.output.height || 1080,
+    },
+  };
+}
+
+/**
+ * Fields worth refreshing on a reused node. `realPath` is deliberately absent:
+ * the sanitizer strips it on every save, and re-adding it would dirty the
+ * document on each canvas load. Identity already holds through `origin`.
+ */
+function reuseRefresh(desired: Record<string, unknown>): Record<string, unknown> {
+  const refresh: Record<string, unknown> = {};
+  for (const key of ['materialType', 'label', 'status', 'selectedTool', 'origin', 'sourceCompositionNodeId', 'mediaUrl', 'thumbnailUrl', 'duration', 'size']) {
+    if (desired[key] !== undefined) refresh[key] = desired[key];
+  }
+  return refresh;
+}
+
+function changedFields(
+  current: Record<string, unknown>,
+  desired: Record<string, unknown>,
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(desired)) {
+    if (JSON.stringify(current[key]) === JSON.stringify(value)) continue;
+    patch[key] = value;
+  }
+  return patch;
 }
 
 export function isDrawableClipExportEdge(edge: ClipExportGraphEdge): boolean {
@@ -120,17 +199,31 @@ export function planClipExportDownstream(
   const videoPath = input.output.videoPath;
   if (!videoPath) return null;
 
-  const existing = existingDownstreamNode(input.currentNodes, videoPath);
+  const desired = desiredData(input);
+  const existing = existingDownstreamNode(input.currentNodes, videoPath, input.sourceNodeId);
+
   if (existing) {
+    const patch = changedFields(nodeDataOf(existing), reuseRefresh(desired));
+    const nodePatches: ClipExportDownstreamPatch[] = Object.keys(patch).length > 0
+      ? [{ nodeId: existing.id, data: patch }]
+      : [];
     const between = edgesBetween(input.currentEdges, input.sourceNodeId, existing.id);
     const drawable = between.find(isDrawableClipExportEdge);
-    if (drawable) return null;
+
+    if (drawable) {
+      // Already wired: only refresh the node, and stay a no-op when nothing changed.
+      return nodePatches.length > 0
+        ? { addNodes: [], addEdges: [], nodePatches, removeEdgeIds: [] }
+        : null;
+    }
+
     const brokenIds = between
       .map((edge) => edge.id)
       .filter((id): id is string => typeof id === 'string' && id.length > 0);
     return {
       addNodes: [],
       addEdges: [edgeBetween(input.sourceNodeId, existing.id)],
+      nodePatches,
       removeEdgeIds: brokenIds,
     };
   }
@@ -147,25 +240,13 @@ export function planClipExportDownstream(
       y: input.sourcePosition.y,
     },
     selected: true,
-    data: {
-      materialType: 'video',
-      label: `${input.sourceLabel}_成片`,
-      status: 'ready',
-      selectedTool: 'import',
-      realPath: videoPath,
-      mediaUrl: videoPath,
-      thumbnailUrl: input.output.thumbnailPath,
-      duration: input.output.durationMs ? Math.round(input.output.durationMs / 1000) : undefined,
-      size: {
-        width: input.output.width || 1920,
-        height: input.output.height || 1080,
-      },
-    },
+    data: desired,
   };
 
   return {
     addNodes: [newNode],
     addEdges: [edgeBetween(input.sourceNodeId, newNodeId)],
     removeEdgeIds: [],
+    nodePatches: [],
   };
 }

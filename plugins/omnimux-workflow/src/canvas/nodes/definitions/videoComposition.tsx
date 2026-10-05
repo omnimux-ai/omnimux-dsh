@@ -208,6 +208,7 @@ const VideoCompositionNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           applyCanvasInputMutation({
             addNodes: plan.addNodes.map((node) => ({ ...node, selected: true })),
             addEdges: plan.addEdges,
+            nodePatches: plan.nodePatches,
             removeEdgeIds: plan.removeEdgeIds,
           });
           toast.success(t('clip.exportedToNode') || '已生成视频节点并连接到画布');
@@ -269,6 +270,7 @@ const VideoCompositionNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     if (!plan) return;
     applyCanvasInputMutation({
       addEdges: plan.addEdges,
+      nodePatches: plan.nodePatches,
       removeEdgeIds: plan.removeEdgeIds,
     });
   }, [
