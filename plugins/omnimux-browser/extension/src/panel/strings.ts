@@ -239,6 +239,8 @@ export interface PanelCopy {
     removeSelection: string
     /** 任务刻度轨与排队坞文案。 */
     queueDockBadge: (count: number) => string
+    queueSteer: string
+    queueSteerFailed: string
     queueEdit: string
     queueRemove: string
     queueSave: string
@@ -530,6 +532,8 @@ const EN: PanelCopy = {
     selectionTruncated: '(truncated)',
     removeSelection: 'Remove the selected text',
     queueDockBadge: (count) => `${count} queued messages`,
+    queueSteer: 'Send now (steer turn)',
+    queueSteerFailed: 'Immediate send failed: the task could not be steered.',
     queueEdit: 'Edit queued message',
     queueRemove: 'Remove queued message',
     queueSave: 'Save queued message',
@@ -834,6 +838,8 @@ const ZH: PanelCopy = {
     selectionTruncated: '（已截断）',
     removeSelection: '移除选中内容',
     queueDockBadge: (count) => `${count} 条排队消息`,
+    queueSteer: '立即发送（插话）',
+    queueSteerFailed: '立即发送失败：当前任务无法插话调度。',
     queueEdit: '编辑排队消息',
     queueRemove: '删除排队消息',
     queueSave: '保存排队消息',
