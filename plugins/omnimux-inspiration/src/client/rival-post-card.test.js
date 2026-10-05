@@ -458,3 +458,31 @@ describe('RivalPostCard — 外链与 locale（第三轮整改）', () => {
     }
   })
 })
+
+describe('RivalPostCard — R4 胶囊行判据与估算层一致（复审 ①）', () => {
+  it('velocity 是对象但 text 为空 → 不渲染 pill-row（空行违反「仅在有胶囊时渲染该行」）', async () => {
+    const cards = [
+      cardOf('text', { velocity: {} }),
+      cardOf('text-media', { velocity: { text: '', tier: 'watch' } }),
+    ]
+    const mounted = await mountStage(cards)
+    try {
+      for (const type of ['text', 'text-media']) {
+        const card = byType(mounted.container, type)
+        assert.ok(card, `${type} must render`)
+        assert.equal(
+          card.querySelector('.omnimux-rival-pill-row'),
+          null,
+          `${type}: a velocity object without text must not reserve the 28+8px pill row`,
+        )
+        assert.equal(
+          card.querySelector('.omnimux-rival-vpill'),
+          null,
+          `${type}: VelocityPill itself returns null on empty text`,
+        )
+      }
+    } finally {
+      await mounted.unmount()
+    }
+  })
+})

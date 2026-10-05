@@ -1,0 +1,39 @@
+{
+  "measuredAt": "2026-10-05T21:30:00Z",
+  "containerWidth": 1164,
+  "columns": 5,
+  "colWidth": 220,
+  "note": "pre-fix run: same page, pre-fix rival-masonry.js (char-dense wrap, truthy-velocity pill)",
+  "table": [
+    {
+      "id": "ra_4:e1",
+      "type": "text",
+      "col": 2,
+      "measured": 222,
+      "est": 202,
+      "diff": 20,
+      "pillRow": true
+    },
+    {
+      "id": "ra_5:e2",
+      "type": "text",
+      "col": 0,
+      "measured": 144,
+      "est": 162,
+      "diff": -18,
+      "pillRow": true
+    },
+    {
+      "id": "ra_5:e3",
+      "type": "text",
+      "col": 1,
+      "measured": 222,
+      "est": 186,
+      "diff": 36,
+      "pillRow": true
+    }
+  ],
+  "baseCards": "12 spec cards identical to post-fix (all diff ≤0.01)",
+  "maxAbsDiff": 36,
+  "replayMismatches": 0
+}

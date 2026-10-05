@@ -14,7 +14,7 @@
 
 import { Button } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
-import { rivalMediaRatioOf, rivalCardTypeOf } from './rival-masonry.js'
+import { rivalHasPill, rivalMediaRatioOf, rivalCardTypeOf } from './rival-masonry.js'
 import {
   formatCount,
   formatEngagementCount,
@@ -195,7 +195,7 @@ export function RivalPostCard(props) {
         </>
       ) : (
         <>
-          {card?.velocity ? (
+          {rivalHasPill(card) ? (
             <div className="omnimux-rival-pill-row">
               <VelocityPill velocity={card.velocity} surface="on-surface" />
             </div>

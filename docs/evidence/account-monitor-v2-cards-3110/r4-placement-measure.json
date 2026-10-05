@@ -1,0 +1,141 @@
+{
+  "table": [
+    {
+      "id": "ra_1:p1",
+      "type": "short-video",
+      "col": 0,
+      "measured": 429.55,
+      "est": 429.56,
+      "diff": -0.01,
+      "pillRow": false
+    },
+    {
+      "id": "ra_2:p2",
+      "type": "long-video",
+      "col": 1,
+      "measured": 164.63,
+      "est": 164.63,
+      "diff": 0,
+      "pillRow": false
+    },
+    {
+      "id": "ra_3:p3",
+      "type": "image",
+      "col": 2,
+      "measured": 314.5,
+      "est": 314.5,
+      "diff": 0,
+      "pillRow": false
+    },
+    {
+      "id": "ra_4:p11",
+      "type": "text",
+      "col": 3,
+      "measured": 222,
+      "est": 222,
+      "diff": 0,
+      "pillRow": true
+    },
+    {
+      "id": "ra_4:p4",
+      "type": "text-media",
+      "col": 4,
+      "measured": 241.13,
+      "est": 241.13,
+      "diff": 0,
+      "pillRow": true
+    },
+    {
+      "id": "ra_6:p5",
+      "type": "short-video",
+      "col": 1,
+      "measured": 429.55,
+      "est": 429.56,
+      "diff": -0.01,
+      "pillRow": false
+    },
+    {
+      "id": "ra_5:p6",
+      "type": "text-media",
+      "col": 3,
+      "measured": 241.13,
+      "est": 241.13,
+      "diff": 0,
+      "pillRow": true
+    },
+    {
+      "id": "ra_5:p12",
+      "type": "text",
+      "col": 4,
+      "measured": 144,
+      "est": 144,
+      "diff": 0,
+      "pillRow": true
+    },
+    {
+      "id": "ra_7:p7",
+      "type": "image",
+      "col": 2,
+      "measured": 260,
+      "est": 260,
+      "diff": 0,
+      "pillRow": false
+    },
+    {
+      "id": "ra_1:p8",
+      "type": "short-video",
+      "col": 4,
+      "measured": 429.55,
+      "est": 429.56,
+      "diff": -0.01,
+      "pillRow": false
+    },
+    {
+      "id": "ra_2:p9",
+      "type": "long-video",
+      "col": 0,
+      "measured": 164.63,
+      "est": 164.63,
+      "diff": 0,
+      "pillRow": false
+    },
+    {
+      "id": "ra_3:p10",
+      "type": "image",
+      "col": 3,
+      "measured": 314.5,
+      "est": 314.5,
+      "diff": 0,
+      "pillRow": false
+    },
+    {
+      "id": "ra_4:e1",
+      "type": "text",
+      "col": 2,
+      "measured": 222,
+      "est": 202,
+      "diff": 20,
+      "pillRow": true
+    },
+    {
+      "id": "ra_5:e2",
+      "type": "text",
+      "col": 0,
+      "measured": 144,
+      "est": 162,
+      "diff": -18,
+      "pillRow": true
+    },
+    {
+      "id": "ra_5:e3",
+      "type": "text",
+      "col": 1,
+      "measured": 222,
+      "est": 186,
+      "diff": 36,
+      "pillRow": true
+    }
+  ],
+  "maxAbsDiff": 36,
+  "replayMismatches": 0
+}

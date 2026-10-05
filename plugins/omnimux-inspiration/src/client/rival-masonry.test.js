@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  rivalWrapLines,
   RIVAL_DEFAULT_IMAGE_RATIO,
   RIVAL_GAP,
   RIVAL_IMAGE_RATIO_MAX,
@@ -37,30 +38,62 @@ import {
  * media/title zones use the inner width (columnWidth − 2), and line counts are
  * approximated per rendered text width (CJK ≈ font-size, ASCII ≈ 0.55×).
  */
+/**
+ * Word-boundary line model mirroring the implementation's `rivalWrapLines`:
+ * CJK characters break per character, runs of half-width characters are
+ * unbreakable words, line-trailing whitespace is swallowed, and an overlong
+ * word occupies one line (overflow:hidden truncation). Kept formula-identical
+ * by design: this layer asserts「决策与给定几何一致」— geometry correctness
+ * is carried by the real-browser measurement, not by this oracle.
+ */
+function oracleWrapLines(text, unit, lineWidth) {
+  const width = Math.max(1, lineWidth)
+  const atoms = []
+  for (const ch of String(text || '')) {
+    if (/\s/.test(ch)) { atoms.push({ space: true }); continue }
+    if (ch.codePointAt(0) > 0x2e7f) { atoms.push({ cjk: ch }); continue }
+    const last = atoms[atoms.length - 1]
+    if (last && last.word) last.word += ch
+    else atoms.push({ word: ch })
+  }
+  let lines = 1
+  let used = 0
+  let pending = false
+  for (const atom of atoms) {
+    if (atom.space) { pending = true; continue }
+    const w = atom.cjk ? unit : [...atom.word].reduce((s, c) => s + unit * 0.55, 0)
+    const glue = pending && used > 0 ? unit * 0.55 : 0
+    pending = false
+    if (used === 0) { used = Math.min(w, width); continue }
+    if (used + glue + w <= width) { used += glue + w; continue }
+    lines += 1
+    used = Math.min(w, width)
+  }
+  return lines
+}
+
 function oracleHeightPx(card, columnWidth) {
   const inner = columnWidth - 2
   const type = card.card_type || card.type
+  // The pill row exists only when velocity carries a non-empty text — the same
+  // predicate the render layer and the estimate now share (R4-1).
+  const pill = card.velocity && String(card.velocity.text || '') !== '' ? 36 : 0
   if (type === 'text') {
-    const width = [...String(card.title || '')].reduce((s, ch) => s + (ch.codePointAt(0) > 0x2e7f ? 14 : 14 * 0.55), 0)
-    const lines = Math.max(1, Math.min(8, Math.ceil(width / (inner - 24))))
-    const pill = card.velocity ? 36 : 0
+    const lines = Math.max(1, Math.min(8, oracleWrapLines(card.title, 14, inner - 24)))
     return Math.max(144, 24 + pill + lines * 20 + 2)
   }
   if (type === 'text-media') {
     const mediaRatio = card.type === 'video' || card.media_kind === 'video'
       ? 16 / 9
       : clamp(Number.isFinite(card.ratio) ? card.ratio : 4 / 5, 0.8, 1.91)
-    const width = [...String(card.title || '')].reduce((s, ch) => s + (ch.codePointAt(0) > 0x2e7f ? 14 : 14 * 0.55), 0)
-    const lines = Math.max(1, Math.min(3, Math.ceil(width / (inner - 24))))
-    const pill = card.velocity ? 36 : 0
+    const lines = Math.max(1, Math.min(3, oracleWrapLines(card.title, 14, inner - 24)))
     return Math.max(144, 24 + pill + lines * 20 + 10 + (inner - 24) / mediaRatio + 2)
   }
   const media = type === 'short-video' ? 9 / 16
     : type === 'long-video' ? 16 / 9
     : clamp(Number.isFinite(card.ratio) ? card.ratio : 4 / 5, 0.8, 1.91)
-  const titleWidth = [...String(card.title || '')].reduce((s, ch) => s + (ch.codePointAt(0) > 0x2e7f ? 13 : 13 * 0.55), 0)
-  const lines = Math.max(1, Math.min(2, Math.ceil(titleWidth / (columnWidth - 26))))
-  return inner / media + 22 + 18 * lines + 2
+  const lines = Math.max(1, Math.min(2, oracleWrapLines(card.title, 13, columnWidth - 26)))
+  return Math.max(144, inner / media + 22 + 18 * lines + 2)
 }
 
 function clamp(value, min, max) {
@@ -181,7 +214,9 @@ describe('rival-masonry — 高度估算（§9.3 参考值护栏）', () => {
   })
 
   it('text-media estimate lands at the spec ≈238px', () => {
-    const h = rivalCardHeightPx({ card_type: 'text-media', media_kind: 'video', title: 'x'.repeat(140), velocity: { text: '飙升 1.2k/h' } }, 220)
+    // 30 个 CJK 字逐字可断 → 3 行封顶；不可断的纯 ASCII 长词只占 1 行
+    //（R4 词边界模型，另有专项断言覆盖）。
+    const h = rivalCardHeightPx({ card_type: 'text-media', media_kind: 'video', title: '横'.repeat(30), velocity: { text: '飙升 1.2k/h' } }, 220)
     assert.ok(Math.abs(h - (24 + 36 + 60 + 10 + (220 - 26) / (16 / 9) + 2)) < 1e-9)
     assert.ok(h < 250 && h > 230, 'spec: text-media ≈ 238px at 220px')
   })
@@ -190,7 +225,7 @@ describe('rival-masonry — 高度估算（§9.3 参考值护栏）', () => {
     const w = 220
     const inner = w - 2
     assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'short-video' }, w) - (inner / (9 / 16) + 22 + 18 + 2)) < 1e-9)
-    assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'long-video', title: 'x'.repeat(140) }, w) - (inner / (16 / 9) + 22 + 36 + 2)) < 1e-9)
+    assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'long-video', title: '评'.repeat(30) }, w) - (inner / (16 / 9) + 22 + 36 + 2)) < 1e-9)
     assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'image', ratio: null }, w) - (inner / 0.8 + 22 + 18 + 2)) < 1e-9)
   })
 
@@ -303,5 +338,65 @@ describe('rival-masonry — rivalPlacements 最短列放置', () => {
     for (const card of cards) {
       assert.ok(placements.get(card.id).height >= 144, `${card.id} below the 144px floor`)
     }
+  })
+})
+
+/* --------------------------- R4：估算层建模缺陷 --------------------------- */
+
+describe('rival-masonry — R4 胶囊行判据收敛（复审 ①）', () => {
+  it('velocity 是对象但 text 为空 → 与无胶囊同高，不预留 36px', () => {
+    // 判据必须与 VelocityPill 的早退（!text → null）一致；否则渲染层真值
+    // velocity 时仍会渲染空 pill-row，卡片比估算高 36px，同列下方卡片重叠。
+    const bare = { card_type: 'text', title: TEXT_LONG }
+    for (const velocity of [{}, { text: '' }, { tier: 'watch' }]) {
+      const h = rivalCardHeightPx({ ...bare, velocity }, 220)
+      assert.equal(h, rivalCardHeightPx(bare, 220), `velocity=${JSON.stringify(velocity)} must not reserve the pill row`)
+      assert.equal(h, 24 + 8 * 20 + 2, 'no 36px pill reservation')
+    }
+  })
+
+  it('velocity.text 非空 → 预留 36px（正向钉住，防反向回归）', () => {
+    const h = rivalCardHeightPx({ card_type: 'text', title: TEXT_LONG, velocity: { text: '飙升 2.6k/h' } }, 220)
+    assert.equal(h, 24 + 36 + 8 * 20 + 2)
+  })
+})
+
+describe('rival-masonry — R4 词边界换行模型（复审 ②）', () => {
+  it('词装行：8 个 hashtag 在 220px 列占 8 行（逐字符密排会少估）', () => {
+    const title = Array(8).fill('#sundayfunday').join(' ')
+    // 每个 hashtag ≈ 12×14×0.55 ≈ 92.4px + 空格 7.7px；行宽 220-2-24=194px，
+    // 每行只能装 2 个词（密排估 ≈5 行，真实词边界换行 = 8 行）。
+    assert.equal(rivalWrapLines(title, 14, 194), 8)
+    assert.equal(rivalCardHeightPx({ card_type: 'text', title }, 220), 24 + 8 * 20 + 2)
+  })
+
+  it('超行宽单词占 1 行不折行（overflow:hidden 截断行为）', () => {
+    const url = 'https://x.com/someone/status/1234567890?ref_src=twsrc&extra=padding-chars'
+    // 78 个 ASCII 字符 ≈ 600px ≫ 194px 行宽：CSS 不折词，一行截断。
+    assert.equal(rivalWrapLines(url, 14, 194), 1)
+    const h = rivalCardHeightPx({ card_type: 'text-media', media_kind: 'video', title: url }, 220)
+    assert.ok(Math.abs(h - (24 + 1 * 20 + 10 + (220 - 26) / (16 / 9) + 2)) < 1e-9,
+      `one-line clamp, got ${h}`)
+  })
+
+  it('中文正文仍是逐字可断（回归：既有中文夹具结果不变）', () => {
+    assert.equal(rivalCardHeightPx({ card_type: 'text', title: TEXT_LONG }, 220), 24 + 8 * 20 + 2)
+    assert.equal(rivalCardHeightPx({ card_type: 'text', title: TEXT_SHORT }, 220), 144)
+  })
+
+  it('混合文本：CJK 与拉丁片段交界处可断行', () => {
+    // "混 合" 间空格 + CJK 逐字 → 不会把整段当成不可断长词。
+    const title = '发布workflow更新后 pipeline 依然稳定'
+    const lines = rivalWrapLines(title, 14, 194)
+    assert.ok(lines >= 2, `mixed text should wrap at CJK/Latin boundaries, got ${lines}`)
+  })
+})
+
+describe('rival-masonry — R4 媒体卡最小高度下限（复审 ③）', () => {
+  it('列宽 <220 时媒体卡估算仍 ≥144（CSS min-height 对所有卡生效）', () => {
+    // 列宽 190：inner 188 / 1.91 + 22 + 18 + 2 ≈ 140.4 → 需钳到 144。
+    const h = rivalCardHeightPx({ card_type: 'image', ratio: 1.91, title: 'x' }, 190)
+    assert.ok(h >= RIVAL_MIN_CARD_HEIGHT, `media card must respect the 144px floor, got ${h}`)
+    assert.equal(h, RIVAL_MIN_CARD_HEIGHT)
   })
 })

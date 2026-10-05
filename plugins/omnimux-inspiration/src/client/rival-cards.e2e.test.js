@@ -276,24 +276,59 @@ function specRatio(post) {
  * @param {number} columnWidth
  * @returns {number}
  */
+/**
+ * Word-boundary line model mirroring the implementation's `rivalWrapLines`
+ * (R4): CJK breaks per character, half-width runs are unbreakable words,
+ * line-trailing whitespace is swallowed, overlong words occupy one line.
+ * Kept formula-identical by design — see the file header: this layer asserts
+ * decisions agree with the given geometry, never that the geometry matches a
+ * real layout engine. Geometry correctness is carried by real-browser
+ * measurement.
+ */
+function specWrapLines(text, unit, lineWidth) {
+  const width = Math.max(1, lineWidth)
+  const atoms = []
+  for (const ch of String(text || '')) {
+    if (/\s/.test(ch)) { atoms.push({ space: true }); continue }
+    if (ch.codePointAt(0) > 0x2e7f) { atoms.push({ cjk: ch }); continue }
+    const last = atoms[atoms.length - 1]
+    if (last && last.word) last.word += ch
+    else atoms.push({ word: ch })
+  }
+  let lines = 1
+  let used = 0
+  let pending = false
+  for (const atom of atoms) {
+    if (atom.space) { pending = true; continue }
+    const w = atom.cjk ? unit : [...atom.word].reduce((sum, c) => sum + unit * 0.55, 0)
+    const glue = pending && used > 0 ? unit * 0.55 : 0
+    pending = false
+    if (used === 0) { used = Math.min(w, width); continue }
+    if (used + glue + w <= width) { used += glue + w; continue }
+    lines += 1
+    used = Math.min(w, width)
+  }
+  return lines
+}
+
 function specHeightPx(post, columnWidth) {
   const inner = columnWidth - 2
-  const widthPx = (text, unit) => [...String(text || '')]
-    .reduce((sum, ch) => sum + (ch.codePointAt(0) > 0x2e7f ? unit : unit * 0.55), 0)
   const platform = post.platform
   const isX = platform === 'x' || platform === 'twitter' || platform === 'threads'
   const isText = isX && String(post.cover_src || '') === '' && post.type !== 'video' && post.type !== 'image'
-  const pill = post.velocity ? 36 : 0
+  // R4-1: the pill row only exists when velocity carries a non-empty text —
+  // same predicate as `rivalHasPill` in the implementation and the DOM.
+  const pill = post.velocity && String(post.velocity.text || '') !== '' ? 36 : 0
   if (isText) {
-    const lines = Math.max(1, Math.min(8, Math.ceil(widthPx(post.title, 14) / (inner - 24))))
+    const lines = Math.max(1, Math.min(8, specWrapLines(post.title, 14, inner - 24)))
     return Math.max(144, 24 + pill + lines * 20 + 2)
   }
   if (isX) {
-    const lines = Math.max(1, Math.min(3, Math.ceil(widthPx(post.title, 14) / (inner - 24))))
+    const lines = Math.max(1, Math.min(3, specWrapLines(post.title, 14, inner - 24)))
     return Math.max(144, 24 + pill + lines * 20 + 10 + (inner - 24) / specRatio(post) + 2)
   }
-  const lines = Math.max(1, Math.min(2, Math.ceil(widthPx(post.title, 13) / (columnWidth - 26))))
-  return inner / specRatio(post) + 22 + lines * 18 + 2
+  const lines = Math.max(1, Math.min(2, specWrapLines(post.title, 13, columnWidth - 26)))
+  return Math.max(144, inner / specRatio(post) + 22 + lines * 18 + 2)
 }
 
 /**

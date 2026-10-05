@@ -7,6 +7,11 @@
  *
  * 纯函数，零 DOM、零 window：媒体区在 <img> 加载前就按数据里的比例占位
  * （§9.3 / V3 / V7），因此比例只可能来自数据字段，绝不测量 naturalWidth。
+ *
+ * 换行模型（R4）：`rivalWrapLines` 模拟 `white-space: normal` 的词边界换行
+ * ——CJK 逐字可断、连续半宽字符是不可断的词、行尾空格被吞、超行宽的词
+ * 独占一行（overflow:hidden 截断）。已知偏差写成 wrapAtoms 的文档化上界；
+ * 几何正确性由真机实测承担（docs/evidence/…/harness 逐卡 rect 对比）。
  */
 
 import {
@@ -71,6 +76,74 @@ function textWidthPx(text, unitPx) {
 }
 
 /**
+ * 换行原子序列：模拟 `white-space: normal`（卡片文字未设 overflow-wrap /
+ * word-break）。CJK 字符（>0x2E7F，含中文与全角标点）逐字可断，各成一格；
+ * 连续半宽字符（拉丁字母、数字、URL、hashtag、ASCII 标点）是不可断的
+ * 「词」，整体换行；空白序列自身是一格，落在行尾时宽度被浏览器吞掉。
+ * 已知偏差（文档化上界，不假装精确）：
+ *   - 行首禁则（某些标点不允许出现在行首）未模拟 → 模型可能少算一行；
+ *   - 西文连字符处断行（break at '-'）未模拟 → 含 '-' 长词可能多算一行；
+ *   - 行尾空格宽度被吞 → 模型可能少算一点点宽度（行数不受影响的情况
+ *     远多于受影响）。
+ * @param {string} text
+ * @returns {Array<{w:number, brk:boolean}>} 每格含估算宽度与「格前是否可断」
+ */
+function wrapAtoms(text) {
+  const atoms = []
+  for (const ch of String(text || '')) {
+    const cp = ch.codePointAt(0)
+    if (/\s/.test(ch)) {
+      atoms.push({ w: cp > 0x2e7f ? 0 : 0, brk: true, space: true })
+      continue
+    }
+    if (cp > 0x2e7f) {
+      atoms.push({ w: 0, brk: true, cjk: true, ch })
+      continue
+    }
+    const last = atoms[atoms.length - 1]
+    if (last && last.word) {
+      last.text += ch
+    } else {
+      atoms.push({ w: 0, brk: true, word: true, text: ch })
+    }
+  }
+  return atoms
+}
+
+/**
+ * 一段文本在 lineWidth 下的估算行数（≥1）。
+ * 贪心装行：逐格尝试放进当前行，放不下换行；不可断的词比行宽还长时
+ * 独占一行（CSS 对溢出词是截断不是折行，overflow:hidden）。
+ * @param {string} text
+ * @param {number} unitPx 全角字符的字宽（正文 14、标题 13）
+ * @param {number} lineWidth 可用行宽（px）
+ */
+export function rivalWrapLines(text, unitPx, lineWidth) {
+  const width = Math.max(1, Number(lineWidth) || 0)
+  let lines = 1
+  let used = 0
+  let pendingSpace = false
+  for (const atom of wrapAtoms(text)) {
+    if (atom.space) { pendingSpace = true; continue }
+    const atomW = atom.cjk ? unitPx : textWidthPx(atom.text, unitPx)
+    const glue = pendingSpace && used > 0 ? unitPx * ASCII_WIDTH_FACTOR : 0
+    pendingSpace = false
+    if (used === 0) {
+      // 行首空格已被浏览器吞掉；超行宽的词/字直接占这一行，不折。
+      used = Math.min(atomW, width)
+      continue
+    }
+    if (used + glue + atomW <= width) {
+      used += glue + atomW
+      continue
+    }
+    lines += 1
+    used = Math.min(atomW, width)
+  }
+  return lines
+}
+
+/**
  * 标题在列宽下的估算行数，按 §9.1 每类卡的截断上限收：短视频/图文 1 行、
  * 长视频 2 行。上限是 cap 不是常量——文本装一行时按一行算。
  * @param {Record<string, any>} card
@@ -80,7 +153,7 @@ function textWidthPx(text, unitPx) {
 function titleLines(card, columnWidth, type) {
   const maxLines = type === 'long-video' ? TITLE_MAX_LINES : 1
   const perLine = Math.max(1, columnWidth - TITLE_ZONE_PAD_H - CARD_BORDER)
-  return Math.max(1, Math.min(maxLines, Math.ceil(textWidthPx(card?.title || '', TITLE_CHAR_PX) / perLine)))
+  return Math.max(1, Math.min(maxLines, rivalWrapLines(card?.title || '', TITLE_CHAR_PX, perLine)))
 }
 
 /**
@@ -166,15 +239,21 @@ export function rivalRatioOf(card, columnWidth) {
   return rivalMediaRatioOf(card)
 }
 
-/** 文本卡估算正文行数：按近似像素宽换行，1–8 行。 */
+/** 文本卡估算正文行数：按词边界换行模型，1–8 行（空文本仍占 1 行）。 */
 function textBodyLines(card, columnWidth) {
-  const width = textWidthPx(card?.title || '', TEXT_CHAR_PX)
-  if (width === 0) return 1
+  const text = String(card?.title || '')
+  if (textWidthPx(text, TEXT_CHAR_PX) === 0) return 1
   const perLine = Math.max(1, columnWidth - CARD_BORDER - TEXT_PAD_V)
-  return Math.max(1, Math.min(TEXT_MAX_LINES, Math.ceil(width / perLine)))
+  return Math.max(1, Math.min(TEXT_MAX_LINES, rivalWrapLines(text, TEXT_CHAR_PX, perLine)))
 }
 
-const hasPill = (card) => Boolean(card?.velocity && String(card.velocity.text || '') !== '')
+/**
+ * 胶囊行存在性的唯一判据：渲染层（pill-row 是否渲染）与估算层（是否预留
+ * 36px）必须共用同一个谓词——`velocity` 是对象但 `text` 为空时
+ * `VelocityPill` 返回 null，该行整行不应出现（§9.1「仅在有胶囊时渲染该行」）。
+ */
+export const rivalHasPill = (card) => Boolean(card?.velocity && String(card.velocity.text || '') !== '')
+const hasPill = rivalHasPill
 
 /**
  * 一张卡的估算高度（px，border-box，含上下各 1px 描边）。
@@ -205,7 +284,7 @@ export function rivalCardHeightPx(card, columnWidth) {
     return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + (hasPill(card) ? PILL_ROW : 0) + lines * BODY_LINE + TEXT_MEDIA_GAP + mediaH + CARD_BORDER)
   }
   const lines = titleLines(card, w, type)
-  return inner / rivalMediaRatioOf(card) + TITLE_ZONE_PAD_V + lines * TITLE_LINE + CARD_BORDER
+  return Math.max(RIVAL_MIN_CARD_HEIGHT, inner / rivalMediaRatioOf(card) + TITLE_ZONE_PAD_V + lines * TITLE_LINE + CARD_BORDER)
 }
 
 /**

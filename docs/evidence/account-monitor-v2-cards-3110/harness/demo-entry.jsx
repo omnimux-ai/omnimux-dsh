@@ -63,9 +63,21 @@ const POSTS = [
   row('p10', ACCOUNTS.home, { type: 'image', title: '阳台改造：宠物友好绿植角', cover_src: SVG_COVER(150, 800, 1000), ratio: 0.8, velocity: { text: '爆款 21k/h', tier: 'hot' }, match: { label: '可参考' } }),
 ]
 
+// R4: ?edge=1 appends the cases the §9.4 fixture cannot reach — English text
+// with hashtags/URLs (word-boundary wrap) and a velocity object with empty
+// text (must render no pill row at all).
+const EDGE_POSTS = [
+  row('e1', ACCOUNTS.higgs, { type: 'text', title: `Shipping our new video pipeline today — benchmark notes inside. ${Array(8).fill('#sundayfunday').join(' ')}`, velocity: { text: 'rising 1.9k/h', tier: 'rising' } }),
+  row('e2', ACCOUNTS.runway, { type: 'text', title: 'Read the full thread here: https://x.com/runwayml/status/1928374650111222334?ref_src=twsrc%5Etfw%7Ctwcamp%7Ctwgr', velocity: { text: 'watch 210/h', tier: 'watch' } }),
+  row('e3', ACCOUNTS.runway, { type: 'text', title: 'Upstream rows may ship a velocity object without text. The empty pill row must not render — an empty row still costs 36px and would push the card past its estimate, overlapping whatever lands below it in the same column.', velocity: {} }),
+]
+
 function App() {
   const [markDoneNote, setMarkDoneNote] = useState('')
-  const cards = useMemo(() => POSTS.map((r) => {
+  const posts = useMemo(() => (
+    new URLSearchParams(location.search).get('edge') ? [...POSTS, ...EDGE_POSTS] : POSTS
+  ), [])
+  const cards = useMemo(() => posts.map((r) => {
     const card = toRivalCardRow(r)
     // The QA page mirrors the cover path into the served location so the media
     // element loads exactly like a real cover (hostMediaSrc whitelist already
