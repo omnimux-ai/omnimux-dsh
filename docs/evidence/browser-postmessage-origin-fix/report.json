@@ -1,0 +1,13 @@
+{
+  "taskId": "browser-postmessage-origin-fix",
+  "verifiedAt": "2026-10-05T05:55:03.120Z",
+  "targetOriginTested": "chrome-extension://inmgnhdibihgiobaoclifhmjgkheffeb",
+  "recipientOrigin": "https://example.com",
+  "testResult": {
+    "success": true,
+    "iframeSrcBeforeLoad": "about:blank",
+    "caughtErrors": []
+  },
+  "verdict": "PASS",
+  "conclusion": "在真实浏览器中成功模拟扩展载入、浮动工作台点击展开以及单页内容变动，0 条跨源 postMessage 报错！"
+}

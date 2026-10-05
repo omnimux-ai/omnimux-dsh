@@ -281,10 +281,22 @@ export function initFabCompanion(): void {
 
   applyFabPosition(currentX, currentY)
 
+  let isFrameReady = false
+
   function isWorkstationFrameLoaded(): boolean {
     if (!iframe) return false
     const current = iframe.getAttribute('src') ?? ''
-    return current === panelUrl
+    return current === panelUrl && isFrameReady
+  }
+
+  function postToWorkstation(message: unknown): boolean {
+    if (!iframe?.contentWindow || !isWorkstationFrameLoaded()) return false
+    try {
+      iframe.contentWindow.postMessage(message, panelOrigin)
+      return true
+    } catch {
+      return false
+    }
   }
 
   function ensureWorkstationFrame(): void {
@@ -305,7 +317,9 @@ export function initFabCompanion(): void {
     isExpanded = true
     fab.classList.add('fab-hidden')
     workstation.classList.add('expanded')
-    syncContextToIframe()
+    if (isWorkstationFrameLoaded()) {
+      syncContextToIframe()
+    }
   }
 
   function collapseWorkstation() {
@@ -319,6 +333,7 @@ export function initFabCompanion(): void {
   function collapseWorkstationForDock(unload: boolean): void {
     collapseWorkstation()
     if (!unload || !iframe) return
+    isFrameReady = false
     try {
       iframe.removeAttribute('src')
       iframe.src = 'about:blank'
@@ -337,15 +352,13 @@ export function initFabCompanion(): void {
       const media = sniffViewportMedia()
       const payload = { ...context, media }
 
-      // 1. 同步到浮动工作台 iframe（仅当工作台已装载真实地址时才同步）
-      if (iframe?.contentWindow && isWorkstationFrameLoaded()) {
-        iframe.contentWindow.postMessage({
-          source: 'omnimux-content-script',
-          type: 'PAGE_CONTEXT_UPDATE',
-          payload,
-          timestamp: Date.now(),
-        }, panelOrigin)
-      }
+      // 1. 同步到浮动工作台 iframe（仅当工作台已装载真实地址且完成加载时才同步）
+      postToWorkstation({
+        source: 'omnimux-content-script',
+        type: 'PAGE_CONTEXT_UPDATE',
+        payload,
+        timestamp: Date.now(),
+      })
 
       // 2. 主动广播给 Chrome 原生侧边栏 / 扩展后台
       try {
@@ -386,12 +399,12 @@ export function initFabCompanion(): void {
       pending.set(payload.id, { resolve, timer })
       void chrome.runtime.sendMessage({ type: 'ISSUE_FLOAT_MEDIA_GRANT', payload }).then((result) => {
         if (typeof result?.grant !== 'string') throw new Error('media grant refused')
-        iframe.contentWindow?.postMessage({
+        postToWorkstation({
           source: CONTENT_MESSAGE_SOURCE,
           type: BRIDGE_MESSAGE.mediaAttachRequest,
           grant: result.grant,
           timestamp: Date.now(),
-        }, panelOrigin)
+        })
       }).catch(() => {
         clearTimeout(timer)
         pending.delete(payload.id)
@@ -526,11 +539,11 @@ export function initFabCompanion(): void {
 
     if (type === 'SNIFF_MEDIA_REQUEST') {
       const media = sniffViewportMedia()
-      iframe.contentWindow?.postMessage({
+      postToWorkstation({
         source: 'omnimux-content-script',
         type: 'MEDIA_SNIFFED_RESULT',
         payload: media,
-      }, panelOrigin)
+      })
       return
     }
 
@@ -542,24 +555,24 @@ export function initFabCompanion(): void {
     if (type === 'FILL_STRUCTURED_DRAFT') {
       const fields = e.data.fields || []
       const result = await fillFormFields(document, fields)
-      iframe.contentWindow?.postMessage({
+      postToWorkstation({
         source: 'omnimux-content-script',
         type: 'FILL_STRUCTURED_DRAFT_RESULT',
         requestId: e.data.requestId,
         payload: result,
-      }, panelOrigin)
+      })
       return
     }
 
     if (type === 'FILL_HOST_DOM') {
       const platform = detectPlatform()
       const result = await fillHostInput(text || '', platform)
-      iframe.contentWindow?.postMessage({
+      postToWorkstation({
         source: 'omnimux-content-script',
         type: 'FILL_HOST_DOM_RESULT',
         requestId: e.data.requestId,
         payload: result,
-      }, panelOrigin)
+      })
       return
     }
   }
@@ -567,8 +580,12 @@ export function initFabCompanion(): void {
 
   // 懒加载就绪侦听：首次动态载入真实插件地址后，若当前处于展开态，自动同步最新上下文
   const handleIframeLoad = () => {
-    if (isWorkstationFrameLoaded() && isExpanded) {
-      syncContextToIframe()
+    // 只有当 iframe 真正完成了扩展页面的加载时，才置位就绪标志
+    if (iframe && (iframe.getAttribute('src') ?? '') === panelUrl) {
+      isFrameReady = true
+      if (isExpanded) {
+        syncContextToIframe()
+      }
     }
   }
   iframe.addEventListener('load', handleIframeLoad)
