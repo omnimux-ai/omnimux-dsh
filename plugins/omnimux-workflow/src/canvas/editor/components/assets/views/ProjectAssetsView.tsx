@@ -18,6 +18,7 @@ import {
   Crosshair,
 } from 'lucide-react';
 import type { AssetItem, ViewMode } from '../types';
+import { MediaThumb } from '../MediaThumb';
 import { useT } from '../../../../i18n';
 
 interface ProjectAssetsViewProps {
@@ -130,13 +131,17 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
             </span>
           ) : null}
 
-          {item.previewUrl ? (
-            <img src={item.previewUrl} alt={item.name} className="wf-tree-file-thumb-compact" />
-          ) : (
-            <div className="wf-tree-file-icon-box-compact">
-              {getAssetIcon(item.type)}
-            </div>
-          )}
+          <MediaThumb
+            kind={item.type}
+            url={item.previewUrl}
+            alt={item.name}
+            className="wf-tree-file-thumb-compact"
+            fallback={
+              <div className="wf-tree-file-icon-box-compact">
+                {getAssetIcon(item.type)}
+              </div>
+            }
+          />
 
           <span className="wf-tree-name-compact" title={item.name}>
             {item.name}
@@ -261,11 +266,12 @@ export const ProjectAssetsView: React.FC<ProjectAssetsViewProps> = ({
                 onMouseLeave={() => onHoverItem(null)}
               >
                 <div className="wf-grid-card-thumb-compact">
-                  {item.previewUrl ? (
-                    <img src={item.previewUrl} alt={item.name} />
-                  ) : (
-                    getAssetIcon(item.type)
-                  )}
+                  <MediaThumb
+                    kind={item.type}
+                    url={item.previewUrl}
+                    alt={item.name}
+                    fallback={getAssetIcon(item.type)}
+                  />
                   {item.duration && (
                     <span className="wf-grid-card-duration-compact">{item.duration}</span>
                   )}

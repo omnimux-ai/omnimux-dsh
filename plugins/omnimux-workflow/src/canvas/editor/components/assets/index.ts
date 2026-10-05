@@ -1,5 +1,7 @@
 export * from './types';
 export * from './extractCanvasAssets';
+export * from './mediaThumbMode';
+export * from './MediaThumb';
 export * from './popovers/TypeFilterPopover';
 export * from './popovers/TagFilterPopover';
 export * from './popovers/TimeFilterPopover';

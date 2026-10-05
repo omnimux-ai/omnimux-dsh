@@ -1,0 +1,137 @@
+{
+  "runId": "2026-10-05T07-48-39-930Z",
+  "issue": 3107,
+  "url": "http://127.0.0.1:50630/",
+  "chrome": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "viewport": "1500x1100",
+  "mediaReady": true,
+  "videoElementCount": 4,
+  "probe": {
+    "beforeVideoRow": {
+      "found": true,
+      "videoTag": false,
+      "imgTag": true,
+      "videoWidth": null,
+      "videoReadyState": null,
+      "videoCurrentTime": null,
+      "imgNaturalWidth": 0,
+      "iconBox": false,
+      "brokenMediaCount": 1
+    },
+    "afterVideoRow": {
+      "found": true,
+      "videoTag": true,
+      "imgTag": false,
+      "videoWidth": 320,
+      "videoReadyState": 4,
+      "videoCurrentTime": 0.1,
+      "imgNaturalWidth": null,
+      "iconBox": false,
+      "brokenMediaCount": 0
+    },
+    "afterImageRow": {
+      "found": true,
+      "videoTag": false,
+      "imgTag": true,
+      "videoWidth": null,
+      "videoReadyState": null,
+      "videoCurrentTime": null,
+      "imgNaturalWidth": 320,
+      "iconBox": false,
+      "brokenMediaCount": 0
+    },
+    "afterAudioRow": {
+      "found": true,
+      "videoTag": false,
+      "imgTag": false,
+      "videoWidth": null,
+      "videoReadyState": null,
+      "videoCurrentTime": null,
+      "imgNaturalWidth": null,
+      "iconBox": true,
+      "brokenMediaCount": 0
+    },
+    "afterGridVideo": {
+      "found": true,
+      "videoTag": true,
+      "imgTag": false,
+      "videoWidth": 320,
+      "videoReadyState": 4,
+      "videoCurrentTime": 0.1,
+      "imgNaturalWidth": null,
+      "iconBox": false,
+      "brokenMediaCount": 0
+    },
+    "afterAssets": {
+      "found": true,
+      "videoTag": true,
+      "imgTag": true,
+      "videoWidth": 320,
+      "videoReadyState": 4,
+      "videoCurrentTime": 0.1,
+      "imgNaturalWidth": 320,
+      "iconBox": true,
+      "brokenMediaCount": 0
+    },
+    "hover": {
+      "found": true,
+      "videoTag": true,
+      "imgTag": false,
+      "videoWidth": 320,
+      "videoReadyState": 4,
+      "videoCurrentTime": 0.1,
+      "imgNaturalWidth": null,
+      "iconBox": false,
+      "brokenMediaCount": 0
+    }
+  },
+  "checks": [
+    {
+      "name": "修复前对照：视频地址落进 <img> → naturalWidth = 0（缺陷复现）",
+      "pass": true,
+      "detail": "{\"found\":true,\"videoTag\":false,\"imgTag\":true,\"videoWidth\":null,\"videoReadyState\":null,\"videoCurrentTime\":null,\"imgNaturalWidth\":0,\"iconBox\":false,\"brokenMediaCount\":1}"
+    },
+    {
+      "name": "创作画布列表·视频行：渲染 <video> 首帧而非 <img>",
+      "pass": true,
+      "detail": "{\"found\":true,\"videoTag\":true,\"imgTag\":false,\"videoWidth\":320,\"videoReadyState\":4,\"videoCurrentTime\":0.1,\"imgNaturalWidth\":null,\"iconBox\":false,\"brokenMediaCount\":0}"
+    },
+    {
+      "name": "创作画布列表·图片行：仍渲染 <img> 且解码正常",
+      "pass": true,
+      "detail": "{\"found\":true,\"videoTag\":false,\"imgTag\":true,\"videoWidth\":null,\"videoReadyState\":null,\"videoCurrentTime\":null,\"imgNaturalWidth\":320,\"iconBox\":false,\"brokenMediaCount\":0}"
+    },
+    {
+      "name": "创作画布列表·音频行：回退类型图标（无 <img>/<video>）",
+      "pass": true,
+      "detail": "{\"found\":true,\"videoTag\":false,\"imgTag\":false,\"videoWidth\":null,\"videoReadyState\":null,\"videoCurrentTime\":null,\"imgNaturalWidth\":null,\"iconBox\":true,\"brokenMediaCount\":0}"
+    },
+    {
+      "name": "创作画布网格·视频卡：渲染 <video> 首帧",
+      "pass": true,
+      "detail": "{\"found\":true,\"videoTag\":true,\"imgTag\":false,\"videoWidth\":320,\"videoReadyState\":4,\"videoCurrentTime\":0.1,\"imgNaturalWidth\":null,\"iconBox\":false,\"brokenMediaCount\":0}"
+    },
+    {
+      "name": "资产页签列表：视频行渲染 <video> 首帧",
+      "pass": true,
+      "detail": "{\"found\":true,\"videoTag\":true,\"imgTag\":true,\"videoWidth\":320,\"videoReadyState\":4,\"videoCurrentTime\":0.1,\"imgNaturalWidth\":320,\"iconBox\":true,\"brokenMediaCount\":0}"
+    },
+    {
+      "name": "悬停预览卡：视频素材渲染 <video> 首帧",
+      "pass": true,
+      "detail": "{\"found\":true,\"videoTag\":true,\"imgTag\":false,\"videoWidth\":320,\"videoReadyState\":4,\"videoCurrentTime\":0.1,\"imgNaturalWidth\":null,\"iconBox\":false,\"brokenMediaCount\":0}"
+    },
+    {
+      "name": "修复后三处均无破图媒体节点",
+      "pass": true,
+      "detail": "row=0 grid=0 assets=0"
+    },
+    {
+      "name": "真实 PNG 截图已留存且可解码",
+      "pass": true,
+      "detail": "129295 bytes"
+    }
+  ],
+  "verdict": "PASS",
+  "screenshot": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-asset-thumb-issue-3107/.workbuddy/evidence/asset-thumb-media-kind/2026-10-05T07-48-39-930Z/asset-thumb-verified.png"
+}

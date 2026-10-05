@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import type { CanvasNodeItem, FilterState, ViewMode } from '../types';
+import { MediaThumb } from '../MediaThumb';
 import { TypeFilterPopover } from '../popovers/TypeFilterPopover';
 import { TagFilterPopover, TAG_OPTIONS } from '../popovers/TagFilterPopover';
 import { TimeFilterPopover } from '../popovers/TimeFilterPopover';
@@ -300,13 +301,17 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
                   onMouseEnter={(e) => onHoverItem(node, e)}
                   onMouseLeave={() => onHoverItem(null)}
                 >
-                  {node.previewUrl ? (
-                    <img src={node.previewUrl} alt={node.name} className="wf-tree-file-thumb-compact" />
-                  ) : (
-                    <div className="wf-tree-file-icon-box-compact">
-                      {getNodeIcon(node.type)}
-                    </div>
-                  )}
+                  <MediaThumb
+                    kind={node.type}
+                    url={node.previewUrl}
+                    alt={node.name}
+                    className="wf-tree-file-thumb-compact"
+                    fallback={
+                      <div className="wf-tree-file-icon-box-compact">
+                        {getNodeIcon(node.type)}
+                      </div>
+                    }
+                  />
 
                   <span className="wf-tree-name-compact" title={node.name}>
                     {node.name}
@@ -352,11 +357,12 @@ export const CanvasOutlineView: React.FC<CanvasOutlineViewProps> = ({
                 onMouseLeave={() => onHoverItem(null)}
               >
                 <div className="wf-grid-card-thumb-compact">
-                  {node.previewUrl ? (
-                    <img src={node.previewUrl} alt={node.name} />
-                  ) : (
-                    getNodeIcon(node.type)
-                  )}
+                  <MediaThumb
+                    kind={node.type}
+                    url={node.previewUrl}
+                    alt={node.name}
+                    fallback={getNodeIcon(node.type)}
+                  />
                 </div>
                 <div className="wf-grid-card-meta-compact">
                   <div className="wf-grid-card-title-compact" title={node.name}>
