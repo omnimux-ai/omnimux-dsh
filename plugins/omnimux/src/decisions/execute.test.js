@@ -114,7 +114,7 @@ test('executeJevDecision calls gateway decisions endpoint with default jev model
     },
   )
 
-  assert.equal(capturedUrl, 'https://api.omnimux.ai/v1/decisions')
+  assert.equal(capturedUrl, 'https://api.omnimux.ai/v1/systemone')
   assert.equal(capturedHeaders['Authorization'], 'Bearer sk-test-gateway')
   assert.equal(capturedHeaders['Accept'], 'application/json')
   assert.equal(capturedBody.model, DEFAULT_JEV_MODEL)

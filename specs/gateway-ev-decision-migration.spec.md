@@ -39,3 +39,8 @@
 - **AC-3 (鉴权缺省拦截)**：未设置 `OMNIMUX_API_KEY` / `OMNIMUX_TOKEN` 时，抛出 `omnimux-unconfigured` 错误。
 - **AC-4 (配额超限分类)**：当网关返回 402/429 且符合配额不足特征时，抛出 `quota-exceeded` 错误。
 - **AC-5 (单元测试全绿)**：`pnpm test plugins/omnimux/src/decisions/` 全量通过。
+
+## 4. 端点更正（2026-10-05）
+- 实测（docs/evidence/jev-systemone-endpoint/probe.json）：统一网关 `POST /v1/decisions` 恒返回 `Invalid URL`；`POST /v1/systemone`（与 TypeSafe 官方 System One 路径一致）带模型 `jev` 返回 `jev-1.13.0` 的 typed answers。原 §2.2「决策端点 `${baseUrl}/decisions`」作废，更正为 `${baseUrl}/systemone`；请求体与响应结构不变。
+- **AC-6**：单测断言请求发往 `${baseUrl}/systemone`。
+- **AC-7（真机）**：开发版推特助手「多视角爆款创作」生成一次，日志视角来源为 `jev`（非 `rules`），不点击发送。
