@@ -402,7 +402,8 @@ describe('rival-masonry — R4 词边界换行模型（复审 ②）', () => {
 describe('rival-masonry — R5 连字符断行与不换行空格（复审 ④⑤）', () => {
   it('连字符后可断行：6 段连字符长词不再按一个不可断词估算', () => {
     // UAX#14：浏览器在 '-' 之后可断行。把整串当一个不可断词会严重少算行数
-    // （实测 6 连字符词模型 6 行、真实 12 行，同列重叠 40px —— R5 复审）。
+    // （QA 41 卡夹具 w1 实测：连字符模型 5 行、Chrome 4 行；按整词不可断的
+    // 旧模型估算 1 行会被 144px 下限吞掉 —— R6 注释修正，数字可复现）。
     const word = 'state-of-the-art-video-pipeline-for-vfx-shot-generation-workflow'
     const lines = rivalWrapLines(word, 14, 194)
     assert.ok(lines >= 2, `hyphenated word must be allowed to break after '-', got ${lines}`)
@@ -424,6 +425,56 @@ describe('rival-masonry — R5 连字符断行与不换行空格（复审 ④⑤
     assert.equal(rivalWrapLines(narrowNoBreak, 14, 60), 1, 'NBSP-joined words stay glued even past line width (overflow)')
     const wj = `aaa${'﻿'}bbb`
     assert.equal(rivalWrapLines(wj, 14, 194), 1, 'FEFF (word joiner) is part of the word, never a break')
+  })
+})
+
+describe('rival-masonry — R6 断行码位全集（复审 ① 回归）', () => {
+  // 红证据要求：R5 把空白判定收窄成 /[ \t\n\r\f\v]/ 后，下列 UAX#14 BA/ZW/BK
+  // 码位被并入词内 → 整串当不可断词估成 1 行。本套件逐个码位钉住分类；
+  // Chrome 真机对照由 harness/codepoint-probe.mjs 执行。
+  it('UAX#14 BA 全宽/窄空格一律可断行（U+1680, 2000–2006, 2008–200A, 205F）', () => {
+    const BA = ['1680', '2000', '2001', '2002', '2003', '2004', '2005', '2006', '2008', '2009', '200a', '205f']
+    for (const hex of BA) {
+      const sep = String.fromCodePoint(parseInt(hex, 16))
+      const text = ['alpha', 'bravo', 'charlie', 'delta', 'echo'].join(sep)
+      const lines = rivalWrapLines(text, 14, 130)
+      assert.ok(lines >= 2, `U+${hex.toUpperCase()} must be a breakable space, got ${lines}`)
+    }
+  })
+
+  it('U+200B 是零宽可断点：不增宽度但允许断行', () => {
+    const text = ['onetwothree', 'fourfivesix', 'seveneightnine', 'teneleventwelve'].join('​')
+    // （上一行 join 的参数是字面 U+200B）
+    const lines = rivalWrapLines(text, 14, 130)
+    assert.ok(lines >= 2, `U+200B must allow a line break, got ${lines}`)
+  })
+
+  it('U+2028 / U+2029 在 Chrome 按可折叠空白断行（实测 5 词窄行 2 行而非 5 行）', () => {
+    // Chrome 把它们当断行机会（white-space:normal 下与 \n 同行为），不是
+    // UAX#14 的强制换行——模型按可折叠空白对齐真机。
+    const sep28 = String.fromCodePoint(0x2028)
+    const sep29 = String.fromCodePoint(0x2029)
+    const words = ['alpha', 'bravo', 'charlie', 'delta', 'echo']
+    assert.equal(rivalWrapLines(`aa${sep28}bb`, 14, 194), 1, 'fits on one line: collapsible break, not a forced line')
+    assert.ok(rivalWrapLines(words.join(sep28), 14, 130) >= 2, 'U+2028 must allow a break')
+    assert.ok(rivalWrapLines(words.join(sep29), 14, 130) >= 2, 'U+2029 must allow a break')
+  })
+
+  it('不可断集合保持：U+00A0 / U+202F / U+FEFF / U+2060 / U+2007 并入词内', () => {
+    for (const hex of ['00a0', '202f', 'feff', '2060', '2007']) {
+      const sep = String.fromCodePoint(parseInt(hex, 16))
+      const text = `aaa${sep}bbb${sep}ccc`
+      const lines = rivalWrapLines(text, 14, 60)
+      assert.equal(lines, 1, `U+${hex.toUpperCase()} must stay inside the word (no break), got ${lines}`)
+    }
+  })
+
+  it('U+3000 仍走 CJK 分支、U+2011 留在词内（既有行为不变）', () => {
+    const ideographic = `中　文　空　格　分　隔`
+    const lines = rivalWrapLines(ideographic, 14, 44)
+    assert.ok(lines >= 2, `U+3000/CJK chars must allow breaks, got ${lines}`)
+    const nbh = `aaa‑bbb`
+    assert.equal(rivalWrapLines(nbh, 14, 60), 1, 'U+2011 non-breaking hyphen stays in the word')
   })
 })
 

@@ -37,3 +37,15 @@ URL 参数：`theme=dark|light`、`width=<px>`（固定容器宽时绕过 Resize
   `window.__RIVAL_QA__`（估算函数 + 渲染中的卡片描述符）供脚本调用。
   用法：`python3 -m http.server <port> --directory <harness>` 后
   `node measure-placement.mjs <url> <out.json> [逗号分隔的id白名单]`。
+  报告字段 `only` 原样记录白名单（null = 全量测量）；证据文件一律
+  用全量生成（白名单只用于诊断，不写进报告）。
+- `?qa41=1`（与 `?edge=1` 叠加）再追加 QA 第四轮独立夹具的 22 张断行
+  压力卡（w1–w12 / u1–u4 / v1–v6），41 卡夹具一条命令可复现：
+  `node measure-placement.mjs "http://127.0.0.1:<port>/demo.html?edge=1&qa41=1&theme=dark&width=1164" <out.json>`。
+- `build-demo.mjs --pre`：只重建 `demo-pre.html` 外壳（引用已提交的
+  `demo-bundle-pre.js` 整改前快照），使 `r5-placement-measure-pre.json`
+  一条命令从 HEAD 可复现。
+- `codepoint-probe.mjs`（R6）：逐码位对比 Chrome 实测行数 vs
+  `rivalWrapLines`（直接 import 实现，无复刻），覆盖 CSS 空白、UAX#14
+  BA/ZW/BK、不换行集合、\v、U+3000、U+2011 共 24 个码位；
+  退出码 0 = 全等。用法：`node codepoint-probe.mjs [out.json]`。

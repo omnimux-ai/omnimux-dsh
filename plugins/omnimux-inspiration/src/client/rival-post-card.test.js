@@ -432,10 +432,23 @@ describe('RivalPostCard — 外链与 locale（第三轮整改）', () => {
       assert.ok(original, 'the slot keeps its button — V16 fixes three secondary slots')
       assert.equal(original.disabled, true, 'a refused scheme greys the button, it does not open')
       assert.equal(original.getAttribute('title'), '原帖链接不可用')
+      // R6-⑨：disabled 控件不可聚焦，title 对键盘/读屏不可达 → 禁用原因
+      // 必须再经 aria-describedby 挂一个解析得到文本的节点。
+      const describedBy = original.getAttribute('aria-describedby')
+      assert.ok(describedBy, 'a disabled button needs aria-describedby for its title text')
+      const desc = mounted.document.getElementById(describedBy)
+      assert.ok(desc, `aria-describedby target ${describedBy} must resolve in the DOM`)
+      assert.match(desc.textContent, /原帖链接不可用/, 'the description carries the same copy as the title')
       await act(async () => {
         original.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
       })
       assert.deepEqual(mounted.opened, [], 'window.open must not run for a refused scheme')
+      // R6-⑥：包裹 span 复用同一行内的既有槽位类（display:flex; flex:0 0 auto），
+      // 而不是落成裸 span 的 display:block / min-width:auto。
+      assert.ok(
+        original.closest('.omnimux-rival-act-slot'),
+        'the click-stop wrapper must reuse .omnimux-rival-act-slot like the fourth slot',
+      )
     } finally {
       await mounted.unmount()
     }

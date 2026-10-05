@@ -56,16 +56,74 @@ const TITLE_ZONE_PAD_H = 24
 const TITLE_ZONE_PAD_V = 10 + 12
 const TITLE_LINE = 18
 const TITLE_MAX_LINES = 2
-/** 西文/数字按半宽折算的系数——够近似真实换行，又不引入字体测量依赖。 */
-const ASCII_WIDTH_FACTOR = 0.55
+/** 西文/数字按半宽折算的兜底系数——真机标定（14px 正文实测：均宽 8.284px）。 */
+const ASCII_WIDTH_FACTOR = 0.592
+/**
+ * 逐字形实测宽度表（单位系数 = 字宽 ÷ 14px）。QA 逐卡审计证明「同一断行
+ * 规则 + measureText 真实宽度」的行数误差全部 ≤1 行，而统一系数在
+ * '#' + 短词、长 URL、全小写长词上系统性失准（e1/w12 少算 3–5 行、
+ * w11 多算 4 行）。表值来自 Chrome canvas.measureText（SF Pro 14px），
+ * 随 unitPx 线性缩放；表外字符回落 ASCII_WIDTH_FACTOR。
+ * 重新标定命令见 harness/codepoint-probe.mjs（同页附逐字形测量）。
+ */
+const GLYPH_WIDTH_FACTOR = {
+  ' ': 0.271, '!': 0.300, '"': 0.467, '#': 0.619, '$': 0.619, '%': 0.915,
+  '&': 0.701, "'": 0.286, '(': 0.371, ')': 0.371, '*': 0.461, '+': 0.619,
+  ',': 0.286, '-': 0.461, '.': 0.286, '/': 0.294, ':': 0.286, ';': 0.286,
+  '<': 0.619, '=': 0.619, '>': 0.619, '?': 0.502, '@': 0.907,
+  '0': 0.619, '1': 0.453, '2': 0.593, '3': 0.616, '4': 0.633,
+  '5': 0.607, '6': 0.626, '7': 0.559, '8': 0.628, '9': 0.626,
+  A: 0.663, B: 0.647, C: 0.705, D: 0.716, E: 0.585, F: 0.561,
+  G: 0.736, H: 0.731, I: 0.257, J: 0.527, K: 0.648, L: 0.557,
+  M: 0.863, N: 0.731, O: 0.761, P: 0.625, Q: 0.761, R: 0.643,
+  S: 0.627, T: 0.623, U: 0.727, V: 0.663, W: 0.957, X: 0.668,
+  Y: 0.645, Z: 0.651,
+  '[': 0.371, '\\': 0.294, ']': 0.371, '^': 0.619, '_': 0.573, '`': 0.489,
+  a: 0.541, b: 0.603, c: 0.549, d: 0.603, e: 0.561, f: 0.351,
+  g: 0.599, h: 0.578, i: 0.236, j: 0.236, k: 0.532, l: 0.242,
+  m: 0.859, n: 0.573, o: 0.580, p: 0.600, q: 0.599, r: 0.370,
+  s: 0.513, t: 0.353, u: 0.573, v: 0.531, w: 0.764, x: 0.514,
+  y: 0.532, z: 0.528,
+  '{': 0.371, '|': 0.248, '}': 0.371, '~': 0.619,
+}
+/** 可折叠 ASCII 空白宽度系数——真机标定：14px 下空格实测 3.79px。 */
+const SPACE_WIDTH_FACTOR = 0.271
+/**
+ * 非折叠空格的实测宽度系数（字宽 ÷ 14px，真机逐一量得）。BA 类空格不被
+ * 折叠：一段连续同码位空格按个数累计宽度；普通空格/制表符整段只计一份。
+ * 未列出的可断码位：ZWSP = 0，行/段分隔符不产生宽度。
+ */
+const SPACE_FACTOR = {
+  0x1680: 0.450,
+  0x2000: 0.489, 0x2002: 0.489,
+  0x2001: 0.989, 0x2003: 0.989,
+  0x2004: 0.322,
+  0x2005: 0.239,
+  0x2006: 0.155,
+  0x2008: 0.286,
+  0x2009: 0.130,
+  0x200a: 0.060,
+  0x205f: 0.211,
+  0x3000: 1.0,
+  // 不换行空格并入词时同样有真实宽度：NBSP 实测 3.79、NNBSP 1.82、
+  // FIGURE 8.67（÷14 取近似）。
+  0x00a0: 0.271,
+  0x202f: 0.130,
+  0x2007: 0.619,
+}
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value))
 }
 
+/** 该码位是否为「词内不换行空格」：有宽度、不断行、不折叠。 */
+function isNoBreakSpace(cp) {
+  return cp === 0x00a0 || cp === 0x202f || cp === 0x2007
+}
+
 /**
  * 一段文本的估算占位宽度（px）。中文、全角与 CJK 标点按整宽，其余按半宽
- * 折算。
+ * 折算；零宽连接符与零宽空格不占宽度，不换行空格按各自实测宽度计。
  * @param {string} text
  * @param {number} unitPx 全角字符的字宽（正文 14、标题 13）
  */
@@ -73,11 +131,21 @@ function textWidthPx(text, unitPx) {
   let px = 0
   for (const ch of String(text || '')) {
     const cp = ch.codePointAt(0)
-    // 零宽连接符（BOM/WORD JOINER）不占宽度。
-    if (cp === 0xfeff || cp === 0x2060) continue
-    px += cp > 0x2e7f ? unitPx : unitPx * ASCII_WIDTH_FACTOR
+    // 零宽连接符（BOM/WORD JOINER）与零宽空格（ZWSP）不占宽度。
+    if (cp === 0xfeff || cp === 0x2060 || cp === 0x200b) continue
+    if (isNoBreakSpace(cp)) {
+      px += unitPx * (SPACE_FACTOR[cp] ?? SPACE_WIDTH_FACTOR)
+      continue
+    }
+    px += unitPx * charWidthFactor(ch, cp)
   }
   return px
+}
+
+/** 半宽字符的逐字形宽度系数；>0x2E7F 返回 1（整宽），表外回落均宽。 */
+function charWidthFactor(ch, cp) {
+  if (cp > 0x2e7f) return 1
+  return GLYPH_WIDTH_FACTOR[ch] ?? ASCII_WIDTH_FACTOR
 }
 
 /**
@@ -85,17 +153,32 @@ function textWidthPx(text, unitPx) {
  * word-break）。CJK 字符（>0x2E7F，含中文与全角标点）逐字可断，各成一格；
  * 连续半宽字符（拉丁字母、数字、URL、hashtag、ASCII 标点）是不可断的
  * 「词」，整体换行；空白序列自身是一格，落在行尾时宽度被浏览器吞掉。
- * UAX#14：断行点在 '-'（U+002D/U+2010）之后 —— 连字符并入左侧词段、
- * 词段前可断（R5-④：把整串当一个不可断词会严重少算，6 连字符词模型
- * 6 行、真实 12 行，同列重叠 40px）。U+00A0/U+202F/U+FEFF/U+2060 是不
- * 换行空格与零宽连接符，**不可断**、归入当前词（R5-⑤：`\s` 会把 NBSP
- * 误当可断空白）。
+ *
+ * 断行码位全集（R6-①，逐一与 Chrome 实测行数对齐，见 harness/
+ * codepoint-probe.mjs）：
+ *   - 可断空白 = CSS 文档空白 {0020,0009,000A,000D,000C}
+ *     ∪ UAX#14 BA {1680,2000–2006,2008–200A,205F}
+ *     ∪ ZW {200B}（零宽可断点：断行但宽度 0）
+ *     ∪ BK {2028,2029}（Chrome 实测按可折叠空白处理：断行机会而非
+ *       强制换行，'white-space:normal' 下与 \n 同行为）；
+ *   - 不可断 = {00A0,202F,FEFF,2060,2007} —— 并入当前词；
+ *   - U+000B 垂直制表 Chrome 实测不可断，按词内字符处理（它既不在 CSS 空白
+ *     集也不在 BA 集）；
+ *   - U+3000 全角空格归入空格原子（不可折叠、整宽、可断）；U+2011 不换行
+ *     连字符留在词内；
+ *   - U+002D/U+2010 连字符并入左侧词段、段后可断（R5-④：把整串当不可断词
+ *     严重少算——同夹具 w1 按整词估 1 行、连字符模型 5 行、Chrome 4 行）。
  * 已知偏差（文档化上界，不假装精确）：
- *   - 行首禁则（某些标点不允许出现在行首）未模拟 → 模型可能少算一行；
  *   - 行尾空格宽度被吞 → 模型可能少算一点点宽度（行数不受影响的情况
- *     远多于受影响）。
+ *     远多于受影响）；
+ *   - 行首禁则只覆盖 CJK 收类标点（，。、；：？！…）且只带回 1 个原子：
+ *     连续多个禁则标点、行尾禁则（开类标点）未模拟 → 仍可能少算；
+ *   - 宽度模型按字符分类近似 → 双向偏差：41 卡夹具里 e5 估算 182 vs
+ *     实测 162（多算 20px，安全方向），e4 同向（多算 20px）。
  * @param {string} text
- * @returns {Array<{w:number, brk:boolean}>} 每格含估算宽度与「格前是否可断」
+ * @returns {Array<{space?:boolean, collapsible?:boolean, w?:number, cjk?:boolean, word?:boolean, text?:string}>}
+ *   原子形状：空白 {space, collapsible, w=unitPx 宽度系数}；
+ *   CJK 字 {cjk, ch}；词段 {word, text}（宽度由 textWidthPx 计算）。
  */
 function wrapAtoms(text) {
   const atoms = []
@@ -103,15 +186,34 @@ function wrapAtoms(text) {
   let open = null
   for (const ch of String(text || '')) {
     const cp = ch.codePointAt(0)
-    if (/[ \t\n\r\f\v]/.test(ch)) {
+    // 可折叠断点空白：CSS 文档空白 {space, tab, lf, cr, ff} 加上 Chrome 实测
+    // 同行为的行/段分隔符 {2028,2029}（white-space:normal 下它们产生断行
+    // 机会与 \n 相同，不是强制换行）。\v(000B) 不在此列——Chrome 实测它
+    // 不可断、按词内字符走。
+    if (cp === 0x0020 || cp === 0x0009 || cp === 0x000a || cp === 0x000d || cp === 0x000c
+      || cp === 0x2028 || cp === 0x2029) {
       open = null
-      atoms.push({ w: 0, brk: true, space: true })
+      atoms.push({ space: true, collapsible: true, w: SPACE_WIDTH_FACTOR })
       continue
     }
-    // 不换行空格与零宽连接符（NBSP / NNBSP / BOM·WJ）：不断行，并入词。
-    if (cp === 0x00a0 || cp === 0x202f || cp === 0xfeff || cp === 0x2060) {
+    // UAX#14 BA 空格（不可折叠、可断）：Ogham/Em/En/Thin/Hair/MMSP 等；
+    // U+3000 全角空格一并归入空格原子（与 CJK 逐字分支等效：可断、整宽）。
+    if (cp === 0x1680 || (cp >= 0x2000 && cp <= 0x2006) || (cp >= 0x2008 && cp <= 0x200a) || cp === 0x205f || cp === 0x3000) {
+      open = null
+      atoms.push({ space: true, collapsible: false, w: SPACE_FACTOR[cp] ?? SPACE_WIDTH_FACTOR })
+      continue
+    }
+    // ZWSP：零宽可断点（BA after ZWSP 等价）。
+    if (cp === 0x200b) {
+      open = null
+      atoms.push({ space: true, collapsible: false, w: 0 })
+      continue
+    }
+    // 不换行空格与零宽连接符（NBSP / NNBSP / FIGURE / BOM·WJ）：不断行，
+    // 有实测宽度，并入词。
+    if (isNoBreakSpace(cp) || cp === 0xfeff || cp === 0x2060) {
       if (!open) {
-        open = { w: 0, brk: true, word: true, text: '' }
+        open = { word: true, text: '' }
         atoms.push(open)
       }
       open.text += ch
@@ -119,11 +221,11 @@ function wrapAtoms(text) {
     }
     if (cp > 0x2e7f) {
       open = null
-      atoms.push({ w: 0, brk: true, cjk: true, ch })
+      atoms.push({ cjk: true, ch })
       continue
     }
     if (!open) {
-      open = { w: 0, brk: true, word: true, text: '' }
+      open = { word: true, text: '' }
       atoms.push(open)
     }
     open.text += ch
@@ -136,34 +238,97 @@ function wrapAtoms(text) {
 /**
  * 一段文本在 lineWidth 下的估算行数（≥1）。
  * 贪心装行：逐格尝试放进当前行，放不下换行；不可断的词比行宽还长时
- * 独占一行（CSS 对溢出词是截断不是折行，overflow:hidden）。
+ * 独占一行（CSS 对溢出词是截断不是折行，overflow:hidden）；硬换行原子
+ * 无条件开新行。
  * @param {string} text
  * @param {number} unitPx 全角字符的字宽（正文 14、标题 13）
  * @param {number} lineWidth 可用行宽（px）
  */
 export function rivalWrapLines(text, unitPx, lineWidth) {
-  const width = Math.max(1, Number(lineWidth) || 0)
+  // Chrome 实测在边界还有 ~0.5px 富余时也换行（亚像素 kerning/取整），
+  // 0.5px 容差让「恰好放下」边界与真机一致——无容差时 p11@266 少算 1 行。
+  const width = Math.max(1, (Number(lineWidth) || 0) - 0.5)
+  const atoms = wrapAtoms(text)
+  const widths = atoms.map((atom) =>
+    atom.cjk ? unitPx : atom.word ? textWidthPx(atom.text, unitPx) : 0)
   let lines = 1
   let used = 0
-  let pendingSpace = false
-  for (const atom of wrapAtoms(text)) {
-    if (atom.space) { pendingSpace = true; continue }
-    const atomW = atom.cjk ? unitPx : textWidthPx(atom.text, unitPx)
-    const glue = pendingSpace && used > 0 ? unitPx * ASCII_WIDTH_FACTOR : 0
-    pendingSpace = false
+  let lastAtomW = 0
+  let pendingCollapsible = false
+  let pendingWidth = 0
+  for (let i = 0; i < atoms.length; i += 1) {
+    const atom = atoms[i]
+    if (atom.space) {
+      if (atom.collapsible && pendingCollapsible) continue
+      if (atom.collapsible) pendingCollapsible = true
+      pendingWidth += atom.w * unitPx
+      continue
+    }
+    const atomW = widths[i]
+    const glue = pendingWidth > 0 && used > 0 ? pendingWidth : 0
+    pendingCollapsible = false
+    pendingWidth = 0
     if (used === 0) {
       // 行首空格已被浏览器吞掉；超行宽的词/字直接占这一行，不折。
       used = Math.min(atomW, width)
+      lastAtomW = used
       continue
     }
     if (used + glue + atomW <= width) {
+      // 行尾禁则（Chrome 实测）：开类标点不允许悬挂在行尾。它放得下、
+      // 但其后的下一个内容原子（跨空白）放不下时，它随内容一起换行。
+      if (atom.cjk && isLineEndForbidden(atom.ch)) {
+        let nextW = 0
+        let j = i + 1
+        for (; j < atoms.length; j += 1) {
+          const n = atoms[j]
+          if (n.space) { nextW += n.w * unitPx; continue }
+          nextW += widths[j]
+          break
+        }
+        if (j < atoms.length && used + glue + atomW + nextW > width) {
+          lines += 1
+          used = Math.min(atomW, width)
+          lastAtomW = atomW
+          continue
+        }
+      }
       used += glue + atomW
+      lastAtomW = atomW
       continue
     }
     lines += 1
-    used = Math.min(atomW, width)
+    if (atom.cjk && lastAtomW > 0 && isLineStartForbidden(atom.ch)) {
+      // 行首禁则：CJK 收类标点不允许出现在行首——浏览器把前一个字符
+      // 一并带到下一行（p11 在 600px 档实测 8 行、无禁则模型算 7 行，
+      // 正是这条规则缺位的少算）。只带回 1 个原子：连续禁则标点与
+      // 词末尾的禁则场景在偏差清单里说明。
+      used = Math.min(lastAtomW + atomW, width)
+    } else {
+      used = Math.min(atomW, width)
+    }
+    lastAtomW = atomW
   }
   return lines
+}
+
+/**
+ * 行首禁则字符（CJK 收类标点）：浏览器断行时不允许它们落在新行首，
+ * 会把前一个字符带回本行。半角 ')' ']' 等未列入——它们在 CJK 文本
+ * 场景里同样禁行首，但出现率低且与词内位置耦合，留在已知偏差。
+ */
+function isLineStartForbidden(ch) {
+  return typeof ch === 'string'
+    && /[，。、；：？！）］｝》」』〞〟‥…‰％]/.test(ch)
+}
+
+/**
+ * 行尾禁则字符（CJK 开类标点）：浏览器断行时不允许它们悬挂在行尾，
+ * 随内容一起换行。半角 '(' '[' '{' 未列入，理由同上。
+ */
+function isLineEndForbidden(ch) {
+  return typeof ch === 'string'
+    && /[（［｛《〈「『【〔［]/.test(ch)
 }
 
 /**

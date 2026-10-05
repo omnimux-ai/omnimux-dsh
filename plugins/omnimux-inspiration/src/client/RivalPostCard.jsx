@@ -216,11 +216,13 @@ export function RivalPostCard(props) {
         <div className="omnimux-rival-act-row">
           {/* §9.2/§9.6 V16 fixes the action row to three secondary slots:
               an unsafe source_url greys its button (same affordance the
-              account filter uses) instead of collapsing the slot. The
-              wrapper eats the click too — React still lets a disabled
-              button's click bubble to the card's detail handler. */}
+              account filter uses) instead of collapsing the slot. Chrome
+              never dispatches click on a disabled button — only synthetic
+              events (jsdom/tests) bubble — but the wrapper span keeps both
+              paths from reaching the card's detail handler; it reuses the
+              act-slot contract so all slots share one flex treatment. */}
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
-          <span onClick={stop}>
+          <span className="omnimux-rival-act-slot" onClick={stop}>
             <Button
               variant="outline"
               size="sm"
@@ -228,9 +230,20 @@ export function RivalPostCard(props) {
               data-act="original"
               disabled={!originalUrlSafe}
               title={originalUrlSafe ? undefined : t('rivalFeed.card.originalUnavailable')}
+              aria-describedby={originalUrlSafe ? undefined : `rival-original-unavailable-${String(card?.id ?? '')}`}
               onClick={openOriginal}
             >
               {t('rivalFeed.card.original')}
+              {/* disabled 按钮不可聚焦，title 对键盘/读屏不可达（R6-⑨）：
+                  同文案经可视隐藏节点挂进 aria-describedby。 */}
+              {!originalUrlSafe ? (
+                <span
+                  id={`rival-original-unavailable-${String(card?.id ?? '')}`}
+                  className="omnimux-rival-vh"
+                >
+                  {t('rivalFeed.card.originalUnavailable')}
+                </span>
+              ) : null}
             </Button>
           </span>
           {typeof onDeconstruct === 'function' ? (

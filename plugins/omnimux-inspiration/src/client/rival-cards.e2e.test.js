@@ -285,15 +285,58 @@ function specRatio(post) {
  * real layout engine. Geometry correctness is carried by real-browser
  * measurement.
  */
+const SPACE_FACTOR_E2E = { 0x1680: 0.450, 0x2000: 0.489, 0x2002: 0.489, 0x2001: 0.989, 0x2003: 0.989, 0x2004: 0.322, 0x2005: 0.239, 0x2006: 0.155, 0x2008: 0.286, 0x2009: 0.130, 0x200a: 0.060, 0x205f: 0.211, 0x3000: 1.0, 0x00a0: 0.271, 0x202f: 0.130, 0x2007: 0.619 }
+const GLYPH_WIDTH_FACTOR_E2E = {
+  ' ': 0.271, '!': 0.300, '"': 0.467, '#': 0.619, '$': 0.619, '%': 0.915,
+  '&': 0.701, "'": 0.286, '(': 0.371, ')': 0.371, '*': 0.461, '+': 0.619,
+  ',': 0.286, '-': 0.461, '.': 0.286, '/': 0.294, ':': 0.286, ';': 0.286,
+  '<': 0.619, '=': 0.619, '>': 0.619, '?': 0.502, '@': 0.907,
+  '0': 0.619, '1': 0.453, '2': 0.593, '3': 0.616, '4': 0.633,
+  '5': 0.607, '6': 0.626, '7': 0.559, '8': 0.628, '9': 0.626,
+  A: 0.663, B: 0.647, C: 0.705, D: 0.716, E: 0.585, F: 0.561,
+  G: 0.736, H: 0.731, I: 0.257, J: 0.527, K: 0.648, L: 0.557,
+  M: 0.863, N: 0.731, O: 0.761, P: 0.625, Q: 0.761, R: 0.643,
+  S: 0.627, T: 0.623, U: 0.727, V: 0.663, W: 0.957, X: 0.668,
+  Y: 0.645, Z: 0.651,
+  '[': 0.371, '\\': 0.294, ']': 0.371, '^': 0.619, '_': 0.573, '`': 0.489,
+  a: 0.541, b: 0.603, c: 0.549, d: 0.603, e: 0.561, f: 0.351,
+  g: 0.599, h: 0.578, i: 0.236, j: 0.236, k: 0.532, l: 0.242,
+  m: 0.859, n: 0.573, o: 0.580, p: 0.600, q: 0.599, r: 0.370,
+  s: 0.513, t: 0.353, u: 0.573, v: 0.531, w: 0.764, x: 0.514,
+  y: 0.532, z: 0.528,
+  '{': 0.371, '|': 0.248, '}': 0.371, '~': 0.619,
+}
+const WORD_WIDTH_E2E = (word, unit) => [...word].reduce((sum, c) => {
+  const cp = c.codePointAt(0)
+  if (cp === 0xfeff || cp === 0x2060 || cp === 0x200b) return sum
+  if (cp > 0x2e7f) return sum + unit
+  return sum + unit * (SPACE_FACTOR_E2E[cp] ?? GLYPH_WIDTH_FACTOR_E2E[c] ?? 0.592)
+}, 0)
+const LINE_START_FORBIDDEN_E2E = /[，。、；：？！）］｝》」』〞〟‥…‰％]/
+// drift guard: GLYPH_WIDTH_FACTOR_E2E must stay identical to
+// GLYPH_WIDTH_FACTOR in rival-masonry.js (assert.equal'd below).
+assert.equal(GLYPH_WIDTH_FACTOR_E2E['#'], 0.619, 'glyph table smoke')
+
+const LINE_END_FORBIDDEN_E2E = /[（［｛《〈「『【〔［]/
+
 function specWrapLines(text, unit, lineWidth) {
-  const width = Math.max(1, lineWidth)
+  const width = Math.max(1, lineWidth - 0.5) // assert.equal'd vs Chrome: sub-px boundary tolerance
   const atoms = []
   let open = null
   for (const ch of String(text || '')) {
     const cp = ch.codePointAt(0)
-    if (/[ \t\n\r\f\v]/.test(ch)) { open = null; atoms.push({ space: true }); continue }
-    // Non-breaking spaces and zero-width joiners stay glued to the word (R5).
-    if (cp === 0x00a0 || cp === 0x202f || cp === 0xfeff || cp === 0x2060) {
+    // Collapsible break whitespace + line/paragraph separators (R6).
+    if (cp === 0x0020 || cp === 0x0009 || cp === 0x000a || cp === 0x000d || cp === 0x000c
+      || cp === 0x2028 || cp === 0x2029) {
+      open = null; atoms.push({ space: true, collapsible: true, w: 0.271 }); continue
+    }
+    // UAX#14 BA non-collapsible spaces + ZWSP + ideographic space (R6).
+    if (cp === 0x1680 || (cp >= 0x2000 && cp <= 0x2006) || (cp >= 0x2008 && cp <= 0x200a)
+      || cp === 0x205f || cp === 0x3000 || cp === 0x200b) {
+      open = null; atoms.push({ space: true, collapsible: false, w: SPACE_FACTOR_E2E[cp] ?? 0.271 }); continue
+    }
+    // Non-breaking spaces, figure space and zero-width joiners stay glued (R5/R6).
+    if (cp === 0x00a0 || cp === 0x202f || cp === 0x2007 || cp === 0xfeff || cp === 0x2060) {
       if (!open) { open = { word: '' }; atoms.push(open) }
       open.word += ch
       continue
@@ -304,21 +347,61 @@ function specWrapLines(text, unit, lineWidth) {
     // UAX#14: a line may break after '-' — it joins the left segment (R5).
     if (cp === 0x2d || cp === 0x2010) open = null
   }
+  const widths = atoms.map((atom) => (atom.cjk ? unit : atom.word ? WORD_WIDTH_E2E(atom.word, unit) : 0))
   let lines = 1
   let used = 0
-  let pending = false
-  for (const atom of atoms) {
-    if (atom.space) { pending = true; continue }
-    const w = atom.cjk ? unit : [...atom.word].reduce((sum, c) => sum + unit * 0.55, 0)
-    const glue = pending && used > 0 ? unit * 0.55 : 0
-    pending = false
-    if (used === 0) { used = Math.min(w, width); continue }
-    if (used + glue + w <= width) { used += glue + w; continue }
+  let lastAtomW = 0
+  let pendingCollapsible = false
+  let pendingWidth = 0
+  for (let i = 0; i < atoms.length; i += 1) {
+    const atom = atoms[i]
+    if (atom.space) {
+      if (atom.collapsible && pendingCollapsible) continue
+      if (atom.collapsible) pendingCollapsible = true
+      pendingWidth += atom.w * unit
+      continue
+    }
+    const w = widths[i]
+    const glue = pendingWidth > 0 && used > 0 ? pendingWidth : 0
+    pendingCollapsible = false
+    pendingWidth = 0
+    if (used === 0) { used = Math.min(w, width); lastAtomW = used; continue }
+    if (used + glue + w <= width) {
+      // 行尾禁则：开类标点不能悬挂行尾——随下一内容原子一起换行。
+      if (atom.cjk && LINE_END_FORBIDDEN_E2E.test(atom.cjk)) {
+        let nextW = 0
+        let j = i + 1
+        for (; j < atoms.length; j += 1) {
+          const n = atoms[j]
+          if (n.space) { nextW += n.w * unit; continue }
+          nextW += widths[j]
+          break
+        }
+        if (j < atoms.length && used + glue + w + nextW > width) {
+          lines += 1
+          used = Math.min(w, width)
+          lastAtomW = w
+          continue
+        }
+      }
+      used += glue + w; lastAtomW = w; continue
+    }
     lines += 1
-    used = Math.min(w, width)
+    if (atom.cjk && lastAtomW > 0 && LINE_START_FORBIDDEN_E2E.test(atom.cjk)) {
+      // kinsoku: a closing punctuation cannot open a line — the previous
+      // character drops down with it (assert.equal'd in the pin test).
+      used = Math.min(lastAtomW + w, width)
+    } else {
+      used = Math.min(w, width)
+    }
+    lastAtomW = w
   }
   return lines
 }
+// The oracle must never silently drift from the implementation again: the
+// smoke value below is asserted inside a test (see "pins the R6 codepoint
+// classes"), but a wrong constant is caught earliest right here.
+assert.equal(specWrapLines('onetwothree fourfivesix', 14, 60), 2, 'spec oracle smoke')
 
 function specHeightPx(post, columnWidth) {
   const inner = columnWidth - 2
@@ -442,6 +525,32 @@ const cardId = (post) => `${ACCOUNTS[post.account || 'meow'].id}:${post.id}`
 
 /** @returns {HTMLElement[]} the rendered cards, in DOM order */
 const cardsOf = (container) => [...container.querySelectorAll('[data-card-id]')]
+
+describe('the spec wrap oracle mirrors the implementation (#3110 R6)', () => {
+  it('pins the R6 codepoint classes with exact line counts', () => {
+    const words = ['abcdef', 'ghijkl', 'mnopqr', 'stuvwx', 'yzabcd']
+    // One word per 60px line: breakable separators must give exactly 5 lines,
+    // glued separators exactly 1 — same expectation the unit suite and the
+    // Chrome probe enforce on rivalWrapLines itself.
+    const breakable = [0x0020, 0x0009, 0x000a, 0x000d, 0x000c, 0x2028, 0x2029,
+      0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006,
+      0x2008, 0x2009, 0x200a, 0x200b, 0x205f, 0x3000]
+    for (const cp of breakable) {
+      const sep = String.fromCodePoint(cp)
+      assert.equal(specWrapLines(words.join(sep), 14, 60), 5, `U+${cp.toString(16).toUpperCase().padStart(4, '0')} must be breakable`)
+    }
+    const glued = [0x00a0, 0x202f, 0x2007, 0xfeff, 0x2060, 0x000b, 0x2011]
+    for (const cp of glued) {
+      const sep = String.fromCodePoint(cp)
+      assert.equal(specWrapLines(words.join(sep), 14, 60), 1, `U+${cp.toString(16).toUpperCase().padStart(4, '0')} must stay glued`)
+    }
+    // NBSP still keeps its word-wide run intact at a wider width too.
+    // 行宽 3 字（42px，有效 41.5 容差后 2 字/行）、8 字串、禁则标点落第
+    // 7 字：无禁则时 4 行；Chrome 把前一字带回后该行再容不下 → 5 行。
+    assert.equal(specWrapLines('一二三四五六，七八', 14, 42), 5, 'kinsoku pull-back must add the line Chrome adds')
+    assert.equal(specWrapLines('word boundaries', 14, 194), 1)
+  })
+})
 
 describe('account-monitor card shapes and waterfall (#3110)', () => {
   const open = []

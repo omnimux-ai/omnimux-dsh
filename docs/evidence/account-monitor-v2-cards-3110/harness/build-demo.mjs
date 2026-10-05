@@ -13,6 +13,10 @@
  *
  * Output: harness/demo.html + harness/demo-bundle.js — serve the harness
  * directory statically and open demo.html?theme=dark|light.
+ *
+ * --pre: rebuild only the page shell demo-pre.html against the committed
+ * demo-bundle-pre.js (the pre-fix estimator snapshot), so
+ * r5-placement-measure-pre.json is reproducible from HEAD with one command.
  */
 import { build } from 'esbuild'
 import { writeFileSync } from 'node:fs'
@@ -22,8 +26,9 @@ import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(here, '..', '..', '..', '..')
 const SHIM = resolve(ROOT, 'plugins/omnimux-inspiration/src/client/test-fixtures/ui-kit-shim.mjs')
+const PRE = process.argv.includes('--pre')
 
-await build({
+if (!PRE) await build({
   absWorkingDir: ROOT,
   entryPoints: [resolve(here, 'demo-entry.jsx')],
   bundle: true,
@@ -132,10 +137,10 @@ body {
 </head>
 <body>
 <div id="app"></div>
-<script type="module" src="./demo-bundle.js"></script>
+<script type="module" src="./demo-bundle${PRE ? '-pre' : ''}.js"></script>
 </body>
 </html>
 `
 
-writeFileSync(resolve(here, 'demo.html'), html)
-console.log(`built ${resolve(here, 'demo.html')} + demo-bundle.js`)
+writeFileSync(resolve(here, PRE ? 'demo-pre.html' : 'demo.html'), html)
+console.log(`built ${resolve(here, PRE ? 'demo-pre.html' : 'demo.html')}${PRE ? ' (shell only, against committed demo-bundle-pre.js)' : ' + demo-bundle.js'}`)

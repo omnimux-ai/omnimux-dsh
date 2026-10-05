@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { RivalMasonry } from '../../../../plugins/omnimux-inspiration/src/client/RivalMasonry.jsx'
 import { RivalPostPreviewModal } from '../../../../plugins/omnimux-inspiration/src/client/RivalPostPreviewModal.jsx'
 import { toRivalCardRow } from '../../../../plugins/omnimux-inspiration/src/client/rival-filter.js'
-import { rivalCardHeightPx, rivalHasPill } from '../../../../plugins/omnimux-inspiration/src/client/rival-masonry.js'
+import { rivalCardHeightPx, rivalHasPill, rivalWrapLines } from '../../../../plugins/omnimux-inspiration/src/client/rival-masonry.js'
 import { injectRivalStyles } from '../../../../plugins/omnimux-inspiration/src/client/rival-styles.js'
 import { injectRivalTokens } from '../../../../plugins/omnimux-inspiration/src/client/rival-tokens.js'
 import { zh, en } from '../../../../plugins/omnimux-inspiration/src/client/locales.js'
@@ -83,12 +83,44 @@ const EDGE_POSTS = [
   row('e7', ACCOUNTS.higgs, { type: 'text', title: 'Short tail card — placement only', velocity: { text: 'watch 60/h', tier: 'watch' } }),
 ]
 
+// R6-①: ?qa41=1 appends the wrap-rule stress set QA used for its 41-card
+// fixture (r4/qa4-fixture-entry.jsx carried absolute paths and could not be
+// rebuilt from HEAD; this is the same set, served by the repo harness).
+const NBSP = ' '
+const NNBSP = ' '
+const QA41_POSTS = [
+  row('w1', ACCOUNTS.higgs, { type: 'text', title: 'A cross-platform end-to-end state-of-the-art text-to-video-and-back-again pipeline benchmark writeup', velocity: { text: 'hot 3.1k/h', tier: 'hot' } }),
+  row('w2', ACCOUNTS.runway, { type: 'text', title: 'Unicode hyphen case: state‐of‐the‐art image‐to‐image up‐scaling workflow notes', velocity: { text: 'watch 120/h', tier: 'watch' } }),
+  row('w3', ACCOUNTS.runway, { type: 'text', title: 'Direct link: https://example.com/a/very/long/unbreakable/path/segment/that/keeps/going/and/going/until/it/exceeds/the/column/width/entirely?x=1', velocity: { text: 'watch 90/h', tier: 'watch' } }),
+  row('w4', ACCOUNTS.higgs, { type: 'text', title: 'https://cdn.example.com/assets/2026/10/05/abcdefghijklmnopqrstuvwxyz0123456789/renders/final-master-v7-transcoded.mp4', velocity: {} }),
+  row('w5', ACCOUNTS.ootd, { type: 'text', title: `${Array(10).fill('#ailookbook').join(' ')} ${Array(4).fill('#sustainablefashion').join(' ')}`, velocity: { text: 'rising 2.2k/h', tier: 'rising' } }),
+  row('w6', ACCOUNTS.home, { type: 'text', title: '本周话题 #家居好物 与 #小户型改造 同时登上热榜，评论区还在吵 #收纳技巧 到底有没有用', velocity: { text: 'watch 140/h', tier: 'watch' } }),
+  row('w7', ACCOUNTS.higgs, { type: 'text', title: '用 Gen-3 跑了一段 cinematic drone shot，prompt 里加了 slow push-in 和 shallow depth of field，成片质感明显提升', velocity: { text: 'hot 4.4k/h', tier: 'hot' } }),
+  row('w8', ACCOUNTS.runway, { type: 'text', title: 'AI 视频工作流分享：先用 image-to-video 生成 draft，再靠 upscale 和 interpolation 补帧，最后统一调色', velocity: { text: 'watch 110/h', tier: 'watch' } }),
+  row('w9', ACCOUNTS.pet, { type: 'text', title: `non${NBSP}breaking${NBSP}space${NBSP}run${NBSP}that${NBSP}should${NBSP}stay${NBSP}glued${NBSP}together${NBSP}as${NBSP}one${NBSP}very${NBSP}long${NBSP}word`, velocity: { text: 'watch 70/h', tier: 'watch' } }),
+  row('w10', ACCOUNTS.fur, { type: 'text', title: `narrow${NNBSP}no${NNBSP}break${NNBSP}space${NNBSP}case${NNBSP}with${NNBSP}several${NNBSP}segments${NNBSP}joined${NNBSP}by${NNBSP}U202F`, velocity: { text: 'watch 55/h', tier: 'watch' } }),
+  row('w11', ACCOUNTS.higgs, { type: 'text', title: `${Array(9).fill('abcdefghijkl').join(' ')} tail`, velocity: { text: 'hot 9.9k/h', tier: 'hot' } }),
+  row('w12', ACCOUNTS.runway, { type: 'text', title: `${Array(11).fill('mnopqrstuvwx').join(' ')} ${Array(3).fill('#twelvechars').join(' ')}`, velocity: { text: 'watch 33/h', tier: 'watch' } }),
+  row('u1', ACCOUNTS.higgs, { type: 'text', title: 'javascript: 协议的 source_url 必须置灰', url: 'javascript:alert(1)', velocity: { text: 'watch 11/h', tier: 'watch' } }),
+  row('u2', ACCOUNTS.runway, { type: 'text', title: '相对路径 source_url 也必须置灰', url: '/relative/path', velocity: { text: 'watch 12/h', tier: 'watch' } }),
+  row('u3', ACCOUNTS.meow, { type: 'text', title: '空 source_url 也必须保留置灰槽位', url: '', velocity: { text: 'watch 13/h', tier: 'watch' } }),
+  row('u4', ACCOUNTS.pet, { type: 'text', title: '正常 https 的对照卡（按钮应可点）', url: 'https://example.com/ok', velocity: { text: 'watch 14/h', tier: 'watch' } }),
+  row('v1', ACCOUNTS.higgs, { type: 'text', title: '中文　全角空格　分隔　的　一行　文本　是否　按　空格　断行', velocity: { text: 'watch 21/h', tier: 'watch' } }),
+  row('v2', ACCOUNTS.runway, { type: 'text', title: 'em space separated words that should break like normal spaces do', velocity: { text: 'watch 22/h', tier: 'watch' } }),
+  row('v3', ACCOUNTS.higgs, { type: 'text', title: 'zero​width​space​should​break​here​and​here​and​here​too', velocity: { text: 'watch 23/h', tier: 'watch' } }),
+  row('v4', ACCOUNTS.runway, { type: 'text', title: 'thin space and hair space separated segments that render very wide', velocity: { text: 'watch 24/h', tier: 'watch' } }),
+  row('v5', ACCOUNTS.higgs, { type: 'text', title: 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima', velocity: { text: 'watch 25/h', tier: 'watch' } }),
+  row('v6', ACCOUNTS.runway, { type: 'text', title: 'onetwothree​fourfivesix​seveneightnine​teneleventwelve​thirteenfourteen​fifteensixteen', velocity: { text: 'watch 26/h', tier: 'watch' } }),
+]
+
 function App() {
   const [markDoneNote, setMarkDoneNote] = useState('')
   const [detailCard, setDetailCard] = useState(null)
-  const posts = useMemo(() => (
-    new URLSearchParams(location.search).get('edge') ? [...POSTS, ...EDGE_POSTS] : POSTS
-  ), [])
+  const posts = useMemo(() => {
+    const q = new URLSearchParams(location.search)
+    const list = q.get('edge') ? [...POSTS, ...EDGE_POSTS] : POSTS
+    return q.get('qa41') ? [...list, ...QA41_POSTS] : list
+  }, [])
   const cards = useMemo(() => posts.map((r) => {
     const card = toRivalCardRow(r)
     // The QA page mirrors the cover path into the served location so the media
@@ -142,4 +174,4 @@ root.render(<App />)
 // Measurement seam for the CDP harness (no UI surface): the estimator the
 // placements were computed with, so the script can compare
 // getBoundingClientRect() against rivalCardHeightPx without re-deriving it.
-window.__RIVAL_QA__ = { rivalCardHeightPx, rivalHasPill }
+window.__RIVAL_QA__ = { rivalCardHeightPx, rivalHasPill, rivalWrapLines }

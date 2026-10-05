@@ -1,4 +1,5 @@
 {
+ "note": "pre-fix snapshot. demo-pre.html is now reproducible from HEAD via `node docs/evidence/account-monitor-v2-cards-3110/harness/build-demo.mjs --pre` (shell only; reuses the committed demo-bundle-pre.js snapshot). Reproduce: python3 -m http.server <port> --directory docs/evidence/account-monitor-v2-cards-3110/harness && node docs/evidence/account-monitor-v2-cards-3110/harness/measure-placement.mjs \"http://127.0.0.1:<port>/demo-pre.html?edge=1&theme=dark&width=1164\" <out>.",
  "url": "http://127.0.0.1:8512/demo-pre.html?edge=1&theme=dark&width=1164",
  "columns": 5,
  "columnWidth": 220,

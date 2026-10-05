@@ -159,6 +159,9 @@ try {
     columns: data.cols,
     columnWidth: data.colW,
     feedHeight: Math.round(data.feedHeight * 100) / 100,
+    // R6-②: record the id whitelist verbatim — a filtered run must say so,
+    // otherwise `maxAbsDiff` reads as if it covered every card on the URL.
+    only: ONLY ? [...ONLY] : null,
     table: rows,
     maxAbsDiff,
     replayMismatches,

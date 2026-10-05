@@ -25,7 +25,14 @@ export function rivalLocaleOf(t) {
   const host = t.hostLocale
   if (host) {
     const active = (typeof host.getSnapshot === 'function' ? host.getSnapshot()?.active : host.current) || ''
-    if (active) return String(active).toLowerCase().startsWith('en') ? 'en' : 'zh'
+    if (active) {
+      const lower = String(active).toLowerCase()
+      // R6-⑧：只认得 zh/en 两个前缀；第三语种（ja/ko/…）不默认 zh，
+      // 落回字典探针按实际绑定字典求解，避免日/韩用户拿到中文文案配
+      // 中文计数（万 / 天前）的混搭口径。
+      if (lower.startsWith('en')) return 'en'
+      if (lower.startsWith('zh')) return 'zh'
+    }
   }
   const probe = String(t('rivalFeed.card.replicate') || '')
   if (!probe || probe === 'rivalFeed.card.replicate') return 'zh'

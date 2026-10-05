@@ -58,6 +58,22 @@ describe('rivalLocaleOf', () => {
     const tCurrent = Object.assign((key) => key, { hostLocale: { current: 'zh-Hans' } })
     assert.equal(rivalLocaleOf(tCurrent), 'zh')
   })
+
+  it('a third host locale falls through to the dictionary probe instead of being judged zh (R6-⑧)', () => {
+    // host 'ja'/'ko' must not default to zh copy + zh units: the format layer
+    // falls through to the probe, which resolves against the actual bound
+    // dictionary (en dictionary → 'en', so a ja user gets K/M and "3d ago"
+    // consistently instead of mixed zh units under ja copy).
+    const jaHost = { getSnapshot: () => ({ active: 'ja' }) }
+    const koHost = { getSnapshot: () => ({ active: 'ko-KR' }) }
+    const tJaEnDict = Object.assign((key) => en[key] || key, { hostLocale: jaHost })
+    assert.equal(rivalLocaleOf(tJaEnDict), 'en', 'ja host + en dictionary must resolve to en, not zh')
+    const tKoZhDict = Object.assign((key) => zh[key] || key, { hostLocale: koHost })
+    assert.equal(rivalLocaleOf(tKoZhDict), 'zh', 'ko host + zh dictionary resolves via the probe')
+    // zh-prefix hosts keep winning directly.
+    const tZhTw = Object.assign((key) => en[key] || key, { hostLocale: { getSnapshot: () => ({ active: 'zh-TW' }) } })
+    assert.equal(rivalLocaleOf(tZhTw), 'zh')
+  })
 })
 
 describe('formatCount — locale', () => {

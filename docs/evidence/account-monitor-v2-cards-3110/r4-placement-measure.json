@@ -1,8 +1,9 @@
 {
- "url": "http://127.0.0.1:8512/demo.html?edge=1&theme=dark&width=1164",
+ "url": "http://127.0.0.1:8561/demo.html?edge=1&theme=dark&width=1164",
  "columns": 5,
  "columnWidth": 220,
- "feedHeight": 1007.63,
+ "feedHeight": 988.5,
+ "only": null,
  "table": [
   {
    "id": "ra_1:p1",
@@ -153,6 +154,46 @@
    "est": 186,
    "diff": 0,
    "pillRow": false
+  },
+  {
+   "id": "ra_4:e4",
+   "type": "text",
+   "col": 0,
+   "top": 786.17,
+   "measured": 162,
+   "est": 162,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:e5",
+   "type": "text",
+   "col": 3,
+   "top": 825.63,
+   "measured": 162,
+   "est": 162,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:e6",
+   "type": "text",
+   "col": 1,
+   "top": 828.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:e7",
+   "type": "text",
+   "col": 2,
+   "top": 844.5,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
   }
  ],
  "maxAbsDiff": 0.01,
@@ -232,6 +273,26 @@
    "id": "ra_5:e3",
    "expectedCol": 1,
    "actualCol": 1
+  },
+  {
+   "id": "ra_4:e4",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_4:e5",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_5:e6",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_4:e7",
+   "expectedCol": 2,
+   "actualCol": 2
   }
  ],
  "adjacentOverlaps": [],

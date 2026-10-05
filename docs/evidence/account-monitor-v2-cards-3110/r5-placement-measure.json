@@ -1,8 +1,9 @@
 {
- "url": "http://127.0.0.1:8512/demo.html?edge=1&theme=dark&width=1164",
+ "url": "http://127.0.0.1:8561/demo.html?edge=1&theme=dark&width=1164",
  "columns": 5,
  "columnWidth": 220,
- "feedHeight": 1007.63,
+ "feedHeight": 988.5,
+ "only": null,
  "table": [
   {
    "id": "ra_1:p1",
@@ -170,8 +171,8 @@
    "col": 3,
    "top": 825.63,
    "measured": 162,
-   "est": 182,
-   "diff": -20,
+   "est": 162,
+   "diff": 0,
    "pillRow": true
   },
   {
@@ -195,7 +196,7 @@
    "pillRow": true
   }
  ],
- "maxAbsDiff": 20,
+ "maxAbsDiff": 0.01,
  "replayMismatches": 0,
  "replay": [
   {

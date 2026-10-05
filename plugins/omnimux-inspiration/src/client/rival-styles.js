@@ -688,13 +688,18 @@ export const RIVAL_CSS = `
   border-radius: 8px;
   font-size: 11px;
   white-space: nowrap;
+  /* R6-③：220px 最小列宽下英文文案（"AI breakdown" clientWidth 62 /
+     scrollWidth 74）会溢出按钮框并与第四位状态槽重叠 5.2px —— nowrap
+     必须配溢出隐藏。 */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .on-media .omnimux-rival-act-btn {
   border-color: var(--dsw-specific-media-border);
   background: var(--dsw-specific-media-btn-bg);
   color: var(--dsw-specific-media-fg);
 }
-.on-media .omnimux-rival-act-btn:hover {
+.on-media .omnimux-rival-act-btn:hover:not(:disabled) {
   background: var(--dsw-specific-media-btn-hover);
 }
 .on-surface .omnimux-rival-act-btn {
@@ -702,9 +707,21 @@ export const RIVAL_CSS = `
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
 }
-.on-surface .omnimux-rival-act-btn:hover {
+.on-surface .omnimux-rival-act-btn:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover);
   border-color: var(--dsw-alias-border-l3);
+}
+/* R6-⑨：禁用按钮的 aria-describedby 目标——文字对读屏可达、不可见。 */
+.omnimux-rival-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 .omnimux-rival-act-slot {
   display: inline-flex;

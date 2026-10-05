@@ -98,7 +98,7 @@ export function RivalAccountsPanel(props) {
    * reports the outcome instead of reimplementing the mount.
    */
   const handleReplicate = useCallback(async (card) => {
-    const ticket = String(card.id)
+    const ticket = String(card?.id ?? '')
     // busyId is a single ticket: without this guard a click on a second card
     // starts a concurrent run and the first run's `finally` clears the ticket
     // mid-flight (R5-⑨, same guard its two sibling handlers already carry).
