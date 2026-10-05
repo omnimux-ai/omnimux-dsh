@@ -288,6 +288,529 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
 
   shots.push(await screenshot('04-avatar-history'))
 
+  // ── 6. J3 · 真实生成 → 资产库「角色」自动建档 ──────────────────────────────
+  // 这一段走的是完整业务路径：真机新建形象 → 真机点生成 → 中枢真实提交/轮询/下载落盘
+  // → 插件归档回调把主图存进资产库「角色」。判定只读应用自己的 HTTP 面或真实 DOM。
+  // 整段包在 try/catch 里：任何一步失败都必须留下已收集的断言与失败原因，
+  // 而不是把整段旅程塌成一条 journey-error（那会连前面的断言一起丢掉）。
+  const AVATAR_NAME = '验收形象3176'
+  const NAME_LITERAL = JSON.stringify(AVATAR_NAME)
+  const avatarIdRef = { id: '' }
+
+  try {
+    const clickedCreate = await evaluate(`(() => {
+      const page = document.querySelector('.omx-avatar-page')
+      if (!page) return { ok: false, why: 'stage-missing' }
+      const hit = [...page.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === '新建形象')
+      if (!hit) return { ok: false, why: 'create-button-missing' }
+      hit.click()
+      return { ok: true }
+    })()`)
+    add('j3-create-avatar-trigger-clickable', clickedCreate.ok === true, clickedCreate.why ?? '已点击「新建形象」')
+
+    await waitFor(
+      evaluate,
+      `(() => {
+        const input = document.querySelector('.omx-avatar-page input[aria-label="形象名称"]')
+        return input ? { ok: true } : { ok: false, why: 'name-input-missing' }
+      })()`,
+      15_000,
+      '新建形象的名称输入框',
+    )
+
+    // 受控输入必须走原生 setter + input 事件，直接改 value 不会触发 React 的 onChange。
+    const typedName = await evaluate(`(() => {
+      const input = document.querySelector('.omx-avatar-page input[aria-label="形象名称"]')
+      if (!input) return { ok: false, why: 'name-input-missing' }
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+      setter.call(input, ${NAME_LITERAL})
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      return { ok: true, value: input.value }
+    })()`)
+    add('j3-avatar-name-typed', typedName.value === AVATAR_NAME, `输入框值「${typedName.value}」`)
+
+    const avatarCreated = await waitFor(
+      evaluate,
+      `(() => {
+        const el = document.querySelector('.omx-avatar-avatars-name')
+        const text = (el?.textContent || '').trim()
+        return text === ${NAME_LITERAL} ? { ok: true, name: text } : { ok: false, why: 'name-not-current:' + text }
+      })()`,
+      20_000,
+      '新建形象成为当前形象',
+    )
+    add('j3-avatar-created-through-ui', avatarCreated.name === AVATAR_NAME, `当前形象「${avatarCreated.name}」`)
+
+    // 从插件自己的 HTTP 面取形象 id：与界面读的是同一份账本，不是另造一份状态。
+    const avatarList = await evaluate(`(async () => {
+      const res = await fetch('/api/omnimux/avatar/avatars')
+      const body = await res.json().catch(() => null)
+      const list = Array.isArray(body?.avatars) ? body.avatars : []
+      const hit = list.find((a) => a.name === ${NAME_LITERAL})
+      return { httpStatus: res.status, count: list.length, id: hit?.id ?? null, names: list.map((a) => a.name) }
+    })()`)
+    avatarIdRef.id = typeof avatarList.id === 'string' ? avatarList.id : ''
+    add(
+      'j3-avatar-present-in-plugin-ledger',
+      avatarList.httpStatus === 200 && avatarIdRef.id !== '',
+      `HTTP ${avatarList.httpStatus}，形象 ${avatarList.count} 个（${avatarList.names.join('、')}），id=${avatarList.id}`,
+    )
+
+    // 让「生成」按钮可用：先点随机补齐选项；仍不可用则如实报出原因，不绕过界面。
+    const enableCta = await evaluate(`(() => {
+      const page = document.querySelector('.omx-avatar-page')
+      if (!page) return { ok: false, why: 'stage-missing' }
+      const cta = page.querySelector('.omx-avatar-cta')
+      if (!cta) return { ok: false, why: 'generate-cta-missing' }
+      if (!cta.disabled) return { ok: true, wasDisabled: false }
+      const shuffle = page.querySelector('button[aria-label="随机"]')
+      if (!shuffle) return { ok: false, why: 'randomize-missing' }
+      shuffle.click()
+      return { ok: true, wasDisabled: true }
+    })()`)
+    if (enableCta.wasDisabled) await sleep(700)
+
+    const genClick = await evaluate(`(() => {
+      const page = document.querySelector('.omx-avatar-page')
+      const cta = page && page.querySelector('.omx-avatar-cta')
+      if (!cta) return { ok: false, why: 'generate-cta-missing' }
+      const modelText = (page.querySelector('.omx-avatar-dropdown-val')?.textContent || '').trim()
+      if (cta.disabled) return { ok: false, why: 'generate-cta-still-disabled', modelText }
+      cta.click()
+      return { ok: true, label: (cta.textContent || '').trim(), modelText }
+    })()`)
+    add(
+      'j3-generate-cta-clickable',
+      genClick.ok === true,
+      genClick.why ?? `已点击「${genClick.label}」，模型选择器显示「${genClick.modelText}」`,
+    )
+
+    // 提交后的第一手账本快照：没有这条就说明请求根本没落到服务端（而不是「还没生成完」）。
+    await sleep(2500)
+    const submitSnapshot = await evaluate(`(async () => {
+      const res = await fetch('/api/omnimux/avatar/tasks?avatarId=' + encodeURIComponent(${JSON.stringify(avatarIdRef.id)}))
+      const body = await res.json().catch(() => null)
+      const tasks = Array.isArray(body?.tasks) ? body.tasks : []
+      return {
+        httpStatus: res.status,
+        total: tasks.length,
+        kinds: tasks.map((t) => String(t.kind) + ':' + String(t.status)),
+      }
+    })()`)
+    // 界面上没出现任务时，直接用同一个端点读服务端错误原文：这决定了根因是渠道、
+    // 鉴权、契约还是提交前的校验，而不是靠猜。
+    let submitProbe = null
+    if (submitSnapshot.total < 1) {
+      submitProbe = await evaluate(`(async () => {
+        const catalogRes = await fetch('/omnimux/model-catalog')
+        const catalog = await catalogRes.json().catch(() => null)
+        const rows = Array.isArray(catalog?.image) ? catalog.image : []
+        const model = catalog?.defaults?.image || rows[0]?.id || ''
+        const res = await fetch('/api/omnimux/avatar/sheet', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            avatarId: ${JSON.stringify(avatarIdRef.id)},
+            model,
+            group: '',
+            tier: 'total',
+            selection: {},
+            brief: '验收诊断：仅用于读出服务端错误原文',
+          }),
+        })
+        const body = await res.json().catch(() => null)
+        const err = body?.error
+        return {
+          httpStatus: res.status,
+          model,
+          imageModelCount: rows.length,
+          success: body?.success === true,
+          errorCode: typeof err === 'object' && err ? String(err.code ?? '') : '',
+          errorMessage: typeof err === 'object' && err ? String(err.message ?? '') : String(err ?? ''),
+          taskStatus: body?.task?.status ?? null,
+          mode: body?.mode ?? null,
+        }
+      })()`)
+    }
+    add(
+      'j3-sheet-task-submitted-to-plugin',
+      submitSnapshot.total >= 1,
+      `HTTP ${submitSnapshot.httpStatus}，任务 ${submitSnapshot.total} 条：${submitSnapshot.kinds.join('、') || '（空）'}` +
+        (submitProbe
+          ? `；直连 /sheet 诊断：HTTP ${submitProbe.httpStatus}，模型 ${submitProbe.model}（目录 ${submitProbe.imageModelCount} 个），code=${submitProbe.errorCode}，message=${submitProbe.errorMessage}，task=${String(submitProbe.taskStatus)}，mode=${String(submitProbe.mode)}`
+          : ''),
+    )
+
+    // 任务终态由真实取回路径推进：界面轮询用的就是这个 refresh=1 入口，
+    // 这里显式打一次，并把服务端的错误原文带进断言细节（失败必须可定位）。
+    const sheetTask = await waitFor(
+      evaluate,
+      `(async () => {
+        const avatarId = ${JSON.stringify(avatarIdRef.id)}
+        const res = await fetch('/api/omnimux/avatar/tasks?avatarId=' + encodeURIComponent(avatarId))
+        const body = await res.json().catch(() => null)
+        const tasks = Array.isArray(body?.tasks) ? body.tasks : []
+        const sheets = tasks.filter((t) => t.kind === 'sheet')
+        const last = sheets[sheets.length - 1]
+        if (!last) return { ok: false, why: 'no-sheet-task:' + tasks.map((t) => String(t.kind) + ':' + String(t.status)).join('|') }
+        if (last.status === 'ready') {
+          return { ok: true, status: last.status, taskId: last.taskId, destPath: last.destPath, model: last.model, group: last.group, syncError: last.syncError ?? null, taskRef: last.taskRef ?? null }
+        }
+        if (last.status === 'failed') return { ok: false, why: 'failed:' + String(last.error || '') }
+        const refreshRes = await fetch('/api/omnimux/avatar/task?refresh=1&avatarId=' + encodeURIComponent(avatarId) + '&taskId=' + encodeURIComponent(String(last.taskId)))
+        const refreshBody = await refreshRes.json().catch(() => null)
+        const refreshed = refreshBody?.task
+        const refreshErr = refreshBody?.error
+        if (refreshed?.status === 'ready') {
+          return { ok: true, status: refreshed.status, taskId: refreshed.taskId, destPath: refreshed.destPath, model: refreshed.model, group: refreshed.group, syncError: refreshed.syncError ?? null, taskRef: refreshed.taskRef ?? null }
+        }
+        if (refreshed?.status === 'failed') return { ok: false, why: 'failed:' + String(refreshed.error || '') }
+        return {
+          ok: false,
+          why: 'status:' + String(refreshed?.status ?? last.status)
+            + ' ref=' + String(last.taskRef ?? 'null')
+            + ' http=' + String(refreshRes.status)
+            + ' err=' + String(typeof refreshErr === 'object' && refreshErr ? (refreshErr.code ?? '') + ':' + (refreshErr.message ?? '') : (refreshErr ?? refreshed?.error ?? '')),
+        }
+      })()`,
+      90_000,
+      '主图任务转为 ready',
+    )
+    add(
+      'j3-sheet-task-reached-ready',
+      sheetTask.status === 'ready' && typeof sheetTask.destPath === 'string' && sheetTask.destPath !== '',
+      `taskId=${sheetTask.taskId}，destPath=${sheetTask.destPath}，归档失败原因=${sheetTask.syncError === null ? '无' : sheetTask.syncError}`,
+    )
+    add('j3-sheet-archive-had-no-error', sheetTask.syncError === null, `syncError=${String(sheetTask.syncError)}`)
+
+    // 产物真的落到盘上并且浏览器能解码：这是「生成完成」的正几何证据。
+    const sheetDecoded = await waitFor(
+      evaluate,
+      `(() => {
+        const imgs = [...document.querySelectorAll('.omx-avatar-card-img')]
+        const decoded = imgs.filter((i) => i.complete && i.naturalWidth > 0)
+        if (decoded.length === 0) return { ok: false, why: 'no-decoded-card-image:' + imgs.length }
+        return { ok: true, total: imgs.length, decoded: decoded.length }
+      })()`,
+      30_000,
+      '主图卡片图片解码成功',
+    )
+    add('j3-sheet-artifact-decoded-in-ui', sheetDecoded.decoded > 0, `卡片图 ${sheetDecoded.total} 张，解码 ${sheetDecoded.decoded} 张`)
+
+    // 应用自己的资产库 HTTP 面：这条资产必须落在「角色」分类下，且引用键是该形象。
+    const archivedAsset = await waitFor(
+      evaluate,
+      `(async () => {
+        const res = await fetch('/omnimux/assets/library?type=character')
+        const body = await res.json().catch(() => null)
+        const assets = Array.isArray(body?.assets) ? body.assets : []
+        const wanted = ${JSON.stringify('omnimux-avatar:')} + ${JSON.stringify(avatarIdRef.id)}
+        const hit = assets.find((a) => a.source === wanted)
+        if (!hit) return { ok: false, why: 'asset-missing:' + assets.length }
+        return {
+          ok: true,
+          id: hit.id, name: hit.name, type: hit.type, cite: hit.cite, source: hit.source,
+          fileCount: Array.isArray(hit.files) ? hit.files.length : 0,
+        }
+      })()`,
+      60_000,
+      '资产库「角色」分类下的形象资产',
+    )
+    add(
+      'j3-asset-archived-under-character-category',
+      archivedAsset.type === 'character' && archivedAsset.cite === '@角色/' + AVATAR_NAME,
+      `type=${archivedAsset.type}，name=${archivedAsset.name}，cite=${archivedAsset.cite}`,
+    )
+    add('j3-asset-carries-the-sheet-file', archivedAsset.fileCount >= 1, `资产 ${archivedAsset.id} 引用文件 ${archivedAsset.fileCount} 个`)
+
+    // 真实界面：资产库 → 本地 → 「角色」分类下能看到这条资产卡片。
+    await evaluate(`(() => {
+      const entry = document.querySelector('[data-omnimux-assets-entry]')
+      if (entry) { entry.click(); return true }
+      const wb = window.__omnimuxWorkbench
+      if (wb && typeof wb.openWorkbench === 'function') {
+        void wb.openWorkbench({ tabId: 'omnimux-assets:library', focus: 'split' })
+        return true
+      }
+      return false
+    })()`)
+
+    // 本地分类行 + 搜索框：隔离 profile 会带进 Dev 的既有资产，只按分类翻页找不到新资产，
+    // 因此用真实搜索把范围收窄到这一个形象（这也是用户会做的动作）。
+    const roleChip = await waitFor(
+      evaluate,
+      `(() => {
+        const stage = document.querySelector('.omnimux-assets-stage')
+        if (!stage) return { ok: false, why: 'assets-stage-missing' }
+        const tabs = [...stage.querySelectorAll('button, [role="tab"]')]
+        const localTab = tabs.find((b) => (b.textContent || '').trim() === '本地')
+        if (localTab) localTab.click()
+        const chips = [...stage.querySelectorAll('.omnimux-assets-local-nav-row button')]
+        const role = chips.find((c) => (c.textContent || '').trim() === '角色')
+        if (!role) return { ok: false, why: 'role-chip-missing:' + chips.map((c) => (c.textContent || '').trim()).join('|') }
+        role.click()
+        const input = stage.querySelector('.omnimux-assets-search-wrap input')
+        if (!input) return { ok: false, why: 'search-input-missing' }
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+        setter.call(input, ${NAME_LITERAL})
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+        return { ok: true, chips: chips.length, searched: input.value }
+      })()`,
+      25_000,
+      '资产库「角色」分类入口与搜索框',
+    )
+    add(
+      'j3-role-category-entry-clickable',
+      roleChip.ok === true && roleChip.searched === AVATAR_NAME,
+      roleChip.why ?? `分类行 ${roleChip.chips} 项，已点击「角色」并搜索「${roleChip.searched}」`,
+    )
+
+    const cardJ3 = await waitFor(
+      evaluate,
+      `(() => {
+        const stage = document.querySelector('.omnimux-assets-stage')
+        const cards = [...document.querySelectorAll('.omnimux-assets-card')]
+        const hit = cards.find((c) => (c.textContent || '').includes(${NAME_LITERAL}))
+        if (!hit) {
+          const titles = cards.map((c) => (c.textContent || '').trim().slice(0, 20))
+          const pressed = [...(stage?.querySelectorAll('.omnimux-assets-local-nav-row button') ?? [])]
+            .map((b) => (b.textContent || '').trim() + ':' + String(b.getAttribute('aria-pressed')))
+          return { ok: false, why: 'card-missing:' + cards.length + ' titles=' + titles.join('|') + ' chips=' + pressed.join('|') }
+        }
+        const r = hit.getBoundingClientRect()
+        if (r.width <= 0 || r.height <= 0) return { ok: false, why: 'card-zero-size' }
+        return { ok: true, w: Math.round(r.width), h: Math.round(r.height), dataType: hit.getAttribute('data-type') }
+      })()`,
+      30_000,
+      '资产库里该形象的卡片',
+    )
+    add(
+      'j3-character-card-visible-in-asset-library-ui',
+      cardJ3.dataType === 'character',
+      `卡片 ${cardJ3.w}×${cardJ3.h}，data-type=${cardJ3.dataType}`,
+    )
+
+    shots.push(await screenshot('05-avatar-j3-asset-library'))
+
+    // ── 7. J4 · 多视角派生 → 该形象资产下的「多视角」文件夹 ──────────────────
+    // 说明（真实缺口，已写进报告）：当前界面里多视角弹窗只能从「已存在的多视角缩略格」
+    // 打开，首次多视角没有任何界面入口（locales 的「生成多视角」文案无人调用）。
+    // 因此这里调用插件自己的公开 HTTP 端点 POST /api/omnimux/avatar/multiview——
+    // 与界面弹窗点「重新生成」走的是同一个服务端函数，不是桩、不是旁路。
+    // 生成、轮询、下载、归档全部真实发生；J4 的界面判定仍全部落在真实资产库 UI 上。
+    const mvSubmit = await evaluate(`(async () => {
+      const res = await fetch('/api/omnimux/avatar/multiview', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          avatarId: ${JSON.stringify(avatarIdRef.id)},
+          model: ${JSON.stringify(sheetTask.model ?? '')},
+          group: ${JSON.stringify(sheetTask.group ?? '')},
+        }),
+      })
+      const body = await res.json().catch(() => null)
+      return {
+        httpStatus: res.status,
+        success: body?.success === true,
+        taskId: body?.task?.taskId ?? null,
+        mode: body?.mode ?? null,
+        error: body?.error?.message ?? null,
+      }
+    })()`)
+    add(
+      'j4-multiview-generation-submitted',
+      mvSubmit.httpStatus === 200 && mvSubmit.success === true,
+      `HTTP ${mvSubmit.httpStatus}，taskId=${mvSubmit.taskId}，mode=${mvSubmit.mode}，error=${String(mvSubmit.error)}`,
+    )
+
+    // 多视角任务同样由真实取回路径推进：主动打一次 refresh=1（界面轮询用的是同一个入口）。
+    const mvReady = await waitFor(
+      evaluate,
+      `(async () => {
+        const avatarId = ${JSON.stringify(avatarIdRef.id)}
+        const tasksRes = await fetch('/api/omnimux/avatar/tasks?avatarId=' + encodeURIComponent(avatarId))
+        const tasksBody = await tasksRes.json().catch(() => null)
+        const tasks = Array.isArray(tasksBody?.tasks) ? tasksBody.tasks : []
+        const mvs = tasks.filter((t) => t.kind === 'multiview')
+        const last = mvs[mvs.length - 1]
+        if (!last) return { ok: false, why: 'no-multiview-task' }
+        if (last.status === 'ready') {
+          return { ok: true, status: last.status, taskId: last.taskId, destPath: last.destPath, syncError: last.syncError ?? null }
+        }
+        if (last.status === 'failed') return { ok: false, why: 'failed:' + String(last.error || '') }
+        const refreshRes = await fetch('/api/omnimux/avatar/task?refresh=1&avatarId=' + encodeURIComponent(avatarId) + '&taskId=' + encodeURIComponent(String(last.taskId)))
+        const refreshBody = await refreshRes.json().catch(() => null)
+        const refreshed = refreshBody?.task
+        if (refreshed?.status === 'ready') {
+          return { ok: true, status: refreshed.status, taskId: refreshed.taskId, destPath: refreshed.destPath, syncError: refreshed.syncError ?? null }
+        }
+        if (refreshed?.status === 'failed') return { ok: false, why: 'failed:' + String(refreshed.error || '') }
+        return { ok: false, why: 'status:' + String(refreshed?.status ?? last.status) + ':' + String(refreshed?.error || '') }
+      })()`,
+      90_000,
+      '多视角任务转为 ready',
+    )
+    add(
+      'j4-multiview-task-reached-ready',
+      mvReady.status === 'ready' && typeof mvReady.destPath === 'string' && mvReady.destPath !== '',
+      `taskId=${mvReady.taskId}，destPath=${mvReady.destPath}，归档失败原因=${mvReady.syncError === null ? '无' : mvReady.syncError}`,
+    )
+    add('j4-multiview-archive-had-no-error', mvReady.syncError === null, `syncError=${String(mvReady.syncError)}`)
+
+    // 应用自己的资产库 HTTP 面：该资产下必须出现名为「多视角」的目录引用。
+    const mvFolder = await waitFor(
+      evaluate,
+      `(async () => {
+        const res = await fetch('/omnimux/assets/library/detail?id=' + encodeURIComponent(${JSON.stringify(archivedAsset.id)}))
+        const body = await res.json().catch(() => null)
+        const files = Array.isArray(body?.asset?.files) ? body.asset.files : []
+        const folder = files.find((f) => {
+          const name = String(f?.original_name || f?.real_path || '')
+          return name === ${JSON.stringify('多视角')} && (f?.kind === undefined || f?.kind === 'directory')
+        })
+        if (!folder) return { ok: false, why: 'folder-missing:' + files.map((f) => String(f?.original_name || '') + '#' + String(f?.kind)).join('|') }
+        return { ok: true, fileId: folder.id, kind: folder.kind ?? null, name: folder.original_name ?? null, fileCount: files.length }
+      })()`,
+      60_000,
+      '资产下的「多视角」目录引用',
+    )
+    add(
+      'j4-multiview-folder-attached-to-avatar-asset',
+      typeof mvFolder.fileId === 'string' && mvFolder.fileId !== '',
+      `目录引用 id=${mvFolder.fileId}，kind=${String(mvFolder.kind)}，资产下共 ${mvFolder.fileCount} 个引用`,
+    )
+
+    const mvEntries = await evaluate(`(async () => {
+      const res = await fetch('/omnimux/assets/library/files?id=' + encodeURIComponent(${JSON.stringify(archivedAsset.id)}) + '&file=' + encodeURIComponent(${JSON.stringify(mvFolder.fileId ?? '')}))
+      const body = await res.json().catch(() => null)
+      const entries = Array.isArray(body?.entries) ? body.entries : []
+      return {
+        httpStatus: res.status,
+        count: entries.length,
+        names: entries.map((e) => String(e?.name ?? e?.relative_path ?? '')),
+        images: entries.filter((e) => /\.(png|jpe?g|webp)$/i.test(String(e?.name ?? e?.relative_path ?? ''))).length,
+      }
+    })()`)
+    add(
+      'j4-multiview-sheet-listed-inside-folder',
+      mvEntries.httpStatus === 200 && mvEntries.images >= 1,
+      `文件夹内 ${mvEntries.count} 项（图片 ${mvEntries.images}）：${mvEntries.names.join('、')}`,
+    )
+
+    // 真实界面：点开该资产 → 点进「多视角」文件夹 → 里面的图真的解码出来 → 就地在文件夹内取证。
+    // 资产库的搜索框是防抖的：查询落地后会重取列表并收起浏览层，因此这里对
+    // 「进入文件夹 → 断言 → 截图」做有限次重试，保证 J4 的截图确实是文件夹内部的画面，
+    // 而不是浏览层被收起后的通用首页（那是冒充证据）。
+    const openAssetBrowse = `(() => {
+      if (document.querySelector('.omnimux-assets-browse')) return { ok: true, already: true }
+      const cards = [...document.querySelectorAll('.omnimux-assets-card')]
+      const hit = cards.find((c) => (c.textContent || '').includes(${NAME_LITERAL}))
+      if (!hit) return { ok: false, why: 'asset-card-missing:' + cards.map((c) => (c.textContent || '').trim().slice(0, 16)).join('|') }
+      hit.click()
+      return { ok: true, already: false }
+    })()`
+
+    const enterFolder = `(() => {
+      const browse = document.querySelector('.omnimux-assets-browse')
+      if (!browse) return { ok: false, why: 'browse-missing' }
+      const crumbs = [...browse.querySelectorAll('.omnimux-assets-crumb')].map((c) => (c.textContent || '').trim())
+      if (crumbs.some((c) => c.indexOf(${JSON.stringify('多视角')}) !== -1)) return { ok: true, already: true }
+      const cards = [...browse.querySelectorAll('.omnimux-assets-card')]
+      const hit = cards.find((c) => (c.textContent || '').trim() === ${JSON.stringify('多视角')}
+        || (c.getAttribute('aria-label') || '').trim() === ${JSON.stringify('多视角')})
+      if (!hit) return { ok: false, why: 'folder-card-missing:' + cards.map((c) => (c.textContent || '').trim().slice(0, 16)).join('|') }
+      const r = hit.getBoundingClientRect()
+      if (r.width <= 0 || r.height <= 0) return { ok: false, why: 'folder-card-zero-size' }
+      hit.click()
+      return { ok: true, already: false, w: Math.round(r.width), h: Math.round(r.height) }
+    })()`
+
+    // 正几何必须落在视口内：元素可以布局出正宽高却整块在视口外（收起的分栏就是这样），
+    // 那种状态下截图里什么都看不到——不能拿它当文件夹内景的证据。
+    const inspectFolder = `(() => {
+      const browse = document.querySelector('.omnimux-assets-browse')
+      if (!browse) return { ok: false, why: 'browse-missing' }
+      const r = browse.getBoundingClientRect()
+      const onScreen = r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0
+        && r.left < window.innerWidth && r.top < window.innerHeight
+      if (!onScreen) {
+        return { ok: false, why: 'browse-offscreen', rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], viewport: [window.innerWidth, window.innerHeight] }
+      }
+      const crumbs = [...browse.querySelectorAll('.omnimux-assets-crumb')].map((c) => (c.textContent || '').trim())
+      if (!crumbs.some((c) => c.indexOf(${JSON.stringify('多视角')}) !== -1)) return { ok: false, why: 'not-inside-folder:' + crumbs.join('|') }
+      const imgs = [...browse.querySelectorAll('img')]
+      const decoded = imgs.filter((i) => i.complete && i.naturalWidth > 0)
+      if (decoded.length === 0) return { ok: false, why: 'no-decoded-image:' + imgs.length }
+      return { ok: true, decoded: decoded.length, total: imgs.length, crumbs: crumbs.join(' / '), rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] }
+    })()`
+
+    const bringAssetsPanelOnScreen = `(async () => {
+      const wb = window.__omnimuxWorkbench
+      if (wb && typeof wb.openWorkbench === 'function') {
+        await wb.openWorkbench({ tabId: 'omnimux-assets:library', focus: 'split' })
+        return { ok: true, via: 'openWorkbench' }
+      }
+      const entry = document.querySelector('[data-omnimux-assets-entry]')
+      if (entry) { entry.click(); return { ok: true, via: 'sidebar-entry' } }
+      return { ok: false, via: null }
+    })()`
+
+    const openResult = await evaluate(openAssetBrowse)
+    add('j4-asset-card-opens-browse', openResult.ok === true, openResult.why ?? '已点开形象资产')
+
+    let folderCard = null
+    let insideImage = null
+    let j4ShotVerified = false
+    for (let attempt = 0; attempt < 4 && !j4ShotVerified; attempt += 1) {
+      if (attempt > 0) {
+        // 上一轮浏览层被收起（防抖重取），重开资产卡片再进一次。
+        await evaluate(openAssetBrowse)
+        await sleep(500)
+      }
+      // 分栏收起时先把它拉回可见区，否则断言与截图都取不到文件夹内景。
+      const visible = await evaluate(inspectFolder).catch(() => null)
+      if (!visible?.ok && String(visible?.why ?? '').startsWith('browse-offscreen')) {
+        await evaluate(bringAssetsPanelOnScreen)
+        await sleep(700)
+      }
+      const entered = await waitFor(evaluate, enterFolder, 20_000, '「多视角」文件夹卡片').catch(() => null)
+      if (entered && !folderCard) folderCard = entered
+      const inspected = await waitFor(evaluate, inspectFolder, 20_000, '「多视角」文件夹内的图片解码').catch(() => null)
+      if (!inspected) continue
+      insideImage = inspected
+      // 断言通过后立刻取证，并复核「截图那一刻仍在文件夹内」。
+      await screenshot('06-avatar-j4-multiview-folder')
+      const stillInside = await evaluate(inspectFolder).catch(() => null)
+      j4ShotVerified = Boolean(stillInside?.ok)
+    }
+
+    add(
+      'j4-multiview-folder-card-clickable-in-ui',
+      folderCard?.ok === true,
+      folderCard ? `文件夹卡片 ${folderCard.w ?? '?'}×${folderCard.h ?? '?'}，已点击进入` : '未能进入「多视角」文件夹',
+    )
+    add(
+      'j4-multiview-sheet-decoded-inside-folder-in-ui',
+      insideImage?.ok === true && j4ShotVerified,
+      insideImage
+        ? `面包屑「${insideImage.crumbs}」，图 ${insideImage.total} 张，解码 ${insideImage.decoded} 张，浏览区视口内位置=[${insideImage.rect}]，截图时仍在文件夹内=${j4ShotVerified}`
+        : '文件夹内未解码出图片',
+    )
+
+    // 取证之后把界面挪回虚拟形象页：否则驱动收尾那张 app-home.png 与 J4 截图是同一帧，
+    // 两张不同用途的证据无法互相区分（不是缺陷，但会让复核者无法判断哪张是哪张）。
+    await evaluate(`(() => {
+      const entry = document.querySelector('[data-omnimux-avatar-entry]')
+      if (entry) { entry.click(); return true }
+      return false
+    })()`)
+    await sleep(800)
+
+  } catch (error) {
+    add('j3-j4-section-error', false, error?.message ?? String(error))
+  }
+
   io.writeFileSync(`${evidenceDir}/journey-result.json`, JSON.stringify({ assertions, shots }, null, 2))
   return { assertions }
 }

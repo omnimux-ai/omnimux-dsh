@@ -10,6 +10,24 @@ const EXECUTABLE = '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux';
 const WRAPPER = '/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js';
 const OFFICIAL_ENDPOINT = 'https://api.deepseek.com';
 const SYNTHETIC_KEY = 'QA-SYNTHETIC-NOT-A-REAL-KEY';
+/**
+ * 隔离环境里的媒体生成凭据。中枢的 omnimux 线路只接受 `sk-` 前缀的密钥，
+ * 这里给的是本机 mock 的假密钥：它只在本进程树内存在，不会落到磁盘，也不会发往真实上游。
+ */
+const SYNTHETIC_MEDIA_KEY = 'sk-qa-local-media-key';
+/**
+ * mock 的合成图像产物：两张 1×1 的有效 PNG，字节不同。
+ * 文生图（无参考图）返回第一张，图生图（请求体带 image）返回第二张，
+ * 验收因此能按字节证明「哪张产物落在哪个位置」，而不是只数元素个数。
+ */
+const MOCK_IMAGE_TEXT_TO_IMAGE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4o6EBAAMQAS0ujiXaAAAAAElFTkSuQmCC',
+  'base64',
+);
+const MOCK_IMAGE_IMAGE_TO_IMAGE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPQiLoDAAIMAV9Wszw4AAAAAElFTkSuQmCC',
+  'base64',
+);
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = sourceRoot.split(`${sep}.worktrees${sep}`)[0];
 const failure = code => Object.assign(new Error('TEST_ENV_' + code), { code: 'TEST_ENV_' + code });
@@ -114,8 +132,54 @@ function validateRoot(root, io, repo) {
 
 /** Local-only protocol double; never forwards requests or echoes submitted content. */
 async function startMock() {
+  let imageTasks = 0;
+  /** task_id → 该任务的产物口味（文生图 / 图生图），决定 /v1/qa-media 回哪一张 PNG。 */
+  const imageFlavourByTask = new Map();
   const server = createServer(async (req, res) => {
     const reply = (status, value) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(value)); };
+    const requestPath = (req.url || '').split('?')[0];
+    // 非 chat 车道的请求逐条打到 stderr：隔离环境的 mock 在父进程里，
+    // 这条日志是「请求到底有没有到本机 mock」的唯一直接证据。
+    if (requestPath !== '/chat/completions') {
+      process.stderr.write(`[qa-mock] ${req.method} ${requestPath} auth=${req.headers.authorization ? 'yes' : 'no'} group=${String(req.headers['x-omnimux-group'] ?? '')}\n`);
+    }
+    // 合成图像生成车道：OpenAI 兼容的最小媒体任务形状（提交回 task_id、轮询回产物 URL、
+    // 产物由本机提供真实 PNG 字节）。它不解析生成参数，也不替任何插件做判定——
+    // 只是让中枢那条「提交 → 轮询 → 下载落盘」的真实代码路径在本机有可用的上游。
+    if (/\/images\/generations$/.test(requestPath) && req.method === 'POST') {
+      let body = '';
+      try {
+        for await (const chunk of req) body += chunk.toString();
+      } catch { return reply(400, { error: { message: 'QA模拟：请求无效' } }); }
+      imageTasks += 1;
+      // 带参考图的请求（图生图）与纯文生图返回不同字节，验收据此分辨产物归属。
+      const flavour = body.includes('"image"') ? 'image-to-image' : 'text-to-image';
+      const taskId = `qa-image-task-${imageTasks}`;
+      imageFlavourByTask.set(taskId, flavour);
+      // 同步出图：中枢明确支持「提交即带产物地址」的同步形态（image 提交可能同步返回，
+      // 与 live 模式真机验收同一条路径），因此这里同时给出 task_id 与产物地址。
+      // 产物地址指向本机 mock，中枢会真的下载字节并落到 dest。
+      return reply(200, {
+        task_id: taskId,
+        data: { url: `http://${req.headers.host}/qa-media/${taskId}.png` },
+      });
+    }
+    const taskMatch = /\/images\/generations\/([A-Za-z0-9_-]+)$/.exec(requestPath);
+    if (taskMatch && req.method === 'GET') {
+      return reply(200, {
+        status: 'completed',
+        data: { url: `http://${req.headers.host}/qa-media/${taskMatch[1]}.png` },
+      });
+    }
+    const mediaMatch = /\/qa-media\/([A-Za-z0-9_-]+)\.png$/.exec(requestPath);
+    if (mediaMatch && req.method === 'GET') {
+      const bytes = imageFlavourByTask.get(mediaMatch[1]) === 'image-to-image'
+        ? MOCK_IMAGE_IMAGE_TO_IMAGE
+        : MOCK_IMAGE_TEXT_TO_IMAGE;
+      res.writeHead(200, { 'content-type': 'image/png', 'content-length': bytes.length, 'cache-control': 'no-store' });
+      res.end(bytes);
+      return;
+    }
     if (req.url !== '/chat/completions') return reply(404, { error: { message: 'QA模拟：路径不支持' } });
     if (req.method !== 'POST') return reply(405, { error: { message: 'QA模拟：方法不支持' } });
     let size = 0; const chunks = [];
@@ -223,6 +287,13 @@ export function createTestEnvironmentStarter(deps = {}) {
       if (mode !== 'onboarding') {
         env.DEEPSEEK_API_KEY = mode === 'ui' ? SYNTHETIC_KEY : credential;
         env.DEEPSEEK_BASE_URL = endpoint;
+        // ui 模式的媒体生成同样落在本机 mock 上：否则隔离环境里没有任何渠道能产出图像，
+        // 「生成完成 → 自动归档」这条业务路径在真机上永远走不到（Issue #3176 J3/J4）。
+        // 只写隔离进程的环境变量，绝不落盘，也绝不指向真实上游。
+        if (mode === 'ui') {
+          env.OMNIMUX_BASE_URL = `${mock.origin}/v1`;
+          env.OMNIMUX_API_KEY = SYNTHETIC_MEDIA_KEY;
+        }
         if (mode === 'live' && credentialBundle) {
           if (credentialBundle.OMNIMUX_API_KEY) {
             env.OMNIMUX_API_KEY = credentialBundle.OMNIMUX_API_KEY;
@@ -366,10 +437,41 @@ export function createTestEnvironmentStarter(deps = {}) {
           for (const item of io.readdirSync(devProfile)) {
             // package.json 是插件注册表，必须写实体副本而不是软链——否则下面为新插件补注册时
             // 会顺着软链改到 Dev profile 上。
+            // ui 模式的 cordis.patch.yml 同样必须是实体副本（下面会追加本机 mock 的媒体线路覆盖），
+            // 软链会顺着写到 Dev profile 上——那是硬性禁止的。
             if (item === 'node_modules' || item === '.materialize-snapshots' || item === 'package.json') continue;
+            if (mode === 'ui' && item === 'cordis.patch.yml') continue;
             try {
               io.symlinkSync(join(devProfile, item), join(omnimuxProfileDir, item));
             } catch {}
+          }
+
+          // ui 模式：中枢的媒体线路必须落在本机 mock 上，否则隔离环境里没有任何渠道能产出图像，
+          // 「生成完成 → 自动归档」这条业务路径在真机上永远走不到（Issue #3176 J3/J4）。
+          // 为什么不能只用 OMNIMUX_BASE_URL：官方媒体请求在 execution-plan 里会把 env 收窄成
+          // 只含密钥的对象，base URL 覆盖到不了路由层；这里改为在隔离 profile 的插件配置里
+          // 覆盖 provider 的 baseUrl。这是测试配置（只写一次性隔离 profile），不改产品代码。
+          if (mode === 'ui') {
+            const devCordisPatch = join(devProfile, 'cordis.patch.yml');
+            if (io.existsSync(devCordisPatch)) {
+              const base = io.readFileSync(devCordisPatch, 'utf8');
+              const override = [
+                '',
+                '# QA 隔离环境（仅此一次性 profile，绝不写 Dev）：把中枢媒体线路指向本机 mock。',
+                '- id: omnimux',
+                '  config:',
+                '    media:',
+                '      providers:',
+                '        omnimux:',
+                `          baseUrl: ${mock.origin}/v1`,
+                '',
+              ].join('\n');
+              io.writeFileSync(
+                join(omnimuxProfileDir, 'cordis.patch.yml'),
+                base.replace(/\n*$/, '\n') + override,
+                { mode: 0o600 },
+              );
+            }
           }
 
           // 动态扫描工作树 plugins/* 下的全部 21 个插件（若测试桩返回空则回退核心集合）
