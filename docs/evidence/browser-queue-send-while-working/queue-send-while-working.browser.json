@@ -1,0 +1,77 @@
+{
+  "task": "browser-queue-send-while-working",
+  "surface": "omnimux-browser extension side panel (real App bundle)",
+  "url": "http://127.0.0.1:58711/",
+  "browser": "Google Chrome (headless, CDP)",
+  "bridge": "stubbed by .tmp/qa-queue-send/api-shim.ts (no DSH host in the worktree)",
+  "chrome": "panel App.tsx + styles.css from this worktree",
+  "screenshots": [
+    "01-running-empty-stop.png",
+    "02-running-typed-send.png",
+    "03-after-queue-send-stop.png"
+  ],
+  "assertions": [
+    {
+      "name": "空闲且输入框为空时显示发送按钮（禁用态）",
+      "pass": true,
+      "detail": {
+        "label": "发送消息",
+        "disabled": true,
+        "isStop": false
+      }
+    },
+    {
+      "name": "空闲且有文字时发送按钮可用",
+      "pass": true,
+      "detail": {
+        "label": "发送消息",
+        "disabled": false,
+        "isStop": false
+      }
+    },
+    {
+      "name": "首条消息经 session.prompt 以 queue 模式提交",
+      "pass": true,
+      "detail": "queue"
+    },
+    {
+      "name": "排队态且输入框为空时显示停止按钮",
+      "pass": true,
+      "detail": {
+        "label": "停止生成",
+        "disabled": false,
+        "isStop": true
+      }
+    },
+    {
+      "name": "排队态输入框有文字时切回发送按钮且可用",
+      "pass": true,
+      "detail": {
+        "label": "发送消息",
+        "disabled": false,
+        "isStop": false
+      }
+    },
+    {
+      "name": "点击后新消息以 queue 模式入队",
+      "pass": true,
+      "detail": "queue"
+    },
+    {
+      "name": "入队内容为输入框文字",
+      "pass": true,
+      "detail": "[{\"type\":\"text\",\"text\":\"第二条排队消息\"}]"
+    },
+    {
+      "name": "发送后输入框清空，按钮回到停止",
+      "pass": true,
+      "detail": {
+        "label": "停止生成",
+        "disabled": false,
+        "isStop": true
+      }
+    }
+  ],
+  "pass": true,
+  "at": "2026-10-05T08:15:31.572Z"
+}
