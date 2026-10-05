@@ -102,7 +102,8 @@ export async function postDecisions(deps, body, options = {}) {
   const fetchFn = deps?.fetcher || globalThis.fetch
   const env = deps?.env ?? process.env
   const base = resolveDecisionsBaseUrl(env?.OMNIMUX_BASE_URL)
-  const endpoint = `${base}/decisions`
+  // System One path on the hub upstream; `/decisions` answers "Invalid URL" (docs/evidence/jev-systemone-endpoint/probe.json).
+  const endpoint = `${base}/systemone`
 
   const res = await fetchFn(endpoint, {
     method: 'POST',
