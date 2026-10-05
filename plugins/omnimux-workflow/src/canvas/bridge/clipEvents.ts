@@ -109,6 +109,13 @@ export interface SaveClipEditorPayload {
     durationMs?: number;
     width?: number;
     height?: number;
+    /**
+     * Content identity of the file just written (`mtimeMs:size` from the clip
+     * host). Re-exporting overwrites the same path, so the downstream node
+     * needs this token in its `mediaUrl` to make the browser fetch the new
+     * bytes instead of reusing the stale `<video>` element.
+     */
+    revision?: string;
   };
 }
 
@@ -124,6 +131,8 @@ export interface VideoCompositionNodeData {
   status: VideoCompositionStatus;
   renderProgress?: number;
   outputVideoUrl?: string;
+  /** Content identity of `outputVideoUrl`; part of the downstream node's media URL. */
+  outputRevision?: string;
   thumbnailUrl?: string;
   outputThumbnailUrl?: string;
   outputDurationMs?: number;

@@ -303,12 +303,17 @@ export async function blobToBase64(blob: Blob): Promise<string> {
  * third. `metadata` stays in the signature for existing callers but is not
  * part of the wire payload — the host derives the destination from the
  * project id.
+ *
+ * `revision` is the host's content identity (`mtimeMs:size`) for the file it
+ * just wrote. The canvas must carry it into the downstream node's `mediaUrl`,
+ * because re-exporting overwrites the same path and an unchanged URL never
+ * makes the browser reload the `<video>`.
  */
 export async function persistExportBlobToHost(
   projectId: string,
   blob: Blob,
   metadata: { durationMs?: number; width?: number; height?: number } = {},
-): Promise<{ path?: string; bytes?: number }> {
+): Promise<{ path?: string; bytes?: number; revision?: string }> {
   void metadata;
   try {
     if (!blob || blob.size === 0) return {};
@@ -321,7 +326,12 @@ export async function persistExportBlobToHost(
       console.warn("[export-runner] persistExportBlobToHost rejected:", res.status);
       return {};
     }
-    return await res.json();
+    const body = (await res.json()) as { path?: string; bytes?: number; revision?: string };
+    return {
+      path: body.path,
+      bytes: body.bytes,
+      revision: typeof body.revision === "string" && body.revision ? body.revision : undefined,
+    };
   } catch (err) {
     console.warn("[export-runner] persistExportBlobToHost failed:", err);
     return {};
@@ -609,6 +619,7 @@ export function useExportRunner(options: ExportRunnerOptions): UseExportRunner {
               durationMs,
               width,
               height,
+              revision: persistRes?.revision,
             },
           });
         }

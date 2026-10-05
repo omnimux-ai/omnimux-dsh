@@ -141,6 +141,20 @@ export function persistExportBytes(body, paths, fs, dest) {
   return bytes.length
 }
 
+/**
+ * 导出文件的内容身份（`mtimeMs:size`），口径与
+ * `omnimux-workflow/src/projects/mediaRevision.ts` 一致。
+ *
+ * 画布导出原地覆盖同一个 `<projectId>.mp4`，路径不变；下游成片节点必须靠这个版本
+ * 串才能让 `<video>` 重新取流，否则浏览器复用旧元素、停在首次加载的失败态。
+ * @param {string} file
+ * @param {typeof DEFAULT_FS} [fs]
+ */
+export function exportFileRevision(file, fs = DEFAULT_FS) {
+  const stat = fs.statSync(file)
+  return `${stat.mtimeMs}:${stat.size}`
+}
+
 /** 画布导出：POST save-export + application/octet-stream。 */
 function isRawExportUpload(req) {
   if ((req.method || 'GET').toUpperCase() !== 'POST') return false
@@ -251,6 +265,7 @@ export function createClipDispatcher(deps) {
             saved: true,
             path: dest,
             bytes,
+            revision: exportFileRevision(dest, fs),
           },
         }
       }

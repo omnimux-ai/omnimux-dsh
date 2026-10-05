@@ -275,3 +275,130 @@ test('错误桩 id output/input 即使写入 store，也不是画布能画的边
   assert.notEqual(broken.sourceHandle, CLIP_EXPORT_SOURCE_HANDLE);
   assert.notEqual(broken.targetHandle, CLIP_EXPORT_TARGET_HANDLE);
 });
+
+/* ── Issue #3146：重复导出必须让下游 <video> 重新取流 ───────────────────
+ * 导出原地覆盖同一个 <projectId>.mp4，URL 不变 → React 复用旧元素、停在首次
+ * 加载的失败态。把文件内容身份写进 URL 是让「状态本身」变化的做法。
+ */
+
+const revisionOne = '1760000000000:1048576';
+const revisionTwo = '1760000123456:2097152';
+const revisionedMediaUrl = `${expectedMediaUrl}&rev=${encodeURIComponent(revisionOne)}`;
+
+test('clipExportMediaUrl：无版本时与修复前逐字符一致，有版本时追加 rev', () => {
+  assert.equal(clipExportMediaUrl('/exports/a.mp4'), expectedMediaUrl);
+  assert.equal(clipExportMediaUrl('/exports/a.mp4', ''), expectedMediaUrl);
+  assert.equal(clipExportMediaUrl('/exports/a.mp4', '   '), expectedMediaUrl);
+  assert.equal(clipExportMediaUrl('/exports/a.mp4', revisionOne), revisionedMediaUrl);
+  // 已解析的 URL 也要能被重新指向新版本，且不重复叠加 rev。
+  assert.equal(clipExportMediaUrl(expectedMediaUrl, revisionOne), revisionedMediaUrl);
+  assert.equal(
+    clipExportMediaUrl(revisionedMediaUrl, revisionTwo),
+    `${expectedMediaUrl}&rev=${encodeURIComponent(revisionTwo)}`,
+  );
+  // 非本机文件地址（blob / http）仍原样透传。
+  assert.equal(clipExportMediaUrl('blob:http://127.0.0.1/x', revisionOne), 'blob:http://127.0.0.1/x');
+  assert.equal(clipExportMediaUrl('https://cdn.example.com/a.mp4', revisionOne), 'https://cdn.example.com/a.mp4');
+  // 版本串必须留在 ?path= 之外，路径还原不受影响。
+  const parsed = new URL(revisionedMediaUrl, 'http://127.0.0.1');
+  assert.equal(parsed.searchParams.get('path'), '/exports/a.mp4');
+  assert.equal(parsed.searchParams.get('rev'), revisionOne);
+});
+
+test('planClipExportDownstream：同一节点二次导出产出新 mediaUrl 的 patch，不新建节点', () => {
+  const first = planClipExportDownstream({
+    sourceNodeId: compositionNode.id,
+    sourcePosition: compositionNode.position,
+    sourceLabel: '视频合成',
+    output: { ...output, revision: revisionOne },
+    currentNodes: [compositionNode],
+    currentEdges: [],
+    nodeWidth: 350,
+  });
+  assert.ok(first);
+  assert.equal(first.addNodes.length, 1);
+  assert.equal(first.addNodes[0].data.mediaUrl, revisionedMediaUrl);
+
+  const created = first.addNodes[0];
+  const second = planClipExportDownstream({
+    sourceNodeId: compositionNode.id,
+    sourcePosition: compositionNode.position,
+    sourceLabel: '视频合成',
+    output: { ...output, revision: revisionTwo },
+    currentNodes: [compositionNode, { id: created.id, type: 'material', data: created.data }],
+    currentEdges: [drawableEdge(compositionNode.id, created.id)],
+    nodeWidth: 350,
+  });
+
+  assert.ok(second, '二次导出必须产出 patch，否则 <video> 的 src 不会变');
+  assert.deepEqual(second.addNodes, []);
+  assert.deepEqual(second.addEdges, []);
+  assert.equal(second.nodePatches.length, 1);
+  assert.equal(second.nodePatches[0].nodeId, created.id);
+  assert.equal(
+    second.nodePatches[0].data.mediaUrl,
+    `${expectedMediaUrl}&rev=${encodeURIComponent(revisionTwo)}`,
+  );
+});
+
+test('planClipExportDownstream：同一版本重复应用返回 null（不脏文档、不抖动 URL）', () => {
+  const node = {
+    id: 'node_mat_vid_rev',
+    type: 'material',
+    data: {
+      materialType: 'video',
+      label: '视频合成_成片',
+      status: 'ready',
+      selectedTool: 'import',
+      origin: CLIP_EXPORT_ORIGIN,
+      sourceCompositionNodeId: compositionNode.id,
+      mediaUrl: revisionedMediaUrl,
+      thumbnailUrl: output.thumbnailPath,
+      duration: 5,
+      size: { width: 1920, height: 1080 },
+    },
+  };
+  const plan = planClipExportDownstream({
+    sourceNodeId: compositionNode.id,
+    sourcePosition: compositionNode.position,
+    sourceLabel: '视频合成',
+    output: { ...output, revision: revisionOne },
+    currentNodes: [compositionNode, node],
+    currentEdges: [drawableEdge(compositionNode.id, node.id)],
+    nodeWidth: 350,
+  });
+  assert.equal(plan, null);
+});
+
+test('planClipExportDownstream：携带旧 rev 的成片节点仍按 ?path= 复用，不产生重复节点', () => {
+  // 没有 origin（早期版本写入的节点），只有带旧 rev 的 mediaUrl。
+  const legacy = {
+    id: 'node_mat_vid_legacy',
+    type: 'material',
+    data: { materialType: 'video', mediaUrl: revisionedMediaUrl },
+  };
+  const plan = planClipExportDownstream({
+    sourceNodeId: compositionNode.id,
+    sourcePosition: compositionNode.position,
+    sourceLabel: '视频合成',
+    output: { ...output, revision: revisionTwo },
+    currentNodes: [compositionNode, legacy],
+    currentEdges: [drawableEdge(compositionNode.id, legacy.id)],
+    nodeWidth: 350,
+  });
+  assert.ok(plan);
+  assert.deepEqual(plan.addNodes, [], '旧 rev 节点必须被复用，不得新增重复成片节点');
+  assert.equal(plan.nodePatches.length, 1);
+  assert.equal(plan.nodePatches[0].nodeId, legacy.id);
+  assert.equal(
+    plan.nodePatches[0].data.mediaUrl,
+    `${expectedMediaUrl}&rev=${encodeURIComponent(revisionTwo)}`,
+  );
+});
+
+test('videoComposition.tsx 把版本串存进节点数据并回填给 plan（两个 effect 不互相剥离 rev）', () => {
+  const source = readFileSync(sourcePath, 'utf8');
+  assert.match(source, /outputRevision: output\?\.revision/);
+  assert.match(source, /revision: nodeData\.outputRevision/);
+  assert.match(source, /nodeData\.outputRevision,/);
+});

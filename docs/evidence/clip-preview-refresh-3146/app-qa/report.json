@@ -1,0 +1,491 @@
+{
+  "runId": "9d275018-85f0-4c23-a381-0f3d4571789d",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/clip-preview-refresh-3146",
+  "origin": "http://127.0.0.1:55981",
+  "appPort": 55981,
+  "cdpPort": 56002,
+  "startedAt": "2026-10-05T17:55:47.665Z",
+  "completedAt": "2026-10-05T17:56:31.109Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:55981",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 21,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:55981",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-3vRlc92TKbquWzz2kVgixtiGgd6cyuWGM9bixSfwJpE"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 56002
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 10,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 24
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 10
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": false
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:canvas-island-mounted",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "keys": [
+          "mountCanvas",
+          "unmountCanvas",
+          "updateCanvas",
+          "useTextStageStore"
+        ]
+      }
+    },
+    {
+      "name": "journey:canvas-graph-seeded",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "status": 200,
+        "version": 0,
+        "getStatus": 200,
+        "text": "{\"workspace\":{\"schemaVersion\":3,\"id\":\"ws_qa_media\",\"name\":\"工作流\",\"version\":1,\"nodes\":[{\"id\":\"node_vc_qa_3146\",\"type\":\"video_composition\",\"position\":{\"x\":120,\"y\":160},\"data\":{\"title\":\"QA 合成\",\"label\":\"QA 合成\",\"status\":\"idle\",\"projectId\":\"clip_node_qa_3146\"}}],\"edges\":[],\"settings\":{\"maxParallel\":3,\"fail"
+      }
+    },
+    {
+      "name": "journey:video-composition-node-visible",
+      "pass": true,
+      "detail": {
+        "reactFlowNodes": 1,
+        "vcNodes": 1,
+        "materialVideos": [
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          },
+          {
+            "src": "",
+            "readyState": 0,
+            "errorCode": null,
+            "duration": null,
+            "networkState": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "journey:server-returned-revision",
+      "pass": true,
+      "detail": {
+        "status": 200,
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/clip-preview-refresh-3146/.test-env-bZ52Th/dsh/omnimux/clip/exports/clip_node_qa_3146.mp4",
+        "bytes": 2290,
+        "revision": "1791222975615.8013:2290"
+      }
+    },
+    {
+      "name": "journey:stale-file-removed",
+      "pass": true,
+      "detail": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/clip-preview-refresh-3146/.test-env-bZ52Th/dsh/omnimux/clip/exports/clip_node_qa_3146.mp4",
+        "removed": true
+      }
+    },
+    {
+      "name": "journey:revision-changed-between-exports",
+      "pass": true,
+      "detail": {
+        "before": "1791222975615.8013:2290",
+        "after": "1791222980889.4944:2290"
+      }
+    },
+    {
+      "name": "journey:P0-stale-element-broken",
+      "pass": true,
+      "detail": {
+        "src": "http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4",
+        "readyState": 0,
+        "errorCode": 4,
+        "duration": null,
+        "networkState": 3
+      }
+    },
+    {
+      "name": "journey:BEFORE-reexport-src-unchanged",
+      "pass": true,
+      "detail": {
+        "brokenSrc": "http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4",
+        "beforeSrc": "http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4"
+      }
+    },
+    {
+      "name": "journey:BEFORE-reexport-still-broken",
+      "pass": true,
+      "detail": {
+        "src": "http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4",
+        "readyState": 0,
+        "errorCode": 4,
+        "duration": null,
+        "networkState": 3
+      }
+    },
+    {
+      "name": "journey:AFTER-src-carries-rev",
+      "pass": true,
+      "detail": "http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4&rev=1791222980889.4944%3A2290"
+    },
+    {
+      "name": "journey:AFTER-video-playable-without-load",
+      "pass": true,
+      "detail": {
+        "src": "http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4&rev=1791222980889.4944%3A2290",
+        "readyState": 4,
+        "errorCode": null,
+        "duration": 1,
+        "networkState": 1
+      }
+    },
+    {
+      "name": "journey:journey-log",
+      "pass": true,
+      "detail": "{\"broken\":{\"src\":\"http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4\",\"readyState\":0,\"errorCode\":4,\"duration\":null,\"networkState\":3},\"before\":{\"src\":\"http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4\",\"readyState\":0,\"errorCode\":4,\"duration\":null,\"networkState\":3},\"after\":{\"src\":\"http://127.0.0.1:55981/omnimux-workflow/api/local-file?path=%2FUsers%2Fx%2FDesktop%2FProject%2Fdsh-plugin%2Fproduct%2Fomnimux-dsh%2F.worktrees%2Fclip-preview-refresh-3146%2F.test-env-bZ52Th%2Fdsh%2Fomnimux%2Fclip%2Fexports%2Fclip_node_qa_3146.mp4&rev=1791222980889.4944%3A2290\",\"readyState\":4,\"errorCode\":null,\"duration\":1,\"networkState\":1},\"first\":{\"revision\":\"1791222975615.8013:2290\",\"path\":\"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/clip-preview-refresh-3146/.test-env-bZ52Th/dsh/omnimux/clip/exports/clip_node_qa_3146.mp4\"},\"second\":{\"revision\":\"1791222980889.4944:2290\",\"path\":\"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/clip-preview-refresh-3146/.test-env-bZ52Th/dsh/omnimux/clip/exports/clip_node_qa_3146.mp4\"}}"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 58856
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/clip-preview-refresh-3146/.workbuddy/evidence/app-qa/9d275018-85f0-4c23-a381-0f3d4571789d/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 58856
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": true,
+    "clickedNewSession": false,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}
