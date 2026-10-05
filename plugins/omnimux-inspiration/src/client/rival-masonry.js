@@ -342,7 +342,7 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
   // 宽度计量，R11 起它们的行首禁则语义是拉回（见语义表注释）。
   const widths = atoms.map((atom) =>
     atom.cjk
-      ? (LINE_START_HALFWIDTH_HANG.has(atom.ch.codePointAt(0)) ? unitPx / 2 : unitPx)
+      ? (LINE_START_HALFWIDTH.has(atom.ch.codePointAt(0)) ? unitPx / 2 : unitPx)
       : atom.word ? textWidthPx(atom.text, unitPx) : 0)
   let lines = 1
   let used = 0
@@ -469,8 +469,9 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
  *   下行——`〉】〕）］｝》」』〞〟`（3009 3011 3015 FF09 FF3D FF5D
  *   300B 300D 300F 301E 301F）。未在语义表中的新增码位先实测再归类。
  * 半角组：｡､･ 在**行中**只占半 advance（中･ab@40 单行，LINE_START_
- *   HALFWIDTH_HANG 只管宽度计量，与拉回/悬挂语义分组无关——名字里的
- *   HANG 是 R10 归错语义时留下的命名债，指「半宽」而非悬挂）。
+ *   HALFWIDTH 只管宽度计量，与拉回/悬挂语义分组无关——R12 由
+ *   LINE_START_HALFWIDTH_HANG 改名，原名的 HANG 是 R10 归错语义时
+ *   留下的命名债，该组行首语义实为拉回）。
  * 前驱类型是次级条件：head 必须是非禁则原子且不把行拉空——前驱是
  * 不可断词原子时拉回组把词整体带下行（aa bb cc，word → cc， 下行）；
  * 前驱是禁则标点时一律挂 run 尾。
@@ -483,7 +484,7 @@ const LINE_START_HANG = new Set([
   0x3009, 0x3011, 0x3015,
   0xff09, 0xff3d, 0xff5d, 0x300b, 0x300d, 0x300f, 0x301e, 0x301f,
 ])
-const LINE_START_HALFWIDTH_HANG = new Set([0xff61, 0xff64, 0xff65])
+const LINE_START_HALFWIDTH = new Set([0xff61, 0xff64, 0xff65])
 
 function lineStartMode(ch) {
   if (typeof ch !== 'string') return null

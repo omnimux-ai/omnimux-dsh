@@ -317,7 +317,7 @@ const WORD_WIDTH_E2E = (word, unit) => [...word].reduce((sum, c) => {
 const LINE_START_PULLBACK_E2E = /[，。、：；？！﹖﹗％｡､･]/
 const LINE_START_HANG_E2E = /[〉】〕）］｝》」』〞〟]/
 const LINE_START_FORBIDDEN_E2E = /[，。、；：？！）］｝》」』〞〟％〉】〕﹗﹖｡､･]/
-const LINE_START_HALFWIDTH_HANG_E2E = /[｡､･]/
+const LINE_START_HALFWIDTH_E2E = /[｡､･]/
 // drift guard: GLYPH_WIDTH_FACTOR_E2E must stay identical to
 // GLYPH_WIDTH_FACTOR in rival-masonry.js (assert.equal'd below).
 assert.equal(GLYPH_WIDTH_FACTOR_E2E['#'], 0.619, 'glyph table smoke')
@@ -353,7 +353,7 @@ function specWrapLines(text, unit, lineWidth) {
     if (cp === 0x2d || cp === 0x2010) open = null
   }
   const widths = atoms.map((atom) => (atom.cjk
-    ? (LINE_START_HALFWIDTH_HANG_E2E.test(atom.cjk) ? unit / 2 : unit)
+    ? (LINE_START_HALFWIDTH_E2E.test(atom.cjk) ? unit / 2 : unit)
     : atom.word ? WORD_WIDTH_E2E(atom.word, unit) : 0))
   let lines = 1
   let used = 0
