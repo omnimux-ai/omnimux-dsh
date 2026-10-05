@@ -4,7 +4,7 @@
  */
 
 import { COPILOT_MENU_ITEMS } from './prompts.ts'
-import { extractTwitterContext } from './extractor.ts'
+import { enrichWithFeedSources, extractTwitterContext } from './extractor.ts'
 import { injectTweetText, showCopilotToast } from './injector.ts'
 import { COPILOT_KEYWORDS_STORAGE_KEY } from './settings.ts'
 import { buildJevDecisionArgs, classifyPerspectiveByRules, getPerspective } from './perspectives.ts'
@@ -283,7 +283,15 @@ export function buildCopilotLogEntry(input: {
     keywords: ctx.keywords || [],
     candidatesScanned: ctx.candidatesScanned ?? 0,
     qualifiedCount: ctx.seeds?.length ?? 0,
-    seeds: (ctx.seeds || []).map((s) => ({ author: s.author, textSnippet: s.text.slice(0, 200), total: s.total, scores: s.scores })),
+    ...(ctx.sourcesScanned ? { sourcesScanned: ctx.sourcesScanned } : {}),
+    seeds: (ctx.seeds || []).map((s) => ({
+      author: s.author,
+      textSnippet: s.text.slice(0, 200),
+      total: s.total,
+      scores: s.scores,
+      ...(s.source ? { source: s.source } : {}),
+      ...(s.isQuote ? { isQuote: true } : {}),
+    })),
     ...(input.perspective ? { perspective: input.perspective } : {}),
     ...(input.generation ? { generation: input.generation } : {}),
     outcome: input.outcome.reason ? { ...input.outcome, reason: input.outcome.reason.slice(0, 200) } : input.outcome,
@@ -308,6 +316,14 @@ async function handleExecuteItem(
 ) {
   const traceId = newTraceId()
   const ctx = extractTwitterContext(anchorButton, scene, { keywords: await readKeywordSetting() })
+  if (scene === 'POST_NEW' && !(ctx.draftText || '').trim()) {
+    showCopilotToast(locale === 'en' ? 'Reading For you and Following…' : '正在读取「为你推荐」和「正在关注」的帖子…', 'info')
+    try {
+      await enrichWithFeedSources(ctx, anchorButton)
+    } catch (e) {
+      console.warn('[Copilot] multi-source feed collection failed; using the current page only:', e)
+    }
+  }
   const blocked = checkContextReady(scene, ctx, locale)
   if (blocked) {
     showCopilotToast(blocked, 'info')

@@ -159,6 +159,22 @@ describe('#3100 bridge.appendCopilotLog', () => {
     expect(seeds[0].textSnippet).toHaveLength(200)
     expect(sanitizeCopilotLogEntry({ ...ENTRY, generation: { blob: 'x'.repeat(20_000) } })).toBeUndefined()
   })
+
+  it('keeps feed-source counts and per-seed source / quote flags, drops unknown values', () => {
+    const out = sanitizeCopilotLogEntry({
+      ...ENTRY,
+      sourcesScanned: { for_you: 6, following: 7, evil: 99, page: 'x' },
+      seeds: [
+        { author: 'a', textSnippet: 't', total: 70, source: 'for_you', isQuote: true },
+        { author: 'b', textSnippet: 't', total: 66, source: 'elsewhere', isQuote: 'yes' },
+      ],
+    })!
+    expect(out.sourcesScanned).toEqual({ for_you: 6, following: 7 })
+    expect(out.seeds).toEqual([
+      { author: 'a', textSnippet: 't', total: 70, source: 'for_you', isQuote: true },
+      { author: 'b', textSnippet: 't', total: 66 },
+    ])
+  })
 })
 
 describe('#3100 copilot log file', () => {

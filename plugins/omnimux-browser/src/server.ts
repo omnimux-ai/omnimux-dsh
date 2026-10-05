@@ -795,6 +795,7 @@ export function parseDecisionArgs(payload: unknown):
 const COPILOT_LOG_MAX_BYTES = 16 * 1024
 const COPILOT_LOG_STRING_FIELDS = ['traceId', 'ts', 'scene', 'itemId', 'locale', 'inputMode'] as const
 const COPILOT_LOG_OBJECT_FIELDS = ['perspective', 'generation', 'outcome'] as const
+const COPILOT_FEED_SOURCES = ['for_you', 'following', 'page'] as const
 
 /**
  * Keep only whitelisted copilot log fields and cap free text, so a buggy or
@@ -815,6 +816,14 @@ export function sanitizeCopilotLogEntry(payload: unknown): Record<string, unknow
   if (Array.isArray(raw.keywords)) {
     out.keywords = raw.keywords.filter((k): k is string => typeof k === 'string').slice(0, 12).map((k) => k.slice(0, 24))
   }
+  if (typeof raw.sourcesScanned === 'object' && raw.sourcesScanned !== null && !Array.isArray(raw.sourcesScanned)) {
+    const scanned: Record<string, number> = {}
+    for (const key of COPILOT_FEED_SOURCES) {
+      const n = (raw.sourcesScanned as Record<string, unknown>)[key]
+      if (typeof n === 'number' && Number.isFinite(n)) scanned[key] = n
+    }
+    out.sourcesScanned = scanned
+  }
   if (Array.isArray(raw.seeds)) {
     out.seeds = raw.seeds.slice(0, 3).flatMap((s) => {
       if (typeof s !== 'object' || s === null) return []
@@ -824,6 +833,8 @@ export function sanitizeCopilotLogEntry(payload: unknown): Record<string, unknow
         textSnippet: typeof seed.textSnippet === 'string' ? seed.textSnippet.slice(0, 200) : '',
         total: typeof seed.total === 'number' ? seed.total : 0,
         ...(typeof seed.scores === 'object' && seed.scores !== null ? { scores: seed.scores } : {}),
+        ...(typeof seed.source === 'string' && (COPILOT_FEED_SOURCES as readonly string[]).includes(seed.source) ? { source: seed.source } : {}),
+        ...(seed.isQuote === true ? { isQuote: true } : {}),
       }]
     })
   }

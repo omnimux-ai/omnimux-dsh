@@ -119,7 +119,18 @@ describe('#3100 Jev 决策参数', () => {
     const hot = item.generatePrompt({ scene: 'POST_NEW', draftText: '', feedHotTweets: seeds }, 'zh', p)
     expect(hot.systemPrompt).toContain(`写作视角：${p.name}`)
     expect(hot.userMessage).toContain('一条热帖正文')
-    expect(hot.userMessage).toContain('提取最有争议或传播潜力的焦点')
+    expect(hot.userMessage).toContain('复刻二创')
+    expect(hot.userMessage).toContain('爆点结构')
+    // AC-11 带评论转发：评论与原帖分开给模型，并要求看评论对原帖用了什么角度
+    const quoteSeeds = [{ author: 'bob', text: '这才是重点', stat: '900 回复', quotedAuthor: 'carol', quotedText: '原帖正文：推理成本下降 40%' }]
+    const remix = item.generatePrompt({ scene: 'POST_NEW', draftText: '', feedHotTweets: quoteSeeds }, 'zh', p)
+    expect(remix.userMessage).toContain('带评论转发')
+    expect(remix.userMessage).toContain('@bob 的评论：这才是重点')
+    expect(remix.userMessage).toContain('被转发的原帖 —— @carol: 原帖正文：推理成本下降 40%')
+    expect(remix.userMessage).toContain('评论对原帖用了什么角度')
+    const remixEn = item.generatePrompt({ scene: 'POST_NEW', draftText: '', feedHotTweets: quoteSeeds }, 'en', p)
+    expect(remixEn.userMessage).toContain('Quoted post — @carol')
+    expect(remixEn.userMessage).toContain('winning structure')
     // 无草稿、无热帖：围绕赛道关键词按视角原创
     const pure = item.generatePrompt({ scene: 'POST_NEW', draftText: '', keywords: ['出海'] }, 'en', p)
     expect(pure.systemPrompt).toContain(`PERSPECTIVE: ${p.nameEn}`)

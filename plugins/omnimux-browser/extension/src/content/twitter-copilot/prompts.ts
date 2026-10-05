@@ -3,7 +3,7 @@
  * Powered by self-built Twitter skills (sopilot-social-agents)
  */
 
-import type { CopilotMenuItem, PerspectiveDef, TwitterContext } from './types.ts'
+import type { CopilotMenuItem, FeedHotTweet, PerspectiveDef, TwitterContext } from './types.ts'
 
 /** 抓不到作者时整行省略，绝不伪造身份 */
 function authorLine(handle?: string): string {
@@ -24,16 +24,31 @@ function optionalBlock(label: string, value?: string): string {
 }
 
 /** 格式化首页采集到的热门讨论推文，作为“全新写（无草稿）”场景下的事实灵感输入 */
-function formatFeedHotTweets(tweets?: Array<{ author: string; text: string; stat?: string }>, locale: 'zh' | 'en' = 'zh'): string {
+function formatFeedHotTweets(tweets?: FeedHotTweet[], locale: 'zh' | 'en' = 'zh'): string {
   if (!tweets || tweets.length === 0) return ''
   const header = locale === 'en' ? 'Trending discussions on Twitter feed right now:\n' : '当前推特首页正在热议的推文参考：\n'
   const body = tweets
-    .map(
-      (t, i) =>
-        `[${locale === 'en' ? 'Hot Tweet' : '热门推文'} ${i + 1}] @${t.author || 'creator'}: ${t.text}${t.stat ? ` (${t.stat})` : ''}`,
-    )
+    .map((t, i) => {
+      const label = locale === 'en' ? 'Hot Tweet' : '热门推文'
+      const stat = t.stat ? ` (${t.stat})` : ''
+      if (!t.quotedText) return `[${label} ${i + 1}] @${t.author || 'creator'}: ${t.text}${stat}`
+      // 带评论转发：评论与被引用原帖分开给，模型才看得出「对原帖用了什么角度」
+      const quoted = `${t.quotedAuthor ? `@${t.quotedAuthor}` : ''}${t.quotedAuthor ? ': ' : ''}${t.quotedText}`
+      return locale === 'en'
+        ? `[${label} ${i + 1} · quote tweet] @${t.author || 'creator'} commented: ${t.text}${stat}\n  Quoted post — ${quoted}`
+        : `[${label} ${i + 1} · 带评论转发] @${t.author || 'creator'} 的评论：${t.text}${stat}\n  被转发的原帖 —— ${quoted}`
+    })
     .join('\n\n')
   return `${header}${body}`
+}
+
+/** 爆款复刻二创任务：先拆爆点，再按爆点结构写全新原创。 */
+function remixTask(tweets: FeedHotTweet[] | undefined, locale: 'zh' | 'en'): string {
+  const hasQuote = (tweets || []).some((t) => Boolean(t.quotedText))
+  if (locale === 'en') {
+    return `Task: Remix, don't copy. First work out why the post above took off${hasQuote ? ' — for a quote tweet, what angle the comment took on the quoted post' : ''}: the hook in the first line, the stance, the rhythm. Then write 1 brand new original tweet that reuses that winning structure with your own content and niche. Do not reuse its sentences and do not mention the original post or its author.`
+  }
+  return `任务：复刻二创，不是照搬。先想清楚上面这条为什么火${hasQuote ? '（带评论转发要看评论对原帖用了什么角度）' : ''}：开头的钩子、立场、节奏。再按这个爆点结构，换成自己的内容和赛道，写 1 条全新原创推文。不沿用原句，不提原帖或原作者。`
 }
 
 /**
@@ -117,7 +132,7 @@ export const COPILOT_MENU_ITEMS: CopilotMenuItem[] = [
           userMessage: hasDraft
             ? `Draft / Idea:\n${ctx.draftText}`
             : hasSeeds
-              ? `${freshMaterial(ctx, 'en')}\n\nTask: Find the most viral hook from the trending discussions above, and write 1 brand new viral tweet from a real user's perspective. Do NOT summarize or repeat the original tweets.`
+              ? `${freshMaterial(ctx, 'en')}\n\n${remixTask(ctx.feedHotTweets, 'en')}`
               : freshMaterial(ctx, 'en'),
         }
       }
@@ -128,7 +143,7 @@ export const COPILOT_MENU_ITEMS: CopilotMenuItem[] = [
         userMessage: hasDraft
           ? `我的发帖主题或想法：\n${ctx.draftText}`
           : hasSeeds
-            ? `${freshMaterial(ctx, 'zh')}\n\n任务：从上方正在热议的推文中提取最有争议或传播潜力的焦点，直接全新写出 1 条爆款原创推文。不要总结或复述原帖。`
+            ? `${freshMaterial(ctx, 'zh')}\n\n${remixTask(ctx.feedHotTweets, 'zh')}`
             : freshMaterial(ctx, 'zh'),
       }
     },

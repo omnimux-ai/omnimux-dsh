@@ -1,0 +1,282 @@
+{
+ "result": {
+  "ms": 20817,
+  "sourcesScanned": {
+   "for_you": 7,
+   "following": 7
+  },
+  "merged": 14,
+  "quotes": 5,
+  "top": [
+   {
+    "a": "btcmos",
+    "src": "for_you",
+    "q": false,
+    "total": 59,
+    "sc": {
+     "keyword": 0,
+     "controversy": 58,
+     "infoDelta": 42,
+     "velocity": 83,
+     "reach": 73
+    },
+    "r": 106,
+    "rp": 60,
+    "l": 638,
+    "h": 7,
+    "text": "毁掉我人生的十个网站： 一、https://stuffer.ai 二、https",
+    "quoted": ""
+   },
+   {
+    "a": "MrLarus",
+    "src": "for_you",
+    "q": true,
+    "total": 45,
+    "sc": {
+     "keyword": 0,
+     "controversy": 5,
+     "infoDelta": 100,
+     "velocity": 50,
+     "reach": 63
+    },
+    "r": 11,
+    "rp": 39,
+    "l": 279,
+    "h": 19.7,
+    "text": "🤯 Images 2.5 将等高线转化为中国山水画！ 连续流动的线条、微小的身",
+    "quoted": "🌄 图像 2.5 将风景转化为流动的线条！ 等高线描边塑造山川、河流和天空——"
+   },
+   {
+    "a": "mad_dogdebt",
+    "src": "following",
+    "q": false,
+    "total": 45,
+    "sc": {
+     "keyword": 0,
+     "controversy": 30,
+     "infoDelta": 100,
+     "velocity": 62,
+     "reach": 44
+    },
+    "r": 13,
+    "rp": 8,
+    "l": 37,
+    "h": 1.7,
+    "text": "내가 보니까 흙수저 출신이 이 시대에 자산을 키울 방법은 결국 세가지 같",
+    "quoted": ""
+   },
+   {
+    "a": "CyberTotal2026",
+    "src": "for_you",
+    "q": false,
+    "total": 43,
+    "sc": {
+     "keyword": 0,
+     "controversy": 6,
+     "infoDelta": 78,
+     "velocity": 48,
+     "reach": 63
+    },
+    "r": 8,
+    "rp": 25,
+    "l": 311,
+    "h": 23.4,
+    "text": "那里，你喜欢吗？帽子的上面完全变成了特等席😊 #AIart #AI写真 #農園",
+    "quoted": ""
+   },
+   {
+    "a": "MoonInAI",
+    "src": "for_you",
+    "q": false,
+    "total": 42,
+    "sc": {
+     "keyword": 0,
+     "controversy": 76,
+     "infoDelta": 35,
+     "velocity": 46,
+     "reach": 45
+    },
+    "r": 32,
+    "rp": 2,
+    "l": 28,
+    "h": 4.6,
+    "text": "太他喵的牛逼了Muse 直接帮我免费白嫖了https://mooninai.co",
+    "quoted": ""
+   },
+   {
+    "a": "DLKFZWilliam2",
+    "src": "for_you",
+    "q": false,
+    "total": 41,
+    "sc": {
+     "keyword": 0,
+     "controversy": 52,
+     "infoDelta": 100,
+     "velocity": 46,
+     "reach": 34
+    },
+    "r": 10,
+    "rp": 0,
+    "l": 12,
+    "h": 1.7,
+    "text": "用 Claude Pro / Max 的朋友要注意了： 从 10 月 6 日也就",
+    "quoted": ""
+   },
+   {
+    "a": "lukeliu66926706",
+    "src": "for_you",
+    "q": false,
+    "total": 40,
+    "sc": {
+     "keyword": 0,
+     "controversy": 14,
+     "infoDelta": 66,
+     "velocity": 48,
+     "reach": 54
+    },
+    "r": 6,
+    "rp": 6,
+    "l": 127,
+    "h": 9.6,
+    "text": "綁得不專業😂 #AIart #AIgirl #AI美女 #AIグラビア #Qw",
+    "quoted": ""
+   },
+   {
+    "a": "williamlong",
+    "src": "following",
+    "q": false,
+    "total": 38,
+    "sc": {
+     "keyword": 0,
+     "controversy": 10,
+     "infoDelta": 33,
+     "velocity": 66,
+     "reach": 48
+    },
+    "r": 4,
+    "rp": 5,
+    "l": 77,
+    "h": 2,
+    "text": "#知乎问答 问：为什么计划经济没有市场经济好？ 答：支持计划经济只需要回答一个问",
+    "quoted": ""
+   },
+   {
+    "a": "thiswillblossom",
+    "src": "following",
+    "q": false,
+    "total": 36,
+    "sc": {
+     "keyword": 0,
+     "controversy": 30,
+     "infoDelta": 80,
+     "velocity": 49,
+     "reach": 33
+    },
+    "r": 3,
+    "rp": 0,
+    "l": 17,
+    "h": 1.3,
+    "text": "i’m back from new york!!!! 30k steps eve",
+    "quoted": ""
+   },
+   {
+    "a": "0xduyan",
+    "src": "following",
+    "q": true,
+    "total": 34,
+    "sc": {
+     "keyword": 0,
+     "controversy": 10,
+     "infoDelta": 100,
+     "velocity": 61,
+     "reach": 21
+    },
+    "r": 1,
+    "rp": 0,
+    "l": 5,
+    "h": 0.2,
+    "text": "🔥Web3国庆理财活动（Barker篇-USDT） 🪐Barker Boos",
+    "quoted": "Barker 第六期 Boost 来了！！！！这次和 @saturn_credi"
+   },
+   {
+    "a": "yetone",
+    "src": "following",
+    "q": true,
+    "total": 32,
+    "sc": {
+     "keyword": 0,
+     "controversy": 10,
+     "infoDelta": 76,
+     "velocity": 70,
+     "reach": 15
+    },
+    "r": 1,
+    "rp": 0,
+    "l": 2,
+    "h": 0.1,
+    "text": "时泪，想起了当年的百度搜搜云输入法🥹",
+    "quoted": "把水杉输入法编译成WASM嵌入到网页了，欢迎体验。 https://metase"
+   },
+   {
+    "a": "wadezone",
+    "src": "for_you",
+    "q": true,
+    "total": 29,
+    "sc": {
+     "keyword": 0,
+     "controversy": 39,
+     "infoDelta": 51,
+     "velocity": 37,
+     "reach": 26
+    },
+    "r": 5,
+    "rp": 1,
+    "l": 4,
+    "h": 1.3,
+    "text": "整个门槛吧，微信好友位199， 当门哥，比开社群还赚钱！",
+    "quoted": "我微信每天都有十几个人加我，发一堆吓死人的 title 过来，我以为接下来要整个"
+   },
+   {
+    "a": "meAsifAi",
+    "src": "following",
+    "q": false,
+    "total": 24,
+    "sc": {
+     "keyword": 0,
+     "controversy": 10,
+     "infoDelta": 68,
+     "velocity": 26,
+     "reach": 25
+    },
+    "r": 1,
+    "rp": 0,
+    "l": 8,
+    "h": 2.6,
+    "text": "使用 @GeminiApp 创建 提示： 使用上传的参考图像作为主要对象的唯一身",
+    "quoted": ""
+   },
+   {
+    "a": "maplejohn01",
+    "src": "following",
+    "q": true,
+    "total": 14,
+    "sc": {
+     "keyword": 0,
+     "controversy": 0,
+     "infoDelta": 29,
+     "velocity": 20,
+     "reach": 17
+    },
+    "r": 0,
+    "rp": 0,
+    "l": 4,
+    "h": 1.9,
+    "text": "纲手青春版🤣，你们觉得像不像",
+    "quoted": "就在这里 🤣 x.com/he1onearth/sta…"
+   }
+  ],
+  "seeds": [],
+  "selectedTab": "为你推荐 "
+ },
+ "scrollY": 0
+}

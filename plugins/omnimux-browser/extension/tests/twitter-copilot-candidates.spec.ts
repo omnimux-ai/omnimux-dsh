@@ -2,11 +2,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   collectFeedCandidates,
+  mergeCandidatePools,
   normalizeKeywords,
   scoreCandidate,
   selectSeeds,
   SEED_THRESHOLD,
 } from '../src/content/twitter-copilot/candidates.ts'
+// SEED_THRESHOLD is pinned by expect(SEED_THRESHOLD).toBe(65) below
 import { COPILOT_MENU_ITEMS, HUMANIZE_EN_RULES, HUMANIZE_ZH_RULES } from '../src/content/twitter-copilot/prompts.ts'
 import { findHumanizeViolations } from '../src/content/twitter-copilot/sanitizer.ts'
 import { extractTwitterContext } from '../src/content/twitter-copilot/extractor.ts'
@@ -112,6 +114,70 @@ describe('#3100 候选池采集与评分', () => {
 
     const entry = buildCopilotLogEntry({ traceId: 'tw_1_abc', ctx, itemId: item.id, locale: 'zh', outcome: { status: 'injected' } })
     expect(entry).toMatchObject({ inputMode: 'PURE_ORIGINAL', candidatesScanned: 1, qualifiedCount: 0, keywords: ['延迟'] })
+  })
+})
+
+/** Quote tweet as X renders it: own tweetText, then a role="link" card holding the quoted post. */
+function quoteTweet(opts: { author: string; comment: string; quotedHandle: string; quoted: string; replies?: number; reposts?: number; likes?: number }): HTMLElement {
+  const a = tweet({ author: opts.author, text: opts.comment, replies: opts.replies, reposts: opts.reposts, likes: opts.likes })
+  const card = document.createElement('div')
+  card.setAttribute('role', 'link')
+  card.innerHTML = `<div data-testid="User-Name">Quoted @${opts.quotedHandle}·10月4日</div><div data-testid="tweetText">${opts.quoted}</div>`
+  a.appendChild(card)
+  return a
+}
+
+describe('#3100 双来源 + 带评论转发优先（AC-11）', () => {
+  beforeEach(() => { document.body.innerHTML = '' })
+
+  it('入选门槛为 65', () => {
+    expect(SEED_THRESHOLD).toBe(65)
+  })
+
+  it('带评论转发：拆出评论与原帖，短评论 + 长原帖也能入池', () => {
+    quoteTweet({ author: 'bob', comment: '这才是重点', quotedHandle: 'carol', quoted: LONG })
+    const [c] = collectFeedCandidates(document, null, NOW, undefined, 'following')
+    expect(c).toMatchObject({ author: 'bob', text: '这才是重点', isQuote: true, quotedAuthor: 'carol', quotedText: LONG, source: 'following' })
+    // 评论太短（< 4 字）不入池
+    document.body.innerHTML = ''
+    quoteTweet({ author: 'bob', comment: '哈', quotedHandle: 'carol', quoted: LONG })
+    expect(collectFeedCandidates(document, null, NOW)).toEqual([])
+  })
+
+  it('评论与原帖合并计算关键词', () => {
+    const quote = { author: 'b', text: '这才是重点', replies: 3, reposts: 0, likes: 2, ageHours: 1, isQuote: true, quotedText: LONG }
+    expect(scoreCandidate(quote, ['延迟']).scores.keyword).toBe(70)
+  })
+
+  it('同样达标时带评论转发排在前面', () => {
+    const hot = { author: 'h', text: LONG, replies: 400, reposts: 300, likes: 9000, ageHours: 1 }
+    const plain = scoreCandidate({ ...hot, author: 'plain', replies: 900 }, ['延迟'])
+    const quote = scoreCandidate({ ...hot, author: 'quote', text: '这才是重点', isQuote: true, quotedText: LONG }, ['延迟'])
+    expect(plain.total).toBeGreaterThanOrEqual(SEED_THRESHOLD)
+    expect(quote.total).toBeGreaterThanOrEqual(SEED_THRESHOLD)
+    expect(selectSeeds([plain, quote]).map((s) => s.author)).toEqual(['quote', 'plain'])
+  })
+
+  it('互动规模计入评分：1 万互动的帖子能过 65 分门槛', () => {
+    const viral = scoreCandidate({ author: 'v', text: LONG, replies: 943, reposts: 1118, likes: 12816, ageHours: 21 }, [])
+    expect(viral.scores.reach).toBe(100)
+    expect(viral.total).toBeGreaterThanOrEqual(SEED_THRESHOLD)
+    const quiet = scoreCandidate({ author: 'q', text: LONG, replies: 1, reposts: 0, likes: 2, ageHours: 1 }, [])
+    expect(quiet.total).toBeLessThan(SEED_THRESHOLD)
+  })
+
+  it('多来源合并按作者 + 正文去重，保留首次出现的来源', () => {
+    const a = { author: 'x', text: LONG, replies: 1, reposts: 1, likes: 1, ageHours: 1, source: 'for_you' as const }
+    const merged = mergeCandidatePools([[a], [{ ...a, source: 'following' as const }, { ...a, author: 'y', source: 'following' as const }]])
+    expect(merged.map((c) => [c.author, c.source])).toEqual([['x', 'for_you'], ['y', 'following']])
+  })
+
+  it('日志带来源条数与入选帖的来源、是否带评论转发', () => {
+    const seed = scoreCandidate({ author: 'q', text: '这才是重点', replies: 943, reposts: 1118, likes: 12816, ageHours: 1, source: 'for_you', isQuote: true, quotedText: LONG }, [])
+    const ctx = { scene: 'POST_NEW' as const, draftText: '', seeds: [seed], candidatesScanned: 12, sourcesScanned: { for_you: 6, following: 7 } }
+    const entry = buildCopilotLogEntry({ traceId: 'tw_2_abc', ctx, itemId: 'ai-hot-tweets', locale: 'zh', outcome: { status: 'injected' } })
+    expect(entry.sourcesScanned).toEqual({ for_you: 6, following: 7 })
+    expect(entry.seeds).toEqual([expect.objectContaining({ author: 'q', source: 'for_you', isQuote: true })])
   })
 })
 

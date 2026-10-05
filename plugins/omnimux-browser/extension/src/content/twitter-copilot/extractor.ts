@@ -4,7 +4,8 @@
  */
 
 import type { TwitterContext, TwitterCopilotScene } from './types.ts'
-import { collectFeedCandidates, normalizeKeywords, scoreCandidate, selectSeeds } from './candidates.ts'
+import { collectFeedCandidates, mergeCandidatePools, normalizeKeywords, scoreCandidate, selectSeeds } from './candidates.ts'
+import { collectSourcePools } from './feed-sources.ts'
 
 function findComposerContainer(el: HTMLElement): HTMLElement | null {
   let cur: HTMLElement | null = el
@@ -129,19 +130,9 @@ export function extractTwitterContext(
 
   context.keywords = normalizeKeywords(options.keywords || '', context.draftText)
 
-  // 1.1 发帖框为空：采集最多 50 条已渲染推文，四维评分，≥ 阈值的最多 3 条作为灵感种子
+  // 1.1 发帖框为空：先按当前页面采集一次，保证同步调用方有可用素材；多来源采集由 enrichWithFeedSources 补齐
   if (scene === 'POST_NEW' && !context.draftText) {
-    const pool = collectFeedCandidates(document, composerContainer || null, options.nowMs)
-    context.candidatesScanned = pool.length
-    const seeds = selectSeeds(pool.map((c) => scoreCandidate(c, context.keywords || [])))
-    context.seeds = seeds
-    if (seeds.length > 0) {
-      context.feedHotTweets = seeds.map((s) => ({
-        author: s.author,
-        text: s.text,
-        stat: `${s.replies} replies, ${s.reposts} reposts, ${s.likes} likes`,
-      }))
-    }
+    applySeeds(context, [collectFeedCandidates(document, composerContainer || null, options.nowMs)], { page: undefined })
   }
 
   // 2. If it is a quote modal, extract quoted tweet
@@ -206,5 +197,44 @@ export function extractTwitterContext(
     }
   }
 
+  return context
+}
+
+type SeedPools = Parameters<typeof mergeCandidatePools>[0]
+
+/** Score the merged pools, pick seeds and expose them to the prompts. */
+function applySeeds(context: TwitterContext, pools: SeedPools, sourcesScanned: TwitterContext['sourcesScanned']): void {
+  const pool = mergeCandidatePools(pools)
+  context.candidatesScanned = pool.length
+  if (sourcesScanned && Object.values(sourcesScanned).some((n) => typeof n === 'number')) context.sourcesScanned = sourcesScanned
+  const seeds = selectSeeds(pool.map((c) => scoreCandidate(c, context.keywords || [])))
+  context.seeds = seeds
+  context.feedHotTweets = seeds.length > 0
+    ? seeds.map((s) => ({
+        author: s.author,
+        text: s.text,
+        stat: `${s.replies} replies, ${s.reposts} reposts, ${s.likes} likes`,
+        ...(s.isQuote ? { quotedAuthor: s.quotedAuthor || '', quotedText: s.quotedText || '' } : {}),
+      }))
+    : undefined
+}
+
+/**
+ * Empty home composer: re-collect from both「为你推荐」and「正在关注」(switching tabs
+ * and back) and replace the single-page seeds. Other scenes are left untouched.
+ */
+export async function enrichWithFeedSources(
+  context: TwitterContext,
+  anchorButton: HTMLElement,
+  options: { nowMs?: number } = {},
+): Promise<TwitterContext> {
+  if (context.scene !== 'POST_NEW' || context.draftText) return context
+  const composer =
+    anchorButton.closest('[data-testid="tweetTextarea_0_label"]')?.parentElement ||
+    anchorButton.closest('[role="dialog"]') ||
+    anchorButton.closest('form') ||
+    findComposerContainer(anchorButton)
+  const { pools, sourcesScanned } = await collectSourcePools(document, composer || null, options.nowMs)
+  applySeeds(context, pools, sourcesScanned)
   return context
 }
