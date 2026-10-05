@@ -364,7 +364,9 @@ export function createTestEnvironmentStarter(deps = {}) {
           const omnimuxProfileDir = join(env.DSH_HOME, 'profiles', 'omnimux');
           io.mkdirSync(omnimuxProfileDir, { recursive: true, mode: 0o700 });
           for (const item of io.readdirSync(devProfile)) {
-            if (item === 'node_modules' || item === '.materialize-snapshots') continue;
+            // package.json 是插件注册表，必须写实体副本而不是软链——否则下面为新插件补注册时
+            // 会顺着软链改到 Dev profile 上。
+            if (item === 'node_modules' || item === '.materialize-snapshots' || item === 'package.json') continue;
             try {
               io.symlinkSync(join(devProfile, item), join(omnimuxProfileDir, item));
             } catch {}
@@ -385,6 +387,45 @@ export function createTestEnvironmentStarter(deps = {}) {
           } catch {}
           const taskPlugins = new Set(discoveredPlugins.length > 0 ? discoveredPlugins : ['omnimux', 'omnimux-video', 'omnimux-clip']);
           taskPluginsCount = taskPlugins.size;
+
+          // 插件注册表：profile 的 package.json 决定宿主加载哪些插件。新插件尚未物化进 Dev，
+          // 因此不在 Dev 的注册表里；若不在隔离 profile 里补注册，宿主就不会加载它——
+          // 验收装置会「看不见」这个插件，新增插件类任务只能对着源码断言。
+          // 这里写的是实体副本（上面已跳过 package.json 的软链），绝不改到 Dev profile。
+          try {
+            const devProfilePkg = join(devProfile, 'package.json');
+            if (io.existsSync(devProfilePkg)) {
+              const registry = JSON.parse(io.readFileSync(devProfilePkg, 'utf8'));
+              registry.dependencies = registry.dependencies ?? {};
+              // cordis.yml 只声明「空树」，真正决定加载哪些插件的是 dsh.profile.bundles；
+              // 只补 dependencies 不补 bundles，插件依然不会被宿主加载。
+              const bundles = registry.dsh?.profile?.bundles;
+              const bundleList = Array.isArray(bundles) ? bundles : null;
+              let registered = 0;
+              for (const pkg of taskPlugins) {
+                if (!io.existsSync(join(root, 'plugins', pkg, 'package.json'))) continue;
+                let touched = false;
+                if (!registry.dependencies[pkg]) {
+                  registry.dependencies[pkg] = `file:${join(root, 'plugins', pkg)}`;
+                  touched = true;
+                }
+                if (bundleList && !bundleList.includes(pkg)) {
+                  bundleList.push(pkg);
+                  touched = true;
+                }
+                if (touched) registered += 1;
+              }
+              if (registered > 0) {
+                io.writeFileSync(
+                  join(omnimuxProfileDir, 'package.json'),
+                  JSON.stringify(registry, null, 2) + '\n',
+                  { mode: 0o600 },
+                );
+              } else {
+                io.cpSync(devProfilePkg, join(omnimuxProfileDir, 'package.json'), { force: true });
+              }
+            }
+          } catch {}
 
           // 检测当前工作树有改动的插件集合（用于按需触发自动构建）
           const modifiedPlugins = new Set();
@@ -486,6 +527,36 @@ export function createTestEnvironmentStarter(deps = {}) {
                   } catch {}
                 }
               }
+            }
+            // 3. 任务自带的**新插件**尚未物化进 Dev profile，因此不在 devNodeModules 里。
+            //    若不在隔离 profile 内补齐，它就不会被宿主加载——验收装置会「看不见」这个插件，
+            //    新增插件类任务只能对着源码断言，那不是真机证据。这里只写入一次性隔离 profile，
+            //    绝不触碰 ~/.omnimux-dev。
+            for (const pkg of taskPlugins) {
+              const dstPkgDir = join(targetNodeModules, pkg)
+              if (io.existsSync(dstPkgDir)) continue
+              const wtPkgDir = join(root, 'plugins', pkg)
+              if (!io.existsSync(join(wtPkgDir, 'package.json'))) continue
+              try {
+                io.mkdirSync(dstPkgDir, { recursive: true, mode: 0o700 })
+                for (const entry of io.readdirSync(wtPkgDir)) {
+                  if (entry === 'node_modules' || entry === '.git' || entry === '.scratch') continue
+                  const s = join(wtPkgDir, entry)
+                  const d = join(dstPkgDir, entry)
+                  if (SYMLINK_DATA_DIRS.has(entry)) {
+                    try { io.symlinkSync(s, d) } catch {}
+                  } else {
+                    io.cpSync(s, d, { recursive: true, force: true })
+                  }
+                }
+                if (!io.existsSync(join(dstPkgDir, 'lib', 'client.js'))) {
+                  for (const buildScript of ['scripts/build-host.mjs', 'scripts/build-client.mjs', 'scripts/build-canvas.mjs', 'scripts/build.mjs']) {
+                    if (io.existsSync(join(dstPkgDir, buildScript))) {
+                      spawnSync(process.execPath, [buildScript], { cwd: dstPkgDir, stdio: 'ignore', timeout: 60000 })
+                    }
+                  }
+                }
+              } catch {}
             }
           } catch {}
         }

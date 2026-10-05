@@ -1,0 +1,117 @@
+{
+  "assertions": [
+    {
+      "name": "left-rail-entry-visible",
+      "pass": true,
+      "detail": "入口文案「虚拟形象」，几何 248×32"
+    },
+    {
+      "name": "stage-mounted-positive-geometry",
+      "pass": true,
+      "detail": "页面 999×673"
+    },
+    {
+      "name": "stage-title-is-chinese",
+      "pass": true,
+      "detail": "标题「虚拟形象」"
+    },
+    {
+      "name": "stage-root-is-the-scroll-container",
+      "pass": true,
+      "detail": "根节点是滚动容器=true，误挂吸附声明=false"
+    },
+    {
+      "name": "sticky-header-is-not-scroll-container",
+      "pass": true,
+      "detail": "吸附头 1 个，误挂滚动声明=false"
+    },
+    {
+      "name": "single-scroll-container",
+      "pass": true,
+      "detail": "正几何滚动容器 1 个"
+    },
+    {
+      "name": "two-column-body-laid-out",
+      "pass": true,
+      "detail": "两栏轨道：340px 623px"
+    },
+    {
+      "name": "no-native-select-in-stage",
+      "pass": true,
+      "detail": "原生下拉 0 个"
+    },
+    {
+      "name": "explore-tab-clickable",
+      "pass": true,
+      "detail": "已点击「灵感库」"
+    },
+    {
+      "name": "preset-grid-rendered",
+      "pass": true,
+      "detail": "70 个可点卡片，首张「」"
+    },
+    {
+      "name": "preset-grid-is-real-grid",
+      "pass": true,
+      "detail": "display=grid，列数 4"
+    },
+    {
+      "name": "preset-preview-artwork-decoded",
+      "pass": true,
+      "detail": "预览图 35 张，解码成功 32，裂图 0，未完成 3"
+    },
+    {
+      "name": "preset-preview-trigger-clickable",
+      "pass": true,
+      "detail": "已点击预览"
+    },
+    {
+      "name": "preset-dialog-opened-positive-geometry",
+      "pass": true,
+      "detail": "弹窗 960×673"
+    },
+    {
+      "name": "preset-dialog-declares-modal",
+      "pass": true,
+      "detail": "aria-modal=true"
+    },
+    {
+      "name": "preset-dialog-has-apply-action",
+      "pass": true,
+      "detail": "「套用」按钮存在=true"
+    },
+    {
+      "name": "preset-dialog-escape-closes",
+      "pass": true,
+      "detail": "Escape 后弹窗已关闭=true"
+    },
+    {
+      "name": "feed-grid-style-reaches-browser",
+      "pass": true,
+      "detail": "display=grid，列数 4（视口 1280）"
+    },
+    {
+      "name": "feed-timeline-style-reaches-browser",
+      "pass": true,
+      "detail": "display=flex，max-width=340px"
+    }
+  ],
+  "shots": [
+    {
+      "name": "01-avatar-stage",
+      "bytes": 109014
+    },
+    {
+      "name": "02-avatar-explore",
+      "bytes": 210444
+    },
+    {
+      "name": "03-avatar-preset-dialog",
+      "bytes": 324791
+    },
+    {
+      "name": "04-avatar-history",
+      "bytes": 89727
+    }
+  ]
+}

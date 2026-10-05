@@ -161,6 +161,26 @@ export function apply(ctx, config) {
   })
   const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud, paths })
 
+  // changed 事件的唯一出口：lrev/arev 取自同一对活跃 store，op 区分新建与追加，
+  // 载荷形态与 assets_create / assets_update 工具保持一致。
+  /**
+   * @param {'create' | 'update'} op
+   * @param {{ id: string, type: string }} asset
+   */
+  const emitChanged = (op, asset) => {
+    ctx.get?.('hubEvents')?.emit({
+      type: 'omnimux:assets:changed',
+      payload: {
+        lrev: library.revision(),
+        arev: artifacts.revision(),
+        op,
+        ids: [asset.id],
+        assetType: asset.type,
+        at: Date.now(),
+      },
+    })
+  }
+
   // 浏览器图片真实入库的宿主内窄服务（#3052）：同一个活跃 library 实例
   // 持有物化/登记/changed 事件的唯一所有权。omnimux-browser 只经
   // ctx.get('assetLibrary') 调用 ingestDownloadedImage，不触碰私有实现；
@@ -168,23 +188,32 @@ export function apply(ctx, config) {
   const imageIngest = createImageIngest({
     library,
     vaultRoot: paths.dir,
-    emitChanged: (asset) => {
-      ctx.get?.('hubEvents')?.emit({
-        type: 'omnimux:assets:changed',
-        payload: {
-          lrev: library.revision(),
-          arev: artifacts.revision(),
-          op: 'create',
-          ids: [asset.id],
-          assetType: asset.type,
-          at: Date.now(),
-        },
-      })
-    },
+    emitChanged: (asset) => emitChanged('create', asset),
   })
   if (typeof ctx.provide === 'function') {
+    // 资产库窄写入面：浏览器图片入库（#3052）+ 带类型保存 / 追加文件 / 按来源
+    // 查重（#3176）。调用方只经 ctx.get('assetLibrary') 使用，不触碰私有实现，
+    // 也不另起一个库；服务缺失时调用方必须返回 unavailable。
     ctx.provide('assetLibrary', {
       ingestDownloadedImage: (input) => imageIngest.ingestDownloadedImage(input),
+      saveTypedAsset: async (input) => {
+        const asset = await library.add({
+          name: input.name,
+          type: input.type,
+          description: input.description,
+          tags: input.tags,
+          files: input.files,
+          source: input.source,
+        })
+        emitChanged('create', asset)
+        return { asset }
+      },
+      attachFiles: async ({ assetId, files }) => {
+        const asset = await library.appendFiles(assetId, files)
+        emitChanged('update', asset)
+        return { asset }
+      },
+      findBySource: (source) => library.findBySource(source),
     })
   }
 

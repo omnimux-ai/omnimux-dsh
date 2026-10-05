@@ -7,6 +7,7 @@ import { join } from 'node:path'
 // Only published sidebar surfaces belong to `all`; canvas, clip, and forms have no
 // independent visible sidebar row. Selectors identify content, not page chrome.
 export const STAGE_CONTENT = Object.freeze({
+  avatar: '.omnimux-avatar-body',
   accounts: '.omnimux-accounts-stage-body',
   workflow: '.omnimux-workflow-library-body',
   assets: '.omnimux-assets-body',

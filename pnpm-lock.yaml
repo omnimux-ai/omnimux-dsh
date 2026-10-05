@@ -226,6 +226,22 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
 
+  plugins/omnimux-avatar:
+    dependencies:
+      dsh-ui-kit:
+        specifier: file:../../packages/dsh-ui-kit
+        version: file:packages/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
+
   plugins/omnimux-browser:
     dependencies:
       '@deepseek-ai/cordis':

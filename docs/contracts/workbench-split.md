@@ -48,6 +48,7 @@ Official AppFrame is already `sidebar | conversation | details`. Workbench does 
 | Tab id | Owner | Default focus | Left row |
 |---|---|---|---|
 | `omnimux-assets:library` | `omnimux-assets` | `gui` | `[data-omnimux-assets-entry]` |
+| `omnimux-avatar:studio` | `omnimux-avatar` | `gui` | `[data-omnimux-avatar-entry]` |
 | `omnimux-products:library` | `omnimux-products` | `gui` | `[data-omnimux-products-entry]` |
 | `omnimux-accounts:library` | `omnimux-accounts` | `gui` | `[data-omnimux-accounts-entry]` |
 | `omnimux-inspiration:library` | `omnimux-inspiration` | `gui` | `[data-omnimux-inspiration-entry]` |

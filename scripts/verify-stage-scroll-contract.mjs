@@ -33,6 +33,12 @@ export const CANONICAL_SCROLL = 'flex:1 1 auto;min-height:0;overflow-y:auto;over
 /** 登记的一级页（工作台 Tab 页）。新增一级页时必须在此登记。 */
 export const STAGE_PAGES = [
   {
+    plugin: 'omnimux-avatar',
+    label: '虚拟形象',
+    styles: 'plugins/omnimux-avatar/src/client/styles.js',
+    pages: ['plugins/omnimux-avatar/src/client/AvatarStage.jsx'],
+  },
+  {
     plugin: 'omnimux-assets',
     label: '资产库',
     styles: 'plugins/omnimux-assets/src/client/styles.js',

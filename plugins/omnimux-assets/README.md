@@ -10,6 +10,23 @@ OmniMux **创作资产库**（v0.2）：一条资产是有名字、类型、描�
 
 一级页入口：侧栏「资产库」行（新会话下方）。页面以 `shell.overlay` 覆盖会话列，顶栏 chrome `12px 20px 12px`。
 
+## 对外 Seam：`ctx.get('assetLibrary')`
+
+领域插件写入资产库的唯一合法通道，持有与页面同一个活跃 `LibraryStore` 实例：
+
+| 方法 | 语义 |
+|---|---|
+| `ingestDownloadedImage(input)` | 浏览器抓取的图片字节入库（既有，行为未变） |
+| `saveTypedAsset({ name, type, description, tags, files, source })` | 新建一条带分类的资产；`files` 为本地绝对路径数组，首项即封面 |
+| `attachFiles({ assetId, files })` | **追加**文件引用：复制进该资产既有托管目录，不重拷既有引用、**不改封面** |
+| `findBySource(source)` | 按 `source` 幂等查询，返回资产或 `null` |
+
+`update()` 仍保持「整组替换 files」语义不变；需要后续追加请用 `attachFiles`（或 store 的 `appendFiles`），
+否则既有引用会被重拷、封面会被重置。`saveTypedAsset` / `attachFiles` 会发同一条
+`omnimux:assets:changed` 事件（op 分别为 `create` / `update`）。
+
+当前消费方：`omnimux-avatar`（形象建档与多视角目录归档）、`omnimux-browser`（`ingestDownloadedImage`）。
+
 ## 安装与验证
 
 日常进 App：

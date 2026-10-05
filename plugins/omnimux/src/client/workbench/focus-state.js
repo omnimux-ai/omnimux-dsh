@@ -29,6 +29,7 @@ export const WORKBENCH_TAB_TITLE_FALLBACKS = Object.freeze({
   'omnimux-workflow:library': '项目',
   'omnimux-market:plaza': '技能/专家',
   'omnimux-automation:workbench': '自动化',
+  'omnimux-avatar:studio': '虚拟形象',
 })
 
 /** Professional SaaS English fallback titles in English language environments. */
