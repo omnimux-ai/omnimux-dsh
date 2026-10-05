@@ -270,4 +270,14 @@ describe('#3100 决策模型挑爆款：候选与回落（AC-13）', () => {
 
     expect(await decideSeedPick({ scene: 'POST_NEW', draftText: '', shortlist: [] })).toEqual(undefined)
   })
+
+  it('AC-17 成功/空结果/失败三处写日志都带挑爆款结果', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const src = readFileSync(resolve(process.cwd(), 'src/content/twitter-copilot/menu.ts'), 'utf8')
+    const calls = (src.match(/sendCopilotLog\(buildCopilotLogEntry\(\{[\s\S]*?outcome:/g) || [])
+      .filter((c) => c.includes('perspective'))
+    expect(calls.length).toEqual(3)
+    expect(calls.map((c) => c.includes('seedPick'))).toEqual([true, true, true])
+  })
 })
