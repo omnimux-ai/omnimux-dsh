@@ -188,7 +188,9 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
             )}
             {instances.map((inst) => {
               const isChosen = inst.port === selectedPort
-              const disabled = inst.status === 'offline'
+              const isEffectiveOnline = inst.status === 'online' || (isChosen && bridgeConnected)
+              const effectiveStatus: InstanceStatus = isEffectiveOnline ? 'online' : inst.status
+              const disabled = effectiveStatus === 'offline'
               return (
                 <div
                   key={inst.id}
@@ -196,10 +198,10 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
                   aria-selected={isChosen}
                   aria-disabled={disabled || undefined}
                   className={`instance-item-row ${isChosen ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
-                  onClick={() => handleSelect(inst)}
+                  onClick={() => handleSelect({ ...inst, status: effectiveStatus })}
                 >
                   <div className="instance-row-left">
-                    <span className={`instance-health-dot ${inst.status === 'online' ? 'online' : inst.status === 'unavailable' ? 'standby' : 'offline'}`} />
+                    <span className={`instance-health-dot ${effectiveStatus === 'online' ? 'online' : effectiveStatus === 'unavailable' ? 'standby' : 'offline'}`} />
                     <span className="instance-name">{locale === 'en' ? inst.nameEn : inst.nameZh}</span>
                     <span className="instance-port-tag">:{inst.port}</span>
                     {inst.isRecommended && (
@@ -207,8 +209,8 @@ export const WorkspaceSelector = memo(function WorkspaceSelector({
                     )}
                   </div>
                   <div className="instance-row-right">
-                    <span className={`health-pill ${inst.status === 'online' ? 'online' : inst.status === 'unavailable' ? 'standby' : 'offline'}`}>
-                      {instanceStatusText(inst, locale)}
+                    <span className={`health-pill ${effectiveStatus === 'online' ? 'online' : effectiveStatus === 'unavailable' ? 'standby' : 'offline'}`}>
+                      {instanceStatusText({ ...inst, status: effectiveStatus }, locale)}
                     </span>
                     {isChosen && (
                       <span className="instance-check-mark"><CheckIcon size={12} /></span>

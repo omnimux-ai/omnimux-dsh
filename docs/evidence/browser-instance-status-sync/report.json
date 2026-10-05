@@ -1,0 +1,24 @@
+{
+  "taskId": "browser-instance-status-sync",
+  "issue": 3077,
+  "summary": "Fix extension instance selector dropdown status out of sync when bridgeConnected is true and add cache-control to discovery endpoint",
+  "verifiedAt": "2026-10-04T13:56:00Z",
+  "checks": [
+    {
+      "name": "vitest dsh-instance-selector & instance-discovery & instance-presets",
+      "status": "PASS",
+      "passed": 23,
+      "failed": 0
+    },
+    {
+      "name": "dsh-browser-extension build",
+      "status": "PASS",
+      "output": "dist/background.js, dist/content.js, dist/panel/assets/index.js"
+    },
+    {
+      "name": "omnimux-browser build:server",
+      "status": "PASS"
+    }
+  ],
+  "browserVerdict": "PASS"
+}

@@ -331,11 +331,19 @@ function mountBridge(
   const configRoute: WebRoute = {
     kind: 'exact',
     path: BRIDGE_CONFIG_PATH,
-    handler: (_req, res) => {
+    handler: (req, res) => {
       res.writeHead(200, {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET, OPTIONS',
+        'access-control-allow-headers': '*',
+        'access-control-allow-private-network': 'true',
+        'cache-control': 'no-store, no-cache, must-revalidate',
       })
+      if (req.method === 'OPTIONS') {
+        res.end()
+        return
+      }
       res.end(JSON.stringify({
         wsUrl: `ws://127.0.0.1:${ctx.webServer.port}${BRIDGE_PATH}`,
         locale: hostLocale,

@@ -18,10 +18,12 @@ export interface DshInstance {
 }
 
 export const DshInstanceSelector = memo(function DshInstanceSelector({
+  bridgeConnected = false,
   locale = 'zh',
   activePort = 43128,
   onSelectInstance,
 }: {
+  bridgeConnected?: boolean
   locale?: UiLocale
   activePort?: number
   onSelectInstance?: (instance: { id: string; port: number; name: string }) => void
@@ -117,7 +119,7 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
       >
         <span
           className={`instance-health-dot ${
-            resolved?.status === 'online'
+            (bridgeConnected || resolved?.status === 'online')
               ? 'online'
               : resolved?.status === 'unavailable'
                 ? 'standby'
@@ -141,7 +143,9 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
             )}
             {instances.map((inst) => {
               const isChosen = inst.port === selectedPort
-              const disabled = inst.status === 'offline'
+              const isEffectiveOnline = inst.status === 'online' || (isChosen && bridgeConnected)
+              const effectiveStatus: InstanceStatus = isEffectiveOnline ? 'online' : inst.status
+              const disabled = effectiveStatus === 'offline'
               return (
                 <div
                   key={inst.id}
@@ -149,14 +153,14 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
                   aria-selected={isChosen}
                   aria-disabled={disabled || undefined}
                   className={`instance-item-row ${isChosen ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
-                  onClick={() => handleSelect(inst)}
+                  onClick={() => handleSelect({ ...inst, status: effectiveStatus })}
                 >
                   <div className="instance-row-left">
                     <span
                       className={`instance-health-dot ${
-                        inst.status === 'online'
+                        effectiveStatus === 'online'
                           ? 'online'
-                          : inst.status === 'unavailable'
+                          : effectiveStatus === 'unavailable'
                             ? 'standby'
                             : 'offline'
                       }`}
@@ -170,14 +174,14 @@ export const DshInstanceSelector = memo(function DshInstanceSelector({
                   <div className="instance-row-right">
                     <span
                       className={`health-pill ${
-                        inst.status === 'online'
+                        effectiveStatus === 'online'
                           ? 'online'
-                          : inst.status === 'unavailable'
+                          : effectiveStatus === 'unavailable'
                             ? 'standby'
                             : 'offline'
                       }`}
                     >
-                      {instanceStatusText(inst, locale)}
+                      {instanceStatusText({ ...inst, status: effectiveStatus }, locale)}
                     </span>
                     {isChosen && (
                       <span className="instance-check-mark"><CheckIcon size={12} /></span>
