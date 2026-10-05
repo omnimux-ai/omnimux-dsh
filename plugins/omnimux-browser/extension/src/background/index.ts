@@ -2572,6 +2572,108 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       }
     })()
     return true
+  } else if (m?.type === 'DSH_SAVE_INSPIRATION_PANEL') {
+    const payload = m.payload as {
+      targetUrl?: string
+      title?: string
+      type?: 'video' | 'image'
+      source_platform?: string
+      sourcePlatform?: string
+      cover_url?: string
+      coverUrl?: string
+      media_urls?: string[]
+      mediaUrls?: string[]
+      content?: string
+      tags?: string[]
+      targetPort?: number
+    } | undefined
+
+    const targetUrl = payload?.targetUrl || ''
+    if (!targetUrl) {
+      sendResponse({ ok: false, message: 'url is required' })
+      return true
+    }
+
+    void (async () => {
+      const candidatePorts: number[] = []
+      if (typeof payload?.targetPort === 'number' && !isNaN(payload.targetPort)) {
+        candidatePorts.push(payload.targetPort)
+      }
+      try {
+        const saved = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
+        const p = saved ? parseInt(saved, 10) : undefined
+        if (p && !isNaN(p) && !candidatePorts.includes(p)) candidatePorts.push(p)
+      } catch {}
+      for (const p of [45120, 45128, 43120, 43128, 3080]) {
+        if (!candidatePorts.includes(p)) candidatePorts.push(p)
+      }
+
+      let saved = false
+      const itemBody = {
+        title: (payload?.title || targetUrl).slice(0, 120),
+        type: payload?.type || 'image',
+        source_platform: payload?.source_platform || payload?.sourcePlatform || 'web',
+        source_url: targetUrl,
+        cover_url: payload?.cover_url || payload?.coverUrl || '',
+        media_urls: payload?.media_urls || payload?.mediaUrls || (payload?.cover_url || payload?.coverUrl ? [payload.cover_url || payload.coverUrl || ''] : []),
+        content: (payload?.content || '').slice(0, 500),
+        tags: payload?.tags || ['网页采集', '灵感采集'],
+      }
+
+      for (const port of candidatePorts) {
+        const targetBase = `http://127.0.0.1:${port}`
+        try {
+          // 1. 尝试 import-url 全量抓取
+          let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: targetUrl, background: true }),
+            signal: AbortSignal.timeout(3500),
+          }).catch(() => null)
+
+          // 2. 如果 import-url 失败或异常（如反爬中断 499），采用前台已嗅探图文直存
+          if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
+            res = await fetch(`${targetBase}/omnimux/inspiration/local`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(itemBody),
+              signal: AbortSignal.timeout(3000),
+            }).catch(() => null)
+          }
+
+          if (res && (res.ok || res.status === 200 || res.status === 201 || res.status === 202)) {
+            saved = true
+            break
+          }
+        } catch {
+          // try next port
+        }
+      }
+
+      if (saved) {
+        try {
+          await appendMediaInspiration({
+            id: `insp_${Date.now().toString(36)}`,
+            src: itemBody.cover_url || targetUrl,
+            type: itemBody.type,
+            pageUrl: targetUrl,
+            pageTitle: itemBody.title,
+            alt: itemBody.content,
+            previewSrc: itemBody.cover_url,
+            width: 0,
+            height: 0,
+            naturalWidth: 0,
+            naturalHeight: 0,
+            capturedAt: Date.now(),
+          })
+        } catch {
+          // ignore cache error
+        }
+      }
+
+      sendResponse({ ok: saved })
+    })()
+    return true
   }
 })
 
