@@ -103,25 +103,33 @@ export const COPILOT_MENU_ITEMS: CopilotMenuItem[] = [
     descEn: 'Extract hooks and recreate high-engagement viral tweets',
     category: 'create',
     scenes: ['POST_NEW'],
-    generatePrompt: (ctx, locale = 'zh') => {
+    // 先选写作视角（Jev 优先，失败回落本地规则），再按视角写。
+    usesPerspective: true,
+    generatePrompt: (ctx, locale = 'zh', perspective) => {
+      const angle = perspective ? perspectiveBlock(perspective, locale) : ''
       const hasDraft = Boolean((ctx.draftText || '').trim())
+      const hasSeeds = (ctx.feedHotTweets?.length ?? 0) > 0
       if (locale === 'en') {
         return {
           systemPrompt: hasDraft
-            ? `You are an elite Twitter/X ghostwriter. Your goal is to recreate a high-converting viral tweet from the draft/topic. Hook on line 1, clean spacing, high curiosity, natural casual tone.${HUMANIZE_EN_RULES}`
-            : `You are an elite Twitter creator. Based on the trending discussions provided, craft 1 brand new viral tweet from a real user's perspective with high curiosity and strong hook. Do NOT summarize or quote the source tweets.${HUMANIZE_EN_RULES}`,
+            ? `You are an elite Twitter/X ghostwriter. Your goal is to recreate a high-converting viral tweet from the draft/topic. Hook on line 1, clean spacing, high curiosity, natural casual tone.${angle}${HUMANIZE_EN_RULES}`
+            : `You are an elite Twitter creator. Craft 1 brand new viral tweet from a real user's perspective with high curiosity and a strong hook. Do NOT summarize or quote any source tweets.${angle}${HUMANIZE_EN_RULES}`,
           userMessage: hasDraft
             ? `Draft / Idea:\n${ctx.draftText}`
-            : `${freshMaterial(ctx, 'en')}\n\nTask: Find the most viral hook from the trending discussions above, and write 1 brand new viral tweet from a real user's perspective. Do NOT summarize or repeat the original tweets.`,
+            : hasSeeds
+              ? `${freshMaterial(ctx, 'en')}\n\nTask: Find the most viral hook from the trending discussions above, and write 1 brand new viral tweet from a real user's perspective. Do NOT summarize or repeat the original tweets.`
+              : freshMaterial(ctx, 'en'),
         }
       }
       return {
         systemPrompt: hasDraft
-          ? `你是一位顶级 Twitter 增长与爆款内容专家。根据用户输入的主题或草稿，创作一条具有高传播力的推特原创帖。要求：第 1 句设置强冲突或逆向认知钩子，排版呼吸感强，结尾带出启发思考。${HUMANIZE_ZH_RULES}`
-          : `你是一个长期活跃在 Twitter 的高网感真人博主。请根据参考推文中当下最具传播潜力的热点讨论，创作 1 条全新的推特原创帖。必须有情绪、有观点，短句为主，末尾适当引导互动。不要总结、复述或引用参考内容。${HUMANIZE_ZH_RULES}`,
+          ? `你是一位顶级 Twitter 增长与爆款内容专家。根据用户输入的主题或草稿，创作一条具有高传播力的推特原创帖。要求：第 1 句设置强冲突或逆向认知钩子，排版呼吸感强，结尾带出启发思考。${angle}${HUMANIZE_ZH_RULES}`
+          : `你是一个长期活跃在 Twitter 的高网感真人博主。创作 1 条全新的推特原创帖。必须有情绪、有观点，短句为主，末尾适当引导互动。不要总结、复述或引用任何参考内容。${angle}${HUMANIZE_ZH_RULES}`,
         userMessage: hasDraft
           ? `我的发帖主题或想法：\n${ctx.draftText}`
-          : `${freshMaterial(ctx, 'zh')}\n\n任务：从上方正在热议的推文中提取最有争议或传播潜力的焦点，直接全新写出 1 条爆款原创推文。不要总结或复述原帖。`,
+          : hasSeeds
+            ? `${freshMaterial(ctx, 'zh')}\n\n任务：从上方正在热议的推文中提取最有争议或传播潜力的焦点，直接全新写出 1 条爆款原创推文。不要总结或复述原帖。`
+            : freshMaterial(ctx, 'zh'),
       }
     },
   },
@@ -218,45 +226,6 @@ export const COPILOT_MENU_ITEMS: CopilotMenuItem[] = [
         userMessage: hasDraft
           ? `Topic / Draft:\n${ctx.draftText}`
           : `${freshMaterial(ctx, 'en')}\n\nTask: Write an authentic, natural English tweet tailored for global tech Twitter based on the trending topics above. Do NOT summarize.`,
-      }
-    },
-  },
-
-  // =========================================================================
-  // 跨场景：【多视角爆款创作】(POST_NEW / POST_QUOTE，先由 Jev 选视角)
-  // =========================================================================
-  {
-    id: 'ai-perspective-post',
-    name: '多视角爆款创作',
-    nameEn: 'Perspective Post',
-    desc: '自动挑选最易引发讨论的写作视角，再写成一条原创推文',
-    descEn: 'Pick the angle most likely to spark replies, then write one original tweet',
-    category: 'create',
-    scenes: ['POST_NEW', 'POST_QUOTE'],
-    usesPerspective: true,
-    generatePrompt: (ctx, locale = 'zh', perspective) => {
-      const angle = perspective ? perspectiveBlock(perspective, locale) : ''
-      const isQuote = ctx.scene === 'POST_QUOTE'
-      const hasDraft = Boolean((ctx.draftText || '').trim())
-      if (locale === 'en') {
-        const material = isQuote
-          ? `${byline('Quoted tweet by ', ctx.quotedAuthor ?? '')}${ctx.quotedTweetText ?? ''}${optionalBlock('My take: ', ctx.draftText)}`
-          : hasDraft
-            ? `Draft / Idea:\n${ctx.draftText}`
-            : freshMaterial(ctx, 'en')
-        return {
-          systemPrompt: `You write original tweets for an experienced creator on X. ${isQuote ? 'This is a quote tweet: add your own angle instead of restating the original.' : 'Write one original tweet; do not summarize or repeat source tweets.'}${angle}${HUMANIZE_EN_RULES}`,
-          userMessage: material,
-        }
-      }
-      const material = isQuote
-        ? `被引用的原推内容：\n${authorLine(ctx.quotedAuthor ?? '')}正文：${ctx.quotedTweetText ?? ''}${optionalBlock('我的补充思路：', ctx.draftText)}`
-        : hasDraft
-          ? `我的发帖主题或想法：\n${ctx.draftText}`
-          : freshMaterial(ctx, 'zh')
-      return {
-        systemPrompt: `你为一位有经验的推特创作者写原创推文。${isQuote ? '这是引用转发：要给出自己的角度，不复述原推。' : '写一条原创推文，不总结、不复述参考推文。'}${angle}${HUMANIZE_ZH_RULES}`,
-        userMessage: material,
       }
     },
   },

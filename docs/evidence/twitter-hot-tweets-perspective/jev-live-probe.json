@@ -1,0 +1,1 @@
+{"probedAt":"2026-10-05T09:27:24Z","via":"真实浏览器扩展 → 开发版中枢 → 网关 /v1/systemone","request":{"choices":["P1_CONTRARIAN","P2_PRACTITIONER","P3_SIMPLIFIER"],"state":"Original tweet. Niche: AI工具, 出海, 独立开发者."},"response":{"ok":true,"decision":"P2_PRACTITIONER","confidence":0.48}}

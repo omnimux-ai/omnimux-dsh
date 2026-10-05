@@ -105,7 +105,7 @@ describe('#3100 候选池采集与评分', () => {
     expect(ctx.feedHotTweets).toBeUndefined()
     expect(checkContextReady('POST_NEW', ctx, 'zh')).toBeNull()
 
-    const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-perspective-post')!
+    const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-hot-tweets')!
     const { userMessage } = item.generatePrompt(ctx, 'zh')
     expect(userMessage).toContain('请围绕以下赛道，挑一个具体场景原创一条推文：延迟')
     expect(userMessage).not.toMatch(/评分|门槛|信息流/)
