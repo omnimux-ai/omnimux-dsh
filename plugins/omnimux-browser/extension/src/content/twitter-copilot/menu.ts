@@ -6,7 +6,10 @@
 import { COPILOT_MENU_ITEMS } from './prompts.ts'
 import { extractTwitterContext } from './extractor.ts'
 import { injectTweetText, showCopilotToast } from './injector.ts'
-import type { CopilotMenuItem, TwitterCopilotScene, TwitterContext } from './types.ts'
+import { COPILOT_KEYWORDS_STORAGE_KEY } from './settings.ts'
+import { buildJevDecisionArgs, classifyPerspectiveByRules, getPerspective } from './perspectives.ts'
+import { findHumanizeViolations, sanitizeTweetText } from './sanitizer.ts'
+import type { CopilotMenuItem, PerspectiveDecision, TwitterCopilotScene, TwitterContext } from './types.ts'
 
 declare const chrome: any
 
@@ -197,8 +200,9 @@ export function checkContextReady(scene: TwitterCopilotScene, ctx: TwitterContex
   const has = (v?: string) => Boolean((v || '').trim())
   const t = (zh: string, en: string) => (locale === 'en' ? en : zh)
 
-  // 原创发新帖双轨支持：有草稿走改写扩写；无草稿时若有首页热点推文则走全新原创
-  if (scene === 'POST_NEW' && !has(ctx.draftText) && (!ctx.feedHotTweets || ctx.feedHotTweets.length === 0)) {
+  // 原创发新帖：有草稿走改写；无草稿时有达标热帖走热点创作，页面有推文但无达标则走纯原创；页面一条推文都没有才拦截
+  const hasFeed = (ctx.feedHotTweets?.length ?? 0) > 0 || (ctx.candidatesScanned ?? 0) > 0
+  if (scene === 'POST_NEW' && !has(ctx.draftText) && !hasFeed) {
     return t('请先在发帖框写下主题，或等待首页推文加载后再试。', 'Write your topic first, or wait for feed tweets to load.')
   }
   if (scene === 'POST_QUOTE' && !has(ctx.quotedTweetText)) {
@@ -210,16 +214,104 @@ export function checkContextReady(scene: TwitterCopilotScene, ctx: TwitterContex
   return null
 }
 
+
+async function readKeywordSetting(): Promise<string> {
+  try {
+    const got = await chrome.storage?.local?.get?.(COPILOT_KEYWORDS_STORAGE_KEY)
+    const v = got?.[COPILOT_KEYWORDS_STORAGE_KEY]
+    return typeof v === 'string' ? v : ''
+  } catch (e) {
+    console.warn('[Copilot] keyword setting unavailable:', e)
+    return ''
+  }
+}
+
+/** Ask Jev (via background → bridge) for a perspective; any failure falls back to rules. */
+export async function decidePerspective(ctx: TwitterContext): Promise<PerspectiveDecision> {
+  const seeds = ctx.seeds || []
+  const ruleId = classifyPerspectiveByRules(seeds, `${ctx.draftText || ''}\n${ctx.quotedTweetText || ''}`)
+  const started = Date.now()
+  let reason = 'no response'
+  try {
+    const res = await chrome.runtime.sendMessage({
+      type: 'DSH_TWITTER_COPILOT_DECIDE',
+      args: buildJevDecisionArgs(seeds, ctx.draftText || '', ctx.quotedTweetText || ''),
+    })
+    if (res?.ok && getPerspective(res.decision)) {
+      return {
+        id: res.decision,
+        source: 'jev',
+        latencyMs: Date.now() - started,
+        ...(typeof res.confidence === 'number' ? { confidence: res.confidence } : {}),
+      }
+    }
+    reason = res?.ok ? `off-list decision: ${String(res.decision)}` : String(res?.message || reason)
+  } catch (e) {
+    reason = e instanceof Error ? e.message : String(e)
+  }
+  return { id: ruleId, source: 'rules', latencyMs: Date.now() - started, fallbackReason: reason.slice(0, 200) }
+}
+
+function newTraceId(): string {
+  return `tw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function inputModeOf(ctx: TwitterContext): string {
+  if (ctx.scene === 'POST_QUOTE' || ctx.scene === 'REPLY_DETAIL' || ctx.scene === 'REPLY_FEED') return 'TARGET_TWEET'
+  if ((ctx.draftText || '').trim()) return 'DRAFT'
+  return (ctx.feedHotTweets?.length ?? 0) > 0 ? 'AUTO_FEED_HOT' : 'PURE_ORIGINAL'
+}
+
+/** Build one whitelisted log entry; text fields are snippets only. */
+export function buildCopilotLogEntry(input: {
+  traceId: string
+  ctx: TwitterContext
+  itemId: string
+  locale: 'zh' | 'en'
+  perspective?: PerspectiveDecision
+  generation?: { latencyMs: number; rawLength: number; finalLength: number; retried: boolean; humanizeViolations: string[] }
+  outcome: { status: 'injected' | 'failed' | 'blocked'; reason?: string }
+}): Record<string, unknown> {
+  const { ctx } = input
+  return {
+    traceId: input.traceId,
+    ts: new Date().toISOString(),
+    scene: ctx.scene,
+    itemId: input.itemId,
+    locale: input.locale,
+    inputMode: inputModeOf(ctx),
+    keywords: ctx.keywords || [],
+    candidatesScanned: ctx.candidatesScanned ?? 0,
+    qualifiedCount: ctx.seeds?.length ?? 0,
+    seeds: (ctx.seeds || []).map((s) => ({ author: s.author, textSnippet: s.text.slice(0, 200), total: s.total, scores: s.scores })),
+    ...(input.perspective ? { perspective: input.perspective } : {}),
+    ...(input.generation ? { generation: input.generation } : {}),
+    outcome: input.outcome.reason ? { ...input.outcome, reason: input.outcome.reason.slice(0, 200) } : input.outcome,
+  }
+}
+
+function sendCopilotLog(entry: Record<string, unknown>): void {
+  try {
+    void chrome.runtime.sendMessage({ type: 'DSH_TWITTER_COPILOT_LOG', entry }).catch((e: unknown) => {
+      console.warn('[Copilot] log write failed:', e)
+    })
+  } catch (e) {
+    console.warn('[Copilot] log write failed:', e)
+  }
+}
+
 async function handleExecuteItem(
   anchorButton: HTMLElement,
   scene: TwitterCopilotScene,
   item: CopilotMenuItem,
   locale: 'zh' | 'en',
 ) {
-  const ctx = extractTwitterContext(anchorButton, scene)
+  const traceId = newTraceId()
+  const ctx = extractTwitterContext(anchorButton, scene, { keywords: await readKeywordSetting() })
   const blocked = checkContextReady(scene, ctx, locale)
   if (blocked) {
     showCopilotToast(blocked, 'info')
+    sendCopilotLog(buildCopilotLogEntry({ traceId, ctx, itemId: item.id, locale, outcome: { status: 'blocked', reason: blocked } }))
     return
   }
 
@@ -232,14 +324,33 @@ async function handleExecuteItem(
     'info',
   )
 
+  let perspective: PerspectiveDecision | undefined
   try {
-    const { systemPrompt, userMessage } = item.generatePrompt(ctx, locale)
+    if (item.usesPerspective) perspective = await decidePerspective(ctx)
+    const { systemPrompt, userMessage } = item.generatePrompt(ctx, locale, getPerspective(perspective?.id))
 
-    // 真正调用大模型补全
-    const generatedText = await requestLlmGeneration(systemPrompt, userMessage, ctx, item.id, locale, scene)
+    const started = Date.now()
+    let raw = await requestLlmGeneration(systemPrompt, userMessage, ctx, item.id, locale, scene)
+    let text = raw ? sanitizeTweetText(raw, locale) : ''
+    let violations = findHumanizeViolations(text)
+    let retried = false
+    if (text && violations.length > 0) {
+      retried = true
+      const fix = locale === 'en'
+        ? `\n\nYour previous draft used banned phrases: ${violations.join(', ')}. Rewrite without them.`
+        : `\n\n上一稿用了禁用表达：${violations.join('、')}。请改写并去掉这些表达。`
+      const second = await requestLlmGeneration(systemPrompt, userMessage + fix, ctx, item.id, locale, scene)
+      if (second) {
+        raw = second
+        text = sanitizeTweetText(second, locale)
+        violations = findHumanizeViolations(text)
+      }
+    }
+    const generation = { latencyMs: Date.now() - started, rawLength: raw?.length ?? 0, finalLength: text.length, retried, humanizeViolations: violations }
 
-    if (generatedText) {
-      await injectTweetText(generatedText, anchorButton, locale)
+    if (text) {
+      await injectTweetText(text, anchorButton, locale)
+      sendCopilotLog(buildCopilotLogEntry({ traceId, ctx, itemId: item.id, locale, perspective, generation, outcome: { status: 'injected' } }))
     } else {
       showCopilotToast(
         locale === 'en'
@@ -247,10 +358,15 @@ async function handleExecuteItem(
           : '模型服务暂未响应，请检查 OmniMux 运行状态',
         'error',
       )
+      sendCopilotLog(buildCopilotLogEntry({ traceId, ctx, itemId: item.id, locale, perspective, generation, outcome: { status: 'failed', reason: 'empty generation' } }))
     }
   } catch (err) {
     console.error('[OmniMux Twitter Copilot] Generation failed:', err)
     showCopilotToast(locale === 'en' ? 'Generation failed, check engine status.' : '生成遇到异常，请检查本地引擎状态。', 'error')
+    sendCopilotLog(buildCopilotLogEntry({
+      traceId, ctx, itemId: item.id, locale, perspective,
+      outcome: { status: 'failed', reason: err instanceof Error ? err.message : String(err) },
+    }))
   } finally {
     anchorButton.classList.remove('omnimux-copilot-anchor-btn--loading')
   }
@@ -272,7 +388,7 @@ async function requestLlmGeneration(
       userMessage,
       locale,
       context: {
-        scene: ctx.scene,
+        scene,
         targetTweetText: ctx.targetTweetText,
         targetAuthor: ctx.targetAuthor,
         draftText: ctx.draftText,

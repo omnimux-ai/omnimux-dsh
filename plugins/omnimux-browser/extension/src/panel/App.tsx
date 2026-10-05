@@ -41,6 +41,13 @@ import {
 } from '../feature-flags.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
 import {
+  COPILOT_KEYWORDS_STORAGE_KEY as COPILOT_KEYWORDS_KEY,
+  MAX_KEYWORD_TAGS,
+  addKeywordTags,
+  parseKeywordTags,
+  serializeKeywordTags,
+} from '../content/twitter-copilot/settings.ts'
+import {
   applyUiScale,
   DEFAULT_UI_SCALE,
   loadUiScale,
@@ -801,6 +808,26 @@ export function App(): React.JSX.Element {
   const [fabEnabled, setFabEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.fab))
   const [mediaHoverEnabled, setMediaHoverEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.mediaHover))
   const [velocityEnabled, setVelocityEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.velocity))
+  const [keywordTags, setKeywordTags] = useState<string[]>([])
+  const [keywordDraft, setKeywordDraft] = useState('')
+  useEffect(() => {
+    void Promise.resolve(chrome.storage?.local?.get?.(COPILOT_KEYWORDS_KEY))
+      .then((got) => {
+        const v = (got as Record<string, unknown> | undefined)?.[COPILOT_KEYWORDS_KEY]
+        if (typeof v === 'string') setKeywordTags(parseKeywordTags(v))
+      })
+      .catch((error: unknown) => { console.warn('[panel] copilot keywords unavailable:', error) })
+  }, [])
+  const saveKeywordTags = (tags: string[]) => {
+    setKeywordTags(tags)
+    void Promise.resolve(chrome.storage?.local?.set?.({ [COPILOT_KEYWORDS_KEY]: serializeKeywordTags(tags) }))
+      .catch((error: unknown) => { console.warn('[panel] copilot keywords not saved:', error) })
+  }
+  const commitKeywordDraft = () => {
+    if (!keywordDraft.trim()) return
+    saveKeywordTags(addKeywordTags(keywordTags, keywordDraft))
+    setKeywordDraft('')
+  }
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
   const [targetPort, setTargetPort] = useState<number>(() => {
@@ -3226,6 +3253,45 @@ export function App(): React.JSX.Element {
             />
             <span className="setting-toggle-control" aria-hidden="true"><span /></span>
           </label>
+          <div className="copilot-keywords">
+            <span className="setting-toggle-copy">
+              <strong id="copilot-keywords-title">{copy.settings.copilotKeywords}</strong>
+              <small>{copy.settings.copilotKeywordsHelp}</small>
+            </span>
+            <div className="keyword-tags-field" onClick={(event) => (event.currentTarget.querySelector('input') as HTMLInputElement | null)?.focus()}>
+              {keywordTags.map((tag) => (
+                <span className="keyword-tag" key={tag}>
+                  {tag}
+                  <button type="button" aria-label={copy.settings.copilotKeywordRemove(tag)} onClick={() => saveKeywordTags(keywordTags.filter((t) => t !== tag))}>×</button>
+                </span>
+              ))}
+              {keywordTags.length < MAX_KEYWORD_TAGS && (
+                <input
+                  aria-labelledby="copilot-keywords-title"
+                  value={keywordDraft}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    if (/[,，、;；]/.test(value)) {
+                      saveKeywordTags(addKeywordTags(keywordTags, value))
+                      setKeywordDraft('')
+                    } else {
+                      setKeywordDraft(value)
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+                      event.preventDefault()
+                      commitKeywordDraft()
+                    } else if (event.key === 'Backspace' && keywordDraft === '' && keywordTags.length > 0) {
+                      saveKeywordTags(keywordTags.slice(0, -1))
+                    }
+                  }}
+                  onBlur={commitKeywordDraft}
+                  placeholder={keywordTags.length === 0 ? copy.settings.copilotKeywordsPlaceholder : ''}
+                />
+              )}
+            </div>
+          </div>
         </section>
         <div className="settings-panel preference-toggles">
           <label className="setting-toggle">

@@ -26,6 +26,8 @@ import type { BrowserHostApi } from './host-api.ts'
 import {
   BRIDGE_FETCH_MEDIA_METHOD,
   BRIDGE_COMPLETE_TEXT_METHOD,
+  BRIDGE_EVALUATE_DECISION_METHOD,
+  BRIDGE_APPEND_COPILOT_LOG_METHOD,
   BRIDGE_INJECT_BROWSER_SNAPSHOT_METHOD,
   BRIDGE_MODEL_MODE_METHOD,
   BRIDGE_PRODUCED_MEDIA_METHOD,
@@ -138,6 +140,13 @@ export interface BridgeServerDeps {
   readProduced?: (request: ProducedMediaRequest) => Promise<ProducedMediaOutcome>
   /** Unary Hub text completion; never a session submission receipt. */
   completeText?: (request: { prompt: string; system: string; maxTokens: number; signal: AbortSignal }) => Promise<unknown>
+  /** One Jev choice decision for {@link BRIDGE_EVALUATE_DECISION_METHOD}. */
+  evaluateDecision?: (
+    args: { state: string; choices: Record<string, string>; instructions: string },
+    ctx: { signal: AbortSignal },
+  ) => Promise<{ decision?: unknown; confidence?: unknown } | undefined>
+  /** Append one sanitized copilot log entry for {@link BRIDGE_APPEND_COPILOT_LOG_METHOD}. */
+  appendCopilotLog?: (entry: Record<string, unknown>) => Promise<void>
   /**
    * Record the composer's model mode for {@link BRIDGE_MODEL_MODE_METHOD}.
    * Process-level state held by the mount; the host never persists it.
@@ -533,6 +542,54 @@ export class BridgeServer {
       }
       return
     }
+    if (frame.method === BRIDGE_EVALUATE_DECISION_METHOD) {
+      const args = parseDecisionArgs(frame.payload)
+      if (args === undefined) {
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'bad-request', message: 'state (≤4000 chars), 1–10 choices and instructions are required' } })
+        return
+      }
+      if (!this.deps.evaluateDecision) {
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'decision-unavailable', message: 'Decision service unavailable' } })
+        return
+      }
+      const signal = AbortSignal.any([conn.abort.signal, AbortSignal.timeout(DECISION_TIMEOUT_MS)])
+      try {
+        const verdict = await Promise.race([
+          this.deps.evaluateDecision(args, { signal }),
+          new Promise<never>((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(new Error('Decision timed out')), { once: true })
+          }),
+        ])
+        const decision = typeof verdict?.decision === 'string' ? verdict.decision : undefined
+        sendFrame(conn.ws, {
+          t: 'rpc.result',
+          id: frame.id,
+          ok: true,
+          result: {
+            ...(decision === undefined ? {} : { decision }),
+            ...(typeof verdict?.confidence === 'number' ? { confidence: verdict.confidence } : {}),
+          },
+        })
+      } catch (error: unknown) {
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'decision-failed', message: error instanceof Error ? error.message : String(error) } })
+      }
+      return
+    }
+    if (frame.method === BRIDGE_APPEND_COPILOT_LOG_METHOD) {
+      const entry = sanitizeCopilotLogEntry(frame.payload)
+      if (entry === undefined) {
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'bad-request', message: 'entry must be an object with traceId and outcome, ≤16KB' } })
+        return
+      }
+      try {
+        if (!this.deps.appendCopilotLog) throw new Error('Copilot log unavailable')
+        await this.deps.appendCopilotLog(entry)
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: true, result: { persisted: true } })
+      } catch (error: unknown) {
+        sendFrame(conn.ws, { t: 'rpc.result', id: frame.id, ok: false, error: { code: 'log-failed', message: error instanceof Error ? error.message : String(error) } })
+      }
+      return
+    }
     if (frame.method === BRIDGE_MODEL_MODE_METHOD) {
       // Set-only: `auto` decides routing; `modelId` is reserved for the manual
       // selection and intentionally not consumed by this method version.
@@ -711,6 +768,70 @@ function modelModePayload(payload: unknown): { auto: boolean } | undefined {
   const { auto } = payload as Record<string, unknown>
   if (typeof auto !== 'boolean') return undefined
   return { auto }
+}
+
+/** Decision budget for {@link BRIDGE_EVALUATE_DECISION_METHOD}; callers fall back to rules past it. */
+export const DECISION_TIMEOUT_MS = 3_000
+
+/** Bounded `{state, choices, instructions}` for one Jev choice decision. */
+export function parseDecisionArgs(payload: unknown):
+  | { state: string; choices: Record<string, string>; instructions: string }
+  | undefined {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
+  const { state, choices, instructions } = payload as Record<string, unknown>
+  if (typeof state !== 'string' || !state.trim() || state.length > 4000) return undefined
+  if (typeof instructions !== 'string' || !instructions.trim() || instructions.length > 2000) return undefined
+  if (typeof choices !== 'object' || choices === null || Array.isArray(choices)) return undefined
+  const entries = Object.entries(choices as Record<string, unknown>)
+  if (entries.length < 1 || entries.length > 10) return undefined
+  const out: Record<string, string> = {}
+  for (const [k, v] of entries) {
+    if (typeof v !== 'string' || !k || k.length > 64 || v.length > 500) return undefined
+    out[k] = v
+  }
+  return { state, choices: out, instructions }
+}
+
+const COPILOT_LOG_MAX_BYTES = 16 * 1024
+const COPILOT_LOG_STRING_FIELDS = ['traceId', 'ts', 'scene', 'itemId', 'locale', 'inputMode'] as const
+const COPILOT_LOG_OBJECT_FIELDS = ['perspective', 'generation', 'outcome'] as const
+
+/**
+ * Keep only whitelisted copilot log fields and cap free text, so a buggy or
+ * hostile page can never turn the log into a dump of full tweets or secrets.
+ */
+export function sanitizeCopilotLogEntry(payload: unknown): Record<string, unknown> | undefined {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
+  const raw = payload as Record<string, unknown>
+  if (typeof raw.traceId !== 'string' || !/^tw_[\w-]{1,64}$/.test(raw.traceId)) return undefined
+  if (typeof raw.outcome !== 'object' || raw.outcome === null) return undefined
+  const out: Record<string, unknown> = {}
+  for (const key of COPILOT_LOG_STRING_FIELDS) {
+    if (typeof raw[key] === 'string') out[key] = (raw[key] as string).slice(0, 64)
+  }
+  for (const key of ['candidatesScanned', 'qualifiedCount'] as const) {
+    if (typeof raw[key] === 'number' && Number.isFinite(raw[key])) out[key] = raw[key]
+  }
+  if (Array.isArray(raw.keywords)) {
+    out.keywords = raw.keywords.filter((k): k is string => typeof k === 'string').slice(0, 12).map((k) => k.slice(0, 24))
+  }
+  if (Array.isArray(raw.seeds)) {
+    out.seeds = raw.seeds.slice(0, 3).flatMap((s) => {
+      if (typeof s !== 'object' || s === null) return []
+      const seed = s as Record<string, unknown>
+      return [{
+        author: typeof seed.author === 'string' ? seed.author.slice(0, 64) : '',
+        textSnippet: typeof seed.textSnippet === 'string' ? seed.textSnippet.slice(0, 200) : '',
+        total: typeof seed.total === 'number' ? seed.total : 0,
+        ...(typeof seed.scores === 'object' && seed.scores !== null ? { scores: seed.scores } : {}),
+      }]
+    })
+  }
+  for (const key of COPILOT_LOG_OBJECT_FIELDS) {
+    if (typeof raw[key] === 'object' && raw[key] !== null && !Array.isArray(raw[key])) out[key] = raw[key]
+  }
+  if (Buffer.byteLength(JSON.stringify(out), 'utf8') > COPILOT_LOG_MAX_BYTES) return undefined
+  return out
 }
 
 function purgeSessionPayload(payload: unknown): string | undefined {

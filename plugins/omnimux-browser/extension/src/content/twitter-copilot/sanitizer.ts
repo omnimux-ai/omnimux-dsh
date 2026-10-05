@@ -3,6 +3,25 @@
  * Ensures clean, single-choice, un-truncated output matching Twitter's character budget.
  */
 
+/** Phrases the humanize rules forbid; matched after sanitizing, case-insensitive. */
+export const HUMANIZE_BANNED: readonly RegExp[] = [
+  /深入探讨/, /至关重要/, /不断演变的格局/, /时代画卷/, /赋能/, /闭环/, /底层逻辑/,
+  /不仅[是仅].{0,20}?更是/, /标志着.{0,20}?新篇章/, /充分彰显/, /让我们拭目以待/, /未来可期/, /让我们(?:一起)?(?:来)?(?:深入)?看看/,
+  /\bdelve into\b/i, /\bever-evolving landscape\b/i, /\bgame[- ]changer\b/i, /\bnot just\b.{0,30}?\bbut\b/i,
+  /\btestament to\b/i, /\bonly time will tell\b/i, /\blet'?s dive in\b/i,
+]
+
+/** List the banned phrases present in `text` (source patterns, de-duplicated). */
+export function findHumanizeViolations(text: string): string[] {
+  if (!text) return []
+  const hits: string[] = []
+  for (const re of HUMANIZE_BANNED) {
+    const m = text.match(re)
+    if (m) hits.push(m[0])
+  }
+  return Array.from(new Set(hits))
+}
+
 export function sanitizeTweetText(rawText: string, locale: 'zh' | 'en' = 'zh'): string {
   if (!rawText || typeof rawText !== 'string') return ''
 

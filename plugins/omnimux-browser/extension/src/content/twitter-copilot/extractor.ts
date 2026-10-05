@@ -4,6 +4,7 @@
  */
 
 import type { TwitterContext, TwitterCopilotScene } from './types.ts'
+import { collectFeedCandidates, normalizeKeywords, scoreCandidate, selectSeeds } from './candidates.ts'
 
 function findComposerContainer(el: HTMLElement): HTMLElement | null {
   let cur: HTMLElement | null = el
@@ -82,7 +83,11 @@ export function detectTwitterScene(anchorButton: HTMLElement): TwitterCopilotSce
   return 'POST_NEW'
 }
 
-export function extractTwitterContext(anchorButton: HTMLElement, scene: TwitterCopilotScene): TwitterContext {
+export function extractTwitterContext(
+  anchorButton: HTMLElement,
+  scene: TwitterCopilotScene,
+  options: { keywords?: string; nowMs?: number } = {},
+): TwitterContext {
   // 所有字段一律初始化为空串：抓不到就是空，绝不让 undefined 流进提示词
   const context: TwitterContext = {
     scene,
@@ -122,36 +127,20 @@ export function extractTwitterContext(anchorButton: HTMLElement, scene: TwitterC
     context.draftText = (textarea.textContent || '').trim()
   }
 
-  // 1.1 若草稿为空且处于发帖场景，自动抓取信息流中当前可见的热门推文（前 3 条）作为灵感参考
+  context.keywords = normalizeKeywords(options.keywords || '', context.draftText)
+
+  // 1.1 发帖框为空：采集最多 50 条已渲染推文，四维评分，≥ 阈值的最多 3 条作为灵感种子
   if (scene === 'POST_NEW' && !context.draftText) {
-    const feedArticles = document.querySelectorAll('article[data-testid="tweet"]')
-    const hotList: Array<{ author: string; text: string; stat?: string }> = []
-    for (const article of Array.from(feedArticles)) {
-      // 排除广告与推广 (Promoted)
-      if (
-        article.textContent?.includes('Ad') ||
-        article.textContent?.includes('Promoted') ||
-        article.querySelector('[data-testid="placementTracking"]')
-      ) {
-        continue
-      }
-      const textEl = article.querySelector('[data-testid="tweetText"]')
-      const text = (textEl?.textContent || '').replace(/\s+/g, ' ').trim()
-      if (!text || text.length < 15) continue
-
-      const userEl = article.querySelector('[data-testid="User-Name"]')
-      const authorLink = userEl?.querySelector('a[role="link"][href^="/"]')
-      const href = authorLink?.getAttribute('href') || ''
-      const author = href.replace(/^\//, '').split('/')[0] || ''
-
-      const group = article.querySelector('div[aria-label][role="group"]')
-      const stat = group?.getAttribute('aria-label') || ''
-
-      hotList.push({ author, text, stat })
-      if (hotList.length >= 3) break
-    }
-    if (hotList.length > 0) {
-      context.feedHotTweets = hotList
+    const pool = collectFeedCandidates(document, composerContainer || null, options.nowMs)
+    context.candidatesScanned = pool.length
+    const seeds = selectSeeds(pool.map((c) => scoreCandidate(c, context.keywords || [])))
+    context.seeds = seeds
+    if (seeds.length > 0) {
+      context.feedHotTweets = seeds.map((s) => ({
+        author: s.author,
+        text: s.text,
+        stat: `${s.replies} replies, ${s.reposts} reposts, ${s.likes} likes`,
+      }))
     }
   }
 

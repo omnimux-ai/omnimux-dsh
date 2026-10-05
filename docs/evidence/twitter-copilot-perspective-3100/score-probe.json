@@ -1,0 +1,35 @@
+{
+  "articles": 4,
+  "rows": [
+    {
+      "a": "AndyL5cc",
+      "len": 79,
+      "r": 3,
+      "rp": 0,
+      "l": 2,
+      "h": 1.1,
+      "scores": {
+        "keyword": 33,
+        "controversy": 100,
+        "infoDelta": 36,
+        "velocity": 25
+      },
+      "total": 52
+    },
+    {
+      "a": "HiTw93",
+      "len": 85,
+      "r": 60,
+      "rp": 7,
+      "l": 113,
+      "h": 3.3,
+      "scores": {
+        "keyword": 33,
+        "controversy": 100,
+        "infoDelta": 41,
+        "velocity": 58
+      },
+      "total": 60
+    }
+  ]
+}
