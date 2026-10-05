@@ -14,6 +14,10 @@ import { createAvatarStore } from './store.js'
 
 const PRESET_NAME = 'abcdef12.webp'
 const PRESET_BYTES = Buffer.from('webp-bytes-'.repeat(8))
+const TASK_IMAGE_BYTES = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from('task-image-bytes-'.repeat(4)),
+])
 
 /** 起一个只服务该插件的真实 HTTP 服务；每个用例独立临时家目录。 */
 async function boot(t, { connection } = {}) {
@@ -230,6 +234,78 @@ test('预设图片：只认白名单路径、支持 Range、越界 416', async (
   assert.equal((await asset('/influencer-presets/ZZZZZZZZ.webp')).status, 404)
   assert.equal((await asset('/influencer-presets/deadbeef.webp')).status, 404)
   assert.equal((await asset('/other/abcdef12.webp')).status, 404)
+})
+
+test('任务成图：经形象→任务解析、支持 Range、越权与丢文件都 404、路径参数无效', async (t) => {
+  const { origin, post, paths } = await boot(t)
+  const url = (path) => `${origin}/api/omnimux/avatar${path}`
+
+  const owner = (await (await post('/api/omnimux/avatar/avatars', { name: '图主' })).json()).avatar
+  const other = (await (await post('/api/omnimux/avatar/avatars', { name: '他人' })).json()).avatar
+
+  const submitted = await (
+    await post('/api/omnimux/avatar/sheet', {
+      avatarId: owner.id,
+      model: 'flux-pro',
+      tier: 'normal',
+      selection: { gender: ['female'] },
+    })
+  ).json()
+  const taskId = submitted.task.taskId
+
+  // 文件还没落盘时，任务载荷不给地址——不给「点进去 404」的假入口。
+  const pending = await (await fetch(url(`/tasks?avatarId=${owner.id}`))).json()
+  assert.equal(pending.tasks[0].imageUrl, undefined)
+
+  // 主图落在任务自己的 destPath 上（服务端就是这么记的）。
+  const dest = join(paths.dataDir, owner.id, 'main.png')
+  mkdirSync(join(paths.dataDir, owner.id), { recursive: true })
+  writeFileSync(dest, TASK_IMAGE_BYTES)
+
+  const listed = await (await fetch(url(`/tasks?avatarId=${owner.id}`))).json()
+  const imageUrl = `/api/omnimux/avatar/task/image?avatarId=${owner.id}&taskId=${taskId}`
+  assert.equal(listed.tasks[0].imageUrl, imageUrl)
+
+  const one = await (await fetch(url(`/task?avatarId=${owner.id}&taskId=${taskId}`))).json()
+  assert.equal(one.task.imageUrl, imageUrl)
+
+  const full = await fetch(`${origin}${imageUrl}`)
+  assert.equal(full.status, 200)
+  assert.equal(full.headers.get('content-type'), 'image/png')
+  assert.equal(full.headers.get('accept-ranges'), 'bytes')
+  assert.equal(Buffer.from(await full.arrayBuffer()).equals(TASK_IMAGE_BYTES), true)
+
+  const ranged = await fetch(`${origin}${imageUrl}`, { headers: { Range: 'bytes=0-7' } })
+  assert.equal(ranged.status, 206)
+  assert.equal(ranged.headers.get('content-range'), `bytes 0-7/${TASK_IMAGE_BYTES.length}`)
+  assert.equal((await ranged.arrayBuffer()).byteLength, 8)
+
+  const beyond = await fetch(`${origin}${imageUrl}`, { headers: { Range: `bytes=${TASK_IMAGE_BYTES.length}-` } })
+  assert.equal(beyond.status, 416)
+
+  // 别人的任务 id：形象存在但任务不属于它 → 404，且不泄露任何路径。
+  assert.equal((await fetch(url(`/task/image?avatarId=${other.id}&taskId=${taskId}`))).status, 404)
+  assert.equal((await fetch(url(`/task/image?avatarId=${owner.id}&taskId=avt_task_deadbeef`))).status, 404)
+
+  // 原始路径参数一律不认：没有标识 → 400；带上也不改变实际取的文件。
+  const rawOnly = await fetch(url(`/task/image?path=${encodeURIComponent(dest)}`))
+  assert.equal(rawOnly.status, 400)
+  assert.equal((await rawOnly.json()).error.code, 'invalid_request')
+
+  const withRaw = await fetch(`${origin}${imageUrl}&path=${encodeURIComponent('/etc/passwd')}`)
+  assert.equal(withRaw.status, 200)
+  assert.equal(Buffer.from(await withRaw.arrayBuffer()).equals(TASK_IMAGE_BYTES), true)
+
+  // 文件被删：404 且带文件自己的错误码，而不是 500。
+  await rm(dest, { force: true })
+  const gone = await fetch(`${origin}${imageUrl}`)
+  assert.equal(gone.status, 404)
+  const goneBody = await gone.json()
+  assert.equal(goneBody.success, false)
+  assert.equal(goneBody.error.code, 'ENOENT')
+
+  const afterDelete = await (await fetch(url(`/tasks?avatarId=${owner.id}`))).json()
+  assert.equal(afterDelete.tasks[0].imageUrl, undefined)
 })
 
 test('错误永不变成 200：非法选项、未知路由、错误方法、超大请求体', async (t) => {

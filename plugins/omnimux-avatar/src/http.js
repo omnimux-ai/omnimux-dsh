@@ -1,8 +1,8 @@
 // 形象管理 HTTP 路由：单个 prefix 注册承载全部子路径。
 // 约定与 omnimux-forms / omnimux-products 一致：宿主鉴权先行、写路由同源 + JSON + 体积上限。
-import { createReadStream } from 'node:fs'
+import { createReadStream, existsSync } from 'node:fs'
 import { stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { extname, join } from 'node:path'
 import { PresetSnapshot } from './presets.js'
 import { ETag, servedTaxonomy } from './taxonomy.js'
 import { AvatarError, latestTaskOf } from './store.js'
@@ -13,6 +13,17 @@ const BODY_LIMIT = 64 * 1024
 const DRAIN_LIMIT = 1024 * 1024
 const PRESET_ASSET_PREFIX = '/influencer-presets/'
 const PRESET_ASSET_PATH = /^\/influencer-presets\/[0-9a-f]{8,}\.webp$/
+// 任务成图路由：只吃 avatarId + taskId，路径由服务端自己从任务记录里取。
+const TASK_IMAGE_ROUTE = '/task/image'
+const IMAGE_TYPES = {
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.avif': 'image/avif',
+  '.bmp': 'image/bmp',
+}
 
 const messageOf = (error) => (error instanceof Error ? error.message : String(error))
 
@@ -82,8 +93,10 @@ export function registerAvatarRoutes(webServer, deps = {}) {
         if (route === '/tasks') {
           const avatarId = url.searchParams.get('avatarId') ?? ''
           if (avatarId === '') return fail(400, 'invalid_request', '缺少 avatarId')
-          return send(200, { success: true, tasks: store.listTasks(avatarId) })
+          const tasks = store.listTasks(avatarId).map((task) => withImageUrl(avatarId, task))
+          return send(200, { success: true, tasks })
         }
+        if (route === '/task/image') return await streamTaskImage(req, res, url, fail, store)
         if (route === '/task') {
           const avatarId = url.searchParams.get('avatarId') ?? ''
           const taskId = url.searchParams.get('taskId') ?? ''
@@ -93,7 +106,7 @@ export function registerAvatarRoutes(webServer, deps = {}) {
               ? await generation.refreshTask({ avatarId, taskId })
               : store.findTask(avatarId, taskId)
           if (!task) throw new AvatarError('task-not-found', 'task not found', 404)
-          return send(200, { success: true, task })
+          return send(200, { success: true, task: withImageUrl(avatarId, task) })
         }
         return fail(404, 'not-found', 'Not found')
       }
@@ -229,35 +242,102 @@ async function readJsonBody(req) {
   return parsed
 }
 
+/**
+ * 任务载荷里附带的成品图地址：文件确实在盘上才加这个字段。
+ *
+ * 地址由服务端自己拼，客户端拿到的永远只是「形象 + 任务」这两个标识，
+ * 因此不可能用它去读库目录以外的文件。
+ */
+function withImageUrl(avatarId, task) {
+  const destPath = typeof task?.destPath === 'string' ? task.destPath : ''
+  const taskId = typeof task?.taskId === 'string' ? task.taskId : ''
+  if (destPath === '' || taskId === '' || !existsSync(destPath)) return task
+  const query = new URLSearchParams({ avatarId, taskId })
+  return { ...task, imageUrl: `${PREFIX}${TASK_IMAGE_ROUTE}?${query}` }
+}
+
+/** 按扩展名判定图片类型；未知扩展名按二进制流返回，不硬猜成图片。 */
+function imageContentType(file) {
+  return IMAGE_TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream'
+}
+
+/**
+ * 任务成图：形象 → 任务 → destPath，只认标识、不收客户端给的路径。
+ *
+ * 任务不属于该形象时 store.findTask 返回 null（形象不存在则抛 404），
+ * 两者都是 404，不区分「别人的任务」与「没有这条任务」。
+ */
+async function streamTaskImage(req, res, url, fail, store) {
+  const avatarId = url.searchParams.get('avatarId') ?? ''
+  const taskId = url.searchParams.get('taskId') ?? ''
+  if (avatarId === '' || taskId === '') return fail(400, 'invalid_request', '缺少 avatarId 或 taskId')
+
+  const task = store.findTask(avatarId, taskId)
+  const destPath = typeof task?.destPath === 'string' ? task.destPath : ''
+  if (destPath === '') return fail(404, 'not-found', 'Not found')
+
+  const error = await streamFile(req, res, destPath, {
+    contentType: imageContentType(destPath),
+    // 同一个 destPath 会被重新生成覆盖，成品图不能按长缓存复用。
+    cacheControl: 'private, no-store',
+  })
+  if (error) return fail(error.status, error.code, error.message)
+}
+
 /** 预设预览图：只认 /influencer-presets/<hex8+>.webp，支持 Range。 */
 async function streamPresetAsset(req, res, url, fail, paths) {
   const raw = url.searchParams.get('path') ?? ''
   if (!PRESET_ASSET_PATH.test(raw)) return fail(404, 'not-found', 'Not found')
   const file = join(paths.presetsDir, raw.slice(PRESET_ASSET_PREFIX.length))
 
-  let info
-  try {
-    info = await stat(file)
-  } catch {
-    return fail(404, 'not-found', 'Not found')
+  const error = await streamFile(req, res, file, {
+    contentType: 'image/webp',
+    cacheControl: 'private, max-age=86400',
+  })
+  // 预设图对外只有一个缺省口径，不把文件系统错误码透出去。
+  if (error) return fail(404, 'not-found', 'Not found')
+}
+
+/**
+ * 流式返回一个本地文件，支持 Range；预设资产与任务成图共用这一份实现。
+ *
+ * 返回 null 表示响应已经写出（含 416）；返回 `{ status, code, message }`
+ * 表示调用方应改走 fail()，code 优先取文件系统自己的错误码（ENOENT / EACCES…）。
+ */
+async function streamFile(req, res, file, { contentType, cacheControl }) {
+  const { info, error } = await statOrError(file)
+  if (error) {
+    const code = typeof error.code === 'string' && error.code !== '' ? error.code : 'not-found'
+    return { status: 404, code, message: 'Not found' }
   }
-  if (!info.isFile()) return fail(404, 'not-found', 'Not found')
+  if (!info.isFile()) return { status: 404, code: 'not-found', message: 'Not found' }
 
   const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
   const start = range ? Number(range[1]) : 0
   const end = range?.[2] ? Math.min(Number(range[2]), info.size - 1) : info.size - 1
   if (start > end || start >= info.size) {
     res.writeHead(416, { 'Content-Range': `bytes */${info.size}` })
-    return res.end()
+    res.end()
+    return null
   }
   res.writeHead(range ? 206 : 200, {
-    'Content-Type': 'image/webp',
+    'Content-Type': contentType,
     'Content-Length': end - start + 1,
     'Accept-Ranges': 'bytes',
-    'Cache-Control': 'private, max-age=86400',
+    'Cache-Control': cacheControl,
     ...(range ? { 'Content-Range': `bytes ${start}-${end}/${info.size}` } : {}),
   })
   const stream = createReadStream(file, { start, end })
   stream.on('error', () => res.destroy())
   stream.pipe(res)
+  return null
+}
+
+/** 读文件元信息；读不到时把错误原样交回，供调用方取它自己的错误码。 */
+async function statOrError(file) {
+  try {
+    return { info: await stat(file), error: null }
+  } catch (error) {
+    return { info: null, error }
+  }
 }

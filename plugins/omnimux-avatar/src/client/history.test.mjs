@@ -169,6 +169,33 @@ describe('taskImageUrl', () => {
     assert.equal(url, '/art.png')
   })
 
+  it('falls back to the server-provided image url when the row has no artifacts', () => {
+    const row = rec({ imageUrl: '/api/omnimux/avatar/task/image?avatarId=avt_1&taskId=avt_task_1' })
+    assert.equal(taskImageUrl(row), '/api/omnimux/avatar/task/image?avatarId=avt_1&taskId=avt_task_1')
+  })
+
+  it('keeps result_url and legacy_content_url ahead of the server url', () => {
+    const server = '/api/omnimux/avatar/task/image?avatarId=avt_1&taskId=avt_task_1'
+    assert.equal(
+      taskImageUrl(rec({ result_url: 'https://cdn.example.com/result.png', imageUrl: server })),
+      '/result.png'
+    )
+    assert.equal(
+      taskImageUrl(rec({ legacy_content_url: 'https://cdn.example.com/legacy.png', imageUrl: server })),
+      '/legacy.png'
+    )
+  })
+
+  it('prefers an artifact over the server-provided image url', () => {
+    const url = taskImageUrl(
+      rec({
+        artifacts: [{ url: 'https://cdn.example.com/art.png' }],
+        imageUrl: '/api/omnimux/avatar/task/image?avatarId=avt_1&taskId=avt_task_1',
+      })
+    )
+    assert.equal(url, '/art.png')
+  })
+
   it('returns null when nothing is available', () => {
     assert.equal(taskImageUrl(rec()), null)
     assert.equal(taskImageUrl(rec({ artifacts: [] })), null)

@@ -20,6 +20,10 @@ const PATHS = {
   sync: '/api/omnimux/avatar/sync',
   tasks: '/api/omnimux/avatar/tasks',
   task: '/api/omnimux/avatar/task',
+  // 任务成图：只吃 avatarId + taskId，服务端自己从任务记录里取盘上路径。
+  // 任务载荷已带现成的 imageUrl（见 history.js 的 taskImageUrl 兜底），
+  // 这一条是给需要自行拼地址的调用方（深链 / 新窗口打开）核对契约用。
+  taskImage: '/api/omnimux/avatar/task/image',
   tasksDelete: '/api/omnimux/avatar/tasks/delete',
 }
 

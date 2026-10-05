@@ -128,6 +128,10 @@ function sameOrigin(url) {
 
 /**
  * 画廊展示用的相对图片 URL。
+ *
+ * 本插件自己的任务记录没有 artifacts / result_url，成品图落在服务端本地盘上，
+ * 由 `GET /task/image` 按「形象 + 任务」取；服务端只在文件确实存在时给 `imageUrl`，
+ * 因此它是最后一道兜底，不会把「取不到图」变成「点进去 404」。
  * @param {import('./types.js').TaskRecord} record
  * @returns {string|null}
  */
@@ -137,5 +141,6 @@ export function taskImageUrl(record) {
   if (url) return sameOrigin(url)
   if (record.result_url) return sameOrigin(record.result_url)
   if (record.legacy_content_url) return sameOrigin(record.legacy_content_url)
+  if (record.imageUrl) return sameOrigin(record.imageUrl)
   return null
 }

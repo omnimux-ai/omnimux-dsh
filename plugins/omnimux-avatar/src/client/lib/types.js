@@ -97,6 +97,7 @@ export const STORAGE_KEYS = Object.freeze({
  * @property {{ key?: string, content_url?: string, url?: string }[]} [artifacts]
  * @property {string} [result_url]
  * @property {string} [legacy_content_url]
+ * @property {string} [imageUrl] 服务端在成品图确实存在时给出的站内相对取图地址
  */
 
 /**
