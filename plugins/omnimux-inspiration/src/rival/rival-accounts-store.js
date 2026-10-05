@@ -204,6 +204,7 @@ export function buildPostRow(record, ctx) {
     video_url: nullableText(source.video_url),
     video_local_path: nullableText(source.video_local_path),
     duration: nullableNumber(source.duration),
+    ratio: nullableNumber(source.ratio),
     stats: {
       views: nullableNumber(stats.views),
       likes: nullableNumber(stats.likes),

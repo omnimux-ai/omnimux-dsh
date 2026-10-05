@@ -93,11 +93,18 @@ describe('rival-accounts-store: whitelist constructors (G3)', () => {
     assert.deepEqual(Object.keys(row).sort(), [
       'account_id', 'cover_http_url', 'cover_local_path', 'cover_url', 'duration', 'first_seen_at',
       'id', 'in_library', 'inspiration_id', 'last_seen_at', 'metrics', 'platform', 'posted_at',
-      'potential', 'stats', 'text', 'title', 'type', 'url', 'video_local_path', 'video_url',
+      'potential', 'ratio', 'stats', 'text', 'title', 'type', 'url', 'video_local_path', 'video_url',
     ])
     assert.equal('extra' in row.stats, false)
     assert.equal('something_else' in row, false)
     assert.equal(row.account_id, 'riv_a')
+  })
+
+  it('persists the media aspect ratio as a number or null (#3110)', () => {
+    const base = { now: FIXED_NOW_ISO, accountId: 'riv_a', platform: 'tiktok' }
+    assert.equal(buildPostRow({ id: 'p1', ratio: 0.8 }, base).ratio, 0.8)
+    assert.equal(buildPostRow({ id: 'p2', ratio: '4:5' }, base).ratio, null)
+    assert.equal(buildPostRow({ id: 'p3' }, base).ratio, null)
   })
 
   it('builds a config from constants, not from the caller', () => {
@@ -229,6 +236,14 @@ describe('rival-accounts-store: post cache', () => {
     assert.equal(updated.inspiration_id, 'insp_1')
     assert.equal(store.findPost('riv_a', 'p1').in_library, true)
     assert.throws(() => store.updatePost('riv_a', 'nope', {}), (err) => err.code === 'post-not-found')
+  })
+
+  it('reads back a ratio written through updatePost (#3110)', () => {
+    const { store } = sandbox()
+    store.writePosts('riv_a', [{ id: 'p1' }], { platform: 'tiktok' })
+    const updated = store.updatePost('riv_a', 'p1', { ratio: 0.8 })
+    assert.equal(updated.ratio, 0.8)
+    assert.equal(store.findPost('riv_a', 'p1').ratio, 0.8)
   })
 
   it('drops a video_url that arrives as an empty string', () => {

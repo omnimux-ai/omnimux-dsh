@@ -99,6 +99,17 @@ describe('rival-feed — titles and rows', () => {
     assert.equal(first.cover_key, first.cover_src, 'the card reads cover_key')
     assert.equal(first.in_library, false)
   })
+
+  it('passes the stored media aspect ratio through, null when unreadable (#3110)', () => {
+    assert.equal(toFeedRow(post('p1', { ratio: 0.8 }), alice).ratio, 0.8)
+    assert.equal(toFeedRow(post('p1', { ratio: 16 / 9 }), alice).ratio, 16 / 9)
+    // A malformed or absent ratio is "unknown" — the card's fallback decides the
+    // media height, an invented number would not.
+    assert.equal(toFeedRow(post('p1', { ratio: '16:9' }), alice).ratio, null)
+    assert.equal(toFeedRow(post('p1', { ratio: Number.NaN }), alice).ratio, null)
+    assert.equal(toFeedRow(post('p1', { ratio: Number.POSITIVE_INFINITY }), alice).ratio, null)
+    assert.equal(toFeedRow(post('p1'), alice).ratio, null)
+  })
 })
 
 describe('rival-feed — filtering and merge', () => {
