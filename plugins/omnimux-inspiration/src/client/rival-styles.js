@@ -376,6 +376,10 @@ export const RIVAL_CSS = `
   min-height: var(--rival-feed-height, 0px);
   height: var(--rival-feed-height, auto);
 }
+/* 追加分页时的骨架矩阵：贴瀑布流底下，间距与列间距同一档。 */
+.omnimux-rival-loadmore {
+  margin-top: 16px;
+}
 .omnimux-rival-card {
   position: absolute;
   left: var(--rival-card-left, 0px);

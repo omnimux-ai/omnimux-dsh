@@ -64,7 +64,7 @@ export function RivalFeedGrid(props) {
     if (doneIds.size === 0) return cards
     return cards.map((card) => (
       doneIds.has(String(card?.id ?? ''))
-        ? { ...card, done: true, state_label: '已处理' }
+        ? { ...card, done: true, state: 'done' }
         : card
     ))
   }, [cards, doneIds])
@@ -127,14 +127,23 @@ export function RivalFeedGrid(props) {
   }
 
   return (
-    <RivalMasonry
-      cards={renderCards}
-      t={t}
-      onDetail={onDetail}
-      onReplicate={onReplicate}
-      onMarkDone={handleMarkDone}
-      onDeconstruct={onDeconstruct}
-      busyId={replicateBusy}
-    />
+    <>
+      <RivalMasonry
+        cards={renderCards}
+        t={t}
+        onDetail={onDetail}
+        onReplicate={onReplicate}
+        onMarkDone={handleMarkDone}
+        onDeconstruct={onDeconstruct}
+        busyId={replicateBusy}
+      />
+      {loadingMore ? (
+        <div className="omnimux-inspiration-skeleton omnimux-rival-loadmore" data-rival-loadmore-skeleton="true" aria-hidden="true">
+          {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
+            <div key={index} className="omnimux-inspiration-skel" />
+          ))}
+        </div>
+      ) : null}
+    </>
   )
 }

@@ -74,6 +74,25 @@ function matchKeyOf(card) {
   return MATCH_KEY[label] || null
 }
 
+/** §9.2 第四种操作位的状态文字：字典值 + `interacted_at` 的本地 HH:mm。 */
+function stateText(card, t) {
+  const label = String(card?.state_label || '')
+  if (label) return label
+  const state = String(card?.state || '')
+  if (state === 'done') return String(t('rivalFeed.card.done'))
+  if (state === 'replicated') return String(t('rivalFeed.card.replicated'))
+  if (state === 'interacted') {
+    const at = Date.parse(String(card?.interacted_at || ''))
+    const template = String(t('rivalFeed.card.interacted'))
+    if (!Number.isFinite(at)) return template.replace(/\s*·\s*\{time\}/, '')
+    const date = new Date(at)
+    const hh = String(date.getHours()).padStart(2, '0')
+    const mm = String(date.getMinutes()).padStart(2, '0')
+    return template.replace('{time}', `${hh}:${mm}`)
+  }
+  return ''
+}
+
 /**
  * @param {{
  *   card: Record<string, any>,
@@ -91,7 +110,7 @@ export function RivalPostCard(props) {
   const { card, t, onDetail, onReplicate, onDeconstruct, onMarkDone, style, column, busy } = props
   const cardType = rivalCardTypeOf(card)
   const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image'
-  const isDone = Boolean(card?.done || card?.state_label)
+  const isDone = Boolean(card?.done || card?.state || card?.state_label)
   const tier = String(card?.velocity?.tier || 'watch')
   const title = String(card?.title || '')
   const mediaRatio = rivalMediaRatioOf(card)
@@ -100,7 +119,7 @@ export function RivalPostCard(props) {
   const account = card?.account || {}
   const posted = formatRelativeTime(card?.posted_at)
   const matchKey = matchKeyOf(card)
-  const stateLabel = String(card?.state_label || '')
+  const stateLabel = stateText(card, t)
 
   const openDetail = () => {
     if (typeof onDetail === 'function') onDetail(card)

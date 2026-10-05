@@ -32,27 +32,35 @@ import {
  * Spec-literal heights in px at `columnWidth` (spec §9.3 + §9.1).
  * This is the independent truth source: the formulas here come from the spec
  * table, not from the module under test, so a regression in the adapter shows.
+ *
+ * Geometry is border-box: the card carries 1px top + 1px bottom border (2px),
+ * media/title zones use the inner width (columnWidth − 2), and line counts are
+ * approximated per rendered text width (CJK ≈ font-size, ASCII ≈ 0.55×).
  */
 function oracleHeightPx(card, columnWidth) {
+  const inner = columnWidth - 2
   const type = card.card_type || card.type
   if (type === 'text') {
-    const chars = [...String(card.title || '')].length
-    const perLine = Math.max(1, Math.floor((columnWidth - 24) / 14))
-    const lines = Math.max(1, Math.min(8, Math.ceil(chars / perLine)))
+    const width = [...String(card.title || '')].reduce((s, ch) => s + (ch.codePointAt(0) > 0x2e7f ? 14 : 14 * 0.55), 0)
+    const lines = Math.max(1, Math.min(8, Math.ceil(width / (inner - 24))))
     const pill = card.velocity ? 36 : 0
-    return Math.max(144, 24 + pill + lines * 20)
+    return Math.max(144, 24 + pill + lines * 20 + 2)
   }
   if (type === 'text-media') {
     const mediaRatio = card.type === 'video' || card.media_kind === 'video'
       ? 16 / 9
       : clamp(Number.isFinite(card.ratio) ? card.ratio : 4 / 5, 0.8, 1.91)
-    return Math.max(144, 24 + 36 + 60 + 10 + (columnWidth - 24) / mediaRatio)
+    const width = [...String(card.title || '')].reduce((s, ch) => s + (ch.codePointAt(0) > 0x2e7f ? 14 : 14 * 0.55), 0)
+    const lines = Math.max(1, Math.min(3, Math.ceil(width / (inner - 24))))
+    const pill = card.velocity ? 36 : 0
+    return Math.max(144, 24 + pill + lines * 20 + 10 + (inner - 24) / mediaRatio + 2)
   }
   const media = type === 'short-video' ? 9 / 16
     : type === 'long-video' ? 16 / 9
     : clamp(Number.isFinite(card.ratio) ? card.ratio : 4 / 5, 0.8, 1.91)
-  const lines = type === 'long-video' ? 2 : 1
-  return columnWidth / media + 24 + 18 * lines
+  const titleWidth = [...String(card.title || '')].reduce((s, ch) => s + (ch.codePointAt(0) > 0x2e7f ? 13 : 13 * 0.55), 0)
+  const lines = Math.max(1, Math.min(2, Math.ceil(titleWidth / (columnWidth - 26))))
+  return inner / media + 22 + 18 * lines + 2
 }
 
 function clamp(value, min, max) {
@@ -155,10 +163,10 @@ describe('rival-masonry — 媒体比例', () => {
 })
 
 describe('rival-masonry — 高度估算（§9.3 参考值护栏）', () => {
-  it('long tweet (#11, 134 chars, with pill) ≈ 220px at 220px column', () => {
+  it('long tweet (#11, 134 chars, with pill) ≈ 222px at 220px column', () => {
     const h = rivalCardHeightPx({ card_type: 'text', title: TEXT_LONG, velocity: { text: '飙升 2.6k/h' } }, 220)
-    assert.equal(h, 24 + 36 + 8 * 20, 'spec §9.3: pill row 28+8 + 8 lines × 20 + padding')
-    assert.ok(h <= 220 + 1e-9 && h > 200, 'must sit at the spec ceiling, not above it')
+    assert.equal(h, 24 + 36 + 8 * 20 + 2, '§9.3: 24 padding + pill row 28+8 + 8 lines × 20 + border 2')
+    assert.ok(h <= 222 + 1e-9 && h > 200, 'must sit at the spec ceiling (≈220), not above it')
   })
 
   it('short tweet (#12, 30 chars) clamps at the 144px floor', () => {
@@ -169,20 +177,31 @@ describe('rival-masonry — 高度估算（§9.3 参考值护栏）', () => {
 
   it('text-card without a pill does not reserve the pill row', () => {
     const h = rivalCardHeightPx({ card_type: 'text', title: TEXT_SHORT }, 220)
-    assert.equal(h, 144, '24 + 3×20 = 84 → floor 144')
+    assert.equal(h, 144, '24 + 3×20 + 2 = 86 → floor 144')
   })
 
   it('text-media estimate lands at the spec ≈238px', () => {
-    const h = rivalCardHeightPx({ card_type: 'text-media', media_kind: 'video', title: 'x'.repeat(140) }, 220)
-    assert.ok(Math.abs(h - (24 + 36 + 60 + 10 + (220 - 24) / (16 / 9))) < 1e-9)
+    const h = rivalCardHeightPx({ card_type: 'text-media', media_kind: 'video', title: 'x'.repeat(140), velocity: { text: '飙升 1.2k/h' } }, 220)
+    assert.ok(Math.abs(h - (24 + 36 + 60 + 10 + (220 - 26) / (16 / 9) + 2)) < 1e-9)
     assert.ok(h < 250 && h > 230, 'spec: text-media ≈ 238px at 220px')
   })
 
-  it('media cards: media height + title zone (long-video 2 lines, others 1)', () => {
+  it('media cards: inner media height + title zone + border (long-video wraps to 2 lines)', () => {
     const w = 220
-    assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'short-video' }, w) - (w / (9 / 16) + 42)) < 1e-9)
-    assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'long-video' }, w) - (w / (16 / 9) + 60)) < 1e-9)
-    assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'image', ratio: null }, w) - (w / 0.8 + 42)) < 1e-9)
+    const inner = w - 2
+    assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'short-video' }, w) - (inner / (9 / 16) + 22 + 18 + 2)) < 1e-9)
+    assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'long-video', title: 'x'.repeat(140) }, w) - (inner / (16 / 9) + 22 + 36 + 2)) < 1e-9)
+    assert.ok(Math.abs(rivalCardHeightPx({ card_type: 'image', ratio: null }, w) - (inner / 0.8 + 22 + 18 + 2)) < 1e-9)
+  })
+
+  it('a short long-video title stays one line — the clamp is a cap, not a constant', () => {
+    const w = 220
+    const inner = w - 2
+    // §9.4 #2/#9：两行截断上限不等于两行占位——QA D1 实测这两张只有 1 行。
+    assert.ok(
+      Math.abs(rivalCardHeightPx({ card_type: 'long-video', title: '2026 十款智能喂食器横评' }, w) - (inner / (16 / 9) + 22 + 18 + 2)) < 1e-9,
+      'short titles render a single line even though the clamp allows two',
+    )
   })
 })
 

@@ -1,0 +1,128 @@
+{
+  "measuredAt": "2026-10-05T12:03:52.976Z",
+  "containerWidth": 1164,
+  "columns": 5,
+  "colWidth": "220",
+  "gridHeightVar": "846.6805555555555px",
+  "gaps": [
+    {
+      "col": 0,
+      "gaps": [
+        16
+      ]
+    },
+    {
+      "col": 1,
+      "gaps": [
+        16
+      ]
+    },
+    {
+      "col": 2,
+      "gaps": [
+        16
+      ]
+    },
+    {
+      "col": 3,
+      "gaps": [
+        16,
+        16
+      ]
+    },
+    {
+      "col": 4,
+      "gaps": [
+        16,
+        16
+      ]
+    }
+  ],
+  "replay": [
+    {
+      "id": "ra_1:p1",
+      "actual": 0,
+      "shortest": 0,
+      "ok": true,
+      "h": 429.55
+    },
+    {
+      "id": "ra_2:p2",
+      "actual": 1,
+      "shortest": 1,
+      "ok": true,
+      "h": 164.63
+    },
+    {
+      "id": "ra_3:p3",
+      "actual": 2,
+      "shortest": 2,
+      "ok": true,
+      "h": 314.5
+    },
+    {
+      "id": "ra_4:p11",
+      "actual": 3,
+      "shortest": 3,
+      "ok": true,
+      "h": 222
+    },
+    {
+      "id": "ra_4:p4",
+      "actual": 4,
+      "shortest": 4,
+      "ok": true,
+      "h": 241.13
+    },
+    {
+      "id": "ra_6:p5",
+      "actual": 1,
+      "shortest": 1,
+      "ok": true,
+      "h": 429.55
+    },
+    {
+      "id": "ra_5:p6",
+      "actual": 3,
+      "shortest": 3,
+      "ok": true,
+      "h": 241.13
+    },
+    {
+      "id": "ra_5:p12",
+      "actual": 4,
+      "shortest": 4,
+      "ok": true,
+      "h": 144
+    },
+    {
+      "id": "ra_7:p7",
+      "actual": 2,
+      "shortest": 2,
+      "ok": true,
+      "h": 260
+    },
+    {
+      "id": "ra_1:p8",
+      "actual": 4,
+      "shortest": 4,
+      "ok": true,
+      "h": 429.55
+    },
+    {
+      "id": "ra_2:p9",
+      "actual": 0,
+      "shortest": 0,
+      "ok": true,
+      "h": 164.63
+    },
+    {
+      "id": "ra_3:p10",
+      "actual": 3,
+      "shortest": 3,
+      "ok": true,
+      "h": 314.5
+    }
+  ],
+  "maxBottom": 870.67
+}

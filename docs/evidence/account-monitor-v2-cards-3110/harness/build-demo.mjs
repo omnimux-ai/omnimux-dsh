@@ -1,32 +1,39 @@
 /**
  * Build the #3110 QA page: real RivalMasonry + RivalPostCard + tokens/styles,
- * bundled with the worktree's own react / dsh-ui-kit (single React copy).
- * Output: tmp-qa/demo.html + tmp-qa/demo-bundle.js
+ * bundled with the repo's own react (single React copy) and the repo's
+ * `ui-kit-shim` in place of `dsh-ui-kit` — the production kit bundles
+ * @deepseek-ai/dsh-client-ui-primitives with CSS modules esbuild can't follow,
+ * and `rival-cards.e2e.test.js` makes the same substitution.
+ *
+ * Prerequisites: a repo checkout with `pnpm install` already run at the repo
+ * root (react/react-dom/esbuild are resolved upward from this directory).
+ *
+ * Command (from the repo root or any directory):
+ *   node docs/evidence/account-monitor-v2-cards-3110/harness/build-demo.mjs
+ *
+ * Output: harness/demo.html + harness/demo-bundle.js — serve the harness
+ * directory statically and open demo.html?theme=dark|light.
  */
 import { build } from 'esbuild'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const W = resolve(here, '..')
-const MAIN = '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh'
+const ROOT = resolve(here, '..', '..', '..', '..')
+const SHIM = resolve(ROOT, 'plugins/omnimux-inspiration/src/client/test-fixtures/ui-kit-shim.mjs')
 
 await build({
-  absWorkingDir: W,
-  entryPoints: ['tmp-qa/demo-entry.jsx'],
+  absWorkingDir: ROOT,
+  entryPoints: [resolve(here, 'demo-entry.jsx')],
   bundle: true,
   format: 'esm',
   platform: 'browser',
   jsx: 'automatic',
-  outfile: 'tmp-qa/demo-bundle.js',
+  outfile: resolve(here, 'demo-bundle.js'),
   logLevel: 'warning',
   alias: {
-    'react': resolve(MAIN, 'node_modules/react'),
-    'react-dom': resolve(MAIN, 'node_modules/react-dom'),
-    'react-dom/client': resolve(MAIN, 'node_modules/react-dom/client.js'),
-    'react/jsx-runtime': resolve(MAIN, 'node_modules/react/jsx-runtime.js'),
-    'dsh-ui-kit': resolve(W, 'packages/dsh-ui-kit/lib/index.js'),
+    'dsh-ui-kit': SHIM,
   },
 })
 
@@ -131,4 +138,4 @@ body {
 `
 
 writeFileSync(resolve(here, 'demo.html'), html)
-console.log('built tmp-qa/demo.html + demo-bundle.js')
+console.log(`built ${resolve(here, 'demo.html')} + demo-bundle.js`)

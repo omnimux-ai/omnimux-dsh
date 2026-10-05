@@ -161,14 +161,18 @@ export function toAccountFilterRow(account, state) {
 
 import { rivalCardTypeOf } from './rival-masonry.js'
 
-/** `已互动 · HH:mm`；`interacted_at` 不可解析时只报已互动（字段含义见 §9.2）。 */
-function interactedLabel(iso) {
-  const at = Date.parse(String(iso || ''))
-  if (!Number.isFinite(at)) return '已互动'
-  const date = new Date(at)
-  const hh = String(date.getHours()).padStart(2, '0')
-  const mm = String(date.getMinutes()).padStart(2, '0')
-  return `已互动 · ${hh}:${mm}`
+/**
+ * §9.2 状态裁决：卡片只消费「状态种类」，文案由渲染层经 locale 字典输出。
+ * Host 下发的 `state_label` 原样透传（展示权在 Host 数据，不翻译），
+ * 派生状态只产枚举——映射层不出现任何界面文字。
+ * @param {Record<string, any>} row
+ * @returns {'done'|'replicated'|'interacted'|null}
+ */
+export function rivalStateOf(row) {
+  if (row?.done || row?.done_at) return 'done'
+  if (row?.in_library) return 'replicated'
+  if (row?.interacted_at) return 'interacted'
+  return null
 }
 
 /**
@@ -179,7 +183,7 @@ function interactedLabel(iso) {
  * validated cover address, and platform metadata instead of library actions.
  *
  * v2.1 扩字段：`card_type` 五种形态、`ratio`、`has_media`/`media_kind`、
- * `velocity`、`metrics_template`（`play` | `read`）与 `done`/`state_label`
+ * `velocity`、`metrics_template`（`play` | `read`）与 `done`/`state`/`state_label`
  * 都在这一层完成归一——卡片组件只消费结果，不读 Host 行。
  * @param {Record<string, any>} row
  * @returns {Record<string, any>}
@@ -194,11 +198,9 @@ export function toRivalCardRow(row) {
   const normalized = { ...row, type: String(row?.type || ''), has_media: hasMedia }
   const cardType = rivalCardTypeOf(normalized)
   const mediaKind = String(row?.media_kind || (String(row?.type || '') === 'image' ? 'image' : (hasMedia ? 'video' : '')))
-  const done = Boolean(row?.done || row?.done_at || row?.in_library || row?.interacted_at || row?.state_label)
+  const state = rivalStateOf(row)
+  const done = Boolean(state || row?.state_label)
   const stateLabel = String(row?.state_label || '')
-    || (row?.done || row?.done_at ? '已处理' : '')
-    || (row?.in_library ? '已复刻' : '')
-    || (row?.interacted_at ? interactedLabel(row?.interacted_at) : '')
   const metricsTemplate = cardType === 'image' || cardType === 'text' ? 'read' : 'play'
   return {
     id: String(row?.row_id || `${row?.account_id || ''}:${row?.id || ''}`),
@@ -212,6 +214,7 @@ export function toRivalCardRow(row) {
     match: row?.match && typeof row.match === 'object' ? row.match : null,
     metrics_template: metricsTemplate,
     done,
+    state,
     state_label: stateLabel,
     done_at: typeof row?.done_at === 'string' ? row.done_at : null,
     interacted_at: typeof row?.interacted_at === 'string' ? row.interacted_at : null,
@@ -273,6 +276,7 @@ export function toRivalPost(card) {
     ratio: Number.isFinite(card?.ratio) ? card.ratio : null,
     done_at: card?.done_at ?? null,
     interacted_at: card?.interacted_at ?? null,
+    state: typeof card?.state === 'string' ? card.state : null,
     state_label: String(card?.state_label || ''),
   }
 }

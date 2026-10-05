@@ -242,8 +242,8 @@ describe('RivalPostCard — 默认态极简白名单（V12/V13）', () => {
 describe('RivalPostCard — 已处理样式（V14）', () => {
   it('processed card: pill neutral, media grayscale+0.45 on the media element, text dimmed, card opacity stays 1', async () => {
     const cards = [
-      cardOf('long-video', { done: true, state_label: '已互动 · 09:12' }),
-      cardOf('text', { done: true, state_label: '已处理' }),
+      cardOf('long-video', { done: true, state: 'interacted', interacted_at: new Date(2026, 9, 5, 9, 12).toISOString() }),
+      cardOf('text', { done: true, state: 'done' }),
     ]
     const mounted = await mountStage(cards)
     try {

@@ -9,13 +9,13 @@
 
 import { createRoot } from 'react-dom/client'
 import { useEffect, useMemo, useState } from 'react'
-import { RivalMasonry } from '../plugins/omnimux-inspiration/src/client/RivalMasonry.jsx'
-import { toRivalCardRow } from '../plugins/omnimux-inspiration/src/client/rival-filter.js'
-import { injectRivalStyles } from '../plugins/omnimux-inspiration/src/client/rival-styles.js'
-import { injectRivalTokens } from '../plugins/omnimux-inspiration/src/client/rival-tokens.js'
-import { zh } from '../plugins/omnimux-inspiration/src/client/locales.js'
+import { RivalMasonry } from '../../../../plugins/omnimux-inspiration/src/client/RivalMasonry.jsx'
+import { toRivalCardRow } from '../../../../plugins/omnimux-inspiration/src/client/rival-filter.js'
+import { injectRivalStyles } from '../../../../plugins/omnimux-inspiration/src/client/rival-styles.js'
+import { injectRivalTokens } from '../../../../plugins/omnimux-inspiration/src/client/rival-tokens.js'
+import { zh, en } from '../../../../plugins/omnimux-inspiration/src/client/locales.js'
 
-const t = (key) => zh[key] || key
+const t = (key) => ((new URLSearchParams(location.search).get('locale') === 'en' ? en : zh)[key] || key)
 
 const SVG_COVER = (hue, w, h) => {
   const files = {
@@ -84,6 +84,7 @@ function App() {
       <RivalMasonry
         cards={cards}
         t={t}
+        containerWidth={Number(new URLSearchParams(location.search).get('width')) || undefined}
         onDetail={() => {}}
         onReplicate={() => {}}
         onDeconstruct={() => {}}

@@ -620,6 +620,10 @@ describe('账号监控 — 作品网格流', () => {
           'the hover CTA must read 立即复刻',
         )
         assert.ok(
+          card.querySelector('[data-act="deconstruct"]'),
+          'the hover layer must carry the AI breakdown button through the real panel wiring (PM B2)',
+        )
+        assert.ok(
           card.querySelector('.omnimux-rival-card-media'),
           'media cards must reserve their media area',
         )

@@ -15,6 +15,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { RivalFeedGrid } from './RivalFeedGrid.jsx'
 import { RivalImportDialog } from './RivalImportDialog.jsx'
 import { RivalPostPreviewModal } from './RivalPostPreviewModal.jsx'
+import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
+import { getLocalInspiration } from './api.js'
+import { convertRivalPost } from './rival-api.js'
 import { addRivalPostToSession } from './rival-add-to-chat.js'
 import { toRivalPost } from './rival-filter.js'
 import { injectRivalStyles } from './rival-styles.js'
@@ -71,8 +74,10 @@ export function RivalAccountsPanel(props) {
   } = props
   const [importOpen, setImportOpen] = useState(false)
   const [detailRow, setDetailRow] = useState(null)
+  const [deconstructRow, setDeconstructRow] = useState(null)
   const [notice, setNotice] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [deconstructBusyId, setDeconstructBusyId] = useState(null)
 
   useEffect(() => {
     injectRivalStyles()
@@ -105,6 +110,38 @@ export function RivalAccountsPanel(props) {
       setBusyId(null)
     }
   }, [])
+
+  /**
+   * 「AI 拆解」：作品先走既有 to-inspiration 链路入库并跑自动解析（E13，
+   * auto_analyze 默认开），然后把入库的灵感条目交给灵感库预览弹窗——
+   * 它的解构页签就是规格「就地展开」的落点。重复点击对已入库的作品是
+   * 幂等的（端点直接返回既有 inspiration_id）。
+   */
+  const handleDeconstruct = useCallback(async (card) => {
+    const ticket = String(card?.id ?? '')
+    if (!ticket || deconstructBusyId) return
+    setDeconstructBusyId(ticket)
+    try {
+      const res = await convertRivalPost(String(card?.account_id || ''), String(card?.post_id || ''), {
+        auto_analyze: true,
+      })
+      const data = res?.body?.data || {}
+      if (!res?.ok || !data.inspiration_id) {
+        setNotice({ key: 'rivalAccounts.post.attachFailed' })
+        return
+      }
+      const item = await getLocalInspiration(String(data.inspiration_id))
+      const row = item?.body?.data || null
+      if (row) {
+        setDeconstructRow(row)
+        setNotice({ key: 'rivalFeed.toast.deconstruct' })
+      } else {
+        setNotice({ key: 'rivalAccounts.post.attachFailed' })
+      }
+    } finally {
+      setDeconstructBusyId(null)
+    }
+  }, [deconstructBusyId])
 
   /**
    * 「标为已处理」的当前回执：#3114 的端点还没有接上，所以本票只给出
@@ -161,6 +198,7 @@ export function RivalAccountsPanel(props) {
         onImport={() => setImportOpen(true)}
         onDetail={handleDetail}
         onReplicate={handleReplicate}
+        onDeconstruct={handleDeconstruct}
         onMarkDone={handleMarkDone}
         replicateBusy={busyId}
       />
@@ -190,6 +228,20 @@ export function RivalAccountsPanel(props) {
             setDetailRow(null)
             void handleReplicate(row)
           }}
+        />
+      ) : null}
+
+      {deconstructRow ? (
+        <InspirationPreviewModal
+          row={deconstructRow}
+          t={t}
+          onClose={() => setDeconstructRow(null)}
+          onItemUpdated={(updated) => setDeconstructRow(updated)}
+          onReplicate={(row) => {
+            setDeconstructRow(null)
+            void handleReplicate(row)
+          }}
+          replicateBusy={busyId != null}
         />
       ) : null}
     </div>

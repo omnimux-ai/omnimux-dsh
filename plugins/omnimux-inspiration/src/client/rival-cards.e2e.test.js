@@ -158,17 +158,45 @@ async function settle(container, predicate) {
   throw new Error('settle: the condition never became true')
 }
 
-/** The mixed-type payload both levels render, in Host order. */
+/**
+ * The §9.4 twelve-card sequence, in Host order (推荐位 1–12).
+ *
+ * Twelve cards over five columns is the smallest payload that can tell the
+ * spec's shortest-column greedy from round-robin: with five cards every
+ * implementation lands them 0..4 and the assertion proves nothing. This is
+ * also the exact sequence the QA pass caught mis-placed (D1), pinned here as
+ * a regression fixture.
+ *
+ * What jsdom cannot see: it does no layout, so card geometry, spacing,
+ * contrast and filters are out of scope for this file — those are verified in
+ * the real-browser acceptance pass. This layer asserts *decisions* (which
+ * column each card was assigned), not pixels.
+ */
 const POSTS = [
-  // The form is decided by the platform first (tiktok → short video, youtube →
-  // long video, instagram → image, x → tweet / tweet with media), so the payload
-  // has to vary the platform, not just the declared type.
-  { id: 'p1', platform: 'tiktok', type: 'video', cover_src: '/omnimux/inspiration/local/media/c1.jpg', ratio: 0.5625, title: '短视频', velocity: { text: '爆款 23k/h', tier: 'hot' } },
-  { id: 'p2', platform: 'youtube', type: 'video', cover_src: '/omnimux/inspiration/local/media/c2.jpg', ratio: 1.7777, title: '长视频', velocity: { text: '均速 1.8k/h', tier: 'average' } },
-  { id: 'p3', platform: 'instagram', type: 'image', cover_src: '/omnimux/inspiration/local/media/c3.jpg', ratio: 0.8, title: '图文', velocity: { text: '观察 320/h', tier: 'watch' } },
-  { id: 'p4', platform: 'x', type: 'text', title: '纯文本推文', interacted_at: '2026-10-05T09:00:00.000Z' },
-  { id: 'p5', platform: 'x', type: 'video', cover_src: '/omnimux/inspiration/local/media/c5.jpg', ratio: 1.7777, title: '带媒体推文', velocity: { text: '观察 480/h', tier: 'watch' } },
+  { id: 'p1', account: 'meow', platform: 'tiktok', type: 'video', cover_src: '/m/c1.jpg', ratio: 0.5625, title: '猫咪饮水机实测：三只猫一周后还喝吗', velocity: { text: '爆款 23k/h', tier: 'hot' }, match: { label: '高契合' } },
+  { id: 'p2', account: 'pet', platform: 'youtube', type: 'video', cover_src: '/m/c2.jpg', ratio: 1.7778, title: '2026 十款智能喂食器横评', velocity: { text: '爆款 42k/h', tier: 'hot' }, match: { label: '可参考' }, interacted_at: '2026-10-05T09:12:00.000Z' },
+  { id: 'p3', account: 'home', platform: 'instagram', type: 'image', cover_src: '/m/c3.jpg', ratio: 0.8, title: '小户型猫爬架一体收纳方案', velocity: { text: '飙升 3.4k/h', tier: 'rising' }, match: { label: '高契合' } },
+  { id: 'p11', account: 'higgs', platform: 'x', type: 'text', title: '做了三个月 AI 视效，最大的体会是：镜头语言比模型更重要。同一段提示词，加上「低机位缓推」和「焦点从前景移到人物」，成片质感直接上一个台阶。很多人卡在画面抖、主体漂，其实是没给运动加约束。下周把团队内部在用的 12 种运镜模板整理出来，评论区告诉我你最想先看哪一种。', velocity: { text: '飙升 2.6k/h', tier: 'rising' }, match: { label: '可参考' } },
+  { id: 'p4', account: 'higgs', platform: 'x', type: 'video', cover_src: '/m/c4.jpg', ratio: 1.7778, title: '电影级推拉镜头拆解：同一个人物，三种运镜节奏，情绪完全不同。提示词和参数都放在视频最后。', velocity: { text: '飙升 1.2k/h', tier: 'rising' }, match: { label: '可参考' }, in_library: true },
+  { id: 'p5', account: 'fur', platform: 'tiktok', type: 'video', cover_src: '/m/c5.jpg', ratio: 0.5625, title: '生骨肉配比入门：一周备餐流程', velocity: { text: '均速 1.8k/h', tier: 'average' } },
+  { id: 'p6', account: 'runway', platform: 'x', type: 'video', cover_src: '/m/c6.jpg', ratio: 1.7778, title: 'Gen-3 运动笔刷实战：沙、烟、水花三种粒子，笔刷方向决定轨迹，强度决定扩散范围。', velocity: { text: '观察 480/h', tier: 'watch' }, interacted_at: '2026-10-04T22:05:00.000Z' },
+  { id: 'p12', account: 'runway', platform: 'x', type: 'text', title: '角色一致性终于不用靠抽卡了：一张参考图，跨镜头保持同一张脸。', velocity: { text: '观察 260/h', tier: 'watch' }, interacted_at: '2026-10-05T10:36:00.000Z' },
+  { id: 'p7', account: 'ootd', platform: 'instagram', type: 'image', cover_src: '/m/c7.jpg', ratio: 1, title: '通勤胶囊衣橱：7 件单品 21 套', velocity: { text: '观察 320/h', tier: 'watch' } },
+  { id: 'p8', account: 'meow', platform: 'tiktok', type: 'video', cover_src: '/m/c8.jpg', ratio: 0.5625, title: '半夜跑酷实录：监控视角全程', velocity: { text: '该号 4.2x', tier: 'relative' } },
+  { id: 'p9', account: 'pet', platform: 'youtube', type: 'video', cover_src: '/m/c9.jpg', ratio: 1.7778, title: '猫砂盆除臭终极方案对比', velocity: { text: '飙升 6.8k/h', tier: 'rising' }, match: { label: '高契合' }, in_library: true },
+  { id: 'p10', account: 'home', platform: 'instagram', type: 'image', cover_src: '/m/c10.jpg', ratio: 0.8, title: '阳台改造：宠物友好绿植角', velocity: { text: '爆款 21k/h', tier: 'hot' }, match: { label: '可参考' } },
 ]
+
+/** Account per card (§9.4 account column). */
+const ACCOUNTS = {
+  meow: { id: 'ra_1', nickname: '喵星日常', handle: '@meow_daily', platform: 'tiktok' },
+  pet: { id: 'ra_2', nickname: '宠物品鉴所', handle: '@pet_review', platform: 'youtube' },
+  home: { id: 'ra_3', nickname: '家居灵感库', handle: '@home_inspo', platform: 'instagram' },
+  higgs: { id: 'ra_4', nickname: 'Higgsfield AI', handle: '@higgsfield_ai', platform: 'x' },
+  runway: { id: 'ra_5', nickname: 'Runway', handle: '@runwayml', platform: 'x' },
+  fur: { id: 'ra_6', nickname: '毛孩子食堂', handle: '@fur_kitchen', platform: 'tiktok' },
+  ootd: { id: 'ra_7', nickname: '穿搭研究所', handle: '@ootd_lab', platform: 'instagram' },
+}
 
 /**
  * The shape the Host serves for one row. `type` decides the card form; the
@@ -176,22 +204,25 @@ const POSTS = [
  * default layer.
  */
 function hostRow(post) {
+  const account = ACCOUNTS[post.account]
   return {
     id: post.id,
-    row_id: `acc-1:${post.id}`,
-    account_id: 'acc-1',
+    row_id: `${account.id}:${post.id}`,
+    account_id: account.id,
     title: post.title,
     text: post.title,
     type: post.type,
     ratio: post.ratio ?? null,
-    url: `https://x.com/li9292/status/${post.id}`,
-    posted_at: '2026-09-12T08:00:00.000Z',
-    stats: { views: 12000, likes: 840, comments: 12, shares: 3 },
+    url: `https://${post.platform}.example/${account.handle}/${post.id}`,
+    posted_at: '2026-10-05T08:12:00.000Z',
+    stats: { views: 128000, likes: 8640, comments: 214, shares: 96 },
     interacted_at: post.interacted_at ?? null,
+    in_library: post.in_library === true,
     velocity: post.velocity ?? null,
+    match: post.match ?? null,
     cover_src: post.cover_src ?? null,
     source_platform: post.platform,
-    account: { id: 'acc-1', nickname: 'Li', handle: '@li9292', platform: post.platform },
+    account: { id: account.id, nickname: account.nickname, handle: account.handle, platform: account.platform },
   }
 }
 
@@ -203,12 +234,12 @@ function hostPayload() {
 /**
  * The ratio a rendered card must carry, derived from the spec's table rather
  * than from the component: a text card has no media, an image clamps into
- * 4:5 … 1.91:1, and a video keeps the orientation its cover implies.
+ * 4:5 … 1.91:1, and a video keeps the orientation its type implies.
  * @param {Record<string, any>} post
  * @returns {number | null}
  */
 function specRatio(post) {
-  const clampImage = (value) => Math.min(4 / 5, Math.max(1 / 1.91, Number.isFinite(value) ? value : 4 / 5))
+  const clampImage = (value) => Math.min(1.91, Math.max(0.8, Number.isFinite(value) ? value : 0.8))
   const platform = post.platform
   if (platform === 'tiktok' || platform === 'douyin' || platform === 'kuaishou') return 9 / 16
   if (platform === 'youtube') return 16 / 9
@@ -221,24 +252,54 @@ function specRatio(post) {
 }
 
 /**
- * Independent shortest-column greedy over the spec ratios.
+ * The spec's card geometry in pixels (§9.1 + §9.3), re-derived independently —
+ * deliberately NOT the implementation's own measure: the gate's value is that
+ * it can disagree with the component when the component is wrong.
  *
- * Deliberately a re-implementation, not a call into `rival-masonry.js`: the
- * point is to disagree with the component when the component is wrong.
+ * border-box: 1px top + 1px bottom border; inner width = columnWidth − 2.
+ * Media cards: media (inner ÷ ratio) + title zone (top 10 + bottom 12, lines ×
+ * 18) where the line count is a *rendered* estimate (CJK ≈ 13px, ASCII ≈
+ * 0.55×), never the clamp cap itself. Text cards: 12+12 padding, optional
+ * 28+8 pill row, body lines × 20 at 14px units, min height 144.
+ * @param {Record<string, any>} post
+ * @param {number} columnWidth
+ * @returns {number}
+ */
+function specHeightPx(post, columnWidth) {
+  const inner = columnWidth - 2
+  const widthPx = (text, unit) => [...String(text || '')]
+    .reduce((sum, ch) => sum + (ch.codePointAt(0) > 0x2e7f ? unit : unit * 0.55), 0)
+  const platform = post.platform
+  const isX = platform === 'x' || platform === 'twitter' || platform === 'threads'
+  const isText = isX && String(post.cover_src || '') === '' && post.type !== 'video' && post.type !== 'image'
+  const pill = post.velocity ? 36 : 0
+  if (isText) {
+    const lines = Math.max(1, Math.min(8, Math.ceil(widthPx(post.title, 14) / (inner - 24))))
+    return Math.max(144, 24 + pill + lines * 20 + 2)
+  }
+  if (isX) {
+    const lines = Math.max(1, Math.min(3, Math.ceil(widthPx(post.title, 14) / (inner - 24))))
+    return Math.max(144, 24 + pill + lines * 20 + 10 + (inner - 24) / specRatio(post) + 2)
+  }
+  const lines = Math.max(1, Math.min(2, Math.ceil(widthPx(post.title, 13) / (columnWidth - 26))))
+  return inner / specRatio(post) + 22 + lines * 18 + 2
+}
+
+/**
+ * Independent shortest-column greedy over spec-pixel heights + 16px gap.
  * @param {Array<Record<string, any>>} posts
  * @param {number} columns
+ * @param {number} columnWidth
  * @returns {number[]} the column index each post must land in, in input order
  */
-function expectedColumns(posts, columns) {
-  const heights = new Array(columns).fill(0)
+function expectedColumns(posts, columns, columnWidth) {
+  const bottoms = new Array(columns).fill(0)
   return posts.map((post) => {
-    const ratio = specRatio(post)
-    const cardHeight = ratio === null ? 1.2 : 1 / ratio + 0.25
     let target = 0
     for (let i = 1; i < columns; i += 1) {
-      if (heights[i] < heights[target] - 1e-9) target = i
+      if (bottoms[i] < bottoms[target] - 1e-9) target = i
     }
-    heights[target] += cardHeight
+    bottoms[target] += specHeightPx(post, columnWidth) + 16
     return target
   })
 }
@@ -280,7 +341,7 @@ async function mountMasonry(containerWidth) {
 async function mountStageOnAccounts() {
   const mod = await import(`${await bundle(join(here, 'InspirationStage.jsx'), 'stage')}?mount=${bundleCounter}`)
   const { dom, container, restore } = installDom()
-  const accounts = [{ id: 'acc-1', handle: '@li9292', platform: 'tiktok', refresh_state: 'idle' }]
+  const accounts = Object.values(ACCOUNTS).map((a) => ({ id: a.id, handle: a.handle, platform: a.platform, refresh_state: 'idle' }))
   let calls = 0
   globalThis.fetch = async (url) => {
     const path = String(url)
@@ -322,7 +383,7 @@ async function mountStageOnAccounts() {
  * bare post id.
  * @param {{ id: string }} post
  */
-const cardId = (post) => `acc-1:${post.id}`
+const cardId = (post) => `${ACCOUNTS[post.account || 'meow'].id}:${post.id}`
 
 /** @returns {HTMLElement[]} the rendered cards, in DOM order */
 const cardsOf = (container) => [...container.querySelectorAll('[data-card-id]')]
@@ -388,9 +449,10 @@ describe('account-monitor card shapes and waterfall (#3110)', () => {
     it('places every card in the shortest column, recomputed independently', async () => {
       const width = 1164
       const columns = 5
+      const columnWidth = (width - 16 * (columns - 1)) / columns // §9.3 等分列宽 = 220px
       const mounted = await mountMasonry(width)
       open.push(mounted)
-      const expected = expectedColumns(POSTS, columns)
+      const expected = expectedColumns(POSTS, columns, columnWidth)
       const cards = cardsOf(mounted.container)
       const actual = POSTS.map((post) => Number(
         cards.find((node) => node.getAttribute('data-card-id') === cardId(post))?.getAttribute('data-col'),
@@ -398,8 +460,17 @@ describe('account-monitor card shapes and waterfall (#3110)', () => {
       assert.deepEqual(
         actual,
         expected,
-        'the greedy must pick the shortest column, and this gate recomputes it from the spec table',
+        `every card must land in the column that was shortest at placement time, recomputed from the spec's pixel geometry (expected ${expected.join(',')})`,
       )
+    })
+
+    it('renders the AI breakdown secondary action — the production wiring must reach the card', async () => {
+      const mounted = await mountMasonry(1164)
+      open.push(mounted)
+      const card = cardsOf(mounted.container).find((node) => node.getAttribute('data-card-id') === cardId({ account: 'meow', id: 'p1' }))
+      const act = card.querySelector('[data-act="deconstruct"]')
+      assert.ok(act, 'the hover layer must carry the AI breakdown button — PM B2: it never rendered in production')
+      assert.equal(act.textContent.trim(), zh['rivalFeed.card.deconstruct'])
     })
 
     it('keeps DOM order equal to the order the Host returned', async () => {
@@ -419,14 +490,14 @@ describe('account-monitor card shapes and waterfall (#3110)', () => {
       const overlay = card.querySelector('.omnimux-rival-card-overlay')
       assert.ok(overlay, 'the card must own a hover overlay')
       assert.ok(
-        overlay.textContent.includes('Li'),
+        overlay.textContent.includes('喵星日常'),
         'the author belongs to the hover layer',
       )
       const defaultLayer = [...card.childNodes]
         .filter((node) => node !== overlay)
         .map((node) => node.textContent ?? '')
         .join(' ')
-      for (const text of ['@li9292', 'Li']) {
+      for (const text of ['@meow_daily', '喵星日常']) {
         assert.equal(
           defaultLayer.includes(text),
           false,
@@ -443,12 +514,46 @@ describe('account-monitor card shapes and waterfall (#3110)', () => {
     it('renders an interacted row in the processed state', async () => {
       const mounted = await mountMasonry(1440)
       open.push(mounted)
-      const done = cardsOf(mounted.container).find((node) => node.getAttribute('data-card-id') === cardId({ id: 'p4' }))
+      const done = cardsOf(mounted.container).find((node) => node.getAttribute('data-card-id') === cardId({ account: 'pet', id: 'p2' }))
+      assert.ok(done, 'the interacted card must render')
       assert.ok(done.className.includes('is-done'), 'an interacted row must render as processed')
-      const live = cardsOf(mounted.container).find((node) => node.getAttribute('data-card-id') === cardId({ id: 'p1' }))
+      const live = cardsOf(mounted.container).find((node) => node.getAttribute('data-card-id') === cardId({ account: 'meow', id: 'p1' }))
       assert.equal(live.className.includes('is-done'), false, 'an untouched row must not look processed')
     })
   })
+
+    it('keeps a skeleton visible while an appended page loads', async () => {
+      const mod = await import(`${await bundle(join(here, 'RivalFeedGrid.jsx'), 'feedgrid')}?mount=${bundleCounter}`)
+      const { dom, container, restore } = installDom()
+      try {
+        const t = (key) => zh[key] || key
+        const root = createRoot(container)
+        await act(async () => {
+          root.render(React.createElement(mod.RivalFeedGrid, {
+            t,
+            cards: hostPayload().map(toRivalCardRow),
+            loading: false,
+            loadingMore: true,
+            emptyKind: 'no-posts',
+            onResetFilters() {},
+            onImport() {},
+            onDetail() {},
+            onReplicate() {},
+          }))
+        })
+        const skeleton = container.querySelector('[data-rival-loadmore-skeleton]')
+        assert.ok(skeleton, 'an append in flight must keep the shimmer visible below the cards')
+        assert.equal(
+          skeleton.querySelectorAll('.omnimux-inspiration-skel').length,
+          10,
+          'the append skeleton reuses the same 10-block shimmer as the first paint',
+        )
+        assert.equal(cardsOf(container).length, POSTS.length, 'existing cards stay rendered while appending')
+        await act(async () => { root.unmount() })
+      } finally {
+        restore()
+      }
+    })
 
   describe('the account-monitor page renders the grid', () => {
     it('shows the Host rows as cards once the tab is selected', async () => {

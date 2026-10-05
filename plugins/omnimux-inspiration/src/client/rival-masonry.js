@@ -32,6 +32,8 @@ const CARD_TYPES = new Set(['short-video', 'long-video', 'image', 'text', 'text-
 const VIDEO_RATIO = 16 / 9
 const SHORT_VIDEO_RATIO = 9 / 16
 
+/** 卡片 1px 描边（上 + 下）：估算按渲染的 border-box 高度计，含这 2px。 */
+const CARD_BORDER = 2
 /** 文本卡几何（§9.1/§9.3）：内边距 12×2、胶囊行 28 + 间距 8、正文行高 20。 */
 const TEXT_PAD_V = 24
 const PILL_ROW = 28 + 8
@@ -41,9 +43,44 @@ const TEXT_MEDIA_BODY_LINES = 3
 const TEXT_MEDIA_GAP = 10
 /** 14px 正文、中文按 1 字宽计的每行字数：floor((columnWidth − 24) / 14)。 */
 const TEXT_CHAR_PX = 14
+/** 媒体卡标题几何（§9.1）：13px 中文字宽、行高 18、标题区左右各 12、上 10 + 下 12。 */
+const TITLE_CHAR_PX = 13
+const TITLE_ZONE_PAD_H = 24
+const TITLE_ZONE_PAD_V = 10 + 12
+const TITLE_LINE = 18
+const TITLE_MAX_LINES = 2
+/** 西文/数字按半宽折算的系数——够近似真实换行，又不引入字体测量依赖。 */
+const ASCII_WIDTH_FACTOR = 0.55
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value))
+}
+
+/**
+ * 一段文本的估算占位宽度（px）。中文、全角与 CJK 标点按整宽，其余按半宽
+ * 折算。
+ * @param {string} text
+ * @param {number} unitPx 全角字符的字宽（正文 14、标题 13）
+ */
+function textWidthPx(text, unitPx) {
+  let px = 0
+  for (const ch of String(text || '')) {
+    px += ch.codePointAt(0) > 0x2e7f ? unitPx : unitPx * ASCII_WIDTH_FACTOR
+  }
+  return px
+}
+
+/**
+ * 标题在列宽下的估算行数，按 §9.1 每类卡的截断上限收：短视频/图文 1 行、
+ * 长视频 2 行。上限是 cap 不是常量——文本装一行时按一行算。
+ * @param {Record<string, any>} card
+ * @param {number} columnWidth
+ * @param {'short-video'|'long-video'|'image'} type
+ */
+function titleLines(card, columnWidth, type) {
+  const maxLines = type === 'long-video' ? TITLE_MAX_LINES : 1
+  const perLine = Math.max(1, columnWidth - TITLE_ZONE_PAD_H - CARD_BORDER)
+  return Math.max(1, Math.min(maxLines, Math.ceil(textWidthPx(card?.title || '', TITLE_CHAR_PX) / perLine)))
 }
 
 /**
@@ -115,8 +152,9 @@ function validRatio(value) {
 
 /**
  * 分列用比例：媒体类就是媒体比；纯文本卡是「列宽 ÷ 估算高度」反解的等效
- * 比例（资产层 MASONRY_AUDIO_RATIO 的同款手法），让无媒体卡也能进入
- * 共享核心的「卡 → 比例」接口。
+ * 比例（资产层 MASONRY_AUDIO_RATIO 的同款手法）。放置决策已经不再走它——
+ * `rivalPlacements` 经 `heightOf` 直接用 `rivalCardHeightPx`——保留导出
+ * 供需要比例视角的调用方与契约测试使用。
  * @param {Record<string, any>} card
  * @param {number} columnWidth
  * @returns {number}
@@ -128,38 +166,46 @@ export function rivalRatioOf(card, columnWidth) {
   return rivalMediaRatioOf(card)
 }
 
-/** 文本卡估算正文行数：字数 ÷ 每行字数，1–8 行。 */
+/** 文本卡估算正文行数：按近似像素宽换行，1–8 行。 */
 function textBodyLines(card, columnWidth) {
-  const chars = [...String(card?.title || '')].length
-  if (chars === 0) return 1
-  const perLine = Math.max(1, Math.floor((columnWidth - TEXT_PAD_V) / TEXT_CHAR_PX))
-  return Math.max(1, Math.min(TEXT_MAX_LINES, Math.ceil(chars / perLine)))
+  const width = textWidthPx(card?.title || '', TEXT_CHAR_PX)
+  if (width === 0) return 1
+  const perLine = Math.max(1, columnWidth - CARD_BORDER - TEXT_PAD_V)
+  return Math.max(1, Math.min(TEXT_MAX_LINES, Math.ceil(width / perLine)))
 }
 
 const hasPill = (card) => Boolean(card?.velocity && String(card.velocity.text || '') !== '')
 
 /**
- * 一张卡的估算高度（px）。所有结果满足 ≥ 144px（§9.3 悬停层高度）。
- * - `text`：24 + (胶囊?36) + 行数×20
- * - `text-media`：24 + 36 + 3×20 + 10 + (columnWidth−24) ÷ 媒体比
- * - 媒体类：columnWidth ÷ 媒体比 + 24 + 18 × 标题行数（long-video 2 行，其余 1 行）
+ * 一张卡的估算高度（px，border-box，含上下各 1px 描边）。
+ * 所有结果满足 ≥ 144px（§9.3 悬停层高度）。
+ *
+ * 这是本文件唯一的高度真源：`rivalPlacements` 的分列决策与 `top` 累加、
+ * `RivalMasonry` 的容器高都消费同一个数——不再经过共享核心的
+ * 「比例 → 卡身系数」换算（那是灵感库的口径，不是这个卡的几何）。
+ * - `text`：24 + (胶囊?36) + 正文行数×20 + 描边 2
+ * - `text-media`：24 + (胶囊?36) + 正文行数(≤3)×20 + 10 + (内宽−24) ÷ 媒体比 + 描边 2
+ * - 媒体类：内宽 ÷ 媒体比 + 标题区(22 + 行数×18) + 描边 2；
+ *   行数按真实换行估（≤2），不再恒取截断上限
  * @param {Record<string, any>} card
  * @param {number} columnWidth
  * @returns {number}
  */
 export function rivalCardHeightPx(card, columnWidth) {
   const w = Number(columnWidth) > 0 ? Number(columnWidth) : RIVAL_MIN_COL_WIDTH
+  const inner = Math.max(0, w - CARD_BORDER)
   const type = rivalCardTypeOf(card)
   if (type === 'text') {
     const lines = textBodyLines(card, w)
-    return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + (hasPill(card) ? PILL_ROW : 0) + lines * BODY_LINE)
+    return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + (hasPill(card) ? PILL_ROW : 0) + lines * BODY_LINE + CARD_BORDER)
   }
   if (type === 'text-media') {
-    const mediaH = (w - TEXT_PAD_V) / rivalMediaRatioOf(card)
-    return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + PILL_ROW + TEXT_MEDIA_BODY_LINES * BODY_LINE + TEXT_MEDIA_GAP + mediaH)
+    const lines = Math.min(TEXT_MEDIA_BODY_LINES, textBodyLines(card, w))
+    const mediaH = (inner - TEXT_PAD_V) / rivalMediaRatioOf(card)
+    return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + (hasPill(card) ? PILL_ROW : 0) + lines * BODY_LINE + TEXT_MEDIA_GAP + mediaH + CARD_BORDER)
   }
-  const lines = type === 'long-video' ? 2 : 1
-  return w / rivalMediaRatioOf(card) + TEXT_PAD_V + 18 * lines
+  const lines = titleLines(card, w, type)
+  return inner / rivalMediaRatioOf(card) + TITLE_ZONE_PAD_V + lines * TITLE_LINE + CARD_BORDER
 }
 
 /**
@@ -191,9 +237,10 @@ export function rivalColumnWidth(containerWidth, columns) {
 /**
  * 逐张放入放置前底边最高的列（最短列；等高取最左）。
  *
- * 贪心决策只调用共享核心；`top` 用「估算卡高 + gap」按桶内顺序累加——
- * 核心的卡身系数只服务灵感库，这里的累计高度必须来自本适配层自己的
- * 估算，两者不可混用。
+ * 贪心决策调用共享核心，但**决策与 `top` 累加用同一个高度函数**：
+ * `rivalCardHeightPx + RIVAL_GAP`。核心默认的「比例 → 卡身系数」口径只服务
+ * 灵感库，直接拿它做放置会把两张卡的相对高度排错（两套度量的差值随卡型
+ * 变化，错误只在 ≥2 排卡时才显形）。
  *
  * @param {Array<Record<string, any>>} cards
  * @param {number} columns
@@ -203,7 +250,12 @@ export function rivalColumnWidth(containerWidth, columns) {
 export function rivalPlacements(cards, columns, columnWidth) {
   const w = Number(columnWidth) > 0 ? Number(columnWidth) : RIVAL_MIN_COL_WIDTH
   const list = Array.isArray(cards) ? cards : []
-  const buckets = distributeColumnsCore(list, columns, (card) => rivalRatioOf(card, w))
+  const buckets = distributeColumnsCore(
+    list,
+    columns,
+    undefined,
+    (card) => rivalCardHeightPx(card, w) + RIVAL_GAP,
+  )
   const placements = new Map()
   const columnHeights = []
   for (let col = 0; col < buckets.length; col += 1) {

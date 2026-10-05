@@ -240,18 +240,19 @@ describe('rival-filter — v2.1 卡片描述符扩字段', () => {
   it('derives the done flag from spec §9.2 state sources, done_at wins', () => {
     const done = toRivalCardRow({ ...base, done_at: '2026-10-05T09:12:00Z', in_library: true })
     assert.equal(done.done, true)
-    assert.equal(done.state_label, '已处理')
+    assert.equal(done.state, 'done')
 
     const replicated = toRivalCardRow({ ...base, in_library: true, inspiration_id: 'insp_1' })
     assert.equal(replicated.done, true)
-    assert.equal(replicated.state_label, '已复刻')
+    assert.equal(replicated.state, 'replicated')
 
     const interacted = toRivalCardRow({ ...base, interacted_at: new Date(2026, 9, 5, 9, 12).toISOString() })
     assert.equal(interacted.done, true)
-    assert.equal(interacted.state_label, '已互动 · 09:12')
+    assert.equal(interacted.state, 'interacted')
 
     const fresh = toRivalCardRow({ ...base })
     assert.equal(fresh.done, false)
+    assert.equal(fresh.state, null)
     assert.equal(fresh.state_label, '')
   })
 })
