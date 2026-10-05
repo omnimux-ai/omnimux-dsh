@@ -1,19 +1,23 @@
 /**
- * The 账号监控 content area: a 9:16 grid of monitored accounts' works.
+ * The 账号监控 content area: a masonry of monitored accounts' works.
  *
- * It renders the *same* card the「全部」tab uses, on purpose. "100% consistent
- * with 全部" is a promise about pixels, and the only way to keep it is to have
- * one card component rather than two that start identical and drift — the
- * differences between a library item and a monitored work live in the row data
- * (`toRivalCardRow`) and nowhere else.
+ * v2.1 (Issue #3110) replaces the shared library grid with the monitor's own
+ * masonry + card pair — a deliberate fork（方案 A）:
+ *   - `RivalMasonry` places cards into the shortest column while keeping the
+ *     DOM flat (sort order = tab order = rank, spec §9.3/V4);
+ *   - `RivalPostCard` renders the five content-type shapes, the minimal default
+ *     state and the processed retreat (§9.1/§9.2), none of which the shared
+ *     library card can express.
+ * `InspirationCoverCard` is untouched; the library keeps its own card.
  *
- * Three states, and the skeleton is the library's own: the same
- * `.omnimux-inspiration-grid` columns and the same `.omnimux-inspiration-skel`
- * shimmer, so a tab switch does not change how loading looks.
+ * Empty states and the first-paint skeleton stay exactly as they were: the
+ * library's shimmer is the honest "collecting" affordance, and a tab switch
+ * does not change how loading looks.
  */
 
+import { useCallback, useMemo, useState } from 'react'
 import { Button, EmptyState } from 'dsh-ui-kit'
-import { InspirationCoverCard } from './InspirationCoverCard.jsx'
+import { RivalMasonry } from './RivalMasonry.jsx'
 import { EMPTY_ICON_SEARCH, EMPTY_ICON_USER, EMPTY_ICON_WORKS } from './icons.jsx'
 
 /** Blocks a first paint or a page append shows while it has nothing to show. */
@@ -25,19 +29,49 @@ const SKELETON_COUNT = 10
  *   cards: Array<Record<string, any>>,
  *   loading: boolean,
  *   loadingMore: boolean,
- *   emptyKind: 'no-accounts' | 'no-posts' | 'filtered' | 'loading',
+ *   emptyKind: 'no-accounts' | 'no-posts' | 'filtered' | 'loading' | 'fetching' | 'fetch-failed',
+ *   fetchPhase?: null | { kind: 'stopped'|'cooling'|'failed'|'timeout', account?: any, minutes?: number },
  *   onResetFilters: () => void,
  *   onImport: () => void,
+ *   onRetryFetch?: () => void,
+ *   onBrowseTrend?: () => void,
  *   onDetail: (row: Record<string, any>) => void,
  *   onReplicate: (row: Record<string, any>) => void,
+ *   onMarkDone?: (row: Record<string, any>) => void,
+ *   onDeconstruct?: (row: Record<string, any>) => void,
  *   replicateBusy: string | null,
  * }} props
  */
 export function RivalFeedGrid(props) {
   const {
-    t, cards, loading, loadingMore, emptyKind, onResetFilters, onImport,
-    onDetail, onReplicate, replicateBusy,
+    t, cards, loading, loadingMore, emptyKind, fetchPhase, onResetFilters, onImport,
+    onRetryFetch, onBrowseTrend,
+    onDetail, onReplicate, onMarkDone, onDeconstruct, replicateBusy,
   } = props
+
+  // 本地已处理集合：点「标为已处理」先就地退位（不请求、不重排），持久化由
+  // #3114 的端点接线后接管同一个 onMarkDone 回调。
+  const [doneIds, setDoneIds] = useState(() => new Set())
+  const handleMarkDone = useCallback((card) => {
+    const id = String(card?.id ?? '')
+    if (!id) return
+    setDoneIds((prev) => {
+      if (prev.has(id)) return prev
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+    if (typeof onMarkDone === 'function') onMarkDone(card)
+  }, [onMarkDone])
+
+  const renderCards = useMemo(() => {
+    if (doneIds.size === 0) return cards
+    return cards.map((card) => (
+      doneIds.has(String(card?.id ?? ''))
+        ? { ...card, done: true, state: 'done' }
+        : card
+    ))
+  }, [cards, doneIds])
 
   if (loading && (cards.length === 0) && emptyKind !== 'no-accounts') {
     return (
@@ -56,11 +90,78 @@ export function RivalFeedGrid(props) {
           icon={EMPTY_ICON_USER}
           title={t('rivalFeed.empty.noAccounts')}
           description={t('rivalFeed.empty.noAccountsHint')}
-          action={
-            <Button variant="primary" size="sm" onClick={onImport}>
-              {t('rivalAccounts.import.btn')}
-            </Button>
-          }
+          action={(
+            <div className="omnimux-rival-empty-actions">
+              <Button variant="primary" size="sm" onClick={onImport}>
+                {t('rivalAccounts.import.btn')}
+              </Button>
+              {onBrowseTrend ? (
+                <Button variant="ghost" size="sm" onClick={onBrowseTrend}>
+                  {t('rivalFeed.empty.browseTrend')}
+                </Button>
+              ) : null}
+            </div>
+          )}
+        />
+      )
+    }
+    if (emptyKind === 'fetching') {
+      return (
+        <EmptyState
+          icon={EMPTY_ICON_WORKS}
+          title={t('rivalFeed.empty.fetchingTitle')}
+          description={t('rivalFeed.empty.fetchingDesc').replace('{n}', '1')}
+          action={(
+            <div className="omnimux-rival-empty-actions">
+              <div
+                className="omnimux-rival-fetch-progress"
+                role="progressbar"
+                aria-label={t('rivalFeed.empty.fetchingTitle')}
+              >
+                <i />
+              </div>
+              {onBrowseTrend ? (
+                <Button variant="ghost" size="sm" onClick={onBrowseTrend}>
+                  {t('rivalFeed.empty.browseTrend')}
+                </Button>
+              ) : null}
+            </div>
+          )}
+        />
+      )
+    }
+    if (emptyKind === 'fetch-failed') {
+      const phase = fetchPhase || { kind: 'failed' }
+      const stoppedFailures = phase.kind === 'stopped'
+        ? Number(phase.account?.consecutive_failures)
+        : null
+      const title = phase.kind === 'stopped'
+        ? t('rivalFeed.empty.failedStopped')
+        : (phase.kind === 'cooling'
+          ? t('rivalFeed.empty.failedCooling').replace('{n}', String(phase.minutes ?? 1))
+          : t('rivalAccounts.import.error'))
+      const reason = Number.isFinite(stoppedFailures) && stoppedFailures > 0
+        ? t('rivalFeed.empty.failedStoppedReason').replace('{n}', String(stoppedFailures))
+        : null
+      return (
+        <EmptyState
+          icon={EMPTY_ICON_WORKS}
+          title={title}
+          description={reason || undefined}
+          action={(
+            <div className="omnimux-rival-empty-actions">
+              {onRetryFetch ? (
+                <Button variant="primary" size="sm" onClick={onRetryFetch}>
+                  {t('rivalFeed.empty.failedRetry')}
+                </Button>
+              ) : null}
+              {onBrowseTrend ? (
+                <Button variant="ghost" size="sm" onClick={onBrowseTrend}>
+                  {t('rivalFeed.empty.browseTrend')}
+                </Button>
+              ) : null}
+            </div>
+          )}
         />
       )
     }
@@ -97,26 +198,23 @@ export function RivalFeedGrid(props) {
   }
 
   return (
-    <div className="omnimux-inspiration-grid" data-rival-grid="true">
-      {cards.map((row) => (
-        <InspirationCoverCard
-          key={String(row.id)}
-          card={{
-            row,
-            t,
-            // Monitored works are not library rows: they carry no in-library
-            // selection checkbox and no import status to reveal.
-            selecting: false,
-            selected: false,
-            replicateBusy: replicateBusy === row.id,
-            onSelect: onDetail,
-            onReplicate,
-          }}
-        />
-      ))}
-      {loadingMore ? Array.from({ length: SKELETON_COUNT }).map((_, index) => (
-        <div key={`rival_more_${index}`} className="omnimux-inspiration-skel" aria-hidden="true" />
-      )) : null}
-    </div>
+    <>
+      <RivalMasonry
+        cards={renderCards}
+        t={t}
+        onDetail={onDetail}
+        onReplicate={onReplicate}
+        onMarkDone={handleMarkDone}
+        onDeconstruct={onDeconstruct}
+        busyId={replicateBusy}
+      />
+      {loadingMore ? (
+        <div className="omnimux-inspiration-skeleton omnimux-rival-loadmore" data-rival-loadmore-skeleton="true" aria-hidden="true">
+          {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
+            <div key={index} className="omnimux-inspiration-skel" />
+          ))}
+        </div>
+      ) : null}
+    </>
   )
 }

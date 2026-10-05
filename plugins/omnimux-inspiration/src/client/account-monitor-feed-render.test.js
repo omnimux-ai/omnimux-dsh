@@ -182,12 +182,16 @@ function jsonResponse(status, body) {
  *
  * A fresh bundle path per mount gives every case its own module registry, which
  * matters because the feed keeps an SWR cache at module scope.
- * @param {{ accounts?: Array<object>, works?: Array<object> }} [options]
+ * @param {{ accounts?: Array<object>, works?: Array<object>, localItems?: Record<string, object>, failPaths?: RegExp[] }} [options]
+ *   `failPaths` lists request paths that must reject (network failure), not
+ *   return an !ok body — that is the only way an uncaught rejection can leak.
  */
 async function mountStage(options = {}) {
   // 可变副本：导入用例会让 Host 多出一个监控账号，重读必须看得到它。
   const accounts = [...(options.accounts ?? ACCOUNTS)]
   const works = options.works ?? WORKS
+  const localItems = options.localItems ?? {}
+  const failPaths = options.failPaths ?? []
   const stageModule = await import(`${await bundleStage()}?mount=${bundleCounter}`)
 
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="host"></div></body></html>', {
@@ -227,6 +231,16 @@ async function mountStage(options = {}) {
     // A gate that fails loudly beats a gate that spins.
     if (calls.length > REQUEST_BUDGET) {
       throw new Error(`request storm: ${calls.length} calls, last ${method} ${path}`)
+    }
+    // A path opted into `failPaths` fails at the transport layer, the way a
+    // real network outage does — `inspirationRequest` never sees a response,
+    // so the rejection propagates to whatever handler forgot its catch.
+    if (failPaths.some((pattern) => pattern.test(path))) {
+      throw new Error(`network failure (test-injected): ${method} ${path}`)
+    }
+    // 「AI 拆解」把作品转成灵感条目：一次 POST 返回既有或新建的 inspiration_id。
+    if (path.includes('/to-inspiration') && method === 'POST') {
+      return jsonResponse(200, { success: true, data: { inspiration_id: 'insp-3110' } })
     }
     // The aggregate feed is a sibling of the per-account routes, not a child,
     // so it is matched before the account-collection fallback.
@@ -275,7 +289,13 @@ async function mountStage(options = {}) {
     }
     if (path.includes(RIVAL_PREFIX)) {
       return jsonResponse(200, { success: true, data: { items: accounts, total: accounts.length } })
-    }    if (path.startsWith('/omnimux/inspiration/local')) {
+    }
+    // A single library item by id — the row the deconstruct modal is opened on.
+    const single = path.match(/^\/omnimux\/inspiration\/local\/([^/?]+)$/)
+    if (single && localItems[single[1]]) {
+      return jsonResponse(200, { success: true, data: localItems[single[1]] })
+    }
+    if (path.startsWith('/omnimux/inspiration/local')) {
       return jsonResponse(200, { success: true, data: { items: [], total: 0, platforms: [] } })
     }
     return jsonResponse(200, { success: true, data: { items: [], total: 0 } })
@@ -365,7 +385,9 @@ const TOAST_EXIT_MS = 2500 + 180 + 120
 const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
 const filterPanel = (container) => container.querySelector('.omnimux-rival-filter-panel')
 const filterRows = (container) => [...container.querySelectorAll('.omnimux-rival-filter-row')]
-const cards = (container) => [...container.querySelectorAll('[data-inspiration-id]')]
+// v2.1: the monitor works render as `.omnimux-rival-card` inside the flat
+// masonry — the composite row id moved to `data-card-id`.
+const cards = (container) => [...container.querySelectorAll('.omnimux-rival-card')]
 const toast = (container) => container.querySelector('.omnimux-inspiration-toast')
 const rowById = (container, id) => filterRows(container).find((node) => node.getAttribute('data-account-id') === id)
 const buttonsLabelled = (container, text) => [...container.querySelectorAll('button')]
@@ -479,7 +501,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
         `unchecking one account must read「已选 1 个账号」(got ${JSON.stringify(triggerText(mounted.container))})`,
       )
       assert.equal(
-        cards(mounted.container)[0].getAttribute('data-inspiration-id'),
+        cards(mounted.container)[0].getAttribute('data-card-id'),
         WORK_BOB.row_id,
         'only the remaining account\'s works may stay on screen',
       )
@@ -492,7 +514,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
       await mounted.click(buttonsLabelled(mounted.container, L.invert)[0])
       await settle(mounted.container, () => cards(mounted.container).length === 1)
       assert.equal(
-        cards(mounted.container)[0].getAttribute('data-inspiration-id'),
+        cards(mounted.container)[0].getAttribute('data-card-id'),
         WORK_ALICE.row_id,
         '反选 must leave the complement on screen',
       )
@@ -584,25 +606,46 @@ describe('账号监控 — 账号筛选（多选）', () => {
 })
 
 describe('账号监控 — 作品网格流', () => {
-  it('renders the works as the library 9:16 grid with 详情 / 立即复刻', async () => {
+  it('renders the works as the v2.1 masonry: flat DOM, minimal default state, hover actions', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
       await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
 
-      const gridNode = mounted.container.querySelector('.omnimux-inspiration-grid')
-      assert.ok(gridNode, 'the works must render in the shared grid container')
+      const gridNode = mounted.container.querySelector('.omnimux-rival-masonry')
+      assert.ok(gridNode, 'the works must render in the v2.1 masonry container')
       assert.ok(
-        gridNode.querySelector('[data-inspiration-id]'),
-        'the works must be inside that grid, not beside it',
+        gridNode.querySelector('[data-card-id]'),
+        'the works must be inside that masonry, not beside it',
       )
       assert.equal(cards(mounted.container).length, WORKS.length, 'one card per work')
+      // v2.1 DOM order = feed order (spec V4): cards are flat children, never
+      // sorted into column wrappers.
+      assert.deepEqual(
+        [...gridNode.children].map((node) => node.getAttribute('data-card-id')),
+        WORKS.map((work) => work.row_id),
+        'the flat list must keep the feed order',
+      )
+      assert.equal(
+        gridNode.querySelector('.omnimux-rival-masonry-col'),
+        null,
+        'column wrappers would break the tab order (spec V4)',
+      )
       for (const card of cards(mounted.container)) {
-        assert.ok(card.textContent.includes(L.detail), 'the hover CTA must read 详情')
-        assert.ok(card.textContent.includes(L.replicate), 'the hover CTA must read 立即复刻')
+        // Default state is minimal: the hover layer carries the actions.
+        const overlay = card.querySelector('.omnimux-rival-card-overlay')
+        assert.ok(overlay, 'every card must carry its hover layer')
         assert.ok(
-          card.querySelector('.omnimux-inspiration-overlay-play'),
-          'the hover overlay must carry the centred play control',
+          card.textContent.includes(L.replicate),
+          'the hover CTA must read 立即复刻',
+        )
+        assert.ok(
+          card.querySelector('[data-act="deconstruct"]'),
+          'the hover layer must carry the AI breakdown button through the real panel wiring (PM B2)',
+        )
+        assert.ok(
+          card.querySelector('.omnimux-rival-card-media'),
+          'media cards must reserve their media area',
         )
       }
 
@@ -628,9 +671,11 @@ describe('账号监控 — 作品网格流', () => {
       await mounted.openAccountTab()
       await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
 
-      const detail = buttonsLabelled(mounted.container, L.detail)[0]
-      assert.ok(detail, 'a card must offer 详情')
-      await mounted.click(detail)
+      // v2.1: the card body itself opens the detail dialog — there is no
+      // separate 详情 button in the whitelist anymore.
+      const card = cards(mounted.container)[0]
+      assert.ok(card, 'a card must be on screen')
+      await mounted.click(card)
       await settle(mounted.container, () => (mounted.container.textContent || '').includes(zh['rivalFeed.detail.title']))
 
       const text = mounted.container.textContent || ''
@@ -864,5 +909,151 @@ describe('账号监控 — 空态与导入反馈', () => {
       await mounted.unmount()
       mounted.close()
     }
+  })
+})
+
+/**
+ * 第三轮整改的三条缺陷（QA 复审 N 项 + OCR 行级意见），各自一条钉测。
+ *
+ * The library row the「AI 拆解」endpoint is scripted to return: a *local
+ * inspiration item*, which is the point — it has `id`/`title`/`source_url`
+ * but no `account_id`/`post_id`. Whatever handler the modal's「立即复刻」
+ * reaches for must be the inspiration chain, not the rival-post one.
+ */
+const LOCAL_ITEM = {
+  id: 'insp-3110',
+  title: '拆解入库的作品',
+  type: 'video',
+  source_url: 'https://www.tiktok.com/@alice/video/1',
+  source_platform: 'tiktok',
+  is_local: true,
+}
+
+describe('账号监控 — 第三轮整改回执', () => {
+  it('routes the deconstruct modal\'s 立即复刻 to the inspiration chain, not the rival handler', async () => {
+    const mounted = await mountStage({ localItems: { 'insp-3110': LOCAL_ITEM } })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
+
+      const card = cards(mounted.container)[0]
+      await mounted.click(card.querySelector('[data-act="deconstruct"]'))
+      const modalReady = await settle(
+        mounted.container,
+        () => mounted.container.querySelector('.omnimux-inspiration-modal-replicate'),
+      )
+      assert.ok(modalReady, 'the deconstruct modal must open on the converted library item')
+
+      const callsBefore = mounted.calls.length
+      await mounted.click(mounted.container.querySelector('.omnimux-inspiration-modal-replicate'))
+      await settle(
+        mounted.container,
+        () => mounted.container.querySelector('.omnimux-rival-notice'),
+      )
+
+      const after = mounted.calls.slice(callsBefore)
+      const rivalChainHits = after.filter((call) => /\/posts\/.+\/(media|to-inspiration)/.test(call.path))
+      assert.deepEqual(
+        rivalChainHits.map((call) => call.path),
+        [],
+        'the modal hands back a library item — the rival replicate chain must not run on it',
+      )
+      assert.equal(
+        after.some((call) => call.path.includes('account_id=undefined') || call.path.includes('/undefined/')),
+        false,
+        'no request may be built from the item\'s missing account_id',
+      )
+
+      // The visible answer: the panel surfaces the inspiration chain's own
+      // status. With no sessions service bound in this harness the chain's
+      // honest reply is newSessionFailed — anything else (or silence) means
+      // the click went somewhere it should not have.
+      const notice = mounted.container.querySelector('.omnimux-rival-notice')
+      assert.ok(notice, 'the replicate click must leave a user-visible answer')
+      assert.ok(
+        (notice.textContent || '').includes(zh['card.cta.newSessionFailed']),
+        `expected the inspiration chain's status (got ${JSON.stringify(notice.textContent)})`,
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('reports a transport-level deconstruct failure instead of leaking a rejection', async () => {
+    const unhandled = []
+    const onUnhandled = (reason) => unhandled.push(reason)
+    process.on('unhandledRejection', onUnhandled)
+    const mounted = await mountStage({ failPaths: [/to-inspiration/] })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
+
+      const button = cards(mounted.container)[0].querySelector('[data-act="deconstruct"]')
+      const requestsBefore = mounted.calls.filter((call) => call.path.includes('to-inspiration')).length
+      await mounted.click(button)
+      const shown = await settle(
+        mounted.container,
+        () => (mounted.container.querySelector('.omnimux-rival-notice')?.textContent || '')
+          .includes(zh['rivalAccounts.post.attachFailed']),
+      )
+      assert.ok(shown, 'a rejected convert must surface the failure notice, not silence')
+
+      // The busy flag must be released: a second click is a second request.
+      await mounted.click(button)
+      await settle(
+        mounted.container,
+        () => mounted.calls.filter((call) => call.path.includes('to-inspiration')).length > requestsBefore + 1,
+      )
+      const convertCalls = mounted.calls.filter((call) => call.path.includes('to-inspiration')).length
+      assert.ok(convertCalls >= requestsBefore + 2, `busy must clear so the retry can run (got ${convertCalls})`)
+
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      assert.deepEqual(unhandled, [], 'the deconstruct handler must not leak an unhandled rejection')
+    } finally {
+      process.off('unhandledRejection', onUnhandled)
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('never offers a profile jump for a non-http(s) URL', async () => {
+    const evil = { ...ACCOUNTS[0], id: 'ra_evil', profile_url: 'javascript:alert(1)' }
+    const mounted = await mountStage({ accounts: [evil], works: [] })
+    try {
+      await mounted.openAccountTab()
+      await mounted.click(filterTrigger(mounted.container))
+      await settle(mounted.container, () => filterRows(mounted.container).length > 0)
+
+      const jump = rowById(mounted.container, 'ra_evil')
+        ?.querySelector(`[aria-label="${L.openProfile}"]`)
+      assert.ok(jump, 'the row still carries its profile button slot')
+      assert.equal(jump.disabled, true, 'a non-http(s) profile URL must disable the jump')
+      const openedBefore = mounted.opened.length
+      await mounted.click(jump)
+      assert.equal(mounted.opened.length, openedBefore, 'window.open must not run for a refused scheme')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('wires the real locale into every count and time the card shows (N1)', async () => {
+    // Mounted-level en coverage lives in rival-post-card.test.js; this gate pins
+    // the wiring itself at the sources so the locale cannot silently stop
+    // reaching the formatters again — the exact way N1 came back.
+    const { readFileSync } = await import('node:fs')
+    const card = readFileSync(join(here, 'RivalPostCard.jsx'), 'utf8')
+    assert.match(card, /rivalLocaleOf\(t\)/, 'the card must derive its locale from t()')
+    assert.match(card, /formatRelativeTime\(card\?\.posted_at,\s*Date\.now\(\),\s*locale\)/, 'posted time must be formatted with the card\'s locale')
+    assert.match(card, /formatEngagementCount\(stats\.(likes|comments|shares),\s*locale\)/, 'engagement counts must be formatted with the card\'s locale')
+    assert.match(card, /formatCount\(stats\.views,\s*locale\)/, 'view count must be formatted with the card\'s locale')
+    const modal = readFileSync(join(here, 'RivalPostPreviewModal.jsx'), 'utf8')
+    assert.match(modal, /rivalLocaleOf\(t\)/, 'the detail dialog must derive the same locale')
+    assert.match(modal, /formatRelativeTime\(row\.posted_at,\s*Date\.now\(\),\s*locale\)/, 'the detail dialog time must follow the same locale')
+    assert.match(modal, /formatCount\(value,\s*locale\)/, 'the detail dialog stats must follow the same locale')
+    const filter = readFileSync(join(here, 'RivalAccountFilter.jsx'), 'utf8')
+    assert.match(filter, /rivalLocaleOf\(t\)/, 'the account filter must derive the same locale')
+    assert.match(filter, /formatCount\(row\.postCount,\s*locale\)/, 'the account row count must follow the same locale')
   })
 })

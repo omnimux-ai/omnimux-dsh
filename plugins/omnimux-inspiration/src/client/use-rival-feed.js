@@ -4,10 +4,20 @@
  * The one state source of the tab, mounted by the shell so the filter in the
  * toolbar and the grid in the content area read the same numbers.
  *
- * It is deliberately timer-free: this module has no `setInterval`, no polling,
- * and no「retry in a moment」state. A request either lands or reports the failure
- * it got; a background refresh that nobody asked for is cost without benefit,
+ * It is deliberately timer-free: this module has no `setInterval`, no
+ *「retry in a moment」state. A request either lands or reports the failure it
+ * got; a background refresh that nobody asked for is cost without benefit,
  * and a spinner that outlives its request is worse than an honest error.
+ *
+ * One controlled exception (Issue #3112): while an E1 account sits in
+ * `queued`/`running` — the only「first fetch in flight」signal — the hook
+ * re-reads the same two endpoints at the server-shipped
+ * `config_summary.poll_interval_ms`. The watch is bounded three ways: it
+ * exists only while something is collecting (an idle tab owns zero timers),
+ * it gives up after `fetchPollBudget` polls and surfaces a failure instead of
+ * spinning, and the timer dies with the hook. The last poll is what re-reads
+ * page 1 — content appears because the queue emptied, not because anything
+ * was optimistically inserted.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -17,8 +27,16 @@ import {
   fetchRivalFeed,
   fetchRivalStatus,
   refreshAllRivalAccounts,
+  refreshRivalAccount,
   retryRivalAccount,
 } from './rival-api.js'
+import {
+  activeFetchAccounts,
+  FALLBACK_POLL_INTERVAL_MS,
+  fetchIssue,
+  fetchPollBudget,
+  fetchPollIntervalMs,
+} from './rival-fetch-watch.js'
 import {
   ALL_ACCOUNTS,
   accountIds,
@@ -58,7 +76,9 @@ function selectionSize(state) {
  *   query?: string,
  *   platform?: string,
  *   sort?: string,
- *   api?: { fetchRivalAccounts?: Function, fetchRivalFeed?: Function, fetchRivalStatus?: Function, refreshAllRivalAccounts?: Function, retryRivalAccount?: Function },
+ *   api?: { fetchRivalAccounts?: Function, fetchRivalFeed?: Function, refreshRivalAccount?: Function, fetchRivalStatus?: Function, refreshAllRivalAccounts?: Function, retryRivalAccount?: Function },
+ *     test seam: when given, this object is the whole endpoint set — an
+ *     endpoint it omits is not called. Production passes nothing.
  * }} [options]
  */
 export function useRivalFeed(options = {}) {
@@ -69,16 +89,45 @@ export function useRivalFeed(options = {}) {
   const sort = options.sort === 'views' ? 'views' : 'posted_at'
   const accountsApi = options.api?.fetchRivalAccounts
   const feedApi = options.api?.fetchRivalFeed
+  const refreshApi = options.api?.refreshRivalAccount
   const statusApi = options.api?.fetchRivalStatus
   const refreshAllApi = options.api?.refreshAllRivalAccounts
   const retryApi = options.api?.retryRivalAccount
+  /**
+   * Endpoint resolution.
+   *
+   * `api` is a test seam and nothing else — the shell mounts this hook bare,
+   * so production always takes the real set below. When a caller *does* inject
+   * it, that object is the whole endpoint set: an endpoint it leaves out is
+   * not called, instead of quietly falling back to the real one. Per-endpoint
+   * fallback is what lets a partial injection escape to real egress, and a
+   * suite that mixes stubs with live network calls proves nothing — the
+   * deny-network harness fails the file precisely to catch that.
+   */
   const api = useMemo(() => ({
     fetchRivalAccounts: accountsApi ?? fetchRivalAccounts,
     fetchRivalFeed: feedApi ?? fetchRivalFeed,
-    fetchRivalStatus: statusApi ?? fetchRivalStatus,
-    refreshAllRivalAccounts: refreshAllApi ?? refreshAllRivalAccounts,
-    retryRivalAccount: retryApi ?? retryRivalAccount,
-  }), [accountsApi, feedApi, statusApi, refreshAllApi, retryApi])
+    refreshRivalAccount: refreshApi ?? (options.api ? undefined : refreshRivalAccount),
+    fetchRivalStatus: statusApi ?? (options.api ? undefined : fetchRivalStatus),
+    refreshAllRivalAccounts: refreshAllApi ?? (options.api ? undefined : refreshAllRivalAccounts),
+    retryRivalAccount: retryApi ?? (options.api ? undefined : retryRivalAccount),
+  }), [
+    accountsApi,
+    feedApi,
+    refreshApi,
+    statusApi,
+    refreshAllApi,
+    retryApi,
+    options.api,
+  ])
+  /**
+   * Test-only seams: the watch cadence is the server's `poll_interval_ms`, and
+   * the watch window is「promised minute + headroom」. Production never sets
+   * these; tests inject millisecond-scale values so the bounded behaviour can
+   * be observed in real time.
+   */
+  const pollIntervalOption = Number.isFinite(options.pollIntervalMs) ? options.pollIntervalMs : null
+  const watchBudgetOption = Number.isFinite(options.watchBudgetMs) ? options.watchBudgetMs : null
 
   const [accounts, setAccounts] = useState([])
   const [selection, setSelection] = useState(ALL_ACCOUNTS)
@@ -90,6 +139,14 @@ export function useRivalFeed(options = {}) {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  /**
+   * Why the first-fetch wait ended, or null while it is still worth waiting.
+   * `stopped`/`cooling`/`failed` come from the Host's terminal states;
+   * `timeout` is the watch's own budget ceiling — the「不无限转圈」half of
+   * the promise.
+   * @type {[null | { kind: 'stopped'|'cooling'|'failed'|'timeout', account?: any, minutes?: number }, Function]}
+   */
+  const [fetchPhase, setFetchPhase] = useState(null)
   /**
    * The scheduler snapshot (E9): the used side of the daily refresh ledger.
    * `null` until its first answer lands — the quota line waits for the real
@@ -120,9 +177,20 @@ export function useRivalFeed(options = {}) {
    */
   const selectionRef = useRef(selection)
   const allIdsRef = useRef([])
+  /** The timer fires `load` — a ref keeps the watch out of its own deps. */
+  const loadRef = useRef(null)
+  /** The single poll timer and how many polls the current watch has made. */
+  const pollTimerRef = useRef(null)
+  const pollCountRef = useRef(0)
+  const pollIntervalRef = useRef(pollIntervalOption ?? FALLBACK_POLL_INTERVAL_MS)
+  const fetchPhaseRef = useRef(null)
 
   useEffect(() => () => {
     mounted.current = false
+    if (pollTimerRef.current != null) {
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
   }, [])
 
   const allIds = useMemo(() => accountIds(accounts), [accounts])
@@ -131,6 +199,62 @@ export function useRivalFeed(options = {}) {
   /** Whether a reply still belongs to the request the UI is waiting for. */
   const isCurrent = useCallback((ticket) => mounted.current && ticket === latest.current, [])
 
+  const updateFetchPhase = useCallback((next) => {
+    fetchPhaseRef.current = next
+    setFetchPhase(next)
+  }, [])
+
+  const clearPollTimer = useCallback(() => {
+    if (pollTimerRef.current != null) {
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+    pollCountRef.current = 0
+  }, [])
+
+  /**
+   * Decide, from the latest E1 rows, whether the watch lives another round.
+   *
+   * Called after every successful account read — the initial load, a manual
+   * reload and every poll — so the same three outcomes hold regardless of who
+   * asked: keep waiting (schedule exactly one more poll), end as a failure
+   * (terminal Host state or the budget ceiling), or end as landed (nothing
+   * queued/running → the read that follows puts the works on screen).
+   * @param {Array<Record<string, any>>} nextAccounts
+   * @param {boolean} polled true when this read came from the poll timer
+   */
+  const watchAccounts = useCallback((nextAccounts, polled) => {
+    const active = activeFetchAccounts(nextAccounts)
+    const issue = fetchIssue(nextAccounts)
+    if (issue && active.length === 0) {
+      clearPollTimer()
+      updateFetchPhase(issue)
+      return
+    }
+    if (active.length === 0) {
+      clearPollTimer()
+      updateFetchPhase(null)
+      return
+    }
+    const budget = fetchPollBudget(
+      pollIntervalRef.current,
+      watchBudgetOption ?? undefined,
+    )
+    if (pollCountRef.current >= budget) {
+      clearPollTimer()
+      updateFetchPhase({ kind: 'timeout', account: active[0] })
+      return
+    }
+    updateFetchPhase(null)
+    if (polled) pollCountRef.current += 1
+    if (pollTimerRef.current != null) clearTimeout(pollTimerRef.current)
+    pollTimerRef.current = setTimeout(() => {
+      pollTimerRef.current = null
+      if (!mounted.current || !enabled) return
+      void loadRef.current({ polled: true })
+    }, pollIntervalRef.current)
+  }, [clearPollTimer, enabled, updateFetchPhase, watchBudgetOption])
+
   /**
    * Load page 1 under whatever the toolbar currently holds.
    *
@@ -138,7 +262,7 @@ export function useRivalFeed(options = {}) {
    * account count, the avatars and the ids the feed filters by; running the two
    * in parallel would let the grid answer a selection that does not exist yet.
    */
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts = {}) => {
     if (!enabled) return
     if (issued.current >= REQUEST_BUDGET) {
       setError('error.generic')
@@ -159,18 +283,23 @@ export function useRivalFeed(options = {}) {
       }
       const accountData = accountRes.body?.data || {}
       const nextAccounts = Array.isArray(accountData.items) ? accountData.items : []
+      if (pollIntervalOption == null) pollIntervalRef.current = fetchPollIntervalMs(accountData)
       setAccounts(nextAccounts)
       setConfigSummary(accountData.config_summary || null)
       // The status snapshot rides the same reload: a failed snapshot degrades
-      // the quota display, it never blocks the feed.
+      // the quota display, it never blocks the feed. An injected endpoint set
+      // that omits it simply has no snapshot to show.
       let statusData = null
-      try {
-        const statusRes = await api.fetchRivalStatus()
-        statusData = statusRes?.ok ? (statusRes.body?.data || null) : null
-      } catch { statusData = null }
+      if (typeof api.fetchRivalStatus === 'function') {
+        try {
+          const statusRes = await api.fetchRivalStatus()
+          statusData = statusRes?.ok ? (statusRes.body?.data || null) : null
+        } catch { statusData = null }
+      }
       if (isCurrent(ticket)) setStatus(statusData)
       const nextAllIds = accountIds(nextAccounts)
       allIdsRef.current = nextAllIds
+      watchAccounts(nextAccounts, opts.polled === true)
 
       // An empty selection means「exclude everything」, and the wire has no way to
       // say that: an omitted `accounts` parameter means *every* account. So the
@@ -212,14 +341,20 @@ export function useRivalFeed(options = {}) {
     } finally {
       if (isCurrent(ticket)) setLoading(false)
     }
-  }, [api, enabled, isCurrent, platform, query, sort])
+  }, [api, enabled, isCurrent, platform, pollIntervalOption, query, sort, watchAccounts])
+
+  loadRef.current = load
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      clearPollTimer()
+      updateFetchPhase(null)
+      return
+    }
     void load()
     // `load` re-identifies itself when the toolbar inputs change, which is
     // exactly when the first page has to be re-read.
-  }, [enabled, load])
+  }, [enabled, load, clearPollTimer, updateFetchPhase])
 
   /** Append the next page; used by the grid's bottom sentinel. */
   const loadMore = useCallback(async () => {
@@ -294,6 +429,7 @@ export function useRivalFeed(options = {}) {
    * @returns {Promise<{ ok: boolean, reason?: 'cooldown' | 'budget' | 'error', n?: number }>}
    */
   const refreshPool = useCallback(async () => {
+    if (typeof api.refreshAllRivalAccounts !== 'function') return { ok: false, reason: 'error' }
     try {
       const res = await api.refreshAllRivalAccounts()
       if (!res?.ok) {
@@ -326,6 +462,7 @@ export function useRivalFeed(options = {}) {
    * @returns {Promise<{ ok: boolean, reason?: 'cooldown' | 'budget' | 'error' }>}
    */
   const retryAccount = useCallback(async (accountId) => {
+    if (typeof api.retryRivalAccount !== 'function') return { ok: false, reason: 'error' }
     try {
       const res = await api.retryRivalAccount(accountId)
       if (!res?.ok) {
@@ -355,6 +492,37 @@ export function useRivalFeed(options = {}) {
     return { ...card, cover_key: hostMediaSrc(card.cover_key) }
   }), [items])
 
+  /**
+   * The failure-exit the ticket promises: re-enqueue accounts the first fetch
+   * gave up on and restart the (bounded) watch.
+   *
+   * `timeout` needs no request — those accounts are still queued/running on
+   * the Host, so resuming the watch is the whole retry. `stopped`/`cooling`
+   * re-queue via the existing single-account refresh endpoint; that path is
+   * the same one the import uses (`enqueue` → one `reserve` → `drain()`), so
+   * the cost contract is unchanged — the client asks the Host to retry, it
+   * does not collect anything itself.
+   */
+  const retryFetch = useCallback(async () => {
+    if (!enabled) return
+    clearPollTimer()
+    const failed = (accounts || []).filter((account) => (
+      (account?.refresh_state === 'error' || account?.refresh_state === 'backoff')
+      && Number(account?.post_count) === 0
+    ))
+    updateFetchPhase(null)
+    if (typeof api.refreshRivalAccount === 'function') {
+      for (const account of failed) {
+        // eslint-disable-next-line no-await-in-loop
+        try { await api.refreshRivalAccount(String(account.id), { manual: false }) } catch { /* the next read reports the truth */ }
+      }
+    }
+    await load()
+  }, [accounts, api, clearPollTimer, enabled, load, updateFetchPhase])
+
+  /** True while an E1 row still reports a fetch in flight. */
+  const fetching = useMemo(() => activeFetchAccounts(accounts).length > 0, [accounts])
+
   return {
     phase,
     error,
@@ -372,6 +540,15 @@ export function useRivalFeed(options = {}) {
     firstLoad: loading && items.length === 0,
     /** True when the selection excludes everything — an empty grid by request. */
     emptySelection: selection.mode === 'subset' && selectionSize(selection) === 0,
+    /**
+     * First-fetch signal (#3112): `fetching` is live while the Host collects;
+     * `fetchPhase` is set only when the wait ended badly — a terminal Host
+     * state (`stopped`/`cooling`/`failed`) or the watch's own budget ceiling
+     * (`timeout`). Both drive the empty state; `retryFetch` is its exit.
+     */
+    fetching,
+    fetchPhase,
+    retryFetch,
     load,
     loadMore,
     reload: load,

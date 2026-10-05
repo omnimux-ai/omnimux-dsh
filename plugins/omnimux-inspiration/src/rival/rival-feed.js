@@ -151,6 +151,7 @@ export function toFeedRow(post, account) {
     type: text(post?.type),
     posted_at: text(post?.posted_at),
     duration: typeof post?.duration === 'number' ? post.duration : null,
+    ratio: Number.isFinite(post?.ratio) ? post.ratio : null,
     stats: {
       views: feedViews(post),
       likes: typeof post?.stats?.likes === 'number' ? post.stats.likes : 0,

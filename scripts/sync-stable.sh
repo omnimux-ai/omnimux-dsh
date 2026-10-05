@@ -590,8 +590,10 @@ if (depChanged || bundleChanged) {
 EOF
 
   # pnpm 11 对同版本 directory file: 依赖会保留现有安装入口，即使受管 source
-  # 已由本轮 rsync 替换。只暂存本轮显式选中、且 manifest 精确声明为受管 file:
-  # 的入口，使 pnpm install 重装它们；失败时恢复原安装入口。
+  # 已由本轮 rsync 替换。暂存范围必须覆盖下方核验会检查的每一个受管 file: 入口
+  # （MANAGED_PLUGINS），否则「本轮未选中、但内容已变」的受管包仍以旧副本存在，
+  # 核验会以指纹不匹配中止整批物化。并上本轮选中项以覆盖尚未进入 manifest 的新包；
+  # 两者都仍要求 manifest 精确声明为受管 file:。失败时恢复原安装入口。
   REFRESH_FILE_PACKAGES=()
   add_refresh_file_package() {
     local candidate="$1" existing
@@ -600,7 +602,8 @@ EOF
     done
     REFRESH_FILE_PACKAGES+=("$candidate")
   }
-  for name in "${PROFILE_TARGET_PLUGINS[@]}"; do
+  for name in "${MANAGED_PLUGINS[@]-}" "${PROFILE_TARGET_PLUGINS[@]-}"; do
+    [ -n "$name" ] || continue
     dependency_spec=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(p.dependencies?.[process.argv[2]]||'')" "$PROFILE/package.json" "$name")
     if [ "$dependency_spec" = "file:.materialize-snapshots/plugins/$name" ]; then
       add_refresh_file_package "$name"

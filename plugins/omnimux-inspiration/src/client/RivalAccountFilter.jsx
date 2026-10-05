@@ -12,7 +12,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
-import { formatCount } from './rival-format.js'
+import { formatCount, rivalLocaleOf } from './rival-format.js'
+import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 import { rivalSelectionSummary, toAccountFilterRow } from './rival-filter.js'
 import { accountHealth, coolingMinutesLeft, stoppedReasonText } from './rival-health.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
@@ -58,10 +59,12 @@ const ICON_EXTERNAL = (
  *   onOpenProfile: (url: string) => void,
  *   onRetry?: (id: string) => void,
  *   quotaLeft?: number,
+ *   locale?: 'zh' | 'en',
  * }} props
  */
-function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft }) {
+function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft, locale }) {
   const handleToggle = () => onToggle(row.id)
+  const profileUrlSafe = isSafeExternalUrl(row.profileUrl)
   const [retryReasonOpen, setRetryReasonOpen] = useState(false)
   // 四态判据的唯一来源是 rival-health.js——行上的标记、原因行与状态条
   // 的计数读同一套事实，永远不会出现两个实现互相打脸。
@@ -127,11 +130,11 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft 
             className="omnimux-rival-filter-jump"
             aria-label={t('rivalFilter.openProfile')}
             title={t('rivalFilter.openProfile')}
-            disabled={!row.profileUrl}
+            disabled={!profileUrlSafe}
             onClick={(event) => {
               event.preventDefault()
               event.stopPropagation()
-              if (row.profileUrl) onOpenProfile(row.profileUrl)
+              if (profileUrlSafe) onOpenProfile(row.profileUrl)
             }}
             onMouseDown={(event) => event.stopPropagation()}
             onPointerDown={(event) => event.stopPropagation()}
@@ -166,7 +169,7 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft 
           <RivalPlatformMark platform={row.platform} />
           <span className="omnimux-rival-filter-handle">{row.handle}</span>
           <span className="omnimux-rival-filter-count">
-            {t('rivalFilter.posts').replace('{n}', formatCount(row.postCount))}
+            {t('rivalFilter.posts').replace('{n}', formatCount(row.postCount, locale))}
           </span>
         </span>
         {health === 'reimport' ? (
@@ -238,6 +241,7 @@ export function RivalAccountFilter(props) {
 
   const rows = (Array.isArray(accounts) ? accounts : []).map((account) => toAccountFilterRow(account, selection))
   const summary = rivalSelectionSummary(selection, t)
+  const locale = rivalLocaleOf(t)
 
   return (
     <div className="omnimux-rival-filter" ref={rootRef}>
@@ -268,14 +272,11 @@ export function RivalAccountFilter(props) {
                 key={row.id}
                 row={row}
                 t={t}
+                locale={locale}
                 onToggle={onToggle}
                 onRetry={onRetry}
                 quotaLeft={quotaLeft}
-                onOpenProfile={(url) => {
-                  if (typeof window !== 'undefined' && typeof window.open === 'function') {
-                    window.open(url, '_blank', 'noopener,noreferrer')
-                  }
-                }}
+                onOpenProfile={(url) => openExternalUrl(url)}
               />
             ))}
           </div>
