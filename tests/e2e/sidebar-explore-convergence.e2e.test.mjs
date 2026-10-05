@@ -263,3 +263,53 @@ test('E2E: 探索菜单运行时注册接缝——注册项追加在末尾、点
     delete globalThis.HTMLButtonElement
   }
 })
+
+test('E2E: 探索入口悬停即展开——接线、延时与幂等收起契约', async () => {
+  const coordinatorPath = path.join(root, 'plugins/omnimux/src/client/sidebar-coordinator.js')
+  const source = fs.readFileSync(coordinatorPath, 'utf8')
+
+  // 1. 悬停接线存在：按钮 mouseenter 触发展开，mouseleave 走宽限收起
+  assert.ok(
+    source.includes("btn.addEventListener('mouseenter'") && source.includes('scheduleExploreHover('),
+    '探索入口必须在 mouseenter 上调度展开，而不是只靠点击',
+  )
+  assert.ok(
+    source.includes("btn.addEventListener('mouseleave'") && source.includes('scheduleExploreHoverClose()'),
+    '探索入口 mouseleave 必须走宽限收起，允许指针斜向移入菜单',
+  )
+
+  // 2. 指针进入菜单即取消收起（不闪断）
+  assert.ok(
+    /menu\.addEventListener\('mouseenter'[\s\S]{0,120}clearExploreHoverTimer\(\)/.test(source),
+    '指针进入菜单必须取消待收起，避免斜向移动时闪断',
+  )
+
+  // 3. 收起判定与事件到达顺序无关：靠指针位置标记，而不是事件顺序
+  assert.ok(
+    source.includes('explorePointerInEntry') && source.includes('explorePointerInMenu'),
+    '收起判定必须依据指针当前位置，而不是依赖 mouseenter/mouseleave 的到达顺序',
+  )
+
+  // 4. 点击仍可用，且点击收起后指针未离开前不得被悬停重开
+  assert.ok(
+    source.includes('exploreHoverSuppressed'),
+    '点击收起后必须抑制悬停重开，直到指针离开',
+  )
+
+  // 5. 幂等收起：移除菜单会让聚焦项触发 blur/focusout 重入收起，必须防重入
+  assert.ok(
+    source.includes('exploreMenuClosing') && source.includes('menu?.isConnected'),
+    '收起必须防重入且只移除仍挂载的菜单，重复收起不得抛错',
+  )
+
+  // 6. 延时是模块常量，不引入环境变量或本机路径
+  assert.ok(
+    source.includes('export const EXPLORE_HOVER_OPEN_DELAY') &&
+      source.includes('export const EXPLORE_HOVER_CLOSE_DELAY'),
+    '悬停延时必须是模块常量',
+  )
+  assert.ok(
+    !/EXPLORE_HOVER_(OPEN|CLOSE)_DELAY\s*=\s*[^\n]*process\.env/.test(source),
+    '悬停延时不得依赖环境变量（产品基线）',
+  )
+})
