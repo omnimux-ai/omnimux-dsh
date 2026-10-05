@@ -1,0 +1,62 @@
+{
+  "task": "account-monitor-filter-polish",
+  "issues": [3171, 3172],
+  "device": "ego-browser (Chromium) / worktree harness, python3 http.server port 0",
+  "measurements": {
+    "before": {
+      "listMaxHeight": "240px",
+      "listScrollHeight": 272,
+      "listClientHeight": 240,
+      "listNeedsScroll": true,
+      "rows": [
+        { "id": "ra_ok", "health": "normal", "rowHeight": 51, "nameWidth": 48, "nameTruncated": false },
+        { "id": "ra_cool", "health": "cooling", "rowHeight": 51, "nameWidth": 50, "nameTruncated": true },
+        { "id": "ra_reimport", "health": "reimport", "rowHeight": 88, "nameWidth": 48, "nameTruncated": false },
+        { "id": "ra_stopped", "health": "stopped", "rowHeight": 76, "nameWidth": 60, "nameTruncated": false }
+      ],
+      "coolingMarkWidth": 115,
+      "infoWidth": 195,
+      "infoMinWidth": "96px",
+      "noticeBackground": "rgba(255, 255, 255, 0.07) [仅因验收页自行定义了该令牌，真实环境无定义]",
+      "echoBackground": "rgba(255, 255, 255, 0.07) [同上]",
+      "undefinedTokenControl": "rgba(0, 0, 0, 0)"
+    },
+    "after": {
+      "listMaxHeight": "320px",
+      "listScrollHeight": 293,
+      "listClientHeight": 293,
+      "listNeedsScroll": false,
+      "listScrollTop": 0,
+      "rows": [
+        { "id": "ra_ok", "health": "normal", "rowHeight": 51, "nameWidth": 48, "nameTruncated": false, "inListView": true },
+        { "id": "ra_cool", "health": "cooling", "rowHeight": 72, "nameWidth": 60, "nameTruncated": false, "inListView": true },
+        { "id": "ra_reimport", "health": "reimport", "rowHeight": 88, "nameWidth": 48, "nameTruncated": false, "inListView": true },
+        { "id": "ra_stopped", "health": "stopped", "rowHeight": 76, "nameWidth": 60, "nameTruncated": false, "inListView": true }
+      ],
+      "noticeBackground": "rgba(255, 255, 255, 0.07) [--dsw-alias-bg-layer-2，验收页已移除对未定义令牌的定义]",
+      "echoBackground": "rgba(255, 255, 255, 0.07) [同上]",
+      "undefinedTokenControl": "rgba(0, 0, 0, 0) [反向对照：未定义令牌确实无底色，证明装置能看见该类缺陷]",
+      "stageHeight": 825,
+      "panelHeight": 352,
+      "panelFitsInStage": true,
+      "lastRowBottom": 573,
+      "lastRowVisible": true
+    }
+  },
+  "undefinedTokenAudit": {
+    "searched": [
+      "node_modules/@deepseek-ai/**",
+      "packages/dsh-ui-kit/**",
+      "~/.omnimux-dev/profiles/omnimux/node_modules/**",
+      "/Users/x/Desktop/Project/OmniMux/**"
+    ],
+    "definitionsFound": 0,
+    "conclusion": "组件库只定义 bg-base / bg-elevated / bg-layer-1 / bg-layer-2 / bg-mask-1，--dsw-alias-bg-tertiary 在任何真实令牌来源中都不存在"
+  },
+  "screenshots": [
+    "before.png",
+    "after.png",
+    "after-full.png",
+    "after-viewport.png"
+  ]
+}

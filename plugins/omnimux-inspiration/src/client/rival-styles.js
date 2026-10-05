@@ -115,7 +115,9 @@ export const RIVAL_CSS = `
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 240px;
+  /* 四行账号（其中终态行带两行原因）实测 272px：上限必须容得下这个常见规模，
+     否则最后一行与其原因行被裁在滚动区外。账号更多时仍按本列表自身滚动。 */
+  max-height: 320px;
   overflow-y: auto;
 }
 .omnimux-rival-filter-row {
@@ -126,11 +128,6 @@ export const RIVAL_CSS = `
   border-radius: 6px;
   cursor: pointer;
   transition: background 120ms ease;
-}
-/* 终态行（带原因行）昵称列至少保留两行文字宽，否则长原因把昵称挤没。 */
-.omnimux-rival-filter-row.is-reimport .omnimux-rival-filter-info,
-.omnimux-rival-filter-row.is-stopped .omnimux-rival-filter-info {
-  min-width: 96px;
 }
 .omnimux-rival-filter-row:hover {
   background: var(--dsw-alias-interactive-bg-hover);
@@ -186,6 +183,8 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-filter-name-row {
   display: flex;
+  /* 昵称与状态文字一行放不下时，让状态文字整体落到第二行，而不是压缩昵称。 */
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -194,6 +193,9 @@ export const RIVAL_CSS = `
   font-size: 12px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
+  /* 昵称必须完整可读：不参与压缩，宁可让同行的状态文字换行。 */
+  flex: none;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -305,7 +307,7 @@ export const RIVAL_CSS = `
 .omnimux-rival-notice {
   padding: 8px 10px;
   border-radius: 8px;
-  background: var(--dsw-alias-bg-tertiary);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
   font-size: 12px;
 }
@@ -502,7 +504,7 @@ export const RIVAL_CSS = `
 .omnimux-rival-import-echo {
   padding: 8px 10px;
   border-radius: 8px;
-  background: var(--dsw-alias-bg-tertiary);
+  background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
   font-size: 12px;
 }
