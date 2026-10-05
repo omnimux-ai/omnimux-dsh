@@ -65,15 +65,15 @@ test('H2: 处置表 82 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 28); // #3086 claude-sonnet-4-6 chat+vision_chat +2 → 28
+  assert.equal(index.listedOperations.length, 29); // #3138 gpt-image-2.5#multi_reference 真机验证后上架 +1 → 29（#3086 为 28）
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {
       assert.ok(index.listedOperations.includes(`${modelId}#${operation}`), `${modelId}#${operation}`);
     }
   }
-  // gpt-image-2.5 的 multi_reference 仍是 draft/stub，不得上架
-  assert.ok(!index.listedOperations.includes('gpt-image-2.5#multi_reference'));
+  // gpt-image-2.5 的 multi_reference 已于 2026-10-05 真机出图验证通过并上架（#3138）
+  assert.ok(index.listedOperations.includes('gpt-image-2.5#multi_reference'));
   assert.ok(index.listedOperations.includes('gpt-image-2.5#text_to_image'));
   // flare 与 sunburst 在售开放
   assert.ok(index.listedOperations.includes('gpt-image-2.5-flare#text_to_image'));
