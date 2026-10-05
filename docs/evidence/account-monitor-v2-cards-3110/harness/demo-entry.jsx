@@ -126,6 +126,16 @@ function App() {
     const list = q.get('edge') ? [...POSTS, ...EDGE_POSTS] : POSTS
     return q.get('qa41') ? [...list, ...QA41_POSTS] : list
   }, [])
+  // R10-装置夹具：?bright=1 把 on-media 卡的封面换成亮档（c13 纯白 /
+  // c14 ~65% 灰，65% 灰是半透明中性胶囊的实测临界点）。默认 fixture
+  // 的 §9.4 暗色渐变口径不变；本参数只用于 M2 亮封面最劣情形验收——
+  // 覆盖「观察/均速/该号」三个中性档 × 亮封面 × 已处理态。
+  if (new URLSearchParams(location.search).get('bright')) {
+    const BRIGHT = { p5: 'c13', p6: 'c14', p7: 'c14', p3: 'c13', p8: 'c13', p4: 'c13', p10: 'c14' }
+    for (const r of posts) {
+      if (BRIGHT[r.id]) r.cover_src = `covers/${BRIGHT[r.id]}.svg`
+    }
+  }
   const cards = useMemo(() => posts.map((r) => {
     const card = toRivalCardRow(r)
     // The QA page mirrors the cover path into the served location so the media

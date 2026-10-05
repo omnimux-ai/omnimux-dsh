@@ -1,0 +1,660 @@
+{
+ "url": "http://127.0.0.1:9425/demo.html?edge=1&qa41=1&theme=dark&width=1164",
+ "columns": 5,
+ "columnWidth": 220,
+ "feedHeight": 2188.88,
+ "only": null,
+ "table": [
+  {
+   "id": "ra_1:p1",
+   "type": "short-video",
+   "col": 0,
+   "top": 0,
+   "measured": 429.55,
+   "est": 429.56,
+   "diff": -0.01,
+   "pillRow": false
+  },
+  {
+   "id": "ra_2:p2",
+   "type": "long-video",
+   "col": 1,
+   "top": 0,
+   "measured": 164.63,
+   "est": 164.63,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_3:p3",
+   "type": "image",
+   "col": 2,
+   "top": 0,
+   "measured": 314.5,
+   "est": 314.5,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:p11",
+   "type": "text",
+   "col": 3,
+   "top": 0,
+   "measured": 222,
+   "est": 222,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:p4",
+   "type": "text-media",
+   "col": 4,
+   "top": 0,
+   "measured": 241.13,
+   "est": 241.13,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_6:p5",
+   "type": "short-video",
+   "col": 1,
+   "top": 180.63,
+   "measured": 429.55,
+   "est": 429.56,
+   "diff": -0.01,
+   "pillRow": false
+  },
+  {
+   "id": "ra_5:p6",
+   "type": "text-media",
+   "col": 3,
+   "top": 238,
+   "measured": 241.13,
+   "est": 241.13,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:p12",
+   "type": "text",
+   "col": 4,
+   "top": 257.13,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_7:p7",
+   "type": "image",
+   "col": 2,
+   "top": 330.5,
+   "measured": 260,
+   "est": 260,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_1:p8",
+   "type": "short-video",
+   "col": 4,
+   "top": 417.13,
+   "measured": 429.55,
+   "est": 429.56,
+   "diff": -0.01,
+   "pillRow": false
+  },
+  {
+   "id": "ra_2:p9",
+   "type": "long-video",
+   "col": 0,
+   "top": 445.55,
+   "measured": 164.63,
+   "est": 164.63,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_3:p10",
+   "type": "image",
+   "col": 3,
+   "top": 495.13,
+   "measured": 314.5,
+   "est": 314.5,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:e1",
+   "type": "text",
+   "col": 2,
+   "top": 606.5,
+   "measured": 222,
+   "est": 222,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:e2",
+   "type": "text",
+   "col": 0,
+   "top": 626.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:e3",
+   "type": "text",
+   "col": 1,
+   "top": 626.17,
+   "measured": 186,
+   "est": 186,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:e4",
+   "type": "text",
+   "col": 0,
+   "top": 786.17,
+   "measured": 162,
+   "est": 162,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:e5",
+   "type": "text",
+   "col": 3,
+   "top": 825.63,
+   "measured": 162,
+   "est": 162,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:e6",
+   "type": "text",
+   "col": 1,
+   "top": 828.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:e7",
+   "type": "text",
+   "col": 2,
+   "top": 844.5,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:w1",
+   "type": "text",
+   "col": 4,
+   "top": 862.67,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:w2",
+   "type": "text",
+   "col": 0,
+   "top": 964.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:w3",
+   "type": "text",
+   "col": 1,
+   "top": 988.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:w4",
+   "type": "text",
+   "col": 3,
+   "top": 1003.63,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_7:w5",
+   "type": "image",
+   "col": 2,
+   "top": 1004.5,
+   "measured": 314.5,
+   "est": 314.5,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_3:w6",
+   "type": "image",
+   "col": 4,
+   "top": 1022.67,
+   "measured": 314.5,
+   "est": 314.5,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:w7",
+   "type": "text",
+   "col": 0,
+   "top": 1124.17,
+   "measured": 144,
+   "est": 162,
+   "diff": -18,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:w8",
+   "type": "text",
+   "col": 1,
+   "top": 1148.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_2:w9",
+   "type": "long-video",
+   "col": 3,
+   "top": 1163.63,
+   "measured": 164.63,
+   "est": 164.63,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_6:w10",
+   "type": "short-video",
+   "col": 0,
+   "top": 1302.17,
+   "measured": 429.55,
+   "est": 429.56,
+   "diff": -0.01,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:w11",
+   "type": "text",
+   "col": 1,
+   "top": 1308.17,
+   "measured": 162,
+   "est": 162,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:w12",
+   "type": "text",
+   "col": 2,
+   "top": 1335,
+   "measured": 222,
+   "est": 222,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:u1",
+   "type": "text",
+   "col": 3,
+   "top": 1344.25,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:u2",
+   "type": "text",
+   "col": 4,
+   "top": 1353.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_1:u3",
+   "type": "short-video",
+   "col": 1,
+   "top": 1486.17,
+   "measured": 429.55,
+   "est": 429.56,
+   "diff": -0.01,
+   "pillRow": false
+  },
+  {
+   "id": "ra_2:u4",
+   "type": "long-video",
+   "col": 3,
+   "top": 1504.25,
+   "measured": 182.63,
+   "est": 182.63,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:v1",
+   "type": "text",
+   "col": 4,
+   "top": 1513.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:v2",
+   "type": "text",
+   "col": 2,
+   "top": 1573,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:v3",
+   "type": "text",
+   "col": 4,
+   "top": 1673.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:v4",
+   "type": "text",
+   "col": 3,
+   "top": 1702.88,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:v5",
+   "type": "text",
+   "col": 2,
+   "top": 1733,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:v6",
+   "type": "text",
+   "col": 0,
+   "top": 1747.73,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:q1",
+   "type": "text-media",
+   "col": 4,
+   "top": 1833.17,
+   "measured": 241.13,
+   "est": 241.13,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:q2",
+   "type": "text-media",
+   "col": 3,
+   "top": 1862.88,
+   "measured": 326,
+   "est": 326,
+   "diff": 0,
+   "pillRow": true
+  }
+ ],
+ "maxAbsDiff": 18,
+ "replayMismatches": 2,
+ "replay": [
+  {
+   "id": "ra_1:p1",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_2:p2",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_3:p3",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_4:p11",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_4:p4",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_6:p5",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_5:p6",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_5:p12",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_7:p7",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_1:p8",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_2:p9",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_3:p10",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_4:e1",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_5:e2",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_5:e3",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_4:e4",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_4:e5",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_5:e6",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_4:e7",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_4:w1",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_5:w2",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_5:w3",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_4:w4",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_7:w5",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_3:w6",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_4:w7",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_5:w8",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_2:w9",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_6:w10",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_4:w11",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_5:w12",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_4:u1",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_5:u2",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_1:u3",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_2:u4",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_4:v1",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_5:v2",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_4:v3",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_5:v4",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_4:v5",
+   "expectedCol": 0,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_5:v6",
+   "expectedCol": 2,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_4:q1",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_5:q2",
+   "expectedCol": 3,
+   "actualCol": 3
+  }
+ ],
+ "adjacentOverlaps": [],
+ "maxAdjacentOverlap": 0
+}

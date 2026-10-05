@@ -749,3 +749,79 @@ describe('rival-masonry — R7 逐字形字宽表锁表断言（QA Q3 阻塞）'
     assert.equal(rivalWrapLines('aa\x7fbbbbbbbb', 14, 60), 1, 'DEL falls back to the uniform factor and stays glued')
   })
 })
+
+describe('rival-masonry — R10 行首禁则「按码位分」语义（QA 收口复验 FAIL 修复）', () => {
+  // QA 用逐行内容测量（非行数差）证 Chrome 行首禁则逐码位异质：
+  // @40px（unit 14，单字 14px）形态 `中文中文中文X`：
+  //   拉回组 = 4 行（`中文`/`中文`/`中`/`文X`）——X 放不下时前一个
+  //     CJK 字带它下行；
+  //   悬挂组 = 3 行（`中文`/`中文`/`中文X`）——X 挂在本行行尾。
+  // R9 按前驱类型分粒度不对：悬挂组在前驱是 CJK 字时同样拉回，与
+  // Chrome 不符。R10 按码位分 + 次级条件（前驱禁则标点也挂行尾）。
+  // 真机口径（本文件同目录 e2e / harness 探针复核）：
+  //   拉回组码位：，。、：；？！﹖﹗％（FF0C 3002 3001 FF1A FF1B FF1F
+  //     FF01 FE56 FE57 FF05）；
+  //   悬挂组码位：｡､･〉】〕）］｝》」』〞〟（FF61 FF64 FF65 3009 3011
+  //     3015 FF09 FF3D FF5D 300B 300D 300F 301E 301F）；
+  //   连续禁则标点：后一个挂行尾（不链式拉回），整个 run 只随 head 下行一次；
+  //   悬挂组在 ink（半宽）放不下的形态里同样把行尾单元整体带下行；
+  //   0.5px 装入容差已删：Chrome 装入边界是行宽本身，恰好等于行宽算放下。
+
+  const PULL = ['，', '。', '、', '：', '；', '？', '！', '﹖', '﹗', '％']
+  const HANG = ['｡', '､', '･', '〉', '】', '〕', '）', '］', '｝', '》', '」', '』', '〞', '〟']
+
+  it('拉回组逐码位钉行：`中文中文中文X`@40px = 4 行（前一 CJK 字随标点下行）', () => {
+    for (const ch of PULL) {
+      assert.equal(rivalWrapLines(`中文中文中文${ch}`, 14, 40), 4,
+        `U+${ch.codePointAt(0).toString(16).toUpperCase()} 属拉回组：Chrome 逐行内容 中文/中文/中/文${ch}`)
+    }
+  })
+
+  it('悬挂组逐码位钉行：`中文中文中文X`@40px = 3 行（标点挂行尾）', () => {
+    for (const ch of HANG) {
+      assert.equal(rivalWrapLines(`中文中文中文${ch}`, 14, 40), 3,
+        `U+${ch.codePointAt(0).toString(16).toUpperCase()} 属悬挂组：Chrome 逐行内容 中文/中文/中文${ch}`)
+    }
+  })
+
+  it('粒度鉴别：前驱同为 CJK 字时，拉回组与悬挂组行为不同（拦「按前驱类型分」回退）', () => {
+    // 同一句、同前驱（文），仅码位不同。R9 的「前驱 CJK → 全拉回」实现
+    // 对悬挂组也给 4 行——本断言会立刻变红；只有把禁则集按码位拆成
+    // 拉回/悬挂两个语义才能同时满足两条。
+    assert.equal(rivalWrapLines('中文中文中文，', 14, 40), 4, '拉回组 ，')
+    assert.equal(rivalWrapLines('中文中文中文）', 14, 40), 3, '悬挂组 ）')
+    assert.equal(rivalWrapLines('中文中文中文｡', 14, 40), 3, '悬挂组 ｡（半角）')
+    assert.equal(rivalWrapLines('中文中文中文％', 14, 40), 4, '拉回组 ％')
+  })
+
+  it('连续禁则标点整体随 head 下行一次，不链式拉回（`中文中文中文X` 尾部 run 形态）', () => {
+    assert.equal(rivalWrapLines('中文中文中文。、', 14, 40), 4,
+      'Chrome 逐行 中文/中文/中/文。、：第二个标点挂在被拉回的 。之后，不再单独开一行')
+    assert.equal(rivalWrapLines('中文中文中文？﹖！﹗', 14, 40), 4,
+      '4 个拉回组标点连排仍只把「文」拉回一次')
+    assert.equal(rivalWrapLines('中文中文中文）｡､･〉】〕', 14, 40), 4,
+      'Chrome 逐行 中文/中文/中/文X：悬挂组 run 放不下时整个 run 随 head 下行')
+  })
+
+  it('悬挂组 ink 放不下的形态同样拉行尾单元（`中中中中））`@63 Chrome 3 行）', () => {
+    // 单个 ）ink 7 ≤ 63-56=7 恰好挂下；两个 ）连排时第二个挂不下，
+    // Chrome 把整个行尾单元（中）+run）拉到下一行。
+    assert.equal(rivalWrapLines('中中中中）文文文文', 14, 63), 2, '单挂：中中中中）/文文文文')
+    assert.equal(rivalWrapLines('中中中中））文文文文', 14, 63), 3,
+      'Chrome 3 行 中中中/中））文文/文文：ink 挂不下时行尾单元整体下行')
+  })
+
+  it('拉回组前驱为不可断词原子/行内唯一原子时留在行尾（前驱类型次级条件保留）', () => {
+    assert.equal(rivalWrapLines('aa bb cc，word', 14, 60), 3,
+      'Chrome 3 行 aa bb/cc，/word：拉回组把词原子 head 一并带下行')
+    assert.equal(rivalWrapLines('中，ab', 14, 26), 2,
+      '拉回会把行拉空（中 是行内唯一原子）→ 标点挂行尾：中，/ab')
+  })
+
+  it('半角悬挂组行中即半宽（`中･ab`@40 单行、行尾 `中…･` 恰宽不折）', () => {
+    assert.equal(rivalWrapLines('中･ab', 14, 40), 1,
+      'Chrome 单行 中･ab：半角悬挂标点在行中只占半 advance')
+    assert.equal(rivalWrapLines('中中中中中･', 14, 28), 3,
+      'Chrome 3 行：中中/中中/中･——28 恰容两字，-0.5 容差曾假折出第 4 行')
+  })
+})

@@ -1,0 +1,3048 @@
+{
+ "method": {
+  "insetCssPx": 3,
+  "dpr": 2,
+  "bucketLevels": 16,
+  "bucketCenter": "per-channel (v*16+8)",
+  "textDistanceThreshold": 60,
+  "bgRule": "modal 16-level bucket inside the inset pill rect (composited pixels)",
+  "textRule": "farthest bucket beyond threshold (ratio_far) + mean of all candidates (ratio_all)",
+  "noAncestorBackgroundLookup": true
+ },
+ "rows": [
+  {
+   "theme": "dark",
+   "idx": 0,
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 23k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-00.png",
+   "ok": true,
+   "bg": [
+    217.0,
+    45.0,
+    32.0
+   ],
+   "bg_hex": "#d92d20",
+   "text_far": [
+    254.9,
+    253.9,
+    253.8
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    246.4,
+    211.6,
+    209.1
+   ],
+   "ratio_far": 4.79,
+   "ratio_all": 3.51,
+   "bg_bucket_share": 0.758,
+   "text_px_share": 0.202,
+   "text_far_bucket_px": 644,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 1,
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 42k/h",
+   "isDone": true,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-01.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    246.0,
+    246.0,
+    246.0
+   ],
+   "text_far_hex": "#f6f6f6",
+   "text_all": [
+    178.2,
+    178.2,
+    178.8
+   ],
+   "ratio_far": 17.44,
+   "ratio_all": 8.91,
+   "bg_bucket_share": 0.766,
+   "text_px_share": 0.199,
+   "text_far_bucket_px": 5,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 2,
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "飙升 3.4k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(120, 53, 15)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.4)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-02.png",
+   "ok": true,
+   "bg": [
+    120.0,
+    53.0,
+    15.0
+   ],
+   "bg_hex": "#78350f",
+   "text_far": [
+    250.1,
+    190.0,
+    35.7
+   ],
+   "text_far_hex": "#fabe24",
+   "text_all": [
+    229.1,
+    167.9,
+    32.1
+   ],
+   "ratio_far": 5.38,
+   "ratio_all": 4.3,
+   "bg_bucket_share": 0.793,
+   "text_px_share": 0.171,
+   "text_far_bucket_px": 630,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 3,
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "飙升 2.6k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(251, 191, 36, 0.2)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.3)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-03.png",
+   "ok": true,
+   "bg": [
+    71.0,
+    59.0,
+    29.0
+   ],
+   "bg_hex": "#473b1d",
+   "text_far": [
+    250.3,
+    190.4,
+    35.9
+   ],
+   "text_far_hex": "#fabe24",
+   "text_all": [
+    220.1,
+    168.2,
+    34.4
+   ],
+   "ratio_far": 6.54,
+   "ratio_all": 5.07,
+   "bg_bucket_share": 0.789,
+   "text_px_share": 0.175,
+   "text_far_bucket_px": 629,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 4,
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "飙升 1.2k/h",
+   "isDone": true,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-04.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    230.8,
+    230.8,
+    231.0
+   ],
+   "text_far_hex": "#e7e7e7",
+   "text_all": [
+    161.2,
+    161.2,
+    161.7
+   ],
+   "ratio_far": 14.03,
+   "ratio_all": 6.74,
+   "bg_bucket_share": 0.799,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 5,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 5,
+   "cls": "omnimux-rival-vpill on-media average",
+   "text": "均速 1.8k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.55)",
+    "borderColor": "rgba(255, 255, 255, 0.16)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-05.png",
+   "ok": true,
+   "bg": [
+    17.2,
+    17.2,
+    19.2
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    146.9,
+    146.9,
+    147.9
+   ],
+   "text_far_hex": "#939394",
+   "text_all": [
+    130.2,
+    130.2,
+    131.3
+   ],
+   "ratio_far": 6.13,
+   "ratio_all": 4.92,
+   "bg_bucket_share": 0.78,
+   "text_px_share": 0.171,
+   "text_far_bucket_px": 549,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 6,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "观察 480/h",
+   "isDone": true,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-06.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.6,
+    189.6,
+    189.8
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    158.9,
+    158.9,
+    159.5
+   ],
+   "ratio_far": 9.31,
+   "ratio_all": 6.56,
+   "bg_bucket_share": 0.732,
+   "text_px_share": 0.226,
+   "text_far_bucket_px": 684,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 7,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "观察 260/h",
+   "isDone": true,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-07.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.7,
+    189.7,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    158.9,
+    158.9,
+    159.5
+   ],
+   "ratio_far": 9.32,
+   "ratio_all": 6.56,
+   "bg_bucket_share": 0.734,
+   "text_px_share": 0.223,
+   "text_far_bucket_px": 681,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 8,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "观察 320/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-08.png",
+   "ok": true,
+   "bg": [
+    17.2,
+    17.2,
+    19.2
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.0,
+    218.0,
+    218.1
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    176.9,
+    176.7,
+    177.3
+   ],
+   "ratio_far": 13.48,
+   "ratio_all": 8.76,
+   "bg_bucket_share": 0.75,
+   "text_px_share": 0.225,
+   "text_far_bucket_px": 640,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 9,
+   "cls": "omnimux-rival-vpill on-media relative",
+   "text": "该号 4.2x",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.55)",
+    "borderColor": "rgba(255, 255, 255, 0.16)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-09.png",
+   "ok": true,
+   "bg": [
+    17.2,
+    17.2,
+    19.2
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    146.9,
+    146.9,
+    147.9
+   ],
+   "text_far_hex": "#939394",
+   "text_all": [
+    130.6,
+    130.6,
+    131.5
+   ],
+   "ratio_far": 6.13,
+   "ratio_all": 4.94,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.154,
+   "text_far_bucket_px": 423,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 10,
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "飙升 6.8k/h",
+   "isDone": true,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-10.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    246.0,
+    246.0,
+    246.0
+   ],
+   "text_far_hex": "#f6f6f6",
+   "text_all": [
+    180.2,
+    180.2,
+    180.7
+   ],
+   "ratio_far": 17.44,
+   "ratio_all": 9.12,
+   "bg_bucket_share": 0.787,
+   "text_px_share": 0.186,
+   "text_far_bucket_px": 5,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 11,
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 21k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-11.png",
+   "ok": true,
+   "bg": [
+    217.0,
+    45.0,
+    32.0
+   ],
+   "bg_hex": "#d92d20",
+   "text_far": [
+    254.9,
+    254.0,
+    253.9
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    246.3,
+    211.1,
+    208.3
+   ],
+   "ratio_far": 4.8,
+   "ratio_all": 3.49,
+   "bg_bucket_share": 0.767,
+   "text_px_share": 0.197,
+   "text_far_bucket_px": 622,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 12,
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "rising 1.9k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(251, 191, 36, 0.2)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.3)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-12.png",
+   "ok": true,
+   "bg": [
+    71.0,
+    59.0,
+    29.0
+   ],
+   "bg_hex": "#473b1d",
+   "text_far": [
+    250.1,
+    190.3,
+    35.8
+   ],
+   "text_far_hex": "#fabe24",
+   "text_all": [
+    222.2,
+    169.7,
+    34.5
+   ],
+   "ratio_far": 6.53,
+   "ratio_all": 5.16,
+   "bg_bucket_share": 0.821,
+   "text_px_share": 0.15,
+   "text_far_bucket_px": 643,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 13,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 210/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-13.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.7,
+    189.7,
+    189.8
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    161.1,
+    161.1,
+    161.6
+   ],
+   "ratio_far": 9.32,
+   "ratio_all": 6.74,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.169,
+   "text_far_bucket_px": 605,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 14,
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 5.1k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-14.png",
+   "ok": true,
+   "bg": [
+    217.0,
+    45.0,
+    32.0
+   ],
+   "bg_hex": "#d92d20",
+   "text_far": [
+    254.9,
+    254.2,
+    254.2
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    246.9,
+    214.8,
+    212.4
+   ],
+   "ratio_far": 4.81,
+   "ratio_all": 3.59,
+   "bg_bucket_share": 0.829,
+   "text_px_share": 0.148,
+   "text_far_bucket_px": 496,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 15,
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "rising 900/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(251, 191, 36, 0.2)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.3)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-15.png",
+   "ok": true,
+   "bg": [
+    71.0,
+    59.0,
+    29.0
+   ],
+   "bg_hex": "#473b1d",
+   "text_far": [
+    250.1,
+    190.3,
+    35.9
+   ],
+   "text_far_hex": "#fabe24",
+   "text_all": [
+    221.3,
+    169.1,
+    34.5
+   ],
+   "ratio_far": 6.53,
+   "ratio_all": 5.12,
+   "bg_bucket_share": 0.803,
+   "text_px_share": 0.164,
+   "text_far_bucket_px": 691,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 16,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 80/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-16.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    160.2,
+    160.2,
+    160.8
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.67,
+   "bg_bucket_share": 0.788,
+   "text_px_share": 0.179,
+   "text_far_bucket_px": 581,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 17,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 60/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-17.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    159.3,
+    159.3,
+    159.8
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.59,
+   "bg_bucket_share": 0.789,
+   "text_px_share": 0.18,
+   "text_far_bucket_px": 579,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 18,
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 3.1k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-18.png",
+   "ok": true,
+   "bg": [
+    217.0,
+    45.0,
+    32.0
+   ],
+   "bg_hex": "#d92d20",
+   "text_far": [
+    254.9,
+    254.3,
+    254.3
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    246.8,
+    214.3,
+    211.9
+   ],
+   "ratio_far": 4.81,
+   "ratio_all": 3.58,
+   "bg_bucket_share": 0.829,
+   "text_px_share": 0.147,
+   "text_far_bucket_px": 491,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 19,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 120/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-19.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.5,
+    189.5,
+    189.6
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    162.8,
+    162.8,
+    163.4
+   ],
+   "ratio_far": 9.3,
+   "ratio_all": 6.88,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.166,
+   "text_far_bucket_px": 620,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 20,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 90/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-20.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    160.1,
+    160.1,
+    160.6
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.66,
+   "bg_bucket_share": 0.788,
+   "text_px_share": 0.178,
+   "text_far_bucket_px": 578,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 21,
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "rising 2.2k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(120, 53, 15)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.4)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-21.png",
+   "ok": true,
+   "bg": [
+    120.0,
+    53.0,
+    15.0
+   ],
+   "bg_hex": "#78350f",
+   "text_far": [
+    250.2,
+    190.1,
+    35.7
+   ],
+   "text_far_hex": "#fabe24",
+   "text_all": [
+    231.7,
+    170.6,
+    32.6
+   ],
+   "ratio_far": 5.38,
+   "ratio_all": 4.42,
+   "bg_bucket_share": 0.82,
+   "text_px_share": 0.148,
+   "text_far_bucket_px": 667,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 22,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 140/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-22.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.1,
+    218.1,
+    218.2
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    183.2,
+    183.2,
+    183.7
+   ],
+   "ratio_far": 13.5,
+   "ratio_all": 9.42,
+   "bg_bucket_share": 0.809,
+   "text_px_share": 0.17,
+   "text_far_bucket_px": 584,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 23,
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 4.4k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-23.png",
+   "ok": true,
+   "bg": [
+    217.0,
+    45.0,
+    32.0
+   ],
+   "bg_hex": "#d92d20",
+   "text_far": [
+    254.9,
+    254.2,
+    254.2
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    247.7,
+    218.9,
+    216.8
+   ],
+   "ratio_far": 4.8,
+   "ratio_all": 3.7,
+   "bg_bucket_share": 0.823,
+   "text_px_share": 0.152,
+   "text_far_bucket_px": 522,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 24,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 110/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-24.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.5,
+    189.5,
+    189.6
+   ],
+   "text_far_hex": "#bdbdbe",
+   "text_all": [
+    161.9,
+    161.9,
+    162.5
+   ],
+   "ratio_far": 9.3,
+   "ratio_all": 6.81,
+   "bg_bucket_share": 0.809,
+   "text_px_share": 0.162,
+   "text_far_bucket_px": 595,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 25,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 70/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-25.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.4,
+    218.4,
+    218.4
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    178.8,
+    178.8,
+    179.4
+   ],
+   "ratio_far": 13.54,
+   "ratio_all": 8.98,
+   "bg_bucket_share": 0.807,
+   "text_px_share": 0.173,
+   "text_far_bucket_px": 507,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 26,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 55/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-26.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.4,
+    218.4,
+    218.5
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    179.1,
+    179.1,
+    179.7
+   ],
+   "ratio_far": 13.54,
+   "ratio_all": 9.01,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.177,
+   "text_far_bucket_px": 506,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 27,
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 9.9k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-27.png",
+   "ok": true,
+   "bg": [
+    217.0,
+    45.0,
+    32.0
+   ],
+   "bg_hex": "#d92d20",
+   "text_far": [
+    254.9,
+    254.2,
+    254.1
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    247.1,
+    215.6,
+    213.3
+   ],
+   "ratio_far": 4.8,
+   "ratio_all": 3.61,
+   "bg_bucket_share": 0.812,
+   "text_px_share": 0.161,
+   "text_far_bucket_px": 556,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 28,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 33/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-28.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    159.7,
+    159.7,
+    160.2
+   ],
+   "ratio_far": 9.32,
+   "ratio_all": 6.62,
+   "bg_bucket_share": 0.797,
+   "text_px_share": 0.171,
+   "text_far_bucket_px": 537,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 29,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 11/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-29.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    158.8,
+    158.8,
+    159.4
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.56,
+   "bg_bucket_share": 0.817,
+   "text_px_share": 0.158,
+   "text_far_bucket_px": 498,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 30,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 12/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-30.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    160.0,
+    160.0,
+    160.6
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.65,
+   "bg_bucket_share": 0.808,
+   "text_px_share": 0.163,
+   "text_far_bucket_px": 525,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 31,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 13/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-31.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.4,
+    218.4,
+    218.4
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    178.3,
+    178.3,
+    178.9
+   ],
+   "ratio_far": 13.54,
+   "ratio_all": 8.93,
+   "bg_bucket_share": 0.812,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 487,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 32,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 14/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-32.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.4,
+    218.4,
+    218.5
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    179.7,
+    179.7,
+    180.2
+   ],
+   "ratio_far": 13.54,
+   "ratio_all": 9.06,
+   "bg_bucket_share": 0.813,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 491,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 33,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 21/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-33.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    159.9,
+    159.9,
+    160.5
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.64,
+   "bg_bucket_share": 0.808,
+   "text_px_share": 0.163,
+   "text_far_bucket_px": 523,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 34,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 22/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-34.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    161.1,
+    161.1,
+    161.6
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.73,
+   "bg_bucket_share": 0.8,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 550,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 35,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 23/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-35.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    160.6,
+    160.6,
+    161.2
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.7,
+   "bg_bucket_share": 0.799,
+   "text_px_share": 0.169,
+   "text_far_bucket_px": 545,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 36,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 24/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-36.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    161.7,
+    161.7,
+    162.2
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.79,
+   "bg_bucket_share": 0.8,
+   "text_px_share": 0.169,
+   "text_far_bucket_px": 547,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 37,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 25/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-37.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.7,
+    189.7,
+    189.8
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    160.9,
+    160.9,
+    161.5
+   ],
+   "ratio_far": 9.31,
+   "ratio_all": 6.72,
+   "bg_bucket_share": 0.798,
+   "text_px_share": 0.17,
+   "text_far_bucket_px": 548,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 38,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 26/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-38.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.7,
+    189.7,
+    189.8
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    161.1,
+    161.1,
+    161.6
+   ],
+   "ratio_far": 9.32,
+   "ratio_all": 6.74,
+   "bg_bucket_share": 0.794,
+   "text_px_share": 0.173,
+   "text_far_bucket_px": 567,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 39,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 31/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-39.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    159.0,
+    159.0,
+    159.5
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.56,
+   "bg_bucket_share": 0.806,
+   "text_px_share": 0.165,
+   "text_far_bucket_px": 515,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "dark",
+   "idx": 40,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 32/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/dark-40.png",
+   "ok": true,
+   "bg": [
+    26.0,
+    26.0,
+    28.0
+   ],
+   "bg_hex": "#1a1a1c",
+   "text_far": [
+    189.8,
+    189.8,
+    189.9
+   ],
+   "text_far_hex": "#bebebe",
+   "text_all": [
+    160.1,
+    160.1,
+    160.6
+   ],
+   "ratio_far": 9.33,
+   "ratio_all": 6.66,
+   "bg_bucket_share": 0.798,
+   "text_px_share": 0.17,
+   "text_far_bucket_px": 542,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 0,
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 23k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-00.png",
+   "ok": true,
+   "bg": [
+    220.0,
+    38.0,
+    38.0
+   ],
+   "bg_hex": "#dc2626",
+   "text_far": [
+    254.9,
+    253.8,
+    253.8
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    246.9,
+    209.5,
+    209.6
+   ],
+   "ratio_far": 4.79,
+   "ratio_all": 3.46,
+   "bg_bucket_share": 0.763,
+   "text_px_share": 0.203,
+   "text_far_bucket_px": 644,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 1,
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 42k/h",
+   "isDone": true,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-01.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    246.0,
+    246.0,
+    246.0
+   ],
+   "text_far_hex": "#f6f6f6",
+   "text_all": [
+    178.0,
+    178.0,
+    178.5
+   ],
+   "ratio_far": 17.44,
+   "ratio_all": 8.89,
+   "bg_bucket_share": 0.766,
+   "text_px_share": 0.2,
+   "text_far_bucket_px": 5,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 2,
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "飙升 3.4k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(120, 53, 15)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.4)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-02.png",
+   "ok": true,
+   "bg": [
+    120.0,
+    53.0,
+    15.0
+   ],
+   "bg_hex": "#78350f",
+   "text_far": [
+    250.1,
+    190.0,
+    35.7
+   ],
+   "text_far_hex": "#fabe24",
+   "text_all": [
+    229.1,
+    167.9,
+    32.1
+   ],
+   "ratio_far": 5.38,
+   "ratio_all": 4.3,
+   "bg_bucket_share": 0.793,
+   "text_px_share": 0.171,
+   "text_far_bucket_px": 630,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 3,
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "飙升 2.6k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(217, 119, 6, 0.16)",
+    "color": "rgb(146, 64, 14)",
+    "borderColor": "rgba(217, 119, 6, 0.3)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-03.png",
+   "ok": true,
+   "bg": [
+    242.0,
+    226.0,
+    209.0
+   ],
+   "bg_hex": "#f2e2d1",
+   "text_far": [
+    146.0,
+    64.0,
+    14.0
+   ],
+   "text_far_hex": "#92400e",
+   "text_all": [
+    164.9,
+    95.7,
+    51.6
+   ],
+   "ratio_far": 5.6,
+   "ratio_all": 3.85,
+   "bg_bucket_share": 0.782,
+   "text_px_share": 0.182,
+   "text_far_bucket_px": 562,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 4,
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "飙升 1.2k/h",
+   "isDone": true,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-04.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    105.6,
+    113.8,
+    125.5
+   ],
+   "ratio_far": 7.04,
+   "ratio_all": 4.56,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.167,
+   "text_far_bucket_px": 555,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 5,
+   "cls": "omnimux-rival-vpill on-media average",
+   "text": "均速 1.8k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.55)",
+    "borderColor": "rgba(255, 255, 255, 0.16)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-05.png",
+   "ok": true,
+   "bg": [
+    17.2,
+    17.2,
+    19.2
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    146.9,
+    146.9,
+    147.9
+   ],
+   "text_far_hex": "#939394",
+   "text_all": [
+    130.2,
+    130.2,
+    131.3
+   ],
+   "ratio_far": 6.13,
+   "ratio_all": 4.92,
+   "bg_bucket_share": 0.78,
+   "text_px_share": 0.171,
+   "text_far_bucket_px": 549,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 6,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "观察 480/h",
+   "isDone": true,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-06.png",
+   "ok": true,
+   "bg": [
+    246.9,
+    246.9,
+    247.9
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    107.6,
+    115.7,
+    127.2
+   ],
+   "ratio_far": 7.04,
+   "ratio_all": 4.43,
+   "bg_bucket_share": 0.738,
+   "text_px_share": 0.225,
+   "text_far_bucket_px": 593,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 7,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "观察 260/h",
+   "isDone": true,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-07.png",
+   "ok": true,
+   "bg": [
+    246.9,
+    246.9,
+    247.9
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.2,
+    85.2,
+    99.2
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    107.7,
+    115.8,
+    127.3
+   ],
+   "ratio_far": 7.03,
+   "ratio_all": 4.42,
+   "bg_bucket_share": 0.74,
+   "text_px_share": 0.223,
+   "text_far_bucket_px": 597,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 8,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "观察 320/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-08.png",
+   "ok": true,
+   "bg": [
+    17.2,
+    17.2,
+    19.2
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.0,
+    218.0,
+    218.1
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    176.9,
+    176.7,
+    177.3
+   ],
+   "ratio_far": 13.48,
+   "ratio_all": 8.76,
+   "bg_bucket_share": 0.75,
+   "text_px_share": 0.225,
+   "text_far_bucket_px": 640,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 9,
+   "cls": "omnimux-rival-vpill on-media relative",
+   "text": "该号 4.2x",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.55)",
+    "borderColor": "rgba(255, 255, 255, 0.16)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-09.png",
+   "ok": true,
+   "bg": [
+    17.2,
+    17.2,
+    19.2
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    146.9,
+    146.9,
+    147.9
+   ],
+   "text_far_hex": "#939394",
+   "text_all": [
+    130.6,
+    130.6,
+    131.5
+   ],
+   "ratio_far": 6.13,
+   "ratio_all": 4.94,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.154,
+   "text_far_bucket_px": 423,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 10,
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "飙升 6.8k/h",
+   "isDone": true,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-10.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    246.0,
+    246.0,
+    246.0
+   ],
+   "text_far_hex": "#f6f6f6",
+   "text_all": [
+    179.9,
+    179.9,
+    180.5
+   ],
+   "ratio_far": 17.44,
+   "ratio_all": 9.09,
+   "bg_bucket_share": 0.787,
+   "text_px_share": 0.187,
+   "text_far_bucket_px": 5,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 11,
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 21k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-11.png",
+   "ok": true,
+   "bg": [
+    220.0,
+    38.0,
+    38.0
+   ],
+   "bg_hex": "#dc2626",
+   "text_far": [
+    254.9,
+    254.0,
+    254.0
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    246.8,
+    209.1,
+    209.1
+   ],
+   "ratio_far": 4.79,
+   "ratio_all": 3.45,
+   "bg_bucket_share": 0.771,
+   "text_px_share": 0.198,
+   "text_far_bucket_px": 622,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 12,
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "rising 1.9k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(217, 119, 6, 0.16)",
+    "color": "rgb(146, 64, 14)",
+    "borderColor": "rgba(217, 119, 6, 0.3)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-12.png",
+   "ok": true,
+   "bg": [
+    242.0,
+    226.0,
+    209.0
+   ],
+   "bg_hex": "#f2e2d1",
+   "text_far": [
+    146.0,
+    64.0,
+    14.0
+   ],
+   "text_far_hex": "#92400e",
+   "text_all": [
+    163.9,
+    93.8,
+    49.4
+   ],
+   "ratio_far": 5.6,
+   "ratio_all": 3.93,
+   "bg_bucket_share": 0.812,
+   "text_px_share": 0.156,
+   "text_far_bucket_px": 557,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 13,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 210/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-13.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    105.6,
+    113.8,
+    125.4
+   ],
+   "ratio_far": 7.04,
+   "ratio_all": 4.56,
+   "bg_bucket_share": 0.805,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 544,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 14,
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 5.1k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-14.png",
+   "ok": true,
+   "bg": [
+    220.0,
+    38.0,
+    38.0
+   ],
+   "bg_hex": "#dc2626",
+   "text_far": [
+    254.9,
+    254.2,
+    254.2
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    248.4,
+    214.3,
+    214.3
+   ],
+   "ratio_far": 4.8,
+   "ratio_all": 3.59,
+   "bg_bucket_share": 0.833,
+   "text_px_share": 0.149,
+   "text_far_bucket_px": 498,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 15,
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "rising 900/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(217, 119, 6, 0.16)",
+    "color": "rgb(146, 64, 14)",
+    "borderColor": "rgba(217, 119, 6, 0.3)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-15.png",
+   "ok": true,
+   "bg": [
+    242.0,
+    226.0,
+    209.0
+   ],
+   "bg_hex": "#f2e2d1",
+   "text_far": [
+    146.0,
+    64.0,
+    14.0
+   ],
+   "text_far_hex": "#92400e",
+   "text_all": [
+    164.0,
+    94.0,
+    49.7
+   ],
+   "ratio_far": 5.6,
+   "ratio_all": 3.92,
+   "bg_bucket_share": 0.793,
+   "text_px_share": 0.171,
+   "text_far_bucket_px": 607,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 16,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 80/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-16.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    106.3,
+    114.5,
+    126.2
+   ],
+   "ratio_far": 7.04,
+   "ratio_all": 4.51,
+   "bg_bucket_share": 0.793,
+   "text_px_share": 0.178,
+   "text_far_bucket_px": 522,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 17,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 60/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-17.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    107.4,
+    115.5,
+    127.1
+   ],
+   "ratio_far": 7.04,
+   "ratio_all": 4.44,
+   "bg_bucket_share": 0.793,
+   "text_px_share": 0.179,
+   "text_far_bucket_px": 523,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 18,
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 3.1k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-18.png",
+   "ok": true,
+   "bg": [
+    220.0,
+    38.0,
+    38.0
+   ],
+   "bg_hex": "#dc2626",
+   "text_far": [
+    254.9,
+    254.3,
+    254.3
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    248.3,
+    213.3,
+    213.3
+   ],
+   "ratio_far": 4.8,
+   "ratio_all": 3.57,
+   "bg_bucket_share": 0.834,
+   "text_px_share": 0.148,
+   "text_far_bucket_px": 493,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 19,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 120/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-19.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    103.6,
+    112.0,
+    123.7
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.68,
+   "bg_bucket_share": 0.805,
+   "text_px_share": 0.166,
+   "text_far_bucket_px": 543,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 20,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 90/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-20.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    106.5,
+    114.7,
+    126.3
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.5,
+   "bg_bucket_share": 0.792,
+   "text_px_share": 0.178,
+   "text_far_bucket_px": 517,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 21,
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "rising 2.2k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(120, 53, 15)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.4)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-21.png",
+   "ok": true,
+   "bg": [
+    120.0,
+    53.0,
+    15.0
+   ],
+   "bg_hex": "#78350f",
+   "text_far": [
+    250.2,
+    190.1,
+    35.7
+   ],
+   "text_far_hex": "#fabe24",
+   "text_all": [
+    231.7,
+    170.6,
+    32.6
+   ],
+   "ratio_far": 5.38,
+   "ratio_all": 4.42,
+   "bg_bucket_share": 0.82,
+   "text_px_share": 0.148,
+   "text_far_bucket_px": 667,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 22,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 140/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-22.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.1,
+    218.1,
+    218.2
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    183.2,
+    183.2,
+    183.7
+   ],
+   "ratio_far": 13.5,
+   "ratio_all": 9.42,
+   "bg_bucket_share": 0.809,
+   "text_px_share": 0.17,
+   "text_far_bucket_px": 584,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 23,
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 4.4k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-23.png",
+   "ok": true,
+   "bg": [
+    220.0,
+    38.0,
+    38.0
+   ],
+   "bg_hex": "#dc2626",
+   "text_far": [
+    254.9,
+    254.2,
+    254.2
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    249.1,
+    218.3,
+    218.3
+   ],
+   "ratio_far": 4.8,
+   "ratio_all": 3.7,
+   "bg_bucket_share": 0.829,
+   "text_px_share": 0.152,
+   "text_far_bucket_px": 524,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 24,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 110/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-24.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    104.6,
+    112.8,
+    124.6
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.62,
+   "bg_bucket_share": 0.812,
+   "text_px_share": 0.161,
+   "text_far_bucket_px": 519,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 25,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 70/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-25.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.4,
+    218.4,
+    218.4
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    178.8,
+    178.8,
+    179.4
+   ],
+   "ratio_far": 13.54,
+   "ratio_all": 8.98,
+   "bg_bucket_share": 0.807,
+   "text_px_share": 0.173,
+   "text_far_bucket_px": 507,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 26,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 55/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-26.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.4,
+    218.4,
+    218.5
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    179.1,
+    179.1,
+    179.7
+   ],
+   "ratio_far": 13.54,
+   "ratio_all": 9.01,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.177,
+   "text_far_bucket_px": 506,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 27,
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 9.9k/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-27.png",
+   "ok": true,
+   "bg": [
+    220.0,
+    38.0,
+    38.0
+   ],
+   "bg_hex": "#dc2626",
+   "text_far": [
+    254.9,
+    254.1,
+    254.1
+   ],
+   "text_far_hex": "#fffefe",
+   "text_all": [
+    248.5,
+    214.4,
+    214.4
+   ],
+   "ratio_far": 4.8,
+   "ratio_all": 3.6,
+   "bg_bucket_share": 0.816,
+   "text_px_share": 0.162,
+   "text_far_bucket_px": 558,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 28,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 33/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-28.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    106.5,
+    114.7,
+    126.3
+   ],
+   "ratio_far": 7.04,
+   "ratio_all": 4.5,
+   "bg_bucket_share": 0.801,
+   "text_px_share": 0.17,
+   "text_far_bucket_px": 480,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 29,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 11/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-29.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    107.8,
+    115.9,
+    127.4
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.42,
+   "bg_bucket_share": 0.82,
+   "text_px_share": 0.158,
+   "text_far_bucket_px": 449,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 30,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 12/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-30.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    106.5,
+    114.7,
+    126.3
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.5,
+   "bg_bucket_share": 0.812,
+   "text_px_share": 0.162,
+   "text_far_bucket_px": 473,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 31,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 13/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-31.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.4,
+    218.4,
+    218.4
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    178.3,
+    178.3,
+    178.9
+   ],
+   "ratio_far": 13.54,
+   "ratio_all": 8.93,
+   "bg_bucket_share": 0.812,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 487,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 32,
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 14/h",
+   "isDone": false,
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-32.png",
+   "ok": true,
+   "bg": [
+    17.1,
+    17.1,
+    19.1
+   ],
+   "bg_hex": "#111113",
+   "text_far": [
+    218.4,
+    218.4,
+    218.5
+   ],
+   "text_far_hex": "#dadada",
+   "text_all": [
+    179.7,
+    179.7,
+    180.2
+   ],
+   "ratio_far": 13.54,
+   "ratio_all": 9.06,
+   "bg_bucket_share": 0.813,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 491,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 33,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 21/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-33.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    106.6,
+    114.8,
+    126.4
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.49,
+   "bg_bucket_share": 0.812,
+   "text_px_share": 0.163,
+   "text_far_bucket_px": 473,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 34,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 22/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-34.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    105.4,
+    113.7,
+    125.4
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.56,
+   "bg_bucket_share": 0.804,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 497,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 35,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 23/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-35.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    105.7,
+    113.9,
+    125.6
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.55,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.168,
+   "text_far_bucket_px": 487,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 36,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 24/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-36.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    104.8,
+    113.1,
+    124.9
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.6,
+   "bg_bucket_share": 0.804,
+   "text_px_share": 0.169,
+   "text_far_bucket_px": 491,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 37,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 25/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-37.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    105.7,
+    113.9,
+    125.6
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.55,
+   "bg_bucket_share": 0.802,
+   "text_px_share": 0.17,
+   "text_far_bucket_px": 487,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 38,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 26/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-38.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    105.5,
+    113.8,
+    125.5
+   ],
+   "ratio_far": 7.05,
+   "ratio_all": 4.56,
+   "bg_bucket_share": 0.797,
+   "text_px_share": 0.173,
+   "text_far_bucket_px": 504,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 39,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 31/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-39.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    107.4,
+    115.6,
+    127.1
+   ],
+   "ratio_far": 7.04,
+   "ratio_all": 4.44,
+   "bg_bucket_share": 0.81,
+   "text_px_share": 0.164,
+   "text_far_bucket_px": 466,
+   "dist_threshold": 60
+  },
+  {
+   "theme": "light",
+   "idx": 40,
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 32/h",
+   "isDone": false,
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "file": "/tmp/r10/contrast-darkcov/light-40.png",
+   "ok": true,
+   "bg": [
+    247.0,
+    247.0,
+    248.0
+   ],
+   "bg_hex": "#f7f7f8",
+   "text_far": [
+    75.1,
+    85.1,
+    99.1
+   ],
+   "text_far_hex": "#4b5563",
+   "text_all": [
+    106.2,
+    114.5,
+    126.1
+   ],
+   "ratio_far": 7.04,
+   "ratio_all": 4.51,
+   "bg_bucket_share": 0.803,
+   "text_px_share": 0.169,
+   "text_far_bucket_px": 490,
+   "dist_threshold": 60
+  }
+ ]
+}

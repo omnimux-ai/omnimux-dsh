@@ -63,4 +63,5 @@
 
 - client 测试：第一段 **1097** / 第二段 **261** / 合计 **1358**，REAL_EXIT=0 ×2，`ℹ fail 0`。
 - 资产层：`omnimux/masonry-layout.test.js` 4 + `omnimux-assets` masonry 10 + asset suite 133，全绿。
-- 人眼复检：`r8-dark-1164-zh.png`、`r8-light-1164-zh.png`、`r8-dark-600-zh.png`（暗/亮、中英、5 列/2 列）无重叠、无破版；胶囊新色（深红底白字、深琥珀底亮琥珀字）可读且色相层级不变。
+- 人眼复检：`r8-dark-1164-zh.png`、`r8-light-1164-zh.png`、`r8-dark-600-zh.png`（暗/亮、中英、5 列/2 列）无破版；胶囊新色（深红底白字、深琥珀底亮琥珀字）可读且色相层级不变。
+- **口径更正（R10 追记）**：上一条「无重叠」应读作装置指标 `maxAdjacentOverlap`。QA 复验实测 600px 档 `ra_4:p11` bottom 819.55 vs `ra_6:p5` top 815.55 = 重叠 4px（`maxAdjacentOverlap=4`），R8 该句与装置指标矛盾。R10 修正后三档（1164/860/600）`maxAdjacentOverlap` 全为 0——报告口径自此一律以装置指标数字为准，不再写「无重叠」而无指标佐证。

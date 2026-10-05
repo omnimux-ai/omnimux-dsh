@@ -332,15 +332,21 @@ function wrapAtoms(text) {
  * @param {number} lineWidth 可用行宽（px）
  */
 export function rivalWrapLines(text, unitPx, lineWidth) {
-  // Chrome 实测在边界还有 ~0.5px 富余时也换行（亚像素 kerning/取整），
-  // 0.5px 容差让「恰好放下」边界与真机一致——无容差时 p11@266 少算 1 行。
-  const width = Math.max(1, (Number(lineWidth) || 0) - 0.5)
+  // Chrome 的装入边界是行宽本身（整数容器下恰宽即放下）。R8-R9 的 -0.5
+  // 容差在恰好整宽时多折一行（中中中中中･@28 Chrome 3 行模型曾给 4 行），
+  // R10 逐行内容复核后移除；kensoku 判定也以行宽本身为准（伪装入分支）。
+  const width = Math.max(1, Number(lineWidth) || 0)
   const atoms = wrapAtoms(text)
+  // 半角悬挂组标点（｡､･，FF61/64/65）行中即半 advance（Chrome 实测
+  // 中･ab@40 单行），与全角收类标点的整 advance 分开计。
   const widths = atoms.map((atom) =>
-    atom.cjk ? unitPx : atom.word ? textWidthPx(atom.text, unitPx) : 0)
+    atom.cjk
+      ? (LINE_START_HALFWIDTH_HANG.has(atom.ch.codePointAt(0)) ? unitPx / 2 : unitPx)
+      : atom.word ? textWidthPx(atom.text, unitPx) : 0)
   let lines = 1
   let used = 0
   let lastAtomW = 0
+  let lineStart = 0
   let pendingCollapsible = false
   let pendingWidth = 0
   for (let i = 0; i < atoms.length; i += 1) {
@@ -359,6 +365,7 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
       // 行首空格已被浏览器吞掉；超行宽的词/字直接占这一行，不折。
       used = Math.min(atomW, width)
       lastAtomW = used
+      lineStart = i
       continue
     }
     if (used + glue + atomW <= width) {
@@ -377,6 +384,7 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
           lines += 1
           used = Math.min(atomW, width)
           lastAtomW = atomW
+          lineStart = i
           continue
         }
       }
@@ -385,15 +393,37 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
       continue
     }
     if (atom.cjk && lastAtomW > 0 && isLineStartForbidden(atom.ch)) {
-      // 行首禁则（拉回语义，R9 复核后的真机口径）：收类标点不允许落
-      // 新行首。前驱是 CJK 字时它与标点一起下行（lines += 1，新行
-      // used = 前原子宽 + 标点宽——R8 的「悬挂溢出」前提已被证伪：155
-      // 夹具宽度扫描首行溢出 0 例，111 夹具 A/B 悬挂低估 49 vs 拉回
-      // 低估 4）；前驱是不可断词原子时标点留在本行行尾（拉回整词与
-      // 此同形，5 词 ﹖ 夹具 Chrome/模型同 5 行）。
-      if (atoms[i - 1] && atoms[i - 1].cjk) {
+      // 行首禁则按码位分（R10，QA 收口复验逐行内容口径）：
+      //   · 恰宽即放下——Chrome 装入边界是行宽本身（中中，@42 = 2 行：
+      //     42≤42 走正常装入路径，不进禁则判定）；
+      //   · 悬挂组（LINE_START_HANG）——ink（半 advance）不越行宽就挂
+      //     行尾；挂不下时同样把行尾单元整体带下行（中中中中））@63：
+      //     首 ） 挂下、第二个挂不下 → 中）+run 一起落下一行）；
+      //   · 拉回组（LINE_START_PULLBACK）——行尾最近的非禁则原子
+      //     （CJK 字或不可断词）连同尾部禁则 run 一起下行（中文中文，word
+      //     @60 → 文，word / aa bb cc，word @60 → cc， 下行）；行内只剩
+      //     head 一个原子时拉不动、挂行尾（中，@26 → 中，/ab）；
+      //   · 前驱本身就是禁则标点 → 挂在 run 尾，不链式拉回
+      //     （中文中文中文。、@40 = 4 行不是 5）。
+      const mode = lineStartMode(atom.ch)
+      if (mode === 'hang' && used + atomW / 2 <= lineWidth) {
+        used += glue + atomW
+        lastAtomW = atomW
+        continue
+      }
+      // 回溯行尾：跳空白 → 连续禁则标点 run → 非禁则 head（词或 CJK 字）。
+      let j = i - 1
+      while (j >= lineStart && atoms[j].space) j -= 1
+      let runW = 0
+      while (j >= lineStart && atoms[j].cjk && isLineStartForbidden(atoms[j].ch)) {
+        runW += widths[j]
+        j -= 1
+      }
+      while (j >= lineStart && atoms[j].space) j -= 1
+      if (j > lineStart) {
         lines += 1
-        used = Math.min(lastAtomW + atomW, width)
+        used = Math.min(widths[j] + runW + atomW, width)
+        lineStart = j
       } else {
         used += glue + atomW
       }
@@ -403,14 +433,16 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
     lines += 1
     used = Math.min(atomW, width)
     lastAtomW = atomW
+    lineStart = i
   }
   return lines
 }
 
 /**
- * 行首禁则字符（CJK 收类标点）：浏览器断行时不允许它们落在新行首，
- * 会把前一个 CJK 字符带回本行（拉回）。半角 ')' ']' 等未列入——它们在
- * CJK 文本场景里同样禁行首，但出现率低且与词内位置耦合，留在已知偏差。
+ * 行首禁则字符（CJK 收类标点）：不允许落新行首——逐码位分「拉回/悬挂」
+ * 两种语义见下方 LINE_START_PULLBACK / LINE_START_HANG 表。半角 ')' ']'
+ * 等未列入——它们在 CJK 文本场景里同样禁行首，但出现率低且与词内位置
+ * 耦合，留在已知偏差。
  * #3166-⑦/R8 探针补齐、R9 按官方 LineBreak-18.0.0 类表重核：小号叹问
  * ﹗﹖（FE57/FE56 官方类是 EX 不是 CL）、右双引 ”（U+201D 是 QU）、
  * 半角句读 ｡､（FF61/FF64 才是 CL 本类）、･（FF65 是 NS）——六者
@@ -421,9 +453,41 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
  *（QU 断后码位，已回 BREAK_AFTER：Chrome 对 5 词夹具实测 5 行=断后，
  * 不入集合会把它并成不可断整词估成 1 行，低估方向）。
  */
+/**
+ * 行首禁则逐码位语义表（R10，QA 收口复验逐行内容实测口径）。
+ * 拉回组：标点放不下时把行尾最近的非禁则原子连同尾部禁则 run 一起
+ *   带下行——`，。、：；？！﹖﹗％`（FF0C 3002 3001 FF1A FF1B FF1F
+ *   FF01 FE56 FE57 FF05）。6820 格网格证这五…九类在 base（拉回）上
+ *   本就正确（30→52 全低估为悬挂改坏）。
+ * 悬挂组：标点挂在行尾（ink 半宽不越界），挂不下时同样把行尾单元带
+ *   下行——`｡､･〉】〕）］｝》」』〞〟`（FF61 FF64 FF65 3009 3011
+ *   3015 FF09 FF3D FF5D 300B 300D 300F 301E 301F）。悬挂量化
+ *   72→55 / 48→31 / 51→31；未在语义表中的新增码位先实测再归类。
+ * 半角悬挂组：｡､･ 在**行中**也只占半 advance（中･ab@40 单行）；
+ *   与悬挂语义配套——它们的 atomW 在 widths[] 里按 unitPx/2 计。
+ * 前驱类型是次级条件：head 必须是非禁则原子且不把行拉空——前驱是
+ * 不可断词原子时拉回组把词整体带下行（aa bb cc，word → cc， 下行）；
+ * 前驱是禁则标点时一律挂 run 尾。
+ */
+const LINE_START_PULLBACK = new Set([
+  0xff0c, 0x3002, 0x3001, 0xff1a, 0xff1b, 0xff1f, 0xff01, 0xfe56, 0xfe57, 0xff05,
+])
+const LINE_START_HANG = new Set([
+  0xff61, 0xff64, 0xff65, 0x3009, 0x3011, 0x3015,
+  0xff09, 0xff3d, 0xff5d, 0x300b, 0x300d, 0x300f, 0x301e, 0x301f,
+])
+const LINE_START_HALFWIDTH_HANG = new Set([0xff61, 0xff64, 0xff65])
+
+function lineStartMode(ch) {
+  if (typeof ch !== 'string') return null
+  const cp = ch.codePointAt(0)
+  if (LINE_START_HANG.has(cp)) return 'hang'
+  if (LINE_START_PULLBACK.has(cp)) return 'pull'
+  return null
+}
+
 function isLineStartForbidden(ch) {
-  return typeof ch === 'string'
-    && /[，。、；：？！）］｝》」』〞〟％〉】〕﹗﹖｡､･]/.test(ch)
+  return lineStartMode(ch) !== null
 }
 
 /**
