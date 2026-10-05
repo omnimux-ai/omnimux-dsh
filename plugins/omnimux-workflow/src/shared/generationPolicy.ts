@@ -23,8 +23,9 @@ export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationP
     modeSelection: 'model',
   },
   video: {
-    // 仅保留网关在售主流视频模型：字节即梦 2.5/2.0 与 MiniMax H3（含对应任务版）
-    allowedModelIds: ['seedance-2-5', 'seedance-2-0', 'minimax-h3'],
+    // 仅保留网关在售主流视频模型：字节即梦 2.5/2.0/2.0 Fast/2.0 Mini 与 MiniMax H3（含对应任务版）
+    // #3152：Seedance 2.0 Fast / Mini 以当前映射契约真机验证通过（文生视频 + 首帧 + 全能参考），加入画布准入
+    allowedModelIds: ['seedance-2-5', 'seedance-2-0', 'seedance-2-0-fast', 'seedance-2-0-mini', 'minimax-h3'],
     defaultModelId: 'seedance-2-5',
     modeSelection: 'model',
   },
