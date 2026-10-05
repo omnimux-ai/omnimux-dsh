@@ -3,7 +3,12 @@
  * @module omnimux-video/contracts/veoContracts
  */
 
-import { VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
+import {
+  VEO_TASK_SPEC,
+  VIDS_ERROR_CODES,
+  VIDS_MODES,
+  buildVidsRequest,
+} from '../shared/veoTaskSpec.js'
 
 /**
  * 谷歌底层 Protobuf 二进制数据包映射模板
@@ -233,25 +238,72 @@ export const GOOGLE_VIDS_PROTO_TEMPLATES = {
 };
 
 /**
- * 校验生成请求入参是否合法
+ * 取第一个有值的候选字段（新契约顶层 snake_case 优先，兼容旧契约的顶层 durationSec）。
+ * @param {Record<string, unknown>} req
+ * @param {string[]} keys
+ * @returns {unknown}
+ */
+function pickFirst(req, keys) {
+  for (const key of keys) {
+    const value = req[key]
+    if (value !== undefined && value !== null) return value
+  }
+  return undefined
+}
+
+/**
+ * 校验生成请求入参是否合法。
+ *
+ * 同时接受两种请求形状（Issue #3181）：
+ * - 四模式新契约：`{ mode, operation, prompt, seconds, resolution, aspect_ratio, image_url?, video_id? }`
+ * - 旧契约：`{ prompt, mode?, durationSec? | parameters: { durationSec } }`
+ *
+ * 参数域与必需输入全部派生自 `veoTaskSpec.js`（单一真源），**不做静默钳制**：
+ * 越界秒数、未知分辨率/比例、缺必需素材一律返回可读中文原因与稳定错误码。
+ *
  * @param {Object} req - 请求载荷
- * @returns {{ valid: boolean, error?: string }}
+ * @returns {{ valid: true, request: { operation: string, mode: string, prompt: string, seconds: number, resolution: string, aspect_ratio: string, image_url?: string, video_id?: string } }
+ *   | { valid: false, code: string, error: string }}
  */
 export function validateVeoTaskRequest(req) {
   if (!req || typeof req !== 'object') {
-    return { valid: false, error: '任务请求载荷必须为有效对象' };
+    return { valid: false, code: VIDS_ERROR_CODES.invalidPayload, error: '任务请求载荷必须为有效对象' };
   }
-  if (!req.prompt || typeof req.prompt !== 'string' || !req.prompt.trim()) {
-    return { valid: false, error: '必须提供有效的视频生成提示词' };
+
+  const rawMode = req.mode;
+  if (rawMode !== undefined && rawMode !== null && typeof rawMode !== 'string') {
+    return { valid: false, code: VIDS_ERROR_CODES.unknownMode, error: `不支持的视频生成模式: ${String(rawMode)}` };
   }
-  const mode = req.mode || VEO_TASK_SPEC.defaultMode;
+  const mode = typeof rawMode === 'string' && rawMode.trim() ? rawMode.trim() : VEO_TASK_SPEC.defaultMode;
   if (!VEO_TASK_SPEC.modeIds.includes(mode)) {
-    return { valid: false, error: `不支持的视频生成模式: ${mode}` };
+    return { valid: false, code: VIDS_ERROR_CODES.unknownMode, error: `不支持的视频生成模式: ${mode}` };
   }
-  const duration = req.parameters?.durationSec ?? VEO_TASK_SPEC.durationSec.fallback;
-  const { min, max } = VEO_TASK_SPEC.durationSec;
-  if (typeof duration !== 'number' || duration < min || duration > max) {
-    return { valid: false, error: '生成时长必须在 3 秒至 10 秒之间' };
+
+  // 模式 → 中枢操作由真源派生；显式传入的 operation 必须与模式一致，否则报错而不是静默改写。
+  const modeSpec = VIDS_MODES.find((m) => m.id === mode);
+  const operation = typeof req.operation === 'string' ? req.operation.trim() : '';
+  if (operation && operation !== modeSpec.operation) {
+    return {
+      valid: false,
+      code: VIDS_ERROR_CODES.invalidPayload,
+      error: `生成模式「${modeSpec.title}」对应的操作应为 ${modeSpec.operation}，收到 ${operation}`,
+    };
   }
-  return { valid: true };
+
+  // 新契约用顶层 seconds；旧契约用顶层 durationSec 或 parameters.durationSec。
+  const seconds = pickFirst(req, ['seconds', 'durationSec']) ?? req.parameters?.durationSec;
+
+  const built = buildVidsRequest({
+    mode,
+    prompt: req.prompt,
+    seconds,
+    resolution: req.resolution,
+    aspectRatio: req.aspect_ratio,
+    imageUrl: req.image_url,
+    videoId: req.video_id,
+  });
+  if (!built.ok) {
+    return { valid: false, code: built.code, error: built.message };
+  }
+  return { valid: true, request: built.request };
 }

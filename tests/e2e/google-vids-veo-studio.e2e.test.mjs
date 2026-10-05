@@ -63,12 +63,22 @@ test('E2E: Google Vids Veo 生成中枢与剪辑协同全链路质量验收', as
   });
 
   await t.test('E2E-AC-3: 任务生成参数校验与谷歌底层 374/376 模板完整性', () => {
+    // Issue #3181：请求改为四模式契约形状（顶层 seconds / resolution / aspect_ratio）
     const validReq = validateVeoTaskRequest({
       prompt: 'A futuristic city with flying cars at sunset, 4k cinematic',
       mode: 'create',
-      parameters: { durationSec: 10, resolution: '720p', aspectRatio: '16:9', model: 'veo-omni-v1' }
+      seconds: 10,
+      resolution: '720p',
+      aspect_ratio: 'landscape',
+      model: 'veo-omni-v1'
     });
     assert.equal(validReq.valid, true);
+    // 旧形状（parameters.durationSec）保持向后兼容
+    assert.equal(validateVeoTaskRequest({
+      prompt: 'A futuristic city with flying cars at sunset',
+      mode: 'create',
+      parameters: { durationSec: 10 }
+    }).valid, true);
 
     const t374 = GOOGLE_VIDS_PROTO_TEMPLATES.TEXT_TO_VIDEO('doc_e2e_1', 'prompt_text', 10);
     assert.equal(t374[0], 374);
@@ -114,14 +124,15 @@ test('E2E: Google Vids Veo 生成中枢与剪辑协同全链路质量验收', as
     assert.equal(appendRes.newTotalDurationMs, 20000);
     assert.equal(appendRes.playheadSeekMs, 10000, '播放头必须对齐新切片起点');
 
-    // 检查组件源文件中对动作栏事件的绑定
-    const componentPath = path.join(root, 'plugins/omnimux-video/src/client/GoogleVidsStudioPanel.jsx');
+    // 检查组件源文件中对动作栏事件的绑定（Issue #3181：真源组件是 GoogleVidsStage.jsx）
+    const componentPath = path.join(root, 'plugins/omnimux-video/src/client/GoogleVidsStage.jsx');
     const compSrc = fs.readFileSync(componentPath, 'utf8');
-    assert.match(compSrc, /onInsertToTimeline/, '必须包含插入轨道回调');
-    assert.match(compSrc, /handleSwitchMode\('extend'/, '必须包含延续扩展联动');
-    assert.match(compSrc, /handleSwitchMode\('modify'/, '必须包含编辑修改联动');
-    assert.match(compSrc, /handleUpscale/, '必须包含升频超分状态流转');
+    assert.match(compSrc, /handleInsertToTimeline/, '必须包含插入轨道回调');
+    assert.match(compSrc, /handleSwitchModeWithSource\('extend'/, '必须包含延续扩展联动');
+    assert.match(compSrc, /handleSwitchModeWithSource\('modify'/, '必须包含编辑修改联动');
     assert.match(compSrc, /handleRemoveTask/, '必须包含移除卡片逻辑');
+    // Issue #3181：删除伪造进度的升频能力
+    assert.doesNotMatch(compSrc, /handleUpscale/, '严禁保留伪造进度的升频能力');
   });
 
 });

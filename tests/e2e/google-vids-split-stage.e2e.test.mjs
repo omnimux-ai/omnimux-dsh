@@ -72,28 +72,36 @@ test('E2E: Google Vids 中间栏主舞台与视频剪辑同屏全链路质量验
     assert.match(stageSrc, /生成记录 \(/, '生成记录列表标题必须为 生成记录 (n)')
     assert.doesNotMatch(stageSrc, /时间线|历史记录/, '严禁违规词汇')
     assert.match(stageSrc, /正在生成视频\.\.\./, '生成中文案必须为 正在生成视频...')
-    assert.match(stageSrc, /正在升频画质\.\.\./, '升频中文案必须为 正在升频画质...')
     assert.match(stageSrc, /取消/, '取消按钮文案锁定为 取消')
-    assert.match(stageSrc, /→ 插入/, '插入动作必须严格为 → 插入（指向右侧）')
-    assert.doesNotMatch(stageSrc, /← 插入/, '绝对禁止写成 ← 插入')
+    // Issue #3181：插入动作改用 Google Vids 官方动词「插入」（不再带方向箭头）
+    assert.match(stageSrc, /插入/, '插入动作必须为 插入')
+    assert.doesNotMatch(stageSrc, /← 插入|→ 插入/, '严禁保留方向箭头写法')
     assert.match(stageSrc, /延续/, '动作按钮锁定为 延续')
     assert.match(stageSrc, /修改/, '动作按钮锁定为 修改')
-    assert.match(stageSrc, /升频/, '动作按钮锁定为 升频')
     assert.match(stageSrc, /移除/, '破坏性按钮锁定为 移除')
+    // Issue #3181：删除伪造进度的「升频」能力（官方生成流程无此步骤）
+    assert.doesNotMatch(stageSrc, /升频|handleUpscale/, '严禁保留伪造进度的升频动作')
 
-    // 4. 四大模式 2 字纯名词 Tab
-    assert.match(stageSrc, /'创建'/, '模式 Tab 必须为 创建')
-    assert.match(stageSrc, /'修改'/, '模式 Tab 必须为 修改')
-    assert.match(stageSrc, /'动画'/, '模式 Tab 必须为 动画')
-    assert.match(stageSrc, /'扩展'/, '模式 Tab 必须为 扩展')
-    assert.doesNotMatch(stageSrc, /添加动画/, '严禁写成动宾短语 添加动画')
+    // 4. 四大模式 2 字纯名词 Tab（Issue #3181：文案真源迁至 shared/veoTaskSpec.js）
+    const specSrc = fs.readFileSync(
+      path.join(root, 'plugins/omnimux-video/src/shared/veoTaskSpec.js'),
+      'utf8',
+    )
+    assert.match(specSrc, /label: '创建'/, '模式 Tab 必须为 创建')
+    assert.match(specSrc, /label: '修改'/, '模式 Tab 必须为 修改')
+    assert.match(specSrc, /label: '动画'/, '模式 Tab 必须为 动画')
+    assert.match(specSrc, /label: '延续'/, '模式 Tab 必须为 延续（官方标签）')
+    assert.doesNotMatch(specSrc, /label: '扩展'/, '严禁再使用旧标签 扩展')
+    // Tab 标签必须是 2 字纯名词；动宾短语只允许出现在模式说明 title 上
+    assert.doesNotMatch(specSrc, /label: '添加动画'/, '严禁把动宾短语写成 Tab 标签')
+    assert.match(stageSrc, /VIDS_MODES/, 'Tab 标签必须从契约真源派生')
 
-    // 5. 动态占位符字典
-    assert.match(stageSrc, /请先在右侧创建或打开剪辑工程\.\.\./, '未就绪占位符')
-    assert.match(stageSrc, /描述您想生成的视频画面与动作\.\.\./, '创建模式占位符')
-    assert.match(stageSrc, /描述需要对当前视频进行的调整（如光影或服装风格）\.\.\./, '修改模式占位符')
-    assert.match(stageSrc, /描述图像素材中应展现的动作与运镜细节\.\.\./, '动画模式占位符')
-    assert.match(stageSrc, /描述当前视频结尾后续发生的情节发展\.\.\./, '扩展模式占位符')
+    // 5. 动态占位符字典（Issue #3181：迁至契约真源，文案同步四模式）
+    assert.equal(specSrc.includes('请先在右侧创建或打开剪辑工程...'), true, '未就绪占位符真源缺失')
+    assert.equal(specSrc.includes('描述要生成的画面与动作'), true, '创建模式占位符真源缺失')
+    assert.equal(specSrc.includes('描述要调整的主体、服装或光影'), true, '修改模式占位符真源缺失')
+    assert.equal(specSrc.includes('描述图片中元素如何运动、镜头如何移动'), true, '动画模式占位符真源缺失')
+    assert.equal(specSrc.includes('描述这个片段结尾之后发生什么'), true, '延续模式占位符真源缺失')
 
     // 6. 严禁装饰 Emoji 检查
     assert.doesNotMatch(stageSrc, /[💎✨🔥⚙️🗑️🎬⚡]/, '绝对禁止包含任何装饰性 Emoji')

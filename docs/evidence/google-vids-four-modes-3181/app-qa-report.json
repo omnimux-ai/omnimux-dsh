@@ -1,0 +1,444 @@
+{
+  "runId": "42f717dc-803d-4e52-a946-48a9b843b30a",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-four-modes",
+  "origin": "http://127.0.0.1:61056",
+  "appPort": 61056,
+  "cdpPort": 61059,
+  "startedAt": "2026-10-05T21:57:49.164Z",
+  "completedAt": "2026-10-05T21:58:03.466Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:61056",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 21,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:61056",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-dJBb4nMuTDOwDpHr7VQd4ZUL1CqgaukX0GgFEznpFi0"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 61059
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 131,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 73
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 131
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:vids:explore-entry-clicked",
+      "pass": true,
+      "detail": {
+        "ok": true
+      }
+    },
+    {
+      "name": "journey:vids:explore-menu-has-google-vids",
+      "pass": true
+    },
+    {
+      "name": "journey:vids:google-vids-item-clicked",
+      "pass": true,
+      "detail": {
+        "ok": true
+      }
+    },
+    {
+      "name": "journey:modes:stage-visible",
+      "pass": true,
+      "detail": {
+        "rect": {
+          "w": 1000,
+          "h": 713
+        },
+        "visibility": "visible"
+      }
+    },
+    {
+      "name": "journey:modes:four-tabs-with-official-labels",
+      "pass": true,
+      "detail": {
+        "tabs": [
+          {
+            "mode": "create",
+            "label": "创建",
+            "active": "true"
+          },
+          {
+            "mode": "animate",
+            "label": "动画",
+            "active": "false"
+          },
+          {
+            "mode": "modify",
+            "label": "修改",
+            "active": "false"
+          },
+          {
+            "mode": "extend",
+            "label": "延续",
+            "active": "false"
+          }
+        ]
+      }
+    },
+    {
+      "name": "journey:modes:param-controls-exist",
+      "pass": true,
+      "detail": {
+        "seconds": {
+          "value": "10",
+          "options": [
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "resolution": {
+          "value": "720p",
+          "options": [
+            "720p",
+            "1080p",
+            "4k"
+          ]
+        },
+        "aspectRatio": {
+          "value": "landscape",
+          "options": [
+            "landscape",
+            "portrait"
+          ]
+        }
+      }
+    },
+    {
+      "name": "journey:modes:param-domains-match-service",
+      "pass": true,
+      "detail": {
+        "seconds": {
+          "value": "10",
+          "options": [
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "resolution": {
+          "value": "720p",
+          "options": [
+            "720p",
+            "1080p",
+            "4k"
+          ]
+        },
+        "aspectRatio": {
+          "value": "landscape",
+          "options": [
+            "landscape",
+            "portrait"
+          ]
+        }
+      }
+    },
+    {
+      "name": "journey:modes:create-tab-activates",
+      "pass": true,
+      "detail": {
+        "active": "true",
+        "hint": "用文字生成一段新视频"
+      }
+    },
+    {
+      "name": "journey:modes:create-attachment-row",
+      "pass": true,
+      "detail": {
+        "attachKinds": [],
+        "expected": []
+      }
+    },
+    {
+      "name": "journey:modes:create-submit-label",
+      "pass": true,
+      "detail": {
+        "label": "生成",
+        "disabled": true,
+        "submitLabel": "生成"
+      }
+    },
+    {
+      "name": "journey:modes:create-submit-gated-with-reason",
+      "pass": true,
+      "detail": {
+        "disabled": true,
+        "reason": "请先填写提示词"
+      }
+    },
+    {
+      "name": "journey:modes:animate-tab-activates",
+      "pass": true,
+      "detail": {
+        "active": "true",
+        "hint": "把一张静态图片变成动态视频"
+      }
+    },
+    {
+      "name": "journey:modes:animate-attachment-row",
+      "pass": true,
+      "detail": {
+        "attachKinds": [
+          "image"
+        ],
+        "expected": [
+          "image"
+        ]
+      }
+    },
+    {
+      "name": "journey:modes:animate-submit-label",
+      "pass": true,
+      "detail": {
+        "label": "生成",
+        "disabled": true,
+        "submitLabel": "生成"
+      }
+    },
+    {
+      "name": "journey:modes:animate-submit-gated-with-reason",
+      "pass": true,
+      "detail": {
+        "disabled": true,
+        "reason": "请先填写提示词"
+      }
+    },
+    {
+      "name": "journey:modes:modify-tab-activates",
+      "pass": true,
+      "detail": {
+        "active": "true",
+        "hint": "改写一个已有片段的画面内容"
+      }
+    },
+    {
+      "name": "journey:modes:modify-attachment-row",
+      "pass": true,
+      "detail": {
+        "attachKinds": [
+          "video",
+          "replacement-image"
+        ],
+        "expected": [
+          "video",
+          "replacement-image"
+        ]
+      }
+    },
+    {
+      "name": "journey:modes:modify-submit-label",
+      "pass": true,
+      "detail": {
+        "label": "生成",
+        "disabled": true,
+        "submitLabel": "生成"
+      }
+    },
+    {
+      "name": "journey:modes:modify-submit-gated-with-reason",
+      "pass": true,
+      "detail": {
+        "disabled": true,
+        "reason": "请先填写提示词"
+      }
+    },
+    {
+      "name": "journey:modes:extend-tab-activates",
+      "pass": true,
+      "detail": {
+        "active": "true",
+        "hint": "把已有片段向后延长"
+      }
+    },
+    {
+      "name": "journey:modes:extend-attachment-row",
+      "pass": true,
+      "detail": {
+        "attachKinds": [
+          "video"
+        ],
+        "expected": [
+          "video"
+        ]
+      }
+    },
+    {
+      "name": "journey:modes:extend-submit-label",
+      "pass": true,
+      "detail": {
+        "label": "提交提示",
+        "disabled": true,
+        "submitLabel": "提交提示"
+      }
+    },
+    {
+      "name": "journey:modes:extend-submit-gated-with-reason",
+      "pass": true,
+      "detail": {
+        "disabled": true,
+        "reason": "请先填写提示词"
+      }
+    },
+    {
+      "name": "journey:modes:result-card-action-row",
+      "pass": true,
+      "detail": {
+        "actions": [
+          "insert",
+          "recreate",
+          "edit-prompt",
+          "set-source",
+          "extend",
+          "modify"
+        ],
+        "wanted": [
+          "insert",
+          "recreate",
+          "edit-prompt"
+        ]
+      }
+    },
+    {
+      "name": "journey:modes:insert-dispatches-or-explains",
+      "pass": true,
+      "detail": {
+        "events": [],
+        "detail": null,
+        "cardReason": "剪辑器未就绪，请先在右侧创建或打开剪辑工程",
+        "payloadOk": false
+      }
+    },
+    {
+      "name": "journey:modes:edit-prompt-refills-composer",
+      "pass": true,
+      "detail": {
+        "composerValue": "韩国极简防晒美学成片"
+      }
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 67523
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-four-modes/.workbuddy/evidence/app-qa/42f717dc-803d-4e52-a946-48a9b843b30a/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 67523
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}
