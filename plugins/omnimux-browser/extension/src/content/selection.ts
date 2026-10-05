@@ -36,10 +36,10 @@ function deepActiveElement(): Element | null {
 
 /** Whether an element sits inside — or is — a field that must not be read. */
 function withinSensitiveField(node: Node | null): boolean {
-  const start = node instanceof Element ? node : node?.parentElement ?? null
-  for (let el = start?.closest(FIELD_SELECTOR) ?? null; el !== null;) {
+  const start = (typeof Element !== 'undefined' && node instanceof Element) ? node : node?.parentElement ?? null
+  for (let el = start?.closest?.(FIELD_SELECTOR) ?? null; el !== null;) {
     if (isSensitiveField(el)) return true
-    el = el.parentElement?.closest(FIELD_SELECTOR) ?? null
+    el = el.parentElement?.closest?.(FIELD_SELECTOR) ?? null
   }
   return false
 }
@@ -52,7 +52,7 @@ function selectionTouchesSensitiveField(selection: Selection | null): boolean {
   try {
     const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null
     const container = range?.commonAncestorContainer ?? null
-    const scope = container instanceof Element ? container : container?.parentElement ?? null
+    const scope = (typeof Element !== 'undefined' && container instanceof Element) ? container : container?.parentElement ?? null
     if (scope === null) return false
     for (const field of scope.querySelectorAll(FIELD_SELECTOR)) {
       if (isSensitiveField(field) && range?.intersectsNode(field) === true) return true
@@ -68,7 +68,9 @@ function selectionTouchesSensitiveField(selection: Selection | null): boolean {
 /** Read the current highlight, preferring a focused field's own selection. */
 function selectedText(): string {
   const active = deepActiveElement()
-  if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+  const isInput = (typeof HTMLInputElement !== 'undefined' && active instanceof HTMLInputElement) || (active as HTMLElement)?.tagName === 'INPUT'
+  const isTextArea = (typeof HTMLTextAreaElement !== 'undefined' && active instanceof HTMLTextAreaElement) || (active as HTMLElement)?.tagName === 'TEXTAREA'
+  if (isInput || isTextArea) {
     // A field's own selection is invisible to window.getSelection() in Chrome.
     if (isSensitiveField(active)) return ''
     try {

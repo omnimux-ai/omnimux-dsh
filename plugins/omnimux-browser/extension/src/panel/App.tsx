@@ -1319,47 +1319,81 @@ export function App(): React.JSX.Element {
     const targetUrl = mediaItem?.src || pageScene?.url || ''
     if (!targetUrl || saveInspirationStatus === 'saving') return
     setSaveInspirationStatus('saving')
-    const candidatePorts = [targetPort, 45120, 43120, 3080].filter((p, i, arr) => arr.indexOf(p) === i)
+    const mediaSrc = mediaItem?.src || detectedMedia[0]?.src || pageScene?.heroImage || ''
+    const directItem = {
+      title: (pageScene?.title || (pageScene?.author ? `@${pageScene.author}` : targetUrl)).slice(0, 120),
+      type: (mediaItem?.type === 'video' || detectedMedia[0]?.type === 'video') ? 'video' as const : 'image' as const,
+      source_platform: pageScene?.platform || 'twitter',
+      source_url: targetUrl,
+      cover_url: mediaSrc,
+      media_urls: mediaSrc ? [mediaSrc] : [],
+      content: pageScene?.title || '',
+      tags: [pageScene?.platform ? `${pageScene.platform}` : '社交媒体', '灵感采集'],
+    }
+
     let saved = false
 
-    for (const port of candidatePorts) {
-      const targetBase = `http://127.0.0.1:${port}`
+    // 1. 优先通过 chrome.runtime.sendMessage 委托后台 service worker 保存（彻底免疫 Edge 私有网络 PNA 拦截）
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
       try {
-        // 1. 优先尝试 import-url 全量社媒抓取
-        let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: targetUrl, background: true }),
-          signal: AbortSignal.timeout(3500),
-        }).catch(() => null)
-
-        // 2. 如果 import-url 异常（如反爬、502、解析空），采用前台已嗅探的多模态图文数据直存灵感库
-        if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
-          const mediaSrc = mediaItem?.src || detectedMedia[0]?.src || pageScene?.media?.[0]?.src || ''
-          const fallbackBody = {
-            title: (pageScene?.title || (pageScene?.author ? `@${pageScene.author}` : targetUrl)).slice(0, 120),
-            type: (mediaItem?.type === 'video' || detectedMedia[0]?.type === 'video') ? 'video' : 'image',
-            source_platform: pageScene?.platform || 'twitter',
-            source_url: targetUrl,
-            cover_url: mediaSrc,
-            media_urls: mediaSrc ? [mediaSrc] : [],
-            content: pageScene?.title || '',
-            tags: [pageScene?.platform ? `${pageScene.platform}` : '社交媒体', '灵感采集'],
-          }
-          res = await fetch(`${targetBase}/omnimux/inspiration/local`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(fallbackBody),
-            signal: AbortSignal.timeout(3000),
-          }).catch(() => null)
-        }
-
-        if (res && (res.ok || res.status === 200 || res.status === 201 || res.status === 202)) {
+        const bgRes = await new Promise<{ ok?: boolean }>((resolve) => {
+          chrome.runtime.sendMessage(
+            {
+              type: 'DSH_SAVE_INSPIRATION_PANEL',
+              payload: {
+                targetUrl,
+                ...directItem,
+                targetPort,
+              },
+            },
+            (response) => {
+              if (chrome.runtime?.lastError || !response) {
+                resolve({ ok: false })
+              } else {
+                resolve(response as { ok?: boolean })
+              }
+            },
+          )
+        })
+        if (bgRes?.ok) {
           saved = true
-          break
         }
       } catch {
-        // try next port
+        // Fall back to direct fetch if message fails
+      }
+    }
+
+    // 2. 备选：直连本地候选端口（全量 import-url 及 local 直存保底）
+    if (!saved) {
+      const candidatePorts = [targetPort, 45120, 43120, 3080].filter((p, i, arr) => arr.indexOf(p) === i)
+      for (const port of candidatePorts) {
+        const targetBase = `http://127.0.0.1:${port}`
+        try {
+          // 优先尝试 import-url 全量社媒抓取
+          let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: targetUrl, background: true }),
+            signal: AbortSignal.timeout(3500),
+          }).catch(() => null)
+
+          // 如果 import-url 异常（如反爬、502、解析空），采用前台已嗅探的多模态图文数据直存灵感库
+          if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
+            res = await fetch(`${targetBase}/omnimux/inspiration/local`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(directItem),
+              signal: AbortSignal.timeout(3000),
+            }).catch(() => null)
+          }
+
+          if (res && (res.ok || res.status === 200 || res.status === 201 || res.status === 202)) {
+            saved = true
+            break
+          }
+        } catch {
+          // try next port
+        }
       }
     }
 
