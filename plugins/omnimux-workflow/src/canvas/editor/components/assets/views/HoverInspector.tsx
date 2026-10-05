@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Sparkles, Calendar, HardDrive, Maximize2, Tag } from 'lucide-react';
 import type { AssetItem, CanvasNodeItem, HoverInspectorAnchorRect } from '../types';
+import { MediaThumb } from '../MediaThumb';
 
 export interface HoverInspectorProps {
   isOpen: boolean;
@@ -82,13 +83,17 @@ export const HoverInspector: React.FC<HoverInspectorProps> = ({
     >
       {/* 缩略图大图展示 */}
       <div className="wf-hover-inspector-preview">
-        {item.previewUrl ? (
-          <img src={item.previewUrl} alt={item.name} className="wf-hover-inspector-img" />
-        ) : (
-          <div className="wf-hover-inspector-placeholder">
-            <Sparkles size={28} className="wf-hover-inspector-placeholder-icon" />
-          </div>
-        )}
+        <MediaThumb
+          kind={node ? node.type : asset?.type}
+          url={item.previewUrl}
+          alt={item.name}
+          className="wf-hover-inspector-img"
+          fallback={
+            <div className="wf-hover-inspector-placeholder">
+              <Sparkles size={28} className="wf-hover-inspector-placeholder-icon" />
+            </div>
+          }
+        />
         {asset?.duration && (
           <span className="wf-hover-inspector-duration">{asset.duration}</span>
         )}
