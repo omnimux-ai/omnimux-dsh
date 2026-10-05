@@ -11,11 +11,16 @@ export const MULTIVIEW_SIZE = '16:9'
 
 /**
  * 任务在画廊中的标识键。
+ *
+ * 上游控制器用 snake_case（`task_id`），本插件自己的任务记录用 camelCase（`taskId`）。
+ * 只认其中一种会让另一种的键恒为 `'undefined'`——派生行被当成孤儿、删除时发出一个假 id。
+ * 因此三种写法都认；都没有时返回空串，让调用方能识别「无键」而不是拿到一个字面量 `'undefined'`。
  * @param {import('./types.js').TaskRecord} task
  * @returns {string}
  */
 export function taskKey(task) {
-  return String(task.task_id || task.id)
+  const id = task?.task_id ?? task?.taskId ?? task?.id
+  return id === undefined || id === null || id === '' ? '' : String(id)
 }
 
 /**

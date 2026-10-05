@@ -111,6 +111,22 @@ describe('multiViewProgress', () => {
   })
 })
 
+describe('taskKey', () => {
+  // 本插件自己的任务记录是 camelCase（taskId），上游控制器是 snake_case（task_id）。
+  // 只认一种会让另一种的键恒为字面量 'undefined'：派生行被当孤儿、删除发出假 id。
+  it('accepts the plugin record shape (taskId) as well as the upstream shape', () => {
+    assert.equal(taskKey({ taskId: 'srv-1' }), 'srv-1')
+    assert.equal(taskKey({ task_id: 'up-1' }), 'up-1')
+    assert.equal(taskKey({ id: 'local-1' }), 'local-1')
+  })
+
+  it('never returns the literal string "undefined" for a keyless record', () => {
+    assert.equal(taskKey({}), '')
+    assert.equal(taskKey({ taskId: '' }), '')
+    assert.equal(taskKey(null), '')
+  })
+})
+
 describe('pendingMultiViewRecord', () => {
   it('is a queued placeholder keyed by the submitted task id', () => {
     const record = pendingMultiViewRecord('t1')
