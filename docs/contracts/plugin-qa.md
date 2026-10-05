@@ -60,6 +60,8 @@ Agent 遇到密钥弹窗，先核对运行模式与本任务入口；普通界�
 
 `pnpm test:worktree-web` 的现有 Stage 分支是模拟宿主夹具，其中包含占位内容与补入口逻辑；它只可提供其明确覆盖的局部证据，不得作为完整应用、首启或任务插件装配的验收通过。完整应用启动失败不得自动退回该夹具并报告成功。
 
+物化后冒烟（dev-smoke）：`scripts/dev-smoke.mjs` 由 `worktree.sh` 物化成功后自动调用——只读探活 Dev 45120 页面并截图，对本次物化插件比对「物化包内最新文件 mtime vs Dev 主进程启动时间」，晚于进程即输出 `needs-restart` 提示（不自动重启）；Dev 未运行或调试口不可达时报 `blocked` 而非误报 PASS。证据落 `docs/evidence/dev-smoke-report.json` 与 `docs/evidence/dev-smoke-<runId>/dev-page.png`。
+
 ## 浏览器与共享探针
 
 - API、脚本和配置优先；需要 Web/Stage 浏览器验收时统一使用 ego-browser 的任务隔离空间，先加载 ego-browser skill。不得回退 IAB，也不得用桌面截图替代浏览器检查。ego 缺少 CDP 事件、脚本源、稳定 task/tab 身份或真实 PNG 能力时为 BLOCKED，不降低校验。

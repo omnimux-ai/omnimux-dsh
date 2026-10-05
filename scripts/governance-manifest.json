@@ -308,6 +308,8 @@
     "composer-inline-bootstrap.mjs",
     "composer-inline-bootstrap.test.mjs",
     "composer-inline-e2e.mjs",
+    "dev-smoke.mjs",
+    "dev-smoke.test.mjs",
     "docked-slot-position-qa.mjs",
     "ego-task-lock.mjs",
     "explore-template-media.test.mjs",

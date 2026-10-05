@@ -448,6 +448,14 @@ auto_materialize_and_reload() {
         node "${ROOT}/scripts/reload-dev-app.mjs" 2>/dev/null || true
       fi
     fi
+    # 物化后冒烟：验证 Dev 窗口可达 + 版本生效；失败/待重启如实报告，不阻断 ship。
+    if [ -f "${ROOT}/scripts/dev-smoke.mjs" ]; then
+      local plugins_csv
+      plugins_csv="$(IFS=,; echo "${changed_plugins[*]}")"
+      if ! node "${ROOT}/scripts/dev-smoke.mjs" --plugins "${plugins_csv}" ${needs_restart:+--expect-restart}; then
+        say "⚠️ dev-smoke 未通过：请查看 ${ROOT}/docs/evidence/dev-smoke-report.json"
+      fi
+    fi
   else
     say "⚠️ 自动物化未成功，请手动在主检出运行: ./scripts/sync-to-app.sh ${changed_plugins[*]}"
   fi
