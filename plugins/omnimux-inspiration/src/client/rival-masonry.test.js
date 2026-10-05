@@ -16,6 +16,7 @@ import {
   rivalPlacements,
   rivalRatioOf,
 } from './rival-masonry.js'
+import { RIVAL_CSS } from './rival-styles.js'
 
 /**
  * Thin adapter tests for the 账号监控 masonry.
@@ -543,7 +544,7 @@ describe('rival-masonry — R7 断行判据迁入套件（QA Q1/Q4 阻塞）', (
     // 断行集合漏掉的 BA：竖线、各文字 danda/节标点、连字符点等——按类表全
     // 枚举而不是手选「像空格」的码位。空格族（1680/2000-200A/205F/3000/0009）
     // 已由 R6 用例覆盖，这里钉「词内」成员。
-    const BA_AFTER = ['007c', '0964', '0965', '0e5a', '0e5b', '0f0b', '0f34',
+    const BA_AFTER = ['0964', '0965', '0e5a', '0e5b', '0f0b', '0f34',
       '0f7f', '0f85', '0fbe', '0fbf', '0fd2', '104a', '104b', '1361', '16eb',
       '16ec', '16ed', '1735', '1736', '17d4', '17d5', '17d8', '17da', '1804',
       '1805', '1b4e', '1b4f', '1b5a', '1b5b', '1b5d', '1b5e', '1b5f', '1b60',
@@ -592,11 +593,13 @@ describe('rival-masonry — R7 断行判据迁入套件（QA Q1/Q4 阻塞）', (
     }
   })
 
-  it('U+0021 是 Chrome 对 UAX#14 的定制：不断后（红绿边界钉住防误加）', () => {
+  it('U+0021 / U+007C 是 Chrome 对 UAX#14 的定制：不断后（红绿边界钉住防误加）', () => {
     // UAX#14 把 '!' 与 '?' 同列 EX，但 Chrome 实测 '!' 之后不断行（词中上下文
     // 与 5 词窄行两种探针均 chrome=1）；QA 报告注明其 '!'/EX 推断未真机实证。
     // 本断言把真机口径钉死：模型不得对 '!' 加断后，否则方向性高估。
     assert.equal(rivalWrapLines('aa!bbbbbbbb', 14, 60), 1, "U+0021: Chrome 不断后，模型不得按 EX 断（规范/真机分歧已登记）")
+    // U+007C 同为 BA 但 Chrome 实测不断后（codepoint-probe chrome=1）。
+    assert.equal(rivalWrapLines('aa|bbbbbbbb', 14, 60), 1, "U+007C: Chrome 不断后，模型不得按 BA 断（规范/真机分歧已登记）")
     // 对照：? 断后，证明同表兄弟类的行为不是「整类不做」。
     assert.ok(rivalWrapLines('aa?bbbbbbbb', 14, 60) >= 2)
   })
@@ -607,6 +610,35 @@ describe('rival-masonry — R7 断行判据迁入套件（QA Q1/Q4 阻塞）', (
     const title = 'Read more: https://example.com/interpolation/benchmark/cinematic?ref=qa'
     const lines = rivalWrapLines(title, 14, 194)
     assert.equal(lines, 3, `Chrome 实测 3 行（? 后断出 "ref=qa" 一行），got ${lines}`)
+  })
+})
+
+describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () => {
+  // 与 QA B-4 / PM M1 同源：样式字符串是产物本身，断言其契约即可在套件内
+  // 鉴别「回退到无显式字体/无 :not(:disabled)」的错误实现。
+  it('文本/标题元素显式声明 font-family（字宽表前提；QA B-4）', () => {
+    assert.ok(/\.omnimux-rival-card-text\s*\{[^}]*font-family:/s.test(RIVAL_CSS),
+      'card-text must declare font-family explicitly — glyph width table is SF Pro 14px calibrated')
+    assert.ok(/\.omnimux-rival-card-title\s*\{[^}]*font-family:/s.test(RIVAL_CSS),
+      'card-title must declare font-family explicitly')
+  })
+  it('主按钮 hover 两条选择器都带 :not(:disabled)（PM M1）', () => {
+    for (const scope of ['on-media', 'on-surface']) {
+      assert.ok(
+        RIVAL_CSS.includes(`.${scope} .omnimux-rival-act-primary:hover:not(:disabled)`),
+        `${scope} act-primary hover must exclude :disabled like the act-btn rules`,
+      )
+    }
+  })
+  it('省略号挂在 label 元素而非按钮容器（PM M2/M3）', () => {
+    assert.ok(
+      /\.omnimux-rival-act-btn > span:not\(\.omnimux-rival-vh\)[^}]*text-overflow:\s*ellipsis/s.test(RIVAL_CSS),
+      'ellipsis must live on the kit Button label span (production DOM is button>span.label)',
+    )
+    assert.ok(
+      /\.omnimux-rival-overlay-metrics\s*\{[^}]*display:\s*inline-block[^}]*text-overflow:\s*ellipsis/s.test(RIVAL_CSS),
+      'metrics row needs a block-level container for text-overflow to reach its text node',
+    )
   })
 })
 

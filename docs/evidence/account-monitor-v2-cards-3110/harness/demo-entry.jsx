@@ -111,6 +111,11 @@ const QA41_POSTS = [
   row('v4', ACCOUNTS.runway, { type: 'text', title: 'thin space and hair space separated segments that render very wide', velocity: { text: 'watch 24/h', tier: 'watch' } }),
   row('v5', ACCOUNTS.higgs, { type: 'text', title: 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima', velocity: { text: 'watch 25/h', tier: 'watch' } }),
   row('v6', ACCOUNTS.runway, { type: 'text', title: 'onetwothree​fourfivesix​seveneightnine​teneleventwelve​thirteenfourteen​fifteensixteen', velocity: { text: 'watch 26/h', tier: 'watch' } }),
+  // R7-①：含 ? 的 text-media（生产常态——X/threads 带媒体帖）；
+  // 同内容放 text-media 才暴露 EX 缺口（text 型会被 144px 下限吞掉，
+  // QA R5 已实证）。同 QA qa39 形态。
+  row('q1', ACCOUNTS.higgs, { type: 'video', media_kind: 'video', title: 'Read more: https://example.com/interpolation/benchmark/cinematic?ref=qa', cover_src: SVG_COVER(260, 1280, 720), velocity: { text: 'watch 31/h', tier: 'watch' } }),
+  row('q2', ACCOUNTS.runway, { type: 'video', media_kind: 'image', title: 'Pipeline notes + link https://example.com/blog/state-of-the-art-video?src=feed&campaign=oct', cover_src: SVG_COVER(300, 900, 900), ratio: 1, velocity: { text: 'watch 32/h', tier: 'watch' } }),
 ]
 
 function App() {

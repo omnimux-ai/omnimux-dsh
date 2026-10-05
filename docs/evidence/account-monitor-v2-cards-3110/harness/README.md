@@ -45,7 +45,14 @@ URL 参数：`theme=dark|light`、`width=<px>`（固定容器宽时绕过 Resize
 - `build-demo.mjs --pre`：只重建 `demo-pre.html` 外壳（引用已提交的
   `demo-bundle-pre.js` 整改前快照），使 `r5-placement-measure-pre.json`
   一条命令从 HEAD 可复现。
-- `codepoint-probe.mjs`（R6）：逐码位对比 Chrome 实测行数 vs
+- `codepoint-probe.mjs`（R6+R7）：逐码位对比 Chrome 实测行数 vs
   `rivalWrapLines`（直接 import 实现，无复刻），覆盖 CSS 空白、UAX#14
-  BA/ZW/BK、不换行集合、\v、U+3000、U+2011 共 24 个码位；
-  退出码 0 = 全等。用法：`node codepoint-probe.mjs [out.json]`。
+  BA/ZW/BK、不换行集合、\v/\f、U+3000、U+2011，以及 R7 补的 EX/HH/B2
+  断后类共 41 个码位；退出码 0 = 全等（当前 41/41 对齐）。
+  用法：`node codepoint-probe.mjs [out.json]`。
+- **字体前提（R7-④）**：`RIVAL_GLYPH_WIDTH_FACTOR` 按 SF Pro /
+  -apple-system 14px 标定（`codepoint-probe.mjs` 的 canvas 实测），
+  与 `.omnimux-rival-card-text/.omnimux-rival-card-title` 显式声明的
+  font-family 和本 README `build-demo.mjs --font-family` 同一栈。
+  宿主换字体族时必须重跑 probe 重标定——generic sans 偏差 0.87px/字、
+  Courier 5.1px/字足以翻转行数。

@@ -5,7 +5,9 @@
  * layout estimator uses (imported from the worktree source, no re-implementation).
  *
  * Chrome ground truth comes from a hidden mirror div with the card body's own
- * font stack, counting distinct Range tops.
+ * font stack (R7: aligned with build-demo --font-family), counting distinct Range tops.
+ * R7-①/Q1：'?'(003F) 与 EX 同类断后；'!'(0021) 是 Chrome 定制不断行——
+ * 与 UAX#14 同名类不同行为，套件内断言已按真机口径钉死。
  *
  * Usage (repo or worktree root):
  *   node docs/evidence/account-monitor-v2-cards-3110/harness/codepoint-probe.mjs [outJson]
@@ -34,6 +36,13 @@ const CASES = [
   ['word-joiner', '2060'], ['ideographic-space', '3000'],
   ['nb-hyphen', '2011'], ['vtab', '000b'],
   ['bom', 'feff'],
+  // R7：断后类补样——EX（? 及同类）、HH/HY/B2、BA 非空格成员。
+  ['ex-qmark', '003f'], ['ex-arabic-q', '061f'], ['ex-small-q', 'fe56'],
+  ['hh-shy', '00ad'], ['hh-armenian', '058a'], ['hh-maqaf', '05be'],
+  ['hh-canadian', '1400'], ['hh-double', '2e40'], ['hh-oblique', '2e17'],
+  ['b2-emdash', '2014'], ['ba-vline', '007c'], ['ba-ethiopic', '1361'],
+  ['ba-figure-dash', '2012'], ['ba-endash', '2013'], ['ba-hyphen-pt', '2027'],
+  ['ex-bang', '0021'], ['ff', '000c'],
 ]
 
 // Equal-length words at a width that admits exactly one per line: the model's
@@ -79,7 +88,7 @@ try {
   const payload = JSON.stringify(strings.map((s) => ({ name: s.name, hex: s.hex, text: s.text, alsoShort: s.alsoShort })))
   const real = await ev(`(() => {
     const cases = ${payload}
-    const font = '14px -apple-system, "system-ui", "Segoe UI", Roboto, "PingFang SC", sans-serif'
+    const font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Source Han Sans SC", sans-serif'
     const c = document.createElement('canvas').getContext('2d'); c.font = font
     const mirror = document.createElement('div')
     mirror.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;white-space:normal;word-break:normal;overflow-wrap:normal;line-height:20px'
