@@ -89,7 +89,7 @@ export function classifyPerspectiveByRules(seeds: ScoredCandidate[], draft: stri
 export const JEV_STATE_MAX = 2000
 
 /** Build the bounded Jev choice request for perspective selection. */
-export function buildJevDecisionArgs(seeds: ScoredCandidate[], draft: string, quoted = ''): {
+export function buildJevDecisionArgs(seeds: ScoredCandidate[], draft: string, quoted = '', keywords: string[] = []): {
   state: string
   choices: Record<string, string>
   instructions: string
@@ -100,6 +100,12 @@ export function buildJevDecisionArgs(seeds: ScoredCandidate[], draft: string, qu
   seeds.forEach((s, i) => {
     parts.push(`Feed ${i + 1} (replies ${s.replies}, reposts ${s.reposts}, likes ${s.likes}): ${s.text}`)
   })
+  // 服务端拒收空素材：没有任何内容时用赛道或通用背景兜底，保证 Jev 始终能参与决策。
+  if (parts.length === 0) {
+    parts.push(keywords.length > 0
+      ? `Original tweet with no source material. Niche: ${keywords.join(', ')}.`
+      : 'Original tweet with no source material, drawn from a working practitioner’s everyday job.')
+  }
   const joined = parts.join('\n')
   const state = joined.length > JEV_STATE_MAX ? `${joined.slice(0, JEV_STATE_MAX)}…` : joined
   const choices: Record<string, string> = {}

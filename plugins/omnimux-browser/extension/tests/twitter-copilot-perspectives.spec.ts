@@ -85,6 +85,25 @@ describe('#3100 Jev 决策参数', () => {
     expect(args.instructions).toMatch(/choice key/)
   })
 
+  it('AC-7 无任何素材时 Jev 素材仍非空（有赛道用赛道，无赛道用通用背景）', () => {
+    const bare = buildJevDecisionArgs([], '', '', [])
+    expect(bare.state.trim().length).toBeGreaterThan(0)
+    expect(bare.state.length).toBeLessThanOrEqual(JEV_STATE_MAX + 1)
+    expect(buildJevDecisionArgs([], '', '', ['ai', '出海']).state).toContain('ai, 出海')
+  })
+
+  it('AC-7 无达标热帖的提示不向模型透露内部筛选说法', () => {
+    const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-perspective-post')!
+    const p = PERSPECTIVES[0]
+    const banned = /评分|门槛|信息流|quality bar|feed/i
+    for (const keywords of [[], ['ai']]) {
+      const zh = item.generatePrompt({ scene: 'POST_NEW', draftText: '', keywords }, 'zh', p)
+      const en = item.generatePrompt({ scene: 'POST_NEW', draftText: '', keywords }, 'en', p)
+      expect(zh.userMessage).not.toMatch(banned)
+      expect(en.userMessage).not.toMatch(banned)
+    }
+  })
+
   it('多视角菜单项：注入视角段，且只出现在发新帖与引用转发', () => {
     const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-perspective-post')!
     expect(item.scenes).toEqual(['POST_NEW', 'POST_QUOTE'])
