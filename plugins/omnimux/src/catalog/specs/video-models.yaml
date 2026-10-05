@@ -2294,3 +2294,55 @@ models:
       profileId: videoGenerate
       seam: videoGenerate
       notes: 仅离线替身/历史 stub，不是渠道真实生成
+
+  # #3167：本机 vids2api 通道（Google Vids 无头生成，docs.google.com/videos）。
+  # 与 gemini-3.8-flash-tts 同构：不写 routing（本机分支按 modelId 直通，不走云端网关）。
+  # op.listed 由加载期计算（research.verified ∧ implementation.ready），手写 listed 无效；
+  # 服务地址与凭据来自进程环境，未配置即响亮失败，绝不回退到其他模型。
+  - id: "google-vids-omni"
+    label: "Google Vids Omni"
+    family: "google"
+    badge: "本机"
+    subtitle: "Google Vids 无头生成 · 文生视频 4–12s"
+    operations:
+      - id: "text_to_video"
+        label: "文生视频"
+        research:
+          status: "verified"
+          docUrl: "docs/evidence/2026-10-06-model-google-vids-omni-text_to_video.md"
+          verifiedAt: "2026-10-06"
+          notes: "经中枢自身媒体入口真机最小生成通过（live，1280×720 h264 4.01s，2 419 225 字节）；时长字段以 seconds 送达上游并生效"
+        output:
+          type: "video"
+          allowedMimes:
+            - video/mp4
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 1
+            max: 1
+        parameters:
+          duration:
+            range:
+              min: 4
+              max: 12
+              step: 1
+            defaultValue: 10
+            unit: s
+        execution:
+          status: "live"
+          profileId: "videoGenerate"
+          seam: "videoGenerate"
+          notes: "本机 vids2api HTTP 通道（提交 /videos → 轮询 /videos/{id} → 取片 /videos/{id}/content）"
+    implementation:
+      status: "ready"
+      profileId: "videoGenerate"
+      seam: "videoGenerate"
+      notes: "按本机 vids2api 契约完成字段/路径/状态映射（Issue #3167）；时长字段必须发 seconds"
+    execution:
+      status: "live"
+      profileId: "videoGenerate"
+      seam: "videoGenerate"
+      notes: "本机服务显式配置后直通；服务未启动或未配置时返回结构化错误，不静默回退"

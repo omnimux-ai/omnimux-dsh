@@ -22,7 +22,8 @@ test('baseline repository contracts pass cross-plugin model alignment verificati
   // #2801: gemini-3.8-flash-tts joins the canvas audio whitelist
   // #3148: seedream-5-0-pro joins the canvas image whitelist
   // #3152: seedance-2-0-fast / seedance-2-0-mini join the canvas video whitelist
-  assert.equal(report.alignment.whitelistModelsChecked, 14);
+  // #3167: google-vids-omni joins the canvas video whitelist
+  assert.equal(report.alignment.whitelistModelsChecked, 15);
   assert.equal(report.alignment.defaultModelsChecked, 4);
   assert.ok(report.alignment.aspectRatiosChecked >= 8);
   // #1789: the capability seam behind audio transcription admits the two ASR contracts.

@@ -347,6 +347,14 @@
       ]
     },
     {
+      "id": "google-vids-omni",
+      "disposition": "canonical",
+      "reason": "本机 vids2api 服务驱动的 Google Vids 无头文生视频通道（显式选择才走本机服务）",
+      "evidence": [
+        "docs/evidence/2026-10-06-model-google-vids-omni-text_to_video.md"
+      ]
+    },
+    {
       "id": "doubao-seed-audio-1.0",
       "disposition": "alias",
       "target": "seed-audio-1.0",

@@ -126,7 +126,7 @@ test('nanobanana: legacy spellings normalize to the hyphen canonical — never d
 test('withdrawn models leave models[]; unlisted canonical/draft rows stay authoritative but out of the four lists', () => {
   const index = freshIndex();
   const dto = projectCatalog(index, loadDispositions(), loadCatalogDefaults());
-  assert.equal(dto.models.length, 44); // #2804 gemini-3.8-flash-tts + #2256 index-tts → 43
+  assert.equal(dto.models.length, 45); // #3167 google-vids-omni 上架 → 45（#2804 为 44）
   // #1751: the 12 withdrawn (disposition=unavailable) rows have no YAML block, so they
   // vanish from the authoritative list and from every derived bucket.
   for (const gone of [
@@ -166,12 +166,13 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'seedream-5-0-pro',
   ]);
   assert.deepEqual(dto.video.map((r) => r.id), [
+    'google-vids-omni',
     'minimax-h3',
     'seedance-2-0',
     'seedance-2-0-fast',
     'seedance-2-0-mini',
     'seedance-2-5',
-  ]); // #3152 seedance-2-0-fast/-mini 上架 +2
+  ]); // #3167 google-vids-omni 上架 +1
   assert.deepEqual(dto.audio.map((row) => row.id), ['gemini-3.8-flash-tts', 'indextts-2', 'seed-audio-1.0']); // #3063 indextts-2 声音克隆
   // Text bucket includes implementation-ready models without requiring live history.
   assert.deepEqual(dto.text.map((r) => r.id), [
@@ -243,7 +244,7 @@ test('projectChatRows: full text directory with brand/role/input derived from op
 test('projectDirectoryRows: media groups project every contracted model (listed or not)', () => {
   const index = freshIndex();
   assert.equal(projectDirectoryRows(index, 'image').length, 11);
-  assert.equal(projectDirectoryRows(index, 'video').length, 11);
+  assert.equal(projectDirectoryRows(index, 'video').length, 12); // #3167 google-vids-omni +1 → 12
   // #1789: seedasr-auc joins the audio management group as its own contracted model.
   assert.equal(projectDirectoryRows(index, 'audio').length, 8); // #2804 gemini-3.8-flash-tts + #2256 index-tts → 8
   // whisper-1 stays in the audio management directory but its output is text
@@ -293,5 +294,5 @@ test('visibleOps only surfaces listed ops', () => {
     visibleOps(seedance).map((op) => op.id),
     ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
   );
-  assert.equal(projectKindRows(index, 'video').length, 5); // #3152 seedance-2-0-fast/-mini 上架 +2 → 5
+  assert.equal(projectKindRows(index, 'video').length, 6); // #3167 google-vids-omni 上架 +1 → 6（#3152 为 5）
 });
