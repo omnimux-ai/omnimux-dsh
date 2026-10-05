@@ -1348,15 +1348,31 @@ export function App(): React.JSX.Element {
     if (!targetUrl || saveInspirationStatus === 'saving') return
     setSaveInspirationStatus('saving')
     const mediaSrc = mediaItem?.src || detectedMedia[0]?.src || pageScene?.heroImage || ''
+    // A captured post carries its own media, author and counters; the media the
+    // page happened to have sniffed is only the fallback for everything else.
+    const tweet = pageScene?.tweet
+    const tweetMedia = tweet?.mediaUrls ?? []
     const directItem = {
       title: (pageScene?.title || (pageScene?.author ? `@${pageScene.author}` : targetUrl)).slice(0, 120),
       type: (mediaItem?.type === 'video' || detectedMedia[0]?.type === 'video') ? 'video' as const : 'image' as const,
       source_platform: pageScene?.platform || 'twitter',
-      source_url: targetUrl,
-      cover_url: mediaSrc,
-      media_urls: mediaSrc ? [mediaSrc] : [],
-      content: pageScene?.title || '',
+      source_url: tweet?.url || targetUrl,
+      cover_url: tweet?.coverUrl || mediaSrc,
+      media_urls: tweetMedia.length > 0 ? tweetMedia : (mediaSrc ? [mediaSrc] : []),
+      content: tweet?.text || pageScene?.postText || pageScene?.title || '',
       tags: [pageScene?.platform ? `${pageScene.platform}` : '社交媒体', '灵感采集'],
+      // Saving is not analysing. The host turns its breakdown on unless told
+      // otherwise, so the choice is stated here rather than inherited.
+      auto_analyze: false,
+      ...(tweet === undefined ? {} : {
+        content_shape: tweet.shape,
+        author: tweet.author,
+        stats: tweet.stats,
+        posted_at: tweet.postedAt,
+        ...(tweet.quoted === undefined ? {} : { quoted: tweet.quoted }),
+        ...(tweet.poll === undefined ? {} : { poll: tweet.poll }),
+        ...(tweet.threadItems === undefined ? {} : { thread_items: tweet.threadItems }),
+      }),
     }
 
     let saved = false
@@ -1401,7 +1417,8 @@ export function App(): React.JSX.Element {
           let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: targetUrl, background: true }),
+            // Saving is not analysing; the host would otherwise run its breakdown.
+            body: JSON.stringify({ url: targetUrl, background: true, auto_analyze: false }),
             signal: AbortSignal.timeout(3500),
           }).catch(() => null)
 

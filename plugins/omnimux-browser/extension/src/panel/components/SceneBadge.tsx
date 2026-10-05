@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { TargetIcon, CloseIcon } from './icons.tsx'
+import type { TweetCapture } from '../../content/twitter-capture/types.ts'
 
 export interface PageSceneInfo {
   url: string
@@ -13,6 +14,8 @@ export interface PageSceneInfo {
   postText?: string
   /** Preview image the sensor lifted off the page; may be absent. */
   heroImage?: string
+  /** Structured capture of the post on screen; mirrors `PageSceneContext`. */
+  tweet?: TweetCapture
 }
 
 const PLATFORM_NAMES: Record<string, { zh: string; en: string }> = {

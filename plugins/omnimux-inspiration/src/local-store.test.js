@@ -624,3 +624,62 @@ describe('local store — read snapshots', () => {
     assert.equal(store.get(created.id).id, created.id)
   })
 })
+
+describe('local store — captured-post fields', () => {
+  let tmp
+  let paths
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'omnimux-store-capture-'))
+    paths = {
+      dir: tmp,
+      libraryFile: join(tmp, 'library.json'),
+      mediaDir: join(tmp, 'media'),
+      coversDir: join(tmp, 'media', 'covers'),
+      videosDir: join(tmp, 'media', 'videos'),
+      imagesDir: join(tmp, 'media', 'images'),
+    }
+  })
+
+  after(() => {
+    rmSync(tmp, { recursive: true, force: true })
+  })
+
+  it('keeps the structure a captured post carries', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({
+      title: '推文',
+      source_url: 'https://x.com/kai/status/1234567890',
+      content: '正文',
+      content_shape: 'quote',
+      quoted: { author: { name: 'Ada', handle: 'ada' }, text: 'Their words' },
+      thread_items: ['one', 'two'],
+      poll: { options: [{ label: 'A', pct: 60 }], votes: 12 },
+    })
+
+    assert.equal(created.content_shape, 'quote')
+    assert.equal(created.quoted.author.handle, 'ada')
+    assert.deepEqual(created.thread_items, ['one', 'two'])
+    assert.equal(created.poll.votes, 12)
+    // The read-back path has to carry them too, not only the write result.
+    assert.equal(store.get(created.id).content_shape, 'quote')
+  })
+
+  it('drops a key the whitelist does not name', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({
+      title: '推文',
+      source_url: 'https://x.com/kai/status/1',
+      not_a_stored_field: 'ignored',
+    })
+
+    assert.equal('not_a_stored_field' in created, false)
+  })
+
+  it('keeps auto_analyze false, so a save does not become an analysis', () => {
+    const store = createLocalStore({ paths })
+    const created = store.add({ title: '推文', source_url: 'https://x.com/kai/status/2', auto_analyze: false })
+
+    assert.equal(created.auto_analyze, false)
+  })
+})

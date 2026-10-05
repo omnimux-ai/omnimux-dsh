@@ -220,7 +220,8 @@ export async function requestInspirationSave(args: {
   const response = await postJson(
     fetchImpl,
     `${args.base}${IMPORT_URL_PATH}`,
-    { url: args.url },
+    // Saving is not analysing: the host runs its breakdown unless told not to.
+    { url: args.url, auto_analyze: false },
     args.timeoutMs ?? SHORTCUT_TIMEOUT_MS,
   )
   if (response === 'timeout') return { ok: false, code: 'timeout' }

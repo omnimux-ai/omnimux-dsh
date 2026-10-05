@@ -1,0 +1,140 @@
+{
+  "capturedAt": "2026-10-05T19:23:37.599Z",
+  "articleCount": 5,
+  "report": {
+    "href": "https://x.com/home",
+    "selectorHits": {
+      "tweetRoot": 5,
+      "focalTweet": 0,
+      "tweetText": 6,
+      "userName": 6,
+      "avatar": 0,
+      "tweetPhoto": 6,
+      "videoPlayer": 3,
+      "videoComponent": 3,
+      "quoteTweet": 0,
+      "attachments": 0,
+      "cardPoll": 0,
+      "cardPollChoice": 0,
+      "cardWrapper": 0,
+      "socialContext": 0,
+      "iconVerified": 10,
+      "like": 5,
+      "retweet": 5,
+      "reply": 5,
+      "analytics": 5
+    },
+    "articles": 5,
+    "nestedArticles": 0,
+    "firstImgIsAvatar": 0,
+    "captures": [
+      {
+        "shape": "photo",
+        "url": "https://x.com/RyossouVT/status/2107110515839553795",
+        "text": "AION2是神级游戏啊！！！",
+        "author": {
+          "name": "りょっそー",
+          "handle": "RyossouVT",
+          "avatar": "",
+          "verified": false
+        },
+        "postedAt": "2026-10-05T14:07:49.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/amplify_video_thumb/2107110332514852864/img/HjuhT_DOFaOK4rvV.jpg"
+        ],
+        "coverUrl": "https://pbs.twimg.com/amplify_video_thumb/2107110332514852864/img/HjuhT_DOFaOK4rvV.jpg",
+        "stats": {
+          "likes": 28661,
+          "comments": 311,
+          "views": 1701690
+        }
+      },
+      {
+        "shape": "photo",
+        "url": "https://x.com/liangzhu_AI/status/2107178068099858932",
+        "text": "卧槽，取下墨镜那儿就绷不住了。\n\n世界首富马斯克都转发了的视频，原作者是B站博主“王与也行”。\n\n这下火了，太有创意了。😂😂",
+        "author": {
+          "name": "良竹",
+          "handle": "liangzhu_AI",
+          "avatar": "",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T18:36:15.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/amplify_video_thumb/2107177968254472192/img/WNKHWxDIW7KId4Lc.jpg"
+        ],
+        "coverUrl": "https://pbs.twimg.com/amplify_video_thumb/2107177968254472192/img/WNKHWxDIW7KId4Lc.jpg",
+        "stats": {
+          "likes": 0,
+          "comments": 0,
+          "views": 70
+        }
+      },
+      {
+        "shape": "gallery",
+        "url": "https://x.com/jedeeai/status/2107128455192301965",
+        "text": "卧槽！！已经解决了！！\n还得是X，什么问题都有答案！\n\n感谢@Hsanli_x 提供的解决方案，请看\n\n①在已有AI Pro账号上开家庭组（需开Google One共享）  \n②弄一个小号加入家庭组  \n③用小号登入Antigravity就能正常使用Opus5.5和Sonnet5.5了\n\n亲测有效！",
+        "author": {
+          "name": "琳小航AI",
+          "handle": "jedeeai",
+          "avatar": "",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T15:19:06.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/media/HT4FkyoagAACOvP?format=png&name=900x900",
+          "https://pbs.twimg.com/media/HT3W0mkaYAA5vN5?format=png&name=240x240"
+        ],
+        "coverUrl": "https://pbs.twimg.com/media/HT4FkyoagAACOvP?format=png&name=900x900",
+        "stats": {
+          "likes": 7,
+          "comments": 8,
+          "views": 2807
+        }
+      },
+      {
+        "shape": "photo",
+        "url": "https://x.com/aiwarts/status/2107126881942385114",
+        "text": "超爆肝！今天把在几个月前我在影视飓风内部分享的AI工作流全公开！\n\n00:15 找到适合你的Skill\n09:28 把你的经验打包成Skill\n20:34 把多个Skills组合成工作流\n30:54 批量化定时化\n\n看完之后你甚至可以手搓一个本地批量视频剪辑Skill，还能做出文案、海报、视频、网页全链路的内容生产工作流！！",
+        "author": {
+          "name": "卡尔的AI沃茨",
+          "handle": "aiwarts",
+          "avatar": "",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T15:12:51.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/amplify_video_thumb/2107095830704553984/img/rHFCMRFnQqS_j2jd.jpg"
+        ],
+        "coverUrl": "https://pbs.twimg.com/amplify_video_thumb/2107095830704553984/img/rHFCMRFnQqS_j2jd.jpg",
+        "stats": {
+          "likes": 62,
+          "comments": 12,
+          "views": 3416
+        }
+      },
+      {
+        "shape": "photo",
+        "url": "https://x.com/ai_funss/status/2107154366277013882",
+        "text": "让 DeepSeek Harness 跑一个 Prompt\n\n跑了 43M Token，花了 2.18 元，缓存命中率高达 99.8%🤩🤩🤩\n\n这要是换个 Harness 和模型，估计就破产了🫠",
+        "author": {
+          "name": "AI Fun",
+          "handle": "ai_funss",
+          "avatar": "",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T17:02:04.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/media/HT4b8xPbIAAUr9R?format=jpg&name=medium"
+        ],
+        "coverUrl": "https://pbs.twimg.com/media/HT4b8xPbIAAUr9R?format=jpg&name=medium",
+        "stats": {
+          "likes": 12,
+          "comments": 3,
+          "views": 1655
+        }
+      }
+    ],
+    "failures": []
+  }
+}

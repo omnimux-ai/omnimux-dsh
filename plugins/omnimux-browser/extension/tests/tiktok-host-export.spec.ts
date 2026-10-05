@@ -126,7 +126,9 @@ describe('保存到灵感库', () => {
 
     expect(outcome).toEqual({ ok: true, code: 'saved' })
     expect(calls[0].url).toBe(`${BASE}/omnimux/inspiration/local/import-url`)
-    expect(calls[0].body).toEqual({ url: POST })
+    // The save states the choice: the host runs its AI breakdown unless the
+    // request turns it off, and saving a post is not asking for an analysis.
+    expect(calls[0].body).toEqual({ url: POST, auto_analyze: false })
   })
 
   it('库里已经有的素材按“已经在库里”回答，不当成失败', async () => {

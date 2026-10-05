@@ -1,7 +1,13 @@
 import { toHoursAlive, classifyTier, computeExposure } from './algorithm.ts'
 import type { TweetVelocityData } from './types.ts'
 
-function parseMetricValue(raw: string): number {
+/**
+ * Parses the abbreviated counters X renders (`1.2K`, `3.4万`) into a number.
+ *
+ * Exported so the tweet capture reuses one parser rather than growing a second
+ * copy of the unit table; the two would drift the moment X adds a suffix.
+ */
+export function parseMetricValue(raw: string): number {
   const cleaned = raw.replace(/,/g, '').trim()
   const match = cleaned.match(/^([\d.]+)\s*([kKmMbB万]?)$/)
   if (!match) return 0
