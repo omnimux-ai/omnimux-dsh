@@ -17,7 +17,7 @@ const index = getContractIndex()
 const profiles = loadAdapterProfiles()
 
 describe('SubmitGuard listed profile coverage (#468)', () => {
-  it('strict listedOperations is exactly 31 and every key has a ready profile payload contract', () => {
+  it('strict listedOperations is exactly 37 and every key has a ready profile payload contract', () => {
     const report = verifyContracts({ strict: true })
     assert.equal(report.ok, true)
     assert.equal(report.listedOperations.length, 37) // #3152 seedance-2-0-fast/-mini 三操作真机验证后上架 +6 → 37（#3148 为 31）
