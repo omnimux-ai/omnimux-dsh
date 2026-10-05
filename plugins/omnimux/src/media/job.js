@@ -173,6 +173,7 @@ function sleepWithSignal(ms, signal) {
  *   retryDelayMs?: number,
  *   requestTimeoutMs?: number,
  *   sleep?: (ms: number) => Promise<void>,
+ *   credentialOrigin?: string,
  * }} options
  */
 export async function downloadMediaFile(options) {
@@ -193,14 +194,23 @@ export async function downloadMediaFile(options) {
     /** @type {Record<string, string>} */
     const headers = {}
     let isOfficialDownload = false
+    // A local provider authenticates its own artifact download (Issue #3167).
+    // The key is attached only when the caller names the exact origin it is
+    // willing to send it to, so a bare loopback URL never inherits a credential
+    // merely by being configured as a download source.
+    let matchesCredentialOrigin = false
     try {
       const target = new URL(url)
       isOfficialDownload = target.protocol === 'https:' && !target.port && !target.username && !target.password
         && (target.hostname === 'api.omnimux.ai' || target.hostname === 'omnimux.ai')
+      matchesCredentialOrigin = Boolean(options.credentialOrigin)
+        && target.origin === String(options.credentialOrigin).replace(/\/+$/, '')
     } catch {
       // Relative or malformed URLs have no verified official credential recipient.
     }
     if (options.apiKey?.trim() && (!options.providerId || options.providerId === 'omnimux') && isOfficialDownload) {
+      headers.authorization = `Bearer ${options.apiKey.trim()}`
+    } else if (options.apiKey?.trim() && matchesCredentialOrigin) {
       headers.authorization = `Bearer ${options.apiKey.trim()}`
     }
 

@@ -1,0 +1,55 @@
+{
+  "issue": 3167,
+  "kind": "live",
+  "at": "2026-10-05T18:55:10.701Z",
+  "hubEntry": "executeOmnimuxMedia(\"video\", { model: \"google-vids-omni\", operation: \"text_to_video\" })",
+  "result": {
+    "mode": "live",
+    "model": "google-vids-omni",
+    "taskId": "7a336f975b1e4ad69d2e425f",
+    "url": "http://127.0.0.1:8931/v1/videos/7a336f975b1e4ad69d2e425f/content",
+    "dest": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-vids2api-channel/.tmp/vids2api-3167/google-vids-omni-text_to_video.mp4"
+  },
+  "artifact": {
+    "dest": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-vids2api-channel/.tmp/vids2api-3167/google-vids-omni-text_to_video.mp4",
+    "bytes": 2419225,
+    "sha256": "f1bc597b81cd6786cf7263c302f830bef15fdd3b85ae04669d858dd91832d769"
+  },
+  "elapsedMs": 37630,
+  "probe": {
+    "format": {
+      "filename": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-vids2api-channel/.tmp/vids2api-3167/google-vids-omni-text_to_video.mp4",
+      "nb_streams": 2,
+      "nb_programs": 0,
+      "nb_stream_groups": 0,
+      "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+      "format_long_name": "QuickTime / MOV",
+      "start_time": "0.000000",
+      "duration": "4.010000",
+      "size": "2419225",
+      "bit_rate": "4826384",
+      "probe_score": 100,
+      "tags": {
+        "major_brand": "isom",
+        "minor_version": "512",
+        "compatible_brands": "isomiso2avc1mp41",
+        "encoder": "Google"
+      }
+    },
+    "streams": [
+      {
+        "type": "video",
+        "codec": "h264",
+        "width": 1280,
+        "height": 720,
+        "r_frame_rate": "24/1"
+      },
+      {
+        "type": "audio",
+        "codec": "aac",
+        "r_frame_rate": "0/0"
+      }
+    ]
+  },
+  "note": "Redacted copy of the raw run record (.agent-reports/vids2api-hub-3167/04-live-verify.json); contains no credentials."
+}

@@ -226,6 +226,16 @@
       "note": "2026-09-29 #2801：本地 CLI 驱动的 Gemini 3.8 Flash TTS（基于 opencli / ego-browser）。"
     },
     {
+      "productId": "google-vids-omni",
+      "kind": "video",
+      "priority": "P1",
+      "gatewayIds": [
+        "google-vids-omni"
+      ],
+      "requiredInAuto": true,
+      "note": "2026-10-06 #3167：本机 vids2api 服务驱动的 Google Vids 无头文生视频通道（显式选择；未配置即响亮失败）。"
+    },
+    {
       "productId": "suno",
       "kind": "audio",
       "priority": "P1",

@@ -12,7 +12,7 @@ import { loadDispositions } from './dispositions.js';
 test('collectRuntimeModelIds returns the universe (contracts + wire aliases)', () => {
   resetContractCache();
   const ids = collectRuntimeModelIds();
-  assert.equal(ids.length, 70, `expected 69 runtime ids, got ${ids.length}`); // #2804 +1 → 69
+  assert.equal(ids.length, 71, `expected 70 runtime ids, got ${ids.length}`); // #3167 google-vids-omni +1 → 71
   assert.equal(ids.length, new Set(ids).size);
   assert.deepEqual(ids, [...ids].sort((a, b) => a.localeCompare(b)));
   assert.ok(ids.includes('whisper-1'));
@@ -97,7 +97,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
     'wan-3.0-ref',
     'wan3.0-video',
   ]);
-  assert.equal(cov.contractIds.length, 44); // #2804 gemini-3.8-flash-tts 注册后 42→43
+  assert.equal(cov.contractIds.length, 45); // #3167 google-vids-omni 注册后 44→45
   assert.ok(cov.contractIds.includes('indextts-2'));
   assert.ok(cov.contractIds.includes('whisper-1'));
   assert.ok(cov.contractIds.includes('gpt-image-2.5-flare'));
@@ -107,7 +107,8 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 37, 'H2 lists evidence-backed ops'); // #3152 seedance-2-0-fast/-mini 三操作真机验证后上架 +6 → 37（#3148 为 31）
+  assert.equal(cov.listedOperationCount, 38, 'H2 lists evidence-backed ops'); // #3167 google-vids-omni text_to_video 上架 +1 → 38（#3152 为 37）
+  assert.ok(cov.listedOperations.includes('google-vids-omni#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-0#text_to_video'));
   assert.ok(cov.listedOperations.includes('minimax-h3#text_to_video'));
@@ -144,7 +145,7 @@ test('negative: canonical-disposition missing contract is a strict coverage erro
   assert.ok(auditIssues.some((i) => i.code === 'coverage_missing' && i.level === 'warning'));
 });
 
-test('verifyContracts: audit ok; strict ok once 81 dispositions resolve', () => {
+test('verifyContracts: audit ok; strict ok once 83 dispositions resolve', () => {
   const audit = verifyContracts({ strict: false });
   assert.equal(audit.ok, true, JSON.stringify(audit.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(audit.exitCode, 0);
@@ -154,10 +155,10 @@ test('verifyContracts: audit ok; strict ok once 81 dispositions resolve', () => 
   assert.equal(strict.ok, true, JSON.stringify(strict.issues.filter((i) => i.level === 'error'), null, 2));
   assert.equal(strict.exitCode, 0);
   assert.equal(strict.admission.errorCount, 0, 'strict must not invent admission errors');
-  assert.equal(strict.dispositions.total, 82);
+  assert.equal(strict.dispositions.total, 83); // #3167 google-vids-omni 上架 → 83
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 37); // #3152 seedance-2-0-fast/-mini 三操作真机验证后上架 +6 → 37（#3148 为 31）
+  assert.equal(strict.listedOperations.length, 38); // #3167 google-vids-omni text_to_video 上架 +1 → 38（#3152 为 37）
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 12);
   for (const id of strict.dispositions.forbiddenListed) {

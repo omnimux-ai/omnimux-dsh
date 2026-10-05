@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 44)
+    assert.equal(catalog.models.length, 45) // #3167 google-vids-omni 上架 → 45
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical')
@@ -82,12 +82,13 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     ])
     assert.equal(catalog.image.some((row) => row.id === 'grok-imagine-image-2-0'), false)
     assert.deepEqual(catalog.video.map((row) => row.id), [
+      'google-vids-omni',
       'minimax-h3',
       'seedance-2-0',
       'seedance-2-0-fast',
       'seedance-2-0-mini',
       'seedance-2-5',
-    ])
+    ]) // #3167 google-vids-omni 上架 +1
     assert.deepEqual(catalog.audio.map((row) => row.id), [
       'gemini-3.8-flash-tts',
       'indextts-2',
@@ -270,7 +271,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 11)
-    assert.equal(VIDEO_MODEL_SPECS.length, 11)
+    assert.equal(VIDEO_MODEL_SPECS.length, 12) // #3167 google-vids-omni joins the video directory
     // #1789: seedasr-auc joins the audio directory as a contracted model (ASR, text output).
     // #2256: index-tts joins the audio directory (voice clone).
     // #2801: gemini-3.8-flash-tts joins the audio directory (TTS).

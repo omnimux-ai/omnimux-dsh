@@ -42,7 +42,7 @@ test('dispositions.json: every row unique, all kinds valid, reasons present', ()
   const doc = loadDispositions();
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
-  assert.equal(rows.length, 82, `expected 81 disposition rows, got ${rows.length}`); // #2804 gemini-3.8-flash-tts 注册后 80→81
+  assert.equal(rows.length, 83, `expected 83 disposition rows, got ${rows.length}`); // #3167 google-vids-omni 上架 → 83
   const ids = new Set(rows.map((r) => r.id));
   assert.equal(ids.size, rows.length);
   for (const row of rows) {
@@ -55,7 +55,7 @@ test('disposition rows mirror the runtime universe exactly (no missing, no ghost
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
-  assert.equal(runtimeIds.length, 70); // #2804 gemini-3.8-flash-tts +1 → 69
+  assert.equal(runtimeIds.length, 71); // #3167 google-vids-omni +1 → 71
   const issues = validateDispositions(doc, { index, runtimeIds, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
 });
