@@ -168,5 +168,24 @@ export function ensureRivalPostMedia(id, postId, kind = 'cover') {
   )()
 }
 
+/**
+ * Re-enqueue one account's refresh (E-account-refresh, existing endpoint).
+ *
+ * Used by #3112's failure retry only: the Host decides whether the queue
+ * accepts it, and a re-enqueued first fetch costs exactly the same budget the
+ * import already pays — the client never collects anything itself.
+ * @param {string} id
+ * @param {{ manual?: boolean }} [opts]
+ */
+export function refreshRivalAccount(id, opts = {}) {
+  return guarded(
+    () => request(`/${encodeURIComponent(id)}/refresh`, {
+      method: 'POST',
+      body: { manual: opts.manual === true },
+    }),
+    'inspiration-rival',
+  )()
+}
+
 /** Path of the account list, exported so the client store and tests agree. */
 export const RIVAL_API_PREFIX = PREFIX

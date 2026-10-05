@@ -20,6 +20,7 @@ import { getLocalInspiration } from './api.js'
 import { convertRivalPost } from './rival-api.js'
 import { addRivalPostToSession } from './rival-add-to-chat.js'
 import { oneClickReplicate } from './replicate-to-chat.js'
+import { feedEmptyKind } from './rival-feed-empty.js'
 import { toRivalPost } from './rival-filter.js'
 import { injectRivalStyles } from './rival-styles.js'
 import { injectRivalTokens } from './rival-tokens.js'
@@ -42,23 +43,6 @@ export function buildRivalPlatformOptions(t) {
 }
 
 /**
- * Why the grid has nothing in it.
- *
- * Four distinct answers, because「no works」is not one situation: there may be no
- * monitored account at all, the accounts may have nothing collected yet, the
- * filters may have excluded everything, or the first request may still be in
- * flight. Only the last one may show a skeleton.
- * @param {Record<string, any>} feed
- * @returns {'loading' | 'no-accounts' | 'filtered' | 'no-posts'}
- */
-export function feedEmptyKind(feed) {
-  if (feed.loading) return 'loading'
-  if (feed.accounts.length === 0) return 'no-accounts'
-  if (feed.emptySelection || feed.error || feed.query || feed.platform) return 'filtered'
-  return 'no-posts'
-}
-
-/**
  * @param {{
  *   t: (key: string) => string,
  *   active?: boolean,
@@ -67,11 +51,12 @@ export function feedEmptyKind(feed) {
  *   feed: Record<string, any>,
  *   onImported?: (item?: Record<string, any>) => void,
  *   onAccountImported?: (account?: Record<string, any>) => void,
+ *   onBrowseTrend?: () => void,
  * }} props
  */
 export function RivalAccountsPanel(props) {
   const {
-    t, active = true, feed, onImported, onAccountImported,
+    t, active = true, feed, onImported, onAccountImported, onBrowseTrend,
   } = props
   const [importOpen, setImportOpen] = useState(false)
   const [detailRow, setDetailRow] = useState(null)
@@ -230,8 +215,11 @@ export function RivalAccountsPanel(props) {
         loading={feed.loading}
         loadingMore={feed.loadingMore}
         emptyKind={emptyKind}
+        fetchPhase={feed.fetchPhase}
         onResetFilters={feed.resetAccounts}
         onImport={() => setImportOpen(true)}
+        onRetryFetch={feed.retryFetch}
+        onBrowseTrend={onBrowseTrend}
         onDetail={handleDetail}
         onReplicate={handleReplicate}
         onDeconstruct={handleDeconstruct}

@@ -29,9 +29,12 @@ const SKELETON_COUNT = 10
  *   cards: Array<Record<string, any>>,
  *   loading: boolean,
  *   loadingMore: boolean,
- *   emptyKind: 'no-accounts' | 'no-posts' | 'filtered' | 'loading',
+ *   emptyKind: 'no-accounts' | 'no-posts' | 'filtered' | 'loading' | 'fetching' | 'fetch-failed',
+ *   fetchPhase?: null | { kind: 'stopped'|'cooling'|'failed'|'timeout', account?: any, minutes?: number },
  *   onResetFilters: () => void,
  *   onImport: () => void,
+ *   onRetryFetch?: () => void,
+ *   onBrowseTrend?: () => void,
  *   onDetail: (row: Record<string, any>) => void,
  *   onReplicate: (row: Record<string, any>) => void,
  *   onMarkDone?: (row: Record<string, any>) => void,
@@ -41,7 +44,8 @@ const SKELETON_COUNT = 10
  */
 export function RivalFeedGrid(props) {
   const {
-    t, cards, loading, loadingMore, emptyKind, onResetFilters, onImport,
+    t, cards, loading, loadingMore, emptyKind, fetchPhase, onResetFilters, onImport,
+    onRetryFetch, onBrowseTrend,
     onDetail, onReplicate, onMarkDone, onDeconstruct, replicateBusy,
   } = props
 
@@ -86,11 +90,78 @@ export function RivalFeedGrid(props) {
           icon={EMPTY_ICON_USER}
           title={t('rivalFeed.empty.noAccounts')}
           description={t('rivalFeed.empty.noAccountsHint')}
-          action={
-            <Button variant="primary" size="sm" onClick={onImport}>
-              {t('rivalAccounts.import.btn')}
-            </Button>
-          }
+          action={(
+            <div className="omnimux-rival-empty-actions">
+              <Button variant="primary" size="sm" onClick={onImport}>
+                {t('rivalAccounts.import.btn')}
+              </Button>
+              {onBrowseTrend ? (
+                <Button variant="ghost" size="sm" onClick={onBrowseTrend}>
+                  {t('rivalFeed.empty.browseTrend')}
+                </Button>
+              ) : null}
+            </div>
+          )}
+        />
+      )
+    }
+    if (emptyKind === 'fetching') {
+      return (
+        <EmptyState
+          icon={EMPTY_ICON_WORKS}
+          title={t('rivalFeed.empty.fetchingTitle')}
+          description={t('rivalFeed.empty.fetchingDesc').replace('{n}', '1')}
+          action={(
+            <div className="omnimux-rival-empty-actions">
+              <div
+                className="omnimux-rival-fetch-progress"
+                role="progressbar"
+                aria-label={t('rivalFeed.empty.fetchingTitle')}
+              >
+                <i />
+              </div>
+              {onBrowseTrend ? (
+                <Button variant="ghost" size="sm" onClick={onBrowseTrend}>
+                  {t('rivalFeed.empty.browseTrend')}
+                </Button>
+              ) : null}
+            </div>
+          )}
+        />
+      )
+    }
+    if (emptyKind === 'fetch-failed') {
+      const phase = fetchPhase || { kind: 'failed' }
+      const stoppedFailures = phase.kind === 'stopped'
+        ? Number(phase.account?.consecutive_failures)
+        : null
+      const title = phase.kind === 'stopped'
+        ? t('rivalFeed.empty.failedStopped')
+        : (phase.kind === 'cooling'
+          ? t('rivalFeed.empty.failedCooling').replace('{n}', String(phase.minutes ?? 1))
+          : t('rivalAccounts.import.error'))
+      const reason = Number.isFinite(stoppedFailures) && stoppedFailures > 0
+        ? t('rivalFeed.empty.failedStoppedReason').replace('{n}', String(stoppedFailures))
+        : null
+      return (
+        <EmptyState
+          icon={EMPTY_ICON_WORKS}
+          title={title}
+          description={reason || undefined}
+          action={(
+            <div className="omnimux-rival-empty-actions">
+              {onRetryFetch ? (
+                <Button variant="primary" size="sm" onClick={onRetryFetch}>
+                  {t('rivalFeed.empty.failedRetry')}
+                </Button>
+              ) : null}
+              {onBrowseTrend ? (
+                <Button variant="ghost" size="sm" onClick={onBrowseTrend}>
+                  {t('rivalFeed.empty.browseTrend')}
+                </Button>
+              ) : null}
+            </div>
+          )}
         />
       )
     }

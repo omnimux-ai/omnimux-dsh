@@ -469,6 +469,7 @@ export function InspirationSection({ t, active }) {
             handleContentImported(item)
           }}
           onAccountImported={handleAccountImported}
+          onBrowseTrend={() => setTab('public')}
         />
       ) : (
         <>
