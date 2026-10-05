@@ -56,6 +56,8 @@ Agent 遇到密钥弹窗，先核对运行模式与本任务入口；普通界�
 
 应用级验收入口：在任务工作树根目录执行 `pnpm verify:app`（等价于 `node scripts/worktree-app-qa.mjs`），一条命令即完成起完整应用、同源登录、真实浏览器验收、截图与结构化报告、自清理；root 由脚本自身位置推导，只接受 `<repo>/.worktrees/<task>` 直接子级，其余路径以可读原因拒绝。证据落 `<root>/.workbuddy/evidence/app-qa/<runId>/`（PNG + 明细报告）与 `<root>/docs/evidence/worktree-app-qa-report.json`。它与 Stage 夹具运行器分工不同：本入口评完整应用本体，两者证据不得互相冒充。
 
+任务功能旅程（journey）：任务用 `--journey <路径>` 把自己的验收路径注入同一入口（`pnpm verify:app -- --journey .workbuddy/qa-journeys/<任务>.mjs`）。journey 是工作树内的 `.mjs`/`.js` 模块，默认导出 `async ({send, sleep, evidenceDir, origin, io}) => { assertions: [{name, pass, detail?}] }`；在保底断言（应用就绪、空白会话可达）通过后执行，断言并入总判定，任一 `pass:false` 或模块抛错即整体 FAIL。界面类任务的验收标准 = `ui` 模式影子实例 + 任务 journey 的功能路径截图与断言；`live` 模式（`pnpm verify:app:live`，真实凭据读 Dev 凭据库）做图片/音频等真实任务验证，属可选加强；视频生成的 `live` 真实验证恒需任务级特批。
+
 `pnpm test:worktree-web` 的现有 Stage 分支是模拟宿主夹具，其中包含占位内容与补入口逻辑；它只可提供其明确覆盖的局部证据，不得作为完整应用、首启或任务插件装配的验收通过。完整应用启动失败不得自动退回该夹具并报告成功。
 
 ## 浏览器与共享探针
@@ -188,6 +190,6 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 ## 评审与验收结论
 
-实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。拿不到**隔离 worktree Web 验证证据**不得宣布交付完成；开发版真机验收归人工，不阻塞 Agent 交付。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
+实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。拿不到**隔离 worktree Web 验证证据**不得宣布交付完成。界面类任务以 `verify:app --journey` 在 `ui` 模式影子实例里的功能路径证据为验收标准；`live` 模式可加强验证图片/音频真实任务，视频生成真实验证需任务级特批。Dev 45120 是单例共享实例：Agent 不重启、不占用、不等待，仅在物化后冒烟或排障时只读使用。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
 
 `qa:pass`、合入方式与 R0–R3 权限统一遵循 [plugin-git-pr](plugin-git-pr.md)。

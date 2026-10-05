@@ -1,16 +1,16 @@
 {
-  "runId": "b45819ee-4547-43db-9209-3887fabb98ea",
+  "runId": "295ffd04-df70-4638-b694-ffdf854a4a75",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/viewer-failed-card-resume",
-  "origin": "http://127.0.0.1:59052",
-  "appPort": 59052,
-  "cdpPort": 59061,
-  "startedAt": "2026-10-03T13:04:05.978Z",
-  "completedAt": "2026-10-03T13:04:18.315Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090",
+  "origin": "http://127.0.0.1:63138",
+  "appPort": 63138,
+  "cdpPort": 63357,
+  "startedAt": "2026-10-05T04:08:21.112Z",
+  "completedAt": "2026-10-05T04:08:36.626Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:59052",
+    "origin": "http://127.0.0.1:63138",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "taskPluginsCount": 21,
@@ -35,19 +35,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:59052",
+      "origin": "http://127.0.0.1:63138",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-yjyXAZmik_UeUGC5R4gF5Si7PTMks9NvsUV9UrssWIw"
+      "cookieName": "dsh-auth-OZtr--bAIKU26ZFhSZ1XJYAwGMujWDUWEXnItT5PXUY"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 59061
+      "port": 63357
     },
     {
       "name": "auth-cookie-applied",
@@ -57,7 +57,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 119,
+        "visibleCount": 10,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -66,7 +66,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 112
+        "bodyTextLength": 24
       }
     },
     {
@@ -77,7 +77,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 119
+      "visibleCount": 10
     },
     {
       "name": "runtime-modal-bypassed",
@@ -86,7 +86,7 @@
     {
       "name": "blank-session-guide-visible",
       "pass": true,
-      "clickedNewSession": true
+      "clickedNewSession": false
     },
     {
       "name": "explore-section-visible",
@@ -106,28 +106,47 @@
       "usedWorkbenchFallback": true
     },
     {
+      "name": "journey:nav-assets-entry",
+      "pass": true,
+      "detail": "library entry clicked"
+    },
+    {
+      "name": "journey:assets-view-visible",
+      "pass": true,
+      "detail": {
+        "hubPanel": true,
+        "assetCards": 1,
+        "bodyLen": 3256
+      }
+    },
+    {
+      "name": "journey:journey-screenshot",
+      "pass": true,
+      "detail": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090/.workbuddy/evidence/app-qa/295ffd04-df70-4638-b694-ffdf854a4a75/journey-assets.png (220596B)"
+    },
+    {
       "name": "screenshot-png-verified",
       "pass": true,
       "dimensions": {
         "width": 1280,
         "height": 713
       },
-      "bytes": 107880
+      "bytes": 220596
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/viewer-failed-card-resume/.workbuddy/evidence/app-qa/b45819ee-4547-43db-9209-3887fabb98ea/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090/.workbuddy/evidence/app-qa/295ffd04-df70-4638-b694-ffdf854a4a75/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 107880
+    "bytes": 220596
   },
   "errors": [],
   "cleanup": {
     "cleaned": true
   },
   "hubPath": {
-    "guideVisibleBefore": false,
-    "clickedNewSession": true,
+    "guideVisibleBefore": true,
+    "clickedNewSession": false,
     "exploreVisible": true,
     "exploreCardCount": 40,
     "assetHubOpened": true

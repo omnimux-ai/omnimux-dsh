@@ -14,7 +14,7 @@ import * as fs from 'node:fs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startTestEnvironment, diagnoseWorktreeRoot } from './test-env-bootstrap.mjs';
 import { findChromePath, assertPng } from './worktree-web-qa.mjs';
 
@@ -448,8 +448,46 @@ export async function assertLiveImageGeneration({
   return { assertions, detail };
 }
 
+/**
+ * 解析任务功能旅程（journey）路径：只允许工作树内的 .mjs/.js 文件，拒绝越界。
+ * @returns {{ok:true, path:string}|{ok:false, reason:string}}
+ */
+export function resolveJourneyPath(candidate, root) {
+  if (typeof candidate !== 'string' || !candidate.trim()) return { ok: false, reason: 'journey-path-empty' };
+  const abs = resolve(root, candidate);
+  const rootAbs = resolve(root);
+  if (abs !== rootAbs && !abs.startsWith(rootAbs + sep)) return { ok: false, reason: 'journey-path-outside-worktree' };
+  if (!abs.endsWith('.mjs') && !abs.endsWith('.js')) return { ok: false, reason: 'journey-path-not-js' };
+  return { ok: true, path: abs };
+}
+
+/**
+ * 执行任务自定义功能旅程：模块默认导出 async ({send, sleep, evidenceDir, origin, io}) => {assertions:[...]}。
+ * 断言缺 pass:true 或模块抛错都算 FAIL——journey 异常绝不静默 PASS。
+ */
+export async function runJourney(journeyPath, { send, sleep, evidenceDir, origin, io = fs }) {
+  let journey;
+  try {
+    const module = await import(pathToFileURL(journeyPath).href);
+    journey = module.default;
+  } catch (error) {
+    return [{ name: 'journey-load', pass: false, detail: error?.message ?? String(error) }];
+  }
+  if (typeof journey !== 'function') {
+    return [{ name: 'journey-export-shape', pass: false, detail: 'journey 模块必须默认导出 async 函数' }];
+  }
+  try {
+    const result = await journey({ send, sleep, evidenceDir, origin, io });
+    const assertions = Array.isArray(result?.assertions) ? result.assertions : null;
+    if (!assertions) return [{ name: 'journey-result-shape', pass: false, detail: 'journey 必须返回 { assertions: [...] }' }];
+    return assertions.map(a => ({ name: `journey:${a?.name ?? 'unnamed'}`, pass: a?.pass === true, detail: a?.detail }));
+  } catch (error) {
+    return [{ name: 'journey-error', pass: false, detail: error?.message ?? String(error) }];
+  }
+}
+
 /** 真实无头 Chrome 驱动：动态 CDP 端口、同源 cookie 注入、正几何断言、PNG 取证。 */
-async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', io = fs, chromePath = findChromePath() }) {
+async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', journey = null, io = fs, chromePath = findChromePath() }) {
   let chrome; let socket;
   const assertions = [];
   const cdpPort = { value: null };
@@ -542,6 +580,12 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       liveMedia = liveRes.detail;
     }
 
+    // 任务自定义功能旅程：保底断言通过后执行，断言并入总判定。
+    if (journey) {
+      const journeyAssertions = await runJourney(journey, { send, sleep, evidenceDir, origin, io });
+      assertions.push(...journeyAssertions);
+    }
+
     const captured = await send('Page.captureScreenshot', { format: 'png' });
     const png = Buffer.from(captured.data, 'base64');
     assertPng(png);
@@ -584,7 +628,18 @@ export function createAppQaRunner(deps = {}) {
   const now = deps.now ?? (() => new Date());
   const uuid = deps.uuid ?? randomUUID;
 
-  return async function runAppQa({ root, repo = repositoryRoot, mode = 'ui' } = {}) {
+  return async function runAppQa({ root, repo = repositoryRoot, mode = 'ui', journey = null } = {}) {
+    // journey 参数先校验：路径不合法时即使环境本身不可用也必须报「journey 路径错」而非混淆的根因。
+    if (journey !== null) {
+      const jr = resolveJourneyPath(journey, root);
+      if (!jr.ok) {
+        const error = new Error(jr.reason);
+        error.code = 'TEST_APP_QA_JOURNEY_PATH';
+        error.hint = 'journey 必须是工作树内的 .mjs/.js 文件路径，例如 .workbuddy/qa-journeys/<任务>.mjs';
+        throw error;
+      }
+      journey = jr.path;
+    }
     const resolved = resolveWorktreeRoot(root, io, repo);
     if (!resolved.ok) {
       const error = new Error(resolved.code);
@@ -625,6 +680,7 @@ export function createAppQaRunner(deps = {}) {
         evidenceDir,
         seededWorkspace: env.summary?.seededWorkspace,
         mode,
+        journey,
         io,
       });
       report.cdpPort = browser.cdpPort;
@@ -653,10 +709,13 @@ export function createAppQaRunner(deps = {}) {
 export const runWorktreeAppQa = createAppQaRunner();
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const modeArg = process.argv.slice(2).find(a => a.startsWith('--mode='))?.split('=')[1]
-    || (process.argv.includes('--live') ? 'live' : 'ui');
+  const argv = process.argv.slice(2);
+  const modeArg = argv.find(a => a.startsWith('--mode='))?.split('=')[1]
+    || (argv.includes('--live') ? 'live' : 'ui');
+  const journeyArg = argv.find(a => a.startsWith('--journey='))?.split('=')[1]
+    ?? (argv.includes('--journey') ? argv[argv.indexOf('--journey') + 1] : null);
   try {
-    const report = await runWorktreeAppQa({ root: sourceRoot, mode: modeArg });
+    const report = await runWorktreeAppQa({ root: sourceRoot, mode: modeArg, journey: journeyArg });
     const failed = report.assertions.filter(assertion => !assertion.pass).map(assertion => assertion.name);
     if (report.pass) {
       console.log(`✅ 应用级 Web 验收通过（mode=${report.mode}，${report.assertions.length} 项断言，端口 ${report.appPort}，CDP ${report.cdpPort}）`);
