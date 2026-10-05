@@ -563,6 +563,7 @@ export function createTestEnvironmentStarter(deps = {}) {
                 // 同上：物化或构建失败会让这个插件在真机里不可见，必须留下可见的痕迹。
                 process.stderr.write(`[test-env] 插件物化失败 ${pkg}：${error?.message ?? error}\n`)
               }
+            }
           } catch {}
         }
       } catch {}

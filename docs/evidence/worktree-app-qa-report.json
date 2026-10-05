@@ -1,16 +1,16 @@
 {
-  "runId": "9e914839-1d21-4698-975d-477785a30cf3",
+  "runId": "8e5c8e59-496e-434d-9b02-5dceb0603386",
   "mode": "ui",
   "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176",
-  "origin": "http://127.0.0.1:52802",
-  "appPort": 52802,
-  "cdpPort": 52804,
-  "startedAt": "2026-10-05T20:39:27.608Z",
-  "completedAt": "2026-10-05T20:39:41.630Z",
+  "origin": "http://127.0.0.1:59884",
+  "appPort": 59884,
+  "cdpPort": 59909,
+  "startedAt": "2026-10-05T21:04:04.234Z",
+  "completedAt": "2026-10-05T21:04:19.971Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:52802",
+    "origin": "http://127.0.0.1:59884",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "taskPluginsCount": 22,
@@ -35,19 +35,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:52802",
+      "origin": "http://127.0.0.1:59884",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-yzdJagQEqE7gDuxmiDRi0vPE_hEaUUuDudrhSIUAwiw"
+      "cookieName": "dsh-auth-OOS14gOayN03OXCuAukgw2pC3ycXJZtKcfgm6gipCTE"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 52804
+      "port": 59909
     },
     {
       "name": "auth-cookie-applied",
@@ -57,7 +57,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 130,
+        "visibleCount": 136,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -66,7 +66,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 68
+        "bodyTextLength": 76
       }
     },
     {
@@ -77,7 +77,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 130
+      "visibleCount": 136
     },
     {
       "name": "runtime-modal-bypassed",
@@ -163,7 +163,7 @@
     {
       "name": "journey:preset-preview-artwork-decoded",
       "pass": true,
-      "detail": "预览图 35 张，解码成功 32，裂图 0，未完成 3"
+      "detail": "预览图 35 张，解码成功 35，裂图 0，未完成 0"
     },
     {
       "name": "journey:preset-preview-trigger-clickable",
@@ -207,14 +207,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 89727
+      "bytes": 117815
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.workbuddy/evidence/app-qa/9e914839-1d21-4698-975d-477785a30cf3/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.workbuddy/evidence/app-qa/8e5c8e59-496e-434d-9b02-5dceb0603386/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 89727
+    "bytes": 117815
   },
   "errors": [],
   "cleanup": {

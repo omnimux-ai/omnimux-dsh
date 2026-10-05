@@ -58,7 +58,7 @@
     {
       "name": "preset-preview-artwork-decoded",
       "pass": true,
-      "detail": "预览图 35 张，解码成功 32，裂图 0，未完成 3"
+      "detail": "预览图 35 张，解码成功 35，裂图 0，未完成 0"
     },
     {
       "name": "preset-preview-trigger-clickable",
@@ -99,19 +99,19 @@
   "shots": [
     {
       "name": "01-avatar-stage",
-      "bytes": 109014
+      "bytes": 67538
     },
     {
       "name": "02-avatar-explore",
-      "bytes": 210444
+      "bytes": 251463
     },
     {
       "name": "03-avatar-preset-dialog",
-      "bytes": 324791
+      "bytes": 208351
     },
     {
       "name": "04-avatar-history",
-      "bytes": 89727
+      "bytes": 117815
     }
   ]
 }
