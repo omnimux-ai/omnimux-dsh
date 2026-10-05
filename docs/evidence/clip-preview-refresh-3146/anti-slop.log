@@ -1,0 +1,11 @@
+✔ Anti-Slop Gate 1: 客户端代码严禁声明退役/隐藏预设黑名单字典 (No Banned/Hidden Blacklist Dictionaries) (1.04625ms)
+✔ Anti-Slop Gate 2: 严禁在视图层硬编码特定预设 ID 进行隐藏遮盖 (No Hardcoded ID Masking) (0.448167ms)
+✔ Anti-Slop Gate 3: 出厂主力预设必须 100% 严格对齐 presets/manifest.json 白名单 (Strict SSOT Alignment) (0.244083ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 48.213458

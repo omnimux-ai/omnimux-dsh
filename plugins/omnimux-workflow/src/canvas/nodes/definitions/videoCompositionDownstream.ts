@@ -22,16 +22,43 @@ export const CLIP_EXPORT_ORIGIN = 'clip_export';
 
 const LOCAL_FILE_MEDIA_URL = '/omnimux-workflow/api/local-file';
 
+/** Re-point an already-resolved local-file URL at a new content revision. */
+function withMediaRevision(url: string, token: string): string {
+  const withoutRev = url.replace(/([?&])rev=[^&]*/g, '$1').replace(/[?&]$/, '');
+  const sep = withoutRev.includes('?') ? '&' : '?';
+  return `${withoutRev}${sep}rev=${encodeURIComponent(token)}`;
+}
+
 /**
  * Absolute host path → the host media URL the canvas can stream.
  * Already-resolved URLs (`/api/local-file`, `blob:`, `data:`, `http:`) and
  * relative paths pass through untouched.
+ *
+ * `revision` is the exported file's content identity (`mtimeMs:size`). Canvas
+ * export overwrites `<projectId>.mp4` in place, so without it the URL is
+ * byte-identical across exports and React keeps the same `<video>` element —
+ * which stays stuck in whatever state the first load left it. Carrying the
+ * revision in the URL is what makes the browser fetch the new bytes.
  */
-export function clipExportMediaUrl(videoPath: string): string {
+export function clipExportMediaUrl(videoPath: string, revision?: string): string {
   if (!videoPath) return videoPath;
-  if (videoPath.includes('/api/local-file')) return videoPath;
+  const token = typeof revision === 'string' ? revision.trim() : '';
+  if (videoPath.includes('/api/local-file')) {
+    return token ? withMediaRevision(videoPath, token) : videoPath;
+  }
   if (!videoPath.startsWith('/')) return videoPath;
-  return `${LOCAL_FILE_MEDIA_URL}?path=${encodeURIComponent(videoPath)}`;
+  const base = `${LOCAL_FILE_MEDIA_URL}?path=${encodeURIComponent(videoPath)}`;
+  return token ? `${base}&rev=${encodeURIComponent(token)}` : base;
+}
+
+/** The `?path=` a local-file media URL points at, or null. */
+function mediaUrlPath(mediaUrl: unknown): string | null {
+  if (typeof mediaUrl !== 'string' || !mediaUrl.includes('/api/local-file')) return null;
+  try {
+    return new URL(mediaUrl, 'http://127.0.0.1').searchParams.get('path');
+  } catch {
+    return null;
+  }
 }
 
 export interface ClipExportOutput {
@@ -40,6 +67,8 @@ export interface ClipExportOutput {
   durationMs?: number;
   width?: number;
   height?: number;
+  /** Content identity of the written file; see `clipExportMediaUrl`. */
+  revision?: string;
 }
 
 export interface ClipExportGraphNode {
@@ -118,7 +147,11 @@ function existingDownstreamNode(
     const data = nodeDataOf(node);
     if (data.origin === CLIP_EXPORT_ORIGIN && data.sourceCompositionNodeId === sourceNodeId) return true;
     if (data.realPath === videoPath) return true;
-    return data.mediaUrl === videoPath || data.mediaUrl === mediaUrl;
+    // Compare the `?path=` itself, so a node carrying an older `rev` still
+    // resolves to the same file instead of spawning a duplicate 成片 node.
+    return data.mediaUrl === videoPath
+      || data.mediaUrl === mediaUrl
+      || mediaUrlPath(data.mediaUrl) === videoPath;
   });
 }
 
@@ -132,7 +165,7 @@ function desiredData(input: ClipExportDownstreamInput): Record<string, unknown> 
     origin: CLIP_EXPORT_ORIGIN,
     sourceCompositionNodeId: input.sourceNodeId,
     realPath: videoPath,
-    mediaUrl: clipExportMediaUrl(videoPath),
+    mediaUrl: clipExportMediaUrl(videoPath, input.output.revision),
     thumbnailUrl: input.output.thumbnailPath,
     duration: input.output.durationMs ? Math.round(input.output.durationMs / 1000) : undefined,
     size: {

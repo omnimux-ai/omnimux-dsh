@@ -7,7 +7,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -157,6 +157,41 @@ test('原始字节上传仅对 save-export 生效，普通 PUT 仍走 JSON 且�
     assert.equal(res.state.body.saved, true)
     assert.deepEqual(readdirSync(paths.exportsDir), [])
     assert.deepEqual(readdirSync(paths.tmpDir), [])
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+/* ── Issue #3146：画布导出原地覆盖同一个 <projectId>.mp4 ───────────────
+ * 下游成片节点只能靠服务端给出的内容身份（mtimeMs:size）判断「文件换了」，
+ * 从而改写 mediaUrl 让 <video> 重新取流。
+ */
+
+test('save-export 响应带内容版本串，且两次导出必然不同', async () => {
+  const { home, paths, handler } = mountRoutes()
+  try {
+    const first = fakeRes()
+    await handler(
+      request(SAVE_EXPORT_URL, { 'content-type': 'application/octet-stream' }, [Buffer.alloc(2048, 1)]),
+      first,
+    )
+    assert.equal(first.state.status, 200)
+    const dest = join(paths.exportsDir, `${PROJECT_ID}.mp4`)
+    assert.equal(first.state.body.path, dest);
+    assert.equal(first.state.body.revision, `${statSync(dest).mtimeMs}:2048`)
+    assert.equal(first.state.body.bytes, 2048)
+
+    // 二次导出覆盖同一路径：内容更长，且 mtime 前进。
+    await new Promise((resolve) => setTimeout(resolve, 12))
+    const second = fakeRes()
+    await handler(
+      request(SAVE_EXPORT_URL, { 'content-type': 'application/octet-stream' }, [Buffer.alloc(4096, 2)]),
+      second,
+    )
+    assert.equal(second.state.status, 200)
+    assert.equal(second.state.body.path, dest)
+    assert.equal(second.state.body.revision, `${statSync(dest).mtimeMs}:4096`)
+    assert.notEqual(second.state.body.revision, first.state.body.revision)
   } finally {
     rmSync(home, { recursive: true, force: true })
   }

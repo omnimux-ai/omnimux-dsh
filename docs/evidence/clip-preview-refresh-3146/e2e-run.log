@@ -1,0 +1,11 @@
+✔ e2e：同一文件重导出的 revision 必须变化，且 size 段相同（size-only 版本串不足以区分） (1111.08375ms)
+✔ e2e：重导出的 revision 让下游成片节点 mediaUrl 变化，且复用同一节点不新增重复节点 (1107.992958ms)
+✔ e2e：没有 revision 时 mediaUrl 与修复前逐字符一致（向后兼容） (2.842792ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2302.99675
