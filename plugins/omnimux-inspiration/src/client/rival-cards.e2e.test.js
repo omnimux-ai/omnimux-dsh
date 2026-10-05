@@ -48,6 +48,17 @@ import { toRivalCardRow } from './rival-filter.js'
  * Reverting the fix is measurable: rendering one flex container per column, or
  * dropping `--rival-media-ratio` from the media element, fails the placement and
  * ratio assertions below.
+ *
+ * Boundary this file does NOT cover (QA report-2 §2③): the placement oracle
+ * (`specHeightPx`/`expectedColumns`) recomputes the same per-type geometry the
+ * implementation's `rivalCardHeightPx` produces — the two are deliberately
+ * formula-identical. So the assertions here prove「决策与给定几何一致」
+ * (every card lands in the greedy shortest column), never「几何与真实渲染
+ * 一致」. A change that alters the height model but leaves the greedy column
+ * order untouched (e.g. long-video clamp 2, title line-height 18→30) would
+ * pass this layer. Geometry correctness is carried by the real-browser
+ * measurement instead — recompute entry:
+ * `docs/evidence/account-monitor-v2-cards-3110/rectify-placement-measure.json`.
  */
 
 const here = fileURLToPath(new URL('.', import.meta.url))

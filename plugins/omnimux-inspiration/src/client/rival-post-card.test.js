@@ -8,7 +8,7 @@ import { JSDOM } from 'jsdom'
 import './test-fixtures/dom-bootstrap.mjs'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { zh } from './locales.js'
+import { zh, en } from './locales.js'
 import { RIVAL_CSS } from './rival-styles.js'
 
 /**
@@ -110,6 +110,9 @@ async function mountStage(cards, options = {}) {
   globalThis.document = window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
+  const opened = []
+  window.open = (url) => { opened.push(String(url)); return null }
+
   const container = window.document.getElementById('host')
   const reactRoot = createRoot(container)
   const events = []
@@ -130,6 +133,7 @@ async function mountStage(cards, options = {}) {
   return {
     container,
     events,
+    opened,
     document: window.document,
     async unmount() {
       await act(async () => reactRoot.unmount())
@@ -408,6 +412,49 @@ describe('RivalMasonry — DOM 顺序与扁平结构（V1/V4）', () => {
     } finally {
       await wide.unmount()
       await narrow.unmount()
+    }
+  })
+})
+
+describe('RivalPostCard — 外链与 locale（第三轮整改）', () => {
+  const overlayText = (container) =>
+    container.querySelector('.omnimux-rival-card-overlay')?.textContent || ''
+
+  it('does not render 原帖直达 for a non-http(s) source_url, and never calls window.open', async () => {
+    const evil = cardOf('short-video', { source_url: 'javascript:alert(1)' })
+    const mounted = await mountStage([evil])
+    try {
+      const card = byType(mounted.container, 'short-video')
+      assert.equal(
+        card.querySelector('[data-act="original"]'),
+        null,
+        'a javascript: source_url must not offer a 原帖直达 button at all',
+      )
+      assert.deepEqual(mounted.opened, [], 'window.open must not run for a refused scheme')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('renders the hover layer entirely in English under an en t() — time and counts included', async () => {
+    const tEn = (key) => en[key] || key
+    const card = cardOf('short-video', {
+      posted_at: new Date(Date.now() - 4 * 3600_000).toISOString(),
+      stats: { views: 128000, likes: 8640, comments: 214, shares: 96 },
+      match: { label: '可参考' },
+      state: 'interacted',
+      interacted_at: '2026-10-05T09:12:00.000Z',
+    })
+    const mounted = await mountStage([card], { props: { t: tEn } })
+    try {
+      const text = overlayText(mounted.container)
+      assert.ok(text.includes(en['rivalFeed.metrics.views'].split(' ')[0]), 'the metrics line must be in English')
+      assert.doesNotMatch(text, /[一-鿿]/, `no Chinese may survive in the en hover layer (got ${JSON.stringify(text)})`)
+      assert.match(text, /4h ago/, `relative time must be English (got ${JSON.stringify(text)})`)
+      assert.match(text, /128K/, `view count must use the en unit (got ${JSON.stringify(text)})`)
+      assert.equal(text.includes('12.8万'), false, 'the zh 万 unit must not leak into en')
+    } finally {
+      await mounted.unmount()
     }
   })
 })

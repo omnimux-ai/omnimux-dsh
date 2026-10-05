@@ -19,6 +19,7 @@ import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
 import { getLocalInspiration } from './api.js'
 import { convertRivalPost } from './rival-api.js'
 import { addRivalPostToSession } from './rival-add-to-chat.js'
+import { oneClickReplicate } from './replicate-to-chat.js'
 import { toRivalPost } from './rival-filter.js'
 import { injectRivalStyles } from './rival-styles.js'
 import { injectRivalTokens } from './rival-tokens.js'
@@ -138,10 +139,41 @@ export function RivalAccountsPanel(props) {
       } else {
         setNotice({ key: 'rivalAccounts.post.attachFailed' })
       }
+    } catch {
+      // A transport-level failure (rejected fetch) is the same user-facing
+      // answer as a refused one: without this catch it leaked as an unhandled
+      // rejection and the user saw nothing.
+      setNotice({ key: 'rivalAccounts.post.attachFailed' })
     } finally {
       setDeconstructBusyId(null)
     }
   }, [deconstructBusyId])
+
+  /**
+   * The deconstruct modal's「立即复刻」is NOT the card's replicate: the modal
+   * hands back a *library item* (the row `getLocalInspiration` returned — it
+   * has no `account_id`/`post_id`), so it must run the library's own
+   * one-click-replicate chain, which starts a new session and prefills the
+   * replication prompt. Routing it through `handleReplicate` builds a
+   * `account_id=undefined` media request — exactly the bug this handler exists
+   * instead of.
+   */
+  const handleInspirationReplicate = useCallback(async (row) => {
+    const ticket = String(row?.id ?? '')
+    if (!ticket || busyId) return
+    setBusyId(ticket)
+    try {
+      await oneClickReplicate(row, {
+        onStatus: (key) => {
+          setNotice(key ? { key } : null)
+        },
+      })
+    } catch {
+      setNotice({ key: 'rivalAccounts.post.attachFailed' })
+    } finally {
+      setBusyId(null)
+    }
+  }, [busyId])
 
   /**
    * 「标为已处理」的当前回执：#3114 的端点还没有接上，所以本票只给出
@@ -239,7 +271,7 @@ export function RivalAccountsPanel(props) {
           onItemUpdated={(updated) => setDeconstructRow(updated)}
           onReplicate={(row) => {
             setDeconstructRow(null)
-            void handleReplicate(row)
+            void handleInspirationReplicate(row)
           }}
           replicateBusy={busyId != null}
         />

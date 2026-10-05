@@ -15,7 +15,13 @@
 import { Button } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 import { rivalMediaRatioOf, rivalCardTypeOf } from './rival-masonry.js'
-import { formatCount, formatEngagementCount, formatRelativeTime } from './rival-format.js'
+import {
+  formatCount,
+  formatEngagementCount,
+  formatRelativeTime,
+  rivalLocaleOf,
+} from './rival-format.js'
+import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 
 const TREND_SVG = (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -59,12 +65,13 @@ function VelocityPill({ velocity, surface }) {
 
 function metricsText(card, t) {
   const stats = card?.stats || {}
+  const locale = rivalLocaleOf(t)
   const key = card?.metrics_template === 'read' ? 'rivalFeed.metrics.reads' : 'rivalFeed.metrics.views'
   return String(t(key) || '')
-    .replace('{views}', formatCount(stats.views))
-    .replace('{likes}', formatEngagementCount(stats.likes))
-    .replace('{comments}', formatEngagementCount(stats.comments))
-    .replace('{shares}', formatEngagementCount(stats.shares))
+    .replace('{views}', formatCount(stats.views, locale))
+    .replace('{likes}', formatEngagementCount(stats.likes, locale))
+    .replace('{comments}', formatEngagementCount(stats.comments, locale))
+    .replace('{shares}', formatEngagementCount(stats.shares, locale))
 }
 
 function matchKeyOf(card) {
@@ -117,19 +124,20 @@ export function RivalPostCard(props) {
   const clamp = TITLE_CLAMP[cardType] || 2
   const cover = String(card?.cover_key || '')
   const account = card?.account || {}
-  const posted = formatRelativeTime(card?.posted_at)
+  const locale = rivalLocaleOf(t)
+  const posted = formatRelativeTime(card?.posted_at, Date.now(), locale)
   const matchKey = matchKeyOf(card)
   const stateLabel = stateText(card, t)
 
   const openDetail = () => {
     if (typeof onDetail === 'function') onDetail(card)
   }
+  // Only absolute http(s) may leave this app — a stored `javascript:`/`data:`
+  // URL on a card must never reach window.open.
+  const originalUrlSafe = isSafeExternalUrl(card?.source_url)
   const openOriginal = (e) => {
     stop(e)
-    const url = String(card?.source_url || '')
-    if (url && typeof window !== 'undefined' && typeof window.open === 'function') {
-      window.open(url, '_blank', 'noopener,noreferrer')
-    }
+    openExternalUrl(card?.source_url)
   }
 
   // 滤镜与淡出只作用在媒体元素本身（§9.2）：胶囊是与媒体同级的独立图层，
@@ -206,7 +214,7 @@ export function RivalPostCard(props) {
         </div>
         <span className="omnimux-rival-overlay-metrics">{metricsText(card, t)}</span>
         <div className="omnimux-rival-act-row">
-          {card?.source_url ? (
+          {originalUrlSafe ? (
             <Button
               variant="outline"
               size="sm"

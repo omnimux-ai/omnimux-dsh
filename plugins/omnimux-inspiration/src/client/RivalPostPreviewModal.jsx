@@ -11,7 +11,8 @@
 
 import { Button, ModalDialog } from 'dsh-ui-kit'
 import { hostMediaSrc } from './api.js'
-import { formatCount, formatDuration, formatRelativeTime } from './rival-format.js'
+import { formatCount, formatDuration, formatRelativeTime, rivalLocaleOf } from './rival-format.js'
+import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 
 const ICON_EXTERNAL = (
@@ -46,6 +47,7 @@ export function RivalPostPreviewModal(props) {
   // The grid hands this dialog a card descriptor, whose original-post field is
   // `source_url`; `url` is what a raw feed row calls it.
   const originalUrl = String(row.source_url || row.url || '')
+  const locale = rivalLocaleOf(t)
   const stats = row.stats || {}
   const duration = formatDuration(row.duration)
   const author = String(account.nickname || account.handle || '')
@@ -60,15 +62,11 @@ export function RivalPostPreviewModal(props) {
       footer={(
         <>
           <Button variant="outline" onClick={onClose}>{t('rivalFeed.detail.close')}</Button>
-          {originalUrl ? (
+          {isSafeExternalUrl(originalUrl) ? (
             <Button
               variant="outline"
               leadingIcon={ICON_EXTERNAL}
-              onClick={() => {
-                if (typeof window !== 'undefined' && typeof window.open === 'function') {
-                  window.open(originalUrl, '_blank', 'noopener,noreferrer')
-                }
-              }}
+              onClick={() => openExternalUrl(originalUrl)}
             >
               {t('rivalFeed.detail.original')}
             </Button>
@@ -106,14 +104,14 @@ export function RivalPostPreviewModal(props) {
             ].map(([labelKey, value]) => (
               <span key={labelKey} className="omnimux-rival-detail-stat">
                 <span className="omnimux-rival-detail-stat-label">{t(labelKey)}</span>
-                <span className="omnimux-rival-detail-stat-value">{formatCount(value)}</span>
+                <span className="omnimux-rival-detail-stat-value">{formatCount(value, locale)}</span>
               </span>
             ))}
           </div>
           {row.posted_at ? (
             <p className="omnimux-rival-detail-time">
               {t('rivalFeed.detail.postedAt')}
-              {`：${formatRelativeTime(row.posted_at)}`}
+              {`：${formatRelativeTime(row.posted_at, Date.now(), locale)}`}
             </p>
           ) : null}
         </div>
