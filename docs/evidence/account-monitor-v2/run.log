@@ -1,0 +1,44 @@
+PASS  三 Tab 文案与顺序  — 爆款趋势/灵感库/账号监控
+PASS  监控池状态条  — 监控池 8 个账号 · 正常 5 · 冷却 2 · 待重导入 1
+PASS  额度
+PASS  新鲜度
+PASS  10 张卡
+PASS  筛选行单行
+PASS  增速胶囊文案  — 爆款 23k/h | 爆款 42k/h | 飙升 3.4k/h | 飙升 1.2k/h | 均速 1.8k/h | 观察 480/h | 观察 320/h | 该号 4.2x | 飙升 6.8k/h | 爆款 21k/h
+PASS  「该号 4.2x」为中性色  — rgba(0, 0, 0, 0.3) / rgba(255, 255, 255, 0.55)
+PASS  全页无 Emoji
+PASS  无「全部平台/全部账号」违规词
+PASS  处理状态常驻底部信息条  — 4 张
+PASS  卡片操作栏四项  — 原帖直达/AI 拆解/标为已处理/立即复刻
+PASS  标为已处理 → Toast
+PASS  超强爆款 → 3 卡
+PASS  D1 三态健康
+PASS  D1 待重导入原因行常驻
+PASS  Esc 关闭 Popover
+PASS  E3 筛选空态
+PASS  D3 详情含口径说明
+PASS  D3 无右上角关闭图标
+PASS  D3 封面无平台角标
+PASS  D3 指标行不复用卡片 overlay 样式
+PASS  D3 立即复刻为主按钮且在最右  — 关闭:S | 查看原帖:S | 立即复刻:P
+PASS  刷新扣额度  — 今日剩余刷新额度 5/8
+PASS  新鲜度最小 1 分钟  — 数据更新于 1 分钟前
+PASS  二次刷新 → 冷却原因
+PASS  D4 无字典外标题
+PASS  T2 确认三要素  — 本次消耗 3 次额度 · 今日剩余 6 次 · 预计 2 分钟
+PASS  额度归零显示 0/8
+PASS  额度耗尽原因
+PASS  账号停止原因  — 该账号自动刷新已停止，请在账号筛选中处理。
+PASS  D2 两个必备行
+PASS  非白名单报错
+PASS  报错时 YouTube 提示行仍可见
+PASS  D2 无右上角关闭图标
+PASS  账号识别回显
+PASS  导入成功 Toast  — 已添加监控账号 @new_creator，首次采集约需 1 分钟
+PASS  监控池 +1  — 监控池 9 个账号 · 正常 6 · 冷却 2 · 待重导入 1
+PASS  E1 时间承诺 + 分流出口
+PASS  E1 不渲染筛选行与状态条
+PASS  E2 首采中
+PASS  分流出口切到爆款趋势
+
+TOTAL 42  FAIL 0
