@@ -1,0 +1,66 @@
+{
+  "task": "browser-queue-steer-drain",
+  "surface": "panel composer gesture + real QueueDock (real key events via CDP)",
+  "url": "http://127.0.0.1:56576/",
+  "browser": "Google Chrome (headless, CDP Input.dispatchKeyEvent)",
+  "bridge": "rpc stub in .tmp/qa-drain/entry.tsx (no DSH host in the worktree)",
+  "screenshots": [
+    "01-two-queued.png",
+    "02-queue-drained.png"
+  ],
+  "assertions": [
+    {
+      "name": "输入框有文字时回车仍走排队提交",
+      "pass": true,
+      "detail": "queue"
+    },
+    {
+      "name": "排队提交不产生插话请求",
+      "pass": true
+    },
+    {
+      "name": "空输入框回车把队首插话发送",
+      "pass": true,
+      "detail": {
+        "sessionId": "qa-session",
+        "itemId": "qa-q1",
+        "action": {
+          "kind": "steer"
+        }
+      }
+    },
+    {
+      "name": "插话后该条从队列消失（投影回流）",
+      "pass": true
+    },
+    {
+      "name": "继续回车继续插话下一条",
+      "pass": true,
+      "detail": {
+        "sessionId": "qa-session",
+        "itemId": "qa-q2",
+        "action": {
+          "kind": "steer"
+        }
+      }
+    },
+    {
+      "name": "队列清空后不再有排队消息",
+      "pass": true
+    },
+    {
+      "name": "队列为空时回车不发插话请求",
+      "pass": true,
+      "detail": {
+        "before": 3,
+        "after": 3
+      }
+    },
+    {
+      "name": "任务未运行时回车不发插话请求",
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "at": "2026-10-05T09:29:18.217Z"
+}

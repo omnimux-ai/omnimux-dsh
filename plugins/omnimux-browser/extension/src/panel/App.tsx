@@ -128,6 +128,7 @@ import {
   type TurnOutlineEntry,
 } from './events.ts'
 import { producedMediaFromToolResult, toolResultCallId } from './produced-media.ts'
+import { nextQueueSteer } from './queue-gesture.ts'
 
 import { TurnRail, buildRailItems } from './TurnRail.tsx'
 import { QueueDock } from './QueueDock.tsx'
@@ -2588,6 +2589,22 @@ export function App(): React.JSX.Element {
     return { ok: false, message: '未连接到宿主网页' }
   }
 
+  /**
+   * 把一条排队消息插话发送进当前运行轮（原生 steer 语义）。
+   * 宿主在插话窗口关闭或条目消失时返回 steer-unavailable / queue-item-not-found，
+   * 这两种情况静默——队列投影会自行刷新出真实状态。
+   */
+  async function steerQueued(itemId: string): Promise<void> {
+    const id = sessionRef.current
+    if (id === null) return
+    try {
+      await api.rpc('session.updateQueue', { sessionId: id, itemId, action: { kind: 'steer' } })
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : String(cause)
+      if (!/steer-unavailable|queue-item-not-found/.test(message)) setError(copy.app.queueSteerFailed)
+    }
+  }
+
   async function send(textOverride?: string): Promise<void> {
     const text = (textOverride ?? input).trim()
     const submittedImages = textOverride === undefined ? draftImages : []
@@ -3827,6 +3844,18 @@ export function App(): React.JSX.Element {
               // isComposing：输入法组词中的回车是确认选字，不是发送。
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault()
+                // 输入框空着时，回车把队首排队消息插话发送；连按可依次清空队列。
+                const steerId = nextQueueSteer({
+                  input,
+                  hasDraftImages: draftImages.length > 0,
+                  working,
+                  stopping,
+                  queuedIds: queuedItems.map((item) => item.id),
+                })
+                if (steerId !== null) {
+                  void steerQueued(steerId)
+                  return
+                }
                 void send()
               }
             }}
