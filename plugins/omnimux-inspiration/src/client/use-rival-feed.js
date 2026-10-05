@@ -12,7 +12,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { hostMediaSrc } from './api.js'
-import { fetchRivalAccounts, fetchRivalFeed } from './rival-api.js'
+import {
+  fetchRivalAccounts,
+  fetchRivalFeed,
+  fetchRivalStatus,
+  refreshAllRivalAccounts,
+  retryRivalAccount,
+} from './rival-api.js'
 import {
   ALL_ACCOUNTS,
   accountIds,
@@ -52,7 +58,7 @@ function selectionSize(state) {
  *   query?: string,
  *   platform?: string,
  *   sort?: string,
- *   api?: { fetchRivalAccounts?: Function, fetchRivalFeed?: Function },
+ *   api?: { fetchRivalAccounts?: Function, fetchRivalFeed?: Function, fetchRivalStatus?: Function, refreshAllRivalAccounts?: Function, retryRivalAccount?: Function },
  * }} [options]
  */
 export function useRivalFeed(options = {}) {
@@ -63,10 +69,16 @@ export function useRivalFeed(options = {}) {
   const sort = options.sort === 'views' ? 'views' : 'posted_at'
   const accountsApi = options.api?.fetchRivalAccounts
   const feedApi = options.api?.fetchRivalFeed
+  const statusApi = options.api?.fetchRivalStatus
+  const refreshAllApi = options.api?.refreshAllRivalAccounts
+  const retryApi = options.api?.retryRivalAccount
   const api = useMemo(() => ({
     fetchRivalAccounts: accountsApi ?? fetchRivalAccounts,
     fetchRivalFeed: feedApi ?? fetchRivalFeed,
-  }), [accountsApi, feedApi])
+    fetchRivalStatus: statusApi ?? fetchRivalStatus,
+    refreshAllRivalAccounts: refreshAllApi ?? refreshAllRivalAccounts,
+    retryRivalAccount: retryApi ?? retryRivalAccount,
+  }), [accountsApi, feedApi, statusApi, refreshAllApi, retryApi])
 
   const [accounts, setAccounts] = useState([])
   const [selection, setSelection] = useState(ALL_ACCOUNTS)
@@ -78,6 +90,21 @@ export function useRivalFeed(options = {}) {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  /**
+   * The scheduler snapshot (E9): the used side of the daily refresh ledger.
+   * `null` until its first answer lands — the quota line waits for the real
+   * number rather than inventing one.
+   */
+  const [status, setStatus] = useState(null)
+  const [configSummary, setConfigSummary] = useState(null)
+  /**
+   * When this client last asked for a manual pool refresh. The Host enforces
+   * a 30-minute window on `refresh-all`; mirroring it locally is what lets the
+   * 置灰 button name its own reason instead of waiting for a refusal.
+   */
+  const [lastManualRefreshAt, setLastManualRefreshAt] = useState(0)
+  /** Failure of the most recent refresh action, keyed by reason kind. */
+  const [refreshFailure, setRefreshFailure] = useState(null)
 
   /** Number of requests this hook has issued; also the request gate. */
   const issued = useRef(0)
@@ -133,6 +160,15 @@ export function useRivalFeed(options = {}) {
       const accountData = accountRes.body?.data || {}
       const nextAccounts = Array.isArray(accountData.items) ? accountData.items : []
       setAccounts(nextAccounts)
+      setConfigSummary(accountData.config_summary || null)
+      // The status snapshot rides the same reload: a failed snapshot degrades
+      // the quota display, it never blocks the feed.
+      let statusData = null
+      try {
+        const statusRes = await api.fetchRivalStatus()
+        statusData = statusRes?.ok ? (statusRes.body?.data || null) : null
+      } catch { statusData = null }
+      if (isCurrent(ticket)) setStatus(statusData)
       const nextAllIds = accountIds(nextAccounts)
       allIdsRef.current = nextAllIds
 
@@ -251,6 +287,65 @@ export function useRivalFeed(options = {}) {
   }, [commitSelection])
 
   /**
+   * 「刷新」：一次性让 Host 把筛选集内的账号都排进刷新队列。
+   *
+   * 本地镜像的只是「上一次按下去的时刻」——冷却期内的置灰理由由外壳读它；
+   * 真正的额度与拒绝理由仍以 Host 的 `skipped`/`budget` 回答为准。
+   * @returns {Promise<{ ok: boolean, reason?: 'cooldown' | 'budget' | 'error', n?: number }>}
+   */
+  const refreshPool = useCallback(async () => {
+    try {
+      const res = await api.refreshAllRivalAccounts()
+      if (!res?.ok) {
+        const code = res?.body?.code || res?.body?.error?.code || ''
+        if (code === 'refresh-budget-exhausted' || code === 'manual-cooldown' || res?.status === 429) {
+          const reason = code === 'manual-cooldown' ? 'cooldown' : 'budget'
+          setRefreshFailure({ reason })
+          return { ok: false, reason }
+        }
+        setRefreshFailure({ reason: 'error' })
+        return { ok: false, reason: 'error' }
+      }
+      setLastManualRefreshAt(Date.now())
+      setRefreshFailure(null)
+      void load()
+      return { ok: true }
+    } catch {
+      setRefreshFailure({ reason: 'error' })
+      return { ok: false, reason: 'error' }
+    }
+  }, [api, load])
+
+  /**
+   * 「已停止」行的重试：让 Host 把这个账号重新排进队列。
+   *
+   * Host 接受后刷新事实马上重读——`refresh_state` 变 `queued`，行回 `normal`，
+   * `pool.summary` 同步，正是规格 §8.1 要求的即时恢复语义；连续失败计数
+   * 由 Host 在新一轮刷新成功后清零。
+   * @param {string} accountId
+   * @returns {Promise<{ ok: boolean, reason?: 'cooldown' | 'budget' | 'error' }>}
+   */
+  const retryAccount = useCallback(async (accountId) => {
+    try {
+      const res = await api.retryRivalAccount(accountId)
+      if (!res?.ok) {
+        const code = res?.body?.code || res?.body?.error?.code || ''
+        const reason = code === 'manual-cooldown' ? 'cooldown'
+          : (code === 'refresh-budget-exhausted' || res?.status === 429) ? 'budget'
+          : 'error'
+        setRefreshFailure({ reason })
+        return { ok: false, reason }
+      }
+      setRefreshFailure(null)
+      await load()
+      return { ok: true }
+    } catch {
+      setRefreshFailure({ reason: 'error' })
+      return { ok: false, reason: 'error' }
+    }
+  }, [api, load])
+
+  /**
    * Cards for the grid. `cover_src` is derived once on the server and still
    * passed through the plugin's own address whitelist: the grid must never be
    * the one place that trusts a URL it was handed.
@@ -283,5 +378,11 @@ export function useRivalFeed(options = {}) {
     toggleAccount,
     invertAccounts,
     resetAccounts,
+    status,
+    configSummary,
+    lastManualRefreshAt,
+    refreshFailure,
+    refreshPool,
+    retryAccount,
   }
 }

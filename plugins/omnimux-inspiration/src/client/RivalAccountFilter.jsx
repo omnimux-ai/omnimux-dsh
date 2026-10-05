@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
 import { formatCount } from './rival-format.js'
 import { rivalSelectionSummary, toAccountFilterRow } from './rival-filter.js'
+import { accountHealth, coolingMinutesLeft, stoppedReasonText } from './rival-health.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 
 const ICON_ACCOUNTS = (
@@ -55,19 +56,48 @@ const ICON_EXTERNAL = (
  *   t: (key: string) => string,
  *   onToggle: (id: string) => void,
  *   onOpenProfile: (url: string) => void,
+ *   onRetry?: (id: string) => void,
+ *   quotaLeft?: number,
  * }} props
  */
-function AccountFilterRow({ row, t, onToggle, onOpenProfile }) {
+function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft }) {
   const handleToggle = () => onToggle(row.id)
+  const [retryReasonOpen, setRetryReasonOpen] = useState(false)
+  // 四态判据的唯一来源是 rival-health.js——行上的标记、原因行与状态条
+  // 的计数读同一套事实，永远不会出现两个实现互相打脸。
+  const health = accountHealth(row)
+  const cooling = health === 'cooling' ? coolingMinutesLeft(row) : null
+  const stoppedReason = health === 'stopped' ? stoppedReasonText(row) : null
+  const quotaEmpty = typeof quotaLeft === 'number' && quotaLeft <= 0
+
+  const healthLabel = health === 'reimport'
+    ? t('rivalAccounts.health.reimport')
+    : health === 'stopped'
+      ? t('rivalAccounts.health.stopped')
+      : health === 'cooling'
+        ? t('rivalAccounts.health.cooling').replace('{n}', String(cooling ?? 1))
+        : t('rivalAccounts.health.ok')
+
+  const handleRetry = (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    // 额度为 0 时重试置灰但可点：D4 的额度原因在这里回答，不静默。
+    if (quotaEmpty) {
+      setRetryReasonOpen((previous) => !previous)
+      return
+    }
+    onRetry?.(row.id)
+  }
   return (
     <div
-      className="omnimux-rival-filter-row"
+      className={`omnimux-rival-filter-row is-${health}`}
       role="checkbox"
       aria-checked={row.checked ? 'true' : 'false'}
       aria-label={row.nickname || row.handle || row.id}
       tabIndex={0}
       data-account-id={row.id}
       data-checked={row.checked ? 'true' : 'false'}
+      data-health={health}
       onClick={handleToggle}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -109,17 +139,58 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile }) {
           >
             {ICON_EXTERNAL}
           </IconButton>
+          <span className={`omnimux-rival-health is-${health}`}>{healthLabel}</span>
+          {health === 'stopped' ? (
+            <span className="omnimux-rival-retry-wrap">
+              <Button
+                variant="ghost"
+                size="xs"
+                className={`omnimux-rival-retry${quotaEmpty ? ' is-blocked' : ''}`}
+                aria-disabled={quotaEmpty ? 'true' : 'false'}
+                onClick={handleRetry}
+                onMouseDown={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                {t('rivalAccounts.health.retry')}
+              </Button>
+              {retryReasonOpen ? (
+                <span className="omnimux-rival-reason" role="alert">
+                  {t('rivalAccounts.refresh.quota').replace('{n}', String(hoursToMidnight()))}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
         </span>
         <span className="omnimux-rival-filter-id">
           <RivalPlatformMark platform={row.platform} />
           <span className="omnimux-rival-filter-handle">{row.handle}</span>
+          <span className="omnimux-rival-filter-count">
+            {t('rivalFilter.posts').replace('{n}', formatCount(row.postCount))}
+          </span>
         </span>
-      </span>
-      <span className="omnimux-rival-filter-count">
-        {t('rivalFilter.posts').replace('{n}', formatCount(row.postCount))}
+        {health === 'reimport' ? (
+          <span className="omnimux-rival-filter-reason">{t('rivalAccounts.health.reimportReason')}</span>
+        ) : null}
+        {/* `{n}` 未由 Host 上报时原因行整行不渲染，标记仍在——无占位符。 */}
+        {health === 'stopped' && stoppedReason ? (
+          <span className="omnimux-rival-filter-reason">{stoppedReason}</span>
+        ) : null}
       </span>
     </div>
   )
+}
+
+/**
+ * Hours until the daily ledger resets at local midnight — the `{n}` of
+ * `refresh.quota`, duplicated as a one-liner so the row never imports the
+ * status bar it cannot see.
+ * @returns {number}
+ */
+function hoursToMidnight() {
+  const next = new Date()
+  next.setHours(24, 0, 0, 0)
+  return Math.max(1, Math.ceil((next.getTime() - Date.now()) / 3_600_000))
 }
 
 /**
@@ -130,10 +201,12 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile }) {
  *   onToggle: (id: string) => void,
  *   onInvert: () => void,
  *   onReset: () => void,
+ *   onRetry?: (id: string) => void,
+ *   quotaLeft?: number,
  * }} props
  */
 export function RivalAccountFilter(props) {
-  const { t, accounts, selection, onToggle, onInvert, onReset } = props
+  const { t, accounts, selection, onToggle, onInvert, onReset, onRetry, quotaLeft } = props
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
@@ -196,6 +269,8 @@ export function RivalAccountFilter(props) {
                 row={row}
                 t={t}
                 onToggle={onToggle}
+                onRetry={onRetry}
+                quotaLeft={quotaLeft}
                 onOpenProfile={(url) => {
                   if (typeof window !== 'undefined' && typeof window.open === 'function') {
                     window.open(url, '_blank', 'noopener,noreferrer')
