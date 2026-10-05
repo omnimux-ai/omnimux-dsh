@@ -72,6 +72,7 @@ Derivation order is fixed and exclusive:
 | `[data-omnimux-device-entry]` | `omnimux-device` | 手机管理（收敛至「探索」菜单） |
 | `[data-omnimux-clip-entry]` | `omnimux-clip` | 视频剪辑（收敛至「探索」菜单） |
 | `[data-omnimux-forms-entry]` | `omnimux-forms` | 任务表单（收敛至「探索」菜单） |
+| `[data-omnimux-avatar-entry]` | `omnimux-avatar` | 虚拟形象（rank 8 现网，**核心常驻**）。**Workbench**：`omnimux-avatar:studio`，不得 claim |
 
 ### 探索菜单运行时注册（第三方 / 个人插件唯一合法入口）
 

@@ -1,0 +1,230 @@
+{
+  "runId": "8e5c8e59-496e-434d-9b02-5dceb0603386",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176",
+  "origin": "http://127.0.0.1:59884",
+  "appPort": 59884,
+  "cdpPort": 59909,
+  "startedAt": "2026-10-05T21:04:04.234Z",
+  "completedAt": "2026-10-05T21:04:19.971Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:59884",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:59884",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-OOS14gOayN03OXCuAukgw2pC3ycXJZtKcfgm6gipCTE"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 59909
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 136,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 76
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 136
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:left-rail-entry-visible",
+      "pass": true,
+      "detail": "入口文案「虚拟形象」，几何 248×32"
+    },
+    {
+      "name": "journey:stage-mounted-positive-geometry",
+      "pass": true,
+      "detail": "页面 999×673"
+    },
+    {
+      "name": "journey:stage-title-is-chinese",
+      "pass": true,
+      "detail": "标题「虚拟形象」"
+    },
+    {
+      "name": "journey:stage-root-is-the-scroll-container",
+      "pass": true,
+      "detail": "根节点是滚动容器=true，误挂吸附声明=false"
+    },
+    {
+      "name": "journey:sticky-header-is-not-scroll-container",
+      "pass": true,
+      "detail": "吸附头 1 个，误挂滚动声明=false"
+    },
+    {
+      "name": "journey:single-scroll-container",
+      "pass": true,
+      "detail": "正几何滚动容器 1 个"
+    },
+    {
+      "name": "journey:two-column-body-laid-out",
+      "pass": true,
+      "detail": "两栏轨道：340px 623px"
+    },
+    {
+      "name": "journey:no-native-select-in-stage",
+      "pass": true,
+      "detail": "原生下拉 0 个"
+    },
+    {
+      "name": "journey:explore-tab-clickable",
+      "pass": true,
+      "detail": "已点击「灵感库」"
+    },
+    {
+      "name": "journey:preset-grid-rendered",
+      "pass": true,
+      "detail": "70 个可点卡片，首张「」"
+    },
+    {
+      "name": "journey:preset-grid-is-real-grid",
+      "pass": true,
+      "detail": "display=grid，列数 4"
+    },
+    {
+      "name": "journey:preset-preview-artwork-decoded",
+      "pass": true,
+      "detail": "预览图 35 张，解码成功 35，裂图 0，未完成 0"
+    },
+    {
+      "name": "journey:preset-preview-trigger-clickable",
+      "pass": true,
+      "detail": "已点击预览"
+    },
+    {
+      "name": "journey:preset-dialog-opened-positive-geometry",
+      "pass": true,
+      "detail": "弹窗 960×673"
+    },
+    {
+      "name": "journey:preset-dialog-declares-modal",
+      "pass": true,
+      "detail": "aria-modal=true"
+    },
+    {
+      "name": "journey:preset-dialog-has-apply-action",
+      "pass": true,
+      "detail": "「套用」按钮存在=true"
+    },
+    {
+      "name": "journey:preset-dialog-escape-closes",
+      "pass": true,
+      "detail": "Escape 后弹窗已关闭=true"
+    },
+    {
+      "name": "journey:feed-grid-style-reaches-browser",
+      "pass": true,
+      "detail": "display=grid，列数 4（视口 1280）"
+    },
+    {
+      "name": "journey:feed-timeline-style-reaches-browser",
+      "pass": true,
+      "detail": "display=flex，max-width=340px"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 117815
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.workbuddy/evidence/app-qa/8e5c8e59-496e-434d-9b02-5dceb0603386/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 117815
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}

@@ -1,19 +1,19 @@
 {
-  "runId": "295ffd04-df70-4638-b694-ffdf854a4a75",
+  "runId": "239bb894-f896-426b-8675-3a672dd429b8",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090",
-  "origin": "http://127.0.0.1:63138",
-  "appPort": 63138,
-  "cdpPort": 63357,
-  "startedAt": "2026-10-05T04:08:21.112Z",
-  "completedAt": "2026-10-05T04:08:36.626Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176",
+  "origin": "http://127.0.0.1:61520",
+  "appPort": 61520,
+  "cdpPort": 61522,
+  "startedAt": "2026-10-05T21:59:00.316Z",
+  "completedAt": "2026-10-05T21:59:20.245Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:63138",
+    "origin": "http://127.0.0.1:61520",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
-    "taskPluginsCount": 21,
+    "taskPluginsCount": 22,
     "seededDataDomains": [
       "assets",
       "assets-storage",
@@ -35,19 +35,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:63138",
+      "origin": "http://127.0.0.1:61520",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-OZtr--bAIKU26ZFhSZ1XJYAwGMujWDUWEXnItT5PXUY"
+      "cookieName": "dsh-auth-wFs52JySmUrYHPQo_BF5xpxPbCdBetzDD31eVGMyS50"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 63357
+      "port": 61522
     },
     {
       "name": "auth-cookie-applied",
@@ -57,7 +57,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 10,
+        "visibleCount": 136,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -66,7 +66,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 24
+        "bodyTextLength": 76
       }
     },
     {
@@ -77,7 +77,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 10
+      "visibleCount": 136
     },
     {
       "name": "runtime-modal-bypassed",
@@ -86,7 +86,7 @@
     {
       "name": "blank-session-guide-visible",
       "pass": true,
-      "clickedNewSession": false
+      "clickedNewSession": true
     },
     {
       "name": "explore-section-visible",
@@ -106,23 +106,209 @@
       "usedWorkbenchFallback": true
     },
     {
-      "name": "journey:nav-assets-entry",
+      "name": "journey:left-rail-entry-visible",
       "pass": true,
-      "detail": "library entry clicked"
+      "detail": "入口文案「虚拟形象」，几何 248×32"
     },
     {
-      "name": "journey:assets-view-visible",
+      "name": "journey:stage-mounted-positive-geometry",
       "pass": true,
-      "detail": {
-        "hubPanel": true,
-        "assetCards": 1,
-        "bodyLen": 3256
-      }
+      "detail": "页面 999×673"
     },
     {
-      "name": "journey:journey-screenshot",
+      "name": "journey:stage-title-is-chinese",
       "pass": true,
-      "detail": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090/.workbuddy/evidence/app-qa/295ffd04-df70-4638-b694-ffdf854a4a75/journey-assets.png (220596B)"
+      "detail": "标题「虚拟形象」"
+    },
+    {
+      "name": "journey:stage-root-is-the-scroll-container",
+      "pass": true,
+      "detail": "根节点是滚动容器=true，误挂吸附声明=false"
+    },
+    {
+      "name": "journey:sticky-header-is-not-scroll-container",
+      "pass": true,
+      "detail": "吸附头 1 个，误挂滚动声明=false"
+    },
+    {
+      "name": "journey:single-scroll-container",
+      "pass": true,
+      "detail": "正几何滚动容器 1 个"
+    },
+    {
+      "name": "journey:two-column-body-laid-out",
+      "pass": true,
+      "detail": "两栏轨道：340px 623px"
+    },
+    {
+      "name": "journey:no-native-select-in-stage",
+      "pass": true,
+      "detail": "原生下拉 0 个"
+    },
+    {
+      "name": "journey:explore-tab-clickable",
+      "pass": true,
+      "detail": "已点击「灵感库」"
+    },
+    {
+      "name": "journey:preset-grid-rendered",
+      "pass": true,
+      "detail": "70 个可点卡片，首张「」"
+    },
+    {
+      "name": "journey:preset-grid-is-real-grid",
+      "pass": true,
+      "detail": "display=grid，列数 4"
+    },
+    {
+      "name": "journey:preset-preview-artwork-decoded",
+      "pass": true,
+      "detail": "预览图 35 张，解码成功 35，裂图 0，未完成 0"
+    },
+    {
+      "name": "journey:preset-preview-trigger-clickable",
+      "pass": true,
+      "detail": "已点击预览"
+    },
+    {
+      "name": "journey:preset-dialog-opened-positive-geometry",
+      "pass": true,
+      "detail": "弹窗 960×673"
+    },
+    {
+      "name": "journey:preset-dialog-declares-modal",
+      "pass": true,
+      "detail": "aria-modal=true"
+    },
+    {
+      "name": "journey:preset-dialog-has-apply-action",
+      "pass": true,
+      "detail": "「套用」按钮存在=true"
+    },
+    {
+      "name": "journey:preset-dialog-escape-closes",
+      "pass": true,
+      "detail": "Escape 后弹窗已关闭=true"
+    },
+    {
+      "name": "journey:feed-grid-style-reaches-browser",
+      "pass": true,
+      "detail": "display=grid，列数 4（视口 1280）"
+    },
+    {
+      "name": "journey:feed-timeline-style-reaches-browser",
+      "pass": true,
+      "detail": "display=flex，max-width=340px"
+    },
+    {
+      "name": "journey:j3-create-avatar-trigger-clickable",
+      "pass": true,
+      "detail": "已点击「新建形象」"
+    },
+    {
+      "name": "journey:j3-avatar-name-typed",
+      "pass": true,
+      "detail": "输入框值「验收形象3176」"
+    },
+    {
+      "name": "journey:j3-avatar-created-through-ui",
+      "pass": true,
+      "detail": "当前形象「验收形象3176」"
+    },
+    {
+      "name": "journey:j3-avatar-present-in-plugin-ledger",
+      "pass": true,
+      "detail": "HTTP 200，形象 1 个（验收形象3176），id=avt_3b130844"
+    },
+    {
+      "name": "journey:j3-generate-cta-clickable",
+      "pass": true,
+      "detail": "已点击「生成」，模型选择器显示「全部」"
+    },
+    {
+      "name": "journey:j3-sheet-task-submitted-to-plugin",
+      "pass": true,
+      "detail": "HTTP 200，任务 1 条：sheet:ready"
+    },
+    {
+      "name": "journey:j3-sheet-task-reached-ready",
+      "pass": true,
+      "detail": "taskId=avt_task_8751c56c，destPath=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.test-env-eTfPZs/dsh/omnimux/avatar/data/avt_3b130844/main.png，归档失败原因=无"
+    },
+    {
+      "name": "journey:j3-sheet-archive-had-no-error",
+      "pass": true,
+      "detail": "syncError=null"
+    },
+    {
+      "name": "journey:j3-sheet-artifact-decoded-in-ui",
+      "pass": true,
+      "detail": "卡片图 1 张，解码 1 张"
+    },
+    {
+      "name": "journey:j3-first-multiview-entry-present",
+      "pass": true,
+      "detail": "入口 1/1 可见，label=「生成多视角」，文案=「生成多视角」"
+    },
+    {
+      "name": "journey:j3-asset-archived-under-character-category",
+      "pass": true,
+      "detail": "type=character，name=验收形象3176，cite=@角色/验收形象3176"
+    },
+    {
+      "name": "journey:j3-asset-carries-the-sheet-file",
+      "pass": true,
+      "detail": "资产 ast_00fec614 引用文件 1 个"
+    },
+    {
+      "name": "journey:j3-role-category-entry-clickable",
+      "pass": true,
+      "detail": "分类行 7 项，已点击「角色」并搜索「验收形象3176」"
+    },
+    {
+      "name": "journey:j3-character-card-visible-in-asset-library-ui",
+      "pass": true,
+      "detail": "卡片 309×471，data-type=character"
+    },
+    {
+      "name": "journey:j4-multiview-generation-submitted",
+      "pass": true,
+      "detail": "HTTP 200，taskId=avt_task_21627c5f，mode=live，error=null"
+    },
+    {
+      "name": "journey:j4-multiview-task-reached-ready",
+      "pass": true,
+      "detail": "taskId=avt_task_21627c5f，destPath=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.test-env-eTfPZs/dsh/omnimux/avatar/data/avt_3b130844/多视角/turnaround.png，归档失败原因=无"
+    },
+    {
+      "name": "journey:j4-multiview-archive-had-no-error",
+      "pass": true,
+      "detail": "syncError=null"
+    },
+    {
+      "name": "journey:j4-multiview-folder-attached-to-avatar-asset",
+      "pass": true,
+      "detail": "目录引用 id=fil_2f098f7e，kind=directory，资产下共 2 个引用"
+    },
+    {
+      "name": "journey:j4-multiview-sheet-listed-inside-folder",
+      "pass": true,
+      "detail": "文件夹内 1 项（图片 1）：turnaround.png"
+    },
+    {
+      "name": "journey:j4-asset-card-opens-browse",
+      "pass": true,
+      "detail": "已点开形象资产"
+    },
+    {
+      "name": "journey:j4-multiview-folder-card-clickable-in-ui",
+      "pass": true,
+      "detail": "文件夹卡片 309×459，已点击进入"
+    },
+    {
+      "name": "journey:j4-multiview-sheet-decoded-inside-folder-in-ui",
+      "pass": true,
+      "detail": "面包屑「验收形象3176 / /多视角」，图 1 张，解码 1 张，浏览区视口内位置=[301,303,951,394]，截图时仍在文件夹内=true"
     },
     {
       "name": "screenshot-png-verified",
@@ -131,22 +317,22 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 220596
+      "bytes": 110527
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090/.workbuddy/evidence/app-qa/295ffd04-df70-4638-b694-ffdf854a4a75/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-clone-issue-3176/.workbuddy/evidence/app-qa/239bb894-f896-426b-8675-3a672dd429b8/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 220596
+    "bytes": 110527
   },
   "errors": [],
   "cleanup": {
     "cleaned": true
   },
   "hubPath": {
-    "guideVisibleBefore": true,
-    "clickedNewSession": false,
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
     "exploreVisible": true,
     "exploreCardCount": 40,
     "assetHubOpened": true

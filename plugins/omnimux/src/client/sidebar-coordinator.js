@@ -78,7 +78,7 @@ const CONVERGED_ROWS = new Map()
 const seen = new Set()
 
 /** 核心常驻侧栏项白名单（除 inline 新建项目与探索行自身外） */
-const PINNED_ENTRY_PREFIXES = ['omnimux-workflow', 'omnimux-market', 'omnimux-assets', 'omnimux-inspiration']
+const PINNED_ENTRY_PREFIXES = ['omnimux-workflow', 'omnimux-market', 'omnimux-assets', 'omnimux-inspiration', 'omnimux-avatar']
 
 export function isPinnedSidebarEntry(id) {
   if (id === 'omnimux-explore-entry') return true
@@ -94,9 +94,9 @@ export function isPinnedSidebarEntry(id) {
 export function isConvergedEntry(id) {
   if (isPinnedSidebarEntry(id)) return false
   const pluginId = id.endsWith('-entry') ? id.slice(0, -6) : id
-  if (pluginId === 'omnimux-workflow' || pluginId === 'omnimux-market' || pluginId === 'omnimux-assets' || pluginId === 'omnimux-inspiration' || pluginId === 'omnimux-explore') {
-    return false
-  }
+  // 核心常驻项与探索行自身都不收敛；白名单是单一真源，避免两处清单漂移。
+  if (pluginId === 'omnimux-explore') return false
+  if (PINNED_ENTRY_PREFIXES.includes(pluginId)) return false
   if (id.startsWith('omnimux-') || pluginId.startsWith('omnimux-')) {
     return true
   }

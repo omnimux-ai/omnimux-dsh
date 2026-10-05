@@ -44,13 +44,13 @@ related:
 
 ---
 
-## 2. 全量 12 插件概览统计看板
+## 2. 全量 13 插件概览统计看板
 
 | 统计指标 | 数值 | 说明 |
 |---|---|---|
-| **体检插件总数** | 12 个 | 覆盖 `plugins/` 下全部生产插件 |
-| **已注册 Agent 工具总数** | 89 个 | 源码中实装并可在会话中调用的工具 (29+4+6+3+9+12+6+15+0+0+4+1)。Hub 规划 +2 `workbench_*`（`Planned`，见 [agent-workbench-sync.md](agent-workbench-sync.md)）落地后改此行。 |
-| **双面齐备标杆插件 (A+)** | 3 个 | `omnimux-workflow` (12 tools), `omnimux-publish` (9 tools), `omnimux-market` (15 tools) |
+| **体检插件总数** | 13 个 | 覆盖 `plugins/` 下全部生产插件 |
+| **已注册 Agent 工具总数** | 98 个 | 源码中实装并可在会话中调用的工具 (29+4+6+3+9+12+6+15+0+0+4+1+9)。Hub 规划 +2 `workbench_*`（`Planned`，见 [agent-workbench-sync.md](agent-workbench-sync.md)）落地后改此行。 |
+| **双面齐备标杆插件 (A+)** | 4 个 | `omnimux-workflow` (12 tools), `omnimux-publish` (9 tools), `omnimux-market` (15 tools), `omnimux-avatar` (9 tools) |
 | **需补齐写操作工具插件 (B)** | 4 个 | `omnimux-assets`, `omnimux-products`, `omnimux-inspiration`, `omnimux-accounts` |
 | **纯后端/纯中枢/纯视图插件** | 5 个 | `omnimux` (中枢 29 tools), `omnimux-video` (4 tools), `omnimux-video-preview` (2 tools), `omnimux-analytics` (0 tools), `omnimux-clip` (6 tools) |
 
@@ -290,6 +290,26 @@ related:
 | 查询本地视频流元数据与播放 URL | 播放器组件加载 | `video_preview_info` | L3 | `Implemented` | 否 |
 | 分析视频分镜与结构拆解并自动打开侧边栏预览 | 视频分析侧边栏预览 | `video_breakdown_analyze` | L2 | `Implemented` | 否 |
 | 播放器全屏与音量拖拽控制 | 播放器控件条 | — | UI-Only | `UI-Only` | 豁免 (前端媒体交互) |
+
+---
+
+### 3.13 `omnimux-avatar`（虚拟形象管理）
+
+- **功能域**：结构化角色设定（18 分类 × 170 选项 × 3 档位）、角色设定图生成与多视角设定板派生、形象任务管理；生成结果自动归档到资产库「角色」分类，多视角图归档到该形象自己的「多视角」文件夹。
+- **状态**：已实装 9 个工具（双面齐备）。
+
+| 业务功能描述 | 对应 UI 交互 / HTTP 路由 | Agent 工具名称 (`Tool Name`) | 分级 | 状态 | 破坏性 confirm |
+|---|---|---|---|---|---|
+| 新建一个虚拟形象（名称 + 设定） | 左栏「新建形象」/ `POST /api/omnimux/avatar/avatars` | `avatar_create` | L1 | `Implemented` | 否 |
+| 列出全部虚拟形象及其最新任务状态 | 左栏「形象」切换器 / `GET /api/omnimux/avatar/avatars` | `avatar_list` | L2 | `Implemented` | 否 |
+| 读取单个虚拟形象的完整设定与任务历史 | 形象详情 / `GET /api/omnimux/avatar/avatars` | `avatar_get` | L2 | `Implemented` | 否 |
+| 更新虚拟形象的名称或设定参数 | 设定面板保存 / `POST /api/omnimux/avatar/avatars/update` | `avatar_update` | L1 | `Implemented` | 否 |
+| 删除虚拟形象（含其托管文件） | 形象删除按钮 / `POST /api/omnimux/avatar/avatars/delete` | `avatar_delete` | L1 | `Implemented` | 是 (`confirm: true`) |
+| 按形象设定提交一次角色设定图生成 | 底部「生成」/ `POST /api/omnimux/avatar/sheet` | `avatar_generate` | L1 | `Implemented` | 否 |
+| 由形象主图派生多视角设定板 | 主图弹窗「生成多视角」/ `POST /api/omnimux/avatar/multiview` | `avatar_multiview` | L1 | `Implemented` | 否 |
+| 查询形象的任务列表或单条任务状态 | 历史记录画廊 / `GET /api/omnimux/avatar/tasks` | `avatar_tasks` | L2 | `Implemented` | 否 |
+| 把形象主图与多视角同步到资产库「角色」分类 | 生成成功后的自动归档 / `POST /api/omnimux/avatar/sheet` | `avatar_library_sync` | L1 | `Implemented` | 否 |
+| 选项卡片悬停标签、图片放大预览、视图平移 | 卡片与弹窗 | — | UI-Only | `UI-Only` | 豁免 (前端视口交互) |
 
 ---
 

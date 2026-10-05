@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-09-13T15:28:44.752Z",
+  "updatedAt": "2026-10-05T19:50:55.221Z",
   "topology": {
     "tiers": [
       {
@@ -23,9 +23,9 @@
       }
     ],
     "summary": {
-      "totalPlugins": 16,
-      "totalTools": 74,
-      "totalSeams": 6
+      "totalPlugins": 19,
+      "totalTools": 100,
+      "totalSeams": 8
     }
   },
   "plugins": [
@@ -61,6 +61,13 @@
             "category": "text",
             "isWriteOperation": false,
             "requiresAuth": true
+          },
+          {
+            "name": "omnimux_jev_decision",
+            "summary": "调用 TypeSafe Jev 决策模型执行结构化决策与评分",
+            "category": "decision",
+            "isWriteOperation": false,
+            "requiresAuth": true
           }
         ],
         "seamsProvided": [
@@ -75,6 +82,10 @@
           {
             "name": "modelCatalog",
             "interfaceDoc": "ctx.get('modelCatalog').list() → { source, fingerprint, defaults, text, image, video, audio }"
+          },
+          {
+            "name": "decisions",
+            "interfaceDoc": "ctx.get('decisions').evaluate(params)"
           }
         ],
         "seamsConsumed": [],
@@ -189,58 +200,6 @@
       "path": "plugins/omnimux-accounts"
     },
     {
-      "id": "omnimux-device",
-      "name": "omnimux-device",
-      "version": "0.1.0",
-      "tier": "tier-1-app",
-      "entrypoint": "src/index.js",
-      "status": "active",
-      "description": "OmniMux 官方应用：手机管理、真机机群大屏、排期发布日历与故障断点自愈",
-      "tags": [
-        "device",
-        "ios",
-        "automation",
-        "phone-farm",
-        "mobile-agent"
-      ],
-      "capabilities": {
-        "tools": [
-          { "name": "device_list", "summary": "列出当前连接的所有物理 iPhone 及其在线状态与电量", "category": "device" },
-          { "name": "device_get_screen", "summary": "获取指定手机当前的界面语义树（AXe）与 OCR 文本列表", "category": "device" },
-          { "name": "device_execute_action", "summary": "在指定手机上执行原子操作（点击元素/找字点击/划动/输入文案）", "category": "device" },
-          { "name": "device_publish_flow", "summary": "调用 TypeSafe 快决策引擎自动完成短视频导入、选择与发布全流程", "category": "device" }
-        ],
-        "seamsProvided": [
-          "device"
-        ],
-        "seamsConsumed": [
-          "decisions",
-          "identity",
-          "publish"
-        ],
-        "slots": [
-          {
-            "target": "sidebar.extra",
-            "componentPath": "src/client/sidebar-entry.js"
-          },
-          {
-            "target": "shell.overlay",
-            "componentPath": "src/client/DeviceStage.jsx"
-          }
-        ],
-        "storageDomains": [
-          "$DSH_HOME/omnimux/devices/"
-        ]
-      },
-      "dependencies": {
-        "requiredPlugins": [
-          "omnimux"
-        ],
-        "systemBinaries": []
-      },
-      "path": "plugins/omnimux-device"
-    },
-    {
       "id": "omnimux-assets",
       "name": "omnimux-assets",
       "version": "0.2.0",
@@ -278,6 +237,13 @@
             "summary": "按分类/关键词检索资产库",
             "category": "library",
             "isWriteOperation": false,
+            "requiresAuth": false
+          },
+          {
+            "name": "assets_cloud_save",
+            "summary": "将公共/云端素材下载到本地并存入本地资产库",
+            "category": "library",
+            "isWriteOperation": true,
             "requiresAuth": false
           },
           {
@@ -359,6 +325,107 @@
       "path": "plugins/omnimux-automation"
     },
     {
+      "id": "omnimux-avatar",
+      "name": "omnimux-avatar",
+      "version": "0.1.0",
+      "tier": "tier-1-app",
+      "entrypoint": "src/index.js",
+      "status": "active",
+      "description": "虚拟形象管理：结构化角色设定、生成与多视角派生、任务管理，生成结果自动归档到资产库「角色」分类",
+      "tags": [
+        "avatar",
+        "character",
+        "influencer",
+        "image-generation",
+        "library"
+      ],
+      "capabilities": {
+        "tools": [
+          {
+            "name": "avatar_create",
+            "summary": "新建一个虚拟形象（名称 + 设定）",
+            "category": "avatar",
+            "isWriteOperation": true,
+            "requiresAuth": false
+          },
+          {
+            "name": "avatar_list",
+            "summary": "列出全部虚拟形象及其最新任务状态",
+            "category": "avatar",
+            "isWriteOperation": false,
+            "requiresAuth": false
+          },
+          {
+            "name": "avatar_get",
+            "summary": "读取单个虚拟形象的完整设定与任务历史",
+            "category": "avatar",
+            "isWriteOperation": false,
+            "requiresAuth": false
+          },
+          {
+            "name": "avatar_update",
+            "summary": "更新虚拟形象的名称或设定参数",
+            "category": "avatar",
+            "isWriteOperation": true,
+            "requiresAuth": false
+          },
+          {
+            "name": "avatar_delete",
+            "summary": "删除虚拟形象（含其托管文件），需 confirm",
+            "category": "avatar",
+            "isWriteOperation": true,
+            "requiresAuth": false
+          },
+          {
+            "name": "avatar_generate",
+            "summary": "按形象设定提交一次角色设定图生成",
+            "category": "avatar",
+            "isWriteOperation": true,
+            "requiresAuth": false
+          },
+          {
+            "name": "avatar_multiview",
+            "summary": "由形象主图派生多视角设定板",
+            "category": "avatar",
+            "isWriteOperation": true,
+            "requiresAuth": false
+          },
+          {
+            "name": "avatar_tasks",
+            "summary": "查询形象的任务列表或单条任务状态",
+            "category": "avatar",
+            "isWriteOperation": false,
+            "requiresAuth": false
+          },
+          {
+            "name": "avatar_library_sync",
+            "summary": "把形象的主图与多视角同步到资产库「角色」分类",
+            "category": "avatar",
+            "isWriteOperation": true,
+            "requiresAuth": false
+          }
+        ],
+        "seamsProvided": [],
+        "seamsConsumed": [
+          "imageGenerate",
+          "assetLibrary",
+          "modelCatalog",
+          "hubEvents"
+        ],
+        "slots": [],
+        "storageDomains": [
+          "$DSH_HOME/omnimux/avatar/"
+        ]
+      },
+      "dependencies": {
+        "requiredPlugins": [
+          "omnimux"
+        ],
+        "systemBinaries": []
+      },
+      "path": "plugins/omnimux-avatar"
+    },
+    {
       "id": "omnimux-clip",
       "name": "omnimux-clip",
       "version": "0.1.0",
@@ -379,6 +446,27 @@
       ],
       "capabilities": {
         "tools": [
+          {
+            "name": "clip_list",
+            "summary": "列出已有剪辑项目（编号、名称、更新时间、时长）",
+            "category": "clip",
+            "isWriteOperation": false,
+            "requiresAuth": false
+          },
+          {
+            "name": "clip_create",
+            "summary": "新建空剪辑工程（名称/分辨率/帧率），返回项目编号",
+            "category": "clip",
+            "isWriteOperation": true,
+            "requiresAuth": false
+          },
+          {
+            "name": "clip_open",
+            "summary": "拉起并聚焦「视频剪辑」编辑界面，挂载指定工程",
+            "category": "clip",
+            "isWriteOperation": false,
+            "requiresAuth": false
+          },
           {
             "name": "clip_get",
             "summary": "读取剪辑工程时间轴与轨道信息（summary/tracks/clips/full）",
@@ -449,6 +537,76 @@
         "systemBinaries": []
       },
       "path": "plugins/omnimux-clip"
+    },
+    {
+      "id": "omnimux-device",
+      "name": "omnimux-device",
+      "version": "0.1.0",
+      "tier": "tier-1-app",
+      "entrypoint": "src/index.js",
+      "status": "active",
+      "description": "OmniMux 移动真机矩阵与设备智能体中枢：支持 iOS 真机集群池化管理、无障碍语义树感知、本地 Vision OCR 与 TypeSafe 毫秒级快决策操作",
+      "tags": [
+        "device",
+        "ios",
+        "automation",
+        "phone-farm",
+        "typesafe",
+        "wda",
+        "mobile-agent"
+      ],
+      "capabilities": {
+        "tools": [
+          {
+            "name": "device_list",
+            "summary": "列出当前连接的所有物理 iPhone 及其在线状态与电量",
+            "category": "device"
+          },
+          {
+            "name": "device_get_screen",
+            "summary": "获取指定手机当前的界面语义树（AXe）与 OCR 文本列表",
+            "category": "device"
+          },
+          {
+            "name": "device_execute_action",
+            "summary": "在指定手机上执行原子操作（点击元素/找字点击/划动/输入文案）",
+            "category": "device"
+          },
+          {
+            "name": "device_publish_flow",
+            "summary": "调用 TypeSafe 快决策引擎自动完成短视频导入、选择与发布全流程",
+            "category": "device"
+          }
+        ],
+        "seamsProvided": [
+          "device"
+        ],
+        "seamsConsumed": [
+          "decisions",
+          "identity",
+          "publish"
+        ],
+        "slots": [
+          {
+            "target": "sidebar.extra",
+            "componentPath": "src/client/sidebar-entry.js"
+          },
+          {
+            "target": "shell.overlay",
+            "componentPath": "src/client/DeviceStage.jsx"
+          }
+        ],
+        "storageDomains": [
+          "$DSH_HOME/omnimux/devices/"
+        ]
+      },
+      "dependencies": {
+        "requiredPlugins": [
+          "omnimux"
+        ],
+        "systemBinaries": []
+      },
+      "path": "plugins/omnimux-device"
     },
     {
       "id": "omnimux-forms",
@@ -794,6 +952,90 @@
       "path": "plugins/omnimux-products"
     },
     {
+      "id": "omnimux-social-harvest",
+      "name": "omnimux-social-harvest",
+      "version": "0.1.0",
+      "tier": "tier-1-app",
+      "entrypoint": "src/index.js",
+      "status": "active",
+      "description": "OmniMux 社媒采集：封装本机 OpenCLI 官方内置社媒适配器（TikTok/Instagram/Facebook/Pinterest/X/YouTube/小红书/抖音/LinkedIn，只读），服务爆款视频复刻的发现与解构环节。复用浏览器登录态，产品不接触账号密码。",
+      "tags": [
+        "social-media",
+        "harvest",
+        "opencli",
+        "discovery",
+        "deconstruction"
+      ],
+      "capabilities": {
+        "tools": [
+          {
+            "name": "harvest_tiktok_search",
+            "summary": "按关键词搜索 TikTok 视频（爆款发现）",
+            "category": "harvest"
+          },
+          {
+            "name": "harvest_tiktok_user",
+            "summary": "获取 TikTok 创作者近期视频列表",
+            "category": "harvest"
+          },
+          {
+            "name": "harvest_pinterest_pins",
+            "summary": "搜索 Pinterest 图钉（免登录可用）",
+            "category": "harvest"
+          },
+          {
+            "name": "harvest_pinterest_download",
+            "summary": "下载 Pinterest 图钉原图到本地",
+            "category": "harvest"
+          },
+          {
+            "name": "harvest_sites_status",
+            "summary": "查询各社媒平台登录态（whoami 自检）",
+            "category": "harvest"
+          },
+          {
+            "name": "harvest_site_login",
+            "summary": "打开指定平台的浏览器登录页并等待人工完成登录",
+            "category": "harvest"
+          },
+          {
+            "name": "flow_image_generate",
+            "summary": "调用 Google Flow (flow.google.com) AI 文生图",
+            "category": "create"
+          },
+          {
+            "name": "flow_video_generate",
+            "summary": "调用 Google Flow (flow.google.com) 生成 Veo AI 视频",
+            "category": "create"
+          }
+        ],
+        "seamsProvided": [],
+        "seamsConsumed": [],
+        "slots": [
+          {
+            "target": "sidebar.extra",
+            "componentPath": "src/client/sidebar-entry.js"
+          },
+          {
+            "target": "shell.overlay",
+            "componentPath": "src/client/HarvestStage.jsx"
+          }
+        ],
+        "storageDomains": [
+          "$DSH_HOME/omnimux-social-harvest/"
+        ]
+      },
+      "dependencies": {
+        "requiredPlugins": [
+          "omnimux"
+        ],
+        "systemBinaries": [
+          "opencli"
+        ]
+      },
+      "path": "plugins/omnimux-social-harvest"
+    },
+    {
       "id": "omnimux-workflow",
       "name": "omnimux-workflow",
       "version": "1.0.0-rc.1",
@@ -956,7 +1198,12 @@
           }
         ],
         "seamsConsumed": [],
-        "slots": [],
+        "slots": [
+          {
+            "target": "main",
+            "componentPath": "src/client/GoogleVidsStage.jsx"
+          }
+        ],
         "storageDomains": [
           "temp/video_output/"
         ]
@@ -1138,7 +1385,7 @@
           },
           {
             "name": "video_breakdown_analyze",
-            "summary": "分析视频链接并提取结构化分镜列表与阶段拆解，自动在右侧侧边栏打开预览",
+            "summary": "分析视频并提取结构化分镜列表与阶段拆解，真实分析成功后在右侧侧边栏打开预览",
             "category": "media",
             "isWriteOperation": true,
             "requiresAuth": false
@@ -1159,7 +1406,8 @@
         ],
         "seamsConsumed": [
           "webServer",
-          "betterSidebar"
+          "betterSidebar",
+          "textComplete"
         ],
         "slots": [
           {

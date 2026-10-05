@@ -418,6 +418,57 @@ export function createLibraryStore(opts = {}) {
     return out
   }
 
+  /**
+   * 往既有资产追加文件引用：只把新来源复制进该资产既有的受管目录，绝不重拷
+   * 既有引用、绝不动 cover_file_id。与 update({files}) 的分工——后者整体替换
+   * files 并重置封面，因此不能用来「再加一个文件」。
+   * 空输入与全部被跳过的输入都是无操作：不改版本号，返回当前视图。
+   * @param {string} assetId
+   * @param {unknown} incoming
+   */
+  async function appendFiles(assetId, incoming) {
+    const found = state.assets.find((asset) => asset.id === assetId)
+    if (!found) throw new AssetsError('asset-not-found', 'asset not found')
+    const sources = normalizeFiles(incoming, fs, { requireExisting: false })
+    // 无受管目录时与 materializeIncomingFiles 同样降级：不复制、不改账本。
+    if (sources.length === 0 || !filesDir || !vaultRoot) return viewOf(found, fs, vaultRoot)
+    const appended = []
+    for (const file of sources) {
+      const source = str(file.real_path)
+      if (!source) continue
+      const copied = await copyIntoVault({
+        sourceAbs: source,
+        destDir: managedDirOf(found.id),
+        vaultRoot,
+        originalName: file.original_name,
+        fs,
+      })
+      appended.push({
+        id: file.id,
+        relative_path: copied.relativePath,
+        original_name: file.original_name || copied.name,
+      })
+    }
+    if (appended.length === 0) return viewOf(found, fs, vaultRoot)
+    const previousFiles = found.files
+    const previousUpdatedAt = found.updated_at
+    found.files = [...previousFiles, ...appended]
+    found.updated_at = new Date().toISOString()
+    state.revision += 1
+    try {
+      persist()
+    } catch (error) {
+      // 与 add() 同一纪律：落盘失败即撤回本次内存追加（含时间戳与版本号），
+      // 账本保持上一次成功状态。不回收受管目录 —— 里面既有引用仍在使用，
+      // 只回收整目录会连旧文件一起删掉。
+      found.files = previousFiles
+      found.updated_at = previousUpdatedAt
+      state.revision -= 1
+      throw error
+    }
+    return viewOf(found, fs, vaultRoot)
+  }
+
   function recycleManagedDir(assetId) {
     const dir = managedDirOf(assetId)
     if (!dir || !vaultRoot || !isInsideDir(dir, vaultRoot)) return
@@ -509,6 +560,21 @@ export function createLibraryStore(opts = {}) {
       formatAssetUri(asset.type, asset.handle) === key ||
       formatAssetUri(asset.type, asset.id) === key
     ))
+    return found ? { ...found, files: found.files.map((file) => ({ ...file })) } : null
+  }
+
+  /**
+   * 按来源字符串精确查一条资产，形态同 get()（浅拷贝，files 逐条浅拷贝）。
+   * 同一来源可能有多条（例如旧记录缺文件后又新建）：取 updated_at 最新的一条。
+   * @param {unknown} source
+   */
+  function findBySource(source) {
+    const key = String(source)
+    let found = null
+    for (const asset of state.assets) {
+      if (String(asset.source) !== key) continue
+      if (!found || String(asset.updated_at) >= String(found.updated_at)) found = asset
+    }
     return found ? { ...found, files: found.files.map((file) => ({ ...file })) } : null
   }
 
@@ -757,7 +823,7 @@ export function createLibraryStore(opts = {}) {
   }
 
   return {
-    list, get, getView, add, update, remove, migrateMappings, revision,
+    list, get, getView, findBySource, add, appendFiles, update, remove, migrateMappings, revision,
     listFileEntries, resolvePreview, resolveEntryPath,
   }
 }
