@@ -151,12 +151,15 @@ models:
               kind: "policy_conservative"
               note: "本仓保守策略而非上游公布值：上游能力合同只给 reference_images {min:0,max:16}，未公布格式清单与单文件大小上限；此处 max 1、mimes 与 10MB 均为保守选择"
         research:
-          status: "draft"
+          status: "verified"
+          docUrl: "docs/evidence/multiref-live-3138/live-verification.md"
+          verifiedAt: "2026-10-05"
+          notes: "2026-10-05 走本仓真实缝隙以 mode=live 用 1 张参考图真实出图：POST /v1/images/generations 200，task_NiRphXe3jeuzPnOWHpOxLpYASWSGgkQW，产物 1349393 字节 1254×1254，耗时约 75 秒；参考图经缝隙上传换公网直链后随请求送达"
         implementation:
           status: "ready"
           profileId: "imageGenerate"
           seam: "imageGenerate"
-          notes: "发包走官方已公布的 POST /v1/images/generations，参考图落在 images 字段（OpenAI 家族分支当前只取首图）；官方未公布 GPT Image edits 端点"
+          notes: "发包走官方已公布的 POST /v1/images/generations；2026-10-05 实测参考图只落成官方已公布的单数字段 image（map.js OpenAI 家族分支取首图），并非 images 数组，legacy images 构造在有 guardPlan.vendorPayload 时被跳过；官方未公布 GPT Image edits 端点"
         execution:
           status: "stub"
           profileId: "imageGenerate"

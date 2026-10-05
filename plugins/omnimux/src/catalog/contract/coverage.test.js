@@ -107,7 +107,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 28, 'H2 lists evidence-backed ops'); // #3086 claude-sonnet-4-6 两个 op 上架
+  assert.equal(cov.listedOperationCount, 29, 'H2 lists evidence-backed ops'); // #3138 gpt-image-2.5#multi_reference 上架 +1 → 29（#3086 为 28）
   assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-0#text_to_video'));
   assert.ok(cov.listedOperations.includes('minimax-h3#text_to_video'));
@@ -157,7 +157,7 @@ test('verifyContracts: audit ok; strict ok once 81 dispositions resolve', () => 
   assert.equal(strict.dispositions.total, 82);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 28); // #3086 claude-sonnet-4-6 +2 → 28
+  assert.equal(strict.listedOperations.length, 29); // #3138 gpt-image-2.5#multi_reference 上架 +1 → 29（#3086 为 28）
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 12);
   for (const id of strict.dispositions.forbiddenListed) {

@@ -95,8 +95,9 @@ describe('buildModelCatalog defaultOperations (real contract)', () => {
       assert.ok(mediaOps.some((candidate) => candidate.id === entry.operationId),
         'a listed media-consuming mode must win over a prompt-only one')
     } else {
-      // Today gpt-image-2.5 publishes multi_reference as draft (research not verified),
-      // so no image mode consumes media and the model's first listed mode is correct.
+      // #3138 起 gpt-image-2.5 的 multi_reference 已上架（2026-10-05 真机出图验证），
+      // 因此该模型有消费素材的图像模式，走上面的 listed media mode 分支；
+      // 本分支仅覆盖仍无媒体模式的模型，其首个 listed 模式即正确默认。
       assert.equal(entry.rule, 'first_operation')
     }
   })
