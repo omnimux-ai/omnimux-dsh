@@ -13,7 +13,7 @@ issue: "#2657"
 # Google Vids (Veo) 视频生成侧边栏入口与内测标记功能规格与文案字典 (Spec Plan)
 
 > **设计基准**：严格遵循 `docs/contracts/sidebar-extra-entries.md` 侧边栏行契约、`docs/contracts/ui-copywriting-and-naming-standards.md` 全局 UI 微文案规范及现代 SaaS 极简标准。  
-> **当前依据**：UI 元素、文案及样式白名单仍以本文第 2–4 节与批准的中栏舞台 Spec 为准；Issue #2721 的座位拓扑与入口交互以 [`specs/google-vids-center-stage-entry-regression.spec.md`](google-vids-center-stage-entry-regression.spec.md) 为当前行为依据。本文保留 Issue #2657 的状态、归属及批准白名单历史记录，不覆盖 #2721 行为。
+> **当前依据**：UI 元素、文案及样式白名单仍以本文第 2–4 节与批准的中栏舞台 Spec 为准；Issue #2721 的座位拓扑与入口交互以 [`specs/google-vids-center-stage-entry-regression.spec.md`](google-vids-center-stage-entry-regression.spec.md) 为当前行为依据；座位与 claim 表述经 Issue #3165 更正（Vids 为官方 `main` 插槽面板，不 claim 产品舞台）。本文保留 Issue #2657 的状态、归属及批准白名单历史记录，不覆盖 #2721 / #3165 行为。
 
 ---
 
@@ -28,7 +28,7 @@ issue: "#2657"
 | `rank` | `number` | `7.5` | 排在灵感社区（Rank 7）之后、产品库（Rank 8）之前 |
 | `datasetKey` | `string` | `'data-omnimux-google-vids-entry'` | 自动化测试与契约选取的标准 Marker |
 | `customClassName` | `string` | `'omnimux-google-vids-entry'` | 扩展类名，前缀严格遵循规范 |
-| `access` | `string` | `'offline'` | 离线可点击准入：点击先请求 Clip Workbench split 打开，成功后再 claim Google Vids 中间舞台 |
+| `access` | `string` | `'offline'` | 离线可点击准入：点击先请求 Clip Workbench split 打开，成功后再以 `layout.selectPanel('omnimux-vids')` 选中 Google Vids 中栏面板（不 claim 产品舞台） |
 | `tabId` | `string` | 不适用 | Vids 不注册 Workbench Tab；Clip 使用 `omnimux-clip:studio`，由 Clip 插件注册 |
 
 ---
@@ -228,9 +228,9 @@ export function mountSidebarEntry(_stage, t, locale) {
 ```
 
 ### 5.2 单激活槽仲裁铁律（The Single Rail Slot Law，历史基线，已被 #2721 替代）
-1. **历史单一事实来源**：旧 `entry.dataset.active` 由 `stageStore.getSnapshot()` 判定；当前实现由 `data-dsh-product-stage="omnimux-vids"` 标记及 `dsh-product-stage` 事件投影，详见 #2721 回归规格。
+1. **历史单一事实来源**：旧 `entry.dataset.active` 由 `stageStore.getSnapshot()` 判定；当前实现由 `layout.panelInfo.activePanelId === 'omnimux-vids'` 投影（Issue #3165 起不再读取 `data-dsh-product-stage`、不再监听 `dsh-product-stage`），详见 #2721 回归规格。
 2. **历史多栏联动排他**：
-   - 旧规则以 Vids Workbench Tab 的激活态为依据，已不适用于当前 Vids `shell.overlay` 舞台；
+   - 旧规则以 Vids Workbench Tab 的激活态为依据，已不适用于当前 Vids 官方 `main` 插槽面板；
    - 当前座位行为与失败/卸载边界仅以 `specs/google-vids-center-stage-entry-regression.spec.md` 为准。
 
 ---
@@ -245,11 +245,11 @@ export function mountSidebarEntry(_stage, t, locale) {
 | **AC-04** | 中文文案锁定 | Label 为 `Google Vids`，Badge 为 `内测版` | 裴像素 | 必检 |
 | **AC-05** | 英文文案锁定 | 切换英文后，Label 为 `Google Vids`，Badge 为 `Alpha` | 裴像素 | 必检 |
 | **AC-06** | 零冗余元素检查 | 条目内直接子元素数 $\le 3$，无任何 Emoji / Extra Badge | 严过关 | 必检 |
-| **AC-07** | 舞台激活态映射（#2721） | 仅当 `data-dsh-product-stage="omnimux-vids"` 时入口设置 `data-active="true"`；`dsh-product-stage` 事件后同步撤销/设置 | 当前实现由 #2721 回归规格定义 | 必检 |
+| **AC-07** | 面板激活态映射（#2721 / #3165） | 仅当 `layout.panelInfo.activePanelId === 'omnimux-vids'` 时入口设置 `data-active="true"`；由 `panelInfo.subscribe` 同步撤销/设置。不得读取 `data-dsh-product-stage`，不得监听 `dsh-product-stage` | 当前实现由 #2721 回归规格定义，座位表述经 #3165 更正 | 必检 |
 | **AC-08** | 折叠态自愈 | 宿主加 `[data-sidebar-collapsed]` 后，Label 与 Badge 消失，宽度 36px 居中 | 裴像素 | 必检 |
-| **AC-09** | #2721 当前交互 | Clip open 以 `focus: 'split'` 请求；仅严格成功后 claim Vids；失败/API 缺失/卸载时不 claim、不独立改焦点 | 详见 `specs/google-vids-center-stage-entry-regression.spec.md` | 必检 |
+| **AC-09** | #2721 当前交互（#3165 更正） | Clip open 以 `focus: 'split'` 请求；仅严格成功后调用 `layout.selectPanel('omnimux-vids')`；不 claim 任何产品舞台；失败/API 缺失/卸载时不切换面板、不独立改焦点 | 详见 `specs/google-vids-center-stage-entry-regression.spec.md` | 必检 |
 
-> **当前实施与验收规范**：AC-07 与 AC-09 的唯一当前行为来源为 `specs/google-vids-center-stage-entry-regression.spec.md`；本表其余条目继续锁定 #2657 已批准且本次不变的 UI。
+> **当前实施与验收规范**：AC-07 与 AC-09 的唯一当前行为来源为 `specs/google-vids-center-stage-entry-regression.spec.md`（座位与 claim 表述以 Issue #3165 为准）；本表其余条目继续锁定 #2657 已批准且本次不变的 UI。
 
 ---
 *规格说明书签署完毕。请前端开发工程师裴像素严格依据本规格实施编码。*

@@ -128,6 +128,31 @@ function mountEntry(t, locale = { current: 'zh' }) {
   return { coordinator, unmount, entry: coordinator.row.create() }
 }
 
+function mountEntryWithLayout(t, layout, locale = { current: 'zh' }) {
+  const coordinator = setupCoordinator()
+  const unmount = mountSidebarEntry(t, locale, undefined, layout)
+  assert.ok(coordinator.row, 'entry must register with the sidebar coordinator')
+  return { coordinator, unmount, entry: coordinator.row.create() }
+}
+
+/** Host layout stub: records selectPanel calls and lets tests drive panelInfo listeners. */
+function createLayoutStub(calls = []) {
+  const snapshot = { activePanelId: null }
+  const listeners = new Set()
+  return {
+    snapshot,
+    listeners,
+    layout: {
+      selectPanel(id) { calls.push(['selectPanel', id]) },
+      panelInfo: {
+        getSnapshot: () => snapshot,
+        subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
+      },
+    },
+    notify() { for (const listener of [...listeners]) listener() },
+  }
+}
+
 test('exports the entry selector and exact approved Chinese and English copy', () => {
   assert.equal(ENTRY_SELECTOR, '[data-omnimux-google-vids-entry]')
   assert.deepEqual(GOOGLE_VIDS_SIDEBAR_I18N.zh, {
@@ -256,34 +281,46 @@ test('sidebar coordinator can become ready after mount and unregisters exactly o
   }
 })
 
-test('active state is projected only from the product-stage DOM marker and stage event', () => {
+test('active state is projected only from the host panel selection', () => {
   setupMockEnvironment()
-  const { entry, unmount } = mountEntry((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key)
+  const stub = createLayoutStub()
+  const { entry, unmount } = mountEntryWithLayout((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key, stub.layout)
   assert.equal(entry.dataset.active, undefined)
 
-  document.documentElement.dataset.dshProductStage = 'omnimux-vids'
-  window.dispatchEvent({ type: 'dsh-product-stage' })
+  stub.snapshot.activePanelId = 'omnimux-vids'
+  stub.notify()
   assert.equal(entry.dataset.active, 'true')
 
-  document.documentElement.dataset.dshProductStage = 'another-stage'
+  stub.snapshot.activePanelId = 'omnimux-clip:studio'
+  stub.notify()
+  assert.equal(entry.dataset.active, undefined)
+
+  // 产品舞台标记不再是激活来源：Vids 是 main 插槽面板，不写也不读 data-dsh-product-stage。
+  document.documentElement.dataset.dshProductStage = 'omnimux-vids'
   window.dispatchEvent({ type: 'dsh-product-stage' })
   assert.equal(entry.dataset.active, undefined)
 
-  document.documentElement.dataset.dshProductStage = 'omnimux-vids'
-  window.dispatchEvent({ type: 'dsh-product-stage' })
+  stub.snapshot.activePanelId = 'omnimux-vids'
+  stub.notify()
   assert.equal(entry.dataset.active, 'true')
+
   unmount()
-  assert.equal(window.listeners['dsh-product-stage'], undefined)
+  assert.equal(stub.listeners.size, 0, 'panel subscription must be released on unmount')
 })
 
-test('Issue #2721: pending Clip open does not claim Vids; strict success claims after open settles', async () => {
+test('Issue #3165: strict Clip open selects the Vids main panel and never claims a product stage', async () => {
   setupMockEnvironment()
-  const { entry, unmount } = mountEntry((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key)
   const calls = []
+  const stub = createLayoutStub(calls)
+  const { entry, unmount } = mountEntryWithLayout((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key, stub.layout)
   let resolveOpen
   const openPromise = new Promise((resolve) => { resolveOpen = resolve })
-  window.__omnimuxStage = { claim(id) { calls.push(['claim', id]) } }
+  window.__omnimuxStage = {
+    claim(id) { calls.push(['claim', id]) },
+    release(id) { calls.push(['release', id]) },
+  }
   window.__omnimuxWorkbench = {
+    layout: stub.layout,
     open(options) { calls.push(['open', options]); return openPromise },
     setFocus(mode) { calls.push(['focus', mode]) },
   }
@@ -301,12 +338,12 @@ test('Issue #2721: pending Clip open does not claim Vids; strict success claims 
   await clickPromise
   assert.deepEqual(calls, [
     ['open', { tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' }],
-    ['claim', 'omnimux-vids'],
-  ])
+    ['selectPanel', 'omnimux-vids'],
+  ], 'a main-slot panel must select the host panel and never claim a product stage')
   unmount()
 })
 
-test('Issue #2721: false, non-true, synchronous throw, and rejection never claim or set focus', async () => {
+test('Issue #2721: false, non-true, synchronous throw, and rejection never select a panel or set focus', async () => {
   const failures = [
     { name: 'false', open: () => false },
     { name: 'truthy non-true', open: () => 1 },
@@ -316,10 +353,12 @@ test('Issue #2721: false, non-true, synchronous throw, and rejection never claim
 
   for (const failure of failures) {
     setupMockEnvironment()
-    const { entry, unmount } = mountEntry((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key)
     const calls = []
+    const stub = createLayoutStub(calls)
+    const { entry, unmount } = mountEntryWithLayout((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key, stub.layout)
     window.__omnimuxStage = { claim(id) { calls.push(['claim', id]) } }
     window.__omnimuxWorkbench = {
+      layout: stub.layout,
       open(options) { calls.push(['open', options]); return failure.open() },
       setFocus(mode) { calls.push(['focus', mode]) },
     }
@@ -327,33 +366,33 @@ test('Issue #2721: false, non-true, synchronous throw, and rejection never claim
     await entry.click()
     assert.deepEqual(calls, [
       ['open', { tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' }],
-    ], `${failure.name} must not claim or independently set focus`)
+    ], `${failure.name} must not select a panel, claim, or independently set focus`)
     unmount()
   }
 })
 
-test('Issue #2721: absent Workbench or Stage APIs produce no claim and no separate focus write', async () => {
+test('Issue #3165: absent Workbench, open, or layout selectPanel APIs produce no selection and no claim', async () => {
   for (const scenario of [
-    { name: 'missing Workbench', workbench: undefined, stage: { claim() {} }, expected: [] },
-    { name: 'missing open API', workbench: { setFocus() {} }, stage: { claim() {} }, expected: [] },
-    { name: 'missing Stage', workbench: { open() {} }, stage: undefined, expected: [] },
-    { name: 'missing claim API', workbench: { open() {} }, stage: {}, expected: [] },
+    { name: 'missing Workbench', layout: true, open: false, expected: [] },
+    { name: 'missing open API', layout: true, open: false, expected: [] },
+    { name: 'missing layout selectPanel', layout: false, open: true, expected: [] },
   ]) {
     setupMockEnvironment()
-    const { entry, unmount } = mountEntry((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key)
     const calls = []
-    window.__omnimuxStage = scenario.stage && {
-      ...scenario.stage,
-      claim(id) { calls.push(['claim', id]) },
-    }
-    window.__omnimuxWorkbench = scenario.workbench && {
-      ...scenario.workbench,
-      ...(scenario.name === 'missing open API' ? {} : {
+    const stub = createLayoutStub(calls)
+    const layout = scenario.layout
+      ? stub.layout
+      : { panelInfo: stub.layout.panelInfo }
+    const { entry, unmount } = mountEntryWithLayout((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key, layout)
+    window.__omnimuxStage = { claim(id) { calls.push(['claim', id]) } }
+    if (scenario.open) {
+      window.__omnimuxWorkbench = {
+        layout,
         open(options) { calls.push(['open', options]); return true },
-      }),
-      setFocus(mode) { calls.push(['focus', mode]) },
+        setFocus(mode) { calls.push(['focus', mode]) },
+      }
     }
-    if (scenario.name === 'missing claim API') delete window.__omnimuxStage.claim
+    if (scenario.name === 'missing Workbench') delete window.__omnimuxWorkbench
 
     await entry.click()
     assert.deepEqual(calls, scenario.expected, `${scenario.name} must leave state unchanged`)
@@ -361,18 +400,20 @@ test('Issue #2721: absent Workbench or Stage APIs produce no claim and no separa
   }
 })
 
-test('Issue #2721: unmount while Clip open is pending prevents a later Vids claim', async () => {
+test('Issue #2721: unmount while Clip open is pending prevents a later panel selection', async () => {
   setupMockEnvironment()
-  const { entry, unmount } = mountEntry((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key)
   const calls = []
-  let resolveOpen
+  const stub = createLayoutStub(calls)
+  const { entry, unmount } = mountEntryWithLayout((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key, stub.layout)
   window.__omnimuxStage = { claim(id) { calls.push(['claim', id]) } }
   window.__omnimuxWorkbench = {
+    layout: stub.layout,
     open(options) {
       calls.push(['open', options])
       return new Promise((resolve) => { resolveOpen = resolve })
     },
   }
+  let resolveOpen
 
   const clickPromise = entry.click()
   assert.equal(calls.length, 1)
@@ -450,6 +491,7 @@ test('Issue #2721: Vids overlay registration retains Clip betterSidebar API bind
 test('legacy Google Vids Tab registration identifiers and sidebar store are absent from current sources', () => {
   const sidebarSource = readFileSync(new URL('./sidebar-entry.js', import.meta.url), 'utf8')
   const indexSource = readFileSync(new URL('./index.js', import.meta.url), 'utf8')
+  const stageSource = readFileSync(new URL('./GoogleVidsStage.jsx', import.meta.url), 'utf8')
   const manifestSource = readFileSync(new URL('../../dsh.manifest.json', import.meta.url), 'utf8')
   assert.doesNotMatch(sidebarSource, /GOOGLE_VIDS_TAB_ID|createGoogleVidsStageStore|data-tab-id/)
   assert.doesNotMatch(indexSource, /GOOGLE_VIDS_TAB_ID|registerGoogleVidsTab|registerTab\s*\(/)
@@ -457,4 +499,16 @@ test('legacy Google Vids Tab registration identifiers and sidebar store are abse
   assert.match(manifestSource, /"target": "main"/)
   assert.match(indexSource, /ctx\.slots\.inject\('main'/)
   assert.match(indexSource, /ctx\.inject\(\['betterSidebar'\]/)
+})
+
+test('Issue #3165: the Vids main-slot panel never claims or releases a product stage', () => {
+  const sidebarSource = readFileSync(new URL('./sidebar-entry.js', import.meta.url), 'utf8')
+  const stageSource = readFileSync(new URL('./GoogleVidsStage.jsx', import.meta.url), 'utf8')
+  // Vids 占据 main 插槽；产品舞台 chrome 会隐藏会话列里所有非 overlay 子节点，
+  // 包括刚被选中的 main 面板本身 —— 因此这里禁止任何 claim/release。
+  assert.doesNotMatch(sidebarSource, /claimProductStage|__omnimuxStage|stage\.claim\(/)
+  assert.doesNotMatch(sidebarSource, /dsh-product-stage/)
+  assert.doesNotMatch(stageSource, /claimProductStage|__omnimuxStage|release\('omnimux-vids'\)/)
+  assert.match(sidebarSource, /selectPanel\('omnimux-vids'\)/)
+  assert.match(stageSource, /selectPanel\(null\)/)
 })

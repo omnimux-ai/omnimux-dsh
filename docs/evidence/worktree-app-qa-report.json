@@ -1,16 +1,16 @@
 {
-  "runId": "295ffd04-df70-4638-b694-ffdf854a4a75",
+  "runId": "4d087da7-6912-4012-a4f6-cbaace8fca26",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090",
-  "origin": "http://127.0.0.1:63138",
-  "appPort": 63138,
-  "cdpPort": 63357,
-  "startedAt": "2026-10-05T04:08:21.112Z",
-  "completedAt": "2026-10-05T04:08:36.626Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-blank-issue-3165",
+  "origin": "http://127.0.0.1:49801",
+  "appPort": 49801,
+  "cdpPort": 49977,
+  "startedAt": "2026-10-05T19:19:33.164Z",
+  "completedAt": "2026-10-05T19:19:48.769Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:63138",
+    "origin": "http://127.0.0.1:49801",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "taskPluginsCount": 21,
@@ -35,19 +35,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:63138",
+      "origin": "http://127.0.0.1:49801",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-OZtr--bAIKU26ZFhSZ1XJYAwGMujWDUWEXnItT5PXUY"
+      "cookieName": "dsh-auth-2cBFxXt8lc9wT0IeeeaXIvd2G-kiRyeEi7BYHwdh2Jg"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 63357
+      "port": 49977
     },
     {
       "name": "auth-cookie-applied",
@@ -57,7 +57,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 10,
+        "visibleCount": 119,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -66,7 +66,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 24
+        "bodyTextLength": 112
       }
     },
     {
@@ -77,7 +77,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 10
+      "visibleCount": 119
     },
     {
       "name": "runtime-modal-bypassed",
@@ -86,7 +86,7 @@
     {
       "name": "blank-session-guide-visible",
       "pass": true,
-      "clickedNewSession": false
+      "clickedNewSession": true
     },
     {
       "name": "explore-section-visible",
@@ -106,23 +106,90 @@
       "usedWorkbenchFallback": true
     },
     {
-      "name": "journey:nav-assets-entry",
-      "pass": true,
-      "detail": "library entry clicked"
-    },
-    {
-      "name": "journey:assets-view-visible",
+      "name": "journey:vids:explore-entry-present",
       "pass": true,
       "detail": {
-        "hubPanel": true,
-        "assetCards": 1,
-        "bodyLen": 3256
+        "hasConversationSurface": false,
+        "desktopMode": null,
+        "hasExploreEntry": true
       }
     },
     {
-      "name": "journey:journey-screenshot",
+      "name": "journey:vids:explore-entry-clicked",
       "pass": true,
-      "detail": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090/.workbuddy/evidence/app-qa/295ffd04-df70-4638-b694-ffdf854a4a75/journey-assets.png (220596B)"
+      "detail": {
+        "ok": true
+      }
+    },
+    {
+      "name": "journey:vids:explore-menu-has-google-vids",
+      "pass": true
+    },
+    {
+      "name": "journey:vids:google-vids-item-clicked",
+      "pass": true,
+      "detail": {
+        "ok": true,
+        "label": "Google Vids"
+      }
+    },
+    {
+      "name": "journey:vids:stage-in-main-slot",
+      "pass": true,
+      "detail": {
+        "rect": {
+          "w": 1000,
+          "h": 713,
+          "top": 0,
+          "left": 280
+        },
+        "productStage": null
+      }
+    },
+    {
+      "name": "journey:vids:stage-visible-with-content",
+      "pass": true,
+      "detail": {
+        "visibility": "visible",
+        "rect": {
+          "w": 1000,
+          "h": 713,
+          "top": 0,
+          "left": 280
+        },
+        "visibleDescendants": 38,
+        "textLength": 88
+      }
+    },
+    {
+      "name": "journey:vids:no-hidden-ancestor",
+      "pass": true,
+      "detail": "clean"
+    },
+    {
+      "name": "journey:vids:entry-active-state-follows-host-layout",
+      "pass": true,
+      "detail": {
+        "entryActive": null,
+        "hostPanelInfoAvailable": false,
+        "note": "本帧无 layout.panelInfo 服务（桌面框架专属）；激活态由单测与侧栏 e2e 的 layout stub 覆盖"
+      }
+    },
+    {
+      "name": "journey:vids:no-product-stage-claim",
+      "pass": true,
+      "detail": {
+        "productStage": null
+      }
+    },
+    {
+      "name": "journey:vids:conversation-restored-after-close",
+      "pass": true,
+      "detail": {
+        "hasStage": false,
+        "productStage": null,
+        "entryActive": null
+      }
     },
     {
       "name": "screenshot-png-verified",
@@ -131,22 +198,22 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 220596
+      "bytes": 64397
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/cross-acceptance-loop-issue-3090/.workbuddy/evidence/app-qa/295ffd04-df70-4638-b694-ffdf854a4a75/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-blank-issue-3165/.workbuddy/evidence/app-qa/4d087da7-6912-4012-a4f6-cbaace8fca26/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 220596
+    "bytes": 64397
   },
   "errors": [],
   "cleanup": {
     "cleaned": true
   },
   "hubPath": {
-    "guideVisibleBefore": true,
-    "clickedNewSession": false,
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
     "exploreVisible": true,
     "exploreCardCount": 40,
     "assetHubOpened": true

@@ -13,7 +13,7 @@
 当前架构中 `Google Vids (Veo)` 与 `OmniMux Clip (视频剪辑)` 作为右侧辅助侧边栏 `betterSidebar` 的互斥页签存在，导致同屏死锁、指引方向颠倒（中栏需要向右插入剪辑器，但此前被放在右侧并写着向左插入）与心流阻断。
 
 ### 1.2 改造目标
-1. **中栏主舞台沉浸生成 (Left-Center Stage)**：将 Google Vids 迁出 `betterSidebar`，升级为一级产品舞台（Product Stage），挂载于 `[data-slot="shell.overlay"]`，覆盖主会话区。
+1. **中栏主舞台沉浸生成 (Left-Center Stage)**：将 Google Vids 迁出 `betterSidebar`，升级为一级产品舞台（Product Stage），挂载于 `[data-slot="shell.overlay"]`，覆盖主会话区。**（历史基线，已被 Issue #3165 取代：Vids 现由 `omnimux-video` 注册为官方 `main` 插槽面板，`key: 'omnimux-vids'`、manifest `target: main`，渲染在中间会话列内；不再占用 `shell.overlay`、不再 claim 产品舞台。）**
 2. **右栏剪辑轨道常驻同屏 (Right Studio Rail)**：激活 Google Vids 时，系统联动打开右侧 `betterSidebar` 的 `omnimux-clip:studio` 并进入 split 焦点，确保剪辑器与 Vids 舞台同屏可见。具体分栏宽度由 Workbench 当前的视口约束与用户保存状态决定；**45% : 55%** 仅为原型示意目标，不是精确比例或运行时不变量。
 3. **跨栏语义与数据流闭环 (Cross-Column Synergy)**：
    - 门禁状态秒级感知：中栏门禁条感知右侧工程打开状态，就绪后平滑淡出自愈；
@@ -24,7 +24,7 @@
 
 ## 2. 核心架构与命令 (Commands & Architecture)
 
-> **当前行为说明（Issue #2721）**：本 Spec 的原型目标与 UI 白名单仍作为视觉基线；入口执行顺序及错误路径以 `specs/google-vids-center-stage-entry-regression.spec.md` 为当前行为真源。下文中 45:55 是原型示意而非精确布局不变量；旧 tab-era 调用顺序不再适用。
+> **当前行为说明（Issue #2721 / #3165）**：本 Spec 的原型目标与 UI 白名单仍作为视觉基线；入口执行顺序、座位拓扑及错误路径以 `specs/google-vids-center-stage-entry-regression.spec.md` 为当前行为真源。下文中 45:55 是原型示意而非精确布局不变量；旧 tab-era 调用顺序不再适用。凡本文出现 `shell.overlay` 挂载、`omnimux-vids-stage` 注册或 claim `omnimux-vids` 的表述，均为 #2698/#2721 历史基线，已由 #3165 取代：Vids 现为官方 `main` 插槽面板，入口只调用 `layout.selectPanel('omnimux-vids')`。
 
 ### 2.1 执行与测试命令
 - 单元测试：`pnpm --filter omnimux test` / `pnpm test`
@@ -33,15 +33,15 @@
 
 ### 2.2 文件结构变动拓扑
 - `plugins/omnimux/src/client/conversation-box.js`：
-  - `STAGE_CSS_CLASS_MAP` 新增 `'omnimux-vids': 'omnimux-vids-stage'`；
-  - `PRODUCT_STAGE_CHROME` 针对 betterSidebar、toggleCluster、shell.sidebar.auxiliary 隐藏规则追加 `:not([data-dsh-product-stage="omnimux-vids"])` 豁免。
+  - **（历史基线，已被 #3165 取代）**曾新增 `STAGE_CSS_CLASS_MAP['omnimux-vids']` 并追加 7 条 `:not([data-dsh-product-stage="omnimux-vids"])` 豁免；
+  - **当前实现**：`STAGE_CSS_CLASS_MAP` **不含** `'omnimux-vids'`，7 条 vids `:not(...)` 豁免已删除。原因：`main` 插槽面板渲染在 `.dshDesktopConversationSurface` 内，产品舞台 chrome 的 `:not([data-slot="shell.overlay"])` 隐藏规则会连同刚选中的面板一起隐藏整列（表现为空白）。
 - `plugins/omnimux-video/dsh.manifest.json`：
-  - capabilities.slots 声明 `shell.overlay` 目标并指向 `src/client/GoogleVidsStage.jsx`。
+  - capabilities.slots 声明 `main` 目标并指向 `src/client/GoogleVidsStage.jsx`。
 - `plugins/omnimux-video/src/client/index.js`：
   - 移除 `betterSidebar.registerTab` 注册；
-  - `ctx.slots.inject('shell.overlay', ...)` 注册 `omnimux-vids-stage` (order: 36, component: GoogleVidsStage)。
+  - `ctx.slots.inject('main', ...)` 注册 `name: 'main', key: 'omnimux-vids'` (order: 36, component: GoogleVidsStage)。
 - `plugins/omnimux-video/src/client/sidebar-entry.js`：
-  - 点击先等待 `workbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })`；仅当结果严格等于 `true` 且入口仍挂载时，再 claim `omnimux-vids`。不另行调用 `workbench.setFocus()`。当前行为细节以 Issue #2721 回归规格为准。
+  - 点击先等待 `workbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })`；仅当结果严格等于 `true` 且入口仍挂载时，再调用 `layout.selectPanel('omnimux-vids')`。不 claim 产品舞台，不另行调用 `workbench.setFocus()`。当前行为细节以 Issue #2721 回归规格为准（座位经 #3165 更正）。
 - `plugins/omnimux-clip/src/client/OpenReelStudioTab.jsx`：
   - 广播工程就绪状态，监听 `omnimux-clip:insert` 事件将切片追加至 V1 视频轨。
 - `plugins/omnimux-video/src/client/GoogleVidsStage.jsx`：
@@ -54,7 +54,7 @@
 ### 3.1 顶部导航与门禁区域 (Chrome & Banner)
 | 组件 ID | 元素类型 | 精确显示文案（逐字锁定） | 显隐与交互规则 | 严禁项 |
 |---|---|---|---|---|
-| `stage.header.closeBtn` | 图标按钮 | `✕` (SVG 或原生) | 点击触发 `releaseProductStage('omnimux-vids')` | 禁加文字标签 |
+| `stage.header.closeBtn` | 图标按钮 | `✕` (SVG 或原生) | 点击调用 `layout.selectPanel(null)` 交还宿主原生会话 | 禁加文字标签 |
 | `stage.header.title` | 页面标题 | `Google Vids` | 常驻 14px 加粗 600 | 禁加 Emoji/副标题 |
 | `stage.header.badge` | 状态微标 | `内测版` | 常驻 12px 轮廓微标 | 禁写营销词 |
 | `stage.header.wizardBtn` | 辅助按钮 | `向导` | 展开开箱向导面板 | 禁写开箱向导 |
@@ -104,13 +104,14 @@
 - **Never**：
   - 绝对禁止使用装饰性 Emoji（如 💎、✨、🔥 等）。
   - 绝对禁止在 `betterSidebar` 再次注册该 Tab。
+  - 绝对禁止注册 `main` 插槽面板的插件调用 `claimProductStage` / `__omnimuxStage.claim` / `stage.claim(`（Issue #3165）。
   - 绝对禁止破坏右侧时间轴或使右侧侧边栏空白。
 
 ---
 
 ## 5. 验收标准 (Acceptance Criteria)
-1. 双栏同屏：点击左侧 Google Vids 入口，中栏激活主舞台，右侧同时打开 Clip 剪辑工作台，会话列被中栏覆盖但右侧栏正常可见。
+1. 双栏同屏：点击左侧 Google Vids 入口，中栏切换为 Vids 面板（官方 `main` 插槽），右侧同时打开 Clip 剪辑工作台，右侧栏正常可见。
 2. 文案一致性：源码中文案 100% 匹配第 3 节白名单，无任何多余词汇。
 3. 联动与数据流：成片卡片动作栏点击「`→ 插入`」，右侧 Clip 时间轴 V1 轨道无缝追加片段，并提供轻量反馈。
 4. 门禁自愈：右侧无工程时中栏提示「请在右侧创建或打开剪辑工程」且输入框置灰禁用；右侧新建或打开工程后门禁条淡出，输入框激活。
-5. 退出安全：中栏点击 `✕` 退出舞台后，主会话完整恢复，右侧剪辑工程不受干扰。
+5. 退出安全：中栏点击 `✕`（`layout.selectPanel(null)`）后，主会话完整恢复，右侧剪辑工程不受干扰。

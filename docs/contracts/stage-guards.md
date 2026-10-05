@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-08-31"
+updated: "2026-10-05"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-accounts"
 ---
@@ -34,8 +34,9 @@ subsystem: "omnimux-accounts"
 
 1. Tab / Stage 根保活（上表）。
 2. **禁止库页 overlay 回潮**：下列包的 `src/client/index.js`（market 为 `src/client/apply.js`）**不得** `slots.inject('shell.overlay')`：`omnimux-assets` / `products` / `accounts` / `inspiration` / `publish` / `analytics` / `workflow` / `market`。
-3. **允许 overlay 白名单**：`plugins/omnimux/src/client/index.js`（LoginGate）、`plugins/omnimux-clip/src/client/index.js`（ClipStage portal only）。
+3. **允许 overlay 白名单**：`plugins/omnimux/src/client/index.js`（LoginGate）、`plugins/omnimux-clip/src/client/index.js`（ClipStage portal only）。`omnimux-video` 注册的是官方 `main` 插槽，不属于 overlay 白名单。
 4. **禁止库页 claim**：迁入名单包的 sidebar / workbench-store 源码不得出现 `claimProductStage` / `stage.claim(`（clip portal 除外）。
+5. **`main` 插槽面板禁止 claim 产品舞台**：注册官方 `main` 插槽（`ctx.slots.inject('main', …)`，如 `omnimux-video` 的 `key: 'omnimux-vids'`）的插件源码不得出现 `claimProductStage` / `__omnimuxStage.claim` / `stage.claim(`，也不得读 `data-dsh-product-stage` 推导激活态。产品舞台 chrome 会隐藏 `.dshDesktopConversationSurface` 内非 `shell.overlay` 的子节点，而 `main` 面板正渲染于其中——claim 会隐藏刚被选中的面板（Issue #3165 空白列回归）。门禁：`scripts/verify-stage-contracts.mjs`（`pnpm verify:stages`）。
 
 实际 sidebar 检查从 client 装配入口捕获传给 kit 的 adapter；六方法、取消订阅、Tab 注册、会话隔离与关闭重开必须执行通过。静态入口不再以旧 wrapper 的工厂导出作为运行覆盖。合并前在隔离 worktree 完成相关自动化/静态检查和独立评审；Agent 侧验收在自身隔离 worktree 内用 ego-browser 或 worktree 隔离 Web QA 运行器完成真实浏览器验收，证据格式见 [plugin-qa.md](./plugin-qa.md)。Dev 真机验收归人工，不作为 Agent 交付卡点；`pnpm verify:live <stage>` 属于人工侧的 Dev 45120 验收程序。
 
