@@ -82,16 +82,21 @@ test('E2E: 悬停预览卡只保留图像（Issue #3123）', async (t) => {
     assert.equal(countOf(css, '.wf-hover-inspector-duration'), 1, '时长角标样式必须保留');
   });
 
-  await t.test('卡片高度兜底值与「只剩图像」后的实际高度一致', () => {
+  await t.test('卡片尺寸按原素材比例拟合，不再固定 140 高', () => {
     assert.equal(
-      /offsetHeight \|\| 142\b/.test(component),
+      /PREVIEW_MAX_EDGE\s*=\s*360/.test(component),
       true,
-      '首帧测量前的兜底高度必须与 140px 图像 + 2px 边框对齐',
+      '最大边必须限制为 360',
+    );
+    assert.equal(
+      /fitWithinMaxEdge/.test(component),
+      true,
+      '必须按原比例拟合宽高',
     );
     assert.equal(
       /\.wf-hover-inspector-preview\s*\{[^}]*height:\s*140px;/.test(css),
-      true,
-      '缩略图区域高度不变（140px）',
+      false,
+      '缩略图区域不得再固定 140px 高',
     );
   });
 });
