@@ -28,7 +28,6 @@ export const WORKBENCH_OCCUPANTS = Object.freeze([
   'omnimux-workflow:library',
   'omnimux-market:plaza',
   'omnimux-automation:workbench',
-  'omnimux-avatar:studio',
 ])
 
 /** 焦点模式：chat = 仅会话（右栏关闭），gui = 面板铺满，split = 会话+面板分栏。 */

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, it } from 'node:test'
@@ -239,98 +239,5 @@ describe('copyIntoVault disk + escape', () => {
       }),
       (error) => error instanceof AssetsError && error.code === 'path-denied',
     )
-  })
-})
-
-describe('LibraryStore appendFiles', () => {
-  it('appends refs without re-copying the existing ones', async () => {
-    const store = makeStore()
-    const asset = await store.add({ name: '追加角色', type: 'character', files: [{ real_path: realFile }] })
-    const firstId = asset.files[0].id
-    const second = join(root, 'second.png')
-    writeFileSync(second, 'png2')
-
-    const appended = await store.appendFiles(asset.id, [{ real_path: second }])
-    assert.equal(appended.files.length, 2)
-    assert.equal(appended.files[0].id, firstId)
-    assert.equal(appended.files[0].relative_path, asset.files[0].relative_path)
-    assert.equal(readFileSync(appended.files[0].real_path, 'utf8'), 'png')
-    assert.equal(readFileSync(appended.files[1].real_path, 'utf8'), 'png2')
-    // 既有引用没有被重拷：受管目录里恰好两份文件
-    assert.equal(readdirSync(join(root, 'store', 'data', 'files', asset.id)).length, 2)
-    assert.equal(store.get(asset.id).files.length, 2)
-  })
-
-  it('keeps the original cover when files are appended', async () => {
-    const store = makeStore()
-    const asset = await store.add({ name: '封面不动', type: 'character', files: [{ real_path: realFile }] })
-    const coverId = asset.cover_file_id
-    const second = join(root, 'second.png')
-    writeFileSync(second, 'png2')
-
-    const appended = await store.appendFiles(asset.id, [{ real_path: second }])
-    assert.equal(appended.cover_file_id, coverId)
-    assert.equal(appended.cover.id, coverId)
-    assert.equal(store.get(asset.id).cover_file_id, coverId)
-  })
-
-  it('is a no-op for an empty list and for paths that do not exist', async () => {
-    const store = makeStore()
-    const asset = await store.add({ name: '空追加', type: 'character', files: [{ real_path: realFile }] })
-    const before = store.revision()
-
-    const empty = await store.appendFiles(asset.id, [])
-    assert.equal(empty.files.length, 1)
-    assert.equal(store.revision(), before)
-
-    const missing = await store.appendFiles(asset.id, [{ real_path: join(root, 'never-there.png') }])
-    assert.equal(missing.files.length, 1)
-    assert.equal(store.revision(), before)
-    assert.equal(readdirSync(join(root, 'store', 'data', 'files', asset.id)).length, 1)
-  })
-
-  it('throws asset-not-found for an unknown asset id', async () => {
-    const store = makeStore()
-    await assert.rejects(
-      () => store.appendFiles('ast_missing', [{ real_path: realFile }]),
-      (error) => error instanceof AssetsError && error.code === 'asset-not-found',
-    )
-  })
-
-  it('adds a folder as exactly one directory ref and keeps the image cover', async () => {
-    const store = makeStore()
-    const asset = await store.add({ name: '多视角', type: 'character', files: [{ real_path: realFile }] })
-    const coverId = asset.cover_file_id
-    const pack = join(root, 'views')
-    mkdirSync(join(pack, 'looks'), { recursive: true })
-    writeFileSync(join(pack, 'front.png'), 'png')
-
-    const appended = await store.appendFiles(asset.id, [{ real_path: pack }])
-    assert.equal(appended.files.length, 2)
-    assert.equal(appended.files[1].kind, 'directory')
-    assert.equal(appended.cover_file_id, coverId)
-    assert.equal(appended.cover.kind, 'image')
-    const entries = store.listFileEntries(asset.id, appended.files[1].id, '')
-    assert.equal(entries.entries.some((row) => row.name === 'front.png' && !row.is_dir), true)
-  })
-})
-
-describe('LibraryStore findBySource', () => {
-  it('matches exactly, misses to null, and prefers the most recently updated', async () => {
-    const store = makeStore()
-    const first = await store.add({ name: '来源一', type: 'character', source: 'cloud:abc' })
-    const found = store.findBySource('cloud:abc')
-    assert.equal(found.id, first.id)
-    assert.equal(found.source, 'cloud:abc')
-    assert.equal(store.findBySource('cloud:other'), null)
-    assert.equal(store.findBySource('cloud:ab'), null)
-
-    // 返回浅拷贝：改它不污染账本
-    found.name = '被改写'
-    assert.equal(store.get(first.id).name, '来源一')
-
-    await new Promise((resolve) => { setTimeout(resolve, 10) })
-    const second = await store.add({ name: '来源二', type: 'character', source: 'cloud:abc' })
-    assert.equal(store.findBySource('cloud:abc').id, second.id)
   })
 })

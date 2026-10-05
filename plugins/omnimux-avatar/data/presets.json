@@ -1,0 +1,2404 @@
+{
+  "version": 1,
+  "source": "higgsfield.ai/ai-influencer-studio explore presets (public CMS endpoint, reverse-engineered)",
+  "fetched_at": "2026-10-05T17:22:42.674Z",
+  "items": [
+    {
+      "id": "9fe66e84-a354-41e8-92ae-b13183ea0a02",
+      "name": "AI Influencer 38",
+      "preview": {
+        "path": "/influencer-presets/a2008147bba69969.webp",
+        "width": 478,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/d5748d5006556e06.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_bowl"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "goth"
+        ],
+        "body_type": [
+          "body_ultra"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_olive"
+        ],
+        "freak_face": [
+          "fn_thickbrows"
+        ],
+        "freak_head": [
+          "head_round"
+        ],
+        "freak_neck": [
+          "neck_column"
+        ],
+        "facial_hair": [
+          "fh_pushbroom"
+        ],
+        "hair_colour": [
+          "hc_black"
+        ],
+        "proportions": [
+          "pr_shoulders"
+        ],
+        "ethnicity_origin_base": [
+          "middle_eastern"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary goth/streetwear styling. Two-panel sheet: left a tight frontal close-up portrait with the entire head and hair in frame, right a full-body standing shot; arms down, blank deadpan expression. PURE WHITE seamless background, bright soft light. Signature: thick glossy black mushroom bowl cut, heavy black horseshoe moustache, metal braces on the teeth, hyper-muscular body. Outfit: black leather vest over a black shirt with rolled sleeves, wide black leather belt, emerald-green velvet flared trousers, black leather gloves, black heeled boots. Hyper-realistic, natural uniform skin tone, crisp texture, sharp focus.",
+      "seed": 427752
+    },
+    {
+      "id": "07711271-55c1-4ee6-92b7-433074a1e946",
+      "name": "AI Influencer 15",
+      "preview": {
+        "path": "/influencer-presets/6624ee60038d09d3.webp",
+        "width": 512,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/ed7646f850b9bb2b.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_long"
+        ],
+        "gender": [
+          "trans_man"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_hat"
+        ],
+        "aesthetic": [
+          "theatrical"
+        ],
+        "body_type": [
+          "body_athletic"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_porcelain"
+        ],
+        "freak_face": [
+          "ff_nose_2"
+        ],
+        "freak_head": [
+          "head_oval"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "distinctive": [
+          "df_slits"
+        ],
+        "facial_hair": [
+          "fh_pencil"
+        ],
+        "hair_colour": [
+          "hc_chestnut"
+        ],
+        "proportions": [
+          "pr_shoulders"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "seed": 318255
+    },
+    {
+      "id": "94e7114c-4162-44e3-9d2e-016909c00641",
+      "name": "AI Influencer 18",
+      "preview": {
+        "path": "/influencer-presets/aee71a423b76f161.webp",
+        "width": 640,
+        "height": 430
+      },
+      "sheet": {
+        "path": "/influencer-presets/0bbd8f213f9fa812.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hs_tufts"
+        ],
+        "gender": [
+          "trans_woman"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_glasses"
+        ],
+        "aesthetic": [
+          "casual"
+        ],
+        "body_type": [
+          "body_muscular"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_monolid"
+        ],
+        "skin_tone": [
+          "st_deep"
+        ],
+        "freak_face": [
+          "ff_teeth_10"
+        ],
+        "freak_head": [
+          "head_square"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "distinctive": [
+          "df_scar"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_grey"
+        ],
+        "proportions": [
+          "pr_shoulders"
+        ],
+        "ethnicity_origin_base": [
+          "latin_american"
+        ]
+      },
+      "seed": 345024
+    },
+    {
+      "id": "2b943a92-d112-49cb-9524-36e0ec3094aa",
+      "name": "AI Influencer 36",
+      "preview": {
+        "path": "/influencer-presets/ce60ac93e58164ad.webp",
+        "width": 512,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/0ce2c57ee847cbcd.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_bowl"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "casual"
+        ],
+        "body_type": [
+          "body_ultra"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_deep"
+        ],
+        "freak_face": [
+          "fn_cheekbones"
+        ],
+        "freak_head": [
+          "head_tiny"
+        ],
+        "freak_neck": [
+          "neck_column"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_platinum"
+        ],
+        "proportions": [
+          "pr_shoulders"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary trendy 2026 runway styling (not retro). Two-panel sheet: left a tight close-up portrait with the entire head and hair in frame, right a full-body standing shot; both front-facing, arms down, blank expression. PURE WHITE seamless background, bright soft light. Not overweight. Signature: hyper-muscular bodybuilder physique with a very small head, platinum bowl cut, deadpan face. Outfit: tight cropped baby-blue knit polo stretched over huge muscles, baggy brown corduroy carpenter pants, clogs with white socks. Hyper-realistic, natural uniform skin tone, crisp texture, 85mm, sharp focus.",
+      "seed": 330951
+    },
+    {
+      "id": "4d1a3816-271c-4a5a-979e-29643e042600",
+      "name": "AI Influencer 41",
+      "preview": {
+        "path": "/influencer-presets/2f4631cfb19fffdb.webp",
+        "width": 425,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/fe96ea5a5d570217.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hair_long"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_glasses",
+          "acc_jewelry"
+        ],
+        "aesthetic": [
+          "goth"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_grey"
+        ],
+        "eye_shape": [
+          "es_hooded"
+        ],
+        "skin_tone": [
+          "st_fair"
+        ],
+        "freak_face": [
+          "fn_eyebags"
+        ],
+        "freak_head": [
+          "head_long"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "facial_hair": [
+          "fh_braid"
+        ],
+        "hair_colour": [
+          "hc_white"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary biker/streetwear styling. Two-panel sheet: left a tight frontal close-up portrait with the entire head and hair in frame, right a full-body standing shot; arms down, blank deadpan expression. PURE WHITE seamless background, bright soft light. Slim, not overweight. Signature: very long straight white hair with a center part, long braided white goatee, black wraparound sunglasses, deeply wrinkled gaunt face. Outfit: black leather biker jacket, plain black tee, black flared jeans, black cowboy boots, chunky silver chains and rings. Hyper-realistic, natural uniform skin tone, crisp texture, sharp focus.",
+      "seed": 477836
+    },
+    {
+      "id": "f1754b73-119c-4959-af7c-45dd1ec9ba64",
+      "name": "AI Influencer 35",
+      "preview": {
+        "path": "/influencer-presets/a357ab62b1f7843d.webp",
+        "width": 425,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/dfbe66a7277b0c4f.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_dome"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "streetstyle"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_ebony"
+        ],
+        "freak_face": [
+          "fn_cheekbones"
+        ],
+        "freak_head": [
+          "head_long"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_platinum"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary trendy 2026 runway styling (not retro). Two-panel sheet: left a tight close-up portrait with the entire head and hair in frame, right a full-body standing shot; both front-facing, arms down, blank expression. PURE WHITE seamless background, bright soft light. Slim, not overweight. Signature: extremely long thin neck, tall bleached-blonde flat-top haircut like a box. Outfit: lime-green fuzzy mohair cropped cardigan, brown leather midi skirt, white knee socks, chunky black loafers. Hyper-realistic, natural uniform skin tone, crisp texture, 85mm, sharp focus.",
+      "seed": 918241
+    },
+    {
+      "id": "0805b749-9fee-4734-9736-2065f4e64567",
+      "name": "AI Influencer 43",
+      "preview": {
+        "path": "/influencer-presets/c37a67ec72ff76e1.webp",
+        "width": 640,
+        "height": 512
+      },
+      "sheet": {
+        "path": "/influencer-presets/9e8194ebdc9303f1.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_dome"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "streetstyle"
+        ],
+        "body_type": [
+          "body_athletic"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_hooded"
+        ],
+        "skin_tone": [
+          "st_olive"
+        ],
+        "freak_face": [
+          "fn_thickbrows"
+        ],
+        "freak_head": [
+          "head_ancient"
+        ],
+        "freak_neck": [
+          "neck_short"
+        ],
+        "facial_hair": [
+          "fh_stubble"
+        ],
+        "hair_colour": [
+          "hc_black"
+        ],
+        "ethnicity_origin_base": [
+          "middle_eastern"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary workwear/streetwear styling. Two-panel sheet: left a tight frontal close-up portrait with the entire head and hair in frame, right a full-body standing shot; arms down, blank deadpan expression. PURE WHITE seamless background, bright soft light. Signature: caveman skull with a massive protruding brow ridge, wide flat nose, black curly high-top fade. Outfit: bright orange canvas work jacket over a black hoodie, baggy olive cargo pants, tan construction boots, chain wallet. Hyper-realistic, natural uniform skin tone, crisp texture, sharp focus.",
+      "seed": 671790
+    },
+    {
+      "id": "d112cf02-f51a-4650-8178-9f7890e4a251",
+      "name": "AI Influencer 10",
+      "preview": {
+        "path": "/influencer-presets/acdd610a25e06863.webp",
+        "width": 512,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/a1ceef12a7eae590.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "mature"
+        ],
+        "hair": [
+          "hs_lampshade"
+        ],
+        "gender": [
+          "trans_man"
+        ],
+        "height": [
+          "h_average"
+        ],
+        "accessory": [
+          "acc_jewelry"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_heavy"
+        ],
+        "eye_color": [
+          "eye_ice_blue"
+        ],
+        "eye_shape": [
+          "es_close"
+        ],
+        "skin_tone": [
+          "st_porcelain"
+        ],
+        "freak_face": [
+          "ff_ears_9"
+        ],
+        "freak_head": [
+          "head_ancient"
+        ],
+        "freak_neck": [
+          "neck_normal"
+        ],
+        "distinctive": [
+          "df_ears"
+        ],
+        "facial_hair": [
+          "fh_pencil"
+        ],
+        "hair_colour": [
+          "hc_lilac"
+        ],
+        "proportions": [
+          "pr_shortlegs"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "seed": 476164
+    },
+    {
+      "id": "7ab45ed9-0722-4ee2-a985-2f69590a5c2e",
+      "name": "AI Influencer 47",
+      "preview": {
+        "path": "/influencer-presets/035eea06d89795ab.webp",
+        "width": 362,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/5c7bb524c9226a79.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_long"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_jewelry"
+        ],
+        "aesthetic": [
+          "streetstyle"
+        ],
+        "body_type": [
+          "body_ultra"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_deep"
+        ],
+        "freak_face": [
+          "ff_brows_6"
+        ],
+        "freak_head": [
+          "head_oval"
+        ],
+        "freak_neck": [
+          "neck_column"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_black"
+        ],
+        "proportions": [
+          "pr_shoulders",
+          "pr_waist"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary streetwear styling. Two-panel sheet: left a tight frontal close-up portrait with the entire head and hair in frame, right a full-body standing shot; arms down, blank deadpan expression. PURE WHITE seamless background, bright soft light. Not overweight. Signature: hyper-muscular woman, tight cornrows pulled into a high bun, bold drawn-on brows, gold grill teeth. Outfit: cropped black leather jacket, black mesh top, baggy camo cargo pants, chunky white sneakers. Hyper-realistic, natural uniform skin tone, crisp texture, sharp focus.",
+      "seed": 905384
+    },
+    {
+      "id": "552eb0bc-688c-4913-8fc7-cb35bc242fbd",
+      "name": "AI Influencer 04",
+      "preview": {
+        "path": "/influencer-presets/041c7ebbc1e2b57a.webp",
+        "width": 640,
+        "height": 358
+      },
+      "sheet": {
+        "path": "/influencer-presets/ed1f69553d4f0f4f.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hs_dome"
+        ],
+        "gender": [
+          "trans_man"
+        ],
+        "height": [
+          "h_average"
+        ],
+        "accessory": [
+          "acc_hat"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_athletic"
+        ],
+        "eye_color": [
+          "eye_ice_blue"
+        ],
+        "eye_shape": [
+          "es_upturned"
+        ],
+        "skin_tone": [
+          "st_tan"
+        ],
+        "freak_face": [
+          "ff_lips_3"
+        ],
+        "freak_head": [
+          "head_forehead"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "distinctive": [
+          "df_septum"
+        ],
+        "facial_hair": [
+          "fh_pushbroom"
+        ],
+        "hair_colour": [
+          "hc_pink"
+        ],
+        "proportions": [
+          "pr_shoulders"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "seed": 651151
+    },
+    {
+      "id": "8b492a5f-032c-4639-a6da-c9d315c95d51",
+      "name": "AI Influencer 13",
+      "preview": {
+        "path": "/influencer-presets/b068c9bad3c78657.webp",
+        "width": 358,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/e1b6a000fb7ca687.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hs_dome"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_average"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "sporty"
+        ],
+        "body_type": [
+          "body_muscular"
+        ],
+        "skin_tone": [
+          "st_fair"
+        ],
+        "freak_face": [
+          "ff_teeth_10",
+          "fn_freckles"
+        ],
+        "freak_head": [
+          "head_herojaw"
+        ],
+        "facial_hair": [
+          "fh_pushbroom"
+        ],
+        "hair_colour": [
+          "hc_ginger"
+        ],
+        "proportions": [
+          "pr_shortlegs",
+          "pr_shoulders"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "Retired 80s aerobics instructor: senior man with a huge chiseled gigachad jaw, enormous tight ginger perm like a giant ball, bushy ginger push-broom moustache, neon pink terry headband, gap teeth grin. Shiny teal-and-purple windbreaker tracksuit, white tube socks pulled high, chunky white retro sneakers, sweat wristbands, tiny skinny legs under a broad barrel chest. Hyperreal practical-prosthetic character, deadpan expression, standing straight, pure white seamless studio backdrop, high-end fashion lookbook photo, extremely exaggerated but photoreal.",
+      "seed": 522857
+    },
+    {
+      "id": "8dc7c2e4-b9b4-4c20-a1bb-50cebc9c13a8",
+      "name": "AI Influencer 42",
+      "preview": {
+        "path": "/influencer-presets/5f51a75aa40db0e5.webp",
+        "width": 425,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/a1e180b7b6c7bfae.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_pompadour"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_jewelry"
+        ],
+        "aesthetic": [
+          "streetstyle"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_blue"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_porcelain"
+        ],
+        "freak_face": [
+          "ff_lips_3"
+        ],
+        "freak_head": [
+          "head_oval"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_platinum"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary club/streetwear styling. Two-panel sheet: left a tight frontal close-up portrait with the entire head and hair in frame, right a full-body standing shot; arms down, blank deadpan expression. PURE WHITE seamless background, bright soft light. Slim, not overweight. Signature: bleached eyebrows, platinum wet-look hair slicked straight back, huge pouty lips, multiple silver facial piercings on brow and lip. Outfit: black latex top, oversized grey pinstripe blazer, baggy dark jeans, pointed silver metallic boots. Hyper-realistic, natural uniform skin tone, crisp texture, sharp focus.",
+      "seed": 62265
+    },
+    {
+      "id": "a617c588-67be-4816-a111-bbcb371ff6c4",
+      "name": "AI Influencer 44",
+      "preview": {
+        "path": "/influencer-presets/a04e93c8d6d5bf95.webp",
+        "width": 640,
+        "height": 478
+      },
+      "sheet": {
+        "path": "/influencer-presets/3d7000969a58e315.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_buzz"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_jewelry"
+        ],
+        "aesthetic": [
+          "y2k"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_grey"
+        ],
+        "eye_shape": [
+          "es_close"
+        ],
+        "skin_tone": [
+          "st_fair"
+        ],
+        "freak_face": [
+          "ff_nose_2",
+          "ff_ears_8"
+        ],
+        "freak_head": [
+          "head_oval"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "distinctive": [
+          "df_ears"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_platinum"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary y2k streetwear styling. Two-panel sheet: left a tight frontal close-up portrait with the entire head in frame, right a full-body standing shot; arms down, blank deadpan expression. PURE WHITE seamless background, bright soft light. Slim, not overweight. Signature: shaved head with a tiny bleached micro-fringe, huge hooked nose, prominent ears, metal braces. Outfit: purple satin bomber jacket, white ribbed tank, grey sweatpants, black slides with white socks, silver chains. Hyper-realistic, natural uniform skin tone, crisp texture, sharp focus.",
+      "seed": 318842
+    },
+    {
+      "id": "9aeccf46-6600-4ab0-bf17-b9b93e019031",
+      "name": "AI Influencer 07",
+      "preview": {
+        "path": "/influencer-presets/f92ec11d095a5b9c.webp",
+        "width": 640,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/b0544c75afcd487c.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_horns"
+        ],
+        "gender": [
+          "trans_woman"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_glasses"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_athletic"
+        ],
+        "eye_color": [
+          "eye_black"
+        ],
+        "eye_shape": [
+          "es_uneven"
+        ],
+        "skin_tone": [
+          "st_deep"
+        ],
+        "freak_face": [
+          "fn_freckles"
+        ],
+        "freak_head": [
+          "head_tiny"
+        ],
+        "freak_neck": [
+          "neck_short"
+        ],
+        "distinctive": [
+          "df_bleached"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_white"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "east_asian"
+        ]
+      },
+      "seed": 879855
+    },
+    {
+      "id": "0d323111-07b4-4952-82bc-620a8a94e5a6",
+      "name": "AI Influencer 09",
+      "preview": {
+        "path": "/influencer-presets/3403c507adcb0e49.webp",
+        "width": 640,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/a3cc5edd4cbdb35c.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_braids"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_hat"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_ultra"
+        ],
+        "eye_color": [
+          "eye_amber"
+        ],
+        "eye_shape": [
+          "es_huge"
+        ],
+        "skin_tone": [
+          "st_brown"
+        ],
+        "freak_face": [
+          "fn_freckles"
+        ],
+        "freak_head": [
+          "head_megachin"
+        ],
+        "freak_neck": [
+          "neck_short"
+        ],
+        "distinctive": [
+          "df_lashes"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_blonde"
+        ],
+        "proportions": [
+          "pr_shortlegs"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "seed": 803143
+    },
+    {
+      "id": "15ae2b44-44d5-4b95-b942-e74fd2c54bd5",
+      "name": "AI Influencer 01",
+      "preview": {
+        "path": "/influencer-presets/f57991a7dd53b8c5.webp",
+        "width": 640,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/30ecbb7cf75fecb8.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "normal",
+      "selection": {
+        "age": [
+          "mature"
+        ],
+        "hair": [
+          "hair_pigtails"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_average"
+        ],
+        "accessory": [
+          "acc_hat"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_heavy"
+        ],
+        "eye_color": [
+          "eye_hazel"
+        ],
+        "eye_shape": [
+          "es_downturned"
+        ],
+        "skin_tone": [
+          "st_deep"
+        ],
+        "freak_face": [
+          "fn_freckles"
+        ],
+        "freak_head": [
+          "head_oval"
+        ],
+        "freak_neck": [
+          "neck_short"
+        ],
+        "distinctive": [
+          "df_hetero"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_white"
+        ],
+        "proportions": [
+          "pr_shortlegs"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "seed": 860447
+    },
+    {
+      "id": "778bc86d-e2d8-4951-8a82-7d9f30f65d72",
+      "name": "AI Influencer 12",
+      "preview": {
+        "path": "/influencer-presets/0311f3a5fcb3064a.webp",
+        "width": 640,
+        "height": 430
+      },
+      "sheet": {
+        "path": "/influencer-presets/0c2dd3daf9b6815a.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hs_beehive"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_average"
+        ],
+        "accessory": [
+          "acc_jewelry"
+        ],
+        "aesthetic": [
+          "theatrical"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "skin_tone": [
+          "st_brown"
+        ],
+        "freak_face": [
+          "fn_mole",
+          "ff_brows_6"
+        ],
+        "freak_head": [
+          "head_heart"
+        ],
+        "distinctive": [
+          "df_hetero",
+          "df_lashes"
+        ],
+        "hair_colour": [
+          "hc_white"
+        ],
+        "ethnicity_origin_base": [
+          "indian"
+        ]
+      },
+      "brief": "Stern elderly salon owner with an enormous towering white beehive twice the height of her head, thin arched high brows, one blue and one brown eye, long false lashes, beauty mark. Fitted purple hairdresser tunic with combs and scissors in the chest pocket, holding silver scissors in one hand and a round brush in the other, black cigarette trousers, plum horsebit loafers. Hyperreal practical-prosthetic character, deadpan expression, standing straight, pure white seamless studio backdrop, high-end fashion lookbook photo, extremely exaggerated but photoreal.",
+      "seed": 167765
+    },
+    {
+      "id": "9d62f679-faf2-46e7-9736-1a6de5e2de89",
+      "name": "AI Influencer 16",
+      "preview": {
+        "path": "/influencer-presets/cc50df3118b1fea2.webp",
+        "width": 358,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/77db713be043b349.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_beehive"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_headphones"
+        ],
+        "aesthetic": [
+          "goth"
+        ],
+        "body_type": [
+          "body_curvy"
+        ],
+        "eye_color": [
+          "eye_hazel"
+        ],
+        "eye_shape": [
+          "es_hooded"
+        ],
+        "skin_tone": [
+          "st_tan"
+        ],
+        "freak_face": [
+          "fn_eyebags"
+        ],
+        "freak_head": [
+          "head_forehead"
+        ],
+        "freak_neck": [
+          "neck_normal"
+        ],
+        "distinctive": [
+          "df_hetero"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_pink"
+        ],
+        "proportions": [
+          "pr_waist"
+        ],
+        "ethnicity_origin_base": [
+          "east_asian"
+        ]
+      },
+      "seed": 671172
+    },
+    {
+      "id": "c6c24c39-b010-41d5-a5cf-aa2310b961f3",
+      "name": "AI Influencer 17",
+      "preview": {
+        "path": "/influencer-presets/7574c39a3944c9de.webp",
+        "width": 640,
+        "height": 358
+      },
+      "sheet": {
+        "path": "/influencer-presets/a756576fc18c4fa6.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hs_wings"
+        ],
+        "gender": [
+          "trans_man"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_hat"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_muscular"
+        ],
+        "eye_color": [
+          "eye_amber"
+        ],
+        "eye_shape": [
+          "es_upturned"
+        ],
+        "skin_tone": [
+          "st_deep"
+        ],
+        "freak_face": [
+          "ff_teeth_10"
+        ],
+        "freak_head": [
+          "head_long"
+        ],
+        "freak_neck": [
+          "neck_column"
+        ],
+        "distinctive": [
+          "df_lashes"
+        ],
+        "facial_hair": [
+          "fh_stubble"
+        ],
+        "hair_colour": [
+          "hc_green"
+        ],
+        "proportions": [
+          "pr_waist"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "seed": 656681
+    },
+    {
+      "id": "ca20a74c-7c73-46b4-ac8a-293cba50cbc5",
+      "name": "AI Influencer 19",
+      "preview": {
+        "path": "/influencer-presets/dbb2d8b88412bcde.webp",
+        "width": 358,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/8c235e12daecfbd5.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_pigtails"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_jewelry"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_black"
+        ],
+        "eye_shape": [
+          "es_upturned"
+        ],
+        "skin_tone": [
+          "st_olive"
+        ],
+        "freak_face": [
+          "ff_brows_5"
+        ],
+        "freak_head": [
+          "head_heart"
+        ],
+        "freak_neck": [
+          "neck_column"
+        ],
+        "distinctive": [
+          "df_ears"
+        ],
+        "facial_hair": [
+          "fh_pencil"
+        ],
+        "hair_colour": [
+          "hc_black"
+        ],
+        "proportions": [
+          "pr_shoulders"
+        ],
+        "ethnicity_origin_base": [
+          "east_asian"
+        ]
+      },
+      "seed": 695297
+    },
+    {
+      "id": "36e03d67-ed7e-4847-b695-fdc46862867b",
+      "name": "AI Influencer 20",
+      "preview": {
+        "path": "/influencer-presets/c128acdbb2746166.webp",
+        "width": 358,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/93dc58ffaf2f207d.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hs_pompadour"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_average"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "y2k"
+        ],
+        "body_type": [
+          "body_heavy"
+        ],
+        "eye_color": [
+          "eye_blue"
+        ],
+        "eye_shape": [
+          "es_large"
+        ],
+        "skin_tone": [
+          "st_light"
+        ],
+        "freak_face": [
+          "ff_brows_7"
+        ],
+        "freak_head": [
+          "head_herojaw"
+        ],
+        "freak_neck": [
+          "neck_short"
+        ],
+        "distinctive": [
+          "df_lashes"
+        ],
+        "facial_hair": [
+          "fh_moustache"
+        ],
+        "hair_colour": [
+          "hc_grey"
+        ],
+        "proportions": [
+          "pr_shortlegs"
+        ],
+        "ethnicity_origin_base": [
+          "middle_eastern"
+        ]
+      },
+      "seed": 613263
+    },
+    {
+      "id": "9dc6f315-a9ee-485f-83fd-096f22ba6e1d",
+      "name": "AI Influencer 21",
+      "preview": {
+        "path": "/influencer-presets/f8ed7c13de600f23.webp",
+        "width": 427,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/c3b5334eeaaba252.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hs_tufts"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_glasses"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_grey"
+        ],
+        "eye_shape": [
+          "es_hooded"
+        ],
+        "skin_tone": [
+          "st_fair"
+        ],
+        "freak_face": [
+          "ff_nose_2",
+          "fn_eyebags"
+        ],
+        "freak_head": [
+          "head_long"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "facial_hair": [
+          "fh_moustache"
+        ],
+        "hair_colour": [
+          "hc_white"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "Classic eccentric 'freak' character, deadpan art-house casting photo; a believable real odd-looking person, understated, not a cartoon. Two-panel character sheet: left half a tight head-and-shoulders portrait, right half a full-body standing shot, both front-facing, symmetrical, arms hanging straight down, blank deadpan expression. PURE WHITE seamless studio background (#FFFFFF) in both panels, no grey, no gradient, no vignette, soft even light, faint contact shadow under the feet. Slim build, not overweight. Hair: bald crown with fluffy white tufts above the ears. Thin white moustache, small round wire glasses. Outfit: grey flannel three-piece suit, navy bow tie, black oxford shoes. No tattoos, no piercings. Hyper-realistic editorial photography, visible skin texture and fabric weave, 85mm lens, sharp focus.",
+      "seed": 937695
+    },
+    {
+      "id": "4bec30e5-b6cc-40ae-9e0b-c6aed99b78bd",
+      "name": "AI Influencer 22",
+      "preview": {
+        "path": "/influencer-presets/583bde50d25862bb.webp",
+        "width": 361,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/07e1718679e49865.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_mullet"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "streetstyle"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_deep"
+        ],
+        "freak_face": [
+          "fn_cheekbones"
+        ],
+        "freak_head": [
+          "head_megachin"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "distinctive": [
+          "df_septum"
+        ],
+        "facial_hair": [
+          "fh_pencil"
+        ],
+        "hair_colour": [
+          "hc_darkbrown"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "brief": "EXTREME hypertrophied 'freak' character, surreal but photoreal fashion-editorial casting photo, the signature feature is wildly exaggerated. Two-panel character sheet: left half an extreme tight close-up portrait filling the frame, right half a full-body standing shot, both front-facing, symmetrical, arms down, blank serious expression. PURE WHITE seamless background (#FFFFFF), bright high-key soft light, soft floor shadow. Slim, not overweight. Signature: a gigantic mega jaw, lower face swollen twice as wide as the forehead, very long thick neck. Curly dark brown mullet, thin moustache, silver septum ring. Outfit: chrome-silver cropped puffer jacket, black ribbed tank, wide black cargo trousers, chunky black boots. Hyper-realistic high-end fashion photography, crisp skin texture, sharp focus.",
+      "seed": 104904
+    },
+    {
+      "id": "ac6d3d09-a269-4df5-8aa7-a5b238f36efb",
+      "name": "AI Influencer 23",
+      "preview": {
+        "path": "/influencer-presets/8e1f22418bb3ae4c.webp",
+        "width": 479,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/44a1c66df81465a8.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "mature"
+        ],
+        "hair": [
+          "hair_long"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_hooded"
+        ],
+        "skin_tone": [
+          "st_olive"
+        ],
+        "freak_face": [
+          "ff_brows_5"
+        ],
+        "freak_head": [
+          "head_ancient"
+        ],
+        "freak_neck": [
+          "neck_normal"
+        ],
+        "facial_hair": [
+          "fh_stubble"
+        ],
+        "hair_colour": [
+          "hc_black"
+        ],
+        "ethnicity_origin_base": [
+          "middle_eastern"
+        ]
+      },
+      "brief": "EXTREME hypertrophied 'freak' character, surreal but photoreal fashion-editorial casting photo, the signature feature is wildly exaggerated. Two-panel character sheet: left half an extreme tight close-up portrait filling the frame, right half a full-body standing shot, both front-facing, symmetrical, arms down, blank serious expression. PURE WHITE seamless background (#FFFFFF), bright high-key soft light, soft floor shadow. Slim, not overweight. Signature: caveman skull with a massive protruding brow ridge and one thick unibrow, deep-set eyes, heavy jaw. Contrast: sleek long jet-black hair with a perfect center part. Outfit: immaculate slim light-grey suit, white shirt, thin black tie, black loafers. Hyper-realistic high-end fashion photography, crisp skin texture, sharp focus.",
+      "seed": 557550
+    },
+    {
+      "id": "5f0238e6-6c35-437d-8ee8-355a93ed79e3",
+      "name": "AI Influencer 24",
+      "preview": {
+        "path": "/influencer-presets/d03fa6c96989ea29.webp",
+        "width": 361,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/dedbbed8b637a1b0.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hair_bald"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_grey"
+        ],
+        "eye_shape": [
+          "es_hooded"
+        ],
+        "skin_tone": [
+          "st_fair"
+        ],
+        "freak_face": [
+          "fn_eyebags"
+        ],
+        "freak_head": [
+          "head_round"
+        ],
+        "freak_neck": [
+          "neck_normal"
+        ],
+        "facial_hair": [
+          "fh_moustache"
+        ],
+        "hair_colour": [
+          "hc_white"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "EXTREME hypertrophied 'freak' character, surreal but photoreal fashion-editorial casting photo, the signature feature is wildly exaggerated. Two-panel character sheet: left half an extreme tight close-up portrait filling the frame, right half a full-body standing shot, both front-facing, symmetrical, arms down, blank serious expression. PURE WHITE seamless background (#FFFFFF), bright high-key soft light, soft floor shadow. Slim, not overweight. Signature: colossal waxed white handlebar moustache spanning wider than his shoulders, both ends curled into perfect tight spirals. Shiny bald head. Outfit: bottle-green velvet three-piece suit, cream shirt, gold pocket-watch chain, brown boots. Hyper-realistic high-end fashion photography, crisp skin texture, sharp focus.",
+      "seed": 668535
+    },
+    {
+      "id": "b28a9d78-a606-4b71-bfda-b5fd039e699c",
+      "name": "AI Influencer 25",
+      "preview": {
+        "path": "/influencer-presets/e99258542abcf013.webp",
+        "width": 640,
+        "height": 427
+      },
+      "sheet": {
+        "path": "/influencer-presets/11100ab0fd87bd80.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_lampshade"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_glasses"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_ice_blue"
+        ],
+        "eye_shape": [
+          "es_close"
+        ],
+        "skin_tone": [
+          "st_light"
+        ],
+        "freak_face": [
+          "ff_brows_6"
+        ],
+        "freak_head": [
+          "head_megachin"
+        ],
+        "freak_neck": [
+          "neck_column"
+        ],
+        "distinctive": [
+          "df_ears"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_platinum"
+        ],
+        "proportions": [
+          "pr_waist"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "Extreme exaggerated anatomy, surreal but photoreal fashion portrait. Man with a gigantic mega jaw twice as wide as his skull and a thick column neck. Platinum lampshade bob with a blunt fringe, thin high eyebrows, small black oval sunglasses. Fully dressed: burgundy knit polo shirt buttoned up, cream pleated wide trousers, oxblood loafers. Deadpan expression. Pure white background.",
+      "seed": 383987
+    },
+    {
+      "id": "5d0d20e3-34ed-40df-94f6-aeb53ee3eac4",
+      "name": "AI Influencer 26",
+      "preview": {
+        "path": "/influencer-presets/f3a1a9e015fbfd50.webp",
+        "width": 640,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/9f85365eeffeb3c7.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_sphere"
+        ],
+        "gender": [
+          "non_binary"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "goth"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_black"
+        ],
+        "eye_shape": [
+          "es_downturned"
+        ],
+        "skin_tone": [
+          "st_porcelain"
+        ],
+        "freak_face": [
+          "fn_fulllips"
+        ],
+        "freak_head": [
+          "head_tiny"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "distinctive": [
+          "df_nobrows"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_platinum"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "Extreme exaggerated anatomy, surreal but photoreal. Very tall androgynous person with a comically tiny head on a long lanky body with extremely long limbs. Platinum curl sphere hair, no eyebrows. Oxblood leather long coat, black crushed velvet top, black leather trousers, black lace-up combat boots. Deadpan expression. Pure white background.",
+      "seed": 485806
+    },
+    {
+      "id": "b42d827e-5a16-4c24-b36f-428c48de98fb",
+      "name": "AI Influencer 27",
+      "preview": {
+        "path": "/influencer-presets/569a8688e3817ca8.webp",
+        "width": 479,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/00d41d8c6be67623.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "mature"
+        ],
+        "hair": [
+          "hair_mullet"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_glasses"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_heavy"
+        ],
+        "eye_color": [
+          "eye_blue"
+        ],
+        "eye_shape": [
+          "es_large"
+        ],
+        "skin_tone": [
+          "st_tan"
+        ],
+        "freak_face": [
+          "fn_widemouth"
+        ],
+        "freak_head": [
+          "head_herojaw"
+        ],
+        "freak_neck": [
+          "neck_short"
+        ],
+        "distinctive": [
+          "df_grill"
+        ],
+        "facial_hair": [
+          "fh_pushbroom"
+        ],
+        "hair_colour": [
+          "hc_grey"
+        ],
+        "proportions": [
+          "pr_shoulders"
+        ],
+        "ethnicity_origin_base": [
+          "latin_american"
+        ]
+      },
+      "brief": "Extreme exaggerated anatomy, surreal but photoreal. Heavy man with an enormous square gigachad jaw. Grey mullet, huge grey push-broom moustache, amber-tinted aviator glasses. Tan suede western jacket with fringe, brown shirt, bolo tie, brown flared trousers, cowboy boots. Deadpan expression. Pure white background.",
+      "seed": 652478
+    },
+    {
+      "id": "4a9e6a43-4ba0-4499-870b-982e29a46dc7",
+      "name": "AI Influencer 28",
+      "preview": {
+        "path": "/influencer-presets/395e25c1948680c6.webp",
+        "width": 640,
+        "height": 425
+      },
+      "sheet": {
+        "path": "/influencer-presets/1bdf6ad64db8a689.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "total",
+      "selection": {
+        "age": [
+          "mature"
+        ],
+        "hair": [
+          "hs_wings"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "theatrical"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_hooded"
+        ],
+        "skin_tone": [
+          "st_tan"
+        ],
+        "freak_face": [
+          "ff_nose_2"
+        ],
+        "freak_head": [
+          "head_long"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "facial_hair": [
+          "fh_pencil"
+        ],
+        "hair_colour": [
+          "hc_black"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "latin_american"
+        ]
+      },
+      "brief": "EXTREME hypertrophied 'freak' character, surreal but photoreal fashion-editorial casting photo, the signature feature is wildly exaggerated. Two-panel character sheet: left half an extreme tight close-up portrait filling the frame, right half a full-body standing shot, both front-facing, symmetrical, arms down, blank serious expression. PURE WHITE seamless background (#FFFFFF), bright high-key soft light, soft floor shadow. Slim, not overweight. Signature: jet-black hair lacquered into one giant crescent-moon shape arching high over the head from ear to ear like a halo. Long pointy nose, pencil moustache. Outfit: black velvet tuxedo jacket, white ruffled shirt, black bow tie, black trousers, patent shoes. Hyper-realistic high-end fashion photography, crisp skin texture, sharp focus.",
+      "seed": 393901
+    },
+    {
+      "id": "536d5d37-f733-44db-919c-bab6dc1949f0",
+      "name": "AI Influencer 29",
+      "preview": {
+        "path": "/influencer-presets/e28857aad196792a.webp",
+        "width": 425,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/28a944dfbee473ae.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "senior"
+        ],
+        "hair": [
+          "hs_pompadour"
+        ],
+        "gender": [
+          "male"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_heavy"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_ginger"
+        ]
+      },
+      "brief": "A two-panel photorealistic character sheet: LEFT panel — deadpan chest-up studio portrait; RIGHT panel — the exact same person full body, standing straight, arms at sides, head to toe. Both panels on a light grey seamless studio background, flat even lighting, fine film grain, identical person and outfit in both panels. THE CHARACTER: a short, round man around 60 with an impossibly TALL copper POMPADOUR rising thirty centimeters straight up like a loaf of bread, perfectly groomed; clear skin, double chin, completely serious stare; powder-blue 1970s suit with wide lapels, white shirt, oversized tie knot, white loafers. No text, no logos, no watermarks.",
+      "seed": 921780
+    },
+    {
+      "id": "3a5f4720-07a7-49e6-97a1-1e42825613d9",
+      "name": "AI Influencer 31",
+      "preview": {
+        "path": "/influencer-presets/69e10db37c65dea5.webp",
+        "width": 640,
+        "height": 362
+      },
+      "sheet": {
+        "path": "/influencer-presets/967d9cd6e2ec8255.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "gender": [
+          "male"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "suits"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "facial_hair": [
+          "fh_pencil"
+        ]
+      },
+      "brief": "A two-panel photorealistic character sheet: LEFT panel — deadpan chest-up studio portrait; RIGHT panel — the exact same person full body, standing straight, arms at sides, head to toe. Both panels on a light grey seamless studio background, flat even lighting, fine film grain, identical person and outfit in both panels. THE CHARACTER: an eccentric dandy around 35 whose short flat-top haircut is dyed in a precise CHECKERBOARD pattern — alternating black and bleached-white squares across the whole scalp; clear even skin, pencil moustache, haughty blank expression; black-and-white houndstooth suit, white shirt, black bow tie, two-tone spectator shoes. No text, no logos, no watermarks.",
+      "seed": 534225
+    },
+    {
+      "id": "9345a815-307c-47a3-b40b-4eeec2f3ed6c",
+      "name": "AI Influencer 33",
+      "preview": {
+        "path": "/influencer-presets/68f67683bc0a113f.webp",
+        "width": 640,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/0de88344d8502b95.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hair_bowl"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_very_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_blue"
+        ],
+        "eye_shape": [
+          "es_close"
+        ],
+        "skin_tone": [
+          "st_fair"
+        ],
+        "freak_face": [
+          "ff_chin_13",
+          "ff_nose_2"
+        ],
+        "freak_head": [
+          "head_long"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_blonde"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "european"
+        ]
+      },
+      "brief": "Classic eccentric 'freak' character, deadpan art-house casting photo; a believable real odd-looking person, understated, not a cartoon. Two-panel character sheet: left half a tight head-and-shoulders portrait, right half a full-body standing shot, both front-facing, symmetrical, arms hanging straight down, blank deadpan expression. PURE WHITE seamless studio background (#FFFFFF) in both panels, no grey, no gradient, no vignette, soft even light, faint contact shadow under the feet. Lanky slim build, not overweight. Hair: straw-blond bowl cut with straight fringe. Weak chin, long pointy nose. Outfit: brown knitted cardigan over a small-check shirt buttoned to the top, too-short beige trousers, white socks, brown lace-up shoes. No tattoos, no piercings. Hyper-realistic editorial photography, visible skin texture and fabric weave, 85mm lens, sharp focus.",
+      "seed": 685325
+    },
+    {
+      "id": "8f4f9241-6512-41a4-ae40-27ac5b463a17",
+      "name": "AI Influencer 34",
+      "preview": {
+        "path": "/influencer-presets/dc8f1c82f4f2e3e2.webp",
+        "width": 425,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/2fa89dde6e8216e5.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "mature"
+        ],
+        "hair": [
+          "hair_bowl"
+        ],
+        "gender": [
+          "male"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "retro"
+        ],
+        "body_type": [
+          "body_athletic"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_hooded"
+        ],
+        "skin_tone": [
+          "st_olive"
+        ],
+        "freak_face": [
+          "ff_brows_5"
+        ],
+        "freak_head": [
+          "head_square"
+        ],
+        "freak_neck": [
+          "neck_normal"
+        ],
+        "facial_hair": [
+          "fh_pushbroom"
+        ],
+        "hair_colour": [
+          "hc_black"
+        ],
+        "ethnicity_origin_base": [
+          "middle_eastern"
+        ]
+      },
+      "brief": "Classic eccentric 'freak' character, deadpan art-house casting photo; a believable real odd-looking person, understated, not a cartoon. Two-panel character sheet: left half a tight head-and-shoulders portrait, right half a full-body standing shot, both front-facing, symmetrical, arms hanging straight down, blank deadpan expression. PURE WHITE seamless studio background (#FFFFFF) in both panels, no grey, no gradient, no vignette, soft even light, faint contact shadow under the feet. Lean athletic build, not overweight. Hair: thick black bowl cut with heavy fringe. Push-broom moustache, unibrow. Outfit: navy double-breasted blazer with gold buttons, white trousers, brown loafers. No tattoos, no piercings. Hyper-realistic editorial photography, visible skin texture and fabric weave, 85mm lens, sharp focus.",
+      "seed": 491345
+    },
+    {
+      "id": "ff979de7-59cc-4381-b81c-00a87279f735",
+      "name": "AI Influencer 37",
+      "preview": {
+        "path": "/influencer-presets/d3749698fa144294.webp",
+        "width": 640,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/94fe3977a4917d78.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_horns"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_none"
+        ],
+        "aesthetic": [
+          "y2k"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_olive"
+        ],
+        "freak_face": [
+          "ff_brows_5"
+        ],
+        "freak_head": [
+          "head_oval"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_black"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "middle_eastern"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary trendy 2026 runway styling (not retro). Two-panel sheet: left a tight close-up portrait with the entire head and hair in frame, right a full-body standing shot; both front-facing, arms down, blank expression. PURE WHITE seamless background, bright soft light. Slim, not overweight. Signature: thick black unibrow, black hair coiled into two huge ram-horn buns on the sides of the head. Outfit: cropped silver metallic puffer jacket, long black ribbed knit maxi dress, chunky silver sneakers. Hyper-realistic, natural uniform skin tone, crisp texture, 85mm, sharp focus.",
+      "seed": 861702
+    },
+    {
+      "id": "8331fd61-3c79-4abb-9b66-dd69b67137dd",
+      "name": "AI Influencer 40",
+      "preview": {
+        "path": "/influencer-presets/b4c3ca4dce8a5581.webp",
+        "width": 425,
+        "height": 640
+      },
+      "sheet": {
+        "path": "/influencer-presets/1f6cf029a08a0615.webp",
+        "width": 1440,
+        "height": 814
+      },
+      "tier": "freak",
+      "selection": {
+        "age": [
+          "adult"
+        ],
+        "hair": [
+          "hs_lampshade"
+        ],
+        "gender": [
+          "female"
+        ],
+        "height": [
+          "h_tall"
+        ],
+        "accessory": [
+          "acc_jewelry"
+        ],
+        "aesthetic": [
+          "y2k"
+        ],
+        "body_type": [
+          "body_slim"
+        ],
+        "eye_color": [
+          "eye_brown"
+        ],
+        "eye_shape": [
+          "es_almond"
+        ],
+        "skin_tone": [
+          "st_brown"
+        ],
+        "freak_face": [
+          "ff_brows_6"
+        ],
+        "freak_head": [
+          "head_oval"
+        ],
+        "freak_neck": [
+          "neck_long"
+        ],
+        "facial_hair": [
+          "fh_none"
+        ],
+        "hair_colour": [
+          "hc_platinum"
+        ],
+        "proportions": [
+          "pr_longlimbs"
+        ],
+        "ethnicity_origin_base": [
+          "african"
+        ]
+      },
+      "brief": "Fashion-editorial freak casting photo of an odd-looking but photoreal person, contemporary y2k streetwear styling. Two-panel sheet: left a tight frontal close-up portrait with the entire head and hair in frame, right a full-body standing shot; arms down, blank deadpan expression. PURE WHITE seamless background, bright soft light. Slim, not overweight. Signature: silver-blonde finger-wave bob glued to the head, thin drawn-on arched brows, huge gold hoop earrings, nose chain to the ear, very long neck. Outfit: red leather racing jacket, white baby tee, low-rise baggy jeans with a wallet chain, white platform sneakers. Hyper-realistic, natural uniform skin tone, crisp texture, sharp focus.",
+      "seed": 674121
+    }
+  ]
+}
