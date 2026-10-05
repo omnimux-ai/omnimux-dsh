@@ -1,0 +1,43 @@
+{
+  "issue": 3130,
+  "task": "preset-bundled-skills-materialization",
+  "date": "2026-10-05",
+  "rootCause": {
+    "summary": "The cordis preset registered its own skills/ directory as a skill root. A packaged preset lives inside app.asar, where the DSH filesystem service cannot list a directory: fs-local probes with stat({ bigint: true }) and Electron's asar stat ignores that option, so `info.mode & 0o777n` throws 'Cannot mix BigInt and other types'. skill-registry skips the whole provider and neither bundled skill reaches the catalog.",
+    "runtimeEvidence": "~/Library/Application Support/OmniMux-Dev/logs/host/dsh-2026-10-05.log — 39 occurrences between 16:57 and 17:05, single unique path: skill provider \"filesystem\" skipped: FsError: cannot list \"/Applications/OmniMux Dev.app/Contents/Resources/app.asar/preset/agent-presets/cordis/skills\". First seen 2026-09-21, present every day since (2026-10-03 / 2026-10-04: 0)."
+  },
+  "changes": [
+    "scripts/sync-agent-presets.sh: stage_preset_skills() copies each preset's bundled skills/<id> into the target Harness Home skill root (<home>/skills), skipping any name that already exists",
+    "presets/cordis/agent.cordis.yml: dropped the self-referential skill-filesystem row (tool-skill kept)",
+    "scripts/verify-preset-skills-materialization.test.mjs: new gate (no shipped preset declares customSkillDirs; cordis still ships both skills; materialization stages them into the real root without clobbering)",
+    "scripts/governance-manifest.json: register the new gate as ciRequired; register scripts/verify-explore-registration-browser.mjs (unregistered since #3115, broke test:gates on main) as manual",
+    "package.json: run the new gate from test:gates"
+  ],
+  "verification": [
+    {
+      "command": "node --test scripts/verify-preset-skills-materialization.test.mjs",
+      "result": "3/3 pass"
+    },
+    {
+      "command": "node --test scripts/verify-agent-presets.test.mjs scripts/verify-agent-presets-health.test.mjs scripts/sync-agent-presets-targets.test.mjs scripts/verify-preset-skills-materialization.test.mjs",
+      "result": "24/24 pass"
+    },
+    {
+      "command": "corepack pnpm test:gates",
+      "result": "285/285 pass, exit 0 (before the governance registration the same suite was 281/282 with 1 pre-existing failure)"
+    },
+    {
+      "command": "corepack pnpm verify:product-baseline",
+      "result": "pass (1 pre-existing exemption, unchanged)"
+    },
+    {
+      "command": "bash scripts/sync-agent-presets.sh --target=/tmp/preset-skills-evidence/home",
+      "result": "exit 0; '+ skill cordis/cordis-plugin-development', '+ skill cordis/editing-cordis-compositions', '+ skill omni-agent/sopilot-social-agents', '+ skill omni-agent/tiktok-growth'; summary '新增 4 · 跳过同名 2'; <home>/skills/ contains cordis-plugin-development, editing-cordis-compositions, sopilot-social-agents, tiktok-growth"
+    }
+  ],
+  "devAcceptance": "Human-owned. After merge, `worktree.sh ship` materializes into ~/.omnimux-dev; the two skills then appear under ~/.omnimux-dev/skills/ and the provider-skipped warning stops. The running Host must be restarted by the user for the catalog to be re-read.",
+  "notCovered": [
+    "omnimux-desktop-fork packaging/asar header (separate workspace, not modified)",
+    "DSH core fs-local bigint stat behavior on asar paths (official source is read-only)"
+  ]
+}
