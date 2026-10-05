@@ -53,6 +53,16 @@ describe('#3100 候选池采集与评分', () => {
     expect(collectFeedCandidates(document, null, NOW, 1)).toHaveLength(1)
   })
 
+  it('AC-15 视频帖不算广告：播放器外层的 placementTracking 不排除；真广告位仍排除', () => {
+    const video = tweet({ text: LONG, author: 'video' })
+    video.insertAdjacentHTML('beforeend', '<div data-testid="placementTracking"><div data-testid="videoPlayer"><video></video></div></div>')
+    const adSlot = tweet({ text: LONG, author: 'adslot' })
+    adSlot.insertAdjacentHTML('beforeend', '<div data-testid="placementTracking"><a href="/promo">去看看</a></div>')
+    tweet({ text: LONG, author: 'labeled', promoted: true })
+    const authors = collectFeedCandidates(document, null, NOW).map((c) => c.author)
+    expect(authors).toEqual(['video'])
+  })
+
   it('读取回复/转帖/喜欢计数（支持 K 单位）', () => {
     tweet({ text: LONG, replies: 1200, reposts: 30, likes: 5 })
     document.querySelector('[data-testid="reply"]')!.setAttribute('aria-label', '1.2K 回复')
