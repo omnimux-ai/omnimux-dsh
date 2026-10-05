@@ -28,13 +28,29 @@ export function dispositionIds(doc) {
 
 export function manifestIds(doc) {
   const list = doc?.models ?? [];
-  return new Set(list.map((x) => x?.id ?? x?.productId).filter((x) => typeof x === 'string' && ID_RE.test(x)));
+  const out = new Set();
+  for (const x of list) {
+    const primary = x?.id ?? x?.productId;
+    if (typeof primary === 'string' && ID_RE.test(primary)) out.add(primary);
+    if (Array.isArray(x?.gatewayIds)) {
+      for (const g of x.gatewayIds) {
+        if (typeof g === 'string' && ID_RE.test(g)) out.add(g);
+      }
+    }
+  }
+  return out;
 }
+
+// 厂商源码中的内部常量或已下线历史兼容 wire 名（非当前在售模型 ID，不参与未登记报错）
+const VENDOR_EXCLUDE_IDS = new Set([
+  'omnimux-failed', // 内部错误码
+  'index-tts',      // #3063 已升级为 indextts-2，AUDIO_VIDEO_TASK_MODEL_IDS 保留仅用于历史任务原路收取
+]);
 
 export function vendorIds(source) {
   const out = new Set();
   for (const m of String(source).matchAll(/["'`]([a-z][a-z0-9]*(?:-[a-z0-9.]+)+)["'`]/g)) {
-    if (ID_RE.test(m[1])) out.add(m[1]);
+    if (ID_RE.test(m[1]) && !VENDOR_EXCLUDE_IDS.has(m[1])) out.add(m[1]);
   }
   return out;
 }
