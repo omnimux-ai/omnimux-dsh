@@ -67,8 +67,17 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
       explicit[hint] = slot?.max === 1 ? [occupant] : [...(explicit[hint] ?? []), occupant];
     }
   }
-  const fill = currentVersion ? { bindings: explicit ?? {}, conflicts: (node.data.slotConflicts ?? []) as SlotConflict[] }
-    : explicit ? autoFillSlots(feed, layout, explicit, Array.isArray(node.data.slotStandbyEdgeIds) ? node.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : []) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
+  const standbyIds = Array.isArray(node.data.slotStandbyEdgeIds) ? node.data.slotStandbyEdgeIds.filter((id): id is string => typeof id === 'string') : [];
+  // A missing V1 `slotBindings` means "not initialized yet", not "the user cleared every slot": the display
+  // side self-heals such a node by auto-filling, so the store must persist that same fill. Leaving `{}` behind
+  // splits the two readers — the panel shows a filled slot while submission skips the fill and drops the asset
+  // silently. An explicit `{}` (a user clear, or a parked edge) keeps its meaning, and a fill that binds
+  // nothing keeps the previous empty shape so untouched nodes stay byte-identical.
+  const selfHealed = explicit === undefined ? autoFillSlots(feed, layout, {}, standbyIds) : undefined;
+  const filledAnything = selfHealed !== undefined && Object.values(selfHealed.bindings).some((occupants) => occupants.length > 0);
+  const fill = currentVersion
+    ? (filledAnything ? selfHealed! : { bindings: explicit ?? {}, conflicts: (node.data.slotConflicts ?? []) as SlotConflict[] })
+    : explicit ? autoFillSlots(feed, layout, explicit, standbyIds) : hydrateSlotBindings(feed, layout, graph.edges.filter((edge) => edge.target === node.id));
   const fingerprint = effectiveSlotFingerprint(raw, layout, fill.bindings, fill.conflicts, currentVersion ? 1 : undefined);
   const match = operation && permitted ? matchOperationInputs(operation, fingerprint) : undefined;
   const reasonCodes = !view.available ? ['catalog_unavailable'] : !permitted ? ['not_listed'] : !model ? ['unknown_model']
