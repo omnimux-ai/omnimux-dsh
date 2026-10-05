@@ -165,11 +165,15 @@ visibility setting changes.
 
 ### Cross-plugin closure
 
-Hub models are shared contracts. Adding, re-parameterizing, changing operations of, aliasing, or deprecating a model closes atomically across plugins:
+Hub models are shared contracts. Adding, re-parameterizing, changing operations of, aliasing, or deprecating a model closes atomically across plugins.
 
-1. A hub operation is admitted downstream only after it is `listed: true` per [model API authority](model-api-authority.md).
-2. Search every consumer (`plugins/omnimux-workflow`, `plugins/omnimux-video`, `plugins/omnimux-apps`, …) and update in the same change: product whitelists (`generationPolicy.ts`), defaults (`catalog-defaults.json`, `route.js`), and UI presets (`aspectRatioGeometry.ts`).
-3. Run `pnpm verify:model-contracts` and the affected downstream submission tests.
+When the user requests listing or making a model available to the canvas/consumers, the task MUST execute the 5-step listing lifecycle atomically instead of leaving the model in "draft":
+
+1. **Contract definition**: Register the canonical runtime model ID, brand, operation IDs, inputs, and defaults in the corresponding specs YAML (`plugins/omnimux/src/catalog/specs/*.yaml`).
+2. **Authorized live probe**: With user authorization, run a minimal live generation probe against the production gateway to verify existence and minimal response, recording the report in `docs/evidence/`.
+3. **Status activation (listed: true)**: Promote the operation's `research.status` from `"draft"` to `"verified"` and set `docUrl` to the evidence doc. The contract loader computes `op.listed = true` only when research is verified with a valid docUrl.
+4. **Manifest and consumers**: Set `requiredInAuto: true` in `auto-serving-manifest.json`, configure channel groups (`channel-groups.js` and `channelGroups.ts`), and register the model in canvas whitelists (`generationPolicy.ts`).
+5. **Gate verification and materialization**: Run `pnpm verify:model-contracts --strict` and `verify:cross-plugin-models`, land via PR, and run `sync-to-app.sh` so canvas/consumers immediately expose the listed model.
 
 ## User layers
 
