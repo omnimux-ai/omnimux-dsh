@@ -74,3 +74,14 @@ node docs/evidence/account-monitor-v2-cards-3110/harness/build-demo.mjs
 - **R9-⑤ 小项**：行首禁则注释按官方类表重写（FE56/FE57=EX、201D=QU、FF65=NS、FF61/FF64=CL）；正则删 3 条恒不可达死条目（‥2025/…2026/‰2030——≤0x2E7F 码位进 word 原子、禁则分支有 cjk 守卫），”201D 改走 word 原子路径恢复断后（QU 码位回 BREAK_AFTER；Chrome 5 词夹具 5 行，否则不可断整词估 1 行）；`charWidthFactor` 删死参数 `cp`；`EXPECTED_VELOCITY_TOKENS` 补 3 个 `-media` token 并断言它们不在 light 段重定义。
 - **R9-⑥ 装置**：shim `Button` 补 `loading` 语义（isDisabled=disabled||loading、aria-busy、label loading 类）；`IconButton` 补生产 slot span 结构。
 - **R9-⑦ 探针**：`codepoint-probe.mjs` CASES 补 FE57/201D/FF61/FF64/FF65/2E3B 六码位；复跑仍须 0 mismatches（2E3B 为双向断点、须按 CJK 原子建模才对得上 Chrome）。
+
+## R11 修整追加段（第十一轮复审必修，2026-10-05）
+
+R10 四轴裁定（QA FAIL / 代码复审 BLOCKING / PM REJECT / OCR 4 medium）收敛为一条实质代码项 + 一批口径项，本轮照裁定照做。
+
+- **R11-①（核心）**：`｡､･`（FF61/FF64/FF65）由 `LINE_START_HANG` 移入 `LINE_START_PULLBACK`——Chrome 逐行内容实测 `中中｡`@32 → `中`/`中｡`（拉回），悬挂建模在放不下时也挂行尾 → 低估。`LINE_START_HALFWIDTH_HANG` 与 `unitPx/2` 半宽 advance **保留**（宽度用途，与语义分组无关）。钉行断言：`中中｡`@32、`中中中｡`@46、`中中中中｡`@60 均 = 2（悬挂给 1，有鉴别力；R10 的 `中文中文中文X`@40 形态对半宽组两语义同值，零鉴别力）。中置形态补测：`中中｡文文`@32 真机逐行 `中`/`中｡`/`文文` = 3 行（悬挂给 2）。先写红后绿。验收：6820 格隔离网格残差 133→**91**（低估 91 / 高估 0 内 42 全消）、7700 行夹具 **28→28 不变**、33 条既有断言 0 条变红。
+- **R11-②**：`％`(FF05) 属拉回组为**已登记偏差**——规格前文拉回组枚举只列 9 个码位，实现含 `％` 共 **10** 个（`，。、：；？！﹖﹗％`）。Chrome 实测 `％` 行为即拉回，删除该码位会使其不符数 3→15（代码复审实测），故实现保留、规格口径在此补齐为 10 个码位。
+- **R11-③**：`filter-jump` 的 `:focus-within` 揭示规则补 `:not(:disabled)`（disabled 缺陷族第 4 次逃逸）；类级护栏断言由「整条规则 includes」改为**按选择器逐条判定**——同一规则块内 `:hover` 选择器的守卫不得替 `:focus-within` 选择器顶包（R10 护栏实测假阴性）。
+- **R11-④**：度量口径——不符数自此一律分「低估/高估」双列报，禁止只报总数（R10 总数下降掩盖低估 310→330 恶化）。
+- **R11-⑤ 装置**：`r10/p5-bright.mjs` 依赖的 `cdp.mjs` helper 入库至 `harness/`（原文件只在 QA 私有目录，第三方不可复现）；`r10/score-mismatch.mjs` 改相对 import + 夹具路径参数化；注释 BREAK_AFTER 计数 304→**133**（R9 删死码后实收）。
+- **R11-⑥ 文档口径**：r10/report.md「16 个禁则码位 mismatch 全为 0」更正为 **42**（`｡､･` 各 14，修后网格内禁则码位全 0、总残差 91）；Q5 最劣溢出 46px→**51px**（`46/73` 不可复现）；PRD §9.1 `:564` on-media `飙升` 底改**不透明 `#78350f` + `#fbbf24`**（与 §9.7 字面一致，亮封面夹具实测 5.43:1）；§9.1 `:565` 溢出登记按 PM M2′ 实测重写（4 按钮卡 27px ≈73/46、3 按钮卡最劣 57px ≈73/16）；对比度数字统一为 `ratio_far` 口径并在 V23 写明（`ratio_all` 抗锯齿均值口径最小 3.46、不作判据）；O4 `爆款` 实底红写成 ≥4.5:1 可执行断言；O8 `lib/client.js` 陈旧构建产物如实登记（发布打包前须经 `prepare` 重建）。

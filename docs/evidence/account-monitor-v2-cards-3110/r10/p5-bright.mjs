@@ -5,7 +5,9 @@
  * 背景取法：胶囊矩形内缩 3px 后的众数桶（= 文字实际承载的合成底色），
  * 绝不沿祖先链取 background-color（半透明胶囊那样会取错）。
  */
-import { launch, dump, sleep } from '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/account-monitor-v2-cards-r8/docs/evidence/account-monitor-v2-cards-3110/r8-qa/cdp.mjs'
+import { launch, dump, sleep } from '../harness/cdp.mjs'
+// R11-R1：helper 已入库至 ../harness/cdp.mjs（原 r8-qa/ 路径在仓库里不
+// 存在——docs/evidence/* 命中 .git/info/exclude，第三方不可复现）。
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs'
 
 const PORT = 9415

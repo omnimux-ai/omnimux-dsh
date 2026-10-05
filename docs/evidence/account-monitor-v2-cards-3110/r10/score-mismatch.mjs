@@ -1,15 +1,29 @@
-import { rivalWrapLines as R10 } from '/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/account-monitor-v2-cards-r8/plugins/omnimux-inspiration/src/client/rival-masonry.js'
+/**
+ * R10/R11 网格残差复算（相对路径版，第三方可复现）。
+ * 用法：node docs/evidence/account-monitor-v2-cards-3110/r10/score-mismatch.mjs [jsonDir]
+ *   jsonDir 缺省 /tmp/r8qa/logs（QA-R8 留档的 p4-kinzoku 6820 格 +
+ *   p1-n1-600 夹具）；输出按「低估/高估」双列（R11 度量口径：不符数
+ *   必须分方向报，禁止只报总数——低估=模型行数<Chrome，高估=>）。
+ */
+import { rivalWrapLines as model } from '../../../../plugins/omnimux-inspiration/src/client/rival-masonry.js'
 import { readFileSync } from 'node:fs'
-let total = 0, mis = 0
-for (const file of ['/tmp/r8qa/logs/p4-kinzoku.json', '/tmp/r8qa/logs/p1-n1-600.json']) {
-  const d = JSON.parse(readFileSync(file, 'utf8'))
-  let m = 0
+import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { dirname } from 'node:path'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const DIR = resolve(process.argv[2] || '/tmp/r8qa/logs')
+let total = 0, mis = 0, low = 0, high = 0
+for (const file of ['p4-kinzoku.json', 'p1-n1-600.json']) {
+  const d = JSON.parse(readFileSync(join(DIR, file), 'utf8'))
+  let m = 0, lo = 0, hi = 0
   for (const r of d.rows) {
     const w = r.width ?? r.w
     total++
-    if (R10(r.text, 14, w) !== r.chrome) m++
+    const v = model(r.text, 14, w)
+    if (v !== r.chrome) { m++; if (v < r.chrome) { lo++; low++ } else { hi++; high++ } }
   }
   mis += m
-  console.log(file.split('/').pop(), 'mismatch', m, '/', d.rows.length)
+  console.log(file.split('/').pop(), 'mismatch', m, '/', d.rows.length, `低估 ${lo} / 高估 ${hi}`)
 }
-console.log('TOTAL mismatch', mis)
+console.log('TOTAL mismatch', mis, `低估 ${low} / 高估 ${high}`)

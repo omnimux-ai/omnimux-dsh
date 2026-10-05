@@ -664,7 +664,7 @@ describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () =>
       'card-title must declare font-family explicitly')
   })
   it('会 disabled 的元素全集 × 其每条 hover 规则都带 :not(:disabled)（PM M1 → #3166 类级）', () => {
-    // 同类缺陷第三次逃逸（R5 act-btn → R6 act-primary → R7 filter-jump）
+    // 同类缺陷第四次逃逸（R5 act-btn → R6 act-primary → R7 filter-jump → R11 :focus-within 揭示块）
     // 证明断言必须钉在「类」上而不是实例上：本枚举覆盖生产里所有真的会
     // disabled 的元素——act-btn（原帖按钮 source_url 不安全时 disabled）、
     // act-primary（复刻按钮 busy 时 disabled）、filter-jump（账号行跳转
@@ -676,18 +676,37 @@ describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () =>
       'omnimux-rival-filter-jump',
     ]
     for (const cls of DISABLED_CAPABLE) {
-      // R9 放宽匹配（逃逸通路修补）：hover 相关选择器有两种形态——
-      // 自身 hover `.cls:hover`（含 [attr] 等复合形态）与祖先驱动
-      // `:hover .cls`（如生产 .filter-row:hover .filter-jump）。任一
-      // 含 .cls 与 :hover 的选择器行都收进来逐条查 :not(:disabled)。
-      const hoverRules = RIVAL_CSS.match(
-        new RegExp(`[^{}]*(?:\\.${cls}(?![\\w-])[^{]*:hover|:hover[^{]*\\.${cls}(?![\\w-]))[^{]*`, 'g'),
+      // R9 放宽匹配（逃逸通路修补）：交互揭示选择器有多种形态——
+      // 自身 `.cls:hover`（含 [attr] 等复合形态）、祖先驱动
+      // `:hover .cls` 与 `:focus-within .cls`（键盘焦点路径同样会揭
+      // 示元素，缺守卫时键盘聚焦 disabled 行也会点亮按钮——disabled
+      // 缺陷族第 4 次逃逸正是这一种）。任一含 .cls 与 :hover /
+      // :focus-within 的选择器都收进来。
+      // R11（护栏假阴性修补）：必须**按选择器逐条**判定，不能整条规则
+      // 做 includes——同一规则块里 `:hover` 选择器的守卫会替
+      // `:focus-within` 选择器顶包（R10 实测假阴性：filter-jump 的
+      // :focus-within 揭示选择器无守卫却全绿）。判定口径：该选择器
+      // 中 .cls 之后必须出现 :not(:disabled)。
+      const ruleText = RIVAL_CSS.match(
+        new RegExp(`[^{}]*\\.${cls}(?![\\w-])[^{]*\\{`, 'g'),
       ) || []
-      assert.ok(hoverRules.length > 0, `${cls} should have hover rules in the stylesheet`)
-      for (const rule of hoverRules) {
+      const stateSels = []
+      for (const block of ruleText) {
+        const head = block.slice(0, -1)
+        for (const sel of head.split(',')) {
+          const t = sel.trim()
+          if (new RegExp(`\\.${cls}(?![\\w-])`).test(t)
+              && (t.includes(':hover') || t.includes(':focus-within'))) {
+            stateSels.push(t)
+          }
+        }
+      }
+      assert.ok(stateSels.length > 0, `${cls} should have hover/focus reveal selectors in the stylesheet`)
+      for (const sel of stateSels) {
+        const guarded = new RegExp(`\\.${cls}[^,{]*:not\\(:disabled\\)`).test(sel)
         assert.ok(
-          rule.includes(':not(:disabled)'),
-          `${cls} hover rule lacks :not(:disabled) — disabled ${cls} still shows hover affordance (rule: ${rule.trim()})`,
+          guarded,
+          `${cls} reveal selector lacks :not(:disabled) — disabled ${cls} still shows the affordance (selector: ${sel})`,
         )
       }
     }
@@ -711,8 +730,9 @@ describe('rival-masonry — R7 逐字形字宽表锁表断言（QA Q3 阻塞）'
   // 重新标定；表外 ASCII 回落 ASCII_WIDTH_FACTOR，>0x2E7F 按整宽。
   // 锁表 = 断言表内代表值与统一系数 0.592 显著不同，使「整体退回 0.592」
   // 立即变红。计数口径（#3166-⑤）：EXPECT 实收 18 个字形（非 17）；
-  // 断后集合 BREAK_AFTER 实收 304 条（LineBreak.txt 18.0.0 官方 306 减
-  // Chrome 定制 {0021,007C}），版本漂移须重跑集合差。
+  // 断后集合 BREAK_AFTER 实收 133 条（R9 删 >0x2E7F 的 172 条恒不可达
+  // 死码后口径：仅 ≤0x2E7F 的 EX∪HH∪HY∪B2∪BA 非空格成员，版本漂移须
+  // 重跑集合差）。
   const EXPECT = {
     '1': 0.453, 'i': 0.236, 'l': 0.242, 'f': 0.351, 'r': 0.370,
     'a': 0.541, 'e': 0.561, 'w': 0.764, 'm': 0.859, 'A': 0.663,
@@ -759,16 +779,17 @@ describe('rival-masonry — R10 行首禁则「按码位分」语义（QA 收口
   // R9 按前驱类型分粒度不对：悬挂组在前驱是 CJK 字时同样拉回，与
   // Chrome 不符。R10 按码位分 + 次级条件（前驱禁则标点也挂行尾）。
   // 真机口径（本文件同目录 e2e / harness 探针复核）：
-  //   拉回组码位：，。、：；？！﹖﹗％（FF0C 3002 3001 FF1A FF1B FF1F
-  //     FF01 FE56 FE57 FF05）；
-  //   悬挂组码位：｡､･〉】〕）］｝》」』〞〟（FF61 FF64 FF65 3009 3011
-  //     3015 FF09 FF3D FF5D 300B 300D 300F 301E 301F）；
+  //   拉回组码位（R11 起含半宽 ｡､･）：，。、：；？！﹖﹗％｡､･
+  //     （FF0C 3002 3001 FF1A FF1B FF1F FF01 FE56 FE57 FF05 FF61 FF64
+  //     FF65——R10 把 ｡､･ 误归悬挂，QA p7 逐行内容证其为拉回）；
+  //   悬挂组码位：〉】〕）］｝》」』〞〟（3009 3011 3015 FF09 FF3D FF5D
+  //     300B 300D 300F 301E 301F）；
   //   连续禁则标点：后一个挂行尾（不链式拉回），整个 run 只随 head 下行一次；
   //   悬挂组在 ink（半宽）放不下的形态里同样把行尾单元整体带下行；
   //   0.5px 装入容差已删：Chrome 装入边界是行宽本身，恰好等于行宽算放下。
 
   const PULL = ['，', '。', '、', '：', '；', '？', '！', '﹖', '﹗', '％']
-  const HANG = ['｡', '､', '･', '〉', '】', '〕', '）', '］', '｝', '》', '」', '』', '〞', '〟']
+  const HANG = ['〉', '】', '〕', '）', '］', '｝', '》', '」', '』', '〞', '〟']
 
   it('拉回组逐码位钉行：`中文中文中文X`@40px = 4 行（前一 CJK 字随标点下行）', () => {
     for (const ch of PULL) {
@@ -790,7 +811,7 @@ describe('rival-masonry — R10 行首禁则「按码位分」语义（QA 收口
     // 拉回/悬挂两个语义才能同时满足两条。
     assert.equal(rivalWrapLines('中文中文中文，', 14, 40), 4, '拉回组 ，')
     assert.equal(rivalWrapLines('中文中文中文）', 14, 40), 3, '悬挂组 ）')
-    assert.equal(rivalWrapLines('中文中文中文｡', 14, 40), 3, '悬挂组 ｡（半角）')
+    assert.equal(rivalWrapLines('中文中文中文｡', 14, 40), 3, '半宽组 ｡（35≤40 不进禁则分支，两语义同值）')
     assert.equal(rivalWrapLines('中文中文中文％', 14, 40), 4, '拉回组 ％')
   })
 
@@ -823,5 +844,29 @@ describe('rival-masonry — R10 行首禁则「按码位分」语义（QA 收口
       'Chrome 单行 中･ab：半角悬挂标点在行中只占半 advance')
     assert.equal(rivalWrapLines('中中中中中･', 14, 28), 3,
       'Chrome 3 行：中中/中中/中･——28 恰容两字，-0.5 容差曾假折出第 4 行')
+  })
+
+  it('半宽组归拉回（R11，QA+代码复审双轴证伪悬挂）：`中^n+X`@14n+4 = 2 行', () => {
+    // QA p7-halfwidth-content 逐行内容实测：中中｡@32 → 中 / 中｡（拉回），
+    // 不是悬挂的 1 行。R10 把它们归悬挂且悬挂 ink 再取半（atomW/2=3.5px），
+    // 放不下时也挂行尾 → 低估。三条都是悬挂=1 / 拉回=2 的鉴别形态；
+    // R10 的 `中文中文中文X`@40 形态两语义同值（35≤40 根本不进禁则分支）。
+    for (const m of ['｡', '､', '･']) {
+      assert.equal(rivalWrapLines(`中中${m}`, 14, 32), 2,
+        `${m} 归拉回：Chrome 逐行 中/中${m}（悬挂建模给 1 行）`)
+      assert.equal(rivalWrapLines(`中中中${m}`, 14, 46), 2,
+        `${m} 归拉回：Chrome 逐行 中中/中${m}`)
+      assert.equal(rivalWrapLines(`中中中中${m}`, 14, 60), 2,
+        `${m} 归拉回：Chrome 逐行 中中中/中${m}`)
+    }
+    // 中置形态（标点不在行尾，QA R10-2 要求补——收尾形态 @40px 对
+    // 半宽组零鉴别力是真因之一）：Chrome 逐行 中/中X/文文 = 3 行，
+    // 悬挂建模给 2 行。46/60 同判别式。
+    for (const m of ['｡', '､', '･']) {
+      assert.equal(rivalWrapLines(`中中${m}文文`, 14, 32), 3,
+        `中置 ${m}：Chrome 逐行 中/中${m}/文文（悬挂给 2）`)
+      assert.equal(rivalWrapLines(`中中${m}文文`, 14, 46), 2,
+        `中置 ${m}：Chrome 逐行 中中${m}/文文`)
+    }
   })
 })

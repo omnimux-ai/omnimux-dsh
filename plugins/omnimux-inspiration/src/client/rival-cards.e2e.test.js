@@ -312,8 +312,10 @@ const WORD_WIDTH_E2E = (word, unit) => [...word].reduce((sum, c) => {
   if (cp > 0x2e7f) return sum + unit
   return sum + unit * (SPACE_FACTOR_E2E[cp] ?? GLYPH_WIDTH_FACTOR_E2E[c] ?? 0.592)
 }, 0)
-const LINE_START_PULLBACK_E2E = /[，。、：；？！﹖﹗％]/
-const LINE_START_HANG_E2E = /[｡､･〉】〕）］｝》」』〞〟]/
+// R11：｡､･ 归拉回（QA p7 逐行内容实测），保持与实现集同步——
+// 该 oracle 必须永远镜像 rival-masonry.js 的三张集合。
+const LINE_START_PULLBACK_E2E = /[，。、：；？！﹖﹗％｡､･]/
+const LINE_START_HANG_E2E = /[〉】〕）］｝》」』〞〟]/
 const LINE_START_FORBIDDEN_E2E = /[，。、；：？！）］｝》」』〞〟％〉】〕﹗﹖｡､･]/
 const LINE_START_HALFWIDTH_HANG_E2E = /[｡､･]/
 // drift guard: GLYPH_WIDTH_FACTOR_E2E must stay identical to

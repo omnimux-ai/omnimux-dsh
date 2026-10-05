@@ -337,8 +337,9 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
   // R10 逐行内容复核后移除；kensoku 判定也以行宽本身为准（伪装入分支）。
   const width = Math.max(1, Number(lineWidth) || 0)
   const atoms = wrapAtoms(text)
-  // 半角悬挂组标点（｡､･，FF61/64/65）行中即半 advance（Chrome 实测
-  // 中･ab@40 单行），与全角收类标点的整 advance 分开计。
+  // 半角组标点（｡､･，FF61/64/65）行中即半 advance（Chrome 实测
+  // 中･ab@40 单行），与全角收类标点的整 advance 分开计；此表只管
+  // 宽度计量，R11 起它们的行首禁则语义是拉回（见语义表注释）。
   const widths = atoms.map((atom) =>
     atom.cjk
       ? (LINE_START_HALFWIDTH_HANG.has(atom.ch.codePointAt(0)) ? unitPx / 2 : unitPx)
@@ -399,10 +400,10 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
       //   · 悬挂组（LINE_START_HANG）——ink（半 advance）不越行宽就挂
       //     行尾；挂不下时同样把行尾单元整体带下行（中中中中））@63：
       //     首 ） 挂下、第二个挂不下 → 中）+run 一起落下一行）；
-      //   · 拉回组（LINE_START_PULLBACK）——行尾最近的非禁则原子
-      //     （CJK 字或不可断词）连同尾部禁则 run 一起下行（中文中文，word
-      //     @60 → 文，word / aa bb cc，word @60 → cc， 下行）；行内只剩
-      //     head 一个原子时拉不动、挂行尾（中，@26 → 中，/ab）；
+      //   · 拉回组（LINE_START_PULLBACK，R11 起含 ｡､･）——行尾最近的
+      //     非禁则原子（CJK 字或不可断词）连同尾部禁则 run 一起下行
+      //     （中文中文，word @60 → 文，word / 中中｡@32 → 中，中｡）；
+      //     行内只剩 head 一个原子时拉不动、挂行尾（中，@26 → 中，/ab）；
       //   · 前驱本身就是禁则标点 → 挂在 run 尾，不链式拉回
       //     （中文中文中文。、@40 = 4 行不是 5）。
       const mode = lineStartMode(atom.ch)
@@ -454,26 +455,32 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
  * 不入集合会把它并成不可断整词估成 1 行，低估方向）。
  */
 /**
- * 行首禁则逐码位语义表（R10，QA 收口复验逐行内容实测口径）。
+ * 行首禁则逐码位语义表（R11 修正，QA+代码复审双轴逐行内容实测口径）。
  * 拉回组：标点放不下时把行尾最近的非禁则原子连同尾部禁则 run 一起
- *   带下行——`，。、：；？！﹖﹗％`（FF0C 3002 3001 FF1A FF1B FF1F
- *   FF01 FE56 FE57 FF05）。6820 格网格证这五…九类在 base（拉回）上
- *   本就正确（30→52 全低估为悬挂改坏）。
+ *   带下行——`，。、：；？！﹖﹗％｡､･`（FF0C 3002 3001 FF1A FF1B
+ *   FF1F FF01 FE56 FE57 FF05 FF61 FF64 FF65）。`｡､･` 在 R10 被
+ *   误归悬挂，QA 逐行内容实测（中中｡@32 → 中/中｡）证其为拉回：
+ *   半宽 advance 只有 7px，悬挂 ink 再取半后 3.5px 恒能挂上，低估
+ *   42 格（6820 网格 133→91 全消在此）。
+ *   `％`(FF05) 登记偏差：官方 CL 类枚举本无它，但 Chrome 实测其行为
+ *   即拉回（逐行内容与 ，。同形），删除会使该码位不符数 3→15——
+ *   实现保留、规格按 10 个码位口径登记。
  * 悬挂组：标点挂在行尾（ink 半宽不越界），挂不下时同样把行尾单元带
- *   下行——`｡､･〉】〕）］｝》」』〞〟`（FF61 FF64 FF65 3009 3011
- *   3015 FF09 FF3D FF5D 300B 300D 300F 301E 301F）。悬挂量化
- *   72→55 / 48→31 / 51→31；未在语义表中的新增码位先实测再归类。
- * 半角悬挂组：｡､･ 在**行中**也只占半 advance（中･ab@40 单行）；
- *   与悬挂语义配套——它们的 atomW 在 widths[] 里按 unitPx/2 计。
+ *   下行——`〉】〕）］｝》」』〞〟`（3009 3011 3015 FF09 FF3D FF5D
+ *   300B 300D 300F 301E 301F）。未在语义表中的新增码位先实测再归类。
+ * 半角组：｡､･ 在**行中**只占半 advance（中･ab@40 单行，LINE_START_
+ *   HALFWIDTH_HANG 只管宽度计量，与拉回/悬挂语义分组无关——名字里的
+ *   HANG 是 R10 归错语义时留下的命名债，指「半宽」而非悬挂）。
  * 前驱类型是次级条件：head 必须是非禁则原子且不把行拉空——前驱是
  * 不可断词原子时拉回组把词整体带下行（aa bb cc，word → cc， 下行）；
  * 前驱是禁则标点时一律挂 run 尾。
  */
 const LINE_START_PULLBACK = new Set([
+  0xff61, 0xff64, 0xff65,
   0xff0c, 0x3002, 0x3001, 0xff1a, 0xff1b, 0xff1f, 0xff01, 0xfe56, 0xfe57, 0xff05,
 ])
 const LINE_START_HANG = new Set([
-  0xff61, 0xff64, 0xff65, 0x3009, 0x3011, 0x3015,
+  0x3009, 0x3011, 0x3015,
   0xff09, 0xff3d, 0xff5d, 0x300b, 0x300d, 0x300f, 0x301e, 0x301f,
 ])
 const LINE_START_HALFWIDTH_HANG = new Set([0xff61, 0xff64, 0xff65])
