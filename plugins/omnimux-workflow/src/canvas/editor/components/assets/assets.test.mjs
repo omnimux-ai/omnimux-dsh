@@ -69,7 +69,7 @@ test('Project Assets Types and Popover Options Data Integrity', async (t) => {
     assert.equal(/onInsertAsset/.test(canvasAction), false);
   });
 
-  await t.test('Canvas Tab shows import/generate badges; import hover hides Prompt', () => {
+  await t.test('Canvas Tab shows import/generate badges; hover preview carries no metadata', () => {
     const outlineSrc = readFileSync(join(here, 'views/CanvasOutlineView.tsx'), 'utf8');
     const hoverSrc = readFileSync(join(here, 'views/HoverInspector.tsx'), 'utf8');
     const drawerSrc = readFileSync(join(here, '../AssetsDrawer.tsx'), 'utf8');
@@ -77,8 +77,10 @@ test('Project Assets Types and Popover Options Data Integrity', async (t) => {
     assert.match(outlineSrc, /wf-node-kind-badge/);
     assert.match(outlineSrc, /导入/);
     assert.match(outlineSrc, /生成/);
-    assert.match(hoverSrc, /本地路径/);
-    assert.match(hoverSrc, /nodeKind !== 'import'/);
+    // 悬停预览卡只保留图像（Issue #3123）：本地路径与 Prompt 一律不再出现在卡内。
+    assert.doesNotMatch(hoverSrc, /本地路径/);
+    assert.doesNotMatch(hoverSrc, /Prompt/);
+    assert.doesNotMatch(hoverSrc, /nodeKind !== 'import'/);
     const addToSubjects = drawerSrc.slice(
       drawerSrc.indexOf("case 'add-to-subjects'"),
       drawerSrc.indexOf("case 'save-to-assets'"),

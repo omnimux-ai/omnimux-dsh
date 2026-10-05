@@ -1,0 +1,180 @@
+{
+  "runId": "2026-10-05T09-18-28-612Z",
+  "origin": "http://127.0.0.1:56372",
+  "probe": {
+    "portalCount": 3,
+    "consoleErrors": [],
+    "image": {
+      "found": true,
+      "removedNodeCount": 0,
+      "textContent": "",
+      "mediaTag": "IMG",
+      "imgNaturalWidth": 320,
+      "videoWidth": null,
+      "videoReadyState": null,
+      "durationText": null,
+      "previewHeight": 140,
+      "rect": {
+        "left": 732,
+        "top": 60,
+        "width": 262,
+        "height": 142
+      }
+    },
+    "video": {
+      "found": true,
+      "removedNodeCount": 0,
+      "textContent": "00:01",
+      "mediaTag": "VIDEO",
+      "imgNaturalWidth": null,
+      "videoWidth": 320,
+      "videoReadyState": 4,
+      "durationText": "00:01",
+      "previewHeight": 140,
+      "rect": {
+        "left": 732,
+        "top": 300,
+        "width": 262,
+        "height": 142
+      }
+    },
+    "audio": {
+      "found": true,
+      "removedNodeCount": 0,
+      "textContent": "00:01",
+      "mediaTag": null,
+      "imgNaturalWidth": null,
+      "videoWidth": null,
+      "videoReadyState": null,
+      "durationText": "00:01",
+      "previewHeight": 140,
+      "rect": {
+        "left": 732,
+        "top": 540,
+        "width": 262,
+        "height": 142
+      }
+    },
+    "expectedLeft": 732
+  },
+  "checks": [
+    {
+      "name": "三张悬停卡均已渲染",
+      "pass": true,
+      "detail": {
+        "portalCount": 3
+      }
+    },
+    {
+      "name": "渲染与挂载过程无控制台错误",
+      "pass": true,
+      "detail": {
+        "consoleErrors": []
+      }
+    },
+    {
+      "name": "图片素材：只渲染图像，信息区节点为 0",
+      "pass": true,
+      "detail": {
+        "found": true,
+        "removedNodeCount": 0,
+        "textContent": "",
+        "mediaTag": "IMG",
+        "imgNaturalWidth": 320,
+        "videoWidth": null,
+        "videoReadyState": null,
+        "durationText": null,
+        "previewHeight": 140,
+        "rect": {
+          "left": 732,
+          "top": 60,
+          "width": 262,
+          "height": 142
+        }
+      }
+    },
+    {
+      "name": "视频素材：渲染首帧，信息区节点为 0",
+      "pass": true,
+      "detail": {
+        "found": true,
+        "removedNodeCount": 0,
+        "textContent": "00:01",
+        "mediaTag": "VIDEO",
+        "imgNaturalWidth": null,
+        "videoWidth": 320,
+        "videoReadyState": 4,
+        "durationText": "00:01",
+        "previewHeight": 140,
+        "rect": {
+          "left": 732,
+          "top": 300,
+          "width": 262,
+          "height": 142
+        }
+      }
+    },
+    {
+      "name": "音频素材：回退占位图标，信息区节点为 0",
+      "pass": true,
+      "detail": {
+        "found": true,
+        "removedNodeCount": 0,
+        "textContent": "00:01",
+        "mediaTag": null,
+        "imgNaturalWidth": null,
+        "videoWidth": null,
+        "videoReadyState": null,
+        "durationText": "00:01",
+        "previewHeight": 140,
+        "rect": {
+          "left": 732,
+          "top": 540,
+          "width": 262,
+          "height": 142
+        }
+      }
+    },
+    {
+      "name": "三张卡片文本只剩时长角标（无素材名 / 更新时间等）",
+      "pass": true,
+      "detail": {
+        "image": "",
+        "video": "00:01",
+        "audio": "00:01"
+      }
+    },
+    {
+      "name": "视频时长角标仍保留在图像区域内",
+      "pass": true,
+      "detail": {
+        "video": "00:01",
+        "audio": "00:01"
+      }
+    },
+    {
+      "name": "卡片定位仍为侧边栏外侧左侧（left = 抽屉左边缘 - 260 - 8）",
+      "pass": true,
+      "detail": {
+        "actual": 732,
+        "expected": 732
+      }
+    },
+    {
+      "name": "卡片高度收敛为图像区域高度（约 140px + 边框）",
+      "pass": true,
+      "detail": {
+        "height": 142,
+        "previewHeight": 140
+      }
+    },
+    {
+      "name": "真实 PNG 截图已留存且可解码",
+      "pass": true,
+      "detail": {
+        "bytes": 78075
+      }
+    }
+  ],
+  "verdict": "PASS"
+}
