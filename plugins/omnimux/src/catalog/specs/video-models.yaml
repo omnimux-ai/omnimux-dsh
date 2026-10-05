@@ -602,6 +602,7 @@ models:
             allowedMimes:
               - audio/wav
               - audio/mp3
+              - audio/mpeg
             maxSizeMb: 15
             minDurationSec: 2
             maxDurationSec: 30
@@ -678,6 +679,7 @@ models:
             allowedMimes:
               - audio/wav
               - audio/mp3
+              - audio/mpeg
             maxSizeMb: 15
             minDurationSec: 2
             maxDurationSec: 30
@@ -761,6 +763,7 @@ models:
             allowedMimes:
               - audio/wav
               - audio/mp3
+              - audio/mpeg
             maxSizeMb: 15
             minDurationSec: 2
             maxDurationSec: 30
@@ -852,7 +855,7 @@ models:
       status: verified
       docUrl: https://docs.apimart.ai/en/api-reference/videos/seedance-2-5/generation.md
       verifiedAt: 2026-09-05
-      notes: 能力和约束取 APIMart 官方 Seedance 2.5 文档；编辑、延长和首尾帧组合约束写入 operation
+      notes: "能力和约束取 APIMart 官方 Seedance 2.5 文档；编辑、延长和首尾帧组合约束写入 operation。reference_images.min 差异登记：上游合同为模型级 min=1，本仓按操作声明 min=0——video_multi_ref 的下限由 inputGroups min=1 承担，video_edit / video_extend 的 reference_images 是源视频之外的可选补充；改为 1 会让「仅源视频」路径被门禁拒收，故保持 0 不改，差异待上游按操作细分或人工裁定。"
     implementation:
       status: ready
       profileId: videoGenerate
@@ -1557,6 +1560,7 @@ models:
             allowedMimes:
               - audio/wav
               - audio/mp3
+              - audio/mpeg
             maxSizeMb: 15
             minDurationSec: 1
             maxDurationSec: 15
@@ -1940,6 +1944,7 @@ models:
             limitSource:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/minimax-h3/generation.md
+              note: "限制值取自 APIMart 渠道文档（聚合渠道页），非 omnimux.ai 模型合同；该模型合同只公布 min/max，不含 formats 与 max_bytes_each"
         parameters:
           aspectRatio:
             options:
@@ -1976,6 +1981,7 @@ models:
             limitSource:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/minimax-h3/generation.md
+              note: "限制值取自 APIMart 渠道文档（聚合渠道页），非 omnimux.ai 模型合同；该模型合同只公布 min/max，不含 formats 与 max_bytes_each"
         parameters:
           aspectRatio:
             options:
@@ -2012,6 +2018,7 @@ models:
             limitSource:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/minimax-h3/generation.md
+              note: "限制值取自 APIMart 渠道文档（聚合渠道页），非 omnimux.ai 模型合同；该模型合同只公布 min/max，不含 formats 与 max_bytes_each"
           - slot: last_frame
             type: image
             role: last_frame
@@ -2028,6 +2035,7 @@ models:
             limitSource:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/minimax-h3/generation.md
+              note: "限制值取自 APIMart 渠道文档（聚合渠道页），非 omnimux.ai 模型合同；该模型合同只公布 min/max，不含 formats 与 max_bytes_each"
         parameters:
           aspectRatio:
             options:
@@ -2064,6 +2072,7 @@ models:
             limitSource:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/minimax-h3/generation.md
+              note: "限制值取自 APIMart 渠道文档（聚合渠道页），非 omnimux.ai 模型合同；该模型合同只公布 min/max，不含 formats 与 max_bytes_each"
           - slot: reference_videos
             type: video
             role: reference
@@ -2080,6 +2089,7 @@ models:
             limitSource:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/minimax-h3/generation.md
+              note: "限制值取自 APIMart 渠道文档（聚合渠道页），非 omnimux.ai 模型合同；该模型合同只公布 min/max，不含 formats 与 max_bytes_each"
           - slot: reference_audios
             type: audio
             role: reference
@@ -2089,6 +2099,7 @@ models:
             allowedMimes:
               - audio/wav
               - audio/mp3
+              - audio/mpeg
             maxSizeMb: 15
             minDurationSec: 2
             maxDurationSec: 15
@@ -2096,6 +2107,7 @@ models:
             limitSource:
               kind: official_docs
               url: https://docs.apimart.ai/en/api-reference/videos/minimax-h3/generation.md
+              note: "限制值取自 APIMart 渠道文档（聚合渠道页），非 omnimux.ai 模型合同；该模型合同只公布 min/max，不含 formats 与 max_bytes_each"
         inputGroups:
           - slots:
               - reference_images
@@ -2145,6 +2157,7 @@ models:
             limitSource:
               kind: official_docs
               url: https://fal.ai/models/fal-ai/minimax/h3-max/lip-sync/image-to-video
+              note: "限制值取自 fal.ai 渠道型号页，非 omnimux.ai 模型合同"
           - slot: driving_audio
             type: audio
             role: audio_track
@@ -2154,11 +2167,13 @@ models:
             allowedMimes:
               - audio/wav
               - audio/mp3
+              - audio/mpeg
             maxSizeMb: 15
             maxDurationSec: 15
             limitSource:
               kind: official_docs
               url: https://fal.ai/models/fal-ai/minimax/h3-max/lip-sync/image-to-video
+              note: "限制值取自 fal.ai 渠道型号页，非 omnimux.ai 模型合同"
         parameters:
           duration:
             range:
