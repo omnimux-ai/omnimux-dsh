@@ -289,6 +289,10 @@ describe('auth http dispatcher', () => {
       'exact:/omnimux/runtime/mode',
       'exact:/omnimux/byok/test',
       'exact:/omnimux/agents',
+      // #3178: sign-in state, account sign-in and version/upgrade routes
+      'exact:/omnimux/agents/updates',
+      'exact:/omnimux/agents/login',
+      'exact:/omnimux/agents/update',
       'exact:/omnimux/agents/select',
       'prefix:/omnimux/templates',
       // #453: workbench routes register via webServer.register in the same inject

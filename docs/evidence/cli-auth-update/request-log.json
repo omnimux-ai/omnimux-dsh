@@ -1,0 +1,67 @@
+{
+    "requests": [
+        {
+            "method": "GET",
+            "path": "/",
+            "search": "?v=2",
+            "body": "",
+            "at": 1791231955664
+        },
+        {
+            "method": "GET",
+            "path": "/tokens.css",
+            "search": "",
+            "body": "",
+            "at": 1791231955685
+        },
+        {
+            "method": "GET",
+            "path": "/bundle.css",
+            "search": "",
+            "body": "",
+            "at": 1791231955685
+        },
+        {
+            "method": "GET",
+            "path": "/bundle.js",
+            "search": "",
+            "body": "",
+            "at": 1791231955685
+        },
+        {
+            "method": "GET",
+            "path": "/omnimux/agents",
+            "search": "",
+            "body": "",
+            "at": 1791231955959
+        },
+        {
+            "method": "GET",
+            "path": "/omnimux/auth/status",
+            "search": "",
+            "body": "",
+            "at": 1791231955959
+        },
+        {
+            "method": "GET",
+            "path": "/omnimux/agents/updates",
+            "search": "",
+            "body": "",
+            "at": 1791231955991
+        },
+        {
+            "method": "POST",
+            "path": "/omnimux/agents/login",
+            "search": "",
+            "body": "{\"id\":\"claude\"}",
+            "at": 1791231970229
+        },
+        {
+            "method": "GET",
+            "path": "/omnimux/agents",
+            "search": "",
+            "body": "",
+            "at": 1791231973232
+        }
+    ]
+}
