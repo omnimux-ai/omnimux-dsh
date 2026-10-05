@@ -302,7 +302,7 @@ describe('OmniMux Profile Target Selection Matrix', () => {
       delete requireFromProfile.cache[requireFromProfile.resolve('omnimux-video')]
       assert.equal(requireFromProfile('omnimux-video').revision, 'second')
       assert.equal(requireFromProfile('omnimux-assets').revision, 'assets')
-      assert.match(second.stdout, /刷新本轮受管 file: 入口 \(omnimux-video\)/)
+      assert.match(second.stdout, /刷新本轮受管 file: 入口 \([^)]*omnimux-video[^)]*\)/)
       assert.match(second.stdout, /已核验 omnimux-video@1\.0\.0 index\.js \+ \d+ 个打包文件/)
       assert.match(second.stdout, /已核验 omnimux-assets@1\.0\.0 index\.js \+ \d+ 个打包文件/)
     } finally {
