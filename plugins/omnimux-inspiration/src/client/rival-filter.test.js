@@ -221,6 +221,15 @@ describe('rival-filter — v2.1 卡片描述符扩字段', () => {
     assert.equal(withoutMedia.has_media, false)
   })
 
+  it('keeps the cover readable under the field name the detail dialog consumes (R5-②)', () => {
+    // The whitelist renames cover_src to cover_key for the grid card — but the
+    // detail dialog is handed the same descriptor and reads cover_src. It must
+    // survive the mapping, or the dialog's cover is always empty.
+    const card = toRivalCardRow({ ...base, cover_src: '/omnimux/inspiration/media/x.jpg' })
+    assert.equal(card.cover_src, '/omnimux/inspiration/media/x.jpg')
+    assert.equal(card.cover_key, '/omnimux/inspiration/media/x.jpg')
+  })
+
   it('carries velocity and state through verbatim for the card to render', () => {
     const velocity = { text: '爆款 23k/h', tier: 'hot' }
     const card = toRivalCardRow({ ...base, type: 'video', source_platform: 'tiktok', velocity, state_label: '已处理', done: true })

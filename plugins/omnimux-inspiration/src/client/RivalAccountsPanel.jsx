@@ -99,6 +99,10 @@ export function RivalAccountsPanel(props) {
    */
   const handleReplicate = useCallback(async (card) => {
     const ticket = String(card.id)
+    // busyId is a single ticket: without this guard a click on a second card
+    // starts a concurrent run and the first run's `finally` clears the ticket
+    // mid-flight (R5-⑨, same guard its two sibling handlers already carry).
+    if (!ticket || busyId) return
     setBusyId(ticket)
     try {
       const result = await addRivalPostToSession(toRivalPost(card), { id: card.account_id })
@@ -110,7 +114,7 @@ export function RivalAccountsPanel(props) {
     } finally {
       setBusyId(null)
     }
-  }, [])
+  }, [busyId])
 
   /**
    * 「AI 拆解」：作品先走既有 to-inspiration 链路入库并跑自动解析（E13，

@@ -8,10 +8,12 @@
  * 纯函数，零 DOM、零 window：媒体区在 <img> 加载前就按数据里的比例占位
  * （§9.3 / V3 / V7），因此比例只可能来自数据字段，绝不测量 naturalWidth。
  *
- * 换行模型（R4）：`rivalWrapLines` 模拟 `white-space: normal` 的词边界换行
- * ——CJK 逐字可断、连续半宽字符是不可断的词、行尾空格被吞、超行宽的词
- * 独占一行（overflow:hidden 截断）。已知偏差写成 wrapAtoms 的文档化上界；
- * 几何正确性由真机实测承担（docs/evidence/…/harness 逐卡 rect 对比）。
+ * 换行模型（R4/R5）：`rivalWrapLines` 模拟 `white-space: normal` 的词边界
+ * 换行——CJK 逐字可断、连续半宽字符是不可断的词、连字符之后可断（UAX#14
+ * BREAK AFTER HYPHEN）、行尾空格被吞、不换行空格（NBSP/NNBSP/WJ）不可断、
+ * 超行宽的词独占一行（overflow:hidden 截断）。已知偏差写成 wrapAtoms 的
+ * 文档化上界；几何正确性由真机实测承担（docs/evidence/…/harness 逐卡
+ * rect 对比）。
  */
 
 import {
@@ -70,7 +72,10 @@ function clamp(value, min, max) {
 function textWidthPx(text, unitPx) {
   let px = 0
   for (const ch of String(text || '')) {
-    px += ch.codePointAt(0) > 0x2e7f ? unitPx : unitPx * ASCII_WIDTH_FACTOR
+    const cp = ch.codePointAt(0)
+    // 零宽连接符（BOM/WORD JOINER）不占宽度。
+    if (cp === 0xfeff || cp === 0x2060) continue
+    px += cp > 0x2e7f ? unitPx : unitPx * ASCII_WIDTH_FACTOR
   }
   return px
 }
@@ -80,9 +85,13 @@ function textWidthPx(text, unitPx) {
  * word-break）。CJK 字符（>0x2E7F，含中文与全角标点）逐字可断，各成一格；
  * 连续半宽字符（拉丁字母、数字、URL、hashtag、ASCII 标点）是不可断的
  * 「词」，整体换行；空白序列自身是一格，落在行尾时宽度被浏览器吞掉。
+ * UAX#14：断行点在 '-'（U+002D/U+2010）之后 —— 连字符并入左侧词段、
+ * 词段前可断（R5-④：把整串当一个不可断词会严重少算，6 连字符词模型
+ * 6 行、真实 12 行，同列重叠 40px）。U+00A0/U+202F/U+FEFF/U+2060 是不
+ * 换行空格与零宽连接符，**不可断**、归入当前词（R5-⑤：`\s` 会把 NBSP
+ * 误当可断空白）。
  * 已知偏差（文档化上界，不假装精确）：
  *   - 行首禁则（某些标点不允许出现在行首）未模拟 → 模型可能少算一行；
- *   - 西文连字符处断行（break at '-'）未模拟 → 含 '-' 长词可能多算一行；
  *   - 行尾空格宽度被吞 → 模型可能少算一点点宽度（行数不受影响的情况
  *     远多于受影响）。
  * @param {string} text
@@ -90,22 +99,36 @@ function textWidthPx(text, unitPx) {
  */
 function wrapAtoms(text) {
   const atoms = []
+  /** 仍在累积字符的最后一个词段；null 表示下一字符要开新词。 */
+  let open = null
   for (const ch of String(text || '')) {
     const cp = ch.codePointAt(0)
-    if (/\s/.test(ch)) {
-      atoms.push({ w: cp > 0x2e7f ? 0 : 0, brk: true, space: true })
+    if (/[ \t\n\r\f\v]/.test(ch)) {
+      open = null
+      atoms.push({ w: 0, brk: true, space: true })
+      continue
+    }
+    // 不换行空格与零宽连接符（NBSP / NNBSP / BOM·WJ）：不断行，并入词。
+    if (cp === 0x00a0 || cp === 0x202f || cp === 0xfeff || cp === 0x2060) {
+      if (!open) {
+        open = { w: 0, brk: true, word: true, text: '' }
+        atoms.push(open)
+      }
+      open.text += ch
       continue
     }
     if (cp > 0x2e7f) {
+      open = null
       atoms.push({ w: 0, brk: true, cjk: true, ch })
       continue
     }
-    const last = atoms[atoms.length - 1]
-    if (last && last.word) {
-      last.text += ch
-    } else {
-      atoms.push({ w: 0, brk: true, word: true, text: ch })
+    if (!open) {
+      open = { w: 0, brk: true, word: true, text: '' }
+      atoms.push(open)
     }
+    open.text += ch
+    // 连字符并入本段、段后允许断行（BREAK AFTER HYPHEN）。
+    if (cp === 0x2d || cp === 0x2010) open = null
   }
   return atoms
 }

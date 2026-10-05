@@ -45,6 +45,10 @@ function renderInspirationIcon(size = 16) {
 export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'omnimux-inspiration: dictionaries')
   const t = ctx.locale.bind(NS)
+  // The components only ever see `t`; pinning the locale service onto it lets
+  // formatting read the language's real source (ctx.locale snapshot) instead
+  // of probing dictionary values (R5-⑦).
+  try { t.hostLocale = ctx.locale } catch { /* a frozen translator keeps the dictionary fallback */ }
   ctx.effect(() => registerPreviewService(t), 'omnimux-inspiration: shared preview')
 
 

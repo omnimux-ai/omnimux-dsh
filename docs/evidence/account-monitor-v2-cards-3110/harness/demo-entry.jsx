@@ -10,7 +10,9 @@
 import { createRoot } from 'react-dom/client'
 import { useEffect, useMemo, useState } from 'react'
 import { RivalMasonry } from '../../../../plugins/omnimux-inspiration/src/client/RivalMasonry.jsx'
+import { RivalPostPreviewModal } from '../../../../plugins/omnimux-inspiration/src/client/RivalPostPreviewModal.jsx'
 import { toRivalCardRow } from '../../../../plugins/omnimux-inspiration/src/client/rival-filter.js'
+import { rivalCardHeightPx, rivalHasPill } from '../../../../plugins/omnimux-inspiration/src/client/rival-masonry.js'
 import { injectRivalStyles } from '../../../../plugins/omnimux-inspiration/src/client/rival-styles.js'
 import { injectRivalTokens } from '../../../../plugins/omnimux-inspiration/src/client/rival-tokens.js'
 import { zh, en } from '../../../../plugins/omnimux-inspiration/src/client/locales.js'
@@ -70,10 +72,20 @@ const EDGE_POSTS = [
   row('e1', ACCOUNTS.higgs, { type: 'text', title: `Shipping our new video pipeline today — benchmark notes inside. ${Array(8).fill('#sundayfunday').join(' ')}`, velocity: { text: 'rising 1.9k/h', tier: 'rising' } }),
   row('e2', ACCOUNTS.runway, { type: 'text', title: 'Read the full thread here: https://x.com/runwayml/status/1928374650111222334?ref_src=twsrc%5Etfw%7Ctwcamp%7Ctwgr', velocity: { text: 'watch 210/h', tier: 'watch' } }),
   row('e3', ACCOUNTS.runway, { type: 'text', title: 'Upstream rows may ship a velocity object without text. The empty pill row must not render — an empty row still costs 36px and would push the card past its estimate, overlapping whatever lands below it in the same column.', velocity: {} }),
+  // R5-④: the wrap model must break after '-' like Chrome does (UAX#14).
+  row('e4', ACCOUNTS.higgs, { type: 'text', title: 'Our state-of-the-art video-pipeline-for-vfx-shot-generation-workflow-chain-of-thought finally shipped today', velocity: { text: 'hot 5.1k/h', tier: 'hot' } }),
+  // R5-④: CJK + ASCII mixed body text.
+  row('e5', ACCOUNTS.higgs, { type: 'text', title: '发布 workflow 更新后 pipeline 依然稳定，output quality 反而更好，recommend everyone try the new state-of-the-art checkpoint 版本', velocity: { text: 'rising 900/h', tier: 'rising' } }),
+  // R5-⑤: non-breaking spaces must not split a word (U+00A0 literals below).
+  row('e6', ACCOUNTS.runway, { type: 'text', title: `word${' '}boundaries${' '}matter${' '}when${' '}you${' '}measure${' '}line${' '}wraps${' '}carefully${' '}indeed`, velocity: { text: 'watch 80/h', tier: 'watch' } }),
+  // R5-④: follows e4 in the same column — with the old model's undercounted
+  // e4 estimate this card's top lands inside e4's real bottom (overlap).
+  row('e7', ACCOUNTS.higgs, { type: 'text', title: 'Short tail card — placement only', velocity: { text: 'watch 60/h', tier: 'watch' } }),
 ]
 
 function App() {
   const [markDoneNote, setMarkDoneNote] = useState('')
+  const [detailCard, setDetailCard] = useState(null)
   const posts = useMemo(() => (
     new URLSearchParams(location.search).get('edge') ? [...POSTS, ...EDGE_POSTS] : POSTS
   ), [])
@@ -81,15 +93,24 @@ function App() {
     const card = toRivalCardRow(r)
     // The QA page mirrors the cover path into the served location so the media
     // element loads exactly like a real cover (hostMediaSrc whitelist already
-    // passed the cover_src upstream in production).
-    return { ...card, cover_key: card.cover_key ? `covers/${card.cover_key.split('/').pop()}` : '' }
+    // passed the cover_src upstream in production). cover_src gets an absolute
+    // http(s) form so the detail dialog's hostMediaSrc whitelist passes too.
+    const file = card.cover_key ? card.cover_key.split('/').pop() : ''
+    return {
+      ...card,
+      cover_key: file ? `covers/${file}` : '',
+      cover_src: file ? new URL(`covers/${file}`, location.href).href : '',
+    }
   }), [])
   useEffect(() => {
     injectRivalTokens()
     injectRivalStyles()
     document.documentElement.setAttribute('data-theme',
       new URLSearchParams(location.search).get('theme') || 'dark')
-  }, [])
+    // Measurement seam: the descriptors the grid rendered, so the CDP script
+    // can estimate every card with the same function and data the layout used.
+    window.__RIVAL_QA__.cards = cards
+  }, [cards])
   return (
     <div className="qa-stage">
       {markDoneNote ? <div className="qa-note">{markDoneNote}</div> : null}
@@ -97,14 +118,28 @@ function App() {
         cards={cards}
         t={t}
         containerWidth={Number(new URLSearchParams(location.search).get('width')) || undefined}
-        onDetail={() => {}}
+        onDetail={(card) => setDetailCard(card)}
         onReplicate={() => {}}
         onDeconstruct={() => {}}
         onMarkDone={(card) => setMarkDoneNote(`${t('rivalFeed.toast.markDone')} · ${card.id}`)}
       />
+      {detailCard ? (
+        <RivalPostPreviewModal
+          row={detailCard}
+          t={t}
+          busy={false}
+          onClose={() => setDetailCard(null)}
+          onReplicate={() => setDetailCard(null)}
+        />
+      ) : null}
     </div>
   )
 }
 
 const root = createRoot(document.getElementById('app'))
 root.render(<App />)
+
+// Measurement seam for the CDP harness (no UI surface): the estimator the
+// placements were computed with, so the script can compare
+// getBoundingClientRect() against rivalCardHeightPx without re-deriving it.
+window.__RIVAL_QA__ = { rivalCardHeightPx, rivalHasPill }

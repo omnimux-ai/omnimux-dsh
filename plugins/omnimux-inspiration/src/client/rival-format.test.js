@@ -40,6 +40,24 @@ describe('rivalLocaleOf', () => {
     assert.equal(rivalLocaleOf(() => ''), 'zh')
     assert.equal(rivalLocaleOf((key) => key), 'zh', 'an unbound t returning the key itself is not English')
   })
+
+  it('reads the host locale service when the bound t carries it (R5-⑦)', () => {
+    // The dictionary probe is only a fallback: `apply(ctx)` pins ctx.locale
+    // onto t as `hostLocale`, and its snapshot — not a dictionary value — is
+    // the language's single source of truth.
+    const enHost = { getSnapshot: () => ({ active: 'en' }) }
+    const zhHost = { getSnapshot: () => ({ active: 'zh' }) }
+    const tEnWithHost = Object.assign((key) => en[key] || key, { hostLocale: enHost })
+    assert.equal(rivalLocaleOf(tEnWithHost), 'en')
+    // The host answer wins even over a probe that cannot reach a dictionary.
+    const tBareWithEnHost = Object.assign((key) => key, { hostLocale: enHost })
+    assert.equal(rivalLocaleOf(tBareWithEnHost), 'en')
+    const tZhWithHost = Object.assign((key) => zh[key] || key, { hostLocale: zhHost })
+    assert.equal(rivalLocaleOf(tZhWithHost), 'zh')
+    // Snapshot-less service shapes (string .current, like omnimux-video's).
+    const tCurrent = Object.assign((key) => key, { hostLocale: { current: 'zh-Hans' } })
+    assert.equal(rivalLocaleOf(tCurrent), 'zh')
+  })
 })
 
 describe('formatCount — locale', () => {

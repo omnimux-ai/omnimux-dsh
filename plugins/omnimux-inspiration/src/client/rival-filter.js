@@ -219,6 +219,10 @@ export function toRivalCardRow(row) {
     done_at: typeof row?.done_at === 'string' ? row.done_at : null,
     interacted_at: typeof row?.interacted_at === 'string' ? row.interacted_at : null,
     cover_key: coverSrc,
+    // The detail dialog is handed this same descriptor and reads `cover_src` —
+    // renaming it to cover_key alone left the dialog's cover always empty
+    // (R5-②). Both names carry the same validated address.
+    cover_src: coverSrc,
     // Kept beside the display address: the replication chain reads the original
     // and must not be handed a locally rewritten one.
     cover_http_url: coverSrc,

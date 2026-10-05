@@ -49,12 +49,19 @@ import {
 function oracleWrapLines(text, unit, lineWidth) {
   const width = Math.max(1, lineWidth)
   const atoms = []
+  let open = null
   for (const ch of String(text || '')) {
-    if (/\s/.test(ch)) { atoms.push({ space: true }); continue }
-    if (ch.codePointAt(0) > 0x2e7f) { atoms.push({ cjk: ch }); continue }
-    const last = atoms[atoms.length - 1]
-    if (last && last.word) last.word += ch
-    else atoms.push({ word: ch })
+    const cp = ch.codePointAt(0)
+    if (/[ \t\n\r\f\v]/.test(ch)) { open = null; atoms.push({ space: true }); continue }
+    if (cp === 0x00a0 || cp === 0x202f || cp === 0xfeff || cp === 0x2060) {
+      if (!open) { open = { word: '' }; atoms.push(open) }
+      open.word += ch
+      continue
+    }
+    if (cp > 0x2e7f) { open = null; atoms.push({ cjk: ch }); continue }
+    if (!open) { open = { word: '' }; atoms.push(open) }
+    open.word += ch
+    if (cp === 0x2d || cp === 0x2010) open = null
   }
   let lines = 1
   let used = 0
@@ -371,8 +378,8 @@ describe('rival-masonry — R4 词边界换行模型（复审 ②）', () => {
   })
 
   it('超行宽单词占 1 行不折行（overflow:hidden 截断行为）', () => {
-    const url = 'https://x.com/someone/status/1234567890?ref_src=twsrc&extra=padding-chars'
-    // 78 个 ASCII 字符 ≈ 600px ≫ 194px 行宽：CSS 不折词，一行截断。
+    const url = 'https://x.com/someone/status/1234567890?ref_src=twsrc%5Etfw%7Ctwcamp'
+    // 77 个 ASCII 字符（无连字符）≈ 590px ≫ 194px 行宽：CSS 不折词，一行截断。
     assert.equal(rivalWrapLines(url, 14, 194), 1)
     const h = rivalCardHeightPx({ card_type: 'text-media', media_kind: 'video', title: url }, 220)
     assert.ok(Math.abs(h - (24 + 1 * 20 + 10 + (220 - 26) / (16 / 9) + 2)) < 1e-9,
@@ -389,6 +396,34 @@ describe('rival-masonry — R4 词边界换行模型（复审 ②）', () => {
     const title = '发布workflow更新后 pipeline 依然稳定'
     const lines = rivalWrapLines(title, 14, 194)
     assert.ok(lines >= 2, `mixed text should wrap at CJK/Latin boundaries, got ${lines}`)
+  })
+})
+
+describe('rival-masonry — R5 连字符断行与不换行空格（复审 ④⑤）', () => {
+  it('连字符后可断行：6 段连字符长词不再按一个不可断词估算', () => {
+    // UAX#14：浏览器在 '-' 之后可断行。把整串当一个不可断词会严重少算行数
+    // （实测 6 连字符词模型 6 行、真实 12 行，同列重叠 40px —— R5 复审）。
+    const word = 'state-of-the-art-video-pipeline-for-vfx-shot-generation-workflow'
+    const lines = rivalWrapLines(word, 14, 194)
+    assert.ok(lines >= 2, `hyphenated word must be allowed to break after '-', got ${lines}`)
+  })
+
+  it('连字符断行使高连字符词不再少算：估算行数与实测行数同量级', () => {
+    // 8 段各 ≈6 字符的连字符串：每段 ≈ 6×14×0.55 ≈ 46px，
+    // 行宽 194px 每行约 4 段 → 3 行，而不是把 370px 当 1 行截断。
+    const word = 'abcdef-abcdef-abcdef-abcdef-abcdef-abcdef-abcdef-abcdef'
+    assert.ok(rivalWrapLines(word, 14, 194) >= 3, 'six-segment hyphenated word must wrap, not truncate to one line')
+  })
+
+  it('不换行空格（NBSP / NNBSP / WJ）不可断行、不产生断点', () => {
+    // U+00A0/U+202F/U+FEFF 是"不换行空格"：浏览器不在这里断行，且宽度保留。
+    // `\s` 会把它们误当可断空白 → 实测 1 行的串被模型算成多行。
+    const nbsp = `aaa${' '}bbb${' '}ccc`
+    assert.equal(rivalWrapLines(nbsp, 14, 194), 1, 'NBSP must not act as a breakable space')
+    const narrowNoBreak = `aaa${' '}bbb${' '}ccc`
+    assert.equal(rivalWrapLines(narrowNoBreak, 14, 60), 1, 'NBSP-joined words stay glued even past line width (overflow)')
+    const wj = `aaa${'﻿'}bbb`
+    assert.equal(rivalWrapLines(wj, 14, 194), 1, 'FEFF (word joiner) is part of the word, never a break')
   })
 })
 

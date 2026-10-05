@@ -43,7 +43,9 @@ export function RivalPostPreviewModal(props) {
   if (!row) return null
 
   const account = row.account || {}
-  const cover = hostMediaSrc(row.cover_src || '')
+  // The grid hands this dialog the card descriptor, which carries the cover
+  // under both `cover_src` and `cover_key`; a raw feed row only has cover_src.
+  const cover = hostMediaSrc(row.cover_src || row.cover_key || '')
   // The grid hands this dialog a card descriptor, whose original-post field is
   // `source_url`; `url` is what a raw feed row calls it.
   const originalUrl = String(row.source_url || row.url || '')
@@ -111,7 +113,7 @@ export function RivalPostPreviewModal(props) {
           {row.posted_at ? (
             <p className="omnimux-rival-detail-time">
               {t('rivalFeed.detail.postedAt')}
-              {`：${formatRelativeTime(row.posted_at, Date.now(), locale)}`}
+              {`: ${formatRelativeTime(row.posted_at, Date.now(), locale)}`}
             </p>
           ) : null}
         </div>

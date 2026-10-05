@@ -420,16 +420,21 @@ describe('RivalPostCard — 外链与 locale（第三轮整改）', () => {
   const overlayText = (container) =>
     container.querySelector('.omnimux-rival-card-overlay')?.textContent || ''
 
-  it('does not render 原帖直达 for a non-http(s) source_url, and never calls window.open', async () => {
+  it('keeps 原帖直达 in place but disabled for a non-http(s) source_url, and never calls window.open (R5-⑥)', async () => {
+    // spec §9.2/§9.6 V16 locks the action row to three secondary buttons — the
+    // slot must stay (greyed) instead of silently collapsing, matching the
+    // account filter's disabled affordance on the same condition.
     const evil = cardOf('short-video', { source_url: 'javascript:alert(1)' })
     const mounted = await mountStage([evil])
     try {
       const card = byType(mounted.container, 'short-video')
-      assert.equal(
-        card.querySelector('[data-act="original"]'),
-        null,
-        'a javascript: source_url must not offer a 原帖直达 button at all',
-      )
+      const original = card.querySelector('[data-act="original"]')
+      assert.ok(original, 'the slot keeps its button — V16 fixes three secondary slots')
+      assert.equal(original.disabled, true, 'a refused scheme greys the button, it does not open')
+      assert.equal(original.getAttribute('title'), '原帖链接不可用')
+      await act(async () => {
+        original.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+      })
       assert.deepEqual(mounted.opened, [], 'window.open must not run for a refused scheme')
     } finally {
       await mounted.unmount()

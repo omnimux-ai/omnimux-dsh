@@ -288,12 +288,21 @@ function specRatio(post) {
 function specWrapLines(text, unit, lineWidth) {
   const width = Math.max(1, lineWidth)
   const atoms = []
+  let open = null
   for (const ch of String(text || '')) {
-    if (/\s/.test(ch)) { atoms.push({ space: true }); continue }
-    if (ch.codePointAt(0) > 0x2e7f) { atoms.push({ cjk: ch }); continue }
-    const last = atoms[atoms.length - 1]
-    if (last && last.word) last.word += ch
-    else atoms.push({ word: ch })
+    const cp = ch.codePointAt(0)
+    if (/[ \t\n\r\f\v]/.test(ch)) { open = null; atoms.push({ space: true }); continue }
+    // Non-breaking spaces and zero-width joiners stay glued to the word (R5).
+    if (cp === 0x00a0 || cp === 0x202f || cp === 0xfeff || cp === 0x2060) {
+      if (!open) { open = { word: '' }; atoms.push(open) }
+      open.word += ch
+      continue
+    }
+    if (cp > 0x2e7f) { open = null; atoms.push({ cjk: ch }); continue }
+    if (!open) { open = { word: '' }; atoms.push(open) }
+    open.word += ch
+    // UAX#14: a line may break after '-' — it joins the left segment (R5).
+    if (cp === 0x2d || cp === 0x2010) open = null
   }
   let lines = 1
   let used = 0

@@ -28,3 +28,12 @@ URL 参数：`theme=dark|light`、`width=<px>`（固定容器宽时绕过 Resize
 
 - 已提交的 `01-*.png` … `06-*.png` 为本装置在整改前版本上的验收截图，仍有效，不重拍。
 - `covers/c1..c12.svg` 是占位封面，模拟真实媒体加载（不触发网络）。
+- `?edge=1` 追加边界卡（hashtag / 超宽 URL / 空 velocity / 连字符长词 e4 /
+  CJK+ASCII 混排 e5 / NBSP e6 / 同列尾随 e7）；点任意卡打开详情弹窗。
+- `measure-placement.mjs`（headless Chrome + CDP）：逐卡实测 vs
+  `rivalCardHeightPx` 估算、实测高度重放最短列 mismatch、**同列相邻卡
+  重叠量**（`adjacentOverlaps` / `maxAdjacentOverlap`，R5 新增——
+  估算自洽但卡面物理重叠就是靠它发现的）。页面暴露
+  `window.__RIVAL_QA__`（估算函数 + 渲染中的卡片描述符）供脚本调用。
+  用法：`python3 -m http.server <port> --directory <harness>` 后
+  `node measure-placement.mjs <url> <out.json> [逗号分隔的id白名单]`。

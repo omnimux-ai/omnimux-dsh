@@ -214,17 +214,25 @@ export function RivalPostCard(props) {
         </div>
         <span className="omnimux-rival-overlay-metrics">{metricsText(card, t)}</span>
         <div className="omnimux-rival-act-row">
-          {originalUrlSafe ? (
+          {/* §9.2/§9.6 V16 fixes the action row to three secondary slots:
+              an unsafe source_url greys its button (same affordance the
+              account filter uses) instead of collapsing the slot. The
+              wrapper eats the click too — React still lets a disabled
+              button's click bubble to the card's detail handler. */}
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
+          <span onClick={stop}>
             <Button
               variant="outline"
               size="sm"
               className="omnimux-rival-act-btn"
               data-act="original"
+              disabled={!originalUrlSafe}
+              title={originalUrlSafe ? undefined : t('rivalFeed.card.originalUnavailable')}
               onClick={openOriginal}
             >
               {t('rivalFeed.card.original')}
             </Button>
-          ) : null}
+          </span>
           {typeof onDeconstruct === 'function' ? (
             <Button
               variant="outline"

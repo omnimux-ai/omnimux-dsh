@@ -8,17 +8,25 @@
 import { zh } from './locales.js'
 
 /**
- * The locale the components are rendering in, derived from `t` itself.
+ * The locale the components are rendering in.
  *
- * Components get `t` — a dictionary-bound translator — and no locale prop, so
- * the locale is probed instead of threaded: the plugin registers exactly two
- * dictionaries (zh/en) and `rivalFeed.card.replicate` reads differently in
- * each. Anything that is not the en dictionary renders as zh.
+ * NOT the language's source of truth — do not copy this pattern. The real
+ * source is `ctx.locale` (`getSnapshot()?.active`, the same seam
+ * `composer-commands-i18n.js` and omnimux-video's sidebar use); `apply(ctx)`
+ * pins it onto the bound `t` as `t.hostLocale`, and this function reads that
+ * first. The dictionary probe below is the fallback for callers that were
+ * handed a bare `t` (tests, ad-hoc mounts): it probes `rivalFeed.card.replicate`,
+ * whose zh/en values differ.
  * @param {((key: string) => string) | undefined | null} t
  * @returns {'zh' | 'en'}
  */
 export function rivalLocaleOf(t) {
   if (typeof t !== 'function') return 'zh'
+  const host = t.hostLocale
+  if (host) {
+    const active = (typeof host.getSnapshot === 'function' ? host.getSnapshot()?.active : host.current) || ''
+    if (active) return String(active).toLowerCase().startsWith('en') ? 'en' : 'zh'
+  }
   const probe = String(t('rivalFeed.card.replicate') || '')
   if (!probe || probe === 'rivalFeed.card.replicate') return 'zh'
   return probe === zh['rivalFeed.card.replicate'] ? 'zh' : 'en'

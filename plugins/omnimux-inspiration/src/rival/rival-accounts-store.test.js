@@ -107,6 +107,29 @@ describe('rival-accounts-store: whitelist constructors (G3)', () => {
     assert.equal(buildPostRow({ id: 'p3' }, base).ratio, null)
   })
 
+  it('keeps the persisted ratio when a refresh row ships none (R5-①)', () => {
+    // The ratio is a measured fact the feed producer may omit on later
+    // refreshes; overwriting it with null silently falls the card back to the
+    // default ratio — the same failure mode first_seen_at already guards
+    // against with its ctx.existing fallback.
+    const stored = buildPostRow(
+      { id: 'p1', title: 't', ratio: 0.8 },
+      { now: FIXED_NOW_ISO, accountId: 'riv_a', platform: 'instagram' },
+    )
+    assert.equal(stored.ratio, 0.8)
+    const refreshed = buildPostRow(
+      { id: 'p1', title: 't' },
+      { now: FIXED_NOW_ISO, accountId: 'riv_a', platform: 'instagram', existing: stored },
+    )
+    assert.equal(refreshed.ratio, 0.8, 'a refresh row without ratio must not null the stored measurement')
+    // A fresh ratio on the refresh row still wins over the stored one.
+    const remeasured = buildPostRow(
+      { id: 'p1', title: 't', ratio: 1.6 },
+      { now: FIXED_NOW_ISO, accountId: 'riv_a', platform: 'instagram', existing: stored },
+    )
+    assert.equal(remeasured.ratio, 1.6)
+  })
+
   it('builds a config from constants, not from the caller', () => {
     const config = buildConfig({ limits: { cloud_calls_global_per_day: 999_999 }, posts_per_refresh: 500 }, FIXED_NOW_ISO)
     assert.equal(config.limits.cloud_calls_per_account_per_cycle, LIMIT_CALLS_PER_ACCOUNT_CYCLE)
