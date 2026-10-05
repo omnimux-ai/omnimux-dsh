@@ -46,6 +46,16 @@ import type { MaterialNodeData, MaterialType } from '../../../../types/materialN
 import { resolveNodeKind } from '../../../../types/materialNode';
 import type { CapabilityCatalog, CapabilityModelItem } from '../../../../../shared/api';
 import { useT } from '../../../../i18n';
+import type { DictKey } from '../../../../i18n';
+import type { UnusedSupply } from '../../../../../shared/graph/feedSlot/types.ts';
+
+/** 未使用素材的原因文案键：保持字面量，供 i18n 键类型收窄。 */
+const UNUSED_REASON_KEYS: Record<UnusedSupply['reasonCode'], DictKey> = {
+  no_matching_slot: 'input.unused.noSlot',
+  slot_capacity: 'input.unused.capacity',
+  not_bound: 'input.unused.notBound',
+  input_unavailable: 'input.unused.unavailable',
+};
 import { CustomSelect, toast } from '../../../../ui';
 import { rememberGenerationModel } from '../../../../store/generationPreferencesStore';
 import { generationReasonText } from '../../../../i18n/generationReason';
@@ -848,6 +858,16 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
     }
   }, [canvasEdges, nodeId, nodeData.slotStandbyEdgeIds]);
 
+  // 未使用供给：把该供给边记入待命池（用户主动排除），供给边本身保留。
+  const handleParkUnusedSupply = useCallback((edgeId: string) => {
+    const standby = Array.isArray(nodeData.slotStandbyEdgeIds) ? nodeData.slotStandbyEdgeIds : [];
+    useCanvasStore.getState().applyCanvasInputMutation({
+      nodePatches: [{ nodeId, data: {
+        slotStandbyEdgeIds: [...new Set([...standby, edgeId])],
+      } }],
+    });
+  }, [nodeId, nodeData.slotStandbyEdgeIds]);
+
   const handlePickSlot = useCallback(
     (request: SlotPickRequest) => onOpenResourcePicker?.(
       displayedSlotLayout.displayOnlyFromOperation
@@ -1175,6 +1195,17 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
               title={t('mention.unbind')}>
               <AlertTriangle size={14} aria-hidden="true" />
               <span>{upstreams.find((item) => item.nodeId === conflict.occupant.sourceNodeId)?.label || conflict.occupant.sourceNodeId} · {t('mention.unavailable')}</span>
+              <X size={12} aria-hidden="true" />
+            </button>
+          ))}
+          {inputDisplay.unused.map((item, index) => (
+            <button key={`unused-${item.occupant.edgeId}-${index}`} type="button"
+              className="wf-effective-text nodrag" data-testid="wf-input-unused"
+              data-unused-reason={item.reasonCode}
+              onClick={() => handleParkUnusedSupply(item.occupant.edgeId)}
+              title={t('input.unused.park')}>
+              <AlertTriangle size={14} aria-hidden="true" />
+              <span>{upstreams.find((source) => source.nodeId === item.occupant.sourceNodeId)?.label || item.occupant.sourceNodeId} · {t(UNUSED_REASON_KEYS[item.reasonCode])}</span>
               <X size={12} aria-hidden="true" />
             </button>
           ))}
