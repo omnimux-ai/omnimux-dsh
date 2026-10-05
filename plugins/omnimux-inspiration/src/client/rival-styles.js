@@ -260,6 +260,42 @@ export const RIVAL_CSS = `
 .omnimux-rival-empty-cta {
   margin-top: 4px;
 }
+
+/* ── #3112 首采进度承诺与分流出口 ──────────────────────────────────── */
+/* 空态动作区：主按钮与分流链接同列，垂直居中。 */
+.omnimux-rival-empty-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+/* E2 细线进度条：无百分比、无计数，规格 §2.2 E2 只允许一条细线。 */
+.omnimux-rival-fetch-progress {
+  width: 160px;
+  height: 2px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--dsw-alias-border-l2);
+}
+.omnimux-rival-fetch-progress i {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--dsw-alias-brand-primary);
+  animation: omnimux-rival-fetch-slide 1.2s ease-in-out infinite;
+}
+@keyframes omnimux-rival-fetch-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-rival-fetch-progress i {
+    animation: none;
+    width: 100%;
+    opacity: .6;
+  }
+}
 .omnimux-rival-notice {
   padding: 8px 10px;
   border-radius: 8px;
