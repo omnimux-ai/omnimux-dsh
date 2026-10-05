@@ -37,10 +37,170 @@ export const LOCAL_VIDS_API_KEY_ENV = 'OMNIMUX_VIDS2API_API_KEY'
 /** One submit round-trip; the generation itself is covered by the poll window. */
 export const LOCAL_VIDS_SUBMIT_TIMEOUT_MS = 60_000
 
+/**
+ * Hub operation → vids2api `mode`. `null` means "send no mode": the service's
+ * own default is create (text-to-video), and it is the only mode that needs no
+ * extra input.
+ *
+ * The service coerces an unrecognised `mode` to create instead of rejecting it,
+ * so the mapping is decided here and an unmapped operation fails loudly — a
+ * typo must never quietly produce a plain text-to-video job.
+ */
+export const LOCAL_VIDS_MODE_BY_OPERATION = Object.freeze({
+  text_to_video: null,
+  first_frame: 'animate',
+  video_edit: 'modify',
+  video_extend: 'extend',
+})
+
+/** Hub operations this channel serves; anything else is refused, not coerced. */
+export const LOCAL_VIDS_OPERATION_IDS = Object.freeze(Object.keys(LOCAL_VIDS_MODE_BY_OPERATION))
+
+/**
+ * Domains the service documents in its request model. It validates neither
+ * (`resolution: "__bogus__"` is accepted and forwarded), so the hub checks them
+ * before spending a generation.
+ */
+export const LOCAL_VIDS_RESOLUTIONS = Object.freeze(['720p', '1080p', '4k'])
+export const LOCAL_VIDS_ASPECT_RATIOS = Object.freeze(['landscape', 'portrait', '横屏', '竖屏'])
+
+/** vids2api task ids are 24-char lowercase hex; stay permissive on the tail. */
+const LOCAL_VIDS_TASK_ID_RE = /^[0-9a-f]{16,}$/i
+
 const UNCONFIGURED_MESSAGE =
   `本机 Google Vids 通道未配置：请设置 ${LOCAL_VIDS_BASE_URL_ENV} 指向本机 vids2api 服务地址后再试。`
 const UNREACHABLE_HINT =
   `请确认本机 vids2api 服务已启动，且 ${LOCAL_VIDS_BASE_URL_ENV} 指向它。`
+
+/** @param {unknown} value */
+function pickText(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : ''
+}
+
+/**
+ * The service addresses a prior job by its **own** task id, while the hub hands
+ * over media URLs. Accept a bare id or one of this channel's own task/content
+ * URLs; anything else is refused rather than forwarded as an id.
+ *
+ * @param {unknown} value
+ * @param {string} baseUrl
+ * @returns {{ id: string, reason: 'missing' | 'foreign' | 'unrecognized' | '' }}
+ */
+export function resolveLocalVidsVideoId(value, baseUrl) {
+  const raw = pickText(value)
+  if (!raw) return { id: '', reason: 'missing' }
+  if (LOCAL_VIDS_TASK_ID_RE.test(raw)) return { id: raw, reason: '' }
+  let parsed
+  try {
+    parsed = new URL(raw)
+  } catch {
+    return { id: '', reason: 'unrecognized' }
+  }
+  if (baseUrl) {
+    try {
+      if (parsed.origin !== new URL(baseUrl).origin) return { id: '', reason: 'foreign' }
+    } catch {
+      return { id: '', reason: 'unrecognized' }
+    }
+  }
+  const segments = parsed.pathname.split('/').filter(Boolean)
+  const marker = segments.lastIndexOf(LOCAL_VIDS_TASK_PATH)
+  const candidate = marker >= 0 ? segments[marker + 1] : ''
+  if (candidate && LOCAL_VIDS_TASK_ID_RE.test(candidate)) return { id: candidate, reason: '' }
+  return { id: '', reason: 'foreign' }
+}
+
+/** @param {unknown} value @returns {string} */
+export function normalizeLocalVidsResolution(value) {
+  const raw = pickText(value)
+  if (!raw) return ''
+  const hit = LOCAL_VIDS_RESOLUTIONS.find((item) => item.toLowerCase() === raw.toLowerCase())
+  if (!hit) {
+    throw new OmnimuxError(
+      'omnimux-invalid-request',
+      `不支持的分辨率 ${raw}：本机 Google Vids 仅支持 ${LOCAL_VIDS_RESOLUTIONS.join(' / ')}`,
+    )
+  }
+  return hit
+}
+
+/** @param {unknown} value @returns {string} */
+export function normalizeLocalVidsAspectRatio(value) {
+  const raw = pickText(value)
+  if (!raw) return ''
+  const hit = LOCAL_VIDS_ASPECT_RATIOS.find((item) => item === raw || item.toLowerCase() === raw.toLowerCase())
+  if (!hit) {
+    throw new OmnimuxError(
+      'omnimux-invalid-request',
+      `不支持的宽高比 ${raw}：本机 Google Vids 仅支持 ${LOCAL_VIDS_ASPECT_RATIOS.join(' / ')}`,
+    )
+  }
+  return hit
+}
+
+/**
+ * Translate one hub video operation into the service's request body.
+ *
+ * @param {{
+ *   operationId: string,
+ *   prompt: string,
+ *   seconds: number,
+ *   resolution: string,
+ *   aspectRatio: string,
+ *   image: string,
+ *   videoRef: string,
+ *   baseUrl: string,
+ * }} input
+ * @returns {Record<string, unknown>}
+ */
+export function buildLocalVidsRequestBody(input) {
+  const operationId = pickText(input.operationId)
+  if (!(operationId in LOCAL_VIDS_MODE_BY_OPERATION)) {
+    throw new OmnimuxError(
+      'omnimux-invalid-request',
+      `本机 Google Vids 通道不支持操作 ${operationId || '(空)'}：仅支持 ${Object.keys(LOCAL_VIDS_MODE_BY_OPERATION).join(' / ')}`,
+    )
+  }
+
+  /** @type {Record<string, unknown>} */
+  const body = { seconds: input.seconds }
+  if (input.prompt) body.prompt = input.prompt
+  if (input.resolution) body.resolution = input.resolution
+  if (input.aspectRatio) body.aspect_ratio = input.aspectRatio
+
+  const mode = LOCAL_VIDS_MODE_BY_OPERATION[operationId]
+  if (mode) body.mode = mode
+
+  if (operationId === 'first_frame') {
+    if (!input.image) {
+      throw new OmnimuxError('omnimux-invalid-request', 'Google Vids 图生视频（添加动画）需要一张输入图片')
+    }
+    body.image_url = input.image
+  }
+
+  if (operationId === 'video_edit' || operationId === 'video_extend') {
+    const { id, reason } = resolveLocalVidsVideoId(input.videoRef, input.baseUrl)
+    if (!id) {
+      const label = operationId === 'video_extend' ? '延续' : '修改'
+      const why = reason === 'foreign'
+        ? '：当前输入不是本通道产出的视频（该模式需要本通道任务的编号或取片地址）'
+        : ''
+      throw new OmnimuxError('omnimux-invalid-request', `Google Vids ${label}模式需要一条前序视频${why}`)
+    }
+    body.video_id = id
+    if (operationId === 'video_edit') {
+      if (!input.image) {
+        throw new OmnimuxError('omnimux-invalid-request', 'Google Vids 修改模式需要一张替换用的参考图片')
+      }
+      body.image_url = input.image
+    }
+  }
+
+  if (operationId === 'text_to_video' && !body.prompt) {
+    throw new OmnimuxError('omnimux-invalid-request', 'Google Vids 文生视频需要非空提示词')
+  }
+  return body
+}
 
 /**
  * @param {Record<string, string | undefined>} [env]
@@ -75,13 +235,12 @@ function unreachableError(error, baseUrl) {
 }
 
 /**
- * Submit one text-to-video job and return its task id.
+ * Submit one job and return its task id.
  *
  * @param {{
  *   baseUrl: string,
  *   apiKey: string,
- *   prompt: string,
- *   seconds: number,
+ *   body: Record<string, unknown>,
  *   fetcher: typeof fetch,
  *   signal?: AbortSignal,
  *   requestTimeoutMs?: number,
@@ -102,7 +261,7 @@ async function submitLocalVidsTask(input) {
     response = await input.fetcher(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ prompt: input.prompt, seconds: input.seconds }),
+      body: JSON.stringify(input.body),
       signal,
     })
   } catch (error) {
@@ -144,7 +303,12 @@ async function submitLocalVidsTask(input) {
 }
 
 /**
- * Run one local Google Vids text-to-video job and download the artifact.
+ * Run one local Google Vids job and download the artifact.
+ *
+ * Covers the hub's four video operations this service implements: text-to-video
+ * (create), image-to-video (animate), subject/clothing replacement (modify) and
+ * tail continuation (extend). Each maps to one service `mode`; an unmapped
+ * operation or a missing per-mode input fails loudly.
  *
  * @param {{
  *   route: { modelId: string },
@@ -167,19 +331,36 @@ export async function generateLocalVids(input) {
     throw new OmnimuxError('omnimux-unconfigured', UNCONFIGURED_MESSAGE)
   }
 
+  const operationId = typeof input.guardPlan?.operationId === 'string' ? input.guardPlan.operationId : ''
+  const payload = input.payload ?? {}
   const prompt = typeof input.guardPlan?.prompt === 'string' && input.guardPlan.prompt.trim()
     ? input.guardPlan.prompt.trim()
-    : (typeof input.payload?.prompt === 'string' ? input.payload.prompt.trim() : '')
-  if (!prompt) {
-    throw new OmnimuxError('omnimux-invalid-request', 'Google Vids 文生视频需要非空提示词')
-  }
+    : pickText(payload.prompt)
 
-  const duration = input.guardPlan?.duration ?? input.payload?.duration
+  const duration = input.guardPlan?.duration ?? payload.duration ?? payload.seconds
   const seconds = clampLocalVidsSeconds(duration)
   const fetcher = input.fetcher ?? fetch
 
+  // vids2api takes a plain image URL for its animate/modify modes and its own
+  // task id for extend/modify; the hub hands over mapped media fields instead.
+  const referenceImages = Array.isArray(payload.reference_images) ? payload.reference_images : []
+  const image = pickText(payload.image) || pickText(referenceImages[0]?.url)
+  const videoUrls = Array.isArray(payload.video_urls) ? payload.video_urls : []
+  const videoRef = pickText(videoUrls[0]) || pickText(payload.video_id)
+
+  const body = buildLocalVidsRequestBody({
+    operationId,
+    prompt,
+    seconds,
+    resolution: normalizeLocalVidsResolution(payload.resolution),
+    aspectRatio: normalizeLocalVidsAspectRatio(payload.aspect_ratio),
+    image,
+    videoRef,
+    baseUrl,
+  })
+
   const { taskId } = await submitLocalVidsTask({
-    baseUrl, apiKey, prompt, seconds, fetcher, signal: input.signal,
+    baseUrl, apiKey, body, fetcher, signal: input.signal,
   })
 
   const poll = input.poll ?? pollOpenAiMediaTask

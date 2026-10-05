@@ -2336,6 +2336,121 @@ models:
           profileId: "videoGenerate"
           seam: "videoGenerate"
           notes: "本机 vids2api HTTP 通道（提交 /videos → 轮询 /videos/{id} → 取片 /videos/{id}/content）"
+      - id: "first_frame"
+        label: "图生视频"
+        research:
+          status: "draft"
+          notes: "vids2api animate 模式（image_url 必填，上游归一为 image-to-video）；提交链路已通，真机取证因上游账号配额耗尽受阻，取证后升格 verified"
+        output:
+          type: "video"
+          allowedMimes:
+            - video/mp4
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 0
+            max: 1
+          - slot: first_frame
+            type: image
+            role: first_frame
+            source: upstream_edge
+            min: 1
+            max: 1
+        parameters:
+          duration:
+            range:
+              min: 4
+              max: 12
+              step: 1
+            defaultValue: 10
+            unit: s
+        execution:
+          status: "live"
+          profileId: "videoGenerate"
+          seam: "videoGenerate"
+          notes: "本机 vids2api animate 模式：image_url 直达上游，秒数仍按 seconds 送达"
+      - id: "video_extend"
+        label: "视频延续"
+        research:
+          status: "draft"
+          notes: "vids2api extend 模式（video_id 必填，须为本通道任务号或取片地址）；真机取证因上游账号配额耗尽受阻"
+        output:
+          type: "video"
+          allowedMimes:
+            - video/mp4
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 0
+            max: 1
+          - slot: source_videos
+            type: video
+            role: source
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - video/mp4
+        parameters:
+          duration:
+            range:
+              min: 4
+              max: 12
+              step: 1
+            defaultValue: 8
+            unit: s
+        execution:
+          status: "live"
+          profileId: "videoGenerate"
+          seam: "videoGenerate"
+          notes: "本机 vids2api extend 模式：前序任务号由中枢媒体地址反解"
+      - id: "video_edit"
+        label: "视频修改"
+        research:
+          status: "draft"
+          notes: "vids2api modify 模式（video_id + 替换图必填）；真机取证因上游账号配额耗尽受阻"
+        output:
+          type: "video"
+          allowedMimes:
+            - video/mp4
+        inputs:
+          - slot: prompt
+            type: text
+            role: prompt
+            source: node_field
+            min: 0
+            max: 1
+          - slot: source_videos
+            type: video
+            role: source
+            source: upstream_edge
+            min: 1
+            max: 1
+            allowedMimes:
+              - video/mp4
+          - slot: reference_images
+            type: image
+            role: reference
+            source: upstream_edge
+            min: 1
+            max: 1
+        parameters:
+          duration:
+            range:
+              min: 4
+              max: 12
+              step: 1
+            defaultValue: 10
+            unit: s
+        execution:
+          status: "live"
+          profileId: "videoGenerate"
+          seam: "videoGenerate"
+          notes: "本机 vids2api modify 模式：前序任务号 + 替换图（image_url）"
     implementation:
       status: "ready"
       profileId: "videoGenerate"
