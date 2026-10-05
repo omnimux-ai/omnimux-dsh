@@ -2297,7 +2297,7 @@ textarea:focus-visible {
   display: none;
 }
 
-.composer-actions button {
+.composer-actions button:not(.amp-panel button) {
   display: inline-flex;
   width: 28px;
   height: 28px;
@@ -2314,7 +2314,7 @@ textarea:focus-visible {
   transition: all 150ms ease;
 }
 
-.composer-actions button svg {
+.composer-actions button:not(.amp-panel button) svg {
   width: 14px;
   height: 14px;
   fill: none;
@@ -2324,7 +2324,7 @@ textarea:focus-visible {
   stroke-width: 1.8;
 }
 
-.composer-actions button:hover:not(:disabled) {
+.composer-actions button:not(.amp-panel button):hover:not(:disabled) {
   border-color: var(--line-strong);
   background: var(--surface);
   transform: translateY(-1px);
@@ -6549,7 +6549,8 @@ textarea:focus-visible {
 }
 
 /* 开关：轨道 32×18px，拇指 14px；ON 态品牌紫 */
-.amp-switch {
+.amp-switch,
+.amp-panel button.amp-switch {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -6561,7 +6562,15 @@ textarea:focus-visible {
   background: var(--blue-soft);
   cursor: pointer;
   flex: 0 0 32px;
+  transform: none;
+  box-shadow: none;
   transition: background-color 0.15s ease;
+}
+
+.amp-switch:hover:not(:disabled),
+.amp-panel button.amp-switch:hover:not(:disabled) {
+  border-color: transparent;
+  transform: none;
 }
 
 /* extension 面板为黑白主行动色体系（紫色被 no-purple-theme 门禁禁止）；
@@ -6605,18 +6614,26 @@ textarea:focus-visible {
 }
 
 .amp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   max-height: 264px;
   overflow-y: auto;
   padding-top: 4px;
 }
 
 /* 模型行：44px 高、[20px 图标][名称+副标题][check] */
-.amp-row {
+.amp-row,
+.amp-panel button.amp-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   width: 100%;
+  height: auto;
   min-height: 44px;
+  flex: 0 0 auto;
   padding: 6px 10px;
   border: none;
   border-radius: 8px;
@@ -6624,19 +6641,26 @@ textarea:focus-visible {
   color: var(--ink-strong);
   text-align: left;
   cursor: pointer;
+  transform: none;
+  box-shadow: none;
   transition: background-color 0.12s ease;
 }
 
-.amp-row:hover {
+.amp-row:hover,
+.amp-panel button.amp-row:hover:not(:disabled) {
+  border-color: transparent;
   background: var(--blue-soft);
+  transform: none;
 }
 
-.amp-row:focus-visible {
+.amp-row:focus-visible,
+.amp-panel button.amp-row:focus-visible {
   outline: none;
   box-shadow: inset var(--focus-ring);
 }
 
-.amp-row-icon {
+.amp-row-icon,
+.amp-panel button.amp-row .amp-row-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6646,7 +6670,8 @@ textarea:focus-visible {
   color: var(--muted);
 }
 
-.amp-row-icon svg {
+.amp-row-icon svg,
+.amp-panel button.amp-row .amp-row-icon svg {
   width: 20px;
   height: 20px;
   display: block;

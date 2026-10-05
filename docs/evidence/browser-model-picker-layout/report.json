@@ -1,0 +1,43 @@
+{
+  "taskId": "browser-model-picker-layout",
+  "verifiedAt": "2026-10-05T05:03:20.328Z",
+  "metrics": {
+    "listFlexDirection": "column",
+    "rows": [
+      {
+        "width": 270,
+        "height": 44,
+        "display": "flex",
+        "flexDirection": "row",
+        "nameVisible": true,
+        "subVisible": true
+      },
+      {
+        "width": 270,
+        "height": 44,
+        "display": "flex",
+        "flexDirection": "row",
+        "nameVisible": true,
+        "subVisible": true
+      },
+      {
+        "width": 270,
+        "height": 44,
+        "display": "flex",
+        "flexDirection": "row",
+        "nameVisible": true,
+        "subVisible": true
+      },
+      {
+        "width": 270,
+        "height": 44,
+        "display": "flex",
+        "flexDirection": "row",
+        "nameVisible": true,
+        "subVisible": true
+      }
+    ]
+  },
+  "verdict": "PASS",
+  "conclusion": "模型选择面板在 .composer-actions 容器中垂直正常展开，每项高度达到 44px，宽度自适应面板宽度，名称与副标题清晰可见，彻底消除横向压缩方块异常。"
+}
