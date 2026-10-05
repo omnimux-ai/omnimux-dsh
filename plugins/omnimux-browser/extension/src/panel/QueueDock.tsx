@@ -24,9 +24,13 @@ interface QueueDockProps {
   items: QueuedMessage[]
   sessionId: string | null
   api: PanelApi
+  /** 当前轮是否接受插话（原生：仅运行中可插话发送）。 */
+  steerAvailable: boolean
   copy: {
     count: (n: number) => string
     steer: string
+    /** 任务未运行时的置灰说明；缺省回落到 steer 文案。 */
+    steerUnavailable?: string
     steerFailed: string
     sending: string
     edit: string
@@ -104,7 +108,7 @@ function QueueEditRow({
   )
 }
 
-export function QueueDock({ items, sessionId, api, copy, onError }: QueueDockProps) {
+export function QueueDock({ items, sessionId, api, steerAvailable, copy, onError }: QueueDockProps) {
   const [collapsed, setCollapsed] = useState(true)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -128,6 +132,23 @@ export function QueueDock({ items, sessionId, api, copy, onError }: QueueDockPro
     } catch {
       onError(failure)
       return false
+    } finally {
+      setBusy((current) => (current === itemId ? null : current))
+    }
+  }
+
+  /**
+   * 插话发送：把该条排队消息并入正在运行的任务（原生语义）。
+   * 宿主在插话窗口已关闭或条目已消失时返回 steer-unavailable / queue-item-not-found，
+   * 这两种情况不提示错误——队列投影会自行刷新出真实状态。
+   */
+  async function steerItem(itemId: string): Promise<void> {
+    setBusy(itemId)
+    try {
+      await api.rpc('session.updateQueue', { sessionId, itemId, action: { kind: 'steer' } })
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : String(cause)
+      if (!/steer-unavailable|queue-item-not-found/.test(message)) onError(copy.steerFailed)
     } finally {
       setBusy((current) => (current === itemId ? null : current))
     }
@@ -178,20 +199,18 @@ export function QueueDock({ items, sessionId, api, copy, onError }: QueueDockPro
                       {item.text === '' ? copy.taskN(index + 1) : item.text}
                     </span>
                     <div className="queue-dock-actions">
-                      {item.steerable && (
-                        <button
-                          type="button"
-                          className="queue-dock-action queue-dock-action-steer"
-                          aria-label={copy.steer}
-                          title={copy.steer}
-                          disabled={busy !== null}
-                          onClick={() => {
-                            void applyAction(item.id, { kind: 'steer' }, copy.steerFailed)
-                          }}
-                        >
-                          <ArrowUpIcon size={13} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="queue-dock-action queue-dock-action-steer"
+                        aria-label={copy.steer}
+                        title={steerAvailable ? copy.steer : copy.steerUnavailable ?? copy.steer}
+                        disabled={busy !== null || !steerAvailable}
+                        onClick={() => {
+                          void steerItem(item.id)
+                        }}
+                      >
+                        <ArrowUpIcon size={13} />
+                      </button>
                       <button
                         type="button"
                         className="queue-dock-action"
