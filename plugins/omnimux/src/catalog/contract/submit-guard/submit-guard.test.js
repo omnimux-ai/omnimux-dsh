@@ -17,10 +17,10 @@ const index = getContractIndex()
 const profiles = loadAdapterProfiles()
 
 describe('SubmitGuard listed profile coverage (#468)', () => {
-  it('strict listedOperations is exactly 24 and every key has a ready profile payload contract', () => {
+  it('strict listedOperations is exactly 28 and every key has a ready profile payload contract', () => {
     const report = verifyContracts({ strict: true })
     assert.equal(report.ok, true)
-    assert.equal(report.listedOperations.length, 26) // #2804 gemini-3.8-flash-tts + seed-audio-1.0 refs 通道
+    assert.equal(report.listedOperations.length, 28) // #3086 claude-sonnet-4-6 chat+vision_chat 上架
     const profileById = new Map((profiles.profiles ?? []).map((p) => [p.id, p]))
     for (const key of report.listedOperations) {
       const [modelId, opId] = key.split('#')

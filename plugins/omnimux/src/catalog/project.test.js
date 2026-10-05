@@ -172,6 +172,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
   assert.deepEqual(dto.audio.map((row) => row.id), ['gemini-3.8-flash-tts', 'indextts-2', 'seed-audio-1.0']); // #3063 indextts-2 声音克隆
   // Text bucket includes implementation-ready models without requiring live history.
   assert.deepEqual(dto.text.map((r) => r.id), [
+    'claude-sonnet-4-6', // #3086 Anthropic 品牌上新
     'gemini-3.8-flash',
     // #1789: the two ASR contracts output text, so both sit in the text bucket by output.type;
     // they are independent rows — seedasr-auc is not folded into doubao-asr-bigmodel.
