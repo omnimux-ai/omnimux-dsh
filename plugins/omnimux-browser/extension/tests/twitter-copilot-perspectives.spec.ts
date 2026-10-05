@@ -8,6 +8,33 @@ import {
 } from '../src/content/twitter-copilot/perspectives.ts'
 import { COPILOT_MENU_ITEMS } from '../src/content/twitter-copilot/prompts.ts'
 import type { PerspectiveId, ScoredCandidate } from '../src/content/twitter-copilot/types.ts'
+import {
+  addKeywordTags,
+  MAX_KEYWORD_TAGS,
+  parseKeywordTags,
+  serializeKeywordTags,
+} from '../src/content/twitter-copilot/settings.ts'
+import { normalizeKeywords } from '../src/content/twitter-copilot/candidates.ts'
+
+describe('#3100 推特赛道关键词标签', () => {
+  it('回车/逗号拆分、去重（忽略大小写）、去空白', () => {
+    expect(addKeywordTags(['AI'], ' 出海，增长、ai ;; ')).toEqual(['AI', '出海', '增长'])
+  })
+
+  it('最多 12 个标签，单个最长 24 字', () => {
+    const many = Array.from({ length: 20 }, (_, i) => `词${i}`).join(',')
+    expect(addKeywordTags([], many)).toHaveLength(MAX_KEYWORD_TAGS)
+    expect(addKeywordTags([], 'x'.repeat(40))[0]).toHaveLength(24)
+  })
+
+  it('存储往返一致，且提取器能读出同样的关键词', () => {
+    const tags = ['AI', '出海', '独立开发']
+    const stored = serializeKeywordTags(tags)
+    expect(parseKeywordTags(stored)).toEqual(tags)
+    expect(normalizeKeywords(stored)).toEqual(['ai', '出海', '独立开发'])
+    expect(parseKeywordTags('AI, 出海 增长')).toEqual(['AI', '出海 增长'])
+  })
+})
 
 function seed(text: string, controversy = 10): ScoredCandidate {
   return {

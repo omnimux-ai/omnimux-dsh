@@ -1,0 +1,39 @@
+{
+  "loaded": [
+    "AI",
+    "出海",
+    "增长"
+  ],
+  "afterEnter": [
+    "AI",
+    "出海",
+    "增长",
+    "独立开发"
+  ],
+  "afterComma": [
+    "AI",
+    "出海",
+    "增长",
+    "独立开发",
+    "SaaS"
+  ],
+  "afterDuplicate": [
+    "AI",
+    "出海",
+    "增长",
+    "独立开发",
+    "SaaS"
+  ],
+  "afterRemove": [
+    "AI",
+    "增长",
+    "独立开发",
+    "SaaS"
+  ],
+  "afterBackspace": [
+    "AI",
+    "增长",
+    "独立开发"
+  ],
+  "stored": "AI、增长、独立开发"
+}

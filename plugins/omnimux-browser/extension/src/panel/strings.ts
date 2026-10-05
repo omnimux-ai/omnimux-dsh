@@ -95,6 +95,7 @@ export interface PanelCopy {
     copilotKeywords: string
     copilotKeywordsPlaceholder: string
     copilotKeywordsHelp: string
+    copilotKeywordRemove: (tag: string) => string
     trustedOrigins: string
     trustedOriginsHelp: string
     trustedOriginInput: string
@@ -385,8 +386,9 @@ const EN: PanelCopy = {
     velocityToggle: 'Show the X velocity badge',
     velocityToggleHelp: 'Show velocity metrics and comment-window hints on X tweets',
     copilotKeywords: 'Niche keywords',
-    copilotKeywordsPlaceholder: 'e.g. AI, startups, growth',
-    copilotKeywordsHelp: 'Separate with commas. Used to pick feed tweets when the composer is empty.',
+    copilotKeywordsPlaceholder: 'Type a keyword and press Enter',
+    copilotKeywordsHelp: 'Press Enter or type a comma to add. Used to pick feed tweets when the composer is empty.',
+    copilotKeywordRemove: (tag) => `Remove ${tag}`,
     trustedOrigins: 'Always-allowed domains',
     trustedOriginsHelp: 'Trusted domains exempt from confirmation',
     trustedOriginInput: 'Domain to always trust (e.g. https://example.com or https://*.example.com)',
@@ -688,8 +690,9 @@ const ZH: PanelCopy = {
     velocityToggle: '显示 X 爆速角标',
     velocityToggleHelp: '在 X 推文上展示爆速指标与评论机会提示。',
     copilotKeywords: '推特赛道关键词',
-    copilotKeywordsPlaceholder: '例如：AI、出海、增长',
-    copilotKeywordsHelp: '用逗号分隔。发帖框为空时，优先挑选与这些词相关的热帖作为灵感。',
+    copilotKeywordsPlaceholder: '输入关键词后按回车，例如：AI',
+    copilotKeywordsHelp: '按回车或输入逗号添加。发帖框为空时，优先挑选与这些词相关的热帖作为灵感。',
+    copilotKeywordRemove: (tag) => `移除 ${tag}`,
     trustedOrigins: '永久免确认域名',
     trustedOriginsHelp: '免除操作审批的受信域名（支持通配符）',
     trustedOriginInput: '要永久信任的域名（如 https://example.com 或 https://*.example.com）',
