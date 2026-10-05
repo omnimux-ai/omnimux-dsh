@@ -3492,6 +3492,10 @@ export function App(): React.JSX.Element {
   // 即使后台正在初始化或尚未分派 sessionId，输入框也必须立即可用，绝不锁定禁用
   const composerDisabled = busy || sessionChanging
   const sendDisabled = busy || addingImages || (!input.trim() && draftImages.length === 0 && selection === null)
+  // 排队态（任务执行中）只要输入框有内容就把右下角主按钮切回「发送」，提示用户还能继续排队；
+  // 清空输入框后回到「停止」。提交在途（busy/加图中）时发送会被 send() 早退，仍显示「停止」。
+  const composerHasContent = input.trim().length > 0 || draftImages.length > 0
+  const queueSendReady = working && composerHasContent && !sendDisabled
 
   return (
     <><div className="app">
@@ -3863,7 +3867,7 @@ export function App(): React.JSX.Element {
                 disabled={composerDisabled}
               />
             </span>
-            {working ? (
+            {working && !queueSendReady ? (
               <button
                 className="stop-button clean-send-btn"
                 onClick={() => { void stopTurn() }}
@@ -3875,7 +3879,7 @@ export function App(): React.JSX.Element {
               </button>
             ) : (
               <button
-                className={`clean-send-btn ${input.trim() || draftImages.length > 0 ? 'active' : ''}`}
+                className={`clean-send-btn ${composerHasContent ? 'active' : ''}`}
                 onClick={() => void send()}
                 disabled={sendDisabled}
                 aria-label={copy.app.sendMessage}
