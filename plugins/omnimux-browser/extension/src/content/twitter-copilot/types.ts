@@ -28,6 +28,19 @@ export interface TwitterContext {
   keywords?: string[]
   /** Candidates collected per feed source (empty-composer POST_NEW only) */
   sourcesScanned?: Partial<Record<CandidateSource, number>>
+  /** Hottest candidates offered to the decision model (empty-composer POST_NEW only) */
+  shortlist?: ScoredCandidate[]
+}
+
+/** Outcome of choosing the remix seed: the decision model's semantic pick, or the rule-score fallback. */
+export interface SeedPickDecision {
+  source: 'jev' | 'rules'
+  candidates: number
+  /** 0-based index into the shortlist when the model picked one */
+  pickedIndex?: number
+  confidence?: number
+  latencyMs?: number
+  fallbackReason?: string
 }
 
 /** Where a feed candidate came from: the home「为你推荐」/「正在关注」tabs, or whatever page is open. */
@@ -56,6 +69,8 @@ export interface ScoredCandidate {
   quotedAuthor?: string
   quotedText?: string
   scores: { keyword: number; controversy: number; infoDelta: number; velocity: number; reach: number }
+  /** Keyword-free 0–100 heat used to shortlist candidates for the semantic pick */
+  heat: number
   total: number
 }
 

@@ -7,7 +7,7 @@
 import { collectFeedCandidates, MAX_CANDIDATES, mergeCandidatePools } from './candidates.ts'
 import type { CandidateSource, ScoredCandidate } from './types.ts'
 
-type RawCandidate = Omit<ScoredCandidate, 'scores' | 'total'>
+type RawCandidate = Omit<ScoredCandidate, 'scores' | 'total' | 'heat'>
 
 export const TAB_LOAD_TIMEOUT_MS = 5000
 /** Screens scrolled per source; X renders only ~5 tweets until the timeline is scrolled. */

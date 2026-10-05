@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   collectFeedCandidates,
   mergeCandidatePools,
@@ -7,12 +7,15 @@ import {
   scoreCandidate,
   selectSeeds,
   SEED_THRESHOLD,
+  SHORTLIST_SIZE,
+  shortlistForPick,
 } from '../src/content/twitter-copilot/candidates.ts'
-// SEED_THRESHOLD is pinned by expect(SEED_THRESHOLD).toBe(65) below
 import { COPILOT_MENU_ITEMS, HUMANIZE_EN_RULES, HUMANIZE_ZH_RULES } from '../src/content/twitter-copilot/prompts.ts'
 import { findHumanizeViolations } from '../src/content/twitter-copilot/sanitizer.ts'
-import { extractTwitterContext } from '../src/content/twitter-copilot/extractor.ts'
-import { buildCopilotLogEntry, checkContextReady } from '../src/content/twitter-copilot/menu.ts'
+import { applyPickedSeed, extractTwitterContext } from '../src/content/twitter-copilot/extractor.ts'
+import { buildCopilotLogEntry, checkContextReady, decideSeedPick } from '../src/content/twitter-copilot/menu.ts'
+import type { TwitterContext } from '../src/content/twitter-copilot/types.ts'
+const PINNED = () => expect([SEED_THRESHOLD, SHORTLIST_SIZE]).toEqual([65, 8])
 
 const NOW = Date.parse('2026-10-05T12:00:00Z')
 
@@ -132,6 +135,7 @@ describe('#3100 双来源 + 带评论转发优先（AC-11）', () => {
 
   it('入选门槛为 65', () => {
     expect(SEED_THRESHOLD).toBe(65)
+    PINNED()
   })
 
   it('带评论转发：拆出评论与原帖，短评论 + 长原帖也能入池', () => {
@@ -198,5 +202,62 @@ describe('#3100 去 AI 味规则', () => {
     )
     expect(findHumanizeViolations('换了模型以后延迟降了，账单涨了。你们怎么权衡？')).toEqual([])
     expect(findHumanizeViolations("Let's dive in: this is a game-changer")).toHaveLength(2)
+  })
+})
+
+describe('#3100 决策模型挑爆款：候选与回落（AC-13）', () => {
+  const base = { text: LONG, ageHours: 2 }
+
+  it('热度不含关键词：同一帖子换不换赛道，热度不变', () => {
+    const c = { ...base, author: 'a', replies: 40, reposts: 30, likes: 400 }
+    expect(scoreCandidate(c, ['区块链']).heat).toEqual(scoreCandidate(c, ['延迟']).heat)
+    expect(scoreCandidate(c, ['区块链']).total).toBeLessThan(scoreCandidate(c, ['延迟']).total)
+  })
+
+  it('候选最多 8 条、热度 ≥ 40，按热度降序', () => {
+    const many = Array.from({ length: 12 }, (_, i) =>
+      scoreCandidate({ ...base, author: `u${i}`, replies: 10 * (i + 1), reposts: 10 * (i + 1), likes: 100 * (i + 1) }, []))
+    const cold = scoreCandidate({ ...base, author: 'cold', replies: 0, reposts: 0, likes: 1, ageHours: 30 }, [])
+    const list = shortlistForPick([...many, cold])
+    expect(list).toHaveLength(SHORTLIST_SIZE)
+    expect(list.every((c) => c.heat >= 40)).toEqual(true)
+    expect(list.map((c) => c.author)).not.toContain('cold')
+    expect(list[0].author).toEqual('u11')
+  })
+
+  it('选中帖子成为唯一复刻素材', () => {
+    const ctx: TwitterContext = { scene: 'POST_NEW', draftText: '' }
+    const pick = scoreCandidate({ ...base, author: 'picked', replies: 5, reposts: 5, likes: 50, isQuote: true, quotedText: '原帖内容' }, [])
+    applyPickedSeed(ctx, pick)
+    expect(ctx.seeds?.map((s) => s.author)).toEqual(['picked'])
+    expect(ctx.feedHotTweets).toEqual([expect.objectContaining({ author: 'picked', quotedText: '原帖内容' })])
+  })
+
+  it('决策模型选中 / 选「都不贴合」/ 出错时的结果与日志', async () => {
+    const shortlist = [
+      scoreCandidate({ ...base, author: 'x0', replies: 20, reposts: 20, likes: 200 }, []),
+      scoreCandidate({ ...base, author: 'x1', replies: 30, reposts: 30, likes: 300 }, []),
+    ]
+    const send = vi.fn()
+    ;(globalThis as any).chrome = { runtime: { sendMessage: send } }
+
+    send.mockResolvedValueOnce({ ok: true, decision: 't1', confidence: 0.7 })
+    const ctx1: TwitterContext = { scene: 'POST_NEW', draftText: '', shortlist }
+    const picked = await decideSeedPick(ctx1)
+    expect(picked).toEqual(expect.objectContaining({ source: 'jev', candidates: 2, pickedIndex: 1, confidence: 0.7 }))
+    expect(ctx1.seeds?.map((s) => s.author)).toEqual(['x1'])
+    const entry = buildCopilotLogEntry({ traceId: 'tw_3_abc', ctx: ctx1, itemId: 'ai-hot-tweets', locale: 'zh', seedPick: picked, outcome: { status: 'injected' } })
+    expect(entry).toMatchObject({ inputMode: 'AUTO_FEED_HOT', seedPick: { source: 'jev', pickedIndex: 1 } })
+
+    send.mockResolvedValueOnce({ ok: true, decision: 'none' })
+    const ctx2: TwitterContext = { scene: 'POST_NEW', draftText: '', shortlist, seeds: [] }
+    expect(await decideSeedPick(ctx2)).toEqual(expect.objectContaining({ source: 'rules', fallbackReason: 'none fits the niche' }))
+    expect(ctx2.seeds).toEqual([])
+
+    send.mockRejectedValueOnce(new Error('bridge down'))
+    const ctx3: TwitterContext = { scene: 'POST_NEW', draftText: '', shortlist }
+    expect(await decideSeedPick(ctx3)).toEqual(expect.objectContaining({ source: 'rules', fallbackReason: 'bridge down' }))
+
+    expect(await decideSeedPick({ scene: 'POST_NEW', draftText: '', shortlist: [] })).toEqual(undefined)
   })
 })

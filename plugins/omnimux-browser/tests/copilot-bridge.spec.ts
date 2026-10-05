@@ -170,6 +170,8 @@ describe('#3100 bridge.appendCopilotLog', () => {
       ],
     })!
     expect(out.sourcesScanned).toEqual({ for_you: 6, following: 7 })
+    const picked = sanitizeCopilotLogEntry({ ...ENTRY, seedPick: { source: 'jev', candidates: 6, pickedIndex: 1, confidence: 0.73, latencyMs: 450 } })!
+    expect(picked.seedPick).toEqual({ source: 'jev', candidates: 6, pickedIndex: 1, confidence: 0.73, latencyMs: 450 })
     expect(out.seeds).toEqual([
       { author: 'a', textSnippet: 't', total: 70, source: 'for_you', isQuote: true },
       { author: 'b', textSnippet: 't', total: 66 },

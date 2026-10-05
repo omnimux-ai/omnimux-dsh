@@ -3,8 +3,8 @@
  * Extracts tweet body, author, quote targets, and drafts with 100% precision.
  */
 
-import type { TwitterContext, TwitterCopilotScene } from './types.ts'
-import { collectFeedCandidates, mergeCandidatePools, normalizeKeywords, scoreCandidate, selectSeeds } from './candidates.ts'
+import type { FeedHotTweet, ScoredCandidate, TwitterContext, TwitterCopilotScene } from './types.ts'
+import { collectFeedCandidates, mergeCandidatePools, normalizeKeywords, scoreCandidate, selectSeeds, shortlistForPick } from './candidates.ts'
 import { collectSourcePools } from './feed-sources.ts'
 
 function findComposerContainer(el: HTMLElement): HTMLElement | null {
@@ -202,21 +202,32 @@ export function extractTwitterContext(
 
 type SeedPools = Parameters<typeof mergeCandidatePools>[0]
 
-/** Score the merged pools, pick seeds and expose them to the prompts. */
+/** Prompt-facing view of one seed. */
+function toFeedHotTweet(s: ScoredCandidate): FeedHotTweet {
+  return {
+    author: s.author,
+    text: s.text,
+    stat: `${s.replies} replies, ${s.reposts} reposts, ${s.likes} likes`,
+    ...(s.isQuote ? { quotedAuthor: s.quotedAuthor || '', quotedText: s.quotedText || '' } : {}),
+  }
+}
+
+/** Score the merged pools, pick rule-score seeds and the hot shortlist for the semantic pick. */
 function applySeeds(context: TwitterContext, pools: SeedPools, sourcesScanned: TwitterContext['sourcesScanned']): void {
   const pool = mergeCandidatePools(pools)
   context.candidatesScanned = pool.length
   if (sourcesScanned && Object.values(sourcesScanned).some((n) => typeof n === 'number')) context.sourcesScanned = sourcesScanned
-  const seeds = selectSeeds(pool.map((c) => scoreCandidate(c, context.keywords || [])))
+  const scored = pool.map((c) => scoreCandidate(c, context.keywords || []))
+  const seeds = selectSeeds(scored)
   context.seeds = seeds
-  context.feedHotTweets = seeds.length > 0
-    ? seeds.map((s) => ({
-        author: s.author,
-        text: s.text,
-        stat: `${s.replies} replies, ${s.reposts} reposts, ${s.likes} likes`,
-        ...(s.isQuote ? { quotedAuthor: s.quotedAuthor || '', quotedText: s.quotedText || '' } : {}),
-      }))
-    : undefined
+  context.shortlist = shortlistForPick(scored)
+  context.feedHotTweets = seeds.length > 0 ? seeds.map(toFeedHotTweet) : undefined
+}
+
+/** The decision model's pick replaces the rule-score seeds as the single remix seed. */
+export function applyPickedSeed(context: TwitterContext, seed: ScoredCandidate): void {
+  context.seeds = [seed]
+  context.feedHotTweets = [toFeedHotTweet(seed)]
 }
 
 /**
