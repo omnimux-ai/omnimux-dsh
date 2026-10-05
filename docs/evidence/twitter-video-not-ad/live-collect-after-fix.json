@@ -1,0 +1,98 @@
+{
+ "where": "真实浏览器 · x.com/home · 修复后代码打包探针（工作树）",
+ "before": "修复前同一首页两次：for_you 1 条 / following 8 条，候选 9 条，短名单 1 条（视频帖全被当广告）",
+ "after": [
+  {
+   "sourcesScanned": {
+    "for_you": 9,
+    "following": 11
+   },
+   "merged": 20,
+   "shortlist": 8,
+   "top": [
+    {
+     "heat": 66,
+     "inter": 568,
+     "src": "for_you",
+     "t": "劲爆金曲MV：《Safety & First Place》 歌词：GPT-6-A"
+    },
+    {
+     "heat": 61,
+     "inter": 533,
+     "src": "for_you",
+     "t": "一个男人用钢笔在圣马力诺勾勒出一支飞镖，它飞离纸面，穿过城堡，又飞回他身边 > "
+    },
+    {
+     "heat": 57,
+     "inter": 100,
+     "src": "following",
+     "t": "Something is happening on Magnific soon "
+    },
+    {
+     "heat": 52,
+     "inter": 336,
+     "src": "for_you",
+     "t": "这个 AI 视频真是达到了下一个级别 🤯 Seedance 2.5 —— 视觉"
+    },
+    {
+     "heat": 50,
+     "inter": 12,
+     "src": "following",
+     "t": "이거는 그냥 순수하게 진짜 부업으로 성공한 형님들은 애매하게 다른 파이프"
+    },
+    {
+     "heat": 49,
+     "inter": 66,
+     "src": "following",
+     "t": "WTF 🤯 这些 AI 估值简直他妈的疯了。 估值： Anthropic — "
+    },
+    {
+     "heat": 48,
+     "inter": 35,
+     "src": "following",
+     "t": "i built a small playable game in Unreal "
+    },
+    {
+     "heat": 41,
+     "inter": 61,
+     "src": "following",
+     "t": "可能会被搜索排除，但因为大家给了好多「赞」，所以还是做成视频吧♡ 🍞的话大家要"
+    }
+   ]
+  },
+  {
+   "sourcesScanned": {
+    "for_you": 8,
+    "following": 12
+   },
+   "merged": 20,
+   "shortlist": 4,
+   "top": [
+    {
+     "heat": 58,
+     "inter": 78,
+     "src": "following",
+     "t": "介绍 jester，你的免费 iMessage 迷因经销商 在家庭群聊里吐槽你妈"
+    },
+    {
+     "heat": 54,
+     "inter": 85,
+     "src": "following",
+     "t": "9:12 AM: I had an image. 9:40 AM: I had "
+    },
+    {
+     "heat": 47,
+     "inter": 111,
+     "src": "for_you",
+     "t": "在机器人展览会上，发生了一件让人们停下脚步、目瞪口呆的事情。 一个穿黑衣的男人抓"
+    },
+    {
+     "heat": 41,
+     "inter": 16,
+     "src": "following",
+     "t": "This video is 100% AI these “yapping” st"
+    }
+   ]
+  }
+ ]
+}
