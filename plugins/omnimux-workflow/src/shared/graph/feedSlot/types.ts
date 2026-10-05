@@ -74,6 +74,15 @@ export interface FillResult {
   unusedFeed: FeedAsset[];
   conflicts: SlotConflict[];
 }
+
+/** Why ready supply stayed out of every slot of the current operation. */
+export type UnusedSupplyReason = 'no_matching_slot' | 'slot_capacity' | 'not_bound' | 'input_unavailable';
+/** Ready inbound media this operation will not consume; the UI must show it instead of hiding it. */
+export interface UnusedSupply {
+  occupant: SlotOccupant;
+  asset: FeedAsset;
+  reasonCode: UnusedSupplyReason;
+}
 export interface EffectiveSubmitInputs {
   prompt: string;
   references: ReferenceAssetPayload[];
