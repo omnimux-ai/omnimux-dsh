@@ -24,6 +24,7 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 - **UI copy.** Labels, options, placeholders, badges, status text, and `locales.js` follow the [copy standards](docs/contracts/ui-copywriting-and-naming-standards.md); a dropdown's first option is exactly `全部`, never `全部+维度`.
 - **Node inputs.** Input, connection, generation-control, and submission changes follow the [node input contract](docs/contracts/node-input-submission.md): generic `in`/`input` edges never lock slots or hide generation modes; verify clean empty nodes and connected project graphs.
 - **Model truth.** Model support comes from the selected channel's official docs, checked offline; never probe real model APIs, and only submission `mode: "live"` proves live generation ([model API authority](docs/contracts/model-api-authority.md)). Model changes close atomically across all consuming plugins ([cross-plugin closure](docs/contracts/model-list-ownership.md#cross-plugin-closure)).
+- **Real verification boundary.** Image/audio real-task verification is agent-allowed; video-generation live verification requires task-level approval ([plugin QA](docs/contracts/plugin-qa.md)).
 
 ## MVP scope
 
