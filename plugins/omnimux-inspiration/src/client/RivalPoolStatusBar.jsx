@@ -1,11 +1,8 @@
 /**
  * R3 监控池状态条与 R4「刷新」主按钮（#3111，规格 §2.2 R3/R4、§8.1）。
  *
- * 状态条第一行五段计数（零值分段也显示，四段互斥闭合到账号总数）；第二
- * 行左侧今日剩余额度、右侧数据新鲜度（无刷新事实时不渲染）。两段文案都
- * 逐字取字典：`监控池 {total} 个账号 · … · 待重导入 {reimport} · 已停止
- * {stopped}` 用的是 `待重导入`，账号行健康态才写 `需要重新导入`——两处
- * 逐字锁定，不能统一。
+ * 状态条只有一行：左侧今日剩余刷新额度，右侧数据新鲜度（无刷新事实时不
+ * 渲染）。额度文案逐字取字典 `今日剩余刷新额度 {left}/{total}`。
  *
  * `RivalRefreshButton` 是筛选行的主按钮：额度耗尽 / 筛选集内有「已停止」
  * 账号 / 手动刷新冷却期三者之一成立时置灰但可点，D4 原因弹层只报一条
@@ -43,24 +40,13 @@ export function refreshGate(gate) {
 /**
  * @param {{
  *   t: (key: string) => string,
- *   tally: { total: number, ok: number, cooling: number, reimport: number, stopped: number },
  *   quota: { left: number, total: number } | null,
  *   freshnessMinutes: number | null,
  * }} props
  */
-export function RivalPoolStatusBar({ t, tally, quota, freshnessMinutes }) {
-  const summary = t('rivalAccounts.pool.summary')
-    .replace('{total}', String(tally?.total ?? 0))
-    .replace('{ok}', String(tally?.ok ?? 0))
-    .replace('{cooling}', String(tally?.cooling ?? 0))
-    .replace('{reimport}', String(tally?.reimport ?? 0))
-    .replace('{stopped}', String(tally?.stopped ?? 0))
-
+export function RivalPoolStatusBar({ t, quota, freshnessMinutes }) {
   return (
     <div className="omnimux-rival-pool" data-rival-pool="true">
-      <div className="omnimux-rival-pool-row">
-        <span className="omnimux-rival-pool-summary">{summary}</span>
-      </div>
       <div className="omnimux-rival-pool-row is-meta">
         {quota ? (
           <span className="omnimux-rival-pool-quota">

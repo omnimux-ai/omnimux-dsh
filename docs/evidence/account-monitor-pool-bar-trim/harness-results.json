@@ -1,0 +1,42 @@
+{
+  "issue": 3164,
+  "task": "account-monitor-pool-bar-trim",
+  "branch": "fix/account-monitor-pool-bar-trim-issue-3164",
+  "base": "origin/main@9a6da6050",
+  "harness": "docs/evidence/account-monitor-pool-bar-trim/harness/index.html",
+  "server": "python3 -m http.server 0 --bind 127.0.0.1 (ephemeral; port 54109 for this run)",
+  "browser": "ego-browser (real Chromium)",
+  "run1_after_open": {
+    "ready": true,
+    "rowCount": 1,
+    "summaryPresent": false,
+    "barText": "今日剩余刷新额度 46/50数据更新于 3 分钟前",
+    "calls": 6,
+    "screenshot": "pool-bar-after.png"
+  },
+  "run2_after_filter_open": {
+    "barRows": 1,
+    "summaryPresent": false,
+    "barText": "今日剩余刷新额度 46/50数据更新于 3 分钟前",
+    "healthMarks": [
+      { "id": "ra_ok", "health": "normal" },
+      { "id": "ra_cool", "health": "cooling" },
+      { "id": "ra_reimport", "health": "reimport" },
+      { "id": "ra_stopped", "health": "stopped" }
+    ],
+    "retryButtons": 1,
+    "screenshot": "pool-bar-with-health.png"
+  },
+  "local_checks": {
+    "focused_render_test": "10 tests / 10 pass / 0 fail (REAL_EXIT=0)",
+    "plugin_suite": "1097 tests / 1095 pass / 0 fail (REAL_EXIT=0)",
+    "plugin_e2e": "261 tests / 261 pass / 0 fail",
+    "verify_stages": "PASS (14 Stage components, 8 sidebar targets)",
+    "anti_slop": "3 tests / 3 pass",
+    "git_diff_check": "clean"
+  },
+  "limitations": [
+    "Harness mounts the real InspirationStage standalone (repo react + repo ui-kit shim + the plugin's own injected stylesheet); the app shell chrome is not part of this page, so the feed empty-state card overlaps the floating panels in the screenshot.",
+    "Dev app (port 45120) acceptance is human-owned and is not claimed here."
+  ]
+}

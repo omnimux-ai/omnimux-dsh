@@ -17,7 +17,6 @@ import {
   manualCooldownMinutesLeft,
   poolFreshnessMinutes,
   poolQuota,
-  poolTally,
 } from './rival-health.js'
 import { accountIds, selectedAccountIds } from './rival-filter.js'
 
@@ -147,14 +146,10 @@ export function InspirationSection({ t, active }) {
   /**
    * R3 监控池状态条与 R4 刷新置灰的共享事实（#3111）。
    *
-   * 五段计数、额度与新鲜度都来自 `rival-health.js` 的同一组纯函数；
-   * 「存在已停止账号」只看**当前筛选集**——所以这里必须同时见到
-   * `selection` 与 `accounts`，判据放在外壳而不是组件里。
+   * 额度与新鲜度来自 `rival-health.js` 的同一组纯函数；「存在已停止账号」
+   * 只看**当前筛选集**——所以这里必须同时见到 `selection` 与 `accounts`，
+   * 判据放在外壳而不是组件里。
    */
-  const rivalTally = useMemo(
-    () => poolTally(rivalFeed.accounts),
-    [rivalFeed.accounts],
-  )
   const rivalQuota = useMemo(
     () => poolQuota(rivalFeed.status, rivalFeed.configSummary),
     [rivalFeed.status, rivalFeed.configSummary],
@@ -512,12 +507,11 @@ export function InspirationSection({ t, active }) {
       {/* Content area — the one region a tab switch replaces. */}
       {rivalTab ? (
         <>
-        {/* R3 监控池状态条：五段计数一行，额度与新鲜度一行。
+        {/* R3 监控池状态条：一行显示额度与新鲜度。
             规格 B9：E1 空态（无监控账号）不显示状态条。 */}
         {rivalFeed.accounts.length > 0 ? (
           <RivalPoolStatusBar
             t={t}
-            tally={rivalTally}
             quota={rivalQuota}
             freshnessMinutes={rivalFreshness}
           />

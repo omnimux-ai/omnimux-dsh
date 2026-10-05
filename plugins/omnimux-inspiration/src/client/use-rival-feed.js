@@ -456,8 +456,8 @@ export function useRivalFeed(options = {}) {
    * 「已停止」行的重试：让 Host 把这个账号重新排进队列。
    *
    * Host 接受后刷新事实马上重读——`refresh_state` 变 `queued`，行回 `normal`，
-   * `pool.summary` 同步，正是规格 §8.1 要求的即时恢复语义；连续失败计数
-   * 由 Host 在新一轮刷新成功后清零。
+   * 正是规格 §8.1 要求的即时恢复语义；连续失败计数由 Host 在新一轮刷新成功
+   * 后清零。
    * @param {string} accountId
    * @returns {Promise<{ ok: boolean, reason?: 'cooldown' | 'budget' | 'error' }>}
    */
