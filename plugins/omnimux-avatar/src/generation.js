@@ -286,7 +286,9 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
 
     const seam = resolveSeam()
     try {
-      const result = await seam.execute({ task_ref: task.taskRef, dest: task.destPath, wait: true })
+      // 续取句柄必须是中枢接缝认的驼峰 `taskRef`；写成 `task_ref` 会被当成一次新提交，
+      // 排队中的任务永远到不了 ready，自动归档与多视角归档也就永远不会发生。
+      const result = await seam.execute({ taskRef: task.taskRef, dest: task.destPath, wait: true })
       const ready = store.updateTask(avatarId, taskId, {
         status: 'ready',
         destPath: result?.dest ?? task.destPath,

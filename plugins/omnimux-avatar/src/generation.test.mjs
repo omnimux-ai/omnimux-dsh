@@ -277,7 +277,10 @@ test('refreshTask：续取成功记 ready，失败记 failed，绝不编造进�
     avatarId: avatar.id,
     taskId: 'avt_task_00000003',
   })
-  assert.equal(ok.calls[0].task_ref, 'tr_3')
+  // 续取句柄必须是中枢接缝真正读的驼峰 `taskRef`；写成 `task_ref` 会被当成一次新提交，
+  // 排队中的任务永远到不了 ready（自动归档与多视角归档也就永远不会发生）。
+  assert.equal(ok.calls[0].taskRef, 'tr_3')
+  assert.equal(ok.calls[0].task_ref, undefined)
   assert.equal(ok.calls[0].wait, true)
   assert.equal(ready.status, 'ready')
   assert.equal(ready.destPath, dest)
