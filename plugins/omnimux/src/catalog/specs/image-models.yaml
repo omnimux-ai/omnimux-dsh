@@ -590,8 +590,12 @@ models:
         defaultValue: "2K"
     research:
       status: "draft"
+      notes: "2026-10-05 上游能力清单（GET /api/model_contract/mj-v8-1，合同版本 4b4e2aff3500ec80）公布 operations=[text_to_image,image_to_image] 与 reference_images{min:0,formats:[png,gif,webp,jpg,jpeg]}。本仓 multi_reference 对应上游 image_to_image（legacy-operation-map.js 的 i2i→image_to_image 与 image_edit→multi_reference 是两条互不等价的映射），该命名映射属本仓决策，故在此写明而非默认背书。待真机取证后升 verified"
     implementation:
-      status: "none"
+      status: "ready"
+      profileId: "imageGenerate"
+      seam: "imageGenerate"
+      notes: "family=midjourney 无专属分支，走 submit-guard/map.js 的通用分支：image 取首图，多图时追加 images 与 references；三字段均在 imageGenerate.vendorFields 白名单内。references 是该分支独有的形状，取证前未被上游验证过"
     execution:
       status: "stub"
       profileId: "imageGenerate"
@@ -655,8 +659,12 @@ models:
         defaultValue: "1080P"
     research:
       status: "draft"
+      notes: "2026-10-05 上游能力清单（GET /api/model_contract/mj-v7，合同版本 4b4e2aff3500ec80）公布 operations=[text_to_image,image_to_image] 与 reference_images{min:0,formats:[png,gif,webp,jpg,jpeg]}。本仓 multi_reference 对应上游 image_to_image（legacy-operation-map.js 的 i2i→image_to_image 与 image_edit→multi_reference 是两条互不等价的映射），该命名映射属本仓决策，故在此写明而非默认背书。待真机取证后升 verified"
     implementation:
-      status: "none"
+      status: "ready"
+      profileId: "imageGenerate"
+      seam: "imageGenerate"
+      notes: "family=midjourney 无专属分支，走 submit-guard/map.js 的通用分支：image 取首图，多图时追加 images 与 references；三字段均在 imageGenerate.vendorFields 白名单内。references 是该分支独有的形状，取证前未被上游验证过"
     execution:
       status: "stub"
       profileId: "imageGenerate"
@@ -849,10 +857,15 @@ models:
           - { value: "1K", label: "1K" }
         defaultValue: "2K"
     research:
-      status: "draft"
-      notes: "2026-09-14 命名收敛：canonical 采用网关命名规则要求的连字符形（GW 命名检查 rules/media-dot.js 对 media 家族的点号形判 error）；点号形登记为别名以打通别名归一。渠道官方文档 URL 未取证，故不上架。"
+      status: "verified"
+      docUrl: "docs/evidence/multiref-listing-3146/02-seedream-live-verification.md"
+      verifiedAt: "2026-10-05"
+      notes: "2026-10-05 走本仓真实缝隙以 mode=live 用 2 张参考图真实出图：POST /v1/images/generations 200，task_zkVJMEU1RhYdd8acx6ldcJG0A4jEOeHU，产物 116972 字节 JPEG 1424×800（魔数 ff d8 ff e0，与上游 output_formats:[jpeg] 一致），耗时约 117 秒；两张参考图经缝隙 presign+confirm 换公网直链后随 image_urls 送达。同批修掉一处必要缺陷：doubao-seedream 家族不接受 resolution，比例须走 size。上游能力清单（合同版本 4b4e2aff3500ec80）公布 operations=[text_to_image,image_to_image] 与 reference_images{min:2,max:10}；本仓 multi_reference 对应上游 image_to_image，命名映射属本仓决策"
     implementation:
-      status: "none"
+      status: "ready"
+      profileId: "imageGenerate"
+      seam: "imageGenerate"
+      notes: "family=seedream 走 submit-guard/map.js 的 isSeedream 分支：image 取首图、image_urls 为全部参考图；两字段均在 imageGenerate.vendorFields 白名单内"
     execution:
       status: "stub"
       profileId: "imageGenerate"

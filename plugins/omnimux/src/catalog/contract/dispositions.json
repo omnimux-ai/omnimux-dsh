@@ -437,7 +437,7 @@
     {
       "id": "seedream-5-0-pro",
       "disposition": "canonical",
-      "reason": "2026-09-14 命名收敛：契约行改用网关命名规则要求的连字符形；契约完整（含 text_to_image 与多图参考），渠道官方文档 URL 未取证故 op 保持 draft 不上架"
+      "reason": "2026-10-05 #3148 更新：契约行采用网关命名规则要求的连字符形（别名登记点号形）；上游能力清单（合同版本 4b4e2aff3500ec80）公布 text_to_image 与 image_to_image，2026-10-05 以本仓真实缝隙真机验证两条路径后，文生图与多图垫图均已上架为 listed。原「渠道官方文档 URL 未取证故 op 保持 draft 不上架」的表述已失效。"
     },
     {
       "id": "seedream-5.0-pro",

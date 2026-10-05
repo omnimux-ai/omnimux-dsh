@@ -84,6 +84,17 @@
       "requiredInAuto": true
     },
     {
+      "productId": "seedream-5-0-pro",
+      "kind": "image",
+      "priority": "P1",
+      "gatewayIds": [
+        "seedream-5-0-pro",
+        "seedream-5.0-pro"
+      ],
+      "requiredInAuto": true,
+      "note": "2026-10-05 #3148：真机验证通过（文生图 + 2 图垫图），上架为 listed；同时修掉 doubao-seedream 家族不支持 resolution 的载荷缺陷。"
+    },
+    {
       "productId": "grok-imagine-image-2-0",
       "kind": "image",
       "priority": "P1",

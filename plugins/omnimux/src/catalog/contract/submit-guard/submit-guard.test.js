@@ -17,10 +17,10 @@ const index = getContractIndex()
 const profiles = loadAdapterProfiles()
 
 describe('SubmitGuard listed profile coverage (#468)', () => {
-  it('strict listedOperations is exactly 29 and every key has a ready profile payload contract', () => {
+  it('strict listedOperations is exactly 31 and every key has a ready profile payload contract', () => {
     const report = verifyContracts({ strict: true })
     assert.equal(report.ok, true)
-    assert.equal(report.listedOperations.length, 29) // #3138 gpt-image-2.5#multi_reference 上架 +1 → 29（#3086 为 28）
+    assert.equal(report.listedOperations.length, 31) // #3148 seedream-5-0-pro 文生图与垫图真机验证后上架 +2 → 31（#3138 为 29）
     const profileById = new Map((profiles.profiles ?? []).map((p) => [p.id, p]))
     for (const key of report.listedOperations) {
       const [modelId, opId] = key.split('#')

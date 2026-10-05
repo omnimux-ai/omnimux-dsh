@@ -67,6 +67,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       'gpt-image-2.5',
       'gpt-image-2.5-flare',
       'gpt-image-2.5-sunburst',
+      'seedream-5-0-pro',
     ])
     const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
     assert.equal(imageRow.label, 'GPT Image 2.5')

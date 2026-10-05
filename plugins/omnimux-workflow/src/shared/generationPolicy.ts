@@ -17,7 +17,8 @@ export const CANVAS_GENERATION_POLICY: Readonly<Record<MaterialType, GenerationP
   },
   image: {
     // 官方价目表在售生图模型全量准入：GPT Image 2.5 标准版、极速版 (Flare)、画质版 (Sunburst)
-    allowedModelIds: ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'],
+    // #3148：Seedream 5.0 Pro 真机验证通过（文生图 + 垫图），加入画布准入
+    allowedModelIds: ['gpt-image-2.5', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst', 'seedream-5-0-pro'],
     defaultModelId: 'gpt-image-2.5',
     modeSelection: 'model',
   },
