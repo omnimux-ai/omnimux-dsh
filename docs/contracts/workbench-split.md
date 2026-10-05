@@ -1,11 +1,11 @@
 ---
-title: "Workbench split — 对话可收、Workbench GUI 常驻（Google Vids stage 例外）"
+title: "Workbench split — 对话可收、Workbench GUI 常驻（Google Vids main 插槽例外）"
 id: "contract-workbench-split"
 type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-31"
-updated: "2026-09-21"
+updated: "2026-10-05"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 related:
@@ -22,22 +22,34 @@ related:
 
 Normative seat for plugin GUIs that must sit **beside** the official conversation (human + Agent both driving the same surface).
 
-**One Workbench seat.** First-level library / catalog / plaza pages, clip studio, and the project canvas live on `ctx.betterSidebar.registerTab`. Ordinary Workbench entry flows **MUST NOT** claim `data-dsh-product-stage`. The 2026-08-31 «library = overlay» exception is abolished ([ADR](../decisions/2026-08-31-workbench-libraries-and-toggle.md)). Google Vids is a narrowly scoped exception: its generation stage occupies `shell.overlay`, while its left-row launcher first awaits opening Clip in the Workbench with split focus; only when that call returns a value strictly equal to `true` may the launcher claim `omnimux-vids`. See the Overlay row and Issue #2721 spec.
+**One Workbench seat.** First-level library / catalog / plaza pages, clip studio, and the project canvas live on `ctx.betterSidebar.registerTab`. Ordinary Workbench entry flows **MUST NOT** claim `data-dsh-product-stage`. The 2026-08-31 «library = overlay» exception is abolished ([ADR](../decisions/2026-08-31-workbench-libraries-and-toggle.md)). Google Vids is a narrowly scoped exception: it registers as the official `main` slot panel (`key: 'omnimux-vids'`, manifest `target: main`), rendered inside the conversation column; its left-row launcher first awaits opening Clip in the Workbench with split focus and, only when that call returns a value strictly equal to `true`, selects the panel with `layout.selectPanel('omnimux-vids')`. It **MUST NOT** claim any product stage (Issue #3165 supersedes the earlier `shell.overlay` stage wording). See the `main` slot section and Issue #2721 spec.
 
 ## One seat, do not mix with overlay
 
 | Kind | Examples | Seat | Left-row click |
 |---|---|---|---|
-| **Workbench** | 资产 / 产品 / 账号 / 灵感 / 发布 / 分析 / 项目库 / 专家馆 / 视频剪辑 / 创作画布 | `ctx.betterSidebar.registerTab` on `[data-dsh-panel-host]` | Ordinary Workbench entry flows use `window.__omnimuxWorkbench.open({ tabId })` and **MUST NOT** set `data-dsh-product-stage`; only the Google Vids launcher may claim its own `omnimux-vids` stage after the Clip open specified in the Overlay row is awaited and returns a value strictly equal to `true` |
-| **Overlay** | Hub 登录门；Apps 货架（未挂载）；Clip **画布节点 portal**；Google Vids 生成舞台 | `shell.overlay` | Google Vids 是唯一的创作 stage 例外：左侧入口 MUST first await `window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })`，并且仅当该调用的返回值严格等于 `true` 时才 claim `omnimux-vids`（`false`、拒绝或其他结果均不 claim）；Vids 不得注册为 `betterSidebar` Tab。Clip portal **MUST NOT** claim |
+| **Workbench** | 资产 / 产品 / 账号 / 灵感 / 发布 / 分析 / 项目库 / 专家馆 / 视频剪辑 / 创作画布 | `ctx.betterSidebar.registerTab` on `[data-dsh-panel-host]` | Ordinary Workbench entry flows use `window.__omnimuxWorkbench.open({ tabId })` and **MUST NOT** set `data-dsh-product-stage`. The Google Vids launcher is the one entry that also drives the `main` slot: after the awaited Clip open (strictly `true`) it calls `layout.selectPanel('omnimux-vids')` and claims no stage |
+| **Overlay** | Hub 登录门；Apps 货架（未挂载）；Clip **画布节点 portal** | `shell.overlay` | 这些表面是仅存的 `claimProductStage` 使用者；Clip portal **MUST NOT** claim。Google Vids 已迁出 overlay（#3165），见下方 `main` 插槽小节 |
 
-Official AppFrame is already `sidebar | conversation | details`. Workbench does **not** replace `conversation`. Ordinary Workbench GUIs live in the community `dsh-better-sidebar` panel (width up to the viewport); Google Vids' generation stage instead occupies `shell.overlay`, while Clip studio remains a Workbench Tab in that right panel. Official `details` stays at 300–520px and is closed (`layout.closeDetails`) when a workbench tab opens.
+Official AppFrame is already `sidebar | conversation | details`. Workbench does **not** replace `conversation`. Ordinary Workbench GUIs live in the community `dsh-better-sidebar` panel (width up to the viewport); Google Vids instead registers as the official `main` slot panel rendered inside the conversation column, while Clip studio remains a Workbench Tab in that right panel. Official `details` stays at 300–520px and is closed (`layout.closeDetails`) when a workbench tab opens.
+
+### `main` slot panels MUST NOT claim a product stage (#3165)
+
+A plugin that registers a **`main` slot panel** (`ctx.slots.inject('main', …)`, e.g. `omnimux-video` with `key: 'omnimux-vids'`) renders inside `.dshDesktopConversationSurface`. The hub product-stage chrome hides every non-`shell.overlay` child of that surface:
+
+```css
+html[data-dsh-product-stage]:not([data-dsh-product-stage="omnimux-apps"]) .dshDesktopConversationSurface > *:not([data-slot="shell.overlay"]) { visibility: hidden !important }
+```
+
+So claiming a product stage from a `main`-slot plugin hides the very panel it just selected — the blank-middle-column regression (Issue #3165). Such a plugin **MUST NOT** call `claimProductStage` / `__omnimuxStage.claim` / `stage.claim(`, and **MUST NOT** read `data-dsh-product-stage` to derive its active state. It selects its panel with `layout.selectPanel(<key>)` and reads `layout.panelInfo.activePanelId`.
+
+Enforced by `scripts/verify-stage-contracts.mjs` (`pnpm verify:stages`).
 
 ## Layout
 
 ```
 左：官方 sidebar + 新会话下方入口
-中：官方 conversation（不可卸载；Google Vids 生成舞台通过 shell.overlay 覆盖此区域）
+中：官方 conversation（不可卸载；Google Vids 以官方 main 插槽面板在此列内渲染）
 右：dsh-better-sidebar Workbench Tab（可收起，Tab 状态按会话持久化；Clip studio 在此）
 ```
 
@@ -56,8 +68,8 @@ Official AppFrame is already `sidebar | conversation | details`. Workbench does 
 | `omnimux-workflow:library` | `omnimux-workflow` | `gui` | `[data-dsh-omnimux-workflow-entry]` |
 | `omnimux-workflow:canvas` | `omnimux-workflow` | `gui` | not a left-row; opened after a project session |
 | `omnimux-market:plaza` | `omnimux-market` | `gui` | `sidebar.footer.action` `[data-omnimux-market-entry]`（设置上方，不是新会话 extra row） |
-| `omnimux-clip:studio` | `omnimux-clip` | `gui` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；由 Vids 左侧入口先行打开，或由画布/Agent 打开。Vids 入口 MUST await Clip Workbench open with `title: '视频剪辑'` and `focus: 'split'`, and may claim `omnimux-vids` only when the result is strictly `true` |
-| `omnimux-vids` (overlay stage, not a Workbench Tab) | `omnimux-video` | `split` on entry | Google Vids left-row launcher; awaits opening Clip (`tabId: 'omnimux-clip:studio'`, `title: '视频剪辑'`, `focus: 'split'`) and claims the overlay stage only when that result is exactly `true` |
+| `omnimux-clip:studio` | `omnimux-clip` | `gui` | left-row hidden（marker `[data-omnimux-clip-entry]` 保留未挂载）；由 Vids 左侧入口先行打开，或由画布/Agent 打开。Vids 入口 MUST await Clip Workbench open with `title: '视频剪辑'` and `focus: 'split'`, and only when the result is strictly `true` may it call `layout.selectPanel('omnimux-vids')` (no stage claim) |
+| `omnimux-vids` (official `main` slot panel, not a Workbench Tab) | `omnimux-video` | `split` on entry | Google Vids left-row launcher; awaits opening Clip (`tabId: 'omnimux-clip:studio'`, `title: '视频剪辑'`, `focus: 'split'`) and only when that result is exactly `true` calls `layout.selectPanel('omnimux-vids')`; closing calls `layout.selectPanel(null)`. Claims no product stage |
 
 Clip overlay (`ClipStage`) remains **only** for canvas-node portal (`openFromCanvas`, does not claim). Sidebar clicks MUST NOT call `stage.open()`.
 
@@ -170,7 +182,7 @@ Hub installs `window.__omnimuxWorkbench` at module top-level (same pattern as `_
 
 - Shadow `root` / `sidebar` / `conversation` / `details`.
 - Draw a second composer inside `shell.overlay`.
-- Claim `data-dsh-product-stage` when opening a workbench tab (product-stage chrome hides the panel host), except the Google Vids left-row launcher may claim `omnimux-vids` only after the awaited `window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })` returns a value strictly equal to `true`.
+- Claim `data-dsh-product-stage` when opening a workbench tab (product-stage chrome hides the panel host). A plugin registering a `main` slot panel **MUST NOT** call `claimProductStage` / `__omnimuxStage.claim` / `stage.claim(` at all: the chrome hides the conversation column, which is exactly where `main` panels render (#3165). The Google Vids left-row launcher instead calls `layout.selectPanel('omnimux-vids')` only after the awaited `window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })` returns a value strictly equal to `true`.
 - Fall back to overlay or `details` when `dsh-better-sidebar` is missing. Host stays; Tab is absent.
 - Keep library pages on `shell.overlay`.
 - Inherit focus across tab ids.

@@ -215,11 +215,38 @@ export function mountSidebarEntry(t, locale, _legacyLocale, layout) {
   updateTexts()
 
   let mounted = true
+  let unsubPanel = null
+
+  /** 激活态只由宿主 layout 的面板选择投影；handle 可能晚于挂载才可用。 */
+  const syncActive = () => {
+    const handle = resolveLayout(resolvedLayout, typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined)
+    const isStageActive = typeof document !== 'undefined'
+      && handle?.panelInfo?.getSnapshot?.()?.activePanelId === 'omnimux-vids'
+    if (isStageActive) {
+      entry.dataset.active = 'true'
+    } else {
+      delete entry.dataset.active
+    }
+  }
+
+  /** 订阅一次即可；layout 服务晚于本插件挂载时在首次点击时补订。 */
+  const subscribePanel = () => {
+    if (typeof unsubPanel === 'function') return
+    const handle = resolveLayout(resolvedLayout, typeof window !== 'undefined' ? window.__omnimuxWorkbench : undefined)
+    if (typeof handle?.panelInfo?.subscribe === 'function') {
+      unsubPanel = handle.panelInfo.subscribe(syncActive)
+    }
+  }
+
   const handleClick = async () => {
     if (typeof window === 'undefined') return
     const workbench = window.__omnimuxWorkbench
-    const stage = window.__omnimuxStage
-    if (typeof workbench?.open !== 'function' || typeof stage?.claim !== 'function') return
+    const layoutBeforeOpen = resolveLayout(resolvedLayout, workbench)
+    // Vids is a `main` slot panel, not an overlay product stage: the only seat it
+    // needs is the host layout's panel selection. Claiming a product stage runs the
+    // overlay chrome, which hides every non-overlay child of the conversation
+    // column — including the panel that was just selected.
+    if (typeof workbench?.open !== 'function' || typeof layoutBeforeOpen?.selectPanel !== 'function') return
 
     try {
       try {
@@ -234,38 +261,17 @@ export function mountSidebarEntry(t, locale, _legacyLocale, layout) {
       try {
         document.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
       } catch {}
-      const layoutHandle = resolveLayout(resolvedLayout, workbench)
-      if (typeof layoutHandle?.selectPanel === 'function') {
-        layoutHandle.selectPanel('omnimux-vids')
-      }
-      stage.claim('omnimux-vids')
+      subscribePanel()
+      const layoutHandle = resolveLayout(resolvedLayout, workbench) ?? layoutBeforeOpen
+      layoutHandle.selectPanel('omnimux-vids')
+      syncActive()
     } catch {
-      // Keep the current stage and focus unchanged when Clip cannot be opened.
+      // Keep the current panel and focus unchanged when Clip cannot be opened.
     }
   }
   entry.addEventListener('click', handleClick)
 
-  const syncActive = () => {
-    const isStageActive = typeof document !== 'undefined' && (
-      document.documentElement?.dataset?.dshProductStage === 'omnimux-vids'
-      || resolvedLayout?.panelInfo?.getSnapshot?.()?.activePanelId === 'omnimux-vids'
-      || window.__omnimuxWorkbench?.layout?.panelInfo?.getSnapshot?.()?.activePanelId === 'omnimux-vids'
-    )
-    if (isStageActive) {
-      entry.dataset.active = 'true'
-    } else {
-      delete entry.dataset.active
-    }
-  }
-
-  let unsubPanel = null
-  if (typeof resolvedLayout?.panelInfo?.subscribe === 'function') {
-    unsubPanel = resolvedLayout.panelInfo.subscribe(syncActive)
-  }
-
-  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-    window.addEventListener('dsh-product-stage', syncActive)
-  }
+  subscribePanel()
   syncActive()
 
   const rawUnsub = typeof resolvedLocale?.subscribe === 'function' ? resolvedLocale.subscribe(updateTexts) : undefined
@@ -283,9 +289,6 @@ export function mountSidebarEntry(t, locale, _legacyLocale, layout) {
     mounted = false
     if (typeof entry?.removeEventListener === 'function') {
       entry.removeEventListener('click', handleClick)
-    }
-    if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
-      window.removeEventListener('dsh-product-stage', syncActive)
     }
     if (typeof unsubPanel === 'function') {
       unsubPanel()

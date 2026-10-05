@@ -441,7 +441,7 @@ export function GoogleVidsStage(props) {
     }
   }, [])
 
-  // 退出主舞台
+  // 退出主舞台：Vids 是 main 插槽面板，退出即把面板选择交还宿主原生会话。
   const handleCloseStage = () => {
     if (typeof window !== 'undefined') {
       try {
@@ -462,17 +462,6 @@ export function GoogleVidsStage(props) {
           layout.selectPanel(null)
         }
       } catch {}
-      try {
-        if (window.__omnimuxStage && typeof window.__omnimuxStage.release === 'function') {
-          window.__omnimuxStage.release('omnimux-vids')
-        }
-      } catch {}
-      try {
-        if (document.documentElement?.dataset?.dshProductStage === 'omnimux-vids') {
-          delete document.documentElement.dataset.dshProductStage
-        }
-      } catch {}
-      window.dispatchEvent(new CustomEvent('dsh-product-stage', { detail: { id: '' } }))
     }
     props?.onClose?.()
   }

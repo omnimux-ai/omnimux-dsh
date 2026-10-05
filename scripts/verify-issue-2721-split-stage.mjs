@@ -2,14 +2,17 @@
 /**
  * scripts/verify-issue-2721-split-stage.mjs
  *
- * Google Vids 中栏 Overlay 与 Clip 右栏同屏联动真实端到端浏览器验收 (Issue #2721)
+ * Google Vids 中栏面板与 Clip 右栏同屏联动真实端到端浏览器验收 (Issue #2721)
+ *
+ * 座位已按 Issue #3165 更正：Vids 是官方 `main` 插槽面板，不是 shell.overlay 产品舞台。
  * 验证：
  * 1. 真实应用启动与工作区加载；
- * 2. 侧边栏入口点击：先 await open Clip('omnimux-clip:studio', focus: 'split')，再 claim('omnimux-vids')；
- * 3. 中栏 Google Vids Overlay 挂载 + 右栏 Clip Studio 工作台展开，双栏同屏；
+ * 2. 侧边栏入口点击：先 await open Clip('omnimux-clip:studio', focus: 'split')，再 layout.selectPanel('omnimux-vids')；
+ * 3. 中栏 Google Vids 面板挂载 + 右栏 Clip Studio 工作台展开，双栏同屏；
  * 4. 界面文案与元素 100% 契约合规（SaaS 极简规范）；
  * 5. 高清实测同屏截图与结构化报告落盘；
- * 6. 关闭 Google Vids 舞台后会话恢复，Clip 保持打开。
+ * 6. 关闭 Google Vids 面板后会话恢复，Clip 保持打开；
+ * 7. 全程 `data-dsh-product-stage` 必须为空（claim 产品舞台会隐藏会话列里的 main 面板）。
  */
 
 import { spawn } from 'node:child_process';
@@ -352,7 +355,7 @@ async function main() {
     });
     console.log('[Issue #2721 QA] 触发结果:', clickRes?.result?.value);
 
-    // 轮询等待同屏就绪：中栏 Vids overlay 出现 + 舞台为 omnimux-vids
+    // 轮询等待同屏就绪：中栏 Vids 面板挂载 + 未写产品舞台标记（Issue #3165）
     const splitDeadline = Date.now() + 15000;
     let splitState = null;
     while (Date.now() < splitDeadline) {
@@ -366,10 +369,14 @@ async function main() {
           const badgeEl = vidsStageEl?.querySelector('.gvids-badge');
           const clipTab = document.querySelector('[data-dsh-better-sidebar]');
           const closeBtn = vidsStageEl?.querySelector('.gvids-close-btn');
+          const rect = vidsStageEl ? vidsStageEl.getBoundingClientRect() : null;
 
           return {
             stage,
             vidsMounted: Boolean(vidsStageEl),
+            vidsInMainSlot: Boolean(vidsStageEl?.closest('[data-slot="main"]')),
+            vidsVisible: Boolean(vidsStageEl) && getComputedStyle(vidsStageEl).visibility !== 'hidden',
+            rect: rect ? { w: Math.round(rect.width), h: Math.round(rect.height) } : null,
             titleText: titleEl?.textContent?.trim(),
             badgeText: badgeEl?.textContent?.trim(),
             clipSidebarVisible: Boolean(clipTab),
@@ -380,7 +387,7 @@ async function main() {
         returnByValue: true,
       });
       const val = checkSplit?.result?.value;
-      if (val && val.stage === 'omnimux-vids' && val.vidsMounted) {
+      if (val && val.vidsMounted && val.vidsVisible) {
         splitState = val;
         break;
       }
@@ -388,13 +395,19 @@ async function main() {
 
     console.log('[Issue #2721 QA] 同屏激活状态:', splitState);
     assertions.push({
-      name: 'vids-overlay-stage-claimed',
-      pass: splitState?.stage === 'omnimux-vids',
-      actual: splitState?.stage,
+      name: 'vids-panel-mounted-in-main-slot',
+      pass: Boolean(splitState?.vidsMounted && splitState?.vidsInMainSlot),
+      actual: { mounted: splitState?.vidsMounted, inMainSlot: splitState?.vidsInMainSlot },
     });
     assertions.push({
-      name: 'vids-stage-dom-mounted',
-      pass: Boolean(splitState?.vidsMounted),
+      name: 'vids-panel-visible-with-geometry',
+      pass: Boolean(splitState?.vidsVisible && splitState?.rect?.w > 100 && splitState?.rect?.h > 100),
+      actual: splitState?.rect,
+    });
+    assertions.push({
+      name: 'no-product-stage-claim',
+      pass: splitState?.stage === null,
+      actual: splitState?.stage,
     });
     assertions.push({
       name: 'saas-copy-title-google-vids',
@@ -444,13 +457,6 @@ async function main() {
         btn.dispatchEvent(new PointerEvent('pointerup', opts));
         btn.dispatchEvent(new MouseEvent('mouseup', opts));
         btn.dispatchEvent(new MouseEvent('click', opts));
-        // 若宿主未卸掉 open，仍强制走舞台 release 契约，避免假红
-        try { window.__omnimuxStage?.release?.('omnimux-vids'); } catch {}
-        try {
-          if (document.documentElement?.dataset?.dshProductStage === 'omnimux-vids') {
-            delete document.documentElement.dataset.dshProductStage;
-          }
-        } catch {}
         return {
           ok: true,
           rect: { x: cx, y: cy, w: rect.width, h: rect.height },
@@ -461,7 +467,7 @@ async function main() {
     });
     console.log('[Issue #2721 QA] 关闭点击:', closeClick?.result?.value);
 
-    // 轮询等待舞台释放：组件关闭后可能保留 display:none 节点，故以不可见为准
+    // 轮询等待面板退出：组件关闭后可能保留 display:none 节点，故以不可见为准
     const closeDeadline = Date.now() + 10000;
     let closeState = null;
     while (Date.now() < closeDeadline) {
@@ -489,7 +495,7 @@ async function main() {
         returnByValue: true,
       });
       const val = checkClose?.result?.value;
-      if (val && !val.stage && val.vidsGone) {
+      if (val && val.vidsGone && val.stage === null) {
         closeState = val;
         break;
       }
@@ -498,8 +504,8 @@ async function main() {
 
     console.log('[Issue #2721 QA] 关闭后状态:', closeState);
     assertions.push({
-      name: 'vids-stage-released-on-close',
-      pass: Boolean(closeState && !closeState.stage && closeState.vidsGone),
+      name: 'vids-panel-released-on-close',
+      pass: Boolean(closeState && closeState.stage === null && closeState.vidsGone),
       actual: closeState,
     });
 
@@ -534,10 +540,10 @@ async function main() {
     console.log(`[Issue #2721 QA] 结构化证据报告已保存: ${reportJsonPath}`);
 
     // 生成 Markdown 验收报告
-    const mdReport = `# Google Vids 中栏 Overlay 与视频剪辑同屏实测验收报告 (Issue #2721)
+    const mdReport = `# Google Vids 中栏面板与视频剪辑同屏实测验收报告 (Issue #2721)
 
 - **Issue**: #2721
-- **分支**: agent/video-vids-overlay-entry-issue-2721
+- **座位更正**: #3165（Vids 迁至官方 \`main\` 插槽，不再 claim 产品舞台）
 - **验收时间**: ${new Date().toISOString()}
 - **环境**: 隔离测试工作树 (.worktrees/video-vids-overlay-entry-issue-2721)
 - **运行模式**: UI 合成隔离环境 (端口: ${env.origin})
@@ -545,15 +551,15 @@ async function main() {
 
 ---
 
-## 一、双栏同屏与主舞台拓扑实测核验
-1. **中栏主舞台挂载 (shell.overlay)**：
+## 一、双栏同屏与 main 插槽拓扑实测核验
+1. **中栏 main 面板挂载**：
    - 侧边栏点击「Google Vids」入口 (Rank 7.5)；
-   - \`[data-slot="shell.overlay"]\` 成功挂载 \`.omnimux-vids-stage\` (GoogleVidsStage)；
-   - 宿主 \`data-dsh-product-stage\` 标记为 \`omnimux-vids\`；
-   - \`conversation-box.js\` 豁免 \`omnimux-vids\`，右侧 \`betterSidebar\` 保持展开，实现 **中栏生成舞台 (45%) : 右栏视频剪辑 (55%)** 左右同屏。
+   - \`[data-slot="main"]\` 内成功挂载 \`.omnimux-vids-stage\` (GoogleVidsStage)；
+   - 全程 \`data-dsh-product-stage\` 保持为空 —— 该标记会触发产品舞台 chrome，隐藏会话列里所有非 overlay 子节点，而 main 面板正渲染在会话列内，claim 即等于把自己隐藏（#3165 中栏空白根因）；
+   - 右侧 \`betterSidebar\` 保持展开，实现 **中栏生成面板 : 右栏视频剪辑** 左右同屏。
 2. **启动时序与异步安全锁**：
    - 入口点击首先 \`await workbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })\`；
-   - 仅当严格返回 \`true\` 时才调用 \`stage.claim('omnimux-vids')\`，彻底规避了 Host 打开 Clip 时释放旧舞台导致的主舞台被冲刷关闭死锁。
+   - 仅当严格返回 \`true\` 时才调用 \`layout.selectPanel('omnimux-vids')\`。
 
 ---
 
@@ -561,9 +567,9 @@ async function main() {
 1. **Header 元素白名单**：
    - 主标题：严格锁定为 \`Google Vids\` (14px，无 Emoji，无营销括号)；
    - 微标：严格锁定为 \`内测版\` (12px 细边框胶囊)；
-   - 关闭按钮：纯矢量 SVG \`✕\`，点击成功触发 \`releaseProductStage('omnimux-vids')\`。
-2. **退出主舞台生命周期验证**：
-   - 点击关闭按钮后，舞台彻底卸载，\`data-dsh-product-stage\` 属性释放；
+   - 关闭按钮：纯矢量 SVG \`✕\`，点击后经 \`layout.selectPanel(null)\` 交还宿主原生会话。
+2. **退出 main 面板生命周期验证**：
+   - 点击关闭按钮后，面板卸载且不可见；
    - 中心主会话列无缝恢复，右侧 Clip 工作台保持驻留打开。
 
 ---
@@ -572,7 +578,7 @@ async function main() {
 1. **同屏联动实机截图**：
    - 相对路径：\`docs/evidence/google-vids-split-stage-verified.png\`
    - 规格：1280x800, PNG 真实解码无伪造
-2. **关闭舞台会话恢复截图**：
+2. **关闭面板会话恢复截图**：
    - 相对路径：\`docs/evidence/google-vids-closed-session-restored.png\`
 3. **结构化报告**：
    - 相对路径：\`docs/evidence/google-vids-split-stage-verified.json\`

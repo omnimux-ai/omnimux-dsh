@@ -14,7 +14,7 @@ issue: "#2657"
 
 > **设计基准**：严格遵循全球顶级现代科技 SaaS（Linear、Vercel、Apple macOS HIG）极简设计标准，彻底终结过度设计。  
 > **适用范围**：`omnimux-video` 视频生成插件在左侧主侧边栏的入口注入、内测阶段标识及 Google Vids 中栏舞台与 Clip 右侧工作台的入口联动。
-> **当前行为依据**：Issue #2721 回归规格 [`specs/google-vids-center-stage-entry-regression.spec.md`](../../specs/google-vids-center-stage-entry-regression.spec.md)；与本文交互/座位约定冲突时，以该回归规格为准。本文 Issue #2657 的状态、归属及既有批准文案/元素/样式白名单保留为历史基线。
+> **当前行为依据**：Issue #2721 回归规格 [`specs/google-vids-center-stage-entry-regression.spec.md`](../../specs/google-vids-center-stage-entry-regression.spec.md)；与本文交互/座位约定冲突时，以该回归规格为准（座位与 claim 表述以 Issue #3165 为准：Vids 为官方 `main` 插槽面板，不 claim 产品舞台）。本文 Issue #2657 的状态、归属及既有批准文案/元素/样式白名单保留为历史基线。
 > **决策与终验签收人**：产品经理 · 许清楚（Xu）
 
 ---
@@ -22,7 +22,7 @@ issue: "#2657"
 ## 1. 产品概况与目标（PRD Overview）
 
 ### 1.1 业务背景
-Google Vids (Veo) 智能视频生成能力以 `GoogleVidsStage` 挂载于 `shell.overlay`，显示在中间会话列。为了让创作者能够从主工作台以最低链路直达 AI 视频生成环境，左侧导航侧边栏（新会话按钮下方）提供常驻一级入口；入口同时联动打开右侧 Clip 工作台。
+Google Vids (Veo) 智能视频生成能力以 `GoogleVidsStage` 注册为官方 `main` 插槽面板（`key: 'omnimux-vids'`），显示在中间会话列。为了让创作者能够从主工作台以最低链路直达 AI 视频生成环境，左侧导航侧边栏（新会话按钮下方）提供常驻一级入口；入口同时联动打开右侧 Clip 工作台。
 鉴于该能力目前处于早期试验与定向测试阶段，根据系统的发布与准入分级规范，必须在侧边栏条目右侧打上「内测版」（英文态为「Alpha」）状态徽标，向用户明确传达当前的试验性阶段属性。
 
 ### 1.2 核心用户价值
@@ -40,21 +40,21 @@ Google Vids (Veo) 智能视频生成能力以 `GoogleVidsStage` 挂载于 `shell
 3. **严禁私造视觉刻度与异构容器**：
    - 必须严格遵循 `sidebar-extra-entries.md` 规范（32px 行高、14×14 图标、14px 文字、8px 圆角），严禁定制尺寸或不同行高。
 4. **舞台与工作台分栏，不改变获批视觉方案**：
-   - Google Vids 生成舞台仅挂载 `shell.overlay`，显示于中间会话列；Clip `omnimux-clip:studio` 仍由 Clip 插件注册并显示于右侧 `betterSidebar`。
-   - 点击入口先请求 Workbench 以 `focus: 'split'` 打开 Clip；仅在 `open` 严格返回 `true` 后 claim `omnimux-vids` 舞台。不得提前 claim，不得另行调用 `setFocus`。
-   - 本交互是 #2721 回归规格定义的窄范围例外；不得借此新增/删除/改写已批准的可见 UI、文案、图标或样式。
+   - Google Vids 生成面板仅注册官方 `main` 插槽，显示于中间会话列；Clip `omnimux-clip:studio` 仍由 Clip 插件注册并显示于右侧 `betterSidebar`。
+   - 点击入口先请求 Workbench 以 `focus: 'split'` 打开 Clip；仅在 `open` 严格返回 `true` 后调用 `layout.selectPanel('omnimux-vids')` 选中面板。不得提前切换，不得 claim 任何产品舞台，不得另行调用 `setFocus`。
+   - 本交互是 #2721 回归规格定义、经 #3165 更正座位的窄范围例外；不得借此新增/删除/改写已批准的可见 UI、文案、图标或样式。
 
 ---
 
 ## 2. 信息架构与极简原型线框（Prototype Wireframe）
 
 ### 2.1 入口与内容座位（Seat Topology）
-侧边栏入口与获批视觉原型保持不变。点击后 Vids 舞台显示在中间会话列的 `shell.overlay`，Clip `omnimux-clip:studio` 显示在右侧 Workbench `betterSidebar`；Vids 不再作为右侧 Workbench Tab 注册。具体异步时序以 #2721 回归规格为当前依据。
+侧边栏入口与获批视觉原型保持不变。点击后 Vids 面板显示在中间会话列（官方 `main` 插槽面板，`key: 'omnimux-vids'`），Clip `omnimux-clip:studio` 显示在右侧 Workbench `betterSidebar`；Vids 不再作为右侧 Workbench Tab 注册，也不 claim 产品舞台。具体异步时序以 #2721 回归规格为当前依据，座位以 #3165 为准。
 
 ```text
 [左侧 Google Vids 入口] --点击--> [右侧 Clip Workbench: split 打开成功]
                                       │
-                                      └──随后 claim──> [中间 Google Vids shell.overlay]
+                                      └─随后 selectPanel─> [中间 Google Vids main 插槽面板]
 ```
 
 上图仅表达座位与行为，不增加、删改任何可见元素、文案、图标或样式。
@@ -113,7 +113,7 @@ Google Vids (Veo) 智能视频生成能力以 `GoogleVidsStage` 挂载于 `shell
 
 | 区域 / 组件 ID | 元素类型 | 精确显示文案（中/英逐字锁定） | 显隐与交互状态规则 | 严禁附加项（显式红线） |
 |---|---|---|---|---|
-| `sidebar.google-vids.entry` | 容器按钮 (Button) | *(无文本，DOM 容器)* | 悬停背景 `--dsw-alias-interactive-bg-hover`；`data-dsh-product-stage="omnimux-vids"` 时映射 `--dsw-alias-interactive-bg-active` | 严禁加任何内外投影、光晕、描边闪烁动效 |
+| `sidebar.google-vids.entry` | 容器按钮 (Button) | *(无文本，DOM 容器)* | 悬停背景 `--dsw-alias-interactive-bg-hover`；`layout.panelInfo.activePanelId === 'omnimux-vids'`（入口 `data-active="true"`）时映射 `--dsw-alias-interactive-bg-active` | 严禁加任何内外投影、光晕、描边闪烁动效 |
 | `sidebar.google-vids.icon` | 矢量图标 (SVG) | *(无文本)* | 14×14 细线矢量图标，填充色 `currentColor`，保持与文字相同光学体量 | 严禁使用彩色渐变图标、严禁 16px 填充满框、严禁带底色徽章 |
 | `sidebar.google-vids.label` | 导航标签 (Span) | 中文：`Google Vids`<br>英文：`Google Vids` | 常驻单行显示，字号 14px，行高 20px；折叠态自动隐藏 | 严禁加 `(Veo)`、严禁加 `(智能生成)`、严禁加 `(AI)` 等任何括号解释 |
 | `sidebar.google-vids.badge` | 状态徽标 (Badge) | 中文：`内测版`<br>英文：`Alpha` | 靠右自适应对齐；字号 12px，行高 16px；边框 `1px solid var(--dsw-alias-border-l2)`；折叠态完全隐藏 | 严禁加实心高亮背景、严禁使用警示黄/红/绿色彩、严禁加 Emoji `✨` / `🔥` |
@@ -126,12 +126,12 @@ Google Vids (Veo) 智能视频生成能力以 `GoogleVidsStage` 挂载于 `shell
 
 1. **点击触发与异步状态契约**：
    - 点击入口后调用 `window.__omnimuxWorkbench.open({ tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' })`；等待 Promise settle。
-   - 仅当 resolve 值严格为 `true` 且入口仍挂载时，随后调用 `window.__omnimuxStage.claim('omnimux-vids')`；不得另行调用 `setFocus`。
-   - 返回 `false` / 非严格 `true`、同步异常、Promise rejection、Workbench/Stage API 缺失或等待期间入口卸载时，不 claim 舞台、不单独改焦点，维持现状。
+   - 仅当 resolve 值严格为 `true` 且入口仍挂载时，随后调用 `layout.selectPanel('omnimux-vids')`；不得 claim 产品舞台，不得另行调用 `setFocus`。
+   - 返回 `false` / 非严格 `true`、同步异常、Promise rejection、Workbench/`layout.selectPanel` API 缺失或等待期间入口卸载时，不切换面板、不单独改焦点，维持现状。
 2. **内容座位与入口激活态**：
-   - Google Vids 由 `omnimux-video` manifest 声明并注册至 `shell.overlay`，ID 为 `omnimux-vids-stage`；不注册 Vids 的 `betterSidebar` Tab。
-   - Clip `omnimux-clip:studio` 继续由 `omnimux-clip` 注册至右侧 `betterSidebar`。调用 `open` 成功后先打开 Clip，再 claim Vids，形成中栏舞台与右侧工作台同屏。
-   - 入口 `data-active="true"` 仅在 `document.documentElement.dataset.dshProductStage === 'omnimux-vids'` 时设置，并通过 `dsh-product-stage` 事件同步；它不是 Vids Workbench Tab 的激活状态。
+   - Google Vids 由 `omnimux-video` manifest 声明并注册至官方 `main` 插槽，`key: 'omnimux-vids'`（order 36）；不注册 Vids 的 `betterSidebar` Tab。
+   - Clip `omnimux-clip:studio` 继续由 `omnimux-clip` 注册至右侧 `betterSidebar`。调用 `open` 成功后先打开 Clip，再 `layout.selectPanel('omnimux-vids')`，形成中栏面板与右侧工作台同屏。
+   - 入口 `data-active="true"` 仅在 `layout.panelInfo.activePanelId === 'omnimux-vids'` 时设置，并通过 `panelInfo.subscribe` 同步；它不读 `data-dsh-product-stage`，也不是 Vids Workbench Tab 的激活状态。
 3. **折叠/展开自适应响应**：
    - 监听宿主侧边栏折叠事件（`[data-sidebar-collapsed]`），CSS 零延迟收起 Label 与 Badge，图标居中过渡。
 
@@ -141,20 +141,20 @@ Google Vids (Veo) 智能视频生成能力以 `GoogleVidsStage` 挂载于 `shell
 
 ### 5.1 前置检查与工程规范
 1. **复用标准侧栏契约**：在 `plugins/omnimux-video/src/client/sidebar-entry.js` 中按 `sidebar-extra-entries.md` 标准渲染入口，保留已批准的图标、文案与样式。
-2. **舞台座位校准**：Google Vids 仅在 manifest 与 `shell.overlay` 注册为 `omnimux-vids-stage`；不得注册 Vids 的 `betterSidebar` Workbench Tab。
+2. **面板座位校准**：Google Vids 仅在 manifest 与 `main` 插槽注册为 `key: 'omnimux-vids'`；不得注册 Vids 的 `betterSidebar` Workbench Tab，不得 claim 产品舞台。
 3. **交互回归规格**：入口启动时序、失败与卸载边界均按 #2721 回归规格实现与验收；本文 Issue #2657 状态与审批元数据不因本次行为修正而改写。
 
 ### 5.2 实施步骤（Step-by-Step）
 - [ ] **Step 1**：按批准的白名单保留侧边栏入口的 14×14 图标、中英文案与既有样式。
-- [ ] **Step 2**：注册 Vids `shell.overlay` 舞台，并保留 Clip 插件负责的右侧 `omnimux-clip:studio` Tab。
-- [ ] **Step 3**：实现 #2721 定义的顺序：请求 Clip `focus: 'split'` 打开，严格成功后再 claim Vids；失败与卸载不改变现状。
-- [ ] **Step 4**：按当前回归规格验证异步成功、失败分支、API 缺失、卸载保护及 overlay/Workbench 拓扑；UI 可见文案与元素不变。
+- [ ] **Step 2**：注册 Vids 官方 `main` 插槽面板，并保留 Clip 插件负责的右侧 `omnimux-clip:studio` Tab。
+- [ ] **Step 3**：实现 #2721 定义、#3165 更正座位的顺序：请求 Clip `focus: 'split'` 打开，严格成功后再 `layout.selectPanel('omnimux-vids')`；失败与卸载不改变现状。
+- [ ] **Step 4**：按当前回归规格验证异步成功、失败分支、API 缺失、卸载保护及 `main` 插槽/Workbench 拓扑；UI 可见文案与元素不变。
 
 ### 5.3 量化验收标准（PM Sign-off Metrics）
 1. **UI 元素合规率 100%**：零未授权 Badge、零多余装饰图标、零未登记元素。
 2. **文案一致性 100%**：中文精准显示 `Google Vids` + `内测版`；英文精准显示 `Google Vids` + `Alpha`。
 3. **尺寸与视觉规范对齐 100%**：行高精确 32px，间距精确 6px，圆角 8px，图标 14×14，徽标边框与色彩使用 DSH 标准 Token。
-4. **入口激活态准确**：只映射 `omnimux-vids` 产品舞台标记；无效的 Workbench 打开、失败或卸载时不误 claim、不遗留错误激活态。
+4. **入口激活态准确**：只映射 `layout.panelInfo.activePanelId === 'omnimux-vids'`；无效的 Workbench 打开、失败或卸载时不误切换面板、不遗留错误激活态。
 
 ---
 *文档编制完成，交付前端开发执行。*

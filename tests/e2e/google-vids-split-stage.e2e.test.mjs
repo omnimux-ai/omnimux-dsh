@@ -22,39 +22,48 @@ const __dirname = path.dirname(__filename)
 const root = path.resolve(__dirname, '../..')
 
 test('E2E: Google Vids 中间栏主舞台与视频剪辑同屏全链路质量验收 (#2698)', async (t) => {
-  await t.test('E2E-AC-1: 双栏同屏架构与 STAGE_CSS_CLASS_MAP 豁免契约', () => {
+  await t.test('E2E-AC-1: main 插槽座位与产品舞台去耦契约（Issue #3165）', () => {
     const convBoxPath = path.join(root, 'plugins/omnimux/src/client/conversation-box.js')
     assert.ok(fs.existsSync(convBoxPath), 'conversation-box.js 必须存在')
     const convBoxSrc = fs.readFileSync(convBoxPath, 'utf8')
 
-    // 1. STAGE_CSS_CLASS_MAP 包含 omnimux-vids
-    assert.match(
+    // 1. Vids 已迁至官方 main 插槽，不得再保留产品舞台样式类
+    assert.doesNotMatch(
       convBoxSrc,
       /'omnimux-vids':\s*'omnimux-vids-stage'/,
-      'STAGE_CSS_CLASS_MAP 必须注册 omnimux-vids 舞台样式类',
+      'STAGE_CSS_CLASS_MAP 不得再为 main 插槽面板保留 omnimux-vids 舞台类',
     )
 
-    // 2. PRODUCT_STAGE_CHROME 豁免 omnimux-vids 不隐藏 betterSidebar / toggleCluster
-    assert.match(
+    // 2. PRODUCT_STAGE_CHROME 不得再引用 omnimux-vids 舞台（该 overlay 舞台已不存在）
+    assert.doesNotMatch(
       convBoxSrc,
-      /html\[data-dsh-product-stage\]:not\(\[data-dsh-product-stage="omnimux-apps"\]\):not\(\[data-dsh-product-stage="omnimux-vids"\]\)\s+\[data-dsh-better-sidebar\]/,
-      'PRODUCT_STAGE_CHROME 必须豁免 omnimux-vids 保持 betterSidebar 展开',
+      /data-dsh-product-stage="omnimux-vids"/,
+      'PRODUCT_STAGE_CHROME 不得再引用 omnimux-vids 舞台',
     )
 
-    // 3. manifest 声明 shell.overlay slot
+    // 3. manifest 声明 main slot，且不得再声明 shell.overlay
     const manifestPath = path.join(root, 'plugins/omnimux-video/dsh.manifest.json')
     assert.ok(fs.existsSync(manifestPath), 'manifest.json 必须存在')
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
-    const overlaySlot = manifest.capabilities.slots.find(
-      (s) => s.target === 'shell.overlay' && s.componentPath === 'src/client/GoogleVidsStage.jsx',
+    const mainSlot = manifest.capabilities.slots.find(
+      (s) => s.target === 'main' && s.componentPath === 'src/client/GoogleVidsStage.jsx',
     )
-    assert.ok(overlaySlot, 'manifest.capabilities.slots 必须声明 shell.overlay 指向 GoogleVidsStage.jsx')
+    assert.ok(mainSlot, 'manifest.capabilities.slots 必须声明 main 指向 GoogleVidsStage.jsx')
+    assert.equal(
+      manifest.capabilities.slots.some((s) => s.target === 'shell.overlay'),
+      false,
+      'Vids 不得再注册 shell.overlay 产品舞台',
+    )
   })
 
   await t.test('E2E-AC-2: 极简 SaaS 文案字典与 UI 元素白名单 100% 审查', () => {
     const stagePath = path.join(root, 'plugins/omnimux-video/src/client/GoogleVidsStage.jsx')
     assert.ok(fs.existsSync(stagePath), 'GoogleVidsStage.jsx 必须存在')
     const stageSrc = fs.readFileSync(stagePath, 'utf8')
+    // 模式 Tab 与占位符的真源是共享 spec，舞台只负责渲染 tab.label / placeholder
+    const specPath = path.join(root, 'plugins/omnimux-video/src/shared/veoTaskSpec.js')
+    assert.ok(fs.existsSync(specPath), 'veoTaskSpec.js 必须存在')
+    const specSrc = fs.readFileSync(specPath, 'utf8')
 
     // 1. 顶部 Header 白名单
     assert.match(stageSrc, /Google Vids/, '主标题必须严格为 Google Vids')
@@ -81,25 +90,42 @@ test('E2E: Google Vids 中间栏主舞台与视频剪辑同屏全链路质量验
     assert.match(stageSrc, /升频/, '动作按钮锁定为 升频')
     assert.match(stageSrc, /移除/, '破坏性按钮锁定为 移除')
 
-    // 4. 四大模式 2 字纯名词 Tab
-    assert.match(stageSrc, /'创建'/, '模式 Tab 必须为 创建')
-    assert.match(stageSrc, /'修改'/, '模式 Tab 必须为 修改')
-    assert.match(stageSrc, /'动画'/, '模式 Tab 必须为 动画')
-    assert.match(stageSrc, /'扩展'/, '模式 Tab 必须为 扩展')
+    // 4. 四大模式 2 字纯名词 Tab（渲染自 VEO_TASK_SPEC.modes）
+    assert.match(stageSrc, /VEO_TASK_SPEC\.modes\.map/, '模式 Tab 必须渲染自 VEO_TASK_SPEC.modes')
+    for (const label of ['创建', '修改', '动画', '扩展']) {
+      assert.equal(
+        new RegExp(`label: '${label}'`).test(specSrc),
+        true,
+        `模式 Tab 必须为 ${label}`,
+      )
+    }
+    assert.doesNotMatch(specSrc, /添加动画/, '严禁写成动宾短语 添加动画')
     assert.doesNotMatch(stageSrc, /添加动画/, '严禁写成动宾短语 添加动画')
 
-    // 5. 动态占位符字典
-    assert.match(stageSrc, /请先在右侧创建或打开剪辑工程\.\.\./, '未就绪占位符')
-    assert.match(stageSrc, /描述您想生成的视频画面与动作\.\.\./, '创建模式占位符')
-    assert.match(stageSrc, /描述需要对当前视频进行的调整（如光影或服装风格）\.\.\./, '修改模式占位符')
-    assert.match(stageSrc, /描述图像素材中应展现的动作与运镜细节\.\.\./, '动画模式占位符')
-    assert.match(stageSrc, /描述当前视频结尾后续发生的情节发展\.\.\./, '扩展模式占位符')
+    // 5. 动态占位符字典（真源同在上表）
+    assert.equal(
+      specSrc.includes('请先在右侧创建或打开剪辑工程...'),
+      true,
+      '未就绪占位符真源缺失',
+    )
+    for (const placeholder of [
+      '描述您想生成的视频画面与动作...',
+      '描述需要对当前视频进行的调整（如光影或服装风格）...',
+      '描述图像素材中应展现的动作与运镜细节...',
+      '描述当前视频结尾后续发生的情节发展...',
+    ]) {
+      assert.equal(
+        specSrc.includes(placeholder),
+        true,
+        `占位符真源缺失: ${placeholder}`,
+      )
+    }
 
     // 6. 严禁装饰 Emoji 检查
     assert.doesNotMatch(stageSrc, /[💎✨🔥⚙️🗑️🎬⚡]/, '绝对禁止包含任何装饰性 Emoji')
   })
 
-  await t.test('E2E-AC-3: 侧边栏条目先开右侧剪辑再 claim 中栏，且分屏焦点由 open 决定', () => {
+  await t.test('E2E-AC-3: 侧边栏条目先开右侧剪辑再选中 main 面板，且分屏焦点由 open 决定', () => {
     const sidebarSrc = fs.readFileSync(
       path.join(root, 'plugins/omnimux-video/src/client/sidebar-entry.js'),
       'utf8',
@@ -110,23 +136,39 @@ test('E2E: Google Vids 中间栏主舞台与视频剪辑同屏全链路质量验
       /const opened = await workbench\.open\(\{\s*tabId:\s*'omnimux-clip:studio',\s*title:\s*'视频剪辑',\s*focus:\s*'split',\s*\}\)/,
       '点击必须 await 打开右侧视频剪辑工程并指定 split 分屏',
     )
-    // 2. 仅当返回严格为 true 时才 claim 中栏
+    // 2. 仅当返回严格为 true 且条目仍挂载时，才用宿主 layout 选中 main 面板
     assert.match(
       sidebarSrc,
-      /if \(!mounted \|\| opened !== true\) return\s*\n\s*stage\.claim\('omnimux-vids'\)/,
-      '仅当 Clip 打开成功（严格 true）且条目仍挂载时才 claim 中栏',
+      /if \(!mounted \|\| opened !== true\) return/,
+      '仅当 Clip 打开成功（严格 true）且条目仍挂载时才继续',
     )
-    // 3. 禁止再独立写 setFocus，分屏焦点只能来自 open
+    assert.match(
+      sidebarSrc,
+      /layoutHandle\.selectPanel\('omnimux-vids'\)/,
+      '成功后必须用宿主 layout 选中 omnimux-vids 面板',
+    )
+    // 3. main 插槽面板不得 claim 产品舞台：产品舞台 chrome 会隐藏会话列中的 main 面板本身
+    assert.doesNotMatch(
+      sidebarSrc,
+      /claimProductStage|stage\.claim\(|__omnimuxStage/,
+      'main 插槽面板不得 claim 产品舞台',
+    )
+    // 4. 禁止再独立写 setFocus，分屏焦点只能来自 open
     assert.doesNotMatch(
       sidebarSrc,
       /setFocus/,
       '分屏焦点必须由 open(focus) 决定，禁止再单独调用 setFocus',
     )
-    // 4. 仍需监听 dsh-product-stage 事件实现高亮自适应
+    // 5. 激活态由宿主 panelInfo 投影，不再依赖 dsh-product-stage 事件
     assert.match(
       sidebarSrc,
+      /panelInfo/,
+      '侧栏条目必须由宿主 panelInfo 投影激活态',
+    )
+    assert.doesNotMatch(
+      sidebarSrc,
       /dsh-product-stage/,
-      '侧栏条目必须监听 dsh-product-stage 事件实现高亮自适应',
+      '侧栏条目不得再依赖 dsh-product-stage 事件',
     )
   })
 
@@ -157,20 +199,20 @@ test('E2E: Google Vids 中间栏主舞台与视频剪辑同屏全链路质量验
     )
   })
 
-  await t.test('E2E-AC-5: 退出主舞台契约与会话恢复', () => {
+  await t.test('E2E-AC-5: 退出 main 面板与会话恢复', () => {
     const stageSrc = fs.readFileSync(
       path.join(root, 'plugins/omnimux-video/src/client/GoogleVidsStage.jsx'),
       'utf8',
     )
     assert.match(
       stageSrc,
-      /window\.__omnimuxStage\.release\('omnimux-vids'\)/,
-      '关闭按钮必须触发 release(omnimux-vids)',
+      /layout\.selectPanel\(null\)/,
+      '关闭按钮必须把面板选择交还宿主原生会话',
     )
-    assert.match(
+    assert.doesNotMatch(
       stageSrc,
-      /dsh-product-stage/,
-      '关闭时必须派发空舞台事件让宿主恢复会话',
+      /__omnimuxStage|release\('omnimux-vids'\)|dsh-product-stage|dshProductStage/,
+      'main 插槽面板关闭时不得操作产品舞台或派发舞台事件',
     )
   })
 })

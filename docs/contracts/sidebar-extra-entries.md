@@ -65,7 +65,7 @@ Derivation order is fixed and exclusive:
 | `[data-omnimux-explore-entry]` | `omnimux` | **探索 / Explore（rank 7.2，位于最下方，排在灵感社区之后）**。点击呼出浮动菜单，收敛全部内测版与非排除项 OmniMux 插件（11 项白名单，见 specs）。 |
 | `[data-omnimux-products-entry]` | `omnimux-products` | 产品库（收敛至「探索」菜单） |
 | `[data-omnimux-automation-entry]` | `omnimux-automation` | 自动化（收敛至「探索」菜单） |
-| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，收敛至「探索」菜单）。**中栏 Stage**：Vids 经 `shell.overlay` 注册，**不再**注册 Workbench Tab。点击先 `await workbench.open({ tabId: 'omnimux-clip:studio', focus: 'split' })` 把视频剪辑开到右侧栏，仅当返回值严格为 `true` 且条目仍挂载时才 `claim('omnimux-vids')`；失败时保持原 Stage 与焦点不变，禁止另写 `setFocus`。 |
+| `[data-omnimux-google-vids-entry]` | `omnimux-video` | Google Vids（rank 7.5，收敛至「探索」菜单）。**中栏面板**：Vids 由 `omnimux-video` 注册为官方 `main` 插槽面板（`key: 'omnimux-vids'`，manifest `target: main`），**不再**注册 Workbench Tab，**不得** claim 产品舞台。点击先 `await workbench.open({ tabId: 'omnimux-clip:studio', focus: 'split' })` 把视频剪辑开到右侧栏，仅当返回值严格为 `true` 且条目仍挂载时才 `layout.selectPanel('omnimux-vids')`；失败时保持当前面板与焦点不变，禁止另写 `setFocus`。 |
 | `[data-omnimux-publish-entry]` | `omnimux-publish` | 发布（收敛至「探索」菜单） |
 | `[data-omnimux-analytics-entry]` | `omnimux-analytics` | 数据分析（收敛至「探索」菜单） |
 | `[data-omnimux-accounts-entry]` | `omnimux-accounts` | 账号（收敛至「探索」菜单） |
@@ -154,9 +154,9 @@ MUST NOT fake a tab as a real session row (no `conversation.view`, no session da
 
 ## Independent pages
 
-**Workbench rows (normative, #318):** library / catalog / plaza / clip / canvas left-rows open a `dsh-better-sidebar` Tab via `window.__omnimuxWorkbench.open({ tabId })`. They **MUST NOT** claim `data-dsh-product-stage`. Occupants and default focus: [workbench-split.md](./workbench-split.md). Left-row `data-active` is the projection of the single activation slot (see below), never computed by the row itself, and **MUST NOT** fall back to tab presence (`isOpen`).
+**Workbench rows (normative, #318):** library / catalog / plaza / clip / canvas left-rows open a `dsh-better-sidebar` Tab via `window.__omnimuxWorkbench.open({ tabId })`. They **MUST NOT** claim `data-dsh-product-stage`. Occupants and default focus: [workbench-split.md](./workbench-split.md). Left-row `data-active` is the projection of the single activation slot (see below), never computed by the row itself, and **MUST NOT** fall back to tab presence (`isOpen`). A plugin that registers a `main` slot panel (Google Vids, `key: 'omnimux-vids'`) **MUST NOT** claim a product stage either — the product-stage chrome hides the conversation column where `main` panels render (#3165; see [workbench-split.md](./workbench-split.md)).
 
-**Overlay leftover (narrow):** Hub 登录门、（未挂载的）Apps 货架、Clip 画布节点 portal。只有这些表面仍可 `claimProductStage`；`PRODUCT_STAGE_CHROME` 只在 `html[data-dsh-product-stage]` 时藏右栏。
+**Overlay leftover (narrow):** Hub 登录门、（未挂载的）Apps 货架、Clip 画布节点 portal。只有这些表面仍可 `claimProductStage`（Google Vids 已迁至 `main` 插槽，不在此列，#3165）；`PRODUCT_STAGE_CHROME` 只在 `html[data-dsh-product-stage]` 时藏右栏。
 
 | Rule | Workbench row | Overlay leftover |
 |---|---|---|

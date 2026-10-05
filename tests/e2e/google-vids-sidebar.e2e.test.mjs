@@ -172,16 +172,28 @@ function initDOM() {
 // -------------------------------------------------------------
 console.log('【维度一：契约文档与真源审计】')
 
-await runCheck('契约审计 1.1: sidebar-extra-entries.md 已登记 Rank 7.5 与中栏 Stage 契约', () => {
+await runCheck('契约审计 1.1: sidebar-extra-entries.md 已登记 Rank 7.5 与 main 插槽面板契约', () => {
   const contractDoc = readFileSync(resolve(root, 'docs/contracts/sidebar-extra-entries.md'), 'utf-8')
   assert.ok(contractDoc.includes('[data-omnimux-google-vids-entry]'), '必须包含选择器登记')
   assert.ok(contractDoc.includes('rank 7.5'), '必须注明 rank 7.5')
   assert.ok(contractDoc.includes("tabId: 'omnimux-clip:studio'"), '必须注明先打开 Clip 右侧栏 Tab')
   assert.ok(contractDoc.includes("focus: 'split'"), '必须注明分屏焦点')
-  assert.ok(contractDoc.includes("claim('omnimux-vids')"), '必须注明成功后 claim 中栏 Stage')
-  assert.ok(contractDoc.includes('shell.overlay'), '必须注明 Vids 经 shell.overlay 注册')
+  assert.equal(
+    contractDoc.includes("selectPanel('omnimux-vids')"),
+    true,
+    '必须注明成功后经宿主 layout 选中 main 面板',
+  )
+  assert.equal(
+    contractDoc.includes("claim('omnimux-vids')"),
+    false,
+    'Vids 是 main 插槽面板，不得再写 claim 产品舞台',
+  )
+  assert.equal(
+    /google-vids[\s\S]{0,200}?shell\.overlay/.test(contractDoc),
+    false,
+    'Vids 已迁出 shell.overlay 产品舞台',
+  )
   assert.ok(contractDoc.includes('不再**注册 Workbench Tab'), '必须明确不再注册 Workbench Tab')
-  assert.doesNotMatch(contractDoc, /google-vids[\s\S]{0,200}?不得 claim/, 'Google Vids 已改为中栏 Stage，不得再写「不得 claim」')
 })
 
 await runCheck('契约审计 1.2: PRD 与 Spec 唯一真源齐备性', () => {
@@ -352,11 +364,22 @@ await runCheck('E2E 3.2: 动态国际化语言切换 (zh -> en)', () => {
   unmount()
 })
 
-await runCheck('E2E 3.3: 中栏 Stage 激活仲裁与 Clip 先行打开顺序', async () => {
+await runCheck('E2E 3.3: main 面板激活仲裁与 Clip 先行打开顺序', async () => {
   initDOM()
   let registeredRow = null
   const calls = []
-  const listeners = new Map()
+  const snapshot = { activePanelId: null }
+  const panelListeners = new Set()
+  const layout = {
+    selectPanel(id) {
+      calls.push(['selectPanel', id])
+      snapshot.activePanelId = id
+    },
+    panelInfo: {
+      getSnapshot: () => snapshot,
+      subscribe(fn) { panelListeners.add(fn); return () => panelListeners.delete(fn) },
+    },
+  }
 
   globalThis.window = {
     __omnimuxSidebar: {
@@ -366,64 +389,61 @@ await runCheck('E2E 3.3: 中栏 Stage 激活仲裁与 Clip 先行打开顺序', 
       },
     },
     __omnimuxWorkbench: {
+      layout,
       open(opts) {
         calls.push(['open', opts])
         return Promise.resolve(true)
       },
     },
-    __omnimuxStage: {
-      claim(id) { calls.push(['claim', id]) },
-    },
-    addEventListener(ev, fn) {
-      if (!listeners.has(ev)) listeners.set(ev, new Set())
-      listeners.get(ev).add(fn)
-    },
-    removeEventListener(ev, fn) {
-      listeners.get(ev)?.delete(fn)
-    },
   }
 
-  const emitStage = (value) => {
-    if (value === undefined) delete globalThis.document.documentElement.dataset.dshProductStage
-    else globalThis.document.documentElement.dataset.dshProductStage = value
-    for (const fn of listeners.get('dsh-product-stage') || []) fn()
+  const selectPanel = (value) => {
+    snapshot.activePanelId = value
+    for (const fn of panelListeners) fn()
   }
 
-  const unmount = mountSidebarEntry(null, (k) => GOOGLE_VIDS_SIDEBAR_I18N.zh[k] || k, { current: 'zh' })
+  const unmount = mountSidebarEntry(null, (k) => GOOGLE_VIDS_SIDEBAR_I18N.zh[k] || k, { current: 'zh' }, layout)
   const el = registeredRow.create()
 
-  // 初始未进入中栏
-  assert.equal(el.dataset.active, undefined, '非 Vids 中栏时不得显示激活态')
+  // 初始未进入 main 面板
+  assert.equal(el.dataset.active, undefined, '非 Vids 面板时不得显示激活态')
 
-  // 点击：必须先 await 打开 Clip 到右侧栏，成功返回 true 后才 claim 中栏
+  // 点击：必须先 await 打开 Clip 到右侧栏，成功返回 true 后才选中 main 面板
   await el.click()
   assert.deepEqual(calls, [
     ['open', { tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' }],
-    ['claim', 'omnimux-vids'],
-  ], '必须先打开 Clip 右侧栏再 claim 中栏')
+    ['selectPanel', 'omnimux-vids'],
+  ], '必须先打开 Clip 右侧栏再选中 main 面板')
   assert.equal(typeof globalThis.window.__omnimuxWorkbench.setFocus, 'undefined', '不得再独立调用 setFocus')
+  assert.equal(
+    typeof globalThis.window.__omnimuxStage,
+    'undefined',
+    'main 插槽面板不得依赖产品舞台 API',
+  )
+  assert.equal(el.dataset.active, 'true', '选中后激活态必须加上 data-active')
 
-  // 收到中栏激活广播
-  emitStage('omnimux-vids')
-  assert.equal(el.dataset.active, 'true', '激活态必须加上 data-active')
-
-  // 切到其他中栏时撤销激活
-  emitStage('omnimux-apps')
+  // 切到其他面板时撤销激活
+  selectPanel('omnimux-apps')
   assert.equal(el.dataset.active, undefined, '失活态必须删除 data-active')
+
+  selectPanel('omnimux-vids')
+  assert.equal(el.dataset.active, 'true', '回到 Vids 面板时必须恢复激活态')
 
   unmount()
 
-  // 卸载后不再响应 Stage 事件
-  emitStage('omnimux-vids')
-  assert.equal(el.dataset.active, undefined, '卸载后必须停止响应 Stage 事件')
+  // 卸载后不再响应面板选择
+  selectPanel('omnimux-apps')
+  selectPanel('omnimux-vids')
+  assert.equal(el.dataset.active, 'true', '卸载后不得再改写已冻结的激活态')
+  assert.equal(panelListeners.size, 0, '卸载必须释放 panelInfo 订阅')
 })
 
-await runCheck('E2E 3.4: 客户端 apply 生命周期只挂中栏 Overlay，不再注册 Workbench Tab', () => {
+await runCheck('E2E 3.4: 客户端 apply 生命周期只挂官方 main 插槽，不再注册 Workbench Tab', () => {
   initDOM()
   let registeredRow = null
   let boundState = null
   const registeredTabs = []
-  const overlayRegistrations = []
+  const mainSlotRegistrations = []
 
   globalThis.window = {
     __omnimuxSidebar: {
@@ -452,9 +472,9 @@ await runCheck('E2E 3.4: 客户端 apply 生命周期只挂中栏 Overlay，不�
     },
     slots: {
       inject(target, factory) {
-        assert.equal(target, 'shell.overlay', 'Vids 只能经 shell.overlay 挂中栏')
-        overlayRegistrations.push(factory())
-        return () => { overlayRegistrations.length = 0 }
+        assert.equal(target, 'main', 'Vids 只能经官方 main 插槽挂载')
+        mainSlotRegistrations.push(factory())
+        return () => { mainSlotRegistrations.length = 0 }
       },
       register(spec, component) {
         return { ...spec, component }
@@ -470,11 +490,15 @@ await runCheck('E2E 3.4: 客户端 apply 生命周期只挂中栏 Overlay，不�
   // 1. 不得再注册 Workbench Tab
   assert.deepEqual(registeredTabs, [], 'Vids 不得再注册 Workbench Tab')
 
-  // 2. 必须经 shell.overlay 注册中栏
-  assert.equal(overlayRegistrations.length, 1, '必须注册一个 shell.overlay 中栏')
-  assert.equal(overlayRegistrations[0].id, 'omnimux-vids-stage')
-  assert.equal(overlayRegistrations[0].order, 36)
-  assert.equal(typeof overlayRegistrations[0].component, 'function', '中栏组件必须是 GoogleVidsStage')
+  // 2. 必须经官方 main 插槽注册面板，且不得占用 shell.overlay 产品舞台
+  assert.equal(mainSlotRegistrations.length, 1, '必须注册一个 main 插槽面板')
+  assert.equal(mainSlotRegistrations[0].key, 'omnimux-vids')
+  assert.equal(
+    mainSlotRegistrations[0].id,
+    undefined,
+    'main 插槽面板不得再使用 omnimux-vids-stage 舞台 id',
+  )
+  assert.equal(typeof mainSlotRegistrations[0].component, 'function', '面板组件必须是 GoogleVidsStage')
 
   // 3. 侧边栏条目与 betterSidebar 绑定仍需保留（供打开 Clip 使用）
   assert.ok(registeredRow, '必须注册侧边栏 Entry')
@@ -483,7 +507,7 @@ await runCheck('E2E 3.4: 客户端 apply 生命周期只挂中栏 Overlay，不�
 
   dispose()
   assert.equal(registeredRow, null, '侧边栏条目必须被完全注销')
-  assert.equal(overlayRegistrations.length, 0, '中栏 Overlay 必须被完全注销')
+  assert.equal(mainSlotRegistrations.length, 0, 'main 插槽面板必须被完全注销')
   assert.equal(boundState, null, 'betterSidebar 绑定必须被解绑')
 })
 
