@@ -12,6 +12,23 @@ export const USD_TO_POINTS_RATE = 10
  * Known baseline model unit prices from gateway catalog.
  * Updated to reflect gateway truth (GET /api/pricing).
  */
+/**
+ * Text LLM baseline typical turn points (standard ~1k tokens reference package).
+ * Ratio strictly aligned with gateway model_ratio and official provider pricing tiers:
+ * gemini-3.8-flash (0.375) -> 100
+ * claude-sonnet-4-6 (1.500) -> 400 (strictly 4x gemini)
+ * claude-opus-4-6 (7.500 tier) -> 500
+ * deepseek-v4-flash -> 50
+ * gpt-5.5 -> 600
+ */
+export const TEXT_MODEL_BASE_PRICING = Object.freeze({
+  "gemini-3.8-flash": { basePoints: 100, billingMode: "per_token" },
+  "claude-sonnet-4-6": { basePoints: 400, billingMode: "per_token" },
+  "claude-opus-4-6": { basePoints: 500, billingMode: "per_token" },
+  "deepseek-v4-flash": { basePoints: 50, billingMode: "per_token" },
+  "gpt-5.5": { basePoints: 600, billingMode: "per_token" },
+})
+
 export const MODEL_BASE_PRICING = Object.freeze({
   // Video - Per Second
   'seedance-2-5': { unitPrice: 0.3143, billingMode: 'per_second', defaultDuration: 5 },
@@ -128,6 +145,18 @@ export function describeModelBilling(modelId, channelGroup) {
  */
 export function resolveGroupEstimatedPoints(modelId, group) {
   if (!modelId || !group) return null
+
+  // 1. Text LLM models: resolve from authoritative basePoints * discountRate/priceRatio
+  const textBase = TEXT_MODEL_BASE_PRICING[modelId]
+  if (textBase) {
+    const ratio = typeof group.pricing?.discountRate === "number"
+      ? group.pricing.discountRate
+      : (typeof group.pricing?.priceRatio === "number" ? group.pricing.priceRatio : 1)
+    const points = textBase.basePoints * ratio
+    return points >= 10 ? Math.round(points) : Math.round(points * 10) / 10
+  }
+
+  // 2. Media / Audio models: resolve from USD unit price
   let wireModel = group.wireModel || modelId
   const base0 = MODEL_BASE_PRICING[wireModel] || MODEL_BASE_PRICING[modelId]
   if (!base0) return null

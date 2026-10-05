@@ -252,7 +252,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "id": "standard",
       "label": "标准版",
       "badge": "Anthropic 官方专线",
-      "pricing": { "pointsEstimate": 1500, "discountRate": 1.0, "billingMode": "per_token" },
+      "pricing": { "pointsEstimate": 400, "discountRate": 1.0, "billingMode": "per_token" },
       "sla": { "stability24h": 98, "avgWaitTimeSec": 12 },
       "wireGroup": "default",
       "enabled": true
@@ -261,7 +261,7 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "id": "pool",
       "label": "畅享版",
       "badge": "自建集群 · 随取随用",
-      "pricing": { "pointsEstimate": 428, "discountRate": 0.2857, "billingMode": "per_token" },
+      "pricing": { "pointsEstimate": 114, "discountRate": 0.2857, "billingMode": "per_token" },
       "sla": { "stability24h": 95, "avgWaitTimeSec": 15 },
       "wireGroup": "pool",
       "enabled": true
