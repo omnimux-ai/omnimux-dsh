@@ -42,7 +42,13 @@ import {
   type RespondResult,
 } from 'omnimux-browser/src/protocol.ts'
 import type { ServerFrame } from 'omnimux-browser/src/protocol.ts'
-import { BRIDGE_CONFIG_PATH, BRIDGE_PATH, BRIDGE_COMPLETE_TEXT_METHOD } from 'omnimux-browser/src/protocol.ts'
+import {
+  BRIDGE_CONFIG_PATH,
+  BRIDGE_PATH,
+  BRIDGE_COMPLETE_TEXT_METHOD,
+  BRIDGE_EVALUATE_DECISION_METHOD,
+  BRIDGE_APPEND_COPILOT_LOG_METHOD,
+} from 'omnimux-browser/src/protocol.ts'
 import { BridgeClient, type BridgeState } from './bridge.ts'
 import { createRpc } from './rpc.ts'
 import {
@@ -1499,6 +1505,10 @@ async function startBridge(): Promise<void> {
   bridge.start(url, settings.token)
 }
 
+/** Twitter-copilot generation log ring buffer (Issue #3100). */
+const TWITTER_COPILOT_LOG_KEY = 'omnimux_twitter_copilot_log'
+const TWITTER_COPILOT_LOG_LIMIT = 100
+
 /** Gateway RPC with a helpful error when the bridge is down. */
 async function gatewayRpc(method: string, payload: unknown): Promise<unknown> {
   if (rpc === null || bridge === null || !bridge.connected) {
@@ -2567,6 +2577,41 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
         const result = await gatewayRpc(BRIDGE_COMPLETE_TEXT_METHOD, { prompt: userMessage, system: systemPrompt }) as { text?: unknown }
         if (typeof result?.text !== 'string' || !result.text.trim()) throw new Error('模型没有返回正文')
         sendResponse({ ok: true, text: result.text.trim() })
+      } catch (error) {
+        sendResponse({ ok: false, message: error instanceof Error ? error.message : String(error) })
+      }
+    })()
+    return true
+  } else if (m?.type === 'DSH_TWITTER_COPILOT_DECIDE') {
+    // Perspective decision via the hub Jev seam; the content script falls back to rules on any failure.
+    void (async () => {
+      try {
+        const result = await gatewayRpc(BRIDGE_EVALUATE_DECISION_METHOD, (m as { args?: unknown }).args) as {
+          decision?: unknown
+          confidence?: unknown
+        }
+        sendResponse({ ok: true, decision: result?.decision, confidence: result?.confidence })
+      } catch (error) {
+        sendResponse({ ok: false, message: error instanceof Error ? error.message : String(error) })
+      }
+    })()
+    return true
+  } else if (m?.type === 'DSH_TWITTER_COPILOT_LOG') {
+    const entry = (m as { entry?: unknown }).entry
+    void (async () => {
+      try {
+        const got = await chrome.storage.local.get(TWITTER_COPILOT_LOG_KEY)
+        const list = Array.isArray(got?.[TWITTER_COPILOT_LOG_KEY]) ? got[TWITTER_COPILOT_LOG_KEY] : []
+        let persisted = false
+        try {
+          await gatewayRpc(BRIDGE_APPEND_COPILOT_LOG_METHOD, entry)
+          persisted = true
+        } catch (error) {
+          console.warn('[twitter-copilot] log not persisted to host:', error)
+        }
+        const next = [...list, { ...(entry as Record<string, unknown>), persisted }].slice(-TWITTER_COPILOT_LOG_LIMIT)
+        await chrome.storage.local.set({ [TWITTER_COPILOT_LOG_KEY]: next })
+        sendResponse({ ok: true, persisted })
       } catch (error) {
         sendResponse({ ok: false, message: error instanceof Error ? error.message : String(error) })
       }

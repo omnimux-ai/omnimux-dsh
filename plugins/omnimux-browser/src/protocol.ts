@@ -54,6 +54,19 @@ export const BRIDGE_FETCH_MEDIA_METHOD = 'bridge.fetchMedia'
 export const BRIDGE_COMPLETE_TEXT_METHOD = 'bridge.completeText'
 
 /**
+ * Internal RPC: one bounded Jev choice decision (Issue #3100). The host
+ * forwards to the hub `decisions` seam; a missing seam answers
+ * `decision-unavailable` so callers fall back to local rules.
+ */
+export const BRIDGE_EVALUATE_DECISION_METHOD = 'bridge.evaluateDecision'
+
+/**
+ * Internal RPC: append one whitelisted Twitter-copilot generation record to
+ * `$DSH_HOME/omnimux-browser/twitter-copilot.ndjson` (Issue #3100).
+ */
+export const BRIDGE_APPEND_COPILOT_LOG_METHOD = 'bridge.appendCopilotLog'
+
+/**
  * Internal RPC the extension uses to save ONE confirmed page image into the
  * current host's asset library (Issue #3052).
  *

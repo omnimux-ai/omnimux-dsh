@@ -20,6 +20,50 @@ export interface TwitterContext {
   tweetUrl?: string
   /** Hot tweets extracted from feed for inspiration when draft is empty */
   feedHotTweets?: Array<{ author: string; text: string; stat?: string }>
+  /** Scored seeds behind `feedHotTweets` (empty-composer POST_NEW only) */
+  seeds?: ScoredCandidate[]
+  /** Feed tweets examined before scoring (empty-composer POST_NEW only) */
+  candidatesScanned?: number
+  /** Normalized keywords used for keyword-fit scoring */
+  keywords?: string[]
+}
+
+/** One feed tweet with its four 0–100 dimension scores and weighted total. */
+export interface ScoredCandidate {
+  author: string
+  text: string
+  replies: number
+  reposts: number
+  likes: number
+  ageHours: number
+  scores: { keyword: number; controversy: number; infoDelta: number; velocity: number }
+  total: number
+}
+
+export type PerspectiveId =
+  | 'P1_CONTRARIAN'
+  | 'P2_PRACTITIONER'
+  | 'P3_SIMPLIFIER'
+  | 'P4_ARBITRAGEUR'
+  | 'P5_OBSERVER'
+  | 'P6_PEER'
+
+export interface PerspectiveDef {
+  id: PerspectiveId
+  name: string
+  nameEn: string
+  /** One-line choice description handed to Jev */
+  choice: string
+  guidanceZh: string
+  guidanceEn: string
+}
+
+export interface PerspectiveDecision {
+  id: PerspectiveId
+  source: 'jev' | 'rules'
+  confidence?: number
+  latencyMs?: number
+  fallbackReason?: string
 }
 
 export interface CopilotMenuItem {
@@ -33,5 +77,11 @@ export interface CopilotMenuItem {
   /** Matching scenes */
   scenes: TwitterCopilotScene[]
   /** System prompt / instruction generator supporting bilingual output */
-  generatePrompt: (context: TwitterContext, locale?: 'zh' | 'en') => { systemPrompt: string; userMessage: string }
+  generatePrompt: (
+    context: TwitterContext,
+    locale?: 'zh' | 'en',
+    perspective?: PerspectiveDef,
+  ) => { systemPrompt: string; userMessage: string }
+  /** True when the item asks Jev for a perspective before generating */
+  usesPerspective?: boolean
 }

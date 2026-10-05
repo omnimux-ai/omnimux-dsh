@@ -1,0 +1,241 @@
+{
+  "home": {
+    "articles": 11,
+    "scores": [
+      {
+        "a": "HarriesSteele",
+        "len": 40,
+        "r": 0,
+        "rp": 0,
+        "l": 0,
+        "h": 0,
+        "scores": {
+          "keyword": 0,
+          "controversy": 0,
+          "infoDelta": 17,
+          "velocity": 0
+        },
+        "total": 3
+      },
+      {
+        "a": "realchendahuang",
+        "len": 134,
+        "r": 2,
+        "rp": 2,
+        "l": 21,
+        "h": 22.9,
+        "scores": {
+          "keyword": 70,
+          "controversy": 8,
+          "infoDelta": 93,
+          "velocity": 13
+        },
+        "total": 45
+      },
+      {
+        "a": "fankaishuoai",
+        "len": 156,
+        "r": 11,
+        "rp": 9,
+        "l": 71,
+        "h": 18.8,
+        "scores": {
+          "keyword": 70,
+          "controversy": 22,
+          "infoDelta": 100,
+          "velocity": 31
+        },
+        "total": 54
+      },
+      {
+        "a": "melvindvivas",
+        "len": 65,
+        "r": 40,
+        "rp": 1,
+        "l": 27,
+        "h": 2.1,
+        "scores": {
+          "keyword": 0,
+          "controversy": 81,
+          "infoDelta": 78,
+          "velocity": 61
+        },
+        "total": 52
+      },
+      {
+        "a": "MoonInAI",
+        "len": 65,
+        "r": 70,
+        "rp": 3,
+        "l": 33,
+        "h": 16.2,
+        "scores": {
+          "keyword": 0,
+          "controversy": 93,
+          "infoDelta": 44,
+          "velocity": 35
+        },
+        "total": 44
+      }
+    ],
+    "composer": "[QA桩文案] 大家都说模型越大越好，真正上线才发现，延迟和账单比效果先到。你们团队现在更怕哪一个？",
+    "postEnabled": true,
+    "messages": [
+      {
+        "type": "DSH_TWITTER_COPILOT_DECIDE",
+        "args": {
+          "state": "",
+          "choices": {
+            "P1_CONTRARIAN": "Challenge the consensus with a counter-intuitive claim; fits heated, divided discussions.",
+            "P2_PRACTITIONER": "Speak from hands-on experience with concrete numbers and failure cases; fits engineering details or benchmarks.",
+            "P3_SIMPLIFIER": "Explain a complex new tool, paper or concept with one everyday analogy; fits jargon-heavy topics.",
+            "P4_ARBITRAGEUR": "Run the numbers on cost, time and return; fits pricing, monetization or replacing human work.",
+            "P5_OBSERVER": "Step back to second-order effects: who wins, who gets replaced; fits big-company moves and industry shifts.",
+            "P6_PEER": "Talk as an equal about shared struggle and real feelings; fits burnout, anxiety or help-seeking threads."
+          },
+          "instructions": "Pick the single writing perspective most likely to earn replies for a tweet about this material. Answer with the choice key only."
+        }
+      },
+      {
+        "type": "DSH_TWITTER_COPILOT_GENERATE",
+        "systemPrompt": "你为一位有经验的推特创作者写原创推文。写一条原创推文，不总结、不复述参考推文。\n\n【写作视角：一线实战老兵】只使用素材里出现的场景、数字和结果，写清「原以为 A，实际是 B」的落差；口吻像刚处理完问题的人。没有数字就不写数字。第一句就要体现这个视角。\n\n【写作与编辑红线】你同时是一位严谨的中文母语文字编辑，成稿要自然、精炼、有真人声音。\n1. 不捏造：不添加素材里没有的数据、指标、案例、人物身份或第一人称经历；没有数据就保持概括。\n2. 保留分寸：原有的否定、限定、时间、假设和不确定性不改动，「可能」不得写成「一定」。\n3. 保护专业元素：代码、链接、技术名词、产品名保持原样。\n4. 删大词套话：不用「深入探讨、至关重要、不断演变的格局、时代画卷、赋能、闭环、底层逻辑」这类空泛词。\n5. 删假升华：不用「不仅是……更是……」「标志着……新篇章」「充分彰显了……」这类抬高语气的句式。\n6. 破机械节奏：不写三段式排比和成语堆叠；破折号只在必要的插入说明时用；少用「进行+动词」和连串的「的」。\n7. 删过渡杂质：不要开场铺垫（如「让我们来看看」）、结尾空洞展望（如「让我们拭目以待」「未来可期」）和客套话。\n8. 输出格式：只输出一条最终文案，用中文；不输出思考过程、前言、备选方案、序号、加粗星号或外层引号。\n9. 字数：控制在 45~85 个汉字，短句为主，在推特时间线上完整显示，不能半句截断。",
+        "userMessage": "当前信息流没有达到评分门槛的热帖。请围绕以下赛道原创一条推文：ai、模型、agent。",
+        "locale": "zh",
+        "context": {
+          "scene": "POST_NEW",
+          "targetTweetText": "",
+          "targetAuthor": "",
+          "draftText": "",
+          "quotedTweetText": "",
+          "quotedAuthor": "",
+          "tweetUrl": "",
+          "itemId": "ai-perspective-post"
+        }
+      },
+      {
+        "type": "DSH_TWITTER_COPILOT_LOG",
+        "entry": {
+          "traceId": "tw_1791182051494_9kp4t0",
+          "ts": "2026-10-05T06:34:11.566Z",
+          "scene": "POST_NEW",
+          "itemId": "ai-perspective-post",
+          "locale": "zh",
+          "inputMode": "PURE_ORIGINAL",
+          "keywords": [
+            "ai",
+            "模型",
+            "agent"
+          ],
+          "candidatesScanned": 5,
+          "qualifiedCount": 0,
+          "seeds": [],
+          "perspective": {
+            "id": "P2_PRACTITIONER",
+            "source": "rules",
+            "latencyMs": 0,
+            "fallbackReason": "qa stub: decision seam not wired in page-injection mode"
+          },
+          "generation": {
+            "latencyMs": 1,
+            "rawLength": 50,
+            "finalLength": 50,
+            "retried": false,
+            "humanizeViolations": []
+          },
+          "outcome": {
+            "status": "injected"
+          }
+        }
+      }
+    ]
+  },
+  "quote": {
+    "menu": [
+      "ai-perspective-post",
+      "ai-retweet",
+      "ai-quote-summary",
+      "ai-quote-debate",
+      "ai-quote-endorse"
+    ],
+    "composer": "[QA桩文案] 大家都说模型越大越好，真正上线才发现，延迟和账单比效果先到。你们团队现在更怕哪一个？",
+    "messages": [
+      {
+        "type": "DSH_TWITTER_COPILOT_DECIDE",
+        "args": {
+          "state": "Quoted tweet: 我现在玩 x 的时间其实就是 vibe coding 等模型回复时弄几个定时任务，回复几条消息，高效利用碎片时间。",
+          "choices": {
+            "P1_CONTRARIAN": "Challenge the consensus with a counter-intuitive claim; fits heated, divided discussions.",
+            "P2_PRACTITIONER": "Speak from hands-on experience with concrete numbers and failure cases; fits engineering details or benchmarks.",
+            "P3_SIMPLIFIER": "Explain a complex new tool, paper or concept with one everyday analogy; fits jargon-heavy topics.",
+            "P4_ARBITRAGEUR": "Run the numbers on cost, time and return; fits pricing, monetization or replacing human work.",
+            "P5_OBSERVER": "Step back to second-order effects: who wins, who gets replaced; fits big-company moves and industry shifts.",
+            "P6_PEER": "Talk as an equal about shared struggle and real feelings; fits burnout, anxiety or help-seeking threads."
+          },
+          "instructions": "Pick the single writing perspective most likely to earn replies for a tweet about this material. Answer with the choice key only."
+        }
+      },
+      {
+        "type": "DSH_TWITTER_COPILOT_GENERATE",
+        "systemPrompt": "你为一位有经验的推特创作者写原创推文。这是引用转发：要给出自己的角度，不复述原推。\n\n【写作视角：一线实战老兵】只使用素材里出现的场景、数字和结果，写清「原以为 A，实际是 B」的落差；口吻像刚处理完问题的人。没有数字就不写数字。第一句就要体现这个视角。\n\n【写作与编辑红线】你同时是一位严谨的中文母语文字编辑，成稿要自然、精炼、有真人声音。\n1. 不捏造：不添加素材里没有的数据、指标、案例、人物身份或第一人称经历；没有数据就保持概括。\n2. 保留分寸：原有的否定、限定、时间、假设和不确定性不改动，「可能」不得写成「一定」。\n3. 保护专业元素：代码、链接、技术名词、产品名保持原样。\n4. 删大词套话：不用「深入探讨、至关重要、不断演变的格局、时代画卷、赋能、闭环、底层逻辑」这类空泛词。\n5. 删假升华：不用「不仅是……更是……」「标志着……新篇章」「充分彰显了……」这类抬高语气的句式。\n6. 破机械节奏：不写三段式排比和成语堆叠；破折号只在必要的插入说明时用；少用「进行+动词」和连串的「的」。\n7. 删过渡杂质：不要开场铺垫（如「让我们来看看」）、结尾空洞展望（如「让我们拭目以待」「未来可期」）和客套话。\n8. 输出格式：只输出一条最终文案，用中文；不输出思考过程、前言、备选方案、序号、加粗星号或外层引号。\n9. 字数：控制在 45~85 个汉字，短句为主，在推特时间线上完整显示，不能半句截断。",
+        "userMessage": "被引用的原推内容：\n正文：我现在玩 x 的时间其实就是 vibe coding 等模型回复时弄几个定时任务，回复几条消息，高效利用碎片时间。",
+        "locale": "zh",
+        "context": {
+          "scene": "POST_QUOTE",
+          "targetTweetText": "",
+          "targetAuthor": "",
+          "draftText": "",
+          "quotedTweetText": "我现在玩 x 的时间其实就是 vibe coding 等模型回复时弄几个定时任务，回复几条消息，高效利用碎片时间。",
+          "quotedAuthor": "",
+          "tweetUrl": "",
+          "itemId": "ai-perspective-post"
+        }
+      },
+      {
+        "type": "DSH_TWITTER_COPILOT_LOG",
+        "entry": {
+          "traceId": "tw_1791182068226_7o7alj",
+          "ts": "2026-10-05T06:34:28.295Z",
+          "scene": "POST_QUOTE",
+          "itemId": "ai-perspective-post",
+          "locale": "zh",
+          "inputMode": "TARGET_TWEET",
+          "keywords": [
+            "ai",
+            "模型",
+            "agent"
+          ],
+          "candidatesScanned": 0,
+          "qualifiedCount": 0,
+          "seeds": [],
+          "perspective": {
+            "id": "P2_PRACTITIONER",
+            "source": "rules",
+            "latencyMs": 0,
+            "fallbackReason": "qa stub: decision seam not wired in page-injection mode"
+          },
+          "generation": {
+            "latencyMs": 1,
+            "rawLength": 50,
+            "finalLength": 50,
+            "retried": false,
+            "humanizeViolations": []
+          },
+          "outcome": {
+            "status": "injected"
+          }
+        }
+      }
+    ],
+    "discarded": true
+  },
+  "detail": {
+    "url": "/ai_xiaomu/status/2106762264959463662",
+    "menu": [
+      "ai-tweet-reply-high",
+      "ai-tweet-comment",
+      "ai-tweet-reply-follow",
+      "cmqolx85u000x1fbggacvllkj",
+      "twitter-reply-en"
+    ]
+  }
+}

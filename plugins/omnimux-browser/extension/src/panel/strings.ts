@@ -92,6 +92,9 @@ export interface PanelCopy {
     velocitySection: string
     velocityToggle: string
     velocityToggleHelp: string
+    copilotKeywords: string
+    copilotKeywordsPlaceholder: string
+    copilotKeywordsHelp: string
     trustedOrigins: string
     trustedOriginsHelp: string
     trustedOriginInput: string
@@ -381,6 +384,9 @@ const EN: PanelCopy = {
     velocitySection: 'X velocity badge',
     velocityToggle: 'Show the X velocity badge',
     velocityToggleHelp: 'Show velocity metrics and comment-window hints on X tweets',
+    copilotKeywords: 'Niche keywords',
+    copilotKeywordsPlaceholder: 'e.g. AI, startups, growth',
+    copilotKeywordsHelp: 'Separate with commas. Used to pick feed tweets when the composer is empty.',
     trustedOrigins: 'Always-allowed domains',
     trustedOriginsHelp: 'Trusted domains exempt from confirmation',
     trustedOriginInput: 'Domain to always trust (e.g. https://example.com or https://*.example.com)',
@@ -681,6 +687,9 @@ const ZH: PanelCopy = {
     velocitySection: 'X 爆速角标',
     velocityToggle: '显示 X 爆速角标',
     velocityToggleHelp: '在 X 推文上展示爆速指标与评论机会提示。',
+    copilotKeywords: '推特赛道关键词',
+    copilotKeywordsPlaceholder: '例如：AI、出海、增长',
+    copilotKeywordsHelp: '用逗号分隔。发帖框为空时，优先挑选与这些词相关的热帖作为灵感。',
     trustedOrigins: '永久免确认域名',
     trustedOriginsHelp: '免除操作审批的受信域名（支持通配符）',
     trustedOriginInput: '要永久信任的域名（如 https://example.com 或 https://*.example.com）',

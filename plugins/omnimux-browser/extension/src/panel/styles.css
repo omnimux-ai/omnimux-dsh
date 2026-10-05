@@ -2766,6 +2766,15 @@ textarea:focus-visible {
   line-height: 1.35;
 }
 
+.settings label.copilot-keywords > .setting-toggle-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  grid-column: 1 / -1;
+}
+
+.settings label.copilot-keywords > .setting-toggle-copy > small,
 .settings label.setting-toggle > .setting-toggle-copy > small {
   color: var(--faint);
   font-size: calc(9.5px * var(--ui-scale));

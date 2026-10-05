@@ -40,6 +40,7 @@ import {
   type FeatureFlagKey,
 } from '../feature-flags.ts'
 import { PANEL_COPY, type PanelCopy } from './strings.ts'
+import { COPILOT_KEYWORDS_STORAGE_KEY as COPILOT_KEYWORDS_KEY } from '../content/twitter-copilot/settings.ts'
 import {
   applyUiScale,
   DEFAULT_UI_SCALE,
@@ -801,6 +802,15 @@ export function App(): React.JSX.Element {
   const [fabEnabled, setFabEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.fab))
   const [mediaHoverEnabled, setMediaHoverEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.mediaHover))
   const [velocityEnabled, setVelocityEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.velocity))
+  const [copilotKeywords, setCopilotKeywords] = useState('')
+  useEffect(() => {
+    void Promise.resolve(chrome.storage?.local?.get?.(COPILOT_KEYWORDS_KEY))
+      .then((got) => {
+        const v = (got as Record<string, unknown> | undefined)?.[COPILOT_KEYWORDS_KEY]
+        if (typeof v === 'string') setCopilotKeywords(v)
+      })
+      .catch((error: unknown) => { console.warn('[panel] copilot keywords unavailable:', error) })
+  }, [])
   const [locale, setLocale] = useState<UiLocale>(() => getUiLocale())
   const copy = PANEL_COPY[locale]
   const [targetPort, setTargetPort] = useState<number>(() => {
@@ -3225,6 +3235,18 @@ export function App(): React.JSX.Element {
               onChange={(event) => updateFeatureFlag(FEATURE_FLAG.velocity, event.target.checked)}
             />
             <span className="setting-toggle-control" aria-hidden="true"><span /></span>
+          </label>
+          <label className="copilot-keywords">
+            <span className="setting-toggle-copy">
+              <strong>{copy.settings.copilotKeywords}</strong>
+              <small>{copy.settings.copilotKeywordsHelp}</small>
+            </span>
+            <input
+              value={copilotKeywords}
+              onChange={(event) => setCopilotKeywords(event.target.value)}
+              onBlur={() => { void chrome.storage?.local?.set?.({ [COPILOT_KEYWORDS_KEY]: copilotKeywords.trim() }) }}
+              placeholder={copy.settings.copilotKeywordsPlaceholder}
+            />
           </label>
         </section>
         <div className="settings-panel preference-toggles">

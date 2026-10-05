@@ -59,6 +59,7 @@ import {
 import { createProducedRegistry, type ProducedRegistry } from './produced-registry.ts'
 import { createImageAssetSaveDeps, saveImageAsset } from './image-assets.ts'
 import { isRecord, type BrowserHostApi } from './host-api.ts'
+import { appendCopilotLog } from './copilot-log.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'bridge-browser'
@@ -313,6 +314,12 @@ function mountBridge(
       if (typeof service?.execute !== 'function') throw new Error('Text completion service unavailable')
       return service.execute(request)
     },
+    evaluateDecision: async (args, { signal }) => {
+      const decisions = ctx.get('decisions') as { evaluate?: AutoModelEvaluate } | undefined
+      if (typeof decisions?.evaluate !== 'function') throw new Error('Decision service unavailable')
+      return decisions.evaluate(args, { signal })
+    },
+    appendCopilotLog: (entry) => appendCopilotLog(entry),
     setModelMode,
   })
 

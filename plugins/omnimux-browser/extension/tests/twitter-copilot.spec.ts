@@ -604,7 +604,8 @@ AIGC 现在的残酷真相是：模型能力每`
 
   it('T23: 发新帖 5 大模块双轨自适应 - 有草稿改写，无草稿从信息流热帖全新原创', () => {
     const postNewItems = COPILOT_MENU_ITEMS.filter((item) => item.scenes.includes('POST_NEW'))
-    expect(postNewItems.length).toBe(5)
+    // 5 个原有模块 + #3100「多视角爆款创作」
+    expect(postNewItems.length).toBe(6)
 
     const sampleFeedTweets = [
       { author: 'tech_insider', text: 'OpenAI 发布了全新的推理强度控制参数，实测效果惊人。', stat: '500 喜欢, 120 转发' },
