@@ -405,7 +405,7 @@ async function handleExecuteItem(
 
     if (text) {
       await injectTweetText(text, anchorButton, locale)
-      sendCopilotLog(buildCopilotLogEntry({ traceId, ctx, itemId: item.id, locale, perspective, generation, outcome: { status: 'injected' } }))
+      sendCopilotLog(buildCopilotLogEntry({ traceId, ctx, itemId: item.id, locale, perspective, seedPick, generation, outcome: { status: 'injected' } }))
     } else {
       showCopilotToast(
         locale === 'en'
@@ -413,7 +413,7 @@ async function handleExecuteItem(
           : '模型服务暂未响应，请检查 OmniMux 运行状态',
         'error',
       )
-      sendCopilotLog(buildCopilotLogEntry({ traceId, ctx, itemId: item.id, locale, perspective, generation, outcome: { status: 'failed', reason: 'empty generation' } }))
+      sendCopilotLog(buildCopilotLogEntry({ traceId, ctx, itemId: item.id, locale, perspective, seedPick, generation, outcome: { status: 'failed', reason: 'empty generation' } }))
     }
   } catch (err) {
     console.error('[OmniMux Twitter Copilot] Generation failed:', err)

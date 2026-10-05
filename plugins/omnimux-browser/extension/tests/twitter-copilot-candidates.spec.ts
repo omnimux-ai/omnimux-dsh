@@ -53,6 +53,16 @@ describe('#3100 候选池采集与评分', () => {
     expect(collectFeedCandidates(document, null, NOW, 1)).toHaveLength(1)
   })
 
+  it('AC-15 视频帖不算广告：播放器外层的 placementTracking 不排除；真广告位仍排除', () => {
+    const video = tweet({ text: LONG, author: 'video' })
+    video.insertAdjacentHTML('beforeend', '<div data-testid="placementTracking"><div data-testid="videoPlayer"><video></video></div></div>')
+    const adSlot = tweet({ text: LONG, author: 'adslot' })
+    adSlot.insertAdjacentHTML('beforeend', '<div data-testid="placementTracking"><a href="/promo">去看看</a></div>')
+    tweet({ text: LONG, author: 'labeled', promoted: true })
+    const authors = collectFeedCandidates(document, null, NOW).map((c) => c.author)
+    expect(authors).toEqual(['video'])
+  })
+
   it('读取回复/转帖/喜欢计数（支持 K 单位）', () => {
     tweet({ text: LONG, replies: 1200, reposts: 30, likes: 5 })
     document.querySelector('[data-testid="reply"]')!.setAttribute('aria-label', '1.2K 回复')
@@ -259,5 +269,15 @@ describe('#3100 决策模型挑爆款：候选与回落（AC-13）', () => {
     expect(await decideSeedPick(ctx3)).toEqual(expect.objectContaining({ source: 'rules', fallbackReason: 'bridge down' }))
 
     expect(await decideSeedPick({ scene: 'POST_NEW', draftText: '', shortlist: [] })).toEqual(undefined)
+  })
+
+  it('AC-17 成功/空结果/失败三处写日志都带挑爆款结果', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const src = readFileSync(resolve(process.cwd(), 'src/content/twitter-copilot/menu.ts'), 'utf8')
+    const calls = (src.match(/sendCopilotLog\(buildCopilotLogEntry\(\{[\s\S]*?outcome:/g) || [])
+      .filter((c) => c.includes('perspective'))
+    expect(calls.length).toEqual(3)
+    expect(calls.map((c) => c.includes('seedPick'))).toEqual([true, true, true])
   })
 })

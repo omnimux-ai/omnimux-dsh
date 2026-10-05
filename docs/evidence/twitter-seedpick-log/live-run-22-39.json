@@ -1,0 +1,15 @@
+{
+ "where": "真实浏览器 · x.com/home · 开发版扩展（主干 4b53891ea）· 点「爆款推文复刻」，未点发送，发帖框已清空",
+ "log": {
+  "inputMode": "AUTO_FEED_HOT",
+  "sourcesScanned": { "following": 12, "for_you": 12 },
+  "candidatesScanned": 24,
+  "seeds": [{ "author": "IsabellaHan_", "source": "for_you", "text": "An entire motion design video created with MiniMax H3… and the result is INSANE." }],
+  "perspective": { "id": "P2_PRACTITIONER", "source": "jev", "confidence": 0.36, "latencyMs": 519 },
+  "generation": { "finalLength": 78, "latencyMs": 15858, "humanizeViolations": [] },
+  "outcome": { "status": "injected" },
+  "seedPick": "缺失 —— 成功分支日志未传入挑爆款结果（本次修复点）"
+ },
+ "composer": "做动态图形，原以为这种成片质感得靠工作室，结果整条视频用 MiniMax H3 做成。真有点服气。工具名不重要，成片能打才重要。你还看得出制作团队的差别吗？",
+ "totalMs": 45691
+}

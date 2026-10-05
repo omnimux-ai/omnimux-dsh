@@ -42,7 +42,9 @@ function readCounter(article: Element, testId: string, labelWords: RegExp): numb
 }
 
 function isPromoted(article: Element): boolean {
-  if (article.querySelector('[data-testid="placementTracking"]')) return true
+  // 推特给每个视频播放器都包一层 placementTracking；只有不含播放器的那层才是广告位
+  const tracking = Array.from(article.querySelectorAll('[data-testid="placementTracking"]'))
+  if (tracking.some((el) => !el.querySelector('video, [data-testid="videoPlayer"], [data-testid="videoComponent"]'))) return true
   const spans = Array.from(article.querySelectorAll('span'))
   return spans.some((s) => {
     const t = (s.textContent || '').trim()
