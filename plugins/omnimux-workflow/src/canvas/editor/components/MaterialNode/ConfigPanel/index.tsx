@@ -259,7 +259,8 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const modelValue = typeof params?.model === 'string' ? params.model.trim() : '';
   const preferredOperationId = readPreferredOperationId(params as Record<string, unknown>);
   const currentInputs = nodeData.inputBindingVersion === 1;
-  const currentOperationId = currentInputs && preferredOperationId ? preferredOperationId
+  const isTextTask = outputTypeForCompat === 'text';
+  const currentOperationId = currentInputs && preferredOperationId && !isTextTask ? preferredOperationId
     : resolveSlotOperation(activeCatalog, modelValue, preferredOperationId, outputTypeForCompat, fingerprint);
   const effectiveSlotLayout = useMemo(() => currentInputs
     ? deriveSlotLayout(activeCatalog, modelValue, currentOperationId)
