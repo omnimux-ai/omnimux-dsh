@@ -128,9 +128,9 @@
         "seedance-2.0-fast"
       ],
       "upstreamWireId": "seedance-2.0-fast",
-      "requiredInAuto": false,
-      "canvasExcluded": true,
-      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
+      "requiredInAuto": true,
+      "canvasExcluded": false,
+      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。"
     },
     {
       "productId": "seedance-2-0-mini",
@@ -141,9 +141,9 @@
         "seedance-2.0-mini"
       ],
       "upstreamWireId": "seedance-2.0-mini",
-      "requiredInAuto": false,
-      "canvasExcluded": true,
-      "note": "2026-09-15: 网关生产基线已下架收敛，仅登记保留元数据映射，不开放访问。"
+      "requiredInAuto": true,
+      "canvasExcluded": false,
+      "note": "2026-10-05: 以当前映射契约真机验证通过（文生视频 / 首帧 / 全能参考），操作升格为 listed 并加入画布准入（#3152）。此前「下架收敛」记录已失效。"
     },
     {
       "productId": "seedance-2-5",

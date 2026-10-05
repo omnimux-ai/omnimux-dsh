@@ -107,7 +107,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 31, 'H2 lists evidence-backed ops'); // #3148 seedream-5-0-pro 文生图与垫图真机验证后上架 +2 → 31（#3138 为 29）
+  assert.equal(cov.listedOperationCount, 37, 'H2 lists evidence-backed ops'); // #3152 seedance-2-0-fast/-mini 三操作真机验证后上架 +6 → 37（#3148 为 31）
   assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-0#text_to_video'));
   assert.ok(cov.listedOperations.includes('minimax-h3#text_to_video'));
@@ -157,7 +157,7 @@ test('verifyContracts: audit ok; strict ok once 81 dispositions resolve', () => 
   assert.equal(strict.dispositions.total, 82);
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 31); // #3148 seedream-5-0-pro 文生图与垫图真机验证后上架 +2 → 31（#3138 为 29）
+  assert.equal(strict.listedOperations.length, 37); // #3152 seedance-2-0-fast/-mini 三操作真机验证后上架 +6 → 37（#3148 为 31）
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 12);
   for (const id of strict.dispositions.forbiddenListed) {

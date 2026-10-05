@@ -84,6 +84,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.deepEqual(catalog.video.map((row) => row.id), [
       'minimax-h3',
       'seedance-2-0',
+      'seedance-2-0-fast',
+      'seedance-2-0-mini',
       'seedance-2-5',
     ])
     assert.deepEqual(catalog.audio.map((row) => row.id), [

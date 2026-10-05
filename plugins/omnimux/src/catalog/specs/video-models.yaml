@@ -23,6 +23,11 @@ models:
     operations:
       - id: text_to_video
         label: 文生视频
+        research:
+          status: verified
+          docUrl: docs/evidence/2026-10-05-model-seedance-2-0-fast-text_to_video.md
+          verifiedAt: 2026-10-05
+          notes: 本操作以当前映射契约真机最小生成通过（live，终态 success，产物字节 > 0）；一操作一文件，同族 SKU 不互背书
         output:
           type: video
           allowedMimes:
@@ -42,6 +47,11 @@ models:
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
       - id: first_frame
         label: 首帧
+        research:
+          status: verified
+          docUrl: docs/evidence/2026-10-05-model-seedance-2-0-fast-first_frame.md
+          verifiedAt: 2026-10-05
+          notes: 本操作以当前映射契约真机最小生成通过（live，终态 success，产物字节 > 0）；一操作一文件，同族 SKU 不互背书
         output:
           type: video
           allowedMimes:
@@ -102,6 +112,11 @@ models:
               url: https://docs.apimart.ai/en/api-reference/videos/seedance-2-0/generation.md
       - id: video_multi_ref
         label: 全能参考
+        research:
+          status: verified
+          docUrl: docs/evidence/2026-10-05-model-seedance-2-0-fast-video_multi_ref.md
+          verifiedAt: 2026-10-05
+          notes: 本操作以当前映射契约真机最小生成通过（live，终态 success，产物字节 > 0）；一操作一文件，同族 SKU 不互背书
         output:
           type: video
           allowedMimes:
@@ -235,6 +250,11 @@ models:
     operations:
       - id: text_to_video
         label: 文生视频
+        research:
+          status: verified
+          docUrl: docs/evidence/2026-10-05-model-seedance-2-0-mini-text_to_video.md
+          verifiedAt: 2026-10-05
+          notes: 本操作以当前映射契约真机最小生成通过（live，终态 success，产物字节 > 0）；一操作一文件，同族 SKU 不互背书
         output:
           type: video
           allowedMimes:
@@ -254,6 +274,11 @@ models:
           notes: 保留既有历史真实执行证据；本轮未新增真实请求
       - id: first_frame
         label: 首帧
+        research:
+          status: verified
+          docUrl: docs/evidence/2026-10-05-model-seedance-2-0-mini-first_frame.md
+          verifiedAt: 2026-10-05
+          notes: 本操作以当前映射契约真机最小生成通过（live，终态 success，产物字节 > 0）；一操作一文件，同族 SKU 不互背书
         output:
           type: video
           allowedMimes:
@@ -314,6 +339,11 @@ models:
               url: https://docs.apimart.ai/en/api-reference/videos/seedance-2-0/generation.md
       - id: video_multi_ref
         label: 全能参考
+        research:
+          status: verified
+          docUrl: docs/evidence/2026-10-05-model-seedance-2-0-mini-video_multi_ref.md
+          verifiedAt: 2026-10-05
+          notes: 本操作以当前映射契约真机最小生成通过（live，终态 success，产物字节 > 0）；一操作一文件，同族 SKU 不互背书
         output:
           type: video
           allowedMimes:

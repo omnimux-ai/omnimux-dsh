@@ -168,8 +168,10 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
   assert.deepEqual(dto.video.map((r) => r.id), [
     'minimax-h3',
     'seedance-2-0',
+    'seedance-2-0-fast',
+    'seedance-2-0-mini',
     'seedance-2-5',
-  ]);
+  ]); // #3152 seedance-2-0-fast/-mini 上架 +2
   assert.deepEqual(dto.audio.map((row) => row.id), ['gemini-3.8-flash-tts', 'indextts-2', 'seed-audio-1.0']); // #3063 indextts-2 声音克隆
   // Text bucket includes implementation-ready models without requiring live history.
   assert.deepEqual(dto.text.map((r) => r.id), [
@@ -291,5 +293,5 @@ test('visibleOps only surfaces listed ops', () => {
     visibleOps(seedance).map((op) => op.id),
     ['text_to_video', 'first_frame', 'first_last_frame', 'video_multi_ref'],
   );
-  assert.equal(projectKindRows(index, 'video').length, 3);
+  assert.equal(projectKindRows(index, 'video').length, 5); // #3152 seedance-2-0-fast/-mini 上架 +2 → 5
 });
