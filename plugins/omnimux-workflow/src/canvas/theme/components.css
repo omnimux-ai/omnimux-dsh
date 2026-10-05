@@ -4620,7 +4620,9 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 }
 
 .wf-hover-inspector-preview {
-  height: 140px;
+  /* 宽高由 HoverInspector 按原素材比例内联设置，这里只保底布局。 */
+  max-width: 360px;
+  max-height: 360px;
   background: var(--wb-pill-bg);
   position: relative;
   overflow: hidden;
@@ -4632,7 +4634,8 @@ body[data-ds-dark-theme] .wf-canvas-root .wf-edge-disconnect__button:focus-visib
 .wf-hover-inspector-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  display: block;
 }
 
 .wf-hover-inspector-placeholder {

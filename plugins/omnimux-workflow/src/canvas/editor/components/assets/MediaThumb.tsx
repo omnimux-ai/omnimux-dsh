@@ -10,6 +10,8 @@ export interface MediaThumbProps {
   className?: string;
   /** 非图片/视频素材的呈现（调用方的类型图标）。 */
   fallback?: React.ReactNode;
+  /** 媒体自然尺寸就绪时回调（图片 onLoad / 视频 onLoadedMetadata）。 */
+  onNaturalSize?: (width: number, height: number) => void;
 }
 
 /**
@@ -22,6 +24,7 @@ export const MediaThumb: React.FC<MediaThumbProps> = ({
   alt,
   className,
   fallback = null,
+  onNaturalSize,
 }) => {
   const href = typeof url === 'string' ? url.trim() : '';
   const mode = resolveThumbMode(kind, href);
@@ -40,10 +43,25 @@ export const MediaThumb: React.FC<MediaThumbProps> = ({
         onLoadedMetadata={(event) => {
           const el = event.currentTarget;
           if (el.readyState >= 1 && el.currentTime <= 0.05) el.currentTime = 0.1;
+          if (el.videoWidth > 0 && el.videoHeight > 0) {
+            onNaturalSize?.(el.videoWidth, el.videoHeight);
+          }
         }}
       />
     );
   }
 
-  return <img className={className} src={href} alt={alt} />;
+  return (
+    <img
+      className={className}
+      src={href}
+      alt={alt}
+      onLoad={(event) => {
+        const el = event.currentTarget;
+        if (el.naturalWidth > 0 && el.naturalHeight > 0) {
+          onNaturalSize?.(el.naturalWidth, el.naturalHeight);
+        }
+      }}
+    />
+  );
 };

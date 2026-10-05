@@ -77,10 +77,11 @@ test('E2E: 资产抽屉缩略图按媒体类型分派（Issue #3107）', async (
       '视频缩略图必须在元数据就绪后定位到首帧',
     );
     assert.equal(
-      /<img className=\{className\} src=\{href\} alt=\{alt\} \/>/.test(mediaThumb),
+      /<img[\s\S]*?src=\{href\}[\s\S]*?alt=\{alt\}/.test(mediaThumb),
       true,
       '图片分支仍渲染 <img>',
     );
+    assert.equal(/onLoad=\{/.test(mediaThumb), true, '图片分支应上报自然尺寸');
   });
 
   await t.test('纯函数分派：地址扩展名优先，声明类型兜底', () => {
@@ -103,9 +104,9 @@ test('E2E: 资产抽屉缩略图按媒体类型分派（Issue #3107）', async (
       '列表行缩略图类必须自带尺寸与裁切，video 沿用同一类',
     );
     assert.equal(
-      /\.wf-hover-inspector-img\s*\{[^}]*object-fit:\s*cover;/.test(css),
+      /\.wf-hover-inspector-img\s*\{[^}]*object-fit:\s*contain;/.test(css),
       true,
-      '悬停预览图类必须自带尺寸与裁切，video 沿用同一类',
+      '悬停预览图类必须完整呈现（contain），video 沿用同一类',
     );
   });
 });
