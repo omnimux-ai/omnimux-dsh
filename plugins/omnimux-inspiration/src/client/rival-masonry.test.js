@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   rivalWrapLines,
+  RIVAL_GLYPH_WIDTH_FACTOR,
   RIVAL_DEFAULT_IMAGE_RATIO,
   RIVAL_GAP,
   RIVAL_IMAGE_RATIO_MAX,
@@ -379,11 +380,16 @@ describe('rival-masonry — R4 词边界换行模型（复审 ②）', () => {
 
   it('超行宽单词占 1 行不折行（overflow:hidden 截断行为）', () => {
     const url = 'https://x.com/someone/status/1234567890?ref_src=twsrc%5Etfw%7Ctwcamp'
-    // 77 个 ASCII 字符（无连字符）≈ 590px ≫ 194px 行宽：CSS 不折词，一行截断。
-    assert.equal(rivalWrapLines(url, 14, 194), 1)
+    // 77 个 ASCII 字符（无连字符）≈ 590px ≫ 194px 行宽：CSS 不折词。
+    // R7-① 修正断言：'?' 是 EX 断后码位，Chrome 实测此串 2 行（在 '?' 后
+    // 断出 "ef_src=…" 一行）——1 行期望建立在「无断后码位」的旧模型上。
+    assert.equal(rivalWrapLines(url, 14, 194), 2)
+    // 对照：不含断后码位的纯长词仍 1 行截断。
+    const plain = 'https://x.com/someone/status/1234567890/extra/segment/path'
+    assert.equal(rivalWrapLines(plain, 14, 194), 1)
     const h = rivalCardHeightPx({ card_type: 'text-media', media_kind: 'video', title: url }, 220)
-    assert.ok(Math.abs(h - (24 + 1 * 20 + 10 + (220 - 26) / (16 / 9) + 2)) < 1e-9,
-      `one-line clamp, got ${h}`)
+    assert.ok(Math.abs(h - (24 + 2 * 20 + 10 + (220 - 26) / (16 / 9) + 2)) < 1e-9,
+      `two-line estimate after EX break, got ${h}`)
   })
 
   it('中文正文仍是逐字可断（回归：既有中文夹具结果不变）', () => {
@@ -402,8 +408,9 @@ describe('rival-masonry — R4 词边界换行模型（复审 ②）', () => {
 describe('rival-masonry — R5 连字符断行与不换行空格（复审 ④⑤）', () => {
   it('连字符后可断行：6 段连字符长词不再按一个不可断词估算', () => {
     // UAX#14：浏览器在 '-' 之后可断行。把整串当一个不可断词会严重少算行数
-    // （QA 41 卡夹具 w1 实测：连字符模型 5 行、Chrome 4 行；按整词不可断的
-    // 旧模型估算 1 行会被 144px 下限吞掉 —— R6 注释修正，数字可复现）。
+    // （QA 41 卡夹具 w1 在 194px 行宽实测：连字符模型 5 行、Chrome 4 行；
+    // 旧整词模型估算 1 行会被 144px 下限吞掉——F-1：此处「整词模型 1 行 /
+    // 生产 196px 实测 4 行」的旧注释数字不可复现，已按 194px 口径改写）。
     const word = 'state-of-the-art-video-pipeline-for-vfx-shot-generation-workflow'
     const lines = rivalWrapLines(word, 14, 194)
     assert.ok(lines >= 2, `hyphenated word must be allowed to break after '-', got ${lines}`)
@@ -484,5 +491,162 @@ describe('rival-masonry — R4 媒体卡最小高度下限（复审 ③）', () 
     const h = rivalCardHeightPx({ card_type: 'image', ratio: 1.91, title: 'x' }, 190)
     assert.ok(h >= RIVAL_MIN_CARD_HEIGHT, `media card must respect the 144px floor, got ${h}`)
     assert.equal(h, RIVAL_MIN_CARD_HEIGHT)
+  })
+})
+
+/* --------------------------- R7：判据迁入套件 + 锁表 --------------------------- */
+
+describe('rival-masonry — R7 断行判据迁入套件（QA Q1/Q4 阻塞）', () => {
+  // 判据与实现解耦：本清单按 UAX#14 类表（官方 LineBreak.txt）枚举，
+  // 不是照模型自身的断行集合挑的——QA 第 5 轮的教训正是「判据只活在外部
+  // 脚本且码位清单不含 ?」，导致 EX 缺口零鉴别力。Chrome 实测行为见
+  // harness/codepoint-probe.mjs 与 R7 报告（qa5-sy-probe / r7 探针输出）。
+  //
+  // 逐码位探针法（与 Chrome 对照同一口径）：等长词窄行 → 可断分隔符给
+  // 多行，粘住给 1 行。
+
+  it('UAX#14 EX 断后机会：? 及同类叹问号后允许断行（Q1 红证据）', () => {
+    // QA 定点实验：Chrome 在 URL 查询串 '?' 之后断行（lines-dump 逐行原文
+    // "…/cinematic?" 行尾），'?' 换成 '/'、'+' 不换、换成 '-' 换 →
+    // 断点在 EX 不在字符形态。'!' 是 Chrome 对 UAX#14 的定制（不断），见下条。
+    const EX_BREAK_AFTER = ['003f', '05c6', '061b', '061f', '06d4', '07f9',
+      '1945', '2762', '2cf9', '2cfe', '2e2e', '2e53', 'a60e', 'fe56']
+    for (const hex of EX_BREAK_AFTER) {
+      const sep = String.fromCodePoint(parseInt(hex, 16))
+      const text = `aa${sep}bbbbbbbb`
+      const lines = rivalWrapLines(text, 14, 60)
+      assert.ok(lines >= 2, `U+${hex.toUpperCase()} (EX) must allow a break AFTER it — got ${lines} (Chrome 实测 2 行)`)
+    }
+  })
+
+  it('UAX#14 HH / HY / B2 连字符族断后机会（含 QA 漏码位清单）', () => {
+    // QA/OCR 第 5 轮清单：00AD 058A 05BE 1400 2E17 2E40 2013 2014——其中
+    // 00AD/058A/05BE/1400/2E17/2E40 在官方 LineBreak.txt 属 HH（hyphen）、
+    // 2014 属 B2、2013 属 BA；HH/B2 与 HY(002D)/2010 同为「断后」语义，
+    // Chrome 对整族实测均断（R7 探针 8/8）。
+    const HYPHEN_AFTER = {
+      HH: ['00ad', '058a', '05be', '1400', '2010', '2e17', '2e40'],
+      HY: ['002d'],
+      B2: ['2014'],
+    }
+    for (const [cls, list] of Object.entries(HYPHEN_AFTER)) {
+      for (const hex of list) {
+        const sep = String.fromCodePoint(parseInt(hex, 16))
+        const text = `aa${sep}bbbbbbbb`
+        const lines = rivalWrapLines(text, 14, 60)
+        assert.ok(lines >= 2, `U+${hex.toUpperCase()} (${cls}) must allow a break after — got ${lines}`)
+      }
+    }
+  })
+
+  it('UAX#14 BA 非空格码位断后机会（官方 LineBreak.txt 全枚举，≤BMP）', () => {
+    // 断行集合漏掉的 BA：竖线、各文字 danda/节标点、连字符点等——按类表全
+    // 枚举而不是手选「像空格」的码位。空格族（1680/2000-200A/205F/3000/0009）
+    // 已由 R6 用例覆盖，这里钉「词内」成员。
+    const BA_AFTER = ['007c', '0964', '0965', '0e5a', '0e5b', '0f0b', '0f34',
+      '0f7f', '0f85', '0fbe', '0fbf', '0fd2', '104a', '104b', '1361', '16eb',
+      '16ec', '16ed', '1735', '1736', '17d4', '17d5', '17d8', '17da', '1804',
+      '1805', '1b4e', '1b4f', '1b5a', '1b5b', '1b5d', '1b5e', '1b5f', '1b60',
+      '1b7d', '1b7e', '1b7f', '1c3b', '1c3c', '1c3d', '1c3e', '1c3f', '1c7e',
+      '1c7f', '2012', '2013', '2027', '2056', '2058', '2059', '205a', '205b',
+      '205d', '205e', '2800', '2cfa', '2cfb', '2cfc', '2cff', '2d70', '2e0e',
+      '2e0f', '2e10', '2e11', '2e12', '2e13', '2e14', '2e15', '2e19', '2e2a',
+      '2e2b', '2e2c', '2e2d', '2e30', '2e31', '2e33', '2e34', '2e3c', '2e3d',
+      '2e3e', '2e41', '2e43', '2e44', '2e45', '2e46', '2e47', '2e48', '2e49',
+      '2e4a', '2e4c', '2e4e', '2e4f', 'a4fe', 'a4ff', 'a60d', 'a60f', 'a6f3',
+      'a6f4', 'a6f5', 'a6f6', 'a6f7', 'a8ce', 'a8cf', 'a92e', 'a92f', 'a9c7',
+      'a9c8', 'a9c9', 'a9cf', 'aa40', 'aa41', 'aa42', 'aa44', 'aa45', 'aa46',
+      'aa47', 'aa48', 'aa49', 'aa4a', 'aa4b', 'aa5d', 'aa5e', 'aa5f', 'aaf0',
+      'aaf1', 'abeb']
+    for (const hex of BA_AFTER) {
+      const sep = String.fromCodePoint(parseInt(hex, 16))
+      const text = `aa${sep}bbbbbbbb`
+      const lines = rivalWrapLines(text, 14, 60)
+      assert.ok(lines >= 2, `U+${hex.toUpperCase()} (BA) must allow a break after — got ${lines}`)
+    }
+  })
+
+  it('UAX#14 BK/ZW 保持可断；U+000C 对齐 Chrome 实测（不断行，Q2）', () => {
+    // BK 的 {000B,000C} 是规范上的强制换行，但 Chrome 对 VT/FF 实测均不断行
+    //（R7 探针 chrome=1）——模型按真机不按规范名头。2028/2029 的 Chrome 行为
+    // 是断行机会（R6 已钉）。ZW=200B。
+    const words = ['alpha', 'bravo', 'charlie', 'delta', 'echo']
+    const ls = String.fromCodePoint(0x2028)
+    const ps = String.fromCodePoint(0x2029)
+    const zw = String.fromCodePoint(0x200b)
+    assert.ok(rivalWrapLines(words.join(ls), 14, 130) >= 2, 'U+2028 keeps break')
+    assert.ok(rivalWrapLines(words.join(ps), 14, 130) >= 2, 'U+2029 keeps break')
+    assert.ok(rivalWrapLines(words.join(zw), 14, 130) >= 2, 'U+200B ZW keeps break')
+    const ff = String.fromCodePoint(0x000c)
+    assert.equal(rivalWrapLines(`aaa${ff}bbb`, 14, 60), 1, 'U+000C form feed: Chrome 实测不断行，模型必须一致')
+    const vt = String.fromCodePoint(0x000b)
+    assert.equal(rivalWrapLines(`aaa${vt}bbb`, 14, 60), 1, 'U+000B vertical tab stays glued')
+  })
+
+  it('UAX#14 GL/WJ 不并入断后集合：NBSP/NNBSP/FIGURE/2011/180E/WJ 不断', () => {
+    const NO_BREAK = ['00a0', '202f', '2007', '2011', '180e', '2060', 'feff']
+    for (const hex of NO_BREAK) {
+      const sep = String.fromCodePoint(parseInt(hex, 16))
+      const text = `aaa${sep}bbb`
+      assert.equal(rivalWrapLines(text, 14, 60), 1, `U+${hex.toUpperCase()} must stay glued, got a break`)
+    }
+  })
+
+  it('U+0021 是 Chrome 对 UAX#14 的定制：不断后（红绿边界钉住防误加）', () => {
+    // UAX#14 把 '!' 与 '?' 同列 EX，但 Chrome 实测 '!' 之后不断行（词中上下文
+    // 与 5 词窄行两种探针均 chrome=1）；QA 报告注明其 '!'/EX 推断未真机实证。
+    // 本断言把真机口径钉死：模型不得对 '!' 加断后，否则方向性高估。
+    assert.equal(rivalWrapLines('aa!bbbbbbbb', 14, 60), 1, "U+0021: Chrome 不断后，模型不得按 EX 断（规范/真机分歧已登记）")
+    // 对照：? 断后，证明同表兄弟类的行为不是「整类不做」。
+    assert.ok(rivalWrapLines('aa?bbbbbbbb', 14, 60) >= 2)
+  })
+
+  it('生产形态回归：含 ? 的 text-media 正文按 EX 断后多算 1 行（QA qa39 复现）', () => {
+    // QA 64 卡夹具 qa39：194px 正文宽下 Chrome 3 行、缺 EX 模型 2 行 →
+    // 卡面矮 20px → 同列 4px 重叠。判据是行数，不写死高度数值。
+    const title = 'Read more: https://example.com/interpolation/benchmark/cinematic?ref=qa'
+    const lines = rivalWrapLines(title, 14, 194)
+    assert.equal(lines, 3, `Chrome 实测 3 行（? 后断出 "ref=qa" 一行），got ${lines}`)
+  })
+})
+
+describe('rival-masonry — R7 逐字形字宽表锁表断言（QA Q3 阻塞）', () => {
+  // 前提（QA Q3 + 代码复审 B-4）：表值来自 Chrome canvas.measureText，
+  // 字体为 SF Pro / -apple-system 14px——与 rival-styles 显式声明的字体栈
+  //（同 build-demo.mjs --font-family）一致。换字体族须用 codepoint-probe.mjs
+  // 重新标定；表外 ASCII 回落 ASCII_WIDTH_FACTOR，>0x2E7F 按整宽。
+  // 锁表 = 断言表内代表值与统一系数 0.592 显著不同，使「整体退回 0.592」
+  // 立即变红。
+  const EXPECT = {
+    '1': 0.453, 'i': 0.236, 'l': 0.242, 'f': 0.351, 'r': 0.370,
+    'a': 0.541, 'e': 0.561, 'w': 0.764, 'm': 0.859, 'A': 0.663,
+    'M': 0.863, 'W': 0.957, '0': 0.619, '?': 0.502, '#': 0.619,
+    '@': 0.907, '/': 0.294, ' ': 0.271,
+  }
+  it('GLYPH_WIDTH_FACTOR 表内代表字形逐项钉住（SF Pro 14px 标定值）', () => {
+    assert.ok(RIVAL_GLYPH_WIDTH_FACTOR, 'width table must be exported for the suite')
+    for (const [ch, factor] of Object.entries(EXPECT)) {
+      assert.equal(RIVAL_GLYPH_WIDTH_FACTOR[ch], factor, `glyph ${JSON.stringify(ch)} factor changed — SF Pro 14px calibrated value`)
+      // 方向性断言：逐字形必须显著不同于统一系数 0.592 才有存在意义
+      //（窄字符 i/l/f/r 与宽字符 m/w/@/W）。
+      if (['i', 'l', 'f', 'r', 'w', 'm', '@', 'W'].includes(ch)) {
+        assert.ok(Math.abs(factor - 0.592) > 0.05, `glyph ${ch} would be invisible to a uniform-0.592 regression`)
+      }
+    }
+  })
+  it('逐字形宽度在行数层可分辨：窄词与宽词不同宽（退回 0.592 变红）', () => {
+    // 8 对 'ii'：逐字形词宽 2×0.236·14 = 6.6px、'ww' = 21.4px；窄行 60px
+    // 下窄词对 2 行、宽词对更多——统一 0.592 下两者词宽同为 16.6px，行数
+    // 差消失。退回统一系数必然变红。
+    const narrow = rivalWrapLines('ii ii ii ii ii ii ii ii', 14, 60)
+    const wide = rivalWrapLines('ww ww ww ww ww ww ww ww', 14, 60)
+    assert.ok(wide > narrow, `per-glyph widths must rank 'w' wider than 'i' (narrow=${narrow} wide=${wide})`)
+    assert.equal(narrow, 2, `narrow glyph rows: got ${narrow} (uniform 0.592 would give 3+)`)
+  })
+  it('表外回落语义钉住：未覆盖 ASCII → 0.592；>0x2E7F → 整宽；已知偏差边界', () => {
+    // DEL(0x7F) 未在表内 → 统一系数且不断行；边界已登记（复审 F-2/Q6）：
+    // 非 ASCII 回落系数在 ZWJ/2011 等码位与真机最大偏差 −5.15px（低估
+    // 方向），列为已知偏差，不改模型。
+    assert.equal(rivalWrapLines('aa\x7fbbbbbbbb', 14, 60), 1, 'DEL falls back to the uniform factor and stays glued')
   })
 })

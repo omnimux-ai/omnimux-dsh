@@ -437,11 +437,17 @@ export const RIVAL_CSS = `
   margin-top: 10px;
 }
 
-/* 标题/正文字阶：媒体类标题 13/18/500；文本类正文 14/20/400（§9.1） */
+/* 标题/正文字阶：媒体类标题 13/18/500；文本类正文 14/20/400（§9.1）。
+   font-family 显式声明（R7-④）：估算层的逐字形字宽表按 SF Pro /
+   -apple-system 14px 标定，不显式声明会继承宿主字体、行数判据失准；
+   栈与 build-demo.mjs --font-family、dsh-ui-kit GenWaveCard 同一约定。 */
 .omnimux-rival-card-title-zone {
   padding: 10px 12px 12px;
 }
 .omnimux-rival-card-title {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Source Han Sans SC",
+    sans-serif;
   font-size: 13px;
   line-height: 18px;
   font-weight: 500;
@@ -451,6 +457,9 @@ export const RIVAL_CSS = `
   -webkit-box-orient: vertical;
 }
 .omnimux-rival-card-text {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Source Han Sans SC",
+    sans-serif;
   font-size: 14px;
   line-height: 20px;
   font-weight: 400;
@@ -653,7 +662,11 @@ export const RIVAL_CSS = `
 }
 
 .omnimux-rival-overlay-metrics {
-  display: inline-flex;
+  /* R7-⑦（PM M3）：display:inline-flex 时 text-overflow:ellipsis 不作用于
+     单文本节点（flex 项不是行内内容）——实测省略号死声明、文本被裸切
+     （scroll 293 vs client 202）。改回行内块级收缩包裹 + min-width:0 等效
+     约束，省略号才真正落地。 */
+  display: inline-block;
   align-self: flex-start;
   max-width: 100%;
   padding: 4px 8px;
@@ -690,9 +703,19 @@ export const RIVAL_CSS = `
   white-space: nowrap;
   /* R6-③：220px 最小列宽下英文文案（"AI breakdown" clientWidth 62 /
      scrollWidth 74）会溢出按钮框并与第四位状态槽重叠 5.2px —— nowrap
-     必须配溢出隐藏。 */
+     必须配溢出隐藏。overflow:hidden 留按钮级兜底；
+     text-overflow 在本级是死声明（kit Button 是 display:flex、文案在
+     子元素 <span class="…label"> 内，text-overflow 只作用于块容器
+     自己的行内内容，触达不到 label）——省略号契约挂在下方 span 上。 */
+  overflow: hidden;
+}
+/* R7-⑥：省略号挂到真正拥有文本的元素（kit Button 的 label span；
+   :not(.omnimux-rival-vh) 排除 aria-describedby 的可视隐藏说明节点）。 */
+.omnimux-rival-act-btn > span:not(.omnimux-rival-vh) {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .on-media .omnimux-rival-act-btn {
   border-color: var(--dsw-specific-media-border);
@@ -752,14 +775,14 @@ export const RIVAL_CSS = `
   background: var(--dsw-specific-media-fg);
   color: var(--dsw-specific-media-ink);
 }
-.on-media .omnimux-rival-act-primary:hover {
+.on-media .omnimux-rival-act-primary:hover:not(:disabled) {
   background: var(--dsw-specific-media-fg-strong);
 }
 .on-surface .omnimux-rival-act-primary {
   background: var(--dsw-alias-label-primary);
   color: var(--dsw-alias-bg-base);
 }
-.on-surface .omnimux-rival-act-primary:hover {
+.on-surface .omnimux-rival-act-primary:hover:not(:disabled) {
   opacity: .88;
 }
 `

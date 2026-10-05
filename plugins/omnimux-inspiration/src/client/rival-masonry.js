@@ -59,14 +59,19 @@ const TITLE_MAX_LINES = 2
 /** 西文/数字按半宽折算的兜底系数——真机标定（14px 正文实测：均宽 8.284px）。 */
 const ASCII_WIDTH_FACTOR = 0.592
 /**
- * 逐字形实测宽度表（单位系数 = 字宽 ÷ 14px）。QA 逐卡审计证明「同一断行
+ * 逐字形实测宽度表（单位系数 = 字宽 ÷ 14px），导出供套件锁表断言。
+ * 字体前提（R7-④/QA B-4）：表值按 SF Pro / -apple-system 14px 标定，
+ * 仅在渲染侧用同一字体栈（.omnimux-rival-card-text/.omnimux-rival-card-title
+ * 显式声明的 --font-family 栈）时有效；换字体族必须用
+ * harness/codepoint-probe.mjs 重新标定——同批字形在 generic sans 偏
+ * 0.87px/字、Courier 5.1px/字，足以翻转行数。QA 逐卡审计证明「同一断行
  * 规则 + measureText 真实宽度」的行数误差全部 ≤1 行，而统一系数在
  * '#' + 短词、长 URL、全小写长词上系统性失准（e1/w12 少算 3–5 行、
  * w11 多算 4 行）。表值来自 Chrome canvas.measureText（SF Pro 14px），
  * 随 unitPx 线性缩放；表外字符回落 ASCII_WIDTH_FACTOR。
  * 重新标定命令见 harness/codepoint-probe.mjs（同页附逐字形测量）。
  */
-const GLYPH_WIDTH_FACTOR = {
+export const RIVAL_GLYPH_WIDTH_FACTOR = {
   ' ': 0.271, '!': 0.300, '"': 0.467, '#': 0.619, '$': 0.619, '%': 0.915,
   '&': 0.701, "'": 0.286, '(': 0.371, ')': 0.371, '*': 0.461, '+': 0.619,
   ',': 0.286, '-': 0.461, '.': 0.286, '/': 0.294, ':': 0.286, ';': 0.286,
@@ -112,6 +117,55 @@ const SPACE_FACTOR = {
   0x2007: 0.619,
 }
 
+
+/**
+ * UAX#14「断后」码位全集（词内可断后）：官方 LineBreak.txt 按类枚举——
+ *   EX（叹问号族，Chrome 定制除外 0x0021：真机实测 '!' 之后不断行，
+ *     与 '?' 同类不同行为，QA Q1 的定点实验证实 '?' 断 '!' 不断）；
+ *   HH/HY/B2（连字符族：002D、2010、00AD、058A、05BE、1400、2013 属 BA、
+ *     2014 属 B2、2E17、2E40、2E3A、2E3B、2E5D、10D6E、10EAD）；
+ *   BA 非空格成员（danda/节标点/竖线/断点符号：007C、0964…、2027、2800、
+ *     2E0E–2E4F 子集、各文字分隔符，含 astral 面码位）。
+ * BA 空格成员（1680/2000–2006/2008–200A/205F/3000）与 0009 不在这里——
+ * 它们走前面的空格原子分支，宽度按 SPACE_FACTOR 计。
+ * 集合按「断后」语义使用：并入左侧词段、段后允许断行（与连字符同形）。
+ * 类归属与 Chrome 实测对照见 harness/codepoint-probe.mjs（R7 扩到全集）。
+ */
+const BREAK_AFTER = new Set([
+  0x002d, 0x003f, 0x007c, 0x00ad, 0x058a, 0x05be, 0x05c6, 0x061b, 0x061d, 0x061e,
+  0x061f, 0x06d4, 0x07f9, 0x0964, 0x0965, 0x0e5a, 0x0e5b, 0x0f0b, 0x0f0d, 0x0f0e,
+  0x0f0f, 0x0f10, 0x0f11, 0x0f14, 0x0f34, 0x0f7f, 0x0f85, 0x0fbe, 0x0fbf, 0x0fd2,
+  0x104a, 0x104b, 0x1361, 0x1400, 0x16eb, 0x16ec, 0x16ed, 0x1735, 0x1736, 0x17d4,
+  0x17d5, 0x17d8, 0x17da, 0x1802, 0x1803, 0x1804, 0x1805, 0x1808, 0x1809, 0x1944,
+  0x1945, 0x1b4e, 0x1b4f, 0x1b5a, 0x1b5b, 0x1b5d, 0x1b5e, 0x1b5f, 0x1b60, 0x1b7d,
+  0x1b7e, 0x1b7f, 0x1c3b, 0x1c3c, 0x1c3d, 0x1c3e, 0x1c3f, 0x1c7e, 0x1c7f, 0x2010,
+  0x2012, 0x2013, 0x2014, 0x2027, 0x2056, 0x2058, 0x2059, 0x205a, 0x205b, 0x205d,
+  0x205e, 0x2762, 0x2763, 0x2800, 0x2cf9, 0x2cfa, 0x2cfb, 0x2cfc, 0x2cfe, 0x2cff,
+  0x2d70, 0x2e0e, 0x2e0f, 0x2e10, 0x2e11, 0x2e12, 0x2e13, 0x2e14, 0x2e15, 0x2e17,
+  0x2e19, 0x2e2a, 0x2e2b, 0x2e2c, 0x2e2d, 0x2e2e, 0x2e30, 0x2e31, 0x2e33, 0x2e34,
+  0x2e3a, 0x2e3b, 0x2e3c, 0x2e3d, 0x2e3e, 0x2e40, 0x2e41, 0x2e43, 0x2e44, 0x2e45,
+  0x2e46, 0x2e47, 0x2e48, 0x2e49, 0x2e4a, 0x2e4c, 0x2e4e, 0x2e4f, 0x2e53, 0x2e54,
+  0x2e5d, 0x2e60, 0x2e61, 0xa4fe, 0xa4ff, 0xa60d, 0xa60e, 0xa60f, 0xa6f3, 0xa6f4,
+  0xa6f5, 0xa6f6, 0xa6f7, 0xa876, 0xa877, 0xa8ce, 0xa8cf, 0xa92e, 0xa92f, 0xa9c7,
+  0xa9c8, 0xa9c9, 0xa9cf, 0xaa40, 0xaa41, 0xaa42, 0xaa44, 0xaa45, 0xaa46, 0xaa47,
+  0xaa48, 0xaa49, 0xaa4a, 0xaa4b, 0xaa5d, 0xaa5e, 0xaa5f, 0xaaf0, 0xaaf1, 0xabeb,
+  0xfe15, 0xfe16, 0xfe56, 0xfe57, 0xff01, 0xff1f, 0x10100, 0x10101, 0x10102,
+  0x1039f, 0x103d0, 0x10857, 0x1091f, 0x10a50, 0x10a51, 0x10a52, 0x10a53, 0x10a54,
+  0x10a55, 0x10a56, 0x10a57, 0x10af0, 0x10af1, 0x10af2, 0x10af3, 0x10af4, 0x10af5,
+  0x10b39, 0x10b3a, 0x10b3b, 0x10b3c, 0x10b3d, 0x10b3e, 0x10b3f, 0x10d6e, 0x10ead,
+  0x10ed0, 0x11047, 0x11048, 0x110be, 0x110bf, 0x110c0, 0x110c1, 0x11140, 0x11141,
+  0x11142, 0x11143, 0x111c5, 0x111c6, 0x111c8, 0x111dd, 0x111de, 0x111df, 0x11238,
+  0x11239, 0x1123b, 0x1123c, 0x112a9, 0x1133d, 0x1135d, 0x1144b, 0x1144c, 0x1144d,
+  0x1144e, 0x1145a, 0x1145b, 0x115c2, 0x115c3, 0x115c4, 0x115c5, 0x115c9, 0x115ca,
+  0x115cb, 0x115cc, 0x115cd, 0x115ce, 0x115cf, 0x115d0, 0x115d1, 0x115d2, 0x115d3,
+  0x115d4, 0x115d5, 0x115d6, 0x115d7, 0x11641, 0x11642, 0x1173c, 0x1173d, 0x1173e,
+  0x11944, 0x11945, 0x11946, 0x11a41, 0x11a42, 0x11a43, 0x11a44, 0x11a9a, 0x11a9b,
+  0x11a9c, 0x11aa1, 0x11aa2, 0x11c41, 0x11c42, 0x11c43, 0x11c44, 0x11c45, 0x11c71,
+  0x11ef2, 0x11ef7, 0x11ef8, 0x11f43, 0x11f44, 0x11fff, 0x12470, 0x12471, 0x12472,
+  0x12473, 0x12474, 0x16a6e, 0x16a6f, 0x16af5, 0x16b37, 0x16b38, 0x16b39, 0x16b44,
+  0x16d6e, 0x16d6f, 0x16e97, 0x16e98, 0x1bc9f, 0x1da87, 0x1da88, 0x1da89, 0x1da8a,
+])
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value))
 }
@@ -145,7 +199,7 @@ function textWidthPx(text, unitPx) {
 /** 半宽字符的逐字形宽度系数；>0x2E7F 返回 1（整宽），表外回落均宽。 */
 function charWidthFactor(ch, cp) {
   if (cp > 0x2e7f) return 1
-  return GLYPH_WIDTH_FACTOR[ch] ?? ASCII_WIDTH_FACTOR
+  return RIVAL_GLYPH_WIDTH_FACTOR[ch] ?? ASCII_WIDTH_FACTOR
 }
 
 /**
@@ -154,20 +208,27 @@ function charWidthFactor(ch, cp) {
  * 连续半宽字符（拉丁字母、数字、URL、hashtag、ASCII 标点）是不可断的
  * 「词」，整体换行；空白序列自身是一格，落在行尾时宽度被浏览器吞掉。
  *
- * 断行码位全集（R6-①，逐一与 Chrome 实测行数对齐，见 harness/
- * codepoint-probe.mjs）：
- *   - 可断空白 = CSS 文档空白 {0020,0009,000A,000D,000C}
+ * 断行码位全集（R6-① + R7-① 扩到断后全集，逐一与 Chrome 实测行数对齐，
+ * 见 harness/codepoint-probe.mjs 与套件内 UAX#14 类表断言）：
+ *   - 可断空白 = CSS 文档空白 {0020,0009,000A,000D}
  *     ∪ UAX#14 BA {1680,2000–2006,2008–200A,205F}
  *     ∪ ZW {200B}（零宽可断点：断行但宽度 0）
  *     ∪ BK {2028,2029}（Chrome 实测按可折叠空白处理：断行机会而非
  *       强制换行，'white-space:normal' 下与 \n 同行为）；
+ *   - 断后码位 = BREAK_AFTER 全集（EX{!} ∪ HH/HY/B2 ∪ BA 非空格成员）：
+ *     并入左侧词段、段后允许断行；'?' 是 URL 查询串的唯一断点（QA Q1），
+ *     '!' 是 Chrome 定制——同类 EX 但实测不断，已排除并登记分歧；
  *   - 不可断 = {00A0,202F,FEFF,2060,2007} —— 并入当前词；
- *   - U+000B 垂直制表 Chrome 实测不可断，按词内字符处理（它既不在 CSS 空白
- *     集也不在 BA 集）；
+ *   - U+000B 垂直制表与 U+000C 换页 Chrome 实测均不断行，按词内字符处理
+ *     （R7-Q2：000C 曾被注释为「CSS 文档空白」并当断点，与真机不符，
+ *     已对齐）；
  *   - U+3000 全角空格归入空格原子（不可折叠、整宽、可断）；U+2011 不换行
  *     连字符留在词内；
  *   - U+002D/U+2010 连字符并入左侧词段、段后可断（R5-④：把整串当不可断词
- *     严重少算——同夹具 w1 按整词估 1 行、连字符模型 5 行、Chrome 4 行）。
+ *     严重少算——同夹具 w1 按整词估 1 行、连字符模型 5 行、Chrome 4 行；
+ *     F-1 注：测试文件里「整词模型 1 行 / 生产 196px 实测 4 行」的
+ *     旧注释数字不可复现（该断言实际跑 194px、Chrome 4 行），已改为
+ *     可复现口径）。
  * 已知偏差（文档化上界，不假装精确）：
  *   - 行尾空格宽度被吞 → 模型可能少算一点点宽度（行数不受影响的情况
  *     远多于受影响）；
@@ -186,11 +247,13 @@ function wrapAtoms(text) {
   let open = null
   for (const ch of String(text || '')) {
     const cp = ch.codePointAt(0)
-    // 可折叠断点空白：CSS 文档空白 {space, tab, lf, cr, ff} 加上 Chrome 实测
+    // 可折叠断点空白：CSS 文档空白 {space, tab, lf, cr} 加上 Chrome 实测
     // 同行为的行/段分隔符 {2028,2029}（white-space:normal 下它们产生断行
-    // 机会与 \n 相同，不是强制换行）。\v(000B) 不在此列——Chrome 实测它
-    // 不可断、按词内字符走。
-    if (cp === 0x0020 || cp === 0x0009 || cp === 0x000a || cp === 0x000d || cp === 0x000c
+    // 机会与 \n 相同，不是强制换行）。\v(000B) 与 \f(000C) 不在此列——
+    // UAX#14 把 000B/000C 列进 BK（强制换行），但 Chrome 实测两者都不断行
+    //（R7 探针 chrome=1），模型按真机不按规范名头（Q2 修正：曾把 FF 当
+    // 断点，真机不断）。
+    if (cp === 0x0020 || cp === 0x0009 || cp === 0x000a || cp === 0x000d
       || cp === 0x2028 || cp === 0x2029) {
       open = null
       atoms.push({ space: true, collapsible: true, w: SPACE_WIDTH_FACTOR })
@@ -219,18 +282,29 @@ function wrapAtoms(text) {
       open.text += ch
       continue
     }
-    if (cp > 0x2e7f) {
+    if (cp > 0x2e7f && !BREAK_AFTER.has(cp)) {
       open = null
       atoms.push({ cjk: true, ch })
       continue
     }
+    // 断后码位只有在「非 CJK 字符之后」才断行：EX/BA 断后规则在 CJK
+    // 上下文中被禁则覆盖（全角 ？！ 等收类标点在 CJK 后不断后，
+    // Chrome 实测 zwj-emoji/punct 夹具卡仍按整词断——R7 复测发现
+    // 把 FF01/FF1F 与 ASCII EX 一视同仁会多算 1 行=高估 20px）。
+    const prevCp = atoms.length && atoms[atoms.length - 1].cjk
+      ? atoms[atoms.length - 1].ch.codePointAt(0) : 0
+    const breakAfterAllowed = BREAK_AFTER.has(cp) && !(prevCp > 0x2e7f)
     if (!open) {
       open = { word: true, text: '' }
       atoms.push(open)
     }
     open.text += ch
-    // 连字符并入本段、段后允许断行（BREAK AFTER HYPHEN）。
-    if (cp === 0x2d || cp === 0x2010) open = null
+    // 断后码位并入本段、段后允许断行（BREAK AFTER HYPHEN 泛化到
+    // UAX#14 断后全集：EX{!} ∪ HH/HY/B2 ∪ BA 非空格成员，见 BREAK_AFTER）。
+    // CJK 之后的断后码位不生效（全角 ？！ 等收类标点禁则优先）。
+    // 反例钉住：'/' ',' ':' '.' '#' '@' '%' 与 '!'(0x0021) 之后 Chrome
+    // 实测不断行，绝不加进来（Q1 实验：换 '/'、'+' 仍少算，换 '-' 才一致）。
+    if (breakAfterAllowed) open = null
   }
   return atoms
 }

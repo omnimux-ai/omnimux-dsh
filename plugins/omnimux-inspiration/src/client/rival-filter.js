@@ -191,9 +191,12 @@ export function rivalStateOf(row) {
 export function toRivalCardRow(row) {
   const account = row?.account || {}
   const title = String(row?.title || row?.text || row?.url || row?.id || '')
-  const coverSrc = String(row?.cover_src || '')
+  // R7-⑨（OCR medium）：hasMedia 把 cover_url 当有媒体的证据，导出字段
+  // 却只吃 cover_src —— 仅带 cover_url 的行被判媒体卡但封面是空。
+  // 同一 fallback 归一进三个导出字段，字段语义一致。
+  const coverSrc = String(row?.cover_src || row?.cover_url || '')
   const hasMedia = coverSrc !== ''
-    || Boolean(row?.video_url || row?.video_local_path || row?.cover_url)
+    || Boolean(row?.video_url || row?.video_local_path)
     || row?.has_media === true
   const normalized = { ...row, type: String(row?.type || ''), has_media: hasMedia }
   const cardType = rivalCardTypeOf(normalized)

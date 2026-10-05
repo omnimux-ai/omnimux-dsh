@@ -231,20 +231,27 @@ export function RivalPostCard(props) {
               disabled={!originalUrlSafe}
               title={originalUrlSafe ? undefined : t('rivalFeed.card.originalUnavailable')}
               aria-describedby={originalUrlSafe ? undefined : `rival-original-unavailable-${String(card?.id ?? '')}`}
+              // O7（已登记，生产不可达）：无 id 卡会得到重复的
+              // `rival-original-unavailable-` id——feed 每张卡都带 row_id，
+              // 若将来 id 来源放宽需补守卫。
               onClick={openOriginal}
             >
               {t('rivalFeed.card.original')}
-              {/* disabled 按钮不可聚焦，title 对键盘/读屏不可达（R6-⑨）：
-                  同文案经可视隐藏节点挂进 aria-describedby。 */}
-              {!originalUrlSafe ? (
-                <span
-                  id={`rival-original-unavailable-${String(card?.id ?? '')}`}
-                  className="omnimux-rival-vh"
-                >
-                  {t('rivalFeed.card.originalUnavailable')}
-                </span>
-              ) : null}
             </Button>
+            {/* disabled 按钮不可聚焦，title 对键盘/读屏不可达（R6-⑨）：
+                同文案经可视隐藏节点挂进 aria-describedby。
+                R7-⑧（PM M4）：隐藏节点必须是 <button> 的 DOM 兄弟而非
+                子节点——作为子节点其文本会被并入可及名称，读屏把
+                "Original Original link unavailable" 念两遍。挂到外层
+                act-slot 即可，describedby 引用不要求后代关系。 */}
+            {!originalUrlSafe ? (
+              <span
+                id={`rival-original-unavailable-${String(card?.id ?? '')}`}
+                className="omnimux-rival-vh"
+              >
+                {t('rivalFeed.card.originalUnavailable')}
+              </span>
+            ) : null}
           </span>
           {typeof onDeconstruct === 'function' ? (
             <Button
