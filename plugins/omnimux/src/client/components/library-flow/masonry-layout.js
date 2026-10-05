@@ -87,12 +87,18 @@ export function cardHeightOf(ratio) {
 
 /**
  * 贪心最短列优先分列算法
+ *
+ * `heightOf` 是可选的真实高度函数（与列累加同一度量单位）。传入时放置决策
+ * 直接用它，绕过 `ratioOf → cardHeightOf` 的比例换算——这是给卡片几何
+ * 不是「列宽 ÷ 比例 + 卡身系数」的调用方留的缝（例如按真实像素估算的
+ * 账号监控瀑布流）。不传时行为与旧版完全一致。
  * @param {any[]} items
  * @param {number} columns
  * @param {(item: any) => number} [ratioOf]
+ * @param {(item: any) => number} [heightOf]
  * @returns {any[][]}
  */
-export function distributeColumns(items, columns, ratioOf = cardRatioOf) {
+export function distributeColumns(items, columns, ratioOf = cardRatioOf, heightOf) {
   const colCount = Math.max(1, Math.floor(Number(columns)) || 1)
   const buckets = Array.from({ length: colCount }, () => [])
   const heights = Array.from({ length: colCount }, () => 0)
@@ -106,7 +112,7 @@ export function distributeColumns(items, columns, ratioOf = cardRatioOf) {
       }
     }
     buckets[target].push(item)
-    heights[target] += cardHeightOf(ratioOf(item))
+    heights[target] += typeof heightOf === 'function' ? heightOf(item) : cardHeightOf(ratioOf(item))
   }
 
   return buckets

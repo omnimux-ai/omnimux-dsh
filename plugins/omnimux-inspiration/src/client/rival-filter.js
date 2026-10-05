@@ -159,23 +159,73 @@ export function toAccountFilterRow(account, state) {
   }
 }
 
+import { rivalCardTypeOf } from './rival-masonry.js'
+
+/**
+ * §9.2 状态裁决：卡片只消费「状态种类」，文案由渲染层经 locale 字典输出。
+ * Host 下发的 `state_label` 原样透传（展示权在 Host 数据，不翻译），
+ * 派生状态只产枚举——映射层不出现任何界面文字。
+ * @param {Record<string, any>} row
+ * @returns {'done'|'replicated'|'interacted'|null}
+ */
+export function rivalStateOf(row) {
+  if (row?.done || row?.done_at) return 'done'
+  if (row?.in_library) return 'replicated'
+  if (row?.interacted_at) return 'interacted'
+  return null
+}
+
 /**
  * Feed row → the descriptor `InspirationCoverCard` already understands.
  *
  * The card is shared with the library grid, so the monitored-work shape is
  * carried by data: a composite key (the same post can exist on two accounts), a
  * validated cover address, and platform metadata instead of library actions.
+ *
+ * v2.1 扩字段：`card_type` 五种形态、`ratio`、`has_media`/`media_kind`、
+ * `velocity`、`metrics_template`（`play` | `read`）与 `done`/`state`/`state_label`
+ * 都在这一层完成归一——卡片组件只消费结果，不读 Host 行。
  * @param {Record<string, any>} row
  * @returns {Record<string, any>}
  */
 export function toRivalCardRow(row) {
   const account = row?.account || {}
   const title = String(row?.title || row?.text || row?.url || row?.id || '')
-  const coverSrc = String(row?.cover_src || '')
+  // R7-⑨（OCR medium）：hasMedia 把 cover_url 当有媒体的证据，导出字段
+  // 却只吃 cover_src —— 仅带 cover_url 的行被判媒体卡但封面是空。
+  // 同一 fallback 归一进三个导出字段，字段语义一致。
+  const coverSrc = String(row?.cover_src || row?.cover_url || '')
+  const hasMedia = coverSrc !== ''
+    || Boolean(row?.video_url || row?.video_local_path)
+    || row?.has_media === true
+  const normalized = { ...row, type: String(row?.type || ''), has_media: hasMedia }
+  const cardType = rivalCardTypeOf(normalized)
+  const mediaKind = String(row?.media_kind || (String(row?.type || '') === 'image' ? 'image' : (hasMedia ? 'video' : '')))
+  const state = rivalStateOf(row)
+  const done = Boolean(state || row?.state_label)
+  const stateLabel = String(row?.state_label || '')
+  const metricsTemplate = cardType === 'image' || cardType === 'text' ? 'read' : 'play'
   return {
     id: String(row?.row_id || `${row?.account_id || ''}:${row?.id || ''}`),
     title,
+    card_type: cardType,
+    type: String(row?.type || ''),
+    media_kind: mediaKind,
+    has_media: hasMedia,
+    ratio: Number.isFinite(row?.ratio) ? row.ratio : null,
+    velocity: row?.velocity && typeof row.velocity === 'object' ? row.velocity : null,
+    match: row?.match && typeof row.match === 'object' ? row.match : null,
+    metrics_template: metricsTemplate,
+    done,
+    state,
+    state_label: stateLabel,
+    done_at: typeof row?.done_at === 'string' ? row.done_at : null,
+    interacted_at: typeof row?.interacted_at === 'string' ? row.interacted_at : null,
     cover_key: coverSrc,
+    // The detail dialog is handed this same descriptor and reads `cover_src` —
+    // renaming it to cover_key alone left the dialog's cover always empty
+    // (R5-②). Both names carry the same validated address.
+    cover_src: coverSrc,
     // Kept beside the display address: the replication chain reads the original
     // and must not be handed a locally rewritten one.
     cover_http_url: coverSrc,
@@ -228,5 +278,12 @@ export function toRivalPost(card) {
     stats: card?.stats || {},
     in_library: card?.in_library === true,
     inspiration_id: card?.inspiration_id ?? null,
+    type: String(card?.type || ''),
+    card_type: String(card?.card_type || ''),
+    ratio: Number.isFinite(card?.ratio) ? card.ratio : null,
+    done_at: card?.done_at ?? null,
+    interacted_at: card?.interacted_at ?? null,
+    state: typeof card?.state === 'string' ? card.state : null,
+    state_label: String(card?.state_label || ''),
   }
 }

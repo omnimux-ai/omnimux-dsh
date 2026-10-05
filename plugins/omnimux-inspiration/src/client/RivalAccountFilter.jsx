@@ -12,7 +12,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
-import { formatCount } from './rival-format.js'
+import { formatCount, rivalLocaleOf } from './rival-format.js'
+import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 import { rivalSelectionSummary, toAccountFilterRow } from './rival-filter.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 
@@ -57,8 +58,9 @@ const ICON_EXTERNAL = (
  *   onOpenProfile: (url: string) => void,
  * }} props
  */
-function AccountFilterRow({ row, t, onToggle, onOpenProfile }) {
+function AccountFilterRow({ row, t, onToggle, onOpenProfile, locale }) {
   const handleToggle = () => onToggle(row.id)
+  const profileUrlSafe = isSafeExternalUrl(row.profileUrl)
   return (
     <div
       className="omnimux-rival-filter-row"
@@ -97,11 +99,11 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile }) {
             className="omnimux-rival-filter-jump"
             aria-label={t('rivalFilter.openProfile')}
             title={t('rivalFilter.openProfile')}
-            disabled={!row.profileUrl}
+            disabled={!profileUrlSafe}
             onClick={(event) => {
               event.preventDefault()
               event.stopPropagation()
-              if (row.profileUrl) onOpenProfile(row.profileUrl)
+              if (profileUrlSafe) onOpenProfile(row.profileUrl)
             }}
             onMouseDown={(event) => event.stopPropagation()}
             onPointerDown={(event) => event.stopPropagation()}
@@ -116,7 +118,7 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile }) {
         </span>
       </span>
       <span className="omnimux-rival-filter-count">
-        {t('rivalFilter.posts').replace('{n}', formatCount(row.postCount))}
+        {t('rivalFilter.posts').replace('{n}', formatCount(row.postCount, locale))}
       </span>
     </div>
   )
@@ -165,6 +167,7 @@ export function RivalAccountFilter(props) {
 
   const rows = (Array.isArray(accounts) ? accounts : []).map((account) => toAccountFilterRow(account, selection))
   const summary = rivalSelectionSummary(selection, t)
+  const locale = rivalLocaleOf(t)
 
   return (
     <div className="omnimux-rival-filter" ref={rootRef}>
@@ -195,12 +198,9 @@ export function RivalAccountFilter(props) {
                 key={row.id}
                 row={row}
                 t={t}
+                locale={locale}
                 onToggle={onToggle}
-                onOpenProfile={(url) => {
-                  if (typeof window !== 'undefined' && typeof window.open === 'function') {
-                    window.open(url, '_blank', 'noopener,noreferrer')
-                  }
-                }}
+                onOpenProfile={(url) => openExternalUrl(url)}
               />
             ))}
           </div>

@@ -1,0 +1,300 @@
+{
+ "note": "pre-fix snapshot. demo-pre.html is now reproducible from HEAD via `node docs/evidence/account-monitor-v2-cards-3110/harness/build-demo.mjs --pre` (shell only; reuses the committed demo-bundle-pre.js snapshot). Reproduce: python3 -m http.server <port> --directory docs/evidence/account-monitor-v2-cards-3110/harness && node docs/evidence/account-monitor-v2-cards-3110/harness/measure-placement.mjs \"http://127.0.0.1:<port>/demo-pre.html?edge=1&theme=dark&width=1164\" <out>.",
+ "url": "http://127.0.0.1:8512/demo-pre.html?edge=1&theme=dark&width=1164",
+ "columns": 5,
+ "columnWidth": 220,
+ "feedHeight": 1007.63,
+ "table": [
+  {
+   "id": "ra_1:p1",
+   "type": "short-video",
+   "col": 0,
+   "top": 0,
+   "measured": 429.55,
+   "est": 429.56,
+   "diff": -0.01,
+   "pillRow": false
+  },
+  {
+   "id": "ra_2:p2",
+   "type": "long-video",
+   "col": 1,
+   "top": 0,
+   "measured": 164.63,
+   "est": 164.63,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_3:p3",
+   "type": "image",
+   "col": 2,
+   "top": 0,
+   "measured": 314.5,
+   "est": 314.5,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:p11",
+   "type": "text",
+   "col": 3,
+   "top": 0,
+   "measured": 222,
+   "est": 222,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:p4",
+   "type": "text-media",
+   "col": 4,
+   "top": 0,
+   "measured": 241.13,
+   "est": 241.13,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_6:p5",
+   "type": "short-video",
+   "col": 1,
+   "top": 180.63,
+   "measured": 429.55,
+   "est": 429.56,
+   "diff": -0.01,
+   "pillRow": false
+  },
+  {
+   "id": "ra_5:p6",
+   "type": "text-media",
+   "col": 3,
+   "top": 238,
+   "measured": 241.13,
+   "est": 241.13,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:p12",
+   "type": "text",
+   "col": 4,
+   "top": 257.13,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_7:p7",
+   "type": "image",
+   "col": 2,
+   "top": 330.5,
+   "measured": 260,
+   "est": 260,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_1:p8",
+   "type": "short-video",
+   "col": 4,
+   "top": 417.13,
+   "measured": 429.55,
+   "est": 429.56,
+   "diff": -0.01,
+   "pillRow": false
+  },
+  {
+   "id": "ra_2:p9",
+   "type": "long-video",
+   "col": 0,
+   "top": 445.55,
+   "measured": 164.63,
+   "est": 164.63,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_3:p10",
+   "type": "image",
+   "col": 3,
+   "top": 495.13,
+   "measured": 314.5,
+   "est": 314.5,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:e1",
+   "type": "text",
+   "col": 2,
+   "top": 606.5,
+   "measured": 222,
+   "est": 222,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:e2",
+   "type": "text",
+   "col": 0,
+   "top": 626.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:e3",
+   "type": "text",
+   "col": 1,
+   "top": 626.17,
+   "measured": 186,
+   "est": 186,
+   "diff": 0,
+   "pillRow": false
+  },
+  {
+   "id": "ra_4:e4",
+   "type": "text",
+   "col": 0,
+   "top": 786.17,
+   "measured": 162,
+   "est": 144,
+   "diff": 18,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:e5",
+   "type": "text",
+   "col": 3,
+   "top": 825.63,
+   "measured": 162,
+   "est": 182,
+   "diff": -20,
+   "pillRow": true
+  },
+  {
+   "id": "ra_5:e6",
+   "type": "text",
+   "col": 1,
+   "top": 828.17,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  },
+  {
+   "id": "ra_4:e7",
+   "type": "text",
+   "col": 2,
+   "top": 844.5,
+   "measured": 144,
+   "est": 144,
+   "diff": 0,
+   "pillRow": true
+  }
+ ],
+ "maxAbsDiff": 20,
+ "replayMismatches": 0,
+ "replay": [
+  {
+   "id": "ra_1:p1",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_2:p2",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_3:p3",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_4:p11",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_4:p4",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_6:p5",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_5:p6",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_5:p12",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_7:p7",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_1:p8",
+   "expectedCol": 4,
+   "actualCol": 4
+  },
+  {
+   "id": "ra_2:p9",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_3:p10",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_4:e1",
+   "expectedCol": 2,
+   "actualCol": 2
+  },
+  {
+   "id": "ra_5:e2",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_5:e3",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_4:e4",
+   "expectedCol": 0,
+   "actualCol": 0
+  },
+  {
+   "id": "ra_4:e5",
+   "expectedCol": 3,
+   "actualCol": 3
+  },
+  {
+   "id": "ra_5:e6",
+   "expectedCol": 1,
+   "actualCol": 1
+  },
+  {
+   "id": "ra_4:e7",
+   "expectedCol": 2,
+   "actualCol": 2
+  }
+ ],
+ "adjacentOverlaps": [],
+ "maxAdjacentOverlap": 0
+}

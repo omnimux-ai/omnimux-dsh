@@ -280,7 +280,7 @@ const searchInput = (container) => container.querySelector('input[type="search"]
 const platformTriggers = (container) => [...container.querySelectorAll(`[aria-haspopup="listbox"][aria-label="${L.platform}"]`)]
 const subfilterRow = (container) => container.querySelector('.omnimux-inspiration-subfilter-row')
 const rivalRoot = (container) => container.querySelector('.omnimux-rival-root')
-const grid = (container) => container.querySelector('.omnimux-inspiration-grid')
+const grid = (container) => container.querySelector('.omnimux-rival-masonry')
 const importButton = (container) => buttonsLabelled(container, L.importBtn)[0] || null
 const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
 
