@@ -1,0 +1,13 @@
+{
+  "task": "browser-queue-dock-native-align",
+  "timestamp": "2026-10-05T15:05:00.000Z",
+  "checks": {
+    "extension_tests": "passed",
+    "extension_build": "passed",
+    "specs_present": "specs/browser-queue-dock-native-align.spec.md",
+    "no_emoji_icons": "verified (all SVG icons)",
+    "dock_inset_verified": "width: calc(100% - 24px), margin: 0 auto -1px auto",
+    "hover_display_verified": "opacity: 0, hover opacity: 1",
+    "steer_action_verified": "session.updateQueue with kind: steer"
+  }
+}
