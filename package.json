@@ -98,7 +98,8 @@
     "dev:unlock": "node scripts/dev-app-unlock.mjs",
     "verify:app": "node scripts/worktree-app-qa.mjs",
     "verify:plugin-load": "node scripts/verify-plugin-load.mjs",
-    "test:plugin-load": "node --test scripts/verify-plugin-load.test.mjs"
+    "test:plugin-load": "node --test scripts/verify-plugin-load.test.mjs",
+    "verify:app:live": "node scripts/worktree-app-qa.mjs --mode=live"
   },
   "devDependencies": {
     "acorn": "8.15.0",
