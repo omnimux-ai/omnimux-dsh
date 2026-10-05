@@ -403,11 +403,6 @@ export const RIVAL_CSS = `
   gap: 16px;
   min-height: 20px;
 }
-.omnimux-rival-pool-summary {
-  font-size: 12px;
-  color: var(--dsw-alias-label-secondary);
-  white-space: nowrap;
-}
 .omnimux-rival-pool-quota {
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);

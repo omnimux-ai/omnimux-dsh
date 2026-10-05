@@ -18,13 +18,13 @@ import { zh } from './locales.js'
  * components replaced by `test-fixtures/ui-kit-shim.mjs`. What this file pins
  * down, word for word from the spec dictionary:
  *
- *   - `pool.summary` reads `监控池 {total} 个账号 · 正常 {ok} · 冷却
- *     {cooling} · 待重导入 {reimport} · 已停止 {stopped}` and its four
- *     segments close onto the account total — zero segments stay visible;
+ *   - the pool bar renders exactly one row carrying the refresh allowance and
+ *     (when a refresh fact exists) the freshness text — the account-tally line
+ *     is gone, so neither `监控池` nor `待重导入` appears in the bar;
  *   - the account row shows one of four health marks, the two terminal marks
  *     carry a resident reason line, and「已停止」is the only row with 重试;
  *   - `重试` hands the account back to `queued` — the row returns to `正常`
- *     and the summary count moves in the same reload;
+ *     in the same reload;
  *   - the refresh button greys but stays clickable under quota / stopped /
  *     cooldown, and its D4 popover names exactly one reason.
  */
@@ -42,9 +42,8 @@ const isoMinutesAgo = (minutes) => new Date(NOW - minutes * 60_000).toISOString(
 const isoMinutesAhead = (minutes) => new Date(NOW + minutes * 60_000).toISOString()
 
 /**
- * 四态各一账号，外加一个未上报失败次数的「已停止」账号。计数预期：
- * 正常 2 / 冷却 1 / 待重导入 1 / 已停止 1（a4 与 a5 都是 stopped → 已停止 2）。
- * 为了贴近规格 §4.1 的演示口径，a5 只用于第二条用例。
+ * 四态各一账号：正常 / 冷却 / 待重导入 / 已停止。另有用例把「已停止」账号的
+ * `consecutive_failures` 置空，覆盖原因行缺失时的健康态分支。
  */
 const ACCOUNTS = [
   {
@@ -285,7 +284,7 @@ async function settle(container, predicate) {
 }
 
 const poolBar = (container) => container.querySelector('[data-rival-pool="true"]')
-const poolSummary = (container) => container.querySelector('.omnimux-rival-pool-summary')?.textContent.trim()
+const poolRows = (container) => [...container.querySelectorAll('.omnimux-rival-pool-row')]
 const poolQuotaText = (container) => container.querySelector('.omnimux-rival-pool-quota')?.textContent.trim()
 const poolFreshness = (container) => container.querySelector('.omnimux-rival-pool-freshness')?.textContent.trim()
 const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
@@ -299,15 +298,20 @@ after(() => {
 })
 
 describe('R3 监控池状态条（#3111）', () => {
-  it('逐字渲染五段计数且闭合到账号总数，零值分段不省略', async () => {
+  it('只渲染一行：额度与新鲜度，账号统计行不存在', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => poolSummary(mounted.container)?.includes('监控池'))
+      await settle(mounted.container, () => poolQuotaText(mounted.container))
+      assert.equal(poolRows(mounted.container).length, 1, '状态条只剩一行')
       assert.equal(
-        poolSummary(mounted.container),
-        '监控池 4 个账号 · 正常 1 · 冷却 1 · 待重导入 1 · 已停止 1',
+        mounted.container.querySelector('.omnimux-rival-pool-summary'),
+        null,
+        '账号统计行不再渲染',
       )
+      const barText = poolBar(mounted.container).textContent
+      assert.ok(!barText.includes('监控池'), '状态条不再出现账号统计文案')
+      assert.ok(!barText.includes('待重导入'), '状态条不再出现待重导入分段')
       assert.equal(poolQuotaText(mounted.container), '今日剩余刷新额度 46/50')
       assert.equal(poolFreshness(mounted.container), '数据更新于 3 分钟前')
     } finally {
@@ -316,17 +320,15 @@ describe('R3 监控池状态条（#3111）', () => {
     }
   })
 
-  it('额度与新鲜度另起一行，不与计数争同一行', async () => {
+  it('额度在左、新鲜度在右，同行不换行', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
       await settle(mounted.container, () => poolBar(mounted.container))
-      const rows = [...mounted.container.querySelectorAll('.omnimux-rival-pool-row')]
-      assert.equal(rows.length, 2, '状态条必须是两行')
-      assert.ok(rows[0].textContent.includes('监控池'))
-      assert.ok(!rows[0].textContent.includes('今日剩余刷新额度'), '额度不与计数同行')
-      assert.ok(rows[1].textContent.includes('今日剩余刷新额度'))
-      assert.ok(rows[1].textContent.includes('数据更新于'))
+      const rows = poolRows(mounted.container)
+      assert.equal(rows.length, 1, '状态条只有一行')
+      assert.ok(rows[0].textContent.includes('今日剩余刷新额度'))
+      assert.ok(rows[0].textContent.includes('数据更新于'))
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -339,7 +341,7 @@ describe('R3 监控池状态条（#3111）', () => {
     })
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => poolSummary(mounted.container)?.includes('监控池'))
+      await settle(mounted.container, () => poolQuotaText(mounted.container))
       assert.equal(poolFreshness(mounted.container), undefined)
       assert.equal(mounted.container.querySelector('.omnimux-rival-pool-freshness'), null)
     } finally {
@@ -431,7 +433,10 @@ describe('D1 账号行四态健康标记（#3111）', () => {
       assert.ok(retry, '已停止行必须有重试')
 
       await mounted.click(retry)
-      await settle(mounted.container, () => poolSummary(mounted.container)?.includes('已停止 0'))
+      await settle(
+        mounted.container,
+        () => rowById(mounted.container, 'ra_stopped')?.getAttribute('data-health') === 'normal',
+      )
 
       assert.ok(
         mounted.calls.some((call) => call.method === 'POST' && call.path.includes('/ra_stopped/refresh')),
@@ -442,10 +447,6 @@ describe('D1 账号行四态健康标记（#3111）', () => {
       assert.ok(updated.textContent.includes('正常'))
       assert.equal(updated.querySelector('.omnimux-rival-filter-reason'), null, '原因行消失')
       assert.equal(updated.querySelector('.omnimux-rival-retry'), null, '重试随健康态消失')
-      assert.equal(
-        poolSummary(mounted.container),
-        '监控池 4 个账号 · 正常 2 · 冷却 1 · 待重导入 1 · 已停止 0',
-      )
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -500,7 +501,7 @@ describe('R4 刷新置灰与 D4 原因（#3111）', () => {
     })
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => poolSummary(mounted.container)?.includes('监控池'))
+      await settle(mounted.container, () => poolQuotaText(mounted.container))
       await mounted.click(refreshButton(mounted.container))
       assert.ok(
         mounted.calls.some((call) => call.method === 'POST' && call.path.includes('/refresh-all')),

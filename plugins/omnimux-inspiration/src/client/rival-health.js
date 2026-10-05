@@ -69,9 +69,8 @@ export function stoppedReasonText(account, template = {}) {
 }
 
 /**
- * Pool-level tally for `pool.summary`. The four buckets partition the pool:
- * `ok` is the default, so a `paused` account lands here and the segments close
- * onto `total` exactly.
+ * Pool-level tally over the four health buckets. `ok` is the default, so a
+ * `paused` account lands here and the segments close onto `total` exactly.
  * @param {Array<Record<string, any>> | null | undefined} accounts
  * @param {number} [nowMs]
  * @returns {{ total: number, ok: number, cooling: number, reimport: number, stopped: number }}
