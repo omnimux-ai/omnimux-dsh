@@ -93,7 +93,7 @@ describe('#3100 Jev 决策参数', () => {
   })
 
   it('AC-7 无达标热帖的提示不向模型透露内部筛选说法', () => {
-    const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-perspective-post')!
+    const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-hot-tweets')!
     const p = PERSPECTIVES[0]
     const banned = /评分|门槛|信息流|quality bar|feed/i
     for (const keywords of [[], ['ai']]) {
@@ -104,20 +104,26 @@ describe('#3100 Jev 决策参数', () => {
     }
   })
 
-  it('多视角菜单项：注入视角段，且只出现在发新帖与引用转发', () => {
-    const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-perspective-post')!
-    expect(item.scenes).toEqual(['POST_NEW', 'POST_QUOTE'])
-    expect(item.usesPerspective).toBe(true)
+  it('AC-9 视角并入「爆款推文复刻」，多视角菜单已移除', () => {
+    expect(COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-perspective-post')).toBeUndefined()
+    expect(COPILOT_MENU_ITEMS.filter((i) => i.usesPerspective).map((i) => i.id)).toEqual(['ai-hot-tweets'])
+    const item = COPILOT_MENU_ITEMS.find((i) => i.id === 'ai-hot-tweets')!
+    expect(item.scenes).toEqual(['POST_NEW'])
     const p = PERSPECTIVES[0]
-    const zh = item.generatePrompt({ scene: 'POST_QUOTE', draftText: '', quotedTweetText: '原推正文', quotedAuthor: 'bob' }, 'zh', p)
-    expect(zh.systemPrompt).toContain(`写作视角：${p.name}`)
-    expect(zh.userMessage).toContain('原推正文')
-    expect(zh.userMessage).toContain('@bob')
-    const en = item.generatePrompt({ scene: 'POST_NEW', draftText: 'my idea' }, 'en', p)
-    expect(en.systemPrompt).toContain(`PERSPECTIVE: ${p.nameEn}`)
-    expect(en.userMessage).toContain('my idea')
-    for (const other of COPILOT_MENU_ITEMS.filter((i) => i.category === 'reply')) {
-      expect(other.usesPerspective).toBeFalsy()
-    }
+    // 有草稿：按视角改写草稿
+    const draft = item.generatePrompt({ scene: 'POST_NEW', draftText: '我的想法' }, 'zh', p)
+    expect(draft.systemPrompt).toContain(`写作视角：${p.name}`)
+    expect(draft.userMessage).toContain('我的想法')
+    // 无草稿、有热帖：提炼钩子，按视角原创
+    const seeds = [{ author: 'alice', text: '一条热帖正文', stat: '10 回复' }]
+    const hot = item.generatePrompt({ scene: 'POST_NEW', draftText: '', feedHotTweets: seeds }, 'zh', p)
+    expect(hot.systemPrompt).toContain(`写作视角：${p.name}`)
+    expect(hot.userMessage).toContain('一条热帖正文')
+    expect(hot.userMessage).toContain('提取最有争议或传播潜力的焦点')
+    // 无草稿、无热帖：围绕赛道关键词按视角原创
+    const pure = item.generatePrompt({ scene: 'POST_NEW', draftText: '', keywords: ['出海'] }, 'en', p)
+    expect(pure.systemPrompt).toContain(`PERSPECTIVE: ${p.nameEn}`)
+    expect(pure.userMessage).toContain('出海')
+    expect(pure.userMessage).not.toMatch(/trending discussions above/)
   })
 })

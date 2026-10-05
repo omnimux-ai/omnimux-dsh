@@ -17,7 +17,9 @@ import type { BrowserHostApi } from '../src/host-api.ts'
 const TOKEN = 'deadbeefdeadbeefdeadbeefdeadbeef'
 const CAPS = { textOnly: true as const, snapshotMaxChars: 12_000, maxInteractiveItems: 60 }
 const ARGS = { state: 'Feed 1: 远程办公提效吗', choices: { P1_CONTRARIAN: 'a', P2_PRACTITIONER: 'b' }, instructions: 'pick one' }
-const ENTRY = { traceId: 'tw_1791180906430_m2p13k', scene: 'POST_NEW', itemId: 'ai-perspective-post', outcome: { status: 'injected' } }
+const ENTRY = { traceId: 'tw_1791180906430_m2p13k', scene: 'POST_NEW', itemId: 'ai-hot-tweets', outcome: { status: 'injected' } }
+const EXPECTED_ITEM = 'ai-hot-tweets'
+it('log fixture uses the perspective-enabled menu item', () => { expect(ENTRY.itemId).toEqual(EXPECTED_ITEM) })
 
 interface Harness { bridge: BridgeServer; server: Server; url: string }
 const harnesses: Harness[] = []
