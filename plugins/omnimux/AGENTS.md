@@ -22,6 +22,7 @@ The hub is the only place OmniMux talks to providers. Root [AGENTS.md](../../AGE
 - Propagate upstream auth/capability errors with their real cause; no empty `catch {}`.
 - Hub events go through the single event WebSocket ([workbench sync](../../docs/contracts/agent-workbench-sync.md)); domain plugins emit via `ctx.get('hubEvents')`, never a private socket.
 - Model rows change only per [model-list ownership](../../docs/contracts/model-list-ownership.md) and close across consuming plugins.
+- Model listing lifecycle: When adding or enabling a model for canvas/consumers, execute the 5-step loop atomically (contract definition, authorized live probe in docs/evidence/, promote research from draft to verified so op.listed=true, manifest requiredInAuto, channel groups + canvas whitelist, and strict gate verification). Never stop at "draft" when user requests model listing or canvas availability.
 
 ## Verify
 
