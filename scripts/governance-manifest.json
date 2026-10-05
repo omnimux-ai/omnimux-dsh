@@ -334,6 +334,8 @@
     "skill-chip-interaction-qa.mjs",
     "sync-fixtures.test.mjs",
     "test-real-image-generation.mjs",
+    "upstream-sentinel.mjs",
+    "upstream-sentinel.test.mjs",
     "verify-agent-presets-health.test.mjs",
     "verify-app-edit-and-fork-flow.mjs",
     "verify-app-edit-fork-modal.mjs",
