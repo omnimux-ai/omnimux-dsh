@@ -11,6 +11,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PanelApi } from '../src/panel/api.ts'
 import { QueueDock } from '../src/panel/QueueDock.tsx'
+import { nextQueueSteer } from '../src/panel/queue-gesture.ts'
 
 const copy = {
   count: (n: number) => `${n} 条排队消息`,
@@ -131,5 +132,55 @@ describe('排队坞插话发送', () => {
     await vi.waitFor(() => { expect(onError).toHaveBeenCalledTimes(1) })
     const message = onError.mock.calls[0]?.[0]
     expect(message).toBe('插话发送失败，请重试。')
+  })
+})
+
+describe('空输入框回车依次插话', () => {
+  const base = {
+    input: '',
+    hasDraftImages: false,
+    working: true,
+    stopping: false,
+    queuedIds: ['q1', 'q2'],
+  }
+
+  it('运行中且输入框为空时取队首', () => {
+    const target = nextQueueSteer(base)
+    expect(target).toBe('q1')
+  })
+
+  it('队列变化后取新的队首（连按依次清空）', () => {
+    const target = nextQueueSteer({ ...base, queuedIds: ['q2'] })
+    expect(target).toBe('q2')
+  })
+
+  it('输入框有文字时不插话（仍走排队提交）', () => {
+    const target = nextQueueSteer({ ...base, input: '一条新消息' })
+    expect(target).toBe(null)
+  })
+
+  it('输入框只有空白字符时按空处理（与发送语义一致）', () => {
+    const target = nextQueueSteer({ ...base, input: '   ' })
+    expect(target).toBe('q1')
+  })
+
+  it('挂着待发图片时不插话', () => {
+    const target = nextQueueSteer({ ...base, hasDraftImages: true })
+    expect(target).toBe(null)
+  })
+
+  it('任务未运行时不插话', () => {
+    const target = nextQueueSteer({ ...base, working: false })
+    expect(target).toBe(null)
+  })
+
+  it('正在停止当前轮时不插话', () => {
+    const target = nextQueueSteer({ ...base, stopping: true })
+    expect(target).toBe(null)
+  })
+
+  it('队列为空时不插话', () => {
+    const target = nextQueueSteer({ ...base, queuedIds: [] })
+    expect(target).toBe(null)
   })
 })
