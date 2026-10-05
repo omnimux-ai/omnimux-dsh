@@ -12,6 +12,7 @@ import {
   createSilentCanvasWritable,
   isCanvasClipExportSession,
 } from "../../../export-canvas-mode.js";
+import { createWritableCapture, type WritableLike } from "./export-write-buffer";
 
 export interface ExportRunnerState {
   isExporting: boolean;
@@ -257,34 +258,17 @@ export function createCapturingWritable(
   mime: string,
   onComplete: (blob: Blob) => void,
 ): FileSystemWritableFileStream {
-  const chunks: Uint8Array[] = [];
+  // 捕获必须保留写入位置：mp4 封装收尾会回到文件头定点回填 mdat 长度，
+  // 无条件追加会让长度字段停在占位值、解析器读不到尾部的 moov。
+  const capture = createWritableCapture(target as unknown as WritableLike);
 
   return {
-    async seek(position: number) {
-      if (typeof target.seek === "function") {
-        await target.seek(position);
-      }
-    },
-    async write(data: unknown) {
-      await target.write(data as Parameters<typeof target.write>[0]);
-      if (data instanceof ArrayBuffer) {
-        chunks.push(new Uint8Array(data.slice(0)));
-      } else if (ArrayBuffer.isView(data)) {
-        chunks.push(new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)));
-      } else if (data instanceof Blob) {
-        const buf = await data.arrayBuffer();
-        chunks.push(new Uint8Array(buf));
-      }
-    },
-    async truncate(size: number) {
-      if (typeof target.truncate === "function") {
-        await target.truncate(size);
-      }
-    },
+    seek: (position: number) => capture.seek(position),
+    write: (data: unknown) => capture.write(data),
+    truncate: (size: number) => capture.truncate(size),
     async close() {
       await target.close();
-      const blob = new Blob(chunks, { type: mime });
-      onComplete(blob);
+      onComplete(new Blob([capture.captured.toUint8Array()], { type: mime }));
     },
     async abort() {
       if (typeof target.abort === "function") {
