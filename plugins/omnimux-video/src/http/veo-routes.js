@@ -115,19 +115,15 @@ export function createVeoDispatcher(deps = {}) {
 
     if (method === 'POST' && pathname === '/tasks') {
       const body = req.body && typeof req.body === 'object' ? req.body : {}
-      const prompt = typeof body.prompt === 'string' ? body.prompt : ''
-      const mode = typeof body.mode === 'string' ? body.mode : VEO_TASK_SPEC.defaultMode
-      const durationSec = Number(
-        body.durationSec ?? body.parameters?.durationSec ?? VEO_TASK_SPEC.durationSec.fallback,
-      )
-      const validation = validateVeoTaskRequest({
-        prompt,
-        mode,
-        parameters: { durationSec },
-      })
+      // 整个请求体交给契约校验：四模式新契约与旧契约（durationSec / parameters.durationSec）都从真源派生。
+      const validation = validateVeoTaskRequest(body)
       if (!validation.valid) {
-        return { status: 400, body: { error: 'invalid-request', message: validation.error } }
+        return {
+          status: 400,
+          body: { error: 'invalid-request', message: validation.error, code: validation.code },
+        }
       }
+      const request = validation.request
 
       const env = detectEnv()
       if (!env.installed) {
@@ -149,15 +145,24 @@ export function createVeoDispatcher(deps = {}) {
       const id = `task_veo_${now()}`
       const seeded = seedVeoTask({
         id,
-        prompt,
-        mode,
-        durationSec,
+        prompt: request.prompt,
+        mode: request.mode,
+        durationSec: request.seconds,
         status: 'queued',
         progress: 1,
         phase: 'queued',
         message: '任务已入队，准备启动无头沙箱…',
       })
-      const task = store.create(seeded)
+      /** @type {Record<string, unknown>} */
+      const vidsFields = {
+        operation: request.operation,
+        seconds: request.seconds,
+        resolution: request.resolution,
+        aspect_ratio: request.aspect_ratio,
+      }
+      if (request.image_url) vidsFields.image_url = request.image_url
+      if (request.video_id) vidsFields.video_id = request.video_id
+      const task = store.create({ ...seeded, ...vidsFields })
 
       // Fire-and-forget background generation.
       // NOTE: generateVideoSilently currently ignores `mode` and does not push

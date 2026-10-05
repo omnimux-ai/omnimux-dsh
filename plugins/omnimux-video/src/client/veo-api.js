@@ -32,12 +32,15 @@ export async function fetchVeoHealth() {
 }
 
 /**
- * @param {{ prompt: string, mode?: string, durationSec?: number }} payload
+ * 原样转发请求体：四模式规范化请求
+ * （`{ operation, mode, prompt, seconds, resolution, aspect_ratio, image_url?, video_id? }`）
+ * 由 `buildVidsRequest` 产出，客户端不再做字段改名或裁剪。
+ * @param {object} request
  */
-export async function createVeoTask(payload) {
+export async function createVeoTask(request) {
   return veoFetch('/tasks', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(request),
   })
 }
 

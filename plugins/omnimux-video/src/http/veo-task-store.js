@@ -17,6 +17,11 @@ import { seedVeoTask } from '../shared/veoTaskSeed.js'
  *   mode: string,
  *   durationSec: number,
  *   title: string,
+ *   operation?: string,
+ *   seconds?: number,
+ *   aspect_ratio?: string,
+ *   image_url?: string,
+ *   video_id?: string,
  *   videoUrl?: string,
  *   localPath?: string,
  *   fileName?: string,
@@ -27,6 +32,20 @@ import { seedVeoTask } from '../shared/veoTaskSeed.js'
  *   updatedAt: number,
  * }} VeoTask
  */
+
+/**
+ * 四模式请求字段（Issue #3181）：随任务记录透传，供后续中枢调用读取。
+ * `durationSec` 仍是客户端读取的时长字段，`seconds` 是中枢请求字段，两者同时保留。
+ * @type {readonly string[]}
+ */
+const VIDS_TASK_FIELDS = Object.freeze([
+  'operation',
+  'seconds',
+  'resolution',
+  'aspect_ratio',
+  'image_url',
+  'video_id',
+])
 
 export function createVeoTaskStore() {
   /** @type {Map<string, VeoTask>} */
@@ -54,6 +73,11 @@ export function createVeoTaskStore() {
       title: seed.title || seeded.title,
       createdAt: now,
       updatedAt: now,
+    }
+    // seedVeoTask 只产出固定字段集，这里显式透传四模式请求字段（含覆盖默认 resolution）。
+    for (const field of VIDS_TASK_FIELDS) {
+      const value = seed[field]
+      if (value !== undefined && value !== null) task[field] = value
     }
     tasks.set(task.id, task)
     return snapshot(task)

@@ -1,0 +1,79 @@
+{
+  "hasStage": true,
+  "rect": {
+    "w": 1000,
+    "h": 713
+  },
+  "visibility": "visible",
+  "tabs": [
+    {
+      "mode": "create",
+      "label": "创建",
+      "active": "true"
+    },
+    {
+      "mode": "animate",
+      "label": "动画",
+      "active": "false"
+    },
+    {
+      "mode": "modify",
+      "label": "修改",
+      "active": "false"
+    },
+    {
+      "mode": "extend",
+      "label": "延续",
+      "active": "false"
+    }
+  ],
+  "hint": "用文字生成一段新视频",
+  "attach": [],
+  "selects": {
+    "seconds": {
+      "value": "10",
+      "options": [
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    "resolution": {
+      "value": "720p",
+      "options": [
+        "720p",
+        "1080p",
+        "4k"
+      ]
+    },
+    "aspectRatio": {
+      "value": "landscape",
+      "options": [
+        "landscape",
+        "portrait"
+      ]
+    }
+  },
+  "paramSummary": "720p · 16:9 · 10s",
+  "submit": {
+    "label": "生成",
+    "disabled": true,
+    "submitLabel": "生成"
+  },
+  "submitReason": "请先填写提示词",
+  "actions": [
+    "insert",
+    "recreate",
+    "edit-prompt",
+    "set-source",
+    "extend",
+    "modify"
+  ],
+  "textareaPlaceholder": "请先在右侧创建或打开剪辑工程..."
+}
