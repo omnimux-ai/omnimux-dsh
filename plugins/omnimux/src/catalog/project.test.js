@@ -163,6 +163,7 @@ test('real specs: buckets derive only from output.type of listed ops', () => {
     'gpt-image-2.5',
     'gpt-image-2.5-flare',
     'gpt-image-2.5-sunburst',
+    'seedream-5-0-pro',
   ]);
   assert.deepEqual(dto.video.map((r) => r.id), [
     'minimax-h3',

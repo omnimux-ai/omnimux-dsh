@@ -65,7 +65,7 @@ test('H2: 处置表 82 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 29); // #3138 gpt-image-2.5#multi_reference 真机验证后上架 +1 → 29（#3086 为 28）
+  assert.equal(index.listedOperations.length, 31); // #3148 seedream-5-0-pro 文生图与垫图真机验证后上架 +2 → 31（#3138 为 29）
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {

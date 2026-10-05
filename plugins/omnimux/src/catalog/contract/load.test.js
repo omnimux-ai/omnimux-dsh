@@ -42,7 +42,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 29); // #3138 gpt-image-2.5#multi_reference 上架 +1 → 29（#3086 为 28）
+  assert.equal(index.listedOperations.length, 31); // #3148 seedream-5-0-pro 文生图与垫图真机验证后上架 +2 → 31（#3138 为 29）
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   // #3063: indextts-2 voice-clone operation reaches listed through its own contract row.
   assert.ok(index.listedOperations.includes('indextts-2#voice_clone'));

@@ -286,13 +286,18 @@ export function mapValidatedPlanToVendor(args) {
       }
       // 严禁向 vendor 注入 aspect_ratio
     } else {
+      const isSeedreamFamily = args.family === 'seedream' || String(args.modelId ?? '').startsWith('seedream')
       if (typeof extras.aspectRatio === 'string' && extras.aspectRatio) {
-        vendor.aspect_ratio = extras.aspectRatio
+        // doubao-seedream 家族不接受 aspect_ratio，比例以 size 表达（2026-10-05 真机）。
+        if (isSeedreamFamily) vendor.size = extras.aspectRatio
+        else vendor.aspect_ratio = extras.aspectRatio
         logical.aspectRatio = extras.aspectRatio
       }
       if (typeof extras.resolution === 'string' && extras.resolution) {
-        vendor.resolution = extras.resolution
+        // doubao-seedream 家族不接受 resolution：2026-10-05 真机 400
+        // `unsupported parameter for doubao-seedream-5.0-pro: resolution`，故只留逻辑值不下发。
         logical.resolution = extras.resolution
+        if (!isSeedreamFamily) vendor.resolution = extras.resolution
       }
       if (typeof extras.quality === 'string' && extras.quality) {
         vendor.quality = extras.quality
