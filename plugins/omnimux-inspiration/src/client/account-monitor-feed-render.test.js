@@ -365,7 +365,9 @@ const TOAST_EXIT_MS = 2500 + 180 + 120
 const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
 const filterPanel = (container) => container.querySelector('.omnimux-rival-filter-panel')
 const filterRows = (container) => [...container.querySelectorAll('.omnimux-rival-filter-row')]
-const cards = (container) => [...container.querySelectorAll('[data-inspiration-id]')]
+// v2.1: the monitor works render as `.omnimux-rival-card` inside the flat
+// masonry — the composite row id moved to `data-card-id`.
+const cards = (container) => [...container.querySelectorAll('.omnimux-rival-card')]
 const toast = (container) => container.querySelector('.omnimux-inspiration-toast')
 const rowById = (container, id) => filterRows(container).find((node) => node.getAttribute('data-account-id') === id)
 const buttonsLabelled = (container, text) => [...container.querySelectorAll('button')]
@@ -479,7 +481,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
         `unchecking one account must read「已选 1 个账号」(got ${JSON.stringify(triggerText(mounted.container))})`,
       )
       assert.equal(
-        cards(mounted.container)[0].getAttribute('data-inspiration-id'),
+        cards(mounted.container)[0].getAttribute('data-card-id'),
         WORK_BOB.row_id,
         'only the remaining account\'s works may stay on screen',
       )
@@ -492,7 +494,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
       await mounted.click(buttonsLabelled(mounted.container, L.invert)[0])
       await settle(mounted.container, () => cards(mounted.container).length === 1)
       assert.equal(
-        cards(mounted.container)[0].getAttribute('data-inspiration-id'),
+        cards(mounted.container)[0].getAttribute('data-card-id'),
         WORK_ALICE.row_id,
         '反选 must leave the complement on screen',
       )
@@ -584,25 +586,42 @@ describe('账号监控 — 账号筛选（多选）', () => {
 })
 
 describe('账号监控 — 作品网格流', () => {
-  it('renders the works as the library 9:16 grid with 详情 / 立即复刻', async () => {
+  it('renders the works as the v2.1 masonry: flat DOM, minimal default state, hover actions', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
       await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
 
-      const gridNode = mounted.container.querySelector('.omnimux-inspiration-grid')
-      assert.ok(gridNode, 'the works must render in the shared grid container')
+      const gridNode = mounted.container.querySelector('.omnimux-rival-masonry')
+      assert.ok(gridNode, 'the works must render in the v2.1 masonry container')
       assert.ok(
-        gridNode.querySelector('[data-inspiration-id]'),
-        'the works must be inside that grid, not beside it',
+        gridNode.querySelector('[data-card-id]'),
+        'the works must be inside that masonry, not beside it',
       )
       assert.equal(cards(mounted.container).length, WORKS.length, 'one card per work')
+      // v2.1 DOM order = feed order (spec V4): cards are flat children, never
+      // sorted into column wrappers.
+      assert.deepEqual(
+        [...gridNode.children].map((node) => node.getAttribute('data-card-id')),
+        WORKS.map((work) => work.row_id),
+        'the flat list must keep the feed order',
+      )
+      assert.equal(
+        gridNode.querySelector('.omnimux-rival-masonry-col'),
+        null,
+        'column wrappers would break the tab order (spec V4)',
+      )
       for (const card of cards(mounted.container)) {
-        assert.ok(card.textContent.includes(L.detail), 'the hover CTA must read 详情')
-        assert.ok(card.textContent.includes(L.replicate), 'the hover CTA must read 立即复刻')
+        // Default state is minimal: the hover layer carries the actions.
+        const overlay = card.querySelector('.omnimux-rival-card-overlay')
+        assert.ok(overlay, 'every card must carry its hover layer')
         assert.ok(
-          card.querySelector('.omnimux-inspiration-overlay-play'),
-          'the hover overlay must carry the centred play control',
+          card.textContent.includes(L.replicate),
+          'the hover CTA must read 立即复刻',
+        )
+        assert.ok(
+          card.querySelector('.omnimux-rival-card-media'),
+          'media cards must reserve their media area',
         )
       }
 
@@ -628,9 +647,11 @@ describe('账号监控 — 作品网格流', () => {
       await mounted.openAccountTab()
       await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
 
-      const detail = buttonsLabelled(mounted.container, L.detail)[0]
-      assert.ok(detail, 'a card must offer 详情')
-      await mounted.click(detail)
+      // v2.1: the card body itself opens the detail dialog — there is no
+      // separate 详情 button in the whitelist anymore.
+      const card = cards(mounted.container)[0]
+      assert.ok(card, 'a card must be on screen')
+      await mounted.click(card)
       await settle(mounted.container, () => (mounted.container.textContent || '').includes(zh['rivalFeed.detail.title']))
 
       const text = mounted.container.textContent || ''

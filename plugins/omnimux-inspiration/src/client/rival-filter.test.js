@@ -190,3 +190,68 @@ describe('rival-filter — 作品行到卡片', () => {
     assert.equal(post.cover_http_url, feedRow.cover_src)
   })
 })
+
+describe('rival-filter — v2.1 卡片描述符扩字段', () => {
+  const base = {
+    id: 'post_9',
+    row_id: 'ra_a:post_9',
+    account_id: 'ra_a',
+    title: '某条内容',
+    url: 'https://x.com/a/status/9',
+    stats: { views: 1, likes: 0, comments: 0, shares: 0 },
+    account: { id: 'ra_a', nickname: 'Alice Studio', handle: '@alice', platform: 'x' },
+  }
+
+  it('normalizes host type + platform into the five spec §9.1 card types', () => {
+    const of = (row) => toRivalCardRow(row).card_type
+    assert.equal(of({ ...base, type: 'video', source_platform: 'tiktok' }), 'short-video')
+    assert.equal(of({ ...base, type: 'video', source_platform: 'youtube' }), 'long-video')
+    assert.equal(of({ ...base, type: 'image', source_platform: 'instagram' }), 'image')
+    assert.equal(of({ ...base, type: 'text', source_platform: 'x' }), 'text')
+    assert.equal(of({ ...base, type: 'video', source_platform: 'x' }), 'text-media')
+  })
+
+  it('passes ratio through and derives has_media from the cover address', () => {
+    const withMedia = toRivalCardRow({ ...base, type: 'image', source_platform: 'instagram', ratio: 1.5, cover_src: '/m/1.jpg' })
+    assert.equal(withMedia.ratio, 1.5)
+    assert.equal(withMedia.has_media, true)
+
+    const withoutMedia = toRivalCardRow({ ...base, type: 'text', source_platform: 'x' })
+    assert.equal(withoutMedia.ratio, null)
+    assert.equal(withoutMedia.has_media, false)
+  })
+
+  it('carries velocity and state through verbatim for the card to render', () => {
+    const velocity = { text: '爆款 23k/h', tier: 'hot' }
+    const card = toRivalCardRow({ ...base, type: 'video', source_platform: 'tiktok', velocity, state_label: '已处理', done: true })
+    assert.deepEqual(card.velocity, velocity)
+    assert.equal(card.state_label, '已处理')
+    assert.equal(card.done, true)
+  })
+
+  it('marks metric template per spec §9.5: video plays, image/text read', () => {
+    const of = (row) => toRivalCardRow(row).metrics_template
+    assert.equal(of({ ...base, type: 'video', source_platform: 'tiktok' }), 'play')
+    assert.equal(of({ ...base, type: 'video', source_platform: 'x' }), 'play')
+    assert.equal(of({ ...base, type: 'image', source_platform: 'instagram' }), 'read')
+    assert.equal(of({ ...base, type: 'text', source_platform: 'x' }), 'read')
+  })
+
+  it('derives the done flag from spec §9.2 state sources, done_at wins', () => {
+    const done = toRivalCardRow({ ...base, done_at: '2026-10-05T09:12:00Z', in_library: true })
+    assert.equal(done.done, true)
+    assert.equal(done.state_label, '已处理')
+
+    const replicated = toRivalCardRow({ ...base, in_library: true, inspiration_id: 'insp_1' })
+    assert.equal(replicated.done, true)
+    assert.equal(replicated.state_label, '已复刻')
+
+    const interacted = toRivalCardRow({ ...base, interacted_at: new Date(2026, 9, 5, 9, 12).toISOString() })
+    assert.equal(interacted.done, true)
+    assert.equal(interacted.state_label, '已互动 · 09:12')
+
+    const fresh = toRivalCardRow({ ...base })
+    assert.equal(fresh.done, false)
+    assert.equal(fresh.state_label, '')
+  })
+})

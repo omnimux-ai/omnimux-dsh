@@ -18,6 +18,7 @@ import { RivalPostPreviewModal } from './RivalPostPreviewModal.jsx'
 import { addRivalPostToSession } from './rival-add-to-chat.js'
 import { toRivalPost } from './rival-filter.js'
 import { injectRivalStyles } from './rival-styles.js'
+import { injectRivalTokens } from './rival-tokens.js'
 
 /**
  * Platform filter options, built from the module's own platform names.
@@ -75,6 +76,9 @@ export function RivalAccountsPanel(props) {
 
   useEffect(() => {
     injectRivalStyles()
+    // The card styles reference the media/velocity token families that only this
+    // tab consumes; inject them at mount so the first paint is never untokened.
+    injectRivalTokens()
   }, [])
 
   const handleDetail = useCallback((row) => setDetailRow(row), [])
@@ -100,6 +104,15 @@ export function RivalAccountsPanel(props) {
     } finally {
       setBusyId(null)
     }
+  }, [])
+
+  /**
+   * 「标为已处理」的当前回执：#3114 的端点还没有接上，所以本票只给出
+   * 「动作已被记录」的通知；卡片的 is-done 视觉翻转由 grid 本地完成。
+   */
+  const handleMarkDone = useCallback((card) => {
+    void card
+    setNotice({ key: 'rivalFeed.toast.markDone' })
   }, [])
 
   const emptyKind = feedEmptyKind(feed)
@@ -148,6 +161,7 @@ export function RivalAccountsPanel(props) {
         onImport={() => setImportOpen(true)}
         onDetail={handleDetail}
         onReplicate={handleReplicate}
+        onMarkDone={handleMarkDone}
         replicateBusy={busyId}
       />
 

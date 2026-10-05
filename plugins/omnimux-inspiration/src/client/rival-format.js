@@ -33,6 +33,18 @@ function trim(value) {
 }
 
 /**
+ * Engagement count in the spec §3.7 互动量 口径：千分位原值，`≥1万` 用万缩写。
+ * 8640 → `8,640`；19640 → `2万`（万缩写取整）。`--` for unreadable values.
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function formatEngagementCount(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '--'
+  if (Math.abs(value) >= 10_000) return `${Math.round(value / 1000) / 10}万`
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+/**
  * `0:31` / `1:02:03` for a duration in seconds.
  * @param {unknown} seconds
  * @returns {string}

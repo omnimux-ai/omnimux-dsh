@@ -159,12 +159,28 @@ export function toAccountFilterRow(account, state) {
   }
 }
 
+import { rivalCardTypeOf } from './rival-masonry.js'
+
+/** `已互动 · HH:mm`；`interacted_at` 不可解析时只报已互动（字段含义见 §9.2）。 */
+function interactedLabel(iso) {
+  const at = Date.parse(String(iso || ''))
+  if (!Number.isFinite(at)) return '已互动'
+  const date = new Date(at)
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  return `已互动 · ${hh}:${mm}`
+}
+
 /**
  * Feed row → the descriptor `InspirationCoverCard` already understands.
  *
  * The card is shared with the library grid, so the monitored-work shape is
  * carried by data: a composite key (the same post can exist on two accounts), a
  * validated cover address, and platform metadata instead of library actions.
+ *
+ * v2.1 扩字段：`card_type` 五种形态、`ratio`、`has_media`/`media_kind`、
+ * `velocity`、`metrics_template`（`play` | `read`）与 `done`/`state_label`
+ * 都在这一层完成归一——卡片组件只消费结果，不读 Host 行。
  * @param {Record<string, any>} row
  * @returns {Record<string, any>}
  */
@@ -172,9 +188,33 @@ export function toRivalCardRow(row) {
   const account = row?.account || {}
   const title = String(row?.title || row?.text || row?.url || row?.id || '')
   const coverSrc = String(row?.cover_src || '')
+  const hasMedia = coverSrc !== ''
+    || Boolean(row?.video_url || row?.video_local_path || row?.cover_url)
+    || row?.has_media === true
+  const normalized = { ...row, type: String(row?.type || ''), has_media: hasMedia }
+  const cardType = rivalCardTypeOf(normalized)
+  const mediaKind = String(row?.media_kind || (String(row?.type || '') === 'image' ? 'image' : (hasMedia ? 'video' : '')))
+  const done = Boolean(row?.done || row?.done_at || row?.in_library || row?.interacted_at || row?.state_label)
+  const stateLabel = String(row?.state_label || '')
+    || (row?.done || row?.done_at ? '已处理' : '')
+    || (row?.in_library ? '已复刻' : '')
+    || (row?.interacted_at ? interactedLabel(row?.interacted_at) : '')
+  const metricsTemplate = cardType === 'image' || cardType === 'text' ? 'read' : 'play'
   return {
     id: String(row?.row_id || `${row?.account_id || ''}:${row?.id || ''}`),
     title,
+    card_type: cardType,
+    type: String(row?.type || ''),
+    media_kind: mediaKind,
+    has_media: hasMedia,
+    ratio: Number.isFinite(row?.ratio) ? row.ratio : null,
+    velocity: row?.velocity && typeof row.velocity === 'object' ? row.velocity : null,
+    match: row?.match && typeof row.match === 'object' ? row.match : null,
+    metrics_template: metricsTemplate,
+    done,
+    state_label: stateLabel,
+    done_at: typeof row?.done_at === 'string' ? row.done_at : null,
+    interacted_at: typeof row?.interacted_at === 'string' ? row.interacted_at : null,
     cover_key: coverSrc,
     // Kept beside the display address: the replication chain reads the original
     // and must not be handed a locally rewritten one.
@@ -228,5 +268,11 @@ export function toRivalPost(card) {
     stats: card?.stats || {},
     in_library: card?.in_library === true,
     inspiration_id: card?.inspiration_id ?? null,
+    type: String(card?.type || ''),
+    card_type: String(card?.card_type || ''),
+    ratio: Number.isFinite(card?.ratio) ? card.ratio : null,
+    done_at: card?.done_at ?? null,
+    interacted_at: card?.interacted_at ?? null,
+    state_label: String(card?.state_label || ''),
   }
 }
