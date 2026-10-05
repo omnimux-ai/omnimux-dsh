@@ -10,11 +10,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { deleteTask, fetchPresets, fetchTaxonomy } from './api.js'
+import { deleteTask, fetchPresets, fetchTaxonomy, syncLibrary } from './api.js'
 import { AvatarList } from './components/AvatarList.jsx'
 import { BuilderPanel } from './components/BuilderPanel.jsx'
 import { ExplorePresetGrid } from './components/ExplorePresetGrid.jsx'
-import { FeedGrid } from './components/FeedGrid.jsx'
+import { FeedGrid, taskIdentity } from './components/FeedGrid.jsx'
 import { GenerateBar } from './components/GenerateBar.jsx'
 import { ModelPicker } from './components/ModelPicker.jsx'
 import { MultiViewDialog } from './components/MultiViewDialog.jsx'
@@ -151,6 +151,9 @@ export function AvatarStage(props) {
   const [previewPreset, setPreviewPreset] = useState(null)
   const [openMultiView, setOpenMultiView] = useState(null)
   const [everOpened, setEverOpened] = useState(visible === true)
+  // 归档补偿：已补偿成功的任务键，以及正在补偿的任务键（同一时刻只跑一个）。
+  const [syncedKeys, setSyncedKeys] = useState(() => new Set())
+  const [syncingKey, setSyncingKey] = useState('')
 
   const { toasts, push } = useToasts()
   const builderRef = useRef(null)
@@ -252,6 +255,27 @@ export function AvatarStage(props) {
     return merged
   }, [childByParent, multiViewApi.childByParent])
 
+  // ── 归档补偿后的显示状态 ───────────────────────────────────────────────
+  // 服务端任务记录上的 syncError 要等下一次读取才会更新；界面以本次补偿的应答
+  // 为最新事实，先把这一行的「未入库」状态收起来。
+  const withoutSyncError = useCallback(
+    (task) => {
+      if (!task || !task.syncError) return task
+      const key = taskIdentity(task)
+      return key && syncedKeys.has(key) ? { ...task, syncError: null } : task
+    },
+    [syncedKeys]
+  )
+
+  const displayRoots = useMemo(() => roots.map(withoutSyncError), [roots, withoutSyncError])
+  const displayPending = withoutSyncError(sheet.pending)
+
+  // 本次会话提交的行：首次看到就可能已经是 ready，因此它们算一次「转 ready」。
+  const sessionChildren = useMemo(
+    () => Object.values(multiViewApi.childByParent ?? {}),
+    [multiViewApi.childByParent]
+  )
+
   const conflict = conflictMessage(b.tier, b.selection)
   const hasInput = totalSelected(b.selection) > 0 || b.brief.trim() !== ''
   const canGenerate = Boolean(currentId) && Boolean(b.model) && !conflict && hasInput
@@ -266,6 +290,35 @@ export function AvatarStage(props) {
   useEffect(() => {
     if (avatarsError) push(avatarsError, 'error')
   }, [avatarsError, push])
+
+  // ── 生成转 ready 且归档成功时给一次轻提示 ───────────────────────────────
+  // 只认本次会话观察到的「转 ready」：历史里早已就绪的记录不该在打开页面时重放提示；
+  // 本次会话提交的行首次看到就可能已经是 ready，因此它们算一次转移。
+  const observedStatusRef = useRef(new Map())
+  const savedToastRef = useRef(new Set())
+
+  useEffect(() => {
+    const sessionKeys = new Set(sessionChildren.map((task) => taskIdentity(task)).filter(Boolean))
+    if (sheet.pending) {
+      const pendingKey = taskIdentity(sheet.pending)
+      if (pendingKey) sessionKeys.add(pendingKey)
+    }
+
+    for (const task of [sheet.pending, ...sessionChildren, ...history.items]) {
+      const key = taskIdentity(task)
+      if (!key) continue
+      const status = String(task.status ?? '').toLowerCase()
+      const seenBefore = observedStatusRef.current.has(key)
+      const previous = observedStatusRef.current.get(key)
+      observedStatusRef.current.set(key, status)
+      // 归档失败的行不走轻提示：卡片上会如实显示未入库并给出补偿入口。
+      if (status !== 'ready' || task.syncError) continue
+      if (savedToastRef.current.has(key)) continue
+      if (seenBefore ? previous === 'ready' : !sessionKeys.has(key)) continue
+      savedToastRef.current.add(key)
+      push(t('toast.savedToLibrary'), 'success')
+    }
+  }, [history.items, push, sessionChildren, sheet.pending, t])
 
   // ── 交互 ───────────────────────────────────────────────────────────────
   const onSourceChange = useCallback((next) => {
@@ -389,6 +442,34 @@ export function AvatarStage(props) {
     setOpenMultiView({ parent, child })
   }, [])
 
+  /** 归档补偿：把已产出但没入库的图重新存一次，成功后收起该行的未入库状态。 */
+  const onSync = useCallback(
+    async (task) => {
+      if (!currentId || syncingKey) return
+      const key = taskIdentity(task)
+      if (!key) return
+      setSyncingKey(key)
+      try {
+        await syncLibrary({
+          avatarId: currentId,
+          kind: task?.kind === 'multiview' ? 'multiview' : 'sheet',
+        })
+      } catch (error) {
+        push(readError(error), 'error')
+        return
+      } finally {
+        setSyncingKey('')
+      }
+      setSyncedKeys((prev) => {
+        const next = new Set(prev)
+        next.add(key)
+        return next
+      })
+      push(t('toast.savedToLibrary'), 'success')
+    },
+    [currentId, push, syncingKey, t]
+  )
+
   const onRegenerateMultiView = useCallback(async () => {
     if (!openMultiView?.parent || !currentId) return
     const meta = parseTaskMeta(openMultiView.parent)
@@ -501,8 +582,8 @@ export function AvatarStage(props) {
               />
             ) : (
               <FeedGrid
-                tasks={roots}
-                pending={sheet.pending}
+                tasks={displayRoots}
+                pending={displayPending}
                 viewMode={viewMode}
                 childByParent={mergedChildren}
                 isInitialLoading={history.isInitialLoading}
@@ -512,6 +593,8 @@ export function AvatarStage(props) {
                 onLoadMore={history.loadMore}
                 onView={onView}
                 onRetry={onRetry}
+                onSync={onSync}
+                syncingKey={syncingKey}
                 onOpenMultiView={onOpenMultiView}
                 t={t}
               />

@@ -139,6 +139,14 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
   })()`)
   add('explore-tab-clickable', clickedExplore.ok === true, clickedExplore.why ?? '已点击「灵感库」')
 
+  // 让懒加载的卡片也真正发起请求，否则「还没开始加载」会被当成通过（历史缺陷：32/35 解码即算绿）。
+  // 这里只改探针的加载时机，不改应用行为；要求变成「全部解码成功」。
+  await evaluate(`(() => {
+    for (const img of document.querySelectorAll('.omx-avatar-preset-grid img')) img.loading = 'eager'
+    return true
+  })()`)
+  await new Promise((resolve) => setTimeout(resolve, 2500))
+
   const explore = await waitFor(
     evaluate,
     `(() => {
@@ -178,7 +186,7 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
   )
   add(
     'preset-preview-artwork-decoded',
-    explore.decoded >= 2 && explore.broken === 0,
+    explore.decoded >= 2 && explore.broken === 0 && explore.pending === 0,
     `预览图 ${explore.images} 张，解码成功 ${explore.decoded}，裂图 ${explore.broken}，未完成 ${explore.pending}${
       explore.broken > 0 ? `；裂图地址样例 ${JSON.stringify(explore.brokenSample)}` : ''
     }`,

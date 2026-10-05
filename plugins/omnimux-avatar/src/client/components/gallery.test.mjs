@@ -88,7 +88,7 @@ describe('ExplorePresetGrid：预览与套用是两个兄弟按钮', () => {
 
   it('空态、瀑布流列数与触屏兜底齐备', () => {
     assert.match(presetGrid, /omx-avatar-preset-grid/)
-    assert.match(presetGrid, /--omx-avatar-preset-columns/)
+    assert.match(presetGrid, /--avatar-preset-columns/)
     assert.match(presetGrid, /暂无预设/)
     assert.match(presetGrid, /灵感预设当前不可用/)
     assert.match(presetGrid, /matchMedia\('\(hover: none\)'\)/)
@@ -233,7 +233,7 @@ describe('MultiViewBadge：缺省态、冒泡与矢量失败图标', () => {
 
   it('没有真实百分比时不显示数字', () => {
     assert.match(mvBadge, /hasRealProgress \? `\$\{progress\}%` : t\('生成中'\)/)
-    assert.match(mvBadge, /--omx-avatar-mv-progress/)
+    assert.match(mvBadge, /--avatar-mv-progress/)
   })
 })
 

@@ -82,7 +82,7 @@ export function MultiViewBadge(props) {
         <>
           <span
             className='omx-avatar-mv-ring'
-            style={{ '--omx-avatar-mv-progress': `${hasRealProgress ? progress : 0}%` }}
+            style={{ '--avatar-mv-progress': `${hasRealProgress ? progress : 0}%` }}
             aria-hidden='true'
           />
           <span className='omx-avatar-mv-pct'>

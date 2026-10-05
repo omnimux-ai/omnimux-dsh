@@ -4,7 +4,7 @@
 //
 // 与真源的差异（本仓硬门禁强制）：
 // 1. 真源用 Tailwind 的 columns-2 / sm:columns-3 / xl:columns-4；插件客户端没有 Tailwind，
-//    列数改由 matchMedia 求值后经 CSS 变量 --omx-avatar-preset-columns 交给样式表
+//    列数改由 matchMedia 求值后经 CSS 变量 --avatar-preset-columns 交给样式表
 //    （内联 CSS 变量是本仓 UI02 允许的唯一传参通道，颜色与排版仍全部来自类）。
 // 2. 图标不再依赖 lucide-react（客户端只允许依赖 react），一律内联矢量 SVG。
 
@@ -177,7 +177,7 @@ export function ExplorePresetGrid(props) {
   return (
     <div
       className='omx-avatar-preset-grid'
-      style={{ '--omx-avatar-preset-columns': String(columns) }}
+      style={{ '--avatar-preset-columns': String(columns) }}
     >
       {items.map((preset) => (
         <ExplorePresetCard

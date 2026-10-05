@@ -1,6 +1,7 @@
 // 资产库同步：把形象主图与「多视角」目录归档到资产库「角色」分类。
 // 一个形象一条资产（按 source 幂等），多视角是该资产下的目录引用。
 import { existsSync } from 'node:fs'
+import { basename } from 'node:path'
 import { avatarMultiViewDir } from './paths.js'
 import { AvatarError } from './store.js'
 
@@ -60,13 +61,24 @@ function suffixedName(base, attempt) {
   return `${base.slice(0, Math.max(1, NAME_MAX - suffix.length))}${suffix}`
 }
 
-/** 一条 file ref 是否就是该形象自己的「多视角」目录。 */
+/**
+ * 一条 file ref 是否就是该形象自己的「多视角」目录。
+ * 资产库把来源复制进受管目录后只剩 relative_path + original_name，因此除了目录真身
+ * （real_path 等于该形象的多视角目录）还要认目录名；kind=directory 只用于排除
+ * 同名普通文件，任何别的目录引用都不算。
+ */
 function isMultiViewRef(file, multiViewDir) {
   if (!file) return false
-  if (file.kind === 'directory') return true
-  if (file.original_name === MULTIVIEW_FOLDER) return true
+  const expected = String(multiViewDir ?? '').replace(/\/+$/, '')
   const real = typeof file.real_path === 'string' ? file.real_path.replace(/\/+$/, '') : ''
-  return real !== '' && real === multiViewDir.replace(/\/+$/, '')
+  if (real !== '' && expected !== '' && real === expected) return true
+  const relative = typeof file.relative_path === 'string' ? file.relative_path.replace(/\/+$/, '') : ''
+  const name =
+    typeof file.original_name === 'string' && file.original_name !== ''
+      ? file.original_name
+      : basename(relative) || basename(real)
+  if (name !== MULTIVIEW_FOLDER) return false
+  return file.kind === undefined || file.kind === 'directory'
 }
 
 /**
@@ -134,7 +146,8 @@ export function createLibrarySync({ ctx, store, paths, assetLibrary } = {}) {
     throw mapError(lastConflict ?? new AvatarError('name-conflict', '资产名重复次数过多', 409))
   }
 
-  async function syncSheet(avatarId) {
+  /** 一次主图同步：已有来源档案只追加新主图，否则首次建档。 */
+  async function syncSheetOnce(avatarId) {
     // 先确认形象存在，再看资产库座位：未知 id 必须报 404 而不是被能力缺失盖住。
     const avatar = store.get(avatarId)
     const seam = resolveSeam()
@@ -154,6 +167,47 @@ export function createLibrarySync({ ctx, store, paths, assetLibrary } = {}) {
     return { assetId: saved.assetId, created: true }
   }
 
+  // 首次建档的并发护栏：同一形象同一时刻只跑一次「查来源 → 建档」，
+  // 后到的调用复用同一个 promise，避免并发首建造出两条资产。
+  const firstIngest = new Map()
+
+  /**
+   * 同步主图到资产库；同一形象的并发调用共用同一次建档。
+   * @param {string} avatarId
+   */
+  function syncSheet(avatarId) {
+    const pending = firstIngest.get(avatarId)
+    if (pending) return pending
+    const run = syncSheetOnce(avatarId).finally(() => {
+      if (firstIngest.get(avatarId) === run) firstIngest.delete(avatarId)
+    })
+    firstIngest.set(avatarId, run)
+    return run
+  }
+
+  /**
+   * 把多视角目录挂到资产上。记录里的 assetId 已失效（资产重建后 id 变了）时按来源键
+   * 找回同一条资产、回写修复后的 id 再重试一次；来源键也找不到才算真的失败。
+   */
+  async function attachMultiView(seam, avatar, multiViewDir) {
+    const files = [multiViewDir]
+    try {
+      await seam.attachFiles({ assetId: avatar.assetId, files })
+      return avatar.assetId
+    } catch (error) {
+      if (error?.code !== 'asset-not-found') throw mapError(error)
+      const found = typeof seam.findBySource === 'function' ? seam.findBySource(avatar.assetSource) : null
+      if (!found?.id || found.id === avatar.assetId) throw mapError(error)
+      try {
+        await seam.attachFiles({ assetId: found.id, files })
+      } catch (retryError) {
+        throw mapError(retryError)
+      }
+      store.update(avatar.id, { assetId: found.id })
+      return found.id
+    }
+  }
+
   async function syncMultiView(avatarId) {
     const avatar = store.get(avatarId)
     const seam = resolveSeam()
@@ -165,8 +219,8 @@ export function createLibrarySync({ ctx, store, paths, assetLibrary } = {}) {
     const files = existingFiles(seam, { ...avatar, assetId }, assetId)
     if (files.some((file) => isMultiViewRef(file, multiViewDir))) return { assetId, attached: false }
 
-    await seam.attachFiles({ assetId, files: [multiViewDir] })
-    return { assetId, attached: true }
+    const attachedTo = await attachMultiView(seam, { ...avatar, assetId }, multiViewDir)
+    return { assetId: attachedTo, attached: true }
   }
 
   /** 只读状态：不写任何账本。 */

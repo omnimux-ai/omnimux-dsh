@@ -425,7 +425,10 @@ export function createTestEnvironmentStarter(deps = {}) {
                 io.cpSync(devProfilePkg, join(omnimuxProfileDir, 'package.json'), { force: true });
               }
             }
-          } catch {}
+          } catch (error) {
+            // 不阻断启动，但绝不静默：这一段失败会让新插件不被加载，验收会悄悄退回源码断言。
+            process.stderr.write(`[test-env] 插件注册表写入失败（新插件可能不会被加载）：${error?.message ?? error}\n`)
+          }
 
           // 检测当前工作树有改动的插件集合（用于按需触发自动构建）
           const modifiedPlugins = new Set();
@@ -556,8 +559,10 @@ export function createTestEnvironmentStarter(deps = {}) {
                     }
                   }
                 }
-              } catch {}
-            }
+              } catch (error) {
+                // 同上：物化或构建失败会让这个插件在真机里不可见，必须留下可见的痕迹。
+                process.stderr.write(`[test-env] 插件物化失败 ${pkg}：${error?.message ?? error}\n`)
+              }
           } catch {}
         }
       } catch {}

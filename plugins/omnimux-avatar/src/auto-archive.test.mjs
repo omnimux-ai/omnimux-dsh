@@ -113,6 +113,32 @@ test('没有 onReady 时是纯 no-op，不报错也不写 syncError', async (t) 
   assert.equal(result.task.syncError, null)
 })
 
+// —— 回归：#3176 缺陷 5 ——
+
+test('回归 3176-5：改任务记录写不进去时，归档失败原因仍要落盘且任务保持 ready', async (t) => {
+  const { paths, store: real } = await withEnv(t)
+  const avatar = real.create({ name: '落盘失败形象' })
+  // 只让 updateTask 写不进账本（落盘失败/记录缺失），其余读写照常。
+  const store = {
+    ...real,
+    updateTask: () => {
+      throw new Error('persist-failed')
+    },
+  }
+  const onReady = recorder(() => {
+    throw new Error('资产库不可用')
+  })
+  const generation = createGeneration({ ctx: { get: () => undefined }, store, paths, imageGenerate: liveSeam(), onReady })
+
+  const result = await generation.submitSheet({ avatarId: avatar.id, model: 'm', ...SHEET_INPUT })
+
+  assert.equal(result.task.status, 'ready')
+  assert.equal(result.task.syncError, '资产库不可用')
+  const persisted = real.get(avatar.id).tasks[0]
+  assert.equal(persisted.status, 'ready', '归档失败绝不能改任务状态')
+  assert.equal(persisted.syncError, '资产库不可用', 'syncError 必须真的写进账本，不能只留在返回值里')
+})
+
 test('refreshTask 轮询到 ready → 触发 sheet 归档', async (t) => {
   const { paths, store } = await withEnv(t)
   const avatar = store.create({ name: '轮询形象' })

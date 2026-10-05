@@ -17,6 +17,7 @@ const PATHS = {
   avatarsDelete: '/api/omnimux/avatar/avatars/delete',
   sheet: '/api/omnimux/avatar/sheet',
   multiview: '/api/omnimux/avatar/multiview',
+  sync: '/api/omnimux/avatar/sync',
   tasks: '/api/omnimux/avatar/tasks',
   task: '/api/omnimux/avatar/task',
   tasksDelete: '/api/omnimux/avatar/tasks/delete',
@@ -158,6 +159,9 @@ export async function deleteAvatar({ id }) {
 
 /**
  * 提交角色设定板生成。
+ *
+ * `taskRef` 是轮询句柄（调用方拿它去 `GET /task?taskId=`），必须是本插件自己的
+ * 任务编号：服务端顶层的 `taskRef` 是上游提供方的引用，用它取任务会 404。
  * @param {{ avatarId: string, model: string, group?: string, tier: string, selection: import('./lib/types.js').Selection, brief?: string, seed?: number, image_url?: string }} body
  * @returns {Promise<{ task: import('./lib/types.js').TaskRecord|null, mode: string, dest: unknown, taskRef: string }>}
  */
@@ -167,12 +171,14 @@ export async function submitSheet(body) {
     task: payload.task ?? null,
     mode: payload.mode ?? '',
     dest: payload.dest ?? null,
-    taskRef: String(payload.taskRef ?? payload.task?.task_id ?? payload.task?.id ?? ''),
+    taskRef: String(payload.task?.taskId ?? payload.taskRef ?? payload.task?.task_id ?? payload.task?.id ?? ''),
   }
 }
 
 /**
  * 提交由现有设定板派生的多视角设定板。
+ *
+ * `taskRef` 的口径与 `submitSheet` 一致：本插件自己的任务编号。
  * @param {{ avatarId: string, model: string, group?: string }} body
  * @returns {Promise<{ task: import('./lib/types.js').TaskRecord|null, mode: string, dest: unknown, taskRef: string }>}
  */
@@ -182,7 +188,26 @@ export async function submitMultiView(body) {
     task: payload.task ?? null,
     mode: payload.mode ?? '',
     dest: payload.dest ?? null,
-    taskRef: String(payload.taskRef ?? payload.task?.task_id ?? payload.task?.id ?? ''),
+    taskRef: String(payload.task?.taskId ?? payload.taskRef ?? payload.task?.task_id ?? payload.task?.id ?? ''),
+  }
+}
+
+/**
+ * 手动补偿归档：自动归档失败后，由界面把已产出的图重新存进资产库。
+ *
+ * 对应规格 §7.2 的 `POST /sync`；`kind` 缺省为 `'sheet'`，与路由取值一致
+ * （`'sheet' | 'multiview' | 'both'`）。返回 `{ sheet, multiView, status }`，
+ * 未参与本次补偿的两项为 null。
+ *
+ * @param {{ avatarId: string, kind?: 'sheet'|'multiview'|'both' }} input
+ * @returns {Promise<{ sheet: unknown, multiView: unknown, status: unknown }>}
+ */
+export async function syncLibrary({ avatarId, kind = 'sheet' }) {
+  const body = await request(PATHS.sync, { method: 'POST', body: { avatarId, kind } })
+  return {
+    sheet: body.sheet ?? null,
+    multiView: body.multiView ?? null,
+    status: body.status ?? null,
   }
 }
 

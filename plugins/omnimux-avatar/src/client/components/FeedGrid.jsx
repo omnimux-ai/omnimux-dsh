@@ -29,10 +29,27 @@ export const GRID_CLASSES = 'omx-avatar-feed-grid'
 /** 时间线类名：窄栏单列，卡片各自收缩到自己的画幅（列宽上限由 CSS 承担）。 */
 export const TIMELINE_CLASSES = 'omx-avatar-feed-timeline'
 
+/**
+ * 任务在界面里的稳定标识。
+ *
+ * 画廊层的 `taskKey` 认上游控制器的 snake_case（`task_id` / `id`），而本插件自己的
+ * 服务端回的是 camelCase 的 `taskId`；两种拼法先补齐再取键，避免不同任务并成同一个键。
+ * 三种编号都没有时返回空串：无法标识的记录不参与去重，也不做兜底合并。
+ *
+ * @param {import('../lib/types.js').TaskRecord|null|undefined} task
+ * @returns {string}
+ */
+export function taskIdentity(task) {
+  if (!task) return ''
+  if (task.task_id || task.id) return taskKey(task)
+  if (task.taskId === undefined || task.taskId === null || task.taskId === '') return ''
+  return taskKey({ ...task, task_id: String(task.taskId) })
+}
+
 /** 有唯一编号才参与去重；连编号都没有的记录按原样保留，不做兜底合并。 */
 function dedupeKey(task) {
-  if (!task) return null
-  return task.task_id || task.id ? taskKey(task) : null
+  const key = taskIdentity(task)
+  return key === '' ? null : key
 }
 
 /**
@@ -48,6 +65,8 @@ function dedupeKey(task) {
  *   onLoadMore: () => void,
  *   onView: (task: import('../lib/types.js').TaskRecord) => void,
  *   onRetry: (task: import('../lib/types.js').TaskRecord) => void,
+ *   onSync?: (task: import('../lib/types.js').TaskRecord) => void,
+ *   syncingKey?: string,
  *   onOpenMultiView?: (parent: import('../lib/types.js').TaskRecord, child: import('../lib/types.js').TaskRecord) => void,
  *   t: (key: string) => string,
  * }} props
@@ -65,6 +84,8 @@ export function FeedGrid(props) {
     onLoadMore,
     onView,
     onRetry,
+    onSync,
+    syncingKey,
     onOpenMultiView,
     t,
   } = props
@@ -135,12 +156,14 @@ export function FeedGrid(props) {
     <div className={isGrid ? GRID_CLASSES : TIMELINE_CLASSES}>
       {items.map((task) => (
         <TaskCard
-          key={taskKey(task)}
+          key={taskIdentity(task)}
           task={task}
           viewMode={viewMode}
           child={childByParent?.get(taskKey(task)) ?? null}
+          syncing={Boolean(syncingKey) && syncingKey === taskIdentity(task)}
           onView={onView}
           onRetry={onRetry}
+          onSync={onSync}
           onOpenMultiView={onOpenMultiView}
           t={t}
         />

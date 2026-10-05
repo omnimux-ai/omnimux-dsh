@@ -288,7 +288,7 @@ ${CANONICAL_SCROLL_DECL}
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--omx-avatar-swatch, var(--dsw-alias-bg-layer-3));
+  background: var(--avatar-swatch, var(--dsw-alias-bg-layer-3));
 }
 
 /* ── 性别卡片：右上角图标 + 左下角标题 ─────────────────── */
@@ -662,7 +662,7 @@ ${CANONICAL_SCROLL_DECL}
   inset: 0;
   opacity: 0.35;
   background: conic-gradient(
-    var(--dsw-alias-brand-primary) var(--omx-avatar-mv-progress, 0%),
+    var(--dsw-alias-brand-primary) var(--avatar-mv-progress, 0%),
     transparent 0
   );
 }
@@ -801,6 +801,35 @@ ${CANONICAL_SCROLL_DECL}
 }
 .omx-avatar-status.is-generating {
   color: var(--dsw-alias-label-secondary);
+}
+/* 归档未完成：贴在成品卡片顶部的一条提示，含补偿入口 */
+.omx-avatar-sync {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--dsw-alias-state-warn-primary);
+  background: var(--dsw-alias-bg-elevated);
+}
+.omx-avatar-sync-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--dsw-alias-state-warn-primary);
+}
+.omx-avatar-sync-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--dsw-alias-label-warning);
+}
+.omx-avatar-sync .omx-avatar-abtn {
+  flex: 0 0 auto;
 }
 .omx-avatar-mv-slot {
   position: absolute;
@@ -947,7 +976,7 @@ ${CANONICAL_SCROLL_DECL}
 /* ── 灵感预设网格 ───────────────────────────────────────── */
 .omx-avatar-preset-grid {
   display: grid;
-  grid-template-columns: repeat(var(--omx-avatar-preset-columns, 4), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--avatar-preset-columns, 4), minmax(0, 1fr));
   gap: 12px;
   align-items: start;
 }

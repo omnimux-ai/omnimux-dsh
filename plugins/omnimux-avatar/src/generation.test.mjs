@@ -301,15 +301,18 @@ test('refreshTask：续取成功记 ready，失败记 failed，绝不编造进�
     destPath: dest,
     error: null,
   })
+  // 提供方明确判定任务失败（omnimux-failed）才是终态。
   const bad = fakeSeam(() => {
-    throw new Error('任务已过期')
+    const error = new Error('生成失败：内容审核未通过')
+    error.code = 'omnimux-failed'
+    throw error
   })
   const failed = await createGeneration({ ctx: { get: () => undefined }, store, paths, imageGenerate: bad }).refreshTask({
     avatarId: avatar.id,
     taskId: 'avt_task_00000004',
   })
   assert.equal(failed.status, 'failed')
-  assert.equal(failed.error, '任务已过期')
+  assert.equal(failed.error, '生成失败：内容审核未通过')
 
   // 没有 taskRef 的排队任务：原样返回，不猜状态。
   store.addTask(avatar.id, {
@@ -334,4 +337,63 @@ test('refreshTask：续取成功记 ready，失败记 failed，绝不编造进�
     () => createGeneration({ ctx: { get: () => undefined }, store, paths, imageGenerate: idle }).refreshTask({ avatarId: avatar.id, taskId: 'avt_task_missing' }),
     rejectsWith('task-not-found', 404)
   )
+})
+
+// —— 回归：#3176 缺陷 4 ——
+
+test('回归 3176-4：可恢复的轮询错误不把任务改写成终态 failed', async (t) => {
+  const { paths, store } = await withEnv(t)
+  const avatar = store.create({ name: '轮询抖动形象' })
+  const dest = avatarMainImagePath(paths, avatar.id)
+  store.addTask(avatar.id, {
+    taskId: 'avt_task_00000006',
+    kind: 'sheet',
+    model: 'm',
+    group: '',
+    status: 'generating',
+    taskRef: 'tr_6',
+    destPath: dest,
+    error: null,
+  })
+
+  // 无 code 的取回失败（网络抖动）：不是提供方判定的任务失败。
+  const flaky = fakeSeam(() => {
+    throw new Error('socket hang up')
+  })
+  const generation = createGeneration({ ctx: { get: () => undefined }, store, paths, imageGenerate: flaky })
+  const stillRunning = await generation.refreshTask({ avatarId: avatar.id, taskId: 'avt_task_00000006' })
+
+  assert.equal(stillRunning.status, 'generating', '可恢复的轮询错误不能把任务改成 failed')
+  assert.equal(stillRunning.error, 'socket hang up', '轮询错误仍要记在任务上')
+  assert.equal(store.findTask(avatar.id, 'avt_task_00000006').status, 'generating')
+
+  // 网络恢复后，下一次续取仍能正常转 ready。
+  flaky.execute = async (input) => ({ mode: 'live', taskRef: input.task_ref, dest: input.dest })
+  const recovered = await generation.refreshTask({ avatarId: avatar.id, taskId: 'avt_task_00000006' })
+  assert.equal(recovered.status, 'ready')
+
+  // 提供方明确判定失败才是终态。
+  store.addTask(avatar.id, {
+    taskId: 'avt_task_00000007',
+    kind: 'multiview',
+    model: 'm',
+    group: '',
+    status: 'generating',
+    taskRef: 'tr_7',
+    destPath: dest,
+    error: null,
+  })
+  const terminal = fakeSeam(() => {
+    const error = new Error('生成失败：内容审核未通过')
+    error.code = 'omnimux-failed'
+    throw error
+  })
+  const failed = await createGeneration({
+    ctx: { get: () => undefined },
+    store,
+    paths,
+    imageGenerate: terminal,
+  }).refreshTask({ avatarId: avatar.id, taskId: 'avt_task_00000007' })
+  assert.equal(failed.status, 'failed')
+  assert.equal(failed.error, '生成失败：内容审核未通过')
 })

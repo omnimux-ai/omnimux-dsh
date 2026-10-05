@@ -47,7 +47,7 @@ export function OptionCard(props) {
       >
         <span
           className="omx-avatar-swatch"
-          style={{ '--omx-avatar-swatch': option.swatch ?? 'var(--dsw-alias-bg-layer-3)' }}
+          style={{ '--avatar-swatch': option.swatch ?? 'var(--dsw-alias-bg-layer-3)' }}
         />
         <span className="omx-avatar-overlay" />
         <span className="omx-avatar-lbl">{label}</span>

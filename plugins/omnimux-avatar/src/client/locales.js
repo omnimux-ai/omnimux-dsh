@@ -90,6 +90,11 @@ const ZH_DOTTED = {
   'toast.tierDropped': '{{n}} 项在当前档位不可见，已移除',
   'toast.savedToLibrary': '已保存到资产库 · 角色',
 
+  // 归档（资产库同步）没跑成时的卡片文案：图已产出，但还没入库。
+  'sync.unsaved': '尚未保存到资产库',
+  'sync.retry': '重试保存',
+  'sync.retrying': '正在保存…',
+
   'error.noImageChannel': '尚未配置图像生成渠道',
   'error.avatarNameExists': '形象名称已存在',
   'common.close': '关闭',
@@ -172,6 +177,10 @@ const EN_DOTTED = {
   'toast.removed': 'Removed from gallery',
   'toast.tierDropped': '{{n}} picks not visible in this tier were removed',
   'toast.savedToLibrary': 'Saved to the asset library · Characters',
+
+  'sync.unsaved': 'Not saved to the asset library yet',
+  'sync.retry': 'Retry saving',
+  'sync.retrying': 'Saving…',
 
   'error.noImageChannel': 'No image generation channel is configured',
   'error.avatarNameExists': 'A character with this name already exists',

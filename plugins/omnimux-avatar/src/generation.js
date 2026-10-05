@@ -21,6 +21,9 @@ const BRIEF_MAX = 4000
 const SHEET_ASPECT = '9:16'
 // 渠道不可用不是生成失败：不写 failed 记录，也不把它降级成 502。
 const AVAILABILITY_CODES = new Set(['needs-provider', 'needs-omnimux'])
+// 只有提供方明确判定任务失败才是终态（与中枢 isTerminalMediaFailure 同口径）；
+// 网络抖动、取回诊断等可恢复的轮询错误不得把任务改写成 failed。
+const TERMINAL_TASK_CODES = new Set(['omnimux-failed'])
 
 const messageOf = (error) => (error instanceof Error ? error.message : String(error))
 const str = (value) => (typeof value === 'string' ? value : '')
@@ -107,6 +110,24 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
   }
 
   /**
+   * 把归档失败的原因落到任务账本上：先改这条任务记录，写不进去时退回同 taskId 的
+   * 覆盖写入（addTask 按 taskId upsert）。两条路都不碰 status —— 图已产出，
+   * 任务必须留在 ready；账本彻底写不进时也不静默吞掉原因。
+   */
+  function persistSyncError(avatarId, task, message) {
+    try {
+      return store.updateTask(avatarId, task.taskId, { syncError: message }) ?? { ...task, syncError: message }
+    } catch (updateError) {
+      try {
+        return store.addTask(avatarId, { ...task, syncError: message }) ?? { ...task, syncError: message }
+      } catch (addError) {
+        console.warn('[avatar] 归档失败原因未能落盘:', messageOf(addError))
+        return { ...task, syncError: message }
+      }
+    }
+  }
+
+  /**
    * 任务刚转为 ready 时触发一次归档（主图建档 / 多视角目录追加）。
    * 归档失败不改变任务状态，只把原因写进 syncError，并原样返回任务。
    */
@@ -116,12 +137,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       await onReady(avatarId, kind)
       return store.updateTask(avatarId, task.taskId, { syncError: null }) ?? task
     } catch (error) {
-      const message = messageOf(error)
-      try {
-        return store.updateTask(avatarId, task.taskId, { syncError: message }) ?? task
-      } catch {
-        return { ...task, syncError: message }
-      }
+      return persistSyncError(avatarId, task, messageOf(error))
     }
   }
 
@@ -265,6 +281,11 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       const code = typeof error?.code === 'string' ? error.code : ''
       // 取不到状态 ≠ 生成失败：渠道不可用时保持非终态，不写假的 failed。
       if (AVAILABILITY_CODES.has(code)) throw new AvatarError(code, messageOf(error), 503)
+      // 可恢复的轮询错误（网络抖动、取回诊断…）只记下原因，任务留在原状态等下次续取；
+      // 只有提供方明确判定任务失败才写终态 failed。
+      if (!TERMINAL_TASK_CODES.has(code)) {
+        return store.updateTask(avatarId, taskId, { error: messageOf(error) }) ?? task
+      }
       return store.updateTask(avatarId, taskId, { status: 'failed', error: messageOf(error) })
     }
   }

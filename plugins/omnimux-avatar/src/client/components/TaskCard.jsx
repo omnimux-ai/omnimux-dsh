@@ -17,15 +17,40 @@ import { MultiViewBadge } from './MultiViewBadge.jsx'
  * 状态归一。
  *
  * 上游控制器拼 `SUCCESS` / `FAILURE`，适配层另有一套 `succeeded` / `failed`，
- * 两种拼法都要认；其余一律按生成中处理，不猜「未知即失败」。
+ * 本插件自己的服务端回 `ready`；三种拼法都要认，其余一律按生成中处理，
+ * 不猜「未知即失败」。
  */
 function statusOf(task) {
   const upper = String(task?.status ?? '').toUpperCase()
   const lower = String(task?.status ?? '').toLowerCase()
-  if (upper === 'SUCCESS' || lower === 'succeeded') return 'done'
+  if (upper === 'SUCCESS' || lower === 'succeeded' || lower === 'ready') return 'done'
   if (upper === 'FAILURE' || lower === 'failed') return 'failed'
   if (upper === 'QUEUED' || upper === 'SUBMITTED' || upper === 'NOT_START') return 'queued'
   return 'generating'
+}
+
+/**
+ * 归档未完成图标：矢量警示三角，不是 `!` 字符。
+ * @returns {import('react').ReactElement}
+ */
+function SyncAlertIcon() {
+  return (
+    <svg
+      viewBox='0 0 24 24'
+      width='14'
+      height='14'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='1.8'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden='true'
+    >
+      <path d='M12 4.5l8.5 15h-17z' />
+      <path d='M12 10.5v4' />
+      <path d='M12 17.4v.1' />
+    </svg>
+  )
 }
 
 /**
@@ -33,14 +58,16 @@ function statusOf(task) {
  *   task: import('../lib/types.js').TaskRecord,
  *   viewMode?: import('../lib/types.js').InfluencerViewMode,
  *   child: import('../lib/types.js').TaskRecord | null,
+ *   syncing?: boolean,
  *   onView: (task: import('../lib/types.js').TaskRecord) => void,
  *   onRetry: (task: import('../lib/types.js').TaskRecord) => void,
+ *   onSync?: (task: import('../lib/types.js').TaskRecord) => void,
  *   onOpenMultiView?: (parent: import('../lib/types.js').TaskRecord, child: import('../lib/types.js').TaskRecord) => void,
  *   t: (key: string) => string,
  * }} props
  */
 export function TaskCard(props) {
-  const { task, viewMode, child, onView, onRetry, onOpenMultiView, t } = props
+  const { task, viewMode, child, syncing, onView, onRetry, onSync, onOpenMultiView, t } = props
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
 
@@ -52,6 +79,8 @@ export function TaskCard(props) {
   const progress = Number.parseInt(task?.progress ?? '0', 10) || 0
   const ratio = taskAspectRatio(task)
   const boardState = child ? multiViewState(child) : 'absent'
+  // 归档（资产库同步）失败的原因：图已产出，任务仍是 ready，但这一行还没入库。
+  const syncError = typeof task?.syncError === 'string' && task.syncError !== '' ? task.syncError : ''
 
   const onActivate = (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
@@ -119,6 +148,29 @@ export function TaskCard(props) {
             >
               {t('重试')}
             </button>
+          </div>
+        ) : null}
+
+        {/* 归档没跑成：图已产出但还没进资产库，如实说明并给出补偿入口 */}
+        {state === 'done' && syncError ? (
+          <div className='omx-avatar-sync' title={syncError}>
+            <span className='omx-avatar-sync-icon'>
+              <SyncAlertIcon />
+            </span>
+            <span className='omx-avatar-sync-text'>{t('sync.unsaved')}</span>
+            {typeof onSync === 'function' ? (
+              <button /* exempt-ui01: 卡片内归档补偿按钮，外观由 omx-avatar-abtn 类独占 */
+                type='button'
+                className='omx-avatar-abtn'
+                disabled={Boolean(syncing)}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onSync(task)
+                }}
+              >
+                {syncing ? t('sync.retrying') : t('sync.retry')}
+              </button>
+            ) : null}
           </div>
         ) : null}
 
