@@ -183,6 +183,12 @@ export function mapValidatedPlanToVendor(args) {
 
         if (isOpenAi) {
           vendor.image = urls[0]
+          // 上游能力合同公布 reference_images{min:0,max:16}（Issue #3142）。多图必须真的发出去，
+          // 否则会变成「画布可连 16 张、实际只发首图」的虚假声明。images 在 imageGenerate 的
+          // vendorFields 白名单内，与 Grok/通用家族的字段写法一致。
+          if (urls.length > 1) {
+            vendor.images = urls
+          }
         } else if (isSeedream) {
           vendor.image = urls[0]
           vendor.image_urls = urls

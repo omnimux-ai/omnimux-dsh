@@ -93,7 +93,17 @@ models:
         output: { type: "audio" }
         inputs:
           - { slot: "prompt", type: "text", role: "prompt", source: "node_field", valueSources: ["local_field", "upstream_output"], composition: { kind: "single_body", localRole: "body" }, min: 1, max: 1 }
-          - { slot: "reference_audio", type: "audio", role: "reference", source: "upstream_edge", min: 0, max: 1 }
+          - slot: "reference_audio"
+            type: "audio"
+            role: "reference"
+            source: "upstream_edge"
+            min: 0
+            max: 1
+            allowedMimes: ["audio/wav", "audio/mp3", "audio/mpeg"]
+            maxSizeMb: 10
+            limitSource:
+              kind: "official_docs"
+              note: "上游合同 4b4e2aff3500ec80：reference_audios {max:3, formats:[wav,mp3,pcm,ogg_opus], max_bytes_each:10485760, max_seconds_each:30}。maxSizeMb 取 max_bytes_each（10MB）。max 保持 1：同步语音仅写首条 references[{audio_url}]（submit-guard/map.js speech 分支），多值无落点。max_seconds_each=30 不落 maxDurationSec：画布本地导入不携带 durationSec，声明会让每次提交在 METADATA_UNKNOWN 被拒（seedasr-auc 同类判据）。formats 中 pcm/ogg_opus 本仓无对应 MIME 常量，不声明。上游另有 reference_images{max:1}，属本仓未登记的 voice_clone/reference_*_generation 操作，本仓 text_to_speech 的 vendor 形状白名单不含 image/images，故不新增参考图声明。"
     parameters:
       voice:
         # Resolved by the catalog loader; the DTO and SubmitGuard share one index.
@@ -286,13 +296,19 @@ models:
         output: { type: "audio" }
         inputs:
           - { slot: "prompt", type: "text", role: "prompt", source: "node_field", min: 1, max: 1 }
-          - { slot: "voice_sample", type: "audio", role: "audio_track", source: "upstream_edge", min: 1, max: 1 }
+          - slot: "voice_sample"
+            type: "audio"
+            role: "audio_track"
+            source: "upstream_edge"
+            min: 1
+            max: 1
+            allowedMimes: ["audio/wav", "audio/mp3", "audio/mpeg"]
     parameters: {}
     research:
       status: "verified"
       docUrl: "https://docs.omnimux.ai/zh/api-reference/audio-series/models/index-tts"
       verifiedAt: "2026-10-04"
-      notes: "渠道官方文档 zh/api-reference/audio-series/models/index-tts.mdx（OmniMux-docs 仓，2026-10-04 离线复核）：canonical 型号 indextts-2；POST /v1/tasks/autodl；必填 prompt_text（文稿）、prompt_simple（参考音 URL，不得 data: URI）、emo_control_method（推荐「与音色参考音频相同」）；可选 emo_happy/emo_sad/emo_angry ∈ [0,1]；轮询 GET /v1/tasks/{id}，产物 GET /v1/tasks/{id}/artifacts 取 WAV。旧型号 index-tts 已下线，保留 alias 兼容存量画布/账本。"
+      notes: "渠道官方文档 zh/api-reference/audio-series/models/index-tts.mdx（OmniMux-docs 仓，2026-10-04 离线复核）：canonical 型号 indextts-2；POST /v1/tasks/autodl；必填 prompt_text（文稿）、prompt_simple（参考音 URL，不得 data: URI）、emo_control_method（推荐「与音色参考音频相同」）；可选 emo_happy/emo_sad/emo_angry ∈ [0,1]；轮询 GET /v1/tasks/{id}，产物 GET /v1/tasks/{id}/artifacts 取 WAV。旧型号 index-tts 已下线，保留 alias 兼容存量画布/账本。参考素材限制差异登记：上游合同 4b4e2aff3500ec80 的 reference_audios 为 {max:2, formats:[wav,mp3]}，本仓 voice_sample 声明 max=1 且不声明 maxSizeMb/maxDurationSec——max=1 因 AutoDL 契约只有单值 prompt_simple（参考音公网 URL），多值无落点；上游未公布 max_bytes_each 与 max_seconds_each，故不声明体积与时长上限；formats 转写为 MIME 并双写 audio/mp3 与 audio/mpeg，覆盖画布探测（audio/mpeg）与中枢探针归一（audio/mp3）两条通路。"
     implementation:
       status: "ready"
       profileId: "audioGenerate"

@@ -53,7 +53,7 @@ models:
             maxSizeMb: 10
             limitSource:
               kind: "policy_conservative"
-              note: "继承 runtime 表行 max1；官方审计前保守"
+              note: "本仓保守策略而非上游公布值：gpt-image-2.5-hd 在公开能力合同目录返回 HTTP 404，上游未公布数量、格式与单文件体积上限；max 1、mimes 与 10MB 均为本仓保守选择"
         implementation:
           status: "ready"
           profileId: "imageGenerate"
@@ -144,12 +144,12 @@ models:
             role: "reference"
             source: "upstream_edge"
             min: 0
-            max: 1
+            max: 16
             allowedMimes: ["image/png", "image/jpeg", "image/webp"]
             maxSizeMb: 10
             limitSource:
-              kind: "policy_conservative"
-              note: "本仓保守策略而非上游公布值：上游能力合同只给 reference_images {min:0,max:16}，未公布格式清单与单文件大小上限；此处 max 1、mimes 与 10MB 均为保守选择"
+              kind: "official_docs"
+              note: "数量上限 16 来自上游能力合同 reference_images{min:0,max:16}；上游未公布格式清单与单文件大小上限，此处 mimes 与 10MB 为本仓保守值"
         research:
           status: "verified"
           docUrl: "docs/evidence/multiref-live-3138/live-verification.md"
@@ -417,7 +417,7 @@ models:
             maxSizeMb: 15
             limitSource:
               kind: "policy_conservative"
-              note: "继承 runtime 表行 max4；官方审计前保守"
+              note: "本仓保守策略而非上游公布值：grok-imagine-image-2-0 在公开能力合同目录返回 HTTP 404，上游未公布数量、格式与单文件体积上限；max 4、mimes 与 15MB 均为本仓保守选择"
         research:
           status: "draft"
         implementation:
@@ -498,7 +498,7 @@ models:
             maxSizeMb: 15
             limitSource:
               kind: "policy_conservative"
-              note: "继承 runtime 表行 max4；官方审计前保守"
+              note: "本仓保守策略而非上游公布值：grok-imagine-image-quality 在公开能力合同目录返回 HTTP 404，上游未公布数量、格式与单文件体积上限；max 4、mimes 与 15MB 均为本仓保守选择"
         implementation:
           status: "ready"
           profileId: "imageGenerate"
@@ -564,11 +564,11 @@ models:
             source: "upstream_edge"
             min: 0
             max: 5
-            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
+            allowedMimes: ["image/png", "image/jpeg", "image/webp", "image/gif"]
             maxSizeMb: 15
             limitSource:
               kind: "policy_conservative"
-              note: "继承 runtime 表行 max5；官方审计前保守"
+              note: "上游能力合同只公布 formats（png/gif/webp/jpg/jpeg）与 min 0，未公布数量上限与单文件体积上限；max 5 与 15MB 为本仓保守值"
     parameters:
       aspectRatio:
         options:
@@ -630,11 +630,11 @@ models:
             source: "upstream_edge"
             min: 0
             max: 5
-            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
+            allowedMimes: ["image/png", "image/jpeg", "image/webp", "image/gif"]
             maxSizeMb: 15
             limitSource:
               kind: "policy_conservative"
-              note: "继承 runtime 表行 max5；官方审计前保守"
+              note: "上游能力合同只公布 formats（png/gif/webp/jpg/jpeg）与 min 0，未公布数量上限与单文件体积上限；max 5 与 15MB 为本仓保守值"
     parameters:
       aspectRatio:
         options:
@@ -695,12 +695,12 @@ models:
             role: "reference"
             source: "upstream_edge"
             min: 0
-            max: 4
-            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
-            maxSizeMb: 15
+            max: 14
+            allowedMimes: ["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"]
+            maxSizeMb: 7
             limitSource:
-              kind: "policy_conservative"
-              note: "继承 runtime 表行 max4；官方审计前保守"
+              kind: "official_docs"
+              note: "max 14 / 格式 5 种 / 7MB 来自上游能力合同 reference_images{min:0,max:14,formats:[png,jpeg,webp,heic,heif],max_bytes_each:7340032}；原 runtime 表行 max4 已作废"
     parameters:
       aspectRatio:
         options:
@@ -759,12 +759,12 @@ models:
             role: "reference"
             source: "upstream_edge"
             min: 0
-            max: 4
-            allowedMimes: ["image/png", "image/jpeg", "image/webp"]
-            maxSizeMb: 15
+            max: 14
+            allowedMimes: ["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"]
+            maxSizeMb: 7
             limitSource:
-              kind: "policy_conservative"
-              note: "继承 runtime 表行 max4；官方审计前保守"
+              kind: "official_docs"
+              note: "max 14 / 格式 5 种 / 7MB 来自上游能力合同 reference_images{min:0,max:14,formats:[png,jpeg,webp,heic,heif],max_bytes_each:7340032}；原 runtime 表行 max4 已作废"
     parameters:
       aspectRatio:
         options:
@@ -823,13 +823,13 @@ models:
             type: "image"
             role: "reference"
             source: "upstream_edge"
-            min: 0
-            max: 8
+            min: 2
+            max: 10
             allowedMimes: ["image/png", "image/jpeg", "image/webp"]
             maxSizeMb: 15
             limitSource:
-              kind: "policy_conservative"
-              note: "继承 runtime 表行 max8；官方审计前保守"
+              kind: "official_docs"
+              note: "min 2 / max 10 来自上游能力合同 reference_images{min:2,max:10}；上游未公布格式清单与单文件体积上限，mimes 与 15MB 为本仓保守值"
     parameters:
       aspectRatio:
         options:

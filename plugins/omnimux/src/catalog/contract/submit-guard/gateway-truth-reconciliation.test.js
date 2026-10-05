@@ -57,7 +57,7 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
       }
     })
 
-    it('image multi_reference routes first image to vendor.image for OpenAI', () => {
+    it('image multi_reference routes every reference image to vendor.images for OpenAI', () => {
       const op = { id: 'multi_reference', output: { type: 'image' }, inputs: [] }
       const mapped = mapValidatedPlanToVendor({
         operation: op,
@@ -69,6 +69,25 @@ describe('Gateway Truth Reconciliation (SPEC-GATEWAY-TRUTH-001) Tests', () => {
           { role: 'reference', type: 'image', pathOrUrl: 'https://img1.png' },
           { role: 'reference', type: 'image', pathOrUrl: 'https://img2.png' },
         ],
+        bySlot: new Map(),
+      })
+      assert.equal(mapped.ok, true)
+      assert.equal(mapped.vendorPayload.image, 'https://img1.png')
+      // Issue #3142：上游合同公布 reference_images{min:0,max:16}，多图必须真的发出去，
+      // 否则会变成「画布可连 16 张、实际只发首图」的虚假声明。
+      assert.deepEqual(mapped.vendorPayload.images, ['https://img1.png', 'https://img2.png'])
+      assert.equal('image_urls' in mapped.vendorPayload, false)
+    })
+
+    it('image multi_reference keeps a single reference image on vendor.image only for OpenAI', () => {
+      const op = { id: 'multi_reference', output: { type: 'image' }, inputs: [] }
+      const mapped = mapValidatedPlanToVendor({
+        operation: op,
+        profile: imageProfile,
+        modelId: 'gpt-image-2.5',
+        family: 'openai',
+        prompt: 'make it snowy',
+        bindings: [{ role: 'reference', type: 'image', pathOrUrl: 'https://img1.png' }],
         bySlot: new Map(),
       })
       assert.equal(mapped.ok, true)
