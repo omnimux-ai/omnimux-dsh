@@ -88,6 +88,13 @@ describe('MediaViewer UI Polish & Spec Compliance', () => {
     assert.match(jsxContent, />\s*\{cnt\}\s*<\/button>/, '面板内张数按钮内部必须为纯数字 {cnt}');
     assert.doesNotMatch(jsxContent, /\{cnt\}\s*张/, '面板内张数选项严禁携带“张”字后缀');
 
+    // 图像生成方式已取消手选：参数面板不再渲染图像「生成方式」分段组（素材数量驱动推导）；
+    // 视频「生成方式」组仍保留（上面已断言）。此处以结构特征而非文案计数判断图像分支。
+    {
+      const imageBranch = jsxContent.split("mode === 'image'")[1] || '';
+      assert.doesNotMatch(imageBranch, /图像生成方式按钮|由素材卡槽自动适配/, '图像分支不得再渲染生成方式分段组');
+    }
+
     // 底栏参数胶囊回显生成方式与纯数字张数
     assert.match(jsxContent, /<span>\{imageOpMode\}<\/span>\s*<span className="omx-dot">·<\/span>/, '底栏胶囊最前必须包含生成方式与分隔点');
     assert.match(jsxContent, /<span>\{imageBatch\}<\/span>/, '底栏胶囊尾部必须为纯数字张数');
