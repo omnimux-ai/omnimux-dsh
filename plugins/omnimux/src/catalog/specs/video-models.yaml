@@ -2339,8 +2339,10 @@ models:
       - id: "first_frame"
         label: "图生视频"
         research:
-          status: "draft"
-          notes: "vids2api animate 模式（image_url 必填，上游归一为 image-to-video）；提交链路已通，真机取证因上游账号配额耗尽受阻，取证后升格 verified"
+          status: "verified"
+          docUrl: "docs/evidence/2026-10-06-model-google-vids-omni-modes.md"
+          verifiedAt: "2026-10-06"
+          notes: "vids2api animate 模式（image_url 必填，上游归一为 image-to-video）；经中枢自身媒体入口真机最小生成通过（live，40s，2 048 833 字节）"
         output:
           type: "video"
           allowedMimes:
@@ -2374,8 +2376,10 @@ models:
       - id: "video_extend"
         label: "视频延续"
         research:
-          status: "draft"
-          notes: "vids2api extend 模式（video_id 必填，须为本通道任务号或取片地址）；真机取证因上游账号配额耗尽受阻"
+          status: "verified"
+          docUrl: "docs/evidence/2026-10-06-model-google-vids-omni-modes.md"
+          verifiedAt: "2026-10-06"
+          notes: "vids2api extend 模式（video_id 必填，须为本通道任务号或取片地址）；经中枢自身媒体入口真机最小生成通过（live，30s，1 792 302 字节）"
         output:
           type: "video"
           allowedMimes:
@@ -2411,8 +2415,10 @@ models:
       - id: "video_edit"
         label: "视频修改"
         research:
-          status: "draft"
-          notes: "vids2api modify 模式（video_id + 替换图必填）；真机取证因上游账号配额耗尽受阻"
+          status: "verified"
+          docUrl: "docs/evidence/2026-10-06-model-google-vids-omni-modes.md"
+          verifiedAt: "2026-10-06"
+          notes: "vids2api modify 模式（video_id + 替换图必填）；经中枢自身媒体入口真机最小生成通过（live，30s，1 741 130 字节）"
         output:
           type: "video"
           allowedMimes:

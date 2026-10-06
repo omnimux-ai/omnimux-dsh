@@ -302,8 +302,8 @@
         <span id="themeLabel">深色</span>
       </button>
       <dl class="meta-list">
-        <div><dt>生成时间</dt><dd>2026/10/6 02:59:01</dd></div>
-        <div><dt>契约指纹</dt><dd>019be21962</dd></div>
+        <div><dt>生成时间</dt><dd>2026/10/6 13:12:55</dd></div>
+        <div><dt>契约指纹</dt><dd>ca448104d7</dd></div>
       </dl>
     </div>
   </header>
@@ -314,10 +314,10 @@
       <div class="stat-value">45<span class="stat-unit">款</span></div>
       <div class="stat-note">已就绪 17 · 已登记 28 · 处置规则 83 条</div>
     </article>
-    <article class="stat" data-stat="tools" data-count="149">
+    <article class="stat" data-stat="tools" data-count="158">
       <div class="stat-label">智能体工具接口</div>
-      <div class="stat-value">149<span class="stat-unit">个</span></div>
-      <div class="stat-note">跨 15 个插件（扫描 21 个）</div>
+      <div class="stat-value">158<span class="stat-unit">个</span></div>
+      <div class="stat-note">跨 16 个插件（扫描 22 个）</div>
     </article>
     <article class="stat" data-stat="platforms" data-count="8">
       <div class="stat-label">账号接入平台</div>
@@ -339,7 +339,7 @@
     <div class="filters" id="filters" role="group" aria-label="接口分类过滤">
       <button type="button" class="chip is-active" data-filter="all">全部接口</button>
       <button type="button" class="chip" data-filter="models">模型能力 <span class="n">45</span></button>
-      <button type="button" class="chip" data-filter="tools">智能体工具 <span class="n">149</span></button>
+      <button type="button" class="chip" data-filter="tools">智能体工具 <span class="n">158</span></button>
       <button type="button" class="chip" data-filter="platforms">账号接入平台 <span class="n">8</span></button>
       <button type="button" class="chip" data-filter="channels">发布与账号来源 <span class="n">13</span></button>
       <span class="chip-sep" aria-hidden="true"></span>
@@ -697,7 +697,7 @@
         </div>
         <div class="grid grid-model">
 
-          <article class="card item" data-cat="models" data-status="listed" data-search="google-vids-omni google vids omni google google 文生视频">
+          <article class="card item" data-cat="models" data-status="listed" data-search="google-vids-omni google vids omni google google 文生视频 图生视频 视频延续 视频修改">
             <div class="card-head">
               <span class="card-kicker">Google</span>
               <span class="chip chip-status-ok">已就绪</span>
@@ -706,9 +706,9 @@
             <button type="button" class="copy mono" data-copy="google-vids-omni" title="点击复制标识">google-vids-omni</button>
 
             <ul class="tags">
-              <li class="tag tag-listed">文生视频</li>
+              <li class="tag tag-listed">文生视频</li><li class="tag tag-listed">图生视频</li><li class="tag tag-listed">视频延续</li><li class="tag tag-listed">视频修改</li>
             </ul>
-            <p class="card-foot mono">1/1 个操作已就绪</p>
+            <p class="card-foot mono">4/4 个操作已就绪</p>
           </article>
           <article class="card item" data-cat="models" data-status="draft" data-search="grok-imagine-video-1-5 grok imagine video 1.5 xai (grok) grok grok-imagine-video-1.5 文生视频 参考图">
             <div class="card-head">
@@ -1003,7 +1003,7 @@
           <h2 class="block-title">智能体工具接口</h2>
           <p class="block-desc">执行中枢 ctx.tools 注册的智能体工具，按插件分组；与治理门禁静态扫描同源（同一脚本、同一次运行）。</p>
         </div>
-        <span class="block-count" data-block-count>149</span>
+        <span class="block-count" data-block-count>158</span>
       </div>
 
       <div class="group" data-group>
@@ -1049,6 +1049,15 @@
         </div>
         <div class="grid grid-tool">
           <button type="button" class="tool item mono" data-cat="tools" data-copy="automation_create" data-search="automation_create omnimux-automation" title="点击复制工具名">automation_create</button><button type="button" class="tool item mono" data-cat="tools" data-copy="automation_list" data-search="automation_list omnimux-automation" title="点击复制工具名">automation_list</button><button type="button" class="tool item mono" data-cat="tools" data-copy="automation_update" data-search="automation_update omnimux-automation" title="点击复制工具名">automation_update</button><button type="button" class="tool item mono" data-cat="tools" data-copy="automation_runs" data-search="automation_runs omnimux-automation" title="点击复制工具名">automation_runs</button><button type="button" class="tool item mono" data-cat="tools" data-copy="automation_run_now" data-search="automation_run_now omnimux-automation" title="点击复制工具名">automation_run_now</button><button type="button" class="tool item mono" data-cat="tools" data-copy="automation_delete" data-search="automation_delete omnimux-automation" title="点击复制工具名">automation_delete</button>
+        </div>
+      </div>
+      <div class="group" data-group>
+        <div class="group-head">
+          <h3 class="group-title mono">omnimux-avatar</h3>
+          <span class="group-count mono" data-group-count>9</span>
+        </div>
+        <div class="grid grid-tool">
+          <button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_create" data-search="avatar_create omnimux-avatar" title="点击复制工具名">avatar_create</button><button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_list" data-search="avatar_list omnimux-avatar" title="点击复制工具名">avatar_list</button><button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_get" data-search="avatar_get omnimux-avatar" title="点击复制工具名">avatar_get</button><button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_update" data-search="avatar_update omnimux-avatar" title="点击复制工具名">avatar_update</button><button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_delete" data-search="avatar_delete omnimux-avatar" title="点击复制工具名">avatar_delete</button><button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_generate" data-search="avatar_generate omnimux-avatar" title="点击复制工具名">avatar_generate</button><button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_multiview" data-search="avatar_multiview omnimux-avatar" title="点击复制工具名">avatar_multiview</button><button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_tasks" data-search="avatar_tasks omnimux-avatar" title="点击复制工具名">avatar_tasks</button><button type="button" class="tool item mono" data-cat="tools" data-copy="avatar_library_sync" data-search="avatar_library_sync omnimux-avatar" title="点击复制工具名">avatar_library_sync</button>
         </div>
       </div>
       <div class="group" data-group>
@@ -1418,7 +1427,7 @@
       </div>
       <div>
         <div class="source-title">智能体工具接口</div>
-        <div class="source-path">scripts/verify-plugin-agent-tools.mjs（治理门禁同源静态扫描，实测 149 个）</div>
+        <div class="source-path">scripts/verify-plugin-agent-tools.mjs（治理门禁同源静态扫描，实测 158 个）</div>
       </div>
       <div>
         <div class="source-title">账号接入平台</div>
@@ -1429,11 +1438,11 @@
         <div class="source-path">plugins/omnimux-publish/src/config.js · plugins/omnimux-publish/src/account-policy.js · plugins/omnimux-publish/src/submit-media.js + src/hubtools.js · plugins/omnimux/src/official/provider.js</div>
       </div>
     </div>
-    <p class="footer-note">生成时间 2026/10/6 02:59:01 · 生成命令 node scripts/generate-hub-interfaces-html.mjs · 契约指纹 019be21962 · 界面标识与中文名全部取自上述源码真源，页面仅内置分档与展示文案常量。</p>
+    <p class="footer-note">生成时间 2026/10/6 13:12:55 · 生成命令 node scripts/generate-hub-interfaces-html.mjs · 契约指纹 ca448104d7 · 界面标识与中文名全部取自上述源码真源，页面仅内置分档与展示文案常量。</p>
   </footer>
 </div>
 
-<script id="hub-data" type="application/json">{"generatedAt":"2026/10/6 02:59:01","fingerprint":"019be21962","stats":{"models":{"total":45,"listed":17,"draft":28,"dispositions":83},"tools":{"total":149,"plugins":15,"pluginsWithTools":[{"plugin":"omnimux","count":48},{"plugin":"omnimux-accounts","count":2},{"plugin":"omnimux-analytics","count":2},{"plugin":"omnimux-assets","count":8},{"plugin":"omnimux-automation","count":6},{"plugin":"omnimux-browser","count":10},{"plugin":"omnimux-clip","count":9},{"plugin":"omnimux-inspiration","count":6},{"plugin":"omnimux-market","count":15},{"plugin":"omnimux-products","count":7},{"plugin":"omnimux-publish","count":9},{"plugin":"omnimux-social-harvest","count":8},{"plugin":"omnimux-video","count":4},{"plugin":"omnimux-video-preview","count":3},{"plugin":"omnimux-workflow","count":12}]},"platforms":{"total":8,"connected":3,"coming":2,"localeOnly":3},"channels":{"channels":2,"accountSources":1,"platforms":10,"directProvider":"tiktok_direct","hubTools":4}},"filters":{"listed":17,"draft":28,"models":45,"tools":149,"platforms":8,"channels":13}}</script>
+<script id="hub-data" type="application/json">{"generatedAt":"2026/10/6 13:12:55","fingerprint":"ca448104d7","stats":{"models":{"total":45,"listed":17,"draft":28,"dispositions":83},"tools":{"total":158,"plugins":16,"pluginsWithTools":[{"plugin":"omnimux","count":48},{"plugin":"omnimux-accounts","count":2},{"plugin":"omnimux-analytics","count":2},{"plugin":"omnimux-assets","count":8},{"plugin":"omnimux-automation","count":6},{"plugin":"omnimux-avatar","count":9},{"plugin":"omnimux-browser","count":10},{"plugin":"omnimux-clip","count":9},{"plugin":"omnimux-inspiration","count":6},{"plugin":"omnimux-market","count":15},{"plugin":"omnimux-products","count":7},{"plugin":"omnimux-publish","count":9},{"plugin":"omnimux-social-harvest","count":8},{"plugin":"omnimux-video","count":4},{"plugin":"omnimux-video-preview","count":3},{"plugin":"omnimux-workflow","count":12}]},"platforms":{"total":8,"connected":3,"coming":2,"localeOnly":3},"channels":{"channels":2,"accountSources":1,"platforms":10,"directProvider":"tiktok_direct","hubTools":4}},"filters":{"listed":17,"draft":28,"models":45,"tools":158,"platforms":8,"channels":13}}</script>
 <script>
 (function () {
   var root = document.documentElement;
