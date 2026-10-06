@@ -23,6 +23,7 @@ import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
 import type { CanvasWorkspaceSnapshot, SerializedCanvasEdge } from '../../shared/canvasTypes.ts';
 import { resolveVideoAbsolutePath, extractMarkdownTables } from '../videoDeconstruct/service.ts';
+import { prepareVideoForAnalyze } from '../prepareAnalyzeVideo.ts';
 
 export interface VideoStoryboardServiceDeps {
   store: WorkspaceStore;
@@ -145,8 +146,9 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
     // 1. 校验工作区存在性
     deps.store.get(workspaceId);
 
-    // 2. 解析视频绝对路径
+    // 2. 解析视频绝对路径；远程 URL 或超上限本地文件先转码压缩成理解模型可接受的样片
     const absVideoPath = resolveVideoAbsolutePath(deps, workspaceId, input.videoPath);
+    const analyzeVideoPath = (await prepareVideoForAnalyze(deps, workspaceId, absVideoPath)) ?? absVideoPath;
 
     // 3. 寻找源视频节点并检查是否已有专属分镜表节点（严格匹配 origin === 'video_storyboard' && sourceVideoNodeId === input.nodeId）
     let existingNode: CanvasNode | undefined;
@@ -255,7 +257,7 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
 
     let analyzeMarkdown = '';
     try {
-      const res = await analyzeTool.execute({ video: absVideoPath, model: 'gemini-3.8-flash' });
+      const res = await analyzeTool.execute({ video: analyzeVideoPath, model: 'gemini-3.8-flash' });
       const text =
         res?.report ||
         res?.text ||

@@ -23,6 +23,7 @@ import { createWorkflowLogger } from '../execution/logger.ts';
 import type { CanvasInputMutation, CanvasNode } from '../../shared/graph/canvasInputMutationGateway.ts';
 import type { CanvasWorkspaceSnapshot, SerializedCanvasEdge } from '../../shared/canvasTypes.ts';
 import { assertProjectWriteSafe, resolveProjectRelPath } from '../../projects/paths.ts';
+import { prepareVideoForAnalyze } from '../prepareAnalyzeVideo.ts';
 
 export interface VideoDeconstructServiceDeps {
   store: WorkspaceStore;
@@ -268,8 +269,9 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
     // 1. 校验工作区存在性
     deps.store.get(workspaceId);
 
-    // 2. 解析视频绝对路径
+    // 2. 解析视频绝对路径；远程 URL 或超上限本地文件先转码压缩成理解模型可接受的样片
     const absVideoPath = resolveVideoAbsolutePath(deps, workspaceId, input.videoPath);
+    const analyzeVideoPath = (await prepareVideoForAnalyze(deps, workspaceId, absVideoPath)) ?? absVideoPath;
 
     // 3. 查找是否有已有下游表格节点，严格复用已有 tableId 与物理文件，避免生成游离碎片文件
     let existingNode: CanvasNode | undefined;
@@ -334,7 +336,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
 
     let markdown = '';
     try {
-      const res = await tool.execute({ video: absVideoPath, model: 'gemini-3.8-flash' });
+      const res = await tool.execute({ video: analyzeVideoPath, model: 'gemini-3.8-flash' });
       const text =
         res?.report ||
         res?.text ||
