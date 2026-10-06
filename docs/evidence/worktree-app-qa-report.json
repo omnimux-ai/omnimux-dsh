@@ -1,16 +1,16 @@
 {
-  "runId": "8bb6e4e4-a951-4c14-9557-ac21e6db03b8",
+  "runId": "a417382f-8335-4a4e-86ef-8568e55aade9",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/vids-in-editor-3196",
-  "origin": "http://127.0.0.1:54195",
-  "appPort": 54195,
-  "cdpPort": 54206,
-  "startedAt": "2026-10-06T10:18:53.378Z",
-  "completedAt": "2026-10-06T10:19:25.742Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/vids-composer-compact",
+  "origin": "http://127.0.0.1:54681",
+  "appPort": 54681,
+  "cdpPort": 54684,
+  "startedAt": "2026-10-06T11:03:31.112Z",
+  "completedAt": "2026-10-06T11:03:49.882Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:54195",
+    "origin": "http://127.0.0.1:54681",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "taskPluginsCount": 22,
@@ -36,19 +36,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:54195",
+      "origin": "http://127.0.0.1:54681",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-vpfKI2lu4EAYacX7uRN56Mv1T0BxqvI22alaYkFmeQc"
+      "cookieName": "dsh-auth-WHnL4KetfP6MeKg0ulvAIVdTc-JrX_j5FbpZPc45aXk"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 54206
+      "port": 54684
     },
     {
       "name": "auth-cookie-applied",
@@ -58,7 +58,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 10,
+        "visibleCount": 132,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -67,7 +67,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 24
+        "bodyTextLength": 121
       }
     },
     {
@@ -78,7 +78,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 10
+      "visibleCount": 132
     },
     {
       "name": "runtime-modal-bypassed",
@@ -87,7 +87,7 @@
     {
       "name": "blank-session-guide-visible",
       "pass": true,
-      "clickedNewSession": false
+      "clickedNewSession": true
     },
     {
       "name": "explore-section-visible",
@@ -107,84 +107,89 @@
       "usedWorkbenchFallback": true
     },
     {
-      "name": "journey:ac0-entry-surface",
+      "name": "journey:ac0-open-clip",
       "pass": true,
-      "detail": "入口在场=false，工作台接口在场=true"
+      "detail": "打开方式：workbench-api"
     },
     {
-      "name": "journey:ac1-entry-click",
-      "pass": true,
-      "detail": "该验收表面不渲染会话侧栏（入口行不在场），改用工作台接口打开剪辑窗口"
-    },
-    {
-      "name": "journey:ac1b-project-ready",
+      "name": "journey:ac0b-project-ready",
       "pass": true,
       "detail": "空态处理：{\"ok\":true,\"needed\":true,\"clicked\":\"创建并进入编辑器\"}"
     },
     {
-      "name": "journey:ac1c-tour-dismissed",
+      "name": "journey:ac1-default-collapsed",
       "pass": true,
-      "detail": "首次引导浮层处理：{\"ok\":true,\"present\":true,\"label\":\"Skip Tour\"}"
+      "detail": "默认态：collapsed"
     },
     {
-      "name": "journey:ac3-area-elements",
+      "name": "journey:ac1-collapsed-input-visible",
       "pass": true,
-      "detail": "带 grid-area 的元素：[{\"tag\":\"div\",\"area\":\"gen\",\"rect\":[715,142,240,321]},{\"tag\":\"div\",\"area\":\"gh\",\"rect\":[955,142,10,321]},{\"tag\":\"div\",\"area\":\"media\",\"rect\":[1255,142,240,321]},{\"tag\":\"div\",\"area\":\"mh\",\"rect\":[1245,142,10,321]},{\"tag\":\"div\",\"area\":\"stage\",\"rect\":[965,142,280,321]},{\"tag\":\"div\",\"area\":\"th\",\"rect\":[715,463,780,10]},{\"tag\":\"div\",\"area\":\"timeline\",\"rect\":[715,473,780,220]}]"
+      "detail": "收起态输入行：{\"x\":736,\"y\":410,\"w\":198,\"h\":38,\"visible\":true}"
     },
     {
-      "name": "journey:ac1-editor-opened",
+      "name": "journey:ac1-collapsed-extras-hidden",
       "pass": true,
-      "detail": "入口打开的是剪辑窗口（不是空白页）"
+      "detail": "收起态不显示设置区：null"
     },
     {
-      "name": "journey:ac2-no-stage-takeover",
+      "name": "journey:ac1-chips-complete",
       "pass": true,
-      "detail": "入口不得抢占产品舞台（dshProductStage=null）"
+      "detail": "模式芯片：[\"create\",\"animate\",\"modify\",\"extend\"]"
     },
     {
-      "name": "journey:ac3-four-regions-present",
+      "name": "journey:ac2-toggle-expands",
       "pass": true,
-      "detail": "四区几何：{\"gen\":{\"x\":715,\"y\":142,\"w\":240,\"h\":321},\"stage\":{\"x\":965,\"y\":142,\"w\":280,\"h\":321},\"media\":{\"x\":1255,\"y\":142,\"w\":240,\"h\":321},\"timeline\":{\"x\":715,\"y\":473,\"w\":780,\"h\":220}}"
+      "detail": "点击箭头后：expanded"
     },
     {
-      "name": "journey:ac3-left-is-generate",
+      "name": "journey:ac2-extras-visible",
       "pass": true,
-      "detail": "生成列在最左且不塌陷（x=715, w=240）"
+      "detail": "设置区可见：{\"x\":736,\"y\":416,\"w\":198,\"h\":32,\"visible\":true}"
     },
     {
-      "name": "journey:ac3-right-is-library",
+      "name": "journey:ac3-capsule-visible",
       "pass": true,
-      "detail": "官方素材/属性面板在右缘且不塌陷（x=1255, w=240）"
+      "detail": "参数胶囊：720p · 16:9 · 10s"
     },
     {
-      "name": "journey:ac3-stage-not-crushed",
+      "name": "journey:ac3-clear-and-send",
       "pass": true,
-      "detail": "官方舞台保留最小可用宽度（w=280）"
+      "detail": "清除 {\"x\":857,\"y\":419,\"w\":36,\"h\":26,\"visible\":true} / 发送 {\"x\":902,\"y\":416,\"w\":32,\"h\":32,\"visible\":true}"
     },
     {
-      "name": "journey:ac3-bottom-is-timeline",
+      "name": "journey:ac3-param-hooks-present",
       "pass": true,
-      "detail": "时间线在下方（y=473, h=220）"
+      "detail": "参数选择器：[\"seconds\",\"resolution\",\"aspectRatio\"]"
     },
     {
-      "name": "journey:ac3-right-column-reachable",
+      "name": "journey:ac3-capsule-collapsed-by-default",
       "pass": true,
-      "detail": "右栏可触达（与编辑器右缘间隙 -215px，网格滚动宽 800/575）"
+      "detail": "参数弹层默认关闭：false"
     },
     {
-      "name": "journey:ac4-generate-panel-mounted",
+      "name": "journey:ac3-capsule-opens-params",
       "pass": true,
-      "detail": "生成面板已挂进左列宿主容器（宿主 {\"x\":716,\"y\":143,\"w\":238,\"h\":319}，面板 {\"x\":716,\"y\":143,\"w\":238,\"h\":319}）"
+      "detail": "参数弹层：true"
     },
     {
-      "name": "journey:ac5-narrow-no-zero-width-column",
+      "name": "journey:ac4-mode-strip-removed",
       "pass": true,
-      "detail": "窄窗口三列宽度：gen=240, stage=280, media=240"
+      "detail": "模式说明行可见性：false"
     },
     {
-      "name": "journey:ac6-restored-after-narrow",
+      "name": "journey:ac4-submit-reason-row-removed",
       "pass": true,
-      "detail": "恢复宽窗口后四区仍在"
+      "detail": "常驻提示行：null"
+    },
+    {
+      "name": "journey:ac4-toggle-recollapses",
+      "pass": true,
+      "detail": "再次收起：collapsed"
+    },
+    {
+      "name": "journey:ac2-input-focus-expands",
+      "pass": true,
+      "detail": "聚焦输入后：expanded"
     },
     {
       "name": "screenshot-png-verified",
@@ -193,22 +198,22 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 110711
+      "bytes": 108078
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/vids-in-editor-3196/.workbuddy/evidence/app-qa/8bb6e4e4-a951-4c14-9557-ac21e6db03b8/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/vids-composer-compact/.workbuddy/evidence/app-qa/a417382f-8335-4a4e-86ef-8568e55aade9/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 110711
+    "bytes": 108078
   },
   "errors": [],
   "cleanup": {
     "cleaned": true
   },
   "hubPath": {
-    "guideVisibleBefore": true,
-    "clickedNewSession": false,
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
     "exploreVisible": true,
     "exploreCardCount": 40,
     "assetHubOpened": true
