@@ -453,7 +453,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "badge": "专属算力实例 · 9图3视频3音频参考",
       "description": "专属 GPU 算力实例 ComfyUI U06 工作流（海螺 H3 换人与多模态参考生视频），默认全能参考模式，支持最多 9 张参考图、3 条参考视频、3 条参考音频。",
       "pricing": {
-        "pointsEstimate": 4.2,
+        "pointsEstimate": 3.8,
         "discountRate": 1,
         "billingMode": "per_task"
       },
