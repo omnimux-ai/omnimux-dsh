@@ -541,6 +541,118 @@ const STAGE_STYLES = `
   cursor: not-allowed;
   color: var(--dsw-alias-label-tertiary);
 }
+
+/* 紧凑合成器卡片：收起态只露一行（模式芯片 + 输入行 + 展开箭头），展开后追加附件与参数 */
+.gvids-drawer {
+  gap: 8px;
+}
+.gvids-composer-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+.gvids-composer-head .gvids-segmented-control {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gvids-composer-head .gvids-segmented-control::-webkit-scrollbar {
+  display: none;
+}
+.gvids-composer-head .gvids-segment-tab {
+  white-space: nowrap;
+  padding: 0 8px;
+  flex: 0 0 auto;
+}
+.gvids-composer-toggle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.gvids-composer-toggle:hover {
+  background: var(--dsw-alias-bg-layer-3);
+}
+.gvids-composer-toggle svg {
+  transition: transform 0.15s ease;
+}
+.gvids-drawer[data-vids-composer='expanded'] .gvids-composer-toggle svg {
+  transform: rotate(180deg);
+}
+.gvids-input-area {
+  resize: none;
+  transition: height 0.15s ease;
+}
+.gvids-drawer[data-vids-composer='collapsed'] .gvids-input-area {
+  min-height: 34px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.gvids-composer-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gvids-composer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.gvids-param-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 15px;
+  border: 1px solid var(--dsw-alias-border-secondary);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gvids-param-popover {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+.gvids-param-popover[data-open='false'] {
+  display: none;
+}
+.gvids-composer-clear {
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.gvids-submit-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 16px;
+}
+.gvids-submit-btn > span {
+  display: none;
+}
 `
 
 const SECONDS_OPTIONS = vidsSecondsOptions()
@@ -873,6 +985,17 @@ export function GoogleVidsStage(props) {
     return activeMode.placeholder
   }
 
+  // 紧凑合成器：默认收起，点击输入框或展开箭头才展开（设置与参数收进展开态）
+  const [composerExpanded, setComposerExpanded] = useState(false)
+  const [paramPopoverOpen, setParamPopoverOpen] = useState(false)
+
+  const handleClearComposer = () => {
+    setPromptText('')
+    setCardNotice(null)
+    handleRemoveImage()
+    handleRemoveSource()
+  }
+
   if (!open && !everOpened) return null
 
   const content = (
@@ -1116,29 +1239,54 @@ export function GoogleVidsStage(props) {
         ))}
       </div>
 
-      {/* 3.3 底部创作抽屉与参数区 */}
-      <div className="gvids-drawer">
-        {/* 模式分段控制器（标签来自 VIDS_MODES） */}
-        <div className="gvids-segmented-control">
-          {VIDS_MODES.map((tab) => (
-            <button // exempt-ui01 Google Vids 舞台专属按钮
-              key={tab.id}
-              type="button"
-              data-vids-mode={tab.id}
-              data-active={currentMode === tab.id ? 'true' : 'false'}
-              onClick={() => handleSwitchMode(tab.id)}
-              className="gvids-segment-tab"
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* 3.3 底部创作抽屉：紧凑合成器卡片（默认收起，点击输入或箭头展开） */}
+      <div className="gvids-drawer" data-vids-composer={composerExpanded ? 'expanded' : 'collapsed'}>
+        <div className="gvids-composer-head">
+          {/* 模式芯片（标签来自 VIDS_MODES；说明文案收进悬浮提示，不再单独占一行） */}
+          <div className="gvids-segmented-control">
+            {VIDS_MODES.map((tab) => (
+              <button // exempt-ui01 Google Vids 舞台专属按钮
+                key={tab.id}
+                type="button"
+                data-vids-mode={tab.id}
+                data-active={currentMode === tab.id ? 'true' : 'false'}
+                data-vids-mode-hint={tab.id === currentMode ? activeMode.hint : undefined}
+                title={tab.id === currentMode ? activeMode.hint : undefined}
+                onClick={() => handleSwitchMode(tab.id)}
+                className="gvids-segment-tab"
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <button // exempt-ui01 Google Vids 舞台专属按钮
+            type="button"
+            data-vids-composer-toggle
+            aria-expanded={composerExpanded ? 'true' : 'false'}
+            aria-label={composerExpanded ? '收起设置' : '展开设置'}
+            onClick={() => setComposerExpanded((v) => !v)}
+            className="gvids-composer-toggle"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
 
-        {/* 当前模式说明条 */}
-        <div className="gvids-mode-strip">
-          <span className="gvids-mode-title">{activeMode.title}</span>
-          <span className="gvids-mode-hint" data-vids-mode-hint>{activeMode.hint}</span>
-        </div>
+        {/* 提示词输入：点击输入框即展开（收起态只占一行） */}
+        <textarea
+          disabled={!isEditorReady}
+          value={promptText}
+          onChange={(e) => setPromptText(e.target.value)}
+          onFocus={() => setComposerExpanded(true)}
+          placeholder={getPlaceholder()}
+          rows={composerExpanded ? 4 : 1}
+          className="gvids-input-area"
+        />
+
+        {composerExpanded && (
+          <div className="gvids-composer-extra">
 
         {/* 模式附件行（槽位来自契约：动画=图片，修改=源片段+替换图，延续=源片段） */}
         {attachmentSlots.length > 0 && (
@@ -1237,18 +1385,8 @@ export function GoogleVidsStage(props) {
           <span className="gvids-action-reason">{composerNotice}</span>
         )}
 
-        {/* 提示词输入框 */}
-        <textarea
-          disabled={!isEditorReady}
-          value={promptText}
-          onChange={(e) => setPromptText(e.target.value)}
-          placeholder={getPlaceholder()}
-          rows={3}
-          className="gvids-input-area"
-        />
-
-        {/* 参数控件行（取值域真源：VIDS_PARAM_SPEC） */}
-        <div className="gvids-params">
+        {/* 参数选择器：默认收进底部胶囊，点胶囊才展开（取值域真源：VIDS_PARAM_SPEC） */}
+        <div className="gvids-param-popover" data-open={paramPopoverOpen ? 'true' : 'false'}>
           <label className="gvids-param-field">
             <span>时长</span>
             <select // exempt-ui01 Google Vids 舞台专属控件
@@ -1291,24 +1429,38 @@ export function GoogleVidsStage(props) {
             </select>
           </label>
 
-          <span className="gvids-param-capsule" data-vids-param-summary>
-            {formatVidsParamSummary(params)}
-          </span>
         </div>
 
-        {/* 底部提交区：校验失败时禁用并展示可读原因 */}
-        <div className="gvids-drawer-bottom">
-          {!submission.ok && (
-            <span className="gvids-submit-reason" data-vids-submit-reason>{submission.reason}</span>
-          )}
+        {/* 底部：参数胶囊 + 清除 + 圆形发送键（校验失败原因收进悬浮提示与无障碍标签） */}
+        <div className="gvids-composer-bottom">
+          <button // exempt-ui01 Google Vids 舞台专属按钮
+            type="button"
+            data-vids-param-summary
+            aria-expanded={paramPopoverOpen ? 'true' : 'false'}
+            onClick={() => setParamPopoverOpen((v) => !v)}
+            className="gvids-param-capsule"
+          >
+            {formatVidsParamSummary(params)}
+          </button>
+
+          <button // exempt-ui01 Google Vids 舞台专属按钮
+            type="button"
+            data-vids-composer-clear
+            onClick={handleClearComposer}
+            className="gvids-composer-clear"
+          >
+            清除
+          </button>
 
           <button // exempt-ui01 Google Vids 舞台专属按钮
             type="button"
             data-vids-submit
             data-submit-label={activeMode.submitLabel}
+            data-vids-submit-reason={submission.ok ? undefined : submission.reason}
+            title={submission.ok ? activeMode.submitLabel : submission.reason}
             disabled={!isEditorReady || !submission.ok}
             onClick={() => submitTask()}
-            aria-label={activeMode.submitLabel}
+            aria-label={submission.ok ? activeMode.submitLabel : submission.reason}
             className="gvids-submit-btn"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -1317,6 +1469,8 @@ export function GoogleVidsStage(props) {
             <span>{activeMode.submitLabel}</span>
           </button>
         </div>
+          </div>
+        )}
       </div>
     </div>
   )
