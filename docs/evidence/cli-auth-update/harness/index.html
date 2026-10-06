@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OmniMux 本机 CLI 验收装置 (#3178)</title>
+    <!-- Official DSH theme tokens, extracted from @deepseek-ai/dsh-client-ui-theme -->
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/bundle.css" />
+    <style>
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--dsw-alias-bg-base, #ffffff);
+        color: var(--dsw-alias-label-primary, #1a1a1a);
+        font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      }
+      /* Frame the settings card the way the real settings page does. */
+      #stage { max-width: 980px; margin: 0 auto; padding: 28px 32px 48px; }
+      #harness-banner {
+        font-size: 12px; color: var(--dsw-alias-label-tertiary, #8a8a8a);
+        margin-bottom: 18px; padding-bottom: 10px;
+        border-bottom: 1px solid var(--dsw-alias-border-l1, #e5e5e5);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="harness-banner">验收装置 · 真实组件 RuntimeModeSection（本机 CLI 页签）</div>
+      <div id="root"></div>
+    </div>
+    <script src="/bundle.js"></script>
+  </body>
+</html>

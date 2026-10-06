@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Button, DropdownSelect, InputField } from 'dsh-ui-kit'
 import { useOmnimuxAuth } from './use-omnimux-auth.js'
 import { DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
@@ -244,6 +244,20 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     : ''
   const [agentModel, setAgentModel] = useState(initialAgentModel)
   const [testedId, setTestedId] = useState('')
+  const [updates, setUpdates] = useState({})
+  const [loggingInId, setLoggingInId] = useState('')
+  const [updatingId, setUpdatingId] = useState('')
+  const loginPollRef = useRef(null)
+
+  // 登录轮询：终端完成登录后由服务端登录态收敛，最长 2 分钟
+  const stopLoginPoll = useCallback(() => {
+    if (loginPollRef.current !== null) {
+      clearInterval(loginPollRef.current)
+      loginPollRef.current = null
+    }
+  }, [])
+
+  useEffect(() => () => stopLoginPoll(), [stopLoginPoll])
 
   // 自愈清理机制：若检测到当前的 agentModel 或 value.runtimeAgentModel 存在且命中了 OBSOLETE_MODEL_IDS，主动清除并同步清理底层持久化存储
   useEffect(() => {
@@ -271,9 +285,45 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     }
   }, [])
 
+  const refreshUpdates = useCallback(async () => {
+    try {
+      const data = await api('/omnimux/agents/updates')
+      if (data && data.updates && typeof data.updates === 'object') {
+        setUpdates(data.updates)
+      }
+    } catch {
+      // best-effort：版本检查不可用时不得渲染任何版本状态
+    }
+  }, [])
+
   useEffect(() => {
-    void refreshAgents()
-  }, [refreshAgents])
+    void refreshAgents().then(() => refreshUpdates())
+  }, [refreshAgents, refreshUpdates])
+
+  const startLoginPoll = useCallback((id) => {
+    stopLoginPoll()
+    const deadline = Date.now() + 120000
+    let inFlight = false
+    loginPollRef.current = setInterval(() => {
+      if (Date.now() >= deadline) {
+        stopLoginPoll()
+        return
+      }
+      if (inFlight) return
+      inFlight = true
+      api('/omnimux/agents').then((data) => {
+        inFlight = false
+        const list = Array.isArray(data.agents) ? data.agents : []
+        setAgents(list)
+        const row = list.find((item) => item && item.id === id)
+        if (row && row.auth && row.auth.state === 'signed-in') {
+          stopLoginPoll()
+        }
+      }).catch(() => {
+        inFlight = false
+      })
+    }, 3000)
+  }, [stopLoginPoll])
 
   const selectAndSaveAgent = async (agent) => {
     if (busy || !agent.installed) return
@@ -336,6 +386,57 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
     }
   }
 
+  const loginAgent = async (event, agent) => {
+    event.stopPropagation()
+    if (busy || loggingInId) return
+    setLoggingInId(agent.id)
+    setError('')
+    setNotice('')
+    try {
+      const res = await api('/omnimux/agents/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: agent.id }),
+      })
+      if (res && res.ok && res.launched) {
+        setNotice(t('runtime.cliLoginOpened'))
+        startLoginPoll(agent.id)
+      } else {
+        setError(t('runtime.cliLoginFail'))
+      }
+    } catch {
+      setError(t('runtime.cliLoginFail'))
+    } finally {
+      setLoggingInId('')
+    }
+  }
+
+  const updateAgent = async (event, agent) => {
+    event.stopPropagation()
+    if (busy || updatingId) return
+    setUpdatingId(agent.id)
+    setError('')
+    setNotice('')
+    try {
+      const res = await api('/omnimux/agents/update', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: agent.id }),
+      })
+      if (res && res.ok) {
+        await refreshAgents()
+        await refreshUpdates()
+        setNotice(t('runtime.cliUpdateDone'))
+      } else {
+        setError(t('runtime.cliUpdateFail'))
+      }
+    } catch {
+      setError(t('runtime.cliUpdateFail'))
+    } finally {
+      setUpdatingId('')
+    }
+  }
+
   const handleModelChange = async (nextModel) => {
     const safeModel = typeof nextModel === 'string' && !OBSOLETE_MODEL_IDS.has(nextModel.trim())
       ? nextModel
@@ -367,6 +468,13 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
       <div className="omx-cli-list">
         {agents.map((agent) => {
           const isSelected = selectedAgent === agent.id
+          const agentAuth = agent.auth && typeof agent.auth === 'object' ? agent.auth : null
+          const isSignedOut = agentAuth !== null && agentAuth.state === 'signed-out'
+          const loginSupported = agentAuth !== null && agentAuth.loginSupported === true
+          const updateInfo = updates[agent.id] && typeof updates[agent.id] === 'object' ? updates[agent.id] : null
+          const showUpdateTag = updateInfo !== null && updateInfo.state === 'available'
+          const showUpdateButton = showUpdateTag && updateInfo.supported === true
+          const updateVersion = updateInfo && typeof updateInfo.latest === 'string' ? updateInfo.latest : ''
           return (
             <div
               key={agent.id}
@@ -382,8 +490,13 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
                     <div className="omx-cli-title-row">
                       <span>{agent.name}</span>
                       {agent.installed ? <span className="omx-cli-tag">{t('runtime.installed')}</span> : null}
+                      {isSignedOut ? <span className="omx-cli-tag">{t('runtime.cliNotLoggedIn')}</span> : null}
+                      {showUpdateTag ? <span className="omx-cli-tag">{t('runtime.cliUpdateAvailable')}</span> : null}
                     </div>
                     <div className="omx-cli-desc">{agent.version || '未检测到程序安装'}</div>
+                    {isSignedOut && !loginSupported ? (
+                      <div className="omx-cli-desc">{t('runtime.cliNoLoginHint')}</div>
+                    ) : null}
                   </div>
                 </div>
                 <div className="omx-cli-tools-row">
@@ -391,6 +504,18 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
                   <Button variant="ghost" disabled={busy || !agent.installed} onClick={(e) => { void testAgent(e, agent) }}>
                     {t('runtime.test')}
                   </Button>
+                  {isSignedOut && loginSupported ? (
+                    <Button variant="ghost" disabled={busy || loggingInId === agent.id} onClick={(e) => { void loginAgent(e, agent) }}>
+                      {t('runtime.cliLogin')}
+                    </Button>
+                  ) : null}
+                  {showUpdateButton ? (
+                    <Button variant="ghost" disabled={busy || updatingId === agent.id} onClick={(e) => { void updateAgent(e, agent) }}>
+                      {updatingId === agent.id
+                        ? t('runtime.cliUpdating')
+                        : (updateVersion ? t('runtime.cliUpdateTo', { version: updateVersion }) : t('runtime.cliUpdate'))}
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 

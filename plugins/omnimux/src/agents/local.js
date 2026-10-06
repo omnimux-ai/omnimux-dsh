@@ -10,6 +10,13 @@ const execFileAsync = promisify(execFile)
  * Local agent CLIs the onboarding can offer. `bin` is the executable name as
  * it appears on PATH; nothing here is a dev-machine address or a fallback —
  * an agent that is not installed is simply not offered.
+ *
+ * `auth`, `login` and `update` are per-CLI capability descriptors, not guesses.
+ * `auth` says how sign-in state is observed offline (a command whose exit code
+ * answers it, or credential files whose non-secret keys do); `login` is the
+ * command that starts an account sign-in, or null when the vendor no longer
+ * offers one; `update` names the channel the binary actually came from — a CLI
+ * whose install shape cannot be determined is never upgraded.
  */
 export const KNOWN_AGENTS = Object.freeze([
   {
@@ -22,6 +29,13 @@ export const KNOWN_AGENTS = Object.freeze([
       'claude-3-5-haiku',
       'claude-3-opus',
     ]),
+    auth: Object.freeze({
+      kind: 'command',
+      command: Object.freeze({ bin: 'claude', args: Object.freeze(['auth', 'status']) }),
+      jsonFlag: 'loggedIn',
+    }),
+    login: Object.freeze({ bin: 'claude', args: Object.freeze(['auth', 'login']) }),
+    update: Object.freeze({ channel: 'npm', npmPackage: '@anthropic-ai/claude-code' }),
   },
   {
     id: 'codex',
@@ -36,6 +50,13 @@ export const KNOWN_AGENTS = Object.freeze([
       'gpt-5.6-luna',
       'gpt-5.5',
     ]),
+    // `codex login status` prints nothing to stdout: the exit code is the answer.
+    auth: Object.freeze({
+      kind: 'command',
+      command: Object.freeze({ bin: 'codex', args: Object.freeze(['login', 'status']) }),
+    }),
+    login: Object.freeze({ bin: 'codex', args: Object.freeze(['login']) }),
+    update: Object.freeze({ channel: 'npm', npmPackage: '@openai/codex' }),
   },
   {
     id: 'kimi',
@@ -47,6 +68,20 @@ export const KNOWN_AGENTS = Object.freeze([
       'kimi-code/kimi-for-coding',
       'kimi-code/kimi-for-coding-highspeed',
     ]),
+    auth: Object.freeze({
+      kind: 'file',
+      paths: Object.freeze(['.kimi-code/credentials/*.json']),
+      tokenKeys: Object.freeze(['access_token', 'refresh_token']),
+    }),
+    login: Object.freeze({ bin: 'kimi', args: Object.freeze(['login']) }),
+    // Native install: npm ships a different artifact on a diverged version
+    // train, so this CLI's own release ledger is the only truthful source.
+    update: Object.freeze({
+      channel: 'self',
+      selfCommand: Object.freeze({ bin: 'kimi', args: Object.freeze(['upgrade']) }),
+      ledgerPath: '.kimi-code/updates/latest.json',
+      ledgerVersionKey: 'latest',
+    }),
   },
   {
     id: 'qwen',
@@ -58,8 +93,68 @@ export const KNOWN_AGENTS = Object.freeze([
       'qwen-turbo',
       'qwen-2.5-coder-32b',
     ]),
+    auth: Object.freeze({
+      kind: 'file',
+      paths: Object.freeze(['.qwen/oauth_creds.json']),
+      tokenKeys: Object.freeze(['access_token']),
+    }),
+    // Qwen retired its account OAuth flow; there is no sign-in command to run.
+    login: null,
+    update: Object.freeze({ channel: 'npm', npmPackage: '@qwen-code/qwen-code' }),
   },
 ])
+
+/**
+ * Resolve an executable name to the absolute path PATH would pick. A missing
+ * name is an empty string, never a guess; an explicit path is resolved as-is.
+ * @param {string} bin
+ * @param {{ env?: Record<string, string|undefined>, fsImpl?: typeof fs, platform?: string }} [options]
+ */
+export function resolveBinPath(bin, options = {}) {
+  const env = options.env || process.env
+  const fsImpl = options.fsImpl || fs
+  const platform = options.platform || process.platform
+  const raw = String(bin || '').trim()
+  if (!raw) return ''
+  const realpath = (value) => {
+    try {
+      return typeof fsImpl.realpathSync === 'function' ? fsImpl.realpathSync(value) : value
+    } catch {
+      return value
+    }
+  }
+  const executable = (candidate) => {
+    try {
+      if (typeof fsImpl.accessSync !== 'function') return true
+      fsImpl.accessSync(candidate, fs.constants.X_OK)
+      return true
+    } catch {
+      return false
+    }
+  }
+  if (raw.includes('/') || raw.includes('\\')) {
+    try {
+      if (!fsImpl.existsSync(raw)) return ''
+    } catch {
+      return ''
+    }
+    return executable(raw) ? realpath(raw) : ''
+  }
+  const dirs = String(env.PATH || '').split(platform === 'win32' ? ';' : ':').filter(Boolean)
+  const extensions = platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : ['']
+  for (const dir of dirs) {
+    for (const extension of extensions) {
+      const candidate = path.join(dir, raw + extension)
+      try {
+        if (!fsImpl.existsSync(candidate)) continue
+      } catch {
+        continue
+      }
+      if (executable(candidate)) return realpath(candidate)
+    }
+  }
+  return ''
+}
 
 const PROBE_TIMEOUT_MS = 5000
 
