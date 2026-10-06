@@ -1,0 +1,2 @@
+fixed.operation= first_frame conflicts= [] ready= true
+legacy.operation= video_multi_ref conflicts= ["slot_removed"] ready= false

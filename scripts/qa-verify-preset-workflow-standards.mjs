@@ -11,6 +11,7 @@ import {
 } from '../plugins/omnimux-workflow/src/client/projects/appLibrary.js';
 
 import { PRESET_WORKFLOW_MAP } from '../plugins/omnimux-workflow/src/client/projects/presetWorkflows.js';
+import { SLOT_LAYOUT_TABLE } from '../plugins/omnimux-workflow/src/shared/graph/feedSlot/slotLayoutTable.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const rootDir = path.resolve(path.dirname(__filename), '..');
@@ -262,6 +263,46 @@ const resIdempotent1 = normalizeWorkflowTopology(validNodes, validEdges);
 const resIdempotent2 = normalizeWorkflowTopology(resIdempotent1.nodes, resIdempotent1.edges);
 assert.deepEqual(resIdempotent1, resIdempotent2);
 pass('normalizeWorkflowTopology 绝对幂等性断言通过');
+
+// -------------------------------------------------------------
+// 5. 视频节点必须显式声明 operation，且连线卡槽必须落在该 operation 的槽位集合内
+// -------------------------------------------------------------
+console.log('\n👉 [Phase 5] 校验视频节点显式 operation 与连线卡槽契约一致性...');
+
+const VIDEO_OPERATIONS = new Set(['text_to_video', 'first_frame', 'first_last_frame', 'end_frame', 'video_multi_ref']);
+
+function assertVideoOperationContract(label, nodes, edges) {
+  for (const node of nodes) {
+    if (node.data?.materialType !== 'video' || !node.data?.model) continue;
+    const params = node.data.params ?? {};
+    // params.mode 是死字段：读取方只认 params.operation，用 mode 表达生成方式会被静默忽略并回落默认 operation。
+    assert.ok(!('mode' in params), `${label} 视频节点 ${node.id} 不得用已废弃的 params.mode 表达生成方式`);
+    const operation = params.operation;
+    assert.ok(typeof operation === 'string' && VIDEO_OPERATIONS.has(operation),
+      `${label} 视频节点 ${node.id} 必须显式声明合法 params.operation，实际: ${String(operation)}`);
+    const allowed = SLOT_LAYOUT_TABLE[operation]?.slots ?? [];
+    for (const edge of edges) {
+      if (edge.target !== node.id || !edge.data?.targetSlot) continue;
+      assert.ok(allowed.includes(edge.data.targetSlot),
+        `${label} 连线 ${edge.id} 的 targetSlot '${edge.data.targetSlot}' 不属于 operation '${operation}' 的槽位集合 [${allowed.join(', ')}]`);
+    }
+  }
+}
+
+for (const appId of EXPECTED_APP_IDS) {
+  const presetFile = path.join(presetsDir, `${appId}.workflow.json`);
+  const presetContent = JSON.parse(fs.readFileSync(presetFile, 'utf8'));
+  assertVideoOperationContract(`presets/${appId}`, presetContent.nodes, presetContent.edges);
+  const inlinePreset = PRESET_WORKFLOW_MAP[appId];
+  if (inlinePreset) assertVideoOperationContract(`presetWorkflows.js/${appId}`, inlinePreset.nodes, inlinePreset.edges);
+  pass(`视频 operation 与卡槽契约一致: ${appId}`);
+}
+
+assert.ok(!builtinTsContent.includes('"mode": "first_frame"'),
+  'builtinCatalogData.ts 不得残留已废弃的 "mode": "first_frame"');
+assert.ok(builtinTsContent.includes('"operation": "first_frame"'),
+  'builtinCatalogData.ts 必须显式声明 "operation": "first_frame"');
+pass('builtinCatalogData.ts 视频节点显式声明 operation');
 
 console.log('\n================================================================');
 console.log(`🎉 全部 ${checkCount} 项 QA 自动化规格断言 100% 顺利通过！`);

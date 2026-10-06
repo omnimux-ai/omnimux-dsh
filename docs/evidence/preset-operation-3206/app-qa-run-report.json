@@ -1,0 +1,156 @@
+{
+  "runId": "b0d41bf0-2d1e-4b6a-b9ae-29af1521a63b",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-apps-preset-operation-issue-3206",
+  "origin": "http://127.0.0.1:60870",
+  "appPort": 60870,
+  "cdpPort": 60890,
+  "startedAt": "2026-10-06T12:54:16.235Z",
+  "completedAt": "2026-10-06T12:54:35.675Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:60870",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:60870",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-Nb64mhiCYoBJasvZLhDmxVmO_rnrBRFpWbTC6qUjyyU"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 60890
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 132,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 121
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 132
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:builtin-app-entry-present-in-real-ui",
+      "pass": true
+    },
+    {
+      "name": "journey:explore-entry-clicked",
+      "pass": true
+    },
+    {
+      "name": "journey:ai-apps-panel-clicked",
+      "pass": true
+    },
+    {
+      "name": "journey:ai-apps-panel-renders-first-level-apps",
+      "pass": true
+    },
+    {
+      "name": "journey:builtin-app-not-in-first-level-app-menu",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 443429
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-apps-preset-operation-issue-3206/.workbuddy/evidence/app-qa/b0d41bf0-2d1e-4b6a-b9ae-29af1521a63b/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 443429
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}

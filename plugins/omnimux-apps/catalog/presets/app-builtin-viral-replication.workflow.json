@@ -77,6 +77,7 @@
         "label": "爆款复刻 视频生成内核",
         "model": "seedance-2.0",
         "params": {
+          "operation": "video_multi_ref",
           "model": "seedance-2.0",
           "aspectRatio": "9:16",
           "duration": 5,

@@ -1,0 +1,65 @@
+{
+  "issue": 3206,
+  "appId": "app-creatify-app-demo",
+  "presetPath": "plugins/omnimux-apps/catalog/presets/app-creatify-app-demo.workflow.json",
+  "presetName": "手机与网页交互实机演示",
+  "computedBy": "recomputeCanvasSlots (plugins/omnimux-workflow/src/shared/graph/canvasSlotRecompute.ts)",
+  "edges": [
+    {
+      "id": "edge-img-to-video",
+      "source": "node-slot-product-image",
+      "targetSlot": "first_frame"
+    },
+    {
+      "id": "edge-text-to-video",
+      "source": "node-slot-copywriting",
+      "targetSlot": null
+    }
+  ],
+  "fixedShape": {
+    "id": "node-video-generation-core",
+    "materialType": "video",
+    "model": "seedance-2-0",
+    "operation": "first_frame",
+    "slotBindings": [
+      "first_frame"
+    ],
+    "slotConflicts": [],
+    "compat": {
+      "status": "ok",
+      "readyToSubmit": true,
+      "acceptsCurrentInputs": true,
+      "operation": "first_frame",
+      "reasonCodes": []
+    }
+  },
+  "legacyShape": {
+    "id": "node-video-generation-core",
+    "materialType": "video",
+    "model": "seedance-2-0",
+    "operation": "video_multi_ref",
+    "legacyMode": "first_frame",
+    "slotBindings": [
+      "reference_images",
+      "reference_videos",
+      "reference_audios"
+    ],
+    "slotConflicts": [
+      {
+        "slot": "first_frame",
+        "reason": "slot_removed",
+        "edgeId": "edge-img-to-video"
+      }
+    ],
+    "compat": {
+      "status": "ok",
+      "readyToSubmit": false,
+      "acceptsCurrentInputs": true,
+      "operation": "video_multi_ref",
+      "reasonCodes": [
+        "min_unsatisfied",
+        "role_conflict"
+      ]
+    }
+  }
+}
