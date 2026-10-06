@@ -563,4 +563,50 @@ describe('RivalPostCard — 结构化增速胶囊（#3113 §3.3）', () => {
       await mounted.unmount()
     }
   })
+
+  it('renders markDone button and handles in-place transition to static span (#3114)', async () => {
+    const unprocessedCard = cardOf('short-video', { id: 'p_act_1', source_url: 'https://www.tiktok.com/@foo/video/123' })
+    const mounted = await mountStage([unprocessedCard])
+
+    const cardEl = byType(mounted.container, 'short-video')
+    assert.equal(cardEl.classList.contains('is-done'), false)
+
+    // Fourth slot has markDone button
+    const markBtn = cardEl.querySelector('[data-act="markDone"]')
+    assert.ok(markBtn, 'markDone button exists')
+    assert.equal(markBtn.textContent.trim(), '标为已处理')
+
+    // Click triggers onMarkDone via mounted.events
+    await act(async () => {
+      markBtn.dispatchEvent(new mounted.document.defaultView.MouseEvent('click', { bubbles: true }))
+    })
+    assert.deepEqual(mounted.events, [['markDone', 'p_act_1']])
+
+    // Replicate button exists and is primary
+    const repBtn = cardEl.querySelector('[data-act="replicate"]')
+    assert.ok(repBtn, 'replicate button exists')
+    assert.equal(repBtn.textContent.trim(), '立即复刻')
+
+    // Original button is enabled for valid url
+    const origBtn = cardEl.querySelector('[data-act="original"]')
+    assert.ok(origBtn, 'original button exists')
+    assert.equal(origBtn.disabled, false)
+
+    // Unprocessed card does not have is-done class
+    assert.equal(cardEl.classList.contains('is-done'), false)
+  })
+
+  it('renders static done state when post has done_at (#3114)', async () => {
+    const doneCard = cardOf('short-video', { id: 'p_done_1', done_at: '2026-10-06T12:00:00.000Z' })
+    const mounted = await mountStage([doneCard])
+    const cardEl = byType(mounted.container, 'short-video')
+    assert.ok(cardEl.classList.contains('is-done'), 'has is-done class')
+
+    // Fourth slot has static state span, no markDone button
+    const markBtn = cardEl.querySelector('[data-act="markDone"]')
+    assert.equal(markBtn, null, 'no markDone button')
+    const stateSpan = cardEl.querySelector('.omnimux-rival-act-state')
+    assert.ok(stateSpan, 'static state span exists')
+    assert.equal(stateSpan.textContent.trim(), '已处理')
+  })
 })

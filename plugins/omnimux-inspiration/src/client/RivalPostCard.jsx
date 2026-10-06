@@ -89,10 +89,11 @@ function matchKeyOf(card) {
 function stateText(card, t) {
   const label = String(card?.state_label || '')
   if (label) return label
+  if (card?.done_at) return String(t('rivalFeed.card.done'))
   const state = String(card?.state || '')
   if (state === 'done') return String(t('rivalFeed.card.done'))
-  if (state === 'replicated') return String(t('rivalFeed.card.replicated'))
-  if (state === 'interacted') {
+  if (state === 'replicated' || card?.in_library) return String(t('rivalFeed.card.replicated'))
+  if (state === 'interacted' || card?.interacted_at) {
     const at = Date.parse(String(card?.interacted_at || ''))
     const template = String(t('rivalFeed.card.interacted'))
     if (!Number.isFinite(at)) return template.replace(/\s*·\s*\{time\}/, '')
@@ -121,7 +122,7 @@ export function RivalPostCard(props) {
   const { card, t, onDetail, onReplicate, onDeconstruct, onMarkDone, style, column, busy } = props
   const cardType = rivalCardTypeOf(card)
   const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image'
-  const isDone = Boolean(card?.done || card?.state || card?.state_label)
+  const isDone = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
   const tier = String(card?.velocity?.tier || 'watch')
   const title = String(card?.title || '')
   const mediaRatio = rivalMediaRatioOf(card)

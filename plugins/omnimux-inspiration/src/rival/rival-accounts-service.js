@@ -269,6 +269,25 @@ export function createRivalAccountsService(deps) {
    * @param {string} postId
    * @returns {Record<string, any>}
    */
+
+  /**
+   * Mark a post as done (Issue #3114).
+   *
+   * @param {string} accountId
+   * @param {string} postId
+   * @param {{ now?: string }} [opts]
+   * @returns {Record<string, any>}
+   */
+  function markPostDone(accountId, postId, opts = {}) {
+    const post = requirePost(accountId, postId)
+    if (post.done_at) {
+      return { post_id: post.id, done_at: post.done_at }
+    }
+    const nowIso = typeof opts.now === 'string' ? opts.now : new Date(now()).toISOString()
+    const updated = store.updatePost(accountId, postId, { done_at: nowIso })
+    return { post_id: updated.id, done_at: updated.done_at }
+  }
+
   function requirePost(accountId, postId) {
     requireAccount(accountId)
     const post = store.findPost(accountId, postId)
@@ -631,6 +650,7 @@ export function createRivalAccountsService(deps) {
     analyze,
     requireAccount,
     requirePost,
+    markPostDone,
     /** Locale key the UI shows when an account identity could not be verified. */
     identityHintKey: RIVAL_LOCALE_KEYS.IDENTITY_HANDLE_UNVERIFIED,
   }

@@ -579,6 +579,47 @@ describe('E13: convert a post into the inspiration library', () => {
     assert.equal(second.body.data.already_in_library, true)
     assert.equal(world.importCalls.length, 1)
   })
+
+  it('marks a post done via POST /rival-accounts/:id/posts/:postId/done (#3114)', async () => {
+    const world = makeWorld()
+    const account = world.store.addAccount({
+      platform: 'tiktok',
+      handle: 'done_acc',
+      external_id: 'done_acc_ext',
+    })
+    world.store.writePosts(account.id, [
+      { id: 'p_to_done', title: 'test post', type: 'text' },
+    ], { platform: 'tiktok' })
+
+    // Initially not done
+    const initialFeed = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts`)
+    const initialPost = initialFeed.body.data.items.find((x) => x.id === 'p_to_done')
+    assert.equal(initialPost.done_at, null)
+
+    // Method not allowed on GET
+    const wrongMethod = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/${account.id}/posts/p_to_done/done`)
+    assert.equal(wrongMethod.status, 405)
+
+    // POST marks done
+    const doneRes = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${account.id}/posts/p_to_done/done`)
+    assert.equal(doneRes.status, 200)
+    assert.equal(doneRes.body.data.post_id, 'p_to_done')
+    assert.ok(typeof doneRes.body.data.done_at === 'string')
+
+    // Feed now reflects done_at
+    const afterFeed = await call(world.dispatcher, 'GET', `${RIVAL_PREFIX}/posts`)
+    const afterPost = afterFeed.body.data.items.find((x) => x.id === 'p_to_done')
+    assert.equal(afterPost.done_at, doneRes.body.data.done_at)
+
+    // Repeat POST is idempotent
+    const repeatRes = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${account.id}/posts/p_to_done/done`)
+    assert.equal(repeatRes.status, 200)
+    assert.equal(repeatRes.body.data.done_at, doneRes.body.data.done_at)
+
+    // 404 for missing post
+    const missingRes = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${account.id}/posts/p_ghost/done`)
+    assert.equal(missingRes.status, 404)
+  })
 })
 
 describe('E14 + add-to-session media: the local media route contract', () => {

@@ -340,6 +340,8 @@ export function toFeedRow(post, account) {
     source_platform: text(account?.platform),
     in_library: post?.in_library === true,
     inspiration_id: post?.inspiration_id ?? null,
+    done_at: text(post?.done_at) || null,
+    interacted_at: text(post?.interacted_at) || null,
     account: toAccountRef(account, 0),
   }
 }

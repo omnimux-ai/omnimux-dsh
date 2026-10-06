@@ -91,8 +91,8 @@ describe('rival-accounts-store: whitelist constructors (G3)', () => {
       { now: FIXED_NOW_ISO, accountId: 'riv_a', platform: 'tiktok' },
     )
     assert.deepEqual(Object.keys(row).sort(), [
-      'account_id', 'cover_http_url', 'cover_local_path', 'cover_url', 'duration', 'first_seen_at',
-      'id', 'in_library', 'inspiration_id', 'last_seen_at', 'metrics', 'platform', 'posted_at',
+      'account_id', 'cover_http_url', 'cover_local_path', 'cover_url', 'done_at', 'duration', 'first_seen_at',
+      'id', 'in_library', 'inspiration_id', 'interacted_at', 'last_seen_at', 'metrics', 'platform', 'posted_at',
       'potential', 'ratio', 'stats', 'text', 'title', 'type', 'url', 'video_local_path', 'video_url',
     ])
     assert.equal('extra' in row.stats, false)
@@ -267,6 +267,19 @@ describe('rival-accounts-store: post cache', () => {
     const updated = store.updatePost('riv_a', 'p1', { ratio: 0.8 })
     assert.equal(updated.ratio, 0.8)
     assert.equal(store.findPost('riv_a', 'p1').ratio, 0.8)
+  })
+
+  it('persists and restores done_at and interacted_at via updatePost (#3114)', () => {
+    const { store } = sandbox()
+    store.writePosts('riv_a', [{ id: 'p_done_test' }], { platform: 'tiktok' })
+    const updated = store.updatePost('riv_a', 'p_done_test', {
+      done_at: '2026-10-06T12:05:00.000Z',
+      interacted_at: '2026-10-06T12:04:00.000Z',
+    })
+    assert.equal(updated.done_at, '2026-10-06T12:05:00.000Z')
+    assert.equal(updated.interacted_at, '2026-10-06T12:04:00.000Z')
+    assert.equal(store.findPost('riv_a', 'p_done_test').done_at, '2026-10-06T12:05:00.000Z')
+    assert.equal(store.findPost('riv_a', 'p_done_test').interacted_at, '2026-10-06T12:04:00.000Z')
   })
 
   it('drops a video_url that arrives as an empty string', () => {
