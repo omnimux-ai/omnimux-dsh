@@ -1,4 +1,4 @@
-// 虚拟形象舞台（Issue #3176）端到端契约回归。
+// 数字人舞台（Issue #3176）端到端契约回归。
 //
 // 为什么要有这一支：真机验收能发现「元素在、图没加载出来」这类缺陷，但真机运行昂贵、不进 CI。
 // 这里把已经用真机证实过的两条契约钉成可重复执行的回归：
@@ -37,15 +37,22 @@ test('E2E: 预设美术一律经插件取图地址，不得把数据里的原始
   assert.match(read('src/http.js'), /route === '\/presets\/asset'/, '宿主必须注册 /presets/asset 路由')
 })
 
-test('E2E: 舞台滚动与吸附契约保持单一滚动容器', () => {
+test('E2E: 舞台为双面板分区滚动，页根不再是滚动容器', () => {
   const stage = fs.readFileSync(path.join(clientRoot, 'AvatarStage.jsx'), 'utf8')
   assert.match(stage, /omx-avatar-page/, '舞台根节点类名必须保留')
-  assert.match(stage, /omx-stage-scroll/, '舞台根节点必须挂滚动契约声明')
-  assert.match(stage, /omx-stage-sticky/, '吸附头必须挂吸附契约声明')
+  assert.match(stage, /omx-stage-sticky/, '页头必须挂吸附契约声明')
+  // 双面板例外（docs/contracts/first-level-page-layout.md §二·补）：页根不滚动，
+  // 左栏设定区与右栏画廊各挂共享的内部滚动类。
+  assert.doesNotMatch(stage, /omx-stage-scroll/, '页根不得再挂整页滚动声明')
+  assert.ok(
+    (stage.match(/omx-avatar-scroll/g) || []).length >= 2,
+    '左右两栏都要有内部滚动区',
+  )
 
   const styles = fs.readFileSync(path.join(clientRoot, 'styles.js'), 'utf8')
   assert.match(styles, /CANONICAL_STICKY_DECL/, '吸附声明必须来自契约常量而不是就地手写')
   assert.match(styles, /CANONICAL_SCROLL_DECL/, '滚动声明必须来自契约常量而不是就地手写')
+  assert.match(styles, /\.omx-avatar-scroll \{/, '内部滚动区必须有自己的类')
 })
 
 test('E2E: 左栏入口与舞台页签按契约注册，且舞台内没有原生下拉', () => {

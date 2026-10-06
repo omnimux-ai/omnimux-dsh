@@ -124,6 +124,12 @@ export function modelsOfBrand(rows, brand) {
 }
 
 /**
+ * 缺名渠道组的展示名。中枢的渠道组不保证带 label，默认线路必须落到中文，
+ * 否则中文界面上会直接露出线路 id（例如 default）。
+ */
+export const DEFAULT_GROUP_LABEL = '默认渠道'
+
+/**
  * 某个模型的渠道层。行没有渠道列表时返回 `[]`，调用方按「无渠道」降级。
  * @param {import('./types.js').ModelCatalogRow[]} rows
  * @param {string} modelId
@@ -135,12 +141,16 @@ export function groupsOfModel(rows, modelId) {
   return groups.map((group) => {
     const pricing = group?.pricing ?? {}
     const billingMode = pricing.billingMode
+    const label = typeof group.label === 'string' && group.label.trim() ? group.label.trim() : ''
+    // 中枢的渠道组不保证带 label；缺名时默认线路要落到中文「默认渠道」，
+    // 否则按钮上会直接露出线路 id（例如 default），中文界面里就是英文泄漏。
+    const isDefault = group.default === true || group.id === 'default'
     return {
       id: group.id,
-      name: group.label || group.id,
+      name: label || (isDefault ? DEFAULT_GROUP_LABEL : group.id),
       wireGroup: group.wireGroup || group.id,
       enabled: group.enabled !== false,
-      isDefault: group.default === true,
+      isDefault,
       price:
         typeof pricing.pointsEstimate === 'number'
           ? `≈${pricing.pointsEstimate} 积分`

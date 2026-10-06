@@ -1,4 +1,4 @@
-// 虚拟形象存储：单文件账本 + 每个形象独立的数据目录。
+// 数字人存储：单文件账本 + 每个形象独立的数据目录。
 // 写入一律先落 <file>.tmp 再 rename，磁盘上任何时刻都是一份完整账本。
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
@@ -32,13 +32,13 @@ function newAvatarId() {
 
 /** 名称：去空白、1..40 字符、不含斜杠与控制字符。 */
 function normalizeName(input) {
-  if (typeof input !== 'string') throw new AvatarError('invalid_name', '形象名称必须是字符串', 400)
+  if (typeof input !== 'string') throw new AvatarError('invalid_name', '数字人名称必须是字符串', 400)
   const name = input.trim()
   if (name.length < 1 || name.length > NAME_MAX) {
-    throw new AvatarError('invalid_name', `形象名称需为 1-${NAME_MAX} 个字符`, 400)
+    throw new AvatarError('invalid_name', `数字人名称需为 1-${NAME_MAX} 个字符`, 400)
   }
   if (name.includes('/') || CONTROL_CHARS.test(name)) {
-    throw new AvatarError('invalid_name', '形象名称不能包含斜杠或控制字符', 400)
+    throw new AvatarError('invalid_name', '数字人名称不能包含斜杠或控制字符', 400)
   }
   return name
 }
@@ -214,7 +214,7 @@ export function createAvatarStore({ paths } = {}) {
   function create({ name, sheet } = {}) {
     const clean = normalizeName(name)
     if (state.avatars.some((record) => record.name === clean)) {
-      throw new AvatarError('name-conflict', `形象名称「${clean}」已存在`, 409)
+      throw new AvatarError('name-conflict', `数字人名称「${clean}」已存在`, 409)
     }
     const now = nowIso()
     const id = newAvatarId()
@@ -243,7 +243,7 @@ export function createAvatarStore({ paths } = {}) {
     if (input.name !== undefined) {
       name = normalizeName(input.name)
       if (state.avatars.some((record, i) => i !== index && record.name === name)) {
-        throw new AvatarError('name-conflict', `形象名称「${name}」已存在`, 409)
+        throw new AvatarError('name-conflict', `数字人名称「${name}」已存在`, 409)
       }
     }
     const sheet = input.sheet === undefined ? clone(current.sheet) : mergeSheet(current.sheet, input.sheet)

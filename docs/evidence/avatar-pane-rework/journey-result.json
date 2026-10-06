@@ -1,0 +1,315 @@
+{
+  "assertions": [
+    {
+      "name": "left-rail-entry-visible",
+      "pass": true,
+      "detail": "入口文案「数字人」，几何 248×32"
+    },
+    {
+      "name": "stage-mounted-positive-geometry",
+      "pass": true,
+      "detail": "页面 999×673"
+    },
+    {
+      "name": "stage-title-is-chinese",
+      "pass": true,
+      "detail": "标题「数字人」"
+    },
+    {
+      "name": "stage-root-is-not-the-scroll-container",
+      "pass": true,
+      "detail": "根节点是滚动容器=false，误挂吸附声明=false"
+    },
+    {
+      "name": "sticky-header-is-not-scroll-container",
+      "pass": true,
+      "detail": "吸附头 1 个，误挂滚动声明=false"
+    },
+    {
+      "name": "two-pane-scroll-containers",
+      "pass": true,
+      "detail": "正几何内部滚动区 2 个（左右各一）"
+    },
+    {
+      "name": "two-column-body-laid-out",
+      "pass": true,
+      "detail": "两栏轨道：340px 623px"
+    },
+    {
+      "name": "no-native-select-in-stage",
+      "pass": true,
+      "detail": "原生下拉 0 个"
+    },
+    {
+      "name": "explore-tab-clickable",
+      "pass": true,
+      "detail": "已点击「灵感库」"
+    },
+    {
+      "name": "preset-grid-rendered",
+      "pass": true,
+      "detail": "70 个可点卡片，首张「」"
+    },
+    {
+      "name": "preset-grid-is-real-grid",
+      "pass": true,
+      "detail": "display=grid，列数 4"
+    },
+    {
+      "name": "preset-preview-artwork-decoded",
+      "pass": true,
+      "detail": "预览图 35 张，解码成功 35，裂图 0，未完成 0"
+    },
+    {
+      "name": "preset-preview-trigger-clickable",
+      "pass": true,
+      "detail": "已点击预览"
+    },
+    {
+      "name": "preset-dialog-opened-positive-geometry",
+      "pass": true,
+      "detail": "弹窗 960×673"
+    },
+    {
+      "name": "preset-dialog-declares-modal",
+      "pass": true,
+      "detail": "aria-modal=true"
+    },
+    {
+      "name": "preset-dialog-has-apply-action",
+      "pass": true,
+      "detail": "「套用」按钮存在=true"
+    },
+    {
+      "name": "preset-dialog-escape-closes",
+      "pass": true,
+      "detail": "Escape 后弹窗已关闭=true"
+    },
+    {
+      "name": "feed-grid-style-reaches-browser",
+      "pass": true,
+      "detail": "display=grid，列数 4（视口 1280）"
+    },
+    {
+      "name": "feed-timeline-style-reaches-browser",
+      "pass": true,
+      "detail": "display=flex，max-width=340px"
+    },
+    {
+      "name": "nav-avatar-entry-exists",
+      "pass": true,
+      "detail": "入口存在"
+    },
+    {
+      "name": "nav-avatar-below-project",
+      "pass": true,
+      "detail": "同级顺序=[project,avatar]，数字人位于「项目」之下=true"
+    },
+    {
+      "name": "nav-avatar-label-is-digital-human",
+      "pass": true,
+      "detail": "入口文案「数字人」"
+    },
+    {
+      "name": "model-config-collapsed-to-one-button",
+      "pass": true,
+      "detail": "点开前浮层内选择器 0 个"
+    },
+    {
+      "name": "model-menu-surface-is-opaque",
+      "pass": true,
+      "detail": "模型菜单底色不透明度 1"
+    },
+    {
+      "name": "model-menu-opens-with-three-fields",
+      "pass": true,
+      "detail": "浮层字段=[品牌,模型,渠道]"
+    },
+    {
+      "name": "model-menu-selection-lands-on-trigger",
+      "pass": true,
+      "detail": "选项「默认渠道」→ 按钮「GPT Image 2.5」"
+    },
+    {
+      "name": "rename-by-double-click-then-blur",
+      "pass": true,
+      "detail": "失焦后名称「验收改名3192」，仍在编辑态=false"
+    },
+    {
+      "name": "rename-persisted-in-plugin-ledger",
+      "pass": true,
+      "detail": "HTTP 200，账本含「验收改名3192」=true"
+    },
+    {
+      "name": "two-pane-scroll-areas-live",
+      "pass": true,
+      "detail": "正几何内部滚动区 2 个"
+    },
+    {
+      "name": "at-least-one-pane-actually-scrolls",
+      "pass": true,
+      "detail": "内容超出可滚的区 1 个"
+    },
+    {
+      "name": "page-root-does-not-scroll",
+      "pass": true,
+      "detail": "页根自身可滚=false"
+    },
+    {
+      "name": "generate-cta-stays-in-viewport",
+      "pass": true,
+      "detail": "生成栏在视口内=true"
+    },
+    {
+      "name": "j3-create-avatar-trigger-clickable",
+      "pass": true,
+      "detail": "已点击「新建数字人」"
+    },
+    {
+      "name": "j3-create-lands-on-default-name",
+      "pass": true,
+      "detail": "默认名「未命名」"
+    },
+    {
+      "name": "j3-double-click-opens-editor",
+      "pass": true,
+      "detail": "已双击名称"
+    },
+    {
+      "name": "j3-avatar-name-typed",
+      "pass": true,
+      "detail": "输入框值「验收形象3176」"
+    },
+    {
+      "name": "j3-avatar-name-submitted",
+      "pass": true,
+      "detail": "已按回车提交"
+    },
+    {
+      "name": "j3-avatar-created-through-ui",
+      "pass": true,
+      "detail": "当前形象「验收形象3176」"
+    },
+    {
+      "name": "j3-avatar-present-in-plugin-ledger",
+      "pass": true,
+      "detail": "HTTP 200，形象 2 个（验收改名3192、验收形象3176），id=avt_bfd731c1"
+    },
+    {
+      "name": "j3-generate-cta-clickable",
+      "pass": true,
+      "detail": "已点击「生成」，模型选择器显示「全部」"
+    },
+    {
+      "name": "j3-sheet-task-submitted-to-plugin",
+      "pass": true,
+      "detail": "HTTP 200，任务 1 条：sheet:ready"
+    },
+    {
+      "name": "j3-sheet-task-reached-ready",
+      "pass": true,
+      "detail": "taskId=avt_task_82da7dce，destPath=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-pane-rework/.test-env-kG3StB/dsh/omnimux/avatar/data/avt_bfd731c1/main.png，归档失败原因=无"
+    },
+    {
+      "name": "j3-sheet-archive-had-no-error",
+      "pass": true,
+      "detail": "syncError=null"
+    },
+    {
+      "name": "j3-sheet-artifact-decoded-in-ui",
+      "pass": true,
+      "detail": "卡片图 1 张，解码 1 张"
+    },
+    {
+      "name": "j3-first-multiview-entry-present",
+      "pass": true,
+      "detail": "入口 1/1 可见，label=「生成多视角」，文案=「生成多视角」"
+    },
+    {
+      "name": "j3-asset-archived-under-character-category",
+      "pass": true,
+      "detail": "type=character，name=验收形象3176，cite=@角色/验收形象3176"
+    },
+    {
+      "name": "j3-asset-carries-the-sheet-file",
+      "pass": true,
+      "detail": "资产 ast_cb06c5be 引用文件 1 个"
+    },
+    {
+      "name": "j3-role-category-entry-clickable",
+      "pass": true,
+      "detail": "分类行 7 项，已点击「角色」并搜索「验收形象3176」"
+    },
+    {
+      "name": "j3-character-card-visible-in-asset-library-ui",
+      "pass": true,
+      "detail": "卡片 309×471，data-type=character"
+    },
+    {
+      "name": "j4-multiview-generation-submitted",
+      "pass": true,
+      "detail": "HTTP 200，taskId=avt_task_6be9afb5，mode=live，error=null"
+    },
+    {
+      "name": "j4-multiview-task-reached-ready",
+      "pass": true,
+      "detail": "taskId=avt_task_6be9afb5，destPath=/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-pane-rework/.test-env-kG3StB/dsh/omnimux/avatar/data/avt_bfd731c1/多视角/turnaround.png，归档失败原因=无"
+    },
+    {
+      "name": "j4-multiview-archive-had-no-error",
+      "pass": true,
+      "detail": "syncError=null"
+    },
+    {
+      "name": "j4-multiview-folder-attached-to-avatar-asset",
+      "pass": true,
+      "detail": "目录引用 id=fil_7ba1057e，kind=directory，资产下共 2 个引用"
+    },
+    {
+      "name": "j4-multiview-sheet-listed-inside-folder",
+      "pass": true,
+      "detail": "文件夹内 1 项（图片 1）：turnaround.png"
+    },
+    {
+      "name": "j4-asset-card-opens-browse",
+      "pass": true,
+      "detail": "已点开形象资产"
+    },
+    {
+      "name": "j4-multiview-folder-card-clickable-in-ui",
+      "pass": true,
+      "detail": "文件夹卡片 309×459，已点击进入"
+    },
+    {
+      "name": "j4-multiview-sheet-decoded-inside-folder-in-ui",
+      "pass": true,
+      "detail": "面包屑「验收形象3176 / /多视角」，图 1 张，解码 1 张，浏览区视口内位置=[301,303,951,394]，截图时仍在文件夹内=true"
+    }
+  ],
+  "shots": [
+    {
+      "name": "01-avatar-stage",
+      "bytes": 60769
+    },
+    {
+      "name": "02-avatar-explore",
+      "bytes": 298250
+    },
+    {
+      "name": "03-avatar-preset-dialog",
+      "bytes": 140193
+    },
+    {
+      "name": "04-avatar-history",
+      "bytes": 95176
+    },
+    {
+      "name": "05-avatar-two-pane",
+      "bytes": 105523
+    },
+    {
+      "name": "05-avatar-j3-asset-library",
+      "bytes": 59849
+    }
+  ]
+}

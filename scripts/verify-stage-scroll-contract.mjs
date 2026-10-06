@@ -34,9 +34,14 @@ export const CANONICAL_SCROLL = 'flex:1 1 auto;min-height:0;overflow-y:auto;over
 export const STAGE_PAGES = [
   {
     plugin: 'omnimux-avatar',
-    label: '虚拟形象',
+    label: '数字人',
     styles: 'plugins/omnimux-avatar/src/client/styles.js',
     pages: ['plugins/omnimux-avatar/src/client/AvatarStage.jsx'],
+    // 双面板例外：页面根不滚动，左栏（形象行/设定/生成栏）与右栏（页眉/画廊）
+    // 各自管理内部 overflow 滚动。契约登记见 first-level-page-layout.md §二·补。
+    // 样式表仍须逐字保留两条 canonical 声明，页面引用 omx-stage-sticky，
+    // 但不再要求引用 omx-stage-scroll。
+    paned: true,
   },
   {
     plugin: 'omnimux-assets',
@@ -194,7 +199,13 @@ export function verifyStageScrollContract(root = REPO_ROOT, registry = STAGE_PAG
       if (seen.scroll) sawScroll = true
     }
     if (!sawSticky) problems.push(`${entry.plugin}: 登记的页面均未使用 .${STICKY_CLASS}`)
-    if (!sawScroll) problems.push(`${entry.plugin}: 登记的页面均未使用 .${SCROLL_CLASS}`)
+    if (!sawScroll && entry.paned !== true) {
+      problems.push(`${entry.plugin}: 登记的页面均未使用 .${SCROLL_CLASS}`)
+    }
+    // 双面板例外页的反向约束：根不得再把整页滚动容器挂回来。
+    if (sawScroll && entry.paned === true) {
+      problems.push(`${entry.plugin}: 已登记双面板例外，页面不得引用 .${SCROLL_CLASS}`)
+    }
   }
   return { ok: problems.length === 0, problems, checked: registry.length }
 }

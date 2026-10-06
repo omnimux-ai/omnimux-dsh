@@ -1,9 +1,11 @@
-// 虚拟形象工作台的样式注入。
+// 数字人工作台的样式注入。
 //
 // 颜色与排版只消费官方 Token（--dsw-alias-* / --dsw-font-*），不引入源工作台的
 // --inf-* 变量体系；源里的每个 --inf-* 概念都映射到一个官方 Token。
-// 唯一的例外是 .omx-stage-sticky 的 canonical 声明——一级页滚动契约要求各插件
-// 逐字一致（docs/contracts/first-level-page-layout.md §二·补，Issue 1977）。
+// 两个契约类声明（吸附栈 / 滚动容器）必须与其它插件逐字一致
+// （docs/contracts/first-level-page-layout.md §二·补，Issue 1977）；
+// 本页是登记过的双面板例外：吸附栈类用在固定页眉行，
+// 滚动容器类只保留契约声明文本，页面自身不引用。
 
 export const STYLES_ID = 'omnimux-avatar-styles'
 
@@ -14,16 +16,18 @@ export const CANONICAL_SCROLL_DECL =
   '.omx-stage-scroll { flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden; }'
 
 export const AVATAR_CSS = `
-/* ── 一级页骨架契约（Issue 1977）：整页唯一滚动区 + 导航栈到顶吸附 ── */
+/* ── 一级页骨架契约（Issue 1977）：声明逐字一致；本页为双面板例外 ── */
 ${CANONICAL_STICKY_DECL}
 ${CANONICAL_SCROLL_DECL}
 
-/* ── 页面骨架 ───────────────────────────────────────────── */
+/* ── 页面骨架：根不滚动，左右面板各自管理内部滚动 ─────────── */
 .omx-avatar-page {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   width: 100%;
-  min-height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
 }
@@ -32,6 +36,7 @@ ${CANONICAL_SCROLL_DECL}
 }
 .omx-avatar-head {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
@@ -45,19 +50,25 @@ ${CANONICAL_SCROLL_DECL}
 .omnimux-avatar-body {
   display: grid;
   grid-template-columns: 340px 1fr;
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
   gap: 12px;
   padding: 12px;
-  align-items: start;
 }
 @media (max-width: 900px) {
   .omnimux-avatar-body {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: min-content;
+    overflow-y: auto;
   }
 }
 .omx-avatar-pane {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   border: 1px solid var(--dsw-alias-border-l1);
   border-radius: 16px;
   background: var(--dsw-alias-bg-layer-1);
@@ -65,6 +76,7 @@ ${CANONICAL_SCROLL_DECL}
 }
 .omx-avatar-pane-head {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
@@ -82,8 +94,16 @@ ${CANONICAL_SCROLL_DECL}
 .omx-avatar-pane-body {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 12px;
   padding: 12px 16px 16px;
+}
+/* 面板内的独立滚动段：左栏设定块区与右栏画廊共用。 */
+.omx-avatar-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .omx-avatar-builder {
   display: flex;
@@ -96,21 +116,25 @@ ${CANONICAL_SCROLL_DECL}
   outline-offset: -2px;
 }
 
-/* ── 形象行（本插件新增，源工作台没有） ─────────────────── */
+/* ── 形象行（本插件新增，源工作台没有）：钉在左栏顶部 ─────── */
 .omx-avatar-avatars {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
   background: var(--dsw-alias-bg-layer-2);
 }
 .omx-avatar-avatars-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
+  user-select: none;
+}
+.omx-avatar-avatars-name[title] {
+  cursor: text;
 }
 .omx-avatar-avatars-spacer {
   flex: 1 1 auto;
@@ -135,6 +159,9 @@ ${CANONICAL_SCROLL_DECL}
 .omx-avatar-error {
   font-size: 12px;
   color: var(--dsw-alias-label-danger);
+}
+.omx-avatar-abtn--icon {
+  padding: 5px 8px;
 }
 
 /* ── 档位与分类块 ───────────────────────────────────────── */
@@ -565,7 +592,7 @@ ${CANONICAL_SCROLL_DECL}
   padding: 4px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2, #1c1c1f));
   box-shadow: 0 12px 32px color-mix(in srgb, var(--dsw-alias-bg-base) 45%, transparent);
 }
 .omx-avatar-menu-item {
@@ -603,12 +630,42 @@ ${CANONICAL_SCROLL_DECL}
   padding: 12px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 12px;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2, #1c1c1f));
   box-shadow: 0 16px 40px color-mix(in srgb, var(--dsw-alias-bg-base) 45%, transparent);
+}
+/* 模型配置浮层：内部三级下拉需要溢出可见。 */
+.omx-avatar-popover--model {
+  overflow: visible;
 }
 .omx-avatar-popover-wrap {
   position: relative;
   display: inline-flex;
+}
+/* 模型配置触发按钮：与分段切换同高，汇报当前模型 · 渠道。 */
+.omx-avatar-modelbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.omx-avatar-modelbtn:hover {
+  border-color: var(--dsw-alias-border-hover);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.omx-avatar-modelbtn-val {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* ── 画廊卡片 ───────────────────────────────────────────── */
@@ -705,7 +762,7 @@ ${CANONICAL_SCROLL_DECL}
   padding: 8px 12px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2, #1c1c1f));
   color: var(--dsw-alias-label-primary);
   font-size: 12px;
   box-shadow: 0 10px 28px color-mix(in srgb, var(--dsw-alias-bg-base) 40%, transparent);
@@ -825,7 +882,7 @@ ${CANONICAL_SCROLL_DECL}
   gap: 6px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--dsw-alias-state-warn-primary);
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2, #1c1c1f));
 }
 .omx-avatar-sync-icon {
   display: inline-flex;
@@ -933,7 +990,7 @@ ${CANONICAL_SCROLL_DECL}
   overflow: hidden;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 16px;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2, #1c1c1f));
   color: var(--dsw-alias-label-primary);
 }
 .omx-avatar-dialog-head {

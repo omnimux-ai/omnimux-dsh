@@ -135,7 +135,7 @@ export async function createAvatar({ name, sheet }) {
 }
 
 /**
- * 更新形象名称或设定板。
+ * 更新数字人名称或设定板。
  * @param {{ id: string, name?: string, sheet?: string }} input
  * @returns {Promise<import('./lib/types.js').AvatarSummary>}
  */

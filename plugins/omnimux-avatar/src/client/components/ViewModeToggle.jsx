@@ -42,8 +42,8 @@ export function ViewModeToggle(props) {
   const { value, onChange, className, t } = props
   const options = useMemo(
     () => [
-      { value: 'timeline', label: t('viewMode.timeline'), icon: <RowsIcon /> },
-      { value: 'grid', label: t('viewMode.grid'), icon: <GridIcon /> },
+      { value: 'timeline', label: t('viewMode.timeline'), icon: <RowsIcon />, iconOnly: true },
+      { value: 'grid', label: t('viewMode.grid'), icon: <GridIcon />, iconOnly: true },
     ],
     [t]
   )

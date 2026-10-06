@@ -217,7 +217,24 @@ export function StandardStage({ t, stage, ...props }) {
 - **MUST NOT**：在页面内再造第二条滚动区（内容区不得自带 `overflow: auto`）。
 - 同一页面出现两段吸附栈时（例如资产库云端：一级 Tab 行 + 云端的分类行），后一段用 CSS 变量 `--omx-rail-h` 取前一段的实测高度做 `top` 偏移，避免重叠。
 
-防漂移门禁：`pnpm verify:stage-scroll` 断言两个 class 在各插件样式表中的声明逐字一致、每个登记一级页都引用两个类、且两个类不写在同一 `className` 上。
+### 登记例外：双面板分区滚动（`omnimux-avatar`）
+
+`omnimux-avatar`（数字人）是唯一登记的双面板一级页，**不适用上面的整页滚动**：页面根
+`overflow: hidden`，左右两块面板各自管理内部滚动（左栏 = 形象行固定 + 设定块区滚动 +
+生成栏钉底；右栏 = 模型配置页眉固定 + 画廊滚动）。理由是它左右两栏各有一段必须常驻
+视口的内容：整页滚动会把「生成」主 CTA 与右栏画廊一起推离视口，窄屏与低分辨率下尤其明显。
+
+| 该例外的约束 | 值 |
+|---|---|
+| 登记位置 | `scripts/verify-stage-scroll-contract.mjs` 的 `STAGE_PAGES` 条目 `paned: true` |
+| 样式表 | 仍须逐字保留 `.omx-stage-sticky` / `.omx-stage-scroll` 两条 canonical 声明（跨插件一致性不变） |
+| 页面源码 | 页头行引用 `.omx-stage-sticky`；页根**不得**再引用 `.omx-stage-scroll`（门禁反向断言） |
+| 内部滚动 | 左栏设定区与右栏画廊共用 `.omx-avatar-scroll`（`flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden`） |
+| 窄屏（≤900px） | 两栏改单列，由 `.omnimux-avatar-body` 自身纵向滚动，保证主 CTA 仍可达 |
+
+新增第二个双面板页面前必须改本表并说明理由；不得就地复制该例外。
+
+防漂移门禁：`pnpm verify:stage-scroll` 断言两个 class 在各插件样式表中的声明逐字一致、每个登记一级页都引用契约类（`paned: true` 的条目改为「必须引用吸附类且不得引用滚动类」）、且两个类不写在同一 `className` 上。
 
 ---
 

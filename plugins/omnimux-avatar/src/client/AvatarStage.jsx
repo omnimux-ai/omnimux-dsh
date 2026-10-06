@@ -1,12 +1,14 @@
-// 虚拟形象工作台一级页：左栏结构化设定，右栏灵感库 / 历史画廊。
+// 数字人工作台一级页：左栏结构化设定，右栏灵感库 / 历史画廊。
 //
 // 数据全部来自插件 HTTP 面与中枢模型目录：界面不编造积分、不编造进度，
 // 生成中的状态只由任务记录本身驱动（useSheetSubmit / FeedGrid / TaskCard）。
 //
-// 骨架契约（docs/contracts/first-level-page-layout.md §二·补）：
-// 根节点是整页唯一滚动容器（omx-stage-scroll 落在根节点上），
-// 页头吸附到顶（omx-stage-sticky 落在页头行上），
-// 两个契约类分别落在两个节点上，绝不同时出现在一个 className 里。
+// 骨架：双面板布局（本页的契约例外，见 first-level-page-layout.md §二·补）——
+// 页面根不滚动，左右两块面板各自管理内部滚动：
+//   左栏：形象行（固定） → 设定块区（overflow 滚动） → 生成栏（钉在底部）；
+//   右栏：模型配置页眉（固定） → 画廊（overflow 滚动）。
+// 页头行仍带 omx-stage-sticky 契约类：面板内内容滚到页眉下沿时被它遮住，
+// 与整页滚动契约的「吸附栈必须有实底」是同一性质。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -39,9 +41,6 @@ injectAvatarStyles()
 
 /** 设定板的提交尺寸（与源工作台一致）。 */
 const SHEET_SIZE = '9:16'
-
-/** 右栏自成滚动区的高度上限：页头与页边距之外都留给画廊。 */
-const GALLERY_MAX_HEIGHT = 'calc(100vh - 150px)'
 
 /** 轻提示停留时长（毫秒）。 */
 const TOAST_MS = 3200
@@ -523,7 +522,7 @@ export function AvatarStage(props) {
 
   return (
     <div
-      className="omx-avatar-page omx-stage-scroll"
+      className="omx-avatar-page"
       data-visible={visible ? 'true' : 'false'}
       aria-hidden={visible ? undefined : 'true'}
     >
@@ -532,26 +531,30 @@ export function AvatarStage(props) {
       </div>
 
       <div className="omnimux-avatar-body">
-        {/* 左栏：形象行 → 设定面板 → 生成栏 */}
+        {/* 左栏三段式：形象行（固定） → 设定块区（独立滚动） → 生成栏（钉底） */}
         <section className="omx-avatar-pane" ref={builderRef}>
           <AvatarList
             avatars={avatars}
             currentId={currentId}
+            loading={avatarsApi.loading}
             createAvatar={avatarsApi.createAvatar}
+            renameAvatar={avatarsApi.updateAvatar}
             selectAvatar={avatarsApi.selectAvatar}
             t={t}
           />
-          <BuilderPanel
-            taxonomy={taxonomy}
-            tier={b.tier}
-            selection={b.selection}
-            openGroups={b.openGroups}
-            visOpts={visOpts}
-            onTier={onTier}
-            onPick={onPick}
-            onToggleGroup={builder.toggleGroup}
-            t={t}
-          />
+          <div className="omx-avatar-scroll">
+            <BuilderPanel
+              taxonomy={taxonomy}
+              tier={b.tier}
+              selection={b.selection}
+              openGroups={b.openGroups}
+              visOpts={visOpts}
+              onTier={onTier}
+              onPick={onPick}
+              onToggleGroup={builder.toggleGroup}
+              t={t}
+            />
+          </div>
           <GenerateBar
             quote={null} /* 中枢目录不提供按渠道的积分报价，宁可留空也不编数字 */
             canGenerate={canGenerate}
@@ -562,11 +565,8 @@ export function AvatarStage(props) {
           />
         </section>
 
-        {/* 右栏：模型/渠道与数据源工具行 + 独立滚动的画廊区 */}
-        <section
-          className="omx-avatar-pane"
-          style={{ maxHeight: GALLERY_MAX_HEIGHT }} /* exempt-ui02: 右栏自成滚动区的高度上限 */
-        >
+        {/* 右栏二段式：模型按钮 + 数据源工具行（固定） → 画廊（独立滚动） */}
+        <section className="omx-avatar-pane">
           <div className="omx-avatar-pane-head">
             <ModelPicker
               catalog={catalog}
@@ -586,10 +586,7 @@ export function AvatarStage(props) {
             </div>
           </div>
 
-          <div
-            className="omx-avatar-pane-body"
-            style={{ overflowY: 'auto', minHeight: 0 }} /* exempt-ui02: 画廊区独立滚动 */
-          >
+          <div className="omx-avatar-pane-body omx-avatar-scroll">
             {source === 'explore' ? (
               <ExplorePresetGrid
                 presets={presets}

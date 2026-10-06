@@ -1,6 +1,6 @@
 /**
  * @file scripts/qa/avatar-stage-probe.mjs
- * @description 虚拟形象一级页的真实浏览器 DOM/资源探针：只报告事实，不做产品判定。
+ * @description 数字人一级页的真实浏览器 DOM/资源探针：只报告事实，不做产品判定。
  */
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))

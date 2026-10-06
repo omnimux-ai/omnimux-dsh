@@ -60,9 +60,9 @@ export function registerAvatarTools(ctx, deps = {}) {
   ctx.tools.register({
     name: 'avatar_create',
     description:
-      '新建一个虚拟形象：名称必填且为 1-40 个字符（不含斜杠），可同时写入档位与选项设定；名称重复时返回冲突，不静默改名。',
+      '新建一个数字人：名称必填且为 1-40 个字符（不含斜杠），可同时写入档位与选项设定；名称重复时返回冲突，不静默改名。',
     parameters: objectParams({
-      name: { type: 'string', required: true, description: '形象名称，1-40 个字符，不含斜杠' },
+      name: { type: 'string', required: true, description: '数字人名称，1-40 个字符，不含斜杠' },
       sheet: SHEET_FIELD,
     }),
     output: jsonOut,
@@ -75,7 +75,7 @@ export function registerAvatarTools(ctx, deps = {}) {
   ctx.tools.register({
     name: 'avatar_list',
     description:
-      '列出全部虚拟形象及其最新任务状态，只读；生成前应先用它确认已有形象，避免重复创建角色。',
+      '列出全部数字人及其最新任务状态，只读；生成前应先用它确认已有形象，避免重复创建角色。',
     parameters: objectParams({}),
     output: jsonOut,
     async execute() {
@@ -85,7 +85,7 @@ export function registerAvatarTools(ctx, deps = {}) {
 
   ctx.tools.register({
     name: 'avatar_get',
-    description: '读取单个虚拟形象的完整设定与任务历史（含未完成任务），只读；id 不存在时报错而不返回空对象。',
+    description: '读取单个数字人的完整设定与任务历史（含未完成任务），只读；id 不存在时报错而不返回空对象。',
     parameters: objectParams({
       id: { type: 'string', required: true, description: '形象 id（avt_…）' },
     }),
@@ -97,10 +97,10 @@ export function registerAvatarTools(ctx, deps = {}) {
 
   ctx.tools.register({
     name: 'avatar_update',
-    description: '更新虚拟形象的名称或设定参数，只改传入的字段；名称与其它形象重复时返回冲突。',
+    description: '更新数字人的名称或设定参数，只改传入的字段；名称与其它形象重复时返回冲突。',
     parameters: objectParams({
       id: { type: 'string', required: true, description: '形象 id（avt_…）' },
-      name: { type: 'string', description: '新的形象名称' },
+      name: { type: 'string', description: '新的数字人名称' },
       sheet: SHEET_FIELD,
     }),
     output: jsonOut,
@@ -113,7 +113,7 @@ export function registerAvatarTools(ctx, deps = {}) {
   ctx.tools.register({
     name: 'avatar_delete',
     description:
-      '删除虚拟形象并回收其托管数据目录（主图与多视角一并删除），破坏性操作，必须显式传 confirm: true 才会执行。',
+      '删除数字人并回收其托管数据目录（主图与多视角一并删除），破坏性操作，必须显式传 confirm: true 才会执行。',
     parameters: objectParams({
       id: { type: 'string', required: true, description: '形象 id（avt_…）' },
       confirm: { type: 'boolean', required: true, description: '必须为 true 才确认永久删除' },

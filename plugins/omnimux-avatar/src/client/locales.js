@@ -1,4 +1,4 @@
-// 虚拟形象工作台的文案字典。
+// 数字人工作台的文案字典。
 //
 // 两套键并存，因为同一插件里两种写法都在用：
 //   1. 语义点号键（本插件的左栏组件）：t('action.generate')。
@@ -15,15 +15,17 @@ export const NS = 'omnimux-avatar'
 
 /** 语义点号键（本插件自有文案）。 */
 const ZH_DOTTED = {
-  nav: '虚拟形象',
-  'avatar.label': '形象',
-  'avatar.create': '新建形象',
-  'avatar.name': '形象名称',
+  nav: '数字人',
+  'avatar.label': '数字人',
+  'avatar.unnamed': '未命名',
+  'avatar.create': '新建数字人',
+  'avatar.name': '数字人名称',
   'avatar.createConfirm': '创建',
   'avatar.cancel': '取消',
-  'avatar.switch': '切换形象',
+  'avatar.switch': '切换数字人',
   'avatar.rename': '重命名',
-  'avatar.empty': '还没有形象，先新建一个。',
+  'avatar.renameHint': '双击改名',
+  'avatar.empty': '还没有数字人，先新建一个。',
 
   'tier.title': '夸张程度',
   'tier.normal': '普通',
@@ -38,6 +40,7 @@ const ZH_DOTTED = {
   'action.download': '下载',
 
   'model.pick': '选择模型',
+  'model.config': '模型配置',
   'model.brand': '品牌',
   'model.brandAll': '全部',
   'model.model': '模型',
@@ -61,7 +64,7 @@ const ZH_DOTTED = {
   'preset.updating': '预设设置正在更新，请稍后再试。',
 
   'history.empty.title': '这里还没有内容',
-  'history.empty.desc': '在左侧选好设定后点生成，或点随机来一个形象',
+  'history.empty.desc': '在左侧选好设定后点生成，或点随机来一个数字人',
   'history.loading': '正在加载历史…',
   'history.loadingMore': '正在加载更多…',
   'history.loadFailed': '加载历史失败',
@@ -96,7 +99,7 @@ const ZH_DOTTED = {
   'sync.retrying': '正在保存…',
 
   'error.noImageChannel': '尚未配置图像生成渠道',
-  'error.avatarNameExists': '形象名称已存在',
+  'error.avatarNameExists': '数字人名称已存在',
   'common.close': '关闭',
 }
 
@@ -104,12 +107,14 @@ const ZH_DOTTED = {
 const EN_DOTTED = {
   nav: 'Characters',
   'avatar.label': 'Character',
+  'avatar.unnamed': 'Untitled',
   'avatar.create': 'New character',
   'avatar.name': 'Character name',
   'avatar.createConfirm': 'Create',
   'avatar.cancel': 'Cancel',
   'avatar.switch': 'Switch character',
   'avatar.rename': 'Rename',
+  'avatar.renameHint': 'Double-click to rename',
   'avatar.empty': 'No characters yet. Create one to start.',
 
   'tier.title': 'Exaggeration',
@@ -125,6 +130,7 @@ const EN_DOTTED = {
   'action.download': 'Download',
 
   'model.pick': 'Pick a model',
+  'model.config': 'Model settings',
   'model.brand': 'Brand',
   'model.brandAll': 'All brands',
   'model.model': 'Model',
@@ -194,7 +200,7 @@ const EN_DOTTED = {
  * @type {[string, string][]}
  */
 const TEXT_KEYS = [
-  ['虚拟形象', 'Characters'],
+  ['数字人', 'Characters'],
   ['夸张程度', 'Exaggeration'],
   ['普通', 'Average'],
   ['夸张', 'Bold'],
@@ -202,6 +208,7 @@ const TEXT_KEYS = [
   ['随机', 'Randomize'],
   ['生成', 'Generate'],
   ['选择模型', 'Pick a model'],
+  ['模型配置', 'Model settings'],
   ['品牌', 'Brand'],
   ['全部', 'All brands'],
   ['模型', 'Model'],
@@ -223,7 +230,7 @@ const TEXT_KEYS = [
   ['预设设置正在更新，请稍后再试。', 'Preset settings are being updated. Please try again later.'],
   ['这里还没有内容', 'Nothing here yet'],
   [
-    '在左侧选好设定后点生成，或点随机来一个形象',
+    '在左侧选好设定后点生成，或点随机来一个数字人',
     'Pick options on the left and hit Generate, or hit Randomize for a character',
   ],
   ['正在加载历史…', 'Loading history…'],
@@ -252,15 +259,17 @@ const TEXT_KEYS = [
   ['多视角生成失败：{{msg}}', 'Multi-view generation failed: {{msg}}'],
   ['已从画廊移除', 'Removed from gallery'],
   ['{{n}} 项在当前档位不可见，已移除', '{{n}} picks not visible in this tier were removed'],
-  ['新建形象', 'New character'],
-  ['形象名称', 'Character name'],
+  ['未命名', 'Untitled'],
+  ['新建数字人', 'New character'],
+  ['数字人名称', 'Character name'],
+  ['双击改名', 'Double-click to rename'],
   ['创建', 'Create'],
   ['取消', 'Cancel'],
-  ['切换形象', 'Switch character'],
+  ['切换数字人', 'Switch character'],
   ['重命名', 'Rename'],
   ['尚未配置图像生成渠道', 'No image generation channel is configured'],
   ['已保存到资产库 · 角色', 'Saved to the asset library · Characters'],
-  ['形象名称已存在', 'A character with this name already exists'],
+  ['数字人名称已存在', 'A character with this name already exists'],
   ['关闭', 'Close'],
 
   // 18 个分类标签：键与数据集 label_en 一致。
