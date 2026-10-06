@@ -475,7 +475,10 @@ export function createRivalAccountsService(deps) {
       q: filter.q,
       platform: filter.platform,
     })
-    const sorted = sortFeedRows(rows, filter.sort === 'views' ? 'views' : 'posted_at')
+    const sort = filter.sort === 'views' ? 'views'
+      : filter.sort === 'velocity' ? 'velocity'
+      : 'posted_at'
+    const sorted = sortFeedRows(rows, sort)
     const page = paginateFeed(sorted, filter.page, filter.page_size)
     return { ...page, requested_accounts: selected.map((account) => account.id) }
   }

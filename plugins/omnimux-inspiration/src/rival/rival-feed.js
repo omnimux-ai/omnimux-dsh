@@ -14,12 +14,36 @@
  *   still remote) and the client must never assemble a URL out of a path.
  * - `row_id` is `${account_id}:${post_id}`; the same post id can exist on two
  *   accounts and a React key collision would drop a card silently.
+ * - `feedVelocity` is the only place the growth pill is derived (Issue #3113):
+ *   three credibility tiers — measured samples, publish-to-now average, then a
+ *   relative-to-account-median proxy. The Host emits facts only
+ *   (`tier`/`confidence`/`vph`/`multiplier`/`samples_at`); the pill text and
+ *   the tier prefixes are the client's dictionary keys, never Host strings.
  */
 
 import { RIVAL_MEDIA_DIR_NAME, RIVAL_MEDIA_URL_PREFIX } from './constants.js'
 
 /** Default page size of the feed endpoint. */
 export const FEED_PAGE_SIZE = 20
+
+/** 规格 §3.3：实测增速要求最早/最晚有效采样间隔 ≥1.5h。 */
+export const VELOCITY_MIN_SAMPLE_SPAN_MS = 1.5 * 3600_000
+/** 规格 §3.3 分级阈值：>20k 爆款 / ≥1k 飙升 / ≥200 观察 / <200 不渲染。 */
+export const VELOCITY_TIER_HOT = 20_000
+export const VELOCITY_TIER_RISING = 1_000
+export const VELOCITY_TIER_WATCH = 200
+/** PRD §5.1 C 档：views ≥ 3× 账号历史播放中位数才记为「该号 Nx」。 */
+export const VELOCITY_RELATIVE_MIN_MULTIPLIER = 3
+
+/** @param {unknown} value */
+function buildViewsHistory(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((entry) => entry && typeof entry === 'object'
+      && typeof entry.at === 'string' && typeof entry.views === 'number'
+      && Number.isFinite(entry.views))
+    .map((entry) => ({ at: entry.at, views: entry.views }))
+}
 
 /** Upper bound of `page_size`, so one request cannot ask for the whole cache. */
 export const FEED_PAGE_SIZE_MAX = 60
@@ -112,6 +136,123 @@ export function feedViews(post) {
 }
 
 /**
+ * Median view count of an account's posts — the baseline of the relative
+ * confidence tier. `0` when nothing readable exists: a median of zero would
+ * make every post an infinite outlier, so callers treat it as "no baseline".
+ * @param {Array<Record<string, any>>} posts
+ * @returns {number}
+ */
+export function feedMedianViews(posts) {
+  const values = (Array.isArray(posts) ? posts : [])
+    .map((row) => row?.stats?.views)
+    .filter((value) => typeof value === 'number' && Number.isFinite(value) && value > 0)
+    .sort((a, b) => a - b)
+  if (values.length === 0) return 0
+  const middle = Math.floor(values.length / 2)
+  return values.length % 2 === 0 ? (values[middle - 1] + values[middle]) / 2 : values[middle]
+}
+
+/**
+ * Display tier of an hourly rate, or `''` when the rate is below the watch
+ * band (§3.3: `<200` renders no pill).
+ * @param {number} vph
+ * @returns {'' | 'hot' | 'rising' | 'watch'}
+ */
+function velocityTier(vph) {
+  if (vph > VELOCITY_TIER_HOT) return 'hot'
+  if (vph >= VELOCITY_TIER_RISING) return 'rising'
+  if (vph >= VELOCITY_TIER_WATCH) return 'watch'
+  return ''
+}
+
+/**
+ * The one growth signal a feed row carries (Issue #3113).
+ *
+ * Credibility degrades strictly: measured — publish-to-now average — relative
+ * to the account's own median. Every failure mode (short sample span, views
+ * rollback, unparseable or future timestamps, missing baseline) degrades to
+ * the next tier instead of throwing or fabricating a number; `null` means the
+ * card renders no pill and the velocity sort sinks it to the end.
+ *
+ * The Host emits facts only. `samples_at` carries the two endpoints the
+ * measured tier was read from (oldest→newest); the detail dialog and the pill
+ * text are the client's to format.
+ * @param {Record<string, any>} post  a stored post row or a feed row
+ * @param {{ now?: string | number, medianViews?: number }} [opts]
+ * @returns {{ confidence: 'measured'|'average'|'relative', tier: string,
+ *   vph?: number, multiplier?: number, samples_at?: [string, string] } | null}
+ */
+export function feedVelocity(post, opts = {}) {
+  const now = typeof opts.now === 'number' && Number.isFinite(opts.now)
+    ? opts.now
+    : Date.parse(typeof opts.now === 'string' ? opts.now : '')
+  if (!Number.isFinite(now)) return null
+  const views = post?.stats?.views
+  const viewsReadable = typeof views === 'number' && Number.isFinite(views)
+
+  // A · measured: ≥2 valid samples spanning ≥1.5h, oldest→newest. A views
+  // rollback is a data anomaly, never a negative speed — degrade, don't sign
+  // it (and never crash on malformed history entries).
+  const samples = buildViewsHistory(post?.metrics?.views_history ?? post?.views_history)
+    .map((entry) => ({ at: Date.parse(entry.at), views: entry.views }))
+    .filter((entry) => Number.isFinite(entry.at))
+    .sort((a, b) => a.at - b.at)
+  if (samples.length >= 2) {
+    const first = samples[0]
+    const last = samples[samples.length - 1]
+    const span = last.at - first.at
+    const delta = last.views - first.views
+    if (span >= VELOCITY_MIN_SAMPLE_SPAN_MS && delta >= 0) {
+      const vph = (delta / span) * 3600_000
+      const tier = velocityTier(vph)
+      if (tier) {
+        return {
+          confidence: 'measured',
+          tier,
+          vph: Math.round(vph * 10) / 10,
+          samples_at: [new Date(first.at).toISOString(), new Date(last.at).toISOString()],
+        }
+      }
+      return null
+    }
+  }
+
+  // B · publish-to-now average. A post with an unreadable or future timestamp
+  // has no age to divide by — degrade, never divide by a negative or zero.
+  if (viewsReadable) {
+    const bornAt = Date.parse(text(post?.posted_at))
+    const ageFrom = Number.isFinite(bornAt) ? bornAt : Date.parse(text(post?.first_seen_at))
+    const ageMs = Number.isFinite(ageFrom) ? now - ageFrom : NaN
+    if (Number.isFinite(ageMs) && ageMs > 0) {
+      const vph = (views / ageMs) * 3600_000
+      return {
+        confidence: 'average',
+        tier: 'average',
+        vph: Math.round(vph * 10) / 10,
+      }
+    }
+
+    // C · relative to the account's own median. Only a real baseline and a
+    // real outlier qualify — a multiplier below the burst gate reads as no
+    // signal rather than as a small badge.
+    const median = typeof opts.medianViews === 'number' && Number.isFinite(opts.medianViews)
+      ? opts.medianViews
+      : 0
+    if (median > 0) {
+      const multiplier = views / median
+      if (multiplier >= VELOCITY_RELATIVE_MIN_MULTIPLIER) {
+        return {
+          confidence: 'relative',
+          tier: 'relative',
+          multiplier: Math.round(multiplier * 10) / 10,
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
  * Author block embedded in every feed row.
  *
  * Denormalized on purpose: the grid renders a card with zero follow-up lookups,
@@ -161,6 +302,10 @@ export function toFeedRow(post, account) {
     cover_src: coverSrc,
     cover_key: coverSrc,
     cover_url: text(post?.cover_url),
+    // 增速原料随行下发：计算在 mergeAccountPosts 的第二阶段做（需要全账号
+    // 中位数），feedVelocity 读这两个字段而不回头查缓存行。
+    views_history: buildViewsHistory(post?.metrics?.views_history),
+    first_seen_at: text(post?.first_seen_at),
     source_platform: text(account?.platform),
     in_library: post?.in_library === true,
     inspiration_id: post?.inspiration_id ?? null,
@@ -205,6 +350,7 @@ export function matchesFeedQuery(post, account, query) {
  *   postsByAccount: Record<string, Array<Record<string, any>>>,
  *   q?: string,
  *   platform?: string,
+ *   now?: string | number,
  * }} input
  * @returns {Array<Record<string, any>>}
  */
@@ -232,10 +378,19 @@ export function mergeAccountPosts(input) {
     }
   }
 
-  // Pass 2 — build the rows, now that every count is final.
+  // Pass 2 — build the rows, now that every count is final. The velocity tier
+  // needs two things only this stage knows: the clock (`now`, injected so the
+  // feed never reads wall time inside a pure function) and each account's
+  // median views over ITS OWN cached list — the relative tier's baseline is
+  // the account's history, not the filtered slice.
+  const now = input?.now ?? new Date().toISOString()
   return kept.map(({ post, account }) => {
     const row = toFeedRow(post, account)
     row.account = toAccountRef(account, counts.get(account.id) || 0)
+    row.velocity = feedVelocity(post, {
+      now,
+      medianViews: feedMedianViews(postsByAccount[account.id]),
+    })
     return row
   })
 }
@@ -248,13 +403,34 @@ export function mergeAccountPosts(input) {
  * @param {unknown} sort
  * @returns {Array<Record<string, any>>}
  */
+/**
+ * Sortable strength of a row's velocity descriptor:
+ * hourly rates rank first, relative multipliers second, nothing last.
+ * `-Infinity` reads as「no signal」and is what sinks a card to the end of the
+ * velocity order without a second comparison key.
+ * @param {Record<string, any>} row
+ * @returns {number}
+ */
+function velocityRank(row) {
+  const velocity = row?.velocity
+  if (!velocity || typeof velocity !== 'object') return -Infinity
+  if (Number.isFinite(velocity.vph)) return velocity.vph * 1_000
+  if (Number.isFinite(velocity.multiplier)) return velocity.multiplier
+  return -Infinity
+}
+
 export function sortFeedRows(rows, sort = 'posted_at') {
   const list = Array.isArray(rows) ? rows.slice() : []
   const byViews = sort === 'views'
+  const byVelocity = sort === 'velocity'
   return list.sort((a, b) => {
     if (byViews) {
       const left = feedViews(a)
       const right = feedViews(b)
+      if (right !== left) return right - left
+    } else if (byVelocity) {
+      const left = velocityRank(a)
+      const right = velocityRank(b)
       if (right !== left) return right - left
     } else {
       const left = feedPostedAt(a)

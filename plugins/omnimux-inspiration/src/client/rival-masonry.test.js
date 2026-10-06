@@ -10,6 +10,7 @@ import {
   RIVAL_MIN_CARD_HEIGHT,
   RIVAL_MIN_COL_WIDTH,
   rivalCardHeightPx,
+  rivalHasPill,
   rivalCardTypeOf,
   rivalColumnsForWidth,
   rivalMediaRatioOf,
@@ -353,6 +354,23 @@ describe('rival-masonry — rivalPlacements 最短列放置', () => {
 /* --------------------------- R4：估算层建模缺陷 --------------------------- */
 
 describe('rival-masonry — R4 胶囊行判据收敛（复审 ①）', () => {
+
+  it('velocity 结构化描述（vph/multiplier 无 text）→ 也判为可渲染胶囊（#3113 服务端事实形态）', () => {
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: { tier: 'watch', confidence: 'measured', vph: 320 } }), true,
+      'structured hourly descriptor renders a pill')
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: { tier: 'relative', confidence: 'relative', multiplier: 4.2 } }), true,
+      'relative tier renders a pill too')
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: { tier: 'watch' } }), false,
+      'a descriptor with no numbers reads as no pill')
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: {} }), false,
+      'an empty object still reserves nothing')
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: null }), false)
+    const structured = rivalCardHeightPx({ card_type: 'text', title: TEXT_SHORT, velocity: { tier: 'watch', confidence: 'measured', vph: 320 } }, 220)
+    const baseline = rivalCardHeightPx({ card_type: 'text', title: TEXT_SHORT }, 220)
+    assert.ok(structured > baseline || (structured === baseline && rivalCardHeightPx({ card_type: 'text', title: TEXT_LONG, velocity: { tier: 'watch', vph: 320 } }, 220) > rivalCardHeightPx({ card_type: 'text', title: TEXT_LONG }, 220)),
+      'the predicate and the height estimator must agree on a structured pill')
+  })
+
   it('velocity 是对象但 text 为空 → 与无胶囊同高，不预留 36px', () => {
     // 判据必须与 VelocityPill 的早退（!text → null）一致；否则渲染层真值
     // velocity 时仍会渲染空 pill-row，卡片比估算高 36px，同列下方卡片重叠。

@@ -20,6 +20,7 @@ import {
   columnsForWidth as columnsForWidthCore,
   distributeColumns as distributeColumnsCore,
 } from '../../../omnimux/src/client/components/library-flow/masonry-layout.js'
+import { rivalVelocityHasSignal } from './rival-filter.js'
 
 /** spec §9.3：最小列宽、间距、列数区间。 */
 export const RIVAL_MIN_COL_WIDTH = 220
@@ -613,10 +614,12 @@ function textBodyLines(card, columnWidth) {
 
 /**
  * 胶囊行存在性的唯一判据：渲染层（pill-row 是否渲染）与估算层（是否预留
- * 36px）必须共用同一个谓词——`velocity` 是对象但 `text` 为空时
+ * 36px）必须共用同一个谓词——`velocity` 是对象但无可渲染信号时
  * `VelocityPill` 返回 null，该行整行不应出现（§9.1「仅在有胶囊时渲染该行」）。
+ * #3113：谓词搬入 rival-filter.js 的 `rivalVelocityHasSignal`，结构化
+ * 描述（`tier` + `vph`/`multiplier`，无 `text`）同样判为可渲染。
  */
-export const rivalHasPill = (card) => Boolean(card?.velocity && String(card.velocity.text || '') !== '')
+export const rivalHasPill = (card) => rivalVelocityHasSignal(card?.velocity)
 const hasPill = rivalHasPill
 
 /**

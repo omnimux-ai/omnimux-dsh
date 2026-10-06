@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ConfirmModal, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
-import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPanel.jsx'
+import { RivalAccountsPanel, buildRivalPlatformOptions, buildRivalSortOptions } from './RivalAccountsPanel.jsx'
 import { RivalPoolStatusBar, RivalRefreshButton } from './RivalPoolStatusBar.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
@@ -127,6 +127,7 @@ export function InspirationSection({ t, active }) {
    */
   const [rivalQuery, setRivalQuery] = useState('')
   const [rivalPlatform, setRivalPlatform] = useState('')
+  const [rivalSort, setRivalSort] = useState('recommended')
   const rivalTab = tab === 'rivals'
 
   /**
@@ -140,6 +141,7 @@ export function InspirationSection({ t, active }) {
     enabled: rivalTab && active !== false,
     query: rivalQuery,
     platform: rivalPlatform,
+    sort: rivalSort,
   })
   const { reload: reloadRivalFeed } = rivalFeed
 
@@ -229,6 +231,7 @@ export function InspirationSection({ t, active }) {
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
   const rivalPlatformOptions = buildRivalPlatformOptions(t)
+  const rivalSortOptions = buildRivalSortOptions(t)
 
   /**
    * Official 18-industry dropdown (Issue #2507 / #2511). The list is local and does
@@ -348,6 +351,13 @@ export function InspirationSection({ t, active }) {
               onChange={setRivalPlatform}
               className="omnimux-inspiration-filter-select"
               options={rivalPlatformOptions}
+            />
+            <DropdownSelect
+              value={rivalSort}
+              aria-label={t('filter.sort')}
+              onChange={setRivalSort}
+              className="omnimux-inspiration-filter-select"
+              options={rivalSortOptions}
             />
           </>
         ) : (

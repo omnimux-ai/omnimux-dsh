@@ -7,6 +7,53 @@
 
 import { zh } from './locales.js'
 
+/** §3.7 增速数字口径：≥10k 取整 `23k`；1k–10k 保留一位 `1.2k`；<1k 整数 `320`。 */
+function velocityRate(vph) {
+  const n = Number(vph)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  if (n >= 10_000) return `${Math.round(n / 1000)}k`
+  if (n >= 1_000) return `${(Math.round(n / 100) / 10).toFixed(1)}k`
+  return String(Math.round(n))
+}
+
+/** 相对爆发倍数：一位小数、整数位不带 `.0`（4.2 / 9）。 */
+function velocityMultiplier(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  const one = Math.round(n * 10) / 10
+  return one === Math.floor(one) ? String(Math.floor(one)) : one.toFixed(1)
+}
+
+/**
+ * Pill text of a Host-emitted velocity descriptor (§3.3, #3113).
+ *
+ * The Host ships facts only (`tier` + `vph` or `multiplier`); every visible
+ * string goes through the dictionary keys so the zh/en layers keep the same
+ * shapes the spec locks. A legacy descriptor that carries `text` verbatim wins
+ * — the same passthrough the grid has always honoured. `''` means the pill
+ * does not render.
+ * @param {Record<string, any> | null | undefined} velocity
+ * @param {(key: string) => string} t
+ * @returns {string}
+ */
+export function rivalVelocityText(velocity, t) {
+  if (!velocity || typeof velocity !== 'object') return ''
+  const direct = String(velocity.text || '')
+  if (direct) return direct
+  const translate = typeof t === 'function' ? t : (key) => key
+  const tier = String(velocity.tier || '')
+  const rate = velocityRate(velocity.vph)
+  if (tier === 'hot') return rate ? `${translate('rivalFeed.pill.hot')} ${rate}/h` : ''
+  if (tier === 'rising') return rate ? `${translate('rivalFeed.pill.rising')} ${rate}/h` : ''
+  if (tier === 'watch') return rate ? `${translate('rivalFeed.pill.watch')} ${rate}/h` : ''
+  if (tier === 'average') return rate ? `${translate('rivalFeed.pill.average')} ${rate}/h` : ''
+  if (tier === 'relative') {
+    const multiplier = velocityMultiplier(velocity.multiplier)
+    return multiplier ? `${translate('rivalFeed.pill.relative')} ${multiplier}x` : ''
+  }
+  return ''
+}
+
 /**
  * The locale the components are rendering in.
  *

@@ -43,6 +43,20 @@ export function buildRivalPlatformOptions(t) {
 }
 
 /**
+ * `filter.sort` 菜单（规格 R4 白名单：四项、禁加第 5 项）。
+ * `recommended` 与 `latest` 在 wire 层共享 `posted_at`——综合推荐分的加权
+ * 公式不在本票；时间序是它当前唯一诚实的排法。
+ */
+export function buildRivalSortOptions(t) {
+  return [
+    { value: 'recommended', label: t('rivalFeed.sort.recommended') },
+    { value: 'velocity', label: t('rivalFeed.sort.velocity') },
+    { value: 'latest', label: t('rivalFeed.sort.latest') },
+    { value: 'views', label: t('rivalFeed.sort.views') },
+  ]
+}
+
+/**
  * @param {{
  *   t: (key: string) => string,
  *   active?: boolean,

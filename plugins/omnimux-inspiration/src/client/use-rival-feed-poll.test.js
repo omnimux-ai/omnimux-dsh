@@ -198,3 +198,42 @@ describe('useRivalFeed bounded first-fetch poll (#3112)', () => {
     assert.equal(accountCalls, atUnmount, 'an unmounted tab must not keep polling')
   })
 })
+
+
+describe('useRivalFeed — sort 选项映射（#3113 增速排序）', () => {
+  const mounted = []
+  after(async () => {
+    while (mounted.length) {
+      // eslint-disable-next-line no-await-in-loop
+      await mounted.pop().unmount()
+    }
+  })
+
+  it('velocity 请求参数原样下发；recommended/latest/views 映射为 wire 值', async () => {
+    const seen = []
+    const api = {
+      fetchRivalAccounts: async () => okAccounts([{ id: 'a', refresh_state: 'idle', post_count: 1 }]),
+      fetchRivalFeed: async (filter) => {
+        seen.push(filter?.sort)
+        return okFeed([{ id: 'p1' }])
+      },
+    }
+    for (const [option, wire] of [
+      ['velocity', 'velocity'],
+      ['views', 'views'],
+      ['recommended', 'posted_at'],
+      ['latest', 'posted_at'],
+      [undefined, 'posted_at'],
+    ]) {
+      seen.length = 0
+      const extra = option === undefined ? {} : { sort: option }
+      // eslint-disable-next-line no-await-in-loop
+      const m = await mount(api, { pollIntervalMs: 15, ...extra })
+      mounted.push(m)
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => { await sleep(40) })
+      assert.ok(seen.length > 0, `sort=${option}: feed must be requested`)
+      assert.equal(seen[0], wire, `option ${option} must map to wire sort ${wire}`)
+    }
+  })
+})

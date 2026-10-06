@@ -5,6 +5,7 @@ import {
   formatEngagementCount,
   formatRelativeTime,
   rivalLocaleOf,
+  rivalVelocityText,
 } from './rival-format.js'
 import { zh, en } from './locales.js'
 
@@ -141,5 +142,44 @@ describe('formatRelativeTime — locale', () => {
   it('returns -- for unreadable values in both locales', () => {
     assert.equal(formatRelativeTime('not-a-date', NOW, 'en'), '--')
     assert.equal(formatRelativeTime(null, NOW, 'en'), '--')
+  })
+})
+
+
+describe('rivalVelocityText — §3.3 三档逐字文案（#3113）', () => {
+  it('measured hot/rising/watch 按前缀与 k/h 格式渲染', () => {
+    assert.equal(rivalVelocityText({ tier: 'hot', confidence: 'measured', vph: 23000 }, tZh), '爆款 23k/h')
+    assert.equal(rivalVelocityText({ tier: 'rising', confidence: 'measured', vph: 1200 }, tZh), '飙升 1.2k/h')
+    assert.equal(rivalVelocityText({ tier: 'watch', confidence: 'measured', vph: 320 }, tZh), '观察 320/h')
+  })
+
+  it('average 档逐字「均速 {v}」：同样走数字格式、不带热度前缀', () => {
+    assert.equal(rivalVelocityText({ tier: 'average', confidence: 'average', vph: 1800 }, tZh), '均速 1.8k/h')
+    assert.equal(rivalVelocityText({ tier: 'average', confidence: 'average', vph: 180 }, tZh), '均速 180/h')
+  })
+
+  it('relative 档逐字「该号 {v}x」：严禁 /h 单位与爆款/飙升前缀（§3.3 红线）', () => {
+    const text = rivalVelocityText({ tier: 'relative', confidence: 'relative', multiplier: 4.2 }, tZh)
+    assert.equal(text, '该号 4.2x')
+    assert.ok(!text.includes('/h'), '相对档不得携带小时速率单位')
+    assert.ok(!text.includes('爆款') && !text.includes('飙升'), '相对档不得使用热度前缀')
+  })
+
+  it('legacy 直传 text 优先返回（向后兼容旧 row 形态）', () => {
+    assert.equal(rivalVelocityText({ text: '爆款 23k/h', tier: 'hot' }, tZh), '爆款 23k/h')
+  })
+
+  it('vph/multiplier 都读不出 → 空串（胶囊不渲染）', () => {
+    assert.equal(rivalVelocityText({ tier: 'hot' }, tZh), '')
+    assert.equal(rivalVelocityText(null, tZh), '')
+    assert.equal(rivalVelocityText({ tier: 'relative' }, tZh), '')
+  })
+
+  it('en 字典键存在且形态同构（不带中文）', () => {
+    const text = rivalVelocityText({ tier: 'hot', confidence: 'measured', vph: 23000 }, tEn)
+    assert.ok(text.endsWith('23k/h'), `en hot tier keeps the rate suffix, got ${text}`)
+    assert.ok(!/[一-鿿]/.test(text), `en pill must not leak Chinese, got ${text}`)
+    const rel = rivalVelocityText({ tier: 'relative', confidence: 'relative', multiplier: 4.2 }, tEn)
+    assert.ok(rel.endsWith('4.2x') && !rel.includes('/h'), `en relative tier, got ${rel}`)
   })
 })

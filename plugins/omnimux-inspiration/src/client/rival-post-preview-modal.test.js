@@ -136,3 +136,53 @@ describe('RivalPostPreviewModal — 封面与发布时间（第五轮整改）',
     }
   })
 })
+
+
+describe('RivalPostPreviewModal — detail.velocityNote 增速口径说明（#3113）', () => {
+  it('实测档显示「基于 {t1} 与 {t2} 两次采样」，且每卡只显示对应口径那一句', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'measured', tier: 'hot', vph: 23000, samples_at: ['2026-10-06T16:00:00.000Z', '2026-10-06T18:00:00.000Z'] } })
+    const mounted = await mountModal(card)
+    try {
+      const note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+      assert.ok(note, 'measured velocity renders its caliber note')
+      const text = note.textContent || ''
+      assert.match(text, /两次采样/, `measured note must cite the two samples, got ${text}`)
+      assert.ok(!text.includes('平均速度'), 'one card shows only its own caliber sentence')
+      assert.ok(!text.includes('中位数'), 'one card shows only its own caliber sentence')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('均速档逐字「按发布至今的平均速度估算」', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'average', tier: 'average', vph: 1800 } })
+    const mounted = await mountModal(card)
+    try {
+      const note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+      assert.equal(note?.textContent.trim(), '按发布至今的平均速度估算')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('相对档逐字「与该账号历史播放中位数对比」', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'relative', tier: 'relative', multiplier: 4.2 } })
+    const mounted = await mountModal(card)
+    try {
+      const note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+      assert.equal(note?.textContent.trim(), '与该账号历史播放中位数对比')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('无增速信号的卡不渲染口径行（不留空位）', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: null })
+    const mounted = await mountModal(card)
+    try {
+      assert.equal(mounted.container.querySelector('.omnimux-rival-detail-velocity'), null)
+    } finally {
+      await mounted.unmount()
+    }
+  })
+})

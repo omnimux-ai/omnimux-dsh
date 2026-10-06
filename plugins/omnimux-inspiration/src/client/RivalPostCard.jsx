@@ -20,6 +20,7 @@ import {
   formatEngagementCount,
   formatRelativeTime,
   rivalLocaleOf,
+  rivalVelocityText,
 } from './rival-format.js'
 import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 
@@ -51,14 +52,17 @@ function stop(e) {
   e.stopPropagation()
 }
 
-function VelocityPill({ velocity, surface }) {
-  if (!velocity || !String(velocity.text || '')) return null
+function VelocityPill({ velocity, surface, t }) {
+  // §3.3：文案经字典派生（Host 只下发 tier/vph/multiplier 事实），
+  // 旧形态直传 `text` 的字样仍原样显示。
+  const text = rivalVelocityText(velocity, t)
+  if (!text) return null
   const tier = String(velocity.tier || 'watch')
   const trend = tier === 'hot' || tier === 'rising'
   return (
     <span className={`omnimux-rival-vpill ${surface} ${tier}`}>
       {trend ? TREND_SVG : null}
-      <span>{String(velocity.text)}</span>
+      <span>{text}</span>
     </span>
   )
 }
@@ -188,7 +192,7 @@ export function RivalPostCard(props) {
       {onMedia ? (
         <>
           {mediaNode}
-          <VelocityPill velocity={card?.velocity} surface="on-media" />
+          <VelocityPill velocity={card?.velocity} surface="on-media" t={t} />
           <div className="omnimux-rival-card-title-zone">
             <div className={`omnimux-rival-card-title clamp-${clamp}`}>{title}</div>
           </div>
@@ -197,7 +201,7 @@ export function RivalPostCard(props) {
         <>
           {rivalHasPill(card) ? (
             <div className="omnimux-rival-pill-row">
-              <VelocityPill velocity={card.velocity} surface="on-surface" />
+              <VelocityPill velocity={card.velocity} surface="on-surface" t={t} />
             </div>
           ) : null}
           <div className={`omnimux-rival-card-text clamp-${clamp}`}>{title}</div>

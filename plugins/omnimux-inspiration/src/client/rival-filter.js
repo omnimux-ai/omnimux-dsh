@@ -171,6 +171,24 @@ export function toAccountFilterRow(account, state) {
 import { rivalCardTypeOf } from './rival-masonry.js'
 
 /**
+ * Whether a velocity descriptor carries a renderable signal — the single
+ * predicate the pill row, `VelocityPill` and the height estimator share.
+ * Legacy `{text}` descriptors pass through; Host structured descriptors
+ * (`tier` + `vph`/`multiplier`, #3113) read renderable by their numbers —
+ * the pill text is derived later, by the render layer that owns `t`.
+ * @param {unknown} velocity
+ * @returns {boolean}
+ */
+export function rivalVelocityHasSignal(velocity) {
+  if (!velocity || typeof velocity !== 'object') return false
+  if (String(velocity.text || '') !== '') return true
+  const tier = String(velocity.tier || '')
+  if (tier === 'relative') return Number.isFinite(velocity.multiplier)
+  return (tier === 'hot' || tier === 'rising' || tier === 'watch' || tier === 'average')
+    && Number.isFinite(velocity.vph)
+}
+
+/**
  * §9.2 状态裁决：卡片只消费「状态种类」，文案由渲染层经 locale 字典输出。
  * Host 下发的 `state_label` 原样透传（展示权在 Host 数据，不翻译），
  * 派生状态只产枚举——映射层不出现任何界面文字。
