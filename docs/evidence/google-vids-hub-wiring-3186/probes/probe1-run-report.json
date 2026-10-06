@@ -1,0 +1,176 @@
+{
+  "runId": "ed091347-8069-4d10-8037-edc85aa2f5bd",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-hub-wiring",
+  "origin": "http://127.0.0.1:60477",
+  "appPort": 60477,
+  "cdpPort": 60498,
+  "startedAt": "2026-10-06T06:42:58.118Z",
+  "completedAt": "2026-10-06T06:43:54.432Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:60477",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:60477",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-4QYihPcfUaYhzROtQEMq1LnG7QdLzGk4tMMD0Gzs_yc"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 60498
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 10,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 24
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 10
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 16
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 16
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:probe-url",
+      "pass": true,
+      "detail": "\"http://127.0.0.1:60477/#/workspace/ws_qa_media\""
+    },
+    {
+      "name": "journey:probe-globals",
+      "pass": true,
+      "detail": "{\"__omnimuxSidebar\":\"object:register,place,registerExploreItem\",\"__omnimuxStage\":\"object:claim,release,PRODUCT_STAGE_EVENT,readBox\",\"__omnimuxWorkbench\":\"object:open,openWorkbench,closeTab,closePanel,isOpen,isActive,getRailVerdict,isRailRowActive,syncActivation,isWorkbenchTab,resolveDefaultFocus,subscribe,attachStore,detachStore,bind,createSidebarStore,waitForService,applyDefaultWidth,getSnapshot,getFocus,setFocus,inferFocus,syncGuiWidth,splitMaxPx,reconcileRightbar\",\"__omnimuxLayout\":\"undefined\",\"__omnimuxClipStatus\":\"undefined\",\"__DSH_BOOT__\":\"object:rev,entries,batches\",\"__omnimuxRuntime\":\"undefined\"}"
+    },
+    {
+      "name": "journey:probe-sidebar-entries",
+      "pass": true,
+      "detail": "[{\"tag\":\"BUTTON\",\"cls\":\"omnimux-sidebar-nav-entry omnimux-workflow-entry\",\"text\":\"项目\",\"w\":248},{\"tag\":\"BUTTON\",\"cls\":\"omnimux-sidebar-nav-entry omnimux-market-entry\",\"text\":\"技能/专家\",\"w\":248},{\"tag\":\"BUTTON\",\"cls\":\"omnimux-sidebar-nav-entry omnimux-assets-entry\",\"text\":\"资产库\",\"w\":248},{\"tag\":\"BUTTON\",\"cls\":\"omnimux-sidebar-nav-entry omnimux-inspiration-entry\",\"text\":\"灵感社区\",\"w\":248},{\"tag\":\"BUTTON\",\"cls\":\"omnimux-sidebar-nav-entry omnimux-explore-entry\",\"text\":\"探索\",\"w\":248},{\"tag\":\"BUTTON\",\"cls\":\"omnimux-sidebar-nav-entry omnimux-avatar-entry\",\"text\":\"虚拟形象\",\"w\":248}]"
+    },
+    {
+      "name": "journey:probe-scripts",
+      "pass": true,
+      "detail": "[\"/plugins/??@deepseek-ai/dsh-client-modules/client.js&rev=cddf5581d5d5\",\"./assets/index-BKQ_L1z6.js\"]"
+    },
+    {
+      "name": "journey:probe-boot",
+      "pass": true,
+      "detail": "{\"length\":28974,\"sample\":\"{\\\"rev\\\":\\\"16b79c02cf79\\\",\\\"entries\\\":[{\\\"id\\\":\\\"@deepseek-ai/dsh-api-gateway\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-api-gateway/client.js&rev=ddb801ecf1278bcd-0\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-0\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-typert-registry\\\",\\\"@deepseek-ai/dsh-client-connection\\\"],\\\"immediately\\\":true},{\\\"id\\\":\\\"@deepseek-ai/dsh-client-ui-open-in-app\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-client-ui-open-in-app/client.js&rev=ddb801ecf1278bcd-1\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-1\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-client-locale\\\",\\\"@deepseek-ai/dsh-client-ui-conversation\\\",\\\"@deepseek-ai/dsh-client-ui-renderer\\\",\\\"@deepseek-ai/dsh-client-ui-session\\\"]},{\\\"id\\\":\\\"@deepseek-ai/dsh-api-workspace-files\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-api-workspace-files/client.js&rev=ddb801ecf1278bcd-2\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-2\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-api-gateway\\\",\\\"@deepseek-ai/dsh-client-resources\\\"]},{\\\"id\\\":\\\"@deepseek-ai/dsh-client-modules\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-client-modules/client.js&rev=ddb801ecf1278bcd-3\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-3\\\",\\\"inject\\\":[],\\\"immediately\\\":true},{\\\"id\\\":\\\"@deepseek-ai/dsh-cordis-client-runner\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-cordis-client-runner/client.js&rev=ddb801ecf1278bcd-4\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-4\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-client-ui-renderer\\\",\\\"@deepseek-ai/dsh-api-remotes\\\",\\\"@deepseek-ai/dsh-client-modules\\\",\\\"@deepseek-ai/dsh-client-ui-theme\\\"]},{\\\"id\\\":\\\"@deepseek-ai/dsh-client-ui-theme\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-client-ui-theme/client.js&rev=ddb801ecf1278bcd-5\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-5\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-client-connection\\\",\\\"@deepseek-ai/dsh-client-locale\\\",\\\"@deepseek-ai/dsh-client-ui-renderer\\\",\\\"@deepseek-ai/dsh-client-ui-settings\\\",\\\"@deepseek-ai/dsh-api-remotes\\\"],\\\"immediately\\\":true},{\\\"id\\\":\\\"@deepseek-ai/dsh-client-locale\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-client-locale/client.js&rev=ddb801ecf1278bcd-6\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-6\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-client-connection\\\",\\\"@deepseek-ai/dsh-client-ui-renderer\\\",\\\"@deepseek-ai/dsh-client-ui-settings\\\",\\\"@deepseek-ai/dsh-api-remotes\\\"],\\\"immediately\\\":true},{\\\"id\\\":\\\"@deepseek-ai/dsh-client-ui-layout\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-client-ui-layout/client.js&rev=ddb801ecf1278bcd-7\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-7\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-client-locale\\\",\\\"@deepseek-ai/dsh-client-ui-renderer\\\",\\\"@deepseek-ai/dsh-client-ui-session\\\",\\\"@deepseek-ai/dsh-client-ui-theme\\\"]},{\\\"id\\\":\\\"@deepseek-ai/dsh-client-ui-renderer\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-client-ui-renderer/client.js&rev=ddb801ecf1278bcd-8\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-8\\\",\\\"immediately\\\":true},{\\\"id\\\":\\\"@deepseek-ai/dsh-client-ui-session\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-client-ui-session/client.js&rev=ddb801ecf1278bcd-9\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-9\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-api-session-controller\\\",\\\"@deepseek-ai/dsh-client-ui-renderer\\\"]},{\\\"id\\\":\\\"@deepseek-ai/dsh-client-resources\\\",\\\"url\\\":\\\"/plugins/??@deepseek-ai/dsh-client-resources/client.js&rev=ddb801ecf1278bcd-10\\\",\\\"rev\\\":\\\"ddb801ecf1278bcd-10\\\",\\\"inject\\\":[\\\"@deepseek-ai/dsh-client-ui-renderer\\\"]},{\\\"id\\\":\\\"@deepseek-ai/dsh-cl\"}"
+    },
+    {
+      "name": "journey:probe-vids-in-dom",
+      "pass": true,
+      "detail": "{\"stage\":false,\"anyVids\":false,\"stageAttr\":\"\"}"
+    },
+    {
+      "name": "journey:probe-claim-attempt",
+      "pass": true,
+      "detail": "{\"before\":false,\"claimed\":true,\"after\":false,\"attr\":\"omnimux-vids\"}"
+    },
+    {
+      "name": "journey:probe-open-workbench",
+      "pass": true,
+      "detail": "{\"opened\":true,\"vids\":false,\"clipReady\":true}"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 87223
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-hub-wiring/.workbuddy/evidence/app-qa/ed091347-8069-4d10-8037-edc85aa2f5bd/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 87223
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 16,
+    "assetHubOpened": true
+  }
+}

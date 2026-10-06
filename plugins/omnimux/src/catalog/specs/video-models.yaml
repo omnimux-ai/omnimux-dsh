@@ -2331,6 +2331,22 @@ models:
               step: 1
             defaultValue: 10
             unit: s
+          aspectRatio:
+            options:
+              - value: landscape
+                label: "横屏"
+              - value: portrait
+                label: "竖屏"
+            defaultValue: landscape
+          resolution:
+            options:
+              - value: 720p
+                label: 720p
+              - value: 1080p
+                label: 1080p
+              - value: 4k
+                label: 4k
+            defaultValue: 720p
         execution:
           status: "live"
           profileId: "videoGenerate"
@@ -2368,6 +2384,22 @@ models:
               step: 1
             defaultValue: 10
             unit: s
+          aspectRatio:
+            options:
+              - value: landscape
+                label: "横屏"
+              - value: portrait
+                label: "竖屏"
+            defaultValue: landscape
+          resolution:
+            options:
+              - value: 720p
+                label: 720p
+              - value: 1080p
+                label: 1080p
+              - value: 4k
+                label: 4k
+            defaultValue: 720p
         execution:
           status: "live"
           profileId: "videoGenerate"
@@ -2407,6 +2439,22 @@ models:
               step: 1
             defaultValue: 8
             unit: s
+          aspectRatio:
+            options:
+              - value: landscape
+                label: "横屏"
+              - value: portrait
+                label: "竖屏"
+            defaultValue: landscape
+          resolution:
+            options:
+              - value: 720p
+                label: 720p
+              - value: 1080p
+                label: 1080p
+              - value: 4k
+                label: 4k
+            defaultValue: 720p
         execution:
           status: "live"
           profileId: "videoGenerate"
@@ -2452,6 +2500,22 @@ models:
               step: 1
             defaultValue: 10
             unit: s
+          aspectRatio:
+            options:
+              - value: landscape
+                label: "横屏"
+              - value: portrait
+                label: "竖屏"
+            defaultValue: landscape
+          resolution:
+            options:
+              - value: 720p
+                label: 720p
+              - value: 1080p
+                label: 1080p
+              - value: 4k
+                label: 4k
+            defaultValue: 720p
         execution:
           status: "live"
           profileId: "videoGenerate"

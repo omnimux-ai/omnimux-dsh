@@ -1,0 +1,22 @@
+[
+  {
+    "name": "reload-ready",
+    "pass": true,
+    "detail": "{\"rows\":3,\"body\":859,\"vids\":false}"
+  },
+  {
+    "name": "captured-errors",
+    "pass": true,
+    "detail": "[]"
+  },
+  {
+    "name": "captured-errors-all",
+    "pass": true,
+    "detail": "[]"
+  },
+  {
+    "name": "after-reload-dom",
+    "pass": true,
+    "detail": "{\"vidsEntry\":false,\"vidsStyles\":true,\"rows\":[\"omnimux-sidebar-nav-entry omnimux-workflow-entry\",\"omnimux-sidebar-nav-entry omnimux-market-entry\",\"omnimux-sidebar-nav-entry omnimux-assets-entry\",\"omnimux-sidebar-nav-entry omnimux-inspiration-entry\",\"omnimux-sidebar-nav-entry omnimux-explore-entry\",\"omnimux-sidebar-nav-entry omnimux-avatar-entry\"],\"stage\":false}"
+  }
+]

@@ -1,13 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { Readable } from 'node:stream'
-import { createVeoDispatcher, registerVeoRoutes } from './veo-routes.js'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { Readable, Writable } from 'node:stream'
+import { createVeoDispatcher, registerVeoRoutes, VEO_UPLOAD_MAX_BYTES } from './veo-routes.js'
 import { createVeoTaskStore, safeMediaBase, veoMediaUrl } from './veo-task-store.js'
 import { VIDS_ERROR_CODES } from '../shared/veoTaskSpec.js'
 
 /**
  * @param {{ getConnection?: () => unknown, store?: ReturnType<typeof createVeoTaskStore>,
- *   now?: () => number, generate?: Function, outputDir?: string }} [deps]
+ *   now?: () => number, generate?: Function, outputDir?: string, hubAvailable?: () => boolean,
+ *   detectEnv?: () => object }} [deps]
  */
 function mountVeo(deps = {}) {
   let handler
@@ -15,7 +19,8 @@ function mountVeo(deps = {}) {
     store: deps.store,
     now: deps.now,
     outputDir: deps.outputDir,
-    detectEnv: () => ({ installed: true, bridgeConnected: true, version: 'test' }),
+    hubAvailable: deps.hubAvailable,
+    detectEnv: deps.detectEnv || (() => ({ installed: true, bridgeConnected: true, version: 'test' })),
     generate: deps.generate || (async () => { throw new Error('should not run') }),
   })
   registerVeoRoutes(
@@ -37,15 +42,32 @@ function mountVeo(deps = {}) {
       headers: { host: 'localhost:43120', ...headers },
       socket: {},
     })
-    /** @type {{ status?: number, body?: unknown }} */
+    /** @type {{ status?: number, body?: unknown, headers?: object }} */
     const result = {}
-    await handler(req, {
-      writeHead(status) { result.status = status },
-      end(payload) {
-        const text = String(payload ?? '')
-        result.body = text ? JSON.parse(text) : undefined
+    // 真实可写响应：媒体路由用 fs.createReadStream(...).pipe(res)，纯对象桩会在 pipe 处抛错。
+    const responseChunks = []
+    const res = new Writable({
+      write(chunk, _encoding, callback) {
+        responseChunks.push(Buffer.from(chunk))
+        callback()
       },
     })
+    res.writeHead = (status, responseHeaders) => {
+      result.status = status
+      result.headers = responseHeaders
+    }
+    const finished = new Promise((resolve) => {
+      res.on('finish', resolve)
+      res.on('close', resolve)
+    })
+    await handler(req, res)
+    await Promise.race([finished, new Promise((resolve) => setTimeout(resolve, 1000))])
+    const text = Buffer.concat(responseChunks).toString('utf8')
+    try {
+      result.body = text ? JSON.parse(text) : undefined
+    } catch {
+      result.body = text
+    }
     return result
   }
 }
@@ -334,4 +356,249 @@ test('Veo routes 经 HTTP 层解析后仍透传四模式字段', async () => {
   assert.equal(task.image_url, 'https://cdn.example.com/frame.png')
   assert.equal(task.durationSec, 6)
   assert.equal(store.get('task_veo_1700000009012').operation, 'first_frame')
+})
+
+/* ---------------------------------------------------- 中枢缝后端（Issue #3186） */
+
+test('中枢缝可用时，opencli 缺失也返回 202（门禁只约束内部驱动）', async () => {
+  const store = createVeoTaskStore()
+  const dispatcher = createVeoDispatcher({
+    store,
+    now: () => 1700000010000,
+    hubAvailable: () => true,
+    detectEnv: () => ({ installed: false, bridgeConnected: false }),
+    outputDir: '/tmp/veo-test-media',
+    generate: async () => ({
+      success: true,
+      channel: 'hub',
+      fileName: 'veo_hub_1.mp4',
+      localPath: '/tmp/veo-test-media/veo_hub_1.mp4',
+      fileSize: 4096,
+      durationSec: 10,
+      resolution: '1080p',
+      upstreamTaskId: '0123456789abcdef01234567',
+      upstreamUrl: 'http://127.0.0.1:8080/videos/0123456789abcdef01234567/content',
+    }),
+  })
+
+  const created = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-video/api/veo/tasks',
+    body: { prompt: '一只猫在草地上奔跑', mode: 'create', seconds: 10, resolution: '1080p' },
+  })
+  assert.equal(created.status, 202)
+  assert.equal(created.body.task.channel, 'hub')
+
+  await new Promise((r) => setTimeout(r, 30))
+  const polled = await dispatcher.dispatch({
+    method: 'GET',
+    url: `/omnimux-video/api/veo/tasks/${created.body.task.id}`,
+  })
+  const task = polled.body.task
+  assert.equal(task.status, 'completed')
+  assert.equal(task.channel, 'hub')
+  assert.equal(task.upstreamTaskId, '0123456789abcdef01234567')
+  assert.equal(task.upstreamUrl, 'http://127.0.0.1:8080/videos/0123456789abcdef01234567/content')
+  assert.equal(task.videoUrl, '/omnimux-video/api/veo/media/veo_hub_1.mp4')
+  assert.equal(task.resolution, '1080p')
+})
+
+test('中枢缝不可用时，opencli 缺失仍按内部驱动返回 503', async () => {
+  const dispatcher = createVeoDispatcher({
+    hubAvailable: () => false,
+    detectEnv: () => ({ installed: false, bridgeConnected: false }),
+    generate: async () => { throw new Error('should not run') },
+  })
+  const res = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-video/api/veo/tasks',
+    body: { prompt: '一只猫在草地上奔跑', mode: 'create', seconds: 10 },
+  })
+  assert.equal(res.status, 503)
+  assert.equal(res.body.error, 'opencli-missing')
+})
+
+test('生成器收到 operation / image_url / video_id 三个字段', async () => {
+  /** @type {object[]} */
+  const calls = []
+  const dispatcher = createVeoDispatcher({
+    now: () => 1700000011000,
+    hubAvailable: () => true,
+    detectEnv: () => ({ installed: false, bridgeConnected: false }),
+    outputDir: '/tmp/veo-test-media',
+    generate: async (request) => {
+      calls.push(request)
+      return {
+        success: true,
+        fileName: 'veo_hub_2.mp4',
+        localPath: '/tmp/veo-test-media/veo_hub_2.mp4',
+        fileSize: 4096,
+        durationSec: 8,
+      }
+    },
+  })
+
+  const created = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-video/api/veo/tasks',
+    body: {
+      mode: 'modify',
+      operation: 'video_edit',
+      prompt: '把外套换成红色',
+      seconds: 8,
+      resolution: '1080p',
+      aspect_ratio: 'portrait',
+      image_url: 'http://127.0.0.1:43120/omnimux-video/api/veo/media/replacement.png',
+      video_id: 'task_veo_prev',
+    },
+  })
+  assert.equal(created.status, 202)
+  await new Promise((r) => setTimeout(r, 30))
+
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].operation, 'video_edit')
+  assert.equal(calls[0].imageUrl, 'http://127.0.0.1:43120/omnimux-video/api/veo/media/replacement.png')
+  assert.equal(calls[0].videoId, 'task_veo_prev')
+  assert.equal(calls[0].seconds, 8)
+  assert.equal(calls[0].aspectRatio, 'portrait')
+})
+
+test('中枢失败原因与错误码原样落到任务记录，不压成通用 500', async () => {
+  const store = createVeoTaskStore()
+  const reason = '本机 Google Vids 通道未配置：请设置 OMNIMUX_VIDS2API_BASE_URL 指向本机 vids2api 服务地址后再试。'
+  const dispatcher = createVeoDispatcher({
+    store,
+    now: () => 1700000012000,
+    hubAvailable: () => true,
+    detectEnv: () => ({ installed: false, bridgeConnected: false }),
+    outputDir: '/tmp/veo-test-media',
+    generate: async () => { throw Object.assign(new Error(reason), { code: 'omnimux-unconfigured' }) },
+  })
+
+  const created = await dispatcher.dispatch({
+    method: 'POST',
+    url: '/omnimux-video/api/veo/tasks',
+    body: { prompt: '一只猫在草地上奔跑', mode: 'create', seconds: 10 },
+  })
+  assert.equal(created.status, 202)
+  await new Promise((r) => setTimeout(r, 30))
+
+  const task = store.get('task_veo_1700000012000')
+  assert.equal(task.status, 'failed')
+  assert.equal(task.error, reason)
+  assert.equal(task.message, reason)
+  assert.equal(task.errorCode, 'omnimux-unconfigured')
+})
+
+test('处理函数抛错时 500 里带真实可读原因，不再吞成通用 internal error', async () => {
+  const reason = '任务账本读取失败：磁盘句柄已关闭'
+  const call = mountVeo({
+    getConnection: () => ({ requestRejection: () => undefined }),
+    store: {
+      create: () => { throw new Error('should not run') },
+      update: () => null,
+      list: () => [],
+      resolveSourceUrl: () => ({ url: '', reason: '' }),
+      get: () => { throw new Error(reason) },
+    },
+  })
+  const res = await call({
+    method: 'GET',
+    url: '/omnimux-video/api/veo/tasks/task_veo_1',
+    headers: { origin: 'http://localhost:43120', 'sec-fetch-site': 'same-origin' },
+  })
+  assert.equal(res.status, 500)
+  assert.equal(res.body.error, 'internal')
+  assert.equal(res.body.message, reason)
+})
+
+/* ------------------------------------------------------ 选图上传（Issue #3186） */
+
+const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+function pngBytes(size = 64) {
+  return Buffer.concat([PNG_HEADER, Buffer.alloc(Math.max(size - PNG_HEADER.length, 8), 0x11)])
+}
+
+test('POST /uploads 落盘并回可抓取的绝对地址，media 路由按图片类型服务', async () => {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'veo-upload-'))
+  const call = mountVeo({
+    outputDir,
+    now: () => 1700000013000,
+    getConnection: () => ({ requestRejection: () => undefined }),
+  })
+
+  const uploaded = await call({
+    method: 'POST',
+    url: '/omnimux-video/api/veo/uploads',
+    headers: {
+      origin: 'http://localhost:43120',
+      'sec-fetch-site': 'same-origin',
+      'content-type': 'image/png',
+    },
+    body: pngBytes(),
+  })
+  assert.equal(uploaded.status, 200)
+  assert.equal(uploaded.body.fileName, 'vids_upload_1700000013000.png')
+  assert.equal(uploaded.body.mime, 'image/png')
+  assert.equal(uploaded.body.fileSize, pngBytes().length)
+  assert.equal(
+    uploaded.body.url,
+    'http://localhost:43120/omnimux-video/api/veo/media/vids_upload_1700000013000.png',
+  )
+  assert.ok(fs.existsSync(path.join(outputDir, 'vids_upload_1700000013000.png')))
+
+  const served = await call({
+    method: 'GET',
+    url: '/omnimux-video/api/veo/media/vids_upload_1700000013000.png',
+  })
+  assert.equal(served.status, 200)
+  assert.equal(served.headers['Content-Type'], 'image/png')
+})
+
+test('POST /uploads 拒绝非图片类型、内容与声明不符、以及超限体积', async () => {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'veo-upload-'))
+  const call = mountVeo({
+    outputDir,
+    now: () => 1700000014000,
+    getConnection: () => ({ requestRejection: () => undefined }),
+  })
+
+  const wrongType = await call({
+    method: 'POST',
+    url: '/omnimux-video/api/veo/uploads',
+    headers: {
+      origin: 'http://localhost:43120',
+      'sec-fetch-site': 'same-origin',
+      'content-type': 'application/octet-stream',
+    },
+    body: pngBytes(),
+  })
+  assert.equal(wrongType.status, 415)
+
+  const mismatch = await call({
+    method: 'POST',
+    url: '/omnimux-video/api/veo/uploads',
+    headers: {
+      origin: 'http://localhost:43120',
+      'sec-fetch-site': 'same-origin',
+      'content-type': 'image/png',
+    },
+    body: Buffer.alloc(64, 0x22),
+  })
+  assert.equal(mismatch.status, 415)
+
+  const tooLarge = await call({
+    method: 'POST',
+    url: '/omnimux-video/api/veo/uploads',
+    headers: {
+      origin: 'http://localhost:43120',
+      'sec-fetch-site': 'same-origin',
+      'content-type': 'image/png',
+    },
+    body: pngBytes(VEO_UPLOAD_MAX_BYTES + 1024),
+  })
+  assert.equal(tooLarge.status, 413)
+
+  assert.deepEqual(fs.readdirSync(outputDir), [])
 })

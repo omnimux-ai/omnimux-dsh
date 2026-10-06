@@ -27,15 +27,29 @@ import { seedVeoTask } from '../shared/veoTaskSeed.js'
  *   fileName?: string,
  *   fileSize?: number,
  *   resolution?: string,
+ *   channel?: 'hub' | 'internal',
+ *   upstreamTaskId?: string,
+ *   upstreamUrl?: string,
  *   error?: string,
+ *   errorCode?: string,
  *   createdAt: number,
  *   updatedAt: number,
  * }} VeoTask
  */
 
 /**
+ * 默认媒体目录：成片与上传图片都落在这里，并由同一前缀的 media 路由对外服务。
+ * 路由与生成器共用同一真源，避免两处各写一份默认路径。
+ * @returns {string}
+ */
+export function defaultVeoMediaDir() {
+  return path.resolve(process.cwd(), '.workbuddy/demo/media')
+}
+
+/**
  * 四模式请求字段（Issue #3181）：随任务记录透传，供后续中枢调用读取。
  * `durationSec` 仍是客户端读取的时长字段，`seconds` 是中枢请求字段，两者同时保留。
+ * `channel`（Issue #3186）标记本次走的是中枢缝还是内部驱动，供界面说明当前通道。
  * @type {readonly string[]}
  */
 const VIDS_TASK_FIELDS = Object.freeze([
@@ -45,6 +59,7 @@ const VIDS_TASK_FIELDS = Object.freeze([
   'aspect_ratio',
   'image_url',
   'video_id',
+  'channel',
 ])
 
 export function createVeoTaskStore() {
@@ -113,7 +128,26 @@ export function createVeoTaskStore() {
     return { ...task }
   }
 
-  return { create, update, get, list }
+  /**
+   * 把插件自身任务号解析成中枢能抓取的取片地址（Issue #3186）。
+   *
+   * 「修改 / 延续」引用前序成片时必须传这条地址；解析不到就返回可读原因，
+   * 绝不把插件任务号当上游任务号传下去。
+   *
+   * @param {string} id 插件任务号
+   * @returns {{ url: string, reason: string }}
+   */
+  function resolveSourceUrl(id) {
+    const key = typeof id === 'string' ? id.trim() : ''
+    if (!key) return { url: '', reason: '没有提供前序任务号' }
+    const task = tasks.get(key)
+    if (!task) return { url: '', reason: '没有找到该任务记录' }
+    const url = typeof task.upstreamUrl === 'string' ? task.upstreamUrl.trim() : ''
+    if (url) return { url, reason: '' }
+    return { url: '', reason: '该任务没有留存上游取片地址' }
+  }
+
+  return { create, update, get, list, resolveSourceUrl }
 }
 
 /**

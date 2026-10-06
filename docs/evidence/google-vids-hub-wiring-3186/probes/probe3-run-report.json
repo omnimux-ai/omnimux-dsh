@@ -1,0 +1,156 @@
+{
+  "runId": "0a32065b-97a1-4eca-963d-bb39aaa26e49",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-hub-wiring",
+  "origin": "http://127.0.0.1:61362",
+  "appPort": 61362,
+  "cdpPort": 61368,
+  "startedAt": "2026-10-06T06:46:03.736Z",
+  "completedAt": "2026-10-06T06:46:19.447Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:61362",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:61362",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-KSyf2k97S4gktMlQnnC0b8jnBA0cpED8piJyceD8-_Q"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 61368
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 136,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 76
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 136
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:reload-ready",
+      "pass": true,
+      "detail": "{\"rows\":3,\"body\":859,\"vids\":false}"
+    },
+    {
+      "name": "journey:captured-errors",
+      "pass": true,
+      "detail": "[]"
+    },
+    {
+      "name": "journey:captured-errors-all",
+      "pass": true,
+      "detail": "[]"
+    },
+    {
+      "name": "journey:after-reload-dom",
+      "pass": true,
+      "detail": "{\"vidsEntry\":false,\"vidsStyles\":true,\"rows\":[\"omnimux-sidebar-nav-entry omnimux-workflow-entry\",\"omnimux-sidebar-nav-entry omnimux-market-entry\",\"omnimux-sidebar-nav-entry omnimux-assets-entry\",\"omnimux-sidebar-nav-entry omnimux-inspiration-entry\",\"omnimux-sidebar-nav-entry omnimux-explore-entry\",\"omnimux-sidebar-nav-entry omnimux-avatar-entry\"],\"stage\":false}"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 252389
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-hub-wiring/.workbuddy/evidence/app-qa/0a32065b-97a1-4eca-963d-bb39aaa26e49/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 252389
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}

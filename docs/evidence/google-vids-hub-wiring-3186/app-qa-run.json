@@ -1,0 +1,206 @@
+{
+  "runId": "40880c1c-7061-4b43-abb9-9fd64521dfaa",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-hub-wiring",
+  "origin": "http://127.0.0.1:59535",
+  "appPort": 59535,
+  "cdpPort": 59544,
+  "startedAt": "2026-10-06T06:39:31.328Z",
+  "completedAt": "2026-10-06T06:40:28.161Z",
+  "pass": false,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:59535",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:59535",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-oYTT-OdxL1WWtP7xtJ1KncqkxgB-f8Le4Gs4IXLMcyk"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 59544
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 10,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 24
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 10
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 16
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 16
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:j1-panel-entry-present",
+      "pass": false,
+      "detail": "侧栏未渲染 [data-omnimux-google-vids-entry]：omnimux-video 客户端未装载"
+    },
+    {
+      "name": "journey:j1-screenshot",
+      "pass": true,
+      "detail": "{\"path\":\"/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-hub-wiring/.workbuddy/evidence/app-qa/40880c1c-7061-4b43-abb9-9fd64521dfaa/journey-01-panel-create.png\",\"bytes\":468214}"
+    },
+    {
+      "name": "journey:j2-four-mode-tabs",
+      "pass": false,
+      "detail": "{\"modes\":[],\"tabs\":[]}"
+    },
+    {
+      "name": "journey:j2-mode-labels",
+      "pass": false,
+      "detail": "[]"
+    },
+    {
+      "name": "journey:j2-default-active-create",
+      "pass": false,
+      "detail": "[]"
+    },
+    {
+      "name": "journey:j2-param-controls",
+      "pass": false,
+      "detail": "[]"
+    },
+    {
+      "name": "journey:j2-param-summary",
+      "pass": false,
+      "detail": ""
+    },
+    {
+      "name": "journey:j2-stage-editor-ready",
+      "pass": false,
+      "detail": "{\"ready\":null}"
+    },
+    {
+      "name": "journey:j3-create-attach-row",
+      "pass": false,
+      "detail": "未找到模式标签 create"
+    },
+    {
+      "name": "journey:j3-animate-attach-row",
+      "pass": false,
+      "detail": "未找到模式标签 animate"
+    },
+    {
+      "name": "journey:j3-modify-attach-row",
+      "pass": false,
+      "detail": "未找到模式标签 modify"
+    },
+    {
+      "name": "journey:j3-extend-attach-row",
+      "pass": false,
+      "detail": "未找到模式标签 extend"
+    },
+    {
+      "name": "journey:j4-upload-route-200",
+      "pass": false,
+      "detail": "evaluate failed: Uncaught"
+    },
+    {
+      "name": "journey:j5-submit-clicked",
+      "pass": false,
+      "detail": "evaluate failed: Uncaught"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 468214
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-vids-hub-wiring/.workbuddy/evidence/app-qa/40880c1c-7061-4b43-abb9-9fd64521dfaa/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 468214
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 16,
+    "assetHubOpened": true
+  }
+}

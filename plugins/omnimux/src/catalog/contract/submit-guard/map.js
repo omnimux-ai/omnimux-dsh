@@ -318,7 +318,10 @@ export function mapValidatedPlanToVendor(args) {
   if (typeof extras.aspectRatio === 'string' && extras.aspectRatio) {
     if (profileId === 'videoGenerate' || profileId === 'videoDigitalHuman') {
       const isKling = args.family === 'kling' || args.model?.family === 'kling' || String(args.modelId ?? '').startsWith('kling')
-      const useAspectRatio = isKling || args.modelId.startsWith('minimax-h3') || args.modelId === 'grok-imagine-video-1-5'
+      // The local Google Vids channel reads the ratio as `aspect_ratio`; the
+      // generic gateway field `size` would reach vids2api as an unknown key.
+      const useAspectRatio = isKling || args.modelId.startsWith('minimax-h3')
+        || args.modelId === 'grok-imagine-video-1-5' || args.modelId === 'google-vids-omni'
       vendor[useAspectRatio ? 'aspect_ratio' : 'size'] = extras.aspectRatio
       if (isKling) {
         vendor.metadata = { ...(vendor.metadata || {}), aspect_ratio: extras.aspectRatio }

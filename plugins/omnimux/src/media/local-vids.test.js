@@ -6,6 +6,11 @@
  * id it reads, the artifact URL it composes because the poll body carries none,
  * and — most importantly — that a missing or unreachable service fails loudly
  * instead of falling back to another model.
+ *
+ * The seam cases at the end run the real SubmitGuard → mapOmnimuxInput →
+ * channel path, because the vendor field names the guard produces
+ * (`image_with_roles`, `image_urls`, `video_urls`, `aspect_ratio`) are what the
+ * caller actually supplies; a direct-call-only test would miss that wiring.
  */
 import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -13,6 +18,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
+import { assertGuardSubmit } from '../catalog/contract/submit-guard/index.js'
 import {
   LOCAL_VIDS_API_KEY_ENV,
   LOCAL_VIDS_BASE_URL_ENV,
@@ -25,6 +31,7 @@ import {
   readLocalVidsConfig,
   resolveLocalVidsVideoId,
 } from './local-vids.js'
+import { mapOmnimuxInput } from './vendors/omnimux.js'
 
 const BASE = 'http://127.0.0.1:8931/v1'
 
@@ -338,6 +345,162 @@ test('an image-to-video job sends the animate mode and the image URL upstream', 
       image_url: 'https://img.example/a.jpg',
       aspect_ratio: 'portrait',
     })
+  } finally {
+    cleanup()
+  }
+})
+
+/**
+ * Drive the seam the way `media/execute.js` wires it: SubmitGuard →
+ * mapOmnimuxInput → the channel. The service stays a stub fetcher, so these
+ * cases prove the guard-to-channel field mapping instead of restating one
+ * function: the guard's vendor payload is the only shape the seam delivers.
+ */
+function seamRequest(request) {
+  const guardPlan = assertGuardSubmit(
+    { prompt: '', model: LOCAL_VIDS_MODEL_ID, capability: 'video', seam: 'videoGenerate', ...request },
+    { seam: 'videoGenerate', capability: 'video', outputType: 'video' },
+  )
+  return { guardPlan, payload: mapOmnimuxInput('video', { prompt: guardPlan.prompt, guardPlan }) }
+}
+
+/** Record what the channel posts to /videos and answer the way vids2api does. */
+function stubService() {
+  const bodies = []
+  const fetcher = async (url, init = {}) => {
+    if (String(url).endsWith('/videos')) {
+      bodies.push(JSON.parse(init.body))
+      return new Response(JSON.stringify({ id: '2d028ceb355444e6b2eebca7' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+    return new Response('video-bytes', { status: 200, headers: { 'content-type': 'video/mp4' } })
+  }
+  return { bodies, fetcher }
+}
+
+const SEAM_ENV = { [LOCAL_VIDS_BASE_URL_ENV]: BASE }
+const completedPoll = async () => ({ status: 'completed' })
+
+test('a first_frame image supplied through the guard reaches the service as image_url', async () => {
+  const { dest, cleanup } = tempDest()
+  const { bodies, fetcher } = stubService()
+  try {
+    const { guardPlan, payload } = seamRequest({
+      operation: 'first_frame',
+      prompt: 'make it move',
+      references: [{ type: 'image', role: 'first_frame', pathOrUrl: 'https://img.example/a.jpg' }],
+    })
+    // The guard, not the caller, names this field; the channel must read it.
+    assert.deepEqual(payload.image_with_roles, [{ url: 'https://img.example/a.jpg', role: 'first_frame' }])
+
+    await generateLocalVids({
+      route: { modelId: LOCAL_VIDS_MODEL_ID }, guardPlan, payload, dest,
+      env: SEAM_ENV, fetcher, poll: completedPoll,
+    })
+
+    assert.equal(bodies[0].mode, 'animate')
+    assert.equal(bodies[0].image_url, 'https://img.example/a.jpg')
+  } finally {
+    cleanup()
+  }
+})
+
+test('a video_edit replacement image and source video supplied through the guard reach the service', async () => {
+  const { dest, cleanup } = tempDest()
+  const { bodies, fetcher } = stubService()
+  const taskId = '2d028ceb355444e6b2eebca7'
+  const sourceUrl = `${BASE}/videos/${taskId}/content`
+  try {
+    const { guardPlan, payload } = seamRequest({
+      operation: 'video_edit',
+      prompt: 'swap the jacket',
+      references: [
+        { type: 'video', role: 'source', pathOrUrl: sourceUrl },
+        { type: 'image', role: 'reference', pathOrUrl: 'https://img.example/b.jpg' },
+      ],
+    })
+    assert.deepEqual(payload.image_urls, ['https://img.example/b.jpg'])
+    assert.deepEqual(payload.video_urls, [sourceUrl])
+
+    await generateLocalVids({
+      route: { modelId: LOCAL_VIDS_MODEL_ID }, guardPlan, payload, dest,
+      env: SEAM_ENV, fetcher, poll: completedPoll,
+    })
+
+    assert.equal(bodies[0].mode, 'modify')
+    assert.equal(bodies[0].image_url, 'https://img.example/b.jpg')
+    assert.equal(bodies[0].video_id, taskId)
+  } finally {
+    cleanup()
+  }
+})
+
+test('resolution and aspect ratio declared for this model survive the guard', async () => {
+  const { dest, cleanup } = tempDest()
+  const { bodies, fetcher } = stubService()
+  try {
+    const chosen = seamRequest({
+      operation: 'text_to_video', prompt: 'a cat', resolution: '1080p', aspectRatio: 'portrait',
+    })
+    assert.equal(chosen.payload.resolution, '1080p')
+    assert.equal(chosen.payload.aspect_ratio, 'portrait')
+    await generateLocalVids({
+      route: { modelId: LOCAL_VIDS_MODEL_ID }, guardPlan: chosen.guardPlan, payload: chosen.payload, dest,
+      env: SEAM_ENV, fetcher, poll: completedPoll,
+    })
+    assert.equal(bodies[0].resolution, '1080p')
+    assert.equal(bodies[0].aspect_ratio, 'portrait')
+
+    // Declaring them is what stops the guard from dropping them: with no
+    // explicit value the declared defaults still reach the service.
+    const defaults = seamRequest({ operation: 'text_to_video', prompt: 'a cat' })
+    assert.equal(defaults.payload.resolution, '720p')
+    assert.equal(defaults.payload.aspect_ratio, 'landscape')
+    await generateLocalVids({
+      route: { modelId: LOCAL_VIDS_MODEL_ID }, guardPlan: defaults.guardPlan, payload: defaults.payload, dest,
+      env: SEAM_ENV, fetcher, poll: completedPoll,
+    })
+    assert.equal(bodies[1].resolution, '720p')
+    assert.equal(bodies[1].aspect_ratio, 'landscape')
+  } finally {
+    cleanup()
+  }
+})
+
+test('an undeclared resolution is refused rather than silently dropped', async () => {
+  assert.throws(
+    () => seamRequest({ operation: 'text_to_video', prompt: 'a cat', resolution: '__bogus__' }),
+    (error) => {
+      assert.equal(error.code, 'omnimux-invalid-request')
+      assert.match(error.message, /resolution/)
+      return true
+    },
+  )
+
+  // The channel keeps its own whitelist for callers that reach it directly.
+  const { dest, cleanup } = tempDest()
+  let called = false
+  const fetcher = async () => { called = true; return new Response('{}', { status: 200 }) }
+  try {
+    await assert.rejects(
+      () => generateLocalVids({
+        route: { modelId: LOCAL_VIDS_MODEL_ID },
+        guardPlan: guardPlan('a cat'),
+        payload: { resolution: '__bogus__' },
+        dest,
+        env: SEAM_ENV,
+        fetcher,
+        poll: completedPoll,
+      }),
+      (error) => {
+        assert.equal(error.code, 'omnimux-invalid-request')
+        assert.match(error.message, /分辨率/)
+        return true
+      },
+    )
+    assert.equal(called, false)
   } finally {
     cleanup()
   }
