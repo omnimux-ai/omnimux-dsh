@@ -189,6 +189,13 @@ describe('rivalVelocityText — §3.3 三档逐字文案（#3113）', () => {
         if (signal) {
           assert.ok(rivalVelocityText(velocity, tZh) !== '',
             `predicate true must never pair with empty copy: tier=${tier} vph=${vph}`)
+        } else {
+          // 反向不变量：谓词判 false 的输入文案必须为空——本轮 必修四，
+          // 这正是上一轮「均速 180→220」测试域调整所依赖的性质（<200
+          // 的旧夹具在改后不再渲染），缺它则「谓词 false 但残留文案」的
+          // 回归无从拦截。
+          assert.equal(rivalVelocityText(velocity, tZh), '',
+            `predicate false must never pair with non-empty copy: tier=${tier} vph=${vph}`)
         }
       }
     }
@@ -197,6 +204,7 @@ describe('rivalVelocityText — §3.3 三档逐字文案（#3113）', () => {
       const signal = rivalVelocityHasSignal(velocity)
       assert.equal(signal, multiplier > 0, `multiplier=${multiplier}`)
       if (signal) assert.ok(rivalVelocityText(velocity, tZh) !== '')
+      else assert.equal(rivalVelocityText(velocity, tZh), '')
     }
     assert.equal(rivalVelocityHasSignal({ text: '飙升 2.6k/h' }), true, 'legacy text passthrough')
     assert.equal(rivalVelocityHasSignal({ text: '' }), false)

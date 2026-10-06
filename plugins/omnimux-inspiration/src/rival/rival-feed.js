@@ -21,7 +21,11 @@
  *   the tier prefixes are the client's dictionary keys, never Host strings.
  */
 
-import { RIVAL_MEDIA_DIR_NAME, RIVAL_MEDIA_URL_PREFIX } from './constants.js'
+import {
+  RIVAL_MEDIA_DIR_NAME,
+  RIVAL_MEDIA_URL_PREFIX,
+  RIVAL_VELOCITY_TIER_WATCH,
+} from './constants.js'
 
 /** Default page size of the feed endpoint. */
 export const FEED_PAGE_SIZE = 20
@@ -31,7 +35,8 @@ export const VELOCITY_MIN_SAMPLE_SPAN_MS = 1.5 * 3600_000
 /** 规格 §3.3 分级阈值：>20k 爆款 / ≥1k 飙升 / ≥200 观察 / <200 不渲染。 */
 export const VELOCITY_TIER_HOT = 20_000
 export const VELOCITY_TIER_RISING = 1_000
-export const VELOCITY_TIER_WATCH = 200
+/** §3.3 速率族下限：真源在 constants.js，此处 re-export 保持既有引用路径。 */
+export const VELOCITY_TIER_WATCH = RIVAL_VELOCITY_TIER_WATCH
 /** PRD §5.1 C 档：views ≥ 3× 账号历史播放中位数才记为「该号 Nx」。 */
 export const VELOCITY_RELATIVE_MIN_MULTIPLIER = 3
 
@@ -172,7 +177,11 @@ function velocityTier(vph) {
  * to the account's own median. Every failure mode (short sample span, views
  * rollback, unparseable or future timestamps, missing baseline) degrades to
  * the next tier instead of throwing or fabricating a number; `null` means the
- * card renders no pill and the velocity sort sinks it to the end.
+ * card renders no pill and the velocity sort sinks it to the end. A rate that
+ * computes but lands below the §3.3 display floor is one of those failure
+ * modes too: the floor rejects the *rate family* only — it never vetoes the
+ * relative family, so a below-floor measured or average rate degrades onward
+ * instead of short-circuiting to `null` (PM 裁定甲案, #3113 修复轮 R3).
  *
  * The Host emits facts only. `samples_at` carries the two endpoints the
  * measured tier was read from (oldest→newest); the detail dialog and the pill
@@ -192,10 +201,12 @@ export function feedVelocity(post, opts = {}) {
 
   // A · measured: ≥2 valid samples spanning ≥1.5h, oldest→newest. A views
   // rollback is a data anomaly, never a negative speed — degrade, don't sign
-  // it (and never crash on malformed history entries).
+  // it (and never crash on malformed history entries). A sample stamped in
+  // the future degrades the same way an unparseable one does: a clock lying
+  // forward is still a clock lying.
   const samples = buildViewsHistory(post?.metrics?.views_history ?? post?.views_history)
     .map((entry) => ({ at: Date.parse(entry.at), views: entry.views }))
-    .filter((entry) => Number.isFinite(entry.at))
+    .filter((entry) => Number.isFinite(entry.at) && entry.at <= now)
     .sort((a, b) => a.at - b.at)
   if (samples.length >= 2) {
     const first = samples[0]
@@ -213,7 +224,9 @@ export function feedVelocity(post, opts = {}) {
           samples_at: [new Date(first.at).toISOString(), new Date(last.at).toISOString()],
         }
       }
-      return null
+      // 低于 200/h 下限：「未产出速率族胶囊」是 A 档的一种失败形态——
+      // 不 return null，照 B 档同构继续下沉走 C 档判定（PM 裁定甲案：
+      // 200/h 是跨账号绝对门，只否决速率族，不兼任相对族否决器）。
     }
   }
 
@@ -225,9 +238,10 @@ export function feedVelocity(post, opts = {}) {
     const ageMs = Number.isFinite(ageFrom) ? now - ageFrom : NaN
     if (Number.isFinite(ageMs) && ageMs > 0) {
       const vph = (views / ageMs) * 3600_000
-      // 「<200 不渲染」是对胶囊存在性的规定，A/B 两档一致适用（PM 终验
-      // §7.3）：均速 33/h 一类噪音胶囊既不构成「值得看」的判断，又会
-      // 让唯一带色信号贬值；规格给的兜底出口是仅指标行累计播放。
+      // 「<200 不渲染」是对速率族胶囊存在性的规定，A/B 两档一致适用
+      // 且后果一致——落空即继续下沉（PM 终验 §7.3 + 本轮甲案裁定）：
+      // 均速 33/h 一类噪音胶囊既不构成「值得看」的判断，又会让唯一
+      // 带色信号贬值；规格给的兜底出口是仅指标行累计播放。
       if (vph >= VELOCITY_TIER_WATCH) {
         return {
           confidence: 'average',
@@ -402,21 +416,29 @@ export function mergeAccountPosts(input) {
 }
 
 /**
- * Sortable strength of a row's velocity descriptor (#3113, 分桶).
+ * Sortable position of a row's velocity descriptor as a [family, value]
+ * tuple (#3113, 分桶).
  *
- * 显式分桶：速率族（任何有限正 vph，rank = 1e9 + vph）恒先于相对族
- * （rank = multiplier）；两族与「无信号」三者同轴比较会把 9.5x 排到
- * vph=0.005 之前——那正是速率/倍数穿插的成因。vph=0 或 multiplier<=0
- * 的描述渲染不出胶囊，与 velocity=null 一起取 -Infinity 沉底。
+ * 二元组族序而非数值基数：速率族（`vph >= VELOCITY_TIER_WATCH`，与
+ * 客户端谓词/文案共享的同一个 200/h 地板）恒先于相对族（任何
+ * `multiplier > 0`），两者恒先于无信号。上一版 `1e9 + vph` 的基数
+ * 方案给相对族 multiplier 设了一个隐含上界——multiplier > 1e9 + vph
+ * 时相对族会压过速率族；二元组比较把这个软边界换成硬保证。而更早
+ * 的 `vph > 0` 门则会把宿主不可产出的 (0,200) 手造描述排进速率族——
+ * 入桶门与渲染门必须同值。
  * @param {Record<string, any>} row
- * @returns {number}
+ * @returns {[number, number]} `[family, value]`; family 2 = rate, 1 = relative, 0 = none
  */
-function velocityRank(row) {
+function velocityRankKey(row) {
   const velocity = row?.velocity
-  if (!velocity || typeof velocity !== 'object') return -Infinity
-  if (Number.isFinite(velocity.vph) && velocity.vph > 0) return 1e9 + velocity.vph
-  if (Number.isFinite(velocity.multiplier) && velocity.multiplier > 0) return velocity.multiplier
-  return -Infinity
+  if (!velocity || typeof velocity !== 'object') return [0, 0]
+  if (Number.isFinite(velocity.vph) && velocity.vph >= VELOCITY_TIER_WATCH) {
+    return [2, velocity.vph]
+  }
+  if (Number.isFinite(velocity.multiplier) && velocity.multiplier > 0) {
+    return [1, velocity.multiplier]
+  }
+  return [0, 0]
 }
 
 /**
@@ -437,9 +459,10 @@ export function sortFeedRows(rows, sort = 'posted_at') {
       const right = feedViews(b)
       if (right !== left) return right - left
     } else if (byVelocity) {
-      const left = velocityRank(a)
-      const right = velocityRank(b)
-      if (right !== left) return right - left
+      const left = velocityRankKey(a)
+      const right = velocityRankKey(b)
+      if (right[0] !== left[0]) return right[0] - left[0]
+      if (right[1] !== left[1]) return right[1] - left[1]
     } else {
       const left = feedPostedAt(a)
       const right = feedPostedAt(b)

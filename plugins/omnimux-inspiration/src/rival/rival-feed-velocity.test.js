@@ -51,7 +51,10 @@ describe('feedVelocity — A · 实测增速', () => {
     assert.equal(mk(400).tier, 'watch', 'vph 200 ∈ [200,1k) → watch')
   })
 
-  it('vph <200 → null（胶囊不渲染、不留位）', () => {
+  it('vph <200 → 不产速率族胶囊，照 B 档继续走 C 档判定（PM 裁定甲案）', () => {
+    // F6：A 档算出 vph 但低于 200 门槛是「未产出胶囊」的失败形态，
+    // 与 B 档落空同构——继续下沉，不短路为 null。此夹具 posted_at 不可
+    // 解析且中位数缺失，三档皆空 → null。
     const v = feedVelocity(post('p', {
       posted_at: null,
       metrics: history(
@@ -61,6 +64,82 @@ describe('feedVelocity — A · 实测增速', () => {
       stats: { views: 199 },
     }), { now: NOW })
     assert.equal(v, null)
+  })
+
+  it('F1/F2：A 档 166/h 落空与 B 档同帖无历史必须产出同一个 relative 描述', () => {
+    // PM 裁定核心断言（F2' 单列）：同一篇帖子，有无 views_history 只
+    // 是数据可得性差，不该决定胶囊的有无——A 档 1670→2002（Δ332/2h=
+    // 166/h<200）落空，B 档 5000/30h=166.7/h 同样落空，都该落 C 档
+    // 5000/100=50x。两路结论 deepEqual。
+    const withHistory = feedVelocity(post('f1', {
+      posted_at: iso(nowMs - 30 * H),
+      stats: { views: 5000 },
+      metrics: history(
+        { at: iso(nowMs - 20 * H), views: 1670 },
+        { at: iso(nowMs - 18 * H), views: 2002 },
+      ),
+    }), { now: NOW, medianViews: 100 })
+    const withoutHistory = feedVelocity(post('f2', {
+      posted_at: iso(nowMs - 30 * H),
+      stats: { views: 5000 },
+    }), { now: NOW, medianViews: 100 })
+    assert.equal(withHistory.confidence, 'relative', 'A-tier below-floor must degrade, not return null')
+    assert.equal(withHistory.tier, 'relative')
+    assert.equal(withHistory.multiplier, 50)
+    assert.equal(withHistory.vph, undefined, '相对族描述不携带小时速率')
+    assert.equal(withoutHistory.confidence, 'relative')
+    assert.equal(withoutHistory.multiplier, 50)
+    assert.deepEqual(withHistory, withoutHistory,
+      'F2\': the same post with and without views_history must reach the same descriptor')
+  })
+
+  it('F3：A 档落空只能下沉到相对族，速率族 200/h 门原样生效', () => {
+    // 落空 ≠ 降门槛：A 档 0→166（83/h）落空、B 档 1000/10h=100/h 落空，
+    // 产出的只能是 {relative, multiplier:10}——不得出现 watch/rising/hot
+    // 任一速率族 tier，也不得携带 vph。
+    const v = feedVelocity(post('p', {
+      posted_at: iso(nowMs - 10 * H),
+      stats: { views: 1000 },
+      metrics: history(
+        { at: iso(nowMs - 2 * H), views: 0 },
+        { at: iso(nowMs - 1 * H), views: 166 },
+      ),
+    }), { now: NOW, medianViews: 100 })
+    assert.equal(v.confidence, 'relative')
+    assert.equal(v.tier, 'relative')
+    assert.equal(v.multiplier, 10)
+    assert.equal(v.vph, undefined)
+    assert.ok(!['watch', 'rising', 'hot', 'average'].includes(v.tier),
+      'the 200/h floor still rejects the rate family')
+  })
+
+  it('F5：A 档落空且倍数 <3 → null（落空不保证产出胶囊）', () => {
+    // 与 F1 同夹具但中位数 2000：5000/2000=2.5x <3，A/B 落空后 C 档同样
+    // 不满足 → null。防「甲案被读成落空必有 relative」。
+    const v = feedVelocity(post('p', {
+      posted_at: iso(nowMs - 30 * H),
+      stats: { views: 5000 },
+      metrics: history(
+        { at: iso(nowMs - 20 * H), views: 1670 },
+        { at: iso(nowMs - 18 * H), views: 2002 },
+      ),
+    }), { now: NOW, medianViews: 2000 })
+    assert.equal(v, null)
+  })
+
+  it('未来采样点一律不计入实测窗口 → 降级（JSDoc：unparseable or future）', () => {
+    // 两枚未来采样（+2h → +4h，间隔 2h ≥1.5h）若不被排除会产出
+    // measured vph=250——「未来」与「不可解析」同列降级清单。posted_at
+    // 置 null 使 B/C 同样落空，降级落点钉为 null。
+    const v = feedVelocity(post('p', {
+      posted_at: null,
+      stats: { views: 1000 },
+      metrics: history(
+        { at: iso(nowMs + 2 * H), views: 0 },
+        { at: iso(nowMs + 4 * H), views: 500 },
+      ),
+    }), { now: NOW })
+    assert.equal(v, null, 'future samples must not feed the measured tier')
   })
 
   it('views 回退（v2 < v1）→ 钉住降级落点为 B 档 average，不抛错', () => {
@@ -299,11 +378,13 @@ describe('sortFeedRows — velocity', () => {
   })
 
   it('速率族与相对族分桶：vph 恒先于 multiplier，不随数值大小穿插', () => {
-    // 旧实现 vph*1000 与 multiplier 同轴比较：multiplier=9.5 会把 vph=0.005
-    // 的速率行挤到相对族之后（QA M3 实测 rel 排在 avg 前）。
+    // 旧实现 vph*1000 与 multiplier 同轴比较：multiplier=9.5 会把
+    // vph=0.005 的速率行挤到相对族之后（QA M3 实测 rel 排在 avg 前）。
+    // 速率族入桶门与谓词地板同值（vph>=200），故极值夹具用 200 起步——
+    // (0,200) 的手造描述归无信号桶（另测）。
     const sorted = sortFeedRows([
-      row('rel', { tier: 'relative', multiplier: 9.5 }),
-      row('tiny', { tier: 'watch', vph: 0.005 }),
+      row('rel', { tier: 'relative', multiplier: 1e6 }),
+      row('tiny', { tier: 'watch', vph: 200 }),
     ], 'velocity')
     assert.deepEqual(sorted.map((r) => r.id), ['tiny', 'rel'],
       'the hourly-rate family always precedes the relative family')
@@ -317,15 +398,45 @@ describe('sortFeedRows — velocity', () => {
       'vph=23000 sorts before vph=200, and the smallest relative still sits in its own bucket')
   })
 
-  it('vph=0（无胶囊）与 velocity=null 一样沉到末尾', () => {
+  it('渲染不出胶囊的描述与 velocity=null 同沉末尾（分桶语义）', () => {
+    // 「谓词判 false」的三态（vph=0 / 0<vph<200 潜伏态 / multiplier<=0）
+    // 与 null 同在无信号桶，落在最小相对族之后；无信号桶内部按 id 降序。
+    // 比旧断言多了「0<vph<200 的手造 wire 行」与「multiplier<=0」——这两
+    // 态在旧 rank（isFinite(vph)&&vph>0）下会错位进速率族。
     const sorted = sortFeedRows([
       row('zero', { tier: 'average', vph: 0 }),
+      row('gap', { tier: 'watch', vph: 199.9 }),
+      row('neg', { tier: 'relative', multiplier: 0 }),
       row('rel', { tier: 'relative', multiplier: 9.5 }),
       row('nul', null),
       row('hot', { tier: 'hot', vph: 23000 }),
     ], 'velocity')
-    assert.deepEqual(sorted.map((r) => r.id), ['hot', 'rel', 'zero', 'nul'],
-      'a descriptor that renders no pill sorts as no signal')
+    assert.deepEqual(sorted.map((r) => r.id), ['hot', 'rel', 'zero', 'nul', 'neg', 'gap'],
+      'a descriptor that renders no pill sorts as no signal, ties by id desc')
+  })
+
+  it('速率族门与谓词地板同值：0<vph<200 的手造 wire 行不得进速率桶', () => {
+    // velocityRank 的速率族门是 vph>=VELOCITY_TIER_WATCH（与谓词同一地
+    // 板），不是「vph>0」——后者会让宿主不可产出的 (0,200) 描述排进速
+    // 率族、压过真实 relative 行（QA/OCR 潜伏项，本轮修复）。
+    const sorted = sortFeedRows([
+      row('gap', { tier: 'watch', vph: 199.9 }),
+      row('rel', { tier: 'relative', multiplier: 3 }),
+    ], 'velocity')
+    assert.deepEqual(sorted.map((r) => r.id), ['rel', 'gap'],
+      'a below-floor rate descriptor must not sit in the rate bucket ahead of a real relative')
+  })
+
+  it('相对族 multiplier 再大也越不过速率族（二元组族序，非数值近似）', () => {
+    // 分桶以（族, 值）二元组保证：相对族的上限不封顶，multiplier 1e9+1
+    // 仍排在最小速率族之后——数值基数（1e9+vph）方案在 multiplier>1e9
+    // +vph 时失效，二元组不依赖该近似前提。
+    const sorted = sortFeedRows([
+      row('v', { tier: 'watch', vph: 200 }),
+      row('rel', { tier: 'relative', multiplier: 1e9 + 1 }),
+    ], 'velocity')
+    assert.deepEqual(sorted.map((r) => r.id), ['v', 'rel'],
+      'family precedence is a tuple, not a numeric approximation')
   })
 
   it('vph 相同按 id 降序，顺序稳定', () => {
@@ -334,5 +445,40 @@ describe('sortFeedRows — velocity', () => {
       row('b', { tier: 'watch', vph: 500 }),
     ], 'velocity')
     assert.deepEqual(sorted.map((r) => r.id), ['b', 'a'])
+  })
+
+  it('F9：A 档落空行与 B 档落空行同族同位，都在无信号行之前', () => {
+    // 与 F1/F2 同一数据的 wire 行：两条都是 relative multiplier=50
+    // （同族同 rank，按 id 降序 f2>f1），无信号行垫在最后——A/B 两档
+    // 在排序层同样不得分叉。
+    const rows = mergeAccountPosts({
+      accounts: [account],
+      postsByAccount: {
+        ra_a: [
+          post('f1', {
+            posted_at: iso(nowMs - 30 * H),
+            stats: { views: 5000 },
+            metrics: history(
+              { at: iso(nowMs - 20 * H), views: 1670 },
+              { at: iso(nowMs - 18 * H), views: 2002 },
+            ),
+          }),
+          post('f2', {
+            posted_at: iso(nowMs - 30 * H),
+            stats: { views: 5000 },
+          }),
+          post('none', { posted_at: null, stats: { views: 0 } }),
+          post('med1', { posted_at: null, stats: { views: 100 } }),
+          post('med2', { posted_at: null, stats: { views: 100 } }),
+          post('med3', { posted_at: null, stats: { views: 100 } }),
+        ],
+      },
+      now: NOW,
+    })
+    const ordered = sortFeedRows(rows, 'velocity').map((r) => r.id)
+    assert.deepEqual(ordered, ['f2', 'f1', 'none', 'med3', 'med2', 'med1'],
+      'both fallthrough rows share the relative bucket and precede the no-signal rows')
+    assert.deepEqual(rows.find((r) => r.id === 'f1').velocity,
+      rows.find((r) => r.id === 'f2').velocity)
   })
 })

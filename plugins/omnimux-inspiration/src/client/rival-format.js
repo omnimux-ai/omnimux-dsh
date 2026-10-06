@@ -6,6 +6,16 @@
  */
 
 import { zh } from './locales.js'
+import { RIVAL_VELOCITY_TIER_WATCH } from '../rival/constants.js'
+
+/**
+ * §3.3 速率族渲染地板（views/hour）。与 Host 侧真源同值——
+ * `rival/constants.js` 的 RIVAL_VELOCITY_TIER_WATCH 是 A/B 两档生产门、
+ * 增速排序入桶门与本文件谓词/文案地板三处共享的常量；本文件不再
+ * 内联 `200` 字面量（修复轮 velocityRank 与谓词门错位即两处字面量
+ * 漂移所致）。
+ */
+const VELOCITY_RATE_FLOOR_VPH = RIVAL_VELOCITY_TIER_WATCH
 
 /** §3.7 增速数字口径：≥10k 取整 `23k`；1k–10k 保留一位 `1.2k`；<1k 整数 `320`。 */
 function velocityRate(vph) {
@@ -29,10 +39,11 @@ function velocityMultiplier(value) {
  * predicate the pill row, `VelocityPill` and the height estimator share.
  *
  * Lives beside `rivalVelocityText` so the two stay in the same numeric domain:
- * the rate family signals only at `vph >= 200` (the §3.3 floor both the A and
- * B tiers honour — a `vph=0` average descriptor used to read true here while
- * the copy rendered `''`, producing a 28px empty pill row), the relative
- * family at `multiplier > 0`. Legacy `{text}` descriptors pass through.
+ * the rate family signals only at `vph >= VELOCITY_RATE_FLOOR_VPH` (the §3.3
+ * floor both the A and B tiers honour — a `vph=0` average descriptor used to
+ * read true here while the copy rendered `''`, producing a 28px empty pill
+ * row), the relative family at `multiplier > 0`. Legacy `{text}` descriptors
+ * pass through.
  * @param {unknown} velocity
  * @returns {boolean}
  */
@@ -42,7 +53,7 @@ export function rivalVelocityHasSignal(velocity) {
   const tier = String(velocity.tier || '')
   if (tier === 'relative') return Number.isFinite(velocity.multiplier) && velocity.multiplier > 0
   return (tier === 'hot' || tier === 'rising' || tier === 'watch' || tier === 'average')
-    && Number.isFinite(velocity.vph) && velocity.vph >= 200
+    && Number.isFinite(velocity.vph) && velocity.vph >= VELOCITY_RATE_FLOOR_VPH
 }
 
 /**
@@ -63,10 +74,10 @@ export function rivalVelocityText(velocity, t) {
   if (direct) return direct
   const translate = typeof t === 'function' ? t : (key) => key
   const tier = String(velocity.tier || '')
-  // 与 rivalVelocityHasSignal 同域：速率族 <200 不产文案——media 支路的
-  // VelocityPill 不经谓词直接消费本函数，空串才是「无可渲染信号」。
+  // 与 rivalVelocityHasSignal 同域：速率族低于渲染地板不产文案——media
+  // 支路的 VelocityPill 不经谓词直接消费本函数，空串才是「无可渲染信号」。
   const rate = velocityRate(velocity.vph)
-  const rateRenderable = Number.isFinite(velocity.vph) && velocity.vph >= 200 ? rate : ''
+  const rateRenderable = Number.isFinite(velocity.vph) && velocity.vph >= VELOCITY_RATE_FLOOR_VPH ? rate : ''
   if (tier === 'hot') return rateRenderable ? `${translate('rivalFeed.pill.hot')} ${rateRenderable}/h` : ''
   if (tier === 'rising') return rateRenderable ? `${translate('rivalFeed.pill.rising')} ${rateRenderable}/h` : ''
   if (tier === 'watch') return rateRenderable ? `${translate('rivalFeed.pill.watch')} ${rateRenderable}/h` : ''
