@@ -92,8 +92,14 @@ export async function executeOmnimuxText(input) {
   // Tool-model bypass: a configured `omnimux.toolModel` pins the request to one
   // session-reachable provider:model pair and streams through ctx.llm — the
   // same stack a conversation uses — instead of the runtimeMode routing below.
-  const toolModel = parseToolModel(input.toolModel
-    ?? input.settings?.get?.('omnimux')?.toolModel)
+  // Video/audio/document references must skip this lane: ctx.llm.stream
+  // attachments cannot carry a video MIME, so the tool-model channel
+  // physically cannot serve them and the multimodal route below has to run.
+  const toolModelUsable = references.every((asset) => asset.type === 'image')
+  const toolModel = toolModelUsable
+    ? parseToolModel(input.toolModel
+      ?? input.settings?.get?.('omnimux')?.toolModel)
+    : null
   if (toolModel !== null) {
     if (!toolModel.provider || !toolModel.model) {
       const storedRaw = typeof input.toolModel === 'string' ? input.toolModel
