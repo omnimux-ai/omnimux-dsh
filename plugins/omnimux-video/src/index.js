@@ -9,6 +9,7 @@ import { createVeoDispatcher, registerVeoRoutes } from './http/veo-routes.js'
 import { createVeoTaskStore } from './http/veo-task-store.js'
 import { createHubVidsGenerator } from './driver/hubVidsGenerator.js'
 import { generateVideoSilently } from './driver/veoHeadlessDriver.js'
+import { readSeat } from './host-seat.js'
 
 export const name = 'omnimux-video'
 export const inject = ['tools', 'textComplete']
@@ -279,7 +280,7 @@ export function apply(ctx, config = {}) {
    * @returns {{ execute: Function } | undefined}
    */
   const getVideoGenerate = () => {
-    const api = ctx.videoGenerate ?? ctx.get?.('videoGenerate')
+    const api = readSeat(ctx, 'videoGenerate')
     if (api && typeof api === 'object' && typeof /** @type {any} */ (api).execute === 'function') {
       return /** @type {{ execute: Function }} */ (api)
     }
