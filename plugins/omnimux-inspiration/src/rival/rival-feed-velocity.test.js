@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import * as rivalConstants from './constants.js'
 import { feedVelocity, mergeAccountPosts, sortFeedRows, toFeedRow } from './rival-feed.js'
+
+// Namespace import on purpose: a missing export must fail THIS assertion, not
+// the module load — otherwise the whole file red-flags on old code instead of
+// one named test.
+const RIVAL_VELOCITY_RANK_FAMILY = rivalConstants.RIVAL_VELOCITY_RANK_FAMILY
 
 /**
  * 增速胶囊三级口径契约（Issue #3113，规格 §3.3 红线区 + PRD §5.1）。
@@ -168,6 +174,45 @@ describe('feedVelocity — A · 实测增速', () => {
     assert.equal(v.confidence, 'average', 'a <1.5h span falls through to the publish average')
     assert.equal(v.tier, 'average')
     assert.equal(v.vph, 1250)
+  })
+
+  it('中间采样回退（端点 delta 仍为正）→ 降级，不产 measured', () => {
+    // 端点比较只查首/末：1000→500→3500 的首末差 +2500（833/h ≥200）为正，
+    // 旧实现照样产出 measured——与 docblock「views rollback is a data
+    // anomaly, never a negative speed — degrade」矛盾（四轴复审 M-C）。
+    // 任一相邻对下降即回滚。posted_at 置 null 使 B 档落空、median 100 使
+    // C 档成立：降级落点钉为 relative 3500/100=35x，而不是给一段含回滚
+    // 的历史签发 measured。
+    const v = feedVelocity(post('p', {
+      posted_at: null,
+      metrics: history(
+        { at: iso(nowMs - 4 * H), views: 1000 },
+        { at: iso(nowMs - 2 * H), views: 500 },
+        { at: iso(nowMs - 1 * H), views: 3500 },
+      ),
+      stats: { views: 3500 },
+    }), { now: NOW, medianViews: 100 })
+    assert.notEqual(v?.confidence, 'measured',
+      'an adjacent-pair views drop must degrade the measured tier')
+    assert.equal(v.confidence, 'relative',
+      'the degraded descriptor lands on the relative tier (B also fails here)')
+    assert.equal(v.multiplier, 35)
+  })
+
+  it('相邻采样单调不减（含持平补采点）仍照常产 measured', () => {
+    // 不误伤：相邻相等不算回滚——平台补采 0 增量是正常形态；
+    // Δ7000/3h = 2333.3/h → rising。
+    const v = feedVelocity(post('p', {
+      metrics: history(
+        { at: iso(nowMs - 4 * H), views: 1000 },
+        { at: iso(nowMs - 2 * H), views: 1000 },
+        { at: iso(nowMs - 1 * H), views: 8000 },
+      ),
+      stats: { views: 8000 },
+    }), { now: NOW })
+    assert.equal(v.confidence, 'measured')
+    assert.equal(v.tier, 'rising')
+    assert.equal(v.vph, 2333.3)
   })
 
   it('历史里有非法行 → 只用有效点对判定，不因坏行抛错', () => {
@@ -345,6 +390,34 @@ describe('toFeedRow / mergeAccountPosts — 数据通路', () => {
     assert.equal(byId.get('a').velocity.vph, 2000)
   })
 
+  it('中位数按账号只算一次：同一账号 N 行 feedMedianViews 恰被调用一次', () => {
+    // 性能契约（四轴复审 M-B）：feedMedianViews 曾坐在 kept.map 回调里，
+    // 每一行都对同一份历史重算一次全量排序。计数桩：给该账号的帖子数组
+    // 套 Proxy，`feedMedianViews` 每次调用都以 `.map` 起始——mapGets 即
+    // 调用次数。同一账号 3 行 ⇒ 旧实现 3 次、新实现 1 次。
+    let medianCalls = 0
+    const countingPosts = new Proxy([
+      post('r1', { posted_at: null, stats: { views: 9000 } }),
+      post('r2', { posted_at: null, stats: { views: 1000 } }),
+      post('r3', { posted_at: null, stats: { views: 1000 } }),
+    ], {
+      get(target, prop, receiver) {
+        if (prop === 'map') medianCalls += 1
+        return Reflect.get(target, prop, receiver)
+      },
+    })
+    const rows = mergeAccountPosts({
+      accounts: [account],
+      postsByAccount: { ra_a: countingPosts },
+      now: NOW,
+    })
+    assert.equal(rows.length, 3)
+    assert.equal(medianCalls, 1,
+      `median must be computed once per account, got ${medianCalls} calls for 3 rows`)
+    // 复用的中位数照常生效：9000 / median(9000,1000,1000)=1000 → 9x。
+    assert.equal(rows.find((r) => r.id === 'r1').velocity.multiplier, 9)
+  })
+
   it('C 档中位数取账号全部作品（含筛选命中的本行），不按请求子集另算', () => {
     const rows = mergeAccountPosts({
       accounts: [account],
@@ -437,6 +510,15 @@ describe('sortFeedRows — velocity', () => {
     ], 'velocity')
     assert.deepEqual(sorted.map((r) => r.id), ['v', 'rel'],
       'family precedence is a tuple, not a numeric approximation')
+  })
+
+  it('族序序号来自 constants.js 的具名常量（速率 > 相对 > 无信号）', () => {
+    // 结构约束（四轴复审 Low-1）：2/1/0 族序是业务语义，与
+    // RIVAL_VELOCITY_TIER_WATCH 同处集中——sorter 不再内联字面量。
+    // 常量缺失时本断言在旧源码上即失败（undefined.rate 抛 TypeError）。
+    assert.ok(RIVAL_VELOCITY_RANK_FAMILY.rate > RIVAL_VELOCITY_RANK_FAMILY.relative)
+    assert.ok(RIVAL_VELOCITY_RANK_FAMILY.relative > RIVAL_VELOCITY_RANK_FAMILY.none)
+    // 语义排序仍由上面的分桶断言覆盖；这里钉的是「常量存在且次序正确」。
   })
 
   it('vph 相同按 id 降序，顺序稳定', () => {

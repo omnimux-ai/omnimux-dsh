@@ -58,6 +58,18 @@ export const VIEWS_HISTORY_MAX = 30
  */
 export const RIVAL_VELOCITY_TIER_WATCH = 200
 
+/**
+ * 增速排序的族序（业务语义，非实现细节）：速率族恒先于相对族，两者恒
+ * 先于无信号。放在这里而不是内联在比较器里，是因为它与上面那个 200/h
+ * 地板是同一份信号域的两个侧面——地板决定「算不算速率族」，族序决定
+ * 「速率族排在哪」；两处各自内联就会像 M1 与 velocityRank 那样漂移。
+ */
+export const RIVAL_VELOCITY_RANK_FAMILY = Object.freeze({
+  rate: 2,
+  relative: 1,
+  none: 0,
+})
+
 /** Scheduler cadence and freshness window. */
 export const TICK_INTERVAL_MS = 60_000
 export const CLIENT_POLL_INTERVAL_MS = 2_500

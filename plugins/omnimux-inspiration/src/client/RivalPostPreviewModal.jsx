@@ -11,7 +11,7 @@
 
 import { Button, ModalDialog } from 'dsh-ui-kit'
 import { hostMediaSrc } from './api.js'
-import { formatCount, formatDuration, formatRelativeTime, rivalLocaleOf } from './rival-format.js'
+import { formatCount, formatDuration, formatRelativeTime, rivalLocaleOf, rivalVelocityHasSignal } from './rival-format.js'
 
 /** `HH:mm` of an ISO timestamp for the measured-velocity note; '' when unreadable. */
 function hhmm(iso) {
@@ -32,6 +32,12 @@ function hhmm(iso) {
 function velocityNote(row, t) {
   const velocity = row?.velocity
   if (!velocity || typeof velocity !== 'object') return ''
+  // 与卡胶囊同一道门。「无信号不留位」必须在卡与弹窗上是同一条规则：
+  // 谓词判 false 的残留描述（`vph: 0`、`multiplier: 0`、低于 200 地板的
+  // `vph: 199.9`）在缓存里仍带着 `confidence` 字符串，只看它就会在弹窗落
+  // 一行而卡上什么都不显示——同一份信号域各写各的门的第三次（R3-Low-5）。
+  // 复用共享谓词而不是再写一套判断，正是为了让这道门只有一处定义。
+  if (!rivalVelocityHasSignal(velocity)) return ''
   const confidence = String(velocity.confidence || '')
   if (confidence === 'measured') {
     const [t1, t2] = Array.isArray(velocity.samples_at) ? velocity.samples_at : []

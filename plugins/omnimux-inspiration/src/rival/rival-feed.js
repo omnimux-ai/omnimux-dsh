@@ -24,6 +24,7 @@
 import {
   RIVAL_MEDIA_DIR_NAME,
   RIVAL_MEDIA_URL_PREFIX,
+  RIVAL_VELOCITY_RANK_FAMILY,
   RIVAL_VELOCITY_TIER_WATCH,
 } from './constants.js'
 
@@ -213,7 +214,17 @@ export function feedVelocity(post, opts = {}) {
     const last = samples[samples.length - 1]
     const span = last.at - first.at
     const delta = last.views - first.views
-    if (span >= VELOCITY_MIN_SAMPLE_SPAN_MS && delta >= 0) {
+    // 回滚检测必须逐对看相邻采样，不能只看首末：`1000 → 500 → 1500` 的
+    // 端点 delta 为正，只看端点会把一段含回滚的历史签成 measured，与上面
+    // 「degrade, don't sign it」的约定相反（R3-M-C）。
+    let hasRollback = false
+    for (let i = 1; i < samples.length; i += 1) {
+      if (samples[i].views < samples[i - 1].views) {
+        hasRollback = true
+        break
+      }
+    }
+    if (span >= VELOCITY_MIN_SAMPLE_SPAN_MS && delta >= 0 && !hasRollback) {
       const vph = (delta / span) * 3600_000
       const tier = velocityTier(vph)
       if (tier) {
@@ -403,13 +414,24 @@ export function mergeAccountPosts(input) {
   // feed never reads wall time inside a pure function) and each account's
   // median views over ITS OWN cached list — the relative tier's baseline is
   // the account's history, not the filtered slice.
+  //
+  // The median is computed ONCE per account, not once per row (R3-M-B):
+  // `feedMedianViews` sorts the account's whole cached list (up to
+  // POSTS_CACHE_MAX_ROWS), so calling it inside the map re-sorts the same
+  // history once for every visible row of that account — O(rows × posts log
+  // posts) per feed request, on a poll that fires every few seconds.
   const now = input?.now ?? new Date().toISOString()
+  const medianByAccount = new Map()
+  for (const { account } of kept) {
+    if (medianByAccount.has(account.id)) continue
+    medianByAccount.set(account.id, feedMedianViews(postsByAccount[account.id]))
+  }
   return kept.map(({ post, account }) => {
     const row = toFeedRow(post, account)
     row.account = toAccountRef(account, counts.get(account.id) || 0)
     row.velocity = feedVelocity(post, {
       now,
-      medianViews: feedMedianViews(postsByAccount[account.id]),
+      medianViews: medianByAccount.get(account.id),
     })
     return row
   })
@@ -427,18 +449,18 @@ export function mergeAccountPosts(input) {
  * 的 `vph > 0` 门则会把宿主不可产出的 (0,200) 手造描述排进速率族——
  * 入桶门与渲染门必须同值。
  * @param {Record<string, any>} row
- * @returns {[number, number]} `[family, value]`; family 2 = rate, 1 = relative, 0 = none
+ * @returns {[number, number]} `[family, value]`; family per `RIVAL_VELOCITY_RANK_FAMILY`
  */
 function velocityRankKey(row) {
   const velocity = row?.velocity
-  if (!velocity || typeof velocity !== 'object') return [0, 0]
+  if (!velocity || typeof velocity !== 'object') return [RIVAL_VELOCITY_RANK_FAMILY.none, 0]
   if (Number.isFinite(velocity.vph) && velocity.vph >= VELOCITY_TIER_WATCH) {
-    return [2, velocity.vph]
+    return [RIVAL_VELOCITY_RANK_FAMILY.rate, velocity.vph]
   }
   if (Number.isFinite(velocity.multiplier) && velocity.multiplier > 0) {
-    return [1, velocity.multiplier]
+    return [RIVAL_VELOCITY_RANK_FAMILY.relative, velocity.multiplier]
   }
-  return [0, 0]
+  return [RIVAL_VELOCITY_RANK_FAMILY.none, 0]
 }
 
 /**

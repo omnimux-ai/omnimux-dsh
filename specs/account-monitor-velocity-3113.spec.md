@@ -93,8 +93,20 @@
   docblock「Every failure mode degrades」并被判定为「有历史反而没
   胶囊」的反向激励缺陷，已撤回。§7.3 的原始理由（拦死 `均速 33/h`
   一类噪音速率胶囊）在甲案下完整保留——门槛适用范围是速率族。
+- A 档落空后的判定次序：**先经 B 档判定，B 亦落空才落 C 档**（严格
+  逐档降级链），不得由 A 直接跳 C。四轴复审有「A 档落空应跳过 B 直接
+  落 C」的相反主张，**已被 PM 裁定驳回**（`pm-signoff-r3.md` §2.2）：
+  B 档产出的是同一 views 的真实发布均速且过同一 200/h 门，不存在
+  伪造速率；跳过 B 反而压制合法信号（档位角色错位）。实测口径：
+  A 落空 + B 成立（2000 views / 4h）→ `均速 500/h`。
+- A 档中间采样回退：`views_history` 任一相邻对 `views[i+1] < views[i]`
+  即视为数据异常回滚，不产 measured、降级到下一档（与端点 `delta<0`
+  同列失败形态；函数 docblock「a views rollback is a data anomaly,
+  never a negative speed — degrade」的完整覆盖）。
 - A 档采样窗口取「最早与最晚有效采样」（PRD §5.1 字面为「最近两次」）：
   **登记遗留，本票不改**，待 PM 裁定口径后另行收口。
+- 同一 PRD 行另载「指数平滑（近一次权重 0.7）」，实现无平滑：
+  **登记遗留，本票不改**（与上一项成对登记，PM signoff R3 §3 要求）。
 
 ## 成功标准（Success Criteria）
 
