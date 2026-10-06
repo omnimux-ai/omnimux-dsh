@@ -42,7 +42,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.contractFingerprint.length, 16)
 
     // Authoritative flat list includes contracted models under disposition governance.
-    assert.equal(catalog.models.length, 45) // #3167 google-vids-omni 上架 → 45
+    assert.equal(catalog.models.length, 44) // #3209 google-vids-omni 下线（墓碑行无契约）→ 44
     assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical')
@@ -52,12 +52,13 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     // Strong form: an omitted field and an undeclared alias list must both read as [].
     assert.deepEqual(catalog.models.find((m) => m.id === 'seedasr-auc')?.aliases ?? [], [])
     assert.deepEqual(catalog.models.find((m) => m.id === 'doubao-asr-bigmodel')?.aliases ?? [], [])
-    // #1751: the 12 withdrawn (disposition=unavailable) models have no YAML row and
-    // therefore never reach the authoritative models[] at all.
+    // #1751: withdrawn (disposition=unavailable) models have no YAML row and therefore
+    // never reach the authoritative models[] at all; #3209 adds the google-vids-omni
+    // tombstone (local Google Vids channel retired).
     for (const gone of [
       'gpt-image-2', 'minimax-h3-max', 'minimax-h3-max-turbo', 'midjourney', 'midjourney-niji-7',
       'seedream-4.5', 'kling-o1', 'seedance2.5-stable-max-720p', 'omni_flash', 'kling-avatar',
-      'veo-3.1', 'veo-3.1-fast',
+      'veo-3.1', 'veo-3.1-fast', 'google-vids-omni',
     ]) {
       assert.equal(catalog.models.some((m) => m.id === gone), false, gone)
     }
@@ -82,13 +83,12 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     ])
     assert.equal(catalog.image.some((row) => row.id === 'grok-imagine-image-2-0'), false)
     assert.deepEqual(catalog.video.map((row) => row.id), [
-      'google-vids-omni',
       'minimax-h3',
       'seedance-2-0',
       'seedance-2-0-fast',
       'seedance-2-0-mini',
       'seedance-2-5',
-    ]) // #3167 google-vids-omni 上架 +1
+    ]) // #3209 google-vids-omni 下线 −1
     assert.deepEqual(catalog.audio.map((row) => row.id), [
       'gemini-3.8-flash-tts',
       'indextts-2',
@@ -271,7 +271,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 describe('media facade tables (derived from contracts)', () => {
   it('facade SPECS are the full contracted directory (listed or not)', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 11)
-    assert.equal(VIDEO_MODEL_SPECS.length, 12) // #3167 google-vids-omni joins the video directory
+    assert.equal(VIDEO_MODEL_SPECS.length, 11) // #3209 google-vids-omni 下线 → 11
     // #1789: seedasr-auc joins the audio directory as a contracted model (ASR, text output).
     // #2256: index-tts joins the audio directory (voice clone).
     // #2801: gemini-3.8-flash-tts joins the audio directory (TTS).

@@ -8,7 +8,7 @@ import { AUDIO_MODEL_SPECS, IMAGE_MODEL_SPECS, VIDEO_MODEL_SPECS, findMediaModel
 describe('hub media catalog facade (contract-derived)', () => {
   it('projects the full contracted directory per kind', () => {
     assert.equal(IMAGE_MODEL_SPECS.length, 11)
-    assert.equal(VIDEO_MODEL_SPECS.length, 12) // #3167 google-vids-omni joins the video directory
+    assert.equal(VIDEO_MODEL_SPECS.length, 11) // #3209 google-vids-omni 下线 → 11
     // #1789: seedasr-auc is contracted in the audio management group (ASR, text output).
     // #2256: index-tts joins the audio group (voice clone, audio output).
     // #2801: gemini-3.8-flash-tts joins the audio group (Google AI Studio TTS).

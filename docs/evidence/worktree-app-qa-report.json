@@ -1,16 +1,16 @@
 {
-  "runId": "5cab5b8c-4741-4238-a6fd-3a414a0942e7",
+  "runId": "44be7139-0658-49c2-8282-014863cc187b",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/vids-panel-chrome-trim",
-  "origin": "http://127.0.0.1:65287",
-  "appPort": 65287,
-  "cdpPort": 65302,
-  "startedAt": "2026-10-06T11:55:32.276Z",
-  "completedAt": "2026-10-06T11:55:48.987Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/google-vids-archive",
+  "origin": "http://127.0.0.1:53420",
+  "appPort": 53420,
+  "cdpPort": 53428,
+  "startedAt": "2026-10-06T15:23:56.457Z",
+  "completedAt": "2026-10-06T15:24:13.528Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:65287",
+    "origin": "http://127.0.0.1:53420",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "taskPluginsCount": 22,
@@ -36,19 +36,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:65287",
+      "origin": "http://127.0.0.1:53420",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-aBc0KZkHmYu8Tf4VFPKHHyayEF5ztdnBY7D3mnqSbv4"
+      "cookieName": "dsh-auth-sBIaQtbneW3KRJd8Yfi6yIkk1YVr-06Olo7wLQWg26o"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 65302
+      "port": 53428
     },
     {
       "name": "auth-cookie-applied",
@@ -58,7 +58,7 @@
       "name": "app-dom-mounted",
       "pass": true,
       "geometry": {
-        "visibleCount": 132,
+        "visibleCount": 119,
         "largest": {
           "width": 1280,
           "height": 713,
@@ -67,7 +67,7 @@
         "vw": 1280,
         "vh": 713,
         "title": "OmniMux",
-        "bodyTextLength": 121
+        "bodyTextLength": 112
       }
     },
     {
@@ -78,7 +78,7 @@
         "height": 713,
         "tag": "DIV"
       },
-      "visibleCount": 132
+      "visibleCount": 119
     },
     {
       "name": "runtime-modal-bypassed",
@@ -112,59 +112,54 @@
       "detail": "打开方式：workbench-api"
     },
     {
+      "name": "journey:ac1-editor-mounted",
+      "pass": true,
+      "detail": "剪辑外壳：true"
+    },
+    {
       "name": "journey:ac1-stage-visible",
       "pass": true,
-      "detail": "面板可见：true"
+      "detail": "中间舞台：{\"w\":380,\"h\":321,\"visible\":true}"
     },
     {
-      "name": "journey:ac1-header-absent",
+      "name": "journey:ac1-stage-width-floor",
       "pass": true,
-      "detail": "标题栏：null / 在 DOM：false"
+      "detail": "中间舞台宽度必须守住可用下限（≥280），实测 380"
     },
     {
-      "name": "journey:ac1-header-text-absent",
+      "name": "journey:ac1-media-visible",
       "pass": true,
-      "detail": "面板内「内测版」字样：false / 向导按钮：false"
+      "detail": "素材列：{\"w\":460,\"h\":321,\"visible\":true}"
     },
     {
-      "name": "journey:ac2-feed-state-matches-records",
+      "name": "journey:ac1-timeline-visible",
       "pass": true,
-      "detail": "生成记录块：empty=false 可见=true"
+      "detail": "时间线：{\"w\":850,\"h\":220,\"visible\":true}"
     },
     {
-      "name": "journey:ac2-empty-state-hides-block",
+      "name": "journey:ac5-clip-chrome-present",
       "pass": true,
-      "detail": "空态容器不可见：true"
+      "detail": "剪辑自带控件：true"
     },
     {
-      "name": "journey:ac2-empty-state-hides-header",
+      "name": "journey:ac2-no-gvids-dom",
       "pass": true,
-      "detail": "空态标题行不可见：true"
+      "detail": "生成面板残留节点：0"
     },
     {
-      "name": "journey:ac4-default-collapsed",
+      "name": "journey:ac2-no-vids-attrs",
       "pass": true,
-      "detail": "默认态：collapsed"
+      "detail": "生成面板残留属性：0"
     },
     {
-      "name": "journey:ac5-chips-visible",
+      "name": "journey:ac3-no-google-vids-text",
       "pass": true,
-      "detail": "四模式芯片可见：true"
+      "detail": "页面是否出现 Google Vids/内测版：false"
     },
     {
-      "name": "journey:ac4-toggle-expands",
+      "name": "journey:ac3-no-generate-panel-text",
       "pass": true,
-      "detail": "点击箭头后：expanded"
-    },
-    {
-      "name": "journey:ac4-header-still-absent",
-      "pass": true,
-      "detail": "展开态标题栏在 DOM：false"
-    },
-    {
-      "name": "journey:ac4-feed-state-stable",
-      "pass": true,
-      "detail": "展开态生成记录状态：false（收起态 false）"
+      "detail": "页面是否出现生成面板文案：false"
     },
     {
       "name": "screenshot-png-verified",
@@ -173,14 +168,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 107915
+      "bytes": 102612
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/vids-panel-chrome-trim/.workbuddy/evidence/app-qa/5cab5b8c-4741-4238-a6fd-3a414a0942e7/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/google-vids-archive/.workbuddy/evidence/app-qa/44be7139-0658-49c2-8282-014863cc187b/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 107915
+    "bytes": 102612
   },
   "errors": [],
   "cleanup": {

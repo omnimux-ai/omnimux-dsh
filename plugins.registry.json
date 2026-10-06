@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-10-05T19:50:55.221Z",
+  "updatedAt": "2026-10-06T15:19:09.797Z",
   "topology": {
     "tiers": [
       {
@@ -331,7 +331,7 @@
       "tier": "tier-1-app",
       "entrypoint": "src/index.js",
       "status": "active",
-      "description": "虚拟形象管理：结构化角色设定、生成与多视角派生、任务管理，生成结果自动归档到资产库「角色」分类",
+      "description": "数字人管理：结构化角色设定、生成与多视角派生、任务管理，生成结果自动归档到资产库「角色」分类",
       "tags": [
         "avatar",
         "character",
@@ -343,35 +343,35 @@
         "tools": [
           {
             "name": "avatar_create",
-            "summary": "新建一个虚拟形象（名称 + 设定）",
+            "summary": "新建一个数字人（名称 + 设定）",
             "category": "avatar",
             "isWriteOperation": true,
             "requiresAuth": false
           },
           {
             "name": "avatar_list",
-            "summary": "列出全部虚拟形象及其最新任务状态",
+            "summary": "列出全部数字人及其最新任务状态",
             "category": "avatar",
             "isWriteOperation": false,
             "requiresAuth": false
           },
           {
             "name": "avatar_get",
-            "summary": "读取单个虚拟形象的完整设定与任务历史",
+            "summary": "读取单个数字人的完整设定与任务历史",
             "category": "avatar",
             "isWriteOperation": false,
             "requiresAuth": false
           },
           {
             "name": "avatar_update",
-            "summary": "更新虚拟形象的名称或设定参数",
+            "summary": "更新数字人的名称或设定参数",
             "category": "avatar",
             "isWriteOperation": true,
             "requiresAuth": false
           },
           {
             "name": "avatar_delete",
-            "summary": "删除虚拟形象（含其托管文件），需 confirm",
+            "summary": "删除数字人（含其托管文件），需 confirm",
             "category": "avatar",
             "isWriteOperation": true,
             "requiresAuth": false
@@ -1198,12 +1198,6 @@
           }
         ],
         "seamsConsumed": [],
-        "slots": [
-          {
-            "target": "main",
-            "componentPath": "src/client/GoogleVidsStage.jsx"
-          }
-        ],
         "storageDomains": [
           "temp/video_output/"
         ]

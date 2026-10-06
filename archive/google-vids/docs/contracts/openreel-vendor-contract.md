@@ -116,8 +116,9 @@ related:
 | 禁止 | `conversation.view`；P1 用 `shell.overlay` 当主入口；打开 Tab 时设 `data-dsh-product-stage`（会藏 `[data-dsh-panel-host]`） |
 | 未装 better-sidebar | Host API 可在，Tab 缺席；不得改挂其它座顶上 |
 | 主题权威 | DSH 官方 `--dsw-*`（见 `ui-design-guidelines.md`）。Hub 全壳桥已染色。clip 消费，不实现第二套 xAI GUI，不建 `--omx-*` |
-| 官方 GUI | 映射 CSS 变量，不重排、不换组件 |
+| 官方 GUI | 映射 CSS 变量，不换组件、不换实现；**列序与列位可调**（见下方窄修订） |
 | 宿主空态 | ui-kit；禁止裸 `<select>` / emoji 图标 |
+| 列序窄修订（2026-10-06 · Issue #3196） | 生成能力并入剪辑窗口时，允许**只调整官方列的顺序与位置**：把生成面板放在左列，官方素材/属性面板移到右侧，官方播放器居中、官方多轨时间线保留下方。**官方组件与实现一律保留**（资源库、属性面板、播放器、时间线、导出均为原实现），三列各留可用下限，容器过窄时该区域可横向滚动而不裁切。真机证据见任务工作树的 `.workbuddy/evidence/app-qa/<run>/`。 |
 
 ---
 
