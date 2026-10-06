@@ -896,4 +896,44 @@ describe('textComplete toolModel bypass', () => {
       (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
     )
   })
+
+  it('a video reference skips the tool model lane instead of throwing invalid-request', async () => {
+    const videoDir = mkdtempSync(join(tmpdir(), 'omnimux-video-'))
+    const videoPath = join(videoDir, 'clip.mp4')
+    writeFileSync(videoPath, Buffer.concat([
+      Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0x32]),
+      Buffer.alloc(32, 0),
+    ]))
+    const seen = []
+    const requests = []
+    const byokSettings = {
+      runtimeMode: 'key',
+      runtimeKeyEndpoint: 'https://my-provider.test/v1',
+      runtimeKeyModel: 'my-model',
+      runtimeKeyVerified: true,
+      toolModel: 'cpa:gpt-6.1-sol',
+    }
+    const result = await executeOmnimuxText({
+      prompt: 'analyze this video',
+      video: videoPath,
+      env: {},
+      settings: { get(key) { return key === 'omnimux' ? byokSettings : undefined } },
+      credentials: {
+        async resolve(ref) {
+          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-secret' }
+          return undefined
+        },
+      },
+      fetcher: async (url, options) => {
+        requests.push({ body: JSON.parse(options.body) })
+        return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'video read' } }] }) }
+      },
+      llm: collectStream(seen),
+    })
+    assert.equal(seen.length, 0, 'video must not ride ctx.llm.stream')
+    assert.equal(requests.length, 1)
+    const videoPart = requests[0].body.messages.at(-1).content.find((part) => part.type === 'image_url')
+    assert.ok(videoPart?.image_url?.url?.startsWith('data:video/mp4;base64,'))
+    assert.equal(result.text, 'video read')
+  })
 })
