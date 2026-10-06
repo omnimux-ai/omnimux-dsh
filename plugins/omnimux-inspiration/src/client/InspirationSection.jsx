@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ConfirmModal, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
 import { RivalAccountsPanel, buildRivalPlatformOptions, buildRivalSortOptions } from './RivalAccountsPanel.jsx'
-import { RivalPoolStatusBar, RivalRefreshButton } from './RivalPoolStatusBar.jsx'
+import { RivalRefreshButton } from './RivalPoolStatusBar.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
@@ -15,7 +15,6 @@ import { useRivalFeed } from './use-rival-feed.js'
 import {
   accountHealth,
   manualCooldownMinutesLeft,
-  poolFreshnessMinutes,
   poolQuota,
 } from './rival-health.js'
 import { accountIds, selectedAccountIds } from './rival-filter.js'
@@ -146,19 +145,15 @@ export function InspirationSection({ t, active }) {
   const { reload: reloadRivalFeed } = rivalFeed
 
   /**
-   * R3 监控池状态条与 R4 刷新置灰的共享事实（#3111）。
+   * R4 刷新置灰的共享事实（#3111）。
    *
-   * 额度与新鲜度来自 `rival-health.js` 的同一组纯函数；「存在已停止账号」
-   * 只看**当前筛选集**——所以这里必须同时见到 `selection` 与 `accounts`，
-   * 判据放在外壳而不是组件里。
+   * 额度来自 `rival-health.js` 的纯函数；「存在已停止账号」只看**当前
+   * 筛选集**——所以这里必须同时见到 `selection` 与 `accounts`，判据
+   * 放在外壳而不是组件里。
    */
   const rivalQuota = useMemo(
     () => poolQuota(rivalFeed.status, rivalFeed.configSummary),
     [rivalFeed.status, rivalFeed.configSummary],
-  )
-  const rivalFreshness = useMemo(
-    () => poolFreshnessMinutes(rivalFeed.accounts),
-    [rivalFeed.accounts],
   )
   const rivalStoppedInSelection = useMemo(() => {
     const selected = new Set(selectedAccountIds(accountIds(rivalFeed.accounts), rivalFeed.selection))
@@ -341,7 +336,7 @@ export function InspirationSection({ t, active }) {
                 gate={rivalRefreshGate}
                 quota={rivalQuota}
                 cooldownLeft={rivalCooldownLeft}
-                fresh={rivalFreshness === 1}
+                fresh={rivalCooldownLeft !== null}
                 onRefresh={rivalFeed.refreshPool}
               />
             ) : null}
@@ -517,15 +512,6 @@ export function InspirationSection({ t, active }) {
       {/* Content area — the one region a tab switch replaces. */}
       {rivalTab ? (
         <>
-        {/* R3 监控池状态条：一行显示额度与新鲜度。
-            规格 B9：E1 空态（无监控账号）不显示状态条。 */}
-        {rivalFeed.accounts.length > 0 ? (
-          <RivalPoolStatusBar
-            t={t}
-            quota={rivalQuota}
-            freshnessMinutes={rivalFreshness}
-          />
-        ) : null}
         <RivalAccountsPanel
           t={t}
           active={active !== false}

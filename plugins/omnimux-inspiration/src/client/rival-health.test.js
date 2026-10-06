@@ -4,7 +4,6 @@ import {
   accountHealth,
   coolingMinutesLeft,
   manualCooldownMinutesLeft,
-  poolFreshnessMinutes,
   poolQuota,
   poolTally,
   stoppedReasonText,
@@ -147,26 +146,6 @@ describe('poolTally — 五段计数闭合', () => {
       [tally.total, tally.ok, tally.cooling, tally.reimport, tally.stopped],
       [0, 0, 0, 0, 0],
     )
-  })
-})
-
-describe('poolFreshnessMinutes — 数据新鲜度', () => {
-  it('取最新 last_refresh_at 的分钟差，最小 1（规格 B13：不出现 `0 分钟前`）', () => {
-    const accounts = [
-      { last_refresh_at: new Date(NOW - 3 * 60_000).toISOString() },
-      { last_refresh_at: new Date(NOW - 30 * 60_000).toISOString() },
-      { last_refresh_at: null },
-    ]
-    assert.equal(poolFreshnessMinutes(accounts, NOW), 3)
-    assert.equal(
-      poolFreshnessMinutes([{ last_refresh_at: new Date(NOW - 500).toISOString() }], NOW),
-      1,
-    )
-  })
-
-  it('无数据 → null（该段不渲染）', () => {
-    assert.equal(poolFreshnessMinutes([], NOW), null)
-    assert.equal(poolFreshnessMinutes([{ last_refresh_at: null }], NOW), null)
   })
 })
 
