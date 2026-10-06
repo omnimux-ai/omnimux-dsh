@@ -34,11 +34,11 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddF
 
   const ingestPaths = useCallback(
     (paths: string[]) => {
+      if (!paths.length) return;
       const drafts = draftsFromPickedPaths(paths);
       const filtered = filterDraftsByTypes(drafts, acceptedTypes);
       if (filtered.length > 0) onAddFiles(filtered);
       if (filtered.length < paths.length) toast.warning(t('picker.unsupported'));
-      if (paths.length > 0 && filtered.length === 0) toast.warning(t('picker.unsupported'));
     },
     [acceptedTypes, onAddFiles, t],
   );
@@ -96,10 +96,9 @@ const LocalUploadPane: React.FC<LocalUploadPaneProps> = ({ files, active, onAddF
 
   const handleClick = useCallback(() => {
     if (!active) return;
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-      return;
-    }
+    // File.path was removed in modern Electron, so the hidden input always
+    // falls back to the native picker anyway — go straight there instead of
+    // making the user pick files in two consecutive dialogs.
     void chooseNative();
   }, [active, chooseNative]);
 
