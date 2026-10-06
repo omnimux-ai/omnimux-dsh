@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   deriveAdaptiveOperation,
-  deriveImageOpModeFromCount,
   extractSlotKeyFromBucketKey,
   inferMimeType,
   isAllowedReferenceUrl,
@@ -10,9 +9,11 @@ import {
   rejectionOf,
   serializeReferenceAssets,
   slotPlan,
-  IMAGE_MODE_OPTIONS,
+  IMAGE_REFERENCE_OP_IDS,
+  IMAGE_EDIT_OP_IDS,
+  isImageReferenceOpId,
+  isImageEditOpId,
   VIDEO_MODE_OPTIONS,
-  pruneAssetsOnModeSwitch,
   groupLockOf,
   visibleSlots,
 } from './media-slot.js';
@@ -149,11 +150,73 @@ describe('素材卡槽槽位与自适应推导', () => {
       assert.equal(op.id, 'multi_reference');
     });
 
-    it('deriveImageOpModeFromCount：0图->文生图，1图->图片编辑，多图->多图参考', () => {
-      assert.equal(deriveImageOpModeFromCount(0), '文生图');
-      assert.equal(deriveImageOpModeFromCount(1), '图片编辑');
-      assert.equal(deriveImageOpModeFromCount(2), '多图参考');
-      assert.equal(deriveImageOpModeFromCount(5), '多图参考');
+    it('图像操作 id 词汇统一：参考类含 image_to_image / inpaint_outpaint，判定与推导同一集合', () => {
+      assert.deepEqual([...IMAGE_REFERENCE_OP_IDS], ['multi_reference', 'image_to_image', 'inpaint_outpaint']);
+      assert.deepEqual([...IMAGE_EDIT_OP_IDS], ['image_edit']);
+      for (const id of IMAGE_REFERENCE_OP_IDS) assert.equal(isImageReferenceOpId(id), true, `${id} 必须判为参考类`);
+      for (const id of IMAGE_EDIT_OP_IDS) assert.equal(isImageEditOpId(id), true, `${id} 必须判为编辑类`);
+      assert.equal(isImageReferenceOpId('text_to_image'), false);
+      assert.equal(isImageEditOpId('multi_reference'), false);
+    });
+
+    it('图像模式：1 图 + 契约含 multi_reference -> multi_reference', () => {
+      const model = {
+        id: 'ref-only',
+        operations: [
+          { id: 'text_to_image', output: { type: 'image' }, inputs: [{ type: 'text', role: 'prompt', max: 1 }] },
+          { id: 'multi_reference', output: { type: 'image' }, inputs: [{ slot: 'reference_images', type: 'image', role: 'reference', max: 4 }] },
+        ],
+      };
+      const op = deriveAdaptiveOperation(model, 'image', {
+        'image:ref-only:reference': [{ id: '1', name: 'a.png', type: 'image' }],
+      });
+      assert.equal(op.id, 'multi_reference');
+    });
+
+    it('图像模式：1 图 + 契约仅有 image_to_image -> image_to_image（回归：曾推导成文生图并静默丢图）', () => {
+      const model = {
+        id: 'i2i-only',
+        operations: [
+          { id: 'text_to_image', output: { type: 'image' }, inputs: [{ type: 'text', role: 'prompt', max: 1 }] },
+          { id: 'image_to_image', output: { type: 'image' }, inputs: [{ slot: 'reference_image', type: 'image', role: 'reference', max: 1 }] },
+        ],
+      };
+      const op = deriveAdaptiveOperation(model, 'image', {
+        'image:i2i-only:reference': [{ id: '1', name: 'a.png', type: 'image' }],
+      });
+      assert.equal(op.id, 'image_to_image');
+    });
+
+    it('图像模式：1 图 + 契约含 image_edit -> image_edit', () => {
+      const model = {
+        id: 'edit-model',
+        operations: [
+          { id: 'text_to_image', output: { type: 'image' }, inputs: [{ type: 'text', role: 'prompt', max: 1 }] },
+          { id: 'image_edit', output: { type: 'image' }, inputs: [{ slot: 'reference_images', type: 'image', role: 'reference', max: 1 }] },
+        ],
+      };
+      const op = deriveAdaptiveOperation(model, 'image', {
+        'image:edit-model:reference': [{ id: '1', name: 'a.png', type: 'image' }],
+      });
+      assert.equal(op.id, 'image_edit');
+    });
+
+    it('图像模式：3 图 + 契约含 multi_reference -> multi_reference', () => {
+      const model = {
+        id: 'many-ref',
+        operations: [
+          { id: 'text_to_image', output: { type: 'image' }, inputs: [{ type: 'text', role: 'prompt', max: 1 }] },
+          { id: 'multi_reference', output: { type: 'image' }, inputs: [{ slot: 'reference_images', type: 'image', role: 'reference', max: 4 }] },
+        ],
+      };
+      const op = deriveAdaptiveOperation(model, 'image', {
+        'image:many-ref:reference': [
+          { id: '1', name: 'a.png', type: 'image' },
+          { id: '2', name: 'b.png', type: 'image' },
+          { id: '3', name: 'c.png', type: 'image' },
+        ],
+      });
+      assert.equal(op.id, 'multi_reference');
     });
 
     it('视频模式：0 素材 -> 文生视频', () => {
@@ -604,16 +667,16 @@ describe('素材卡槽槽位与自适应推导', () => {
       assert.equal(resIdOnly[0].pathOrUrl, undefined);
     });
 
-    it('Ticket 2: 规范生成方式选项与文案收敛（消除多图参考与单图参考分裂）', () => {
-      assert.deepEqual(
-        IMAGE_MODE_OPTIONS.map((o) => o.label),
-        ['文生图', '参考', '编辑'],
-        '图像生成方式严格收敛为：文生图、参考、编辑'
-      );
+    it('Ticket 2: 视频生成方式选项与文案收敛（图像手选页签已取消，词汇改由契约 id 集合统一）', () => {
       assert.deepEqual(
         VIDEO_MODE_OPTIONS.map((o) => o.label),
         ['文生视频', '首帧', '首尾帧', '全能参考', '编辑'],
         '视频生成方式严格收敛为：文生视频、首帧、首尾帧、全能参考、编辑'
+      );
+      assert.deepEqual(
+        [...IMAGE_REFERENCE_OP_IDS, ...IMAGE_EDIT_OP_IDS],
+        ['multi_reference', 'image_to_image', 'inpaint_outpaint', 'image_edit'],
+        '图像契约操作 id 集合：参考类三项 + 编辑类一项，页签/推导/激活共用'
       );
     });
 
@@ -655,31 +718,6 @@ describe('素材卡槽槽位与自适应推导', () => {
       assert.equal(fluxSlots.length, 1);
       assert.equal(fluxSlots[0].slot, 'reference_images');
       assert.equal(fluxSlots[0].max, 4, 'Flux Pro 垫图参考最大容量严格为 4');
-    });
-
-    it('Ticket 2: pruneAssetsOnModeSwitch 模式切换平滑裁剪超出容量的素材并自愈', () => {
-      const targetOp = {
-        id: 'multi_reference',
-        inputs: [
-          { slot: 'prompt', type: 'text', role: 'prompt', max: 1 },
-          { slot: 'reference_image', type: 'image', role: 'reference', max: 1 },
-        ],
-      };
-
-      const buckets = {
-        'image:gpt-image-2.5:reference': [
-          { url: 'https://example.com/1.png', type: 'image' },
-          { url: 'https://example.com/2.png', type: 'image' },
-          { url: 'https://example.com/3.png', type: 'image' },
-        ],
-      };
-
-      const { cleanBuckets, didPrune, prunedCount, keptCount } = pruneAssetsOnModeSwitch(buckets, targetOp, 'image');
-      assert.equal(didPrune, true, '素材超出 max:1 时必须触发平滑裁剪');
-      assert.equal(prunedCount, 2, '多余的 2 张素材应被截断丢弃');
-      assert.equal(keptCount, 1, '仅保留前 1 张合规素材');
-      assert.equal(cleanBuckets['image:gpt-image-2.5:reference'].length, 1);
-      assert.equal(cleanBuckets['image:gpt-image-2.5:reference'][0].url, 'https://example.com/1.png');
     });
 
     it('Ticket 2: serializeReferenceAssets 动态绑定当前 activeOperation 的合规 slot', () => {

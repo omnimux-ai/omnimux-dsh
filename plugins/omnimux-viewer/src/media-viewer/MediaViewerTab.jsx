@@ -230,7 +230,9 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
       const materializedAssets = Array.isArray(assets)
         ? await Promise.all(assets.map(materializeAssetFile))
         : assets;
-      const serializedReferences = serializeReferenceAssets(materializedAssets);
+      // 传入 activeOperation：serializeReferenceAssets 会按当前契约 inputs 自愈真实槽位名，
+      // 消除 reference_image 与 reference_images 这类单复数不匹配导致的槽位错绑。
+      const serializedReferences = serializeReferenceAssets(materializedAssets, activeOperation);
 
       // 提交所需参数随 media 项持久化，供失败重试与刷新续传复用
       const request = {

@@ -358,25 +358,6 @@ export function MediaParamsPanel({ config, open, onToggle, showOpMode = true }) 
         <div className="omx-popover-shell omx-params-panel" role="dialog" aria-label="模型参数配置">
           {mode === 'image' ? (
             <>
-              {showOpMode && (
-                <div className="omx-param-group">
-                  <div className="omx-param-title">生成方式</div>
-                  <div className="omx-mode-track">
-                    {['文生图', '图片编辑', '多图参考'].map((op) => (
-                      <button // exempt-ui01: 图像生成方式按钮
-                        key={op}
-                        type="button"
-                        className={`omx-mode-pill ${imageOpMode === op ? 'is-active' : ''}`}
-                        disabled
-                        title="由素材卡槽自动适配：空卡槽为文生图，单图为图片编辑，多图为多图参考"
-                      >
-                        {op}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="omx-param-group">
                 <div className="omx-param-title">比例</div>
                 <div className="omx-ratio-grid">

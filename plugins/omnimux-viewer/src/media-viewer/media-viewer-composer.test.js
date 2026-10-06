@@ -854,9 +854,9 @@ describe('MediaViewerComposer Component Contract', () => {
     assert.ok(
       composerSrc.includes('const hasLocalMediaFile = assets.some((a) => a.file && !a.assetId && (a.type === \'video\' || a.type === \'audio\'));') &&
       composerSrc.includes('const hasInvalidFragment = assets.some((a) => {') &&
-      composerSrc.includes('if (a.assetId || a.file) return false;') &&
+      composerSrc.includes('if (a.file) return false;') &&
       composerSrc.includes("return !isAllowedReferenceUrl(a.url) || url.startsWith('blob:');"),
-      '本地音视频必须单独拦截，图片文件留给提交前物化'
+      '本地音视频必须单独拦截，图片文件留给提交前物化；无 URL 的 assetId-only 行服务端必然静默丢弃，客户端必须拦截'
     );
     assert.ok(
       composerSrc.includes("setNotice('请先上传本地音视频到资产库后再用于生成');"),
@@ -872,7 +872,8 @@ describe('MediaViewerComposer Component Contract', () => {
       const hasLocalMediaFile = assets.some((a) => a.file && !a.assetId && (a.type === 'video' || a.type === 'audio'));
       if (hasLocalMediaFile) return '请先上传本地音视频到资产库后再用于生成';
       const hasInvalidFragment = assets.some((a) => {
-        if (a.assetId || a.file) return false;
+        // 服务端只认可消费地址（normalize 对无 pathOrUrl 行静默返回 null），assetId 不能豁免地址校验
+        if (a.file) return false;
         const url = String(a.url || '');
         return !isAllowedReferenceUrl(a.url) || url.startsWith('blob:');
       });
@@ -893,9 +894,18 @@ describe('MediaViewerComposer Component Contract', () => {
     // 2. 本地上传携带原生 file 对象的 blob: 图片素材：不被 hasInvalidFragment 拦截
     const assetsWithLocalFile = [
       { slot: 'character', type: 'image', role: 'character', url: 'blob:http://localhost/uuid-2', file: { name: 'local.png' } },
-      { slot: 'reference_images', type: 'image', role: 'reference', assetId: 'aid_100' },
+      { slot: 'reference_images', type: 'image', role: 'reference', url: '/omnimux/assets/aid_100.png', assetId: 'aid_100' },
     ];
     assert.equal(checkFragmentInterception(assetsWithLocalFile), null);
+
+    // 2.2 有 assetId 但无可用地址的素材：服务端无法消费，必须拦截（曾豁免 assetId 导致参考图被静默丢弃）
+    const assetsWithAssetIdOnly = [
+      { slot: 'reference_images', type: 'image', role: 'reference', assetId: 'aid_100' },
+    ];
+    assert.equal(
+      checkFragmentInterception(assetsWithAssetIdOnly),
+      '参考素材地址无效，请重新选择'
+    );
 
     // 2.1 本地上传携带原生 file 对象的 blob: 视频/音频素材：被 hasInvalidFragment 拦截
     const assetsWithLocalVideoFile = [
@@ -906,17 +916,17 @@ describe('MediaViewerComposer Component Contract', () => {
       '请先上传本地音视频到资产库后再用于生成'
     );
 
-    // 3. 站内同源相对路径与已分配 assetId 素材：放行
+    // 3. 站内同源相对路径与已分配 assetId 且带可用地址的素材：放行
     const validAssets = [
       { slot: 'character', type: 'image', role: 'reference', url: '/assets/character.png' },
-      { slot: 'reference_images', type: 'image', role: 'reference', assetId: 'aid_100' },
+      { slot: 'reference_images', type: 'image', role: 'reference', url: '/omnimux/assets/aid_100.png', assetId: 'aid_100' },
     ];
     assert.equal(checkFragmentInterception(validAssets), null);
 
     // 4. 合规的 base64 Data URL：放行
     const base64Assets = [
       { slot: 'character', type: 'image', role: 'character', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' },
-      { slot: 'reference_images', type: 'image', role: 'reference', assetId: 'aid_100' },
+      { slot: 'reference_images', type: 'image', role: 'reference', url: '/omnimux/assets/aid_100.png', assetId: 'aid_100' },
     ];
     assert.equal(checkFragmentInterception(base64Assets), null);
   });
@@ -1343,9 +1353,9 @@ describe('MediaViewerComposer Component Contract', () => {
     assert.ok(
       composerSrc.includes('const hasLocalMediaFile = assets.some((a) => a.file && !a.assetId && (a.type === \'video\' || a.type === \'audio\'));') &&
       composerSrc.includes('const hasInvalidFragment = assets.some((a) => {') &&
-      composerSrc.includes('if (a.assetId || a.file) return false;') &&
+      composerSrc.includes('if (a.file) return false;') &&
       composerSrc.includes("return !isAllowedReferenceUrl(a.url) || url.startsWith('blob:');"),
-      '本地音视频单独拦截，无 file/assetId 的 blob 不能提交'
+      '本地音视频单独拦截，无 file 且无有效 URL 的引用不能提交（assetId 不能豁免地址校验）'
     );
 
     // 逻辑行为验证单一真源 isAllowedReferenceUrl
@@ -1369,7 +1379,7 @@ describe('MediaViewerComposer Component Contract', () => {
     );
     assert.ok(
       composerSrc.includes('const hasInvalidFragment = assets.some((a) => {') &&
-      composerSrc.includes('if (a.assetId || a.file) return false;'),
+      composerSrc.includes('if (a.file) return false;'),
       '放行合规本地图片素材进入 assets 供提交器和后端处理'
     );
 
@@ -1588,7 +1598,7 @@ describe('MediaViewerComposer Component Contract', () => {
           'handleDirectSubmit 必须对 assets 异步物化'
         );
         assert.ok(
-          tabSrc.includes('serializeReferenceAssets(materializedAssets)'),
+          tabSrc.includes('serializeReferenceAssets(materializedAssets, activeOperation)'),
           'serializeReferenceAssets 必须消费物化后的 materializedAssets'
         );
 
@@ -1839,9 +1849,9 @@ describe('MediaViewerComposer Component Contract', () => {
         assert.ok(
           composerSrc.includes('const hasLocalMediaFile = assets.some((a) => a.file && !a.assetId && (a.type === \'video\' || a.type === \'audio\'));') &&
           composerSrc.includes('const hasInvalidFragment = assets.some((a) => {') &&
-          composerSrc.includes('if (a.assetId || a.file) return false;') &&
+          composerSrc.includes('if (a.file) return false;') &&
           composerSrc.includes("return !isAllowedReferenceUrl(a.url) || url.startsWith('blob:');"),
-          'MediaViewerComposer 提交校验必须拦截本地音视频与无 file/assetId 的纯 blob 引用'
+          'MediaViewerComposer 提交校验必须拦截本地音视频与无 file 且无有效 URL 的引用（assetId 不能豁免地址校验）'
         );
         assert.ok(
           composerSrc.includes("setNotice('请先上传本地音视频到资产库后再用于生成');"),

@@ -13,9 +13,9 @@ import {
   extractSlotKeyFromBucketKey,
   inferMimeType,
   isAllowedReferenceUrl,
+  imageOpDisplayLabel,
   makeBucketKey,
   operationsOf,
-  pruneAssetsOnModeSwitch,
   rejectionOf,
   slotPlan,
   groupLockOf,
@@ -176,13 +176,28 @@ export function MediaViewerComposer({
     ))
   ), [model]);
 
-  // 契约驱动当前选中的操作 ID（图像模式与视频模式统一规范）
+  // 图像素材签名：推导必须且只能随素材增减触发，
+  // 把生成方式标签列入依赖会让推导结果被标签状态回弹（缺陷回归）。
+  const imageBucketsDependencyKey = useMemo(() => {
+    if (mode !== 'image') return '';
+    const prefix = makeBucketKey('image', model?.id, '');
+    return Object.entries(buckets)
+      .filter(([k]) => k.startsWith(prefix))
+      .map(([k, v]) => `${k}:${Array.isArray(v) ? v.map((item) => item?.id ?? item?.name ?? item?.url).join(',') : (v ? '1' : '0')}`)
+      .sort()
+      .join('|');
+  }, [mode, model?.id, buckets]);
+
+  // 契约驱动当前选中的操作 ID：图像由实际放入的素材数量推导（已取消手选生成方式），视频沿用页签。
+  // 只随素材签名重算，不订阅任何生成方式标签，避免推导结果被手选状态回弹。
   const currentOperationId = useMemo(() => {
     if (mode === 'video') return videoModeId;
-    if (config.imageOpMode === '编辑' || config.imageOpMode === '图片编辑') return 'image_edit';
-    if (config.imageOpMode === '参考' || config.imageOpMode === '多图参考') return 'multi_reference';
-    return 'text_to_image';
-  }, [mode, videoModeId, config.imageOpMode]);
+    const prefix = makeBucketKey('image', model?.id, '');
+    const scopedImageBuckets = Object.fromEntries(
+      Object.entries(bucketsRef.current || {}).filter(([key]) => key.startsWith(prefix))
+    );
+    return deriveAdaptiveOperation(model, 'image', scopedImageBuckets)?.id ?? 'text_to_image';
+  }, [mode, videoModeId, model, imageBucketsDependencyKey]);
 
   const slots = useMemo(
     () => slotPlan(model, mode, currentOperationId),
@@ -258,64 +273,9 @@ export function MediaViewerComposer({
       return tabs.length > 1 ? tabs : [];
     }
 
-    // 图像模式：动态根据执行中枢的 operations 契约分流（统一收敛为 文生图、参考、编辑，消除多图参考分裂）
-    const tabs = [];
-    if (modelOps.some((op) => op.id === 'text_to_image')) {
-      tabs.push({
-        id: 'text',
-        label: '文生图',
-        icon: ICONS_MODE.text,
-        active: config.imageOpMode === '文生图',
-        onClick: () => {
-          config.setImageOpMode?.('文生图');
-        },
-      });
-    }
-    if (modelOps.some((op) => op.id === 'multi_reference' || op.id === 'image_to_image')) {
-      const refOp = modelOps.find((op) => op.id === 'multi_reference' || op.id === 'image_to_image');
-      tabs.push({
-        id: 'ref',
-        label: '参考',
-        icon: ICONS_MODE.ref,
-        active: config.imageOpMode === '参考' || config.imageOpMode === '多图参考',
-        onClick: () => {
-          config.setImageOpMode?.('参考');
-          const scopedPrefix = makeBucketKey('image', model?.id, '');
-          const scopedBuckets = Object.fromEntries(
-            Object.entries(bucketsRef.current || {}).filter(([key]) => key.startsWith(scopedPrefix))
-          );
-          const { cleanBuckets, didPrune } = pruneAssetsOnModeSwitch(scopedBuckets, refOp, 'image');
-          if (didPrune) {
-            setBuckets((prev) => ({ ...prev, ...cleanBuckets }));
-            setNotice('已保留前 1 项');
-          }
-        },
-      });
-    }
-    if (modelOps.some((op) => op.id === 'image_edit')) {
-      const editOp = modelOps.find((op) => op.id === 'image_edit');
-      tabs.push({
-        id: 'edit',
-        label: '编辑',
-        icon: ICONS_MODE.edit,
-        active: config.imageOpMode === '编辑' || config.imageOpMode === '图片编辑',
-        onClick: () => {
-          config.setImageOpMode?.('编辑');
-          const scopedPrefix = makeBucketKey('image', model?.id, '');
-          const scopedBuckets = Object.fromEntries(
-            Object.entries(bucketsRef.current || {}).filter(([key]) => key.startsWith(scopedPrefix))
-          );
-          const { cleanBuckets, didPrune } = pruneAssetsOnModeSwitch(scopedBuckets, editOp, 'image');
-          if (didPrune) {
-            setBuckets((prev) => ({ ...prev, ...cleanBuckets }));
-            setNotice('已保留前 1 项');
-          }
-        },
-      });
-    }
-    // 页签只剩 1 个时没有切换价值，隐藏整行避免死开关。
-    return tabs.length > 1 ? tabs : [];
-  }, [model, mode, videoModeId, setVideoGenMode, config.imageOpMode, config.setImageOpMode]);
+    // 图像模式已取消手选生成方式：生成方式由实际放入的素材数量自动推导，不再渲染页签行。
+    return [];
+  }, [model, mode, videoModeId, setVideoGenMode]);
 
   const bucketKey = useCallback(
     (slot) => makeBucketKey(mode, model?.id, slot?.key),
@@ -529,18 +489,6 @@ export function MediaViewerComposer({
       .join('|');
   }, [mode, buckets, videoSlots, bucketKey]);
 
-  // 图像模式同样提取素材签名：自适应推导必须且只能随素材增减触发，
-  // 把模式状态本身列入依赖会让手动点击的页签被立即回弹（缺陷回归）。
-  const imageBucketsDependencyKey = useMemo(() => {
-    if (mode !== 'image') return '';
-    const prefix = makeBucketKey('image', model?.id, '');
-    return Object.entries(buckets)
-      .filter(([k]) => k.startsWith(prefix))
-      .map(([k, v]) => `${k}:${Array.isArray(v) ? v.map((item) => item?.id ?? item?.name ?? item?.url).join(',') : (v ? '1' : '0')}`)
-      .sort()
-      .join('|');
-  }, [mode, model?.id, buckets]);
-
   // 自适应收敛模式（仅随素材增减运行；不订阅 videoGenMode，避免手动切换被回弹）
   useEffect(() => {
     if (mode !== 'video' || !model) return;
@@ -558,10 +506,8 @@ export function MediaViewerComposer({
   }, [mode, model, videoBucketsDependencyKey, setVideoGenMode]);
 
   // 图像生成方式与素材卡槽消费端自适应算法：
-  // 空卡槽 -> 文生图 (text_to_image)
-  // 单图 -> 图片编辑 (image_edit)
-  // 多图 -> 多图参考 (multi_reference)
-  // 仅在素材签名变化时推导；手动点「参考/编辑」后空卡槽不再回弹覆盖。
+  // 空卡槽 -> 文生图；单图 -> 图片编辑（无则参考类）；多图 -> 参考类。
+  // 仅在素材签名变化时推导展示标签；已取消手选，推导结果只同步给展示层。
   useEffect(() => {
     if (mode !== 'image' || !model) return;
     const prefix = makeBucketKey('image', model?.id, '');
@@ -570,12 +516,7 @@ export function MediaViewerComposer({
     );
     const adaptiveOp = deriveAdaptiveOperation(model, 'image', scopedImageBuckets);
     if (adaptiveOp) {
-      let targetLabel = '文生图';
-      if (adaptiveOp.id === 'image_edit') {
-        targetLabel = '图片编辑';
-      } else if (adaptiveOp.id === 'multi_reference') {
-        targetLabel = '多图参考';
-      }
+      const targetLabel = imageOpDisplayLabel(adaptiveOp);
       if (config.imageOpMode !== targetLabel) {
         config.setImageOpMode(targetLabel);
       }
@@ -874,9 +815,9 @@ export function MediaViewerComposer({
             if (outcome !== 'ok') continue;
             accepted.push(file);
             placed = true;
-            // 同步操作模式让页签与素材一致
+            // 粘贴落位后同步展示层操作标签（image_to_image / inpaint_outpaint 也归一为参考类文案）
             if (effectiveMode === 'image') {
-              const label = op.id === 'image_edit' ? '编辑' : op.id === 'multi_reference' ? '参考' : config.imageOpMode;
+              const label = imageOpDisplayLabel(op);
               if (label && label !== config.imageOpMode) config.setImageOpMode?.(label);
             } else {
               const opt = VIDEO_MODE_OPTIONS.find((o) => o.id === op.id);
@@ -976,13 +917,28 @@ export function MediaViewerComposer({
       }
     }
 
-    const isTextOnlyMode = (mode === 'image' && config.imageOpMode === '文生图') ||
-      (mode === 'video' && activeOp?.id === 'text_to_video');
+    // 视频：文生视频是纯文本操作，素材不随请求发出（保持既有语义）。
+    const isVideoTextOnly = mode === 'video' && activeOp?.id === 'text_to_video';
     const submitSlots = slotPlan(model, mode, activeOp?.id);
     const opInputs = activeOp?.inputs || [];
 
+    // 图像模式：契约里没有任何接受媒体输入的操作时，已放入的素材不可能被消费，
+    // 必须显式提示并阻断，严禁静默丢弃后仍按文生图出图。
+    const imageAttachedCount = mode === 'image'
+      ? Object.values(scopedBuckets).reduce((sum, items) => (
+        sum + (Array.isArray(items) ? items.filter((item) => !item?.type || item.type === 'image').length : 0)
+      ), 0)
+      : 0;
+    const imageContractAcceptsMedia = operationsOf(model, 'image').some((op) => (op?.inputs || []).some(
+      (input) => input && input.type !== 'text' && input.role !== 'prompt'
+    ));
+    if (mode === 'image' && imageAttachedCount > 0 && !imageContractAcceptsMedia) {
+      setNotice('当前模型不支持参考图，请更换支持参考图的模型或移除素材');
+      return;
+    }
+
     // 若当前模型操作不支持参考图且槽位为 guidedOnly：只要存在素材项（无论是否有打点），阻断提交并提示，严禁静默丢弃！
-    const hasUnsupportedGuidedWithItems = !isTextOnlyMode && submitSlots.some((slot) => {
+    const hasUnsupportedGuidedWithItems = !isVideoTextOnly && submitSlots.some((slot) => {
       if (!slot.guidedOnly) return false;
       const items = buckets[bucketKey(slot)] ?? [];
       if (items.length === 0) return false;
@@ -1001,7 +957,7 @@ export function MediaViewerComposer({
       return;
     }
 
-    const assets = isTextOnlyMode ? [] : submitSlots.flatMap((slot) => {
+    const assets = isVideoTextOnly ? [] : submitSlots.flatMap((slot) => {
       const items = buckets[bucketKey(slot)] ?? [];
       if (items.length === 0) return [];
       if (slot.guidedOnly) {
@@ -1033,8 +989,11 @@ export function MediaViewerComposer({
       setNotice('请先上传本地音视频到资产库后再用于生成');
       return;
     }
+    // 服务端只认可消费的地址，不能按 assetId 解析素材（normalize 遇无 URL 行会静默丢弃）。
+    // 因此仅本地 File（提交前物化成 data URL）可豁免地址校验；assetId 不能豁免，
+    // 否则「有 assetId 无 URL」的参考行会被服务端无声吃掉——参考图被忽略且无任何报错。
     const hasInvalidFragment = assets.some((a) => {
-      if (a.assetId || a.file) return false;
+      if (a.file) return false;
       const url = String(a.url || '');
       return !isAllowedReferenceUrl(a.url) || url.startsWith('blob:');
     });
@@ -1043,10 +1002,12 @@ export function MediaViewerComposer({
       return;
     }
 
-    // 参考/编辑模式要求至少一份素材：空载荷直接发给后端会被上游 400，
-    // 前端前置提示，不发空请求（不静默丢弃）。
-    if (!isTextOnlyMode && assets.length === 0) {
-      setNotice('参考/编辑模式需要先在卡槽选择素材');
+    // 推导出的操作确实要求素材（契约 min≥1）而卡槽为空时才拦空载荷：
+    // 图像按素材数量推导，空素材必落到文生图，正常不可达；视频保留原有前置拦截。
+    const derivedOpRequiresMaterial = mode === 'video' || (activeOp?.inputs || []).some((input) =>
+      input && input.type !== 'text' && input.role !== 'prompt' && Number.isFinite(input.min) && input.min >= 1);
+    if (!isVideoTextOnly && derivedOpRequiresMaterial && assets.length === 0) {
+      setNotice('请先在卡槽放入素材');
       return;
     }
 
@@ -1111,7 +1072,6 @@ export function MediaViewerComposer({
     model,
     videoModeId,
     config.channel?.id,
-    config.imageOpMode,
     currentOperationId,
   ]);
 
@@ -1178,24 +1138,26 @@ export function MediaViewerComposer({
 
         {notice ? <div className="omx-slot-notice" role="status">{notice}</div> : null}
 
-        {/* 输入框内侧顶栏：生成方式选项卡（素材卡槽上方） + 右侧展开全屏按钮 */}
-        <div className="omx-composer-header-row">
-          <div className="omx-slot-modes" role="tablist" aria-label="生成方式">
-            {opModeTabs.map((tab) => (
-              <button // exempt-ui01: 模式切换单项
-                key={tab.id}
-                type="button"
-                role="tab"
-                className={`omx-slot-mode${tab.active ? ' is-active' : ''}`}
-                aria-pressed={tab.active}
-                onClick={tab.onClick}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            ))}
+        {/* 输入框内侧顶栏：生成方式选项卡（素材卡槽上方）。图像模式已取消手选，无页签时不渲染整行 */}
+        {opModeTabs.length > 0 && (
+          <div className="omx-composer-header-row">
+            <div className="omx-slot-modes" role="tablist" aria-label="生成方式">
+              {opModeTabs.map((tab) => (
+                <button // exempt-ui01: 模式切换单项
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  className={`omx-slot-mode${tab.active ? ' is-active' : ''}`}
+                  aria-pressed={tab.active}
+                  onClick={tab.onClick}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 提示词与素材卡槽上下分层自适应排布 */}
         <div className="omx-mv-prompt-row">

@@ -1,16 +1,16 @@
 {
-  "runId": "44be7139-0658-49c2-8282-014863cc187b",
+  "runId": "42feba51-b482-4a51-a60a-66b670746020",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/google-vids-archive",
-  "origin": "http://127.0.0.1:53420",
-  "appPort": 53420,
-  "cdpPort": 53428,
-  "startedAt": "2026-10-06T15:23:56.457Z",
-  "completedAt": "2026-10-06T15:24:13.528Z",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-viewer-auto-image-mode",
+  "origin": "http://127.0.0.1:54128",
+  "appPort": 54128,
+  "cdpPort": 54171,
+  "startedAt": "2026-10-06T17:39:15.298Z",
+  "completedAt": "2026-10-06T17:39:37.012Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:53420",
+    "origin": "http://127.0.0.1:54128",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "taskPluginsCount": 22,
@@ -36,19 +36,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:53420",
+      "origin": "http://127.0.0.1:54128",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-sBIaQtbneW3KRJd8Yfi6yIkk1YVr-06Olo7wLQWg26o"
+      "cookieName": "dsh-auth-_TwapFSKa73e-tIdaigf2soK1MtKA5etO-ULY9XdIzU"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 53428
+      "port": 54171
     },
     {
       "name": "auth-cookie-applied",
@@ -107,59 +107,71 @@
       "usedWorkbenchFallback": true
     },
     {
-      "name": "journey:ac0-open-clip",
+      "name": "journey:composer-mounted",
       "pass": true,
-      "detail": "打开方式：workbench-api"
+      "detail": {
+        "opened": {
+          "viaWorkbench": true
+        },
+        "composerState": {
+          "composerMounted": true,
+          "hasHeaderRow": false,
+          "modeButtonCount": 0,
+          "modeLabels": [],
+          "hasTextarea": true,
+          "textareaPlaceholder": "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+        }
+      }
     },
     {
-      "name": "journey:ac1-editor-mounted",
+      "name": "journey:image-mode-no-manual-tab",
       "pass": true,
-      "detail": "剪辑外壳：true"
+      "detail": {
+        "composerMounted": true,
+        "hasHeaderRow": false,
+        "modeButtonCount": 0,
+        "modeLabels": [],
+        "hasTextarea": true,
+        "textareaPlaceholder": "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
+      }
     },
     {
-      "name": "journey:ac1-stage-visible",
+      "name": "journey:prompt-textarea-present",
       "pass": true,
-      "detail": "中间舞台：{\"w\":380,\"h\":321,\"visible\":true}"
+      "detail": "描述你想生成或修改的内容；如已上传参考图，可输入 @ 引用"
     },
     {
-      "name": "journey:ac1-stage-width-floor",
+      "name": "journey:paste-dispatched",
       "pass": true,
-      "detail": "中间舞台宽度必须守住可用下限（≥280），实测 380"
+      "detail": {
+        "dispatched": true,
+        "files": 1
+      }
     },
     {
-      "name": "journey:ac1-media-visible",
+      "name": "journey:reference-entered-slot",
       "pass": true,
-      "detail": "素材列：{\"w\":460,\"h\":321,\"visible\":true}"
+      "detail": {
+        "visibleSlotCards": 1,
+        "slotButtons": 1,
+        "noticeText": "已粘贴 1 项素材",
+        "modeButtonCount": 0
+      }
     },
     {
-      "name": "journey:ac1-timeline-visible",
+      "name": "journey:still-no-manual-tab-after-paste",
       "pass": true,
-      "detail": "时间线：{\"w\":850,\"h\":220,\"visible\":true}"
+      "detail": {
+        "visibleSlotCards": 1,
+        "slotButtons": 1,
+        "noticeText": "已粘贴 1 项素材",
+        "modeButtonCount": 0
+      }
     },
     {
-      "name": "journey:ac5-clip-chrome-present",
+      "name": "journey:composer-screenshot-saved",
       "pass": true,
-      "detail": "剪辑自带控件：true"
-    },
-    {
-      "name": "journey:ac2-no-gvids-dom",
-      "pass": true,
-      "detail": "生成面板残留节点：0"
-    },
-    {
-      "name": "journey:ac2-no-vids-attrs",
-      "pass": true,
-      "detail": "生成面板残留属性：0"
-    },
-    {
-      "name": "journey:ac3-no-google-vids-text",
-      "pass": true,
-      "detail": "页面是否出现 Google Vids/内测版：false"
-    },
-    {
-      "name": "journey:ac3-no-generate-panel-text",
-      "pass": true,
-      "detail": "页面是否出现生成面板文案：false"
+      "detail": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-viewer-auto-image-mode/.workbuddy/evidence/app-qa/42feba51-b482-4a51-a60a-66b670746020/composer-with-reference.png"
     },
     {
       "name": "screenshot-png-verified",
@@ -168,14 +180,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 102612
+      "bytes": 110297
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/google-vids-archive/.workbuddy/evidence/app-qa/44be7139-0658-49c2-8282-014863cc187b/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/omnimux-viewer-auto-image-mode/.workbuddy/evidence/app-qa/42feba51-b482-4a51-a60a-66b670746020/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 102612
+    "bytes": 110297
   },
   "errors": [],
   "cleanup": {

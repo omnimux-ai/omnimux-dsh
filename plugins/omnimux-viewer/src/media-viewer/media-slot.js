@@ -5,14 +5,32 @@
  * 不在界面里另写张数、格式或时长。读不到契约时返回空，调用方不显示卡槽。
  */
 
+/** 图像参考类契约操作 id：页签、推导、激活三处必须同一集合，不得分裂。 */
+export const IMAGE_REFERENCE_OP_IDS = Object.freeze(['multi_reference', 'image_to_image', 'inpaint_outpaint']);
+/** 图像编辑类契约操作 id。 */
+export const IMAGE_EDIT_OP_IDS = Object.freeze(['image_edit']);
+
+/** 参考类操作判定（页签/推导/激活共用，禁止各写一份）。 */
+export function isImageReferenceOpId(id) {
+  return IMAGE_REFERENCE_OP_IDS.includes(id);
+}
+
+/** 编辑类操作判定。 */
+export function isImageEditOpId(id) {
+  return IMAGE_EDIT_OP_IDS.includes(id);
+}
+
 /**
- * 图像生成模式与契约操作对应：按 PM 规范统一收敛为 文生图、参考、编辑，彻底废除多图参考分裂
+ * 图像操作的展示层标签（只用于回显，不决定提交行为；提交一律用操作 id）。
+ * 参考类三 id（multi_reference / image_to_image / inpaint_outpaint）统一回显为「参考」，编辑类为「编辑」，其余为「文生图」。
+ * @param {object|null} op
+ * @returns {'文生图' | '参考' | '编辑'}
  */
-export const IMAGE_MODE_OPTIONS = Object.freeze([
-  { id: 'text_to_image', label: '文生图' },
-  { id: 'multi_reference', label: '参考' },
-  { id: 'image_edit', label: '编辑' },
-]);
+export function imageOpDisplayLabel(op) {
+  if (isImageEditOpId(op?.id)) return '编辑';
+  if (isImageReferenceOpId(op?.id)) return '参考';
+  return '文生图';
+}
 
 /** 视频生成模式与契约操作的对应。文案沿用输入框里已有的四个，再补契约里的「视频编辑」。 */
 export const VIDEO_MODE_OPTIONS = Object.freeze([
@@ -85,7 +103,7 @@ export function cleanAnnotationPrefix(val, savedAnnotations = []) {
     .trim();
 }
 
-const IMAGE_MODE_ORDER = ['multi_reference', 'image_edit', 'text_to_image'];
+const IMAGE_MODE_ORDER = [...IMAGE_REFERENCE_OP_IDS, ...IMAGE_EDIT_OP_IDS, 'text_to_image'];
 
 /** 一个操作里，同类型同角色的输入槽（首帧、尾帧各自独立，不合并）。 */
 function slotGroups(operation) {
@@ -182,20 +200,6 @@ export function operationsOf(model, kind) {
 }
 
 /**
- * 根据图像卡槽中的素材数量自动推导生成方式标签（保持历史兼容）
- * 0 张图 -> 文生图
- * 1 张图 -> 图片编辑
- * 多张图 -> 多图参考
- * @param {number} imageCount
- * @returns {'文生图' | '图片编辑' | '多图参考'}
- */
-export function deriveImageOpModeFromCount(imageCount) {
-  if (!imageCount || imageCount <= 0) return '文生图';
-  if (imageCount === 1) return '图片编辑';
-  return '多图参考';
-}
-
-/**
  * 方案 C 双轨打点自适应机制：根据当前模型与已入槽素材自适应推导最佳契约操作。
  * @param {object} model
  * @param {'image' | 'video'} kind
@@ -257,24 +261,16 @@ export function deriveAdaptiveOperation(model, kind, buckets = {}, hintOpId = ''
   let targetId = null;
 
   if (kind === 'image') {
+    // 操作 id 词汇统一：参考类含 image_to_image / inpaint_outpaint，不得出现「页签认识、推导不认识」的分裂。
+    const refOp = operations.find((op) => isImageReferenceOpId(op.id));
+    const editOp = operations.find((op) => isImageEditOpId(op.id));
+    const textOp = operations.find((op) => op.id === 'text_to_image');
     if (imageCount === 0) {
-      targetId = 'text_to_image';
+      targetId = (textOp ?? refOp ?? editOp)?.id ?? null;
     } else if (imageCount === 1) {
-      if (operations.some((op) => op.id === 'image_edit')) {
-        targetId = 'image_edit';
-      } else if (operations.some((op) => op.id === 'multi_reference')) {
-        targetId = 'multi_reference';
-      } else {
-        targetId = 'text_to_image';
-      }
+      targetId = (editOp ?? refOp ?? textOp)?.id ?? null;
     } else {
-      if (operations.some((op) => op.id === 'multi_reference')) {
-        targetId = 'multi_reference';
-      } else if (operations.some((op) => op.id === 'image_edit')) {
-        targetId = 'image_edit';
-      } else {
-        targetId = 'text_to_image';
-      }
+      targetId = (refOp ?? editOp ?? textOp)?.id ?? null;
     }
   } else {
     // kind === 'video'
@@ -672,81 +668,4 @@ export function serializeReferenceAssets(assets, activeOperation) {
       return cleaned;
     })
     .filter((item) => Boolean(item.url || item.assetId));
-}
-
-/**
- * 模式/模型切换平滑裁剪与自愈纯函数：
- * 根据目标操作中各输入槽位的真实 max 和允许类型，对当前素材进行 FIFO 截断与类型校验。
- * 超出容量的素材自动丢弃，保留前 max 项，杜绝脏数据滞留或超额提交导致的后端校验报错。
- * @param {Record<string, Array<object>>} currentBuckets
- * @param {object} targetOperation
- * @param {'image' | 'video'} [targetKind]
- * @returns {{
- *   cleanBuckets: Record<string, Array<object>>,
- *   didPrune: boolean,
- *   prunedCount: number,
- *   keptCount: number
- * }}
- */
-export function pruneAssetsOnModeSwitch(currentBuckets = {}, targetOperation, targetKind = 'image') {
-  if (!currentBuckets || typeof currentBuckets !== 'object') {
-    return { cleanBuckets: {}, didPrune: false, prunedCount: 0, keptCount: 0 };
-  }
-  const cleanBuckets = {};
-  let prunedCount = 0;
-  let keptCount = 0;
-
-  // 获取目标操作定义的所有媒体输入槽位
-  const targetInputs = (targetOperation?.inputs || []).filter(
-    (input) => input && input.type !== 'text' && input.role !== 'prompt'
-  );
-
-  for (const [bKey, rawItems] of Object.entries(currentBuckets)) {
-    if (!Array.isArray(rawItems) || rawItems.length === 0) {
-      cleanBuckets[bKey] = [];
-      continue;
-    }
-
-    const slotKey = extractSlotKeyFromBucketKey(bKey).toLowerCase();
-    // 寻找匹配的目标 input 槽位
-    let matchedInput = targetInputs.find((inp) => {
-      const inpSlot = (inp.slot || '').toLowerCase();
-      const inpRole = (inp.role || '').toLowerCase();
-      return (
-        slotKey === inpSlot ||
-        slotKey.includes(inpRole) ||
-        (inpRole === 'reference' && (slotKey.includes('reference') || slotKey.includes('image'))) ||
-        (inpRole === 'first_frame' && slotKey.includes('first')) ||
-        (inpRole === 'last_frame' && slotKey.includes('last'))
-      );
-    });
-
-    // 容量上限：若命中目标 input 则取 input.max，未命中或无输入槽则默认 1
-    const allowedMax = (matchedInput && Number.isFinite(matchedInput.max))
-      ? Math.max(0, matchedInput.max)
-      : (targetInputs.length === 0 ? 1 : 1);
-
-    // 过滤不合规模态类型并截断
-    const validItems = rawItems.filter((item) => {
-      if (!item) return false;
-      const itemType = item.type || (targetKind === 'video' ? 'video' : 'image');
-      if (targetKind === 'image' && itemType === 'video') return false;
-      return true;
-    });
-
-    const keptItems = validItems.slice(0, allowedMax);
-    const prunedFromThisBucket = rawItems.length - keptItems.length;
-    if (prunedFromThisBucket > 0) {
-      prunedCount += prunedFromThisBucket;
-    }
-    keptCount += keptItems.length;
-    cleanBuckets[bKey] = keptItems;
-  }
-
-  return {
-    cleanBuckets,
-    didPrune: prunedCount > 0,
-    prunedCount,
-    keptCount,
-  };
 }
