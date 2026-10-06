@@ -217,9 +217,9 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
   // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线、15秒长片版以及口型同步专线版。
   // 靠分组自带的 wireModel 指向各自的上游独立型号；每个分组携带独立契约。
   describe('MiniMax H3 series as groups', () => {
-    it('declares all 6 lines, each with its own upstream model and contract', () => {
+    it('declares all 7 lines, each with its own upstream model and contract', () => {
       const groups = getModelChannelGroups('minimax-h3')
-      assert.equal(groups.length, 6)
+      assert.equal(groups.length, 7)
       const byId = new Map(groups.map((group) => [group.id, group]))
 
       const standard = byId.get('standard')
@@ -265,6 +265,12 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.deepEqual(lipsync.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
       assert.deepEqual(lipsync.constraints?.operations, ['digital_human'])
       assert.equal(lipsync.description, '专注音频驱动人像唇形对齐，完美匹配口播短剧、带货解说与虚拟角色对白场景。')
+
+      const comfyui = byId.get('comfyui')
+      assert.equal(comfyui.wireModel, 'minimax-h3')
+      assert.equal(comfyui.wireGroup, 'comfyui')
+      assert.equal(comfyui.pricing?.billingMode, 'per_task')
+      assert.deepEqual(comfyui.constraints?.operations, ['video_multi_ref'])
     })
 
     it('routes each line to its own upstream model', () => {
@@ -291,6 +297,10 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.deepEqual(
         resolveChannelPlan('minimax-h3', { allowedGroups: ['lipsync'] }).candidates,
         ['minimax-h3-lip-sync@default'],
+      )
+      assert.deepEqual(
+        resolveChannelPlan('minimax-h3', { allowedGroups: ['comfyui'] }).candidates,
+        ['minimax-h3@comfyui'],
       )
       // 显式点名分组同样走该线路自己的上游型号与分组
       assert.deepEqual(

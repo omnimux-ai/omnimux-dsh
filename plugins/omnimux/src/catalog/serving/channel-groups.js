@@ -443,6 +443,32 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "wireModel": "minimax-h3-lip-sync",
       "wireGroup": "default",
       "enabled": true
+    },
+    {
+      // ComfyUI 专属算力实例（U06，docs/comfyui-instance-api-spec.md）：
+      // 默认全能参考模式 video_multi_ref（9 图 / 3 视频 / 3 音频契约）。
+      // 由执行中枢 comfyui-instance.js 直连专属 GPU 实例，不走公共网关计费通道。
+      "id": "comfyui",
+      "label": "全能参考版",
+      "badge": "专属算力实例 · 9图3视频3音频参考",
+      "description": "专属 GPU 算力实例 ComfyUI U06 工作流（海螺 H3 换人与多模态参考生视频），默认全能参考模式，支持最多 9 张参考图、3 条参考视频、3 条参考音频。",
+      "pricing": {
+        "pointsEstimate": 4.2,
+        "discountRate": 1,
+        "billingMode": "per_task"
+      },
+      "sla": {
+        "stability24h": 97,
+        "avgWaitTimeSec": 180
+      },
+      "constraints": {
+        "operations": [
+          "video_multi_ref"
+        ]
+      },
+      "wireModel": "minimax-h3",
+      "wireGroup": "comfyui",
+      "enabled": true
     }
   ],
   "gemini-3.8-flash": [

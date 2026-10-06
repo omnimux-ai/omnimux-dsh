@@ -13,6 +13,7 @@ import {
 } from '../catalog/contract/submit-guard/index.js'
 import { probeMediaAssets } from './asset-probe.js'
 import { LOCAL_VIDS_MODEL_ID, LOCAL_VIDS_OPERATION_IDS, generateLocalVids } from './local-vids.js'
+import { generateComfyUiVideo, isComfyUiVideoRoute } from './comfyui-instance.js'
 import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
 import { generateCliSpeech } from './cli-speech.js'
@@ -730,6 +731,21 @@ export async function executeOmnimuxMedia(capability, input) {
     return generateLocalVids({
       route,
       guardPlan,
+      payload: mappedInput,
+      dest: input.dest,
+      signal: input.signal,
+      env: input.env,
+      fetcher: input.fetcher,
+      deadlineMs: input.deadlineMs,
+      pollIntervalMs: input.pollIntervalMs,
+    })
+  }
+
+  // ComfyUI 专属 GPU 算力实例（工作流 U06，docs/comfyui-instance-api-spec.md）：
+  // 画布/调用方以 minimax-h3@comfyui 显式选中「全能参考版」渠道组时才命中；
+  // 该实例自有多模态素材上传与任务队列，不依赖云端网关凭据，未配置地址时响亮失败。
+  if (isComfyUiVideoRoute({ capability, group: route.group, candidates: route.candidates, modelId: guardPlan.modelId })) {
+    return generateComfyUiVideo({
       payload: mappedInput,
       dest: input.dest,
       signal: input.signal,
