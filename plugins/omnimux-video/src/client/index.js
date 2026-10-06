@@ -1,13 +1,13 @@
-import { createElement } from 'react'
 import { NS, zh, en } from './locales.js'
 import { mountSidebarEntry, ENTRY_SELECTOR } from './sidebar-entry.js'
 import { GoogleVidsStage } from './GoogleVidsStage.jsx'
 import { GoogleVidsStudioPanel } from './GoogleVidsStudioPanel.jsx'
+import { mountGeneratePanel } from './host-mount.js'
 
 export const name = 'omnimux-video'
-export const inject = ['locale', 'slots', 'layout']
+export const inject = ['locale', 'layout']
 
-export { ENTRY_SELECTOR, GoogleVidsStage, GoogleVidsStudioPanel, mountSidebarEntry }
+export { ENTRY_SELECTOR, GoogleVidsStage, GoogleVidsStudioPanel, mountSidebarEntry, mountGeneratePanel }
 
 /**
  * OmniMux-Video client entry: registers locale, sidebar entry and the Google Vids conversation stage.
@@ -36,14 +36,17 @@ export function apply(ctx) {
     if (typeof unmount === 'function') disposers.push(unmount)
   }
 
-  if (ctx?.slots && typeof ctx.slots.inject === 'function') {
-    const uninjectSlot = ctx.slots.inject('main', () => ctx.slots.register({
-      name: 'main',
-      key: 'omnimux-vids',
-      order: 36,
-      locale: NS,
-    }, (props) => createElement(GoogleVidsStage, { ...props, layout: ctx?.layout })))
-    if (typeof uninjectSlot === 'function') disposers.push(uninjectSlot)
+  // The generation surface is no longer a product stage: it mounts itself into
+  // the Clip editor's left column host container (see host-mount.js).
+  const mountPanelSafely = () => {
+    if (typeof document === 'undefined') return () => {}
+    return mountGeneratePanel({ layout: ctx?.layout, component: GoogleVidsStage })
+  }
+  if (typeof ctx?.effect === 'function') {
+    ctx.effect(mountPanelSafely, 'omnimux-video: generation panel')
+  } else {
+    const unmountPanel = mountPanelSafely()
+    if (typeof unmountPanel === 'function') disposers.push(unmountPanel)
   }
 
   let workbenchBound = false

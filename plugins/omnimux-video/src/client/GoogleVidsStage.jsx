@@ -576,6 +576,10 @@ function releaseObjectUrl(asset) {
 export function GoogleVidsStage(props) {
   const [everOpened, setEverOpened] = useState(false)
   const open = typeof props?.visible === 'boolean' ? props.visible : true
+  // `panel` mounts the same surface inside the Clip editor's left column
+  // instead of as a standalone product stage; it stays open and drops the
+  // close affordance, which would only leave an empty editor column.
+  const isPanel = props?.variant === 'panel'
 
   useEffect(() => {
     if (open) {
@@ -881,17 +885,19 @@ export function GoogleVidsStage(props) {
     >
       {/* 3.1 顶部 Header */}
       <header className="gvids-header">
-        {/* 关闭按钮 */}
-        <button // exempt-ui01 Google Vids 舞台专属按钮
-          type="button"
-          onClick={handleCloseStage}
-          aria-label="关闭"
-          className="gvids-close-btn"
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        {/* 关闭按钮（面板形态下无独立可关语义，隐藏） */}
+        {!isPanel && (
+          <button // exempt-ui01 Google Vids 舞台专属按钮
+            type="button"
+            onClick={handleCloseStage}
+            aria-label="关闭"
+            className="gvids-close-btn"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
 
         {/* 标题与微标 */}
         <div className="gvids-title-cluster">
