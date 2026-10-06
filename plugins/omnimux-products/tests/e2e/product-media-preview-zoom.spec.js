@@ -110,7 +110,7 @@ describe('e2e · product media preview zoom & lightbox (AC-101 ~ AC-104)', () =>
     for (const c of classes) {
       assert.match(stylesJs, new RegExp(`\\.${c}\\b`), `styles.js must define .${c}`)
     }
-    assert.match(stylesJs, /var\(--dsw-alias-bg-elevated\)/, 'must use bg-elevated token')
+    assert.match(stylesJs, /var\(--dsw-alias-bg-elevated\b/, 'must use bg-elevated token')
     assert.match(stylesJs, /var\(--dsw-alias-bg-mask-1\)/, 'must use bg-mask-1 token')
     assert.match(stylesJs, /var\(--dsw-alias-border-l3\)/, 'must use border-l3 token')
   })

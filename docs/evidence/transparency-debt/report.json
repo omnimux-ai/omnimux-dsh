@@ -1,0 +1,171 @@
+{
+  "runId": "cff05da6-01f4-4b91-9a4b-75b0a7f55e79",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/transparency-debt",
+  "origin": "http://127.0.0.1:56312",
+  "appPort": 56312,
+  "cdpPort": 56316,
+  "startedAt": "2026-10-06T11:08:11.426Z",
+  "completedAt": "2026-10-06T11:08:27.224Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:56312",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:56312",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-L_HG6C3Lp6IiNfHKGJo6PADdYBRaV_DCxTLnVNT9S0M"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 56316
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 10,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 24
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 10
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": false
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:assets-menu-mounted",
+      "pass": true,
+      "detail": "尺寸菜单容器已挂进页面并按任务声明设色"
+    },
+    {
+      "name": "journey:assets-dimension-menu-opaque",
+      "pass": true,
+      "detail": "尺寸菜单计算底色 rgb(44, 44, 46)（alpha=1），backdrop=none"
+    },
+    {
+      "name": "journey:assets-dimension-menu-no-blur",
+      "pass": true,
+      "detail": "backdrop-filter=none"
+    },
+    {
+      "name": "journey:products-popover-mounted",
+      "pass": true,
+      "detail": "商品缩略图浮层容器已挂进页面并按任务声明设色"
+    },
+    {
+      "name": "journey:products-thumb-popover-opaque",
+      "pass": true,
+      "detail": "缩略图浮层计算底色 rgb(44, 44, 46)（alpha=1），backdrop=none"
+    },
+    {
+      "name": "journey:products-thumb-popover-no-blur",
+      "pass": true,
+      "detail": "backdrop-filter=none"
+    },
+    {
+      "name": "journey:both-surfaces-non-transparent",
+      "pass": true,
+      "detail": "菜单 alpha=1，浮层 alpha=1"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 105871
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/transparency-debt/.workbuddy/evidence/app-qa/cff05da6-01f4-4b91-9a4b-75b0a7f55e79/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 105871
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": true,
+    "clickedNewSession": false,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}

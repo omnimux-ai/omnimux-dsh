@@ -85,20 +85,8 @@ export function extractCssRuleBlocks(content) {
  * ②任何**新增**的同类写法一律致命拦截。清除条件：对应测试断言改为接受带回退的写法。
  */
 export const LEGACY_FLOATING_SURFACE_DEBT = [
-  {
-    file: 'plugins/omnimux-assets/src/client/styles.js',
-    selector: '.omnimux-assets-cloud-dimension-menu',
-    rules: ['NO_BARE_BG_ELEVATED'],
-    reason:
-      'CloudCategoryRow.test.js 断言 ASSETS_CSS 必须匹配裸写 /var\(--dsw-alias-bg-elevated\)/，改源码即变红',
-  },
-  {
-    file: 'plugins/omnimux-products/src/client/styles.js',
-    selector: '.omnimux-products-thumb-popover',
-    rules: ['NO_BARE_BG_ELEVATED', 'POPOVER_NO_BACKDROP_BLUR'],
-    reason:
-      'products 测试断言 PRODUCTS_CSS 必须匹配裸写 /var\(--dsw-alias-bg-elevated\)/（“must use bg-elevated token”）；底色既已失效，单独摘掉毛玻璃会让该浮层退化为完全透明，故一并保留待随断言一起修',
-  },
+  // 跨插件历史债务已于「浮层实体底色治理」任务清空：assets 尺寸菜单与 products 缩略图浮层
+  // 均已改为带实体回退的令牌，钉住旧写法的断言同步放开。此后任何浮层都必须自带实体底色。
 ]
 
 /** 该违规是否属于已登记的既有债务。 */

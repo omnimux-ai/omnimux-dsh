@@ -1151,7 +1151,7 @@ export const ASSETS_CSS = `
   padding: 4px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2));
   box-shadow: 0 12px 28px var(--dsw-alias-shadow-strong);
 }
 /* 面板里的选项是同一套胶囊文字的列表行：左标签右计数，选中反白。 */
@@ -1224,7 +1224,7 @@ export const ASSETS_CSS = `
   aspect-ratio: 9 / 16;
   height: auto;
   border-radius: 10px;
-  background-color: var(--dsw-alias-bg-elevated);
+  background-color: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2));
   animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite;
 }
 .omnimux-assets-cloud-skeleton-line {
@@ -1232,7 +1232,7 @@ export const ASSETS_CSS = `
   margin-top: 10px;
   width: 60%;
   border-radius: 6px;
-  background-color: var(--dsw-alias-bg-elevated);
+  background-color: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2));
   animation: omnimux-assets-skeleton-breathe 1.6s ease-in-out infinite;
 }
 @keyframes omnimux-assets-skeleton-breathe {
@@ -1255,7 +1255,7 @@ export const ASSETS_CSS = `
    这里是媒体展示面（等同缩略图底），不是界面控件色，故按 design.md 的特化场景豁免。 */
 .omnimux-assets-cloud-card--audio .omnimux-assets-cloud-thumb {
   height: 112px;
-  background-color: var(--dsw-alias-bg-elevated);
+  background-color: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2));
   background-image: linear-gradient(135deg, rgba(18, 22, 30, 0.94), rgba(10, 12, 17, 0.98)); /* exempt-ui03 音效卡片暗调底：媒体展示面，非控件色 */
 }
 .omnimux-assets-cloud-card--audio[data-theme="indigo"] .omnimux-assets-cloud-thumb {
@@ -1338,7 +1338,7 @@ export const ASSETS_CSS = `
 }
 .omnimux-assets-cloud-card .omnimux-assets-cloud-action {
   border-radius: 8px;
-  background: var(--dsw-alias-bg-elevated);
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2));
   border-color: var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-primary);
   opacity: 0;
@@ -1706,7 +1706,7 @@ export const ASSETS_CSS = `
   width: 36px !important;
   height: 36px !important;
   border-radius: 50% !important;
-  background: var(--dsw-alias-bg-elevated) !important;
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2)) !important;
   border: 1px solid var(--dsw-alias-border-l2) !important;
   color: var(--dsw-alias-label-primary) !important;
   z-index: 5;
