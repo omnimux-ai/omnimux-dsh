@@ -124,21 +124,3 @@ export function manualCooldownMinutesLeft(lastRefreshAt, nowMs = Date.now(), win
   if (!(left > 0)) return null
   return Math.max(1, Math.ceil(left / MS_PER_MINUTE))
 }
-
-/**
- * Minutes since the pool's newest refresh, or `null` when no account ever
- * refreshed — the freshness segment hides itself in that case. Never returns
- * `0`: a refresh that just happened reads `1`, matching「数据更新于
- * {n} 分钟前」whose最小值是 1（规格 B13）。
- * @param {Array<Record<string, any>> | null | undefined} accounts
- * @param {number} [nowMs]
- * @returns {number | null}
- */
-export function poolFreshnessMinutes(accounts, nowMs = Date.now()) {
-  const newest = (Array.isArray(accounts) ? accounts : [])
-    .map((account) => Date.parse(String(account?.last_refresh_at || '')))
-    .filter((value) => Number.isFinite(value))
-  if (newest.length === 0) return null
-  const elapsed = nowMs - Math.max(...newest)
-  return Math.max(1, Math.floor(elapsed / MS_PER_MINUTE))
-}

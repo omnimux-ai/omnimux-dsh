@@ -404,32 +404,6 @@ export const RIVAL_CSS = `
   color: var(--dsw-alias-label-secondary);
 }
 
-/* ── R3 监控池状态条（#3111） ──────────────────────────────────────── */
-.omnimux-rival-pool {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-}
-.omnimux-rival-pool-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 20px;
-}
-.omnimux-rival-pool-quota {
-  font-size: 12px;
-  color: var(--dsw-alias-label-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.omnimux-rival-pool-freshness {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary);
-}
-
 /* ── R4 刷新按钮 + 额度角标 + D4 原因弹层（#3111） ─────────────────── */
 .omnimux-rival-refresh-wrap {
   position: relative;

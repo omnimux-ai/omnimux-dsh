@@ -1,8 +1,5 @@
 /**
- * R3 监控池状态条与 R4「刷新」主按钮（#3111，规格 §2.2 R3/R4、§8.1）。
- *
- * 状态条只有一行：左侧今日剩余刷新额度，右侧数据新鲜度（无刷新事实时不
- * 渲染）。额度文案逐字取字典 `今日剩余刷新额度 {left}/{total}`。
+ * R4「刷新」主按钮（#3111，规格 §2.2 R4、§8.1）。
  *
  * `RivalRefreshButton` 是筛选行的主按钮：额度耗尽 / 筛选集内有「已停止」
  * 账号 / 手动刷新冷却期三者之一成立时置灰但可点，D4 原因弹层只报一条
@@ -35,34 +32,6 @@ export function refreshGate(gate) {
   const left = gate?.cooldownLeft
   if (typeof left === 'number' && left > 0) return { kind: 'cooldown' }
   return null
-}
-
-/**
- * @param {{
- *   t: (key: string) => string,
- *   quota: { left: number, total: number } | null,
- *   freshnessMinutes: number | null,
- * }} props
- */
-export function RivalPoolStatusBar({ t, quota, freshnessMinutes }) {
-  return (
-    <div className="omnimux-rival-pool" data-rival-pool="true">
-      <div className="omnimux-rival-pool-row is-meta">
-        {quota ? (
-          <span className="omnimux-rival-pool-quota">
-            {t('rivalAccounts.pool.quota')
-              .replace('{left}', String(quota.left))
-              .replace('{total}', String(quota.total))}
-          </span>
-        ) : null}
-        {typeof freshnessMinutes === 'number' && freshnessMinutes > 1 ? (
-          <span className="omnimux-rival-pool-freshness">
-            {t('rivalAccounts.pool.freshness').replace('{n}', String(freshnessMinutes))}
-          </span>
-        ) : null}
-      </div>
-    </div>
-  )
 }
 
 /**

@@ -284,9 +284,6 @@ async function settle(container, predicate) {
 }
 
 const poolBar = (container) => container.querySelector('[data-rival-pool="true"]')
-const poolRows = (container) => [...container.querySelectorAll('.omnimux-rival-pool-row')]
-const poolQuotaText = (container) => container.querySelector('.omnimux-rival-pool-quota')?.textContent.trim()
-const poolFreshness = (container) => container.querySelector('.omnimux-rival-pool-freshness')?.textContent.trim()
 const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
 const filterRows = (container) => [...container.querySelectorAll('.omnimux-rival-filter-row')]
 const rowById = (container, id) => filterRows(container).find((node) => node.getAttribute('data-account-id') === id)
@@ -297,60 +294,23 @@ after(() => {
   rmSync(cacheDir, { recursive: true, force: true })
 })
 
-describe('R3 监控池状态条（#3111）', () => {
-  it('只渲染一行：额度与新鲜度，账号统计行不存在', async () => {
+describe('R3 监控池状态条已移除', () => {
+  it('账号监控有账号时不再渲染额度/更新于状态条', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => poolQuotaText(mounted.container))
-      assert.equal(poolRows(mounted.container).length, 1, '状态条只剩一行')
-      assert.equal(
-        mounted.container.querySelector('.omnimux-rival-pool-summary'),
-        null,
-        '账号统计行不再渲染',
-      )
-      const barText = poolBar(mounted.container).textContent
-      assert.ok(!barText.includes('监控池'), '状态条不再出现账号统计文案')
-      assert.ok(!barText.includes('待重导入'), '状态条不再出现待重导入分段')
-      assert.equal(poolQuotaText(mounted.container), '今日剩余刷新额度 46/50')
-      assert.equal(poolFreshness(mounted.container), '数据更新于 3 分钟前')
+      await settle(mounted.container, () => refreshButton(mounted.container))
+      assert.equal(poolBar(mounted.container), null, '状态条整行不再渲染')
+      const text = mounted.container.textContent || ''
+      assert.ok(!text.includes('今日剩余刷新额度'), '页面不再出现额度文案')
+      assert.ok(!text.includes('数据更新于'), '页面不再出现新鲜度文案')
     } finally {
       await mounted.unmount()
       mounted.close()
     }
   })
 
-  it('额度在左、新鲜度在右，同行不换行', async () => {
-    const mounted = await mountStage()
-    try {
-      await mounted.openAccountTab()
-      await settle(mounted.container, () => poolBar(mounted.container))
-      const rows = poolRows(mounted.container)
-      assert.equal(rows.length, 1, '状态条只有一行')
-      assert.ok(rows[0].textContent.includes('今日剩余刷新额度'))
-      assert.ok(rows[0].textContent.includes('数据更新于'))
-    } finally {
-      await mounted.unmount()
-      mounted.close()
-    }
-  })
-
-  it('无任何刷新事实时新鲜度段不渲染', async () => {
-    const mounted = await mountStage({
-      accounts: ACCOUNTS.map((account) => ({ ...account, last_refresh_at: null })),
-    })
-    try {
-      await mounted.openAccountTab()
-      await settle(mounted.container, () => poolQuotaText(mounted.container))
-      assert.equal(poolFreshness(mounted.container), undefined)
-      assert.equal(mounted.container.querySelector('.omnimux-rival-pool-freshness'), null)
-    } finally {
-      await mounted.unmount()
-      mounted.close()
-    }
-  })
-
-  it('E1 空态（无监控账号）整条状态条不渲染（规格 B9）', async () => {
+  it('E1 空态（无监控账号）状态条与刷新按钮都不出现（规格 B9）', async () => {
     const mounted = await mountStage({ accounts: [] })
     try {
       await mounted.openAccountTab()
@@ -501,7 +461,7 @@ describe('R4 刷新置灰与 D4 原因（#3111）', () => {
     })
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => poolQuotaText(mounted.container))
+      await settle(mounted.container, () => refreshButton(mounted.container))
       await mounted.click(refreshButton(mounted.container))
       assert.ok(
         mounted.calls.some((call) => call.method === 'POST' && call.path.includes('/refresh-all')),
