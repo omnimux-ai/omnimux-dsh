@@ -34,8 +34,8 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   // 2026-09-15 #1861: gpt-image-2.5-flare and sunburst registered → 41.
   // 2026-09-18 #2256: index-tts (voice clone) registered → 42.
   // 2026-09-29 #2804: gemini-3.8-flash-tts registered → 43.
-  // 2026-10-06 #3167: google-vids-omni registered (local vids2api channel) → 45.
-  assert.equal(index.all().length, 45, `expected 45 models, got ${index.all().length}`);
+  // 2026-10-06 #3209: google-vids-omni retired with the local Google Vids channel → 44.
+  assert.equal(index.all().length, 44, `expected 44 models, got ${index.all().length}`);
   assert.ok(index.get('whisper-1'));
   assert.ok(index.get('nano-banana-2'));
   assert.ok(index.get('mj-v7'));
@@ -43,7 +43,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 41); // #3167 后续 google-vids-omni 三新模式真机取证后上架 +3 → 41（首轮文生视频上架后为 38，#3152 为 37）
+  assert.equal(index.listedOperations.length, 37); // #3209 google-vids-omni 下线 −4 → 37（#3152 为 37）
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   // #3063: indextts-2 voice-clone operation reaches listed through its own contract row.
   assert.ok(index.listedOperations.includes('indextts-2#voice_clone'));

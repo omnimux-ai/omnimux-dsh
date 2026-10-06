@@ -49,10 +49,9 @@ export function resolveExecutionPlan({ kind, req, current }) {
   const isCatalogOfficialModel = Boolean(effectiveModelId && findMediaModel(kind, effectiveModelId))
   const isOfficialModel = Boolean(effectiveModelId && (modelGroups.length > 0 || isCatalogOfficialModel))
   // Local, non-gateway media models run without remote auth or a verified
-  // cloud runtime: the local CLI speech model (#2801) and the loopback Google
-  // Vids channel (#3167). Both are reachable only by explicitly naming them.
-  const isCliLocalModel = (kind === 'audio' && effectiveModelId === 'gemini-3.8-flash-tts')
-    || (kind === 'video' && effectiveModelId === 'google-vids-omni')
+  // cloud runtime: the local CLI speech model (#2801). It is reachable only by
+  // explicitly naming it.
+  const isCliLocalModel = kind === 'audio' && effectiveModelId === 'gemini-3.8-flash-tts'
   const hasVerifiedRuntime = Boolean(runtime.textReady || runtime.mediaReady)
   const isFallbackOfficial = !targetChannel && current?.allowOfficialMediaFallback === true && hasVerifiedRuntime
   const explicitProvider = typeof req.provider === 'string' && req.provider.trim() ? req.provider.trim() : ''

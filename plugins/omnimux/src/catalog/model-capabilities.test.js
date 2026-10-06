@@ -27,8 +27,8 @@ test('MCC 契约门禁: 视频模型能力声明文件完备性（contract loade
   const videoModels = index.all().filter((m) => m.managementGroup === 'video');
   assert.ok(videoModels.length >= 6, '必须至少声明主流视频模型');
   // #1751：数字人 kling-avatar 整款撤架后，video 目录收敛为 11 款合约型号
-  // #3167：google-vids-omni（本机 vids2api 通道）加入 video 目录 → 12
-  assert.equal(videoModels.length, 12);
+  // #3209：google-vids-omni（本机 vids2api 通道）下线、契约行删除 → 11
+  assert.equal(videoModels.length, 11);
 
   for (const [modelId, expected] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     const model = index.get(modelId);
@@ -43,11 +43,12 @@ test('H2: 处置表 83 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(index.schemaVersion, '1.1');
 
   const doc = loadDispositions();
-  assert.equal(doc.dispositions.length, 83); // #3167 google-vids-omni 上架 → 83
+  assert.equal(doc.dispositions.length, 83); // #3209 google-vids-omni 转墓碑行，行数不变 → 83
   const byId = new Map(doc.dispositions.map((r) => [r.id, r]));
   const forbidden = forbiddenListedIds(doc);
-  // #1751：12 款撤架型号（unavailable）不再有 YAML 契约行，故 listed 门禁恒不命中。
-  assert.equal(forbidden.size, 12);
+  // #1751：撤架型号（unavailable）不再有 YAML 契约行，故 listed 门禁恒不命中。
+  // #3209：google-vids-omni 加入墓碑集合 → 13，且必须同样没有契约行。
+  assert.equal(forbidden.size, 13);
   for (const id of forbidden) assert.equal(index.get(id), undefined, id);
 
   for (const model of index.all()) {
@@ -66,7 +67,7 @@ test('H2: 处置表 83 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 41); // #3167 后续 google-vids-omni 三新模式真机取证后上架 +3 → 41（首轮文生视频上架后为 38，#3152 为 37）
+  assert.equal(index.listedOperations.length, 37); // #3209 google-vids-omni 下线 −4 → 37（#3152 为 37）
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {
@@ -92,7 +93,7 @@ test('H2: 处置表 83 行 + implementation-ready 集合与处置一致', () => 
   assert.equal(report.schemaVersion, '1.1');
   assert.equal(Object.prototype.hasOwnProperty.call(report, 'version'), false);
   assert.ok(report.listedOperations.length > 0);
-  assert.equal(report.dispositions.total, 83); // #3167 google-vids-omni 上架 → 83
+  assert.equal(report.dispositions.total, 83); // #3209 google-vids-omni 转墓碑行，行数不变 → 83
   assert.deepEqual(report.dispositions.unresolvedDispositions, []);
 });
 

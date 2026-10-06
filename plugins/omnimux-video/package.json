@@ -5,45 +5,22 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
   "files": [
     "src",
-    "lib/client.js",
     "scripts",
     "prompts",
     "cordis.patch.yml",
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/build-client.mjs",
-    "prepare": "npm run build",
     "test": "node --test 'src/**/*.test.js'"
-  },
-  "peerDependencies": {
-    "react": "^18.2.0 || ^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    }
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
-    },
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-runtime",
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-primitives"
-      ],
-      "platform": "web"
     }
-  },
-  "devDependencies": {
-    "esbuild": "^0.25.0"
   },
   "license": "MIT",
   "description": "Local ffmpeg video processing + depth map (Depth Anything V2) + hub-backed video understanding for OmniMux."

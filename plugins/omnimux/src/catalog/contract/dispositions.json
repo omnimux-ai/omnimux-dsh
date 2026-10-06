@@ -348,11 +348,9 @@
     },
     {
       "id": "google-vids-omni",
-      "disposition": "canonical",
-      "reason": "本机 vids2api 服务驱动的 Google Vids 无头文生视频通道（显式选择才走本机服务）",
-      "evidence": [
-        "docs/evidence/2026-10-06-model-google-vids-omni-text_to_video.md"
-      ]
+      "disposition": "unavailable",
+      "reason": "2026-10-06 #3209 移除：产品决定下线 Google Vids（谷歌 AI 视频生成，走本机 vids2api 无头通道）；提供该通道的 omnimux-video 插件一并摘除，中枢已无该通道实现，故撤销在售状态。历史依据如实保留：docs/evidence/2026-10-06-model-google-vids-omni-text_to_video.md 与 docs/evidence/2026-10-06-model-google-vids-omni-modes.md 记录的是移除前的 dated live 生成，不再是上架依据",
+      "notes": "墓碑行（同 veo-3.1-fast 口径）：YAML 契约行按设计删除，id 有意不在 runtime 宇宙内，禁止出现在对外模型列表"
     },
     {
       "id": "doubao-seed-audio-1.0",

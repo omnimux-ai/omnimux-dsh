@@ -25,7 +25,7 @@
  * 3. 其余所有插件（包括所有 Alpha 插件 accounts, publish, analytics, forms, automation 以及垂直插件 video, products, device, clip, social-harvest, apps 等）全部收敛至探索菜单，不再作为独立行渲染在侧边栏；
  * 4. 常驻探索行（rank 3.9，在项目上方），展开态显示图标与“探索”，折叠态显示居中图标；
  * 5. 浮动探索菜单（挂在 document.body，深色半透明圆角面板、细分割线、hover 态、点击激活对应 Workbench Tab 并关闭菜单、点击外部或按 Esc 关闭、防溢出几何定位）；
- * 6. 探索菜单项严格按照产品经理 Spec 白名单（11项：应用、视频剪辑、Google Vids、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标。
+ * 6. 探索菜单项严格按照产品经理 Spec 白名单（10项：应用、视频剪辑、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收），带纯矢量 SVG 图标。
  */
 
 import pluginLifecycle from '../plugin-lifecycle.json' with { type: 'json' }
@@ -247,8 +247,8 @@ const EXPLORE_STYLES = `
 `
 
 /**
- * 探索菜单项白名单（11项，逐字锁定）：
- * 应用、视频剪辑、Google Vids、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收
+ * 探索菜单项白名单（10项，逐字锁定）：
+ * 应用、视频剪辑、产品库、发布、账号、手机管理、数据分析、自动化、任务表单、社交采收
  * 统一带纯矢量 SVG 图标，严禁 Emoji，零冗余徽章、零副标题、零同义重复。
  */
 export const EXPLORE_MENU_ITEMS = [
@@ -278,16 +278,6 @@ export const EXPLORE_MENU_ITEMS = [
     label: '视频剪辑',
     tabId: 'omnimux-clip:studio',
     iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.75" y="3.25" width="12.5" height="9.5" rx="1.75"/><path d="M6.4 5.6v4.8L10.6 8 6.4 5.6Z" fill="currentColor" stroke="none"/></svg>',
-  },
-  {
-    id: 'google-vids',
-    pluginId: 'omnimux-video',
-    // 必须与 omnimux-video 侧栏注册的真实 row.id 一致，探索菜单才能委托到已挂载条目
-    entryId: 'omnimux-video-google-vids-entry',
-    label: 'Google Vids',
-    // Issue #2721: Vids 不再是 Workbench Tab，无 tabId 兜底；点击一律委托给已挂载条目，
-    // 由其先打开 Clip 右侧栏再 claim 中栏 Stage。
-    iconSvg: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2.5"/><path d="M6.5 5.5l4 2.5-4 2.5v-5z" fill="currentColor" stroke="none"/></svg>',
     dividerAfter: true,
   },
   {

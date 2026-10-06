@@ -2,7 +2,7 @@
  * sidebar-coordinator 回归测试（P0）与探索菜单收敛专项测试：
  *   1. 注册 below（rank 5）+ inline（kind:'inline'）后，连续 place() 不抛；
  *   2. 常驻探索行 rank 3.9，排在项目（rank 4）上方；
- *   3. 浮动菜单展示 11 项白名单，点击激活对应 Workbench Tab 并关闭菜单；
+ *   3. 浮动菜单展示 10 项白名单，点击激活对应 Workbench Tab 并关闭菜单；
  *   4. 收敛所有非常驻插件，不作为独立行挂入侧栏 DOM。
  */
 import { JSDOM } from 'jsdom'
@@ -489,7 +489,6 @@ test('非核心插件（video, products, device, clip, social-harvest, apps 等�
 
   const targets = [
     { id: 'omnimux-video-entry', rank: 7.5 },
-    { id: 'omnimux-google-vids-entry', rank: 7.5 },
     { id: 'omnimux-products-entry', rank: 8 },
     { id: 'omnimux-device-entry', rank: 3.5 },
     { id: 'omnimux-clip-entry', rank: 8.2 },
@@ -514,7 +513,7 @@ test('非核心插件（video, products, device, clip, social-harvest, apps 等�
   for (const { dispose } of disposers) dispose()
 })
 
-test('点击探索行弹出浮动菜单，包含 Spec 锁定 11 项白名单与纯矢量 SVG', async () => {
+test('点击探索行弹出浮动菜单，包含 Spec 锁定 10 项白名单与纯矢量 SVG', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL, closeExploreMenu } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
@@ -532,14 +531,14 @@ test('点击探索行弹出浮动菜单，包含 Spec 锁定 11 项白名单与�
   assert.equal(exploreBtn.getAttribute('aria-expanded'), 'true')
 
   const items = [...menu.querySelectorAll('.omnimux-explore-menu-item')]
-  assert.equal(items.length, 11, '菜单项必须严格为 11 项')
+  assert.equal(items.length, 10, '菜单项必须严格为 10 项')
 
   const expectedLabels = [
-    '应用', '视频剪辑', 'Google Vids', '产品库', '发布',
+    '应用', '视频剪辑', '产品库', '发布',
     '账号', '手机管理', '数据分析', '自动化', '任务表单', '社交采收',
   ]
   const actualLabels = items.map((el) => el.querySelector('.omnimux-explore-menu-item-label')?.textContent?.trim())
-  assert.deepEqual(actualLabels, expectedLabels, '11项文案必须逐字匹配白名单')
+  assert.deepEqual(actualLabels, expectedLabels, '10项文案必须逐字匹配白名单')
 
   // 严禁 Emoji（UI04 门禁硬规则），每项必须包含矢量 SVG
   for (const item of items) {
@@ -563,11 +562,11 @@ test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
 
-  let videoClicks = 0
-  const videoBtn = document.createElement('button')
-  videoBtn.addEventListener('click', () => { videoClicks += 1 })
-  // 必须用 omnimux-video 插件真实注册的 row.id；用旧 id 会让探索菜单 entryId 匹配不上而落到死 tabId 兜底
-  const disposeVideo = api.register({ id: 'omnimux-video-google-vids-entry', rank: 7.5, create: () => videoBtn })
+  let clipClicks = 0
+  const clipBtn = document.createElement('button')
+  clipBtn.addEventListener('click', () => { clipClicks += 1 })
+  // 必须用 omnimux-clip 插件真实注册的 row.id；用旧 id 会让探索菜单 entryId 匹配不上而落到 tabId 兜底
+  const disposeClip = api.register({ id: 'omnimux-clip-entry', rank: 8.2, create: () => clipBtn })
 
   let wbOpenedTab = null
   window.__omnimuxWorkbench = {
@@ -579,15 +578,14 @@ test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素
     const root = document.querySelector('[data-pane="sidebar"]')
     const exploreBtn = root.querySelector('[data-omnimux-explore-entry]')
 
-    // 1. 点击已注册的 Google Vids，委托触发 videoBtn.click()
+    // 1. 点击已注册的「视频剪辑」，委托触发 clipBtn.click()，不得回落到 open() 兜底
     exploreBtn.click()
     let menu = document.getElementById('omnimux-explore-menu')
-    const vidsItem = menu.querySelector('[data-explore-id="google-vids"]')
-    vidsItem.click()
-    assert.equal(videoClicks, 1, '优先触发已注册收敛元素的 click 处理器')
+    const clipItem = menu.querySelector('[data-explore-id="clip"]')
+    clipItem.click()
+    assert.equal(clipClicks, 1, '优先触发已注册收敛元素的 click 处理器')
     assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
-    // Issue #2721: Vids 不再有 Workbench Tab，探索菜单点击它绝不能走 open() 兜底
-    assert.equal(wbOpenedTab, null, 'Vids 无 tabId，点击不得回落到 window.__omnimuxWorkbench.open')
+    assert.equal(wbOpenedTab, null, '命中已注册条目时不得回落到 window.__omnimuxWorkbench.open')
 
     // 2. 点击未注册实际元素的「数据分析」，fallback 到 window.__omnimuxWorkbench.open
     exploreBtn.click()
@@ -598,7 +596,7 @@ test('点击菜单项激活对应 Tab 并关闭菜单，支持委托收敛元素
     assert.equal(wbOpenedTab?.title, '数据分析')
     assert.equal(document.getElementById('omnimux-explore-menu'), null, '选后关闭菜单')
   } finally {
-    disposeVideo()
+    disposeClip()
     delete window.__omnimuxWorkbench
   }
 })
@@ -758,14 +756,14 @@ test('computeExploreMenuPosition 用实测菜单尺寸定位：长菜单底边�
   )
 })
 
-test('探索菜单运行时注册接缝：未注册与内置 11 项完全一致，注册后追加且可注销', async () => {
+test('探索菜单运行时注册接缝：未注册与内置 10 项完全一致，注册后追加且可注销', async () => {
   setup()
   const { installSidebarGlobal, SIDEBAR_GLOBAL, EXPLORE_MENU_ITEMS, resolveExploreMenuItems } = await import('./sidebar-coordinator.js')
   installSidebarGlobal()
   const api = SIDEBAR_GLOBAL()
 
   // AC1：未注册时合并结果 === 内置白名单（同长度、同序、同 id）
-  assert.equal(EXPLORE_MENU_ITEMS.length, 11, '内置白名单 11 项')
+  assert.equal(EXPLORE_MENU_ITEMS.length, 10, '内置白名单 10 项')
   assert.deepEqual(
     resolveExploreMenuItems().map((item) => item.id),
     EXPLORE_MENU_ITEMS.map((item) => item.id),
@@ -789,7 +787,7 @@ test('探索菜单运行时注册接缝：未注册与内置 11 项完全一致�
   let menu = document.getElementById('omnimux-explore-menu')
   assert.ok(menu, '探索菜单已打开')
   const ids = [...menu.querySelectorAll('[data-explore-id]')].map((el) => el.dataset.exploreId)
-  assert.equal(ids.length, 12, '注册后共 12 项')
+  assert.equal(ids.length, 11, '注册后共 11 项')
   assert.equal(ids[ids.length - 1], 'fast-news-workbench', '注册项追加在末尾')
 
   const registered = menu.querySelector('[data-explore-id="fast-news-workbench"]')
@@ -808,7 +806,7 @@ test('探索菜单运行时注册接缝：未注册与内置 11 项完全一致�
   unregister()
   exploreBtn.click()
   menu = document.getElementById('omnimux-explore-menu')
-  assert.equal(menu.querySelectorAll('[data-explore-id]').length, 11, '注销后回到 11 项')
+  assert.equal(menu.querySelectorAll('[data-explore-id]').length, 10, '注销后回到 10 项')
   assert.equal(menu.querySelector('[data-explore-id="fast-news-workbench"]'), null, '注销项不再渲染')
   delete window.__omnimuxWorkbench
 })
@@ -839,11 +837,11 @@ test('探索菜单运行时注册接缝：action 优先于 tabId，非法形状�
     assert.equal(typeof dispose, 'function', '非法输入仍返回注销函数')
     dispose()
   }
-  assert.equal(resolveExploreMenuItems().length, 11, '非法输入不改变菜单集合')
+  assert.equal(resolveExploreMenuItems().length, 10, '非法输入不改变菜单集合')
 
   // AC5：与内置 id 冲突时不注册
   const conflict = api.registerExploreItem({ id: 'apps', label: '伪装应用', iconSvg: '<svg></svg>' })
-  assert.equal(resolveExploreMenuItems().length, 11, '内置 id 冲突项被忽略')
+  assert.equal(resolveExploreMenuItems().length, 10, '内置 id 冲突项被忽略')
   conflict()
 
   // AC5：同 id 二次注册覆盖，不产生重复项
@@ -880,7 +878,7 @@ test('探索菜单运行时注册接缝：action 优先于 tabId，非法形状�
 
   unregisterFirst()
   unregisterSecond()
-  assert.equal(resolveExploreMenuItems().length, 11, '全部注销后回到 11 项')
+  assert.equal(resolveExploreMenuItems().length, 10, '全部注销后回到 10 项')
   delete window.__omnimuxWorkbench
 })
 
