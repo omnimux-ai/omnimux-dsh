@@ -43,7 +43,7 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 38); // #3167 google-vids-omni text_to_video 上架 +1 → 38（#3152 为 37）
+  assert.equal(index.listedOperations.length, 41); // #3167 后续 google-vids-omni 三新模式真机取证后上架 +3 → 41（首轮文生视频上架后为 38，#3152 为 37）
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   // #3063: indextts-2 voice-clone operation reaches listed through its own contract row.
   assert.ok(index.listedOperations.includes('indextts-2#voice_clone'));

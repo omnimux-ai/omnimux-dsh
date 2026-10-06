@@ -107,7 +107,7 @@ test('coverage report: extra=0; missing only alias ids; listedOperations non-emp
   assert.ok(cov.contractIds.includes('seedasr-auc'));
   // kling-avatar was removed upstream on 2026-09-14 (#1751) — it is no longer a contract.
   assert.equal(cov.contractIds.includes('kling-avatar'), false);
-  assert.equal(cov.listedOperationCount, 38, 'H2 lists evidence-backed ops'); // #3167 google-vids-omni text_to_video 上架 +1 → 38（#3152 为 37）
+  assert.equal(cov.listedOperationCount, 41, 'H2 lists evidence-backed ops'); // #3167 后续 google-vids-omni 三新模式真机取证后上架 +3 → 41（首轮文生视频上架后为 38，#3152 为 37）
   assert.ok(cov.listedOperations.includes('google-vids-omni#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-5#text_to_video'));
   assert.ok(cov.listedOperations.includes('seedance-2-0#text_to_video'));
@@ -158,7 +158,7 @@ test('verifyContracts: audit ok; strict ok once 83 dispositions resolve', () => 
   assert.equal(strict.dispositions.total, 83); // #3167 google-vids-omni 上架 → 83
   assert.deepEqual(strict.dispositions.unresolvedDispositions, []);
   assert.deepEqual(strict.coverage.extraInYaml, []);
-  assert.equal(strict.listedOperations.length, 38); // #3167 google-vids-omni text_to_video 上架 +1 → 38（#3152 为 37）
+  assert.equal(strict.listedOperations.length, 41); // #3167 后续 google-vids-omni 三新模式真机取证后上架 +3 → 41（首轮文生视频上架后为 38，#3152 为 37）
   // forbidden-listed models never expose listed operations
   assert.equal(strict.dispositions.forbiddenListed.length, 12);
   for (const id of strict.dispositions.forbiddenListed) {

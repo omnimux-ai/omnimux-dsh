@@ -66,7 +66,7 @@ test('H2: 处置表 83 行 + implementation-ready 集合与处置一致', () => 
     }
   }
 
-  assert.equal(index.listedOperations.length, 38); // #3167 google-vids-omni text_to_video 上架 +1 → 38（#3152 为 37）
+  assert.equal(index.listedOperations.length, 41); // #3167 后续 google-vids-omni 三新模式真机取证后上架 +3 → 41（首轮文生视频上架后为 38，#3152 为 37）
   assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
   for (const [modelId, operations] of Object.entries(PHASE_ONE_VIDEO_OPERATIONS)) {
     for (const operation of operations) {
