@@ -44,10 +44,10 @@ export const RIVAL_TOKENS_CSS = `
   --dsw-specific-media-badge-bg: rgba(0,0,0,0.55); /* exempt-ui03 token definition */
   --dsw-specific-media-badge-bg-strong: rgba(0,0,0,0.60); /* exempt-ui03 token definition */
   /* #3166 M2：半透明中性媒体胶囊在亮封面上最劣对比度 1.63（均速@L95，
-     临界点约 65% 灰），亮主题已处理态同样受害（2.43/2.70）——比已裁定
-     不可交付的琥珀档 1.61 更差。改不透明 media-ink #111113：26 组合 ×
-     2 主题像素法实测 fail=0、最小 ratio_far 4.79（ratio_all 均值口径最小
-     3.46 系抗锯齿边缘计入，不作判据）；已处理态（dim 档）跟随同值。 */
+   * 临界点约 65% 灰），亮主题已处理态同样受害（2.43/2.70）——比已裁定
+   * 不可交付的琥珀档 1.61 更差。改不透明 media-ink（见下方 pill-bg 令牌）：
+   * 26 组合 × 2 主题像素法实测 fail=0、最小 ratio_far 4.79（ratio_all 均值
+   * 口径最小 3.46 系抗锯齿边缘计入，不作判据）；已处理态（dim 档）同值。 */
   --dsw-specific-media-pill-bg: #111113; /* exempt-ui03 token definition · #3166: was rgba(0,0,0,0.38) (1.63:1 fail on light covers) */
   --dsw-specific-media-pill-bg-dim: #111113; /* exempt-ui03 token definition · #3166: was rgba(0,0,0,0.30) (2.43:1 fail on light covers) */
   --dsw-specific-media-chip-bg: rgba(0,0,0,0.40); /* exempt-ui03 token definition */
