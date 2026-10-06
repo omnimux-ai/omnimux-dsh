@@ -148,7 +148,7 @@ function transpileWorkflow(rawDag, spec) {
         model: 'seedance-2.0',
         aspectRatio: '9:16',
         duration: 5,
-        mode: 'first_frame',
+        operation: 'first_frame',
       },
       upstreamBindings: {
         image: 'node-slot-product-image',

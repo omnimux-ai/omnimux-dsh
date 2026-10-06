@@ -1323,7 +1323,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "model": "seedance-2.0",
             "aspectRatio": "9:16",
             "duration": 5,
-            "mode": "first_frame",
+            "operation": "first_frame",
             "contentMode": "preset",
             "presetType": "ugc",
             "platforms": [
@@ -1524,6 +1524,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
           "model": "seedance-2.0",
           "params": {
             "model": "seedance-2.0",
+            "operation": "video_multi_ref",
             "aspectRatio": "9:16",
             "duration": 5,
             "platforms": [
@@ -1635,7 +1636,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "model": "seedance-2.0",
             "aspectRatio": "9:16",
             "duration": 5,
-            "mode": "first_frame"
+            "operation": "first_frame"
           },
           "upstreamBindings": {
             "image": "node-slot-product-image",
@@ -1745,7 +1746,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "model": "seedance-2.0",
             "aspectRatio": "9:16",
             "duration": 5,
-            "mode": "first_frame"
+            "operation": "first_frame"
           },
           "upstreamBindings": {
             "image": "node-slot-product-image",
@@ -1855,7 +1856,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "model": "seedance-2.0",
             "aspectRatio": "9:16",
             "duration": 5,
-            "mode": "first_frame"
+            "operation": "first_frame"
           },
           "upstreamBindings": {
             "image": "node-slot-product-image",
@@ -1965,7 +1966,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "model": "seedance-2.0",
             "aspectRatio": "9:16",
             "duration": 5,
-            "mode": "first_frame"
+            "operation": "first_frame"
           },
           "upstreamBindings": {
             "image": "node-slot-product-image",
@@ -2075,7 +2076,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "model": "seedance-2.0",
             "aspectRatio": "9:16",
             "duration": 5,
-            "mode": "first_frame"
+            "operation": "first_frame"
           },
           "upstreamBindings": {
             "image": "node-slot-product-image",
@@ -2185,7 +2186,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "model": "seedance-2.0",
             "aspectRatio": "9:16",
             "duration": 5,
-            "mode": "first_frame"
+            "operation": "first_frame"
           },
           "upstreamBindings": {
             "image": "node-slot-product-image",
@@ -2295,7 +2296,7 @@ export const PRESET_WORKFLOW_SNAPSHOTS: Record<string, any> = Object.freeze({
             "model": "seedance-2.0",
             "aspectRatio": "9:16",
             "duration": 5,
-            "mode": "first_frame"
+            "operation": "first_frame"
           },
           "upstreamBindings": {
             "image": "node-slot-product-image",

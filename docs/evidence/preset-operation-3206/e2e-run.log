@@ -1,0 +1,11 @@
+✔ E2E #3206: 随包内置应用模板的视频节点显式声明 operation，副本画布无槽位冲突且可提交 (150.860375ms)
+✔ E2E #3206: 反向对照——还原修复前的 params.mode 形状后，同一计算入口必须报出 slot_removed 冲突 (7.158333ms)
+✔ E2E #3206: 真实浏览器功能旅程——内置应用随包发布且探索页应用清单真实渲染 (19445.602584ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19656.40625
