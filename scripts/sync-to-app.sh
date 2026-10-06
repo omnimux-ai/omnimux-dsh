@@ -456,8 +456,14 @@ build_one() {
 
   case "$name" in
     omnimux|omnimux-accounts|omnimux-assets|omnimux-products|omnimux-inspiration|omnimux-clip|omnimux-analytics|omnimux-publish|omnimux-video)
-      echo "→ build $name (client)"
-      (cd "$dir" && node scripts/build-client.mjs)
+      # 插件可以没有客户端面（纯服务端插件）：没有构建脚本就跳过，口径与 build:all 的
+      # resolvePluginBuildTask 一致，不能凭空假设脚本存在。
+      if [ -f "$dir/scripts/build-client.mjs" ]; then
+        echo "→ build $name (client)"
+        (cd "$dir" && node scripts/build-client.mjs)
+      else
+        echo "· $name 无客户端构建脚本，跳过 build"
+      fi
       ;;
     omnimux-workflow)
       echo "→ build $name (host + client + canvas)"
