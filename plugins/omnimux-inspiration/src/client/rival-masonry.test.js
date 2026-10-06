@@ -10,6 +10,7 @@ import {
   RIVAL_MIN_CARD_HEIGHT,
   RIVAL_MIN_COL_WIDTH,
   rivalCardHeightPx,
+  rivalHasPill,
   rivalCardTypeOf,
   rivalColumnsForWidth,
   rivalMediaRatioOf,
@@ -353,6 +354,23 @@ describe('rival-masonry — rivalPlacements 最短列放置', () => {
 /* --------------------------- R4：估算层建模缺陷 --------------------------- */
 
 describe('rival-masonry — R4 胶囊行判据收敛（复审 ①）', () => {
+
+  it('velocity 结构化描述（vph/multiplier 无 text）→ 也判为可渲染胶囊（#3113 服务端事实形态）', () => {
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: { tier: 'watch', confidence: 'measured', vph: 320 } }), true,
+      'structured hourly descriptor renders a pill')
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: { tier: 'relative', confidence: 'relative', multiplier: 4.2 } }), true,
+      'relative tier renders a pill too')
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: { tier: 'watch' } }), false,
+      'a descriptor with no numbers reads as no pill')
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: {} }), false,
+      'an empty object still reserves nothing')
+    assert.equal(rivalHasPill({ card_type: 'text', velocity: null }), false)
+    const structured = rivalCardHeightPx({ card_type: 'text', title: TEXT_SHORT, velocity: { tier: 'watch', confidence: 'measured', vph: 320 } }, 220)
+    const baseline = rivalCardHeightPx({ card_type: 'text', title: TEXT_SHORT }, 220)
+    assert.ok(structured > baseline || (structured === baseline && rivalCardHeightPx({ card_type: 'text', title: TEXT_LONG, velocity: { tier: 'watch', vph: 320 } }, 220) > rivalCardHeightPx({ card_type: 'text', title: TEXT_LONG }, 220)),
+      'the predicate and the height estimator must agree on a structured pill')
+  })
+
   it('velocity 是对象但 text 为空 → 与无胶囊同高，不预留 36px', () => {
     // 判据必须与 VelocityPill 的早退（!text → null）一致；否则渲染层真值
     // velocity 时仍会渲染空 pill-row，卡片比估算高 36px，同列下方卡片重叠。
@@ -362,6 +380,22 @@ describe('rival-masonry — R4 胶囊行判据收敛（复审 ①）', () => {
       assert.equal(h, rivalCardHeightPx(bare, 220), `velocity=${JSON.stringify(velocity)} must not reserve the pill row`)
       assert.equal(h, 24 + 8 * 20 + 2, 'no 36px pill reservation')
     }
+    // 四轴必修 A：vph=0 / multiplier=0 的结构化描述曾让谓词判 true——渲染层
+    // 铺 28px 空行、估算层把 36px 空洞写进瀑布流高度预算；两族零值均不留位。
+    for (const velocity of [
+      { tier: 'average', confidence: 'average', vph: 0 },
+      { tier: 'watch', confidence: 'measured', vph: 0 },
+      { tier: 'average', confidence: 'average', vph: 199.9 },
+      { tier: 'relative', confidence: 'relative', multiplier: 0 },
+    ]) {
+      const h = rivalCardHeightPx({ ...bare, velocity }, 220)
+      assert.equal(h, 24 + 8 * 20 + 2,
+        `${JSON.stringify(velocity)} carries no renderable signal — no 36px reservation`)
+      assert.equal(rivalHasPill({ ...bare, velocity }), false,
+        `predicate agrees: ${JSON.stringify(velocity)} has no pill`)
+    }
+    assert.equal(rivalHasPill({ ...bare, velocity: { tier: 'average', confidence: 'average', vph: 200 } }), true,
+      'vph=200 is the inclusive floor of the rate family')
   })
 
   it('velocity.text 非空 → 预留 36px（正向钉住，防反向回归）', () => {

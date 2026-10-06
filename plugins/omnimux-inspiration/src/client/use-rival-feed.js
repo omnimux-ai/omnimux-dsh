@@ -86,7 +86,12 @@ export function useRivalFeed(options = {}) {
   const enabled = options.enabled !== false
   const query = typeof options.query === 'string' ? options.query : ''
   const platform = typeof options.platform === 'string' ? options.platform : ''
-  const sort = options.sort === 'views' ? 'views' : 'posted_at'
+  // UI 选项 → wire 值（规格 R4：四项排序、禁加第 5 项；recommended/latest
+  // 在实现层共享 posted_at——「综合推荐」的加权公式不在本票，时间序是它
+  // 当前唯一诚实的排法）。
+  const sort = options.sort === 'views' ? 'views'
+    : options.sort === 'velocity' ? 'velocity'
+    : 'posted_at'
   const accountsApi = options.api?.fetchRivalAccounts
   const feedApi = options.api?.fetchRivalFeed
   const refreshApi = options.api?.refreshRivalAccount

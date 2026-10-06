@@ -6,6 +6,88 @@
  */
 
 import { zh } from './locales.js'
+import { RIVAL_VELOCITY_TIER_WATCH } from '../rival/constants.js'
+
+/**
+ * §3.3 速率族渲染地板（views/hour）。与 Host 侧真源同值——
+ * `rival/constants.js` 的 RIVAL_VELOCITY_TIER_WATCH 是 A/B 两档生产门、
+ * 增速排序入桶门与本文件谓词/文案地板三处共享的常量；本文件不再
+ * 内联 `200` 字面量（修复轮 velocityRank 与谓词门错位即两处字面量
+ * 漂移所致）。
+ */
+const VELOCITY_RATE_FLOOR_VPH = RIVAL_VELOCITY_TIER_WATCH
+
+/** §3.7 增速数字口径：≥10k 取整 `23k`；1k–10k 保留一位 `1.2k`；<1k 整数 `320`。 */
+function velocityRate(vph) {
+  const n = Number(vph)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  if (n >= 10_000) return `${Math.round(n / 1000)}k`
+  if (n >= 1_000) return `${(Math.round(n / 100) / 10).toFixed(1)}k`
+  return String(Math.round(n))
+}
+
+/** 相对爆发倍数：一位小数、整数位不带 `.0`（4.2 / 9）。 */
+function velocityMultiplier(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  const one = Math.round(n * 10) / 10
+  return one === Math.floor(one) ? String(Math.floor(one)) : one.toFixed(1)
+}
+
+/**
+ * Whether a velocity descriptor carries a renderable signal — the single
+ * predicate the pill row, `VelocityPill` and the height estimator share.
+ *
+ * Lives beside `rivalVelocityText` so the two stay in the same numeric domain:
+ * the rate family signals only at `vph >= VELOCITY_RATE_FLOOR_VPH` (the §3.3
+ * floor both the A and B tiers honour — a `vph=0` average descriptor used to
+ * read true here while the copy rendered `''`, producing a 28px empty pill
+ * row), the relative family at `multiplier > 0`. Legacy `{text}` descriptors
+ * pass through.
+ * @param {unknown} velocity
+ * @returns {boolean}
+ */
+export function rivalVelocityHasSignal(velocity) {
+  if (!velocity || typeof velocity !== 'object') return false
+  if (String(velocity.text || '') !== '') return true
+  const tier = String(velocity.tier || '')
+  if (tier === 'relative') return Number.isFinite(velocity.multiplier) && velocity.multiplier > 0
+  return (tier === 'hot' || tier === 'rising' || tier === 'watch' || tier === 'average')
+    && Number.isFinite(velocity.vph) && velocity.vph >= VELOCITY_RATE_FLOOR_VPH
+}
+
+/**
+ * Pill text of a Host-emitted velocity descriptor (§3.3, #3113).
+ *
+ * The Host ships facts only (`tier` + `vph` or `multiplier`); every visible
+ * string goes through the dictionary keys so the zh/en layers keep the same
+ * shapes the spec locks. A legacy descriptor that carries `text` verbatim wins
+ * — the same passthrough the grid has always honoured. `''` means the pill
+ * does not render.
+ * @param {Record<string, any> | null | undefined} velocity
+ * @param {(key: string) => string} t
+ * @returns {string}
+ */
+export function rivalVelocityText(velocity, t) {
+  if (!velocity || typeof velocity !== 'object') return ''
+  const direct = String(velocity.text || '')
+  if (direct) return direct
+  const translate = typeof t === 'function' ? t : (key) => key
+  const tier = String(velocity.tier || '')
+  // 与 rivalVelocityHasSignal 同域：速率族低于渲染地板不产文案——media
+  // 支路的 VelocityPill 不经谓词直接消费本函数，空串才是「无可渲染信号」。
+  const rate = velocityRate(velocity.vph)
+  const rateRenderable = Number.isFinite(velocity.vph) && velocity.vph >= VELOCITY_RATE_FLOOR_VPH ? rate : ''
+  if (tier === 'hot') return rateRenderable ? `${translate('rivalFeed.pill.hot')} ${rateRenderable}/h` : ''
+  if (tier === 'rising') return rateRenderable ? `${translate('rivalFeed.pill.rising')} ${rateRenderable}/h` : ''
+  if (tier === 'watch') return rateRenderable ? `${translate('rivalFeed.pill.watch')} ${rateRenderable}/h` : ''
+  if (tier === 'average') return rateRenderable ? `${translate('rivalFeed.pill.average')} ${rateRenderable}/h` : ''
+  if (tier === 'relative') {
+    const multiplier = velocityMultiplier(velocity.multiplier)
+    return multiplier ? `${translate('rivalFeed.pill.relative')} ${multiplier}x` : ''
+  }
+  return ''
+}
 
 /**
  * The locale the components are rendering in.

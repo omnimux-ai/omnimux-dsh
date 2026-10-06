@@ -39,6 +39,7 @@ const cacheDir = join(here, '.esbuild-cache', 'section')
 
 /** aria-label the section puts on the platform dropdown (`filter.platform`). */
 const PLATFORM_LABEL = zh['filter.platform']
+const SORT_LABEL = zh['filter.sort']
 /** aria-label of the always-rendered type dropdown, used as a "mounted" probe. */
 const TYPE_LABEL = zh['filter.type']
 /** aria-label the section puts on the category dropdown (`filter.category`). */
@@ -396,6 +397,39 @@ describe('InspirationSection render gate — official 18-industry dropdown', () 
         false,
         `switching back must not reuse a hidden official id: ${JSON.stringify(cloudUrls)}`,
       )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+})
+
+
+describe('InspirationSection render gate — 账号监控 filter.sort（#3113）', () => {
+  it('renders the four spec sort options on the rivals tab', async () => {
+    const mounted = await mountSection(['tiktok'])
+    try {
+      // 切到账号监控 tab（Tabs shim 同步回写 onChange）
+      const tabBtn = mounted.container.querySelector('[data-tab="rivals"]')
+      assert.ok(tabBtn, 'the rivals tab must exist')
+      await act(async () => { tabBtn.click() })
+      const trigger = await mounted.waitFor(() =>
+        mounted.container.querySelector(`[aria-haspopup="listbox"][aria-label="${SORT_LABEL}"]`),
+        3000,
+      )
+      assert.ok(trigger, 'the rivals toolbar must render the filter.sort dropdown')
+      await act(async () => { trigger.click() })
+      const options = [...mounted.container.querySelectorAll('[role="option"]')]
+        .map((el) => el.textContent.trim())
+      assert.deepEqual(options, [
+        zh['rivalFeed.sort.recommended'],
+        zh['rivalFeed.sort.velocity'],
+        zh['rivalFeed.sort.latest'],
+        zh['rivalFeed.sort.views'],
+      ], 'spec R4: exactly four sort options, verbatim labels, no fifth item')
+      const selected = mounted.container.querySelector('[role="option"][aria-selected="true"]')
+      assert.equal(selected?.textContent.trim(), zh['rivalFeed.sort.recommended'],
+        'the default selection must be 综合推荐')
     } finally {
       await mounted.unmount()
       mounted.close()

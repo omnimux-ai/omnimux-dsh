@@ -170,6 +170,12 @@ export function toAccountFilterRow(account, state) {
 
 import { rivalCardTypeOf } from './rival-masonry.js'
 
+// 谓词住在 rival-format.js（与文案同域：速率族 vph>=200、相对族
+// multiplier>0）——此文件已 import rival-masonry.js，谓词若再被
+// rival-masonry.js 反向引用即成循环依赖（四轴 M6）。这里只做透传，
+// 让既有 import 路径不变。
+export { rivalVelocityHasSignal } from './rival-format.js'
+
 /**
  * §9.2 状态裁决：卡片只消费「状态种类」，文案由渲染层经 locale 字典输出。
  * Host 下发的 `state_label` 原样透传（展示权在 Host 数据，不翻译），

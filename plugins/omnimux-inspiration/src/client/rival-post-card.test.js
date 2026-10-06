@@ -514,3 +514,53 @@ describe('RivalPostCard — R4 胶囊行判据与估算层一致（复审 ①）
     }
   })
 })
+
+
+describe('RivalPostCard — 结构化增速胶囊（#3113 §3.3）', () => {
+  it('measured hot 结构描述渲染爆款前缀与 k/h，hot 档有趋势图标', async () => {
+    const mounted = await mountStage([
+      cardOf('short-video', { velocity: { tier: 'hot', confidence: 'measured', vph: 23000, samples_at: ['2026-10-06T16:00:00Z', '2026-10-06T18:00:00Z'] } }),
+    ])
+    try {
+      const pill = mounted.container.querySelector('.omnimux-rival-vpill')
+      assert.ok(pill, 'structured velocity must render a pill')
+      assert.equal(pill.textContent.trim(), '爆款 23k/h')
+      assert.ok(pill.classList.contains('hot'), 'hot tier keeps its colour class')
+      assert.ok(pill.querySelector('svg'), 'hot pill carries the trend icon')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('relative 档渲染「该号 {v}x」且无 /h、无热度前缀、无彩色档位', async () => {
+    const mounted = await mountStage([
+      cardOf('short-video', { velocity: { tier: 'relative', confidence: 'relative', multiplier: 4.2 } }),
+    ])
+    try {
+      const pill = mounted.container.querySelector('.omnimux-rival-vpill')
+      assert.ok(pill, 'relative tier must render its own pill')
+      const text = pill.textContent.trim()
+      assert.equal(text, '该号 4.2x')
+      assert.ok(!text.includes('/h'), 'relative must never carry an hourly unit')
+      assert.ok(!pill.classList.contains('hot') && !pill.classList.contains('rising'),
+        'relative tier never wears the hot/rising colour classes')
+      assert.ok(!pill.querySelector('svg'), 'relative pill carries no trend icon')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('结构化 average 档渲染「均速 {v}」，无趋势图标', async () => {
+    const mounted = await mountStage([
+      cardOf('short-video', { velocity: { tier: 'average', confidence: 'average', vph: 1800 } }),
+    ])
+    try {
+      const pill = mounted.container.querySelector('.omnimux-rival-vpill')
+      assert.equal(pill?.textContent.trim(), '均速 1.8k/h')
+      assert.ok(pill.classList.contains('average'), 'average pill takes the weakened style class')
+      assert.ok(!pill.querySelector('svg'), 'average pill carries no trend icon')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+})

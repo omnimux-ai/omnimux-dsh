@@ -51,18 +51,18 @@ const row = (id, account, extra) => ({
 })
 
 const POSTS = [
-  row('p1', ACCOUNTS.meow, { type: 'video', title: '猫咪饮水机实测：三只猫一周后还喝吗', cover_src: SVG_COVER(200, 720, 1280), velocity: { text: '爆款 23k/h', tier: 'hot' }, match: { label: '高契合' } }),
-  row('p2', ACCOUNTS.pet, { type: 'video', title: '2026 十款智能喂食器横评', cover_src: SVG_COVER(30, 1280, 720), velocity: { text: '爆款 42k/h', tier: 'hot' }, match: { label: '可参考' }, interacted_at: '2026-10-05T09:12:00.000Z' }),
-  row('p3', ACCOUNTS.home, { type: 'image', title: '小户型猫爬架一体收纳方案', cover_src: SVG_COVER(120, 800, 1000), ratio: 0.8, velocity: { text: '飙升 3.4k/h', tier: 'rising' }, match: { label: '高契合' } }),
-  row('p11', ACCOUNTS.higgs, { type: 'text', title: '做了三个月 AI 视效，最大的体会是：镜头语言比模型更重要。同一段提示词，加上「低机位缓推」和「焦点从前景移到人物」，成片质感直接上一个台阶。很多人卡在画面抖、主体漂，其实是没给运动加约束。下周把团队内部在用的 12 种运镜模板整理出来，评论区告诉我你最想先看哪一种。', velocity: { text: '飙升 2.6k/h', tier: 'rising' }, match: { label: '可参考' } }),
-  row('p4', ACCOUNTS.higgs, { type: 'video', title: '电影级推拉镜头拆解：同一个人物，三种运镜节奏，情绪完全不同。提示词和参数都放在视频最后。', cover_src: SVG_COVER(260, 1280, 720), in_library: true, inspiration_id: 'insp_1', velocity: { text: '飙升 1.2k/h', tier: 'rising' }, match: { label: '可参考' } }),
-  row('p5', ACCOUNTS.fur, { type: 'video', title: '生骨肉配比入门：一周备餐流程', cover_src: SVG_COVER(10, 720, 1280), velocity: { text: '均速 1.8k/h', tier: 'average' } }),
-  row('p6', ACCOUNTS.runway, { type: 'video', title: 'Gen-3 运动笔刷实战：沙、烟、水花三种粒子，笔刷方向决定轨迹，强度决定扩散范围。', cover_src: SVG_COVER(180, 1280, 720), velocity: { text: '观察 480/h', tier: 'watch' }, interacted_at: '2026-10-04T22:05:00.000Z' }),
-  row('p12', ACCOUNTS.runway, { type: 'text', title: '角色一致性终于不用靠抽卡了：一张参考图，跨镜头保持同一张脸。', velocity: { text: '观察 260/h', tier: 'watch' }, interacted_at: '2026-10-05T10:36:00.000Z' }),
-  row('p7', ACCOUNTS.ootd, { type: 'image', title: '通勤胶囊衣橱：7 件单品 21 套', cover_src: SVG_COVER(300, 900, 900), ratio: 1, velocity: { text: '观察 320/h', tier: 'watch' } }),
-  row('p8', ACCOUNTS.meow, { type: 'video', title: '半夜跑酷实录：监控视角全程', cover_src: SVG_COVER(50, 720, 1280), velocity: { text: '该号 4.2x', tier: 'relative' } }),
-  row('p9', ACCOUNTS.pet, { type: 'video', title: '猫砂盆除臭终极方案对比', cover_src: SVG_COVER(90, 1280, 720), in_library: true, inspiration_id: 'insp_2', velocity: { text: '飙升 6.8k/h', tier: 'rising' }, match: { label: '高契合' } }),
-  row('p10', ACCOUNTS.home, { type: 'image', title: '阳台改造：宠物友好绿植角', cover_src: SVG_COVER(150, 800, 1000), ratio: 0.8, velocity: { text: '爆款 21k/h', tier: 'hot' }, match: { label: '可参考' } }),
+  row('p1', ACCOUNTS.meow, { type: 'video', title: '猫咪饮水机实测：三只猫一周后还喝吗', cover_src: SVG_COVER(200, 720, 1280), velocity: { tier: 'hot', confidence: 'measured', vph: 23000, samples_at: ['2026-10-06T16:00:00.000Z','2026-10-06T18:00:00.000Z'] }, match: { label: '高契合' } }),
+  row('p2', ACCOUNTS.pet, { type: 'video', title: '2026 十款智能喂食器横评', cover_src: SVG_COVER(30, 1280, 720), velocity: { tier: 'hot', confidence: 'measured', vph: 42000, samples_at: ['2026-10-06T13:00:00.000Z','2026-10-06T15:00:00.000Z'] }, match: { label: '可参考' }, interacted_at: '2026-10-05T09:12:00.000Z' }),
+  row('p3', ACCOUNTS.home, { type: 'image', title: '小户型猫爬架一体收纳方案', cover_src: SVG_COVER(120, 800, 1000), ratio: 0.8, velocity: { tier: 'rising', confidence: 'measured', vph: 3400, samples_at: ['2026-10-06T14:00:00.000Z','2026-10-06T16:00:00.000Z'] }, match: { label: '高契合' } }),
+  row('p11', ACCOUNTS.higgs, { type: 'text', title: '做了三个月 AI 视效，最大的体会是：镜头语言比模型更重要。同一段提示词，加上「低机位缓推」和「焦点从前景移到人物」，成片质感直接上一个台阶。很多人卡在画面抖、主体漂，其实是没给运动加约束。下周把团队内部在用的 12 种运镜模板整理出来，评论区告诉我你最想先看哪一种。', velocity: { tier: 'rising', confidence: 'measured', vph: 2600, samples_at: ['2026-10-06T13:10:00.000Z','2026-10-06T14:45:00.000Z'] }, match: { label: '可参考' } }),
+  row('p4', ACCOUNTS.higgs, { type: 'video', title: '电影级推拉镜头拆解：同一个人物，三种运镜节奏，情绪完全不同。提示词和参数都放在视频最后。', cover_src: SVG_COVER(260, 1280, 720), in_library: true, inspiration_id: 'insp_1', velocity: { tier: 'rising', confidence: 'measured', vph: 1200, samples_at: ['2026-10-06T13:00:00.000Z','2026-10-06T15:00:00.000Z'] }, match: { label: '可参考' } }),
+  row('p5', ACCOUNTS.fur, { type: 'video', title: '生骨肉配比入门：一周备餐流程', cover_src: SVG_COVER(10, 720, 1280), velocity: { tier: 'average', confidence: 'average', vph: 1800 } }),
+  row('p6', ACCOUNTS.runway, { type: 'video', title: 'Gen-3 运动笔刷实战：沙、烟、水花三种粒子，笔刷方向决定轨迹，强度决定扩散范围。', cover_src: SVG_COVER(180, 1280, 720), velocity: { tier: 'watch', confidence: 'measured', vph: 480, samples_at: ['2026-10-06T08:40:00.000Z','2026-10-06T10:20:00.000Z'] }, interacted_at: '2026-10-04T22:05:00.000Z' }),
+  row('p12', ACCOUNTS.runway, { type: 'text', title: '角色一致性终于不用靠抽卡了：一张参考图，跨镜头保持同一张脸。', velocity: { tier: 'watch', confidence: 'measured', vph: 260, samples_at: ['2026-10-06T08:40:00.000Z','2026-10-06T10:20:00.000Z'] }, interacted_at: '2026-10-05T10:36:00.000Z' }),
+  row('p7', ACCOUNTS.ootd, { type: 'image', title: '通勤胶囊衣橱：7 件单品 21 套', cover_src: SVG_COVER(300, 900, 900), ratio: 1, velocity: { tier: 'watch', confidence: 'measured', vph: 320, samples_at: ['2026-10-06T08:40:00.000Z','2026-10-06T10:20:00.000Z'] } }),
+  row('p8', ACCOUNTS.meow, { type: 'video', title: '半夜跑酷实录：监控视角全程', cover_src: SVG_COVER(50, 720, 1280), velocity: { tier: 'relative', confidence: 'relative', multiplier: 4.2 } }),
+  row('p9', ACCOUNTS.pet, { type: 'video', title: '猫砂盆除臭终极方案对比', cover_src: SVG_COVER(90, 1280, 720), in_library: true, inspiration_id: 'insp_2', velocity: { tier: 'rising', confidence: 'measured', vph: 6800, samples_at: ['2026-10-06T14:00:00.000Z','2026-10-06T16:00:00.000Z'] }, match: { label: '高契合' } }),
+  row('p10', ACCOUNTS.home, { type: 'image', title: '阳台改造：宠物友好绿植角', cover_src: SVG_COVER(150, 800, 1000), ratio: 0.8, velocity: { tier: 'hot', confidence: 'measured', vph: 21000, samples_at: ['2026-10-06T15:00:00.000Z','2026-10-06T16:30:00.000Z'] }, match: { label: '可参考' } }),
 ]
 
 // R4: ?edge=1 appends the cases the §9.4 fixture cannot reach — English text

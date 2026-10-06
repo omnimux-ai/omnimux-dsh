@@ -14,12 +14,42 @@
  *   still remote) and the client must never assemble a URL out of a path.
  * - `row_id` is `${account_id}:${post_id}`; the same post id can exist on two
  *   accounts and a React key collision would drop a card silently.
+ * - `feedVelocity` is the only place the growth pill is derived (Issue #3113):
+ *   three credibility tiers — measured samples, publish-to-now average, then a
+ *   relative-to-account-median proxy. The Host emits facts only
+ *   (`tier`/`confidence`/`vph`/`multiplier`/`samples_at`); the pill text and
+ *   the tier prefixes are the client's dictionary keys, never Host strings.
  */
 
-import { RIVAL_MEDIA_DIR_NAME, RIVAL_MEDIA_URL_PREFIX } from './constants.js'
+import {
+  RIVAL_MEDIA_DIR_NAME,
+  RIVAL_MEDIA_URL_PREFIX,
+  RIVAL_VELOCITY_RANK_FAMILY,
+  RIVAL_VELOCITY_TIER_WATCH,
+} from './constants.js'
 
 /** Default page size of the feed endpoint. */
 export const FEED_PAGE_SIZE = 20
+
+/** 规格 §3.3：实测增速要求最早/最晚有效采样间隔 ≥1.5h。 */
+export const VELOCITY_MIN_SAMPLE_SPAN_MS = 1.5 * 3600_000
+/** 规格 §3.3 分级阈值：>20k 爆款 / ≥1k 飙升 / ≥200 观察 / <200 不渲染。 */
+export const VELOCITY_TIER_HOT = 20_000
+export const VELOCITY_TIER_RISING = 1_000
+/** §3.3 速率族下限：真源在 constants.js，此处 re-export 保持既有引用路径。 */
+export const VELOCITY_TIER_WATCH = RIVAL_VELOCITY_TIER_WATCH
+/** PRD §5.1 C 档：views ≥ 3× 账号历史播放中位数才记为「该号 Nx」。 */
+export const VELOCITY_RELATIVE_MIN_MULTIPLIER = 3
+
+/** @param {unknown} value */
+function buildViewsHistory(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((entry) => entry && typeof entry === 'object'
+      && typeof entry.at === 'string' && typeof entry.views === 'number'
+      && Number.isFinite(entry.views))
+    .map((entry) => ({ at: entry.at, views: entry.views }))
+}
 
 /** Upper bound of `page_size`, so one request cannot ask for the whole cache. */
 export const FEED_PAGE_SIZE_MAX = 60
@@ -112,6 +142,149 @@ export function feedViews(post) {
 }
 
 /**
+ * Median view count of an account's posts — the baseline of the relative
+ * confidence tier. `0` when nothing readable exists: a median of zero would
+ * make every post an infinite outlier, so callers treat it as "no baseline".
+ * @param {Array<Record<string, any>>} posts
+ * @returns {number}
+ */
+export function feedMedianViews(posts) {
+  const values = (Array.isArray(posts) ? posts : [])
+    .map((row) => row?.stats?.views)
+    .filter((value) => typeof value === 'number' && Number.isFinite(value) && value > 0)
+    .sort((a, b) => a - b)
+  if (values.length === 0) return 0
+  const middle = Math.floor(values.length / 2)
+  return values.length % 2 === 0 ? (values[middle - 1] + values[middle]) / 2 : values[middle]
+}
+
+/**
+ * Display tier of an hourly rate, or `''` when the rate is below the watch
+ * band (§3.3: `<200` renders no pill).
+ * @param {number} vph
+ * @returns {'' | 'hot' | 'rising' | 'watch'}
+ */
+function velocityTier(vph) {
+  if (vph > VELOCITY_TIER_HOT) return 'hot'
+  if (vph >= VELOCITY_TIER_RISING) return 'rising'
+  if (vph >= VELOCITY_TIER_WATCH) return 'watch'
+  return ''
+}
+
+/**
+ * The one growth signal a feed row carries (Issue #3113).
+ *
+ * Credibility degrades strictly: measured — publish-to-now average — relative
+ * to the account's own median. Every failure mode (short sample span, views
+ * rollback, unparseable or future timestamps, missing baseline) degrades to
+ * the next tier instead of throwing or fabricating a number; `null` means the
+ * card renders no pill and the velocity sort sinks it to the end. A rate that
+ * computes but lands below the §3.3 display floor is one of those failure
+ * modes too: the floor rejects the *rate family* only — it never vetoes the
+ * relative family, so a below-floor measured or average rate degrades onward
+ * instead of short-circuiting to `null` (PM 裁定甲案, #3113 修复轮 R3).
+ *
+ * The Host emits facts only. `samples_at` carries the two endpoints the
+ * measured tier was read from (oldest→newest); the detail dialog and the pill
+ * text are the client's to format.
+ * @param {Record<string, any>} post  a stored post row or a feed row
+ * @param {{ now?: string | number, medianViews?: number }} [opts]
+ * @returns {{ confidence: 'measured'|'average'|'relative', tier: string,
+ *   vph?: number, multiplier?: number, samples_at?: [string, string] } | null}
+ */
+export function feedVelocity(post, opts = {}) {
+  const now = typeof opts.now === 'number' && Number.isFinite(opts.now)
+    ? opts.now
+    : Date.parse(typeof opts.now === 'string' ? opts.now : '')
+  if (!Number.isFinite(now)) return null
+  const views = post?.stats?.views
+  const viewsReadable = typeof views === 'number' && Number.isFinite(views)
+
+  // A · measured: ≥2 valid samples spanning ≥1.5h, oldest→newest. A views
+  // rollback is a data anomaly, never a negative speed — degrade, don't sign
+  // it (and never crash on malformed history entries). A sample stamped in
+  // the future degrades the same way an unparseable one does: a clock lying
+  // forward is still a clock lying.
+  const samples = buildViewsHistory(post?.metrics?.views_history ?? post?.views_history)
+    .map((entry) => ({ at: Date.parse(entry.at), views: entry.views }))
+    .filter((entry) => Number.isFinite(entry.at) && entry.at <= now)
+    .sort((a, b) => a.at - b.at)
+  if (samples.length >= 2) {
+    const first = samples[0]
+    const last = samples[samples.length - 1]
+    const span = last.at - first.at
+    const delta = last.views - first.views
+    // 回滚检测必须逐对看相邻采样，不能只看首末：`1000 → 500 → 1500` 的
+    // 端点 delta 为正，只看端点会把一段含回滚的历史签成 measured，与上面
+    // 「degrade, don't sign it」的约定相反（R3-M-C）。
+    let hasRollback = false
+    for (let i = 1; i < samples.length; i += 1) {
+      if (samples[i].views < samples[i - 1].views) {
+        hasRollback = true
+        break
+      }
+    }
+    if (span >= VELOCITY_MIN_SAMPLE_SPAN_MS && delta >= 0 && !hasRollback) {
+      const vph = (delta / span) * 3600_000
+      const tier = velocityTier(vph)
+      if (tier) {
+        return {
+          confidence: 'measured',
+          tier,
+          vph: Math.round(vph * 10) / 10,
+          samples_at: [new Date(first.at).toISOString(), new Date(last.at).toISOString()],
+        }
+      }
+      // 低于 200/h 下限：「未产出速率族胶囊」是 A 档的一种失败形态——
+      // 不 return null，照 B 档同构继续下沉走 C 档判定（PM 裁定甲案：
+      // 200/h 是跨账号绝对门，只否决速率族，不兼任相对族否决器）。
+    }
+  }
+
+  // B · publish-to-now average. A post with an unreadable or future timestamp
+  // has no age to divide by — degrade, never divide by a negative or zero.
+  if (viewsReadable) {
+    const bornAt = Date.parse(text(post?.posted_at))
+    const ageFrom = Number.isFinite(bornAt) ? bornAt : Date.parse(text(post?.first_seen_at))
+    const ageMs = Number.isFinite(ageFrom) ? now - ageFrom : NaN
+    if (Number.isFinite(ageMs) && ageMs > 0) {
+      const vph = (views / ageMs) * 3600_000
+      // 「<200 不渲染」是对速率族胶囊存在性的规定，A/B 两档一致适用
+      // 且后果一致——落空即继续下沉（PM 终验 §7.3 + 本轮甲案裁定）：
+      // 均速 33/h 一类噪音胶囊既不构成「值得看」的判断，又会让唯一
+      // 带色信号贬值；规格给的兜底出口是仅指标行累计播放。
+      if (vph >= VELOCITY_TIER_WATCH) {
+        return {
+          confidence: 'average',
+          tier: 'average',
+          vph: Math.round(vph * 10) / 10,
+        }
+      }
+      // 低于下限不落 B 档，继续走 C 档判定——相对中位数的爆发信号
+      // 仍是合法信号（倍数族不受 200/h 约束）。
+    }
+
+    // C · relative to the account's own median. Only a real baseline and a
+    // real outlier qualify — a multiplier below the burst gate reads as no
+    // signal rather than as a small badge.
+    const median = typeof opts.medianViews === 'number' && Number.isFinite(opts.medianViews)
+      ? opts.medianViews
+      : 0
+    if (median > 0) {
+      const multiplier = views / median
+      if (multiplier >= VELOCITY_RELATIVE_MIN_MULTIPLIER) {
+        return {
+          confidence: 'relative',
+          tier: 'relative',
+          multiplier: Math.round(multiplier * 10) / 10,
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
  * Author block embedded in every feed row.
  *
  * Denormalized on purpose: the grid renders a card with zero follow-up lookups,
@@ -161,6 +334,9 @@ export function toFeedRow(post, account) {
     cover_src: coverSrc,
     cover_key: coverSrc,
     cover_url: text(post?.cover_url),
+    // 增速原料不随行下发：mergeAccountPosts 把原始 post 传给 feedVelocity
+    //（需要全账号中位数，计算在第二阶段），wire 行只带 velocity 结论——
+    // views_history/first_seen_at 透传只增 wire 体积（四轴 M5 死载荷）。
     source_platform: text(account?.platform),
     in_library: post?.in_library === true,
     inspiration_id: post?.inspiration_id ?? null,
@@ -205,6 +381,7 @@ export function matchesFeedQuery(post, account, query) {
  *   postsByAccount: Record<string, Array<Record<string, any>>>,
  *   q?: string,
  *   platform?: string,
+ *   now?: string | number,
  * }} input
  * @returns {Array<Record<string, any>>}
  */
@@ -232,12 +409,58 @@ export function mergeAccountPosts(input) {
     }
   }
 
-  // Pass 2 — build the rows, now that every count is final.
+  // Pass 2 — build the rows, now that every count is final. The velocity tier
+  // needs two things only this stage knows: the clock (`now`, injected so the
+  // feed never reads wall time inside a pure function) and each account's
+  // median views over ITS OWN cached list — the relative tier's baseline is
+  // the account's history, not the filtered slice.
+  //
+  // The median is computed ONCE per account, not once per row (R3-M-B):
+  // `feedMedianViews` sorts the account's whole cached list (up to
+  // POSTS_CACHE_MAX_ROWS), so calling it inside the map re-sorts the same
+  // history once for every visible row of that account — O(rows × posts log
+  // posts) per feed request, on a poll that fires every few seconds.
+  const now = input?.now ?? new Date().toISOString()
+  const medianByAccount = new Map()
+  for (const { account } of kept) {
+    if (medianByAccount.has(account.id)) continue
+    medianByAccount.set(account.id, feedMedianViews(postsByAccount[account.id]))
+  }
   return kept.map(({ post, account }) => {
     const row = toFeedRow(post, account)
     row.account = toAccountRef(account, counts.get(account.id) || 0)
+    row.velocity = feedVelocity(post, {
+      now,
+      medianViews: medianByAccount.get(account.id),
+    })
     return row
   })
+}
+
+/**
+ * Sortable position of a row's velocity descriptor as a [family, value]
+ * tuple (#3113, 分桶).
+ *
+ * 二元组族序而非数值基数：速率族（`vph >= VELOCITY_TIER_WATCH`，与
+ * 客户端谓词/文案共享的同一个 200/h 地板）恒先于相对族（任何
+ * `multiplier > 0`），两者恒先于无信号。上一版 `1e9 + vph` 的基数
+ * 方案给相对族 multiplier 设了一个隐含上界——multiplier > 1e9 + vph
+ * 时相对族会压过速率族；二元组比较把这个软边界换成硬保证。而更早
+ * 的 `vph > 0` 门则会把宿主不可产出的 (0,200) 手造描述排进速率族——
+ * 入桶门与渲染门必须同值。
+ * @param {Record<string, any>} row
+ * @returns {[number, number]} `[family, value]`; family per `RIVAL_VELOCITY_RANK_FAMILY`
+ */
+function velocityRankKey(row) {
+  const velocity = row?.velocity
+  if (!velocity || typeof velocity !== 'object') return [RIVAL_VELOCITY_RANK_FAMILY.none, 0]
+  if (Number.isFinite(velocity.vph) && velocity.vph >= VELOCITY_TIER_WATCH) {
+    return [RIVAL_VELOCITY_RANK_FAMILY.rate, velocity.vph]
+  }
+  if (Number.isFinite(velocity.multiplier) && velocity.multiplier > 0) {
+    return [RIVAL_VELOCITY_RANK_FAMILY.relative, velocity.multiplier]
+  }
+  return [RIVAL_VELOCITY_RANK_FAMILY.none, 0]
 }
 
 /**
@@ -251,11 +474,17 @@ export function mergeAccountPosts(input) {
 export function sortFeedRows(rows, sort = 'posted_at') {
   const list = Array.isArray(rows) ? rows.slice() : []
   const byViews = sort === 'views'
+  const byVelocity = sort === 'velocity'
   return list.sort((a, b) => {
     if (byViews) {
       const left = feedViews(a)
       const right = feedViews(b)
       if (right !== left) return right - left
+    } else if (byVelocity) {
+      const left = velocityRankKey(a)
+      const right = velocityRankKey(b)
+      if (right[0] !== left[0]) return right[0] - left[0]
+      if (right[1] !== left[1]) return right[1] - left[1]
     } else {
       const left = feedPostedAt(a)
       const right = feedPostedAt(b)

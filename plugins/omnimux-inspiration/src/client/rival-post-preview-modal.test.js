@@ -136,3 +136,134 @@ describe('RivalPostPreviewModal — 封面与发布时间（第五轮整改）',
     }
   })
 })
+
+
+describe('RivalPostPreviewModal — detail.velocityNote 增速口径说明（#3113）', () => {
+  it('实测档显示「基于 {t1} 与 {t2} 两次采样」，且每卡只显示对应口径那一句', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'measured', tier: 'hot', vph: 23000, samples_at: ['2026-10-06T16:00:00.000Z', '2026-10-06T18:00:00.000Z'] } })
+    const mounted = await mountModal(card)
+    try {
+      const note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+      assert.ok(note, 'measured velocity renders its caliber note')
+      const text = note.textContent || ''
+      assert.match(text, /两次采样/, `measured note must cite the two samples, got ${text}`)
+      assert.ok(!text.includes('平均速度'), 'one card shows only its own caliber sentence')
+      assert.ok(!text.includes('中位数'), 'one card shows only its own caliber sentence')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('均速档逐字「按发布至今的平均速度估算」', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'average', tier: 'average', vph: 1800 } })
+    const mounted = await mountModal(card)
+    try {
+      const note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+      assert.equal(note?.textContent.trim(), '按发布至今的平均速度估算')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('相对档逐字「与该账号历史播放中位数对比」', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'relative', tier: 'relative', multiplier: 4.2 } })
+    const mounted = await mountModal(card)
+    try {
+      const note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+      assert.equal(note?.textContent.trim(), '与该账号历史播放中位数对比')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('实测档 samples_at 任一端不可解析 → 不渲染口径行（不出现 -- 占位）', async () => {
+    // PM 终验建议项：「基于 -- 与 -- 两次采样」是无信息噪音，宁可不渲染。
+    for (const samples_at of [undefined, [], ['not-a-date', '2026-10-06T18:00:00.000Z'], [null, 'also-bad']]) {
+      const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'measured', tier: 'hot', vph: 23000, samples_at } })
+      const mounted = await mountModal(card)
+      try {
+        assert.equal(mounted.container.querySelector('.omnimux-rival-detail-velocity'), null,
+          `samples_at=${JSON.stringify(samples_at)} must not render the measured note`)
+      } finally {
+        await mounted.unmount()
+      }
+    }
+  })
+
+  it('无增速信号的卡不渲染口径行（不留空位）', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: null })
+    const mounted = await mountModal(card)
+    try {
+      assert.equal(mounted.container.querySelector('.omnimux-rival-detail-velocity'), null)
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('谓词判 false 的残留描述不渲染口径行（与卡胶囊同门，R3-Low-5）', async () => {
+    // 「无信号不留位」第三次门不统一：velocityNote 只看 confidence，于是
+    // 低于 200 地板的残留（vph: 0 / multiplier: 0 / vph: 199.9）在卡胶囊
+    // 已被抑制的情况下仍在弹窗落一行。门改为复用 rivalVelocityHasSignal。
+    //
+    // 断言一律放在 unmount() 之后：在该装置里，抛在 try 内的断言会打断
+    // jsdom/React 的清理，node 只报文件级 'test failed' 并挂到超时，红阶段
+    // 就不可见了（这正是上一轮两条测试看起来「跑过」实为从未完成的原因）。
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'average', tier: 'average', vph: 0 } })
+    const mounted = await mountModal(card)
+    let note
+    try {
+      note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+    } finally {
+      await mounted.unmount()
+    }
+    assert.equal(note, null, 'predicate-false descriptor must not render the note line at all')
+  })
+
+  it('低于 200 地板的 vph 同样不渲染（门与卡胶囊同值）', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'average', tier: 'average', vph: 199.9 } })
+    const mounted = await mountModal(card)
+    let note
+    try {
+      note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+    } finally {
+      await mounted.unmount()
+    }
+    assert.equal(note, null)
+  })
+
+  it('相对族 multiplier 为 0 同样不渲染（门与卡胶囊同域）', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'relative', tier: 'relative', multiplier: 0 } })
+    const mounted = await mountModal(card)
+    let note
+    try {
+      note = mounted.container.querySelector('.omnimux-rival-detail-velocity')
+    } finally {
+      await mounted.unmount()
+    }
+    assert.equal(note, null)
+  })
+
+  it('谓词判 true 的速率族口径行逐字不变（门不误伤）', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'average', tier: 'average', vph: 1800 } })
+    const mounted = await mountModal(card)
+    let text
+    try {
+      text = mounted.container.querySelector('.omnimux-rival-detail-velocity')?.textContent.trim()
+    } finally {
+      await mounted.unmount()
+    }
+    assert.equal(text, '按发布至今的平均速度估算')
+  })
+
+  it('谓词判 true 的相对族口径行逐字不变（门不误伤）', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'relative', tier: 'relative', multiplier: 4.2 } })
+    const mounted = await mountModal(card)
+    let text
+    try {
+      text = mounted.container.querySelector('.omnimux-rival-detail-velocity')?.textContent.trim()
+    } finally {
+      await mounted.unmount()
+    }
+    assert.equal(text, '与该账号历史播放中位数对比')
+  })
+})

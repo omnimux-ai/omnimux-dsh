@@ -48,6 +48,28 @@ export const MANUAL_COOLDOWN_MINUTES = Object.freeze({ single: 10, all: 30 })
 export const POSTS_CACHE_MAX_ROWS = 500
 export const VIEWS_HISTORY_MAX = 30
 
+/**
+ * §3.3 增速胶囊速率族下限（views/hour）：低于该值不产任何 `X/h` 胶囊
+ *（观察/均速同门）。跨模块共享口径：Host 侧 A/B 两档生产门
+ *（rival-feed.js 的 VELOCITY_TIER_WATCH）、增速排序的速率族入桶门
+ * 与客户端谓词/文案的渲染地板（rival-format.js）三处消费同一个
+ * 值——任何一处内联字面量都会让三层数值域漂移（四轴 M1 与修复轮
+ * velocityRank 门错位就是先例）。
+ */
+export const RIVAL_VELOCITY_TIER_WATCH = 200
+
+/**
+ * 增速排序的族序（业务语义，非实现细节）：速率族恒先于相对族，两者恒
+ * 先于无信号。放在这里而不是内联在比较器里，是因为它与上面那个 200/h
+ * 地板是同一份信号域的两个侧面——地板决定「算不算速率族」，族序决定
+ * 「速率族排在哪」；两处各自内联就会像 M1 与 velocityRank 那样漂移。
+ */
+export const RIVAL_VELOCITY_RANK_FAMILY = Object.freeze({
+  rate: 2,
+  relative: 1,
+  none: 0,
+})
+
 /** Scheduler cadence and freshness window. */
 export const TICK_INTERVAL_MS = 60_000
 export const CLIENT_POLL_INTERVAL_MS = 2_500

@@ -5,6 +5,8 @@ import {
   formatEngagementCount,
   formatRelativeTime,
   rivalLocaleOf,
+  rivalVelocityHasSignal,
+  rivalVelocityText,
 } from './rival-format.js'
 import { zh, en } from './locales.js'
 
@@ -141,5 +143,79 @@ describe('formatRelativeTime — locale', () => {
   it('returns -- for unreadable values in both locales', () => {
     assert.equal(formatRelativeTime('not-a-date', NOW, 'en'), '--')
     assert.equal(formatRelativeTime(null, NOW, 'en'), '--')
+  })
+})
+
+
+describe('rivalVelocityText — §3.3 三档逐字文案（#3113）', () => {
+  it('measured hot/rising/watch 按前缀与 k/h 格式渲染', () => {
+    assert.equal(rivalVelocityText({ tier: 'hot', confidence: 'measured', vph: 23000 }, tZh), '爆款 23k/h')
+    assert.equal(rivalVelocityText({ tier: 'rising', confidence: 'measured', vph: 1200 }, tZh), '飙升 1.2k/h')
+    assert.equal(rivalVelocityText({ tier: 'watch', confidence: 'measured', vph: 320 }, tZh), '观察 320/h')
+  })
+
+  it('average 档逐字「均速 {v}」：同样走数字格式、不带热度前缀', () => {
+    assert.equal(rivalVelocityText({ tier: 'average', confidence: 'average', vph: 1800 }, tZh), '均速 1.8k/h')
+    assert.equal(rivalVelocityText({ tier: 'average', confidence: 'average', vph: 220 }, tZh), '均速 220/h')
+  })
+
+  it('relative 档逐字「该号 {v}x」：严禁 /h 单位与爆款/飙升前缀（§3.3 红线）', () => {
+    const text = rivalVelocityText({ tier: 'relative', confidence: 'relative', multiplier: 4.2 }, tZh)
+    assert.equal(text, '该号 4.2x')
+    assert.ok(!text.includes('/h'), '相对档不得携带小时速率单位')
+    assert.ok(!text.includes('爆款') && !text.includes('飙升'), '相对档不得使用热度前缀')
+  })
+
+  it('legacy 直传 text 优先返回（向后兼容旧 row 形态）', () => {
+    assert.equal(rivalVelocityText({ text: '爆款 23k/h', tier: 'hot' }, tZh), '爆款 23k/h')
+  })
+
+  it('vph/multiplier 都读不出 → 空串（胶囊不渲染）', () => {
+    assert.equal(rivalVelocityText({ tier: 'hot' }, tZh), '')
+    assert.equal(rivalVelocityText(null, tZh), '')
+    assert.equal(rivalVelocityText({ tier: 'relative' }, tZh), '')
+  })
+
+  it('不变量：谓词 true ⇒ 文案非空（谓词与文案同域）', () => {
+    // 四轴必修 A：vph=0 之类输入曾让谓词判 true 而文案为 ''，渲染层据此
+    // 铺出 28px 空白胶囊行。谓词必须与文案共享同一数值域——速率族
+    // vph>=200（§3.3 下限），相对族 multiplier>0。
+    const rates = [0, 199.9, 200, 1_000, 20_000, 20_000.5]
+    for (const tier of ['hot', 'rising', 'watch', 'average']) {
+      for (const vph of rates) {
+        const velocity = { tier, confidence: tier === 'average' ? 'average' : 'measured', vph }
+        const signal = rivalVelocityHasSignal(velocity)
+        assert.equal(signal, vph >= 200, `tier=${tier} vph=${vph} must signal only at/above the 200 floor`)
+        if (signal) {
+          assert.ok(rivalVelocityText(velocity, tZh) !== '',
+            `predicate true must never pair with empty copy: tier=${tier} vph=${vph}`)
+        } else {
+          // 反向不变量：谓词判 false 的输入文案必须为空——本轮 必修四，
+          // 这正是上一轮「均速 180→220」测试域调整所依赖的性质（<200
+          // 的旧夹具在改后不再渲染），缺它则「谓词 false 但残留文案」的
+          // 回归无从拦截。
+          assert.equal(rivalVelocityText(velocity, tZh), '',
+            `predicate false must never pair with non-empty copy: tier=${tier} vph=${vph}`)
+        }
+      }
+    }
+    for (const multiplier of [0, 3]) {
+      const velocity = { tier: 'relative', confidence: 'relative', multiplier }
+      const signal = rivalVelocityHasSignal(velocity)
+      assert.equal(signal, multiplier > 0, `multiplier=${multiplier}`)
+      if (signal) assert.ok(rivalVelocityText(velocity, tZh) !== '')
+      else assert.equal(rivalVelocityText(velocity, tZh), '')
+    }
+    assert.equal(rivalVelocityHasSignal({ text: '飙升 2.6k/h' }), true, 'legacy text passthrough')
+    assert.equal(rivalVelocityHasSignal({ text: '' }), false)
+    assert.equal(rivalVelocityHasSignal(null), false)
+  })
+
+  it('en 字典键存在且形态同构（不带中文）', () => {
+    const text = rivalVelocityText({ tier: 'hot', confidence: 'measured', vph: 23000 }, tEn)
+    assert.ok(text.endsWith('23k/h'), `en hot tier keeps the rate suffix, got ${text}`)
+    assert.ok(!/[一-鿿]/.test(text), `en pill must not leak Chinese, got ${text}`)
+    const rel = rivalVelocityText({ tier: 'relative', confidence: 'relative', multiplier: 4.2 }, tEn)
+    assert.ok(rel.endsWith('4.2x') && !rel.includes('/h'), `en relative tier, got ${rel}`)
   })
 })

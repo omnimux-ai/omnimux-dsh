@@ -227,6 +227,213 @@
    "chromeWideShort": 1,
    "modelWideShort": 1,
    "glyphWidthPx14": 0
+  },
+  {
+   "name": "ex-qmark",
+   "codepoint": "U+003F",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 7.027
+  },
+  {
+   "name": "ex-arabic-q",
+   "codepoint": "U+061F",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 7.027
+  },
+  {
+   "name": "ex-small-q",
+   "codepoint": "U+FE56",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 14
+  },
+  {
+   "name": "hh-shy",
+   "codepoint": "U+00AD",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 0
+  },
+  {
+   "name": "hh-armenian",
+   "codepoint": "U+058A",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 6.453
+  },
+  {
+   "name": "hh-maqaf",
+   "codepoint": "U+05BE",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 6.057
+  },
+  {
+   "name": "hh-canadian",
+   "codepoint": "U+1400",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 8.579
+  },
+  {
+   "name": "hh-double",
+   "codepoint": "U+2E40",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 6.464
+  },
+  {
+   "name": "hh-oblique",
+   "codepoint": "U+2E17",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 7.448
+  },
+  {
+   "name": "b2-emdash",
+   "codepoint": "U+2014",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 12.086
+  },
+  {
+   "name": "ba-vline",
+   "codepoint": "U+007C",
+   "chromeLines": 1,
+   "modelLines": 1,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 3.473
+  },
+  {
+   "name": "ba-ethiopic",
+   "codepoint": "U+1361",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 4.704
+  },
+  {
+   "name": "ba-figure-dash",
+   "codepoint": "U+2012",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 8.668
+  },
+  {
+   "name": "ba-endash",
+   "codepoint": "U+2013",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 8.019
+  },
+  {
+   "name": "ba-hyphen-pt",
+   "codepoint": "U+2027",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 7
+  },
+  {
+   "name": "ex-bang",
+   "codepoint": "U+0021",
+   "chromeLines": 1,
+   "modelLines": 1,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 4.204
+  },
+  {
+   "name": "ff",
+   "codepoint": "U+000C",
+   "chromeLines": 1,
+   "modelLines": 1,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 3.787
+  },
+  {
+   "name": "ex-tiny-excl",
+   "codepoint": "U+FE57",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 14
+  },
+  {
+   "name": "qu-close-dq",
+   "codepoint": "U+201D",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 6.275
+  },
+  {
+   "name": "cl-ideographic-stop",
+   "codepoint": "U+FF61",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 7
+  },
+  {
+   "name": "cl-ideographic-comma",
+   "codepoint": "U+FF64",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 7
+  },
+  {
+   "name": "ns-halfwidth-mid",
+   "codepoint": "U+FF65",
+   "chromeLines": 5,
+   "modelLines": 5,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 7
+  },
+  {
+   "name": "b2-three-em",
+   "codepoint": "U+2E3B",
+   "chromeLines": 9,
+   "modelLines": 9,
+   "chromeWideShort": 1,
+   "modelWideShort": 1,
+   "glyphWidthPx14": 36.559
   }
  ]
 }

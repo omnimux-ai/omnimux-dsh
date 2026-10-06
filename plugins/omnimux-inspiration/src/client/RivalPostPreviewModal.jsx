@@ -11,7 +11,48 @@
 
 import { Button, ModalDialog } from 'dsh-ui-kit'
 import { hostMediaSrc } from './api.js'
-import { formatCount, formatDuration, formatRelativeTime, rivalLocaleOf } from './rival-format.js'
+import { formatCount, formatDuration, formatRelativeTime, rivalLocaleOf, rivalVelocityHasSignal } from './rival-format.js'
+
+/** `HH:mm` of an ISO timestamp for the measured-velocity note; '' when unreadable. */
+function hhmm(iso) {
+  const at = Date.parse(String(iso || ''))
+  if (!Number.isFinite(at)) return ''
+  const d = new Date(at)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/**
+ * `detail.velocityNote`（规格 §3.6 逐字三句，每卡只显示对应口径那一句）。
+ * `''` means no line renders — the same「no signal, no slot」rule the card
+ * pill follows.
+ * @param {Record<string, any>} row
+ * @param {(key: string) => string} t
+ * @returns {string}
+ */
+function velocityNote(row, t) {
+  const velocity = row?.velocity
+  if (!velocity || typeof velocity !== 'object') return ''
+  // 与卡胶囊同一道门。「无信号不留位」必须在卡与弹窗上是同一条规则：
+  // 谓词判 false 的残留描述（`vph: 0`、`multiplier: 0`、低于 200 地板的
+  // `vph: 199.9`）在缓存里仍带着 `confidence` 字符串，只看它就会在弹窗落
+  // 一行而卡上什么都不显示——同一份信号域各写各的门的第三次（R3-Low-5）。
+  // 复用共享谓词而不是再写一套判断，正是为了让这道门只有一处定义。
+  if (!rivalVelocityHasSignal(velocity)) return ''
+  const confidence = String(velocity.confidence || '')
+  if (confidence === 'measured') {
+    const [t1, t2] = Array.isArray(velocity.samples_at) ? velocity.samples_at : []
+    const [a, b] = [hhmm(t1), hhmm(t2)]
+    // 采样时间任一端不可读时不渲染该行——「基于 -- 与 -- 两次采样」是
+    // 无信息噪音（四轴 M9，同「无信号不留位」的口径）。
+    if (!a || !b) return ''
+    return String(t('rivalFeed.detail.velocityMeasured'))
+      .replace('{t1}', a)
+      .replace('{t2}', b)
+  }
+  if (confidence === 'average') return String(t('rivalFeed.detail.velocityAverage'))
+  if (confidence === 'relative') return String(t('rivalFeed.detail.velocityRelative'))
+  return ''
+}
 import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 
@@ -54,6 +95,7 @@ export function RivalPostPreviewModal(props) {
   const duration = formatDuration(row.duration)
   const author = String(account.nickname || account.handle || '')
   const handle = String(account.handle || '')
+  const vNote = velocityNote(row, t)
 
   return (
     <ModalDialog
@@ -110,6 +152,9 @@ export function RivalPostPreviewModal(props) {
               </span>
             ))}
           </div>
+          {vNote ? (
+            <p className="omnimux-rival-detail-velocity">{vNote}</p>
+          ) : null}
           {row.posted_at ? (
             <p className="omnimux-rival-detail-time">
               {t('rivalFeed.detail.postedAt')}
