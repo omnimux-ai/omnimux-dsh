@@ -137,11 +137,21 @@ const SlotWells: React.FC<SlotWellsProps> = (props) => {
 
   if (layout.slots.length === 0 && !props.records?.length) return null;
 
-  const pickRequest = (spec: SlotSpec): SlotPickRequest => ({
-    targetSlot: spec.slot,
-    acceptedTypes: [spec.type],
-    max: spec.max,
-  });
+  // Contract type stays the single-slot whitelist ('image'/'video'/'audio'/
+  // 'document'/'text'). Any other value (e.g. a role) widens to all media
+  // types so the picker still accepts files instead of rejecting every pick.
+  const pickRequest = (spec: SlotSpec): SlotPickRequest => {
+    const type = String(spec.type || '');
+    const acceptedTypes =
+      type === 'image' || type === 'video' || type === 'audio' || type === 'document' || type === 'text'
+        ? [type]
+        : ['image', 'video', 'audio', 'document', 'text'];
+    return {
+      targetSlot: spec.slot,
+      acceptedTypes,
+      max: spec.max,
+    };
+  };
 
   const renderWell = (model: WellModel, index: number) => {
     const { spec, occupant } = model;
