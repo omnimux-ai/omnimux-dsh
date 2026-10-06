@@ -22,12 +22,19 @@ console.error = (...args) => {
   consoleErrors.push(args.map((a) => (a && a.stack ? a.stack : String(a))).join(' '))
   nativeError(...args)
 }
-window.addEventListener('error', (e) => {
+const onWindowError = (e) => {
   consoleErrors.push(`window.error: ${e.message || String(e.error)}`)
-})
-window.addEventListener('unhandledrejection', (e) => {
+}
+const onUnhandledRejection = (e) => {
   consoleErrors.push(`unhandledrejection: ${String(e.reason)}`)
-})
+}
+window.addEventListener('error', onWindowError)
+window.addEventListener('unhandledrejection', onUnhandledRejection)
+/** Detach both capture listeners; exposed so the harness owns no global state after teardown. */
+window.__teardownErrorCapture = () => {
+  window.removeEventListener('error', onWindowError)
+  window.removeEventListener('unhandledrejection', onUnhandledRejection)
+}
 
 /* ---- real hub stylesheet ---- */
 const style = document.createElement('style')

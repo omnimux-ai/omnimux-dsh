@@ -47663,12 +47663,18 @@ console.error = (...args) => {
   consoleErrors.push(args.map((a2) => a2 && a2.stack ? a2.stack : String(a2)).join(" "));
   nativeError(...args);
 };
-window.addEventListener("error", (e) => {
+var onWindowError = (e) => {
   consoleErrors.push(`window.error: ${e.message || String(e.error)}`);
-});
-window.addEventListener("unhandledrejection", (e) => {
+};
+var onUnhandledRejection = (e) => {
   consoleErrors.push(`unhandledrejection: ${String(e.reason)}`);
-});
+};
+window.addEventListener("error", onWindowError);
+window.addEventListener("unhandledrejection", onUnhandledRejection);
+window.__teardownErrorCapture = () => {
+  window.removeEventListener("error", onWindowError);
+  window.removeEventListener("unhandledrejection", onUnhandledRejection);
+};
 var style = document.createElement("style");
 style.setAttribute("data-harness", "hub-css");
 style.textContent = HUB_CSS;
