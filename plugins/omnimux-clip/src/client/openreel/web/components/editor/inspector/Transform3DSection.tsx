@@ -4,6 +4,7 @@ import { ToolcraftSelectControl as Selector } from "@openreel/ui";
 import { ToolcraftText as Text } from "@openreel/ui";
 import { PropertySlider } from "./shell/PropertySlider";
 import { useProjectStore } from "../../../stores/project-store";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface Transform3DSectionProps {
   clipId: string;
@@ -12,6 +13,7 @@ interface Transform3DSectionProps {
 export const Transform3DSection: React.FC<Transform3DSectionProps> = ({
   clipId,
 }) => {
+  const t = useClipT();
   const {
     getClip,
     getTextClip,
@@ -88,7 +90,7 @@ export const Transform3DSection: React.FC<Transform3DSectionProps> = ({
   if (!clip) {
     return (
       <Text type="supporting" color="secondary" className="py-8 text-center text-xs">
-        No clip selected
+        {t("No clip selected")}
       </Text>
     );
   }
@@ -96,7 +98,7 @@ export const Transform3DSection: React.FC<Transform3DSectionProps> = ({
   return (
     <div className="space-y-3">
       <PropertySlider
-        label="Rotation X"
+        label={t("Rotation X")}
         value={rotate3d.x}
         onChange={handleRotateXChange}
         min={-360}
@@ -106,7 +108,7 @@ export const Transform3DSection: React.FC<Transform3DSectionProps> = ({
       />
 
       <PropertySlider
-        label="Rotation Y"
+        label={t("Rotation Y")}
         value={rotate3d.y}
         onChange={handleRotateYChange}
         min={-360}
@@ -116,7 +118,7 @@ export const Transform3DSection: React.FC<Transform3DSectionProps> = ({
       />
 
       <PropertySlider
-        label="Rotation Z"
+        label={t("Rotation Z")}
         value={rotate3d.z}
         onChange={handleRotateZChange}
         min={-360}
@@ -126,7 +128,7 @@ export const Transform3DSection: React.FC<Transform3DSectionProps> = ({
       />
 
       <PropertySlider
-        label="Perspective"
+        label={t("Perspective")}
         value={perspective}
         onChange={handlePerspectiveChange}
         min={100}
@@ -137,7 +139,7 @@ export const Transform3DSection: React.FC<Transform3DSectionProps> = ({
 
       <div className="space-y-1">
         <Selector
-          label="Transform Style"
+          label={t("Transform Style")}
           size="sm"
           width="100%"
           value={transformStyle}

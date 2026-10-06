@@ -23,8 +23,10 @@ import { ModelSelector } from "./ModelSelector";
 import { EnhancedTextPreview } from "./EnhancedTextPreview";
 import { AudioResult } from "./AudioResult";
 import { TTS_PROVIDERS } from "./tts-constants";
+import { useClipT } from "../../../../../i18n/index.js";
 
 export const TextToSpeechPanel: React.FC = () => {
+  const t = useClipT();
   const {
     defaultTtsProvider,
     defaultLlmProvider,
@@ -144,15 +146,15 @@ export const TextToSpeechPanel: React.FC = () => {
           <Mic size={16} className="text-primary" aria-hidden />
           <div className="flex flex-col gap-0.5 min-w-0">
             <Text type="body" color="primary" weight="bold" display="block" className="text-[11px]">
-              Text to Speech
+              {t("Text to Speech")}
             </Text>
             <Text type="supporting" color="secondary" display="block" className="text-[9px]">
-              AI voice generation
+              {t("AI voice generation")}
             </Text>
           </div>
         </div>
         <IconButton
-          label="API Key Settings"
+          label={t("API Key Settings")}
           icon={<Settings size={14} aria-hidden />}
           variant="ghost"
           size="sm"
@@ -163,7 +165,7 @@ export const TextToSpeechPanel: React.FC = () => {
 
       <div className="space-y-2">
         <Text type="supporting" color="secondary" weight="bold" className="block text-[10px]">
-          Provider
+          {t("Provider")}
         </Text>
         <div className="flex gap-1.5">
           {TTS_PROVIDERS.map((p) => {
@@ -195,13 +197,13 @@ export const TextToSpeechPanel: React.FC = () => {
 
       <div className="space-y-2">
         <ToolcraftTextAreaControl
-          label="Text"
+          label={t("Text")}
           value={text}
           onChange={(value) => {
             setText(value);
             setEnhancedPreview(null);
           }}
-          placeholder="Enter the text you want to convert to speech..."
+          placeholder={t("Enter the text you want to convert to speech...")}
           maxLength={maxChars}
           rows={4}
           width="100%"
@@ -210,7 +212,7 @@ export const TextToSpeechPanel: React.FC = () => {
           {provider === "elevenlabs" ? (
             <div className="flex items-center gap-1.5">
               <MockToggle
-                ariaLabel="Enhance for TTS"
+                ariaLabel={t("Enhance for TTS")}
                 checked={enhanceText}
                 onChange={setEnhanceText}
               />
@@ -221,7 +223,7 @@ export const TextToSpeechPanel: React.FC = () => {
                 onClick={() => setEnhanceText(!enhanceText)}
               >
                 <Sparkles size={10} className={enhanceText ? "text-amber-400" : ""} aria-hidden />
-                Enhance for TTS
+                {t("Enhance for TTS")}
               </Text>
             </div>
           ) : (
@@ -255,7 +257,7 @@ export const TextToSpeechPanel: React.FC = () => {
       {provider === "piper" && (
         <div className="space-y-2">
           <PropertySlider
-            label="Speed"
+            label={t("Speed")}
             min={0.5}
             max={2.0}
             step={0.1}
@@ -282,7 +284,7 @@ export const TextToSpeechPanel: React.FC = () => {
           </Text>
           {(error.includes("API key") || error.includes("Session locked") || error.includes("Unlock")) && (
             <Button
-              label="Open Settings"
+              label={t("Open Settings")}
               variant="secondary"
               size="sm"
               onClick={() => openSettings("api-keys")}

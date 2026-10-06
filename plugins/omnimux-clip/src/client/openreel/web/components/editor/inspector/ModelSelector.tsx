@@ -6,6 +6,7 @@ import { ToolcraftText as Text } from "@openreel/ui";
 import { Star, StarOff, ChevronDown } from "@/icons/lucide-compat";
 import { useSettingsStore } from "../../../stores/settings-store";
 import type { ElevenLabsModel } from "./tts-types";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface ModelSelectorProps {
   allModels: ElevenLabsModel[];
@@ -16,6 +17,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   allModels,
   isLoadingModels,
 }) => {
+  const t = useClipT();
   const {
     elevenLabsModel,
     setElevenLabsModel,
@@ -56,7 +58,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   return (
     <div className="space-y-2">
       <Text type="supporting" color="secondary" className="text-[10px] font-medium">
-        Model
+        {t("Model")}
       </Text>
 
       {favoriteModels.length > 0 && (
@@ -93,7 +95,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
       <div className="flex items-center gap-2">
         <ClickableCard
-          label="Toggle model list"
+          label={t("Toggle model list")}
           className="flex-1 h-8 px-2 rounded-lg border border-border bg-bg-2 text-[10px] text-fg flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors"
           onClick={() => setShowAllModels(!showAllModels)}
         >

@@ -5,7 +5,11 @@ import { extname, join, relative } from 'node:path'
 const JS_SYNTAX_EXTENSIONS = new Set(['.js', '.mjs', '.cjs'])
 const TEST_RE = /(?:^|[./\\])[^/\\]*\.(?:test|spec)\.[^/\\]+$/
 const RAW_COLOR_RE = /#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+/g
-const VENDOR_ENGINE_RE = /(?:^|[\\/])engine[\\/]openreel(?:[\\/]|$)/
+// Vendored OpenReel 微应用根路径，真源 docs/contracts/openreel-vendor-contract.md §3「Vendor 根」：
+// 现行 vendor 根 plugins/omnimux-clip/src/client/openreel/ 与退役过渡路径
+// src/client/engine/openreel/ 都整树豁免。--all 模式另有 SKIP_DIRS('openreel') 提前跳过；
+// --diff 模式的文件来自 git、不经过 SKIP_DIRS，本正则就是该模式下唯一的豁免入口。
+const VENDOR_ENGINE_RE = /(?:^|[\\/])(?:src[\\/]client[\\/]openreel|engine[\\/]openreel)(?:[\\/]|$)/
 const CONTENT_PRESET_RE = /(?:timelineTypes\.js|pixel-avatar-constants\.js)$/
 const JSX_TAG_RE = /<[A-Za-z][A-Za-z0-9._-]*(?:\s+[^>]*)?(?:\/>|>[^<]*<\/[A-Za-z][A-Za-z0-9._-]*>)/
 const JSX_RETURN_RE = /return\s+<[A-Za-z][A-Za-z0-9._-]*/

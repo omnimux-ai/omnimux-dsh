@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -13,8 +14,17 @@ import {
   isExtensionManifestPath,
   securityFindings,
   securityViolations,
+  staticScan,
 } from './auto-qa-scan.mjs'
-import { findFiles, isExtensionManifestFile, parseArgs, runGate } from './auto-qa-gate.mjs'
+import {
+  changedFilesFromGit,
+  createReport,
+  findFiles,
+  isExtensionManifestFile,
+  isScannableSourceFile,
+  parseArgs,
+  runGate,
+} from './auto-qa-gate.mjs'
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const CHROME_MANIFEST = 'plugins/omnimux-browser/extension/manifest.json'
@@ -246,6 +256,115 @@ describe('auto-qa-scan：事故反证与全仓回归', () => {
       const files = findFiles(dir)
       assert.deepEqual(files.map((f) => relative(dir, f)), [relative(dir, productFile)],
         'docs/specs 下的文件必须被忽略，plugins 下的 specs 源码必须保留')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('auto-qa-scan：vendored OpenReel 路径豁免（契约真源 docs/contracts/openreel-vendor-contract.md §3「Vendor 根」）', () => {
+  // 契约规定现行 vendor 根是 plugins/omnimux-clip/src/client/openreel/；src/client/engine/openreel/ 是退役过渡路径，保留兼容。
+  const VENDOR_CURRENT = 'plugins/omnimux-clip/src/client/openreel/web/motion/components/MotionTimeline.tsx'
+  const VENDOR_RETIRED = 'plugins/omnimux-clip/src/client/engine/openreel/render/previewRenderer.tsx'
+  const HOST_GLUE = 'plugins/omnimux-clip/src/client/host/InspectorPanel.tsx'
+  const RAW_COLOR_LINE = 'const panelBackground = "#1b1d21"\n'
+
+  function scanFixture(relativePaths) {
+    const dir = mkdtempSync(join(tmpdir(), 'qa-vendor-path-'))
+    try {
+      for (const rel of relativePaths) {
+        const full = join(dir, rel)
+        mkdirSync(dirname(full), { recursive: true })
+        writeFileSync(full, RAW_COLOR_LINE)
+      }
+      const report = createReport({ targetDir: dir })
+      staticScan(report, relativePaths.map((rel) => join(dir, rel)), dir)
+      return report
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
+
+  it('① 契约现行 vendor 根 src/client/openreel/ 下的裸色被跳过', () => {
+    const report = scanFixture([VENDOR_CURRENT])
+    assert.equal(report.dimensions.tokens.pass, true)
+    assert.deepEqual(report.dimensions.tokens.errors, [])
+  })
+
+  it('② 退役过渡路径 src/client/engine/openreel/ 下的裸色仍被跳过（向后兼容）', () => {
+    const report = scanFixture([VENDOR_RETIRED])
+    assert.equal(report.dimensions.tokens.pass, true)
+    assert.deepEqual(report.dimensions.tokens.errors, [])
+  })
+
+  it('③ 非 vendored 的宿主胶水裸色仍被拦下（门禁未被削弱）', () => {
+    const report = scanFixture([HOST_GLUE])
+    assert.equal(report.dimensions.tokens.pass, false)
+    assert.deepEqual(report.dimensions.tokens.errors.map((error) => error.file), [HOST_GLUE])
+    assert.match(report.dimensions.tokens.errors[0].message, /发现裸颜色值 \(#1b1d21\)，必须使用 --dsw-\* token。/)
+  })
+
+  it('三态同批：同一轮扫描里两个 vendored 根被跳过、宿主胶水仍报错', () => {
+    const report = scanFixture([VENDOR_CURRENT, VENDOR_RETIRED, HOST_GLUE])
+    assert.equal(report.scannedFiles.length, 3)
+    assert.deepEqual(report.dimensions.tokens.errors.map((error) => error.file), [HOST_GLUE])
+  })
+
+  it('回归锚点：仓库真实 vendored 文件仍含裸色，但不再产生 tokens 阻断', () => {
+    const realVendored = join(repoRoot, VENDOR_CURRENT)
+    assert.match(
+      readFileSync(realVendored, 'utf8'),
+      /#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+/,
+      '真实 vendored 文件必须仍含裸色，否则本用例退化为空断言'
+    )
+    const report = createReport({ targetDir: repoRoot })
+    staticScan(report, [realVendored], repoRoot)
+    assert.deepEqual(report.dimensions.tokens.errors, [])
+  })
+})
+
+describe('auto-qa-scan：diff 模式下的 vendored 豁免（本次回归的根因面）', () => {
+  // 根因：--all 模式靠 auto-qa-gate.mjs 的 SKIP_DIRS('openreel') 在遍历阶段整树跳过，
+  // 而 --diff 模式的文件来自 git、不经过 SKIP_DIRS，vendored 文件会真的进入扫描。
+  // 因此 VENDOR_ENGINE_RE 是 diff 模式下唯一的豁免入口；它一旦只认退役路径，diff 必红。
+  const VENDOR_CURRENT = 'plugins/omnimux-clip/src/client/openreel/web/motion/components/MotionTimeline.tsx'
+  const HOST_GLUE = 'plugins/omnimux-clip/src/client/host/InspectorPanel.tsx'
+  const RAW_COLOR_LINE = 'const panelBackground = "#1b1d21"\n'
+
+  function gitFixture(relativePaths) {
+    const dir = mkdtempSync(join(tmpdir(), 'qa-diff-vendor-'))
+    const init = spawnSync('git', ['init', '--quiet'], { cwd: dir, encoding: 'utf8' })
+    assert.equal(init.status, 0, `git init 失败：${init.stderr}`)
+    for (const rel of relativePaths) {
+      const full = join(dir, rel)
+      mkdirSync(dirname(full), { recursive: true })
+      writeFileSync(full, RAW_COLOR_LINE)
+    }
+    return dir
+  }
+
+  function diffSelected(dir) {
+    return changedFilesFromGit(dir, 'HEAD').filter((file) => isScannableSourceFile(dir, file))
+  }
+
+  it('① diff 模式确实把 vendored 文件送进扫描（不享受 --all 的 SKIP_DIRS 整树跳过）', () => {
+    const dir = gitFixture([VENDOR_CURRENT])
+    try {
+      assert.deepEqual(diffSelected(dir).map((file) => relative(dir, file)), [VENDOR_CURRENT])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('② diff 模式选中 vendored 文件后 tokens 放行；同一批里的宿主胶水仍被拦', () => {
+    const dir = gitFixture([VENDOR_CURRENT, HOST_GLUE])
+    try {
+      const files = diffSelected(dir)
+      assert.equal(files.length, 2)
+      const report = createReport({ targetDir: dir, diff: true })
+      staticScan(report, files, dir)
+      assert.equal(report.diffMode, true)
+      assert.deepEqual(report.dimensions.tokens.errors.map((error) => error.file), [HOST_GLUE])
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

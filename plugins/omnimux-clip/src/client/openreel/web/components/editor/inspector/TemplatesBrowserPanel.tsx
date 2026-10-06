@@ -32,6 +32,7 @@ import {
 import { templateCloudService } from "../../../services/template-cloud-service";
 import { SaveTemplateDialog } from "../SaveTemplateDialog";
 import { TemplateVariablesPanel } from "./TemplateVariablesPanel";
+import { useClipT } from "../../../../../i18n/index.js";
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   "social-media": Share,
@@ -59,6 +60,7 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
   onSelect,
   onApply,
 }) => {
+  const t = useClipT();
   const Icon = CATEGORY_ICONS[template.category] || FolderOpen;
 
   return (
@@ -85,13 +87,13 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
             </span>
             {template.id.startsWith("builtin-") && (
               <span className="px-1.5 py-0.5 text-[8px] bg-status-info/20 text-status-info rounded shrink-0">
-                Built-in
+                {t("Built-in")}
               </span>
             )}
             {template.source === "cloud" && (
               <span className="px-1.5 py-0.5 text-[8px] bg-primary/20 text-primary rounded flex items-center gap-1 shrink-0">
                 <Cloud size={8} />
-                Cloud
+                {t("Cloud")}
               </span>
             )}
           </div>
@@ -109,7 +111,7 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
       </div>
       {isSelected && (
         <Button
-          label="Use This Template"
+          label={t("Use This Template")}
           variant="primary"
           onClick={(e) => {
             e.stopPropagation();
@@ -129,6 +131,7 @@ interface TemplatesBrowserPanelProps {
 export const TemplatesBrowserPanel: React.FC<TemplatesBrowserPanelProps> = ({
   onTemplateApplied,
 }) => {
+  const t = useClipT();
   const getTemplateEngine = useEngineStore((state) => state.getTemplateEngine);
   const getTitleEngine = useEngineStore((state) => state.getTitleEngine);
   const loadProject = useProjectStore((state) => state.loadProject);
@@ -261,7 +264,7 @@ export const TemplatesBrowserPanel: React.FC<TemplatesBrowserPanelProps> = ({
           const placeholder = template.placeholders.find(
             (p) => p.id === textClip.placeholderId,
           );
-          const trackName = placeholder?.label || "Text";
+          const trackName = placeholder?.label || t("Text");
 
           const track = project.timeline.tracks.find((t) =>
             t.clips.some((c) => c.id === textClip.id),
@@ -330,7 +333,7 @@ export const TemplatesBrowserPanel: React.FC<TemplatesBrowserPanelProps> = ({
     return (
       <div className="space-y-4 w-full min-w-0 max-w-full">
         <Button
-          label="Back to Templates"
+          label={t("Back to Templates")}
           variant="ghost"
           icon={<ChevronLeft size={12} />}
           onClick={handleBackToTemplates}
@@ -344,7 +347,7 @@ export const TemplatesBrowserPanel: React.FC<TemplatesBrowserPanelProps> = ({
               {loadedTemplate.name}
             </span>
             <Text type="supporting" color="secondary" display="block" className="text-[9px]">
-              Configure template variables
+              {t("Configure template variables")}
             </Text>
           </div>
         </div>
@@ -376,7 +379,7 @@ export const TemplatesBrowserPanel: React.FC<TemplatesBrowserPanelProps> = ({
             Templates
           </span>
           <Text type="supporting" color="secondary" display="block" className="text-[9px]">
-            Start with a pre-made project
+            {t("Start with a pre-made project")}
           </Text>
         </div>
       </div>
@@ -437,7 +440,7 @@ export const TemplatesBrowserPanel: React.FC<TemplatesBrowserPanelProps> = ({
               className="mx-auto mb-2 text-fg-3 opacity-50"
             />
             <Text type="supporting" color="secondary" display="block" className="text-[10px]">
-              No templates in this category
+              {t("No templates in this category")}
             </Text>
           </div>
         ) : (
@@ -455,7 +458,7 @@ export const TemplatesBrowserPanel: React.FC<TemplatesBrowserPanelProps> = ({
 
       <div className="pt-2 border-t border-border">
         <Button
-          label="Save Current Project as Template"
+          label={t("Save Current Project as Template")}
           variant="ghost"
           icon={<Plus size={12} />}
           onClick={() => setIsSaveDialogOpen(true)}

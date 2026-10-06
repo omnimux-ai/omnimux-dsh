@@ -6,12 +6,14 @@ import { Crop, RotateCcw } from "@/icons/lucide-compat";
 import { useProjectStore } from "../../../stores/project-store";
 import { useUIStore } from "../../../stores/ui-store";
 import type { Clip } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface CropSectionProps {
   clip: Clip;
 }
 
 export const CropSection: React.FC<CropSectionProps> = ({ clip }) => {
+  const t = useClipT();
   const updateClipTransform = useProjectStore(
     (state) => state.updateClipTransform,
   );
@@ -45,7 +47,7 @@ export const CropSection: React.FC<CropSectionProps> = ({ clip }) => {
           <Card variant="muted" padding={2} className="space-y-0.5 border border-border">
             <div className="flex justify-between">
               <Text type="supporting" color="secondary" className="text-[9px]">
-                Crop Region:
+                {t("Crop Region:")}
               </Text>
               <Text type="supporting" color="secondary" className="text-[9px]">
                 {Math.round(crop.width * 100)}% × {Math.round(crop.height * 100)}%
@@ -53,7 +55,7 @@ export const CropSection: React.FC<CropSectionProps> = ({ clip }) => {
             </div>
             <div className="flex justify-between">
               <Text type="supporting" color="secondary" className="text-[9px]">
-                Position:
+                {t("Position:")}
               </Text>
               <Text type="supporting" color="secondary" className="text-[9px]">
                 ({Math.round(crop.x * 100)}%, {Math.round(crop.y * 100)}%)
@@ -61,7 +63,7 @@ export const CropSection: React.FC<CropSectionProps> = ({ clip }) => {
             </div>
           </Card>
           <Button
-            label="Reset Crop"
+            label={t("Reset Crop")}
             icon={<RotateCcw size={12} />}
             variant="secondary"
             size="sm"

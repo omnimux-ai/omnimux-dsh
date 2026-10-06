@@ -14,6 +14,7 @@ import {
   type EmojiItem,
   type StickerItem,
 } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 type TabType = "emojis" | "stickers";
 
@@ -67,6 +68,7 @@ const StickerCard: React.FC<StickerCardProps> = ({ sticker, onAdd }) => (
 );
 
 export const StickerPickerPanel: React.FC = () => {
+  const t = useClipT();
   const addTrack = useProjectStore((state) => state.addTrack);
   const project = useProjectStore((state) => state.project);
   const createStickerClip = useProjectStore((state) => state.createStickerClip);
@@ -217,17 +219,17 @@ export const StickerPickerPanel: React.FC = () => {
         <Smile size={16} className="text-primary" aria-hidden />
         <div className="flex flex-col gap-0.5 min-w-0">
           <Text type="body" color="primary" weight="bold" display="block" className="text-[11px]">
-            Stickers & Emojis
+            {t("Stickers & Emojis")}
           </Text>
           <Text type="supporting" color="secondary" display="block" className="text-[9px]">
-            Add fun elements to your video
+            {t("Add fun elements to your video")}
           </Text>
         </div>
       </Card>
 
       <div className="flex gap-1">
         <Button
-          label="Emojis"
+          label={t("Emojis")}
           icon={<Smile size={12} aria-hidden />}
           variant={activeTab === "emojis" ? "primary" : "secondary"}
           size="sm"
@@ -235,7 +237,7 @@ export const StickerPickerPanel: React.FC = () => {
           className="flex-1"
         />
         <Button
-          label="Stickers"
+          label={t("Stickers")}
           icon={<Sticker size={12} aria-hidden />}
           variant={activeTab === "stickers" ? "primary" : "secondary"}
           size="sm"
@@ -301,7 +303,7 @@ export const StickerPickerPanel: React.FC = () => {
                 aria-hidden
               />
               <Text type="supporting" color="secondary" className="text-[10px]">
-                No emojis found
+                {t("No emojis found")}
               </Text>
             </div>
           ) : (
@@ -326,10 +328,10 @@ export const StickerPickerPanel: React.FC = () => {
                 aria-hidden
               />
               <Text type="supporting" color="secondary" className="text-[10px]">
-                No stickers yet
+                {t("No stickers yet")}
               </Text>
               <Text type="supporting" color="secondary" className="text-[9px] mt-1">
-                Import custom stickers below
+                {t("Import custom stickers below")}
               </Text>
             </div>
           ) : (
@@ -351,7 +353,7 @@ export const StickerPickerPanel: React.FC = () => {
           ref={fileInputRef}
           type="file"
           accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-          aria-label="Choose custom sticker image"
+          aria-label={t("Choose custom sticker image")}
           className="sr-only"
           onChange={(event) =>
             void handleImportSticker(event.currentTarget.files?.[0])

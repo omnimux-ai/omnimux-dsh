@@ -5,6 +5,7 @@ import { ToolcraftClickableCard as ClickableCard } from "@openreel/ui";
 import { ToolcraftText as Text } from "@openreel/ui";
 import { PropertySlider } from "./shell/PropertySlider";
 import { Eraser, Copy, Eye, Target, MousePointer2 } from "@/icons/lucide-compat";
+import { useClipT } from "../../../../../i18n/index.js";
 
 export type RetouchingTool = "spotHeal" | "cloneStamp" | "redEyeRemoval";
 
@@ -131,12 +132,13 @@ const CloneSourceIndicator: React.FC<{
   source: CloneSource | null;
   onClear: () => void;
 }> = ({ source, onClear }) => {
+  const t = useClipT();
   if (!source) {
     return (
       <div className="p-3 bg-bg-2 rounded-lg text-center">
         <Target size={20} className="mx-auto mb-1 text-fg-3" />
         <Text type="supporting" color="secondary">
-          Alt+Click to set clone source
+          {t("Alt+Click to set clone source")}
         </Text>
       </div>
     );
@@ -148,11 +150,11 @@ const CloneSourceIndicator: React.FC<{
         <div className="flex items-center gap-2">
           <Target size={14} className="text-primary" />
           <Text type="supporting" color="primary">
-            Clone Source
+            {t("Clone Source")}
           </Text>
         </div>
         <Button
-          label="Clear"
+          label={t("Clear")}
           size="sm"
           variant="ghost"
           onClick={onClear}
@@ -216,6 +218,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
   onBrushFlowChange,
   onClearCloneSource,
 }) => {
+  const t = useClipT();
   // Tool definitions
   const tools = useMemo(
     () => [
@@ -246,7 +249,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
       {/* Tool Selection */}
       <div className="space-y-2">
         <Text type="supporting" color="secondary" weight="medium">
-          Retouching Tools
+          {t("Retouching Tools")}
         </Text>
         <div className="space-y-2">
           {tools.map((tool) => (
@@ -267,7 +270,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
       {activeTool === "cloneStamp" && (
         <div className="space-y-2">
           <Text type="supporting" color="secondary" weight="medium">
-            Clone Source
+            {t("Clone Source")}
           </Text>
           <CloneSourceIndicator
             source={cloneSource}
@@ -280,7 +283,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
       <Card variant="muted" padding={3}>
         <div className="space-y-3">
           <Text type="supporting" color="secondary" weight="medium">
-            Brush Settings
+            {t("Brush Settings")}
           </Text>
 
           {/* Brush Preview */}
@@ -288,7 +291,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
 
           {/* Size Slider */}
           <BrushSlider
-            label="Size"
+            label={t("Size")}
             value={brushConfig.size}
             onChange={onBrushSizeChange}
             min={1}
@@ -299,7 +302,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
 
           {/* Hardness Slider */}
           <BrushSlider
-            label="Hardness"
+            label={t("Hardness")}
             value={brushConfig.hardness * 100}
             onChange={(value) => onBrushHardnessChange(value / 100)}
             min={0}
@@ -310,7 +313,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
 
           {/* Opacity Slider */}
           <BrushSlider
-            label="Opacity"
+            label={t("Opacity")}
             value={brushConfig.opacity * 100}
             onChange={(value) => onBrushOpacityChange(value / 100)}
             min={0}
@@ -322,7 +325,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
           {/* Flow Slider (for spot healing and clone stamp) */}
           {(activeTool === "spotHeal" || activeTool === "cloneStamp") && (
             <BrushSlider
-              label="Flow"
+              label={t("Flow")}
               value={brushConfig.flow * 100}
               onChange={(value) => onBrushFlowChange(value / 100)}
               min={0}
@@ -340,7 +343,7 @@ export const RetouchingSection: React.FC<RetouchingSectionProps> = ({
           <MousePointer2 size={14} className="text-fg-3 mt-0.5" />
           <div className="flex flex-col gap-1">
             <Text type="supporting" color="primary" weight="medium">
-              How to use
+              {t("How to use")}
             </Text>
             <Text type="supporting" color="secondary" className="mt-1 text-[9px]">
               {activeTool === "spotHeal" &&

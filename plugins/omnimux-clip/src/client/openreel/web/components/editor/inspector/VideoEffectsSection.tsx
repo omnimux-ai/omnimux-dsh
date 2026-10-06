@@ -38,6 +38,7 @@ import {
   copyVideoEffectStack,
   hasVideoEffectStackClipboard,
 } from "../../../utils/video-effect-stack-clipboard";
+import { useClipT } from "../../../../../i18n/index.js";
 
 function shaderEffectNumberValue(
   value: unknown,
@@ -126,6 +127,7 @@ const EffectItem: React.FC<{
   canMoveUp,
   canMoveDown,
 }) => {
+  const t = useClipT();
   const [isExpanded, setIsExpanded] = React.useState(true);
 
   const effectLabels: Record<VideoEffectType, string> = {
@@ -167,7 +169,7 @@ const EffectItem: React.FC<{
       if (!shaderDef) {
         return (
           <Text type="supporting" color="secondary" className="text-[10px]">
-            Unknown shader
+            {t("Unknown shader")}
           </Text>
         );
       }
@@ -178,7 +180,7 @@ const EffectItem: React.FC<{
               return (
                 <EffectColorField
                   key={param.name}
-                  label={param.label}
+                  label={t(param.label)}
                   value={shaderEffectColorValue(
                     effect.params[param.name],
                     param.default,
@@ -190,7 +192,7 @@ const EffectItem: React.FC<{
             return (
               <EffectSlider
                 key={param.name}
-                label={param.label}
+                label={t(param.label)}
                 value={shaderEffectNumberValue(
                   effect.params[param.name],
                   param.default,
@@ -209,7 +211,7 @@ const EffectItem: React.FC<{
       case "brightness":
         return (
           <EffectSlider
-            label="Value"
+            label={t("Value")}
             value={effectNumberValue(effect.params.value, 0)}
             onChange={(v) => onUpdate(effect.id, { value: v })}
             min={-100}
@@ -219,7 +221,7 @@ const EffectItem: React.FC<{
       case "contrast":
         return (
           <EffectSlider
-            label="Value"
+            label={t("Value")}
             value={effectNumberValue(effect.params.value, 1) * 100}
             onChange={(v) => onUpdate(effect.id, { value: v / 100 })}
             min={0}
@@ -230,7 +232,7 @@ const EffectItem: React.FC<{
       case "saturation":
         return (
           <EffectSlider
-            label="Value"
+            label={t("Value")}
             value={effectNumberValue(effect.params.value, 1) * 100}
             onChange={(v) => onUpdate(effect.id, { value: v / 100 })}
             min={0}
@@ -243,7 +245,7 @@ const EffectItem: React.FC<{
       case "invert":
         return (
           <EffectSlider
-            label="Amount"
+            label={t("Amount")}
             value={effectNumberValue(effect.params.amount, 1) * 100}
             onChange={(v) => onUpdate(effect.id, { amount: v / 100 })}
             min={0}
@@ -254,7 +256,7 @@ const EffectItem: React.FC<{
       case "blur":
         return (
           <EffectSlider
-            label="Radius"
+            label={t("Radius")}
             value={effectNumberValue(effect.params.radius, 0)}
             onChange={(v) => onUpdate(effect.id, { radius: v })}
             min={0}
@@ -266,7 +268,7 @@ const EffectItem: React.FC<{
         return (
           <>
             <EffectSlider
-              label="Amount"
+              label={t("Amount")}
               value={effectNumberValue(effect.params.amount, 0)}
               onChange={(v) => onUpdate(effect.id, { amount: v })}
               min={0}
@@ -274,7 +276,7 @@ const EffectItem: React.FC<{
               unit="%"
             />
             <EffectSlider
-              label="Radius"
+              label={t("Radius")}
               value={effectNumberValue(effect.params.radius, 1)}
               onChange={(v) => onUpdate(effect.id, { radius: v })}
               min={0.1}
@@ -287,14 +289,14 @@ const EffectItem: React.FC<{
         return (
           <>
             <EffectSlider
-              label="Amount"
+              label={t("Amount")}
               value={effectNumberValue(effect.params.amount, 0)}
               onChange={(v) => onUpdate(effect.id, { amount: v })}
               min={0}
               max={100}
             />
             <EffectSlider
-              label="Midpoint"
+              label={t("Midpoint")}
               value={effectNumberValue(effect.params.midpoint, 0.5) * 100}
               onChange={(v) => onUpdate(effect.id, { midpoint: v / 100 })}
               min={0}
@@ -302,7 +304,7 @@ const EffectItem: React.FC<{
               unit="%"
             />
             <EffectSlider
-              label="Feather"
+              label={t("Feather")}
               value={effectNumberValue(effect.params.feather, 0.3) * 100}
               onChange={(v) => onUpdate(effect.id, { feather: v / 100 })}
               min={0}
@@ -315,14 +317,14 @@ const EffectItem: React.FC<{
         return (
           <>
             <EffectSlider
-              label="Amount"
+              label={t("Amount")}
               value={effectNumberValue(effect.params.amount, 0)}
               onChange={(v) => onUpdate(effect.id, { amount: v })}
               min={0}
               max={100}
             />
             <EffectSlider
-              label="Size"
+              label={t("Size")}
               value={effectNumberValue(effect.params.size, 1)}
               onChange={(v) => onUpdate(effect.id, { size: v })}
               min={0.5}
@@ -334,7 +336,7 @@ const EffectItem: React.FC<{
       case "temperature":
         return (
           <EffectSlider
-            label="Value"
+            label={t("Value")}
             value={effectNumberValue(effect.params.value, 0)}
             onChange={(v) => onUpdate(effect.id, { value: v })}
             min={-100}
@@ -344,7 +346,7 @@ const EffectItem: React.FC<{
       case "tint":
         return (
           <EffectSlider
-            label="Value"
+            label={t("Value")}
             value={effectNumberValue(effect.params.value, 0)}
             onChange={(v) => onUpdate(effect.id, { value: v })}
             min={-100}
@@ -355,7 +357,7 @@ const EffectItem: React.FC<{
         return (
           <>
             <EffectSlider
-              label="Offset X"
+              label={t("Offset X")}
               value={effectNumberValue(effect.params.offsetX, 5)}
               onChange={(v) => onUpdate(effect.id, { offsetX: v })}
               min={-100}
@@ -363,7 +365,7 @@ const EffectItem: React.FC<{
               unit="px"
             />
             <EffectSlider
-              label="Offset Y"
+              label={t("Offset Y")}
               value={effectNumberValue(effect.params.offsetY, 5)}
               onChange={(v) => onUpdate(effect.id, { offsetY: v })}
               min={-100}
@@ -371,7 +373,7 @@ const EffectItem: React.FC<{
               unit="px"
             />
             <EffectSlider
-              label="Blur"
+              label={t("Blur")}
               value={effectNumberValue(effect.params.blur, 10)}
               onChange={(v) => onUpdate(effect.id, { blur: v })}
               min={0}
@@ -379,7 +381,7 @@ const EffectItem: React.FC<{
               unit="px"
             />
             <EffectSlider
-              label="Opacity"
+              label={t("Opacity")}
               value={effectNumberValue(effect.params.opacity, 0.8) * 100}
               onChange={(v) => onUpdate(effect.id, { opacity: v / 100 })}
               min={0}
@@ -392,7 +394,7 @@ const EffectItem: React.FC<{
         return (
           <>
             <EffectSlider
-              label="Radius"
+              label={t("Radius")}
               value={effectNumberValue(effect.params.radius, 10)}
               onChange={(v) => onUpdate(effect.id, { radius: v })}
               min={0}
@@ -400,7 +402,7 @@ const EffectItem: React.FC<{
               unit="px"
             />
             <EffectSlider
-              label="Intensity"
+              label={t("Intensity")}
               value={effectNumberValue(effect.params.intensity, 1) * 100}
               onChange={(v) => onUpdate(effect.id, { intensity: v / 100 })}
               min={0}
@@ -413,7 +415,7 @@ const EffectItem: React.FC<{
         return (
           <>
             <EffectSlider
-              label="Angle"
+              label={t("Angle")}
               value={effectNumberValue(effect.params.angle, 0)}
               onChange={(v) => onUpdate(effect.id, { angle: v })}
               min={0}
@@ -421,7 +423,7 @@ const EffectItem: React.FC<{
               unit="°"
             />
             <EffectSlider
-              label="Distance"
+              label={t("Distance")}
               value={effectNumberValue(effect.params.distance, 20)}
               onChange={(v) => onUpdate(effect.id, { distance: v })}
               min={0}
@@ -434,14 +436,14 @@ const EffectItem: React.FC<{
         return (
           <>
             <EffectSlider
-              label="Amount"
+              label={t("Amount")}
               value={effectNumberValue(effect.params.amount, 20)}
               onChange={(v) => onUpdate(effect.id, { amount: v })}
               min={0}
               max={100}
             />
             <EffectSlider
-              label="Center X"
+              label={t("Center X")}
               value={effectNumberValue(effect.params.centerX, 50)}
               onChange={(v) => onUpdate(effect.id, { centerX: v })}
               min={0}
@@ -449,7 +451,7 @@ const EffectItem: React.FC<{
               unit="%"
             />
             <EffectSlider
-              label="Center Y"
+              label={t("Center Y")}
               value={effectNumberValue(effect.params.centerY, 50)}
               onChange={(v) => onUpdate(effect.id, { centerY: v })}
               min={0}
@@ -462,7 +464,7 @@ const EffectItem: React.FC<{
         return (
           <>
             <EffectSlider
-              label="Amount"
+              label={t("Amount")}
               value={effectNumberValue(effect.params.amount, 5)}
               onChange={(v) => onUpdate(effect.id, { amount: v })}
               min={0}
@@ -471,7 +473,7 @@ const EffectItem: React.FC<{
               unit="px"
             />
             <EffectSlider
-              label="Angle"
+              label={t("Angle")}
               value={effectNumberValue(effect.params.angle, 0)}
               onChange={(v) => onUpdate(effect.id, { angle: v })}
               min={0}
@@ -513,7 +515,7 @@ const EffectItem: React.FC<{
             type="button"
             draggable
             aria-label={`Reorder ${headerLabel}`}
-            title="Drag to reorder effect"
+            title={t("Drag to reorder effect")}
             onDragStart={(event) => {
               event.dataTransfer.effectAllowed = "move";
               event.dataTransfer.setData(
@@ -580,14 +582,14 @@ const EffectItem: React.FC<{
             }
           />
           <IconButton
-            label="Duplicate effect"
+            label={t("Duplicate effect")}
             onClick={() => onDuplicate(effect.id)}
             variant="ghost"
             size="sm"
             icon={<Copy size={12} aria-hidden />}
           />
           <IconButton
-            label="Remove effect"
+            label={t("Remove effect")}
             onClick={() => onRemove(effect.id)}
             variant="ghost"
             size="sm"
@@ -608,6 +610,7 @@ function VisualEffectPreview({
   def: EditorEffectPreviewDef;
   onSelect: (def: EditorEffectPreviewDef) => void;
 }): React.ReactElement {
+  const t = useClipT();
   const effectedStyle = def.previewStyle(0.82);
   return (
     <button
@@ -630,10 +633,10 @@ function VisualEffectPreview({
           Aa
         </span>
         <span className="absolute bottom-1 left-1 rounded bg-black/45 px-1 py-0.5 text-[8px] font-semibold uppercase text-white/75">
-          Before
+          {t("Before")}
         </span>
         <span className="absolute bottom-1 right-1 rounded bg-black/55 px-1 py-0.5 text-[8px] font-semibold uppercase text-white/90">
-          Effect
+          {t("Effect")}
         </span>
       </span>
       <span className="mt-1.5 block truncate text-[11px] font-semibold text-fg-2">
@@ -650,6 +653,7 @@ const EffectTypeSelector: React.FC<{
   onSelect: (def: EditorEffectPreviewDef) => void;
   onSelectShader: (shaderId: string) => void;
 }> = ({ onSelect, onSelectShader }) => {
+  const t = useClipT();
   const [pickerTab, setPickerTab] = React.useState<"effects" | "shaders">(
     "effects",
   );
@@ -669,7 +673,7 @@ const EffectTypeSelector: React.FC<{
       placement="below"
       alignment="end"
       width={430}
-      label="Add video effect"
+      label={t("Add video effect")}
       content={
         <div className="w-[430px] max-w-[calc(100vw-32px)] space-y-2.5 p-2.5">
           <div className="flex items-center gap-1 rounded-[8px] bg-bg-2 p-1">
@@ -704,8 +708,8 @@ const EffectTypeSelector: React.FC<{
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search visual effects"
-                  aria-label="Search visual effects"
+                  placeholder={t("Search visual effects")}
+                  aria-label={t("Search visual effects")}
                   className="h-8 w-full rounded-[7px] border border-border bg-bg-2 pl-8 pr-2.5 text-xs text-fg outline-none placeholder:text-fg-4 focus:border-accent"
                 />
               </label>
@@ -749,14 +753,14 @@ const EffectTypeSelector: React.FC<{
               defs={shaderDefs}
               onSelect={onSelectShader}
               sample="effect"
-              label="Shader effect previews"
+              label={t("Shader effect previews")}
             />
           )}
         </div>
       }
     >
       <Button
-        label="Add Effect"
+        label={t("Add Effect")}
         variant="secondary"
         size="sm"
         endContent={<ChevronDown size={12} className="text-fg-3" aria-hidden />}
@@ -786,6 +790,7 @@ interface VideoEffectsSectionProps {
 export const VideoEffectsSection: React.FC<VideoEffectsSectionProps> = ({
   clipId,
 }) => {
+  const t = useClipT();
   const {
     getVideoEffects,
     addVideoEffect,
@@ -921,28 +926,28 @@ export const VideoEffectsSection: React.FC<VideoEffectsSectionProps> = ({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-1.5">
         <Button
-          label="Copy effect stack"
+          label={t("Copy effect stack")}
           variant="secondary"
           size="sm"
           isDisabled={effects.length === 0}
           onClick={handleCopyStack}
         />
         <Button
-          label="Paste effect stack"
+          label={t("Paste effect stack")}
           variant="secondary"
           size="sm"
           isDisabled={!hasStackClipboard}
           onClick={() => handlePasteStack("append")}
         />
         <Button
-          label="Paste and replace effects"
+          label={t("Paste and replace effects")}
           variant="secondary"
           size="sm"
           isDisabled={!hasStackClipboard}
           onClick={() => handlePasteStack("replace")}
         />
         <Button
-          label="Clear effect stack"
+          label={t("Clear effect stack")}
           variant="secondary"
           size="sm"
           isDisabled={effects.length === 0}
@@ -956,7 +961,7 @@ export const VideoEffectsSection: React.FC<VideoEffectsSectionProps> = ({
           display="block"
           className="py-2 text-center text-[10px]"
         >
-          No effects applied
+          {t("No effects applied")}
         </Text>
       ) : (
         <div className="space-y-2">

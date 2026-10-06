@@ -28,6 +28,7 @@ import {
   isWhisperModelKey,
   type WhisperModelKey,
 } from "../../../workers/whisper-models";
+import { useClipT } from "../../../../../i18n/index.js";
 
 const CAPTION_STYLE_PRESETS = ["default", "modern", "bold", "cinematic", "minimal"] as const;
 const WHISPER_LANGUAGES = [
@@ -63,6 +64,7 @@ export const AutoCaptionPanel: React.FC<AutoCaptionPanelProps> = ({
   clipId,
   maxWordsPerLine = 5,
 }) => {
+  const t = useClipT();
   const getClip = useProjectStore((state) => state.getClip);
   const getMediaItem = useProjectStore((state) => state.getMediaItem);
   const addSubtitle = useProjectStore((state) => state.addSubtitle);
@@ -349,10 +351,10 @@ export const AutoCaptionPanel: React.FC<AutoCaptionPanelProps> = ({
       <Card variant="muted" padding={3} className="space-y-2 border border-primary/30 bg-primary/5">
         <div className="flex items-center justify-between gap-2">
           <Text type="supporting" color="secondary" className="text-[10px]">
-            Model quality
+            {t("Model quality")}
           </Text>
           <Selector
-            label="Local caption model"
+            label={t("Local caption model")}
             isLabelHidden
             size="sm"
             width={176}
@@ -411,10 +413,10 @@ export const AutoCaptionPanel: React.FC<AutoCaptionPanelProps> = ({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <Languages size={14} className="text-fg-2" aria-hidden />
-            <Text type="supporting" color="secondary" className="text-[10px]">Language</Text>
+            <Text type="supporting" color="secondary" className="text-[10px]">{t("Language")}</Text>
           </div>
           <Selector
-            label="Caption language"
+            label={t("Caption language")}
             isLabelHidden
             size="sm"
             width={132}
@@ -428,9 +430,9 @@ export const AutoCaptionPanel: React.FC<AutoCaptionPanelProps> = ({
           />
         </div>
         <div className="flex items-center justify-between gap-2">
-          <Text type="supporting" color="secondary" className="text-[10px]">Caption style</Text>
+          <Text type="supporting" color="secondary" className="text-[10px]">{t("Caption style")}</Text>
           <Selector
-            label="Caption style"
+            label={t("Caption style")}
             isLabelHidden
             size="sm"
             width={132}
@@ -498,7 +500,7 @@ export const AutoCaptionPanel: React.FC<AutoCaptionPanelProps> = ({
       />
       {!canTranscribe && (
         <Text type="supporting" color="secondary" className="block text-center text-[9px]">
-          Select a connected video or audio clip first.
+          {t("Select a connected video or audio clip first.")}
         </Text>
       )}
     </div>

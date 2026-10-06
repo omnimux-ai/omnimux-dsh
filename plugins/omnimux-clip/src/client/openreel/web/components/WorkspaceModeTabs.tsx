@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import { useClipT } from "../../../i18n/index.js";
 
 export type WorkspaceMode = "video" | "motion";
 
@@ -23,10 +24,11 @@ export function WorkspaceModeTabs({
   className?: string;
   accessibleLabels?: Partial<Record<WorkspaceMode, string>>;
 }): JSX.Element {
+  const t = useClipT();
   return (
     <div
       role="tablist"
-      aria-label={ariaLabel}
+      aria-label={t(ariaLabel)}
       className={`inline-flex items-center gap-0 rounded-[9px] bg-bg-3 p-[3px] ${className}`}
     >
       {MODES.map((mode) => {
@@ -36,7 +38,11 @@ export function WorkspaceModeTabs({
             key={mode.id}
             type="button"
             role="tab"
-            aria-label={accessibleLabels?.[mode.id]}
+            aria-label={
+              accessibleLabels?.[mode.id]
+                ? t(accessibleLabels[mode.id] as string)
+                : undefined
+            }
             aria-selected={isActive}
             onClick={() => onSelectMode(mode.id)}
             className={`rounded-[7px] px-4 py-[7px] text-[13px] transition-colors ${
@@ -45,7 +51,7 @@ export function WorkspaceModeTabs({
                 : "bg-transparent text-fg-3 font-medium hover:text-fg-2"
             }`}
           >
-            {mode.label}
+            {t(mode.label)}
           </button>
         );
       })}

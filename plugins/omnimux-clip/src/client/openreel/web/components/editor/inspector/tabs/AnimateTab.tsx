@@ -13,6 +13,7 @@ import {
 import { InspectorSection } from "../shell/InspectorSection";
 import { useRouter } from "../../../../hooks/use-router";
 import { useProjectStore } from "../../../../stores/project-store";
+import { useClipT } from "../../../../../../i18n/index.js";
 
 export interface AnimateTabProps {
   clipId: string;
@@ -25,6 +26,7 @@ export const AnimateTab: React.FC<AnimateTabProps> = ({
   clipType,
   showTextSection,
 }) => {
+  const t = useClipT();
   const { navigate } = useRouter();
   const motionCompositionId = useProjectStore((state) => {
     const clip = state.project.timeline.tracks
@@ -63,7 +65,7 @@ export const AnimateTab: React.FC<AnimateTabProps> = ({
           </ClickableCard>
         </InspectorSection>
       )}
-      <InspectorSection title="Keyframes" sectionId="keyframes">
+      <InspectorSection title={t("Keyframes")} sectionId="keyframes">
         <KeyframesSection clipId={clipId} />
       </InspectorSection>
       {(clipType === "video" ||
@@ -73,7 +75,7 @@ export const AnimateTab: React.FC<AnimateTabProps> = ({
         clipType === "svg" ||
         clipType === "sticker") && (
         <InspectorSection
-          title="Transitions"
+          title={t("Transitions")}
           sectionId="transitions"
           defaultOpen={false}
         >
@@ -86,7 +88,7 @@ export const AnimateTab: React.FC<AnimateTabProps> = ({
         clipType === "svg" ||
         clipType === "sticker") && (
         <InspectorSection
-          title="Motion Presets"
+          title={t("Motion Presets")}
           sectionId="motion-presets"
           defaultOpen={false}
         >
@@ -100,7 +102,7 @@ export const AnimateTab: React.FC<AnimateTabProps> = ({
         clipType === "svg" ||
         clipType === "sticker") && (
         <InspectorSection
-          title="Motion Path"
+          title={t("Motion Path")}
           sectionId="motion-path"
           defaultOpen={false}
         >
@@ -114,7 +116,7 @@ export const AnimateTab: React.FC<AnimateTabProps> = ({
         clipType === "svg" ||
         clipType === "sticker") && (
         <InspectorSection
-          title="Emphasis Animation"
+          title={t("Emphasis Animation")}
           sectionId="emphasis-animation"
           defaultOpen={false}
         >
@@ -123,7 +125,7 @@ export const AnimateTab: React.FC<AnimateTabProps> = ({
       )}
       {showTextSection && (
         <InspectorSection
-          title="Text Animation"
+          title={t("Text Animation")}
           sectionId="text-animation"
           defaultOpen={false}
         >

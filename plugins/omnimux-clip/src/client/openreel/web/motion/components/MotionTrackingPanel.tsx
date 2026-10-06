@@ -41,6 +41,7 @@ import {
   SwitchInput,
   TextInput,
 } from "./primitives";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface MotionTrackingPanelProps {
   composition: MotionComposition;
@@ -54,6 +55,7 @@ export function MotionTrackingPanel({
   composition,
   embedded = false,
 }: MotionTrackingPanelProps): JSX.Element {
+  const t = useClipT();
   const tracks = normalizeMotionTracks(composition);
   const [activeTrackId, setActiveTrackId] = useState<string | null>(
     tracks[0]?.id ?? null,
@@ -164,7 +166,7 @@ export function MotionTrackingPanel({
         (item.blob || item.fileHandle || item.originalUrl),
     );
     if (!videoMedia) {
-      toast.error("No video source", "Import a video clip to auto-track from.");
+      toast.error(t("No video source"), t("Import a video clip to auto-track from."));
       return;
     }
     setIsAutoTracking(true);
@@ -177,7 +179,7 @@ export function MotionTrackingPanel({
             ? await (await fetch(videoMedia.originalUrl)).blob()
             : null;
       if (!blob) {
-        toast.error("Auto-track failed", "Could not read the video source.");
+        toast.error(t("Auto-track failed"), t("Could not read the video source."));
         return;
       }
       const frames = await autoTrackVideoFeature({
@@ -190,7 +192,7 @@ export function MotionTrackingPanel({
         startTime: playhead,
       });
       if (frames.length < 2) {
-        toast.error("Auto-track failed", "Could not analyze enough frames.");
+        toast.error(t("Auto-track failed"), t("Could not analyze enough frames."));
         return;
       }
       patchTrack(activeTrack.id, (track) => {
@@ -207,11 +209,11 @@ export function MotionTrackingPanel({
         }
         return next;
       });
-      toast.success("Auto-track complete", `${frames.length} frames tracked.`);
+      toast.success(t("Auto-track complete"), t("{count} frames tracked.").replace("{count}", String(frames.length)));
     } catch (error) {
       toast.error(
-        "Auto-track failed",
-        error instanceof Error ? error.message : "Unexpected tracking error.",
+        t("Auto-track failed"),
+        error instanceof Error ? error.message : t("Unexpected tracking error."),
       );
     } finally {
       setIsAutoTracking(false);
@@ -243,12 +245,12 @@ export function MotionTrackingPanel({
     <div className={embedded ? "" : "flex h-full min-h-0 flex-col"}>
       {embedded ? null : (
         <PanelHeader
-          title="Tracker"
+          title={t("Tracker")}
           icon={Route}
           actions={
             <IconButton
               icon={Plus}
-              label="Add motion track"
+              label={t("Add motion track")}
               size="sm"
               onClick={addTrack}
             />
@@ -256,19 +258,19 @@ export function MotionTrackingPanel({
         />
       )}
       <div className={embedded ? "" : "min-h-0 flex-1 overflow-auto"}>
-        <Section title="Tracks" icon={Route}>
+        <Section title={t("Tracks")} icon={Route}>
           {tracks.length === 0 ? (
             <EmptyState
               icon={Route}
-              title="No motion tracks"
-              description="Create a point track, sample positions over time, then apply it to a selected layer."
+              title={t("No motion tracks")}
+              description={t("Create a point track, sample positions over time, then apply it to a selected layer.")}
             />
           ) : (
             <div className="space-y-2">
               {tracks.map((track) => (
                 <ToolcraftClickableCard
                   key={track.id}
-                  label={`Select ${track.name}`}
+                  label={`${t("Select")} ${track.name}`}
                   onClick={() => {
                     setActiveTrackId(track.id);
                     setActivePointId(track.points[0]?.id ?? null);
@@ -303,13 +305,13 @@ export function MotionTrackingPanel({
               ))}
             </div>
           )}
-          <Button label="Add Track" icon={Plus} onClick={addTrack} />
+          <Button label={t("Add Track")} icon={Plus} onClick={addTrack} />
         </Section>
 
         {activeTrack ? (
           <>
-            <Section title="Active Track" icon={SlidersHorizontal}>
-              <Field label="Name">
+            <Section title={t("Active Track")} icon={SlidersHorizontal}>
+              <Field label={t("Name")}>
                 <TextInput
                   value={activeTrack.name}
                   onChange={(name) =>
@@ -321,7 +323,7 @@ export function MotionTrackingPanel({
                   }
                 />
               </Field>
-              <Field label="Point">
+              <Field label={t("Point")}>
                 <SelectInput
                   value={activePoint?.id ?? ""}
                   options={activeTrack.points.map((point) => ({
@@ -332,9 +334,9 @@ export function MotionTrackingPanel({
                 />
               </Field>
               <div className="grid grid-cols-2 gap-2">
-                <Button label="Add Point" icon={Crosshair} onClick={addPoint} />
+                <Button label={t("Add Point")} icon={Crosshair} onClick={addPoint} />
                 <Button
-                  label="Delete"
+                  label={t("Delete")}
                   icon={Trash2}
                   variant="danger"
                   onClick={() => {
@@ -346,9 +348,9 @@ export function MotionTrackingPanel({
               </div>
             </Section>
 
-            <Section title="Sample Frame" icon={LocateFixed}>
+            <Section title={t("Sample Frame")} icon={LocateFixed}>
               <div className="grid grid-cols-3 gap-2.5">
-                <Field label="Time" hint="s">
+                <Field label={t("Time")} hint={t("s")}>
                   <NumberInput
                     value={playhead}
                     min={0}
@@ -357,28 +359,28 @@ export function MotionTrackingPanel({
                     onChange={setPlayhead}
                   />
                 </Field>
-                <Field label="X">
+                <Field label={t("X")}>
                   <NumberInput value={sampleX} step={1} onChange={setSampleX} />
                 </Field>
-                <Field label="Y">
+                <Field label={t("Y")}>
                   <NumberInput value={sampleY} step={1} onChange={setSampleY} />
                 </Field>
               </div>
               <Button
-                label="Add Frame At Playhead"
+                label={t("Add Frame At Playhead")}
                 icon={Plus}
                 variant="solid"
                 disabled={!activePoint}
                 onClick={addFrame}
               />
               <Button
-                label="Use Selected Layer Position"
+                label={t("Use Selected Layer Position")}
                 icon={LocateFixed}
                 disabled={!selectedLayer}
                 onClick={useSelectedLayerPosition}
               />
               <Button
-                label={isAutoTracking ? "Tracking..." : "Auto-Track From Video"}
+                label={t(isAutoTracking ? "Tracking..." : "Auto-Track From Video")}
                 icon={Route}
                 disabled={!activePoint || isAutoTracking}
                 onClick={() => void autoTrack()}
@@ -386,15 +388,15 @@ export function MotionTrackingPanel({
               {activePoint ? <TrackPointFrames point={activePoint} setPlayhead={setPlayhead} /> : null}
             </Section>
 
-            <Section title="Apply" icon={Route}>
-              <Field label="Mode">
+            <Section title={t("Apply")} icon={Route}>
+              <Field label={t("Mode")}>
                 <SelectInput
                   value={applyMode}
                   options={[
-                    { value: "position", label: "Position" },
+                    { value: "position", label: t("Position") },
                     {
                       value: "position-scale-rotation",
-                      label: "Position, scale, rotation",
+                      label: t("Position, scale, rotation"),
                     },
                   ]}
                   onChange={(mode) =>
@@ -403,7 +405,7 @@ export function MotionTrackingPanel({
                 />
               </Field>
               <div className="grid grid-cols-2 gap-2.5">
-                <Field label="Smooth">
+                <Field label={t("Smooth")}>
                   <NumberInput
                     value={smoothWindow}
                     min={0}
@@ -414,7 +416,7 @@ export function MotionTrackingPanel({
                 </Field>
                 <div className="self-end">
                   <SwitchInput
-                    label="Preserve offset"
+                    label={t("Preserve offset")}
                     checked={preserveOffset}
                     onChange={setPreserveOffset}
                   />
@@ -422,13 +424,13 @@ export function MotionTrackingPanel({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Button
-                  label="Smooth"
+                  label={t("Smooth")}
                   icon={SlidersHorizontal}
                   onClick={smoothTrack}
                   disabled={countTrackFrames(activeTrack) === 0}
                 />
                 <Button
-                  label="Apply"
+                  label={t("Apply")}
                   icon={Route}
                   variant="solid"
                   disabled={
@@ -455,6 +457,7 @@ function TrackPointFrames({
   point: MotionTrackPoint;
   setPlayhead: (time: number) => void;
 }): JSX.Element {
+  const t = useClipT();
   if (point.frames.length === 0) {
     return (
       <ToolcraftText type="supporting" color="secondary" className="block rounded-md border border-dashed border-border bg-bg-2 px-3 py-3 text-[12px] leading-relaxed text-fg-muted">
@@ -468,7 +471,7 @@ function TrackPointFrames({
       {point.frames.map((frame) => (
         <ToolcraftClickableCard
           key={`${point.id}-${frame.time}`}
-          label={`Go to sample at ${frame.time.toFixed(2)} seconds`}
+          label={t("Go to sample at {time} seconds").replace("{time}", frame.time.toFixed(2))}
           onClick={() => setPlayhead(frame.time)}
           variant="transparent"
           padding={2}

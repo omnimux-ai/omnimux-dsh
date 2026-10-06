@@ -26,6 +26,7 @@ import {
 } from "@openreel/core";
 import { toast } from "../../../stores/notification-store";
 import { useProjectStore } from "../../../stores/project-store";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface AutoReframeSectionProps {
   clipId: string;
@@ -48,6 +49,7 @@ export const AutoReframeSection: React.FC<AutoReframeSectionProps> = ({
   clipId,
   onReframeComplete,
 }) => {
+  const t = useClipT();
   const updateProjectDimensions = useProjectStore(
     (state) => state.updateSettings,
   );
@@ -205,7 +207,7 @@ export const AutoReframeSection: React.FC<AutoReframeSectionProps> = ({
       <div className="space-y-3">
         <div>
           <Text type="supporting" color="secondary" className="mb-2 block text-[10px]">
-            Platform Presets
+            {t("Platform Presets")}
           </Text>
             <div className="grid grid-cols-3 gap-1">
               {(Object.keys(PLATFORM_PRESETS) as PlatformPreset[]).map(
@@ -235,7 +237,7 @@ export const AutoReframeSection: React.FC<AutoReframeSectionProps> = ({
 
         <div>
           <Text type="supporting" color="secondary" className="mb-2 block text-[10px]">
-            Aspect Ratio
+            {t("Aspect Ratio")}
           </Text>
           <div className="grid grid-cols-3 gap-1">
             {(Object.keys(ASPECT_RATIO_PRESETS) as AspectRatioPreset[])
@@ -259,7 +261,7 @@ export const AutoReframeSection: React.FC<AutoReframeSectionProps> = ({
         </div>
 
         <PropertySlider
-          label="Tracking Speed"
+          label={t("Tracking Speed")}
           min={0}
           max={100}
           step={1}
@@ -273,7 +275,7 @@ export const AutoReframeSection: React.FC<AutoReframeSectionProps> = ({
         />
 
         <PropertySlider
-          label="Smoothing"
+          label={t("Smoothing")}
           min={0}
           max={100}
           step={1}
@@ -283,7 +285,7 @@ export const AutoReframeSection: React.FC<AutoReframeSectionProps> = ({
         />
 
         <PropertySlider
-          label="Center Bias"
+          label={t("Center Bias")}
           min={0}
           max={100}
           step={1}
@@ -298,10 +300,10 @@ export const AutoReframeSection: React.FC<AutoReframeSectionProps> = ({
 
         <div className="flex items-center justify-between">
           <Text type="supporting" color="secondary" className="text-[10px]">
-            Follow Subject
+            {t("Follow Subject")}
           </Text>
           <MockToggle
-            ariaLabel="Follow Subject"
+            ariaLabel={t("Follow Subject")}
             checked={reframeSettings.followSubject}
             onChange={() =>
               updateLocalSettings({

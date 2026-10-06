@@ -22,6 +22,7 @@ import {
 import { toast } from "../../../stores/notification-store";
 import { useProcessingStore } from "../../../services/processing-manager";
 import { ColorSelector } from "../../../motion/components/primitives";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface BackgroundRemovalSectionProps {
   clipId: string;
@@ -53,6 +54,7 @@ const PRESET_COLORS = [
 export const BackgroundRemovalSection: React.FC<
   BackgroundRemovalSectionProps
 > = ({ clipId, onSettingsChange }) => {
+  const t = useClipT();
   const [settings, setSettings] = useState<BackgroundRemovalSettings>(
     DEFAULT_BACKGROUND_SETTINGS,
   );
@@ -158,7 +160,7 @@ export const BackgroundRemovalSection: React.FC<
     <div className="space-y-3">
       <div className="flex justify-end">
         <Button
-          label={settings.enabled ? "On" : "Off"}
+          label={settings.enabled ? t("On") : t("Off")}
           icon={
             isInitializing || isProcessing ? (
               <Loader2 size={12} className="animate-spin" />
@@ -175,7 +177,7 @@ export const BackgroundRemovalSection: React.FC<
         <Card variant="muted" padding={3} className="space-y-3">
           <div>
             <Text type="supporting" color="secondary" className="mb-2 block text-[10px]">
-              Background Mode
+              {t("Background Mode")}
             </Text>
             <div className="grid grid-cols-4 gap-1">
               {BACKGROUND_MODES.map((mode) => {
@@ -183,7 +185,7 @@ export const BackgroundRemovalSection: React.FC<
                 return (
                   <ClickableCard
                     key={mode.value}
-                    label={`${mode.label} background mode`}
+                    label={`${t(mode.label)} background mode`}
                     onClick={() => updateSettings({ mode: mode.value })}
                     className={`flex flex-col items-center gap-1 rounded p-2 transition-colors ${
                       settings.mode === mode.value
@@ -193,7 +195,7 @@ export const BackgroundRemovalSection: React.FC<
                   >
                     <ModeIcon size={14} />
                     <Text type="supporting" color="primary" className="text-[9px]">
-                      {mode.label}
+                      {t(mode.label)}
                     </Text>
                   </ClickableCard>
                 );
@@ -203,7 +205,7 @@ export const BackgroundRemovalSection: React.FC<
 
           {settings.mode === "blur" && (
             <PropertySlider
-              label="Blur Amount"
+              label={t("Blur Amount")}
               min={0}
               max={50}
               step={1}
@@ -216,7 +218,7 @@ export const BackgroundRemovalSection: React.FC<
           {settings.mode === "color" && (
             <div>
               <Text type="supporting" color="secondary" className="mb-2 block text-[10px]">
-                Background Color
+                {t("Background Color")}
               </Text>
               <div className="grid grid-cols-8 gap-1 mb-2">
                 {PRESET_COLORS.map((color) => (
@@ -236,7 +238,7 @@ export const BackgroundRemovalSection: React.FC<
               <ColorSelector
                 value={settings.backgroundColor}
                 onChange={(value) => updateSettings({ backgroundColor: value })}
-                label="Select replacement background color"
+                label={t("Select replacement background color")}
               />
             </div>
           )}
@@ -244,10 +246,10 @@ export const BackgroundRemovalSection: React.FC<
           {settings.mode === "image" && (
             <div>
               <Text type="supporting" color="secondary" className="mb-2 block text-[10px]">
-                Background Image
+                {t("Background Image")}
               </Text>
               <Button
-                label="Choose Image"
+                label={t("Choose Image")}
                 icon={<ImageIcon size={14} />}
                 variant="secondary"
                 size="sm"
@@ -272,14 +274,14 @@ export const BackgroundRemovalSection: React.FC<
               />
               {settings.backgroundImageUrl && (
                 <Text type="supporting" color="secondary" className="mt-2 truncate text-[9px]">
-                  Image loaded
+                  {t("Image loaded")}
                 </Text>
               )}
             </div>
           )}
 
           <PropertySlider
-            label="Edge Smoothing"
+            label={t("Edge Smoothing")}
             min={0}
             max={10}
             step={1}
@@ -289,7 +291,7 @@ export const BackgroundRemovalSection: React.FC<
           />
 
           <PropertySlider
-            label="Detection Threshold"
+            label={t("Detection Threshold")}
             min={0}
             max={100}
             step={1}

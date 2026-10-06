@@ -37,6 +37,7 @@ import {
 } from "@openreel/core";
 import { useProjectStore } from "../../stores/project-store";
 import { ColorInput, Field, NumberInput, Section } from "./primitives";
+import { useClipT } from "../../../../i18n/index.js";
 
 const MERGE_MODE_OPTIONS: ReadonlyArray<{
   value: MotionShapeMergeMode;
@@ -111,6 +112,7 @@ export function ShapeContentsSection({
   composition: MotionComposition;
   layer: MotionShapeLayer;
 }): JSX.Element {
+  const t = useClipT();
   const upsertMotionComposition = useProjectStore(
     (state) => state.upsertMotionComposition,
   );
@@ -395,7 +397,7 @@ export function ShapeContentsSection({
 
   if (!explicit) {
     return (
-      <Section title="Contents" icon={Shapes}>
+      <Section title={t("Contents")} icon={Shapes}>
         <div className="rounded-lg border border-border bg-bg-1 p-3">
           <p className="mb-2.5 text-[12px] text-fg-3">
             Convert this shape into a contents tree to build groups, merge paths,
@@ -414,7 +416,7 @@ export function ShapeContentsSection({
   }
 
   return (
-    <Section title="Contents" icon={Shapes}>
+    <Section title={t("Contents")} icon={Shapes}>
       <div className="flex flex-wrap items-center gap-1.5">
         <button
           type="button"
@@ -434,7 +436,7 @@ export function ShapeContentsSection({
           type="button"
           disabled={!selectedItemId}
           onClick={() => selectedItemId && handleMove(selectedItemId, "up")}
-          aria-label="Move up"
+          aria-label={t("Move up")}
           className="rounded-[7px] border border-border bg-bg-1 p-1.5 text-fg-2 transition-colors hover:border-accent disabled:opacity-40"
         >
           <MoveUp size={14} aria-hidden />
@@ -443,7 +445,7 @@ export function ShapeContentsSection({
           type="button"
           disabled={!selectedItemId}
           onClick={() => selectedItemId && handleMove(selectedItemId, "down")}
-          aria-label="Move down"
+          aria-label={t("Move down")}
           className="rounded-[7px] border border-border bg-bg-1 p-1.5 text-fg-2 transition-colors hover:border-accent disabled:opacity-40"
         >
           <MoveDown size={14} aria-hidden />
@@ -452,7 +454,7 @@ export function ShapeContentsSection({
           type="button"
           disabled={!selectedItemId}
           onClick={() => selectedItemId && handleRemove(selectedItemId)}
-          aria-label="Delete"
+          aria-label={t("Delete")}
           className="rounded-[7px] border border-border bg-bg-1 p-1.5 text-fg-2 transition-colors hover:border-danger disabled:opacity-40"
         >
           <Trash2 size={14} aria-hidden />
@@ -476,7 +478,7 @@ export function ShapeContentsSection({
               {isGroup ? (
                 <button
                   type="button"
-                  aria-label={isExpanded ? "Collapse group" : "Expand group"}
+                  aria-label={t(isExpanded ? "Collapse group" : "Expand group")}
                   onClick={() => toggleExpanded(item.id)}
                   className="shrink-0 text-fg-muted"
                 >
@@ -496,7 +498,7 @@ export function ShapeContentsSection({
               )}
               {renamingId === item.id ? (
                 <input
-                  aria-label="Rename item"
+                  aria-label={t("Rename item")}
                   autoFocus
                   value={renameDraft}
                   onChange={(event) => setRenameDraft(event.target.value)}
@@ -524,7 +526,7 @@ export function ShapeContentsSection({
               )}
               <button
                 type="button"
-                aria-label="Toggle visibility"
+                aria-label={t("Toggle visibility")}
                 onClick={() => handleToggleVisibility(item)}
                 className="shrink-0 text-fg-muted transition-colors hover:text-fg-2"
               >
@@ -608,12 +610,13 @@ function GroupDetail({
     direction: "up" | "down",
   ) => void;
 }): JSX.Element {
+  const t = useClipT();
   const { transform } = group;
   const operators = group.operators ?? [];
   return (
     <>
       <div className="grid grid-cols-2 gap-2.5">
-        <Field label="Position X">
+        <Field label={t("Position X")}>
           <NumberInput
             value={transform.position.x}
             onChange={(x) =>
@@ -624,7 +627,7 @@ function GroupDetail({
             }
           />
         </Field>
-        <Field label="Position Y">
+        <Field label={t("Position Y")}>
           <NumberInput
             value={transform.position.y}
             onChange={(y) =>
@@ -635,7 +638,7 @@ function GroupDetail({
             }
           />
         </Field>
-        <Field label="Scale X">
+        <Field label={t("Scale X")}>
           <NumberInput
             value={transform.scale.x}
             step={0.05}
@@ -647,7 +650,7 @@ function GroupDetail({
             }
           />
         </Field>
-        <Field label="Scale Y">
+        <Field label={t("Scale Y")}>
           <NumberInput
             value={transform.scale.y}
             step={0.05}
@@ -659,7 +662,7 @@ function GroupDetail({
             }
           />
         </Field>
-        <Field label="Rotation">
+        <Field label={t("Rotation")}>
           <NumberInput
             value={transform.rotation}
             unit="deg"
@@ -668,7 +671,7 @@ function GroupDetail({
             }
           />
         </Field>
-        <Field label="Opacity">
+        <Field label={t("Opacity")}>
           <NumberInput
             value={transform.opacity}
             min={0}
@@ -681,9 +684,9 @@ function GroupDetail({
         </Field>
       </div>
 
-      <Field label="Merge mode">
+      <Field label={t("Merge mode")}>
         <select
-          aria-label="Merge mode"
+          aria-label={t("Merge mode")}
           value={group.mergeMode ?? "none"}
           onChange={(event) =>
             onMergeMode(group, event.target.value as MotionShapeMergeMode)
@@ -692,7 +695,7 @@ function GroupDetail({
         >
           {MERGE_MODE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {t(option.label)}
             </option>
           ))}
         </select>
@@ -701,7 +704,7 @@ function GroupDetail({
       <div className="space-y-2">
         <div className="flex items-center gap-1.5">
           <select
-            aria-label="Add operator"
+            aria-label={t("Add operator")}
             value={pendingOperator}
             onChange={(event) =>
               onPendingOperatorChange(
@@ -712,13 +715,13 @@ function GroupDetail({
           >
             {MOTION_SHAPE_MODIFIER_TYPES.map((type) => (
               <option key={type} value={type}>
-                {OPERATOR_LABELS[type]}
+                {t(OPERATOR_LABELS[type])}
               </option>
             ))}
           </select>
           <button
             type="button"
-            aria-label="Add operator to group"
+            aria-label={t("Add operator to group")}
             onClick={() => onAddOperator(group)}
             className="flex shrink-0 items-center gap-1 rounded-[7px] border border-border bg-bg-2 px-2.5 py-2 text-[12px] font-medium text-fg-2 transition-colors hover:border-accent"
           >
@@ -774,6 +777,7 @@ function OperatorRow({
   onMoveDown: () => void;
   onRemove: () => void;
 }): JSX.Element {
+  const t = useClipT();
   const numericParams = Object.entries(operator).filter(
     ([key, value]) =>
       !RESERVED_OPERATOR_KEYS.includes(key) &&
@@ -784,17 +788,17 @@ function OperatorRow({
       <div className="flex items-center gap-1.5">
         <input
           type="checkbox"
-          aria-label={`${OPERATOR_LABELS[operator.type]} enabled`}
+          aria-label={`${t(OPERATOR_LABELS[operator.type])} ${t("enabled")}`}
           checked={operator.enabled}
           onChange={(event) => onToggle(event.target.checked)}
           className="h-3.5 w-3.5"
         />
         <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-fg-2">
-          {OPERATOR_LABELS[operator.type]}
+          {t(OPERATOR_LABELS[operator.type])}
         </span>
         <button
           type="button"
-          aria-label="Move operator up"
+          aria-label={t("Move operator up")}
           disabled={isFirst}
           onClick={onMoveUp}
           className="text-fg-muted transition-colors hover:text-fg-2 disabled:opacity-40"
@@ -803,7 +807,7 @@ function OperatorRow({
         </button>
         <button
           type="button"
-          aria-label="Move operator down"
+          aria-label={t("Move operator down")}
           disabled={isLast}
           onClick={onMoveDown}
           className="text-fg-muted transition-colors hover:text-fg-2 disabled:opacity-40"
@@ -812,7 +816,7 @@ function OperatorRow({
         </button>
         <button
           type="button"
-          aria-label="Remove operator"
+          aria-label={t("Remove operator")}
           onClick={onRemove}
           className="text-fg-muted transition-colors hover:text-danger"
         >
@@ -850,6 +854,7 @@ function PathDetail({
     patch: Partial<Omit<MotionShapePathItem, "kind" | "id">>,
   ) => void;
 }): JSX.Element {
+  const t = useClipT();
   const inherits = item.style === undefined;
   const style = item.style;
   const fillColor =
@@ -875,9 +880,9 @@ function PathDetail({
 
   return (
     <>
-      <Field label="Shape type">
+      <Field label={t("Shape type")}>
         <select
-          aria-label="Shape type"
+          aria-label={t("Shape type")}
           value={item.shapeType}
           onChange={(event) =>
             onPatch(item, { shapeType: event.target.value as ShapeType })
@@ -893,7 +898,7 @@ function PathDetail({
       </Field>
 
       <div className="grid grid-cols-2 gap-2.5">
-        <Field label="Width">
+        <Field label={t("Width")}>
           <NumberInput
             value={item.width}
             min={1}
@@ -901,7 +906,7 @@ function PathDetail({
             onChange={(width) => onPatchNumber(item, { width })}
           />
         </Field>
-        <Field label="Height">
+        <Field label={t("Height")}>
           <NumberInput
             value={item.height}
             min={1}
@@ -909,7 +914,7 @@ function PathDetail({
             onChange={(height) => onPatchNumber(item, { height })}
           />
         </Field>
-        <Field label="Position X">
+        <Field label={t("Position X")}>
           <NumberInput
             value={item.position.x}
             onChange={(x) =>
@@ -917,7 +922,7 @@ function PathDetail({
             }
           />
         </Field>
-        <Field label="Position Y">
+        <Field label={t("Position Y")}>
           <NumberInput
             value={item.position.y}
             onChange={(y) =>
@@ -930,7 +935,7 @@ function PathDetail({
       <label className="flex items-center gap-2 text-[12px] font-medium text-fg-2">
         <input
           type="checkbox"
-          aria-label="Inherit style"
+          aria-label={t("Inherit style")}
           checked={inherits}
           onChange={(event) => setInherit(event.target.checked)}
           className="h-3.5 w-3.5"
@@ -940,7 +945,7 @@ function PathDetail({
 
       {!inherits && style ? (
         <div className="grid grid-cols-1 gap-2.5">
-          <Field label="Fill color">
+          <Field label={t("Fill color")}>
             <ColorInput
               value={fillColor}
               onChange={(color) =>
@@ -951,7 +956,7 @@ function PathDetail({
               }
             />
           </Field>
-          <Field label="Stroke color">
+          <Field label={t("Stroke color")}>
             <ColorInput
               value={strokeColor}
               onChange={(color) =>

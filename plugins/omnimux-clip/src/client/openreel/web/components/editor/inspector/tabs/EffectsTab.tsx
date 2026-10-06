@@ -31,6 +31,7 @@ import {
 } from "../../panels/EditingTemplateControls";
 import { toast } from "../../../../stores/notification-store";
 import { ParticleEffectsSectionWrapper } from "./ParticleEffectsSectionWrapper";
+import { useClipT } from "../../../../../../i18n/index.js";
 
 interface EffectsTabClip {
   duration: number;
@@ -118,6 +119,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
   handleKeyColorChange,
   handleToleranceChange,
 }) => {
+  const t = useClipT();
   return (
     <>
       {showVideoControls && selectedTimelineClip && (appliedEditingTemplates.length > 0 || (selectedTimelineClip.effects && selectedTimelineClip.effects.length > 0)) && (
@@ -168,7 +170,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
                     <div className="flex shrink-0 gap-1">
                       {canEdit && (
                         <Button
-                          label="Edit"
+                          label={t("Edit")}
                           onClick={() =>
                             handleToggleRecipeControls(
                               application.applicationId,
@@ -182,7 +184,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
                         />
                       )}
                       <IconButton
-                        label="Remove recipe"
+                        label={t("Remove recipe")}
                         onClick={() => {
                           const removed = removeEditingTemplateApplication(
                             selectedTimelineClip.id,
@@ -224,7 +226,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
                       />
                       <div className="flex justify-end gap-1.5">
                         <Button
-                          label="Reset"
+                          label={t("Reset")}
                           onClick={() =>
                             handleResetRecipeControls(
                               application.applicationId,
@@ -236,7 +238,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
                           size="sm"
                         />
                         <Button
-                          label="Update"
+                          label={t("Update")}
                           onClick={() =>
                             handleUpdateRecipeControls(
                               application.applicationId,
@@ -280,7 +282,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
                       effect.enabled !== false ? "text-green-400" : ""
                     }`}
                   >
-                    {effect.enabled !== false ? "On" : "Off"}
+                    {effect.enabled !== false ? t("On") : t("Off")}
                   </Text>
                 </Card>
               ))}
@@ -289,7 +291,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
       )}
 
       {clipType === "video" && (
-        <InspectorSection title="Background Removal" sectionId="background-removal" defaultOpen={false}>
+        <InspectorSection title={t("Background Removal")} sectionId="background-removal" defaultOpen={false}>
           <BackgroundRemovalSection clipId={clipId} />
         </InspectorSection>
       )}
@@ -303,7 +305,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
         clipType === "sticker") &&
         selectedClip && (
           <InspectorSection
-            title="Particle Effects"
+            title={t("Particle Effects")}
             sectionId="particle-effects"
             defaultOpen={false}
           >
@@ -317,14 +319,14 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
 
       {/* Chroma Key - Using ChromaKeyEngine - Only for video/image */}
       {showVideoControls && (
-        <InspectorSection title="Chroma Key (Green Screen)">
+        <InspectorSection title={t("Chroma Key (Green Screen)")}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Text type="supporting" color="secondary" className="text-[10px]">
-                Enable
+                {t("Enable")}
               </Text>
               <MockToggle
-                ariaLabel="Enable chroma key"
+                ariaLabel={t("Enable chroma key")}
                 checked={chromaKeyEnabled}
                 onChange={handleChromaKeyToggle}
               />
@@ -333,10 +335,10 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
               <>
                 <div className="flex items-center justify-between">
                   <Text type="supporting" color="secondary" className="text-[10px]">
-                    Key Color
+                    {t("Key Color")}
                   </Text>
                   <ToolcraftTextInputControl
-                    label="Key Color"
+                    label={t("Key Color")}
                     isLabelHidden
                     size="sm"
                     width={96}
@@ -352,7 +354,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
                   />
                 </div>
                 <PropertySlider
-                  label="Tolerance"
+                  label={t("Tolerance")}
                   value={tolerance}
                   onChange={handleToleranceChange}
                   min={0}
@@ -367,20 +369,20 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
 
       {/* Motion Tracking - Using MotionTrackingEngine - Only for video/image */}
       {showVideoControls && (
-        <InspectorSection title="Motion Tracking" sectionId="motion-tracking">
+        <InspectorSection title={t("Motion Tracking")} sectionId="motion-tracking">
           <MotionTrackingSection clipId={clipId} />
         </InspectorSection>
       )}
 
       {showVideoEffects && (
-        <InspectorSection title="Video Effects" sectionId="video-effects">
+        <InspectorSection title={t("Video Effects")} sectionId="video-effects">
           <VideoEffectsSection clipId={clipId} />
         </InspectorSection>
       )}
 
       {showVideoControls && (
         <InspectorSection
-          title="Green Screen"
+          title={t("Green Screen")}
           sectionId="green-screen"
           defaultOpen={false}
         >
@@ -391,7 +393,7 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
       {/* Picture-in-Picture Section */}
       {showVideoControls && (
         <InspectorSection
-          title="Picture-in-Picture"
+          title={t("Picture-in-Picture")}
           sectionId="pip"
           defaultOpen={false}
         >
@@ -400,26 +402,26 @@ export const EffectsTab: React.FC<EffectsTabProps> = ({
       )}
 
       {showVideoControls && (
-        <InspectorSection title="Masking" sectionId="masking" defaultOpen={false}>
+        <InspectorSection title={t("Masking")} sectionId="masking" defaultOpen={false}>
           <MaskSection clipId={clipId} />
         </InspectorSection>
       )}
 
       {showVideoControls && (
-        <InspectorSection title="Nested Sequences" defaultOpen={false}>
+        <InspectorSection title={t("Nested Sequences")} defaultOpen={false}>
           <NestedSequenceSection clipId={clipId} />
         </InspectorSection>
       )}
 
       {showVideoControls && (
-        <InspectorSection title="Adjustment Layers" defaultOpen={false}>
+        <InspectorSection title={t("Adjustment Layers")} defaultOpen={false}>
           <AdjustmentLayerSection clipId={clipId} />
         </InspectorSection>
       )}
 
       {showTextSection && (
         <InspectorSection
-          title="Text Behind Subject"
+          title={t("Text Behind Subject")}
           sectionId="text-behind-subject"
           defaultOpen={false}
         >

@@ -4,6 +4,7 @@ import { ToolcraftCard as Card } from "@openreel/ui";
 import { ToolcraftIconButton as IconButton } from "@openreel/ui";
 import { ToolcraftText as Text } from "@openreel/ui";
 import { Play, Pause, Plus, Download, FolderPlus, Volume2 } from "@/icons/lucide-compat";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface AudioResultProps {
   generatedAudio: Blob;
@@ -26,6 +27,7 @@ export const AudioResult: React.FC<AudioResultProps> = ({
   onAddToTimeline,
   onDownload,
 }) => {
+  const t = useClipT();
   return (
     <Card padding={3} variant="muted" className="space-y-3">
       <div className="flex items-center justify-between">
@@ -59,7 +61,7 @@ export const AudioResult: React.FC<AudioResultProps> = ({
 
       <div className="flex gap-2">
         <Button
-          label="Save to Media"
+          label={t("Save to Media")}
           icon={<FolderPlus size={12} aria-hidden />}
           variant="primary"
           size="sm"
@@ -68,7 +70,7 @@ export const AudioResult: React.FC<AudioResultProps> = ({
           className="flex-1"
         />
         <IconButton
-          label="Add to Timeline"
+          label={t("Add to Timeline")}
           icon={<Plus size={12} aria-hidden />}
           variant="secondary"
           size="sm"
@@ -76,7 +78,7 @@ export const AudioResult: React.FC<AudioResultProps> = ({
           isDisabled={isGenerating}
         />
         <IconButton
-          label="Download"
+          label={t("Download")}
           icon={<Download size={12} aria-hidden />}
           variant="secondary"
           size="sm"

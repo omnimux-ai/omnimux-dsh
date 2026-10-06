@@ -5,6 +5,7 @@ import { MockToggle } from "./shell/InspectorControls";
 import { useEngineStore } from "../../../stores/engine-store";
 import { useProjectStore } from "../../../stores/project-store";
 import { getPersonSegmentationEngine } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface BehindSubjectSectionProps {
   clipId: string;
@@ -13,6 +14,7 @@ interface BehindSubjectSectionProps {
 export const BehindSubjectSection: React.FC<BehindSubjectSectionProps> = ({
   clipId,
 }) => {
+  const t = useClipT();
   const getTitleEngine = useEngineStore((state) => state.getTitleEngine);
   const updateTextBehindSubject = useProjectStore(
     (state) => state.updateTextBehindSubject,
@@ -70,17 +72,17 @@ export const BehindSubjectSection: React.FC<BehindSubjectSectionProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex flex-1 flex-col gap-0.5">
           <Text type="supporting" color="primary" className="block">
-            Place Behind Subject
+            {t("Place Behind Subject")}
           </Text>
           <Text type="supporting" color="secondary" className="block text-[9px]">
-            Text appears behind people in the video
+            {t("Text appears behind people in the video")}
           </Text>
         </div>
         {isLoading ? (
           <Loader2 size={14} className="animate-spin text-primary" />
         ) : (
           <MockToggle
-            ariaLabel="Place Behind Subject"
+            ariaLabel={t("Place Behind Subject")}
             checked={enabled}
             onChange={handleToggle}
           />
@@ -88,7 +90,7 @@ export const BehindSubjectSection: React.FC<BehindSubjectSectionProps> = ({
       </div>
       {isLoading && (
         <Text type="supporting" color="secondary" className="text-[9px]">
-          Loading AI model...
+          {t("Loading AI model...")}
         </Text>
       )}
       {error && (

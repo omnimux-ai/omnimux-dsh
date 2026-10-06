@@ -40,6 +40,7 @@ import {
   SwitchInput,
   TextInput,
 } from "./primitives";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface MotionSyncPanelProps {
   composition: MotionComposition;
@@ -54,6 +55,7 @@ export function MotionSyncPanel({
   composition,
   embedded = false,
 }: MotionSyncPanelProps): JSX.Element {
+  const t = useClipT();
   const [bpm, setBpm] = useState(composition.beatAnalysis?.bpm ?? 120);
   const [beatsPerBar, setBeatsPerBar] = useState(4);
   const [startTime, setStartTime] = useState(0);
@@ -197,12 +199,12 @@ export function MotionSyncPanel({
     <div className={embedded ? "" : "flex h-full min-h-0 flex-col"}>
       {embedded ? null : (
         <PanelHeader
-          title="Sync"
+          title={t("Sync")}
           icon={Music2}
           actions={
             <IconButton
               icon={Flag}
-              label="Add marker at playhead"
+              label={t("Add marker at playhead")}
               size="sm"
               onClick={addMarker}
             />
@@ -211,7 +213,7 @@ export function MotionSyncPanel({
       )}
       <div className={embedded ? "" : "min-h-0 flex-1 overflow-auto"}>
         <Section
-          title={`Audio Clips (${(composition.audioClips ?? []).length})`}
+          title={`${t("Audio Clips")} (${(composition.audioClips ?? []).length})`}
           icon={Music2}
         >
           {(composition.audioClips ?? []).length === 0 ? (
@@ -233,16 +235,16 @@ export function MotionSyncPanel({
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <button
                       type="button"
-                      aria-label={`Select audio clip ${audioClip.name ?? "Audio"}`}
+                      aria-label={t("Select audio clip {name}").replace("{name}", audioClip.name ?? t("Audio"))}
                       aria-pressed={selectedAudioClipId === audioClip.id}
                       onClick={() => selectAudioClip(audioClip.id)}
                       className="min-w-0 flex-1 truncate text-left text-[12.5px] font-semibold text-fg-2 hover:text-accent"
                     >
-                      {audioClip.name ?? "Audio"}
+                      {audioClip.name ?? t("Audio")}
                     </button>
                     <IconButton
                       icon={Trash2}
-                      label="Remove audio clip"
+                      label={t("Remove audio clip")}
                       size="sm"
                       variant="danger"
                       onClick={() => {
@@ -260,7 +262,7 @@ export function MotionSyncPanel({
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2.5">
-                    <Field label="Gain">
+                    <Field label={t("Gain")}>
                       <NumberInput
                         value={audioClip.gain ?? 1}
                         min={0}
@@ -269,7 +271,7 @@ export function MotionSyncPanel({
                         onChange={(gain) => patchAudioClip(audioClip.id, { gain })}
                       />
                     </Field>
-                    <Field label="Start" hint="s">
+                    <Field label={t("Start")} hint={t("s")}>
                       <NumberInput
                         value={audioClip.startTime}
                         min={0}
@@ -283,7 +285,7 @@ export function MotionSyncPanel({
                         }
                       />
                     </Field>
-                    <Field label="Duration" hint="s">
+                    <Field label={t("Duration")} hint={t("s")}>
                       <NumberInput
                         value={audioClip.duration}
                         min={1 / Math.max(1, composition.frameRate)}
@@ -301,7 +303,7 @@ export function MotionSyncPanel({
                         }
                       />
                     </Field>
-                    <Field label="Source trim" hint="s">
+                    <Field label={t("Source trim")} hint={t("s")}>
                       <NumberInput
                         value={audioClip.trimStart ?? 0}
                         min={0}
@@ -311,7 +313,7 @@ export function MotionSyncPanel({
                         }
                       />
                     </Field>
-                    <Field label="Fade in" hint="s">
+                    <Field label={t("Fade in")} hint={t("s")}>
                       <NumberInput
                         value={audioClip.fadeIn ?? 0}
                         min={0}
@@ -322,7 +324,7 @@ export function MotionSyncPanel({
                         }
                       />
                     </Field>
-                    <Field label="Fade out" hint="s">
+                    <Field label={t("Fade out")} hint={t("s")}>
                       <NumberInput
                         value={audioClip.fadeOut ?? 0}
                         min={0}
@@ -336,7 +338,7 @@ export function MotionSyncPanel({
                   </div>
                   <div className="mt-2">
                     <SwitchInput
-                      label="Mute clip"
+                      label={t("Mute clip")}
                       checked={audioClip.muted ?? false}
                       onChange={(muted) =>
                         patchAudioClip(audioClip.id, { muted })
@@ -349,12 +351,12 @@ export function MotionSyncPanel({
           )}
         </Section>
 
-        <Section title="Beat Grid" icon={RadioTower}>
+        <Section title={t("Beat Grid")} icon={RadioTower}>
           <div className="grid grid-cols-3 gap-2.5">
-            <Field label="BPM">
+            <Field label={t("BPM")}>
               <NumberInput value={bpm} min={1} max={999} onChange={setBpm} />
             </Field>
-            <Field label="Bar">
+            <Field label={t("Bar")}>
               <NumberInput
                 value={beatsPerBar}
                 min={1}
@@ -362,7 +364,7 @@ export function MotionSyncPanel({
                 onChange={setBeatsPerBar}
               />
             </Field>
-            <Field label="Start" hint="s">
+            <Field label={t("Start")} hint={t("s")}>
               <NumberInput
                 value={startTime}
                 min={0}
@@ -373,7 +375,7 @@ export function MotionSyncPanel({
             </Field>
           </div>
           <Button
-            label="Generate Beat Grid"
+            label={t("Generate Beat Grid")}
             icon={RadioTower}
             variant="solid"
             size="md"
@@ -382,16 +384,16 @@ export function MotionSyncPanel({
           />
         </Section>
 
-        <Section title="Waveform Detection" icon={Music2}>
+        <Section title={t("Waveform Detection")} icon={Music2}>
           {mediaSources.length === 0 ? (
             <EmptyState
               icon={Music2}
-              title="No waveform media"
-              description="Import audio or video with waveform data to detect beat markers."
+              title={t("No waveform media")}
+              description={t("Import audio or video with waveform data to detect beat markers.")}
             />
           ) : (
             <>
-              <Field label="Source">
+              <Field label={t("Source")}>
                 <SelectInput
                   value={selectedSource?.id ?? ""}
                   options={mediaSources.map((item) => ({
@@ -401,7 +403,7 @@ export function MotionSyncPanel({
                   onChange={setSourceMediaId}
                 />
               </Field>
-              <Field label="Sensitivity">
+              <Field label={t("Sensitivity")}>
                 <NumberInput
                   value={sensitivity}
                   min={0}
@@ -411,7 +413,7 @@ export function MotionSyncPanel({
                 />
               </Field>
               <Button
-                label="Detect From Waveform"
+                label={t("Detect From Waveform")}
                 icon={Music2}
                 variant="outline"
                 size="md"
@@ -422,17 +424,17 @@ export function MotionSyncPanel({
           )}
         </Section>
 
-        <Section title={`Beat Markers (${beatMarkers.length})`} icon={Zap}>
+        <Section title={`${t("Beat Markers")} (${beatMarkers.length})`} icon={Zap}>
           {beatMarkers.length === 0 ? (
             <EmptyState
               icon={Zap}
-              title="No beat markers"
-              description="Generate a beat grid or detect beats from waveform media."
+              title={t("No beat markers")}
+              description={t("Generate a beat grid or detect beats from waveform media.")}
             />
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2.5">
-                <Field label="Preset">
+                <Field label={t("Preset")}>
                   <SelectInput
                     value={presetId}
                     options={BEAT_PRESET_OPTIONS.map((preset) => ({
@@ -444,7 +446,7 @@ export function MotionSyncPanel({
                     }
                   />
                 </Field>
-                <Field label="Duration" hint="s">
+                <Field label={t("Duration")} hint={t("s")}>
                   <NumberInput
                     value={animationDuration}
                     min={0.05}
@@ -455,12 +457,12 @@ export function MotionSyncPanel({
                 </Field>
               </div>
               <SwitchInput
-                label="Downbeats only"
+                label={t("Downbeats only")}
                 checked={onlyDownbeats}
                 onChange={setOnlyDownbeats}
               />
               <Button
-                label="Apply To Selected Layer"
+                label={t("Apply To Selected Layer")}
                 icon={Zap}
                 variant="solid"
                 size="md"
@@ -469,7 +471,7 @@ export function MotionSyncPanel({
                 className="w-full"
               />
               <Button
-                label="Clear Beat Markers"
+                label={t("Clear Beat Markers")}
                 icon={Trash2}
                 variant="danger"
                 size="md"
@@ -480,12 +482,12 @@ export function MotionSyncPanel({
           )}
         </Section>
 
-        <Section title={`Markers (${composition.markers.length})`} icon={Flag}>
+        <Section title={`${t("Markers")} (${composition.markers.length})`} icon={Flag}>
           {composition.markers.length === 0 ? (
             <EmptyState
               icon={Flag}
-              title="No composition markers"
-              description="Add timing markers at the playhead for cuts, reveals, voiceover notes, and sections."
+              title={t("No composition markers")}
+              description={t("Add timing markers at the playhead for cuts, reveals, voiceover notes, and sections.")}
             />
           ) : (
             <div className="space-y-2">
@@ -500,14 +502,14 @@ export function MotionSyncPanel({
                       style={{ backgroundColor: marker.color }}
                     />
                     <Button
-                      label={`Go to ${marker.label}`}
+                      label={`Go to ${t(marker.label)}`}
                       variant="ghost"
                       size="sm"
                       onClick={() => setPlayhead(marker.time)}
                       className="min-w-0 flex-1 justify-start text-left"
                     >
                       <span className="block truncate text-[12px] font-semibold text-fg-2">
-                        {marker.label}
+                        {t(marker.label)}
                       </span>
                       <span className="block text-[10.5px] tabular-nums text-fg-muted">
                         {marker.time.toFixed(2)}s
@@ -515,26 +517,26 @@ export function MotionSyncPanel({
                     </Button>
                     <IconButton
                       icon={LocateFixed}
-                      label="Go to marker"
+                      label={t("Go to marker")}
                       size="sm"
                       onClick={() => setPlayhead(marker.time)}
                     />
                     <IconButton
                       icon={Trash2}
-                      label="Remove marker"
+                      label={t("Remove marker")}
                       size="sm"
                       variant="danger"
                       onClick={() => removeMarker(marker.id)}
                     />
                   </div>
                   <div className="grid grid-cols-[minmax(0,1fr)_84px] gap-2">
-                    <Field label="Label">
+                    <Field label={t("Label")}>
                       <TextInput
-                        value={marker.label}
+                        value={t(marker.label)}
                         onChange={(label) => updateMarker(marker.id, { label })}
                       />
                     </Field>
-                    <Field label="Time" hint="s">
+                    <Field label={t("Time")} hint={t("s")}>
                       <NumberInput
                         value={marker.time}
                         min={0}
@@ -544,7 +546,7 @@ export function MotionSyncPanel({
                       />
                     </Field>
                   </div>
-                  <Field label="Color">
+                  <Field label={t("Color")}>
                     <ColorInput
                       value={marker.color}
                       onChange={(color) => updateMarker(marker.id, { color })}
@@ -555,7 +557,7 @@ export function MotionSyncPanel({
             </div>
           )}
           <Button
-            label="Add Marker At Playhead"
+            label={t("Add Marker At Playhead")}
             icon={Plus}
             variant="outline"
             size="md"

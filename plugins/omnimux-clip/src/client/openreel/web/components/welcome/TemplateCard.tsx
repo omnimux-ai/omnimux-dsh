@@ -13,6 +13,7 @@ import type { ScriptableTemplate, SocialMediaCategory } from "@openreel/core";
 import { SOCIAL_MEDIA_PRESETS } from "@openreel/core";
 import { ToolcraftClickableCard as ClickableCard } from "@openreel/ui";
 import { ToolcraftText as Text } from "@openreel/ui";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface TemplateCardProps {
   template: ScriptableTemplate;
@@ -61,6 +62,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
   template,
   onClick,
 }) => {
+  const t = useClipT();
   const [isHovered, setIsHovered] = useState(false);
 
   const category: SocialMediaCategory = template.socialCategory || "custom";
@@ -79,7 +81,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
 
   return (
     <ClickableCard
-      label={template.name}
+      label={t(template.name)}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -128,7 +130,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
         {template.featured && (
           <div className="absolute top-2 left-2 px-2 py-0.5 bg-amber-500 text-black text-[10px] font-semibold rounded-full flex items-center gap-1">
             <Star size={10} fill="currentColor" />
-            Featured
+            {t("Featured")}
           </div>
         )}
 
@@ -151,7 +153,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
             <Layers size={11} />
-            <span>{template.placeholders.length} editable</span>
+            <span>{template.placeholders.length} {t("editable")}</span>
           </div>
         </div>
 

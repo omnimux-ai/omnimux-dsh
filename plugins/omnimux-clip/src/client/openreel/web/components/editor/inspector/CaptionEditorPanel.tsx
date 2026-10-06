@@ -8,6 +8,7 @@ import {
 } from "@openreel/ui";
 import { Check, WrapText } from "@/icons/lucide-compat";
 import { useProjectStore } from "../../../stores/project-store";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface CaptionEditorPanelProps {
   maxWordsPerLine: number;
@@ -18,6 +19,7 @@ export const CaptionEditorPanel: React.FC<CaptionEditorPanelProps> = ({
   maxWordsPerLine,
   onMaxWordsPerLineChange,
 }) => {
+  const t = useClipT();
   const project = useProjectStore((state) => state.project);
   const getAllTextClips = useProjectStore((state) => state.getAllTextClips);
   const updateTextContent = useProjectStore((state) => state.updateTextContent);
@@ -131,14 +133,14 @@ export const CaptionEditorPanel: React.FC<CaptionEditorPanelProps> = ({
         <div className="flex items-center justify-between gap-3">
           <div>
             <Text type="supporting" weight="bold" className="block text-[11px] text-fg">
-              Single-line captions
+              {t("Single-line captions")}
             </Text>
             <Text type="supporting" color="secondary" className="block text-[9px]">
-              Split each cue into timed clips for vertical video.
+              {t("Split each cue into timed clips for vertical video.")}
             </Text>
           </div>
           <Selector
-            label="Maximum words per caption"
+            label={t("Maximum words per caption")}
             isLabelHidden
             size="sm"
             width={84}

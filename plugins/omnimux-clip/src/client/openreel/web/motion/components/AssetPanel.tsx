@@ -26,6 +26,7 @@ import {
 import { useProjectStore } from "../../stores/project-store";
 import { toast } from "../../stores/notification-store";
 import { useMotionStore } from "../stores/motion-store";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface AssetPanelProps {
   composition: MotionComposition;
@@ -63,6 +64,7 @@ const SOLID_ASSET_TYPES: ReadonlyArray<MotionAsset["type"]> = [
 ];
 
 export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
+  const t = useClipT();
   const mediaItems = useProjectStore((state) => state.project.mediaLibrary.items);
   const motionCompositions = useProjectStore(
     (state) => state.project.motionCompositions,
@@ -108,13 +110,13 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
       const result = await upsertMotionComposition(nextComposition);
       if (!result.success) {
         toast.error(
-          "Could not add asset",
-          result.error?.message ?? "The motion scene could not be updated.",
+          t("Could not add asset"),
+          result.error?.message ?? t("The motion scene could not be updated."),
         );
         return false;
       }
       selectLayer(layerId);
-      toast.success("Layer added", `${name} added at the playhead.`);
+      toast.success(t("Layer added"), t("{name} added at the playhead.").replace("{name}", name));
       return true;
     },
     [selectLayer, upsertMotionComposition],
@@ -237,11 +239,11 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
       if (result.success) {
         selectAudioClip(audioClip.id);
         setRightTab("sync");
-        toast.success("Audio added", `${item.name} added at the playhead.`);
+        toast.success(t("Audio added"), t("{name} added at the playhead.").replace("{name}", item.name));
       } else {
         toast.error(
-          "Could not add audio",
-          result.error?.message ?? "The motion scene could not be updated.",
+          t("Could not add audio"),
+          result.error?.message ?? t("The motion scene could not be updated."),
         );
       }
     },
@@ -287,12 +289,12 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
         name: file.name.replace(/\.svg$/i, "") || "Imported SVG",
       });
       await saveImportedComposition(imported);
-      toast.success("SVG imported", imported.name);
+      toast.success(t("SVG imported"), imported.name);
     } catch (error) {
       console.error("[MotionCreator] SVG import failed:", error);
       toast.error(
         "SVG import failed",
-        error instanceof Error ? error.message : "Could not read this SVG.",
+        error instanceof Error ? error.message : t("Could not read this SVG."),
       );
     }
   };
@@ -305,12 +307,12 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
         nm: lottie.nm || file.name.replace(/\.(json|lottie)$/i, ""),
       });
       await saveImportedComposition(imported);
-      toast.success("Lottie imported", imported.name);
+      toast.success(t("Lottie imported"), imported.name);
     } catch (error) {
       console.error("[MotionCreator] Lottie import failed:", error);
       toast.error(
         "Lottie import failed",
-        error instanceof Error ? error.message : "Could not read this Lottie file.",
+        error instanceof Error ? error.message : t("Could not read this Lottie file."),
       );
     }
   };
@@ -349,8 +351,8 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
         }
         if (imported > 0) {
           toast.success(
-            imported === 1 ? "Media imported" : `${imported} files imported`,
-            "Select the asset to add it at the playhead.",
+            imported === 1 ? t("Media imported") : t("{count} files imported").replace("{count}", String(imported)),
+            t("Select the asset to add it at the playhead."),
           );
         }
       } finally {
@@ -451,11 +453,11 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
   return (
     <div className="flex h-full min-h-0 flex-col p-[18px_16px]">
       <div className="mb-[14px] flex items-center justify-between">
-        <span className="text-[18px] font-bold text-fg">Assets</span>
+        <span className="text-[18px] font-bold text-fg">{t("Assets")}</span>
         <div className="flex items-center gap-1">
           <ToolcraftFileDropControl
             accept="image/*,video/*,audio/*"
-            label={isImportingMedia ? "Importing…" : "Import Media"}
+            label={t(isImportingMedia ? "Importing…" : "Import Media")}
             icon={<Upload size={14} aria-hidden />}
             onChange={handleMediaInputChange}
             variant="button"
@@ -463,14 +465,14 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
           />
           <ToolcraftFileDropControl
             accept=".svg,image/svg+xml"
-            label="Import SVG"
+            label={t("Import SVG")}
             icon={<FileCode2 size={14} aria-hidden />}
             onChange={handleSvgInputChange}
             variant="button"
           />
           <ToolcraftFileDropControl
             accept=".json,.lottie,application/json"
-            label="Import Lottie"
+            label={t("Import Lottie")}
             icon={<FileJson size={14} aria-hidden />}
             onChange={handleLottieInputChange}
             variant="button"
@@ -482,17 +484,17 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
         <ToolcraftTextInputControl
           value={query}
           onChange={setQuery}
-          placeholder="Search assets..."
-          ariaLabel="Search assets"
+          placeholder={t("Search assets...")}
+          ariaLabel={t("Search assets")}
           leading={<Search size={15} aria-hidden />}
           className="flex-1"
           inputClassName="h-10 rounded-[9px] bg-bg"
         />
         <button
           type="button"
-          aria-label="Show scene assets only"
+          aria-label={t("Show scene assets only")}
           aria-pressed={sceneAssetsOnly}
-          title="Show scene assets only"
+          title={t("Show scene assets only")}
           onClick={() => setSceneAssetsOnly((value) => !value)}
           className={`flex w-[42px] items-center justify-center rounded-[9px] border transition-colors ${
             sceneAssetsOnly
@@ -518,7 +520,7 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
                   : "shrink-0 pb-[9px] text-[13px] font-medium text-fg-muted"
               }
             >
-              {tab.label}
+              {t(tab.label)}
             </button>
           );
         })}
@@ -526,7 +528,7 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
 
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="mb-2.5 flex items-center justify-between text-[12px] font-semibold text-fg-3">
-          <span>{sceneAssetsOnly ? "Scene Assets" : "Available Assets"}</span>
+          <span>{t(sceneAssetsOnly ? "Scene Assets" : "Available Assets")}</span>
           <span className="font-mono text-[10px] font-medium text-fg-muted">
             {gridEntries.length}
           </span>
@@ -540,8 +542,8 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
         ) : (
           <div className="rounded-lg border border-dashed border-border bg-bg-1 px-3 py-6 text-center text-[11px] text-fg-muted">
             {sceneAssetsOnly
-              ? "No reusable assets in this scene yet."
-              : "No assets match this search or category."}
+              ? t("No reusable assets in this scene yet.")
+              : t("No assets match this search or category.")}
           </div>
         )}
 
@@ -551,7 +553,7 @@ export function AssetPanel({ composition }: AssetPanelProps): JSX.Element {
           </span>
           <button
             type="button"
-            aria-label="Create motion scene"
+            aria-label={t("Create motion scene")}
             onClick={() => void createMotionComposition("Motion Scene")}
             className="flex h-6 w-6 items-center justify-center rounded-md text-[#a0a0a5] transition-colors hover:bg-bg hover:text-accent"
           >

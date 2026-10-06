@@ -19,6 +19,7 @@ import {
   type SocialMediaCategory,
 } from "@openreel/core";
 import { ToolcraftButton as Button } from "@openreel/ui";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface CategoryTabsProps {
   selectedCategory: SocialMediaCategory | "all";
@@ -60,6 +61,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   onSelectCategory,
   categoryStats,
 }) => {
+  const t = useClipT();
   const [expandedPlatform, setExpandedPlatform] = React.useState<string | null>(
     null,
   );
@@ -80,7 +82,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
     <div className="space-y-3">
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <Button
-          label="All"
+          label={t("All")}
           onClick={() => {
             onSelectCategory("all");
             setExpandedPlatform(null);
@@ -117,7 +119,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           return (
             <Button
               key={platform}
-              label={platform}
+              label={t(platform)}
               onClick={() => handlePlatformClick(platform)}
               variant={isActive || isExpanded ? "primary" : "secondary"}
               size="sm"
@@ -151,7 +153,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
             return (
               <Button
                 key={category}
-                label={info?.name || category}
+                label={t(info?.name || category)}
                 onClick={() => onSelectCategory(category)}
                 variant={selectedCategory === category ? "primary" : "secondary"}
                 size="sm"

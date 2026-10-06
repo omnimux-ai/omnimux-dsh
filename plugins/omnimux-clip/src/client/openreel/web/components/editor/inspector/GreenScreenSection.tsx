@@ -8,6 +8,7 @@ import { MockSlider } from "./shell/InspectorControls";
 import { useProjectStore } from "../../../stores/project-store";
 import { useEngineStore } from "../../../stores/engine-store";
 import type { RGB, ChromaKeySettings } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface GreenScreenSectionProps {
   clipId: string;
@@ -18,7 +19,7 @@ const ColorPreview: React.FC<{ color: RGB; onClick?: () => void }> = ({
   onClick,
 }) => (
   <Button
-    label="Pick color from video"
+    label={t("Pick color from video")}
     variant="ghost"
     onClick={onClick}
     className="w-8 h-8 rounded-lg border-2 border-border hover:border-primary transition-colors"
@@ -94,6 +95,7 @@ const COLOR_PRESETS: { color: RGB; label: string }[] = [
 export const GreenScreenSection: React.FC<GreenScreenSectionProps> = ({
   clipId,
 }) => {
+  const t = useClipT();
   const project = useProjectStore((state) => state.project);
   const getChromaKeyEngine = useEngineStore(
     (state) => state.getChromaKeyEngine,
@@ -231,14 +233,14 @@ export const GreenScreenSection: React.FC<GreenScreenSectionProps> = ({
         <Video size={16} className="text-green-400" />
         <div className="flex flex-col gap-0.5 flex-1">
           <span className="block text-[11px] font-medium text-fg">
-            Green Screen
+            {t("Green Screen")}
           </span>
           <Text type="supporting" color="secondary" display="block" className="text-[9px] text-fg-3">
-            Remove background color from video
+            {t("Remove background color from video")}
           </Text>
         </div>
         <IconButton
-          label={settings.enabled ? "Disable chroma key" : "Enable chroma key"}
+          label={settings.enabled ? t("Disable chroma key") : t("Enable chroma key")}
           icon={settings.enabled ? <Eye size={14} /> : <EyeOff size={14} />}
           variant="ghost"
           size="sm"
@@ -256,11 +258,11 @@ export const GreenScreenSection: React.FC<GreenScreenSectionProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-medium text-fg">
-                Key Color
+                {t("Key Color")}
               </span>
               <div className="flex items-center gap-2">
                 <IconButton
-                  label="Pick color from video"
+                  label={t("Pick color from video")}
                   icon={<Pipette size={12} />}
                   variant="ghost"
                   size="sm"
@@ -278,7 +280,7 @@ export const GreenScreenSection: React.FC<GreenScreenSectionProps> = ({
             {isPickingColor && (
               <div className="p-2 bg-primary/10 border border-primary/30 rounded-lg">
                 <Text type="supporting" color="primary" className="text-[9px] text-primary text-center">
-                  Click on the video preview to pick a color
+                  {t("Click on the video preview to pick a color")}
                 </Text>
               </div>
             )}
@@ -298,19 +300,19 @@ export const GreenScreenSection: React.FC<GreenScreenSectionProps> = ({
 
           <div className="space-y-3 pt-2 border-t border-border">
             <ControlSlider
-              label="Tolerance"
+              label={t("Tolerance")}
               value={settings.tolerance}
               onChange={handleSetTolerance}
             />
 
             <ControlSlider
-              label="Edge Softness"
+              label={t("Edge Softness")}
               value={settings.edgeSoftness}
               onChange={handleSetEdgeSoftness}
             />
 
             <ControlSlider
-              label="Spill Suppression"
+              label={t("Spill Suppression")}
               value={settings.spillSuppression}
               onChange={handleSetSpillSuppression}
             />
@@ -318,7 +320,7 @@ export const GreenScreenSection: React.FC<GreenScreenSectionProps> = ({
 
           <div className="flex items-center gap-2 pt-2 border-t border-border">
             <Button
-              label="Reset to Defaults"
+              label={t("Reset to Defaults")}
               variant="ghost"
               icon={<RefreshCw size={12} />}
               onClick={handleResetToDefaults}
@@ -329,7 +331,7 @@ export const GreenScreenSection: React.FC<GreenScreenSectionProps> = ({
           <div className="flex items-center gap-2 p-2 bg-bg-2 rounded-lg">
             <Layers size={12} className="text-fg-3" />
             <Text type="supporting" color="secondary" className="text-[9px] text-fg-3 flex-1">
-              Place video clips below this one to use as background
+              {t("Place video clips below this one to use as background")}
             </Text>
           </div>
         </>
@@ -342,10 +344,10 @@ export const GreenScreenSection: React.FC<GreenScreenSectionProps> = ({
             className="mx-auto mb-2 text-fg-3 opacity-50"
           />
           <Text type="supporting" color="secondary" display="block" className="text-[10px] text-fg-3">
-            Enable to remove background color
+            {t("Enable to remove background color")}
           </Text>
           <Button
-            label="Enable Green Screen"
+            label={t("Enable Green Screen")}
             variant="primary"
             onClick={handleToggleEnabled}
             className="mt-2 px-4 py-1.5 text-[10px] bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded-lg transition-colors"

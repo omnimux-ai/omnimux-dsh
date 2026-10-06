@@ -14,6 +14,7 @@ import {
   MockSlider,
   NumberField,
 } from "../shell/InspectorControls";
+import { useClipT } from "../../../../../../i18n/index.js";
 
 interface TransformTabClip {
   id: string;
@@ -56,6 +57,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   canvasHeight,
   handleTransformChange,
 }) => {
+  const t = useClipT();
   const usesNormalizedPosition =
     clipType === "text" ||
     clipType === "shape" ||
@@ -96,13 +98,13 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       {showTransformControls && (
         <>
           <InspectorSection
-            title="Transform"
+            title={t("Transform")}
             sectionId="transform"
             defaultOpen
           >
             <div className="space-y-3">
               <NumberField
-                label="Position"
+                label={t("Position")}
                 fields={[
                   {
                     axis: "X",
@@ -128,7 +130,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                 <span className="w-[90px] flex-none text-[11px] font-medium text-fg-muted">
                   {usesNormalizedPosition ? "Canvas pixels" : "Offset pixels"}
                 </span>
-                <div className="grid flex-1 grid-cols-4 gap-1" role="group" aria-label="Nudge position by one pixel">
+                <div className="grid flex-1 grid-cols-4 gap-1" role="group" aria-label={t("Nudge position by one pixel")}>
                   {([
                     ["Nudge left 1 pixel", ArrowLeft, -1, 0],
                     ["Nudge up 1 pixel", ArrowUp, 0, -1],
@@ -151,7 +153,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
               <div className="flex items-center">
                 <span className="w-[90px] flex-none text-[13px] font-medium text-fg-3">
-                  Scale
+                  {t("Scale")}
                 </span>
                 <MockSlider
                   className="flex-1"
@@ -170,7 +172,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
               <div className="flex items-center">
                 <span className="w-[90px] flex-none text-[13px] font-medium text-fg-3">
-                  Rotation
+                  {t("Rotation")}
                 </span>
                 <div className="flex flex-1 items-center justify-between rounded-[7px] border border-border px-[10px] py-[7px] focus-within:border-accent">
                   <input
@@ -190,7 +192,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                   <div className="flex flex-none flex-col">
                     <button
                       type="button"
-                      aria-label="Increase rotation"
+                      aria-label={t("Increase rotation")}
                       onClick={() =>
                         handleTransformChange({
                           rotation: stepRotation(transform.rotation, 1),
@@ -211,7 +213,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                     </button>
                     <button
                       type="button"
-                      aria-label="Decrease rotation"
+                      aria-label={t("Decrease rotation")}
                       onClick={() =>
                         handleTransformChange({
                           rotation: stepRotation(transform.rotation, -1),
@@ -235,7 +237,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
               </div>
 
               <NumberField
-                label="Anchor Point"
+                label={t("Anchor Point")}
                 fields={[
                   {
                     axis: "X",
@@ -266,7 +268,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
               <div className="flex items-center">
                 <span className="w-[90px] flex-none text-[13px] font-medium text-fg-3">
-                  Opacity
+                  {t("Opacity")}
                 </span>
                 <MockSlider
                   className="flex-1"
@@ -283,7 +285,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
               <div className="flex items-center">
                 <span className="w-[90px] flex-none text-[13px] font-medium text-fg-3">
-                  Radius
+                  {t("Radius")}
                 </span>
                 <MockSlider
                   className="flex-1"
@@ -305,7 +307,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                     color="secondary"
                     className="text-[11px] text-fg-3"
                   >
-                    Fit Mode
+                    {t("Fit Mode")}
                   </Text>
                   <div className="grid grid-cols-3 gap-1.5">
                     {(["contain", "cover", "stretch"] as FitMode[]).map(
@@ -328,9 +330,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                             }`}
                           >
                             {mode === "contain"
-                              ? "Fit"
+                              ? t("Fit")
                               : mode === "cover"
-                                ? "Fill"
+                                ? t("Fill")
                                 : mode}
                           </ClickableCard>
                         );
@@ -350,7 +352,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         !selectedClip.mediaId.startsWith("shape-") &&
         !selectedClip.mediaId.startsWith("svg-") &&
         !selectedClip.mediaId.startsWith("sticker-") && (
-          <InspectorSection title="Crop" sectionId="crop" defaultOpen={false}>
+          <InspectorSection title={t("Crop")} sectionId="crop" defaultOpen={false}>
             <CropSection clip={selectedClip as Clip} />
           </InspectorSection>
         )}
@@ -362,7 +364,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         clipType === "svg" ||
         clipType === "sticker") && (
         <InspectorSection
-          title="Alignment"
+          title={t("Alignment")}
           sectionId="alignment"
           defaultOpen={false}
         >
@@ -394,7 +396,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         clipType === "svg" ||
         clipType === "sticker") && (
         <InspectorSection
-          title="3D Transforms"
+          title={t("3D Transforms")}
           sectionId="transform-3d"
           defaultOpen={false}
         >

@@ -29,6 +29,7 @@ import {
   SPEED_MAX,
   SPEED_CURVE_PRESETS,
 } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface ClipLike {
   id: string;
@@ -73,6 +74,7 @@ const SpeedCurveCanvas: React.FC<{
   onRemoveKeyframe,
   onMoveKeyframe,
 }) => {
+  const t = useClipT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredKeyframe, setHoveredKeyframe] = useState<string | null>(null);
   const [draggingKeyframe, setDraggingKeyframe] = useState<string | null>(null);
@@ -371,13 +373,14 @@ const SpeedCurveCanvas: React.FC<{
         }`}
       />
       <div className="absolute bottom-1 right-1 text-[8px] text-fg-3 pointer-events-none">
-        Click to add • Drag to move • Click a point to remove
+        {t("Click to add • Drag to move • Click a point to remove")}
       </div>
     </div>
   );
 };
 
 export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
+  const t = useClipT();
   const playheadPosition = useTimelineStore((state) => state.playheadPosition);
   const speedEngine = useMemo(() => getSpeedEngine(), []);
 
@@ -602,7 +605,7 @@ export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
 
       <div className="space-y-2">
         <PropertySlider
-          label="Playback Speed"
+          label={t("Playback Speed")}
           min={Math.log(SPEED_MIN)}
           max={Math.log(SPEED_MAX)}
           step={0.01}
@@ -632,7 +635,7 @@ export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
 
       <div className="flex gap-2">
         <Button
-          label="Reverse"
+          label={t("Reverse")}
           icon={<RotateCcw size={12} aria-hidden />}
           variant={isReverse ? "primary" : "secondary"}
           size="sm"
@@ -640,7 +643,7 @@ export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
           className="flex-1"
         />
         <Button
-          label="Pitch Correct"
+          label={t("Pitch Correct")}
           variant={pitchCorrection ? "primary" : "secondary"}
           size="sm"
           onClick={handlePitchCorrectionToggle}
@@ -650,7 +653,7 @@ export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
 
       <div className="space-y-1.5">
         <Text type="supporting" color="secondary" weight="bold" className="text-[10px]">
-          Speed Curve Presets
+          {t("Speed Curve Presets")}
         </Text>
         <div className="grid grid-cols-2 gap-1">
           {SPEED_CURVE_PRESETS.map((preset) => (
@@ -711,7 +714,7 @@ export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
                     {kf.speed.toFixed(2)}x
                   </Text>
                   <IconButton
-                    label="Remove speed keyframe"
+                    label={t("Remove speed keyframe")}
                     icon={<Trash2 size={10} aria-hidden />}
                     variant="ghost"
                     size="sm"
@@ -743,7 +746,7 @@ export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
       {isExpanded && (
         <div className="space-y-2">
           <Button
-            label="Add Freeze Frame at Playhead"
+            label={t("Add Freeze Frame at Playhead")}
             icon={<Pause size={12} aria-hidden />}
             variant="primary"
             size="sm"
@@ -769,7 +772,7 @@ export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
                     {ff.duration.toFixed(1)}s
                   </Text>
                   <IconButton
-                    label="Remove freeze frame"
+                    label={t("Remove freeze frame")}
                     icon={<Trash2 size={10} aria-hidden />}
                     variant="ghost"
                     size="sm"
@@ -784,7 +787,7 @@ export const SpeedRampSection: React.FC<SpeedRampSectionProps> = ({ clip }) => {
       )}
 
       <Button
-        label="Reset Speed & Effects"
+        label={t("Reset Speed & Effects")}
         icon={<RotateCcw size={12} aria-hidden />}
         variant="secondary"
         size="sm"

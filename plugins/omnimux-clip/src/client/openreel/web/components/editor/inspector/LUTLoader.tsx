@@ -7,6 +7,7 @@ import { ToolcraftText as Text } from "@openreel/ui";
 import { PropertySlider } from "./shell/PropertySlider";
 import { Upload, X, AlertCircle } from "@/icons/lucide-compat";
 import type { LUTData } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface LUTLoaderProps {
   lutData: LUTData | null;
@@ -18,11 +19,12 @@ const IntensitySlider: React.FC<{
   value: number;
   onChange: (value: number) => void;
 }> = ({ value, onChange }) => {
+  const t = useClipT();
   const percentage = Math.round(value * 100);
 
   return (
     <PropertySlider
-      label="Intensity"
+      label={t("Intensity")}
       min={0}
       max={100}
       step={1}
@@ -172,6 +174,7 @@ export const LUTLoader: React.FC<LUTLoaderProps> = ({
   onChange,
   onError,
 }) => {
+  const t = useClipT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -262,7 +265,7 @@ export const LUTLoader: React.FC<LUTLoaderProps> = ({
       {/* Hidden file input */}
       <FileInput
         ref={fileInputRef}
-        label="Load LUT file"
+        label={t("Load LUT file")}
         isLabelHidden
         value={null}
         accept=".cube,.3dl"
@@ -309,7 +312,7 @@ export const LUTLoader: React.FC<LUTLoaderProps> = ({
               </Text>
             </div>
             <IconButton
-              label="Remove LUT"
+              label={t("Remove LUT")}
               icon={<X size={14} />}
               variant="ghost"
               size="sm"
@@ -326,7 +329,7 @@ export const LUTLoader: React.FC<LUTLoaderProps> = ({
 
           {/* Load different LUT button */}
           <Button
-            label="Load Different LUT"
+            label={t("Load Different LUT")}
             variant="ghost"
             size="sm"
             onClick={handleLoadClick}
