@@ -10,7 +10,7 @@ export const INSPIRATION_CSS = `
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--dsw-alias-bg-base, var(--dsw-bg, #111215));
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
 }
 .omx-stage-scroll {
   flex: 1 1 auto;
@@ -24,7 +24,7 @@ export const INSPIRATION_CSS = `
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--dsw-alias-bg-base);
+  background: var(--dsw-alias-bg-base, var(--dsw-bg));
   color: var(--dsw-alias-label-primary, inherit);
   overflow: hidden;
   box-sizing: border-box;
@@ -35,7 +35,7 @@ export const INSPIRATION_CSS = `
   pointer-events: none;
 }
 .omnimux-inspiration-stage-body {
-  flex: none;
+  flex: 1 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -51,7 +51,7 @@ export const INSPIRATION_CSS = `
 }
 
 .omnimux-inspiration-root {
-  flex: none;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -59,7 +59,7 @@ export const INSPIRATION_CSS = `
   max-width: 100%;
   padding: 0 20px 24px;
   gap: 12px;
-  background: var(--dsw-alias-bg-primary, var(--dsw-bg, #111215));
+  background: transparent;
   color: var(--dsw-alias-label-primary, inherit);
   font-family: inherit;
 }
