@@ -17,9 +17,6 @@
       { "name": "videoProcess", "interfaceDoc": "ctx.get('videoProcess').execute(task)" }
     ],
     "seamsConsumed": [],
-    "slots": [
-      { "target": "main", "componentPath": "src/client/GoogleVidsStage.jsx" }
-    ],
     "storageDomains": ["temp/video_output/"]
   },
   "dependencies": {

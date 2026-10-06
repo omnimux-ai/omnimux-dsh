@@ -17,7 +17,7 @@ await build({
   bundle: true,
   format: 'esm',
   platform: 'node',
-  external: ['react', 'react/jsx-runtime'],
+  external: ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/client'],
 })
 const { apply, GoogleVidsStage } = await import(tempFile.href)
 await rm(fileURLToPath(tempFile)).catch(() => {})
@@ -276,7 +276,7 @@ test('active state is projected only from the product-stage DOM marker and stage
   assert.equal(window.listeners['dsh-product-stage'], undefined)
 })
 
-test('Issue #2721: pending Clip open does not claim Vids; strict success claims after open settles', async () => {
+test('Issue #3196: pending Clip open claims no stage and claims none after it settles', async () => {
   setupMockEnvironment()
   const { entry, unmount } = mountEntry((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key)
   const calls = []
@@ -301,8 +301,7 @@ test('Issue #2721: pending Clip open does not claim Vids; strict success claims 
   await clickPromise
   assert.deepEqual(calls, [
     ['open', { tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' }],
-    ['claim', 'omnimux-vids'],
-  ])
+  ], 'opening the editor is the whole contract: no stage is claimed afterwards')
   unmount()
 })
 
@@ -332,12 +331,13 @@ test('Issue #2721: false, non-true, synchronous throw, and rejection never claim
   }
 })
 
-test('Issue #2721: absent Workbench or Stage APIs produce no claim and no separate focus write', async () => {
+test('Issue #3196: a missing Workbench or open API opens nothing; a missing Stage API still opens the editor', async () => {
+  const openCall = ['open', { tabId: 'omnimux-clip:studio', title: '视频剪辑', focus: 'split' }]
   for (const scenario of [
     { name: 'missing Workbench', workbench: undefined, stage: { claim() {} }, expected: [] },
     { name: 'missing open API', workbench: { setFocus() {} }, stage: { claim() {} }, expected: [] },
-    { name: 'missing Stage', workbench: { open() {} }, stage: undefined, expected: [] },
-    { name: 'missing claim API', workbench: { open() {} }, stage: {}, expected: [] },
+    { name: 'missing Stage', workbench: { open() {} }, stage: undefined, expected: [openCall] },
+    { name: 'missing claim API', workbench: { open() {} }, stage: {}, expected: [openCall] },
   ]) {
     setupMockEnvironment()
     const { entry, unmount } = mountEntry((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key)
@@ -361,7 +361,7 @@ test('Issue #2721: absent Workbench or Stage APIs produce no claim and no separa
   }
 })
 
-test('Issue #2721: unmount while Clip open is pending prevents a later Vids claim', async () => {
+test('Issue #3196: unmount while Clip open is pending leaves no later stage write behind', async () => {
   setupMockEnvironment()
   const { entry, unmount } = mountEntry((key) => GOOGLE_VIDS_SIDEBAR_I18N.zh[key] || key)
   const calls = []
@@ -384,7 +384,7 @@ test('Issue #2721: unmount while Clip open is pending prevents a later Vids clai
   ])
 })
 
-test('Issue #2721: Vids overlay registration retains Clip betterSidebar API binding and cleanup', () => {
+test('Issue #3196: the client keeps the Clip betterSidebar binding and cleanup without registering a slot', () => {
   setupMockEnvironment()
   globalThis.CustomEvent = class CustomEvent { constructor(type, init = {}) { this.type = type; this.detail = init.detail } }
   const manifest = JSON.parse(readFileSync(new URL('../../dsh.manifest.json', import.meta.url), 'utf8'))
@@ -416,16 +416,9 @@ test('Issue #2721: Vids overlay registration retains Clip betterSidebar API bind
   })
 
   assert.equal(typeof GoogleVidsStage, 'function')
-  assert.deepEqual(manifest.capabilities.slots, [
-    { target: 'main', componentPath: 'src/client/GoogleVidsStage.jsx' },
-  ])
+  assert.equal(manifest.capabilities.slots, undefined, 'no host slot is declared once the editor hosts the panel')
   assert.ok(injections.some((dep) => dep.includes('betterSidebar')))
-  assert.equal(slots[0].target, 'main')
-  assert.equal(typeof slots[0].register, 'function')
-  slots[0].register()
-  assert.equal(slots[1].descriptor.key, 'omnimux-vids')
-  assert.equal(slots[1].descriptor.name, 'main')
-  assert.equal(typeof slots[1].component, 'function')
+  assert.deepEqual(slots, [], 'the client must not register into host slots any more')
   assert.equal(typeof window.__omnimuxWorkbench, 'undefined', 'Workbench binding requires the host API to exist')
 
   window.__omnimuxWorkbench = hostWorkbench
@@ -454,7 +447,8 @@ test('legacy Google Vids Tab registration identifiers and sidebar store are abse
   assert.doesNotMatch(sidebarSource, /GOOGLE_VIDS_TAB_ID|createGoogleVidsStageStore|data-tab-id/)
   assert.doesNotMatch(indexSource, /GOOGLE_VIDS_TAB_ID|registerGoogleVidsTab|registerTab\s*\(/)
   assert.match(indexSource, /GoogleVidsStudioPanel/)
-  assert.match(manifestSource, /"target": "main"/)
-  assert.match(indexSource, /ctx\.slots\.inject\('main'/)
+  assert.doesNotMatch(manifestSource, /"target": "main"/)
+  assert.doesNotMatch(indexSource, /ctx\.slots\.inject\('main'/)
+  assert.match(indexSource, /mountGeneratePanel/)
   assert.match(indexSource, /ctx\.inject\(\['betterSidebar'\]/)
 })

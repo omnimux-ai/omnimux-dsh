@@ -218,29 +218,21 @@ export function mountSidebarEntry(t, locale, _legacyLocale, layout) {
   const handleClick = async () => {
     if (typeof window === 'undefined') return
     const workbench = window.__omnimuxWorkbench
-    const stage = window.__omnimuxStage
-    if (typeof workbench?.open !== 'function' || typeof stage?.claim !== 'function') return
+    if (typeof workbench?.open !== 'function') return
 
     try {
       try {
         document.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
       } catch {}
-      const opened = await workbench.open({
+      // The generation surface now lives in the Clip editor's left column, so
+      // the entry opens that editor and claims no product stage of its own.
+      await workbench.open({
         tabId: 'omnimux-clip:studio',
         title: '视频剪辑',
         focus: 'split',
       })
-      if (!mounted || opened !== true) return
-      try {
-        document.documentElement?.removeAttribute?.('data-omnimux-conversation-collapsed')
-      } catch {}
-      const layoutHandle = resolveLayout(resolvedLayout, workbench)
-      if (typeof layoutHandle?.selectPanel === 'function') {
-        layoutHandle.selectPanel('omnimux-vids')
-      }
-      stage.claim('omnimux-vids')
     } catch {
-      // Keep the current stage and focus unchanged when Clip cannot be opened.
+      // Leave the current view untouched when the editor cannot be opened.
     }
   }
   entry.addEventListener('click', handleClick)

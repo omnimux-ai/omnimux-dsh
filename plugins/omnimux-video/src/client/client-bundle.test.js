@@ -36,8 +36,15 @@ test('build writes a classic-script ModuleLoader bundle for omnimux-video', () =
   assert.equal(typeof registered[0].factory, 'function')
 
   const react = { createElement: (...args) => ({ args }) }
+  // The generation panel mounts itself into the Clip editor's host container,
+  // so the bundle now requires react-dom/client at runtime — the same external
+  // the host provides to omnimux-inspiration and omnimux-video-preview.
+  const reactDomClient = {
+    createRoot: () => ({ render() {}, unmount() {} }),
+  }
   const exports = registered[0].factory((spec) => {
     if (spec === 'react' || spec === 'react/jsx-runtime') return react
+    if (spec === 'react-dom' || spec === 'react-dom/client') return reactDomClient
     throw new Error(`unexpected require ${spec}`)
   })
   assert.equal(exports.name, 'omnimux-video')
