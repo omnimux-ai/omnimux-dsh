@@ -1,0 +1,17 @@
+[
+  {
+    "name": "coordinator-api",
+    "pass": true,
+    "detail": "{\"keys\":[\"register\",\"place\",\"registerExploreItem\"],\"hasPlace\":true}"
+  },
+  {
+    "name": "manual-probe-row",
+    "pass": true,
+    "detail": "{\"retType\":\"function\",\"inDom\":true,\"inDomAfterPlace\":true}"
+  },
+  {
+    "name": "vids-row-state",
+    "pass": true,
+    "detail": "{\"inDom\":false,\"rows\":[\"项目\",\"技能/专家\",\"资产库\",\"灵感社区\",\"探索\",\"探针行\",\"虚拟形象\"]}"
+  }
+]

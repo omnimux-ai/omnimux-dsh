@@ -3,13 +3,17 @@
  * - GET  /omnimux-video/api/veo/health
  * - POST /omnimux-video/api/veo/tasks
  * - GET  /omnimux-video/api/veo/tasks/:id
+ * - POST /omnimux-video/api/veo/uploads   （选图上传：把图片落到插件自己的媒体目录）
  * - GET  /omnimux-video/api/veo/media/:fileName
+ *
+ * 生成后端在装载期按「中枢缝是否可用」选择（Issue #3186）：中枢可用走 `videoGenerate`，
+ * 否则回退插件自带的内部驱动。对外路径、请求体与轮询语义保持不变。
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
 import { requestRejection } from './request-authorization.js'
-import { createVeoTaskStore, safeMediaBase, veoMediaUrl } from './veo-task-store.js'
+import { createVeoTaskStore, defaultVeoMediaDir, safeMediaBase, veoMediaUrl } from './veo-task-store.js'
 import { seedVeoTask, VEO_DEFAULT_DURATION_SEC, VEO_DEFAULT_RESOLUTION } from '../shared/veoTaskSeed.js'
 import { validateVeoTaskRequest } from '../contracts/veoContracts.js'
 import { VEO_TASK_SPEC } from '../shared/veoTaskSpec.js'
@@ -19,6 +23,27 @@ import {
 } from '../driver/veoHeadlessDriver.js'
 
 export const VEO_API_PREFIX = '/omnimux-video/api/veo'
+
+/** 选图上传：接受的最小图片集合与体积上限。 */
+export const VEO_UPLOAD_MAX_BYTES = 8 * 1024 * 1024
+
+/** @type {Readonly<Record<string, string>>} mime → 扩展名 */
+const VEO_UPLOAD_EXTENSIONS = Object.freeze({
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+})
+
+/** @type {Readonly<Record<string, string>>} 扩展名 → 响应 Content-Type */
+const VEO_MEDIA_CONTENT_TYPES = Object.freeze({
+  '.mp4': 'video/mp4',
+  '.mov': 'video/quicktime',
+  '.webm': 'video/webm',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+})
 
 /**
  * @param {import('node:http').ServerResponse} res
@@ -56,8 +81,52 @@ export async function readJsonBody(req, opts = {}) {
   }
 }
 
+/**
+ * 读取原始字节体；超过上限返回 null（由调用方给出可读的 413）。
+ * @param {import('node:http').IncomingMessage} req
+ * @param {number} maxBytes
+ * @returns {Promise<Buffer | null>}
+ */
+export async function readRawBody(req, maxBytes) {
+  const chunks = []
+  let size = 0
+  for await (const chunk of req) {
+    size += chunk.length
+    if (size > maxBytes) return null
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks)
+}
+
+/**
+ * 按魔数判定图片类型——只信字节，不信请求头里的声明。
+ * @param {Buffer} buffer
+ * @returns {string} mime 或空串
+ */
+export function sniffImageMime(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return ''
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return 'image/png'
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg'
+  if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return 'image/webp'
+  return ''
+}
+
+/**
+ * 媒体目录里的对外地址。中枢与本机服务要抓取的是**绝对**地址，所以优先用请求 Host 拼；
+ * 没有 Host（非 HTTP 调用）时退回同源相对地址。
+ * @param {{ headers?: Record<string, unknown>, socket?: { encrypted?: boolean } }} req
+ * @param {string} fileName
+ */
+export function veoPublicMediaUrl(req, fileName) {
+  const relative = `/omnimux-video/api/veo/media/${encodeURIComponent(fileName)}`
+  const host = typeof req?.headers?.host === 'string' ? req.headers.host.trim() : ''
+  if (!host) return relative
+  const scheme = req?.socket?.encrypted ? 'https' : 'http'
+  return `${scheme}://${host}${relative}`
+}
+
 function defaultOutputDir() {
-  return path.resolve(process.cwd(), '.workbuddy/demo/media')
+  return defaultVeoMediaDir()
 }
 
 /**
@@ -65,6 +134,7 @@ function defaultOutputDir() {
  *   store?: ReturnType<typeof createVeoTaskStore>,
  *   detectEnv?: typeof detectOpenCliEnvironment,
  *   generate?: typeof generateVideoSilently,
+ *   hubAvailable?: () => boolean,
  *   outputDir?: string,
  *   now?: () => number,
  * }} [deps]
@@ -89,6 +159,9 @@ export function createVeoDispatcher(deps = {}) {
   const store = deps.store || createVeoTaskStore()
   const detectEnv = deps.detectEnv || detectOpenCliEnvironment
   const generate = deps.generate || generateVideoSilently
+  // 中枢缝可用时，本机 opencli / 桥接的就绪与否与生成无关（Issue #3186）：
+  // 前置门禁只约束内部驱动这条回退路径。
+  const hubAvailable = deps.hubAvailable || (() => false)
   const outputDir = deps.outputDir || defaultOutputDir()
   const now = deps.now || Date.now
   /** @type {Set<string>} */
@@ -103,11 +176,13 @@ export function createVeoDispatcher(deps = {}) {
 
     if (method === 'GET' && pathname === '/health') {
       const env = detectEnv()
+      const hub = Boolean(hubAvailable())
       return {
         status: 200,
         body: {
-          ok: Boolean(env.installed && env.bridgeConnected),
+          ok: hub || Boolean(env.installed && env.bridgeConnected),
           opencli: env,
+          hub: { available: hub },
           mediaDir: outputDir,
         },
       }
@@ -124,21 +199,24 @@ export function createVeoDispatcher(deps = {}) {
         }
       }
       const request = validation.request
+      const channel = hubAvailable() ? 'hub' : 'internal'
 
-      const env = detectEnv()
-      if (!env.installed) {
-        return {
-          status: 503,
-          body: { error: 'opencli-missing', message: '本机未安装 opencli，无法后台生成 Google Vids 成片' },
+      if (channel === 'internal') {
+        const env = detectEnv()
+        if (!env.installed) {
+          return {
+            status: 503,
+            body: { error: 'opencli-missing', message: '本机未安装 opencli，无法后台生成 Google Vids 成片' },
+          }
         }
-      }
-      if (!env.bridgeConnected) {
-        return {
-          status: 503,
-          body: {
-            error: 'opencli-bridge-disconnected',
-            message: 'opencli 浏览器桥未连接，请先打开 Bridge / Extension 后再试',
-          },
+        if (!env.bridgeConnected) {
+          return {
+            status: 503,
+            body: {
+              error: 'opencli-bridge-disconnected',
+              message: 'opencli 浏览器桥未连接，请先打开 Bridge / Extension 后再试',
+            },
+          }
         }
       }
 
@@ -159,35 +237,52 @@ export function createVeoDispatcher(deps = {}) {
         seconds: request.seconds,
         resolution: request.resolution,
         aspect_ratio: request.aspect_ratio,
+        channel,
       }
       if (request.image_url) vidsFields.image_url = request.image_url
       if (request.video_id) vidsFields.video_id = request.video_id
       const task = store.create({ ...seeded, ...vidsFields })
 
       // Fire-and-forget background generation.
-      // NOTE: generateVideoSilently currently ignores `mode` and does not push
-      // durationSec into Google Vids page controls — modes are UI/validation only.
+      // 内部驱动忽略 `mode` 且不把 durationSec 写进页面控件（模式仅为 UI/校验）；
+      // 中枢缝则消费 operation / image_url / video_id 三个字段。
       if (!running.has(id)) {
         running.add(id)
         Promise.resolve()
           .then(async () => {
-            store.update(id, {
+            /** @type {Record<string, unknown>} */
+            const starting = {
               status: 'generating',
-              progress: 3,
-              phase: 'initializing',
-              message: '正在初始化 opencli 后台沙箱…',
-            })
+              phase: channel === 'hub' ? 'submitting' : 'initializing',
+              message: channel === 'hub'
+                ? '正在提交到本机 Google Vids 通道…'
+                : '正在初始化 opencli 后台沙箱…',
+            }
+            // 内部驱动的百分比是它自己上报的真实阶段值；中枢缝没有进度通道，
+            // 因此这里不给中枢路径填百分比（进度只反映真实阶段）。
+            if (channel === 'internal') starting.progress = 3
+            store.update(id, starting)
+
             const result = await generate({
               prompt: seeded.prompt,
               durationSec: seeded.durationSec,
+              seconds: request.seconds,
+              mode: request.mode,
+              operation: request.operation,
+              resolution: request.resolution,
+              aspectRatio: request.aspect_ratio,
+              imageUrl: request.image_url,
+              videoId: request.video_id,
               outputDir,
               onProgress: (evt) => {
-                store.update(id, {
+                /** @type {Record<string, unknown>} */
+                const patch = {
                   status: 'generating',
-                  progress: evt?.percent ?? 0,
                   phase: evt?.phase || 'rendering',
                   message: evt?.message || '生成中…',
-                })
+                }
+                if (typeof evt?.percent === 'number') patch.progress = evt.percent
+                store.update(id, patch)
               },
             })
             // Prefer generator fileName; otherwise basename of localPath — then
@@ -199,7 +294,8 @@ export function createVeoDispatcher(deps = {}) {
               throw new Error('invalid media file name')
             }
             const current = store.get(id)
-            store.update(id, {
+            /** @type {Record<string, unknown>} */
+            const completed = {
               status: 'completed',
               progress: 100,
               phase: 'completed',
@@ -210,18 +306,22 @@ export function createVeoDispatcher(deps = {}) {
               durationSec: result.durationSec || seeded.durationSec,
               resolution: result.resolution || current?.resolution || VEO_TASK_SPEC.resolution,
               videoUrl: veoMediaUrl(fileName),
+              channel,
               // Keep enqueue title; do not recompute from prompt.
               title: current?.title || seeded.title,
-            })
+            }
+            // 上游标识只在中枢路径存在；回填后「修改 / 延续」才能引用这条成片。
+            if (result.upstreamTaskId) completed.upstreamTaskId = result.upstreamTaskId
+            if (result.upstreamUrl) completed.upstreamUrl = result.upstreamUrl
+            store.update(id, completed)
           })
           .catch((err) => {
             const message = err instanceof Error ? err.message : String(err)
-            store.update(id, {
-              status: 'failed',
-              phase: 'failed',
-              message,
-              error: message,
-            })
+            /** @type {Record<string, unknown>} */
+            const patch = { status: 'failed', phase: 'failed', message, error: message }
+            const code = err && typeof err.code === 'string' ? err.code : ''
+            if (code) patch.errorCode = code
+            store.update(id, patch)
           })
           .finally(() => {
             running.delete(id)
@@ -242,7 +342,7 @@ export function createVeoDispatcher(deps = {}) {
     return { status: 404, body: { error: 'not-found', message: `no route for ${method} ${pathname}` } }
   }
 
-  return { dispatch, store, outputDir }
+  return { dispatch, store, outputDir, hubAvailable }
 }
 
 /**
@@ -262,8 +362,9 @@ export function trySendVeoMedia(fileName, outputDir, res) {
     return true
   }
   const stat = fs.statSync(full)
+  const contentType = VEO_MEDIA_CONTENT_TYPES[path.extname(base).toLowerCase()] || 'application/octet-stream'
   res.writeHead(200, {
-    'Content-Type': 'video/mp4',
+    'Content-Type': contentType,
     'Content-Length': stat.size,
     'Cache-Control': 'no-store',
   })
@@ -272,9 +373,66 @@ export function trySendVeoMedia(fileName, outputDir, res) {
 }
 
 /**
+ * 处理一次选图上传：只接受声明且魔数匹配的图片类型，文件名由插件生成
+ * （不接受任何调用方给出的路径），落进插件自己的媒体目录。
+ *
+ * @param {import('node:http').IncomingMessage} req
+ * @param {import('node:http').ServerResponse} res
+ * @param {{ outputDir: string, now?: () => number }} deps
+ * @returns {Promise<boolean>} true = 已响应
+ */
+export async function handleVeoUpload(req, res, deps) {
+  const declared = String(req.headers?.['content-type'] || '').split(';')[0].trim().toLowerCase()
+  const extension = VEO_UPLOAD_EXTENSIONS[declared]
+  if (!extension) {
+    sendJson(res, 415, {
+      error: 'unsupported-media-type',
+      message: '仅支持 PNG / JPEG / WebP 图片',
+    })
+    return true
+  }
+
+  const buffer = await readRawBody(req, VEO_UPLOAD_MAX_BYTES)
+  if (buffer === null) {
+    sendJson(res, 413, {
+      error: 'payload-too-large',
+      message: `图片体积超过上限 ${Math.round(VEO_UPLOAD_MAX_BYTES / 1024 / 1024)} MB`,
+    })
+    return true
+  }
+  if (buffer.length === 0) {
+    sendJson(res, 400, { error: 'empty-payload', message: '没有收到图片数据' })
+    return true
+  }
+
+  const sniffed = sniffImageMime(buffer)
+  if (sniffed !== declared) {
+    sendJson(res, 415, {
+      error: 'unsupported-media-type',
+      message: '图片内容与声明的类型不一致',
+    })
+    return true
+  }
+
+  const now = deps.now || Date.now
+  const fileName = `vids_upload_${now()}.${extension}`
+  const full = path.join(deps.outputDir, fileName)
+  fs.mkdirSync(deps.outputDir, { recursive: true })
+  fs.writeFileSync(full, buffer)
+
+  sendJson(res, 200, {
+    url: veoPublicMediaUrl(req, fileName),
+    fileName,
+    fileSize: buffer.length,
+    mime: sniffed,
+  })
+  return true
+}
+
+/**
  * @param {{ register: Function }} webServer
  * @param {ReturnType<typeof createVeoDispatcher>} dispatcher
- * @param {{ getConnection?: () => unknown, outputDir?: string }} [deps]
+ * @param {{ getConnection?: () => unknown, outputDir?: string, now?: () => number }} [deps]
  */
 export function registerVeoRoutes(webServer, dispatcher, deps = {}) {
   const outputDir = deps.outputDir || dispatcher.outputDir || defaultOutputDir()
@@ -296,6 +454,12 @@ export function registerVeoRoutes(webServer, dispatcher, deps = {}) {
           if (handled) return
         }
 
+        // 选图上传走原始字节体，不能落进下面的 JSON 体解析。
+        if (method === 'POST' && url.pathname === `${VEO_API_PREFIX}/uploads`) {
+          const handled = await handleVeoUpload(req, res, { outputDir, now: deps.now })
+          if (handled) return
+        }
+
         const wantsBody = method === 'POST' || method === 'PUT'
         const body = wantsBody ? await readJsonBody(req) : undefined
         if (wantsBody && body === null) {
@@ -308,8 +472,11 @@ export function registerVeoRoutes(webServer, dispatcher, deps = {}) {
           body,
         })
         sendJson(res, result.status, result.body)
-      } catch {
-        sendJson(res, 500, { error: 'internal', message: 'internal error' })
+      } catch (err) {
+        // 不把可读原因压成通用 500：真实原因必须能到达调用方。
+        const message = err instanceof Error && err.message ? err.message : '内部错误'
+        const code = err && typeof err.code === 'string' ? err.code : ''
+        sendJson(res, 500, { error: 'internal', message, ...(code ? { code } : {}) })
       }
     },
   })

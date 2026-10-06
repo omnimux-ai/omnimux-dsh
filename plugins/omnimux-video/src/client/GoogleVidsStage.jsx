@@ -6,6 +6,7 @@ import {
   resolveVidsMode,
 } from '../shared/veoTaskSpec.js'
 import { useVeoTaskFeed } from './useVeoTaskFeed.js'
+import { uploadVeoImage } from './veo-api.js'
 import {
   defaultVidsParams,
   inheritVidsParams,
@@ -404,6 +405,13 @@ const STAGE_STYLES = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.gvids-chip-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
 .gvids-chip-remove {
   border: none;
   background: transparent;
@@ -549,13 +557,15 @@ function injectGoogleVidsStyles() {
 }
 
 /**
- * 释放本地图片的 object URL（真实上传链路不在本票范围，请求里携带的就是这个地址）。
- * @param {{ url?: string } | null | undefined} asset
+ * 释放本地图片的 object URL。`previewUrl` 是浏览器内的缩略图地址，
+ * `url` 是插件 HTTP 服务返回的、可被本机服务抓取的地址（不释放）。
+ * @param {{ previewUrl?: string, url?: string } | null | undefined} asset
  */
 function releaseObjectUrl(asset) {
-  if (!asset?.url) return
+  const preview = asset?.previewUrl || (asset?.url?.startsWith('blob:') ? asset.url : '')
+  if (!preview) return
   if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return
-  URL.revokeObjectURL(asset.url)
+  URL.revokeObjectURL(preview)
 }
 
 /**
@@ -616,7 +626,8 @@ export function GoogleVidsStage(props) {
   const activeImage = modeImages[currentMode] || null
   const acceptsImage = attachmentSlots.some((slot) => slot.id === 'image')
 
-  // 只把当前模式真正接受的输入交给请求构造：create 不带图/视频，extend 不带图
+  // 只把当前模式真正接受的输入交给请求构造：create 不带图/视频，extend 不带图。
+  // 图片给的是插件 HTTP 服务返回的地址（本机服务可抓取）；上传完成前该字段为空，提交门禁会拦住。
   const modeInputs = {
     imageUrl: acceptsImage && activeImage ? activeImage.url : '',
     videoId: activeMode.requiresVideo && sourceClip ? sourceClip.videoId : '',
@@ -724,22 +735,40 @@ export function GoogleVidsStage(props) {
     setClipPickerOpen(false)
   }
 
-  // 选择本地图片：object URL 即请求里的 imageUrl
-  const handleImagePicked = (event) => {
+  // 选择本地图片：先把字节上传到插件 HTTP 服务（本机服务可抓取），本地 object URL 只做缩略图预览
+  const handleImagePicked = async (event) => {
     const file = event?.target?.files?.[0]
     if (event?.target) event.target.value = ''
     if (!file) return
-    if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
-      setComposerNotice('当前环境不支持本地图片地址')
-      return
-    }
     const modeId = currentMode
-    setComposerNotice('')
+    const canPreview = typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
+    const previewUrl = canPreview ? URL.createObjectURL(file) : ''
     releaseObjectUrl(modeImagesRef.current[modeId])
     setModeImages((prev) => ({
       ...prev,
-      [modeId]: { url: URL.createObjectURL(file), name: file.name || '图片' },
+      [modeId]: { previewUrl, url: '', name: file.name || '图片', uploading: true },
     }))
+    setComposerNotice('图片上传中')
+
+    const uploaded = await uploadVeoImage(file)
+    const servedUrl = uploaded.ok && typeof uploaded.body?.url === 'string' ? uploaded.body.url : ''
+    if (!servedUrl) {
+      releaseObjectUrl({ previewUrl })
+      setModeImages((prev) => {
+        const next = { ...prev }
+        delete next[modeId]
+        return next
+      })
+      setComposerNotice(uploaded.body?.message || `图片上传失败（HTTP ${uploaded.status}）`)
+      return
+    }
+    setComposerNotice('')
+    setModeImages((prev) => {
+      const current = prev[modeId]
+      // 上传期间用户可能已换图或移除：只在仍是本次上传时落库。
+      if (!current || current.previewUrl !== previewUrl) return prev
+      return { ...prev, [modeId]: { ...current, url: servedUrl, uploading: false } }
+    })
   }
 
   const handleRemoveImage = () => {
@@ -1137,8 +1166,17 @@ export function GoogleVidsStage(props) {
                   </button>
                 )}
                 {slot.id === 'image' && activeImage && (
-                  <span className="gvids-chip" data-vids-asset={attachKind}>
-                    <span className="gvids-chip-name">{activeImage.name}</span>
+                  <span
+                    className="gvids-chip"
+                    data-vids-asset={attachKind}
+                    data-vids-asset-state={activeImage.uploading ? 'uploading' : 'ready'}
+                  >
+                    {activeImage.previewUrl && (
+                      <img className="gvids-chip-thumb" src={activeImage.previewUrl} alt="" />
+                    )}
+                    <span className="gvids-chip-name">
+                      {activeImage.uploading ? `${activeImage.name} · 上传中` : activeImage.name}
+                    </span>
                     <button // exempt-ui01 Google Vids 舞台专属按钮
                       type="button"
                       data-vids-asset-remove

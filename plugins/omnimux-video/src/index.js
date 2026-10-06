@@ -6,6 +6,9 @@ import { SLUGS } from './engine/video.js'
 import { executeVideoAnalyze } from './understand/analyze.js'
 import { executeVideoReversePrompt, IDENTITY_MODES } from './understand/reverse.js'
 import { createVeoDispatcher, registerVeoRoutes } from './http/veo-routes.js'
+import { createVeoTaskStore } from './http/veo-task-store.js'
+import { createHubVidsGenerator } from './driver/hubVidsGenerator.js'
+import { generateVideoSilently } from './driver/veoHeadlessDriver.js'
 
 export const name = 'omnimux-video'
 export const inject = ['tools', 'textComplete']
@@ -266,9 +269,35 @@ export function apply(ctx, config = {}) {
     },
   })
 
-  // Google Vids / Veo opencli generation HTTP (Issue #2741).
+  // Google Vids / Veo 生成 HTTP（Issue #2741 / #3186）。
   // webServer is optional at load time; mount via nested inject like omnimux-clip.
-  const veoDispatcher = createVeoDispatcher()
+  //
+  // 生成后端：中枢 `videoGenerate` 缝可用时走中枢（模型 google-vids-omni），
+  // 缝不可用时回退插件自带的内部驱动。判定放在调用时（与 textComplete 同样的懒解析），
+  // 因此装载顺序不影响选择；对外 HTTP 契约与轮询语义不变。
+  /**
+   * @returns {{ execute: Function } | undefined}
+   */
+  const getVideoGenerate = () => {
+    const api = ctx.videoGenerate ?? ctx.get?.('videoGenerate')
+    if (api && typeof api === 'object' && typeof /** @type {any} */ (api).execute === 'function') {
+      return /** @type {{ execute: Function }} */ (api)
+    }
+    return undefined
+  }
+
+  const veoStore = createVeoTaskStore()
+  const hubVidsGenerator = createHubVidsGenerator({
+    getSeam: getVideoGenerate,
+    resolveSourceVideo: (taskId) => veoStore.resolveSourceUrl(taskId),
+  })
+  const veoDispatcher = createVeoDispatcher({
+    store: veoStore,
+    hubAvailable: () => Boolean(getVideoGenerate()),
+    generate: (request) => (getVideoGenerate()
+      ? hubVidsGenerator(request)
+      : generateVideoSilently(request)),
+  })
   if (typeof ctx.provide === 'function') {
     ctx.provide('veoTasks', {
       get: (id) => veoDispatcher.store.get(id),

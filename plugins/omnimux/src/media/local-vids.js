@@ -78,6 +78,23 @@ function pickText(value) {
 }
 
 /**
+ * First usable URL in a guard-produced list. The SubmitGuard writes plain
+ * strings into `image_urls` / `video_urls`; an object row with a `url` field is
+ * accepted too so one reader covers both shapes.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+function pickFirstUrl(value) {
+  if (!Array.isArray(value)) return ''
+  for (const item of value) {
+    const url = pickText(typeof item === 'string' ? item : item?.url)
+    if (url) return url
+  }
+  return ''
+}
+
+/**
  * The service addresses a prior job by its **own** task id, while the hub hands
  * over media URLs. Accept a bare id or one of this channel's own task/content
  * URLs; anything else is refused rather than forwarded as an id.
@@ -343,10 +360,23 @@ export async function generateLocalVids(input) {
 
   // vids2api takes a plain image URL for its animate/modify modes and its own
   // task id for extend/modify; the hub hands over mapped media fields instead.
+  //
+  // Two shapes arrive here and both must be readable: the SubmitGuard's vendor
+  // payload (`image_with_roles` for the first_frame family, `image_urls` +
+  // `video_urls` for the reference family) and a direct caller's own fields
+  // (`image`, `reference_images`, `video_id`, `references`). Reading only the
+  // direct-call shape is what made first_frame / video_edit fail through the
+  // seam with "需要一张输入图片" even when the caller had supplied one.
   const referenceImages = Array.isArray(payload.reference_images) ? payload.reference_images : []
-  const image = pickText(payload.image) || pickText(referenceImages[0]?.url)
-  const videoUrls = Array.isArray(payload.video_urls) ? payload.video_urls : []
-  const videoRef = pickText(videoUrls[0]) || pickText(payload.video_id)
+  const imageWithRoles = Array.isArray(payload.image_with_roles) ? payload.image_with_roles : []
+  const image = pickText(payload.image)
+    || pickText(referenceImages[0]?.url)
+    || pickText(imageWithRoles[0]?.url)
+    || pickFirstUrl(payload.image_urls)
+  const referenceVideos = Array.isArray(payload.references) ? payload.references : []
+  const videoRef = pickFirstUrl(payload.video_urls)
+    || pickText(payload.video_id)
+    || pickText(referenceVideos.find((reference) => reference?.type === 'video')?.pathOrUrl)
 
   const body = buildLocalVidsRequestBody({
     operationId,
