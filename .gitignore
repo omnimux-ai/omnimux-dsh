@@ -11,6 +11,7 @@ dist
 /docs/evidence/live-qa-report.json
 /docs/evidence/picker-dialog-qa-report.json
 /docs/evidence/worktree-web-qa-report.json
+/docs/evidence/dev-smoke-report.json
 .worktrees/
 .agent-backups/
 
