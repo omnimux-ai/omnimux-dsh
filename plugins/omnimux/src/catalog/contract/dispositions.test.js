@@ -42,7 +42,7 @@ test('dispositions.json: every row unique, all kinds valid, reasons present', ()
   const doc = loadDispositions();
   assert.equal(validateDispositionsShape(doc).length, 0);
   const rows = doc.dispositions;
-  assert.equal(rows.length, 83, `expected 83 disposition rows, got ${rows.length}`); // #3167 google-vids-omni 上架 → 83
+  assert.equal(rows.length, 83, `expected 83 disposition rows, got ${rows.length}`); // #3209 google-vids-omni 转墓碑行，行数不变 → 83
   const ids = new Set(rows.map((r) => r.id));
   assert.equal(ids.size, rows.length);
   for (const row of rows) {
@@ -55,7 +55,7 @@ test('disposition rows mirror the runtime universe exactly (no missing, no ghost
   const index = freshIndex();
   const doc = loadDispositions();
   const runtimeIds = runtimeIdsOf(index);
-  assert.equal(runtimeIds.length, 71); // #3167 google-vids-omni +1 → 71
+  assert.equal(runtimeIds.length, 70); // #3209 google-vids-omni 下线 −1 → 70
   const issues = validateDispositions(doc, { index, runtimeIds, strict: true });
   assert.deepEqual(issues, [], JSON.stringify(issues, null, 2));
 });
@@ -82,6 +82,8 @@ test('locked dispositions: draft-probeable / tombstones / un-quarantined / alias
   // #1751: the removed models keep a tombstone row instead of a shelf entry.
   assert.equal(resolveDisposition(doc, 'kling-avatar')?.disposition, 'unavailable');
   assert.equal(resolveDisposition(doc, 'gpt-image-2')?.disposition, 'unavailable');
+  // #3209: the retired local Google Vids channel keeps a tombstone row, never a shelf entry.
+  assert.equal(resolveDisposition(doc, 'google-vids-omni')?.disposition, 'unavailable');
   assert.equal(resolveDisposition(doc, 'minimax-h3')?.disposition, 'canonical');
   // #1751: quarantine is fully retired — kling-o3 / kling-v3-motion-control were un-quarantined
   // as canonical (upstream-registered), while omni_flash / kling-o1 were removed outright.
@@ -355,13 +357,14 @@ test('dispositions path constant points at the on-disk machine truth', () => {
  * unnoticed (the reviewer reproduced this with a synthetic id). Pin the exact tombstone set: any
  * new, renamed, or typo'd `unavailable` row now fails here instead of slipping through D5.
  */
-test('tombstone whitelist: exactly the 12 removed models are unavailable, no typos or ghosts', () => {
+test('tombstone whitelist: exactly the 13 removed models are unavailable, no typos or ghosts', () => {
   const doc = loadDispositions();
   const tombstones = doc.dispositions
     .filter((row) => row.disposition === 'unavailable')
     .map((row) => row.id)
     .sort();
   assert.deepEqual(tombstones, [
+    'google-vids-omni',
     'gpt-image-2',
     'kling-avatar',
     'kling-o1',
@@ -375,7 +378,7 @@ test('tombstone whitelist: exactly the 12 removed models are unavailable, no typ
     'veo-3.1',
     'veo-3.1-fast',
   ]);
-  // 这 12 个 id 必须都不在 runtime 宇宙内（YAML 整行已删），且都被 D4 列为禁止 listed。
+  // 这 13 个 id 必须都不在 runtime 宇宙内（YAML 整行已删），且都被 D4 列为禁止 listed。
   const index = freshIndex();
   const runtimeIds = runtimeIdsOf(index);
   const forbidden = forbiddenListedIds(doc);

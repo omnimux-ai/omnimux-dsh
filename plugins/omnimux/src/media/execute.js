@@ -12,7 +12,6 @@ import {
   assertGuardSubmit,
 } from '../catalog/contract/submit-guard/index.js'
 import { probeMediaAssets } from './asset-probe.js'
-import { LOCAL_VIDS_MODEL_ID, LOCAL_VIDS_OPERATION_IDS, generateLocalVids } from './local-vids.js'
 import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
 import { generateCliSpeech } from './cli-speech.js'
@@ -718,25 +717,6 @@ export async function executeOmnimuxMedia(capability, input) {
       dest: input.dest,
       signal: input.signal,
       runner: input.cliRunner,
-    })
-  }
-
-  // Local Google Vids channel (Issue #3167): an explicitly selected model is
-  // served by a loopback vids2api service instead of the cloud gateway. It runs
-  // before remote auth because it owns its own credential, and it fails loudly
-  // when the service address is unconfigured — never a silent fallback.
-  if (capability === 'video' && guardPlan.modelId === LOCAL_VIDS_MODEL_ID
-    && LOCAL_VIDS_OPERATION_IDS.includes(guardPlan.operationId)) {
-    return generateLocalVids({
-      route,
-      guardPlan,
-      payload: mappedInput,
-      dest: input.dest,
-      signal: input.signal,
-      env: input.env,
-      fetcher: input.fetcher,
-      deadlineMs: input.deadlineMs,
-      pollIntervalMs: input.pollIntervalMs,
     })
   }
 

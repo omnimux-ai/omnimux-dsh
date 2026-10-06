@@ -67,7 +67,14 @@ const MAX_CHAT_W = 560;
 const MIN_STAGE_W = 380;
 const RESIZE_HANDLE = 10;
 
-type ResizeTarget = "timeline" | "media" | "inspector" | "chat";
+// Host panel column (left): the generation surface is provided by the video
+// plugin and mounted into the host container this column renders. Official
+// panels keep their implementations and only change column order.
+const DEFAULT_GENERATE_W = 360;
+const MIN_GENERATE_W = 280;
+const MAX_GENERATE_W = 560;
+
+type ResizeTarget = "timeline" | "media" | "inspector" | "chat" | "generate";
 
 const clamp = (value: number, min: number, max: number): number => {
   return Math.min(Math.max(value, min), max);
@@ -324,6 +331,7 @@ export const EditorInterface: React.FC = () => {
   const [mediaWidth, setMediaWidth] = useState(DEFAULT_MEDIA_W);
   const [inspectorWidth, setInspectorWidth] = useState(DEFAULT_INSPECTOR_W);
   const [chatWidth, setChatWidth] = useState(DEFAULT_CHAT_W);
+  const [generateWidth, setGenerateWidth] = useState(DEFAULT_GENERATE_W);
   const [timelineRatio, setTimelineRatio] = useState<number>(() => {
     if (typeof window === "undefined") return DEFAULT_TIMELINE_RATIO;
     const stored = window.localStorage.getItem(TIMELINE_RATIO_STORAGE_KEY);
@@ -338,6 +346,7 @@ export const EditorInterface: React.FC = () => {
   const mediaRef = useRef(mediaWidth);
   const inspectorRef = useRef(inspectorWidth);
   const chatRef = useRef(chatWidth);
+  const generateRef = useRef(generateWidth);
   useEffect(() => {
     mediaRef.current = mediaWidth;
   }, [mediaWidth]);
@@ -347,6 +356,9 @@ export const EditorInterface: React.FC = () => {
   useEffect(() => {
     chatRef.current = chatWidth;
   }, [chatWidth]);
+  useEffect(() => {
+    generateRef.current = generateWidth;
+  }, [generateWidth]);
 
   const beginResize = useCallback(
     (target: ResizeTarget) => (e: React.MouseEvent) => {
@@ -369,10 +381,37 @@ export const EditorInterface: React.FC = () => {
         useUIStore.getState().panels.agentChat?.visible ?? false;
       const chatOffset = chatOpen ? chatRef.current + RESIZE_HANDLE : 0;
 
+      if (target === "generate") {
+        const maxByStage =
+          rect.width -
+          mediaRef.current -
+          chatOffset -
+          2 * RESIZE_HANDLE -
+          MIN_STAGE_W;
+        setGenerateWidth(
+          clamp(
+            e.clientX - rect.left,
+            MIN_GENERATE_W,
+            Math.min(MAX_GENERATE_W, maxByStage),
+          ),
+        );
+        return;
+      }
       if (target === "media") {
-        const maxByStage = rect.width - chatOffset - MIN_STAGE_W;
+        // The library/attributes column now sits on the right edge, so its
+        // width is measured from the right border rather than the left.
+        const maxByStage =
+          rect.width -
+          generateRef.current -
+          chatOffset -
+          2 * RESIZE_HANDLE -
+          MIN_STAGE_W;
         setMediaWidth(
-          clamp(e.clientX - rect.left, MIN_MEDIA_W, Math.min(MAX_MEDIA_W, maxByStage)),
+          clamp(
+            rect.right - e.clientX,
+            MIN_MEDIA_W,
+            Math.min(MAX_MEDIA_W, maxByStage),
+          ),
         );
         return;
       }
@@ -421,11 +460,12 @@ export const EditorInterface: React.FC = () => {
     const r = rootRef.current;
     if (!r) return;
     const tlRatio = timelineMaximized ? COMPACT_TIMELINE_RATIO : timelineRatio;
+    r.style.setProperty("--generate-w", `${generateWidth}px`);
     r.style.setProperty("--media-w", `${mediaWidth}px`);
     r.style.setProperty("--inspector-w", `${inspectorWidth}px`);
     r.style.setProperty("--chat-w", `${chatWidth}px`);
     r.style.setProperty("--tl-height", `${tlRatio}%`);
-  }, [mediaWidth, inspectorWidth, chatWidth, timelineRatio, timelineMaximized]);
+  }, [generateWidth, mediaWidth, inspectorWidth, chatWidth, timelineRatio, timelineMaximized]);
 
   if (initializing || !initialized) {
     return (
@@ -449,21 +489,22 @@ export const EditorInterface: React.FC = () => {
   const effectiveTimelineRatio = timelineMaximized
     ? COMPACT_TIMELINE_RATIO
     : timelineRatio;
-  // 舞台列设可用下限：窗口偏窄时宁可让网格横向滚动，也不许中间播放器被两侧挤成几像素宽的破版。
+  // 生成列与素材列是可拖拽的偏好宽度，不是硬下限：窄窗口里必须让位给官方舞台，
+  // 否则中间播放器会被两侧挤成几像素宽的破版。三区各留一条可用下限，谁都不许塌陷。
+  const STAGE_MIN_W = 280;
+  const SIDE_MIN_W = 240;
   const gridStyle: React.CSSProperties = chatVisible
     ? {
-        gridTemplateColumns: `${mediaWidth}px ${RESIZE_HANDLE}px minmax(${MIN_STAGE_W}px, 1fr) ${RESIZE_HANDLE}px ${chatWidth}px`,
+        gridTemplateColumns: `minmax(${SIDE_MIN_W}px, ${generateWidth}px) ${RESIZE_HANDLE}px minmax(${STAGE_MIN_W}px, 1fr) ${RESIZE_HANDLE}px ${chatWidth}px ${RESIZE_HANDLE}px minmax(${SIDE_MIN_W}px, ${mediaWidth}px)`,
         gridTemplateRows: `1fr ${RESIZE_HANDLE}px ${effectiveTimelineRatio}%`,
         gridTemplateAreas:
-          "'media mh stage ch chat' 'th th th th th' 'timeline timeline timeline timeline timeline'",
-        overflowX: "auto",
+          "'gen gh stage ch chat mh media' 'th th th th th th th' 'timeline timeline timeline timeline timeline timeline timeline'",
       }
     : {
-        gridTemplateColumns: `${mediaWidth}px ${RESIZE_HANDLE}px minmax(${MIN_STAGE_W}px, 1fr)`,
+        gridTemplateColumns: `minmax(${SIDE_MIN_W}px, ${generateWidth}px) ${RESIZE_HANDLE}px minmax(${STAGE_MIN_W}px, 1fr) ${RESIZE_HANDLE}px minmax(${SIDE_MIN_W}px, ${mediaWidth}px)`,
         gridTemplateRows: `1fr ${RESIZE_HANDLE}px ${effectiveTimelineRatio}%`,
         gridTemplateAreas:
-          "'media mh stage' 'th th th' 'timeline timeline timeline'",
-        overflowX: "auto",
+          "'gen gh stage mh media' 'th th th th th' 'timeline timeline timeline timeline timeline'",
       };
 
   return (
@@ -475,9 +516,32 @@ export const EditorInterface: React.FC = () => {
 
       <div className="flex-1 min-h-0 flex">
         <div
-          className="flex-1 min-h-0 grid gap-0 bg-bg p-2.5"
+          className="flex-1 min-w-0 min-h-0 grid gap-0 bg-bg p-2.5 overflow-x-auto overflow-y-hidden"
           style={gridStyle}
         >
+        <div
+          className="bg-bg-1 min-w-0 min-h-0 overflow-hidden rounded-xl border border-border shadow-sm"
+          style={{ gridArea: "gen" }}
+        >
+          <PanelErrorBoundary name="Generate">
+            {/* Host container: the generation surface is provided by the video
+                plugin and mounts itself here. Nothing is rendered by the
+                editor itself, so the two plugins stay decoupled. */}
+            <div
+              className="h-full w-full min-w-0 min-h-0"
+              data-omnimux-host="clip.editor.generate"
+            />
+          </PanelErrorBoundary>
+        </div>
+
+        <div
+          className="grid place-items-center cursor-col-resize group/h"
+          style={{ gridArea: "gh" }}
+          onMouseDown={beginResize("generate")}
+        >
+          <span className="h-10 w-1 rounded-full bg-transparent group-hover/h:bg-accent/40 transition-colors" />
+        </div>
+
         <div
           className="bg-bg-1 min-w-0 min-h-0 overflow-hidden rounded-xl border border-border shadow-sm"
           style={{ gridArea: "media" }}
