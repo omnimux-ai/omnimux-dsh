@@ -137,6 +137,7 @@ import {
 } from "../frame-cache-state";
 import type { CachedRange } from "../frame-cache";
 import { Button, ColorInput, IconButton, NumberInput } from "./primitives";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface MotionTimelineProps {
   composition: MotionComposition;
@@ -360,6 +361,7 @@ const tickStep = (duration: number) => {
 };
 
 export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Element {
+  const t = useClipT();
   const [timingMenuOpen, setTimingMenuOpen] = useState(false);
   const [sequenceGap, setSequenceGap] = useState(0.1);
   const [staggerOffset, setStaggerOffset] = useState(0.12);
@@ -1186,7 +1188,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
     return depth;
   };
   const timelineParentName = (layer: MotionLayer): string =>
-    layer.parentId ? (layerById.get(layer.parentId)?.name ?? "Missing") : "-";
+    layer.parentId ? (layerById.get(layer.parentId)?.name ?? t("Missing")) : "-";
   const timelineBeatMarkers = (composition.beatMarkers ?? []).filter(
     (marker) => marker.time >= 0 && marker.time <= duration,
   );
@@ -2035,43 +2037,43 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
               selectedLayer
                 ? activePropertyDescriptor?.label ?? activeProperty
                 : selectedAudioClip
-                  ? selectedAudioClip.name?.trim() || "Audio clip"
+                  ? selectedAudioClip.name?.trim() || t("Audio clip")
                 : selectedLight
-                  ? `${selectedLight.name}: ${formatLightProperty(activeLightProperty)}`
+                  ? `${selectedLight.name}: ${t(formatLightProperty(activeLightProperty))}`
                 : selectedCamera
-                  ? formatCameraProperty(activeCameraProperty)
-                : "Select a layer"
+                  ? t(formatCameraProperty(activeCameraProperty))
+                : t("Select a layer")
             }
           >
             {selectedLayer
               ? activePropertyDescriptor?.label ?? activeProperty
               : selectedAudioClip
-                ? selectedAudioClip.name?.trim() || "Audio clip"
+                ? selectedAudioClip.name?.trim() || t("Audio clip")
               : selectedLight
-                ? formatLightProperty(activeLightProperty)
+                ? t(formatLightProperty(activeLightProperty))
               : selectedCamera
-                ? formatCameraProperty(activeCameraProperty)
-              : "No layer"}
+                ? t(formatCameraProperty(activeCameraProperty))
+              : t("No layer")}
           </span>
           {selectedKeyframeIds.length > 0 ? (
             <span
               className="rounded bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-accent"
-              title="Alt+Left/Right nudges selected keyframes; add Shift for 10 frames"
+              title={t("Alt+Left/Right nudges selected keyframes; add Shift for 10 frames")}
             >
               {selectedKeyframeIds.length} KF
             </span>
           ) : null}
           <TransportButton
             icon={SkipBack}
-            label="Previous keyframe (J)"
+            label={t("Previous keyframe (J)")}
             disabled={!canSeekPreviousKeyframe}
             onClick={() => seekToAdjacentKeyframe(-1)}
           />
           <IconButton
             label={
               activeKeyframe
-                ? "Remove keyframe at playhead"
-                : "Add keyframe at playhead"
+                ? t("Remove keyframe at playhead")
+                : t("Add keyframe at playhead")
             }
             icon={
               <Diamond
@@ -2095,21 +2097,21 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
           />
           <TransportButton
             icon={SkipForward}
-            label="Next keyframe (K)"
+            label={t("Next keyframe (K)")}
             disabled={!canSeekNextKeyframe}
             onClick={() => seekToAdjacentKeyframe(1)}
           />
           {selectedKeyframeIds.length > 0 ? (
             <>
               <IconButton
-                label="Duplicate selected keyframes at playhead (⌘D)"
+                label={t("Duplicate selected keyframes at playhead (⌘D)")}
                 icon={<Copy size={13} aria-hidden />}
                 size="sm"
                 variant="ghost"
                 onClick={duplicateSelectedKeyframesAtPlayhead}
               />
               <IconButton
-                label={`Delete ${selectedKeyframeIds.length} selected keyframe${selectedKeyframeIds.length === 1 ? "" : "s"}`}
+                label={`${t("Delete")} ${selectedKeyframeIds.length} ${t("selected keyframes")}`}
                 icon={<Trash2 size={13} aria-hidden />}
                 size="sm"
                 variant="danger"
@@ -2120,8 +2122,8 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
           <IconButton
             label={
               activeTimelineMarker
-                ? "Remove marker at playhead (M)"
-                : "Add marker at playhead (M)"
+                ? t("Remove marker at playhead (M)")
+                : t("Add marker at playhead (M)")
             }
             icon={
               <Flag
@@ -2138,7 +2140,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             placement="below"
             alignment="end"
             width={320}
-            label="Composition markers"
+            label={t("Composition markers")}
             content={
               <MarkerManager
                 markers={timelineMarkers}
@@ -2150,7 +2152,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             }
           >
             <IconButton
-              label="Manage composition markers"
+              label={t("Manage composition markers")}
               icon={<ChevronDown size={12} aria-hidden />}
               size="sm"
               variant="ghost"
@@ -2159,7 +2161,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
         </div>
         <div className="ml-2 flex items-center gap-0.5 border-l border-border pl-2">
           <IconButton
-            label="Copy timeline selection (⌘C)"
+            label={t("Copy timeline selection (⌘C)")}
             icon={<Copy size={14} aria-hidden />}
             size="md"
             variant="ghost"
@@ -2172,7 +2174,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-3 transition-colors hover:bg-hover hover:text-fg disabled:pointer-events-none disabled:opacity-35"
           />
           <IconButton
-            label="Paste at playhead (⌘V)"
+            label={t("Paste at playhead (⌘V)")}
             icon={<ClipboardPaste size={14} aria-hidden />}
             size="md"
             variant="ghost"
@@ -2181,7 +2183,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-3 transition-colors hover:bg-hover hover:text-fg disabled:pointer-events-none disabled:opacity-35"
           />
           <IconButton
-            label="Split selection at playhead"
+            label={t("Split selection at playhead")}
             icon={<Scissors size={15} aria-hidden />}
             size="md"
             variant="ghost"
@@ -2190,7 +2192,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-3 transition-colors hover:bg-hover hover:text-fg disabled:pointer-events-none disabled:opacity-35"
           />
           <IconButton
-            label="Ripple delete selection"
+            label={t("Ripple delete selection")}
             icon={<Delete size={15} aria-hidden />}
             size="md"
             variant="ghost"
@@ -2199,7 +2201,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-3 transition-colors hover:bg-hover hover:text-fg disabled:pointer-events-none disabled:opacity-35"
           />
           <IconButton
-            label="Ripple edit"
+            label={t("Ripple edit")}
             icon={<MoveHorizontal size={15} aria-hidden />}
             size="md"
             variant={rippleEnabled ? "primary" : "ghost"}
@@ -2215,7 +2217,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
         <div className="ml-auto flex items-center gap-2 text-[11px] text-fg-muted">
           <div className="flex items-center gap-0.5 rounded-md border border-border bg-bg-2 p-0.5">
             <IconButton
-              label="Zoom out timeline"
+              label={t("Zoom out timeline")}
               icon={<ZoomOut size={13} aria-hidden />}
               size="sm"
               variant="ghost"
@@ -2228,7 +2230,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
               className="inline-flex h-6 w-6 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg disabled:pointer-events-none disabled:opacity-35"
             />
             <Button
-              label="Fit"
+              label={t("Fit")}
               variant="ghost"
               size="sm"
               disabled={timelineZoom === TIMELINE_ZOOM_MIN}
@@ -2237,7 +2239,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             />
             <input
               type="range"
-              aria-label="Motion timeline zoom"
+              aria-label={t("Motion timeline zoom")}
               aria-valuetext={`${timelineZoom.toFixed(2).replace(/\.00$/, "")}×`}
               min={TIMELINE_ZOOM_MIN}
               max={TIMELINE_ZOOM_MAX}
@@ -2249,7 +2251,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
               className="mx-1 h-6 w-20 cursor-ew-resize accent-accent"
             />
             <IconButton
-              label="Zoom in timeline"
+              label={t("Zoom in timeline")}
               icon={<ZoomIn size={13} aria-hidden />}
               size="sm"
               variant="ghost"
@@ -2263,7 +2265,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             />
           </div>
           <Button
-            label="In"
+            label={t("In")}
             icon={CornerDownLeft}
             variant="outline"
             size="sm"
@@ -2272,7 +2274,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-bg-2 px-2 text-[11px] font-medium text-fg-3 transition-colors hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-40"
           />
           <Button
-            label="Out"
+            label={t("Out")}
             icon={CornerDownRight}
             variant="outline"
             size="sm"
@@ -2282,7 +2284,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
           />
           {hasCustomWorkArea ? (
             <Button
-              label="Clear"
+              label={t("Clear")}
               variant="outline"
               size="sm"
               onClick={clearWorkArea}
@@ -2291,7 +2293,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
           ) : null}
           <div className="relative">
             <Button
-              label="Timing"
+              label={t("Timing")}
               icon={Clock3}
               variant={timingMenuOpen ? "solid" : "outline"}
               size="sm"
@@ -2336,28 +2338,28 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
                     <TimingMenuButton
-                      label="Align In"
+                      label={t("Align In")}
                       disabled={!canTimeSelection}
                       onClick={alignSelectedLayerIns}
                     />
                     <TimingMenuButton
-                      label="Align Out"
+                      label={t("Align Out")}
                       disabled={!canTimeSelection}
                       onClick={alignSelectedLayerOuts}
                     />
                     <TimingMenuButton
-                      label="Sequence"
+                      label={t("Sequence")}
                       disabled={!canTimeMultipleLayers}
                       onClick={sequenceSelectedLayers}
                     />
                     <TimingMenuButton
-                      label="Stagger"
+                      label={t("Stagger")}
                       disabled={!canTimeMultipleLayers}
                       onClick={staggerSelectedLayers}
                     />
                   </div>
                   <Button
-                    label="Fit selection to work area"
+                    label={t("Fit selection to work area")}
                     variant="outline"
                     size="sm"
                     disabled={!canFitSelectionToWorkArea}
@@ -2390,8 +2392,8 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
           />
           <input
             type="search"
-            aria-label="Search timeline layers"
-            placeholder="Search layers, effects…"
+            aria-label={t("Search timeline layers")}
+            placeholder={t("Search layers, effects…")}
             value={layerQuery}
             onChange={(event) => setLayerQuery(event.target.value)}
             className="h-7 w-full rounded-md border border-border bg-bg-2 pl-7 pr-7 text-[11px] text-fg outline-none placeholder:text-fg-muted focus:border-accent"
@@ -2399,7 +2401,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
           {layerQuery ? (
             <button
               type="button"
-              aria-label="Clear timeline search"
+              aria-label={t("Clear timeline search")}
               onClick={() => setLayerQuery("")}
               className="absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-fg-muted hover:bg-hover hover:text-fg"
             >
@@ -2479,8 +2481,8 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                 </button>
                 <button
                   type="button"
-                  aria-label={composition.hideShyLayers ? "Show shy layers" : "Hide shy layers"}
-                  title={composition.hideShyLayers ? "Show shy layers" : "Hide shy layers"}
+                  aria-label={t(composition.hideShyLayers ? "Show shy layers" : "Hide shy layers")}
+                  title={t(composition.hideShyLayers ? "Show shy layers" : "Hide shy layers")}
                   onClick={() =>
                     updateComposition({
                       ...composition,
@@ -2502,12 +2504,12 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                 style={{ gridTemplateColumns: TIMELINE_RAIL_COLUMNS }}
               >
                 <div className="px-2 text-center">#</div>
-                <div className="px-2">Layer Name</div>
+                <div className="px-2">{t("Layer Name")}</div>
                 <div className="px-2">
-                  {timelineColumnMode === "modes" ? "Modes" : "Switches"}
+                  {t(timelineColumnMode === "modes" ? "Modes" : "Switches")}
                 </div>
-                <div className="px-2">Parent</div>
-                <div className="px-2 text-right">Timing</div>
+                <div className="px-2">{t("Parent")}</div>
+                <div className="px-2 text-right">{t("Timing")}</div>
               </div>
             </div>
             <div
@@ -2547,7 +2549,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                   <Button
                     key={`beat-ruler-${marker.index}-${marker.time}`}
                     hideLabel
-                    label={`Beat ${marker.index + 1}`}
+                    label={`${t("Beat")} ${marker.index + 1}`}
                     variant="ghost"
                     size="sm"
                     onPointerDown={(event) => event.stopPropagation()}
@@ -2568,7 +2570,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                 {timelineMarkers.map((marker) => (
                   <Button
                     key={`marker-ruler-${marker.id}`}
-                    label={marker.label}
+                    label={t(marker.label)}
                     variant="ghost"
                     size="sm"
                     onPointerDown={(event) => event.stopPropagation()}
@@ -2613,7 +2615,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                 </div>
                 <button
                   type="button"
-                  aria-label="Select Camera"
+                  aria-label={t("Select Camera")}
                   onClick={() =>
                     selectCameraProperty(activeCameraProperty ?? "camera.zoom")
                   }
@@ -2681,7 +2683,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                       hideLabel
                       label={
                         propertyIsCamera
-                          ? formatCameraProperty(keyframe.property)
+                          ? t(formatCameraProperty(keyframe.property))
                           : keyframe.property
                       }
                       variant="ghost"
@@ -2731,7 +2733,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                         <Button
                           key={`camera-active-${keyframe.id}`}
                           hideLabel
-                          label={`${formatCameraProperty(activeCameraProperty)} keyframe`}
+                          label={`${t(formatCameraProperty(activeCameraProperty))} ${t("keyframe")}`}
                           variant="ghost"
                           size="sm"
                           aria-pressed={keyframeSelected}
@@ -2799,7 +2801,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                     </div>
                     <button
                       type="button"
-                      aria-label={`Select ${light.name}`}
+                      aria-label={`${t("Select")} ${light.name}`}
                       onClick={() => selectLightProperty(light.id, lightProperty)}
                       className="flex min-w-0 items-center gap-1.5 px-1.5 text-left"
                     >
@@ -2866,7 +2868,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                           hideLabel
                           label={
                             propertyIsLight
-                              ? formatLightProperty(keyframe.property)
+                              ? t(formatLightProperty(keyframe.property))
                               : keyframe.property
                           }
                           variant="ghost"
@@ -2916,7 +2918,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                             <Button
                               key={`light-active-${keyframe.id}`}
                               hideLabel
-                              label={`${formatLightProperty(activeLightProperty)} keyframe`}
+                              label={`${t(formatLightProperty(activeLightProperty))} ${t("keyframe")}`}
                               variant="ghost"
                               size="sm"
                               aria-pressed={keyframeSelected}
@@ -2990,7 +2992,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                     </div>
                     <button
                       type="button"
-                      aria-label={`Select audio clip ${clipName}`}
+                      aria-label={`${t("Select audio clip")} ${clipName}`}
                       onClick={() => selectAudioClip(audioClip.id)}
                       className="relative flex min-w-0 items-center gap-1.5 px-3 text-left"
                     >
@@ -3014,7 +3016,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                     <div className="flex items-center gap-0.5 px-1.5">
                       <TimelineLayerSwitch
                         icon={audioClip.muted ? VolumeX : Volume2}
-                        label={audioClip.muted ? "Unmute audio clip" : "Mute audio clip"}
+                        label={t(audioClip.muted ? "Unmute audio clip" : "Mute audio clip")}
                         active={!audioClip.muted}
                         activeClassName="text-status-success"
                         onClick={() =>
@@ -3026,7 +3028,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                       />
                       <TimelineLayerSwitch
                         icon={Trash2}
-                        label="Delete audio clip"
+                        label={t("Delete audio clip")}
                         active={false}
                         activeClassName="text-status-danger"
                         onClick={() => removeAudioClip(audioClip.id)}
@@ -3042,7 +3044,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                   <div
                     role="button"
                     tabIndex={0}
-                    aria-label={`Audio timeline clip ${clipName}`}
+                    aria-label={`${t("Audio timeline clip")} ${clipName}`}
                     onClick={() => selectAudioClip(audioClip.id)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -3064,7 +3066,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                   >
                     <button
                       type="button"
-                      aria-label={`Move audio clip ${clipName} in time`}
+                      aria-label={`${t("Move audio clip")} ${clipName} ${t("in time")}`}
                       onPointerDown={(event) =>
                         beginAudioTimingDrag(audioClip, "move", event)
                       }
@@ -3102,8 +3104,8 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                       <span
                         role="button"
                         tabIndex={-1}
-                        title="Trim audio in"
-                        aria-label={`Trim ${clipName} in point`}
+                        title={t("Trim audio in")}
+                        aria-label={`${t("Trim")} ${clipName} ${t("in point")}`}
                         onPointerDown={(event) =>
                           beginAudioTimingDrag(audioClip, "trim-start", event)
                         }
@@ -3126,8 +3128,8 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                       <span
                         role="button"
                         tabIndex={-1}
-                        title="Trim audio out"
-                        aria-label={`Trim ${clipName} out point`}
+                        title={t("Trim audio out")}
+                        aria-label={`${t("Trim")} ${clipName} ${t("out point")}`}
                         onPointerDown={(event) =>
                           beginAudioTimingDrag(audioClip, "trim-end", event)
                         }
@@ -3150,10 +3152,10 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
             (composition.audioClips ?? []).length === 0 ? (
               <div className="col-span-2 flex h-24 items-center justify-center text-[12px] text-fg-muted">
                 {timelineIsFiltered
-                  ? "No layers match the current timeline filters."
+                  ? t("No layers match the current timeline filters.")
                   : composition.layers.length > 0
-                    ? "All layers are hidden by the shy switch."
-                  : "Layers you add will appear here as tracks."}
+                    ? t("All layers are hidden by the shy switch.")
+                  : t("Layers you add will appear here as tracks.")}
               </div>
             ) : (
               displayedLayers.map((layer, index) => {
@@ -3225,7 +3227,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                         )}
                         <button
                           type="button"
-                          aria-label={`Select ${layer.name}`}
+                          aria-label={`${t("Select")} ${layer.name}`}
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -3254,7 +3256,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                           onClick={(event) => event.stopPropagation()}
                         >
                           <select
-                            aria-label="Layer blend mode"
+                            aria-label={t("Layer blend mode")}
                             value={layer.blendMode ?? "normal"}
                             onChange={(event) =>
                               patchTimelineLayer(layer.id, {
@@ -3277,7 +3279,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                         <div className="flex items-center gap-0.5 px-1.5">
                           <TimelineLayerSwitch
                             icon={layer.visible ? Eye : EyeOff}
-                            label="Layer visibility"
+                            label={t("Layer visibility")}
                             active={layer.visible}
                             activeClassName="text-fg-2"
                             onClick={() =>
@@ -3288,7 +3290,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                           />
                           <TimelineLayerSwitch
                             icon={Star}
-                            label="Solo layer"
+                            label={t("Solo layer")}
                             active={Boolean(layer.solo)}
                             activeClassName="text-status-warning"
                             fillWhenActive
@@ -3300,7 +3302,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                           />
                           <TimelineLayerSwitch
                             icon={layer.locked ? Lock : Unlock}
-                            label="Lock layer"
+                            label={t("Lock layer")}
                             active={Boolean(layer.locked)}
                             activeClassName="text-status-warning"
                             onClick={() =>
@@ -3311,7 +3313,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                           />
                           <TimelineLayerSwitch
                             icon={Ruler}
-                            label="Guide layer"
+                            label={t("Guide layer")}
                             active={Boolean(layer.guideLayer)}
                             activeClassName="text-accent"
                             onClick={() =>
@@ -3322,7 +3324,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                           />
                           <TimelineLayerSwitch
                             icon={VenetianMask}
-                            label="Shy layer"
+                            label={t("Shy layer")}
                             active={Boolean(layer.shy)}
                             activeClassName="text-accent"
                             onClick={() =>
@@ -3372,7 +3374,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                       ) : null}
                       <button
                         type="button"
-                        aria-label={`Move ${layer.name} in time`}
+                        aria-label={`${t("Move")} ${layer.name} ${t("in time")}`}
                         disabled={layer.locked}
                         onPointerDown={(event) =>
                           beginTimingDrag(layer, "move", event)
@@ -3398,8 +3400,8 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                         <span
                           role="button"
                           tabIndex={-1}
-                          title="Trim layer in"
-                          aria-label={`Trim ${layer.name} in point`}
+                          title={t("Trim layer in")}
+                          aria-label={`${t("Trim")} ${layer.name} ${t("in point")}`}
                           onPointerDown={(event) =>
                             beginTimingDrag(layer, "trim-start", event)
                           }
@@ -3419,8 +3421,8 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                         <span
                           role="button"
                           tabIndex={-1}
-                          title="Trim layer out"
-                          aria-label={`Trim ${layer.name} out point`}
+                          title={t("Trim layer out")}
+                          aria-label={`${t("Trim")} ${layer.name} ${t("out point")}`}
                           onPointerDown={(event) =>
                             beginTimingDrag(layer, "trim-end", event)
                           }
@@ -3508,7 +3510,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                               <Button
                                 key={`active-${keyframe.id}`}
                                 hideLabel
-                                label={`${activePropertyDescriptor?.label ?? activeProperty} keyframe`}
+                                label={`${activePropertyDescriptor?.label ?? activeProperty} ${t("keyframe")}`}
                                 variant="ghost"
                                 size="sm"
                                 aria-pressed={keyframeSelected}
@@ -3655,7 +3657,7 @@ export function MotionTimeline({ composition }: MotionTimelineProps): JSX.Elemen
                                     <Button
                                       key={`prop-${group.property}-${keyframe.id}`}
                                       hideLabel
-                                      label={`${propertyLabel} keyframe`}
+                                      label={`${propertyLabel} ${t("keyframe")}`}
                                       variant="ghost"
                                       size="sm"
                                       aria-pressed={keyframeSelected}
@@ -3812,10 +3814,11 @@ function MarkerManager({
   ) => void;
   onDelete: (markerId: string) => void;
 }): JSX.Element {
+  const t = useClipT();
   return (
     <div className="max-h-[360px] w-[320px] overflow-y-auto p-2.5">
       <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
-        <span className="text-[11px] font-semibold text-fg">Composition markers</span>
+        <span className="text-[11px] font-semibold text-fg">{t("Composition markers")}</span>
         <span className="text-[10px] tabular-nums text-fg-muted">{markers.length}</span>
       </div>
       {markers.length === 0 ? (
@@ -3856,6 +3859,7 @@ function MarkerManagerRow({
   ) => void;
   onDelete: (markerId: string) => void;
 }): JSX.Element {
+  const t = useClipT();
   const [label, setLabel] = useState(marker.label);
   useEffect(() => setLabel(marker.label), [marker.label]);
   const commitLabel = () => {
@@ -3869,14 +3873,14 @@ function MarkerManagerRow({
       <div className="mb-1.5 flex items-center gap-1.5">
         <button
           type="button"
-          aria-label={`Seek to ${marker.label}`}
+          aria-label={`Seek to ${t(marker.label)}`}
           onClick={() => onSeek(marker.time)}
           className="h-7 shrink-0 rounded border border-border bg-bg-1 px-2 font-mono text-[10px] tabular-nums text-fg-3 hover:border-accent hover:text-accent"
         >
           {formatMotionTimecode(marker.time, frameRate)}
         </button>
         <input
-          aria-label={`Marker label for ${marker.label}`}
+          aria-label={`Marker label for ${t(marker.label)}`}
           value={label}
           onChange={(event) => setLabel(event.target.value)}
           onBlur={commitLabel}
@@ -3886,7 +3890,7 @@ function MarkerManagerRow({
           className="h-7 min-w-0 flex-1 rounded border border-border bg-bg-1 px-2 text-[11px] font-medium text-fg outline-none focus:border-accent"
         />
         <IconButton
-          label={`Delete ${marker.label}`}
+          label={`Delete ${t(marker.label)}`}
           icon={<Trash2 size={12} aria-hidden />}
           size="sm"
           variant="danger"

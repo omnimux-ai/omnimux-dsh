@@ -8,6 +8,7 @@ import { ToolcraftText as Text } from "@openreel/ui";
 import { ToolcraftTextInputControl } from "@openreel/ui";
 import { getGraphicsBridge } from "../../../bridges";
 import type { StickerItem, EmojiItem } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 type TabType = "stickers" | "emojis";
 
@@ -92,6 +93,7 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
   duration = 5,
   onSelect,
 }) => {
+  const t = useClipT();
   const [activeTab, setActiveTab] = useState<TabType>("emojis");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("smileys");
@@ -189,7 +191,7 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
       {/* Tab Switcher */}
       <div className="flex gap-1 p-1 bg-bg-2 rounded-lg">
         <Button
-          label="Emojis"
+          label={t("Emojis")}
           icon={<Smile size={14} aria-hidden />}
           variant={activeTab === "emojis" ? "primary" : "secondary"}
           size="sm"
@@ -197,7 +199,7 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
           className="flex-1"
         />
         <Button
-          label="Stickers"
+          label={t("Stickers")}
           icon={<Sticker size={14} aria-hidden />}
           variant={activeTab === "stickers" ? "primary" : "secondary"}
           size="sm"
@@ -220,7 +222,7 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
         />
         {searchQuery && (
           <IconButton
-            label="Clear search"
+            label={t("Clear search")}
             icon={<X size={12} className="text-fg-3" aria-hidden />}
             variant="ghost"
             size="sm"
@@ -308,7 +310,7 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
       {activeTab === "stickers" && (
         <div className="pt-2 border-t border-border">
           <Button
-            label="Add Custom Sticker"
+            label={t("Add Custom Sticker")}
             icon={<Plus size={14} aria-hidden />}
             variant="secondary"
             size="sm"

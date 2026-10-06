@@ -26,6 +26,7 @@ import {
   PanelHeader,
   Section,
 } from "./primitives";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface AnimationPresetsPanelProps {
   composition: MotionComposition;
@@ -58,6 +59,7 @@ export function AnimationPresetsPanel({
   composition,
   embedded = false,
 }: AnimationPresetsPanelProps): JSX.Element | null {
+  const t = useClipT();
   const [duration, setDuration] = useState(0.6);
   const [distance, setDistance] = useState(120);
   const [intensity, setIntensity] = useState(1);
@@ -116,12 +118,12 @@ export function AnimationPresetsPanel({
     }
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <PanelHeader title="Animation Presets" icon={Sparkles} />
+        <PanelHeader title={t("Animation Presets")} icon={Sparkles} />
         <div className="flex flex-1 items-center justify-center p-4">
           <EmptyState
             icon={Sparkles}
-            title="Select a layer"
-            description="Apply entrance, exit, emphasis, and loop presets as editable keyframes."
+            title={t("Select a layer")}
+            description={t("Apply entrance, exit, emphasis, and loop presets as editable keyframes.")}
           />
         </div>
       </div>
@@ -130,11 +132,11 @@ export function AnimationPresetsPanel({
 
   return (
     <div className={embedded ? "" : "flex h-full min-h-0 flex-col"}>
-      {embedded ? null : <PanelHeader title="Animation Presets" icon={Sparkles} />}
+      {embedded ? null : <PanelHeader title={t("Animation Presets")} icon={Sparkles} />}
       <div className={embedded ? "" : "min-h-0 flex-1 overflow-auto"}>
-        <Section title="Timing" icon={MoveUp}>
+        <Section title={t("Timing")} icon={MoveUp}>
           <div className="grid grid-cols-3 gap-2.5">
-            <Field label="Duration" hint="s">
+            <Field label={t("Duration")} hint={t("s")}>
               <NumberInput
                 value={duration}
                 min={0.05}
@@ -143,7 +145,7 @@ export function AnimationPresetsPanel({
                 onChange={setDuration}
               />
             </Field>
-            <Field label="Distance" hint="px">
+            <Field label={t("Distance")} hint={t("px")}>
               <NumberInput
                 value={distance}
                 min={0}
@@ -152,7 +154,7 @@ export function AnimationPresetsPanel({
                 onChange={setDistance}
               />
             </Field>
-            <Field label="Intensity">
+            <Field label={t("Intensity")}>
               <NumberInput
                 value={intensity}
                 min={0}
@@ -213,10 +215,11 @@ function PresetCategorySection({
   disabled: boolean;
   onApply: (preset: MotionAnimationPreset) => void;
 }): JSX.Element {
+  const t = useClipT();
   const meta = CATEGORY_META[category];
   const Icon = meta.icon;
   return (
-    <Section title={meta.label} icon={Icon}>
+    <Section title={t(meta.label)} icon={Icon}>
       <div className="grid grid-cols-1 gap-2">
         {presets.map((preset) => (
           <PresetButton
@@ -240,6 +243,7 @@ function PresetButton({
   disabled: boolean;
   onApply: () => void;
 }): JSX.Element {
+  const t = useClipT();
   const [isHovered, setIsHovered] = useState(false);
   const [progress, setProgress] = useState(0.62);
 
@@ -260,7 +264,7 @@ function PresetButton({
 
   return (
     <ToolcraftClickableCard
-      label={`Apply ${preset.name}`}
+      label={`${t("Apply")} ${preset.name}`}
       disabled={disabled}
       onClick={onApply}
       onMouseEnter={() => setIsHovered(true)}

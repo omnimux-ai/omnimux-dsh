@@ -28,6 +28,7 @@ import { useEngineStore } from "../../../stores/engine-store";
 import { useProjectStore } from "../../../stores/project-store";
 import type { BezierPath, Mask, MaskShape } from "@openreel/core";
 import { boundsPathFromTransform } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface MaskSectionProps {
   clipId: string;
@@ -82,6 +83,7 @@ const MaskItem: React.FC<{
   onUpdatePath,
   onSetMatteSource,
 }) => {
+  const t = useClipT();
   const maskTypeIcon =
     mask.type === "shape"
       ? Square
@@ -93,7 +95,7 @@ const MaskItem: React.FC<{
     mask.type === "shape"
       ? "Shape Mask"
       : mask.type === "track-matte"
-        ? "Track Matte"
+        ? t("Track Matte")
         : "Drawn Mask";
   // Avoid self-referential mattes
   const availableSources = matteSourceOptions.filter(
@@ -160,7 +162,7 @@ const MaskItem: React.FC<{
           }
         />
         <IconButton
-          label="Duplicate Mask"
+          label={t("Duplicate Mask")}
           onClick={(e) => {
             e.stopPropagation();
             onDuplicate();
@@ -171,7 +173,7 @@ const MaskItem: React.FC<{
           className="text-fg-3 hover:text-fg"
         />
         <IconButton
-          label="Delete Mask"
+          label={t("Delete Mask")}
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
@@ -189,10 +191,10 @@ const MaskItem: React.FC<{
             <div className="space-y-2 rounded border border-border bg-bg-1 p-2">
               <div className="flex items-center justify-between gap-2">
                 <Text type="supporting" color="primary" className="text-[9.5px] font-medium">
-                  Path points
+                  {t("Path points")}
                 </Text>
                 <Button
-                  label="Add path point"
+                  label={t("Add path point")}
                   onClick={() => {
                     const last = mask.path.points.at(-1) ?? { x: 0.5, y: 0.5 };
                     onUpdatePath({
@@ -277,11 +279,11 @@ const MaskItem: React.FC<{
               <div className="flex items-center gap-1.5">
                 <Layers size={11} className="text-primary" />
                 <Text type="supporting" color="primary" className="text-[9.5px] font-medium">
-                  Matte source
+                  {t("Matte source")}
                 </Text>
               </div>
               <Selector
-                label="Matte source"
+                label={t("Matte source")}
                 isLabelHidden
                 size="sm"
                 width="100%"
@@ -289,7 +291,7 @@ const MaskItem: React.FC<{
                 onChange={(v) =>
                   onSetMatteSource(v, mask.matteSource ?? "bounds")
                 }
-                placeholder="Pick a clip..."
+                placeholder={t("Pick a clip...")}
                 isDisabled={availableSources.length === 0}
                 options={availableSources.map((opt) => ({
                   label: opt.label,
@@ -298,7 +300,7 @@ const MaskItem: React.FC<{
               />
               <div className="flex items-center justify-between">
                 <Text type="supporting" color="secondary" className="text-[9px]">
-                  Channel
+                  {t("Channel")}
                 </Text>
                 <div className="flex gap-1">
                   {(["bounds", "alpha", "luminance"] as const).map((m) => (
@@ -329,7 +331,7 @@ const MaskItem: React.FC<{
           )}
 
           <PropertySlider
-            label="Feathering"
+            label={t("Feathering")}
             min={0}
             max={100}
             step={1}
@@ -339,7 +341,7 @@ const MaskItem: React.FC<{
           />
 
           <PropertySlider
-            label="Expansion"
+            label={t("Expansion")}
             min={-100}
             max={100}
             step={1}
@@ -349,7 +351,7 @@ const MaskItem: React.FC<{
           />
 
           <PropertySlider
-            label="Opacity"
+            label={t("Opacity")}
             min={0}
             max={100}
             step={1}
@@ -384,6 +386,7 @@ const MaskItem: React.FC<{
 };
 
 export const MaskSection: React.FC<MaskSectionProps> = ({ clipId }) => {
+  const t = useClipT();
   const getMaskEngine = useEngineStore((state) => state.getMaskEngine);
   const project = useProjectStore((s) => s.project);
   const getAllTextClips = useProjectStore((s) => s.getAllTextClips);
@@ -697,10 +700,10 @@ export const MaskSection: React.FC<MaskSectionProps> = ({ clipId }) => {
         <Square size={16} className="text-primary" />
         <div className="flex flex-1 flex-col gap-0.5">
           <Text type="supporting" color="primary" className="text-[11px] font-medium">
-            Masking
+            {t("Masking")}
           </Text>
           <Text type="supporting" color="secondary" className="text-[9px]">
-            Control visible regions of clip
+            {t("Control visible regions of clip")}
           </Text>
         </div>
       </Card>
@@ -708,7 +711,7 @@ export const MaskSection: React.FC<MaskSectionProps> = ({ clipId }) => {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Text type="supporting" color="secondary" className="text-[10px] font-medium">
-            Add Mask Shape
+            {t("Add Mask Shape")}
           </Text>
         </div>
         <div className="grid grid-cols-5 gap-1">
@@ -731,7 +734,7 @@ export const MaskSection: React.FC<MaskSectionProps> = ({ clipId }) => {
             );
           })}
           <ClickableCard
-            label="Add custom path mask"
+            label={t("Add custom path mask")}
             onClick={handleAddDrawnMask}
             padding={2}
             variant="muted"
@@ -743,7 +746,7 @@ export const MaskSection: React.FC<MaskSectionProps> = ({ clipId }) => {
             </Text>
           </ClickableCard>
           <ClickableCard
-            label="Use another clip as a track matte"
+            label={t("Use another clip as a track matte")}
             onClick={handleAddTrackMatte}
             padding={2}
             variant="muted"
@@ -751,7 +754,7 @@ export const MaskSection: React.FC<MaskSectionProps> = ({ clipId }) => {
           >
             <Layers size={14} className="text-fg-2" />
             <Text type="supporting" color="secondary" className="text-[8px]">
-              Track Matte
+              {t("Track Matte")}
             </Text>
           </ClickableCard>
         </div>
@@ -764,7 +767,7 @@ export const MaskSection: React.FC<MaskSectionProps> = ({ clipId }) => {
               Masks ({masks.length})
             </Text>
             <Button
-              label="Clear All"
+              label={t("Clear All")}
               onClick={handleResetMasks}
               variant="ghost"
               size="sm"
@@ -805,17 +808,17 @@ export const MaskSection: React.FC<MaskSectionProps> = ({ clipId }) => {
             className="mx-auto mb-2 text-fg-3 opacity-50"
           />
           <Text type="supporting" color="secondary" className="block text-[10px]">
-            No masks on this clip
+            {t("No masks on this clip")}
           </Text>
           <Text type="supporting" color="secondary" className="mt-1 block text-[9px]">
-            Click a shape above to add a mask
+            {t("Click a shape above to add a mask")}
           </Text>
         </div>
       )}
 
       <div className="pt-2 border-t border-border">
         <Text type="supporting" color="secondary" className="text-center text-[9px]">
-          Masks control which parts of the clip are visible
+          {t("Masks control which parts of the clip are visible")}
         </Text>
       </div>
     </div>

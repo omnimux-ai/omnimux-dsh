@@ -10,6 +10,7 @@ import { getSecret, isSessionUnlocked } from "../../services/secure-storage";
 import { useProjectStore } from "../../stores/project-store";
 import { useSettingsStore } from "../../stores/settings-store";
 import { Button, Field, TextInput } from "./primitives";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface GenerateShaderBoxProps {
   category: MotionShaderCategory;
@@ -51,6 +52,7 @@ export function GenerateShaderBox({
   category,
   onGenerated,
 }: GenerateShaderBoxProps): JSX.Element {
+  const t = useClipT();
   const [prompt, setPrompt] = useState("");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 
@@ -65,7 +67,7 @@ export function GenerateShaderBox({
     const { provider, model } = resolveModel();
     const apiKey = await resolveApiKey(provider);
     if (apiKey === null || (!isDesktop() && apiKey === "")) {
-      setPhase({ kind: "error", message: CONFIGURE_PROVIDER });
+      setPhase({ kind: "error", message: t(CONFIGURE_PROVIDER) });
       return;
     }
 
@@ -86,7 +88,7 @@ export function GenerateShaderBox({
       result = await generateAiShader(trimmed, category, { send });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Shader generation failed";
+        error instanceof Error ? error.message : t("Shader generation failed");
       setPhase({ kind: "error", message });
       return;
     }
@@ -106,7 +108,7 @@ export function GenerateShaderBox({
     if (!dispatched.success) {
       setPhase({
         kind: "error",
-        message: dispatched.error?.message ?? "Could not save the shader",
+        message: dispatched.error?.message ?? t("Could not save the shader"),
       });
       return;
     }
@@ -128,16 +130,16 @@ export function GenerateShaderBox({
         <Sparkles size={13} />
         Generate with AI
       </ToolcraftText>
-      <Field label="Shader prompt">
+      <Field label={t("Shader prompt")}>
         <TextInput
           value={prompt}
           onChange={setPrompt}
-          placeholder="Describe a shader, e.g. holographic foil"
+          placeholder={t("Describe a shader, e.g. holographic foil")}
           disabled={busy}
         />
       </Field>
       <Button
-        label="Generate shader"
+        label={t("Generate shader")}
         variant="solid"
         onClick={() => void runGenerate()}
         disabled={busy || prompt.trim() === ""}

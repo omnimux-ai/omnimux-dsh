@@ -22,6 +22,7 @@ import { ToolcraftText as Text } from "@openreel/ui";
 import { ToolcraftTextAreaControl } from "@openreel/ui";
 import { ToolcraftTextInputControl } from "@openreel/ui";
 import { useEngineStore } from "../../stores/engine-store";
+import { useClipT } from "../../../../i18n/index.js";
 import { useProjectStore } from "../../stores/project-store";
 import type {
   ScriptableTemplate,
@@ -58,6 +59,7 @@ export const TemplatePreviewModal: React.FC<TemplatePreviewModalProps> = ({
   onClose,
   onApply,
 }) => {
+  const t = useClipT();
   const getTemplateEngine = useEngineStore((state) => state.getTemplateEngine);
   const getTitleEngine = useEngineStore((state) => state.getTitleEngine);
   const loadProject = useProjectStore((state) => state.loadProject);
@@ -205,9 +207,9 @@ export const TemplatePreviewModal: React.FC<TemplatePreviewModalProps> = ({
       <Layout
         header={
           <DialogHeader
-            title={template.name}
+            title={t(template.name)}
             onOpenChange={(open) => !open && onClose()}
-            subtitle={`${formatDuration(template.timeline.duration)} · ${template.placeholders.length} editable fields`}
+            subtitle={`${formatDuration(template.timeline.duration)} · ${template.placeholders.length} ${t("editable fields")}`}
           />
         }
         content={
@@ -237,7 +239,7 @@ export const TemplatePreviewModal: React.FC<TemplatePreviewModalProps> = ({
               {template.scenes && template.scenes.length > 0 && (
                 <div className="space-y-2">
                   <Text type="label" color="secondary" weight="medium" className="text-xs text-text-muted uppercase tracking-wide">
-                    Scenes
+                    {t("Scenes")}
                   </Text>
                   <div className="flex flex-wrap gap-2">
                     {template.scenes.map((scene) => (
@@ -264,7 +266,7 @@ export const TemplatePreviewModal: React.FC<TemplatePreviewModalProps> = ({
 
             <div className="space-y-4">
               <Text type="label" color="primary" weight="medium" className="text-sm text-text-primary">
-                Customize Template
+                {t("Customize Template")}
               </Text>
 
               {groupedPlaceholders.main.length > 0 && (
@@ -289,7 +291,7 @@ export const TemplatePreviewModal: React.FC<TemplatePreviewModalProps> = ({
               {groupedPlaceholders.advanced.length > 0 && (
                 <div>
                   <Button
-                    label={`Advanced Options (${groupedPlaceholders.advanced.length})`}
+                    label={`${t("Advanced Options")} (${groupedPlaceholders.advanced.length})`}
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowAdvanced((value) => !value)}
@@ -334,9 +336,9 @@ export const TemplatePreviewModal: React.FC<TemplatePreviewModalProps> = ({
         }
         footer={
         <LayoutFooter>
-          <Button label="Cancel" variant="ghost" onClick={onClose} />
+          <Button label={t("Cancel")} variant="ghost" onClick={onClose} />
           <Button
-            label={isApplying ? "Applying..." : "Use Template"}
+            label={isApplying ? t("Applying...") : t("Use Template")}
             icon={isApplying ? (
               <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
             ) : (
@@ -376,7 +378,7 @@ const PlaceholderInput: React.FC<PlaceholderInputProps> = ({
         return (
           <div className="space-y-1">
             <ToolcraftTextAreaControl
-              label={placeholder.label}
+              label={t(placeholder.label)}
               isLabelHidden
               value={String(displayValue)}
               onChange={onChange}
@@ -404,7 +406,7 @@ const PlaceholderInput: React.FC<PlaceholderInputProps> = ({
           return (
             <div className="flex items-center gap-3">
               <ToolcraftSliderControl
-                label={placeholder.label}
+                label={t(placeholder.label)}
                 isLabelHidden
                 value={Number(displayValue) || 0}
                 onChange={onChange}
@@ -423,7 +425,7 @@ const PlaceholderInput: React.FC<PlaceholderInputProps> = ({
 
         return (
           <ToolcraftNumberInputControl
-            label={placeholder.label}
+            label={t(placeholder.label)}
             isLabelHidden
             value={Number(displayValue) || 0}
             onChange={(next) => onChange(next ?? 0)}
@@ -439,7 +441,7 @@ const PlaceholderInput: React.FC<PlaceholderInputProps> = ({
         return (
           <div className="flex items-center gap-3">
             <ToolcraftSwitchControl
-              label={placeholder.description || "Enabled"}
+              label={placeholder.description ? t(placeholder.description) : t("Enabled")}
               checked={Boolean(displayValue)}
               onCheckedChange={(checked) => onChange(checked)}
             />
@@ -454,7 +456,7 @@ const PlaceholderInput: React.FC<PlaceholderInputProps> = ({
               style={{ backgroundColor: String(displayValue) || "#000000" }}
             />
             <ToolcraftTextInputControl
-              label={placeholder.label}
+              label={t(placeholder.label)}
               isLabelHidden
               value={String(displayValue) || "#000000"}
               onChange={onChange}
@@ -467,7 +469,7 @@ const PlaceholderInput: React.FC<PlaceholderInputProps> = ({
       default:
         return (
           <ToolcraftTextInputControl
-            label={placeholder.label}
+            label={t(placeholder.label)}
             isLabelHidden
             value={String(displayValue)}
             onChange={onChange}
@@ -483,14 +485,14 @@ const PlaceholderInput: React.FC<PlaceholderInputProps> = ({
       <div className="flex items-center gap-2">
         <Icon size={14} className="text-text-muted" />
         <Text type="label" color="primary" weight="medium" className="text-sm text-text-primary">
-          {placeholder.label}
+          {t(placeholder.label)}
         </Text>
         {placeholder.required && (
           <span className="text-red-400 text-xs">*</span>
         )}
       </div>
       {placeholder.description && placeholder.type !== "boolean" && (
-        <Text type="supporting" color="secondary" className="text-xs text-text-muted">{placeholder.description}</Text>
+        <Text type="supporting" color="secondary" className="text-xs text-text-muted">{t(placeholder.description)}</Text>
       )}
       {renderInput()}
     </div>

@@ -12,6 +12,7 @@ import type {
 import type { Clip, TransitionType } from "@openreel/core";
 import { getTransitionBridge } from "../../../bridges/transition-bridge";
 import { serializeEditorEffectDropPayload } from "../timeline/effect-drop";
+import { useClipT } from "../../../../../i18n/index.js";
 
 // ─── Effect & Transition catalogs ──────────────────────────────────
 // Each item ships with a small CSS recipe used to animate the live
@@ -1240,6 +1241,7 @@ const EffectCard: React.FC<{
   thumbUrl: string | null;
   onApply: () => void;
 }> = ({ def, thumbUrl, onApply }) => {
+  const t = useClipT();
   const [progress, setProgress] = useState(0.72);
   const [isHover, setIsHover] = useState(false);
   const rafRef = React.useRef<number | null>(null);
@@ -1284,7 +1286,7 @@ const EffectCard: React.FC<{
 
   return (
     <ClickableCard
-      label={`${def.label}. Drag onto a clip to apply, or double-click to apply to selected clip.`}
+      label={`${t(def.label)}. ${t("Drag onto a clip to apply, or double-click to apply to selected clip.")}`}
       draggable
       onDragStart={handleDragStart}
       onDoubleClick={onApply}
@@ -1318,15 +1320,15 @@ const EffectCard: React.FC<{
           />
         )}
         <Text className="absolute bottom-1 right-1 text-[8.5px] uppercase px-1.5 py-0.5 rounded bg-black/55 text-white/85 backdrop-blur-sm">
-          {def.category}
+          {t(def.category)}
         </Text>
       </div>
       <div className="px-2 py-1.5 border-t border-border">
         <Text type="supporting" weight="bold" display="block" maxLines={1} className="text-[10.5px] text-fg leading-tight">
-          {def.label}
+          {t(def.label)}
         </Text>
         <Text type="supporting" color="secondary" display="block" maxLines={1} className="text-[9.5px] text-fg-muted leading-tight mt-0.5">
-          {def.description}
+          {t(def.description)}
         </Text>
       </div>
     </ClickableCard>
@@ -1338,6 +1340,7 @@ const TransitionCard: React.FC<{
   thumbUrl: string | null;
   onApply: () => void;
 }> = ({ def, thumbUrl, onApply }) => {
+  const t = useClipT();
   const [progress, setProgress] = useState(0);
   const [isHover, setIsHover] = useState(false);
   const rafRef = React.useRef<number | null>(null);
@@ -1376,7 +1379,7 @@ const TransitionCard: React.FC<{
 
   return (
     <ClickableCard
-      label={`${def.label}. Drag onto a clip edge, or double-click to apply to the selected cut.`}
+      label={`${t(def.label)}. ${t("Drag onto a clip edge, or double-click to apply to the selected cut.")}`}
       draggable
       onDragStart={handleDragStart}
       onDoubleClick={onApply}
@@ -1391,10 +1394,10 @@ const TransitionCard: React.FC<{
       </div>
       <div className="px-2 py-1.5 border-t border-border">
         <Text type="supporting" weight="bold" display="block" maxLines={1} className="text-[10.5px] text-fg leading-tight">
-          {def.label}
+          {t(def.label)}
         </Text>
         <Text type="supporting" color="secondary" display="block" maxLines={1} className="text-[9.5px] text-fg-muted leading-tight mt-0.5">
-          {def.description}
+          {t(def.description)}
         </Text>
       </div>
     </ClickableCard>
@@ -1450,6 +1453,7 @@ const useCurrentClipThumbnail = (): string | null => {
 // ─── Main panel ───────────────────────────────────────────────────
 
 export const EffectsPanel: React.FC = () => {
+  const t = useClipT();
   const thumbUrl = useCurrentClipThumbnail();
   const getSelectedClipIds = useUIStore((s) => s.getSelectedClipIds);
   const addVideoEffect = useProjectStore((s) => s.addVideoEffect);
@@ -1474,8 +1478,8 @@ export const EffectsPanel: React.FC = () => {
       const selectedIds = getSelectedClipIds();
       if (selectedIds.length === 0) {
         toast.warning(
-          "No clip selected",
-          "Drag the effect onto a clip in the timeline, or select a clip and double-click.",
+          t("No clip selected"),
+          t("Drag the effect onto a clip in the timeline, or select a clip and double-click."),
         );
         return;
       }
@@ -1485,19 +1489,19 @@ export const EffectsPanel: React.FC = () => {
       }
       if (appliedCount === 0) {
         toast.error(
-          "Effect could not be applied",
-          "The selected layers did not accept this effect.",
+          t("Effect could not be applied"),
+          t("The selected layers did not accept this effect."),
         );
         return;
       }
       toast.success(
-        "Effect applied",
-        `${def.label} added to ${appliedCount} clip${appliedCount > 1 ? "s" : ""}`,
+        t("Effect applied"),
+        `${t(def.label)} · ${appliedCount}`,
       );
       if (appliedCount < selectedIds.length) {
         toast.warning(
-          "Some layers were skipped",
-          `${selectedIds.length - appliedCount} selected layer${selectedIds.length - appliedCount > 1 ? "s" : ""} could not accept the effect.`,
+          t("Some layers were skipped"),
+          `${selectedIds.length - appliedCount}`,
         );
       }
     },
@@ -1508,12 +1512,12 @@ export const EffectsPanel: React.FC = () => {
     <div className="flex flex-col h-full min-h-0">
       <div className="px-3 pt-3 pb-2 shrink-0">
         <ToolcraftTextInputControl
-          label="Search effects"
+          label={t("Search effects")}
           isLabelHidden
           type="text"
           value={query}
           onChange={setQuery}
-          placeholder="Search effects"
+          placeholder={t("Search effects")}
           startIcon={<Search size={13} aria-hidden />}
           size="sm"
           width="100%"
@@ -1521,7 +1525,7 @@ export const EffectsPanel: React.FC = () => {
         <div
           className="mt-2 flex gap-1 overflow-x-auto pb-0.5"
           role="group"
-          aria-label="Effect categories"
+          aria-label={t("Effect categories")}
         >
           {(["All", ...EDITOR_EFFECT_CATEGORIES] as const).map((category) => {
             const count =
@@ -1542,7 +1546,7 @@ export const EffectsPanel: React.FC = () => {
                     : "border-border bg-bg-2 text-fg-3 hover:border-primary/50 hover:text-fg"
                 }`}
               >
-                {category} {count}
+                {t(category)} {count}
               </button>
             );
           })}
@@ -1559,7 +1563,7 @@ export const EffectsPanel: React.FC = () => {
             return (
               <section key={cat}>
                 <Text type="supporting" color="secondary" weight="bold" display="block" className="text-[9.5px] uppercase mb-1.5">
-                  {cat}
+                  {t(cat)}
                 </Text>
                 <div className="grid grid-cols-2 gap-2">
                   {items.map((def) => (
@@ -1576,7 +1580,7 @@ export const EffectsPanel: React.FC = () => {
           })}
           {filtered.length === 0 && (
             <Text type="supporting" color="secondary" display="block" justify="center" className="text-[10.5px] py-6">
-              No effects match "{query}".
+              {t("No effects match")} "{query}".
             </Text>
           )}
         </div>
@@ -1586,6 +1590,7 @@ export const EffectsPanel: React.FC = () => {
 };
 
 export const TransitionsPanel: React.FC = () => {
+  const t = useClipT();
   const thumbUrl = useCurrentClipThumbnail();
   const project = useProjectStore((state) => state.project);
   const addClipTransition = useProjectStore(
@@ -1620,8 +1625,8 @@ export const TransitionsPanel: React.FC = () => {
       const selectedCount = selectedIds.size;
       if (selectedCount === 0) {
         toast.warning(
-          "No clip selected",
-          "Select a clip or two adjacent clips, then double-click the transition.",
+          t("No clip selected"),
+          t("Select a clip or two adjacent clips, then double-click the transition."),
         );
         return;
       }
@@ -1668,8 +1673,8 @@ export const TransitionsPanel: React.FC = () => {
 
       if (!clipA) {
         toast.warning(
-          "No compatible cut",
-          "The selected clips must be adjacent on the same timeline track.",
+          t("No compatible cut"),
+          t("The selected clips must be adjacent on the same timeline track."),
         );
         return;
       }
@@ -1687,19 +1692,19 @@ export const TransitionsPanel: React.FC = () => {
         : bridge.createClipEdgeTransition(clipA, "out", def.type, 1, params);
       if (!result.success || !result.transitionId) {
         toast.error(
-          "Transition failed",
-          result.error ?? "Could not create this transition at the selected cut.",
+          t("Transition failed"),
+          result.error ?? t("Could not create this transition at the selected cut."),
         );
         return;
       }
       const transition = bridge.getTransition(result.transitionId);
       if (!transition || !(await addClipTransition(transition))) {
-        toast.error("Transition failed", "Could not save the transition.");
+        toast.error(t("Transition failed"), t("Could not save the transition."));
         return;
       }
       toast.success(
-        "Transition applied",
-        `${def.label} added to the selected cut.`,
+        t("Transition applied"),
+        `${t(def.label)}`,
       );
     },
     [addClipTransition, getSelectedClipIds, project],
@@ -1709,12 +1714,12 @@ export const TransitionsPanel: React.FC = () => {
     <div className="flex flex-col h-full min-h-0">
       <div className="px-3 pt-3 pb-2 shrink-0">
         <ToolcraftTextInputControl
-          label="Search transitions"
+          label={t("Search transitions")}
           isLabelHidden
           type="text"
           value={query}
           onChange={setQuery}
-          placeholder="Search transitions"
+          placeholder={t("Search transitions")}
           startIcon={<Search size={13} aria-hidden />}
           size="sm"
           width="100%"
@@ -1722,7 +1727,7 @@ export const TransitionsPanel: React.FC = () => {
         <div
           className="mt-2 flex gap-1 overflow-x-auto pb-0.5"
           role="group"
-          aria-label="Transition categories"
+          aria-label={t("Transition categories")}
         >
           {(["All", ...TRANSITION_CATEGORIES] as const).map((category) => {
             const count =
@@ -1744,7 +1749,7 @@ export const TransitionsPanel: React.FC = () => {
                     : "border-border bg-bg-2 text-fg-3 hover:border-primary/50 hover:text-fg"
                 }`}
               >
-                {category} {count}
+                {t(category)} {count}
               </button>
             );
           })}
@@ -1764,7 +1769,7 @@ export const TransitionsPanel: React.FC = () => {
               <section key={category}>
                 <div className="mb-1.5 flex items-center justify-between">
                   <Text type="supporting" color="secondary" weight="bold" className="text-[9.5px] uppercase">
-                    {category}
+                    {t(category)}
                   </Text>
                   <Text type="supporting" color="secondary" className="font-mono text-[9px]">
                     {items.length}
@@ -1785,7 +1790,7 @@ export const TransitionsPanel: React.FC = () => {
           })}
           {filtered.length === 0 && (
             <Text type="supporting" color="secondary" display="block" justify="center" className="text-[10.5px] py-6">
-              No transitions match "{query}".
+              {t("No transitions match")} "{query}".
             </Text>
           )}
         </div>

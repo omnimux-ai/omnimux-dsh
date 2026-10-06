@@ -33,6 +33,7 @@ import type {
   GraphicClip,
 } from "@openreel/core";
 import { v4 as uuid } from "uuid";
+import { useClipT } from "../../../../../i18n/index.js";
 
 type MutableGraphicClip = {
   -readonly [K in keyof GraphicClip]: GraphicClip[K];
@@ -230,6 +231,7 @@ const PresetCard: React.FC<PresetCardProps> = ({
   isApplied,
   onApply,
 }) => {
+  const t = useClipT();
   const [isHovered, setIsHovered] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<Animation | null>(null);
@@ -284,7 +286,7 @@ const PresetCard: React.FC<PresetCardProps> = ({
         {isHovered && !isApplied && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <Text type="supporting" className="text-[10px] text-white font-medium px-2 py-1 bg-primary rounded">
-              Apply
+              {t("Apply")}
             </Text>
           </div>
         )}
@@ -315,6 +317,7 @@ interface MotionPresetsPanelProps {
 export const MotionPresetsPanel: React.FC<MotionPresetsPanelProps> = ({
   clipId,
 }) => {
+  const t = useClipT();
   const selectedClipIds = useUIStore((state) => state.getSelectedClipIds());
   const project = useProjectStore((state) => state.project);
   const updateClipKeyframes = useProjectStore(
@@ -524,7 +527,7 @@ export const MotionPresetsPanel: React.FC<MotionPresetsPanelProps> = ({
       <div className="p-4 text-center">
         <Zap size={24} className="mx-auto mb-2 text-fg-3" />
         <Text type="supporting" color="secondary" className="text-[10px]">
-          Select a clip to apply motion presets
+          {t("Select a clip to apply motion presets")}
         </Text>
       </div>
     );
@@ -535,7 +538,7 @@ export const MotionPresetsPanel: React.FC<MotionPresetsPanelProps> = ({
       <div className="p-4 text-center">
         <Zap size={24} className="mx-auto mb-2 text-fg-3" />
         <Text type="supporting" color="secondary" className="text-[10px]">
-          Clip not found
+          {t("Clip not found")}
         </Text>
       </div>
     );
@@ -548,12 +551,12 @@ export const MotionPresetsPanel: React.FC<MotionPresetsPanelProps> = ({
         appliedState.emphasis) && (
         <Card variant="muted" padding={2} className="space-y-1 border border-border">
           <Text type="supporting" color="secondary" className="text-[10px] font-medium">
-            Applied Animations
+            {t("Applied Animations")}
           </Text>
           <div className="flex flex-wrap gap-1 mt-1">
             {appliedState.entrance && (
               <Button
-                label="Entry x"
+                label={t("Entry x")}
                 icon={<ArrowRight size={10} />}
                 variant="ghost"
                 size="sm"
@@ -563,7 +566,7 @@ export const MotionPresetsPanel: React.FC<MotionPresetsPanelProps> = ({
             )}
             {appliedState.exit && (
               <Button
-                label="Exit x"
+                label={t("Exit x")}
                 icon={<ArrowLeft size={10} />}
                 variant="ghost"
                 size="sm"
@@ -573,7 +576,7 @@ export const MotionPresetsPanel: React.FC<MotionPresetsPanelProps> = ({
             )}
             {appliedState.emphasis && (
               <Button
-                label="Emphasis x"
+                label={t("Emphasis x")}
                 icon={<Zap size={10} />}
                 variant="ghost"
                 size="sm"

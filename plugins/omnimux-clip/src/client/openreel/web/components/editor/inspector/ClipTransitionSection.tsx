@@ -34,6 +34,7 @@ import { ToolcraftClickableCard as ClickableCard } from "@openreel/ui";
 import { ToolcraftNumberInputControl } from "@openreel/ui";
 import { ToolcraftSelectControl as Selector } from "@openreel/ui";
 import { ToolcraftText as Text } from "@openreel/ui";
+import { useClipT } from "../../../../../i18n/index.js";
 
 type MutableGraphicClip = {
   -readonly [K in keyof GraphicClip]: GraphicClip[K];
@@ -914,6 +915,7 @@ function detectCurrentTransitions(clip: ClipLike): {
 export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
   clipId,
 }) => {
+  const t = useClipT();
   const {
     project,
     updateClipKeyframes,
@@ -1215,13 +1217,13 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
           color="secondary"
           className="text-[10px] font-medium uppercase tracking-wider"
         >
-          Entry Animation
+          {t("Entry Animation")}
         </Text>
         <div className="grid grid-cols-3 gap-1">
           {PRESETS.map((preset) => (
             <ClickableCard
               key={`entry-${preset.id}`}
-              label={`Set entry animation to ${preset.label}`}
+              label={`Set entry animation to ${t(preset.label)}`}
               onClick={() => setEntryPreset(preset.id)}
               padding={2}
               variant={entryPreset === preset.id ? "green" : "muted"}
@@ -1237,7 +1239,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
                 color="inherit"
                 className="text-[9px]"
               >
-                {preset.label}
+                {t(preset.label)}
               </Text>
             </ClickableCard>
           ))}
@@ -1245,7 +1247,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
         {entryPreset !== "none" && (
           <div className="flex gap-2 mt-2">
             <ToolcraftNumberInputControl
-              label="Duration"
+              label={t("Duration")}
               size="sm"
               width="100%"
               step={0.1}
@@ -1256,7 +1258,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
               units="s"
             />
             <Selector
-              label="Easing"
+              label={t("Easing")}
               size="sm"
               width="100%"
               value={entryEasing}
@@ -1277,13 +1279,13 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
           color="secondary"
           className="text-[10px] font-medium uppercase tracking-wider"
         >
-          Exit Animation
+          {t("Exit Animation")}
         </Text>
         <div className="grid grid-cols-3 gap-1">
           {PRESETS.map((preset) => (
             <ClickableCard
               key={`exit-${preset.id}`}
-              label={`Set exit animation to ${preset.label}`}
+              label={`Set exit animation to ${t(preset.label)}`}
               onClick={() => setExitPreset(preset.id)}
               padding={2}
               variant={exitPreset === preset.id ? "green" : "muted"}
@@ -1299,7 +1301,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
                 color="inherit"
                 className="text-[9px]"
               >
-                {preset.label}
+                {t(preset.label)}
               </Text>
             </ClickableCard>
           ))}
@@ -1307,7 +1309,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
         {exitPreset !== "none" && (
           <div className="flex gap-2 mt-2">
             <ToolcraftNumberInputControl
-              label="Duration"
+              label={t("Duration")}
               size="sm"
               width="100%"
               step={0.1}
@@ -1318,7 +1320,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
               units="s"
             />
             <Selector
-              label="Easing"
+              label={t("Easing")}
               size="sm"
               width="100%"
               value={exitEasing}
@@ -1334,7 +1336,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
 
       {/* Apply Button */}
       <Button
-        label="Apply Entry/Exit Animations"
+        label={t("Apply Entry/Exit Animations")}
         onClick={applyTransitions}
         variant="primary"
         size="sm"
@@ -1347,7 +1349,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
           color="secondary"
           className="text-[10px] font-medium uppercase tracking-wider"
         >
-          Single-Clip Transitions
+          {t("Single-Clip Transitions")}
         </Text>
 
         {edgeTransitions.length > 0 ? (
@@ -1389,7 +1391,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
           ))
         ) : (
           <Text type="supporting" color="secondary" className="text-[10px]">
-            Single-clip transitions are available for video and image clips.
+            {t("Single-clip transitions are available for video and image clips.")}
           </Text>
         )}
       </div>
@@ -1400,7 +1402,7 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
           color="secondary"
           className="text-[10px] font-medium uppercase tracking-wider"
         >
-          Clip-to-Clip Transitions
+          {t("Clip-to-Clip Transitions")}
         </Text>
 
         {timelineClipContext ? (
@@ -1441,12 +1443,12 @@ export const ClipTransitionSection: React.FC<ClipTransitionSectionProps> = ({
             ))
           ) : (
             <Text type="supporting" color="secondary" className="text-[10px]">
-              No adjacent clips are available on this track.
+              {t("No adjacent clips are available on this track.")}
             </Text>
           )
         ) : (
           <Text type="supporting" color="secondary" className="text-[10px]">
-            Clip-to-clip transitions are available for timeline media clips.
+            {t("Clip-to-clip transitions are available for timeline media clips.")}
           </Text>
         )}
       </div>

@@ -12,6 +12,7 @@ import {
   type SilenceAnalysisResult,
 } from "../../../bridges/silence-cut-bridge";
 import { toast } from "../../../stores/notification-store";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface AutoCutSilenceSectionProps {
   clipId: string;
@@ -44,6 +45,7 @@ const SilenceSlider: React.FC<{
 export const AutoCutSilenceSection: React.FC<AutoCutSilenceSectionProps> = ({
   clipId,
 }) => {
+  const t = useClipT();
   const { getClip, getMediaItem } = useProjectStore();
   const [settings, setSettings] = useState<SilenceSettings>(
     DEFAULT_SILENCE_SETTINGS,
@@ -143,18 +145,18 @@ export const AutoCutSilenceSection: React.FC<AutoCutSilenceSectionProps> = ({
     <div className="space-y-3">
       <div className="space-y-3">
         <SilenceSlider
-          label="Silence Threshold"
+          label={t("Silence Threshold")}
           min={-80}
           max={-20}
           step={1}
           value={settings.threshold}
           onChange={(threshold) => updateSettings({ threshold })}
           unit=" dB"
-          description="Lower values detect more silence"
+          description={t("Lower values detect more silence")}
         />
 
         <SilenceSlider
-          label="Min Duration"
+          label={t("Min Duration")}
           min={0.1}
           max={2.0}
           step={0.1}
@@ -163,12 +165,12 @@ export const AutoCutSilenceSection: React.FC<AutoCutSilenceSectionProps> = ({
             updateSettings({ minSilenceDuration })
           }
           unit="s"
-          description="Minimum silence length to detect"
+          description={t("Minimum silence length to detect")}
         />
 
         <div className="grid grid-cols-2 gap-2">
           <SilenceSlider
-            label="Pad Before"
+            label={t("Pad Before")}
             min={0}
             max={2}
             step={0.05}
@@ -177,7 +179,7 @@ export const AutoCutSilenceSection: React.FC<AutoCutSilenceSectionProps> = ({
             unit="s"
           />
           <SilenceSlider
-            label="Pad After"
+            label={t("Pad After")}
             min={0}
             max={2}
             step={0.05}
@@ -191,7 +193,7 @@ export const AutoCutSilenceSection: React.FC<AutoCutSilenceSectionProps> = ({
           <Card variant="muted" padding={3}>
             <div className="flex items-center justify-between mb-1">
               <Text type="supporting" color="secondary">
-                Silent Sections Found
+                {t("Silent Sections Found")}
               </Text>
               <Text type="body" color="primary" weight="bold">
                 {analysisResult.silentRegions.length}
@@ -199,7 +201,7 @@ export const AutoCutSilenceSection: React.FC<AutoCutSilenceSectionProps> = ({
             </div>
             <div className="flex items-center justify-between">
               <Text type="supporting" color="secondary">
-                Total Silence
+                {t("Total Silence")}
               </Text>
               <Text type="supporting" color="primary">
                 {analysisResult.totalSilenceDuration.toFixed(1)}s of{" "}
@@ -279,7 +281,7 @@ export const AutoCutSilenceSection: React.FC<AutoCutSilenceSectionProps> = ({
         </div>
 
         <Text type="supporting" color="secondary" className="text-center text-[9px]">
-          Tip: Use Ctrl+Z to undo all cuts at once
+          {t("Tip: Use Ctrl+Z to undo all cuts at once")}
         </Text>
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
 } from "@openreel/core";
 import { PropertySlider } from "./shell/PropertySlider";
 import { ColorSelector } from "../../../motion/components/primitives";
+import { useClipT } from "../../../../../i18n/index.js";
 
 export interface EditorShaderRef {
   readonly shaderId: string;
@@ -116,10 +117,11 @@ const ShaderNumberField: React.FC<{
   param: MotionShaderParamDef;
   value: number;
   onChange: (value: number) => void;
-}> = ({ param, value, onChange }) =>
-  shaderParamUsesSlider(param) ? (
+}> = ({ param, value, onChange }) => {
+  const t = useClipT();
+  return shaderParamUsesSlider(param) ? (
     <PropertySlider
-      label={param.label}
+      label={t(param.label)}
       value={value}
       onChange={onChange}
       min={param.min}
@@ -133,7 +135,7 @@ const ShaderNumberField: React.FC<{
     />
   ) : (
     <ToolcraftNumberInputControl
-      label={param.label}
+      label={t(param.label)}
       size="sm"
       width="100%"
       value={value}
@@ -143,18 +145,21 @@ const ShaderNumberField: React.FC<{
       step={param.step}
     />
   );
+};
 
 export const ShaderParamFields: React.FC<{
   def: MotionShaderDef;
   params: Record<string, MotionShaderParamValue>;
   onChange: (name: string, value: MotionShaderParamValue) => void;
-}> = ({ def, params, onChange }) => (
-  <>
+}> = ({ def, params, onChange }) => {
+  const t = useClipT();
+  return (
+    <>
     {def.params.map((param) =>
       param.type === "color" ? (
         <ShaderColorField
           key={param.name}
-          label={param.label}
+          label={t(param.label)}
           value={shaderColorValue(params[param.name], param.default)}
           onChange={(value) => onChange(param.name, value)}
         />
@@ -169,3 +174,4 @@ export const ShaderParamFields: React.FC<{
     )}
   </>
 );
+};

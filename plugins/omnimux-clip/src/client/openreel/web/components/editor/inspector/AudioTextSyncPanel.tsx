@@ -12,6 +12,7 @@ import {
   DEFAULT_BEAT_SYNC_CONFIG,
 } from "../../../bridges/audio-text-sync-bridge";
 import type { SyncMode } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface BeatSyncPanelProps {
   clipId: string;
@@ -25,6 +26,7 @@ const TRACK_ICONS: Record<string, React.ReactNode> = {
 };
 
 export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => {
+  const t = useClipT();
   const [state, setState] = useState<BeatSyncState | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -86,7 +88,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
       <div className="flex items-center gap-2 text-fg-2">
         <Music size={14} aria-hidden />
         <Text type="supporting" color="secondary" className="text-[10px]">
-          Sync clips to the beat of this audio
+          {t("Sync clips to the beat of this audio")}
         </Text>
       </div>
 
@@ -114,7 +116,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
                 </Text>
               </div>
               <ProgressBar
-                label="Beat detection progress"
+                label={t("Beat detection progress")}
                 isLabelHidden
                 value={progress.percent}
                 max={100}
@@ -123,7 +125,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
             </div>
           ) : (
             <Button
-              label="Detect Beats"
+              label={t("Detect Beats")}
               icon={<Music size={14} aria-hidden />}
               variant="primary"
               size="sm"
@@ -141,7 +143,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
           >
             <div>
               <Text type="supporting" color="secondary" className="block text-[10px]">
-                BPM Detected
+                {t("BPM Detected")}
               </Text>
               <Text type="body" color="primary" weight="bold" className="text-lg">
                 {beatAnalysis.bpm}
@@ -149,7 +151,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
             </div>
             <div className="text-right">
               <Text type="supporting" color="secondary" className="block text-[10px]">
-                Beats
+                {t("Beats")}
               </Text>
               <Text type="body" color="primary" weight="bold" className="text-sm">
                 {beatAnalysis.beats.length}
@@ -159,13 +161,13 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
 
           <div className="space-y-2">
             <Text type="supporting" color="secondary" className="block text-[10px]">
-              Select tracks to sync to beats:
+              {t("Select tracks to sync to beats:")}
             </Text>
 
             {availableTracks.length === 0 ? (
               <Card variant="muted" padding={3}>
                 <Text type="supporting" color="secondary" className="text-[10px]">
-                  No other tracks with clips found. Add clips to other tracks first.
+                  {t("No other tracks with clips found. Add clips to other tracks first.")}
                 </Text>
               </Card>
             ) : (
@@ -210,7 +212,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
 
           <div className="border-t border-border pt-3">
             <Button
-              label="Sync Settings"
+              label={t("Sync Settings")}
               icon={<Settings2 size={12} aria-hidden />}
               variant="ghost"
               size="sm"
@@ -222,7 +224,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
               <Card variant="muted" padding={3} className="space-y-3">
                 <div>
                   <Text type="supporting" color="secondary" className="block mb-2 text-[10px]">
-                    Sync Mode
+                    {t("Sync Mode")}
                   </Text>
                   <div className="space-y-1">
                     {([
@@ -255,7 +257,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
 
                 <div className="flex items-center justify-between gap-2">
                   <Text type="supporting" color="secondary" className="text-[10px]">
-                    Beat Subdivision
+                    {t("Beat Subdivision")}
                   </Text>
                   <div className="flex gap-1">
                     {([1, 2, 4] as const).map((sub) => (
@@ -271,7 +273,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
                 </div>
 
                 <PropertySlider
-                  label="Offset"
+                  label={t("Offset")}
                   value={config.offsetMs}
                   onChange={(value: number) => handleUpdateConfig({ offsetMs: value })}
                   min={-500}
@@ -282,17 +284,17 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
 
                 <div className="flex items-center justify-between gap-2">
                   <Text type="supporting" color="secondary" className="text-[10px]">
-                    Downbeats Only
+                    {t("Downbeats Only")}
                   </Text>
                   <div className="flex gap-1">
                     <Button
-                      label="All Beats"
+                      label={t("All Beats")}
                       variant={!config.snapToDownbeats ? "primary" : "secondary"}
                       size="sm"
                       onClick={() => handleUpdateConfig({ snapToDownbeats: false })}
                     />
                     <Button
-                      label="Downbeats"
+                      label={t("Downbeats")}
                       variant={config.snapToDownbeats ? "primary" : "secondary"}
                       size="sm"
                       onClick={() => handleUpdateConfig({ snapToDownbeats: true })}
@@ -306,7 +308,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
           {previewTimings.length > 0 && (
             <div className="space-y-2">
               <Text type="supporting" color="secondary" className="text-[9px]">
-                Preview:
+                {t("Preview:")}
               </Text>
               <Card variant="muted" padding={2} className="max-h-24 overflow-y-auto space-y-1">
                 {previewTimings.slice(0, 5).map((timing, idx) => (
@@ -364,7 +366,7 @@ export const AudioTextSyncPanel: React.FC<BeatSyncPanelProps> = ({ clipId }) => 
           />
 
           <Button
-            label="Re-analyze Beats"
+            label={t("Re-analyze Beats")}
             variant="secondary"
             size="sm"
             onClick={handleAnalyzeBeats}

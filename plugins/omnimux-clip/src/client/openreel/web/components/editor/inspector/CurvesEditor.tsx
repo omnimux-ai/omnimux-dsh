@@ -10,6 +10,7 @@ import { ToolcraftClickableCard as ClickableCard } from "@openreel/ui";
 import { ToolcraftText as Text } from "@openreel/ui";
 import { RotateCcw } from "@/icons/lucide-compat";
 import type { CurvesValues, CurvePoint } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 export const DEFAULT_CURVES: CurvesValues = {
   rgb: [
@@ -153,6 +154,7 @@ export const CurvesEditor: React.FC<CurvesEditorProps> = ({
   onChange,
   onReset: _onReset,
 }) => {
+  const t = useClipT();
   void _onReset;
   const [activeChannel, setActiveChannel] = useState<keyof CurvesValues>("rgb");
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(
@@ -430,10 +432,10 @@ export const CurvesEditor: React.FC<CurvesEditorProps> = ({
       {/* Controls */}
       <div className="flex justify-between items-center">
         <Text type="supporting" color="secondary" className="text-[9px]">
-          Click to add point • Double-click to remove
+          {t("Click to add point • Double-click to remove")}
         </Text>
         <Button
-          label="Reset"
+          label={t("Reset")}
           icon={<RotateCcw size={10} />}
           variant="ghost"
           size="sm"

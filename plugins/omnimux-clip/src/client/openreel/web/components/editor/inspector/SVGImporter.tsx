@@ -5,6 +5,7 @@ import { ToolcraftIconButton as IconButton } from "@openreel/ui";
 import { ToolcraftText as Text } from "@openreel/ui";
 import { Upload, FileImage, AlertCircle, Check, X } from "@/icons/lucide-compat";
 import { getGraphicsBridge } from "../../../bridges";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface SVGImporterProps {
   trackId: string;
@@ -31,6 +32,7 @@ export const SVGImporter: React.FC<SVGImporterProps> = ({
   onImport,
   onError,
 }) => {
+  const t = useClipT();
   const [status, setStatus] = useState<ImportStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
@@ -167,7 +169,7 @@ export const SVGImporter: React.FC<SVGImporterProps> = ({
       {/* Hidden file input */}
       <FileInput
         ref={fileInputRef}
-        label="Import SVG file"
+        label={t("Import SVG file")}
         isLabelHidden
         value={null}
         accept=".svg"
@@ -216,11 +218,11 @@ export const SVGImporter: React.FC<SVGImporterProps> = ({
           <div className="text-center">
             {status === "loading" ? (
               <Text type="supporting" color="secondary" className="text-[10px]">
-                Importing...
+                {t("Importing...")}
               </Text>
             ) : status === "success" ? (
               <Text type="supporting" className="text-[10px] text-green-500">
-                SVG imported successfully
+                {t("SVG imported successfully")}
               </Text>
             ) : status === "error" ? (
               <Text type="supporting" className="text-[10px] text-red-500">
@@ -229,10 +231,10 @@ export const SVGImporter: React.FC<SVGImporterProps> = ({
             ) : (
               <div className="flex flex-col gap-0.5">
                 <Text type="supporting" color="primary" className="block text-[10px] font-medium">
-                  Import SVG
+                  {t("Import SVG")}
                 </Text>
                 <Text type="supporting" color="secondary" className="block text-[9px]">
-                  Click or drag & drop
+                  {t("Click or drag & drop")}
                 </Text>
               </div>
             )}
@@ -252,7 +254,7 @@ export const SVGImporter: React.FC<SVGImporterProps> = ({
         {/* Clear error button */}
         {status === "error" && (
           <IconButton
-            label="Clear SVG import error"
+            label={t("Clear SVG import error")}
             icon={<X size={14} className="text-fg-3" />}
             variant="ghost"
             size="sm"
@@ -268,7 +270,7 @@ export const SVGImporter: React.FC<SVGImporterProps> = ({
       {/* Supported formats info */}
       <Text type="supporting" color="secondary" className="flex items-center gap-2 text-[9px]">
         <FileImage size={12} />
-        Supported format: SVG (.svg)
+        {t("Supported format: SVG (.svg)")}
       </Text>
     </div>
   );

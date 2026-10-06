@@ -25,6 +25,7 @@ import {
   type SFXCategory,
   type MoodTag,
 } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 type TabType = "music" | "sfx";
 
@@ -113,6 +114,7 @@ const SoundCard: React.FC<SoundCardProps> = ({
 };
 
 export const MusicLibraryPanel: React.FC = () => {
+  const t = useClipT();
   const getSoundLibraryEngine = useEngineStore(
     (state) => state.getSoundLibraryEngine,
   );
@@ -246,17 +248,17 @@ export const MusicLibraryPanel: React.FC = () => {
         <Music size={16} className="text-primary" aria-hidden />
         <div className="flex flex-col gap-0.5">
           <Text type="body" color="primary" weight="bold" className="text-[11px]">
-            Music & SFX
+            {t("Music & SFX")}
           </Text>
           <Text type="supporting" color="secondary" className="text-[9px]">
-            Royalty-free sounds
+            {t("Royalty-free sounds")}
           </Text>
         </div>
       </Card>
 
       <div className="flex gap-1">
         <Button
-          label="Music"
+          label={t("Music")}
           icon={<Music size={12} aria-hidden />}
           variant={activeTab === "music" ? "primary" : "secondary"}
           size="sm"
@@ -264,7 +266,7 @@ export const MusicLibraryPanel: React.FC = () => {
           className="flex-1"
         />
         <Button
-          label="Sound FX"
+          label={t("Sound FX")}
           icon={<Zap size={12} aria-hidden />}
           variant={activeTab === "sfx" ? "primary" : "secondary"}
           size="sm"
@@ -275,11 +277,11 @@ export const MusicLibraryPanel: React.FC = () => {
 
       <div className="relative">
         <ToolcraftTextInputControl
-          label="Search sounds"
+          label={t("Search sounds")}
           isLabelHidden
           size="sm"
           width="100%"
-          placeholder="Search sounds..."
+          placeholder={t("Search sounds...")}
           value={searchQuery}
           onChange={setSearchQuery}
           startIcon={<Search size={14} aria-hidden />}
@@ -354,10 +356,10 @@ export const MusicLibraryPanel: React.FC = () => {
               aria-hidden
             />
             <Text type="supporting" color="secondary" className="block text-[10px]">
-              No sounds found
+              {t("No sounds found")}
             </Text>
             <Text type="supporting" color="secondary" className="block text-[9px] mt-1">
-              Try adjusting filters
+              {t("Try adjusting filters")}
             </Text>
           </div>
         ) : (

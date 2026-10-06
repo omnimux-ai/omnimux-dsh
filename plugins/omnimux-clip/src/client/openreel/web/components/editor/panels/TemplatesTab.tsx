@@ -11,8 +11,10 @@ import type {
   TemplateCategory,
 } from "@openreel/core";
 import { TEMPLATE_CATEGORIES, clearMotionExpressionCodeApprovals } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 export const TemplatesTab: React.FC = () => {
+  const t = useClipT();
   const getTemplateEngine = useEngineStore((s) => s.getTemplateEngine);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,7 +63,7 @@ export const TemplatesTab: React.FC = () => {
         useProjectStore.getState().project.timeline.tracks.length > 0;
       if (hasClips) {
         const confirmed = window.confirm(
-          "Applying a template will replace your current project. Continue?",
+          t("Applying a template will replace your current project. Continue?"),
         );
         if (!confirmed) return;
       }
@@ -129,7 +131,7 @@ export const TemplatesTab: React.FC = () => {
               : "bg-background-tertiary border-border text-text-muted hover:border-primary/50"
           }`}
         >
-          All
+          {t("All")}
         </SelectableCard>
         {TEMPLATE_CATEGORIES.slice(0, 6).map((cat) => (
           <SelectableCard
@@ -153,7 +155,7 @@ export const TemplatesTab: React.FC = () => {
 
       <button
         type="button"
-        aria-label="Start a Motion Creator template"
+        aria-label={t("Start a Motion Creator template")}
         className="flex min-h-[72px] w-full min-w-0 items-center gap-3 rounded-lg border border-primary/35 bg-primary/10 p-3 text-left transition-colors hover:bg-primary/15"
         onClick={async () => {
           const composition = await createMotionComposition(
@@ -170,10 +172,10 @@ export const TemplatesTab: React.FC = () => {
         </span>
         <span className="min-w-0 flex-1 overflow-hidden">
           <span className="block truncate text-xs font-semibold text-text-primary">
-            Start a Motion Creator template
+            {t("Start a Motion Creator template")}
           </span>
           <span className="mt-0.5 block overflow-hidden text-ellipsis text-[10px] leading-4 text-text-muted [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-            Ads, app UI demos, lower thirds, social hooks, logo reveals, and end screens.
+            {t("Ads, app UI demos, lower thirds, social hooks, logo reveals, and end screens.")}
           </span>
         </span>
       </button>
@@ -218,7 +220,7 @@ export const TemplatesTab: React.FC = () => {
               </div>
               {applying === template.id && (
                 <div className="absolute inset-0 bg-background-primary/80 rounded-lg flex items-center justify-center">
-                  <span className="text-[10px] text-primary">Applying...</span>
+                  <span className="text-[10px] text-primary">{t("Applying...")}</span>
                 </div>
               )}
             </Button>

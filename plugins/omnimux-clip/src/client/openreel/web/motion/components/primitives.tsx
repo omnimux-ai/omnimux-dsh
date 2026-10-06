@@ -25,6 +25,7 @@ import {
   ToolcraftTextInputControl,
 } from "@openreel/ui";
 import type { LucideIcon } from "@/icons/lucide-compat";
+import { useClipT } from "../../../../i18n/index.js";
 
 type IconButtonVariant =
   | "ghost"
@@ -352,9 +353,10 @@ export function TextInput({
   placeholder?: string;
   disabled?: boolean;
 }): JSX.Element {
+  const t = useClipT();
   return (
     <ToolcraftTextInputControl
-      ariaLabel={placeholder || "Text input"}
+      ariaLabel={placeholder || t("Text input")}
       value={value}
       placeholder={placeholder}
       onChange={onChange}
@@ -372,9 +374,10 @@ export function TextArea({
   onChange: (value: string) => void;
   placeholder?: string;
 }): JSX.Element {
+  const t = useClipT();
   return (
     <ToolcraftTextAreaControl
-      ariaLabel={placeholder || "Text area"}
+      ariaLabel={placeholder || t("Text area")}
       rows={3}
       value={value}
       placeholder={placeholder}
@@ -398,7 +401,7 @@ export function SelectInput<T extends string>({
 }): JSX.Element {
   return (
     <ToolcraftSelectControl
-      ariaLabel={placeholder || "Select option"}
+      ariaLabel={placeholder || t("Select option")}
       value={value}
       options={options}
       placeholder={placeholder}
@@ -451,9 +454,10 @@ export function NumberInput({
   icon?: LucideIcon;
   disabled?: boolean;
 }): JSX.Element {
+  const t = useClipT();
   return (
     <ToolcraftNumberInputControl
-      ariaLabel={unit ? `Value in ${unit}` : "Number value"}
+      ariaLabel={unit ? t("Value in {unit}").replace("{unit}", unit) : t("Number value")}
       value={Number.isFinite(value) ? value : 0}
       min={min}
       max={max}
@@ -475,10 +479,11 @@ export function ColorInput({
   onChange: (value: string) => void;
   disabled?: boolean;
 }): JSX.Element {
+  const t = useClipT();
   const isHex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value);
   return (
     <ToolcraftTextInputControl
-      ariaLabel="Color value"
+      ariaLabel={t("Color value")}
       value={value}
       onChange={onChange}
       disabled={disabled}
@@ -578,7 +583,7 @@ export function SegmentedControl<T extends string>({
 }): JSX.Element {
   return (
     <ToolcraftSegmentedControl
-      ariaLabel="Segmented control"
+      ariaLabel={t("Segmented control")}
       value={value}
       onChange={onChange}
       options={options.map((option) => {

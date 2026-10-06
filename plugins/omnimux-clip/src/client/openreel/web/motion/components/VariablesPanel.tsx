@@ -42,6 +42,7 @@ import {
   SelectInput,
   SwitchInput,
 } from "./primitives";
+import { useClipT } from "../../../../i18n/index.js";
 
 interface VariablesPanelProps {
   composition: MotionComposition;
@@ -71,6 +72,7 @@ export function VariablesPanel({
   composition,
   embedded = false,
 }: VariablesPanelProps): JSX.Element {
+  const t = useClipT();
   const [bindingTargets, setBindingTargets] = useState<
     Record<string, MotionVariableBindingTarget>
   >({});
@@ -141,7 +143,7 @@ export function VariablesPanel({
     <div className={embedded ? "" : "flex h-full min-h-0 flex-col"}>
       {embedded ? null : (
         <PanelHeader
-          title="Variables"
+          title={t("Variables")}
           icon={Braces}
           actions={
             <div className="flex items-center gap-0.5">
@@ -163,7 +165,7 @@ export function VariablesPanel({
         />
       )}
       <div className={embedded ? "" : "min-h-0 flex-1 overflow-auto"}>
-        <Section title="Add Variable" icon={Plus}>
+        <Section title={t("Add Variable")} icon={Plus}>
           <div className="grid grid-cols-2 gap-2">
             {VARIABLE_TYPES.map((type) => {
               const meta = VARIABLE_META[type];
@@ -171,7 +173,7 @@ export function VariablesPanel({
               return (
                 <ToolcraftClickableCard
                   key={type}
-                  label={`Add ${meta.label} variable`}
+                  label={`Add ${t(meta.label)} variable`}
                   onClick={() => addVariable(type)}
                   variant="muted"
                   padding={2}
@@ -183,7 +185,7 @@ export function VariablesPanel({
                   </span>
                   <span className="min-w-0">
                     <ToolcraftText type="label" color="primary" weight="semibold" maxLines={1}>
-                      {meta.label}
+                      {t(meta.label)}
                     </ToolcraftText>
                     <ToolcraftText type="supporting" color="secondary">
                       Template value
@@ -200,8 +202,8 @@ export function VariablesPanel({
           {composition.variables.length === 0 ? (
             <EmptyState
               icon={Braces}
-              title="No variables yet"
-              description="Add reusable text, color, number, media, or toggle values for templates and AI-generated scenes."
+              title={t("No variables yet")}
+              description={t("Add reusable text, color, number, media, or toggle values for templates and AI-generated scenes.")}
             />
           ) : (
             <div className="space-y-2.5">
@@ -250,6 +252,7 @@ function VariableCard({
   onUpdate: (updater: (variable: MotionVariable) => MotionVariable) => void;
   onRemove: () => void;
 }): JSX.Element {
+  const t = useClipT();
   const meta = VARIABLE_META[variable.type];
   const Icon = meta.icon;
   const compatibleTargets = selectedLayer
@@ -275,19 +278,19 @@ function VariableCard({
           </span>
           <span className="flex items-center gap-1.5 text-[10.5px] text-fg-muted">
             <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
-            {meta.label}
+            {t(meta.label)}
           </span>
         </span>
         <IconButton
           icon={Trash2}
-          label="Remove variable"
+          label={t("Remove variable")}
           size="sm"
           variant="danger"
           onClick={onRemove}
         />
       </div>
       <div className="space-y-3 p-3">
-        <Field label="Name">
+        <Field label={t("Name")}>
           <TextInput
             value={variable.name}
             onChange={(name) =>
@@ -298,7 +301,7 @@ function VariableCard({
             }
           />
         </Field>
-        <Field label="Type">
+        <Field label={t("Type")}>
           <SelectInput
             value={variable.type}
             options={VARIABLE_TYPES.map((type) => ({
@@ -321,7 +324,7 @@ function VariableCard({
           </div>
           {selectedLayer && compatibleTargets.length > 0 ? (
             <div className="flex items-end gap-2">
-              <Field label="Selected layer target">
+              <Field label={t("Selected layer target")}>
                 <SelectInput
                   value={selectedTarget}
                   options={compatibleTargets.map((target) => ({
@@ -335,7 +338,7 @@ function VariableCard({
               </Field>
               <IconButton
                 icon={Link2}
-                label="Bind variable to selected layer"
+                label={t("Bind variable to selected layer")}
                 variant="outline"
                 onClick={() => onBind(selectedTarget)}
               />
@@ -367,7 +370,7 @@ function VariableCard({
                     </span>
                     <IconButton
                       icon={Unlink2}
-                      label="Remove binding"
+                      label={t("Remove binding")}
                       size="sm"
                       variant="danger"
                       onClick={() => onRemoveBinding(layer.id, binding.id)}
@@ -390,9 +393,10 @@ function VariableValueControl({
   variable: MotionVariable;
   onUpdate: (updater: (variable: MotionVariable) => MotionVariable) => void;
 }): JSX.Element {
+  const t = useClipT();
   if (variable.type === "number") {
     return (
-      <Field label="Value">
+      <Field label={t("Value")}>
         <NumberInput
           value={typeof variable.value === "number" ? variable.value : 0}
           onChange={(value) =>
@@ -408,7 +412,7 @@ function VariableValueControl({
 
   if (variable.type === "color") {
     return (
-      <Field label="Value">
+      <Field label={t("Value")}>
         <ColorInput
           value={typeof variable.value === "string" ? variable.value : "#14b8a6"}
           onChange={(value) =>
@@ -425,7 +429,7 @@ function VariableValueControl({
   if (variable.type === "boolean") {
     return (
       <SwitchInput
-        label="Value"
+        label={t("Value")}
         checked={Boolean(variable.value)}
         onChange={(value) =>
           onUpdate((current) => ({
@@ -438,10 +442,10 @@ function VariableValueControl({
   }
 
   return (
-    <Field label="Value">
+    <Field label={t("Value")}>
       <TextInput
         value={String(variable.value)}
-        placeholder={variable.type === "media" ? "Media placeholder id" : undefined}
+        placeholder={variable.type === "media" ? t("Media placeholder id") : undefined}
         onChange={(value) =>
           onUpdate((current) => ({
             ...current,

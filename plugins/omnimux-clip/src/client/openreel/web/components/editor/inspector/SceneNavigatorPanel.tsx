@@ -13,6 +13,7 @@ import { ToolcraftSelectableCard as SelectableCard } from "@openreel/ui";
 import { ToolcraftText as Text } from "@openreel/ui";
 import { useProjectStore } from "../../../stores/project-store";
 import { getPlaybackBridge } from "../../../bridges/playback-bridge";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface Scene {
   id: string;
@@ -29,6 +30,7 @@ interface SceneNavigatorPanelProps {
 export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
   variant = "vertical",
 }) => {
+  const t = useClipT();
   const { project, addMarker } = useProjectStore();
   const markers = project.timeline.markers;
   const duration = project.timeline.duration;
@@ -121,7 +123,7 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
     return (
       <div className="flex items-center gap-2">
         <IconButton
-          label="Previous scene"
+          label={t("Previous scene")}
           icon={<ChevronLeft size={16} className="text-fg-2" />}
           variant="ghost"
           size="sm"
@@ -141,7 +143,7 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
         </div>
 
         <IconButton
-          label="Next scene"
+          label={t("Next scene")}
           icon={<ChevronRight size={16} className="text-fg-2" />}
           variant="ghost"
           size="sm"
@@ -167,19 +169,19 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
             </span>
           </div>
           <Button
-            label="Add scene"
+            label={t("Add scene")}
             variant="primary"
             icon={<Plus size={10} />}
             onClick={handleAddScene}
             className="flex items-center gap-1 px-2 py-1 bg-primary hover:bg-primary/80 text-white rounded text-[10px] font-medium transition-colors"
           >
-            Add
+            {t("Add")}
           </Button>
         </div>
 
         <div className="flex items-center gap-1">
           <IconButton
-            label="Previous scene"
+            label={t("Previous scene")}
             icon={<ChevronLeft size={14} />}
             variant="ghost"
             size="sm"
@@ -194,7 +196,7 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
               return (
                 <SelectableCard
                   key={scene.id}
-                  label={scene.label}
+                  label={t(scene.label)}
                   isSelected={isActive}
                   onChange={() => handleSceneClick(index)}
                   onClick={() => handleSceneClick(index)}
@@ -219,7 +221,7 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
           </div>
 
           <IconButton
-            label="Next scene"
+            label={t("Next scene")}
             icon={<ChevronRight size={14} />}
             variant="ghost"
             size="sm"
@@ -238,10 +240,10 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
         <Layers size={16} className="text-emerald-500" />
         <div className="flex flex-col gap-0.5">
           <span className="text-[11px] font-medium text-fg">
-            Scene Navigator
+            {t("Scene Navigator")}
           </span>
           <Text type="supporting" color="secondary" className="text-[9px] text-fg-3">
-            Navigate between sections
+            {t("Navigate between sections")}
           </Text>
         </div>
       </div>
@@ -257,13 +259,13 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
           </span>
         </div>
         <Button
-          label="Add Scene"
+          label={t("Add Scene")}
           variant="primary"
           icon={<Plus size={10} />}
           onClick={handleAddScene}
           className="flex items-center gap-1 px-2 py-1 bg-primary hover:bg-primary/80 text-white rounded text-[10px] font-medium transition-colors"
         >
-          Add Scene
+          {t("Add Scene")}
         </Button>
       </div>
 
@@ -275,7 +277,7 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
           return (
             <SelectableCard
               key={scene.id}
-              label={scene.label}
+              label={t(scene.label)}
               isSelected={isActive}
               onChange={() => handleSceneClick(index)}
               onClick={() => handleSceneClick(index)}
@@ -306,7 +308,7 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
                   <span
                     className={`text-[11px] truncate ${isActive ? "text-fg font-medium" : "text-fg-2"}`}
                   >
-                    {scene.label}
+                    {t(scene.label)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -334,26 +336,26 @@ export const SceneNavigatorPanel: React.FC<SceneNavigatorPanelProps> = ({
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <Button
-          label="Previous scene"
+          label={t("Previous scene")}
           variant="ghost"
           icon={<ChevronLeft size={12} />}
           onClick={handlePrevious}
           isDisabled={currentSceneIndex === 0}
           className="flex items-center gap-1 text-[10px] text-fg-3 hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
-          Previous
+          {t("Previous")}
         </Button>
         <span className="text-[9px] text-fg-3">
           Scene {currentSceneIndex + 1} of {scenes.length}
         </span>
         <Button
-          label="Next scene"
+          label={t("Next scene")}
           variant="ghost"
           onClick={handleNext}
           isDisabled={currentSceneIndex === scenes.length - 1}
           className="flex items-center gap-1 text-[10px] text-fg-3 hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
-          Next
+          {t("Next")}
           <ChevronRight size={12} />
         </Button>
       </div>

@@ -14,6 +14,7 @@ import {
   generateDefaultControlPoints,
   type GSAPMotionPathPoint,
 } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface MotionPathSectionProps {
   clipId: string;
@@ -22,6 +23,7 @@ interface MotionPathSectionProps {
 export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
   clipId,
 }) => {
+  const t = useClipT();
   const { getClip, project } = useProjectStore();
   const { motionPathMode, motionPathClipId, setMotionPathMode } = useUIStore();
   const getGraphicsEngine = useEngineStore((state) => state.getGraphicsEngine);
@@ -153,7 +155,7 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
   if (!clip) {
     return (
       <Text type="supporting" color="secondary" className="py-8 text-center text-xs">
-        No clip selected
+        {t("No clip selected")}
       </Text>
     );
   }
@@ -170,11 +172,11 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
         <div className="flex items-center gap-2">
           <Route size={14} className="text-primary" />
           <Text type="supporting" color="primary" className="text-xs font-medium">
-            Motion Path
+            {t("Motion Path")}
           </Text>
         </div>
         <MockToggle
-          ariaLabel="Enable motion path"
+          ariaLabel={t("Enable motion path")}
           checked={isEnabled}
           onChange={handleEnableToggle}
         />
@@ -185,7 +187,7 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
           <Card variant="muted" padding={3} className="space-y-3">
             <div className="flex items-center justify-between">
               <Text type="supporting" color="secondary" className="text-[10px]">
-                Show Path
+                {t("Show Path")}
               </Text>
               <div className="flex items-center gap-2">
                 <IconButton
@@ -205,10 +207,10 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
 
             <div className="flex items-center justify-between">
               <Text type="supporting" color="secondary" className="text-[10px]">
-                Auto Orient
+                {t("Auto Orient")}
               </Text>
               <MockToggle
-                ariaLabel="Auto Orient"
+                ariaLabel={t("Auto Orient")}
                 checked={autoOrient}
                 onChange={handleAutoOrientToggle}
               />
@@ -216,7 +218,7 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
 
             <div className="space-y-1">
               <Text type="supporting" color="secondary" className="text-[10px]">
-                Path Type
+                {t("Path Type")}
               </Text>
               <div className="grid grid-cols-3 gap-1">
                 {(["linear", "bezier", "catmull-rom"] as const).map((type) => (
@@ -240,7 +242,7 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
           <Card variant="muted" padding={3} className="flex items-center justify-between">
             <div className="flex flex-col gap-0.5">
               <Text type="supporting" color="secondary" className="text-[10px]">
-                Path Points
+                {t("Path Points")}
               </Text>
               <Text type="body" color="primary" className="text-sm font-medium">
                 {pointCount} points
@@ -248,7 +250,7 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
             </div>
             <div className="flex items-center gap-1">
               <IconButton
-                label="Add point"
+                label={t("Add point")}
                 icon={<Plus size={12} />}
                 variant="primary"
                 size="sm"
@@ -256,7 +258,7 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
                 className="p-1.5 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
               />
               <IconButton
-                label="Clear path"
+                label={t("Clear path")}
                 icon={<Trash2 size={12} />}
                 variant="secondary"
                 size="sm"
@@ -283,7 +285,7 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
             <Card variant="muted" padding={2} className="border border-primary/30 bg-primary/10">
               <Text type="supporting" className="text-[9px] text-primary">
                 <Text as="span" type="supporting" className="font-medium text-primary">
-                  Editing:
+                  {t("Editing:")}
                 </Text>{" "}
                 Click on the path
                 to add points. Drag points to move them. Right-click to remove.
@@ -295,7 +297,7 @@ export const MotionPathSection: React.FC<MotionPathSectionProps> = ({
           <Card variant="muted" padding={2} className="border border-border bg-bg-2/50">
             <Text type="supporting" color="secondary" className="text-[9px]">
               <Text as="span" type="supporting" className="font-medium text-fg-2">
-                Tip:
+                {t("Tip:")}
               </Text>{" "}
               Motion paths animate the clip's position along a curved path over
               time. Use bezier handles for smooth curves.

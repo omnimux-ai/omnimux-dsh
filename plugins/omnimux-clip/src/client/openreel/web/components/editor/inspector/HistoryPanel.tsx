@@ -21,6 +21,7 @@ import { ToolcraftText as Text } from "@openreel/ui";
 import { ToolcraftTextInputControl } from "@openreel/ui";
 import { useProjectStore } from "../../../stores/project-store";
 import type { HistorySnapshot } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 interface DisplayEntry {
   id: string;
@@ -33,6 +34,7 @@ interface DisplayEntry {
 }
 
 export const HistoryPanel: React.FC = () => {
+  const t = useClipT();
   const { actionHistory, undo, redo, canUndo, canRedo, clipUndoStack, clipRedoStack } = useProjectStore();
   const [combinedHistory, setCombinedHistory] = useState<DisplayEntry[]>([]);
   const [snapshots, setSnapshots] = useState<HistorySnapshot[]>([]);
@@ -44,7 +46,7 @@ export const HistoryPanel: React.FC = () => {
     switch (type) {
       case "text": return "Create text clip";
       case "shape": return "Create shape";
-      case "svg": return "Import SVG";
+      case "svg": return t("Import SVG");
       case "sticker": return "Add sticker";
       default: return "Create clip";
     }
@@ -135,7 +137,7 @@ export const HistoryPanel: React.FC = () => {
         <div className="flex items-center gap-2">
           <History size={14} className="text-primary" aria-hidden />
           <Text type="body" color="primary" weight="bold" className="text-sm">
-            History
+            {t("History")}
           </Text>
         </div>
         <div className="flex items-center gap-1">
@@ -183,7 +185,7 @@ export const HistoryPanel: React.FC = () => {
           <div className="px-2 pb-2">
             {snapshots.length === 0 && !isCreatingSnapshot && (
               <Text type="supporting" color="secondary" className="block text-[10px] py-2 text-center">
-                No snapshots saved
+                {t("No snapshots saved")}
               </Text>
             )}
 
@@ -219,7 +221,7 @@ export const HistoryPanel: React.FC = () => {
             {isCreatingSnapshot ? (
               <div className="flex items-center gap-2 p-2">
                 <ToolcraftTextInputControl
-                  label="Snapshot name"
+                  label={t("Snapshot name")}
                   isLabelHidden
                   size="sm"
                   width="100%"
@@ -229,11 +231,11 @@ export const HistoryPanel: React.FC = () => {
                     if (e.key === "Enter") handleCreateSnapshot();
                     if (e.key === "Escape") setIsCreatingSnapshot(false);
                   }}
-                  placeholder="Snapshot name..."
+                  placeholder={t("Snapshot name...")}
                   hasAutoFocus
                 />
                 <Button
-                  label="Save"
+                  label={t("Save")}
                   variant="primary"
                   size="sm"
                   onClick={handleCreateSnapshot}
@@ -241,7 +243,7 @@ export const HistoryPanel: React.FC = () => {
               </div>
             ) : (
               <Button
-                label="Create Snapshot"
+                label={t("Create Snapshot")}
                 icon={<BookmarkPlus size={12} aria-hidden />}
                 variant="secondary"
                 size="sm"
@@ -258,7 +260,7 @@ export const HistoryPanel: React.FC = () => {
           <div className="flex flex-col items-center justify-center h-full text-fg-3">
             <History size={24} className="mb-2 opacity-30" aria-hidden />
             <Text type="supporting" color="secondary" className="text-xs">
-              No actions yet
+              {t("No actions yet")}
             </Text>
           </div>
         ) : (

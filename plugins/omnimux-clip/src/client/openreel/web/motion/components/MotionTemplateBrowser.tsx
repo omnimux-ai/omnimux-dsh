@@ -6,6 +6,7 @@ import { MOTION_PRESETS, getMotionPresetCategories } from "@openreel/core";
 import { useProjectStore } from "../../stores/project-store";
 import { useMotionStore } from "../stores/motion-store";
 import { PanelHeader, SegmentedControl } from "./primitives";
+import { useClipT } from "../../../../i18n/index.js";
 
 const CATEGORY_LABELS: Record<string, string> = {
   ads: "Ads",
@@ -30,6 +31,7 @@ const CATEGORY_GRADIENTS: Record<string, string> = {
 const DEFAULT_GRADIENT = "from-accent-soft via-bg-3 to-accent-soft";
 
 export function MotionTemplateBrowser(): JSX.Element {
+  const t = useClipT();
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const createMotionComposition = useProjectStore(
     (state) => state.createMotionComposition,
@@ -57,14 +59,14 @@ export function MotionTemplateBrowser(): JSX.Element {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PanelHeader title="Templates" icon={Sparkles} />
+      <PanelHeader title={t("Templates")} icon={Sparkles} />
 
       <div className="shrink-0 border-b border-border px-3 py-2.5">
         <SegmentedControl
           value={activeCategory}
           options={categories.map((category) => ({
             value: category,
-            label: category === "all" ? "All" : CATEGORY_LABELS[category] ?? category,
+            label: category === "all" ? t("All") : t(CATEGORY_LABELS[category] ?? category),
           }))}
           onChange={setActiveCategory}
         />
@@ -75,7 +77,7 @@ export function MotionTemplateBrowser(): JSX.Element {
           {presets.map((preset) => (
             <ToolcraftClickableCard
               key={preset.id}
-              label={`Apply ${preset.name}`}
+              label={`${t("Apply")} ${preset.name}`}
               onClick={() => void applyPreset(preset.id, preset.name)}
               variant="muted"
               padding={0}

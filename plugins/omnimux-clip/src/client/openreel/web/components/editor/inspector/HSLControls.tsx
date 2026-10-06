@@ -5,6 +5,7 @@ import { ToolcraftText as Text } from "@openreel/ui";
 import { PropertySlider } from "./shell/PropertySlider";
 import { RotateCcw } from "@/icons/lucide-compat";
 import type { HSLValues } from "@openreel/core";
+import { useClipT } from "../../../../../i18n/index.js";
 
 export const DEFAULT_HSL_VALUES: HSLValues = {
   hue: [0, 0, 0, 0, 0, 0, 0, 0],
@@ -126,6 +127,7 @@ export const HSLControls: React.FC<HSLControlsProps> = ({
   onChange,
   onReset,
 }) => {
+  const t = useClipT();
   const [activeColorIndex, setActiveColorIndex] = useState(0);
 
   // Get current color info
@@ -196,7 +198,7 @@ export const HSLControls: React.FC<HSLControlsProps> = ({
       {onReset && (
         <div className="flex justify-end">
           <Button
-            label="Reset All"
+            label={t("Reset All")}
             icon={<RotateCcw size={10} />}
             variant="ghost"
             size="sm"
@@ -231,7 +233,7 @@ export const HSLControls: React.FC<HSLControlsProps> = ({
         </div>
         {hasAdjustments && (
           <Button
-            label="Reset"
+            label={t("Reset")}
             variant="ghost"
             size="sm"
             onClick={handleResetColor}
@@ -243,7 +245,7 @@ export const HSLControls: React.FC<HSLControlsProps> = ({
       {/* HSL Sliders */}
       <div className="space-y-3">
         <HSLSlider
-          label="Hue"
+          label={t("Hue")}
           value={currentHue}
           onChange={handleHueChange}
           min={-180}
@@ -252,7 +254,7 @@ export const HSLControls: React.FC<HSLControlsProps> = ({
           color={activeColor.color}
         />
         <HSLSlider
-          label="Saturation"
+          label={t("Saturation")}
           value={currentSaturation}
           onChange={handleSaturationChange}
           min={-100}
@@ -261,7 +263,7 @@ export const HSLControls: React.FC<HSLControlsProps> = ({
           color={activeColor.color}
         />
         <HSLSlider
-          label="Luminance"
+          label={t("Luminance")}
           value={currentLuminance}
           onChange={handleLuminanceChange}
           min={-100}

@@ -59,6 +59,7 @@ import {
   type MotionLeftTab,
   type MotionRightTab,
 } from "./stores/motion-store";
+import { useClipT } from "../../../i18n/index.js";
 
 interface MotionCreatorShellProps {
   composition: MotionComposition;
@@ -250,6 +251,7 @@ export function MotionCreatorShell({
   composition,
   embedded = false,
 }: MotionCreatorShellProps): JSX.Element {
+  const t = useClipT();
   const [isExportingScene, setIsExportingScene] = useState(false);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const setExportActive = useMotionStore((state) => state.setExportActive);
@@ -335,13 +337,13 @@ export function MotionCreatorShell({
       : null;
   const inspectorSubtitle = selectedLayer
     ? selectedLayer.name
-    : "Composition";
+    : t("Composition");
   const inspectorType =
     selectedLayerIds.length > 1
-      ? `${selectedLayerIds.length} layers selected`
+      ? `${selectedLayerIds.length} ${t("layers selected")}`
       : selectedLayer
-        ? LAYER_TYPE_LABEL[selectedLayer.type] ?? "Layer"
-        : "Scene settings";
+        ? t(LAYER_TYPE_LABEL[selectedLayer.type] ?? "Layer")
+        : t("Scene settings");
 
   leftPanelWidthRef.current = leftPanelWidth;
   rightPanelWidthRef.current = rightPanelWidth;
@@ -668,23 +670,22 @@ export function MotionCreatorShell({
       const instance = await insertMotionInstance(composition.id);
       if (!instance) {
         toast.error(
-          "Could not add motion scene",
-          "The scene could not be placed on the editor timeline.",
+          t("Could not add motion scene"),
+          t("The scene could not be placed on the editor timeline."),
         );
         return;
       }
       toast.success(
-        "Motion scene added",
-        `${composition.name} is on the editor timeline.`,
+        t("Motion scene added"),
+        t("{name} is on the editor timeline.").replace("{name}", composition.name),
       );
       setDesktopPage("edit");
       navigate("editor");
     } catch (error) {
       toast.error(
-        "Could not add motion scene",
+        t("Could not add motion scene"),
         error instanceof Error
-          ? error.message
-          : "The scene could not be placed on the editor timeline.",
+          ? error.message : t("The scene could not be placed on the editor timeline."),
       );
     }
   };
@@ -692,14 +693,14 @@ export function MotionCreatorShell({
   const undoMotionEdit = async () => {
     const result = await undo();
     if (!result.success) {
-      toast.error("Undo failed", result.error?.message ?? "Could not undo the last edit.");
+      toast.error(t("Undo failed"), result.error?.message ?? t("Could not undo the last edit."));
     }
   };
 
   const redoMotionEdit = async () => {
     const result = await redo();
     if (!result.success) {
-      toast.error("Redo failed", result.error?.message ?? "Could not redo the last edit.");
+      toast.error(t("Redo failed"), result.error?.message ?? t("Could not redo the last edit."));
     }
   };
 
@@ -737,7 +738,7 @@ export function MotionCreatorShell({
           }
         },
       });
-      toast.success("Motion scene exported", result.filename);
+      toast.success(t("Motion scene exported"), result.filename);
 
       if (isCanvas && session?.nodeId) {
         const projectId = session.projectId || project.id || `clip_${Date.now()}`;
@@ -762,8 +763,8 @@ export function MotionCreatorShell({
       }
       console.error("[MotionCreator] Scene export failed:", error);
       toast.error(
-        "Motion export failed",
-        error instanceof Error ? error.message : "Could not export the scene.",
+        t("Motion export failed"),
+        error instanceof Error ? error.message : t("Could not export the scene."),
       );
     } finally {
       setIsExportingScene(false);
@@ -819,7 +820,7 @@ export function MotionCreatorShell({
           {!embedded ? (
             <WorkspaceModeTabs
               activeMode="motion"
-              ariaLabel="Workspaces"
+              ariaLabel={t("Workspaces")}
               onSelectMode={(mode) => {
                 if (mode === "video") {
                   navigate("editor");
@@ -846,13 +847,13 @@ export function MotionCreatorShell({
         >
           <MotionHeaderIconButton
             icon="arrow.uturn.backward"
-            label="Undo"
+            label={t("Undo")}
             disabled={!canUndo || isExportingScene}
             onClick={undoMotionEdit}
           />
           <MotionHeaderIconButton
             icon="arrow.uturn.forward"
-            label="Redo"
+            label={t("Redo")}
             disabled={!canRedo || isExportingScene}
             onClick={redoMotionEdit}
           />
@@ -881,7 +882,7 @@ export function MotionCreatorShell({
               style={{ gridColumn: 1, gridRow: 1 }}
             >
               <nav
-                aria-label="Motion workspace tabs"
+                aria-label={t("Motion workspace tabs")}
                 className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-2"
               >
                 {LEFT_TABS.map((tab) => {
@@ -890,7 +891,7 @@ export function MotionCreatorShell({
                   return (
                     <Button
                       key={tab.id}
-                      label={tab.label}
+                      label={t(tab.label)}
                       icon={<Icon size={14} aria-hidden />}
                       variant={active ? "secondary" : "ghost"}
                       size="sm"
@@ -913,7 +914,7 @@ export function MotionCreatorShell({
 
             <PanelResizeHandle
               side="left"
-              label="Resize workspace"
+              label={t("Resize workspace")}
               value={leftPanelWidth}
               min={MIN_LEFT_PANEL_WIDTH}
               max={MAX_LEFT_PANEL_WIDTH}
@@ -933,7 +934,7 @@ export function MotionCreatorShell({
 
             <PanelResizeHandle
               side="right"
-              label="Resize inspector"
+              label={t("Resize inspector")}
               value={rightPanelWidth}
               min={MIN_RIGHT_PANEL_WIDTH}
               max={MAX_RIGHT_PANEL_WIDTH}
@@ -964,7 +965,7 @@ export function MotionCreatorShell({
                     return (
                       <Button
                         key={group.id}
-                        label={group.label}
+                        label={t(group.label)}
                         icon={<Icon size={13} aria-hidden />}
                         variant={active ? "secondary" : "ghost"}
                         size="sm"
@@ -1024,14 +1025,14 @@ export function MotionCreatorShell({
         <div className="flex items-center gap-2">
           {parentCompositionId ? (
             <Button
-              label="Back"
+              label={t("Back")}
               variant="ghost"
               size="sm"
               icon={<ChevronLeft size={13} aria-hidden />}
               tooltip={
                 parentComposition
                   ? `Back to ${parentComposition.name}`
-                  : "Back to parent scene"
+                  : t("Back to parent scene")
               }
               onClick={goBackComposition}
             />
@@ -1039,19 +1040,19 @@ export function MotionCreatorShell({
           <div className="flex items-center gap-0.5">
             <FooterToggle
               icon={LayoutGrid}
-              label="Show layer switches"
+              label={t("Show layer switches")}
               active={timelineColumnMode === "switches"}
               onClick={() => setTimelineColumnMode("switches")}
             />
             <FooterToggle
               icon={SlidersHorizontal}
-              label="Show transfer modes"
+              label={t("Show transfer modes")}
               active={timelineColumnMode === "modes"}
               onClick={() => setTimelineColumnMode("modes")}
             />
             <FooterToggle
               icon={Diamond}
-              label={autoKeyframe ? "Auto-keyframe on" : "Auto-keyframe off"}
+              label={t(autoKeyframe ? "Auto-keyframe on" : "Auto-keyframe off")}
               active={autoKeyframe}
               onClick={() => setAutoKeyframe(!autoKeyframe)}
             />
@@ -1065,7 +1066,7 @@ export function MotionCreatorShell({
             <span className="tabular-nums text-accent">Exporting {exportProgress}%</span>
           ) : null}
           <span className="text-fg-3">{composition.width}×{composition.height}</span>
-          <span>Toggle Switches / Modes</span>
+          <span>{t("Toggle Switches / Modes")}</span>
         </div>
       </footer>
     </div>
@@ -1087,6 +1088,7 @@ function InspectorWorkflowGroup({
   onToggle: () => void;
   onSelectPanel: (tab: MotionRightTab) => void;
 }): JSX.Element {
+  const t = useClipT();
   const GroupIcon = group.icon;
   const hasActivePanel = group.panels.some((panel) => panel.id === activeTab);
 
@@ -1109,7 +1111,7 @@ function InspectorWorkflowGroup({
         />
         <GroupIcon size={14} aria-hidden className="shrink-0" />
         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
-          {group.label}
+          {t(group.label)}
         </span>
       </button>
       {open ? (
@@ -1127,7 +1129,7 @@ function InspectorWorkflowGroup({
                       : "bg-bg-1 text-fg-2 hover:bg-bg-2"
                   }`}
                 >
-                  <span className="truncate">{panel.label}</span>
+                  <span className="truncate">{t(panel.label)}</span>
                   {active ? (
                     <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                   ) : null}
@@ -1207,22 +1209,23 @@ function ExportButton({
   onExport: () => void;
   onUseInEditor: () => void;
 }): JSX.Element {
+  const t = useClipT();
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
       <div className="flex items-stretch overflow-hidden rounded-[8px] shadow-sm">
         <button
           type="button"
-          aria-label="Export"
+          aria-label={t("Export")}
           disabled={exporting}
           onClick={() => setOpen((value) => !value)}
           className="openreel-export-btn flex items-center bg-accent px-[18px] py-[9px] text-[13px] font-semibold text-accent-fg transition-colors hover:bg-accent-strong disabled:opacity-60"
         >
-          {exporting ? `${progress ?? 0}%` : "Export"}
+          {exporting ? `${progress ?? 0}%` : t("Export")}
         </button>
         <button
           type="button"
-          aria-label="Export options"
+          aria-label={t("Export options")}
           aria-expanded={open}
           disabled={exporting}
           onClick={() => setOpen((value) => !value)}
@@ -1240,7 +1243,7 @@ function ExportButton({
           />
           <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-52 overflow-hidden rounded-lg border border-border bg-bg-elev p-1.5 shadow-lg">
             <Button
-              label="Export video (MP4)"
+              label={t("Export video (MP4)")}
               variant="ghost"
               size="sm"
               icon={<Icon name="square.and.arrow.up" size={15} ariaHidden className="text-fg-3" />}
@@ -1251,7 +1254,7 @@ function ExportButton({
               className="w-full justify-start"
             />
             <Button
-              label="Use in Editor"
+              label={t("Use in Editor")}
               variant="ghost"
               size="sm"
               icon={<Icon name="paperplane" size={15} ariaHidden className="text-fg-3" />}
@@ -1283,16 +1286,17 @@ function TimelineResizeHandle({
   onDoubleClick: () => void;
   onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
 }): JSX.Element {
+  const t = useClipT();
   return (
     <div
       role="separator"
       aria-orientation="horizontal"
-      aria-label="Resize timeline"
+      aria-label={t("Resize timeline")}
       aria-valuemin={min}
       aria-valuemax={Math.round(max)}
       aria-valuenow={Math.round(value)}
       tabIndex={0}
-      title="Resize timeline"
+      title={t("Resize timeline")}
       onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
       onKeyDown={onKeyDown}
@@ -1357,6 +1361,7 @@ function SceneSwitcher({
 }: {
   composition: MotionComposition;
 }): JSX.Element {
+  const t = useClipT();
   const [open, setOpen] = useState(false);
   const compositions = useProjectStore(
     (state) => state.project.motionCompositions ?? [],
@@ -1412,7 +1417,7 @@ function SceneSwitcher({
                 return (
                   <ToolcraftClickableCard
                     key={scene.id}
-                    label={`Open ${scene.name}`}
+                    label={`${t("Open")} ${scene.name}`}
                     onClick={() => selectComposition(scene.id)}
                     active={active}
                     variant={active ? "selected" : "transparent"}
@@ -1441,7 +1446,7 @@ function SceneSwitcher({
               })}
             </div>
             <Button
-              label="New sequence"
+              label={t("New sequence")}
               icon={<Plus size={15} aria-hidden />}
               variant="ghost"
               size="sm"
