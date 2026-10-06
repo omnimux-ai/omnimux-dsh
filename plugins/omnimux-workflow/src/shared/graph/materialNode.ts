@@ -123,6 +123,12 @@ export interface MaterialNodeData {
   slotConflicts?: SlotConflict[];
   /** Incoming edge IDs explicitly kept outside the active input slots. */
   slotStandbyEdgeIds?: string[];
+  /**
+   * 生成方式的来源标记（不参与提交参数）：
+   * string = 系统上次自动写入的模式 id；null = 用户显式拍板过；undefined = 历史节点，来源未知。
+   * 系统写入的模式在上游素材到来时可按供给池改写，用户拍板过的模式永不被自动改写。
+   */
+  autoOperationId?: string | null;
 
   // === 尺寸配置 ===
   nodeWidth?: number;

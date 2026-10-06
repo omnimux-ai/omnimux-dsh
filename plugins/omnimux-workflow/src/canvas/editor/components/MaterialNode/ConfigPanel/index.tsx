@@ -454,13 +454,15 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
             nextOperationId: nextOpId,
           });
           commitVideoSelection(transition);
+          onUpdateNodeData({ autoOperationId: null });
           return;
         }
         const next = setParamsOperation(
           params as Record<string, unknown>,
           nextOpId,
         );
-        onUpdateNodeData({ params: next });
+        // 用户拍板过的生成方式写 null 标记：此后上游素材不再改写它。
+        onUpdateNodeData({ params: next, autoOperationId: null });
         return;
       }
       // T04：视频参数写入经声明式白名单过滤（hidden / 非白名单键被剥离）。

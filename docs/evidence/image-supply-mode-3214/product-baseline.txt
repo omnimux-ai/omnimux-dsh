@@ -1,0 +1,7 @@
+Scope: all 27 workspace projects
+Already up to date
+Done in 147ms using pnpm v11.7.0
+$ node scripts/verify-product-baseline.mjs
+ℹ️ 已豁免 1 处（每条须带理由，修好后必须删除豁免，否则门禁报僵尸豁免）：
+  · [R6] plugins/omnimux-market/catalog/covers/home/bggg-data-amazon.generation.json:13 ← 历史生成记录（provenance）：response.sourcePath 记录当时生成本图的本机来源，属已发生事实的原样留存，不是产品可达路径（该封面本身已随 catalog 分发）。保留历史、不参与门禁判定
+✅ verify-product-baseline：产品运行时未发现未豁免的开发机私有状态依赖
