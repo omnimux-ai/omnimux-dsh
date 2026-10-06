@@ -350,7 +350,7 @@ export function createVideoDeconstructService(deps: VideoDeconstructServiceDeps)
         code: failure.code,
         error: err instanceof Error ? err.message : String(err),
       });
-      throw new VideoDeconstructError(failure.code, failure.message, 502);
+      throw new VideoDeconstructError(failure.code, failure.message, 502, failure.upstream);
     }
 
     if (!markdown) {

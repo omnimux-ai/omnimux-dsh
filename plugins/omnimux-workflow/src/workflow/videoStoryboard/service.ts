@@ -271,7 +271,7 @@ export function createVideoStoryboardService(deps: VideoStoryboardServiceDeps) {
         code: failure.code,
         error: err instanceof Error ? err.message : String(err),
       });
-      throw new VideoStoryboardError(failure.code, failure.message, 502);
+      throw new VideoStoryboardError(failure.code, failure.message, 502, failure.upstream);
     }
 
     if (!analyzeMarkdown) {

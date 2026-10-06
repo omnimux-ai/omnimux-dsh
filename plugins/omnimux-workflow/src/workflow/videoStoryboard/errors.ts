@@ -1,8 +1,15 @@
 /** Safe route errors; upstream messages and stacks are never sent to clients. */
 export class VideoStoryboardError extends Error {
-  constructor(readonly code: string, message: string, readonly status: number) {
+  readonly code: string;
+  readonly status: number;
+  readonly upstream?: { code: string; detail: string };
+
+  constructor(code: string, message: string, status: number, upstream?: { code: string; detail: string }) {
     super(message);
     this.name = 'VideoStoryboardError';
+    this.code = code;
+    this.status = status;
+    this.upstream = upstream;
   }
 }
 
@@ -26,8 +33,9 @@ export function videoStoryboardFailure(error: unknown) {
   let status = 500;
   let code = 'storyboard-failed';
   let message = '视频分镜表生成发生内部错误，请稍后重试';
+  let upstream: { code: string; detail: string } | undefined;
   if (error instanceof VideoStoryboardError) {
-    ({ status, code, message } = error);
+    ({ status, code, message, upstream } = error);
   } else if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
     const known = Object.hasOwn(FAILURES, error.code) ? FAILURES[error.code] : undefined;
     if (known) {
@@ -35,5 +43,7 @@ export function videoStoryboardFailure(error: unknown) {
       [status, message] = known;
     }
   }
-  return { status, body: { ok: false, code: status, data: null, error: code, message } };
+  const body: Record<string, unknown> = { ok: false, code: status, data: null, error: code, message };
+  if (upstream) body.upstream = upstream;
+  return { status, body };
 }
