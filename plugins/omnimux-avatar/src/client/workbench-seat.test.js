@@ -1,7 +1,8 @@
 // 客户端外壳的静态契约测试：只读源码文本，不建 DOM、不渲染组件。
 //
 // 这些断言守的是「外壳装配」这一层无法靠单测覆盖的约定：
-//   · 一级页骨架契约（整页唯一滚动容器 + 吸附栈）不能退化；
+//   · 双面板骨架（登记过的契约例外）：页根不滚动、左右面板各自内部滚动，
+//     页眉仍带 omx-stage-sticky 契约类；
 //   · 左栏行必须经中枢仲裁判定开关，且必须带自己的 dataset 标记；
 //   · 客户端源码不得依赖 Node 内建模块，也不得出现抢占产品级 overlay 的调用；
 //   · 预设快照必须在页面里注入，否则 usablePresets() 永远是空的。
@@ -114,13 +115,13 @@ describe('stage skeleton (AvatarStage.jsx)', () => {
     assertTopLevelCall(source, 'AvatarStage.jsx', 'injectAvatarStyles()')
   })
 
-  it('references both scroll-contract classes and the live-stage body class', () => {
-    for (const cls of ['omx-stage-scroll', 'omx-stage-sticky', 'omnimux-avatar-body']) {
+  it('references the sticky contract class and the live-stage body class', () => {
+    for (const cls of ['omx-stage-sticky', 'omnimux-avatar-body']) {
       assert.ok(source.includes(cls), `AvatarStage.jsx must reference ${cls}`)
     }
   })
 
-  it('never puts the scroll container and the sticky stack on one className', () => {
+  it('keeps the two-pane layout: page root does not scroll', () => {
     const classNames = [...source.matchAll(/className\s*=\s*["'`]([^"'`]*)["'`]/g)].map(
       (match) => match[1]
     )
@@ -131,14 +132,19 @@ describe('stage skeleton (AvatarStage.jsx)', () => {
         `one className must not carry both contract classes: ${value}`
       )
     }
-    // 两个契约类各自至少出现一次，且分别落在不同节点上。
+    // 双面板例外：页根不再是整页滚动容器；页眉仍带契约吸附类。
     assert.ok(
-      classNames.some((value) => value.includes('omx-stage-scroll')),
-      'the page root must be the single scroll container'
+      !classNames.some((value) => value.includes('omx-stage-scroll')),
+      'the page root must not be the scroll container (two-pane exception)'
     )
     assert.ok(
       classNames.some((value) => value.includes('omx-stage-sticky')),
       'the header row must be the sticky stack'
+    )
+    // 左右两条内部滚动区必须由共享类承载。
+    assert.ok(
+      classNames.filter((value) => value.includes('omx-avatar-scroll')).length >= 2,
+      'both panes need the shared inner-scroll class'
     )
   })
 

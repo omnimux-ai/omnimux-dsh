@@ -8,7 +8,7 @@ import { AvatarError } from './store.js'
 const NAME_MAX = 40
 const MAX_NAME_ATTEMPTS = 20
 const MULTIVIEW_FOLDER = '多视角'
-const FALLBACK_NAME = '虚拟形象'
+const FALLBACK_NAME = '数字人'
 
 // 资产库 seam 的错误码 → HTTP 状态；未列出的按上游失败（502）处理。
 const STATUS_BY_CODE = {
@@ -128,8 +128,8 @@ export function createLibrarySync({ ctx, store, paths, assetLibrary } = {}) {
         const result = await seam.saveTypedAsset({
           name,
           type: 'character',
-          description: `虚拟形象 · ${avatar.name}`,
-          tags: ['虚拟形象'],
+          description: `数字人 · ${avatar.name}`,
+          tags: ['数字人'],
           files: [destPath],
           source: avatar.assetSource,
         })

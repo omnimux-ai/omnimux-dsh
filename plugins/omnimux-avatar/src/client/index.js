@@ -1,8 +1,9 @@
-// 虚拟形象工作台的客户端装配入口：语言包、左栏入口、工作台 Tab。
+// 数字人工作台的客户端装配入口：语言包、左栏入口、工作台 Tab。
 //
 // 与 omnimux-assets 的入口同形（左栏入口 + 一级页 Tab），差异只有 id / rank / 文案：
 //   · Tab：omnimux-avatar:studio，order 20（紧邻任务表单 19），single + 可见；
-//   · 左栏行：rank 8，access offline，datasetKey data-omnimux-avatar-entry；
+//   · 左栏行：rank 4.05（落在「项目」rank 4 与「专家·技能·连接器」rank 4.1 之间），
+//     access offline，datasetKey data-omnimux-avatar-entry；
 //   · 激活判定完全交给中枢仲裁（window.__omnimuxWorkbench.createSidebarStore），
 //     本插件不自行推断开关状态，也不抢占任何全局 overlay。
 
@@ -41,7 +42,7 @@ function resolveTitle(t) {
   } catch {
     /* 语言包可能尚未就绪；用中文原文兜底 */
   }
-  return '虚拟形象'
+  return '数字人'
 }
 
 /**
@@ -152,7 +153,7 @@ function createWorkbenchStageStore(t, tabId) {
 function mountSidebarEntry(t, locale) {
   return createSidebarEntry({
     id: 'omnimux-avatar',
-    rank: 8,
+    rank: 4.05,
     label: () => resolveTitle(t),
     iconSvg: ENTRY_ICON,
     stageStore: createWorkbenchStageStore(t, AVATAR_TAB_ID),

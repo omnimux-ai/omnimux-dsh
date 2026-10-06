@@ -1,11 +1,11 @@
 /**
  * @file scripts/qa/avatar-stage-acceptance.mjs
- * @description 虚拟形象一级页（omnimux-avatar:studio）的真实浏览器验收模块。
+ * @description 数字人一级页（omnimux-avatar:studio）的真实浏览器验收模块。
  *
  * 作为 `scripts/worktree-app-qa.mjs` 的 journey 输入使用：
  *   node scripts/worktree-app-qa.mjs --journey=scripts/qa/avatar-stage-acceptance.mjs
  * 该驱动在任务工作树内起完整应用（隔离环境 · 动态端口 · 测完即焚），本模块在真实浏览器内核里
- * 打开左侧栏「虚拟形象」入口，做真实导航与交互，并把截图落到 evidenceDir。
+ * 打开左侧栏「数字人」入口，做真实导航与交互，并把截图落到 evidenceDir。
  *
  * 判定只认正几何与真实计算样式：页面标题、HTTP 200 或合法空态都不算通过。
  */
@@ -68,7 +68,7 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
       return { ok: true, text: (el.textContent || '').trim(), w: Math.round(r.width), h: Math.round(r.height) }
     })()`,
     25_000,
-    '左侧栏「虚拟形象」入口',
+    '左侧栏「数字人」入口',
   )
   add('left-rail-entry-visible', true, `入口文案「${entry.text}」，几何 ${entry.w}×${entry.h}`)
 
@@ -88,7 +88,7 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
       const hr = head.getBoundingClientRect()
       const br = body.getBoundingClientRect()
       if (hr.height <= 0 || br.height <= 0) return { ok: false, why: 'head-or-body-zero-size' }
-      const scrolls = [...document.querySelectorAll('.omx-stage-scroll')]
+      const scrolls = [...document.querySelectorAll('.omx-avatar-scroll')]
         .filter((el) => el.getBoundingClientRect().height > 0)
       return {
         ok: true,
@@ -104,14 +104,14 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
       }
     })()`,
     25_000,
-    '虚拟形象一级页挂载',
+    '数字人一级页挂载',
   )
 
   add('stage-mounted-positive-geometry', true, `页面 ${stage.w}×${stage.h}`)
-  add('stage-title-is-chinese', stage.title === '虚拟形象', `标题「${stage.title}」`)
+  add('stage-title-is-chinese', stage.title === '数字人', `标题「${stage.title}」`)
   add(
-    'stage-root-is-the-scroll-container',
-    stage.pageIsScroll === true && stage.pageIsSticky === false,
+    'stage-root-is-not-the-scroll-container',
+    stage.pageIsScroll === false && stage.pageIsSticky === false,
     `根节点是滚动容器=${stage.pageIsScroll}，误挂吸附声明=${stage.pageIsSticky}`,
   )
   add(
@@ -119,7 +119,7 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
     stage.stickyCount === 1 && stage.headIsScroll === false,
     `吸附头 ${stage.stickyCount} 个，误挂滚动声明=${stage.headIsScroll}`,
   )
-  add('single-scroll-container', stage.liveScrollCount === 1, `正几何滚动容器 ${stage.liveScrollCount} 个`)
+  add('two-pane-scroll-containers', stage.liveScrollCount === 2, `正几何内部滚动区 ${stage.liveScrollCount} 个（左右各一）`)
   add(
     'two-column-body-laid-out',
     stage.bodyColumns.split(' ').filter(Boolean).length === 2,
@@ -288,8 +288,161 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
 
   shots.push(await screenshot('04-avatar-history'))
 
+  // ── 5.5 本次重构的四条关键交互（导航位置 / 模型菜单 / 双击改名 / 分区滚动） ────
+  // 判定只认真实 DOM 与插件自己的 HTTP 面：不读内存状态，也不靠截图比对。
+  const navOrder = await evaluate(`(() => {
+    const avatar = document.querySelector('[data-omnimux-avatar-entry]')
+    const project = document.querySelector('[data-dsh-omnimux-workflow-entry]')
+    if (!avatar) return { ok: false, why: 'avatar-entry-missing' }
+    if (!project) return { ok: false, why: 'project-entry-missing' }
+    const rows = [...document.querySelectorAll('[data-omnimux-avatar-entry], [data-dsh-omnimux-workflow-entry]')]
+    const positions = rows.map((el) => (el === avatar ? 'avatar' : 'project'))
+    const order = [...project.parentElement.children]
+    return {
+      ok: true,
+      positions,
+      avatarBelowProject: order.indexOf(avatar) > order.indexOf(project),
+      avatarLabel: (avatar.textContent || '').trim(),
+    }
+  })()`)
+  add('nav-avatar-entry-exists', navOrder.ok === true, navOrder.why ?? '入口存在')
+  add(
+    'nav-avatar-below-project',
+    navOrder.avatarBelowProject === true,
+    `同级顺序=[${navOrder.positions}]，数字人位于「项目」之下=${navOrder.avatarBelowProject}`,
+  )
+  add(
+    'nav-avatar-label-is-digital-human',
+    navOrder.avatarLabel.includes('数字人') && !navOrder.avatarLabel.includes('虚拟形象'),
+    `入口文案「${navOrder.avatarLabel}」`,
+  )
+
+  // 模型配置收敛为一颗按钮：点开才有浮层，浮层里是品牌/模型/渠道三级下拉。
+  const modelMenu = await evaluate(`(async () => {
+    const btn = document.querySelector('.omx-avatar-modelbtn')
+    if (!btn) return { ok: false, why: 'model-button-missing' }
+    const before = document.querySelectorAll('.omx-avatar-picker').length
+    btn.click()
+    await new Promise((r) => setTimeout(r, 250))
+    const pop = document.querySelector('.omx-avatar-popover--model')
+    const labels = pop ? [...pop.querySelectorAll('.omx-avatar-field-lbl')].map((n) => n.textContent.trim()) : []
+    const dialogs = document.querySelectorAll('.omx-avatar-picker').length
+    // 浮层底色必须不透明：裸用未定义令牌时 var() 整条失效、背景退化为 transparent，
+    // 菜单就会透出下层文字（真实缺陷，不是观感偏好）。
+    let bgAlpha = null
+    if (pop) {
+      const bg = getComputedStyle(pop).backgroundColor
+      const m = bg.match(/rgba?\(([^)]+)\)/)
+      if (m) {
+        const parts = m[1].split(',').map((v) => Number(v.trim()))
+        bgAlpha = parts.length < 4 ? 1 : parts[3]
+      }
+    }
+    return { ok: true, before, popOpen: Boolean(pop), labels, dialogs, bgAlpha }
+  })()`)
+  add('model-config-collapsed-to-one-button', modelMenu.before === 0, `点开前浮层内选择器 ${modelMenu.before} 个`)
+  add(
+    'model-menu-surface-is-opaque',
+    modelMenu.bgAlpha !== null && modelMenu.bgAlpha >= 0.95,
+    `模型菜单底色不透明度 ${modelMenu.bgAlpha}`,
+  )
+  add(
+    'model-menu-opens-with-three-fields',
+    modelMenu.popOpen === true && modelMenu.labels.length === 3,
+    `浮层字段=[${modelMenu.labels}]`,
+  )
+
+  const modelPick = await evaluate(`(async () => {
+    const pop = document.querySelector('.omx-avatar-popover--model')
+    if (!pop) return { ok: false, why: 'popover-missing' }
+    const fields = [...pop.querySelectorAll('.omx-avatar-field')]
+    const groupField = fields[2]
+    const trigger = groupField && groupField.querySelector('.omx-avatar-dropdown')
+    if (!trigger) return { ok: false, why: 'group-dropdown-missing' }
+    const before = trigger.textContent.trim()
+    trigger.click()
+    await new Promise((r) => setTimeout(r, 200))
+    const items = [...groupField.querySelectorAll('[role="option"]')]
+    const target = items.find((n) => n.textContent.trim() && n.getAttribute('aria-selected') !== 'true')
+    if (!target) return { ok: false, why: 'no-alternative-option', count: items.length }
+    const wanted = target.textContent.trim()
+    target.click()
+    await new Promise((r) => setTimeout(r, 250))
+    const after = document.querySelectorAll('.omx-avatar-modelbtn-val')[0]?.textContent.trim() || ''
+    return { ok: true, before, wanted, after }
+  })()`)
+  add(
+    'model-menu-selection-lands-on-trigger',
+    modelPick.ok === true && String(modelPick.after).length > 0,
+    modelPick.ok ? `选项「${modelPick.wanted}」→ 按钮「${modelPick.after}」` : modelPick.why,
+  )
+
+  // 双击名称进入编辑、失焦即保存：改名结果必须落到插件自己的账本（HTTP 面复核）。
+  const renameName = '验收改名3192'
+  const RENAME_LITERAL = JSON.stringify(renameName)
+  const rename = await evaluate(`(async () => {
+    const nameEl = document.querySelector('.omx-avatar-avatars-name')
+    if (!nameEl) return { ok: false, why: 'name-element-missing' }
+    nameEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+    await new Promise((r) => setTimeout(r, 250))
+    const input = document.querySelector('.omx-avatar-page input[aria-label="数字人名称"]')
+    if (!input) return { ok: false, why: 'edit-input-missing' }
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+    setter.call(input, ${RENAME_LITERAL})
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    // 失焦保存：不派发 Enter，只把焦点移走。
+    input.blur()
+    await new Promise((r) => setTimeout(r, 400))
+    const back = document.querySelector('.omx-avatar-avatars-name')
+    return { ok: true, text: (back?.textContent || '').trim(), editing: Boolean(document.querySelector('.omx-avatar-page input[aria-label="数字人名称"]')) }
+  })()`)
+  add(
+    'rename-by-double-click-then-blur',
+    rename.ok === true && rename.text === renameName && rename.editing === false,
+    rename.ok ? `失焦后名称「${rename.text}」，仍在编辑态=${rename.editing}` : rename.why,
+  )
+
+  const renamePersisted = await evaluate(`(async () => {
+    const res = await fetch('/api/omnimux/avatar/avatars')
+    const body = await res.json().catch(() => null)
+    const list = Array.isArray(body?.avatars) ? body.avatars : []
+    return { httpStatus: res.status, hit: list.some((a) => a.name === ${RENAME_LITERAL}) }
+  })()`)
+  add(
+    'rename-persisted-in-plugin-ledger',
+    renamePersisted.httpStatus === 200 && renamePersisted.hit === true,
+    `HTTP ${renamePersisted.httpStatus}，账本含「${renameName}」=${renamePersisted.hit}`,
+  )
+
+  // 分区滚动：左栏设定区与右栏画廊各自可滚，页面根不滚。
+  const panes = await evaluate(`(() => {
+    const page = document.querySelector('.omx-avatar-page')
+    const areas = [...document.querySelectorAll('.omx-avatar-scroll')]
+    const grown = areas.filter((el) => el.getBoundingClientRect().height > 0)
+    const scrollable = grown.filter((el) => el.scrollHeight > el.clientHeight + 1)
+    const gen = document.querySelector('.omx-avatar-bar')
+    const gr = gen && gen.getBoundingClientRect()
+    return {
+      ok: true,
+      areaCount: grown.length,
+      scrollableCount: scrollable.length,
+      pageScrolls: page ? page.scrollHeight > page.clientHeight + 1 : null,
+      ctaInViewport: gr ? gr.bottom <= window.innerHeight + 1 && gr.top >= 0 : null,
+    }
+  })()`)
+  add('two-pane-scroll-areas-live', panes.areaCount === 2, `正几何内部滚动区 ${panes.areaCount} 个`)
+  add(
+    'at-least-one-pane-actually-scrolls',
+    panes.scrollableCount >= 1,
+    `内容超出可滚的区 ${panes.scrollableCount} 个`,
+  )
+  add('page-root-does-not-scroll', panes.pageScrolls === false, `页根自身可滚=${panes.pageScrolls}`)
+  add('generate-cta-stays-in-viewport', panes.ctaInViewport === true, `生成栏在视口内=${panes.ctaInViewport}`)
+
+  shots.push(await screenshot('05-avatar-two-pane'))
+
   // ── 6. J3 · 真实生成 → 资产库「角色」自动建档 ──────────────────────────────
-  // 这一段走的是完整业务路径：真机新建形象 → 真机点生成 → 中枢真实提交/轮询/下载落盘
+  // 这一段走的是完整业务路径：真机新建数字人 → 真机点生成 → 中枢真实提交/轮询/下载落盘
   // → 插件归档回调把主图存进资产库「角色」。判定只读应用自己的 HTTP 面或真实 DOM。
   // 整段包在 try/catch 里：任何一步失败都必须留下已收集的断言与失败原因，
   // 而不是把整段旅程塌成一条 journey-error（那会连前面的断言一起丢掉）。
@@ -298,37 +451,76 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
   const avatarIdRef = { id: '' }
 
   try {
+    // 「+」之前先记下当前名字：新建是否落地要看名字「变了」，不能只看有没有字。
+    const beforeCreate = await evaluate(`(() => {
+      const el = document.querySelector('.omx-avatar-avatars-name')
+      return { name: (el?.textContent || '').trim() }
+    })()`)
+    const PREVIOUS_LITERAL = JSON.stringify(beforeCreate.name)
+
     const clickedCreate = await evaluate(`(() => {
       const page = document.querySelector('.omx-avatar-page')
       if (!page) return { ok: false, why: 'stage-missing' }
-      const hit = [...page.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === '新建形象')
+      const hit = page.querySelector('button[aria-label="新建数字人"]')
       if (!hit) return { ok: false, why: 'create-button-missing' }
       hit.click()
       return { ok: true }
     })()`)
-    add('j3-create-avatar-trigger-clickable', clickedCreate.ok === true, clickedCreate.why ?? '已点击「新建形象」')
+    add('j3-create-avatar-trigger-clickable', clickedCreate.ok === true, clickedCreate.why ?? '已点击「新建数字人」')
+
+    // 「+」只新建并切到默认名，不抢焦点；改名必须由用户双击名称触发。
+    const defaultName = await waitFor(
+      evaluate,
+      `(() => {
+        const el = document.querySelector('.omx-avatar-avatars-name')
+        const text = (el?.textContent || '').trim()
+        if (!text) return { ok: false, why: 'default-name-missing' }
+        if (text === ${PREVIOUS_LITERAL}) return { ok: false, why: 'still-previous:' + text }
+        return { ok: true, name: text }
+      })()`,
+      15_000,
+      '新建后的默认名称',
+    )
+    add('j3-create-lands-on-default-name', defaultName.name.includes('未命名'), `默认名「${defaultName.name}」`)
+
+    const openedEditor = await evaluate(`(() => {
+      const el = document.querySelector('.omx-avatar-avatars-name')
+      if (!el) return { ok: false, why: 'name-element-missing' }
+      el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+      return { ok: true }
+    })()`)
+    add('j3-double-click-opens-editor', openedEditor.ok === true, openedEditor.why ?? '已双击名称')
 
     await waitFor(
       evaluate,
       `(() => {
-        const input = document.querySelector('.omx-avatar-page input[aria-label="形象名称"]')
+        const input = document.querySelector('.omx-avatar-page input[aria-label="数字人名称"]')
         return input ? { ok: true } : { ok: false, why: 'name-input-missing' }
       })()`,
       15_000,
-      '新建形象的名称输入框',
+      '新建数字人的名称输入框',
     )
 
     // 受控输入必须走原生 setter + input 事件，直接改 value 不会触发 React 的 onChange。
+    // 提交另起一次求值：同一次求值里紧接着按回车，处理函数读到的还是上一帧的草稿。
     const typedName = await evaluate(`(() => {
-      const input = document.querySelector('.omx-avatar-page input[aria-label="形象名称"]')
+      const input = document.querySelector('.omx-avatar-page input[aria-label="数字人名称"]')
       if (!input) return { ok: false, why: 'name-input-missing' }
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
       setter.call(input, ${NAME_LITERAL})
       input.dispatchEvent(new Event('input', { bubbles: true }))
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
       return { ok: true, value: input.value }
     })()`)
     add('j3-avatar-name-typed', typedName.value === AVATAR_NAME, `输入框值「${typedName.value}」`)
+
+    await sleep(300)
+    const submittedName = await evaluate(`(() => {
+      const input = document.querySelector('.omx-avatar-page input[aria-label="数字人名称"]')
+      if (!input) return { ok: false, why: 'name-input-gone-before-submit' }
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      return { ok: true }
+    })()`)
+    add('j3-avatar-name-submitted', submittedName.ok === true, submittedName.why ?? '已按回车提交')
 
     const avatarCreated = await waitFor(
       evaluate,
@@ -338,7 +530,7 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
         return text === ${NAME_LITERAL} ? { ok: true, name: text } : { ok: false, why: 'name-not-current:' + text }
       })()`,
       20_000,
-      '新建形象成为当前形象',
+      '新建数字人成为当前形象',
     )
     add('j3-avatar-created-through-ui', avatarCreated.name === AVATAR_NAME, `当前形象「${avatarCreated.name}」`)
 
@@ -817,7 +1009,7 @@ export default async function avatarStageAcceptance({ send, evidenceDir, io }) {
         : '文件夹内未解码出图片',
     )
 
-    // 取证之后把界面挪回虚拟形象页：否则驱动收尾那张 app-home.png 与 J4 截图是同一帧，
+    // 取证之后把界面挪回数字人页：否则驱动收尾那张 app-home.png 与 J4 截图是同一帧，
     // 两张不同用途的证据无法互相区分（不是缺陷，但会让复核者无法判断哪张是哪张）。
     await evaluate(`(() => {
       const entry = document.querySelector('[data-omnimux-avatar-entry]')

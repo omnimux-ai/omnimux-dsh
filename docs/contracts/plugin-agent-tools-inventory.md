@@ -293,18 +293,18 @@ related:
 
 ---
 
-### 3.13 `omnimux-avatar`（虚拟形象管理）
+### 3.13 `omnimux-avatar`（数字人管理）
 
 - **功能域**：结构化角色设定（18 分类 × 170 选项 × 3 档位）、角色设定图生成与多视角设定板派生、形象任务管理；生成结果自动归档到资产库「角色」分类，多视角图归档到该形象自己的「多视角」文件夹。
 - **状态**：已实装 9 个工具（双面齐备）。
 
 | 业务功能描述 | 对应 UI 交互 / HTTP 路由 | Agent 工具名称 (`Tool Name`) | 分级 | 状态 | 破坏性 confirm |
 |---|---|---|---|---|---|
-| 新建一个虚拟形象（名称 + 设定） | 左栏「新建形象」/ `POST /api/omnimux/avatar/avatars` | `avatar_create` | L1 | `Implemented` | 否 |
-| 列出全部虚拟形象及其最新任务状态 | 左栏「形象」切换器 / `GET /api/omnimux/avatar/avatars` | `avatar_list` | L2 | `Implemented` | 否 |
-| 读取单个虚拟形象的完整设定与任务历史 | 形象详情 / `GET /api/omnimux/avatar/avatars` | `avatar_get` | L2 | `Implemented` | 否 |
-| 更新虚拟形象的名称或设定参数 | 设定面板保存 / `POST /api/omnimux/avatar/avatars/update` | `avatar_update` | L1 | `Implemented` | 否 |
-| 删除虚拟形象（含其托管文件） | 形象删除按钮 / `POST /api/omnimux/avatar/avatars/delete` | `avatar_delete` | L1 | `Implemented` | 是 (`confirm: true`) |
+| 新建一个数字人（默认名「未命名」，双击可改名） | 左栏「+」/ `POST /api/omnimux/avatar/avatars` | `avatar_create` | L1 | `Implemented` | 否 |
+| 列出全部数字人及其最新任务状态 | 左栏「数字人」切换器 / `GET /api/omnimux/avatar/avatars` | `avatar_list` | L2 | `Implemented` | 否 |
+| 读取单个数字人的完整设定与任务历史 | 形象详情 / `GET /api/omnimux/avatar/avatars` | `avatar_get` | L2 | `Implemented` | 否 |
+| 更新数字人的名称或设定参数 | 双击名称改名 / 设定面板保存 / `POST /api/omnimux/avatar/avatars/update` | `avatar_update` | L1 | `Implemented` | 否 |
+| 删除数字人（含其托管文件） | 数字人删除按钮 / `POST /api/omnimux/avatar/avatars/delete` | `avatar_delete` | L1 | `Implemented` | 是 (`confirm: true`) |
 | 按形象设定提交一次角色设定图生成 | 底部「生成」/ `POST /api/omnimux/avatar/sheet` | `avatar_generate` | L1 | `Implemented` | 否 |
 | 由形象主图派生多视角设定板 | 主图弹窗「生成多视角」/ `POST /api/omnimux/avatar/multiview` | `avatar_multiview` | L1 | `Implemented` | 否 |
 | 查询形象的任务列表或单条任务状态 | 历史记录画廊 / `GET /api/omnimux/avatar/tasks` | `avatar_tasks` | L2 | `Implemented` | 否 |

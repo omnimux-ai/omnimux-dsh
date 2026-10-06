@@ -25,11 +25,14 @@ export function SegmentedToggle(props) {
             role="radio"
             aria-checked={active}
             aria-label={option.label}
+            title={option.label}
             className="omx-avatar-seg-item"
             onClick={() => onChange(option.value)}
           >
             {option.icon}
-            <span>{option.label}</span>
+            {/* 纯图标是逐项显式开启的（iconOnly），不能默认隐藏 —— 同组件的其它分段
+                控件（如来源切换）靠可见文字识别，默认隐藏会让它们变成无字按钮。 */}
+            {option.iconOnly ? null : <span>{option.label}</span>}
           </button>
         )
       })}

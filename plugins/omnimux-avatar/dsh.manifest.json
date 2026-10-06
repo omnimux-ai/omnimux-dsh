@@ -1,14 +1,14 @@
 {
   "id":"omnimux-avatar","name":"omnimux-avatar","version":"0.1.0","tier":"tier-1-app",
-  "entrypoint":"src/index.js","status":"active","description":"虚拟形象管理：结构化角色设定、生成与多视角派生、任务管理，生成结果自动归档到资产库「角色」分类",
+  "entrypoint":"src/index.js","status":"active","description":"数字人管理：结构化角色设定、生成与多视角派生、任务管理，生成结果自动归档到资产库「角色」分类",
   "tags":["avatar","character","influencer","image-generation","library"],
   "capabilities":{
     "tools":[
-      {"name":"avatar_create","summary":"新建一个虚拟形象（名称 + 设定）","category":"avatar","isWriteOperation":true,"requiresAuth":false},
-      {"name":"avatar_list","summary":"列出全部虚拟形象及其最新任务状态","category":"avatar","isWriteOperation":false,"requiresAuth":false},
-      {"name":"avatar_get","summary":"读取单个虚拟形象的完整设定与任务历史","category":"avatar","isWriteOperation":false,"requiresAuth":false},
-      {"name":"avatar_update","summary":"更新虚拟形象的名称或设定参数","category":"avatar","isWriteOperation":true,"requiresAuth":false},
-      {"name":"avatar_delete","summary":"删除虚拟形象（含其托管文件），需 confirm","category":"avatar","isWriteOperation":true,"requiresAuth":false},
+      {"name":"avatar_create","summary":"新建一个数字人（名称 + 设定）","category":"avatar","isWriteOperation":true,"requiresAuth":false},
+      {"name":"avatar_list","summary":"列出全部数字人及其最新任务状态","category":"avatar","isWriteOperation":false,"requiresAuth":false},
+      {"name":"avatar_get","summary":"读取单个数字人的完整设定与任务历史","category":"avatar","isWriteOperation":false,"requiresAuth":false},
+      {"name":"avatar_update","summary":"更新数字人的名称或设定参数","category":"avatar","isWriteOperation":true,"requiresAuth":false},
+      {"name":"avatar_delete","summary":"删除数字人（含其托管文件），需 confirm","category":"avatar","isWriteOperation":true,"requiresAuth":false},
       {"name":"avatar_generate","summary":"按形象设定提交一次角色设定图生成","category":"avatar","isWriteOperation":true,"requiresAuth":false},
       {"name":"avatar_multiview","summary":"由形象主图派生多视角设定板","category":"avatar","isWriteOperation":true,"requiresAuth":false},
       {"name":"avatar_tasks","summary":"查询形象的任务列表或单条任务状态","category":"avatar","isWriteOperation":false,"requiresAuth":false},
