@@ -657,9 +657,7 @@ export const PRODUCTS_CSS = `
   visibility: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--dsw-alias-bg-elevated);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2));
   border: 1px solid var(--dsw-alias-border-l3);
   border-radius: 12px;
   padding: 8px;
@@ -703,8 +701,6 @@ export const PRODUCTS_CSS = `
   align-items: center;
   justify-content: center;
   background: var(--dsw-alias-bg-mask-1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   padding: 24px;
   box-sizing: border-box;
   animation: omnimux-products-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -732,8 +728,6 @@ export const PRODUCTS_CSS = `
   border-radius: 999px;
   background: var(--dsw-alias-bg-layer-3);
   border: 1px solid var(--dsw-alias-border-l2);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   color: var(--dsw-alias-label-primary);
   font-size: 12px;
   max-width: 80vw;
@@ -745,7 +739,7 @@ export const PRODUCTS_CSS = `
   position: absolute !important;
   top: 20px;
   right: 20px;
-  background: var(--dsw-alias-bg-elevated) !important;
+  background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-layer-2)) !important;
   border: 1px solid var(--dsw-alias-border-l2) !important;
   color: var(--dsw-alias-label-primary) !important;
   border-radius: 50% !important;

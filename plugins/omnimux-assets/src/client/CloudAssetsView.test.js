@@ -376,7 +376,7 @@ describe('Cloud voice card plays from its colour plate', () => {
     const plate = ruleBody(ASSETS_CSS, '.omnimux-assets-cloud-card--audio .omnimux-assets-cloud-thumb')
     assert.match(plate, /height: 112px/)
     // The wash is an overlay on the official token, not a replacement for it.
-    assert.match(plate, /background-color: var\(--dsw-alias-bg-elevated\)/)
+    assert.match(plate, /background-color: var\(--dsw-alias-bg-elevated, /)
     assert.match(plate, /background-image: linear-gradient/)
 
     assert.equal(CLOUD_AUDIO_THEMES.length, 5)
@@ -507,7 +507,7 @@ describe('Cloud card hover cluster holds the two product actions', () => {
       ASSETS_CSS.indexOf('.omnimux-assets-cloud-desc {'),
     )
     assert.ok(plates.length > 0, 'the shared plate slice must not be empty')
-    assert.match(plates, /background: var\(--dsw-alias-bg-elevated\)/)
+    assert.match(plates, /background: var\(--dsw-alias-bg-elevated, /)
     assert.match(plates, /transition: opacity/)
     assert.match(plates, /background: var\(--dsw-alias-label-primary\)/)
     assert.match(plates, /color: var\(--dsw-alias-label-primary-foreground\)/)
@@ -657,7 +657,7 @@ describe('Cloud character filter bar', () => {
     assert.match(bar, /border-radius: 999px/)
     assert.match(bar, /background: var\(--dsw-alias-label-primary\)/)
     assert.match(bar, /color: var\(--dsw-alias-label-primary-foreground\)/)
-    assert.match(bar, /background: var\(--dsw-alias-bg-elevated\)/)
+    assert.match(bar, /background: var\(--dsw-alias-bg-elevated, /)
     assert.doesNotMatch(bar, /brand-primary/)
     assert.doesNotMatch(bar, /#[0-9a-fA-F]{3,8}\b/)
     assert.doesNotMatch(bar, /rgba?\(/)

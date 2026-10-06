@@ -96,7 +96,7 @@ describe('Cloud category row layout and refresh shuffle cache contract', () => {
     assert.match(ASSETS_CSS, /\.omnimux-assets-cloud-rows-scroll/)
     assert.match(ASSETS_CSS, /\.omnimux-assets-cloud-row-cards/)
     assert.match(ASSETS_CSS, /\.omnimux-assets-cloud-row-arrow/)
-    assert.match(ASSETS_CSS, /var\(--dsw-alias-bg-elevated\)/)
+    assert.match(ASSETS_CSS, /var\(--dsw-alias-bg-elevated, /)
     assert.match(ASSETS_CSS, /var\(--dsw-alias-border\)/)
   })
 
