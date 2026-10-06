@@ -190,6 +190,11 @@ const EXPLORE_STYLES = `
   display: none !important;
 }
 
+/* 外壳分隔线手柄（.dshDesktopResizeHandle，宿主 z-index 50）必须压在探索菜单（z-index 500）之上：
+   菜单贴边弹出时盖住手柄命中区，导致分割线被覆盖段不可拖。
+   手柄仅 8px 宽，不会遮挡菜单项。 */
+.dshDesktopResizeHandle { z-index: 510 !important; }
+
 .omnimux-explore-menu {
   position: fixed; z-index: 500; min-width: 180px; width: max-content; max-width: 240px;
   max-height: calc(100vh - 16px); overflow-y: auto;
