@@ -1,0 +1,196 @@
+{
+  "runId": "5cab5b8c-4741-4238-a6fd-3a414a0942e7",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/vids-panel-chrome-trim",
+  "origin": "http://127.0.0.1:65287",
+  "appPort": 65287,
+  "cdpPort": 65302,
+  "startedAt": "2026-10-06T11:55:32.276Z",
+  "completedAt": "2026-10-06T11:55:48.987Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:65287",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:65287",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-aBc0KZkHmYu8Tf4VFPKHHyayEF5ztdnBY7D3mnqSbv4"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 65302
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 132,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 121
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 132
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:ac0-open-clip",
+      "pass": true,
+      "detail": "打开方式：workbench-api"
+    },
+    {
+      "name": "journey:ac1-stage-visible",
+      "pass": true,
+      "detail": "面板可见：true"
+    },
+    {
+      "name": "journey:ac1-header-absent",
+      "pass": true,
+      "detail": "标题栏：null / 在 DOM：false"
+    },
+    {
+      "name": "journey:ac1-header-text-absent",
+      "pass": true,
+      "detail": "面板内「内测版」字样：false / 向导按钮：false"
+    },
+    {
+      "name": "journey:ac2-feed-state-matches-records",
+      "pass": true,
+      "detail": "生成记录块：empty=false 可见=true"
+    },
+    {
+      "name": "journey:ac2-empty-state-hides-block",
+      "pass": true,
+      "detail": "空态容器不可见：true"
+    },
+    {
+      "name": "journey:ac2-empty-state-hides-header",
+      "pass": true,
+      "detail": "空态标题行不可见：true"
+    },
+    {
+      "name": "journey:ac4-default-collapsed",
+      "pass": true,
+      "detail": "默认态：collapsed"
+    },
+    {
+      "name": "journey:ac5-chips-visible",
+      "pass": true,
+      "detail": "四模式芯片可见：true"
+    },
+    {
+      "name": "journey:ac4-toggle-expands",
+      "pass": true,
+      "detail": "点击箭头后：expanded"
+    },
+    {
+      "name": "journey:ac4-header-still-absent",
+      "pass": true,
+      "detail": "展开态标题栏在 DOM：false"
+    },
+    {
+      "name": "journey:ac4-feed-state-stable",
+      "pass": true,
+      "detail": "展开态生成记录状态：false（收起态 false）"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 107915
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/vids-panel-chrome-trim/.workbuddy/evidence/app-qa/5cab5b8c-4741-4238-a6fd-3a414a0942e7/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 107915
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}
