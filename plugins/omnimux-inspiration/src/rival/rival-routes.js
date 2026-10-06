@@ -142,6 +142,7 @@ export function matchRivalRoute(pathname) {
   if (parts.length === 4 && parts[1] === 'posts') {
     if (parts[3] === 'to-inspiration') return { kind: 'post-to-inspiration', id: parts[0], postId: parts[2] }
     if (parts[3] === 'media') return { kind: 'post-media', id: parts[0], postId: parts[2] }
+    if (parts[3] === 'done') return { kind: 'post-done', id: parts[0], postId: parts[2] }
   }
   return null
 }
@@ -270,6 +271,12 @@ export function createRivalDispatcher(deps) {
           tags: body.tags,
           auto_analyze: body.auto_analyze !== false,
         }), 202)
+
+      case 'post-done': {
+        if (method !== 'POST') return fail(405, 'method-not-allowed', 'Only POST is accepted')
+        const result = service.markPostDone(route.id, route.postId)
+        return ok(result)
+      }
 
       case 'post-media':
         return downloadPostMedia(route, body)

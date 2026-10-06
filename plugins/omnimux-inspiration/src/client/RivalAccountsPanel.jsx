@@ -17,7 +17,7 @@ import { RivalImportDialog } from './RivalImportDialog.jsx'
 import { RivalPostPreviewModal } from './RivalPostPreviewModal.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
 import { getLocalInspiration } from './api.js'
-import { convertRivalPost } from './rival-api.js'
+import { convertRivalPost, markRivalPostDone } from './rival-api.js'
 import { addRivalPostToSession } from './rival-add-to-chat.js'
 import { oneClickReplicate } from './replicate-to-chat.js'
 import { feedEmptyKind } from './rival-feed-empty.js'
@@ -182,9 +182,16 @@ export function RivalAccountsPanel(props) {
    * 「标为已处理」的当前回执：#3114 的端点还没有接上，所以本票只给出
    * 「动作已被记录」的通知；卡片的 is-done 视觉翻转由 grid 本地完成。
    */
-  const handleMarkDone = useCallback((card) => {
-    void card
+  const handleMarkDone = useCallback(async (card) => {
+    const accountId = String(card?.account_id || card?.account?.id || '')
+    const postId = String(card?.post_id || card?.id || '')
     setNotice({ key: 'rivalFeed.toast.markDone' })
+    if (!accountId || !postId) return
+    try {
+      await markRivalPostDone(accountId, postId)
+    } catch {
+      // 本地存储写入异常时静默或保持乐观测状态，不打扰用户
+    }
   }, [])
 
   const emptyKind = feedEmptyKind(feed)

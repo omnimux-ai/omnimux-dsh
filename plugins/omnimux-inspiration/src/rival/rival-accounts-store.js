@@ -226,6 +226,8 @@ export function buildPostRow(record, ctx) {
       score: nullableNumber(potential.score),
     },
     inspiration_id: nullableText(source.inspiration_id),
+    done_at: nullableText(source.done_at),
+    interacted_at: nullableText(source.interacted_at),
     in_library: Boolean(source.in_library),
     metrics: { views_history: history.slice(-VIEWS_HISTORY_MAX) },
     first_seen_at: firstSeen,
