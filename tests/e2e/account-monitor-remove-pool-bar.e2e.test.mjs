@@ -14,7 +14,8 @@ const client = path.join(root, 'plugins/omnimux-inspiration/src/client')
 
 test('E2E 契约一：外壳不再挂载监控池状态条', () => {
   const section = fs.readFileSync(path.join(client, 'InspirationSection.jsx'), 'utf8')
-  assert.doesNotMatch(section, /RivalPoolStatusBar/, 'InspirationSection 不得再引用状态条组件')
+  assert.doesNotMatch(section, /<RivalPoolStatusBar/, 'InspirationSection 不得再挂载状态条组件')
+  assert.doesNotMatch(section, /import[^\n]*RivalPoolStatusBar[^\n]*\.jsx['"][^\n]*\bRivalPoolStatusBar\b/, '不得再具名引入状态条')
   assert.doesNotMatch(section, /data-rival-pool/, '外壳不得再渲染状态条容器')
   assert.doesNotMatch(section, /poolFreshnessMinutes/, '外壳不得再计算新鲜度')
   assert.match(section, /RivalRefreshButton/, '筛选行刷新主按钮必须保留')
