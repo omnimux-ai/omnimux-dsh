@@ -222,3 +222,17 @@ export function refreshAllRivalAccounts() {
 
 /** Path of the account list, exported so the client store and tests agree. */
 export const RIVAL_API_PREFIX = PREFIX
+
+/**
+ * Mark a rival post as done (Issue #3114).
+ * @param {string} accountId
+ * @param {string} postId
+ */
+export function markRivalPostDone(accountId, postId) {
+  return guarded(async () => {
+    return request(`/${encodeURIComponent(accountId)}/posts/${encodeURIComponent(postId)}/done`, {
+      method: 'POST',
+      body: JSON.stringify({ done: true }),
+    })
+  }, 'inspiration-rival')()
+}
