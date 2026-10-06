@@ -1,0 +1,169 @@
+{
+  "issue": 3212,
+  "title": "灵感社区舞台底色断层修复 · 真机取证",
+  "capturedAt": "2026-10-06T15:40:35.668Z",
+  "worktree": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-bg-fix-issue-3212",
+  "browser": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "harness": {
+    "panelWidth": 900,
+    "panelHeight": 700,
+    "sampleX": 828,
+    "note": "真实 INSPIRATION_CSS + 真实舞台骨架 + 官方暗色令牌；内容刻意少于一屏以复现触发条件"
+  },
+  "officialBase": "#151517",
+  "legacyBluish": {
+    "hex": "#111215",
+    "rgb": "17,18,21"
+  },
+  "fixed": {
+    "geometry": {
+      "baseToken": "#151517",
+      "stage": {
+        "selector": ".omnimux-inspiration-stage",
+        "backgroundColor": "rgb(21, 21, 23)",
+        "height": 700,
+        "top": 0,
+        "bottom": 700
+      },
+      "header": {
+        "selector": ".omnimux-page-header",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "height": 80,
+        "top": 0,
+        "bottom": 80
+      },
+      "stageBody": {
+        "selector": ".omnimux-inspiration-stage-body",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "height": 620,
+        "top": 80,
+        "bottom": 700
+      },
+      "root": {
+        "selector": ".omnimux-inspiration-root",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "height": 620,
+        "top": 80,
+        "bottom": 700
+      },
+      "sticky": {
+        "selector": ".omx-stage-sticky",
+        "backgroundColor": "rgb(21, 21, 23)",
+        "height": 44,
+        "top": 148,
+        "bottom": 192
+      },
+      "panelHeight": 700
+    },
+    "columnColors": [
+      {
+        "color": "21,21,23",
+        "count": 700
+      }
+    ]
+  },
+  "legacyControl": {
+    "geometry": {
+      "baseToken": "#151517",
+      "stage": {
+        "selector": ".omnimux-inspiration-stage",
+        "backgroundColor": "rgb(21, 21, 23)",
+        "height": 700,
+        "top": 0,
+        "bottom": 700
+      },
+      "header": {
+        "selector": ".omnimux-page-header",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "height": 80,
+        "top": 0,
+        "bottom": 80
+      },
+      "stageBody": {
+        "selector": ".omnimux-inspiration-stage-body",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "height": 136,
+        "top": 80,
+        "bottom": 216
+      },
+      "root": {
+        "selector": ".omnimux-inspiration-root",
+        "backgroundColor": "rgb(17, 18, 21)",
+        "height": 136,
+        "top": 80,
+        "bottom": 216
+      },
+      "sticky": {
+        "selector": ".omx-stage-sticky",
+        "backgroundColor": "rgb(21, 21, 23)",
+        "height": 44,
+        "top": 148,
+        "bottom": 192
+      },
+      "panelHeight": 700
+    },
+    "columnColors": [
+      {
+        "color": "21,21,23",
+        "count": 608
+      },
+      {
+        "color": "17,18,21",
+        "count": 92
+      }
+    ]
+  },
+  "assertions": [
+    {
+      "name": "fixed-column-single-color",
+      "pass": true,
+      "detail": "采样列颜色集合=[{\"color\":\"21,21,23\",\"count\":700}]"
+    },
+    {
+      "name": "fixed-column-is-official-base",
+      "pass": true,
+      "detail": "期望 21,21,23（#151517），实际=[{\"color\":\"21,21,23\",\"count\":700}]"
+    },
+    {
+      "name": "legacy-column-has-band",
+      "pass": true,
+      "detail": "修复前应出现 ≥2 种底色，实际=[{\"color\":\"21,21,23\",\"count\":608},{\"color\":\"17,18,21\",\"count\":92}]"
+    },
+    {
+      "name": "legacy-column-contains-bluish",
+      "pass": true,
+      "detail": "修复前应含偏蓝石板色 17,18,21（#111215），实际=[{\"color\":\"21,21,23\",\"count\":608},{\"color\":\"17,18,21\",\"count\":92}]"
+    },
+    {
+      "name": "fixed-token-resolves",
+      "pass": true,
+      "detail": "--dsw-alias-bg-base=#151517"
+    },
+    {
+      "name": "fixed-root-transparent",
+      "pass": true,
+      "detail": "root 计算底色=rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "fixed-stage-official-base",
+      "pass": true,
+      "detail": "stage 计算底色=rgb(21, 21, 23)"
+    },
+    {
+      "name": "fixed-sticky-official-base",
+      "pass": true,
+      "detail": "吸顶栏计算底色=rgb(21, 21, 23)"
+    },
+    {
+      "name": "fixed-no-bluish-anywhere",
+      "pass": true,
+      "detail": "修复后任何一层都不得是 rgb(17,19,23)"
+    },
+    {
+      "name": "fixed-root-covers-viewport-bottom",
+      "pass": true,
+      "detail": "root.bottom=700 面板高=700"
+    }
+  ],
+  "pass": true
+}
