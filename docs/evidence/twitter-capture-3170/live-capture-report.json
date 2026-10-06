@@ -1,0 +1,242 @@
+{
+  "capturedAt": "2026-10-05T19:26:14.030Z",
+  "articleCount": 10,
+  "report": {
+    "href": "https://x.com/home",
+    "selectorHits": {
+      "tweetRoot": 10,
+      "focalTweet": 0,
+      "tweetText": 10,
+      "userName": 11,
+      "avatar": 0,
+      "tweetPhoto": 7,
+      "videoPlayer": 3,
+      "videoComponent": 3,
+      "quoteTweet": 0,
+      "attachments": 0,
+      "cardPoll": 0,
+      "cardPollChoice": 0,
+      "cardWrapper": 0,
+      "socialContext": 1,
+      "iconVerified": 14,
+      "like": 10,
+      "retweet": 10,
+      "reply": 10,
+      "analytics": 10
+    },
+    "articles": 10,
+    "nestedArticles": 0,
+    "firstImgIsAvatar": 10,
+    "videoArticles": 3,
+    "videoShapes": [
+      "video",
+      "video",
+      "video"
+    ],
+    "captures": [
+      {
+        "shape": "video",
+        "url": "https://x.com/heisdavies94285/status/2107097097644183607",
+        "text": "How?😳",
+        "author": {
+          "name": "Anny",
+          "handle": "heisdavies94285",
+          "avatar": "https://pbs.twimg.com/profile_images/2104623117154844672/IKdHwwbh_400x400.jpg",
+          "verified": false
+        },
+        "postedAt": "2026-10-05T13:14:30.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/amplify_video_thumb/2107097060440772608/img/V5xFqRzYnQIcTgSo.jpg"
+        ],
+        "coverUrl": "https://pbs.twimg.com/amplify_video_thumb/2107097060440772608/img/V5xFqRzYnQIcTgSo.jpg",
+        "stats": {
+          "likes": 174,
+          "comments": 75,
+          "views": 176914
+        }
+      },
+      {
+        "shape": "text",
+        "url": "https://x.com/josesilesdata/status/2106837333425185088",
+        "text": "2026 年最被低估的网站：\n\nGoogle Trends。\n\n我用它赚了 5400 美元。\n\n这正是我所做的\n\n以及你也可以如何做到：",
+        "author": {
+          "name": "José Siles | AI | Data",
+          "handle": "josesilesdata",
+          "avatar": "https://pbs.twimg.com/profile_images/2021598903444078592/TQyIwxuo_400x400.jpg",
+          "verified": true
+        },
+        "postedAt": "2026-10-04T20:02:18.000Z",
+        "mediaUrls": [],
+        "coverUrl": "",
+        "stats": {
+          "likes": 113,
+          "comments": 2,
+          "views": 14143
+        }
+      },
+      {
+        "shape": "text",
+        "url": "https://x.com/alexandr_wang/status/2106824386850521335",
+        "text": "我们已经推出的产品：\n\nmuse ♥️\n大量连接器 🔧\nmuse 邀请码 💌\nmuse 电话通话测试版 ☎️\nmuse for mac \n加拿大版 muse 🇨🇦\nmuse 连接器平台 🛠️\nmuse mac 电脑使用 💻\n面向小型企业的 muse 💼\nmuse 设备 🕹️\nmuse 迷因 🤡\n无屁眼 🍰\n\n我们接下来应该推出什么？",
+        "author": {
+          "name": "Alexandr Wang",
+          "handle": "alexandr_wang",
+          "avatar": "https://pbs.twimg.com/profile_images/1631421210205749248/uohbT_400x400.jpg",
+          "verified": true
+        },
+        "postedAt": "2026-10-04T19:10:51.000Z",
+        "mediaUrls": [],
+        "coverUrl": "",
+        "stats": {
+          "likes": 4655,
+          "comments": 1276,
+          "views": 379643
+        }
+      },
+      {
+        "shape": "text",
+        "url": "https://x.com/Tim_Denning/status/2107051086926192932",
+        "text": "如果你想每月赚取2万美元以上，千万不要从以下开始：\n\n• 数字产品\n• 无面孔YouTube\n• 赞助帖子\n• 付费通讯\n\n相反，从以下开始：",
+        "author": {
+          "name": "Tim Denning",
+          "handle": "Tim_Denning",
+          "avatar": "https://pbs.twimg.com/profile_images/1760794427331948545/XXYtQTw4_400x400.jpg",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T10:11:40.000Z",
+        "mediaUrls": [],
+        "coverUrl": "",
+        "stats": {
+          "likes": 439,
+          "comments": 22,
+          "views": 97102
+        }
+      },
+      {
+        "shape": "video",
+        "url": "https://x.com/rsalimx/status/2107159356626145653",
+        "text": "不，兄弟 😭\n\n这个食物扫描 app 光靠一个 TikTok 账号一个月就赚了 2 万刀 😭\n\n每条帖子都是她逛 M&S 或 Tesco，app 的评分叠在上面\n\n钩子就是 app 吐出来的一个数字\n\n人们甚至还没听说过这个 app 就先信了它\n\n这就是你 app 的玩法\n\n找到你 app",
+        "author": {
+          "name": "Salim",
+          "handle": "rsalimx",
+          "avatar": "https://pbs.twimg.com/profile_images/2047745729393811456/596TQQDf_400x400.jpg",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T17:21:54.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/media/HT4frv8WgAAVekf?format=jpg&name=large",
+          "https://pbs.twimg.com/media/HT4fvPcXkAAC8ab?format=jpg&name=large",
+          "https://pbs.twimg.com/amplify_video_thumb/2107156808217346049/img/c8ALEKr_2_r9SMxc.jpg"
+        ],
+        "coverUrl": "https://pbs.twimg.com/media/HT4frv8WgAAVekf?format=jpg&name=large",
+        "stats": {
+          "likes": 35,
+          "comments": 3,
+          "views": 1903
+        }
+      },
+      {
+        "shape": "text",
+        "url": "https://x.com/AlanShao111/status/2106939935177797635",
+        "text": "这个世界对有执行力的人来说没有任何竞争🤣🤣\n\n我说想做网红，1个月做到30万粉丝。\n\n我说想做知识付费，第一场直播就卖了7万。\n\n我说想做个人IP，1个月搞出了“薄肌理论”。",
+        "author": {
+          "name": "邵艾伦Alan（薄肌版）",
+          "handle": "AlanShao111",
+          "avatar": "https://pbs.twimg.com/profile_images/2086673168098570240/6K719ph7_400x400.jpg",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T02:50:00.000Z",
+        "mediaUrls": [],
+        "coverUrl": "",
+        "stats": {
+          "likes": 656,
+          "comments": 124,
+          "views": 88786
+        }
+      },
+      {
+        "shape": "text",
+        "url": "https://x.com/AYi_AInotes/status/2107118301373485471",
+        "text": "哇偶，微信里几千条带图、带文件的碎碎念聊天记录，终于能一键无损塞进 AI 知识库了！\n\n很多朋友平时在微信群里看到别人分享干货，\n比如一整套用产品图做 AI 广告片的实操流程、或者几十个设计灵感网站，\n一屏长截图根本截不全，复制出来文字格式全乱，里面的原图和附件更是根本带不走，",
+        "author": {
+          "name": "AYi",
+          "handle": "AYi_AInotes",
+          "avatar": "https://pbs.twimg.com/profile_images/1989157446829350912/pW828UwK_400x400.jpg",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T14:38:46.000Z",
+        "mediaUrls": [],
+        "coverUrl": "",
+        "stats": {
+          "likes": 7,
+          "comments": 14,
+          "views": 2112
+        }
+      },
+      {
+        "shape": "photo",
+        "url": "https://x.com/WangNextDoor2/status/2107158122997424334",
+        "text": "贤合庄由爆红走向崩盘，拆解明星餐饮加盟模式的风险。陈赫凭借曾小贤人设，和四川至膳合作，明星站台引流招商，单店投入超 200 万，承诺十多个月回本，短短几年门店从 6 家暴涨到 800 多家。",
+        "author": {
+          "name": "WangNextDoor",
+          "handle": "WangNextDoor2",
+          "avatar": "https://pbs.twimg.com/profile_images/1617123815510933505/7TIpoQM9_400x400.jpg",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T17:17:00.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/media/HT2vSkAasAADKfg?format=jpg&name=medium"
+        ],
+        "coverUrl": "https://pbs.twimg.com/media/HT2vSkAasAADKfg?format=jpg&name=medium",
+        "stats": {
+          "likes": 1,
+          "comments": 1,
+          "views": 807
+        }
+      },
+      {
+        "shape": "photo",
+        "url": "https://x.com/AlexCodeRx/status/2107084752549232911",
+        "text": "🚨 突发新闻：再见 CapCut 👋\n\nGoogle Gemini 现在可以编辑你的视频并在几秒钟内创建比 CapCut 更好的惊艳内容。\n\n这里有 10 个强大的提示语可以试试。👇\n\n今天保存一个 = 下个视频节省数小时。🔖",
+        "author": {
+          "name": "Alex",
+          "handle": "AlexCodeRx",
+          "avatar": "https://pbs.twimg.com/profile_images/2082902773851652096/vervgIG2_400x400.jpg",
+          "verified": true
+        },
+        "postedAt": "2026-10-05T12:25:27.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/media/HT3eaJ0aIAAn-_V?format=jpg&name=medium"
+        ],
+        "coverUrl": "https://pbs.twimg.com/media/HT3eaJ0aIAAn-_V?format=jpg&name=medium",
+        "stats": {
+          "likes": 163,
+          "comments": 40,
+          "views": 7245
+        }
+      },
+      {
+        "shape": "video",
+        "url": "https://x.com/vision2046/status/2107189923774353541",
+        "text": "性感不停诱惑不止\n大佬推尤物@kitty3ioi\n\n@KazamaTom\n@KasukabeAe\n@Suotomet\n@sktwobba",
+        "author": {
+          "name": "视觉动物📸",
+          "handle": "vision2046",
+          "avatar": "https://pbs.twimg.com/profile_images/1867103076118855680/-EF90sA9_400x400.jpg",
+          "verified": false
+        },
+        "postedAt": "2026-10-05T19:23:22.000Z",
+        "mediaUrls": [
+          "https://pbs.twimg.com/amplify_video_thumb/2107189764382445569/img/BxtxlWBOuWtlbWEP.jpg"
+        ],
+        "coverUrl": "https://pbs.twimg.com/amplify_video_thumb/2107189764382445569/img/BxtxlWBOuWtlbWEP.jpg",
+        "stats": {
+          "likes": 1,
+          "comments": 0,
+          "views": 66
+        }
+      }
+    ],
+    "failures": []
+  }
+}

@@ -1990,7 +1990,9 @@ async function saveMediaToHostInspiration(payload: HoveredMedia): Promise<boolea
     source_url: payload.pageUrl,
     cover_url: payload.previewSrc || payload.src,
     media_urls: [payload.src],
-    content: (payload.alt || payload.pageTitle || '').trim().slice(0, 500),
+    content: (payload.alt || payload.pageTitle || '').trim().slice(0, 2000),
+    // Saving is not analysing; the host would otherwise run its breakdown.
+    auto_analyze: false,
     tags: ['网页采集', payload.type === 'video' ? '视频' : '图片'],
   }
 
@@ -2629,6 +2631,16 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       media_urls?: string[]
       mediaUrls?: string[]
       content?: string
+      // Captured-post fields. This list is explicit: a key missing here never
+      // reaches `itemBody`, and the host would store the row without it.
+      content_shape?: string
+      author?: Record<string, unknown>
+      stats?: Record<string, unknown>
+      posted_at?: string | null
+      quoted?: Record<string, unknown>
+      poll?: Record<string, unknown>
+      thread_items?: string[]
+      auto_analyze?: boolean
       tags?: string[]
       targetPort?: number
     } | undefined
@@ -2661,7 +2673,19 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
         source_url: targetUrl,
         cover_url: payload?.cover_url || payload?.coverUrl || '',
         media_urls: payload?.media_urls || payload?.mediaUrls || (payload?.cover_url || payload?.coverUrl ? [payload.cover_url || payload.coverUrl || ''] : []),
-        content: (payload?.content || '').slice(0, 500),
+        // 2000 rather than 500: a post's body is the thing being saved, and the
+        // old cap cut most of a long one.
+        content: (payload?.content || '').slice(0, 2000),
+        content_shape: payload?.content_shape,
+        author: payload?.author,
+        stats: payload?.stats,
+        posted_at: payload?.posted_at ?? null,
+        quoted: payload?.quoted,
+        poll: payload?.poll,
+        thread_items: payload?.thread_items,
+        // `undefined` drops the key and leaves the host on its own default; the
+        // panel states `false` explicitly, and nothing else needs to.
+        auto_analyze: payload?.auto_analyze === false ? false : undefined,
         tags: payload?.tags || ['网页采集', '灵感采集'],
       }
 
@@ -2672,7 +2696,8 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
           let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: targetUrl, background: true }),
+            // Saving is not analysing; the host would otherwise run its breakdown.
+            body: JSON.stringify({ url: targetUrl, background: true, auto_analyze: false }),
             signal: AbortSignal.timeout(3500),
           }).catch(() => null)
 

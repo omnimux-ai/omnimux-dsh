@@ -291,8 +291,14 @@ const WORK_CONTAINER_SELECTOR = [
  */
 const TWEET_ROOT_SELECTOR = 'article[data-testid="tweet"], [data-testid="tweet"]'
 
-/** The status containers that carry a tweet's photo or player, and nothing else. */
-const TWEET_MEDIA_SELECTOR = [
+/**
+ * The status containers that carry a tweet's photo or player, and nothing else.
+ *
+ * Exported because the tweet capture in `content/twitter-capture/` must accept
+ * exactly the media this rule accepts: a second copy of the string would let the
+ * hover capsule and the capture disagree about what one post's media is.
+ */
+export const TWEET_MEDIA_SELECTOR = [
   '[data-testid="tweetPhoto"]',
   '[data-testid="videoComponent"]',
   '[data-testid="videoPlayer"]',

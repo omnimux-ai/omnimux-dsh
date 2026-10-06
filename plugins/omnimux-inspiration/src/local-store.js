@@ -38,7 +38,11 @@ import { SHARE_STATUS_IDLE } from './share-status.js'
  * @property {string} [content]
  * @property {Record<string, unknown> | string} [deconstruction] five-dimension breakdown object or markdown
  * @property {Record<string, unknown>} [stats] likes, comments, shares, etc.
- * @property {Record<string, unknown>} [author] name, handle, avatar
+ * @property {Record<string, unknown>} [author] name, handle, avatar, verified
+ * @property {string} [content_shape] shape of a saved post: text | photo | gallery | video | quote | repost | thread | article | poll | link
+ * @property {Record<string, unknown>} [quoted] the post this one quotes: author, text, coverUrl
+ * @property {string[]} [thread_items] the conversation entries of a thread
+ * @property {Record<string, unknown>} [poll] poll options, vote count and remaining time
  * @property {number} [duration] seconds
  * @property {number} [views]
  * @property {string} [country_code]
@@ -112,6 +116,12 @@ function buildRow(record, identity = {}) {
     deconstruction: record.deconstruction,
     stats: record.stats || {},
     author: record.author || {},
+    // Captured-post structure. Keys the capture did not fill stay absent so a
+    // card can tell "the page showed no poll" from "the poll was empty".
+    content_shape: record.content_shape,
+    quoted: record.quoted,
+    thread_items: record.thread_items,
+    poll: record.poll,
     duration: record.duration,
     views: record.views,
     country_code: record.country_code || '',

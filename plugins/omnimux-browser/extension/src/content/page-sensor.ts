@@ -5,6 +5,8 @@
  */
 
 import { platformForHost } from '../platform/registry.ts'
+import { extractTweetCapture } from './twitter-capture/extractor.ts'
+import type { TweetCapture } from './twitter-capture/types.ts'
 
 export interface PageSceneContext {
   url: string
@@ -17,6 +19,14 @@ export interface PageSceneContext {
   postText?: string
   heroImage?: string
   timestamp?: number
+  /**
+   * Structured capture of the post on screen, when the page holds one.
+   *
+   * `postText` and `author` stay for every consumer that only needs those two;
+   * this carries the rest (media set, counters, quoted post, shape) so a save
+   * can store the post rather than the page's title.
+   */
+  tweet?: TweetCapture
 }
 
 /**
@@ -182,14 +192,24 @@ export function extractHeroImage(platform: PageSceneContext['platform']): string
   return undefined
 }
 
-export function extractPostData(platform: PageSceneContext['platform']): { author?: string; postText?: string } {
+export function extractPostData(platform: PageSceneContext['platform']): { author?: string; postText?: string; tweet?: TweetCapture } {
   try {
     if (platform === 'twitter') {
       const tweetArticle =
-        document.querySelector('article[tabindex="-1"][data-testid="tweet"]') ||
-        document.querySelector('main article[data-testid="tweet"]') ||
-        document.querySelector('article[data-testid="tweet"]')
+        document.querySelector<HTMLElement>('article[tabindex="-1"][data-testid="tweet"]') ||
+        document.querySelector<HTMLElement>('main article[data-testid="tweet"]') ||
+        document.querySelector<HTMLElement>('article[data-testid="tweet"]')
       if (tweetArticle) {
+        const tweet = extractTweetCapture(tweetArticle)
+        if (tweet !== null) {
+          return {
+            postText: tweet.text || undefined,
+            author: tweet.author.handle || tweet.author.name || undefined,
+            tweet
+          }
+        }
+        // A post with no permanent address is still worth the panel's body and
+        // author, even though there is nothing to save under a stable URL.
         const textEl = tweetArticle.querySelector('div[data-testid="tweetText"]')
         const userEl = tweetArticle.querySelector('div[data-testid="User-Name"]')
         return {
@@ -236,6 +256,7 @@ export function getFullContext(url: string = window.location.href): PageSceneCon
     author: extra.author,
     postText: extra.postText,
     heroImage,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    ...(extra.tweet === undefined ? {} : { tweet: extra.tweet })
   }
 }
