@@ -227,6 +227,8 @@ export function collapsedHostNode(doc = typeof document !== 'undefined' ? docume
  */
 export function isLeftSidebarCollapsed(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return false
+  if (explicitLeftCollapseIntent === true) return true
+  if (explicitLeftCollapseIntent === false) return false
   const column = doc.querySelector(
     '[data-pane="sidebar"], [class*="sidebarCol"], .dshDesktopSidebarSurface, [class*="dshDesktopSidebarSurface"]',
   )
@@ -237,11 +239,21 @@ export function isLeftSidebarCollapsed(doc) {
       // ignore
     }
   }
-  return Boolean(
-    doc.querySelector(
-      '[class*="frame"][data-sidebar-collapsed], .dshDesktopFrame[data-sidebar-collapsed]',
-    ),
-  )
+  if (doc.querySelector(
+    '[class*="frame"][data-sidebar-collapsed], .dshDesktopFrame[data-sidebar-collapsed], [data-sidebar-collapsed]',
+  )) {
+    return true
+  }
+  if (!column) return true
+  try {
+    const style = doc.defaultView?.getComputedStyle?.(column)
+    if (style?.display === 'none' || style?.visibility === 'hidden') return true
+    const w = column.offsetWidth || Math.round(column.getBoundingClientRect?.().width || 0)
+    if (w === 0 && column.hasAttribute?.('data-sidebar-collapsed')) return true
+  } catch {
+    // ignore
+  }
+  return false
 }
 
 /**
@@ -836,6 +848,31 @@ export function readShellRailWidthPx(doc) {
 }
 
 /**
+ * Detect macOS desktop host with native window titlebar controls (traffic lights).
+ * Plain web browsers (even on macOS) lack native traffic lights and use the 8px gutter.
+ * @param {Document | null | undefined} doc
+ * @returns {boolean}
+ */
+export function isDarwinDesktopHost(doc) {
+  if (!doc) return false
+  const b = doc.body
+  const el = doc.documentElement
+  const hasDesktopMode = Boolean(
+    b?.hasAttribute?.('data-dsh-desktop-mode') ||
+    el?.hasAttribute?.('data-dsh-desktop-mode') ||
+    b?.matches?.('[data-dsh-desktop-mode]') ||
+    el?.matches?.('[data-dsh-desktop-mode]')
+  )
+  const isDarwin = Boolean(
+    b?.getAttribute?.('data-dsh-desktop-platform') === 'darwin' ||
+    el?.getAttribute?.('data-dsh-desktop-platform') === 'darwin' ||
+    b?.matches?.('[data-dsh-desktop-platform="darwin"]') ||
+    el?.matches?.('[data-dsh-desktop-platform="darwin"]')
+  )
+  return hasDesktopMode && isDarwin
+}
+
+/**
  * Single chrome layout snapshot. Tab padding is the horizontal overlap
  * between the fixed toggle and the visible workbench panel — NOT a function
  * of the collapsed boolean alone (collapsed+split must not shove tabs right).
@@ -879,7 +916,7 @@ export function computeChromeLayout(doc) {
       : (readShellRailWidthPx(doc) ?? (lastGoodLeftRailW || 0))
     if (leftRailW >= LEFT_RAIL_MIN_PX) lastGoodLeftRailW = leftRailW
   }
-  const leftInset = doc?.body?.matches?.('[data-dsh-desktop-mode][data-dsh-desktop-platform="darwin"]')
+  const leftInset = isDarwinDesktopHost(doc)
     ? TOPBAR_MACOS_INSET_PX
     : TOPBAR_TOGGLE_LEFT_PX
   const toggleLeft = collapsed
@@ -1048,6 +1085,8 @@ function runTopbarGeometryHook(doc) {
 /**
  * The better-sidebar workbench tab bar is the highest-stacking chrome in the
  * workspace; a fixed toggle child of it is guaranteed on top + clickable.
+ * When tabBar is not rendered (e.g. workbench closed or blank new-chat screen),
+ * fall back to doc.body so the topbar controls remain permanently visible.
  * @param {Document | null | undefined} doc
  * @returns {Element | null}
  */
@@ -1059,13 +1098,37 @@ export function findTopbarAnchor(doc) {
 }
 
 /**
+ * Fallback host for topbar controls when no visible anchor exists.
+ * @param {Document | null | undefined} doc
+ * @returns {Element | null}
+ */
+export function resolveSafeTopbarAnchor(doc) {
+  if (!doc) return null
+  const anchor = findTopbarAnchor(doc)
+  if (anchor) {
+    try {
+      if (anchor instanceof HTMLElement && anchor !== doc.body && anchor !== doc.documentElement) {
+        const style = doc.defaultView?.getComputedStyle?.(anchor)
+        if (style?.display === 'none' || style?.visibility === 'hidden') {
+          return doc.body || doc.documentElement || anchor
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return anchor
+  }
+  return doc.body || doc.documentElement || null
+}
+
+/**
  * Inject (idempotently) our own topbar toggle button into the better-sidebar
  * tab bar. Its click drives the official button's programmatic click.
  * @param {Document | null | undefined} doc
  * @returns {HTMLElement | null}
  */
 export function injectTopbarToggleButton(doc) {
-  const anchor = findTopbarAnchor(doc)
+  const anchor = resolveSafeTopbarAnchor(doc)
   if (!anchor) return null
   let btn = doc.querySelector(`[${SIDEBAR_TOGGLE_TOPBAR_ATTR}="1"]`)
   if (!btn) {
@@ -1083,7 +1146,23 @@ export function injectTopbarToggleButton(doc) {
       if (official) triggerClick(official)
     })
     anchor.appendChild(btn)
+  } else if (btn.parentElement !== anchor && anchor) {
+    anchor.appendChild(btn)
   }
+  btn.style.setProperty('position', 'fixed', 'important')
+  btn.style.setProperty('left', 'var(--omnimux-topbar-toggle-left, 84px)', 'important')
+  btn.style.setProperty('top', 'var(--omnimux-topbar-toggle-top, 4px)', 'important')
+  btn.style.setProperty('width', 'var(--omnimux-topbar-toggle-size, 32px)', 'important')
+  btn.style.setProperty('height', 'var(--omnimux-topbar-toggle-size, 32px)', 'important')
+  btn.style.setProperty('align-items', 'center', 'important')
+  btn.style.setProperty('justify-content', 'center', 'important')
+  btn.style.setProperty('background', 'transparent', 'important')
+  btn.style.setProperty('border', 'none', 'important')
+  btn.style.setProperty('border-radius', '8px', 'important')
+  btn.style.setProperty('color', 'var(--dsw-alias-label-secondary)', 'important')
+  btn.style.setProperty('cursor', 'pointer', 'important')
+  btn.style.setProperty('box-sizing', 'border-box', 'important')
+  btn.style.setProperty('display', 'flex', 'important')
   applyButtonChrome(btn)
   return btn
 }
@@ -1103,7 +1182,7 @@ export function injectTopbarNewSessionButton(doc, collapsed) {
     }
     return null
   }
-  const anchor = findTopbarAnchor(doc)
+  const anchor = resolveSafeTopbarAnchor(doc)
   if (!anchor) return null
   if (!btn) {
     btn = doc.createElement('button')
@@ -1127,7 +1206,23 @@ export function injectTopbarNewSessionButton(doc, collapsed) {
       if (official) triggerClick(official)
     })
     anchor.appendChild(btn)
+  } else if (btn.parentElement !== anchor && anchor) {
+    anchor.appendChild(btn)
   }
+  btn.style.setProperty('position', 'fixed', 'important')
+  btn.style.setProperty('left', 'var(--omnimux-topbar-new-session-left, calc(var(--omnimux-topbar-toggle-left, 84px) + var(--omnimux-topbar-toggle-size, 32px) + var(--omnimux-topbar-toggle-gap, 8px)))', 'important')
+  btn.style.setProperty('top', 'var(--omnimux-topbar-toggle-top, 4px)', 'important')
+  btn.style.setProperty('width', 'var(--omnimux-topbar-toggle-size, 32px)', 'important')
+  btn.style.setProperty('height', 'var(--omnimux-topbar-toggle-size, 32px)', 'important')
+  btn.style.setProperty('align-items', 'center', 'important')
+  btn.style.setProperty('justify-content', 'center', 'important')
+  btn.style.setProperty('background', 'transparent', 'important')
+  btn.style.setProperty('border', 'none', 'important')
+  btn.style.setProperty('border-radius', '8px', 'important')
+  btn.style.setProperty('color', 'var(--dsw-alias-label-secondary)', 'important')
+  btn.style.setProperty('cursor', 'pointer', 'important')
+  btn.style.setProperty('box-sizing', 'border-box', 'important')
+  btn.style.setProperty('display', 'flex', 'important')
   applyButtonChrome(btn)
   return btn
 }
