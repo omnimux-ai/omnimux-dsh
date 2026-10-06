@@ -25,6 +25,27 @@ function velocityMultiplier(value) {
 }
 
 /**
+ * Whether a velocity descriptor carries a renderable signal — the single
+ * predicate the pill row, `VelocityPill` and the height estimator share.
+ *
+ * Lives beside `rivalVelocityText` so the two stay in the same numeric domain:
+ * the rate family signals only at `vph >= 200` (the §3.3 floor both the A and
+ * B tiers honour — a `vph=0` average descriptor used to read true here while
+ * the copy rendered `''`, producing a 28px empty pill row), the relative
+ * family at `multiplier > 0`. Legacy `{text}` descriptors pass through.
+ * @param {unknown} velocity
+ * @returns {boolean}
+ */
+export function rivalVelocityHasSignal(velocity) {
+  if (!velocity || typeof velocity !== 'object') return false
+  if (String(velocity.text || '') !== '') return true
+  const tier = String(velocity.tier || '')
+  if (tier === 'relative') return Number.isFinite(velocity.multiplier) && velocity.multiplier > 0
+  return (tier === 'hot' || tier === 'rising' || tier === 'watch' || tier === 'average')
+    && Number.isFinite(velocity.vph) && velocity.vph >= 200
+}
+
+/**
  * Pill text of a Host-emitted velocity descriptor (§3.3, #3113).
  *
  * The Host ships facts only (`tier` + `vph` or `multiplier`); every visible
@@ -42,11 +63,14 @@ export function rivalVelocityText(velocity, t) {
   if (direct) return direct
   const translate = typeof t === 'function' ? t : (key) => key
   const tier = String(velocity.tier || '')
+  // 与 rivalVelocityHasSignal 同域：速率族 <200 不产文案——media 支路的
+  // VelocityPill 不经谓词直接消费本函数，空串才是「无可渲染信号」。
   const rate = velocityRate(velocity.vph)
-  if (tier === 'hot') return rate ? `${translate('rivalFeed.pill.hot')} ${rate}/h` : ''
-  if (tier === 'rising') return rate ? `${translate('rivalFeed.pill.rising')} ${rate}/h` : ''
-  if (tier === 'watch') return rate ? `${translate('rivalFeed.pill.watch')} ${rate}/h` : ''
-  if (tier === 'average') return rate ? `${translate('rivalFeed.pill.average')} ${rate}/h` : ''
+  const rateRenderable = Number.isFinite(velocity.vph) && velocity.vph >= 200 ? rate : ''
+  if (tier === 'hot') return rateRenderable ? `${translate('rivalFeed.pill.hot')} ${rateRenderable}/h` : ''
+  if (tier === 'rising') return rateRenderable ? `${translate('rivalFeed.pill.rising')} ${rateRenderable}/h` : ''
+  if (tier === 'watch') return rateRenderable ? `${translate('rivalFeed.pill.watch')} ${rateRenderable}/h` : ''
+  if (tier === 'average') return rateRenderable ? `${translate('rivalFeed.pill.average')} ${rateRenderable}/h` : ''
   if (tier === 'relative') {
     const multiplier = velocityMultiplier(velocity.multiplier)
     return multiplier ? `${translate('rivalFeed.pill.relative')} ${multiplier}x` : ''

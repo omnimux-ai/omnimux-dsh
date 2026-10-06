@@ -225,11 +225,18 @@ export function feedVelocity(post, opts = {}) {
     const ageMs = Number.isFinite(ageFrom) ? now - ageFrom : NaN
     if (Number.isFinite(ageMs) && ageMs > 0) {
       const vph = (views / ageMs) * 3600_000
-      return {
-        confidence: 'average',
-        tier: 'average',
-        vph: Math.round(vph * 10) / 10,
+      // 「<200 不渲染」是对胶囊存在性的规定，A/B 两档一致适用（PM 终验
+      // §7.3）：均速 33/h 一类噪音胶囊既不构成「值得看」的判断，又会
+      // 让唯一带色信号贬值；规格给的兜底出口是仅指标行累计播放。
+      if (vph >= VELOCITY_TIER_WATCH) {
+        return {
+          confidence: 'average',
+          tier: 'average',
+          vph: Math.round(vph * 10) / 10,
+        }
       }
+      // 低于下限不落 B 档，继续走 C 档判定——相对中位数的爆发信号
+      // 仍是合法信号（倍数族不受 200/h 约束）。
     }
 
     // C · relative to the account's own median. Only a real baseline and a
@@ -302,10 +309,9 @@ export function toFeedRow(post, account) {
     cover_src: coverSrc,
     cover_key: coverSrc,
     cover_url: text(post?.cover_url),
-    // 增速原料随行下发：计算在 mergeAccountPosts 的第二阶段做（需要全账号
-    // 中位数），feedVelocity 读这两个字段而不回头查缓存行。
-    views_history: buildViewsHistory(post?.metrics?.views_history),
-    first_seen_at: text(post?.first_seen_at),
+    // 增速原料不随行下发：mergeAccountPosts 把原始 post 传给 feedVelocity
+    //（需要全账号中位数，计算在第二阶段），wire 行只带 velocity 结论——
+    // views_history/first_seen_at 透传只增 wire 体积（四轴 M5 死载荷）。
     source_platform: text(account?.platform),
     in_library: post?.in_library === true,
     inspiration_id: post?.inspiration_id ?? null,
@@ -396,6 +402,24 @@ export function mergeAccountPosts(input) {
 }
 
 /**
+ * Sortable strength of a row's velocity descriptor (#3113, 分桶).
+ *
+ * 显式分桶：速率族（任何有限正 vph，rank = 1e9 + vph）恒先于相对族
+ * （rank = multiplier）；两族与「无信号」三者同轴比较会把 9.5x 排到
+ * vph=0.005 之前——那正是速率/倍数穿插的成因。vph=0 或 multiplier<=0
+ * 的描述渲染不出胶囊，与 velocity=null 一起取 -Infinity 沉底。
+ * @param {Record<string, any>} row
+ * @returns {number}
+ */
+function velocityRank(row) {
+  const velocity = row?.velocity
+  if (!velocity || typeof velocity !== 'object') return -Infinity
+  if (Number.isFinite(velocity.vph) && velocity.vph > 0) return 1e9 + velocity.vph
+  if (Number.isFinite(velocity.multiplier) && velocity.multiplier > 0) return velocity.multiplier
+  return -Infinity
+}
+
+/**
  * Sort rows in place-free fashion: `posted_at` (default) or `views`, both
  * descending, ties broken by `id` descending so the order is stable across
  * requests and pagination cannot repeat or skip a row.
@@ -403,22 +427,6 @@ export function mergeAccountPosts(input) {
  * @param {unknown} sort
  * @returns {Array<Record<string, any>>}
  */
-/**
- * Sortable strength of a row's velocity descriptor:
- * hourly rates rank first, relative multipliers second, nothing last.
- * `-Infinity` reads as「no signal」and is what sinks a card to the end of the
- * velocity order without a second comparison key.
- * @param {Record<string, any>} row
- * @returns {number}
- */
-function velocityRank(row) {
-  const velocity = row?.velocity
-  if (!velocity || typeof velocity !== 'object') return -Infinity
-  if (Number.isFinite(velocity.vph)) return velocity.vph * 1_000
-  if (Number.isFinite(velocity.multiplier)) return velocity.multiplier
-  return -Infinity
-}
-
 export function sortFeedRows(rows, sort = 'posted_at') {
   const list = Array.isArray(rows) ? rows.slice() : []
   const byViews = sort === 'views'

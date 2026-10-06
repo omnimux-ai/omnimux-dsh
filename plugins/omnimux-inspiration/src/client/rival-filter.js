@@ -170,23 +170,11 @@ export function toAccountFilterRow(account, state) {
 
 import { rivalCardTypeOf } from './rival-masonry.js'
 
-/**
- * Whether a velocity descriptor carries a renderable signal — the single
- * predicate the pill row, `VelocityPill` and the height estimator share.
- * Legacy `{text}` descriptors pass through; Host structured descriptors
- * (`tier` + `vph`/`multiplier`, #3113) read renderable by their numbers —
- * the pill text is derived later, by the render layer that owns `t`.
- * @param {unknown} velocity
- * @returns {boolean}
- */
-export function rivalVelocityHasSignal(velocity) {
-  if (!velocity || typeof velocity !== 'object') return false
-  if (String(velocity.text || '') !== '') return true
-  const tier = String(velocity.tier || '')
-  if (tier === 'relative') return Number.isFinite(velocity.multiplier)
-  return (tier === 'hot' || tier === 'rising' || tier === 'watch' || tier === 'average')
-    && Number.isFinite(velocity.vph)
-}
+// 谓词住在 rival-format.js（与文案同域：速率族 vph>=200、相对族
+// multiplier>0）——此文件已 import rival-masonry.js，谓词若再被
+// rival-masonry.js 反向引用即成循环依赖（四轴 M6）。这里只做透传，
+// 让既有 import 路径不变。
+export { rivalVelocityHasSignal } from './rival-format.js'
 
 /**
  * §9.2 状态裁决：卡片只消费「状态种类」，文案由渲染层经 locale 字典输出。

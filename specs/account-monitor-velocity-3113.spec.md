@@ -12,7 +12,9 @@
   前缀按阈值：`>20000` 爆款 / `≥1000` 飙升 / `≥200` 观察 / `<200` 不渲染胶囊。
 - **B · 发布均速**：A 不可用且 `posted_at`（否则 `first_seen_at`）可解析且
   距今 >0（时钟异常、未来时间、无效日期一律降级）→ `views ÷ age_hours`，
-  前缀 `均速`，三级文字弱化；B 档 vph <200 仍渲染（<200 规则只约束档位前缀）。
+  前缀 `均速`，三级文字弱化。**PM 终验裁定（§7.3）：`<200` 是对胶囊
+  存在性的规定，A/B 两档一致适用**——B 档 vph <200 不产出 average 档，
+  继续走 C 档判定；C 档是倍数族，不受 200/h 约束。
 - **C · 账号内相对爆发**：A/B 均不可用且账号历史播放中位数 >0 且
   `views/median ≥ 3`（PRD §5.1「≥3x 记为爆发」）→ `该号 {v}x`，中性描边。
 
@@ -25,9 +27,9 @@
 
 ## 结构（Project Structure）
 
-- 计算与排序：`src/rival/rival-feed.js`（`feedVelocity` 新增、`toFeedRow`
-  透传 `metrics.views_history`/`first_seen_at`、`mergeAccountPosts` 接受
-  `now` 并按账号中位数判 C 档、`sortFeedRows` 新增 `velocity` 分支）。
+- 计算与排序：`src/rival/rival-feed.js`（`feedVelocity` 新增、`mergeAccountPosts`
+  接受 `now` 并按账号中位数判 C 档、`sortFeedRows` 新增 `velocity` 分支；
+  增速原料留在原始 post 上，wire 行只带 `velocity` 结论）。
 - 服务接线：`src/rival/rival-accounts-service.js` `listFeed` 透传 `now`
   与 `sort=velocity`。
 - 客户端文案派生：`src/client/rival-format.js` `rivalVelocityText(v, t)`
@@ -80,9 +82,9 @@
   返回 null（宁可不渲染也不给出弱化假信号）。
 - `posted_at` 无效/缺失时 B 档年龄退用 `first_seen_at`（规格未覆盖此
   兜底；若被否按规格字面改为直接判 null→C）。
-- B 档 vph <200 的胶囊存在性：§3.3「`<200` 不渲染胶囊」在上下文中绑定
-  「分级阈值（爆款/飙升/观察前缀）」，实现解读为前缀不渲染而非胶囊不
-  渲染——与 PRD §5.1 B 档「胶囊描边提示是均值」并存。
+- B 档 vph <200 的胶囊存在性：**已由 PM 终验裁定**——「<200 不渲染」
+  是对胶囊存在性的规定，A/B 两档一致适用（原实现解读为只约束 A 档
+  前缀，已被驳回并修正）。
 
 ## 成功标准（Success Criteria）
 

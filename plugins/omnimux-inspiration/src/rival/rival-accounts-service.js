@@ -474,6 +474,9 @@ export function createRivalAccountsService(deps) {
       postsByAccount,
       q: filter.q,
       platform: filter.platform,
+      // 增速三档降级（#3113）的时钟与刷新态同一条注入链：纯函数不读
+      // 墙钟，spec §「服务接线」约定的透传在这里落地。
+      now: new Date(now()).toISOString(),
     })
     const sort = filter.sort === 'views' ? 'views'
       : filter.sort === 'velocity' ? 'velocity'

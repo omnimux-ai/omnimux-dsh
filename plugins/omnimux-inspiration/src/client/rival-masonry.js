@@ -20,7 +20,7 @@ import {
   columnsForWidth as columnsForWidthCore,
   distributeColumns as distributeColumnsCore,
 } from '../../../omnimux/src/client/components/library-flow/masonry-layout.js'
-import { rivalVelocityHasSignal } from './rival-filter.js'
+import { rivalVelocityHasSignal } from './rival-format.js'
 
 /** spec §9.3：最小列宽、间距、列数区间。 */
 export const RIVAL_MIN_COL_WIDTH = 220
@@ -616,8 +616,11 @@ function textBodyLines(card, columnWidth) {
  * 胶囊行存在性的唯一判据：渲染层（pill-row 是否渲染）与估算层（是否预留
  * 36px）必须共用同一个谓词——`velocity` 是对象但无可渲染信号时
  * `VelocityPill` 返回 null，该行整行不应出现（§9.1「仅在有胶囊时渲染该行」）。
- * #3113：谓词搬入 rival-filter.js 的 `rivalVelocityHasSignal`，结构化
- * 描述（`tier` + `vph`/`multiplier`，无 `text`）同样判为可渲染。
+ * #3113：谓词共享 rival-format.js 的 `rivalVelocityHasSignal`——与文案
+ * 同一数值域（速率族 vph>=200、相对族 multiplier>0），结构化描述
+ * （`tier` + `vph`/`multiplier`，无 `text`）同样判为可渲染；本文件不
+ * 反向 import rival-filter.js（后者为 rivalCardTypeOf 引用本文件，
+ * 反向即成循环依赖）。
  */
 export const rivalHasPill = (card) => rivalVelocityHasSignal(card?.velocity)
 const hasPill = rivalHasPill

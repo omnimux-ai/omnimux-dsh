@@ -94,7 +94,7 @@ describe('端到端：views_history → 胶囊事实 → 逐字文案', () => {
     const rows = feed([
       post('none', { posted_at: null, stats: { views: 10 } }),
       post('rel', { posted_at: null, stats: { views: 4500 } }),
-      post('avg', { posted_at: iso(nowMs - 1000 * H), stats: { views: 0 } }),
+      post('avg', { posted_at: iso(nowMs - 1000 * H), stats: { views: 230000 } }),
       post('hot', { metrics: { views_history: [
         { at: iso(nowMs - 4 * H), views: 0 },
         { at: iso(nowMs - 2 * H), views: 47000 },
@@ -104,8 +104,13 @@ describe('端到端：views_history → 胶囊事实 → 逐字文案', () => {
       post('l3', { posted_at: null, stats: { views: 300 } }),
     ])
     const ordered = sortFeedRows(rows, 'velocity').map((r) => r.id)
-    assert.deepEqual(ordered, ['hot', 'rel', 'avg', 'none', 'l3', 'l2', 'l1'],
+    // avg 的 230000 views / 1000h = 均速 230/h ≥ 200（四轴必修 B：B 档同样
+    // 受 200 下限约束）→ 速率族在相对族之前；无信号行按 id 降序垫底。
+    assert.deepEqual(ordered, ['hot', 'avg', 'rel', 'none', 'l3', 'l2', 'l1'],
       'vph signals → relative → no-signal last; ties settle by id desc so the order is stable')
+    const avg = rows.find((r) => r.id === 'avg')
+    assert.equal(avg.velocity.tier, 'average')
+    assert.equal(avg.velocity.vph, 230)
     // 「增速信号不增加云调用次数」的结构证据：整条链没有网络面——
     // velocity 只由已落库的 views_history/posted_at/first_seen_at 派生
     assert.equal(rivalVelocityHasSignal(rows.find((r) => r.id === 'none').velocity), false)

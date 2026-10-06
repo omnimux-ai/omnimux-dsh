@@ -176,6 +176,20 @@ describe('RivalPostPreviewModal — detail.velocityNote 增速口径说明（#31
     }
   })
 
+  it('实测档 samples_at 任一端不可解析 → 不渲染口径行（不出现 -- 占位）', async () => {
+    // PM 终验建议项：「基于 -- 与 -- 两次采样」是无信息噪音，宁可不渲染。
+    for (const samples_at of [undefined, [], ['not-a-date', '2026-10-06T18:00:00.000Z'], [null, 'also-bad']]) {
+      const card = toRivalCardRow({ ...FEED_ROW, velocity: { confidence: 'measured', tier: 'hot', vph: 23000, samples_at } })
+      const mounted = await mountModal(card)
+      try {
+        assert.equal(mounted.container.querySelector('.omnimux-rival-detail-velocity'), null,
+          `samples_at=${JSON.stringify(samples_at)} must not render the measured note`)
+      } finally {
+        await mounted.unmount()
+      }
+    }
+  })
+
   it('无增速信号的卡不渲染口径行（不留空位）', async () => {
     const card = toRivalCardRow({ ...FEED_ROW, velocity: null })
     const mounted = await mountModal(card)

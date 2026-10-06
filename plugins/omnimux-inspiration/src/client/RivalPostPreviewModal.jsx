@@ -35,9 +35,13 @@ function velocityNote(row, t) {
   const confidence = String(velocity.confidence || '')
   if (confidence === 'measured') {
     const [t1, t2] = Array.isArray(velocity.samples_at) ? velocity.samples_at : []
+    const [a, b] = [hhmm(t1), hhmm(t2)]
+    // 采样时间任一端不可读时不渲染该行——「基于 -- 与 -- 两次采样」是
+    // 无信息噪音（四轴 M9，同「无信号不留位」的口径）。
+    if (!a || !b) return ''
     return String(t('rivalFeed.detail.velocityMeasured'))
-      .replace('{t1}', hhmm(t1) || '--')
-      .replace('{t2}', hhmm(t2) || '--')
+      .replace('{t1}', a)
+      .replace('{t2}', b)
   }
   if (confidence === 'average') return String(t('rivalFeed.detail.velocityAverage'))
   if (confidence === 'relative') return String(t('rivalFeed.detail.velocityRelative'))

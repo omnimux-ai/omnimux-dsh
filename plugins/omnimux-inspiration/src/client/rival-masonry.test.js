@@ -380,6 +380,22 @@ describe('rival-masonry — R4 胶囊行判据收敛（复审 ①）', () => {
       assert.equal(h, rivalCardHeightPx(bare, 220), `velocity=${JSON.stringify(velocity)} must not reserve the pill row`)
       assert.equal(h, 24 + 8 * 20 + 2, 'no 36px pill reservation')
     }
+    // 四轴必修 A：vph=0 / multiplier=0 的结构化描述曾让谓词判 true——渲染层
+    // 铺 28px 空行、估算层把 36px 空洞写进瀑布流高度预算；两族零值均不留位。
+    for (const velocity of [
+      { tier: 'average', confidence: 'average', vph: 0 },
+      { tier: 'watch', confidence: 'measured', vph: 0 },
+      { tier: 'average', confidence: 'average', vph: 199.9 },
+      { tier: 'relative', confidence: 'relative', multiplier: 0 },
+    ]) {
+      const h = rivalCardHeightPx({ ...bare, velocity }, 220)
+      assert.equal(h, 24 + 8 * 20 + 2,
+        `${JSON.stringify(velocity)} carries no renderable signal — no 36px reservation`)
+      assert.equal(rivalHasPill({ ...bare, velocity }), false,
+        `predicate agrees: ${JSON.stringify(velocity)} has no pill`)
+    }
+    assert.equal(rivalHasPill({ ...bare, velocity: { tier: 'average', confidence: 'average', vph: 200 } }), true,
+      'vph=200 is the inclusive floor of the rate family')
   })
 
   it('velocity.text 非空 → 预留 36px（正向钉住，防反向回归）', () => {

@@ -5,6 +5,7 @@ import {
   formatEngagementCount,
   formatRelativeTime,
   rivalLocaleOf,
+  rivalVelocityHasSignal,
   rivalVelocityText,
 } from './rival-format.js'
 import { zh, en } from './locales.js'
@@ -155,7 +156,7 @@ describe('rivalVelocityText — §3.3 三档逐字文案（#3113）', () => {
 
   it('average 档逐字「均速 {v}」：同样走数字格式、不带热度前缀', () => {
     assert.equal(rivalVelocityText({ tier: 'average', confidence: 'average', vph: 1800 }, tZh), '均速 1.8k/h')
-    assert.equal(rivalVelocityText({ tier: 'average', confidence: 'average', vph: 180 }, tZh), '均速 180/h')
+    assert.equal(rivalVelocityText({ tier: 'average', confidence: 'average', vph: 220 }, tZh), '均速 220/h')
   })
 
   it('relative 档逐字「该号 {v}x」：严禁 /h 单位与爆款/飙升前缀（§3.3 红线）', () => {
@@ -173,6 +174,33 @@ describe('rivalVelocityText — §3.3 三档逐字文案（#3113）', () => {
     assert.equal(rivalVelocityText({ tier: 'hot' }, tZh), '')
     assert.equal(rivalVelocityText(null, tZh), '')
     assert.equal(rivalVelocityText({ tier: 'relative' }, tZh), '')
+  })
+
+  it('不变量：谓词 true ⇒ 文案非空（谓词与文案同域）', () => {
+    // 四轴必修 A：vph=0 之类输入曾让谓词判 true 而文案为 ''，渲染层据此
+    // 铺出 28px 空白胶囊行。谓词必须与文案共享同一数值域——速率族
+    // vph>=200（§3.3 下限），相对族 multiplier>0。
+    const rates = [0, 199.9, 200, 1_000, 20_000, 20_000.5]
+    for (const tier of ['hot', 'rising', 'watch', 'average']) {
+      for (const vph of rates) {
+        const velocity = { tier, confidence: tier === 'average' ? 'average' : 'measured', vph }
+        const signal = rivalVelocityHasSignal(velocity)
+        assert.equal(signal, vph >= 200, `tier=${tier} vph=${vph} must signal only at/above the 200 floor`)
+        if (signal) {
+          assert.ok(rivalVelocityText(velocity, tZh) !== '',
+            `predicate true must never pair with empty copy: tier=${tier} vph=${vph}`)
+        }
+      }
+    }
+    for (const multiplier of [0, 3]) {
+      const velocity = { tier: 'relative', confidence: 'relative', multiplier }
+      const signal = rivalVelocityHasSignal(velocity)
+      assert.equal(signal, multiplier > 0, `multiplier=${multiplier}`)
+      if (signal) assert.ok(rivalVelocityText(velocity, tZh) !== '')
+    }
+    assert.equal(rivalVelocityHasSignal({ text: '飙升 2.6k/h' }), true, 'legacy text passthrough')
+    assert.equal(rivalVelocityHasSignal({ text: '' }), false)
+    assert.equal(rivalVelocityHasSignal(null), false)
   })
 
   it('en 字典键存在且形态同构（不带中文）', () => {
