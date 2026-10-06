@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { readFile } from 'node:fs/promises'
 import * as rivalConstants from './constants.js'
 import { feedVelocity, mergeAccountPosts, sortFeedRows, toFeedRow } from './rival-feed.js'
 
@@ -513,12 +514,27 @@ describe('sortFeedRows — velocity', () => {
   })
 
   it('族序序号来自 constants.js 的具名常量（速率 > 相对 > 无信号）', () => {
-    // 结构约束（四轴复审 Low-1）：2/1/0 族序是业务语义，与
-    // RIVAL_VELOCITY_TIER_WATCH 同处集中——sorter 不再内联字面量。
-    // 常量缺失时本断言在旧源码上即失败（undefined.rate 抛 TypeError）。
+    // 常量存在且次序正确。常量缺失时本断言在旧源码上即失败
+    //（undefined.rate 抛 TypeError）。
     assert.ok(RIVAL_VELOCITY_RANK_FAMILY.rate > RIVAL_VELOCITY_RANK_FAMILY.relative)
     assert.ok(RIVAL_VELOCITY_RANK_FAMILY.relative > RIVAL_VELOCITY_RANK_FAMILY.none)
-    // 语义排序仍由上面的分桶断言覆盖；这里钉的是「常量存在且次序正确」。
+    // 但这条断言只钉常量自身，钉不住「sorter 是否真的在用它」——见下一条
+    //（R3 复审 R1：恢复内联字面量而保留常量导出时，本条仍全绿）。
+  })
+
+  it('velocityRankKey 消费具名常量且不内联族序字面量（R1 结构断言）', async () => {
+    // 上一条只断言常量自身的数值次序，而它声称要防的是「sorter 恢复内联
+    // 族序」——两者不同轴：恢复内联、常量保留导出时，行为完全一致，任何
+    // 行为断言都抓不住（R3 复审 R1 实测：那种回退仍 36/36 全绿）。
+    // 所以这里直接钉源码结构：族序只能来自 RIVAL_VELOCITY_RANK_FAMILY。
+    const src = await readFile(new URL('./rival-feed.js', import.meta.url), 'utf8')
+    const start = src.indexOf('function velocityRankKey')
+    assert.notEqual(start, -1, 'velocityRankKey must exist')
+    const body = src.slice(start, src.indexOf('export function sortFeedRows', start))
+    assert.match(body, /RIVAL_VELOCITY_RANK_FAMILY\.(rate|relative|none)/,
+      'family ordinal must be read from RIVAL_VELOCITY_RANK_FAMILY')
+    assert.doesNotMatch(body, /return\s*\[\s*[0-9]/,
+      'family ordinal must not be an inline literal in velocityRankKey')
   })
 
   it('vph 相同按 id 降序，顺序稳定', () => {

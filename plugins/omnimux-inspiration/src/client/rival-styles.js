@@ -389,6 +389,20 @@ export const RIVAL_CSS = `
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
 }
+/* 增速口径说明行（§3.6 三句之一）。此前只有 JSX 没有规则，以浏览器默认
+   p 标签呈现（margin-block:1em 与 .omnimux-rival-detail 的 flex gap 叠加），
+   与原型 .detail-note 的「上分隔线 + 小字号三级色」不一致（四轴复审 O-1）。
+   分隔线照原型；字号与颜色跟随相邻的 .omnimux-rival-detail-time 取房内
+   12px / label-secondary，而不是原型的 11px / label-tertiary——
+   两行相邻，保持同一档字号与可读对比度比逐像素贴原型更重要。 */
+.omnimux-rival-detail-velocity {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-secondary);
+}
 
 /* ── R3 监控池状态条（#3111） ──────────────────────────────────────── */
 .omnimux-rival-pool {

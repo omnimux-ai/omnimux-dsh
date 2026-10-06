@@ -108,6 +108,15 @@
 - 同一 PRD 行另载「指数平滑（近一次权重 0.7）」，实现无平滑：
   **登记遗留，本票不改**（与上一项成对登记，PM signoff R3 §3 要求）。
 
+- **弹窗增速口径说明行的样式（四轴复审 O-1，本轮已修）**：`.omnimux-rival-detail-velocity`
+  自首轮起**只有 JSX 没有 CSS 规则**，以浏览器默认 `<p>` 呈现（默认 `margin-block:1em`
+  与 `.omnimux-rival-detail` 的 `flex gap` 叠加、字号颜色未收敛），与原型 `.detail-note`
+  的「上分隔线 + 小字号三级色」不一致。已补规则：分隔线照原型（`margin:14px 0 0` /
+  `padding-top:12px` / `border-top:1px solid var(--dsw-alias-border-l1)`）；**字号与颜色
+  跟随相邻的 `.omnimux-rival-detail-time` 取房内 `12px` / `label-secondary`，而非原型的
+  `11px` / `label-tertiary`** —— 两行相邻，同档字号与可读对比度优先于逐像素贴原型。
+  验收：近景截图 + 与相邻行同档的字号/颜色断言。
+
 ## 成功标准（Success Criteria）
 
 - 六条验收标准全过：三档降级、C 档无 `/h` 形态、胶囊右上默认+悬停可见、
