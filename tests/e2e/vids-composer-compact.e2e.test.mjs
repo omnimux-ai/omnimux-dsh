@@ -22,7 +22,7 @@ test('E2E-AC-1/2: 紧凑合成器具备收起/展开双态与两个展开触发�
     "data-vids-composer={composerExpanded ? 'expanded' : 'collapsed'}",
     'data-vids-composer-toggle',
     'data-vids-composer-clear',
-    'data-vids-composer-extra',
+    'className="gvids-composer-extra"',
   ]) {
     assert.equal(stageSrc.includes(hook), true, `缺少紧凑卡片钩子: ${hook}`)
   }
