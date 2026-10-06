@@ -312,7 +312,12 @@ const WORD_WIDTH_E2E = (word, unit) => [...word].reduce((sum, c) => {
   if (cp > 0x2e7f) return sum + unit
   return sum + unit * (SPACE_FACTOR_E2E[cp] ?? GLYPH_WIDTH_FACTOR_E2E[c] ?? 0.592)
 }, 0)
-const LINE_START_FORBIDDEN_E2E = /[，。、；：？！）］｝》」』〞〟‥…‰％]/
+// R11：｡､･ 归拉回（QA p7 逐行内容实测），保持与实现集同步——
+// 该 oracle 必须永远镜像 rival-masonry.js 的三张集合。
+const LINE_START_PULLBACK_E2E = /[，。、：；？！﹖﹗％｡､･]/
+const LINE_START_HANG_E2E = /[〉】〕）］｝》」』〞〟]/
+const LINE_START_FORBIDDEN_E2E = /[，。、；：？！）］｝》」』〞〟％〉】〕﹗﹖｡､･]/
+const LINE_START_HALFWIDTH_E2E = /[｡､･]/
 // drift guard: GLYPH_WIDTH_FACTOR_E2E must stay identical to
 // GLYPH_WIDTH_FACTOR in rival-masonry.js (assert.equal'd below).
 assert.equal(GLYPH_WIDTH_FACTOR_E2E['#'], 0.619, 'glyph table smoke')
@@ -320,7 +325,7 @@ assert.equal(GLYPH_WIDTH_FACTOR_E2E['#'], 0.619, 'glyph table smoke')
 const LINE_END_FORBIDDEN_E2E = /[（［｛《〈「『【〔［]/
 
 function specWrapLines(text, unit, lineWidth) {
-  const width = Math.max(1, lineWidth - 0.5) // assert.equal'd vs Chrome: sub-px boundary tolerance
+  const width = Math.max(1, lineWidth) // R10: Chrome 装入边界是行宽本身（恰宽即放下）
   const atoms = []
   let open = null
   for (const ch of String(text || '')) {
@@ -347,10 +352,13 @@ function specWrapLines(text, unit, lineWidth) {
     // UAX#14: a line may break after '-' — it joins the left segment (R5).
     if (cp === 0x2d || cp === 0x2010) open = null
   }
-  const widths = atoms.map((atom) => (atom.cjk ? unit : atom.word ? WORD_WIDTH_E2E(atom.word, unit) : 0))
+  const widths = atoms.map((atom) => (atom.cjk
+    ? (LINE_START_HALFWIDTH_E2E.test(atom.cjk) ? unit / 2 : unit)
+    : atom.word ? WORD_WIDTH_E2E(atom.word, unit) : 0))
   let lines = 1
   let used = 0
   let lastAtomW = 0
+  let lineStart = 0
   let pendingCollapsible = false
   let pendingWidth = 0
   for (let i = 0; i < atoms.length; i += 1) {
@@ -365,7 +373,7 @@ function specWrapLines(text, unit, lineWidth) {
     const glue = pendingWidth > 0 && used > 0 ? pendingWidth : 0
     pendingCollapsible = false
     pendingWidth = 0
-    if (used === 0) { used = Math.min(w, width); lastAtomW = used; continue }
+    if (used === 0) { used = Math.min(w, width); lastAtomW = used; lineStart = i; continue }
     if (used + glue + w <= width) {
       // 行尾禁则：开类标点不能悬挂行尾——随下一内容原子一起换行。
       if (atom.cjk && LINE_END_FORBIDDEN_E2E.test(atom.cjk)) {
@@ -381,20 +389,45 @@ function specWrapLines(text, unit, lineWidth) {
           lines += 1
           used = Math.min(w, width)
           lastAtomW = w
+          lineStart = i
           continue
         }
       }
       used += glue + w; lastAtomW = w; continue
     }
-    lines += 1
     if (atom.cjk && lastAtomW > 0 && LINE_START_FORBIDDEN_E2E.test(atom.cjk)) {
-      // kinsoku: a closing punctuation cannot open a line — the previous
-      // character drops down with it (assert.equal'd in the pin test).
-      used = Math.min(lastAtomW + w, width)
-    } else {
-      used = Math.min(w, width)
+      // kinsoku 按码位分（R10 与实现对齐）：悬挂组 ink 半宽挂行尾、
+      // 挂不下拉行尾单元；拉回组把非禁则 head+run 带下行；前驱禁则标点
+      // 挂 run 尾；head 拉空行时挂行尾。
+      let placed = false
+      if (LINE_START_HANG_E2E.test(atom.cjk) && used + w / 2 <= lineWidth) {
+        used += glue + w
+        placed = true
+      }
+      if (!placed) {
+        let j = i - 1
+        while (j >= lineStart && atoms[j].space) j -= 1
+        let runW = 0
+        while (j >= lineStart && atoms[j].cjk && LINE_START_FORBIDDEN_E2E.test(atoms[j].cjk)) {
+          runW += widths[j]
+          j -= 1
+        }
+        while (j >= lineStart && atoms[j].space) j -= 1
+        if (j > lineStart) {
+          lines += 1
+          used = Math.min(widths[j] + runW + w, width)
+          lineStart = j
+          placed = true
+        }
+      }
+      if (!placed) used += glue + w
+      lastAtomW = w
+      continue
     }
+    lines += 1
+    used = Math.min(w, width)
     lastAtomW = w
+    lineStart = i
   }
   return lines
 }
@@ -545,9 +578,10 @@ describe('the spec wrap oracle mirrors the implementation (#3110 R6)', () => {
       assert.equal(specWrapLines(words.join(sep), 14, 60), 1, `U+${cp.toString(16).toUpperCase().padStart(4, '0')} must stay glued`)
     }
     // NBSP still keeps its word-wide run intact at a wider width too.
-    // 行宽 3 字（42px，有效 41.5 容差后 2 字/行）、8 字串、禁则标点落第
-    // 7 字：无禁则时 4 行；Chrome 把前一字带回后该行再容不下 → 5 行。
-    assert.equal(specWrapLines('一二三四五六，七八', 14, 42), 5, 'kinsoku pull-back must add the line Chrome adds')
+    // 行宽 3 字（42px）、8 字串、禁则标点落第 7 字：Chrome 逐行
+    // 一二三/四五六/六，七/八 = 4 行——R10 移除 -0.5 容差后恰宽即放下，
+    // 拉回组把「六」连同「，」带回下行（Chrome 实测 4 行复核）。
+    assert.equal(specWrapLines('一二三四五六，七八', 14, 42), 4, 'kinsoku pull-back must add the line Chrome adds')
     assert.equal(specWrapLines('word boundaries', 14, 194), 1)
   })
 })
@@ -673,6 +707,26 @@ describe('account-monitor card shapes and waterfall (#3110)', () => {
       assert.ok(card.querySelector('.omnimux-rival-card-title'), 'the title is default-visible')
       const pill = card.querySelector('.omnimux-rival-vpill, .omnimux-rival-pill-row')
       assert.ok(pill, `the velocity pill is default-visible; card html: ${card.outerHTML.slice(0, 900)}`)
+    })
+
+    it('renders kit Buttons with a real label span and pills in the production shape (#3166-②)', async () => {
+      // R8 装置整改：shim Button 此前渲染裸文本节点，省略号规则
+      //（.omnimux-rival-act-btn > span:text-overflow）在装置里匹配不到任何
+      // 元素——该修复曾连续两轮不可见。此用例把生产 DOM 形状钉在渲染层：
+      // 每个 act 按钮必须有一个 .label span（生产 Button.tsx 同构）。
+      const mounted = await mountMasonry(1440)
+      open.push(mounted)
+      const card = cardsOf(mounted.container)[0]
+      const actions = [...card.querySelectorAll('.omnimux-rival-act-btn, .omnimux-rival-act-primary')]
+      assert.ok(actions.length > 0, 'the hover layer must render action buttons')
+      for (const btn of actions) {
+        const label = btn.querySelector('span.label')
+        assert.ok(label, `${btn.className} must render its text inside a .label span (production kit DOM)`)
+        assert.equal(label.textContent, btn.textContent, 'the label span carries the whole button text')
+      }
+      const pill = card.querySelector('.omnimux-rival-vpill')
+      assert.ok(pill, 'the velocity pill must render')
+      assert.match(pill.className, /\bon-(media|surface)\b/, 'the pill carries its surface class for the contrast tokens')
     })
 
     it('renders an interacted row in the processed state', async () => {

@@ -212,13 +212,13 @@ export const RIVAL_CSS = `
   color: var(--dsw-alias-label-tertiary);
   transition: opacity 150ms ease, transform 150ms ease, background 120ms ease, color 120ms ease;
 }
-.omnimux-rival-filter-row:hover .omnimux-rival-filter-jump,
-.omnimux-rival-filter-row:focus-within .omnimux-rival-filter-jump {
+.omnimux-rival-filter-row:hover .omnimux-rival-filter-jump:not(:disabled),
+.omnimux-rival-filter-row:focus-within .omnimux-rival-filter-jump:not(:disabled) {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
 }
-.omnimux-rival-filter-jump:hover {
+.omnimux-rival-filter-jump:hover:not(:disabled) {
   border-color: var(--dsw-alias-border-l3);
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
@@ -665,6 +665,15 @@ export const RIVAL_CSS = `
   color: var(--dsw-specific-velocity-rising-fg);
   border: 1px solid var(--dsw-specific-velocity-rising-ring);
   backdrop-filter: blur(4px);
+}
+/* #3166 决策二：叠在媒体上的 rising 走暗房 token（两主题同值）——半透明
+   琥珀底在亮封面上对亮琥珀字实测最劣 ~1.6:1，连大字号 3:1 底线都未过；
+   不透明深琥珀底在亮封面夹具最劣实测 5.43:1（ratio_far 口径），色相仍琥珀、层级不变
+   （hot > rising > 中性）。 */
+.omnimux-rival-vpill.on-media.rising {
+  background: var(--dsw-specific-velocity-rising-bg-media);
+  color: var(--dsw-specific-velocity-rising-fg-media);
+  border: 1px solid var(--dsw-specific-velocity-rising-ring-media);
 }
 .omnimux-rival-vpill.on-media.watch {
   background: var(--dsw-specific-media-pill-bg);

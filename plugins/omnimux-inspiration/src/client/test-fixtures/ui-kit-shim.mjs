@@ -18,7 +18,31 @@ import React from 'react'
 
 const h = React.createElement
 
-export const Button = ({ children, leadingIcon, ...rest }) => h('button', { type: 'button', ...rest }, leadingIcon ?? null, children)
+// 生产 Button 的 DOM 形状（packages/dsh-ui-kit/src/button/Button.tsx）：
+// <button disabled={disabled||loading} aria-busy={loading} aria-disabled>
+//   <span class="slot" aria-hidden>{icon|spinner}</span>
+//   <span class="label">{children}</span></button>
+// 裸文本节点会让「label span 上挂省略号」的规则在装置里匹配不到任何
+// 元素（该缺陷曾连续两轮逃逸，QA 自己改 shim 才测出来）——#3166-②
+// 把 label span 补齐；class 名沿用生产的语义名（css-modules 在生产
+// 里是哈希名，装置断言按结构/类名语义匹配）。
+// R9 补 loading 语义：生产 isDisabled = Boolean(disabled) || loading 并置
+// aria-busy——InspirationPreviewModal 等确实传 loading={analyzing}，
+// shim 完全吞掉会让「loading 时按钮不可点 / busy 态」在装置里不可断言。
+export const Button = ({ children, leadingIcon, disabled, loading, ...rest }) => h(
+  'button',
+  {
+    type: 'button',
+    disabled: Boolean(disabled) || Boolean(loading),
+    'aria-busy': Boolean(loading) || undefined,
+    'aria-disabled': (Boolean(disabled) || Boolean(loading)) || undefined,
+    ...rest,
+  },
+  leadingIcon != null && !loading ? h('span', { className: 'slot', 'aria-hidden': 'true' }, leadingIcon) : null,
+  children != null && children !== ''
+    ? h('span', { className: `label${loading ? ' label-loading' : ''}` }, children)
+    : null,
+)
 
 export const Divider = () => h('hr', null)
 
@@ -86,7 +110,20 @@ export const ConfirmModal = ({ children, ...rest }) => h('div', rest, children)
 
 export const Badge = ({ children, variant, ...rest }) => h('span', { 'data-variant': variant, ...rest }, children)
 
-export const IconButton = ({ children, ...rest }) => h('button', { type: 'button', ...rest }, children)
+// 生产 IconButton 同样把 children 包在 <span class="slot" aria-hidden> 里
+//（loading 时换成 spinner）——裸 children 会让「按钮内部 slot」结构断言
+//（如 .omnimux-rival-filter-jump 的图标承载）在装置里不可见（R9-⑥）。
+export const IconButton = ({ children, disabled, loading, ...rest }) => h(
+  'button',
+  {
+    type: 'button',
+    disabled: Boolean(disabled) || Boolean(loading),
+    'aria-busy': Boolean(loading) || undefined,
+    'aria-disabled': (Boolean(disabled) || Boolean(loading)) || undefined,
+    ...rest,
+  },
+  h('span', { className: 'slot', 'aria-hidden': 'true' }, loading ? null : children),
+)
 
 export const MediaCard = ({ children, coverNode, ...rest }) => h('div', rest, coverNode, children)
 

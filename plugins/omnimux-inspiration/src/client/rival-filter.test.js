@@ -189,6 +189,25 @@ describe('rival-filter — 作品行到卡片', () => {
     assert.equal(post.url, feedRow.url)
     assert.equal(post.cover_http_url, feedRow.cover_src)
   })
+
+  it('cover_key / cover_src / cover_http_url 三字段同源同值（R8-⑦：只吃 cover_src 的回归不可达）', () => {
+    // QA 实测「coverSrc 只吃 cover_src」注入后 534 条 client 测试 0 fail——
+    // 该行为对纯 JS 单测不可达，因为三字段各自由不同消费者读：cover_key
+    // 给卡片媒体占位、cover_src 给详情弹窗、cover_http_url 给复刻链。
+    // 三字段必须同源同值（cover_src 优先，cover_url 兜底），否则某一消费
+    // 侧悄悄拿不到封面。
+    const direct = toRivalCardRow(feedRow)
+    assert.equal(direct.cover_key, feedRow.cover_src)
+    assert.equal(direct.cover_src, feedRow.cover_src)
+    assert.equal(direct.cover_http_url, feedRow.cover_src)
+    // cover_url 兜底同样归一到三个字段（R7-⑨：仅带 cover_url 的行曾被判
+    // 媒体卡但封面为空——has_media 认 cover_url、导出却只认 cover_src）。
+    const viaUrl = toRivalCardRow({ ...feedRow, cover_src: '', cover_url: 'https://cdn.example/c2.jpg' })
+    assert.equal(viaUrl.cover_key, 'https://cdn.example/c2.jpg')
+    assert.equal(viaUrl.cover_src, 'https://cdn.example/c2.jpg')
+    assert.equal(viaUrl.cover_http_url, 'https://cdn.example/c2.jpg')
+    assert.equal(viaUrl.has_media, true)
+  })
 })
 
 describe('rival-filter — v2.1 卡片描述符扩字段', () => {

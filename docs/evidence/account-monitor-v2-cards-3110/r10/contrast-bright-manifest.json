@@ -1,0 +1,1646 @@
+{
+ "url": "http://127.0.0.1:9425/demo.html",
+ "dpr": 2,
+ "entries": [
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-00.png",
+   "idx": 0,
+   "cardId": "ra_1:p1",
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 23k/h",
+   "rect": {
+    "x": 143.6953125,
+    "y": 33,
+    "w": 95.3046875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-01.png",
+   "idx": 1,
+   "cardId": "ra_2:p2",
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 42k/h",
+   "rect": {
+    "x": 377.6953125,
+    "y": 33,
+    "w": 97.3046875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-02.png",
+   "idx": 2,
+   "cardId": "ra_3:p3",
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "飙升 3.4k/h",
+   "rect": {
+    "x": 609.7265625,
+    "y": 33,
+    "w": 101.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(120, 53, 15)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.4)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-03.png",
+   "idx": 3,
+   "cardId": "ra_4:p11",
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "飙升 2.6k/h",
+   "rect": {
+    "x": 841.7265625,
+    "y": 39,
+    "w": 101.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(251, 191, 36, 0.2)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.3)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-04.png",
+   "idx": 4,
+   "cardId": "ra_4:p4",
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "飙升 1.2k/h",
+   "rect": {
+    "x": 1077.7265625,
+    "y": 39,
+    "w": 101.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-05.png",
+   "idx": 5,
+   "cardId": "ra_6:p5",
+   "cls": "omnimux-rival-vpill on-media average",
+   "text": "均速 1.8k/h",
+   "rect": {
+    "x": 389.7265625,
+    "y": 213.625,
+    "w": 85.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.55)",
+    "borderColor": "rgba(255, 255, 255, 0.16)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-06.png",
+   "idx": 6,
+   "cardId": "ra_5:p6",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "观察 480/h",
+   "rect": {
+    "x": 860.8203125,
+    "y": 277,
+    "w": 82.1796875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-07.png",
+   "idx": 7,
+   "cardId": "ra_5:p12",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "观察 260/h",
+   "rect": {
+    "x": 1096.8203125,
+    "y": 296.125,
+    "w": 82.1796875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-08.png",
+   "idx": 8,
+   "cardId": "ra_7:p7",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "观察 320/h",
+   "rect": {
+    "x": 628.8203125,
+    "y": 363.5,
+    "w": 82.1796875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-09.png",
+   "idx": 9,
+   "cardId": "ra_1:p8",
+   "cls": "omnimux-rival-vpill on-media relative",
+   "text": "该号 4.2x",
+   "rect": {
+    "x": 1109.3125,
+    "y": 450.125,
+    "w": 73.6875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.55)",
+    "borderColor": "rgba(255, 255, 255, 0.16)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-10.png",
+   "idx": 10,
+   "cardId": "ra_2:p9",
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "飙升 6.8k/h",
+   "rect": {
+    "x": 137.7265625,
+    "y": 478.5546875,
+    "w": 101.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-11.png",
+   "idx": 11,
+   "cardId": "ra_3:p10",
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 21k/h",
+   "rect": {
+    "x": 851.6953125,
+    "y": 528.125,
+    "w": 95.3046875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-12.png",
+   "idx": 12,
+   "cardId": "ra_4:e1",
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "rising 1.9k/h",
+   "rect": {
+    "x": 596.5703125,
+    "y": 645.5,
+    "w": 110.4296875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(251, 191, 36, 0.2)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.3)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-13.png",
+   "idx": 13,
+   "cardId": "ra_5:e2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 210/h",
+   "rect": {
+    "x": 141.1171875,
+    "y": 665.1796875,
+    "w": 93.8828125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-14.png",
+   "idx": 14,
+   "cardId": "ra_4:e4",
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 5.1k/h",
+   "rect": {
+    "x": 140.2421875,
+    "y": 825.1796875,
+    "w": 94.7578125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-15.png",
+   "idx": 15,
+   "cardId": "ra_4:e5",
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "rising 900/h",
+   "rect": {
+    "x": 835.625,
+    "y": 864.625,
+    "w": 107.375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(251, 191, 36, 0.2)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.3)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-16.png",
+   "idx": 16,
+   "cardId": "ra_5:e6",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 80/h",
+   "rect": {
+    "x": 385.0078125,
+    "y": 867.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-17.png",
+   "idx": 17,
+   "cardId": "ra_4:e7",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 60/h",
+   "rect": {
+    "x": 621.0078125,
+    "y": 883.5,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-18.png",
+   "idx": 18,
+   "cardId": "ra_4:w1",
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 3.1k/h",
+   "rect": {
+    "x": 1084.2421875,
+    "y": 901.6796875,
+    "w": 94.7578125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-19.png",
+   "idx": 19,
+   "cardId": "ra_5:w2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 120/h",
+   "rect": {
+    "x": 141.1171875,
+    "y": 1003.1796875,
+    "w": 93.8828125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-20.png",
+   "idx": 20,
+   "cardId": "ra_5:w3",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 90/h",
+   "rect": {
+    "x": 385.0078125,
+    "y": 1027.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-21.png",
+   "idx": 21,
+   "cardId": "ra_7:w5",
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "rising 2.2k/h",
+   "rect": {
+    "x": 600.5703125,
+    "y": 1037.5,
+    "w": 110.4296875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(120, 53, 15)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.4)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-22.png",
+   "idx": 22,
+   "cardId": "ra_3:w6",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 140/h",
+   "rect": {
+    "x": 1089.1171875,
+    "y": 1055.6796875,
+    "w": 93.8828125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-23.png",
+   "idx": 23,
+   "cardId": "ra_4:w7",
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 4.4k/h",
+   "rect": {
+    "x": 140.2421875,
+    "y": 1163.1796875,
+    "w": 94.7578125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-24.png",
+   "idx": 24,
+   "cardId": "ra_5:w8",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 110/h",
+   "rect": {
+    "x": 377.1171875,
+    "y": 1187.1796875,
+    "w": 93.8828125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-25.png",
+   "idx": 25,
+   "cardId": "ra_2:w9",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 70/h",
+   "rect": {
+    "x": 861.0078125,
+    "y": 1196.625,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-26.png",
+   "idx": 26,
+   "cardId": "ra_6:w10",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 55/h",
+   "rect": {
+    "x": 153.0078125,
+    "y": 1335.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-27.png",
+   "idx": 27,
+   "cardId": "ra_4:w11",
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 9.9k/h",
+   "rect": {
+    "x": 376.2421875,
+    "y": 1347.1796875,
+    "w": 94.7578125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(217, 45, 32)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-28.png",
+   "idx": 28,
+   "cardId": "ra_5:w12",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 33/h",
+   "rect": {
+    "x": 621.0078125,
+    "y": 1374,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-29.png",
+   "idx": 29,
+   "cardId": "ra_4:u1",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 11/h",
+   "rect": {
+    "x": 857.0078125,
+    "y": 1383.25,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-30.png",
+   "idx": 30,
+   "cardId": "ra_5:u2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 12/h",
+   "rect": {
+    "x": 1093.0078125,
+    "y": 1392.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-31.png",
+   "idx": 31,
+   "cardId": "ra_1:u3",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 13/h",
+   "rect": {
+    "x": 389.0078125,
+    "y": 1519.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-32.png",
+   "idx": 32,
+   "cardId": "ra_2:u4",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 14/h",
+   "rect": {
+    "x": 861.0078125,
+    "y": 1537.25,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-33.png",
+   "idx": 33,
+   "cardId": "ra_4:v1",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 21/h",
+   "rect": {
+    "x": 1093.0078125,
+    "y": 1552.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-34.png",
+   "idx": 34,
+   "cardId": "ra_5:v2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 22/h",
+   "rect": {
+    "x": 621.0078125,
+    "y": 1612,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-35.png",
+   "idx": 35,
+   "cardId": "ra_4:v3",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 23/h",
+   "rect": {
+    "x": 1093.0078125,
+    "y": 1712.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-36.png",
+   "idx": 36,
+   "cardId": "ra_5:v4",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 24/h",
+   "rect": {
+    "x": 857.0078125,
+    "y": 1741.875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-37.png",
+   "idx": 37,
+   "cardId": "ra_4:v5",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 25/h",
+   "rect": {
+    "x": 621.0078125,
+    "y": 1772,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-38.png",
+   "idx": 38,
+   "cardId": "ra_5:v6",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 26/h",
+   "rect": {
+    "x": 149.0078125,
+    "y": 1786.734375,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-39.png",
+   "idx": 39,
+   "cardId": "ra_4:q1",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 31/h",
+   "rect": {
+    "x": 1093.0078125,
+    "y": 1872.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "dark",
+   "file": "/tmp/r10/contrast-bright/dark-40.png",
+   "idx": 40,
+   "cardId": "ra_5:q2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 32/h",
+   "rect": {
+    "x": 857.0078125,
+    "y": 1901.875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgba(255, 255, 255, 0.72)",
+    "borderColor": "rgba(255, 255, 255, 0.12)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-00.png",
+   "idx": 0,
+   "cardId": "ra_1:p1",
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 23k/h",
+   "rect": {
+    "x": 143.6953125,
+    "y": 33,
+    "w": 95.3046875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-01.png",
+   "idx": 1,
+   "cardId": "ra_2:p2",
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 42k/h",
+   "rect": {
+    "x": 377.6953125,
+    "y": 33,
+    "w": 97.3046875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-02.png",
+   "idx": 2,
+   "cardId": "ra_3:p3",
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "飙升 3.4k/h",
+   "rect": {
+    "x": 609.7265625,
+    "y": 33,
+    "w": 101.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(120, 53, 15)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.4)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-03.png",
+   "idx": 3,
+   "cardId": "ra_4:p11",
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "飙升 2.6k/h",
+   "rect": {
+    "x": 841.7265625,
+    "y": 39,
+    "w": 101.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(217, 119, 6, 0.16)",
+    "color": "rgb(146, 64, 14)",
+    "borderColor": "rgba(217, 119, 6, 0.3)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-04.png",
+   "idx": 4,
+   "cardId": "ra_4:p4",
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "飙升 1.2k/h",
+   "rect": {
+    "x": 1077.7265625,
+    "y": 39,
+    "w": 101.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-05.png",
+   "idx": 5,
+   "cardId": "ra_6:p5",
+   "cls": "omnimux-rival-vpill on-media average",
+   "text": "均速 1.8k/h",
+   "rect": {
+    "x": 389.7265625,
+    "y": 213.625,
+    "w": 85.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.55)",
+    "borderColor": "rgba(255, 255, 255, 0.16)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-06.png",
+   "idx": 6,
+   "cardId": "ra_5:p6",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "观察 480/h",
+   "rect": {
+    "x": 860.8203125,
+    "y": 277,
+    "w": 82.1796875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-07.png",
+   "idx": 7,
+   "cardId": "ra_5:p12",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "观察 260/h",
+   "rect": {
+    "x": 1096.8203125,
+    "y": 296.125,
+    "w": 82.1796875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-08.png",
+   "idx": 8,
+   "cardId": "ra_7:p7",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "观察 320/h",
+   "rect": {
+    "x": 628.8203125,
+    "y": 363.5,
+    "w": 82.1796875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-09.png",
+   "idx": 9,
+   "cardId": "ra_1:p8",
+   "cls": "omnimux-rival-vpill on-media relative",
+   "text": "该号 4.2x",
+   "rect": {
+    "x": 1109.3125,
+    "y": 450.125,
+    "w": 73.6875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.55)",
+    "borderColor": "rgba(255, 255, 255, 0.16)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-10.png",
+   "idx": 10,
+   "cardId": "ra_2:p9",
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "飙升 6.8k/h",
+   "rect": {
+    "x": 137.7265625,
+    "y": 478.5546875,
+    "w": 101.2734375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": true
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-11.png",
+   "idx": 11,
+   "cardId": "ra_3:p10",
+   "cls": "omnimux-rival-vpill on-media hot",
+   "text": "爆款 21k/h",
+   "rect": {
+    "x": 851.6953125,
+    "y": 528.125,
+    "w": 95.3046875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-12.png",
+   "idx": 12,
+   "cardId": "ra_4:e1",
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "rising 1.9k/h",
+   "rect": {
+    "x": 596.5703125,
+    "y": 645.5,
+    "w": 110.4296875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(217, 119, 6, 0.16)",
+    "color": "rgb(146, 64, 14)",
+    "borderColor": "rgba(217, 119, 6, 0.3)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-13.png",
+   "idx": 13,
+   "cardId": "ra_5:e2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 210/h",
+   "rect": {
+    "x": 141.1171875,
+    "y": 665.1796875,
+    "w": 93.8828125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-14.png",
+   "idx": 14,
+   "cardId": "ra_4:e4",
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 5.1k/h",
+   "rect": {
+    "x": 140.2421875,
+    "y": 825.1796875,
+    "w": 94.7578125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-15.png",
+   "idx": 15,
+   "cardId": "ra_4:e5",
+   "cls": "omnimux-rival-vpill on-surface rising",
+   "text": "rising 900/h",
+   "rect": {
+    "x": 835.625,
+    "y": 864.625,
+    "w": 107.375,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(217, 119, 6, 0.16)",
+    "color": "rgb(146, 64, 14)",
+    "borderColor": "rgba(217, 119, 6, 0.3)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-16.png",
+   "idx": 16,
+   "cardId": "ra_5:e6",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 80/h",
+   "rect": {
+    "x": 385.0078125,
+    "y": 867.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-17.png",
+   "idx": 17,
+   "cardId": "ra_4:e7",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 60/h",
+   "rect": {
+    "x": 621.0078125,
+    "y": 883.5,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-18.png",
+   "idx": 18,
+   "cardId": "ra_4:w1",
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 3.1k/h",
+   "rect": {
+    "x": 1084.2421875,
+    "y": 901.6796875,
+    "w": 94.7578125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-19.png",
+   "idx": 19,
+   "cardId": "ra_5:w2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 120/h",
+   "rect": {
+    "x": 141.1171875,
+    "y": 1003.1796875,
+    "w": 93.8828125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-20.png",
+   "idx": 20,
+   "cardId": "ra_5:w3",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 90/h",
+   "rect": {
+    "x": 385.0078125,
+    "y": 1027.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-21.png",
+   "idx": 21,
+   "cardId": "ra_7:w5",
+   "cls": "omnimux-rival-vpill on-media rising",
+   "text": "rising 2.2k/h",
+   "rect": {
+    "x": 600.5703125,
+    "y": 1037.5,
+    "w": 110.4296875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(120, 53, 15)",
+    "color": "rgb(251, 191, 36)",
+    "borderColor": "rgba(251, 191, 36, 0.4)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-22.png",
+   "idx": 22,
+   "cardId": "ra_3:w6",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 140/h",
+   "rect": {
+    "x": 1089.1171875,
+    "y": 1055.6796875,
+    "w": 93.8828125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-23.png",
+   "idx": 23,
+   "cardId": "ra_4:w7",
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 4.4k/h",
+   "rect": {
+    "x": 140.2421875,
+    "y": 1163.1796875,
+    "w": 94.7578125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-24.png",
+   "idx": 24,
+   "cardId": "ra_5:w8",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 110/h",
+   "rect": {
+    "x": 377.1171875,
+    "y": 1187.1796875,
+    "w": 93.8828125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-25.png",
+   "idx": 25,
+   "cardId": "ra_2:w9",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 70/h",
+   "rect": {
+    "x": 861.0078125,
+    "y": 1196.625,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-26.png",
+   "idx": 26,
+   "cardId": "ra_6:w10",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 55/h",
+   "rect": {
+    "x": 153.0078125,
+    "y": 1335.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-27.png",
+   "idx": 27,
+   "cardId": "ra_4:w11",
+   "cls": "omnimux-rival-vpill on-surface hot",
+   "text": "hot 9.9k/h",
+   "rect": {
+    "x": 376.2421875,
+    "y": 1347.1796875,
+    "w": 94.7578125,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(220, 38, 38)",
+    "color": "rgb(255, 255, 255)",
+    "borderColor": "rgb(255, 255, 255)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-28.png",
+   "idx": 28,
+   "cardId": "ra_5:w12",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 33/h",
+   "rect": {
+    "x": 621.0078125,
+    "y": 1374,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-29.png",
+   "idx": 29,
+   "cardId": "ra_4:u1",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 11/h",
+   "rect": {
+    "x": 857.0078125,
+    "y": 1383.25,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-30.png",
+   "idx": 30,
+   "cardId": "ra_5:u2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 12/h",
+   "rect": {
+    "x": 1093.0078125,
+    "y": 1392.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-31.png",
+   "idx": 31,
+   "cardId": "ra_1:u3",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 13/h",
+   "rect": {
+    "x": 389.0078125,
+    "y": 1519.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-32.png",
+   "idx": 32,
+   "cardId": "ra_2:u4",
+   "cls": "omnimux-rival-vpill on-media watch",
+   "text": "watch 14/h",
+   "rect": {
+    "x": 861.0078125,
+    "y": 1537.25,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgb(17, 17, 19)",
+    "color": "rgba(255, 255, 255, 0.85)",
+    "borderColor": "rgba(255, 255, 255, 0.24)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-33.png",
+   "idx": 33,
+   "cardId": "ra_4:v1",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 21/h",
+   "rect": {
+    "x": 1093.0078125,
+    "y": 1552.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-34.png",
+   "idx": 34,
+   "cardId": "ra_5:v2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 22/h",
+   "rect": {
+    "x": 621.0078125,
+    "y": 1612,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-35.png",
+   "idx": 35,
+   "cardId": "ra_4:v3",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 23/h",
+   "rect": {
+    "x": 1093.0078125,
+    "y": 1712.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-36.png",
+   "idx": 36,
+   "cardId": "ra_5:v4",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 24/h",
+   "rect": {
+    "x": 857.0078125,
+    "y": 1741.875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-37.png",
+   "idx": 37,
+   "cardId": "ra_4:v5",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 25/h",
+   "rect": {
+    "x": 621.0078125,
+    "y": 1772,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-38.png",
+   "idx": 38,
+   "cardId": "ra_5:v6",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 26/h",
+   "rect": {
+    "x": 149.0078125,
+    "y": 1786.734375,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-39.png",
+   "idx": 39,
+   "cardId": "ra_4:q1",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 31/h",
+   "rect": {
+    "x": 1093.0078125,
+    "y": 1872.1796875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  },
+  {
+   "theme": "light",
+   "file": "/tmp/r10/contrast-bright/light-40.png",
+   "idx": 40,
+   "cardId": "ra_5:q2",
+   "cls": "omnimux-rival-vpill on-surface watch",
+   "text": "watch 32/h",
+   "rect": {
+    "x": 857.0078125,
+    "y": 1901.875,
+    "w": 85.9921875,
+    "h": 24
+   },
+   "css": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(75, 85, 99)",
+    "borderColor": "rgb(229, 231, 235)"
+   },
+   "isDone": false
+  }
+ ]
+}

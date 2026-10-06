@@ -14,6 +14,14 @@
  * family IS redefined for light because the spec's pill colours differ there
  * (#f0453a → #dc2626, amber ring adjusts).
  *
+ * #3166 决策二（WCAG AA ≥4.5:1，像素法实测）：hot 暗色底 #f0453a 实测仅
+ * 3.84:1，改为 #d92d20（同色相更深明度）→ ratio_far 4.79:1（像素法最远
+ * 文字桶 vs 背景众数桶；PM contrastExtreme 口径同点位 4.83）；rising 叠在媒体上的
+ * 胶囊文字在亮封面下最劣仅 1.6:1——半透明琥珀底无法保底，on-media 统一
+ * 改用暗房深色琥珀底（--dsw-specific-velocity-rising-*-media，两主题同值，
+ * 与 B15 暗房原则一致）；亮色 surface 的 rising 前景 #d97706 → #92400e
+ *（同为琥珀 600→800，仅降明度）。层级语义不变：hot 仍最热、rising 次之。
+ *
  * Raw colour values are token definitions, not component colours — the
  * UI03 bare-colour rule is exempted per line for exactly this file purpose.
  */
@@ -22,7 +30,7 @@ export const RIVAL_TOKENS_ID = 'omnimux-rival-tokens'
 
 export const RIVAL_TOKENS_CSS = `
 :root {
-  --dsw-specific-velocity-hot-bg: #f0453a; /* exempt-ui03 token definition */
+  --dsw-specific-velocity-hot-bg: #d92d20; /* exempt-ui03 token definition · #3166: was #f0453a (3.84:1 fail) */
   --dsw-specific-velocity-hot-fg: #ffffff; /* exempt-ui03 token definition */
   --dsw-specific-velocity-hot-ring: rgba(240,69,58,0.45); /* exempt-ui03 token definition */
   --dsw-specific-velocity-rising-fg: #fbbf24; /* exempt-ui03 token definition */
@@ -35,8 +43,13 @@ export const RIVAL_TOKENS_CSS = `
   --dsw-specific-media-ink: #111113; /* exempt-ui03 token definition */
   --dsw-specific-media-badge-bg: rgba(0,0,0,0.55); /* exempt-ui03 token definition */
   --dsw-specific-media-badge-bg-strong: rgba(0,0,0,0.60); /* exempt-ui03 token definition */
-  --dsw-specific-media-pill-bg: rgba(0,0,0,0.38); /* exempt-ui03 token definition */
-  --dsw-specific-media-pill-bg-dim: rgba(0,0,0,0.30); /* exempt-ui03 token definition */
+  /* #3166 M2：半透明中性媒体胶囊在亮封面上最劣对比度 1.63（均速@L95，
+   * 临界点约 65% 灰），亮主题已处理态同样受害（2.43/2.70）——比已裁定
+   * 不可交付的琥珀档 1.61 更差。改不透明 media-ink（见下方 pill-bg 令牌）：
+   * 26 组合 × 2 主题像素法实测 fail=0、最小 ratio_far 4.79（ratio_all 均值
+   * 口径最小 3.46 系抗锯齿边缘计入，不作判据）；已处理态（dim 档）同值。 */
+  --dsw-specific-media-pill-bg: #111113; /* exempt-ui03 token definition · #3166: was rgba(0,0,0,0.38) (1.63:1 fail on light covers) */
+  --dsw-specific-media-pill-bg-dim: #111113; /* exempt-ui03 token definition · #3166: was rgba(0,0,0,0.30) (2.43:1 fail on light covers) */
   --dsw-specific-media-chip-bg: rgba(0,0,0,0.40); /* exempt-ui03 token definition */
   --dsw-specific-media-btn-bg: rgba(0,0,0,0.45); /* exempt-ui03 token definition */
   --dsw-specific-media-btn-hover: rgba(255,255,255,0.16); /* exempt-ui03 token definition */
@@ -48,12 +61,19 @@ export const RIVAL_TOKENS_CSS = `
   --dsw-specific-media-scrim: linear-gradient(180deg, rgba(0,0,0,0.02) 40%, rgba(0,0,0,0.62) 100%); /* exempt-ui03 token definition */
   --dsw-specific-media-overlay: linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.30) 45%, rgba(0,0,0,0.82) 100%); /* exempt-ui03 token definition */
   --dsw-specific-media-glow-hot: rgba(240,69,58,0.12); /* exempt-ui03 token definition */
+  /* #3166 决策二：on-media rising 的暗房色（两主题同值、不在 light 重定义）——
+     半透明琥珀底在亮封面上对亮琥珀字仅 ~1.6:1；深色不透明琥珀底在纯白
+     封面夹具实测最劣 5.43:1（ratio_far 口径；α=0.9 时封面色透上来只剩
+     4.15:1，R9 已去 alpha 改不透明），色相仍为琥珀系。 */
+  --dsw-specific-velocity-rising-fg-media: #fbbf24; /* exempt-ui03 token definition */
+  --dsw-specific-velocity-rising-bg-media: #78350f; /* exempt-ui03 token definition */
+  --dsw-specific-velocity-rising-ring-media: rgba(251,191,36,0.40); /* exempt-ui03 token definition */
 }
 html[data-theme="light"] {
   --dsw-specific-velocity-hot-bg: #dc2626; /* exempt-ui03 token definition */
   --dsw-specific-velocity-hot-fg: #ffffff; /* exempt-ui03 token definition */
   --dsw-specific-velocity-hot-ring: rgba(220,38,38,0.30); /* exempt-ui03 token definition */
-  --dsw-specific-velocity-rising-fg: #d97706; /* exempt-ui03 token definition */
+  --dsw-specific-velocity-rising-fg: #92400e; /* exempt-ui03 token definition · #3166: was #d97706 (2.51:1 fail) */
   --dsw-specific-velocity-rising-bg: rgba(217,119,6,0.16); /* exempt-ui03 token definition */
   --dsw-specific-velocity-rising-ring: rgba(217,119,6,0.30); /* exempt-ui03 token definition */
 }

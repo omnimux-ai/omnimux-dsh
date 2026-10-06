@@ -90,6 +90,9 @@ export const RIVAL_GLYPH_WIDTH_FACTOR = {
   s: 0.513, t: 0.353, u: 0.573, v: 0.531, w: 0.764, x: 0.514,
   y: 0.532, z: 0.528,
   '{': 0.371, '|': 0.248, '}': 0.371, '~': 0.619,
+  // U+2E3B ⸻（THREE-EM DASH）：Chrome 实测字形宽 36.56px @14px（系数
+  // 2.611），断行按「独立一格、前后皆可断」建模（见 wrapAtoms 内注释）。
+  '⸻': 2.611,
 }
 /** 可折叠 ASCII 空白宽度系数——真机标定：14px 下空格实测 3.79px。 */
 const SPACE_WIDTH_FACTOR = 0.271
@@ -131,40 +134,31 @@ const SPACE_FACTOR = {
  * 它们走前面的空格原子分支，宽度按 SPACE_FACTOR 计。
  * 集合按「断后」语义使用：并入左侧词段、段后允许断行（与连字符同形）。
  * 类归属与 Chrome 实测对照见 harness/codepoint-probe.mjs（R7 扩到全集）。
+ * 计数口径（#3166-⑤，R9-② 重核）：实收 133 条 = LineBreak.txt **18.0.0**
+ * 官方 EX∪HH∪HY∪B2∪BA 非空格全集 306 减 Chrome 定制 {0x0021, 0x007C}、
+ * 减恒不可达的 >0x2E7F 成员 172 条、加回 QU 断后码位 0x201D（经 word
+ * 原子路径断后，真机实测 5 词夹具 5 行）。——它们被 CJK 分支（cp > 0x2E7F）
+ * 先行拦截，词段判定永远走不到；R8 删掉「非 CJK 守卫」后这段成了死码
+ * 并顺带把 168 个非 CJK 高码位标点的断行语义静默改成了「逐字可断」，
+ * 删出集合即恢复「断后码位」集合的真实适用范围。版本漂移须重跑差集；
+ * 仅新增 ≤0x2E7F 断后码位应回到本集合。
  */
 const BREAK_AFTER = new Set([
-  0x002d, 0x003f, 0x00ad, 0x058a, 0x05be, 0x05c6, 0x061b, 0x061d, 0x061e,
-  0x061f, 0x06d4, 0x07f9, 0x0964, 0x0965, 0x0e5a, 0x0e5b, 0x0f0b, 0x0f0d, 0x0f0e,
-  0x0f0f, 0x0f10, 0x0f11, 0x0f14, 0x0f34, 0x0f7f, 0x0f85, 0x0fbe, 0x0fbf, 0x0fd2,
-  0x104a, 0x104b, 0x1361, 0x1400, 0x16eb, 0x16ec, 0x16ed, 0x1735, 0x1736, 0x17d4,
-  0x17d5, 0x17d8, 0x17da, 0x1802, 0x1803, 0x1804, 0x1805, 0x1808, 0x1809, 0x1944,
-  0x1945, 0x1b4e, 0x1b4f, 0x1b5a, 0x1b5b, 0x1b5d, 0x1b5e, 0x1b5f, 0x1b60, 0x1b7d,
-  0x1b7e, 0x1b7f, 0x1c3b, 0x1c3c, 0x1c3d, 0x1c3e, 0x1c3f, 0x1c7e, 0x1c7f, 0x2010,
-  0x2012, 0x2013, 0x2014, 0x2027, 0x2056, 0x2058, 0x2059, 0x205a, 0x205b, 0x205d,
-  0x205e, 0x2762, 0x2763, 0x2800, 0x2cf9, 0x2cfa, 0x2cfb, 0x2cfc, 0x2cfe, 0x2cff,
-  0x2d70, 0x2e0e, 0x2e0f, 0x2e10, 0x2e11, 0x2e12, 0x2e13, 0x2e14, 0x2e15, 0x2e17,
-  0x2e19, 0x2e2a, 0x2e2b, 0x2e2c, 0x2e2d, 0x2e2e, 0x2e30, 0x2e31, 0x2e33, 0x2e34,
-  0x2e3a, 0x2e3b, 0x2e3c, 0x2e3d, 0x2e3e, 0x2e40, 0x2e41, 0x2e43, 0x2e44, 0x2e45,
-  0x2e46, 0x2e47, 0x2e48, 0x2e49, 0x2e4a, 0x2e4c, 0x2e4e, 0x2e4f, 0x2e53, 0x2e54,
-  0x2e5d, 0x2e60, 0x2e61, 0xa4fe, 0xa4ff, 0xa60d, 0xa60e, 0xa60f, 0xa6f3, 0xa6f4,
-  0xa6f5, 0xa6f6, 0xa6f7, 0xa876, 0xa877, 0xa8ce, 0xa8cf, 0xa92e, 0xa92f, 0xa9c7,
-  0xa9c8, 0xa9c9, 0xa9cf, 0xaa40, 0xaa41, 0xaa42, 0xaa44, 0xaa45, 0xaa46, 0xaa47,
-  0xaa48, 0xaa49, 0xaa4a, 0xaa4b, 0xaa5d, 0xaa5e, 0xaa5f, 0xaaf0, 0xaaf1, 0xabeb,
-  0xfe15, 0xfe16, 0xfe56, 0xfe57, 0xff01, 0xff1f, 0x10100, 0x10101, 0x10102,
-  0x1039f, 0x103d0, 0x10857, 0x1091f, 0x10a50, 0x10a51, 0x10a52, 0x10a53, 0x10a54,
-  0x10a55, 0x10a56, 0x10a57, 0x10af0, 0x10af1, 0x10af2, 0x10af3, 0x10af4, 0x10af5,
-  0x10b39, 0x10b3a, 0x10b3b, 0x10b3c, 0x10b3d, 0x10b3e, 0x10b3f, 0x10d6e, 0x10ead,
-  0x10ed0, 0x11047, 0x11048, 0x110be, 0x110bf, 0x110c0, 0x110c1, 0x11140, 0x11141,
-  0x11142, 0x11143, 0x111c5, 0x111c6, 0x111c8, 0x111dd, 0x111de, 0x111df, 0x11238,
-  0x11239, 0x1123b, 0x1123c, 0x112a9, 0x1133d, 0x1135d, 0x1144b, 0x1144c, 0x1144d,
-  0x1144e, 0x1145a, 0x1145b, 0x115c2, 0x115c3, 0x115c4, 0x115c5, 0x115c9, 0x115ca,
-  0x115cb, 0x115cc, 0x115cd, 0x115ce, 0x115cf, 0x115d0, 0x115d1, 0x115d2, 0x115d3,
-  0x115d4, 0x115d5, 0x115d6, 0x115d7, 0x11641, 0x11642, 0x1173c, 0x1173d, 0x1173e,
-  0x11944, 0x11945, 0x11946, 0x11a41, 0x11a42, 0x11a43, 0x11a44, 0x11a9a, 0x11a9b,
-  0x11a9c, 0x11aa1, 0x11aa2, 0x11c41, 0x11c42, 0x11c43, 0x11c44, 0x11c45, 0x11c71,
-  0x11ef2, 0x11ef7, 0x11ef8, 0x11f43, 0x11f44, 0x11fff, 0x12470, 0x12471, 0x12472,
-  0x12473, 0x12474, 0x16a6e, 0x16a6f, 0x16af5, 0x16b37, 0x16b38, 0x16b39, 0x16b44,
-  0x16d6e, 0x16d6f, 0x16e97, 0x16e98, 0x1bc9f, 0x1da87, 0x1da88, 0x1da89, 0x1da8a,
+  0x002d, 0x003f, 0x00ad, 0x058a, 0x05be, 0x05c6, 0x061b, 0x061d, 0x061e, 0x061f,
+  0x06d4, 0x07f9, 0x0964, 0x0965, 0x0e5a, 0x0e5b, 0x0f0b, 0x0f0d, 0x0f0e, 0x0f0f,
+  0x0f10, 0x0f11, 0x0f14, 0x0f34, 0x0f7f, 0x0f85, 0x0fbe, 0x0fbf, 0x0fd2, 0x104a,
+  0x104b, 0x1361, 0x1400, 0x16eb, 0x16ec, 0x16ed, 0x1735, 0x1736, 0x17d4, 0x17d5,
+  0x17d8, 0x17da, 0x1802, 0x1803, 0x1804, 0x1805, 0x1808, 0x1809, 0x1944, 0x1945,
+  0x1b4e, 0x1b4f, 0x1b5a, 0x1b5b, 0x1b5d, 0x1b5e, 0x1b5f, 0x1b60, 0x1b7d, 0x1b7e,
+  0x1b7f, 0x1c3b, 0x1c3c, 0x1c3d, 0x1c3e, 0x1c3f, 0x1c7e, 0x1c7f, 0x2010, 0x2012,
+  0x2013, 0x2014, 0x201d, 0x2027, 0x2056, 0x2058, 0x2059, 0x205a, 0x205b, 0x205d,
+  0x205e,
+  0x2762, 0x2763, 0x2800, 0x2cf9, 0x2cfa, 0x2cfb, 0x2cfc, 0x2cfe, 0x2cff, 0x2d70,
+  0x2e0e, 0x2e0f, 0x2e10, 0x2e11, 0x2e12, 0x2e13, 0x2e14, 0x2e15, 0x2e17, 0x2e19,
+  0x2e2a, 0x2e2b, 0x2e2c, 0x2e2d, 0x2e2e, 0x2e30, 0x2e31, 0x2e33, 0x2e34, 0x2e3a,
+  0x2e3b, 0x2e3c, 0x2e3d, 0x2e3e, 0x2e40, 0x2e41, 0x2e43, 0x2e44, 0x2e45, 0x2e46,
+  0x2e47, 0x2e48, 0x2e49, 0x2e4a, 0x2e4c, 0x2e4e, 0x2e4f, 0x2e53, 0x2e54, 0x2e5d,
+  0x2e60, 0x2e61
 ])
 
 function clamp(value, min, max) {
@@ -192,14 +186,13 @@ function textWidthPx(text, unitPx) {
       px += unitPx * (SPACE_FACTOR[cp] ?? SPACE_WIDTH_FACTOR)
       continue
     }
-    px += unitPx * charWidthFactor(ch, cp)
+    px += unitPx * charWidthFactor(ch)
   }
   return px
 }
 
-/** 半宽字符的逐字形宽度系数；>0x2E7F 返回 1（整宽），表外回落均宽。 */
-function charWidthFactor(ch, cp) {
-  if (cp > 0x2e7f) return 1
+/** 半宽字符的逐字形宽度系数；表外回落均宽（词段不含 >0x2E7F 码位）。 */
+function charWidthFactor(ch) {
   return RIVAL_GLYPH_WIDTH_FACTOR[ch] ?? ASCII_WIDTH_FACTOR
 }
 
@@ -216,9 +209,13 @@ function charWidthFactor(ch, cp) {
  *     ∪ ZW {200B}（零宽可断点：断行但宽度 0）
  *     ∪ BK {2028,2029}（Chrome 实测按可折叠空白处理：断行机会而非
  *       强制换行，'white-space:normal' 下与 \n 同行为）；
- *   - 断后码位 = BREAK_AFTER 全集（EX{!} ∪ HH/HY/B2 ∪ BA 非空格成员）：
- *     并入左侧词段、段后允许断行；'?' 是 URL 查询串的唯一断点（QA Q1），
- *     '!' 是 Chrome 定制——同类 EX 但实测不断，已排除并登记分歧；
+ *   - 断后码位 = BREAK_AFTER 的 ≤0x2E7F 成员（EX{!} ∪ HH/HY/B2 ∪ BA 非
+ *     空格成员的半宽段）：并入左侧词段、段后允许断行；'?' 是 URL 查询串
+ *     的唯一断点（QA Q1），'!' 是 Chrome 定制——同类 EX 但实测不断，
+ *     已排除并登记分歧；>0x2E7F 的官方断后成员由 CJK 分支承载；
+ *   - U+2E3B ⸻ 自成一格：Chrome 实测前后皆可断（双向断点），宽度按
+ *     字形表真实值——并入词段（断后）会把 5 词夹具算成 5 行、按整词
+ *     处理只得 1 行，而真机是 9 行；
  *   - 不可断 = {00A0,202F,FEFF,2060,2007} —— 并入当前词；
  *   - U+000B 垂直制表与 U+000C 换页 Chrome 实测均不断行，按词内字符处理
  *     （R7-Q2：000C 曾被注释为「CSS 文档空白」并当断点，与真机不符，
@@ -233,10 +230,19 @@ function charWidthFactor(ch, cp) {
  * 已知偏差（文档化上界，不假装精确）：
  *   - 行尾空格宽度被吞 → 模型可能少算一点点宽度（行数不受影响的情况
  *     远多于受影响）；
- *   - 行首禁则只覆盖 CJK 收类标点（，。、；：？！…）且只带回 1 个原子：
- *     连续多个禁则标点、行尾禁则（开类标点）未模拟 → 仍可能少算；
+ *   - 行首禁则只覆盖 CJK 收类标点（，。、；：？！… 等）：放不下时前一
+ *     CJK 字与标点一起下行（拉回，只带回 1 个原子——前驱是不可断词
+ *     原子时标点留行尾，行数与悬挂同形）；连续多个禁则标点仍可能少算；
+ *     行尾禁则（开类标点）已实现——该旧注曾误写「行尾禁则未模拟」
+ *     （#3166-⑥ 修正）；
  *   - 宽度模型按字符分类近似 → 双向偏差：41 卡夹具里 e5 估算 182 vs
- *     实测 162（多算 20px，安全方向），e4 同向（多算 20px）。
+ *     实测 162（多算 20px，安全方向），e4 同向（多算 20px）；
+ *   - U+2E3B ⸻（THREE-EM DASH）Chrome 实测前后皆可断、字形宽
+ *     36.56px——已按「独立一格、双向可断 + 实测宽度」建模，探针行数
+ *     与真机一致（#3166-⑦/R9 复核）；
+ *     社交内容常见 U+2764 ❤（−4.454）、U+2192 →（−4.242）、emoji（−4.0）
+ *     为低估方向，U+200D ZWJ（+8.288）与 U+2011（+1.835）为安全方向，
+ *     最坏低估是 U+2E3B 自身宽度差 −28.271px（#3166-④ 实测口径）。
  * @param {string} text
  * @returns {Array<{space?:boolean, collapsible?:boolean, w?:number, cjk?:boolean, word?:boolean, text?:string}>}
  *   原子形状：空白 {space, collapsible, w=unitPx 宽度系数}；
@@ -283,29 +289,35 @@ function wrapAtoms(text) {
       open.text += ch
       continue
     }
-    if (cp > 0x2e7f && !BREAK_AFTER.has(cp)) {
+    // U+2E3B ⸻（THREE-EM DASH）：Chrome 实测前后皆可断（B2 在真机的
+    // 行为是「自成一格」而不是「并入前词段」），按独立 word 原子处理，
+    // 宽度走字形表 2.611 系数。
+    if (cp === 0x2e3b) {
+      open = null
+      atoms.push({ word: true, text: ch })
+      continue
+    }
+    if (cp > 0x2e7f) {
       open = null
       atoms.push({ cjk: true, ch })
       continue
     }
-    // 断后码位只有在「非 CJK 字符之后」才断行：EX/BA 断后规则在 CJK
-    // 上下文中被禁则覆盖（全角 ？！ 等收类标点在 CJK 后不断后，
-    // Chrome 实测 zwj-emoji/punct 夹具卡仍按整词断——R7 复测发现
-    // 把 FF01/FF1F 与 ASCII EX 一视同仁会多算 1 行=高估 20px）。
-    const prevCp = atoms.length && atoms[atoms.length - 1].cjk
-      ? atoms[atoms.length - 1].ch.codePointAt(0) : 0
-    const breakAfterAllowed = BREAK_AFTER.has(cp) && !(prevCp > 0x2e7f)
     if (!open) {
       open = { word: true, text: '' }
       atoms.push(open)
     }
     open.text += ch
     // 断后码位并入本段、段后允许断行（BREAK AFTER HYPHEN 泛化到
-    // UAX#14 断后全集：EX{!} ∪ HH/HY/B2 ∪ BA 非空格成员，见 BREAK_AFTER）。
-    // CJK 之后的断后码位不生效（全角 ？！ 等收类标点禁则优先）。
+    // UAX#14 断后全集：EX{!} ∪ HH/HY/B2 ∪ BA 非空格成员中的 ≤0x2E7F 段，
+    // 见 BREAK_AFTER——>0x2E7F 成员走上面的 CJK 分支，永远到不了这里）。
+    // 断后语义不区分 CJK/非 CJK 上下文——R7 的「非 CJK 守卫」经 QA 反证
+    // 既无益于其声称要修的 20px 高估（无夹具可复现）、又是新高估成因
+    //（把全角 ？！ 粘进后续拉丁词），R8 已整条移除（#3166 决策一）；
+    // 全角 ？！ 的断后效果由 CJK 逐字可断自身承载，行数断言见套件
+    //「<CJK>？<拉丁词>」用例。
     // 反例钉住：'/' ',' ':' '.' '#' '@' '%' 与 '!'(0x0021) 之后 Chrome
     // 实测不断行，绝不加进来（Q1 实验：换 '/'、'+' 仍少算，换 '-' 才一致）。
-    if (breakAfterAllowed) open = null
+    if (BREAK_AFTER.has(cp)) open = null
   }
   return atoms
 }
@@ -320,15 +332,22 @@ function wrapAtoms(text) {
  * @param {number} lineWidth 可用行宽（px）
  */
 export function rivalWrapLines(text, unitPx, lineWidth) {
-  // Chrome 实测在边界还有 ~0.5px 富余时也换行（亚像素 kerning/取整），
-  // 0.5px 容差让「恰好放下」边界与真机一致——无容差时 p11@266 少算 1 行。
-  const width = Math.max(1, (Number(lineWidth) || 0) - 0.5)
+  // Chrome 的装入边界是行宽本身（整数容器下恰宽即放下）。R8-R9 的 -0.5
+  // 容差在恰好整宽时多折一行（中中中中中･@28 Chrome 3 行模型曾给 4 行），
+  // R10 逐行内容复核后移除；kensoku 判定也以行宽本身为准（伪装入分支）。
+  const width = Math.max(1, Number(lineWidth) || 0)
   const atoms = wrapAtoms(text)
+  // 半角组标点（｡､･，FF61/64/65）行中即半 advance（Chrome 实测
+  // 中･ab@40 单行），与全角收类标点的整 advance 分开计；此表只管
+  // 宽度计量，R11 起它们的行首禁则语义是拉回（见语义表注释）。
   const widths = atoms.map((atom) =>
-    atom.cjk ? unitPx : atom.word ? textWidthPx(atom.text, unitPx) : 0)
+    atom.cjk
+      ? (LINE_START_HALFWIDTH.has(atom.ch.codePointAt(0)) ? unitPx / 2 : unitPx)
+      : atom.word ? textWidthPx(atom.text, unitPx) : 0)
   let lines = 1
   let used = 0
   let lastAtomW = 0
+  let lineStart = 0
   let pendingCollapsible = false
   let pendingWidth = 0
   for (let i = 0; i < atoms.length; i += 1) {
@@ -347,6 +366,7 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
       // 行首空格已被浏览器吞掉；超行宽的词/字直接占这一行，不折。
       used = Math.min(atomW, width)
       lastAtomW = used
+      lineStart = i
       continue
     }
     if (used + glue + atomW <= width) {
@@ -365,6 +385,7 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
           lines += 1
           used = Math.min(atomW, width)
           lastAtomW = atomW
+          lineStart = i
           continue
         }
       }
@@ -372,29 +393,109 @@ export function rivalWrapLines(text, unitPx, lineWidth) {
       lastAtomW = atomW
       continue
     }
-    lines += 1
     if (atom.cjk && lastAtomW > 0 && isLineStartForbidden(atom.ch)) {
-      // 行首禁则：CJK 收类标点不允许出现在行首——浏览器把前一个字符
-      // 一并带到下一行（p11 在 600px 档实测 8 行、无禁则模型算 7 行，
-      // 正是这条规则缺位的少算）。只带回 1 个原子：连续禁则标点与
-      // 词末尾的禁则场景在偏差清单里说明。
-      used = Math.min(lastAtomW + atomW, width)
-    } else {
-      used = Math.min(atomW, width)
+      // 行首禁则按码位分（R10，QA 收口复验逐行内容口径）：
+      //   · 恰宽即放下——Chrome 装入边界是行宽本身（中中，@42 = 2 行：
+      //     42≤42 走正常装入路径，不进禁则判定）；
+      //   · 悬挂组（LINE_START_HANG）——ink（半 advance）不越行宽就挂
+      //     行尾；挂不下时同样把行尾单元整体带下行（中中中中））@63：
+      //     首 ） 挂下、第二个挂不下 → 中）+run 一起落下一行）；
+      //   · 拉回组（LINE_START_PULLBACK，R11 起含 ｡､･）——行尾最近的
+      //     非禁则原子（CJK 字或不可断词）连同尾部禁则 run 一起下行
+      //     （中文中文，word @60 → 文，word / 中中｡@32 → 中，中｡）；
+      //     行内只剩 head 一个原子时拉不动、挂行尾（中，@26 → 中，/ab）；
+      //   · 前驱本身就是禁则标点 → 挂在 run 尾，不链式拉回
+      //     （中文中文中文。、@40 = 4 行不是 5）。
+      const mode = lineStartMode(atom.ch)
+      if (mode === 'hang' && used + atomW / 2 <= lineWidth) {
+        used += glue + atomW
+        lastAtomW = atomW
+        continue
+      }
+      // 回溯行尾：跳空白 → 连续禁则标点 run → 非禁则 head（词或 CJK 字）。
+      let j = i - 1
+      while (j >= lineStart && atoms[j].space) j -= 1
+      let runW = 0
+      while (j >= lineStart && atoms[j].cjk && isLineStartForbidden(atoms[j].ch)) {
+        runW += widths[j]
+        j -= 1
+      }
+      while (j >= lineStart && atoms[j].space) j -= 1
+      if (j > lineStart) {
+        lines += 1
+        used = Math.min(widths[j] + runW + atomW, width)
+        lineStart = j
+      } else {
+        used += glue + atomW
+      }
+      lastAtomW = atomW
+      continue
     }
+    lines += 1
+    used = Math.min(atomW, width)
     lastAtomW = atomW
+    lineStart = i
   }
   return lines
 }
 
 /**
- * 行首禁则字符（CJK 收类标点）：浏览器断行时不允许它们落在新行首，
- * 会把前一个字符带回本行。半角 ')' ']' 等未列入——它们在 CJK 文本
- * 场景里同样禁行首，但出现率低且与词内位置耦合，留在已知偏差。
+ * 行首禁则字符（CJK 收类标点）：不允许落新行首——逐码位分「拉回/悬挂」
+ * 两种语义见下方 LINE_START_PULLBACK / LINE_START_HANG 表。半角 ')' ']'
+ * 等未列入——它们在 CJK 文本场景里同样禁行首，但出现率低且与词内位置
+ * 耦合，留在已知偏差。
+ * #3166-⑦/R8 探针补齐、R9 按官方 LineBreak-18.0.0 类表重核：小号叹问
+ * ﹗﹖（FE57/FE56 官方类是 EX 不是 CL）、右双引 ”（U+201D 是 QU）、
+ * 半角句读 ｡､（FF61/FF64 才是 CL 本类）、･（FF65 是 NS）——六者
+ * 行为上都不可落行首，但类归属按官方类写，不混称 CL。
+ * 死条目清理（R9）：‥(2025)/…(2026)/‰(2030) 的码位 ≤0x2E7F，走 word
+ * 原子分支、禁则判定带 cjk 守卫故恒不可达，已从集合删除。U+201D ” 同
+ * 为 ≤0x2E7F、在本集合同样不可达——但它经 word 原子路径恢复断后语义
+ *（QU 断后码位，已回 BREAK_AFTER：Chrome 对 5 词夹具实测 5 行=断后，
+ * 不入集合会把它并成不可断整词估成 1 行，低估方向）。
  */
+/**
+ * 行首禁则逐码位语义表（R11 修正，QA+代码复审双轴逐行内容实测口径）。
+ * 拉回组：标点放不下时把行尾最近的非禁则原子连同尾部禁则 run 一起
+ *   带下行——`，。、：；？！﹖﹗％｡､･`（FF0C 3002 3001 FF1A FF1B
+ *   FF1F FF01 FE56 FE57 FF05 FF61 FF64 FF65）。`｡､･` 在 R10 被
+ *   误归悬挂，QA 逐行内容实测（中中｡@32 → 中/中｡）证其为拉回：
+ *   半宽 advance 只有 7px，悬挂 ink 再取半后 3.5px 恒能挂上，低估
+ *   42 格（6820 网格 133→91 全消在此）。
+ *   `％`(FF05) 登记偏差：官方 CL 类枚举本无它，但 Chrome 实测其行为
+ *   即拉回（逐行内容与 ，。同形），删除会使该码位不符数 3→15——
+ *   实现保留、规格按 10 个码位口径登记。
+ * 悬挂组：标点挂在行尾（ink 半宽不越界），挂不下时同样把行尾单元带
+ *   下行——`〉】〕）］｝》」』〞〟`（3009 3011 3015 FF09 FF3D FF5D
+ *   300B 300D 300F 301E 301F）。未在语义表中的新增码位先实测再归类。
+ * 半角组：｡､･ 在**行中**只占半 advance（中･ab@40 单行，LINE_START_
+ *   HALFWIDTH 只管宽度计量，与拉回/悬挂语义分组无关——R12 由
+ *   LINE_START_HALFWIDTH_HANG 改名，原名的 HANG 是 R10 归错语义时
+ *   留下的命名债，该组行首语义实为拉回）。
+ * 前驱类型是次级条件：head 必须是非禁则原子且不把行拉空——前驱是
+ * 不可断词原子时拉回组把词整体带下行（aa bb cc，word → cc， 下行）；
+ * 前驱是禁则标点时一律挂 run 尾。
+ */
+const LINE_START_PULLBACK = new Set([
+  0xff61, 0xff64, 0xff65,
+  0xff0c, 0x3002, 0x3001, 0xff1a, 0xff1b, 0xff1f, 0xff01, 0xfe56, 0xfe57, 0xff05,
+])
+const LINE_START_HANG = new Set([
+  0x3009, 0x3011, 0x3015,
+  0xff09, 0xff3d, 0xff5d, 0x300b, 0x300d, 0x300f, 0x301e, 0x301f,
+])
+const LINE_START_HALFWIDTH = new Set([0xff61, 0xff64, 0xff65])
+
+function lineStartMode(ch) {
+  if (typeof ch !== 'string') return null
+  const cp = ch.codePointAt(0)
+  if (LINE_START_HANG.has(cp)) return 'hang'
+  if (LINE_START_PULLBACK.has(cp)) return 'pull'
+  return null
+}
+
 function isLineStartForbidden(ch) {
-  return typeof ch === 'string'
-    && /[，。、；：？！）］｝》」』〞〟‥…‰％]/.test(ch)
+  return lineStartMode(ch) !== null
 }
 
 /**
@@ -403,7 +504,7 @@ function isLineStartForbidden(ch) {
  */
 function isLineEndForbidden(ch) {
   return typeof ch === 'string'
-    && /[（［｛《〈「『【〔［]/.test(ch)
+    && /[（［｛《〈「『【〔]/.test(ch)
 }
 
 /**

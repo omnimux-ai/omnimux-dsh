@@ -1,0 +1,751 @@
+{
+ "rows": [
+  {
+   "ch": "，",
+   "hex": "FF0C",
+   "form": "single@40",
+   "text": "中文中文中文，",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "，",
+   "hex": "FF0C",
+   "form": "single@40-tail",
+   "text": "中文中文中文，文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "，",
+   "hex": "FF0C",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee，",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "。",
+   "hex": "3002",
+   "form": "single@40",
+   "text": "中文中文中文。",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "。",
+   "hex": "3002",
+   "form": "single@40-tail",
+   "text": "中文中文中文。文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "。",
+   "hex": "3002",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee。",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "、",
+   "hex": "3001",
+   "form": "single@40",
+   "text": "中文中文中文、",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "、",
+   "hex": "3001",
+   "form": "single@40-tail",
+   "text": "中文中文中文、文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "、",
+   "hex": "3001",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee、",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "：",
+   "hex": "FF1A",
+   "form": "single@40",
+   "text": "中文中文中文：",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "：",
+   "hex": "FF1A",
+   "form": "single@40-tail",
+   "text": "中文中文中文：文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "：",
+   "hex": "FF1A",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee：",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "；",
+   "hex": "FF1B",
+   "form": "single@40",
+   "text": "中文中文中文；",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "；",
+   "hex": "FF1B",
+   "form": "single@40-tail",
+   "text": "中文中文中文；文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "；",
+   "hex": "FF1B",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee；",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "？",
+   "hex": "FF1F",
+   "form": "single@40",
+   "text": "中文中文中文？",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "？",
+   "hex": "FF1F",
+   "form": "single@40-tail",
+   "text": "中文中文中文？文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "？",
+   "hex": "FF1F",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee？",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "！",
+   "hex": "FF01",
+   "form": "single@40",
+   "text": "中文中文中文！",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "！",
+   "hex": "FF01",
+   "form": "single@40-tail",
+   "text": "中文中文中文！文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "！",
+   "hex": "FF01",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee！",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "﹖",
+   "hex": "FE56",
+   "form": "single@40",
+   "text": "中文中文中文﹖",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "﹖",
+   "hex": "FE56",
+   "form": "single@40-tail",
+   "text": "中文中文中文﹖文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "﹖",
+   "hex": "FE56",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee﹖",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "﹗",
+   "hex": "FE57",
+   "form": "single@40",
+   "text": "中文中文中文﹗",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "﹗",
+   "hex": "FE57",
+   "form": "single@40-tail",
+   "text": "中文中文中文﹗文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "﹗",
+   "hex": "FE57",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee﹗",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "｡",
+   "hex": "FF61",
+   "form": "single@40",
+   "text": "中文中文中文｡",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "｡",
+   "hex": "FF61",
+   "form": "single@40-tail",
+   "text": "中文中文中文｡文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "｡",
+   "hex": "FF61",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee｡",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "､",
+   "hex": "FF64",
+   "form": "single@40",
+   "text": "中文中文中文､",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "､",
+   "hex": "FF64",
+   "form": "single@40-tail",
+   "text": "中文中文中文､文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "､",
+   "hex": "FF64",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee､",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "･",
+   "hex": "FF65",
+   "form": "single@40",
+   "text": "中文中文中文･",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "･",
+   "hex": "FF65",
+   "form": "single@40-tail",
+   "text": "中文中文中文･文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "･",
+   "hex": "FF65",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee･",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "〉",
+   "hex": "3009",
+   "form": "single@40",
+   "text": "中文中文中文〉",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "〉",
+   "hex": "3009",
+   "form": "single@40-tail",
+   "text": "中文中文中文〉文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "〉",
+   "hex": "3009",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee〉",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "】",
+   "hex": "3011",
+   "form": "single@40",
+   "text": "中文中文中文】",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "】",
+   "hex": "3011",
+   "form": "single@40-tail",
+   "text": "中文中文中文】文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "】",
+   "hex": "3011",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee】",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "〕",
+   "hex": "3015",
+   "form": "single@40",
+   "text": "中文中文中文〕",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "〕",
+   "hex": "3015",
+   "form": "single@40-tail",
+   "text": "中文中文中文〕文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "〕",
+   "hex": "3015",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee〕",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "）",
+   "hex": "FF09",
+   "form": "single@40",
+   "text": "中文中文中文）",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "）",
+   "hex": "FF09",
+   "form": "single@40-tail",
+   "text": "中文中文中文）文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "）",
+   "hex": "FF09",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee）",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "］",
+   "hex": "FF3D",
+   "form": "single@40",
+   "text": "中文中文中文］",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "］",
+   "hex": "FF3D",
+   "form": "single@40-tail",
+   "text": "中文中文中文］文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "］",
+   "hex": "FF3D",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee］",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "｝",
+   "hex": "FF5D",
+   "form": "single@40",
+   "text": "中文中文中文｝",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "｝",
+   "hex": "FF5D",
+   "form": "single@40-tail",
+   "text": "中文中文中文｝文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "｝",
+   "hex": "FF5D",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee｝",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "》",
+   "hex": "300B",
+   "form": "single@40",
+   "text": "中文中文中文》",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "》",
+   "hex": "300B",
+   "form": "single@40-tail",
+   "text": "中文中文中文》文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "》",
+   "hex": "300B",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee》",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "」",
+   "hex": "300D",
+   "form": "single@40",
+   "text": "中文中文中文」",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "」",
+   "hex": "300D",
+   "form": "single@40-tail",
+   "text": "中文中文中文」文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "」",
+   "hex": "300D",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee」",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "』",
+   "hex": "300F",
+   "form": "single@40",
+   "text": "中文中文中文』",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "』",
+   "hex": "300F",
+   "form": "single@40-tail",
+   "text": "中文中文中文』文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "』",
+   "hex": "300F",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee』",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "〞",
+   "hex": "301E",
+   "form": "single@40",
+   "text": "中文中文中文〞",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "〞",
+   "hex": "301E",
+   "form": "single@40-tail",
+   "text": "中文中文中文〞文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "〞",
+   "hex": "301E",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee〞",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "〟",
+   "hex": "301F",
+   "form": "single@40",
+   "text": "中文中文中文〟",
+   "w": 40,
+   "chrome": 3,
+   "model": 4
+  },
+  {
+   "ch": "〟",
+   "hex": "301F",
+   "form": "single@40-tail",
+   "text": "中文中文中文〟文文文",
+   "w": 40,
+   "chrome": 5,
+   "model": 6
+  },
+  {
+   "ch": "〟",
+   "hex": "301F",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee〟",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "％",
+   "hex": "FF05",
+   "form": "single@40",
+   "text": "中文中文中文％",
+   "w": 40,
+   "chrome": 4,
+   "model": 4
+  },
+  {
+   "ch": "％",
+   "hex": "FF05",
+   "form": "single@40-tail",
+   "text": "中文中文中文％文文文",
+   "w": 40,
+   "chrome": 6,
+   "model": 6
+  },
+  {
+   "ch": "％",
+   "hex": "FF05",
+   "form": "word-pred",
+   "text": "aa bb cc dd ee％",
+   "w": 40,
+   "chrome": 3,
+   "model": 3
+  },
+  {
+   "ch": "。、",
+   "hex": "3002+3001",
+   "form": "seq@40",
+   "text": "中文中文中文。、",
+   "w": 40,
+   "chrome": 4,
+   "model": 5
+  },
+  {
+   "ch": "，，",
+   "hex": "ff0c+ff0c",
+   "form": "seq@40",
+   "text": "中文中文中文，，",
+   "w": 40,
+   "chrome": 4,
+   "model": 5
+  },
+  {
+   "ch": "。｡",
+   "hex": "3002+ff61",
+   "form": "seq@40",
+   "text": "中文中文中文。｡",
+   "w": 40,
+   "chrome": 4,
+   "model": 5
+  },
+  {
+   "ch": "，｡",
+   "hex": "ff0c+ff61",
+   "form": "seq@40",
+   "text": "中文中文中文，｡",
+   "w": 40,
+   "chrome": 4,
+   "model": 5
+  },
+  {
+   "ch": "｡，",
+   "hex": "ff61+ff0c",
+   "form": "seq@40",
+   "text": "中文中文中文｡，",
+   "w": 40,
+   "chrome": 4,
+   "model": 5
+  },
+  {
+   "ch": "））",
+   "hex": "ff09+ff09",
+   "form": "seq@40",
+   "text": "中文中文中文））",
+   "w": 40,
+   "chrome": 4,
+   "model": 5
+  },
+  {
+   "ch": "）、",
+   "hex": "ff09+3001",
+   "form": "seq@40",
+   "text": "中文中文中文）、",
+   "w": 40,
+   "chrome": 4,
+   "model": 5
+  },
+  {
+   "ch": "｡､･",
+   "hex": "ff61+ff64+ff65",
+   "form": "seq@40",
+   "text": "中文中文中文｡､･",
+   "w": 40,
+   "chrome": 4,
+   "model": 6
+  },
+  {
+   "ch": "？﹖！﹗",
+   "hex": "ff1f+fe56+ff01+fe57",
+   "form": "seq@40",
+   "text": "中文中文中文？﹖！﹗",
+   "w": 40,
+   "chrome": 4,
+   "model": 7
+  },
+  {
+   "ch": "）｡､･〉】〕",
+   "hex": "ff09+ff61+ff64+ff65+3009+3011+3015",
+   "form": "seq@40",
+   "text": "中文中文中文）｡､･〉】〕",
+   "w": 40,
+   "chrome": 4,
+   "model": 10
+  },
+  {
+   "ch": "。、，",
+   "hex": "3002+3001+ff0c",
+   "form": "seq@40",
+   "text": "中文中文中文。、，",
+   "w": 40,
+   "chrome": 4,
+   "model": 6
+  }
+ ]
+}

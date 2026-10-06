@@ -611,6 +611,47 @@ describe('rival-masonry — R7 断行判据迁入套件（QA Q1/Q4 阻塞）', (
     const lines = rivalWrapLines(title, 14, 194)
     assert.equal(lines, 3, `Chrome 实测 3 行（? 后断出 "ref=qa" 一行），got ${lines}`)
   })
+
+  it('CJK 上下文不抑制断后：<CJK>？<拉丁词> 行数与 Chrome 一致（#3166 决策一）', () => {
+    // R8 收口：R7 引入的「非 CJK 守卫」（断后码位仅在非 CJK 字符之后生效，
+    // 附带 :286 例外与 charWidthFactor 特例）把全角 ？！ 粘进后续拉丁词——
+    // QA 反证它既无益于其声称要修的 20px 高估（按任何夹具复现不出），
+    // 又是新高估的成因；去掉守卫后 9 个坏例回到 Chrome 行数，而 ?-in-URL
+    // 的修复不受影响（上面 qa39 断言不变红）。以下形态钉死 Chrome 行数，
+    // 防止守卫被加回来。
+    assert.equal(rivalWrapLines('中文？abc def', 14, 60), 2,
+      'Chrome 2 行：？ 后可断、"abc def" 排第二行；守卫把 ？ 粘进 abc 后多算 1 行')
+    assert.equal(rivalWrapLines('中文？abc def', 14, 50), 2,
+      'Chrome 2 行（更窄列宽同形）')
+    assert.equal(rivalWrapLines('中文？aa中文bb？cc', 14, 50), 3,
+      'Chrome 3 行：两个 ？ 都在 CJK 后仍按断后语义断开')
+  })
+})
+
+describe('rival-masonry — R9 行首禁则「拉回」语义（R8 悬挂前提被真机证伪）', () => {
+  // R8 把行首禁则由「前一字随标点下行（拉回）」改成「悬挂占满行尾」，
+  // 依据是探针观察到溢出；复审用 155 夹具 × 14 宽度扫描证伪：Chrome 首行
+  // 溢出 >0.5px 的条数为 0——放不下时前一 CJK 字与标点一起下行。
+  // A/B（111 夹具 × 真 Chrome）：悬挂 mismatch 52（低估 49）、拉回 22（低估 4），
+  // 低估=卡片高度不足=同列重叠，正是本线一直在打的缺陷族。
+  // 注意适用域：拉回只在前一原子是 CJK 字时发生；前驱是不可断词原子时
+  // Chrome 让标点留在行尾（词整体下行），行数与悬挂同形——word+﹖ 夹具
+  // 两模型同给 5 行，不能用作鉴别夹具。
+  it('行首禁则拉回：标点放不下时前一 CJK 字随之下行（悬挂给 2、真机 3）', () => {
+    // 每条都在悬挂/拉回间有鉴别力：悬挂 2 行、拉回/Chrome 3 行。
+    assert.equal(rivalWrapLines('中中中中，文文文文', 14, 63), 3,
+      'Chrome 3 行：，放不下时第 4 个「中」随之下行；悬挂只占满行尾会少算一整行')
+    assert.equal(rivalWrapLines('中中中中中。文文文文', 14, 77), 3,
+      'Chrome 3 行：句号触发同一拉回机理')
+    assert.equal(rivalWrapLines('中中中中，，，文文文文', 14, 63), 3,
+      'Chrome 3 行：连续禁则标点按前一原子逐个拉回，不得再少算')
+  })
+  it('防回退：行首禁则不是悬挂——溢出形态在夹具宽度扫描中为 0 例', () => {
+    // 与上一条同一形态单独成 it：若有人把分支改回「used += glue + atomW
+    // 悬挂」而不改其它，此断言立刻变红（悬挂输出 2、拉回输出 3）。
+    assert.equal(rivalWrapLines('中中中中，文文文文', 14, 63), 3,
+      'hang model gives 2, pull-back (Chrome-verified) gives 3 — regression guard')
+  })
 })
 
 describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () => {
@@ -622,12 +663,52 @@ describe('rival-styles — R7 字体前提与禁用态守卫（④⑤）', () =>
     assert.ok(/\.omnimux-rival-card-title\s*\{[^}]*font-family:/s.test(RIVAL_CSS),
       'card-title must declare font-family explicitly')
   })
-  it('主按钮 hover 两条选择器都带 :not(:disabled)（PM M1）', () => {
-    for (const scope of ['on-media', 'on-surface']) {
-      assert.ok(
-        RIVAL_CSS.includes(`.${scope} .omnimux-rival-act-primary:hover:not(:disabled)`),
-        `${scope} act-primary hover must exclude :disabled like the act-btn rules`,
-      )
+  it('会 disabled 的元素全集 × 其每条 hover 规则都带 :not(:disabled)（PM M1 → #3166 类级）', () => {
+    // 同类缺陷第四次逃逸（R5 act-btn → R6 act-primary → R7 filter-jump → R11 :focus-within 揭示块）
+    // 证明断言必须钉在「类」上而不是实例上：本枚举覆盖生产里所有真的会
+    // disabled 的元素——act-btn（原帖按钮 source_url 不安全时 disabled）、
+    // act-primary（复刻按钮 busy 时 disabled）、filter-jump（账号行跳转
+    // profileUrl 不安全时 disabled）。新增 disabled 元素须同步扩此表；
+    // 断言按类逐条校验 RIVAL_CSS 里该类的**每一条** :hover 规则。
+    const DISABLED_CAPABLE = [
+      'omnimux-rival-act-btn',
+      'omnimux-rival-act-primary',
+      'omnimux-rival-filter-jump',
+    ]
+    for (const cls of DISABLED_CAPABLE) {
+      // R9 放宽匹配（逃逸通路修补）：交互揭示选择器有多种形态——
+      // 自身 `.cls:hover`（含 [attr] 等复合形态）、祖先驱动
+      // `:hover .cls` 与 `:focus-within .cls`（键盘焦点路径同样会揭
+      // 示元素，缺守卫时键盘聚焦 disabled 行也会点亮按钮——disabled
+      // 缺陷族第 4 次逃逸正是这一种）。任一含 .cls 与 :hover /
+      // :focus-within 的选择器都收进来。
+      // R11（护栏假阴性修补）：必须**按选择器逐条**判定，不能整条规则
+      // 做 includes——同一规则块里 `:hover` 选择器的守卫会替
+      // `:focus-within` 选择器顶包（R10 实测假阴性：filter-jump 的
+      // :focus-within 揭示选择器无守卫却全绿）。判定口径：该选择器
+      // 中 .cls 之后必须出现 :not(:disabled)。
+      const ruleText = RIVAL_CSS.match(
+        new RegExp(`[^{}]*\\.${cls}(?![\\w-])[^{]*\\{`, 'g'),
+      ) || []
+      const stateSels = []
+      for (const block of ruleText) {
+        const head = block.slice(0, -1)
+        for (const sel of head.split(',')) {
+          const t = sel.trim()
+          if (new RegExp(`\\.${cls}(?![\\w-])`).test(t)
+              && (t.includes(':hover') || t.includes(':focus-within'))) {
+            stateSels.push(t)
+          }
+        }
+      }
+      assert.ok(stateSels.length > 0, `${cls} should have hover/focus reveal selectors in the stylesheet`)
+      for (const sel of stateSels) {
+        const guarded = new RegExp(`\\.${cls}[^,{]*:not\\(:disabled\\)`).test(sel)
+        assert.ok(
+          guarded,
+          `${cls} reveal selector lacks :not(:disabled) — disabled ${cls} still shows the affordance (selector: ${sel})`,
+        )
+      }
     }
   })
   it('省略号挂在 label 元素而非按钮容器（PM M2/M3）', () => {
@@ -648,7 +729,10 @@ describe('rival-masonry — R7 逐字形字宽表锁表断言（QA Q3 阻塞）'
   //（同 build-demo.mjs --font-family）一致。换字体族须用 codepoint-probe.mjs
   // 重新标定；表外 ASCII 回落 ASCII_WIDTH_FACTOR，>0x2E7F 按整宽。
   // 锁表 = 断言表内代表值与统一系数 0.592 显著不同，使「整体退回 0.592」
-  // 立即变红。
+  // 立即变红。计数口径（#3166-⑤）：EXPECT 实收 18 个字形（非 17）；
+  // 断后集合 BREAK_AFTER 实收 133 条（R9 删 >0x2E7F 的 172 条恒不可达
+  // 死码后口径：仅 ≤0x2E7F 的 EX∪HH∪HY∪B2∪BA 非空格成员，版本漂移须
+  // 重跑集合差）。
   const EXPECT = {
     '1': 0.453, 'i': 0.236, 'l': 0.242, 'f': 0.351, 'r': 0.370,
     'a': 0.541, 'e': 0.561, 'w': 0.764, 'm': 0.859, 'A': 0.663,
@@ -675,10 +759,114 @@ describe('rival-masonry — R7 逐字形字宽表锁表断言（QA Q3 阻塞）'
     assert.ok(wide > narrow, `per-glyph widths must rank 'w' wider than 'i' (narrow=${narrow} wide=${wide})`)
     assert.equal(narrow, 2, `narrow glyph rows: got ${narrow} (uniform 0.592 would give 3+)`)
   })
-  it('表外回落语义钉住：未覆盖 ASCII → 0.592；>0x2E7F → 整宽；已知偏差边界', () => {
-    // DEL(0x7F) 未在表内 → 统一系数且不断行；边界已登记（复审 F-2/Q6）：
-    // 非 ASCII 回落系数在 ZWJ/2011 等码位与真机最大偏差 −5.15px（低估
-    // 方向），列为已知偏差，不改模型。
+  it('表外回落语义钉住：未覆盖 ASCII → 0.592；已知偏差边界', () => {
+    // DEL(0x7F) 未在表内 → 统一系数且不断行；边界已登记（复审 F-2/Q6，
+    // #3166-④ 修正方向）：真机实测 U+200D ZWJ → Chrome 0px vs 模型 8.288
+    //（+8.288 安全方向）、U+2011 → +1.835（安全）；真正的最坏低估是
+    // U+2E3B −28.271px，社媒常见 U+2764 ❤ −4.454、U+2192 → −4.242、
+    // emoji −4.0；扫 11,751 个表外码位中 8,443 个是低估——旧注记的
+    //「ZWJ/2011 最大偏差 −5.15px（低估）」方向与码位都错，已按实测重写。
     assert.equal(rivalWrapLines('aa\x7fbbbbbbbb', 14, 60), 1, 'DEL falls back to the uniform factor and stays glued')
+  })
+})
+
+describe('rival-masonry — R10 行首禁则「按码位分」语义（QA 收口复验 FAIL 修复）', () => {
+  // QA 用逐行内容测量（非行数差）证 Chrome 行首禁则逐码位异质：
+  // @40px（unit 14，单字 14px）形态 `中文中文中文X`：
+  //   拉回组 = 4 行（`中文`/`中文`/`中`/`文X`）——X 放不下时前一个
+  //     CJK 字带它下行；
+  //   悬挂组 = 3 行（`中文`/`中文`/`中文X`）——X 挂在本行行尾。
+  // R9 按前驱类型分粒度不对：悬挂组在前驱是 CJK 字时同样拉回，与
+  // Chrome 不符。R10 按码位分 + 次级条件（前驱禁则标点也挂行尾）。
+  // 真机口径（本文件同目录 e2e / harness 探针复核）：
+  //   拉回组码位（R11 起含半宽 ｡､･）：，。、：；？！﹖﹗％｡､･
+  //     （FF0C 3002 3001 FF1A FF1B FF1F FF01 FE56 FE57 FF05 FF61 FF64
+  //     FF65——R10 把 ｡､･ 误归悬挂，QA p7 逐行内容证其为拉回）；
+  //   悬挂组码位：〉】〕）］｝》」』〞〟（3009 3011 3015 FF09 FF3D FF5D
+  //     300B 300D 300F 301E 301F）；
+  //   连续禁则标点：后一个挂行尾（不链式拉回），整个 run 只随 head 下行一次；
+  //   悬挂组在 ink（半宽）放不下的形态里同样把行尾单元整体带下行；
+  //   0.5px 装入容差已删：Chrome 装入边界是行宽本身，恰好等于行宽算放下。
+
+  const PULL = ['，', '。', '、', '：', '；', '？', '！', '﹖', '﹗', '％']
+  const HANG = ['〉', '】', '〕', '）', '］', '｝', '》', '」', '』', '〞', '〟']
+
+  it('拉回组逐码位钉行：`中文中文中文X`@40px = 4 行（前一 CJK 字随标点下行）', () => {
+    for (const ch of PULL) {
+      assert.equal(rivalWrapLines(`中文中文中文${ch}`, 14, 40), 4,
+        `U+${ch.codePointAt(0).toString(16).toUpperCase()} 属拉回组：Chrome 逐行内容 中文/中文/中/文${ch}`)
+    }
+  })
+
+  it('悬挂组逐码位钉行：`中文中文中文X`@40px = 3 行（标点挂行尾）', () => {
+    for (const ch of HANG) {
+      assert.equal(rivalWrapLines(`中文中文中文${ch}`, 14, 40), 3,
+        `U+${ch.codePointAt(0).toString(16).toUpperCase()} 属悬挂组：Chrome 逐行内容 中文/中文/中文${ch}`)
+    }
+  })
+
+  it('粒度鉴别：前驱同为 CJK 字时，拉回组与悬挂组行为不同（拦「按前驱类型分」回退）', () => {
+    // 同一句、同前驱（文），仅码位不同。R9 的「前驱 CJK → 全拉回」实现
+    // 对悬挂组也给 4 行——本断言会立刻变红；只有把禁则集按码位拆成
+    // 拉回/悬挂两个语义才能同时满足两条。
+    assert.equal(rivalWrapLines('中文中文中文，', 14, 40), 4, '拉回组 ，')
+    assert.equal(rivalWrapLines('中文中文中文）', 14, 40), 3, '悬挂组 ）')
+    assert.equal(rivalWrapLines('中文中文中文｡', 14, 40), 3, '半宽组 ｡（35≤40 不进禁则分支，两语义同值）')
+    assert.equal(rivalWrapLines('中文中文中文％', 14, 40), 4, '拉回组 ％')
+  })
+
+  it('连续禁则标点整体随 head 下行一次，不链式拉回（`中文中文中文X` 尾部 run 形态）', () => {
+    assert.equal(rivalWrapLines('中文中文中文。、', 14, 40), 4,
+      'Chrome 逐行 中文/中文/中/文。、：第二个标点挂在被拉回的 。之后，不再单独开一行')
+    assert.equal(rivalWrapLines('中文中文中文？﹖！﹗', 14, 40), 4,
+      '4 个拉回组标点连排仍只把「文」拉回一次')
+    assert.equal(rivalWrapLines('中文中文中文）｡､･〉】〕', 14, 40), 4,
+      'Chrome 逐行 中文/中文/中/文X：悬挂组 run 放不下时整个 run 随 head 下行')
+  })
+
+  it('悬挂组 ink 放不下的形态同样拉行尾单元（`中中中中））`@63 Chrome 3 行）', () => {
+    // 单个 ）ink 7 ≤ 63-56=7 恰好挂下；两个 ）连排时第二个挂不下，
+    // Chrome 把整个行尾单元（中）+run）拉到下一行。
+    assert.equal(rivalWrapLines('中中中中）文文文文', 14, 63), 2, '单挂：中中中中）/文文文文')
+    assert.equal(rivalWrapLines('中中中中））文文文文', 14, 63), 3,
+      'Chrome 3 行 中中中/中））文文/文文：ink 挂不下时行尾单元整体下行')
+  })
+
+  it('拉回组前驱为不可断词原子/行内唯一原子时留在行尾（前驱类型次级条件保留）', () => {
+    assert.equal(rivalWrapLines('aa bb cc，word', 14, 60), 3,
+      'Chrome 3 行 aa bb/cc，/word：拉回组把词原子 head 一并带下行')
+    assert.equal(rivalWrapLines('中，ab', 14, 26), 2,
+      '拉回会把行拉空（中 是行内唯一原子）→ 标点挂行尾：中，/ab')
+  })
+
+  it('半角悬挂组行中即半宽（`中･ab`@40 单行、行尾 `中…･` 恰宽不折）', () => {
+    assert.equal(rivalWrapLines('中･ab', 14, 40), 1,
+      'Chrome 单行 中･ab：半角悬挂标点在行中只占半 advance')
+    assert.equal(rivalWrapLines('中中中中中･', 14, 28), 3,
+      'Chrome 3 行：中中/中中/中･——28 恰容两字，-0.5 容差曾假折出第 4 行')
+  })
+
+  it('半宽组归拉回（R11，QA+代码复审双轴证伪悬挂）：`中^n+X`@14n+4 = 2 行', () => {
+    // QA p7-halfwidth-content 逐行内容实测：中中｡@32 → 中 / 中｡（拉回），
+    // 不是悬挂的 1 行。R10 把它们归悬挂且悬挂 ink 再取半（atomW/2=3.5px），
+    // 放不下时也挂行尾 → 低估。三条都是悬挂=1 / 拉回=2 的鉴别形态；
+    // R10 的 `中文中文中文X`@40 形态两语义同值（35≤40 根本不进禁则分支）。
+    for (const m of ['｡', '､', '･']) {
+      assert.equal(rivalWrapLines(`中中${m}`, 14, 32), 2,
+        `${m} 归拉回：Chrome 逐行 中/中${m}（悬挂建模给 1 行）`)
+      assert.equal(rivalWrapLines(`中中中${m}`, 14, 46), 2,
+        `${m} 归拉回：Chrome 逐行 中中/中${m}`)
+      assert.equal(rivalWrapLines(`中中中中${m}`, 14, 60), 2,
+        `${m} 归拉回：Chrome 逐行 中中中/中${m}`)
+    }
+    // 中置形态（标点不在行尾，QA R10-2 要求补——收尾形态 @40px 对
+    // 半宽组零鉴别力是真因之一）：Chrome 逐行 中/中X/文文 = 3 行，
+    // 悬挂建模给 2 行。46/60 同判别式。
+    for (const m of ['｡', '､', '･']) {
+      assert.equal(rivalWrapLines(`中中${m}文文`, 14, 32), 3,
+        `中置 ${m}：Chrome 逐行 中/中${m}/文文（悬挂给 2）`)
+      assert.equal(rivalWrapLines(`中中${m}文文`, 14, 46), 2,
+        `中置 ${m}：Chrome 逐行 中中${m}/文文`)
+    }
   })
 })
