@@ -156,6 +156,9 @@ const STAGE_STYLES = `
   display: flex;
   gap: 16px;
 }
+.gvids-feed[data-empty='true'] {
+  display: none;
+}
 .gvids-feed {
   flex: 1;
   overflow-y: auto;
@@ -1006,21 +1009,19 @@ export function GoogleVidsStage(props) {
         display: open ? undefined : 'none',
       }}
     >
-      {/* 3.1 顶部 Header */}
+      {/* 3.1 顶部 Header：仅独立舞台形态需要。并轨进剪辑面板后，标题/内测版微标/向导按钮都不承载信息，不再渲染 */}
+      {!isPanel && (
       <header className="gvids-header">
-        {/* 关闭按钮（面板形态下无独立可关语义，隐藏） */}
-        {!isPanel && (
-          <button // exempt-ui01 Google Vids 舞台专属按钮
-            type="button"
-            onClick={handleCloseStage}
-            aria-label="关闭"
-            className="gvids-close-btn"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        )}
+        <button // exempt-ui01 Google Vids 舞台专属按钮
+          type="button"
+          onClick={handleCloseStage}
+          aria-label="关闭"
+          className="gvids-close-btn"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
 
         {/* 标题与微标 */}
         <div className="gvids-title-cluster">
@@ -1041,6 +1042,7 @@ export function GoogleVidsStage(props) {
           向导
         </button>
       </header>
+      )}
 
       {/* 3.1 门禁警告条（未就绪时呈现，就绪后 300ms 平滑淡出收缩） */}
       <div
@@ -1083,11 +1085,13 @@ export function GoogleVidsStage(props) {
         </div>
       )}
 
-      {/* 3.2 生成记录流 */}
-      <div className="gvids-feed">
-        <div className="gvids-feed-header">
-          {`生成记录 (${tasks.length})`}
-        </div>
+      {/* 3.2 生成记录流：没有记录时整块不渲染（空标题行是噪音） */}
+      <div className="gvids-feed" data-empty={tasks.length === 0 ? 'true' : 'false'}>
+        {tasks.length > 0 && (
+          <div className="gvids-feed-header">
+            {`生成记录 (${tasks.length})`}
+          </div>
+        )}
 
         {tasks.map((task) => (
           <div key={task.id} className="gvids-card">
