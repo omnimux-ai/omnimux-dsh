@@ -60,7 +60,7 @@ Agent 遇到密钥弹窗，先核对运行模式与本任务入口；普通界�
 
 `pnpm test:worktree-web` 的现有 Stage 分支是模拟宿主夹具，其中包含占位内容与补入口逻辑；它只可提供其明确覆盖的局部证据，不得作为完整应用、首启或任务插件装配的验收通过。完整应用启动失败不得自动退回该夹具并报告成功。
 
-物化后冒烟（dev-smoke）：`scripts/dev-smoke.mjs` 由 `worktree.sh` 物化成功后自动调用——只读探活 Dev 45120 页面并截图，对本次物化插件比对「物化包内最新文件 mtime vs Dev 主进程启动时间」，晚于进程即输出 `needs-restart` 提示（不自动重启）；Dev 未运行或调试口不可达时报 `blocked` 而非误报 PASS。证据落 `docs/evidence/dev-smoke-report.json` 与 `docs/evidence/dev-smoke-<runId>/dev-page.png`。
+物化后冒烟（dev-smoke）：`scripts/dev-smoke.mjs` 由 `worktree.sh` 物化成功后自动调用——只读探活 Dev 45120 页面并截图，对本次物化插件比对「物化包内最新文件 mtime vs Dev 主进程启动时间」，晚于进程即输出 `needs-restart` 提示（不自动重启）；Dev 未运行或调试口不可达时报 `blocked` 而非误报 PASS。证据落 `docs/evidence/dev-smoke-report.json` 与 `docs/evidence/dev-smoke-<runId>/dev-page.png`。两者都是本机生成物：报告已被 `.gitignore` 忽略且不进版本库，冒烟覆盖写它不得弄脏主检出（否则 `worktree.sh ship` 的干净检查会拒绝物化）。
 
 ## 浏览器与共享探针
 
