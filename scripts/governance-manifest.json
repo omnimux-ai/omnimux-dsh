@@ -249,6 +249,8 @@
     "verify-media-hover-card-region.mjs",
     "verify-media-hover-toolbar.mjs",
     "verify-media-hover-video-visibility.mjs",
+    "verify-modality-matrix.mjs",
+    "verify-modality-matrix.test.mjs",
     "verify-model-contracts.mjs",
     "verify-model-contracts.test.mjs",
     "verify-models.mjs",
