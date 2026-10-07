@@ -424,6 +424,12 @@ export function buildChannelContract(
           defaultConstraints.defaultDuration = paramConstraints.duration.fixed;
         }
       }
+      // 渠道显式声明不支持分辨率参数（如 U06 工作流无 resolution 输入）：
+      // 清空支持集合，让清晰度控件与「自适应调整为 X」自愈提示整体消失。
+      if (paramConstraints.resolution?.supported === false) {
+        defaultConstraints.supportedResolutions = [];
+        defaultConstraints.defaultResolution = '';
+      }
       if (Array.isArray(paramConstraints.resolution?.only)) {
         const validResolutions = (paramConstraints.resolution.only as unknown[]).filter(
           (v): v is string => typeof v === 'string' && v.trim().length > 0

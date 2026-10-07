@@ -31,6 +31,7 @@ import { ModelCascadeMenu } from './ModelCascadeMenu';
 import {
   resolveModelChannelGroups,
   resolveShortModelName,
+  resolveLineConstraints,
   isByokGroup,
   isRuntimeByokChannelSettings,
   type RuntimeByokChannelSettings,
@@ -267,6 +268,26 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   const outputTypeForCompat = isAsrTool ? 'text' : materialType;
 
   const modelValue = typeof params?.model === 'string' ? params.model.trim() : '';
+
+  // 渠道组 operations 约束（如 comfyui 仅 video_multi_ref）：收窄目录后
+  // 页签、选中态与提交路径天然一致，不再出现不可用的生成模式。
+  const lineConstraints = useMemo(
+    () => resolveLineConstraints(modelValue, params.routing, effectiveRuntimeSettings),
+    [modelValue, params.routing, effectiveRuntimeSettings],
+  );
+  const opsCatalog = useMemo(() => {
+    if (!activeCatalog || !Array.isArray(lineConstraints?.operations) || lineConstraints.operations.length === 0) {
+      return activeCatalog;
+    }
+    const allowed = new Set(lineConstraints.operations);
+    const models = activeCatalog.models?.map((model) =>
+      model.id === modelValue
+        ? { ...model, operations: (model.operations ?? []).filter((op) => allowed.has(op.id)) }
+        : model,
+    );
+    return models ? { ...activeCatalog, models } : activeCatalog;
+  }, [activeCatalog, modelValue, lineConstraints]);
+
   const preferredOperationId = readPreferredOperationId(params as Record<string, unknown>);
   const currentInputs = nodeData.inputBindingVersion === 1;
   const isTextTask = outputTypeForCompat === 'text';
@@ -502,21 +523,23 @@ const GenerationConfigPanel: React.FC<ConfigPanelProps> = ({
   );
 
   // Effective ops for the currently selected model (all modalities).
+  // opsCatalog 已按渠道组 constraints.operations 收窄（如 comfyui 仅 video_multi_ref），
+  // 页签与提交路径天然一致。
   const opsState = useMemo(
     () => buildEffectiveOpsUiState({
-      catalog: activeCatalog,
+      catalog: opsCatalog,
       modelId: modelValue,
       fingerprint: consumedFingerprint,
       ...(currentOperationId ? { preferredOperationId: currentOperationId } : {}),
       outputType: outputTypeForCompat,
     }),
-    [activeCatalog, modelValue, consumedFingerprint, currentOperationId, outputTypeForCompat],
+    [opsCatalog, modelValue, consumedFingerprint, currentOperationId, outputTypeForCompat],
   );
   const availableOpsState = useMemo(() => buildEffectiveOpsUiState({
-    catalog: activeCatalog, modelId: modelValue, fingerprint,
+    catalog: opsCatalog, modelId: modelValue, fingerprint,
     ...(currentOperationId ? { preferredOperationId: currentOperationId } : {}),
     outputType: outputTypeForCompat,
-  }), [activeCatalog, modelValue, fingerprint, currentOperationId, outputTypeForCompat]);
+  }), [opsCatalog, modelValue, fingerprint, currentOperationId, outputTypeForCompat]);
   const showModeUi = shouldRenderModeUi(availableOpsState);
 
   // 视频节点的有效参数（contract-driven operation + schema scrubbing）

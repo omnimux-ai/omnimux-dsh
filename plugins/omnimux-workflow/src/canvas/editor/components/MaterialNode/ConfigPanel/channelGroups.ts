@@ -473,7 +473,12 @@ export const MODEL_CHANNEL_GROUPS: Record<string, ChannelGroupItem[]> = {
       "constraints": {
         "operations": [
           "video_multi_ref"
-        ]
+        ],
+        "parameters": {
+          "resolution": {
+            "supported": false
+          }
+        }
       },
       "wireModel": "minimax-h3",
       "wireGroup": "comfyui",
