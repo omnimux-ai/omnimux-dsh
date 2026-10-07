@@ -1,0 +1,41 @@
+{
+  "hasMediaRegion": true,
+  "hasActionsRegion": true,
+  "mediaFlexShrink": "1",
+  "mediaMinHeight": "0px",
+  "actionsFlexShrink": "0",
+  "actionsDisplay": "flex",
+  "background": "rgb(28, 28, 31)",
+  "borderWidth": "1px",
+  "borderColor": "rgba(255, 255, 255, 0.12)",
+  "card": {
+    "top": 156.5078125,
+    "bottom": 339.3828125,
+    "left": 547,
+    "right": 787,
+    "height": 182.875
+  },
+  "buttons": [
+    {
+      "top": 298.3828125,
+      "bottom": 330.3828125,
+      "left": 617,
+      "right": 663,
+      "label": "替换"
+    },
+    {
+      "top": 298.3828125,
+      "bottom": 330.3828125,
+      "left": 671,
+      "right": 717,
+      "label": "停用"
+    }
+  ],
+  "buttonsInsideCard": true,
+  "buttonsInsideHorizontally": true,
+  "buttonsSameRow": true,
+  "labels": [
+    "替换",
+    "停用"
+  ]
+}
