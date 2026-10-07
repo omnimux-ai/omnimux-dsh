@@ -8,6 +8,7 @@ import {
 import { OmnimuxError } from '../errors.js'
 import { classifyQuotaFailure } from '../../errors/quota-classifier.js'
 import { getJson, credentialRejectedError } from '../job.js'
+import { appendMediaTaskLog } from '../task-log.js'
 import {
   describeTaskFailure,
   isAutodlTaskPath,
@@ -164,6 +165,12 @@ export async function pollOpenAiMediaTask(options) {
     }
     const left = remainingMs(deadlineAt)
     if (left <= 0) {
+      void appendMediaTaskLog({
+        event: 'poll.timeout',
+        taskRef: options.taskRef,
+        capability: options.capability,
+        message: `${options.capability} task ${options.taskId} exceeded its poll deadline`,
+      })
       throw taskTimeout(options.capability, options.taskId, options.deadlineMs, lastTransientError ?? undefined)
     }
     let json = null
@@ -179,6 +186,12 @@ export async function pollOpenAiMediaTask(options) {
       // "No such task" is an answer, not a transport failure: restate it as the
       // domain error a reconcile reads ("nothing to reconcile, resubmit").
       if (isUnknownTaskError(error)) {
+        void appendMediaTaskLog({
+          event: 'poll.unknown-task',
+          taskRef: options.taskRef,
+          capability: options.capability,
+          message: error instanceof Error ? error.message : String(error),
+        })
         throw unknownTask(options.capability, options.taskId, error)
       }
       if (!isRetryablePollError(error)) throw error
@@ -214,6 +227,13 @@ export async function pollOpenAiMediaTask(options) {
         return json
       }
       if (status === 'failed' || status === 'error' || status === 'failure') {
+        void appendMediaTaskLog({
+          event: 'poll.terminal-failure',
+          taskRef: options.taskRef,
+          capability: options.capability,
+          upstreamCode: typeof json?.code === 'string' ? json.code : undefined,
+          message: `upstream reported status=${status} for task ${options.taskId}`,
+        })
         const classified = classifyQuotaFailure({ body: json })
         if (classified.kind === 'channel-unavailable') throw new OmnimuxError(classified.code, classified.message)
         if (classified.kind === 'quota-exceeded') throw new OmnimuxError('quota-exceeded', classified.message, { details: classified })
