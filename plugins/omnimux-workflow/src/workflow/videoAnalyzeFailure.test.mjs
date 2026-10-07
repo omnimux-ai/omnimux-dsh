@@ -101,3 +101,22 @@ test('videoStoryboardFailure: 非本类错误不带 upstream', () => {
   const { body } = videoStoryboardFailure(new Error('boom'));
   assert.equal('upstream' in body, false);
 });
+
+test('videoAnalyzeFailure: 码被上游替换时优先透传原始码', () => {
+  // video 层把 omnimux-invalid-request 改写成 video-invalid-input，原始码挂在 upstreamCode
+  const mapped = Object.assign(new Error('tool model only accepts text and image input'), {
+    code: 'video-invalid-input',
+    upstreamCode: 'omnimux-invalid-request',
+  });
+  const failure = describeVideoAnalyzeFailure(mapped);
+  assert.equal(failure.code, 'analyze-invalid-input');
+  assert.equal(failure.upstream?.code, 'omnimux-invalid-request');
+  assert.equal(failure.upstream?.detail, 'tool model only accepts text and image input');
+});
+
+test('videoAnalyzeFailure: 无 upstreamCode 时退回自身码', () => {
+  const failure = describeVideoAnalyzeFailure(
+    Object.assign(new Error('file is too large'), { code: 'video-invalid-input' }),
+  );
+  assert.equal(failure.upstream?.code, 'video-invalid-input');
+});

@@ -38,10 +38,16 @@ function sanitizeUpstreamDetail(raw: string): string {
 
 function extractUpstream(error: unknown): VideoAnalyzeUpstream | undefined {
   if (!error || typeof error !== 'object') return undefined;
+  // 优先取被本层替换前的原始码：中枢错误在 video 层已改码，只认 code 会丢掉真因。
+  const upstreamCode =
+    'upstreamCode' in error && typeof (error as { upstreamCode?: unknown }).upstreamCode === 'string'
+      ? String((error as { upstreamCode?: unknown }).upstreamCode).trim()
+      : '';
   const code =
-    'code' in error && typeof (error as { code?: unknown }).code === 'string'
+    upstreamCode ||
+    ('code' in error && typeof (error as { code?: unknown }).code === 'string'
       ? String((error as { code?: unknown }).code).trim() || 'unknown'
-      : 'unknown';
+      : 'unknown');
   const rawMessage =
     error instanceof Error
       ? error.message
