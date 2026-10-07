@@ -64,7 +64,7 @@
     "smoke": "bash scripts/smoke.sh",
     "accept:apps": "bash scripts/accept-apps-install.sh",
     "verify:models": "node scripts/verify-models.mjs",
-    "verify:model-contracts": "node scripts/verify-model-contracts.mjs --strict",
+    "verify:model-contracts": "node scripts/verify-model-contracts.mjs --strict && node scripts/verify-modality-matrix.mjs",
     "verify:cross-plugin-models": "node scripts/verify-cross-plugin-model-alignment.mjs",
     "verify:group-naming": "node scripts/verify-channel-group-naming.mjs",
     "verify:group-pricing": "node scripts/verify-channel-group-pricing.mjs",
