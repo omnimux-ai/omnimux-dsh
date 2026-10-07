@@ -1,0 +1,34 @@
+{
+  "task": "workflow-slot-preview-layout",
+  "surface": "创作画布 · 素材卡槽悬浮预览（.wf-slot-hover-preview）",
+  "method": "真实浏览器（Chromium 1243）驱动画布 harness；竖屏参考视频接入 vision_chat 的参考视频槽位；悬停卡槽后读取弹层盒模型与计算样式",
+  "harness": "plugins/omnimux-workflow/scripts/canvas-harness.mjs（工作树内构建，端口 4820；修复前基线取自主检出端口 4817）",
+  "hostTokenSimulation": "宿主 DSH 令牌注入 body（--dsw-alias-bg-elevated / --dsw-alias-border-l2 / --dsw-alias-label-primary / --dsw-alias-bg-layer-2 / --dsw-alias-interactive-bg-hover），模拟真实宿主的令牌作用域",
+  "baseline": {
+    "hasMediaWrapper": false,
+    "hasActionsRow": false,
+    "buttonsSameRow": false,
+    "buttonTops": [526.98, 566.98],
+    "cardHeight": 451.98,
+    "overflow": "auto",
+    "screenshot": "docs/evidence/slot-preview-layout/01-before-buttons-stacked.png"
+  },
+  "fixed": {
+    "hasMediaWrapper": true,
+    "hasActionsRow": true,
+    "buttonsSameRow": true,
+    "buttonTops": [566.98, 566.98],
+    "buttonsInsideCard": true,
+    "cardHeightStressed": 451.98,
+    "cardHeightNatural": 183,
+    "overflow": "hidden",
+    "screenshotStressed": "docs/evidence/slot-preview-layout/02-after-buttons-one-row.png",
+    "screenshotNatural": "docs/evidence/slot-preview-layout/03-after-natural-state.png"
+  },
+  "checks": {
+    "pnpm --filter omnimux-workflow test": "REAL_EXIT=0 · tests 2449 / pass 2449 / fail 0",
+    "pnpm verify:stages": "REAL_EXIT=0 · 14 Stage components, 8 sidebar targets PASS",
+    "node --test scripts/verify-anti-slop.test.mjs": "见同目录 anti-slop 结果"
+  },
+  "note": "压力用例通过注入超高竖屏媒体（height 520px, max-height none）复现「媒体撑破卡片」；自然用例不注入任何尺寸，走产品真实渲染路径。"
+}

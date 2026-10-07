@@ -1,0 +1,3 @@
+skipped /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-slot-preview-layout/plugins/omnimux-workflow/lib/canvas.js (--harness does not write production bundle)
+wrote /Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/workflow-slot-preview-layout/plugins/omnimux-workflow/dist-harness/canvas-harness.js (17394967 bytes)
+canvas harness: http://localhost:4931/
