@@ -1,0 +1,492 @@
+{
+  "steps": [
+    {
+      "step": "navigated",
+      "href": "http://127.0.0.1:49361/#/workspace/ws_qa_media"
+    },
+    {
+      "step": "load-island",
+      "loadIsland": {
+        "ok": true,
+        "already": false,
+        "src": "/omnimux-workflow/canvas.js?v=9fd79edb2d8dfd98",
+        "hasApi": true
+      }
+    },
+    {
+      "step": "seed-node",
+      "seed": {
+        "getStatus": 200,
+        "postStatus": 200,
+        "postBody": "{\"workspace\":{\"schemaVersion\":3,\"id\":\"ws_qa_media\",\"name\":\"QA Media\",\"version\":0,\"nodes\":[],\"edges\":[],\"settings\":{\"maxParallel\":3,\"failStrategy\":\"fail-fast\"},\"metadata\":{\"createdAt\":\"2026-10-07T04:40:33.564Z\",\"updatedAt\":\"2026-10-07T04:40:33.564Z\",\"nodeCount\":0}}}",
+        "snapshotKeys": [
+          "schemaVersion",
+          "id",
+          "name",
+          "version",
+          "nodes",
+          "edges",
+          "settings",
+          "metadata"
+        ],
+        "version": 0,
+        "existingNodes": 0,
+        "existingEdges": 0,
+        "schemaVersion": 3,
+        "putStatus": 200,
+        "putBody": "{\"workspace\":{\"schemaVersion\":3,\"id\":\"ws_qa_media\",\"name\":\"QA Media\",\"version\":1,\"nodes\":[{\"id\":\"node_qa_upstream_1\",\"type\":\"material\",\"position\":{\"x\":160,\"y\":160},\"data\":{\"label\":\"QA 视频素材\",\"materialType\":\"video\",\"status\":\"completed\",\"selectedTool\":\"import\",\"nodeKind\":\"import\",\"params\":{},\"failStrategy\":\"abort\",\"inputBindingVersion\":1,\"slotBindings\":{},\"relativePath\":\"assets/imported/fixture-video"
+      }
+    },
+    {
+      "step": "mount-canvas",
+      "mountResult": {
+        "ok": true
+      }
+    },
+    {
+      "step": "canvas-dom",
+      "probe": {
+        "host": true,
+        "rect": {
+          "w": 1280,
+          "h": 713
+        },
+        "totalElements": 132,
+        "reactFlowNode": 1,
+        "canvasRoot": 1,
+        "pill": 0,
+        "gscBox": 0,
+        "classCensus": [
+          [
+            "wf-header-capsule__btn",
+            5
+          ],
+          [
+            "wf-canvas-toolbar__item",
+            5
+          ],
+          [
+            "wf-canvas-toolbar__icon",
+            5
+          ],
+          [
+            "wf-canvas-toolbar__item--icon-only",
+            3
+          ],
+          [
+            "wf-canvas-toolbar__label",
+            3
+          ],
+          [
+            "react-flow__handle",
+            2
+          ],
+          [
+            "wf-handle",
+            2
+          ],
+          [
+            "wf-handle--plus",
+            2
+          ],
+          [
+            "wf-handle__anchor-layer",
+            2
+          ],
+          [
+            "wf-handle__anchor",
+            2
+          ],
+          [
+            "wf-handle__dot",
+            2
+          ],
+          [
+            "wf-handle__plus-hit-area",
+            2
+          ],
+          [
+            "wf-handle__plus",
+            2
+          ],
+          [
+            "wf-handle__plus-button",
+            2
+          ],
+          [
+            "wf-header-capsule",
+            2
+          ],
+          [
+            "wf-canvas-toolbar__divider",
+            2
+          ],
+          [
+            "wf-canvas-root",
+            1
+          ],
+          [
+            "wf-canvas-main",
+            1
+          ],
+          [
+            "wf-canvas-editor",
+            1
+          ],
+          [
+            "react-flow",
+            1
+          ],
+          [
+            "react-flow__renderer",
+            1
+          ],
+          [
+            "react-flow__pane",
+            1
+          ],
+          [
+            "react-flow__viewport",
+            1
+          ],
+          [
+            "react-flow__container",
+            1
+          ],
+          [
+            "react-flow__edges",
+            1
+          ],
+          [
+            "react-flow__edgelabel-renderer",
+            1
+          ],
+          [
+            "react-flow__nodes",
+            1
+          ],
+          [
+            "react-flow__node",
+            1
+          ],
+          [
+            "react-flow__node-material",
+            1
+          ],
+          [
+            "wf-material-node",
+            1
+          ]
+        ],
+        "innerText": "QA 视频素材\nReact Flow\n创作页 1\n100%",
+        "htmlHead": "<div class=\"wf-canvas-root\"><main class=\"wf-canvas-main\"><div class=\"wf-canvas-editor\" style=\"position: relative; height: 100%;\"><div data-testid=\"rf__wrapper\" class=\"react-flow light\" role=\"application\" style=\"width: 100%; height: 100%; overflow: hidden; position: relative; z-index: 0;\"><div class=\"react-flow__renderer\" style=\"position: absolute; width: 100%; height: 100%; top: 0px; left: 0px;\"><div class=\"react-flow__pane selection\" style=\"position: absolute; width: 100%; height: 100%; top: 0px; left: 0px;\"><div class=\"react-flow__viewport xyflow__viewport react-flow__container\" style=\"transform: translate(305px, 56.5px) scale(1);\"><div class=\"react-flow__edges\"></div><div class=\"react-flo"
+      },
+      "nodeAppeared": 1
+    },
+    {
+      "step": "workspace-after-mount",
+      "snapshot": {
+        "version": 1,
+        "nodeCount": 1,
+        "nodeIds": [
+          "node_qa_upstream_1"
+        ],
+        "dataKeys": [
+          [
+            "label",
+            "materialType",
+            "status",
+            "selectedTool",
+            "nodeKind",
+            "params",
+            "failStrategy",
+            "inputBindingVersion",
+            "slotBindings",
+            "relativePath",
+            "mediaUrl"
+          ]
+        ]
+      }
+    },
+    {
+      "step": "assets-index",
+      "assets": {
+        "status": 400,
+        "body": "{\"error\":\"project-required\",\"message\":\"workspace ws_qa_media is not bound to a local project\"}"
+      }
+    },
+    {
+      "step": "pill:upstream",
+      "pill": {
+        "found": true,
+        "key": "storyboard-video",
+        "label": "分镜表",
+        "disabled": false
+      }
+    },
+    {
+      "step": "click:upstream",
+      "click": {
+        "clicked": true,
+        "at": {
+          "x": 624,
+          "y": 169.5,
+          "w": 70,
+          "h": 26
+        },
+        "selector": ".wf-floating-top-pill__group [data-pill-measure-key=\"storyboard-video\"]"
+      },
+      "pillSelector": ".wf-floating-top-pill__group [data-pill-measure-key=\"storyboard-video\"]",
+      "viaMenu": false
+    },
+    {
+      "step": "A1",
+      "a1": {
+        "clicked": true,
+        "pill": {
+          "found": true,
+          "key": "storyboard-video",
+          "label": "分镜表",
+          "disabled": false
+        },
+        "interceptHits": 1,
+        "interceptUrls": [
+          "/omnimux-workflow/api/workspaces/ws_qa_media/storyboard-video"
+        ],
+        "reading": {
+          "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input重新生成",
+          "cardHeight": 195.75,
+          "cardWidth": 348,
+          "upstreamPresent": true,
+          "upstreamText": "该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input",
+          "reasonText": "该渠道不支持此素材类型，请更换渠道后重试。",
+          "detailText": "tool model only accepts text and image input",
+          "detailTitle": "tool model only accepts text and image input",
+          "detailWhiteSpace": "nowrap",
+          "detailTextOverflow": "ellipsis",
+          "detailOverflow": "hidden",
+          "detailScrollWidth": 247,
+          "detailClientWidth": 247,
+          "detailClientHeight": 17,
+          "detailLineHeight": "16.5px",
+          "detailOffsetTop": 345.88,
+          "cardHasMachineCode": false
+        },
+        "expectedDetail": "tool model only accepts text and image input"
+      }
+    },
+    {
+      "step": "pill:plain",
+      "pill": {
+        "found": true,
+        "key": "storyboard-video",
+        "label": "分镜表",
+        "disabled": false
+      }
+    },
+    {
+      "step": "click:plain",
+      "click": {
+        "clicked": true,
+        "at": {
+          "x": 624,
+          "y": 169.5,
+          "w": 70,
+          "h": 26
+        },
+        "selector": ".wf-floating-top-pill__group [data-pill-measure-key=\"storyboard-video\"]"
+      },
+      "pillSelector": ".wf-floating-top-pill__group [data-pill-measure-key=\"storyboard-video\"]",
+      "viaMenu": false
+    },
+    {
+      "step": "A3",
+      "a3": {
+        "clicked": true,
+        "pill": {
+          "found": true,
+          "key": "storyboard-video",
+          "label": "分镜表",
+          "disabled": false
+        },
+        "interceptHits": 1,
+        "interceptUrls": [
+          "/omnimux-workflow/api/workspaces/ws_qa_media/storyboard-video"
+        ],
+        "reading": {
+          "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试重新生成",
+          "cardHeight": 195.75,
+          "cardWidth": 348,
+          "upstreamPresent": false,
+          "upstreamText": null,
+          "reasonText": null,
+          "detailText": null,
+          "detailTitle": null,
+          "detailWhiteSpace": null,
+          "detailTextOverflow": null,
+          "detailOverflow": null,
+          "detailScrollWidth": null,
+          "detailClientWidth": null,
+          "detailClientHeight": null,
+          "detailLineHeight": null,
+          "detailOffsetTop": null,
+          "cardHasMachineCode": false
+        },
+        "expectedDetail": null
+      }
+    },
+    {
+      "step": "pill:long",
+      "pill": {
+        "found": true,
+        "key": "storyboard-video",
+        "label": "分镜表",
+        "disabled": false
+      }
+    },
+    {
+      "step": "click:long",
+      "click": {
+        "clicked": true,
+        "at": {
+          "x": 624,
+          "y": 169.5,
+          "w": 70,
+          "h": 26
+        },
+        "selector": ".wf-floating-top-pill__group [data-pill-measure-key=\"storyboard-video\"]"
+      },
+      "pillSelector": ".wf-floating-top-pill__group [data-pill-measure-key=\"storyboard-video\"]",
+      "viaMenu": false
+    },
+    {
+      "step": "A5",
+      "a5": {
+        "clicked": true,
+        "pill": {
+          "found": true,
+          "key": "storyboard-video",
+          "label": "分镜表",
+          "disabled": false
+        },
+        "interceptHits": 1,
+        "interceptUrls": [
+          "/omnimux-workflow/api/workspaces/ws_qa_media/storyboard-video"
+        ],
+        "reading": {
+          "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-重新生成",
+          "cardHeight": 195.75,
+          "cardWidth": 348,
+          "upstreamPresent": true,
+          "upstreamText": "该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-",
+          "reasonText": "该渠道不支持此素材类型，请更换渠道后重试。",
+          "detailText": "tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-",
+          "detailTitle": "tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-",
+          "detailWhiteSpace": "nowrap",
+          "detailTextOverflow": "ellipsis",
+          "detailOverflow": "hidden",
+          "detailScrollWidth": 1137,
+          "detailClientWidth": 316,
+          "detailClientHeight": 17,
+          "detailLineHeight": "16.5px",
+          "detailOffsetTop": 345.88,
+          "cardHasMachineCode": false
+        },
+        "expectedDetail": "tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-"
+      }
+    }
+  ],
+  "readings": {
+    "a1": {
+      "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input重新生成",
+      "cardHeight": 195.75,
+      "cardWidth": 348,
+      "upstreamPresent": true,
+      "upstreamText": "该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input",
+      "reasonText": "该渠道不支持此素材类型，请更换渠道后重试。",
+      "detailText": "tool model only accepts text and image input",
+      "detailTitle": "tool model only accepts text and image input",
+      "detailWhiteSpace": "nowrap",
+      "detailTextOverflow": "ellipsis",
+      "detailOverflow": "hidden",
+      "detailScrollWidth": 247,
+      "detailClientWidth": 247,
+      "detailClientHeight": 17,
+      "detailLineHeight": "16.5px",
+      "detailOffsetTop": 345.88,
+      "cardHasMachineCode": false
+    },
+    "a3": {
+      "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试重新生成",
+      "cardHeight": 195.75,
+      "cardWidth": 348,
+      "upstreamPresent": false,
+      "upstreamText": null,
+      "reasonText": null,
+      "detailText": null,
+      "detailTitle": null,
+      "detailWhiteSpace": null,
+      "detailTextOverflow": null,
+      "detailOverflow": null,
+      "detailScrollWidth": null,
+      "detailClientWidth": null,
+      "detailClientHeight": null,
+      "detailLineHeight": null,
+      "detailOffsetTop": null,
+      "cardHasMachineCode": false
+    },
+    "a5": {
+      "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-重新生成",
+      "cardHeight": 195.75,
+      "cardWidth": 348,
+      "upstreamPresent": true,
+      "upstreamText": "该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-",
+      "reasonText": "该渠道不支持此素材类型，请更换渠道后重试。",
+      "detailText": "tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-",
+      "detailTitle": "tool model only accepts text and image input :: upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-segment upstream-detail-padding-",
+      "detailWhiteSpace": "nowrap",
+      "detailTextOverflow": "ellipsis",
+      "detailOverflow": "hidden",
+      "detailScrollWidth": 1137,
+      "detailClientWidth": 316,
+      "detailClientHeight": 17,
+      "detailLineHeight": "16.5px",
+      "detailOffsetTop": 345.88,
+      "cardHasMachineCode": false
+    },
+    "heights": {
+      "a1": 195.75,
+      "a3": 195.75,
+      "a5": 195.75,
+      "deltaA1A5": 0
+    },
+    "intercepts": {
+      "a1": 1,
+      "a3": 1,
+      "a5": 1
+    }
+  },
+  "screenshots": {
+    "a1": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/canvas-upstream-reason/.workbuddy/evidence/app-qa/df128ddd-d3fe-4a04-b762-9d3f1c433e32/A1-failed-upstream.png",
+      "bytes": 58358
+    },
+    "a3": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/canvas-upstream-reason/.workbuddy/evidence/app-qa/df128ddd-d3fe-4a04-b762-9d3f1c433e32/A3-failed-no-upstream.png",
+      "bytes": 52030
+    },
+    "a5": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/canvas-upstream-reason/.workbuddy/evidence/app-qa/df128ddd-d3fe-4a04-b762-9d3f1c433e32/A5-failed-long-detail.png",
+      "bytes": 59038
+    },
+    "overview": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/canvas-upstream-reason/.workbuddy/evidence/app-qa/df128ddd-d3fe-4a04-b762-9d3f1c433e32/A0-canvas-overview.png",
+      "bytes": 59038
+    }
+  },
+  "fixtures": {
+    "detailA1": "tool model only accepts text and image input",
+    "detailLongLength": 200,
+    "upstreamCode": "omnimux-invalid-request"
+  }
+}

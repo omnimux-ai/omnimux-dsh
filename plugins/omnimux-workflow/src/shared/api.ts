@@ -346,6 +346,18 @@ export type ExecutionApiStatus =
 /** Node execution status (host ExecutionContext.NodeStatus). */
 export type NodeExecutionApiStatus = 'pending' | 'running' | 'completed' | 'error' | 'skipped';
 
+/**
+ * Upstream attribution carried by failed route envelopes (`body.upstream`).
+ *
+ * `code` is the machine code from the hub / video layer (never shown to the
+ * user); `detail` is the sanitized upstream summary (≤200 chars) and is the
+ * only technical text the canvas failure card is allowed to surface.
+ */
+export interface ApiUpstream {
+  code: string;
+  detail: string;
+}
+
 /** POST /executions request body. */
 export interface StartExecutionPayload {
   /** Last successfully saved input version; mismatch returns 409 version_conflict. */

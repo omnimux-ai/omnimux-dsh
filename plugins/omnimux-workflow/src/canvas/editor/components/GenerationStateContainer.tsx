@@ -14,6 +14,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RefreshCw, X } from 'lucide-react';
 import { useT } from '../../i18n';
+import { resolveUpstreamReason } from '../../i18n/upstreamReason.ts';
+import type { ApiUpstream } from '../../../shared/api.ts';
 import type { GenerationStatus } from '../utils/nodeVisualMath';
 import { OrganicShimmerOverlay } from './OrganicShimmer';
 
@@ -29,6 +31,13 @@ export interface GenerationStateContainerProps {
   loadingAspectRatio?: 'square' | 'video' | 'audio' | 'auto';
   /** 错误消息 */
   errorMessage?: string;
+  /**
+   * 上游归因（独立字段，勿并入 errorMessage）。
+   *
+   * errorMessage 会经过 useUserFacingErrorMessage 的二次翻译，命中关键词时
+   * 整段丢弃传入串；归因拼进去会被吞掉，故必须走独立 prop。
+   */
+  errorUpstream?: ApiUpstream;
   /** 任务 ID（失败时显示，截断前 8 位） */
   taskId?: string;
   /** 重试回调（接 MaterialNode handleGenerate） */
@@ -118,6 +127,7 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
   status,
   loadingAspectRatio = 'square',
   errorMessage,
+  errorUpstream,
   taskId,
   onRetry,
   children,
@@ -195,6 +205,10 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
   const isCompleted = status === 'completed';
   const defaultLoadingText = status === 'pending' ? t('node.preparing') : t('node.generating');
   const resolvedErrorMessage = useUserFacingErrorMessage(errorMessage);
+  // 上游归因不参与二次翻译：机器码只映射成结论，技术原文（detail，唯一允许的
+  // 非中文内容）原样弱化展示，缺失 code 时整行不渲染。
+  const upstreamReason = errorUpstream?.code ? resolveUpstreamReason(errorUpstream.code, t) : undefined;
+  const upstreamDetail = errorUpstream?.detail?.trim() || undefined;
 
   useEffect(() => {
     if (!isFailed || !errorMessage) return;
@@ -240,6 +254,16 @@ const GenerationStateContainer: React.FC<GenerationStateContainerProps> = ({
       <span className="wf-gsc__failed-label">{t('node.generationFailed')}</span>
       {resolvedErrorMessage ? (
         <span className="wf-gsc__failed-message">{resolvedErrorMessage}</span>
+      ) : null}
+      {upstreamReason ? (
+        <span className="wf-gsc__failed-upstream">
+          <span className="wf-gsc__failed-upstream-reason">{upstreamReason}</span>
+          {upstreamDetail ? (
+            <span className="wf-gsc__failed-upstream-detail" title={upstreamDetail}>
+              {upstreamDetail}
+            </span>
+          ) : null}
+        </span>
       ) : null}
       {taskId ? (
         <span className="wf-gsc__failed-task">

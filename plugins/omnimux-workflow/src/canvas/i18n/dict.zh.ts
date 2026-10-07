@@ -220,6 +220,14 @@ const zh = {
   'error.generationProviderFailed': '生成服务失败，请稍后重试。',
   'error.channelUnavailable': '该模型服务通道正在维护中，建议切换至默认模型继续生成。',
   'error.assetUrlMustBeHttp': '参考素材格式无效：当前模型需要公网可访问的 HTTP/HTTPS 素材链接，暂不支持直接使用本地离线文件。',
+  // 上游归因（upstream.code → 结论；技术原文由失败卡片另行弱化展示）
+  'error.upstreamChannelUnsupported': '该渠道不支持此素材类型，请更换渠道后重试。',
+  'error.upstreamModelDisabled': '该模型未启用，请在设置中启用后重试。',
+  'error.upstreamVideoInvalid': '视频文件不满足理解要求，请更换视频后重试。',
+  'error.upstreamChannelMissing': '尚未接入可用的模型渠道，请先在设置中配置渠道后重试。',
+  'error.upstreamHubNotReady': '执行中枢未就绪，请重启应用后重试。',
+  'error.upstreamCredentialMissing': '中枢尚未配置访问凭据，请先完成登录或配置后重试。',
+  'error.upstreamRejected': '上游服务拒绝了本次请求，请稍后重试或更换渠道。',
   // 连线与端口（W3，edge.*/menu.*）
   'edge.disconnect': '取消连接',
   'menu.generateFromNode': '从该节点生成',

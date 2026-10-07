@@ -8,6 +8,7 @@
 
 import { WORKFLOW_API_ROUTES } from '../../shared/api.ts';
 import type {
+  ApiUpstream,
   BuildManifest,
   CapabilityCatalog,
   CreateExecutionResponse,
@@ -43,11 +44,19 @@ export async function importAudioBytes(workspaceId: string, bytes: Blob, signal:
   return result;
 }
 
+/** Error-envelope fields the host may attach to any route response. */
+export interface ApiErrorEnvelope {
+  error?: string;
+  message?: string;
+  /** Upstream attribution, present only on failures that carry a real cause. */
+  upstream?: ApiUpstream;
+}
+
 export interface ApiResult<T> {
   ok: boolean;
   status: number;
   /** Success payload intersected with the error envelope fields. */
-  body: T & { error?: string; message?: string };
+  body: T & ApiErrorEnvelope;
 }
 
 export async function request<T>(
@@ -60,11 +69,11 @@ export async function request<T>(
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
     signal: opts.signal,
   });
-  let json = {} as T & { error?: string; message?: string };
+  let json = {} as T & ApiErrorEnvelope;
   try {
-    json = (await response.json()) as T & { error?: string; message?: string };
+    json = (await response.json()) as T & ApiErrorEnvelope;
   } catch {
-    json = { error: `HTTP ${String(response.status)}` } as T & { error?: string; message?: string };
+    json = { error: `HTTP ${String(response.status)}` } as T & ApiErrorEnvelope;
   }
   return { ok: response.ok, status: response.status, body: json };
 }

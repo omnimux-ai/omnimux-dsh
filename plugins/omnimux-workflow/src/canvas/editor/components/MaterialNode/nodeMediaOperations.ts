@@ -3,6 +3,7 @@
  */
 
 import type { MaterialNodeData } from '../../../types/materialNode';
+import type { ApiUpstream } from '../../../../shared/api.ts';
 import { toast } from '../../../ui';
 import { useCanvasStore } from '../../../store/canvasStore';
 import { tableDocumentCache } from '../../../store/tableDocumentCache.ts';
@@ -19,6 +20,8 @@ import {
 interface ApiMessageBody {
   message?: string;
   error?: string;
+  /** 上游归因（仅失败且上游给出真因时存在）。 */
+  upstream?: ApiUpstream;
 }
 
 interface MediaPathQuery {
@@ -50,6 +53,20 @@ function getApiErrorMessage(body: ApiMessageBody | undefined, fallback: string):
     if (body.error) return body.error;
   }
   return fallback;
+}
+
+/**
+ * 上游归因取值：只有响应体真带非空 code 时才算数。
+ *
+ * 与 errorMessage 分开传递——错误文案的二次翻译层会整段丢弃传入串，
+ * 归因拼进同一个字符串会被吞掉。
+ */
+function getApiUpstream(body: ApiMessageBody | undefined): ApiUpstream | undefined {
+  const raw = body?.upstream;
+  if (!raw || typeof raw.code !== 'string') return undefined;
+  const code = raw.code.trim();
+  if (!code) return undefined;
+  return { code, detail: typeof raw.detail === 'string' ? raw.detail.trim() : '' };
 }
 
 function refreshTableCache(workspaceId: string, tableId?: string): void {
@@ -259,7 +276,7 @@ function handleDeconstructResult(
   defaultLabel: string,
 ): boolean {
   const { id, nodeWidth, applyCanvasInputMutation, setNodes, updateNodeData } = params;
-  updateNodeData({ executionStatus: 'completed', executionError: undefined, videoDeconstructActive: undefined });
+  updateNodeData({ executionStatus: 'completed', executionError: undefined, executionUpstream: undefined, videoDeconstructActive: undefined });
 
   const serverWorkspace = result.body.workspace;
   const returnedTableId = result.body.tableId;
@@ -293,10 +310,14 @@ async function runDeconstructVideo(
   videoPath: string,
   defaultLabel: string,
   params: DeconstructVideoParams,
-): Promise<{ ok: boolean; message?: string }> {
+): Promise<{ ok: boolean; message?: string; upstream?: ApiUpstream }> {
   const result = await deconstructVideo(workspaceId, { nodeId: id, videoPath, title: defaultLabel });
   if (!result.ok || !result.body?.tableId) {
-    return { ok: false, message: getApiErrorMessage(result.body, params.t('deconstructVideo.toast.failed')) };
+    return {
+      ok: false,
+      message: getApiErrorMessage(result.body, params.t('deconstructVideo.toast.failed')),
+      upstream: getApiUpstream(result.body),
+    };
   }
 
   const applied = handleDeconstructResult(result, params, defaultLabel);
@@ -326,19 +347,24 @@ export async function executeDeconstructVideo(params: DeconstructVideoParams): P
     return;
   }
 
-  updateNodeData({ executionStatus: 'running', executionError: undefined, videoDeconstructActive: true });
+  updateNodeData({ executionStatus: 'running', executionError: undefined, executionUpstream: undefined, videoDeconstructActive: true });
   const defaultLabel = label ? `${label} 内容拆解表` : t('deconstructVideo.nodeLabel');
   try {
     const outcome = await runDeconstructVideo(workspaceId, id, videoPath, defaultLabel, params);
     if (!outcome.ok) {
-      updateNodeData({ executionStatus: 'error', executionError: outcome.message });
+      updateNodeData({
+        executionStatus: 'error',
+        executionError: outcome.message,
+        executionUpstream: outcome.upstream,
+        videoDeconstructActive: undefined,
+      });
       toast.error(outcome.message || t('deconstructVideo.toast.failed'));
       return;
     }
     toast.success(t('deconstructVideo.toast.success'));
   } catch (error) {
     const message = resolveErrorMessage(error, t('deconstructVideo.toast.failed'));
-    updateNodeData({ executionStatus: 'error', executionError: message, videoDeconstructActive: undefined });
+    updateNodeData({ executionStatus: 'error', executionError: message, executionUpstream: undefined, videoDeconstructActive: undefined });
     toast.error(message);
   }
 }
@@ -385,23 +411,28 @@ export async function executeStoryboardVideo(params: StoryboardVideoParams): Pro
     return;
   }
 
-  updateNodeData({ executionStatus: 'running', executionError: undefined, videoStoryboardActive: true });
+  updateNodeData({ executionStatus: 'running', executionError: undefined, executionUpstream: undefined, videoStoryboardActive: true });
   const defaultLabel = label ? `${label} 分镜表` : t('storyboardVideo.nodeLabel');
   try {
     const result = await storyboardVideo(workspaceId, { nodeId: id, videoPath, title: defaultLabel });
     if (!result.ok || !result.body?.tableId) {
       const message = getApiErrorMessage(result.body, t('storyboardVideo.toast.failed'));
-      updateNodeData({ executionStatus: 'error', executionError: message, videoStoryboardActive: undefined });
+      updateNodeData({
+        executionStatus: 'error',
+        executionError: message,
+        executionUpstream: getApiUpstream(result.body),
+        videoStoryboardActive: undefined,
+      });
       toast.error(message);
       return;
     }
-    updateNodeData({ executionStatus: 'completed', executionError: undefined, videoStoryboardActive: undefined });
+    updateNodeData({ executionStatus: 'completed', executionError: undefined, executionUpstream: undefined, videoStoryboardActive: undefined });
 
     handleStoryboardResult(result, setNodes);
     toast.success(t('storyboardVideo.toast.success'));
   } catch (error) {
     const message = resolveErrorMessage(error, t('storyboardVideo.toast.failed'));
-    updateNodeData({ executionStatus: 'error', executionError: message, videoStoryboardActive: undefined });
+    updateNodeData({ executionStatus: 'error', executionError: message, executionUpstream: undefined, videoStoryboardActive: undefined });
     toast.error(message);
   }
 }

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import type { MaterialNodeData, MaterialType } from '../../../../types/materialNode';
+import type { ApiUpstream } from '../../../../../shared/api.ts';
 import type { GenerationStatus } from '../../../utils/nodeVisualMath';
 import GenerationStateContainer from '../../GenerationStateContainer';
 import MediaPreview, { type MediaAssetLike } from '../MediaPreview';
@@ -18,6 +19,8 @@ export interface MediaCardBodyProps {
   loadingAspectRatio: 'video' | 'audio' | 'auto' | 'square';
   executionError?: string;
   errorMessage?: string;
+  /** 上游归因（独立字段；无上游时 undefined，失败卡片不渲染该行）。 */
+  errorUpstream?: ApiUpstream;
   previewUrl?: string;
   mediaAssets?: MediaAssetLike[];
   mediaUrl?: string;
@@ -45,6 +48,7 @@ export const MediaCardBody: React.FC<MediaCardBodyProps> = ({
   loadingAspectRatio,
   executionError,
   errorMessage,
+  errorUpstream,
   previewUrl,
   mediaAssets,
   mediaUrl,
@@ -86,6 +90,7 @@ export const MediaCardBody: React.FC<MediaCardBodyProps> = ({
         status={generationStatus}
         loadingAspectRatio={loadingAspectRatio}
         errorMessage={executionError ?? errorMessage}
+        errorUpstream={errorUpstream}
         taskId={nodeData.taskId}
         onRetry={materialType === 'audio' ? undefined : onRetry}
       >
