@@ -17,8 +17,8 @@ interface SlotHoverPreviewProps {
   onClose: () => void;
 }
 
-/** 操作行高度预算：32px 按钮 + 卡片上下内边距 + 与媒体的间距。媒体先让位，操作行始终留在卡内。 */
-const ACTION_ROW_HEIGHT = 56;
+/** 卡片外侧操作行的高度预算：32px 按钮 + 与卡片的间距。媒体按此让位，按钮组始终留在视口内。 */
+const ACTION_ROW_HEIGHT = 48;
 
 /** One hover region spans thumbnail, gap, preview and action, outside the clipped canvas. */
 export default function SlotHoverPreview({ anchor, upstream, state, reasonCode, onReturnFocus, onReplace, use = 'active', onSetUse, onClose }: SlotHoverPreviewProps) {
@@ -75,7 +75,9 @@ export default function SlotHoverPreview({ anchor, upstream, state, reasonCode, 
     <div ref={panelRef} className="wf-slot-hover-preview nodrag nowheel" role="dialog" aria-label={t('mention.preview')}
       style={{ position: 'fixed', left: position.left, width: position.width, maxHeight: available, ...(position.placement === 'top' ? { bottom: position.bottom } : { top: position.top }) }}
       onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
-      <div className="wf-slot-hover-preview__media">{media}</div>
+      <div className="wf-slot-hover-preview__card">
+        <div className="wf-slot-hover-preview__media">{media}</div>
+      </div>
       {hasActions ? (
         <div className="wf-slot-hover-preview__actions">
           {onReplace && <button type="button" className="wf-slot-well__replace-pill nodrag" aria-label={t('node.replace')} onClick={(event) => { event.stopPropagation(); onReplace(); onClose(); }}>{t('node.replace')}</button>}
