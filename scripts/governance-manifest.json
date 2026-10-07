@@ -312,6 +312,7 @@
     "composer-inline-bootstrap.mjs",
     "composer-inline-bootstrap.test.mjs",
     "composer-inline-e2e.mjs",
+    "dev-replay.mjs",
     "dev-smoke.mjs",
     "dev-smoke.test.mjs",
     "docked-slot-position-qa.mjs",

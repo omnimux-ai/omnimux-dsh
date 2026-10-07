@@ -43,6 +43,7 @@ import type { HeadlessExecutionSeam } from './execution/HeadlessExecutionSeam';
 import { persistGeneratedArtifact } from './execution/persistGeneratedArtifact';
 import { createLibraryHttpClient } from './library/libraryHttp';
 import { createWorkflowDispatcher, registerWorkflowRoutes } from './routes/canvasRoutes';
+import { DEV_FAILURE_FILE_NAME, withDevFailureRecorder } from './devFailureRecorder';
 import { registerWorkflowAgentSeats } from './agent/agentTools';
 import type { AgentSeatContext } from './agent/agentTools';
 
@@ -153,6 +154,15 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     resolveSessionWorkspaceDir: readSessionWorkspaceDir,
   });
 
+  // Issue #3237: dev-only failure recorder behind one-command replay. Off
+  // unless OMNIMUX_WORKFLOW_DEV_REPLAY=1 — Dev and Prod load the same build,
+  // so `NODE_ENV` cannot select dev. While off this returns `dispatcher`
+  // itself: no extra branch, no IO, no file.
+  const recordingDispatcher = withDevFailureRecorder(dispatcher, {
+    env: opts.env ?? process.env,
+    file: join(paths.root, DEV_FAILURE_FILE_NAME),
+  });
+
   // Recovery pass (Gxgen ExecutionRecoveryService port): resume live runs
   // persisted by a previous mount / process. Fire-and-forget — route mounts
   // do not wait on it; recovered executions stream to late SSE subscribers.
@@ -181,7 +191,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     const mount = () => {
       // 项目库 API（Phase 0）已并入 workflow dispatcher（/omnimux-workflow/api/projects*），
       // 与画布路由共用同一 prefix 注册，最长前缀不冲突、无二次 register。
-      disposers.push(registerWorkflowRoutes(webServer, dispatcher));
+      disposers.push(registerWorkflowRoutes(webServer, recordingDispatcher));
     };
     if (typeof ctx.effect === 'function') {
       ctx.effect(mount, 'omnimux-workflow: http routes');
