@@ -28,6 +28,7 @@ import {
   recordMediaCollectionFailure,
 } from './task-store.js'
 import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
+import { appendMediaTaskLog } from './task-log.js'
 import { resolveRuntimeChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
 import { getModelChannelGroups, resolveRequestChannelIntent, parseModelAndGroup, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
 import { DEFAULT_PROVIDER_ENDPOINTS, BYOK_KEY_REF } from '../byok/http.js'
@@ -291,6 +292,12 @@ export async function executeOmnimuxMedia(capability, input) {
         await downloadMediaFile({ dest: input.dest, url: taskRecord.artifact.sourceUrl, capability, apiKey: auth.apiKey, providerId: route.providerId, fetcher: input.fetcher, signal: input.signal })
       } catch (error) {
         recordMediaCollectionFailure(taskRecord.taskRef, error)
+        void appendMediaTaskLog({
+          event: 'retrieve.failed',
+          taskRef: taskRecord.taskRef,
+          capability,
+          message: error instanceof Error ? error.message : String(error),
+        })
         throw error
       }
       updateMediaTaskRecord(taskRecord.taskRef, { status: 'ready', collectionError: undefined, collectionErrorCode: undefined,
@@ -309,6 +316,12 @@ export async function executeOmnimuxMedia(capability, input) {
       })
     } catch (error) {
       if (taskRecord) recordMediaCollectionFailure(taskRecord.taskRef, error)
+      void appendMediaTaskLog({
+        event: 'retrieve.failed',
+        taskRef: taskRecord?.taskRef,
+        capability,
+        message: error instanceof Error ? error.message : String(error),
+      })
       throw error
     }
     if (taskRecord && result.mode === 'live') {
@@ -798,6 +811,15 @@ export async function executeOmnimuxMedia(capability, input) {
         wireModel: candidateRoute.modelId, group: candidateRoute.group,
         credentialRef: candidateRoute.apiKeyEnv,
       })
+      void appendMediaTaskLog({
+        event: 'submit.accepted',
+        taskRef: pendingTaskRecord.taskRef,
+        requestKey,
+        capability,
+        model: candidateRoute.modelId,
+        channel: candidateRoute.group,
+        attempt,
+      })
     }
     const runtime = input.runtime ?? createProtocolRuntime(candidateRoute, input.fetcher, auth.apiKey, onSubmitted)
     try {
@@ -831,6 +853,18 @@ export async function executeOmnimuxMedia(capability, input) {
       break
     } catch (error) {
       const unwrapped = unwrapAdapterError(error)
+      void appendMediaTaskLog({
+        event: 'submit.failed',
+        taskRef: pendingTaskRecord.taskRef,
+        requestKey,
+        capability,
+        model: candidateModelId || candidate,
+        channel: candidateGroup ?? route.group,
+        upstreamCode: typeof unwrapped?.code === 'string' ? unwrapped.code : undefined,
+        httpStatus: typeof unwrapped?.status === 'number' ? unwrapped.status : undefined,
+        attempt,
+        message: unwrapped?.message ?? (error instanceof Error ? error.message : String(error)),
+      })
       const classified = classifyQuotaFailure({ error, cause: error, message: error?.message })
       if (classified.kind === 'quota-exceeded') {
         throw new OmnimuxError('quota-exceeded', classified.message)

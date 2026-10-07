@@ -13,6 +13,7 @@ import {
   updateMediaTaskRecord,
   canRecoverMediaTask,
 } from './task-store.js'
+import { appendMediaTaskLog } from './task-log.js'
 
 export const DIRECT_MEDIA_GENERATE_ROUTE = '/omnimux/api/media/generate'
 
@@ -67,6 +68,12 @@ export function registerDirectMediaRoutes(webServer, deps) {
         || (typeof body.task_ref === 'string' && body.task_ref.trim())
       )
       if (!prompt && !hasTaskHandle) {
+        void appendMediaTaskLog({
+          event: 'submit.rejected',
+          capability: body.kind === 'video' ? 'video' : 'image',
+          httpStatus: 400,
+          message: 'prompt-required',
+        })
         sendJson(res, 400, { ok: false, error: 'prompt-required' })
         return
       }
@@ -237,7 +244,11 @@ export function registerDirectMediaRoutes(webServer, deps) {
           try {
             recordMediaCollectionFailure(targetRecord.taskRef, err, ledgerOpts)
           } catch (ledgerError) {
-            console.warn('[media] collection diagnostic could not be persisted:', ledgerError.message)
+            void appendMediaTaskLog({
+              event: 'request.failed',
+              taskRef: targetRecord?.taskRef,
+              message: `collection diagnostic could not be persisted: ${ledgerError.message}`,
+            })
           }
         } else if (targetRecord && (targetRecord.status === 'submitting' || targetRecord.status === 'submitted')) {
           try {
@@ -248,10 +259,25 @@ export function registerDirectMediaRoutes(webServer, deps) {
               errorCode: failCode,
             }, ledgerOpts)
           } catch (upErr) {
-            console.error('[media] updateMediaTaskRecord failed:', upErr)
+            void appendMediaTaskLog({
+              event: 'request.failed',
+              taskRef: targetRecord?.taskRef,
+              message: `updateMediaTaskRecord failed: ${upErr instanceof Error ? upErr.message : String(upErr)}`,
+            })
           }
         }
         const latest = targetRecord ? getMediaTaskRecord(targetRecord.taskRef, ledgerOpts) : null
+        void appendMediaTaskLog({
+          event: 'request.failed',
+          taskRef: latest?.taskRef || targetRecord?.taskRef,
+          requestKey: normalizedRequestKey,
+          capability: kind,
+          model: latest?.model,
+          channel: latest?.group,
+          httpStatus: typeof err?.status === 'number' ? err.status : undefined,
+          upstreamCode: typeof err?.code === 'string' ? err.code : undefined,
+          message,
+        })
         const failure = { ok: false, error: message }
         if (latest) {
           failure.taskRef = latest.taskRef

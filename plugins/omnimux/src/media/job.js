@@ -3,6 +3,7 @@ import { dirname } from 'node:path'
 import { OmnimuxError } from './errors.js'
 import { classifyQuotaFailure } from '../errors/quota-classifier.js'
 import { DEFAULT_REQUEST_TIMEOUT_MS, RETRYABLE_STATUS } from './task-deadline.js'
+import { appendMediaTaskLog } from './task-log.js'
 
 /**
  * Upstream 401s on media /v1 endpoints do NOT mean "not signed in": the console
@@ -272,6 +273,15 @@ export async function downloadMediaFile(options) {
           await sleep(retryDelayMs)
           continue
         }
+        void appendMediaTaskLog({
+          event: 'download.failed',
+          taskRef: options.taskRef,
+          capability: options.capability,
+          attempt,
+          upstreamCode: typeof err?.code === 'string' ? err.code : undefined,
+          httpStatus: typeof err?.status === 'number' ? err.status : undefined,
+          message: err instanceof Error ? err.message : String(err),
+        })
         throw new OmnimuxError('omnimux-download-failed', `download failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err })
       }
     }
