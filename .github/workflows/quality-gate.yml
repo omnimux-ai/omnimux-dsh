@@ -94,10 +94,13 @@ jobs:
         run: node scripts/check-tracked-artifacts.mjs
 
       # 仓库静态门禁：插件边界、双语配对、AGENTS.md 预算与链接（侧栏契约需 dsh-ui-kit 实物依赖，暂不入此环境）。
+      # 静默吞错为告警档（恒以成功状态退出，只打印存量清单），豁免清单出现僵尸条目才失败。
       - name: Repo gate scripts (boundaries, bilingual, AGENTS.md)
         run: |
           node scripts/verify-plugin-boundaries.mjs
           node scripts/verify-bilingual-docs.mjs
+          node scripts/verify-silent-catch.mjs
+          node --test scripts/verify-silent-catch.test.mjs
           node --test scripts/verify-agents-md.test.mjs
 
       # 侧栏契约门禁：真实装配 8 个 Stage + market 全生命周期（JSDOM + 真实
