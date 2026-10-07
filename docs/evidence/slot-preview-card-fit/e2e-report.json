@@ -1,0 +1,174 @@
+{
+  "origin": "http://localhost:4943",
+  "geometry": {
+    "square": {
+      "hasCard": true,
+      "hasActionsOutsideCard": true,
+      "natural": {
+        "width": 96,
+        "height": 96
+      },
+      "card": {
+        "top": 156.5078125,
+        "bottom": 266.5078125,
+        "left": 612,
+        "right": 722,
+        "width": 110,
+        "height": 110
+      },
+      "image": {
+        "width": 96,
+        "height": 96
+      },
+      "popover": {
+        "width": 240,
+        "left": 547,
+        "right": 787
+      },
+      "actions": {
+        "top": 274.5078125,
+        "bottom": 306.5078125,
+        "left": 617,
+        "right": 717
+      },
+      "cardBackground": "rgb(28, 28, 31)",
+      "cardBorderWidth": "1px",
+      "cardRadius": "12px",
+      "buttons": [
+        {
+          "top": 274.5078125,
+          "bottom": 306.5078125,
+          "left": 617,
+          "right": 663,
+          "label": "替换"
+        },
+        {
+          "top": 274.5078125,
+          "bottom": 306.5078125,
+          "left": 671,
+          "right": 717,
+          "label": "停用"
+        }
+      ],
+      "buttonsSameRow": true,
+      "labels": [
+        "替换",
+        "停用"
+      ]
+    },
+    "portrait": {
+      "hasCard": true,
+      "hasActionsOutsideCard": true,
+      "natural": {
+        "width": 240,
+        "height": 480
+      },
+      "card": {
+        "top": 156.5078125,
+        "bottom": 622.5078125,
+        "left": 547,
+        "right": 787,
+        "width": 240,
+        "height": 466
+      },
+      "image": {
+        "width": 226,
+        "height": 452
+      },
+      "popover": {
+        "width": 240,
+        "left": 547,
+        "right": 787
+      },
+      "actions": {
+        "top": 630.5078125,
+        "bottom": 662.5078125,
+        "left": 617,
+        "right": 717
+      },
+      "cardBackground": "rgb(28, 28, 31)",
+      "cardBorderWidth": "1px",
+      "cardRadius": "12px",
+      "buttons": [
+        {
+          "top": 630.5078125,
+          "bottom": 662.5078125,
+          "left": 617,
+          "right": 663,
+          "label": "替换"
+        },
+        {
+          "top": 630.5078125,
+          "bottom": 662.5078125,
+          "left": 671,
+          "right": 717,
+          "label": "停用"
+        }
+      ],
+      "buttonsSameRow": true,
+      "labels": [
+        "替换",
+        "停用"
+      ]
+    },
+    "stressed": {
+      "hasCard": true,
+      "hasActionsOutsideCard": true,
+      "natural": {
+        "width": 240,
+        "height": 480
+      },
+      "card": {
+        "top": 156.5078125,
+        "bottom": 690.5078125,
+        "left": 547,
+        "right": 787,
+        "width": 240,
+        "height": 534
+      },
+      "image": {
+        "width": 226,
+        "height": 520
+      },
+      "popover": {
+        "width": 240,
+        "left": 547,
+        "right": 787
+      },
+      "actions": {
+        "top": 698.5078125,
+        "bottom": 730.5078125,
+        "left": 617,
+        "right": 717
+      },
+      "cardBackground": "rgb(28, 28, 31)",
+      "cardBorderWidth": "1px",
+      "cardRadius": "12px",
+      "buttons": [
+        {
+          "top": 698.5078125,
+          "bottom": 730.5078125,
+          "left": 617,
+          "right": 663,
+          "label": "替换"
+        },
+        {
+          "top": 698.5078125,
+          "bottom": 730.5078125,
+          "left": 671,
+          "right": 717,
+          "label": "停用"
+        }
+      ],
+      "buttonsSameRow": true,
+      "labels": [
+        "替换",
+        "停用"
+      ]
+    },
+    "viewport": {
+      "width": 1728,
+      "height": 873
+    }
+  }
+}
