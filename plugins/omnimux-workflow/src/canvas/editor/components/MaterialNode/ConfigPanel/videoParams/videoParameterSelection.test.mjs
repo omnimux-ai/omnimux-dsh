@@ -109,3 +109,38 @@ test('operation adapts to line constraints when preferred operation is not suppo
   assert.deepEqual(result.errors, []);
 });
 
+test('comfyui line narrows the operation list and keeps hidden parameters from resurfacing', () => {
+  const resolution = { options:[{value:'768P'},{value:'2K'}], defaultValue:'2K' };
+  const operation = (id) => ({
+    id, listed:true, output:{type:'video'},
+    inputs:[{slot:'prompt',type:'text',source:'node_field',min:0,max:1}],
+    // The operation republishes the control the line refuses; the panel must not read it back.
+    parameters:{ resolution:{...resolution} },
+  });
+  const h3 = {
+    id:'minimax-h3', label:'海螺 H3',
+    parameters:{ resolution:{...resolution}, duration:{options:[{value:5},{value:10}],defaultValue:10} },
+    operations:[operation('text_to_video'), operation('video_multi_ref')],
+  };
+  const catalog = { video:[h3], models:[h3] };
+  const args = { currentModelItem:h3, targetModelItem:h3, catalog };
+
+  const narrowed = buildVideoParameterSelection({
+    ...args,
+    params:{ model:'minimax-h3', operation:'text_to_video', resolution:'2K', duration:5 },
+    routing:{ channelGroupId:'comfyui', allowedGroups:['comfyui'] },
+  });
+  assert.equal(narrowed.params.operation, 'video_multi_ref');
+  assert.equal(narrowed.params.resolution, undefined);
+  // 模式被渠道收敛到唯一允许项，时长回到该模式的模型默认值（10s），不是用户上一次的 5s。
+  assert.equal(narrowed.params.duration, 10);
+  assert.deepEqual(narrowed.notices.filter((notice) => notice.includes('清晰度')), []);
+
+  const open = buildVideoParameterSelection({
+    ...args,
+    params:{ model:'minimax-h3', operation:'text_to_video', resolution:'2K', duration:5 },
+  });
+  assert.equal(open.params.operation, 'text_to_video');
+  assert.equal(open.params.resolution, '2K');
+});
+

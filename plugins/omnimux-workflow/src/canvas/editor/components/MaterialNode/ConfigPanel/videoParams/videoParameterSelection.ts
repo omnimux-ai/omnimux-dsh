@@ -100,6 +100,17 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
     args.targetModelItem.id,
     lineConstraints,
   );
+  // The operation list and the operation-level parameter declarations must carry the same
+  // narrowing as the model itself: reading them from the raw catalog re-publishes what the
+  // line refuses (extra generation modes, and controls the line does not expose at all).
+  const catalog = args.catalog.models
+    ? {
+        ...args.catalog,
+        models: args.catalog.models.map((model) => (model.id === args.targetModelItem!.id
+          ? narrowModelByLineConstraints(model, args.targetModelItem!.id, lineConstraints)
+          : model)),
+      }
+    : args.catalog;
   const currentId = typeof args.params.model === 'string' ? args.params.model : '';
   const resolvedCurrent = args.catalog.models?.find(model => model.id === currentId || model.aliases?.includes(currentId));
   const currentMatches = Boolean(args.currentModelItem && resolvedCurrent?.id === args.currentModelItem.id);
@@ -107,7 +118,7 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
   const history = readVideoParameterSelections(args.parameterSelections);
   const fingerprint = buildUiUpstreamFingerprint({prompt: args.prompt, upstreams: args.upstreams});
   function branch(model: CapabilityModelItem, preferred?: string) {
-    const state = buildEffectiveOpsUiState({catalog:args.catalog!, modelId:model.id, fingerprint, outputType:'video', ...(preferred ? {preferredOperationId:preferred} : {})});
+    const state = buildEffectiveOpsUiState({catalog, modelId:model.id, fingerprint, outputType:'video', ...(preferred ? {preferredOperationId:preferred} : {})});
     const operation = preferred
       ? state.effectiveOps.find(op => op.id === preferred)
       : (state.effectiveOps.find(op => op.id === 'text_to_video') ?? state.effectiveOps.find(op => op.id === state.selectedOperationId) ?? state.effectiveOps[0]);
@@ -123,7 +134,7 @@ export function buildVideoParameterSelection(args: VideoParameterSelectionArgs):
     preferred = lineConstraints.operations[0];
   }
   // 2. 若跨模型切换且历史记录的操作在新模型中不存在，平滑回退
-  const targetDecl = args.catalog.models?.find(m => m.id === target.id || m.aliases?.includes(target.id));
+  const targetDecl = catalog.models?.find(m => m.id === target.id || m.aliases?.includes(target.id));
   const targetOps = (target as CapabilityModelItem & { operations?: Array<{ id: string }> }).operations ?? targetDecl?.operations;
   if (!sameModel && preferred && targetOps && !targetOps.some((op: { id: string }) => op.id === preferred)) {
     preferred = undefined;
