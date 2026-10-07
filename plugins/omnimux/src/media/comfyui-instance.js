@@ -18,6 +18,15 @@ export const DEFAULT_COMFYUI_ENGINE_URL = 'https://u14326-79121a894bb2.westd.see
 export const U06_WORKFLOW_FILENAME = 'API-U06-无加速多参.json'
 export const DEFAULT_COMFYUI_OPERATION = 'video_multi_ref'
 
+/** 画布画幅 → U06 ResolutionSelector 枚举串 */
+export const U06_ASPECT_RATIO_MAP = Object.freeze({
+  '16:9': '16:9 (Landscape Widescreen)',
+  '9:16': '9:16 (Portrait Widescreen)',
+  '1:1': '1:1 (Square)',
+  '4:3': '4:3 (Standard)',
+  '3:4': '3:4 (Portrait)',
+})
+
 /** 渠道组 id：画布与路由层以 minimax-h3@comfyui 选中本实例 */
 export const COMFYUI_CHANNEL_GROUP_ID = 'comfyui'
 
@@ -194,6 +203,7 @@ export function buildU06Prompt({
   uploadedAudios = [],
   duration = 12,
   steps = 8,
+  aspectRatio,
   seed,
 }) {
   const wf = JSON.parse(JSON.stringify(workflow))
@@ -228,7 +238,17 @@ export function buildU06Prompt({
     wf['728'].inputs.steps = Number(steps) || 8
   }
 
-  // 7. 随机种子 (节点 142 easy seed)
+  // 7. 画面比例 (ResolutionSelector 枚举串，蓝本现值兜底)
+  if (aspectRatio) {
+    for (const node of Object.values(wf)) {
+      if (node && typeof node === 'object' && node.inputs && typeof node.inputs.aspect_ratio === 'string') {
+        const mapped = U06_ASPECT_RATIO_MAP[aspectRatio] ?? (String(aspectRatio).includes('(') ? aspectRatio : null)
+        if (mapped) node.inputs.aspect_ratio = mapped
+      }
+    }
+  }
+
+  // 8. 随机种子 (节点 142 easy seed)
   if (wf['142']?.inputs) {
     const finalSeed = Number.isInteger(seed) && seed >= 0
       ? seed
@@ -453,6 +473,7 @@ export async function generateComfyUiVideo({
     uploadedAudios,
     duration,
     steps,
+    aspectRatio: payload.aspect_ratio ?? payload.aspectRatio,
     seed: payload.seed,
   })
 

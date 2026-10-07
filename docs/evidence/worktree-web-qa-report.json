@@ -1,0 +1,61 @@
+{
+  "runId": "ff10ea01-706f-4945-830d-4edc53de84d9",
+  "stage": "workflow",
+  "plugin": "omnimux-workflow",
+  "startedAt": "2026-10-07T03:02:45.313Z",
+  "completedAt": "2026-10-07T03:02:51.863Z",
+  "pass": true,
+  "serverPort": 58898,
+  "cdpPort": 58945,
+  "assertions": [
+    {
+      "name": "bundle-client-code",
+      "pass": true,
+      "size": 5611184
+    },
+    {
+      "name": "ephemeral-server-listen",
+      "pass": true,
+      "port": 58898
+    },
+    {
+      "name": "ephemeral-cdp-listen",
+      "pass": true,
+      "port": 58945
+    },
+    {
+      "name": "runner-page-ready",
+      "pass": true
+    },
+    {
+      "name": "sidebar-entry-clicked",
+      "pass": true,
+      "selector": "[data-omnimux-workflow-entry]"
+    },
+    {
+      "name": "stage-content-rendered",
+      "pass": true,
+      "dimensions": {
+        "width": 548,
+        "height": 88
+      },
+      "textSnippet": "工作流库\n\n工作树隔离环境已成功渲染 Stage 内容 (Tab: omnimux-workflow"
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 36012
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/canvas-comfyui-u06-ops/.workbuddy/evidence/worktree-qa/ff10ea01-706f-4945-830d-4edc53de84d9/workflow.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 36012
+  },
+  "errors": []
+}
