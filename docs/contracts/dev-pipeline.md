@@ -61,7 +61,8 @@ Dev 与 Prod 都不得 link 工作树或接收未合并产物；没有未合并�
 
 ## 刷新与重启
 
-- 构建 watcher 只产出构建文件，不代表 Host 已加载，也不承诺 HMR。Client 物化后在指定 Dev 页面或窗口刷新；Host 变更只有在目标进程重新加载后才生效。
+- Client 热更新是产品默认行为，不是可选开关（[Hub WebSocket 热更新](hmr.md)）：watcher 产出新 Client 产物后，Hub 经事件通道通知已打开页面失效缓存、预取并重挂载，无需手动刷新。官方原生 `client-hmr` 行必须保持禁用；在更高层重新启用会被 Host 挂载检查拒绝。
+- 构建 watcher 只产出构建文件，不代表 Host 已加载——这条限制只适用于 Host 侧：Host 变更只有在目标进程重新加载后才生效，与 Client 热更新是两件事，不要据此推断 Client 也需要刷新。
 - Dev 重启按 [Git/PR 授权边界](plugin-git-pr.md#授权边界)执行：Agent 核实目标身份、状态可恢复性及占用冲突；无冲突时自主执行并复核，有冲突时只协调该冲突。Prod 保留生产授权边界，不得默认 `pkill` 未确认目标。
 - 只有壳层/平台门控改动需要额外 Electron renderer/CDP；普通 Web/Stage 的 Agent 侧验收以隔离 worktree 的真实浏览器 Web 验证为准，Dev 45120 真机验收归人工，不作为 Agent 交付卡点。
 
@@ -72,7 +73,7 @@ Dev 与 Prod 都不得 link 工作树或接收未合并产物；没有未合并�
 1. **Tier 1 (纯前端轻量刷新 · 零风险)**：
    - **适用场景**：CSS 样式修改、React 页面纯排版布局、局部交互动效、静态文案修正。
    - **生效边界**：仅影响 Chromium 渲染层，无服务端 Node 模块或持久化缓存依赖。
-   - **操作指令**：在已打开的开发版窗口按 `Cmd + R` 即刻加载最新 Client Bundle 生效。
+   - **操作指令**：热更新默认生效——已打开窗口会经 Hub 事件通道自动加载最新 Client 产物；`Cmd + R` 仅作兜底手动刷新。
 2. **Tier 2 (深度契约与宿主重载 · 需用户明确批准)**：
    - **适用场景**：新增/修改模型能力契约（`specs/*.yaml`）、Node 服务端路由与 Seam 扩展、全局 Provider 注册。
    - **阻碍根因**：Node 宿主进程内存驻留（模块级顶级静态单例不会自动重读磁盘）+ 前端 10 分钟 `localStorage`（`omnimux.canvas.catalog.cache`）强缓存锁。
