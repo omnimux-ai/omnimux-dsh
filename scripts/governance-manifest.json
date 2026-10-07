@@ -274,6 +274,8 @@
     "verify-profile-preflight.mjs",
     "verify-profile-preflight.test.mjs",
     "verify-sidebar-title-i18n.mjs",
+    "verify-silent-catch.mjs",
+    "verify-silent-catch.test.mjs",
     "verify-site-screenshots.mjs",
     "verify-skill-bilingual.mjs",
     "verify-skill-bilingual.test.mjs",
