@@ -1,12 +1,12 @@
 {
-  "runId": "ff10ea01-706f-4945-830d-4edc53de84d9",
+  "runId": "030baa12-81d7-4d07-8216-a24e53defa0a",
   "stage": "workflow",
   "plugin": "omnimux-workflow",
-  "startedAt": "2026-10-07T03:02:45.313Z",
-  "completedAt": "2026-10-07T03:02:51.863Z",
+  "startedAt": "2026-10-07T03:47:37.532Z",
+  "completedAt": "2026-10-07T03:47:43.885Z",
   "pass": true,
-  "serverPort": 58898,
-  "cdpPort": 58945,
+  "serverPort": 52516,
+  "cdpPort": 52526,
   "assertions": [
     {
       "name": "bundle-client-code",
@@ -16,12 +16,12 @@
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 58898
+      "port": 52516
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 58945
+      "port": 52526
     },
     {
       "name": "runner-page-ready",
@@ -52,7 +52,7 @@
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/canvas-comfyui-u06-ops/.workbuddy/evidence/worktree-qa/ff10ea01-706f-4945-830d-4edc53de84d9/workflow.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-param-line-narrowing/.workbuddy/evidence/worktree-qa/030baa12-81d7-4d07-8216-a24e53defa0a/workflow.png",
     "width": 1280,
     "height": 713,
     "bytes": 36012
