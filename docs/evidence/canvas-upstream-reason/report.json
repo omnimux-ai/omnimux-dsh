@@ -1,0 +1,117 @@
+{
+  "task": "canvas-upstream-reason",
+  "issue": "#3235",
+  "branch": "feat/canvas-upstream-reason",
+  "worktree": ".worktrees/canvas-upstream-reason",
+  "date": "2026-10-07",
+  "command": "pnpm verify:app -- --journey .workbuddy/qa-journeys/canvas-upstream-reason.mjs",
+  "runner": "scripts/worktree-app-qa.mjs (worktree web QA runner, port 0, self-cleaning)",
+  "runId": "df128ddd-d3fe-4a04-b762-9d3f1c433e32",
+  "mode": "ui",
+  "origin": "http://127.0.0.1:49361",
+  "evidenceLevel": "full",
+  "taskPluginsInstalled": true,
+  "taskPluginsCount": 22,
+  "browser": "headless Chrome via CDP (--headless=new, 1280x800), real pointer input via Input.dispatchMouseEvent",
+  "pass": true,
+  "assertionCount": 30,
+  "failed": [],
+  "fixture": {
+    "interceptor": "window.fetch override, matched URL /omnimux-workflow/api/workspaces/ws_qa_media/storyboard-video",
+    "httpStatus": 502,
+    "body": {
+      "ok": false,
+      "code": 502,
+      "data": null,
+      "error": "analyze-invalid-input",
+      "message": "视频文件不满足理解要求（格式、大小或路径），请更换视频后重试",
+      "upstream": {
+        "code": "omnimux-invalid-request",
+        "detail": "tool model only accepts text and image input"
+      }
+    },
+    "negativeControl": "same 502 with the upstream key removed",
+    "longDetail": "detail replaced with a 200-character string"
+  },
+  "assertions": [
+    {
+      "id": "A1",
+      "name": "归因行出现 + 中文结论 + 技术原文",
+      "result": "PASS",
+      "evidence": {
+        "upstreamPresent": true,
+        "reasonText": "该渠道不支持此素材类型，请更换渠道后重试。",
+        "detailText": "tool model only accepts text and image input",
+        "interceptHits": 1,
+        "interceptUrl": "/omnimux-workflow/api/workspaces/ws_qa_media/storyboard-video"
+      },
+      "screenshot": "A1-failed-with-upstream.png / A1-card-closeup.png"
+    },
+    {
+      "id": "A3",
+      "name": "负向对照：不带 upstream 时不出现归因行",
+      "result": "PASS",
+      "evidence": {
+        "upstreamPresent": false,
+        "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试重新生成",
+        "cardHeight": 195.75
+      },
+      "screenshot": "A3-failed-without-upstream.png / A3-card-closeup.png"
+    },
+    {
+      "id": "A5",
+      "name": "200 字符长文单行省略号截断且卡片高度与 A1 一致",
+      "result": "PASS",
+      "evidence": {
+        "detailLength": 200,
+        "whiteSpace": "nowrap",
+        "textOverflow": "ellipsis",
+        "scrollWidth": 1137,
+        "clientWidth": 316,
+        "clientHeight": 17,
+        "lineHeight": "16.5px",
+        "titleLength": 200
+      },
+      "screenshot": "A5-long-detail-200chars.png / A5-card-closeup.png"
+    },
+    {
+      "id": "A6",
+      "name": "归因行文本不出现英文机器码 omnimux-invalid-request",
+      "result": "PASS",
+      "evidence": {
+        "cardHasMachineCode": false,
+        "note": "对整张卡片 textContent 做否定断言，正向与对照两轮均通过"
+      }
+    }
+  ],
+  "heights": {
+    "A1_cardHeight": 195.75,
+    "A3_cardHeight": 195.75,
+    "A5_cardHeight": 195.75,
+    "delta_A1_A5": 0,
+    "cardWidth": 348,
+    "unit": "CSS px (getBoundingClientRect)"
+  },
+  "screenshots": [
+    "A1-failed-with-upstream.png (1280x713, full viewport, canvas mounted)",
+    "A1-card-closeup.png (940x660, 2x crop of the failure card)",
+    "A3-failed-without-upstream.png (1280x713)",
+    "A3-card-closeup.png (940x660)",
+    "A5-long-detail-200chars.png (1280x713)",
+    "A5-card-closeup.png (940x660)",
+    "A0-canvas-overview.png (1280x713)"
+  ],
+  "reachability": {
+    "uiClickPath": "项目 → 项目会话 → 创作画布",
+    "uiClickPathResult": "NOT REACHABLE headlessly — tests/fixtures/qa-workspace-media seeds a chat workspace, not a workflow project; 项目 page shows 暂无项目 and creating one needs a native directory picker. Same limitation recorded in docs/evidence/clip-preview-refresh-3146/report.md §5.1.",
+    "substituteUsed": "Real canvas island mounted via the product mount contract window.__omnimuxWorkflowCanvas.mountCanvas(el, { workspaceId, locale }) — the same code path CanvasBridge.jsx uses for the right-sidebar canvas tab. Node persisted through the product route PUT /omnimux-workflow/api/workspaces/ws_qa_media (expectedVersion). Failure injected by intercepting the product route POST .../storyboard-video.",
+    "nodeTriggered": "分镜表 (storyboard-video) pill on the real video material node, clicked with real CDP pointer input after a real hover"
+  },
+  "notCovered": [
+    "the literal 「项目 → 项目会话 → 创作画布」 click chain (see reachability)",
+    "toast.error text (the fix scoped only the canvas card)",
+    "electron/shell surface (pure client plugin change)",
+    "canvas persistence of executionUpstream across reload",
+    "the 内容拆解 (deconstruct-video) branch — same renderer, only 分镜表 was driven"
+  ]
+}

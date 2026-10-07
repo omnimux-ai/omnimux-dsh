@@ -62,7 +62,7 @@ import { useCanvasStore, useIsMultiSelected } from '../../../store/canvasStore';
 import { useTextStageStore } from '../../../store/textStageStore';
 import { useT } from '../../../i18n';
 import { toast } from '../../../ui';
-import type { CapabilityCatalog, NodeExecutionApiStatus } from '../../../../shared/api';
+import type { ApiUpstream, CapabilityCatalog, NodeExecutionApiStatus } from '../../../../shared/api';
 import { draftFromRealPath, nativePathOf } from '../../utils/localFileDraft.ts';
 import { planImportNodeFill } from '../../utils/resourcePickerPolicy.ts';
 import { resolveModelInputCapability } from '../../../../shared/validation/modelCompatibilityEvaluator.ts';
@@ -134,6 +134,8 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
   const executionStatus = nodeData.executionStatus as NodeExecutionApiStatus | undefined;
   const executionError = nodeData.executionError as string | undefined;
+  // 上游归因与 executionError 分开存放：错误文案会经二次翻译层，拼串会被吞掉。
+  const executionUpstream = nodeData.executionUpstream as ApiUpstream | undefined;
   const simulated = nodeData.simulated === true;
   const mediaAssets = nodeData.mediaAssets as MediaAssetLike[] | undefined;
   const catalog = (data as { __catalog?: CapabilityCatalog }).__catalog ?? null;
@@ -1346,6 +1348,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             loadingAspectRatio={loadingAspectRatio}
             executionError={executionError}
             errorMessage={errorMessage}
+            errorUpstream={executionUpstream}
             previewUrl={previewUrl}
             mediaAssets={mediaAssets}
             mediaUrl={mediaUrl}
