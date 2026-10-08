@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { contentFingerprint } from './contract/load.js'
 import { isMediaEnabled } from '../gate/guard.js'
 import { DEFAULT_MEDIA } from '../media/route.js'
 import { DEFAULT_TEXT, enabledTextModels } from '../text/catalog.js'
@@ -207,6 +207,8 @@ export function buildModelCatalog(opts = {}) {
       contractFingerprint: index.contentFingerprint,
       listedOperations: index.listedOperations ?? [],
       defaultsByOperation: dto.defaultsByOperation,
+      defaultOperations,
+      channelGroups: dto.models.map((model) => ({ modelId: model.id, groups: model.channelGroups })),
       dispositions: (dispositionsDoc.dispositions ?? []).map((row) => [
         row?.id,
         row?.disposition,
@@ -252,12 +254,10 @@ function trimId(value) {
 }
 
 /**
- * H2: contract-sensitive fingerprint. With `contract` context the input is
- * contractFingerprint + listedOperations + defaults + defaultsByOperation +
- * dispositions + schemaVersion (+ the projected list ids) — changing any
- * MIME/count/size/duration/op/output/admission/disposition moves it.
- * Legacy two-arg calls (lists + defaults only) stay deterministic (compat
- * overload for old callers).
+ * Contract-sensitive fingerprint: canonical contract content, projected public
+ * channel groups, resolved defaults and disposition governance. Object keys
+ * have no ordering semantics; operation and channel candidate arrays retain
+ * their order. Two-arg calls remain supported for legacy callers.
  *
  * @param {{ text: Array<{ id: string }>, image: Array<{ id: string }>, video: Array<{ id: string }>, audio: Array<{ id: string }> }} lists
  * @param {{ text: string, image: string, video: string, audio: string }} defaults
@@ -266,6 +266,8 @@ function trimId(value) {
  *   contractFingerprint: string,
  *   listedOperations: string[],
  *   defaultsByOperation: Record<string, string>,
+ *   defaultOperations?: Record<string, { modelId: string, operationId: string, rule: string }>,
+ *   channelGroups?: Array<{ modelId: string, groups: object[] }>,
  *   dispositions: unknown[],
  * }} [contract]
  */
@@ -276,18 +278,19 @@ export function fingerprintOf(lists, defaults, contract) {
     video: lists.video.map((row) => row.id),
     audio: lists.audio.map((row) => row.id),
   }
-  const payload = JSON.stringify(
+  return contentFingerprint(
     contract && typeof contract === 'object'
       ? {
           schemaVersion: contract.schemaVersion,
           contractFingerprint: contract.contractFingerprint,
           listedOperations: [...(contract.listedOperations ?? [])].sort(),
           defaultsByOperation: contract.defaultsByOperation ?? {},
+          defaultOperations: contract.defaultOperations ?? {},
+          channelGroups: contract.channelGroups ?? [],
           dispositions: contract.dispositions ?? [],
           lists: listIds,
           defaults,
         }
       : { ...listIds, defaults },
   )
-  return createHash('sha256').update(payload).digest('hex').slice(0, 16)
 }
