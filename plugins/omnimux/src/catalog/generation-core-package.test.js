@@ -13,7 +13,7 @@ import ts from 'typescript'
 const hub = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const root = resolve(hub, '../..')
 const core = join(root, 'packages/generation-capabilities')
-const scope = join(root, '.tmp/3259')
+const scope = join(root, '.tmp/3256')
 const sources = ['package.json', 'src/assets.js', 'src/codes.js', 'src/index.js', 'src/units.js', 'types/index.d.ts']
 const facades = ['src/catalog/contract/units.js', 'src/catalog/contract/submit-guard/codes.js', 'src/catalog/contract/submit-guard/slots.js']
 const sha = (text) => createHash('sha256').update(text).digest('hex')
@@ -156,6 +156,9 @@ test('pure shared source and neutral/browser bundle have no runtime dependency o
     'eval("side effect")', 'Function("return this")()',
     "import 'node:fs'", "import 'react'", "export * from '../../plugins/omnimux/src/index.js'",
     'fetch("x")', 'process.env.KEY', 'import("./units.js")',
+    'Date.now()', 'new Date()', 'performance.now()', 'Math.random()',
+    'const clock = Date; clock.now()', 'const clock = performance; clock.now()',
+    'const { random } = Math; random()',
   ]
   for (const bad of forbidden) assert.throws(() => assertPure(bad, 'negative gate', true), undefined, bad)
   const allowed = [
@@ -173,7 +176,35 @@ test('pure shared source and neutral/browser bundle have no runtime dependency o
   for (const good of allowed) assert.doesNotThrow(() => assertPure(good, 'positive gate', true), good)
 })
 
-test('old facades share export identity and retain Map, original assets, greedy and aggregate results', async () => {
+test('assignment consumers narrow concrete rejection payloads and reject invalid pending metadata', () => {
+  const filename = join(core, 'assignment-type-consumer.ts')
+  const text = `
+    import { solveAssetAssignment, type AssignmentPending, type AssignmentRejection } from './types/index.js';
+    const result = solveAssetAssignment({ inputs: [{ slot: 'ref', type: 'image', maxSizeMb: 1 }] }, [{ type: 'image', sizeBytes: 2000000 }]);
+    if (result.status === 'rejected') for (const reason of result.rejections) {
+      if (reason.code === 'size_exceeded') { const size: number = reason.maxSizeMb; void size; }
+      if (reason.code === 'mime_unsupported') { const formats: readonly string[] = reason.allowedMimes; void formats; }
+    }
+    // @ts-expect-error metadata may not identify contract structure
+    const invalidField: AssignmentPending = { code: 'metadata_unknown', message: 'x', slot: 'A', field: 'inputs' };
+    // @ts-expect-error capacity is a hard rejection
+    const invalidPending: AssignmentPending = { code: 'slot_capacity', message: 'x', slot: 'A', max: 0 };
+    // @ts-expect-error invalid asset metadata must name a metadata field
+    const invalidDiagnostic: AssignmentRejection = { code: 'operation_incompatible', message: 'x', slot: 'A', diagnostic: 'invalid_metadata', field: 'inputs' };
+    void invalidField; void invalidPending; void invalidDiagnostic;
+  `
+  const options = { strict: true, noEmit: true, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, types: [] }
+  const host = ts.createCompilerHost(options)
+  const originalGetSourceFile = host.getSourceFile.bind(host)
+  const source = ts.createSourceFile(filename, text, options.target, true)
+  host.getSourceFile = (file, languageVersion, onError, shouldCreateNewSourceFile) => file === filename ? source : originalGetSourceFile(file, languageVersion, onError, shouldCreateNewSourceFile)
+  host.writeFile = () => { throw new Error('type consumer cannot emit') }
+  const program = ts.createProgram([filename], options, host)
+  const diagnostics = ts.getPreEmitDiagnostics(program)
+  assert.deepEqual(diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')), [])
+})
+
+test('old facades share export identity and retain Map, original assets and valid legacy witnesses', async () => {
   const shared = await import(pathToFileURL(join(core, 'src/index.js')))
   const units = await import('./contract/units.js')
   const codes = await import('./contract/submit-guard/codes.js')
@@ -199,7 +230,7 @@ test('old facades share export identity and retain Map, original assets, greedy 
   assert.equal(slots.operationAcceptsAssets(op, [], { requireMins: true }).ok, false)
   assert.equal(slots.assignAndValidateSlots({ inputs: [{ slot: 'legacy', type: 'image', max: 1 }] }, [{ type: 'image', role: 'reference', pathOrUrl: '/fixture.png' }]).ok, true)
   const greedy = { inputs: [{ slot: 'A', type: 'image', min: 1, max: 1, allowedMimes: ['image/png', 'image/jpeg'] }, { slot: 'B', type: 'image', min: 1, max: 1, allowedMimes: ['image/png'] }] }
-  assert.equal(slots.assignAndValidateSlots(greedy, [{ type: 'image', mime: 'image/png' }, { type: 'image', mime: 'image/jpeg' }]).ok, false)
+  assert.equal(slots.assignAndValidateSlots(greedy, [{ type: 'image', mime: 'image/png' }, { type: 'image', mime: 'image/jpeg' }]).ok, true)
   for (const facade of facades.slice(0, 2)) {
     const ast = parse(readFileSync(join(hub, facade), 'utf8'), { ecmaVersion: 'latest', sourceType: 'module' })
     assert.ok(ast.body.every((node) => node.type === 'ExportNamedDeclaration' && node.source && !node.declaration), facade)
@@ -243,7 +274,7 @@ test('real Hub npm tarball relocates with only local low-level facades; missing 
 })
 
 test('materialized Hub pnpm pack works without workspace sources or installed dependencies', () => {
-  const packScope = join(root, '.tmp/3259')
+  const packScope = join(root, '.tmp/3256')
   mkdirSync(packScope, { recursive: true })
   const dir = mkdtempSync(join(packScope, 'materialized-'))
   try {

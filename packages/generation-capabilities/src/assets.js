@@ -153,3 +153,333 @@ export function validateAssetAgainstSlot(asset, slot) {
 
   return { ok: true }
 }
+
+/** @typedef {import('../types/index.js').OperationSlot} OperationSlot */
+/** @typedef {import('../types/index.js').AssignmentRejection} AssignmentRejection */
+/** @typedef {import('../types/index.js').AssignmentPending} AssignmentPending */
+/** @typedef {{ slotIndex: number, pending: AssignmentPending[] }} Domain */
+
+/**
+ * One bounded assignment state, shared by legacy witness selection, DFS and count completion.
+ * Unknown metadata retains a domain but never proves readiness.
+ * @template {import('../types/index.js').GenerationAsset} A
+ * @param {import('../types/index.js').AssignmentOperation} operation
+ * @param {readonly (A | null | undefined)[]} assets
+ * @param {import('../types/index.js').AssignmentContext} [context]
+ * @param {import('../types/index.js').AssignmentPolicy} [policy]
+ * @returns {import('../types/index.js').AssignmentResult<A>}
+ */
+export function solveAssetAssignment(operation, assets, context = {}, policy = {}) {
+  if (!policy || typeof policy !== 'object' || Array.isArray(policy)) throw new TypeError('invalid assignment policy')
+  const strategy = policy.strategy === undefined ? 'legacy' : policy.strategy, mode = policy.mode === undefined ? 'full' : policy.mode, maxStates = policy.maxStates === undefined ? 100000 : policy.maxStates
+  if (!['legacy', 'strict'].includes(strategy) || !['full', 'accept'].includes(mode) || !Number.isSafeInteger(maxStates) || maxStates < 1) throw new TypeError('invalid assignment policy')
+  const strict = strategy === 'strict'
+  const slots = Array.isArray(operation?.inputs) ? operation.inputs : []
+  const groups = operation?.inputGroups ?? []
+  let visitedStates = 0, exhausted = false, seenCompletionUnproven = false
+  /** @type {AssignmentRejection[]} */
+  let failures = []
+  /** @type {import('../types/index.js').AssignmentResult<A> | undefined} */
+  let ready
+  /** @type {import('../types/index.js').AssignmentResult<A> | undefined} */
+  let savedPending
+  /** @type {number[][]} */
+  const buckets = slots.map(() => [])
+  const counts = slots.map(() => 0)
+  /** @type {Map<number, Domain>} */
+  const assigned = new Map()
+  const maxima = slots.map(s => s?.max === undefined || s?.max === null ? Infinity : s.max)
+  const minima = slots.map(s => s?.min === undefined ? 0 : s.min)
+  const media = (assets ?? []).flatMap((asset, assetIndex) => asset && asset.type && asset.type !== 'text' ? [{ asset, assetIndex }] : [])
+  const slotIndices = slots.map((_, i) => i)
+  const mediaSlots = slotIndices.filter(i => slots[i]?.type !== 'text' && slots[i]?.role !== 'prompt')
+  /** @param {AssignmentRejection[]} reasons @param {'search_budget_exceeded' | 'completion_unproven'} [diagnostic] */
+  function failed(reasons, diagnostic) {
+    const common = { bindings: [], buckets: slots.map(() => []), rejections: reasons, pending: /** @type {readonly []} */ ([]), visitedStates, uncheckedConstraints: [] }
+    return /** @type {import('../types/index.js').AssignmentResult<A>} */ (diagnostic ? { ...common, status: 'indeterminate', diagnostic } : { ...common, status: 'rejected' })
+  }
+  /** @template {object} E @param {string} message @param {E} [extra] */
+  const incompatible = (message, extra = /** @type {E} */ ({})) => ({ code: GUARD_CODES.OPERATION_INCOMPATIBLE, message, ...extra })
+  /** @param {string} message @param {{ slotIndex?: number, slot?: string, field?: 'inputs' | 'min' | 'max' | 'slot' | 'inputGroups' }} [extra] */
+  const malformed = (message, extra = {}) => failed([incompatible(message, { diagnostic: /** @type {const} */ ('malformed_contract'), ...extra })])
+  const countValid = (/** @type {unknown} */ n) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0
+  if (!Array.isArray(operation?.inputs)) return malformed('operation inputs must be an array', { field: 'inputs' })
+  const names = new Set()
+  for (const i of slotIndices) {
+    const s = slots[i]
+    if (!s || typeof s.slot !== 'string' || !s.slot.trim() || names.has(s.slot)) return malformed('slot names must be nonempty and unique', { slotIndex: i, field: 'slot' })
+    names.add(s.slot)
+    if (!countValid(minima[i]) || (maxima[i] !== Infinity && !countValid(maxima[i])) || (s.max !== undefined && s.max !== null && !countValid(s.max)) || minima[i] > maxima[i]) return malformed(`invalid count range for slot ${s.slot}`, { slotIndex: i, slot: s.slot, field: 'min' })
+  }
+  if (!Array.isArray(groups)) return malformed('inputGroups must be an array', { field: 'inputGroups' })
+  for (const g of groups) {
+    if (!g || !Array.isArray(g.slots) || new Set(g.slots).size !== g.slots.length || g.slots.some((/** @type {string} */ name) => !names.has(name)) || !countValid(g.min === undefined ? 0 : g.min) || (!g.slots.length && (g.min ?? 0) > 0)) return malformed('invalid input group', { field: 'inputGroups' })
+    const capacity = mediaSlots.filter(i => g.slots.includes(slots[i].slot)).reduce((n, i) => n + maxima[i], 0)
+    if (capacity < (g.min ?? 0)) return failed([incompatible('input group minimum exceeds available capacity', { slots: [...g.slots], min: g.min, limit: capacity })])
+  }
+  function enter() {
+    if (visitedStates >= maxStates) { exhausted = true; return false }
+    visitedStates++; return true
+  }
+  /** @param {AssignmentRejection[]} reasons */
+  function remember(reasons) { if (!failures.length) failures = reasons }
+  /** @param {A} asset @param {number} assetIndex @param {number} slotIndex */
+  function domainCheck(asset, assetIndex, slotIndex) {
+    const s = slots[slotIndex]
+    /** @type {AssignmentPending[]} */
+    const pending = []
+    /** @type {AssignmentRejection[]} */
+    const rejected = []
+    const base = { assetIndex, slotIndex, slot: s.slot }
+    let testedAsset = asset
+    let testedSlot = s
+    if (s.maxSizeMb === 0 && s.maxSizeExclusive === true) rejected.push({ code: GUARD_CODES.SIZE_EXCEEDED, message: `no nonnegative size can satisfy slot ${s.slot}`, ...base, maxSizeMb: 0, maxSizeExclusive: true })
+    if (s.minDurationSec !== undefined && s.maxDurationSec !== undefined && s.minDurationSec > s.maxDurationSec) rejected.push({ code: GUARD_CODES.DURATION_EXCEEDED, message: `slot ${s.slot} duration bounds cannot be satisfied`, ...base, diagnostic: 'duration_bounds_conflict' })
+    if (strict) {
+      for (const field of /** @type {const} */ (['sizeBytes', 'durationSec'])) {
+        const value = asset[field]
+        if (value !== undefined && value !== null && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) rejected.push(incompatible(`invalid ${field} for slot ${s.slot}`, { ...base, diagnostic: /** @type {const} */ ('invalid_metadata'), field }))
+      }
+      if (asset.role && s.role && asset.role !== s.role) rejected.push({ code: GUARD_CODES.ROLE_CONFLICT, message: `asset role ${asset.role} does not match slot role ${s.role}`, ...base, role: asset.role })
+      if (!asset.role && !asset.targetSlot && ((s.role && s.role !== 'reference') || ['first_frame', 'first_frame_image', 'last_frame', 'last_frame_image', 'source', 'source_image', 'source_video', 'mask', 'audio_track'].includes(s.slot))) pending.push({ code: GUARD_CODES.OPERATION_INCOMPATIBLE, message: `explicit intent required for slot ${s.slot}`, ...base, diagnostic: 'intent_required' })
+      if (Array.isArray(s.allowedMimes) && s.allowedMimes.length) {
+        if (!asset.mime || !asset.mime.trim()) pending.push({ code: GUARD_CODES.METADATA_UNKNOWN, message: `MIME unknown for slot ${s.slot}`, ...base, field: 'mime' })
+        else testedAsset = /** @type {A} */ ({ ...asset, mime: asset.mime.trim().toLowerCase() })
+        testedSlot = { ...s, allowedMimes: s.allowedMimes.map((/** @type {string} */ m) => m.trim().toLowerCase()) }
+      }
+    }
+    // Remove only unknown-field checks so a missing size cannot hide a known duration/MIME conflict.
+    if (asset.sizeBytes === undefined || asset.sizeBytes === null) {
+      if (typeof s.maxSizeMb === 'number' && Number.isFinite(s.maxSizeMb)) {
+        const check = validateAssetAgainstSlot({ ...testedAsset, durationSec: undefined }, { ...testedSlot, minDurationSec: undefined, maxDurationSec: undefined })
+        if (!check.ok && check.rejection.code === GUARD_CODES.METADATA_UNKNOWN) pending.push({ ...check.rejection, ...base })
+        testedSlot = { ...testedSlot, maxSizeMb: undefined }
+      }
+    }
+    if (asset.durationSec === undefined || asset.durationSec === null) {
+      if ((typeof s.maxDurationSec === 'number' && Number.isFinite(s.maxDurationSec)) || (typeof s.minDurationSec === 'number' && Number.isFinite(s.minDurationSec))) {
+        const check = validateAssetAgainstSlot(testedAsset, { ...testedSlot, maxSizeMb: undefined })
+        if (!check.ok && check.rejection.code === GUARD_CODES.METADATA_UNKNOWN) pending.push({ ...check.rejection, ...base })
+        testedSlot = { ...testedSlot, minDurationSec: undefined, maxDurationSec: undefined }
+      }
+    }
+    if (!rejected.length) {
+      const check = validateAssetAgainstSlot(testedAsset, testedSlot)
+      if (!check.ok) rejected.push({ ...check.rejection, ...base })
+    }
+    return { pending, rejected }
+  }
+  const entries = media.map(entry => {
+    const { asset, assetIndex } = entry
+    let candidates = mediaSlots
+    /** @type {AssignmentRejection[]} */
+    let rejected = []
+    if (asset.targetSlot) {
+      candidates = mediaSlots.filter(i => slots[i].slot === asset.targetSlot)
+      if (!candidates.length) candidates = mediaSlots.filter(i => getSlotAliases(asset.targetSlot).includes(slots[i].slot))
+      if (!candidates.length) rejected.push({ code: GUARD_CODES.ROLE_CONFLICT, message: `explicit targetSlot ${asset.targetSlot} not found`, slot: asset.targetSlot, assetIndex })
+    } else if (asset.role) {
+      candidates = mediaSlots.filter(i => slots[i].role === asset.role && (!slots[i].type || slots[i].type === asset.type))
+      if (!candidates.length) candidates = strict ? [] : mediaSlots.filter(i => slots[i].type === asset.type)
+    } else candidates = mediaSlots.filter(i => slots[i].type === asset.type)
+    /** @type {Domain[]} */
+    const domains = []
+    for (const i of candidates) {
+      const check = domainCheck(asset, assetIndex, i)
+      if (check.rejected.length) rejected.push(...check.rejected)
+      else domains.push({ slotIndex: i, pending: check.pending })
+    }
+    if (!domains.length && !rejected.length) {
+      if (asset.role) rejected.push({ code: GUARD_CODES.ROLE_CONFLICT, message: `no slot with role ${asset.role} for type ${asset.type}`, assetIndex, role: asset.role, type: /** @type {string} */ (asset.type) })
+      else rejected.push(incompatible(`operation has no slot for type ${asset.type}`, { assetIndex, type: asset.type }))
+    }
+    return { ...entry, domains, rejected }
+  })
+  for (const e of entries) if (!e.domains.length) return failed(e.rejected)
+  /** @param {boolean} final */
+  function validate(final) {
+    /** @type {AssignmentPending[]} */
+    const pending = final ? [...assigned.values()].flatMap(d => d.pending) : []
+    /** @type {AssignmentRejection[]} */
+    const rejected = []
+    /** @type {import('../types/index.js').UncheckedConstraint[]} */
+    const uncheckedConstraints = []
+    let unproven = false
+    for (const i of mediaSlots) {
+      const s = slots[i], bucket = buckets[i], current = counts[i]
+      const base = { slotIndex: i, slot: s.slot }
+      if (current > maxima[i]) rejected.push({ code: GUARD_CODES.SLOT_CAPACITY, message: `slot ${s.slot} is full (max ${s.max})`, ...base, max: s.max })
+      if (final && mode === 'full' && current < minima[i]) pending.push({ code: GUARD_CODES.MIN_UNSATISFIED, message: `slot ${s.slot} needs min ${minima[i]}, got ${current}`, ...base, min: minima[i], current })
+      if (!bucket.length) continue
+      const timed = s.totalMinDurationSec !== undefined || s.totalMaxDurationSec !== undefined || s.combinedOutputMaxDurationSec !== undefined
+      if (!timed) continue
+      let low = 0, high = 0, unknown = false
+      for (const assetIndex of bucket) {
+        const value = assets[assetIndex]?.durationSec
+        if (typeof value === 'number' && Number.isFinite(value) && value >= 0) { low += value; high += value }
+        else {
+          unknown = true; low += s.minDurationSec ?? 0; high += s.maxDurationSec ?? Infinity
+          if (final) pending.push({ code: GUARD_CODES.METADATA_UNKNOWN, message: `durationSec unknown for slot ${s.slot} total-duration validation`, ...base, assetIndex, field: 'durationSec' })
+        }
+      }
+      const ceiling = s.totalMaxDurationSec
+      if (ceiling !== undefined && (s.totalMaxExclusive ? low >= ceiling : low > ceiling)) rejected.push({ code: GUARD_CODES.DURATION_EXCEEDED, message: `slot ${s.slot} total duration ${low}s exceeds the documented maximum`, ...base, ...(!unknown ? { totalDurationSec: low, totalMaxDurationSec: ceiling, exclusive: s.totalMaxExclusive === true } : { limit: ceiling }) })
+      const floor = s.totalMinDurationSec
+      if (mode === 'full' && floor !== undefined && ceiling !== undefined && (floor > ceiling || (floor === ceiling && (s.totalMinExclusive || s.totalMaxExclusive)))) rejected.push({ code: GUARD_CODES.DURATION_EXCEEDED, message: `slot ${s.slot} duration bounds cannot be satisfied`, ...base, diagnostic: 'duration_bounds_conflict' })
+      const output = context.duration
+      const combinedCeiling = s.combinedOutputMaxDurationSec === undefined ? Infinity : s.combinedOutputMaxDurationSec - (typeof output === 'number' && Number.isFinite(output) && output >= 0 ? output : 0)
+      if (mode === 'full' && floor !== undefined && (floor > combinedCeiling || (s.totalMinExclusive && floor === combinedCeiling))) rejected.push({ code: GUARD_CODES.DURATION_EXCEEDED, message: `slot ${s.slot} combined duration bounds cannot be satisfied`, ...base, diagnostic: 'duration_bounds_conflict' })
+      if (low > combinedCeiling && !(typeof output === 'number' && Number.isFinite(output) && output >= 0)) rejected.push({ code: GUARD_CODES.DURATION_EXCEEDED, message: `slot ${s.slot} input duration ${low}s exceeds the combined maximum`, ...base, limit: s.combinedOutputMaxDurationSec })
+      if (final && mode === 'full' && floor !== undefined && (unknown || current < maxima[i])) {
+        const remaining = maxima[i] - current
+        const perHigh = typeof s.maxDurationSec === 'number' && Number.isFinite(s.maxDurationSec) ? s.maxDurationSec : Infinity
+        const futureHigh = remaining === 0 || perHigh === 0 ? 0 : remaining * perHigh
+        const reachableHigh = high + futureHigh
+        if (s.totalMinExclusive ? reachableHigh <= floor : reachableHigh < floor) rejected.push({ code: GUARD_CODES.DURATION_EXCEEDED, message: `slot ${s.slot} maximum reachable total duration ${reachableHigh}s is below the documented minimum`, ...base, min: floor, limit: reachableHigh })
+      }
+      if (final && mode === 'full' && floor !== undefined && (s.totalMinExclusive ? high <= floor : high < floor)) {
+        if (current >= maxima[i] && !unknown) rejected.push({ code: GUARD_CODES.DURATION_EXCEEDED, message: `slot ${s.slot} total duration ${high}s is below the documented minimum`, ...base, totalDurationSec: high, totalMinDurationSec: floor, exclusive: s.totalMinExclusive === true })
+        else unproven = true
+      } else if (final && mode === 'full' && floor !== undefined && unknown && (s.totalMinExclusive ? low <= floor : low < floor)) {
+        if (ceiling !== undefined && (floor > ceiling || (floor === ceiling && (s.totalMinExclusive || s.totalMaxExclusive)))) rejected.push(incompatible(`slot ${s.slot} duration bounds cannot be satisfied`, base))
+      }
+      if (s.combinedOutputMaxDurationSec !== undefined) {
+        const output = context.duration
+        if (typeof output === 'number' && Number.isFinite(output) && output >= 0) {
+          if (low + output > s.combinedOutputMaxDurationSec) rejected.push({ code: GUARD_CODES.DURATION_EXCEEDED, message: `slot ${s.slot} input duration ${low}s plus output duration ${output}s exceeds the documented maximum`, ...base, ...(!unknown ? { totalDurationSec: low, outputDurationSec: output, combinedOutputMaxDurationSec: s.combinedOutputMaxDurationSec } : { limit: s.combinedOutputMaxDurationSec }) })
+        } else if (final) {
+          if (strict && mode === 'full') pending.push({ code: GUARD_CODES.METADATA_UNKNOWN, message: `output duration unknown for slot ${s.slot} combined-duration validation`, ...base, field: 'outputDurationSec' })
+          else uncheckedConstraints.push({ constraint: 'combined_output_ceiling', slotIndex: i, field: 'outputDurationSec' })
+        }
+      }
+    }
+    if (final && mode === 'full') {
+      for (const g of groups) {
+        const current = mediaSlots.filter(i => g.slots.includes(slots[i].slot)).reduce((n, i) => n + counts[i], 0)
+        if (current < (g.min ?? 0)) pending.push({ code: GUARD_CODES.MIN_UNSATISFIED, message: g.hint || `input group needs min ${g.min}, got ${current}`, slots: [...g.slots], min: g.min ?? 0, current })
+      }
+      const prompt = slots.find(s => s.role === 'prompt' || (s.type === 'text' && s.source === 'node_field'))
+      if (prompt && (prompt.min ?? 0) >= 1 && !(typeof context.prompt === 'string' && context.prompt.trim())) pending.push({ code: GUARD_CODES.PROMPT_REQUIRED, message: 'prompt is required for this operation', slot: prompt.slot, slotIndex: slots.indexOf(prompt) })
+    }
+    return { pending, rejected, uncheckedConstraints, unproven }
+  }
+  /** @param {typeof entries[number]} e @param {Domain} d */
+  function place(e, d) {
+    const i = d.slotIndex
+    assigned.set(e.assetIndex, d); buckets[i].push(e.assetIndex); counts[i]++
+  }
+  /** @param {typeof entries[number]} e */
+  function unplace(e) {
+    const d = assigned.get(e.assetIndex)
+    if (d) { const i = d.slotIndex; buckets[i].pop(); counts[i]--; assigned.delete(e.assetIndex) }
+  }
+  /** @param {AssignmentPending[]} pending @param {import('../types/index.js').UncheckedConstraint[]} uncheckedConstraints */
+  function witness(pending, uncheckedConstraints) {
+    const bindings = entries.map(e => {
+      const slotIndex = /** @type {Domain} */ (assigned.get(e.assetIndex)).slotIndex
+      const s = slots[slotIndex]
+      return { assetIndex: e.assetIndex, slotIndex, slot: s.slot, ...(s.role ? { role: s.role } : {}), asset: e.asset }
+    })
+    return /** @type {import('../types/index.js').AssignmentResult<A>} */ ({ status: pending.length ? 'pending' : 'ready', bindings, buckets: buckets.map(bucket => [...bucket].sort((a, b) => a - b).map(i => /** @type {A} */ (assets[i]))), rejections: pending, pending, visitedStates, uncheckedConstraints })
+  }
+  // Count completion never invents media or metadata. Timed future inputs require a separate proof.
+  function completeCounts() {
+    const missing = () => mediaSlots.some(i => counts[i] < minima[i]) || groups.some(g => mediaSlots.filter(i => g.slots.includes(slots[i].slot)).reduce((n, i) => n + counts[i], 0) < (g.min ?? 0))
+    /** @param {number} position @returns {'yes' | 'no' | 'unproven'} */
+    function fill(position) {
+      if (!enter()) return 'unproven'
+      if (!missing()) return 'yes'
+      if (position >= mediaSlots.length) return 'no'
+      const i = mediaSlots[position], s = slots[i], original = counts[i]
+      let needed = minima[i] > original ? minima[i] - original : 0
+      for (const g of groups) if (g.slots.includes(s.slot)) {
+        const deficit = (g.min ?? 0) - mediaSlots.filter(j => g.slots.includes(slots[j].slot)).reduce((n, j) => n + counts[j], 0)
+        if (deficit > needed) needed = deficit
+      }
+      let limit = maxima[i] - original
+      if (needed < limit) limit = needed
+      // Zero-duration prospective inputs prove counts under upper-only bounds.
+      // Positive/lower duration completion remains outside this narrow proof.
+      let uncertain = limit > 0 && (s.totalMinDurationSec !== undefined || (s.minDurationSec ?? 0) > 0)
+      if (uncertain || (s.maxSizeMb === 0 && s.maxSizeExclusive) || (s.totalMaxDurationSec === 0 && s.totalMaxExclusive) || (s.combinedOutputMaxDurationSec !== undefined && typeof context.duration === 'number' && context.duration > s.combinedOutputMaxDurationSec)) limit = 0
+      for (let add = 0; add <= limit; add++) {
+        counts[i] = original + add
+        const answer = fill(position + 1)
+        counts[i] = original
+        if (answer === 'yes') return 'yes'
+        if (answer === 'unproven') uncertain = true
+        if (exhausted) break
+      }
+      return uncertain ? 'unproven' : 'no'
+    }
+    return fill(0)
+  }
+  function leaf() {
+    if (!enter()) return
+    const check = validate(true)
+    if (check.rejected.length) { remember(check.rejected); return }
+    if (check.unproven) { seenCompletionUnproven = true; return }
+    if (check.pending.some(p => p.code === GUARD_CODES.MIN_UNSATISFIED)) {
+      const completion = completeCounts()
+      if (completion === 'no') { remember([incompatible('input minima cannot be completed')]); return }
+      if (completion === 'unproven') { seenCompletionUnproven = true; return }
+    }
+    const result = witness(check.pending, check.uncheckedConstraints)
+    if (result.status === 'ready') ready = result
+    else if (!savedPending) savedPending = result
+  }
+  if (!enter()) return failed([incompatible('assignment search budget exceeded')], 'search_budget_exceeded')
+  if (strategy === 'legacy') {
+    for (const e of entries) {
+      let domains = e.domains
+      if (!e.asset.targetSlot && !e.asset.role) domains = [...domains].sort((a, b) => {
+        const rank = (/** @type {Domain} */ d) => { const i = d.slotIndex; return counts[i] < minima[i] ? 0 : slots[i].role === 'reference' ? 1 : 2 }
+        return rank(a) - rank(b) || a.slotIndex - b.slotIndex
+      })
+      for (const d of domains) {
+        const i = d.slotIndex
+        if (counts[i] >= maxima[i]) continue
+        if (!enter()) break
+        place(e, d)
+        const check = validate(false)
+        if (!check.rejected.length) break
+        unplace(e)
+      }
+      if (!assigned.has(e.assetIndex) || exhausted) break
+    }
+    if (assigned.size === entries.length && !exhausted) leaf()
+    if (ready) return ready
+    for (const e of [...entries].reverse()) unplace(e)
+  }
+  /** @param {typeof entries} remaining */
+  function search(remaining) {
+    if (ready || exhausted) return
+    if (!remaining.length) { leaf(); return }
+    const available = (/** @type {typeof entries[number]} */ e) => e.domains.filter(d => { const i = d.slotIndex; return counts[i] < maxima[i] })
+    const ordered = [...remaining].sort((a, b) => Number(Boolean(b.asset.targetSlot)) - Number(Boolean(a.asset.targetSlot)) || available(a).length - available(b).length || a.assetIndex - b.assetIndex)
+    const e = ordered[0], domains = available(e)
+    if (!domains.length) {
+      if (e.domains.length === 1) {
+        const i = e.domains[0].slotIndex, s = slots[i]
+        remember([{ code: GUARD_CODES.SLOT_CAPACITY, message: `slot ${s.slot} is full (max ${s.max})`, assetIndex: e.assetIndex, slotIndex: i, slot: s.slot, max: s.max }])
+      } else remember([incompatible('no complete assignment satisfies the operation')])
+      return
+    }
+    for (const d of domains) {
+      if (!enter()) return
+      place(e, d)
+      const check = validate(false)
+      if (check.rejected.length) remember(check.rejected)
+      else search(remaining.filter(item => item !== e))
+      unplace(e)
+      if (ready || exhausted) return
+    }
+  }
+  search(entries)
+  const finalReady = /** @type {import('../types/index.js').AssignmentResult<A> | undefined} */ (ready)
+  if (finalReady) return { ...finalReady, visitedStates }
+  if (exhausted) return failed([incompatible('assignment search budget exceeded', { diagnostic: /** @type {const} */ ('search_budget_exceeded') })], 'search_budget_exceeded')
+  if (savedPending) return { ...savedPending, visitedStates }
+  if (seenCompletionUnproven) return failed([incompatible('future input completion is not proven', { diagnostic: /** @type {const} */ ('completion_unproven') })], 'completion_unproven')
+  return failed(failures.length && entries.every(e => e.domains.length === 1) ? failures : [incompatible('no complete assignment satisfies the operation')])
+}
