@@ -32,7 +32,6 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@omnimux/generation-capabilities": "workspace:*",
     "esbuild": "^0.25.0",
     "jsdom": "^30.0.1",
     "typescript": "5.9.3"
