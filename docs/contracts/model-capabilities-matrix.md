@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-04"
-updated: "2026-09-14"
+updated: "2026-10-08"
 authors: ["qi-huolin", "xu-qingchu", "gao-jianyuan"]
 subsystem: "omnimux/catalog"
 tags:
@@ -25,6 +25,8 @@ related:
 ---
 
 # OmniMux 全模态模型能力契约与工程治理规范 (MCC 1.0)
+
+本注册表承载内部能力，不是角色创作的对外功能菜单。产品方向见[产品定位](product-positioning.md)；内部请求与分组要求见[中枢合同](hub.md#角色创作与内部路由要求)。现有 `routing` 字段说明和兼容投影不构成显式分组、自动匹配或低价优先已实现的证明，也不能用于发送裸模型请求。
 
 > **执行中枢** = `omnimux`。能力校验与上架门禁发生在执行中枢 catalog / 提交路径，**不得**称网关。
 > **机器真源**（与本文人读表双轨）：`plugins/omnimux/src/catalog/contract/operation-registry.json`、`model-capability.schema.json`、`adapter-profiles.json`、`specs/*.yaml`。
@@ -170,7 +172,7 @@ Normative JSON Schema（`model-capability.schema.json`）`required` = **`["schem
 
 - YAML 可按管理分组拆分文件（text/image/video/audio/reader-models.yaml），**分组不是 output 真源**。
 - Catalog v1.1 权威集合为 **`models[]`**。
-- 对外四列表（text/image/video/audio）仅为 **按 `output.type` 的兼容投影**（H2 起；H1 shadow 不改 runtime 列表实现）。
+- 面向内部消费者的四列表（text/image/video/audio）仅为 **按 `output.type` 的兼容投影**（H2 起；H1 shadow 不改 runtime 列表实现）。
 - 投影与画布过滤必须以 **listed operation** 为准。
 
 ### 3.4 Adapter profile

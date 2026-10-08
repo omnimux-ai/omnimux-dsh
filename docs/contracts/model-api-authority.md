@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-05"
-updated: "2026-09-05"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux/catalog"
 tags: ["model-contract", "official-docs", "evolink", "apimart"]
@@ -31,7 +31,7 @@ related:
 
 以上是项目主要渠道，由用户指定；文档入口于 2026-09-05 核对。入口只用于发现页面，具体约束必须引用该渠道对应模型、版本、端点的参数页或官方 schema。记录最终页面 URL、核对日期及适用条件。
 
-当前七款视频模型批次固定使用 APIMart，不做自动切换。产品模型 ID 与 APIMart `model` 字段的精确映射见 [阶段一范围规格](../specs/2026-09-05-video-phase-one-scope.md)。EvoLink 只在 [独立渠道记录](../references/evolink-video-channel.md) 中维护，本批不得引用其字段、限制或价格补 APIMart 的缺项。
+2026-09-05 阶段一的七款视频模型批次曾固定使用 APIMart，不做自动切换；这不是当前全产品的渠道路线。现行产品方向见[产品定位](product-positioning.md)，内部同组候选规则见[中枢合同](hub.md#角色创作与内部路由要求)，不能跨渠道借用字段与限制。产品模型 ID 与 APIMart `model` 字段的精确映射见 [阶段一范围规格](../specs/2026-09-05-video-phase-one-scope.md)。EvoLink 只在 [独立渠道记录](../references/evolink-video-channel.md) 中维护，本批不得引用其字段、限制或价格补 APIMart 的缺项。
 
 - 同名模型在不同渠道分别建账。不得把 EvoLink 的字段、数量或格式限制套到 APIMart，反之亦然。
 - 渠道文档是该渠道接入规范的准据；原厂资料、营销首页、模型名后缀、仓内旧摘要、测试结果都不能覆盖它。

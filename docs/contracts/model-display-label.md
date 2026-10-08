@@ -5,12 +5,14 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-31"
-updated: "2026-08-31"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
 
 # Model display-label (alias) convention
+
+Ordinary character creation does not expose model IDs or require model/group selection; see [product positioning](product-positioning.md). This naming contract applies to retained technical selectors and administrative settings, not a requirement to add model choices to that product journey. Routing IDs remain unchanged.
 
 This contract governs **human-facing model names** shown in Settings / canvas
 dropdowns (`label`). It does **not** govern routing model ids.
@@ -36,9 +38,10 @@ Related: [model-list-ownership.md](./model-list-ownership.md) (who owns the id l
    - Tier / mode words are Title Case when English: `Opus`, `Flash`, `Pro`,
      `Preview`, `Mini`, `Sol`, `Quality`, `Avatar`, …
    - Do not ALL-CAPS whole labels; do not lowercase brand names.
-4. **Must not equal the raw id** when a curated label exists. Fallback to the
-   id is allowed only for unknown ids (tests still forbid `-` on curated
-   catalog rows returned by `modelCatalog.list()`).
+4. **Must not equal the raw id** when a curated label exists. Unknown IDs may remain in internal diagnostics, but MUST NOT be used as
+   a raw-ID fallback on the ordinary character-creation surface. Existing
+   selector behavior requires implementation evidence; this rule is not a
+   claim that the current UI has been migrated.
 5. **Scope**: model row `label` only. Parameter option labels (aspect ratios
    `16:9`, resolution chips like `auto-4K`, duration `5s`) are out of scope.
 

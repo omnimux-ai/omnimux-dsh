@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-09-09"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 tags: ["portal", "index", "docs-root", "navigation"]
@@ -14,6 +14,10 @@ tags: ["portal", "index", "docs-root", "navigation"]
 # OmniMux-DSH 开发文档导航
 
 文档治理见 [docs-governance-standard](contracts/docs-governance-standard.md)。当前 runtime/代码证明事实；`AGENTS.md` 与现行 contract 定义行动边界。代码可执行不代表已获 push、merge、生产、重启或管理权限。
+
+## 产品方向先读
+
+[产品定位：角色生成与视频复刻](contracts/product-positioning.md)是当前定位与对外描述的唯一归属。落地页、旧研究和既有插件目录不能扩大默认范围，也不能证明功能完成。角色旅程见[制作指南](guides/ecommerce-video-replication.md)，本轮来源见[核验记录](evidence/2026-10-08-landing-positioning-sources.md)。
 
 ## 核心活文档
 

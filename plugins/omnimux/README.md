@@ -1,5 +1,8 @@
 # omnimux
 
+当前产品方向见[角色生成与视频复刻](../../docs/contracts/product-positioning.md)。本页保留该组件的技术职责与既有实现记录，不证明全部功能当前可用，也不扩展默认产品范围；模型/渠道信息属于内部执行，普通用户的简化入口仍需对应实现证据。
+
+
 Execution hub for landing OmniMux on official dsh. Not a gateway: OmniMux cloud owns HTTP; this package exposes seams and tools. Product chrome, identity, model routes, and media seams live here. Verticals send requests in and take results out. Do not split chrome or identity into a sibling plugin. Third-party compatible media endpoints are configured here. Official-only tools stay here because only OmniMux cloud implements them.
 
 I/O and the seam list: repo `docs/contracts/hub.md`.
@@ -40,6 +43,6 @@ Official Apps rows come from `apps/catalog.json` (floor) plus an optional Host G
 
 ## Product chrome
 
-The host half embeds overlay config in the Web index (`window.__OMNIMUX_BRAND__`). The browser half covers official whale / wordmark / tab title / favicon without detaching React nodes. Empty-session hero mark prefers the official `conversation.hero.brand.mark` slot (`priority: -10`); `coverHeroFish` remains the DOM fallback. Config fields (all optional): `productName`, `logoSvg`, `wordmarkText`, `replaceHeroMark`, `hidePreviewBadge`, `rewriteWelcome`, `heroHeadline`, `heroHeadlineFit`, `heroHeadlineMaxPx`, `heroHeadlineMinPx`. Defaults are OmniMux (`heroHeadline` = `属于你的AI社媒运营团队`; headline fit on, 26px→16px) so a narrow session column does not wrap a trailing CJK glyph.
+The host half embeds overlay config in the Web index (`window.__OMNIMUX_BRAND__`). The browser half covers official whale / wordmark / tab title / favicon without detaching React nodes. Empty-session hero mark prefers the official `conversation.hero.brand.mark` slot (`priority: -10`); `coverHeroFish` remains the DOM fallback. Config fields (all optional): `productName`, `logoSvg`, `wordmarkText`, `replaceHeroMark`, `hidePreviewBadge`, `rewriteWelcome`, `heroHeadline`, `heroHeadlineFit`, `heroHeadlineMaxPx`, `heroHeadlineMinPx`. Brand defaults are existing configuration, not the current public positioning; read the Config source rather than restoring an old social-team tagline from this document.
 
 Do not export a `sk-` as `OMNIMUX_ACCESS_TOKEN`. Do not split chrome into a sibling plugin.

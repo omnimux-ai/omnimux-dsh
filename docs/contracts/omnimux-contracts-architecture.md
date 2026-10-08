@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-11"
-updated: "2026-09-14"
+updated: "2026-10-08"
 authors: ["architecture-group"]
 subsystem: "global"
 tags: ["agent-contracts", "always-on", "anti-loop", "semantic-judgment", "timeline-discipline", "batch-grouping"]
@@ -20,7 +20,7 @@ related:
 # OmniMux 常驻行为契约系统架构与治理规范
 
 > **权威等级**：L1（工程契约） | **生命周期**：持续演进 (Living)
-> **适用范围**：OmniMux 多模态社媒全链路运营 Agent 体系与全量插件调度上下文。
+> **适用范围**：OmniMux 多模态创作执行与插件调度上下文；当前产品主线见[产品定位](product-positioning.md)，不以模板目录扩大默认范围。
 
 ---
 

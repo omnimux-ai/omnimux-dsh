@@ -1,5 +1,8 @@
 # OmniMux：短剧 Agent 插件该拿什么
 
+> **历史定位边界（2026-10-08）**：本文的社媒全链路、短剧首发、矩阵增长和旧“唯一定位”属于所记日期的研究或决策；产品定位部分已由[角色生成与视频复刻](../../docs/contracts/product-positioning.md)替代。原历史正文、证据与技术分工保留，不据此恢复旧产品路线、执行旧请求示例或宣称当前功能已交付。
+
+
 研究日期：2026-08-14。  
 对照：`/Users/x/Desktop/Project/OmniMux`（`@omnimux/cli` 0.3.0）+ sibling `OmniMux-docs`。  
 消化过程见 [NOTES.md](NOTES.md)，来源表见 [SOURCES.md](SOURCES.md)。  
@@ -312,7 +315,7 @@ dest id 是本仓路由器的索引名，不是 OmniMux 目录 id。目录 id �
 
 ## 延伸阅读
 
-开发 Agent 从这三份开始，不必先读整个 OmniMux 仓：
+开发 Agent 先读[现行产品定位](../../docs/contracts/product-positioning.md)和当前领域合同；以下三份仅按需查历史背景：
 
 1. 本文件（站位 + 插件对照）。
 2. `OmniMux/cli/skill/omnimux/docs/setup.md` + `actions-exec.md`（怎么装、怎么安全调 `/v1`）。

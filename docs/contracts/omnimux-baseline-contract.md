@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-11"
-updated: "2026-09-11"
+updated: "2026-10-08"
 authors: ["architecture-group"]
 subsystem: "global"
 tags: ["baseline", "retry-ceiling", "path-immutability", "working-language"]
@@ -34,7 +34,7 @@ related:
 
 - 任何工具调用或生成失败，**最多允许 3 次参数具备实质性差异的尝试**；
 - 严禁使用相同或微调无关标点符号的参数反复重试；
-- 遇底层平台级致命报错（如配额耗尽、通道下线、权限被拒），必须立即向用户抛出真实错误信息，并提供切换模型渠道或重试策略的结构化选项，严禁静默重试吞错。
+- 遇底层平台级致命报错（如配额耗尽、通道下线、权限被拒），必须立即向用户抛出真实错误信息，并提供任务级重试、调整输入或停止的选择，严禁静默重试吞错。模型与分组匹配由中枢在契约和授权内处理，不把内部 ID 或渠道菜单转交普通用户；见[产品定位](product-positioning.md)。
 
 ---
 

@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-09-09"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -17,10 +17,13 @@ subsystem: "global"
 ## 1. 目录职能
 系统接口定义、架构边界、开发流程与运维规范。具有高权威效力，随系统迭代持续演化。
 
+产品方向先读[产品定位](product-positioning.md)；既有技术合同继续约束其实现，但不代表对应能力属于当前对外承诺。历史规格中的全链路社媒定位不作为新任务依据。
+
 ## 2. 索引矩阵 (Index Matrix)
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
 |---|---|---|---|---|---|
+| `living` | [product-positioning.md](product-positioning.md) | 产品定位：角色生成与视频复刻 | `global` | 2026-10-08 | 现行产品方向、用户旅程、内部执行与对外体验的分界；计划不冒充实现，旧定位与既有能力不扩大范围。 |
 | `living` | [mvp-scope.md](mvp-scope.md) | MVP scope: viral video replication | `global` | 2026-10-01 | 爆款复刻 MVP 目标与三步验证证据、默认排除范围、越界先停与四项说明、明确同意与授权继承；`AGENTS.md` 只保留摘要。 |
 | `living` | [omnimux-contracts-architecture.md](omnimux-contracts-architecture.md) | OmniMux 常驻行为契约系统架构与治理规范 | `global` | 2026-09-14 | 建立 Layer 1~4 渐进式知识金字塔，通过 `contracts-loader` 实现启动期与运行时的常驻行为契约动态缝合；含契约单一真源与「新增契约前先查既有归属」治理条款。 |
 | `living` | [omnimux-baseline-contract.md](omnimux-baseline-contract.md) | OmniMux 通用底线与交互契约 (Baseline Contract) | `global` | 2026-09-11 | 资产物理路径不可变性、最多 3 次异参重试熔断与 `working_language` 级联裁决协议栈。 |

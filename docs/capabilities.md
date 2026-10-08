@@ -5,7 +5,7 @@ type: "core"
 status: "living"
 authority: "L1"
 date: "2026-08-14"
-updated: "2026-08-31"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 tags: ["capabilities", "matrix", "truth", "seams"]
@@ -14,6 +14,12 @@ tags: ["capabilities", "matrix", "truth", "seams"]
 # Capabilities
 
 Honest surface for both coding agents and the product agent. If a row is stub or absent, do not tell the user it works. **unproven** = 代码已写、仅 mock 测试通过、未对真实 OmniMux 跑通，不得对用户宣称可用。 Hub vs vertical I/O: [contracts/hub.md](contracts/hub.md).
+
+## 当前定位与证据时效
+
+现行方向见[产品定位](contracts/product-positioning.md)。本表含 2026-08 的历史实现与验证记录，状态只对所列版本和场景有效，不证明当前上线，也不决定新产品范围。模型默认值、排除列表与旧目录描述须先核对当前源码和配置，不按旧记录恢复。
+
+角色生图/生视频的简化入口、不展示模型 ID、系统自动匹配分组属于产品要求；本次文档同步没有验证这些要求在桌面插件中全量完成。旧音频、账号、发布等行保留为技术记录，不授权删除功能，不作为当前主线宣传。无当前版本证据时不得提升为可用。
 
 | Surface | Status | Evidence |
 |---|---|---|
@@ -48,7 +54,7 @@ Honest surface for both coding agents and the product agent. If a row is stub or
 | Profile avatar (blobatar) | **real** (keyless) | Host `GET`/`PATCH /omnimux/avatar`; the profile page hover-**编辑** dialog re-rolls, pins a hue, uploads an image (≤200KB raster data URI), or resets. Default is `blobatarUri(username)`; customized rows persist a snapshot URI under `$DSH_HOME/omnimux/avatar.json`. Tests in `plugins/omnimux/src/avatar/*.test.js`. No network. |
 | `dsh web --host 0.0.0.0` | **blocked upstream** | official CLI rejects it |
 
-Phase labels in older notes (`A` / `B` / `C`) are history. Use this table.
+Phase labels in older notes (`A` / `B` / `C`) are history. Read each table row with its recorded date and evidence; revalidate against the current revision before claiming availability.
 
 Do not put `fetch` to OmniMux inside a vertical. Verticals I/O only through hub seams.
 

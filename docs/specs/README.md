@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L2"
 date: "2026-08-26"
-updated: "2026-09-09"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -19,6 +19,8 @@ subsystem: "global"
 
 > **流程版本边界（2026-09-09 / #864）：** 本目录历史规格中的 L2 环境、合入前独立 Host/浏览器验收及专属稳定 baseline D/C/S 要求均已 **superseded**；现行流程仅由 [dev-pipeline](../contracts/dev-pipeline.md)、[plugin-qa](../contracts/plugin-qa.md) 与 [plugin-git-pr](../contracts/plugin-git-pr.md)定义。产品/接口约束、文档 authority 和工具/UI 层级 L2 不因此失效；历史失败、未执行与证据不重标。
 
+> **产品方向版本边界（2026-10-08）**：旧社媒营销、矩阵运营、短剧优先与多模型菜单不是当前主定位。现行方向见[产品定位](../contracts/product-positioning.md)；既有技术与历史证据不整体废止，`accepted` 不代表运行可用。
+
 ## 2. 索引矩阵 (Index Matrix)
 
 | 状态 | 文件名 | 标题 | 模块 | 维护/生效日期 | 核心摘要 |
@@ -27,7 +29,7 @@ subsystem: "global"
 | `accepted` | [2026-09-06-node-input-submission-prd.md](2026-09-06-node-input-submission-prd.md) | 节点上游输入与提交一致性需求补充 | `omnimux-workflow` | 2026-09-06 | 输入解析缺口与 28 项验收场景；文档接受不代表代码或运行验收完成。 |
 | `accepted` | [2026-09-06-inspiration-pagination-refresh.md](2026-09-06-inspiration-pagination-refresh.md) | 灵感库分页刷新约束 | `omnimux-inspiration` | 2026-09-06 | #637：追加分页不得反馈触发第一页刷新；末页停止请求，筛选、激活和授权刷新统一复位第一页。 |
 | `accepted` | [2026-09-06-gxgen-incremental-import.md](2026-09-06-gxgen-incremental-import.md) | Gxgen 灵感增量导入 | `omnimux` | 2026-09-06 | #630：按 TikTok ID 去重、只新增、原 R2 封面预检、冻结计划及逐条回执；同计划恢复与复验。 |
-| `accepted` | [2026-09-05-video-phase-one-scope.md](2026-09-05-video-phase-one-scope.md) | 视频模型阶段一范围：七个产品型号 | `omnimux/catalog` | 2026-09-05 | 当前阶段仅 Seedance 2.0/2.0 Fast/2.0 Mini/2.5、Wan 3.0、MiniMax H3 和 Grok 视频 1.5；wire 和模式按具体渠道官方 API 文档核对，Kling 与 Wan 派生型号延后不排期。 |
+| `accepted` | [2026-09-05-video-phase-one-scope.md](2026-09-05-video-phase-one-scope.md) | 视频模型阶段一范围：七个产品型号 | `omnimux/catalog` | 2026-09-05 | 2026-09 阶段记录仅 Seedance 2.0/2.0 Fast/2.0 Mini/2.5、Wan 3.0、MiniMax H3 和 Grok 视频 1.5；wire 和模式按具体渠道官方 API 文档核对，Kling 与 Wan 派生型号延后不排期。 |
 | `accepted` | [2026-09-05-model-contract-docs-first.md](2026-09-05-model-contract-docs-first.md) | 模型合同：渠道官方 API 文档优先方法修订 | `omnimux/catalog` | 2026-09-05 | 当前方法：具体 EvoLink/APIMart 模型 API 文档决定模式、字段、角色、数量、格式与时长；文档支持、离线实现验证、历史真实执行分列。无真实请求例外；`execution.live` 是待对齐实现差异。 |
 | `accepted` | [2026-09-05-workbench-panel-containing-block.md](2026-09-05-workbench-panel-containing-block.md) | 工作台分栏定位容器修复 | `omnimux` | 2026-09-05 | #610/#552：保留全视口 panel host，只限制真实右面板；以几何及 hit-test 验证会话可用。 |
 | `accepted` | [2026-09-05-market-skill-candidate.md](2026-09-05-market-skill-candidate.md) | Market 技能候选对象加载修复 | `omnimux-market` | 2026-09-05 | #593：当前 SkillProvider 候选对象契约、完整定义元数据、零模型回归；Dev 激活单独交付。 |

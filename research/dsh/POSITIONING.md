@@ -1,5 +1,8 @@
 # 官方意图对齐：OmniMux 落到 dsh 插件生态
 
+> **历史定位边界（2026-10-08）**：本文的社媒全链路、短剧首发、矩阵增长和旧“唯一定位”属于所记日期的研究或决策；产品定位部分已由[角色生成与视频复刻](../../docs/contracts/product-positioning.md)替代。原历史正文、证据与技术分工保留，不据此恢复旧产品路线、执行旧请求示例或宣称当前功能已交付。
+
+
 日期：2026-08-14。
 依据：[EXTENSION.md](EXTENSION.md) 的扩展面事实 + 官方中英产品页。
 本文件只定站位，不写实现。活能力和包边界见 [docs/capabilities.md](../../docs/capabilities.md)、[docs/contracts/hub.md](../../docs/contracts/hub.md)、[docs/decisions/2026-08-14-execution-hub.md](../../docs/decisions/2026-08-14-execution-hub.md)。

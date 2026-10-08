@@ -1,5 +1,8 @@
 # OmniMux Device
 
+当前产品方向见[角色生成与视频复刻](../../docs/contracts/product-positioning.md)。本页保留该组件的技术职责与既有实现记录，不证明全部功能当前可用，也不扩展默认产品范围；模型/渠道信息属于内部执行，普通用户的简化入口仍需对应实现证据。
+
+
 > OmniMux 移动真机矩阵与设备智能体中枢（Mobile Device Farm & Agent Brain）
 
 专为 DeepSeek Harness / OmniMux 打造的 iOS 物理真机自动化与设备池化中控系统。深度融合了 **`prod-FARM-IOS-Core` 的机房硬件池化守护**、**`dsh-ios` 的语义无障碍感知与本地 Vision OCR**，并搭载 **`TypeSafe Jev` 毫秒级快速决策模型**，实现真正由 AI Agent 自主闭环控制的多手机矩阵系统。
