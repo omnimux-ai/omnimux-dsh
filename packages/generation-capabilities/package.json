@@ -1,0 +1,19 @@
+{
+  "name": "@omnimux/generation-capabilities",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": ["src", "types"],
+  "scripts": {
+    "test": "node --test test/core.test.mjs"
+  },
+  "license": "MIT"
+}
