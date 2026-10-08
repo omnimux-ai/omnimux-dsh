@@ -1,12 +1,13 @@
 /**
  * Parameter domain (`parameters`) structural validation operators.
  *
- * Offline structure only: no network, no provider probing. Applies to both
- * model-level and operation-level `parameters`. Unknown keys (e.g. `type`,
- * `optionsFrom`) are ignored — this module validates known domains, it does not
- * close the parameter namespace.
+ * Offline validation: no network or provider probing. Applies to model-level
+ * and operation-level declarations. Known structure keeps its own diagnostics;
+ * consumed defaults additionally require a proven packaged-domain member.
+ * Extensions without a consumed default do not close the parameter namespace.
  */
 
+import { evaluateDeclaredParameters } from '../../../../lib/generation-core.js';
 import { issue } from './commonSchema.js';
 
 /** Error codes emitted by this module (registered in ADMISSION_ERROR_CODES). */
@@ -41,7 +42,7 @@ function isPlainObject(value) {
  */
 function isScalar(value) {
   const type = typeof value;
-  return type === 'string' || type === 'number' || type === 'boolean';
+  return value === null || type === 'string' || (type === 'number' && Number.isFinite(value)) || type === 'boolean';
 }
 
 /**
@@ -271,36 +272,24 @@ function validateOptions(def, path, ctx, out) {
 }
 
 /**
- * Validate defaultValue against the declared domain (options, then range).
+ * Defaults use the packaged domain kernel; structure issues keep their original
+ * code and location and are reported before domain evaluation.
  * @param {Record<string, unknown>} def
  * @param {string} path
  * @param {{ modelId?: string, file?: string }} ctx
  * @param {object[]} out
- * @param {{ optionKeys: Set<string>|null, range: { min?: number, max?: number }|null }} domain
- * @returns {void}
  */
-function validateDefaultValue(def, path, ctx, out, domain) {
-  const defaultValue = def.defaultValue;
-  if (defaultValue === undefined) return;
-  const { optionKeys, range } = domain;
-  if (optionKeys === null && range === null) return;
-
-  const key = valueKey(defaultValue, isCaseInsensitive(def));
-  if (key !== null && optionKeys !== null && optionKeys.has(key)) return;
-  const inRange =
-    range !== null &&
-    isFiniteNumber(defaultValue) &&
-    (range.min === undefined || defaultValue >= range.min) &&
-    (range.max === undefined || defaultValue <= range.max);
-  if (inRange) return;
-
-  out.push(
-    issue(
-      'parameter_default_unmatched',
-      `defaultValue ${JSON.stringify(defaultValue)} is not declared by options/range at ${path}`,
-      { ...ctx, path: `${path}.defaultValue` },
-    ),
-  );
+function validateDefaultValue(def, path, ctx, out) {
+  if (!Object.prototype.hasOwnProperty.call(def, 'defaultValue') || out.length > 0) return;
+  const result = evaluateDeclaredParameters({}, { value: def }, undefined, { mode: 'legacyGuard' });
+  if (result.ok) return;
+  // Raw registered voice structure is not execution readiness; load resolves it first.
+  if (path.endsWith('.voice') && def.optionsFrom === 'volcengine-voice-index'
+    && def.options === undefined && def.range === undefined
+    && result.result.status === 'indeterminate' && result.result.diagnostic === 'unresolved_options') return;
+  out.push(issue('parameter_default_unmatched',
+    `defaultValue ${JSON.stringify(def.defaultValue)} is not declared by options/range at ${path}`,
+    { ...ctx, path: `${path}.defaultValue` }));
 }
 
 /**
@@ -315,9 +304,9 @@ function validateParameterDefinition(def, path, ctx) {
   validateLengthBounds(def, path, ctx, out);
   validateBooleanFlags(def, path, ctx, out);
   validateUnit(def, path, ctx, out);
-  const optionKeys = validateOptions(def, path, ctx, out);
-  const range = validateRange(def, path, ctx, out);
-  validateDefaultValue(def, path, ctx, out, { optionKeys, range });
+  validateOptions(def, path, ctx, out);
+  validateRange(def, path, ctx, out);
+  validateDefaultValue(def, path, ctx, out);
   return out;
 }
 

@@ -1,4 +1,4 @@
-// Generated from @omnimux/generation-capabilities; source-sha256: 5d378a57167ef5cb3b9d213e2d793e9ee2b508f50d27e5074ce8b93d3e22f2fd
+// Generated from @omnimux/generation-capabilities; source-sha256: 5586e322120980fab414e1bdd68d585fedf1961c45d62ba15dcdd58238f6b63e
 
 // src/units.js
 var BYTES_PER_MB = 1024 * 1024;
@@ -556,10 +556,198 @@ function solveAssetAssignment(operation, assets, context = {}, policy = {}) {
   ) })], "completion_unproven");
   return failed(failures.length && entries.every((e) => e.domains.length === 1) ? failures : [incompatible("no complete assignment satisfies the operation")]);
 }
+
+// src/parameters.js
+function plain(value) {
+  return typeof value === "object" && value !== null && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
+}
+function modeOf(policy) {
+  if (policy === void 0) return "canonical";
+  if (!plain(policy) || Object.getOwnPropertySymbols(policy).length > 0 || Object.getOwnPropertyNames(policy).some((key) => key !== "mode") || policy.mode !== void 0 && policy.mode !== "canonical" && policy.mode !== "legacyGuard") {
+    throw new TypeError("parameter policy must be { mode?: canonical | legacyGuard }");
+  }
+  return policy.mode ?? "canonical";
+}
+function primitive(value) {
+  return value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value);
+}
+function matches(left, right, fold) {
+  return Object.is(left, right) || left === 0 && right === 0 || fold === true && typeof left === "string" && typeof right === "string" && left.toLowerCase() === right.toLowerCase();
+}
+function decimal(value) {
+  const match = /^(-?)(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/.exec(String(value));
+  if (!match) return null;
+  let digits = (match[2] + (match[3] ?? "")).replace(/^0+/, "") || "0";
+  let exponent = Number(match[4] ?? 0) - (match[3]?.length ?? 0);
+  while (digits.length > 1 && digits.endsWith("0")) {
+    digits = digits.slice(0, -1);
+    exponent += 1;
+  }
+  if (digits.length > 17 || exponent < -324 || exponent > 308 || !Number.isInteger(exponent)) return null;
+  return { coefficient: BigInt((match[1] || "") + digits), exponent };
+}
+function stepped(value, min, step) {
+  const parts = [decimal(value), decimal(min), decimal(step)];
+  if (parts.some((part) => part === null)) return { status: "indeterminate", diagnostic: "precision_unproven" };
+  const valid = (
+    /** @type {{ coefficient: bigint, exponent: number }[]} */
+    parts
+  );
+  const exponent = valid.reduce((lowest, part) => part.exponent < lowest ? part.exponent : lowest, 308);
+  if (valid.some((part) => part.exponent - exponent > 632)) return { status: "indeterminate", diagnostic: "precision_unproven" };
+  const [V, M, S] = valid.map((part) => part.coefficient * 10n ** BigInt(part.exponent - exponent));
+  const D = V - M;
+  if (D < 0n || S <= 0n) return { status: "indeterminate", diagnostic: "precision_unproven" };
+  const Q = D > S ? D : S;
+  const scale = 2n ** 49n;
+  if (4n * Q >= scale * S) return { status: "indeterminate", diagnostic: "precision_unproven" };
+  const remainder = D % S;
+  const R = remainder < S - remainder ? remainder : S - remainder;
+  return R * scale <= Q ? { status: "member" } : { status: "nonmember", reason: "range" };
+}
+function checkParameterMember(definition, value, policy) {
+  const mode = modeOf(policy);
+  if (!plain(definition)) return { status: "indeterminate", diagnostic: "malformed_definition" };
+  const malformed = { status: (
+    /** @type {const} */
+    "indeterminate"
+  ), diagnostic: (
+    /** @type {const} */
+    "malformed_definition"
+  ) };
+  for (
+    const flag of
+    /** @type {const} */
+    ["allowAuto", "supported", "caseInsensitive"]
+  ) {
+    if (definition[flag] !== void 0 && typeof definition[flag] !== "boolean") return malformed;
+  }
+  for (
+    const bound of
+    /** @type {const} */
+    ["minLength", "maxLength"]
+  ) {
+    const raw = definition[bound];
+    if (raw !== void 0 && (typeof raw !== "number" || !Number.isSafeInteger(raw) || raw <= 0)) return malformed;
+  }
+  if (definition.minLength !== void 0 && definition.maxLength !== void 0 && definition.minLength > definition.maxLength) return malformed;
+  if (Object.prototype.hasOwnProperty.call(definition, "defaultValue") && definition.defaultValue === void 0) return malformed;
+  const known = [
+    "type",
+    "options",
+    "optionsFrom",
+    "range",
+    "defaultValue",
+    "minLength",
+    "maxLength",
+    "supported",
+    "allowAuto",
+    "caseInsensitive",
+    "unit",
+    "description",
+    "label",
+    "help"
+  ];
+  if (Object.getOwnPropertySymbols(definition).length > 0 || Object.getOwnPropertyNames(definition).some((key) => !known.includes(key))) return malformed;
+  const range = definition.range;
+  if (range !== void 0) {
+    if (!plain(range) || Object.getOwnPropertySymbols(range).length > 0 || Object.getOwnPropertyNames(range).some((key) => !["min", "max", "step"].includes(key))) return malformed;
+    for (
+      const bound of
+      /** @type {const} */
+      ["min", "max", "step"]
+    ) {
+      const raw = range[bound];
+      if (raw !== void 0 && (typeof raw !== "number" || !Number.isFinite(raw))) return malformed;
+    }
+    if (range.step !== void 0 && range.step <= 0 || range.min !== void 0 && range.max !== void 0 && range.min > range.max) return malformed;
+  }
+  const options = [];
+  if (definition.options !== void 0) {
+    if (!Array.isArray(definition.options)) return malformed;
+    for (const item of definition.options) {
+      const option = plain(item) ? (
+        /** @type {{ value: unknown }} */
+        item.value
+      ) : item;
+      if (!primitive(option) || options.some((candidate) => matches(candidate, option, definition.caseInsensitive))) return malformed;
+      options.push(option);
+    }
+  }
+  const optionMember = options.some((option) => matches(option, value, definition.caseInsensitive));
+  const inRangeBounds = range !== void 0 && typeof value === "number" && Number.isFinite(value) && (range.min === void 0 || value >= range.min) && (range.max === void 0 || value <= range.max);
+  const autoMember = definition.allowAuto === true && value === -1;
+  if (mode === "legacyGuard" && definition.optionsFrom === void 0 && options.length > 0 && !optionMember && !inRangeBounds && !autoMember) {
+    return { status: "nonmember", reason: "domain" };
+  }
+  if (!primitive(value)) return { status: "nonmember", reason: "domain" };
+  if (definition.supported === true && typeof value !== "boolean") return { status: "nonmember", reason: "boolean" };
+  if (definition.supported === false) return { status: "nonmember", reason: "unsupported" };
+  if (definition.type === "integer" && (typeof value !== "number" || !Number.isSafeInteger(value))) return { status: "nonmember", reason: "integer" };
+  if (definition.type === "number" && typeof value !== "number") return { status: "nonmember", reason: "number" };
+  if (definition.type === "string" && typeof value !== "string") return { status: "nonmember", reason: "string" };
+  if (definition.type === "boolean" && typeof value !== "boolean") return { status: "nonmember", reason: "boolean" };
+  if (definition.type !== void 0 && !["integer", "number", "string", "boolean"].includes(definition.type)) return { status: "nonmember", reason: "type" };
+  if (definition.minLength !== void 0 || definition.maxLength !== void 0) {
+    if (typeof value !== "string") return { status: "nonmember", reason: "length_type" };
+    const length = Array.from(value).length;
+    if (definition.minLength !== void 0 && length < definition.minLength) return { status: "nonmember", reason: "minLength" };
+    if (definition.maxLength !== void 0 && length > definition.maxLength) return { status: "nonmember", reason: "maxLength" };
+  }
+  if (optionMember) return { status: "member" };
+  if (autoMember) return { status: "member" };
+  let rangeResult;
+  if (range !== void 0) {
+    rangeResult = typeof value !== "number" ? { status: "nonmember", reason: "number" } : !inRangeBounds ? { status: "nonmember", reason: "range" } : range.step === void 0 ? { status: "member" } : range.min === void 0 ? { status: "indeterminate", diagnostic: "precision_unproven" } : stepped(value, range.min, range.step);
+    if (rangeResult.status === "member") return rangeResult;
+  }
+  if (definition.optionsFrom !== void 0) return { status: "indeterminate", diagnostic: "unresolved_options" };
+  if (rangeResult) {
+    if (definition.options && definition.options.length > 0 && rangeResult.status === "nonmember" && !inRangeBounds) return { status: "nonmember", reason: "domain" };
+    return rangeResult;
+  }
+  return definition.options === void 0 && value !== null ? { status: "member" } : { status: "nonmember", reason: "domain" };
+}
+function evaluateDeclaredParameters(request, operationDefinitions, modelDefinitions, policy) {
+  const mode = modeOf(policy);
+  if (!plain(request)) throw new TypeError("parameter request must be a plain object");
+  if (operationDefinitions !== void 0 && !plain(operationDefinitions) || modelDefinitions !== void 0 && !plain(modelDefinitions)) return {
+    ok: false,
+    field: "",
+    source: "definition",
+    result: { status: "indeterminate", diagnostic: "malformed_definition" }
+  };
+  const definitions = { ...modelDefinitions, ...operationDefinitions };
+  if (mode === "canonical") for (const field of Object.keys(request)) {
+    if (request[field] !== void 0 && !Object.prototype.hasOwnProperty.call(definitions, field)) return {
+      ok: false,
+      field,
+      source: "request",
+      result: { status: "nonmember", reason: "unknown_field" }
+    };
+  }
+  const values = {};
+  for (const [field, definition] of Object.entries(definitions)) {
+    if (!plain(definition)) return { ok: false, field, source: "definition", result: { status: "indeterminate", diagnostic: "malformed_definition" } };
+    const supplied = Object.prototype.hasOwnProperty.call(request, field) && request[field] !== void 0 && (mode !== "legacyGuard" || request[field] !== null && request[field] !== "");
+    if (!supplied && !Object.prototype.hasOwnProperty.call(definition, "defaultValue")) continue;
+    const value = supplied ? request[field] : definition.defaultValue;
+    const domain = !supplied && mode === "legacyGuard" && definition.supported === false ? Object.create(Object.getPrototypeOf(definition), {
+      ...Object.getOwnPropertyDescriptors(definition),
+      supported: { value: void 0, enumerable: true, writable: true, configurable: true }
+    }) : definition;
+    const result = checkParameterMember(domain, value, policy);
+    if (result.status !== "member") return { ok: false, field, source: supplied ? "request" : "default", result };
+    Object.defineProperty(values, field, { value, enumerable: true, writable: true, configurable: true });
+  }
+  return { ok: true, values };
+}
 export {
   BYTES_PER_MB,
   GUARD_CODES,
   SLOT_ALIASES,
+  checkParameterMember,
+  evaluateDeclaredParameters,
   getSlotAliases,
   isWithinDurationLimit,
   isWithinSizeLimit,

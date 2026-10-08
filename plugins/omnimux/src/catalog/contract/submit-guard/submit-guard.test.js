@@ -16,6 +16,23 @@ import { getContractIndex, loadAdapterProfiles, verifyContracts } from '../index
 const index = getContractIndex()
 const profiles = loadAdapterProfiles()
 
+function parameterPlan(parameters, request = {}, modelParameters = {}) {
+  const original = index.get('gpt-image-2.5')
+  const operation = { ...original.operations.find((op) => op.id === 'text_to_image'), parameters }
+  const model = { ...original, parameters: modelParameters, operations: [operation] }
+  return guardSubmit({ model: model.id, operation: operation.id, prompt: 'hello', ...request }, {
+    index: { get: (id) => id === model.id ? model : undefined, all: () => [model] },
+    profiles, dispositions: { models: [] }, skipVendorMap: true,
+  })
+}
+
+it('parameter options and stepped range are alternative members through the original guard', () => {
+  const definition = { duration: { options: [-1, 5], range: { min: 4, max: 30, step: 2 } } }
+  const plan = parameterPlan(definition, { duration: 5 })
+  assert.equal(plan.ok, true, JSON.stringify(plan))
+  assert.equal(plan.extras.duration, 5)
+})
+
 describe('SubmitGuard listed profile coverage (#468)', () => {
   it('strict listedOperations is exactly 37 and every key has a ready profile payload contract', () => {
     const report = verifyContracts({ strict: true })
@@ -217,4 +234,57 @@ describe('normalizeLogicalRequest', () => {
     assert.ok(n.assets.some((a) => a.role === 'reference'))
     assert.ok(n.assets.some((a) => a.role === 'audio_track'))
   })
+})
+
+it('parameter guard retains original shape, order, messages and legacy default extraction', () => {
+  const parameters = {
+    duration: { options: [-1, 5], range: { min: 4, max: 30, step: 2 } },
+    sound: { supported: true, defaultValue: true }, watermark: { supported: false, defaultValue: false },
+    n: { type: 'integer', defaultValue: 1 }, text: { type: 'string', defaultValue: 'default' },
+  }
+  for (const duration of [-1, 5, 6]) {
+    const plan = parameterPlan(parameters, { duration, sound: false, n: 0, text: null, transport: 99 })
+    assert.equal(plan.ok, true)
+    assert.deepEqual(plan.extras, { duration, sound: false, watermark: false, n: 0, text: 'default' })
+    assert.deepEqual(Object.keys(plan.extras), ['duration', 'sound', 'watermark', 'n', 'text'])
+    assert.deepEqual(Object.keys(plan), ['ok', 'modelId', 'requestedModelId', 'operationId', 'operationInferred', 'operation', 'model', 'profile', 'profileId', 'seam', 'prompt', 'assets', 'bindings', 'bySlot', 'vendorPayload', 'logicalPayload', 'extras', 'diagnostics', 'disposition', 'payloadContract'])
+  }
+  for (const [definition, value, message] of [
+    [{ options: [5] }, 6, 'does not accept 6'],
+    [{ supported: true }, 0, 'must be boolean'],
+    [{ supported: false }, false, 'is not supported'],
+    [{ type: 'integer' }, 1.5, 'must be an integer'],
+    [{ range: {} }, '5', 'must be numeric'],
+    [{ range: { min: 4, step: 2 } }, 7, 'is outside its documented range'],
+    [{ minLength: 2 }, 'a', 'is shorter than 2 characters'],
+    [{ maxLength: 1 }, 'ab', 'exceeds 1 characters'],
+  ]) assert.deepEqual(parameterPlan({ duration: definition }, { duration: value }), {
+    ok: false, code: 'parameter_unsupported', message: `parameter "duration" ${message}`,
+    diagnostics: [], details: { modelId: 'gpt-image-2.5', operationId: 'text_to_image', field: 'duration' },
+  })
+  const badDefault = parameterPlan({ duration: { range: { min: 4, step: 2 }, defaultValue: 7 } })
+  assert.equal(badDefault.code, 'catalog_malformed')
+  assert.equal(badDefault.message, 'parameter "duration" has an invalid or unresolved defaultValue')
+  assert.equal(parameterPlan({ duration: { range: { min: .1, step: .1 } } }, { duration: .3 }).ok, true)
+  assert.equal(parameterPlan({ duration: { range: { min: 0, step: 1 } } }, { duration: 2 ** 48 + .25 }).code, 'catalog_malformed')
+  assert.deepEqual(parameterPlan({ n: { type: 'integer' } }, {}, { n: { defaultValue: 9 } }).extras, {})
+})
+
+it('parameter guard preserves literal options-first compound errors without weakening outer constraints', () => {
+  for (const [definition, value, message] of [
+    [{ type: 'integer', options: [1, 2] }, 1.5, 'does not accept 1.5'],
+    [{ supported: true, options: [false] }, 'x', 'does not accept "x"'],
+    [{ options: ['ab'], minLength: 2 }, 'a', 'does not accept "a"'],
+    [{ type: 'integer', options: [1.5] }, 1.5, 'must be an integer'],
+    [{ type: 'integer', options: [1, 2], range: { min: 0, max: 2 } }, 1.5, 'must be an integer'],
+    [{ type: 'integer', options: [1, 2], range: { min: 0, max: 1 } }, 1.5, 'does not accept 1.5'],
+  ]) assert.deepEqual(parameterPlan({ f: definition }, { f: value }), {
+    ok: false, code: 'parameter_unsupported', message: `parameter "f" ${message}`,
+    diagnostics: [], details: { modelId: 'gpt-image-2.5', operationId: 'text_to_image', field: 'f' },
+  })
+})
+
+it('parameter guard retains the option-domain message when no option or range-bound witness exists', () => {
+  const result = parameterPlan({ duration: { options: [-1, 5], range: { min: 4, max: 30, step: 2 } } }, { duration: 3 })
+  assert.equal(result.message, 'parameter "duration" does not accept 3')
 })

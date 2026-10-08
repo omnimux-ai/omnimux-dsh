@@ -8,6 +8,7 @@
  * taskId poll/finish skips initial asset guard (caller responsibility).
  */
 
+import { evaluateDeclaredParameters } from '../../../../lib/generation-core.js'
 import { getContractIndex } from '../index.js'
 import { loadAdapterProfiles } from '../schema.js'
 import { loadDispositions } from '../dispositions.js'
@@ -365,112 +366,23 @@ export function assertGuardOutput(plan, result, opts = {}) {
  * @param {object | undefined} modelParameters
  */
 function validateDeclaredParameters(request, operationParameters, modelParameters) {
-  const operation = operationParameters && typeof operationParameters === 'object' ? operationParameters : {}
-  const model = modelParameters && typeof modelParameters === 'object' ? modelParameters : {}
-  const definitions = { ...model, ...operation }
-  const values = {}
-  for (const [field, definition] of Object.entries(definitions)) {
-    if (!definition || typeof definition !== 'object') continue
-    const supplied = Object.prototype.hasOwnProperty.call(request, field)
-      && request[field] !== undefined
-      && request[field] !== null
-      && request[field] !== ''
-    const hasDefault = Object.prototype.hasOwnProperty.call(definition, 'defaultValue')
-    if (!supplied && !hasDefault) continue
-    const value = supplied ? request[field] : definition.defaultValue
-
-    if (Array.isArray(definition.options) && definition.options.length > 0) {
-      const allowed = definition.options.map((option) => option && typeof option === 'object' && 'value' in option ? option.value : option)
-      const optionMatches = allowed.some((candidate) => Object.is(candidate, value)
-        || (definition.caseInsensitive === true
-          && typeof candidate === 'string'
-          && typeof value === 'string'
-          && candidate.toLowerCase() === value.toLowerCase()))
-      const inRange = definition.range && typeof definition.range === 'object'
-        && typeof value === 'number' && Number.isFinite(value)
-        && (typeof definition.range.min !== 'number' || value >= definition.range.min)
-        && (typeof definition.range.max !== 'number' || value <= definition.range.max)
-      if (!optionMatches && !inRange) {
-        return {
-          ok: false,
-          code: GUARD_CODES.PARAMETER_UNSUPPORTED,
-          field,
-          message: `parameter "${field}" does not accept ${JSON.stringify(value)}`,
-        }
-      }
-    }
-
-    if (definition.supported === true && typeof value !== 'boolean') {
-      return {
-        ok: false,
-        code: GUARD_CODES.PARAMETER_UNSUPPORTED,
-        field,
-        message: `parameter "${field}" must be boolean`,
-      }
-    }
-    if (definition.supported === false && supplied) {
-      return {
-        ok: false,
-        code: GUARD_CODES.PARAMETER_UNSUPPORTED,
-        field,
-        message: `parameter "${field}" is not supported`,
-      }
-    }
-    if (definition.type === 'integer' && !Number.isInteger(value)) {
-      return {
-        ok: false,
-        code: GUARD_CODES.PARAMETER_UNSUPPORTED,
-        field,
-        message: `parameter "${field}" must be an integer`,
-      }
-    }
-    if (definition.range && typeof definition.range === 'object') {
-      if (typeof value !== 'number' || !Number.isFinite(value)) {
-        return {
-          ok: false,
-          code: GUARD_CODES.PARAMETER_UNSUPPORTED,
-          field,
-          message: `parameter "${field}" must be numeric`,
-        }
-      }
-      const auto = definition.allowAuto === true && value === -1
-      if (!auto && (
-        (typeof definition.range.min === 'number' && value < definition.range.min)
-        || (typeof definition.range.max === 'number' && value > definition.range.max)
-        || (typeof definition.range.step === 'number'
-          && typeof definition.range.min === 'number'
-          && Math.abs((value - definition.range.min) / definition.range.step - Math.round((value - definition.range.min) / definition.range.step)) > Number.EPSILON)
-      )) {
-        return {
-          ok: false,
-          code: GUARD_CODES.PARAMETER_UNSUPPORTED,
-          field,
-          message: `parameter "${field}" is outside its documented range`,
-        }
-      }
-    }
-    if (typeof value === 'string') {
-      const length = Array.from(value).length
-      if (typeof definition.minLength === 'number' && length < definition.minLength) {
-        return {
-          ok: false,
-          code: GUARD_CODES.PARAMETER_UNSUPPORTED,
-          field,
-          message: `parameter "${field}" is shorter than ${definition.minLength} characters`,
-        }
-      }
-      if (typeof definition.maxLength === 'number' && length > definition.maxLength) {
-        return {
-          ok: false,
-          code: GUARD_CODES.PARAMETER_UNSUPPORTED,
-          field,
-          message: `parameter "${field}" exceeds ${definition.maxLength} characters`,
-        }
-      }
-    }
-    values[field] = value
+  const result = evaluateDeclaredParameters(request, operationParameters, modelParameters, { mode: 'legacyGuard' })
+  if (result.ok) return result
+  const { field, source } = result
+  const definition = operationParameters?.[field] ?? modelParameters?.[field]
+  const value = request[field]
+  if (source !== 'request' || result.result.status === 'indeterminate') return {
+    ok: false, code: GUARD_CODES.CATALOG_MALFORMED, field,
+    message: `parameter "${field}" has an invalid or unresolved ${source === 'default' ? 'defaultValue' : 'definition'}`,
   }
-  return { ok: true, values }
+  const suffix = {
+    boolean: 'must be boolean', unsupported: 'is not supported', integer: 'must be an integer',
+    number: 'must be numeric', string: 'must be a string', type: 'has an unsupported type',
+    length_type: 'must be a string', range: 'is outside its documented range',
+    minLength: `is shorter than ${definition?.minLength} characters`,
+    maxLength: `exceeds ${definition?.maxLength} characters`,
+  }[result.result.reason] ?? `does not accept ${JSON.stringify(value)}`
+  return { ok: false, code: GUARD_CODES.PARAMETER_UNSUPPORTED, field, message: `parameter "${field}" ${suffix}` }
 }
 
 export { GUARD_CODES, validateVendorResult, normalizeLogicalRequest, mapValidatedPlanToVendor }
