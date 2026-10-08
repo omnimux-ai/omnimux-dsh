@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-08"
-updated: "2026-09-09"
+updated: "2026-10-08"
 authors: ["Gao", "agent-architect"]
 subsystem: "omnimux-workflow"
 tags: ["workflow", "apps", "boundary", "manifest", "headless"]
@@ -19,6 +19,8 @@ related:
 ---
 
 # Canvas / AI 应用协作契约
+
+本文的通用应用目标与固定版本缺口保留为技术背景，不是当前产品路线。角色创作范围见[产品定位](product-positioning.md)；复用宿主和调度能力不授权扩展泛应用或删除旧用途。
 
 ## 1. 范围与状态
 

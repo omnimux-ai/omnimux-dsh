@@ -1,5 +1,8 @@
 # omnimux-publish
 
+当前产品方向见[角色生成与视频复刻](../../docs/contracts/product-positioning.md)。本页保留该组件的技术职责与既有实现记录，不证明全部功能当前可用，也不扩展默认产品范围；模型/渠道信息属于内部执行，普通用户的简化入口仍需对应实现证据。
+
+
 社媒内容发布中心插件（Host + Client 双半边）：从草稿到多账号分发到审核跟进的发布编排层。执行走 hub `omnimux_publish_*` 官方工具通道，本插件不直连任何平台、不存任何 `OMNIMUX_*` secret。
 
 - PRD：`docs/PRD.md`（v1 Confirmed）

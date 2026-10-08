@@ -1,8 +1,11 @@
 # omnimux-workflow
 
+当前产品方向见[角色生成与视频复刻](../../docs/contracts/product-positioning.md)。本页保留该组件的技术职责与既有实现记录，不证明全部功能当前可用，也不扩展默认产品范围；模型/渠道信息属于内部执行，普通用户的简化入口仍需对应实现证据。
+
+
 > 运维入口：`cd ~/Desktop/Project/omnimux-desktop-fork && yarn omnimux:sync omnimux-workflow`（+ `yarn omnimux:restart`）。`npm run deploy` 已废弃为转发器，勿再加私有同步逻辑。详见 `docs/contracts/ops-entry.md`。
 >
-> **Gxgen 迁移蓝图（代理必读）**：产品树 [`docs/contracts/gxgen-workflow-migration.md`](../../../docs/contracts/gxgen-workflow-migration.md) —— 进度矩阵 + Phase0 项目壳优先 + 术语表。动手改画布对齐前先更新/阅读矩阵。
+> **Gxgen 迁移蓝图（代理必读）**：产品树 [`docs/contracts/gxgen-workflow-migration.md`](../../docs/contracts/gxgen-workflow-migration.md) —— 进度矩阵 + Phase0 项目壳优先 + 术语表。动手改画布对齐前先更新/阅读矩阵。
 
 
 DeepSeek Harness（dsh）的工作流无限画布插件：拖拽节点、连线成 DAG、编排多模态生成任务，并允许 dsh 会话里的 **Agent 通过工具查询与执行画布**。画布自身零模型 API 调用——所有生成经 OmniMux 执行中枢的 seam 提交（M4 已接通）；数据 100% 本地文件（`$DSH_HOME/omnimux/workflow/`）。

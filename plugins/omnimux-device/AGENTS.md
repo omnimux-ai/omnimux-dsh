@@ -1,5 +1,8 @@
 # omnimux-device
 
+Product scope follows [product positioning](../../docs/contracts/product-positioning.md) and root rules; the existing domain mission does not authorize matrix-publishing expansion or prove shipped capability.
+
+
 > OmniMux 移动真机矩阵与设备智能体中枢（Mobile Device Farm & Agent Brain）
 > 负责连接物理 iPhone 集群，将硬件能力转化为标准智能体工具，通过快慢双脑分层回路实现高并发短视频矩阵自动化分发。
 

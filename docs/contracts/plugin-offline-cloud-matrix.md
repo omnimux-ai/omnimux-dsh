@@ -11,6 +11,8 @@ subsystem: "global"
 
 # plugin-offline-cloud-matrix — 插件离线/云端定界与侧栏动态可见性合同
 
+本页是既有访问与数据源分类，不定义对外产品范围或证明业务已可用。现行主线见[产品定位](product-positioning.md)；账号、发布和分析说明不授权矩阵运营扩展，也不因文档同步隐藏或停用旧插件。
+
 > 目的：规范 OmniMux 插件在离线（Local/Offline）与云端强依赖（Cloud-dependent）场景下的能力定级、数据源归属、侧栏入口显式门闩协议及方案 D 游客拦截规则。
 
 ## 1. 核心交互铁律 (Core Invariants)

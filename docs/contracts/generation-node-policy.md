@@ -5,19 +5,21 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-06"
-updated: "2026-09-06"
+updated: "2026-10-08"
 subsystem: "omnimux-workflow"
 ---
 
 # 生成节点模型选择与偏好
 
-Workflow 在 [generationPolicy.ts](../../plugins/omnimux-workflow/src/shared/generationPolicy.ts) 维护产品模型范围、类型默认项和模式展示策略；Hub 继续独占渠道、输入能力和执行合同。此策略取代旧兼容性规格中的同系列优先、禁止产品模型筛选及所有节点一律按 operation 数量展示模式的规则。
+现行角色创作方向见[产品定位](product-positioning.md)。下表和手动偏好属于既有画布策略说明，不定义新的对外模型清单；普通用户不展示模型 ID、不选渠道组是目标要求，不是已全量完成的结论。保留历史项目、音频、编辑与续写用途，禁止因文档同步批量删改配置。
 
-| 类型 | 产品范围 | 默认项 | 模式展示 |
+Workflow 在 [generationPolicy.ts](../../plugins/omnimux-workflow/src/shared/generationPolicy.ts) 维护既有画布模型范围、类型默认项和模式展示策略；Hub 继续独占渠道、输入能力和执行合同。此策略取代旧兼容性规格中的同系列优先、禁止产品模型筛选及所有节点一律按 operation 数量展示模式的规则。
+
+| 类型 | 既有策略记录（需核对当前源码） | 默认项 | 模式展示 |
 | --- | --- | --- | --- |
 | 文本 | Claude Opus 4.6、Gemini 3.8 Flash、DeepSeek V4 Flash、GPT 5.5 | Gemini 3.8 Flash | 始终隐藏，按输入解析 |
 | 图片 | GPT Image 2、Grok Imagine Image | GPT Image 2 | 所选模型具有多种可用创作方式时显示 |
-| 视频 | 当前七款，顺序见策略源码 | Seedance 2.0 Fast | **保留生成方式选择（一等公民可见性，严禁因连线收缩隐藏）** |
+| 视频 | 2026-09 策略七款，当前顺序见策略源码 | Seedance 2.0 Fast | **保留生成方式选择（一等公民可见性，严禁因连线收缩隐藏）** |
 | 音频 | Suno、GPT 4o mini TTS | Suno | 仅多任务模型显示，不固定语音／音乐页签 |
 
 范围不代表已经接通。可用模型取产品范围与 Hub 已就绪目录的交集，再由共享兼容性内核按当前输入筛选。策略投影同时覆盖目录的模型列表、operation 和默认项；UI、Agent、连线和提交使用该投影。无 Hub 的测试桩目录仅用于离线测试，不证明实际模型能力。

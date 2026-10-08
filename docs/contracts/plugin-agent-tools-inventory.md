@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-30"
-updated: "2026-09-04"
+updated: "2026-10-08"
 authors: ["qi-huolin", "xu-qingchu", "gao-jianyuan", "lin-shen", "yan-guoguan"]
 subsystem: "global"
 tags: ["agent-tools", "dual-surface", "inventory", "verification", "governance"]
@@ -18,6 +18,8 @@ related:
 ---
 
 # OmniMux 全量插件 Agent 工具与双面交付清单契约
+
+本页数字、`Implemented` 与“双面就绪”是既有源码注册记录，不是当前上线或真实业务可用证明，不作为正式版宣传数量。发布阶段读[生命周期清单](../../plugins/omnimux/src/plugin-lifecycle.json)，运行可用性需当前版本证据；现行产品范围见[产品定位](product-positioning.md)。
 
 > **版本**：v1.0.0 | **权威级别**：L1（工程契约）  
 > **适用范围**：`/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh` 下全部 12 个插件的 UI 交互与 Agent Tool 注册规范。  

@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-08"
-updated: "2026-09-16"
+updated: "2026-10-08"
 authors: ["Gao", "agent-architect"]
 subsystem: "omnimux-apps"
 tags: ["ui", "spec", "form", "layout", "qa-assertions"]
@@ -19,6 +19,8 @@ related:
 ---
 
 # OmniMux AI 应用 UI 布局与表单交互标准规范
+
+本文保留通用应用承载形态与固定版本审计。当前产品范围由[产品定位](product-positioning.md)定义，视频/图片/音频分类不授权建设泛应用平台；角色创作不向普通用户展示模型 ID 或渠道组选项。该目标与既有原型状态分开，本次不改运行代码或历史验收结论。
 
 ## 1. 规范目标、现状与证据限制
 

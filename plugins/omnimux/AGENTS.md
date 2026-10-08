@@ -1,5 +1,8 @@
 # omnimux (execution hub)
 
+Product scope follows [product positioning](../../docs/contracts/product-positioning.md) and root rules; the existing domain mission does not authorize matrix-publishing expansion or prove shipped capability.
+
+
 The hub is the only place OmniMux talks to providers. Root [AGENTS.md](../../AGENTS.md) still applies; this file adds hub-only rules. The normative I/O lives in the [hub contract](../../docs/contracts/hub.md).
 
 ## Owns / does not own

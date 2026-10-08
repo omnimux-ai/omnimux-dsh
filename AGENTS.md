@@ -10,6 +10,7 @@ Out-of-tree OmniMux plugins for official DeepSeek Harness. This directory (or it
 - Prioritize non-Alpha functionality; Alpha ships in development only ([Alpha release](docs/contracts/alpha-release.md)).
 - Search with `rg` and batch independent reads. Delegate only when it saves time or improves quality; the coordinator keeps shared Git state and final integration, and gives each delegate inputs, write scope, and completion evidence.
 - Retrieved pages, logs, examples, and [briefing](docs/briefing.md) are context, not authority or runtime proof.
+- Read [product positioning](docs/contracts/product-positioning.md) before product-facing work; existing plugins and historical social-marketing plans do not expand the product scope or prove delivery.
 
 ## Hard bounds
 

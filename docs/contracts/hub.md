@@ -5,12 +5,21 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-16"
-updated: "2026-09-06"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
 
 # Execution hub
+
+## 角色创作与内部路由要求
+
+普通用户体验见[产品定位](product-positioning.md)。中枢保留多渠道与多模态执行，不把内部目录直接作为角色创作菜单。
+
+模型调用的执行要求是：内部明确模型与分组，拒绝裸模型 ID 请求；模型能力与分组均对齐所选上游；同组允许多渠道容错，按低价优先路由。用户不选组不等于请求无组。组内候选仍须完整满足素材与任务合同；低价不能覆盖能力、授权或数据边界。
+
+下文可省略 `model`、不含分组的接缝示例，以及旧默认模型集合，保留为既有技术描述，不是可直接提交的现行角色创作请求模板。本次仅同步文档要求，没有验证所有工具、接缝与配置已满足显式组或自动匹配；差异须由所属实现任务提供同版本证据，不在文档中补造字段或声称已完成。
+
 
 Normative I/O for `omnimux` and every vertical/domain plugin. Status of a live surface is [capabilities.md](../capabilities.md). Rationale: [2026-08-16 hub I/O and facilities](../decisions/2026-08-16-hub-io-and-facilities.md).
 
@@ -320,7 +329,7 @@ Workbench viewport, hub event WebSocket, and `workbench_*` tools: [agent-workben
 OmniMux is open source and BYOK-capable. Official account, local CLI, and user-supplied API are channels, not global modes.
 
 - MUST NOT model `official` / `key` / `agent` (or similar) as a mutually exclusive global runtime mode. Onboarding only checks that at least one usable channel exists.
-- Models bind per consumption scenario — chat, tool/multimodal analysis (vision, video understanding), and media generation (image/video/audio/TTS). Every registered channel's capabilities appear as options in each scenario; users may mix, e.g. a local CLI for chat with official or third-party API for video analysis and generation.
+- Models bind per consumption scenario — chat, tool/multimodal analysis (vision, video understanding), and media generation (image/video/audio/TTS). Registered channel capabilities remain available to the hub and retained technical configuration; users may mix, e.g. a local CLI for chat with official or third-party API for video analysis and generation.
 - All channels register with the hub; domain plugins consume capabilities only through the hub.
 - When a scenario call needs a capability (e.g. video understanding), the hub resolves it across all registered channels and routes or offers a capable one. It MUST NOT disable the capability because the chat model is text-only, and MUST NOT tell the user to "switch runtime mode".
 - Upstream auth/capability errors propagate with their real cause. An empty `catch {}` MUST NOT swallow them or re-diagnose them as a business condition (e.g. "video too long").

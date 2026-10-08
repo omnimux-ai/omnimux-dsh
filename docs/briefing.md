@@ -12,7 +12,7 @@ subsystem: "global"
 
 # Briefing
 
-> Memory, not truth. Rank: code > AGENTS.md > contracts > CONTEXT.md > ADRs > this file.
+> Memory, not current truth or authority. Product direction: [product positioning](contracts/product-positioning.md). Facts and permissions are arbitrated separately under [docs governance](contracts/docs-governance-standard.md); historical summaries cannot override current instructions or prove runtime availability.
 > Process: `docs/contracts/briefing.md`.
 
 ## Index

@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-18"
-updated: "2026-09-05"
+updated: "2026-10-08"
 authors: ["x", "agent-architect", "gao-jianyuan"]
 subsystem: "omnimux"
 tags:
@@ -22,6 +22,8 @@ related:
 ---
 
 # OmniMux model-list ownership
+
+This contract owns the internal directory and retained technical selectors. It does not make every registered model a public product choice. Ordinary character creation follows [product positioning](product-positioning.md); hiding IDs and automatic group matching are product requirements, not proof that existing selectors or request schemas have changed.
 
 The app's OmniMux model list has one **field authority**: `plugins/omnimux/cordis.patch.yml` says what every model looks like — wire parameters, modalities, context windows, reasoning efforts. Membership of the chat composer list is a separate, dynamic concern: at runtime the hub narrows the list to the models it currently lists, and the `composerHiddenModels` setting can subtract further. See [Composer list membership](#composer-list-membership).
 

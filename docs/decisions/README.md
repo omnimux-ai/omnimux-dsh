@@ -5,7 +5,7 @@ type: "index"
 status: "living"
 authority: "L2"
 date: "2026-08-26"
-updated: "2026-09-09"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 ---
@@ -18,6 +18,8 @@ subsystem: "global"
 重大架构决议与技术选型裁定。历史决议不可篡改，若有升级仅通过新增补丁决议替代。
 
 > **流程版本边界（2026-09-09 / #864）：** 历史决议中的 L2 独立运行环境、生命周期与合入前浏览器验收要求已退役。现行流程见 [dev-pipeline](../contracts/dev-pipeline.md) 与 [plugin-qa](../contracts/plugin-qa.md)；文档 authority、工具/UI 层级 L2 不受影响，历史结果不重标。
+
+> **产品方向版本边界（2026-10-08）**：旧社媒营销、矩阵运营、短剧优先与多模型菜单不是当前主定位。现行方向见[产品定位](../contracts/product-positioning.md)；既有技术与历史证据不整体废止，`accepted` 不代表运行可用。
 
 ## 2. 索引矩阵 (Index Matrix)
 
@@ -37,4 +39,4 @@ subsystem: "global"
 | `accepted` | [2026-08-16-harness-consume-not-fork.md](2026-08-16-harness-consume-not-fork.md) | 决策：消费官方 dsh，不整仓 fork | `omnimux` | 2026-08-16 | 日期：2026-08-16。 |
 | `accepted` | [2026-08-16-hub-io-and-facilities.md](2026-08-16-hub-io-and-facilities.md) | 决策：执行中枢 I/O 与落地设施 | `omnimux` | 2026-08-16 | 日期：2026-08-16。 |
 | `accepted` | [2026-08-16-hub-owns-core.md](2026-08-16-hub-owns-core.md) | 决策：中枢拥有全部 OmniMux 核心能力 | `omnimux` | 2026-08-16 | 日期：2026-08-16。 |
-| `accepted` | [2026-08-14-execution-hub.md](2026-08-14-execution-hub.md) | 决策：执行中枢与领域插件 | `omnimux` | 2026-08-14 | 日期：2026-08-14。 |
+| `accepted` | [2026-08-14-execution-hub.md](2026-08-14-execution-hub.md) | 决策：执行中枢与领域插件 | `omnimux` | 2026-08-14 | 执行中枢与领域分工保留；产品定位部分已由 [product-positioning](../contracts/product-positioning.md) 替代。 |

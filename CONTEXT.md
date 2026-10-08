@@ -2,6 +2,14 @@
 
 This repo lands OmniMux on official dsh. `omnimux` is the execution hub, not a gateway. Platform and domain plugins send requests into hub seams and manage their respective stores. I/O: `docs/contracts/hub.md`.
 
+## Product language
+
+**Character generation（角色生成）**: Establishing a character from a description or an authorized photo, then producing reusable character images.
+
+**Character video replication（角色视频复刻）**: Producing a video with the chosen character and a reference video's intended motion or expression. It does not promise exact reproduction or automated social publishing.
+
+Current product scope and public wording: [product positioning](docs/contracts/product-positioning.md). The component map below names existing responsibilities, not shipped capabilities or permission to expand that scope.
+
 ## Architecture & Responsibilities
 
 | Role | Responsibility |

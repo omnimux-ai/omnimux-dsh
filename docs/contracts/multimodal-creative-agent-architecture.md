@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-09"
-updated: "2026-09-14"
+updated: "2026-10-08"
 authors: ["architecture-group"]
 subsystem: "global"
 tags: ["agent-architecture", "canvas-workflow", "multimodal", "prompt-compiler", "state-machine"]
@@ -19,7 +19,9 @@ related:
 
 # 多模态创意内容生产 Agent 架构与工程实践规范
 
-> **定位**：面向全域社媒（以竖屏短视频与图文轮播为核心切入点，支持多平台平滑扩展）的现代多模态内容生产 Agent 顶层架构设计与工程方法论研究报告。  
+角色生图与视频复刻是产品主线。下列角色、模态工艺与画布方法按实际任务需要复用，不要求每次生成组建全套团队，也不证明全部工艺已交付；不得由本规范启动泛画布或矩阵运营建设。
+
+> **适用范围**：服务已授权角色创作任务的多模态生产方法；现行方向见[产品定位](product-positioning.md)。历史全域社媒与图文扩展设想不是默认产品路线。
 > **核心目标**：实现“高专业度认知 + 全链路工程交付”的统一，彻底解决 Agent 凭空瞎编、长上下文漂移、多模态资产断层与跨平台扩展困难的痼疾。
 
 ---
@@ -34,7 +36,7 @@ related:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 1. 认知角色拓扑 (Cognitive-Role Topology)：按项目认知链条分工，非按模态切割    │
 │ 2. 四层渐进知识库 (Progressive Knowledge Pyramid)：微内核+按需外挂，杜绝膨胀  │
-│ 3. 画布即物理状态机 (Canvas-First State Machine)：无限画布作为唯一生产载体    │
+│ 3. 画布即物理状态机 (Canvas-First State Machine)：画布承载已授权的复合任务状态    │
 │ 4. 创意与模型编译解耦 (Decoupled Model Compilation)：高维剧本与低维参数分层   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

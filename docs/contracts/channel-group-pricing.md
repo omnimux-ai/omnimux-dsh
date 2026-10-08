@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-10-05"
-updated: "2026-10-05"
+updated: "2026-10-08"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 related:
@@ -14,6 +14,8 @@ related:
 ---
 
 # OmniMux 渠道分组定价推导与真实性契约
+
+本规范保留既有 `pointsEstimate` 的来源与对账要求，不是角色创作的对外价目表。下列倍率和折扣是 2026-10-05 的基准记录，不能当当前金额或恢复旧分组选价入口的依据。统一对外口径与内部低价优先是不同层面，见[产品定位](product-positioning.md)；本次未改计费或路由。
 
 > **上游依据**：执行网关官方定价元数据 `GET https://api.omnimux.ai/api/pricing`（`data[].model_ratio`, `group_ratio.pool`）。
 > **级别**：**强制 (MANDATORY)** —— 由 `pnpm verify:group-pricing` 机械门禁强制拦截。
