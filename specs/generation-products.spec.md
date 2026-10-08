@@ -17,7 +17,7 @@
 8. 最终执行前重核目录/候选，备用均接受完整快照；上游已accept不得盲目换线重投。normal文生/参考/帧prompt政策按最终operation复核。
 
 ## 第一子切片：指纹语义完整性
-独立实现/评审load.js规范指纹及list.js对外指纹语义覆盖。新增generation-fingerprint.test.js覆盖inputGroups/implementation/routing/channelGroups constraints/enabled/wireGroup/pricing/sla/defaultOperations敏感性，对象键顺序不敏感。用临时完整合法契约fixture和正式loadAll/正常buildModelCatalog执行，而不是只测自己组的payload。保持现有public返回形状和schemaVersion1.1，允许fingerprint有意改变；不更新任何live状态、不改端点。不把该切片完成称产品视图已完成。
+独立实现/评审load.js规范指纹及list.js对外指纹语义覆盖。新增generation-fingerprint.test.js覆盖inputGroups/implementation/routing/channelGroups constraints/enabled/wireGroup/pricing/sla/defaultOperations敏感性，对象键顺序不敏感。用临时完整合法契约fixture和正式loadAll/正常buildModelCatalog执行，而不是只测自己组的payload。保持现有public返回形状和schemaVersion1.1，允许fingerprint有意改变；不更新任何live状态、不改端点。不把该切片完成称产品视图已完成。目录hash变化后，已有官方声音预览衍生快照的catalog_fingerprint必须用正式exporter同步，逐字验证仅该字段变化、voice509及preview_fingerprint不变；不改声音数据、不删快照校验断言。
 
 ## 技术形状（后续共享与投影）
 generationProducts为带version、product kind/label、intents及精确variants引用的可选目录视图。共享库packages/generation-capabilities/只解释DTO，不含厂商配置。编辑态可接收/未满足最低要求与提交ready分开。输出必须含决定operation、素材bySlot、参数集合及原因，服务器保留最终SubmitGuard。固定意图通过声明映射不靠本地operation枚举。
