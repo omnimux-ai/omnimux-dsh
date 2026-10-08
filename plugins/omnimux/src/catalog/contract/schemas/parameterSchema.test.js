@@ -12,6 +12,8 @@ import {
   validateOperation,
 } from '../schema.js';
 import { ADMISSION_ERROR_CODES } from '../admission.js';
+import { evaluateDeclaredParameters } from '../../../../lib/generation-core.js';
+import { materializeVoiceOptions, readVoiceIndexSnapshot } from '../../voices/options.js';
 import { loadAll, resetContractCache, DEFAULT_SPECS_DIR } from '../load.js';
 
 /**
@@ -54,6 +56,36 @@ test('parameterSchema: real-world parameter shapes pass unchanged', () => {
   const issues = validateParameterDomain(parameters, 'parameters', 'model-a', 'video-models.yaml');
   assert.deepEqual(issues, []);
 });
+
+test('parameterSchema: registered raw source is structural only while materialized defaults remain strict', () => {
+  const source = 'volcengine-voice-index'
+  const valid = 'zh_male_guanggaojieshuo_uranus_bigtts'
+  const raw = { voice: { optionsFrom: source, defaultValue: valid } }
+  assert.deepEqual(validateParameterDomain(raw, 'parameters'), [])
+  assert.equal(evaluateDeclaredParameters({}, raw).result.diagnostic, 'unresolved_options')
+  const resolved = materializeVoiceOptions({ models: [{ parameters: raw }] }, readVoiceIndexSnapshot()).models[0].parameters
+  assert.equal(Object.hasOwn(resolved.voice, 'optionsFrom'), false)
+  assert.ok(resolved.voice.options.some((option) => option.value === valid))
+  assert.deepEqual(validateParameterDomain(resolved, 'parameters'), [])
+  assert.deepEqual(codesOf(validateParameterDomain({ voice: { ...resolved.voice, defaultValue: 'missing' } }, 'parameters')), ['parameter_default_unmatched'])
+  assert.deepEqual(codesOf(validateParameterDomain({ voice: { ...resolved.voice, type: 'integer' } }, 'parameters')), ['parameter_default_unmatched'])
+  assert.throws(() => materializeVoiceOptions({ models: [{ parameters: { voice: { optionsFrom: 'unregistered' } } }] }), /unregistered parameter optionsFrom/)
+  assert.throws(() => materializeVoiceOptions({ models: [{ parameters: { voice: { optionsFrom: source, defaultValue: 'missing' } } }] }, readVoiceIndexSnapshot()), /voice defaultValue is not present/)
+  for (const definition of [
+    { options: [valid], defaultValue: 'missing' },
+    { options: [valid], type: 'integer', defaultValue: valid },
+    { optionsFrom: source, type: 'integer', defaultValue: 1.5 },
+    { optionsFrom: source, type: 'future', defaultValue: valid },
+    { optionsFrom: source, maxLength: 1, defaultValue: valid },
+    { optionsFrom: source, range: { min: 0, max: 1 }, defaultValue: 2 },
+    { optionsFrom: source, options: [valid], defaultValue: 'missing' },
+    { optionsFrom: 'unregistered', defaultValue: valid },
+    { optionsFrom: source, futureUiHint: true, defaultValue: valid },
+  ]) assert.deepEqual(codesOf(validateParameterDomain({ voice: definition }, 'parameters')), ['parameter_default_unmatched'])
+  assert.deepEqual(codesOf(validateParameterDomain({ voice: {
+    optionsFrom: source, range: { step: 0 }, defaultValue: valid,
+  } }, 'parameters')), ['parameter_step_invalid'])
+})
 
 test('parameterSchema: minLength > maxLength and non-positive bounds', () => {
   const inverted = validateParameterDomain({ prompt: { minLength: 10, maxLength: 5 } }, 'parameters');
@@ -138,6 +170,12 @@ test('parameterSchema: defaultValue must be declared by options/range', () => {
   );
   assert.deepEqual(outsideOptionsInsideRange, []);
 });
+
+test('parameterSchema: stepped default is checked by the original schema entry', () => {
+  const issues = validateParameterDomain({ duration: { range: { min: 4, max: 30, step: 2 }, defaultValue: 7 } }, 'parameters')
+  assert.deepEqual(codesOf(issues), ['parameter_default_unmatched'])
+  assert.equal(issues[0].path, 'parameters.duration.defaultValue')
+})
 
 test('parameterSchema: range bounds and step', () => {
   const inverted = validateParameterDomain({ duration: { range: { min: 30, max: 4, step: 1 } } }, 'parameters');
@@ -261,3 +299,20 @@ test('parameterSchema: real specs stay free of parameter-domain errors', () => {
   const parameterIssues = (index.issues ?? []).filter((i) => PARAMETER_ERROR_CODES.has(i.code));
   assert.deepEqual(parameterIssues, [], JSON.stringify(parameterIssues, null, 2));
 });
+
+test('parameterSchema: null option and layered unresolved defaults use the packaged member kernel', () => {
+  assert.deepEqual(validateParameterDomain({ choice: { options: [null, 'x'], defaultValue: null } }, 'parameters'), [])
+  for (const definition of [
+    { defaultValue: undefined }, { type: 'integer', defaultValue: 1.5 },
+    { maxLength: 1, defaultValue: '😀😀' }, { optionsFrom: 'future', defaultValue: 'x' },
+    { range: { step: 1 }, defaultValue: 5 },
+  ]) {
+    const issues = validateParameterDomain({ value: definition }, 'parameters')
+    assert.deepEqual(codesOf(issues), ['parameter_default_unmatched'])
+    assert.equal(issues[0].path, 'parameters.value.defaultValue')
+  }
+  const malformed = validateParameterDomain({ value: { options: [5], range: { step: 0 }, defaultValue: 5 } }, 'parameters')
+  assert.deepEqual(codesOf(malformed), ['parameter_step_invalid'])
+  assert.deepEqual(validateParameterDomain({ value: { options: [5], range: { step: 2 }, defaultValue: 5 } }, 'parameters'), [])
+  assert.deepEqual(validateParameterDomain({ value: { futureUiHint: true } }, 'parameters'), [])
+})

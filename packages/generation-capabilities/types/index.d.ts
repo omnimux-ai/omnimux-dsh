@@ -169,3 +169,31 @@ export type AssignmentResult<A extends GenerationAsset = GenerationAsset> = Assi
   | { readonly status: 'indeterminate'; readonly diagnostic: 'search_budget_exceeded' | 'completion_unproven'; readonly rejections: readonly AssignmentRejection[]; readonly pending: readonly [] }
 );
 export function solveAssetAssignment<A extends GenerationAsset>(operation: AssignmentOperation, assets: readonly (A | null | undefined)[], context?: AssignmentContext, policy?: AssignmentPolicy): AssignmentResult<A>;
+
+export type ParameterPrimitive = string | boolean | number | null;
+export interface ParameterPolicy { readonly mode?: 'canonical' | 'legacyGuard' }
+export interface ParameterDefinition {
+  readonly type?: 'integer' | 'number' | 'string' | 'boolean';
+  readonly options?: readonly (ParameterPrimitive | { readonly value: ParameterPrimitive; readonly label?: string })[];
+  readonly optionsFrom?: string;
+  readonly range?: { readonly min?: number; readonly max?: number; readonly step?: number };
+  readonly defaultValue?: ParameterPrimitive;
+  readonly minLength?: number;
+  readonly maxLength?: number;
+  readonly supported?: boolean;
+  readonly allowAuto?: boolean;
+  readonly caseInsensitive?: boolean;
+  readonly unit?: string;
+}
+export type ParameterNonmemberReason = 'domain' | 'boolean' | 'unsupported' | 'integer' | 'number' | 'string' | 'type' | 'length_type' | 'minLength' | 'maxLength' | 'range' | 'unknown_field';
+export type ParameterMemberResult =
+  | { readonly status: 'member' }
+  | { readonly status: 'nonmember'; readonly reason: ParameterNonmemberReason }
+  | { readonly status: 'indeterminate'; readonly diagnostic: 'malformed_definition' | 'unresolved_options' | 'precision_unproven' };
+export type DeclaredParameterResult =
+  | { readonly ok: true; readonly values: Record<string, unknown> }
+  | { readonly ok: false; readonly field: string; readonly source: 'request' | 'default' | 'definition'; readonly result: Exclude<ParameterMemberResult, { readonly status: 'member' }> };
+/** Finite Number grid checks use bounded native shortest-decimal residuals; values are never snapped. */
+export function checkParameterMember(definition: ParameterDefinition, value: unknown, policy?: ParameterPolicy): ParameterMemberResult;
+/** Whole operation fields override model fields. Undefined is absent; legacy also treats null/empty string as absent. */
+export function evaluateDeclaredParameters(request: Readonly<Record<string, unknown>>, operationDefinitions?: Readonly<Record<string, ParameterDefinition>>, modelDefinitions?: Readonly<Record<string, ParameterDefinition>>, policy?: ParameterPolicy): DeclaredParameterResult;

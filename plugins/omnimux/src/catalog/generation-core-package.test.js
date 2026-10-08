@@ -13,8 +13,8 @@ import ts from 'typescript'
 const hub = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const root = resolve(hub, '../..')
 const core = join(root, 'packages/generation-capabilities')
-const scope = join(root, '.tmp/3256')
-const sources = ['package.json', 'src/assets.js', 'src/codes.js', 'src/index.js', 'src/units.js', 'types/index.d.ts']
+const scope = join(root, '.tmp/3264')
+const sources = ['package.json', 'src/assets.js', 'src/codes.js', 'src/index.js', 'src/parameters.js', 'src/units.js', 'types/index.d.ts']
 const facades = ['src/catalog/contract/units.js', 'src/catalog/contract/submit-guard/codes.js', 'src/catalog/contract/submit-guard/slots.js']
 const sha = (text) => createHash('sha256').update(text).digest('hex')
 function digest(directory) {
@@ -41,7 +41,7 @@ function walk(node, visit) {
   }
 }
 // Deliberately narrower than lib.es*: no ambient browser/Node globals, clocks or evaluators.
-const pureBuiltins = new Set(['Object', 'Array', 'String', 'Number', 'Boolean', 'Map', 'Set', 'TypeError', 'RangeError', 'Error', 'JSON', 'undefined', 'NaN', 'Infinity'])
+const pureBuiltins = new Set(['Object', 'Array', 'String', 'Number', 'Boolean', 'BigInt', 'Map', 'Set', 'TypeError', 'RangeError', 'Error', 'JSON', 'undefined', 'NaN', 'Infinity'])
 function assertPure(text, file, importsAllowed = false) {
   const ast = parse(text, { ecmaVersion: 'latest', sourceType: 'module' })
   walk(ast, (node) => {
@@ -113,7 +113,7 @@ test('pure shared source and neutral/browser bundle have no runtime dependency o
   assert.equal(pkg.sideEffects, false)
   assert.deepEqual(pkg.dependencies ?? {}, {})
   assert.deepEqual(pkg.peerDependencies ?? {}, {})
-  assert.deepEqual(readdirSync(join(core, 'src')).sort(), ['assets.js', 'codes.js', 'index.js', 'units.js'])
+  assert.deepEqual(readdirSync(join(core, 'src')).sort(), ['assets.js', 'codes.js', 'index.js', 'parameters.js', 'units.js'])
   for (const file of sources.filter((file) => file.endsWith('.js'))) assertPure(readFileSync(join(core, file), 'utf8'), file, true)
   for (const platform of ['neutral', 'browser']) {
     const result = await esbuild.build({ absWorkingDir: core, entryPoints: ['src/index.js'], bundle: true, platform, format: 'esm', write: false, metafile: true })
@@ -162,6 +162,7 @@ test('pure shared source and neutral/browser bundle have no runtime dependency o
   ]
   for (const bad of forbidden) assert.throws(() => assertPure(bad, 'negative gate', true), undefined, bad)
   const allowed = [
+    'const exact = BigInt(17); exact % 3n',
     'const self = 1, location = 2, console = 3, setTimeout = 4, sendBeacon = 5; [self, location, console, setTimeout, sendBeacon]',
     'const process = 1, window = 2, evalLocal = 3; [process, window, evalLocal]',
     'const object = { self: 1, location: 2, console() { return 3 }, process: 4, constructor: 5 }; object.self',
@@ -202,6 +203,31 @@ test('assignment consumers narrow concrete rejection payloads and reject invalid
   const program = ts.createProgram([filename], options, host)
   const diagnostics = ts.getPreEmitDiagnostics(program)
   assert.deepEqual(diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')), [])
+})
+
+test('parameter consumers narrow domain/default failures and strict JS agrees with public types', () => {
+  const filename = join(core, 'parameter-type-consumer.ts')
+  const text = `
+    import { checkParameterMember, evaluateDeclaredParameters, type ParameterPolicy, type ParameterMemberResult } from './types/index.js';
+    const member = checkParameterMember({ type: 'number', range: { min: .1, step: .1 } }, .3);
+    if (member.status === 'indeterminate') { const reason: 'malformed_definition' | 'unresolved_options' | 'precision_unproven' = member.diagnostic; void reason; }
+    const declared = evaluateDeclaredParameters({ n: 0 }, { n: { type: 'integer', defaultValue: 5 } });
+    if (!declared.ok) { const source: 'request' | 'default' | 'definition' = declared.source; const field: string = declared.field; void source; void field; }
+    // @ts-expect-error policy is not a string
+    checkParameterMember({}, 1, 'canonical');
+    // @ts-expect-error unknown policy keys are forbidden
+    const policy: ParameterPolicy = { mode: 'canonical', extra: true };
+    // @ts-expect-error malformed is diagnostic, not a nonmember reason
+    const invalid: ParameterMemberResult = { status: 'nonmember', diagnostic: 'malformed_definition' };
+    void policy; void invalid;
+  `
+  const options = { strict: true, noEmit: true, allowJs: true, checkJs: true, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, types: [] }
+  const host = ts.createCompilerHost(options)
+  const get = host.getSourceFile.bind(host)
+  host.getSourceFile = (file, version, onError, fresh) => file === filename ? ts.createSourceFile(filename, text, options.target, true) : get(file, version, onError, fresh)
+  host.writeFile = () => { throw new Error('parameter type check cannot emit') }
+  const program = ts.createProgram([filename, join(core, 'src/parameters.js')], options, host)
+  assert.deepEqual(ts.getPreEmitDiagnostics(program).map((item) => ts.flattenDiagnosticMessageText(item.messageText, '\n')), [])
 })
 
 test('old facades share export identity and retain Map, original assets and valid legacy witnesses', async () => {
@@ -262,7 +288,7 @@ test('real Hub npm tarball relocates with only local low-level facades; missing 
     facades.forEach((file) => closure(join(relocated, file)))
     assert.equal(seen.size, 4)
     writeFileSync(join(dir, 'isolate.mjs'), `import { registerHooks } from 'node:module'; import { fileURLToPath } from 'node:url'; import { resolve, sep } from 'node:path'; const root = resolve(${JSON.stringify(relocated)}) + sep; registerHooks({ resolve(specifier, context, next) { const r = next(specifier, context); if (!r.url.startsWith('file:') || !fileURLToPath(r.url).startsWith(root)) throw new Error('outside packed closure: ' + specifier); return r; } });`)
-    const script = `const units = await import('./src/catalog/contract/units.js'); const codes = await import('./src/catalog/contract/submit-guard/codes.js'); const slots = await import('./src/catalog/contract/submit-guard/slots.js'); const asset = { type:'image', role:'reference', targetSlot:'reference_image', pathOrUrl:'/fixture.png', sizeBytes:1048576 }; const r = slots.assignAndValidateSlots({ inputs:[{slot:'reference_images',type:'image',role:'reference',min:1,max:1,maxSizeMb:1}] }, [asset]); if (units.mbToBytes(1)!==1048576 || codes.GUARD_CODES.SIZE_EXCEEDED!=='size_exceeded' || !r.ok || !(r.bySlot instanceof Map) || r.bindings[0].asset!==asset) throw new Error('packed facade mismatch');`
+    const script = `const core = await import('./lib/generation-core.js'); if (core.checkParameterMember({options:[5],range:{min:4,step:2}},5).status !== 'member' || core.checkParameterMember({range:{min:.1,step:.1}},.31).status !== 'nonmember') throw new Error('packed parameter mismatch'); const units = await import('./src/catalog/contract/units.js'); const codes = await import('./src/catalog/contract/submit-guard/codes.js'); const slots = await import('./src/catalog/contract/submit-guard/slots.js'); const asset = { type:'image', role:'reference', targetSlot:'reference_image', pathOrUrl:'/fixture.png', sizeBytes:1048576 }; const r = slots.assignAndValidateSlots({ inputs:[{slot:'reference_images',type:'image',role:'reference',min:1,max:1,maxSizeMb:1}] }, [asset]); if (units.mbToBytes(1)!==1048576 || codes.GUARD_CODES.SIZE_EXCEEDED!=='size_exceeded' || !r.ok || !(r.bySlot instanceof Map) || r.bindings[0].asset!==asset) throw new Error('packed facade mismatch');`
     run(process.execPath, ['--import', join(dir, 'isolate.mjs'), '--input-type=module', '-e', script], relocated)
     rmSync(join(relocated, 'lib/generation-core.js'))
     for (const facade of facades) {
@@ -274,7 +300,7 @@ test('real Hub npm tarball relocates with only local low-level facades; missing 
 })
 
 test('materialized Hub pnpm pack works without workspace sources or installed dependencies', () => {
-  const packScope = join(root, '.tmp/3256')
+  const packScope = join(root, '.tmp/3264')
   mkdirSync(packScope, { recursive: true })
   const dir = mkdtempSync(join(packScope, 'materialized-'))
   try {
@@ -364,7 +390,7 @@ test('actual build-client entry rebuilds changed source deterministically and re
     assert.equal(loaded.mbToBytes(1), 1048577)
     run(process.execPath, ['scripts/build-client.mjs'], fixtureHub)
     assert.equal(readFileSync(artifact, 'utf8'), changed)
-    for (const missing of ['src/units.js', 'src/index.js']) {
+    for (const missing of sources) {
       const path = join(fixtureCore, missing)
       const saved = readFileSync(path)
       rmSync(path)
