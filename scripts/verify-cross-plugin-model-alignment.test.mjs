@@ -12,6 +12,50 @@ import {
 import { DEFAULT_MEDIA } from '../plugins/omnimux/src/media/route.js';
 import { CANVAS_GENERATION_POLICY } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts';
 import { ASPECT_RATIO_GEOMETRIES } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/cfg/aspectRatioGeometry.ts';
+import { MODEL_CHANNEL_GROUPS as HUB_CHANNEL_GROUPS } from '../plugins/omnimux/src/catalog/serving/channel-groups.js';
+import { MODEL_CHANNEL_GROUPS as PICKER_CHANNEL_GROUPS } from '../plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts';
+
+const selectedGroup = (groups) => groups['gpt-image-2.5'].find((group) => group.id === 'standard');
+
+for (const [name, mutate] of [
+  ['reference image limit', (group) => { group.constraints.inputs = { image: { max: 2 } }; }],
+  ['nested resolution constraint', (group) => { group.constraints.parameters.resolution.fixed = '2K'; }],
+  ['removed parameter constraint', (group) => { delete group.constraints.parameters.n; }],
+  ['operation eligibility', (group) => { group.constraints.operations = ['text_to_image']; }],
+]) {
+  test(`fails when picker channel ${name} differs from hub`, () => {
+    const pickerChannelGroups = structuredClone(PICKER_CHANNEL_GROUPS);
+    mutate(selectedGroup(pickerChannelGroups));
+    const report = verifyCrossPluginModelAlignment({ pickerChannelGroups, changedFiles: [] });
+    assert.equal(report.ok, false);
+    assert.ok(report.issues.some((issue) => issue.code === 'cross_plugin_channel_field_drift'
+      && issue.modelId === 'gpt-image-2.5' && issue.message.includes('constraints')),
+    JSON.stringify(report.issues));
+    assert.ok(report.alignment.channelGroupsChecked > 0);
+  });
+}
+
+test('equal nested constraints with different object key order pass', () => {
+  const pickerChannelGroups = structuredClone(PICKER_CHANNEL_GROUPS);
+  const hubParameters = selectedGroup(HUB_CHANNEL_GROUPS).constraints.parameters;
+  const reordered = Object.fromEntries(Object.entries(hubParameters).reverse());
+  selectedGroup(pickerChannelGroups).constraints = { parameters: reordered };
+  const report = verifyCrossPluginModelAlignment({ pickerChannelGroups, changedFiles: [] });
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+  assert.ok(report.alignment.channelGroupsChecked > 0);
+});
+
+test('constraints absent on both sides pass; explicitly empty constraints are distinct', () => {
+  const hubChannelGroups = structuredClone(HUB_CHANNEL_GROUPS);
+  const pickerChannelGroups = structuredClone(PICKER_CHANNEL_GROUPS);
+  delete selectedGroup(hubChannelGroups).constraints;
+  delete selectedGroup(pickerChannelGroups).constraints;
+  assert.equal(verifyCrossPluginModelAlignment({ hubChannelGroups, pickerChannelGroups, changedFiles: [] }).ok, true);
+  selectedGroup(pickerChannelGroups).constraints = {};
+  const report = verifyCrossPluginModelAlignment({ hubChannelGroups, pickerChannelGroups, changedFiles: [] });
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((issue) => issue.message.includes('constraints')));
+});
 
 test('baseline repository contracts pass cross-plugin model alignment verification', () => {
   const report = verifyCrossPluginModelAlignment();

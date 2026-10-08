@@ -21,6 +21,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { isDeepStrictEqual } from 'node:util';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -295,6 +296,9 @@ export function verifyCrossPluginModelAlignment(options = {}) {
         compare('stability24h', hubGroup.sla?.stability24h ?? null, pickerGroup.sla?.stability24h ?? null);
         compare('avgWaitTimeSec', hubGroup.sla?.avgWaitTimeSec ?? null, pickerGroup.sla?.avgWaitTimeSec ?? null);
         compare('enabled', hubGroup.enabled, pickerGroup.enabled);
+        if (!isDeepStrictEqual(hubGroup.constraints, pickerGroup.constraints)) {
+          issue('channel_field_drift', `Channel "${key}@${id}" constraints: picker=${JSON.stringify(pickerGroup.constraints)} hub=${JSON.stringify(hubGroup.constraints)}.`, key);
+        }
       }
     }
   }
