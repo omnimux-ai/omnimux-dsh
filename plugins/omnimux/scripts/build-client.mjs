@@ -1,4 +1,5 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
@@ -6,6 +7,35 @@ import * as esbuild from 'esbuild'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outFile = join(root, 'lib', 'client.js')
 const metaFile = join(root, 'lib', 'client.metafile.json')
+
+// Host loads src directly; its rule facades must resolve only this packaged bundle.
+const coreRoot = join(root, '..', '..', 'packages', 'generation-capabilities')
+const coreSources = ['package.json', 'src/assets.js', 'src/codes.js', 'src/index.js', 'src/units.js', 'types/index.d.ts']
+const sourceHash = createHash('sha256')
+for (const file of coreSources) {
+  sourceHash.update(file).update('\0').update(readFileSync(join(coreRoot, file))).update('\0')
+}
+const coreResult = await esbuild.build({
+  absWorkingDir: coreRoot,
+  entryPoints: ['src/index.js'],
+  bundle: true,
+  format: 'esm',
+  platform: 'neutral',
+  target: 'es2022',
+  write: false,
+  metafile: true,
+  logLevel: 'info',
+  banner: { js: `// Generated from @omnimux/generation-capabilities; source-sha256: ${sourceHash.digest('hex')}` },
+})
+if (Object.values(coreResult.metafile.outputs).some((output) => output.imports.length > 0)) {
+  throw new Error('generation core bundle contains external runtime imports')
+}
+const coreCode = coreResult.outputFiles[0]?.text
+if (!coreCode) throw new Error('esbuild produced no generation core output')
+const coreFile = join(root, 'lib', 'generation-core.js')
+mkdirSync(dirname(coreFile), { recursive: true })
+writeFileSync(coreFile, coreCode)
+console.log(`wrote ${coreFile} (${Buffer.byteLength(coreCode, 'utf8')} bytes)`)
 
 const result = await esbuild.build({
   absWorkingDir: root,

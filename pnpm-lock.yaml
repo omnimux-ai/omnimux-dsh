@@ -70,6 +70,8 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/generation-capabilities: {}
+
   plugins/omnimux:
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives':
@@ -97,12 +99,18 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
     devDependencies:
+      '@omnimux/generation-capabilities':
+        specifier: workspace:*
+        version: link:../../packages/generation-capabilities
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   plugins/omnimux-accounts:
     dependencies:
