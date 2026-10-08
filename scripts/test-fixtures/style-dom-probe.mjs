@@ -23,6 +23,7 @@ export function runStyleDomProbe({ name, styles, html, measure }) {
     const output = spawnSync(findChromePath(), [
       '--headless=new',
       '--incognito',
+      `--user-data-dir=${join(dir, 'profile')}`,
       '--disable-gpu',
       '--disable-extensions',
       '--no-first-run',
@@ -32,11 +33,27 @@ export function runStyleDomProbe({ name, styles, html, measure }) {
       '--dump-dom',
       `file://${page}`,
     ], { encoding: 'utf8', timeout: 30000 })
-    if (output.error) throw output.error
-    assert.equal(output.status, 0, output.stderr || `Chrome exited with ${output.status}`)
     const match = /<title>RESULT:(.*?)<\/title>/s.exec(output.stdout || '')
-    assert.ok(match, `页面未回传测量结果: ${(output.stdout || '').slice(0, 300)}`)
-    return JSON.parse(match[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'))
+    try {
+      if (output.error) throw output.error
+      assert.equal(output.status, 0, (output.stderr || '').slice(-2048) || `Chrome exited with ${output.status}`)
+      assert.ok(match, `页面未回传测量结果: ${(output.stdout || '').slice(0, 300)}`)
+      return JSON.parse(match[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'))
+    } catch (error) {
+      /** @type {{ name: string, timeoutMs: number, status: number | null, signal: string | null, stdoutTail: string, stderrTail: string, measurementPresent: boolean }} */
+      const diagnostic = {
+        name,
+        timeoutMs: 30000,
+        status: output.status,
+        signal: output.signal,
+        stdoutTail: (output.stdout || '').slice(-2048),
+        stderrTail: (output.stderr || '').slice(-2048),
+        measurementPresent: Boolean(match),
+      }
+      error.diagnostic = diagnostic
+      error.message += `\nChrome probe diagnostic: ${JSON.stringify(diagnostic)}`
+      throw error
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
