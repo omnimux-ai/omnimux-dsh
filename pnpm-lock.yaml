@@ -99,9 +99,6 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
     devDependencies:
-      '@omnimux/generation-capabilities':
-        specifier: workspace:*
-        version: link:../../packages/generation-capabilities
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12

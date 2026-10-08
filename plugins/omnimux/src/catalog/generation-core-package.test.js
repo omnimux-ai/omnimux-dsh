@@ -13,7 +13,7 @@ import ts from 'typescript'
 const hub = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const root = resolve(hub, '../..')
 const core = join(root, 'packages/generation-capabilities')
-const scope = join(root, '.tmp/3255')
+const scope = join(root, '.tmp/3259')
 const sources = ['package.json', 'src/assets.js', 'src/codes.js', 'src/index.js', 'src/units.js', 'types/index.d.ts']
 const facades = ['src/catalog/contract/units.js', 'src/catalog/contract/submit-guard/codes.js', 'src/catalog/contract/submit-guard/slots.js']
 const sha = (text) => createHash('sha256').update(text).digest('hex')
@@ -239,6 +239,67 @@ test('real Hub npm tarball relocates with only local low-level facades; missing 
       assert.notEqual(missing.status, 0)
       assert.match(missing.stderr, /ERR_MODULE_NOT_FOUND|Cannot find module/)
     }
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('materialized Hub pnpm pack works without workspace sources or installed dependencies', () => {
+  const packScope = join(root, '.tmp/3259')
+  mkdirSync(packScope, { recursive: true })
+  const dir = mkdtempSync(join(packScope, 'materialized-'))
+  try {
+    const managed = join(dir, '.materialize-snapshots/plugins/omnimux')
+    cpSync(hub, managed, {
+      recursive: true,
+      filter: (file) => !relative(hub, file).split('/').includes('node_modules') && !/\.(test|spec)\.js$/.test(file),
+    })
+    const manifestFile = join(managed, 'package.json')
+    const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
+    manifest.dependencies['dsh-ui-kit'] = 'file:../dsh-ui-kit'
+    writeFileSync(join(managed, 'src/release-channel.json'), JSON.stringify({ channel: 'development' }) + '\n')
+    for (const directory of [dir, join(dir, '.materialize-snapshots'), join(dir, '.materialize-snapshots/plugins'), managed]) {
+      for (const absent of ['packages', 'node_modules', 'pnpm-workspace.yaml']) assert.equal(existsSync(join(directory, absent)), false)
+    }
+    const args = ['pnpm', '--config.ignore-scripts=true', 'pack', '--dry-run', '--json']
+    const env = { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: dir, npm_config_cache: join(dir, 'npm-cache'), npm_config_update_notifier: 'false' }
+    const pack = () => spawnSync('corepack', args, { cwd: managed, env, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
+    // The old build-only edge must fail on the same managed source and real pack entry.
+    const old = structuredClone(manifest)
+    old.devDependencies['@omnimux/generation-capabilities'] = 'workspace:*'
+    writeFileSync(manifestFile, JSON.stringify(old, null, 2) + '\n')
+    const red = pack()
+    assert.ifError(red.error)
+    assert.equal(red.status, 1, `${red.stdout}\n${red.stderr}`)
+    assert.equal(JSON.parse(red.stdout).error.code, 'ERR_PNPM_CANNOT_RESOLVE_WORKSPACE_PROTOCOL')
+    assert.match(JSON.parse(red.stdout).error.message, /@omnimux\/generation-capabilities/)
+    console.log(`materialized pnpm old manifest: exit ${red.status}, ERR_PNPM_CANNOT_RESOLVE_WORKSPACE_PROTOCOL`)
+    writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + '\n')
+    const green = pack()
+    assert.ifError(green.error)
+    assert.equal(green.status, 0, `corepack ${args.join(' ')}\n${green.stdout}\n${green.stderr}`)
+    const records = JSON.parse(green.stdout)
+    const entries = Array.isArray(records) ? records.flatMap((record) => record.files) : records.files
+    const files = new Set(entries.map((file) => typeof file === 'string' ? file : file.path))
+    for (const file of ['lib/client.js', 'lib/generation-core.js', ...facades]) assert.ok(files.has(file), `pack omitted ${file}`)
+    const seen = new Set()
+    function closure(file) {
+      if (seen.has(file)) return
+      seen.add(file)
+      assert.ok(files.has(relative(managed, file)), `unpacked closure file: ${file}`)
+      const ast = parse(readFileSync(file, 'utf8'), { ecmaVersion: 'latest', sourceType: 'module' })
+      walk(ast, (node) => {
+        assert.notEqual(node.type, 'ImportExpression')
+        if (node.source && ['ImportDeclaration', 'ExportNamedDeclaration', 'ExportAllDeclaration'].includes(node.type)) {
+          assert.ok(node.source.value.startsWith('.'), `nonlocal runtime edge: ${node.source.value}`)
+          const target = resolve(dirname(file), node.source.value)
+          assert.ok(relative(managed, target) && !relative(managed, target).startsWith('..'), `escaping runtime edge: ${node.source.value}`)
+          closure(target)
+        }
+      })
+    }
+    facades.forEach((file) => closure(join(managed, file)))
+    assert.equal(seen.size, 4)
+    assert.equal(sha(readFileSync(join(managed, 'lib/generation-core.js'))), sha(readFileSync(join(hub, 'lib/generation-core.js'))))
+    console.log(`materialized pnpm current manifest: exit ${green.status}, ${files.size} files, ${seen.size} local closure files`)
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
