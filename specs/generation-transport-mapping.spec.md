@@ -1,0 +1,51 @@
+# #3272 当前媒体传输身份与权威生成预检同源
+
+## 目标、前置与用户旅程
+母目标#3247；前置#3270/PR3271 MERGED。任务W=.worktrees/cross-generation-mapping-3272，branch agent/cross-generation-mapping-3272-issue-3272，固定base/head431e62b3d10293fc0a6e0af4541399083c640c87。先规格独审再TDD；普通Issue/PR/官方MQ/Dev/清理沿既有批准，UI合入人确认与video真实调用专项保留。
+用户创建角色→选择生图/视频用途→上传完整素材与参数→检查当前条件；本片使当前预检私有传输身份与实际Hub传输配置同源，配置/映射版本变化不能继续使用旧资格或旧预检。不新增可执行能力，不称角色生成已端到端完成。
+新用户只依正式打包Hub、规范合同及已解析Hub媒体配置，不读用户profile/settings/凭据、不连供应商，不依绝对工作区路径/本机服务。实际供应商channel绑定与真实资格缺源保持pending；未消费输入语义保持indeterminate。产品仍只有两项、五intent；全部PreviewV1 executable:false。
+
+## 当前事实与最小选择
+现catalog/generation-products.js256–276从group或model.routing拼channel/protocol/wire，而apply.js118没有当前media依赖；实际mountMedia消费apply内parseHubConfig(config).media，route及execute沿其provider/protocol与真实分组构造字面wire。因此model YAML routing是供应商资料，不是当前正式传输身份。
+区分providerId（Hub注册媒体传输提供方）与channelId（真实供应商/渠道绑定证据）。默认正式providerId=omnimux不代表已证供应商channelId；apimart/dot-wire不得自动拼入正式omnimux/openai-media/canonical-wire身份，不拷云channel整数。
+本片仅复用旧resolveMediaRoute的确定性传输部分并给它明确脱敏配置+空环境，不复制路由算法。它的内部readProviderKey只能接收到完全无key/apiKeyEnv字段的服务器纯投影与空env，因此不触及真实凭据；不得把带密钥原对象直接交旧resolver。不引新用户getConfig/settings服务、不改旧resolver返回或执行链。
+不新增默认永远null或仅active:false的资格平台/JSON。两历史样本缺完整当前域/绑定/产物事实，先保留现readQualification接缝；本片没有真实资格reader与上市写。后续证据资格独立，不能靠本片指纹绿激活。
+
+## 一个私有Module与现Interface
+新Hub私有media/generation-mapping.js导出createGenerationMapping(media)，由现apply一次给已解析hub.media，返回只读candidate→mapping Adapter；同一generationProducts实例仍挂现GET/POST/provide，公共Interface不变。media先必要正向投影并固定，不读取credentials/apiKey/apiKeyEnv、任意settings、profile或process.env；只validated provider registration/default、protocol、模型声明与resolver必要baseUrl留私有运输，原文端点不进入公共结果或current摘要。
+每次generation权威快照复用同一次规范index、group、profile；私有readMapping接收冻结model/operation/单真实group必要数据，不含秘密/采购。Adapter只取当前enabled===true真实组，向现resolver显式model+group及allowedGroups=[该组]；不得使用禁用head、未声明组或跨组tail作为资格。
+解析resolve结果候选保字面wireModel，不能用会归一化供应商别名的parseModelAndGroup重写；wireGroup须精确等当前group.wireGroup或id；候选数量须1，传输group/model不匹配返回未证而非自动fallback。providerId、protocol来自实际解析配置，realGroupId与wireGroup分开；group wireModel可真实覆盖canonical。无匹配Provider/unsupportedProtocol不得造默认provider或label推断，沿固定未证/不可用边界。
+Adapter返回私有{providerId,protocol,wireModel,wireGroup,sourceVersion,transportTarget:{origin,basePath},channelId?}；只有固定公开可解析http/https基地址才能形成transportTarget，含userinfo/query/fragment的基地址直接unavailable，不能extract/运输/日志化其秘密。origin与必要basePath只在私有资格上下文中比较，二者原文或摘要均不进入current/requestFingerprint、publicDTO/log；缺目标绑定不能eligible。channelId只有服务器已注册且与传输绑定的独立真实来源才可提供，默认配置无此来源必须省略。规范YAML声明仍参与合同当前摘要，但不补候选当前传输缺项。公开caller readMapping/providerId/channel/target等字段仍拒。
+createGenerationProducts新增私有readMapping依赖；生产默认通过正式parseMediaConfig(undefined)与同Adapter，不从raw model.routing填当前身份；Host显式传实际hub.media Adapter。测试必须明确注入synthetic映射接缝，不让自造raw.routing伪生产来源。
+身份追加providerId与sourceVersion，semantic正向投影、identitycomplete、证据identitycomplete、bound陈旧判定以及全identity相等均同步包含两字段及原canonical/realGroup/wireModel/wireGroup/op/purpose/protocol/channelId。readQualification私有请求加transportTarget，返回proof需同样私有transportTarget own origin/basePath，先校descriptor与类型后exact比较；目标原文不并identity/domain，也不透传hash。当前target变动时旧完整prooftarget不等或缺target→pending，即使其原identity/domain/active均相等；资格聚合可因此使current改变，已一直缺证pending时允许current不变，不能声称端点变必stale。任何必需真实channel缺源仍pending，测试资格identity/target必须完整；只有独立readQualification全绑定已证才eligible，不允许mapping Adapter单独返回eligible/active/default等。
+
+## 映射版本与当前指纹
+sourceVersion是本Module首次加载时的正式包固定映射来源身份，不是假“completeDomain=true”、help/notes或裸model id，不声称能从磁盘逆证任意已缓存JS的执行字节。固定读取13条包内来源全文：media/generation-mapping.js、media/route.js、media/execute.js、media/vendors/omnimux.js、media/protocols/openai-media.js、catalog/generation-products.js、catalog/serving/id-universe.js、catalog/serving/channel-groups.js、catalog/contract/auto-serving-manifest.json、catalog/contract/dispositions.json、catalog/contract/submit-guard/map.js、map-bindings.js、map-contract.js；这些直接负责当前传输/身份/映射，不递归扫仓或任意依赖。文件名+原bytes以现canonical序列和完整SHA256形成同一包版本；不抄执行源码、不另建builder或改shared纯核。摘要在Module首次求值时冻结，同一已加载Module的旧及新构造实例都不因后续磁盘替换而谎报新版本；全新加载包实例才取新来源，正式静态来源必须与模块加载同时身份一致。读取失败保固定unavailable，list/preview由现边界503，不空hash或继续可用；不能借运行期文件替换宣称已热加载实现。
+同次index.profiles中当前operation.implementation.profileId唯一匹配profile，复用现adapterProfileCompatible核其id/live/operation/output/seam与必要slotRoles相容性；不按型号猜profile、不用任一live profile补。profile只已知正向键id/seam/status/operations/outputTypes/logicalFields/vendorFields/forbiddenVendorFields/unknownFieldPolicy/operationVendorShapes/slotRoles及非语义notes/help/description；shape只allow/require。全部必要类型与own descriptor检查先于访问，非metadata未知键、缺/错类型、重复profile或不相容profile一律mapping未证/pending，不能凭完整合成proof变ready，仍保core独立hard/unknown优先。未知值不进摘要，未知键名/未证状态参与current失效。已证profile必要语义与identity、enabled、全部rawconstraints及原domain参与mappingDigest；notes/help/description不影响映射语义。
+currentFingerprint追加必要providerId/sourceVersion/当前profile映射摘要，其余#3270全覆盖保；每次依当前非秘密来源派生，不只复用旧publichash。测试改变映射返回sourceVersion、当前provider/protocol/wire/group约束或正式profile字段→current改变旧请求stale；credential-only差异不得改变current，不把endpoint/keyref原文塞摘要。sourceVersion不授权执行，也不证明官方域和样本。
+readMapping是服务器只读依赖，返回对象须plain own data必要正向白名单；坏结构/访问器/符号/hidden/未知键/错误类型固定未证或catalog_unavailable，不调用getter、不让未知private值进摘要；不扩恶意Proxy防护平台。明确disabled优先保原hard拒。mapping失败不跳过原完整候选共享核判断。
+
+## 原样保护与公共结果
+RequestV1/ListV1/AlternativeV1/PreviewV1和Host授权、body1MiB、409、错误码全部原#3270；不新增public provider/channel/evidence/config/profile/诊断自由文案，不返回有效参数/assignment/执行载荷。
+现唯一参数默认来源、显式值/undefined运输/全资产原序角色版本/单候选全请求、hard→unknown→pending与整请求聚合不改。未知valueSources/composition/options/constraint分支继续indeterminate；不为真资格删除语义/收缩完整域为样本点。
+旧modelCatalog、mountMedia、resolveMediaRoute及execute旧行为保；不改裸旧请求、编辑/延长/digital_human/inflight收取、更不扩大旧裸请求许可为新product许可。原旧route输出字段键序与密钥解析路径保持，不动任务/上传/网络/采购排序。#3244图YAML/mapper修复树与#3252draft不动。
+
+## 可测验收与测试先行
+AC1 现公开createGenerationProducts实际调用注册readMapping：synthetic raw.routing=apimart/fixture-wire但Adapter当前provider/协议/wire来自另一完整映射，私有观察identity必须取Adapter，raw不得覆盖。未注当前channel字段不得eligible；所有结果executable:false。
+AC2 真实apply同实例取非默认解析media并映射到私有身份；正常图standard/default及Mini standard/default字面wire与同一现resolver相等，供应商YAML/apimart不能冒当前channel。公共GET/POST不漏内部字段；正常生产仍pending/indeterminate。
+AC3 启用且明确单组+allowedGroups只同组才有mapping；disable/unknown/missing组/返回tail不形成资格；wire覆盖保字面不alias化。旧resolveMediaRoute完整DTO/原键序/异常与旧参数载荷快照逐字节不变。
+AC4 真实包sourceVersion全SHA/13固定来源闭合，每项原bytes单独改变须使全新加载包版本变；同一进程已加载Module旧及后建构造实例sourceVersion均稳定，不能把运行中磁盘变称热加载。固定来源读失败list/preview明确unavailable；改变注入映射版本/当前profile实际fields使旧currentstale。未知profile键+完整proof不ready且未知值不入hash，notes/help不影响已证语义；原contracts域/registry仍变。仅非秘密transportTarget origin/basePath变化时旧proof不得ready，缺target同理；已有资格因此失效current变、旧请求stale，缺证仍pending则不承诺current变化，目标原文及其摘要始终无公开/hash泄漏。
+AC5 从已解析media进入Adapter及list/preview起算synthetic apiKey/apiKeyEnv getters、credentials/settings/用户profile/真实env读取0；旧parseMediaConfig在Host初始化读synthetickey另计，不为本片改旧parser。readMapping或profile返回getter/hidden/symbol/额外键/坏类型零getter、固定pending或catalog_unavailable，disabled硬拒及unknown域不因映射失败消失。credential-only合法值改动current不变；公共返回无privateorigin/endpoint/provider/channel/key/sourceVersion、hash不含端点原文/摘要。provider/auth网络/任务写0。实际Host两种合法注册provider配置核current变旧请求409，不以非法provider503冒失效；非默认provider裸候选必须结合现route.group/execute回退核同wireGroup，否则mapping未证，不改resolver造成功。
+AC6 合成资格proof完全identity/domain绑定才检预检行为，非实际生成；缺真实channel/官方域/产物绝不能由listed或sample激活。新增默认readonly不是新上市；当前unknown输入来源/组合持续未证。
+先仅在现publiclist/prepare与actualapply新增AC1/AC2行为测试，现ignored readMapping产生真实assertRED；不以新Module import缺失冒RED。再最小实现、专项GREEN；必要新Module测试在Module存在后加入待修行为反例。全部旧测试原文保，fixture共用helper可最小显式syntheticreadMapping接线适配，不能弱化旧assert或改预期。禁止全true写生产。
+
+## 写集、风格与命令
+行为源码最多3paths：新增plugins/omnimux/src/media/generation-mapping.js；现catalog/generation-products.js；现host/apply.js。测试为对应新mapping.test.js+generation-products.test.js+host/apply.test.js加法；另仅允许catalog/http.test.js的products() fixture helper适配synthetic readMapping、相容operation implementation/profile及transportTarget/proof，不改该文件任何旧测试体、assert或预期。generation-products旧registry刷新测试现只复制catalog subtree而新真实依赖含media，因此setup复制需扩大到完整本包src+lib；仅这段既有setup允许变，所有原断言/expectations/finally读取恢复/cleanup保持原文。fixturemodel/helper只加synthetic新字段与当前依赖，不弱化原缺field/oldrouting/status反例。旧route.js/test.js全部不改。文档唯一owner docs/contracts/hub.md补provider/版本私有归属与诚实边界；本spec随PR。无新依赖、YAML/group/价格/纯核/consumer/Client/AGENTS/CI修改。
+ESM具名导出、同层2空格与关键JSDoc，安全plain数据投影复用现canonical/hash与检查，不复制成员/分配/core或路由算法；无unused执行wrapper/getConfig平台。当前sources边界已冻结12项SHA于本任务.tmp/3272-parent/base-source-identities.json，正式收据持久另存父reports。
+专项W cwd：node --test plugins/omnimux/src/catalog/generation-products.test.js plugins/omnimux/src/host/apply.test.js；新Module存在后加plugins/omnimux/src/media/generation-mapping.test.js。正式Hub cwd plugins/omnimux：node scripts/run-tests.mjs；builder仅按正式入口node scripts/build-client.mjs满足packageignoredclient闭合，trackedcore同字节。
+根W：node scripts/verify-plugin-boundaries.mjs；node scripts/verify-product-baseline.mjs；node scripts/verify-model-contracts.mjs --strict；node scripts/verify-modality-matrix.mjs。node scripts/impact-matrix.mjs --git-diff --base 431e62b3d10293fc0a6e0af4541399083c640c87，git -C W diff --check；真实load命令node scripts/verify-plugin-load.mjs --json .tmp/3272-parent/plugin-load.json --only omnimux及node --test scripts/verify-plugin-load.test.mjs按触面需要，不把stubs称Host运行。
+适用实际mount HTTP完整request与零provider；无UI/browser.required=false，不冒截图/Dev共享验收。真exit/fail/skip日志全文summary核对，不tail假绿；现已绿旧#3270证据只对字节不变部分复用，不替本片新逻辑。独立冻结评审与required/MQ实际归档后才能PR合入。
+
+## 三层边界与收尾
+总是：先规格与独审、独立树、当前正式源码/配置同源、秘密零接触、完整候选与失效证明、旧用途保全、真RED/GREEN/实际原挂载。先问：新依赖、任务成本实质扩大、凭据bootstrap、真实视频、UI合入、破坏迁移或越仓/生产；不例行询问继续。绝不：provider HTTP/上传/任务重提、云channel整数/品牌猜测、假active/listed/completeDomain、采购未知0、关闭门禁或本地mergemain、Dev未合入链接、重启桌面。
+交付仅当前映射身份补齐与预检诚实失效，不证明真正供应商channel/domain/real-output资格。真证据/可比采购/执行及消费界面另片；现两公开产品不能先标可生成。正式收尾：源码freeze独审→PRrequired原归档→官方MQ MERGED→mainff同字节→namedDev九相关身份核→仅自树localbranch清理；不生产/重启。当前规格待独审，不把设计建议签成实施批准。

@@ -19,7 +19,8 @@ const model = (id = 'PRIVATE-MODEL', parameters = {}, inputs = []) => ({
   id, label: 'PRIVATE-LABEL', listed: true, research: { status: 'verified', docUrl: 'PRIVATE-PROOF-URL' },
   routing: { channel: 'PRIVATE-CHANNEL', wireModel: 'PRIVATE-WIRE', protocol: 'fixture' },
   parameters, operations: [{ id: 'text_to_image', output: { type: 'image' }, inputs,
-    execution: { status: 'live', profileId: 'PRIVATE-PROFILE' } }],
+    execution: { status: 'live', profileId: 'PRIVATE-PROFILE' },
+    implementation: { status: 'ready', profileId: 'PRIVATE-PROFILE', seam: 'imageGenerate' } }],
 })
 const group = (id = 'PRIVATE-GROUP', constraints = {}) => ({ id, wireGroup: `wire-${id}`, enabled: true, constraints })
 function proof({ identity, domain }) {
@@ -28,11 +29,21 @@ function proof({ identity, domain }) {
 }
 function fixture(models = [model()], groups = [group()], qualification = proof) {
   const counters = { index: 0, groups: 0, qualification: 0 }
-  const index = { schemaVersion: '1.1', registry, issues: [], parseErrors: [], all: () => models }
+  const profiles = { profiles: [{ id: 'PRIVATE-PROFILE', seam: 'imageGenerate', status: 'live', operations: ['text_to_image'],
+    outputTypes: ['image'], logicalFields: ['prompt'], vendorFields: ['prompt'], unknownFieldPolicy: 'reject' }] }
+  const index = { schemaVersion: '1.1', registry, profiles, issues: [], parseErrors: [], all: () => models }
   const products = createGenerationProducts({
     readIndex: () => { counters.index++; return index },
     readGroups: () => { counters.groups++; return groups },
-    ...(qualification ? { readQualification: (candidate) => { counters.qualification++; return qualification(candidate) } } : {}),
+    readMapping({ model: current, group: selected }) {
+      const routing = models.find(row => row.id === current.id).routing, row = groups.find(g => g.id === selected.id)
+      return { providerId: 'PRIVATE-REGISTERED', sourceVersion: 'b'.repeat(64),
+        channelId: row.channelId ?? routing?.channel, protocol: row.protocol ?? routing?.protocol,
+        wireModel: selected.wireModel ?? routing?.wireModel, wireGroup: selected.wireGroup ?? selected.id,
+        transportTarget: { origin: 'https://fixture.example.invalid', basePath: '/v1' } }
+    },
+    ...(qualification ? { readQualification: (candidate) => { counters.qualification++; const evidence = qualification(candidate)
+      return evidence && { ...evidence, transportTarget: candidate.transportTarget } } } : {}),
   })
   return { products, models, groups, index, counters }
 }
@@ -409,4 +420,192 @@ test('default source identity uses the same semantic projection as the current f
   assert.deepEqual(codes(f.products.preparePreview(original)), ['stale_fingerprint'])
   assert.equal(preview(f).status, 'pending')
   assert.equal(preview(f, { parameters: { n: 7 } }).status, 'ready')
+})
+
+// #3272 transport and qualification remain synthetic; these calls never submit media.
+function mappingFixture({ target = { origin: 'https://mapping.example.invalid', basePath: '/v1' }, includeProofTarget = true } = {}) {
+  const m = model('PRIVATE-MODEL')
+  m.operations[0].implementation = { status: 'ready', profileId: 'imageGenerate', seam: 'imageGenerate' }
+  const profiles = { profiles: [{ id: 'imageGenerate', seam: 'imageGenerate', status: 'live', operations: ['text_to_image'],
+    outputTypes: ['image'], logicalFields: ['prompt'], vendorFields: ['prompt'], unknownFieldPolicy: 'reject' }] }
+  const mapping = { providerId: 'PRIVATE-REGISTERED', channelId: 'PRIVATE-BOUND-CHANNEL', protocol: 'openai-media',
+    wireModel: 'PRIVATE-TRANSPORT-WIRE', wireGroup: 'wire-PRIVATE-GROUP', sourceVersion: 'b'.repeat(64), transportTarget: target }
+  const state = { calls: 0, observed: null, proof: null }
+  const products = createGenerationProducts({
+    readIndex: () => ({ schemaVersion: '1.1', registry, profiles, issues: [], parseErrors: [], all: () => [m] }),
+    readGroups: () => [group()],
+    readMapping(candidate) { state.calls++; assert.equal(candidate.model.id, m.id); return mapping },
+    readQualification(candidate) {
+      state.observed = candidate
+      return state.proof ?? { ...proof(candidate), ...(includeProofTarget ? { transportTarget: candidate.transportTarget } : {}) }
+    },
+  })
+  return { products, mapping, profiles, state }
+}
+
+test('#3272 current identity consumes the registered transport mapping rather than supplier routing declarations', () => {
+  const f = mappingFixture(), list = f.products.list()
+  assert.equal(f.state.calls, 1)
+  assert.equal(f.state.observed.identity.providerId, 'PRIVATE-REGISTERED')
+  assert.equal(f.state.observed.identity.channelId, 'PRIVATE-BOUND-CHANNEL')
+  assert.equal(f.state.observed.identity.wireModel, 'PRIVATE-TRANSPORT-WIRE')
+  assert.equal(f.state.observed.identity.protocol, 'openai-media')
+  assert.equal(f.state.observed.identity.sourceVersion, 'b'.repeat(64))
+  assert.deepEqual(f.state.observed.transportTarget, f.mapping.transportTarget)
+  const checked = f.products.preparePreview({ ...request(f.products), currentFingerprint: list.currentFingerprint })
+  assert.equal(checked.status, 'ready'); assert.equal(checked.executable, false)
+  assert.equal(JSON.stringify([list, checked]).includes('PRIVATE-'), false)
+  assert.equal(JSON.stringify([list, checked]).includes('mapping.example.invalid'), false)
+})
+
+test('#3272 transport implementation versions invalidate the complete old request', () => {
+  const f = mappingFixture(), original = request(f.products)
+  f.mapping.sourceVersion = 'c'.repeat(64)
+  assert.notEqual(f.products.list().currentFingerprint, original.currentFingerprint)
+  assert.deepEqual(codes(f.products.preparePreview(original)), ['stale_fingerprint'])
+})
+
+test('#3272 an unknown profile semantic cannot be made ready by a complete synthetic proof', () => {
+  const f = mappingFixture()
+  f.profiles.profiles[0].futureConstraint = { token: 'DUMMY-A' }
+  const first = request(f.products), checked = f.products.preparePreview(first)
+  assert.equal(checked.status, 'pending')
+  f.profiles.profiles[0].futureConstraint.token = 'DUMMY-B'
+  assert.equal(f.products.list().currentFingerprint, first.currentFingerprint)
+})
+
+test('#3272 qualification binds the private transport target without publishing its text or digest', () => {
+  const f = mappingFixture({ includeProofTarget: false })
+  assert.equal(f.products.preparePreview(request(f.products)).status, 'pending')
+  const ready = mappingFixture(), first = request(ready.products)
+  assert.equal(ready.products.preparePreview(first).status, 'ready')
+  ready.state.proof = { ...proof(ready.state.observed), transportTarget: { ...ready.mapping.transportTarget } }
+  ready.mapping.transportTarget.origin = 'https://changed.example.invalid'
+  const current = request(ready.products), checked = ready.products.preparePreview(current)
+  assert.equal(checked.status, 'pending')
+  assert.equal(JSON.stringify(checked).includes('changed.example.invalid'), false)
+})
+
+test('#3272 the mapping dependency receives only frozen necessary contract data, not free metadata', () => {
+  const m = model(), selected = group(); m.operations[0].notes = { secret: 'DUMMY-PRIVATE-METADATA' }
+  let observed
+  const products = createGenerationProducts({
+    readIndex: () => ({ schemaVersion: '1.1', registry, all: () => [m] }), readGroups: () => [selected],
+    readMapping(candidate) { observed = candidate; return null },
+  })
+  products.list()
+  assert.deepEqual(Object.keys(observed).sort(), ['group', 'model', 'operation'])
+  assert.deepEqual(observed.model, { id: m.id })
+  assert.deepEqual(observed.operation, { id: 'text_to_image', output: { type: 'image' } })
+  assert.deepEqual(observed.group, { id: selected.id, wireGroup: selected.wireGroup, enabled: true })
+  assert.ok(Object.isFrozen(observed) && Object.isFrozen(observed.model) && Object.isFrozen(observed.operation.output))
+  assert.equal(JSON.stringify(observed).includes('DUMMY'), false)
+})
+
+test('#3272 unknown profile shape names invalidate the current request without digesting their values', () => {
+  const f = mappingFixture(), profile = f.profiles.profiles[0]
+  profile.operationVendorShapes = { text_to_image: { allow: ['prompt'], futureRule: { token: 'DUMMY-A' } } }
+  const first = request(f.products)
+  assert.equal(f.products.preparePreview(first).status, 'pending')
+  profile.operationVendorShapes.text_to_image.futureRule.token = 'DUMMY-B'
+  assert.equal(f.products.list().currentFingerprint, first.currentFingerprint)
+  profile.operationVendorShapes.text_to_image.otherRule = profile.operationVendorShapes.text_to_image.futureRule
+  delete profile.operationVendorShapes.text_to_image.futureRule
+  assert.notEqual(f.products.list().currentFingerprint, first.currentFingerprint)
+})
+
+test('#3272 malformed mapping and target records never invoke accessors or bypass complete hard judgment', () => {
+  const mutations = [m => { m.extra = { token: 'DUMMY' } }, m => { m.sourceVersion = 'short' }, m => { m.providerId = 1 },
+    m => { m.wireGroup = 'different' }, m => { m.transportTarget.origin = 'https://user:password@example.invalid' },
+    m => { m.transportTarget.basePath = '/v1?token=DUMMY' }, m => { m.transportTarget.extra = 'DUMMY' },
+    m => Object.defineProperty(m, 'hidden', { value: 'DUMMY' }), m => { m[Symbol('private')] = 'DUMMY' }]
+  let calls = 0
+  mutations.push(m => Object.defineProperty(m, 'providerId', { enumerable: true, get() { calls++; return 'PRIVATE' } }),
+    m => Object.defineProperty(m.transportTarget, 'origin', { enumerable: true, get() { calls++; return 'https://example.invalid' } }))
+  for (const mutate of mutations) {
+    const f = mappingFixture(); mutate(f.mapping)
+    const checked = f.products.preparePreview(request(f.products))
+    assert.equal(checked.status, 'pending'); assert.equal(checked.executable, false)
+    assert.equal(JSON.stringify(checked).includes('DUMMY'), false)
+  }
+  assert.equal(calls, 0)
+  const m = model('m', { n: { type: 'number', options: [5] } })
+  const index = { schemaVersion: '1.1', registry, all: () => [m] }
+  const products = createGenerationProducts({ readIndex: () => index, readGroups: () => [group()], readMapping: () => null })
+  assert.equal(products.preparePreview(request(products, { parameters: { n: 15 } })).status, 'rejected')
+})
+
+test('#3272 current qualification needs every new identity member and the bound private target', () => {
+  for (const field of ['providerId', 'sourceVersion', 'channelId']) {
+    const f = mappingFixture(); f.products.list()
+    f.state.proof = { ...proof(f.state.observed), transportTarget: { ...f.mapping.transportTarget }, identity: { ...f.state.observed.identity } }
+    delete f.state.proof.identity[field]
+    assert.equal(f.products.preparePreview(request(f.products)).status, 'pending')
+    const missing = mappingFixture(); delete missing.mapping[field]
+    assert.equal(missing.products.preparePreview(request(missing.products)).status, 'pending')
+  }
+  const f = mappingFixture(), original = request(f.products)
+  assert.equal(f.products.preparePreview(original).status, 'ready')
+  f.state.proof = { ...proof(f.state.observed), transportTarget: { ...f.mapping.transportTarget } }
+  f.mapping.transportTarget.basePath = '/v2'
+  assert.notEqual(f.products.list().currentFingerprint, original.currentFingerprint)
+  assert.deepEqual(codes(f.products.preparePreview(original)), ['stale_fingerprint'])
+  assert.equal(f.products.preparePreview(request(f.products)).status, 'pending')
+  for (const key of ['providerId', 'sourceVersion', 'transportTarget', 'readMapping', 'readQualification']) {
+    assert.deepEqual(codes(f.products.preparePreview(request(f.products, { [key]: 'private' }))), ['invalid_request'])
+  }
+})
+
+test('#3272 only the uniquely selected compatible profile can support a complete proof, without metadata or getter reads', () => {
+  const invalid = [p => { p.status = 'draft' }, p => { p.seam = 'videoGenerate' }, p => { p.outputTypes = ['video'] },
+    p => { p.operations = ['video_multi_ref'] }, p => { p.logicalFields = 1 }, p => { p.vendorFields = [1] },
+    p => { p.unknownFieldPolicy = 'invent' }, p => { p.slotRoles = ['missing_role'] },
+    p => { p.operationVendorShapes = { text_to_image: { allow: 1 } } }]
+  let calls = 0
+  invalid.push(p => Object.defineProperty(p, 'seam', { enumerable: true, get() { calls++; return 'imageGenerate' } }),
+    p => Object.defineProperty(p, 'hidden', { value: 'DUMMY' }), p => { p[Symbol('private')] = 'DUMMY' })
+  for (const mutate of invalid) {
+    const f = mappingFixture(); mutate(f.profiles.profiles[0])
+    assert.equal(f.products.preparePreview(request(f.products)).status, 'pending')
+  }
+  assert.equal(calls, 0)
+  const duplicate = mappingFixture(); duplicate.profiles.profiles.push({ ...duplicate.profiles.profiles[0] })
+  assert.equal(duplicate.products.preparePreview(request(duplicate.products)).status, 'pending')
+  const missing = mappingFixture(); missing.profiles.profiles = []
+  assert.equal(missing.products.preparePreview(request(missing.products)).status, 'pending')
+  const compatible = mappingFixture(), original = request(compatible.products)
+  for (const field of ['notes', 'help', 'description']) {
+    compatible.profiles.profiles[0][field] = { token: 'DUMMY-IGNORED' }
+    assert.equal(compatible.products.list().currentFingerprint, original.currentFingerprint)
+    assert.equal(compatible.products.preparePreview(original).status, 'ready')
+  }
+  compatible.profiles.profiles[0].vendorFields.push('quality')
+  assert.notEqual(compatible.products.list().currentFingerprint, original.currentFingerprint)
+  assert.deepEqual(codes(compatible.products.preparePreview(original)), ['stale_fingerprint'])
+})
+
+test('#3272 contradictory required vendor shape fields cannot be made available by a complete proof', () => {
+  const contradictions = [
+    { vendorFields: ['prompt', 'image_urls'], shape: { allow: ['prompt'], require: ['image_urls'] } },
+    { vendorFields: ['prompt'], shape: { allow: ['prompt', 'image_urls'], require: ['image_urls'] } },
+    { vendorFields: ['prompt', 'image_urls'], forbiddenVendorFields: ['image_urls'], shape: { allow: ['prompt', 'image_urls'], require: ['image_urls'] } },
+  ]
+  for (const unknownFieldPolicy of ['reject', 'drop']) for (const { shape, ...fields } of contradictions) {
+    const f = mappingFixture(), profile = f.profiles.profiles[0]
+    Object.assign(profile, fields, { unknownFieldPolicy, operationVendorShapes: { text_to_image: shape } })
+    assert.equal(f.products.list().products[0].intents[0].status, 'pending')
+    assert.equal(f.products.preparePreview(request(f.products)).status, 'pending')
+  }
+})
+
+test('#3272 compatible required shapes preserve the existing unrestricted global and missing operation allow semantics', () => {
+  for (const fields of [
+    { vendorFields: ['prompt'], operationVendorShapes: { text_to_image: { allow: ['prompt'], require: ['prompt'] } } },
+    { vendorFields: [], operationVendorShapes: { text_to_image: { require: ['prompt'] } } },
+    { vendorFields: ['prompt'], operationVendorShapes: { text_to_image: { require: ['prompt'] } } },
+  ]) {
+    const f = mappingFixture(); Object.assign(f.profiles.profiles[0], fields)
+    assert.equal(f.products.preparePreview(request(f.products)).status, 'ready')
+    assert.equal(f.products.preparePreview(request(f.products)).executable, false)
+  }
 })

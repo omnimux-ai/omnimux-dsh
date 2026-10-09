@@ -34,6 +34,7 @@ import { executeOmnimuxSpeechToText } from '../media/stt.js'
 import { mountTextComplete } from '../text/mount.js'
 import { buildModelCatalog } from '../catalog/list.js'
 import { createGenerationProducts } from '../catalog/generation-products.js'
+import { createGenerationMapping } from '../media/generation-mapping.js'
 import { listSessionModels } from '../catalog/session-models.js'
 import { createComposerListSync } from '../catalog/composer-sync.js'
 import { SettingsConfig } from '../settings/schema.js'
@@ -115,7 +116,7 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  const generationProducts = createGenerationProducts()
+  const generationProducts = createGenerationProducts({ readMapping: createGenerationMapping(hub.media) })
   const httpDeps = {
     products: generationProducts,
     store,

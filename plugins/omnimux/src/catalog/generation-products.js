@@ -2,12 +2,16 @@ import { createHash } from 'node:crypto'
 import { canonicalStringify, loadAll } from './contract/load.js'
 import { resetSchemaCaches } from './contract/schema.js'
 import { getModelChannelGroups } from './serving/channel-groups.js'
+import { adapterProfileCompatible } from './contract/status.js'
+import { assertVendorBodyAllowed, resolveProfilePayloadContract } from './contract/submit-guard/map-contract.js'
+import { createGenerationMapping } from '../media/generation-mapping.js'
+import { parseMediaConfig } from '../media/route.js'
 import { checkParameterMember, evaluateCandidateRequest } from '../../lib/generation-core.js'
 
 /** @typedef {string | number | boolean | null} Primitive */
 /** @typedef {Record<string, unknown>} Data */
 /** @typedef {{schemaVersion?: string, registry: Data, parseErrors?: unknown[], issues?: Data[], all: () => Data[]}} Index */
-/** @typedef {{ readIndex?: () => Index, readGroups?: (modelId: string) => Data[], readQualification?: (candidate: {identity: Data, domain: Data}) => unknown }} Dependencies */
+/** @typedef {{ readIndex?: () => Index, readGroups?: (modelId: string) => Data[], readMapping?: (candidate: {model: Data, operation: Data, group: Data}) => unknown, readQualification?: (candidate: {identity: Data, domain: Data, transportTarget?: Data}) => unknown }} Dependencies */
 /** @typedef {{schemaVersion: 1, currentFingerprint: string, productId: string, intent: string, prompt?: string, parameters: Record<string, Primitive | undefined>, assets: Data[]}} RequestV1 */
 /** @typedef {{schemaVersion: 1, currentFingerprint: string, requestFingerprint?: string, status: 'ready' | 'pending' | 'rejected' | 'indeterminate', executable: false, issues: Data[]}} PreviewV1 */
 const POLICY = [
@@ -17,6 +21,8 @@ const POLICY = [
 const INPUT_KEYS = ['slot', 'type', 'role', 'source', 'min', 'max', 'allowedMimes', 'maxSizeMb', 'maxSizeExclusive', 'minDurationSec', 'maxDurationSec', 'totalMinDurationSec', 'totalMaxDurationSec', 'totalMinExclusive', 'totalMaxExclusive', 'combinedOutputMaxDurationSec']
 const PARAM_KEYS = ['type', 'options', 'range', 'supported', 'allowAuto', 'caseInsensitive', 'minLength', 'maxLength', 'unit']
 const ASSET_KEYS = ['type', 'pathOrUrl', 'role', 'targetSlot', 'mime', 'sizeBytes', 'durationSec', 'sourceNodeId', 'edgeId', 'outputId', 'outputVersion', 'originalName', 'dimensions']
+const IDENTITY_KEYS = ['canonicalModelId', 'providerId', 'channelId', 'realGroupId', 'wireGroup', 'wireModel', 'operationId', 'purpose', 'protocol', 'sourceVersion']
+const PROFILE_KEYS = ['id', 'seam', 'status', 'operations', 'outputTypes', 'logicalFields', 'vendorFields', 'forbiddenVendorFields', 'unknownFieldPolicy', 'operationVendorShapes', 'slotRoles']
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key)
 /** @param {unknown} value @returns {value is Primitive} */
 const primitive = value => value === null || typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))
@@ -70,6 +76,61 @@ function freeze(value) {
   if (value && typeof value === 'object') { for (const key of Object.keys(value)) freeze(value[key]); Object.freeze(value) }
   return value
 }
+/** Validate the entire private mapping before reading any member or digesting values. */
+function mappingProjection(value, group) {
+  const required = ['providerId', 'protocol', 'wireModel', 'wireGroup', 'sourceVersion', 'transportTarget']
+  if (!bounded(value, [...required, 'channelId']) || required.some(key => !own(value, key))
+    || ['providerId', 'protocol', 'wireModel', 'wireGroup'].some(key => !name(value[key]))
+    || typeof value.sourceVersion !== 'string' || !/^[a-f0-9]{64}$/.test(value.sourceVersion)
+    || (own(value, 'channelId') && !name(value.channelId)) || !targetValid(value.transportTarget)
+    || value.wireGroup !== (group.wireGroup ?? group.id)) return null
+  return pick(value, [...required, 'channelId'])
+}
+function targetValid(value) {
+  if (!bounded(value, ['origin', 'basePath']) || !name(value.origin) || typeof value.basePath !== 'string'
+    || (value.basePath !== '' && !value.basePath.startsWith('/')) || /[?#]/.test(value.basePath)) return false
+  try {
+    const url = new URL(value.origin)
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+      && !url.search && !url.hash && url.origin === value.origin && url.pathname === '/'
+  } catch { return false }
+}
+/** Select and validate only the operation's current profile; unknown values stay outside hashes. */
+function currentProfile(profiles, operation) {
+  const pending = (unknown = []) => ({ proven: false, semantic: { proven: false, unknown } })
+  if (!record(profiles) || !array(profiles.profiles) || !record(operation.implementation) || !name(operation.implementation.profileId)) return pending()
+  const matches = []
+  for (const profile of profiles.profiles) {
+    if (!record(profile)) return pending()
+    if (profile.id === operation.implementation.profileId) matches.push(profile)
+  }
+  if (matches.length !== 1) return pending()
+  const profile = matches[0], metadata = ['notes', 'help', 'description']
+  const unknown = Object.keys(profile).filter(key => !PROFILE_KEYS.includes(key) && !metadata.includes(key)).sort()
+  const strings = value => array(value) && value.every(name) && new Set(value).size === value.length
+  if (['id', 'seam', 'status'].some(key => !name(profile[key]))
+    || !['live', 'unavailable', 'draft'].includes(profile.status)
+    || ['operations', 'outputTypes', 'logicalFields', 'vendorFields'].some(key => !strings(profile[key]))
+    || !['reject', 'drop'].includes(profile.unknownFieldPolicy)
+    || ['forbiddenVendorFields', 'slotRoles'].some(key => own(profile, key) && !strings(profile[key]))) return pending(unknown)
+  if (own(profile, 'operationVendorShapes')) {
+    if (!record(profile.operationVendorShapes)) return pending(unknown)
+    let malformed = false
+    for (const [id, shape] of Object.entries(profile.operationVendorShapes)) {
+      if (!record(shape)) { malformed = true; continue }
+      const extra = Object.keys(shape).filter(key => !['allow', 'require'].includes(key))
+      unknown.push(...extra.map(key => `${id}.${key}`))
+      if (extra.length || ['allow', 'require'].some(key => own(shape, key) && !strings(shape[key]))) malformed = true
+    }
+    if (malformed) return pending(unknown.sort())
+  }
+  const clean = pick(profile, PROFILE_KEYS)
+  const required = resolveProfilePayloadContract(clean).operationVendorShapes?.[operation.id]?.require ?? []
+  // The existing body contract decides whether required names can coexist with its allow/forbid rules.
+  const shapeCompatible = !required.length || assertVendorBodyAllowed(Object.fromEntries(required.map(field => [field, true])), clean, operation.id).ok
+  const proven = unknown.length === 0 && shapeCompatible && adapterProfileCompatible(operation, { profiles: [clean] }).ok
+  return { proven, semantic: { proven, profile: semantic(clean, 'profile'), unknown } }
+}
 function definitions(model, operation) {
   const out = {}
   if (!record(model.parameters ?? {}) || !record(operation.parameters ?? {})) return null
@@ -104,9 +165,9 @@ function semantic(value, kind) {
     for (const field of Object.keys(value)) put(out, field, semantic(value[field], 'parameter'))
     return out
   }
-  if (kind === 'parameterConstraints') {
+  if (kind === 'parameterConstraints' || kind === 'profileShapes') {
     const out = {}
-    for (const field of Object.keys(value)) put(out, field, semantic(value[field], 'parameterConstraint'))
+    for (const field of Object.keys(value)) put(out, field, semantic(value[field], kind === 'profileShapes' ? 'profileShape' : 'parameterConstraint'))
     return out
   }
   const shapes = {
@@ -126,7 +187,9 @@ function semantic(value, kind) {
     parameterConstraint: { fixed: '', only: '', supported: '' }, mediaConstraints: { image: 'mediaConstraint', video: 'mediaConstraint', audio: 'mediaConstraint' },
     mediaConstraint: { max: '' }, registry: { version: '', operations: 'registeredOperation' },
     registeredOperation: { id: '', label: '', group: '', defaultOutputType: '', promptPolicy: '' },
-    identity: { canonicalModelId: '', channelId: '', realGroupId: '', wireGroup: '', wireModel: '', operationId: '', purpose: '', protocol: '', mappingDigest: '' },
+    profile: { ...Object.fromEntries(PROFILE_KEYS.map(key => [key, ''])), operationVendorShapes: 'profileShapes' },
+    profileShape: { allow: '', require: '' },
+    identity: { ...Object.fromEntries(IDENTITY_KEYS.map(key => [key, ''])), mappingDigest: '' },
     domain: { inputs: 'input', inputGroups: 'inputGroup', parameters: 'fields', output: 'output', constraints: 'constraints' },
     evidence: { identity: 'identity', domain: 'domain', active: '', sourceDigest: '', documentVersion: '', sample: 'sample' },
     sample: { mode: '', taskId: '', output: 'outputFacts' },
@@ -225,6 +288,7 @@ function result(currentFingerprint, status, issues, requestFingerprint) {
 export function createGenerationProducts(deps = {}) {
   const readIndex = deps.readIndex ?? (() => { resetSchemaCaches(); return loadAll(undefined, { useCache: false }) })
   const readGroups = deps.readGroups ?? getModelChannelGroups
+  const readMapping = deps.readMapping ?? createGenerationMapping(parseMediaConfig(undefined))
   function snapshot() {
     const index = readIndex()
     if (!index || typeof index.all !== 'function' || !array(index.registry?.operations)
@@ -251,26 +315,32 @@ export function createGenerationProducts(deps = {}) {
         const registered = registry.operations.find(op => op.id === operation.id && op.defaultOutputType === policy?.type)
         if (!policy || !registered) continue
         const defs = definitions(model, operation)
+        const profile = currentProfile(index.profiles, operation)
         for (const group of mappingGroups) {
           const constraints = own(group, 'constraints') ? group.constraints : {}
-          const identity = { canonicalModelId: model.id, operationId: operation.id, purpose: operation.id,
-            ...pick(group, ['wireGroup', 'wireModel']), realGroupId: group.id,
-            ...((group.channelId ?? model.routing?.channel) !== undefined ? { channelId: group.channelId ?? model.routing.channel } : {}),
-            ...((group.protocol ?? model.routing?.protocol) !== undefined ? { protocol: group.protocol ?? model.routing.protocol } : {}) }
-          if (!own(identity, 'wireModel') && model.routing?.wireModel !== undefined) identity.wireModel = model.routing.wireModel
-          identity.mappingDigest = hash({ identity, enabled: group.enabled ?? null, constraints: semantic(constraints, 'constraints') })
+          const mappingInput = { model: { id: model.id }, operation: { id: operation.id, output: { type: operation.output.type } },
+            group: pick(group, ['id', 'wireGroup', 'wireModel', 'enabled']) }
+          const mapping = mappingProjection(readMapping(freeze(mappingInput)), group)
+          const identity = { canonicalModelId: model.id, operationId: operation.id, purpose: operation.id, realGroupId: group.id,
+            ...(mapping ? pick(mapping, ['providerId', 'channelId', 'protocol', 'wireGroup', 'wireModel', 'sourceVersion']) : {}) }
           const domain = { inputs: copy(operation.inputs), inputGroups: copy(operation.inputGroups ?? []), parameters: copy(defs), output: copy(operation.output), constraints: copy(constraints) }
-          const proof = deps.readQualification ? deps.readQualification(freeze(copy({ identity, domain }))) : null
+          identity.mappingDigest = hash({ identity, profile: profile.semantic, mappingProven: mapping !== null,
+            enabled: group.enabled ?? null, domain: semantic(domain, 'domain') })
+          const transportTarget = mapping?.transportTarget
+          const proof = deps.readQualification ? deps.readQualification(freeze(copy({ identity, domain, ...(transportTarget ? { transportTarget } : {}) }))) : null
+          // Target binding is compared privately and never passed to the semantic evidence digest.
+          const proofTarget = record(proof) && targetValid(proof.transportTarget) ? proof.transportTarget : null
+          const targetBound = transportTarget && proofTarget && transportTarget.origin === proofTarget.origin && transportTarget.basePath === proofTarget.basePath
           const evidence = record(proof) ? pick(proof, ['identity', 'domain', 'active', 'sourceDigest', 'documentVersion', 'sample']) : null
-          const complete = ['canonicalModelId', 'channelId', 'realGroupId', 'wireGroup', 'wireModel', 'operationId', 'purpose', 'protocol'].every(key => name(identity[key]))
+          const complete = IDENTITY_KEYS.every(key => name(identity[key])) && /^[a-f0-9]{64}$/.test(identity.sourceVersion)
           let eligibility = 'pending'
           if (group.enabled === false) eligibility = 'rejected'
-          else if (group.enabled === true && complete && evidence?.active === true && /^[a-f0-9]{64}$/.test(evidence.sourceDigest)
+          else if (group.enabled === true && mapping && profile.proven && targetBound && complete && evidence?.active === true && /^[a-f0-9]{64}$/.test(evidence.sourceDigest)
             && name(evidence.documentVersion) && evidence.sample?.mode === 'live' && name(evidence.sample.taskId)
             && evidence.sample.output?.verified === true && evidence.sample.output.type === domain.output.type
-            && record(evidence.identity) && ['canonicalModelId', 'channelId', 'realGroupId', 'wireGroup', 'wireModel', 'operationId', 'purpose', 'protocol', 'mappingDigest'].every(key => name(evidence.identity[key]))
-            && hash(evidence.domain) === hash(domain)) {
-            const bound = ['channelId', 'realGroupId', 'wireGroup', 'wireModel', 'protocol', 'mappingDigest'].every(key => evidence.identity[key] === identity[key])
+            && record(evidence.identity) && [...IDENTITY_KEYS, 'mappingDigest'].every(key => name(evidence.identity[key]))
+            && /^[a-f0-9]{64}$/.test(evidence.identity.sourceVersion) && hash(evidence.domain) === hash(domain)) {
+            const bound = ['providerId', 'channelId', 'realGroupId', 'wireGroup', 'wireModel', 'protocol', 'sourceVersion', 'mappingDigest'].every(key => evidence.identity[key] === identity[key])
             if (bound && ['canonicalModelId', 'operationId', 'purpose'].some(key => evidence.identity[key] !== identity[key])) eligibility = 'rejected'
             else if (hash(evidence.identity) === hash(identity)) eligibility = 'eligible'
           }

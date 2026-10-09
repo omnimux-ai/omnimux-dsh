@@ -8,14 +8,21 @@ import { registerCatalogRoutes } from './http.js'
 function products() {
   const models = [{ id: 'PRIVATE-MODEL', routing: { channel: 'fixture', wireModel: 'PRIVATE-WIRE', protocol: 'fixture' },
     parameters: { n: { type: 'number', range: { min: 0, max: 20 }, defaultValue: 5 } },
-    operations: [{ id: 'text_to_image', inputs: [], output: { type: 'image' } }] }]
+    operations: [{ id: 'text_to_image', inputs: [], output: { type: 'image' },
+      implementation: { status: 'ready', profileId: 'imageGenerate', seam: 'imageGenerate' } }] }]
+  const profiles = { profiles: [{ id: 'imageGenerate', seam: 'imageGenerate', status: 'live', operations: ['text_to_image'],
+    outputTypes: ['image'], logicalFields: ['prompt'], vendorFields: ['prompt'], unknownFieldPolicy: 'reject' }] }
   const api = createGenerationProducts({
-    readIndex: () => ({ schemaVersion: '1.1', issues: [], parseErrors: [], all: () => models,
+    readIndex: () => ({ schemaVersion: '1.1', profiles, issues: [], parseErrors: [], all: () => models,
       registry: { operations: [{ id: 'text_to_image', label: '文生图', defaultOutputType: 'image' },
         { id: 'image_to_image', label: '图生图', defaultOutputType: 'image' }, { id: 'multi_reference', label: '多图主体参考', defaultOutputType: 'image' },
         { id: 'video_multi_ref', label: '全能参考', defaultOutputType: 'video' }, { id: 'first_last_frame', label: '首尾帧过渡', defaultOutputType: 'video' }] } }),
     readGroups: () => [{ id: 'PRIVATE-GROUP', wireGroup: 'PRIVATE-WIRE-GROUP', enabled: true, constraints: {} }],
-    readQualification: ({ identity, domain }) => ({ identity, domain, active: true, sourceDigest: 'a'.repeat(64), documentVersion: 'fixture-v1',
+    readMapping: ({ model, group }) => ({ providerId: 'PRIVATE-REGISTERED', sourceVersion: 'b'.repeat(64),
+      channelId: models.find(row => row.id === model.id).routing.channel, protocol: models.find(row => row.id === model.id).routing.protocol,
+      wireModel: models.find(row => row.id === model.id).routing.wireModel, wireGroup: group.wireGroup,
+      transportTarget: { origin: 'https://fixture.example.invalid', basePath: '/v1' } }),
+    readQualification: ({ identity, domain, transportTarget }) => ({ identity, domain, transportTarget, active: true, sourceDigest: 'a'.repeat(64), documentVersion: 'fixture-v1',
       sample: { mode: 'live', taskId: 'PRIVATE-TASK', output: { type: 'image', verified: true } } }),
   })
   return { api, models }

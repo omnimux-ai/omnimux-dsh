@@ -175,3 +175,31 @@ describe('hub apply composition', () => {
     assert.ok(textEnum.includes('gemini-3.7-flash'))
   })
 })
+
+describe('#3272 current generation transport composition', () => {
+  const create = (name, apiKey = 'test-token-unused') => {
+    const provided = {}
+    apply({ tools: { register() {} }, provide(key, api) { provided[key] = api }, get() { return undefined } }, {
+      official: { mount: false }, media: { defaultProvider: name, providers: {
+        [name]: { protocol: 'openai-media', baseUrl: 'https://transport.example.invalid/v1', apiKey,
+          models: { image: 'gpt-image-2.5', video: 'seedance-2-0-mini' } },
+      } },
+    })
+    return provided.generationProducts
+  }
+  it('the mounted product instance follows the actual validated provider registration without publishing it', () => {
+    const a = create('private-a'), b = create('private-b'), first = a.list(), second = b.list()
+    assert.notEqual(first.currentFingerprint, second.currentFingerprint)
+    const checked = b.preparePreview({ schemaVersion: 1, currentFingerprint: first.currentFingerprint,
+      productId: 'generation.image', intent: 'multi_reference', prompt: '角色', parameters: {}, assets: [] })
+    assert.deepEqual(checked.issues, [{ code: 'stale_fingerprint' }]); assert.equal(checked.executable, false)
+    assert.equal(JSON.stringify([first, second, checked]).includes('private-a'), false)
+    assert.equal(JSON.stringify([first, second, checked]).includes('transport.example.invalid'), false)
+  })
+  it('changing only credential data cannot change the product fingerprint or invoke credential resolution', () => {
+    const first = create('omnimux', 'test-token-unused-a').list()
+    const second = create('omnimux', 'test-token-unused-b').list()
+    assert.equal(first.currentFingerprint, second.currentFingerprint)
+    assert.equal(JSON.stringify([first, second]).includes('test-token-unused'), false)
+  })
+})
