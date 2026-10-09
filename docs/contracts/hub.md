@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-16"
-updated: "2026-10-08"
+updated: "2026-10-09"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -114,6 +114,62 @@ media:
 
 `OMNIMUX_BASE_URL` / `OMNIMUX_VIDEO_MODEL` / `OMNIMUX_IMAGE_MODEL` / `OMNIMUX_API_KEY` overlay the `omnimux` row at resolve time. Adding a vendor is a new `providers` row plus `src/media/vendors/<id>.js`. Adding a wire format is a new `src/media/protocols/<id>.js`. Do not grow `apply()` or the seam.
 
+## Generation products and stateless preview
+
+`generationProducts = { list(), preparePreview(request) }` is the hub-owned interface for a public generation-product catalog and complete-request preflight. These requirements define the interface, not deployment or live-generation acceptance. The public product policy exposes only `generation.image` (生图) and `generation.video` (生视频), not a model selector. Its explicit intent whitelist uses canonical registry IDs and labels: image `text_to_image`, `image_to_image`, `multi_reference`; video `video_multi_ref`, `first_last_frame`. Brand names, model prefixes and asset counts must not infer an intent.
+
+This interface is additive. Existing `modelCatalog`, text/audio/media seams, edit/extend/digital-human operations and accepted-task collection keep their contracts. Preview neither migrates operations nor activates models/products; there is no submission endpoint, execution wrapper, admission token, JWT, TTL map or persistent preview cache. Actual execution still requires an explicit real group and eligible same-group routing; preview does not choose a procurement route or expose prices.
+
+### Version 1 request
+
+`RequestV1` is the complete body `{ schemaVersion: 1, currentFingerprint, productId, intent, parameters, assets, prompt? }`. All six non-optional keys are required. Fingerprints are full 64-character lowercase hexadecimal digests. `parameters` is an own field-name record of primitive values: string, boolean, finite number or null. Optional top-level `prompt` is a string. Unknown versions, top-level keys, product/intent combinations and unknown parameter names are rejected, not silently sanitized. Model/group/route, credentials, task/destination, qualification hints, parameter sources, defaults and constraints are not caller fields.
+
+Records must be plain/null-prototype, own enumerable data records; arrays must be dense with no extra properties. Accessors, hidden/symbol properties and extra nested keys are invalid; validation must not invoke getters or mutate the caller. Declared parameter names, including `__proto__`, `constructor` and `toString`, retain safe own-property identity. Explicit parameter `false`, `0`, `null` and `''` remain supplied values, subject to the canonical domain checks.
+
+The sole in-process transport exception is own enumerable data `undefined` on optional top-level `prompt` or on a parameter declared in the applicable definitions' field-name union. After descriptor validation it is absent, with the same source and request fingerprint as omission, and may enter default consensus. Unknown parameters, required top-level fields, asset fields and other nested `undefined` remain invalid. HTTP JSON has no such exception and accepts only the primitive domain.
+
+Assets retain every item, order, duplicate, role and declared origin/version/metadata. The asset whitelist is `pathOrUrl` (required), `type?`, `role?`, `targetSlot?`, `mime?`, `sizeBytes?`, `durationSec?`, `sourceNodeId?`, `edgeId?`, `outputId?`, `outputVersion?`, `originalName?`, `dimensions?`. There is no arbitrary `meta`. String fields must be nonblank without rewriting their values; `outputVersion` is an opaque string. `sizeBytes` is null or a nonnegative safe integer; `durationSec` is null or a nonnegative finite number; dimensions contain exactly positive safe-integer `width` and `height`. Omission and null differ. Unknown/missing asset classification must reach the canonical check, not default to image or disappear. Declared identity is not server verification; preview does not read files, download URLs or synthesize versions. Subsequent provider execution requires anonymous public HTTPS assets.
+
+Top-level `prompt` and explicit `parameters.prompt`, when both supplied, must be exactly equal. One supplied value freezes once. Top-only prompt enters a candidate's parameter transport view only if that candidate declares the prompt parameter; otherwise it remains snapshot text. Explicit `parameters.prompt` is never removed from an undeclared candidate and must fail its normal unknown-field check.
+
+### Current authority and full-candidate judgment
+
+Each call must read one current canonical-contract/registry/registered-options/real-group snapshot and derive every candidate from it. Public DTOs, caller hints, `listed`, document URLs and a live profile are not qualification evidence. Private candidate identity binds canonical model, channel, real group, wire group/model, operation, purpose, protocol and current mapping. A group must exist and be explicitly enabled; no cross-group fallback may supply missing capabilities.
+
+Qualification requires current active evidence matching that complete identity, a fixed official-source/version identity, live-task/output facts and the applicable full input/parameter domain. A historical sample does not prove a larger domain. Missing production qualification is `pending`, not unsupported or ready; known disabled/identity-purpose mismatches are rejected. Explicitly injected eligible fixtures may establish preflight behavior only and must never activate production state.
+
+Merge operation parameters over model parameters by whole field. Freeze explicit logical values first; only unsupplied fields enter default consensus. All applicable candidates must declare the field with the same primitive default and the same proven non-default definition source (product/intent/policy version plus canonical definition semantics) before one default freezes. All without defaults means absent; any missing/conflicting/unproven/invalid default means unresolved, not a candidate fallback. Explicit values do not become unresolved because defaults differ. Request-check definition copies remove only `defaultValue`; original domains and full definitions/default sources remain authoritative and fingerprinted.
+
+Every applicable candidate must check the entire frozen request and original assets through the shared canonical full-candidate evaluator, even without qualification. Its registry IDs are the complete same-snapshot set. Preserve registered option value/label semantics and all raw group constraints; unknown constraints stay indeterminate. Do not duplicate domain/matching algorithms, trim assets/explicit parameters per candidate, clamp values, union ranges/options or combine one candidate's parameter success with another's asset success.
+
+Preview aggregation is: any qualified checked-ready candidate → `ready`; otherwise any indeterminate → `indeterminate`; otherwise any pending → `pending`; only all applicable candidates proven hard-rejected → `rejected`. An empty applicable set is pending/unavailable, not vacuous readiness/rejection. Within a candidate, canonical hard → unknown → pending precedence remains; independently malformed input is rejected.
+
+### Public results and change detection
+
+`ListV1` from `list()` is `{ schemaVersion: 1, currentFingerprint, products }`, with the two complete product records `{ productId, label, status, intents }`; each intent is `{ intent, label, status, alternatives }`. Product/intent statuses are `available | pending | rejected | indeterminate`. Labels are fixed product copy or safe canonical registry labels, never private free text.
+
+Each alternative has exactly six required keys: `{ status, inputs, inputGroups, parameters, output, constraints }`, with status `pending | available`. It is one complete canonical declaration branch, not an execution permit. Deduplicate only equivalent whole branches, including constraints. If unknown/invalid constraints or unmaterialized domains prevent lossless public expression, omit that complete branch and keep the intent indeterminate; never silently discard it and claim availability.
+
+Public inputs preserve canonical slot/type/role/source, counts, MIME/size/duration bounds and exclusivity; input groups preserve slot references and minimum counts. Parameters preserve only canonical type/options/range/supported/auto/case/length/unit semantics, with primitive options or `{ value, label? }`; no `defaultValue`, help, description, options source, notes or URLs. Output permits only `type`, `allowedMimes?`, `min?`, `max?`, and must match the image/video product. Omitted/null fields retain canonical meaning, and unsupported semantic fields cannot be dropped to fabricate a complete branch.
+
+`constraints` attaches the same candidate's supported raw `operations?`, `parameters?` and `inputs?`: canonical operation IDs; parameter `{ fixed?, only?, supported? }`; media-type `{ max? }`. It must not rewrite definitions into a derived range/options union. For example, a declared range 4–15 with group fixed 15 retains both and promises no default 5; two slots each allowing two images with a group total cap of two do not promise four images.
+
+`PreviewV1` from `preparePreview()` is `{ schemaVersion: 1, currentFingerprint, requestFingerprint?, status, executable: false, issues }`. Status is `ready | pending | rejected | indeterminate`; `ready` means only complete preflight passed, never paid execution authority. Request fingerprint appears only when the full snapshot can form. Issues are `{ code, field?, assetIndex? }`, where field is a declared public parameter name and asset index is the original nonnegative safe index. No result exposes assignments, effective parameters, vendor payloads or private identity.
+
+Public issue codes are closed: `invalid_request`, `unsupported_version`, `unknown_product`, `unknown_intent`, `unknown_parameter`, `catalog_unavailable`, `stale_fingerprint`, `request_too_large`, `qualification_pending`, `qualification_rejected`, `default_ambiguous`, `parameter_invalid`, `parameter_unresolved`, `input_invalid`, `input_pending`, `input_unresolved`, `unavailable`. Canonical parameter hard failures map to `parameter_invalid`, unknown/source failures to `parameter_unresolved`; asset hard/pending/unknown map to the corresponding input code. Unknown internal codes map to `input_unresolved`, never raw diagnostics. Public schemas never expose model/group/wire/channel/profile/endpoint, credentials, procurement amounts, evidence identities/URLs, private slots or arbitrary messages/details.
+
+Current fingerprint must be rederived every call from version/policy, full covered contract semantics, registry/registered options, current private mappings including wire model/protocol, group enablement/all constraints, default sources and active qualification identity. Reusing only a YAML memo or public catalog hash is insufficient. Object key ordering is irrelevant; semantic array ordering remains. Only necessary non-secret semantics enter the digest, never credentials, arbitrary settings, endpoints or purchase amounts.
+
+Request fingerprint covers that current fingerprint, product/intent, the complete frozen logical values and sources, and all original ordered asset identity/role/metadata/selection facts. Both hashes detect changes, not permission. A stale current fingerprint returns HTTP 409 with the current fingerprint, status pending and executable false; callers must resend the complete request, not accept newly resolved defaults implicitly. Even a supplied current hash requires reconstructing server authority and judging the full request.
+
+### Host authorization and failure boundary
+
+GET `/omnimux/generation-products` and POST `/omnimux/generation-products/preview` must use existing `requestRejection(req, getConnection)` Host authentication and exact-origin checks before any body read. Missing connection is 503; cross-origin/unauthenticated rejection keeps only the existing fixed status/error, with no product catalog or identity. Mounting must pass the real connection resolver, not an undefined permissive default. Other methods return 404.
+
+POST reuses the existing JSON-body helper with a fixed UTF-8 limit of 1,048,576 bytes; an optional bound must leave old helper callers unchanged. Over-limit accumulation stops immediately, returns 413/rejected/`request_too_large`, and never invokes preview. Malformed/version/unknown-field input is 400 with its fixed code; valid judgment is 200; unavailable authority is 503/`catalog_unavailable`; no error includes raw details or internal paths. Source-read failures must not become empty success.
+
+Preview is stateless and performs zero provider/auth network calls or task/state writes. It must not call `identity.require`/status or resolve user credentials/settings/profiles. Host request authorization is not media authorization. Existing accounts, credential ownership and execution ledgers remain unchanged; static/fixture evidence does not establish real generation.
+
 ## Text complete
 
 `textComplete` is a one-shot expert call, not a second chat. It does not inherit parent messages, does not pass tools, and does not write the image/video into the parent session. Authorization is the enabled whitelist plus the tool's required `reason`. The hub does not prompt the user.
@@ -158,6 +214,9 @@ A request may name `model` or omit it for `defaultModel`. The image is an absolu
 | `omnimux_text_complete` | hub tool over `textComplete` | same plus required `reason` | same | same |
 | `modelCatalog` | neutral provide | `list()` (no args) | `{ source, fingerprint, defaults, text, image, video, audio }` — lists sorted by display name; defaults = env → settings → config → first sorted | never throws for empty lists; gate may empty a media kind |
 | `GET /omnimux/model-catalog` | public Host HTTP | GET | same body as `modelCatalog.list()` | 503 when catalog unavailable |
+| `generationProducts` | hub provide | `list()` / `preparePreview(RequestV1)` | `ListV1` / `PreviewV1`; see generation-products contract above | fixed public codes; never execution authority |
+| `GET /omnimux/generation-products` | authenticated exact-origin Host HTTP | GET | `ListV1` | existing Host rejection; 503 `catalog_unavailable` |
+| `POST /omnimux/generation-products/preview` | authenticated exact-origin Host HTTP | complete `RequestV1`; body ≤ 1 MiB | `PreviewV1`, always `executable: false` | existing Host rejection; 400 / 409 / 413 / 503 with fixed public codes |
 | `omnimux_social_data` | official-only tool | `platform` + `capability` + `url`/`id`/`query`; hub maps to top-level business fields (`tweet_id`/`aweme_id`/…); `sk-` | `{ platform, capability, model, field, value, data }` — for `x/tweet`, `data` includes `text`/`display_text`, `author`, engagement, and media URLs under `data.media` / `data.entities.media` | `capability-disabled`, `omnimux-unconfigured`, `omnimux-invalid-request`, `omnimux-request-failed` |
 | `omnimux_page_fetch` | official-only tool | `{ url }` http(s); `sk-`; locked model `jina-reader-v1` | `{ mode: "live", model, url, title, pageContent, truncated? }` | `capability-disabled`, `omnimux-unconfigured`, `needs-omnimux`, `omnimux-invalid-request`, `omnimux-request-failed`, `omnimux-invalid-response` |
 | `omnimux_accounts_*` / `omnimux_publish_*` | official-only tools | connect / list / presign / create / get post; access token | upstream JSON, secrets stripped | `capability-disabled`, `needs-omnimux` |
