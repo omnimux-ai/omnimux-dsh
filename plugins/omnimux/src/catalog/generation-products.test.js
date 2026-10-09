@@ -375,3 +375,38 @@ test('repair actual registered voice materialization permits value label project
   assert.deepEqual(intent(f).alternatives[0].parameters.voice.options[0], { value: def.options[0].value, label: def.options[0].label })
   assert.equal(Object.hasOwn(def.options[0], 'meta'), true)
 })
+
+test('registered limit source URL changes invalidate the complete old request without ingesting free notes', () => {
+  const source = { kind: 'official_docs', url: 'https://docs.example.invalid/generation.md', note: 'DUMMY-A' }
+  const f = fixture([model('m', {}, [{ slot: 'reference', type: 'image', min: 0, max: 1, limitSource: source }])])
+  const original = request(f.products)
+  assert.equal(f.products.preparePreview(original).status, 'ready')
+  source.note = 'DUMMY-B'
+  assert.equal(f.products.list().currentFingerprint, original.currentFingerprint)
+  source.url = 'https://docs.example.invalid/revision.md'
+  assert.notEqual(f.products.list().currentFingerprint, original.currentFingerprint)
+  const stale = f.products.preparePreview(original)
+  assert.equal(stale.status, 'pending')
+  assert.deepEqual(codes(stale), ['stale_fingerprint'])
+})
+
+test('default source identity uses the same semantic projection as the current fingerprint', () => {
+  const a = model('a', { n: { type: 'number', range: { min: 0, max: 10 }, defaultValue: 5 } })
+  const b = model('b', { n: { type: 'number', range: { min: 0, max: 10 }, defaultValue: 5 } })
+  const f = fixture([a, b]), original = request(f.products)
+  const initial = f.products.preparePreview(original)
+  assert.equal(initial.status, 'ready')
+  for (const field of ['help', 'description']) {
+    b.parameters.n[field] = 'nonsecret-picker-copy'
+    assert.equal(f.products.list().currentFingerprint, original.currentFingerprint)
+    const checked = f.products.preparePreview(original)
+    assert.equal(checked.status, 'ready')
+    assert.equal(checked.requestFingerprint, initial.requestFingerprint)
+    delete b.parameters.n[field]
+  }
+  b.parameters.n.range.max = 9
+  assert.notEqual(f.products.list().currentFingerprint, original.currentFingerprint)
+  assert.deepEqual(codes(f.products.preparePreview(original)), ['stale_fingerprint'])
+  assert.equal(preview(f).status, 'pending')
+  assert.equal(preview(f, { parameters: { n: 7 } }).status, 'ready')
+})
