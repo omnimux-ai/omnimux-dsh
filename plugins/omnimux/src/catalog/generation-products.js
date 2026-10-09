@@ -119,7 +119,7 @@ function semantic(value, kind) {
     parameter: { ...Object.fromEntries(PARAM_KEYS.map(key => [key, ''])), options: 'option', range: 'range', defaultValue: '', optionsFrom: '', label: '' },
     option: { value: '', label: '' }, range: { min: '', max: '', step: '' },
     input: { ...Object.fromEntries(INPUT_KEYS.map(key => [key, ''])), valueSources: '', composition: 'composition', limitSource: 'limitSource' },
-    composition: { kind: '', localRole: '' }, limitSource: { kind: '' }, inputGroup: { slots: '', min: '' },
+    composition: { kind: '', localRole: '' }, limitSource: { kind: '', url: '' }, inputGroup: { slots: '', min: '' },
     output: { type: '', allowedMimes: '', min: '', max: '' },
     group: { id: '', wireGroup: '', wireModel: '', channelId: '', protocol: '', enabled: '', constraints: 'constraints' },
     constraints: { operations: '', parameters: 'parameterConstraints', inputs: 'mediaConstraints' },
@@ -354,7 +354,7 @@ export function createGenerationProducts(deps = {}) {
       put(parameterSources, field, { source: 'absent' })
       if (!haveDefaults) continue
       const first = defs[0]
-      const sourceId = def => hash({ productId: policy.productId, intent: request.intent, policyVersion: 1, definition: judgmentDefinitions({ [field]: def }) })
+      const sourceId = def => hash({ productId: policy.productId, intent: request.intent, policyVersion: 1, definition: semantic(judgmentDefinitions({ [field]: def })[field], 'parameter') })
       const consensus = record(first) && primitive(first.defaultValue) && defs.every(def => record(def) && own(def, 'defaultValue') && primitive(def.defaultValue)
         && Object.is(def.defaultValue, first.defaultValue) && sourceId(def) === sourceId(first)
         && checkParameterMember(judgmentDefinitions({ [field]: def })[field], def.defaultValue, { mode: 'canonical' }).status === 'member')
