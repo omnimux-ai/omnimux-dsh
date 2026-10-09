@@ -583,3 +583,29 @@ test('#3272 only the uniquely selected compatible profile can support a complete
   assert.notEqual(compatible.products.list().currentFingerprint, original.currentFingerprint)
   assert.deepEqual(codes(compatible.products.preparePreview(original)), ['stale_fingerprint'])
 })
+
+test('#3272 contradictory required vendor shape fields cannot be made available by a complete proof', () => {
+  const contradictions = [
+    { vendorFields: ['prompt', 'image_urls'], shape: { allow: ['prompt'], require: ['image_urls'] } },
+    { vendorFields: ['prompt'], shape: { allow: ['prompt', 'image_urls'], require: ['image_urls'] } },
+    { vendorFields: ['prompt', 'image_urls'], forbiddenVendorFields: ['image_urls'], shape: { allow: ['prompt', 'image_urls'], require: ['image_urls'] } },
+  ]
+  for (const unknownFieldPolicy of ['reject', 'drop']) for (const { shape, ...fields } of contradictions) {
+    const f = mappingFixture(), profile = f.profiles.profiles[0]
+    Object.assign(profile, fields, { unknownFieldPolicy, operationVendorShapes: { text_to_image: shape } })
+    assert.equal(f.products.list().products[0].intents[0].status, 'pending')
+    assert.equal(f.products.preparePreview(request(f.products)).status, 'pending')
+  }
+})
+
+test('#3272 compatible required shapes preserve the existing unrestricted global and missing operation allow semantics', () => {
+  for (const fields of [
+    { vendorFields: ['prompt'], operationVendorShapes: { text_to_image: { allow: ['prompt'], require: ['prompt'] } } },
+    { vendorFields: [], operationVendorShapes: { text_to_image: { require: ['prompt'] } } },
+    { vendorFields: ['prompt'], operationVendorShapes: { text_to_image: { require: ['prompt'] } } },
+  ]) {
+    const f = mappingFixture(); Object.assign(f.profiles.profiles[0], fields)
+    assert.equal(f.products.preparePreview(request(f.products)).status, 'ready')
+    assert.equal(f.products.preparePreview(request(f.products)).executable, false)
+  }
+})
