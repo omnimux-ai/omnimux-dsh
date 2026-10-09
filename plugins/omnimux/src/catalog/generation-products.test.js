@@ -410,3 +410,67 @@ test('default source identity uses the same semantic projection as the current f
   assert.equal(preview(f).status, 'pending')
   assert.equal(preview(f, { parameters: { n: 7 } }).status, 'ready')
 })
+
+// #3272 transport and qualification remain synthetic; these calls never submit media.
+function mappingFixture({ target = { origin: 'https://mapping.example.invalid', basePath: '/v1' }, includeProofTarget = true } = {}) {
+  const m = model('PRIVATE-MODEL')
+  m.operations[0].implementation = { status: 'ready', profileId: 'imageGenerate', seam: 'imageGenerate' }
+  const profiles = { profiles: [{ id: 'imageGenerate', seam: 'imageGenerate', status: 'live', operations: ['text_to_image'],
+    outputTypes: ['image'], logicalFields: ['prompt'], vendorFields: ['prompt'], unknownFieldPolicy: 'reject' }] }
+  const mapping = { providerId: 'PRIVATE-REGISTERED', channelId: 'PRIVATE-BOUND-CHANNEL', protocol: 'openai-media',
+    wireModel: 'PRIVATE-TRANSPORT-WIRE', wireGroup: 'wire-PRIVATE-GROUP', sourceVersion: 'b'.repeat(64), transportTarget: target }
+  const state = { calls: 0, observed: null, proof: null }
+  const products = createGenerationProducts({
+    readIndex: () => ({ schemaVersion: '1.1', registry, profiles, issues: [], parseErrors: [], all: () => [m] }),
+    readGroups: () => [group()],
+    readMapping(candidate) { state.calls++; assert.equal(candidate.model.id, m.id); return mapping },
+    readQualification(candidate) {
+      state.observed = candidate
+      return state.proof ?? { ...proof(candidate), ...(includeProofTarget ? { transportTarget: candidate.transportTarget } : {}) }
+    },
+  })
+  return { products, mapping, profiles, state }
+}
+
+test('#3272 current identity consumes the registered transport mapping rather than supplier routing declarations', () => {
+  const f = mappingFixture(), list = f.products.list()
+  assert.equal(f.state.calls, 1)
+  assert.equal(f.state.observed.identity.providerId, 'PRIVATE-REGISTERED')
+  assert.equal(f.state.observed.identity.channelId, 'PRIVATE-BOUND-CHANNEL')
+  assert.equal(f.state.observed.identity.wireModel, 'PRIVATE-TRANSPORT-WIRE')
+  assert.equal(f.state.observed.identity.protocol, 'openai-media')
+  assert.equal(f.state.observed.identity.sourceVersion, 'b'.repeat(64))
+  assert.deepEqual(f.state.observed.transportTarget, f.mapping.transportTarget)
+  const checked = f.products.preparePreview({ ...request(f.products), currentFingerprint: list.currentFingerprint })
+  assert.equal(checked.status, 'ready'); assert.equal(checked.executable, false)
+  assert.equal(JSON.stringify([list, checked]).includes('PRIVATE-'), false)
+  assert.equal(JSON.stringify([list, checked]).includes('mapping.example.invalid'), false)
+})
+
+test('#3272 transport implementation versions invalidate the complete old request', () => {
+  const f = mappingFixture(), original = request(f.products)
+  f.mapping.sourceVersion = 'c'.repeat(64)
+  assert.notEqual(f.products.list().currentFingerprint, original.currentFingerprint)
+  assert.deepEqual(codes(f.products.preparePreview(original)), ['stale_fingerprint'])
+})
+
+test('#3272 an unknown profile semantic cannot be made ready by a complete synthetic proof', () => {
+  const f = mappingFixture()
+  f.profiles.profiles[0].futureConstraint = { token: 'DUMMY-A' }
+  const first = request(f.products), checked = f.products.preparePreview(first)
+  assert.equal(checked.status, 'pending')
+  f.profiles.profiles[0].futureConstraint.token = 'DUMMY-B'
+  assert.equal(f.products.list().currentFingerprint, first.currentFingerprint)
+})
+
+test('#3272 qualification binds the private transport target without publishing its text or digest', () => {
+  const f = mappingFixture({ includeProofTarget: false })
+  assert.equal(f.products.preparePreview(request(f.products)).status, 'pending')
+  const ready = mappingFixture(), first = request(ready.products)
+  assert.equal(ready.products.preparePreview(first).status, 'ready')
+  ready.state.proof = { ...proof(ready.state.observed), transportTarget: { ...ready.mapping.transportTarget } }
+  ready.mapping.transportTarget.origin = 'https://changed.example.invalid'
+  const current = request(ready.products), checked = ready.products.preparePreview(current)
+  assert.equal(checked.status, 'pending')
+  assert.equal(JSON.stringify(checked).includes('changed.example.invalid'), false)
+})
