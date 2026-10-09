@@ -36,10 +36,17 @@ export function sendJson(res, status, body) {
 
 /**
  * @param {import('node:http').IncomingMessage} req
+ * @param {number} [maxBytes] Optional UTF-8 byte bound; legacy calls remain unbounded.
  */
-export async function readJsonBody(req) {
+export async function readJsonBody(req, maxBytes = Infinity) {
   const chunks = []
-  for await (const chunk of req) chunks.push(chunk)
+  let bytes = 0
+  for await (const chunk of req) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    bytes += buffer.length
+    if (bytes > maxBytes) throw Object.assign(new Error('request too large'), { code: 'request_too_large' })
+    chunks.push(buffer)
+  }
   if (chunks.length === 0) return {}
   try {
     return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
