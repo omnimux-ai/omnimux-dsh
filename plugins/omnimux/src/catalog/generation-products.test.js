@@ -4,7 +4,6 @@ import { createGenerationProducts } from './generation-products.js'
 import fs from 'node:fs'
 import { syncBuiltinESMExports } from 'node:module'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { resolve } from 'node:path'
 import { materializeVoiceOptions } from './voices/options.js'
 
 const registry = { version: '1', operations: [
@@ -259,7 +258,7 @@ test('unconsumed canonical input composition, valueSources, unknown output/param
 })
 
 test('repair production default reader refreshes original cached registry chain on every call', async () => {
-  const scratch = resolve('.tmp/3270-repair/production-reader')
+  const scratch = fileURLToPath(new URL('../../../../.tmp/3270-repair/production-reader', import.meta.url))
   fs.mkdirSync(`${scratch}/src`, { recursive: true })
   fs.cpSync(fileURLToPath(new URL('..', import.meta.url)), `${scratch}/src`, { recursive: true })
   fs.cpSync(fileURLToPath(new URL('../../lib/', import.meta.url)), `${scratch}/lib`, { recursive: true })
@@ -290,7 +289,7 @@ test('repair production default reader refreshes original cached registry chain 
     const changed = products.preparePreview({ ...request(products), currentFingerprint: first.currentFingerprint })
     assert.deepEqual(codes(changed), ['stale_fingerprint'])
     assert.equal(reads, 4)
-  } finally { fs.readFileSync = originalRead; syncBuiltinESMExports() }
+  } finally { fs.readFileSync = originalRead; syncBuiltinESMExports(); fs.rmSync(scratch, { recursive: true, force: true }) }
 })
 
 test('repair fingerprint excludes arbitrary nested proof and option metadata but retains live binding facts', () => {

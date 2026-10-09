@@ -1,11 +1,15 @@
 import { createHash } from 'node:crypto'
 import { canonicalStringify, loadAll } from './contract/load.js'
+import { resetSchemaCaches } from './contract/schema.js'
 import { getModelChannelGroups } from './serving/channel-groups.js'
 import { checkParameterMember, evaluateCandidateRequest } from '../../lib/generation-core.js'
 
 /** @typedef {string | number | boolean | null} Primitive */
-/** @typedef {Record<string, any>} Data */
-/** @typedef {{ readIndex?: () => Data, readGroups?: (modelId: string) => Data[], readQualification?: (candidate: {identity: Data, domain: Data}) => unknown }} Dependencies */
+/** @typedef {Record<string, unknown>} Data */
+/** @typedef {{schemaVersion?: string, registry: Data, parseErrors?: unknown[], issues?: Data[], all: () => Data[]}} Index */
+/** @typedef {{ readIndex?: () => Index, readGroups?: (modelId: string) => Data[], readQualification?: (candidate: {identity: Data, domain: Data}) => unknown }} Dependencies */
+/** @typedef {{schemaVersion: 1, currentFingerprint: string, productId: string, intent: string, prompt?: string, parameters: Record<string, Primitive | undefined>, assets: Data[]}} RequestV1 */
+/** @typedef {{schemaVersion: 1, currentFingerprint: string, requestFingerprint?: string, status: 'ready' | 'pending' | 'rejected' | 'indeterminate', executable: false, issues: Data[]}} PreviewV1 */
 const POLICY = [
   { productId: 'generation.image', label: '生图', type: 'image', intents: ['text_to_image', 'image_to_image', 'multi_reference'] },
   { productId: 'generation.video', label: '生视频', type: 'video', intents: ['video_multi_ref', 'first_last_frame'] },
@@ -28,7 +32,7 @@ function record(value) {
     })
 }
 function array(value) {
-  if (!Array.isArray(value) || Object.getOwnPropertySymbols(value).length || Object.getOwnPropertyNames(value).length !== value.length + 1) return false
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || Object.getOwnPropertySymbols(value).length || Object.getOwnPropertyNames(value).length !== value.length + 1) return false
   for (let i = 0; i < value.length; i++) {
     const descriptor = Object.getOwnPropertyDescriptor(value, String(i))
     if (!descriptor?.enumerable || !own(descriptor, 'value')) return false
@@ -36,7 +40,7 @@ function array(value) {
   return true
 }
 const bounded = (value, keys) => record(value) && Object.keys(value).every(key => keys.includes(key))
-/** @param {Data} target @param {string} key @param {any} value */
+/** @param {Data} target @param {string} key @param {unknown} value */
 function put(target, key, value) { Object.defineProperty(target, key, { value, enumerable: true, writable: true, configurable: true }) }
 /** Copy JSON data without retaining references or invoking getters. Undefined is not JSON. */
 function copy(value, depth = 0) {
@@ -72,7 +76,77 @@ function definitions(model, operation) {
   for (const source of [model.parameters ?? {}, operation.parameters ?? {}]) for (const key of Object.keys(source)) put(out, key, copy(source[key]))
   return out
 }
-/** Remove only defaults for judgment; materialized option metadata is not domain semantics. */
+/** Only the registered voice materializer's identified picker metadata is non-domain data. */
+function optionProjection(option) {
+  if (primitive(option)) return option
+  if (!bounded(option, ['value', 'label', 'meta'])) return null
+  if (own(option, 'meta')) {
+    const meta = option.meta
+    if (!bounded(meta, ['voice_type', 'name', 'display_name', 'category', 'language', 'accent', 'gender', 'tags', 'resource_id', 'is_hot', 'hot_order', 'preview'])
+      || !name(meta.voice_type) || meta.voice_type !== option.value || meta.display_name !== option.label
+      || !bounded(meta.preview, ['purpose', 'state', 'primary_url', 'candidates', 'checked_at', 'evidence_ref'])
+      || meta.preview.purpose !== 'official-voice-preview' || !['verified-file', 'unverified'].includes(meta.preview.state)
+      || ['voice_type', 'name', 'display_name', 'category', 'language', 'accent', 'gender', 'resource_id'].some(key => own(meta, key) && typeof meta[key] !== 'string')
+      || (own(meta, 'tags') && (!array(meta.tags) || !meta.tags.every(name)))
+      || (own(meta, 'is_hot') && typeof meta.is_hot !== 'boolean') || (own(meta, 'hot_order') && !count(meta.hot_order))
+      || !array(meta.preview.candidates) || !meta.preview.candidates.every(name)
+      || ['primary_url', 'checked_at', 'evidence_ref'].some(key => !own(meta.preview, key) || (meta.preview[key] !== null && !name(meta.preview[key])))) return null
+  }
+  return pick(option, ['value', 'label'])
+}
+/** Recursive positive digest projection. Unknown semantic keys retain presence, never arbitrary values. */
+function semantic(value, kind) {
+  if (primitive(value)) return value
+  if (array(value)) return value.map(item => semantic(item, kind))
+  if (!record(value)) throw new TypeError('invalid data')
+  if (kind === 'fields') {
+    const out = {}
+    for (const field of Object.keys(value)) put(out, field, semantic(value[field], 'parameter'))
+    return out
+  }
+  if (kind === 'parameterConstraints') {
+    const out = {}
+    for (const field of Object.keys(value)) put(out, field, semantic(value[field], 'parameterConstraint'))
+    return out
+  }
+  const shapes = {
+    model: { id: '', label: '', family: '', badge: '', subtitle: '', role: '', managementGroup: '', aliases: '', listed: '', listedOperations: '',
+      parameters: 'fields', operations: 'operation', research: 'status', implementation: 'status', execution: 'status', routing: 'routing' },
+    operation: { id: '', label: '', listed: '', aliases: '', research: 'status', implementation: 'status', execution: 'status',
+      inputs: 'input', inputGroups: 'inputGroup', parameters: 'fields', output: 'output' },
+    status: { status: '', verifiedAt: '', profileId: '', seam: '' },
+    routing: { channel: '', wireModel: '', protocol: '', automaticFallback: '' },
+    parameter: { ...Object.fromEntries(PARAM_KEYS.map(key => [key, ''])), options: 'option', range: 'range', defaultValue: '', optionsFrom: '', label: '' },
+    option: { value: '', label: '' }, range: { min: '', max: '', step: '' },
+    input: { ...Object.fromEntries(INPUT_KEYS.map(key => [key, ''])), valueSources: '', composition: 'composition', limitSource: 'limitSource' },
+    composition: { kind: '', localRole: '' }, limitSource: { kind: '' }, inputGroup: { slots: '', min: '' },
+    output: { type: '', allowedMimes: '', min: '', max: '' },
+    group: { id: '', wireGroup: '', wireModel: '', channelId: '', protocol: '', enabled: '', constraints: 'constraints' },
+    constraints: { operations: '', parameters: 'parameterConstraints', inputs: 'mediaConstraints' },
+    parameterConstraint: { fixed: '', only: '', supported: '' }, mediaConstraints: { image: 'mediaConstraint', video: 'mediaConstraint', audio: 'mediaConstraint' },
+    mediaConstraint: { max: '' }, registry: { version: '', operations: 'registeredOperation' },
+    registeredOperation: { id: '', label: '', group: '', defaultOutputType: '', promptPolicy: '' },
+    identity: { canonicalModelId: '', channelId: '', realGroupId: '', wireGroup: '', wireModel: '', operationId: '', purpose: '', protocol: '', mappingDigest: '' },
+    domain: { inputs: 'input', inputGroups: 'inputGroup', parameters: 'fields', output: 'output', constraints: 'constraints' },
+    evidence: { identity: 'identity', domain: 'domain', active: '', sourceDigest: '', documentVersion: '', sample: 'sample' },
+    sample: { mode: '', taskId: '', output: 'outputFacts' },
+    outputFacts: { type: '', verified: '', count: '', mime: '', sizeBytes: '', durationSec: '', width: '', height: '', digest: '', outputId: '', outputVersion: '' },
+  }
+  const shape = shapes[kind] ?? {}, out = {}, unknown = []
+  const metadata = ['label', 'help', 'description', 'notes', 'docUrl', 'meta', 'hint']
+  for (const key of Object.keys(value)) {
+    if (own(shape, key)) put(out, key, shape[key] ? semantic(value[key], shape[key]) : scalarSemantics(value[key]))
+    else if (!metadata.includes(key) && !['sample', 'outputFacts', 'evidence', 'identity', 'status', 'routing', 'model', 'operation', 'registry', 'registeredOperation'].includes(kind)) unknown.push(key)
+  }
+  return { values: out, unknown: unknown.sort() }
+}
+function scalarSemantics(value) {
+  if (primitive(value)) return value
+  if (array(value)) return value.map(scalarSemantics)
+  if (!record(value)) throw new TypeError('invalid data')
+  return { unknown: Object.keys(value).sort() }
+}
+/** Remove only defaults for judgment; unknown options remain unproven. */
 function judgmentDefinitions(defs) {
   if (!record(defs)) return defs
   const out = {}
@@ -81,7 +155,7 @@ function judgmentDefinitions(defs) {
     if (!record(def)) { put(out, field, def); continue }
     const clean = {}
     for (const key of Object.keys(def)) if (key !== 'defaultValue') put(clean, key, copy(def[key]))
-    if (array(clean.options)) clean.options = clean.options.map(option => record(option) ? pick(option, ['value', 'label']) : option)
+    if (array(clean.options)) clean.options = clean.options.map(option => primitive(option) ? option : optionProjection(option) ?? {})
     put(out, field, clean)
   }
   return out
@@ -95,7 +169,8 @@ function publicDefinitions(defs) {
     const clean = pick(def, PARAM_KEYS)
     if (own(clean, 'options')) {
       if (!array(clean.options)) return null
-      clean.options = clean.options.map(option => record(option) ? pick(option, ['value', 'label']) : option)
+      if (def.options.some(option => !primitive(option) && optionProjection(option) === null)) return null
+      clean.options = def.options.map(optionProjection)
       if (clean.options.some(option => !primitive(option) && (!bounded(option, ['value', 'label']) || !own(option, 'value') || !primitive(option.value) || (own(option, 'label') && typeof option.label !== 'string')))) return null
     }
     if (checkParameterMember(clean, undefined, { mode: 'canonical' }).status === 'indeterminate') return null
@@ -145,10 +220,10 @@ function result(currentFingerprint, status, issues, requestFingerprint) {
  * One fresh authoritative snapshot per call. Missing production qualification stays pending.
  * Dependencies are server-owned read-only sources, never request-supplied eligibility.
  * @param {Dependencies} [deps]
- * @returns {{list: () => Data, preparePreview: (request: unknown) => Data}}
+ * @returns {{list: () => Data, preparePreview: (request: unknown) => PreviewV1}}
  */
 export function createGenerationProducts(deps = {}) {
-  const readIndex = deps.readIndex ?? (() => loadAll(undefined, { useCache: false }))
+  const readIndex = deps.readIndex ?? (() => { resetSchemaCaches(); return loadAll(undefined, { useCache: false }) })
   const readGroups = deps.readGroups ?? getModelChannelGroups
   function snapshot() {
     const index = readIndex()
@@ -170,7 +245,7 @@ export function createGenerationProducts(deps = {}) {
       const groups = readGroups(raw.id)
       if (!array(groups)) throw new Error('catalog unavailable')
       const mappingGroups = groups.map(g => pick(g, ['id', 'wireGroup', 'wireModel', 'channelId', 'protocol', 'enabled', 'constraints']))
-      covered.push({ model, groups: mappingGroups })
+      covered.push({ model: semantic(model, 'model'), groups: semantic(mappingGroups, 'group') })
       for (const operation of model.operations) {
         const policy = POLICY.find(p => p.type === operation.output?.type && p.intents.includes(operation.id))
         const registered = registry.operations.find(op => op.id === operation.id && op.defaultOutputType === policy?.type)
@@ -183,7 +258,7 @@ export function createGenerationProducts(deps = {}) {
             ...((group.channelId ?? model.routing?.channel) !== undefined ? { channelId: group.channelId ?? model.routing.channel } : {}),
             ...((group.protocol ?? model.routing?.protocol) !== undefined ? { protocol: group.protocol ?? model.routing.protocol } : {}) }
           if (!own(identity, 'wireModel') && model.routing?.wireModel !== undefined) identity.wireModel = model.routing.wireModel
-          identity.mappingDigest = hash({ identity, enabled: group.enabled ?? null, constraints })
+          identity.mappingDigest = hash({ identity, enabled: group.enabled ?? null, constraints: semantic(constraints, 'constraints') })
           const domain = { inputs: copy(operation.inputs), inputGroups: copy(operation.inputGroups ?? []), parameters: copy(defs), output: copy(operation.output), constraints: copy(constraints) }
           const proof = deps.readQualification ? deps.readQualification(freeze(copy({ identity, domain }))) : null
           const evidence = record(proof) ? pick(proof, ['identity', 'domain', 'active', 'sourceDigest', 'documentVersion', 'sample']) : null
@@ -193,7 +268,12 @@ export function createGenerationProducts(deps = {}) {
           else if (group.enabled === true && complete && evidence?.active === true && /^[a-f0-9]{64}$/.test(evidence.sourceDigest)
             && name(evidence.documentVersion) && evidence.sample?.mode === 'live' && name(evidence.sample.taskId)
             && evidence.sample.output?.verified === true && evidence.sample.output.type === domain.output.type
-            && hash(evidence.identity) === hash(identity) && hash(evidence.domain) === hash(domain)) eligibility = 'eligible'
+            && record(evidence.identity) && ['canonicalModelId', 'channelId', 'realGroupId', 'wireGroup', 'wireModel', 'operationId', 'purpose', 'protocol', 'mappingDigest'].every(key => name(evidence.identity[key]))
+            && hash(evidence.domain) === hash(domain)) {
+            const bound = ['channelId', 'realGroupId', 'wireGroup', 'wireModel', 'protocol', 'mappingDigest'].every(key => evidence.identity[key] === identity[key])
+            if (bound && ['canonicalModelId', 'operationId', 'purpose'].some(key => evidence.identity[key] !== identity[key])) eligibility = 'rejected'
+            else if (hash(evidence.identity) === hash(identity)) eligibility = 'eligible'
+          }
           const projected = publicDomain(operation, defs, constraints)
           const coreOperation = { id: operation.id, inputs: projected ? projected.inputs : copy(operation.inputs), inputGroups: projected ? projected.inputGroups : copy(operation.inputGroups ?? []) }
           const core = { operation: coreOperation, parameters: judgmentDefinitions(defs), constraints: copy(constraints), knownOperationIds: [...knownOperationIds], currentEligibility: eligibility }
@@ -202,7 +282,7 @@ export function createGenerationProducts(deps = {}) {
       }
     }
     return { candidates, registry, currentFingerprint: hash({ schemaVersion: 1, policyVersion: 1, policy: POLICY, contractVersion: index.schemaVersion,
-      covered, registry, qualifications: candidates.map(c => ({ identity: c.identity, evidence: c.evidence })) }) }
+      covered, registry: semantic(registry, 'registry'), qualifications: candidates.map(c => ({ identity: semantic(c.identity, 'identity'), evidence: semantic(c.evidence, 'evidence'), eligibility: c.core.currentEligibility, domainProven: c.projected !== null })) }) }
   }
   function list() {
     const current = snapshot()
@@ -229,6 +309,7 @@ export function createGenerationProducts(deps = {}) {
       return { productId: policy.productId, label: policy.label, status: directoryStatus(intents.map(i => i.status)), intents }
     }) }
   }
+  /** @param {unknown} request @returns {PreviewV1} */
   function preparePreview(request) {
     const current = snapshot(), fingerprint = current.currentFingerprint
     const reject = code => result(fingerprint, 'rejected', [{ code }])
@@ -280,14 +361,15 @@ export function createGenerationProducts(deps = {}) {
       if (consensus) { put(logicalParameters, field, first.defaultValue); put(parameterSources, field, { source: 'definition-default', value: first.defaultValue }) }
       else authority = 'unresolved'
     }
+    const frozenPrompt = own(logicalParameters, 'prompt') ? logicalParameters.prompt : prompt
     // Top-only prompt has one transport view per declared-presence, not one default per candidate.
     const snapshots = candidates.map(candidate => {
       const logical = copy(logicalParameters), sources = copy(parameterSources)
       if (!own(parameters, 'prompt') && !own(candidate.defs ?? {}, 'prompt')) { delete logical.prompt; delete sources.prompt }
-      return freeze({ assets, ...(prompt !== undefined ? { prompt } : {}), logicalParameters: logical, parameterSources: sources, parameterAuthority: authority })
+      return freeze({ assets, ...(frozenPrompt !== undefined ? { prompt: frozenPrompt } : {}), logicalParameters: logical, parameterSources: sources, parameterAuthority: authority })
     })
     const requestFingerprint = hash({ currentFingerprint: fingerprint, productId: policy.productId, intent: request.intent,
-      assets, ...(prompt !== undefined ? { prompt } : {}), logicalParameters, parameterSources, parameterAuthority: authority })
+      assets, ...(frozenPrompt !== undefined ? { prompt: frozenPrompt } : {}), logicalParameters, parameterSources, parameterAuthority: authority })
     const results = candidates.map((candidate, index) => {
       const checked = evaluateCandidateRequest(candidate.core, snapshots[index])
       if (!candidate.projected && checked.status !== 'rejected') return { status: 'indeterminate', diagnostics: [...checked.diagnostics, { code: 'unchecked_constraint' }] }
