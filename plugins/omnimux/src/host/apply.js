@@ -33,6 +33,7 @@ import { mountAudioVoices } from '../media/voices-mount.js'
 import { executeOmnimuxSpeechToText } from '../media/stt.js'
 import { mountTextComplete } from '../text/mount.js'
 import { buildModelCatalog } from '../catalog/list.js'
+import { createGenerationProducts } from '../catalog/generation-products.js'
 import { listSessionModels } from '../catalog/session-models.js'
 import { createComposerListSync } from '../catalog/composer-sync.js'
 import { SettingsConfig } from '../settings/schema.js'
@@ -114,7 +115,9 @@ export function apply(ctx, config = {}) {
     }
   }
 
+  const generationProducts = createGenerationProducts()
   const httpDeps = {
+    products: generationProducts,
     store,
     identity,
     siteBaseUrl,
@@ -332,6 +335,7 @@ export function apply(ctx, config = {}) {
   mountContractsPrompt(ctx)
   if (typeof ctx.provide === 'function') {
     ctx.provide('modelCatalog', { list: listCatalog })
+    ctx.provide('generationProducts', generationProducts)
   }
 
   /**
