@@ -13,9 +13,10 @@ import ts from 'typescript'
 const hub = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const root = resolve(hub, '../..')
 const core = join(root, 'packages/generation-capabilities')
-const scope = join(root, '.tmp/3264')
-const sources = ['package.json', 'src/assets.js', 'src/codes.js', 'src/index.js', 'src/parameters.js', 'src/units.js', 'types/index.d.ts']
+const scope = join(root, '.tmp/3267-implementation')
+const sources = ['package.json', 'src/assets.js', 'src/candidate.js', 'src/codes.js', 'src/index.js', 'src/parameters.js', 'src/units.js', 'types/index.d.ts']
 const facades = ['src/catalog/contract/units.js', 'src/catalog/contract/submit-guard/codes.js', 'src/catalog/contract/submit-guard/slots.js']
+const candidatePackScript = `const c = {operation:{id:'op',inputs:[]},parameters:{n:{type:'number',options:[5]}},constraints:{},knownOperationIds:['op'],currentEligibility:'eligible'}; const s = {assets:[],logicalParameters:{n:5},parameterSources:{n:{source:'explicit',value:5}},parameterAuthority:'resolved'}; const ready = core.evaluateCandidateRequest(c,s); if (ready.status!=='ready' || ready.effectiveParameters.n!==5) throw new Error('packed candidate positive'); const rejected = core.evaluateCandidateRequest({...c,constraints:{parameters:{n:{fixed:15}}}},s); if(rejected.status!=='rejected' || rejected.assignment!==undefined) throw new Error('packed candidate negative');`
 const sha = (text) => createHash('sha256').update(text).digest('hex')
 function digest(directory) {
   const hash = createHash('sha256')
@@ -113,7 +114,7 @@ test('pure shared source and neutral/browser bundle have no runtime dependency o
   assert.equal(pkg.sideEffects, false)
   assert.deepEqual(pkg.dependencies ?? {}, {})
   assert.deepEqual(pkg.peerDependencies ?? {}, {})
-  assert.deepEqual(readdirSync(join(core, 'src')).sort(), ['assets.js', 'codes.js', 'index.js', 'parameters.js', 'units.js'])
+  assert.deepEqual(readdirSync(join(core, 'src')).sort(), ['assets.js', 'candidate.js', 'codes.js', 'index.js', 'parameters.js', 'units.js'])
   for (const file of sources.filter((file) => file.endsWith('.js'))) assertPure(readFileSync(join(core, file), 'utf8'), file, true)
   for (const platform of ['neutral', 'browser']) {
     const result = await esbuild.build({ absWorkingDir: core, entryPoints: ['src/index.js'], bundle: true, platform, format: 'esm', write: false, metafile: true })
@@ -230,6 +231,65 @@ test('parameter consumers narrow domain/default failures and strict JS agrees wi
   assert.deepEqual(ts.getPreEmitDiagnostics(program).map((item) => ts.flattenDiagnosticMessageText(item.messageText, '\n')), [])
 })
 
+test('candidate consumers forbid sensitive complete variables and strict source agrees without any', () => {
+  const filename = join(core, 'candidate-type-consumer.ts')
+  const text = `
+    import { evaluateCandidateRequest, type Candidate, type CandidateSnapshot, type CandidateAsset, type CandidatePolicy, type CheckedAssignment } from './types/index.js';
+    const base: Candidate = { operation: { id: 'op', inputs: [] }, parameters: {}, constraints: {}, knownOperationIds: ['op'], currentEligibility: 'eligible' };
+    const snapshot: CandidateSnapshot<CandidateAsset> = { assets: [{ type: 'image' }], logicalParameters: {}, parameterSources: {}, parameterAuthority: 'resolved' };
+    const result = evaluateCandidateRequest(base, snapshot, { maxStates: 100000 });
+    if (result.status === 'ready') { const a: CheckedAssignment<CandidateAsset> = result.assignment; const original: CandidateAsset = a.bindings[0].asset; const value: string | boolean | number | null | undefined = result.effectiveParameters.x; void original; void value; }
+    else {
+      // @ts-expect-error failures expose no assignment
+      const assignment: CheckedAssignment<CandidateAsset> = result.assignment;
+      void assignment;
+    }
+    const providerVariable = { ...base, provider: 'private' };
+    // @ts-expect-error sensitive property on a complete variable is forbidden
+    const provider: Candidate = providerVariable;
+    const profileVariable = { ...base, profile: 'private' };
+    // @ts-expect-error sensitive property on a complete variable is forbidden
+    const profile: Candidate = profileVariable;
+    const endpointVariable = { ...base, endpoint: 'private' };
+    // @ts-expect-error sensitive property on a complete variable is forbidden
+    const endpoint: Candidate = endpointVariable;
+    const costVariable = { ...base, purchaseCost: 1 };
+    // @ts-expect-error sensitive property on a complete variable is forbidden
+    const cost: Candidate = costVariable;
+    // @ts-expect-error candidate assets require a media type
+    const missingType: CandidateAsset = { role: 'reference' };
+    // @ts-expect-error text is not classified media
+    const textType: CandidateAsset = { type: 'text' };
+    // @ts-expect-error request assets are readonly
+    snapshot.assets.push({ type: 'image' });
+    // @ts-expect-error logical values are readonly
+    snapshot.logicalParameters.x = 1;
+    // @ts-expect-error sources are readonly
+    snapshot.parameterSources.x = { source: 'absent' };
+    // @ts-expect-error policy has no strategy
+    const policy: CandidatePolicy = { strategy: 'strict' };
+    // @ts-expect-error eligibility is an exact enum
+    const boolHint: Candidate = { ...base, currentEligibility: true };
+    // @ts-expect-error authority is an exact enum
+    const boolAuthority: CandidateSnapshot<CandidateAsset> = { ...snapshot, parameterAuthority: true };
+    // @ts-expect-error explicit source requires its own value
+    const incompleteSource: CandidateSnapshot<CandidateAsset> = { ...snapshot, parameterSources: { n: { source: 'explicit' } } };
+    void provider; void profile; void endpoint; void cost; void missingType; void textType; void policy; void boolHint; void boolAuthority; void incompleteSource;
+  `
+  const options = { strict: true, noEmit: true, allowJs: true, checkJs: true, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, types: [] }
+  const host = ts.createCompilerHost(options)
+  const get = host.getSourceFile.bind(host)
+  let consumer = text
+  host.getSourceFile = (file, version, onError, fresh) => file === filename ? ts.createSourceFile(filename, consumer, options.target, true) : get(file, version, onError, fresh)
+  host.writeFile = () => { throw new Error('candidate type check cannot emit') }
+  const check = () => ts.getPreEmitDiagnostics(ts.createProgram([filename, join(core, 'src/candidate.js')], options, host))
+  assert.deepEqual(check().map(item => ts.flattenDiagnosticMessageText(item.messageText, '\n')), [])
+  consumer = text.replace("const providerVariable = { ...base, provider: 'private' };", 'const providerVariable = { ...base };')
+  assert.ok(check().some(item => item.code === 2578), 'unused negative assertions must fail')
+  const source = ts.createSourceFile('candidate.js', readFileSync(join(core, 'src/candidate.js'), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+  assert.ok(!/\bany\b/.test(source.text), 'candidate source may not widen to any')
+})
+
 test('old facades share export identity and retain Map, original assets and valid legacy witnesses', async () => {
   const shared = await import(pathToFileURL(join(core, 'src/index.js')))
   const units = await import('./contract/units.js')
@@ -289,7 +349,7 @@ test('real Hub npm tarball relocates with only local low-level facades; missing 
     assert.equal(seen.size, 4)
     writeFileSync(join(dir, 'isolate.mjs'), `import { registerHooks } from 'node:module'; import { fileURLToPath } from 'node:url'; import { resolve, sep } from 'node:path'; const root = resolve(${JSON.stringify(relocated)}) + sep; registerHooks({ resolve(specifier, context, next) { const r = next(specifier, context); if (!r.url.startsWith('file:') || !fileURLToPath(r.url).startsWith(root)) throw new Error('outside packed closure: ' + specifier); return r; } });`)
     const script = `const core = await import('./lib/generation-core.js'); if (core.checkParameterMember({options:[5],range:{min:4,step:2}},5).status !== 'member' || core.checkParameterMember({range:{min:.1,step:.1}},.31).status !== 'nonmember') throw new Error('packed parameter mismatch'); const units = await import('./src/catalog/contract/units.js'); const codes = await import('./src/catalog/contract/submit-guard/codes.js'); const slots = await import('./src/catalog/contract/submit-guard/slots.js'); const asset = { type:'image', role:'reference', targetSlot:'reference_image', pathOrUrl:'/fixture.png', sizeBytes:1048576 }; const r = slots.assignAndValidateSlots({ inputs:[{slot:'reference_images',type:'image',role:'reference',min:1,max:1,maxSizeMb:1}] }, [asset]); if (units.mbToBytes(1)!==1048576 || codes.GUARD_CODES.SIZE_EXCEEDED!=='size_exceeded' || !r.ok || !(r.bySlot instanceof Map) || r.bindings[0].asset!==asset) throw new Error('packed facade mismatch');`
-    run(process.execPath, ['--import', join(dir, 'isolate.mjs'), '--input-type=module', '-e', script], relocated)
+    run(process.execPath, ['--import', join(dir, 'isolate.mjs'), '--input-type=module', '-e', script + candidatePackScript], relocated)
     rmSync(join(relocated, 'lib/generation-core.js'))
     for (const facade of facades) {
       const missing = run(process.execPath, ['--import', join(dir, 'isolate.mjs'), '--input-type=module', '-e', `await import('./${facade}')`], relocated, false)
@@ -300,7 +360,7 @@ test('real Hub npm tarball relocates with only local low-level facades; missing 
 })
 
 test('materialized Hub pnpm pack works without workspace sources or installed dependencies', () => {
-  const packScope = join(root, '.tmp/3264')
+  const packScope = scope
   mkdirSync(packScope, { recursive: true })
   const dir = mkdtempSync(join(packScope, 'materialized-'))
   try {
@@ -356,6 +416,11 @@ test('materialized Hub pnpm pack works without workspace sources or installed de
     facades.forEach((file) => closure(join(managed, file)))
     assert.equal(seen.size, 4)
     assert.equal(sha(readFileSync(join(managed, 'lib/generation-core.js'))), sha(readFileSync(join(hub, 'lib/generation-core.js'))))
+    writeFileSync(join(dir, 'isolate.mjs'), `import { registerHooks } from 'node:module'; import { fileURLToPath } from 'node:url'; import { resolve, sep } from 'node:path'; const root = resolve(${JSON.stringify(managed)}) + sep; registerHooks({ resolve(specifier, context, next) { const r = next(specifier, context); if (!r.url.startsWith('file:') || !fileURLToPath(r.url).startsWith(root)) throw new Error('outside managed closure: ' + specifier); return r; } });`)
+    run(process.execPath, ['--import', join(dir, 'isolate.mjs'), '--input-type=module', '-e', "const core = await import('./lib/generation-core.js'); " + candidatePackScript], managed)
+    rmSync(join(managed, 'lib/generation-core.js'))
+    const missing = run(process.execPath, ['--import', join(dir, 'isolate.mjs'), '--input-type=module', '-e', "await import('./lib/generation-core.js')"], managed, false)
+    assert.notEqual(missing.status, 0); assert.match(missing.stderr, /ERR_MODULE_NOT_FOUND|Cannot find module/)
     console.log(`materialized pnpm current manifest: exit ${green.status}, ${files.size} files, ${seen.size} local closure files`)
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
@@ -383,7 +448,20 @@ test('actual build-client entry rebuilds changed source deterministically and re
     const units = join(fixtureCore, 'src/units.js')
     writeFileSync(units, readFileSync(units, 'utf8').replace('1024 * 1024', '1024 * 1024 + 1'))
     run(process.execPath, ['scripts/build-client.mjs'], fixtureHub)
+    const unitChanged = readFileSync(artifact, 'utf8')
+    const unitLoaded = await import(`${pathToFileURL(artifact).href}?unit`)
+    assert.equal(unitLoaded.mbToBytes(1), 1048577)
+    const candidatePath = join(fixtureCore, 'src/candidate.js')
+    const candidateText = readFileSync(candidatePath, 'utf8')
+    assert.ok(candidateText.includes("issue('indeterminate', 'unknown_operation')"))
+    writeFileSync(candidatePath, candidateText.replace("issue('indeterminate', 'unknown_operation')", "issue('indeterminate', 'malformed_input')"))
+    run(process.execPath, ['scripts/build-client.mjs'], fixtureHub)
+    const mutatedCandidate = await import(`${pathToFileURL(artifact).href}?candidate`)
+    const mutated = mutatedCandidate.evaluateCandidateRequest({ operation: { id: 'op', inputs: [] }, parameters: {}, constraints: {}, knownOperationIds: [], currentEligibility: 'eligible' }, { assets: [], logicalParameters: {}, parameterSources: {}, parameterAuthority: 'resolved' })
+    assert.ok(mutated.diagnostics.some(reason => reason.code === 'malformed_input'))
+    assert.ok(!mutated.diagnostics.some(reason => reason.code === 'unknown_operation'))
     const changed = readFileSync(artifact, 'utf8')
+    assert.notEqual(sha(changed), sha(unitChanged))
     assert.notEqual(sha(changed), sha(first))
     assert.ok(changed.startsWith(`// Generated from @omnimux/generation-capabilities; source-sha256: ${digest(fixtureCore)}\n`))
     const loaded = await import(`${pathToFileURL(artifact).href}?changed`)

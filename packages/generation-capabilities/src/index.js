@@ -2,3 +2,4 @@ export { BYTES_PER_MB, mbToBytes, isWithinSizeLimit, isWithinDurationLimit } fro
 export { GUARD_CODES } from './codes.js'
 export { SLOT_ALIASES, getSlotAliases, validateAssetAgainstSlot, solveAssetAssignment } from './assets.js'
 export { checkParameterMember, evaluateDeclaredParameters } from './parameters.js'
+export { evaluateCandidateRequest } from './candidate.js'

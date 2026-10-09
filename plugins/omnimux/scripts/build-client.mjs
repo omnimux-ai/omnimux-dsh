@@ -10,7 +10,7 @@ const metaFile = join(root, 'lib', 'client.metafile.json')
 
 // Host loads src directly; its rule facades must resolve only this packaged bundle.
 const coreRoot = join(root, '..', '..', 'packages', 'generation-capabilities')
-const coreSources = ['package.json', 'src/assets.js', 'src/codes.js', 'src/index.js', 'src/parameters.js', 'src/units.js', 'types/index.d.ts']
+const coreSources = ['package.json', 'src/assets.js', 'src/candidate.js', 'src/codes.js', 'src/index.js', 'src/parameters.js', 'src/units.js', 'types/index.d.ts']
 const sourceHash = createHash('sha256')
 for (const file of coreSources) {
   sourceHash.update(file).update('\0').update(readFileSync(join(coreRoot, file))).update('\0')

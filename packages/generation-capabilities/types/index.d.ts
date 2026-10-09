@@ -170,6 +170,41 @@ export type AssignmentResult<A extends GenerationAsset = GenerationAsset> = Assi
 );
 export function solveAssetAssignment<A extends GenerationAsset>(operation: AssignmentOperation, assets: readonly (A | null | undefined)[], context?: AssignmentContext, policy?: AssignmentPolicy): AssignmentResult<A>;
 
+export type MediaType = 'image' | 'video' | 'audio';
+export type CandidateAsset = GenerationAsset & { readonly type: MediaType };
+export type CandidateOperation = AssignmentOperation & { readonly id: string };
+export interface ParameterLimit { readonly fixed?: ParameterPrimitive; readonly only?: readonly ParameterPrimitive[]; readonly supported?: boolean }
+export interface Constraints {
+  readonly operations?: readonly string[];
+  readonly parameters?: Readonly<Record<string, ParameterLimit>>;
+  readonly inputs?: Readonly<Partial<Record<MediaType, { readonly max?: number }>>>;
+}
+export interface Candidate {
+  readonly operation: CandidateOperation;
+  readonly parameters: Readonly<Record<string, ParameterDefinition>>;
+  readonly constraints: Constraints;
+  readonly knownOperationIds: readonly string[];
+  readonly currentEligibility: 'eligible' | 'pending' | 'rejected';
+  readonly provider?: never; readonly profile?: never; readonly endpoint?: never; readonly purchaseCost?: never;
+}
+export interface CandidatePolicy { readonly maxStates?: number }
+export type LogicalSource = { readonly source: 'explicit' | 'definition-default'; readonly value: ParameterPrimitive } | { readonly source: 'absent'; readonly value?: never };
+export type EffectiveSource = 'explicit' | 'definition-default' | 'absent' | 'omitted-by-group';
+export interface CandidateSnapshot<A extends CandidateAsset> {
+  readonly assets: readonly A[];
+  readonly prompt?: string;
+  readonly logicalParameters: Readonly<Record<string, ParameterPrimitive>>;
+  readonly parameterSources: Readonly<Record<string, LogicalSource>>;
+  readonly parameterAuthority: 'resolved' | 'unresolved';
+}
+export type CandidateCode = 'malformed_input' | 'malformed_constraint' | 'unknown_operation' | 'unknown_field' | 'parameter_nonmember' | 'parameter_indeterminate' | 'empty_domain' | 'fixed_conflict' | 'disabled' | 'source_mismatch' | 'default_ambiguous' | 'input_limit' | 'media_unclassified' | 'asset_rejected' | 'asset_pending' | 'asset_indeterminate' | 'completion_unproven' | 'unchecked_constraint' | 'eligibility_pending' | 'eligibility_rejected';
+export interface CandidateDiagnostic { readonly code: CandidateCode; readonly field?: string; readonly assetIndex?: number; readonly slotIndex?: number }
+export type CheckedAssignment<A extends CandidateAsset> = Extract<AssignmentResult<A>, { readonly status: 'ready' }> & { readonly uncheckedConstraints: readonly [] };
+export type CandidateResult<A extends CandidateAsset> =
+  | { readonly status: 'ready'; readonly effectiveParameters: Readonly<Record<string, ParameterPrimitive>>; readonly parameterSources: Readonly<Record<string, EffectiveSource>>; readonly assignment: CheckedAssignment<A>; readonly diagnostics: readonly [] }
+  | { readonly status: 'pending' | 'rejected' | 'indeterminate'; readonly diagnostics: readonly CandidateDiagnostic[]; readonly effectiveParameters?: never; readonly parameterSources?: never; readonly assignment?: never };
+export function evaluateCandidateRequest<A extends CandidateAsset>(candidate: Candidate, snapshot: CandidateSnapshot<A>, policy?: CandidatePolicy): CandidateResult<A>;
+
 export type ParameterPrimitive = string | boolean | number | null;
 export interface ParameterPolicy { readonly mode?: 'canonical' | 'legacyGuard' }
 export interface ParameterDefinition {

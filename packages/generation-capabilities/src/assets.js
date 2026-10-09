@@ -17,7 +17,8 @@ export const SLOT_ALIASES = Object.freeze({
  */
 export function getSlotAliases(slotName) {
   if (!slotName || typeof slotName !== 'string') return []
-  return SLOT_ALIASES[/** @type {keyof typeof SLOT_ALIASES} */ (slotName)] || []
+  return Object.prototype.hasOwnProperty.call(SLOT_ALIASES, slotName)
+    ? SLOT_ALIASES[/** @type {keyof typeof SLOT_ALIASES} */ (slotName)] : []
 }
 
 /**
