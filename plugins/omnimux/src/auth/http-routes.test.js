@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { apply } from '../index.js'
-import { createAuthDispatcher, sendJson, SECRET_PATTERN } from './http-routes.js'
+import { createAuthDispatcher, readJsonBody, sendJson, SECRET_PATTERN } from './http-routes.js'
 import { createPendingStore } from './pending.js'
 import { createTokenStore } from './store.js'
 
@@ -15,6 +15,21 @@ function jsonResponse(status, json) {
     json: async () => json,
   }
 }
+
+describe('readJsonBody optional byte bound', () => {
+  it('preserves unbounded legacy calls and accepts exactly the UTF8 byte limit', async () => {
+    const text = JSON.stringify({ value: '中文' })
+    const req = () => ({ async *[Symbol.asyncIterator]() { yield Buffer.from(text) } })
+    assert.deepEqual(await readJsonBody(req()), { value: '中文' })
+    assert.deepEqual(await readJsonBody(req(), Buffer.byteLength(text)), { value: '中文' })
+  })
+  it('throws the explicit oversize sentinel immediately without consuming later chunks', async () => {
+    let reads = 0
+    const req = { async *[Symbol.asyncIterator]() { reads++; yield Buffer.from('中文'); reads++; yield Buffer.from('unused') } }
+    await assert.rejects(() => readJsonBody(req, 5), error => error.code === 'request_too_large')
+    assert.equal(reads, 1)
+  })
+})
 
 describe('auth http dispatcher', () => {
   it('starts a flow without leaking the device code and stores the PAT on success', async () => {
@@ -276,6 +291,8 @@ describe('auth http dispatcher', () => {
       'exact:/omnimux/auth/logout',
       'exact:/omnimux/capabilities',
       'exact:/omnimux/model-catalog',
+      'exact:/omnimux/generation-products',
+      'exact:/omnimux/generation-products/preview',
       'prefix:/omnimux/plugins',
       'prefix:/omnimux/apps',
       'prefix:/omnimux/accounts',
