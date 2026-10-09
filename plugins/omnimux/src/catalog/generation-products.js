@@ -3,6 +3,7 @@ import { canonicalStringify, loadAll } from './contract/load.js'
 import { resetSchemaCaches } from './contract/schema.js'
 import { getModelChannelGroups } from './serving/channel-groups.js'
 import { adapterProfileCompatible } from './contract/status.js'
+import { assertVendorBodyAllowed, resolveProfilePayloadContract } from './contract/submit-guard/map-contract.js'
 import { createGenerationMapping } from '../media/generation-mapping.js'
 import { parseMediaConfig } from '../media/route.js'
 import { checkParameterMember, evaluateCandidateRequest } from '../../lib/generation-core.js'
@@ -124,7 +125,10 @@ function currentProfile(profiles, operation) {
     if (malformed) return pending(unknown.sort())
   }
   const clean = pick(profile, PROFILE_KEYS)
-  const proven = unknown.length === 0 && adapterProfileCompatible(operation, { profiles: [clean] }).ok
+  const required = resolveProfilePayloadContract(clean).operationVendorShapes?.[operation.id]?.require ?? []
+  // The existing body contract decides whether required names can coexist with its allow/forbid rules.
+  const shapeCompatible = !required.length || assertVendorBodyAllowed(Object.fromEntries(required.map(field => [field, true])), clean, operation.id).ok
+  const proven = unknown.length === 0 && shapeCompatible && adapterProfileCompatible(operation, { profiles: [clean] }).ok
   return { proven, semantic: { proven, profile: semantic(clean, 'profile'), unknown } }
 }
 function definitions(model, operation) {
