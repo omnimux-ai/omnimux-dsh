@@ -1,4 +1,4 @@
-// Generated from @omnimux/generation-capabilities; source-sha256: 5586e322120980fab414e1bdd68d585fedf1961c45d62ba15dcdd58238f6b63e
+// Generated from @omnimux/generation-capabilities; source-sha256: fbc1c8ce19b43ba731cb9a4a3f1cf355bd07fce83623ca991a22565c2a18cd21
 
 // src/units.js
 var BYTES_PER_MB = 1024 * 1024;
@@ -77,10 +77,10 @@ var SLOT_ALIASES = Object.freeze({
 });
 function getSlotAliases(slotName) {
   if (!slotName || typeof slotName !== "string") return [];
-  return SLOT_ALIASES[
+  return Object.prototype.hasOwnProperty.call(SLOT_ALIASES, slotName) ? SLOT_ALIASES[
     /** @type {keyof typeof SLOT_ALIASES} */
     slotName
-  ] || [];
+  ] : [];
 }
 function rejection(code, message, extra) {
   return { code, message, ...extra };
@@ -206,7 +206,7 @@ function solveAssetAssignment(operation, assets, context = {}, policy = {}) {
   const assigned = /* @__PURE__ */ new Map();
   const maxima = slots.map((s) => s?.max === void 0 || s?.max === null ? Infinity : s.max);
   const minima = slots.map((s) => s?.min === void 0 ? 0 : s.min);
-  const media = (assets ?? []).flatMap((asset, assetIndex) => asset && asset.type && asset.type !== "text" ? [{ asset, assetIndex }] : []);
+  const media2 = (assets ?? []).flatMap((asset, assetIndex) => asset && asset.type && asset.type !== "text" ? [{ asset, assetIndex }] : []);
   const slotIndices = slots.map((_, i) => i);
   const mediaSlots = slotIndices.filter((i) => slots[i]?.type !== "text" && slots[i]?.role !== "prompt");
   function failed(reasons, diagnostic) {
@@ -238,7 +238,7 @@ function solveAssetAssignment(operation, assets, context = {}, policy = {}) {
   }
   if (!Array.isArray(groups)) return malformed("inputGroups must be an array", { field: "inputGroups" });
   for (const g of groups) {
-    if (!g || !Array.isArray(g.slots) || new Set(g.slots).size !== g.slots.length || g.slots.some((name) => !names.has(name)) || !countValid(g.min === void 0 ? 0 : g.min) || !g.slots.length && (g.min ?? 0) > 0) return malformed("invalid input group", { field: "inputGroups" });
+    if (!g || !Array.isArray(g.slots) || new Set(g.slots).size !== g.slots.length || g.slots.some((name2) => !names.has(name2)) || !countValid(g.min === void 0 ? 0 : g.min) || !g.slots.length && (g.min ?? 0) > 0) return malformed("invalid input group", { field: "inputGroups" });
     const capacity = mediaSlots.filter((i) => g.slots.includes(slots[i].slot)).reduce((n, i) => n + maxima[i], 0);
     if (capacity < (g.min ?? 0)) return failed([incompatible("input group minimum exceeds available capacity", { slots: [...g.slots], min: g.min, limit: capacity })]);
   }
@@ -303,7 +303,7 @@ function solveAssetAssignment(operation, assets, context = {}, policy = {}) {
     }
     return { pending, rejected };
   }
-  const entries = media.map((entry) => {
+  const entries = media2.map((entry) => {
     const { asset, assetIndex } = entry;
     let candidates = mediaSlots;
     let rejected = [];
@@ -605,9 +605,9 @@ function stepped(value, min, step) {
   const R = remainder < S - remainder ? remainder : S - remainder;
   return R * scale <= Q ? { status: "member" } : { status: "nonmember", reason: "range" };
 }
-function checkParameterMember(definition, value, policy) {
+function checkParameterMember(definition2, value, policy) {
   const mode = modeOf(policy);
-  if (!plain(definition)) return { status: "indeterminate", diagnostic: "malformed_definition" };
+  if (!plain(definition2)) return { status: "indeterminate", diagnostic: "malformed_definition" };
   const malformed = { status: (
     /** @type {const} */
     "indeterminate"
@@ -620,18 +620,18 @@ function checkParameterMember(definition, value, policy) {
     /** @type {const} */
     ["allowAuto", "supported", "caseInsensitive"]
   ) {
-    if (definition[flag] !== void 0 && typeof definition[flag] !== "boolean") return malformed;
+    if (definition2[flag] !== void 0 && typeof definition2[flag] !== "boolean") return malformed;
   }
   for (
     const bound of
     /** @type {const} */
     ["minLength", "maxLength"]
   ) {
-    const raw = definition[bound];
+    const raw = definition2[bound];
     if (raw !== void 0 && (typeof raw !== "number" || !Number.isSafeInteger(raw) || raw <= 0)) return malformed;
   }
-  if (definition.minLength !== void 0 && definition.maxLength !== void 0 && definition.minLength > definition.maxLength) return malformed;
-  if (Object.prototype.hasOwnProperty.call(definition, "defaultValue") && definition.defaultValue === void 0) return malformed;
+  if (definition2.minLength !== void 0 && definition2.maxLength !== void 0 && definition2.minLength > definition2.maxLength) return malformed;
+  if (Object.prototype.hasOwnProperty.call(definition2, "defaultValue") && definition2.defaultValue === void 0) return malformed;
   const known = [
     "type",
     "options",
@@ -648,8 +648,8 @@ function checkParameterMember(definition, value, policy) {
     "label",
     "help"
   ];
-  if (Object.getOwnPropertySymbols(definition).length > 0 || Object.getOwnPropertyNames(definition).some((key) => !known.includes(key))) return malformed;
-  const range = definition.range;
+  if (Object.getOwnPropertySymbols(definition2).length > 0 || Object.getOwnPropertyNames(definition2).some((key) => !known.includes(key))) return malformed;
+  const range = definition2.range;
   if (range !== void 0) {
     if (!plain(range) || Object.getOwnPropertySymbols(range).length > 0 || Object.getOwnPropertyNames(range).some((key) => !["min", "max", "step"].includes(key))) return malformed;
     for (
@@ -663,36 +663,36 @@ function checkParameterMember(definition, value, policy) {
     if (range.step !== void 0 && range.step <= 0 || range.min !== void 0 && range.max !== void 0 && range.min > range.max) return malformed;
   }
   const options = [];
-  if (definition.options !== void 0) {
-    if (!Array.isArray(definition.options)) return malformed;
-    for (const item of definition.options) {
+  if (definition2.options !== void 0) {
+    if (!Array.isArray(definition2.options)) return malformed;
+    for (const item of definition2.options) {
       const option = plain(item) ? (
         /** @type {{ value: unknown }} */
         item.value
       ) : item;
-      if (!primitive(option) || options.some((candidate) => matches(candidate, option, definition.caseInsensitive))) return malformed;
+      if (!primitive(option) || options.some((candidate) => matches(candidate, option, definition2.caseInsensitive))) return malformed;
       options.push(option);
     }
   }
-  const optionMember = options.some((option) => matches(option, value, definition.caseInsensitive));
+  const optionMember = options.some((option) => matches(option, value, definition2.caseInsensitive));
   const inRangeBounds = range !== void 0 && typeof value === "number" && Number.isFinite(value) && (range.min === void 0 || value >= range.min) && (range.max === void 0 || value <= range.max);
-  const autoMember = definition.allowAuto === true && value === -1;
-  if (mode === "legacyGuard" && definition.optionsFrom === void 0 && options.length > 0 && !optionMember && !inRangeBounds && !autoMember) {
+  const autoMember = definition2.allowAuto === true && value === -1;
+  if (mode === "legacyGuard" && definition2.optionsFrom === void 0 && options.length > 0 && !optionMember && !inRangeBounds && !autoMember) {
     return { status: "nonmember", reason: "domain" };
   }
   if (!primitive(value)) return { status: "nonmember", reason: "domain" };
-  if (definition.supported === true && typeof value !== "boolean") return { status: "nonmember", reason: "boolean" };
-  if (definition.supported === false) return { status: "nonmember", reason: "unsupported" };
-  if (definition.type === "integer" && (typeof value !== "number" || !Number.isSafeInteger(value))) return { status: "nonmember", reason: "integer" };
-  if (definition.type === "number" && typeof value !== "number") return { status: "nonmember", reason: "number" };
-  if (definition.type === "string" && typeof value !== "string") return { status: "nonmember", reason: "string" };
-  if (definition.type === "boolean" && typeof value !== "boolean") return { status: "nonmember", reason: "boolean" };
-  if (definition.type !== void 0 && !["integer", "number", "string", "boolean"].includes(definition.type)) return { status: "nonmember", reason: "type" };
-  if (definition.minLength !== void 0 || definition.maxLength !== void 0) {
+  if (definition2.supported === true && typeof value !== "boolean") return { status: "nonmember", reason: "boolean" };
+  if (definition2.supported === false) return { status: "nonmember", reason: "unsupported" };
+  if (definition2.type === "integer" && (typeof value !== "number" || !Number.isSafeInteger(value))) return { status: "nonmember", reason: "integer" };
+  if (definition2.type === "number" && typeof value !== "number") return { status: "nonmember", reason: "number" };
+  if (definition2.type === "string" && typeof value !== "string") return { status: "nonmember", reason: "string" };
+  if (definition2.type === "boolean" && typeof value !== "boolean") return { status: "nonmember", reason: "boolean" };
+  if (definition2.type !== void 0 && !["integer", "number", "string", "boolean"].includes(definition2.type)) return { status: "nonmember", reason: "type" };
+  if (definition2.minLength !== void 0 || definition2.maxLength !== void 0) {
     if (typeof value !== "string") return { status: "nonmember", reason: "length_type" };
     const length = Array.from(value).length;
-    if (definition.minLength !== void 0 && length < definition.minLength) return { status: "nonmember", reason: "minLength" };
-    if (definition.maxLength !== void 0 && length > definition.maxLength) return { status: "nonmember", reason: "maxLength" };
+    if (definition2.minLength !== void 0 && length < definition2.minLength) return { status: "nonmember", reason: "minLength" };
+    if (definition2.maxLength !== void 0 && length > definition2.maxLength) return { status: "nonmember", reason: "maxLength" };
   }
   if (optionMember) return { status: "member" };
   if (autoMember) return { status: "member" };
@@ -701,12 +701,12 @@ function checkParameterMember(definition, value, policy) {
     rangeResult = typeof value !== "number" ? { status: "nonmember", reason: "number" } : !inRangeBounds ? { status: "nonmember", reason: "range" } : range.step === void 0 ? { status: "member" } : range.min === void 0 ? { status: "indeterminate", diagnostic: "precision_unproven" } : stepped(value, range.min, range.step);
     if (rangeResult.status === "member") return rangeResult;
   }
-  if (definition.optionsFrom !== void 0) return { status: "indeterminate", diagnostic: "unresolved_options" };
+  if (definition2.optionsFrom !== void 0) return { status: "indeterminate", diagnostic: "unresolved_options" };
   if (rangeResult) {
-    if (definition.options && definition.options.length > 0 && rangeResult.status === "nonmember" && !inRangeBounds) return { status: "nonmember", reason: "domain" };
+    if (definition2.options && definition2.options.length > 0 && rangeResult.status === "nonmember" && !inRangeBounds) return { status: "nonmember", reason: "domain" };
     return rangeResult;
   }
-  return definition.options === void 0 && value !== null ? { status: "member" } : { status: "nonmember", reason: "domain" };
+  return definition2.options === void 0 && value !== null ? { status: "member" } : { status: "nonmember", reason: "domain" };
 }
 function evaluateDeclaredParameters(request, operationDefinitions, modelDefinitions, policy) {
   const mode = modeOf(policy);
@@ -727,26 +727,435 @@ function evaluateDeclaredParameters(request, operationDefinitions, modelDefiniti
     };
   }
   const values = {};
-  for (const [field, definition] of Object.entries(definitions)) {
-    if (!plain(definition)) return { ok: false, field, source: "definition", result: { status: "indeterminate", diagnostic: "malformed_definition" } };
+  for (const [field, definition2] of Object.entries(definitions)) {
+    if (!plain(definition2)) return { ok: false, field, source: "definition", result: { status: "indeterminate", diagnostic: "malformed_definition" } };
     const supplied = Object.prototype.hasOwnProperty.call(request, field) && request[field] !== void 0 && (mode !== "legacyGuard" || request[field] !== null && request[field] !== "");
-    if (!supplied && !Object.prototype.hasOwnProperty.call(definition, "defaultValue")) continue;
-    const value = supplied ? request[field] : definition.defaultValue;
-    const domain = !supplied && mode === "legacyGuard" && definition.supported === false ? Object.create(Object.getPrototypeOf(definition), {
-      ...Object.getOwnPropertyDescriptors(definition),
+    if (!supplied && !Object.prototype.hasOwnProperty.call(definition2, "defaultValue")) continue;
+    const value = supplied ? request[field] : definition2.defaultValue;
+    const domain = !supplied && mode === "legacyGuard" && definition2.supported === false ? Object.create(Object.getPrototypeOf(definition2), {
+      ...Object.getOwnPropertyDescriptors(definition2),
       supported: { value: void 0, enumerable: true, writable: true, configurable: true }
-    }) : definition;
+    }) : definition2;
     const result = checkParameterMember(domain, value, policy);
     if (result.status !== "member") return { ok: false, field, source: supplied ? "request" : "default", result };
     Object.defineProperty(values, field, { value, enumerable: true, writable: true, configurable: true });
   }
   return { ok: true, values };
 }
+
+// src/candidate.js
+function record(value) {
+  return typeof value === "object" && value !== null && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null) && Object.getOwnPropertySymbols(value).length === 0 && Object.getOwnPropertyNames(value).every((key) => {
+    const property = Object.getOwnPropertyDescriptor(value, key);
+    return property !== void 0 && property.enumerable === true && "value" in property;
+  });
+}
+function own(value, key) {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+function bounded(value, keys) {
+  return Object.getOwnPropertyNames(value).every((key) => keys.includes(key));
+}
+function array(value) {
+  if (!Array.isArray(value) || Object.getOwnPropertySymbols(value).length) return false;
+  if (Object.getOwnPropertyNames(value).length !== value.length + 1) return false;
+  for (let index = 0; index < value.length; index++) {
+    const property = Object.getOwnPropertyDescriptor(value, String(index));
+    if (!property || !property.enumerable || !("value" in property)) return false;
+  }
+  return true;
+}
+function primitive2(value) {
+  return value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value);
+}
+function count(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+function name(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+function media(value) {
+  return value === "image" || value === "video" || value === "audio";
+}
+function equal(left, right, fold = false) {
+  return Object.is(left, right) || left === 0 && right === 0 || fold && typeof left === "string" && typeof right === "string" && left.toLowerCase() === right.toLowerCase();
+}
+function put(target, field, value) {
+  Object.defineProperty(target, field, { value, enumerable: true, writable: true, configurable: true });
+}
+function sum(left, right) {
+  return left === Infinity || right === Infinity || left > Number.MAX_SAFE_INTEGER - right ? Infinity : left + right;
+}
+function definition(value) {
+  if (!record(value) || !bounded(value, ["type", "options", "optionsFrom", "range", "defaultValue", "minLength", "maxLength", "supported", "allowAuto", "caseInsensitive", "unit", "label", "help", "description"])) return false;
+  if (Object.getOwnPropertyNames(value).some((key) => value[key] === void 0)) return false;
+  const range = value.range;
+  if (own(value, "range") && record(range) && Object.getOwnPropertyNames(range).some((key) => range[key] === void 0)) return false;
+  if (own(value, "type") && !["integer", "number", "string", "boolean"].includes(
+    /** @type {string} */
+    value.type
+  )) return false;
+  for (const key of ["optionsFrom", "unit", "label", "help", "description"]) if (own(value, key) && typeof value[key] !== "string") return false;
+  if (own(value, "range") && (!record(value.range) || !bounded(value.range, ["min", "max", "step"]))) return false;
+  if (own(value, "options")) {
+    if (!array(value.options)) return false;
+    for (const option of value.options) {
+      if (primitive2(option)) continue;
+      if (!record(option) || !bounded(option, ["value", "label"]) || !own(option, "value") || !primitive2(option.value) || own(option, "label") && typeof option.label !== "string") return false;
+    }
+  }
+  return true;
+}
+function evaluateCandidateRequest(candidate, snapshot, policy) {
+  if (policy !== void 0 && (!record(policy) || !bounded(policy, ["maxStates"]) || own(policy, "maxStates") && (!count(policy.maxStates) || policy.maxStates === 0))) throw new TypeError("candidate policy must contain only a positive safe maxStates");
+  const diagnostics = [];
+  let hard = false, uncertain = false, pending = false;
+  function issue(status, code, indices = {}) {
+    diagnostics.push({ code, ...indices });
+    if (status === "rejected") hard = true;
+    else if (status === "indeterminate") uncertain = true;
+    else pending = true;
+  }
+  const failure = () => ({ status: (
+    /** @type {'rejected'|'indeterminate'|'pending'} */
+    hard ? "rejected" : uncertain ? "indeterminate" : "pending"
+  ), diagnostics });
+  if (!record(candidate) || !bounded(candidate, ["operation", "parameters", "constraints", "knownOperationIds", "currentEligibility"]) || !record(snapshot) || !bounded(snapshot, ["assets", "prompt", "logicalParameters", "parameterSources", "parameterAuthority"])) {
+    issue("indeterminate", "malformed_input");
+    return failure();
+  }
+  if (!own(candidate, "currentEligibility") || !["eligible", "pending", "rejected"].includes(candidate.currentEligibility)) issue("indeterminate", "malformed_input", { field: "currentEligibility" });
+  else if (candidate.currentEligibility === "rejected") issue("rejected", "eligibility_rejected");
+  else if (candidate.currentEligibility === "pending") issue("pending", "eligibility_pending");
+  if (!own(snapshot, "parameterAuthority") || !["resolved", "unresolved"].includes(snapshot.parameterAuthority)) issue("indeterminate", "malformed_input", { field: "parameterAuthority" });
+  else if (snapshot.parameterAuthority === "unresolved") issue("pending", "default_ambiguous");
+  const defsOK = record(candidate.parameters);
+  const logicalOK = record(snapshot.logicalParameters), sourcesOK = record(snapshot.parameterSources);
+  if (!defsOK || !logicalOK || !sourcesOK) issue("indeterminate", "malformed_input");
+  const effective = {};
+  const origins = {};
+  const constraintsOK = record(candidate.constraints) && bounded(candidate.constraints, ["operations", "parameters", "inputs"]);
+  if (!constraintsOK) issue("indeterminate", "malformed_constraint");
+  const limits = constraintsOK && own(candidate.constraints, "parameters") ? candidate.constraints.parameters : {};
+  const limitsOK = record(limits);
+  if (!limitsOK) issue("indeterminate", "malformed_constraint", { field: "parameters" });
+  if (defsOK && logicalOK && sourcesOK) {
+    const values = snapshot.logicalParameters, sources = snapshot.parameterSources, definitions = candidate.parameters;
+    const explicitFields = /* @__PURE__ */ new Set();
+    for (const field of Object.getOwnPropertyNames(values)) {
+      if (!own(definitions, field)) issue("rejected", "unknown_field", { field });
+      if (!primitive2(values[field])) issue("indeterminate", "source_mismatch", { field });
+      if (!own(sources, field)) issue("indeterminate", "source_mismatch", { field });
+    }
+    for (const field of Object.getOwnPropertyNames(sources)) {
+      const source = sources[field];
+      if (!record(source) || !bounded(source, ["source", "value"]) || !own(source, "source") || !["explicit", "definition-default", "absent"].includes(source.source)) {
+        issue("indeterminate", "malformed_input", { field });
+        continue;
+      }
+      if (source.source === "absent") {
+        if (own(source, "value") || own(values, field)) issue("indeterminate", "source_mismatch", { field });
+      } else {
+        if (!own(definitions, field)) issue("rejected", "unknown_field", { field });
+        if (!own(source, "value") || !primitive2(source.value) || !own(values, field) || !equal(source.value, values[field])) issue("indeterminate", "source_mismatch", { field });
+        else if (source.source === "explicit") explicitFields.add(field);
+      }
+    }
+    for (const field of Object.getOwnPropertyNames(definitions)) {
+      const def = definitions[field], source = sources[field];
+      if (!own(sources, field)) issue("indeterminate", "source_mismatch", { field });
+      const limit = limitsOK && own(limits, field) ? limits[field] : {};
+      const limitOK = record(limit) && bounded(limit, ["fixed", "only", "supported"]) && (!own(limit, "fixed") || primitive2(limit.fixed)) && (!own(limit, "only") || array(limit.only) && limit.only.every(primitive2)) && (!own(limit, "supported") || typeof limit.supported === "boolean");
+      if (!limitOK) issue("indeterminate", "malformed_constraint", { field });
+      else {
+        if (array(limit.only) && !limit.only.length) issue("rejected", "empty_domain", { field });
+        if (limit.supported === false && explicitFields.has(field)) issue("rejected", "disabled", { field });
+      }
+      if (!definition(def)) {
+        issue("indeterminate", "parameter_indeterminate", { field });
+        continue;
+      }
+      const active = own(values, field);
+      const value = active ? values[field] : own(def, "defaultValue") ? def.defaultValue : void 0;
+      const checked = checkParameterMember(def, value, { mode: "canonical" });
+      if (checked.status === "indeterminate") issue("indeterminate", "parameter_indeterminate", { field });
+      else if (checked.status === "nonmember" && (active || own(def, "defaultValue"))) issue("rejected", "parameter_nonmember", { field });
+      if (!active && !own(def, "defaultValue") && (own(def, "optionsFrom") || def.range !== void 0 && own(def.range, "step") && !own(def.range, "min"))) issue("indeterminate", "parameter_indeterminate", { field });
+      if (!limitOK) continue;
+      const fixed = own(limit, "fixed") ? checkParameterMember(def, limit.fixed, { mode: "canonical" }) : void 0;
+      if (fixed?.status === "nonmember") issue("rejected", "empty_domain", { field });
+      else if (fixed?.status === "indeterminate") issue("indeterminate", "parameter_indeterminate", { field });
+      const only = (
+        /** @type {readonly Primitive[] | undefined} */
+        limit.only
+      );
+      if (only !== void 0) {
+        const members = only.map((item) => checkParameterMember(def, item, { mode: "canonical" }));
+        if (only.length && members.every((item) => item.status === "nonmember")) issue("rejected", "empty_domain", { field });
+        if (members.some((item) => item.status === "indeterminate")) issue("indeterminate", "parameter_indeterminate", { field });
+        if (active && checked.status === "member" && !only.some((item, index) => members[index].status === "member" && equal(values[field], item, def.caseInsensitive === true))) {
+          issue(members.some((item) => item.status === "indeterminate") ? "indeterminate" : "rejected", "parameter_nonmember", { field });
+        }
+        if (fixed?.status === "member" && !only.some((item) => equal(limit.fixed, item, def.caseInsensitive === true))) issue("rejected", "fixed_conflict", { field });
+      }
+      if (active && own(limit, "fixed") && !equal(values[field], limit.fixed, def.caseInsensitive === true)) issue("rejected", "fixed_conflict", { field });
+      if (limit.supported === false) {
+        if (fixed?.status === "member") issue("rejected", "disabled", { field });
+        if (!record(source) || source.source !== "explicit") put(origins, field, "omitted-by-group");
+      } else if (record(source) && (source.source === "absent" || source.source === "explicit" || source.source === "definition-default")) {
+        put(origins, field, source.source);
+        if (active && checked.status === "member") put(effective, field, values[field]);
+      }
+    }
+    if (own(definitions, "prompt")) {
+      const active = own(values, "prompt");
+      if (own(snapshot, "prompt") !== active || active && !equal(snapshot.prompt, values.prompt)) issue("indeterminate", "source_mismatch", { field: "prompt" });
+    }
+  }
+  if (limitsOK && defsOK) {
+    for (const field of Object.getOwnPropertyNames(limits)) if (!own(candidate.parameters, field)) issue("rejected", "unknown_field", { field });
+  }
+  const operationOK = record(candidate.operation) && bounded(candidate.operation, ["id", "inputs", "inputGroups"]);
+  const idsOK = array(candidate.knownOperationIds) && candidate.knownOperationIds.every(name) && new Set(candidate.knownOperationIds).size === candidate.knownOperationIds.length;
+  if (!operationOK || !name(candidate.operation.id)) issue("indeterminate", "malformed_input", { field: "operation" });
+  if (!idsOK || operationOK && idsOK && !candidate.knownOperationIds.includes(candidate.operation.id)) issue("indeterminate", "unknown_operation");
+  if (constraintsOK && own(candidate.constraints, "operations")) {
+    const operations = candidate.constraints.operations;
+    if (!array(operations) || !operations.every(name)) issue("indeterminate", "malformed_constraint", { field: "operations" });
+    else {
+      if (!operations.length) issue("rejected", "empty_domain", { field: "operations" });
+      if (!idsOK || operations.some((id) => !candidate.knownOperationIds.includes(id))) issue("indeterminate", "unknown_operation");
+      else if (operationOK && !operations.includes(candidate.operation.id)) issue("rejected", "disabled", { field: "operations" });
+    }
+  }
+  let slotsOK = operationOK && array(candidate.operation.inputs), groupsOK = operationOK;
+  if (!slotsOK) issue("indeterminate", "malformed_input", { field: "inputs" });
+  const slots = slotsOK ? candidate.operation.inputs : [];
+  const groups = operationOK && own(candidate.operation, "inputGroups") ? candidate.operation.inputGroups : [];
+  const slotNames = /* @__PURE__ */ new Set();
+  let texts = 0;
+  const numeric = ["maxSizeMb", "minDurationSec", "maxDurationSec", "totalMinDurationSec", "totalMaxDurationSec", "combinedOutputMaxDurationSec"];
+  for (let slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+    const slot = slots[slotIndex];
+    if (!record(slot) || !bounded(slot, ["slot", "type", "role", "min", "max", "source", "allowedMimes", ...numeric, "maxSizeExclusive", "totalMinExclusive", "totalMaxExclusive"])) {
+      issue("indeterminate", "malformed_input", { slotIndex });
+      slotsOK = false;
+      continue;
+    }
+    if (!name(slot.slot) || slotNames.has(slot.slot)) {
+      issue("rejected", "malformed_input", { slotIndex });
+      slotsOK = false;
+    }
+    slotNames.add(slot.slot);
+    if (!media(slot.type) && slot.type !== "text") {
+      issue("indeterminate", "malformed_input", { slotIndex });
+      slotsOK = false;
+    }
+    if (own(slot, "role") && !name(slot.role) || own(slot, "source") && !["user", "upstream_edge", "node_field"].includes(
+      /** @type {string} */
+      slot.source
+    )) {
+      issue("indeterminate", "malformed_input", { slotIndex });
+      slotsOK = false;
+    }
+    const min = slot.min === void 0 && !own(slot, "min") ? 0 : slot.min;
+    const max = !own(slot, "max") || slot.max === null ? Infinity : slot.max;
+    if (!count(min) || own(slot, "max") && slot.max !== null && !count(slot.max) || /** @type {number} */
+    min > /** @type {number} */
+    max) {
+      issue("rejected", "malformed_input", { slotIndex });
+      slotsOK = false;
+    }
+    for (const field of numeric) if (own(slot, field) && (typeof slot[field] !== "number" || !Number.isFinite(slot[field]) || /** @type {number} */
+    slot[field] < 0)) {
+      issue("rejected", "malformed_input", { slotIndex });
+      slotsOK = false;
+    }
+    for (const field of ["maxSizeExclusive", "totalMinExclusive", "totalMaxExclusive"]) if (own(slot, field) && typeof slot[field] !== "boolean") {
+      issue("rejected", "malformed_input", { slotIndex });
+      slotsOK = false;
+    }
+    if (own(slot, "allowedMimes") && slot.allowedMimes !== null && (!array(slot.allowedMimes) || !slot.allowedMimes.length || !slot.allowedMimes.every(name) || new Set(slot.allowedMimes).size !== slot.allowedMimes.length)) {
+      issue("rejected", "malformed_input", { slotIndex });
+      slotsOK = false;
+    }
+    if (typeof slot.minDurationSec === "number" && typeof slot.maxDurationSec === "number" && slot.minDurationSec > slot.maxDurationSec || typeof slot.totalMinDurationSec === "number" && typeof slot.totalMaxDurationSec === "number" && (slot.totalMinDurationSec > slot.totalMaxDurationSec || slot.totalMinDurationSec === slot.totalMaxDurationSec && (slot.totalMinExclusive === true || slot.totalMaxExclusive === true))) issue("rejected", "asset_rejected", { slotIndex });
+    if (slot.type === "text") {
+      if (!bounded(slot, ["slot", "type", "role", "source", "min", "max"])) issue("indeterminate", "unchecked_constraint", { slotIndex });
+      texts++;
+      if (texts > 1 || slot.role !== "prompt" || slot.source !== "node_field" || ![0, 1].includes(
+        /** @type {number} */
+        min
+      ) || max !== Infinity && ![0, 1].includes(
+        /** @type {number} */
+        max
+      )) {
+        issue("indeterminate", "malformed_input", { slotIndex });
+        slotsOK = false;
+      }
+      const presence = typeof snapshot.prompt === "string" && snapshot.prompt.trim() ? 1 : 0;
+      if (presence > /** @type {number} */
+      max) issue("rejected", "input_limit", { slotIndex });
+      else if (presence < /** @type {number} */
+      min) issue("pending", "asset_pending", { slotIndex });
+    } else if (slot.role === "prompt") {
+      issue("indeterminate", "malformed_input", { slotIndex });
+      slotsOK = false;
+    }
+  }
+  if (own(snapshot, "prompt") && typeof snapshot.prompt !== "string") issue("indeterminate", "malformed_input", { field: "prompt" });
+  if (!array(groups)) {
+    issue("indeterminate", "malformed_input", { field: "inputGroups" });
+    groupsOK = false;
+  } else for (const group of groups) {
+    if (!record(group) || !bounded(group, ["slots", "min", "hint"])) {
+      issue("indeterminate", "malformed_input", { field: "inputGroups" });
+      groupsOK = false;
+      continue;
+    }
+    if (!array(group.slots) || !group.slots.every(name) || new Set(group.slots).size !== group.slots.length || own(group, "min") && !count(group.min) || !group.slots.length && (group.min ?? 0) > 0 || own(group, "hint") && typeof group.hint !== "string") {
+      issue("rejected", "malformed_input", { field: "inputGroups" });
+      groupsOK = false;
+      continue;
+    }
+    if (group.slots.some((id) => !slotNames.has(id))) {
+      issue("rejected", "malformed_input", { field: "inputGroups" });
+      groupsOK = false;
+    }
+    if (slotsOK && group.slots.some((id) => slots.some((slot) => slot.slot === id && slot.type === "text"))) {
+      issue("indeterminate", "malformed_input", { field: "inputGroups" });
+      groupsOK = false;
+    }
+  }
+  const caps = constraintsOK && own(candidate.constraints, "inputs") ? candidate.constraints.inputs : {};
+  let capsOK = record(caps) && bounded(caps, ["image", "video", "audio"]);
+  if (!capsOK) issue("indeterminate", "malformed_constraint", { field: "inputs" });
+  const maxima = {};
+  if (record(caps) && capsOK) {
+    for (
+      const type of
+      /** @type {const} */
+      ["image", "video", "audio"]
+    ) if (own(caps, type)) {
+      const limit = caps[type];
+      if (!record(limit) || !bounded(limit, ["max"]) || own(limit, "max") && !count(limit.max)) {
+        issue("indeterminate", "malformed_constraint", { field: type });
+        capsOK = false;
+      } else if (typeof limit.max === "number") maxima[type] = limit.max;
+    }
+  }
+  let assetsOK = array(snapshot.assets), classified = true;
+  const counts = { image: 0, video: 0, audio: 0 };
+  if (!assetsOK) issue("rejected", "malformed_input", { field: "assets" });
+  else for (let assetIndex = 0; assetIndex < snapshot.assets.length; assetIndex++) {
+    const asset = snapshot.assets[assetIndex];
+    if (!record(asset) || !Object.getOwnPropertyNames(asset).length) {
+      issue("rejected", "malformed_input", { assetIndex });
+      assetsOK = false;
+      continue;
+    }
+    if (!own(asset, "type")) {
+      issue("indeterminate", "media_unclassified", { assetIndex });
+      classified = false;
+    } else if (!media(asset.type)) {
+      issue("rejected", "malformed_input", { assetIndex });
+      assetsOK = false;
+    } else {
+      const type = asset.type;
+      counts[type]++;
+    }
+    for (const field of ["role", "targetSlot", "mime"]) if (own(asset, field) && !name(asset[field])) {
+      issue("rejected", "malformed_input", { assetIndex });
+      assetsOK = false;
+    }
+    for (const field of ["sizeBytes", "durationSec"]) if (own(asset, field) && asset[field] !== null && (typeof asset[field] !== "number" || !Number.isFinite(asset[field]) || /** @type {number} */
+    asset[field] < 0)) {
+      issue("rejected", "malformed_input", { assetIndex });
+      assetsOK = false;
+    }
+  }
+  for (
+    const type of
+    /** @type {const} */
+    ["image", "video", "audio"]
+  ) {
+    const max = maxima[type];
+    if (max !== void 0 && counts[type] > max) issue("rejected", "input_limit", { field: type });
+    if (slotsOK && max !== void 0 && slots.filter((slot) => slot.type === type).reduce((n, slot) => sum(n, slot.min ?? 0), 0) > max) issue("rejected", "input_limit", { field: type });
+  }
+  if (slotsOK && groupsOK && array(groups)) for (const group of groups) {
+    let upper = 0;
+    for (
+      const type of
+      /** @type {const} */
+      ["image", "video", "audio"]
+    ) {
+      const slotUpper = slots.filter((slot) => slot.type === type && group.slots.includes(slot.slot)).reduce((n, slot) => sum(n, slot.max ?? Infinity), 0);
+      const max = maxima[type] ?? Infinity;
+      upper = sum(upper, slotUpper < max ? slotUpper : max);
+    }
+    if (upper < (group.min ?? 0)) issue("rejected", "input_limit", { field: "inputGroups" });
+  }
+  let assignment;
+  if (slotsOK && groupsOK && assetsOK) {
+    const duration = own(effective, "duration") && typeof effective.duration === "number" && Number.isFinite(effective.duration) && effective.duration > 0 ? effective.duration : void 0;
+    assignment = solveAssetAssignment(candidate.operation, snapshot.assets, { prompt: snapshot.prompt, duration }, { strategy: "strict", mode: "full", maxStates: (
+      /** @type {number} */
+      policy?.maxStates ?? 1e5
+    ) });
+    if (assignment.status === "rejected") {
+      const local = assignment.rejections.filter((reason) => reason.assetIndex !== void 0 && reason.code !== "slot_capacity");
+      if (classified || assignment.visitedStates === 0 && local.length) {
+        for (const reason of classified ? assignment.rejections : local) issue("rejected", "asset_rejected", { ...reason.assetIndex === void 0 ? {} : { assetIndex: reason.assetIndex }, ...reason.slotIndex === void 0 ? {} : { slotIndex: reason.slotIndex } });
+      }
+    } else if (assignment.status === "indeterminate") issue("indeterminate", assignment.diagnostic === "completion_unproven" ? "completion_unproven" : "asset_indeterminate");
+    else {
+      if (assignment.uncheckedConstraints.length) issue("indeterminate", "unchecked_constraint");
+      if (classified && (assignment.bindings.length !== snapshot.assets.length || new Set(assignment.bindings.map((binding) => binding.assetIndex)).size !== snapshot.assets.length || assignment.bindings.some((binding) => {
+        const index = binding.assetIndex;
+        return binding.asset !== snapshot.assets[index];
+      }))) issue("indeterminate", "asset_indeterminate");
+      if (assignment.status === "pending") {
+        const limited = Object.getOwnPropertyNames(maxima);
+        let certificate = classified && assignment.pending.every((reason) => reason.code === "min_unsatisfied" || reason.code === "prompt_required");
+        if (array(groups)) {
+          for (const group of groups) if (assignment.bindings.filter((binding) => group.slots.includes(binding.slot)).length < (group.min ?? 0)) certificate = false;
+        }
+        for (const type of limited) {
+          const typed = (
+            /** @type {import('../types/index.js').MediaType} */
+            type
+          );
+          const future = slots.filter((slot, index) => slot.type === typed && (slot.max ?? Infinity) > /** @type {import('../types/index.js').AssignmentResult<A>} */
+          assignment.buckets[index].length);
+          const missing = slots.filter((slot) => slot.type === typed).reduce((n, slot) => sum(n, (slot.min ?? 0) > assignmentBindings(slot.slot) ? (slot.min ?? 0) - assignmentBindings(slot.slot) : 0), 0);
+          if (future.length > 1 || missing > /** @type {number} */
+          maxima[typed] - counts[typed] || future.some((slot) => ["allowedMimes", ...numeric, "maxSizeExclusive", "totalMinExclusive", "totalMaxExclusive"].some((field) => own(slot, field)))) certificate = false;
+        }
+        if (limited.length && !certificate) issue("indeterminate", "completion_unproven");
+        else issue("pending", "asset_pending");
+      }
+    }
+  }
+  function assignmentBindings(slot) {
+    return assignment?.bindings.filter((binding) => binding.slot === slot).length ?? 0;
+  }
+  if (hard || uncertain || pending) return failure();
+  if (!assignment || assignment.status !== "ready" || !classified || assignment.uncheckedConstraints.length) {
+    issue("indeterminate", "asset_indeterminate");
+    return failure();
+  }
+  return { status: "ready", effectiveParameters: effective, parameterSources: origins, assignment: (
+    /** @type {import('../types/index.js').CheckedAssignment<A>} */
+    assignment
+  ), diagnostics: [] };
+}
 export {
   BYTES_PER_MB,
   GUARD_CODES,
   SLOT_ALIASES,
   checkParameterMember,
+  evaluateCandidateRequest,
   evaluateDeclaredParameters,
   getSlotAliases,
   isWithinDurationLimit,
