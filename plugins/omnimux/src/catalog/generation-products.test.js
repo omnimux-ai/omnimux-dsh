@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createGenerationProducts } from './generation-products.js'
+import fs from 'node:fs'
+import { syncBuiltinESMExports } from 'node:module'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { resolve } from 'node:path'
+import { materializeVoiceOptions } from './voices/options.js'
 
 const registry = { version: '1', operations: [
   { id: 'text_to_image', label: '文生图', defaultOutputType: 'image' },
@@ -251,4 +256,123 @@ test('unconsumed canonical input composition, valueSources, unknown output/param
     assert.deepEqual(intent(f).alternatives, []); assert.equal(intent(f).status, 'indeterminate')
     assert.equal(preview(f, { prompt: 'x' }).status, 'indeterminate')
   }
+})
+
+test('repair production default reader refreshes original cached registry chain on every call', async () => {
+  const scratch = resolve('.tmp/3270-repair/production-reader')
+  fs.mkdirSync(`${scratch}/src`, { recursive: true })
+  fs.cpSync(fileURLToPath(new URL('..', import.meta.url)), `${scratch}/src`, { recursive: true })
+  fs.cpSync(fileURLToPath(new URL('../../lib/', import.meta.url)), `${scratch}/lib`, { recursive: true })
+  const registryPath = `${scratch}/src/catalog/contract/operation-registry.json`
+  const originalRead = fs.readFileSync
+  const source = JSON.parse(originalRead(registryPath, 'utf8'))
+  let version = 1, reads = 0
+  fs.readFileSync = function(path, ...args) {
+    if (String(path) === registryPath) {
+      reads++
+      const next = structuredClone(source)
+      next.version = String(version)
+      next.operations.find(op => op.id === 'text_to_image').label = `当前标签${version}`
+      if (version === 2) next.operations.push({ id: 'future_registered', label: '新用途', defaultOutputType: 'image' })
+      return JSON.stringify(next)
+    }
+    return originalRead(path, ...args)
+  }
+  syncBuiltinESMExports()
+  try {
+    const isolated = await import(pathToFileURL(`${scratch}/src/catalog/generation-products.js`).href)
+    const products = isolated.createGenerationProducts({ readGroups: () => [] })
+    const first = products.list(); version = 2
+    const second = products.list()
+    assert.equal(second.products[0].intents[0].label, '当前标签2')
+    assert.notEqual(first.currentFingerprint, second.currentFingerprint)
+    assert.equal(reads, 2)
+    const changed = products.preparePreview({ ...request(products), currentFingerprint: first.currentFingerprint })
+    assert.deepEqual(codes(changed), ['stale_fingerprint'])
+    assert.equal(reads, 4)
+  } finally { fs.readFileSync = originalRead; syncBuiltinESMExports() }
+})
+
+test('repair fingerprint excludes arbitrary nested proof and option metadata but retains live binding facts', () => {
+  let token = 'DUMMY-A', taskId = 'task-a', verified = true, digest = 'a'.repeat(64), documentVersion = 'v1'
+  const m = model('m', { n: { type: 'number', options: [{ value: 5, label: '五', meta: { credentials: { token } } }] } })
+  const f = fixture([m], undefined, c => ({ ...proof(c), sourceDigest: digest, documentVersion,
+    sample: { mode: 'live', taskId, output: { type: 'image', verified }, credentials: { token } } }))
+  const first = f.products.list().currentFingerprint
+  token = 'DUMMY-B'; m.parameters.n.options[0].meta.credentials.token = token
+  assert.equal(f.products.list().currentFingerprint, first)
+  for (const mutate of [() => { taskId = 'task-b' }, () => { verified = false }, () => { digest = 'b'.repeat(64) },
+    () => { documentVersion = 'v2' }, () => { m.parameters.n.options[0].value = 6 }, () => { m.parameters.n.options[0].label = '六' }]) {
+    const before = f.products.list().currentFingerprint; mutate(); assert.notEqual(f.products.list().currentFingerprint, before)
+  }
+})
+test('repair semantic coverage includes operation status, full input bounds, defaults and unknown key presence without private values', () => {
+  const m = model('m', { n: { type: 'number', range: { min: 0, max: 10, step: 1 }, defaultValue: 5 } },
+    [{ slot: 'ref', type: 'image', min: 0, max: 2, allowedMimes: ['image/png'], maxSizeMb: 5 }])
+  const f = fixture([m]); const initial = f.products.list().currentFingerprint
+  m.operations[0].notes = { credentials: 'DUMMY-A' }; m.research.notes = 'DUMMY-A'
+  m.routing.endpoint = 'https://private.invalid/a'
+  assert.equal(f.products.list().currentFingerprint, initial)
+  m.operations[0].notes.credentials = 'DUMMY-B'; m.research.notes = 'DUMMY-B'; m.routing.endpoint += 'b'
+  assert.equal(f.products.list().currentFingerprint, initial)
+  for (const mutate of [() => { m.operations[0].execution.profileId += 'x' }, () => { m.operations[0].inputs[0].maxSizeMb = 6 },
+    () => { m.parameters.n.defaultValue = 6 }, () => { m.parameters.n.range.step = 2 }, () => { m.parameters.n.futureConstraint = { token: 'DUMMY-A' } }]) {
+    const before = f.products.list().currentFingerprint; mutate(); assert.notEqual(f.products.list().currentFingerprint, before)
+  }
+  const unknown = f.products.list().currentFingerprint; m.parameters.n.futureConstraint.token = 'DUMMY-B'
+  assert.equal(f.products.list().currentFingerprint, unknown)
+})
+test('repair common prompt default freezes matching logical and text transport, with no candidate invention', () => {
+  const slot = [{ slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 }]
+  const a = model('a', { prompt: { type: 'string', defaultValue: 'x' } }, slot)
+  const f = fixture([a]); assert.equal(preview(f).status, 'ready'); assert.equal(preview(f).executable, false)
+  assert.equal(preview(f, { prompt: 'x' }).requestFingerprint, preview(f, { parameters: { prompt: 'x' } }).requestFingerprint)
+  assert.equal(preview(f, { prompt: 'x' }).requestFingerprint, preview(f, { prompt: 'x', parameters: { prompt: 'x' } }).requestFingerprint)
+  const b = model('b', { prompt: { type: 'string', defaultValue: 'y' } }, slot)
+  assert.equal(preview(fixture([a, b])).status, 'pending')
+  delete b.parameters.prompt.defaultValue
+  assert.equal(preview(fixture([a, b])).status, 'pending')
+  assert.equal(preview(fixture([b])).status, 'pending')
+  assert.equal(preview(fixture([a, model('c', {}, slot)]), { prompt: 'x' }).status, 'ready')
+})
+test('repair complete asserted current mapping identity or purpose contradiction is hard, stale and partial remain pending', () => {
+  for (const [field, value] of [['purpose', 'image_to_image'], ['operationId', 'image_to_image'], ['canonicalModelId', 'other']]) {
+    const f = fixture(undefined, undefined, c => ({ ...proof(c), identity: { ...c.identity, [field]: value } }))
+    assert.equal(preview(f).status, 'rejected'); assert.ok(codes(preview(f)).includes('qualification_rejected'))
+  }
+  for (const mutate of [p => ({ ...p, identity: { ...p.identity, mappingDigest: 'old' } }),
+    p => ({ ...p, identity: { ...p.identity, wireModel: 'old', purpose: 'image_to_image' } }),
+    p => ({ ...p, identity: { purpose: 'image_to_image' } }), p => ({ ...p, sample: null }), p => ({})]) {
+    assert.equal(preview(fixture(undefined, undefined, c => mutate(proof(c)))).status, 'pending')
+  }
+  assert.equal(preview(fixture()).status, 'ready')
+})
+test('repair arrays reject inherited iterator getters and null prototypes without reading or changing caller', () => {
+  const f = fixture(); let calls = 0
+  for (const length of [0, 1]) for (const nullPrototype of [false, true]) {
+    const assets = length ? [image()] : []
+    const prototype = nullPrototype ? null : Object.create(Array.prototype)
+    if (prototype) Object.defineProperty(prototype, Symbol.iterator, { get() { calls++; return Array.prototype[Symbol.iterator] } })
+    Object.setPrototypeOf(assets, prototype)
+    const r = request(f.products, { assets })
+    assert.deepEqual(codes(f.products.preparePreview(r)), ['invalid_request'])
+    assert.equal(Object.getPrototypeOf(assets), prototype); assert.equal(r.assets, assets)
+  }
+  assert.equal(calls, 0)
+})
+test('repair unknown option fields and arbitrary meta cannot be washed into complete domain', () => {
+  for (const option of [{ value: 5, futureConstraint: { allowed: false } }, { value: 5, futureOption: true },
+    { value: 5, meta: { credentials: { token: 'DUMMY' } } }]) {
+    const f = fixture([model('m', { n: { type: 'number', options: [option] } })])
+    assert.equal(preview(f, { parameters: { n: 5 } }).status, 'indeterminate')
+    assert.deepEqual(intent(f).alternatives, []); assert.equal(intent(f).status, 'indeterminate')
+  }
+})
+test('repair actual registered voice materialization permits value label projection in applicable synthetic image branch', () => {
+  const doc = materializeVoiceOptions({ models: [{ parameters: { voice: { type: 'string', optionsFrom: 'volcengine-voice-index' } } }] })
+  const def = doc.models[0].parameters.voice
+  const f = fixture([model('m', { voice: def })])
+  assert.equal(preview(f, { parameters: { voice: def.options[0].value } }).status, 'ready')
+  assert.deepEqual(intent(f).alternatives[0].parameters.voice.options[0], { value: def.options[0].value, label: def.options[0].label })
+  assert.equal(Object.hasOwn(def.options[0], 'meta'), true)
 })

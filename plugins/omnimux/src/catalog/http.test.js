@@ -117,3 +117,40 @@ test('mounted HTTP over real ephemeral server handles authenticated JSON preview
     assert.equal(m.calls(), 1)
   } finally { await new Promise(resolve => server.close(resolve)) }
 })
+
+test('repair mounted default prompt shares one frozen text value and stays non-executable', async () => {
+  const { api, models } = products()
+  models[0].parameters = { prompt: { type: 'string', defaultValue: 'x' } }
+  models[0].operations[0].inputs = [{ slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 }]
+  const m = mount(api)
+  const result = await dispatch(m, '/omnimux/generation-products/preview', { method: 'POST', body: JSON.stringify(req(api)) })
+  assert.equal(result.status, 200); assert.equal(result.body.status, 'ready'); assert.equal(result.body.executable, false)
+  assert.deepEqual(result.body.issues, [])
+})
+test('repair mounted safe access_token parameter never leaks legacy serialization failure', async () => {
+  const { api, models } = products(); models[0].parameters = { access_token: { type: 'boolean' } }
+  const m = mount(api)
+  const responses = [await dispatch(m, '/omnimux/generation-products'),
+    await dispatch(m, '/omnimux/generation-products/preview', { method: 'POST', body: JSON.stringify(req(api, { parameters: { access_token: 'invalid' } })) })]
+  for (const result of responses) {
+    assert.equal(result.status, 503)
+    assert.deepEqual(result.body, { schemaVersion: 1, status: 'pending', executable: false, issues: [{ code: 'catalog_unavailable' }] })
+  }
+})
+test('repair repeated mounted guarded labels yield fixed catalog unavailable on both new routes only', async () => {
+  const { api, models } = products()
+  models[0].parameters.n.options = [{ value: 5, label: 'sk-DUMMYONLY123456' }]
+  const m = mount(api)
+  for (let i = 0; i < 2; i++) {
+    const directory = await dispatch(m, '/omnimux/generation-products')
+    assert.equal(directory.status, 503); assert.deepEqual(directory.body.issues, [{ code: 'catalog_unavailable' }])
+    assert.equal(JSON.stringify(directory.body).includes('DUMMY'), false)
+  }
+  const guarded = mount({ list: () => api.list(), preparePreview: () => ({ schemaVersion: 1, status: 'rejected', executable: false,
+    issues: [{ code: 'parameter_invalid', field: 'access_token' }] }) })
+  const result = await dispatch(guarded, '/omnimux/generation-products/preview', { method: 'POST', body: '{}' })
+  assert.equal(result.status, 503); assert.deepEqual(result.body.issues, [{ code: 'catalog_unavailable' }])
+  let oldRoute
+  registerCatalogRoutes({ register(route) { oldRoute = route; return () => {} } }, { list: () => ({ label: 'access_token' }) })
+  assert.deepEqual((await dispatch({ routes: [oldRoute] }, '/omnimux/model-catalog')).body, { error: 'refused to emit a secret' })
+})
