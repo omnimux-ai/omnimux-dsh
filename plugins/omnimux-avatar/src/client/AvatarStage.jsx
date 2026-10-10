@@ -277,7 +277,9 @@ export function AvatarStage(props) {
 
   const conflict = conflictMessage(b.tier, b.selection)
   const hasInput = totalSelected(b.selection) > 0 || b.brief.trim() !== ''
-  const canGenerate = Boolean(currentId) && Boolean(b.model) && !conflict && hasInput
+  const modelGroups = groupsOfModel(imageModels(catalog), b.model)
+  const allGroupsDisabled = modelGroups.length > 0 && modelGroups.every((group) => group.enabled === false)
+  const canGenerate = Boolean(currentId) && Boolean(b.model) && !conflict && hasInput && !allGroupsDisabled
 
   // ── 提交失败要看得见 ───────────────────────────────────────────────────
   const sheetError = readError(sheet.error)
@@ -359,6 +361,10 @@ export function AvatarStage(props) {
       return
     }
     if (!currentId || !b.model) return
+    if (allGroupsDisabled) {
+      push(t('error.allImageChannelsDisabled'), 'error')
+      return
+    }
     const record = await sheet.submit({
       avatarId: currentId,
       model: b.model,
@@ -373,7 +379,7 @@ export function AvatarStage(props) {
     if (!record) return
     onSourceChange('history')
     push(t('status.generating'), 'success')
-  }, [b, currentId, onSourceChange, push, sheet, t])
+  }, [allGroupsDisabled, b, currentId, onSourceChange, push, sheet, t])
 
   const applyPreset = useCallback(
     (preset) => {

@@ -8,6 +8,7 @@ import { createServer } from 'node:http';
 import { createTestEnvironmentStarter } from '../../../../scripts/test-env-bootstrap.mjs';
 import { privateStarterFs, redact } from '../../../../scripts/composer-inline-bootstrap.mjs';
 import { fileURLToPath } from 'node:url';
+import { materializePackages as materializePackagesBase, installPrivatePluginPackages } from '../../../../test-support/private-plugin-installation.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const common = spawnSync('git', ['-C', root, 'rev-parse', '--path-format=absolute', '--git-common-dir'], { encoding: 'utf8' });
@@ -16,72 +17,10 @@ const repository = dirname(common.stdout.trim());
 const executable = '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux';
 const cli = '/Applications/OmniMux Dev.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh/lib/bin.js';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-const allowedSource = source => source.startsWith(join(root, 'plugins') + '/') || source.startsWith(join(root, 'node_modules') + '/') || source.startsWith(join(root, 'packages') + '/') || source.startsWith(join(repository, 'node_modules') + '/') || source.startsWith(join(repository, 'packages') + '/');
 
-/** Task-only local file dependency preparation; no shared configuration or registry fetch. */
+/** Task-only local file dependency preparation; delegates to repository test-support helper. */
 export function materializePackages(privateHome, packageNames) {
-  const records = new Map();
-  const copied = [];
-  const packageRoot = join(privateHome, 'task-packages');
-  fs.mkdirSync(packageRoot, { recursive: true });
-  function dependencyDir(source, name) {
-    const candidates = [join(source, 'node_modules', name), join(dirname(source), name)];
-    if (dirname(source).split('/').at(-1)?.startsWith('@')) candidates.push(join(dirname(dirname(source)), name));
-    for (const candidate of candidates) {
-      if (!fs.existsSync(join(candidate, 'package.json'))) continue;
-      const actual = fs.realpathSync(candidate);
-      if (!allowedSource(actual)) throw new Error('Task dependency source is outside admitted package roots');
-      return actual;
-    }
-    const require = createRequire(join(source, 'package.json'));
-    let manifest;
-    try { manifest = require.resolve(name + '/package.json'); }
-    catch { throw new Error('Declared task dependency is not installed: ' + name); }
-    const actual = fs.realpathSync(dirname(manifest));
-    if (!allowedSource(actual)) throw new Error('Task dependency source is outside admitted package roots');
-    return actual;
-  }
-  function copyPackage(source) {
-    source = fs.realpathSync(source);
-    if (!allowedSource(source)) throw new Error('Unadmitted package source');
-    if (records.has(source)) return records.get(source);
-    const original = JSON.parse(fs.readFileSync(join(source, 'package.json'), 'utf8'));
-    const target = join(packageRoot, String(records.size));
-    records.set(source, target);
-    fs.cpSync(source, target, { recursive: true, dereference: false, filter: path => {
-      const parts = relative(source, path).split('/');
-      return !parts.some(part => ['node_modules', '.git', '.tmp', '.scratch', '.agent-reports'].includes(part));
-    } });
-    const manifest = { ...original };
-    for (const kind of ['dependencies', 'optionalDependencies']) {
-      if (!original[kind]) continue;
-      manifest[kind] = {};
-      for (const name of Object.keys(original[kind])) {
-        const dependency = copyPackage(dependencyDir(source, name));
-        manifest[kind][name] = 'file:' + dependency;
-      }
-    }
-    fs.writeFileSync(join(target, 'package.json'), JSON.stringify(manifest, null, 2) + '\n');
-    const sources = [];
-    function observe(dir, prefix = '') {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const name = prefix + entry.name;
-        if (entry.name === 'node_modules' || name === 'package.json') continue;
-        const path = join(dir, entry.name);
-        if (entry.isSymbolicLink()) throw new Error('Task package payload contains unadmitted symlink: ' + name);
-        if (entry.isDirectory()) observe(path, name + '/');
-        else if (entry.isFile()) {
-          const bytes = fs.readFileSync(path);
-          if (!bytes.equals(fs.readFileSync(join(source, name)))) throw new Error('Task package payload mismatch: ' + name);
-          sources.push({ path: name, sha256: hash(bytes), bytes: bytes.length });
-        } else throw new Error('Task package payload is not a regular file');
-      }
-    }
-    observe(target);
-    copied.push({ name: original.name, version: original.version, source, target, sources });
-    return target;
-  }
-  return { targets: packageNames.map(name => copyPackage(name.startsWith('/') ? name : join(root, 'plugins', name))), copied };
+  return materializePackagesBase(privateHome, packageNames, { root, repository });
 }
 
 export async function startPrivateConsumerEnvironment(evidence) {
@@ -119,70 +58,19 @@ export async function startPrivateConsumerEnvironment(evidence) {
         const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
         settings.locale = { preference: 'zh' };
         fs.writeFileSync(settingsPath, JSON.stringify(settings) + '\n', { mode: 0o600 });
-        const prepared = materializePackages(options.env.DSH_HOME, ['omnimux', 'omnimux-workflow', 'omnimux-viewer', sidebarPackage]);
-        const runtimeEnv = { ...options.env, PATH: process.env.PATH,
-          npm_config_store_dir: join(options.env.DSH_HOME, 'private-store'),
-          npm_config_cache: join(options.env.DSH_HOME, 'private-cache'),
-          npm_config_userconfig: join(options.env.DSH_HOME, 'private.npmrc'),
-          npm_config_globalconfig: join(options.env.DSH_HOME, 'private-global.npmrc'),
-          COREPACK_ENABLE_NETWORK: '0', PNPM_HOME: join(options.env.DSH_HOME, 'private-pnpm') };
-        fs.writeFileSync(runtimeEnv.npm_config_userconfig, '', { flag: 'wx', mode: 0o600 });
-        fs.writeFileSync(runtimeEnv.npm_config_globalconfig, '', { flag: 'wx', mode: 0o600 });
-        const allLocalDependencyPaths = prepared.copied.map(item => item.target);
-        const install = spawnSync(executable, ['--expose-internals', cli, 'plugin', '--profile', 'web', 'add', ...prepared.targets, ...allLocalDependencyPaths.filter(path => !prepared.targets.includes(path)), '--ignore-scripts', '--offline', '--prod', '--store-dir=' + runtimeEnv.npm_config_store_dir], {
-          ...options, env: runtimeEnv, stdio: 'pipe', encoding: 'utf8', timeout: 120000, maxBuffer: 8 * 1024 * 1024,
+        const { prepared, runtimeEnv, installed, wholePackages } = installPrivatePluginPackages({
+          root, repository, home: options.env.DSH_HOME, executable, cli, evidence,
+          packageNames: ['omnimux', 'omnimux-workflow', 'omnimux-viewer', sidebarPackage],
+          requiredLayers: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'omnimux', 'omnimux-workflow', 'omnimux-viewer', 'dsh-better-sidebar'],
+          entryFiles: {
+            omnimux: ['lib/client.js', 'src/catalog/generation-products.js', 'src/media/generation-mapping.js'],
+            'omnimux-viewer': ['lib/index.js', 'lib/client.js'],
+            'omnimux-workflow': ['dist/index.js', 'lib/client.js', 'lib/canvas.js'],
+          },
+          options,
         });
-        fs.writeFileSync(join(evidence, 'install.log'), redact((install.stdout || '') + '\n' + (install.stderr || '')));
-        if (install.error || install.status !== 0) throw new Error('Formal task-private offline installation failed: ' + (install.error?.code || install.status));
         const profile = join(options.env.DSH_HOME, 'profiles/web');
         const manifest = JSON.parse(fs.readFileSync(join(profile, 'package.json'), 'utf8'));
-        if (!['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app', 'omnimux', 'omnimux-workflow', 'omnimux-viewer', 'dsh-better-sidebar'].every(name => manifest.dsh?.profile?.bundles.includes(name))) throw new Error('Formal complete application layer missing');
-        const installed = [];
-        for (const name of ['omnimux', 'omnimux-workflow', 'omnimux-viewer']) {
-          const source = join(root, 'plugins', name);
-          for (const file of name === 'omnimux' ? ['lib/client.js', 'src/catalog/generation-products.js', 'src/media/generation-mapping.js'] : name === 'omnimux-viewer' ? ['lib/index.js', 'lib/client.js'] : ['dist/index.js', 'lib/client.js', 'lib/canvas.js']) {
-            const bytes = fs.readFileSync(join(source, file));
-            if (!bytes.equals(fs.readFileSync(join(profile, 'node_modules', name, file)))) throw new Error('Formal task installed payload mismatch');
-            installed.push({ name, file, bytes: bytes.length, sha256: hash(bytes) });
-          }
-        }
-        // Fail closed on every materialized byte, not only selected entry bundles.
-        const wholePackages = [];
-        for (const item of prepared.copied) {
-          const references = prepared.copied.flatMap(parent => {
-            const manifest = JSON.parse(fs.readFileSync(join(parent.target, 'package.json'), 'utf8'));
-            return ['dependencies', 'optionalDependencies'].flatMap(kind => Object.entries(manifest[kind] || {}).filter(([, value]) => value === 'file:' + item.target).map(([name]) => ({ parent: parent.name, parentTarget: parent.target, name, entry: join(parent.target, 'node_modules', name) })));
-          });
-          const admittedRoots = references.map(reference => {
-            // Local CLI links each copied package; bind its declared file dependency
-            // where a flat root installation cannot represent concurrent versions.
-            if (!fs.existsSync(reference.entry)) {
-              fs.mkdirSync(dirname(reference.entry), { recursive: true });
-              fs.symlinkSync(item.target, reference.entry, 'dir');
-              fs.appendFileSync(join(evidence, 'private-dependency-graph-links.jsonl'), JSON.stringify({ parent: reference.parent, dependency: reference.name, declaredTarget: item.target, entry: reference.entry, created: true }) + '\n');
-            }
-            const actualRoot = fs.realpathSync(reference.entry);
-            if (actualRoot !== fs.realpathSync(item.target)) throw new Error('Declared nested dependency resolves to a different package: ' + reference.parent + '/' + reference.name);
-            return actualRoot;
-          });
-          if (prepared.targets.includes(item.target)) {
-            const actualRoot = fs.realpathSync(join(profile, 'node_modules', item.name));
-            if (actualRoot !== fs.realpathSync(item.target)) throw new Error('Top-level plugin resolves to a different package: ' + item.name);
-            admittedRoots.push(actualRoot);
-          }
-          if (!admittedRoots.length) throw new Error('Package is not reachable from its declared dependency graph: ' + item.name);
-          const installedRoot = admittedRoots[0];
-          const files = [{ path: 'package.json', sha256: hash(fs.readFileSync(join(item.target, 'package.json'))) }, ...item.sources];
-          for (const file of files) {
-            const expected = fs.readFileSync(join(item.target, file.path));
-            const actual = fs.readFileSync(join(installedRoot, file.path));
-            if (!expected.equals(actual)) {
-              fs.writeFileSync(join(evidence, 'package-byte-mismatch.json'), JSON.stringify({ name: item.name, file: file.path, source: item.source, target: item.target, installedRoot, actualRoot: fs.realpathSync(installedRoot), sameNameRecords: prepared.copied.filter(entry => entry.name === item.name).map(entry => ({ name: entry.name, version: entry.version, target: entry.target, source: entry.source })), expected: file.path === 'package.json' ? JSON.parse(expected) : hash(expected), actual: file.path === 'package.json' ? JSON.parse(actual) : hash(actual) }, null, 2) + '\n');
-              throw new Error('Formal whole package payload mismatch: ' + item.name + '/' + file.path);
-            }
-          }
-          wholePackages.push({ name: item.name, source: item.source, target: item.target, installedRoot, references, admittedRoots, files });
-        }
         const workspaceId = randomUUID();
         const workspacePath = join(options.env.HOME, 'generation-preview-synthetic-project');
         fs.mkdirSync(workspacePath, { recursive: true });
