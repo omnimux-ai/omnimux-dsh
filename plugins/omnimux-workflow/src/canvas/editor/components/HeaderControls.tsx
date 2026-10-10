@@ -9,7 +9,8 @@
  * .nodrag .nopan and stop native pointer/mouse events.
  */
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
+import { GenerationProductDraft } from './GenerationProductDraft';
 import {
   useReactFlow,
   useStore,
@@ -70,6 +71,7 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onResetExecution,
 }) => {
   const t = useT();
+  const [draftOpen, setDraftOpen] = useState(false);
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const zoomPercent = useStore(zoomSelector);
 
@@ -123,6 +125,10 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
       onPointerDown={stopToolbarNativeEvent}
       onMouseDown={stopToolbarNativeEvent}
     >
+      <div className="wf-header-capsule">
+        <button type="button" className="wf-header-capsule__btn wf-generation-draft-entry" onClick={() => setDraftOpen(true)}>{t('generationDraft.entry')}</button>
+      </div>
+      {draftOpen && <GenerationProductDraft onClose={() => setDraftOpen(false)} />}
       {/* 1. 执行控制（闲态不提供全画布一键运行；仅在执行中或终态时展示状态胶囊） */}
       {(busy || paused || (terminal && onResetExecution)) && (
         <div

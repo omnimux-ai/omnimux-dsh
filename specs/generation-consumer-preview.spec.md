@@ -42,3 +42,12 @@ AC6：用户看到同版演示后明确确认才提交UI正式PR/MQ/mainff/Dev/�
 ## 禁止与待定
 不改App/CanvasEditor/ConfigPanel/原读取口/store/执行器/纯核/模型/groups/价格/Host公共契约；不第一选项默认、参数clamp/跨域拼表、slice/去重已选素材、旧用途“升级”、常量supplierchannel/虚构版本；不新工作流/新跨包UI组件/缓存/平台/提供方客户端；不sharedkit/Prod/restart/跨仓。若实际验收必须扩大以上写集，先更spec并复审，不擅自用广泛修复抹门禁。
 真实supplierchannel/完整官方域/采购/同版产物另方向取证；三个官方原文保未证矛盾。缺input身份/版本的新草稿不能表示已有可稳定执行资格，本片检查不激活生产。
+
+## 验证固化补充（已确认界面保持同版）
+用户已在同版功能截图展示后明确选择“采用本版并合入”，覆盖本版合入、开发环境更新与任务清理，不覆盖真实视频生成、生产、重启或跨仓。首次交付命令因缺版本化端到端与功能证据被现质量门在执行前拒绝；本补充仅固化已有验收，不改变七业务文件或AC1–AC6。前44行及原失败/冻结/审查完整保留，第9行“另仅”在测试与证据范围的例外以下列精确新增为限。
+新增仅 plugins/omnimux-workflow/tests/e2e/generation-consumer-preview.e2e.test.mjs、同目录generation-consumer-preview.journey.mjs、docs/evidence/generation-consumer-preview-3274.md及generation-consumer-preview-3274/empty-authoritative-result.png与light-product-dropdown.png两张专属同版截图；不增scripts/第三runner/依赖/CI/AGENTS/生产JSON或资格平台。
+端到端真实执行入口复用现公开createTestEnvironmentStarter/privateStarterFs、打包dsh plugin私有offline安装与实际Ego page旅程，源码不依赖.tmp/.workbuddy或旧PASS收据。侧栏测试依赖由显式OMNIMUX_GENERATION_QA_SIDEBAR_PACKAGE指定，realpath须位于当前仓node_modules内且package.name精确dsh-better-sidebar；缺失/环境不满足时失败，不联网补装、不无条件skip。不将本机路径作为产品默认或写进代码。
+显式执行 `node --test plugins/omnimux-workflow/tests/e2e/generation-consumer-preview.e2e.test.mjs`；前提为macOS已安装正式OmniMux Dev包、任务正式host/client/canvas构建产物、Ego可用与上述已装声明侧栏依赖。现普通包unit脚本不含nested tests/e2e，本功能浏览器测试单独执行，不扩CI平台要求或以unit冒浏览器。
+正常登录/项目/会话/创作页导航与完整JSON/原身份/重复次序/首尾角色/0false/null/空值/来源更版和断边门、原三task GETpoll→GETMP4→项目SSE必须强断言；SSE目标须包含原execution events路径，不仅记录。新建执行/上游生成均0与旧恢复1分别核，GET-only合成夹具不等真实资格。
+同Ego调用finally finish keep[]；实际同space closedSpace=true、keptManagedLabels=[]、fresh journey complete/零失败、前后source/bundle相同、Host/两本机夹具/监听/私有目录关闭须断言，缺收据/坏JSON/false均失败。成功start后的proof写入或返回失败必须调用已拥有environment.cleanup，不能漏清理或伪造关闭。
+顺序为本补充→原已验证scratch同版真实预演生成晚于规格的受控证据→上述两测试固化→正式测试实际运行与独立新增文件/隐私审查→版本化功能摘要及两PNG→正常requiredCI/MergeQueue/Dev/任务清理。公开仅脱敏功能摘要与已审查合成截图，不提交登录token、私有profile或原始日志；完整本机收据另留任务报告。原界面明确确认不重复索取，亦不授扩功能或视频live权限。
