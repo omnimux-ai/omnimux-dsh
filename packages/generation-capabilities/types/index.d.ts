@@ -89,6 +89,9 @@ export interface OperationSlot extends GenerationSlot {
   readonly min?: number;
   readonly max?: number | null;
   readonly source?: string;
+  /** Allowed origins of an already composed prompt; not proof of its actual provenance. */
+  readonly valueSources?: readonly ('local_field' | 'upstream_output')[];
+  readonly composition?: { readonly kind: 'content_with_instruction'; readonly localRole: 'instruction' };
   readonly totalMinDurationSec?: number;
   readonly totalMaxDurationSec?: number;
   readonly totalMinExclusive?: boolean;

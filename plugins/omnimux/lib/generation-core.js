@@ -1,4 +1,4 @@
-// Generated from @omnimux/generation-capabilities; source-sha256: fbc1c8ce19b43ba731cb9a4a3f1cf355bd07fce83623ca991a22565c2a18cd21
+// Generated from @omnimux/generation-capabilities; source-sha256: e2ed2b63222fff8ec0564c30c746bffaddab576ae201561909db9c2f586f5aaa
 
 // src/units.js
 var BYTES_PER_MB = 1024 * 1024;
@@ -937,7 +937,7 @@ function evaluateCandidateRequest(candidate, snapshot, policy) {
   const numeric = ["maxSizeMb", "minDurationSec", "maxDurationSec", "totalMinDurationSec", "totalMaxDurationSec", "combinedOutputMaxDurationSec"];
   for (let slotIndex = 0; slotIndex < slots.length; slotIndex++) {
     const slot = slots[slotIndex];
-    if (!record(slot) || !bounded(slot, ["slot", "type", "role", "min", "max", "source", "allowedMimes", ...numeric, "maxSizeExclusive", "totalMinExclusive", "totalMaxExclusive"])) {
+    if (!record(slot) || !bounded(slot, ["slot", "type", "role", "min", "max", "source", "valueSources", "composition", "allowedMimes", ...numeric, "maxSizeExclusive", "totalMinExclusive", "totalMaxExclusive"])) {
       issue("indeterminate", "malformed_input", { slotIndex });
       slotsOK = false;
       continue;
@@ -980,8 +980,16 @@ function evaluateCandidateRequest(candidate, snapshot, policy) {
       slotsOK = false;
     }
     if (typeof slot.minDurationSec === "number" && typeof slot.maxDurationSec === "number" && slot.minDurationSec > slot.maxDurationSec || typeof slot.totalMinDurationSec === "number" && typeof slot.totalMaxDurationSec === "number" && (slot.totalMinDurationSec > slot.totalMaxDurationSec || slot.totalMinDurationSec === slot.totalMaxDurationSec && (slot.totalMinExclusive === true || slot.totalMaxExclusive === true))) issue("rejected", "asset_rejected", { slotIndex });
+    const hasTextDeclaration = own(slot, "valueSources") || own(slot, "composition");
+    if (hasTextDeclaration) {
+      const sources = slot.valueSources, composition = slot.composition;
+      if (slot.type !== "text" || !array(sources) || Object.getPrototypeOf(sources) !== Array.prototype || sources.length !== 2 || !(sources[0] === "local_field" && sources[1] === "upstream_output" || sources[0] === "upstream_output" && sources[1] === "local_field") || !record(composition) || !bounded(composition, ["kind", "localRole"]) || composition.kind !== "content_with_instruction" || composition.localRole !== "instruction") {
+        issue("indeterminate", "unchecked_constraint", { slotIndex });
+        slotsOK = false;
+      }
+    }
     if (slot.type === "text") {
-      if (!bounded(slot, ["slot", "type", "role", "source", "min", "max"])) issue("indeterminate", "unchecked_constraint", { slotIndex });
+      if (!bounded(slot, ["slot", "type", "role", "source", "min", "max", "valueSources", "composition"])) issue("indeterminate", "unchecked_constraint", { slotIndex });
       texts++;
       if (texts > 1 || slot.role !== "prompt" || slot.source !== "node_field" || ![0, 1].includes(
         /** @type {number} */

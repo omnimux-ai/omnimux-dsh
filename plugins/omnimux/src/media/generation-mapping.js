@@ -10,6 +10,7 @@ const SOURCE_PATHS = [
   'catalog/serving/channel-groups.js', 'catalog/contract/auto-serving-manifest.json',
   'catalog/contract/dispositions.json', 'catalog/contract/submit-guard/map.js',
   'catalog/contract/submit-guard/map-bindings.js', 'catalog/contract/submit-guard/map-contract.js',
+  '../lib/generation-core.js',
 ]
 // Package identity is captured at first module evaluation, not at a later factory call.
 const sourceVersion = (() => {

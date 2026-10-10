@@ -426,3 +426,23 @@ test('#3274 empty draft posts six keys with exact explicit prompt and still cann
     assert.equal(env.calls.filter(call => !call.url.startsWith('/omnimux/generation-products')).length, 0);
   } finally { await cleanup(env); }
 });
+
+test('#3276 unchanged directory reader and draft preserve nested text declarations without a second matcher', async () => {
+  const slot = { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+    valueSources: ['local_field', 'upstream_output'], composition: { kind: 'content_with_instruction', localRole: 'instruction' } };
+  const alternative = { status: 'pending', inputs: [slot], inputGroups: [], parameters: {}, output: { type: 'image' }, constraints: {} };
+  const env = setup({ alternatives: [alternative] });
+  const before = JSON.stringify(alternative);
+  try {
+    await mount(env); await choose(env, '产品', '生图'); await choose(env, '用途', '垫图参考');
+    const declaration = env.win.document.querySelector('[data-generation-branch] pre');
+    assert.ok(declaration); assert.deepEqual(JSON.parse(declaration.textContent), alternative);
+    assert.equal(JSON.stringify(alternative), before);
+    await change(env, 'textarea[aria-label="说明"]', '  完整最终描述\n');
+    await click(env, '检查输入');
+    assert.equal(env.calls.at(-1).body.prompt, '  完整最终描述\n');
+    assert.deepEqual(env.calls.at(-1).body.assets, []);
+    assert.equal(env.calls.filter(call => !call.url.startsWith('/omnimux/generation-products')).length, 0);
+    assert.match(env.win.document.body.textContent, /输入预检通过，尚不能生成/);
+  } finally { await cleanup(env); }
+});

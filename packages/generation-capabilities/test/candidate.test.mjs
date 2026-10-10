@@ -282,3 +282,65 @@ for (const [entry, core] of [['source', source], ['artifact', artifact]]) {
     assert.equal(core.evaluateCandidateRequest(candidate({ prompt: { type: 'string' } }, {}, [{ ...text, min: 1, max: 1 }]), snapshot({ prompt: '' }, { prompt: { source: 'explicit', value: '' } }, [], { prompt: '' })).status, 'pending')
   })
 }
+
+for (const [entry, core] of [['source', source], ['artifact', artifact]]) {
+  test(`${entry}: #3276 known dual-source declaration checks only the complete final prompt and never supplies eligibility`, () => {
+    for (const valueSources of [['local_field', 'upstream_output'], ['upstream_output', 'local_field']]) {
+      const slot = Object.freeze({ slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+        valueSources: Object.freeze(valueSources), composition: Object.freeze({ kind: 'content_with_instruction', localRole: 'instruction' }) })
+      const input = candidate({}, {}, [slot]), finalPrompt = '  来源内容\n\n补充要求：保持角色\n'
+      const snap = snapshot({}, {}, [], { prompt: finalPrompt })
+      const checked = core.evaluateCandidateRequest(input, snap)
+      assert.equal(checked.status, 'ready'); assert.deepEqual(checked.diagnostics, [])
+      assert.equal(snap.prompt, finalPrompt); assert.deepEqual(input.operation.inputs, [slot])
+      assert.equal(core.evaluateCandidateRequest({ ...input, currentEligibility: 'pending' }, snap).status, 'pending')
+      assert.equal(core.evaluateCandidateRequest({ ...input, currentEligibility: 'rejected' }, snap).status, 'rejected')
+      for (const prompt of [undefined, '', ' \n']) {
+        assert.equal(core.evaluateCandidateRequest(input, snapshot({}, {}, [], prompt === undefined ? {} : { prompt })).status, 'pending')
+      }
+      assert.equal(core.evaluateCandidateRequest(candidate({}, {}, [{ ...slot, min: 0 }]), snapshot()).status, 'ready')
+      assert.equal(core.evaluateCandidateRequest(candidate({}, {}, [{ ...slot, min: 0, max: 0 }]), snap).status, 'rejected')
+    }
+  })
+  test(`${entry}: #3276 unsupported text declarations stay closed without getters or mutation`, () => {
+    let calls = 0
+    const base = { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+      valueSources: ['local_field', 'upstream_output'], composition: { kind: 'content_with_instruction', localRole: 'instruction' } }
+    const mutations = [
+      s => { delete s.composition }, s => { delete s.valueSources },
+      s => { s.valueSources = ['upstream_output'] }, s => { s.valueSources = ['local_field'] },
+      s => { s.valueSources = [] }, s => { s.valueSources = ['local_field', 'local_field'] },
+      s => { s.valueSources = ['local_field', 'future'] }, s => { s.valueSources = ['local_field', , 'upstream_output'] },
+      s => { s.valueSources.extra = true }, s => { s.valueSources[Symbol('hidden')] = true },
+      s => { Object.setPrototypeOf(s.valueSources, null) },
+      s => { const inherited = Object.create(Array.prototype); Object.setPrototypeOf(s.valueSources, inherited) },
+      s => { const inherited = Object.create(Array.prototype);
+        Object.defineProperty(inherited, Symbol.iterator, { get() { calls++; return function* () { yield 'local_field'; yield 'upstream_output' } } });
+        inherited.includes = () => { calls++; return true };
+        s.valueSources = ['evil_one', 'evil_two']; Object.setPrototypeOf(s.valueSources, inherited) },
+      s => { const inherited = Object.create(Array.prototype);
+        Object.defineProperty(inherited, 'includes', { get() { calls++; return () => true } });
+        Object.setPrototypeOf(s.valueSources, inherited) },
+      s => { const inherited = Object.create(Array.prototype);
+        Object.defineProperty(inherited, '0', { get() { calls++; return 'local_field' } });
+        delete s.valueSources[0]; Object.setPrototypeOf(s.valueSources, inherited) },
+      s => { s.composition.kind = 'single_body' }, s => { s.composition.localRole = 'body' },
+      s => { s.composition.extra = false }, s => { s.composition.kind = undefined },
+      s => { Object.setPrototypeOf(s.composition, { inherited: true }) },
+      s => { Object.defineProperty(s.composition, 'hidden', { value: false }) },
+      s => { s.composition[Symbol('hidden')] = true },
+      s => { Object.defineProperty(s.composition, 'kind', { enumerable: true, get() { calls++; return 'content_with_instruction' } }) },
+      s => { Object.defineProperty(s.valueSources, '0', { enumerable: true, get() { calls++; return 'local_field' } }) },
+      s => { s.type = 'image'; s.role = 'reference' }, s => { s.allowedMimes = ['image/png'] },
+    ]
+    for (const mutate of mutations) {
+      const slot = structuredClone(base); mutate(slot)
+      const before = Object.getOwnPropertyDescriptors(slot.composition ?? {}), input = candidate({}, {}, [slot])
+      const result = core.evaluateCandidateRequest(input, snapshot({}, {}, [], { prompt: 'x' }))
+      assert.equal(result.status, 'indeterminate'); assert.equal(result.assignment, undefined); assert.equal(result.effectiveParameters, undefined)
+      assert.deepEqual(Object.getOwnPropertyDescriptors(slot.composition ?? {}), before)
+      assert.equal(core.evaluateCandidateRequest({ ...input, currentEligibility: 'rejected' }, snapshot({}, {}, [], { prompt: 'x' })).status, 'rejected')
+    }
+    assert.equal(calls, 0)
+  })
+}

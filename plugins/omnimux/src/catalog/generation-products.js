@@ -18,7 +18,7 @@ const POLICY = [
   { productId: 'generation.image', label: '生图', type: 'image', intents: ['text_to_image', 'image_to_image', 'multi_reference'] },
   { productId: 'generation.video', label: '生视频', type: 'video', intents: ['video_multi_ref', 'first_last_frame'] },
 ]
-const INPUT_KEYS = ['slot', 'type', 'role', 'source', 'min', 'max', 'allowedMimes', 'maxSizeMb', 'maxSizeExclusive', 'minDurationSec', 'maxDurationSec', 'totalMinDurationSec', 'totalMaxDurationSec', 'totalMinExclusive', 'totalMaxExclusive', 'combinedOutputMaxDurationSec']
+const INPUT_KEYS = ['slot', 'type', 'role', 'source', 'valueSources', 'composition', 'min', 'max', 'allowedMimes', 'maxSizeMb', 'maxSizeExclusive', 'minDurationSec', 'maxDurationSec', 'totalMinDurationSec', 'totalMaxDurationSec', 'totalMinExclusive', 'totalMaxExclusive', 'combinedOutputMaxDurationSec']
 const PARAM_KEYS = ['type', 'options', 'range', 'supported', 'allowAuto', 'caseInsensitive', 'minLength', 'maxLength', 'unit']
 const ASSET_KEYS = ['type', 'pathOrUrl', 'role', 'targetSlot', 'mime', 'sizeBytes', 'durationSec', 'sourceNodeId', 'edgeId', 'outputId', 'outputVersion', 'originalName', 'dimensions']
 const IDENTITY_KEYS = ['canonicalModelId', 'providerId', 'channelId', 'realGroupId', 'wireGroup', 'wireModel', 'operationId', 'purpose', 'protocol', 'sourceVersion']
