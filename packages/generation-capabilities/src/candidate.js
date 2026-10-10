@@ -207,7 +207,7 @@ export function evaluateCandidateRequest(candidate, snapshot, policy) {
   const numeric = ['maxSizeMb', 'minDurationSec', 'maxDurationSec', 'totalMinDurationSec', 'totalMaxDurationSec', 'combinedOutputMaxDurationSec']
   for (let slotIndex = 0; slotIndex < slots.length; slotIndex++) {
     const slot = slots[slotIndex]
-    if (!record(slot) || !bounded(slot, ['slot', 'type', 'role', 'min', 'max', 'source', 'allowedMimes', ...numeric, 'maxSizeExclusive', 'totalMinExclusive', 'totalMaxExclusive'])) {
+    if (!record(slot) || !bounded(slot, ['slot', 'type', 'role', 'min', 'max', 'source', 'valueSources', 'composition', 'allowedMimes', ...numeric, 'maxSizeExclusive', 'totalMinExclusive', 'totalMaxExclusive'])) {
       issue('indeterminate', 'malformed_input', { slotIndex }); slotsOK = false; continue
     }
     if (!name(slot.slot) || slotNames.has(slot.slot)) { issue('rejected', 'malformed_input', { slotIndex }); slotsOK = false }
@@ -222,8 +222,19 @@ export function evaluateCandidateRequest(candidate, snapshot, policy) {
     if (own(slot, 'allowedMimes') && slot.allowedMimes !== null && (!array(slot.allowedMimes) || !slot.allowedMimes.length || !slot.allowedMimes.every(name) || new Set(slot.allowedMimes).size !== slot.allowedMimes.length)) { issue('rejected', 'malformed_input', { slotIndex }); slotsOK = false }
     if ((typeof slot.minDurationSec === 'number' && typeof slot.maxDurationSec === 'number' && slot.minDurationSec > slot.maxDurationSec)
       || (typeof slot.totalMinDurationSec === 'number' && typeof slot.totalMaxDurationSec === 'number' && (slot.totalMinDurationSec > slot.totalMaxDurationSec || (slot.totalMinDurationSec === slot.totalMaxDurationSec && (slot.totalMinExclusive === true || slot.totalMaxExclusive === true))))) issue('rejected', 'asset_rejected', { slotIndex })
+    const hasTextDeclaration = own(slot, 'valueSources') || own(slot, 'composition')
+    if (hasTextDeclaration) {
+      const sources = slot.valueSources, composition = slot.composition
+      if (slot.type !== 'text' || !array(sources) || Object.getPrototypeOf(sources) !== Array.prototype || sources.length !== 2
+        || !((sources[0] === 'local_field' && sources[1] === 'upstream_output')
+          || (sources[0] === 'upstream_output' && sources[1] === 'local_field'))
+        || !record(composition) || !bounded(composition, ['kind', 'localRole'])
+        || composition.kind !== 'content_with_instruction' || composition.localRole !== 'instruction') {
+        issue('indeterminate', 'unchecked_constraint', { slotIndex }); slotsOK = false
+      }
+    }
     if (slot.type === 'text') {
-      if (!bounded(slot, ['slot', 'type', 'role', 'source', 'min', 'max'])) issue('indeterminate', 'unchecked_constraint', { slotIndex })
+      if (!bounded(slot, ['slot', 'type', 'role', 'source', 'min', 'max', 'valueSources', 'composition'])) issue('indeterminate', 'unchecked_constraint', { slotIndex })
       texts++
       if (texts > 1 || slot.role !== 'prompt' || slot.source !== 'node_field' || ![0, 1].includes(/** @type {number} */ (min)) || (max !== Infinity && ![0, 1].includes(/** @type {number} */ (max)))) { issue('indeterminate', 'malformed_input', { slotIndex }); slotsOK = false }
       const presence = typeof snapshot.prompt === 'string' && snapshot.prompt.trim() ? 1 : 0

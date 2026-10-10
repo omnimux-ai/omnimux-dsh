@@ -259,7 +259,7 @@ test('complete alternatives preserve only/fixed/whole-media caps without domain 
 })
 test('unconsumed canonical input composition, valueSources, unknown output/parameter semantics invalidate whole branch', () => {
   for (const mutate of [m => { m.operations[0].inputs = [{ slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
-    valueSources: ['local_field', 'upstream_output'], composition: { kind: 'content_with_instruction', localRole: 'instruction' } }] },
+    valueSources: ['upstream_output'], composition: { kind: 'content_with_instruction', localRole: 'instruction' } }] },
     m => { m.operations[0].output.newLimit = 1 }, m => { m.parameters.n = { type: 'number', newDomain: true } },
     m => { m.parameters.n = { optionsFrom: 'unknown' } }]) {
     const m = model(); mutate(m); const f = fixture([m])
@@ -608,4 +608,55 @@ test('#3272 compatible required shapes preserve the existing unrestricted global
     assert.equal(f.products.preparePreview(request(f.products)).status, 'ready')
     assert.equal(f.products.preparePreview(request(f.products)).executable, false)
   }
+})
+
+// Qualification here remains synthetic; a declaration is never production evidence.
+test('#3276 existing dual-origin prompt metadata is losslessly public while absent qualification stays pending', () => {
+  const slot = { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+    valueSources: ['local_field', 'upstream_output'], composition: { kind: 'content_with_instruction', localRole: 'instruction' } }
+  const f = fixture([model('PRIVATE-MODEL', {}, [slot])], undefined, null)
+  const directory = f.products.list(), current = directory.products[0].intents[0]
+  assert.equal(current.status, 'pending'); assert.equal(current.alternatives.length, 1)
+  assert.deepEqual(current.alternatives[0].inputs, [slot])
+  assert.deepEqual(Object.keys(current.alternatives[0]).sort(), ['constraints', 'inputGroups', 'inputs', 'output', 'parameters', 'status'])
+  const checked = preview(f, { prompt: '  完整最终描述\n' })
+  assert.equal(checked.status, 'pending'); assert.equal(checked.executable, false)
+  assert.deepEqual(codes(checked), ['qualification_pending'])
+  assert.equal(f.products.list().currentFingerprint, directory.currentFingerprint)
+})
+
+test('#3276 normal canonical catalog includes the exact known declaration without replacing other unresolved candidates', () => {
+  const products = createGenerationProducts(), first = products.list()
+  const text = first.products.find(p => p.productId === 'generation.image').intents.find(i => i.intent === 'text_to_image')
+  const branch = text.alternatives.find(a => a.inputs.some(s => s.valueSources?.includes('local_field') && s.valueSources?.includes('upstream_output')))
+  assert.ok(branch, 'Normal canonical dual-origin declaration was omitted')
+  const slot = branch.inputs.find(s => s.slot === 'prompt')
+  assert.deepEqual(slot.valueSources, ['local_field', 'upstream_output'])
+  assert.deepEqual(slot.composition, { kind: 'content_with_instruction', localRole: 'instruction' })
+  assert.equal(branch.status, 'pending')
+  assert.equal(products.list().currentFingerprint, first.currentFingerprint)
+  const checked = products.preparePreview({ schemaVersion: 1, currentFingerprint: first.currentFingerprint,
+    productId: 'generation.image', intent: 'text_to_image', parameters: {}, assets: [], prompt: '最终描述' })
+  assert.equal(checked.executable, false); assert.notEqual(checked.status, 'ready')
+  assert.ok(codes(checked).includes('qualification_pending'))
+})
+
+test('#3276 declaration values and ordering invalidate fingerprints and old qualification without publishing proof', () => {
+  const slot = { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1,
+    valueSources: ['local_field', 'upstream_output'], composition: { kind: 'content_with_instruction', localRole: 'instruction' } }
+  let bound
+  const f = fixture([model('PRIVATE-MODEL', {}, [slot])], undefined, c => bound ??= structuredClone(proof(c)))
+  const original = f.products.list().currentFingerprint
+  assert.equal(preview(f, { prompt: 'x' }).status, 'ready')
+  const current = f.models[0].operations[0].inputs[0]
+  current.composition = { localRole: 'instruction', kind: 'content_with_instruction' }
+  assert.equal(f.products.list().currentFingerprint, original)
+  current.valueSources.reverse()
+  const changed = f.products.list().currentFingerprint
+  assert.notEqual(changed, original); assert.equal(preview(f, { prompt: 'x' }).status, 'pending')
+  assert.deepEqual(codes(f.products.preparePreview({ ...request(f.products), currentFingerprint: original, prompt: 'x' })), ['stale_fingerprint'])
+  current.composition.localRole = 'body'
+  assert.notEqual(f.products.list().currentFingerprint, changed)
+  assert.equal(f.products.list().products[0].intents[0].status, 'indeterminate')
+  assert.equal(f.products.list().products[0].intents[0].alternatives.length, 0)
 })

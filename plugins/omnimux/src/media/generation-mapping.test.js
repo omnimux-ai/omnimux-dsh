@@ -137,3 +137,34 @@ test('#3272 unreadable package source never breaks import but list and preview f
     } finally { fs.readFileSync = read; syncBuiltinESMExports() }
   })
 })
+
+test('#3276 actual packaged decision bytes change fresh mapping identity and do not rewrite an already loaded version', async () => {
+  await isolatedPackage(async scratch => {
+    const url = pathToFileURL(`${scratch}/src/media/generation-mapping.js`).href
+    const first = await import(`${url}?core-before`), held = first.createGenerationMapping(parsed())
+    const initial = held(candidate()).sourceVersion, file = `${scratch}/lib/generation-core.js`, bytes = fs.readFileSync(file)
+    try {
+      fs.writeFileSync(file, Buffer.concat([bytes, Buffer.from('\n// private identity-only probe\n')]))
+      assert.equal(held(candidate()).sourceVersion, initial)
+      const changed = await import(`${url}?core-after`)
+      assert.notEqual(changed.createGenerationMapping(parsed())(candidate()).sourceVersion, initial)
+    } finally { fs.writeFileSync(file, bytes) }
+  })
+})
+
+test('#3276 unreadable packaged decision never yields a usable mapping or catalog', async () => {
+  await isolatedPackage(async scratch => {
+    const read = fs.readFileSync, failed = `${scratch}/lib/generation-core.js`
+    fs.readFileSync = function(path, ...args) {
+      if ((path instanceof URL ? fileURLToPath(path) : String(path)) === failed) throw new Error('DUMMY-PACKAGED-DECISION-UNREADABLE')
+      return read(path, ...args)
+    }
+    syncBuiltinESMExports()
+    try {
+      const module = await import(`${pathToFileURL(`${scratch}/src/media/generation-mapping.js`).href}?missing-core-proof`)
+      const readMapping = module.createGenerationMapping(parsed())
+      assert.throws(() => readMapping(candidate()), error => error.message === 'catalog unavailable')
+      assert.throws(() => createGenerationProducts({ readMapping }).list(), error => error.message === 'catalog unavailable')
+    } finally { fs.readFileSync = read; syncBuiltinESMExports() }
+  })
+})
