@@ -99,6 +99,7 @@ const ZH_DOTTED = {
   'sync.retrying': '正在保存…',
 
   'error.noImageChannel': '尚未配置图像生成渠道',
+  'error.allImageChannelsDisabled': '当前图像生成渠道均不可用',
   'error.avatarNameExists': '数字人名称已存在',
   'common.close': '关闭',
 }
@@ -189,6 +190,7 @@ const EN_DOTTED = {
   'sync.retrying': 'Saving…',
 
   'error.noImageChannel': 'No image generation channel is configured',
+  'error.allImageChannelsDisabled': 'All current image generation channels are unavailable',
   'error.avatarNameExists': 'A character with this name already exists',
   'common.close': 'Close',
 }

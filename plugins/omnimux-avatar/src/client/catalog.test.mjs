@@ -176,12 +176,12 @@ describe('pickAutoGroup', () => {
     assert.equal(pickAutoGroup([{ id: 'off', enabled: false }]), '')
   })
 
-  it('still takes the marked default when it is disabled (first enabled is only the fallback)', () => {
+  it('falls back to the first enabled group when the marked default is disabled', () => {
     const groups = [
       { id: 'off', enabled: false, isDefault: true },
       { id: 'on', enabled: true, isDefault: false },
     ]
-    assert.equal(pickAutoGroup(groups), 'off')
+    assert.equal(pickAutoGroup(groups), 'on')
   })
 })
 

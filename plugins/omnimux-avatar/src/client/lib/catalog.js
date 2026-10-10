@@ -174,7 +174,7 @@ export function groupsOfModel(rows, modelId) {
 }
 
 /**
- * 自动选中的渠道 id：优先中枢标记 `default: true` 的渠道，否则第一个启用的渠道，
+ * 自动选中的渠道 id：优先中枢标记 `default: true` 且启用的渠道，否则第一个启用的渠道，
  * 都没有时返回空串。
  *
  * 注意：返回的是渠道 id；提交给服务端的取值是该渠道的 `wireGroup`
@@ -184,7 +184,7 @@ export function groupsOfModel(rows, modelId) {
  */
 export function pickAutoGroup(groups) {
   const list = groups ?? []
-  const preferred = list.find((group) => group?.isDefault === true)
+  const preferred = list.find((group) => group?.isDefault === true && group.enabled !== false)
   if (preferred) return preferred.id
   const enabled = list.find((group) => group?.enabled !== false)
   return enabled ? enabled.id : ''
