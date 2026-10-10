@@ -660,9 +660,11 @@ export function MediaViewerComposer({
     if (!activeSlot || !activeSlot.key) return false;
 
     const exactMime = inferMimeType(asset);
-    const inferredType = exactMime ? exactMime.split('/')[0] : (asset.type || activeSlot.type || '');
-    const safeSubtype = inferredType === 'video' ? 'video/mp4' : (inferredType === 'audio' ? 'audio/mpeg' : 'image/jpeg');
-    const fileType = exactMime || safeSubtype;
+    if (!exactMime) {
+      setNotice('当前素材格式不明，请换用带格式信息的文件');
+      return false;
+    }
+    const fileType = exactMime;
     const pseudoFile = asset.file
       ? { ...asset.file, type: asset.file.type || fileType, name: asset.file.name || asset.name || asset.title }
       : (fileType ? { type: fileType, name: asset.name || asset.title } : null);

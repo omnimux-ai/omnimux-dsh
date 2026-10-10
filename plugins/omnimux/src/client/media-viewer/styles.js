@@ -1331,7 +1331,7 @@ button.omx-slot-add:hover,
   min-height: 40px;
   padding: 0 14px;
   border-radius: 12px;
-  background: var(--dsw-alias-bg-elevated, #1c1c1f);
+  background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
   border: 1px solid var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
