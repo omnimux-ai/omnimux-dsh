@@ -1716,18 +1716,18 @@ describe('MediaViewerComposer Component Contract', () => {
         );
       });
 
-      it('项 3: MediaViewerComposer.jsx 杜绝生成带尾部斜杠的伪 MIME（如 image/），推导不明确时安全默认使用 image/jpeg', () => {
+      it('项 3: MediaViewerComposer.jsx 未知格式不冒认为受支持子类型', () => {
         assert.ok(
           !composerSrc.includes("`${inferredType}/`"),
           'MediaViewerComposer.jsx 严禁生成裸 `${inferredType}/` 伪 MIME'
         );
-        assert.ok(
-          composerSrc.includes("const safeSubtype = inferredType === 'video' ? 'video/mp4' : (inferredType === 'audio' ? 'audio/mpeg' : 'image/jpeg');"),
-          '推导不明确时必须具备 safeSubtype 安全子类型兜底'
+        assert.doesNotMatch(
+          composerSrc, /\b(?:const|let|var)\s+safeSubtype\b/,
+          '未知格式不得声明假子类型兜底'
         );
         assert.ok(
-          composerSrc.includes("const fileType = exactMime || safeSubtype;"),
-          'fileType 必须直接采用 exactMime 或 safeSubtype'
+          composerSrc.includes('const fileType = exactMime;'),
+          'fileType 只使用已读取的格式，不借目标槽补值'
         );
       });
 

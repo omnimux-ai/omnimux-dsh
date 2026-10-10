@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, before, after } from 'node:test';
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
@@ -76,7 +76,21 @@ async function withProduction({ kind = 'image', assets = [], limits = {} }, run)
       await act(async () => target.click());
     };
     const snapshot = () => ({ prompt: document.querySelector('textarea').value, items: [...document.querySelectorAll('.omx-slot-card')].map(value => ({ url: value.querySelector('img,video')?.getAttribute('src') || null, html: value.outerHTML })) });
-    await run({ dom, act, open, select, snapshot, setPrompt, click, requests, submissions });
+    const uploadNative = async file => {
+      const create = Object.getOwnPropertyDescriptor(URL, 'createObjectURL'), revoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
+      const revoked = [];
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: () => 'blob:synthetic-native-3278' });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: url => revoked.push(url) });
+      try {
+        const input = document.querySelector('.omx-ref-picker-popover input[type="file"]'); assert.ok(input);
+        Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+        await act(async () => input.dispatchEvent(new dom.window.Event('change', { bubbles: true })));
+        return revoked;
+      } finally {
+        Object.defineProperty(URL, 'createObjectURL', create); Object.defineProperty(URL, 'revokeObjectURL', revoke);
+      }
+    };
+    await run({ dom, act, open, select, snapshot, setPrompt, click, requests, submissions, uploadNative });
     assert.deepEqual(submissions, [], 'Selection must never submit generation');
     assert.deepEqual(requests.filter(value => value.method !== 'GET'), [], 'Selection must never upload or write a task');
   } finally {
@@ -117,6 +131,38 @@ test('#3278 production picker does not borrow the target image slot for missing 
     await setPrompt('保留草稿'); await open(); const previous = snapshot();
     for (const asset of assets) { await select(asset.id); assert.equal(document.querySelector('[role="status"]').textContent, '当前素材格式不明，请换用带格式信息的文件'); assert.deepEqual(snapshot(), previous); }
   });
+});
+
+test('#3278 native local selection with an empty file type uses the copied filename but rejects an unnamed format', async () => {
+  await withProduction({ assets: [] }, async ({ dom, open, snapshot, setPrompt, uploadNative }) => {
+    await setPrompt('保留本地草稿'); await open(); const previous = snapshot();
+    const rejected = await uploadNative(new dom.window.File(['unknown'], '无扩展素材', { type: '' }));
+    assert.equal(document.querySelector('[role="status"]').textContent, '当前素材格式不明，请换用带格式信息的文件');
+    assert.deepEqual(snapshot(), previous); assert.deepEqual(rejected, ['blob:synthetic-native-3278']);
+    await uploadNative(new dom.window.File(['png-fixture'], 'sample.png', { type: '' }));
+    assert.equal(document.querySelector('.omx-ref-picker-popover'), null); assert.equal(snapshot().items.length, 1); assert.equal(snapshot().prompt, previous.prompt);
+  });
+});
+
+test('#3278 known type mismatches and size limits still refuse selection without touching the original image', async () => {
+  const assets = [
+    { id: 'small', title: '原图片', type: 'image', mime: 'image/png', sizeBytes: 1024, url: 'https://synthetic.example.test/small' },
+    { id: 'large', title: '超限图片', type: 'image', mime: 'image/png', sizeBytes: 2097153, url: 'https://synthetic.example.test/large' },
+    { id: 'video', title: '视频格式', type: 'video', mime: 'video/mp4', url: 'https://synthetic.example.test/video' },
+  ];
+  await withProduction({ assets, limits: { maxSizeMb: 2 } }, async ({ open, select, snapshot }) => {
+    await open(); await select('small'); await open(); const previous = snapshot();
+    await select('large'); assert.equal(document.querySelector('[role="status"]').textContent, '文件不能超过 2MB'); assert.deepEqual(snapshot(), previous);
+    await select('video'); assert.equal(document.querySelector('[role="status"]').textContent, '请上传图片，当前文件格式不符合要求'); assert.deepEqual(snapshot(), previous);
+  });
+});
+
+test('#3278 readable unknown-format notice uses paired native theme layers without a fixed dark fallback', () => {
+  const source = readFileSync(new URL('../../../omnimux/src/client/media-viewer/styles.js', import.meta.url), 'utf8');
+  const rule = source.match(/\.omx-slot-notice\s*\{([^}]+)\}/)?.[1];
+  assert.ok(rule, 'Production notice rule must exist');
+  assert.match(rule, /background:\s*var\(--dsw-alias-bg-layer-1,\s*var\(--dsw-alias-bg-base\)\)/);
+  assert.match(rule, /color:\s*var\(--dsw-alias-label-primary\)/);
 });
 
 test('#3278 known MIME sources still follow the real picker and existing whitelist', async () => {

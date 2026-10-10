@@ -33,3 +33,8 @@ AC7 正式交付相关整包/类型/构建/边界/Stage/新用户基线/L0/diff�
 总是：先规格独审、真实业务RED/GREEN、原testidentity保、复用现helper、实际完整页同版图人工确认、精确独审、全部旧用途保护、TaskSpace/Host自清、原失败保留。先问仅成本/凭据/生产/跨仓/破坏迁移/新依赖越界或保留界面合入决定，普通规格/测试/PR/MQ/Dev已授权不逐stage问。
 绝不：图片视频供应商请求/真实上传/账号写/secret读取、跨仓/共享Dev未合入链接、重启/Prod、constantready/pending平台、陌生URL抓图测格式、抹原测试或oldoracle迁移未审。本片不改sourceVersion或qualification，不声称完整新产品迁移/可比报价/真实生成成功。
 待证：实际组件全部known来源样例、浏览器媒体页可复用正式入口、修改行coverage及同版UI确认；此spec是待审设计不是任何已通过证明。
+
+## 实际人眼拒绝后的必要可读性补充（仅当前提示）
+原35行/9610B/9d981b…规格源码已按两独审实施；实际完整App e03d0361…1pass且unknown拒/草稿原素材保持/known重选，但两原PNG父人眼发现.omx-slot-notice深色fallback背景搭浅色主题深文字、关键提示不可读，不可用assertgreen代交付。该图作为VISUAL_REJECT证据保，不作合入展示批准。
+AC8 必要写集加plugins/omnimux/src/client/media-viewer/styles.js，仅.omx-slot-notice的background从缺elevated时暗色常量改为现官方已知背景层令牌（优先--dsw-alias-bg-layer-1，缺时--dsw-alias-bg-base），仍与原--dsw-alias-label-primary搭配；不新CSS层/私造变量/DOMpatch/整页覆盖、不改其它picker/模式按钮/底栏。真实完整媒体页浅/深主题提示计算色对比≥4.5:1且原PNG字清、主按钮/草稿/原素材完整；保先前视觉失败，不借参数数目或提示timer截掉问题。
+仅影响打包共用样式，正式Hub/client及viewerbuild同版重建，原其它业务/新产品/旧用途不动；新增media-mime-selection.test.js可补精确此规则结构断言，仅作副证不能代真实computedcontrast/PNG。旧测试不改（唯一AC5例外保）。浏览器重走本版unknown→known并正常系统主题换浅/深，每次实际采色/viewport截图，页面未加载官方token原因仍如实保，不能用注入style/改DOM令牌人为冒绿。此补充规格先独审再改样式。
