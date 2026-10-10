@@ -167,7 +167,7 @@ jobs:
           node scripts/verify-skill-bilingual.mjs
           node scripts/verify-dsh-lockfile-uniform.mjs
           node --test scripts/verify-dsh-lockfile-uniform.test.mjs
-          node --test scripts/verify-modality-matrix.test.mjs
+          node --test scripts/verify-modality-matrix.test.mjs scripts/verify-multimodal-contract-completeness.test.mjs
 
       # 路由声明（cordis.patch.yml 的 input[]）↔ 模型契约（specs/*.yaml 的 inputs[].type）
       # 模态双向对账在 verify:model-contracts 内（Issue #3236）；本地与 CI 走同一条命令。

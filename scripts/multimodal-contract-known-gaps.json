@@ -1,0 +1,219 @@
+[
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "claude-opus-4-6",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "claude-opus-4-6",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "claude-opus-4-6",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "claude-opus-4-6",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gpt-5.6-sol",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gpt-5.6-sol",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gpt-5.6-sol",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gpt-5.6-sol",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gpt-5.5",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gpt-5.5",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gpt-5.5",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gpt-5.5",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "grok-4.6",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "grok-4.6",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "grok-4.6",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "grok-4.6",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "kimi-k3",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "kimi-k3",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "kimi-k3",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "kimi-k3",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gemini-3.8-flash",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gemini-3.8-flash",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gemini-3.7-flash",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gemini-3.7-flash",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gemini-3.7-flash",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gemini-3.7-flash",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gemini-3.1-pro-preview",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gemini-3.1-pro-preview",
+    "operationId": "chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_SOURCES_MISSING",
+    "modelId": "gemini-3.1-pro-preview",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明本地字段与上游输出双来源；历史欠账未修复"
+  },
+  {
+    "code": "PROMPT_COMPOSITION_MISSING",
+    "modelId": "gemini-3.1-pro-preview",
+    "operationId": "vision_chat",
+    "issue": "#3249",
+    "reason": "真实文本契约的此prompt槽尚未声明content_with_instruction组合；历史欠账未修复"
+  },
+  {
+    "code": "ROUTE_MODEL_UNPAIRED",
+    "modelId": "deepseek-v4-flash-vision-exp",
+    "operationId": null,
+    "issue": "#3249",
+    "reason": "现有image路由别名与文本契约canonical模型未配对，明确未深检查；新增未配对不得沿用此豁免"
+  }
+]
