@@ -256,6 +256,10 @@ export async function executeOmnimuxMedia(capability, input) {
     if (taskRecord && taskRecord.capability !== capability) {
       throw new OmnimuxError('omnimux-invalid-request', '任务媒体类型与取回请求不一致')
     }
+    if(taskRecord?.status==='ready'&&taskRecord.artifact?.cachePath&&existsSync(taskRecord.artifact.cachePath)) {
+      if(input.dest!==taskRecord.artifact.cachePath){mkdirSync(dirname(input.dest),{recursive:true});copyFileSync(taskRecord.artifact.cachePath,input.dest)}
+      return {mode:'live',taskRef:taskRecord.taskRef,taskId:taskRecord.upstreamTaskId??null,dest:input.dest,url:input.dest}
+    }
     const effectiveTaskId = taskRecord?.upstreamTaskId || taskId
     if (!effectiveTaskId && !taskRecord?.artifact?.sourceUrl) throw new OmnimuxError('omnimux-invalid-request', '缺少有效的任务标识，无法轮询取回产物')
     let route
@@ -938,7 +942,13 @@ export async function executeOmnimuxMedia(capability, input) {
   if (pendingTaskRecord) {
     try {
       const current = getMediaTaskRecord(pendingTaskRecord.taskRef)
-      if (current?.upstreamTaskId || current?.artifact?.sourceUrl) recordMediaCollectionFailure(pendingTaskRecord.taskRef, submitError)
+      if (current?.upstreamTaskId || current?.artifact?.sourceUrl) {
+        recordMediaCollectionFailure(pendingTaskRecord.taskRef, submitError)
+        if (submitError && typeof submitError === 'object') {
+          submitError.taskRef = pendingTaskRecord.taskRef
+          submitError.recoverable = submitError.code !== 'omnimux-failed'
+        }
+      }
       else updateMediaTaskRecord(pendingTaskRecord.taskRef, {
         status: 'failed',
         error: submitError instanceof Error ? submitError.message : String(submitError),

@@ -65,6 +65,8 @@ export function GenerateBar(props) {
       <button type="button" /* exempt-ui01: 主 CTA 由本插件样式族承载 */
         className="omx-avatar-cta"
         disabled={!canGenerate || submitting}
+        aria-busy={submitting}
+        aria-label={t('action.generate')}
         onClick={onGenerate}
       >
         {submitting ? (

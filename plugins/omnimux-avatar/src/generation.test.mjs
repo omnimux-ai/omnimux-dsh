@@ -109,7 +109,7 @@ test('提交成功：记录带 taskRef 的任务、落到主图路径并回写�
   const dest = avatarMainImagePath(paths, avatar.id)
   assert.equal(seam.calls.length, 1)
   assert.equal(seam.calls[0].dest, dest)
-  assert.equal(seam.calls[0].aspectRatio, '9:16')
+  assert.equal(seam.calls[0].aspectRatio, '16:9')
   assert.equal(seam.calls[0].operation, 'text_to_image')
   assert.equal(seam.calls[0].image, undefined)
   assert.equal(seam.calls[0].seed, 42)

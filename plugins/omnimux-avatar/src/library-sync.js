@@ -147,12 +147,12 @@ export function createLibrarySync({ ctx, store, paths, assetLibrary } = {}) {
   }
 
   /** 一次主图同步：已有来源档案只追加新主图，否则首次建档。 */
-  async function syncSheetOnce(avatarId) {
+  async function syncSheetOnce(avatarId, taskId) {
     // 先确认形象存在，再看资产库座位：未知 id 必须报 404 而不是被能力缺失盖住。
     const avatar = store.get(avatarId)
     const seam = resolveSeam()
-    const task = readyTaskOf(avatar, 'sheet')
-    if (!task) throw new AvatarError('invalid_request', '该形象尚无已完成的主图', 400)
+    const task = taskId ? store.findTask(avatarId, taskId) : readyTaskOf(avatar, 'sheet')
+    if (!task || task.kind !== 'sheet' || task.status !== 'ready') throw new AvatarError('invalid_request', '该形象尚无已完成的主图', 400)
 
     const existing = typeof seam.findBySource === 'function' ? seam.findBySource(avatar.assetSource) : null
     if (existing?.id) {
@@ -175,10 +175,10 @@ export function createLibrarySync({ ctx, store, paths, assetLibrary } = {}) {
    * 同步主图到资产库；同一形象的并发调用共用同一次建档。
    * @param {string} avatarId
    */
-  function syncSheet(avatarId) {
+  function syncSheet(avatarId, taskId) {
     const pending = firstIngest.get(avatarId)
-    if (pending) return pending
-    const run = syncSheetOnce(avatarId).finally(() => {
+    if(pending&&!taskId)return pending
+    const run = (pending?pending.catch(()=>{}).then(()=>syncSheetOnce(avatarId,taskId)):syncSheetOnce(avatarId,taskId)).finally(() => {
       if (firstIngest.get(avatarId) === run) firstIngest.delete(avatarId)
     })
     firstIngest.set(avatarId, run)
@@ -208,16 +208,24 @@ export function createLibrarySync({ ctx, store, paths, assetLibrary } = {}) {
     }
   }
 
-  async function syncMultiView(avatarId) {
+  async function syncMultiView(avatarId, taskId) {
     const avatar = store.get(avatarId)
     const seam = resolveSeam()
-    const task = readyTaskOf(avatar, 'multiview')
-    if (!task) throw new AvatarError('invalid_request', '该形象尚无已完成的多视角图', 400)
+    const task = taskId ? store.findTask(avatarId, taskId) : readyTaskOf(avatar, 'multiview')
+    if (!task || task.kind !== 'multiview' || task.status !== 'ready') throw new AvatarError('invalid_request', '该形象尚无已完成的多视角图', 400)
 
     const assetId = avatar.assetId ?? (await syncSheet(avatarId)).assetId
     const multiViewDir = avatarMultiViewDir(paths, avatarId)
     const files = existingFiles(seam, { ...avatar, assetId }, assetId)
-    if (files.some((file) => isMultiViewRef(file, multiViewDir))) return { assetId, attached: false }
+    if (files.some((file) => isMultiViewRef(file, multiViewDir))) {
+      if (taskId && task.parentTaskId) {
+        const folder = files.find(file => isMultiViewRef(file, multiViewDir))
+        const already = (folder.children ?? []).some(file => file.original_name === basename(task.destPath))
+        if (!already) await seam.attachFiles({ assetId, files: [task.destPath], targetFileId: folder.id })
+        return { assetId, attached: !already }
+      }
+      return { assetId, attached: false }
+    }
 
     const attachedTo = await attachMultiView(seam, { ...avatar, assetId }, multiViewDir)
     return { assetId: attachedTo, attached: true }

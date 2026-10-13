@@ -6,6 +6,7 @@ import { extname, join } from 'node:path'
 import { PresetSnapshot } from './presets.js'
 import { ETag, servedTaxonomy } from './taxonomy.js'
 import { AvatarError, latestTaskOf } from './store.js'
+import { resolveAvatarArtifact } from './artifact.js'
 
 const PREFIX = '/api/omnimux/avatar'
 const BODY_LIMIT = 64 * 1024
@@ -35,7 +36,7 @@ const messageOf = (error) => (error instanceof Error ? error.message : String(er
  */
 export function registerAvatarRoutes(webServer, deps = {}) {
   // librarySync 供 POST /sync 手动补偿使用；自动归档在任务转 ready 时已经跑过一次。
-  const { store, generation, paths, librarySync } = deps
+  const { store, generation, paths, librarySync, materials, motion } = deps
 
   /** 宿主连接座位：给了 ctx 就按请求实时取，便于座位后注册与测试替换。 */
   function connectionOf() {
@@ -87,6 +88,16 @@ export function registerAvatarRoutes(webServer, deps = {}) {
         }
         if (route === '/presets') return send(200, { success: true, data: PresetSnapshot() })
         if (route === '/presets/asset') return await streamPresetAsset(req, res, url, fail, paths)
+        if (route === '/materials') {
+          const avatarId = url.searchParams.get('avatarId') ?? ''
+          return send(200, { success: true, items: materials.list(avatarId) })
+        }
+        if (route === '/materials/file') {
+          const row = materials.resolve(url.searchParams.get('avatarId'), url.searchParams.get('id'))
+          const error = await streamFile(req, res, row.path, { contentType: row.mime, cacheControl: 'private, no-store' })
+          if (error) return fail(error.status, error.code, error.message)
+          return
+        }
         if (route === '/avatars') {
           return send(200, { success: true, revision: store.revision(), avatars: store.list().map(withLatest) })
         }
@@ -96,14 +107,18 @@ export function registerAvatarRoutes(webServer, deps = {}) {
           const tasks = store.listTasks(avatarId).map((task) => withImageUrl(avatarId, task))
           return send(200, { success: true, tasks })
         }
-        if (route === '/task/image') return await streamTaskImage(req, res, url, fail, store)
+        if (route === '/task/image') return await streamTaskImage(req, res, url, fail, store, paths, deps.ctx?.get?.('mediaInspect'))
         if (route === '/task') {
           const avatarId = url.searchParams.get('avatarId') ?? ''
           const taskId = url.searchParams.get('taskId') ?? ''
           if (avatarId === '' || taskId === '') return fail(400, 'invalid_request', '缺少 avatarId 或 taskId')
+          if(url.searchParams.get('refresh')==='1') {
+            const guard=assertWritable({...req,headers:{...req.headers,'content-type':'application/json'}})
+            if(guard)return fail(guard.status,guard.code,guard.message)
+          }
           const task =
             url.searchParams.get('refresh') === '1'
-              ? await generation.refreshTask({ avatarId, taskId })
+              ? await (store.findTask(avatarId, taskId)?.kind === 'motion' ? motion.collect({ avatarId, taskId }) : generation.refreshTask({ avatarId, taskId }))
               : store.findTask(avatarId, taskId)
           if (!task) throw new AvatarError('task-not-found', 'task not found', 404)
           return send(200, { success: true, task: withImageUrl(avatarId, task) })
@@ -113,6 +128,21 @@ export function registerAvatarRoutes(webServer, deps = {}) {
 
       if (method !== 'POST') return fail(405, 'method-not-allowed', 'Method not allowed')
 
+      if (route === '/materials/import') {
+        const jsonGuard = assertWritable({ ...req, headers: { ...req.headers, 'content-type': 'application/json' } })
+        if (jsonGuard) return fail(jsonGuard.status, jsonGuard.code, jsonGuard.message)
+        const type = String(req.headers['content-type'] ?? '').split(';')[0]
+        const limit = type.startsWith('video/') ? 100 * 1024 * 1024 : 5 * 1024 * 1024
+        const parts = []
+        let length = 0
+        for await (const part of req) {
+          length += part.length
+          if (length > limit) return fail(413, 'body-too-large', '素材超过大小限制')
+          parts.push(part)
+        }
+        const item = await materials.importFile({ avatarId: url.searchParams.get('avatarId'), name: url.searchParams.get('name'), type, bytes: Buffer.concat(parts) })
+        return send(200, { success: true, item })
+      }
       const rejectionOfWrite = assertWritable(req)
       if (rejectionOfWrite) return fail(rejectionOfWrite.status, rejectionOfWrite.code, rejectionOfWrite.message)
 
@@ -146,7 +176,20 @@ export function registerAvatarRoutes(webServer, deps = {}) {
           store.remove(body.id)
           return send(200, { success: true, deleted: true })
         }
+        case '/motion/options': {
+          const options = await motion.options(body)
+          return send(200, { success: true, ...options })
+        }
+        case '/motion': {
+          const result = await motion.submit(body)
+          return send(200, { success: true, ...result })
+        }
         case '/sheet': {
+          if (body.materialId) {
+            const reference = materials.resolve(body.avatarId, body.materialId)
+            if (reference.type !== 'image') return fail(400, 'invalid_request', '参考素材必须是图片')
+            body.image_url = reference.path
+          }
           const result = await generation.submitSheet(body)
           return send(200, { success: true, ...result })
         }
@@ -155,9 +198,21 @@ export function registerAvatarRoutes(webServer, deps = {}) {
           return send(200, { success: true, ...result })
         }
         case '/sync': {
+          if (body.taskId && store.findTask(body.avatarId, body.taskId)?.kind === 'motion') {
+            const task = await motion.collect({ avatarId: body.avatarId, taskId: body.taskId })
+            return send(200, { success: true, task })
+          }
           // 归档失败后的手动补偿入口；自动归档在任务转 ready 时已经跑过一次。
           if (typeof body.avatarId !== 'string' || body.avatarId === '') {
             return fail(400, 'invalid_request', '缺少 avatarId')
+          }
+          if (body.taskId) {
+            const task = store.findTask(body.avatarId, body.taskId)
+            if (!task || task.status !== 'ready') return fail(400, 'invalid_request', '所选任务尚未完成')
+            if (task.kind === 'multiview') await librarySync.syncMultiView(body.avatarId, body.taskId)
+            else await librarySync.syncSheet(body.avatarId, body.taskId)
+            const updated = store.updateTask(body.avatarId, body.taskId, { syncError: null })
+            return send(200, { success: true, task: updated })
           }
           const kind = body.kind === 'multiview' || body.kind === 'both' ? body.kind : 'sheet'
           const sheet = kind === 'multiview' ? null : await librarySync.syncSheet(body.avatarId)
@@ -170,6 +225,8 @@ export function registerAvatarRoutes(webServer, deps = {}) {
           if (typeof body.avatarId !== 'string' || typeof body.taskId !== 'string') {
             return fail(400, 'invalid_request', '缺少 avatarId 或 taskId')
           }
+          const task=store.findTask(body.avatarId,body.taskId)
+          if(task&&!['ready','failed'].includes(task.status))return fail(409,'task-active','任务仍在处理中，完成后可删除记录')
           store.removeTask(body.avatarId, body.taskId)
           return send(200, { success: true })
         }
@@ -267,7 +324,7 @@ function imageContentType(file) {
  * 任务不属于该形象时 store.findTask 返回 null（形象不存在则抛 404），
  * 两者都是 404，不区分「别人的任务」与「没有这条任务」。
  */
-async function streamTaskImage(req, res, url, fail, store) {
+async function streamTaskImage(req, res, url, fail, store, paths, inspector) {
   const avatarId = url.searchParams.get('avatarId') ?? ''
   const taskId = url.searchParams.get('taskId') ?? ''
   if (avatarId === '' || taskId === '') return fail(400, 'invalid_request', '缺少 avatarId 或 taskId')
@@ -276,8 +333,12 @@ async function streamTaskImage(req, res, url, fail, store) {
   const destPath = typeof task?.destPath === 'string' ? task.destPath : ''
   if (destPath === '') return fail(404, 'not-found', 'Not found')
 
-  const error = await streamFile(req, res, destPath, {
-    contentType: imageContentType(destPath),
+  let path
+  try { path = resolveAvatarArtifact(paths, avatarId, destPath) }
+  catch (error) { return fail(404, error.code === 'ENOENT' ? 'ENOENT' : 'not-found', 'Not found') }
+  const metadata = inspector ? await inspector.inspect({ path, type: task.kind === 'motion' ? 'video' : 'image' }) : null
+  const error = await streamFile(req, res, path, {
+    contentType: metadata?.mime ?? imageContentType(destPath),
     // 同一个 destPath 会被重新生成覆盖，成品图不能按长缓存复用。
     cacheControl: 'private, no-store',
   })

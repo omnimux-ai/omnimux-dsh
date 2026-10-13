@@ -50,6 +50,12 @@ export function avatarMainImagePath(paths, avatarId) {
   return join(avatarDirOf(paths, avatarId), 'main.png')
 }
 
+/** 后续成品使用任务专属文件；第一份兼容既有主图布局。 */
+export function avatarTaskImagePath(paths, avatarId, taskId, kind = 'sheet') {
+  if (!/^avt_task_[0-9a-f]{8}$/.test(taskId)) throw new Error('invalid task image identity')
+  return join(kind === 'multiview' ? avatarMultiViewDir(paths, avatarId) : avatarDirOf(paths, avatarId), `${taskId}.png`)
+}
+
 /** 形象多视角设定板目录。 */
 export function avatarMultiViewDir(paths, avatarId) {
   return join(avatarDirOf(paths, avatarId), '多视角')

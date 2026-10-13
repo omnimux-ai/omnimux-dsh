@@ -85,6 +85,9 @@ function resolvePluginBuildTask(pluginName, dir) {
 
   try {
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
+    if(['omnimux','omnimux-avatar'].includes(pluginName)&&pkg.scripts?.build){
+      return {name:pluginName,dir,command:'npm',args:['run','build','--silent']}
+    }
     // 1. 特殊脚本：build-client.mjs
     if (existsSync(join(dir, 'scripts/build-client.mjs'))) {
       return {

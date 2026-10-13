@@ -208,8 +208,8 @@ export function apply(ctx, config) {
         emitChanged('create', asset)
         return { asset }
       },
-      attachFiles: async ({ assetId, files }) => {
-        const asset = await library.appendFiles(assetId, files)
+      attachFiles: async ({ assetId, files, targetFileId }) => {
+        const asset = await library.appendFiles(assetId, files, targetFileId)
         emitChanged('update', asset)
         return { asset }
       },

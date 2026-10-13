@@ -1,0 +1,149 @@
+{
+  "runId": "7de73a13-3c83-4c10-99d7-0a7e11bedd05",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-sync-issue-3283",
+  "origin": "http://127.0.0.1:59816",
+  "appPort": 59816,
+  "cdpPort": 59820,
+  "startedAt": "2026-10-13T17:42:38.233Z",
+  "completedAt": "2026-10-13T17:42:48.953Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:59816",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:59816",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-3dFUpa3omEoeEZosxsXGfO74PaCyFi8R1XbXrbNrXJU"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 59820
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 131,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 73
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 131
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:手选特征随机后保持",
+      "pass": true
+    },
+    {
+      "name": "journey:动物多视角保留父快照及本地下载",
+      "pass": true,
+      "detail": {
+        "status": 200,
+        "type": "image/png",
+        "bytes": 69
+      }
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 76606
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-sync-issue-3283/.workbuddy/evidence/app-qa/7de73a13-3c83-4c10-99d7-0a7e11bedd05/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 76606
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}

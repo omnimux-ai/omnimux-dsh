@@ -32,7 +32,7 @@ export function multiViewState(child) {
   if (!child) return 'absent'
   // 适配层对终态的拼法不止一种，两种都接受。
   const status = (child.status ?? '').toUpperCase()
-  if (status === 'SUCCESS' || status === 'SUCCEEDED') return 'ready'
+  if (status === 'READY' || status === 'SUCCESS' || status === 'SUCCEEDED') return 'ready'
   if (status === 'FAILURE' || status === 'FAILED') return 'failed'
   return 'generating'
 }
@@ -82,7 +82,8 @@ export function partitionTasks(tasks) {
       continue
     }
     const current = childByParent.get(parent)
-    if (!current || (task.id ?? 0) > (current.id ?? 0)) {
+    const date = row => row.createdAt ?? row.created_at ?? ''
+    if (!current || date(task) > date(current) || (date(task) === date(current) && (task.id ?? 0) > (current.id ?? 0))) {
       childByParent.set(parent, task)
     }
   }

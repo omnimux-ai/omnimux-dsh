@@ -53,7 +53,7 @@ function isVisible() {
  * @param {{ avatarId?: string, userId?: number }} [options]
  * @returns {InfluencerHistory}
  */
-export function useInfluencerHistory({ avatarId, userId } = {}) {
+export function useInfluencerHistory({ avatarId, userId, revision } = {}) {
   const cached = useMemo(() => readHistoryCache(userId), [userId])
 
   const [items, setItems] = useState(() => cached?.items ?? [])
@@ -69,17 +69,26 @@ export function useInfluencerHistory({ avatarId, userId } = {}) {
   const timerRef = useRef(null)
   const activeSinceRef = useRef(0)
   const tickRef = useRef(null)
+  const activeAvatarRef = useRef(avatarId)
+  const historyEpochRef=useRef(0)
+  if(activeAvatarRef.current!==avatarId){activeAvatarRef.current=avatarId;historyEpochRef.current++}
+  useEffect(()=>{setItems([]);setTotal(0);setVisibleCount(PAGE_SIZE);setLoading(true);setError(null);fetchingMoreRef.current=false;setFetchingMore(false);setLoadMoreFailed(false)},[avatarId])
 
   /** 拉取该形象的最新任务列表；成功后刷新缓存。 */
   const loadOnce = useCallback(async () => {
+    const epoch=historyEpochRef.current
     if (!avatarId) {
       setItems([])
       setTotal(0)
       return
     }
     const page = await fetchTasks(avatarId)
-    if (!mountedRef.current) return
-    setItems(page.items)
+    const settled = await Promise.all(page.items.map(async task => {
+      if (isTerminalStatus(task.status)) return task
+      return await fetchTask(avatarId, task.taskId, { refresh: true }) ?? task
+    }))
+    if (!mountedRef.current || activeAvatarRef.current !== avatarId || epoch!==historyEpochRef.current) return
+    setItems(settled)
     setTotal(page.total)
     setError(null)
     // 只持久化本次网络返回的内容，避免过期种子不断刷新自己的时间戳。
@@ -103,7 +112,7 @@ export function useInfluencerHistory({ avatarId, userId } = {}) {
     return () => {
       alive = false
     }
-  }, [loadOnce])
+  }, [loadOnce, revision])
 
   // 轮询：列表里还有未完成的任务时才继续；超过退避时长后放慢；页面隐藏时暂停，
   // 回到前台立刻补一次读取。全部到终态即停止。
@@ -182,18 +191,19 @@ export function useInfluencerHistory({ avatarId, userId } = {}) {
 
   const loadMore = useCallback(() => {
     if (fetchingMoreRef.current || !hasMore) return
+    const epoch=historyEpochRef.current
+    const current=()=>mountedRef.current&&epoch===historyEpochRef.current
     fetchingMoreRef.current = true
     setFetchingMore(true)
     setLoadMoreFailed(false)
     void (async () => {
       try {
         await loadOnce()
-        setVisibleCount((count) => count + PAGE_SIZE)
+        if(current())setVisibleCount((count) => count + PAGE_SIZE)
       } catch {
-        if (mountedRef.current) setLoadMoreFailed(true)
+        if (current()) setLoadMoreFailed(true)
       } finally {
-        fetchingMoreRef.current = false
-        if (mountedRef.current) setFetchingMore(false)
+        if(current()){fetchingMoreRef.current=false;setFetchingMore(false)}
       }
     })()
   }, [hasMore, loadOnce])
@@ -224,6 +234,9 @@ export function useSheetSubmit({ avatarId } = {}) {
   const mountedRef = useRef(true)
   const polledTaskRef = useRef(null)
   const tickRef = useRef(null)
+  const epochRef=useRef(0)
+  const avatarRef=useRef(avatarId)
+  if(avatarRef.current!==avatarId){avatarRef.current=avatarId;epochRef.current++}
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -242,10 +255,7 @@ export function useSheetSubmit({ avatarId } = {}) {
    */
   const loadRecord = useCallback(
     async (taskId) => {
-      const record = await fetchTask(avatarId, taskId)
-      if (!record || !isTerminalStatus(record.status)) return record
-      const settled = await fetchTask(avatarId, taskId, { refresh: true })
-      return settled ?? record
+      return await fetchTask(avatarId, taskId, { refresh: true })
     },
     [avatarId]
   )
@@ -275,11 +285,13 @@ export function useSheetSubmit({ avatarId } = {}) {
    */
   const startPolling = useCallback(
     (taskId) => {
+      const epoch=epochRef.current
+      const current=()=>mountedRef.current&&epoch===epochRef.current
       const startedAt = Date.now()
       let inFlight = false
 
       const schedule = () => {
-        if (!mountedRef.current) return
+        if (!current()) return
         const elapsed = Date.now() - startedAt
         const delay = elapsed > POLL_BACKOFF_AFTER_MS ? POLL_SLOW_MS : POLL_MS
         timerRef.current = setTimeout(() => {
@@ -288,7 +300,7 @@ export function useSheetSubmit({ avatarId } = {}) {
       }
 
       const tick = async () => {
-        if (!mountedRef.current || inFlight) return
+        if (!current() || inFlight) return
         if (!isVisible()) {
           schedule()
           return
@@ -296,16 +308,14 @@ export function useSheetSubmit({ avatarId } = {}) {
         inFlight = true
         try {
           const next = await loadRecord(taskId)
-          if (!mountedRef.current) return
+          if (!current()) return
           if (next) setPending(next)
           if (next && isTerminalStatus(next.status)) {
             clearTimer()
             return
           }
         } catch (e) {
-          clearTimer()
-          if (mountedRef.current) setError(e)
-          return
+          if (current()) setError(e)
         } finally {
           inFlight = false
         }
@@ -327,23 +337,34 @@ export function useSheetSubmit({ avatarId } = {}) {
    */
   const submit = useCallback(
     async (body) => {
+      const epoch=++epochRef.current
+      const current=()=>mountedRef.current&&epoch===epochRef.current
       clearTimer()
       setSubmitting(true)
       setError(null)
       try {
         const payload = await submitSheet(body)
         const taskId = payload.taskRef || String(payload.task?.task_id ?? payload.task?.id ?? '')
-        const rec = taskId ? await loadRecord(taskId) : payload.task
-        if (!mountedRef.current) return rec
+        const accepted = payload.task
+        if(!current())return null
+        if (current()) {
+          setPending(accepted)
+          setSubmitting(false)
+        }
+        let rec = accepted
+        try {
+          if (taskId) rec = await loadRecord(taskId) ?? accepted
+        } catch (collectionError) {
+          if (current()) setError(collectionError)
+        }
+        if (!current()) return null
         setPending(rec)
-        setSubmitting(false)
         if (rec && !isTerminalStatus(rec.status) && taskId) {
           startPolling(taskId)
         }
         return rec
       } catch (e) {
-        setSubmitting(false)
-        if (mountedRef.current) setError(e)
+        if(current()){setSubmitting(false);setError(e)}
         return null
       }
     },
@@ -351,6 +372,8 @@ export function useSheetSubmit({ avatarId } = {}) {
   )
 
   const reset = useCallback(() => {
+    epochRef.current++
+    setSubmitting(false)
     clearTimer()
     setPending(null)
     setError(null)

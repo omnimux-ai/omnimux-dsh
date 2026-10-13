@@ -186,6 +186,11 @@ test('生成、多视角与任务路由共享同一套服务', async (t) => {
   assert.equal(seam.calls.at(-1).aspectRatio, '16:9')
   assert.equal(seam.calls.at(-1).image, join(paths.dataDir, avatar.id, 'main.png'))
 
+  store.addTask(avatar.id,{taskId:'pending-original',kind:'sheet',status:'queued'})
+  const blocked=await post('/api/omnimux/avatar/tasks/delete',{avatarId:avatar.id,taskId:'pending-original'})
+  assert.equal(blocked.status,409)
+  assert.equal(store.findTask(avatar.id,'pending-original').status,'queued')
+  store.removeTask(avatar.id,'pending-original')
   const removed = await post('/api/omnimux/avatar/tasks/delete', { avatarId: avatar.id, taskId })
   assert.equal(removed.status, 200)
   assert.equal(store.listTasks(avatar.id).length, 1)
@@ -201,7 +206,7 @@ test('taxonomy 只回六个字段并带 etag；presets 回快照', async (t) => 
   assert.equal(taxBody.data.rules, undefined)
   assert.equal(taxBody.data.counts, undefined)
   assert.equal(typeof taxBody.data.version, 'number')
-  assert.equal(taxBody.data.categories.length, 18)
+  assert.equal(taxBody.data.categories.length, 21)
   assert.match(taxBody.etag, /^[0-9a-f]{16}$/)
 
   const presets = await (await fetch(`${origin}/api/omnimux/avatar/presets`)).json()

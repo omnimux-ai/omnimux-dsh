@@ -7,6 +7,8 @@
 // 与真源 api.ts 的差异（数据源变更）：真源走 OmniMux 网关的 /api/influencer/* 与
 // /pg/influencer/*；这里全部改为插件自身的 /api/omnimux/avatar/* 端点。
 
+import { selectedInspirationVideo } from './lib/inspiration-media.js'
+
 /** 端点表，集中一处便于核对冻结契约。 */
 const PATHS = {
   taxonomy: '/api/omnimux/avatar/taxonomy',
@@ -16,6 +18,8 @@ const PATHS = {
   avatarsUpdate: '/api/omnimux/avatar/avatars/update',
   avatarsDelete: '/api/omnimux/avatar/avatars/delete',
   sheet: '/api/omnimux/avatar/sheet',
+  motion: '/api/omnimux/avatar/motion',
+  materials: '/api/omnimux/avatar/materials',
   multiview: '/api/omnimux/avatar/multiview',
   sync: '/api/omnimux/avatar/sync',
   tasks: '/api/omnimux/avatar/tasks',
@@ -169,6 +173,49 @@ export async function deleteAvatar({ id }) {
  * @param {{ avatarId: string, model: string, group?: string, tier: string, selection: import('./lib/types.js').Selection, brief?: string, seed?: number, image_url?: string }} body
  * @returns {Promise<{ task: import('./lib/types.js').TaskRecord|null, mode: string, dest: unknown, taskRef: string }>}
  */
+export async function fetchMaterials(avatarId) {
+  const body = await request(PATHS.materials, { query: { avatarId } })
+  return body.items
+}
+
+export function materialUrl(avatarId, id) {
+  return `${PATHS.materials}/file?${new URLSearchParams({ avatarId, id })}`
+}
+
+export async function importMaterial(avatarId, file) {
+  const res = await fetch(`${PATHS.materials}/import?${new URLSearchParams({ avatarId, name: file.name })}`, { method: 'POST', headers: { 'content-type': file.type }, body: file })
+  const body = await res.json()
+  if (!res.ok || body.success === false) throw new Error(serverMessage(body, '素材上传失败'))
+  return body.item
+}
+
+/** Bounded catalogue media fetch, only exact host-owned inspiration paths. */
+export async function importInspirationVideo(avatarId, item) {
+  const url=selectedInspirationVideo(item)
+  if(!url)throw new Error('灵感视频没有受管下载入口')
+  const response=await fetch(url,{signal:AbortSignal.timeout(15000),redirect:'error'})
+  if(!response.ok)throw new Error('灵感视频读取失败')
+  const type=response.headers.get('content-type')?.split(';')[0]
+  if(!['video/mp4','video/quicktime'].includes(type))throw new Error('灵感素材不是支持的视频')
+  const reader=response.body.getReader()
+  const chunks=[]
+  let size=0
+  try {
+    for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>100*1024*1024)throw new Error('灵感视频超过100MB');chunks.push(value)}
+  } finally { await reader.cancel().catch(()=>{}) }
+  const file=new File(chunks,(item.title??'参考视频')+'.mp4',{type})
+  return await importMaterial(avatarId,file)
+}
+
+export async function fetchMotionOptions(body) {
+  return await request(PATHS.motion + '/options', { method: 'POST', body })
+}
+
+export async function submitMotion(body) {
+  const result = await request(PATHS.motion, { method: 'POST', body })
+  return result.task
+}
+
 export async function submitSheet(body) {
   const payload = await request(PATHS.sheet, { method: 'POST', body })
   return {
@@ -206,8 +253,9 @@ export async function submitMultiView(body) {
  * @param {{ avatarId: string, kind?: 'sheet'|'multiview'|'both' }} input
  * @returns {Promise<{ sheet: unknown, multiView: unknown, status: unknown }>}
  */
-export async function syncLibrary({ avatarId, kind = 'sheet' }) {
-  const body = await request(PATHS.sync, { method: 'POST', body: { avatarId, kind } })
+export async function syncLibrary({ avatarId, kind = 'sheet', taskId }) {
+  const body = await request(PATHS.sync, { method: 'POST', body: { avatarId, kind, taskId } })
+  if (body.task?.syncError) throw new Error(body.task.syncError)
   return {
     sheet: body.sheet ?? null,
     multiView: body.multiView ?? null,
@@ -222,7 +270,7 @@ export async function syncLibrary({ avatarId, kind = 'sheet' }) {
  */
 export async function fetchTasks(avatarId) {
   const body = await request(PATHS.tasks, { query: { avatarId } })
-  const items = Array.isArray(body.tasks) ? body.tasks : []
+  const items = Array.isArray(body.tasks) ? [...body.tasks].reverse() : []
   return { items, total: items.length }
 }
 

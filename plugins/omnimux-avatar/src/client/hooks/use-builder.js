@@ -5,8 +5,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { filterSelectionForTier, trySelect } from '../lib/taxonomy.js'
+import { filterSelectionForTier, trySelect, normalizeBuilderSelection } from '../lib/taxonomy.js'
 import { randomizeSelection } from '../lib/randomize.js'
+import { readBuilderDraft, writeBuilderDraft } from '../lib/builder-draft.js'
 
 /**
  * @typedef {object} BuilderState
@@ -27,6 +28,7 @@ import { randomizeSelection } from '../lib/randomize.js'
 export function useBuilder(taxonomy) {
   const [tier, setTier] = useState('total')
   const [selection, setSelection] = useState({})
+  const [manualSelection, setManualSelection] = useState({})
   const [brief, setBrief] = useState('')
   const [seed, setSeed] = useState('')
   const [imageUrl, setImageUrl] = useState('')
@@ -43,9 +45,19 @@ export function useBuilder(taxonomy) {
   useEffect(() => {
     if (taxonomy && !initializedGroupsRef.current) {
       setOpenGroups(new Set(taxonomy.categories.map((c) => c.id)))
+      const draft = readBuilderDraft(taxonomy)
+      if (draft) {
+        setTier(draft.tier)
+        setSelection(draft.selection)
+        setManualSelection(draft.manualSelection)
+      } else setSelection(randomizeSelection(taxonomy, 'total'))
       initializedGroupsRef.current = true
     }
   }, [taxonomy])
+
+  useEffect(() => {
+    if (initializedGroupsRef.current) writeBuilderDraft(tier, selection, manualSelection)
+  }, [tier, selection, manualSelection])
 
   const pick = useCallback(
     (catId, optId) => {
@@ -53,6 +65,12 @@ export function useBuilder(taxonomy) {
       const res = trySelect(taxonomy.categories, tier, selection, catId, optId)
       if (res.message) return res.message
       setSelection(res.selection)
+      setManualSelection(prev => {
+        const next = { ...prev }
+        if (res.selection[catId]?.length) next[catId] = res.selection[catId]
+        else delete next[catId]
+        return next
+      })
       return null
     },
     [taxonomy, tier, selection]
@@ -69,8 +87,13 @@ export function useBuilder(taxonomy) {
         next,
         selection
       )
+      const normalized = normalizeBuilderSelection(taxonomy.categories, next, filtered)
+      for (const category of taxonomy.categories) for (const id of filtered[category.id]??[]) {
+        if (!(normalized[category.id]??[]).includes(id)) dropped.push(category.options.find(option=>option.id===id)?.label_en??id)
+      }
       setTier(next)
-      setSelection(filtered)
+      setSelection(normalized)
+      setManualSelection(prev => normalizeBuilderSelection(taxonomy.categories, next, prev))
       return dropped
     },
     [taxonomy, selection]
@@ -78,13 +101,14 @@ export function useBuilder(taxonomy) {
 
   const randomize = useCallback(() => {
     if (!taxonomy) return {}
-    const sel = randomizeSelection(taxonomy, tier)
+    const sel = randomizeSelection(taxonomy, tier, Math.random, manualSelection)
     setSelection(sel)
     return sel
-  }, [taxonomy, tier])
+  }, [taxonomy, tier, manualSelection])
 
   const reset = useCallback(() => {
     setSelection({})
+    setManualSelection({})
     setBrief('')
     setSeed('')
     setImageUrl('')
@@ -101,13 +125,14 @@ export function useBuilder(taxonomy) {
 
   const applySheet = useCallback((params) => {
     if (params.tier) setTier(params.tier)
-    if (params.selection) setSelection(params.selection)
+    if (params.selection) setSelection(taxonomy ? normalizeBuilderSelection(taxonomy.categories, params.tier || tier, params.selection) : params.selection)
+    setManualSelection({})
     setBrief(params.brief ?? '')
     setSeed(params.seed ? String(params.seed) : '')
     setImageUrl(params.image_url ?? '')
     if (params.model) setModel(params.model)
     if (params.group) setGroup(params.group)
-  }, [])
+  }, [taxonomy, tier])
 
   /** @type {BuilderState} */
   const state = useMemo(

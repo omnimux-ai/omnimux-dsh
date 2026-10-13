@@ -152,7 +152,10 @@ test('BuildPrompt 前缀 / 片段 / 后缀与 brief 拼接', () => {
   for (const frag of ['Male', 'afro', 'deep brown skin']) {
     assert.ok(p.includes(frag), `缺少片段 ${frag}: ${p}`)
   }
-  assert.ok(p.endsWith('Studio background, full-body shot, 9:16 composition, high detail, clean lighting.'))
+  assert.match(p, /Fixed 16:9 composition/)
+  assert.match(p, /chest-up bust on the left/)
+  assert.match(p, /full-body view on the right/)
+  assert.match(p, /No text, labels, borders or extra panels/)
   // 片段顺序遵循 promptOrder：skin_tone 先于 hair。
   assert.ok(p.indexOf('deep brown skin') < p.indexOf('afro'))
 

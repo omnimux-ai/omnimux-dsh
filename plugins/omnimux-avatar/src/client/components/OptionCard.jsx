@@ -55,7 +55,7 @@ export function OptionCard(props) {
     )
   }
 
-  if (kind === 'text') {
+  if (kind === 'text' || !option.imageUrl && !option.swatch) {
     return (
       <button type="button" /* exempt-ui01: 选项瓦片是自定义控件，非 kit 组件语义 */
         className={`${cls} omx-avatar-opt--text`}

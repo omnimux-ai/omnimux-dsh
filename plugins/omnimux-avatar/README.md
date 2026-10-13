@@ -1,59 +1,32 @@
 # omnimux-avatar
 
-当前产品方向见[角色生成与视频复刻](../../docs/contracts/product-positioning.md)。本页保留该组件的技术职责与既有实现记录，不证明全部功能当前可用，也不扩展默认产品范围；模型/渠道信息属于内部执行，普通用户的简化入口仍需对应实现证据。
+OmniMux 角色创作工作台。产品方向见[角色生成与视频复刻](../../docs/contracts/product-positioning.md)，逐项变化、适配与未完成项见[迁移映射](../../docs/implementation/influencer-avatar-sync-3283.md)。源码和模拟验收不代表真实收费渠道、正式部署或生成质量已经验证。
 
+## 创作能力
 
-OmniMux **数字人管理**：把一个角色从「结构化设定」做到「可复用产出」。
+- 角色设计提供自然、夸张、极限、猫、狗五类，21分类208项，新增发色和肤色；首开随机，手选类别在后续随机中保持，会话草稿按可见性与冲突规则恢复。
+- 新角色图采用16:9胸像与全身双视图；动物保持双足、动物头与毛发、尾巴和爪。多视角从选定成功父图及完整父快照派生，不借最新角色参数替代。
+- 风格参考图片通过受管文件上传，显式图片参考操作和真实组提交。图像上限5MiB，支持PNG/JPEG/WebP，上传失败与不可用渠道明确报错。
+- 视频创作提供动作复刻与角色替换；图片与视频为独立素材角色，通过中枢videoGenerate执行。分辨率和输出画幅由当前完整候选提供，替换保持原片画幅。素材及模型声明不保证视频会精确复现参考作品。
+- 图像、视频、派生任务共用角色账本，保存每次输入；后续生成使用任务独立文件。历史完整预览、视频播放、同源下载及有限媒体恢复不触发新生成；明确“重新生成”才创建新意图。
+- 角色预设沿用随包快照；动作与趋势视频复用现有中枢公共灵感目录，不复制或分发官网第三方视频素材。目录不可用时显示真实原因。
 
-- **形象是一等实体**：先在插件里建形象（起名 + 设定），再生成。设定 = 18 分类 × 170 选项 × 3 档位 + 方向说明 + 种子 + 参考图。
-- **生成结果自动归档**：该形象首次生成成功后，自动在资产库「角色」分类下建档（资产名 = 形象名，封面 = 主图）；后续生成只追加文件，不新增资产。
-- **多视角归档到形象自己的文件夹**：由主图派生的多视角设定板保存为该形象资产下的「多视角」目录，在资产库中可逐层点开。
-- **入口**：左栏「数字人」行（新会话下方，rank 4.05，位于「项目」之下）→ 工作台 Tab `omnimux-avatar:studio`。
+## 执行与数据边界
 
-## 数据位置
+中枢独占提供方请求、凭据、模型路由、托管、接受账本和续取。领域仅经公开的imageGenerate、videoGenerate、mediaInspect、modelCatalog与assetLibrary能力执行，不能读取密钥或导入中枢内部代码。
 
-```
-$DSH_HOME/omnimux/avatar/
-  avatars.json                     # 形象账本 { schema, revision, avatars[] }
-  data/<avatarId>/main.png         # 该形象最新主图
-  data/<avatarId>/多视角/turnaround.png
-```
+默认数据位于 `$DSH_HOME/omnimux/avatar/`，缺省为 `~/.dsh`。角色账本包含input快照、父任务及中枢taskRef；受管上传文件保留摘要、真实大小与媒体信息，使用时检查归属与摘要。第一份主图/多视角保留main.png/多视角/turnaround.png兼容布局，后续为任务独立文件；视频为独立任务mp4文件。真实MIME由中枢字节检查提供，不因目标扩展名推断。
 
-`DSH_HOME` 缺失时回落 `~/.dsh`（与 hub / assets / products 同一约定）。不读取其它 profile，不探测开发端口。
+无需开发端口、本机模型或手工安装视频工具。图片以正式随包依赖解码并限制40百万像素；参考视频检查单视频轨道、真实时长尺寸、常用编码、12–60帧及AAC音轨，限制4–30秒及240–4096像素。这是容器与采样包检查，不是逐帧视频解码或生成质量保证。缺中枢、模型、完整候选、素材或权限时明确报错，不返回演示模板或伪进度。使用照片、视频、声音和商品素材前须确认肖像与版权授权，执行中枢可能将参考素材托管到外部服务，不能承诺全部本地保留。
 
-## 对外接口
+## HTTP 与工具
 
-**HTTP**（前缀 `/api/omnimux/avatar`）：`GET /taxonomy`、`GET /presets`、`GET /presets/asset?path=`、
-`GET /avatars`、`POST /avatars`、`POST /avatars/update`、`POST /avatars/delete`、
-`POST /sheet`、`POST /multiview`、`GET /tasks`、`GET /task`、`POST /tasks/delete`。
-写路由一律先过 `connection.requestRejection`，再校验同源与 JSON，body 上限 64KB，响应 `Cache-Control: no-store`。
+HTTP前缀 `/api/omnimux/avatar`。保留taxonomy、presets、角色CRUD、sheet、multiview、tasks、task与sync；新增materials列表/文件/二进制import、motion和motion/options。JSON写入上限64KiB，二进制图片5MiB、视频100MiB。先宿主鉴权，再同源检查；文件请求只收角色及素材/任务标识，不接客户端任意磁盘路径。历史refresh为显式收取原任务，有副作用，不应当作纯只读查询。
 
-**Agent 工具**（与页面共用同一 store/service）：`avatar_create`、`avatar_list`、`avatar_get`、`avatar_update`、
-`avatar_delete`（需 `confirm: true`）、`avatar_generate`、`avatar_multiview`、`avatar_tasks`、`avatar_library_sync`。
+Agent工具保留avatar_create/list/get/update/delete/generate/multiview/tasks/library_sync，与界面共用账本。删除角色需confirm；视频界面能力不等于已新增视频Agent工具。
 
-**消费的 Seam**：
-- `ctx.get('imageGenerate').execute({...})` —— 唯一执行面；prompt 由本插件服务端拼装，前端不可注入。渠道缺失时如实抛 `needs-provider`，绝不返回空成功或假 `mode:'live'`。
-- `ctx.get('assetLibrary')` —— `saveTypedAsset` / `attachFiles` / `findBySource`（由 `omnimux-assets` 提供）。
-- `ctx.get('modelCatalog')` —— 模型与渠道目录（客户端走 `/omnimux/model-catalog`）。
+## 构建与验证
 
-## 数据集（Config-as-Code）
+`npm run build` 构建本包host公共能力副本与客户端。公共计算源来自MIT共享包 `@omnimux/generation-capabilities`，通过构建捆入本包lib，不引入中枢私有bundle或安装后工作区路径。
 
-`data/taxonomy.json`（40,877 B，18 分类 / 170 选项 / 3 档位）与 `data/presets.json`（35 条灵感预设）
-逐字节来自产品真源；`data/presets/*.webp` 为 70 张预设预览图（约 2.8MB）。
-`GET /taxonomy` 只回 Go 同形（`version/source/tier_group/category_priority/categories/prompt_map`），
-丢弃文件里的 `rules`/`counts`，避免前端类型漂移；`etag` = 原始字节 sha256 前 16 位十六进制。
-
-## 与上游产品的偏差（本仓硬门禁强制）
-
-原生 `<select>` → 自定义下拉浮层；字符图标 → 矢量 SVG；英文文案 → 中文（英文原文保留为 `en` 词条）；
-网关 pricing/task API → 中枢模型目录 + 插件自有账本；`POST /pg/influencer/*` → `imageGenerate` seam；
-参考图弱 URL 子串校验 → 按形象归属校验；localStorage 隐藏黑名单 → 真实删除；无真实百分比时不做假进度。
-
-## 安装与验证
-
-```sh
-node --test src/*.test.mjs src/client/*.test.mjs src/client/components/*.test.mjs
-npm run build            # esbuild → lib/client.js（ModuleLoader 包裹，ID = omnimux-avatar）
-```
-
-仓库级门禁：`pnpm verify:stages`、`pnpm verify:stage-scroll`、`pnpm test:ui`、`pnpm verify:tools`、`pnpm check:boundaries`。
+插件自动化使用package中的test；界面验收在任务隔离完整应用ui模式下进行，须保留专属截图和断言。真实视频生成需要任务级授权。合并后按仓库交付流程更新开发版，正式发布另需授权。

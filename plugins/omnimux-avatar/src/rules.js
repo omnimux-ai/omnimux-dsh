@@ -32,6 +32,7 @@ function slotOf(option) {
  * 顺序敏感，命中即返回。
  */
 export function conflictMessage(tier, sel) {
+  if (tier === 'cat' || tier === 'dog') return ''
   if (has(sel, 'body_type', 'body_heavy') && hasAny(sel, 'height', ['h_tall', 'h_very_tall'])) {
     return 'Heavy build cannot be combined with Tall or Very tall.'
   }
@@ -107,6 +108,7 @@ export function ValidateSelection(tier, sel = {}) {
 
 /** 夸张档位对应的提示词引导语。 */
 export function tierLead(tier) {
+  if (tier === 'cat' || tier === 'dog') return `A bipedal anthropomorphic ${tier}, standing on two legs, animal muzzle, ears, fur, tail and paws, wearing everyday clothing.`
   if (tier === 'total') {
     return 'Extreme caricature, exaggerated proportions, full-body character portrait of a'
   }
@@ -119,7 +121,7 @@ export function tierLead(tier) {
 /** 按 promptOrder 汇总选项片段。 */
 function fragmentsOf(sel) {
   const parts = []
-  for (const catID of promptOrder) {
+  for (const catID of [...promptOrder, 'animal_breed', 'fur_colour', 'fur_pattern']) {
     for (const id of sel[catID] ?? []) parts.push(Fragment(catID, id))
   }
   return parts
@@ -132,7 +134,7 @@ export function BuildPrompt(tier, sel = {}, brief = '') {
   if (parts.length > 0) p += ` ${parts.join(', ')}`
   const trimmed = String(brief ?? '').trim()
   if (trimmed !== '') p += `. ${trimmed}`
-  p += '. Studio background, full-body shot, 9:16 composition, high detail, clean lighting.'
+  p += '. Fixed 16:9 composition, two views of the same character on one white studio background: front-facing chest-up bust on the left, complete head-to-toe full-body view on the right. Keep identity, hair, clothing and proportions consistent. No text, labels, borders or extra panels. Clean lighting, natural texture. These layout requirements override any conflicting description.'
   return p
 }
 

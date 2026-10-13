@@ -14,22 +14,22 @@ import {
   servedTaxonomy,
 } from './taxonomy.js'
 
-test('数据集规模为 18 个分类 / 170 个选项', () => {
+test('数据集规模为 21 个分类 / 208 个选项', () => {
   const tax = Taxonomy()
-  assert.equal(tax.categories.length, 18)
+  assert.equal(tax.categories.length, 21)
   let options = 0
   for (const c of tax.categories) options += c.options.length
-  assert.equal(options, 170)
+  assert.equal(options, 208)
 })
 
-test('各档位可见选项数精确为 normal=124 / freak=167 / total=170', () => {
-  const visible = { normal: 0, freak: 0, total: 0 }
+test('每种角色的可见选项数与其物种适配一致', () => {
+  const visible = { normal: 0, freak: 0, total: 0, cat: 0, dog: 0 }
   for (const c of Taxonomy().categories) {
     for (const o of c.options) {
       for (const tier of o.visibleIn) visible[tier] += 1
     }
   }
-  assert.deepEqual(visible, { normal: 124, freak: 167, total: 170 })
+  assert.deepEqual(visible, { normal: 140, freak: 183, total: 186, cat: 108, dog: 109 })
 })
 
 test('servedTaxonomy 只有 Go 结构体的 6 个键，rules / counts 必须缺席', () => {
@@ -49,7 +49,7 @@ test('ETag 为 16 位小写十六进制且稳定', () => {
   const etag = ETag()
   assert.match(etag, /^[0-9a-f]{16}$/)
   assert.equal(etag, ETag())
-  assert.equal(readTaxonomyBytes().length, 40877)
+  assert.equal(readTaxonomyBytes().length, 50554)
 })
 
 test('promptOrder 为 18 项且顺序与 Go 端一致', () => {
@@ -69,8 +69,8 @@ test('category_priority 与数据集一致', () => {
 })
 
 test('ValidTier 只认 tier_group 里的档位', () => {
-  assert.deepEqual(servedTaxonomy().tier_group.options.map((o) => o.id), ['normal', 'freak', 'total'])
-  for (const tier of ['normal', 'freak', 'total']) assert.ok(ValidTier(tier))
+  assert.deepEqual(servedTaxonomy().tier_group.options.map((o) => o.id), ['normal', 'freak', 'total', 'cat', 'dog'])
+  for (const tier of ['normal', 'freak', 'total', 'cat', 'dog']) assert.ok(ValidTier(tier))
   for (const tier of ['', 'NORMAL', 'notatier', undefined]) assert.ok(!ValidTier(tier))
 })
 

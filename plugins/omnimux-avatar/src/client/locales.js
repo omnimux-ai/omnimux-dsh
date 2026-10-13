@@ -11,6 +11,8 @@
 // 四条硬冲突的键就是 CONFLICT_RULES 的英文 message 本身，因为
 // conflictMessage() 返回英文原文，页面直接 t(conflict)。
 
+import creationOptions from '../../data/creation-options.json' with { type: 'json' }
+
 export const NS = 'omnimux-avatar'
 
 /** 语义点号键（本插件自有文案）。 */
@@ -551,6 +553,12 @@ function buildDictionaries() {
     // 两侧键数同步增长，不派生中文原文键。
     zhDict[enText] = zhText
     enDict[enText] = enText
+  }
+  const extraLabels = [...creationOptions.tiers, ...creationOptions.categories,
+    ...creationOptions.categories.flatMap(category => category.options), ...Object.values(creationOptions.additions).flat()]
+  for (const row of extraLabels) {
+    zhDict[row.label_en] = row.label_zh
+    enDict[row.label_en] = row.label_en
   }
   return { zh: zhDict, en: enDict }
 }

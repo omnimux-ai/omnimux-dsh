@@ -24,6 +24,7 @@ import { mountReader } from '../reader/mount.js'
 import { createAvatarStore } from '../avatar/store.js'
 import { JSON_TOOL_OUTPUT, objectParams, rethrow } from '../tools/schema.js'
 import { mountMedia } from '../media/mount.js'
+import { createMediaInspector } from '../media/inspect.js'
 import { createSessionModelPreference } from '../session/model-preference.js'
 import { registerSessionModelRoutes } from '../session/http.js'
 import { registerDirectMediaRoutes } from '../media/direct-http.js'
@@ -337,6 +338,7 @@ export function apply(ctx, config = {}) {
   if (typeof ctx.provide === 'function') {
     ctx.provide('modelCatalog', { list: listCatalog })
     ctx.provide('generationProducts', generationProducts)
+    ctx.provide('mediaInspect', createMediaInspector())
   }
 
   /**

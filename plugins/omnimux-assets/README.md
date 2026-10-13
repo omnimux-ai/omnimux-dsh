@@ -18,7 +18,7 @@ OmniMux **创作资产库**（v0.2）：一条资产是有名字、类型、描�
 |---|---|
 | `ingestDownloadedImage(input)` | 浏览器抓取的图片字节入库（既有，行为未变） |
 | `saveTypedAsset({ name, type, description, tags, files, source })` | 新建一条带分类的资产；`files` 为本地绝对路径数组，首项即封面 |
-| `attachFiles({ assetId, files })` | **追加**文件引用：复制进该资产既有托管目录，不重拷既有引用、**不改封面** |
+| `attachFiles({ assetId, files, targetFileId? })` | **追加**文件引用，不改封面；可选目标必须是本资产已受管目录编号，文件写入原目录、不新增根引用。同名同内容幂等，异内容明确冲突，真实祖先外跳拒绝 |
 | `findBySource(source)` | 按 `source` 幂等查询，返回资产或 `null` |
 
 `update()` 仍保持「整组替换 files」语义不变；需要后续追加请用 `attachFiles`（或 store 的 `appendFiles`），
