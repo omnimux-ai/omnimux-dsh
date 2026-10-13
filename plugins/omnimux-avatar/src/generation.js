@@ -19,7 +19,7 @@ import {
 import { AvatarError } from './store.js'
 
 const BRIEF_MAX = 4000
-const SHEET_ASPECT = '9:16'
+const SHEET_ASPECT = '16:9'
 // 渠道不可用不是生成失败：不写 failed 记录，也不把它降级成 502。
 const AVAILABILITY_CODES = new Set(['needs-provider', 'needs-omnimux'])
 // 只有提供方明确判定任务失败才是终态（与中枢 isTerminalMediaFailure 同口径）；
@@ -168,7 +168,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
     if (briefText.length > BRIEF_MAX) {
       throw new AvatarError('invalid_request', `方向说明不能超过 ${BRIEF_MAX} 个字符`, 400)
     }
-    if (isEmptySelection(normalized) && briefText.trim() === '') {
+    if (isEmptySelection(normalized) && briefText.trim() === '' && !image_url && tier !== 'cat' && tier !== 'dog') {
       throw new AvatarError('invalid_request', '至少选择一个选项或填写方向说明', 400)
     }
 

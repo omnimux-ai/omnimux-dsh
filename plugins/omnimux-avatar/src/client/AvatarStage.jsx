@@ -39,7 +39,7 @@ import { injectAvatarStyles } from './styles.js'
 injectAvatarStyles()
 
 /** 设定板的提交尺寸（与源工作台一致）。 */
-const SHEET_SIZE = '9:16'
+const SHEET_SIZE = '16:9'
 
 /** 轻提示停留时长（毫秒）。 */
 const TOAST_MS = 3200
@@ -275,7 +275,7 @@ export function AvatarStage(props) {
   )
 
   const conflict = conflictMessage(b.tier, b.selection)
-  const hasInput = totalSelected(b.selection) > 0 || b.brief.trim() !== ''
+  const hasInput = totalSelected(b.selection) > 0 || b.brief.trim() !== '' || Boolean(b.imageUrl) || b.tier === 'cat' || b.tier === 'dog'
   const modelGroups = groupsOfModel(imageModels(catalog), b.model)
   const allGroupsDisabled = modelGroups.length > 0 && modelGroups.every((group) => group.enabled === false)
   const canGenerate = Boolean(currentId) && Boolean(b.model) && !conflict && hasInput && !allGroupsDisabled

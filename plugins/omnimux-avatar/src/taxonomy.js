@@ -26,7 +26,28 @@ let cachedETag = null
 /** 数据集原始字节，供摘要计算与测试使用。 */
 export function readTaxonomyBytes() {
   if (cachedBytes === null) {
-    cachedBytes = readFileSync(join(resolvePluginDataDir(), 'taxonomy.json'))
+    const tax = JSON.parse(readFileSync(join(resolvePluginDataDir(), 'taxonomy.json'), 'utf8'))
+    const extras = JSON.parse(readFileSync(join(resolvePluginDataDir(), 'creation-options.json'), 'utf8'))
+    tax.version = extras.version
+    tax.source = extras.source
+    tax.tier_group.options.push(...extras.tiers)
+    for (const category of tax.categories) {
+      const additions = extras.additions[category.id] ?? []
+      for (const option of additions) {
+        const entry = { ...option, visibleIn: ['normal', 'freak', 'total'], slot: null, imageUrl: null }
+        category.options.push(entry)
+        tax.prompt_map.categories[category.id].push({ id: entry.id, fragment: entry.fragment })
+      }
+      if (extras.animalCategories.includes(category.id)) {
+        for (const option of category.options) option.visibleIn = [...new Set([...option.visibleIn, 'cat', 'dog'])]
+      }
+    }
+    for (const category of extras.categories) {
+      const entry = { ...category, options: category.options.map(option => ({ ...option, visibleIn: option.visibleIn ?? ['cat', 'dog'], slot: null, imageUrl: null })) }
+      tax.categories.push(entry)
+      tax.prompt_map.categories[entry.id] = entry.options.map(option => ({ id: option.id, fragment: option.fragment }))
+    }
+    cachedBytes = Buffer.from(JSON.stringify(tax))
   }
   return cachedBytes
 }

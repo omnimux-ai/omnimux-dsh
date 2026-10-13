@@ -119,6 +119,7 @@ export const CONFLICT_MESSAGES_ZH = {
  * @returns {ConflictRule|null}
  */
 export function findConflict(tier, sel) {
+  if (tier === 'cat' || tier === 'dog') return null
   for (const rule of CONFLICT_RULES) {
     if (rule.hits(tier, sel)) return rule
   }

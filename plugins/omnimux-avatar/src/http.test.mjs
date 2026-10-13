@@ -201,7 +201,7 @@ test('taxonomy 只回六个字段并带 etag；presets 回快照', async (t) => 
   assert.equal(taxBody.data.rules, undefined)
   assert.equal(taxBody.data.counts, undefined)
   assert.equal(typeof taxBody.data.version, 'number')
-  assert.equal(taxBody.data.categories.length, 18)
+  assert.equal(taxBody.data.categories.length, 21)
   assert.match(taxBody.etag, /^[0-9a-f]{16}$/)
 
   const presets = await (await fetch(`${origin}/api/omnimux/avatar/presets`)).json()

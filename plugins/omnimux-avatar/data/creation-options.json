@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "source": "OmniMux 角色创作业务增量，独立编写；2026-10-13",
+  "tiers": [{"id":"cat","label_en":"Cat","label_zh":"猫"},{"id":"dog","label_en":"Dog","label_zh":"狗"}],
+  "animalCategories": ["gender","height","body_type","proportions","hair","hair_colour","distinctive","aesthetic","accessory"],
+  "categories": [
+    {"id":"animal_breed","label_en":"Breed","label_zh":"品种","kind":"text","max":1,"options":[
+      {"id":"cat_generic","label_en":"Domestic cat","label_zh":"家猫","visibleIn":["cat"],"fragment":"domestic feline"},
+      {"id":"cat_british","label_en":"British shorthair","label_zh":"英国短毛猫","visibleIn":["cat"],"fragment":"British shorthair feline"},
+      {"id":"cat_maine","label_en":"Maine coon","label_zh":"缅因猫","visibleIn":["cat"],"fragment":"Maine coon feline"},
+      {"id":"cat_siamese","label_en":"Siamese","label_zh":"暹罗猫","visibleIn":["cat"],"fragment":"Siamese feline"},
+      {"id":"cat_persian","label_en":"Persian","label_zh":"波斯猫","visibleIn":["cat"],"fragment":"Persian feline"},
+      {"id":"dog_generic","label_en":"Domestic dog","label_zh":"家犬","visibleIn":["dog"],"fragment":"domestic canine"},
+      {"id":"dog_corgi","label_en":"Corgi","label_zh":"柯基","visibleIn":["dog"],"fragment":"corgi canine"},
+      {"id":"dog_pug","label_en":"Pug","label_zh":"巴哥","visibleIn":["dog"],"fragment":"pug canine"},
+      {"id":"dog_poodle","label_en":"Poodle","label_zh":"贵宾犬","visibleIn":["dog"],"fragment":"poodle canine"},
+      {"id":"dog_dachshund","label_en":"Dachshund","label_zh":"腊肠犬","visibleIn":["dog"],"fragment":"dachshund canine"},
+      {"id":"dog_shepherd","label_en":"Shepherd dog","label_zh":"牧羊犬","visibleIn":["dog"],"fragment":"shepherd canine"}
+    ]},
+    {"id":"fur_colour","label_en":"Fur color","label_zh":"毛色","kind":"color","max":1,"options":[
+      {"id":"fur_white","label_en":"White fur","label_zh":"白毛","swatch":"var(--dsw-alias-bg-layer-3, #faf6ee)","fragment":"white coat"},
+      {"id":"fur_black","label_en":"Black fur","label_zh":"黑毛","swatch":"var(--dsw-alias-bg-primary, #242424)","fragment":"black coat"},
+      {"id":"fur_grey","label_en":"Grey fur","label_zh":"灰毛","swatch":"var(--dsw-alias-label-tertiary, #9d9d9d)","fragment":"grey coat"},
+      {"id":"fur_orange","label_en":"Orange fur","label_zh":"橘毛","swatch":"var(--dsw-alias-label-warning, #d99449)","fragment":"orange coat"},
+      {"id":"fur_brown","label_en":"Brown fur","label_zh":"棕毛","swatch":"var(--dsw-alias-border-l3, #8f6547)","fragment":"brown coat"},
+      {"id":"fur_cream","label_en":"Cream fur","label_zh":"奶油毛","swatch":"var(--dsw-alias-bg-layer-2, #e8d7b6)","fragment":"cream coat"},
+      {"id":"fur_tan","label_en":"Tan fur","label_zh":"浅棕毛","swatch":"var(--dsw-alias-border-l2, #bb9269)","fragment":"tan coat"}
+    ]},
+    {"id":"fur_pattern","label_en":"Fur pattern","label_zh":"毛纹","kind":"text","max":1,"options":[
+      {"id":"fur_solid","label_en":"Solid coat","label_zh":"纯色","fragment":"solid coat pattern"},
+      {"id":"fur_striped","label_en":"Striped coat","label_zh":"条纹","fragment":"striped coat pattern"},
+      {"id":"fur_spotted","label_en":"Spotted coat","label_zh":"斑点","fragment":"spotted coat pattern"},
+      {"id":"fur_bicolor","label_en":"Two-tone coat","label_zh":"双色","fragment":"two-tone coat pattern"}
+    ]}
+  ],
+  "additions": {
+    "skin_tone": [{"id":"st_carbon","label_en":"Carbon black","label_zh":"碳黑","swatch":"var(--dsw-alias-bg-primary, #111111)","fragment":"carbon-black skin tone"}],
+    "hair_colour": [
+      {"id":"hc_chocolate","label_en":"Chocolate brown","label_zh":"巧克力棕","fragment":"chocolate-brown hair"},
+      {"id":"hc_lightbrown","label_en":"Light brown","label_zh":"浅棕","fragment":"light-brown hair"},
+      {"id":"hc_caramel","label_en":"Caramel brown","label_zh":"焦糖棕","fragment":"caramel-brown hair"},
+      {"id":"hc_ashbrown","label_en":"Ash brown","label_zh":"灰棕","fragment":"ash-brown hair"},
+      {"id":"hc_beigeblonde","label_en":"Beige blonde","label_zh":"米金","fragment":"beige-blonde hair"},
+      {"id":"hc_rosegold","label_en":"Rose gold","label_zh":"玫瑰金","fragment":"rose-gold hair"},
+      {"id":"hc_copper","label_en":"Copper","label_zh":"铜色","fragment":"copper-colored hair"},
+      {"id":"hc_burgundy","label_en":"Burgundy","label_zh":"酒红","fragment":"burgundy hair"},
+      {"id":"hc_silver","label_en":"Silver","label_zh":"银色","fragment":"silver hair"},
+      {"id":"hc_smokegrey","label_en":"Smoke grey","label_zh":"烟灰","fragment":"smoke-grey hair"},
+      {"id":"hc_rosepink","label_en":"Rose pink","label_zh":"玫粉","fragment":"rose-pink hair"},
+      {"id":"hc_darkpurple","label_en":"Deep purple","label_zh":"深紫","fragment":"deep-purple hair"},
+      {"id":"hc_midnight","label_en":"Midnight blue","label_zh":"午夜蓝","fragment":"midnight-blue hair"},
+      {"id":"hc_teal","label_en":"Teal","label_zh":"青绿","fragment":"teal hair"},
+      {"id":"hc_mint","label_en":"Mint green","label_zh":"薄荷绿","fragment":"mint-green hair"}
+    ]
+  }
+}

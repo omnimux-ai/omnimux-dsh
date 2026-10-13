@@ -9,6 +9,8 @@ const TIER_KEYS = {
   normal: 'tier.normal',
   freak: 'tier.freak',
   total: 'tier.total',
+  cat: 'Cat',
+  dog: 'Dog',
 }
 
 /** 折叠箭头：矢量 SVG，不用 ▾ 字符。 */

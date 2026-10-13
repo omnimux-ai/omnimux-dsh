@@ -304,9 +304,7 @@ export function useSheetSubmit({ avatarId } = {}) {
             return
           }
         } catch (e) {
-          clearTimer()
           if (mountedRef.current) setError(e)
-          return
         } finally {
           inFlight = false
         }
@@ -334,10 +332,19 @@ export function useSheetSubmit({ avatarId } = {}) {
       try {
         const payload = await submitSheet(body)
         const taskId = payload.taskRef || String(payload.task?.task_id ?? payload.task?.id ?? '')
-        const rec = taskId ? await loadRecord(taskId) : payload.task
+        const accepted = payload.task
+        if (mountedRef.current) {
+          setPending(accepted)
+          setSubmitting(false)
+        }
+        let rec = accepted
+        try {
+          if (taskId) rec = await loadRecord(taskId) ?? accepted
+        } catch (collectionError) {
+          if (mountedRef.current) setError(collectionError)
+        }
         if (!mountedRef.current) return rec
         setPending(rec)
-        setSubmitting(false)
         if (rec && !isTerminalStatus(rec.status) && taskId) {
           startPolling(taskId)
         }

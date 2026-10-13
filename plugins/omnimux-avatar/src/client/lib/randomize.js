@@ -162,13 +162,19 @@ const MAX_REPAIR_PASSES = 8
  * @param {RandomSource} random
  * @returns {import('./types.js').Selection}
  */
-function repair(tax, tier, sel, random) {
+function repair(tax, tier, sel, random, locked = {}) {
   /** @type {import('./types.js').Selection} */
   const next = { ...sel }
   for (let pass = 0; pass < MAX_REPAIR_PASSES; pass++) {
     const conflict = findConflict(tier, next)
     if (!conflict) return next
     const { category, avoid } = conflict.reroll
+    if (locked[category]?.length) {
+      const contributor = tax.categories.find(cat => !locked[cat.id]?.length && next[cat.id]?.length && conflict.hits(tier, next) && !conflict.hits(tier, { ...next, [cat.id]: [] }))
+      if (!contributor) return next
+      delete next[contributor.id]
+      continue
+    }
     const cat = catById(tax.categories, category)
     if (!cat) break
     const usable = eligiblePool(cat, tier, next, avoid).filter((o) => !avoid.includes(o.id))
@@ -194,13 +200,14 @@ function repair(tax, tier, sel, random) {
  * @param {RandomSource} [random]
  * @returns {import('./types.js').Selection}
  */
-export function randomizeSelection(tax, tier, random = Math.random) {
+export function randomizeSelection(tax, tier, random = Math.random, manualSelection = {}) {
   /** @type {import('./types.js').Selection} */
-  const sel = {}
+  const sel = structuredClone(manualSelection)
   for (const cat of rollOrder(tax.categories)) {
+    if (manualSelection[cat.id]?.length) continue
     const pool = eligiblePool(cat, tier, sel, [])
     if (!pool.length) continue
     sel[cat.id] = [pickWeighted(cat.id, pool, random).id]
   }
-  return repair(tax, tier, sel, random)
+  return repair(tax, tier, sel, random, manualSelection)
 }
