@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react'
 import { taskAspectRatio, taskImageUrl, taskKind } from '../lib/history.js'
 import { multiViewProgress, multiViewState } from '../lib/multiview.js'
 import { MultiViewBadge } from './MultiViewBadge.jsx'
+import { RecoverableMedia } from './RecoverableMedia.jsx'
 
 /**
  * 状态归一。
@@ -117,7 +118,7 @@ export function TaskCard(props) {
         style={isGrid ? { aspectRatio: '16 / 9' } : ratio ? { aspectRatio: ratio } : undefined} /* exempt-ui02: 逐条不同的画幅比例 */
       >
         {state === 'done' ? (
-          image ? isVideo ? <video src={image} controls muted preload="metadata" className="omx-avatar-card-img is-loaded" onClick={event => event.stopPropagation()} /> : (
+          image ? isVideo ? <RecoverableMedia video src={image} controls muted preload="metadata" className="omx-avatar-card-img is-loaded" onClick={event => event.stopPropagation()} /> : (
             <img
               src={imageAttempt ? image + (image.includes('?')?'&':'?') + 'preview=' + imageAttempt : image}
               alt=''

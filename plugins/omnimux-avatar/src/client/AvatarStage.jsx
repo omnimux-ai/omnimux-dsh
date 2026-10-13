@@ -180,6 +180,7 @@ export function AvatarStage(props) {
   const multiViewApi = useMultiViewSubmit({ avatarId: currentId })
   const previousAvatarRef = useRef(currentId)
   const inspirationEpochRef=useRef(0)
+  const multiViewIntentRef=useRef(0)
   useEffect(()=>{inspirationEpochRef.current++;return()=>{inspirationEpochRef.current++}},[currentId])
   useEffect(() => {
     if (previousAvatarRef.current === currentId) return
@@ -489,6 +490,7 @@ export function AvatarStage(props) {
   )
 
   const onOpenMultiView = useCallback((parent, child) => {
+    multiViewIntentRef.current++
     setOpenMultiView({ parent, child })
   }, [])
 
@@ -498,6 +500,7 @@ export function AvatarStage(props) {
       if (!currentId || syncingKey) return
       const key = taskIdentity(task)
       if (!key) return
+      const epoch=inspirationEpochRef.current
       setSyncingKey(key)
       try {
         await syncLibrary({
@@ -506,11 +509,12 @@ export function AvatarStage(props) {
           taskId: taskKey(task),
         })
       } catch (error) {
-        push(readError(error), 'error')
+        if(epoch===inspirationEpochRef.current)push(readError(error), 'error')
         return
       } finally {
-        setSyncingKey('')
+        if(epoch===inspirationEpochRef.current)setSyncingKey('')
       }
+      if(epoch!==inspirationEpochRef.current)return
       setSyncedKeys((prev) => {
         const next = new Set(prev)
         next.add(key)
@@ -523,6 +527,8 @@ export function AvatarStage(props) {
 
   const onRegenerateMultiView = useCallback(async () => {
     if (!openMultiView?.parent || !currentId) return
+    const intent=++multiViewIntentRef.current
+    const parentId=taskKey(openMultiView.parent)
     const meta = parseTaskMeta(openMultiView.parent)
     const record = await multiViewApi.submit({
       avatarId: currentId,
@@ -530,8 +536,8 @@ export function AvatarStage(props) {
       model: meta?.model || b.model,
       group: meta?.group || b.group,
     })
-    if (record) {
-      setOpenMultiView((prev) => (prev ? { ...prev, child: record } : prev))
+    if (record&&intent===multiViewIntentRef.current) {
+      setOpenMultiView((prev) => (taskKey(prev?.parent)===parentId ? { ...prev, child: record } : prev))
     }
   }, [b.group, b.model, currentId, multiViewApi, openMultiView])
 
@@ -539,6 +545,7 @@ export function AvatarStage(props) {
   const onGenerateMultiView = useCallback(
     async (parent) => {
       if (!parent || !currentId) return
+      const intent=++multiViewIntentRef.current
       const meta = parseTaskMeta(parent)
       const record = await multiViewApi.submit({
         avatarId: currentId,
@@ -547,22 +554,25 @@ export function AvatarStage(props) {
         group: meta?.group || b.group,
       })
       // 提交后立刻打开弹窗：进度与结果都落在同一处，不需要用户再找一遍入口。
-      if (record) setOpenMultiView({ parent, child: record })
+      if (record&&intent===multiViewIntentRef.current) setOpenMultiView({ parent, child: record })
     },
     [b.group, b.model, currentId, multiViewApi]
   )
 
   const onDeleteMultiView = useCallback(async () => {
     if (!openMultiView?.child || !currentId) return
+    const epoch=inspirationEpochRef.current
+    const childId=taskKey(openMultiView.child)
     const parentId = openMultiView.parent ? taskKey(openMultiView.parent) : ''
     try {
-      await deleteTask({ avatarId: currentId, taskId: taskKey(openMultiView.child) })
+      await deleteTask({ avatarId: currentId, taskId: childId })
     } catch (error) {
-      push(readError(error), 'error')
+      if(epoch===inspirationEpochRef.current)push(readError(error), 'error')
       return
     }
+    if(epoch!==inspirationEpochRef.current)return
     if (parentId) multiViewApi.forget(parentId)
-    setOpenMultiView(null)
+    setOpenMultiView(prev=>taskKey(prev?.child)===childId?null:prev)
     push(t('toast.removed'), 'success')
   }, [currentId, multiViewApi, openMultiView, push, t])
 
@@ -670,8 +680,9 @@ export function AvatarStage(props) {
 
       <TaskPreviewDialog task={previewTask} onClose={() => setPreviewTask(null)} onGenerate={task => { setPreviewTask(null); void onRetry(task) }} onVideo={task => { setVideoInitialTask(task); setPreviewTask(null); setWorkbenchMode('video') }} onDelete={async task=>{
         if(!window.confirm('删除该生成记录？已归档素材不受影响。'))return
-        try{await deleteTask({avatarId:currentId,taskId:taskKey(task)});setPreviewTask(null);setMotionRevision({deleted:taskKey(task)})}
-        catch(error){push(readError(error),'error')}
+        const epoch=inspirationEpochRef.current
+        try{await deleteTask({avatarId:currentId,taskId:taskKey(task)});if(epoch!==inspirationEpochRef.current)return;setPreviewTask(prev=>taskKey(prev)===taskKey(task)?null:prev);setMotionRevision({deleted:taskKey(task)})}
+        catch(error){if(epoch===inspirationEpochRef.current)push(readError(error),'error')}
       }} t={t} />
 
       {/* 覆盖层：预设预览与多视角设定板 */}
@@ -686,7 +697,7 @@ export function AvatarStage(props) {
       <MultiViewDialog
         open={Boolean(openMultiView)}
         onOpenChange={(open) => {
-          if (!open) setOpenMultiView(null)
+          if (!open) {multiViewIntentRef.current++;setOpenMultiView(null)}
         }}
         task={openMultiView?.parent ? mergedChildren.get(taskKey(openMultiView.parent)) ?? openMultiView.child : null}
         regenerating={regeneratingMultiView}

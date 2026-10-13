@@ -191,7 +191,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       actualGroup = channel.id
     }
     const taskId = newTaskId()
-    const dest = store.listTasks(avatarId).some(task => task.kind === 'sheet')
+    const dest = (existsSync(avatarMainImagePath(paths,avatarId))||store.listTasks(avatarId).some(task => task.kind === 'sheet'))
       ? avatarTaskImagePath(paths, avatarId, taskId)
       : avatarMainImagePath(paths, avatarId)
     resolveAvatarDestination(paths,avatarId,dest)
@@ -263,7 +263,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
     if (active) return { task: active, mode: 'submitted', dest: active.destPath, taskRef: active.taskRef }
     const seam = resolveSeam()
     const taskId = newTaskId()
-    const dest = avatar.tasks.some(task => task.kind === 'multiview')
+    const dest = existsSync(avatarMultiViewImagePath(paths,avatarId))||avatar.tasks.some(task => task.kind === 'multiview')
       ? avatarTaskImagePath(paths, avatarId, taskId, 'multiview')
       : avatarMultiViewImagePath(paths, avatarId)
     resolveAvatarDestination(paths,avatarId,dest)

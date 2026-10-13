@@ -225,6 +225,8 @@ export function registerAvatarRoutes(webServer, deps = {}) {
           if (typeof body.avatarId !== 'string' || typeof body.taskId !== 'string') {
             return fail(400, 'invalid_request', '缺少 avatarId 或 taskId')
           }
+          const task=store.findTask(body.avatarId,body.taskId)
+          if(task&&!['ready','failed'].includes(task.status))return fail(409,'task-active','任务仍在处理中，完成后可删除记录')
           store.removeTask(body.avatarId, body.taskId)
           return send(200, { success: true })
         }

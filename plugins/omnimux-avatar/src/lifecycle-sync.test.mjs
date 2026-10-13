@@ -72,6 +72,17 @@ test('提交返回前重启留下的queued可按原requestKey找回已接受任�
   assert.equal(calls[0].prompt,undefined)
 })
 
+test('删除首份完成记录后新图不能覆盖遗留成品',async t=>{
+ const {paths,store,avatar}=await setup(t)
+ const generation=createGeneration({paths,store,imageGenerate:{async execute(request){writeFileSync(request.dest,request.prompt);return {mode:'live',dest:request.dest}}}})
+ const first=(await generation.submitSheet(input(avatar.id,'原成品'))).task
+ const original=readFileSync(first.destPath,'utf8')
+ store.removeTask(avatar.id,first.taskId)
+ const second=(await generation.submitSheet(input(avatar.id,'新成品'))).task
+ assert.notEqual(second.destPath,first.destPath)
+ assert.equal(readFileSync(first.destPath,'utf8'),original)
+})
+
 test('本地完成态可以结束主图与多视角追踪', () => {
   assert.equal(isTerminalStatus('ready'), true)
   assert.equal(multiViewState({ status: 'ready' }), 'ready')

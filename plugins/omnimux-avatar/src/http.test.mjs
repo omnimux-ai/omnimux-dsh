@@ -186,6 +186,11 @@ test('生成、多视角与任务路由共享同一套服务', async (t) => {
   assert.equal(seam.calls.at(-1).aspectRatio, '16:9')
   assert.equal(seam.calls.at(-1).image, join(paths.dataDir, avatar.id, 'main.png'))
 
+  store.addTask(avatar.id,{taskId:'pending-original',kind:'sheet',status:'queued'})
+  const blocked=await post('/api/omnimux/avatar/tasks/delete',{avatarId:avatar.id,taskId:'pending-original'})
+  assert.equal(blocked.status,409)
+  assert.equal(store.findTask(avatar.id,'pending-original').status,'queued')
+  store.removeTask(avatar.id,'pending-original')
   const removed = await post('/api/omnimux/avatar/tasks/delete', { avatarId: avatar.id, taskId })
   assert.equal(removed.status, 200)
   assert.equal(store.listTasks(avatar.id).length, 1)

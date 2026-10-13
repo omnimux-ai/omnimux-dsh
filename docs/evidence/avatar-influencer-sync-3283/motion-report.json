@@ -1,16 +1,16 @@
 {
-  "runId": "4324d9f8-51ba-4f07-8029-94177bf4f646",
+  "runId": "c65aff60-61d9-42c1-8769-20db9a37eae0",
   "mode": "ui",
   "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-sync-issue-3283",
-  "origin": "http://127.0.0.1:62706",
-  "appPort": 62706,
-  "cdpPort": 62708,
-  "startedAt": "2026-10-13T15:40:55.160Z",
-  "completedAt": "2026-10-13T15:41:08.420Z",
+  "origin": "http://127.0.0.1:59638",
+  "appPort": 59638,
+  "cdpPort": 59640,
+  "startedAt": "2026-10-13T17:42:25.717Z",
+  "completedAt": "2026-10-13T17:42:38.189Z",
   "pass": true,
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:62706",
+    "origin": "http://127.0.0.1:59638",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
     "taskPluginsCount": 22,
@@ -36,19 +36,19 @@
     {
       "name": "app-runtime-ready",
       "pass": true,
-      "origin": "http://127.0.0.1:62706",
+      "origin": "http://127.0.0.1:59638",
       "evidenceLevel": "full"
     },
     {
       "name": "same-origin-login",
       "pass": true,
       "status": 303,
-      "cookieName": "dsh-auth-HIRrXxHs_-MgDTBS231sND0ex-jwUSdtIlq0UDmxRBE"
+      "cookieName": "dsh-auth-WRkCftXQloLUtnOKUFUevYDWuLGi0mduOTAbFvYhDfM"
     },
     {
       "name": "chrome-cdp-listen",
       "pass": true,
-      "port": 62708
+      "port": 59640
     },
     {
       "name": "auth-cookie-applied",
@@ -166,14 +166,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 57437
+      "bytes": 56641
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-sync-issue-3283/.workbuddy/evidence/app-qa/4324d9f8-51ba-4f07-8029-94177bf4f646/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-influencer-sync-issue-3283/.workbuddy/evidence/app-qa/c65aff60-61d9-42c1-8769-20db9a37eae0/app-home.png",
     "width": 1280,
     "height": 713,
-    "bytes": 57437
+    "bytes": 56641
   },
   "errors": [],
   "cleanup": {
