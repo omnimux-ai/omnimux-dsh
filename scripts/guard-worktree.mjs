@@ -18,7 +18,7 @@
 import { spawnSync } from 'node:child_process'
 import { lstatSync, realpathSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 
 const MAIN_PLUGINS_MARK = `${sep}omnimux-dsh${sep}plugins${sep}`
 
@@ -992,6 +992,17 @@ export function decideSearchTarget({ toolName, toolInput = {}, homeDir = homedir
 
 export function decideBashCommand({ command, cwd }) {
   if (!command || typeof command !== 'string') return { decision: 'allow' }
+
+  if(command.includes('recover-media-build-3288.mjs')&&command.trim()!=='node scripts/recover-media-build-3288.mjs --apply')return {decision:'deny',reason:'scoped-media-build-recovery-invalid-command'}
+  if(command.trim()==='node scripts/recover-media-build-3288.mjs --apply') {
+    const root=dirname(dirname(fileURLToPath(import.meta.url)))
+    const script='scripts/recover-media-build-3288.mjs'
+    const committed=spawnSync('git',['-C',root,'show','HEAD:'+script],{timeout:3000})
+    try {
+      if(realpathSync(cwd||process.cwd())===realpathSync(root)&&realpathSync(resolve(root,script))===resolve(root,script)&&committed.status===0&&committed.stdout.equals(readFileSync(resolve(root,script))))return {decision:'allow',reason:'scoped-media-build-recovery'}
+    } catch {}
+    return {decision:'deny',reason:'scoped-media-build-recovery-identity-mismatch'}
+  }
 
   // 1. 检查破坏性重置未推送提交
   if (isDestructiveResetCommand(command)) {
