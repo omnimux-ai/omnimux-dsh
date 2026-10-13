@@ -37,7 +37,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0",
+    "esbuild": "0.25.12",
     "jsdom": "^30.0.1",
     "mediabunny": "1.55.3",
     "typescript": "5.9.3"
