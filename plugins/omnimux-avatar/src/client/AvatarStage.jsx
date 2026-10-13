@@ -161,8 +161,8 @@ export function AvatarStage(props) {
   const b = builder.state
   const avatarsApi = useAvatars()
   const { avatars, currentId } = avatarsApi
-  const history = useInfluencerHistory({ avatarId: currentId })
   const sheet = useSheetSubmit({ avatarId: currentId })
+  const history = useInfluencerHistory({ avatarId: currentId, revision: sheet.pending })
   const multiViewApi = useMultiViewSubmit({ avatarId: currentId })
 
   // 页面一旦打开过就一直留在树上，之后只切 display 与 aria-hidden：

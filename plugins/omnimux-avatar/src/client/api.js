@@ -222,7 +222,7 @@ export async function syncLibrary({ avatarId, kind = 'sheet' }) {
  */
 export async function fetchTasks(avatarId) {
   const body = await request(PATHS.tasks, { query: { avatarId } })
-  const items = Array.isArray(body.tasks) ? body.tasks : []
+  const items = Array.isArray(body.tasks) ? [...body.tasks].reverse() : []
   return { items, total: items.length }
 }
 

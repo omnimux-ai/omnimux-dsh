@@ -60,7 +60,7 @@ export function useMultiViewSubmit({ avatarId } = {}) {
       const timer = setInterval(() => {
         void (async () => {
           try {
-            const next = await fetchTask(avatarId, taskId)
+            const next = await fetchTask(avatarId, taskId, { refresh: true })
             if (!mountedRef.current) return
             if (next) track(parentId, next)
             if (next && isTerminalStatus(next.status)) clearTimer(parentId)

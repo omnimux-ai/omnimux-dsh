@@ -7,6 +7,7 @@ import {
   avatarMainImagePath,
   avatarMultiViewDir,
   avatarMultiViewImagePath,
+  avatarTaskImagePath,
 } from './paths.js'
 import {
   BuildMultiViewPrompt,
@@ -174,13 +175,17 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
     const prompt = BuildPrompt(tier, normalized, briefText)
     // 渠道不可用要在动磁盘之前失败：不建目录、不写任务。
     const seam = resolveSeam()
-    const dest = avatarMainImagePath(paths, avatarId)
-    mkdirSync(avatarDirOf(paths, avatarId), { recursive: true })
-
     const taskId = newTaskId()
+    const dest = store.listTasks(avatarId).some(task => task.kind === 'sheet')
+      ? avatarTaskImagePath(paths, avatarId, taskId)
+      : avatarMainImagePath(paths, avatarId)
+    mkdirSync(avatarDirOf(paths, avatarId), { recursive: true })
+    const params = { tier, selection: normalized, brief: briefText, seed: seed > 0 ? seed : 0,
+      image_url: typeof image_url === 'string' ? image_url : '', model: str(model), group: str(group), size: SHEET_ASPECT }
     const base = {
       taskId,
       kind: 'sheet',
+      input: params,
       model: str(model),
       group: str(group),
       status: 'queued',
@@ -227,22 +232,29 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
   }
 
   async function submitMultiView(input = {}) {
-    const { avatarId, model, group } = input
+    const { avatarId, model, group, parentTaskId } = input
     const avatar = store.get(avatarId)
 
-    // 参考图必须是该形象自己的成图，而不是靠 URL 子串判断归属。
-    const sheetTask = readyTaskOf(avatar, avatarId, paths, 'sheet')
-    if (!sheetTask) throw new AvatarError('invalid_request', '该形象尚无已完成的主图', 400)
+    const sheetTask = parentTaskId
+      ? store.findTask(avatarId, parentTaskId)
+      : readyTaskOf(avatar, avatarId, paths, 'sheet')
+    if (!sheetTask || sheetTask.kind !== 'sheet' || sheetTask.status !== 'ready' || !existsSync(sheetTask.destPath)) {
+      throw new AvatarError('invalid_request', '所选角色图片尚未完成或不可用', 400)
+    }
 
     const seam = resolveSeam()
-    const dest = avatarMultiViewImagePath(paths, avatarId)
-    mkdirSync(avatarMultiViewDir(paths, avatarId), { recursive: true })
-    const prompt = BuildMultiViewPrompt(avatar.sheet?.selection ?? {}, avatar.sheet?.brief ?? '')
-
     const taskId = newTaskId()
+    const dest = avatar.tasks.some(task => task.kind === 'multiview')
+      ? avatarTaskImagePath(paths, avatarId, taskId, 'multiview')
+      : avatarMultiViewImagePath(paths, avatarId)
+    mkdirSync(avatarMultiViewDir(paths, avatarId), { recursive: true })
+    const snapshot = sheetTask.input ?? avatar.sheet
+    const prompt = BuildMultiViewPrompt(snapshot?.selection ?? {}, snapshot?.brief ?? '')
     const base = {
       taskId,
       kind: 'multiview',
+      parentTaskId: sheetTask.taskId,
+      input: { kind: 'multiview', parent_task_id: sheetTask.taskId, size: MULTIVIEW_SIZE },
       model: str(model),
       group: str(group),
       status: 'queued',
@@ -289,6 +301,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       // 续取句柄必须是中枢接缝认的驼峰 `taskRef`；写成 `task_ref` 会被当成一次新提交，
       // 排队中的任务永远到不了 ready，自动归档与多视角归档也就永远不会发生。
       const result = await seam.execute({ taskRef: task.taskRef, dest: task.destPath, wait: true })
+      if (result?.mode !== 'live') return task
       const ready = store.updateTask(avatarId, taskId, {
         status: 'ready',
         destPath: result?.dest ?? task.destPath,

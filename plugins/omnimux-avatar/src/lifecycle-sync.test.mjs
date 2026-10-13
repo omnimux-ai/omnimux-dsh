@@ -9,6 +9,11 @@ import { resolveAvatarPaths } from './paths.js'
 import { createGeneration } from './generation.js'
 import { isTerminalStatus, parseTaskMeta, taskKind, parentTaskId } from './client/lib/history.js'
 import { multiViewState, partitionTasks } from './client/lib/multiview.js'
+import { build } from 'esbuild'
+import { JSDOM } from 'jsdom'
+import React, { act } from 'react'
+import Module, { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 
 async function setup(t) {
   const home = await mkdtemp(join(tmpdir(), 'avatar-sync-'))
@@ -77,6 +82,41 @@ test('刷新未完成响应不能提前写为ready，已有句柄恢复不提交
   assert.equal(refreshed.status, 'generating')
   assert.equal(calls.at(-1).taskRef, 'same-ref')
   assert.equal(calls.at(-1).prompt, undefined)
+})
+
+test('真实提交钩子对已受理任务发起续取而非仅反复读取本地状态', async t => {
+  const built = await build({ entryPoints: [fileURLToPath(new URL('./client/hooks/use-tasks.js', import.meta.url))], bundle: true, write: false, platform: 'node', format: 'cjs', external: ['react'] })
+  const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/' })
+  const keys = ['window', 'document', 'navigator', 'fetch', 'IS_REACT_ACT_ENVIRONMENT']
+  const saved = new Map(keys.map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
+  for (const key of keys) Object.defineProperty(globalThis, key, { value: key === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[key], configurable: true, writable: true })
+  const reads = []
+  const task = { taskId: 'accepted-task', kind: 'sheet', status: 'generating', taskRef: 'upstream-task' }
+  globalThis.fetch = async (url, options = {}) => {
+    let body
+    if (options.method === 'POST') body = { success: true, task, taskRef: 'upstream-task' }
+    else { reads.push(String(url)); body = { success: true, task: { ...task, status: String(url).includes('refresh=1') ? 'ready' : 'generating' } } }
+    return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } })
+  }
+  const production = new Module(fileURLToPath(import.meta.url))
+  production.filename = fileURLToPath(import.meta.url)
+  production.paths = Module._nodeModulePaths(fileURLToPath(new URL('.', import.meta.url)))
+  production.require = createRequire(import.meta.url)
+  production._compile(built.outputFiles[0].text, production.filename)
+  let api
+  function Harness() { api = production.exports.useSheetSubmit({ avatarId: 'avatar' }); return null }
+  const { createRoot } = await import('react-dom/client')
+  const root = createRoot(document.getElementById('root'))
+  t.after(async () => {
+    await act(async () => root.unmount())
+    dom.window.close()
+    for (const [key, descriptor] of saved) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key] }
+  })
+  await act(async () => root.render(React.createElement(Harness)))
+  let result
+  await act(async () => { result = await api.submit({ avatarId: 'avatar' }) })
+  assert.equal(reads.some(url => url.includes('refresh=1')), true)
+  assert.equal(result.status, 'ready')
 })
 
 test('同一父图的派生行按真实时间选择最新而非缺失网页id', () => {

@@ -82,6 +82,8 @@ function normalizeTask(input, now) {
     group: typeof task.group === 'string' ? task.group : '',
     status: TASK_STATUSES.has(task.status) ? task.status : 'queued',
     taskRef: task.taskRef ?? null,
+    input: task.input && typeof task.input === 'object' && !Array.isArray(task.input) ? clone(task.input) : null,
+    parentTaskId: typeof task.parentTaskId === 'string' ? task.parentTaskId : null,
     destPath: typeof task.destPath === 'string' ? task.destPath : '',
     error: task.error == null ? null : String(task.error),
     // 归档（资产库同步）失败的原因：图已产出，任务仍 ready，只把原因留在这里。

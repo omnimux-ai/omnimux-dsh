@@ -12,6 +12,7 @@ const TERMINAL = new Set(['SUCCESS', 'FAILURE'])
 export function isTerminalStatus(status) {
   return (
     TERMINAL.has((status ?? '').toUpperCase()) ||
+    (status ?? '').toLowerCase() === 'ready' ||
     (status ?? '').toLowerCase() === 'succeeded' ||
     (status ?? '').toLowerCase() === 'failed'
   )
@@ -24,7 +25,8 @@ export function isTerminalStatus(status) {
  * @returns {import('./types.js').InfluencerTaskMeta|null}
  */
 function readTaskMeta(record) {
-  const raw = record.properties?.input
+  if (record?.input && typeof record.input === 'object' && !Array.isArray(record.input)) return record.input
+  const raw = record?.properties?.input
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw)
@@ -52,7 +54,8 @@ export function parseTaskMeta(record) {
  * @returns {import('./types.js').InfluencerTaskKind}
  */
 export function taskKind(record) {
-  return readTaskMeta(record)?.kind === 'multiview' ? 'multiview' : 'sheet'
+  const kind = record?.kind ?? readTaskMeta(record)?.kind
+  return kind === 'multiview' ? 'multiview' : kind === 'motion' ? 'motion' : 'sheet'
 }
 
 /**
@@ -62,7 +65,7 @@ export function taskKind(record) {
  */
 export function parentTaskId(record) {
   if (taskKind(record) !== 'multiview') return null
-  const parent = readTaskMeta(record)?.parent_task_id
+  const parent = record?.parentTaskId ?? readTaskMeta(record)?.parent_task_id
   return typeof parent === 'string' && parent ? parent : null
 }
 
@@ -96,10 +99,8 @@ export function taskAbsoluteImageUrl(record) {
  * @returns {string|undefined}
  */
 export function taskAspectRatio(record) {
-  const raw = record.properties?.input
-  if (!raw) return undefined
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = readTaskMeta(record)
     if (typeof parsed?.size !== 'string') return undefined
     const match = /^(\d{1,4})\s*[:x*]\s*(\d{1,4})$/i.exec(parsed.size.trim())
     if (!match) return undefined

@@ -53,7 +53,7 @@ function isVisible() {
  * @param {{ avatarId?: string, userId?: number }} [options]
  * @returns {InfluencerHistory}
  */
-export function useInfluencerHistory({ avatarId, userId } = {}) {
+export function useInfluencerHistory({ avatarId, userId, revision } = {}) {
   const cached = useMemo(() => readHistoryCache(userId), [userId])
 
   const [items, setItems] = useState(() => cached?.items ?? [])
@@ -78,8 +78,12 @@ export function useInfluencerHistory({ avatarId, userId } = {}) {
       return
     }
     const page = await fetchTasks(avatarId)
+    const settled = await Promise.all(page.items.map(async task => {
+      if (isTerminalStatus(task.status) || !task.taskRef) return task
+      return await fetchTask(avatarId, task.taskId, { refresh: true }) ?? task
+    }))
     if (!mountedRef.current) return
-    setItems(page.items)
+    setItems(settled)
     setTotal(page.total)
     setError(null)
     // 只持久化本次网络返回的内容，避免过期种子不断刷新自己的时间戳。
@@ -103,7 +107,7 @@ export function useInfluencerHistory({ avatarId, userId } = {}) {
     return () => {
       alive = false
     }
-  }, [loadOnce])
+  }, [loadOnce, revision])
 
   // 轮询：列表里还有未完成的任务时才继续；超过退避时长后放慢；页面隐藏时暂停，
   // 回到前台立刻补一次读取。全部到终态即停止。
@@ -242,10 +246,7 @@ export function useSheetSubmit({ avatarId } = {}) {
    */
   const loadRecord = useCallback(
     async (taskId) => {
-      const record = await fetchTask(avatarId, taskId)
-      if (!record || !isTerminalStatus(record.status)) return record
-      const settled = await fetchTask(avatarId, taskId, { refresh: true })
-      return settled ?? record
+      return await fetchTask(avatarId, taskId, { refresh: true })
     },
     [avatarId]
   )
