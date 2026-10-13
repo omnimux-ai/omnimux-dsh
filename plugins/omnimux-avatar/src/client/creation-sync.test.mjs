@@ -3,7 +3,16 @@ import assert from 'node:assert/strict'
 import { Taxonomy, ValidTier } from '../taxonomy.js'
 import { BuildPrompt, ValidateSelection } from '../rules.js'
 import { randomizeSelection } from './lib/randomize.js'
+import { inspirationMediaUrl,selectedInspirationVideo } from './lib/inspiration-media.js'
 import { visOpts } from './lib/taxonomy.js'
+
+test('灵感实际使用唯一规范化受管媒体且拒绝路径跳转',()=>{
+ const local='/omnimux/inspiration/media/video.mp4'
+ assert.equal(inspirationMediaUrl(local),local)
+ assert.equal(inspirationMediaUrl('/omnimux/inspiration/media/../../../api/omnimux/avatar/task'),null)
+ assert.equal(inspirationMediaUrl('//external.test/video.mp4'),null)
+ assert.equal(selectedInspirationVideo({media_urls:['https://external.test/video.mp4',local]}),local)
+})
 
 test('新增猫狗类别和颜色来自完整分类数据', () => {
   const tax = Taxonomy()

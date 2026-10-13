@@ -455,7 +455,11 @@ build_one() {
   fi
 
   case "$name" in
-    omnimux|omnimux-accounts|omnimux-assets|omnimux-products|omnimux-inspiration|omnimux-clip|omnimux-analytics|omnimux-publish|omnimux-video)
+    omnimux)
+      echo "→ build $name (package)"
+      (cd "$dir" && npm run build --silent)
+      ;;
+    omnimux-accounts|omnimux-assets|omnimux-products|omnimux-inspiration|omnimux-clip|omnimux-analytics|omnimux-publish|omnimux-video)
       # 插件可以没有客户端面（纯服务端插件）：没有构建脚本就跳过，口径与 build:all 的
       # resolvePluginBuildTask 一致，不能凭空假设脚本存在。
       if [ -f "$dir/scripts/build-client.mjs" ]; then

@@ -17,6 +17,7 @@ import {
   ValidationError,
 } from './rules.js'
 import { AvatarError } from './store.js'
+import { resolveAvatarArtifact,resolveAvatarDestination } from './artifact.js'
 
 const BRIEF_MAX = 4000
 const SHEET_ASPECT = '16:9'
@@ -105,8 +106,11 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
   function failureOf(avatarId, base, error) {
     const code = typeof error?.code === 'string' && error.code !== '' ? error.code : 'generation-failed'
     const message = messageOf(error)
-    if (AVAILABILITY_CODES.has(code)) return new AvatarError(code, message, 503)
-    store.addTask(avatarId, { ...base, status: 'failed', error: message })
+    if (AVAILABILITY_CODES.has(code)&&!error?.taskRef) {
+      if (store.findTask(avatarId, base.taskId)) store.removeTask(avatarId, base.taskId)
+      return new AvatarError(code, message, 503)
+    }
+    store.addTask(avatarId, { ...base, status: error?.taskRef ? 'generating' : 'failed', taskRef: error?.taskRef ?? null, error: message })
     return new AvatarError(code, message, 502)
   }
 
@@ -135,7 +139,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
   async function archiveReady(avatarId, task, kind) {
     if (typeof onReady !== 'function' || task?.status !== 'ready') return task
     try {
-      await onReady(avatarId, kind)
+      await onReady(avatarId, kind, task.taskId)
       return store.updateTask(avatarId, task.taskId, { syncError: null }) ?? task
     } catch (error) {
       return persistSyncError(avatarId, task, messageOf(error))
@@ -175,13 +179,24 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
     const prompt = BuildPrompt(tier, normalized, briefText)
     // 渠道不可用要在动磁盘之前失败：不建目录、不写任务。
     const seam = resolveSeam()
+    let imageOperation
+    let actualGroup = group
+    if (input.materialId) {
+      const catalog = readSeat(ctx, 'modelCatalog')?.list?.()
+      const row = catalog?.models?.find(item => item.id === model)
+      const operation = row?.operations?.find(item => item.listed === true && item.id === 'multi_reference' && item.output?.type === 'image')
+      const channel = row?.channelGroups?.find(item => item.enabled === true && (item.id === group || item.wireGroup === group))
+      if (!operation || !channel || channel.constraints?.operations && !channel.constraints.operations.includes(operation.id)) throw new AvatarError('needs-provider', '当前渠道不支持图片风格参考', 503)
+      imageOperation = operation.id
+      actualGroup = channel.id
+    }
     const taskId = newTaskId()
     const dest = store.listTasks(avatarId).some(task => task.kind === 'sheet')
       ? avatarTaskImagePath(paths, avatarId, taskId)
       : avatarMainImagePath(paths, avatarId)
-    mkdirSync(avatarDirOf(paths, avatarId), { recursive: true })
+    resolveAvatarDestination(paths,avatarId,dest)
     const params = { tier, selection: normalized, brief: briefText, seed: seed > 0 ? seed : 0,
-      image_url: typeof image_url === 'string' ? image_url : '', model: str(model), group: str(group), size: SHEET_ASPECT }
+      image_url: typeof image_url === 'string' ? image_url : '', materialId: input.materialId ?? '', model: str(model), group: str(actualGroup), size: SHEET_ASPECT }
     const base = {
       taskId,
       kind: 'sheet',
@@ -194,14 +209,16 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       error: null,
     }
 
+    store.addTask(avatarId, base)
     let result
     try {
       result = await seam.execute({
         prompt,
         dest,
         model,
-        group,
-        operation: image_url ? undefined : 'text_to_image',
+        group: actualGroup,
+        ...(imageOperation ? { allowedGroups: [actualGroup] } : {}),
+        operation: imageOperation ?? (image_url ? undefined : 'text_to_image'),
         image: image_url || undefined,
         aspectRatio: SHEET_ASPECT,
         seed: seed > 0 ? seed : undefined,
@@ -216,7 +233,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       ...base,
       status: result?.mode === 'live' ? 'ready' : 'generating',
       taskRef: result?.taskRef ?? null,
-      destPath: result?.dest ?? dest,
+      destPath: resolveAvatarDestination(paths,avatarId,result?.dest ?? dest),
     })
     store.update(avatarId, {
       sheet: {
@@ -242,19 +259,22 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       throw new AvatarError('invalid_request', '所选角色图片尚未完成或不可用', 400)
     }
 
+    const active = avatar.tasks.find(task => task.kind === 'multiview' && task.parentTaskId === sheetTask.taskId && !['ready','failed'].includes(task.status))
+    if (active) return { task: active, mode: 'submitted', dest: active.destPath, taskRef: active.taskRef }
     const seam = resolveSeam()
     const taskId = newTaskId()
     const dest = avatar.tasks.some(task => task.kind === 'multiview')
       ? avatarTaskImagePath(paths, avatarId, taskId, 'multiview')
       : avatarMultiViewImagePath(paths, avatarId)
-    mkdirSync(avatarMultiViewDir(paths, avatarId), { recursive: true })
+    resolveAvatarDestination(paths,avatarId,dest)
+    const parentImage=resolveAvatarArtifact(paths,avatarId,sheetTask.destPath)
     const snapshot = sheetTask.input ?? avatar.sheet
-    const prompt = BuildMultiViewPrompt(snapshot?.selection ?? {}, snapshot?.brief ?? '')
+    const prompt = BuildMultiViewPrompt(snapshot?.selection ?? {}, snapshot?.brief ?? '') + (snapshot?.tier === 'cat' || snapshot?.tier === 'dog' ? `\nPreserve the bipedal ${snapshot.tier} species, muzzle, ears, fur, paws and tail from the reference. Do not turn it into a person or four-legged pet.` : '')
     const base = {
       taskId,
       kind: 'multiview',
       parentTaskId: sheetTask.taskId,
-      input: { kind: 'multiview', parent_task_id: sheetTask.taskId, size: MULTIVIEW_SIZE },
+      input: { ...snapshot, kind: 'multiview', parent_task_id: sheetTask.taskId, size: MULTIVIEW_SIZE },
       model: str(model),
       group: str(group),
       status: 'queued',
@@ -263,6 +283,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       error: null,
     }
 
+    store.addTask(avatarId, base)
     let result
     try {
       result = await seam.execute({
@@ -270,7 +291,7 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
         dest,
         model,
         group,
-        image: sheetTask.destPath,
+        image: parentImage,
         aspectRatio: MULTIVIEW_SIZE,
         requestKey: taskId,
         wait: false,
@@ -283,28 +304,31 @@ export function createGeneration({ ctx, store, paths, imageGenerate, onReady } =
       ...base,
       status: result?.mode === 'live' ? 'ready' : 'generating',
       taskRef: result?.taskRef ?? null,
-      destPath: result?.dest ?? dest,
+      destPath: resolveAvatarDestination(paths,avatarId,result?.dest ?? dest),
     })
     const archived = await archiveReady(avatarId, task, 'multiview')
     return { task: archived, mode: result?.mode ?? null, dest: task.destPath, taskRef: task.taskRef }
   }
 
   async function refreshTask({ avatarId, taskId } = {}) {
-    const task = store.findTask(avatarId, taskId)
+    let task = store.findTask(avatarId, taskId)
     if (!task) throw new AvatarError('task-not-found', 'task not found', 404)
-    // 终态不再轮询；没有 taskRef 的排队任务没有可续取的句柄，原样返回。
     if (task.status === 'ready' || task.status === 'failed') return task
-    if (!task.taskRef) return task
-
     const seam = resolveSeam()
+    if (!task.taskRef) {
+      const accepted = seam.findAccepted?.(task.taskId)
+      if (!accepted) return task
+      task = store.updateTask(avatarId, taskId, { taskRef: accepted.taskRef, status: 'generating' })
+    }
+    const destination=resolveAvatarDestination(paths,avatarId,task.destPath)
     try {
       // 续取句柄必须是中枢接缝认的驼峰 `taskRef`；写成 `task_ref` 会被当成一次新提交，
       // 排队中的任务永远到不了 ready，自动归档与多视角归档也就永远不会发生。
-      const result = await seam.execute({ taskRef: task.taskRef, dest: task.destPath, wait: true })
+      const result = await seam.execute({ taskRef: task.taskRef, dest: destination, wait: true })
       if (result?.mode !== 'live') return task
       const ready = store.updateTask(avatarId, taskId, {
         status: 'ready',
-        destPath: result?.dest ?? task.destPath,
+        destPath: resolveAvatarDestination(paths,avatarId,result?.dest ?? task.destPath),
         taskRef: result?.taskRef ?? task.taskRef,
         error: null,
       })

@@ -39,7 +39,10 @@ export function readTaxonomyBytes() {
         tax.prompt_map.categories[category.id].push({ id: entry.id, fragment: entry.fragment })
       }
       if (extras.animalCategories.includes(category.id)) {
-        for (const option of category.options) option.visibleIn = [...new Set([...option.visibleIn, 'cat', 'dog'])]
+        for (const option of category.options) {
+          if(extras.animalOptions?.[category.id]&&!extras.animalOptions[category.id].includes(option.id))continue
+          option.visibleIn = [...new Set([...option.visibleIn, 'cat', 'dog'])]
+        }
       }
     }
     for (const category of extras.categories) {

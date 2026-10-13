@@ -13,6 +13,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import { presetAssetUrl } from '../api.js'
+import { RecoverableMedia } from './RecoverableMedia.jsx'
 
 import { presetParamRows, resolvePresetSelection } from '../lib/presets.js'
 
@@ -248,7 +249,7 @@ export function PresetPreviewDialog(props) {
         {/* 素材区：整张角色设定图，默认适应窗口，可切到原始尺寸滚动查看 */}
         <div className='omx-avatar-preset-media'>
           <div className={actualSize ? 'omx-avatar-preset-view is-actual' : 'omx-avatar-preset-view'}>
-            <img
+            <RecoverableMedia
               src={presetAssetUrl(preset.sheet.path)}
               alt={preset.name}
               width={preset.sheet.width}

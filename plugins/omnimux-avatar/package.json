@@ -11,19 +11,21 @@
   "files": [
     "src",
     "lib/client.js",
+    "lib/capability-core.js",
     "data",
     "cordis.patch.yml",
     "dsh.manifest.json",
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/build-client.mjs",
+    "build": "node scripts/build-host.mjs && node scripts/build-client.mjs",
     "test": "node --test src/*.test.mjs src/client/*.test.mjs src/client/*.test.js src/client/components/*.test.mjs"
   },
   "dependencies": {
     "dsh-ui-kit": "file:../../packages/dsh-ui-kit"
   },
   "devDependencies": {
+    "@omnimux/generation-capabilities": "workspace:*",
     "esbuild": "^0.25.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

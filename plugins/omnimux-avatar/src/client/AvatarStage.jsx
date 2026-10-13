@@ -12,13 +12,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { deleteTask, fetchPresets, fetchTaxonomy, syncLibrary } from './api.js'
+import { deleteTask, fetchPresets, fetchTaxonomy, syncLibrary, submitMotion, fetchTask, importInspirationVideo } from './api.js'
 import { AvatarList } from './components/AvatarList.jsx'
 import { BuilderPanel } from './components/BuilderPanel.jsx'
 import { ExplorePresetGrid } from './components/ExplorePresetGrid.jsx'
+import { VideoExplore } from './components/VideoExplore.jsx'
 import { FeedGrid, taskIdentity } from './components/FeedGrid.jsx'
 import { GenerateBar } from './components/GenerateBar.jsx'
 import { MultiViewDialog } from './components/MultiViewDialog.jsx'
+import { MotionPanel } from './components/MotionPanel.jsx'
+import { TaskPreviewDialog } from './components/TaskPreviewDialog.jsx'
+import { ImageReference } from './components/ImageReference.jsx'
+import { Button } from './kit.js'
 import { PresetPreviewDialog } from './components/PresetPreviewDialog.jsx'
 import { SourceTabs } from './components/SourceTabs.jsx'
 import { ViewModeToggle } from './components/ViewModeToggle.jsx'
@@ -145,9 +150,17 @@ export function AvatarStage(props) {
   const [catalog, setCatalog] = useState(null)
   const [presetSnapshot, setPresetSnapshotState] = useState(null)
   const [source, setSource] = useState(() => readSource())
+  const [mobileSection,setMobileSection]=useState('create')
+  const [workbenchMode, setWorkbenchMode] = useState('image')
+  const [exploreKind, setExploreKind] = useState('characters')
+  const [motionRevision, setMotionRevision] = useState(null)
+  const [imageMaterialId, setImageMaterialId] = useState('')
+  const [imageUploading,setImageUploading]=useState(false)
+  const [videoInitialTask, setVideoInitialTask] = useState(null)
   const [viewMode, setViewMode] = useState(() => readViewMode())
   const [previewPreset, setPreviewPreset] = useState(null)
   const [openMultiView, setOpenMultiView] = useState(null)
+  const [previewTask, setPreviewTask] = useState(null)
   const [everOpened, setEverOpened] = useState(visible === true)
   // 归档补偿：已补偿成功的任务键，以及正在补偿的任务键（同一时刻只跑一个）。
   const [syncedKeys, setSyncedKeys] = useState(() => new Set())
@@ -162,8 +175,18 @@ export function AvatarStage(props) {
   const avatarsApi = useAvatars()
   const { avatars, currentId } = avatarsApi
   const sheet = useSheetSubmit({ avatarId: currentId })
-  const history = useInfluencerHistory({ avatarId: currentId, revision: sheet.pending })
+  const historyRevision = useMemo(() => ({ image: sheet.pending, video: motionRevision }), [sheet.pending, motionRevision])
+  const history = useInfluencerHistory({ avatarId: currentId, revision: historyRevision })
   const multiViewApi = useMultiViewSubmit({ avatarId: currentId })
+  const previousAvatarRef = useRef(currentId)
+  const inspirationEpochRef=useRef(0)
+  useEffect(()=>{inspirationEpochRef.current++;return()=>{inspirationEpochRef.current++}},[currentId])
+  useEffect(() => {
+    if (previousAvatarRef.current === currentId) return
+    previousAvatarRef.current = currentId
+    setPreviewTask(null);setOpenMultiView(null);setImageMaterialId('');setVideoInitialTask(null);setMotionRevision(null)
+    sheet.reset()
+  }, [currentId])
 
   // 页面一旦打开过就一直留在树上，之后只切 display 与 aria-hidden：
   // 卸载会丢掉左栏设定与画廊滚动位置，也让轮询白白重启。
@@ -275,10 +298,10 @@ export function AvatarStage(props) {
   )
 
   const conflict = conflictMessage(b.tier, b.selection)
-  const hasInput = totalSelected(b.selection) > 0 || b.brief.trim() !== '' || Boolean(b.imageUrl) || b.tier === 'cat' || b.tier === 'dog'
+  const hasInput = totalSelected(b.selection) > 0 || b.brief.trim() !== '' || Boolean(b.imageUrl || imageMaterialId) || b.tier === 'cat' || b.tier === 'dog'
   const modelGroups = groupsOfModel(imageModels(catalog), b.model)
   const allGroupsDisabled = modelGroups.length > 0 && modelGroups.every((group) => group.enabled === false)
-  const canGenerate = Boolean(currentId) && Boolean(b.model) && !conflict && hasInput && !allGroupsDisabled
+  const canGenerate = Boolean(currentId) && Boolean(b.model) && !conflict && hasInput && !allGroupsDisabled && !imageUploading
 
   // ── 提交失败要看得见 ───────────────────────────────────────────────────
   const sheetError = readError(sheet.error)
@@ -323,6 +346,7 @@ export function AvatarStage(props) {
   // ── 交互 ───────────────────────────────────────────────────────────────
   const onSourceChange = useCallback((next) => {
     setSource(next)
+    if(next==='history')setMobileSection('history')
     writeSource(next)
   }, [])
 
@@ -374,11 +398,12 @@ export function AvatarStage(props) {
       seed: seedValue(b.seed),
       size: SHEET_SIZE,
       image_url: b.imageUrl,
+      materialId: imageMaterialId || undefined,
     })
     if (!record) return
     onSourceChange('history')
     push(t('status.generating'), 'success')
-  }, [allGroupsDisabled, b, currentId, onSourceChange, push, sheet, t])
+  }, [allGroupsDisabled, b, currentId, imageMaterialId, onSourceChange, push, sheet, t])
 
   const applyPreset = useCallback(
     (preset) => {
@@ -395,6 +420,9 @@ export function AvatarStage(props) {
         seed: preset.seed,
       })
       setPreviewPreset(null)
+      setImageMaterialId('')
+      setWorkbenchMode('image')
+      setMobileSection('create')
       push(t('toast.presetApplied'), 'success')
       builderRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
     },
@@ -404,12 +432,17 @@ export function AvatarStage(props) {
   /** 点开一条历史记录：把它的设定参数填回左栏，没有参数就如实说明。 */
   const onView = useCallback(
     (task) => {
+      setPreviewTask(task)
+      setImageMaterialId('')
+      if (task.kind === 'motion') { setVideoInitialTask(task); return }
       const meta = parseTaskMeta(task)
       if (!meta) {
         push(t('toast.noSheetParams'), 'warning')
         return
       }
       builder.applySheet(meta)
+      setImageMaterialId(meta.materialId ?? '')
+      setWorkbenchMode('image')
       push(t('toast.formFilled'), 'success')
     },
     [builder, push, t]
@@ -418,6 +451,18 @@ export function AvatarStage(props) {
   /** 失败卡片重试：按记录里存的同一套参数再提交一次。 */
   const onRetry = useCallback(
     async (task) => {
+      if (task.kind === 'motion') {
+        const epoch=inspirationEpochRef.current
+        try {
+          const record = !['ready','failed'].includes(task.status) && task.taskRef
+            ? await fetchTask(currentId, task.taskId, { refresh: true })
+            : await submitMotion({ ...task.input, avatarId: currentId })
+          if(epoch!==inspirationEpochRef.current)return
+          setMotionRevision(record)
+          onSourceChange('history')
+        } catch (error) { if(epoch===inspirationEpochRef.current)push(readError(error), 'error') }
+        return
+      }
       const meta = parseTaskMeta(task)
       if (!meta || !currentId) {
         push(t('toast.noSheetParams'), 'warning')
@@ -433,6 +478,7 @@ export function AvatarStage(props) {
         seed: seedValue(meta.seed),
         size: meta.size || SHEET_SIZE,
         image_url: meta.image_url,
+        materialId: meta.materialId || undefined,
       })
       if (record) {
         onSourceChange('history')
@@ -457,6 +503,7 @@ export function AvatarStage(props) {
         await syncLibrary({
           avatarId: currentId,
           kind: task?.kind === 'multiview' ? 'multiview' : 'sheet',
+          taskId: taskKey(task),
         })
       } catch (error) {
         push(readError(error), 'error')
@@ -529,10 +576,13 @@ export function AvatarStage(props) {
     <div
       className="omx-avatar-page"
       data-visible={visible ? 'true' : 'false'}
+      data-mobile-section={mobileSection}
       aria-hidden={visible ? undefined : 'true'}
     >
       <div className="omx-avatar-head omx-stage-sticky">
         <span className="omx-avatar-head-title">{t('nav')}</span>
+        <Button variant={workbenchMode === 'image' ? 'primary' : 'ghost'} onClick={() => setWorkbenchMode('image')}>角色设计</Button>
+        <Button variant={workbenchMode === 'video' ? 'primary' : 'ghost'} onClick={() => setWorkbenchMode('video')}>视频创作</Button>
       </div>
 
       <div className="omnimux-avatar-body">
@@ -548,7 +598,7 @@ export function AvatarStage(props) {
             t={t}
           />
           <div className="omx-avatar-scroll">
-            <BuilderPanel
+            <div hidden={workbenchMode !== 'video'}><MotionPanel active={workbenchMode === 'video'} initialTask={videoInitialTask} avatarId={currentId} tasks={history.items} onError={error => push(readError(error), 'error')} onAccepted={task => { setMotionRevision(task); onSourceChange('history') }} /></div><div hidden={workbenchMode !== 'image'}><ImageReference onBusy={setImageUploading} brief={b.brief} onBrief={builder.setBrief} avatarId={currentId} value={imageMaterialId} onChange={setImageMaterialId} onError={error => push(readError(error), 'error')} onReset={() => { builder.reset(); setImageMaterialId('') }} /><BuilderPanel
               taxonomy={taxonomy}
               tier={b.tier}
               selection={b.selection}
@@ -558,16 +608,16 @@ export function AvatarStage(props) {
               onPick={onPick}
               onToggleGroup={builder.toggleGroup}
               t={t}
-            />
+            /></div>
           </div>
-          <GenerateBar
+          {workbenchMode === 'image' ? <GenerateBar
             quote={null} /* 中枢目录不提供按渠道的积分报价，宁可留空也不编数字 */
             canGenerate={canGenerate}
             submitting={sheet.submitting}
             onGenerate={onGenerate}
             onRandomize={onRandomize}
             t={t}
-          />
+          /> : null}
         </section>
 
         {/* 右栏二段式：数据源与视图工具行（固定） → 画廊（独立滚动） */}
@@ -580,13 +630,20 @@ export function AvatarStage(props) {
           </div>
 
           <div className="omx-avatar-pane-body omx-avatar-scroll">
-            {source === 'explore' ? (
-              <ExplorePresetGrid
+            {source === 'explore' ? (<>
+              <div className="omx-avatar-pane-tools">{[['characters','角色'],['motion','动作'],['trends','趋势']].map(([value,label])=><Button key={value} variant={exploreKind===value?'secondary':'ghost'} onClick={()=>setExploreKind(value)}>{label}</Button>)}</div>
+              {exploreKind==='characters'?<ExplorePresetGrid
                 presets={presets}
                 onPreview={setPreviewPreset}
                 onApply={applyPreset}
                 t={t}
-              />
+              />:<VideoExplore kind={exploreKind} active={visible&&source==='explore'} t={t} onApply={async (item,isCurrent)=>{
+                const epoch=inspirationEpochRef.current
+                const material=await importInspirationVideo(currentId,item)
+                if(epoch!==inspirationEpochRef.current||!isCurrent())return
+                setVideoInitialTask({kind:'reference-preset',materialId:material.id,mode:['motion','replace'].includes(item.mode)?item.mode:undefined,prompt:item.prompt??item.content??item.description??''})
+                setWorkbenchMode('video');setSource('create');setMobileSection('create')
+              }}/>}</>
             ) : (
               <FeedGrid
                 tasks={displayRoots}
@@ -611,6 +668,12 @@ export function AvatarStage(props) {
         </section>
       </div>
 
+      <TaskPreviewDialog task={previewTask} onClose={() => setPreviewTask(null)} onGenerate={task => { setPreviewTask(null); void onRetry(task) }} onVideo={task => { setVideoInitialTask(task); setPreviewTask(null); setWorkbenchMode('video') }} onDelete={async task=>{
+        if(!window.confirm('删除该生成记录？已归档素材不受影响。'))return
+        try{await deleteTask({avatarId:currentId,taskId:taskKey(task)});setPreviewTask(null);setMotionRevision({deleted:taskKey(task)})}
+        catch(error){push(readError(error),'error')}
+      }} t={t} />
+
       {/* 覆盖层：预设预览与多视角设定板 */}
       <PresetPreviewDialog
         preset={previewPreset}
@@ -625,13 +688,18 @@ export function AvatarStage(props) {
         onOpenChange={(open) => {
           if (!open) setOpenMultiView(null)
         }}
-        task={openMultiView?.child ?? null}
+        task={openMultiView?.parent ? mergedChildren.get(taskKey(openMultiView.parent)) ?? openMultiView.child : null}
         regenerating={regeneratingMultiView}
         onRegenerate={onRegenerateMultiView}
         onDelete={onDeleteMultiView}
         t={t}
       />
 
+      <nav className="omx-avatar-mobile-nav" aria-label="创作导航">
+        <Button variant={mobileSection==='create'?'secondary':'ghost'} onClick={()=>setMobileSection('create')}>创建</Button>
+        <Button variant={mobileSection==='explore'?'secondary':'ghost'} onClick={()=>{setMobileSection('explore');onSourceChange('explore')}}>灵感</Button>
+        <Button variant={mobileSection==='history'?'secondary':'ghost'} onClick={()=>{setMobileSection('history');onSourceChange('history')}}>历史</Button>
+      </nav>
       <div className="omx-avatar-toasts" role="status" aria-live="polite">
         {toasts.map((item) => (
           <div

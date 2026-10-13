@@ -13,7 +13,8 @@ import { groupsOfModel, pickAutoGroup } from './lib/catalog.js'
 const require = createRequire(import.meta.url)
 const built = await build({
   entryPoints: [fileURLToPath(new URL('./AvatarStage.jsx', import.meta.url))],
-  bundle: true, write: false, platform: 'node', format: 'cjs',
+  bundle: true, write: false, platform: 'node', format: 'cjs', outfile: 'avatar-unit.cjs',
+  loader: { '.css': 'local-css', '.woff2': 'dataurl', '.woff': 'dataurl', '.ttf': 'dataurl' },
   jsx: 'automatic', external: ['react', 'react-dom', 'react-dom/*'], metafile: true,
 })
 assert.equal(React.version, '18.3.1')

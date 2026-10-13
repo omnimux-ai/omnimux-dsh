@@ -194,6 +194,20 @@ export function trySelect(cats, tier, sel, catId, optId) {
  * @param {import('./types.js').Selection} sel
  * @returns {{ selection: import('./types.js').Selection, dropped: string[] }}
  */
+/** Whole-draft restoration uses the same click rules, dropping invalid combinations. */
+export function normalizeBuilderSelection(cats, tier, selection) {
+  let result = {}
+  for (const category of cats) {
+    for (const id of selection?.[category.id] ?? []) {
+      const option = optById(cats, category.id, id)
+      if (!option?.visibleIn.includes(tier)) continue
+      const next = trySelect(cats, tier, result, category.id, id)
+      if (!next.message) result = next.selection
+    }
+  }
+  return result
+}
+
 export function filterSelectionForTier(cats, tier, sel) {
   /** @type {import('./types.js').Selection} */
   const out = {}

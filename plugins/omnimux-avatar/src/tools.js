@@ -53,7 +53,7 @@ export const AVATAR_TOOL_NAMES = Object.freeze([
  * @param {{ store: object, generation: object, librarySync: object }} deps
  */
 export function registerAvatarTools(ctx, deps = {}) {
-  const { store, generation, librarySync } = deps
+  const { store, generation, librarySync, motion } = deps
 
   const withLatest = (avatar) => ({ ...avatar, latestTask: latestTaskOf(avatar) })
 
@@ -182,7 +182,7 @@ export function registerAvatarTools(ctx, deps = {}) {
       const { avatarId, taskId, refresh } = args ?? {}
       if (typeof taskId === 'string' && taskId !== '') {
         const task =
-          refresh === true ? await generation.refreshTask({ avatarId, taskId }) : store.findTask(avatarId, taskId)
+          refresh === true ? await (store.findTask(avatarId, taskId)?.kind==='motion'?motion.collect({avatarId,taskId}):generation.refreshTask({ avatarId, taskId })) : store.findTask(avatarId, taskId)
         if (!task) throw new AvatarError('task-not-found', 'task not found', 404)
         return { task }
       }

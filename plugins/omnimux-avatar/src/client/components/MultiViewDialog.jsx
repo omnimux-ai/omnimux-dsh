@@ -11,6 +11,7 @@
 import { taskAbsoluteImageUrl, taskImageUrl } from '../lib/history.js'
 import { multiViewProgress, multiViewState } from '../lib/multiview.js'
 import { DialogFrame } from './PresetPreviewDialog.jsx'
+import { RecoverableMedia } from './RecoverableMedia.jsx'
 
 /**
  * @param {{
@@ -32,7 +33,8 @@ export function MultiViewDialog(props) {
   const preview = task ? taskImageUrl(task) : null
   const absolute = task ? taskAbsoluteImageUrl(task) : null
   // 绝对地址才配当下载目标；相对地址只是本会话可用的展示地址。
-  const download = absolute && /^https?:\/\//i.test(absolute) ? absolute : null
+  const local = preview?.startsWith('/api/omnimux/avatar/task/image?') ? preview : null
+  const download = local ?? (absolute && /^https?:\/\//i.test(absolute) ? absolute : null)
 
   return (
     <DialogFrame
@@ -74,7 +76,7 @@ export function MultiViewDialog(props) {
       }
     >
       {state === 'ready' && preview ? (
-        <img src={preview} alt={t('多视角')} className='omx-avatar-mv-image' />
+        <RecoverableMedia src={preview} alt={t('多视角')} />
       ) : null}
 
       {state === 'generating' ? (

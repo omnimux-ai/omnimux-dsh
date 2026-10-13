@@ -29,7 +29,7 @@ test('每种角色的可见选项数与其物种适配一致', () => {
       for (const tier of o.visibleIn) visible[tier] += 1
     }
   }
-  assert.deepEqual(visible, { normal: 140, freak: 183, total: 186, cat: 118, dog: 119 })
+  assert.deepEqual(visible, { normal: 140, freak: 183, total: 186, cat: 108, dog: 109 })
 })
 
 test('servedTaxonomy 只有 Go 结构体的 6 个键，rules / counts 必须缺席', () => {
@@ -49,7 +49,7 @@ test('ETag 为 16 位小写十六进制且稳定', () => {
   const etag = ETag()
   assert.match(etag, /^[0-9a-f]{16}$/)
   assert.equal(etag, ETag())
-  assert.equal(readTaxonomyBytes().length, 50545)
+  assert.equal(readTaxonomyBytes().length, 50554)
 })
 
 test('promptOrder 为 18 项且顺序与 Go 端一致', () => {

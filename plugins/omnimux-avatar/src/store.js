@@ -77,7 +77,7 @@ function normalizeTask(input, now) {
   const task = input && typeof input === 'object' ? input : {}
   return {
     taskId: typeof task.taskId === 'string' ? task.taskId : '',
-    kind: task.kind === 'multiview' ? 'multiview' : 'sheet',
+    kind: task.kind === 'motion' ? 'motion' : task.kind === 'multiview' ? 'multiview' : 'sheet',
     model: typeof task.model === 'string' ? task.model : '',
     group: typeof task.group === 'string' ? task.group : '',
     status: TASK_STATUSES.has(task.status) ? task.status : 'queued',

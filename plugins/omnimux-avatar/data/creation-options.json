@@ -2,6 +2,7 @@
   "version": 2,
   "source": "OmniMux 角色创作业务增量，独立编写；2026-10-13",
   "tiers": [{"id":"cat","label_en":"Cat","label_zh":"猫"},{"id":"dog","label_en":"Dog","label_zh":"狗"}],
+  "animalOptions": {"distinctive":["df_hetero","df_ears","df_gems","df_bandage"]},
   "animalCategories": ["gender","height","body_type","proportions","hair","hair_colour","distinctive","aesthetic","accessory"],
   "categories": [
     {"id":"animal_breed","label_en":"Breed","label_zh":"品种","kind":"text","max":1,"options":[
@@ -24,12 +25,12 @@
       {"id":"fur_orange","label_en":"Orange fur","label_zh":"橘毛","swatch":"var(--dsw-alias-label-warning, #d99449)","fragment":"orange coat"},
       {"id":"fur_brown","label_en":"Brown fur","label_zh":"棕毛","swatch":"var(--dsw-alias-border-l3, #8f6547)","fragment":"brown coat"},
       {"id":"fur_cream","label_en":"Cream fur","label_zh":"奶油毛","swatch":"var(--dsw-alias-bg-layer-2, #e8d7b6)","fragment":"cream coat"},
-      {"id":"fur_tan","label_en":"Tan fur","label_zh":"浅棕毛","swatch":"var(--dsw-alias-border-l2, #bb9269)","fragment":"tan coat"}
+      {"id":"fur_natural","label_en":"Natural fur","label_zh":"自然毛色","swatch":"var(--dsw-alias-border-l2, #bb9269)","fragment":"natural species-appropriate coat"}
     ]},
     {"id":"fur_pattern","label_en":"Fur pattern","label_zh":"毛纹","kind":"text","max":1,"options":[
       {"id":"fur_solid","label_en":"Solid coat","label_zh":"纯色","fragment":"solid coat pattern"},
       {"id":"fur_striped","label_en":"Striped coat","label_zh":"条纹","fragment":"striped coat pattern"},
-      {"id":"fur_spotted","label_en":"Spotted coat","label_zh":"斑点","fragment":"spotted coat pattern"},
+      {"id":"fur_pattern_natural","label_en":"Natural coat pattern","label_zh":"自然毛纹","fragment":"natural breed-appropriate coat pattern"},
       {"id":"fur_bicolor","label_en":"Two-tone coat","label_zh":"双色","fragment":"two-tone coat pattern"}
     ]}
   ],

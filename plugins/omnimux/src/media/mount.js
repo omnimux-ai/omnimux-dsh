@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { assertCapabilityEnabled, isMediaEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from './errors.js'
 import { resolveExecutionPlan } from './execution-plan.js'
+import { findMediaTaskByRequestKey } from './task-store.js'
 import { objectParams, rethrow } from '../tools/schema.js'
 
 /**
@@ -151,6 +152,13 @@ export function mountMedia(ctx, opts) {
   const gate = opts.gate ?? opts.hub?.gate ?? ctx.get?.('gate')
 
   const api = {
+    /** Look up an already accepted intent without submitting or exposing route/credentials. */
+    findAccepted(requestKey) {
+      if (typeof requestKey !== 'string' || !requestKey.trim()) return null
+      const record = findMediaTaskByRequestKey(requestKey)
+      if (!record || record.capability !== kind || !record.upstreamTaskId && !record.artifact?.sourceUrl && !(record.status==='ready'&&record.artifact?.cachePath&&existsSync(record.artifact.cachePath))) return null
+      return { taskRef: record.taskRef, status: record.status }
+    },
     /**
      * @param {{ prompt?: string, dest: string, duration?: number, image?: string, taskId?: string, wait?: boolean, signal?: AbortSignal, [key: string]: unknown }} req
      */

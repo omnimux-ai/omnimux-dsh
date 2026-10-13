@@ -14,12 +14,16 @@
     "assets",
     "lib/client.js",
     "lib/generation-core.js",
+    "lib/video-inspect.js",
+    "lib/mediabunny-LICENSE.txt",
+    "THIRD-PARTY-NOTICES.md",
     "scripts/build-client.mjs",
+    "scripts/build-media-inspect.mjs",
     "scripts/export-voice-previews.mjs",
     "cordis.patch.yml"
   ],
   "scripts": {
-    "build": "node scripts/build-client.mjs",
+    "build": "node scripts/build-media-inspect.mjs && node scripts/build-client.mjs",
     "prepare": "npm run build",
     "test": "node scripts/run-tests.mjs",
     "test:e2e": "node --test tests/e2e/*.e2e.test.js"
@@ -28,12 +32,14 @@
     "aigc-provider-runtime-kit": "^0.2.0",
     "blobatar": "^0.2.0",
     "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
+    "sharp": "0.35.5",
     "ws": "^8.21.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
     "jsdom": "^30.0.1",
+    "mediabunny": "1.55.3",
     "typescript": "5.9.3"
   },
   "peerDependencies": {

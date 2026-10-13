@@ -4,6 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { resolveAvatarArtifact } from './artifact.js'
 import { createAvatarStore } from './store.js'
 import { resolveAvatarPaths } from './paths.js'
 import { createGeneration } from './generation.js'
@@ -24,6 +25,52 @@ async function setup(t) {
 }
 
 const input = (avatarId, brief = '第一张') => ({ avatarId, model: 'image-test', group: 'test-group', tier: 'normal', selection: { gender: ['female'] }, brief })
+
+test('任务文件解析拒绝库外路径且保留真实所属身份', async t => {
+  const { home, paths, avatar } = await setup(t)
+  const file = join(paths.dataDir, avatar.id, 'owned.png')
+  mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, 'owned')
+  assert.match(resolveAvatarArtifact(paths,avatar.id,file), /owned\.png$/)
+  const outside = join(home,'outside.png');writeFileSync(outside,'outside')
+  assert.throws(() => resolveAvatarArtifact(paths,avatar.id,outside),error => error.code === 'path-denied')
+})
+
+test('已受理图片下载出错仍保留原任务引用可续取', async t => {
+  const { paths,store,avatar } = await setup(t)
+  const calls=[]
+  const seam={async execute(request){calls.push(request);if(!request.taskRef){const error=new Error('download interrupted');error.taskRef='accepted-original';throw error}return {mode:'submitted',taskRef:request.taskRef}}}
+  const generation=createGeneration({paths,store,imageGenerate:seam})
+  await assert.rejects(generation.submitSheet(input(avatar.id)))
+  const task=store.listTasks(avatar.id)[0]
+  assert.equal(task.status,'generating')
+  assert.equal(task.taskRef,'accepted-original')
+  await generation.refreshTask({avatarId:avatar.id,taskId:task.taskId})
+  assert.equal(calls.at(-1).taskRef,'accepted-original')
+  assert.equal(calls.at(-1).prompt,undefined)
+})
+
+test('已受理图片鉴权中断保留原身份而不是再次提交',async t=>{
+ const {paths,store,avatar}=await setup(t)
+ let submissions=0
+ const generation=createGeneration({paths,store,imageGenerate:{async execute(request){if(request.taskRef)return {mode:'submitted'};submissions++;const error=Object.assign(new Error('登录已失效'),{code:'needs-omnimux',taskRef:'paid-original'});throw error}}})
+ await assert.rejects(generation.submitSheet(input(avatar.id)))
+ const task=store.listTasks(avatar.id)[0]
+ assert.equal(task.taskRef,'paid-original');assert.equal(task.status,'generating')
+ await generation.refreshTask({avatarId:avatar.id,taskId:task.taskId})
+ assert.equal(submissions,1)
+})
+
+test('提交返回前重启留下的queued可按原requestKey找回已接受任务', async t => {
+  const { paths,store,avatar } = await setup(t)
+  store.addTask(avatar.id,{taskId:'avt_task_11223344',kind:'sheet',status:'queued',destPath:join(paths.dataDir,avatar.id,'existing.png')})
+  const calls=[]
+  const generation=createGeneration({paths,store,imageGenerate:{findAccepted(key){assert.equal(key,'avt_task_11223344');return {taskRef:'persisted-ref'}},async execute(request){calls.push(request);return {mode:'submitted'}}}})
+  const task=await generation.refreshTask({avatarId:avatar.id,taskId:'avt_task_11223344'})
+  assert.equal(task.taskRef,'persisted-ref')
+  assert.equal(calls.length,1)
+  assert.equal(calls[0].taskRef,'persisted-ref')
+  assert.equal(calls[0].prompt,undefined)
+})
 
 test('本地完成态可以结束主图与多视角追踪', () => {
   assert.equal(isTerminalStatus('ready'), true)
@@ -117,6 +164,15 @@ test('真实提交钩子对已受理任务发起续取而非仅反复读取本�
   await act(async () => { result = await api.submit({ avatarId: 'avatar' }) })
   assert.equal(reads.some(url => url.includes('refresh=1')), true)
   assert.equal(result.status, 'ready')
+  let fulfill
+  globalThis.fetch=()=>new Promise(resolve=>{fulfill=resolve})
+  let stale
+  await act(async()=>{stale=api.submit({avatarId:'avatar'})})
+  await act(async()=>api.reset())
+  await act(async()=>{fulfill(new Response(JSON.stringify({success:true,task,taskRef:'upstream-task'})));result=await stale})
+  assert.equal(result,null)
+  assert.equal(api.pending,null)
+  assert.equal(api.submitting,false)
 })
 
 test('同一父图的派生行按真实时间选择最新而非缺失网页id', () => {

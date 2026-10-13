@@ -92,6 +92,9 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@25.9.5)
       ws:
         specifier: ^8.21.0
         version: 8.21.0
@@ -105,6 +108,9 @@ importers:
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1
+      mediabunny:
+        specifier: 1.55.3
+        version: 1.55.3
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -237,6 +243,9 @@ importers:
         specifier: file:../../packages/dsh-ui-kit
         version: file:packages/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
+      '@omnimux/generation-capabilities':
+        specifier: workspace:*
+        version: link:../../packages/generation-capabilities
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12

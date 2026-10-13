@@ -237,12 +237,11 @@ describe('MultiViewBadge：缺省态、冒泡与矢量失败图标', () => {
   })
 })
 
-describe('MultiViewDialog：只把绝对地址当下载目标', () => {
-  it('下载链接要求 http(s) 绝对地址，相对地址一律不提供', () => {
-    assert.ok(
-      mvDialog.includes('const download = absolute && /^https?:\\/\\//i.test(absolute) ? absolute : null'),
-      '应当就地校验绝对地址'
-    )
+describe('MultiViewDialog：支持受管本地下载且保持外链安全', () => {
+  it('本地链接必须为角色任务入口，外链仍要求http(s)', () => {
+    assert.match(mvDialog, /startsWith\('\/api\/omnimux\/avatar\/task\/image\?'/)
+    assert.match(mvDialog, /const download = local \?\?/)
+    assert.ok(mvDialog.includes('absolute && /^https?:\\/\\//i.test(absolute)'), '应当校验外链绝对地址')
     assert.match(mvDialog, /\{download \? \(/)
     assert.match(mvDialog, /rel='noreferrer'/)
   })

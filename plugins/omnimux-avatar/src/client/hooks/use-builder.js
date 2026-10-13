@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { filterSelectionForTier, trySelect } from '../lib/taxonomy.js'
+import { filterSelectionForTier, trySelect, normalizeBuilderSelection } from '../lib/taxonomy.js'
 import { randomizeSelection } from '../lib/randomize.js'
 import { readBuilderDraft, writeBuilderDraft } from '../lib/builder-draft.js'
 
@@ -50,7 +50,7 @@ export function useBuilder(taxonomy) {
         setTier(draft.tier)
         setSelection(draft.selection)
         setManualSelection(draft.manualSelection)
-      }
+      } else setSelection(randomizeSelection(taxonomy, 'total'))
       initializedGroupsRef.current = true
     }
   }, [taxonomy])
@@ -87,9 +87,13 @@ export function useBuilder(taxonomy) {
         next,
         selection
       )
+      const normalized = normalizeBuilderSelection(taxonomy.categories, next, filtered)
+      for (const category of taxonomy.categories) for (const id of filtered[category.id]??[]) {
+        if (!(normalized[category.id]??[]).includes(id)) dropped.push(category.options.find(option=>option.id===id)?.label_en??id)
+      }
       setTier(next)
-      setSelection(filtered)
-      setManualSelection(prev => filterSelectionForTier(taxonomy.categories, next, prev).selection)
+      setSelection(normalized)
+      setManualSelection(prev => normalizeBuilderSelection(taxonomy.categories, next, prev))
       return dropped
     },
     [taxonomy, selection]
@@ -121,14 +125,14 @@ export function useBuilder(taxonomy) {
 
   const applySheet = useCallback((params) => {
     if (params.tier) setTier(params.tier)
-    if (params.selection) setSelection(params.selection)
+    if (params.selection) setSelection(taxonomy ? normalizeBuilderSelection(taxonomy.categories, params.tier || tier, params.selection) : params.selection)
     setManualSelection({})
     setBrief(params.brief ?? '')
     setSeed(params.seed ? String(params.seed) : '')
     setImageUrl(params.image_url ?? '')
     if (params.model) setModel(params.model)
     if (params.group) setGroup(params.group)
-  }, [])
+  }, [taxonomy, tier])
 
   /** @type {BuilderState} */
   const state = useMemo(

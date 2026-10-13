@@ -6,7 +6,7 @@
  * Deleting a record recycles the managed copy only.
  */
 import { accessSync, constants, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { basename, dirname, join, resolve, sep } from 'node:path'
+import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { bucketOf, extOf, previewMimeOf, scanDir, scanFile, statStatus } from './scanner.js'
 import { AssetsError, newRecordId } from './mappings.js'
 import { formatAssetUri, isAssetUri, parseAssetUri, toAssetUri } from './protocol.js'
@@ -426,19 +426,32 @@ export function createLibraryStore(opts = {}) {
    * @param {string} assetId
    * @param {unknown} incoming
    */
-  async function appendFiles(assetId, incoming) {
+  async function appendFiles(assetId, incoming, targetFileId) {
     const found = state.assets.find((asset) => asset.id === assetId)
     if (!found) throw new AssetsError('asset-not-found', 'asset not found')
     const sources = normalizeFiles(incoming, fs, { requireExisting: false })
     // 无受管目录时与 materializeIncomingFiles 同样降级：不复制、不改账本。
     if (sources.length === 0 || !filesDir || !vaultRoot) return viewOf(found, fs, vaultRoot)
+    const target=targetFileId?found.files.find(file=>file.id===targetFileId):null
+    const destDir=target?absoluteOf(target,vaultRoot):managedDirOf(found.id)
+    if(targetFileId){
+      const expectedRoot=join(fs.realpathSync(vaultRoot),relative(resolve(vaultRoot),resolve(managedDirOf(found.id))))
+      if(!target||!target.relative_path||!isInsideDir(destDir,managedDirOf(found.id))||!isInsideDir(expectedRoot,fs.realpathSync(vaultRoot))||fs.realpathSync(managedDirOf(found.id))!==expectedRoot||fs.realpathSync(destDir)!==join(expectedRoot,relative(managedDirOf(found.id),destDir))||!fs.statSync(destDir).isDirectory())throw new AssetsError('path-denied','target folder is not owned by this asset')
+    }
     const appended = []
     for (const file of sources) {
+      if(target){
+        try {
+          const existing=join(destDir,basename(file.real_path))
+          if(fs.realpathSync(existing)!==join(fs.realpathSync(destDir),basename(file.real_path))||!fs.readFileSync(existing).equals(fs.readFileSync(file.real_path)))throw new AssetsError('file-conflict','target folder already contains different content')
+          continue
+        } catch(error){if(error.code!=='ENOENT')throw error}
+      }
       const source = str(file.real_path)
       if (!source) continue
       const copied = await copyIntoVault({
         sourceAbs: source,
-        destDir: managedDirOf(found.id),
+        destDir,
         vaultRoot,
         originalName: file.original_name,
         fs,
@@ -452,7 +465,7 @@ export function createLibraryStore(opts = {}) {
     if (appended.length === 0) return viewOf(found, fs, vaultRoot)
     const previousFiles = found.files
     const previousUpdatedAt = found.updated_at
-    found.files = [...previousFiles, ...appended]
+    found.files = target ? previousFiles : [...previousFiles, ...appended]
     found.updated_at = new Date().toISOString()
     state.revision += 1
     try {
