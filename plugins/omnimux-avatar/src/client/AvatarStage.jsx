@@ -6,7 +6,7 @@
 // 骨架：双面板布局（本页的契约例外，见 first-level-page-layout.md §二·补）——
 // 页面根不滚动，左右两块面板各自管理内部滚动：
 //   左栏：形象行（固定） → 设定块区（overflow 滚动） → 生成栏（钉在底部）；
-//   右栏：模型配置页眉（固定） → 画廊（overflow 滚动）。
+//   右栏：数据源切换页眉（固定） → 画廊（overflow 滚动）。
 // 页头行仍带 omx-stage-sticky 契约类：面板内内容滚到页眉下沿时被它遮住，
 // 与整页滚动契约的「吸附栈必须有实底」是同一性质。
 
@@ -18,7 +18,6 @@ import { BuilderPanel } from './components/BuilderPanel.jsx'
 import { ExplorePresetGrid } from './components/ExplorePresetGrid.jsx'
 import { FeedGrid, taskIdentity } from './components/FeedGrid.jsx'
 import { GenerateBar } from './components/GenerateBar.jsx'
-import { ModelPicker } from './components/ModelPicker.jsx'
 import { MultiViewDialog } from './components/MultiViewDialog.jsx'
 import { PresetPreviewDialog } from './components/PresetPreviewDialog.jsx'
 import { SourceTabs } from './components/SourceTabs.jsx'
@@ -220,7 +219,7 @@ export function AvatarStage(props) {
     }
   }, [push])
 
-  // 目录落地后只自动选一次模型与渠道；此后用户手改品牌/模型/渠道都不再被覆盖。
+  // 目录落地后只自动选一次模型与渠道，后续重渲染保留当前生成配置。
   useEffect(() => {
     if (autoPickedRef.current || !catalog) return
     const rows = imageModels(catalog)
@@ -571,25 +570,13 @@ export function AvatarStage(props) {
           />
         </section>
 
-        {/* 右栏二段式：模型按钮 + 数据源工具行（固定） → 画廊（独立滚动） */}
+        {/* 右栏二段式：数据源与视图工具行（固定） → 画廊（独立滚动） */}
         <section className="omx-avatar-pane">
           <div className="omx-avatar-pane-head">
-            <ModelPicker
-              catalog={catalog}
-              vendorId={b.vendorId}
-              model={b.model}
-              group={b.group}
-              onVendor={builder.setVendorId}
-              onModel={builder.setModel}
-              onGroup={builder.setGroup}
-              t={t}
-            />
-            <div className="omx-avatar-pane-tools">
-              <SourceTabs value={source} onChange={onSourceChange} t={t} />
-              {source === 'history' ? (
-                <ViewModeToggle value={viewMode} onChange={onViewModeChange} t={t} />
-              ) : null}
-            </div>
+            <SourceTabs value={source} onChange={onSourceChange} t={t} />
+            {source === 'history' ? (
+              <ViewModeToggle value={viewMode} onChange={onViewModeChange} t={t} />
+            ) : null}
           </div>
 
           <div className="omx-avatar-pane-body omx-avatar-scroll">

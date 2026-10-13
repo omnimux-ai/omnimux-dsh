@@ -1,0 +1,192 @@
+{
+  "runId": "35b70dda-cea0-4401-8fb2-cbee94317781",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-source-tabs-issue-3282",
+  "origin": "http://127.0.0.1:56231",
+  "appPort": 56231,
+  "cdpPort": 56236,
+  "startedAt": "2026-10-13T08:34:39.710Z",
+  "completedAt": "2026-10-13T08:34:53.576Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:56231",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:56231",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-_C-_lIdjf5-Z0rc6p6LsZCdQh1_jarDDsCLCD5shduQ"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 56236
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 104,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 55
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 104
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:desktop-历史记录",
+      "pass": true,
+      "detail": {
+        "source": "历史记录",
+        "firstIsTabs": true,
+        "modelPickerAbsent": true,
+        "leftAligned": true,
+        "tabsFit": true,
+        "paneFits": true,
+        "contentPresent": true,
+        "historyViewControls": false
+      }
+    },
+    {
+      "name": "journey:desktop-灵感库",
+      "pass": true,
+      "detail": {
+        "source": "灵感库",
+        "firstIsTabs": true,
+        "modelPickerAbsent": true,
+        "leftAligned": true,
+        "tabsFit": true,
+        "paneFits": true,
+        "contentPresent": true,
+        "historyViewControls": false
+      }
+    },
+    {
+      "name": "journey:narrow-历史记录",
+      "pass": true,
+      "detail": {
+        "source": "历史记录",
+        "firstIsTabs": true,
+        "modelPickerAbsent": true,
+        "leftAligned": true,
+        "tabsFit": true,
+        "paneFits": true,
+        "contentPresent": true,
+        "historyViewControls": false
+      }
+    },
+    {
+      "name": "journey:narrow-灵感库",
+      "pass": true,
+      "detail": {
+        "source": "灵感库",
+        "firstIsTabs": true,
+        "modelPickerAbsent": true,
+        "leftAligned": true,
+        "tabsFit": true,
+        "paneFits": true,
+        "contentPresent": true,
+        "historyViewControls": false
+      }
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 123436
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-source-tabs-issue-3282/.workbuddy/evidence/app-qa/35b70dda-cea0-4401-8fb2-cbee94317781/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 123436
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}

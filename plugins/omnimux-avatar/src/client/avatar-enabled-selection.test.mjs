@@ -118,12 +118,12 @@ function realClickCallback(button) {
   return callback
 }
 
-async function selectGroup(ui, label) {
-  await ui.click(ui.query('.omx-avatar-modelbtn'))
-  await ui.click(ui.query('.omx-avatar-dropdown[aria-label="渠道"]'))
-  const option = [...ui.dom.window.document.querySelectorAll('[role="option"]')].find((node) => node.textContent === label)
-  assert.ok(option, `real group option missing: ${label}`)
-  await ui.click(option)
+function assertNoModelPicker(ui) {
+  assert.equal(ui.dom.window.document.querySelector('.omx-avatar-modelbtn'), null)
+  assert.equal(ui.dom.window.document.querySelector('.omx-avatar-modelpicker'), null)
+  const head = ui.query('.omx-avatar-pane-head')
+  assert.equal(head.firstElementChild.getAttribute('role'), 'radiogroup')
+  assert.match(head.firstElementChild.textContent, /灵感库.*历史记录/)
 }
 
 test('all-disabled marked default produces no automatic group and keeps raw catalog rows intact', () => {
@@ -142,14 +142,15 @@ test('production Stage skips disabled default and submits enabled wireGroup thro
   assert.equal(ui.posts().length, 1)
   assert.equal(ui.posts()[0].body.group, 'active-wire')
   assert.equal(ui.posts()[0].body.brief, '保留角色说明')
-  assert.equal(ui.query('.omx-avatar-modelbtn-val').textContent, '测试图像模型 · 启用组')
+  assertNoModelPicker(ui)
+  assert.equal(ui.posts()[0].body.model, MODEL)
   assert.deepEqual(ui.catalog, original)
 })
 
 test('production Stage preserves enabled default preference and distinct wireGroup', async () => {
   const ui = await mount([{ ...off, enabled: true }, on])
   await ui.apply()
-  assert.equal(ui.query('.omx-avatar-modelbtn-val').textContent, '测试图像模型 · 停用组')
+  assertNoModelPicker(ui)
   await ui.click(ui.query('.omx-avatar-cta'))
   assert.equal(ui.posts().length, 1)
   assert.equal(ui.posts()[0].body.group, 'disabled-wire')
@@ -171,14 +172,13 @@ test('actual main onClick rejects all-disabled groups even with restored nonempt
   assert.ok(historyTab, 'production history tab exists')
   await ui.click(historyTab)
   await ui.click(ui.query('.omx-avatar-card.is-clickable'))
-  assert.equal(ui.query('.omx-avatar-modelbtn-val').textContent, '测试图像模型 · historic-wire')
+  assertNoModelPicker(ui)
   const selected = ui.query('.omx-avatar-builder').innerHTML
-  const summary = ui.query('.omx-avatar-modelbtn-val').textContent
   const callback = realClickCallback(ui.query('.omx-avatar-cta'))
   await act(async () => { await callback() })
   assert.equal(ui.posts().length, 0, 'all-disabled callback must not call original submitSheet')
   assert.equal(ui.query('.omx-avatar-builder').innerHTML, selected)
-  assert.equal(ui.query('.omx-avatar-modelbtn-val').textContent, summary)
+  assertNoModelPicker(ui)
   assert.deepEqual(task, originalTask, 'restored brief, seed, reference, and taskRef metadata stay untouched')
   assert.match(ui.query('[role="status"]').textContent, /当前图像生成渠道均不可用/)
 })
@@ -210,16 +210,17 @@ test('production visible false/true keeps initialized selection and draft withou
   assert.deepEqual(ui.posts()[0].body.selection, { appearance: ['natural'] })
 })
 
-test('manual disabled choice stays unchanged when another enabled group exists', async () => {
+test('automatic enabled choice stays unchanged without exposing a manual picker', async () => {
   const ui = await mount([{ ...off, default: false }, on])
   await ui.apply()
-  await selectGroup(ui, '停用组')
+  assertNoModelPicker(ui)
   await ui.render(false)
   await ui.render(true)
-  assert.equal(ui.query('.omx-avatar-modelbtn-val').textContent, '测试图像模型 · 停用组')
+  assertNoModelPicker(ui)
   assert.equal(ui.query('.omx-avatar-cta').disabled, false)
   await ui.click(ui.query('.omx-avatar-cta'))
-  assert.equal(ui.posts()[0].body.group, 'off', 'original manual id semantics are outside wire remapping scope')
+  assert.equal(ui.posts()[0].body.group, 'active-wire')
+  assert.equal(ui.posts()[0].body.model, MODEL)
 })
 
 test('original history view restores metadata without changing task or generating a new request', async () => {
@@ -232,7 +233,14 @@ test('original history view restores metadata without changing task or generatin
   await ui.click(ui.query('.omx-avatar-card.is-clickable'))
   await ui.render(false)
   await ui.render(true)
-  assert.equal(ui.query('.omx-avatar-modelbtn-val').textContent, '测试图像模型 · historic-wire')
+  assertNoModelPicker(ui)
   assert.deepEqual(task, before)
   assert.equal(ui.posts().length, 0)
+  await ui.click(ui.query('.omx-avatar-cta'))
+  const submitted = ui.posts()[0].body
+  assert.equal(submitted.model, MODEL)
+  assert.equal(submitted.group, 'historic-wire')
+  assert.equal(submitted.brief, '历史说明')
+  assert.equal(submitted.seed, 77)
+  assert.deepEqual(submitted.selection, historyMeta.selection)
 })
