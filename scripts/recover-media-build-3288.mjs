@@ -43,7 +43,14 @@ export function recoverMediaBuild(){
  if(realpathSync(receiptDir)!==receiptDir)throw new Error('Receipt directory escaped')
  const receipt=join(receiptDir,'media-recovery-3288.json')
  const data={task:3288,path:RECOVERY.path,head:git('rev-parse','HEAD').toString().trim(),before:RECOVERY.before,after:RECOVERY.after,backup:RECOVERY.backup,state:'prepared'}
- const receiptFd=openSync(receipt,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600)
+ let receiptFd
+ try{receiptFd=openSync(receipt,constants.O_RDWR|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600)}catch(error){
+  if(error.code!=='EEXIST')throw error
+  receiptFd=openSync(receipt,constants.O_RDWR|constants.O_NOFOLLOW)
+  const saved=JSON.parse(readFileSync(receiptFd,'utf8'))
+  const stat=fstatSync(receiptFd)
+  if(!stat.isFile()||stat.nlink!==1||(stat.mode&0o777)!==0o600||saved.state!=='rolled-back'||saved.head!==data.head||saved.path!==data.path||saved.backup!==data.backup||saved.before!==data.before||saved.after!==data.after){closeSync(receiptFd);throw new Error('Existing receipt does not authorize safe retry')}
+ }
  const record=value=>{const bytes=Buffer.from(JSON.stringify(value,null,2));ftruncateSync(receiptFd,bytes.length);let offset=0;while(offset<bytes.length)offset+=writeSync(receiptFd,bytes,offset,bytes.length-offset,offset);fsyncSync(receiptFd)}
  let fd
  try{
@@ -54,7 +61,11 @@ export function recoverMediaBuild(){
   replaceBytes(fd,current,expected)
   if(hash(readFileSync(file))!==RECOVERY.after||(lstatSync(file).mode&0o777)!==420)throw new Error('Recovery verification failed')
   record({...data,state:'restored'})
- }catch(error){record({...data,state:error.recoveryState??'failed',error:error.message});throw error}
+ }catch(error){
+  const currentHash=hash(readFileSync(file))
+  const state=error.recoveryState??(currentHash===RECOVERY.after?'restored-receipt-error':currentHash===RECOVERY.before?'rolled-back':'failed')
+  record({...data,state,currentHash,error:error.message,rollbackError:error.rollbackError??null});throw error
+ }
  finally{if(fd!==undefined)closeSync(fd);closeSync(receiptFd)}
  return {...data,state:'restored'}
 }

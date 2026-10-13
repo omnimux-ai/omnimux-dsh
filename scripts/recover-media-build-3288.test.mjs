@@ -15,7 +15,7 @@ test('合成Git仓库仅恢复指定生成物并拒绝回执路径外跳',t=>{
  const expected=readFileSync(join(source,RECOVERY.path))
  const before=Buffer.from(expected.toString().replaceAll('// ../../../../node_modules/','// ../../node_modules/').replace('Symbol.dispose ??= /* @__PURE__ */ Symbol','Symbol.dispose ??= Symbol').replace('= /* @__PURE__ */ Symbol.for("mediabunny loaded")','= Symbol.for("mediabunny loaded")'))
  assert.equal(createHash('sha256').update(before).digest('hex'),RECOVERY.before)
- for(const scenario of ['restore','receipt-link','mode']){
+ for(const scenario of ['restore','receipt-link','mode','retry']){
   const root=join(base,scenario);mkdirSync(join(root,'scripts'),{recursive:true});mkdirSync(dirname(join(root,RECOVERY.path)),{recursive:true})
   cpSync(join(source,'scripts/recover-media-build-3288.mjs'),join(root,'scripts/recover-media-build-3288.mjs'))
   writeFileSync(join(root,RECOVERY.path),expected)
@@ -28,8 +28,9 @@ test('合成Git仓库仅恢复指定生成物并拒绝回执路径外跳',t=>{
   mkdirSync(join(root,'.agent-reports'))
   if(scenario==='receipt-link'){const outside=join(base,'outside');mkdirSync(outside);symlinkSync(outside,join(root,'.agent-reports/influencer-avatar-sync'))}
   if(scenario==='mode')chmodSync(current,0o600)
+  if(scenario==='retry'){mkdirSync(join(root,'.agent-reports/influencer-avatar-sync'));const receipt=join(root,'.agent-reports/influencer-avatar-sync/media-recovery-3288.json');writeFileSync(receipt,JSON.stringify({state:'rolled-back',head:git('rev-parse','HEAD'),path:RECOVERY.path,before:RECOVERY.before,after:RECOVERY.after,backup:RECOVERY.backup}),{mode:0o600})}
   const result=spawnSync(process.execPath,['scripts/recover-media-build-3288.mjs','--apply'],{cwd:root,encoding:'utf8'})
-  if(scenario==='restore'){assert.equal(result.status,0,result.stderr);assert.deepEqual(readFileSync(current),expected);assert.equal(JSON.parse(readFileSync(join(root,'.agent-reports/influencer-avatar-sync/media-recovery-3288.json'))).state,'restored')}
+  if(scenario==='restore'||scenario==='retry'){assert.equal(result.status,0,result.stderr);assert.deepEqual(readFileSync(current),expected);assert.equal(JSON.parse(readFileSync(join(root,'.agent-reports/influencer-avatar-sync/media-recovery-3288.json'))).state,'restored')}
   else{assert.notEqual(result.status,0);assert.deepEqual(readFileSync(current),before)}
  }
 })
