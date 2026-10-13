@@ -25,7 +25,6 @@
     "dsh-ui-kit": "file:../../packages/dsh-ui-kit"
   },
   "devDependencies": {
-    "@omnimux/generation-capabilities": "workspace:*",
     "esbuild": "^0.25.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
