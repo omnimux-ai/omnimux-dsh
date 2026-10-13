@@ -1,4 +1,4 @@
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/misc.js
+/*! Mediabunny 1.55.3 — Copyright Vanilagy and contributors. Mozilla Public License 2.0; see mediabunny-LICENSE.txt and THIRD-PARTY-NOTICES.md. */
 function assert(x) {
   if (!x) {
     throw new Error("Assertion failed.");
@@ -255,7 +255,7 @@ var uint8ArraysAreEqual = (a, b) => {
   return true;
 };
 var polyfillSymbolDispose = () => {
-  Symbol.dispose ??= /* @__PURE__ */ Symbol("Symbol.dispose");
+  Symbol.dispose ??= Symbol("Symbol.dispose");
 };
 var isNumber = (x) => {
   return typeof x === "number" && !Number.isNaN(x);
@@ -333,7 +333,6 @@ var EventEmitter = class {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/logging.js
 var LogLevel;
 (function(LogLevel2) {
   LogLevel2[LogLevel2["Silent"] = 0] = "Silent";
@@ -387,7 +386,6 @@ var Logging = class _Logging {
 Logging._level = LogLevel.Info;
 Logging._emitterInstance = null;
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/metadata.js
 var RichImageData = class {
   /** Creates a new {@link RichImageData}. */
   constructor(data, mimeType) {
@@ -432,7 +430,6 @@ var DEFAULT_TRACK_DISPOSITION = {
   visuallyImpaired: false
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/shared/bitstream.js
 var Bitstream = class _Bitstream {
   constructor(bytes) {
     this.bytes = bytes;
@@ -494,7 +491,6 @@ var Bitstream = class _Bitstream {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/shared/aac-misc.js
 var aacFrequencyTable = [
   96e3,
   88200,
@@ -579,7 +575,6 @@ var readAacSamplingFrequency = (bitstream) => {
   };
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/codec.js
 var PCM_AUDIO_CODECS = [
   "pcm-s16",
   // We don't prefix 'le' so we're compatible with the WebCodecs-registered PCM codec strings
@@ -898,11 +893,9 @@ var parsePcmCodec = (codec) => {
 };
 var VALID_VIDEO_CODEC_STRING_PREFIXES = ["avc1", "avc3", "hev1", "hvc1", "vp8", "vp09", "av01", ...PRORES_FOURCCS];
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/shared/ac3-misc.js
 var AC3_SAMPLE_RATES = [48e3, 44100, 32e3];
 var EAC3_REDUCED_SAMPLE_RATES = [24e3, 22050, 16e3];
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/codec-data.js
 var AvcNalUnitType;
 (function(AvcNalUnitType2) {
   AvcNalUnitType2[AvcNalUnitType2["NON_IDR_SLICE"] = 1] = "NON_IDR_SLICE";
@@ -2727,7 +2720,6 @@ var getDtsChannelCount = (channelLayout) => {
   return popcount(channelLayout) + popcount(channelLayout & DTS_CHANNEL_LAYOUT_PAIR_MASK);
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/demuxer.js
 var Demuxer = class {
   constructor(input) {
     this.input = input;
@@ -2736,7 +2728,6 @@ var Demuxer = class {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/packet.js
 var PLACEHOLDER_DATA = /* @__PURE__ */ new Uint8Array(0);
 var EncodedPacket = class _EncodedPacket {
   /** Creates a new {@link EncodedPacket} from raw bytes and timing information. */
@@ -2897,7 +2888,6 @@ var EncodedPacket = class _EncodedPacket {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/isobmff/isobmff-misc.js
 var buildIsobmffMimeType = (info) => {
   const base = info.hasVideo ? "video/" : info.hasAudio ? "audio/" : "application/";
   let string = base + (info.isQuickTime ? "quicktime" : "mp4");
@@ -2937,7 +2927,6 @@ var parsePsshBoxContents = (contents) => {
 };
 var psshBoxesAreEqual = (a, b) => a.systemId === b.systemId && uint8ArraysAreEqual(a.data, b.data);
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/isobmff/isobmff-reader.js
 var MIN_BOX_HEADER_SIZE = 8;
 var MAX_BOX_HEADER_SIZE = 16;
 var readBoxHeader = (slice) => {
@@ -3008,7 +2997,6 @@ var readDataBox = (slice) => {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/aes.js
 var AES_128_BLOCK_SIZE = 16;
 var Te4 = new Uint32Array(256);
 var Td0 = new Uint32Array(256);
@@ -3139,7 +3127,6 @@ var Aes128CbcContext = class {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/isobmff/isobmff-demuxer.js
 var IsobmffDemuxer = class _IsobmffDemuxer extends Demuxer {
   constructor(input) {
     super(input);
@@ -6124,7 +6111,6 @@ var collectCryptRanges = (subsamples, cryptByteBlock, skipByteBlock) => {
   return ranges;
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/matroska/ebml.js
 var EBMLId;
 (function(EBMLId2) {
   EBMLId2[EBMLId2["EBML"] = 440786851] = "EBML";
@@ -6463,7 +6449,6 @@ function assertDefinedSize(size) {
   }
 }
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/matroska/matroska-misc.js
 var buildMatroskaMimeType = (info) => {
   const base = info.hasVideo ? "video/" : info.hasAudio ? "audio/" : "application/";
   let string = base + (info.isWebM ? "webm" : "x-matroska");
@@ -6474,7 +6459,6 @@ var buildMatroskaMimeType = (info) => {
   return string;
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/matroska/matroska-demuxer.js
 var BlockLacing;
 (function(BlockLacing2) {
   BlockLacing2[BlockLacing2["None"] = 0] = "None";
@@ -8527,7 +8511,6 @@ var MatroskaAudioTrackBacking = class extends MatroskaTrackBacking {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/source.js
 polyfillSymbolDispose();
 var DEFAULT_MIN_READ_POSITION = 0;
 var DEFAULT_MAX_READ_POSITION = Infinity;
@@ -8799,7 +8782,6 @@ var RangedSource = class extends Source {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/input-format.js
 var InputFormat = class {
   constructor() {
     this._isIsobmff = false;
@@ -9019,11 +9001,9 @@ var validateInputFormatOptions = (options, prefix) => {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/custom-coder.js
 var customVideoDecoders = [];
 var customAudioDecoders = [];
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/media-sink.js
 var validatePacketRetrievalOptions = (options) => {
   if (!options || typeof options !== "object") {
     throw new TypeError("options must be an object.");
@@ -9279,7 +9259,6 @@ var EncodedPacketSink = class {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/input-track.js
 var InputTrack = class _InputTrack {
   /** @internal */
   constructor(input, backing) {
@@ -10300,7 +10279,6 @@ var getBestGuessFrameRate = (frameRate) => {
   return best;
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/input.js
 polyfillSymbolDispose();
 var DEFAULT_SOURCE_CACHE_GROUP = 1;
 var Input = class _Input extends EventEmitter {
@@ -10653,7 +10631,6 @@ var InputDisposedError = class extends Error {
   }
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/reader.js
 var Reader = class {
   constructor(source) {
     this.source = source;
@@ -10867,8 +10844,7 @@ var readAscii = (slice, length) => {
   return str;
 };
 
-// ../../../../node_modules/.pnpm/mediabunny@1.55.3/node_modules/mediabunny/dist/modules/src/index.js
-var MEDIABUNNY_LOADED_SYMBOL = /* @__PURE__ */ Symbol.for("mediabunny loaded");
+var MEDIABUNNY_LOADED_SYMBOL = Symbol.for("mediabunny loaded");
 if (globalThis[MEDIABUNNY_LOADED_SYMBOL]) {
   Logging._error("[WARNING]\nMediabunny was loaded twice. This will likely cause Mediabunny not to work correctly. Check if multiple dependencies are importing different versions of Mediabunny, or if something is being bundled incorrectly.");
 }
