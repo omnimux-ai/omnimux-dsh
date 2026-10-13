@@ -28,6 +28,7 @@ export function useMultiViewSubmit({ avatarId } = {}) {
   const mountedRef = useRef(true)
   const avatarRef = useRef(avatarId)
   const epochRef=useRef(0)
+  const parentIntentRef=useRef(new Map())
   if(avatarRef.current!==avatarId){avatarRef.current=avatarId;epochRef.current++}
 
   const clearTimer = useCallback((parentId) => {
@@ -62,6 +63,7 @@ export function useMultiViewSubmit({ avatarId } = {}) {
     (parentId, taskId) => {
       clearTimer(parentId)
       const epoch=epochRef.current
+      const intent=parentIntentRef.current.get(parentId)
       let inflight=false
       const timer = setInterval(() => {
         if(inflight||avatarRef.current!==avatarId||epoch!==epochRef.current||document.visibilityState==='hidden'||navigator.onLine===false)return
@@ -69,11 +71,11 @@ export function useMultiViewSubmit({ avatarId } = {}) {
         void (async () => {
           try {
             const next = await fetchTask(avatarId, taskId, { refresh: true })
-            if (!mountedRef.current || avatarRef.current!==avatarId||epoch!==epochRef.current) return
+            if (!mountedRef.current || avatarRef.current!==avatarId||epoch!==epochRef.current||parentIntentRef.current.get(parentId)!==intent) return
             if (next) track(parentId, next)
             if (next && isTerminalStatus(next.status)) clearTimer(parentId)
           } catch (error) {
-            if(!mountedRef.current||avatarRef.current!==avatarId||epoch!==epochRef.current)return
+            if(!mountedRef.current||avatarRef.current!==avatarId||epoch!==epochRef.current||parentIntentRef.current.get(parentId)!==intent)return
             setChildByParent(prev => ({ ...prev, [parentId]: prev[parentId] ? { ...prev[parentId], error: error.message } : prev[parentId] }))
           } finally {inflight=false}
         })()
@@ -91,6 +93,9 @@ export function useMultiViewSubmit({ avatarId } = {}) {
     async (body) => {
       const epoch=epochRef.current
       const parentId = body.parentTaskId
+      const intent=Symbol(parentId)
+      parentIntentRef.current.set(parentId,intent)
+      clearTimer(parentId)
       setSubmittingParent(parentId)
       try {
         const payload = await submitMultiView(body)
@@ -99,12 +104,12 @@ export function useMultiViewSubmit({ avatarId } = {}) {
           (taskId ? await fetchTask(avatarId, taskId) : null) ??
           payload.task ??
           pendingMultiViewRecord(taskId)
-        if (!mountedRef.current || avatarRef.current!==avatarId||epoch!==epochRef.current) return null
+        if (!mountedRef.current || avatarRef.current!==avatarId||epoch!==epochRef.current||parentIntentRef.current.get(parentId)!==intent) return null
         track(parentId, record)
         if (!isTerminalStatus(record.status) && taskId) startPolling(parentId, taskId)
         return record
       } finally {
-        if (mountedRef.current&&avatarRef.current===avatarId&&epoch===epochRef.current) setSubmittingParent(null)
+        if (mountedRef.current&&avatarRef.current===avatarId&&epoch===epochRef.current&&parentIntentRef.current.get(parentId)===intent) setSubmittingParent(prev=>prev===parentId?null:prev)
       }
     },
     [avatarId, startPolling, track]
@@ -113,6 +118,7 @@ export function useMultiViewSubmit({ avatarId } = {}) {
   /** 本地摘掉已挂载的设定板；任务行本身不动。 */
   const forget = useCallback(
     (parentId) => {
+      parentIntentRef.current.delete(parentId)
       clearTimer(parentId)
       setChildByParent((prev) => {
         const next = { ...prev }

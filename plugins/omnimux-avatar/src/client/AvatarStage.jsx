@@ -185,6 +185,8 @@ export function AvatarStage(props) {
   useEffect(() => {
     if (previousAvatarRef.current === currentId) return
     previousAvatarRef.current = currentId
+    multiViewIntentRef.current++
+    setSyncingKey('');setSyncedKeys(new Set())
     setPreviewTask(null);setOpenMultiView(null);setImageMaterialId('');setVideoInitialTask(null);setMotionRevision(null)
     sheet.reset()
   }, [currentId])
