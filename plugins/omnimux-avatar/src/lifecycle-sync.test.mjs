@@ -184,6 +184,18 @@ test('真实提交钩子对已受理任务发起续取而非仅反复读取本�
   assert.equal(result,null)
   assert.equal(api.pending,null)
   assert.equal(api.submitting,false)
+  const multiBuilt=await build({entryPoints:[fileURLToPath(new URL('./client/hooks/use-multiview.js',import.meta.url))],bundle:true,write:false,platform:'node',format:'cjs',external:['react']})
+  const multiModule=new Module(production.filename);multiModule.filename=production.filename;multiModule.paths=production.paths;multiModule.require=production.require;multiModule._compile(multiBuilt.outputFiles[0].text,production.filename)
+  let multi
+  function MultiHarness(){multi=multiModule.exports.useMultiViewSubmit({avatarId:'avatar'});return null}
+  await act(async()=>root.render(React.createElement(MultiHarness)))
+  await act(async()=>{stale=multi.submit({avatarId:'avatar',parentTaskId:'parent'})})
+  assert.equal(multi.submittingParent,'parent')
+  await act(async()=>multi.forget('parent'))
+  assert.equal(multi.submittingParent,null)
+  await act(async()=>{fulfill(new Response(JSON.stringify({success:true,task,taskRef:'upstream-task'})));result=await stale})
+  assert.equal(result,null)
+  assert.equal(multi.childByParent.parent,undefined)
 })
 
 test('同一父图的派生行按真实时间选择最新而非缺失网页id', () => {

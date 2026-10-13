@@ -537,7 +537,7 @@ export function AvatarStage(props) {
       parentTaskId: taskKey(openMultiView.parent),
       model: meta?.model || b.model,
       group: meta?.group || b.group,
-    })
+    }).catch(error=>{if(intent===multiViewIntentRef.current)push(readError(error),'error');return null})
     if (record&&intent===multiViewIntentRef.current) {
       setOpenMultiView((prev) => (taskKey(prev?.parent)===parentId ? { ...prev, child: record } : prev))
     }
@@ -554,7 +554,7 @@ export function AvatarStage(props) {
         parentTaskId: taskKey(parent),
         model: meta?.model || b.model,
         group: meta?.group || b.group,
-      })
+      }).catch(error=>{if(intent===multiViewIntentRef.current)push(readError(error),'error');return null})
       // 提交后立刻打开弹窗：进度与结果都落在同一处，不需要用户再找一遍入口。
       if (record&&intent===multiViewIntentRef.current) setOpenMultiView({ parent, child: record })
     },

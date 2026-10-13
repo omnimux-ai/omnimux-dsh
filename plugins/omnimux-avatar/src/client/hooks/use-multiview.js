@@ -99,6 +99,7 @@ export function useMultiViewSubmit({ avatarId } = {}) {
       setSubmittingParent(parentId)
       try {
         const payload = await submitMultiView(body)
+        if(!mountedRef.current||epoch!==epochRef.current||parentIntentRef.current.get(parentId)!==intent)return null
         const taskId = payload.taskRef || String(payload.task?.task_id ?? payload.task?.id ?? '')
         const record =
           (taskId ? await fetchTask(avatarId, taskId) : null) ??
@@ -108,6 +109,9 @@ export function useMultiViewSubmit({ avatarId } = {}) {
         track(parentId, record)
         if (!isTerminalStatus(record.status) && taskId) startPolling(parentId, taskId)
         return record
+      } catch(error) {
+        if(!mountedRef.current||epoch!==epochRef.current||parentIntentRef.current.get(parentId)!==intent)return null
+        throw error
       } finally {
         if (mountedRef.current&&avatarRef.current===avatarId&&epoch===epochRef.current&&parentIntentRef.current.get(parentId)===intent) setSubmittingParent(prev=>prev===parentId?null:prev)
       }
@@ -119,6 +123,7 @@ export function useMultiViewSubmit({ avatarId } = {}) {
   const forget = useCallback(
     (parentId) => {
       parentIntentRef.current.delete(parentId)
+      setSubmittingParent(prev=>prev===parentId?null:prev)
       clearTimer(parentId)
       setChildByParent((prev) => {
         const next = { ...prev }
