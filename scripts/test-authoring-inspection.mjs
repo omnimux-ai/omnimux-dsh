@@ -6,6 +6,7 @@ export function inspectTestAuthoring(code) {
   try { ast = parse(code, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true }) }
   catch { return { allowed: false, reason: 'unsupported-or-incomplete-test-syntax' } }
   const blocked = new Set(['skip', 'only', 'todo'])
+  const execution = new Set(['eval', 'Function', 'constructor', 'defineProperty', 'defineProperties', 'call', 'apply', 'bind', 'getBuiltinModule', 'binding', '_linkedBinding', 'dlopen', 'createRequire'])
   const runners = new Set(['test', 'it', 'describe'])
   for (const statement of ast.body) {
     if (statement.type === 'ImportDeclaration' && ['node:test', 'vitest', '@jest/globals'].includes(statement.source.value)) {
@@ -13,16 +14,17 @@ export function inspectTestAuthoring(code) {
     }
   }
   let reason = null
-  function inspect(node) {
+  function inspect(node, parent = null) {
     if (!node || typeof node !== 'object' || reason) return
     if (node.type === 'MemberExpression') {
       const property = node.computed ? node.property.type === 'Literal' ? node.property.value : null : node.property.name
       if (property === null) reason = 'dynamic-test-member-needs-review'
-      else if (blocked.has(property) || ['eval', 'Function', 'constructor', 'defineProperty', 'defineProperties', 'call', 'apply', 'bind', 'getBuiltinModule', 'binding', '_linkedBinding', 'dlopen', 'createRequire'].includes(property) || node.object.type === 'Identifier' && node.object.name === 'Reflect') reason = 'test-execution-selector-needs-review'
+      else if (blocked.has(property) || execution.has(property) || node.object.type === 'Identifier' && node.object.name === 'Reflect') reason = 'test-execution-selector-needs-review'
     }
     if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') {
       const key = node.computed ? node.key.type === 'Literal' ? node.key.value : null : node.key.name ?? node.key.value
       if (key === null) reason = 'dynamic-test-property-needs-review'
+      if (parent?.type === 'ObjectPattern' && execution.has(key)) reason = 'runtime-code-execution-binding-needs-review'
       if (blocked.has(key) && !(node.value?.type === 'Literal' && [false, null, 0, ''].includes(node.value.value))) reason = 'test-execution-option-needs-review'
     }
     if (node.type === 'CallExpression') {
@@ -42,8 +44,8 @@ export function inspectTestAuthoring(code) {
     if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) reason = 'dynamic-test-execution-needs-review'
     if (node.type === 'ImportSpecifier' && blocked.has(node.imported.name ?? node.imported.value)) reason = 'test-execution-import-needs-review'
     for (const value of Object.values(node)) {
-      if (Array.isArray(value)) for (const child of value) inspect(child)
-      else if (value && typeof value === 'object') inspect(value)
+      if (Array.isArray(value)) for (const child of value) inspect(child, node)
+      else if (value && typeof value === 'object') inspect(value, node)
     }
   }
   inspect(ast)
