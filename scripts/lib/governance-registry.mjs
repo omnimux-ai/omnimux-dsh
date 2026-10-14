@@ -175,7 +175,8 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
 
   function parseCommand(command, context, cwd = '.', stack = [], budget = { remaining: MAX_EXPANSIONS }) {
     if (typeof command !== 'string') { unknown('command-shape', context); return }
-    const joined = command.replace(/\\\r?\n/g, ' ')
+    if (/\\\r?\n/.test(command)) { unknown('shell-line-continuation-unmapped', { ...context, command }); return }
+    const joined = command
     if (/^\s*(?:if\b|for\b|while\b|case\b|until\b|function\b|\w+\s*\(\))/m.test(joined)) {
       unknown('shell-control-flow', { ...context, command }); return
     }
@@ -205,7 +206,7 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
           const explicitRun = words[offset] === 'run'
           if (explicitRun) offset++
           const name = words[offset]
-          if (!explicitRun && ['install', 'exec', 'dlx', 'list', 'why', 'add', 'remove', 'update', 'help', 'config', 'prune', 'store', 'import', 'fetch', 'pack', 'publish', 'rebuild', 'link', 'unlink', 'patch', 'patch-commit', 'setup', 'env', 'root'].includes(name)) {
+          if (!explicitRun && ['install', 'exec', 'dlx', 'list', 'ls', 'audit', 'why', 'add', 'remove', 'update', 'help', 'config', 'prune', 'store', 'import', 'fetch', 'pack', 'publish', 'link', 'unlink', 'patch', 'patch-commit', 'env', 'root'].includes(name)) {
             unknown('package-builtin', location); return
           }
           if (!name || name.startsWith('-') || tokens[offset]?.dynamic || /[*?{}]/.test(name)) {
@@ -213,15 +214,15 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
           }
           if (!Object.hasOwn(scripts, name)) {
             // pnpm built-ins are not root package scripts.
-            if (['install', 'exec', 'dlx', 'list', 'why', 'add', 'remove', 'update', 'help', 'config', 'prune', 'store', 'import', 'fetch', 'pack', 'publish', 'rebuild', 'link', 'unlink', 'patch', 'patch-commit', 'setup', 'env', 'root'].includes(name)) unknown('package-builtin', location)
+            if (['install', 'exec', 'dlx', 'list', 'ls', 'audit', 'why', 'add', 'remove', 'update', 'help', 'config', 'prune', 'store', 'import', 'fetch', 'pack', 'publish', 'link', 'unlink', 'patch', 'patch-commit', 'env', 'root'].includes(name)) unknown('package-builtin', location)
             else error('package-script-missing', { ...location, script: name })
-            continue
+            return
           }
           if (cwd !== '.') { unknown('package-cwd-unsupported', { ...location, cwd }); return }
           if (words.length !== offset + 1) { unknown('package-script-arguments', { ...location, script: name }); return }
           if (stack.includes(name)) { error('package-script-cycle', { ...location, cycle: [...stack, name] }); return }
-          if (stack.length >= MAX_EXPANSIONS || budget.remaining-- <= 0) { error('package-expansion-limit', location); continue }
-          if (typeof scripts[name] !== 'string') { error('package-script-shape', { script: name }); continue }
+          if (stack.length >= MAX_EXPANSIONS || budget.remaining-- <= 0) { error('package-expansion-limit', location); return }
+          if (typeof scripts[name] !== 'string') { error('package-script-shape', { script: name }); return }
           prove({ kind: 'package-expansion', ...location, script: name, chain: [...stack, name] })
           parseCommand(scripts[name], { ...location, viaPackage: [...stack, name], line: null }, cwd, [...stack, name], budget)
           // A package command may alter shell cwd/environment. Preserve its own proven roots, not its suffix.
@@ -239,15 +240,16 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
         } else if (runtime === 'bash' && words[offset] === '-n') { mode = 'syntax'; offset++ }
         if (!words[offset] || words[offset].startsWith('-')) { unknown('runtime-options-or-discovery', location); return }
         if (testing && words.slice(offset).some(word => word.startsWith('-'))) {
-          unknown('test-runner-options', location); continue
+          unknown('test-runner-options', location); return
         }
         const targets = testing ? words.slice(offset) : [words[offset]]
         for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
           const target = targets[targetIndex], token = tokens[offset + targetIndex]
-          if (token?.dynamic || target.startsWith('-')) { unknown('target-unsupported', { ...location, target }); continue }
+          if (token?.dynamic || target.startsWith('-')) { unknown('target-unsupported', { ...location, target }); return }
           const path = resolveTarget(target, cwd, location)
+          if (!path) return
           const compatible = path && (runtime === 'node' ? JS.test(path) : runtime === 'bash' ? path.endsWith('.sh') : path.endsWith('.py'))
-          if (path && !compatible) unknown('runtime-language-mismatch', { ...location, runtime, target: path })
+          if (!compatible) { unknown('runtime-language-mismatch', { ...location, runtime, target: path }); return }
           const fixedArgs = !tokens.some(token => token.dynamic || /[*?\[\]{}]/.test(token.text))
           if (compatible) addRoot(path, location, mode, testing ? [] : fixedArgs ? words.slice(offset + 1) : null)
         }
@@ -290,9 +292,12 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
           channel: 'ci', source: path, job: jobId, step: stepIndex, stepName: step.name ?? null, line,
           conditions: [workflow.if, job.if, step.if].filter(item => item !== undefined),
         }
-        const shell = step.shell ?? job.defaults?.run?.shell ?? workflow.defaults?.run?.shell
-        if (shell && !['bash', 'sh'].includes(shell)) { unknown('workflow-shell', { ...context, shell }); continue }
-        const directory = step['working-directory'] ?? job.defaults?.run?.['working-directory'] ?? workflow.defaults?.run?.['working-directory'] ?? '.'
+        const runDefaults = [step, job.defaults?.run, workflow.defaults?.run].filter(record)
+        const shellOwner = runDefaults.find(level => Object.hasOwn(level, 'shell'))
+        const shell = shellOwner ? shellOwner.shell : undefined
+        if (shellOwner && !['bash', 'sh'].includes(shell)) { unknown('workflow-shell', { ...context, shell }); continue }
+        const directoryOwner = runDefaults.find(level => Object.hasOwn(level, 'working-directory'))
+        const directory = directoryOwner ? directoryOwner['working-directory'] : '.'
         if (typeof directory !== 'string' || /[\\\x00-\x20$`?#:*\[\]{}]/.test(directory) || posix.isAbsolute(directory)) { unknown('workflow-cwd', { ...context, cwd: directory }); continue }
         const cwd = posix.normalize(directory)
         if (!cwd || (cwd !== '.' && !safePath(cwd))) { unknown('workflow-cwd', { ...context, cwd: directory }); continue }
@@ -300,7 +305,7 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
           unknown('workflow-environment-shape', context); continue
         }
         const environment = Object.assign({}, record(workflow.env) ? workflow.env : {}, record(job.env) ? job.env : {}, record(step.env) ? step.env : {})
-        if (Object.hasOwn(environment, 'NODE_OPTIONS') || Object.hasOwn(environment, 'BASH_ENV') || Object.hasOwn(environment, 'ENV')) {
+        if (Object.hasOwn(environment, 'PATH') || Object.hasOwn(environment, 'NODE_OPTIONS') || Object.hasOwn(environment, 'BASH_ENV') || Object.hasOwn(environment, 'ENV')) {
           unknown('workflow-runtime-environment', context); continue
         }
         parseCommand(step.run, { ...context, cwd, shell: shell ?? 'default' }, cwd)

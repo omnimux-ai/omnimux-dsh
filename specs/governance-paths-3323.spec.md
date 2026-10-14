@@ -25,7 +25,7 @@
 
 沿用仓库 ESM、具名导出、英文标识符及 JSDoc 关键输入契约；复用已有 `acorn` 与 `yaml`，不加依赖。先校验输入／清单，再解析真实命令根，再提取 JS AST 的 import/re-export/literal import，最后按 root→edge→target 生成有限证据并比较分类。执行、语法、本地／持续集成证据分别保存；不透明 shell／Python 保留未知。
 
-仅支持固定 `node`、`node --test`、`node --check`、`bash`、`bash -n`、固定 `pnpm/corepack pnpm [run] <script>` 和独立行／`&&`。复杂 shell、命令替换、重定向、glob、动态目标、runner/workspace discovery 不做全语言模拟；安全的已证前缀可以保留，但未知后续不向全图传播。
+仅支持固定 `node`、`node --test`、`node --check`、`bash`、`bash -n`、固定 `pnpm/corepack pnpm [run] <script>` 和独立行／`&&`。复杂 shell、命令替换、反斜杠续行（未实现精确物理行映射）、重定向、glob、动态目标、runner/workspace discovery 不做全语言模拟；安全的已证前缀可以保留，但未知后续不向全图传播。
 
 ## 新用户基线与文档影响
 
