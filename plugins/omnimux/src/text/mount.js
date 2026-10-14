@@ -1,9 +1,7 @@
 import { assertCapabilityEnabled, isModelEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from '../media/errors.js'
 import { objectParams } from '../tools/schema.js'
-import { assertRuntimeReady, resolveRuntimeChoice } from '../settings/runtime-mode.js'
-import { isAuthenticOfficialToken, resolveSyncOfficialToken } from '../media/mount.js'
-import { getModelChannelGroups, parseModelAndGroup, resolveRequestChannelIntent, isOfficialChannelId } from '../catalog/serving/channel-groups.js'
+
 import { enabledTextModels, CHAT_MODEL_IDS } from './catalog.js'
 import { normalizeTextReferences } from './references.js'
 import { executeOmnimuxText } from './execute.js'
@@ -27,65 +25,12 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
      */
     execute(req) {
       assertCapabilityEnabled(gate, 'omnimux_text_complete', 'tool')
-      const current = ctx.get?.('settings')?.get?.('omnimux')
-      const channelIntent = resolveRequestChannelIntent(req)
-
-      const rawSystemToken = resolveSyncOfficialToken(process.env)
-      const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
-      const runtime = resolveRuntimeChoice(current)
-
-      const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
-      const targetChannel = typeof rawTargetChannel === 'string' ? rawTargetChannel.toLowerCase().trim() : ''
-      const { modelId: requestModelId } = parseModelAndGroup(req?.model)
-      const modelGroups = requestModelId ? getModelChannelGroups(requestModelId) : []
-      const isKnownOfficial = targetChannel
-        ? (targetChannel === 'official' || modelGroups.some((group) => {
-            const gid = typeof group.id === 'string' ? group.id.toLowerCase().trim() : ''
-            const wire = typeof group.wireGroup === 'string' ? group.wireGroup.toLowerCase().trim() : ''
-            return gid === targetChannel || wire === targetChannel
-          }))
-        : (runtime.mode === 'official')
-
-      const references = normalizeTextReferences(req)
-      const hasComplexMedia = references.some((asset) => asset.type === 'video' || asset.type === 'audio' || asset.type === 'image' || asset.type === 'document')
-      const isMultimodalRequest = references.length > 0 || hasComplexMedia
-      const effectiveModelId = requestModelId || hub.text?.defaultModel || 'gemini-3.8-flash'
-      const isEffectiveOfficialModel = Boolean(effectiveModelId && CHAT_MODEL_IDS.includes(effectiveModelId))
-
-      const isOfficialModel = Boolean(requestModelId && CHAT_MODEL_IDS.includes(requestModelId))
-      const isExplicitAgent = targetChannel === 'agent' || targetChannel === 'local'
-
-      const isOfficialRequest = !channelIntent.isByokChannel && !isExplicitAgent
-        && (
-          (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
-          || (!targetChannel && (runtime.mode === 'official' || isOfficialModel || (isMultimodalRequest && hasOfficialToken && isEffectiveOfficialModel)))
-        )
-
-      const isOfficialBypass = isOfficialRequest && hasOfficialToken
-      // A configured tool model pins execution to the session LLM stack, so the
-      // runtime-mode readiness check must not stand between it and the wire.
-      const toolModel = typeof current?.toolModel === 'string' ? current.toolModel.trim() : ''
-      const hasToolModel = Boolean(toolModel && toolModel !== 'auto')
-      if (!isOfficialBypass && !hasToolModel) {
-        assertRuntimeReady(current, 'text')
-      }
       if (req.model) {
         const baseModel = String(req.model).split('@')[0].trim()
         assertCapabilityEnabled(gate, baseModel || req.model, 'model')
       }
-      let finalReq
-      if (isOfficialBypass) {
-        finalReq = {
-          ...req,
-          env: {
-            OMNIMUX_API_KEY: rawSystemToken.trim(),
-          },
-        }
-      } else if (isOfficialRequest) {
-        finalReq = { ...req, env: {} }
-      } else {
-        finalReq = req
-      }
+      // The executor resolves one consumption choice for this operation.
+      const finalReq = req
 
       return executeOmnimuxText({
         ...finalReq,

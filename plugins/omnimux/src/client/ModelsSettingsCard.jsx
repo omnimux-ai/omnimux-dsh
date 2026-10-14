@@ -89,7 +89,7 @@ export function ModelsSettingsCard({ t, scope }) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught))
       })
     return () => { cancelled = true }
-  }, [])
+  }, [snapshot?.value?.defaultTextModel, snapshot?.value?.defaultImageModel, snapshot?.value?.defaultVideoModel, snapshot?.value?.defaultAudioModel, snapshot?.value?.defaultImageOperation, snapshot?.value?.defaultVideoOperation])
 
   const value = snapshot?.value && typeof snapshot.value === 'object' ? snapshot.value : {}
   const user = snapshot?.user && typeof snapshot.user === 'object' ? snapshot.user : {}
@@ -118,8 +118,7 @@ export function ModelsSettingsCard({ t, scope }) {
     const modelId = currentModelIdFor(kind)
     const operations = listedOperationsFor(kind, modelId)
     const configured = value[`default${cap(kind)}Operation`]
-    if (typeof configured === 'string' && configured && configured !== DEFAULT_OPERATION_AUTO
-      && operations.some((op) => op.id === configured)) {
+    if (typeof configured === 'string' && configured && configured !== DEFAULT_OPERATION_AUTO) {
       return configured
     }
     const recommended = catalog?.defaultOperations?.[kind]
@@ -135,8 +134,12 @@ export function ModelsSettingsCard({ t, scope }) {
       return REASONING_LEVELS.map((level) => ({ value: level, label: t(`models.reasoning.${level}`) }))
     }
     if (row.mode) {
-      return listedOperationsFor(group.kind, currentModelIdFor(group.kind))
+      const options = listedOperationsFor(group.kind, currentModelIdFor(group.kind))
         .map((op) => ({ value: op.id, label: op.label || op.id }))
+      const stored = value[row.key]
+      if (typeof stored === 'string' && stored && stored !== DEFAULT_OPERATION_AUTO
+        && !options.some((option) => option.value === stored)) options.push({ value: stored, label: `${stored} · ${t('runtime.needsConfirmation')}` })
+      return options
     }
     if (row.tool) {
       // Session-reachable provider:model pairs; 'auto' means "not configured".
@@ -154,7 +157,12 @@ export function ModelsSettingsCard({ t, scope }) {
       return options
     }
     const rows = Array.isArray(catalog?.[group.kind]) ? catalog[group.kind] : []
-    return rows.map((item) => ({ value: item.id, label: item.label || item.id }))
+    const options = rows.map((item) => ({ value: item.id, label: item.label || item.id }))
+    const stored = value[row.key]
+    if (typeof stored === 'string' && stored && !options.some((option) => option.value === stored)) {
+      options.push({ value: stored, label: `${stored} · ${t('runtime.needsConfirmation')}` })
+    }
+    return options
   }, [catalog, currentModelIdFor, listedOperationsFor, t, value])
 
   const currentValueForRow = useCallback((group, row, options) => {

@@ -105,9 +105,9 @@ export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCata
         && model.operations?.some((op) => op.listed === true && op.output?.type === kind))) return [];
       return [row];
     });
-    defaults[kind] = lists[kind].some((row) => row.id === policy[kind].defaultModelId)
-      ? policy[kind].defaultModelId
-      : lists[kind][0]?.id ?? '';
+    defaults[kind] = [catalog.defaults?.[kind], policy[kind].defaultModelId]
+      .find((id) => lists[kind].some((row) => row.id === id))
+      ?? lists[kind][0]?.id ?? '';
   }
   const capabilitySeams = new Set<string>(CANVAS_INPUT_CAPABILITY_SEAMS);
   const capabilityAdmitted = new Set((catalog.models ?? [])
@@ -134,12 +134,16 @@ export function projectCanvasCatalog(catalog: CapabilityCatalog): CapabilityCata
       if (op.output?.type === kind) defaultsByOperation[op.id] = defaultModel!.id;
     }
   }
+  const defaultOperations = Object.fromEntries(Object.entries(catalog.defaultOperations ?? {})
+    .filter(([kind, recommendation]) => models?.some((model) => model.id === recommendation?.modelId
+      && model.operations?.some((op) => op.id === recommendation.operationId && op.output?.type === kind))));
   return {
     ...catalog,
     ...lists,
     ...(models ? { models } : {}),
     defaults,
     defaultsByOperation,
+    defaultOperations,
     generationPolicy: policy,
     fingerprint: catalog.fingerprint
       ? `${catalog.fingerprint}:canvas:${JSON.stringify(policy)}`

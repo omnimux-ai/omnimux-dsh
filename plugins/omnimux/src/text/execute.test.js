@@ -7,6 +7,7 @@ import { apply } from '../index.js'
 import { OmnimuxError } from '../media/errors.js'
 import { decodeDataUri, mediaFromMagic } from './image.js'
 import { executeOmnimuxText } from './execute.js'
+import { completeTextViaChat } from './chat.js'
 import { loadTextVideo, toVideoImageUrlPart } from './video.js'
 
 const PNG = Uint8Array.from([
@@ -144,7 +145,7 @@ describe('textComplete execute', () => {
 
   it('uses probed image metadata and rejects an oversized image before saving or streaming', async () => {
     const bytes = Buffer.alloc(20 * 1024 * 1024 + 1)
-    PNG.forEach((value, index) => { bytes[index] = value })
+    bytes.set(PNG)
     let saved = 0
     let streamCalls = 0
     await assert.rejects(
@@ -249,7 +250,7 @@ describe('textComplete execute', () => {
       () => executeOmnimuxText({
         prompt: 'describe',
         video: `data:video/webm;base64,${WEBM.toString('base64')}`,
-        assetMeta: { [`data:video/webm;base64,${WEBM.toString('base64')}`]: { mime: 'video/mp4', sizeBytes: 1 } },
+        assetMeta: Object.fromEntries([[`data:video/webm;base64,${WEBM.toString('base64')}`, { mime: 'video/mp4', sizeBytes: 1 }]]),
         env: { OMNIMUX_API_KEY: 'sk-test' },
         fetcher: async () => {
           vendorCalls += 1
@@ -385,8 +386,8 @@ describe('omnimux_text_complete tool', () => {
     const provided = {}
     const seen = []
     apply({
-      tools: { register(tool) { tools[tool.name] = tool } },
-      provide(name, value) { provided[name] = value },
+      tools: { register(tool) { Object.assign(tools, Object.fromEntries([[tool.name, tool]])) } },
+      provide(name, value) { Object.assign(provided, Object.fromEntries([[name, value]])) },
       get(name) {
         if (name === 'llm') return collectStream(seen)
         return undefined
@@ -412,7 +413,7 @@ describe('omnimux_text_complete tool', () => {
   it('hides a disabled whitelist model from the tool enum', () => {
     const tools = {}
     apply({
-      tools: { register(tool) { tools[tool.name] = tool } },
+      tools: { register(tool) { Object.assign(tools, Object.fromEntries([[tool.name, tool]])) } },
       provide() {},
       get() { return undefined },
     }, { text: { models: [{ id: 'grok-4.6', enabled: false }, { id: 'glm-5.3' }] } })
@@ -422,7 +423,7 @@ describe('omnimux_text_complete tool', () => {
   it('rejects a missing reason at the tool', async () => {
     const tools = {}
     apply({
-      tools: { register(tool) { tools[tool.name] = tool } },
+      tools: { register(tool) { Object.assign(tools, Object.fromEntries([[tool.name, tool]])) } },
       provide() {},
       get() { return { stream: async function* () {} } },
     })
@@ -433,7 +434,6 @@ describe('omnimux_text_complete tool', () => {
   })
 
   it('completeTextViaChat uses hub only and ignores CPA settings when hub key exists', async () => {
-    const { completeTextViaChat } = await import('./chat.js')
     let capturedRequest = null
     const fakeFetcher = async (url, opts) => {
       capturedRequest = { url, opts, body: JSON.parse(opts.body) }
@@ -487,7 +487,6 @@ describe('omnimux_text_complete tool', () => {
   })
 
   it('completeTextViaChat does not fall back to CPA when hub credentials are absent', async () => {
-    const { completeTextViaChat } = await import('./chat.js')
     let called = 0
     await assert.rejects(
       () => completeTextViaChat({
@@ -610,21 +609,27 @@ describe('omnimux_text_complete tool', () => {
 
   it('BYOK mode sends text to the user endpoint with the tested model, not the official directory name', async () => {
     const requests = []
+    const credentialRefs = []
     let streamCalls = 0
     const byokSettings = {
       runtimeMode: 'key',
       runtimeKeyEndpoint: 'https://my-provider.test/v1',
       runtimeKeyModel: 'my-model',
       runtimeKeyVerified: true,
+      scenarioBindings: { text: { channel: 'byok', provider: 'custom' } },
+      byokProviders: [{ provider: 'custom', endpoint: 'https://my-provider.test/v1', models: { text: 'my-model' }, capabilities: ['text'] }],
+      toolModel: 'cpa:must-not-override',
     }
     const result = await executeOmnimuxText({
       prompt: 'hello',
       model: 'gemini-3.8-flash',
+      group: 'byok-custom',
       env: {},
       settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
       credentials: {
         async resolve(ref) {
-          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-secret' }
+          credentialRefs.push(ref)
+          if (ref === 'OMNIMUX_MEDIA_KEY_CUSTOM') return { value: 'sk-byok-secret' }
           return undefined
         },
       },
@@ -646,6 +651,8 @@ describe('omnimux_text_complete tool', () => {
     assert.equal(requests[0].auth, 'Bearer sk-byok-secret')
     assert.equal(requests[0].body.model, 'gemini-3.8-flash', 'an explicit caller model still wins')
     assert.equal(result.text, 'byok reply')
+    assert.equal(result.model, 'gemini-3.8-flash')
+    assert.deepEqual(credentialRefs, ['OMNIMUX_MEDIA_KEY_CUSTOM'])
   })
 
   it('BYOK mode defaults the wire model to the tested runtimeKeyModel', async () => {
@@ -655,6 +662,8 @@ describe('omnimux_text_complete tool', () => {
       runtimeKeyEndpoint: 'https://my-provider.test/v1',
       runtimeKeyModel: 'my-model',
       runtimeKeyVerified: true,
+      scenarioBindings: { text: { channel: 'byok', provider: 'custom' } },
+      byokProviders: [{ provider: 'custom', endpoint: 'https://my-provider.test/v1', models: { text: 'my-model' }, capabilities: ['text'] }],
     }
     const result = await executeOmnimuxText({
       prompt: 'hello',
@@ -662,7 +671,7 @@ describe('omnimux_text_complete tool', () => {
       settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
       credentials: {
         async resolve(ref) {
-          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-secret' }
+          if (ref === 'OMNIMUX_MEDIA_KEY_CUSTOM') return { value: 'sk-byok-secret' }
           return undefined
         },
       },
@@ -683,6 +692,8 @@ describe('omnimux_text_complete tool', () => {
       runtimeKeyEndpoint: 'https://my-provider.test/v1',
       runtimeKeyModel: 'my-model',
       runtimeKeyVerified: true,
+      scenarioBindings: { text: { channel: 'byok', provider: 'custom' } },
+      byokProviders: [{ provider: 'custom', endpoint: 'https://my-provider.test/v1', models: { text: 'my-model' }, capabilities: ['text'] }],
     }
     const result = await executeOmnimuxText({
       prompt: 'hello',
@@ -691,7 +702,7 @@ describe('omnimux_text_complete tool', () => {
       settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
       credentials: {
         async resolve(ref) {
-          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-secret' }
+          if (ref === 'OMNIMUX_MEDIA_KEY_CUSTOM') return { value: 'sk-byok-secret' }
           return undefined
         },
       },
@@ -706,45 +717,70 @@ describe('omnimux_text_complete tool', () => {
   })
 
   it('BYOK mode without a stored key throws unconfigured', async () => {
+    const credentialRefs = []
+    let httpCalls = 0
+    let streamCalls = 0
     const byokSettings = {
       runtimeMode: 'key',
       runtimeKeyEndpoint: 'https://my-provider.test/v1',
       runtimeKeyModel: 'my-model',
       runtimeKeyVerified: true,
+      scenarioBindings: { text: { channel: 'byok', provider: 'custom' } },
+      byokProviders: [{ provider: 'custom', endpoint: 'https://my-provider.test/v1', models: { text: 'my-model' }, capabilities: ['text'] }],
     }
     await assert.rejects(
       () => executeOmnimuxText({
         prompt: 'hello',
         model: 'gemini-3.8-flash',
+        group: 'byok-custom',
         env: {},
         settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
-        credentials: { async resolve() { return undefined } },
-        fetcher: async () => ({ ok: true, json: async () => ({}) }),
-        llm: { async * stream() { yield {} } },
+        credentials: { async resolve(ref) {
+          credentialRefs.push(ref)
+          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'synthetic-unrelated-legacy-key' }
+          return undefined
+        } },
+        fetcher: async () => { httpCalls += 1; return { ok: true, json: async () => ({}) } },
+        llm: { async * stream() { streamCalls += 1; yield {} } },
       }),
       (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
     )
+    assert.deepEqual(credentialRefs, ['OMNIMUX_MEDIA_KEY_CUSTOM'])
+    assert.equal(httpCalls, 0)
+    assert.equal(streamCalls, 0)
   })
 
   it('BYOK mode without an endpoint throws unconfigured', async () => {
+    const credentialRefs = []
+    let httpCalls = 0
+    let streamCalls = 0
     const byokSettings = {
       runtimeMode: 'key',
       runtimeKeyEndpoint: '',
       runtimeKeyModel: 'my-model',
       runtimeKeyVerified: true,
+      scenarioBindings: { text: { channel: 'byok', provider: 'custom' } },
+      byokProviders: [{ provider: 'custom', endpoint: '', models: { text: 'my-model' }, capabilities: ['text'] }],
     }
     await assert.rejects(
       () => executeOmnimuxText({
         prompt: 'hello',
         model: 'gemini-3.8-flash',
+        group: 'byok-custom',
         env: {},
         settings: { get: (key) => key === 'omnimux' ? byokSettings : undefined },
-        credentials: { async resolve(ref) { return ref === 'OMNIMUX_BYOK_API_KEY' ? { value: 'sk-x' } : undefined } },
-        fetcher: async () => ({ ok: true, json: async () => ({}) }),
-        llm: { async * stream() { yield {} } },
+        credentials: { async resolve(ref) {
+          credentialRefs.push(ref)
+          return ref === 'OMNIMUX_MEDIA_KEY_CUSTOM' ? { value: 'sk-x' } : undefined
+        } },
+        fetcher: async () => { httpCalls += 1; return { ok: true, json: async () => ({}) } },
+        llm: { async * stream() { streamCalls += 1; yield {} } },
       }),
       (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
     )
+    assert.deepEqual(credentialRefs, [])
+    assert.equal(httpCalls, 0)
+    assert.equal(streamCalls, 0)
   })
 
   it('agent mode runs text through the CLI, not the official stream', async () => {
@@ -804,6 +840,11 @@ describe('omnimux_text_complete tool', () => {
   })
 
   it('agent mode rejects media references in this version', async () => {
+    let saved = 0
+    let credentialCalls = 0
+    let httpCalls = 0
+    let streamCalls = 0
+    let agentCalls = 0
     const agentSettings = {
       runtimeMode: 'agent',
       runtimeAgentId: 'claude',
@@ -813,13 +854,21 @@ describe('omnimux_text_complete tool', () => {
       () => executeOmnimuxText({
         prompt: 'describe',
         image: `data:image/png;base64,${MP4.toString('base64')}`,
-        attachments: { saveImage: async () => ({ id: 'x' }) },
+        attachments: { saveImage: async () => { saved += 1; return { id: 'x' } } },
         env: {},
         settings: { get: (key) => key === 'omnimux' ? agentSettings : undefined },
-        llm: { async * stream() { yield {} } },
+        credentials: { async resolve() { credentialCalls += 1; return undefined } },
+        fetcher: async () => { httpCalls += 1; return { ok: true, json: async () => ({}) } },
+        llm: { async * stream() { streamCalls += 1; yield {} } },
+        agentRun: async () => { agentCalls += 1; return 'must not run' },
       }),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-invalid-request',
+      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
     )
+    assert.equal(saved, 0)
+    assert.equal(credentialCalls, 0)
+    assert.equal(httpCalls, 0)
+    assert.equal(streamCalls, 0)
+    assert.equal(agentCalls, 0)
   })
 
   it('agent mode unverified throws unconfigured before any call', async () => {
@@ -900,40 +949,53 @@ describe('textComplete toolModel bypass', () => {
   it('a video reference skips the tool model lane instead of throwing invalid-request', async () => {
     const videoDir = mkdtempSync(join(tmpdir(), 'omnimux-video-'))
     const videoPath = join(videoDir, 'clip.mp4')
-    writeFileSync(videoPath, Buffer.concat([
-      Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0x32]),
-      Buffer.alloc(32, 0),
-    ]))
     const seen = []
     const requests = []
+    const credentialRefs = []
     const byokSettings = {
       runtimeMode: 'key',
       runtimeKeyEndpoint: 'https://my-provider.test/v1',
       runtimeKeyModel: 'my-model',
       runtimeKeyVerified: true,
+      scenarioBindings: { analysis: { channel: 'byok', provider: 'custom' } },
+      byokProviders: [{ provider: 'custom', endpoint: 'https://my-provider.test/v1', models: { analysis: 'my-model' }, capabilities: ['analysis'] }],
       toolModel: 'cpa:gpt-6.1-sol',
     }
-    const result = await executeOmnimuxText({
-      prompt: 'analyze this video',
-      video: videoPath,
-      env: {},
-      settings: { get(key) { return key === 'omnimux' ? byokSettings : undefined } },
-      credentials: {
-        async resolve(ref) {
-          if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-secret' }
-          return undefined
+    try {
+      writeFileSync(videoPath, Buffer.concat([
+        Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0x32]),
+        Buffer.alloc(32, 0),
+      ]))
+      const result = await executeOmnimuxText({
+        prompt: 'analyze this video',
+        video: videoPath,
+        env: {},
+        settings: { get(key) { return key === 'omnimux' ? byokSettings : undefined } },
+        credentials: {
+          async resolve(ref) {
+            credentialRefs.push(ref)
+            if (ref === 'OMNIMUX_MEDIA_KEY_CUSTOM') return { value: 'sk-byok-secret' }
+            return undefined
+          },
         },
-      },
-      fetcher: async (url, options) => {
-        requests.push({ body: JSON.parse(options.body) })
-        return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'video read' } }] }) }
-      },
-      llm: collectStream(seen),
-    })
-    assert.equal(seen.length, 0, 'video must not ride ctx.llm.stream')
-    assert.equal(requests.length, 1)
-    const videoPart = requests[0].body.messages.at(-1).content.find((part) => part.type === 'image_url')
-    assert.ok(videoPart?.image_url?.url?.startsWith('data:video/mp4;base64,'))
-    assert.equal(result.text, 'video read')
+        fetcher: async (url, options) => {
+          requests.push({ url, auth: options.headers.authorization, body: JSON.parse(options.body) })
+          return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'video read' } }] }) }
+        },
+        llm: collectStream(seen),
+      })
+      assert.equal(seen.length, 0, 'video must not ride ctx.llm.stream')
+      assert.equal(requests.length, 1)
+      const videoPart = requests[0].body.messages.at(-1).content.find((part) => part.type === 'image_url')
+      assert.ok(videoPart?.image_url?.url?.startsWith('data:video/mp4;base64,'))
+      assert.equal(result.text, 'video read')
+      assert.equal(requests[0].url, 'https://my-provider.test/v1/chat/completions')
+      assert.equal(requests[0].auth, 'Bearer sk-byok-secret')
+      assert.equal(requests[0].body.model, 'my-model')
+      assert.equal(result.model, 'my-model')
+      assert.deepEqual(credentialRefs, ['OMNIMUX_MEDIA_KEY_CUSTOM'])
+    } finally {
+      rmSync(videoDir, { recursive: true, force: true })
+    }
   })
 })

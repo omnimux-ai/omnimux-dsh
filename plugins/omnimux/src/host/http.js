@@ -117,6 +117,9 @@ export function mountHubHttp(httpCtx, deps) {
       // Services arrive after mount; resolve them per request, never eagerly.
       getSettings: () => deps.settings ?? httpCtx.get?.('settings'),
       getCredentials: () => deps.credentials ?? httpCtx.get?.('credentials'),
+      hubEvents: deps.hubEvents,
+      onCredentialUpdated: typeof httpCtx.on === 'function'
+        ? (listener) => httpCtx.on('credentials/reference-updated', listener) : undefined,
     })
     const stopAgents = registerAgentRoutes(webServer, {
       getSettings: () => deps.settings ?? httpCtx.get?.('settings'),

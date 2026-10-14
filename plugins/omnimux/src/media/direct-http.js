@@ -191,10 +191,14 @@ export function registerDirectMediaRoutes(webServer, deps) {
             model: body.model,
             group: requestedGroup,
             channel: requestedGroup,
+            allowedGroups: body.allowedGroups,
+            strategy: body.strategy,
+            provider: body.provider,
             taskId: normalizedTaskId,
             taskRef: normalizedTaskRef,
           },
           current: deps?.getRuntimeSettings?.() ?? deps?.runtimeSettings,
+          media: deps.media,
         })
         const recoveredHandle = (ledgerRecord?.upstreamTaskId || ledgerRecord?.artifact?.sourceUrl) && canRecoverMediaTask(ledgerRecord)
         const executePayload = {
@@ -285,7 +289,8 @@ export function registerDirectMediaRoutes(webServer, deps) {
         }
         if (typeof err?.code === 'string' && err.code.trim()) failure.code = err.code
         if (typeof err?.status === 'number' && Number.isFinite(err.status)) failure.status = err.status
-        sendJson(res, 500, failure)
+        const status = ['unknown-group', 'omnimux-invalid-request'].includes(err?.code) ? 400 : 500
+        sendJson(res, status, failure)
       }
     },
   })
