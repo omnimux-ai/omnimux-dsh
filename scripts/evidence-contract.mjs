@@ -127,7 +127,7 @@ function readTree(root, sha, exclusions) {
         requireThat(fields.length === 3 && fields[0] === object && fields[1] === 'blob' && Number.isSafeInteger(size) && size >= 0, 'INVALID_GIT_OUTPUT')
         const start = end + 1
         requireThat(start + size < batch.length && batch[start + size] === 10, 'INVALID_GIT_OUTPUT')
-        content.set(object, Buffer.from(batch.subarray(start, start + size)))
+        content.set(object, { bytes: size, sha256: bytesDigest(batch.subarray(start, start + size)) })
         offset = start + size + 1
       }
       requireThat(offset === batch.length, 'INVALID_GIT_OUTPUT')
@@ -142,7 +142,7 @@ function readTree(root, sha, exclusions) {
     }
     if (group.length) readGroup()
   }
-  return sortEntries(descriptors.map(({ path, mode, object }) => entry(path, mode, content.get(object))))
+  return sortEntries(descriptors.map(({ path, mode, object }) => ({ path, mode, bytes: content.get(object).bytes, sha256: content.get(object).sha256 })))
 }
 function indexEntries(root) {
   requireThat(nul(git(root, ['ls-files', '-v', '-z'])).every(record => record.startsWith('H ')), 'INDEX_FLAGS_UNSUPPORTED')
