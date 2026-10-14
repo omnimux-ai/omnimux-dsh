@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { acquireIssueLock, assertSameRun, makeRunKey, readState, transitionState, writeState } from './pipeline-state.mjs'
 import { assessAdmission, assessRuntimeAuthorization, parseFrontmatter } from './authorization.mjs'
-import { deriveImpactMatrix, postMergeAcceptance } from './impact-matrix.mjs'
+import { deriveImpactMatrix, postMergeAcceptance, requiresDev } from './impact-matrix.mjs'
 import { PipelineError, repoRoot, runCommand, writeEvidence } from './auto-pipeline-runtime.mjs'
 import { classifyRisk, fetchIssue, inferPlugin, maintainersFor, parseArgs, resolveDeliveryChannel, slugifyTopic } from './auto-pipeline-metadata.mjs'
 import { baseSha, changedPaths, ensureBranchAndWorktree, getPackageInfo, hasCodeChanges, materializeAndCleanup, pluginNamesFromChanges, runImplementation } from './auto-pipeline-worktree.mjs'
@@ -56,7 +56,7 @@ export function handoffToAgent(root, issueId, evidence, options, fromPhase = 'pr
     mergeProhibited: merged || Boolean(options.noMerge),
     materializeProhibited: options.materialize === false,
     nextAction: merged
-      ? `${options.materialize === false ? 'Do not materialize (--no-materialize).' : 'Automatically materialize merged changes into the development app (~/.omnimux-dev).'} The agent-side delivery gate is this task's isolated-worktree real-browser web verification evidence (screenshots or structured report); Dev 45120 real-device acceptance is HUMAN-owned and must not block, be waited on, or be claimed by the agent. Preserve evidence and worktree, then finish applicable cleanup.`
+      ? `${options.materialize === false ? 'Do not materialize (--no-materialize).' : 'Automatically materialize merged changes into the development app (~/.omnimux-dev) only through verified safe closeout.'} Recheck current task authorization, base/head and independent review; resolve completion gaps: ${(evidence.completionGaps || ['applicable delivery evidence must be rechecked']).join('; ')}. The agent-side delivery gate is this task's isolated-worktree real-browser web verification evidence (screenshots or structured report); Dev 45120 real-device acceptance is HUMAN-owned and must not block, be waited on, or be claimed by the agent. Preserve evidence and worktree; do not invoke legacy runtime cleanup. Complete applicable evidence and safe closeout before claiming success.`
       : options.noMerge
         ? 'Complete PR acceptance and report within --no-merge scope; do not merge or materialize.'
         : `Recheck current user scope and revocation, PR head, required static/test checks and independent review; perform authorized merge${options.materialize === false ? '; do not materialize (--no-materialize)' : ' then auto-materialize into ~/.omnimux-dev'}, requesting only missing boundary authorization.`,
@@ -68,8 +68,60 @@ export function finishMergedDelivery(root, wt, { issueId, plugin, topic, ...evid
   if (evidence.merged?.state !== 'MERGED' || !evidence.merged.mergedAt || !evidence.merged.mergeCommit?.oid) {
     throw new PipelineError('Delivery requires confirmed MERGED identity')
   }
-  if (evidence.reports.dev.required) {
-    return handoffToAgent(root, issueId, { ...evidence, materialized: false }, options, 'merged-confirmed')
+  const saved = readState(root, issueId) || {}
+  const reports = evidence.reports || {}
+  const paths = evidence.changedFiles ?? saved.changedFiles ?? reports.qa?.report?.changedFiles
+  const completionGaps = []
+  const validPaths = Array.isArray(paths) && paths.length > 0 && paths.every(file =>
+    typeof file === 'string' && file.trim() === file && file && !file.includes('\\') &&
+    !/^(?:\/|[A-Za-z]:)/.test(file) && file.split('/').every(part => part && part !== '.' && part !== '..'))
+  if (!validPaths) completionGaps.push('changed-file scope is missing or invalid')
+  const matrix = validPaths ? deriveImpactMatrix(paths) : null
+  const staticReport = reports.qa?.report
+  const dimensions = ['syntax', 'lifecycle', 'security', 'tokens', 'guards'].map(name => staticReport?.dimensions?.[name])
+  if (reports.qa?.pass !== true || staticReport?.pass !== true ||
+      dimensions.some(check => check?.pass !== true) ||
+      Object.values(staticReport?.dimensions || {}).some(check => check?.pass !== true)) {
+    completionGaps.push('static QA has no explicit passing report')
+  }
+  for (const command of ['test:gates', 'check:boundaries', 'verify:stages']) {
+    const checks = Array.isArray(reports.integration)
+      ? reports.integration.filter(check => check?.command === 'pnpm' && check.args?.length === 1 && check.args[0] === command) : []
+    if (checks.length !== 1 || checks[0].status !== 0) completionGaps.push(`integration ${command} has not passed`)
+  }
+  if (!Array.isArray(reports.integration) || reports.integration.some(check => check?.status !== 0)) {
+    completionGaps.push('integration checks include failed or unknown results')
+  }
+  const packages = validPaths ? pluginNamesFromChanges(paths) : []
+  if (packages.length === 0 && plugin && plugin !== 'common') packages.push(plugin)
+  for (const packageName of packages) {
+    const tests = Array.isArray(reports.tests) ? reports.tests.filter(test => test?.packageName === packageName) : []
+    if (tests.length !== 1 || tests[0].status !== 0 || !Number.isInteger(tests[0].tests) ||
+        tests[0].tests <= 0 || tests[0].passed !== tests[0].tests || tests[0].failed !== 0 || tests[0].skipped !== 0) {
+      completionGaps.push(`package ${packageName} has no complete passing tests`)
+    }
+  }
+  if (!Array.isArray(reports.tests) || reports.tests.some(test => test?.status !== 0 ||
+      !Number.isInteger(test.tests) || test.tests <= 0 || test.passed !== test.tests || test.failed !== 0 || test.skipped !== 0)) {
+    completionGaps.push('test reports are missing, failed or incomplete')
+  }
+  for (const [name, check] of Object.entries(reports)) {
+    // Human Dev acceptance is separate. Other declared requirements cannot disappear.
+    if (name === 'dev' || name === 'browser' || check?.required !== true) continue
+    if (check.pass !== true || check.status && check.status !== 'passed') completionGaps.push(`required ${name} has not passed`)
+    if (name === 'runtime') completionGaps.push('required runtime evidence needs a trusted current receipt, not a pass field')
+  }
+  if (matrix?.dimensions.browser.required || reports.browser?.required === true) {
+    // No trusted current-worktree receipt consumer is connected here yet.
+    completionGaps.push('required worktree browser evidence needs a trusted current receipt, not a pass field')
+  }
+  if (validPaths && (requiresDev(paths) || paths.some(file => /^plugins\/[^/]+\/(?:skills|catalog)\//.test(file))) ||
+      reports.impactMatrix?.needsMaterialization === true || evidence.needsMaterialization === true) {
+    completionGaps.push('runtime changes require verified safe closeout; legacy cleanup is unsafe')
+  }
+  if (reports.dev?.required === true) completionGaps.push('unexpected Agent Dev requirement needs applicability review')
+  if (completionGaps.length > 0) {
+    return handoffToAgent(root, issueId, { ...evidence, completionGaps }, options, 'merged-confirmed')
   }
   cleanup(wt, plugin, topic, issueId, evidence.pr, { ...options, materialize: false })
   transitionIssue(issueId, 'status:auto-merged', options, [`risk:${evidence.risk.tier}`])
@@ -193,8 +245,8 @@ export async function executePipeline(options) {
     saveState(repoRoot, options.issueId, 'auto-merge-pending', 'merged-confirmed', { merged })
     const delivery = finishMergedDelivery(repoRoot, wt, { issueId: options.issueId, plugin, topic, commit, risk, pr, merged, reports }, options)
     process.stdout.write(delivery.state === 'ready-for-agent'
-      ? `\n✓ Issue #${options.issueId} 已确认 MERGED；Dev 验收 pending，现场交给协调 Agent，未物化或清理\n`
-      : `\n✓ Issue #${options.issueId} 已确认 MERGED；Dev 不适用，已完成收尾\n`)
+      ? `\n✓ Issue #${options.issueId} 已确认 MERGED；适用证据或安全收尾待补，现场交给协调 Agent，未物化或清理\n`
+      : `\n✓ Issue #${options.issueId} 已确认 MERGED；适用静态证据通过，无 App 物化需求，已完成收尾\n`)
     return { ...delivery, issue, plugin, topic }
   } catch (error) {
     if (stateWritten) {

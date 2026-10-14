@@ -31,6 +31,26 @@ import { evaluateVerdict } from './ci-verdict.mjs'
 import { deriveImpactMatrix, postMergeAcceptance } from './impact-matrix.mjs'
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..')
+
+function passingDeliveryReports(files = ['docs/guide.md']) {
+  const acceptance = postMergeAcceptance(deriveImpactMatrix(files))
+  return {
+    qa: { pass: true, report: {
+      pass: true, changedFiles: files,
+      dimensions: {
+        syntax: { pass: true }, lifecycle: { pass: true }, security: { pass: true },
+        tokens: { pass: true }, guards: { pass: true },
+      },
+    } },
+    integration: [
+      { command: 'pnpm', args: ['test:gates'], status: 0 },
+      { command: 'pnpm', args: ['check:boundaries'], status: 0 },
+      { command: 'pnpm', args: ['verify:stages'], status: 0 },
+    ],
+    tests: [], browser: acceptance.browser, dev: acceptance.dev,
+  }
+}
+
 describe('OmniMux 自动化交付流水线与质量门禁套件', () => {
   it('auto-qa-gate.mjs 脚本存在且支持 JSON 输出模式与五维指标', () => {
     const qaScript = join(here, 'auto-qa-gate.mjs')
@@ -330,30 +350,44 @@ allow-skips: false
     try {
       for (const files of [['plugins/a/client/View.js'], ['plugins/a/src/server.js']]) {
         for (const materialize of [true, false]) {
-          writeState(root, '866', { state: 'merged-confirmed', runKey: 'run', worktree: '/task' })
-          const reports = postMergeAcceptance(deriveImpactMatrix(files))
-          const evidence = { issueId: '866', plugin: 'a', topic: 'task', reports, risk: { tier: 'R2' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }
+          writeState(root, '866', {
+            state: 'merged-confirmed', runKey: 'run', baseSha: 'base', worktree: '/task', branch: 'task',
+            commit: { headSha: 'head' }, review: { reportPath: 'independent-review.md', pass: true },
+          })
+          const reports = passingDeliveryReports(files)
+          reports.tests = [{ packageName: 'a', status: 0, tests: 3, passed: 3, failed: 0, skipped: 0 }]
+          const evidence = { issueId: '866', plugin: 'a', topic: 'task', changedFiles: files, reports, risk: { tier: 'R2' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }
           const calls = []
           const cleanups = []
           const result = finishMergedDelivery(root, { wtDir: '/task' }, evidence, {
             materialize, execCommand: (command, args) => { calls.push([command, args]); return { status: 0 } },
           }, (wt, plugin, topic, issueId, pr, options) => { cleanups.push({ issueId, pr, options }) })
-          // Dev acceptance is human-owned, so it is not-applicable for the agent rather than pending:
-          // merged delivery finishes without waiting on it and never materializes on the agent's behalf.
+          // Human Dev acceptance stays separate; missing Agent evidence must preserve the workspace.
           assert.equal(reports.dev.required, false)
           assert.equal(reports.dev.status, 'not-applicable')
           assert.equal(reports.dev.pass, null)
-          assert.equal(result.state, 'succeeded')
-          assert.equal(result.materialized, false)
-          assert.equal('handoff' in result, false)
-          assert.equal(cleanups.length, 1)
-          assert.equal(cleanups[0].options.materialize, false)
-          assert.equal(cleanups[0].issueId, '866')
-          assert.equal(cleanups[0].pr.number, 867)
+          assert.equal(result.state, 'ready-for-agent')
+          assert.notEqual(result.materialized, true)
+          assert.equal(result.handoff.owner, 'coordinating-agent')
+          assert.equal(result.handoff.materializeProhibited, !materialize)
+          assert.equal(result.handoff.mergeProhibited, true)
+          assert.equal(cleanups.length, 0)
+          assert.equal(result.runKey, 'run')
+          assert.equal(result.baseSha, 'base')
+          assert.equal(result.commit.headSha, 'head')
+          assert.deepEqual(result.review, { reportPath: 'independent-review.md', pass: true })
+          assert.deepEqual(result.reports, reports)
+          assert.deepEqual(result.changedFiles, files)
           assert.equal(result.worktree, '/task')
           assert.equal(result.merged.mergeCommit.oid, 'merge')
+          assert.deepEqual(readState(root, '866'), result)
+          assert.ok(result.completionGaps.length > 0)
+          assert.match(result.handoff.nextAction, /Preserve evidence and worktree/)
           assert.equal(calls.length, 1)
-          assert.ok(calls[0][1].includes('status:auto-merged'))
+          assert.equal(calls[0][0], 'gh')
+          assert.deepEqual(calls[0][1].slice(0, 3), ['issue', 'edit', '866'])
+          assert.ok(calls[0][1].includes('status:qa-review'))
+          assert.doesNotMatch(calls[0][1].join(' '), /--add-label status:auto-merged(?: |$)/)
         }
       }
       writeState(root, '866', { state: 'merged-confirmed' })
@@ -391,15 +425,52 @@ allow-skips: false
     const root = mkdtempSync(join(tmpdir(), 'pipeline-docs-finish-'))
     try {
       writeState(root, '866', { state: 'merged-confirmed' })
-      const reports = postMergeAcceptance(deriveImpactMatrix(['docs/guide.md']))
+      const reports = passingDeliveryReports(['docs/guide.md'])
       let cleaned = false
-      const result = finishMergedDelivery(root, {}, { issueId: '866', reports, risk: { tier: 'R3' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }, { materialize: true, execCommand: () => ({ status: 0 }) }, (_wt, _plugin, _topic, _issue, _pr, options) => {
+      const result = finishMergedDelivery(root, {}, { issueId: '866', changedFiles: ['docs/guide.md'], reports, risk: { tier: 'R3' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }, { materialize: true, execCommand: () => ({ status: 0 }) }, (_wt, _plugin, _topic, _issue, _pr, options) => {
         cleaned = true; assert.equal(options.materialize, false)
       })
       assert.equal(cleaned, true)
       assert.equal(result.state, 'succeeded')
       assert.equal(result.materialized, false)
       assert.equal(result.reports.dev.status, 'not-applicable')
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+  it('incomplete static evidence never triggers post-merge cleanup', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pipeline-static-incomplete-'))
+    try {
+      const reports = passingDeliveryReports()
+      reports.qa.report.dimensions.security.pass = false
+      let cleanupCalls = 0
+      const result = finishMergedDelivery(root, {}, { issueId: '866', plugin: 'common', changedFiles: ['docs/guide.md'], reports, risk: { tier: 'R3' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }, { materialize: false, execCommand: () => ({ status: 0 }) }, () => { cleanupCalls++ })
+      assert.equal(result.state, 'ready-for-agent')
+      assert.equal(cleanupCalls, 0)
+      assert.equal(result.handoff.materializeProhibited, true)
+      assert.equal(result.completionGaps.includes('static QA has no explicit passing report'), true)
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+  it('self-reported runtime success cannot replace a trusted current receipt', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pipeline-runtime-unproven-'))
+    try {
+      const reports = passingDeliveryReports()
+      reports.runtime = { required: true, status: 'passed', pass: true }
+      let cleanupCalls = 0
+      const result = finishMergedDelivery(root, {}, { issueId: '866', plugin: 'common', changedFiles: ['docs/guide.md'], reports, risk: { tier: 'R3' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }, { execCommand: () => ({ status: 0 }) }, () => { cleanupCalls++ })
+      assert.equal(result.state, 'ready-for-agent')
+      assert.equal(cleanupCalls, 0)
+      assert.equal(result.completionGaps.includes('required runtime evidence needs a trusted current receipt, not a pass field'), true)
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+  it('human development acceptance remains independent of complete document evidence', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pipeline-human-dev-independent-'))
+    try {
+      const reports = passingDeliveryReports()
+      reports.dev = { required: false, status: 'failed', pass: false }
+      let cleanupCalls = 0
+      const result = finishMergedDelivery(root, {}, { issueId: '866', plugin: 'common', changedFiles: ['docs/guide.md'], reports, risk: { tier: 'R3' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }, { materialize: false, execCommand: () => ({ status: 0 }) }, () => { cleanupCalls++ })
+      assert.equal(result.state, 'succeeded')
+      assert.equal(result.materialized, false)
+      assert.equal(cleanupCalls, 1)
     } finally { rmSync(root, { recursive: true, force: true }) }
   })
   it('obsolete pre-merge browser CLI options are rejected without affecting risk or scope options', () => {
