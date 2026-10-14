@@ -31,6 +31,11 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
   const normalizedPath = (filePath || '').replace(/\\/g, '/');
   const code = content || '';
 
+  // 任务规格不是可执行测试；文档中的代码示例也不是生产写入。
+  if (/\.md$/i.test(normalizedPath)) {
+    return { permissionDecision: 'allow' };
+  }
+
   // 0. 检查是否命中已批准的豁免令牌 (Exemption Token)
   for (const ex of exemptions) {
     if (ex.filePath === normalizedPath && ex.status === 'approved') {
