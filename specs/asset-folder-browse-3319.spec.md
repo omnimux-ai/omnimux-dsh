@@ -10,7 +10,7 @@
 复用SubjectLibraryView现有卡片样式和MediaThumb，在集合内显示文件列表及返回导航。AssetsDrawer从整体导入改为选择文件回调。现有instantiate主体接口新增可选fileIds过滤，校验所选ID存在且可见，未传保留显式旧工具批量行为；浏览进入绝不调用写接口。
 
 ## 命令
-工作流包build/test/typecheck；node --test定向服务端/组件测试；Stage、anti-slop、产品基线；正式隔离完整应用入口tests/e2e/asset-folder-browse.e2e.test.mjs；git diff --check。复用已存在任务私有正式安装与ego驱动，不启动共享Dev测试。
+工作流包build/test/typecheck；node --test定向服务端/组件测试；Stage、anti-slop、产品基线；正式隔离完整应用入口tests/e2e/asset-subject-import.e2e.test.mjs；git diff --check。复用已存在任务私有正式安装与ego驱动，不启动共享Dev测试。
 
 ## 风格与测试
 复用已有素材预览、样式、主体映射和导入，不新造平行资源库。测试先行验证进入不导入、选一图只入一图、返回及无文件；服务端选ID白名单、不支持ID、未绑定画布原图不损失；端到端合成两图集合进入零节点，点一图一节点，刷新仍一节点。
