@@ -307,6 +307,7 @@
     "auto-pipeline-metadata.mjs",
     "auto-pipeline-runtime.mjs",
     "auto-pipeline-worktree.mjs",
+    "test-authoring-inspection.mjs",
     "automation-alpha-verification.test.mjs",
     "batch-generate-home-covers.mjs",
     "capture-media-preview-evidence.mjs",
