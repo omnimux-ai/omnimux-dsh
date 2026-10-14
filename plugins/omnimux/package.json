@@ -29,12 +29,15 @@
     "test:e2e": "node --test tests/e2e/*.e2e.test.js"
   },
   "dependencies": {
+    "@aws-crypto/sha256-js": "5.2.0",
+    "@jsquash/webp": "1.5.0",
+    "@smithy/signature-v4": "5.7.4",
     "aigc-provider-runtime-kit": "^0.2.0",
     "blobatar": "^0.2.0",
     "dsh-ui-kit": "file:../../packages/dsh-ui-kit",
-    "@jsquash/webp": "1.5.0",
-    "image-size": "2.0.4",
     "exif-reader": "2.0.3",
+    "image-size": "2.0.4",
+    "ipaddr.js": "2.5.0",
     "jpeg-js": "0.4.4",
     "pngjs": "7.0.0",
     "ws": "^8.21.0",

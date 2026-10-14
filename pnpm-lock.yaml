@@ -74,12 +74,18 @@ importers:
 
   plugins/omnimux:
     dependencies:
+      '@aws-crypto/sha256-js':
+        specifier: 5.2.0
+        version: 5.2.0
       '@deepseek-ai/dsh-client-ui-primitives':
         specifier: '>=0.1.0-rc.6'
-        version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
+        version: 0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)
       '@jsquash/webp':
         specifier: 1.5.0
         version: 1.5.0
+      '@smithy/signature-v4':
+        specifier: 5.7.4
+        version: 5.7.4
       aigc-provider-runtime-kit:
         specifier: ^0.2.0
         version: 0.2.0
@@ -88,13 +94,16 @@ importers:
         version: 0.2.0(react@18.3.1)
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
-        version: link:../../packages/dsh-ui-kit
+        version: file:packages/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       exif-reader:
         specifier: 2.0.3
         version: 2.0.3
       image-size:
         specifier: 2.0.4
         version: 2.0.4
+      ipaddr.js:
+        specifier: 2.5.0
+        version: 2.5.0
       jpeg-js:
         specifier: 0.4.4
         version: 0.4.4
@@ -103,10 +112,10 @@ importers:
         version: 7.0.0
       react:
         specifier: ^18.2.0
-        version: 18.3.1
+        version: 19.2.8
       react-dom:
         specifier: ^18.2.0
-        version: 18.3.1(react@18.3.1)
+        version: 19.2.8(react@19.2.8)
       ws:
         specifier: ^8.21.0
         version: 8.21.0
