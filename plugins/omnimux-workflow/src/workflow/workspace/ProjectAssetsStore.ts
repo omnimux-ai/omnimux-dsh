@@ -590,7 +590,21 @@ export function createProjectAssetsStore(opts: {
       if (!detail) {
         throw new WorkflowStoreError('not-found', `subject ${subjectId} not found`);
       }
-      const visible = (detail.files ?? []).filter((file) => file && file.visible !== false);
+      let visible = (detail.files ?? []).filter((file) => file && file.visible !== false);
+      if (payload.fileIds !== undefined) {
+        if (!Array.isArray(payload.fileIds) || payload.fileIds.length === 0
+          || payload.fileIds.some((id) => typeof id !== 'string' || !id.trim())) {
+          throw new WorkflowStoreError('invalid-id', '请选择要加入的素材文件');
+        }
+        const selectedIds = new Set(payload.fileIds);
+        if ([...selectedIds].some((id) => !visible.some((file) => file.id === id && file.kind !== 'directory'))) {
+          throw new WorkflowStoreError('invalid-id', '所选素材文件不可用，请刷新后重试');
+        }
+        visible = visible.filter((file) => file.id && selectedIds.has(file.id));
+        if (visible.some((file) => !file.real_path || !statSync(file.real_path).isFile())) {
+          throw new WorkflowStoreError('invalid-path', '请选择具体素材文件，不能导入整个文件夹');
+        }
+      }
       const sources = visible
         .map((file) => String(file.real_path || '').trim())
         .filter(Boolean);
