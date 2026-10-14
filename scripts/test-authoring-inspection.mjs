@@ -32,11 +32,40 @@ function contextOf(node) {
   return null
 }
 
+// Roles only: genuine references with local shadowing still conservatively match by name.
+function referenceIdentifiers(value, references = new WeakSet(), declaration = false) {
+  if (Array.isArray(value)) { value.forEach(child => referenceIdentifiers(child, references, declaration)); return references }
+  if (!value || typeof value !== 'object') return references
+  if (value.type === 'Identifier') { if (!declaration) references.add(value); return references }
+  if (['ImportSpecifier', 'ImportDefaultSpecifier', 'ImportNamespaceSpecifier', 'ImportAttribute', 'MetaProperty'].includes(value.type)) return references
+  for (const [key, child] of Object.entries(value)) {
+    if (['Property', 'MethodDefinition', 'PropertyDefinition'].includes(value.type) && key === 'key') {
+      if (value.computed) referenceIdentifiers(child, references)
+      continue
+    }
+    if (value.type === 'MemberExpression' && key === 'property' && !value.computed) continue
+    if (['LabeledStatement', 'BreakStatement', 'ContinueStatement'].includes(value.type) && key === 'label') continue
+    if (value.type === 'ExportSpecifier' && key === 'exported') continue
+    const binding = value.type === 'VariableDeclarator' && key === 'id'
+      || functions.has(value.type) && (key === 'id' || key === 'params')
+      || ['ClassDeclaration', 'ClassExpression'].includes(value.type) && key === 'id'
+      || value.type === 'CatchClause' && key === 'param'
+      || declaration && (value.type === 'ObjectPattern' && key === 'properties'
+        || value.type === 'ArrayPattern' && key === 'elements'
+        || value.type === 'Property' && key === 'value'
+        || value.type === 'RestElement' && key === 'argument'
+        || value.type === 'AssignmentPattern' && key === 'left')
+    referenceIdentifiers(child, references, binding)
+  }
+  return references
+}
+
 /** Collect the existing bounded risk rules, not a general JavaScript dataflow model. */
 function collectRisks(code, { resolveImport } = {}) {
   let ast
   try { ast = parse(code, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true }) }
   catch { return { reason: 'unsupported-or-incomplete-test-syntax' } }
+  const references = referenceIdentifiers(ast)
   const risks = []
   const runners = new Set(['test', 'it', 'describe'])
   const imports = new Map()
@@ -78,14 +107,14 @@ function collectRisks(code, { resolveImport } = {}) {
     }
     function risk(reason) {
       const anchor = (parent?.type === 'CallExpression' || parent?.type === 'NewExpression') && parent.callee === node ? parent : node
-      const detail = canonical({ node: anchor, contexts: nextContexts })
       const names = new Set()
       function identifiers(value) {
         if (!value || typeof value !== 'object') return
-        if (value.type === 'Identifier') names.add(value.name)
+        if (value.type === 'Identifier' && references.has(value)) names.add(value.name)
         for (const child of Object.values(value)) if (Array.isArray(child)) child.forEach(identifiers); else identifiers(child)
       }
-      identifiers(detail)
+      identifiers({ node: anchor, contexts: nextContexts })
+      const detail = canonical({ node: anchor, contexts: nextContexts })
       const bindings = [...names].filter(name => imports.has(name)).sort().map(name => imports.get(name))
       risks.push({ reason, fingerprint: JSON.stringify(canonical({ reason, detail, bindings })) })
     }

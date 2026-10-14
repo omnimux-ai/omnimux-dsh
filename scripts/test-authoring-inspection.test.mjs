@@ -122,6 +122,82 @@ test('unused known execution imports new spreads and unsupported candidates rema
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
 })
 
+test('pattern-only names do not bind an old dynamic import to new static items', () => {
+  const before = "test('read', async () => { const { readFileSync } = await import('node:fs'); readFileSync(path) })"
+  const after = "import { readFileSync, statSync, lstatSync, realpathSync } from 'node:fs'; " + before
+  assert.equal(inspectTestAuthoringDelta(before, after).allowed, true)
+  assert.equal(inspectTestAuthoring(after).allowed, false)
+})
+
+test('declarations and noncomputed names are not references in risk bodies or contexts', () => {
+  for (const before of [
+    "async function read() { const { safeApi: local, nested: [other, ...rest] } = await import('./data.mjs') }",
+    "async function read() { const [safeApi = 1, ...rest] = await import('./data.mjs') }",
+    "async function read() { const { other: safeApi } = await import('./data.mjs') }",
+    "async function read() { const { nested: [safeApi, ...rest] } = await import('./data.mjs') }",
+    "function read(safeApi, { nested: [other] }, ...rest) { consume([...values]) }",
+    "function read(...safeApi) { consume([...values]) }",
+    "consume((safeApi) => [...values])",
+    "try { step() } catch (safeApi) { consume([...values]) }",
+    "consume(function safeApi() { return [...values] })",
+    "consume(class safeApi extends factory([...values]) {})",
+    "try { step() } catch ({ safeApi }) { consume([...values]) }",
+    "consume({ safeApi: [...values] })",
+    "consume({ safeApi() { return [...values] } })",
+    "class Example { safeApi = [...values] }",
+    "consume(object.safeApi, [...values])",
+    "safeApi: for (;;) { consume([...values]); break safeApi }",
+    "import { safeApi as local } from './data.mjs'; consume([...values])",
+    "const value = 'safeApi'; consume([...values])",
+  ]) {
+    const after = "import { safeApi } from './safeApi'; " + before
+    assert.equal(inspectTestAuthoringDelta(before, after).allowed, true, before)
+    assert.equal(inspectTestAuthoring(after).allowed, false, before)
+  }
+})
+
+test('shorthand computed and default expressions remain genuine references', () => {
+  for (const before of [
+    'consume({ safeApi }, [...values])',
+    'consume({ [safeApi]: 1 }, [...values])',
+    'consume(object[safeApi], [...values])',
+    "async function read() { const { [safeApi]: local } = await import('./data.mjs') }",
+    "async function read() { const { local = safeApi } = await import('./data.mjs') }",
+    "async function read() { const [local = safeApi] = await import('./data.mjs') }",
+    'function read(local = safeApi) { consume([...values]) }',
+    'function read({ local = safeApi }) { consume([...values]) }',
+    'function read({ [safeApi]: local }) { consume([...values]) }',
+    'try { step() } catch ({ local = safeApi }) { consume([...values]) }',
+    'consume({ safeApi = fallback } = input, [...values])',
+    'consume({ safeApi }, [...safeApi])',
+    'consume(safeApi, [...values])',
+  ]) {
+    const after = "import { safeApi } from './domain.mjs'; " + before
+    assert.equal(inspectTestAuthoringDelta(before, before).allowed, true, before)
+    assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, before)
+  }
+})
+
+test('genuine locally shadowed references remain conservatively associated without scope analysis', () => {
+  for (const before of [
+    'function read(safeApi) { consume([...safeApi]) }',
+    'function read() { const safeApi = values; consume([...safeApi]) }',
+    '{ let safeApi = values; consume([...safeApi]) }',
+    'function read(safeApi, local = safeApi) { consume([...values]) }',
+  ]) assert.equal(inspectTestAuthoringDelta(before, "import { safeApi } from './domain.mjs'; " + before).allowed, false, before)
+})
+
+test('role filtering preserves context slots occurrences risk multiplicity and new execution denials', () => {
+  for (const [before, after] of [
+    ["function first(safeApi) { consume([...values]) }", "function second(safeApi) { consume([...values]) }"],
+    ["consume(() => [...values], () => 1)", "consume(() => 1, () => [...values])"],
+    ["function read() { consume([...values]) }", "function read() { consume([...values]) } function readAgain() { consume([...values]) }"],
+    ["consume([...values])", "consume([...values]); consume([...values])"],
+    ["consume([...values])", "consume([...values]); eval(code)"],
+    ["consume([...values])", "import vm from 'node:vm'; consume([...values])"],
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+})
+
 test('import declaration risk bodies and contexts remain conservative when adding siblings', () => {
   for (const [before, after] of [
     ["import { constructor as create } from './domain.mjs'; create(ctx)", "import { constructor as create, safeApi } from './domain.mjs'; create(ctx)"],
