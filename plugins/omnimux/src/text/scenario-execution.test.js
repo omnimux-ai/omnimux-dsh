@@ -104,6 +104,13 @@ test('custom text model remains outside the official whitelist and uses its boun
   assert.deepEqual(h.calls.agent, [])
 })
 
+test('BYOK wire model preserves a user id that also happens to be an official alias', async () => {
+  const h = harness(getter(customSettings()))
+  const result = await h.execute({ model: 'grok-imagine-image-2', group: 'byok-custom' })
+  assert.equal(h.calls.http.at(0).body.model, 'grok-imagine-image-2')
+  assert.equal(result.model, 'grok-imagine-image-2')
+})
+
 test('explicit BYOK model wins over saved model and toolModel', async () => {
   const value = customSettings()
   value.toolModel = 'cpa:tool-default'
@@ -190,6 +197,18 @@ test('official inline and field conflict rejects with zero dependencies', async 
 })
 test('official outside allowed pool rejects with zero dependencies', async () => {
   await rejectedIntent({ model: 'gemini-3.8-flash@standard', allowedGroups: ['cheap'] })
+})
+
+test('inline official and local field intents cannot be exchanged before a local call', async () => {
+  const h = harness(getter({ runtimeMode: 'agent', runtimeAgentId: 'codex', runtimeAgentVerified: true }))
+  await assert.rejects(() => h.execute({ model: 'custom-model@standard', group: 'agent' }), { code: 'omnimux-invalid-request' })
+  zeroDependencies(h.calls)
+})
+
+test('inline local and official field intents cannot be exchanged before any dependency', async () => {
+  const h = harness(getter({ runtimeMode: 'agent', runtimeAgentId: 'codex', runtimeAgentVerified: true }))
+  await assert.rejects(() => h.execute({ model: 'custom-model@agent', group: 'standard' }), { code: 'omnimux-invalid-request' })
+  zeroDependencies(h.calls)
 })
 
 test('legacy local alias cannot erase a conflicting field channel', async () => {

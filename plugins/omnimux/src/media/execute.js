@@ -30,7 +30,7 @@ import { hostLocalAssetsIfNeeded, isRemoteGateway } from './gateway-upload.js'
 import { appendMediaTaskLog } from './task-log.js'
 import { resolveScenarioChoice, resolveMediaProviderChoice, DEFAULT_MEDIA_MODELS, assertScenarioRequestIntent } from '../settings/runtime-mode.js'
 import { resolveExecutionPlan } from './execution-plan.js'
-import { parseModelAndGroup } from '../catalog/serving/channel-groups.js'
+import { parseModelAndGroup, getModelChannelGroups } from '../catalog/serving/channel-groups.js'
 export { probeMediaAssets } from './asset-probe.js'
 export { hostLocalAssetsIfNeeded, uploadMediaToGateway, isLocalMediaSource } from './gateway-upload.js'
 
@@ -290,7 +290,8 @@ export async function executeOmnimuxMedia(capability, input) {
           route.apiKey = hit.value.trim()
           input = { ...input, env: { [credentialRef]: route.apiKey } }
         } else {
-          input = { ...input, env: {} }
+          route.apiKey = undefined
+          throw new OmnimuxError('omnimux-unconfigured', '原任务来源的当前专属凭据未配置；不会沿用旧配置密钥')
         }
       }
     } else {
@@ -631,6 +632,28 @@ export async function executeOmnimuxMedia(capability, input) {
     const runtime = input.runtime ?? createProtocolRuntime(candidateRoute, input.fetcher, auth.apiKey, onSubmitted)
     try {
       acceptedRoute = candidateRoute
+      if (!isByok && guardRequest) {
+        const candidateRow = getModelChannelGroups(route.modelId).find((row) =>
+          (row.wireModel || route.modelId) === candidateRoute.modelId
+          && (row.wireGroup || row.id) === candidateRoute.group)
+        const constraints = candidateRow?.constraints
+        if (constraints?.operations?.length && !constraints.operations.includes(guardPlan.operationId)) {
+          throw new OmnimuxError('omnimux-invalid-request', '所选备用线路不支持此生成操作')
+        }
+        for (const [key, domain] of Object.entries(constraints?.parameters || {})) {
+          const value = guardRequest[key]
+          if (value === undefined) continue
+          if ((domain.fixed !== undefined && value !== domain.fixed)
+            || (Array.isArray(domain.only) && !domain.only.includes(value))
+            || (typeof domain.min === 'number' && value < domain.min)
+            || (typeof domain.max === 'number' && value > domain.max)) {
+            throw new OmnimuxError('omnimux-invalid-request', `${key} 不满足备用线路限制${domain.fixed !== undefined ? `：${domain.fixed}` : ''}`)
+          }
+        }
+        assertGuardSubmit({ ...guardRequest, group: candidateRow?.id || candidateRoute.group }, {
+          seam, capability, outputType: capability, requireListed: input.requireListed,
+        })
+      }
       // Pools may cross image protocols. Re-admit each candidate against the
       // original logical intent; never reuse beta size fields on a pixel line.
       let candidateInput = finalInput

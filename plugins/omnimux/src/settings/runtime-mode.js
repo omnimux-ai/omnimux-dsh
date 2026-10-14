@@ -47,7 +47,9 @@ export function assertScenarioRequestIntent(request) {
     || req.model.split('@').length > 2 || req.model.startsWith('@') || req.model.endsWith('@'))) throw new Error('模型选择无效')
   const inline = typeof req.model === 'string' && req.model.includes('@') ? req.model.split('@')[1].trim().toLowerCase() : ''
   const group = textValue(req.group).toLowerCase()
-  if (inline && group && inline !== group && (inline.startsWith('byok-') || group.startsWith('byok-'))) throw new Error('所选渠道相互冲突')
+  const localAliases = new Set(['agent', 'local'])
+  if (inline && group && inline !== group && !(localAliases.has(inline) && localAliases.has(group))
+    && (inline.startsWith('byok-') || group.startsWith('byok-') || localAliases.has(inline) || localAliases.has(group))) throw new Error('所选渠道相互冲突')
   if (req.allowedGroups !== undefined && (!Array.isArray(req.allowedGroups)
     || req.allowedGroups.some((item) => typeof item !== 'string' || !item.trim()))) throw new Error('允许渠道范围无效')
   const target = group || inline

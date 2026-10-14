@@ -1068,8 +1068,15 @@ export function resolveModelChannelGroups(modelId, runtimeSettings) {
     capFlag = 'runtimeMediaAudio'
   }
 
-  // 1. 检查主配置中的媒体 Provider，未知模态模型在非全关情况下保持健壮可用
-  if (runtimeSettings.runtimeKeyVerified === true) {
+  // Current provider records and explicit scenario choices outrank legacy primary fields.
+  const hasBindings = runtimeSettings.scenarioBindings && typeof runtimeSettings.scenarioBindings === 'object'
+  const hasPrimaryRecord = Array.isArray(runtimeSettings.byokProviders)
+    && runtimeSettings.byokProviders.some((item) => item && typeof item.provider === 'string'
+      && item.provider.trim().toLowerCase() === (runtimeSettings.runtimeMediaProvider || 'fal'))
+  const primaryProvider = typeof runtimeSettings.runtimeMediaProvider === 'string'
+    ? runtimeSettings.runtimeMediaProvider.trim().toLowerCase() : 'fal'
+  if (!hasBindings && (!hasPrimaryRecord || isByokProviderVerifiedAndCapReady(primaryProvider, capability, runtimeSettings))
+    && runtimeSettings.runtimeKeyVerified === true) {
     const allFalse =
       runtimeSettings.runtimeMediaImage === false &&
       runtimeSettings.runtimeMediaVideo === false &&
@@ -1279,8 +1286,11 @@ function isByokProviderVerifiedAndCapReady(provider, capability, runtimeSettings
     }
   }
 
-  // 2. 检查主配置中的媒体 Provider (runtimeKeyVerified)
-  if (runtimeSettings.runtimeKeyVerified === true) {
+  const hasBindings = runtimeSettings.scenarioBindings && typeof runtimeSettings.scenarioBindings === 'object'
+  const hasCurrentRecord = Array.isArray(runtimeSettings.byokProviders)
+    && runtimeSettings.byokProviders.some((item) => item && typeof item.provider === 'string'
+      && item.provider.trim().toLowerCase() === normProvider)
+  if (!hasBindings && !hasCurrentRecord && runtimeSettings.runtimeKeyVerified === true) {
     const rawProvider = runtimeSettings.runtimeMediaProvider
     const mainProvider = (typeof rawProvider === 'string' && rawProvider.trim())
       ? rawProvider.trim().toLowerCase()

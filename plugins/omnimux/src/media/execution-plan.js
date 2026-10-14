@@ -3,6 +3,7 @@ import { DEFAULT_MEDIA } from './route.js'
 import { findMediaModel } from './catalog.js'
 import { resolveScenarioChoice, assertScenarioRequestIntent } from '../settings/runtime-mode.js'
 import { OmnimuxError } from './errors.js'
+import { buildModelCatalog } from '../catalog/list.js'
 
 /** @typedef {{modelId:string, channelIntent:object, isOfficialRequest:boolean, isOfficialBypass:boolean, isTaskCollect:boolean, isByok:boolean, requireListed:boolean, finalReq:object}} RouteDecision */
 
@@ -45,9 +46,12 @@ export function resolveExecutionPlan({ kind, req, current }) {
   if (!choice.configured) throw new OmnimuxError('omnimux-unconfigured', choice.reason || '此媒体用途尚未配置')
   const isOfficialRequest = choice.channel === 'official'
   const isByok = choice.channel === 'byok'
-  const modelId = requestModelId || (isOfficialRequest ? DEFAULT_MEDIA.providers.omnimux.models[kind] : choice.model)
+  const defaultField = `default${kind[0].toUpperCase()}${kind.slice(1)}Model`
+  const configuredDefault = isOfficialRequest && !requestModelId && current?.[defaultField]
+    ? buildModelCatalog({ env: serverEnv, settingsDefaults: current }).defaults[kind] : ''
+  const modelId = requestModelId || (isOfficialRequest ? configuredDefault || DEFAULT_MEDIA.providers.omnimux.models[kind] : choice.model)
   const finalReq = { ...req, provider: isOfficialRequest ? 'omnimux' : choice.provider,
-    ...(req.model || isByok ? { model: req.model || modelId } : {}),
+    ...(req.model || isByok || configuredDefault ? { model: req.model || modelId } : {}),
     ...(isOfficialRequest ? { env: serverEnv } : {}) }
   return { modelId, channelIntent, isOfficialRequest, isOfficialBypass: isOfficialRequest,
     isTaskCollect: false, isByok, requireListed: !isByok, finalReq }

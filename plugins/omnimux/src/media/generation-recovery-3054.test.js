@@ -157,6 +157,18 @@ test('3312: BYOK collection rejects pending provider save before credentials or 
     credentials: { async resolve() { calls++; return { value: 'must-not-send' } } }, fetcher: async () => { calls++; return completedImage() } }), { code: 'omnimux-unconfigured' })
   assert.equal(calls, 0); assert.equal(getMediaTaskRecord(record.taskRef).status, 'submitted')
 }))
+test('3312: current credential absence cannot revive a legacy inline Config key during collection', async () => isolated(async (home) => {
+  const record = customSeed(); let http = 0
+  const media = { defaultProvider: 'custom', providers: { custom: {
+    protocol: 'openai-media', baseUrl: 'https://custom.invalid/v1', apiKey: 'synthetic-old-config-key', models: { image: 'vendor-image' },
+  } } }
+  await assert.rejects(() => executeOmnimuxMedia('image', { taskRef: record.taskRef, dest: join(home, 'image.png'),
+    runtimeSettings: customSettings(), media, credentials: { async resolve() { return undefined } },
+    fetcher: async () => { http += 1; return completedImage() } }), { code: 'omnimux-unconfigured' })
+  assert.equal(http, 0)
+  assert.equal(getMediaTaskRecord(record.taskRef).status, 'submitted')
+}))
+
 test('3312: BYOK collection never falls back to generic or official keys when the recorded dedicated reference is absent', async () => isolated(async (home) => {
   const record = customSeed(), refs = []; let http = 0
   await assert.rejects(() => executeOmnimuxMedia('image', { taskRef: record.taskRef, dest: join(home, 'image.png'), runtimeSettings: customSettings(), media: CUSTOM_MEDIA,

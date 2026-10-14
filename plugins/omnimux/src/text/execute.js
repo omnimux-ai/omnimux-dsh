@@ -13,6 +13,7 @@ import { normalizeTextReferences } from './references.js'
 import { resolveScenarioChoice, readScenarioSettings, assertScenarioRequestIntent } from '../settings/runtime-mode.js'
 import { parseModelAndGroup, resolveRequestChannelIntent } from '../catalog/serving/channel-groups.js'
 import { runAgentText } from '../agents/local.js'
+import { buildModelCatalog } from '../catalog/list.js'
 
 /** 识别已知思考通道引导词/纯思考断言的前缀特征 */
 const REASONING_PREAMBLE_RE = /^(?:i['’]?m\s+thinking\s+through|let\s+me\s+think|thinking\s+process|thought\s*:)/i
@@ -210,6 +211,14 @@ export async function executeOmnimuxText(input) {
   // The official route — its whitelist, channel plan and submit guard — only
   // applies when the request actually rides it. A BYOK endpoint knows its own
   // model names, so none of that machinery may run for it.
+  let officialText = text
+  if (isOfficialRequest && !input.model && runtimeSettings.defaultTextModel) {
+    const catalog = buildModelCatalog({ text, gate, env: input.env || {}, settingsDefaults: runtimeSettings })
+    const savedDefault = catalog.defaults.text
+    const compatible = catalog.text.find((row) => row.id === savedDefault)
+    if (compatible && references.every((asset) => compatible.input?.includes(asset.type))) officialText = { ...text, defaultModel: savedDefault }
+    else if (references.length === 0 && savedDefault) officialText = { ...text, defaultModel: savedDefault }
+  }
   const route = useByok
     ? null
     : resolveTextRoute({
@@ -218,7 +227,7 @@ export async function executeOmnimuxText(input) {
       strategy: input.strategy,
       group: input.group,
       allowedGroups: input.allowedGroups,
-    }, text, input.env, gate)
+    }, officialText, input.env, gate)
 
   const maxTokens = typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
     ? input.maxTokens
@@ -303,7 +312,7 @@ export async function executeOmnimuxText(input) {
     }
     // The user's endpoint knows their model, not the official directory's.
     // An explicit caller model wins; otherwise the tested runtimeKeyModel goes.
-    const byokModel = inputModelId || choice.model
+    const byokModel = (typeof input.model === 'string' ? input.model.split('@')[0].trim() : '') || choice.model
     if (!byokModel) {
       throw new OmnimuxError('omnimux-unconfigured', '自备密钥缺少模型名')
     }
