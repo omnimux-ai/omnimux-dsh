@@ -43,7 +43,7 @@ function collectRisks(code, { resolveImport } = {}) {
   for (const statement of ast.body) {
     if (statement.type !== 'ImportDeclaration') continue
     for (const specifier of statement.specifiers) {
-      imports.set(specifier.local.name, statement)
+      imports.set(specifier.local.name, Object.assign({}, statement, { specifiers: [specifier] }))
       if (['node:test', 'vitest', '@jest/globals'].includes(statement.source.value)) runners.add(specifier.local.name)
     }
   }
