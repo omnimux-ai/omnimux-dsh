@@ -1,0 +1,350 @@
+{
+  "runId": "65a743d2-8455-417a-a813-c0d7bcf3129e",
+  "mode": "ui",
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-cards-issue-3300",
+  "origin": "http://127.0.0.1:50249",
+  "appPort": 50249,
+  "cdpPort": 50277,
+  "startedAt": "2026-10-14T09:34:44.191Z",
+  "completedAt": "2026-10-14T09:34:58.809Z",
+  "pass": true,
+  "summary": {
+    "mode": "ui",
+    "origin": "http://127.0.0.1:50249",
+    "evidenceLevel": "full",
+    "taskPluginsInstalled": true,
+    "taskPluginsCount": 22,
+    "seededDataDomains": [
+      "assets",
+      "assets-storage",
+      "avatar",
+      "clip",
+      "form-attachments",
+      "forms",
+      "inspirations",
+      "media-logs",
+      "media-tasks",
+      "products",
+      "publish",
+      "recipes",
+      "workflow"
+    ],
+    "realModelRequest": false,
+    "modelConfiguration": "QA模拟",
+    "seededWorkspace": "ws_qa_media"
+  },
+  "assertions": [
+    {
+      "name": "app-runtime-ready",
+      "pass": true,
+      "origin": "http://127.0.0.1:50249",
+      "evidenceLevel": "full"
+    },
+    {
+      "name": "same-origin-login",
+      "pass": true,
+      "status": 303,
+      "cookieName": "dsh-auth-zFlXJ1pRZxNRbKaK6U5a42ZhyrntPptsouILBOQjyYc"
+    },
+    {
+      "name": "chrome-cdp-listen",
+      "pass": true,
+      "port": 50277
+    },
+    {
+      "name": "auth-cookie-applied",
+      "pass": true
+    },
+    {
+      "name": "app-dom-mounted",
+      "pass": true,
+      "geometry": {
+        "visibleCount": 104,
+        "largest": {
+          "width": 1280,
+          "height": 713,
+          "tag": "DIV"
+        },
+        "vw": 1280,
+        "vh": 713,
+        "title": "OmniMux",
+        "bodyTextLength": 55
+      }
+    },
+    {
+      "name": "visible-geometry-positive",
+      "pass": true,
+      "largest": {
+        "width": 1280,
+        "height": 713,
+        "tag": "DIV"
+      },
+      "visibleCount": 104
+    },
+    {
+      "name": "runtime-modal-bypassed",
+      "pass": true
+    },
+    {
+      "name": "blank-session-guide-visible",
+      "pass": true,
+      "clickedNewSession": true
+    },
+    {
+      "name": "explore-section-visible",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "explore-cards-present",
+      "pass": true,
+      "cardCount": 40
+    },
+    {
+      "name": "asset-hub-reachable-via-library",
+      "pass": true,
+      "openedMenu": true,
+      "clickedLibrary": true,
+      "usedWorkbenchFallback": true
+    },
+    {
+      "name": "journey:类型卡独立标签与折叠保留选择",
+      "pass": true,
+      "detail": {
+        "width": 88,
+        "height": 104,
+        "bg": "rgb(249, 250, 251)",
+        "color": "rgb(15, 17, 21)"
+      }
+    },
+    {
+      "name": "journey:四列连续16像素且两三列窄屏无溢出",
+      "pass": true,
+      "detail": {
+        "count": "4",
+        "gap": "16px",
+        "width": 741,
+        "scrollWidth": 741,
+        "cards": [
+          {
+            "x": 662,
+            "top": 223,
+            "bottom": 454.28125
+          },
+          {
+            "x": 662,
+            "top": 470.28125,
+            "bottom": 686.34375
+          },
+          {
+            "x": 662,
+            "top": 702.34375,
+            "bottom": 819.390625
+          },
+          {
+            "x": 662,
+            "top": 835.390625,
+            "bottom": 1051.453125
+          },
+          {
+            "x": 662,
+            "top": 1067.453125,
+            "bottom": 1327.328125
+          },
+          {
+            "x": 662,
+            "top": 1343.328125,
+            "bottom": 1603.203125
+          },
+          {
+            "x": 662,
+            "top": 1619.203125,
+            "bottom": 1758.203125
+          },
+          {
+            "x": 662,
+            "top": 1774.203125,
+            "bottom": 1990.265625
+          },
+          {
+            "x": 662,
+            "top": 2006.265625,
+            "bottom": 2311.015625
+          },
+          {
+            "x": 851.25,
+            "top": 223,
+            "bottom": 320.78125
+          },
+          {
+            "x": 851.25,
+            "top": 336.78125,
+            "bottom": 644.921875
+          },
+          {
+            "x": 851.25,
+            "top": 660.921875,
+            "bottom": 920.796875
+          },
+          {
+            "x": 851.25,
+            "top": 936.796875,
+            "bottom": 1066.6875
+          },
+          {
+            "x": 851.25,
+            "top": 1082.6875,
+            "bottom": 1255.9375
+          },
+          {
+            "x": 851.25,
+            "top": 1271.9375,
+            "bottom": 1445.1875
+          },
+          {
+            "x": 851.25,
+            "top": 1461.1875,
+            "bottom": 1634.4375
+          },
+          {
+            "x": 851.25,
+            "top": 1650.4375,
+            "bottom": 1767.484375
+          },
+          {
+            "x": 851.25,
+            "top": 1783.484375,
+            "bottom": 2091.625
+          },
+          {
+            "x": 851.25,
+            "top": 2107.625,
+            "bottom": 2205.40625
+          },
+          {
+            "x": 1040.5,
+            "top": 223,
+            "bottom": 531.140625
+          },
+          {
+            "x": 1040.5,
+            "top": 547.140625,
+            "bottom": 855.28125
+          },
+          {
+            "x": 1040.5,
+            "top": 871.28125,
+            "bottom": 1129.953125
+          },
+          {
+            "x": 1040.5,
+            "top": 1145.953125,
+            "bottom": 1451.546875
+          },
+          {
+            "x": 1040.5,
+            "top": 1467.546875,
+            "bottom": 1698.34375
+          },
+          {
+            "x": 1040.5,
+            "top": 1714.34375,
+            "bottom": 2019.9375
+          },
+          {
+            "x": 1040.5,
+            "top": 2035.9375,
+            "bottom": 2152.1875
+          },
+          {
+            "x": 1229.75,
+            "top": 223,
+            "bottom": 396.25
+          },
+          {
+            "x": 1229.75,
+            "top": 412.25,
+            "bottom": 643.046875
+          },
+          {
+            "x": 1229.75,
+            "top": 659.046875,
+            "bottom": 774.765625
+          },
+          {
+            "x": 1229.75,
+            "top": 790.765625,
+            "bottom": 1050.640625
+          },
+          {
+            "x": 1229.75,
+            "top": 1066.640625,
+            "bottom": 1165.5
+          },
+          {
+            "x": 1229.75,
+            "top": 1181.5,
+            "bottom": 1354.75
+          },
+          {
+            "x": 1229.75,
+            "top": 1370.75,
+            "bottom": 1630.625
+          },
+          {
+            "x": 1229.75,
+            "top": 1646.625,
+            "bottom": 1819.875
+          },
+          {
+            "x": 1229.75,
+            "top": 1835.875,
+            "bottom": 2095.75
+          }
+        ]
+      }
+    },
+    {
+      "name": "journey:色块名称独立安全行",
+      "pass": true,
+      "detail": {
+        "swatchBottom": 560.5,
+        "labelTop": 560.5,
+        "labelHeight": 24,
+        "bg": "rgb(44, 44, 46)",
+        "color": "rgb(249, 250, 251)",
+        "position": "relative"
+      }
+    },
+    {
+      "name": "journey:媒体失败可读且预览独立关闭",
+      "pass": true
+    },
+    {
+      "name": "screenshot-png-verified",
+      "pass": true,
+      "dimensions": {
+        "width": 1280,
+        "height": 713
+      },
+      "bytes": 175225
+    }
+  ],
+  "screenshot": {
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/avatar-cards-issue-3300/.workbuddy/evidence/app-qa/65a743d2-8455-417a-a813-c0d7bcf3129e/app-home.png",
+    "width": 1280,
+    "height": 713,
+    "bytes": 175225
+  },
+  "errors": [],
+  "cleanup": {
+    "cleaned": true
+  },
+  "hubPath": {
+    "guideVisibleBefore": false,
+    "clickedNewSession": true,
+    "exploreVisible": true,
+    "exploreCardCount": 40,
+    "assetHubOpened": true
+  }
+}

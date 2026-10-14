@@ -1,17 +1,9 @@
 // 左栏设定面板：档位块 + 每个分类一个可折叠块。
-// 与源工作台 builder-panel.tsx 1:1：分类顺序按 category_priority（未登记 → 99），
+// 分类顺序按 category_priority（未登记 → 99），
 // 当前档位下没有可见选项的分类整块不渲染。
 
+import { useState } from 'react'
 import { OptionCard } from './OptionCard.jsx'
-
-/** 档位 id → 词条键；未登记档位直接显示 id 原文。 */
-const TIER_KEYS = {
-  normal: 'tier.normal',
-  freak: 'tier.freak',
-  total: 'tier.total',
-  cat: 'Cat',
-  dog: 'Dog',
-}
 
 /** 折叠箭头：矢量 SVG，不用 ▾ 字符。 */
 function ChevronIcon() {
@@ -36,12 +28,6 @@ function ChevronIcon() {
   )
 }
 
-/** @param {string} tier @param {(k: string) => string} t */
-function tierLabel(tier, t) {
-  const key = TIER_KEYS[tier]
-  return key ? t(key) : tier
-}
-
 /**
  * @param {{
  *   taxonomy: object,
@@ -57,6 +43,7 @@ function tierLabel(tier, t) {
  */
 export function BuilderPanel(props) {
   const { taxonomy, tier, selection, openGroups, onTier, onPick, onToggleGroup, t } = props
+  const [tierOpen,setTierOpen]=useState(true)
   const visOpts = props.visOpts
   const priority = Array.isArray(taxonomy?.category_priority)
     ? taxonomy.category_priority
@@ -71,15 +58,17 @@ export function BuilderPanel(props) {
     <div className="omx-avatar-builder">
       {/* 1. 档位块 */}
       <div className="omx-avatar-block">
-        <div className="omx-avatar-block-head">
+        <button type="button" /* exempt-ui01: 类型折叠标题复用同页分类行 */ className="omx-avatar-group-head" aria-label="角色类型" aria-expanded={tierOpen} onClick={()=>setTierOpen(value=>!value)}>
           <span className="omx-avatar-block-title">{t('tier.title')}</span>
-          <span className="omx-avatar-block-meta">{tierLabel(tier, t)}</span>
-        </div>
-        <div className="omx-avatar-block-body">
+          <span className="omx-avatar-block-meta">{taxonomy?.tier_group?.options?.length??0} 项</span>
+          <ChevronIcon />
+        </button>
+        {tierOpen?<div className="omx-avatar-block-body">
           <div className="omx-avatar-grid">
             {(taxonomy?.tier_group?.options ?? []).map((option) => (
               <OptionCard
                 key={option.id}
+                categoryId="tier"
                 kind="media"
                 option={option}
                 selected={tier === option.id}
@@ -88,7 +77,8 @@ export function BuilderPanel(props) {
               />
             ))}
           </div>
-        </div>
+          <p className="omx-avatar-type-note">头像仅为类型示意</p>
+        </div>:null}
       </div>
 
       {/* 2. 各分类块 */}
