@@ -195,6 +195,7 @@ export function apply(ctx, config) {
     // 查重（#3176）。调用方只经 ctx.get('assetLibrary') 使用，不触碰私有实现，
     // 也不另起一个库；服务缺失时调用方必须返回 unavailable。
     ctx.provide('assetLibrary', {
+      getAsset: (id) => library.getView(id),
       ingestDownloadedImage: (input) => imageIngest.ingestDownloadedImage(input),
       saveTypedAsset: async (input) => {
         const asset = await library.add({

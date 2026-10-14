@@ -34,6 +34,10 @@ for (const action of ['instantiate', 'ingest']) {
     const f = fixture();
     try {
       const ws = f.store.create('角色复刻');
+      f.store.save(ws.id, { expectedVersion: 0, nodes: [
+        { id: 'existing_a', type: 'material', position: { x: 10, y: 20 }, data: { label: '原有文本' } },
+        { id: 'existing_b', type: 'material', position: { x: 40, y: 50 }, data: { label: '原有图片' } },
+      ], edges: [{ id: 'existing_edge', source: 'existing_a', target: 'existing_b' }] });
       const before = f.store.get(ws.id);
       const request = { method: 'POST', url: '/omnimux-workflow/api/workspaces/' + ws.id + '/assets/' + action,
         origin: 'http://localhost:3000', body: action === 'instantiate'
