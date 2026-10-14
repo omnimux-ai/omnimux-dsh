@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { inspectTestAuthoring } from './test-authoring-inspection.mjs'
+import './public-plugin-apply.test.mjs'
 
 test('normal complete assertion and literal runner candidates are writable', () => {
   for (const source of [
