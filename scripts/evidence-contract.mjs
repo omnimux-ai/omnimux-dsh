@@ -277,7 +277,9 @@ function checkSnapshot(snapshot) {
 }
 
 /** Re-read target Git blobs; this mapping is an attachment, not an edit to the old snapshot. */
-export function mapCandidateToCommit(snapshot, { root, base, head }) {
+export function mapCandidateToCommit(snapshot, request) {
+  requireThat(request && Object.getPrototypeOf(request) === Object.prototype, 'INVALID_SHAPE')
+  const { root, base, head } = request
   checkSnapshot(snapshot)
   const repo = repository(root)
   requireThat(canonical(repo) === canonical(snapshot.repo), 'REPOSITORY_MISMATCH')
