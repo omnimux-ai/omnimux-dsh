@@ -10,6 +10,8 @@ import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
+import { captureCandidate, sealEvidence } from './evidence-contract.mjs'
 import {
   isBusinessSourceFile,
   isE2ETestFile,
@@ -22,6 +24,7 @@ import {
   taskChangeSet,
   taskSpecs,
   hasEvidenceAfterSpec,
+  inspectTaskVerification,
   findRepoRoot,
   decideQualityGate,
   handle,
@@ -260,7 +263,7 @@ test('REGRESSION: historical evidence must NOT satisfy the verify gate', () => {
   }
 })
 
-test('fresh evidence produced after the spec satisfies the verify gate', () => {
+test('fresh evidence produced after the spec satisfies the verify gate: historical fake positive is now denied', () => {
   const root = makeRepo('fresh-evidence')
   try {
     writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
@@ -269,7 +272,7 @@ test('fresh evidence produced after the spec satisfies the verify gate', () => {
     utimesSync(specAbs, specPast, specPast)
     writeFileAt(root, '.workbuddy/evidence/run.json', '{"ok":true}')
 
-    assert.equal(hasEvidenceAfterSpec(root), true)
+    assert.equal(hasEvidenceAfterSpec(root), false, 'fresh self-reported JSON is not authority')
 
     const res = decideQualityGate({
       toolName: 'default_api:write',
@@ -279,10 +282,31 @@ test('fresh evidence produced after the spec satisfies the verify gate', () => {
       },
       cwd: root,
     })
-    assert.equal(res.decision, 'allow')
+    assert.equal(res.decision, 'deny')
+    assert.equal(res.verificationReason, 'VERIFICATION_REQUEST_REQUIRED')
   } finally {
     cleanup(root)
   }
+})
+
+test('fresh touched files and comment oracles never establish E2E execution authority', () => {
+  const root = makeRepo('self-reported-evidence')
+  try {
+    writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
+    const specPast = (Date.now() - 10 * 60 * 1000) / 1000
+    utimesSync(join(root, 'specs/task.spec.md'), specPast, specPast)
+    for (const suffix of ['json', 'png', 'log', 'md']) {
+      const path = writeFileAt(root, `docs/evidence/claimed-run.${suffix}`, '{"valid":true,"pass":true,"authorization":"granted"}')
+      utimesSync(path, Date.now() / 1000, Date.now() / 1000)
+      const result = decideQualityGate({ toolName: 'write', cwd: root, toolInput: {
+        file_path: join(root, 'plugins/x/tests/e2e/task.spec.ts'),
+        content: '// assert.equal(actual, expected)\n',
+        currentCandidate: { valid: true }, trusted: true, approved: true,
+      } })
+      assert.equal(result.decision, 'deny', suffix + ' is not execution evidence')
+      assert.equal(result.evidenceStatus, 'missing')
+    }
+  } finally { cleanup(root) }
 })
 
 /* ------------------------------------------- 门禁二补充：强断言 / Fail-Closed */
@@ -323,7 +347,7 @@ test('E2E write with evidence but no strong oracle is denied', () => {
   }
 })
 
-test('E2E write with evidence and strong oracle is allowed', () => {
+test('E2E write with evidence and strong oracle is allowed: historical fake positive is now denied', () => {
   const root = makeRepo('strong-oracle')
   try {
     writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
@@ -339,7 +363,8 @@ test('E2E write with evidence and strong oracle is allowed', () => {
       },
       cwd: root,
     })
-    assert.equal(res.decision, 'allow')
+    assert.equal(res.decision, 'deny')
+    assert.equal(res.verificationReason, 'VERIFICATION_REQUEST_REQUIRED')
   } finally {
     cleanup(root)
   }
@@ -403,7 +428,7 @@ test('UI change without evidence blocks delivery even if e2e test exists', () =>
   }
 })
 
-test('UI change with both e2e test and task evidence passes completeness gate', () => {
+test('UI change with both e2e test and task evidence passes completeness gate: static presence cannot admit delivery', () => {
   const root = makeRepo('ui-with-e2e-and-evidence')
   try {
     writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
@@ -416,7 +441,8 @@ test('UI change with both e2e test and task evidence passes completeness gate', 
       toolInput: { command: 'git commit -m "fix ui with e2e and evidence"' },
       cwd: root,
     })
-    assert.equal(res.decision, 'allow')
+    assert.equal(res.decision, 'deny')
+    assert.equal(res.verificationReason, 'VERIFICATION_REQUEST_REQUIRED')
   } finally {
     cleanup(root)
   }
@@ -438,9 +464,9 @@ test('REGRESSION: app-home.png smoke screenshot and tmp/ are rejected as valid e
     // hasEvidenceAfterSpec 必须判定为 false
     assert.equal(hasEvidenceAfterSpec(root), false)
 
-    // 写入合法专属证据后变为 true
+    // Preserve the old fake-PNG attack: a task-specific name does not establish execution.
     writeFileAt(root, 'docs/evidence/task-verified.png', 'png bytes')
-    assert.equal(hasEvidenceAfterSpec(root), true)
+    assert.equal(hasEvidenceAfterSpec(root), false)
   } finally {
     cleanup(root)
   }
@@ -568,13 +594,14 @@ test('CONVERGENCE: delivery commands honour `git -C <task repo>` for the change 
     writeFileAt(taskRoot, 'plugins/x/tests/e2e/login.spec.ts', '// e2e\n')
     writeFileAt(taskRoot, 'docs/evidence/task-verified.png', 'png bytes')
 
-    // -C 指向工作树：界面改动 + 端到端测试齐全 → 放行
+    // -C targets this worktree: static completeness still lacks bound evidence/authority.
     const allowed = decideQualityGate({
       toolName: 'bash',
       toolInput: { command: `git -C "${taskRoot}" commit -m "feat ui"` },
       cwd: sessionRoot,
     })
-    assert.equal(allowed.decision, 'allow')
+    assert.equal(allowed.decision, 'deny')
+    assert.equal(allowed.verificationReason, 'VERIFICATION_REQUEST_REQUIRED')
 
     // 同一批改动但在工作树里缺端到端测试 → 拒绝，证明 -C 目标确实被采用
     const missing = makeRepo('task-delivery-missing-e2e')
@@ -591,5 +618,135 @@ test('CONVERGENCE: delivery commands honour `git -C <task repo>` for the change 
   } finally {
     cleanup(sessionRoot)
     cleanup(taskRoot)
+  }
+})
+
+test('public consumer reports an absent verification request', () => {
+  const result = inspectTaskVerification(undefined)
+  assert.equal(result.reason, 'VERIFICATION_REQUEST_REQUIRED')
+  assert.equal(result.evidenceStatus, 'missing')
+  assert.equal(result.authorization, 'not-granted')
+})
+
+test('public consumer classifies an incomplete request without requiring a receipt', () => {
+  const result = inspectTaskVerification({ request: { root: '/repo' } })
+  assert.equal(result.reason, 'VERIFICATION_REQUEST_INVALID')
+  assert.equal(result.evidenceStatus, 'invalid')
+  assert.equal(result.valid, false)
+  assert.equal(result.authorization, 'not-granted')
+  assert.equal(isE2ETestFile('/repo/plugins/x/tests/unit/value.test.mjs', '/repo'), false)
+  assert.equal(isE2ETestFile('/repo/plugins/x/tests/integration/value.test.mjs', '/repo'), false)
+})
+
+test('public consumer distinguishes invalid roots, missing reports and corrupt JSON', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  const sha = process.env.EVIDENCE_FIXTURE_SHA
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  assert.equal(sha, '437f5e4f806d3819f1aab378fadd674401a9789e')
+  const taskId = 'consumer-negative-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const reportPath = prefix + 'evidence.json'
+  const request = { purpose: 'history', root, taskId, runId, scope: 'smoke', baseSha: sha, headSha: sha,
+    requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+    reportPath, artifactPaths: [prefix + 'raw-run.json'] }
+  const invalidRoot = inspectTaskVerification({ request: Object.assign({}, request, { root: join(root, taskId) }) })
+  assert.equal(invalidRoot.reason, 'INVALID_GIT_ROOT')
+  assert.equal(invalidRoot.evidenceStatus, 'invalid')
+  const absent = inspectTaskVerification({ request })
+  assert.equal(absent.reason, 'VERIFICATION_REPORT_MISSING')
+  assert.equal(absent.evidenceStatus, 'missing')
+  assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { artifactPaths: [prefix + '../escape.json'] }) }).reason, 'VERIFICATION_REQUEST_INVALID')
+  mkdirSync(join(root, prefix), { recursive: true })
+  writeFileSync(join(root, reportPath), '{"valid":true,', { flag: 'wx' })
+  const corrupt = inspectTaskVerification({ request })
+  assert.equal(corrupt.reason, 'VERIFICATION_REPORT_CORRUPT')
+  assert.equal(corrupt.evidenceStatus, 'corrupt')
+  assert.equal(corrupt.authorization, 'not-granted')
+  const cwd = repoRootForSpawn()
+  assert.equal(decideQualityGate({ toolName: 'write', cwd, toolInput: { file_path: join(cwd, 'scripts/example.test.mjs') } }).decision, 'allow')
+  assert.equal(decideQualityGate({ toolName: 'write', cwd, toolInput: { file_path: join(cwd, 'plugins/x/tests/integration/value.test.mjs') } }).decision, 'allow')
+})
+
+test('public consumer verifies real historical integrity without granting execution authority', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  const sha = process.env.EVIDENCE_FIXTURE_SHA
+  assert.equal(process.env.EVIDENCE_FIXTURE_REPO, root)
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  assert.equal(sha, '437f5e4f806d3819f1aab378fadd674401a9789e')
+  const taskId = 'consumer-' + randomUUID()
+  for (const scenario of [
+    { name: 'passed', tests: 1, status: 'completed', reason: null, exitCode: 0, pass: true },
+    { name: 'zero-tests', tests: 0, status: 'completed', reason: null, exitCode: 0, pass: false },
+    { name: 'preparation-failed', tests: 0, status: 'not-run', reason: 'dependency-unavailable', exitCode: null, pass: false },
+  ]) {
+    const runId = randomUUID()
+    const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+    const rawPath = prefix + 'raw-run.json'
+    const reportPath = prefix + 'evidence.json'
+    const options = { root, base: sha, head: sha, taskId, runId, outputs: [rawPath, reportPath] }
+    const before = captureCandidate(options)
+    assert.deepEqual(before.candidate.entries.map(item => item.path), ['.gitignore', 'source.txt'])
+    const checks = [{ name: 'fixture-check', scope: 'smoke', required: true, status: scenario.status,
+      reason: scenario.reason, exitCode: scenario.exitCode, tests: scenario.tests, skipped: 0,
+      assertions: [{ name: 'fixture-source-present', pass: true }] }]
+    const cleanup = [{ name: 'fixture-output', owner: 'fixture-check', status: 'not-applicable', reason: 'not-created' }]
+    mkdirSync(join(root, prefix), { recursive: true })
+    const rawBytes = JSON.stringify({ checks, cleanup }) + '\n'
+    writeFileSync(join(root, rawPath), rawBytes, { flag: 'wx' })
+    const after = captureCandidate(options)
+    assert.deepEqual(after, before)
+    const envelope = sealEvidence({ taskId, runId, producer: 'dependency-stub', scope: 'smoke',
+      candidateBefore: before, candidateAfter: after, checks, cleanup, artifactPaths: [rawPath], reportPath })
+    writeFileSync(join(root, reportPath), JSON.stringify(envelope) + '\n', { flag: 'wx' })
+    const request = { purpose: 'history', root, taskId, runId, scope: 'smoke', baseSha: sha, headSha: sha,
+      requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+      reportPath, artifactPaths: [rawPath] }
+    const history = inspectTaskVerification({ request })
+    assert.equal(history.valid, true, scenario.name)
+    assert.equal(history.applicable, true)
+    assert.equal(history.pass, scenario.pass)
+    assert.equal(history.evidenceStatus, scenario.pass ? 'valid' : 'valid-failure')
+    assert.equal(history.reason, scenario.pass ? 'VALID_SELF_REPORTED' : 'VALID_FAILED_CHECKS')
+    assert.equal(history.provenance, 'self-reported')
+    assert.equal(history.authorization, 'not-granted')
+    assert.equal(hasEvidenceAfterSpec(root, { request }), false)
+    const candidateRequest = Object.assign({}, request, { purpose: 'candidate' })
+    assert.equal(inspectTaskVerification({ request: candidateRequest, currentCandidate: after }).valid, true)
+    assert.equal(inspectTaskVerification({ request: candidateRequest }).reason, 'CURRENT_CANDIDATE_REQUIRED')
+    const changed = structuredClone(after)
+    changed.candidate.entries[0].bytes += 1
+    assert.equal(inspectTaskVerification({ request: candidateRequest, currentCandidate: changed }).reason, 'INVALID_SNAPSHOT')
+    assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { purpose: 'pre-e2e' }) }).reason, 'PURPOSE_UNSUPPORTED')
+    assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { requiredChecks: ['other-check'] }) }).reason, 'REQUIRED_CHECKS_MISMATCH')
+    assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { scope: 'task' }) }).reason, 'RUN_OR_SCOPE_MISMATCH')
+    if (scenario.pass) {
+      const undeclared = prefix + 'not-created.json'
+      const altered = structuredClone(envelope)
+      altered.artifacts[0].path = undeclared
+      writeFileSync(join(root, reportPath), JSON.stringify(altered))
+      const binding = inspectTaskVerification({ request })
+      assert.equal(binding.reason, 'VERIFICATION_BINDING_MISMATCH')
+      assert.equal(binding.evidenceStatus, 'invalid')
+      const missing = inspectTaskVerification({ request: Object.assign({}, request, { artifactPaths: [undeclared] }) })
+      assert.equal(missing.reason, 'VERIFICATION_ARTIFACT_MISSING')
+      assert.equal(missing.evidenceStatus, 'missing')
+      writeFileSync(join(root, reportPath), JSON.stringify(envelope))
+      writeFileSync(join(root, rawPath), rawBytes + 'changed-bytes\n')
+      const corrupt = inspectTaskVerification({ request })
+      assert.equal(corrupt.reason, 'ARTIFACT_CHANGED')
+      assert.equal(corrupt.evidenceStatus, 'corrupt')
+      assert.equal(corrupt.pass, false)
+      assert.equal(corrupt.authorization, 'not-granted')
+      writeFileSync(join(root, rawPath), rawBytes)
+      const brokenDigest = structuredClone(envelope)
+      brokenDigest.result.pass = false
+      writeFileSync(join(root, reportPath), JSON.stringify(brokenDigest))
+      assert.equal(inspectTaskVerification({ request }).reason, 'REPORT_DIGEST_MISMATCH')
+      writeFileSync(join(root, reportPath), '{"valid":true,"pass":true,')
+      assert.equal(inspectTaskVerification({ request }).reason, 'VERIFICATION_REPORT_CORRUPT')
+      writeFileSync(join(root, reportPath), JSON.stringify(envelope) + '\n')
+      assert.equal(inspectTaskVerification({ request }).valid, true)
+    }
   }
 })

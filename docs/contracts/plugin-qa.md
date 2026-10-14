@@ -66,6 +66,14 @@ subsystem: "omnimux"
 
 物化后冒烟（dev-smoke）：`scripts/dev-smoke.mjs` 由 `worktree.sh` 物化成功后自动调用——只读探活 Dev 45120 页面并截图，对本次物化插件比对「物化包内最新文件 mtime vs Dev 主进程启动时间」，晚于进程即输出 `needs-restart` 提示（不自动重启）；Dev 未运行或调试口不可达时报 `blocked` 而非误报 PASS。证据落 `docs/evidence/dev-smoke-report.json` 与 `docs/evidence/dev-smoke-<runId>/dev-page.png`。两者都是本机生成物：报告已被 `.gitignore` 忽略且不进版本库，冒烟覆盖写它不得弄脏主检出（否则 `worktree.sh ship` 的干净检查会拒绝物化）。
 
+## 质量闭环证据消费
+
+`scripts/guard-quality-loop.mjs` 的 `inspectTaskVerification` 直接消费公共 `validateEvidence`。调用者必须在读取报告前固定精确 root/task/run/base/head、检查与断言集合、`evidence.json` 及原件路径；规格和请求文件只是上下文，不产生权限。消费者只读精确任务报告，不以 mtime、任意后缀、目录扫描、文件名或源码注释推断执行。输出区分 missing/corrupt/invalid/valid-failure/valid；历史完整性、候选适用性、任务通过、来源认证与授权分别记录。
+
+candidate 校验要求调用者在真实执行路径持有 `currentCandidate`；工具 JSON 自报、从旧封套复制 candidate 或报告内的 producer/approved/observation 都不能替代。当前工具前入口没有此持有者，不同步重捕全仓、不以八秒工具预算承诺完成捕获，端到端写入及界面交付的实测边界明确阻断。正常单元/集成 TDD 写入不要求先有执行收据，业务源码仍受本任务规格前置门约束。
+
+公共核心仍拒绝 `pre-e2e/current-runtime`，授权恒 `not-granted`。有效失败记录可能只是准备、编译、加载、零用例、跳过或清理失败，不是已准备并加载任务后的真实业务断言失败；来源自报的有效历史不能准入端到端写入。断言文字检查只保留为静态提示，不证明运行。界面交付原文件名齐备门保留，但不能静默签实测通过；本消费者首片没有真实预演准入正例或完整来源认证，不代表完整质量闭环已经交付。
+
 ## 浏览器与共享探针
 
 - API、脚本和配置优先；需要 Web/Stage 浏览器验收时统一使用 ego-browser 的任务隔离空间，先加载 ego-browser skill。不得回退 IAB，也不得用桌面截图替代浏览器检查。ego 缺少 CDP 事件、脚本源、稳定 task/tab 身份或真实 PNG 能力时为 BLOCKED，不降低校验。
