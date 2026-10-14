@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 /**
  * scripts/guard-anti-cheat.mjs
- * AI Agent 防兜底、假数据与虚假交差自适应硬门禁 (PreToolUse Guard)
+ * AI Agent 防兜底、假数据与虚假交差写前门禁 (PreToolUse Guard)
  *
- * 特性：
- *  1. 意图作用域感知 (Task Intent Scoping)：支持测试用例与骨架屏合法场景自适应放行；
- *  2. 行为级防造假拦截 (Anti-Mock & Anti-Silent-Catch)：拦截伪造数据与吞错假交差；
- *  3. 结构化豁免支持 (Policy Exemption Token)：支持人工一键审批后携带 token 放行；
- *  4. 既可作为 DSH PreToolUse 独立运行，也可作为 ESM 模块由单元测试复用。
+ * 生产规则使用固定路径与模式，不接受任务意图或本地审批作为放行权限。
+ * 测试检查是有界语法检查，已有标准变更仍须独立审查；不是执行沙箱。
+ * 既可作为 DSH PreToolUse 独立运行，也可作为 ESM 模块由单元测试复用。
  */
 
 import { readFileSync, existsSync, lstatSync, realpathSync, openSync, closeSync, fstatSync, constants } from 'node:fs';
@@ -256,15 +254,15 @@ function resolvePublicPluginImport(filePath, source, inspection) {
  * @param {string} params.tool - 工具名称 (write|edit)
  * @param {string} params.filePath - 目标文件路径
  * @param {string} params.content - 拟写入/替换的内容
- * @param {string} [params.intent] - 任务意图 (business_code|test_authoring|frontend_skeleton|fallback_infra)
- * @param {Array<object>} [params.exemptions] - 已获批准的豁免列表
+ * @param {string} [params.intent] - 兼容参数，ignored_noauthority
+ * @param {Array<object>} [params.exemptions] - 兼容参数，ignored_noauthority
  * @returns {{ permissionDecision: 'allow'|'deny', reason?: string, ruleId?: string }}
  */
 export function evaluateAntiCheat(params) {
   return evaluateWithInspection(params);
 }
 
-function evaluateWithInspection({ tool, filePath, content, intent = 'business_code', exemptions = [], cwd = process.cwd() }) {
+function evaluateWithInspection({ tool, filePath, content, cwd = process.cwd() }) {
   if (tool !== 'write' && tool !== 'edit') {
     return { permissionDecision: 'allow' };
   }
@@ -299,28 +297,15 @@ function evaluateWithInspection({ tool, filePath, content, intent = 'business_co
     return testDecision(inspection);
   }
 
-  // 0. 检查是否命中已批准的豁免令牌 (Exemption Token)
-  for (const ex of exemptions) {
-    if (ex.filePath === normalizedPath && ex.status === 'approved') {
-      return {
-        permissionDecision: 'allow',
-        reason: `[EXEMPTION] 命中已批准的人工豁免 (ID: ${ex.id}): ${ex.justification || '允许放行'}`
-      };
-    }
-  }
-
   // 2. 门禁 2：生产代码硬编码 Mock/Fake 数据注入拦截
   if (!isTestFile && !isFixtureFile) {
-    // 豁免特定合法意图：骨架屏、纯 UI 占位
-    if (intent !== 'test_authoring' && intent !== 'frontend_skeleton') {
-      const mockPattern = /(const|let|var)\s+(mock|fake|dummy|fallback)[A-Za-z0-9_]*\s*=\s*(\[|\{)/i;
-      if (mockPattern.test(code)) {
-        return {
-          permissionDecision: 'deny',
-          ruleId: 'RULE-02-ANTI-MOCK-DATA',
-          reason: '【硬门禁拦截】生产代码中检测到硬编码 Mock/Fake 数据注入。请对接真实链路或使用阻断上报协议！'
-        };
-      }
+    const mockPattern = /(const|let|var)\s+(mock|fake|dummy|fallback)[A-Za-z0-9_]*\s*=\s*(\[|\{)/i;
+    if (mockPattern.test(code)) {
+      return {
+        permissionDecision: 'deny',
+        ruleId: 'RULE-02-ANTI-MOCK-DATA',
+        reason: '【硬门禁拦截】生产代码中检测到硬编码 Mock/Fake 数据注入。请对接真实链路或使用阻断上报协议！'
+      };
     }
   }
 
@@ -329,15 +314,11 @@ function evaluateWithInspection({ tool, filePath, content, intent = 'business_co
     // 检测 catch 块中直接返回伪造状态对象（如 { ok: true }, { status: 'mock_healthy' } 等）
     const silentFakeReturnPattern = /catch\s*\([^)]*\)\s*\{[^}]*return\s*\{[^}]*(ok|status|success)[^}]*\}/i;
     if (silentFakeReturnPattern.test(code)) {
-      // 检查是否有合法的日志报告或告警逻辑
-      const hasLogging = /(logger\.(warn|error|info)|console\.(warn|error)|telemetry\.report)/i.test(code);
-      if (!hasLogging || intent !== 'fallback_infra') {
-        return {
-          permissionDecision: 'deny',
-          ruleId: 'RULE-03-ANTI-SILENT-CATCH',
-          reason: '【硬门禁拦截】检测到静默吞错并返回虚假成功状态。请向上抛出异常或记录标准化结构化日志！'
-        };
-      }
+      return {
+        permissionDecision: 'deny',
+        ruleId: 'RULE-03-ANTI-SILENT-CATCH',
+        reason: '【硬门禁拦截】检测到静默吞错并返回虚假成功状态。日志不能授权假成功；请向上抛出异常或显式上报阻断！'
+      };
     }
   }
 
@@ -429,22 +410,10 @@ export function handle(rawInput) {
       } finally { checkedTarget?.close(); }
     }
   }
-  const intent = process.env.DSH_TASK_INTENT || 'business_code';
-
-  let exemptions = [];
-  const exemptionPath = resolve(process.cwd(), '.tmp/anti-cheat-exemptions.json');
-  if (existsSync(exemptionPath)) {
-    try {
-      exemptions = JSON.parse(readFileSync(exemptionPath, 'utf8'));
-    } catch {}
-  }
-
   const decision = evaluateWithInspection({
     tool: toolName,
     filePath,
     content,
-    intent,
-    exemptions,
     cwd: resolve(input.cwd || process.cwd(), toolInput.workdir || '.'),
   });
   return formatHookOutput(decision, hookEventName);

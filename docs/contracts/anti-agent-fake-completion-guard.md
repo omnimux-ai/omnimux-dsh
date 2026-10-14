@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-29"
-updated: "2026-10-14"
+updated: "2026-10-15"
 authors: ["architecture-group", "engineering-director"]
 subsystem: "global"
 tags: ["agent-governance", "anti-cheating", "reward-hacking", "hard-gates", "anti-fallback"]
@@ -84,11 +84,13 @@ related:
 * **规格与测试分类**：任务需求 Markdown 不属于可执行评估资产，写前防造假检查不扫描 `.md` 的文档示例。可解析的完整 JavaScript 测试候选可经语法检查形成：真实跳过/聚焦选择、已识别的动态成员或执行、未知语法保守拒绝；这是有界语法检查，不证明任意程序不存在间接执行，文字样例不当作执行。现有测试编写意图兼容通路不新增许可来源；已有标准的删除、跳过、聚焦或期待变化须独立审查。正常测试编写与旧标准审查的完整闭环尚未机械接入，不能用本次文档分类修正宣称已完成测试权限治理；写前检查也不提供文件系统物理只读。
 * **CI 与构建配置锁定**：禁止 Agent 修改 `.github/`、`eslint*`、`tsconfig.json` 等门禁配置文件；任何对配置文件的修改必须单独审批。
 
-### 3.2 层级 2：代码 AST 与静态检测硬门禁 (Static Anti-Fallback Gates)
-在工具调用前置钩子（`PreToolUse`）或 Git 提交阶段强制执行确定性静态扫描：
-1. **禁止在生产代码中注入未注册的 Mock**：禁止在非 `test` 目录下声明带有 `mock*`、`fake*`、`dummy*`、`fallbackData` 等字面量变量。
-2. **禁止空 Catch 吞错**：严格限制 `catch (err) { return fallback; }` 结构，凡捕获异常必须有显式错误抛出或合规日志上报。
-3. **测试输入查表作弊拦截**：扫描函数体中是否存在大量针对测试输入常量的硬编码映射分支。
+### 3.2 层级 2：有界语法与生产模式检查 (Static Anti-Fallback Gates)
+
+现有 `scripts/guard-anti-cheat.mjs` 在写前执行确定性检查，不是执行沙箱，也不证明任意代码没有间接造假：
+
+1. **生产假数据声明**：沿现有路径资格，在非测试、非 fixture 路径检查 `const|let|var` 后名称以 `mock`、`fake`、`dummy`、`fallback` 开头且直接赋数组或对象的原模式。任务意图、日志和 approved 元数据不提供免检权；正常占位代码若不命中模式，仍按原规则处理。
+2. **catch 状态对象**：沿现有正则检查有括号 catch 内直接返回包含 `ok|status|success` 的对象。即使存在日志或 `fallback_infra` 意图也不免检。该模式不判断值是真或假，可能匹配明确失败对象；普通返回缓存、抛错、空 catch、无括号 catch 与复杂嵌套并未被完整解析，本切片不扩大关键词或重写异常分析器。
+3. **测试语法**：完整候选、现有 before/after 风险比较与公开函数来源检查使用原有有界规则；语法放行不等于独立批准旧标准变化，也不实现通用查表作弊分析。
 
 ### 3.3 层级 3：零自我认证与独立物理凭据 (Zero Self-Certification)
 * **废除口头宣称**：禁止采信 Agent 在会话中的“已测试通过”、“数据已获取”。
@@ -108,60 +110,17 @@ related:
 
 ## 4. 实施落地参考配置 (Implementation Recipes)
 
-### 4.1 门禁 Hook 脚本标准实现 (`anti-cheat-guard.js`)
+### 4.1 门禁运行入口
 
-可在 Agent 框架（如 DSH Hooks）或本地 Git 钩子中挂载以下检查逻辑：
+实际入口是 [`scripts/guard-anti-cheat.mjs`](../../scripts/guard-anti-cheat.mjs)，由仓库 `.dsh/hooks.json` 的 `PreToolUse` 挂载。CLI 接收真实 stdin JSON 并输出 `hookSpecificOutput`；畸变输入走 fail-closed。公开 `evaluateAntiCheat` 与 `handle` 是行为验证入口，不能通过工具自述事实制造来源权限。
 
-```javascript
-// anti-cheat-guard.js
-const fs = require('fs');
+`intent` / `exemptions` 仅为兼容输入，语义是 `ignored_noauthority`。`handle` 不读取 `DSH_TASK_INTENT` 或 `.tmp/anti-cheat-exemptions.json` 作为放行权限；自写 `status: approved`、全路径匹配、日志或修改参数均不能授权生产规则例外。这里没有派发或验证新审批 token 的服务。
 
-function checkToolInput(toolName, input) {
-  if (toolName !== 'write' && toolName !== 'edit') {
-    return { decision: 'allow' };
-  }
+### 4.2 反馈与红黑样本回归
 
-  const filePath = input.file_path || '';
-  const newContent = input.content || input.new_string || '';
-
-  // 1. 物理阻断测试文件篡改
-  if (/(\btest\b|\bspec\b|__tests__|\.test\.|\.spec\.)/i.test(filePath)) {
-    return {
-      decision: 'deny',
-      reason: '【硬门禁拦截】测试用例与断言属于只读评估契约，严禁 Agent 修改！请调整业务代码以满足既有规范。'
-    };
-  }
-
-  // 2. 阻断生产源码中的假数据注入
-  if (!filePath.includes('test') && !filePath.includes('fixture')) {
-    const fakePattern = /(const|let|var)\s+(mock|fake|dummy|fallback)[A-Za-z0-9_]*\s*=\s*(\[|\{)/i;
-    if (fakePattern.test(newContent)) {
-      return {
-        decision: 'deny',
-        reason: '【硬门禁拦截】生产代码中检测到硬编码 Mock/Fake 数据注入。请对接真实链路或使用阻断上报协议！'
-      };
-    }
-  }
-
-  return { decision: 'allow' };
-}
-```
-
-### 4.2 自适应反馈与红黑样本进化机制 (Adaptive Feedback & Immunization)
-
-针对“合理场景误杀”与“新型作弊漏逃”的工程矛盾，契约确立三大自适应闭环机制：
-
-1. **意图作用域感知 (Task Intent Scoping)**：
-   * `intent: test_authoring`：豁免单测/Mock 夹具的只读限制与字面量检查；
-   * `intent: frontend_skeleton`：豁免 UI 占位与骨架屏静态数据检查；
-   * `intent: fallback_infra`：允许容灾降级，但强制校验结构化日志。
-2. **结构化申诉通道 (Policy Exemption Protocol)**：
-   * 当 Agent 认为拦截不合理时，调用 `request_policy_exemption` 提交理据；
-   * 严禁私自绕行，必须经人类一键核准后派发 Exemption Token 放行。
-3. **红黑样本库自动化回归 (Sample Regression Suite)**：
-   * 收集白名单样本 (`tests/anti-cheat-samples/allowlist/*.json`)，确保合规场景 0 误杀；
-   * 收集黑名单样本 (`tests/anti-cheat-samples/blocklist/*.json`)，确保作弊手法 0 漏逃；
-   * 运行 `node --test scripts/guard-anti-cheat.test.mjs` 作为发布前强制门禁。
+1. **路径与意图分离**：真实测试和 fixture 路径使用原有资格判断；生产文件不能因为 `test_authoring`、`frontend_skeleton` 或 `fallback_infra` 自述变成夹具。骨架样例若只是正常占位且未命中原模式，可以继续通过；命中生产假数据模式则拒绝。
+2. **标准更正须可审查**：误杀或漏逃应以需求、原输入、原规则、真实退出码与差异提交独立审查，不能用本地 approved 文件自我批准。旧断言删除、跳过、聚焦或期待变化仍需独审；既有标准风险与来源消费者完整闭环尚未机械接入，本切片不能宣布 #3301 / #3302 阶段 A 全部完成。
+3. **红黑样本保留**：`tests/anti-cheat-samples/allowlist/*.json` 与 `blocklist/*.json` 经 `node --test scripts/guard-anti-cheat.test.mjs` 检验各自声明范围。不得删除旧用例或 skip 来刷绿；已批准的权限标准更正须记录前后反证。样本通过只证明实际输入，不能推广为所有误杀和漏逃均消除。
 
 测试候选默认拒绝导入 `apply`；仅由门禁自身检出的共同 Git 目录建立主根身份，核验目标位于主根或其 `.worktrees` 直接子目录且有同共同目录、规范普通 Git 指针、双向登记与精确注册记录（新写入仅允许缺失叶节点），将目标和公开插件 `src/index.js` 的具名函数或固定重导出到 `host/apply.js` 限定同一目标树，以该树一次固定 HEAD 只读核对字节与 AST，并在解析结束后联合复核登记、目标、全部来源、祖先身份与 HEAD，才允许直接调用；绑定值逃逸、立即再次调用安装结果、动态执行、跳过测试、来源跨树、外部仓库、未登记、嵌套仓库、软链接与未确认或变动来源仍拒绝，普通调用结果检查不追踪通用结果流，工具自述目录或事实不产生授权，这些写前事实既不构成完整授权闭环，也不保证后续执行时来源不变。
 

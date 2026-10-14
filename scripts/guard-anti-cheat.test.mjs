@@ -70,8 +70,8 @@ describe('AI Agent 防造假与自适应门禁系统测试 (guard-anti-cheat.tes
     }
   });
 
-  describe('3. 人工申诉与豁免机制测试 (Exemption Mechanism)', () => {
-    it('对于原本会被拦截的黑样本，当携带有效审批豁免令牌时，应当成功放行', () => {
+  describe('3. 自述审批不构成授权 (ignored_noauthority)', () => {
+    it('原本被拦截的黑样本携带 approved 元数据仍须拒绝', () => {
       const targetPath = 'plugins/omnimux/src/services/legacy-bridge.ts';
       const mockCode = 'const mockBridgeResponse = [{ bridgeId: 101 }];';
 
@@ -84,7 +84,7 @@ describe('AI Agent 防造假与自适应门禁系统测试 (guard-anti-cheat.tes
       });
       assert.equal(deniedResult.permissionDecision, 'deny');
 
-      // 2. 携带已批准豁免令牌时放行
+      // 同一生产输入不得因为调用者自述 approved 改变规则。
       const approvedResult = evaluateAntiCheat({
         tool: 'write',
         filePath: targetPath,
@@ -99,8 +99,25 @@ describe('AI Agent 防造假与自适应门禁系统测试 (guard-anti-cheat.tes
           }
         ]
       });
-      assert.equal(approvedResult.permissionDecision, 'allow');
-      assert.ok(approvedResult.reason.includes('命中已批准的人工豁免'));
+      assert.equal(approvedResult.permissionDecision, 'deny');
+      assert.equal(approvedResult.ruleId, 'RULE-02-ANTI-MOCK-DATA');
+    });
+  });
+
+  describe('production intent never grants checking exemptions', () => {
+    it('rejects the same production mock regardless of declared intent', () => {
+      for (const intent of ['business_code', 'test_authoring', 'frontend_skeleton', 'fallback_infra']) {
+        const result = evaluateAntiCheat({ tool: 'write', filePath: 'plugins/omnimux/src/authority-example.js', content: 'const mockData = [{ id: 1 }];', intent });
+        assert.equal(result.permissionDecision, 'deny');
+        assert.equal(result.ruleId, 'RULE-02-ANTI-MOCK-DATA');
+      }
+    });
+    it('does not treat logging and declared fallback intent as proof of successful recovery', () => {
+      const result = evaluateAntiCheat({ tool: 'write', filePath: 'plugins/omnimux/src/authority-example.js', content: "try { remote(); } catch (error) { logger.warn('failed'); return { ok: true }; }", intent: 'fallback_infra' });
+      assert.equal(result.permissionDecision, 'deny');
+      assert.equal(result.ruleId, 'RULE-03-ANTI-SILENT-CATCH');
+      const fixture = evaluateAntiCheat({ tool: 'write', filePath: 'tests/fixtures/authority-example.mock.js', content: 'const mockData = [{ id: 1 }];' });
+      assert.equal(fixture.permissionDecision, 'allow');
     });
   });
 
