@@ -16,7 +16,17 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
-import { inspectTestAuthoring } from './test-authoring-inspection.mjs';
+import { inspectTestAuthoring, inspectTestAuthoringDelta } from './test-authoring-inspection.mjs';
+
+const isTestPath = path => /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/')) && !/\.md$/i.test(path);
+const isFixturePath = path => /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/'));
+function testDecision(inspection) {
+  return inspection.allowed ? { permissionDecision: 'allow' } : {
+    permissionDecision: 'deny',
+    ruleId: 'RULE-01-TEST-IMMUTABLE',
+    reason: '【硬门禁拦截】测试用例与断言属于只读评估契约，严禁新增执行风险；旧标准变更仍须独立审查。'
+  };
+}
 
 // Repository identity starts at this guard's checkout, never at tool-supplied cwd.
 const REPO_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
@@ -24,8 +34,9 @@ const REPO_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
 // Trusted in-process I/O seam; tool input never supplies this object or its facts.
 export const sourceInspectionIO = { readFileSync, lstatSync, realpathSync, openSync, closeSync, fstatSync, spawnSync };
 
-function sameIdentity(before, after) {
-  return ['dev', 'ino', 'mode', 'size', 'mtimeMs', 'ctimeMs'].every(key => before[key] === after[key]);
+function sameIdentity(before, after, directory = false) {
+  const fields = directory ? ['dev', 'ino', 'mode'] : ['dev', 'ino', 'mode', 'size', 'mtimeMs', 'ctimeMs'];
+  return fields.every(key => before[key] === after[key]);
 }
 
 function createSourceInspection(target, allowMissing = true) {
@@ -139,7 +150,7 @@ function createSourceInspection(target, allowMissing = true) {
         throw new Error('New target appeared during inspection');
       }
       const live = sourceInspectionIO.lstatSync(item.path);
-      if (live.isSymbolicLink() || !sameIdentity(item.stat, live) || sourceInspectionIO.realpathSync(item.path) !== item.path) throw new Error('Inspection path changed');
+      if (live.isSymbolicLink() || (item.directory ? !live.isDirectory() : !live.isFile()) || !sameIdentity(item.stat, live, item.directory) || sourceInspectionIO.realpathSync(item.path) !== item.path) throw new Error('Inspection path changed');
       if (item.fd !== undefined && !sameIdentity(item.stat, sourceInspectionIO.fstatSync(item.fd))) throw new Error('Inspection file changed');
     }
   }
@@ -150,14 +161,15 @@ function createSourceInspection(target, allowMissing = true) {
   return {
     treeRoot,
     readTarget() {
-      const bytes = sourceInspectionIO.readFileSync(records.get(target).fd);
+      const item = records.get(target);
+      const bytes = item.missing ? undefined : sourceInspectionIO.readFileSync(item.fd);
       verify();
-      return bytes.toString('utf8');
+      return bytes?.toString('utf8');
     },
     readSource(path) {
       if (head === undefined) head = currentHead();
       const item = capture(path);
-      const bytes = sourceInspectionIO.readFileSync(item.fd);
+      const bytes = item.bytes ??= sourceInspectionIO.readFileSync(item.fd);
       const rel = relative(treeRoot, path);
       const tree = git(['ls-tree', head, '--', rel]);
       const match = /^(100644|100755) blob ([0-9a-f]{40})\t([^\n]+)\n?$/.exec(tree);
@@ -252,7 +264,7 @@ export function evaluateAntiCheat(params) {
   return evaluateWithInspection(params);
 }
 
-function evaluateWithInspection({ tool, filePath, content, intent = 'business_code', exemptions = [], cwd = process.cwd() }, checkedTarget) {
+function evaluateWithInspection({ tool, filePath, content, intent = 'business_code', exemptions = [], cwd = process.cwd() }) {
   if (tool !== 'write' && tool !== 'edit') {
     return { permissionDecision: 'allow' };
   }
@@ -265,37 +277,34 @@ function evaluateWithInspection({ tool, filePath, content, intent = 'business_co
     return { permissionDecision: 'allow' };
   }
 
+  const isTestFile = isTestPath(normalizedPath);
+  const isFixtureFile = isFixturePath(normalizedPath);
+  // Pure candidates have no trusted before; test intent and approval metadata are not authority.
+  if (isTestFile && !isFixtureFile) {
+    let snapshot;
+    let inspection;
+    let unverifiedImport = false;
+    try {
+      const target = resolve(cwd, normalizedPath);
+      inspection = inspectTestAuthoring(code, { resolveImport: source => {
+        snapshot ??= createSourceInspection(target, tool === 'write');
+        const fact = resolvePublicPluginImport(target, source, snapshot);
+        if (!fact) unverifiedImport = true;
+        return fact;
+      } });
+      snapshot?.verify();
+      if (unverifiedImport) inspection = { allowed: false };
+    } catch { inspection = { allowed: false }; }
+    finally { snapshot?.close(); }
+    return testDecision(inspection);
+  }
+
   // 0. 检查是否命中已批准的豁免令牌 (Exemption Token)
   for (const ex of exemptions) {
     if (ex.filePath === normalizedPath && ex.status === 'approved') {
       return {
         permissionDecision: 'allow',
         reason: `[EXEMPTION] 命中已批准的人工豁免 (ID: ${ex.id}): ${ex.justification || '允许放行'}`
-      };
-    }
-  }
-
-  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
-  const isFixtureFile = /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
-
-  // 1. 门禁 1：测试套件与评估资产只读守卫
-  if (isTestFile && !isFixtureFile) {
-    let snapshot = checkedTarget;
-    let inspection;
-    try {
-      const target = resolve(cwd, filePath);
-      inspection = inspectTestAuthoring(code, { resolveImport: source => {
-        snapshot ??= createSourceInspection(target, tool === 'write');
-        return resolvePublicPluginImport(target, source, snapshot);
-      } });
-      snapshot?.verify();
-    } catch { inspection = { allowed: false }; }
-    finally { if (!checkedTarget) snapshot?.close(); }
-    if (intent !== 'test_authoring' && !inspection.allowed) {
-      return {
-        permissionDecision: 'deny',
-        ruleId: 'RULE-01-TEST-IMMUTABLE',
-        reason: '【硬门禁拦截】测试用例与断言属于只读评估契约，严禁在业务开发中修改！请调整业务实现以匹配测试。'
       };
     }
   }
@@ -372,23 +381,52 @@ export function handle(rawInput) {
   const toolInput = input.tool_input || (input.file_path ? input : {});
   const filePath = toolInput.file_path || input.file_path || '';
   let content = toolInput.content || toolInput.new_string || input.content || input.new_string || '';
-  let checkedTarget;
-  if (['write', 'edit'].includes(toolName) && resolve(input.cwd || process.cwd(), filePath) === REPO_ROOT) {
-    return formatHookOutput({ permissionDecision: 'deny', reason: 'Repository root is not a file target' }, hookEventName);
-  }
-  if (['write', 'edit'].includes(toolName) && /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(filePath.replace(/\\/g, '/')) && !/\.md$/i.test(filePath)) {
-    try {
-      checkedTarget = createSourceInspection(resolve(input.cwd || process.cwd(), filePath), toolName === 'write');
-      if (toolName === 'edit') {
-        const oldString = toolInput.old_string;
-        const source = checkedTarget.readTarget();
-        if (typeof oldString !== 'string' || !oldString || !source.includes(oldString)) throw new Error('Cannot reconstruct test edit');
-        if (!toolInput.replace_all && source.indexOf(oldString) !== source.lastIndexOf(oldString)) throw new Error('Ambiguous test edit');
-        content = toolInput.replace_all ? source.split(oldString).join(toolInput.new_string || '') : source.replace(oldString, () => toolInput.new_string || '');
+  if (toolName === 'write' || toolName === 'edit') {
+    const cwd = resolve(input.cwd || process.cwd(), toolInput.workdir || '.');
+    const target = resolve(cwd, filePath.replace(/\\/g, '/'));
+    if (target === REPO_ROOT) return formatHookOutput({ permissionDecision: 'deny', reason: 'Repository root is not a file target' }, hookEventName);
+    const repoPath = path => {
+      let root = dirname(path);
+      while (dirname(root) !== root) {
+        if (existsSync(resolve(root, '.git'))) return relative(root, path).replace(/\\/g, '/');
+        root = dirname(root);
       }
-    } catch {
-      checkedTarget?.close();
-      return formatHookOutput({ permissionDecision: 'deny', reason: 'Cannot inspect canonical test target' }, hookEventName);
+      return path;
+    };
+    const protectedPath = path => { const ownedPath = repoPath(path); return isTestPath(ownedPath) && !isFixturePath(ownedPath); };
+    let actualTarget = target;
+    if (!protectedPath(target)) {
+      try { actualTarget = realpathSync(target); }
+      catch (err) { if (err.code !== 'ENOENT' && protectedPath(target)) throw err; }
+    }
+    if (protectedPath(target) || protectedPath(actualTarget)) {
+      let checkedTarget;
+      try {
+        checkedTarget = createSourceInspection(target, toolName === 'write');
+        const source = checkedTarget.readTarget();
+        if (toolName === 'edit') {
+          const oldString = toolInput.old_string;
+          if (typeof source !== 'string' || typeof oldString !== 'string' || !oldString || !source.includes(oldString)) throw new Error('Cannot reconstruct test edit');
+          if (!toolInput.replace_all && source.indexOf(oldString) !== source.lastIndexOf(oldString)) throw new Error('Ambiguous test edit');
+          const replacement = toolInput.new_string ?? '';
+          if (typeof replacement !== 'string') throw new Error('Invalid test replacement');
+          content = toolInput.replace_all ? source.split(oldString).join(replacement) : source.replace(oldString, () => replacement);
+        } else {
+          content = toolInput.content ?? input.content;
+          if (typeof content !== 'string') throw new Error('Missing complete test candidate');
+        }
+        let unverifiedImport = false;
+        const trustedFacts = { resolveImport: source => {
+          const fact = resolvePublicPluginImport(target, source, checkedTarget);
+          if (!fact) unverifiedImport = true;
+          return fact;
+        } };
+        const inspection = typeof source === 'string' ? inspectTestAuthoringDelta(source, content, trustedFacts) : inspectTestAuthoring(content, trustedFacts);
+        checkedTarget.verify();
+        return formatHookOutput(testDecision(unverifiedImport ? { allowed: false } : inspection), hookEventName);
+      } catch {
+        return formatHookOutput({ permissionDecision: 'deny', reason: 'Cannot inspect canonical test target or source' }, hookEventName);
+      } finally { checkedTarget?.close(); }
     }
   }
   const intent = process.env.DSH_TASK_INTENT || 'business_code';
@@ -401,20 +439,15 @@ export function handle(rawInput) {
     } catch {}
   }
 
-  try {
-    const decision = evaluateWithInspection({
-      tool: toolName,
-      filePath,
-      content,
-      intent,
-      exemptions,
-      cwd: input.cwd || process.cwd(),
-    }, checkedTarget);
-    checkedTarget?.verify();
-    return formatHookOutput(decision, hookEventName);
-  } catch {
-    return formatHookOutput({ permissionDecision: 'deny', reason: 'Test inspection identity changed' }, hookEventName);
-  } finally { checkedTarget?.close(); }
+  const decision = evaluateWithInspection({
+    tool: toolName,
+    filePath,
+    content,
+    intent,
+    exemptions,
+    cwd: resolve(input.cwd || process.cwd(), toolInput.workdir || '.'),
+  });
+  return formatHookOutput(decision, hookEventName);
 }
 
 function main() {
