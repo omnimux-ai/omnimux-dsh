@@ -125,6 +125,18 @@ export function apply(ctx) {
       label: () => t('referenceStorage.title'), locale: NS, inject: () => ({ t }),
     }, ({ t: translate, view }) => view === 'summary' ? translate('referenceStorage.description') : createElement(ReferenceStorageSection, { t: translate })))), 'omnimux: reference storage configuration')
   })
+  if (typeof ctx.inject === 'function') ctx.inject(['configForms'], (formCtx) => {
+    const form = formCtx.configForms.get('omnimux')
+    const scope = {
+      getSnapshot: () => form.getSnapshot(), subscribe: listener => form.subscribe(listener),
+      async set(field, value) { if (!await form.mutate([{ op: 'set', path: [field], value }])) throw new Error('设置未能保存，请刷新后重试') },
+      async unset(field) { if (!await form.mutate([{ op: 'unset', path: [field] }])) throw new Error('设置未能保存，请刷新后重试') },
+    }
+    formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.item', () => formCtx.slots.register({
+      name: 'plugins.item', id: 'omnimux-model-settings', order: 90,
+      label: () => t('runtime.cardTitle'), locale: NS, inject: () => ({ t, scope }),
+    }, ({ t: translate, view, scope: settingsScope }) => view === 'summary' ? translate('runtime.cardDesc') : createElement(ModelsSettingsCard, { t: translate, scope: settingsScope })))), 'omnimux: model scenario configuration')
+  })
   // Canvas default models — Settings → 插件 → 可配置 (keyed by Host namespace).
   // Bind once when the slot mounts; do not re-bind inside the React card.
   if (typeof ctx.inject === 'function') {

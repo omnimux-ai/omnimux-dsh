@@ -2,6 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Config } from '../config.js'
 
+test('official live provider settings reject embedded credential values', () => {
+  const invalid = Config['~standard'].validate({ byokProviders: [{ provider: 'custom', apiKey: 'synthetic-secret' }] })
+  assert.equal(invalid.issues.length, 1)
+})
+
 test('live official config preserves scenario selection and provider metadata alongside storage', () => {
   const raw = { scenarioBindings: { image: { channel: 'byok', provider: 'custom', model: 'custom-image' } }, byokProviders: [{ provider: 'custom', endpoint: 'https://provider.example.test', capabilities: ['image'], models: { image: 'custom-image' } }], referenceStorage: { enabled: false } }
   const result = Config['~standard'].validate(raw)

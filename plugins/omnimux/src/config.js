@@ -1,5 +1,6 @@
 import z from '@deepseek-ai/schemastery'
 import { parseReferenceStorageConfig } from './reference-storage/config.js'
+import { SETTINGS_DEFAULTS, parseSettingsSection } from './settings/schema.js'
 import { parseAppsConfig } from './apps/config.js'
 import { DEFAULT_SITE, resolveSiteBaseUrl } from './auth/omnimux-auth.js'
 import { parseBrandConfig } from './brand/config.js'
@@ -47,6 +48,11 @@ fields.referenceStorage = z.object({
   publicBaseUrl: z.string().default(''),
   credentialId: z.string().default(''),
 }).default(parseReferenceStorageConfig(undefined)).volatile()
+for (const [key, fallback] of Object.entries(SETTINGS_DEFAULTS)) {
+  if (key === 'referenceStorage') continue
+  const field = typeof fallback === 'boolean' ? z.boolean() : typeof fallback === 'string' ? z.string() : Array.isArray(fallback) ? z.array(z.any()) : z.object({})
+  fields[key] = field.default(fallback).volatile()
+}
 const formSchema = z.object(fields)
 export const Config = formSchema
 Object.defineProperty(Config, '~standard', { value: {
@@ -58,7 +64,18 @@ Object.defineProperty(Config, '~standard', { value: {
       const ordinary = parseHubConfig(value)
       const storage = parsed.referenceStorage?.get ? parsed.referenceStorage.get() : parsed.referenceStorage
       parseReferenceStorageConfig(storage)
-      return { value: Object.assign({}, ordinary, { referenceStorage: parsed.referenceStorage }) }
+      const settingsValues = Object.fromEntries(Object.keys(SETTINGS_DEFAULTS).map(key => [key, parsed[key]?.get ? parsed[key].get() : parsed[key]]))
+      const scanSettings = value => {
+        if (!value || typeof value !== 'object') return
+        for (const [key, entry] of Object.entries(value)) {
+          if (/^(?:apiKey|secretAccessKey|accessKeyId|password|token|secret|sessionToken)$/i.test(key)) throw new Error('访问凭据必须单独安全保存')
+          scanSettings(entry)
+        }
+      }
+      scanSettings(settingsValues)
+      parseSettingsSection(settingsValues)
+      const liveFields = Object.fromEntries(Object.keys(SETTINGS_DEFAULTS).map(key => [key, parsed[key]]))
+      return { value: Object.assign({}, ordinary, liveFields) }
     } catch (error) {
       return { issues: [{ message: error instanceof Error ? error.message : String(error) }] }
     }
