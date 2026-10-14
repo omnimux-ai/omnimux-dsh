@@ -18,8 +18,13 @@
 
 旅程 []、空白名、重名、非布尔 pass 拒绝整组形状；正常 false 原样保留。契约检查断言名集合必须和固定请求完全一致，未执行项 false，但 tests 只数真实执行单元；额外或畸形断言不能被投影丢失后刷绿。所有错误只留分类码，禁止原始错误/环境/登录 URL/cookie/token/动态详情写入原件。原生 exitCode/signal 与检查结果分开。
 
+## 正式公共小仓回归（父集成范围）
+父已读关键路径再评估，采用分层真实根：核心封套正负矩阵使用task-owned两数据真实Git主仓，不创建secondary工作树；应用仅少量公共编排复用本任务已有真实直接登记工作树，核心capture/seal/validate不注入。应用依赖桩仍明确smoke/dependency-stub/self-reported/not-granted，不签真实浏览器/fresh/task。核心环境由公开正常数据owner提供EVIDENCE_FIXTURE_REPO/ROOT/SHA，其中ROOT可等真实primary，SHA真实Git读取；缺环境同次fail非skip/全产品回落。原件精确ignored contract目录/唯一run，准备owner核实自有绝对根和identity后清理。小仓数据生命周期候选先正常测试写入、固定独审及工具前明确允许后才执行；不将旧被拒worktree-add准备载荷搬进test/helper/换tool绕。不得新增child_process导入或隐藏断言。持续集成必须实际完成准备再直接执行覆盖；现未运行旧init-main/detached-worktree方案须正常联动替换为上述可运行分层，不删除覆盖来假绿。治理清单按真实闭包同步，不第二runner/installer。
+
+父集成允许现有core/app/env/journey测试、现质量工作流、单一治理清单与QA所属合同联动，不受初实施子代理仅两生产文件/no-CI限制；未改变用户原批准A-E的权限边界。所有新测试必须正常工具写入，通过固定独审和真实CI/MQ；任何硬拒均停止受影响动作，不换工具/意图/别名绕写。
+
 ## 结构与风格
-只修改 scripts/worktree-app-qa.mjs、scripts/test-env-bootstrap.mjs 和本规格；主报告为 tmp/agent-infra-2026-10-14/evidence-consumer-3335-implementation.md。保留既有具名 exports/CLI mode，不新 helper/test 文件，不改 core、ignore、CI、合同、通用 token 系统。沿用现有 ESM、具名函数、分号与现有注入 seam；新增内部函数只服务此垂直。
+首实施只修改 scripts/worktree-app-qa.mjs、scripts/test-env-bootstrap.mjs 和本规格；主报告为 tmp/agent-infra-2026-10-14/evidence-consumer-3335-implementation.md。保留既有具名 exports/CLI mode，不新 helper/test 文件，不改 core、ignore、CI、合同、通用 token 系统。沿用现有 ESM、具名函数、分号与现有注入 seam；新增内部函数只服务此垂直。
 
 ## 验证策略与命令
 允许 node --check scripts/worktree-app-qa.mjs、node --check scripts/test-env-bootstrap.mjs、git diff --check；node --test scripts/worktree-app-qa.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs scripts/evidence-contract.test.mjs（仅现有 fixture）；小内存编排检查允许但不得伪装正式覆盖。可以 node scripts/verify-product-baseline.mjs。禁止安装/远端/fetch/提交/full gates、真实 Chrome/env/Dev/Prod/credential 运行或新 real-Git fixture。基线冲突必须原样报红，不能弱化断言刷绿。正式 *.test 写入与公共正例/CI 待父 #3334 合入 root 后合法补齐。

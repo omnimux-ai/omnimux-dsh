@@ -157,6 +157,34 @@ jobs:
       - name: Verify task form runtime and protected draft handoff
         run: node --test plugins/omnimux-forms/src/*.test.mjs plugins/omnimux-forms/src/client/*.test.mjs plugins/omnimux/src/host/form-attachments*.test.js plugins/omnimux/src/client/forms/*.test.js
 
+      - name: Prepare small public evidence data repository
+        run: |
+          set -euo pipefail
+          fixture="$(mktemp -d "$RUNNER_TEMP/evidence-contract-XXXXXX")"
+          git init -b main "$fixture/primary"
+          git -C "$fixture/primary" config core.autocrlf false
+          printf '.worktrees/\n.workbuddy/evidence/\n' > "$fixture/primary/.gitignore"
+          printf 'synthetic public evidence source\n' > "$fixture/primary/source.txt"
+          git -C "$fixture/primary" add -- .gitignore source.txt
+          git -C "$fixture/primary" -c user.name=EvidenceFixture -c user.email=fixture@example.invalid commit -m fixture
+          sha="$(git -C "$fixture/primary" rev-parse --verify HEAD)"
+          git -C "$fixture/primary" worktree add --detach "$fixture/primary/.worktrees/task" "$sha"
+          printf 'EVIDENCE_FIXTURE_REPO=%s\nEVIDENCE_FIXTURE_ROOT=%s\nEVIDENCE_FIXTURE_SHA=%s\nEVIDENCE_FIXTURE_OWNER=%s\n' "$fixture/primary" "$fixture/primary/.worktrees/task" "$sha" "$fixture" >> "$GITHUB_ENV"
+
+      - name: Verify public evidence core and consumer
+        run: node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs
+
+      - name: Clean owned public evidence data repository
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          if [ -n "${EVIDENCE_FIXTURE_OWNER:-}" ]; then
+            case "$EVIDENCE_FIXTURE_OWNER" in "$RUNNER_TEMP"/evidence-contract-*) ;; *) exit 1 ;; esac
+            test -d "$EVIDENCE_FIXTURE_OWNER" && test ! -L "$EVIDENCE_FIXTURE_OWNER"
+            test "$(realpath "$EVIDENCE_FIXTURE_OWNER")" = "$EVIDENCE_FIXTURE_OWNER"
+            rm -r -- "$EVIDENCE_FIXTURE_OWNER"
+          fi
+
       - name: Run regression tests
         run: |
           node --test scripts/git-wt.test.mjs scripts/test-dx-pipeline.mjs scripts/worktree-delivery.test.mjs scripts/run-workspace-tests.test.mjs scripts/style-dom-probe.test.mjs
