@@ -227,38 +227,68 @@ export function createTestEnvironmentStarter(deps = {}) {
   const io = deps.fs ?? fs;
   const signals = deps.signals ?? process;
   return async function start(options = {}) {
-    if (!options || typeof options !== 'object' || Object.keys(options).some(k => !['root', 'mode'].includes(k))) throw failure('OPTIONS');
-    const { root, mode = 'ui' } = options;
+    if (!options || typeof options !== 'object' || Object.keys(options).some(k => !['root', 'mode', 'evidenceContext'].includes(k))) throw failure('OPTIONS');
+    const { root, mode = 'ui', evidenceContext = null } = options;
     if (!['ui', 'onboarding', 'live'].includes(mode)) throw failure('OPTIONS');
     validateRoot(root, io, deps.repositoryRoot ?? repositoryRoot);
+    if (evidenceContext !== null) {
+      if (!evidenceContext || Object.keys(evidenceContext).sort().join(',') !== 'runId,taskId'
+        || !Object.values(evidenceContext).every(value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value))) throw failure('OPTIONS');
+      // The legacy full profile is Dev-backed, not a fresh synthetic installation.
+      const error = failure('NOT_USER_FRESH_TASK_UNKNOWN');
+      error.cleanup = { cleaned: true, resources: ['app-child', 'mock-server', 'app-private-directory'].map(name => ({ name, owner: 'app-environment', status: 'not-applicable', reason: 'not-created' })) };
+      error.observations = { userFresh: false, taskBinding: 'unknown', runtimeStarted: false };
+      throw error;
+    }
     try { io.accessSync(EXECUTABLE, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
-    let privateDir, mock, child, exited = false, cleanupPromise, startupReject;
+    let privateDir, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise, startupReject;
+    const observations = { contract: 'none', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
     let releaseOutput = () => {};
     const shutdownMs = deps.shutdownTimeoutMs ?? 5000;
     const waitExit = async milliseconds => {
-      if (!child || exited || child.exitCode !== null || child.signalCode !== null) return true;
+      if (!child || (exited && closed)) return true;
       return new Promise(yes => {
-        const onExit = () => { clearTimeout(timer); yes(true); };
-        const timer = setTimeout(() => { child.off('exit', onExit); yes(false); }, milliseconds);
-        child.once('exit', onExit);
+        const finish = value => { clearTimeout(timer); child.off('exit', check); child.off('close', check); yes(value); };
+        const check = () => { if (exited && closed) finish(true); };
+        const timer = setTimeout(() => finish(false), milliseconds);
+        child.on('exit', check); child.on('close', check);
+        check();
       });
     };
-    const onSignal = () => { startupReject?.(failure('INTERRUPTED')); void cleanup().catch(() => {}); };
-    const cleanup = () => cleanupPromise ??= (async () => {
+    const onSignal = () => { observations.interrupted = true; startupReject?.(failure('INTERRUPTED')); void cleanup().catch(() => {}); };
+    const cleanup = () => cleanupPromise ??= Promise.resolve().then(async () => {
+      cleaning = true;
       signals.off('SIGINT', onSignal); signals.off('SIGTERM', onSignal);
-      releaseOutput();
-      let stopped = true;
-      try {
-        if (child && !exited && child.exitCode === null && child.signalCode === null) {
-          child.kill('SIGTERM'); stopped = await waitExit(shutdownMs);
-          if (!stopped) { child.kill('SIGKILL'); stopped = await waitExit(shutdownMs); }
-        }
-      } catch { stopped = false; }
-      await mock?.close();
-      if (!stopped) throw failure('CLEANUP_TIMEOUT');
-      if (privateDir) io.rmSync(privateDir, { recursive: true, force: true });
-      return { cleaned: true };
-    })();
+      const resources = [];
+      const record = (name, status, reason = null) => resources.push({ name, owner: 'app-environment', status, reason });
+      try { releaseOutput(); } catch { observations.outputReleaseFailed = true; }
+      if (!child) record('app-child', 'not-applicable', 'not-created');
+      else {
+        let stopped = exited && closed;
+        try {
+          if (!exited) child.kill('SIGTERM');
+          stopped = await waitExit(shutdownMs);
+          if (!stopped && !exited) { child.kill('SIGKILL'); stopped = await waitExit(shutdownMs); }
+        } catch { stopped = false; }
+        record('app-child', stopped ? 'completed' : 'failed', stopped ? null : 'exit-or-close-unconfirmed');
+      }
+      if (!mock) record('mock-server', 'not-applicable', 'not-created');
+      else {
+        try { await mock.close(); record('mock-server', 'completed'); }
+        catch { record('mock-server', 'failed', 'mock-close-failed'); }
+      }
+      if (!privateDir) record('app-private-directory', 'not-applicable', 'not-created');
+      else if (resources.some(item => item.name === 'app-child' && item.status === 'failed')) record('app-private-directory', 'failed', 'owned-child-still-unconfirmed');
+      else {
+        try {
+          if (dirname(privateDir) !== root || !privateDir.startsWith(join(root, '.test-env-'))) throw failure('ROOT_UNSAFE');
+          canonical(io, privateDir, true);
+          io.rmSync(privateDir, { recursive: true, force: true });
+          record('app-private-directory', 'completed');
+        } catch { record('app-private-directory', 'failed', 'private-directory-remove-failed'); }
+      }
+      return { cleaned: resources.every(item => item.status !== 'failed'), resources };
+    });
     try {
       // Authorization for live credential access must already cover this task; selecting a mode does not grant it.
       let credential;
@@ -677,11 +707,17 @@ export function createTestEnvironmentStarter(deps = {}) {
         const timer = setTimeout(() => no(failure('START_TIMEOUT')), deps.startupTimeoutMs ?? 60000);
         try {
           child = (deps.spawn ?? spawn)(EXECUTABLE, ['--expose-internals', WRAPPER, '--profile', profileName, '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
-          child.once('exit', () => {
-            exited = true; no(failure('RUNTIME_EXIT'));
+          observations.runtimeStarted = true;
+          observations.events.push({ event: 'spawn', pid: child.pid ?? null, parentPid: process.pid });
+          child.once('exit', (code, signal) => {
+            exited = true;
+            observations.events.push({ event: 'exit', code: code ?? null, signal: signal ?? null });
+            if (!cleaning) observations.unexpectedExit = true;
+            no(failure('RUNTIME_EXIT'));
             void cleanup().catch(() => {});
           });
-          child.on('error', () => no(failure('RUNTIME_START')));
+          child.once('close', (code, signal) => { closed = true; observations.events.push({ event: 'close', code: code ?? null, signal: signal ?? null }); });
+          child.on('error', () => { observations.events.push({ event: 'error' }); no(failure('RUNTIME_START')); });
           const output = chunk => {
             buffer += chunk.toString();
             if (buffer.length > 65536) { buffer = ''; no(failure('OUTPUT_LIMIT')); return; }
@@ -709,12 +745,18 @@ export function createTestEnvironmentStarter(deps = {}) {
         modelConfiguration: mode === 'ui' ? 'QA模拟' : mode === 'live' ? 'authorized-dev-reference' : 'unconfigured',
         seededWorkspace: hasSeededFixture ? seededWorkspaceId : null,
       });
-      const result = { origin: url.origin, summary, cleanup };
+      const result = { origin: url.origin, summary, observations, cleanup };
       Object.defineProperty(result, 'loginUrl', { value: url.href, enumerable: false });
+      Object.defineProperty(result, 'assertAlive', { value: () => {
+        if (exited || closed || observations.unexpectedExit || observations.interrupted) throw failure('RUNTIME_EXIT');
+      }, enumerable: false });
       return result;
     } catch (error) {
-      try { await cleanup(); } catch { throw failure('CLEANUP_FAILED'); }
-      throw safeError(error, 'PREPARE');
+      const cleaned = await cleanup();
+      const classified = safeError(error, 'PREPARE');
+      classified.cleanup = cleaned;
+      classified.observations = observations;
+      throw classified;
     }
   };
 }
@@ -722,7 +764,8 @@ export function createTestEnvironmentStarter(deps = {}) {
 /** Start a private complete core Web runtime. Callers must use try/finally cleanup.
  * `live` requires prior task-specific authorization and does not submit a model request.
  * loginUrl is a secret in-memory capability: never log it or put it in evidence.
- * @param {{root: string, mode?: 'ui'|'onboarding'|'live'}} options
+ * evidenceContext rejects the Dev-backed legacy preparation before runtime or profile access.
+ * @param {{root: string, mode?: 'ui'|'onboarding'|'live', evidenceContext?: {taskId:string, runId:string}}} options
  */
 export const startTestEnvironment = createTestEnvironmentStarter();
 
