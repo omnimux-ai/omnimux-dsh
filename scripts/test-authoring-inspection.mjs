@@ -18,14 +18,15 @@ function contextOf(node) {
   if (node.type === 'VariableDeclaration') return { type: node.type, kind: node.kind }
   if (['ReturnStatement', 'ThrowStatement', 'AwaitExpression', 'YieldExpression'].includes(node.type)) return { type: node.type, delegate: node.delegate }
   if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') return { type: node.type, key: node.key, computed: node.computed, kind: node.kind, static: node.static }
-  if (node.type === 'CallExpression' || node.type === 'NewExpression') return { type: node.type, callee: node.callee, arguments: node.arguments.map(arg => functions.has(arg.type) ? contextOf(arg) : arg) }
+  if (node.type === 'CallExpression' || node.type === 'NewExpression') return { type: node.type, optional: node.optional, callee: node.callee, arguments: node.arguments.map(arg => functions.has(arg.type) ? contextOf(arg) : arg) }
+  if (['ArrayExpression', 'ArrayPattern', 'TryStatement', 'ChainExpression', 'SequenceExpression', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type)) return { type: node.type }
   if (node.type === 'ImportDeclaration') return node
   if (node.type === 'LogicalExpression' || node.type === 'BinaryExpression') return { type: node.type, operator: node.operator, left: node.left }
   if (node.type === 'UnaryExpression' || node.type === 'UpdateExpression') return { type: node.type, operator: node.operator, prefix: node.prefix }
   if (node.type === 'AssignmentExpression') return { type: node.type, operator: node.operator, left: node.left }
   if (node.type === 'ClassDeclaration' || node.type === 'ClassExpression') return { type: node.type, id: node.id, superClass: node.superClass }
   if (node.type === 'BlockStatement' || node.type === 'StaticBlock') return { type: node.type }
-  if (['IfStatement', 'ConditionalExpression', 'WhileStatement', 'DoWhileStatement', 'ForStatement', 'ForInStatement', 'ForOfStatement', 'SwitchStatement', 'SwitchCase', 'CatchClause'].includes(node.type)) return { type: node.type, test: node.test, init: node.init, update: node.update, left: node.left, right: node.right, discriminant: node.discriminant, param: node.param }
+  if (['IfStatement', 'ConditionalExpression', 'WhileStatement', 'DoWhileStatement', 'ForStatement', 'ForInStatement', 'ForOfStatement', 'SwitchStatement', 'SwitchCase', 'CatchClause'].includes(node.type)) return { type: node.type, await: node.await, test: node.test, init: node.init, update: node.update, left: node.left, right: node.right, discriminant: node.discriminant, param: node.param }
   return null
 }
 
@@ -100,9 +101,9 @@ function collectRisks(code) {
     if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) risk('dynamic-test-execution-needs-review')
     if (node.type === 'ImportSpecifier' && (blocked.has(node.imported.name ?? node.imported.value) || execution.has(node.imported.name ?? node.imported.value))) risk('test-execution-import-needs-review')
     for (const [key, value] of Object.entries(node)) {
-      const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
+      const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression', 'TryStatement', 'ChainExpression', 'SequenceExpression', 'ArrayExpression', 'ArrayPattern', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
       if (Array.isArray(value)) for (const [index, child] of value.entries()) {
-        const argumentsContext = key === 'arguments' ? [...branch, { argument: index }] : branch
+        const argumentsContext = ['arguments', 'elements', 'expressions'].includes(key) ? [...branch, { slot: key, index }] : branch
         inspect(child, node, argumentsContext, nestedSiblings)
       }
       else if (value && typeof value === 'object') inspect(value, node, branch, nestedSiblings)
