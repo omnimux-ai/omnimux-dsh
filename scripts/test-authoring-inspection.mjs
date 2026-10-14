@@ -18,7 +18,7 @@ export function inspectTestAuthoring(code) {
     if (node.type === 'MemberExpression') {
       const property = node.computed ? node.property.type === 'Literal' ? node.property.value : null : node.property.name
       if (property === null) reason = 'dynamic-test-member-needs-review'
-      else if (blocked.has(property) || ['eval', 'Function', 'defineProperty', 'defineProperties'].includes(property) || node.object.type === 'Identifier' && node.object.name === 'Reflect') reason = 'test-execution-selector-needs-review'
+      else if (blocked.has(property) || ['eval', 'Function', 'constructor', 'defineProperty', 'defineProperties', 'call', 'apply', 'bind'].includes(property) || node.object.type === 'Identifier' && node.object.name === 'Reflect') reason = 'test-execution-selector-needs-review'
     }
     if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') {
       const key = node.computed ? node.key.type === 'Literal' ? node.key.value : null : node.key.name ?? node.key.value
@@ -29,8 +29,11 @@ export function inspectTestAuthoring(code) {
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
       const namespaceRunner = node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier' && runners.has(node.callee.object.name)
       if (directRunner || namespaceRunner) {
-        const options = node.arguments.length > 2 ? node.arguments[1] : null
-        if (options && (options.type !== 'ObjectExpression' || options.properties.some(property => property.type !== 'Property'))) reason = 'dynamic-test-options-needs-review'
+        const first = node.arguments[0]
+        const named = first?.type === 'Literal' && typeof first.value === 'string'
+        const options = named ? node.arguments[1] : first
+        const callback = options && ['ArrowFunctionExpression', 'FunctionExpression'].includes(options.type)
+        if (options && !callback && (options.type !== 'ObjectExpression' || options.properties.some(property => property.type !== 'Property'))) reason = 'dynamic-test-options-needs-review'
       }
     }
     if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.type === 'WithStatement') reason = 'dynamic-test-execution-needs-review'
