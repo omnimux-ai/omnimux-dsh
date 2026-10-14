@@ -28,6 +28,14 @@ Normative seat for OmniMux plugin UI in the official Web Settings panel. Live sl
 
 MUST NOT register plugin config, plugin install, or social-account management as a new `settings.section`. That slot is the first-level sidebar. Adding a row there is how "DeepSeek 搜索密钥" and "DSH 插件" leaked into the nav.
 
+## Reference media storage on current configuration forms
+
+Current official Hosts expose plugin Config volatile fields through `configForms`, not the legacy `settingsScope` / `settings.plugin.item` seat. OmniMux reference media storage uses one `referenceStorage` volatile field and the existing global Plugins page: `plugins.item`, id `omnimux-reference-storage`, registered only while the `omnimux` form is served. Summary renders explanation only; page renders the configuration. Bundle/row detail contributions target OmniMux explicitly and never another plugin.
+
+Non-secret configuration persists through official SettingsForms / ConfigEditor with the entry revision. Access identifier and secret are separate official credential references; reads report presence and writability, never their values. Every generation prepares from the current operation snapshot. See [reference media storage](../guides/reference-media-storage.md) for scope and privacy boundaries.
+
+The legacy seats below remain descriptions of older composition surfaces; their presence in this contract is not proof of availability on a current Host. No new top-level `settings.section` is created for storage.
+
 ## Current occupants
 
 | Slot | id | Owner | Role |
