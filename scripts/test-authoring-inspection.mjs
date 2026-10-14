@@ -19,6 +19,7 @@ function contextOf(node) {
   if (['ReturnStatement', 'ThrowStatement', 'AwaitExpression', 'YieldExpression'].includes(node.type)) return { type: node.type, delegate: node.delegate }
   if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') return { type: node.type, key: node.key, computed: node.computed, kind: node.kind, static: node.static }
   if (node.type === 'CallExpression' || node.type === 'NewExpression') return { type: node.type, optional: node.optional, callee: node.callee, arguments: node.arguments.map(arg => functions.has(arg.type) ? contextOf(arg) : arg) }
+  if (node.type === 'TaggedTemplateExpression') return { type: node.type, quasi: node.quasi }
   if (['ArrayExpression', 'ArrayPattern', 'TryStatement', 'ChainExpression', 'SequenceExpression', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type)) return { type: node.type }
   if (node.type === 'ImportDeclaration') return node
   if (node.type === 'LogicalExpression' || node.type === 'BinaryExpression') return { type: node.type, operator: node.operator, left: node.left }
@@ -101,7 +102,7 @@ function collectRisks(code) {
     if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) risk('dynamic-test-execution-needs-review')
     if (node.type === 'ImportSpecifier' && (blocked.has(node.imported.name ?? node.imported.value) || execution.has(node.imported.name ?? node.imported.value))) risk('test-execution-import-needs-review')
     for (const [key, value] of Object.entries(node)) {
-      const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression', 'TryStatement', 'ChainExpression', 'SequenceExpression', 'ArrayExpression', 'ArrayPattern', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
+      const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression', 'TryStatement', 'TaggedTemplateExpression', 'ChainExpression', 'SequenceExpression', 'ArrayExpression', 'ArrayPattern', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
       if (Array.isArray(value)) for (const [index, child] of value.entries()) {
         const argumentsContext = ['arguments', 'elements', 'expressions'].includes(key) ? [...branch, { slot: key, index }] : branch
         inspect(child, node, argumentsContext, nestedSiblings)
