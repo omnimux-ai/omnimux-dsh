@@ -31,7 +31,7 @@ describe('media route', () => {
     'grok-imagine-image-2-0',
     'grok-imagine-image-2.0',
   ]) {
-    it(`normalizes image request, env and config model ${model} to Grok Image 2`, () => {
+    it('normalizes each registered image alias in request, env and config to Grok Image 2', () => {
       const media = parseMediaConfig(undefined)
       assert.equal(toMediaWireModelId(` ${model} `), 'grok-imagine-image-2-0')
       assert.equal(resolveMediaRoute('image', { model }, media, {}).modelId, 'grok-imagine-image-2-0')
@@ -340,11 +340,15 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     )
   })
 
-  it('keeps a model without a channel pool but records the unusable channel intent', () => {
+  it('rejects unusable channel intent on a model without a channel pool', () => {
     const media = parseMediaConfig(undefined)
-    const route = resolveMediaRoute('image', { model: 'grok-imagine-image-2', allowedGroups: ['standard'] }, media)
-    assert.deepEqual(route.unresolvedGroups, ['standard'])
-    assert.ok(route.candidates.includes('grok-imagine-image-2'))
+    assert.throws(
+      () => resolveMediaRoute('image', { model: 'grok-imagine-image-2', allowedGroups: ['standard'] }, media, {}),
+      (error) => error instanceof OmnimuxError && error.code === 'unknown-group' && /standard/.test(error.message),
+    )
+    assert.deepEqual(resolveMediaRoute('image', { model: 'grok-imagine-image-2' }, media, {}).candidates, [
+      'grok-imagine-image-2-0', 'grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2.0',
+    ])
   })
 
   it('auto-pins the default line when a model declares one and the caller gave no intent', () => {
@@ -361,11 +365,15 @@ describe('resolveMediaAuth (dual-track auth)', () => {
     assert.deepEqual(sunburstRoute.candidates, ['gpt-image-2.5-sunburst@gpt-image-2.5-sunburst-std'])
   })
 
-  it('explicit group intent overrides the default line', () => {
+  it('rejects an unregistered explicit line and honors a registered default override', () => {
     const media = parseMediaConfig(undefined)
-    const explicit = resolveMediaRoute('image', { model: 'gpt-image-2.5-flare', group: 'pro' }, media)
-    // When the caller specifically asks for pro, that choice is honored instead of the default.
+    assert.throws(
+      () => resolveMediaRoute('image', { model: 'gpt-image-2.5-flare', group: 'pro' }, media, {}),
+      (error) => error instanceof OmnimuxError && error.code === 'unknown-group',
+    )
+    const explicit = resolveMediaRoute('image', { model: 'gpt-image-2.5', group: 'pro' }, media, {})
     assert.equal(explicit.group, 'pro')
+    assert.deepEqual(explicit.candidates, ['gpt-image-2.5@gpt-image-2.5-pro'])
   })
 
   it('models without a pinned default line retain legacy bare candidates under empty intent', () => {

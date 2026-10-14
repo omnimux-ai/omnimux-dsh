@@ -1,103 +1,12 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Button, DropdownSelect, InputField } from 'dsh-ui-kit'
 import { useOmnimuxAuth } from './use-omnimux-auth.js'
-import { DEFAULT_MEDIA_MODELS } from '../settings/runtime-mode.js'
-
-/**
- * Supported media provider presets and model options
- */
-const MEDIA_PROVIDER_PRESETS = {
-  fal: {
-    id: 'fal',
-    name: 'fal.ai',
-    tag: '推荐首选',
-    capsDesc: '图片 (Flux / SD3.5) · 视频 (Kling / Minimax / Luma) · 音频 (F5-TTS)',
-    defaultEndpoint: 'https://fal.run',
-    keyPlaceholder: 'fal_key_...',
-    models: {
-      image: ['fal-ai/flux/dev', 'fal-ai/flux-pro', 'fal-ai/stable-diffusion-v35-large'],
-      video: ['fal-ai/kling-video/v1/standard', 'fal-ai/minimax-video', 'fal-ai/luma-dream-machine'],
-      audio: ['fal-ai/f5-tts', 'fal-ai/playht/tts'],
-    },
-  },
-  openai: {
-    id: 'openai',
-    name: 'OpenAI',
-    tag: '原生媒体',
-    capsDesc: '图片 (DALL·E 3) · 音频 (TTS-1 / Whisper) · 视频 (Sora API)',
-    defaultEndpoint: 'https://api.openai.com/v1',
-    keyPlaceholder: 'sk-proj-...',
-    models: {
-      image: ['dall-e-3', 'dall-e-2'],
-      video: ['sora-preview-1.0'],
-      audio: ['tts-1-hd', 'tts-1', 'whisper-1'],
-    },
-  },
-  openrouter: {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    tag: '全聚合',
-    capsDesc: '全聚合接口路由 · 多模态与多渠道生图模型',
-    defaultEndpoint: 'https://openrouter.ai/api/v1',
-    keyPlaceholder: 'sk-or-v1-...',
-    models: {
-      image: ['black-forest-labs/flux-1.1-pro', 'stabilityai/stable-diffusion-3.5-large'],
-      video: ['minimax/video-01'],
-      audio: ['openai/tts-1'],
-    },
-  },
-}
-
-/**
- * Built-in official models for known agent CLIs as resilient frontend fallback.
- */
-const CLI_KNOWN_MODELS = {
-  claude: [
-    'claude-3-7-sonnet',
-    'claude-3-5-sonnet',
-    'claude-3-5-haiku',
-    'claude-3-opus',
-  ],
-  codex: [
-    'gpt-6-astra',
-    'gpt-6-sol',
-    'gpt-6-luna',
-    'gpt-5.6-sol',
-    'gpt-5.6-terra',
-    'gpt-5.6-luna',
-    'gpt-5.5',
-  ],
-  kimi: [
-    'kimi-code/k3',
-    'kimi-code/k3-256k',
-    'kimi-code/kimi-for-coding',
-    'kimi-code/kimi-for-coding-highspeed',
-  ],
-  qwen: [
-    'qwen-max',
-    'qwen-plus',
-    'qwen-turbo',
-    'qwen-2.5-coder-32b',
-  ],
-}
-
-/**
- * Obsolete legacy model identifiers that must be cleansed from in-memory backend cache.
- */
-export const OBSOLETE_MODEL_IDS = new Set([
-  'gpt-4o',
-  'o1',
-  'o3-mini',
-  'gpt-4.5-preview',
-  'kimi-latest',
-  'moonshot-v1-128k',
-  'moonshot-v1-32k',
-  'moonshot-v1-8k',
-])
+import { ScenarioSelection } from './ScenarioSelection.jsx'
+import { ProviderConfigPanel } from './ProviderConfigPanel.jsx'
 
 async function api(path, init) {
   const response = await fetch(path, init)
-  const body = await response.json().catch(() => ({}))
+  const body = await response.json()
   if (!response.ok) {
     throw new Error(typeof body.error === 'string' ? body.error : `HTTP ${response.status}`)
   }
@@ -165,11 +74,13 @@ export function RuntimeModeSection({ t, scope }) {
         </Button>
       </div>
 
+      <ScenarioSelection t={t} scope={scope} value={value} busy={busy} setBusy={setBusy} setError={setError} />
       <div className="omx-segmented-tabs" role="tablist">
         <Button
           variant="ghost"
           role="tab"
           aria-selected={activeTab === 'cli'}
+          disabled={busy}
           className={`omx-tab-btn ${activeTab === 'cli' ? 'active' : ''}`}
           onClick={() => { setActiveTab('cli'); setError(''); setNotice('') }}
         >
@@ -179,6 +90,7 @@ export function RuntimeModeSection({ t, scope }) {
           variant="ghost"
           role="tab"
           aria-selected={activeTab === 'media'}
+          disabled={busy}
           className={`omx-tab-btn ${activeTab === 'media' ? 'active' : ''}`}
           onClick={() => { setActiveTab('media'); setError(''); setNotice('') }}
         >
@@ -186,7 +98,7 @@ export function RuntimeModeSection({ t, scope }) {
         </Button>
       </div>
 
-      {activeTab === 'cli' ? (
+      <div hidden={activeTab !== 'cli'}>
         <AgentPanel
           t={t}
           scope={scope}
@@ -198,10 +110,10 @@ export function RuntimeModeSection({ t, scope }) {
           notice={notice}
           setNotice={setNotice}
         />
-      ) : null}
+      </div>
 
-      {activeTab === 'media' ? (
-        <ByokPanel
+      <div hidden={activeTab !== 'media'}>
+        <ProviderConfigPanel
           t={t}
           scope={scope}
           value={value}
@@ -212,19 +124,6 @@ export function RuntimeModeSection({ t, scope }) {
           notice={notice}
           setNotice={setNotice}
         />
-      ) : null}
-
-      <div className="omx-status-bar">
-        <div>
-          <span>{t('runtime.currentChat')}</span>
-          <strong>{value.runtimeAgentId ? value.runtimeAgentId : t('runtime.defaultChat')}</strong>
-          <span className="omx-dot-separator">·</span>
-          <span>{t('runtime.currentMedia')}</span>
-          <strong>{value.runtimeMediaProvider ? value.runtimeMediaProvider : t('runtime.unconfigured')}</strong>
-        </div>
-        <div>
-          {value.runtimeKeyVerified ? <span className="omx-status-pass">{t('runtime.mediaReady')}</span> : null}
-        </div>
       </div>
 
       {error ? <p className="omnimux-models-card__error" role="status">{error}</p> : null}
@@ -239,7 +138,7 @@ export function RuntimeModeSection({ t, scope }) {
 function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, setNotice, onVerified }) {
   const [agents, setAgents] = useState([])
   const [selectedAgent, setSelectedAgent] = useState(value.runtimeAgentId || '')
-  const initialAgentModel = typeof value.runtimeAgentModel === 'string' && !OBSOLETE_MODEL_IDS.has(value.runtimeAgentModel.trim())
+  const initialAgentModel = typeof value.runtimeAgentModel === 'string'
     ? value.runtimeAgentModel
     : ''
   const [agentModel, setAgentModel] = useState(initialAgentModel)
@@ -258,21 +157,6 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
   }, [])
 
   useEffect(() => () => stopLoginPoll(), [stopLoginPoll])
-
-  // 自愈清理机制：若检测到当前的 agentModel 或 value.runtimeAgentModel 存在且命中了 OBSOLETE_MODEL_IDS，主动清除并同步清理底层持久化存储
-  useEffect(() => {
-    const rawVal = typeof value.runtimeAgentModel === 'string' ? value.runtimeAgentModel.trim() : ''
-    const rawState = typeof agentModel === 'string' ? agentModel.trim() : ''
-    const isValObsolete = rawVal !== '' && OBSOLETE_MODEL_IDS.has(rawVal)
-    const isStateObsolete = rawState !== '' && OBSOLETE_MODEL_IDS.has(rawState)
-
-    if (isValObsolete || isStateObsolete) {
-      setAgentModel('')
-      if (scope && typeof scope.set === 'function') {
-        void scope.set('runtimeAgentModel', '')
-      }
-    }
-  }, [agentModel, value.runtimeAgentModel, scope])
 
   const refreshAgents = useCallback(async () => {
     try {
@@ -327,14 +211,6 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
 
   const selectAndSaveAgent = async (agent) => {
     if (busy || !agent.installed) return
-    const prevAgent = selectedAgent
-    setSelectedAgent(agent.id)
-    if (prevAgent !== agent.id) {
-      setAgentModel('')
-      if (scope && typeof scope.set === 'function') {
-        void scope.set('runtimeAgentModel', '')
-      }
-    }
     setBusy(true)
     setError('')
     try {
@@ -346,12 +222,8 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
       if (!res.ok) {
         throw new Error(res.error || t('runtime.agentFail'))
       }
-      // Explicitly switch runtimeMode to 'agent' to ensure official sign-in bypass
-      await api('/omnimux/runtime/mode', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mode: 'agent' }),
-      })
+      setSelectedAgent(agent.id)
+      setNotice(t('runtime.agentOk', { name: agent.name }))
       if (typeof onVerified === 'function') onVerified(agent.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -369,11 +241,11 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
       const res = await api('/omnimux/agents/select', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: agent.id }),
+        body: JSON.stringify({ id: agent.id, checkOnly: true }),
       })
       if (res.ok) {
         setTestedId(agent.id)
-        setNotice(t('runtime.agentOk', { name: agent.name }))
+        setNotice(t('runtime.agentChecked', { name: agent.name }))
       } else {
         setTestedId('')
         setError(res.error || t('runtime.agentFail'))
@@ -438,17 +310,16 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
   }
 
   const handleModelChange = async (nextModel) => {
-    const safeModel = typeof nextModel === 'string' && !OBSOLETE_MODEL_IDS.has(nextModel.trim())
-      ? nextModel
-      : ''
-    setAgentModel(safeModel)
-    if (scope && typeof scope.set === 'function') {
-      try {
-        await scope.set('runtimeAgentModel', safeModel)
-      } catch {
-        // best effort
-      }
-    }
+    if (!scope || typeof scope.set !== 'function' || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await scope.set('runtimeAgentModel', nextModel)
+      setAgentModel(nextModel)
+      setTestedId('')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : t('runtime.error'))
+    } finally { setBusy(false) }
   }
 
   return (
@@ -500,7 +371,7 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
                   </div>
                 </div>
                 <div className="omx-cli-tools-row">
-                  {testedId === agent.id ? <span className="omx-status-pass">✓ 通过</span> : null}
+                  {testedId === agent.id ? <span className="omx-status-pass">{t('runtime.programChecked')}</span> : null}
                   <Button variant="ghost" disabled={busy || !agent.installed} onClick={(e) => { void testAgent(e, agent) }}>
                     {t('runtime.test')}
                   </Button>
@@ -524,16 +395,11 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
                   <div className="omx-form-row">
                     <span className="omx-cli-desc">{t('runtime.modelLabel')}</span>
                     {(() => {
-                      const rawAgentModels = Array.isArray(agent.models) ? agent.models : []
-                      const cleansedModels = rawAgentModels.filter((m) => typeof m === 'string' && !OBSOLETE_MODEL_IDS.has(m.trim()))
-                      const rawFallbackModels = Array.isArray(CLI_KNOWN_MODELS[agent.id]) ? CLI_KNOWN_MODELS[agent.id] : []
-                      const cleansedFallbackModels = rawFallbackModels.filter((m) => typeof m === 'string' && !OBSOLETE_MODEL_IDS.has(m.trim()))
-                      const agentModels = cleansedModels.length > 0 ? cleansedModels : cleansedFallbackModels
-                      const isSafeModel = typeof agentModel === 'string' && agentModel.trim() !== '' && !agentModel.trim().startsWith('-') && /^[a-zA-Z0-9_.:/-]+$/.test(agentModel.trim()) && !OBSOLETE_MODEL_IDS.has(agentModel.trim())
+                       const agentModels = Array.isArray(agent.models) ? agent.models.filter((model) => typeof model === 'string' && model.trim()) : []
                       const rawOptions = [
                         { value: '', label: t('runtime.cliDefaultSetting') },
                         ...agentModels.map((m) => ({ value: m, label: m })),
-                        ...(agentModel && !agentModels.includes(agentModel) && isSafeModel ? [{ value: agentModel, label: agentModel }] : []),
+                        ...(agentModel && !agentModels.includes(agentModel) ? [{ value: agentModel, label: agentModel }] : []),
                       ]
                       const seen = new Set()
                       const uniqueOptions = rawOptions.filter((opt) => {
@@ -562,225 +428,9 @@ function AgentPanel({ t, scope, value, busy, setBusy, error, setError, notice, s
   )
 }
 
-/**
- * Media Generation Providers configuration panel (fal.ai, OpenAI, OpenRouter)
- */
-function ByokPanel({ t, scope, value, busy, setBusy, error, setError, notice, setNotice, onVerified }) {
-  const [provider, setProvider] = useState(value.runtimeMediaProvider || 'fal')
-  const [apiKey, setApiKey] = useState('')
-  const [hasKey, setHasKey] = useState(false)
-  const [endpoint, setEndpoint] = useState('')
-  const [imgModel, setImgModel] = useState(value.runtimeMediaImageModel || DEFAULT_MEDIA_MODELS.image)
-  const [vidModel, setVidModel] = useState(value.runtimeMediaVideoModel || DEFAULT_MEDIA_MODELS.video)
-  const [audModel, setAudModel] = useState(value.runtimeMediaAudioModel || DEFAULT_MEDIA_MODELS.audio)
-  const [modelsExpanded, setModelsExpanded] = useState(false)
-
-  const preset = MEDIA_PROVIDER_PRESETS[provider] || MEDIA_PROVIDER_PRESETS.fal
-
-  useEffect(() => {
-    let cancelled = false
-    api('/omnimux/byok/config').then((cfg) => {
-      if (cancelled) return
-      if (cfg.provider) setProvider(cfg.provider)
-      if (cfg.endpoint) setEndpoint(cfg.endpoint)
-      setHasKey(cfg.hasKey === true)
-      if (cfg.mediaImageModel) setImgModel(cfg.mediaImageModel)
-      if (cfg.mediaVideoModel) setVidModel(cfg.mediaVideoModel)
-      if (cfg.mediaAudioModel) setAudModel(cfg.mediaAudioModel)
-    }).catch(() => {})
-    return () => { cancelled = true }
-  }, [])
-
-  const handleProviderSelect = (pId) => {
-    setProvider(pId)
-    const pCfg = MEDIA_PROVIDER_PRESETS[pId]
-    if (pCfg) {
-      setEndpoint(pCfg.defaultEndpoint)
-      setImgModel(pCfg.models.image[0])
-      setVidModel(pCfg.models.video[0])
-      setAudModel(pCfg.models.audio[0])
-    }
-    setHasKey(false)
-    setApiKey('')
-    api('/omnimux/byok/config').then((cfg) => {
-      if (cfg.provider === pId) {
-        setHasKey(cfg.hasKey === true)
-      }
-    }).catch(() => {})
-  }
-
-  const save = useCallback(async () => {
-    if (busy) return
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const body = await api('/omnimux/byok/config', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          provider,
-          endpoint,
-          apiKey: apiKey.trim(),
-          model: imgModel,
-          mediaImageModel: imgModel,
-          mediaVideoModel: vidModel,
-          mediaAudioModel: audModel,
-          mediaImage: true,
-          mediaVideo: true,
-          mediaAudio: true,
-        }),
-      })
-      // Ensure runtimeMode is key
-      await api('/omnimux/runtime/mode', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mode: 'key' }),
-      })
-      setHasKey(body.hasKey === true)
-      setApiKey('')
-      setNotice(t('runtime.saved'))
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
-    } finally {
-      setBusy(false)
-    }
-  }, [busy, provider, endpoint, apiKey, imgModel, vidModel, audModel, t])
-
-  const test = useCallback(async () => {
-    if (busy) return
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const result = await api('/omnimux/byok/test', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          provider,
-          endpoint,
-          apiKey: apiKey.trim(),
-          model: imgModel,
-        }),
-      })
-      if (result.ok === true) {
-        setNotice(t('runtime.testOk'))
-        if (typeof onVerified === 'function') onVerified()
-      } else {
-        setError(t('runtime.testFail', { status: String(result.status || '') }))
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
-    } finally {
-      setBusy(false)
-    }
-  }, [busy, provider, endpoint, apiKey, imgModel, t, onVerified])
-
-  return (
-    <div>
-      <div className="omx-section-header">
-        <span className="omx-section-title">{t('runtime.mediaProviderHeader')}</span>
-      </div>
-
-      <div className="omx-media-grid">
-        {Object.values(MEDIA_PROVIDER_PRESETS).map((p) => {
-          const isSelected = provider === p.id
-          return (
-            <div
-              key={p.id}
-              className={`omx-provider-choice ${isSelected ? 'active' : ''}`}
-              onClick={() => handleProviderSelect(p.id)}
-            >
-              <div className="omx-section-header">
-                <span className="omx-provider-name">{p.name}</span>
-                <span className="omx-cli-tag">{p.tag}</span>
-              </div>
-              <p className="omx-provider-caps">{p.capsDesc}</p>
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="omx-provider-form">
-        <div className="omx-form-row">
-          <span className="omx-section-title">{preset.name} API Key</span>
-          <InputField
-            type="password"
-            value={apiKey}
-            placeholder={hasKey ? t('runtime.keyStored') : preset.keyPlaceholder}
-            onChange={(e) => setApiKey(e.target.value)}
-          />
-        </div>
-
-        <div className="omx-form-row">
-          <span className="omx-section-title">{t('runtime.endpointLabel')}</span>
-          <InputField
-            value={endpoint}
-            placeholder={preset.defaultEndpoint}
-            onChange={(e) => setEndpoint(e.target.value)}
-          />
-        </div>
-
-        <div className="omx-form-row">
-          <Button
-            type="button"
-            variant="ghost"
-            className="omx-collapsible-trigger"
-            aria-expanded={modelsExpanded}
-            onClick={() => setModelsExpanded(!modelsExpanded)}
-          >
-            <span className="omx-section-title">{t('runtime.mediaModelsToggle')}</span>
-            <span className="omx-toggle-badge">
-              {modelsExpanded ? t('runtime.collapse') : t('runtime.expand')}
-            </span>
-          </Button>
-
-          {modelsExpanded ? (
-            <div className="omx-caps-column">
-              <div className="omx-cap-card">
-                <span className="omx-form-item">{t('runtime.imageModel')}</span>
-                <DropdownSelect
-                  id="omx-img-model"
-                  value={imgModel}
-                  options={preset.models.image.map((m) => ({ value: m, label: m }))}
-                  onChange={(next) => setImgModel(next)}
-                />
-              </div>
-
-              <div className="omx-cap-card">
-                <span className="omx-form-item">{t('runtime.videoModel')}</span>
-                <DropdownSelect
-                  id="omx-vid-model"
-                  value={vidModel}
-                  options={preset.models.video.map((m) => ({ value: m, label: m }))}
-                  onChange={(next) => setVidModel(next)}
-                />
-              </div>
-
-              <div className="omx-cap-card">
-                <span className="omx-form-item">{t('runtime.audioModel')}</span>
-                <DropdownSelect
-                  id="omx-aud-model"
-                  value={audModel}
-                  options={preset.models.audio.map((m) => ({ value: m, label: m }))}
-                  onChange={(next) => setAudModel(next)}
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="omx-provider-form-actions">
-          <Button variant="ghost" disabled={busy} onClick={() => { void test() }}>
-            {t('runtime.test')}
-          </Button>
-          <Button variant="primary" disabled={busy} onClick={() => { void save() }}>
-            {t('runtime.save')}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
+/** Existing settings export uses the single provider draft surface. */
+function ByokPanel(props) {
+  return <ProviderConfigPanel {...props} />
 }
 
 export { ByokPanel, AgentPanel }
