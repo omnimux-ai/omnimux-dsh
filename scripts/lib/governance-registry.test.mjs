@@ -71,6 +71,26 @@ test('unknown shell prefixes stop subsequent execution-root claims', () => {
   }
 })
 
+test('raw directory globs and unsupported package arguments cannot promote suffix roots', () => {
+  const files = { 'scripts/a.mjs': 'export const value = 1;' }
+  for (const directory of ['*/..', '[abc]/..', 'bad\\path/..']) {
+    const input = { '.github/workflows/gate.yml': { jobs: { checks: { steps: [{ run: 'node scripts/a.mjs', 'working-directory': directory }] } } } }
+    const result = inspectGovernance(registry([], [], ['a.mjs']), files, { scripts: {} }, input)
+    assert.deepEqual(result.reachability.ci, [], directory)
+    assert.equal(result.unknowns.some(item => item.code === 'workflow-cwd'), true)
+  }
+  const suffix = inspectGovernance(registry([], [], ['a.mjs']), files, { scripts: { guard: 'exit 1' } }, workflow('pnpm run guard extra && node scripts/a.mjs'))
+  assert.deepEqual(suffix.reachability.ci, [])
+  assert.equal(suffix.unknowns.some(item => item.code === 'package-script-arguments'), true)
+})
+
+test('YAML source locations refer to actual command lines rather than block headers', () => {
+  const input = { '.github/workflows/gate.yml': 'jobs:\n  checks:\n    steps:\n      - run: |\n          node scripts/a.mjs\n' }
+  const result = inspectGovernance(registry(['a.mjs'], [], []), { 'scripts/a.mjs': '' }, { scripts: {} }, input)
+  const root = result.evidence.find(item => item.kind === 'root')
+  assert.equal(root.line, 5)
+})
+
 test('shell invocation declarations cannot prove a mismatched interpreter target', () => {
   const files = { 'scripts/run.sh': 'node scripts/target.py', 'scripts/target.py': 'print(1)' }
   const manifest = { version: 2, ciRequired: ['run.sh'], localRequired: [], manual: ['target.py'], deprecated: [], invocations: [{ from: 'run.sh', to: 'target.py', kind: 'node', source: { line: 1, callee: 'node', argument: 0 }, reason: 'Synthetic literal command.' }] }
