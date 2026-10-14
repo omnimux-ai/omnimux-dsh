@@ -15,8 +15,11 @@
 ## 首拒后的新边界候选
 原新增参数化测试未落并保持停止，不去除其展开或换工具重送。现独立复用已存在“只有文档改动不安装”公开收尾用例的原执行上下文，只在其已创建任务树增加这个版本化测试执行器文件，保持原spawn/env/所有断言与expect不变，以扩大非运行输入的覆盖；没有新增/隐藏执行或替换旧风险上下文。候选须正常edit写入后独立核查旧风险完整抵消和原测试标准加严，再执行其公开收尾行为红灯；禁止先改生产求绿。必要时原混合源码用例也只追加非运行文件，不删真实源码/模式/删除行为。作者语法比较仅检查不等许可；正常工具拒则停该整个候选，不拆/改工具helper绕。
 
+## 重命名输入保护
+独审确认上游默认Git name-only仅目的路径会吞掉运行源移到已知测试执行器的删除。上游版本路径收集显式--no-renames，使真实重命名两端以D/A参与分类；任何运行端保留安装需求。范围匹配R/C原保守分支不承担修复所有旧列序语义，本切片不重写通用Git解析器。新增真实边界用例只在原已批准删除文件用例内追加固定文件路径和已存在git函数调用，保持所有原spawn/env/expect，先未修上游时真实红后定点恢复绿；不重送旧拒参数化loop，不新增Spread/helper。
+
 ## 命令与证据
-- 红：`node --test --test-name-pattern='3352.*runner-only' scripts/worktree-delivery.test.mjs`。
+- 实际红灯入口：`node --test --test-name-pattern='^只有文档改动时不安装开发版$' scripts/worktree-delivery.test.mjs`（文档与已知测试执行器组合，不是独立runner-only矩阵；旧3352.*筛选不匹配，不可零测试报绿）。
 - 绿：`node --test scripts/worktree-delivery.test.mjs`。
 - 相关影响：`node --test scripts/impact-matrix.test.mjs`；`node scripts/impact-matrix.mjs --git-diff --base e36cafdf34597a0623d3b2ebe58c640b13b50046`。
 - 静态：`bash -n scripts/worktree.sh`；`node --check scripts/worktree-delivery.test.mjs`；`git diff --check`。
