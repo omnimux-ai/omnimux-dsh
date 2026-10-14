@@ -51,8 +51,10 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
 
   // 测试编写可形成候选；跳过/聚焦片段仍保守拒绝，旧标准变化另须独审。
   if (isTestFile && !isFixtureFile) {
-    const selectorCode = code.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n\r]*/g, ' ');
-    const narrowsExecution = /\.\s*(?:skip|todo|only)\b|\[\s*['"](?:skip|todo|only)['"]\s*\]|(?:\b(?:skip|todo|only)\b|['"](?:skip|todo|only)['"])\s*:\s*(?!false\b|null\b|undefined\b|0\s*[,}])\S/.test(selectorCode);
+    const gap = String.raw`(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n\r]*(?:\r?\n|$))*`;
+    const narrowedMember = new RegExp(String.raw`\.${gap}(?:skip|todo|only)\b|\[${gap}['"](?:skip|todo|only)['"]${gap}\]`);
+    const narrowedOption = /(?:\b(?:skip|todo|only)\b|['"](?:skip|todo|only)['"])\s*:\s*(?!false\b|null\b|undefined\b|0\s*[,}])\S/;
+    const narrowsExecution = narrowedMember.test(code) || narrowedOption.test(code);
     if (intent !== 'test_authoring' && narrowsExecution) {
       return {
         permissionDecision: 'deny',
