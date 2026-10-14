@@ -88,8 +88,9 @@ test('Project Assets Types and Popover Options Data Integrity', async (t) => {
     assert.match(addToSubjects, /无法索引此文件/);
     assert.match(addToSubjects, /real_path: item.real_path/);
     assert.equal(/prompt: sub.tags/.test(subjectSrc), false);
-    assert.match(subjectSrc, /real_path: firstFile\?\.real_path/);
-    assert.match(subjectSrc, /无本地文件，无法入创作画布/);
+    assert.match(subjectSrc, /onClick=\{\(\) => setSelectedSubjectId\(sub.id\)\}/);
+    assert.doesNotMatch(subjectSrc, /files: sub.files/);
+    assert.match(subjectSrc, /onSelectFile\(selectedSubject, file\)/);
   });
 
   await t.test('HoverInspector positions preview card fixed to the outer left of the sidebar', () => {

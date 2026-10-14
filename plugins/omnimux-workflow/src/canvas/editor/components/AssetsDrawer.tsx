@@ -310,13 +310,18 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
     });
   };
 
-  const handleSelectSubject = (subject: { id: string; name: string }) => {
+  const subjectImportPending = useRef(false);
+  const handleSelectSubjectFile = async (subject: { id: string; name: string }, file: { id?: string }) => {
+    if (!file.id || subjectImportPending.current) return;
+    subjectImportPending.current = true;
     const ticket = guard.capture();
-    void instantiateSubjectToProject(subject, projectAssets, guard, ticket, (assets) => {
-      for (const asset of assets) onInsertAsset?.(asset);
-      setViewState('normal');
-      setActiveTab('assets');
-    });
+    try {
+      await instantiateSubjectToProject(subject, projectAssets, guard, ticket, (assets) => {
+        for (const asset of assets) onInsertAsset?.(asset);
+      }, [file.id]);
+    } finally {
+      subjectImportPending.current = false;
+    }
   };
 
   const handleCreateSubject = () => {
@@ -370,7 +375,7 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
             subjects={subjectLibrary.subjects}
             error={subjectLibrary.error}
             onBack={() => setViewState('normal')}
-            onSelectSubject={handleSelectSubject}
+            onSelectFile={handleSelectSubjectFile}
             onCreateSubject={handleCreateSubject}
           />
         )}
