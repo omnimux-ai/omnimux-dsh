@@ -60,6 +60,8 @@ import { mountDecisions } from '../decisions/mount.js'
  */
 export function apply(ctx, config = {}) {
   const hub = parseHubConfig(config)
+  const readReferenceStorageConfig = () => config.referenceStorage?.get ? config.referenceStorage.get() : config.referenceStorage
+  ctx.provide?.('referenceStorageConfig', { read: readReferenceStorageConfig })
   const siteBaseUrl = resolveSiteBaseUrl(config.siteBaseUrl || process.env.OMNIMUX_SITE_URL || DEFAULT_SITE)
   const clientName = config.clientName || CLIENT_NAME
   const brand = hub
@@ -140,6 +142,7 @@ export function apply(ctx, config = {}) {
     getWorkspaceRegistry: () => ctx.get?.('workspaceRegistry'),
     getConnection: () => ctx.get?.('connection'),
     settings: ctx.get?.('settings'),
+    readReferenceStorageConfig,
     credentials: ctx.get?.('credentials'),
   }
   mountComposerCommands(ctx)
@@ -160,8 +163,8 @@ export function apply(ctx, config = {}) {
         httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox, getConnection: () => ctx.get?.('connection') }), 'omnimux: workbench HTTP')
         httpCtx.effect(() => registerSessionModelRoutes(server, { preference: sessionModelPreference }), 'omnimux: session model HTTP')
         httpCtx.effect(() => registerDirectMediaRoutes(server, {
-          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
-          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
+          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: Object.assign({}, ctx.get?.('settings')?.get?.('omnimux'), { referenceStorage: readReferenceStorageConfig() }) }),
+          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: Object.assign({}, ctx.get?.('settings')?.get?.('omnimux'), { referenceStorage: readReferenceStorageConfig() }) }),
           getRuntimeSettings: () => ctx.get?.('settings')?.get?.('omnimux'),
           getConnection: () => ctx.get?.('connection'),
           gate: hub.gate,
@@ -184,6 +187,7 @@ export function apply(ctx, config = {}) {
   if (typeof ctx.inject === 'function') {
     ctx.inject(['settings'], (sctx) => {
       const settings = sctx.settings
+      httpDeps.settings = settings
       if (!settings || typeof settings.register !== 'function') return
       // The settings service arrives after httpDeps is built; hand it to the
       // HTTP faces (BYOK / agent routes) only once it actually exists.

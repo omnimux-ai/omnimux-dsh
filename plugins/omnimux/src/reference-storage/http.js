@@ -12,7 +12,7 @@ export function registerReferenceStorageRoutes(server, deps) {
     if (rejected !== undefined) return sendJson(res, rejected, { error: '访问未获授权', code: 'request-denied' })
     if (!['GET', 'PUT'].includes(method)) return sendJson(res, 405, { error: '不支持此操作', code: 'method-not-allowed' })
     try {
-      const services = { settings: deps.getSettings?.(), credentials: deps.getCredentials?.() }
+      const services = { settings: deps.getSettings?.(), credentials: deps.getCredentials?.(), readConfig: deps.readConfig }
       if (method === 'GET') return sendJson(res, 200, await readReferenceStorage(services))
       const body = await readJsonBody(req, 32768)
       return sendJson(res, 200, await saveReferenceStorage(services, body))

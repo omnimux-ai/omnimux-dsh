@@ -49,13 +49,15 @@ function descriptorOf(settings) {
   if (!descriptor || !Number.isSafeInteger(descriptor.revision)) throw storageConfigError('设置服务暂不可用', 'reference-storage-unavailable')
   return descriptor
 }
-async function currentConfig(settings) {
+async function currentConfig(settings, readConfig) {
+  if (typeof readConfig === 'function') return parseReferenceStorageConfig(await readConfig())
   if (typeof settings?.get !== 'function') throw storageConfigError('设置服务暂不可用', 'reference-storage-unavailable')
   return parseReferenceStorageConfig((await settings.get('omnimux'))?.referenceStorage)
 }
-export async function readReferenceStorage({ settings, credentials }) {
-  const config = await currentConfig(settings)
+export async function readReferenceStorage({ settings, credentials, readConfig }) {
   const descriptor = descriptorOf(settings)
+  const config = await currentConfig(settings, readConfig)
+  if (descriptorOf(settings).revision !== descriptor.revision) throw storageConfigError('设置已被更新，请刷新后重试', 'SETTINGS_CONFLICT')
   let hasCredentials = false
   let credentialsWritable = typeof credentials?.set === 'function' && typeof credentials?.unset === 'function'
   if (config.credentialId) {
@@ -66,6 +68,7 @@ export async function readReferenceStorage({ settings, credentials }) {
     hasCredentials = access?.configured === true && secret?.configured === true
     credentialsWritable = credentialsWritable && access?.writable === true && secret?.writable === true
   }
+  if (descriptorOf(settings).revision !== descriptor.revision) throw storageConfigError('设置已被更新，请刷新后重试', 'SETTINGS_CONFLICT')
   return { config, revision: descriptor.revision, hasCredentials, credentialsWritable }
 }
 /** Stage a fresh pair before the settings revision commit; never replace a pair used by an in-flight operation. */
@@ -74,7 +77,7 @@ export async function saveReferenceStorage(deps, request) {
   for (const key of Object.keys(request)) if (!CONFIG_KEYS.has(key) && !['accessKeyId', 'secretAccessKey', 'expectedRevision'].includes(key)) throw storageConfigError('保存请求包含不支持的字段')
   const descriptor = descriptorOf(deps.settings)
   if (!Number.isSafeInteger(request.expectedRevision) || request.expectedRevision !== descriptor.revision) throw storageConfigError('设置已被更新，请刷新后重试', 'SETTINGS_CONFLICT')
-  const previous = await currentConfig(deps.settings)
+  const previous = await currentConfig(deps.settings, deps.readConfig)
   const candidate = {}
   for (const key of CONFIG_KEYS) if (key !== 'credentialId' && request[key] !== undefined) candidate[key] = request[key]
   candidate.credentialId = previous.credentialId
@@ -104,7 +107,7 @@ export async function saveReferenceStorage(deps, request) {
     if (stagedRefs) {
       // An acknowledgement may be lost after commit. Only remove staged values once non-activation is observed.
       try {
-        const active = await currentConfig(deps.settings)
+        const active = await currentConfig(deps.settings, deps.readConfig)
         if (active.credentialId !== config.credentialId) {
           await deps.credentials.unset(stagedRefs.accessKeyId)
           await deps.credentials.unset(stagedRefs.secretAccessKey)

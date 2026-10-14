@@ -1,25 +1,31 @@
 import { createHash } from 'node:crypto'
 import { Readable } from 'node:stream'
-import { stat } from 'node:fs/promises'
+import { stat, mkdtemp, open, rm } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { SignatureV4 } from '@smithy/signature-v4'
 import { Sha256 } from '@aws-crypto/sha256-js'
 import { resolveMediaDescriptor } from '../media/gateway-upload.js'
 import { parseReferenceStorageConfig, storageConfigError } from './config.js'
 import { requestPublicStorage } from './public-http.js'
+import { assertReferenceMediaType } from './media-type.js'
 
 const MAX_REFERENCE_BYTES = 200 * 1024 * 1024
 const EXTENSIONS = Object.freeze({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/mp4': 'm4a', 'audio/ogg': 'ogg' })
 async function digestStream(stream, signal, limit) {
   const hash = createHash('sha256')
   let bytes = 0
+  let prefix = Buffer.alloc(0)
   for await (const chunk of stream) {
     signal?.throwIfAborted()
     bytes += chunk.byteLength
     if (bytes > limit) throw storageConfigError('参考素材超出上传大小限制')
     hash.update(chunk)
+    if (prefix.byteLength < 512) prefix = Buffer.concat([prefix, Buffer.from(chunk).subarray(0, 512 - prefix.byteLength)])
   }
   signal?.throwIfAborted()
-  return { bytes, digest: hash.digest('hex') }
+  return { bytes, digest: hash.digest('hex'), prefix }
 }
 async function cancelResponse(response) { await response.body?.cancel() }
 /** Upload a local reference copy, then independently verify the entire anonymous response. */
@@ -32,7 +38,23 @@ export async function uploadReferenceMedia(source, options) {
   const descriptor = await resolveMediaDescriptor(source, { signal, fetcher: options.localFetcher })
   const ext = EXTENSIONS[descriptor.mimeType]
   if (!ext || descriptor.size <= 0 || descriptor.size > MAX_REFERENCE_BYTES) throw storageConfigError('参考素材格式或大小不受支持')
-  const original = await digestStream(Readable.fromWeb(descriptor.createStream()), signal, MAX_REFERENCE_BYTES)
+  const snapshotDir = await mkdtemp(join(tmpdir(), 'omnimux-reference-snapshot-'))
+  const snapshotPath = join(snapshotDir, 'media')
+  try {
+  const snapshot = await open(snapshotPath, 'wx', 0o600)
+  let snapshotSize = 0
+  try {
+    for await (const chunk of Readable.fromWeb(descriptor.createStream())) {
+      signal.throwIfAborted()
+      snapshotSize += chunk.byteLength
+      if (snapshotSize > MAX_REFERENCE_BYTES) throw storageConfigError('参考素材超出上传大小限制')
+      await snapshot.writeFile(chunk)
+    }
+    await snapshot.sync()
+  } finally { await snapshot.close() }
+  const snapshotStream = () => createReadStream(snapshotPath)
+  const original = await digestStream(snapshotStream(), signal, MAX_REFERENCE_BYTES)
+  assertReferenceMediaType(original.prefix, descriptor.mimeType)
   if (original.bytes !== descriptor.size) throw storageConfigError('参考素材在准备过程中发生变化')
   if (descriptor.filePath) {
     const current = await stat(descriptor.filePath)
@@ -46,7 +68,7 @@ export async function uploadReferenceMedia(source, options) {
   const uploadHash = createHash('sha256')
   let uploadedBytes = 0
   async function* body() {
-    for await (const chunk of Readable.fromWeb(descriptor.createStream())) {
+    for await (const chunk of snapshotStream()) {
       signal.throwIfAborted()
       uploadedBytes += chunk.byteLength
       if (uploadedBytes > original.bytes) throw storageConfigError('参考素材在上传过程中发生变化')
@@ -67,4 +89,5 @@ export async function uploadReferenceMedia(source, options) {
   const actual = await digestStream(Readable.fromWeb(verified.body), signal, original.bytes)
   if (actual.bytes !== original.bytes || actual.digest !== original.digest) throw storageConfigError('公开地址未返回上传的素材内容')
   return publicUrl
+  } finally { await rm(snapshotDir, { recursive: true, force: true }) }
 }

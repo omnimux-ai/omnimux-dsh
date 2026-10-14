@@ -5,6 +5,7 @@ import { NS } from './locales.js'
 import { ProfileSection } from './ProfileSection.jsx'
 import { DshPluginsSection } from './DshPluginsSection.jsx'
 import { ModelsSettingsCard } from './ModelsSettingsCard.jsx'
+import { ReferenceStorageSection } from './ReferenceStorageSection.jsx'
 import { LoginGate } from './LoginGate.jsx'
 import { RuntimeGuideGate } from './RuntimeGuideGate.jsx'
 import { setRuntimeChoiceReader } from './auth-gate.js'
@@ -106,6 +107,24 @@ export function apply(ctx) {
     locale: NS,
     inject: () => ({ t }),
   }, DshPluginsSection))
+  ctx.slots.inject('plugins.detail.section', () => ctx.slots.register({
+    name: 'plugins.detail.section',
+    id: 'omnimux-reference-storage',
+    order: 100,
+    locale: NS,
+    inject: () => ({ t }),
+  }, ({ t: translate, subject }) => {
+    const matches = subject?.kind === 'bundle' && subject.pkg?.name === 'omnimux'
+      || subject?.kind === 'row' && subject.pkg?.name === 'omnimux' && subject.row?.rowId === 'omnimux'
+      || subject?.kind === 'item' && subject.id === 'omnimux'
+    return matches ? createElement(ReferenceStorageSection, { t: translate }) : null
+  }))
+  if (typeof ctx.inject === 'function') ctx.inject(['configForms'], (formCtx) => {
+    formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.item', () => formCtx.slots.register({
+      name: 'plugins.item', id: 'omnimux-reference-storage', order: 100,
+      label: () => t('referenceStorage.title'), locale: NS, inject: () => ({ t }),
+    }, ({ t: translate, view }) => view === 'summary' ? translate('referenceStorage.description') : createElement(ReferenceStorageSection, { t: translate })))), 'omnimux: reference storage configuration')
+  })
   // Canvas default models — Settings → 插件 → 可配置 (keyed by Host namespace).
   // Bind once when the slot mounts; do not re-bind inside the React card.
   if (typeof ctx.inject === 'function') {

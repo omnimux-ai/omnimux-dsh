@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { prepareReferencePayload } from './prepare.js'
+import { prepareReferencePayload, verifyRemoteReference } from './prepare.js'
 
 function deps() {
   const calls = []
@@ -33,6 +33,10 @@ test('upload failure propagates without old cloud fallback or partial payload re
   d.upload = async () => { throw Error('upload refused') }
   await assert.rejects(prepareReferencePayload({ image: '/tmp/ref.png' }, d), /upload refused/)
 })
+test('remote video and audio declarations cannot disguise ordinary text', async () => {
+  for (const mime of ['video/mp4', 'audio/mpeg']) await assert.rejects(verifyRemoteReference('https://existing.example.test/ref', { request: async () => new Response('ordinary text', { headers: { 'content-type': mime } }) }))
+})
+
 test('existing public media is verified but never copied into user storage', async () => {
   const d = deps()
   let checks = 0

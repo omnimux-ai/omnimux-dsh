@@ -1,5 +1,5 @@
 import { isLocalMediaSource } from '../media/gateway-upload.js'
-import { mediaFromMagic } from '../text/image.js'
+import { assertReferenceMediaType } from './media-type.js'
 import { parseReferenceStorageConfig, credentialRefs, storageConfigError } from './config.js'
 import { uploadReferenceMedia } from './upload.js'
 import { requestPublicStorage } from './public-http.js'
@@ -25,7 +25,8 @@ export async function verifyRemoteReference(url, { signal, request = requestPubl
     if (prefix.byteLength < 512) prefix = Buffer.concat([prefix, Buffer.from(chunk).subarray(0, 512 - prefix.byteLength)])
   }
   const text = prefix.toString('utf8').trimStart().toLowerCase()
-  if (!bytes || text.startsWith('<') || /^image\//.test(mime) && !mediaFromMagic(prefix)) throw storageConfigError('参考素材链接未返回正确媒体')
+  if (!bytes || text.startsWith('<')) throw storageConfigError('参考素材链接未返回正确媒体')
+  assertReferenceMediaType(prefix, mime)
 }
 /** One operation-scoped preparation, shared only for duplicate sources within this payload. */
 export async function prepareReferencePayload(payload, options) {

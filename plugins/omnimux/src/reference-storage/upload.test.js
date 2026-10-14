@@ -1,6 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { uploadReferenceMedia } from './upload.js'
 
 const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4o6EBAAMQAS0ujiXaAAAAAElFTkSuQmCC', 'base64')
@@ -39,6 +42,29 @@ test('private, redirected, HTML, wrong media and rejected PUT never yield a usab
     assert.equal(opts.calls.length, mode === 'upload-failure' ? 1 : 2)
   }
 })
+test('upload uses validated snapshot even when original is replaced before request consumes bytes', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'reference-original-'))
+  const path = join(dir, 'reference.png')
+  writeFileSync(path, bytes)
+  const opts = options()
+  const request = opts.request
+  opts.request = async (url, init) => {
+    if (init.method === 'PUT') writeFileSync(path, Buffer.alloc(bytes.length, 65))
+    return request(url, init)
+  }
+  try {
+    const result = await uploadReferenceMedia(path, opts)
+    assert.ok(result.startsWith('https://media.example.test/'))
+    assert.equal(opts.calls.length, 2)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('declared image MIME cannot cause ordinary text to upload', async () => {
+  const opts = options()
+  await assert.rejects(uploadReferenceMedia('data:image/png;base64,' + Buffer.from('not an image').toString('base64'), opts))
+  assert.equal(opts.calls.length, 0)
+})
+
 test('cancellation and missing credentials reject before any upload', async () => {
   const opts = options()
   const controller = new AbortController()

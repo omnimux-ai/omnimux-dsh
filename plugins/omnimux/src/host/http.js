@@ -123,6 +123,7 @@ export function mountHubHttp(httpCtx, deps) {
       getSettings: () => deps.settings ?? httpCtx.get?.('settings'),
       getCredentials: () => deps.credentials ?? httpCtx.get?.('credentials'),
       getConnection: deps.getConnection,
+      readConfig: deps.readReferenceStorageConfig,
     })
     const stopAgents = registerAgentRoutes(webServer, {
       getSettings: () => deps.settings ?? httpCtx.get?.('settings'),

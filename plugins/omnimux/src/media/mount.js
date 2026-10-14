@@ -164,7 +164,7 @@ export function mountMedia(ctx, opts) {
      */
     execute(req) {
       assertCapabilityEnabled(gate, kind, 'media')
-      const current = ctx.get?.('settings')?.get?.('omnimux')
+      const current = Object.assign({}, ctx.get?.('settings')?.get?.('omnimux'), { referenceStorage: ctx.get?.('referenceStorageConfig')?.read?.() })
       // 放行/渠道判定唯一拥有者：resolveExecutionPlan（见 media/execution-plan.js）。
       // 本处只做能力门禁 + 调用判定；execute 消费 RouteDecision.finalReq 不再重复判定。
       const plan = resolveExecutionPlan({ kind, req, current })

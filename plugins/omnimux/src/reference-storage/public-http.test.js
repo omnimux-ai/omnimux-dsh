@@ -7,6 +7,14 @@ test('public address classification rejects private, mapped private, multicast a
   assert.equal(isPublicAddress('8.8.8.8'), true)
   assert.equal(isPublicAddress('2606:4700:4700::1111'), true)
 })
+test('cancellation ends a DNS wait without waiting for resolver completion', async () => {
+  const controller = new AbortController()
+  const pending = requestPublicStorage('https://storage.example.test', { signal: controller.signal }, () => new Promise(() => {}))
+  controller.abort()
+  const result = await Promise.race([pending.then(() => 'allowed', () => 'rejected'), new Promise(resolve => setTimeout(() => resolve('still-pending'), 20))])
+  assert.equal(result, 'rejected')
+})
+
 test('mixed DNS answers and failed resolution reject before network connection', async () => {
   await assert.rejects(requestPublicStorage('https://storage.example.test', {}, async () => [{ address: '8.8.8.8', family: 4 }, { address: '127.0.0.1', family: 4 }]))
   await assert.rejects(requestPublicStorage('https://storage.example.test', {}, async () => []))

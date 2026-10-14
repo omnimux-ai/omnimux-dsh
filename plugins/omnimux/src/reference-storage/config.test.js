@@ -75,6 +75,15 @@ test('second credential write failure cleans first staged value and leaves setti
   assert.equal(f.entries.size, 0)
   assert.deepEqual(f.value, { referenceStorage: { enabled: false } })
 })
+test('reading configuration refuses a revision changed during the value read', async () => {
+  const f = fixture()
+  const original = f.settings.get
+  let revision = 1
+  f.settings.describe = () => [{ namespace: 'omnimux', revision }]
+  f.settings.get = () => { const value = original(); revision++; return value }
+  await assert.rejects(readReferenceStorage(f), e => e.code === 'SETTINGS_CONFLICT')
+})
+
 test('stale form and absent credentials fail closed; disable retains pair', async () => {
   const f = fixture()
   await assert.rejects(saveReferenceStorage(f, Object.assign(configuration(), { expectedRevision: 1 })))
