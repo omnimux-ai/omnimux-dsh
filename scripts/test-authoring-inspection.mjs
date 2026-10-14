@@ -42,7 +42,7 @@ export function inspectTestAuthoring(code) {
     if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'require') reason = 'dynamic-test-execution-needs-review'
     if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.type === 'WithStatement') reason = 'dynamic-test-execution-needs-review'
     if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) reason = 'dynamic-test-execution-needs-review'
-    if (node.type === 'ImportSpecifier' && blocked.has(node.imported.name ?? node.imported.value)) reason = 'test-execution-import-needs-review'
+    if (node.type === 'ImportSpecifier' && (blocked.has(node.imported.name ?? node.imported.value) || execution.has(node.imported.name ?? node.imported.value))) reason = 'test-execution-import-needs-review'
     for (const value of Object.values(node)) {
       if (Array.isArray(value)) for (const child of value) inspect(child, node)
       else if (value && typeof value === 'object') inspect(value, node)
