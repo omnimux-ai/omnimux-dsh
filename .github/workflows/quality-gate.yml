@@ -162,41 +162,223 @@ jobs:
       - name: Prepare small public evidence data repository
         run: |
           set -euo pipefail
-          fixture="$(mktemp -d "$RUNNER_TEMP/evidence-contract-XXXXXX")"
-          git init -b fixture-seed "$fixture/primary"
-          git -C "$fixture/primary" config core.autocrlf false
+          no_link_directory() {
+            local path="$1"
+            test "$(realpath -e -- "$path")" = "$path" || return
+            while :; do
+              test -d "$path" && test ! -L "$path" || return
+              test "$path" != / || break
+              path="$(dirname -- "$path")"
+            done
+          }
+          parent="$(realpath -e -- "${RUNNER_TEMP:?}")"
+          no_link_directory "$parent"
+          fixture="$(mktemp -d "$parent/evidence-contract-XXXXXX")"
+          phase=created
+          identity=''
+          preparation_exit() {
+            local source_exit=$?
+            trap - EXIT
+            if no_link_directory "$fixture" && test -n "$identity" && test "$(stat -c '%d:%i' -- "$fixture")" = "$identity"; then
+              printf 'preparation_phase=%s\npreparation_exit=%s\n' "$phase" "$source_exit" >> "$fixture/owner-receipt.txt"
+            else
+              printf 'Preparation receipt identity unconfirmed; always cleanup must retain owner\n' >&2
+              test "$source_exit" -ne 0 || source_exit=1
+            fi
+            exit "$source_exit"
+          }
+          trap preparation_exit EXIT
+          # Record responsibility before init/add/commit can fail; absence of identity never permits deletion.
+          printf 'EVIDENCE_FIXTURE_OWNER=%s\nEVIDENCE_FIXTURE_PARENT=%s\n' "$fixture" "$parent" >> "$GITHUB_ENV"
+          identity="$(stat -c '%d:%i' -- "$fixture")"
+          printf 'EVIDENCE_FIXTURE_IDENTITY=%s\n' "$identity" >> "$GITHUB_ENV"
+          no_link_directory "$fixture"
+          test "$(dirname -- "$fixture")" = "$parent"
+          printf 'owner=%s\nparent=%s\nidentity=%s\n' "$fixture" "$parent" "$identity" > "$fixture/owner-receipt.txt"
+          clean_git=(env -i PATH="$PATH" HOME="$fixture" LC_ALL=C GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0 GIT_NO_REPLACE_OBJECTS=1 GIT_OPTIONAL_LOCKS=0 git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c commit.gpgSign=false -c tag.gpgSign=false)
+          phase=init
+          "${clean_git[@]}" init --template= -b fixture-seed "$fixture/primary"
+          "${clean_git[@]}" -C "$fixture/primary" config core.autocrlf false
+          phase=data
           printf '.worktrees/\n.workbuddy/evidence/\n' > "$fixture/primary/.gitignore"
           printf 'synthetic public evidence source\n' > "$fixture/primary/source.txt"
-          git -C "$fixture/primary" add -- .gitignore source.txt
-          git -C "$fixture/primary" -c user.name=EvidenceFixture -c user.email=fixture@example.invalid commit -m fixture
-          sha="$(git -C "$fixture/primary" rev-parse --verify HEAD)"
-          printf 'EVIDENCE_FIXTURE_REPO=%s\nEVIDENCE_FIXTURE_ROOT=%s\nEVIDENCE_FIXTURE_SHA=%s\nEVIDENCE_FIXTURE_OWNER=%s\n' "$fixture/primary" "$fixture/primary" "$sha" "$fixture" >> "$GITHUB_ENV"
+          phase=add
+          "${clean_git[@]}" -C "$fixture/primary" add -- .gitignore source.txt
+          phase=commit
+          "${clean_git[@]}" -C "$fixture/primary" -c user.name=EvidenceFixture -c user.email=fixture@example.invalid commit -m fixture
+          phase=resolve
+          sha="$("${clean_git[@]}" -C "$fixture/primary" rev-parse --verify 'HEAD^{commit}')"
+          [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
+          printf 'source_sha=%s\n' "$sha" >> "$fixture/owner-receipt.txt"
+          printf 'EVIDENCE_FIXTURE_REPO=%s\nEVIDENCE_FIXTURE_ROOT=%s\nEVIDENCE_FIXTURE_SHA=%s\n' "$fixture/primary" "$fixture/primary" "$sha" >> "$GITHUB_ENV"
+          phase=ready
 
       - name: Verify public evidence core and consumer
         run: node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs
 
+      # A direct registered task below the original checkout resolves its already locked root dependencies.
+      # The dynamic shell root remains unproven to the governance parser; do not relabel it static CI evidence.
       - name: Verify public application composition in a registered task root
+        env:
+          EXPECTED_CANDIDATE: ${{ github.sha }}
         run: |
           set -euo pipefail
-          parent="$(mktemp -d "$RUNNER_TEMP/evidence-app-owner-XXXXXX")"
-          primary="$parent/primary"
-          git clone --no-local "$GITHUB_WORKSPACE" "$primary"
-          git -C "$primary" worktree add --detach "$primary/.worktrees/task" origin/main
-          candidate="$(git -C "$GITHUB_WORKSPACE" rev-parse --verify HEAD)"
-          git -C "$primary/.worktrees/task" checkout --detach "$candidate"
-          trap 'test "$(realpath "$parent")" = "$parent" && test ! -L "$parent" && rm -r -- "$parent"' EXIT
-          node --test "$primary/.worktrees/task/scripts/worktree-app-qa.test.mjs"
+          no_link_directory() {
+            local path="$1"
+            test "$(realpath -e -- "$path")" = "$path" || return
+            while :; do
+              test -d "$path" && test ! -L "$path" || return
+              test "$path" != / || break
+              path="$(dirname -- "$path")"
+            done
+          }
+          primary="${GITHUB_WORKSPACE:?}"
+          no_link_directory "$primary"
+          no_link_directory "$primary/.git"
+          clean_git=(env -i PATH="$PATH" HOME="$HOME" LC_ALL=C GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0 GIT_NO_REPLACE_OBJECTS=1 GIT_OPTIONAL_LOCKS=0 git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c commit.gpgSign=false -c tag.gpgSign=false)
+          test "$("${clean_git[@]}" -C "$primary" rev-parse --show-toplevel)" = "$primary"
+          test "$("${clean_git[@]}" -C "$primary" rev-parse --absolute-git-dir)" = "$primary/.git"
+          test "$("${clean_git[@]}" -C "$primary" config --default false --get core.autocrlf)" = false
+          candidate="$("${clean_git[@]}" -C "$primary" rev-parse --verify 'HEAD^{commit}')"
+          main_sha="$("${clean_git[@]}" -C "$primary" rev-parse --verify 'refs/remotes/origin/main^{commit}')"
+          [[ "$candidate" =~ ^[a-f0-9]{40}$ && "$main_sha" =~ ^[a-f0-9]{40}$ ]]
+          test "$candidate" = "${EXPECTED_CANDIDATE:?}"
+          test "$("${clean_git[@]}" -C "$primary" rev-parse --verify "${EXPECTED_CANDIDATE}^{commit}")" = "$candidate"
+          # origin/main is actions/checkout's fetched real main, never a candidate-created alias.
+          parent="$primary/.worktrees"
+          retained="$primary/.workbuddy/evidence/contract-app-retained"
+          for directory in "$parent" "$primary/.workbuddy" "$primary/.workbuddy/evidence" "$retained"; do
+            if test ! -e "$directory" && test ! -L "$directory"; then mkdir -- "$directory"; fi
+            no_link_directory "$directory"
+          done
+          task="$(mktemp -d "$parent/evidence-app-XXXXXX")"
+          phase=created
+          identity=''
+          saved="$retained/${task##*/}"
+          cleanup_app() {
+            no_link_directory "$parent" && no_link_directory "$task" && no_link_directory "$retained" || return
+            test "$(dirname -- "$task")" = "$parent" || return
+            [[ "$(basename -- "$task")" =~ ^evidence-app-[A-Za-z0-9]{6}$ ]] || return
+            test -n "$identity" && test "$(stat -c '%d:%i' -- "$task")" = "$identity" || return
+            local registrations registered=false
+            if test ! -e "$saved" && test ! -L "$saved"; then mkdir -- "$saved" || return; fi
+            no_link_directory "$saved" || return
+            test ! -L "$saved/owner-receipt.txt" || return
+            printf 'phase=%s\nsource_exit=%s\ncleanup=started\n' "$phase" "$source_exit" >> "$saved/owner-receipt.txt" || return
+            if test -e "$task/.workbuddy/evidence/contract" || test -L "$task/.workbuddy/evidence/contract"; then
+              no_link_directory "$task/.workbuddy/evidence/contract" || return
+              cp -a -- "$task/.workbuddy/evidence/contract" "$saved/contract" || return
+            fi
+            registrations="$("${clean_git[@]}" -C "$primary" worktree list --porcelain)" || return
+            while IFS= read -r line; do
+              if test "$line" = "worktree $task"; then registered=true; fi
+            done <<< "$registrations"
+            # Copy first, then recheck the exact held identity immediately before removal.
+            no_link_directory "$task" || return
+            test "$(stat -c '%d:%i' -- "$task")" = "$identity" || return
+            if test "$registered" = true; then
+              "${clean_git[@]}" -C "$primary" worktree remove --force -- "$task" || return
+            else
+              test ! -e "$task/.git" && test ! -L "$task/.git" || return
+              rm -r -- "${task:?}" || return
+            fi
+            test ! -e "$task" && test ! -L "$task" || return
+            printf 'cleanup=completed\n' >> "$saved/owner-receipt.txt"
+          }
+          app_exit() {
+            local source_exit=$? cleanup_exit=0
+            trap - EXIT
+            set +e
+            cleanup_app
+            cleanup_exit=$?
+            if test "$cleanup_exit" -ne 0; then
+              printf 'App cleanup failed; retain owner, source_exit=%s cleanup_exit=%s\n' "$source_exit" "$cleanup_exit" >&2
+            fi
+            if test "$source_exit" -ne 0; then exit "$source_exit"; fi
+            exit "$cleanup_exit"
+          }
+          # The trap owns even a failed registration/checkout, not only successful tests.
+          trap app_exit EXIT
+          identity="$(stat -c '%d:%i' -- "$task")"
+          no_link_directory "$task"
+          mkdir -- "$saved"
+          no_link_directory "$saved"
+          printf 'owner=%s\nparent=%s\nidentity=%s\nmain_sha=%s\ncandidate_sha=%s\nphase=created\n' "$task" "$parent" "$identity" "$main_sha" "$candidate" > "$saved/owner-receipt.txt"
+          phase=register
+          "${clean_git[@]}" -C "$primary" worktree add --detach "$task" origin/main
+          test "$(stat -c '%d:%i' -- "$task")" = "$identity"
+          test "$("${clean_git[@]}" -C "$task" rev-parse --verify 'HEAD^{commit}')" = "$main_sha"
+          test "$("${clean_git[@]}" -C "$primary" rev-parse --verify 'refs/remotes/origin/main^{commit}')" = "$main_sha"
+          phase=checkout-candidate
+          "${clean_git[@]}" -C "$task" checkout --detach "$candidate"
+          test "$("${clean_git[@]}" -C "$task" rev-parse --verify 'HEAD^{commit}')" = "$candidate"
+          test "$(stat -c '%d:%i' -- "$task")" = "$identity"
+          phase=tests
+          node --test "$task/scripts/worktree-app-qa.test.mjs"
+          phase=tests-completed
 
-      - name: Clean owned public evidence data repository
+      - name: Retain evidence and clean owned public evidence data repository
         if: ${{ always() }}
+        env:
+          SOURCE_JOB_STATUS: ${{ job.status }}
         run: |
           set -euo pipefail
-          if [ -n "${EVIDENCE_FIXTURE_OWNER:-}" ]; then
-            case "$EVIDENCE_FIXTURE_OWNER" in "$RUNNER_TEMP"/evidence-contract-*) ;; *) exit 1 ;; esac
-            test -d "$EVIDENCE_FIXTURE_OWNER" && test ! -L "$EVIDENCE_FIXTURE_OWNER"
-            test "$(realpath "$EVIDENCE_FIXTURE_OWNER")" = "$EVIDENCE_FIXTURE_OWNER"
-            rm -r -- "$EVIDENCE_FIXTURE_OWNER"
+          no_link_directory() {
+            local path="$1"
+            test "$(realpath -e -- "$path")" = "$path" || return
+            while :; do
+              test -d "$path" && test ! -L "$path" || return
+              test "$path" != / || break
+              path="$(dirname -- "$path")"
+            done
+          }
+          if test -z "${EVIDENCE_FIXTURE_OWNER:-}"; then
+            printf 'No recorded core owner; no deletion attempted\n'
+            exit 0
           fi
+          fixture="$EVIDENCE_FIXTURE_OWNER"
+          parent="${EVIDENCE_FIXTURE_PARENT:?}"
+          identity="${EVIDENCE_FIXTURE_IDENTITY:?}"
+          test "$parent" = "$(realpath -e -- "${RUNNER_TEMP:?}")"
+          no_link_directory "$parent"
+          no_link_directory "$fixture"
+          test "$(dirname -- "$fixture")" = "$parent"
+          [[ "$(basename -- "$fixture")" =~ ^evidence-contract-[A-Za-z0-9]{6}$ ]]
+          test "$(stat -c '%d:%i' -- "$fixture")" = "$identity"
+          retained="${GITHUB_WORKSPACE:?}/.workbuddy/evidence/contract-core-retained"
+          no_link_directory "$GITHUB_WORKSPACE"
+          # mkdir does not authorize following a pre-existing linked ancestor.
+          for directory in "$GITHUB_WORKSPACE/.workbuddy" "$GITHUB_WORKSPACE/.workbuddy/evidence" "$retained"; do
+            if test ! -e "$directory" && test ! -L "$directory"; then mkdir -- "$directory"; fi
+            no_link_directory "$directory"
+          done
+          saved="$retained/$(basename -- "$fixture")"
+          mkdir -- "$saved"
+          no_link_directory "$saved"
+          trap 'result=$?; if test "$result" -ne 0; then printf "Core retention/cleanup failed; owner preserved unless deletion already completed\n" >&2; fi' EXIT
+          test -f "$fixture/owner-receipt.txt" && test ! -L "$fixture/owner-receipt.txt"
+          cp -a -- "$fixture/owner-receipt.txt" "$saved/owner-receipt.txt"
+          printf 'source_job_status=%s\ncleanup=started\n' "$SOURCE_JOB_STATUS" >> "$saved/owner-receipt.txt"
+          if test -e "$fixture/primary/.workbuddy/evidence/contract" || test -L "$fixture/primary/.workbuddy/evidence/contract"; then
+            no_link_directory "$fixture/primary/.workbuddy/evidence/contract"
+            cp -a -- "$fixture/primary/.workbuddy/evidence/contract" "$saved/contract"
+          fi
+          if test -d "$fixture/primary"; then
+            no_link_directory "$fixture/primary"
+            for name in .gitignore source.txt; do
+              if test -e "$fixture/primary/$name" || test -L "$fixture/primary/$name"; then
+                test -f "$fixture/primary/$name" && test ! -L "$fixture/primary/$name"
+                cp -a -- "$fixture/primary/$name" "$saved/$name"
+                sha256sum -- "$saved/$name" >> "$saved/source-sha256.txt"
+              fi
+            done
+          fi
+          no_link_directory "$fixture"
+          test "$(dirname -- "$fixture")" = "$parent"
+          test "$(stat -c '%d:%i' -- "$fixture")" = "$identity"
+          rm -r -- "${fixture:?}"
+          test ! -e "$fixture" && test ! -L "$fixture"
+          printf 'cleanup=completed\n' >> "$saved/owner-receipt.txt"
 
       - name: Run regression tests
         run: |
