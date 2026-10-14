@@ -59,6 +59,23 @@ test('same media type with changed bytes cannot replace the admitted reference',
   assert.equal((await prepareReferencePayload({ image: url }, d)).image, url)
 })
 
+test('conflicting admitted identities for one source fail before preparation', async () => {
+  const d = deps()
+  const url = 'https://existing.example.test/conflict.png'
+  d.expectedAssets = [{ pathOrUrl: url, type: 'image', mime: 'image/png', sizeBytes: 10, contentDigest: 'first' }, { pathOrUrl: url, type: 'image', mime: 'image/png', sizeBytes: 10, contentDigest: 'second' }]
+  d.verifyRemote = async () => { throw Error('must not fetch conflicting source') }
+  await assert.rejects(prepareReferencePayload({ image: url }, d), /身份不一致/)
+})
+
+test('public document references keep existing document admission and are not routed into media storage', async () => {
+  const d = deps()
+  const url = 'https://existing.example.test/reference.pdf'
+  d.expectedAssets = [{ pathOrUrl: url, type: 'document', mime: 'application/pdf', sizeBytes: 24 }]
+  d.request = async () => { throw Error('document must not use media upload') }
+  assert.equal((await prepareReferencePayload({ file_url: url }, d)).file_url, url)
+  assert.equal(d.calls.length, 0)
+})
+
 test('mapped metadata audio is prepared without changing unrelated metadata', async () => {
   const d = deps()
   const result = await prepareReferencePayload({ metadata: { audio: '/tmp/audio.wav', speech: 'retain words' } }, d)

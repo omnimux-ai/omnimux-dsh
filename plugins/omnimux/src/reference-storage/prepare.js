@@ -38,11 +38,18 @@ export async function prepareReferencePayload(payload, options) {
   const config = parseReferenceStorageConfig(options.config)
   if (!config.enabled) return payload
   const prepared = new Map()
+  const identities = new Map()
+  for (const asset of options.expectedAssets || []) {
+    const prior = identities.get(asset.pathOrUrl)
+    if (prior && (prior.type !== asset.type || prior.mime !== asset.mime || prior.sizeBytes !== asset.sizeBytes || prior.contentDigest !== asset.contentDigest)) throw storageConfigError('同一参考素材的准入身份不一致，请重新提交')
+    identities.set(asset.pathOrUrl, asset)
+  }
   let pair = null
   async function prepare(source, expectedType) {
     if (typeof source !== 'string' || !source.trim()) return source
     const expectedAsset = options.expectedAssets?.find(asset => asset.pathOrUrl === source)
     expectedType = expectedAsset?.type || expectedType
+    if (expectedType === 'document' || expectedType === 'webpage') return source
     const identity = `${expectedType || ''}:${source}`
     if (prepared.has(identity)) return prepared.get(identity)
     const result = (async () => {

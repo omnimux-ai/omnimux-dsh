@@ -61,7 +61,6 @@ import { mountDecisions } from '../decisions/mount.js'
 export function apply(ctx, config = {}) {
   const hub = parseHubConfig(config)
   const readReferenceStorageConfig = () => config.referenceStorage?.get ? config.referenceStorage.get() : config.referenceStorage
-  ctx.provide?.('referenceStorageConfig', { read: readReferenceStorageConfig })
   const siteBaseUrl = resolveSiteBaseUrl(config.siteBaseUrl || process.env.OMNIMUX_SITE_URL || DEFAULT_SITE)
   const clientName = config.clientName || CLIENT_NAME
   const brand = hub
@@ -284,7 +283,7 @@ export function apply(ctx, config = {}) {
   }
 
   const jsonOut = JSON_TOOL_OUTPUT
-  const mediaDeps = { media: hub.media, gate: hub.gate, store, jsonOut, sessionModel: sessionModelPreference }
+  const mediaDeps = { media: hub.media, gate: hub.gate, store, jsonOut, sessionModel: sessionModelPreference, readReferenceStorageConfig }
   mountMedia(ctx, { kind: 'video', execute: executeOmnimuxVideo, ...mediaDeps })
   mountMedia(ctx, { kind: 'image', execute: executeOmnimuxImage, ...mediaDeps })
   mountMedia(ctx, { kind: 'audio', execute: executeOmnimuxAudio, ...mediaDeps })

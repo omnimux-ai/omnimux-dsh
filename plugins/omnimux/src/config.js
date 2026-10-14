@@ -55,10 +55,10 @@ Object.defineProperty(Config, '~standard', { value: {
   validate(value) {
     try {
       const parsed = formSchema(value)
-      parseHubConfig(value)
+      const ordinary = parseHubConfig(value)
       const storage = parsed.referenceStorage?.get ? parsed.referenceStorage.get() : parsed.referenceStorage
       parseReferenceStorageConfig(storage)
-      return { value: parsed }
+      return { value: Object.assign({}, ordinary, { referenceStorage: parsed.referenceStorage }) }
     } catch (error) {
       return { issues: [{ message: error instanceof Error ? error.message : String(error) }] }
     }
