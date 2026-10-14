@@ -283,7 +283,7 @@ export async function executeOmnimuxMedia(capability, input) {
           && item.provider.trim().toLowerCase() === providerId) || []
         if (input.runtimeSettings && matches.length !== 1) throw new OmnimuxError('omnimux-unconfigured', '原任务来源的供应商身份尚未确认；保留任务，不会沿用其它来源')
         const saved = matches[0]
-        const currentOrigin = saved?.endpoint || row?.baseUrl
+        const currentOrigin = input.runtimeSettings ? saved?.endpoint?.trim() : row?.baseUrl
         if (!currentOrigin || currentOrigin.replace(/\/+$/, '') !== taskRecord.baseUrl.replace(/\/+$/, '') || saved?.saveState === 'pending') {
           throw new OmnimuxError('omnimux-unconfigured', '原任务来源的凭据尚未确认；保留任务记录，不会重新生成')
         }

@@ -168,6 +168,10 @@ test('3312: accepted custom task collection refuses duplicate or missing current
   await assert.rejects(() => executeOmnimuxMedia('image', input), { code: 'omnimux-unconfigured' })
   current.byokProviders = []
   await assert.rejects(() => executeOmnimuxMedia('image', input), { code: 'omnimux-unconfigured' })
+  current.byokProviders = [{ provider: 'custom', endpoint: '   ', models: { image: 'vendor-image' }, capabilities: ['image'] }]
+  await assert.rejects(() => executeOmnimuxMedia('image', input), { code: 'omnimux-unconfigured' })
+  current.byokProviders = [{ provider: 'custom', models: { image: 'vendor-image' }, capabilities: ['image'] }]
+  await assert.rejects(() => executeOmnimuxMedia('image', input), { code: 'omnimux-unconfigured' })
   assert.equal(calls, 0)
   assert.equal(getMediaTaskRecord(record.taskRef).status, 'submitted')
 }))
