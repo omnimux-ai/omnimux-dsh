@@ -204,6 +204,23 @@ test('3312: invalid saved defaults fall back to legal fixed catalog models and a
   await seedSpeech(home, current, undefined, 'fallback.mp3')
 }))
 
+test('3312: omitted image model keeps legal environment and current Config priority over saved or invalid defaults', async () => isolated(async (home) => {
+  const media = { defaultProvider: 'omnimux', providers: { omnimux: { protocol: 'openai-media',
+    baseUrl: 'https://api.omnimux.ai/v1', apiKeyEnv: 'OMNIMUX_API_KEY', models: { image: 'gpt-image-2.5-flare' } } } }
+  const current = officialSettings()
+  current.defaultImageModel = 'invalid-default'
+  const seen = []
+  const input = { prompt: 'synthetic image', dest: join(home, 'config-priority.png'), runtimeSettings: current,
+    media, env: {}, credentials: officialCredentials(), runtime: runtime(seen, 'image', imageData) }
+  await executeOmnimuxMedia('image', input)
+  assert.equal(seen[0].input.model, 'gpt-image-2.5-flare')
+  current.defaultImageModel = 'gpt-image-2.5-flare'
+  input.env = { OMNIMUX_IMAGE_MODEL: 'gpt-image-2.5-sunburst' }
+  input.dest = join(home, 'env-priority.png')
+  await executeOmnimuxMedia('image', input)
+  assert.equal(seen[1].input.model, 'gpt-image-2.5-sunburst')
+}))
+
 test('3312: saved official defaults cannot steal BYOK or agent selections and trusted custom media config keeps its positive route', async () => isolated(async (home) => {
   const current = officialSettings()
   current.runtimeAgentId = 'synthetic-agent'

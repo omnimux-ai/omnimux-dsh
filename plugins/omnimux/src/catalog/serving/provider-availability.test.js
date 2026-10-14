@@ -29,6 +29,17 @@ test('current pending or disabled rows are not revived by matching legacy primar
   }
 })
 
+test('legacy provider spelling cannot revive a current provider veto', () => {
+  for (const spelling of ['CUSTOM', ' custom ']) {
+    for (const veto of [{ saveState: 'pending' }, { image: false }, { runtimeMediaImage: false }]) {
+      const current = withLegacy(settings(veto))
+      current.runtimeMediaProvider = spelling
+      assert.equal(resolveModelChannelGroups('gpt-image-2.5', current).some((item) => item.id === 'byok-custom'), false)
+      assert.deepEqual(resolveChannelPlan('gpt-image-2.5@byok-custom', { runtimeSettings: current }).candidates, [])
+    }
+  }
+})
+
 test('partial explicit bindings cannot infer other provider availability from legacy fields', () => {
   const current = withLegacy({ scenarioBindings: { text: { channel: 'official' } } })
   assert.equal(resolveModelChannelGroups('gpt-image-2.5', current).some((item) => item.id === 'byok-custom'), false)

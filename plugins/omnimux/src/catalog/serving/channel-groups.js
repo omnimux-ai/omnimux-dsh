@@ -1070,11 +1070,11 @@ export function resolveModelChannelGroups(modelId, runtimeSettings) {
 
   // Current provider records and explicit scenario choices outrank legacy primary fields.
   const hasBindings = runtimeSettings.scenarioBindings && typeof runtimeSettings.scenarioBindings === 'object'
-  const hasPrimaryRecord = Array.isArray(runtimeSettings.byokProviders)
-    && runtimeSettings.byokProviders.some((item) => item && typeof item.provider === 'string'
-      && item.provider.trim().toLowerCase() === (runtimeSettings.runtimeMediaProvider || 'fal'))
   const primaryProvider = typeof runtimeSettings.runtimeMediaProvider === 'string'
     ? runtimeSettings.runtimeMediaProvider.trim().toLowerCase() : 'fal'
+  const hasPrimaryRecord = Array.isArray(runtimeSettings.byokProviders)
+    && runtimeSettings.byokProviders.some((item) => item && typeof item.provider === 'string'
+      && item.provider.trim().toLowerCase() === primaryProvider)
   if (!hasBindings && (!hasPrimaryRecord || isByokProviderVerifiedAndCapReady(primaryProvider, capability, runtimeSettings))
     && runtimeSettings.runtimeKeyVerified === true) {
     const allFalse =

@@ -362,7 +362,7 @@ export async function executeOmnimuxMedia(capability, input) {
   }
   const plan = serverConfigured
     ? { finalReq: { ...input, provider: configuredProvider }, requireListed: false, isByok: false }
-    : resolveExecutionPlan({ kind: capability, req: input, current: input.runtimeSettings })
+    : resolveExecutionPlan({ kind: capability, req: input, current: input.runtimeSettings, media, env: input.env })
   input = { ...input, ...plan.finalReq, env: input.env ?? plan.finalReq.env, requireListed: plan.requireListed }
   if (plan.isByok) {
     const provider = input.provider
@@ -641,7 +641,7 @@ export async function executeOmnimuxMedia(capability, input) {
           throw new OmnimuxError('omnimux-invalid-request', '所选备用线路不支持此生成操作')
         }
         for (const [key, domain] of Object.entries(constraints?.parameters || {})) {
-          const value = guardRequest[key]
+          const value = finalInput[key] ?? guardRequest[key]
           if (value === undefined) continue
           if ((domain.fixed !== undefined && value !== domain.fixed)
             || (Array.isArray(domain.only) && !domain.only.includes(value))

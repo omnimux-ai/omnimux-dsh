@@ -168,7 +168,7 @@ export function mountMedia(ctx, opts) {
       const current = readScenarioSettings(ctx.get?.('settings'))
       // 放行/渠道判定唯一拥有者：resolveExecutionPlan（见 media/execution-plan.js）。
       // 本处只做能力门禁 + 调用判定；execute 消费 RouteDecision.finalReq 不再重复判定。
-      const plan = resolveExecutionPlan({ kind, req, current })
+      const plan = resolveExecutionPlan({ kind, req, current, media })
       return execute({
         ...plan.finalReq,
         media,

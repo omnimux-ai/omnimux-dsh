@@ -11,7 +11,7 @@ import { buildModelCatalog } from '../catalog/list.js'
  * @param {{kind:'image'|'video'|'audio', req:object, current?:object}} input
  * @returns {RouteDecision}
  */
-export function resolveExecutionPlan({ kind, req, current }) {
+export function resolveExecutionPlan({ kind, req, current, media, env }) {
   try { assertScenarioRequestIntent(req) }
   catch (cause) { throw new OmnimuxError('omnimux-invalid-request', cause.message) }
   const channelIntent = resolveRequestChannelIntent(req)
@@ -48,7 +48,7 @@ export function resolveExecutionPlan({ kind, req, current }) {
   const isByok = choice.channel === 'byok'
   const defaultField = `default${kind[0].toUpperCase()}${kind.slice(1)}Model`
   const configuredDefault = isOfficialRequest && !requestModelId && current?.[defaultField]
-    ? buildModelCatalog({ env: serverEnv, settingsDefaults: current }).defaults[kind] : ''
+    ? buildModelCatalog({ media, env: env || process.env, settingsDefaults: current }).defaults[kind] : ''
   const modelId = requestModelId || (isOfficialRequest ? configuredDefault || DEFAULT_MEDIA.providers.omnimux.models[kind] : choice.model)
   const finalReq = { ...req, provider: isOfficialRequest ? 'omnimux' : choice.provider,
     ...(req.model || isByok || configuredDefault ? { model: req.model || modelId } : {}),

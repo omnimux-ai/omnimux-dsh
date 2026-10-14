@@ -162,6 +162,17 @@ test('3312: H3 duration 5 refuses the allowed task tail fixed at 15 before a sec
   assert.equal(record.upstreamTaskId, undefined)
 }))
 
+test('3312: an omitted duration cannot carry the head default of 5 into a fixed-15 task fallback', async () => isolated(async (home) => {
+  const calls = []
+  const input = videoInput(home, 'omitted-duration-task-tail')
+  delete input.duration
+  input.runtime = capturedRuntime(calls)
+  await assert.rejects(() => executeOmnimuxMedia('video', input), { code: 'omnimux-invalid-request' })
+  assert.equal(calls.length, 1)
+  assertVideoCall(calls[0], 'minimax-h3', 5)
+  assert.equal(Object.hasOwn(input, 'duration'), false)
+}))
+
 test('3312: H3 duration 15 keeps a legal task fallback successful with the original logical intent and accepted task record', async () => isolated(async (home) => {
   const calls = []
   const input = videoInput(home, 'compatible-task-tail')
