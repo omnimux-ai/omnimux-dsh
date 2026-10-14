@@ -334,6 +334,8 @@
     "inspect-avatar-keys.mjs",
     "inspect-gxgen-tiktok.mjs",
     "list-tables.mjs",
+    "lib/governance-registry.mjs",
+    "lib/governance-registry.test.mjs",
     "market-try-skill-chip-qa.mjs",
     "patch-asar-agent-presets.test.mjs",
     "qa-verify-preset-workflow-standards.mjs",
