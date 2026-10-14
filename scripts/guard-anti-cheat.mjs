@@ -10,9 +10,233 @@
  *  4. 既可作为 DSH PreToolUse 独立运行，也可作为 ESM 模块由单元测试复用。
  */
 
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { readFileSync, existsSync, lstatSync, realpathSync, openSync, closeSync, fstatSync, constants } from 'node:fs';
+import { resolve, dirname, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { parse } from 'acorn';
 import { inspectTestAuthoring } from './test-authoring-inspection.mjs';
+
+// Repository identity starts at this guard's checkout, never at tool-supplied cwd.
+const REPO_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
+
+// Trusted in-process I/O seam; tool input never supplies this object or its facts.
+export const sourceInspectionIO = { readFileSync, lstatSync, realpathSync, openSync, closeSync, fstatSync, spawnSync };
+
+function sameIdentity(before, after) {
+  return ['dev', 'ino', 'mode', 'size', 'mtimeMs', 'ctimeMs'].every(key => before[key] === after[key]);
+}
+
+function createSourceInspection(target, allowMissing = true) {
+  const records = new Map();
+  const gitEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')));
+  let head;
+  let treeRoot;
+  let commonDir;
+  let mainRoot;
+  function git(args, root = treeRoot || REPO_ROOT) {
+    const result = sourceInspectionIO.spawnSync('git', ['-C', root, ...args], { encoding: 'utf8', timeout: 5000, env: gitEnv });
+    if (result.status !== 0 || result.error) throw new Error('Cannot confirm repository identity');
+    return result.stdout || '';
+  }
+  function currentHead() {
+    const value = git(['rev-parse', '--verify', 'HEAD']).trim();
+    if (!/^[0-9a-f]{40}$/.test(value)) throw new Error('Invalid repository HEAD');
+    return value;
+  }
+  function record(path, directory, missingAllowed = false) {
+    if (records.has(path)) return records.get(path);
+    let stat;
+    try { stat = sourceInspectionIO.lstatSync(path); }
+    catch (error) {
+      if (!missingAllowed || error.code !== 'ENOENT') throw error;
+      const item = { path, missing: true };
+      records.set(path, item);
+      return item;
+    }
+    if (stat.isSymbolicLink() || (directory ? !stat.isDirectory() : !stat.isFile()) || sourceInspectionIO.realpathSync(path) !== path) throw new Error('Noncanonical or nonregular inspection path');
+    const item = { path, stat, directory };
+    records.set(path, item);
+    if (!directory) {
+      item.fd = sourceInspectionIO.openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+      const opened = sourceInspectionIO.fstatSync(item.fd);
+      if (!opened.isFile() || !sameIdentity(stat, opened)) throw new Error('Path changed while opening');
+    }
+    return item;
+  }
+  function capturePath(path, directory = false, missingAllowed = false) {
+    const parts = path.split(sep).filter(Boolean);
+    let current = sep;
+    record(current, true);
+    for (let index = 0; index < parts.length; index++) {
+      current = resolve(current, parts[index]);
+      record(current, index < parts.length - 1 || directory, index === parts.length - 1 && missingAllowed);
+    }
+    return records.get(path);
+  }
+  function capture(path, missingAllowed = false) {
+    const rel = relative(treeRoot, path);
+    if (!rel || rel.startsWith(`..${sep}`) || rel === '..' || rel.split(sep).includes('.worktrees')) throw new Error('Path outside selected repository tree');
+    const item = capturePath(path, false, missingAllowed);
+    const parents = rel.split(sep).slice(0, -1);
+    let current = treeRoot;
+    for (const part of parents) {
+      current = resolve(current, part);
+      if (!record(resolve(current, '.git'), false, true).missing) throw new Error('Nested repository in inspection path');
+    }
+    return item;
+  }
+  function metadata(path) {
+    const item = capturePath(path);
+    item.bytes ??= sourceInspectionIO.readFileSync(item.fd);
+    return item.bytes.toString('utf8').trim();
+  }
+  function checkedGitDir(root) {
+    const gitDir = git(['rev-parse', '--absolute-git-dir'], root).trim();
+    const actualCommon = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], root).trim();
+    if (actualCommon !== commonDir || git(['rev-parse', '--show-toplevel'], root).trim() !== root) throw new Error('Repository identity mismatch');
+    if (root === mainRoot) {
+      if (gitDir !== commonDir) throw new Error('Invalid main repository');
+      capturePath(commonDir, true);
+    } else {
+      if (dirname(root) !== resolve(mainRoot, '.worktrees') || dirname(gitDir) !== resolve(commonDir, 'worktrees')) throw new Error('Unregistered worktree location');
+      capturePath(gitDir, true);
+      if (metadata(resolve(root, '.git')) !== `gitdir: ${gitDir}` || resolve(gitDir, metadata(resolve(gitDir, 'commondir'))) !== commonDir || metadata(resolve(gitDir, 'gitdir')) !== resolve(root, '.git')) throw new Error('Invalid worktree registration');
+    }
+    return gitDir;
+  }
+  let guardGitDir;
+  let targetGitDir;
+  function verifyRepository() {
+    if (checkedGitDir(REPO_ROOT) !== guardGitDir || checkedGitDir(treeRoot) !== targetGitDir) throw new Error('Worktree identity changed');
+    const registered = git(['worktree', 'list', '--porcelain', '-z'], REPO_ROOT).split('\0');
+    if (!registered.includes(`worktree ${REPO_ROOT}`) || !registered.includes(`worktree ${treeRoot}`)) throw new Error('Worktree is not registered');
+  }
+  function selectTree() {
+    commonDir = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], REPO_ROOT).trim();
+    mainRoot = dirname(commonDir);
+    if (commonDir !== resolve(mainRoot, '.git')) throw new Error('Unsupported common repository root');
+    capturePath(commonDir, true);
+    const rel = relative(mainRoot, target);
+    if (!rel || rel === '..' || rel.startsWith(`..${sep}`)) throw new Error('Target outside shared repository');
+    const parts = rel.split(sep);
+    treeRoot = parts[0] === '.worktrees' ? resolve(mainRoot, '.worktrees', parts[1] || '') : mainRoot;
+    if (treeRoot === resolve(mainRoot, '.worktrees')) throw new Error('Missing registered task root');
+    capturePath(treeRoot, true);
+    guardGitDir = checkedGitDir(REPO_ROOT);
+    targetGitDir = checkedGitDir(treeRoot);
+    verifyRepository();
+  }
+  function verify() {
+    // Child-process queries precede the final joint filesystem observation.
+    verifyRepository();
+    if (head !== undefined && currentHead() !== head) throw new Error('Repository HEAD changed');
+    for (const item of records.values()) {
+      if (item.missing) {
+        try { sourceInspectionIO.lstatSync(item.path); }
+        catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+        throw new Error('New target appeared during inspection');
+      }
+      const live = sourceInspectionIO.lstatSync(item.path);
+      if (live.isSymbolicLink() || !sameIdentity(item.stat, live) || sourceInspectionIO.realpathSync(item.path) !== item.path) throw new Error('Inspection path changed');
+      if (item.fd !== undefined && !sameIdentity(item.stat, sourceInspectionIO.fstatSync(item.fd))) throw new Error('Inspection file changed');
+    }
+  }
+  function close() {
+    for (const item of records.values()) if (item.fd !== undefined) sourceInspectionIO.closeSync(item.fd);
+  }
+  try { selectTree(); capture(target, allowMissing); } catch (error) { close(); throw error; }
+  return {
+    treeRoot,
+    readTarget() {
+      const bytes = sourceInspectionIO.readFileSync(records.get(target).fd);
+      verify();
+      return bytes.toString('utf8');
+    },
+    readSource(path) {
+      if (head === undefined) head = currentHead();
+      const item = capture(path);
+      const bytes = sourceInspectionIO.readFileSync(item.fd);
+      const rel = relative(treeRoot, path);
+      const tree = git(['ls-tree', head, '--', rel]);
+      const match = /^(100644|100755) blob ([0-9a-f]{40})\t([^\n]+)\n?$/.exec(tree);
+      const hash = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+      if (!match || match[2] !== hash || match[3] !== rel) throw new Error('Source is not confirmed at fixed repository HEAD');
+      return bytes;
+    },
+    verify, close,
+  };
+}
+
+function readConfirmedSource(path, inspection) {
+    const bytes = inspection.readSource(path);
+    const ast = parse(bytes.toString('utf8'), { ecmaVersion: 'latest', sourceType: 'module' });
+    let unsafe = false;
+    function checkSource(node) {
+      if (!node || typeof node !== 'object') return;
+      if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) unsafe = true;
+      if (node.type === 'ImportExpression') unsafe = true;
+      if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'require') unsafe = true;
+      if (node.type === 'Property' && ['skip', 'only', 'todo'].includes(node.key.name ?? node.key.value)) unsafe = true;
+      if (node.type === 'ImportDeclaration' && /^(?:node:)?(?:vm|child_process|worker_threads|module)$/.test(node.source.value)) unsafe = true;
+      if (node.type === 'MemberExpression') {
+        const key = node.computed ? node.property.value : node.property.name;
+        if (['constructor', 'apply', 'call', 'bind', 'skip', 'only', 'todo', 'getBuiltinModule', 'binding', '_linkedBinding', 'dlopen', 'createRequire'].includes(key)) unsafe = true;
+      }
+      if (node.type === 'AssignmentExpression' && node.left.type === 'Identifier' && node.left.name === 'apply') unsafe = true;
+      if (node.type === 'UpdateExpression' && node.argument.type === 'Identifier' && node.argument.name === 'apply') unsafe = true;
+      for (const value of Object.values(node)) {
+        if (Array.isArray(value)) value.forEach(checkSource);
+        else if (value && typeof value === 'object') checkSource(value);
+      }
+    }
+    checkSource(ast);
+    if (unsafe) throw new Error('Dynamic source is not a verified public function');
+    return { ast, sourceRealPath: path };
+}
+
+function resolvePublicPluginImport(filePath, source, inspection) {
+  try {
+    if (typeof source !== 'string' || !source.startsWith('./') && !source.startsWith('../')) return null;
+    const target = resolve(filePath);
+    const entryPath = resolve(dirname(target), source);
+    const rel = relative(inspection.treeRoot, entryPath);
+    if (!/^plugins\/[^/]+\/src\/index\.js$/.test(rel)) return null;
+    const entry = readConfirmedSource(entryPath, inspection);
+    const statements = entry.ast.body;
+    const direct = statements.find(node => node.type === 'ExportNamedDeclaration' && node.declaration?.type === 'FunctionDeclaration' && node.declaration.id?.name === 'apply');
+    if (direct) return { sourceRealPath: entryPath, strictSourceFunction: 'apply' };
+    const exported = statements.filter(node => node.type === 'ExportNamedDeclaration' && node.specifiers.some(item => item.exported.name === 'apply'));
+    if (exported.length !== 1) return null;
+    const declaration = exported[0];
+    const specifier = declaration.specifiers.find(item => item.exported.name === 'apply');
+    if (specifier.local.name !== 'apply') return null;
+    let hostSource = declaration.source?.value;
+    if (!hostSource) {
+      const imported = statements.find(node => node.type === 'ImportDeclaration' && node.specifiers.some(item => item.type === 'ImportSpecifier' && item.imported.name === 'apply' && item.local.name === 'apply'));
+      hostSource = imported?.source.value;
+      // An imported binding may only be imported and re-exported, never used as a value.
+      const permitted = new Set([specifier, imported?.specifiers.find(item => item.local.name === 'apply')]);
+      let invalid = false;
+      function check(node, parent) {
+        if (!node || typeof node !== 'object') return;
+        if (node.type === 'Identifier' && node.name === 'apply' && !permitted.has(parent)) invalid = true;
+        for (const value of Object.values(node)) {
+          if (Array.isArray(value)) value.forEach(child => check(child, node));
+          else if (value && typeof value === 'object') check(value, node);
+        }
+      }
+      check(entry.ast);
+      if (invalid) return null;
+    }
+    if (hostSource !== './host/apply.js') return null;
+    const host = readConfirmedSource(resolve(dirname(entryPath), hostSource), inspection);
+    const functions = host.ast.body.filter(node => node.type === 'ExportNamedDeclaration' && node.declaration?.type === 'FunctionDeclaration' && node.declaration.id?.name === 'apply');
+    if (functions.length !== 1) return null;
+    return { sourceRealPath: entryPath, strictSourceFunction: 'apply' };
+  } catch { return null; }
+}
 
 /**
  * 核心判定函数
@@ -24,7 +248,11 @@ import { inspectTestAuthoring } from './test-authoring-inspection.mjs';
  * @param {Array<object>} [params.exemptions] - 已获批准的豁免列表
  * @returns {{ permissionDecision: 'allow'|'deny', reason?: string, ruleId?: string }}
  */
-export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_code', exemptions = [] }) {
+export function evaluateAntiCheat(params) {
+  return evaluateWithInspection(params);
+}
+
+function evaluateWithInspection({ tool, filePath, content, intent = 'business_code', exemptions = [], cwd = process.cwd() }, checkedTarget) {
   if (tool !== 'write' && tool !== 'edit') {
     return { permissionDecision: 'allow' };
   }
@@ -52,7 +280,17 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
 
   // 1. 门禁 1：测试套件与评估资产只读守卫
   if (isTestFile && !isFixtureFile) {
-    const inspection = inspectTestAuthoring(code);
+    let snapshot = checkedTarget;
+    let inspection;
+    try {
+      const target = resolve(cwd, filePath);
+      inspection = inspectTestAuthoring(code, { resolveImport: source => {
+        snapshot ??= createSourceInspection(target, tool === 'write');
+        return resolvePublicPluginImport(target, source, snapshot);
+      } });
+      snapshot?.verify();
+    } catch { inspection = { allowed: false }; }
+    finally { if (!checkedTarget) snapshot?.close(); }
     if (intent !== 'test_authoring' && !inspection.allowed) {
       return {
         permissionDecision: 'deny',
@@ -134,12 +372,24 @@ export function handle(rawInput) {
   const toolInput = input.tool_input || (input.file_path ? input : {});
   const filePath = toolInput.file_path || input.file_path || '';
   let content = toolInput.content || toolInput.new_string || input.content || input.new_string || '';
-  if (toolName === 'edit' && /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(filePath.replace(/\\/g, '/')) && !/\.md$/i.test(filePath)) {
-    const oldString = toolInput.old_string;
-    const source = readFileSync(resolve(input.cwd || process.cwd(), filePath), 'utf8');
-    if (typeof oldString !== 'string' || !oldString || !source.includes(oldString)) throw new Error('Cannot reconstruct test edit');
-    if (!toolInput.replace_all && source.indexOf(oldString) !== source.lastIndexOf(oldString)) throw new Error('Ambiguous test edit');
-    content = toolInput.replace_all ? source.split(oldString).join(toolInput.new_string || '') : source.replace(oldString, () => toolInput.new_string || '');
+  let checkedTarget;
+  if (['write', 'edit'].includes(toolName) && resolve(input.cwd || process.cwd(), filePath) === REPO_ROOT) {
+    return formatHookOutput({ permissionDecision: 'deny', reason: 'Repository root is not a file target' }, hookEventName);
+  }
+  if (['write', 'edit'].includes(toolName) && /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(filePath.replace(/\\/g, '/')) && !/\.md$/i.test(filePath)) {
+    try {
+      checkedTarget = createSourceInspection(resolve(input.cwd || process.cwd(), filePath), toolName === 'write');
+      if (toolName === 'edit') {
+        const oldString = toolInput.old_string;
+        const source = checkedTarget.readTarget();
+        if (typeof oldString !== 'string' || !oldString || !source.includes(oldString)) throw new Error('Cannot reconstruct test edit');
+        if (!toolInput.replace_all && source.indexOf(oldString) !== source.lastIndexOf(oldString)) throw new Error('Ambiguous test edit');
+        content = toolInput.replace_all ? source.split(oldString).join(toolInput.new_string || '') : source.replace(oldString, () => toolInput.new_string || '');
+      }
+    } catch {
+      checkedTarget?.close();
+      return formatHookOutput({ permissionDecision: 'deny', reason: 'Cannot inspect canonical test target' }, hookEventName);
+    }
   }
   const intent = process.env.DSH_TASK_INTENT || 'business_code';
 
@@ -151,15 +401,20 @@ export function handle(rawInput) {
     } catch {}
   }
 
-  const decision = evaluateAntiCheat({
-    tool: toolName,
-    filePath,
-    content,
-    intent,
-    exemptions,
-  });
-
-  return formatHookOutput(decision, hookEventName);
+  try {
+    const decision = evaluateWithInspection({
+      tool: toolName,
+      filePath,
+      content,
+      intent,
+      exemptions,
+      cwd: input.cwd || process.cwd(),
+    }, checkedTarget);
+    checkedTarget?.verify();
+    return formatHookOutput(decision, hookEventName);
+  } catch {
+    return formatHookOutput({ permissionDecision: 'deny', reason: 'Test inspection identity changed' }, hookEventName);
+  } finally { checkedTarget?.close(); }
 }
 
 function main() {

@@ -194,6 +194,7 @@
     "sync-to-app.sh",
     "sync-vendored-runtime.mjs",
     "sync-workbuddyskills.mjs",
+    "public-plugin-apply.test.mjs",
     "test-authoring-inspection.test.mjs",
     "test-change-review.test.mjs",
     "test-agent-tools.mjs",
