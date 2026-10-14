@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 
 const hash = value => createHash('sha256').update(value).digest('hex')
-const safePath = path => typeof path === 'string' && path.length > 0 && !path.startsWith('/') && !path.includes('\\') && !path.includes('\0') && !path.split('/').some(part => !part || part === '..' || part === '.')
+const safePath = path => typeof path === 'string' && path.length > 0 && path.isWellFormed() && !path.startsWith('/') && !path.includes('\\') && !path.includes('\0') && !path.split('/').some(part => !part || part === '..' || part === '.')
 export function isEvaluationPath(path) {
   return /(?:^|\/)(?:tests?|__tests__|e2e|fixtures?|test-fixtures|test-support|__snapshots__)(?:\/|\.[^/]+$)|\.(?:test|spec)\.[^/]+$|(?:^|\/)(?:vitest|jest|playwright|cypress)\.config\.[^/]+$/.test(path)
     || /(?:^|\/)package\.json$/.test(path) || path.startsWith('scripts/') || path.startsWith('.github/workflows/')
@@ -22,7 +22,7 @@ export function analyzeTestChanges({ root, baseCommit, comparisonBase, candidate
   const risks = []
   const seen = new Set()
   for (const change of changes) {
-    if (!change || !/^(?:A|M|D|T|R\d+|C\d+)$/.test(change.status || '')) throw new Error('unsupported-change-status')
+    if (!change || !/^(?:A|M|D|T|[RC](?:100|[1-9]?\d))$/.test(change.status || '')) throw new Error('unsupported-change-status')
     const oldPath = change.oldPath || change.path
     if (!safePath(change.path) || !safePath(oldPath)) throw new Error('unsupported-change-path')
     if (!isEvaluationPath(change.path) && !isEvaluationPath(oldPath)) continue
@@ -57,7 +57,7 @@ export function analyzeTestChanges({ root, baseCommit, comparisonBase, candidate
 
 function git(root, args, encoding = 'utf8') {
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')))
-  return execFileSync('git', ['--literal-pathspecs', '-C', root, ...args], { encoding, env, maxBuffer: 16 * 1024 * 1024, timeout: 10000 })
+  return execFileSync('git', ['--no-optional-locks', '--literal-pathspecs', '-C', root, ...args], { encoding, env: { ...env, GIT_OPTIONAL_LOCKS: '0' }, maxBuffer: 16 * 1024 * 1024, timeout: 10000 })
 }
 function nulFields(bytes) {
   const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
