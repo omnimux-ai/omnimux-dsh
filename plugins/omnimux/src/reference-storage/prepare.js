@@ -79,19 +79,19 @@ export async function prepareReferencePayload(payload, options) {
       if (!row || typeof row !== 'object') { rows.push(row); continue }
       const updated = Object.assign({}, row)
       if (typeof updated.pathOrUrl === 'string') updated.pathOrUrl = await prepare(updated.pathOrUrl, updated.type || 'image')
-      if (typeof updated.url === 'string') updated.url = await prepare(updated.url)
+      if (typeof updated.url === 'string') updated.url = await prepare(updated.url, updated.type || 'image')
       rows.push(updated)
     }
     result[key] = rows
   }
   if (result.audioTrack && typeof result.audioTrack === 'object') {
     result.audioTrack = Object.assign({}, result.audioTrack)
-    if (typeof result.audioTrack.pathOrUrl === 'string') result.audioTrack.pathOrUrl = await prepare(result.audioTrack.pathOrUrl)
-    if (typeof result.audioTrack.url === 'string') result.audioTrack.url = await prepare(result.audioTrack.url)
+    if (typeof result.audioTrack.pathOrUrl === 'string') result.audioTrack.pathOrUrl = await prepare(result.audioTrack.pathOrUrl, 'audio')
+    if (typeof result.audioTrack.url === 'string') result.audioTrack.url = await prepare(result.audioTrack.url, 'audio')
   }
   if (result.metadata && typeof result.metadata === 'object' && typeof result.metadata.audio === 'string') {
-    result.metadata = Object.assign({}, result.metadata, { audio: await prepare(result.metadata.audio) })
+    result.metadata = Object.assign({}, result.metadata, { audio: await prepare(result.metadata.audio, 'audio') })
   }
-  if (typeof result.audio_url === 'string') result.audio_url = await prepare(result.audio_url)
+  if (typeof result.audio_url === 'string') result.audio_url = await prepare(result.audio_url, 'audio')
   return result
 }
