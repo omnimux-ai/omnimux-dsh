@@ -16,7 +16,7 @@ describe('text whitelist', () => {
     assert.equal(parsed.defaultProvider, 'omnimux')
     assert.equal(parsed.defaultModel, 'gemini-3.8-flash')
     assert.equal(parsed.maxTokens, 4096)
-    assert.deepEqual(parsed.models.map((row) => row.id), [...CHAT_MODEL_IDS])
+    assert.deepEqual(parsed.models.map((row) => row.id), Array.from(CHAT_MODEL_IDS))
     assert.equal(enabledTextModels(parsed).length, 13)
     assert.equal(parsed.models.find((row) => row.id === 'deepseek-v4-flash')?.role, 'classic')
     assert.equal(parsed.models.find((row) => row.id === 'grok-4.6')?.brand, 'xai')

@@ -105,14 +105,18 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
 
     it('resolves explicit group from inline model@group', () => {
-      const candidates = resolveChannelCandidates('claude-opus-4-6@default')
-      assert.equal(candidates[0], 'claude-opus-4-6@default')
-      assert.ok(candidates.every((id) => id.includes('@')), candidates.join(','))
+      const candidates = resolveChannelCandidates('claude-opus-4-6@standard')
+      assert.deepEqual(candidates, ['claude-opus-4-6@standard'])
+      const unregistered = resolveChannelPlan('claude-opus-4-6@default')
+      assert.deepEqual(unregistered.candidates, [])
+      assert.deepEqual(unregistered.unresolvedGroups, ['default'])
     })
 
-    it('keeps the pro line, reports the delisted cheap line, and fails closed on a pinned dead line', () => {
-      const proCandidates = resolveChannelCandidates('seedance-2-5', { group: 'pro' })
-      assert.equal(proCandidates[0], 'seedance-2-5@seedance-2-5-task-pro')
+    it('rejects the disabled pro line, reports the delisted cheap line, and fails closed on a pinned dead line', () => {
+      const proPlan = resolveChannelPlan('seedance-2-5', { group: 'pro' })
+      assert.deepEqual(proPlan.candidates, [])
+      assert.deepEqual(proPlan.unresolvedGroups, ['pro'])
+      assert.deepEqual(resolveChannelCandidates('seedance-2-5', { group: 'seedance-2-5-task-pro' }), [])
 
       // 下架后显式请求旧分组必须被报告为不可解析，而不是当成有效线路继续下发。
       const cheapPlan = resolveChannelPlan('seedance-2-5', { group: 'seedance-cheap' })
@@ -166,7 +170,7 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     it('reports a group this model does not serve instead of dropping it silently', () => {
       // `preferred` exists for seedance-2-0 but not for seedance-2-0-fast.
       const plan = resolveChannelPlan('seedance-2-0-fast', { group: 'preferred' })
-      assert.equal(plan.candidates[0], 'seedance-2-0-fast@preferred')
+      assert.deepEqual(plan.candidates, [])
       assert.deepEqual(plan.unresolvedGroups, ['preferred'])
     })
 
@@ -176,7 +180,13 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
 
     it('orders the explicit-group tail by the requested strategy', () => {
-      const plan = resolveChannelPlan('seedance-2-0', { group: 'cheap', strategy: 'cost_first' })
+      const single = resolveChannelPlan('seedance-2-0', { group: 'cheap', strategy: 'cost_first' })
+      assert.deepEqual(single.candidates, ['seedance-2-0@cheap'])
+      const plan = resolveChannelPlan('seedance-2-0', {
+        group: 'cheap',
+        strategy: 'cost_first',
+        allowedGroups: ['cheap', 'standard', 'preferred', 'pro'],
+      })
       assert.deepEqual(plan.candidates, [
         'seedance-2-0@cheap',
         'seedance-2-0@default',
@@ -185,16 +195,17 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       ])
     })
 
-    it('keeps a model without a channel pool on its base candidates and reports the intent', () => {
+    it('rejects channel intent without a pool and preserves registered aliases without intent', () => {
       const plan = resolveChannelPlan('grok-imagine-image-2', { allowedGroups: ['standard'] })
-      // #1751：别名先归一到 grok-imagine-image-2-0，再取网关注册候选（产品 ID 恒在首位）。
-      assert.deepEqual(plan.candidates, [
+      assert.deepEqual(plan.candidates, [])
+      assert.deepEqual(plan.unresolvedGroups, ['standard'])
+      assert.deepEqual(resolveChannelPlan('grok-imagine-image-2').candidates, [
         'grok-imagine-image-2-0',
         'grok-imagine-image-2',
         'grok-imagine-image',
         'grok-imagine-image-2.0',
       ])
-      assert.deepEqual(plan.unresolvedGroups, ['standard'])
+      assert.deepEqual(resolveChannelPlan('grok-imagine-image-2', { strategy: 'auto' }).candidates, [])
       // 同一产品 ID 的四种写法落到同一份候选表，顺序完全一致。
       assert.deepEqual(
         resolveChannelPlan('grok-imagine-image-2-0', { allowedGroups: ['standard'] }),
@@ -202,9 +213,9 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       )
     })
 
-    it('falls back to gatewayCandidates for unregistered models', () => {
+    it('rejects unregistered models without synthesizing bare candidates', () => {
       const candidates = resolveChannelCandidates('custom-unregistered-test-model')
-      assert.deepEqual(candidates, ['custom-unregistered-test-model'])
+      assert.deepEqual(candidates, [])
     })
 
     it('fails closed and refuses to synthesize candidate on unknown channel group', () => {
@@ -236,20 +247,20 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.equal(videoFast.wireModel, 'minimax-h3-video')
       assert.equal(videoFast.wireGroup, 'minimax-h3-video-fast')
       assert.equal(videoFast.pricing?.pointsEstimate, 0.2)
-      assert.deepEqual(videoFast.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
+      assert.deepEqual(videoFast.constraints?.parameters?.resolution, Object.fromEntries([['only', ['768P', '2K']]]))
 
       const videoPro = byId.get('video_pro')
       assert.equal(videoPro.wireModel, 'minimax-h3-video')
       assert.equal(videoPro.wireGroup, 'minimax-h3-video-pro')
       assert.equal(videoPro.pricing?.pointsEstimate, 0.3)
-      assert.deepEqual(videoPro.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
+      assert.deepEqual(videoPro.constraints?.parameters?.resolution, Object.fromEntries([['only', ['768P', '2K']]]))
 
       const task = byId.get('task')
       assert.equal(task.wireModel, 'minimax-h3-task')
       assert.equal(task.wireGroup, 'default')
       assert.equal(task.pricing?.billingMode, 'per_task')
       assert.deepEqual(task.constraints.parameters.duration, { fixed: 15 })
-      assert.deepEqual(task.constraints.parameters.resolution, { only: ['768P', '2K'] })
+      assert.deepEqual(task.constraints.parameters.resolution, Object.fromEntries([['only', ['768P', '2K']]]))
       assert.deepEqual(task.constraints.operations, [
         'text_to_video',
         'first_frame',
@@ -262,7 +273,7 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.equal(lipsync.wireGroup, 'default')
       assert.equal(lipsync.pricing?.pointsEstimate, 6.3)
       assert.equal(lipsync.pricing?.billingMode, 'per_second')
-      assert.deepEqual(lipsync.constraints?.parameters?.resolution, { only: ['768P', '2K'] })
+      assert.deepEqual(lipsync.constraints?.parameters?.resolution, Object.fromEntries([['only', ['768P', '2K']]]))
       assert.deepEqual(lipsync.constraints?.operations, ['digital_human'])
       assert.equal(lipsync.description, '专注音频驱动人像唇形对齐，完美匹配口播短剧、带货解说与虚拟角色对白场景。')
 

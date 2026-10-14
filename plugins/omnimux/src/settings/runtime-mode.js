@@ -11,6 +11,153 @@ export const DEFAULT_MEDIA_MODELS = Object.freeze({
   audio: 'fal-ai/f5-tts',
 })
 
+/** @typedef {'text'|'analysis'|'image'|'video'|'audio'} ConsumptionScenario */
+/** @typedef {{ channel: 'official'|'agent'|'byok'|'pending', provider?: string }} ScenarioBinding */
+export const CONSUMPTION_SCENARIOS = Object.freeze(['text', 'analysis', 'image', 'video', 'audio'])
+export const DEFAULT_SCENARIO_BINDINGS = Object.freeze(Object.fromEntries(
+  CONSUMPTION_SCENARIOS.map((kind) => [kind, Object.freeze({ channel: 'official' })]),
+))
+
+const record = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+const textValue = (value) => typeof value === 'string' ? value.trim() : ''
+
+/** Read the current resolved settings without assuming an obsolete service getter.
+ * @param {{describe?:Function,get?:Function}|undefined} settings
+ * @returns {Record<string, unknown>}
+ */
+export function readScenarioSettings(settings) {
+  const descriptors = typeof settings?.describe === 'function' ? settings.describe() : []
+  const descriptor = Array.isArray(descriptors) ? descriptors.find((item) => item?.ns === 'omnimux') : undefined
+  if (descriptor?.value && typeof descriptor.value === 'object') {
+    const raw = record(descriptor.user)
+    return { ...descriptor.value,
+      scenarioBindings: Object.keys(record(raw.scenarioBindings)).length
+        ? resolveScenarioBindings(raw)
+        : Object.keys(raw).length ? resolveScenarioBindings(raw) : descriptor.value.scenarioBindings }
+  }
+  return settings?.get?.('omnimux') ?? {}
+}
+
+/** Refuse malformed or contradictory request intent before any credential/HTTP work.
+ * @param {object} request
+ */
+export function assertScenarioRequestIntent(request) {
+  const req = record(request)
+  if (req.model !== undefined && (typeof req.model !== 'string' || !req.model.trim()
+    || req.model.split('@').length > 2 || req.model.startsWith('@') || req.model.endsWith('@'))) throw new Error('模型选择无效')
+  const inline = typeof req.model === 'string' && req.model.includes('@') ? req.model.split('@')[1].trim().toLowerCase() : ''
+  const group = textValue(req.group).toLowerCase()
+  if (inline && group && inline !== group && (inline.startsWith('byok-') || group.startsWith('byok-'))) throw new Error('所选渠道相互冲突')
+  if (req.allowedGroups !== undefined && (!Array.isArray(req.allowedGroups)
+    || req.allowedGroups.some((item) => typeof item !== 'string' || !item.trim()))) throw new Error('允许渠道范围无效')
+  const target = group || inline
+  if (target === 'byok-' || inline === 'byok-') throw new Error('自备渠道缺少供应商名称')
+  const allowed = Array.isArray(req.allowedGroups) ? req.allowedGroups.map((item) => item.trim().toLowerCase()) : []
+  if ((target.startsWith('byok-') || target === 'agent' || target === 'local')
+    && allowed.length && !allowed.includes(target)
+    && !(target === 'agent' && allowed.includes('local')) && !(target === 'local' && allowed.includes('agent'))) throw new Error('所选渠道不在允许范围内')
+  const hasByok = allowed.some((item) => item.startsWith('byok-'))
+  if (hasByok && allowed.some((item) => !item.startsWith('byok-'))) throw new Error('允许渠道范围相互冲突')
+  const provider = textValue(req.provider).toLowerCase()
+  if (provider && target.startsWith('byok-') && provider !== target.slice(5)) throw new Error('供应商与所选渠道相互冲突')
+}
+
+/** Read raw stored choices before schema defaults can be mistaken for user intent.
+ * @param {unknown} settings
+ * @returns {Record<ConsumptionScenario, ScenarioBinding>}
+ */
+export function resolveScenarioBindings(settings) {
+  const input = record(settings)
+  const stored = record(input.scenarioBindings)
+  const legacyMode = textValue(input.runtimeMode)
+  const hasBindings = Object.keys(stored).length > 0
+  const customized = Boolean(legacyMode && legacyMode !== 'official')
+  const out = {}
+  for (const kind of CONSUMPTION_SCENARIOS) {
+    if (Object.hasOwn(stored, kind)) {
+      const item = record(stored[kind])
+      const channel = ['official', 'agent', 'byok', 'pending'].includes(item.channel) ? item.channel : 'pending'
+      const provider = textValue(item.provider).toLowerCase()
+      out[kind] = channel === 'byok'
+        ? (/^[a-z0-9_-]+$/.test(provider) ? { channel, provider } : { channel: 'pending' })
+        : { channel: channel === 'agent' && kind !== 'text' ? 'pending' : channel }
+      continue
+    }
+    if (hasBindings) {
+      out[kind] = { channel: 'pending' }
+      continue
+    }
+    if (!customized) {
+      out[kind] = { channel: 'official' }
+      continue
+    }
+    if (kind === 'text' && legacyMode === 'agent' && textValue(input.runtimeAgentId)) {
+      out[kind] = { channel: 'agent' }
+      continue
+    }
+    if (['image', 'video', 'audio'].includes(kind)) {
+      const provider = textValue(input.runtimeMediaProvider).toLowerCase()
+      const model = textValue(input[`runtimeMedia${kind[0].toUpperCase()}${kind.slice(1)}Model`])
+      if (provider && model && input[`runtimeMedia${kind[0].toUpperCase()}${kind.slice(1)}`] === true
+        && textValue(input.runtimeKeyEndpoint)) {
+        out[kind] = { channel: 'byok', provider }
+        continue
+      }
+    }
+    // Legacy key was also written by image setup; it cannot prove text intent.
+    out[kind] = { channel: 'pending' }
+  }
+  return /** @type {Record<ConsumptionScenario, ScenarioBinding>} */ (out)
+}
+
+/** Resolve one saved consumption choice without changing another scenario.
+ * Authentication is always resolved by the executor for the current operation.
+ * @param {unknown} settings
+ * @param {ConsumptionScenario} scenario
+ * @returns {ScenarioBinding & { scenario: ConsumptionScenario, configured: boolean, model: string, endpoint: string, credentialRef?: string, reason?: string }}
+ */
+export function resolveScenarioChoice(settings, scenario) {
+  if (!CONSUMPTION_SCENARIOS.includes(scenario)) throw new Error('消费用途无效')
+  const input = record(settings)
+  const binding = resolveScenarioBindings(input)[scenario]
+  const base = { ...binding, scenario, configured: false, model: '', endpoint: '' }
+  if (binding.channel === 'pending') return { ...base, reason: '请确认此用途的模型服务' }
+  if (binding.channel === 'official') return { ...base, configured: true }
+  if (binding.channel === 'agent') {
+    const agent = resolveAgentChoice(input)
+    return { ...base, configured: agent.enabled, model: agent.model,
+      ...(agent.enabled ? {} : { reason: '请先配置本机文字助手' }) }
+  }
+  const providers = Array.isArray(input.byokProviders) ? input.byokProviders : []
+  const matches = providers.filter((item) => record(item).provider === binding.provider)
+  if (!matches.length && ['image', 'video', 'audio'].includes(scenario)
+    && input.runtimeMediaProvider === binding.provider && input.runtimeKeyEndpoint
+    && input[`runtimeMedia${scenario[0].toUpperCase()}${scenario.slice(1)}`] === true) {
+    const legacyModel = textValue(input[`runtimeMedia${scenario[0].toUpperCase()}${scenario.slice(1)}Model`])
+    if (legacyModel) matches.push({ provider: binding.provider, endpoint: input.runtimeKeyEndpoint,
+      models: { [scenario]: legacyModel }, capabilities: [scenario], legacy: true })
+  }
+  if (matches.length !== 1) return { ...base, reason: '此用途的模型服务尚未确认' }
+  const provider = record(matches[0])
+  const endpoint = textValue(provider.endpoint)
+  const models = record(provider.models)
+  const model = textValue(models[scenario])
+  const capabilities = Array.isArray(provider.capabilities) ? provider.capabilities : []
+  let validEndpoint = false
+  try {
+    const url = new URL(endpoint)
+    validEndpoint = ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash
+  } catch { validEndpoint = false }
+  const legacyFlag = ['image', 'video', 'audio'].includes(scenario)
+    ? `runtimeMedia${scenario[0].toUpperCase()}${scenario.slice(1)}` : ''
+  const explicitlyDisabled = provider[scenario] === false || (legacyFlag && provider[legacyFlag] === false)
+  const configured = validEndpoint && Boolean(model) && capabilities.includes(scenario)
+    && !explicitlyDisabled && provider.saveState !== 'pending'
+  return { ...base, model, endpoint, configured,
+    credentialRef: `OMNIMUX_MEDIA_KEY_${binding.provider.toUpperCase()}`,
+    ...(configured ? {} : { reason: '此用途的模型或能力尚未配置' }) }
+}
+
 /** Actions that are bound to the official account and always need sign-in. */
 const OFFICIAL_ONLY = new Set(['publish', 'accounts', 'quota', 'inspiration'])
 
@@ -27,8 +174,15 @@ const OFFICIAL_ONLY = new Set(['publish', 'accounts', 'quota', 'inspiration'])
  */
 export function requiresOfficialSignIn(settings, action) {
   if (action && OFFICIAL_ONLY.has(action)) return true
-  const choice = resolveRuntimeChoice(settings)
-  return choice.mode === 'official'
+  const scenario = action === 'text' ? 'text' : action === 'analysis' ? 'analysis'
+    : ['image', 'video', 'audio'].includes(action) ? action : null
+  if (scenario) return resolveScenarioChoice(settings, scenario).channel === 'official'
+  if (action === 'generate') {
+    const choices = ['image', 'video', 'audio'].map((kind) => resolveScenarioChoice(settings, kind))
+    return !choices.some((choice) => choice.channel === 'byok' && choice.configured)
+      && !['agent', 'key'].includes(record(settings).runtimeMode)
+  }
+  return record(settings).runtimeMode === 'official'
 }
 
 /**

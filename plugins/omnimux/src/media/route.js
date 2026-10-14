@@ -149,12 +149,13 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
   if (!modelId) {
     throw new OmnimuxError('unknown-model', `no model configured for ${providerId}/${capability}`)
   }
-  const requestedGroup = inlineGroup || (typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined)
+  const fieldGroup = typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined
+  const requestedGroup = inlineGroup || fieldGroup
   const explicitStrategy = typeof request.strategy === 'string' && ROUTING_STRATEGIES.includes(request.strategy)
-  const allowedGroups = Array.isArray(request.allowedGroups) && request.allowedGroups.length > 0
-    ? request.allowedGroups
-    : undefined
-  const callerIntent = Boolean(requestedGroup || allowedGroups || explicitStrategy)
+  const hasAllowedIntent = request.allowedGroups != null
+    && (!Array.isArray(request.allowedGroups) || request.allowedGroups.length > 0)
+  const allowedGroups = hasAllowedIntent ? request.allowedGroups : undefined
+  const callerIntent = Boolean(requestedGroup || hasAllowedIntent || explicitStrategy)
 
   // A model may pin its own line. Callers such as the canvas cannot name a group
   // (their request whitelist carries `strategy`/`allowedGroups` only), and the
@@ -170,11 +171,15 @@ export function resolveMediaRoute(capability, request, media, env = process.env)
   const effectiveAllowedGroups = allowedGroups
     ?? (modelId === 'gpt-image-2.5' && ['standard', 'default', 'economy', 'pro', 'gpt-image-2.5-economy', 'gpt-image-2.5-pro'].includes(requestedGroup) ? [requestedGroup] : undefined)
     ?? (pinnedWire ? [pinnedWire] : undefined)
-  const hasRoutingIntent = Boolean(group || effectiveAllowedGroups || explicitStrategy)
+  const hasRoutingIntent = Boolean(group || hasAllowedIntent || effectiveAllowedGroups || explicitStrategy)
 
-  const plan = providerId === 'omnimux' && hasRoutingIntent
-    ? resolveChannelPlan(modelId, { strategy: explicitStrategy ? request.strategy : 'auto', group, allowedGroups: effectiveAllowedGroups })
-    : { candidates: providerId === 'omnimux' ? gatewayCandidates(modelId) : [modelId], unresolvedGroups: [] }
+  const plan = providerId === 'omnimux'
+    ? resolveChannelPlan(catalogModelId, {
+      ...(explicitStrategy ? { strategy: request.strategy } : {}),
+      group: fieldGroup ?? pinnedWire,
+      allowedGroups: effectiveAllowedGroups,
+    })
+    : { candidates: [modelId], unresolvedGroups: [] }
   if (hasRoutingIntent && plan.candidates.length === 0) {
     // Fail closed: an empty plan means every requested channel was excluded or
     // unknown. Falling back to the bare model would silently widen the pool.

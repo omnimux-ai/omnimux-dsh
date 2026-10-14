@@ -2,286 +2,246 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { Readable } from 'node:stream'
 import { describeByokConfig, parseByokPut, registerByokRoutes, BYOK_KEY_REF } from './http.js'
+import { parseSettingsSection } from '../settings/schema.js'
 
 function fakeRes() {
-  return {
-    status: 0,
-    text: '',
-    writeHead(status) { this.status = status },
-    end(text) { this.text = text },
-    body() { return JSON.parse(this.text) },
-  }
+  return { status: 0, text: '', writeHead(status) { this.status = status }, end(text) { this.text = text }, body() { return JSON.parse(this.text) } }
 }
-
 function fakeReq(method, body, headers = {}) {
   const stream = Readable.from(body === undefined ? [] : [Buffer.from(JSON.stringify(body))])
   stream.method = method
   stream.headers = headers
   return stream
 }
-
 function fakeSettings(initial = {}) {
-  let value = { ...initial }
+  let value = parseSettingsSection(initial)
+  let revision = 1
   const updates = []
   return {
     updates,
-    get value() { return value },
-    get: async () => value,
-    describe: () => [{ ns: 'omnimux', revision: 1 }],
-    update: async (ns, patch, revision) => {
+    get value() { return structuredClone(value) },
+    get revision() { return revision },
+    get: async () => structuredClone(value),
+    describe: () => [{ ns: 'omnimux', revision, value: structuredClone(value) }],
+    update: async (ns, patch, expectedRevision) => {
       assert.equal(ns, 'omnimux')
-      assert.equal(revision, 1)
-      updates.push(patch)
-      value = { ...value, ...patch }
+      assert.equal(expectedRevision, revision)
+      updates.push(structuredClone(patch))
+      value = parseSettingsSection(Object.assign({}, value, patch))
+      revision += 1
     },
   }
 }
-
 function fakeCredentials(stored = '') {
-  let value = stored
+  const tokens = new Map(stored ? [['OMNIMUX_MEDIA_KEY_OPENAI', stored]] : [])
   const writes = []
+  const resolves = []
   return {
-    writes,
-    get value() { return value },
-    set: async (ref, token) => { writes.push([ref, token]); value = token },
-    resolve: async (ref) => (ref === BYOK_KEY_REF && value ? { value } : undefined),
+    writes, resolves,
+    get value() { return tokens.get('OMNIMUX_MEDIA_KEY_OPENAI') || '' },
+    describe: async (ref) => ({ configured: tokens.has(ref), source: 'file', writable: true }),
+    set: async (ref, token) => { writes.push([ref, token]); tokens.set(ref, token) },
+    unset: async (ref) => { writes.push([ref, '']); tokens.delete(ref) },
+    resolve: async (ref) => { resolves.push(ref); return tokens.has(ref) ? { value: tokens.get(ref) } : undefined },
   }
 }
-
 function register(deps) {
-  const handlers = {}
-  const webServer = {
-    register(route) {
-      handlers[route.path] = route.handler
-      return () => { delete handlers[route.path] }
-    },
-  }
-  registerByokRoutes(webServer, deps)
+  const handlers = new Map()
+  registerByokRoutes({ register(route) { handlers.set(route.path, route.handler); return () => handlers.delete(route.path) } }, deps)
   return handlers
+}
+function savedRecord() {
+  return { provider: 'openai', endpoint: 'https://p.test/v1', models: { image: 'm1' }, capabilities: ['image'], revision: 1, verified: true }
+}
+function storedSettings() {
+  return fakeSettings({ runtimeMediaProvider: 'openai', runtimeKeyEndpoint: 'https://p.test/v1', runtimeKeyModel: 'text-model', runtimeKeyVerified: true, byokProviders: [savedRecord()] })
+}
+function saveBody(apiKey = 'sk-new') {
+  return { provider: 'openai', endpoint: 'https://p.test/v1', models: { image: 'm1' }, apiKey, expectedRevision: 1, mediaImage: true }
 }
 
 describe('describeByokConfig', () => {
   it('reports state without ever carrying the key', () => {
-    const view = describeByokConfig({
-      runtimeKeyEndpoint: 'https://p.test/v1',
-      runtimeKeyModel: 'm1',
-      runtimeKeyVerified: true,
-      runtimeMediaImage: true,
-    }, true)
-    assert.deepEqual(view, {
-      endpoint: 'https://p.test/v1',
-      model: 'm1',
-      verified: true,
-      mediaImage: true,
-      mediaVideo: false,
-      mediaAudio: false,
-      hasKey: true,
-    })
+    const view = describeByokConfig({ runtimeKeyEndpoint: 'https://p.test/v1', runtimeKeyModel: 'm1', runtimeKeyVerified: true, runtimeMediaImage: true }, true)
+    assert.deepEqual(view, { endpoint: 'https://p.test/v1', model: 'm1', verified: true, mediaImage: true, mediaVideo: false, mediaAudio: false, hasKey: true })
     assert.ok(!('apiKey' in view))
   })
 })
 
 describe('parseByokPut', () => {
   it('rejects a bad endpoint', () => {
-    assert.throws(() => parseByokPut({ endpoint: 'not-a-url', model: 'm' }), /http/)
-    assert.throws(() => parseByokPut({ endpoint: '', model: 'm' }), /http/)
+    assert.throws(() => parseByokPut({ provider: 'openai', endpoint: 'not-a-url', models: { image: 'm' } }), /http/)
+    assert.throws(() => parseByokPut({ provider: 'openai', endpoint: '', models: { image: 'm' } }), /http/)
+    assert.throws(() => parseByokPut({ provider: 'openai', endpoint: 'https://user:secret@p.test/v1', models: { image: 'm' } }), /http/)
   })
-
   it('rejects an empty model', () => {
-    assert.throws(() => parseByokPut({ endpoint: 'https://p.test/v1', model: ' ' }), /模型/)
+    assert.throws(() => parseByokPut({ provider: 'openai', endpoint: 'https://p.test/v1', models: { image: ' ' } }), /模型/)
   })
-
-  it('strips a trailing slash and marks the pass stale', () => {
-    const { patch, apiKey } = parseByokPut({
-      endpoint: 'https://p.test/v1/',
-      model: 'm1',
-      apiKey: 'sk-x',
-      mediaImage: true,
-    })
-    assert.equal(patch.runtimeKeyEndpoint, 'https://p.test/v1')
-    assert.equal(patch.runtimeKeyVerified, false)
-    assert.equal(patch.runtimeMediaImage, true)
-    assert.equal(apiKey, 'sk-x')
+  it('strips a trailing slash and marks the pass stale without assigning a media model to text', () => {
+    const parsed = parseByokPut({ provider: 'openai', endpoint: 'https://p.test/v1/', model: 'm1', apiKey: 'sk-x', mediaImage: true })
+    assert.equal(parsed.patch.runtimeKeyEndpoint, 'https://p.test/v1')
+    assert.equal(parsed.patch.runtimeKeyVerified, false)
+    assert.equal(parsed.patch.runtimeMediaImage, true)
+    assert.equal(parsed.patch.runtimeKeyModel, undefined)
+    assert.deepEqual(parsed.models, { image: 'm1' })
+    assert.equal(parsed.apiKey, 'sk-x')
   })
 })
 
 describe('byok routes', () => {
-  it('GET reports config and hasKey', async () => {
-    const settings = fakeSettings({
-      runtimeKeyEndpoint: 'https://p.test/v1',
-      runtimeKeyModel: 'm1',
-      runtimeKeyVerified: true,
-    })
+  it('GET reports config and provider credential metadata without trusting a legacy verification flag', async () => {
+    const settings = storedSettings()
     const credentials = fakeCredentials('sk-stored')
     const handlers = register({ settings, credentials })
     const res = fakeRes()
-    await handlers['/omnimux/byok/config'](fakeReq('GET'), res)
+    await handlers.get('/omnimux/byok/config')(fakeReq('GET'), res)
     assert.equal(res.status, 200)
     assert.equal(res.body().hasKey, true)
-    assert.equal(res.body().verified, true)
+    assert.equal(res.body().configured, true)
+    assert.equal(res.body().source, 'file')
+    assert.equal(res.body().verified, false)
     assert.ok(!('apiKey' in res.body()))
+    assert.deepEqual(credentials.resolves, [])
   })
-
-  it('PUT stores the key in credentials and resets the pass', async () => {
-    const settings = fakeSettings({})
+  it('PUT stores only the provider key and resets the pass', async () => {
+    const settings = storedSettings()
     const credentials = fakeCredentials('')
     const handlers = register({ settings, credentials })
     const res = fakeRes()
-    await handlers['/omnimux/byok/config'](fakeReq('PUT', {
-      endpoint: 'https://p.test/v1',
-      model: 'm1',
-      apiKey: 'sk-new',
-      mediaImage: true,
-    }), res)
+    await handlers.get('/omnimux/byok/config')(fakeReq('PUT', saveBody()), res)
     assert.equal(res.status, 200)
-    assert.deepEqual(credentials.writes, [[BYOK_KEY_REF, 'sk-new']])
+    assert.deepEqual(credentials.writes, [['OMNIMUX_MEDIA_KEY_OPENAI', 'sk-new']])
+    assert.equal(credentials.writes.some((entry) => entry[0] === BYOK_KEY_REF), false)
     assert.equal(settings.value.runtimeKeyEndpoint, 'https://p.test/v1')
     assert.equal(settings.value.runtimeKeyVerified, false)
+    assert.equal(settings.value.runtimeKeyModel, 'text-model')
     assert.equal(res.body().hasKey, true)
+    assert.equal(res.body().saved, true)
   })
-
-  it('PUT without a key keeps the stored one', async () => {
-    const settings = fakeSettings({})
+  it('PUT without a key keeps the same-provider same-origin stored one', async () => {
+    const settings = storedSettings()
     const credentials = fakeCredentials('sk-old')
     const handlers = register({ settings, credentials })
     const res = fakeRes()
-    await handlers['/omnimux/byok/config'](fakeReq('PUT', {
-      endpoint: 'https://p.test/v1',
-      model: 'm1',
-    }), res)
+    await handlers.get('/omnimux/byok/config')(fakeReq('PUT', saveBody('')), res)
     assert.equal(res.status, 200)
     assert.deepEqual(credentials.writes, [])
+    assert.equal(credentials.value, 'sk-old')
     assert.equal(res.body().hasKey, true)
   })
-
   it('PUT refuses a cross-origin write', async () => {
-    const handlers = register({ settings: fakeSettings({}), credentials: fakeCredentials('') })
+    const settings = fakeSettings()
+    const credentials = fakeCredentials()
+    const handlers = register({ settings, credentials })
     const res = fakeRes()
-    await handlers['/omnimux/byok/config'](fakeReq('PUT', {
-      endpoint: 'https://p.test/v1', model: 'm1',
-    }, { origin: 'https://evil.example' }), res)
+    await handlers.get('/omnimux/byok/config')(fakeReq('PUT', saveBody(), { origin: 'https://evil.example' }), res)
     assert.equal(res.status, 403)
+    assert.deepEqual(settings.updates, [])
+    assert.deepEqual(credentials.writes, [])
   })
-
-  it('test marks verified on success using the stored key', async () => {
-    const settings = fakeSettings({
-      runtimeKeyEndpoint: 'https://p.test/v1',
-      runtimeKeyModel: 'm1',
-    })
+  it('test checks stored provider metadata without networking, resolving the key or persisting verification', async () => {
+    const settings = storedSettings()
     const credentials = fakeCredentials('sk-stored')
     const calls = []
-    const handlers = register({
-      settings,
-      credentials,
-      fetcher: async (url, init) => {
-        calls.push({ url, init })
-        return { ok: true, status: 200 }
-      },
-    })
+    const handlers = register({ settings, credentials, fetcher: async (url, init) => { calls.push({ url, init }); return { ok: true, status: 200 } } })
+    const before = settings.value
     const res = fakeRes()
-    await handlers['/omnimux/byok/test'](fakeReq('POST', {}), res)
+    await handlers.get('/omnimux/byok/test')(fakeReq('POST', {}), res)
     assert.equal(res.status, 200)
     assert.equal(res.body().ok, true)
-    assert.equal(settings.value.runtimeKeyVerified, true)
-    assert.equal(calls.length, 1)
-    assert.equal(calls[0].url, 'https://p.test/v1/chat/completions')
-    assert.equal(calls[0].init.headers.authorization, 'Bearer sk-stored')
+    assert.equal(res.body().checkType, 'offline-config')
+    assert.equal(res.body().verified, false)
+    assert.equal(res.body().connectionVerified, false)
+    assert.deepEqual(settings.value, before)
+    assert.deepEqual(settings.updates, [])
+    assert.deepEqual(credentials.resolves, [])
+    assert.equal(calls.length, 0)
   })
-
-  it('test reports the upstream status on failure and clears the pass', async () => {
-    const settings = fakeSettings({
-      runtimeKeyEndpoint: 'https://p.test/v1',
-      runtimeKeyModel: 'm1',
-      runtimeKeyVerified: true,
-    })
+  it('test reports invalid configuration failure without upstream requests or clearing saved state', async () => {
+    const settings = storedSettings()
     const credentials = fakeCredentials('sk-stored')
-    const handlers = register({
-      settings,
-      credentials,
-      fetcher: async () => ({ ok: false, status: 401 }),
-    })
+    const calls = []
+    const handlers = register({ settings, credentials, fetcher: async () => { calls.push('http'); return { ok: false, status: 401 } } })
+    const before = settings.value
     const res = fakeRes()
-    await handlers['/omnimux/byok/test'](fakeReq('POST', {}), res)
-    assert.equal(res.status, 200)
-    assert.deepEqual(res.body(), { ok: false, status: 401 })
-    assert.equal(settings.value.runtimeKeyVerified, false)
+    await handlers.get('/omnimux/byok/test')(fakeReq('POST', { endpoint: 'not-a-url' }), res)
+    assert.equal(res.status, 400)
+    assert.equal(res.body().ok, false)
+    assert.match(res.body().error, /http/)
+    assert.deepEqual(settings.value, before)
+    assert.deepEqual(settings.updates, [])
+    assert.deepEqual(credentials.writes, [])
+    assert.deepEqual(calls, [])
   })
-
-  it('test pass persists a caller-provided key so verified and credentials agree', async () => {
-    const settings = fakeSettings({
-      runtimeKeyEndpoint: 'https://p.test/v1',
-      runtimeKeyModel: 'm1',
-    })
+  it('test with a caller-provided draft key never persists it or marks a connection verified', async () => {
+    const settings = storedSettings()
     const credentials = fakeCredentials('')
-    const handlers = register({
-      settings,
-      credentials,
-      fetcher: async () => ({ ok: true, status: 200 }),
-    })
+    const calls = []
+    const handlers = register({ settings, credentials, fetcher: async () => { calls.push('http'); return { ok: true, status: 200 } } })
+    const before = settings.value
     const res = fakeRes()
-    await handlers['/omnimux/byok/test'](fakeReq('POST', { apiKey: 'sk-fresh' }), res)
+    await handlers.get('/omnimux/byok/test')(fakeReq('POST', { apiKey: 'sk-fresh' }), res)
     assert.equal(res.status, 200)
     assert.equal(res.body().ok, true)
-    assert.equal(settings.value.runtimeKeyVerified, true)
-    assert.deepEqual(credentials.writes, [[BYOK_KEY_REF, 'sk-fresh']])
+    assert.equal(res.body().credentialSource, 'draft')
+    assert.equal(res.body().configured, true)
+    assert.equal(res.body().persisted, false)
+    assert.equal(res.body().verified, false)
+    assert.deepEqual(settings.value, before)
+    assert.deepEqual(settings.updates, [])
+    assert.deepEqual(credentials.writes, [])
+    assert.deepEqual(credentials.resolves, [])
+    assert.deepEqual(calls, [])
   })
-
   it('answers OPTIONS preflight with 204 on every route', async () => {
-    const handlers = register({ settings: fakeSettings({}), credentials: fakeCredentials('') })
+    const handlers = register({ settings: fakeSettings(), credentials: fakeCredentials() })
     for (const path of ['/omnimux/byok/config', '/omnimux/byok/test', '/omnimux/runtime/mode']) {
       const res = fakeRes()
-      await handlers[path](fakeReq('OPTIONS'), res)
+      await handlers.get(path)(fakeReq('OPTIONS'), res)
       assert.equal(res.status, 204, `${path} must answer preflight`)
     }
   })
-
-  it('DELETE clears the config and the key', async () => {
-    const settings = fakeSettings({
-      runtimeKeyEndpoint: 'https://p.test/v1',
-      runtimeKeyModel: 'm1',
-      runtimeKeyVerified: true,
-      runtimeMediaImage: true,
-    })
+  it('DELETE clears only the targeted provider config and key', async () => {
+    const settings = storedSettings()
     const credentials = fakeCredentials('sk-stored')
     const handlers = register({ settings, credentials })
     const res = fakeRes()
-    await handlers['/omnimux/byok/config'](fakeReq('DELETE'), res)
+    await handlers.get('/omnimux/byok/config')(fakeReq('DELETE', { provider: 'openai', expectedRevision: 1 }), res)
     assert.equal(res.status, 200)
     assert.equal(res.body().hasKey, false)
-    assert.equal(res.body().endpoint, '')
+    assert.deepEqual(res.body().providers, [])
     assert.equal(credentials.value, '')
-    assert.ok(credentials.writes.some(([ref, val]) => ref === 'OMNIMUX_MEDIA_KEY_SILICONFLOW' && val === ''))
-    assert.ok(credentials.writes.some(([ref, val]) => ref === 'OMNIMUX_MEDIA_KEY_FAL' && val === ''))
-    assert.ok(credentials.writes.some(([ref, val]) => ref === 'OMNIMUX_MEDIA_KEY_OPENAI' && val === ''))
-    assert.ok(credentials.writes.some(([ref, val]) => ref === 'OMNIMUX_MEDIA_KEY_OPENROUTER' && val === ''))
-    assert.ok(credentials.writes.some(([ref, val]) => ref === BYOK_KEY_REF && val === ''))
+    assert.deepEqual(credentials.writes, [['OMNIMUX_MEDIA_KEY_OPENAI', '']])
     assert.equal(settings.value.runtimeKeyVerified, false)
     assert.equal(settings.value.runtimeMediaImage, false)
+    assert.equal(settings.value.runtimeMediaVideo, false)
+    assert.equal(settings.value.runtimeMediaAudio, false)
   })
-
   it('runtime mode endpoint writes a valid choice', async () => {
-    const settings = fakeSettings({})
-    const handlers = register({ settings, credentials: fakeCredentials('') })
+    const settings = fakeSettings()
+    const handlers = register({ settings, credentials: fakeCredentials() })
     const res = fakeRes()
-    await handlers['/omnimux/runtime/mode'](fakeReq('PUT', { mode: 'key' }), res)
+    await handlers.get('/omnimux/runtime/mode')(fakeReq('PUT', { mode: 'key' }), res)
     assert.equal(res.status, 200)
     assert.deepEqual(res.body(), { ok: true, mode: 'key' })
     assert.equal(settings.value.runtimeMode, 'key')
+    assert.equal(settings.revision, 2)
   })
-
   it('runtime mode endpoint rejects an unknown choice', async () => {
-    const settings = fakeSettings({})
-    const handlers = register({ settings, credentials: fakeCredentials('') })
+    const settings = fakeSettings()
+    const handlers = register({ settings, credentials: fakeCredentials() })
     const res = fakeRes()
-    await handlers['/omnimux/runtime/mode'](fakeReq('PUT', { mode: 'nope' }), res)
+    await handlers.get('/omnimux/runtime/mode')(fakeReq('PUT', { mode: 'nope' }), res)
     assert.equal(res.status, 400)
-    assert.equal(settings.value.runtimeMode, undefined)
+    assert.equal(settings.value.runtimeMode, '')
+    assert.deepEqual(settings.updates, [])
   })
-
   it('runtime mode endpoint refuses a cross-origin write', async () => {
-    const handlers = register({ settings: fakeSettings({}), credentials: fakeCredentials('') })
+    const settings = fakeSettings()
+    const handlers = register({ settings, credentials: fakeCredentials() })
     const res = fakeRes()
-    await handlers['/omnimux/runtime/mode'](fakeReq('PUT', { mode: 'key' }, { origin: 'https://evil.example' }), res)
+    await handlers.get('/omnimux/runtime/mode')(fakeReq('PUT', { mode: 'key' }, { origin: 'https://evil.example' }), res)
     assert.equal(res.status, 403)
+    assert.deepEqual(settings.updates, [])
   })
 })

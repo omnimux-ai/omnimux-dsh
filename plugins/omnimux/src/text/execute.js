@@ -10,13 +10,9 @@ import { loadTextVideo, toVideoImageUrlPart } from './video.js'
 import { loadTextAudio, toAudioImageUrlPart } from './audio.js'
 import { loadTextDocument, toDocumentImageUrlPart } from './document.js'
 import { normalizeTextReferences } from './references.js'
-import { resolveRuntimeChoice } from '../settings/runtime-mode.js'
-import { isAuthenticOfficialToken, resolveSyncOfficialToken } from '../media/mount.js'
-import { parseModelAndGroup, resolveRequestChannelIntent, isOfficialChannelId, getModelChannelGroups } from '../catalog/serving/channel-groups.js'
+import { resolveScenarioChoice, readScenarioSettings, assertScenarioRequestIntent } from '../settings/runtime-mode.js'
+import { parseModelAndGroup, resolveRequestChannelIntent } from '../catalog/serving/channel-groups.js'
 import { runAgentText } from '../agents/local.js'
-
-/** Fixed credential reference for the BYOK API key. */
-const BYOK_KEY_REF = 'OMNIMUX_BYOK_API_KEY'
 
 /** 识别已知思考通道引导词/纯思考断言的前缀特征 */
 const REASONING_PREAMBLE_RE = /^(?:i['’]?m\s+thinking\s+through|let\s+me\s+think|thinking\s+process|thought\s*:)/i
@@ -76,6 +72,13 @@ function parseToolModel(value) {
 }
 
 export async function executeOmnimuxText(input) {
+  if (input.model === '@agent' || input.model === '@local') {
+    const alias = input.model.slice(1)
+    if (input.group && !['agent', 'local'].includes(input.group)) throw new OmnimuxError('omnimux-invalid-request', '本机助手与所选渠道相互冲突')
+    if (Array.isArray(input.allowedGroups) && input.allowedGroups.length
+      && !input.allowedGroups.some((group) => group === 'agent' || group === 'local')) throw new OmnimuxError('omnimux-invalid-request', '本机助手不在允许渠道范围内')
+    input = { ...input, model: undefined, group: alias }
+  }
   const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : ''
   if (!prompt) {
     throw new OmnimuxError('omnimux-invalid-request', 'prompt is required')
@@ -95,15 +98,19 @@ export async function executeOmnimuxText(input) {
   // Video/audio/document references must skip this lane: ctx.llm.stream
   // attachments cannot carry a video MIME, so the tool-model channel
   // physically cannot serve them and the multimodal route below has to run.
+  try { assertScenarioRequestIntent(input) }
+  catch (cause) { throw new OmnimuxError('omnimux-invalid-request', cause.message) }
+  const requestedIntent = resolveRequestChannelIntent(input)
   const toolModelUsable = references.every((asset) => asset.type === 'image')
+    && !input.model && !requestedIntent.requestedChannel && !requestedIntent.effectiveChannel
   const toolModel = toolModelUsable
     ? parseToolModel(input.toolModel
-      ?? input.settings?.get?.('omnimux')?.toolModel)
+      ?? readScenarioSettings(input.settings).toolModel)
     : null
   if (toolModel !== null) {
     if (!toolModel.provider || !toolModel.model) {
       const storedRaw = typeof input.toolModel === 'string' ? input.toolModel
-        : input.settings?.get?.('omnimux')?.toolModel
+        : readScenarioSettings(input.settings).toolModel
       const stored = typeof storedRaw === 'string' ? storedRaw.trim() : ''
       throw new OmnimuxError('omnimux-unconfigured',
         `工具模型不可用${stored ? `（${stored}）` : ''}，请在设置中重新选择`)
@@ -144,73 +151,32 @@ export async function executeOmnimuxText(input) {
     return { ...toolResult, model: `${toolModel.provider}:${toolModel.model}` }
   }
 
-  // BYOK: the user configured their own key and it tested OK. Text runs
-  // directly against their endpoint; the official channel is not consulted.
-  const runtimeSettings = input.settings && typeof input.settings.get === 'function'
-    ? input.settings.get('omnimux')
-    : undefined
-  const runtime = resolveRuntimeChoice(runtimeSettings)
-
-  const { modelId: inputModelId } = typeof input.model === 'string'
-    ? parseModelAndGroup(input.model)
-    : { modelId: '', group: null }
-  const channelIntent = resolveRequestChannelIntent(input)
-  const rawTargetChannel = channelIntent.requestedChannel || channelIntent.effectiveChannel
-  const targetChannel = typeof rawTargetChannel === 'string' ? rawTargetChannel.toLowerCase().trim() : ''
-
-  const modelGroups = inputModelId ? getModelChannelGroups(inputModelId) : []
-  const isKnownOfficial = targetChannel
-    ? (targetChannel === 'official' || modelGroups.some((group) => {
-        const gid = typeof group.id === 'string' ? group.id.toLowerCase().trim() : ''
-        const wire = typeof group.wireGroup === 'string' ? group.wireGroup.toLowerCase().trim() : ''
-        return gid === targetChannel || wire === targetChannel
-      }))
-    : (runtime.mode === 'official')
-
-  const isOfficialModel = Boolean(inputModelId && CHAT_MODEL_IDS.includes(inputModelId))
+  const runtimeSettings = readScenarioSettings(input.settings)
+  const scenario = references.length ? 'analysis' : 'text'
+  const { modelId: inputModelId } = parseModelAndGroup(input.model)
+  const channelIntent = requestedIntent
+  const targetChannel = String(channelIntent.requestedChannel || channelIntent.effectiveChannel || '').toLowerCase().trim()
   const isExplicitAgent = targetChannel === 'agent' || targetChannel === 'local'
-  const isMultimodalRequest = references.length > 0 || hasComplexMedia || hasImage
-  const effectiveModelId = inputModelId || text.defaultModel
-  const isEffectiveOfficialModel = Boolean(effectiveModelId && CHAT_MODEL_IDS.includes(effectiveModelId))
-
-  let rawSystemToken = resolveSyncOfficialToken(input.env)
-  if (!rawSystemToken && input.credentials && typeof input.credentials.resolve === 'function') {
-    for (const ref of ['OMNIMUX_API_KEY', 'OMNIMUX_TOKEN']) {
-      try {
-        const hit = await input.credentials.resolve(ref)
-        const val = hit && typeof hit.value === 'string' ? hit.value.trim() : ''
-        if (isAuthenticOfficialToken(val)) {
-          rawSystemToken = val
-          break
-        }
-      } catch {}
-    }
+  const explicitOfficial = channelIntent.isOfficialChannel
+    || Boolean(inputModelId && CHAT_MODEL_IDS.includes(inputModelId) && !targetChannel)
+  let scenarioSettings = runtimeSettings
+  if (channelIntent.isByokChannel || isExplicitAgent || explicitOfficial) {
+    const binding = channelIntent.isByokChannel
+      ? { channel: 'byok', provider: channelIntent.byokProvider }
+      : { channel: isExplicitAgent ? 'agent' : 'official' }
+    scenarioSettings = { ...runtimeSettings,
+      scenarioBindings: { ...runtimeSettings.scenarioBindings, [scenario]: binding } }
   }
-  const hasOfficialToken = typeof rawSystemToken === 'string' && isAuthenticOfficialToken(rawSystemToken)
-
-  const isOfficialRequest = !channelIntent.isByokChannel && !isExplicitAgent
-    && (
-      (targetChannel && isKnownOfficial && (channelIntent.isOfficialChannel || runtime.mode === 'official'))
-      || (!targetChannel && (runtime.mode === 'official' || (isOfficialModel && hasOfficialToken) || (isMultimodalRequest && hasOfficialToken && isEffectiveOfficialModel)))
-    )
-
-  const isOfficialBypass = isOfficialRequest && hasOfficialToken
-
-  if (isOfficialBypass && rawSystemToken) {
-    if (!input.env) input.env = {}
-    input.env.OMNIMUX_API_KEY = rawSystemToken
+  const choice = resolveScenarioChoice(scenarioSettings, scenario)
+  if (targetChannel && !channelIntent.isByokChannel && !isExplicitAgent && !channelIntent.isOfficialChannel) {
+    throw new OmnimuxError('unknown-group', '所选文字渠道不可用')
   }
-
-  // Chose BYOK but hasn't finished configuring — fail loudly, not silently
-  // fall through to the official account.
-  if (runtime.mode === 'key' && !runtime.textReady && !isOfficialBypass) {
-    throw new OmnimuxError('omnimux-unconfigured', '自备密钥尚未配置完成，请在设置中填写地址和模型并测试通过')
-  }
-  if (runtime.mode === 'agent' && !runtime.textReady && !isOfficialBypass) {
-    throw new OmnimuxError('omnimux-unconfigured', '本机助手尚未配置完成，请在设置中选择并测试通过')
-  }
-  const useByok = channelIntent.isByokChannel || (runtime.mode === 'key' && !isOfficialRequest && runtime.textReady)
-  const useAgent = !isMultimodalRequest && (isExplicitAgent || (runtime.mode === 'agent' && !isOfficialRequest)) && runtime.textReady
+  if (!choice.configured) throw new OmnimuxError('omnimux-unconfigured', choice.reason || '此用途尚未配置')
+  const useByok = choice.channel === 'byok'
+  const useAgent = choice.channel === 'agent'
+  if (useAgent && references.length) throw new OmnimuxError('omnimux-invalid-request', '本机助手只承接纯文字，请配置素材理解服务')
+  const isOfficialRequest = choice.channel === 'official'
+  if (isOfficialRequest && !input.env) input = { ...input, env: process.env }
 
   // Local agent: text goes to the selected CLI and back. Media references are
   // out of scope for the agent path in this version — only plain text rides it.
@@ -220,7 +186,7 @@ export async function executeOmnimuxText(input) {
     }
     try {
       const agentRun = typeof input.agentRun === 'function' ? input.agentRun : runAgentText
-      const agentModel = String(runtimeSettings?.runtimeAgentModel ?? '').trim()
+      const agentModel = inputModelId || String(runtimeSettings?.runtimeAgentModel ?? '').trim()
       const text2 = await agentRun({
         id: String(runtimeSettings?.runtimeAgentId ?? ''),
         prompt,
@@ -326,28 +292,18 @@ export async function executeOmnimuxText(input) {
       else if (asset.type === 'audio') mediaParts.push(toAudioImageUrlPart(media))
       else if (asset.type === 'document') mediaParts.push(toDocumentImageUrlPart(media))
     }
-    let byokKey = ''
-    if (input.credentials && typeof input.credentials.resolve === 'function') {
-      try {
-        const hit = await input.credentials.resolve(BYOK_KEY_REF)
-        if (hit && typeof hit.value === 'string') byokKey = hit.value.trim()
-      } catch { /* fall through */ }
-    }
+    const hit = await input.credentials?.resolve?.(choice.credentialRef)
+    const byokKey = typeof hit?.value === 'string' ? hit.value.trim() : ''
     if (!byokKey) {
       throw new OmnimuxError('omnimux-unconfigured', '自备密钥未找到，请在设置中重新填写')
     }
-    const byokEndpoint = typeof runtimeSettings?.runtimeKeyEndpoint === 'string'
-      ? runtimeSettings.runtimeKeyEndpoint.trim()
-      : ''
+    const byokEndpoint = choice.endpoint
     if (!byokEndpoint) {
       throw new OmnimuxError('omnimux-unconfigured', '自备密钥缺少接口地址')
     }
     // The user's endpoint knows their model, not the official directory's.
     // An explicit caller model wins; otherwise the tested runtimeKeyModel goes.
-    const explicitModel = typeof input.model === 'string' && input.model.trim()
-    const byokModel = explicitModel
-      ? input.model.trim()
-      : (typeof runtimeSettings?.runtimeKeyModel === 'string' && runtimeSettings.runtimeKeyModel.trim())
+    const byokModel = inputModelId || choice.model
     if (!byokModel) {
       throw new OmnimuxError('omnimux-unconfigured', '自备密钥缺少模型名')
     }

@@ -243,6 +243,7 @@ describe('Text Channel & Local Agent Orthogonal Coexistence (Issue #2694)', () =
         runtimeMode: 'agent',
         runtimeAgentId: 'codex',
         runtimeAgentVerified: true,
+        scenarioBindings: { text: { channel: 'agent' }, analysis: { channel: 'official' } },
       }
 
       const result = await executeOmnimuxText({

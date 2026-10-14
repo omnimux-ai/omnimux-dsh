@@ -52,6 +52,18 @@ vertical disk  <--only the vertical writes its own files
 
 Chat stays on the dsh LLM surface (`llm-pi-ai` `omnimux` route). The hub must not register a parallel chat tool. A one-shot expert completion (`textComplete` / `omnimux_text_complete`) is not chat: text/image runs one `ctx.llm.stream` call with no tools and no parent messages; **video** bypasses stream/attachments and POSTs `/v1/chat/completions` with `image_url` + `data:video/…` (harness `ImageMediaType` cannot store video MIME).
 
+## Configuration consistency
+
+Consumption scenarios have independent saved choices in the Hub settings namespace: text tools, multimodal reference analysis, image generation, video generation and retained audio generation. Explicit request intent and existing creative choices remain stronger than a scenario default. Conflicting inline/field/provider intent or invalid permitted pools fail before credential or upstream work; unsupported local media analysis never turns into an automatic paid fallback. The session composer remains on the existing Host LLM surface.
+
+Every explicitly named line belongs to the current model, is enabled and falls inside its permitted pool. A named line without an explicit permitted pool is a single-line choice; a supplied pool alone bounds lawful fallback candidates. A missing pool or unknown model never repairs explicit intent through bare-model candidates or a group borrowed from another model. Each candidate retains its own wire model/group and complete constraints. Sorting and prices are unchanged.
+
+The Hub reads scenario settings once for each operation and resolves credentials through the current credentials service. Provider saves/checks do not write the text generic credential or global runtime mode. An unconfirmed or partially saved provider fails only its associated scenarios. Merely saving provider metadata or passing an offline format check does not make a media protocol supported: user media requires an existing registered protocol and matching origin.
+
+Accepted-task collection uses its recorded provider/protocol/origin/model/group/reference, not today's default. Current user-provider metadata must still match the recorded origin and not be partially saved before resolving its current credential; a caller-supplied old key never shadows that value. A changed origin or missing credential retains the task reference with an explicit error and never creates a replacement paid task. Already downloaded verified bytes can still be reused.
+
+Detailed saving/checking placement and evidence semantics: [settings UI](settings-ui.md#scenario-choices-and-truthful-checks). This contract does not claim real provider availability or output quality from offline regression.
+
 ## Media layers
 
 One generation seam, many vendors and HTTP bodies. Do not put vendor fields or protocol paths on the seam. Do not copy OmniMux cloud channel types (Kling `50`, Gxgen `61`, …) into the hub.
