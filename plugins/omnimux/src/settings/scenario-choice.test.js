@@ -26,6 +26,13 @@ test('raw user evidence wins over schema default choices during legacy migration
   assert.equal(resolveScenarioChoice(settings, 'text').channel, 'pending')
 })
 
+test('storage-only override never replaces inherited scenario choices', () => {
+  const inherited = { scenarioBindings: { text: { channel: 'agent' }, image: { channel: 'byok', provider: 'custom' } } }
+  const settings = readScenarioSettings({ describe: () => [{ ns: 'omnimux', user: { referenceStorage: { enabled: true } }, value: inherited }] })
+  assert.equal(settings.scenarioBindings.text.channel, 'agent')
+  assert.equal(settings.scenarioBindings.image.provider, 'custom')
+})
+
 test('partially saved provider is never executable even with old models present', () => {
   const choice = resolveScenarioChoice({ scenarioBindings: { image: { channel: 'byok', provider: 'custom' } },
     byokProviders: [{ provider: 'custom', endpoint: 'https://fixture.invalid/v1', models: { image: 'fixture-image' }, capabilities: ['image'], saveState: 'pending' }] }, 'image')

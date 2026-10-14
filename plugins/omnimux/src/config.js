@@ -50,7 +50,8 @@ fields.referenceStorage = z.object({
 }).default(parseReferenceStorageConfig(undefined)).volatile()
 for (const [key, fallback] of Object.entries(SETTINGS_DEFAULTS)) {
   if (key === 'referenceStorage') continue
-  const field = typeof fallback === 'boolean' ? z.boolean() : typeof fallback === 'string' ? z.string() : Array.isArray(fallback) ? z.array(z.any()) : z.object({})
+  const scenarioFields = Object.fromEntries(['text', 'analysis', 'image', 'video', 'audio'].map(scenario => [scenario, z.object({ channel: z.string(), provider: z.string() })]))
+  const field = key === 'scenarioBindings' ? z.object(scenarioFields) : typeof fallback === 'boolean' ? z.boolean() : typeof fallback === 'string' ? z.string() : Array.isArray(fallback) ? z.array(z.any()) : z.object({})
   fields[key] = field.default(fallback).volatile()
 }
 const formSchema = z.object(fields)
@@ -73,6 +74,10 @@ Object.defineProperty(Config, '~standard', { value: {
         }
       }
       scanSettings(settingsValues)
+      const providerKeys = new Set(['provider', 'verified', 'endpoint', 'credentialRef', 'revision', 'saveState', 'protocol', 'capabilities', 'models', 'imageModel', 'videoModel', 'audioModel', 'model', 'image', 'video', 'audio', 'runtimeMediaImage', 'runtimeMediaVideo', 'runtimeMediaAudio', 'constraints'])
+      for (const provider of settingsValues.byokProviders || []) {
+        if (!provider || typeof provider !== 'object' || Array.isArray(provider) || Object.keys(provider).some(key => !providerKeys.has(key))) throw new Error('供应商设置包含不支持的字段')
+      }
       parseSettingsSection(settingsValues)
       const liveFields = Object.fromEntries(Object.keys(SETTINGS_DEFAULTS).map(key => [key, parsed[key]]))
       return { value: Object.assign({}, ordinary, liveFields) }
