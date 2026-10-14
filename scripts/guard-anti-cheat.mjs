@@ -31,6 +31,11 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
   const normalizedPath = (filePath || '').replace(/\\/g, '/');
   const code = content || '';
 
+  // 任务规格不是可执行测试；文档中的代码示例也不是生产写入。
+  if (/\.(?:md|mdx)$/i.test(normalizedPath)) {
+    return { permissionDecision: 'allow' };
+  }
+
   // 0. 检查是否命中已批准的豁免令牌 (Exemption Token)
   for (const ex of exemptions) {
     if (ex.filePath === normalizedPath && ex.status === 'approved') {
@@ -41,12 +46,13 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
     }
   }
 
-  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|(\.|\/)(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
+  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
   const isFixtureFile = /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
 
-  // 1. 门禁 1：测试套件与评估资产只读守卫
+  // 测试编写可形成候选；跳过/聚焦片段仍保守拒绝，旧标准变化另须独审。
   if (isTestFile && !isFixtureFile) {
-    if (intent !== 'test_authoring') {
+    const narrowsExecution = /\.(?:skip|todo|only)\b|\b(?:skip|todo|only)\s*:\s*(?:true|['"])/.test(code);
+    if (intent !== 'test_authoring' && narrowsExecution) {
       return {
         permissionDecision: 'deny',
         ruleId: 'RULE-01-TEST-IMMUTABLE',

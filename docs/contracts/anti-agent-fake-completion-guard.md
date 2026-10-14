@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-09-29"
-updated: "2026-09-29"
+updated: "2026-10-14"
 authors: ["architecture-group", "engineering-director"]
 subsystem: "global"
 tags: ["agent-governance", "anti-cheating", "reward-hacking", "hard-gates", "anti-fallback"]
@@ -81,7 +81,7 @@ related:
 ```
 
 ### 3.1 层级 1：文件与配置物理只读隔离 (Write Scope Sandboxing)
-* **测试代码物理只读**：在沙盒或工作树配置中，`tests/**`、`specs/**`、`e2e/**` 以及测试断言文件对 Agent 设置为**严格只读**。
+* **规格与测试分类**：任务需求 Markdown 不属于可执行评估资产。正常测试编写可在任务工作树形成候选；已有标准的删除、跳过、聚焦或期待变化须由独立审查者核对规格和替代验证，不把所有测试永久锁死。当前写前检查仍保守拒绝未经测试编写意图声明的跳过/聚焦片段；该模式检查不是完整语义审查，也不是文件系统物理只读。
 * **CI 与构建配置锁定**：禁止 Agent 修改 `.github/`、`eslint*`、`tsconfig.json` 等门禁配置文件；任何对配置文件的修改必须单独审批。
 
 ### 3.2 层级 2：代码 AST 与静态检测硬门禁 (Static Anti-Fallback Gates)
