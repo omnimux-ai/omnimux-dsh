@@ -12,6 +12,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
+import { inspectTestAuthoring } from './test-authoring-inspection.mjs';
 
 /**
  * 核心判定函数
@@ -46,12 +47,13 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
     }
   }
 
-  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|(\.|\/)(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
+  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
   const isFixtureFile = /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
 
   // 1. 门禁 1：测试套件与评估资产只读守卫
   if (isTestFile && !isFixtureFile) {
-    if (intent !== 'test_authoring') {
+    const inspection = inspectTestAuthoring(code);
+    if (intent !== 'test_authoring' && !inspection.allowed) {
       return {
         permissionDecision: 'deny',
         ruleId: 'RULE-01-TEST-IMMUTABLE',
@@ -131,7 +133,14 @@ export function handle(rawInput) {
   const toolName = rawTool.replace(/^.*:/, '');
   const toolInput = input.tool_input || (input.file_path ? input : {});
   const filePath = toolInput.file_path || input.file_path || '';
-  const content = toolInput.content || toolInput.new_string || input.content || input.new_string || '';
+  let content = toolInput.content || toolInput.new_string || input.content || input.new_string || '';
+  if (toolName === 'edit' && /\.(?:test|spec)\.[^/]+$|(?:^|\/)(?:tests?|__tests__)\//.test(filePath.replace(/\\/g, '/'))) {
+    const oldString = toolInput.old_string;
+    const source = readFileSync(resolve(input.cwd || process.cwd(), filePath), 'utf8');
+    if (typeof oldString !== 'string' || !oldString || !source.includes(oldString)) throw new Error('Cannot reconstruct test edit');
+    if (!toolInput.replace_all && source.indexOf(oldString) !== source.lastIndexOf(oldString)) throw new Error('Ambiguous test edit');
+    content = toolInput.replace_all ? source.split(oldString).join(toolInput.new_string || '') : source.replace(oldString, () => toolInput.new_string || '');
+  }
   const intent = process.env.DSH_TASK_INTENT || 'business_code';
 
   let exemptions = [];
