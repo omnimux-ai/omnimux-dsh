@@ -246,7 +246,7 @@ export function indexWorkspaceAssets(
 
 export function instantiateWorkspaceAssets(
   id: string,
-  payload: { globalSubjectId: string; parentId?: string | null; expectedRev?: number },
+  payload: { globalSubjectId: string; fileIds?: string[]; parentId?: string | null; expectedRev?: number },
 ): Promise<ApiResult<{ assets: ProjectAssetsDocument; current?: number }>> {
   return request<{ assets: ProjectAssetsDocument; current?: number }>(
     WORKFLOW_API_ROUTES.workspaceAssetsInstantiate(encodeURIComponent(id)),

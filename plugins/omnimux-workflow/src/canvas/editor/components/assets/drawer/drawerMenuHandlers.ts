@@ -290,13 +290,14 @@ export async function executeFolderMenuAction(
 
 export async function instantiateSubjectToProject(
   subject: { id: string; name: string },
-  projectAssets: { instantiateSubject: (id: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void) => Promise<boolean>; error?: string | null },
+  projectAssets: { instantiateSubject: (id: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void, fileIds?: string[]) => Promise<boolean>; error?: string | null },
   guard: { isCurrent: (ticket: any) => boolean },
   ticket: any,
   onSuccess: (assets: AssetItem[]) => void,
+  fileIds?: string[],
 ): Promise<void> {
   let addedAssets: AssetItem[] = [];
-  const ok = await projectAssets.instantiateSubject(subject.id, null, (assets) => { addedAssets = assets; });
+  const ok = await projectAssets.instantiateSubject(subject.id, null, (assets) => { addedAssets = assets; }, fileIds);
   if (!guard.isCurrent(ticket)) return;
   if (ok) {
     onSuccess(addedAssets);

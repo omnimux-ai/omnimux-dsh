@@ -80,6 +80,7 @@ export type IngestProjectAssetsPayload = IndexProjectAssetsPayload;
 
 export interface InstantiateProjectAssetsPayload {
   globalSubjectId: string;
+  fileIds?: string[];
   parentId?: string | null;
   expectedRev?: number;
 }

@@ -60,6 +60,7 @@ export interface CanvasNodeItem {
 
 export interface SubjectFileRef {
   id?: string;
+  kind?: string;
   real_path?: string;
   original_name?: string;
 }
