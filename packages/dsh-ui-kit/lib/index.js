@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { IconCheckOutline16, IconChevronDownOutline14, IconChevronUpOutline14, IconCloseFill14, IconCloseOutline16, IconCopyOutline16, IconLoadingOutline16, IconRefreshOutline16, IconSearchOutline16, Menu, Modal, Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
+import * as primitives from "@deepseek-ai/dsh-client-ui-primitives";
+import { IconCheckOutline16, IconChevronDownOutline14, IconChevronUpOutline14, IconCloseFill14, IconCloseOutline16, IconCopyOutline16, IconLoadingOutline16, IconRefreshOutline16, IconSearchOutline16, Modal, Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { createPortal } from "react-dom";
 //#region src/internal/cssClass.ts
@@ -1362,6 +1363,8 @@ var DropdownSelect_module_css_default = {
 };
 //#endregion
 //#region src/field/DropdownSelect.tsx
+const Menu = primitives.Menu;
+const ChevronDown = primitives.IconChevronDownOutlineRegular ?? primitives.IconChevronDownOutline14;
 /**
 * 32px select built on the official Menu. Never renders a native `<select>`.
 */
@@ -1412,7 +1415,7 @@ function DropdownSelect({ value, options, onChange, placeholder = "Select", disa
 			}), /* @__PURE__ */ jsx("span", {
 				className: cx(DropdownSelect_module_css_default.chevron, open && DropdownSelect_module_css_default.chevronOpen),
 				"aria-hidden": "true",
-				children: /* @__PURE__ */ jsx(IconChevronDownOutline14, { size: 14 })
+				children: /* @__PURE__ */ jsx(ChevronDown, { size: 14 })
 			})]
 		})
 	});
