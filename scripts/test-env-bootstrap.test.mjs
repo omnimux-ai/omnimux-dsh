@@ -173,11 +173,16 @@ test('unexpected runtime exit after readiness cleans its directory and mock', as
   try { assert.equal(f.removed.length, 1); await assert.rejects(fetch(base)); } finally { await run.cleanup(); }
 });
 
-test('cleanup escalates only owned child and awaits confirmed exit', async () => {
+test('cleanup escalates only owned child and awaits confirmed exit and close', async () => {
   const { createTestEnvironmentStarter } = await load(); const f = fixture(); const run = await createTestEnvironmentStarter(f.deps)({ root });
   const child = f.spawned[0].child; const sent = [];
-  child.kill = signal => { sent.push(signal); if (signal === 'SIGKILL') setTimeout(() => { child.signalCode = signal; child.emit('exit', null, signal); }, 2); return true; };
-  await run.cleanup(); assert.deepEqual(sent, ['SIGTERM', 'SIGKILL']); assert.equal(f.removed.length, 1);
+  child.kill = signal => { sent.push(signal); if (signal === 'SIGKILL') setTimeout(() => { child.signalCode = signal; child.emit('exit', null, signal); child.emit('close', null, signal); }, 2); return true; };
+  const result = await run.cleanup();
+  assert.deepEqual(sent, ['SIGTERM', 'SIGKILL']); assert.equal(f.removed.length, 1);
+  assert.equal(result.cleaned, true);
+  assert.deepEqual(result.resources.map(item => [item.name, item.status]), [['app-child', 'completed'], ['mock-server', 'completed'], ['app-private-directory', 'completed']]);
+  assert.equal(run.observations.events.filter(item => item.event === 'exit').length, 1);
+  assert.equal(run.observations.events.filter(item => item.event === 'close').length, 1);
 });
 
 test('live rejects empty credential rather than falling back to unconfigured mode', async () => {
@@ -208,6 +213,7 @@ test('immediate exit right after stdout login URL rejects and cleans up', async 
       child.stdout.write('dsh web: http://127.0.0.1:45120/?token=abc-123\n');
       child.exitCode = 1;
       child.emit('exit', 1);
+      child.emit('close', 1);
     });
     return child;
   };

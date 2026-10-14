@@ -90,6 +90,11 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
     writeFileSync: (path, value) => written.push({ path, value }),
   };
   let cleanupCount = 0;
+  let cleanupBehavior = 'success';
+  const browserAssertions = [
+    { name: 'app-dom-mounted', pass: true },
+    { name: 'visible-geometry-positive', pass: true, largest: { width: 900, height: 600 } },
+  ];
   const run = createAppQaRunner({
     io,
     uuid: () => 'run-ok',
@@ -102,14 +107,15 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
       origin: 'http://127.0.0.1:15000',
       summary: Object.freeze({ mode: 'ui', evidenceLevel: 'core-only', taskPluginsInstalled: false }),
       loginUrl: 'http://127.0.0.1:15000/?token=unit-only',
-      cleanup: async () => { cleanupCount += 1; return { cleaned: true }; },
+      cleanup: async () => {
+        cleanupCount += 1;
+        if (cleanupBehavior === 'throw') throw new Error('unit-secret-never-log');
+        return { cleaned: cleanupBehavior !== 'false' };
+      },
     }),
     driveBrowser: async () => ({
       cdpPort: 15001,
-      assertions: [
-        { name: 'app-dom-mounted', pass: true },
-        { name: 'visible-geometry-positive', pass: true, largest: { width: 900, height: 600 } },
-      ],
+      assertions: browserAssertions,
       screenshot: { path: root + '/.workbuddy/evidence/app-qa/run-ok/app-home.png', width: 1280, height: 713, bytes: 2048 },
     }),
   });
@@ -121,10 +127,44 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
   assert.equal(report.assertions.every(assertion => assertion.pass), true);
   assert.ok(written.some(item => item.path.endsWith('/docs/evidence/worktree-app-qa-report.json')), '必须写摘要报告');
   assert.ok(written.some(item => item.path.endsWith('/evidence/app-qa/run-ok/report.json')), '必须写明细报告');
-  // 报告不得携带登录能力
+  assert.equal(report.scope, 'smoke');
+  assert.equal(report.contract, 'none');
+  assert.equal(report.producer, 'dependency-stub');
+  assert.equal(report.taskBinding, 'unknown');
+  assert.equal(report.userFresh, 'unknown');
+  assert.equal(report.evidence, undefined, 'legacy output is not a validated envelope');
+
+  for (const behavior of ['false', 'throw']) {
+    cleanupBehavior = behavior;
+    const failed = await run({ root, repo: '/repo' });
+    assert.equal(failed.pass, false, `cleanup ${behavior} cannot pass`);
+    assert.equal(failed.cleanup.cleaned, false);
+    assert.ok(failed.errors.includes('TEST_APP_QA_CLEANUP_INCOMPLETE'));
+    if (behavior === 'throw') assert.ok(failed.errors.includes('TEST_APP_QA_CLEANUP'));
+    assert.equal(cleanupCount, behavior === 'false' ? 2 : 3, 'each attempted run cleans exactly once');
+  }
+  cleanupBehavior = 'success';
+
+  const request = {
+    root, repo: '/repo', taskId: 'task', base: 'HEAD', head: 'HEAD', scope: 'smoke',
+    requiredChecks: ['app-environment', 'app-browser'],
+    expectedAssertions: {
+      'app-environment': ['app-runtime-ready', 'same-origin-login'],
+      'app-browser': ['chrome-cdp-listen', 'auth-cookie-applied', 'app-dom-mounted', 'visible-geometry-positive', 'runtime-modal-bypassed', 'blank-session-guide-visible', 'explore-section-visible', 'explore-cards-present', 'asset-hub-reachable-via-library', 'screenshot-png-verified'],
+    },
+  };
+  const beforeWrites = written.length;
+  await assert.rejects(run(Object.assign({}, request, { base: undefined })), { code: 'TEST_APP_QA_CONTRACT_REQUEST' });
+  await assert.rejects(run(Object.assign({}, request, { requiredChecks: [] })), { code: 'TEST_APP_QA_EXPECTED_POLICY' });
+  await assert.rejects(run(Object.assign({}, request, { expectedAssertions: { 'app-environment': ['app-runtime-ready', 'same-origin-login'], 'app-browser': ['app-dom-mounted', 'visible-geometry-positive'] } })), { code: 'TEST_APP_QA_EXPECTED_POLICY' });
+  assert.equal(cleanupCount, 3, 'preflight failures never prepare or clean an environment');
+  assert.equal(written.length, beforeWrites, 'preflight failures never create a report');
+
+  // 报告不得携带登录能力或清理异常原文
   for (const item of written) {
     assert.equal(/token=/.test(item.value), false, '报告不得包含 token');
     assert.equal(/loginUrl/.test(item.value), false, '报告不得包含 loginUrl');
+    assert.doesNotMatch(item.value, /unit-cookie-value|unit-secret-never-log/, '报告只保留分类码，不含 cookie 或清理异常原文');
   }
 });
 
