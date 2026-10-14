@@ -24,6 +24,7 @@ import { MotionPanel } from './components/MotionPanel.jsx'
 import { TaskPreviewDialog } from './components/TaskPreviewDialog.jsx'
 import { ImageReference } from './components/ImageReference.jsx'
 import { Button } from './kit.js'
+import { SegmentedToggle } from './components/SegmentedToggle.jsx'
 import { PresetPreviewDialog } from './components/PresetPreviewDialog.jsx'
 import { SourceTabs } from './components/SourceTabs.jsx'
 import { ViewModeToggle } from './components/ViewModeToggle.jsx'
@@ -156,6 +157,7 @@ export function AvatarStage(props) {
   const [motionRevision, setMotionRevision] = useState(null)
   const [imageMaterialId, setImageMaterialId] = useState('')
   const [imageUploading,setImageUploading]=useState(false)
+  const [summaryExpanded,setSummaryExpanded]=useState(false)
   const [videoInitialTask, setVideoInitialTask] = useState(null)
   const [viewMode, setViewMode] = useState(() => readViewMode())
   const [previewPreset, setPreviewPreset] = useState(null)
@@ -300,6 +302,7 @@ export function AvatarStage(props) {
     [multiViewApi.childByParent]
   )
 
+  const selectedLabels = (taxonomy?.categories??[]).flatMap(category=>(b.selection[category.id]??[]).map(id=>category.options.find(option=>option.id===id)).filter(Boolean).map(option=>t(option.label_en)))
   const conflict = conflictMessage(b.tier, b.selection)
   const hasInput = totalSelected(b.selection) > 0 || b.brief.trim() !== '' || Boolean(b.imageUrl || imageMaterialId) || b.tier === 'cat' || b.tier === 'dog'
   const modelGroups = groupsOfModel(imageModels(catalog), b.model)
@@ -593,8 +596,7 @@ export function AvatarStage(props) {
     >
       <div className="omx-avatar-head omx-stage-sticky">
         <span className="omx-avatar-head-title">{t('nav')}</span>
-        <Button variant={workbenchMode === 'image' ? 'primary' : 'ghost'} onClick={() => setWorkbenchMode('image')}>角色设计</Button>
-        <Button variant={workbenchMode === 'video' ? 'primary' : 'ghost'} onClick={() => setWorkbenchMode('video')}>视频创作</Button>
+        <SegmentedToggle value={workbenchMode} onChange={setWorkbenchMode} ariaLabel="工作台" options={[{value:'image',label:'角色设计'},{value:'video',label:'视频创作'}]}/>
       </div>
 
       <div className="omnimux-avatar-body">
@@ -609,8 +611,9 @@ export function AvatarStage(props) {
             selectAvatar={avatarsApi.selectAvatar}
             t={t}
           />
-          <div className="omx-avatar-scroll">
-            <div hidden={workbenchMode !== 'video'}><MotionPanel active={workbenchMode === 'video'} initialTask={videoInitialTask} avatarId={currentId} tasks={history.items} onError={error => push(readError(error), 'error')} onAccepted={task => { setMotionRevision(task); onSourceChange('history') }} /></div><div hidden={workbenchMode !== 'image'}><ImageReference onBusy={setImageUploading} brief={b.brief} onBrief={builder.setBrief} avatarId={currentId} value={imageMaterialId} onChange={setImageMaterialId} onError={error => push(readError(error), 'error')} onReset={() => { builder.reset(); setImageMaterialId('') }} /><BuilderPanel
+          <MotionPanel active={visible&&workbenchMode === 'video'} initialTask={videoInitialTask} avatarId={currentId} tasks={history.items} onError={error => push(readError(error), 'error')} onAccepted={task => { setMotionRevision(task); onSourceChange('history') }} />
+          <div className="omx-avatar-scroll" hidden={workbenchMode !== 'image'}>
+            <div><ImageReference onBusy={setImageUploading} brief={b.brief} onBrief={builder.setBrief} avatarId={currentId} value={imageMaterialId} onChange={setImageMaterialId} onError={error => push(readError(error), 'error')} /><BuilderPanel
               taxonomy={taxonomy}
               tier={b.tier}
               selection={b.selection}
@@ -622,6 +625,7 @@ export function AvatarStage(props) {
               t={t}
             /></div>
           </div>
+          {workbenchMode==='image'?<div className="omx-avatar-selection-summary" data-expanded={summaryExpanded}><div className="omx-avatar-pane-tools"><span>已选设置</span><Button aria-expanded={summaryExpanded} onClick={()=>setSummaryExpanded(value=>!value)}>{summaryExpanded?'收起':'展开更多'}</Button><Button onClick={builder.resetFeatures}>重置特征</Button></div><p title={selectedLabels.join(' · ')}>{selectedLabels.length?selectedLabels.join(' · '):'尚未选择特征'}</p></div>:null}
           {workbenchMode === 'image' ? <GenerateBar
             quote={null} /* 中枢目录不提供按渠道的积分报价，宁可留空也不编数字 */
             canGenerate={canGenerate}
