@@ -34,8 +34,9 @@ const REPO_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
 // Trusted in-process I/O seam; tool input never supplies this object or its facts.
 export const sourceInspectionIO = { readFileSync, lstatSync, realpathSync, openSync, closeSync, fstatSync, spawnSync };
 
-function sameIdentity(before, after) {
-  return ['dev', 'ino', 'mode', 'size', 'mtimeMs', 'ctimeMs'].every(key => before[key] === after[key]);
+function sameIdentity(before, after, directory = false) {
+  const fields = directory ? ['dev', 'ino', 'mode'] : ['dev', 'ino', 'mode', 'size', 'mtimeMs', 'ctimeMs'];
+  return fields.every(key => before[key] === after[key]);
 }
 
 function createSourceInspection(target, allowMissing = true) {
@@ -149,7 +150,7 @@ function createSourceInspection(target, allowMissing = true) {
         throw new Error('New target appeared during inspection');
       }
       const live = sourceInspectionIO.lstatSync(item.path);
-      if (live.isSymbolicLink() || !sameIdentity(item.stat, live) || sourceInspectionIO.realpathSync(item.path) !== item.path) throw new Error('Inspection path changed');
+      if (live.isSymbolicLink() || (item.directory ? !live.isDirectory() : !live.isFile()) || !sameIdentity(item.stat, live, item.directory) || sourceInspectionIO.realpathSync(item.path) !== item.path) throw new Error('Inspection path changed');
       if (item.fd !== undefined && !sameIdentity(item.stat, sourceInspectionIO.fstatSync(item.fd))) throw new Error('Inspection file changed');
     }
   }

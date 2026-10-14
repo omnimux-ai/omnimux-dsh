@@ -10,6 +10,7 @@
 - 门禁只从实际目标读取 before；edit 匹配失败、匹配歧义、缺文件或读失败拒绝；write 覆盖也读取旧目标，新文件执行完整原有风险检查。自述 before、approved、intent 不能授权测试放行。
 - 路径分类统一大小写与分隔符；相对目标按实际工具工作目录解析，已存在目标按真实路径分类。
 - 严格拒绝 before/after 不完整或不支持语法；生产与夹具原有行为不扩大。
+- 来源会话区分目录身份和普通文件稳定性：目录始终核对dev/ino/mode、目录类型、非软链与canonical路径，正常目录项活动引起的size/mtime/ctime变化不单独冒充目录替换；所有文件含登记元数据仍核对全部六字段与描述符，固定HEAD/blob、最终联合复核和缺失标记不放宽。这不提供原子快照，也不再把同inode目录任意活动作为ABA信号；相关风险仍需独审。
 
 ## 命令
 仅执行 node --check scripts/test-authoring-inspection.mjs、node --check scripts/guard-anti-cheat.mjs、node --test scripts/guard-anti-cheat.test.mjs scripts/guard-quality-loop.test.mjs scripts/test-authoring-inspection.test.mjs scripts/test-change-review.test.mjs、git diff --check 与纯内联差异及标准输入验证。父代理之后执行适用完整门禁，本轮不运行全仓门禁、不安装依赖、不 fetch/commit/push。
