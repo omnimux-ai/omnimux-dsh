@@ -182,26 +182,12 @@ test('createLibraryAsset 可携带 files[].real_path', async () => {
   assert.equal(created.subject?.files?.[0]?.real_path, '/tmp/night.png');
 });
 
-test('SubjectLibraryView lucide-react 命名导入必须绑定 Layers（防卡片徽章 ReferenceError）', () => {
-  const source = readFileSync(
-    join(here, '../editor/components/assets/views/SubjectLibraryView.tsx'),
-    'utf8',
-  );
-  const importMatch = source.match(/import\s*\{([\s\S]*?)\}\s*from\s*['"]lucide-react['"]/);
-  assert.ok(importMatch, 'SubjectLibraryView.tsx 必须有 lucide-react 命名导入');
-  const imported = importMatch[1]
-    .split(',')
-    .map((part) => part.trim().split(/\s+as\s+/)[0].trim())
-    .filter(Boolean);
-  assert.ok(
-    imported.includes('Layers'),
-    `lucide-react import 必须含 Layers，实际: ${imported.join(', ')}`,
-  );
-  assert.match(
-    source,
-    /<Layers\b/,
-    '卡片计数徽章必须使用 <Layers />，import 绑定才有运行时意义',
-  );
+test('SubjectLibraryView 卡片仅保留缩略图和名称，不渲染标签或数量角标', () => {
+  const source = readFileSync(join(here, '../editor/components/assets/views/SubjectLibraryView.tsx'), 'utf8');
+  assert.match(source, /wf-subject-card-cover-compact/);
+  assert.match(source, /wf-subject-card-name-compact/);
+  assert.doesNotMatch(source, /wf-subject-card-(?:tags|tag|count-badge)-compact/);
+  assert.doesNotMatch(source, /<Layers\b/);
 });
 
 test('listLibrary 转发 AbortSignal；中止后返回 aborted 而非 network', async () => {

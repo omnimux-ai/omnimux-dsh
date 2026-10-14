@@ -6,7 +6,6 @@ import {
   Plus,
   Sparkles,
   ChevronDown,
-  Layers,
 } from 'lucide-react';
 import { SortFilterPopover } from '../popovers/SortFilterPopover';
 import { SUBJECT_CATEGORY_TABS } from '../../../../bridge/assetsLibraryMapper';
@@ -179,21 +178,11 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
                       <Sparkles size={20} />
                     </div>
                   )}
-                  <span className="wf-subject-card-count-badge-compact">
-                    <Layers size={10} /> {sub.itemCount} 项
-                  </span>
                 </div>
 
                 <div className="wf-subject-card-info-compact">
                   <div className="wf-subject-card-name-compact" title={sub.name}>
                     {sub.name}
-                  </div>
-                  <div className="wf-subject-card-tags-compact">
-                    {sub.tags.slice(0, 3).map((t, idx) => (
-                      <span key={idx} className="wf-subject-card-tag-compact">
-                        {t}
-                      </span>
-                    ))}
                   </div>
                 </div>
               </div>
