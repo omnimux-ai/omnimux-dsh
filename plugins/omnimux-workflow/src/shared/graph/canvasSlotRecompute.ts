@@ -20,13 +20,22 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   const view = buildContractView(catalog);
   if (!params.model && catalog) {
     const recommended = catalog.defaultOperations?.[outputType];
-    const pick = planAutoAdaptation({ catalog, outputType, preferredModelId: context.preferredModels?.[outputType] ?? recommended?.modelId,
+    const pick = planAutoAdaptation({ catalog, outputType, preferredModelId: context.preferredModels?.[outputType],
       currentOperationId: typeof params.operation === 'string' ? params.operation : undefined,
       fingerprint: buildUpstreamFingerprint({ ...raw, assets: raw.assets.filter((asset) => asset.type === 'text') }) });
-    if (pick) { params.model = pick.modelId; params.operation ??= pick.operationId; }
+    if (pick) {
+      params.model = pick.modelId;
+      const recommendedId = recommended?.modelId === pick.modelId
+        && resolveModelView(view, pick.modelId)?.operations.some((op) => op.id === recommended.operationId
+          && op.listed && op.output.type === outputType)
+        ? recommended.operationId : undefined;
+      params.operation ??= recommendedId ?? pick.operationId;
+    }
   }
   const model = resolveModelView(view, typeof params.model === 'string' ? params.model : undefined);
   if (model) params.model = model.id;
+  const modelRecommendation = catalog?.defaultOperations?.[outputType];
+  const recommendedId = modelRecommendation?.modelId === model?.id ? modelRecommendation?.operationId : undefined;
   const savedOperation = typeof params.operation === 'string' && params.operation.trim() ? params.operation.trim() : undefined;
   const legacyChat = !currentVersion && outputType === 'text' && savedOperation === 'chat';
   const savedOp = savedOperation && model
@@ -36,7 +45,7 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
   // null = 用户拍板，undefined = 历史节点来源未知，仅当模式恰好等于该产出类型的目录推荐值时才按系统写入对待）。
   const autoOperationId = node.data.autoOperationId;
   const systemChosen = autoOperationId === undefined
-    ? Boolean(savedOperation && savedOperation === catalog?.defaultOperations?.[outputType]?.operationId)
+    ? Boolean(savedOperation && savedOperation === recommendedId)
     : autoOperationId === savedOperation;
   // 仅当已就绪的上游媒体当前模式吸收不了时才改写；用户拍板过的模式与无素材场景都不受影响。
   const strandedBySupply = Boolean(savedOp && !matchOperationInputs(savedOp, raw).accepts
@@ -46,7 +55,6 @@ export function recomputeCanvasSlots(node: CanvasNode, graph: CanvasInputMutatio
     // A node without a saved mode starts in the catalog's recommended one — the mode that
     // consumes upstream media, so its slots exist from the first render. A saved mode, an
     // explicit connection or a user pick is never replaced here.
-    const recommendedId = catalog?.defaultOperations?.[outputType]?.operationId;
     const recommended = recommendedId && model.operations.some((op) => op.id === recommendedId && op.listed && op.output.type === outputType)
       ? recommendedId : undefined;
     params.operation = resolveSlotOperation(catalog, model.id, systemChosen && strandedBySupply ? undefined : params.operation, outputType, raw) ?? recommended;
