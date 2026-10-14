@@ -473,6 +473,21 @@ allow-skips: false
       assert.equal(cleanupCalls, 1)
     } finally { rmSync(root, { recursive: true, force: true }) }
   })
+  it('required checks need an explicit supported success state before cleanup', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pipeline-required-state-'))
+    try {
+      for (const check of [{ required: true, pass: true }, { required: true, pass: true, status: null }, { required: true, pass: true, status: '' }, { required: true, pass: true, status: 0 }, { required: true, pass: true, status: 'unknown' }]) {
+        writeState(root, '866', { state: 'merged-confirmed' })
+        const reports = passingDeliveryReports()
+        reports.extra = check
+        let cleanupCalls = 0
+        const result = finishMergedDelivery(root, {}, { issueId: '866', plugin: 'common', changedFiles: ['docs/guide.md'], reports, risk: { tier: 'R3' }, pr: { number: 867 }, merged: { state: 'MERGED', mergedAt: 'now', mergeCommit: { oid: 'merge' } } }, { execCommand: () => ({ status: 0 }) }, () => { cleanupCalls++ })
+        assert.equal(result.state, 'ready-for-agent')
+        assert.equal(cleanupCalls, 0)
+        assert.equal(result.completionGaps.includes('required extra has not passed'), true)
+      }
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
   it('obsolete pre-merge browser CLI options are rejected without affecting risk or scope options', () => {
     for (const option of ['--l2-url', '--expected-text', '--browser-run-id', '--browser-stage', '--browser-target']) {
       assert.throws(() => parseArgs(['866', option, 'value']), /未知参数/)

@@ -108,7 +108,7 @@ export function finishMergedDelivery(root, wt, { issueId, plugin, topic, ...evid
   for (const [name, check] of Object.entries(reports)) {
     // Human Dev acceptance is separate. Other declared requirements cannot disappear.
     if (name === 'dev' || name === 'browser' || check?.required !== true) continue
-    if (check.pass !== true || check.status && check.status !== 'passed') completionGaps.push(`required ${name} has not passed`)
+    if (check.pass !== true || check.status !== 'passed') completionGaps.push(`required ${name} has not passed`)
     if (name === 'runtime') completionGaps.push('required runtime evidence needs a trusted current receipt, not a pass field')
   }
   if (matrix?.dimensions.browser.required || reports.browser?.required === true) {
