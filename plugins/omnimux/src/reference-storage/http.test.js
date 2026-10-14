@@ -29,7 +29,7 @@ function setup() {
     req.socket = { encrypted: false }
     req.headers = { host: 'localhost:44321', origin, authorization: authorized ? 'test-session' : '' }
     const headers = new Map()
-    const res = { statusCode: 0, setHeader(key, value) { headers.set(key.toLowerCase(), value) }, end(text) { this.body = JSON.parse(text) } }
+    const res = { statusCode: 0, setHeader(key, value) { headers.set(key.toLowerCase(), value) }, writeHead(status) { this.statusCode = status }, end(text) { this.body = JSON.parse(text) } }
     await routes.get('/omnimux/reference-storage/config')(req, res)
     return { status: res.statusCode, body: res.body, headers }
   }
