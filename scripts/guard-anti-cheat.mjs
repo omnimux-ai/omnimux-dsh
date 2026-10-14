@@ -32,7 +32,7 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
   const code = content || '';
 
   // 任务规格不是可执行测试；文档中的代码示例也不是生产写入。
-  if (/\.(?:md|mdx)$/i.test(normalizedPath)) {
+  if (/\.md$/i.test(normalizedPath)) {
     return { permissionDecision: 'allow' };
   }
 
@@ -46,16 +46,12 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
     }
   }
 
-  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
+  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|(\.|\/)(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
   const isFixtureFile = /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
 
-  // 测试编写可形成候选；跳过/聚焦片段仍保守拒绝，旧标准变化另须独审。
+  // 1. 门禁 1：测试套件与评估资产只读守卫
   if (isTestFile && !isFixtureFile) {
-    const gap = String.raw`(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n\r]*(?:\r?\n|$))*`;
-    const narrowedMember = new RegExp(String.raw`\.${gap}(?:skip|todo|only)\b|\[${gap}['"](?:skip|todo|only)['"]${gap}\]`);
-    const narrowedOption = /(?:\b(?:skip|todo|only)\b|['"](?:skip|todo|only)['"])\s*:\s*(?!false\b|null\b|undefined\b|0\s*[,}])\S/;
-    const narrowsExecution = narrowedMember.test(code) || narrowedOption.test(code);
-    if (intent !== 'test_authoring' && narrowsExecution) {
+    if (intent !== 'test_authoring') {
       return {
         permissionDecision: 'deny',
         ruleId: 'RULE-01-TEST-IMMUTABLE',
