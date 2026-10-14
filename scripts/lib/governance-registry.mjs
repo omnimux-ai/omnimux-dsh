@@ -289,7 +289,7 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
         const literalBlock = node?.srcToken?.type === 'block-scalar' && node.srcToken.props?.some(token => token.type === 'block-scalar-header' && token.source.startsWith('|'))
         const startLine = node?.range ? counter.linePos(node.range[0]).line : null
         const endLine = node?.range ? counter.linePos(Math.max(node.range[0], node.range[1] - 1)).line : null
-        const unmappedLocation = Boolean(node && !literalBlock && (startLine !== endLine || typeof step.run === 'string' && /[\r\n]/.test(step.run) || node.srcToken?.type === 'block-scalar'))
+        const unmappedLocation = Boolean(node && !literalBlock && (node.srcToken?.type === 'alias' || startLine !== endLine || typeof step.run === 'string' && /[\r\n]/.test(step.run) || node.srcToken?.type === 'block-scalar'))
         const line = unmappedLocation ? null : literalBlock ? startLine + 1 : startLine
         const context = {
           channel: 'ci', source: path, job: jobId, step: stepIndex, stepName: step.name ?? null, line,
