@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { normalizeLogicalRequest } from '../catalog/contract/submit-guard/index.js'
 import { probeTextImage } from '../text/image.js'
 import { probeTextVideo } from '../text/video.js'
@@ -57,7 +58,7 @@ export async function probeMediaAssets(input, context = {}) {
         fetcher: input.fetcher,
         signal: input.signal,
       })
-      return { ...identity, mime: image.mediaType, sizeBytes: image.sizeBytes }
+      return { ...identity, mime: image.mediaType, sizeBytes: image.sizeBytes, contentDigest: createHash('sha256').update(image.data).digest('hex') }
     }
     if (asset.type === 'video') {
       const video = await probeTextVideo(asset.pathOrUrl, {
@@ -69,6 +70,7 @@ export async function probeMediaAssets(input, context = {}) {
         ...identity,
         mime: video.mediaType,
         sizeBytes: video.sizeBytes,
+        contentDigest: createHash('sha256').update(video.data).digest('hex'),
         ...(video.durationSec !== undefined ? { durationSec: video.durationSec } : {}),
       }
     }
@@ -82,6 +84,7 @@ export async function probeMediaAssets(input, context = {}) {
         ...identity,
         mime: audio.contentType === 'audio/mpeg' ? 'audio/mp3' : audio.contentType,
         sizeBytes: audio.bytes.byteLength,
+        contentDigest: createHash('sha256').update(audio.bytes).digest('hex'),
         ...(durationSec !== undefined ? { durationSec } : {}),
       }
     }

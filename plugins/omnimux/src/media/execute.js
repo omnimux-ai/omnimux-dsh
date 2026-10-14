@@ -774,6 +774,7 @@ export async function executeOmnimuxMedia(capability, input) {
   const finalInput = useReferenceStorage
     ? await prepareReferencePayload(mappedInput, {
       config: input.runtimeSettings.referenceStorage,
+      expectedAssets: assets,
       credentials: input.credentials,
       signal: input.signal,
     })

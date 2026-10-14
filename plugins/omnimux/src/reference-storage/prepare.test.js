@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { prepareReferencePayload, verifyRemoteReference } from './prepare.js'
 
 function deps() {
@@ -35,6 +36,35 @@ test('upload failure propagates without old cloud fallback or partial payload re
 })
 test('remote video and audio declarations cannot disguise ordinary text', async () => {
   for (const mime of ['video/mp4', 'audio/mpeg']) await assert.rejects(verifyRemoteReference('https://existing.example.test/ref', { request: async () => new Response('ordinary text', { headers: { 'content-type': mime } }) }))
+})
+
+test('typed image reference rejects an audio response instead of preserving false image identity', async () => {
+  const d = deps()
+  const wav = Buffer.alloc(46)
+  wav.write('RIFF', 0); wav.write('WAVE', 8)
+  d.request = async () => new Response(wav, { headers: { 'content-type': 'audio/wav' } })
+  await assert.rejects(prepareReferencePayload({ references: [{ type: 'image', pathOrUrl: 'https://existing.example.test/changed.png' }] }, d))
+})
+
+test('same media type with changed bytes cannot replace the admitted reference', async () => {
+  const d = deps()
+  const original = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4o6EBAAMQAS0ujiXaAAAAAElFTkSuQmCC', 'base64')
+  const changed = Buffer.from(original)
+  changed.writeUInt8(1, changed.length - 1)
+  const url = 'https://existing.example.test/changed.png'
+  d.expectedAssets = [{ type: 'image', pathOrUrl: url, mime: 'image/png', sizeBytes: original.length, contentDigest: createHash('sha256').update(original).digest('hex') }]
+  d.request = async () => new Response(changed, { headers: { 'content-type': 'image/png' } })
+  await assert.rejects(prepareReferencePayload({ image: url }, d), /发生变化/)
+  d.request = async () => new Response(original, { headers: { 'content-type': 'image/png' } })
+  assert.equal((await prepareReferencePayload({ image: url }, d)).image, url)
+})
+
+test('mapped metadata audio is prepared without changing unrelated metadata', async () => {
+  const d = deps()
+  const result = await prepareReferencePayload({ metadata: { audio: '/tmp/audio.wav', speech: 'retain words' } }, d)
+  assert.equal(d.calls.length, 1)
+  assert.equal(result.metadata.audio, 'https://media.example.test/reference.png')
+  assert.equal(result.metadata.speech, 'retain words')
 })
 
 test('existing public media is verified but never copied into user storage', async () => {

@@ -55,6 +55,8 @@ export async function uploadReferenceMedia(source, options) {
   const snapshotStream = () => createReadStream(snapshotPath)
   const original = await digestStream(snapshotStream(), signal, MAX_REFERENCE_BYTES)
   assertReferenceMediaType(original.prefix, descriptor.mimeType)
+  const expected = options.expectedAsset
+  if (expected && (expected.contentDigest && expected.contentDigest !== original.digest || expected.sizeBytes !== undefined && expected.sizeBytes !== original.bytes || expected.mime && expected.mime.replace('audio/mp3', 'audio/mpeg') !== descriptor.mimeType)) throw storageConfigError('参考素材在准入后发生变化，请重新提交')
   if (original.bytes !== descriptor.size) throw storageConfigError('参考素材在准备过程中发生变化')
   if (descriptor.filePath) {
     const current = await stat(descriptor.filePath)
