@@ -6,6 +6,7 @@ import {
   Plus,
   Sparkles,
   ChevronDown,
+  FileText,
 } from 'lucide-react';
 import { SortFilterPopover } from '../popovers/SortFilterPopover';
 import { SUBJECT_CATEGORY_TABS, libraryPreviewUrl } from '../../../../bridge/assetsLibraryMapper';
@@ -114,7 +115,7 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
                 onClick={() => { if (file.id && supported && kind !== 'directory') onSelectFile(selectedSubject, file); }}
                 onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && file.id && supported && kind !== 'directory') { event.preventDefault(); onSelectFile(selectedSubject, file); } }}>
                 <MediaThumb kind={kind} url={file.id ? libraryPreviewUrl(selectedSubject.id, file.id) : undefined} alt={name}
-                  className="wf-tree-file-thumb-compact" fallback={<Layers size={14} />} />
+                  className="wf-tree-file-thumb-compact" fallback={<FileText size={14} />} />
                 <span className="wf-tree-name-compact" title={name}>{name}</span>
               </div>
             );
