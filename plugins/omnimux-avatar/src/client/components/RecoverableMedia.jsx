@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '../kit.js'
 
 /** Reload only media; never repeat a generation intent. */
-export function RecoverableMedia({ src, video=false, mediaRef, alt='', className='omx-avatar-mv-image', ...props }) {
+export function RecoverableMedia({ src, video=false, mediaRef, compact=false, alt='', className='omx-avatar-mv-image', ...props }) {
   const [attempt,setAttempt]=useState(0)
   const [state,setState]=useState('loading')
   useEffect(()=>{setAttempt(0);setState('loading')},[src])
@@ -18,7 +18,8 @@ export function RecoverableMedia({ src, video=false, mediaRef, alt='', className
     return()=>{clearTimeout(timer);document.removeEventListener('visibilitychange',resume);window.removeEventListener('online',resume)}
   },[state,attempt])
   const source=src&&attempt?src+(src.includes('?')?'&':'?')+'preview='+attempt:src
-  if(!source||state==='unavailable')return <div className="omx-avatar-mv-empty"><p>预览暂不可用，素材和生成记录仍保留。</p>{src?<Button onClick={()=>{setAttempt(0);setState('loading')}}>重新加载</Button>:null}</div>
+  if(compact&&(!source||state==='unavailable'))return <span className={className} aria-hidden="true" />
+   if(!source||state==='unavailable')return <div className="omx-avatar-mv-empty"><p>预览暂不可用，素材和生成记录仍保留。</p>{src?<Button onClick={()=>{setAttempt(0);setState('loading')}}>重新加载</Button>:null}</div>
   const failed=()=>setState(attempt<2?'waiting':'unavailable')
-  return <>{video?<video {...props} ref={mediaRef} key={source} src={source} className={className} onLoadedData={()=>setState('ready')} onError={failed}/>:<img {...props} ref={mediaRef} key={source} src={source} className={className} alt={alt} onLoad={()=>setState('ready')} onError={failed}/>} {state==='waiting'?<p aria-live="polite">正在恢复预览</p>:null}</>
+  return <>{video?<video {...props} ref={mediaRef} key={source} src={source} className={className} onLoadedData={()=>setState('ready')} onError={failed}/>:<img {...props} ref={mediaRef} key={source} src={source} className={className} alt={alt} onLoad={()=>setState('ready')} onError={failed}/>} {state==='waiting'&&!compact?<p aria-live="polite">正在恢复预览</p>:null}</>
 }

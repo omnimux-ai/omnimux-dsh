@@ -29,7 +29,7 @@ const ZH_DOTTED = {
   'avatar.renameHint': '双击改名',
   'avatar.empty': '还没有数字人，先新建一个。',
 
-  'tier.title': '夸张程度',
+  'tier.title': '角色类型',
   'tier.normal': '普通',
   'tier.freak': '夸张',
   'tier.total': '极限',

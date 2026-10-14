@@ -106,8 +106,8 @@ export function BuilderPanel(props) {
             >
               <span className="omx-avatar-block-title">{t(category.label_en)}</span>
               <span className="omx-avatar-block-meta">
-                {t(category.label_en)} · {options.length}
-                {picked > 0 ? ` · ${picked}` : ''}
+                {options.length} 项
+                {picked > 0 ? ` · 已选 ${picked}` : ''}
               </span>
               <ChevronIcon />
             </button>

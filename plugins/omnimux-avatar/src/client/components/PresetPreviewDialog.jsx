@@ -118,12 +118,13 @@ function ActualSizeIcon() {
  * }} props
  */
 export function DialogFrame(props) {
-  const { title, onClose, children, footer, t } = props
+  const { title, onClose, children, footer, t, panelClassName='', panelStyle } = props
   const panelRef = useRef(null)
   const titleId = useId()
 
   useEffect(() => {
     const panel = panelRef.current
+    const previous=typeof document==='undefined'?null:document.activeElement
     const first = panel ? panel.querySelector(FOCUSABLE) : null
     if (first && typeof first.focus === 'function') first.focus()
 
@@ -151,6 +152,7 @@ export function DialogFrame(props) {
     if (typeof document !== 'undefined') document.addEventListener('keydown', onKeyDown)
     return () => {
       if (typeof document !== 'undefined') document.removeEventListener('keydown', onKeyDown)
+      if(previous?.isConnected)previous.focus?.()
     }
   }, [onClose])
 
@@ -167,7 +169,8 @@ export function DialogFrame(props) {
         aria-modal='true'
         aria-labelledby={titleId}
         tabIndex={-1}
-        className='omx-avatar-dialog'
+        className={`omx-avatar-dialog ${panelClassName}`}
+        style={panelStyle}
       >
         <header className='omx-avatar-dialog-head'>
           <h2 id={titleId} className='omx-avatar-dialog-title'>

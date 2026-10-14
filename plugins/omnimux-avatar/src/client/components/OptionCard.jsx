@@ -1,3 +1,5 @@
+import { RecoverableMedia } from './RecoverableMedia.jsx'
+
 // 单个设定选项瓦片：84×84 固定尺寸，三种呈现（图片 / 色块 / 纯文字）+ 性别特例。
 // 与源工作台 option-card.tsx 1:1；图标与角标一律矢量 SVG，不用字符图标。
 
@@ -21,11 +23,12 @@ export function OptionCard(props) {
     return (
       <button type="button" /* exempt-ui01: 选项瓦片是自定义控件，非 kit 组件语义 */
         className={`${cls} omx-avatar-opt--gender`}
+        aria-label={label}
         aria-pressed={selected}
         onClick={onClick}
       >
         {option.imageUrl ? (
-          <img
+          <RecoverableMedia compact
             className="omx-avatar-gender-icon"
             loading="lazy"
             src={option.imageUrl}
@@ -42,6 +45,7 @@ export function OptionCard(props) {
     return (
       <button type="button" /* exempt-ui01: 选项瓦片是自定义控件，非 kit 组件语义 */
         className={cls}
+        aria-label={label}
         aria-pressed={selected}
         onClick={onClick}
       >
@@ -59,6 +63,7 @@ export function OptionCard(props) {
     return (
       <button type="button" /* exempt-ui01: 选项瓦片是自定义控件，非 kit 组件语义 */
         className={`${cls} omx-avatar-opt--text`}
+        aria-label={label}
         aria-pressed={selected}
         onClick={onClick}
       >
@@ -70,11 +75,12 @@ export function OptionCard(props) {
   return (
     <button type="button" /* exempt-ui01: 选项瓦片是自定义控件，非 kit 组件语义 */
       className={cls}
-      aria-pressed={selected}
+      aria-label={label}
+        aria-pressed={selected}
       onClick={onClick}
     >
       {option.imageUrl ? (
-        <img className="omx-avatar-thumb" loading="lazy" src={option.imageUrl} alt={label} />
+        <RecoverableMedia compact className="omx-avatar-thumb" loading="lazy" src={option.imageUrl} alt={label} />
       ) : (
         <span className="omx-avatar-thumb" />
       )}

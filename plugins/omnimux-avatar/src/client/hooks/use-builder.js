@@ -114,6 +114,8 @@ export function useBuilder(taxonomy) {
     setImageUrl('')
   }, [])
 
+  const resetFeatures=useCallback(()=>{setSelection({});setManualSelection({})},[])
+
   const toggleGroup = useCallback((catId) => {
     setOpenGroups((prev) => {
       const next = new Set(prev)
@@ -156,6 +158,7 @@ export function useBuilder(taxonomy) {
     switchTier,
     randomize,
     reset,
+    resetFeatures,
     toggleGroup,
     applySheet,
     setBrief,
