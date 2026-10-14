@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-28"
-updated: "2026-09-22"
+updated: "2026-10-15"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -42,21 +42,25 @@ subsystem: "omnimux"
 
 ## 工作树测试配置准备
 
-完整应用测试使用 `scripts/test-env-bootstrap.mjs` 的 `startTestEnvironment({ root, mode })`，`root` 必须是本仓 `.worktrees/` 内的任务工作树；创建源码工作树本身不读取或复制凭据。调用者负责在 `finally` 中等待 `cleanup()`，只将脱敏 `summary` 写入证据。启动就绪不等于业务验收通过。
+现有 `scripts/test-env-bootstrap.mjs` 的 `startTestEnvironment({ root, mode })` 是兼容准备路径，`root` 必须是本仓 `.worktrees/` 内真实双向登记的直接任务工作树；创建源码工作树本身不读取或复制凭据。调用者负责在 `finally` 中等待 `cleanup()`，只将脱敏 `summary` 写入证据。启动就绪不等于业务验收通过，现有完整装配也不等于新用户安装。
 
-| 模式 | 配置来源与行为 | 证据边界 |
+| 模式 | 兼容路径的实际配置来源与行为 | 证据边界 |
 |---|---|---|
-| `ui`（默认） | 私有配置、合成测试凭据、本机动态模拟端点；不读取 Dev/Prod 或继承提供方密钥 | 模拟响应必须标为测试数据，不证明真实模型执行 |
-| `onboarding` | 不配置模型凭据，保留原生首次配置流程 | 用于首启与缺配置反向验收，不作为普通测试的临时绕路 |
-| `live` | 仅在当前任务已有明确凭据授权时，只读固定 Dev 的 `refs.DEEPSEEK_API_KEY`，仅传入本次宿主进程，使用官方 DeepSeek 端点 | 模式参数不产生授权；配置存在不证明密钥有效，也不授权额外付费请求 |
+| `ui`（默认） | 私有运行目录、合成测试凭据与本机动态模拟端点；现有完整插件装配仍读取 Dev 设置、profile 和部分业务数据，并复用其依赖/媒体 | Dev-backed，无契约 smoke；不是不访问共享状态的新用户环境，不证明真实模型、任务安装或加载 |
+| `onboarding` | 不配置模型凭据，保留首次配置流程；兼容装配仍可能复用 Dev profile/数据，不能据此证明任务插件已按新用户方式装入 | 只证明实际执行的首启/缺配置局部行为，不作为任务验收绕路 |
+| `live` | 只可在当前任务明确凭据授权内使用；现有兼容路径读取 Dev 配置/凭据并可能复用共享资源 | 模式参数不产生授权；不得按固定单密钥假设扩张读取，不证明 fresh 或任务成功；额外付费/视频请求仍受任务边界约束 |
 
-Agent 遇到密钥弹窗，先核对运行模式与本任务入口；普通界面测试应使用 `ui`，而不是在网页填写真实密钥。`live` 缺失或不支持的配置必须报告脱敏原因，禁止转读 Prod、Base、其它引用或复制整个 profile。原生欢迎声明仍通过正常界面确认，密钥不代替声明确认。
+普通界面测试不得在网页填写真实密钥，`live` 不能作为 `ui` 失败的静默回退。缺配置须报告脱敏原因；禁止为凑通过转读 Prod、Base 或扩大当前任务授权。现有 Dev-backed 行为是待替换的兼容事实，不是新任务默认授权，也不改变产品新用户基线。
 
-登录 URL 仅在受信调用者内存中用于本次同源 token→Cookie 交换，不打印、不持久化、不放入截图说明。浏览器进程不继承宿主密钥。完整核心应用启动不自动证明任务插件已装载；插件须通过正式安装机制装入任务私有 profile，并验证实际加载产物身份。
+显式证据请求会传入 `evidenceContext`。真实准备器在根与参数验证后、runtime/profile/credential 访问前以 `TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN` 拒绝所有 contract scope（包括 smoke）；六资源按未创建记账，入口可保留历史有效但 pass=false 的失败封套。缺字段或不合规根在启动前拒绝，未必有原件；失败封套有效不等于检查通过。不能回退兼容路径、Stage 夹具或读取 Dev 来刷绿。
 
-应用级验收入口：在任务工作树根目录执行 `pnpm verify:app`（等价于 `node scripts/worktree-app-qa.mjs`），一条命令即完成起完整应用、同源登录、真实浏览器验收、截图与结构化报告、自清理；root 由脚本自身位置推导，只接受 `<repo>/.worktrees/<task>` 直接子级，其余路径以可读原因拒绝。证据落 `<root>/.workbuddy/evidence/app-qa/<runId>/`（PNG + 明细报告）与 `<root>/docs/evidence/worktree-app-qa-report.json`。它与 Stage 夹具运行器分工不同：本入口评完整应用本体，两者证据不得互相冒充。
+登录 URL 仅在受信调用者内存中用于本次同源 token→Cookie 交换，不打印、不持久化、不放入截图说明。浏览器进程不继承宿主密钥。完整核心应用启动或 `evidenceLevel=full` 不证明任务源码已安装加载；该绑定当前 unknown，任务检查中的 `task-source-installed-loaded` 不能报通过。
 
-任务功能旅程（journey）：任务用 `--journey <路径>` 把自己的验收路径注入同一入口（`pnpm verify:app -- --journey .workbuddy/qa-journeys/<任务>.mjs`）。journey 是工作树内的 `.mjs`/`.js` 模块，默认导出 `async ({send, sleep, evidenceDir, origin, io}) => { assertions: [{name, pass, detail?}] }`；在保底断言（应用就绪、空白会话可达）通过后执行，断言并入总判定，任一 `pass:false` 或模块抛错即整体 FAIL。界面类任务的验收标准 = `ui` 模式影子实例 + 任务 journey 的功能路径截图与断言；`live` 模式（`pnpm verify:app:live`，真实凭据读 Dev 凭据库）做图片/音频等真实任务验证，属可选加强；视频生成的 `live` 真实验证恒需任务级特批。
+应用级入口为 `pnpm verify:app`（等价于 `node scripts/worktree-app-qa.mjs`），root 从脚本位置推导，只接受 `<repo>/.worktrees/<task>` 真实直接登记树。无显式请求的旧调用保留无契约 smoke：原件落 `<root>/.workbuddy/evidence/app-qa/<runId>/`，兼容摘要写 `<root>/docs/evidence/worktree-app-qa-report.json`；其 pass 只涵盖真实执行的固定安全名称冒烟，不签 task/fresh。legacy 使用静态断言名称白名单，普通自定义 `journey:<名称>` 不在白名单，会分类失败，不承诺任意 journey 任务成功。摘要不是权威封套，且现有摘要路径没有被 ignore，可能改变候选状态。
+
+自定义任务旅程使用显式 `--request <工作树内非秘密JSON>`，可另给 `--journey <路径>`，或在请求中给 journey。请求启动前固定 taskId/base/head/scope/requiredChecks/expectedAssertions，可列 extraInputs/artifactNames；只接受 ui。固定检查为 app-environment/app-browser；有 journey 增加 task-journey，task/reproduction 必须有 journey、非空具名预期及任务安装加载断言。请求、旅程和显式 helper 文件纳入输入，完整动态输入闭包仍 unknown；不从返回断言反推标准。旅程模块默认导出 `async ({send, sleep, evidenceDir, origin, io}) => { assertions: [{name, pass}] }`，空/空白/重名/非布尔整组拒绝，正常 false 保留；同进程仅允许一次 contract journey，未知名不得持久化原文或投影丢弃后刷绿。请求必须先由真实 fresh 准备能力支持，当前默认准备器会提前拒绝，不能称完整任务验收已可用。
+
+显式请求只写 `<root>/.workbuddy/evidence/contract/<taskId>/<runId>/` 中预声明单层 png/json/log/txt，不写兼容 docs 摘要。顺序为 capture before → 执行/逐项清理并等待 exit+close → 固定 raw-run.json → 相同 options capture after → seal/写 evidence.json → candidate validate。raw 保持 pass=false/unsealed，不在封存后回改；封套不自含，漂移/封存失败保 raw 且最终 false。输出目录不等于排除源码或来源认证，依赖桩明确 dependency-stub/self-reported/not-granted。该封套只承诺结束运行历史完整性及候选适用性，不承诺当前在线、独立认证、完整阶段 C 或真实浏览器。图片/音频真实任务加强证据仍需沿授权正式路径；视频生成 live 验证恒需任务级特批。
 
 `pnpm test:worktree-web` 的现有 Stage 分支是模拟宿主夹具，其中包含占位内容与补入口逻辑；它只可提供其明确覆盖的局部证据，不得作为完整应用、首启或任务插件装配的验收通过。完整应用启动失败不得自动退回该夹具并报告成功。
 
@@ -192,6 +196,6 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 ## 评审与验收结论
 
-实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。拿不到**隔离 worktree Web 验证证据**不得宣布交付完成。界面类任务以 `verify:app --journey` 在 `ui` 模式影子实例里的功能路径证据为验收标准；`live` 模式可加强验证图片/音频真实任务，视频生成真实验证需任务级特批。Dev 45120 是单例共享实例：Agent 不重启、不占用、不等待，仅在物化后冒烟或排障时只读使用。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
+实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。适用界面任务拿不到**自身隔离 worktree 的功能路径真实浏览器证据**不得宣布交付完成；局部 Stage 证据不能冒充完整应用或任务装配。应用入口的无请求 legacy 只签无契约 smoke；自定义任务旅程须固定显式 request，当前真实准备器前置拒绝尚不能提供 fresh/task 通过，应准确记录受影响验收缺口，不降低标准或拿有效失败封套签成功。`live` 真实图片/音频证据仅按实际授权与能力补充，视频生成真实验证需任务级特批。Dev 45120 是单例共享实例：Agent 不重启、不占用、不等待，仅在物化后冒烟或排障时只读使用。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
 
 `qa:pass`、合入方式与 R0–R3 权限统一遵循 [plugin-git-pr](plugin-git-pr.md)。

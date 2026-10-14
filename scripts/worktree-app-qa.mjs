@@ -6,14 +6,16 @@
  * 与 worktree-web-qa.mjs 的分工：后者评的是 Stage 夹具（伪造宿主 + 占位内容），本脚本评的是完整应用本体；
  * 两者证据不得互相冒充。
  *
- * 证据：<root>/.workbuddy/evidence/app-qa/<runId>/（PNG + 明细报告）与 <root>/docs/evidence/worktree-app-qa-report.json。
+ * 显式请求证据：.workbuddy/evidence/contract/<taskId>/<runId>/；无请求的旧调用仅为无契约冒烟。
  * loginUrl 是内存中的一次性能力：绝不解密、打印、落盘或放进截图说明。
  */
 import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+import { tmpdir } from 'node:os';
+import { captureCandidate, sealEvidence, validateEvidence } from './evidence-contract.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startTestEnvironment, diagnoseWorktreeRoot } from './test-env-bootstrap.mjs';
 import { findChromePath, assertPng } from './worktree-web-qa.mjs';
@@ -479,8 +481,12 @@ export async function runJourney(journeyPath, { send, sleep, evidenceDir, origin
   try {
     const result = await journey({ send, sleep, evidenceDir, origin, io });
     const assertions = Array.isArray(result?.assertions) ? result.assertions : null;
-    if (!assertions) return [{ name: 'journey-result-shape', pass: false, detail: 'journey 必须返回 { assertions: [...] }' }];
-    return assertions.map(a => ({ name: `journey:${a?.name ?? 'unnamed'}`, pass: a?.pass === true, detail: a?.detail }));
+    if (!assertions || assertions.length === 0) return [{ name: 'journey-result-shape', pass: false }];
+    if (assertions.some(a => !a || typeof a.name !== 'string' || !a.name.trim() || a.name !== a.name.trim()
+      || typeof a.pass !== 'boolean') || new Set(assertions.map(a => a.name)).size !== assertions.length) {
+      return [{ name: 'journey-assertions-invalid', pass: false }];
+    }
+    return assertions.map(a => ({ name: `journey:${a.name}`, pass: a.pass }));
   } catch (error) {
     return [{ name: 'journey-error', pass: false, detail: error?.message ?? String(error) }];
   }
@@ -488,36 +494,51 @@ export async function runJourney(journeyPath, { send, sleep, evidenceDir, origin
 
 /** 真实无头 Chrome 驱动：动态 CDP 端口、同源 cookie 注入、正几何断言、PNG 取证。 */
 async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', journey = null, io = fs, chromePath = findChromePath() }) {
-  let chrome; let socket;
+  let chrome; let socket; let privateDir; let exited = false; let closed = false; let cleaning = false;
   const assertions = [];
+  const state = { assertions, cleanup: [], observations: { events: [], rawOutputRetained: false } };
   const cdpPort = { value: null };
   try {
+    privateDir = fs.mkdtempSync(join(fs.realpathSync(tmpdir()), 'omnimux-app-qa-'));
+    fs.chmodSync(privateDir, 0o700);
     chrome = spawn(chromePath, [
       '--headless=new', '--remote-debugging-port=0', '--no-first-run',
-      '--no-default-browser-check', '--disable-gpu', '--window-size=1280,800',
+      `--user-data-dir=${privateDir}`, '--no-default-browser-check', '--disable-gpu', '--window-size=1280,800',
       'about:blank',
-    ]);
+    ], { env: { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', HOME: privateDir, TMPDIR: privateDir }, stdio: ['ignore', 'ignore', 'pipe'] });
+    state.observations.events.push({ event: 'spawn', pid: chrome.pid ?? null, parentPid: process.pid });
+    chrome.once('exit', (code, signal) => { exited = true; if (!cleaning) state.observations.unexpectedExit = true; state.observations.events.push({ event: 'exit', code: code ?? null, signal: signal ?? null }); });
+    chrome.once('close', (code, signal) => { closed = true; state.observations.events.push({ event: 'close', code: code ?? null, signal: signal ?? null }); });
+    chrome.on('error', () => { state.observations.events.push({ event: 'error' }); });
     cdpPort.value = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('chrome-start-timeout')), 15000);
       let buffer = '';
+      const unavailable = () => { clearTimeout(timer); reject(new Error('chrome-start-failed')); };
+      chrome.once('error', unavailable); chrome.once('exit', unavailable);
       chrome.stderr.on('data', chunk => {
         buffer += chunk.toString();
+        if (buffer.length > 65536) { buffer = ''; clearTimeout(timer); reject(new Error('chrome-output-limit')); return; }
         const match = /DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//.exec(buffer);
         if (match) { clearTimeout(timer); resolve(Number(match[1])); }
       });
     });
     assertions.push({ name: 'chrome-cdp-listen', pass: true, port: cdpPort.value });
 
-    const targets = await (await fetch(`http://127.0.0.1:${cdpPort.value}/json/list`)).json();
+    const targets = await (await fetch(`http://127.0.0.1:${cdpPort.value}/json/list`, { signal: AbortSignal.timeout(15000) })).json();
     const page = targets.find(target => target.type === 'page');
     socket = new WebSocket(page.webSocketDebuggerUrl);
-    await new Promise((yes, no) => { socket.onopen = yes; socket.onerror = no; });
+    await new Promise((yes, no) => {
+      const timer = setTimeout(() => no(new Error('cdp-open-timeout')), 15000);
+      socket.onopen = () => { clearTimeout(timer); yes(); };
+      socket.onerror = () => { clearTimeout(timer); no(new Error('cdp-open-failed')); };
+    });
 
     let sequence = 0;
     const pending = new Map();
     const send = (method, params) => new Promise((resolve, reject) => {
       const id = ++sequence;
-      pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => { pending.delete(id); reject(new Error('cdp-command-timeout')); }, 15000);
+      pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
       socket.send(JSON.stringify({ id, method, params: params ?? {} }));
     });
     socket.onmessage = event => {
@@ -597,7 +618,8 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       dimensions: geometry ? { width: geometry.vw, height: geometry.vh } : null,
       bytes: png.length,
     });
-    return {
+    if (exited || closed) throw qaFailure('TEST_APP_QA_BROWSER_EXIT');
+    return Object.assign(state, {
       cdpPort: cdpPort.value,
       assertions,
       geometry,
@@ -609,16 +631,141 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
         height: geometry ? geometry.vh : 0,
         bytes: png.length,
       },
-    };
+    });
+  } catch {
+    throw Object.assign(new Error('TEST_APP_QA_BROWSER'), { code: 'TEST_APP_QA_BROWSER', browser: state });
   } finally {
-    try { socket?.close(); } catch { /* 已关闭 */ }
-    try { chrome?.kill('SIGTERM'); } catch { /* 已退出 */ }
+    cleaning = true;
+    const record = (name, status, reason = null) => state.cleanup.push({ name, owner: 'app-browser', status, reason });
+    if (!socket) record('cdp-transport', 'not-applicable', 'not-created');
+    else {
+      try {
+        if (socket.readyState !== 3) await new Promise((yes, no) => {
+          const timer = setTimeout(() => no(new Error('close-timeout')), 5000);
+          socket.addEventListener('close', () => { clearTimeout(timer); yes(); }, { once: true });
+          socket.close();
+        });
+        record('cdp-transport', 'completed');
+      } catch { record('cdp-transport', 'failed', 'cdp-close-unconfirmed'); }
+    }
+    const waitClosed = async () => {
+      if (exited && closed) return true;
+      return new Promise(yes => {
+        const finish = value => { clearTimeout(timer); chrome.off('exit', check); chrome.off('close', check); yes(value); };
+        const check = () => { if (exited && closed) finish(true); };
+        const timer = setTimeout(() => finish(false), 5000);
+        chrome.on('exit', check); chrome.on('close', check); check();
+      });
+    };
+    let stopped = !chrome;
+    if (!chrome) record('browser-child', 'not-applicable', 'not-created');
+    else {
+      try {
+        if (!exited) chrome.kill('SIGTERM');
+        stopped = await waitClosed();
+        if (!stopped && !exited) { chrome.kill('SIGKILL'); stopped = await waitClosed(); }
+      } catch { stopped = false; }
+      record('browser-child', stopped ? 'completed' : 'failed', stopped ? null : 'exit-or-close-unconfirmed');
+    }
+    if (!privateDir) record('browser-private-directory', 'not-applicable', 'not-created');
+    else if (!stopped) record('browser-private-directory', 'failed', 'owned-child-still-unconfirmed');
+    else {
+      try {
+        if (dirname(privateDir) !== fs.realpathSync(tmpdir()) || !privateDir.startsWith(join(fs.realpathSync(tmpdir()), 'omnimux-app-qa-'))
+          || fs.realpathSync(privateDir) !== privateDir || fs.lstatSync(privateDir).isSymbolicLink()) throw new Error('unsafe-private-directory');
+        fs.rmSync(privateDir, { recursive: true, force: true });
+        record('browser-private-directory', 'completed');
+      } catch { record('browser-private-directory', 'failed', 'private-directory-remove-failed'); }
+    }
   }
+}
+
+const ENV_ASSERTIONS = ['app-runtime-ready', 'same-origin-login'];
+const BROWSER_ASSERTIONS = ['chrome-cdp-listen', 'auth-cookie-applied', 'app-dom-mounted', 'visible-geometry-positive', 'runtime-modal-bypassed', 'blank-session-guide-visible', 'explore-section-visible', 'explore-cards-present', 'asset-hub-reachable-via-library', 'screenshot-png-verified'];
+const OWNER_RESOURCES = {
+  'app-environment': ['app-child', 'mock-server', 'app-private-directory'],
+  'app-browser': ['browser-child', 'cdp-transport', 'browser-private-directory'],
+};
+let contractJourneyConsumed = false;
+const qaFailure = code => Object.assign(new Error(code), { code });
+const namedList = values => Array.isArray(values) && values.length > 0
+  && values.every(value => typeof value === 'string' && value.length > 0 && value === value.trim())
+  && new Set(values).size === values.length;
+const sameNames = (a, b) => namedList(a) && namedList(b) && [...a].sort().join('\0') === [...b].sort().join('\0');
+
+function inputFile(root, path, io) {
+  if (typeof path !== 'string' || !path || path.includes('\\') || path.includes('\0')) throw qaFailure('TEST_APP_QA_INPUT_PATH');
+  const absolute = resolve(root, path);
+  const rel = relative(root, absolute).split(sep).join('/');
+  if (!rel || rel.startsWith('../') || rel.startsWith('.workbuddy/evidence/contract/')
+    || /(?:^|\/)(?:\.env(?:\.[^/]*)?|\.ssh|\.test-env[^/]*|credentials?(?:\.(?:json|ya?ml|toml|ini|conf))?|secrets?(?:\.(?:json|ya?ml|toml|ini|conf))?|tokens?(?:\.(?:json|ya?ml|toml|ini|conf))?|passwords?(?:\.(?:json|ya?ml|toml|ini|conf))?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.[^/]*)?)(?:\/|$)|\.(?:pem|key|p12|pfx)$/i.test(rel)) throw qaFailure('TEST_APP_QA_INPUT_PATH');
+  const parts = rel.split('/');
+  for (let index = 1; index <= parts.length; index++) {
+    const current = resolve(root, ...parts.slice(0, index));
+    const stat = io.lstatSync(current);
+    if (stat.isSymbolicLink() || io.realpathSync(current) !== current
+      || (index === parts.length ? !stat.isFile() : !stat.isDirectory())) throw qaFailure('TEST_APP_QA_INPUT_PATH');
+  }
+  return rel;
+}
+
+/** Fixed policy comes from the request, never from returned assertions. */
+function contractRequest(options, io) {
+  const fields = ['taskId', 'base', 'head', 'scope', 'requiredChecks', 'expectedAssertions', 'extraInputs', 'artifactNames', 'requestPath'];
+  if (!fields.some(key => Object.hasOwn(options, key))) return null;
+  const { root, taskId, base, head, scope, journey = null, mode = 'ui' } = options;
+  if (typeof taskId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(taskId)
+    || ![base, head].every(value => typeof value === 'string' && value.trim() === value && value.length > 0)
+    || !['smoke', 'reproduction', 'task'].includes(scope) || mode !== 'ui') throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
+  if (scope !== 'smoke' && !journey) throw qaFailure('TEST_APP_QA_TASK_JOURNEY_REQUIRED');
+  const checks = ['app-environment', 'app-browser', ...(journey ? ['task-journey'] : [])];
+  const expected = options.expectedAssertions;
+  if (!sameNames(options.requiredChecks, checks) || !expected || Object.getPrototypeOf(expected) !== Object.prototype
+    || !sameNames(Object.keys(expected), checks)
+    || !sameNames(expected['app-environment'], [...ENV_ASSERTIONS, ...(scope !== 'smoke' ? ['task-source-installed-loaded'] : [])])
+    || !sameNames(expected['app-browser'], BROWSER_ASSERTIONS)
+    || (journey && (!namedList(expected['task-journey']) || expected['task-journey'].some(name => !name.startsWith('journey:') || !name.slice(8).trim())))) throw qaFailure('TEST_APP_QA_EXPECTED_POLICY');
+  if (options.extraInputs !== undefined && !Array.isArray(options.extraInputs)) throw qaFailure('TEST_APP_QA_INPUT_PATH');
+  if ((options.extraInputs ?? []).some(path => typeof path !== 'string' || path !== path.trim() || path.startsWith('/')
+    || path.split('/').some(part => !part || part === '.' || part === '..' || part === '.git'))
+    || new Set(options.extraInputs ?? []).size !== (options.extraInputs ?? []).length) throw qaFailure('TEST_APP_QA_INPUT_PATH');
+  const extraInputs = (options.extraInputs ?? []).map(path => inputFile(root, path, io));
+  if (journey) extraInputs.push(inputFile(root, journey, io));
+  if (options.requestPath) extraInputs.push(inputFile(root, options.requestPath, io));
+  const artifactNames = options.artifactNames ?? [];
+  if (!Array.isArray(artifactNames) || new Set(artifactNames).size !== artifactNames.length
+    || artifactNames.some(name => typeof name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:json|log|txt|png)$/.test(name)
+      || ['raw-run.json', 'evidence.json', 'app-home.png', 'hub-business-path.png'].includes(name))) throw qaFailure('TEST_APP_QA_ARTIFACT_NAMES');
+  if (journey && contractJourneyConsumed) throw qaFailure('TEST_APP_QA_FRESH_PROCESS_REQUIRED');
+  return Object.freeze({ taskId, base, head, scope,
+    requiredChecks: Object.freeze([...checks]),
+    expectedAssertions: Object.freeze(Object.fromEntries(checks.map(name => [name, Object.freeze([...expected[name]])]))),
+    extraInputs: Object.freeze([...new Set(extraInputs)]), artifactNames: Object.freeze([...artifactNames]),
+  });
+}
+
+function resourceResults(owner, result, invoked) {
+  return OWNER_RESOURCES[owner].map(name => {
+    if (!invoked) return { name, owner, status: 'not-applicable', reason: 'not-created' };
+    const exactSet = Array.isArray(result) && result.length === OWNER_RESOURCES[owner].length
+      && sameNames(result.map(item => item?.name), OWNER_RESOURCES[owner]);
+    const found = exactSet ? result.filter(item => item?.name === name) : [];
+    const item = found[0];
+    if (found.length !== 1 || item.owner !== owner || !['completed', 'failed', 'not-applicable'].includes(item.status)
+      || (item.status === 'completed' ? item.reason !== null : typeof item.reason !== 'string' || !item.reason.trim())
+      || (item.status === 'not-applicable' && item.reason !== 'not-created')) {
+      return { name, owner, status: 'failed', reason: 'cleanup-resource-unconfirmed' };
+    }
+    return { name, owner, status: item.status, reason: item.status === 'completed' ? null
+      : item.status === 'not-applicable' && item.reason === 'not-created' ? 'not-created' : 'owned-cleanup-failed' };
+  });
 }
 
 /**
  * 可测的运行器：编排逻辑与浏览器实现解耦，测试可注入桩。
  * @param {{io?: *, startEnv?: Function, driveBrowser?: Function, fetchImpl?: Function, now?: Function, uuid?: Function}} [deps]
+ * Contract calls additionally require explicit taskId/base/head/scope/requiredChecks/expectedAssertions;
+ * this slice cannot establish task installation/loading, and default preparation fails closed.
  */
 export function createAppQaRunner(deps = {}) {
   const io = deps.io ?? fs;
@@ -628,75 +775,181 @@ export function createAppQaRunner(deps = {}) {
   const now = deps.now ?? (() => new Date());
   const uuid = deps.uuid ?? randomUUID;
 
-  return async function runAppQa({ root, repo = repositoryRoot, mode = 'ui', journey = null } = {}) {
-    // journey 参数先校验：路径不合法时即使环境本身不可用也必须报「journey 路径错」而非混淆的根因。
+  const producer = Object.keys(deps).length ? 'dependency-stub' : 'controlled-runner';
+  return async function runAppQa(options = {}) {
+    const { root, repo = repositoryRoot, mode = 'ui' } = options;
+    let { journey = null } = options;
+    if (!['ui', 'onboarding', 'live'].includes(mode)) throw qaFailure('TEST_APP_QA_MODE');
     if (journey !== null) {
       const jr = resolveJourneyPath(journey, root);
-      if (!jr.ok) {
-        const error = new Error(jr.reason);
-        error.code = 'TEST_APP_QA_JOURNEY_PATH';
-        error.hint = 'journey 必须是工作树内的 .mjs/.js 文件路径，例如 .workbuddy/qa-journeys/<任务>.mjs';
-        throw error;
-      }
+      if (!jr.ok) throw Object.assign(qaFailure('TEST_APP_QA_JOURNEY_PATH'), { message: jr.reason, hint: 'journey 必须位于任务工作树内。' });
       journey = jr.path;
     }
     const resolved = resolveWorktreeRoot(root, io, repo);
-    if (!resolved.ok) {
-      const error = new Error(resolved.code);
-      error.code = resolved.code;
-      error.hint = resolved.hint;
-      error.rootReason = resolved.reason;
-      throw error;
-    }
+    if (!resolved.ok) throw Object.assign(qaFailure(resolved.code), { hint: resolved.hint, rootReason: resolved.reason });
+    const request = contractRequest({ ...options, journey }, io);
     const runId = uuid();
+    if (typeof runId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(runId)) throw qaFailure('TEST_APP_QA_RUN_ID');
     const startedAt = now().toISOString();
-    const evidenceDir = join(root, '.workbuddy/evidence/app-qa', runId);
-    io.mkdirSync(evidenceDir, { recursive: true });
-
+    const prefix = request ? `.workbuddy/evidence/contract/${request.taskId}/${runId}/` : `.workbuddy/evidence/app-qa/${runId}/`;
+    const evidenceDir = join(root, prefix);
+    const outputs = request ? ['raw-run.json', 'evidence.json', 'app-home.png', 'hub-business-path.png', ...request.artifactNames].map(name => prefix + name) : [];
+    const captureOptions = request ? { root, base: request.base, head: request.head, taskId: request.taskId, runId, outputs, extraInputs: request.extraInputs } : null;
+    let candidateBefore;
+    const captureStarted = Date.now();
+    if (request) candidateBefore = captureCandidate(captureOptions);
+    const beforeCaptureMs = Date.now() - captureStarted;
+    if (request) {
+      // Create each ancestor without following links; a run directory is never reused.
+      for (const leaf of ['.workbuddy', '.workbuddy/evidence', '.workbuddy/evidence/contract', `.workbuddy/evidence/contract/${request.taskId}`]) {
+        const path = join(root, leaf);
+        if (!io.existsSync(path)) io.mkdirSync(path);
+        const stat = io.lstatSync(path);
+        if (!stat.isDirectory() || stat.isSymbolicLink() || io.realpathSync(path) !== path) throw qaFailure('TEST_APP_QA_OUTPUT_PATH');
+      }
+      io.mkdirSync(evidenceDir);
+      if (journey) contractJourneyConsumed = true;
+    } else io.mkdirSync(evidenceDir, { recursive: true });
     const report = {
       runId, mode, root, origin: null, appPort: null, cdpPort: null,
-      startedAt, completedAt: null, pass: false,
+      startedAt, completedAt: null, pass: false, scope: request?.scope ?? 'smoke', producer,
+      contract: request ? 'candidate' : 'none', taskBinding: 'unknown', userFresh: 'unknown', inputClosure: 'unknown',
       summary: null, assertions: [], screenshot: null, errors: [], cleanup: null,
+      observations: { rawOutputRetained: false }, beforeCaptureMs,
     };
-    let env;
+    let env; let browser; let envCleanup; let prepareObservations; let prepareAttempted = false; let browserAttempted = false;
+    const addAssertions = assertions => {
+      if (!Array.isArray(assertions) || !assertions.length || assertions.some(item => !item || typeof item.name !== 'string'
+        || !item.name.trim() || item.name !== item.name.trim() || typeof item.pass !== 'boolean')
+        || new Set(assertions.map(item => item.name)).size !== assertions.length) {
+        report.errors.push('TEST_APP_QA_ASSERTIONS_INVALID'); return;
+      }
+      const allowedNames = request ? request.requiredChecks.flatMap(name => request.expectedAssertions[name])
+        : [...ENV_ASSERTIONS, ...BROWSER_ASSERTIONS, 'live-model-catalog-ready', 'live-image-generate-http-200', 'live-image-rendered-no-broken-img', 'journey-load', 'journey-export-shape', 'journey-result-shape', 'journey-assertions-invalid', 'journey-error'];
+      if (assertions.some(item => !allowedNames.includes(item.name))) report.errors.push('TEST_APP_QA_ASSERTION_SET_MISMATCH');
+      report.assertions.push(...assertions.filter(item => allowedNames.includes(item.name)).map(({ name, pass }) => ({ name, pass })));
+    };
     try {
-      env = await startEnv({ root, mode });
-      report.origin = env.origin;
-      report.appPort = Number(new URL(env.origin).port);
-      report.summary = env.summary;
-      report.assertions.push({ name: 'app-runtime-ready', pass: true, origin: env.origin, evidenceLevel: env.summary?.evidenceLevel });
-
-      // 同源 token→Cookie：只在内存中传递，绝不落盘或打印。
-      const loginResponse = await fetchImpl(env.loginUrl, { redirect: 'manual' });
+      prepareAttempted = true;
+      env = await startEnv({ root, mode, ...(request ? { evidenceContext: { taskId: request.taskId, runId } } : {}) });
+      const origin = new URL(env.origin);
+      if (origin.protocol !== 'http:' || origin.hostname !== '127.0.0.1' || !origin.port || env.origin !== origin.origin
+        || new URL(env.loginUrl).origin !== origin.origin) throw qaFailure('TEST_APP_QA_ORIGIN');
+      env.assertAlive?.();
+      report.origin = origin.origin;
+      report.appPort = Number(origin.port);
+      report.summary = { mode, evidenceLevel: ['core-only', 'full'].includes(env.summary?.evidenceLevel) ? env.summary.evidenceLevel : 'unknown',
+        taskPluginsInstalled: env.summary?.taskPluginsInstalled === true, realModelRequest: false,
+        seededWorkspace: env.summary?.seededWorkspace === 'ws_qa_media' ? 'ws_qa_media' : null };
+      addAssertions([{ name: 'app-runtime-ready', pass: true }]);
+      const loginResponse = await fetchImpl(env.loginUrl, { redirect: 'manual', signal: AbortSignal.timeout(15000) });
       const rawCookie = loginResponse.headers.getSetCookie()[0] ?? '';
       const cookieName = rawCookie.split('=')[0];
       const cookieValue = rawCookie.split(';')[0].slice(cookieName.length + 1);
-      if (!cookieName || !cookieValue) throw new Error('TEST_APP_QA_LOGIN_COOKIE');
-      report.assertions.push({ name: 'same-origin-login', pass: loginResponse.status === 303, status: loginResponse.status, cookieName });
-
-      const browser = await driveBrowser({
-        origin: env.origin,
-        cookie: { name: cookieName, value: cookieValue },
-        evidenceDir,
-        seededWorkspace: env.summary?.seededWorkspace,
-        mode,
-        journey,
-        io,
-      });
-      report.cdpPort = browser.cdpPort;
-      report.assertions.push(...browser.assertions);
-      report.screenshot = browser.screenshot;
-      if (browser.hubPath) report.hubPath = browser.hubPath;
-      if (browser.liveMedia) report.liveMedia = browser.liveMedia;
-      report.pass = report.assertions.every(assertion => assertion.pass);
+      if (!cookieName || !cookieValue) throw qaFailure('TEST_APP_QA_LOGIN_COOKIE');
+      addAssertions([{ name: 'same-origin-login', pass: loginResponse.status === 303 }]);
+      if (loginResponse.status !== 303) throw qaFailure('TEST_APP_QA_LOGIN_COOKIE');
+      browserAttempted = true;
+      browser = await driveBrowser({ origin: origin.origin, cookie: { name: cookieName, value: cookieValue },
+        evidenceDir, seededWorkspace: env.summary?.seededWorkspace, mode, journey, io });
+      addAssertions(browser.assertions);
+      report.cdpPort = Number.isInteger(browser.cdpPort) ? browser.cdpPort : null;
+      if (browser.screenshot) report.screenshot = { path: join(evidenceDir, 'app-home.png'),
+        width: Number(browser.screenshot.width) || 0, height: Number(browser.screenshot.height) || 0, bytes: Number(browser.screenshot.bytes) || 0 };
+      if (browser.hubPath) report.hubPath = { clickedNewSession: browser.hubPath.clickedNewSession === true,
+        exploreVisible: browser.hubPath.exploreVisible === true, assetHubOpened: browser.hubPath.assetHubOpened === true };
+      if (request && report.assertions.some(item => item.name === 'screenshot-png-verified' && item.pass)) {
+        try { assertPng(io.readFileSync(join(evidenceDir, 'app-home.png'))); }
+        catch { report.errors.push('TEST_APP_QA_SCREENSHOT_MISSING_OR_INVALID'); }
+      }
+      if (mode === 'live' && browser.liveMedia) report.liveMedia = {
+        httpStatus: Number(browser.liveMedia.httpStatus) || 0, generationMode: browser.liveMedia.generationMode === 'live' ? 'live' : 'unknown',
+        naturalWidth: Number(browser.liveMedia.naturalWidth) || 0, naturalHeight: Number(browser.liveMedia.naturalHeight) || 0,
+        destBytes: Number(browser.liveMedia.destBytes) || 0, brokenImageCount: Number(browser.liveMedia.brokenImageCount) || 0,
+        screenshotPath: browser.liveMedia.screenshotPath ? join(evidenceDir, 'live-image-generated-success.png') : null,
+      };
+      env.assertAlive?.();
     } catch (error) {
-      report.errors.push(error?.code ?? error?.message ?? 'unknown');
-      if (error?.hint) report.hint = error.hint;
+      report.errors.push(error?.code === 'TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN' ? error.code : 'TEST_APP_QA_EXECUTION');
+      if (error?.code === 'TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN') report.userFresh = false;
+      if (!env && error?.cleanup) envCleanup = error.cleanup;
+      if (!env && error?.observations) prepareObservations = error.observations;
+      if (error?.browser) { browser = error.browser; addAssertions(browser.assertions); }
     } finally {
-      if (env?.cleanup) {
-        try { report.cleanup = await env.cleanup(); } catch (error) { report.errors.push(error?.code ?? 'TEST_APP_QA_CLEANUP'); }
+      if (env) {
+        try {
+          if (typeof env.cleanup !== 'function') throw qaFailure('TEST_APP_QA_CLEANUP');
+          envCleanup = await env.cleanup();
+        } catch { report.errors.push('TEST_APP_QA_CLEANUP'); }
+        if (env.observations?.unexpectedExit || env.observations?.interrupted || env.observations?.outputReleaseFailed) report.errors.push('TEST_APP_QA_RUNTIME_EXIT');
       }
       report.completedAt = now().toISOString();
+    }
+    const resources = [...resourceResults('app-environment', envCleanup?.resources, prepareAttempted),
+      ...resourceResults('app-browser', browser?.cleanup, browserAttempted)];
+    if (!request && envCleanup?.cleaned === true && !envCleanup.resources && producer === 'dependency-stub') {
+      // Legacy dependency doubles predate per-resource receipts; never use this compatibility path in a contract run.
+      report.cleanup = { cleaned: true, contract: 'none' };
+    } else report.cleanup = { cleaned: envCleanup?.cleaned === true && resources.every(item => item.status !== 'failed'), resources };
+    if (!report.cleanup.cleaned) report.errors.push('TEST_APP_QA_CLEANUP_INCOMPLETE');
+    if (browserAttempted && (request || browser?.cleanup !== undefined) && (!Array.isArray(browser?.cleanup) || browser.cleanup.some(item => !item || item.status === 'failed'))) report.errors.push('TEST_APP_QA_BROWSER_CLEANUP');
+    if (browser?.observations?.unexpectedExit) report.errors.push('TEST_APP_QA_BROWSER_EXIT');
+    if ([(env?.observations ?? prepareObservations)?.events, browser?.observations?.events].some(events => Array.isArray(events) && events.length > 16)) report.errors.push('TEST_APP_QA_EVENT_LIMIT');
+    const eventLists = [(env?.observations ?? prepareObservations)?.events, browser?.observations?.events];
+    if (eventLists.some(events => events !== undefined && (!Array.isArray(events) || events.some(item => !item || typeof item !== 'object')))) report.errors.push('TEST_APP_QA_EVENTS_INVALID');
+    const safeEvents = events => Array.isArray(events) ? events.slice(0, 16).filter(item => item && typeof item === 'object').map(item => ({
+      event: ['spawn', 'exit', 'close', 'error'].includes(item.event) ? item.event : 'unknown',
+      code: Number.isInteger(item.code) ? item.code : null,
+      signal: ['SIGTERM', 'SIGKILL', 'SIGINT', 'SIGABRT', 'SIGSEGV'].includes(item.signal) ? item.signal : null,
+      pid: Number.isInteger(item.pid) ? item.pid : null,
+      parentPid: Number.isInteger(item.parentPid) ? item.parentPid : null,
+    })) : [];
+    report.observations.appEvents = safeEvents((env?.observations ?? prepareObservations)?.events);
+    report.observations.browserEvents = safeEvents(browser?.observations?.events);
+    if (request) {
+      const allExpected = request.requiredChecks.flatMap(name => request.expectedAssertions[name]);
+      if (new Set(report.assertions.map(item => item.name)).size !== report.assertions.length
+        || report.assertions.some(item => !allExpected.includes(item.name))) report.errors.push('TEST_APP_QA_ASSERTION_SET_MISMATCH');
+      const checks = request.requiredChecks.map(name => {
+        const names = request.expectedAssertions[name];
+        const actual = report.assertions.filter(item => name === 'app-environment' ? ENV_ASSERTIONS.includes(item.name)
+          : name === 'task-journey' ? item.name.startsWith('journey') : !ENV_ASSERTIONS.includes(item.name) && !item.name.startsWith('journey'));
+        const complete = sameNames(actual.map(item => item.name), names);
+        return { name, scope: request.scope, required: true, status: actual.length ? 'completed' : 'not-run',
+          reason: actual.length ? null : 'not-executed', exitCode: actual.length ? (complete && actual.every(item => item.pass) && !report.errors.length ? 0 : 1) : null,
+          tests: actual.filter(item => names.includes(item.name)).length, skipped: 0, assertions: names.map(assertion => ({ name: assertion,
+            pass: actual.filter(item => item.name === assertion).length === 1 && actual.find(item => item.name === assertion)?.pass === true })) };
+      });
+      report.checks = checks;
+      const executionPassed = checks.every(item => item.status === 'completed' && item.exitCode === 0 && item.tests > 0 && item.assertions.every(a => a.pass))
+        && report.cleanup.cleaned && !report.errors.length;
+      report.executionPassed = executionPassed;
+      report.pass = false;
+      report.evidenceStatus = 'unsealed';
+      // Raw is fixed before after-capture and never amended with sealing/validation results.
+      const rawPath = prefix + 'raw-run.json';
+      io.writeFileSync(join(root, rawPath), JSON.stringify(report, null, 2) + '\n', { flag: 'wx' });
+      let envelope; let validation; let afterCaptureMs = null;
+      try {
+        const afterStarted = Date.now();
+        const candidateAfter = captureCandidate(captureOptions);
+        afterCaptureMs = Date.now() - afterStarted;
+        const artifactPaths = outputs.filter(path => path !== prefix + 'evidence.json' && io.existsSync(join(root, path)));
+        envelope = sealEvidence({ taskId: request.taskId, runId, producer, scope: request.scope,
+          candidateBefore, candidateAfter, checks, cleanup: resources, artifactPaths, reportPath: prefix + 'evidence.json' });
+        io.writeFileSync(join(root, envelope.reportPath), JSON.stringify(envelope, null, 2) + '\n', { flag: 'wx' });
+        validation = validateEvidence(envelope, { purpose: 'candidate', root, taskId: request.taskId, runId,
+          scope: request.scope, requiredChecks: request.requiredChecks, expectedAssertions: request.expectedAssertions, currentCandidate: candidateAfter });
+      } catch { validation = { valid: false, pass: false, provenance: 'unknown', authorization: 'not-granted', errors: ['TEST_APP_QA_SEAL_FAILED'] }; }
+      report.evidence = { rawPath, reportPath: envelope?.reportPath ?? null, reportDigest: envelope?.reportDigest ?? null,
+        valid: validation.valid, pass: validation.pass, scope: request.scope, provenance: validation.provenance,
+        authorization: validation.authorization, errors: validation.errors, beforeCaptureMs, afterCaptureMs,
+        artifactBytes: envelope?.artifacts.reduce((sum, item) => sum + item.bytes, 0) ?? null };
+      report.pass = executionPassed && validation.valid && validation.pass;
+      report.evidenceStatus = validation.valid ? 'validated' : 'failed';
+      // The old fixed summary is not ignored; return this projection rather than dirtying source after capture.
+    } else {
+      report.pass = report.assertions.length > 0 && report.assertions.every(item => item.pass) && !report.errors.length && report.cleanup.cleaned;
       io.writeFileSync(join(evidenceDir, 'report.json'), JSON.stringify(report, null, 2) + '\n');
       const summaryPath = join(root, 'docs/evidence/worktree-app-qa-report.json');
       io.mkdirSync(dirname(summaryPath), { recursive: true });
@@ -715,15 +968,38 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const journeyArg = argv.find(a => a.startsWith('--journey='))?.split('=')[1]
     ?? (argv.includes('--journey') ? argv[argv.indexOf('--journey') + 1] : null);
   try {
-    const report = await runWorktreeAppQa({ root: sourceRoot, mode: modeArg, journey: journeyArg });
+    for (let index = 0; index < argv.length; index++) {
+      const arg = argv[index];
+      if (arg === '--request' || arg === '--journey') {
+        if (!argv[index + 1] || argv[index + 1].startsWith('--')) throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
+        index++;
+      } else if (arg !== '--live' && !arg.startsWith('--mode=') && !arg.startsWith('--journey=') && !arg.startsWith('--request=')) {
+        throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
+      }
+    }
+    const requestArg = argv.find(a => a.startsWith('--request='))?.slice('--request='.length)
+      ?? (argv.includes('--request') ? argv[argv.indexOf('--request') + 1] : null);
+    let request = {};
+    if (argv.includes('--request') && !requestArg) throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
+    if (requestArg !== null) {
+      const requestPath = inputFile(sourceRoot, requestArg, fs);
+      const bytes = fs.readFileSync(join(sourceRoot, requestPath));
+      if (bytes.length > 65536) throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
+      request = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+      const allowed = ['taskId', 'base', 'head', 'scope', 'requiredChecks', 'expectedAssertions', 'extraInputs', 'artifactNames', 'journey'];
+      if (!request || Object.getPrototypeOf(request) !== Object.prototype || Object.keys(request).some(key => !allowed.includes(key))) throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
+      request.requestPath = requestPath;
+    }
+    const report = await runWorktreeAppQa({ ...request, root: sourceRoot, mode: modeArg, journey: journeyArg ?? request.journey ?? null });
     const failed = report.assertions.filter(assertion => !assertion.pass).map(assertion => assertion.name);
     if (report.pass) {
-      console.log(`✅ 应用级 Web 验收通过（mode=${report.mode}，${report.assertions.length} 项断言，端口 ${report.appPort}，CDP ${report.cdpPort}）`);
+      console.log(`✅ 应用级 ${report.scope} 检查通过（mode=${report.mode}，${report.assertions.length} 项断言，端口 ${report.appPort}，CDP ${report.cdpPort}）`);
       console.log(`   截图: ${report.screenshot?.path} (${report.screenshot?.width}x${report.screenshot?.height}, ${report.screenshot?.bytes} 字节)`);
       if (report.liveMedia?.screenshotPath) {
         console.log(`   真实生图验收截图: ${report.liveMedia.screenshotPath} (尺寸 ${report.liveMedia.naturalWidth}x${report.liveMedia.naturalHeight}, 落盘 ${report.liveMedia.destBytes} 字节)`);
       }
-      console.log('   证据: docs/evidence/worktree-app-qa-report.json');
+      console.log(`   证据: ${report.evidence?.reportPath ?? 'docs/evidence/worktree-app-qa-report.json'}`);
+      console.log(`   范围: ${report.scope}；任务绑定: unknown；实时在线: unsupported`);
       if (report.summary?.seededWorkspace) {
         console.log(`💡【测试工程夹具】：已自动预装带媒体素材的标准测试工程（ID: ${report.summary.seededWorkspace}）`);
         console.log(`   前置测试直达：${report.origin}/#/workspace/${report.summary.seededWorkspace}`);
@@ -735,8 +1011,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       process.exitCode = 1;
     }
   } catch (error) {
-    console.error(`❌ 无法开始：${error.message}`);
-    if (error.hint) console.error(`   ${error.hint}`);
+    console.error(`❌ 无法开始：${typeof error?.code === 'string' && /^(?:TEST_APP_QA|TEST_ENV)_[A-Z_]+$/.test(error.code) ? error.code : 'TEST_APP_QA_REQUEST_FAILED'}`);
+    if (error?.code === 'TEST_ENV_ROOT_UNSAFE' && error.hint) console.error(`   ${error.hint}`);
     process.exitCode = 1;
   }
 }
