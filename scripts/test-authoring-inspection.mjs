@@ -25,7 +25,7 @@ export function inspectTestAuthoring(code) {
       const key = node.computed ? node.key.type === 'Literal' ? node.key.value : null : node.key.name ?? node.key.value
       if (key === null) reason = 'dynamic-test-property-needs-review'
       if (parent?.type === 'ObjectPattern' && execution.has(key)) reason = 'runtime-code-execution-binding-needs-review'
-      if (blocked.has(key) && !(node.value?.type === 'Literal' && [false, null, 0, ''].includes(node.value.value))) reason = 'test-execution-option-needs-review'
+      if (blocked.has(key) && !(node.value?.type === 'Literal' && node.value.value === false)) reason = 'test-execution-option-needs-review'
     }
     if (node.type === 'CallExpression') {
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
