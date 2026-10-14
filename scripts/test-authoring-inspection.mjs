@@ -105,7 +105,7 @@ function collectRisks(code) {
     for (const [key, value] of Object.entries(node)) {
       const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression', 'TryStatement', 'TaggedTemplateExpression', 'MemberExpression', 'ChainExpression', 'SequenceExpression', 'ArrayExpression', 'ArrayPattern', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
       if (Array.isArray(value)) for (const [index, child] of value.entries()) {
-        const argumentsContext = ['arguments', 'elements', 'expressions'].includes(key) ? [...branch, { slot: key, index }] : branch
+        const argumentsContext = ['arguments', 'elements', 'expressions', 'cases'].includes(key) ? [...branch, { slot: key, index }] : branch
         inspect(child, node, argumentsContext, nestedSiblings)
       }
       else if (value && typeof value === 'object') inspect(value, node, branch, nestedSiblings)
