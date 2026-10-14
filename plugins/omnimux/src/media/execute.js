@@ -12,6 +12,7 @@ import {
   assertGuardSubmit,
 } from '../catalog/contract/submit-guard/index.js'
 import { probeMediaAssets } from './asset-probe.js'
+import { prepareReferencePayload } from '../reference-storage/prepare.js'
 import { generateComfyUiVideo, isComfyUiVideoRoute } from './comfyui-instance.js'
 import { MEDIA_EXECUTION_BUDGET_MS } from './task-deadline.js'
 import { generateSpeech } from './speech.js'
@@ -769,14 +770,21 @@ export async function executeOmnimuxMedia(capability, input) {
   }
 
   const shouldHost = (input.uploadLocalAssets ?? !input.runtime) && isRemoteGateway(route.baseUrl) && Boolean(auth.apiKey)
-  const finalInput = shouldHost
-    ? await hostLocalAssetsIfNeeded(mappedInput, {
-      baseUrl: route.baseUrl,
-      apiKey: auth.apiKey,
-      fetcher: input.fetcher,
+  const useReferenceStorage = ['image', 'video'].includes(capability) && input.runtimeSettings?.referenceStorage?.enabled === true
+  const finalInput = useReferenceStorage
+    ? await prepareReferencePayload(mappedInput, {
+      config: input.runtimeSettings.referenceStorage,
+      credentials: input.credentials,
       signal: input.signal,
     })
-    : mappedInput
+    : shouldHost
+      ? await hostLocalAssetsIfNeeded(mappedInput, {
+        baseUrl: route.baseUrl,
+        apiKey: auth.apiKey,
+        fetcher: input.fetcher,
+        signal: input.signal,
+      })
+      : mappedInput
 
   {
       pendingTaskRecord = createMediaTaskRecord({
