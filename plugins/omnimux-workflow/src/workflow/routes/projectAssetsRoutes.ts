@@ -81,6 +81,10 @@ export function createProjectAssetsRoutes(
       if (typeof body.globalSubjectId !== 'string' || !body.globalSubjectId.trim()) {
         return { status: 400, body: { error: 'invalid-id', message: '请选择要加入的主体' } };
       }
+      if (body.fileIds !== undefined && (!Array.isArray(body.fileIds) || body.fileIds.length === 0
+        || body.fileIds.some((id) => typeof id !== 'string' || !id.trim()))) {
+        return { status: 400, body: { error: 'invalid-id', message: '请选择要加入的素材文件' } };
+      }
       await prepareImport?.(instantiateMatch[1] ?? '');
       const assets = await store.instantiate(instantiateMatch[1] ?? '', body);
       return { status: 200, body: { assets } };

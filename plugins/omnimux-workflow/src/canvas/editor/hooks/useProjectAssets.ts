@@ -32,7 +32,7 @@ export interface UseProjectAssetsResult {
   refresh: () => Promise<void>;
   mkdir: (name: string, parentId?: string | null) => Promise<boolean>;
   indexPaths: (paths: string[], parentId?: string | null) => Promise<boolean>;
-  instantiateSubject: (globalSubjectId: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void) => Promise<boolean>;
+  instantiateSubject: (globalSubjectId: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void, fileIds?: string[]) => Promise<boolean>;
   persist: (next: { folders: ProjectAssetsFolder[]; items: ProjectAssetsItem[] }) => Promise<boolean>;
   renameFolder: (folderId: string, name: string) => Promise<boolean>;
   moveNode: (id: string, parentId: string | null) => Promise<boolean>;
@@ -83,6 +83,7 @@ export function useProjectAssets(workspaceId: string | null | undefined): UsePro
   }, [workspaceId, hydrate]);
 
   const adopt = useCallback((next: ProjectAssetsDocument) => {
+    documentRef.current = next;
     setDocument(next);
     setError(null);
   }, []);
@@ -127,12 +128,13 @@ export function useProjectAssets(workspaceId: string | null | undefined): UsePro
     return true;
   }, [adopt, guard, workspaceId]);
 
-  const instantiateSubject = useCallback(async (globalSubjectId: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void) => {
+  const instantiateSubject = useCallback(async (globalSubjectId: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void, fileIds?: string[]) => {
     const ticket = guard.capture();
     if (!workspaceId || !guard.isCurrent(ticket)) return false;
     const existingIds = new Set(documentRef.current.items.map((item) => item.id));
     const result = await instantiateWorkspaceAssets(workspaceId, {
       globalSubjectId,
+      ...(fileIds ? { fileIds } : {}),
       parentId: parentId ?? null,
       expectedRev: documentRef.current.rev,
     }).catch((err: unknown) => ({
