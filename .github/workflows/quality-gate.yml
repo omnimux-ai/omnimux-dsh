@@ -163,18 +163,29 @@ jobs:
         run: |
           set -euo pipefail
           fixture="$(mktemp -d "$RUNNER_TEMP/evidence-contract-XXXXXX")"
-          git init -b main "$fixture/primary"
+          git init -b fixture-seed "$fixture/primary"
           git -C "$fixture/primary" config core.autocrlf false
           printf '.worktrees/\n.workbuddy/evidence/\n' > "$fixture/primary/.gitignore"
           printf 'synthetic public evidence source\n' > "$fixture/primary/source.txt"
           git -C "$fixture/primary" add -- .gitignore source.txt
           git -C "$fixture/primary" -c user.name=EvidenceFixture -c user.email=fixture@example.invalid commit -m fixture
           sha="$(git -C "$fixture/primary" rev-parse --verify HEAD)"
-          git -C "$fixture/primary" worktree add --detach "$fixture/primary/.worktrees/task" "$sha"
-          printf 'EVIDENCE_FIXTURE_REPO=%s\nEVIDENCE_FIXTURE_ROOT=%s\nEVIDENCE_FIXTURE_SHA=%s\nEVIDENCE_FIXTURE_OWNER=%s\n' "$fixture/primary" "$fixture/primary/.worktrees/task" "$sha" "$fixture" >> "$GITHUB_ENV"
+          printf 'EVIDENCE_FIXTURE_REPO=%s\nEVIDENCE_FIXTURE_ROOT=%s\nEVIDENCE_FIXTURE_SHA=%s\nEVIDENCE_FIXTURE_OWNER=%s\n' "$fixture/primary" "$fixture/primary" "$sha" "$fixture" >> "$GITHUB_ENV"
 
       - name: Verify public evidence core and consumer
-        run: node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs
+        run: node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs
+
+      - name: Verify public application composition in a registered task root
+        run: |
+          set -euo pipefail
+          parent="$(mktemp -d "$RUNNER_TEMP/evidence-app-owner-XXXXXX")"
+          primary="$parent/primary"
+          git clone --no-local "$GITHUB_WORKSPACE" "$primary"
+          git -C "$primary" worktree add --detach "$primary/.worktrees/task" origin/main
+          candidate="$(git -C "$GITHUB_WORKSPACE" rev-parse --verify HEAD)"
+          git -C "$primary/.worktrees/task" checkout --detach "$candidate"
+          trap 'test "$(realpath "$parent")" = "$parent" && test ! -L "$parent" && rm -r -- "$parent"' EXIT
+          node --test "$primary/.worktrees/task/scripts/worktree-app-qa.test.mjs"
 
       - name: Clean owned public evidence data repository
         if: ${{ always() }}

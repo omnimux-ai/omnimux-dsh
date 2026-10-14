@@ -5,7 +5,133 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createTestEnvironmentStarter } from './test-env-bootstrap.mjs';
+import { validateEvidence } from './evidence-contract.mjs';
 import { createAppQaRunner, resolveWorktreeRoot, isAppReady, assertBlankSessionHubPath } from './worktree-app-qa.mjs';
+
+const publicRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const publicRepository = resolve(publicRoot, '../..');
+const publicExpectedAssertions = {
+  'app-environment': ['app-runtime-ready', 'same-origin-login'],
+  'app-browser': ['chrome-cdp-listen', 'auth-cookie-applied', 'app-dom-mounted', 'visible-geometry-positive', 'runtime-modal-bypassed', 'blank-session-guide-visible', 'explore-section-visible', 'explore-cards-present', 'asset-hub-reachable-via-library', 'screenshot-png-verified'],
+};
+const publicEnvironmentResources = ['app-child', 'mock-server', 'app-private-directory'].map(name => ({ name, owner: 'app-environment', status: 'not-applicable', reason: 'not-created' }));
+const publicBrowserResources = ['browser-child', 'cdp-transport', 'browser-private-directory'].map(name => ({ name, owner: 'app-browser', status: 'not-applicable', reason: 'not-created' }));
+
+// These smoke doubles do not establish browser execution, fresh installation or task loading.
+test('公共应用入口用真实登记根封存依赖桩冒烟成功，原件保持未封存状态', async t => {
+  assert.deepEqual(resolveWorktreeRoot(publicRoot, fs, publicRepository), { ok: true, root: publicRoot });
+  const runId = randomUUID();
+  const prefix = `.workbuddy/evidence/contract/3335/${runId}/`;
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4o6EBAAMQAS0ujiXaAAAAAElFTkSuQmCC', 'base64');
+  let cleaned = 0;
+  const run = createAppQaRunner({
+    uuid: () => runId,
+    startEnv: async () => ({
+      origin: 'http://127.0.0.1:15000',
+      loginUrl: 'http://127.0.0.1:15000/?token=synthetic-public-only',
+      summary: { mode: 'ui', evidenceLevel: 'core-only', taskPluginsInstalled: false },
+      cleanup: async () => { cleaned += 1; return { cleaned: true, resources: publicEnvironmentResources }; },
+    }),
+    fetchImpl: async () => ({ status: 303, headers: { getSetCookie: () => ['dsh-auth-unit=synthetic-public-cookie; Path=/; HttpOnly'] } }),
+    driveBrowser: async ({ evidenceDir }) => {
+      assert.equal(evidenceDir, join(publicRoot, prefix));
+      fs.writeFileSync(join(evidenceDir, 'app-home.png'), png, { flag: 'wx' });
+      return {
+        assertions: publicExpectedAssertions['app-browser'].map(name => ({ name, pass: true })),
+        cleanup: publicBrowserResources,
+        screenshot: { width: 1, height: 1, bytes: png.length },
+      };
+    },
+  });
+  const report = await run({ root: publicRoot, repo: publicRepository, taskId: '3335', base: 'HEAD', head: 'HEAD', scope: 'smoke',
+    requiredChecks: ['app-environment', 'app-browser'], expectedAssertions: publicExpectedAssertions });
+  assert.equal(report.pass, true);
+  assert.equal(report.evidence.valid, true);
+  assert.equal(report.evidence.pass, true);
+  assert.equal(cleaned, 1);
+  const rawText = fs.readFileSync(join(publicRoot, prefix, 'raw-run.json'), 'utf8');
+  const raw = JSON.parse(rawText);
+  const envelope = JSON.parse(fs.readFileSync(join(publicRoot, prefix, 'evidence.json'), 'utf8'));
+  const validation = validateEvidence(envelope, { purpose: 'history', root: publicRoot, taskId: '3335', runId, scope: 'smoke',
+    requiredChecks: ['app-environment', 'app-browser'], expectedAssertions: publicExpectedAssertions });
+  assert.equal(validation.valid, true);
+  assert.equal(validation.pass, true);
+  assert.equal(validation.provenance, 'self-reported');
+  assert.equal(validation.authorization, 'not-granted');
+  assert.equal(raw.pass, false);
+  assert.equal(raw.executionPassed, true);
+  assert.equal(raw.evidenceStatus, 'unsealed');
+  assert.equal(raw.evidence, undefined);
+  assert.equal(raw.producer, 'dependency-stub');
+  assert.equal(raw.scope, 'smoke');
+  assert.equal(raw.taskBinding, 'unknown');
+  assert.equal(raw.userFresh, 'unknown');
+  assert.deepEqual(raw.checks.map(item => item.tests), [2, 10]);
+  assert.deepEqual(raw.cleanup.resources, publicEnvironmentResources.concat(publicBrowserResources));
+  assert.deepEqual(envelope.cleanup, raw.cleanup.resources);
+  assert.deepEqual(envelope.candidate.exclusions.outputPaths, [prefix + 'app-home.png', prefix + 'evidence.json', prefix + 'hub-business-path.png', prefix + 'raw-run.json']);
+  assert.deepEqual(envelope.artifacts.map(item => item.path), [prefix + 'raw-run.json', prefix + 'app-home.png']);
+  assert.equal(envelope.candidate.repo.realRoot, publicRoot);
+  assert.equal(envelope.candidate.base.resolvedSha, envelope.candidate.head.resolvedSha);
+  assert.match(envelope.candidate.head.resolvedSha, /^[a-f0-9]{40}$/);
+  assert.deepEqual(fs.readFileSync(join(publicRoot, prefix, 'app-home.png')), png);
+  assert.doesNotMatch(rawText, /synthetic-public-cookie|synthetic-public-only|loginUrl|token=/);
+  assert.deepEqual(raw.errors, []);
+  assert.ok(Number.isSafeInteger(report.evidence.beforeCaptureMs));
+  assert.ok(Number.isSafeInteger(report.evidence.afterCaptureMs));
+  t.diagnostic(JSON.stringify({ runId, head: envelope.candidate.head.resolvedSha, beforeCaptureMs: report.evidence.beforeCaptureMs,
+    afterCaptureMs: report.evidence.afterCaptureMs, reportDigest: envelope.reportDigest, rawPath: report.evidence.rawPath, reportPath: report.evidence.reportPath }));
+});
+
+test('公共应用入口真实准备器前置拒绝仍封存有效失败，不启动运行环境', async t => {
+  assert.deepEqual(resolveWorktreeRoot(publicRoot, fs, publicRepository), { ok: true, root: publicRoot });
+  const runId = randomUUID();
+  const prefix = `.workbuddy/evidence/contract/3335/${runId}/`;
+  const run = createAppQaRunner({ uuid: () => runId, startEnv: createTestEnvironmentStarter({ repositoryRoot: publicRepository }) });
+  const report = await run({ root: publicRoot, repo: publicRepository, taskId: '3335', base: 'HEAD', head: 'HEAD', scope: 'smoke',
+    requiredChecks: ['app-environment', 'app-browser'], expectedAssertions: publicExpectedAssertions });
+  assert.equal(report.pass, false);
+  assert.equal(report.evidence.valid, true);
+  assert.equal(report.evidence.pass, false);
+  assert.deepEqual(report.errors, ['TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN']);
+  const rawText = fs.readFileSync(join(publicRoot, prefix, 'raw-run.json'), 'utf8');
+  const raw = JSON.parse(rawText);
+  const envelope = JSON.parse(fs.readFileSync(join(publicRoot, prefix, 'evidence.json'), 'utf8'));
+  const validation = validateEvidence(envelope, { purpose: 'history', root: publicRoot, taskId: '3335', runId, scope: 'smoke',
+    requiredChecks: ['app-environment', 'app-browser'], expectedAssertions: publicExpectedAssertions });
+  assert.equal(validation.valid, true);
+  assert.equal(validation.pass, false);
+  assert.equal(validation.provenance, 'self-reported');
+  assert.equal(validation.authorization, 'not-granted');
+  assert.equal(raw.pass, false);
+  assert.equal(raw.executionPassed, false);
+  assert.equal(raw.evidenceStatus, 'unsealed');
+  assert.equal(raw.producer, 'dependency-stub', 'repositoryRoot/uuid seam is not a default controlled-runner claim');
+  assert.equal(raw.userFresh, false);
+  assert.equal(raw.taskBinding, 'unknown');
+  assert.equal(raw.origin, null);
+  assert.equal(raw.appPort, null);
+  assert.equal(raw.cdpPort, null);
+  assert.deepEqual(raw.assertions, []);
+  assert.deepEqual(raw.checks.map(item => item.tests), [0, 0]);
+  assert.ok(raw.checks.every(item => item.status === 'not-run' && item.exitCode === null && item.assertions.every(assertion => assertion.pass === false)));
+  assert.equal(raw.cleanup.cleaned, true);
+  assert.deepEqual(raw.cleanup.resources, publicEnvironmentResources.concat(publicBrowserResources));
+  assert.deepEqual(envelope.cleanup, raw.cleanup.resources);
+  assert.deepEqual(envelope.artifacts.map(item => item.path), [prefix + 'raw-run.json']);
+  assert.deepEqual(raw.errors, ['TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN']);
+  assert.deepEqual(raw.observations.appEvents, []);
+  assert.deepEqual(raw.observations.browserEvents, []);
+  assert.equal(raw.screenshot, null);
+  assert.doesNotMatch(rawText, /loginUrl|token=/);
+  t.diagnostic(JSON.stringify({ runId, head: envelope.candidate.head.resolvedSha, beforeCaptureMs: report.evidence.beforeCaptureMs,
+    afterCaptureMs: report.evidence.afterCaptureMs, reportDigest: envelope.reportDigest, rawPath: report.evidence.rawPath, reportPath: report.evidence.reportPath }));
+});
 
 test('isAppReady 要求可见元素数量与最大可见几何同时为正', () => {
   assert.equal(isAppReady({ visibleCount: 60, largest: { width: 900, height: 600 } }), true);
