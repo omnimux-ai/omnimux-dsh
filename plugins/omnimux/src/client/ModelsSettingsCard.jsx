@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { Button, DropdownSelect, SelectableTile } from 'dsh-ui-kit'
 import { RuntimeModeSection } from './RuntimeModeSection.jsx'
-import { ReferenceStorageSection } from './ReferenceStorageSection.jsx'
 
 /** Sentinel the hub stores for "no explicit choice"; the picker shows the resolved mode instead. */
 const DEFAULT_OPERATION_AUTO = 'auto'
@@ -255,7 +254,6 @@ export function ModelsSettingsCard({ t, scope }) {
 
   return (
     <div className="omnimux-settings-sections">
-      <ReferenceStorageSection t={t} />
       {/* 栏目一：对话与媒体生成模型 */}
       <div className="omnimux-models-card" data-section="runtime">
         <div className="omnimux-models-card__head">
