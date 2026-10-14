@@ -5,6 +5,7 @@
  */
 
 import { gatewayCandidates, toProductId } from './id-universe.js'
+import { loadDispositions, resolveDisposition } from '../contract/dispositions.js'
 import { resolveGroupEstimatedPoints } from '../pricing-calculator.js'
 
 export const ROUTING_STRATEGIES = Object.freeze(['auto', 'stability_first', 'cost_first'])
@@ -1067,8 +1068,15 @@ export function resolveModelChannelGroups(modelId, runtimeSettings) {
     capFlag = 'runtimeMediaAudio'
   }
 
-  // 1. 检查主配置中的媒体 Provider，未知模态模型在非全关情况下保持健壮可用
-  if (runtimeSettings.runtimeKeyVerified === true) {
+  // Current provider records and explicit scenario choices outrank legacy primary fields.
+  const hasBindings = runtimeSettings.scenarioBindings && typeof runtimeSettings.scenarioBindings === 'object'
+  const primaryProvider = typeof runtimeSettings.runtimeMediaProvider === 'string'
+    ? runtimeSettings.runtimeMediaProvider.trim().toLowerCase() : 'fal'
+  const hasPrimaryRecord = Array.isArray(runtimeSettings.byokProviders)
+    && runtimeSettings.byokProviders.some((item) => item && typeof item.provider === 'string'
+      && item.provider.trim().toLowerCase() === primaryProvider)
+  if (!hasBindings && (!hasPrimaryRecord || isByokProviderVerifiedAndCapReady(primaryProvider, capability, runtimeSettings))
+    && runtimeSettings.runtimeKeyVerified === true) {
     const allFalse =
       runtimeSettings.runtimeMediaImage === false &&
       runtimeSettings.runtimeMediaVideo === false &&
@@ -1103,6 +1111,8 @@ export function resolveModelChannelGroups(modelId, runtimeSettings) {
   if (Array.isArray(runtimeSettings.byokProviders)) {
     for (const item of runtimeSettings.byokProviders) {
       if (item && typeof item === 'object' && item.verified === true && typeof item.provider === 'string' && item.provider.trim()) {
+        if (item.saveState === 'pending') continue
+        if (capability && (item[capability] === false || (capFlag && item[capFlag] === false))) continue
         if (capability) {
           // 精确模态匹配：优先对齐前端 TypeScript 检查 item.capabilities.includes(capability)
           if (Array.isArray(item.capabilities) && item.capabilities.length > 0) {
@@ -1210,9 +1220,10 @@ function comparatorFor(strategy) {
  * @returns {Set<string> | null}
  */
 function normalizeAllowed(allowedGroups) {
-  if (!Array.isArray(allowedGroups) || allowedGroups.length === 0) return null
-  const allowed = new Set(allowedGroups.map((id) => String(id).trim().toLowerCase()).filter(Boolean))
-  return allowed.size > 0 ? allowed : null
+  if (allowedGroups == null || (Array.isArray(allowedGroups) && allowedGroups.length === 0)) return null
+  if (!Array.isArray(allowedGroups)
+    || allowedGroups.some((id) => typeof id !== 'string' || !id.trim())) return new Set()
+  return new Set(allowedGroups.map((id) => id.trim().toLowerCase()))
 }
 
 /**
@@ -1243,7 +1254,8 @@ function isByokProviderVerifiedAndCapReady(provider, capability, runtimeSettings
     const hasReadyItem = runtimeSettings.byokProviders.some((item) => {
       if (!item || typeof item !== 'object') return false
       if (typeof item.provider !== 'string' || item.provider.toLowerCase().trim() !== normProvider) return false
-      if (item.verified !== true) return false
+      if (item.verified !== true || item.saveState === 'pending') return false
+      if (capability && (item[capability] === false || (capFlag && item[capFlag] === false))) return false
 
       if (normProvider === 'custom') {
         const ep = typeof item.endpoint === 'string' ? item.endpoint.trim() : ''
@@ -1274,8 +1286,11 @@ function isByokProviderVerifiedAndCapReady(provider, capability, runtimeSettings
     }
   }
 
-  // 2. 检查主配置中的媒体 Provider (runtimeKeyVerified)
-  if (runtimeSettings.runtimeKeyVerified === true) {
+  const hasBindings = runtimeSettings.scenarioBindings && typeof runtimeSettings.scenarioBindings === 'object'
+  const hasCurrentRecord = Array.isArray(runtimeSettings.byokProviders)
+    && runtimeSettings.byokProviders.some((item) => item && typeof item.provider === 'string'
+      && item.provider.trim().toLowerCase() === normProvider)
+  if (!hasBindings && !hasCurrentRecord && runtimeSettings.runtimeKeyVerified === true) {
     const rawProvider = runtimeSettings.runtimeMediaProvider
     const mainProvider = (typeof rawProvider === 'string' && rawProvider.trim())
       ? rawProvider.trim().toLowerCase()
@@ -1306,14 +1321,15 @@ function isByokProviderVerifiedAndCapReady(provider, capability, runtimeSettings
  * Routing intent (`group`, `allowedGroups`, or `strategy`) makes the plan
  * fail-closed: only configured groups are tried, the caller's pool is never
  * silently widened, and an exhausted pool surfaces as an error instead of
- * falling back to an unbounded channel. Without intent the plan is exactly
- * `gatewayCandidates`, i.e. the pre-routing behavior.
+ * falling back to an unbounded channel. Without intent only registered official
+ * canonical models retain their legacy gateway candidates.
  *
  * @param {string} modelId
  * @param {{
  *   strategy?: 'auto' | 'stability_first' | 'cost_first' | string,
  *   group?: string,
- *   allowedGroups?: string[],
+ *   allowedGroups?: unknown,
+ *   runtimeSettings?: Record<string, unknown>,
  * }} [options]
  * @returns {{ candidates: string[], unresolvedGroups: string[] }}
  */
@@ -1321,12 +1337,24 @@ export function resolveChannelPlan(modelId, options = {}) {
   const { modelId: canonicalModel, group: inlineGroup } = parseModelAndGroup(modelId)
   if (!canonicalModel) return { candidates: [], unresolvedGroups: [] }
 
-  const requestedGroup = inlineGroup || (typeof options.group === 'string' ? options.group.trim() : '')
+  const fieldGroup = typeof options.group === 'string' ? options.group.trim() : ''
+  const requestedGroup = inlineGroup || fieldGroup
   const strategy = ROUTING_STRATEGIES.includes(options.strategy) ? options.strategy : 'auto'
   const allowed = normalizeAllowed(options.allowedGroups)
   const hasIntent = Boolean(requestedGroup || allowed || ROUTING_STRATEGIES.includes(options.strategy))
 
-  if (!hasIntent) return { candidates: gatewayCandidates(canonicalModel), unresolvedGroups: [] }
+  if (allowed?.size === 0) {
+    return {
+      candidates: [],
+      unresolvedGroups: Array.isArray(options.allowedGroups)
+        ? options.allowedGroups.filter((id) => typeof id === 'string')
+        : [],
+    }
+  }
+  if (!hasIntent) {
+    const registered = resolveDisposition(loadDispositions(), canonicalModel)?.disposition === 'canonical'
+    return { candidates: registered ? gatewayCandidates(canonicalModel) : [], unresolvedGroups: [] }
+  }
 
   const normalizedAllowed = Array.isArray(options.allowedGroups)
     ? options.allowedGroups.map((g) => (typeof g === 'string' ? g.trim() : '')).filter(Boolean)
@@ -1391,12 +1419,8 @@ export function resolveChannelPlan(modelId, options = {}) {
   if (groups.length === 0) {
     // No pool is configured for this model, so the intent cannot be honored.
     // Report the ids that could not be resolved instead of pretending they applied.
-    const unresolvedGroups = allowed ? [...options.allowedGroups].map((id) => String(id).trim()).filter(Boolean) : (requestedGroup ? [requestedGroup] : [])
-    const hasByokIntent = Boolean((requestedGroup && isByok(requestedGroup)) || hasAllowedByok)
-    if (hasByokIntent) {
-      return { candidates: [], unresolvedGroups }
-    }
-    return { candidates: gatewayCandidates(canonicalModel), unresolvedGroups }
+    const unresolvedGroups = allowed ? [...allowed] : (requestedGroup ? [requestedGroup] : [])
+    return { candidates: [], unresolvedGroups }
   }
 
   const isAllowed = (group) => !allowed
@@ -1411,29 +1435,30 @@ export function resolveChannelPlan(modelId, options = {}) {
   const enabled = groups.filter((group) => group.enabled)
 
   if (requestedGroup) {
-    const targetGroup = String(requestedGroup).toLowerCase().trim()
-    const isTargetGroup = (group) => {
-      if (!group) return false
-      const gid = String(group.id).toLowerCase().trim()
-      const wire = group.wireGroup ? String(group.wireGroup).toLowerCase().trim() : ''
-      return gid === targetGroup || wire === targetGroup
+    const matchingRows = (reference) => {
+      const target = reference.toLowerCase().trim()
+      const byId = groups.filter((group) => group.id.toLowerCase() === target)
+      // Distinct ids may share a wire group but select different upstream models.
+      return byId.length > 0 ? byId : groups.filter((group) => group.wireGroup?.toLowerCase() === target)
     }
-    const matched = groups.find(isTargetGroup)
-    const tail = enabled.filter((group) => !isTargetGroup(group))
-    // The pool restricts the failover tail too: naming one group is not a licence
-    // to try the caller's excluded (often pricier) groups.
-    const orderedTail = tail.filter(isAllowed).sort(comparatorFor(strategy))
-    const unresolvedGroups = matched ? [] : [requestedGroup]
-    if (!matched && (isByok(targetGroup) || !isOfficialChannelId(targetGroup))) {
-      return { candidates: [], unresolvedGroups }
+    let matches = matchingRows(requestedGroup)
+    if (inlineGroup && fieldGroup) {
+      const fieldMatches = matchingRows(fieldGroup)
+      matches = matches.filter((group) => fieldMatches.includes(group))
+      if (matches.length === 0) {
+        return { candidates: [], unresolvedGroups: [...new Set([inlineGroup, fieldGroup])] }
+      }
     }
-    // The named line leads through the same builder as the tail: naming `task` on a
-    // product whose lines point at different upstream models must route to *that*
-    // line's model, not to the product id.
-    const head = matched ? wireOf(matched) : `${canonicalModel}@${targetGroup}`
+    const matched = matches.find((group) => group.enabled && isAllowed(group))
+    if (!matched) return { candidates: [], unresolvedGroups: [requestedGroup] }
+    // Only an explicit allowed pool authorizes backup lines; a selection alone
+    // locks to the one resolved row, including its wire model and constraints.
+    const orderedTail = allowed
+      ? enabled.filter((group) => group !== matched && isAllowed(group)).sort(comparatorFor(strategy))
+      : []
     return {
-      candidates: [...new Set([head, ...orderedTail.map(wireOf)])],
-      unresolvedGroups,
+      candidates: [...new Set([wireOf(matched), ...orderedTail.map(wireOf)])],
+      unresolvedGroups: [],
     }
   }
 

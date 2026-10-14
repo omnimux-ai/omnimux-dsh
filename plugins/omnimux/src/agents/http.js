@@ -1,6 +1,7 @@
 import { sendJson, readJsonBody } from '../auth/http-routes.js'
 import { assertLocalWrite, readOriginHeaders } from '../apps/origin.js'
 import { findDescriptor } from '../catalog/composer-sync.js'
+import { resolveScenarioBindings } from '../settings/runtime-mode.js'
 import { KNOWN_AGENTS, scanLocalAgents, probeAgentBin, resolveBinPath } from './local.js'
 import { probeAgentAuth, launchAgentLogin } from './auth.js'
 import { createUpdateChecker, runAgentUpdate, detectInstallShape } from './updates.js'
@@ -216,20 +217,35 @@ export function registerAgentRoutes(webServer, deps = {}) {
       }
       try {
         if (!assertLocal(req, res)) return
-        const id = await readId(req)
+        const body = await readJsonBody(req)
+        const id = typeof body?.id === 'string' ? body.id.trim() : ''
+        const settings = getSettings()
+        const descriptor = findDescriptor(settings?.describe?.(), NAMESPACE)
+        if (!descriptor) throw Object.assign(new Error('settings unavailable'), { status: 503 })
         const agent = findAgent(id)
         if (!agent) {
           sendJson(res, 400, { ok: false, error: 'unknown agent' })
           return
         }
         const result = await probe(agent.bin)
+        const afterProbe = findDescriptor(settings.describe(), NAMESPACE)
+        if (afterProbe?.revision !== descriptor.revision) {
+          sendJson(res, 409, { ok: false, error: '配置已变化，请重新检查' })
+          return
+        }
         if (!result || result.installed !== true) {
-          await writeSettings(getSettings(), { runtimeAgentId: agent.id, runtimeAgentVerified: false })
           sendJson(res, 200, { ok: false, error: 'not-installed' })
           return
         }
-        await writeSettings(getSettings(), { runtimeAgentId: agent.id, runtimeAgentVerified: true })
-        sendJson(res, 200, { ok: true, version: typeof result.version === 'string' ? result.version : '' })
+        if (body.checkOnly !== true) {
+          const current = descriptor.value ?? settings?.get?.(NAMESPACE) ?? {}
+          await settings.update(NAMESPACE, {
+            runtimeAgentId: agent.id, runtimeAgentVerified: true,
+            scenarioBindings: { ...resolveScenarioBindings(current), text: { channel: 'agent' } },
+          }, descriptor.revision)
+        }
+        sendJson(res, 200, { ok: true, checkType: 'installed-program', saved: body.checkOnly !== true,
+          version: typeof result.version === 'string' ? result.version : '' })
       } catch (error) {
         const status = typeof error?.status === 'number' ? error.status : 500
         sendJson(res, status, { ok: false, error: typeof error?.message === 'string' ? error.message : String(error) })

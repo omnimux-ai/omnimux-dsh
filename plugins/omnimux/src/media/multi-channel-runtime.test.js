@@ -1,2098 +1,438 @@
 import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
-import {
-  executeOmnimuxMedia,
-  resolveEffectiveMediaModel,
-  isExternalMediaProvider,
-  EXTERNAL_MEDIA_PROVIDERS,
-} from './execute.js'
+import { before, after, describe, it } from 'node:test'
+import { executeOmnimuxMedia, resolveEffectiveMediaModel, isExternalMediaProvider, EXTERNAL_MEDIA_PROVIDERS } from './execute.js'
 import { DEFAULT_PROVIDER_ENDPOINTS } from '../byok/http.js'
 import { mountMedia } from './mount.js'
-import { assertRuntimeReady } from '../settings/runtime-mode.js'
+import { OmnimuxError } from './errors.js'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+let fixtureHome, previousHome
+before(() => { previousHome = process.env.DSH_HOME; fixtureHome = mkdtempSync(join(tmpdir(), 'multi-runtime-home-')); process.env.DSH_HOME = fixtureHome })
+after(() => { if (previousHome === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = previousHome; rmSync(fixtureHome, { recursive: true, force: true }) })
+
+const FAL_MEDIA = { defaultProvider: 'fal', providers: { fal: { protocol: 'openai-media', baseUrl: 'https://fal.fixture.invalid/v1', apiKeyEnv: 'OMNIMUX_MEDIA_KEY_FAL', models: { image: 'fixture-image', video: 'fixture-video' } } } }
+const OPENAI_MEDIA = { defaultProvider: 'openai', providers: { openai: { protocol: 'openai-media', baseUrl: 'https://openai.fixture.invalid/v1', apiKeyEnv: 'OMNIMUX_MEDIA_KEY_OPENAI', models: { image: 'fixture-image', video: 'fixture-video' } } } }
+const CUSTOM_MEDIA = { defaultProvider: 'custom', providers: { custom: { protocol: 'openai-media', baseUrl: 'https://custom.fixture.invalid/v1', apiKeyEnv: 'OMNIMUX_MEDIA_KEY_CUSTOM', models: { image: 'fixture-image' } } } }
+function falSettings() {
+  return { runtimeMode: 'agent', runtimeAgentId: 'fixture-agent', runtimeAgentVerified: true,
+    scenarioBindings: { text: { channel: 'agent' }, image: { channel: 'byok', provider: 'fal' }, video: { channel: 'pending' } },
+    byokProviders: [{ provider: 'fal', endpoint: 'https://fal.fixture.invalid/v1', models: { image: 'fixture-image' }, capabilities: ['image'] }] }
+}
+function openaiSettings() {
+  return { runtimeMode: 'agent', runtimeAgentId: 'fixture-agent', runtimeAgentVerified: true,
+    scenarioBindings: { text: { channel: 'agent' }, image: { channel: 'byok', provider: 'openai' }, video: { channel: 'pending' } },
+    byokProviders: [{ provider: 'openai', endpoint: 'https://openai.fixture.invalid/v1', models: { image: 'fixture-image' }, capabilities: ['image'] }] }
+}
+function customSettings() {
+  return { scenarioBindings: { image: { channel: 'byok', provider: 'custom' } },
+    byokProviders: [{ provider: 'custom', endpoint: 'https://custom.fixture.invalid/v1', models: { image: 'fixture-image' }, capabilities: ['image'] }] }
+}
+function credentials(ref) {
+  return { async resolve(requested) { assert.equal(requested, ref); return { value: 'fixture-provider-key' } } }
+}
+function submittedRuntime(check) {
+  return { async execute(req) { check(req); return { taskId: 'fixture-task', outputs: [] } } }
+}
+function submit(current, media, model, check = () => {}) {
+  return executeOmnimuxMedia('image', { dest: '/tmp/unused-multi.png', prompt: 'fixture', model, runtimeSettings: current, media,
+    credentials: credentials(media.defaultProvider === 'fal' ? 'OMNIMUX_MEDIA_KEY_FAL' : media.defaultProvider === 'openai' ? 'OMNIMUX_MEDIA_KEY_OPENAI' : 'OMNIMUX_MEDIA_KEY_CUSTOM'),
+    runtime: submittedRuntime(check), wait: false })
+}
+async function rejectImage(current, model, code = 'omnimux-unconfigured', media = FAL_MEDIA, extra = {}) {
+  let calls = 0
+  await assert.rejects(() => executeOmnimuxMedia('image', { dest: '/tmp/unused-reject.png', prompt: 'fixture', model,
+    runtimeSettings: current, media, group: extra.group, allowedGroups: extra.allowedGroups,
+    credentials: { async resolve() { calls++; throw new Error('unexpected credential') } },
+    runtime: { async execute() { calls++; throw new Error('unexpected runtime') } },
+    fetcher: async () => { calls++; throw new Error('unexpected HTTP') } }), (error) => error instanceof OmnimuxError && error.code === code)
+  assert.equal(calls, 0)
+}
+function mounted(read, execute, media = {}, kind = 'image') {
+  let api
+  mountMedia({ get(name) { if (name === 'settings') return { get: read } }, tools: { register() {} },
+    provide(name, value) { if (name === 'imageGenerate' && kind === 'image' || name === 'videoGenerate' && kind === 'video') api = value } }, { kind, execute, media, jsonOut: {}, gate: { capabilities: { media: true } } })
+  return api
+}
+
 describe('Multi-Channel Runtime & Effective Media Model', () => {
-  describe('resolveEffectiveMediaModel', () => {
+  describe('resolveEffectiveMediaModel legacy helper remains compatible', () => {
     it('strips channel suffix and prioritizes explicit inputModel', () => {
-      const settings = {
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImageModel: 'global-singleton-model',
-      }
-      assert.equal(
-        resolveEffectiveMediaModel('seedance-2-0@byok-fal', 'fal', 'video', settings),
-        'seedance-2-0',
-      )
-      assert.equal(
-        resolveEffectiveMediaModel('gpt-image-2.5@standard', 'openai', 'image', settings),
-        'gpt-image-2.5',
-      )
-      assert.equal(
-        resolveEffectiveMediaModel('seedance-2-0', 'fal', 'video', settings),
-        'seedance-2-0',
-      )
+      const settings = { runtimeMediaProvider: 'fal', runtimeKeyVerified: true, runtimeMediaImageModel: 'global-singleton-model' }
+      assert.equal(resolveEffectiveMediaModel('seedance-2-0@byok-fal', 'fal', 'video', settings), 'seedance-2-0')
+      assert.equal(resolveEffectiveMediaModel('gpt-image-2.5@standard', 'openai', 'image', settings), 'gpt-image-2.5')
+      assert.equal(resolveEffectiveMediaModel('seedance-2-0', 'fal', 'video', settings), 'seedance-2-0')
     })
-
     it('falls back to mediaChoice.activeModel when inputModel is not provided', () => {
-      const settings = {
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImageModel: 'custom-flux-pro',
-      }
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'fal', 'image', settings),
-        'custom-flux-pro',
-      )
-      assert.equal(
-        resolveEffectiveMediaModel('', 'fal', 'image', settings),
-        'custom-flux-pro',
-      )
-      assert.equal(
-        resolveEffectiveMediaModel('   ', 'fal', 'image', settings),
-        'custom-flux-pro',
-      )
+      const settings = { runtimeMediaProvider: 'fal', runtimeKeyVerified: true, runtimeMediaImageModel: 'custom-flux-pro' }
+      assert.equal(resolveEffectiveMediaModel(undefined, 'fal', 'image', settings), 'custom-flux-pro')
+      assert.equal(resolveEffectiveMediaModel('', 'fal', 'image', settings), 'custom-flux-pro')
+      assert.equal(resolveEffectiveMediaModel('   ', 'fal', 'image', settings), 'custom-flux-pro')
     })
-
     it('falls back to runtimeKeyModel when mediaChoice has no explicit provider', () => {
-      const settings = {
-        runtimeKeyModel: 'custom-model-id',
-      }
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'custom', 'image', settings),
-        'custom-model-id',
-      )
+      assert.equal(resolveEffectiveMediaModel(undefined, 'custom', 'image', { runtimeKeyModel: 'custom-model-id' }), 'custom-model-id')
     })
-
     it('falls back to DEFAULT_MEDIA_MODELS when neither is configured', () => {
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'fal', 'image', {}),
-        'fal-ai/flux/dev',
-      )
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'fal', 'video', {}),
-        'fal-ai/kling-video/v1/standard',
-      )
+      assert.equal(resolveEffectiveMediaModel(undefined, 'fal', 'image', {}), 'fal-ai/flux/dev')
+      assert.equal(resolveEffectiveMediaModel(undefined, 'fal', 'video', {}), 'fal-ai/kling-video/v1/standard')
     })
-
-    it('reads provider-specific model configuration from byokProviders when inputModel is omitted', () => {
-      const settings = {
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImageModel: 'flux-dev-default',
-        byokProviders: [
-          {
-            provider: 'openai',
-            verified: true,
-            models: {
-              image: 'dall-e-3-hd',
-            },
-          },
-          {
-            provider: 'openrouter',
-            verified: true,
-            model: 'midjourney-proxy-v1',
-          },
-          {
-            provider: 'unverified-provider',
-            verified: false,
-            model: 'should-never-be-read',
-          },
-        ],
-      }
-      // 1. 请求 openai provider 时读取 openai 专属模型
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'openai', 'image', settings),
-        'dall-e-3-hd',
-      )
-      // 2. 只有通用 model、没有模态能力声明时，不把它当成图片模型
-      assert.notEqual(
-        resolveEffectiveMediaModel(undefined, 'openrouter', 'image', settings),
-        'midjourney-proxy-v1',
-      )
-      // 3. 请求主 provider (fal) 时读取主配置模型
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'fal', 'image', settings),
-        'flux-dev-default',
-      )
-      // 4. 请求未通过验证的提供商时，绝不读取未验证记录的物理模型（防冒领），安全兜底
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'unverified-provider', 'image', settings),
-        'fal-ai/flux/dev',
-      )
+    it('reads provider-specific models without borrowing a generic or unverified record', () => {
+      const settings = { runtimeMediaProvider: 'fal', runtimeKeyVerified: true, runtimeMediaImageModel: 'flux-dev-default', byokProviders: [
+        { provider: 'openai', verified: true, models: { image: 'dall-e-3-hd' } },
+        { provider: 'openrouter', verified: true, model: 'midjourney-proxy-v1' },
+        { provider: 'unverified-provider', verified: false, model: 'should-never-be-read' }] }
+      assert.equal(resolveEffectiveMediaModel(undefined, 'openai', 'image', settings), 'dall-e-3-hd')
+      assert.notEqual(resolveEffectiveMediaModel(undefined, 'openrouter', 'image', settings), 'midjourney-proxy-v1')
+      assert.equal(resolveEffectiveMediaModel(undefined, 'fal', 'image', settings), 'flux-dev-default')
+      assert.equal(resolveEffectiveMediaModel(undefined, 'unverified-provider', 'image', settings), 'fal-ai/flux/dev')
     })
-
-    it('prioritizes explicit logical model when specified and falls back to provider physical model when omitted', () => {
-      const settings = {
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            models: {
-              image: 'fal-ai/flux/schnell',
-            },
-          },
-        ],
-      }
-      // 传入逻辑模型 seedream-5-0-pro@byok-fal 时，优先解析为该显式逻辑模型
-      assert.equal(
-        resolveEffectiveMediaModel('seedream-5-0-pro@byok-fal', 'fal', 'image', settings),
-        'seedream-5-0-pro',
-      )
-      // 未显式指定模型时，回退至该 BYOK 提供商指定的物理模型
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'fal', 'image', settings),
-        'fal-ai/flux/schnell',
-      )
+    it('prioritizes explicit logical model and otherwise reads the provider physical model', () => {
+      const settings = { runtimeMediaProvider: 'fal', runtimeKeyVerified: true, byokProviders: [{ provider: 'fal', verified: true, models: { image: 'fal-ai/flux/schnell' } }] }
+      assert.equal(resolveEffectiveMediaModel('seedream-5-0-pro@byok-fal', 'fal', 'image', settings), 'seedream-5-0-pro')
+      assert.equal(resolveEffectiveMediaModel(undefined, 'fal', 'image', settings), 'fal-ai/flux/schnell')
     })
-
-    it('strips bare channel prefix like @byok-fal and falls back safely to default model', () => {
-      const settings = {
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-      }
-      // 裸渠道前缀 @byok-fal 不能作为模型名，应截断为空并安全降级到默认模型
-      assert.equal(
-        resolveEffectiveMediaModel('@byok-fal', 'fal', 'image', settings),
-        'fal-ai/flux/dev',
-      )
-      assert.equal(
-        resolveEffectiveMediaModel('@official', 'fal', 'video', settings),
-        'fal-ai/kling-video/v1/standard',
-      )
+    it('strips bare channel prefixes and falls back safely', () => {
+      const settings = { runtimeMediaProvider: 'fal', runtimeKeyVerified: true }
+      assert.equal(resolveEffectiveMediaModel('@byok-fal', 'fal', 'image', settings), 'fal-ai/flux/dev')
+      assert.equal(resolveEffectiveMediaModel('@official', 'fal', 'video', settings), 'fal-ai/kling-video/v1/standard')
     })
-
-    it('prevents cross-provider activeModel leakage when requesting different BYOK provider', () => {
-      const settings = {
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImageModel: 'main-fal-exclusive-model',
-      }
-      // 当前 provider 为 openai，主 provider 为 fal，严禁读取 fal 的 activeModel 产生串线
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'openai', 'image', settings),
-        'fal-ai/flux/dev',
-      )
-      // 若当前 provider 与主 provider 匹配，才允许读取 activeModel
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'fal', 'image', settings),
-        'main-fal-exclusive-model',
-      )
+    it('prevents cross-provider activeModel leakage', () => {
+      const settings = { runtimeMediaProvider: 'fal', runtimeKeyVerified: true, runtimeMediaImageModel: 'main-fal-exclusive-model' }
+      assert.equal(resolveEffectiveMediaModel(undefined, 'openai', 'image', settings), 'fal-ai/flux/dev')
+      assert.equal(resolveEffectiveMediaModel(undefined, 'fal', 'image', settings), 'main-fal-exclusive-model')
     })
-
-    it('safely parses complex or multi-at model strings using parseModelAndGroup without corruption', () => {
-      // 保证复用 parseModelAndGroup：多于一个 @ 时 Fail-Closed，安全回退到默认模型杜绝畸变冒领
-      assert.equal(
-        resolveEffectiveMediaModel('seedance-2-0@standard@extra', 'fal', 'video', {}),
-        'fal-ai/kling-video/v1/standard',
-      )
-      assert.equal(
-        resolveEffectiveMediaModel('gpt-image-2.5@byok-fal', 'fal', 'image', {}),
-        'gpt-image-2.5',
-      )
+    it('parses multi-at model strings without corruption', () => {
+      assert.equal(resolveEffectiveMediaModel('seedance-2-0@standard@extra', 'fal', 'video', {}), 'fal-ai/kling-video/v1/standard')
+      assert.equal(resolveEffectiveMediaModel('gpt-image-2.5@byok-fal', 'fal', 'image', {}), 'gpt-image-2.5')
     })
-
-    it('defensively validates runtimeMediaProvider string type and safely falls back to fal when malformed', () => {
-      for (const invalid of [123, true, {}, [], null, '   ']) {
-        const settings = {
-          runtimeMediaProvider: invalid,
-        }
-        assert.equal(
-          resolveEffectiveMediaModel(undefined, undefined, 'image', settings),
-          'fal-ai/flux/dev',
-        )
-      }
+    it('validates malformed runtimeMediaProvider values', () => {
+      for (const invalid of [123, true, {}, [], null, '   ']) assert.equal(resolveEffectiveMediaModel(undefined, undefined, 'image', { runtimeMediaProvider: invalid }), 'fal-ai/flux/dev')
     })
-
-    it('prioritizes explicit logical model when specified even if provider has configured physical model', () => {
-      const settings = {
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImageModel: 'flux-dev-real',
-      }
-      // 传入显式逻辑模型时，优先返回该模型 ID
-      assert.equal(
-        resolveEffectiveMediaModel('seedream-5-0', 'fal', 'image', settings),
-        'seedream-5-0',
-      )
-      // 若外部提供商未显式传入模型 ID，才解析为主配置的物理模型
-      assert.equal(
-        resolveEffectiveMediaModel(undefined, 'fal', 'image', settings),
-        'flux-dev-real',
-      )
-      assert.equal(
-        resolveEffectiveMediaModel('seedance-2-0', 'fal', 'video', settings),
-        'seedance-2-0',
-      )
+    it('explicit logical models override the main physical model', () => {
+      const settings = { runtimeMediaProvider: 'fal', runtimeKeyVerified: true, runtimeMediaImageModel: 'flux-dev-real' }
+      assert.equal(resolveEffectiveMediaModel('seedream-5-0', 'fal', 'image', settings), 'seedream-5-0')
+      assert.equal(resolveEffectiveMediaModel(undefined, 'fal', 'image', settings), 'flux-dev-real')
+      assert.equal(resolveEffectiveMediaModel('seedance-2-0', 'fal', 'video', settings), 'seedance-2-0')
     })
-
-    it('never lets unverified byok record model win over verified record without model', () => {
-      const settings = {
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        byokProviders: [
-          // 已验证记录：未配置物理模型
-          {
-            provider: 'fal',
-            verified: true,
-          },
-          // 未验证记录：配置了物理模型，绝不能胜出！
-          {
-            provider: 'fal',
-            verified: false,
-            models: {
-              image: 'malicious-unverified-model',
-            },
-          },
-        ],
-      }
-      // 不传 inputModel，且已验证记录无模型，不能被未验证记录的模型胜出，回退到主配置/默认模型
+    it('unverified records never win over a verified record without model', () => {
+      const settings = { runtimeMediaProvider: 'fal', runtimeKeyVerified: true, byokProviders: [{ provider: 'fal', verified: true }, { provider: 'fal', verified: false, models: { image: 'malicious-unverified-model' } }] }
       const resolved = resolveEffectiveMediaModel(undefined, 'fal', 'image', settings)
       assert.notEqual(resolved, 'malicious-unverified-model')
       assert.equal(resolved, 'fal-ai/flux/dev')
     })
-
-    it('strictly validates modal capability to prevent image generation picking video model from same-provider records in byokProviders', () => {
-      const settings = {
-        byokProviders: [
-          // 记录 1：同名 provider，但显式声明为 video 模态
-          {
-            provider: 'siliconflow',
-            verified: true,
-            capabilities: ['video'],
-            model: 'wan-2.1',
-            videoModel: 'wan-2.1',
-          },
-          // 记录 2：同名 provider，显式声明为 image 模态
-          {
-            provider: 'siliconflow',
-            verified: true,
-            capabilities: ['image'],
-            model: 'flux-schnell',
-            imageModel: 'flux-schnell',
-          },
-        ],
-      }
-      // 请求 image 模态，严禁误取到前面的 video 专线模型 wan-2.1
-      const resolved = resolveEffectiveMediaModel(undefined, 'siliconflow', 'image', settings)
-      assert.equal(resolved, 'flux-schnell')
-
-      // 反向校验：请求 video 模态，必须正确取到 wan-2.1
-      const resolvedVideo = resolveEffectiveMediaModel(undefined, 'siliconflow', 'video', settings)
-      assert.equal(resolvedVideo, 'wan-2.1')
+    it('legacy helper selects the modal model from same-provider records', () => {
+      const settings = { byokProviders: [{ provider: 'siliconflow', verified: true, capabilities: ['video'], model: 'wan-2.1', videoModel: 'wan-2.1' },
+        { provider: 'siliconflow', verified: true, capabilities: ['image'], model: 'flux-schnell', imageModel: 'flux-schnell' }] }
+      assert.equal(resolveEffectiveMediaModel(undefined, 'siliconflow', 'image', settings), 'flux-schnell')
+      assert.equal(resolveEffectiveMediaModel(undefined, 'siliconflow', 'video', settings), 'wan-2.1')
     })
   })
 
-  describe('executeOmnimuxMedia with agent mode and BYOK channel routing', () => {
-    it('executes without throwing in agent mode when fal is verified and byok-fal is selected', async () => {
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-claude',
-        runtimeAgentVerified: true,
-        runtimeKeyVerified: true,
-        runtimeMediaProvider: 'fal',
-        runtimeMediaImage: true,
-      }
-
-      // 验证 assertRuntimeReady 不再抛错
-      assert.doesNotThrow(() => assertRuntimeReady(settings, 'image'))
-
-      let capturedReq = null
-      const fakeRuntime = {
-        execute: async (req) => {
-          capturedReq = req
-          return {
-            taskId: 'task-fake-123',
-            outputs: [],
-          }
-        },
-      }
-
-      const credentials = {
-        resolve: async (ref) => {
-          if (ref === 'OMNIMUX_MEDIA_KEY_FAL') return { value: 'fake-fal-key' }
-          return undefined
-        },
-      }
-
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/test-output.png',
-        model: 'seedance-2-0@byok-fal',
-        prompt: 'test prompt',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-
-      assert.equal(result.mode, 'submitted')
-      assert.equal(result.taskId, 'task-fake-123')
-      assert.ok(capturedReq)
-      // 核心断言：传入的逻辑模型 seedance-2-0 未被单例模型篡改，剥离了 @byok-fal
-      assert.equal(capturedReq.input.model, 'seedance-2-0')
-      assert.equal(capturedReq.providerId, 'fal')
+  describe('explicit media choices and exact registered provider configuration', () => {
+    it('agent text does not block an explicitly configured fal media request', async () => {
+      let called = 0
+      const result = await submit(falSettings(), FAL_MEDIA, 'explicit-image@byok-fal', (req) => { called++; assert.equal(req.providerId, 'fal'); assert.equal(req.input.model, 'explicit-image') })
+      assert.equal(result.mode, 'submitted'); assert.equal(result.taskId, 'fixture-task'); assert.equal(called, 1)
     })
-
-    it('handles live mode with mock fetcher without triggering network guard', async () => {
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-claude',
-        runtimeAgentVerified: true,
-        runtimeKeyVerified: true,
-        runtimeMediaProvider: 'fal',
-        runtimeMediaImage: true,
+    it('registered media executes the actual protocol and collects bytes without a real service', async (t) => {
+      const dir = mkdtempSync(join(tmpdir(), 'multi-protocol-')); t.after(() => rmSync(dir, { recursive: true, force: true }))
+      const calls = []
+      const fetcher = async (url, init) => {
+        calls.push({ url: String(url), method: init.method, auth: new Headers(init.headers).get('authorization') })
+        if (init.method === 'POST') { assert.equal(JSON.parse(init.body).model, 'fixture-image'); return new Response(JSON.stringify({ task_id: 'registered-task' }), { headers: { 'content-type': 'application/json' } }) }
+        if (String(url).endsWith('/content')) return new Response('png', { headers: { 'content-type': 'image/png' } })
+        return new Response(JSON.stringify({ status: 'completed', data: [{ url: 'https://fal.fixture.invalid/v1/images/registered/content' }] }), { headers: { 'content-type': 'application/json' } })
       }
+      const first = await executeOmnimuxMedia('image', { dest: join(dir, 'image.png'), prompt: 'fixture', runtimeSettings: falSettings(), media: FAL_MEDIA, credentials: credentials('OMNIMUX_MEDIA_KEY_FAL'), fetcher, wait: false })
+      assert.equal(first.mode, 'submitted'); assert.equal(first.taskId, 'registered-task'); assert.match(first.taskRef, /^mtask_/)
+      const result = await executeOmnimuxMedia('image', { taskRef: first.taskRef, dest: join(dir, 'image.png'), runtimeSettings: falSettings(), media: FAL_MEDIA, credentials: credentials('OMNIMUX_MEDIA_KEY_FAL'), fetcher })
+      assert.equal(result.mode, 'live'); assert.equal(result.taskId, 'registered-task'); assert.equal(result.taskRef, first.taskRef); assert.equal(result.url, 'https://fal.fixture.invalid/v1/images/registered/content'); assert.equal(readFileSync(join(dir, 'image.png'), 'utf8'), 'png')
+      assert.equal(calls.length, 3); assert.equal(calls[0].method, 'POST'); assert.notEqual(calls[1].method, 'POST'); assert.notEqual(calls[2].method, 'POST')
+      assert.ok(calls.every((call) => call.url.startsWith('https://fal.fixture.invalid/v1/')))
+      assert.equal(calls[0].auth, 'Bearer fixture-provider-key'); assert.equal(calls[1].auth, 'Bearer fixture-provider-key')
+      assert.equal(calls[2].auth, null, 'an artifact URL without explicit credential-origin authorization cannot inherit the provider key')
+    })
+    it('unknown or incompletely configured BYOK channels fail before credentials', async () => {
+      await rejectImage({ byokProviders: [{ provider: 'openai', verified: false }] }, 'fixture@byok-openai')
+      await rejectImage({}, 'fixture@byok-custom')
+    })
+    it('unsupported media kinds are invalid requests', async () => {
+      await assert.rejects(() => executeOmnimuxMedia('invalid-cap', { dest: '/tmp/unused', prompt: 'fixture' }), { code: 'omnimux-invalid-request' })
+    })
+    it('bare BYOK channel names are invalid requests', async () => { await rejectImage({}, 'fixture@byok-', 'omnimux-invalid-request') })
+    it('independent openai media remains available with no main mediaChoice', async () => {
+      const result = await submit(openaiSettings(), OPENAI_MEDIA, 'explicit-image@byok-openai')
+      assert.equal(result.mode, 'submitted'); assert.equal(result.taskId, 'fixture-task')
+    })
+    it('image configuration never enables a requested video capability', async () => {
+      let calls = 0
+      await assert.rejects(() => executeOmnimuxMedia('video', { dest: '/tmp/unused.mp4', prompt: 'fixture', model: 'fixture@byok-fal', runtimeSettings: falSettings(), media: FAL_MEDIA,
+        credentials: { async resolve() { calls++; } }, fetcher: async () => { calls++; } }), { code: 'omnimux-unconfigured' })
+      assert.equal(calls, 0)
+    })
+    it('same-provider duplicate records are rejected rather than selecting the first verified one', async () => {
+      const current = falSettings(); current.byokProviders.push({ provider: 'fal', endpoint: 'https://other.fixture.invalid/v1', models: { image: 'other-image' }, capabilities: ['image'], verified: true })
+      await rejectImage(current, 'fixture@byok-fal')
+    })
+    it('unverified duplicate candidates cannot shadow or silently inherit the main source', async () => {
+      const current = falSettings(); current.runtimeKeyVerified = true; current.runtimeMediaProvider = 'fal'; current.runtimeMediaImage = true
+      current.byokProviders.push({ provider: 'fal', verified: false, image: false, endpoint: 'https://unverified.fixture.invalid/v1' })
+      await rejectImage(current, 'fixture@byok-fal')
+    })
+    it('missing provider and generic legacy keys never establish media authorization', async () => {
+      await rejectImage({ runtimeMode: 'agent', runtimeKeyVerified: true, runtimeMediaImage: true }, 'fixture@byok-fal')
+      let http = 0, refs = []
+      const current = { scenarioBindings: { image: { channel: 'byok', provider: 'openrouter' } }, byokProviders: [{ provider: 'openrouter', endpoint: 'https://router.fixture.invalid/v1', models: { image: 'fixture' }, capabilities: ['image'] }] }
+      await assert.rejects(() => executeOmnimuxMedia('image', { dest: '/tmp/unused.png', prompt: 'fixture', runtimeSettings: current,
+        env: { OMNIMUX_MEDIA_KEY: 'must-not-leak' }, credentials: { async resolve(ref) { refs.push(ref); return undefined } }, fetcher: async () => { http++; } }), { code: 'omnimux-unconfigured' })
+      assert.deepEqual(refs, ['OMNIMUX_MEDIA_KEY_OPENROUTER']); assert.equal(http, 0)
+    })
+    it('custom provider missing endpoint is rejected', async () => {
+      const current = customSettings(); current.byokProviders[0].endpoint = '  '; await rejectImage(current, 'fixture@byok-custom', 'omnimux-unconfigured', CUSTOM_MEDIA)
+    })
+    it('custom provider non-HTTP endpoint is rejected', async () => {
+      const current = customSettings(); current.byokProviders[0].endpoint = 'ftp://fixture.invalid/api'; await rejectImage(current, 'fixture@byok-custom', 'omnimux-unconfigured', CUSTOM_MEDIA)
+    })
+    it('implicit custom choice with empty endpoint is rejected', async () => {
+      const current = customSettings(); current.byokProviders[0].endpoint = ''; await rejectImage(current, undefined, 'omnimux-unconfigured', CUSTOM_MEDIA)
+    })
+    it('modal-mismatched duplicate records cannot silently shadow the selected video source', async () => {
+      let calls = 0
+      const current = { scenarioBindings: { video: { channel: 'byok', provider: 'fal' } }, byokProviders: [
+        { provider: 'fal', endpoint: 'https://fal.fixture.invalid/v1', models: { video: 'fixture-video' }, capabilities: ['video'] },
+        { provider: 'fal', endpoint: 'https://other.fixture.invalid/v1', models: { image: 'fixture-image' }, capabilities: ['image'] }] }
+      await assert.rejects(() => executeOmnimuxMedia('video', { dest: '/tmp/unused.mp4', prompt: 'fixture', runtimeSettings: current, media: FAL_MEDIA, credentials: { async resolve() { calls++; } } }), { code: 'omnimux-unconfigured' })
+      assert.equal(calls, 0)
+    })
+    it('explicit configured BYOK does not require the obsolete main verified flag', async () => {
+      const current = falSettings(); current.runtimeMediaProvider = ''; current.runtimeKeyVerified = false
+      const result = await submit(current, FAL_MEDIA, 'explicit-image@byok-fal'); assert.equal(result.mode, 'submitted')
+    })
+    it('unknown explicit channel fails before credentials', async () => { await rejectImage(falSettings(), 'fixture@unknown-custom-group', 'unknown-group') })
+    it('BYOK execution discards forged client env and uses only the selected provider reference', async () => {
+      let calls = 0
+      const result = await executeOmnimuxMedia('image', { dest: '/tmp/unused.png', prompt: 'fixture', model: 'fixture@byok-custom', runtimeSettings: customSettings(), media: CUSTOM_MEDIA,
+        credentials: credentials('OMNIMUX_MEDIA_KEY_CUSTOM'), env: { UNTRUSTED_CLIENT_VAR: 'malicious', OMNIMUX_TOKEN: 'forged' },
+        runtime: submittedRuntime((req) => { calls++; assert.equal(req.providerId, 'custom'); assert.equal(req.input.model, 'fixture'); assert.equal(req.input.OMNIMUX_TOKEN, undefined); assert.equal(req.input.UNTRUSTED_CLIENT_VAR, undefined) }), wait: false })
+      assert.equal(result.mode, 'submitted'); assert.equal(calls, 1)
+    })
+  })
 
-      const fakeRuntime = {
-        execute: async () => ({
-          taskId: 'task-live-456',
-          outputs: [{ type: 'image', url: 'https://mock.local/result.png' }],
-        }),
+  describe('mounted media authority and independent scenarios', () => {
+    it('official catalogue is independent of agent chat, but unknown models/groups and incomplete BYOK cannot penetrate', async () => {
+      let current = { runtimeMode: 'agent', runtimeAgentId: 'fixture', runtimeAgentVerified: true }, calls = 0, captured
+      const api = mounted(() => current, (req) => { calls++; captured = req; return { ok: true } })
+      assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'unregistered-custom-model' }), { code: 'omnimux-unconfigured' }); assert.equal(calls, 0)
+      await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5' }); assert.equal(captured.provider, 'omnimux')
+      const video = mounted(() => current, (req) => { calls++; captured = req; return { ok: true } }, {}, 'video')
+      for (const model of ['seedance-2-0', 'minimax-h3', 'seedance-2-0@official']) {
+        await video.execute({ dest: '/tmp/unused.mp4', model }); assert.equal(captured.provider, 'omnimux')
       }
-
-      const mockFetcher = async () => new Response(new Uint8Array([137, 80, 78, 71]), {
-        status: 200,
-        headers: { 'content-type': 'image/png' },
-      })
-
-      const credentials = {
-        resolve: async (ref) => {
-          if (ref === 'OMNIMUX_MEDIA_KEY_FAL') return { value: 'fake-fal-key' }
-          return undefined
-        },
-      }
-
+      const before = calls
+      assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'fixture@byok-fal' }), { code: 'omnimux-unconfigured' })
+      assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0@unknown-custom-channel' }), { code: 'unknown-group' })
+      assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@official' }), { code: 'unknown-group' }); assert.equal(calls, before)
+      await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@standard' }); assert.equal(captured.provider, 'omnimux')
+      await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5', provider: 'omnimux' }); assert.equal(captured.provider, 'omnimux')
+      current = { runtimeMode: 'key', runtimeKeyVerified: false }; await video.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0@official' }); assert.equal(captured.provider, 'omnimux')
+      current = { runtimeMode: 'official' }; await video.execute({ dest: '/tmp/unused.mp4', model: 'seedance-2-0' }); assert.equal(captured.provider, 'omnimux')
+      current = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false, allowOfficialMediaFallback: false }
+      assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'unregistered-custom-model' }), { code: 'omnimux-unconfigured' })
+      current.allowOfficialMediaFallback = true; await video.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0' }); assert.equal(captured.provider, 'omnimux')
+      await video.execute({ dest: '/tmp/unused.mp4', model: 'seedance-2-0@official', env: { OMNIMUX_API_KEY: 'forged', UNTRUSTED_CLIENT_VAR: 'forged' } })
+      assert.equal(captured.env.UNTRUSTED_CLIENT_VAR, undefined); assert.notEqual(captured.env.OMNIMUX_API_KEY, 'forged')
+    })
+    it('an explicitly disabled image remains blocked despite its declared model, capability and registered protocol', async () => {
+      const current = falSettings(); current.byokProviders[0].image = false
+      assert.deepEqual(current.byokProviders[0].capabilities, ['image'])
+      assert.equal(current.byokProviders[0].models.image, 'fixture-image')
+      assert.equal(current.byokProviders[0].endpoint, FAL_MEDIA.providers.fal.baseUrl)
+      await rejectImage(current, 'fixture-image@byok-fal')
+    })
+    it('an image excluded by capabilities remains blocked without an explicit image flag', async () => {
+      const current = falSettings(); current.byokProviders[0].capabilities = ['video']
+      assert.equal(Object.hasOwn(current.byokProviders[0], 'image'), false)
+      assert.equal(current.byokProviders[0].models.image, 'fixture-image')
+      assert.equal(current.byokProviders[0].endpoint, FAL_MEDIA.providers.fal.baseUrl)
+      await rejectImage(current, 'fixture-image@byok-fal')
+    })
+    it('verified record with no modal declarations does not authorize media', async () => {
+      const current = falSettings(); current.byokProviders = [{ provider: 'fal', verified: true, endpoint: 'https://fal.fixture.invalid/v1' }]
+      await rejectImage(current, 'fixture@byok-fal')
+    })
+    it('declared modal model alone is not universal support; exact capabilities and adapter are required', async () => {
+      const current = falSettings(); current.byokProviders[0].capabilities = []
+      await rejectImage(current, 'fixture@byok-fal')
+      current.byokProviders[0].capabilities = ['image']; assert.equal((await submit(current, FAL_MEDIA, 'fixture@byok-fal')).mode, 'submitted')
+    })
+    it('official catalogue request never silently routes to a ready BYOK source', async () => {
+      let provider
+      const result = await executeOmnimuxMedia('image', { dest: '/tmp/unused.png', prompt: 'fixture', model: 'gpt-image-2.5', runtimeSettings: falSettings(), env: { OMNIMUX_API_KEY: 'sk-fixture' },
+        runtime: submittedRuntime((req) => { provider = req.providerId }), wait: false })
+      assert.equal(provider, 'omnimux'); assert.equal(result.mode, 'submitted')
+    })
+    it('legacy official state keeps saved official image generation live alongside ready BYOK metadata', async (t) => {
+      const dir = mkdtempSync(join(tmpdir(), 'official-ready-byok-'))
+      t.after(() => rmSync(dir, { recursive: true, force: true }))
+      const current = falSettings()
+      current.runtimeMode = 'official'
+      current.runtimeKeyVerified = true
+      current.runtimeMediaProvider = 'fal'
+      current.runtimeMediaImage = true
+      current.runtimeMediaImageModel = 'fixture-image'
+      current.runtimeKeyEndpoint = 'https://fal.fixture.invalid/v1'
+      current.scenarioBindings.image = { channel: 'official' }
+      current.byokProviders[0].verified = true
+      current.byokProviders[0].image = true
+      const media = { defaultProvider: 'omnimux', providers: {
+        fal: FAL_MEDIA.providers.fal,
+        omnimux: { protocol: 'openai-media', baseUrl: 'https://api.omnimux.ai/v1', apiKeyEnv: 'OMNIMUX_API_KEY', models: { image: 'gpt-image-2.5' } },
+      } }
+      const dest = join(dir, 'official.png'), refs = [], requests = []
       const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/test-live-output.png',
-        model: 'seedance-2-0@byok-fal',
-        prompt: 'test prompt',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        fetcher: mockFetcher,
-        wait: true,
+        dest, prompt: 'official lamp', model: 'gpt-image-2.5', runtimeSettings: current, media, env: {}, wait: true,
+        credentials: { async resolve(ref) { refs.push(ref); assert.equal(ref, 'OMNIMUX_API_KEY'); return { value: 'sk-official-coexistence-fixture' } } },
+        fetcher: async (url, init) => {
+          requests.push({ url: String(url), method: init.method, auth: new Headers(init.headers).get('authorization'), body: JSON.parse(init.body) })
+          assert.equal(String(url), 'https://api.omnimux.ai/v1/images/generations')
+          return new Response(JSON.stringify({ data: [{ b64_json: 'iVBORw==' }] }), { headers: { 'content-type': 'application/json' } })
+        },
       })
-
       assert.equal(result.mode, 'live')
-      assert.equal(result.taskId, 'task-live-456')
-      assert.equal(result.url, 'https://mock.local/result.png')
+      assert.deepEqual(refs, ['OMNIMUX_API_KEY'])
+      assert.equal(requests.length, 1)
+      assert.equal(requests[0].method, 'POST')
+      assert.equal(requests[0].auth, 'Bearer sk-official-coexistence-fixture')
+      assert.equal(requests[0].body.model, 'gpt-image-2.5')
+      assert.equal(requests[0].body.prompt, 'official lamp')
+      assert.deepEqual(readFileSync(dest), Buffer.from([137, 80, 78, 71]))
     })
-
-    it('throws omnimux-unconfigured when byok channel is requested but provider is unconfigured or unverified', async () => {
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-claude',
-        runtimeAgentVerified: true,
-        // 主配置是 fal，且已验证
-        runtimeKeyVerified: true,
-        runtimeMediaProvider: 'fal',
-        runtimeMediaImage: true,
-        byokProviders: [
-          // openai 未通过验证
-          { provider: 'openai', verified: false },
-        ],
-      }
-
-      // 请求未验证的 byok-openai 渠道，必须抛出 omnimux-unconfigured
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test-unverified.png',
-          model: 'seedance-2-0@byok-openai',
-          prompt: 'test prompt',
-          runtimeSettings: settings,
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /自备渠道 openai 未配置或未通过验证/)
-          return true
-        },
-      )
-
-      // 请求完全未配置的 byok-custom 渠道，也必须抛出 omnimux-unconfigured
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test-unconfigured.png',
-          model: 'seedance-2-0@byok-custom',
-          prompt: 'test prompt',
-          runtimeSettings: settings,
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /自备渠道 custom 未配置或未通过验证/)
-          return true
-        },
-      )
+    it('provider credentials are resolved per request, never from forged client env or stale verification', async () => {
+      let http = 0, refs = []
+      await assert.rejects(() => executeOmnimuxMedia('image', { dest: '/tmp/unused.png', prompt: 'fixture', runtimeSettings: falSettings(), media: FAL_MEDIA,
+        env: { OMNIMUX_MEDIA_KEY_FAL: 'forged-client-key' }, credentials: { async resolve(ref) { refs.push(ref); return undefined } }, fetcher: async () => { http++; } }), { code: 'omnimux-unconfigured' })
+      assert.equal(http, 0); assert.deepEqual(refs, ['OMNIMUX_MEDIA_KEY_FAL'])
+      assert.equal((await submit(falSettings(), FAL_MEDIA, 'fixture@byok-fal')).mode, 'submitted')
     })
-
-    it('rejects unsupported capability types strictly with omnimux-invalid-request', async () => {
-      await assert.rejects(
-        () => executeOmnimuxMedia('invalid-cap', {
-          dest: '/tmp/test.png',
-          prompt: 'test',
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-invalid-request')
-          assert.match(err.message, /不支持的媒体能力类型/)
-          return true
-        },
-      )
+    it('capabilities apply independently to image and video', async () => {
+      assert.equal((await submit(openaiSettings(), OPENAI_MEDIA, 'fixture@byok-openai')).mode, 'submitted')
+      let calls = 0
+      await assert.rejects(() => executeOmnimuxMedia('video', { dest: '/tmp/unused.mp4', prompt: 'fixture', model: 'fixture@byok-openai', runtimeSettings: openaiSettings(), media: OPENAI_MEDIA,
+        credentials: { async resolve() { calls++; } } }), { code: 'omnimux-unconfigured' }); assert.equal(calls, 0)
     })
-
-    it('rejects bare BYOK channel prefix missing provider name', async () => {
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test.png',
-          model: 'seedance-2-0@byok-',
-          prompt: 'test',
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-invalid-request')
-          assert.match(err.message, /BYOK 渠道名称不合法或缺少提供商标识/)
-          return true
-        },
-      )
-    })
-
-    it('does not falsely block BYOK channel in agent mode when main mediaChoice is unready', async () => {
-      // 场景：Agent 模式下，主媒体配置未开启（runtimeKeyVerified 为 false），但 byokProviders 列表中配置并验证了 openai
-      const agentSettings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-agent',
-        runtimeAgentVerified: true,
-        runtimeKeyVerified: false,
-        byokProviders: [
-          {
-            provider: 'openai',
-            verified: true,
-            image: true,
-          },
-        ],
-      }
-
-      let executed = false
-      const fakeRuntime = {
-        execute: async () => {
-          executed = true
-          return { taskId: 'task-openai-1', outputs: [] }
-        },
-      }
-
-      const credentials = {
-        resolve: async (ref) => {
-          if (ref === 'OMNIMUX_MEDIA_KEY_OPENAI') return { value: 'sk-openai-key' }
-          return undefined
-        },
-      }
-
-      // 请求合法已配置的 byok-openai 渠道，绝不能被“本机助手只承接文字”拦截
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/openai-out.png',
-        model: 'seedance-2-0@byok-openai',
-        prompt: 'test prompt',
-        runtimeSettings: agentSettings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-
-      assert.equal(executed, true)
-      assert.equal(result.mode, 'submitted')
-      assert.equal(result.taskId, 'task-openai-1')
-    })
-
-    it('strictly throws when requested BYOK channel has capability disabled even if main provider has it enabled', async () => {
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-agent',
-        runtimeAgentVerified: true,
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImage: true,
-        runtimeMediaVideo: true,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            image: true,
-            video: false,
-          },
-        ],
-      }
-
-      await assert.rejects(
-        () => executeOmnimuxMedia('video', {
-          dest: '/tmp/video-out.mp4',
-          model: 'seedance-2-0@byok-fal',
-          prompt: 'test video',
-          runtimeSettings: settings,
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /媒体生成提供商未开启视频/)
-          return true
-        },
-      )
-    })
-
-    it('robustly selects verified item when multiple records exist for same provider in byokProviders', async () => {
-      let executed = false
-      const fakeRuntime = {
-        execute: async (req) => {
-          executed = true
-          assert.equal(req.providerId, 'fal')
-          return { taskId: 'task-multi-fal-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async () => ({ value: 'fake-multi-key' }),
-      }
-      const multiSettings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-agent',
-        runtimeAgentVerified: true,
-        byokProviders: [
-          // 前置失效记录（未验证）
-          { provider: 'fal', verified: false, image: true },
-          // 前置失效记录（能力被显式禁用）
-          { provider: 'fal', verified: true, image: false },
-          // 后置有效记录（已验证且开启对应模态）
-          { provider: 'fal', verified: true, image: true },
-        ],
-      }
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/multi-test.png',
-        model: 'seedance-2-0@byok-fal',
-        prompt: 'test multi',
-        runtimeSettings: multiSettings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(executed, true)
-      assert.equal(result.mode, 'submitted')
-      assert.equal(result.taskId, 'task-multi-fal-1')
-    })
-
-    it('prevents unverified byok candidates from shadowing main provider valid configuration', async () => {
-      let executed = false
-      let capturedReq = null
-      const fakeRuntime = {
-        execute: async (req) => {
-          executed = true
-          capturedReq = req
-          return { taskId: 'task-main-fal-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async () => ({ value: 'fake-fal-key' }),
-      }
-      const settings = {
-        runtimeMode: 'key',
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImage: true,
-        runtimeMediaImageModel: 'flux-main-model',
-        byokProviders: [
-          // 未通过验证的候选记录，严禁越权遮蔽主提供商有效配置
-          { provider: 'fal', verified: false, image: false, endpoint: 'https://unverified-invalid-endpoint.com' },
-        ],
-      }
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/shadowing-test.png',
-        model: 'seedance-2-0@byok-fal',
-        prompt: 'test shadowing protection',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(executed, true)
-      assert.equal(result.mode, 'submitted')
-      assert.equal(result.taskId, 'task-main-fal-1')
-      // 验证未被未验证候选记录篡改 endpoint
-      assert.notEqual(capturedReq?.endpoint, 'https://unverified-invalid-endpoint.com')
-    })
-
-    it('does not silently fallback to fal when runtimeMediaProvider is missing and restricts BYOK_KEY_REF to fal only', async () => {
-      // 1. runtimeMediaProvider 缺失时，即使 runtimeKeyVerified: true，请求 @byok-fal 也不能静默当作已验证
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/fal-out.png',
-          model: 'seedance-2-0@byok-fal',
-          prompt: 'test',
-          runtimeSettings: {
-            runtimeMode: 'agent',
-            runtimeAgentId: 'local-agent',
-            runtimeAgentVerified: true,
-            runtimeKeyVerified: true,
-            runtimeMediaImage: true,
-          },
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /自备渠道 fal 未配置或未通过验证/)
-          return true
-        },
-      )
-
-      // 2. 非 fal 的提供商（如 openrouter）在缺少专属 key 时，绝不回退读取 BYOK_KEY_REF (OMNIMUX_MEDIA_KEY)
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/or-out.png',
-          model: 'seedance-2-0@byok-openrouter',
-          prompt: 'test',
-          runtimeSettings: {
-            runtimeMode: 'agent',
-            runtimeAgentId: 'local-agent',
-            runtimeAgentVerified: true,
-            byokProviders: [
-              { provider: 'openrouter', verified: true, image: true },
-            ],
-          },
-          env: {
-            OMNIMUX_MEDIA_KEY: 'fal-secret-key-must-not-leak',
-          },
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /openrouter 媒体 API 密钥未找到/)
-          return true
-        },
-      )
-    })
-
-    it('throws omnimux-unconfigured when custom provider endpoint is missing', async () => {
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'claude',
-        runtimeAgentVerified: true,
-        byokProviders: [
-          { provider: 'custom', verified: true, endpoint: '  ', image: true },
-        ],
-      }
-      await assert.rejects(
-        executeOmnimuxMedia('image', {
-          dest: '/tmp/test.png',
-          model: 'gpt-image-2.5@byok-custom',
-          prompt: 'test',
-          runtimeSettings: settings,
-          credentials: { resolve: async () => ({ value: 'custom-key' }) },
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /custom 媒体端点未配置或协议不合法，请在设置中填写 http\(s\) 地址/)
-          return true
-        },
-      )
-    })
-
-    it('throws omnimux-unconfigured when custom provider endpoint protocol is invalid (non-http/https)', async () => {
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'claude',
-        runtimeAgentVerified: true,
-        byokProviders: [
-          { provider: 'custom', verified: true, endpoint: 'ftp://my-custom.ai/api', image: true },
-        ],
-      }
-      await assert.rejects(
-        executeOmnimuxMedia('image', {
-          dest: '/tmp/test.png',
-          model: 'gpt-image-2.5@byok-custom',
-          prompt: 'test',
-          runtimeSettings: settings,
-          credentials: { resolve: async () => ({ value: 'custom-key' }) },
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /custom 媒体端点未配置或协议不合法，请在设置中填写 http\(s\) 地址/)
-          return true
-        },
-      )
-    })
-
-    it('intercepts custom provider with empty endpoint when no channel preference is given', async () => {
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'claude',
-        runtimeAgentVerified: true,
-        runtimeMediaProvider: 'custom',
-        runtimeKeyVerified: true,
-        runtimeKeyEndpoint: '',
-        runtimeMediaImage: true,
-      }
-      await assert.rejects(
-        executeOmnimuxMedia('image', {
-          dest: '/tmp/test.png',
-          model: 'gpt-image-2.5',
-          prompt: 'test',
-          runtimeSettings: settings,
-          credentials: { resolve: async () => ({ value: 'custom-key' }) },
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /custom 媒体端点未配置，请在设置中填写/)
-          return true
-        },
-      )
-    })
-
-    it('prevents modal-mismatched byok candidate from shadowing main provider valid config on plain request', async () => {
-      let executed = false
-      let capturedReq = null
-      const fakeRuntime = {
-        execute: async (req) => {
-          executed = true
-          capturedReq = req
-          return { taskId: 'task-main-fal-video-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async () => ({ value: 'fake-fal-key' }),
-      }
-      const settings = {
-        runtimeMode: 'key',
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaVideo: true,
-        runtimeMediaVideoModel: 'fal-ai/kling-video/v1/pro',
-        byokProviders: [
-          // 已验证的 BYOK 记录，但只开启了图片，未开启视频
-          {
-            provider: 'fal',
-            verified: true,
-            image: true,
-            video: false,
-            endpoint: 'https://byok-endpoint-fal.com',
-          },
-        ],
-      }
-      // 普通请求（非显式 @byok-fal 渠道），请求 video 模态
-      const result = await executeOmnimuxMedia('video', {
-        dest: '/tmp/shadowing-video-test.mp4',
-        model: 'seedance-2-0',
-        prompt: 'test shadowing protection for video',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(executed, true)
-      assert.equal(result.mode, 'submitted')
-      assert.equal(result.taskId, 'task-main-fal-video-1')
-      // 成功回退至主渠道，未被模态不匹配的 BYOK 记录遮蔽，优先保留调用方显式逻辑模型
-      assert.equal(capturedReq?.input?.model, 'seedance-2-0')
-    })
-
-    it('routes to byok when main mediaChoice is unready but byokProviders has verified item', async () => {
-      let executed = false
-      const fakeRuntime = {
-        execute: async () => {
-          executed = true
-          return { taskId: 'task-byok-ready-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async () => ({ value: 'fake-fal-key' }),
-      }
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-claude',
-        runtimeAgentVerified: true,
-        // 主媒体提供商未配置且 unready
-        runtimeMediaProvider: '',
-        runtimeKeyVerified: false,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            image: true,
-          },
-        ],
-      }
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/byok-ready-test.png',
-        model: 'gpt-image-2.5@byok-fal',
-        prompt: 'test byok route',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(executed, true)
-      assert.equal(result.mode, 'submitted')
-      assert.equal(result.taskId, 'task-byok-ready-1')
-    })
-
-    it('strictly throws unknown-group when explicit unknown channel is requested', async () => {
-      const credentials = {
-        resolve: async () => ({ value: 'fake-fal-key' }),
-      }
-      const settings = {
-        runtimeMode: 'key',
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImage: true,
-      }
-      await assert.rejects(
-        async () => {
-          await executeOmnimuxMedia('image', {
-            dest: '/tmp/unknown-channel.png',
-            model: 'seedance-2-0@unknown-custom-group',
-            prompt: 'test prompt',
-            runtimeSettings: settings,
-            credentials,
-          })
-        },
-        (err) => {
-          assert.equal(err.code, 'unknown-group')
-          assert.match(err.message, /所选渠道分组不可用（unknown-custom-group）/)
-          return true
-        },
-      )
-    })
-
-    it('strictly purges untrusted client env when reconstructing external BYOK request', async () => {
-      let executed = false
-      const fakeRuntime = {
-        execute: async () => {
-          executed = true
-          return { taskId: 'task-byok-clean-env', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async (ref) => {
-          if (ref === 'OMNIMUX_MEDIA_KEY_CUSTOM') return { value: 'secure-custom-key' }
-          return undefined
-        },
-      }
-      const settings = {
-        runtimeMode: 'key',
-        runtimeKeyEndpoint: 'https://custom-gateway.internal/v1',
-        runtimeKeyVerified: true,
-        runtimeMediaProvider: 'custom',
-        runtimeMediaImage: true,
-        runtimeMediaModel: 'dall-e-3',
-      }
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/byok-clean-env.png',
-        model: 'dall-e-3@byok-custom',
-        prompt: 'test clean env',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-        env: {
-          UNTRUSTED_CLIENT_VAR: 'malicious-data',
-          OMNIMUX_TOKEN: 'forged-token',
-        },
-      })
-      assert.equal(executed, true)
-      assert.equal(result.mode, 'submitted')
-      assert.equal(result.taskId, 'task-byok-clean-env')
-    })
-  })
-
-  describe('mountMedia channel intent and hasOfficialToken anti-penetration', () => {
-    it('官方目录在 agent 模式独立放行并剥离客户端 env，未知模型与组仍拒绝', () => {
-      const origKey = process.env.OMNIMUX_API_KEY
+    it('official mount uses authoritative server token and discards client base URL', async () => {
+      const old = process.env.OMNIMUX_API_KEY
       try {
-        process.env.OMNIMUX_API_KEY = 'sk-mock-official-token'
-
-        let currentSettings = {
-          runtimeMode: 'agent',
-          runtimeAgentId: 'local-agent',
-          runtimeAgentVerified: true,
-          // 未配置或验证媒体 Provider
-          runtimeKeyVerified: false,
-        }
-
-        let executed = false
-        let capturedOfficialReq
-        const fakeCtx = {
-          get: (key) => (key === 'settings' ? { get: () => currentSettings } : undefined),
-          tools: { register: () => {} },
-          provide: () => {},
-        }
-
-        let mountedApi = null
-        mountMedia(fakeCtx, {
-          kind: 'image',
-          execute: async (req) => {
-            executed = true
-            capturedOfficialReq = req
-            return { ok: true }
-          },
-          media: {},
-          gate: { capabilities: { media: true } },
-          jsonOut: {},
-        })
-        fakeCtx.provide = (name, api) => {
-          if (name === 'imageGenerate') mountedApi = api
-        }
-        mountMedia(fakeCtx, {
-          kind: 'image',
-          execute: async (req) => {
-            executed = true
-            capturedOfficialReq = req
-            return { ok: true }
-          },
-          media: {},
-          gate: { capabilities: { media: true } },
-          jsonOut: {},
-        })
-
-        assert.ok(mountedApi)
-
-        // 1. 未在系统登记的非官方模型请求：不能因为存在 OMNIMUX_API_KEY 而穿透跳过校验，必须抛出“尚未配置图片、视频和音频”
-        assert.throws(
-          () => mountedApi.execute({ dest: '/tmp/out.png', model: 'unregistered-custom-model' }),
-          /尚未配置图片、视频和音频/,
-        )
-        assert.equal(executed, false)
-
-        // 1b. 正交共存保证：在 Agent 模式下，未带渠道后缀的官方模型（画布默认场景：seedance-2-0、gpt-image-2.5、minimax-h3），具备官方 Token 时直接安全放行
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0' })
-        })
-        assert.equal(executed, true)
-
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({ dest: '/tmp/out.png', model: 'gpt-image-2.5' })
-        })
-        assert.equal(executed, true)
-
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({ dest: '/tmp/out.png', model: 'minimax-h3' })
-        })
-        assert.equal(executed, true)
-
-        // 2. 指定了 BYOK 渠道但本地未配置好：不能穿透跳过校验，必须抛出“尚未配置图片、视频和音频”
-        executed = false
-        assert.throws(
-          () => mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@byok-fal' }),
-          /尚未配置图片、视频和音频/,
-        )
-        assert.equal(executed, false)
-
-        // 3. 正交共存保证：在 Agent 模式下，只要请求的是官方专线且具备官方 Token，直接放行执行
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' })
-        })
-        assert.equal(executed, true)
-
-        // 4. 在 Key 模式下传 @official 渠道，具备官方 Token 时同样安全放行
-        currentSettings = { runtimeMode: 'key', runtimeKeyVerified: false }
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' })
-        })
-        assert.equal(executed, true)
-
-        // 5. 切换为官方模式且存在官方 Token 时，常规官方请求（未显式指定渠道组）与显式官方渠道均正确识别为默认官方渠道并安全放行
-        currentSettings = { runtimeMode: 'official' }
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0' })
-        })
-        assert.equal(executed, true)
-
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' })
-        })
-        assert.equal(executed, true)
-
-        // 官方目录不依赖 process.env 密钥；客户端伪造 env 不进入执行器。
-        executed = false
-        delete process.env.OMNIMUX_API_KEY
-        currentSettings = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false }
-        assert.doesNotThrow(() => mountedApi.execute({
-          dest: '/tmp/out.png',
-          model: 'seedance-2-0@official',
-          env: { OMNIMUX_API_KEY: 'sk-forged-token', UNTRUSTED_CLIENT_VAR: 'forged-value' },
-        }))
-        assert.equal(executed, true)
-        assert.deepEqual(capturedOfficialReq.env, {})
-        executed = false
-
-        // 7. 渠道严格判定：非已知官方专线且非 byok- 的未知自定义渠道，绝不能误判为官方放行
-        process.env.OMNIMUX_API_KEY = 'sk-mock-official-token'
-        currentSettings = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false }
-        assert.throws(
-          () => mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'seedance-2-0@unknown-custom-channel',
-          }),
-          /尚未配置图片、视频和音频/,
-        )
-        assert.equal(executed, false)
-
-        // 8. 官方凭据判定移至安全上下文，不信任调用方请求体自带的 req.env.OMNIMUX_API_KEY
-        // (a) 在未显式指定渠道且未开启官方兜底时，未在系统登记的非官方模型请求坚决拦截
-        currentSettings = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false, allowOfficialMediaFallback: false }
-        executed = false
-        assert.throws(
-          () => mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'unregistered-custom-model',
-          }),
-          /尚未配置图片、视频和音频/,
-        )
-        assert.equal(executed, false)
-
-        // (b) 显式选择官方专线渠道时，正交共存直接放行；或者开启官方兜底时，普通请求安全放行
-        currentSettings = { runtimeMode: 'agent', runtimeAgentId: 'local-agent', runtimeAgentVerified: true, runtimeKeyVerified: false, allowOfficialMediaFallback: true }
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'seedance-2-0',
-          })
-        })
-        assert.equal(executed, true)
-
-        // (c) 即使调用方传入了不一致或伪造的 req.env，只要服务端安全上下文有效，鉴权不受不可信客户端 payload 干扰
-        executed = false
-        assert.doesNotThrow(() => {
-          mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'seedance-2-0@official',
-            env: { OMNIMUX_API_KEY: 'untrusted-client-key' },
-          })
-        })
-        assert.equal(executed, true)
-
-        // 占位值不作为 API key 注入；官方目录的规划放行仍独立于凭据。
-        for (const placeholder of ['undefined', 'null', 'false', 'none', '0', '  ']) {
-          process.env.OMNIMUX_API_KEY = placeholder
-          currentSettings = { runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false }
-          executed = false
-          assert.doesNotThrow(() => mountedApi.execute({ dest: '/tmp/out.png', model: 'seedance-2-0@official' }))
-          assert.equal(executed, true)
-          assert.deepEqual(capturedOfficialReq.env, {})
-        }
-      } finally {
-        if (origKey === undefined) {
-          delete process.env.OMNIMUX_API_KEY
-        } else {
-          process.env.OMNIMUX_API_KEY = origKey
-        }
-      }
+        process.env.OMNIMUX_API_KEY = 'sk-authoritative-server-token'; let captured
+        const api = mounted(() => ({ runtimeMode: 'official' }), (req) => { captured = req; return { ok: true } })
+        await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@standard', env: { OMNIMUX_API_KEY: 'forged', OMNIMUX_BASE_URL: 'https://evil.invalid', SOME_OTHER_VAR: 'forged' } })
+        assert.equal(captured.env.OMNIMUX_API_KEY, 'sk-authoritative-server-token'); assert.equal(captured.env.OMNIMUX_BASE_URL, undefined); assert.equal(captured.env.SOME_OTHER_VAR, undefined)
+      } finally { if (old === undefined) delete process.env.OMNIMUX_API_KEY; else process.env.OMNIMUX_API_KEY = old }
     })
-
-    it('strictly blocks BYOK when capability toggle is explicitly false or excluded', async () => {
-      // 场景 1：byokProviders 中显式配置 image: false，坚决拦截
-      const settingsFalse = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-agent',
-        runtimeAgentVerified: true,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            image: false,
-            models: { image: 'fal-ai/flux/schnell' },
-            imageModel: 'fal-ai/flux/schnell',
-          },
-        ],
-      }
-
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test.png',
-          model: 'seedance-2-0@byok-fal',
-          prompt: 'test',
-          runtimeSettings: settingsFalse,
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /媒体生成提供商未开启图片/)
-          return true
-        },
-      )
-
-      // 场景 2：capabilities 列表中排除了当前模态（仅包含 video），坚决拦截
-      const settingsExcluded = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-agent',
-        runtimeAgentVerified: true,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            capabilities: ['video'],
-          },
-        ],
-      }
-
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test.png',
-          model: 'seedance-2-0@byok-fal',
-          prompt: 'test',
-          runtimeSettings: settingsExcluded,
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /媒体生成提供商未开启图片/)
-          return true
-        },
-      )
+    it('official mount with no server token purges forged client credentials', async () => {
+      const old = process.env.OMNIMUX_API_KEY
+      try { delete process.env.OMNIMUX_API_KEY; let captured
+        const api = mounted(() => ({ runtimeMode: 'official' }), (req) => { captured = req; return { ok: true } })
+        await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@standard', env: { OMNIMUX_API_KEY: 'forged', CUSTOM_VAR: 'forged' } }); assert.deepEqual(captured.env, {})
+      } finally { if (old === undefined) delete process.env.OMNIMUX_API_KEY; else process.env.OMNIMUX_API_KEY = old }
     })
-
-    it('strictly blocks BYOK when capabilities are triple undefined and no modal model is declared (eliminating || true bypass)', async () => {
-      // 场景：未配置 capabilities，且 image/video/audio 开关均为 undefined，且未声明专属模型（无 models[image]，无 imageModel）
-      // 必须严格消除 || true 带来的能力门禁失效，坚决抛出 omnimux-unconfigured
-      const settingsTripleUndefinedNoModel = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-agent',
-        runtimeAgentVerified: true,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            // 没有任何模态开关和模型声明
-          },
-        ],
-      }
-
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test.png',
-          model: 'seedance-2-0@byok-fal',
-          prompt: 'test',
-          runtimeSettings: settingsTripleUndefinedNoModel,
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /媒体生成提供商未开启图片/)
-          return true
-        },
-      )
-    })
-
-    it('allows BYOK when capabilities are unspecified and modal toggle is undefined but model is declared or universally supported', async () => {
-      // 修复审查员审秋毫指出误杀缺陷：未配置 capabilities 且模态开关为 undefined 时，
-      // 对齐 runtime-mode.js 权威判定，如果模型声明了或通用支持，正常放行，绝不误杀为未开启
-      const settingsDeclared = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'local-agent',
-        runtimeAgentVerified: true,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            models: { image: 'fal-ai/flux/schnell' },
-            imageModel: 'fal-ai/flux/schnell',
-          },
-        ],
-      }
-
-      const credentials = {
-        resolve: async (ref) => {
-          if (ref === 'OMNIMUX_MEDIA_KEY_FAL') return { value: 'fake-fal-key' }
-          return undefined
-        },
-      }
-
-      let capturedReq = null
-      const fakeRuntime = {
-        execute: async (req) => {
-          capturedReq = req
-          return {
-            taskId: 'task-declared-model-ok',
-            outputs: [{ type: 'image', url: 'https://mock.local/result.png' }],
-          }
-        },
-      }
-
-      const mockFetcher = async () => new Response(new Uint8Array([137, 80, 78, 71]), {
-        status: 200,
-        headers: { 'content-type': 'image/png' },
-      })
-
-      const res = await executeOmnimuxMedia('image', {
-        dest: '/tmp/test-declared.png',
-        model: 'seedance-2-0@byok-fal',
-        prompt: 'test prompt',
-        runtimeSettings: settingsDeclared,
-        credentials,
-        runtime: fakeRuntime,
-        fetcher: mockFetcher,
-        wait: true,
-      })
-
-      assert.equal(res.mode, 'live')
-      assert.equal(res.taskId, 'task-declared-model-ok')
-      assert.ok(capturedReq)
-    })
-
-    it('does not silently route official request to BYOK when runtime.mode is official even if mediaChoice is ready', async () => {
-      const origKey = process.env.OMNIMUX_API_KEY
-      try {
-        process.env.OMNIMUX_API_KEY = 'sk-official-token'
-
-        // 场景：runtimeMode 为 official，且本地配置了通过验证的 BYOK mediaChoice（例如 fal key）
-        // 当用户没有指定渠道时，绝不能因为 mediaChoice.ready 被静默路由到 BYOK 渠道！
-        const settings = {
-          runtimeMode: 'official',
-          runtimeKeyVerified: true,
-          runtimeMediaProvider: 'fal',
-          runtimeMediaImage: true,
-        }
-
-        let capturedProviderId = null
-        const fakeRuntime = {
-          execute: async (req) => {
-            capturedProviderId = req.providerId
-            return {
-              taskId: 'task-official-ok',
-              outputs: [{ type: 'image', url: 'https://mock.local/official.png' }],
-            }
-          },
-        }
-
-        const mockFetcher = async () => new Response(new Uint8Array([137, 80, 78, 71]), {
-          status: 200,
-          headers: { 'content-type': 'image/png' },
-        })
-
-        const res = await executeOmnimuxMedia('image', {
-          dest: '/tmp/test-official.png',
-          model: 'gpt-image-2.5', // 官方默认图片模型，未指定渠道
-          prompt: 'test prompt',
-          runtimeSettings: settings,
-          runtime: fakeRuntime,
-          fetcher: mockFetcher,
-          wait: true,
-        })
-
-        // 核心断言：走官方通道 (omnimux)，绝不被静默截胡到自备渠道 (fal)
-        assert.equal(capturedProviderId, 'omnimux')
-        assert.notEqual(capturedProviderId, 'fal')
-        assert.equal(res.mode, 'live')
-      } finally {
-        if (origKey === undefined) delete process.env.OMNIMUX_API_KEY
-        else process.env.OMNIMUX_API_KEY = origKey
-      }
-    })
-
-    it('strictly resolves credentials from service-side storage/env and ignores untrusted input.env', async () => {
-      const origFalKey = process.env.OMNIMUX_MEDIA_KEY_FAL
-      const origByokKey = process.env.OMNIMUX_MEDIA_KEY
-      try {
-        delete process.env.OMNIMUX_MEDIA_KEY_FAL
-        delete process.env.OMNIMUX_MEDIA_KEY
-
-        const settings = {
-          runtimeMode: 'key',
-          runtimeKeyVerified: true,
-          runtimeMediaProvider: 'fal',
-          runtimeMediaImage: true,
-        }
-
-        // 1. 当服务侧 credentials 和 process.env 均无 key 时，即便客户端 input.env 传入，也必须严格拒绝
-        await assert.rejects(
-          () => executeOmnimuxMedia('image', {
-            dest: '/tmp/test-untrusted-env.png',
-            model: 'gpt-image-2.5@byok-fal',
-            prompt: 'test',
-            runtimeSettings: settings,
-            env: { OMNIMUX_MEDIA_KEY_FAL: 'sk-untrusted-client-key' },
-          }),
-          (err) => {
-            assert.equal(err.code, 'omnimux-unconfigured')
-            assert.match(err.message, /fal 媒体 API 密钥未找到/)
-            return true
-          },
-        )
-
-        // 2. 当服务侧 process.env 安全提供时，无需 input.env 即可成功执行
-        process.env.OMNIMUX_MEDIA_KEY_FAL = 'sk-service-env-fal-key'
-        let executed = false
-        const fakeRuntime = {
-          execute: async () => {
-            executed = true
-            return { taskId: 'task-sec-1', outputs: [] }
-          },
-        }
-        const res = await executeOmnimuxMedia('image', {
-          dest: '/tmp/test-sec-ok.png',
-          model: 'gpt-image-2.5@byok-fal',
-          prompt: 'test',
-          runtimeSettings: settings,
-          runtime: fakeRuntime,
-          wait: false,
-        })
-        assert.equal(executed, true)
-        assert.equal(res.taskId, 'task-sec-1')
-      } finally {
-        if (origFalKey !== undefined) process.env.OMNIMUX_MEDIA_KEY_FAL = origFalKey
-        else delete process.env.OMNIMUX_MEDIA_KEY_FAL
-        if (origByokKey !== undefined) process.env.OMNIMUX_MEDIA_KEY = origByokKey
-        else delete process.env.OMNIMUX_MEDIA_KEY
-      }
-    })
-
-    it('accurately checks modal capabilities declared via capabilities array in byokProviders', async () => {
-      const settings = {
-        runtimeMode: 'key',
-        runtimeKeyVerified: true,
-        byokProviders: [
-          {
-            provider: 'openai',
-            verified: true,
-            capabilities: ['image'],
-          },
-        ],
-      }
-
-      // 请求 image 模态能力通过模态开关
-      let executed = false
-      const fakeRuntime = {
-        execute: async () => {
-          executed = true
-          return { taskId: 'task-cap-img-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async () => ({ value: 'sk-openai-key' }),
-      }
-
-      const res = await executeOmnimuxMedia('image', {
-        dest: '/tmp/test-cap.png',
-        model: 'gpt-image-2.5@byok-openai',
-        prompt: 'test',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(executed, true)
-      assert.equal(res.taskId, 'task-cap-img-1')
-
-      // 请求 video 模态能力严格拦截
-      await assert.rejects(
-        () => executeOmnimuxMedia('video', {
-          dest: '/tmp/test-cap.mp4',
-          model: 'seedance-2-0@byok-openai',
-          prompt: 'test',
-          runtimeSettings: settings,
-          credentials,
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /媒体生成提供商未开启视频/)
-          return true
-        },
-      )
-    })
-
-    it('strictly overwrites client env with authoritative server token on isOfficialBypass', async () => {
-      const origKey = process.env.OMNIMUX_API_KEY
-      try {
-        process.env.OMNIMUX_API_KEY = 'sk-authoritative-server-token'
-
-        const officialSettings = {
-          runtimeMode: 'official',
-        }
-
-        let capturedReq = null
-        let mountedApi = null
-        const fakeCtx = {
-          get: (key) => (key === 'settings' ? { get: () => officialSettings } : undefined),
-          tools: { register: () => {} },
-          provide: (name, api) => {
-            if (name === 'imageGenerate') mountedApi = api
-          },
-        }
-
-        mountMedia(fakeCtx, {
-          kind: 'image',
-          execute: async (req) => {
-            capturedReq = req
-            return { ok: true }
-          },
-          media: {},
-          gate: { capabilities: { media: true } },
-          jsonOut: {},
-        })
-
-        assert.ok(mountedApi)
-
-        // 调用方在请求体传入伪造未授权的 OMNIMUX_API_KEY 与恶意 Base URL
-        await mountedApi.execute({
-          dest: '/tmp/official-test.png',
-          model: 'gpt-image-2.5@official',
-          env: {
-            OMNIMUX_API_KEY: 'forged-unauthorized-client-key',
-            OMNIMUX_BASE_URL: 'https://evil.attacker.com/v1',
-            SOME_OTHER_VAR: 'untrusted-val',
-          },
-        })
-
-        // 权威 Token 覆盖防伪造与防劫持：坚决丢弃调用方传入的恶意 env，仅注入服务端权威 Token
-        assert.ok(capturedReq)
-        assert.equal(capturedReq.env?.OMNIMUX_API_KEY, 'sk-authoritative-server-token')
-        assert.equal(capturedReq.env?.OMNIMUX_BASE_URL, undefined)
-        assert.equal(capturedReq.env?.SOME_OTHER_VAR, undefined)
-      } finally {
-        if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
-        else delete process.env.OMNIMUX_API_KEY
-      }
-    })
-
-    it('strictly purges forged client OMNIMUX_API_KEY when official request lacks authoritative server token', async () => {
-      const origKey = process.env.OMNIMUX_API_KEY
-      try {
-        delete process.env.OMNIMUX_API_KEY
-
-        const officialSettings = {
-          runtimeMode: 'official',
-        }
-
-        let capturedReq = null
-        let mountedApi = null
-        const fakeCtx = {
-          get: (key) => (key === 'settings' ? { get: () => officialSettings } : undefined),
-          tools: { register: () => {} },
-          provide: (name, api) => {
-            if (name === 'imageGenerate') mountedApi = api
-          },
-        }
-
-        mountMedia(fakeCtx, {
-          kind: 'image',
-          execute: async (req) => {
-            capturedReq = req
-            return { ok: true }
-          },
-          media: {},
-          gate: { capabilities: { media: true } },
-          jsonOut: {},
-        })
-
-        assert.ok(mountedApi)
-
-        // 客户端在官方请求体中试图伪造 OMNIMUX_API_KEY，且服务端没有权威 Token（isOfficialBypass 为 false）
-        await mountedApi.execute({
-          dest: '/tmp/official-test-purge.png',
-          model: 'gpt-image-2.5@official',
-          env: {
-            OMNIMUX_API_KEY: 'forged-client-token',
-            CUSTOM_VAR: 'keep-safe-var',
-          },
-        })
-
-        // 验证：官方请求且无权威 Token 时，客户端传入的 env 被彻底置空为 {}，杜绝客户端注入伪造凭据被下游误用
-        assert.ok(capturedReq)
-        assert.deepEqual(capturedReq.env, {})
-      } finally {
-        if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
-        else delete process.env.OMNIMUX_API_KEY
-      }
-    })
-
-    it('includes custom provider in isExternalMediaProvider and skips submit guard', () => {
-      assert.equal(isExternalMediaProvider('custom'), true)
-      assert.equal(isExternalMediaProvider('CUSTOM'), true)
-      assert.equal(isExternalMediaProvider('fal'), true)
-      assert.equal(isExternalMediaProvider('openai'), true)
-      assert.equal(isExternalMediaProvider('openrouter'), true)
-      assert.equal(isExternalMediaProvider('byok'), true)
+    it('external provider identity does not imply any registered protocol', () => {
+      for (const name of ['custom', 'CUSTOM', 'fal', 'openai', 'openrouter', 'byok']) assert.equal(isExternalMediaProvider(name), true)
       assert.equal(isExternalMediaProvider('omnimux'), false)
     })
-
-    it('strictly prevents cross-model channel appropriation and allows official line bypass in agent mode', async () => {
-      const origKey = process.env.OMNIMUX_API_KEY
-      try {
-        process.env.OMNIMUX_API_KEY = 'sk-authoritative-server-token'
-        let currentSettings = {
-          runtimeMode: 'agent',
-          runtimeAgentVerified: false,
-          runtimeKeyVerified: false,
-          allowOfficialMediaFallback: false,
-        }
-        let mountedApi = null
-        let capturedExecutionReq = null
-        const fakeCtx = {
-          get: (key) => (key === 'settings' ? { get: () => currentSettings } : undefined),
-          tools: { register: () => {} },
-          provide: (name, api) => {
-            if (name === 'imageGenerate') mountedApi = api
-          },
-        }
-        mountMedia(fakeCtx, {
-          kind: 'image',
-          execute: async (req) => {
-            capturedExecutionReq = req
-            return { ok: true }
-          },
-          media: {},
-          gate: { capabilities: { media: true } },
-          jsonOut: {},
-        })
-        assert.ok(mountedApi)
-
-        // 1. 正交共存保证：在 agent 运行模式下，只要目标是官方专线且具备官方 Token，直接放行执行
-        await mountedApi.execute({
-          dest: '/tmp/out.png',
-          model: 'seedance-2-0@official',
-        })
-        assert.ok(capturedExecutionReq)
-        assert.equal(capturedExecutionReq.env?.OMNIMUX_API_KEY, 'sk-authoritative-server-token')
-
-        // 2. 跨模型非法冒领拦截：请求其它模型的专用渠道（如 gpt-image-2.5 冒领 seedance-2-0-task-pro）
-        currentSettings = {
-          runtimeMode: 'agent',
-          runtimeAgentVerified: true,
-          allowOfficialMediaFallback: false,
-        }
-        assert.throws(
-          () => mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'gpt-image-2.5@seedance-2-0-task-pro',
-          }),
-          /尚未配置图片、视频和音频/,
-        )
-      } finally {
-        if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
-        else delete process.env.OMNIMUX_API_KEY
-      }
+    it('official line works in agent mode but cross-model dedicated line appropriation is blocked', async () => {
+      let calls = 0
+      const api = mounted(() => ({ runtimeMode: 'agent', runtimeAgentVerified: false }), () => { calls++; return { ok: true } })
+      await api.execute({ dest: '/tmp/unused.png', model: 'seedance-2-0@official' }); assert.equal(calls, 1)
+      assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@seedance-2-0-task-pro' }), { code: 'unknown-group' }); assert.equal(calls, 1)
     })
-
-    it('includes siliconflow in EXTERNAL_MEDIA_PROVIDERS and isExternalMediaProvider', () => {
-      assert.ok(EXTERNAL_MEDIA_PROVIDERS.includes('siliconflow'))
-      assert.equal(isExternalMediaProvider('siliconflow'), true)
-      assert.equal(isExternalMediaProvider('SILICONFLOW'), true)
+    it('siliconflow identity and documented default endpoint remain available', () => {
+      assert.ok(EXTERNAL_MEDIA_PROVIDERS.includes('siliconflow')); assert.equal(isExternalMediaProvider('siliconflow'), true); assert.equal(isExternalMediaProvider('SILICONFLOW'), true)
       assert.equal(DEFAULT_PROVIDER_ENDPOINTS.siliconflow, 'https://api.siliconflow.cn/v1')
     })
-
-    it('strictly prevents unverified records from having their physical models claimed', () => {
-      // 当 verifiedItems 为空时，绝不回退至未验证的 matchedItems 冒领物理模型
-      const unverifiedSettings = {
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: false,
-            model: 'unverified-stolen-model',
-            models: { image: 'unverified-stolen-image-model' },
-          },
-        ],
-      }
-      const model = resolveEffectiveMediaModel(undefined, 'fal', 'image', unverifiedSettings)
-      assert.notEqual(model, 'unverified-stolen-model')
-      assert.notEqual(model, 'unverified-stolen-image-model')
-      assert.equal(model, 'fal-ai/flux/dev')
+    it('legacy helper never claims an unverified physical model', () => {
+      const model = resolveEffectiveMediaModel(undefined, 'fal', 'image', { byokProviders: [{ provider: 'fal', verified: false, model: 'unverified-stolen-model', models: { image: 'unverified-stolen-image-model' } }] })
+      assert.notEqual(model, 'unverified-stolen-model'); assert.notEqual(model, 'unverified-stolen-image-model'); assert.equal(model, 'fal-ai/flux/dev')
     })
-
-    it('keeps shouldRouteByok as false when implicit byok provider does not match current modality', async () => {
-      // 缺少显式渠道且主媒体未就绪时，若 byokProviders 仅有 video 能力，请求 image 必须拒绝并保持 shouldRouteByok 为 false
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'agent-1',
-        runtimeAgentVerified: true,
-        runtimeMediaProvider: '',
-        runtimeKeyVerified: false,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            video: true,
-            image: false,
-          },
-        ],
-      }
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test.png',
-          prompt: 'test prompt',
-          runtimeSettings: settings,
-        }),
-        (err) => {
-          assert.equal(err.code, 'omnimux-unconfigured')
-          assert.match(err.message, /本机助手只承接文字/)
-          return true
-        },
-      )
+    it('implicit video-only legacy provider does not authorize image', async () => {
+      await rejectImage({ runtimeMode: 'agent', runtimeAgentId: 'fixture', runtimeAgentVerified: true, byokProviders: [{ provider: 'fal', verified: true, video: true, image: false }] }, undefined)
     })
-
-    it('accurately resolves modality-matching provider when channel is unspecified', async () => {
-      // 缺少显式渠道且主媒体未就绪时，若 byokProviders 有匹配当前模态且已验证的 openai，精准解析为 openai
-      let capturedReq = null
-      const fakeRuntime = {
-        execute: async (req) => {
-          capturedReq = req
-          return { taskId: 'task-implicit-openai-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async (key) => {
-          if (key === 'OMNIMUX_MEDIA_KEY_OPENAI') return { value: 'sk-test-openai-key' }
-          return undefined
-        },
-      }
-      const settings = {
-        runtimeMode: 'agent',
-        runtimeAgentId: 'agent-1',
-        runtimeAgentVerified: true,
-        runtimeMediaProvider: '',
-        runtimeKeyVerified: false,
-        byokProviders: [
-          {
-            provider: 'openai',
-            verified: true,
-            image: true,
-            model: 'dall-e-3',
-          },
-        ],
-      }
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/test-implicit.png',
-        prompt: 'test implicit prompt',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(result.mode, 'submitted')
-      assert.equal(capturedReq?.providerId, 'openai')
-      assert.equal(capturedReq?.input?.model, 'dall-e-3')
+    it('a saved image binding selects the exact provider and physical model with no channel suffix', async () => {
+      let captured
+      const result = await submit(openaiSettings(), OPENAI_MEDIA, undefined, (req) => { captured = req })
+      assert.equal(result.mode, 'submitted'); assert.equal(captured.providerId, 'openai'); assert.equal(captured.input.model, 'fixture-image')
     })
-
-    it('strictly guards agent verified fallback against missing or empty runtimeAgentId', () => {
-      const origKey = process.env.OMNIMUX_API_KEY
-      try {
-        process.env.OMNIMUX_API_KEY = 'sk-authoritative-server-token'
-        let currentSettings = {
-          runtimeMode: 'agent',
-          runtimeAgentId: '', // 空字符串
-          runtimeAgentVerified: true,
-          runtimeKeyVerified: false,
-          allowOfficialMediaFallback: true,
-        }
-        let mountedApi = null
-        const fakeCtx = {
-          get: (key) => (key === 'settings' ? { get: () => currentSettings } : undefined),
-          tools: { register: () => {} },
-          provide: (name, api) => {
-            if (name === 'imageGenerate') mountedApi = api
-          },
-        }
-        mountMedia(fakeCtx, {
-          kind: 'image',
-          execute: async () => ({ ok: true }),
-          media: {},
-          gate: { capabilities: { media: true } },
-          jsonOut: {},
-        })
-        assert.ok(mountedApi)
-
-        // 空 agentId 必须被拦截，不可通过 allowOfficialMediaFallback 越权放行未指定渠道的普通请求
-        assert.throws(
-          () => mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'unregistered-custom-model',
-          }),
-          /尚未配置图片、视频和音频/,
-        )
-
-        // runtimeAgentId 缺失时也坚决拦截未指定渠道的普通请求
-        currentSettings = {
-          runtimeMode: 'agent',
-          runtimeAgentVerified: true,
-          runtimeKeyVerified: false,
-          allowOfficialMediaFallback: true,
-        }
-        assert.throws(
-          () => mountedApi.execute({
-            dest: '/tmp/out.png',
-            model: 'unregistered-custom-model',
-          }),
-          /尚未配置图片、视频和音频/,
-        )
-      } finally {
-        if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
-        else delete process.env.OMNIMUX_API_KEY
-      }
+    it('missing or empty agent id cannot authorize an unknown media model', () => {
+      let current = { runtimeMode: 'agent', runtimeAgentId: '', runtimeAgentVerified: true, allowOfficialMediaFallback: true }, calls = 0
+      const api = mounted(() => current, () => { calls++; })
+      assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'unregistered-custom-model' }), { code: 'omnimux-unconfigured' })
+      current = { runtimeMode: 'agent', runtimeAgentVerified: true, allowOfficialMediaFallback: true }
+      assert.throws(() => api.execute({ dest: '/tmp/unused.png', model: 'unregistered-custom-model' }), { code: 'omnimux-unconfigured' }); assert.equal(calls, 0)
     })
-
-    it('prioritizes custom provider in key mode when runtimeKeyEndpoint is verified without runtimeMediaProvider', async () => {
-      let capturedReq = null
-      const fakeRuntime = {
-        execute: async (req) => {
-          capturedReq = req
-          return { taskId: 'task-custom-key-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async () => ({ value: 'custom-api-key' }),
-      }
-      const settings = {
-        runtimeMode: 'key',
-        runtimeKeyEndpoint: 'https://internal-custom-proxy.org/v1',
-        runtimeKeyModel: 'internal-llm',
-        runtimeKeyVerified: true,
-        runtimeMediaImage: true,
-        // 未配置 runtimeMediaProvider
-      }
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/test-custom-key.png',
-        model: 'seedance-2-0',
-        prompt: 'test custom key prompt',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(result.mode, 'submitted')
-      assert.equal(capturedReq?.providerId, 'custom')
-      assert.equal(capturedReq?.modelId, 'custom-image')
-      assert.equal(capturedReq?.input?.model, 'seedance-2-0')
+    it('a verified text-only endpoint never silently becomes custom image support', async () => {
+      await rejectImage({ runtimeMode: 'key', runtimeKeyEndpoint: 'https://custom.fixture.invalid/v1', runtimeKeyModel: 'internal-llm', runtimeKeyVerified: true, runtimeMediaImage: true }, 'unregistered-image')
     })
-
-    it('falls back to verified implicitByokProvider when main media provider modality is disabled', async () => {
-      let capturedReq = null
-      const fakeRuntime = {
-        execute: async (req) => {
-          capturedReq = req
-          return { taskId: 'task-modality-mismatch-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async (key) => {
-          if (key === 'OMNIMUX_MEDIA_KEY_OPENAI') return { value: 'sk-test-openai-key' }
-          return undefined
-        },
-      }
-      const settings = {
-        runtimeMode: 'key',
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImage: true,
-        runtimeMediaVideo: false, // 主媒体提供商未启用视频能力
-        byokProviders: [
-          {
-            provider: 'openai',
-            verified: true,
-            video: true,
-            model: 'sora-2',
-          },
-        ],
-      }
-      const result = await executeOmnimuxMedia('video', {
-        dest: '/tmp/test-video.mp4',
-        model: 'seedance-2-0', // 缺少显式渠道
-        prompt: 'video prompt',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(result.mode, 'submitted')
-      assert.equal(capturedReq?.providerId, 'openai')
-      assert.equal(capturedReq?.input?.model, 'seedance-2-0')
-
-      // 当调用方未提供显式模型时，安全回退到 byokProviders 中配置的专属模型
-      const resultFallback = await executeOmnimuxMedia('video', {
-        dest: '/tmp/test-video-fallback.mp4',
-        prompt: 'video prompt without model',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(resultFallback.mode, 'submitted')
-      assert.equal(capturedReq?.input?.model, 'sora-2')
+    it('image and video bindings independently select their configured provider, with explicit model override preserved', async () => {
+      const current = { scenarioBindings: { image: { channel: 'byok', provider: 'fal' }, video: { channel: 'byok', provider: 'openai' } }, byokProviders: [
+        { provider: 'fal', endpoint: 'https://fal.fixture.invalid/v1', models: { image: 'fixture-image' }, capabilities: ['image'] },
+        { provider: 'openai', endpoint: 'https://openai.fixture.invalid/v1', models: { video: 'fixture-video' }, capabilities: ['video'] }] }
+      let captured
+      const first = await executeOmnimuxMedia('video', { dest: '/tmp/unused.mp4', prompt: 'fixture', model: 'explicit-video', runtimeSettings: current, media: OPENAI_MEDIA,
+        credentials: credentials('OMNIMUX_MEDIA_KEY_OPENAI'), runtime: submittedRuntime((req) => { captured = req }), wait: false })
+      assert.equal(first.mode, 'submitted'); assert.equal(captured.providerId, 'openai'); assert.equal(captured.input.model, 'explicit-video')
+      const second = await executeOmnimuxMedia('video', { dest: '/tmp/unused.mp4', prompt: 'fixture', runtimeSettings: current, media: OPENAI_MEDIA,
+        credentials: credentials('OMNIMUX_MEDIA_KEY_OPENAI'), runtime: submittedRuntime((req) => { captured = req }), wait: false })
+      assert.equal(second.mode, 'submitted'); assert.equal(captured.input.model, 'fixture-video')
     })
-
-    it('unblocks pure media users in isKeyDirect mode without requiring runtime.textReady', async () => {
-      // 纯媒体用户：runtimeMode 为 key，未配置 runtimeMediaProvider（isKeyDirect 模式），未配置 runtimeKeyModel（textReady 为 false）
-      // 仅校验端点非空与 verified，放行媒体生成
-      let executed = false
-      let capturedReq = null
-      const fakeRuntime = {
-        execute: async (req) => {
-          executed = true
-          capturedReq = req
-          return { taskId: 'task-key-direct-image-1', outputs: [] }
-        },
-      }
-      const credentials = {
-        resolve: async () => ({ value: 'fake-direct-key' }),
-      }
-      const settings = {
-        runtimeMode: 'key',
-        runtimeKeyEndpoint: 'https://api.openai.com/v1',
-        runtimeKeyModel: '', // 未配置文本模型，textReady 为 false
-        runtimeKeyVerified: true,
-        runtimeMediaImage: true,
-      }
-      const result = await executeOmnimuxMedia('image', {
-        dest: '/tmp/test-direct-image.png',
-        model: 'nano-banana-2',
-        prompt: 'test direct key media generation',
-        runtimeSettings: settings,
-        credentials,
-        runtime: fakeRuntime,
-        wait: false,
-      })
-      assert.equal(executed, true)
-      assert.equal(result.mode, 'submitted')
-      assert.equal(result.taskId, 'task-key-direct-image-1')
+    it('pure media configuration works without configuring any text model', async () => {
+      const current = customSettings(); current.runtimeKeyModel = ''; current.runtimeKeyVerified = false
+      assert.equal((await submit(current, CUSTOM_MEDIA, 'fixture@byok-custom')).mode, 'submitted')
     })
-
-    it('agent 官方目录无服务端 env 密钥仍规划放行，下层只解析当前 credentials', async (t) => {
-      const previousKey = process.env.OMNIMUX_API_KEY
-      const dir = mkdtempSync(join(tmpdir(), 'official-agent-creds-'))
-      t.after(() => rmSync(dir, { recursive: true, force: true }))
-      let api
-      const refs = []
-      const requests = []
+    it('agent official media plans without credentials and resolves the current credential at execution', async (t) => {
+      const dir = mkdtempSync(join(tmpdir(), 'official-agent-creds-')); t.after(() => rmSync(dir, { recursive: true, force: true }))
+      const old = process.env.OMNIMUX_API_KEY; let api; const refs = [], requests = []
       try {
         delete process.env.OMNIMUX_API_KEY
-        mountMedia({
-          get: (key) => key === 'settings' ? { get: () => ({ runtimeMode: 'agent', runtimeAgentVerified: true, runtimeKeyVerified: false }) }
-            : key === 'credentials' ? { async resolve(ref) { refs.push(ref); return ref === 'OMNIMUX_API_KEY' ? { value: 'sk-fixture-current' } : undefined } } : undefined,
-          tools: { register() {} },
-          provide(name, value) { if (name === 'imageGenerate') api = value },
-        }, {
-          kind: 'image', media: {}, jsonOut: {},
-          execute: (req) => {
-            assert.deepEqual(req.env, {})
-            assert.deepEqual(refs, [], 'planning must not resolve credentials')
-            return executeOmnimuxMedia('image', { ...req, fetcher: async (url, init) => {
-              requests.push({ url: String(url), method: init.method, authorization: new Headers(init.headers).get('authorization'), body: JSON.parse(init.body) })
-              return new Response(JSON.stringify({ data: [{ b64_json: 'cG5n' }] }), { headers: { 'content-type': 'application/json' } })
-            } })
-          },
-        })
-        const dest = join(dir, 'image.png')
-        const result = await api.execute({ prompt: 'a lamp', dest, model: 'gpt-image-2.5', env: { OMNIMUX_API_KEY: 'sk-forged-client', UNTRUSTED_CLIENT_VAR: 'forged-value' } })
-        assert.equal(result.mode, 'live')
-        assert.deepEqual(refs, ['OMNIMUX_API_KEY'])
-        assert.equal(requests.length, 1)
-        assert.equal(requests[0].method, 'POST')
-        assert.match(requests[0].url, /^https:\/\/api\.omnimux\.ai\/v1\/images\/generations$/)
-        assert.equal(requests[0].authorization, 'Bearer sk-fixture-current')
-        assert.equal(requests[0].body.model, 'gpt-image-2.5')
-        assert.equal(existsSync(dest), true)
-        assert.equal(readFileSync(dest, 'utf8'), 'png')
-      } finally {
-        if (previousKey === undefined) delete process.env.OMNIMUX_API_KEY
-        else process.env.OMNIMUX_API_KEY = previousKey
-      }
+        mountMedia({ get(name) { if (name === 'settings') return { get: () => ({ runtimeMode: 'agent', runtimeAgentVerified: true }) }; if (name === 'credentials') return { async resolve(ref) { refs.push(ref); assert.equal(ref, 'OMNIMUX_API_KEY'); return { value: 'sk-fixture-current' } } } },
+          tools: { register() {} }, provide(name, value) { if (name === 'imageGenerate') api = value } }, {
+          kind: 'image', media: {}, jsonOut: {}, execute(req) {
+            assert.deepEqual(req.env, {}); assert.deepEqual(refs, [])
+            return executeOmnimuxMedia('image', { prompt: req.prompt, dest: req.dest, model: req.model, provider: req.provider, env: req.env, credentials: req.credentials, runtimeSettings: req.runtimeSettings,
+              fetcher: async (url, init) => { requests.push({ url: String(url), method: init.method, authorization: new Headers(init.headers).get('authorization'), body: JSON.parse(init.body) }); return new Response(JSON.stringify({ data: [{ b64_json: 'cG5n' }] }), { headers: { 'content-type': 'application/json' } }) } })
+          } })
+        const dest = join(dir, 'image.png'); const result = await api.execute({ prompt: 'a lamp', dest, model: 'gpt-image-2.5', env: { OMNIMUX_API_KEY: 'sk-forged', UNTRUSTED_CLIENT_VAR: 'forged' } })
+        assert.equal(result.mode, 'live'); assert.deepEqual(refs, ['OMNIMUX_API_KEY']); assert.equal(requests.length, 1); assert.equal(requests[0].method, 'POST')
+        assert.equal(requests[0].url, 'https://api.omnimux.ai/v1/images/generations'); assert.equal(requests[0].authorization, 'Bearer sk-fixture-current'); assert.equal(requests[0].body.model, 'gpt-image-2.5')
+        assert.equal(existsSync(dest), true); assert.equal(readFileSync(dest, 'utf8'), 'png')
+      } finally { if (old === undefined) delete process.env.OMNIMUX_API_KEY; else process.env.OMNIMUX_API_KEY = old }
     })
-
-    it('非 sk Bearer 与含控制字符的服务端值均不注入官方 API key', async () => {
-      const origKey = process.env.OMNIMUX_API_KEY
-      try {
-        // 带 Bearer 前缀的非 sk 值不是官方 API key；规划放行但不得注入。
-        process.env.OMNIMUX_API_KEY = 'Bearer valid-long-secret-key-12345'
-        let capturedReq = null
-        let mountedApi = null
-        const fakeCtx = {
-          get: (key) => (key === 'settings' ? { get: () => ({ runtimeMode: 'official' }) } : undefined),
-          tools: { register: () => {} },
-          provide: (name, api) => {
-            if (name === 'imageGenerate') mountedApi = api
-          },
+    it('placeholder, non-sk Bearer and control-character server values never enter official API credentials', async () => {
+      const old = process.env.OMNIMUX_API_KEY
+      try { let captured; const api = mounted(() => ({ runtimeMode: 'official' }), (req) => { captured = req; return { ok: true } })
+        for (const token of ['undefined', 'null', 'false', 'none', '0', '  ', 'Bearer valid-long-secret-key-12345', 'token\rwithcr', 'token\nwithlf', 'token\twithtab']) {
+          process.env.OMNIMUX_API_KEY = token; await api.execute({ dest: '/tmp/unused.png', model: 'gpt-image-2.5@standard' }); assert.equal(captured.env.OMNIMUX_API_KEY, undefined)
         }
-
-        mountMedia(fakeCtx, {
-          kind: 'image',
-          execute: async (req) => {
-            capturedReq = req
-            return { ok: true }
-          },
-          media: {},
-          gate: { capabilities: { media: true } },
-          jsonOut: {},
-        })
-
-        assert.ok(mountedApi)
-        await mountedApi.execute({
-          dest: '/tmp/bearer-test.png',
-          model: 'gpt-image-2.5@official',
-        })
-        assert.ok(capturedReq)
-        assert.equal(capturedReq.env?.OMNIMUX_API_KEY, undefined)
-
-        // 2. 含有控制字符 (\r, \n, \t) 的 Token 坚决拦截
-        for (const badToken of ['token\rwithcr', 'token\nwithlf', 'token\twithtab']) {
-          process.env.OMNIMUX_API_KEY = badToken
-          capturedReq = null
-          await mountedApi.execute({
-            dest: '/tmp/bad-token-test.png',
-            model: 'gpt-image-2.5@official',
-          })
-          // 未通过真实 Token 校验，客户端 env 必须被清空
-          assert.equal(capturedReq.env?.OMNIMUX_API_KEY, undefined)
-        }
-      } finally {
-        if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
-        else delete process.env.OMNIMUX_API_KEY
-      }
+      } finally { if (old === undefined) delete process.env.OMNIMUX_API_KEY; else process.env.OMNIMUX_API_KEY = old }
     })
-
-    it('prioritizes explicit BYOK channel over official mode and routes to BYOK', async () => {
-      const origKey = process.env.OMNIMUX_API_KEY
-      try {
-        process.env.OMNIMUX_API_KEY = 'sk-official-server-token'
-        const settings = {
-          runtimeMode: 'official',
-          runtimeKeyVerified: true,
-          runtimeMediaProvider: 'fal',
-          runtimeMediaImage: true,
-          byokProviders: [
-            { provider: 'fal', verified: true, image: true },
-          ],
-        }
-        // 当显式指定 BYOK 渠道时，即使当前 runtimeMode 为 official，也绝不被官方模式错误压制，优先走 BYOK 路由
-        // 缺少对应提供商密钥时抛出 omnimux-unconfigured，而不是官方渠道池未命中导致的 unknown-group
-        await assert.rejects(
-          () => executeOmnimuxMedia('image', {
-            dest: '/tmp/test-penetration.png',
-            model: 'gpt-image-2.5@byok-fal',
-            prompt: 'test penetration',
-            runtimeSettings: settings,
-          }),
-          (err) => {
-            assert.equal(err.code, 'omnimux-unconfigured')
-            assert.match(err.message, /fal 媒体 API 密钥未找到，请在设置中填写/)
-            return true
-          },
-        )
-
-        // 当提供凭据与 mock runtime 时，验证顺利走通 BYOK 执行
-        const fakeRuntime = {
-          execute: async () => ({ taskId: 'task-byok-priority-1', outputs: [] }),
-        }
-        const credentials = {
-          resolve: async () => ({ value: 'test-fal-key' }),
-        }
-        const result = await executeOmnimuxMedia('image', {
-          dest: '/tmp/test-penetration.png',
-          model: 'gpt-image-2.5@byok-fal',
-          prompt: 'test penetration',
-          runtimeSettings: settings,
-          credentials,
-          runtime: fakeRuntime,
-          wait: false,
-        })
-        assert.equal(result.mode, 'submitted')
-        assert.equal(result.taskId, 'task-byok-priority-1')
-      } finally {
-        if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
-        else delete process.env.OMNIMUX_API_KEY
-      }
+    it('explicit BYOK overrides the official saved choice and never borrows its key', async () => {
+      const current = falSettings(); current.scenarioBindings.image = { channel: 'official' }
+      let calls = 0
+      await assert.rejects(() => executeOmnimuxMedia('image', { dest: '/tmp/unused.png', prompt: 'fixture', model: 'fixture@byok-fal', runtimeSettings: current, media: FAL_MEDIA,
+        env: { OMNIMUX_API_KEY: 'sk-official-fixture' }, credentials: { async resolve(ref) { assert.equal(ref, 'OMNIMUX_MEDIA_KEY_FAL'); return undefined } }, fetcher: async () => { calls++; } }), { code: 'omnimux-unconfigured' })
+      assert.equal(calls, 0); let provider
+      assert.equal((await submit(current, FAL_MEDIA, 'fixture@byok-fal', (req) => { provider = req.providerId })).mode, 'submitted'); assert.equal(provider, 'fal')
     })
-
-    it('strictly throws unknown-group when allowedGroups contains conflicting official and BYOK channels', async () => {
-      const settings = {
-        runtimeMode: 'key',
-        runtimeMediaProvider: 'fal',
-        runtimeKeyVerified: true,
-        runtimeMediaImage: true,
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            image: true,
-          },
-        ],
-      }
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test-mixed.png',
-          model: 'gpt-image-2.5',
-          prompt: 'test mixed groups',
-          allowedGroups: ['official', 'byok-fal'],
-          runtimeSettings: settings,
-        }),
-        (err) => {
-          assert.equal(err.code, 'unknown-group')
-          assert.match(err.message, /所选渠道包含冲突的渠道分组/)
-          return true
-        },
-      )
+    it('conflicting official and BYOK allowedGroups fail before credentials', async () => {
+      await rejectImage(falSettings(), 'gpt-image-2.5', 'omnimux-invalid-request', FAL_MEDIA, { allowedGroups: ['official', 'byok-fal'] })
     })
-
-    it('refuses a generic model field that does not declare the requested capability', async () => {
-      const fakeRuntime = {
-        execute: async () => ({ taskId: 'task-generic-model-1', outputs: [] }),
-      }
-      const credentials = {
-        resolve: async () => ({ value: 'test-fal-key' }),
-      }
-      const settings = {
-        runtimeMode: 'agent',
-        byokProviders: [
-          {
-            provider: 'fal',
-            verified: true,
-            model: 'fal-ai/flux/schnell',
-          },
-        ],
-      }
-      await assert.rejects(
-        () => executeOmnimuxMedia('image', {
-          dest: '/tmp/test-generic.png',
-          model: 'seedream-5-0@byok-fal',
-          prompt: 'test generic model field',
-          runtimeSettings: settings,
-          credentials,
-          runtime: fakeRuntime,
-          wait: false,
-        }),
-        (error) => error?.code === 'omnimux-unconfigured',
-      )
+    it('a generic model field never declares all media capabilities', async () => {
+      const current = falSettings(); current.byokProviders = [{ provider: 'fal', endpoint: 'https://fal.fixture.invalid/v1', verified: true, model: 'fal-ai/flux/schnell' }]
+      await rejectImage(current, 'seedream-5-0@byok-fal')
     })
-
-    it('normalizes targetChannel case-insensitively in mountMedia', async () => {
-      const origKey = process.env.OMNIMUX_API_KEY
-      try {
-        process.env.OMNIMUX_API_KEY = 'sk-official-mount-token'
-        let capturedReq = null
-        let mountedApi = null
-        const fakeCtx = {
-          get: (key) => (key === 'settings' ? { get: () => ({ runtimeMode: 'official' }) } : undefined),
-          tools: { register: () => {} },
-          provide: (name, api) => {
-            if (name === 'imageGenerate') mountedApi = api
-          },
-        }
-        mountMedia(fakeCtx, {
-          kind: 'image',
-          execute: async (req) => {
-            capturedReq = req
-            return { ok: true }
-          },
-          media: {},
-          gate: { capabilities: { media: true } },
-          jsonOut: {},
-        })
-
-        assert.ok(mountedApi && typeof mountedApi.execute === 'function')
-        // 验证传入大写 OFFICIAL 渠道能被小写归一化匹配为已知官方专线，权威绕过并正常执行
-        await mountedApi.execute({
-          dest: '/tmp/test-case-mount.png',
-          model: 'gpt-image-2.5',
-          group: '  OFFICIAL  ',
-        })
-        assert.ok(capturedReq)
-      } finally {
-        if (origKey !== undefined) process.env.OMNIMUX_API_KEY = origKey
-        else delete process.env.OMNIMUX_API_KEY
-      }
+    it('mount normalizes official channel case without changing the selected provider', async () => {
+      let captured; const api = mounted(() => ({ runtimeMode: 'official' }), (req) => { captured = req; return { ok: true } }, {}, 'video')
+      await api.execute({ dest: '/tmp/unused.mp4', model: 'seedance-2-0', group: '  OFFICIAL  ' }); assert.equal(captured.provider, 'omnimux')
     })
   })
 })

@@ -1,24 +1,12 @@
-/**
- * Pure view-model for the first-run runtime guide.
- * RuntimeGuideGate.jsx renders this snapshot; L1 tests assert without React.
- */
+import { resolveScenarioBindings } from '../settings/runtime-mode.js'
 
-const CHOSEN = new Set(['official', 'agent', 'key'])
-
-/**
- * Whether the first-run guide must show. A stored choice hides it forever;
- * everything else — a fresh install, an upgrade, a cleared value — shows it
- * exactly once, until the user picks and passes.
+/** First-run configuration is not an exclusive runtime choice.
+ * Official creation keeps its existing sign-in gate; pending scenarios are
+ * displayed in settings without blocking other configured scenarios.
  * @param {unknown} settings
  */
 export function describeRuntimeGuide(settings) {
-  const value = settings && typeof settings === 'object' && !Array.isArray(settings)
-    ? /** @type {Record<string, unknown>} */ (settings)
-    : {}
-  const mode = typeof value.runtimeMode === 'string' ? value.runtimeMode : ''
-  const chosen = CHOSEN.has(mode)
-  return {
-    visible: !chosen,
-    mode: chosen ? mode : '',
-  }
+  const bindings = resolveScenarioBindings(settings)
+  return { visible: false, mode: '', pendingScenarios: Object.entries(bindings)
+    .filter(([, binding]) => binding.channel === 'pending').map(([scenario]) => scenario) }
 }
