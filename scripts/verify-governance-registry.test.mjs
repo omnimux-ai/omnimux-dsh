@@ -21,15 +21,10 @@ collect(join(root, 'scripts'), sources, /\.(?:mjs|js|sh|py)$/)
 collect(join(root, '.github/workflows'), workflows, /\.ya?ml$/)
 const manifest = JSON.parse(readFileSync(join(root, 'scripts/governance-manifest.json'), 'utf8'))
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
-let result = inspectGovernance(manifest, sources, packageJson, workflows)
-for (let round = 0; round < 64; round++) {
-  let added = 0
-  for (const item of result.unknowns) {
-    if (item.code !== 'target-not-supplied' || sources.has(item.target)) continue
-    const path = item.target
-    if (typeof path !== 'string' || !/^(?:plugins|packages)\//.test(path) || path.split('/').some(part => ['..', '.', 'node_modules', '.worktrees', 'lib', 'dist', 'build'].includes(part))) continue
-    const absolute = resolve(root, path)
-    if (!absolute.startsWith(resolve(root) + sep)) throw new Error('Governance source leaves repository')
+function readExternalSource(path) {
+  const absolute = resolve(root, path)
+  if (!absolute.startsWith(resolve(root) + sep)) throw new Error('Governance source leaves repository')
+  try {
     let current = dirname(absolute)
     while (current !== resolve(root)) {
       const stat = lstatSync(current)
@@ -38,7 +33,22 @@ for (let round = 0; round < 64; round++) {
     }
     const stat = lstatSync(absolute)
     if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('Nonregular governance source')
-    sources.set(path, readFileSync(absolute, 'utf8'))
+    return readFileSync(absolute, 'utf8')
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return null
+    throw error
+  }
+}
+let result = inspectGovernance(manifest, sources, packageJson, workflows)
+for (let round = 0; round < 64; round++) {
+  let added = 0
+  for (const item of result.unknowns) {
+    if (item.code !== 'target-not-supplied' || sources.has(item.target)) continue
+    const path = item.target
+    if (typeof path !== 'string' || !/^(?:plugins|packages)\//.test(path) || path.split('/').some(part => ['..', '.', 'node_modules', '.worktrees', 'lib', 'dist', 'build'].includes(part))) continue
+    const content = readExternalSource(path)
+    if (content === null) continue
+    sources.set(path, content)
     added++
   }
   if (!added) break
@@ -60,6 +70,14 @@ test('registered categories match actual workflow roots and bounded static depen
   const reasons = new Map()
   for (const item of result.unknowns) reasons.set(item.code, (reasons.get(item.code) || 0) + 1)
   console.log('Governance unknown edges remain unproven:', Object.fromEntries(reasons))
+})
+
+test('missing optional external sources remain unknown without interrupting inventory checks', () => {
+  assert.equal(readExternalSource('plugins/governance-missing-source-fixture/not-present.mjs'), null)
+  assert.equal(readExternalSource('plugins/omnimux/package.json/not-present.mjs'), null)
+  const sample = inspectGovernance({ version: 2, ciRequired: ['entry.mjs'], localRequired: [], manual: [], deprecated: [] }, { 'scripts/entry.mjs': "import '../plugins/governance-missing-source-fixture/not-present.mjs';" }, { scripts: {} }, { '.github/workflows/example.yml': { jobs: { check: { steps: [{ run: 'node scripts/entry.mjs' }] } } } })
+  assert.deepEqual(sample.diagnostics, [])
+  assert.equal(sample.unknowns.some(item => item.code === 'target-not-supplied'), true)
 })
 
 test('missing real helpers and ghost entries fail rather than becoming empty successful checks', () => {
