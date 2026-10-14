@@ -33,7 +33,7 @@ function contextOf(node) {
 }
 
 /** Collect the existing bounded risk rules, not a general JavaScript dataflow model. */
-function collectRisks(code) {
+function collectRisks(code, { resolveImport } = {}) {
   let ast
   try { ast = parse(code, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true }) }
   catch { return { reason: 'unsupported-or-incomplete-test-syntax' } }
@@ -45,6 +45,20 @@ function collectRisks(code) {
     for (const specifier of statement.specifiers) {
       imports.set(specifier.local.name, statement)
       if (['node:test', 'vitest', '@jest/globals'].includes(statement.source.value)) runners.add(specifier.local.name)
+    }
+  }
+  const publicImports = new Set()
+  const publicBindings = new Set()
+  for (const statement of ast.body) {
+    if (statement.type !== 'ImportDeclaration') continue
+    for (const specifier of statement.specifiers) {
+      if (specifier.type !== 'ImportSpecifier' || specifier.imported.name !== 'apply' || specifier.local.name !== 'apply') continue
+      let fact
+      try { fact = resolveImport?.(statement.source.value) } catch { /* Unverified imports remain denied. */ }
+      if (fact?.sourceRealPath && fact.strictSourceFunction === 'apply') {
+        publicImports.add(specifier)
+        publicBindings.add(specifier.local.name)
+      }
     }
   }
   function inspect(node, parent = null, contexts = [], siblings = new Map()) {
@@ -87,6 +101,7 @@ function collectRisks(code) {
       if (key === 'only' || blocked.has(key) && !(node.value?.type === 'Literal' && node.value.value === false)) risk('test-execution-option-needs-review')
     }
     if (node.type === 'CallExpression') {
+      if (node.callee.type === 'Identifier' && publicBindings.has(node.callee.name) && (parent?.type === 'CallExpression' && parent.callee === node || parent?.type === 'NewExpression' && parent.callee === node)) risk('public-plugin-result-execution-needs-review')
       const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
       const namespaceRunner = node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier' && runners.has(node.callee.object.name)
       if (directRunner || namespaceRunner) {
@@ -101,7 +116,8 @@ function collectRisks(code) {
     if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'require') risk('dynamic-test-execution-needs-review')
     if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.type === 'WithStatement') risk('dynamic-test-execution-needs-review')
     if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) risk('dynamic-test-execution-needs-review')
-    if (node.type === 'ImportSpecifier' && (blocked.has(node.imported.name ?? node.imported.value) || execution.has(node.imported.name ?? node.imported.value))) risk('test-execution-import-needs-review')
+    if (node.type === 'ImportSpecifier' && (blocked.has(node.imported.name ?? node.imported.value) || execution.has(node.imported.name ?? node.imported.value)) && !publicImports.has(node)) risk('test-execution-import-needs-review')
+    if (node.type === 'Identifier' && publicBindings.has(node.name) && !publicImports.has(parent) && !(parent?.type === 'CallExpression' && parent.callee === node && !parent.optional)) risk('public-plugin-binding-escape-needs-review')
     for (const [key, value] of Object.entries(node)) {
       const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression', 'TryStatement', 'TaggedTemplateExpression', 'MemberExpression', 'ChainExpression', 'SequenceExpression', 'ArrayExpression', 'ArrayPattern', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
       if (Array.isArray(value)) for (const [index, child] of value.entries()) {
@@ -116,16 +132,16 @@ function collectRisks(code) {
 }
 
 /** Narrow complete-candidate inspection; neither semantic equivalence nor independent review. */
-export function inspectTestAuthoring(code) {
-  const result = collectRisks(code)
+export function inspectTestAuthoring(code, trustedFacts = {}) {
+  const result = collectRisks(code, trustedFacts)
   const reason = result.reason || result.risks[0]?.reason || null
   return { allowed: !reason, reason, scope }
 }
 
 /** Pure comparison; the guard, never tool-supplied metadata, owns the actual before source. */
-export function inspectTestAuthoringDelta(before, after) {
-  const old = collectRisks(before)
-  const candidate = collectRisks(after)
+export function inspectTestAuthoringDelta(before, after, trustedFacts = {}) {
+  const old = collectRisks(before, trustedFacts)
+  const candidate = collectRisks(after, trustedFacts)
   if (old.reason || candidate.reason) return { allowed: false, reason: old.reason || candidate.reason, scope }
   const remaining = new Map()
   for (const risk of old.risks) remaining.set(risk.fingerprint, (remaining.get(risk.fingerprint) || 0) + 1)
