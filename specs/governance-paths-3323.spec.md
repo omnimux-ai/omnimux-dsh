@@ -13,7 +13,7 @@
 - 清单四类均为 `scripts/` 相对路径，版本必须为 2；可选 `invocations` 仍在同一清单，不另造执行名单。
 - `packageJson` 为对象或 JSON 字符串，只读 `scripts`。
 - `workflows` 为路径→YAML 字符串／已解析对象的 Map 或对象（兼容 `{path, content}` 数组）；只读 `jobs.*.steps.*.run`，保留条件、shell、cwd、job/step 和行号。默认 cwd 是仓库根；变量／复杂 cwd 不猜。
-- 少量手工边使用 `{from, to, kind, source: {line, callee, argument}, selector?, reason}`；`from/to` 为清单相对路径，`kind` 为 `module/node/bash/python`。source 必须绑定 AST 中该行的真实调用及字面量目标，不接受普通字符串；shell 仅允许真实固定解释器命令行，且整份传入 shell 源只含注释／空行及无变量、无串联的固定解释器命令；其他 shell 结构不猜。有 selector 的 JS 边必须同时落在同值 switch case 中，且 switch 判别式为无重绑定、无嵌套函数作用域的 `process.argv[2]`，再与入口首参数匹配；别名、其他判别式与复杂作用域明确 unknown，不猜路由。无法证明包装器调用语义的登记返回 unknown，不提升覆盖。fork 的字面量调用点可以定位，但即使本模块没有 `process.chdir`，依赖模块也可能改变目录或参数，因此首版不以该局部检查证明进程调用边，始终记录执行上下文 unknown。不泛化包装器、别名求值或 shell 控制流。
+- 少量手工边使用 `{from, to, kind, source: {line, callee, argument}, selector?, reason}`；`from/to` 为清单相对路径，`kind` 为 `module/node/bash/python`。source 必须绑定 AST 中该行的真实调用及字面量目标，不接受普通字符串；shell 仅允许真实固定解释器命令行，且整份传入 shell 源只含注释／空行及无变量、无串联的固定解释器命令；其他 shell 结构不猜。有selector的JS调用点必须同时落在同值switch case中，且switch判别式为无重绑定、无嵌套函数作用域的`process.argv[2]`，再与入口首参数匹配；该定位不证明调用点已运行，别名、其他判别式与复杂作用域明确 unknown，不猜路由。无法证明包装器调用语义的登记返回 unknown，不提升覆盖。fork 的字面量调用点可以定位，但即使本模块没有 `process.chdir`，依赖模块也可能改变目录或参数，因此首版不以该局部检查证明进程调用边，始终记录执行上下文 unknown。不泛化包装器、别名求值或 shell 控制流。
 
 ## 命令与验证策略
 
@@ -25,7 +25,7 @@
 
 沿用仓库 ESM、具名导出、英文标识符及 JSDoc 关键输入契约；复用已有 `acorn` 与 `yaml`，不加依赖。先校验输入／清单，再解析真实命令根，再提取 JS AST 的 import/re-export/literal import，最后按 root→edge→target 生成有限证据并比较分类。执行、语法、本地／持续集成证据分别保存；不透明 shell／Python 保留未知。
 
-仅支持固定 `node`、`node --test`、`node --check`、`bash`、`bash -n`、固定 `pnpm/corepack pnpm [run] <script>` 和独立行／`&&`。复杂 shell、命令替换、反斜杠续行（未实现精确物理行映射）、重定向、glob、动态目标、runner/workspace discovery 不做全语言模拟；安全的已证前缀可以保留，但未知后续不向全图传播。
+仅支持固定 `node`、`node --test`、`node --check`、`bash`、`bash -n`、固定 `pnpm/corepack pnpm run <script>`、已核对的可脚本覆盖裸入口（test/start/rebuild/rb/setup/deploy/clean/purge）和独立行／合法非空`&&`链；其他裸名称分派不证明包脚本，明确unknown。复杂 shell、命令替换、反斜杠续行（未实现精确物理行映射）、重定向、glob、动态目标、runner/workspace discovery 不做全语言模拟；安全的已证前缀可以保留，但未知后续不向全图传播。
 
 ## 新用户基线与文档影响
 

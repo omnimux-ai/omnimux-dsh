@@ -108,7 +108,7 @@ test('a literal fork call does not prove an unchanged process execution context'
 })
 
 test('package expansion cycles fail instead of claiming complete reachability', () => {
-  const result = inspectGovernance(registry([], [], []), {}, { scripts: { a: 'pnpm b', b: 'pnpm a' } }, workflow('pnpm a'))
+  const result = inspectGovernance(registry([], [], []), {}, { scripts: { a: 'pnpm run b', b: 'pnpm run a' } }, workflow('pnpm run a'))
   assert.equal(result.diagnostics.some(item => item.code === 'package-script-cycle'), true)
 })
 

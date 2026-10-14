@@ -195,8 +195,8 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
         if (token.operator) segments.push([])
         else segments.at(-1).push(token)
       }
+      if (segments.some(tokens => !tokens.length)) { unknown('shell-chain-shape', location); return }
       for (const tokens of segments) {
-        if (!tokens.length) continue
         let words = tokens.map(token => token.text)
         if (tokens.some(token => token.dynamic)) { unknown('command-dynamic-arguments', location); return }
         if (words[0] === 'corepack' && words[1] === 'pnpm') { words = words.slice(1); tokens.shift() }
@@ -206,8 +206,9 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
           const explicitRun = words[offset] === 'run'
           if (explicitRun) offset++
           const name = words[offset]
-          if (!explicitRun && ['install', 'exec', 'dlx', 'list', 'ls', 'audit', 'why', 'add', 'remove', 'update', 'help', 'config', 'prune', 'store', 'import', 'fetch', 'pack', 'publish', 'link', 'unlink', 'patch', 'patch-commit', 'env', 'root'].includes(name)) {
-            unknown('package-builtin', location); return
+          if (!explicitRun && !['test', 'start', 'rebuild', 'rb', 'setup', 'deploy', 'clean', 'purge'].includes(name)) {
+            const knownBuiltin = ['install', 'i', 'exec', 'dlx', 'list', 'ls', 'audit', 'why', 'add', 'remove', 'rm', 'update', 'up', 'help', 'config', 'prune', 'dedupe', 'run-script'].includes(name)
+            unknown(knownBuiltin ? 'package-builtin' : 'package-bare-dispatch-unproven', location); return
           }
           if (!name || name.startsWith('-') || tokens[offset]?.dynamic || /[*?{}]/.test(name)) {
             unknown('package-command-unsupported', location); return
@@ -285,13 +286,15 @@ export function inspectGovernance(manifest, files, packageJson, workflows) {
         const step = job.steps[stepIndex]
         if (!record(step) || !Object.hasOwn(step, 'run')) continue
         const node = document?.getIn(['jobs', jobId, 'steps', stepIndex, 'run'], true)
-        const line = node?.srcToken?.type === 'block-scalar'
+        const folded = node?.srcToken?.type === 'block-scalar' && node.srcToken.props?.some(token => token.type === 'block-scalar-header' && token.source.startsWith('>'))
+        const line = folded ? null : node?.srcToken?.type === 'block-scalar'
           ? counter.linePos(node.range[0]).line + 1
           : node?.range ? counter.linePos(node.range[0]).line : null
         const context = {
           channel: 'ci', source: path, job: jobId, step: stepIndex, stepName: step.name ?? null, line,
           conditions: [workflow.if, job.if, step.if].filter(item => item !== undefined),
         }
+        if (folded) unknown('workflow-folded-location-unmapped', context)
         const runDefaults = [step, job.defaults?.run, workflow.defaults?.run].filter(record)
         const shellOwner = runDefaults.find(level => Object.hasOwn(level, 'shell'))
         const shell = shellOwner ? shellOwner.shell : undefined
