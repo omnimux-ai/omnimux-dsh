@@ -36,6 +36,8 @@ export function inspectTestAuthoring(code) {
         if (options && !callback && (options.type !== 'ObjectExpression' || options.properties.some(property => property.type !== 'Property'))) reason = 'dynamic-test-options-needs-review'
       }
     }
+    if (node.type === 'ImportDeclaration' && /^(?:node:)?(?:vm|child_process|worker_threads|module)$/.test(node.source.value)) reason = 'runtime-code-execution-import-needs-review'
+    if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'require') reason = 'dynamic-test-execution-needs-review'
     if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.type === 'WithStatement') reason = 'dynamic-test-execution-needs-review'
     if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) reason = 'dynamic-test-execution-needs-review'
     if (node.type === 'ImportSpecifier' && blocked.has(node.imported.name ?? node.imported.value)) reason = 'test-execution-import-needs-review'
