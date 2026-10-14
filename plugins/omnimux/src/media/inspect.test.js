@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import sharp from 'sharp'
+import png from 'pngjs'
 import { createMediaInspector } from './inspect.js'
 
 test('本地素材检查无需凭据、提供方请求或系统视频工具，真实识别PNG', async t => {
@@ -18,7 +18,7 @@ test('本地素材检查无需凭据、提供方请求或系统视频工具，�
   assert.equal(result.sizeBytes>0,true)
   await assert.rejects(createMediaInspector().inspect({path:'https://example.test/media',type:'image'}))
   await assert.rejects(createMediaInspector().inspect({path:file,type:'video'}))
-  const huge=await sharp({create:{width:6500,height:6500,channels:3,background:'#fff'}}).png().toBuffer()
+  const huge=png.PNG.sync.write({width:6500,height:6500,data:Buffer.alloc(6500*6500*4,255)})
   await writeFile(file,huge)
   await assert.rejects(createMediaInspector().inspect({path:file,type:'image'}),/pixel limit/i)
   await writeFile(file,huge.subarray(0,40))
