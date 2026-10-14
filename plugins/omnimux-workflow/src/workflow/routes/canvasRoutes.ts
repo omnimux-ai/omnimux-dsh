@@ -67,7 +67,7 @@ import { createMediaRoutes } from './mediaRoutes';
 import { createLocalFileRoutes } from './localFileRoutes';
 import { createProjectAssetsRoutes } from './projectAssetsRoutes';
 import { createAudioBytesRoutes } from './audioBytesRoutes.ts';
-import { createLibraryHttpClient } from '../library/libraryHttp';
+import { createLibraryServiceClient } from '../library/libraryService';
 import { createProjectAssetsStore } from '../workspace/ProjectAssetsStore';
 import { createProjectStore } from '../../projects/ProjectStore';
 import { ensureLibraryRoot } from '../../projects/library';
@@ -132,7 +132,7 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const workspaceRoutes = createWorkspaceRoutes(store, projectStore);
   const preferenceRoutes = deps.generationPreferences ? createGenerationPreferencesRoutes(deps.generationPreferences, gateway) : null;
   const ensureProjectBound = deps.ensureProjectBound ?? bindEnsureProjectBound(projectStore);
-  const libraryHttp = createLibraryHttpClient();
+  const libraryHttp = createLibraryServiceClient(() => deps.getSeam?.('assetLibrary'));
   const assetsStore = deps.assetsStore ?? createProjectAssetsStore({
     workspacesDir: store.workspacesDir,
     resolveProjectRoot: (workspaceId) => projectStore.findByCanvasWorkspaceId(workspaceId),
@@ -143,7 +143,11 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     mediaRevision: createMediaRevision(mediaDir, (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath)),
     resolveSessionWorkspaceDir: deps.resolveSessionWorkspaceDir,
   });
-  const projectAssetsRoutes = createProjectAssetsRoutes(assetsStore);
+  const projectAssetsRoutes = createProjectAssetsRoutes(assetsStore, {}, async (workspaceId) => {
+    const snapshot = store.get(workspaceId);
+    await ensureProjectBound(workspaceId, snapshot.name);
+    store.get(workspaceId);
+  });
   const executionRoutes = createExecutionRoutes({
     store,
     mediaDir,
