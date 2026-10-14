@@ -17,7 +17,11 @@ import type {
 import type { ProjectAssetsStore } from '../workspace/ProjectAssetsStore.ts';
 import { notFound, type RouteTry, type WorkflowDispatchRequest } from './dispatch.ts';
 
-export function createProjectAssetsRoutes(store: ProjectAssetsStore, audioDeps: AudioFileActionDeps = {}): { tryHandle: RouteTry } {
+export function createProjectAssetsRoutes(
+  store: ProjectAssetsStore,
+  audioDeps: AudioFileActionDeps = {},
+  prepareImport?: (workspaceId: string) => Promise<void>,
+): { tryHandle: RouteTry } {
   const assetsRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/assets$`);
   const mkdirRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/assets/mkdir$`);
   const ingestRe = new RegExp(`^${WORKFLOW_ROUTE_PREFIX}/api/workspaces/([^/]+)/assets/ingest$`);
@@ -62,6 +66,8 @@ export function createProjectAssetsRoutes(store: ProjectAssetsStore, audioDeps: 
       const problem = jsonBodyProblem(req.body);
       if (problem) return problem;
       const body = req.body as IngestProjectAssetsPayload;
+      if (!Array.isArray(body.paths)) return { status: 400, body: { error: 'invalid-json' } };
+      await prepareImport?.(ingestMatch[1] ?? '');
       const assets = await store.ingest(ingestMatch[1] ?? '', body);
       return { status: 200, body: { assets } };
     }
@@ -72,6 +78,10 @@ export function createProjectAssetsRoutes(store: ProjectAssetsStore, audioDeps: 
       const problem = jsonBodyProblem(req.body);
       if (problem) return problem;
       const body = req.body as InstantiateProjectAssetsPayload;
+      if (typeof body.globalSubjectId !== 'string' || !body.globalSubjectId.trim()) {
+        return { status: 400, body: { error: 'invalid-id', message: '请选择要加入的主体' } };
+      }
+      await prepareImport?.(instantiateMatch[1] ?? '');
       const assets = await store.instantiate(instantiateMatch[1] ?? '', body);
       return { status: 200, body: { assets } };
     }

@@ -41,7 +41,7 @@ import { createExecutionManager } from './execution/ExecutionManager';
 import { createHeadlessExecutionSeam } from './execution/HeadlessExecutionSeam';
 import type { HeadlessExecutionSeam } from './execution/HeadlessExecutionSeam';
 import { persistGeneratedArtifact } from './execution/persistGeneratedArtifact';
-import { createLibraryHttpClient } from './library/libraryHttp';
+import { createLibraryServiceClient } from './library/libraryService';
 import { createWorkflowDispatcher, registerWorkflowRoutes } from './routes/canvasRoutes';
 import { DEV_FAILURE_FILE_NAME, withDevFailureRecorder } from './devFailureRecorder';
 import { registerWorkflowAgentSeats } from './agent/agentTools';
@@ -118,7 +118,7 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
       ...(opts.seamConcurrency !== undefined ? { seamConcurrency: opts.seamConcurrency } : {}),
       env: opts.env ?? process.env,
     }).gateway;
-  const libraryHttp = createLibraryHttpClient();
+  const libraryHttp = createLibraryServiceClient(() => ctx.get?.('assetLibrary'));
   const assetsStore = createProjectAssetsStore({
     workspacesDir: paths.workspacesDir,
     resolveProjectRoot,

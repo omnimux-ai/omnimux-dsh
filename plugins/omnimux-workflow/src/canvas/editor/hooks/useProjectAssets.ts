@@ -32,7 +32,7 @@ export interface UseProjectAssetsResult {
   refresh: () => Promise<void>;
   mkdir: (name: string, parentId?: string | null) => Promise<boolean>;
   indexPaths: (paths: string[], parentId?: string | null) => Promise<boolean>;
-  instantiateSubject: (globalSubjectId: string, parentId?: string | null) => Promise<boolean>;
+  instantiateSubject: (globalSubjectId: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void) => Promise<boolean>;
   persist: (next: { folders: ProjectAssetsFolder[]; items: ProjectAssetsItem[] }) => Promise<boolean>;
   renameFolder: (folderId: string, name: string) => Promise<boolean>;
   moveNode: (id: string, parentId: string | null) => Promise<boolean>;
@@ -127,9 +127,10 @@ export function useProjectAssets(workspaceId: string | null | undefined): UsePro
     return true;
   }, [adopt, guard, workspaceId]);
 
-  const instantiateSubject = useCallback(async (globalSubjectId: string, parentId?: string | null) => {
+  const instantiateSubject = useCallback(async (globalSubjectId: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void) => {
     const ticket = guard.capture();
     if (!workspaceId || !guard.isCurrent(ticket)) return false;
+    const existingIds = new Set(documentRef.current.items.map((item) => item.id));
     const result = await instantiateWorkspaceAssets(workspaceId, {
       globalSubjectId,
       parentId: parentId ?? null,
@@ -140,10 +141,13 @@ export function useProjectAssets(workspaceId: string | null | undefined): UsePro
     }));
     if (!guard.isCurrent(ticket)) return false;
     if (!result.ok || !result.body.assets) {
-      setError(result.body.error || result.body.message || 'instantiate failed');
+      setError(result.body.message || result.body.error || '未能加入主体素材，请重试');
       return false;
     }
+    const added = result.body.assets.items.filter((item) =>
+      !existingIds.has(item.id) && item.snapshot?.globalSubjectId === globalSubjectId);
     adopt(result.body.assets);
+    onAssets?.(flattenProjectAssets({ ...result.body.assets, folders: [], items: added }, workspaceId));
     return true;
   }, [adopt, guard, workspaceId]);
 
