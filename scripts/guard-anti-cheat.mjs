@@ -10,9 +10,19 @@
  *  4. 既可作为 DSH PreToolUse 独立运行，也可作为 ESM 模块由单元测试复用。
  */
 
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { inspectTestAuthoring } from './test-authoring-inspection.mjs';
+import { readFileSync, existsSync, lstatSync, realpathSync } from 'node:fs';
+import { resolve, dirname, relative } from 'node:path';
+import { inspectTestAuthoring, inspectTestAuthoringDelta } from './test-authoring-inspection.mjs';
+
+const isTestPath = path => /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/')) && !/\.md$/i.test(path);
+const isFixturePath = path => /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(path.replace(/\\/g, '/'));
+function testDecision(inspection) {
+  return inspection.allowed ? { permissionDecision: 'allow' } : {
+    permissionDecision: 'deny',
+    ruleId: 'RULE-01-TEST-IMMUTABLE',
+    reason: '【硬门禁拦截】测试用例与断言属于只读评估契约，严禁新增执行风险；旧标准变更仍须独立审查。'
+  };
+}
 
 /**
  * 核心判定函数
@@ -37,27 +47,17 @@ export function evaluateAntiCheat({ tool, filePath, content, intent = 'business_
     return { permissionDecision: 'allow' };
   }
 
+  const isTestFile = isTestPath(normalizedPath);
+  const isFixtureFile = isFixturePath(normalizedPath);
+  // Pure candidates have no trusted before; test intent and approval metadata are not authority.
+  if (isTestFile && !isFixtureFile) return testDecision(inspectTestAuthoring(code));
+
   // 0. 检查是否命中已批准的豁免令牌 (Exemption Token)
   for (const ex of exemptions) {
     if (ex.filePath === normalizedPath && ex.status === 'approved') {
       return {
         permissionDecision: 'allow',
         reason: `[EXEMPTION] 命中已批准的人工豁免 (ID: ${ex.id}): ${ex.justification || '允许放行'}`
-      };
-    }
-  }
-
-  const isTestFile = /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
-  const isFixtureFile = /(^|\/)(fixtures?|mocks?|test-data)(\/|$)|(\.|\/)(fixture|mock)\.[a-zA-Z0-9]+$/i.test(normalizedPath);
-
-  // 1. 门禁 1：测试套件与评估资产只读守卫
-  if (isTestFile && !isFixtureFile) {
-    const inspection = inspectTestAuthoring(code);
-    if (intent !== 'test_authoring' && !inspection.allowed) {
-      return {
-        permissionDecision: 'deny',
-        ruleId: 'RULE-01-TEST-IMMUTABLE',
-        reason: '【硬门禁拦截】测试用例与断言属于只读评估契约，严禁在业务开发中修改！请调整业务实现以匹配测试。'
       };
     }
   }
@@ -134,12 +134,43 @@ export function handle(rawInput) {
   const toolInput = input.tool_input || (input.file_path ? input : {});
   const filePath = toolInput.file_path || input.file_path || '';
   let content = toolInput.content || toolInput.new_string || input.content || input.new_string || '';
-  if (toolName === 'edit' && /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(filePath.replace(/\\/g, '/')) && !/\.md$/i.test(filePath)) {
-    const oldString = toolInput.old_string;
-    const source = readFileSync(resolve(input.cwd || process.cwd(), filePath), 'utf8');
-    if (typeof oldString !== 'string' || !oldString || !source.includes(oldString)) throw new Error('Cannot reconstruct test edit');
-    if (!toolInput.replace_all && source.indexOf(oldString) !== source.lastIndexOf(oldString)) throw new Error('Ambiguous test edit');
-    content = toolInput.replace_all ? source.split(oldString).join(toolInput.new_string || '') : source.replace(oldString, () => toolInput.new_string || '');
+  if (toolName === 'write' || toolName === 'edit') {
+    const cwd = resolve(input.cwd || process.cwd(), toolInput.workdir || '.');
+    const target = resolve(cwd, filePath.replace(/\\/g, '/'));
+    const repoPath = path => {
+      let root = dirname(path);
+      while (dirname(root) !== root) {
+        if (existsSync(resolve(root, '.git'))) return relative(root, path).replace(/\\/g, '/');
+        root = dirname(root);
+      }
+      return path;
+    };
+    const protectedPath = path => { const ownedPath = repoPath(path); return isTestPath(ownedPath) && !isFixturePath(ownedPath); };
+    let present = false;
+    try { lstatSync(target); present = true; }
+    catch (err) { if (err.code !== 'ENOENT' && protectedPath(target)) throw err; }
+    let actualTarget = target;
+    if (present) {
+      try { actualTarget = realpathSync(target); }
+      catch (err) { if (protectedPath(target)) throw err; }
+    }
+    if (protectedPath(target) || protectedPath(actualTarget)) {
+      let source;
+      if (present) source = readFileSync(actualTarget, 'utf8');
+      if (toolName === 'edit') {
+        const oldString = toolInput.old_string;
+        if (typeof source !== 'string' || typeof oldString !== 'string' || !oldString || !source.includes(oldString)) throw new Error('Cannot reconstruct test edit');
+        if (!toolInput.replace_all && source.indexOf(oldString) !== source.lastIndexOf(oldString)) throw new Error('Ambiguous test edit');
+        const replacement = toolInput.new_string ?? '';
+        if (typeof replacement !== 'string') throw new Error('Invalid test replacement');
+        content = toolInput.replace_all ? source.split(oldString).join(replacement) : source.replace(oldString, () => replacement);
+      } else {
+        content = toolInput.content ?? input.content;
+        if (typeof content !== 'string') throw new Error('Missing complete test candidate');
+      }
+      const inspection = present ? inspectTestAuthoringDelta(source, content) : inspectTestAuthoring(content);
+      return formatHookOutput(testDecision(inspection), hookEventName);
+    }
   }
   const intent = process.env.DSH_TASK_INTENT || 'business_code';
 
