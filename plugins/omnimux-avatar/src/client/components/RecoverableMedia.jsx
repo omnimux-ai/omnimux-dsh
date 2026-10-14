@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '../kit.js'
 
 /** Reload only media; never repeat a generation intent. */
-export function RecoverableMedia({ src, video=false, mediaRef, compact=false, alt='', className='omx-avatar-mv-image', ...props }) {
+export function RecoverableMedia({ src, video=false, mediaRef, compact=false, onStateChange, alt='', className='omx-avatar-mv-image', ...props }) {
   const [attempt,setAttempt]=useState(0)
   const [state,setState]=useState('loading')
+  const stateSource=useRef(src)
   useEffect(()=>{setAttempt(0);setState('loading')},[src])
+  useEffect(()=>{if(state==='loading')stateSource.current=src;onStateChange?.(stateSource.current===src?state:'loading',src)},[state,src,onStateChange])
   useEffect(()=>{
     if(state!=='waiting'||attempt>=2)return
     let resumed=false

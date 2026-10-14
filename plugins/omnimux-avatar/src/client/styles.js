@@ -190,7 +190,9 @@ ${CANONICAL_SCROLL_DECL}
   width: 100%;
   align-items: center;
   gap: 8px;
-  padding: 12px;
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 8px 12px;
   border: 0;
   background: none;
   text-align: left;
@@ -207,25 +209,25 @@ ${CANONICAL_SCROLL_DECL}
 }
 .omx-avatar-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 84px);
+  grid-template-columns: repeat(auto-fill, 88px);
   gap: 8px;
 }
 .omx-avatar-block-body {
   padding: 0 12px 12px;
 }
 
-/* ── 选项卡片：84×84 固定瓦片 ───────────────────────────── */
+/* ── 特征选项瓦片 ───────────────────────────────────────── */
 .omx-avatar-opt {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 84px;
-  height: 84px;
-  min-width: 84px;
-  min-height: 84px;
-  max-width: 84px;
-  max-height: 84px;
+  width: 88px;
+  height: 88px;
+  min-width: 88px;
+  min-height: 88px;
+  max-width: 88px;
+  max-height: 88px;
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
@@ -244,9 +246,7 @@ ${CANONICAL_SCROLL_DECL}
 }
 .omx-avatar-opt.is-sel {
   border-color: var(--dsw-alias-brand-primary);
-  box-shadow:
-    0 0 0 1px var(--dsw-alias-brand-primary),
-    0 0 0 4px var(--dsw-alias-state-business-tertiary);
+  box-shadow: inset 0 0 0 1px var(--dsw-alias-brand-primary);
 }
 .omx-avatar-opt.is-sel:hover {
   border-color: var(--dsw-alias-brand-primary);
@@ -288,16 +288,14 @@ ${CANONICAL_SCROLL_DECL}
   font-size: 11px;
   font-weight: 500;
   line-height: 1.2;
-  color: var(--dsw-alias-label-primary-foreground);
+  color: var(--dsw-alias-label-primary);
   text-align: center;
   word-break: break-word;
   pointer-events: none;
   opacity: 1;
   transform: none;
-  padding: 4px;
-  border-radius: 4px;
-  background: var(--dsw-alias-bg-base);
-  color: var(--dsw-alias-label-primary);
+  padding: 0;
+  background: none;
   transition: opacity 0.15s ease-in-out;
 }
 .omx-avatar-opt:hover .omx-avatar-lbl {
@@ -315,6 +313,10 @@ ${CANONICAL_SCROLL_DECL}
   transform: none;
   color: var(--dsw-alias-label-primary);
 }
+.omx-avatar-opt--color { flex-direction:column;background:var(--dsw-alias-bg-layer-2); }
+.omx-avatar-opt--color .omx-avatar-swatch { height:calc(100% - 24px);flex:none; }
+.omx-avatar-opt--color .omx-avatar-lbl { position:relative;left:auto;right:auto;bottom:auto;width:100%;height:24px;display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2); }
+.omx-avatar-opt--color .omx-avatar-overlay { display:none; }
 .omx-avatar-swatch {
   display: block;
   width: 100%;
@@ -332,11 +334,11 @@ ${CANONICAL_SCROLL_DECL}
 }
 .omx-avatar-gender-icon {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   z-index: 1;
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
   transition: transform 0.15s ease;
 }
@@ -359,9 +361,28 @@ ${CANONICAL_SCROLL_DECL}
 }
 .omx-avatar-opt--gender:hover .omx-avatar-gender-title,
 .omx-avatar-opt--gender.is-sel .omx-avatar-gender-title {
-  color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-brand-primary);
   font-weight: 600;
 }
+
+.omx-avatar-opt--tier { height:104px;min-height:104px;max-height:104px;flex-direction:column;justify-content:flex-start;padding:4px;border:0;border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary); }
+[data-ds-dark-theme] .omx-avatar-opt--tier { background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-foreground); }
+.omx-avatar-opt--tier.is-sel { box-shadow:inset 0 0 0 4px currentColor; }
+.omx-avatar-tier-visual { display:flex;align-items:center;justify-content:center;width:80px;height:76px;flex:none; }
+.omx-avatar-tier-image { width:68px;height:68px;object-fit:contain; }
+.omx-avatar-tier-label { display:block;width:100%;height:20px;line-height:20px;flex:none;font-size:12px;font-weight:500;text-align:center;color:inherit;background:none; }
+.omx-avatar-type-note { margin:8px 0 0;font-size:11px;color:var(--dsw-alias-label-secondary); }
+.omx-avatar-opt--gender { background:transparent;border-width:2px; }
+.omx-avatar-opt--gender .omx-avatar-overlay { display:none; }
+.omx-avatar-opt:focus-visible { outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px; }
+.omx-avatar-opt--media[data-media-ready="true"] .omx-avatar-lbl { opacity:0;color:var(--dsw-alias-label-primary); }
+.omx-avatar-opt--media[data-media-ready="true"]:hover .omx-avatar-lbl,
+.omx-avatar-opt--media[data-media-ready="true"]:focus-visible .omx-avatar-lbl { opacity:1; }
+.omx-avatar-opt--media[data-media-ready="true"]:hover .omx-avatar-overlay,
+.omx-avatar-opt--media[data-media-ready="true"]:focus-visible .omx-avatar-overlay { opacity:1;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--dsw-alias-bg-base) 90%,transparent)); }
+.omx-avatar-opt--media:not([data-media-ready="true"]) .omx-avatar-overlay { opacity:0; }
+@media (hover:none) { .omx-avatar-opt--media[data-media-ready="true"] .omx-avatar-lbl { opacity:1; } .omx-avatar-opt--media[data-media-ready="true"] .omx-avatar-overlay { opacity:1; } }
+.omx-avatar-preset-open:focus-visible { outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-3px; }
 
 /* ── 状态角标 / 微光 / 进度条 ───────────────────────────── */
 .omx-avatar-status {
@@ -1047,12 +1068,14 @@ ${CANONICAL_SCROLL_DECL}
 
 /* ── 灵感预设网格 ───────────────────────────────────────── */
 .omx-avatar-preset-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--avatar-preset-columns, 4), minmax(0, 1fr));
-  gap: 12px;
-  align-items: start;
+  display: block;
+  flex: none;
+  column-count: var(--avatar-preset-columns, 4);
+  column-gap: 16px;
 }
 .omx-avatar-preset-card {
+  break-inside: avoid;
+  margin-bottom: 16px;
   position: relative;
   overflow: hidden;
   border: 1px solid var(--dsw-alias-border-l1);

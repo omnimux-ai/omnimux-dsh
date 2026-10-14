@@ -1,7 +1,7 @@
+import { useCallback, useState } from 'react'
 import { RecoverableMedia } from './RecoverableMedia.jsx'
 
-// 单个设定选项瓦片：84×84 固定尺寸，三种呈现（图片 / 色块 / 纯文字）+ 性别特例。
-// 与源工作台 option-card.tsx 1:1；图标与角标一律矢量 SVG，不用字符图标。
+// 类型使用独立插图与名称行，其他特征按照片、色块、文字或性别图标呈现。
 
 /**
  * @param {{
@@ -15,10 +15,18 @@ import { RecoverableMedia } from './RecoverableMedia.jsx'
  */
 export function OptionCard(props) {
   const { categoryId, kind = 'media', option, selected, onClick, t } = props
+  const [media,setMedia]=useState({state:'loading',src:null})
+  const onMediaState=useCallback((state,src)=>setMedia({state,src}),[])
+  const ready=media.state==='ready'&&media.src===option.imageUrl
   const label = t(option.label_en)
   const cls = `omx-avatar-opt${selected ? ' is-sel' : ''}`
 
-  // 性别卡片：图标缩小置于右上角，标题置于卡片内侧左下角。
+  if(categoryId==='tier')return <button type="button" /* exempt-ui01: 角色类型插图与标签组成独立选择瓦片 */ className={`${cls} omx-avatar-opt--tier`} aria-label={label} aria-pressed={selected} onClick={onClick}>
+    <span className="omx-avatar-tier-visual">{option.imageUrl?<RecoverableMedia compact className="omx-avatar-tier-image" src={option.imageUrl} alt="" loading="lazy"/>:null}</span>
+    <span className="omx-avatar-tier-label">{label}</span>
+  </button>
+
+  // 性别卡片保留图标和常显名称。
   if (categoryId === 'gender') {
     return (
       <button type="button" /* exempt-ui01: 选项瓦片是自定义控件，非 kit 组件语义 */
@@ -44,7 +52,7 @@ export function OptionCard(props) {
   if (kind === 'color') {
     return (
       <button type="button" /* exempt-ui01: 选项瓦片是自定义控件，非 kit 组件语义 */
-        className={cls}
+        className={`${cls} omx-avatar-opt--color`}
         aria-label={label}
         aria-pressed={selected}
         onClick={onClick}
@@ -74,13 +82,14 @@ export function OptionCard(props) {
 
   return (
     <button type="button" /* exempt-ui01: 选项瓦片是自定义控件，非 kit 组件语义 */
-      className={cls}
+      className={`${cls} omx-avatar-opt--media`}
+      data-media-ready={ready}
       aria-label={label}
-        aria-pressed={selected}
+      aria-pressed={selected}
       onClick={onClick}
     >
       {option.imageUrl ? (
-        <RecoverableMedia compact className="omx-avatar-thumb" loading="lazy" src={option.imageUrl} alt={label} />
+        <RecoverableMedia compact onStateChange={onMediaState} className="omx-avatar-thumb" loading="lazy" src={option.imageUrl} alt={label} />
       ) : (
         <span className="omx-avatar-thumb" />
       )}

@@ -1,6 +1,6 @@
 // 灵感预设网格：镜像预设以瀑布流铺开——每张卡片的美术比例各不相同，固定网格会裁切画面。
 //
-// 来源：OmniMux/web/src/features/influencer/components/explore-preset-grid.tsx（只读真源），行为 1:1。
+// 原生多列保持预设DOM顺序，每列卡片独立接续，预览与套用仍是两个操作。
 //
 // 与真源的差异（本仓硬门禁强制）：
 // 1. 真源用 Tailwind 的 columns-2 / sm:columns-3 / xl:columns-4；插件客户端没有 Tailwind，
