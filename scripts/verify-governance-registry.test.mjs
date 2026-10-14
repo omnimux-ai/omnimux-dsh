@@ -74,7 +74,7 @@ test('registered categories match actual workflow roots and bounded static depen
 
 test('missing optional external sources remain unknown without interrupting inventory checks', () => {
   assert.equal(readExternalSource('plugins/governance-missing-source-fixture/not-present.mjs'), null)
-  assert.equal(readExternalSource('plugins/omnimux/package.json/not-present.mjs'), null)
+  assert.throws(() => readExternalSource('plugins/omnimux/package.json/not-present.mjs'), /Noncanonical governance source directory/)
   const sample = inspectGovernance({ version: 2, ciRequired: ['entry.mjs'], localRequired: [], manual: [], deprecated: [] }, { 'scripts/entry.mjs': "import '../plugins/governance-missing-source-fixture/not-present.mjs';" }, { scripts: {} }, { '.github/workflows/example.yml': { jobs: { check: { steps: [{ run: 'node scripts/entry.mjs' }] } } } })
   assert.deepEqual(sample.diagnostics, [])
   assert.equal(sample.unknowns.some(item => item.code === 'target-not-supplied'), true)
