@@ -72,12 +72,11 @@ test('runJourney 返回值形状不对→FAIL', async () => {
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('runJourney 断言缺 pass:true 一律算 FAIL', async () => {
+test('runJourney 非布尔 pass 拒绝整组，不保留另一条 true', async () => {
   const { dir, p } = tmpJourney(`export default async () => ({ assertions: [{name:'truthy',pass:1},{name:'ok',pass:true}] })`);
   try {
     const out = await runJourney(p, noopDeps);
-    assert.equal(out[0].pass, false, 'pass:1 不算显式 true');
-    assert.equal(out[1].pass, true);
+    assert.deepEqual(out, [{ name: 'journey-assertions-invalid', pass: false }]);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
