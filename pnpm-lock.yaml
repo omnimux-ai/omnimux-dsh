@@ -79,7 +79,7 @@ importers:
         version: 5.2.0
       '@deepseek-ai/dsh-client-ui-primitives':
         specifier: '>=0.1.0-rc.6'
-        version: 0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)
+        version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.3(@deepseek-ai/cordis@4.0.2))
       '@deepseek-ai/schemastery':
         specifier: 3.18.4
         version: 3.18.4
@@ -97,7 +97,7 @@ importers:
         version: 0.2.0(react@18.3.1)
       dsh-ui-kit:
         specifier: file:../../packages/dsh-ui-kit
-        version: file:packages/dsh-ui-kit(@deepseek-ai/dsh-client-ui-primitives@0.1.2-rc.1(@deepseek-ai/cordis@4.0.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: link:../../packages/dsh-ui-kit
       exif-reader:
         specifier: 2.0.3
         version: 2.0.3
