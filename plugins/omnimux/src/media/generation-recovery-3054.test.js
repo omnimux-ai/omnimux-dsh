@@ -157,6 +157,21 @@ test('3312: BYOK collection rejects pending provider save before credentials or 
     credentials: { async resolve() { calls++; return { value: 'must-not-send' } } }, fetcher: async () => { calls++; return completedImage() } }), { code: 'omnimux-unconfigured' })
   assert.equal(calls, 0); assert.equal(getMediaTaskRecord(record.taskRef).status, 'submitted')
 }))
+test('3312: accepted custom task collection refuses duplicate or missing current provider identities before credentials', async () => isolated(async (home) => {
+  const record = customSeed()
+  const current = customSettings()
+  current.byokProviders.push({ provider: 'custom', endpoint: 'https://replacement.invalid/v1', saveState: 'pending', models: { image: 'other-image' }, capabilities: ['image'] })
+  let calls = 0
+  const input = { taskRef: record.taskRef, dest: join(home, 'image.png'), runtimeSettings: current, media: CUSTOM_MEDIA,
+    credentials: { async resolve() { calls += 1; return { value: 'synthetic-current-rotated-key' } } },
+    fetcher: async () => { calls += 1; return completedImage() } }
+  await assert.rejects(() => executeOmnimuxMedia('image', input), { code: 'omnimux-unconfigured' })
+  current.byokProviders = []
+  await assert.rejects(() => executeOmnimuxMedia('image', input), { code: 'omnimux-unconfigured' })
+  assert.equal(calls, 0)
+  assert.equal(getMediaTaskRecord(record.taskRef).status, 'submitted')
+}))
+
 test('3312: current credential absence cannot revive a legacy inline Config key during collection', async () => isolated(async (home) => {
   const record = customSeed(); let http = 0
   const media = { defaultProvider: 'custom', providers: { custom: {
