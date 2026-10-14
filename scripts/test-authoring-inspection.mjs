@@ -18,7 +18,7 @@ export function inspectTestAuthoring(code) {
     if (node.type === 'MemberExpression') {
       const property = node.computed ? node.property.type === 'Literal' ? node.property.value : null : node.property.name
       if (property === null) reason = 'dynamic-test-member-needs-review'
-      else if (blocked.has(property) || ['eval', 'Function', 'constructor', 'defineProperty', 'defineProperties', 'call', 'apply', 'bind'].includes(property) || node.object.type === 'Identifier' && node.object.name === 'Reflect') reason = 'test-execution-selector-needs-review'
+      else if (blocked.has(property) || ['eval', 'Function', 'constructor', 'defineProperty', 'defineProperties', 'call', 'apply', 'bind', 'getBuiltinModule', 'binding', '_linkedBinding', 'dlopen', 'createRequire'].includes(property) || node.object.type === 'Identifier' && node.object.name === 'Reflect') reason = 'test-execution-selector-needs-review'
     }
     if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') {
       const key = node.computed ? node.key.type === 'Literal' ? node.key.value : null : node.key.name ?? node.key.value
