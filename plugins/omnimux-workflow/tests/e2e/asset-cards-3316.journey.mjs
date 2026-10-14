@@ -1,6 +1,5 @@
 export default async ({send, evidenceDir, io}) => {
- const file=new URL("../../../../tests/fixtures/qa-workspace-media/assets/imported/fixture-video.mp4",import.meta.url).pathname;
- const seed=await send('Runtime.evaluate',{expression:`(async()=>{const out=[];for(const name of ['王桂香-居委会观察日记超长中文名称','Harajuku_Yuki_Long_Asset_Name','无缩略图角色']){const r=await fetch('/omnimux/assets/library',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type:'character',tags:['验收标签'],files:name.startsWith('无')?[]:[{real_path:${JSON.stringify(file)}}]})});out.push({status:r.status,body:await r.json()})}return out})()`,returnByValue:true,awaitPromise:true});
+ const seed=await send('Runtime.evaluate',{expression:`(async()=>{const out=[];for(const name of ['王桂香-居委会观察日记超长中文名称','Harajuku_Yuki_Long_Asset_Name','无缩略图角色']){const r=await fetch('/omnimux/assets/library',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type:'character',tags:['验收标签'],files:[]})});out.push({status:r.status,body:await r.json()})}return out})()`,returnByValue:true,awaitPromise:true});
  io.writeFileSync(`${evidenceDir}/seed.json`,JSON.stringify(seed.result.value,null,2));
  await send('Runtime.evaluate',{expression:`document.querySelector('.omnimux-workflow-entry').click()`});
  await new Promise(r=>setTimeout(r,1000));
@@ -19,7 +18,7 @@ export default async ({send, evidenceDir, io}) => {
  const diag=await send('Runtime.evaluate',{expression:`({text:document.body.innerText,drawers:document.querySelectorAll('.wf-assets-drawer-root').length,views:document.querySelectorAll('.wf-subject-view-compact').length})`,returnByValue:true});io.writeFileSync(`${evidenceDir}/diagnostic.json`,JSON.stringify(diag,null,2));
  const r = await send('Runtime.evaluate', {expression: `JSON.stringify([...document.querySelectorAll('button')].map(e=>({text:e.textContent,title:e.title,aria:e.getAttribute('aria-label'),cls:e.className})))`,returnByValue:true});
  io.writeFileSync(`${evidenceDir}/buttons.json`,r.result.value);
- const inspect=await send('Runtime.evaluate',{expression:`(()=>{const cards=[...document.querySelectorAll('.wf-subject-card-compact')];return {count:cards.length,extra:document.querySelectorAll('.wf-subject-card-tags-compact,.wf-subject-card-count-badge-compact').length,cards:cards.map(c=>({text:c.textContent.trim(),children:c.children.length,height:c.getBoundingClientRect().height,width:c.getBoundingClientRect().width,draggable:c.draggable}))}})()`,returnByValue:true});
+ const inspect=await send('Runtime.evaluate',{expression:`(()=>{const cards=[...document.querySelectorAll('.wf-subject-card-compact')];return {count:cards.length,extra:document.querySelectorAll('.wf-subject-card-tags-compact,.wf-subject-card-count-badge-compact').length,cards:cards.map(c=>({text:c.textContent.trim(),children:c.children.length,height:c.getBoundingClientRect().height,width:c.getBoundingClientRect().width,draggable:c.draggable,name:c.querySelector('.wf-subject-card-name-compact')?.textContent.trim(),cover:!!c.querySelector('.wf-subject-card-cover-compact'),title:c.querySelector('.wf-subject-card-name-compact')?.title}))}})()`,returnByValue:true});
  io.writeFileSync(`${evidenceDir}/cards.json`,JSON.stringify(inspect.result.value,null,2));
  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:500,y:493,button:'left',clickCount:1});
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:500,y:120,button:'left',buttons:1});
@@ -33,7 +32,7 @@ export default async ({send, evidenceDir, io}) => {
  const narrow=await send('Page.captureScreenshot',{format:'png'});io.writeFileSync(`${evidenceDir}/asset-cards-narrow.png`,Buffer.from(narrow.data,'base64'));
  await send('Runtime.evaluate',{expression:`(()=>{const el=document.querySelector('.wf-subject-search-input-compact');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'验收标签');el.dispatchEvent(new Event('input',{bubbles:true}))})()`});
  await new Promise(r=>setTimeout(r,300));
- const search=await send('Runtime.evaluate',{expression:`document.querySelectorAll('.wf-subject-card-compact').length`,returnByValue:true});
+ const search=await send('Runtime.evaluate',{expression:`[...document.querySelectorAll('.wf-subject-card-name-compact')].map(c=>c.textContent.trim())`,returnByValue:true});
  io.writeFileSync(`${evidenceDir}/search.json`,JSON.stringify(search.result.value));
- return {assertions:[{name:'tag-search-retained',pass:search.result.value===3},{name:'only-cover-and-name',pass:inspect.result.value?.count>=3&&inspect.result.value.extra===0&&inspect.result.value.cards.every(c=>c.children===2&&c.draggable),detail:JSON.stringify(inspect.result.value)}]};
+ return {assertions:[{name:'tag-search-retained',pass:search.result.value?.length===3&&['王桂香-居委会观察日记超长中文名称','Harajuku_Yuki_Long_Asset_Name','无缩略图角色'].every(n=>search.result.value.includes(n))},{name:'only-cover-and-name',pass:inspect.result.value?.count>=3&&inspect.result.value.extra===0&&inspect.result.value.cards.every(c=>c.children===2&&c.draggable&&c.cover&&c.name===c.text&&c.title===c.name&&c.width>100&&c.height>80),detail:JSON.stringify(inspect.result.value)}]};
 };
