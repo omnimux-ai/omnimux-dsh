@@ -102,6 +102,8 @@ jobs:
           node scripts/verify-silent-catch.mjs
           node --test scripts/verify-silent-catch.test.mjs
           node --test scripts/verify-agents-md.test.mjs
+          node --test scripts/verify-governance-registry.test.mjs scripts/lib/governance-registry.test.mjs
+          node --test scripts/guard-anti-cheat.test.mjs
 
       # 侧栏契约门禁：真实装配 8 个 Stage + market 全生命周期（JSDOM + 真实
       # dsh-ui-kit 缝位）。file: 依赖在全仓 install 下可解析、kit lib 产物已

@@ -39,6 +39,7 @@ import { createGenerationMapping } from '../media/generation-mapping.js'
 import { listSessionModels } from '../catalog/session-models.js'
 import { createComposerListSync } from '../catalog/composer-sync.js'
 import { SettingsConfig } from '../settings/schema.js'
+import { readScenarioSettings } from '../settings/runtime-mode.js'
 import { mountHubHttp } from './http.js'
 import { mountComposerCommands } from './composer-commands.js'
 import { hubHomeDir, hubProfileName } from './paths.js'
@@ -60,6 +61,7 @@ import { mountDecisions } from '../decisions/mount.js'
  */
 export function apply(ctx, config = {}) {
   const hub = parseHubConfig(config)
+  const readReferenceStorageConfig = () => config.referenceStorage?.get ? config.referenceStorage.get() : config.referenceStorage
   const siteBaseUrl = resolveSiteBaseUrl(config.siteBaseUrl || process.env.OMNIMUX_SITE_URL || DEFAULT_SITE)
   const clientName = config.clientName || CLIENT_NAME
   const brand = hub
@@ -140,6 +142,7 @@ export function apply(ctx, config = {}) {
     getWorkspaceRegistry: () => ctx.get?.('workspaceRegistry'),
     getConnection: () => ctx.get?.('connection'),
     settings: ctx.get?.('settings'),
+    readReferenceStorageConfig,
     credentials: ctx.get?.('credentials'),
   }
   mountComposerCommands(ctx)
@@ -160,9 +163,9 @@ export function apply(ctx, config = {}) {
         httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox, getConnection: () => ctx.get?.('connection') }), 'omnimux: workbench HTTP')
         httpCtx.effect(() => registerSessionModelRoutes(server, { preference: sessionModelPreference }), 'omnimux: session model HTTP')
         httpCtx.effect(() => registerDirectMediaRoutes(server, {
-          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
-          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: ctx.get?.('settings')?.get?.('omnimux') }),
-          getRuntimeSettings: () => ctx.get?.('settings')?.get?.('omnimux'),
+          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: Object.assign({}, readScenarioSettings(ctx.get?.('settings')), { referenceStorage: readReferenceStorageConfig() }) }),
+          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: Object.assign({}, readScenarioSettings(ctx.get?.('settings')), { referenceStorage: readReferenceStorageConfig() }) }),
+          getRuntimeSettings: () => Object.assign({}, readScenarioSettings(ctx.get?.('settings')), { referenceStorage: readReferenceStorageConfig() }),
           media: hub.media,
           getConnection: () => ctx.get?.('connection'),
           gate: hub.gate,
@@ -185,6 +188,7 @@ export function apply(ctx, config = {}) {
   if (typeof ctx.inject === 'function') {
     ctx.inject(['settings'], (sctx) => {
       const settings = sctx.settings
+      httpDeps.settings = settings
       if (!settings || typeof settings.register !== 'function') return
       // The settings service arrives after httpDeps is built; hand it to the
       // HTTP faces (BYOK / agent routes) only once it actually exists.
@@ -281,7 +285,7 @@ export function apply(ctx, config = {}) {
   }
 
   const jsonOut = JSON_TOOL_OUTPUT
-  const mediaDeps = { media: hub.media, gate: hub.gate, store, jsonOut, sessionModel: sessionModelPreference }
+  const mediaDeps = { media: hub.media, gate: hub.gate, store, jsonOut, sessionModel: sessionModelPreference, readReferenceStorageConfig }
   mountMedia(ctx, { kind: 'video', execute: executeOmnimuxVideo, ...mediaDeps })
   mountMedia(ctx, { kind: 'image', execute: executeOmnimuxImage, ...mediaDeps })
   mountMedia(ctx, { kind: 'audio', execute: executeOmnimuxAudio, ...mediaDeps })

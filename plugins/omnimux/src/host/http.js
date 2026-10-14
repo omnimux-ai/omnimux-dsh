@@ -12,6 +12,7 @@ import { createComposerAttachmentsDispatcher, registerComposerAttachmentRoutes }
 import { registerTextCompleteRoutes } from '../text/http.js'
 import { registerByokRoutes } from '../byok/http.js'
 import { registerAgentRoutes } from '../agents/http.js'
+import { registerReferenceStorageRoutes } from '../reference-storage/http.js'
 import { createTemplatesDispatcher, registerTemplatesRoutes } from '../templates/http.js'
 
 /**
@@ -121,6 +122,12 @@ export function mountHubHttp(httpCtx, deps) {
       onCredentialUpdated: typeof httpCtx.on === 'function'
         ? (listener) => httpCtx.on('credentials/reference-updated', listener) : undefined,
     })
+    const stopReferenceStorage = registerReferenceStorageRoutes(webServer, {
+      getSettings: () => deps.settings ?? httpCtx.get?.('settings'),
+      getCredentials: () => deps.credentials ?? httpCtx.get?.('credentials'),
+      getConnection: deps.getConnection,
+      readConfig: deps.readReferenceStorageConfig,
+    })
     const stopAgents = registerAgentRoutes(webServer, {
       getSettings: () => deps.settings ?? httpCtx.get?.('settings'),
     })
@@ -139,6 +146,7 @@ export function mountHubHttp(httpCtx, deps) {
       stopTextComplete()
       stopByok()
       stopAgents()
+      stopReferenceStorage()
       stopTemplates()
     }
   }

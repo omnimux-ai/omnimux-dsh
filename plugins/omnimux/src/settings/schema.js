@@ -9,6 +9,8 @@ import { DEFAULT_SCENARIO_BINDINGS, resolveScenarioBindings } from './runtime-mo
  * only the top-level fields `settingsScope.set` can write.
  */
 
+import { parseReferenceStorageConfig } from '../reference-storage/config.js'
+
 /** Sentinel meaning "follow the catalog recommendation" for a generation mode. */
 export const DEFAULT_OPERATION_AUTO = 'auto'
 
@@ -64,6 +66,7 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   runtimeMediaAudioModel: 'fal-ai/f5-tts',
   allowOfficialMediaFallback: false,
   byokProviders: Object.freeze([]),
+  referenceStorage: Object.freeze(parseReferenceStorageConfig(undefined)),
   scenarioBindings: DEFAULT_SCENARIO_BINDINGS,
 })
 
@@ -115,6 +118,7 @@ function boolNode(key) {
 }
 
 const RUNTIME_DICT = Object.freeze({
+  referenceStorage: { type: 'object', default: SETTINGS_DEFAULTS.referenceStorage, meta: { description: '参考素材云存储，访问凭据单独安全保存' } },
   runtimeMode: stringNode('runtimeMode'),
   runtimeAgentId: stringNode('runtimeAgentId'),
   runtimeAgentModel: stringNode('runtimeAgentModel'),
@@ -200,7 +204,9 @@ function parseSettingsSection(value) {
   for (const key of Object.keys(SETTINGS_DEFAULTS)) {
     const raw = input[key]
     const fallback = SETTINGS_DEFAULTS[key]
-    if (key === 'scenarioBindings') {
+    if (key === 'referenceStorage') {
+      out.referenceStorage = parseReferenceStorageConfig(raw)
+    } else if (key === 'scenarioBindings') {
       out.scenarioBindings = resolveScenarioBindings(input)
     } else if (key === 'byokProviders') {
       out.byokProviders = Array.isArray(raw)

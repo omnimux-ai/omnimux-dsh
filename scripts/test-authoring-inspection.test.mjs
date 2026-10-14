@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { inspectTestAuthoring } from './test-authoring-inspection.mjs'
+import { inspectTestAuthoring, inspectTestAuthoringDelta } from './test-authoring-inspection.mjs'
 import './public-plugin-apply.test.mjs'
 
 test('normal complete assertion and literal runner candidates are writable', () => {
@@ -59,4 +59,75 @@ test('unknown options and unsupported syntax are honestly refused', () => {
     "const value: number = 1",
     'test(',
   ]) assert.equal(inspectTestAuthoring(source).allowed, false, source)
+})
+
+test('unused safe sibling imports preserve existing use-site risks only in delta inspection', () => {
+  const before = "import { values } from './domain.mjs'; consume([...values])"
+  const after = "import { values, safeApi } from './domain.mjs'; consume([...values])"
+  assert.equal(inspectTestAuthoringDelta(before, after).allowed, true)
+  assert.equal(inspectTestAuthoring(after).allowed, false)
+})
+
+test('default namespace and literal named bindings ignore unused safe siblings at use sites', () => {
+  for (const [before, after] of [
+    ["import values from './domain.mjs'; consume([...values])", "import values, { safeApi } from './domain.mjs'; consume([...values])"],
+    ["import * as values from './domain.mjs'; consume([...values])", "import safeApi, * as values from './domain.mjs'; consume([...values])"],
+    ["import { 'values' as values } from './domain.mjs'; consume([...values])", "import { 'values' as values, safeApi } from './domain.mjs'; consume([...values])"],
+  ]) {
+    assert.equal(inspectTestAuthoringDelta(before, after).allowed, true, after)
+    assert.equal(inspectTestAuthoring(after).allowed, false, after)
+  }
+})
+
+test('supported import attributes preserve siblings but retain value raw and key identity', () => {
+  const before = "import { values } from './domain.mjs' with { type: 'json' }; consume([...values])"
+  const after = "import { values, safeApi } from './domain.mjs' with { type: 'json' }; consume([...values])"
+  assert.equal(inspectTestAuthoringDelta(before, after).allowed, true)
+  for (const changed of [
+    "import { values } from './domain.mjs' with { type: 'text' }; consume([...values])",
+    'import { values } from \'./domain.mjs\' with { type: "json" }; consume([...values])',
+    "import { values } from './domain.mjs' with { format: 'json' }; consume([...values])",
+    "import { values } from './domain.mjs'; consume([...values])",
+    "import { values } from './domain.mjs' assert { type: 'json' }; consume([...values])",
+  ]) assert.equal(inspectTestAuthoringDelta(before, changed).allowed, false, changed)
+})
+
+test('source literal imported local and binding kind changes still change existing risks', () => {
+  const before = "import { values } from './domain.mjs'; consume([...values])"
+  for (const after of [
+    "import { values } from './other.mjs'; consume([...values])",
+    'import { values } from "./domain.mjs"; consume([...values])',
+    "import { otherValues as values } from './domain.mjs'; consume([...values])",
+    "import { values as renamed } from './domain.mjs'; consume([...renamed])",
+    "import values from './domain.mjs'; consume([...values])",
+    "import * as values from './domain.mjs'; consume([...values])",
+    "import { 'values' as values } from './domain.mjs'; consume([...values])",
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+  const literalBefore = "import { 'values' as values } from './domain.mjs'; consume([...values])"
+  assert.equal(inspectTestAuthoringDelta(literalBefore, "import { 'otherValues' as values } from './domain.mjs'; consume([...values])").allowed, false)
+  assert.equal(inspectTestAuthoringDelta("import values from './domain.mjs'; consume([...values])", "import * as values from './domain.mjs'; consume([...values])").allowed, false)
+})
+
+test('unused known execution imports new spreads and unsupported candidates remain denied', () => {
+  const before = "import { values } from './domain.mjs'; consume([...values])"
+  for (const after of [
+    "import { values, eval as extraExecution } from './domain.mjs'; consume([...values])",
+    "import { values, constructor as extraExecution } from './domain.mjs'; consume([...values])",
+    "import { values } from './domain.mjs'; import vm from 'node:vm'; consume([...values])",
+    "import { values } from './domain.mjs'; import worker from 'node:worker_threads'; consume([...values])",
+    "import { values } from './domain.mjs'; consume([...values]); consume([...extra])",
+    "import { values } from './domain.mjs'; consume([...values]); const typed: number = 1",
+    "import { values } from './domain.mjs'; consume([...values]); test(",
+    "import type { values } from './domain.mjs'; consume([...values])",
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+})
+
+test('import declaration risk bodies and contexts remain conservative when adding siblings', () => {
+  for (const [before, after] of [
+    ["import { constructor as create } from './domain.mjs'; create(ctx)", "import { constructor as create, safeApi } from './domain.mjs'; create(ctx)"],
+    ["import { runInThisContext } from 'node:vm'; runInThisContext(code)", "import { runInThisContext, safeApi } from 'node:vm'; runInThisContext(code)"],
+  ]) {
+    assert.equal(inspectTestAuthoringDelta(before, before).allowed, true)
+    assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+  }
 })

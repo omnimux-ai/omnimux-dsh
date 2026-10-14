@@ -1,6 +1,9 @@
 import { useId, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { IconChevronDownOutline14, Menu } from "@deepseek-ai/dsh-client-ui-primitives";
+import * as primitives from "@deepseek-ai/dsh-client-ui-primitives";
+
+const Menu = primitives.Menu;
+const ChevronDown = (primitives as unknown as Record<string, typeof primitives.IconChevronDownOutline14>).IconChevronDownOutlineRegular ?? primitives.IconChevronDownOutline14;
 import type { MenuItem } from "@deepseek-ai/dsh-client-ui-primitives";
 
 import { cx } from "../internal/cx.ts";
@@ -84,7 +87,7 @@ export function DropdownSelect({
             {selected ? selected.label : placeholder}
           </span>
           <span className={cx(css.chevron, open && css.chevronOpen)} aria-hidden="true">
-            <IconChevronDownOutline14 size={14} />
+            <ChevronDown size={14} />
           </span>
         </button>
       )}

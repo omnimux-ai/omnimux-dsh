@@ -1,0 +1,18 @@
+{
+  "result": {
+    "pass": true,
+    "saved": true,
+    "credentialsRedacted": true,
+    "reopened": true,
+    "rejectedEditPreserved": true
+  },
+  "origin": "http://localhost:52217",
+  "hashes": {
+    "src/config.js": "fc90c2216eefa82bf6caf133cbb16f9d5c9b23391afafa4ab7076ea858883451",
+    "src/host/apply.js": "027d2025055fbf4cfeda626c30a2109d3485eb13947cc4f8a3437106831e2b78",
+    "src/media/execute.js": "c75a674eca294b14c6a948f9ef73caf6e268de365d0b81c4766a31a92c7e7049",
+    "src/reference-storage/prepare.js": "089b0591f5c21db23e347a81fe275fb8ff08137c669bf5c3845e125a5977cf02",
+    "lib/client.js": "0d98bc633cd8f953779756638994f531c1bb4291650b8b6f78fd93d3fa2b328a"
+  },
+  "scope": "official private app synthetic credentials no generation"
+}
