@@ -112,22 +112,23 @@ export function resolveTextRoute(request, text, env = process.env, gate) {
       throw new OmnimuxError('omnimux-invalid-request', `model '${row.id}' does not accept ${type} input`)
     }
   }
-  const group = inlineGroup || (typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined)
+  const fieldGroup = typeof request.group === 'string' && request.group.trim() ? request.group.trim() : undefined
+  const group = inlineGroup || fieldGroup
   const explicitStrategy = typeof request.strategy === 'string' && ROUTING_STRATEGIES.includes(request.strategy)
-  const allowedGroups = Array.isArray(request.allowedGroups) && request.allowedGroups.length > 0
-    ? request.allowedGroups
-    : undefined
+  const hasAllowedIntent = request.allowedGroups != null
+    && (!Array.isArray(request.allowedGroups) || request.allowedGroups.length > 0)
+  const allowedGroups = hasAllowedIntent ? request.allowedGroups : undefined
   // A channel selection cannot ride the streaming path: `llm.stream` resolves a
   // declared session model id, so `model@group` never reaches the gateway.
   // `routed` tells the executor to use the direct chat path instead.
-  const plan = resolveChannelPlan(row.id, {
+  const plan = resolveChannelPlan(baseModelId ? requested : row.id, {
     // 只有调用方显式给了策略才算"有意图"；否则不能传 'auto'，
     // 否则会把「没选渠道」的请求当成按 auto 排名自动选组。
     ...(explicitStrategy ? { strategy: request.strategy } : {}),
-    group,
+    group: fieldGroup,
     allowedGroups,
   })
-  const hasRoutingIntent = Boolean(group || allowedGroups || explicitStrategy)
+  const hasRoutingIntent = Boolean(group || hasAllowedIntent || explicitStrategy)
   if (hasRoutingIntent && plan.candidates.length === 0) {
     const detail = plan.unresolvedGroups.length > 0 ? plan.unresolvedGroups.join(', ') : 'no enabled channel group'
     throw new OmnimuxError('unknown-group', `所选渠道分组不可用于 ${row.id}（${detail}）`)

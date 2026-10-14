@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { assertCapabilityEnabled, isMediaEnabled, isToolEnabled } from '../gate/guard.js'
 import { OmnimuxError } from './errors.js'
 import { resolveExecutionPlan } from './execution-plan.js'
+import { readScenarioSettings } from '../settings/runtime-mode.js'
 import { findMediaTaskByRequestKey } from './task-store.js'
 import { objectParams, rethrow } from '../tools/schema.js'
 
@@ -164,10 +165,11 @@ export function mountMedia(ctx, opts) {
      */
     execute(req) {
       assertCapabilityEnabled(gate, kind, 'media')
-      const current = Object.assign({}, ctx.get?.('settings')?.get?.('omnimux'), { referenceStorage: opts.readReferenceStorageConfig?.() ?? ctx.get?.('settings')?.get?.('omnimux')?.referenceStorage })
+      const scenarioSettings = readScenarioSettings(ctx.get?.('settings'))
+      const current = Object.assign({}, scenarioSettings, { referenceStorage: opts.readReferenceStorageConfig?.() ?? scenarioSettings?.referenceStorage })
       // 放行/渠道判定唯一拥有者：resolveExecutionPlan（见 media/execution-plan.js）。
       // 本处只做能力门禁 + 调用判定；execute 消费 RouteDecision.finalReq 不再重复判定。
-      const plan = resolveExecutionPlan({ kind, req, current })
+      const plan = resolveExecutionPlan({ kind, req, current, media })
       return execute({
         ...plan.finalReq,
         media,

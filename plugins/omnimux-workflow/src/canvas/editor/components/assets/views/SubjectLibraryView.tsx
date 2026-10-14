@@ -6,17 +6,20 @@ import {
   Plus,
   Sparkles,
   ChevronDown,
+  FileText,
 } from 'lucide-react';
 import { SortFilterPopover } from '../popovers/SortFilterPopover';
-import { SUBJECT_CATEGORY_TABS } from '../../../../bridge/assetsLibraryMapper';
-import type { SubjectPack } from '../types';
+import { SUBJECT_CATEGORY_TABS, libraryPreviewUrl } from '../../../../bridge/assetsLibraryMapper';
+import type { SubjectPack, SubjectFileRef } from '../types';
+import { MediaThumb } from '../MediaThumb';
+import { materialTypeFromFilename } from '../../../../../shared/localMedia';
 import { useT } from '../../../../i18n';
 
 interface SubjectLibraryViewProps {
   subjects: SubjectPack[];
   error?: string | null;
   onBack: () => void;
-  onSelectSubject: (subject: SubjectPack) => void;
+  onSelectFile: (subject: SubjectPack, file: SubjectFileRef) => void;
   onCreateSubject: () => void;
 }
 
@@ -24,10 +27,12 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
   subjects,
   error,
   onBack,
-  onSelectSubject,
+  onSelectFile,
   onCreateSubject,
 }) => {
   const t = useT();
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+  const selectedSubject = subjects.find((subject) => subject.id === selectedSubjectId);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortValue, setSortValue] = useState<'recent' | 'name' | 'count'>('recent');
@@ -86,6 +91,39 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
         return t('assets.filter.sort') || '排序';
     }
   };
+
+  if (selectedSubject) {
+    return (
+      <div className="wf-subject-view-compact">
+        <div className="wf-subject-nav-header-compact">
+          <button type="button" className="wf-subject-nav-back-btn-compact" aria-label="返回主体库" onClick={() => setSelectedSubjectId(null)}>
+            <ArrowLeft size={13} /><span>{selectedSubject.name}</span>
+          </button>
+        </div>
+        <div className="wf-drawer-content-scroll-compact">
+          {(selectedSubject.files ?? []).length === 0 ? (
+            <div className="wf-assets-empty-state-compact"><span className="wf-assets-empty-title">暂无素材文件</span></div>
+          ) : (selectedSubject.files ?? []).map((file) => {
+            const name = file.original_name || '未命名文件';
+            const kind = file.kind || materialTypeFromFilename(name);
+            const supported = Boolean(materialTypeFromFilename(name));
+            return (
+              <div key={file.id} className="wf-tree-item-compact" data-subject-file-id={file.id}
+                role="button" tabIndex={file.id && supported && kind !== 'directory' ? 0 : -1}
+                aria-disabled={!file.id || !supported || kind === 'directory'}
+                title={kind === 'directory' ? '请选择文件素材' : !supported ? '暂不支持加入画布' : `加入画布：${name}`}
+                onClick={() => { if (file.id && supported && kind !== 'directory') onSelectFile(selectedSubject, file); }}
+                onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && file.id && supported && kind !== 'directory') { event.preventDefault(); onSelectFile(selectedSubject, file); } }}>
+                <MediaThumb kind={kind} url={file.id ? libraryPreviewUrl(selectedSubject.id, file.id) : undefined} alt={name}
+                  className="wf-tree-file-thumb-compact" fallback={<FileText size={14} />} />
+                <span className="wf-tree-name-compact" title={name}>{name}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="wf-subject-view-compact">
@@ -150,25 +188,10 @@ export const SubjectLibraryView: React.FC<SubjectLibraryViewProps> = ({
               <div
                 key={sub.id}
                 className="wf-subject-card-compact"
-                draggable
-                title={sub.files?.some((file) => file.real_path) ? sub.name : '无本地文件，无法入创作画布'}
-                onDragStart={(e) => {
-                  const firstFile = (sub.files || []).find((file) => file.real_path);
-                  e.dataTransfer.setData(
-                    'application/json',
-                    JSON.stringify({
-                      type: 'omnimux-asset',
-                      asset: {
-                        id: sub.id,
-                        name: firstFile?.original_name || sub.name,
-                        real_path: firstFile?.real_path,
-                        files: sub.files,
-                      },
-                    }),
-                  );
-                  e.dataTransfer.effectAllowed = 'copy';
-                }}
-                onClick={() => onSelectSubject(sub)}
+                title={`打开：${sub.name}`}
+                role="button" tabIndex={0}
+                onClick={() => setSelectedSubjectId(sub.id)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedSubjectId(sub.id); } }}
               >
                 <div className="wf-subject-card-cover-compact">
                   {sub.avatar ? (

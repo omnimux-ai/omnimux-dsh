@@ -101,6 +101,7 @@ export function mapLibraryAssetToSubject(asset: LibraryAssetView): SubjectPack {
       if (!realPath && !fileId && !originalName) return null;
       return {
         ...(fileId ? { id: fileId } : {}),
+        ...(file.kind ? { kind: file.kind } : {}),
         ...(realPath ? { real_path: realPath } : {}),
         ...(originalName ? { original_name: originalName } : {}),
       };

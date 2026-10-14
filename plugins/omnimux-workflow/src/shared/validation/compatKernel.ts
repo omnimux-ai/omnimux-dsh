@@ -965,11 +965,10 @@ export function planAutoAdaptation(args: {
   const evaluation = evaluateCatalogCompat(args.catalog, args.fingerprint, { outputType });
   if (evaluation.zeroCandidates) return null;
   const kind = outputType as keyof NonNullable<CapabilityCatalog['defaults']>;
-  const defaults = args.catalog?.generationPolicy?.[kind]?.defaultModelId
-    ?? args.catalog?.defaults?.[kind];
   const preferredIds: Array<[string | undefined, AutoAdaptationPick['rule']]> = [
     [!args.currentModelId ? args.preferredModelId : undefined, 'user_preference'],
-    [defaults, 'type_default'],
+    [args.catalog?.defaults?.[kind], 'type_default'],
+    [args.catalog?.generationPolicy?.[kind]?.defaultModelId, 'type_default'],
     [!args.catalog?.generationPolicy && currentOperationId ? view.defaultsByOperation[currentOperationId] : undefined, 'operation_default'],
   ];
   for (const [id, rule] of preferredIds) {

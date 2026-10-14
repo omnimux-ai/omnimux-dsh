@@ -10,7 +10,7 @@ export const INSPIRATION_CSS = `
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--dsw-alias-bg-base, var(--dsw-bg));
+  background: var(--dsw-alias-bg-base, var(--dsw-bg, #111215));
 }
 .omx-stage-scroll {
   flex: 1 1 auto;

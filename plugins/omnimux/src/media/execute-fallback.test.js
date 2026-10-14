@@ -2,13 +2,15 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test } from 'node:test'
+import { before, after, test } from 'node:test'
 import { executeOmnimuxMedia } from './execute.js'
 import { OmnimuxError } from './errors.js'
 import { SAFE_CHANNEL_MESSAGE } from '../errors/channel-classifier.js'
 import { gatewayCandidates } from '../catalog/serving/id-universe.js'
 
-const AUDIO_BYTES = Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x00])
+let fixtureHome, previousHome
+before(() => { previousHome = process.env.DSH_HOME; fixtureHome = mkdtempSync(join(tmpdir(), 'fallback-home-')); process.env.DSH_HOME = fixtureHome })
+after(() => { if (previousHome === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = previousHome; rmSync(fixtureHome, { recursive: true, force: true }) })
 
 const productId = 'gpt-image-2.5'
 const channelMessage = '分组 auto 下模型 gpt-image-2.5 无可用渠道 (distributor) (request id: hidden-id)'
@@ -28,309 +30,166 @@ const assertChannel = (error) => {
 function inputFor(t, extra = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-fallback-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
-  return { prompt: 'a lamp', dest: join(dir, 'out.png'), model: productId, env: { OMNIMUX_API_KEY: 'sk-fixture' }, ...extra }
+  return Object.assign({ prompt: 'a lamp', dest: join(dir, 'out.png'), model: productId, env: { OMNIMUX_API_KEY: 'sk-fixture' } }, extra)
+}
+function customSettings() {
+  return { scenarioBindings: { image: { channel: 'byok', provider: 'custom' }, video: { channel: 'pending' } },
+    byokProviders: [{ provider: 'custom', endpoint: 'https://my-provider.test/v1', models: { image: 'my-image-model' }, capabilities: ['image'] }] }
+}
+const CUSTOM_MEDIA = { defaultProvider: 'custom', providers: { custom: {
+  protocol: 'openai-media', baseUrl: 'https://my-provider.test/v1', apiKeyEnv: 'OMNIMUX_MEDIA_KEY_CUSTOM', models: { image: 'my-image-model' },
+} } }
+function customCredentials() {
+  return { async resolve(ref) { assert.equal(ref, 'OMNIMUX_MEDIA_KEY_CUSTOM'); return { value: 'sk-byok-media' } } }
 }
 
-// 2026-09-14 #1751（评审次要-2）：gpt-image-2.5 无上游承认的别名 —— `gpt-image-2-5` 拼写被上游
-// 明写否决（与 gpt-image-2-hd / gpt-image2-hd 同源同口径），故它只剩单一网关候选、不会重试。
+// gpt-image-2.5 has no documented upstream alias; video retains the Seedance alias contract.
 test('gpt-image-2.5 declares no upstream-recognised alias, so the real protocol sends one request', async (t) => {
-  const bodies = []
-  const signal = new AbortController().signal
-  const input = inputFor(t, { signal, aspectRatio: '16:9', resolution: '1K',
-    fetcher: async (url, init) => {
-      assert.match(String(url), /images\/generations$/)
-      assert.equal(init.method, 'POST')
-      bodies.push(JSON.parse(init.body))
-      return json({ data: [{ b64_json: 'cG5n' }] })
-    },
-  })
-  const result = await executeOmnimuxMedia('image', input)
-  assert.equal(result.mode, 'live')
-  assert.equal(input.model, productId)
-  // 单次请求锁死 payload：vendor 字段映射完毕，model 由协议持有，不存在第二次别名改写。
-  assert.deepEqual(bodies, [
-    { prompt: 'a lamp', size: '16:9', resolution: '1K', n: 1, model: productId },
-  ])
-  assert.deepEqual(gatewayCandidates(productId), [productId])
-  assert.equal(readFileSync(input.dest, 'utf8'), 'png')
-})
-
-test('structured code-only HTTP failures survive runtime-kit message extraction', async (t) => {
-  const models = []
-  const input = inputFor(t, { fetcher: async (_url, init) => {
-    models.push(JSON.parse(init.body).model)
-    return json({ error: { code: 'get_channel_failed', message: 'temporarily unavailable' } }, 503)
+  const bodies = [], signal = new AbortController().signal
+  const input = inputFor(t, { signal, aspectRatio: '16:9', resolution: '1K', fetcher: async (url, init) => {
+    assert.match(String(url), /images\/generations$/); assert.equal(init.method, 'POST'); bodies.push(JSON.parse(init.body))
+    return json({ data: [{ b64_json: 'cG5n' }] })
   } })
-  // 分类仍然成立（code → CHANNEL_UNAVAILABLE，且上游文案不泄漏）；无别名可退，故只发一次请求。
-  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
-  assert.deepEqual(models, [productId])
+  const result = await executeOmnimuxMedia('image', input)
+  assert.equal(result.mode, 'live'); assert.equal(input.model, productId)
+  assert.deepEqual(bodies, [{ prompt: 'a lamp', size: '16:9', resolution: '1K', n: 1, model: productId }])
+  assert.deepEqual(gatewayCandidates(productId), [productId]); assert.equal(readFileSync(input.dest, 'utf8'), 'png')
 })
-
-// 2026-09-14 #1751：图片侧默认型号 gpt-image-2.5 已无别名，别名重试的覆盖由 video 路径承担
-// （seedance-2-5 → 上游承认的 seedance-2.5）。
+test('structured code-only HTTP failures survive runtime-kit message extraction', async (t) => {
+  const models = [], input = inputFor(t, { fetcher: async (_url, init) => {
+    models.push(JSON.parse(init.body).model); return json({ error: { code: 'get_channel_failed', message: 'temporarily unavailable' } }, 503)
+  } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel); assert.deepEqual(models, [productId])
+})
 test('video fallback uses the documented gateway alias without switching provider or input', async (t) => {
-  const bodies = []
-  const input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false, fetcher: async (url, init) => {
-    assert.match(String(url), /video\/generations$/)
-    bodies.push(JSON.parse(init.body))
+  const bodies = [], input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false, fetcher: async (url, init) => {
+    assert.match(String(url), /video\/generations$/); bodies.push(JSON.parse(init.body))
     return bodies.length === 1 ? json({ error: { message: channelMessage } }, 503) : json({ task_id: 'video-alias-task' })
   } })
-  const aliasResult = await executeOmnimuxMedia('video', input)
-  assert.equal(aliasResult.mode, 'submitted')
-  assert.equal(aliasResult.taskId, 'video-alias-task')
-  assert.equal(aliasResult.url, null)
-  assert.match(aliasResult.taskRef, /^mtask_/)
+  const result = await executeOmnimuxMedia('video', input)
+  assert.equal(result.mode, 'submitted'); assert.equal(result.taskId, 'video-alias-task'); assert.equal(result.url, null); assert.match(result.taskRef, /^mtask_/)
   assert.deepEqual(bodies.map((body) => body.model), ['seedance-2-5', 'seedance-2.5'])
-  assert.deepEqual({ ...bodies[0], model: bodies[1].model }, bodies[1])
-  assert.equal(input.model, 'seedance-2-5')
+  assert.deepEqual(Object.assign({}, bodies[0], { model: bodies[1].model }), bodies[1]); assert.equal(input.model, 'seedance-2-5')
 })
-
 test('successful primary sends one request only', async (t) => {
   let calls = 0
   const input = inputFor(t, { runtime: { execute: async () => { calls++; return output() } } })
-  assert.equal((await executeOmnimuxMedia('image', input)).mode, 'live')
-  assert.equal(calls, 1)
+  assert.equal((await executeOmnimuxMedia('image', input)).mode, 'live'); assert.equal(calls, 1)
 })
-
 test('two channel failures exhaust the gateway alias list', async (t) => {
-  const models = []
-  const input = inputFor(t, {
-    model: 'seedance-2-5', operation: 'text_to_video', wait: false,
-    runtime: { execute: async (req) => { models.push(req.input.model); throw channelError() } },
-  })
+  const models = [], input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false,
+    runtime: { execute: async (req) => { models.push(req.input.model); throw channelError() } } })
   await assert.rejects(() => executeOmnimuxMedia('video', input), assertChannel)
-  assert.deepEqual(models, ['seedance-2-5', 'seedance-2.5'])
-  assert.equal(existsSync(input.dest), false)
+  assert.deepEqual(models, ['seedance-2-5', 'seedance-2.5']); assert.equal(existsSync(input.dest), false)
 })
-
-// #2682 (866905473) narrowed executeOmnimuxMedia to image/video/audio; STT has its own
-// path (stt.js). The surviving contract here is: doubao-asr-bigmodel exposes only itself
-// as a gateway candidate — no upstream-recognised alias exists.
 test('a model with a single gateway candidate exposes only itself', async (t) => {
   assert.deepEqual(gatewayCandidates('doubao-asr-bigmodel'), ['doubao-asr-bigmodel'])
   let calls = 0
-  const input = inputFor(t, {
-    model: 'gpt-image-2.5',
-    runtime: { execute: async () => { calls++; throw channelError() } },
-  })
-  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
-  assert.equal(calls, 1)
+  const input = inputFor(t, { model: productId, runtime: { execute: async () => { calls++; throw channelError() } } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel); assert.equal(calls, 1)
 })
-
-for (const [label, error, expectedCode] of [
-  ['quota', Object.assign(new Error('quota exceeded'), { code: 'ADAPTER_FAILED' }), 'quota-exceeded'],
-  ['auth', Object.assign(new Error('Invalid token'), { code: 'needs-omnimux' }), 'needs-omnimux'],
-  ['timeout', Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' }), 'ETIMEDOUT'],
-  ['unknown model', new OmnimuxError('unknown-model', 'model not found'), 'unknown-model'],
-]) {
-  test(`${label} failures never retry`, async (t) => {
-    let calls = 0
-    const input = inputFor(t, { runtime: { execute: async () => { calls++; throw error } } })
-    await assert.rejects(() => executeOmnimuxMedia('image', input), (failure) => failure.code === expectedCode)
-    assert.equal(calls, 1)
-  })
+async function failureWithoutRetry(t, error, expectedCode) {
+  let calls = 0
+  const input = inputFor(t, { runtime: { execute: async () => { calls++; throw error } } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), { code: expectedCode }); assert.equal(calls, 1)
 }
-
-for (const [status, code] of [[401, 'needs-omnimux'], [402, 'quota-exceeded']]) {
-  test(`explicit HTTP ${status} suppresses alias retry even with channel wording`, async (t) => {
-    let calls = 0
-    const input = inputFor(t, { fetcher: async () => {
-      calls++
-      return json({ error: { message: channelMessage } }, status)
-    } })
-    await assert.rejects(() => executeOmnimuxMedia('image', input), (error) => error.code === code)
-    assert.equal(calls, 1)
-  })
+test('quota failures never retry', async (t) => failureWithoutRetry(t, Object.assign(new Error('quota exceeded'), { code: 'ADAPTER_FAILED' }), 'quota-exceeded'))
+test('auth failures never retry', async (t) => failureWithoutRetry(t, Object.assign(new Error('Invalid token'), { code: 'needs-omnimux' }), 'needs-omnimux'))
+test('timeout failures never retry', async (t) => failureWithoutRetry(t, Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' }), 'ETIMEDOUT'))
+test('unknown model failures never retry', async (t) => failureWithoutRetry(t, new OmnimuxError('unknown-model', 'model not found'), 'unknown-model'))
+async function explicitHttp(t, status, code) {
+  let calls = 0
+  const input = inputFor(t, { fetcher: async () => { calls++; return json({ error: { message: channelMessage } }, status) } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), { code }); assert.equal(calls, 1)
 }
-
-// 别名路径仍存在（video seedance-2-5 → seedance-2.5）：第二次尝试上的另一种错误必须保留
-// 它自己的分类并立刻停止，不得被当作渠道不可用继续退避。
+test('explicit HTTP 401 suppresses alias retry even with channel wording', async (t) => explicitHttp(t, 401, 'needs-omnimux'))
+test('explicit HTTP 402 suppresses alias retry even with channel wording', async (t) => explicitHttp(t, 402, 'quota-exceeded'))
 test('a different error on the alias retains its classification and stops', async (t) => {
   let calls = 0
-  const input = inputFor(t, {
-    model: 'seedance-2-5', operation: 'text_to_video', wait: false,
-    runtime: { execute: async () => {
-      if (++calls === 1) throw channelError()
-      throw new Error('quota exceeded')
-    } },
-  })
-  await assert.rejects(() => executeOmnimuxMedia('video', input), (error) => error.code === 'quota-exceeded')
-  assert.equal(calls, 2)
-})
-
-test('abort between attempts prevents retry and preserves the signal on execution', async (t) => {
-  const controller = new AbortController()
-  let calls = 0
-  const input = inputFor(t, { signal: controller.signal, runtime: { execute: async (req) => {
-    assert.equal(req.signal, controller.signal)
-    calls++
-    controller.abort()
-    throw channelError()
+  const input = inputFor(t, { model: 'seedance-2-5', operation: 'text_to_video', wait: false, runtime: { execute: async () => {
+    if (++calls === 1) throw channelError(); throw new Error('quota exceeded')
   } } })
-  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
-  assert.equal(calls, 1)
+  await assert.rejects(() => executeOmnimuxMedia('video', input), { code: 'quota-exceeded' }); assert.equal(calls, 2)
 })
-
+test('abort between attempts prevents retry and preserves the signal on execution', async (t) => {
+  const controller = new AbortController(); let calls = 0
+  const input = inputFor(t, { signal: controller.signal, runtime: { execute: async (req) => {
+    assert.equal(req.signal, controller.signal); calls++; controller.abort(); throw channelError()
+  } } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel); assert.equal(calls, 1)
+})
 test('custom providers do not inherit OmniMux alias retries', async (t) => {
   let calls = 0
-  const input = inputFor(t, {
-    provider: 'custom', media: { defaultProvider: 'custom', providers: { custom: {
-      protocol: 'openai-media', baseUrl: 'https://custom.example/v1', apiKey: 'none', models: { image: productId },
-    } } }, runtime: { execute: async () => { calls++; throw channelError() } },
-  })
-  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
-  assert.equal(calls, 1)
+  const input = inputFor(t, { model: 'my-image-model', provider: 'custom', runtimeSettings: customSettings(), media: CUSTOM_MEDIA, credentials: customCredentials(),
+    runtime: { execute: async () => { calls++; throw channelError() } } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel); assert.equal(calls, 1)
 })
-
-for (const status of [200, 503]) {
-  test(`poll failure after task creation never resubmits (HTTP ${status})`, async (t) => {
-    let posts = 0
-    const input = inputFor(t, { fetcher: async (_url, init) => {
-      if (init?.method === 'POST') { posts++; return json({ task_id: 'accepted-task' }) }
-      return json({ status: 'failed', error: { message: channelMessage } }, status)
-    } })
-    await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
-    assert.equal(posts, 1)
-  })
+async function pollFailure(t, status) {
+  let posts = 0
+  const input = inputFor(t, { fetcher: async (_url, init) => {
+    if (init?.method === 'POST') { posts++; return json({ task_id: 'accepted-task' }) }
+    return json({ status: 'failed', error: { message: channelMessage } }, status)
+  } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel); assert.equal(posts, 1)
 }
-
+test('poll failure after task creation never resubmits (HTTP 200)', async (t) => pollFailure(t, 200))
+test('poll failure after task creation never resubmits (HTTP 503)', async (t) => pollFailure(t, 503))
 test('download channel failure after a completed submit never resubmits', async (t) => {
   let posts = 0
   const input = inputFor(t, { fetcher: async (_url, init) => {
     if (init?.method === 'POST') { posts++; return json({ data: [{ url: 'https://cdn.example/out.png' }] }) }
     return json({ error: { message: channelMessage } }, 503)
   } })
-  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
-  assert.equal(posts, 1)
-  assert.equal(existsSync(input.dest), false)
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel); assert.equal(posts, 1); assert.equal(existsSync(input.dest), false)
 })
-
-for (const status of [429, 503]) {
-  test(`HTTP ${status} alone is not sufficient to retry a generation`, async (t) => {
-    let calls = 0
-    const input = inputFor(t, { fetcher: async () => { calls++; return json({ error: { message: 'service busy' } }, status) } })
-    await assert.rejects(() => executeOmnimuxMedia('image', input), (error) => error.code === 'ADAPTER_FAILED')
-    assert.equal(calls, 1)
-  })
+async function busyFailure(t, status) {
+  let calls = 0
+  const input = inputFor(t, { fetcher: async () => { calls++; return json({ error: { message: 'service busy' } }, status) } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), { code: 'ADAPTER_FAILED' }); assert.equal(calls, 1)
 }
-
+test('HTTP 429 alone is not sufficient to retry a generation', async (t) => busyFailure(t, 429))
+test('HTTP 503 alone is not sufficient to retry a generation', async (t) => busyFailure(t, 503))
 test('taskId resume sanitizes poll failure without submitting', async (t) => {
   let posts = 0
   const input = inputFor(t, { taskId: 'existing-task', fetcher: async (_url, init) => {
-    if (init?.method === 'POST') posts++
-    return json({ error: { message: channelMessage } }, 503)
+    if (init?.method === 'POST') posts++; return json({ error: { message: channelMessage } }, 503)
   } })
-  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel)
-  assert.equal(posts, 0)
+  await assert.rejects(() => executeOmnimuxMedia('image', input), assertChannel); assert.equal(posts, 0)
 })
-
-// gpt-image-2.5 无别名可退：wait=false 直接返回单一网关候选提交的任务，且只发一次请求。
 test('wait=false returns the task submitted by the single gateway candidate', async (t) => {
-  const models = []
-  const input = inputFor(t, { wait: false, fetcher: async (_url, init) => {
-    models.push(JSON.parse(init.body).model)
-    return json({ task_id: 'single-candidate-task' })
+  const models = [], input = inputFor(t, { wait: false, fetcher: async (_url, init) => {
+    models.push(JSON.parse(init.body).model); return json({ task_id: 'single-candidate-task' })
   } })
-  const singleResult = await executeOmnimuxMedia('image', input)
-  assert.equal(singleResult.mode, 'submitted')
-  assert.equal(singleResult.taskId, 'single-candidate-task')
-  assert.equal(singleResult.url, null)
-  assert.match(singleResult.taskRef, /^mtask_/)
-  assert.deepEqual(models, [productId])
-  assert.equal(existsSync(input.dest), false)
+  const result = await executeOmnimuxMedia('image', input)
+  assert.equal(result.mode, 'submitted'); assert.equal(result.taskId, 'single-candidate-task'); assert.equal(result.url, null); assert.match(result.taskRef, /^mtask_/)
+  assert.deepEqual(models, [productId]); assert.equal(existsSync(input.dest), false)
 })
-
-// BYOK: the user's own key covers image, so the request goes to their endpoint.
-test('BYOK media sends image to the user endpoint, not the official one', async (t) => {
-  const requests = []
-  const dir = mkdtempSync(join(tmpdir(), 'omnimux-byok-'))
-  t.after(() => rmSync(dir, { recursive: true, force: true }))
-  const result = await executeOmnimuxMedia('image', {
-    prompt: 'a lamp',
-    dest: join(dir, 'out.png'),
-    runtimeSettings: {
-      runtimeMode: 'key',
-      runtimeKeyEndpoint: 'https://my-provider.test/v1',
-      runtimeKeyModel: 'my-image-model',
-      runtimeKeyVerified: true,
-      runtimeMediaImage: true,
-    },
-    credentials: {
-      async resolve(ref) {
-        if (ref === 'OMNIMUX_BYOK_API_KEY') return { value: 'sk-byok-media' }
-        return undefined
-      },
-    },
-    fetcher: async (url, init) => {
-      requests.push({ url, auth: init.headers.authorization, body: JSON.parse(init.body) })
-      return json({ data: [{ b64_json: 'cG5n' }] })
-    },
-  })
-  assert.equal(result.mode, 'live')
-  assert.equal(requests.length, 1)
-  assert.ok(requests[0].url.startsWith('https://my-provider.test/v1'))
-  assert.equal(requests[0].auth, 'Bearer sk-byok-media')
-  assert.equal(requests[0].body.model, 'my-image-model')
+test('BYOK media sends image to the registered user endpoint, not the official one', async (t) => {
+  const requests = [], input = inputFor(t, { model: 'my-image-model', runtimeSettings: customSettings(), media: CUSTOM_MEDIA, credentials: customCredentials(), fetcher: async (url, init) => {
+    requests.push({ url: String(url), auth: init.headers.authorization, body: JSON.parse(init.body) }); return json({ data: [{ b64_json: 'cG5n' }] })
+  } })
+  const result = await executeOmnimuxMedia('image', input)
+  assert.equal(result.mode, 'live'); assert.equal(requests.length, 1); assert.equal(requests[0].url, 'https://my-provider.test/v1/images/generations')
+  assert.equal(requests[0].auth, 'Bearer sk-byok-media'); assert.equal(requests[0].body.model, 'my-image-model'); assert.equal(readFileSync(input.dest, 'utf8'), 'png')
 })
-
-// BYOK without a stored key fails before any request.
-test('BYOK media without a stored key throws unconfigured', async (t) => {
-  const input = inputFor(t, {
-    runtimeSettings: {
-      runtimeMode: 'key',
-      runtimeKeyEndpoint: 'https://my-provider.test/v1',
-      runtimeKeyModel: 'my-model',
-      runtimeKeyVerified: true,
-      runtimeMediaImage: true,
-    },
-    credentials: { async resolve() { return undefined } },
-    fetcher: async () => json({}),
-  })
-  await assert.rejects(
-    () => executeOmnimuxMedia('image', input),
-    (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
-  )
+test('BYOK media without a current dedicated key throws unconfigured before HTTP', async (t) => {
+  let calls = 0, refs = []
+  const input = inputFor(t, { model: 'my-image-model', runtimeSettings: customSettings(), media: CUSTOM_MEDIA,
+    credentials: { async resolve(ref) { refs.push(ref); return undefined } }, fetcher: async () => { calls++; return json({}) } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured')
+  assert.deepEqual(refs, ['OMNIMUX_MEDIA_KEY_CUSTOM']); assert.equal(calls, 0)
 })
-
-// BYOK for a media kind not selected is unavailable — never the official route.
 test('BYOK media for an unselected kind throws, never falls back to official', async (t) => {
   let calls = 0
-  const input = inputFor(t, {
-    runtimeSettings: {
-      runtimeMode: 'key',
-      runtimeKeyEndpoint: 'https://my-provider.test/v1',
-      runtimeKeyModel: 'my-model',
-      runtimeKeyVerified: true,
-      runtimeMediaImage: false,
-      runtimeMediaVideo: true,
-    },
-    fetcher: async () => { calls += 1; return json({ data: [{ b64_json: 'cG5n' }] }) },
-  })
-  await assert.rejects(
-    () => executeOmnimuxMedia('image', input),
-    (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
-  )
-  assert.equal(calls, 0, 'no request may leave for any channel')
+  const current = { scenarioBindings: { image: { channel: 'pending' }, video: { channel: 'byok', provider: 'custom' } },
+    byokProviders: [{ provider: 'custom', endpoint: 'https://my-provider.test/v1', models: { video: 'my-video-model' }, capabilities: ['video'] }] }
+  const input = inputFor(t, { model: 'my-image-model', runtimeSettings: current, media: CUSTOM_MEDIA,
+    credentials: { async resolve() { calls++; return { value: 'sk-byok-media' } } }, fetcher: async () => { calls++; return json({ data: [{ b64_json: 'cG5n' }] }) } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured'); assert.equal(calls, 0)
 })
-
-// #2817 (6127da0a): agent mode no longer blocks media outright — when the selected
-// model is an official media model (getModelChannelGroups non-empty), the official
-// channel is allowed through. This test now pins the remaining boundary: a non-official,
-// non-BYOK, non-listed media model in agent mode is still rejected before any request.
 test('agent mode rejects a non-official media model without touching any channel', async (t) => {
   let calls = 0
-  const input = inputFor(t, {
-    model: 'not-a-listed-media-model',
-    runtimeSettings: {
-      runtimeMode: 'agent',
-      runtimeAgentId: 'claude',
-      runtimeAgentVerified: true,
-    },
-    fetcher: async () => { calls += 1; return json({}) },
-  })
-  await assert.rejects(
-    () => executeOmnimuxMedia('image', input),
-    (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
-  )
-  assert.equal(calls, 0)
+  const input = inputFor(t, { model: 'not-a-listed-media-model', runtimeSettings: { runtimeMode: 'agent', runtimeAgentId: 'claude', runtimeAgentVerified: true },
+    fetcher: async () => { calls++; return json({}) } })
+  await assert.rejects(() => executeOmnimuxMedia('image', input), (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured'); assert.equal(calls, 0)
 })

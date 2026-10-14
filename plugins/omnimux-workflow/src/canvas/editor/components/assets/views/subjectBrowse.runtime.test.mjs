@@ -1,0 +1,11 @@
+import {test}from'node:test';import assert from'node:assert/strict';import{build}from'esbuild';import{JSDOM}from'jsdom';
+const bundle=await build({stdin:{contents:"export {SubjectLibraryView} from './SubjectLibraryView.tsx';export{createElement,act}from'react';export{createRoot}from'react-dom/client';",resolveDir:new URL('.',import.meta.url).pathname},bundle:true,write:false,format:'iife',globalName:'api',platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"development"'},plugins:[{name:'i18n',setup(b){b.onResolve({filter:/i18n$/},()=>({path:'i18n',namespace:'stub'}));b.onLoad({filter:/.*/,namespace:'stub'},()=>({contents:'export const useT=()=>key=>key;'}));}}]});
+test('collection click browses files without insertion; choosing one file forwards only its identity',async()=>{
+ const dom=new JSDOM('<div id="root"></div>',{runScripts:'outside-only',url:'http://localhost'});const w=dom.window;w.IS_REACT_ACT_ENVIRONMENT=true;w.MessageChannel=class{port1={onmessage:null};port2={postMessage:()=>setImmediate(()=>this.port1.onmessage?.())};};w.eval(bundle.outputFiles[0].text);const a=w.api;const root=a.createRoot(w.document.getElementById('root'));const selected=[];
+ const subject={id:'subject',name:'文件夹',avatar:'',itemCount:2,tags:[],updatedAt:1,previewUrls:[],files:[{id:'a',original_name:'a.png',kind:'image'},{id:'b',original_name:'b.png',kind:'image'}]};
+ try{await a.act(async()=>root.render(a.createElement(a.SubjectLibraryView,{subjects:[subject],onBack(){},onCreateSubject(){},onSelectSubject:s=>selected.push(s),onSelectFile:(s,f)=>selected.push([s.id,f.id])})));
+ await a.act(async()=>w.document.querySelector('.wf-subject-card-compact').click());assert.equal(selected.length,0);assert.equal(w.document.querySelectorAll('[data-subject-file-id]').length,2);
+ await a.act(async()=>w.document.querySelector('[data-subject-file-id="b"]').click());assert.deepEqual(selected,[['subject','b']]);
+ await a.act(async()=>w.document.querySelector('[aria-label="返回主体库"]').click());assert.equal(w.document.querySelectorAll('[data-subject-file-id]').length,0);assert.equal(w.document.querySelectorAll('.wf-subject-card-compact').length,1);
+ }finally{await a.act(async()=>root.unmount());w.close();}
+});

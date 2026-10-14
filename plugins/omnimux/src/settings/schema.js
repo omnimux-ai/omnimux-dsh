@@ -1,3 +1,5 @@
+import { DEFAULT_SCENARIO_BINDINGS, resolveScenarioBindings } from './runtime-mode.js'
+
 /**
  * Compact settings namespace for canvas default models.
  *
@@ -65,6 +67,7 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   allowOfficialMediaFallback: false,
   byokProviders: Object.freeze([]),
   referenceStorage: Object.freeze(parseReferenceStorageConfig(undefined)),
+  scenarioBindings: DEFAULT_SCENARIO_BINDINGS,
 })
 
 const FIELD_META = Object.freeze({
@@ -95,6 +98,7 @@ const FIELD_META = Object.freeze({
   runtimeMediaAudioModel: '音频生成模型',
   allowOfficialMediaFallback: '允许官方通道兜底媒体生成',
   byokProviders: '自备 API Key 多渠道提供商配置列表',
+  scenarioBindings: '文字、素材理解和媒体生成的独立服务选择',
 })
 
 function stringNode(key) {
@@ -132,6 +136,11 @@ const RUNTIME_DICT = Object.freeze({
   runtimeMediaVideoModel: stringNode('runtimeMediaVideoModel'),
   runtimeMediaAudioModel: stringNode('runtimeMediaAudioModel'),
   allowOfficialMediaFallback: boolNode('allowOfficialMediaFallback'),
+  scenarioBindings: {
+    type: 'object',
+    default: DEFAULT_SCENARIO_BINDINGS,
+    meta: { description: FIELD_META.scenarioBindings },
+  },
   byokProviders: {
     type: 'array',
     default: SETTINGS_DEFAULTS.byokProviders,
@@ -154,6 +163,10 @@ function sanitizeByokProvider(item) {
   if (typeof item.endpoint === 'string' && item.endpoint.trim()) {
     sanitized.endpoint = item.endpoint.trim()
   }
+  if (typeof item.credentialRef === 'string' && /^OMNIMUX_MEDIA_KEY_[A-Z0-9_]+$/.test(item.credentialRef)) sanitized.credentialRef = item.credentialRef
+  if (Number.isSafeInteger(item.revision) && item.revision >= 0) sanitized.revision = item.revision
+  if (item.saveState === 'pending') sanitized.saveState = 'pending'
+  if (typeof item.protocol === 'string') sanitized.protocol = item.protocol.trim()
   // 密钥由 credentials 独立安全持久化，严禁明文污染公开 settings 命名空间
   if (Array.isArray(item.capabilities)) {
     sanitized.capabilities = item.capabilities.filter((c) => typeof c === 'string' && c.trim()).map((c) => c.trim())
@@ -193,6 +206,8 @@ function parseSettingsSection(value) {
     const fallback = SETTINGS_DEFAULTS[key]
     if (key === 'referenceStorage') {
       out.referenceStorage = parseReferenceStorageConfig(raw)
+    } else if (key === 'scenarioBindings') {
+      out.scenarioBindings = resolveScenarioBindings(input)
     } else if (key === 'byokProviders') {
       out.byokProviders = Array.isArray(raw)
         ? raw.map(sanitizeByokProvider).filter(Boolean)

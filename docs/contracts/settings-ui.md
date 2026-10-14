@@ -49,6 +49,16 @@ The legacy seats below remain descriptions of older composition surfaces; their 
 
 Official Settings plugin tabs already occupy `configurable` (order 0) and `all` (order 10). Product `settings.plugins.tab` entries use order ≥ 20 so they sit after the official ones; this ordering does not apply to Workbench Tabs.
 
+## Scenario choices and truthful checks
+
+The existing OmniMux card owns independent `text`, `analysis`, `image`, `video`, and retained `audio` choices in `scenarioBindings`. Saving a provider does not select it for every scenario or write a global runtime mode. Existing session chat remains on the Host LLM settings surface. Canvas defaults apply to unspecified new-node choices, never rewrite saved nodes; the canvas projection preserves a lawful Hub default before its curated fallback.
+
+Provider metadata lives in `byokProviders`; values remain in the credentials domain under the provider-specific reference. Configuration writes carry the read revision, invalidate the target record before a credential write, and confirm normalized readback. Partial writes retain `saveState: pending`; recovery requires a newly supplied credential rather than silently pairing a rotated credential with old-origin metadata. Deletion affects only the named provider. A changed origin cannot reuse an old credential without supplying it again.
+
+`POST /omnimux/byok/test` is a read-only offline configuration check: no generation, provider HTTP, credential resolution, key saving or default selection. A format pass is not connection authentication, adapter support or a historical generation success. The response carries configuration and provider revision, a Host-controlled non-secret credential generation, identity and time. Committed credential reference events invalidate this generation and notify the existing Hub event stream, so displayed checks withdraw immediately; already-confirmed duplicate events do not erase a completed save receipt. Process environment changes are not observable. Settings or credential changes during checking/confirmation reject the old result. Client drafts keep their own identity and discard late results; tab changes preserve unfinished drafts.
+
+Legacy raw user fields are evidence, schema defaults are not user choices. Ambiguous legacy key/text or duplicate provider records stay locally pending without clearing keys or projects. Unknown locally stored model IDs are retained visibly, never erased by a client blacklist. Media execution additionally requires an already registered provider protocol and matching origin; writing a native provider name does not install an adapter.
+
 ## Adding a Settings surface
 
 These steps apply only to the `settings.*` seats above. App and library pages use the registration and opening flow in [workbench-split.md](workbench-split.md).

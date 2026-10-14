@@ -39,6 +39,7 @@ import { createGenerationMapping } from '../media/generation-mapping.js'
 import { listSessionModels } from '../catalog/session-models.js'
 import { createComposerListSync } from '../catalog/composer-sync.js'
 import { SettingsConfig } from '../settings/schema.js'
+import { readScenarioSettings } from '../settings/runtime-mode.js'
 import { mountHubHttp } from './http.js'
 import { mountComposerCommands } from './composer-commands.js'
 import { hubHomeDir, hubProfileName } from './paths.js'
@@ -162,9 +163,10 @@ export function apply(ctx, config = {}) {
         httpCtx.effect(() => registerWorkbenchHttpRoutes(server, { mailbox, getConnection: () => ctx.get?.('connection') }), 'omnimux: workbench HTTP')
         httpCtx.effect(() => registerSessionModelRoutes(server, { preference: sessionModelPreference }), 'omnimux: session model HTTP')
         httpCtx.effect(() => registerDirectMediaRoutes(server, {
-          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: Object.assign({}, ctx.get?.('settings')?.get?.('omnimux'), { referenceStorage: readReferenceStorageConfig() }) }),
-          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: Object.assign({}, ctx.get?.('settings')?.get?.('omnimux'), { referenceStorage: readReferenceStorageConfig() }) }),
-          getRuntimeSettings: () => ctx.get?.('settings')?.get?.('omnimux'),
+          executeImage: (req) => executeOmnimuxImage({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: Object.assign({}, readScenarioSettings(ctx.get?.('settings')), { referenceStorage: readReferenceStorageConfig() }) }),
+          executeVideo: (req) => executeOmnimuxVideo({ ...req, media: hub.media, store, credentials: ctx.get?.('credentials'), runtimeSettings: Object.assign({}, readScenarioSettings(ctx.get?.('settings')), { referenceStorage: readReferenceStorageConfig() }) }),
+          getRuntimeSettings: () => Object.assign({}, readScenarioSettings(ctx.get?.('settings')), { referenceStorage: readReferenceStorageConfig() }),
+          media: hub.media,
           getConnection: () => ctx.get?.('connection'),
           gate: hub.gate,
         }), 'omnimux: direct media generate HTTP')
