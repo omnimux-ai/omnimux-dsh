@@ -198,6 +198,7 @@ export function registerDirectMediaRoutes(webServer, deps) {
             taskRef: normalizedTaskRef,
           },
           current: deps?.getRuntimeSettings?.() ?? deps?.runtimeSettings,
+          media: deps.media,
         })
         const recoveredHandle = (ledgerRecord?.upstreamTaskId || ledgerRecord?.artifact?.sourceUrl) && canRecoverMediaTask(ledgerRecord)
         const executePayload = {

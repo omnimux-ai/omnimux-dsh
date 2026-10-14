@@ -254,6 +254,21 @@ test('3312: an accepted H3 task followed by channel failure never submits a seco
   assert.equal(record.collectionErrorCode, 'CHANNEL_UNAVAILABLE')
 }))
 
+test('3312: the direct HTTP planner preserves current official Config defaults when saved defaults are invalid', async () => isolated(async (home) => {
+  let route, captured
+  registerDirectMediaRoutes({ register(definition) { route = definition; return () => {} } }, {
+    storageDir: join(home, 'config-default-ledger'),
+    runtimeSettings: { defaultImageModel: 'invalid-default' },
+    media: { defaultProvider: 'omnimux', providers: { omnimux: { protocol: 'openai-media', baseUrl: 'https://api.omnimux.ai/v1',
+      apiKeyEnv: 'OMNIMUX_API_KEY', models: { image: 'gpt-image-2.5-flare' } } } },
+    executeImage: async (request) => { captured = request; return { mode: 'submitted', taskId: 'synthetic-config-default' } },
+    executeVideo: async () => { throw new Error('Unexpected video executor') },
+  })
+  const result = await post(route, { kind: 'image', prompt: 'synthetic default', dest: join(home, 'default.png'), wait: false })
+  assert.equal(result.status, 200)
+  assert.equal(captured.model, 'gpt-image-2.5-flare')
+}))
+
 test('3312: direct image HTTP rejects a standard head excluded by the economy-only allowed pool before executor or new ledger', async () => isolated(async (home) => {
   const body = imageBody(home, 'direct-head-outside-pool')
   body.allowedGroups = ['economy']
