@@ -91,6 +91,7 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
   };
   let cleanupCount = 0;
   let cleanupBehavior = 'success';
+  const browserReceipt = {};
   const browserAssertions = [
     { name: 'app-dom-mounted', pass: true },
     { name: 'visible-geometry-positive', pass: true, largest: { width: 900, height: 600 } },
@@ -116,6 +117,8 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
     driveBrowser: async () => ({
       cdpPort: 15001,
       assertions: browserAssertions,
+      cleanup: browserReceipt.cleanup,
+      observations: browserReceipt.observations,
       screenshot: { path: root + '/.workbuddy/evidence/app-qa/run-ok/app-home.png', width: 1280, height: 713, bytes: 2048 },
     }),
   });
@@ -144,6 +147,21 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
     assert.equal(cleanupCount, behavior === 'false' ? 2 : 3, 'each attempted run cleans exactly once');
   }
   cleanupBehavior = 'success';
+  browserAssertions.push({ name: 'cookie=unit-secret-never-log', pass: false });
+  const unexpectedName = await run({ root, repo: '/repo' });
+  assert.equal(unexpectedName.pass, false);
+  assert.ok(unexpectedName.errors.includes('TEST_APP_QA_ASSERTION_SET_MISMATCH'));
+  assert.equal(unexpectedName.assertions.some(item => item.name.includes('unit-secret-never-log')), false);
+  browserAssertions.pop();
+  browserReceipt.cleanup = {};
+  browserReceipt.observations = { events: [null] };
+  const malformedReceipt = await run({ root, repo: '/repo' });
+  assert.equal(malformedReceipt.pass, false);
+  assert.ok(malformedReceipt.errors.includes('TEST_APP_QA_BROWSER_CLEANUP'));
+  assert.ok(malformedReceipt.errors.includes('TEST_APP_QA_EVENTS_INVALID'));
+  assert.ok(written.some(item => item.value.includes('TEST_APP_QA_EVENTS_INVALID')));
+  delete browserReceipt.cleanup;
+  delete browserReceipt.observations;
 
   const request = {
     root, repo: '/repo', taskId: 'task', base: 'HEAD', head: 'HEAD', scope: 'smoke',
@@ -157,7 +175,7 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
   await assert.rejects(run(Object.assign({}, request, { base: undefined })), { code: 'TEST_APP_QA_CONTRACT_REQUEST' });
   await assert.rejects(run(Object.assign({}, request, { requiredChecks: [] })), { code: 'TEST_APP_QA_EXPECTED_POLICY' });
   await assert.rejects(run(Object.assign({}, request, { expectedAssertions: { 'app-environment': ['app-runtime-ready', 'same-origin-login'], 'app-browser': ['app-dom-mounted', 'visible-geometry-positive'] } })), { code: 'TEST_APP_QA_EXPECTED_POLICY' });
-  assert.equal(cleanupCount, 3, 'preflight failures never prepare or clean an environment');
+  assert.equal(cleanupCount, 5, 'preflight failures never prepare or clean an environment');
   assert.equal(written.length, beforeWrites, 'preflight failures never create a report');
 
   // 报告不得携带登录能力或清理异常原文

@@ -824,7 +824,10 @@ export function createAppQaRunner(deps = {}) {
         || new Set(assertions.map(item => item.name)).size !== assertions.length) {
         report.errors.push('TEST_APP_QA_ASSERTIONS_INVALID'); return;
       }
-      report.assertions.push(...assertions.map(({ name, pass }) => ({ name, pass })));
+      const allowedNames = request ? request.requiredChecks.flatMap(name => request.expectedAssertions[name])
+        : [...ENV_ASSERTIONS, ...BROWSER_ASSERTIONS, 'live-model-catalog-ready', 'live-image-generate-http-200', 'live-image-rendered-no-broken-img', 'journey-load', 'journey-export-shape', 'journey-result-shape', 'journey-assertions-invalid', 'journey-error'];
+      if (assertions.some(item => !allowedNames.includes(item.name))) report.errors.push('TEST_APP_QA_ASSERTION_SET_MISMATCH');
+      report.assertions.push(...assertions.filter(item => allowedNames.includes(item.name)).map(({ name, pass }) => ({ name, pass })));
     };
     try {
       prepareAttempted = true;
@@ -889,10 +892,12 @@ export function createAppQaRunner(deps = {}) {
       report.cleanup = { cleaned: true, contract: 'none' };
     } else report.cleanup = { cleaned: envCleanup?.cleaned === true && resources.every(item => item.status !== 'failed'), resources };
     if (!report.cleanup.cleaned) report.errors.push('TEST_APP_QA_CLEANUP_INCOMPLETE');
-    if (browserAttempted && browser?.cleanup?.some(item => item.status === 'failed')) report.errors.push('TEST_APP_QA_BROWSER_CLEANUP');
+    if (browserAttempted && (request || browser?.cleanup !== undefined) && (!Array.isArray(browser?.cleanup) || browser.cleanup.some(item => !item || item.status === 'failed'))) report.errors.push('TEST_APP_QA_BROWSER_CLEANUP');
     if (browser?.observations?.unexpectedExit) report.errors.push('TEST_APP_QA_BROWSER_EXIT');
     if ([(env?.observations ?? prepareObservations)?.events, browser?.observations?.events].some(events => Array.isArray(events) && events.length > 16)) report.errors.push('TEST_APP_QA_EVENT_LIMIT');
-    const safeEvents = events => Array.isArray(events) ? events.slice(0, 16).map(item => ({
+    const eventLists = [(env?.observations ?? prepareObservations)?.events, browser?.observations?.events];
+    if (eventLists.some(events => events !== undefined && (!Array.isArray(events) || events.some(item => !item || typeof item !== 'object')))) report.errors.push('TEST_APP_QA_EVENTS_INVALID');
+    const safeEvents = events => Array.isArray(events) ? events.slice(0, 16).filter(item => item && typeof item === 'object').map(item => ({
       event: ['spawn', 'exit', 'close', 'error'].includes(item.event) ? item.event : 'unknown',
       code: Number.isInteger(item.code) ? item.code : null,
       signal: ['SIGTERM', 'SIGKILL', 'SIGINT', 'SIGABRT', 'SIGSEGV'].includes(item.signal) ? item.signal : null,
