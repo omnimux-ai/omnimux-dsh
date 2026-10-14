@@ -165,7 +165,8 @@ export function mountMedia(ctx, opts) {
      */
     execute(req) {
       assertCapabilityEnabled(gate, kind, 'media')
-      const current = readScenarioSettings(ctx.get?.('settings'))
+      const scenarioSettings = readScenarioSettings(ctx.get?.('settings'))
+      const current = Object.assign({}, scenarioSettings, { referenceStorage: opts.readReferenceStorageConfig?.() ?? scenarioSettings?.referenceStorage })
       // 放行/渠道判定唯一拥有者：resolveExecutionPlan（见 media/execution-plan.js）。
       // 本处只做能力门禁 + 调用判定；execute 消费 RouteDecision.finalReq 不再重复判定。
       const plan = resolveExecutionPlan({ kind, req, current, media })

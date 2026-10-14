@@ -19,13 +19,13 @@ function jsonResponse(status, json) {
 describe('readJsonBody optional byte bound', () => {
   it('preserves unbounded legacy calls and accepts exactly the UTF8 byte limit', async () => {
     const text = JSON.stringify({ value: '中文' })
-    const req = () => ({ async *[Symbol.asyncIterator]() { yield Buffer.from(text) } })
+    const req = async function* () { yield Buffer.from(text) }
     assert.deepEqual(await readJsonBody(req()), { value: '中文' })
     assert.deepEqual(await readJsonBody(req(), Buffer.byteLength(text)), { value: '中文' })
   })
   it('throws the explicit oversize sentinel immediately without consuming later chunks', async () => {
     let reads = 0
-    const req = { async *[Symbol.asyncIterator]() { reads++; yield Buffer.from('中文'); reads++; yield Buffer.from('unused') } }
+    const req = (async function* () { reads++; yield Buffer.from('中文'); reads++; yield Buffer.from('unused') })()
     await assert.rejects(() => readJsonBody(req, 5), error => error.code === 'request_too_large')
     assert.equal(reads, 1)
   })
@@ -251,7 +251,7 @@ describe('auth http dispatcher', () => {
     apply({
       tools: { register() {} },
       provide() {},
-      get(name) { return optional[name] },
+      get() { return undefined },
       inject(deps, callback) {
         if (deps.includes('clientModules')) {
           assert.deepEqual(deps, ['clientModules', 'webServer', 'loader', 'connection'])
@@ -305,6 +305,7 @@ describe('auth http dispatcher', () => {
       'exact:/omnimux/byok/config',
       'exact:/omnimux/runtime/mode',
       'exact:/omnimux/byok/test',
+      'exact:/omnimux/reference-storage/config',
       'exact:/omnimux/agents',
       // #3178: sign-in state, account sign-in and version/upgrade routes
       'exact:/omnimux/agents/updates',
@@ -324,14 +325,13 @@ describe('auth http dispatcher', () => {
     assert.ok(composerRoute, 'composer attachments route must be registered')
     /** @type {{ status?: number, chunks: string[] }} */
     const seen = { chunks: [] }
-    const req = {
+    const req = Object.assign((async function* () {
+      yield Buffer.from(JSON.stringify({ sessionId: 'sess-522', assetIds: [] }))
+    })(), {
       method: 'POST',
       url: '/omnimux/composer/attachments/instantiate',
       headers: {},
-      async *[Symbol.asyncIterator]() {
-        yield Buffer.from(JSON.stringify({ sessionId: 'sess-522', assetIds: [] }))
-      },
-    }
+    })
     const res = {
       writeHead(status) { seen.status = status },
       end(chunk) { seen.chunks.push(String(chunk)) },

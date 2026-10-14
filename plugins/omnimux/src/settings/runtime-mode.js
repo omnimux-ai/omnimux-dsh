@@ -33,7 +33,7 @@ export function readScenarioSettings(settings) {
     return { ...descriptor.value,
       scenarioBindings: Object.keys(record(raw.scenarioBindings)).length
         ? resolveScenarioBindings(raw)
-        : Object.keys(raw).length ? resolveScenarioBindings(raw) : descriptor.value.scenarioBindings }
+        : ['runtimeMode', 'runtimeAgentId', 'runtimeKeyEndpoint', 'runtimeMediaProvider', 'runtimeMediaImageModel', 'runtimeMediaVideoModel', 'runtimeMediaAudioModel'].some(key => Object.hasOwn(raw, key)) ? resolveScenarioBindings(raw) : descriptor.value.scenarioBindings }
   }
   return settings?.get?.('omnimux') ?? {}
 }

@@ -1,0 +1,49 @@
+{
+  "before": [
+    {
+      "label": "Text tools",
+      "value": "Official"
+    },
+    {
+      "label": "Reference analysis",
+      "value": "Official"
+    },
+    {
+      "label": "Image generation",
+      "value": "Official"
+    },
+    {
+      "label": "Video generation",
+      "value": "Official"
+    },
+    {
+      "label": "Audio generation",
+      "value": "Official"
+    }
+  ],
+  "after": [
+    {
+      "label": "Text tools",
+      "value": "Official"
+    },
+    {
+      "label": "Reference analysis",
+      "value": "Official"
+    },
+    {
+      "label": "Image generation",
+      "value": "Official"
+    },
+    {
+      "label": "Video generation",
+      "value": "Official"
+    },
+    {
+      "label": "Audio generation",
+      "value": "Official"
+    }
+  ],
+  "unchanged": true,
+  "origin": "http://localhost:63672",
+  "scope": "official app existing synthetic storage save without generation"
+}

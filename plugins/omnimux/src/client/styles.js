@@ -11,6 +11,10 @@ const LOGIN_GATE_JELLY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0
 const LOGIN_GATE_JELLY_URI = `url("data:image/svg+xml,${encodeURIComponent(LOGIN_GATE_JELLY_SVG)}")`
 
 export const HUB_CSS = `
+.omnimux-reference-storage-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.omnimux-reference-storage-error { color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-primary)); }
+@media (max-width: 640px) { .omnimux-reference-storage-fields { grid-template-columns: minmax(0, 1fr); } }
+
 /* ── OmniMux 原生蓝色元素中性化重构 (精准覆盖原生蓝色，保留 DSH 原生黑白底色与层次) ── */
 :root,
 body {
