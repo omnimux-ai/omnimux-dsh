@@ -4383,25 +4383,8 @@ body:has(.wf-generation-draft) > .wf-custom-select-dropdown .wf-custom-select-op
   color: var(--wb-text-muted, #71717a);
 }
 
-.wf-subject-card-count-badge-compact {
-  position: absolute;
-  bottom: 3px;
-  right: 3px;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #ffffff;
-  font-size: var(--wb-fs-caption, 12px);
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
 .wf-subject-card-info-compact {
   padding: 5px 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
 }
 
 .wf-subject-card-name-compact {
@@ -4411,20 +4394,6 @@ body:has(.wf-generation-draft) > .wf-custom-select-dropdown .wf-custom-select-op
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.wf-subject-card-tags-compact {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-
-.wf-subject-card-tag-compact {
-  font-size: var(--wb-fs-caption, 12px);
-  padding: 1px 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--wb-text-muted, #a1a1aa);
 }
 
 .wf-subject-card-placeholder {
