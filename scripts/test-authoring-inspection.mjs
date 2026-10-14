@@ -6,20 +6,34 @@ export function inspectTestAuthoring(code) {
   try { ast = parse(code, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true }) }
   catch { return { allowed: false, reason: 'unsupported-or-incomplete-test-syntax' } }
   const blocked = new Set(['skip', 'only', 'todo'])
+  const runners = new Set(['test', 'it', 'describe'])
+  for (const statement of ast.body) {
+    if (statement.type === 'ImportDeclaration' && ['node:test', 'vitest', '@jest/globals'].includes(statement.source.value)) {
+      for (const specifier of statement.specifiers) runners.add(specifier.local.name)
+    }
+  }
   let reason = null
   function inspect(node) {
     if (!node || typeof node !== 'object' || reason) return
     if (node.type === 'MemberExpression') {
       const property = node.computed ? node.property.type === 'Literal' ? node.property.value : null : node.property.name
       if (property === null) reason = 'dynamic-test-member-needs-review'
-      else if (blocked.has(property)) reason = 'test-execution-selector-needs-review'
+      else if (blocked.has(property) || ['eval', 'Function', 'defineProperty', 'defineProperties'].includes(property) || node.object.type === 'Identifier' && node.object.name === 'Reflect') reason = 'test-execution-selector-needs-review'
     }
-    if (node.type === 'Property') {
+    if (node.type === 'Property' || node.type === 'MethodDefinition' || node.type === 'PropertyDefinition') {
       const key = node.computed ? node.key.type === 'Literal' ? node.key.value : null : node.key.name ?? node.key.value
       if (key === null) reason = 'dynamic-test-property-needs-review'
-      if (blocked.has(key) && !(node.value.type === 'Literal' && [false, null, 0, ''].includes(node.value.value))) reason = 'test-execution-option-needs-review'
+      if (blocked.has(key) && !(node.value?.type === 'Literal' && [false, null, 0, ''].includes(node.value.value))) reason = 'test-execution-option-needs-review'
     }
-    if (node.type === 'ImportExpression' || node.type === 'WithStatement') reason = 'dynamic-test-execution-needs-review'
+    if (node.type === 'CallExpression') {
+      const directRunner = node.callee.type === 'Identifier' && runners.has(node.callee.name)
+      const namespaceRunner = node.callee.type === 'MemberExpression' && node.callee.object.type === 'Identifier' && runners.has(node.callee.object.name)
+      if (directRunner || namespaceRunner) {
+        const options = node.arguments.length > 2 ? node.arguments[1] : null
+        if (options && (options.type !== 'ObjectExpression' || options.properties.some(property => property.type !== 'Property'))) reason = 'dynamic-test-options-needs-review'
+      }
+    }
+    if (node.type === 'SpreadElement' || node.type === 'ImportExpression' || node.type === 'WithStatement') reason = 'dynamic-test-execution-needs-review'
     if (node.type === 'Identifier' && ['eval', 'Function'].includes(node.name)) reason = 'dynamic-test-execution-needs-review'
     if (node.type === 'ImportSpecifier' && blocked.has(node.imported.name ?? node.imported.value)) reason = 'test-execution-import-needs-review'
     for (const value of Object.values(node)) {

@@ -134,7 +134,7 @@ export function handle(rawInput) {
   const toolInput = input.tool_input || (input.file_path ? input : {});
   const filePath = toolInput.file_path || input.file_path || '';
   let content = toolInput.content || toolInput.new_string || input.content || input.new_string || '';
-  if (toolName === 'edit' && /\.(?:test|spec)\.[^/]+$|(?:^|\/)(?:tests?|__tests__)\//.test(filePath.replace(/\\/g, '/'))) {
+  if (toolName === 'edit' && /(^|\/)(tests?|specs?|__tests__)(\/|$)|\.(test|spec)\.[a-zA-Z0-9]+$/i.test(filePath.replace(/\\/g, '/')) && !/\.md$/i.test(filePath)) {
     const oldString = toolInput.old_string;
     const source = readFileSync(resolve(input.cwd || process.cwd(), filePath), 'utf8');
     if (typeof oldString !== 'string' || !oldString || !source.includes(oldString)) throw new Error('Cannot reconstruct test edit');
