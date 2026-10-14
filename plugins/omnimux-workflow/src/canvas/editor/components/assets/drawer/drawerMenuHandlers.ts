@@ -290,16 +290,16 @@ export async function executeFolderMenuAction(
 
 export async function instantiateSubjectToProject(
   subject: { id: string; name: string },
-  projectAssets: { instantiateSubject: (id: string) => Promise<boolean>; error?: string | null },
+  projectAssets: { instantiateSubject: (id: string, parentId?: string | null, onAssets?: (assets: AssetItem[]) => void) => Promise<boolean>; error?: string | null },
   guard: { isCurrent: (ticket: any) => boolean },
   ticket: any,
-  onSuccess: () => void,
+  onSuccess: (assets: AssetItem[]) => void,
 ): Promise<void> {
-  const ok = await projectAssets.instantiateSubject(subject.id);
+  let addedAssets: AssetItem[] = [];
+  const ok = await projectAssets.instantiateSubject(subject.id, null, (assets) => { addedAssets = assets; });
   if (!guard.isCurrent(ticket)) return;
   if (ok) {
-    toast.success(`已实例化到项目：${subject.name}`);
-    onSuccess();
+    onSuccess(addedAssets);
   } else {
     toast.error(projectAssets.error || '实例化失败');
   }

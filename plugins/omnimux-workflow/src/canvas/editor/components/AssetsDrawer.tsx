@@ -312,7 +312,8 @@ export const AssetsDrawer: React.FC<AssetsDrawerProps> = ({
 
   const handleSelectSubject = (subject: { id: string; name: string }) => {
     const ticket = guard.capture();
-    void instantiateSubjectToProject(subject, projectAssets, guard, ticket, () => {
+    void instantiateSubjectToProject(subject, projectAssets, guard, ticket, (assets) => {
+      for (const asset of assets) onInsertAsset?.(asset);
       setViewState('normal');
       setActiveTab('assets');
     });
