@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync as realSpawnSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, fstatSync, readFileSync } from 'node:fs'
 import { registerHooks } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,6 +12,7 @@ const moduleUrl = source => `data:text/javascript,${encodeURIComponent(source)}`
 const calls = []
 let outcome
 let duringSpawn
+let lifecycle
 const resultDom = '<html><head><title>RESULT:{&quot;width&quot;:321,&quot;label&quot;:&quot;A&amp;B&quot;}</title></head></html>'
 globalThis.__styleProbeSpawn = (binary, args, options) => {
   const page = fileURLToPath(args.at(-1))
@@ -20,10 +21,29 @@ globalThis.__styleProbeSpawn = (binary, args, options) => {
   calls.push({ binary, args, options, page, profile })
   assert.ok(existsSync(page), 'fixture must exist while the child runs')
   assert.match(readFileSync(page, 'utf8'), /document.title = 'RESULT:'/)
+  if (options.stdio) {
+    assert.equal(options.stdio[0], 'ignore')
+    for (const fd of options.stdio.slice(1)) {
+      assert.equal(typeof fd, 'number')
+      const file = fstatSync(fd)
+      assert.ok(file.isFile(), 'child output must target a real regular file')
+      assert.equal(file.nlink, 1)
+      assert.equal(file.size, 0)
+    }
+    assert.ok(existsSync(join(dirname(page), 'stdout')))
+    assert.ok(existsSync(join(dirname(page), 'stderr')))
+  }
   duringSpawn?.()
   const controlled = outcome
-  const child = realSpawnSync(process.execPath, ['--input-type=module', '-e',
-    `process.stdout.write(${JSON.stringify(controlled.stdout)}); process.stderr.write(${JSON.stringify(controlled.stderr)}); process.exit(${controlled.status ?? 0})`], { encoding: 'utf8' })
+  const code = lifecycle === 'descendant'
+    ? `import { spawn } from 'node:child_process'; import { writeSync } from 'node:fs'; const child = spawn(process.execPath, ['-e', 'setTimeout(() => process.exit(0), 400)'], { stdio: ['ignore', 1, 2] }); child.unref(); writeSync(1, ${JSON.stringify(controlled.stdout)}); process.exit(0)`
+    : lifecycle === 'direct-live'
+      ? `import { writeSync } from 'node:fs'; writeSync(1, ${JSON.stringify(controlled.stdout)}); setTimeout(() => process.exit(0), 400)`
+      : `process.stdout.write(${JSON.stringify(controlled.stdout)}); process.stderr.write(${JSON.stringify(controlled.stderr)}); process.exit(${controlled.status ?? 0})`
+  const childOptions = Object.assign({}, options, lifecycle ? { timeout: 100 } : {})
+  const child = realSpawnSync(process.execPath, ['--input-type=module', '-e', code], childOptions)
+  calls.at(-1).child = child
+  if (lifecycle) return child
   assert.equal(child.error, undefined)
   return { ...child, status: controlled.status, signal: controlled.signal, error: controlled.error }
 }
@@ -41,9 +61,16 @@ const hooks = registerHooks({
 const { runStyleDomProbe } = await import(helperUrl)
 const input = { name: 'diagnostics', styles: '.fixture { width: 321px }', html: '<div class="fixture">synthetic</div>', measure: () => ({ width: 321, label: 'A&B' }) }
 const success = () => ({ status: 0, signal: null, stdout: resultDom, stderr: '' })
-function reset(value = success()) { calls.length = 0; outcome = value; duringSpawn = undefined }
+function reset(value = success()) {
+  calls.length = 0; outcome = value; duringSpawn = undefined; lifecycle = undefined
+}
 function assertClean() {
-  for (const call of calls) assert.equal(existsSync(dirname(call.page)), false, 'only this call directory must be removed')
+  for (const call of calls) {
+    assert.equal(existsSync(dirname(call.page)), false, 'only this call directory must be removed')
+    for (const fd of call.options.stdio?.slice(1) || []) {
+      assert.throws(() => fstatSync(fd), { code: 'EBADF' }, 'output descriptors must be closed')
+    }
+  }
 }
 function receipt(value) {
   return { name: 'diagnostics', timeoutMs: 30000, status: value.status, signal: value.signal,
@@ -65,7 +92,9 @@ test('success keeps the original JSON and arguments with independent temporary p
     assert.equal(call.binary, 'synthetic-chrome')
     assert.equal(call.profile, join(dirname(call.page), 'profile'))
     assert.deepEqual(call.args, ['--headless=new', '--incognito', `--user-data-dir=${call.profile}`, '--disable-gpu', '--disable-extensions', '--no-first-run', '--no-default-browser-check', '--window-size=1600,800', '--virtual-time-budget=1500', '--dump-dom', `file://${call.page}`])
-    assert.deepEqual(call.options, { encoding: 'utf8', timeout: 30000 })
+    assert.deepEqual(call.options, { encoding: 'utf8', timeout: 30000, stdio: ['ignore', call.options.stdio[1], call.options.stdio[2]] })
+    assert.equal(call.child.stdout, null, 'measurement comes from owned files, not returned pipe text')
+    assert.equal(call.child.stderr, null)
   }
   assert.notEqual(calls[0].profile, calls[1].profile)
   assertClean()
@@ -127,6 +156,28 @@ test('invalid JSON still throws SyntaxError and cleans its own temporary directo
   assert.ok(rejected() instanceof SyntaxError)
 })
 
+test('direct exit returns measurement without waiting for bounded descendants to close inherited output', () => {
+  reset()
+  lifecycle = 'descendant'
+  assert.deepEqual(runStyleDomProbe(input), { width: 321, label: 'A&B' })
+  assert.equal(calls.length, 1, 'one invocation must not retry')
+  assert.equal(calls[0].options.timeout, 30000, 'production timeout stays unchanged')
+  assert.equal(calls[0].child.status, 0)
+  assert.equal(calls[0].child.error, undefined)
+  assertClean()
+})
+
+test('a directly live child times out even after writing valid measurement', () => {
+  reset()
+  lifecycle = 'direct-live'
+  const error = rejected()
+  assert.equal(error, calls[0].child.error)
+  assert.equal(error.code, 'ETIMEDOUT')
+  assert.equal(error.diagnostic.measurementPresent, true)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].options.timeout, 30000)
+})
+
 test('quality gate retains existing verdict and uploads only explicit failure receipt paths', () => {
   const workflow = parse(readFileSync(new URL('../.github/workflows/quality-gate.yml', import.meta.url), 'utf8'))
   const job = workflow.jobs['static-and-tests']
@@ -149,4 +200,8 @@ test('quality gate retains existing verdict and uploads only explicit failure re
   assert.deepEqual(workflow.on.merge_group.types, ['checks_requested'])
 })
 
-test.after(() => { hooks.deregister(); delete globalThis.__styleProbeSpawn })
+test.after(async () => {
+  hooks.deregister()
+  delete globalThis.__styleProbeSpawn
+  await new Promise(resolve => setTimeout(resolve, 450))
+})
