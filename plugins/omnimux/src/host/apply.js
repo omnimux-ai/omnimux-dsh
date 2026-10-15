@@ -77,7 +77,7 @@ export function apply(ctx, config = {}) {
   const identity = createIdentity({ store, siteBaseUrl })
   const modelKeys = createAccountModelKeyService({ store, identity, siteBaseUrl,
     getCredentials: () => ctx.get?.('credentials') })
-  ctx.provide('identity', { status: identity.status, require: identity.require })
+  ctx.provide('identity', { status: identity.status, require: identity.require, getSnapshot: identity.getSnapshot })
   const profile = hubProfileName()
   const appsStore = createAppsStore({
     home: homeDir,

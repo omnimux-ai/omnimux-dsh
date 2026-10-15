@@ -73,7 +73,7 @@ F12是真实范围，模拟和真实模型结果分列，缺必要权限只暂�
 
 目标通用快照宽校验data/type不是导演schema；必须主机独立校验。普通导入不支持三维文件，新增受限三维资源接入，不能关闭全局白名单或把模型伪装图片。现有单材料类型投影不能自动支持多出口，优先通过明确图像/视频输出节点复用，若直连多端口须完整实现输出选择和消费绑定。
 
-已有画布React19隔离树，宿主React18仅传DOM/普通数据/回调。导演处于画布树，不跨树交换组件/refs/context；依赖受管锁定并验证兼容，不搬源Ant Design/Tailwind全套。外层遵循[design](../design.md)、[UI指南](../docs/contracts/ui-design-guidelines.md)、[文案](../docs/contracts/ui-copywriting-and-naming-standards.md)。
+已有画布React19隔离树，宿主React18仅传DOM/普通数据/回调。P0确定导演独立懒加载IIFE与React19 root，DOM容器由画布提供，双方只传普通场景数据/Blob/回调，不交换组件/refs/context或Three对象。普通dynamic import在现有单IIFE不会拆包，故独立root避免重三维依赖进入普通画布首屏。导演CSS只作用于本root，utility构建禁preflight，不引源全局主题/Ant Design provider。依赖受管锁定并验证兼容，不搬源Ant Design/Tailwind全套。外层遵循[design](../design.md)、[UI指南](../docs/contracts/ui-design-guidelines.md)、[文案](../docs/contracts/ui-copywriting-and-naming-standards.md)。
 
 ### 数据与安全
 

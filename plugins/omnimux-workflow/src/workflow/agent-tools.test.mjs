@@ -59,6 +59,17 @@ function fakeReq({ method = 'GET', url = '/', body = undefined }) {
 }
 
 const PREFIX = '/omnimux-workflow';
+const LEGACY_AGENT_TOOL_NAMES = [
+  'canvas_get_table_node', 'canvas_write_table_node',
+  'workflow_connect', 'workflow_create', 'workflow_disconnect', 'workflow_execution_control',
+  'workflow_list', 'workflow_node_add', 'workflow_node_remove', 'workflow_node_update',
+  'workflow_run', 'workflow_snapshot',
+];
+const LEGACY_WORKFLOW_TOOL_NAMES = [
+  'workflow_connect', 'workflow_create', 'workflow_disconnect', 'workflow_execution_control',
+  'workflow_list', 'workflow_node_add', 'workflow_node_remove', 'workflow_node_update',
+  'workflow_run', 'workflow_snapshot',
+];
 
 function makeHarness({ gatewayLatency = { minLatencyMs: 10, maxLatencyMs: 30 }, catalog = null, gateway } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'omnimux-agent-tools-'));
@@ -165,7 +176,7 @@ function makeHarness({ gatewayLatency = { minLatencyMs: 10, maxLatencyMs: 30 }, 
   return { dir, libraryRoot, tools, promptSections, dispose, call, tool, seedWorkspace };
 }
 
-test('agent seats register the twelve tools + workflow:ops prompt section', () => {
+test('agent seats register the thirteen tools + workflow:ops prompt section', () => {
   const h = makeHarness();
   try {
     assert.deepEqual(
@@ -175,6 +186,7 @@ test('agent seats register the twelve tools + workflow:ops prompt section', () =
         'canvas_write_table_node',
         'workflow_connect',
         'workflow_create',
+        'workflow_director',
         'workflow_disconnect',
         'workflow_execution_control',
         'workflow_list',
@@ -184,6 +196,11 @@ test('agent seats register the twelve tools + workflow:ops prompt section', () =
         'workflow_run',
         'workflow_snapshot',
       ],
+    );
+    assert.equal(h.tools.length, 13);
+    assert.deepEqual(
+      h.tools.map((t) => t.name).filter((name) => name !== 'workflow_director').sort(),
+      LEGACY_AGENT_TOOL_NAMES,
     );
     for (const tool of h.tools) {
       assert.equal(tool.parameters.type, 'object');
@@ -535,6 +552,7 @@ test('pinned schemas: workflow_* tool names and parameter contracts remain equal
     assert.deepEqual(names, [
       'workflow_connect',
       'workflow_create',
+      'workflow_director',
       'workflow_disconnect',
       'workflow_execution_control',
       'workflow_list',
@@ -544,6 +562,9 @@ test('pinned schemas: workflow_* tool names and parameter contracts remain equal
       'workflow_run',
       'workflow_snapshot',
     ]);
+
+    assert.equal(names.length, 11);
+    assert.deepEqual(names.filter((name) => name !== 'workflow_director'), LEGACY_WORKFLOW_TOOL_NAMES);
 
     const toolMap = new Map(workflowTools.map((t) => [t.name, t]));
 

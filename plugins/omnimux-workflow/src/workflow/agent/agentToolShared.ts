@@ -64,6 +64,8 @@ export interface WorkbenchMailboxSeat {
 
 export interface WorkflowAgentDeps {
   store: WorkspaceStore;
+  directorHost?: import('../director/directorHost.ts').DirectorHost;
+  directorOperations?: import('../director/directorOperations.ts').DirectorOperations;
   projectStore?: import('../../projects/ProjectStore.ts').ProjectStore;
   resolveSessionWorkspaceDir?: (sessionId: string) => string | undefined;
   executionManager: ExecutionManager;

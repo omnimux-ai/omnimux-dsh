@@ -41,7 +41,15 @@ const bundle = await build({
         export const fetchCapabilities = async () => ({ ok: true, body: { text: [], image: [], video: [], audio: [], fingerprint: 'test' } });
         export const probeLocalFiles = async () => ({ ok: true, body: { items: [] } });
         export const fetchGenerationPreferences = async () => ({ ok: true, body: { lastModelByType: {} } });
-        export const saveGenerationPreference = fetchGenerationPreferences;`,
+        export const saveGenerationPreference = fetchGenerationPreferences;
+        export const request = (...args) => {
+          window.fixture.directorApiCalls.push({ api: 'request', args });
+          throw new Error('unexpected-director-api: request');
+        };
+        export const getWorkspaceAssets = (...args) => {
+          window.fixture.directorApiCalls.push({ api: 'getWorkspaceAssets', args });
+          throw new Error('unexpected-director-api: getWorkspaceAssets');
+        };`,
     }));
   } }],
 });
@@ -64,7 +72,7 @@ function setup() {
   win.clearTimeout = id => { timers.delete(id); realClear(id); };
   const docs = Object.fromEntries(['C', 'D'].map(id => [id, { id, name: id, version: 0, nodes: [], edges: [] }]));
   const writes = [];
-  win.fixture = { docs, hash: async () => 'fixture',
+  win.fixture = { docs, directorApiCalls: [], hash: async () => 'fixture',
     get: async id => ({ ok: true, body: { workspace: clone(docs[id]) } }),
     save: async (id, payload) => {
       writes.push({ id, payload: clone(payload) });
@@ -116,6 +124,7 @@ test('detached bridge unmounts its real App and store subscriptions before the n
     assert.equal(h.docs.C.nodes[0].id, 'C-node');
     assert.equal(Boolean(oldIsland.querySelector('.wf-canvas-root')), false, 'detached container must release the island root');
     assert.equal(h.writes.filter(row => row.id === 'C' && row.payload.nodes.some(node => node.id === 'D-node')).length, 0);
+    assert.deepEqual(h.win.fixture.directorApiCalls, [], 'short lifecycle must not call director APIs without advancing the polling interval');
   } finally { await h.close(); }
 });
 
@@ -127,6 +136,7 @@ test('cleanup uses the API that mounted the island even if the global bundle was
     h.win.__omnimuxWorkflowCanvas = { unmountCanvas() { wrongApiCalls++; } };
     await c.unmount();
     assert.equal(wrongApiCalls, 0); assert.equal(Boolean(oldIsland.querySelector('.wf-canvas-root')), false);
+    assert.deepEqual(h.win.fixture.directorApiCalls, [], 'short lifecycle must not call director APIs without advancing the polling interval');
   } finally { await h.close(); }
 });
 
@@ -139,5 +149,6 @@ test('late manifest loading cannot mount after the bridge lifetime ended', async
     const c = await h.mount('C'); await c.unmount();
     await h.flush(() => resolveHash('fixture'));
     assert.equal(mounts, 0);
+    assert.deepEqual(h.win.fixture.directorApiCalls, [], 'short lifecycle must not call director APIs without advancing the polling interval');
   } finally { await h.close(); }
 });

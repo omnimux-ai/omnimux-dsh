@@ -11,6 +11,7 @@ import { materialNodeSpec, MATERIAL_TOOLS_BY_TYPE } from './nodes/materialNodeSp
 import { tableNodeSpec } from './nodes/tableNodeSpec.ts';
 import { videoCompositionNodeSpec } from './nodes/videoCompositionNodeSpec.ts';
 import { groupNodeSpec } from './nodes/groupNodeSpec.ts';
+import { directorNodeSpec } from './nodes/directorNodeSpec.ts';
 
 export class NodeSpecRegistryImpl {
   private readonly specs = new Map<string, NodeSpec>();
@@ -133,6 +134,7 @@ export class NodeSpecRegistryImpl {
     this.register(tableNodeSpec);
     this.register(videoCompositionNodeSpec);
     this.register(groupNodeSpec);
+    this.register(directorNodeSpec);
   }
 }
 

@@ -22,6 +22,8 @@ export interface WorkflowDispatcherDeps {
   /** Injected fetcher for media downloads (tests). */
   fetcher?: typeof fetch;
   store: WorkspaceStore;
+  directorOperations?: import('../director/directorOperations.ts').DirectorOperations;
+  directorSessionFactory?: import('../director/directorSession.ts').DirectorSessionFactory;
   gateway: GenerationGateway;
   mediaDir: string;
   executionManager: ExecutionManager;
@@ -51,6 +53,11 @@ export interface WorkflowDispatchRequest {
   secFetchSite?: string;
   body?: unknown;
   range?: string;
+  /** Set only by the authenticated raw HTTP adapter, never an Agent argument. */
+  browserOwner?: string;
+  directorSession?: import('../director/directorSession.ts').DirectorSessionContext;
+  directorTaskScope?: () => string | null;
+  directorTaskOwner?: () => string | null;
 }
 
 export type DispatchResult =

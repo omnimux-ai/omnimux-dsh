@@ -45,6 +45,9 @@ import { createLibraryServiceClient } from './library/libraryService';
 import { createWorkflowDispatcher, registerWorkflowRoutes } from './routes/canvasRoutes';
 import { DEV_FAILURE_FILE_NAME, withDevFailureRecorder } from './devFailureRecorder';
 import { registerWorkflowAgentSeats } from './agent/agentTools';
+import { createDirectorSessionFactory } from './director/directorSession.ts';
+import { createDirectorHost } from './director/directorHost.ts';
+import { createDirectorOperations } from './director/directorOperations.ts';
 import type { AgentSeatContext } from './agent/agentTools';
 
 type WebServer = {
@@ -125,6 +128,9 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     fetchLibraryDetail: libraryHttp.fetchLibraryDetail,
     promoteToLibrary: libraryHttp.promoteToLibrary,
   });
+  const directorSessionFactory = createDirectorSessionFactory({ stateDir: join(paths.root, 'director-auth') });
+  const directorHost = createDirectorHost({ store });
+  const directorOperations = createDirectorOperations({ host: directorHost, store, assetsStore });
   const executionManager = createExecutionManager({
     executionsDir: paths.executionsDir,
     resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),
@@ -140,6 +146,8 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
     getSeam: (name) => ctx.get?.(name),
     getTool: (name) => (ctx as any).tools?.get?.(name) ?? (typeof ctx.get === 'function' ? (ctx.get('tools') as any)?.get?.(name) : undefined),
     store,
+    directorOperations,
+    directorSessionFactory,
     generationPreferences,
     gateway,
     mediaDir: paths.mediaDir,
@@ -234,6 +242,8 @@ export function mountWorkflowHost(ctx: HostContext, opts: MountWorkflowHostOptio
       disposers.push(
         registerWorkflowAgentSeats(ctx, {
           store,
+          directorHost,
+          directorOperations,
           projectStore,
           resolveSessionWorkspaceDir: readSessionWorkspaceDir,
           resolveProjectFile: (workspaceId, relativePath) => assetsStore.resolveProjectFile(workspaceId, relativePath),

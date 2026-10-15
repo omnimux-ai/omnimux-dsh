@@ -18,6 +18,8 @@ import { useCanvasBoot } from './hooks/useCanvasBoot';
 import { setLocale, useT, type Locale } from './i18n';
 import { useWorkspacePersistence } from './bridge/useWorkspacePersistence';
 import { useTablePersistence } from './bridge/useTablePersistence';
+import { prepareDirectorClose } from './bridge/directorLifecycle';
+import { DirectorPanel } from './components/director-panel/DirectorPanel.tsx';
 import type { CanvasWorkspaceSnapshot } from '../shared/canvasTypes';
 
 export interface CanvasAppProps {
@@ -48,7 +50,8 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, f
     },
   });
 
-  const handleSwitchWorkspace = useCallback((newWorkspaceId: string) => {
+  const handleSwitchWorkspace = useCallback(async (newWorkspaceId: string) => {
+    if (!await prepareDirectorClose()) return;
     flushRef.current();
     setCurrentWorkspaceId(newWorkspaceId);
     if (typeof window !== 'undefined') {
@@ -154,6 +157,7 @@ const App: React.FC<CanvasAppProps> = ({ locale, workspaceId: propWorkspaceId, f
             onResetExecution={execution.reset}
             onSwitchWorkspaceId={handleSwitchWorkspace}
           />
+          <DirectorPanel workspaceId={workspace?.id ?? null} saveGraph={persistence.saveNow} />
         </CanvasErrorBoundary>
       </main>
     </div>

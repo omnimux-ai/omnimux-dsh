@@ -34,6 +34,7 @@
  * public assembly + HTTP adapter. Named exports keep the original surface.
  */
 import { createGenerationPreferencesRoutes } from './generationPreferencesRoutes';
+import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { serveFile } from './serveFile';
 import {
@@ -66,7 +67,7 @@ import { createExecutionRoutes } from './executionRoutes';
 import { createMediaRoutes } from './mediaRoutes';
 import { createLocalFileRoutes } from './localFileRoutes';
 import { createProjectAssetsRoutes } from './projectAssetsRoutes';
-import { createAudioBytesRoutes } from './audioBytesRoutes.ts';
+import { createAudioBytesRoutes, assertAudioRequestOrigin } from './audioBytesRoutes.ts';
 import { createLibraryServiceClient } from '../library/libraryService';
 import { createProjectAssetsStore } from '../workspace/ProjectAssetsStore';
 import { createProjectStore } from '../../projects/ProjectStore';
@@ -79,6 +80,12 @@ import { createVideoExtractionRoutes } from './videoExtractionRoutes';
 import { createVideoDeconstructRoutes } from './videoDeconstructRoutes';
 import { createVideoStoryboardRoutes } from './videoStoryboardRoutes';
 import { createAudioExtractRoutes } from './audioExtractRoutes';
+import { createDirectorRoutes } from './directorRoutes.ts';
+import { createDirectorAssistantRoutes } from './directorAssistantRoutes.ts';
+import { createDirectorOperationRoutes } from './directorOperationRoutes.ts';
+import { DirectorHostError } from '../director/directorHost.ts';
+import { createDirectorBytesRoutes } from './directorBytesRoutes.ts';
+import { DIRECTOR_DOCUMENT_LIMIT } from '../../shared/directorSchema.ts';
 
 export {
   MAX_JSON_BODY_BYTES,
@@ -133,6 +140,7 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   const workspaceRoutes = createWorkspaceRoutes(store, projectStore);
   const preferenceRoutes = deps.generationPreferences ? createGenerationPreferencesRoutes(deps.generationPreferences, gateway) : null;
   const ensureProjectBound = deps.ensureProjectBound ?? bindEnsureProjectBound(projectStore);
+  const directorRoutes = createDirectorRoutes(store, ensureProjectBound);
   const libraryHttp = createLibraryServiceClient(() => deps.getSeam?.('assetLibrary'));
   const assetsStore = deps.assetsStore ?? createProjectAssetsStore({
     workspacesDir: store.workspacesDir,
@@ -149,6 +157,8 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     await ensureProjectBound(workspaceId, snapshot.name);
     store.get(workspaceId);
   });
+  const directorAssistant = createDirectorAssistantRoutes({ store, assetsStore, getSeam: deps.getSeam });
+  const directorOperationRoutes = createDirectorOperationRoutes(deps.directorOperations);
   const executionRoutes = createExecutionRoutes({
     store,
     mediaDir,
@@ -252,6 +262,12 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
       if (fromBundle) return fromBundle;
       const fromPreferences = await preferenceRoutes?.tryHandle(method, path, req);
       if (fromPreferences) return fromPreferences;
+      const fromDirectorOperation = await directorOperationRoutes.tryHandle(method, path, req);
+      if (fromDirectorOperation) return fromDirectorOperation;
+      const fromDirectorAssistant = await directorAssistant.tryHandle(method, path, req);
+      if (fromDirectorAssistant) return fromDirectorAssistant;
+      const fromDirector = await Promise.resolve(directorRoutes.tryHandle(method, path, req));
+      if (fromDirector) return fromDirector;
       const fromTable = await Promise.resolve(tableRoutes.tryHandle(method, path, req));
       if (fromTable) return fromTable;
       const fromWorkspace = await Promise.resolve(workspaceRoutes.tryHandle(method, path, req));
@@ -271,6 +287,10 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
 
       return { status: 404, body: { error: 'not-found', message: 'unknown route' } };
     } catch (error) {
+      if (error instanceof DirectorHostError) {
+        const status = error.code === 'version_conflict' || error.code === 'director-request-conflict' || error.code === 'director-observer-busy' ? 409 : error.code.includes('unavailable') ? 503 : error.code.includes('not-found') ? 404 : 400;
+        return { status, body: { error: error.code } };
+      }
       if (error instanceof WorkflowStoreError) {
         const conflict = error.code === 'version_conflict';
         // M2 QA fix #5: the server version comes from the error object's
@@ -295,7 +315,22 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
   }
 
   const audioRoutes = createAudioBytesRoutes(assetsStore, () => deps.getSeam?.('connection'));
-  return { dispatch, handleAudioRequest: audioRoutes.handle };
+  const directorBytes = createDirectorBytesRoutes({ store, assetsStore, getSeam: deps.getSeam });
+  const authorizeDirectorRequest = (request: IncomingMessage): number | undefined => {
+    const connection = deps.getSeam?.('connection') as { requestRejection?: (request: IncomingMessage) => number | undefined } | undefined;
+    return typeof connection?.requestRejection === 'function' ? connection.requestRejection(request) : 503;
+  };
+  const publicIdentitySnapshot = () => {
+    const identity = deps.getSeam?.('identity') as { getSnapshot?: () => import('../director/directorSession.ts').DirectorPublicIdentityStatus } | undefined;
+    return typeof identity?.getSnapshot === 'function' ? identity.getSnapshot() : null;
+  };
+  const directorSession = (request: IncomingMessage) => deps.directorSessionFactory?.fromAuthenticatedRequest({ authenticated: true, rawCookie: header(request, 'cookie') || '', publicIdentityStatus: publicIdentitySnapshot() });
+  const directorSessionCurrent = (session: import('../director/directorSession.ts').DirectorSessionContext, request: IncomingMessage) => {
+    if (deps.directorSessionFactory?.isCurrent(session) !== true) return false;
+    const refreshed = directorSession(request);
+    return refreshed?.epoch === session.epoch && deps.directorSessionFactory.isCurrent(session);
+  };
+  return { dispatch, authorizeDirectorRequest, directorSession, directorSessionCurrent, handleAudioRequest: audioRoutes.handle, handleDirectorRequest: directorBytes.handle };
 }
 
 /**
@@ -310,11 +345,23 @@ export function registerWorkflowRoutes(
   const makeHandler = () => {
     return async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
       try {
+        let authenticatedDirectorSession: import('../director/directorSession.ts').DirectorSessionContext | undefined;
+        const requestPath = new URL(req.url || '/', 'http://127.0.0.1').pathname;
+        if (/^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director(?:-operations)?\//.test(requestPath) || /^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director-operations$/.test(requestPath) || /^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director\/[^/]+$/.test(requestPath)) {
+          const rejection = dispatcher.authorizeDirectorRequest(req);
+          if (rejection !== undefined) { sendJson(res, rejection, { error: rejection === 503 ? 'auth-unavailable' : 'unauthorized' }); return; }
+          assertAudioRequestOrigin(req);
+          authenticatedDirectorSession = dispatcher.directorSession(req);
+        }
+        if (await dispatcher.handleDirectorRequest(req, res)) return;
         if (await dispatcher.handleAudioRequest(req, res)) return;
         const method = (req.method || 'GET').toUpperCase();
         let body: unknown;
         if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-          body = await readJsonBody(req);
+          const pathname = new URL(req.url || '/', 'http://127.0.0.1').pathname;
+          const directorWrite = method === 'PUT' && /^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director\/[^/]+$/.test(pathname);
+          if (directorWrite) body = await readJsonBody(req, DIRECTOR_DOCUMENT_LIMIT);
+          else body = await readJsonBody(req);
         }
         const result = await dispatcher.dispatch({
           method,
@@ -324,6 +371,16 @@ export function registerWorkflowRoutes(
           secFetchSite: header(req, 'sec-fetch-site'),
           range: header(req, 'range'),
           body,
+          browserOwner: authenticatedDirectorSession?.owner,
+          directorSession: authenticatedDirectorSession,
+          directorTaskScope: authenticatedDirectorSession ? () => {
+            if (dispatcher.authorizeDirectorRequest(req) !== undefined) return null;
+            return dispatcher.directorSessionCurrent(authenticatedDirectorSession!, req) ? authenticatedDirectorSession!.modelTaskScope : null;
+          } : undefined,
+          directorTaskOwner: authenticatedDirectorSession ? () => {
+            if (dispatcher.authorizeDirectorRequest(req) !== undefined) return null;
+            return dispatcher.directorSessionCurrent(authenticatedDirectorSession!, req) ? authenticatedDirectorSession!.modelTaskOwner : null;
+          } : undefined,
         });
         if ('file' in result) {
           serveFile(res, result.file, 'application/octet-stream', header(req, 'range'));
@@ -345,6 +402,7 @@ export function registerWorkflowRoutes(
           });
           return;
         }
+        if ((error as { code?: string }).code === 'not-local') { sendJson(res, 403, { error: 'not-local' }); return; }
         sendJson(res, 500, { error: 'internal', message: 'internal error' });
       }
     };
