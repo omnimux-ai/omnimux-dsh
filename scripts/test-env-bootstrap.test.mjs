@@ -45,6 +45,16 @@ function fixture(behavior = 'ready') {
 }
 async function load() { return import(moduleUrl); }
 
+test('preparation-only requires an explicit candidate before creating resources', async () => {
+  const { createTestEnvironmentStarter } = await load();
+  const f = fixture();
+  const start = createTestEnvironmentStarter(f.deps);
+  await assert.rejects(start({ root, mode: 'ui', evidenceContext: { taskId: '3357', runId: 'missing-candidate' }, preparationOnly: true }), { code: 'TEST_ENV_PREPARE_CANDIDATE_REQUIRED' });
+  assert.equal(f.spawned.length, 0);
+  assert.equal(f.removed.length, 0);
+  assert.equal(f.reads(), 0);
+});
+
 test('default ui isolates environment, fixed config, login capability and cleanup', async () => {
   const { createTestEnvironmentStarter } = await load(); const f = fixture();
   const run = await createTestEnvironmentStarter(f.deps)({ root });

@@ -1,10 +1,15 @@
 import * as fs from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
 import { readDevDeepSeekCredential, readDevCredentialsBundle } from './test-env-credentials.mjs';
+import { captureCandidate } from './evidence-contract.mjs';
+import { runPnpm } from './managed-tarball.mjs';
+import { privatePnpmEnvironment } from './materialize-cache.mjs';
+import { prepareFiles, payloadManifest, hashFile, readJson, stable } from './materialize-graph.mjs';
 
 const EXECUTABLE = '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux';
 const WRAPPER = '/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js';
@@ -30,7 +35,7 @@ const MOCK_IMAGE_IMAGE_TO_IMAGE = Buffer.from(
 );
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = sourceRoot.split(`${sep}.worktrees${sep}`)[0];
-const failure = code => Object.assign(new Error('TEST_ENV_' + code), { code: 'TEST_ENV_' + code });
+const failure = (code, hint) => Object.assign(new Error('TEST_ENV_' + code), { code: 'TEST_ENV_' + code, ...(hint ? { hint } : {}) });
 function safeError(error, fallback) {
   const code = error?.code;
   if (typeof code === 'string' && /^TEST_ENV_(?:CREDENTIAL_)?[A-Z_]+$/.test(code)) {
@@ -220,6 +225,195 @@ function parseLogin(line) {
   } catch { throw failure('UNSAFE_LOGIN_URL'); }
 }
 
+// Hub client sources import a sibling plugin's module across the plugin boundary, so the stage
+// must carry that source too; the packaged set below stays limited to hub and kit.
+const PREPARATION_PACKAGES = ['plugins/omnimux', 'plugins/omnimux-inspiration', 'packages/dsh-ui-kit', 'packages/generation-capabilities'];
+const PREPARATION_CONFIG = ['package.json', 'pnpm-workspace.yaml', 'pnpm-lock.yaml'];
+const ARCHIVE_SCRIPT = fileURLToPath(new URL('./managed-tarball-archive.py', import.meta.url));
+const SHA_RE = /^[0-9a-f]{40}$/;
+const PACKER_INCLUDED = { LICENSE: 'LICENSE' };
+
+function inspectArchive(tarball, name, version, sha256) {
+  const result = spawnSync('python3', ['-B', ARCHIVE_SCRIPT, 'inspect'], {
+    input: JSON.stringify({ tarball, name, version, sha256 }), encoding: 'utf8', maxBuffer: 16 << 20,
+  });
+  if (result.status !== 0) throw failure('PREPARE_ARCHIVE_INSPECTION_FAILED');
+  return JSON.parse(result.stdout);
+}
+
+/** Materialize a verified archive so the packed manifest can be compared by content, not by bytes. */
+function extractArchive(tarball, name, version, sha256, destination) {
+  const result = spawnSync('python3', ['-B', ARCHIVE_SCRIPT, 'extract'], {
+    input: JSON.stringify({ tarball, name, version, sha256, destination }), encoding: 'utf8', maxBuffer: 16 << 20,
+  });
+  if (result.status !== 0) throw failure('PREPARE_ARCHIVE_EXTRACTION_FAILED');
+  return JSON.parse(result.stdout);
+}
+
+/** preparation-only: real candidate source → owned stage → fixed build → pack → archive inspect.
+ * Reuses captureCandidate, prepareFiles, privatePnpmEnvironment, runPnpm, payloadManifest and archive.py inspect.
+ * Never installs, never reads Dev profile or credentials, never upgrades output to installed/loaded/fresh proof.
+ */
+async function runTaskPreparation({ options, io, deps }) {
+  const { root, mode, candidate, evidenceContext } = options;
+  if (mode !== 'ui') throw failure('OPTIONS');
+  if (!candidate || typeof candidate !== 'object' || !SHA_RE.test(candidate.base) || !SHA_RE.test(candidate.head)) throw failure('PREPARE_CANDIDATE_REQUIRED');
+  validateRoot(root, io, deps.repositoryRoot ?? repositoryRoot);
+  if (!evidenceContext || Object.keys(evidenceContext).sort().join(',') !== 'runId,taskId'
+    || !Object.values(evidenceContext).every(value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value))) throw failure('OPTIONS');
+  const observations = { contract: 'preparation-only', runtimeStarted: false, userFresh: 'unknown', taskBinding: 'unknown', steps: [] };
+  const capture = deps.captureCandidate ?? captureCandidate;
+  const strictJson = deps.readJson ?? readJson;
+  const privateDir = io.mkdtempSync(join(root, '.test-env-'));
+  const cleanup = async () => {
+    const privateRoot = io.realpathSync(privateDir);
+    if (dirname(privateRoot) !== root || !basename(privateRoot).startsWith('.test-env-') || io.realpathSync(privateRoot) !== privateRoot) throw failure('ROOT_UNSAFE');
+    canonical(io, privateRoot, true);
+    io.rmSync(privateRoot, { recursive: true, force: true });
+    return { cleaned: true };
+  };
+  try {
+    io.chmodSync(privateDir, 0o700);
+    const captureOptions = { root, base: candidate.base, head: candidate.head, taskId: evidenceContext.taskId, runId: evidenceContext.runId, outputs: [], extraInputs: [] };
+    const before = capture(captureOptions);
+    observations.steps.push('candidate-before');
+    const allowed = new Set((before.candidate?.entries || []).map(item => item.path));
+    const copyTree = (source, destination, allowAll = false) => {
+      for (const name of io.readdirSync(source)) {
+        if (['node_modules', '.git', '.scratch'].includes(name)) continue;
+        const from = join(source, name), to = join(destination, name);
+        const stat = io.lstatSync(from);
+        if (stat.isSymbolicLink()) throw failure('PREPARE_INPUT_UNSUPPORTED');
+        if (stat.isDirectory()) {
+          const rel = relative(root, from);
+          if (allowAll || [...allowed].some(path => path === rel || path.startsWith(`${rel}/`))) copyTree(from, to, allowAll);
+        } else if (stat.isFile()) {
+          const rel = relative(root, from);
+          if (!allowAll && !allowed.has(rel)) throw failure('PREPARE_INPUT_UNSUPPORTED');
+          io.mkdirSync(dirname(to), { recursive: true });
+          try { prepareFiles({ operation: 'copy', source: from, destination: to }); }
+          catch (error) { error.path = to; error.sourcePath = from; throw error; }
+        } else throw failure('PREPARE_INPUT_UNSUPPORTED');
+      }
+    };
+    const stageRoot = join(privateDir, 'stage');
+    for (const rel of PREPARATION_CONFIG.concat(PREPARATION_PACKAGES)) {
+      const source = join(root, rel), destination = join(stageRoot, rel);
+      const stat = io.lstatSync(source);
+      if (stat.isSymbolicLink()) throw failure('PREPARE_INPUT_UNSUPPORTED');
+      if (stat.isDirectory()) copyTree(source, destination);
+      else if (stat.isFile()) { io.mkdirSync(dirname(destination), { recursive: true }); prepareFiles({ operation: 'copy', source, destination }); }
+      else throw failure('PREPARE_INPUT_UNSUPPORTED');
+    }
+    observations.steps.push('stage-copied');
+    let linkedTools = 0;
+    for (const rel of ['node_modules', ...PREPARATION_PACKAGES.map(item => join(item, 'node_modules'))]) {
+      const source = join(root, rel);
+      if (!io.existsSync(source)) continue;
+      io.mkdirSync(dirname(join(stageRoot, rel)), { recursive: true });
+      try { io.symlinkSync(source, join(stageRoot, rel), 'dir'); linkedTools++; }
+      catch { throw failure('PREPARE_DEPENDENCY_REQUIRED'); }
+    }
+    if (!linkedTools) throw failure('PREPARE_DEPENDENCY_REQUIRED');
+    io.mkdirSync(join(privateDir, 'pnpm'), { recursive: true, mode: 0o700 });
+    // The shared install environment disables the project package-manager spec and owns an empty
+    // corepack cache, which is correct for offline lockfile installs but cannot launch a build.
+    // Builds honor the pinned toolchain from the invoking environment and still fail loudly offline.
+    const env = Object.assign(privatePnpmEnvironment(join(privateDir, 'pnpm')), {
+      PATH: `${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`, ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--max-http-header-size=65536',
+      COREPACK_HOME: process.env.COREPACK_HOME || join(homedir(), '.cache', 'node', 'corepack'),
+      COREPACK_ENABLE_PROJECT_SPEC: '1',
+    });
+    const run = deps.runPnpm ?? runPnpm;
+    const runStep = async (argv, cwd) => {
+      const result = await run(argv, { cwd, env });
+      const step = { argv, cwd: relative(stageRoot, cwd) || cwd, code: result.code, signal: result.signal ?? null,
+        stdout: (result.stdout || '').slice(-2048), stderr: (result.stderr || '').slice(-2048) };
+      observations.steps.push({ argv, code: result.code, signal: result.signal ?? null, stdout: step.stdout, stderr: step.stderr });
+      if (result.code !== 0 || result.signal) throw failure('PREPARE_BUILD_FAILED');
+      return step;
+    };
+    await runStep(['--config.verify-deps-before-run=false', '--filter', 'dsh-ui-kit', 'build'], stageRoot);
+    await runStep(['--config.verify-deps-before-run=false', '--filter', 'omnimux', 'build'], stageRoot);
+    const after = capture(captureOptions);
+    if (JSON.stringify(before.candidate) !== JSON.stringify(after.candidate)) throw failure('PREPARE_CANDIDATE_CHANGED');
+    observations.steps.push('candidate-after');
+    const packRoot = join(privateDir, 'pack');
+    const packages = [];
+    for (const rel of ['plugins/omnimux', 'packages/dsh-ui-kit']) {
+      const destination = join(packRoot, rel);
+      copyTree(join(stageRoot, rel), destination, true);
+      const manifestPath = join(destination, 'package.json');
+      const manifest = strictJson(manifestPath);
+      if (rel === 'plugins/omnimux') {
+        if (manifest.dependencies?.['dsh-ui-kit'] !== 'file:../../packages/dsh-ui-kit') throw failure('PREPARE_PACKAGE_MANIFEST_UNSUPPORTED');
+        manifest.dependencies['dsh-ui-kit'] = 'file:../dsh-ui-kit';
+        const channelPath = join(destination, 'src/release-channel.json');
+        const channel = strictJson(channelPath);
+        if (channel.channel !== 'development') throw failure('PREPARE_RELEASE_CHANNEL_UNSUPPORTED');
+        io.writeFileSync(channelPath, `${JSON.stringify(channel, null, 2)}\n`);
+      }
+      // pnpm drops the lifecycle `prepare` script and the trailing newline while packing; declaring
+      // both here keeps the archived manifest byte-identical instead of re-serialized by the packer.
+      if (manifest.scripts && Object.hasOwn(manifest.scripts, 'prepare')) delete manifest.scripts.prepare;
+      io.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+      const packResult = await run(['--config.ignore-scripts=true', '--config.verify-deps-before-run=false', 'pack', '--pack-destination', privateDir], { cwd: destination, env });
+      observations.steps.push({ argv: ['pack'], code: packResult.code, signal: packResult.signal ?? null, stdout: (packResult.stdout || '').slice(-2048), stderr: (packResult.stderr || '').slice(-2048) });
+      if (packResult.code !== 0 || packResult.signal) throw failure('PREPARE_PACK_FAILED');
+      const tarball = join(privateDir, `${manifest.name}-${manifest.version}.tgz`);
+      const sha256 = hashFile(tarball);
+      const inspection = deps.inspectArchive ? deps.inspectArchive(tarball, manifest.name, manifest.version, sha256)
+        : inspectArchive(tarball, manifest.name, manifest.version, sha256);
+      // Every archived regular file must be the declared pack payload byte for byte; the archive may
+      // omit undeclared files but must never invent, alter, or relax the mode of a declared one.
+      // The packer re-serializes the manifest, so that one file is compared by content instead.
+      const declaredPayload = payloadManifest(destination, { links: false });
+      const declared = new Map(declaredPayload.entries.map(item => [item.path, item]));
+      for (const entry of inspection.entries) {
+        const source = declared.get(entry.path);
+        if (!source) {
+          // The packer always adds README/LICENSE, taking LICENSE from an ancestor directory when the
+          // package has none; that origin file is still verified byte for byte, never waved through.
+          const origin = PACKER_INCLUDED[entry.path];
+          if (!origin) throw failure('PREPARE_ARCHIVE_UNDECLARED_ENTRY', { path: entry.path });
+          const originPath = join(root, origin);
+          const originStat = io.lstatSync(originPath);
+          if (entry.type !== 'file' || entry.size !== originStat.size || entry.sha256 !== hashFile(originPath) || entry.mode !== (originStat.mode & 0o777)) {
+            throw failure('PREPARE_ARCHIVE_PACKER_INCLUDE_MISMATCH', { path: entry.path });
+          }
+          continue;
+        }
+        if (source.type !== entry.type) throw failure('PREPARE_ARCHIVE_TYPE_MISMATCH', { path: entry.path, declaredType: source.type, archivedType: entry.type });
+        if (entry.type !== 'file' || entry.path === 'package.json') continue;
+        if (source.size !== entry.size || source.sha256 !== entry.sha256 || source.mode !== entry.mode) {
+          throw failure('PREPARE_ARCHIVE_BYTES_MISMATCH', { path: entry.path,
+            declaredSize: source.size, archivedSize: entry.size, declaredMode: source.mode, archivedMode: entry.mode });
+        }
+      }
+      const extractedRoot = join(privateDir, `extracted-${manifest.name}`);
+      const extraction = deps.extractArchive ? deps.extractArchive(tarball, manifest.name, manifest.version, sha256, extractedRoot)
+        : extractArchive(tarball, manifest.name, manifest.version, sha256, extractedRoot);
+      const archivedManifest = strictJson(join(extractedRoot, 'package.json'));
+      if (stable(archivedManifest) !== stable(manifest)) throw failure('PREPARE_ARCHIVE_MANIFEST_MISMATCH', { path: 'package.json', declared: stable(manifest), archived: stable(archivedManifest) });
+      packages.push({ name: manifest.name, version: manifest.version, tarball, sha256, inspection, extraction,
+        payloadDigest: declaredPayload.digest, archiveDigest: inspection.digest });
+    }
+    const manifests = { stage: payloadManifest(stageRoot, { exclude: ['node_modules', ...PREPARATION_PACKAGES.map(item => `${item}/node_modules`)], links: false }) };
+    observations.steps.push('completed');
+    const result = { scope: 'preparation-only', status: 'task-source-prepared', preparationPath: privateDir,
+      candidateBefore: before, candidateAfter: after, sourceMap: packages.map(pkg => pkg.name), packages, build: observations.steps, observations, manifests };
+    Object.defineProperty(result, 'cleanup', { value: cleanup, enumerable: false });
+    return result;
+  } catch (error) {
+    const classified = safeError(error, 'PREPARE');
+    classified.observations = observations;
+    classified.rootReason = error?.code || error?.message || 'unknown';
+    if (error?.sourcePath) classified.failedInput = { source: error.sourcePath, destination: error.path };
+    classified.cleanup = { cleaned: false, resources: [{ name: 'preparation-directory', owner: 'app-environment', status: 'failed', reason: 'not-deleted' }] };
+    throw classified;
+  }
+}
+
 /** Test-only dependency seam. Overrides never come from CLI flags or process environment.
  * @param {{fs?: typeof fs, repositoryRoot?: string, spawn?: typeof spawn, readCredential?: () => string, signals?: NodeJS.Process, startupTimeoutMs?: number, shutdownTimeoutMs?: number}} [deps]
  */
@@ -227,10 +421,16 @@ export function createTestEnvironmentStarter(deps = {}) {
   const io = deps.fs ?? fs;
   const signals = deps.signals ?? process;
   return async function start(options = {}) {
-    if (!options || typeof options !== 'object' || Object.keys(options).some(k => !['root', 'mode', 'evidenceContext'].includes(k))) throw failure('OPTIONS');
-    const { root, mode = 'ui', evidenceContext = null } = options;
+    if (!options || typeof options !== 'object' || Object.keys(options).some(k => !['root', 'mode', 'evidenceContext', 'preparationOnly', 'candidate'].includes(k))) throw failure('OPTIONS');
+    const { root, mode = 'ui', evidenceContext = null, preparationOnly = false, candidate = null } = options;
     if (!['ui', 'onboarding', 'live'].includes(mode)) throw failure('OPTIONS');
     validateRoot(root, io, deps.repositoryRoot ?? repositoryRoot);
+    if (preparationOnly) {
+      if (mode !== 'ui') throw failure('OPTIONS');
+      if (!candidate || typeof candidate !== 'object' || !SHA_RE.test(candidate.base) || !SHA_RE.test(candidate.head)) throw failure('PREPARE_CANDIDATE_REQUIRED');
+      return runTaskPreparation({ options: { root, mode, candidate, evidenceContext }, io, deps });
+    }
+    if (candidate !== null) throw failure('OPTIONS');
     if (evidenceContext !== null) {
       if (!evidenceContext || Object.keys(evidenceContext).sort().join(',') !== 'runId,taskId'
         || !Object.values(evidenceContext).every(value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value))) throw failure('OPTIONS');
