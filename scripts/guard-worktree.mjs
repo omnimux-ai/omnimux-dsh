@@ -728,6 +728,8 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
   if (!command || typeof command !== 'string') return { decision: 'allow' }
   const sessionCwd = resolve(cwd || process.cwd())
   let currentCwd = sessionCwd
+  // One synchronous decision shares a metadata snapshot only for the exact cwd.
+  const worktreeByCwd = new Map()
 
   const segments = rawCommandSegments(command)
   for (const seg of segments) {
@@ -747,9 +749,15 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
     }
 
     // 若当前实际生效的工作目录处于 linked worktree 内，完全放行构建
-    if (isWorktreePath(currentCwd)) continue
-    const root = gitRoot(currentCwd)
-    if (root && isWorktreePath(root)) continue
+    if (!worktreeByCwd.has(currentCwd)) {
+      let inWorktree = isWorktreePath(currentCwd)
+      if (!inWorktree) {
+        const root = gitRoot(currentCwd)
+        inWorktree = Boolean(root && isWorktreePath(root))
+      }
+      worktreeByCwd.set(currentCwd, inWorktree)
+    }
+    if (worktreeByCwd.get(currentCwd)) continue
 
     const cleanWords = words.map((w) => w.replace(/^['"]|['"]$/g, ''))
 
