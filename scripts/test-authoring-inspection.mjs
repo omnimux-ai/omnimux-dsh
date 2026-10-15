@@ -90,18 +90,21 @@ function collectRisks(code, { resolveImport } = {}) {
       }
     }
   }
-  function inspect(node, parent = null, contexts = [], siblings = new Map()) {
+  const occurrenceDomains = new Map()
+  function inspect(node, parent = null, contexts = []) {
     if (!node || typeof node !== 'object' || !node.type) return
     const context = contextOf(node)
     let nextContexts = contexts
-    let nestedSiblings = siblings
     if (context) {
-      const key = JSON.stringify(canonical(context))
       let occurrence
       if (functions.has(node.type) || node.type === 'BlockStatement' || node.type === 'StaticBlock') {
+        // Complete parent chains separate unrelated calls without resetting repeated parents.
+        const domain = JSON.stringify(canonical(contexts))
+        let siblings = occurrenceDomains.get(domain)
+        if (!siblings) occurrenceDomains.set(domain, siblings = new Map())
+        const key = JSON.stringify(canonical(context))
         occurrence = siblings.get(key) || 0
         siblings.set(key, occurrence + 1)
-        nestedSiblings = new Map()
       }
       nextContexts = [...contexts, { node: context, occurrence }]
     }
@@ -151,9 +154,9 @@ function collectRisks(code, { resolveImport } = {}) {
       const branch = ['IfStatement', 'ConditionalExpression', 'LogicalExpression', 'TryStatement', 'TaggedTemplateExpression', 'MemberExpression', 'ChainExpression', 'SequenceExpression', 'ArrayExpression', 'ArrayPattern', 'ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(node.type) ? [...nextContexts, { edge: key }] : nextContexts
       if (Array.isArray(value)) for (const [index, child] of value.entries()) {
         const argumentsContext = ['arguments', 'elements', 'expressions', 'cases'].includes(key) ? [...branch, { slot: key, index }] : branch
-        inspect(child, node, argumentsContext, nestedSiblings)
+        inspect(child, node, argumentsContext)
       }
-      else if (value && typeof value === 'object') inspect(value, node, branch, nestedSiblings)
+      else if (value && typeof value === 'object') inspect(value, node, branch)
     }
   }
   inspect(ast)
