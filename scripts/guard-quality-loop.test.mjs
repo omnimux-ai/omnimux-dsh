@@ -5,11 +5,13 @@
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, utimesSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, utimesSync, lstatSync, symlinkSync, linkSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
+import { captureCandidate, sealEvidence } from './evidence-contract.mjs'
 import {
   isBusinessSourceFile,
   isE2ETestFile,
@@ -22,9 +24,11 @@ import {
   taskChangeSet,
   taskSpecs,
   hasEvidenceAfterSpec,
+  inspectTaskVerification,
   findRepoRoot,
   decideQualityGate,
   handle,
+  verificationCommand,
 } from './guard-quality-loop.mjs'
 
 /* ------------------------------------------------------------------ helpers */
@@ -591,5 +595,328 @@ test('CONVERGENCE: delivery commands honour `git -C <task repo>` for the change 
   } finally {
     cleanup(sessionRoot)
     cleanup(taskRoot)
+  }
+})
+
+test('public verification command rejects absent arguments', () => {
+  assert.deepEqual(verificationCommand([]), {
+    exitCode: 2,
+    result: { valid: false, applicable: false, pass: false,
+      authorization: 'not-granted', provenance: 'unknown', reason: 'VERIFICATION_ARGUMENTS_REQUIRED',
+      evidenceStatus: 'invalid', errors: ['VERIFICATION_ARGUMENTS_REQUIRED'] },
+  })
+})
+
+test('public verification command classifies an ordinary absent request file', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const requestPath = join(dirname(root), 'request-missing-' + randomUUID() + '.json')
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.result.reason, 'REQUEST_MISSING')
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.evidenceStatus, 'missing')
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command rejects an ordinary malformed JSON request', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const requestPath = join(dirname(root), 'request-corrupt-' + randomUUID() + '.json')
+  writeFileSync(requestPath, '{"purpose":', { flag: 'wx' })
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'REQUEST_CORRUPT')
+  assert.equal(command.result.evidenceStatus, 'corrupt')
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command rejects an unknown request policy field', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const taskId = 'reader-policy-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const requestPath = join(dirname(root), taskId + '.json')
+  writeFileSync(requestPath, JSON.stringify({ purpose: 'history', root, taskId, runId, scope: 'smoke',
+    baseSha: '0'.repeat(40), headSha: '0'.repeat(40),
+    requiredChecks: ['reader-check'], expectedAssertions: { 'reader-check': ['reader-assertion'] },
+    reportPath: prefix + 'evidence.json', artifactPaths: [prefix + 'raw-run.json'], requestNote: 'not-a-policy-field' }), { flag: 'wx' })
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'REQUEST_INVALID')
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command enforces the ordinary request byte limit', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const requestPath = join(dirname(root), 'request-limit-' + randomUUID() + '.json')
+  writeFileSync(requestPath, ' '.repeat(128 * 1024 + 1), { flag: 'wx' })
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'REQUEST_SIZE_UNSUPPORTED')
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command rejects surplus path arguments', () => {
+  const command = verificationCommand(['--verify-report', '/request-one.json', '/request-two.json'])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'VERIFICATION_ARGUMENTS_INVALID')
+})
+
+test('public verification command does not turn a fresh fake envelope into historical evidence', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  const sha = process.env.EVIDENCE_FIXTURE_SHA
+  assert.equal(process.env.EVIDENCE_FIXTURE_REPO, root)
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  assert.match(sha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/)
+  const taskId = 'reader-envelope-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const reportPath = prefix + 'evidence.json'
+  const requestPath = join(dirname(root), taskId + '.json')
+  mkdirSync(join(root, prefix), { recursive: true })
+  writeFileSync(join(root, reportPath), '{"valid":true,"pass":true,"readerNote":"fresh-is-not-proof"}\n', { flag: 'wx' })
+  writeFileSync(requestPath, JSON.stringify({ purpose: 'history', root, taskId, runId, scope: 'smoke',
+    baseSha: sha, headSha: sha,
+    requiredChecks: ['reader-check'], expectedAssertions: { 'reader-check': ['reader-assertion'] },
+    reportPath, artifactPaths: [prefix + 'raw-run.json'] }), { flag: 'wx' })
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'VERIFICATION_BINDING_MISMATCH')
+  assert.equal(command.result.valid, false)
+  assert.equal(command.result.pass, false)
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command requires explicit current capture and declared outputs', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const taskId = 'reader-current-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const requestPath = join(dirname(root), taskId + '.json')
+  writeFileSync(requestPath, JSON.stringify({ purpose: 'candidate', root, taskId, runId, scope: 'smoke',
+    baseSha: '0'.repeat(40), headSha: '0'.repeat(40),
+    requiredChecks: ['reader-check'], expectedAssertions: { 'reader-check': ['reader-assertion'] },
+    reportPath: prefix + 'evidence.json', artifactPaths: [prefix + 'raw-run.json'] }), { flag: 'wx' })
+  assert.equal(verificationCommand(['--verify-report', requestPath]).result.reason, 'CURRENT_ARGUMENT_REQUIRED')
+  const command = verificationCommand(['--verify-report', requestPath, '--current'])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'CURRENT_OUTPUTS_REQUIRED')
+  assert.equal(command.result.valid, false)
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command classifies a current capture Git read failure without leaking the request', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  const sha = process.env.EVIDENCE_FIXTURE_SHA
+  assert.equal(process.env.EVIDENCE_FIXTURE_REPO, root)
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  assert.match(sha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/)
+  const taskId = 'current-git-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const reportPath = prefix + 'evidence.json'
+  const rawPath = prefix + 'raw-run.json'
+  const requestPath = join(dirname(root), 'request-' + taskId + '.json')
+  writeFileSync(requestPath, JSON.stringify({ purpose: 'candidate', root, taskId, runId, scope: 'smoke',
+    baseSha: '0000000000000000000000000000000000000000', headSha: sha,
+    requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+    reportPath, artifactPaths: [rawPath], outputs: [rawPath, reportPath], extraInputs: [] }) + '\n', { flag: 'wx' })
+  assert.deepEqual(verificationCommand(['--verify-report', requestPath, '--current']), {
+    exitCode: 2,
+    result: { valid: false, applicable: false, pass: false, authorization: 'not-granted', provenance: 'unknown',
+      reason: 'GIT_READ_FAILED', evidenceStatus: 'invalid', errors: ['GIT_READ_FAILED'] },
+  })
+})
+
+test('public consumer reports an absent verification request', () => {
+  const result = inspectTaskVerification(undefined)
+  assert.equal(result.reason, 'VERIFICATION_REQUEST_REQUIRED')
+  assert.equal(result.evidenceStatus, 'missing')
+  assert.equal(result.authorization, 'not-granted')
+})
+
+test('public consumer classifies an incomplete request without requiring a receipt', () => {
+  const result = inspectTaskVerification({ request: { root: '/repo' } })
+  assert.equal(result.reason, 'VERIFICATION_REQUEST_INVALID')
+  assert.equal(result.evidenceStatus, 'invalid')
+  assert.equal(result.valid, false)
+  assert.equal(result.authorization, 'not-granted')
+  assert.equal(isE2ETestFile('/repo/plugins/x/tests/unit/value.test.mjs', '/repo'), false)
+  assert.equal(isE2ETestFile('/repo/plugins/x/tests/integration/value.test.mjs', '/repo'), false)
+})
+
+test('public consumer distinguishes invalid roots, missing reports and corrupt JSON', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  const sha = process.env.EVIDENCE_FIXTURE_SHA
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  assert.match(sha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/)
+  const taskId = 'consumer-negative-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const reportPath = prefix + 'evidence.json'
+  const request = { purpose: 'history', root, taskId, runId, scope: 'smoke', baseSha: sha, headSha: sha,
+    requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+    reportPath, artifactPaths: [prefix + 'raw-run.json'] }
+  const invalidRoot = inspectTaskVerification({ request: Object.assign({}, request, { root: join(root, taskId) }) })
+  assert.equal(invalidRoot.reason, 'INVALID_GIT_ROOT')
+  assert.equal(invalidRoot.evidenceStatus, 'invalid')
+  const absent = inspectTaskVerification({ request })
+  assert.equal(absent.reason, 'VERIFICATION_REPORT_MISSING')
+  assert.equal(absent.evidenceStatus, 'missing')
+  assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { artifactPaths: [prefix + '../escape.json'] }) }).reason, 'VERIFICATION_REQUEST_INVALID')
+  mkdirSync(join(root, prefix), { recursive: true })
+  writeFileSync(join(root, reportPath), '{"valid":true,', { flag: 'wx' })
+  const corrupt = inspectTaskVerification({ request })
+  assert.equal(corrupt.reason, 'VERIFICATION_REPORT_CORRUPT')
+  assert.equal(corrupt.evidenceStatus, 'corrupt')
+  assert.equal(corrupt.authorization, 'not-granted')
+  const cwd = repoRootForSpawn()
+  assert.equal(decideQualityGate({ toolName: 'write', cwd, toolInput: { file_path: join(cwd, 'scripts/example.test.mjs') } }).decision, 'allow')
+  assert.equal(decideQualityGate({ toolName: 'write', cwd, toolInput: { file_path: join(cwd, 'plugins/x/tests/integration/value.test.mjs') } }).decision, 'allow')
+})
+
+test('public consumer verifies real historical integrity without granting execution authority', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  const sha = process.env.EVIDENCE_FIXTURE_SHA
+  assert.equal(process.env.EVIDENCE_FIXTURE_REPO, root)
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  assert.match(sha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/)
+  const taskId = 'consumer-' + randomUUID()
+  for (const scenario of [
+    { name: 'passed', tests: 1, status: 'completed', reason: null, exitCode: 0, pass: true },
+    { name: 'zero-tests', tests: 0, status: 'completed', reason: null, exitCode: 0, pass: false },
+    { name: 'preparation-failed', tests: 0, status: 'not-run', reason: 'dependency-unavailable', exitCode: null, pass: false },
+  ]) {
+    const runId = randomUUID()
+    const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+    const rawPath = prefix + 'raw-run.json'
+    const reportPath = prefix + 'evidence.json'
+    const options = { root, base: sha, head: sha, taskId, runId, outputs: [rawPath, reportPath], extraInputs: [] }
+    const before = captureCandidate(options)
+    assert.deepEqual(before.candidate.entries.map(item => item.path), ['.gitignore', 'source.txt'])
+    assert.equal(before.base.resolvedSha, sha)
+    assert.equal(before.head.resolvedSha, sha)
+    for (const entry of before.candidate.entries) {
+      assert.equal(entry.bytes, readFileSync(join(root, entry.path)).length)
+      assert.equal(entry.mode, '100644')
+    }
+    assert.notEqual(before.candidate.entries[0].sha256, before.candidate.entries[1].sha256)
+    const checks = [{ name: 'fixture-check', scope: 'smoke', required: true, status: scenario.status,
+      reason: scenario.reason, exitCode: scenario.exitCode, tests: scenario.tests, skipped: 0,
+      assertions: [{ name: 'fixture-source-present', pass: true }] }]
+    const cleanup = [{ name: 'fixture-output', owner: 'fixture-check', status: 'not-applicable', reason: 'not-created' }]
+    mkdirSync(join(root, prefix), { recursive: true })
+    const rawBytes = JSON.stringify({ checks, cleanup }) + '\n'
+    writeFileSync(join(root, rawPath), rawBytes, { flag: 'wx' })
+    const after = captureCandidate(options)
+    assert.deepEqual(after, before)
+    const envelope = sealEvidence({ taskId, runId, producer: 'dependency-stub', scope: 'smoke',
+      candidateBefore: before, candidateAfter: after, checks, cleanup, artifactPaths: [rawPath], reportPath })
+    writeFileSync(join(root, reportPath), JSON.stringify(envelope) + '\n', { flag: 'wx' })
+    const request = { purpose: 'history', root, taskId, runId, scope: 'smoke', baseSha: sha, headSha: sha,
+      requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+      reportPath, artifactPaths: [rawPath] }
+    const requestPath = join(dirname(root), 'request-reader-' + taskId + '-' + runId + '.json')
+    const commandRequest = { purpose: 'history', root, taskId, runId, scope: 'smoke',
+      baseSha: sha, headSha: sha,
+      requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+      reportPath, artifactPaths: [rawPath] }
+    writeFileSync(requestPath, JSON.stringify(commandRequest) + '\n', { flag: 'wx' })
+    const command = verificationCommand(['--verify-report', requestPath])
+    assert.equal(command.exitCode, scenario.pass ? 0 : 1, scenario.name)
+    assert.equal(command.result.valid, true)
+    assert.equal(command.result.pass, scenario.pass)
+    assert.equal(command.result.reason, scenario.pass ? 'VALID_SELF_REPORTED' : 'VALID_FAILED_CHECKS')
+    assert.equal(command.result.provenance, 'self-reported')
+    assert.equal(command.result.authorization, 'not-granted')
+    assert.equal(verificationCommand(['--verify-report', requestPath, '--current']).result.reason, 'VERIFICATION_ARGUMENTS_INVALID')
+    const currentRequestPath = join(dirname(root), 'request-current-' + taskId + '-' + runId + '.json')
+    const currentRequest = { purpose: 'candidate', root, taskId, runId, scope: 'smoke',
+      baseSha: sha, headSha: sha, requiredChecks: ['fixture-check'],
+      expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+      reportPath, artifactPaths: [rawPath], outputs: [rawPath, reportPath], extraInputs: [] }
+    writeFileSync(currentRequestPath, JSON.stringify(currentRequest) + '\n', { flag: 'wx' })
+    const currentCommand = verificationCommand(['--verify-report', currentRequestPath, '--current'])
+    assert.equal(currentCommand.result.reason, scenario.pass ? 'VALID_SELF_REPORTED' : 'VALID_FAILED_CHECKS')
+    assert.equal(currentCommand.exitCode, scenario.pass ? 0 : 1)
+    assert.equal(currentCommand.result.valid, true)
+    assert.equal(currentCommand.result.applicable, true)
+    assert.equal(currentCommand.result.pass, scenario.pass)
+    assert.equal(currentCommand.result.provenance, 'self-reported')
+    assert.equal(currentCommand.result.authorization, 'not-granted')
+    const history = inspectTaskVerification({ request })
+    assert.equal(history.valid, true, scenario.name)
+    assert.equal(history.applicable, true)
+    assert.equal(history.pass, scenario.pass)
+    assert.equal(history.evidenceStatus, scenario.pass ? 'valid' : 'valid-failure')
+    assert.equal(history.reason, scenario.pass ? 'VALID_SELF_REPORTED' : 'VALID_FAILED_CHECKS')
+    assert.equal(history.provenance, 'self-reported')
+    assert.equal(history.authorization, 'not-granted')
+    // 非准入消费者不调用原 mtime 准入谓词。
+    assert.equal(history.authorization, 'not-granted')
+    const candidateRequest = Object.assign({}, request, { purpose: 'candidate' })
+    assert.equal(inspectTaskVerification({ request: candidateRequest, currentCandidate: after }).valid, true)
+    assert.equal(inspectTaskVerification({ request: candidateRequest }).reason, 'CURRENT_CANDIDATE_REQUIRED')
+    const changed = structuredClone(after)
+    changed.candidate.entries[0].bytes += 1
+    assert.equal(inspectTaskVerification({ request: candidateRequest, currentCandidate: changed }).reason, 'INVALID_SNAPSHOT')
+    assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { purpose: 'pre-e2e' }) }).reason, 'PURPOSE_UNSUPPORTED')
+    assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { requiredChecks: ['other-check'] }) }).reason, 'REQUIRED_CHECKS_MISMATCH')
+    assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { scope: 'task' }) }).reason, 'RUN_OR_SCOPE_MISMATCH')
+    if (scenario.pass) {
+      const sourcePath = join(root, 'source.txt')
+      const sourceMode = lstatSync(sourcePath).mode
+      assert.equal(readFileSync(sourcePath, 'utf8'), 'synthetic public evidence source\n')
+      try {
+        writeFileSync(sourcePath, 'synthetic current capture changed source\n')
+        const drifted = verificationCommand(['--verify-report', currentRequestPath, '--current'])
+        assert.equal(drifted.exitCode, 2)
+        assert.equal(drifted.result.reason, 'CANDIDATE_CHANGED_DURING_RUN')
+        assert.equal(drifted.result.errors[0], 'CANDIDATE_CHANGED_DURING_RUN')
+        assert.equal(drifted.result.valid, false)
+        assert.equal(drifted.result.applicable, false)
+        assert.equal(drifted.result.pass, false)
+        assert.equal(drifted.result.authorization, 'not-granted')
+        assert.equal(verificationCommand(['--verify-report', requestPath]).result.valid, true)
+      } finally { writeFileSync(sourcePath, 'synthetic public evidence source\n') }
+      assert.equal(lstatSync(sourcePath).mode, sourceMode)
+      assert.equal(readFileSync(sourcePath, 'utf8'), 'synthetic public evidence source\n')
+      const restored = verificationCommand(['--verify-report', currentRequestPath, '--current'])
+      assert.equal(restored.exitCode, 0)
+      assert.equal(restored.result.valid, true)
+      assert.equal(restored.result.applicable, true)
+      assert.equal(restored.result.pass, true)
+      assert.equal(restored.result.reason, 'VALID_SELF_REPORTED')
+      assert.equal(restored.result.authorization, 'not-granted')
+      const undeclared = prefix + 'not-created.json'
+      const altered = structuredClone(envelope)
+      altered.artifacts[0].path = undeclared
+      writeFileSync(join(root, reportPath), JSON.stringify(altered))
+      const binding = inspectTaskVerification({ request })
+      assert.equal(binding.reason, 'VERIFICATION_BINDING_MISMATCH')
+      assert.equal(binding.evidenceStatus, 'invalid')
+      const missing = inspectTaskVerification({ request: Object.assign({}, request, { artifactPaths: [undeclared] }) })
+      assert.equal(missing.reason, 'VERIFICATION_ARTIFACT_MISSING')
+      assert.equal(missing.evidenceStatus, 'missing')
+      writeFileSync(join(root, reportPath), JSON.stringify(envelope))
+      writeFileSync(join(root, rawPath), rawBytes + 'changed-bytes\n')
+      const corrupt = inspectTaskVerification({ request })
+      assert.equal(corrupt.reason, 'ARTIFACT_CHANGED')
+      assert.equal(corrupt.evidenceStatus, 'corrupt')
+      assert.equal(corrupt.pass, false)
+      assert.equal(corrupt.authorization, 'not-granted')
+      writeFileSync(join(root, rawPath), rawBytes)
+      const brokenDigest = structuredClone(envelope)
+      brokenDigest.result.pass = false
+      writeFileSync(join(root, reportPath), JSON.stringify(brokenDigest))
+      assert.equal(inspectTaskVerification({ request }).reason, 'REPORT_DIGEST_MISMATCH')
+      writeFileSync(join(root, reportPath), '{"valid":true,"pass":true,')
+      assert.equal(inspectTaskVerification({ request }).reason, 'VERIFICATION_REPORT_CORRUPT')
+      writeFileSync(join(root, reportPath), JSON.stringify(envelope) + '\n')
+      assert.equal(inspectTaskVerification({ request }).valid, true)
+    }
   }
 })
