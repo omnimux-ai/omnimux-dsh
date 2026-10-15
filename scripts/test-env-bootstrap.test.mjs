@@ -48,9 +48,26 @@ async function load() { return import(moduleUrl); }
 test('preparation-only requires an explicit candidate before creating resources', async () => {
   const { createTestEnvironmentStarter } = await load();
   const f = fixture();
+  let directories = 0;
+  f.deps.fs.mkdtempSync = p => { directories++; return p + '-prep'; };
   const start = createTestEnvironmentStarter(f.deps);
   await assert.rejects(start({ root, mode: 'ui', evidenceContext: { taskId: '3357', runId: 'missing-candidate' }, preparationOnly: true }), { code: 'TEST_ENV_PREPARE_CANDIDATE_REQUIRED' });
+  assert.equal(directories, 0, 'no private directory before the candidate is accepted');
   assert.equal(f.spawned.length, 0);
+  assert.equal(f.removed.length, 0);
+  assert.equal(f.files.size, 3, 'no write before the candidate is accepted');
+  assert.equal(f.reads(), 0);
+});
+
+test('preparation-only rejects a candidate that is not a request and the public entry rejects a missing candidate', async () => {
+  const { createTestEnvironmentStarter, prepareTaskRuntime } = await load();
+  const f = fixture();
+  let directories = 0;
+  f.deps.fs.mkdtempSync = p => { directories++; return p + '-prep'; };
+  const start = createTestEnvironmentStarter(f.deps);
+  await assert.rejects(start({ root, mode: 'ui', candidate: { base: 'a'.repeat(40), head: 'b'.repeat(40) } }), { code: 'TEST_ENV_OPTIONS' });
+  await assert.rejects(prepareTaskRuntime({ root, mode: 'ui', evidenceContext: { taskId: '3357', runId: 'public-entry' }, preparationOnly: true }), { code: 'TEST_ENV_PREPARE_CANDIDATE_REQUIRED' });
+  assert.equal(directories, 0);
   assert.equal(f.removed.length, 0);
   assert.equal(f.reads(), 0);
 });

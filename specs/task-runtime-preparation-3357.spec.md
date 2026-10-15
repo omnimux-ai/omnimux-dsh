@@ -1,7 +1,8 @@
 # #3357 C/E：任务自有源码构建与打包准备
 
 ## 目标与阶段
-- 状态：获父批准有限 preparation-only 本地实施；固定基线 `8fe6276958d27e40007cd3336c0342829c1b09fa`。本轮仅写原 bootstrap、其原测试和本规格，不执行真实构建/打包/安装；App 两消费路径后由父整合。
+- 状态：本轮为**已实施并真实跑通**的 preparation-only 纵切；本文档同时保留原设计基线说明。原设计基线为 `8fe6276958d27e40007cd3336c0342829c1b09fa`，实际交付基线为 `9097135c6dd298409085925d0b5b6e762a3c591c`（含已合入的 #3358 与 #3360）；两者不同，以实际交付基线为准。
+- 设计阶段原写“不执行真实构建/打包/安装”，该限制已被本轮父授权的真实实施取代：构建与打包已真实执行一次以上并留证，安装仍未执行（见文末“实施后的实测事实”）。App 两消费路径后由父整合。
 - 第一纵切仅同一既有启动入口的 preparation-only：真实候选源码 → owned builder → 预构建归档 → 字节核对 → 清理；不安装、不启动、不宣称 fresh、任务行为反证或 source-installed-loaded。
 - 父先读本规格及设计报告，判断范围与依赖，再授权正常实施；本规格不产生执行、来源认证或生产发布权限。
 
@@ -55,12 +56,14 @@
 实测修正了规格原先的推断，均以真实字节为准：
 1. **stage 必须包含兄弟插件**：`plugins/omnimux/src/client/session-guide/trending/recommendation-engine.js` 真实跨插件引用 `plugins/omnimux-inspiration/src/recommendation-engine.js`，故 stage 增加该插件源码；打包集合仍仅 hub 与 kit。
 2. **声明三项 pack 变换而非两项**：除 kit 依赖路径与 release-channel 外，packer 会移除生命周期 `prepare` 脚本且不写末尾换行，因此在声明负载中提前落地该规范化，使归档清单与声明负载逐字节一致。
-3. **归档集合完整性以 packer 自己的声明为准**：先以真实 `pack --dry-run --json` 取声明文件集合，要求归档文件集合与之完全相等（数量与逐路径），再对每个声明文件按其真实来源（暂存目标或仓根附加文件）比对 size/sha256/mode；`package.json` 经受验 extract 后按内容深度相等（packer 会重排键序，键序非语义）。因此“构建空转或丢文件仍报已准备”不再可能。
-4. **暂存源码在构建后必须未被改写**：构建前记录全部候选已复制输入（path/mode/size/sha256）为 sourceMap，构建后逐项复核，任一漂移即失败。
-5. **owned 根身份**：创建时记录 dev/ino，删除前复核同一身份，并在 cleanup 结果中回报；失败保留现场且 `cleaned=false`。
+3. **归档集合完整性以 packer 自己的声明为准**：先以真实 `pack --dry-run --json` 取声明文件集合，要求归档文件集合与之完全相等（数量与逐路径），再对每个声明文件按其真实来源（暂存目标或仓根附加文件）比对 size/sha256/mode；`package.json` 经受验 extract 后按内容深度相等（packer 会重排键序，键序非语义）。丢文件因此已不可能静默通过。
+4. **构建空转必须大声失败**：packer 会静默忽略白名单中不存在的条目，故声明集合与归档集合可能“一致地空”。因此对每个包显式声明必须存在的构建产物（hub 的 `lib/client.js`、`lib/generation-core.js`、`lib/video-inspect.js`、`lib/mediabunny-LICENSE.txt`；kit 的 `lib/index.js`、`lib/index.d.ts` 及其 sourcemap），要求存在、非空且出现在 packer 声明集合中。已用注入“构建成功但零产物”的真实负向运行证实：`PREPARE_OUTPUT_MISSING`（path=`lib/client.js`），不再报已准备。
+5. **暂存源码在构建后必须未被改写**：构建前记录全部候选已复制输入（path/mode/size/sha256）为 sourceMap（实测 1305 项），构建后逐项复核，任一漂移即失败。
+6. **owned 根身份**：创建时记录 dev/ino，删除前复核同一身份，并在 cleanup 结果中回报；失败保留现场且 `cleaned=false`；重复清理返回 `alreadyCleaned`。
+7. **公开入口**：除 `start` 的 `preparationOnly:true` 选项外，另行导出 `prepareTaskRuntime(options)` 走完全同一条路径；已实测其产出与选项入口一致。非 preparationOnly 时只要出现 `candidate` 键（含 null）即拒绝。
 
 构建子环境对既有安装向 private env 做了两处显式覆盖：`COREPACK_HOME` 指向调用环境提供的工具缓存，`COREPACK_ENABLE_PROJECT_SPEC=1` 以尊重 `packageManager: pnpm@11.7.0` 固定值；网络仍禁用，解析失败即大声失败。
 
 写集说明：因新增静态依赖使 `managed-tarball.mjs`、`materialize-cache.mjs`、`materialize-graph.mjs` 成为 CI 实际消费的根，按仓库既有治理门禁要求把这三项从 localRequired 升为 ciRequired（`scripts/governance-manifest.json`），这是门禁的既有契约而非新增信任。
 
-仍未证：pnpm 驱动仍由宿主 PATH 解析（worker 尚无固定 EXE 入参，属已记录的前置依赖票）；无 OS 子进程写隔离；未安装、未加载、非 fresh、未启动 App、无任务行为证据。
+仍未证：pnpm 驱动仍由宿主 PATH 解析（worker 尚无固定 EXE 入参，属已记录的前置依赖票）；无 OS 子进程写隔离；未安装、未加载、非 fresh、未启动 App、无任务行为证据；失败/中断路径保留现场但无自动清扫；负向矩阵除“构建空转”外未逐一真实触发。

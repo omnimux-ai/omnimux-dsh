@@ -232,6 +232,12 @@ const PREPARATION_CONFIG = ['package.json', 'pnpm-workspace.yaml', 'pnpm-lock.ya
 const ARCHIVE_SCRIPT = fileURLToPath(new URL('./managed-tarball-archive.py', import.meta.url));
 const SHA_RE = /^[0-9a-f]{40}$/;
 const PACKER_INCLUDED = { LICENSE: 'LICENSE' };
+// The packer silently omits whitelist entries that do not exist, so a build that produced nothing
+// would leave the plan and the archive in agreement; these outputs are asserted to exist instead.
+const PREPARATION_OUTPUTS = {
+  'plugins/omnimux': ['lib/client.js', 'lib/generation-core.js', 'lib/video-inspect.js', 'lib/mediabunny-LICENSE.txt'],
+  'packages/dsh-ui-kit': ['lib/index.js', 'lib/index.d.ts', 'lib/index.js.map', 'lib/index.d.ts.map'],
+};
 
 function inspectArchive(tarball, name, version, sha256) {
   const result = spawnSync('python3', ['-B', ARCHIVE_SCRIPT, 'inspect'], {
@@ -268,6 +274,7 @@ async function runTaskPreparation({ options, io, deps }) {
   const created = io.statSync(privateDir, { bigint: true });
   const ownerIdentity = [String(created.dev), String(created.ino)];
   const cleanup = async () => {
+    if (!io.lstatSync(privateDir, { throwIfNoEntry: false })) return { cleaned: true, ownerIdentity, alreadyCleaned: true };
     const privateRoot = io.realpathSync(privateDir);
     if (dirname(privateRoot) !== root || !basename(privateRoot).startsWith('.test-env-') || io.realpathSync(privateRoot) !== privateRoot) throw failure('ROOT_UNSAFE');
     canonical(io, privateRoot, true);
@@ -379,6 +386,11 @@ async function runTaskPreparation({ options, io, deps }) {
       let declaredFiles;
       try { declaredFiles = JSON.parse(dryRun.stdout).files.map(item => item.path); } catch { throw failure('PREPARE_PACK_PLAN_FAILED'); }
       if (!Array.isArray(declaredFiles) || !declaredFiles.length) throw failure('PREPARE_PACK_PLAN_FAILED');
+      for (const artifact of PREPARATION_OUTPUTS[rel] ?? []) {
+        const built = io.lstatSync(join(destination, artifact), { throwIfNoEntry: false });
+        if (!built?.isFile() || built.size === 0) throw failure('PREPARE_OUTPUT_MISSING', { path: artifact });
+        if (!declaredFiles.includes(artifact)) throw failure('PREPARE_OUTPUT_UNPLANNED', { path: artifact });
+      }
       const packResult = await run(['--config.ignore-scripts=true', '--config.verify-deps-before-run=false', 'pack', '--pack-destination', privateDir], { cwd: destination, env });
       observations.steps.push({ argv: ['pack'], code: packResult.code, signal: packResult.signal ?? null, stdout: (packResult.stdout || '').slice(-2048), stderr: (packResult.stderr || '').slice(-2048) });
       if (packResult.code !== 0 || packResult.signal) throw failure('PREPARE_PACK_FAILED');
@@ -434,6 +446,14 @@ async function runTaskPreparation({ options, io, deps }) {
   }
 }
 
+/**
+ * Public preparation-only entry, sharing the exact path the starter uses for `preparationOnly:true`.
+ * It never installs, loads, or starts anything, and grants no authority beyond producing artifacts.
+ */
+export async function prepareTaskRuntime(options = {}) {
+  return runTaskPreparation({ options, io: fs, deps: {} });
+}
+
 /** Test-only dependency seam. Overrides never come from CLI flags or process environment.
  * @param {{fs?: typeof fs, repositoryRoot?: string, spawn?: typeof spawn, readCredential?: () => string, signals?: NodeJS.Process, startupTimeoutMs?: number, shutdownTimeoutMs?: number}} [deps]
  */
@@ -450,7 +470,7 @@ export function createTestEnvironmentStarter(deps = {}) {
       if (!candidate || typeof candidate !== 'object' || !SHA_RE.test(candidate.base) || !SHA_RE.test(candidate.head)) throw failure('PREPARE_CANDIDATE_REQUIRED');
       return runTaskPreparation({ options: { root, mode, candidate, evidenceContext }, io, deps });
     }
-    if (candidate !== null) throw failure('OPTIONS');
+    if (Object.hasOwn(options, 'candidate')) throw failure('OPTIONS');
     if (evidenceContext !== null) {
       if (!evidenceContext || Object.keys(evidenceContext).sort().join(',') !== 'runId,taskId'
         || !Object.values(evidenceContext).every(value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value))) throw failure('OPTIONS');
