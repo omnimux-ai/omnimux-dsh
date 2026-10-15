@@ -343,7 +343,7 @@ async function runTaskPreparation({ options, io, deps }) {
     // corepack cache, which is correct for offline lockfile installs but cannot launch a build.
     // Builds honor the pinned toolchain from the invoking environment and still fail loudly offline.
     const env = Object.assign(privatePnpmEnvironment(join(privateDir, 'pnpm')), {
-      PATH: `${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`, ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--max-http-header-size=65536',
+      PATH: `${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`,
       COREPACK_HOME: process.env.COREPACK_HOME || join(homedir(), '.cache', 'node', 'corepack'),
       COREPACK_ENABLE_PROJECT_SPEC: '1',
     });
@@ -360,8 +360,10 @@ async function runTaskPreparation({ options, io, deps }) {
       const staged = readJsonFile(join(stageRoot, rel, 'package.json'));
       if (staged?.scripts?.build !== expected) throw failure('PREPARE_BUILD_SCRIPT_UNSUPPORTED', { path: `${rel}/package.json`, build: staged?.scripts?.build ?? null });
     }
-    await runStep(['--config.verify-deps-before-run=false', '--filter', 'dsh-ui-kit', 'build'], stageRoot);
-    await runStep(['--config.verify-deps-before-run=false', '--filter', 'omnimux', 'build'], stageRoot);
+    // Lifecycle pre/post hooks are not part of the reviewed build body, so they are switched off.
+    const buildArgs = ['--config.verify-deps-before-run=false', '--config.enable-pre-post-scripts=false'];
+    await runStep([...buildArgs, '--filter', 'dsh-ui-kit', 'build'], stageRoot);
+    await runStep([...buildArgs, '--filter', 'omnimux', 'build'], stageRoot);
     // The build may add generated outputs but must leave every copied candidate input untouched.
     const stageAfter = payloadManifest(stageRoot, { exclude: stageExclusions, links: false });
     const stagedAfter = new Map(stageAfter.entries.map(item => [item.path, item]));

@@ -65,7 +65,9 @@
 7. **owned 根身份**：创建时记录 dev/ino，删除前复核同一身份，并在 cleanup 结果中回报；失败保留现场且 `cleaned=false`；重复清理返回 `alreadyCleaned`。
 8. **公开入口**：除 `start` 的 `preparationOnly:true` 选项外，另行导出 `prepareTaskRuntime(options)` 走完全同一条路径；已实测其产出与选项入口一致。非 preparationOnly 时只要出现 `candidate` 键（含 null）即拒绝。
 
-构建子环境对既有安装向 private env 做了两处显式覆盖：`COREPACK_HOME` 指向调用环境提供的工具缓存，`COREPACK_ENABLE_PROJECT_SPEC=1` 以尊重 `packageManager: pnpm@11.7.0` 固定值；网络仍禁用，解析失败即大声失败。
+9. **构建生命周期前后置脚本关闭**：`prebuild`/`postbuild` 不属于被审构建体，且该 pin 的 pnpm 默认启用前后置脚本，故两条构建调用均加 `--config.enable-pre-post-scripts=false`；实测产物摘要与加固前完全一致（`19a0c47c…`/`87c69d89…`）。
+
+构建子环境对既有安装向 private env 做了两处显式覆盖：`COREPACK_HOME` 指向调用环境提供的工具缓存，`COREPACK_ENABLE_PROJECT_SPEC=1` 以尊重 `packageManager: pnpm@11.7.0` 固定值；另按第 30 行要求收窄 `PATH`。未设置 `NODE_OPTIONS`、`NODE_PATH`、`ELECTRON_RUN_AS_NODE`、预加载或代理；网络仍禁用，解析失败即大声失败。
 
 写集说明：因新增静态依赖使 `managed-tarball.mjs`、`materialize-cache.mjs`、`materialize-graph.mjs` 成为 CI 实际消费的根，按仓库既有治理门禁要求把这三项从 localRequired 升为 ciRequired（`scripts/governance-manifest.json`），这是门禁的既有契约而非新增信任。
 
