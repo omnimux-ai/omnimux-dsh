@@ -27,6 +27,8 @@ subsystem: "omnimux"
 | 壳层 / 平台门控 | 相关自动化测试与静态检查；独立评审 | 隔离 worktree 的适用浏览器证据 + 真实 Electron renderer/CDP | 不能只用 web 页面替代 Electron |
 | 生产发布 | 另见发布授权与发布计划 | 授权目标上的发布/回滚证据 | 不属于普通开发验收 |
 
+已知 `plugins/omnimux/scripts/run-tests.mjs` 仅用于包测试，不在产品安装包文件清单；独立改动与文档、正式测试同为非运行输入，不安装或重启开发版。其它插件构建、宿主、客户端及运行时资源仍按实际用途交付，混合改动不因含测试执行器而跳过安装。
+
 每条 Issue acceptance 只绑定适用阶段。`not applicable` 必须给出变更面理由；skip、环境错误或未执行检查不能写成 PASS。CI `qa:pass` 仅证明合入前静态与测试，不等于隔离 worktree Web 验证通过。历史 QA/evidence 中的失败或未执行不重标为通过。
 
 ## 环境身份

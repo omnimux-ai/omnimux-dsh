@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { globSync, mkdtempSync, rmSync } from 'node:fs'
+import { globSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -34,42 +34,75 @@ export function assertTestFiles(files) {
   }
 }
 
-export function runTests(cwd = process.cwd()) {
-  const files = discoverTestFiles(cwd)
+/** Plan non-overlapping Hub runs within the source discovery boundary. */
+export function planHubTestRuns(files) {
   assertTestFiles(files)
   if (!files.includes(NETWORK_GUARD_TEST)) {
     throw new Error(`Missing required network guard test: ${NETWORK_GUARD_TEST}`)
   }
+  const ordinary = []
+  const resource = []
+  for (const file of files) {
+    if (file === NETWORK_GUARD_TEST) continue
+    // Conservative resource scheduling, not proof of browser execution.
+    if (/\.e2e\.test\.(js|ts|mjs)$/.test(file) || file === 'src/client/provider-config-state.test.js') {
+      resource.push(file)
+    } else {
+      ordinary.push(file)
+    }
+  }
+  return [
+    { files: [NETWORK_GUARD_TEST], args: [] },
+    { files: ordinary, args: [] },
+    { files: resource, args: ['--test-concurrency=1'] },
+  ].filter((group) => group.files.length > 0)
+}
+
+export function runTests(cwd = process.cwd()) {
+  const files = discoverTestFiles(cwd)
+  const [guard, ...phases] = planHubTestRuns(files)
   console.log(`[omnimux:test] discovered ${files.length} test files`)
 
-  // Throwaway DSH_HOME per spawned test process: code paths that resolve
+  // Throwaway DSH_HOME shared only by this runner's test phases: code paths that resolve
   // hubHomeDir() (media task ledger, auth store, plugin manage routes, …)
   // must never write the developer machine's real ~/.dsh. A test may still
   // override DSH_HOME inside its own process, which wins over this inherit.
   const dshHome = mkdtempSync(join(tmpdir(), 'omnimux-test-home-'))
+  const ownedHome = realpathSync(dshHome)
   const env = { ...process.env, DSH_HOME: dshHome }
-  const cleanup = () => rmSync(dshHome, { recursive: true, force: true })
+  const cleanup = () => {
+    if (!ownedHome.startsWith(join(realpathSync(tmpdir()), 'omnimux-test-home-'))) {
+      throw new Error('Hub test home is outside its owned temporary prefix')
+    }
+    rmSync(ownedHome, { recursive: true, force: true })
+  }
 
   const preload = new URL('./test-network-guard.mjs', import.meta.url).href
-  const run = (testFiles) => spawnSync(process.execPath, ['--import', preload, '--test', ...testFiles], {
+  const run = (group) => spawnSync(process.execPath, ['--import', preload, '--test', ...group.args, ...group.files], {
     cwd,
     stdio: 'inherit',
     env,
   })
   try {
-    const guardResult = run([NETWORK_GUARD_TEST])
+    const guardResult = run(guard)
     if (guardResult.error) throw guardResult.error
     if (guardResult.signal) {
       throw new Error(`Hub network guard test terminated by ${guardResult.signal}`)
     }
     if (guardResult.status !== 0) return guardResult.status ?? 1
 
-    const result = run(files.filter((file) => file !== NETWORK_GUARD_TEST))
-    if (result.error) throw result.error
-    if (result.signal) {
-      throw new Error(`Hub test runner terminated by ${result.signal}`)
+    let status = 0
+    let failure
+    for (const phase of phases) {
+      const result = run(phase)
+      if (!failure && result.error) failure = result.error
+      if (!failure && result.signal) {
+        failure = new Error(`Hub test runner terminated by ${result.signal}`)
+      }
+      if (status === 0) status = result.status ?? 1
     }
-    return result.status ?? 1
+    if (failure) throw failure
+    return status
   } finally {
     cleanup()
   }

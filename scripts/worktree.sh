@@ -356,6 +356,13 @@ dev_plugin_matches_range() {
     [ -n "${changes}" ] || continue
     while IFS=$'\t' read -r status path old_path; do
       [ -n "${status}" ] || continue
+      # This versioned entry is a package-test runner, not a shipped runtime input.
+      if [ "${path}" = "plugins/omnimux/scripts/run-tests.mjs" ]; then
+        case "${status}" in
+          R[0-9]*|C[0-9]*) [ "${old_path}" = "${path}" ] && continue ;;
+          *) continue ;;
+        esac
+      fi
       touched=1
       case "${status}" in
         R[0-9]*|C[0-9]*) ;;
@@ -395,12 +402,12 @@ auto_materialize_and_reload() {
   # 只认插件目录。文档、流程、脚本、测试夹具不进开发版。
   # 逐次提交收集：同一范围里先改后还原的文件，两端净差是空的，不能因此跳过。
   local changed_paths changed_plugins=() pending=()
-  changed_paths="$(git -C "${ROOT}" log --name-only --pretty=format: "${base_ref}..${target_ref}" -- plugins 2>/dev/null | grep -E '^plugins/' | sort -u || true)"
+  changed_paths="$(git -C "${ROOT}" log --no-renames --name-only --pretty=format: "${base_ref}..${target_ref}" -- plugins 2>/dev/null | grep -E '^plugins/' | sort -u || true)"
   # 插件根目录的 *.md（AGENTS.md / README*.md / PRD.md …）与 plugins/<name>/docs/ 只给人和 Agent 读，
   # 运行时不加载；测试文件（*.test.* 与 tests/、test/、test-support/、__tests__/）同样不进开发版运行时，
   # 两类改动都不物化也不触发重启。skills/、catalog/ 等运行时读取的 Markdown 不在此列。
   local source_paths
-  source_paths="$(printf '%s\n' "${changed_paths}" | grep -vE '^plugins/[^/]+/[^/]+\.md$|^plugins/[^/]+/docs/|^plugins/[^/]+/(tests?|test-support|__tests__)/|\.test\.(js|mjs|ts|jsx|tsx|cjs)$' || true)"
+  source_paths="$(printf '%s\n' "${changed_paths}" | grep -vE '^plugins/omnimux/scripts/run-tests\.mjs$|^plugins/[^/]+/[^/]+\.md$|^plugins/[^/]+/docs/|^plugins/[^/]+/(tests?|test-support|__tests__)/|\.test\.(js|mjs|ts|jsx|tsx|cjs)$' || true)"
   if [ -n "${changed_paths}" ] && [ -z "${source_paths}" ]; then
     say "ℹ️ 本次合入只改了插件文档或测试文件，无需物化。"
     return 0
