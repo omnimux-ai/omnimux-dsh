@@ -68,11 +68,13 @@ subsystem: "omnimux"
 
 ## 质量闭环证据消费
 
-`scripts/guard-quality-loop.mjs` 的 `inspectTaskVerification` 直接消费公共 `validateEvidence`。调用者必须在读取报告前固定精确 root/task/run/base/head、检查与断言集合、`evidence.json` 及原件路径；规格和请求文件只是上下文，不产生权限。消费者只读精确任务报告，不以 mtime、任意后缀、目录扫描、文件名或源码注释推断执行。输出区分 missing/corrupt/invalid/valid-failure/valid；历史完整性、候选适用性、任务通过、来源认证与授权分别记录。
+当前已建立公开请求读取与历史核证边界：空参数退出2；请求须为绝对规范路径的普通单硬链接非秘密JSON，逐段拒链接、NOFOLLOW/NONBLOCK打开、128KiB有界读取并核前后身份，有效UTF8与固定字段白名单。缺失、损坏、类型/大小不支持及未知字段均分类退出2，不回显路径、请求或底层异常。该字节上限不等于核心全流程资源或耗时上限。原入口已恢复基线行为，仅撤销本片新增的永久拒绝，不代表原证据漏洞已修复。
 
-candidate 校验要求调用者在真实执行路径持有 `currentCandidate`；工具 JSON 自报、从旧封套复制 candidate 或报告内的 producer/approved/observation 都不能替代。当前工具前入口没有此持有者，不同步重捕全仓、不以八秒工具预算承诺完成捕获，端到端写入及界面交付的实测边界明确阻断。正常单元/集成 TDD 写入不要求先有执行收据，业务源码仍受本任务规格前置门约束。
+`node scripts/guard-quality-loop.mjs --verify-report <非秘密固定请求JSON> [--current]` 是非准入核证入口；history 实际调用公共 `inspectTaskVerification`，先绑定精确 root/task/run/base/head、检查/断言、报告与原件，再调用公共核心，只读精确报告及原件。candidate 必须显式 --current 且预声明包含报告和全部原件的 outputs，缺失分别返回 CURRENT_ARGUMENT_REQUIRED / CURRENT_OUTPUTS_REQUIRED、退出2；以同一运行的 outputs/extraInputs 真实调用公共 captureCandidate，仅传本次返回值，不复制封套快照或回退 history。真实当前源字节漂移由核心分类失效；捕获错误保原核心稳定错误码，意外异常为 CURRENT_CAPTURE_FAILED，不回显请求、路径或底层异常。history 加 --current 或多余参数拒绝；JSON 候选或信任自报不在白名单。请求不能伪装 output 排除，根内请求须在原捕获前稳定存在或用已授权根外请求。当前历史/候选域覆盖有限，进程行为、读取竞态及来源认证仍按实际证据独立判断，不据此报完整质量闭环完成。
 
-公共核心仍拒绝 `pre-e2e/current-runtime`，授权恒 `not-granted`。有效失败记录可能只是准备、编译、加载、零用例、跳过或清理失败，不是已准备并加载任务后的真实业务断言失败；来源自报的有效历史不能准入端到端写入。断言文字检查只保留为静态提示，不证明运行。界面交付原文件名齐备门保留，但不能静默签实测通过；本消费者首片没有真实预演准入正例或完整来源认证，不代表完整质量闭环已经交付。
+只有 valid 且 pass 才退出0，有效失败退出1，其余无效/读取/捕获错误退出2；输出分类及代码，始终 self-reported/not-granted，不输出工具权限决策、不执行检查或应用，不证明来源认证、真实业务预演或端到端准入。
+
+无参数已注册工具前入口保持原基线行为；本片撤销自身新增的 E2E/UI 永久拒绝，不修复原 mtime、注释和假PNG 假正例漏洞，也不代表完整质量闭环或批准 D 完成，后继须真实当前持有者及源码安装加载行为闭包。
 
 ## 浏览器与共享探针
 

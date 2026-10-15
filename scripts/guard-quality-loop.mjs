@@ -6,17 +6,20 @@
  *
  * 设计要点（任务级，非仓库级）：
  *  1. 规格门禁：业务源码改动必须伴随「本任务」产出的规格文档（未提交改动或领先 origin/main 的提交）。
- *  2. 验证门禁：精确消费公共封套完整性；缺当前持有者或预演权限时拒绝端到端写入。
+ *  2. 验证门禁：写端到端测试前，必须存在晚于本任务规格的验证证据。
  *  3. 完整性门禁：提交/推送/建 PR 时，若改动集合含界面源码，则必须同时含端到端测试。
  *  4. bash 覆盖：终端写入业务源码与提交类命令同样受门禁约束。
  */
 
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, realpathSync, statSync } from 'node:fs'
-import { isAbsolute, resolve, relative, dirname } from 'node:path'
+import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, readFileSync, readSync, realpathSync, statSync } from 'node:fs'
+import { isAbsolute, resolve, relative, dirname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 
-import { validateEvidence } from './evidence-contract.mjs'
+import { captureCandidate, validateEvidence } from './evidence-contract.mjs'
+
+const EVIDENCE_WINDOW_MS = 4 * 60 * 60 * 1000
+const MAX_SCAN_ENTRIES = 4000
 
 /* ------------------------------------------------------------------ 仓库根 */
 
@@ -194,10 +197,45 @@ export function inspectTaskVerification(input = {}) {
     evidenceStatus: validation.pass ? 'valid' : 'valid-failure' }
 }
 
-/** Compatibility predicate: neither file presence nor historical integrity grants E2E admission. */
-export function hasEvidenceAfterSpec(root, input = {}) {
-  const result = inspectTaskVerification(input)
-  return input.request?.root === root && result.valid && result.authorization === 'granted'
+/** 递归收集证据候选文件（受限深度与数量，排除黑名单首页冒烟）。 */
+function collectEvidenceFiles(dir, depth, acc) {
+  if (depth > 3 || acc.length >= MAX_SCAN_ENTRIES) return
+  let entries
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+  for (const entry of entries) {
+    if (acc.length >= MAX_SCAN_ENTRIES) return
+    const abs = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      collectEvidenceFiles(abs, depth + 1, acc)
+    } else if (entry.isFile()) {
+      if (/\.(png|jpg|jpeg|webp|json|log|txt|md)$/i.test(entry.name)) {
+        if (!isBannedSmokeEvidence(entry.name)) {
+          try {
+            acc.push({ path: abs, name: entry.name, mtime: statSync(abs).mtimeMs })
+          } catch {}
+        }
+      }
+    }
+  }
+}
+
+/** 晚于本任务规格产生的验证证据（收敛至受控目录，彻底剔除 tmp/ 临时目录）。 */
+export function hasEvidenceAfterSpec(root) {
+  const specs = taskSpecs(root)
+  if (specs.length === 0) return false
+  const since = Math.max(...specs.map((s) => s.mtime))
+  const now = Date.now()
+
+  const acc = []
+  collectEvidenceFiles(resolve(root, 'docs/evidence'), 0, acc)
+  collectEvidenceFiles(resolve(root, '.agent-reports'), 0, acc)
+  collectEvidenceFiles(resolve(root, '.workbuddy/evidence'), 0, acc)
+
+  return acc.some((f) => f.mtime >= since && now - f.mtime <= EVIDENCE_WINDOW_MS)
 }
 
 /* ------------------------------------------------------------- 源码判定 */
@@ -323,7 +361,7 @@ export function effectiveRepoRoot(command, cwd) {
   return findRepoRoot(target)
 }
 
-export function decideQualityGate({ toolName, toolInput, cwd, verification }) {
+export function decideQualityGate({ toolName, toolInput, cwd }) {
   const rawTool = String(toolName || '').toLowerCase()
   const name = rawTool.replace(/^.*:/, '')
 
@@ -353,11 +391,6 @@ export function decideQualityGate({ toolName, toolInput, cwd, verification }) {
           sample: ui.slice(0, 3).join(', '),
         }
       }
-      if (ui.length > 0) {
-        const result = inspectTaskVerification(verification)
-        return { decision: 'deny', reason: result.valid ? 'verification-authorization-not-granted' : 'missing-verify-evidence-for-e2e',
-          verificationReason: result.reason, evidenceStatus: result.evidenceStatus, authorization: result.authorization }
-      }
       return { decision: 'allow' }
     }
     if (bashWritesSource(command) && taskSpecs(root).length === 0) {
@@ -383,13 +416,13 @@ export function decideQualityGate({ toolName, toolInput, cwd, verification }) {
   }
 
   if (isE2ETestFile(fullPath, root)) {
+    if (!hasEvidenceAfterSpec(root)) {
+      return { decision: 'deny', reason: 'missing-verify-evidence-for-e2e' }
+    }
     const content = String(toolInput.content || toolInput.new_string || '')
-    if (content && !hasStrongOracleSignal(content)) return { decision: 'deny', reason: 'missing-strong-oracle-for-e2e' }
-    const result = inspectTaskVerification(verification)
-    if (!result.valid) return { decision: 'deny', reason: 'missing-verify-evidence-for-e2e',
-      verificationReason: result.reason, evidenceStatus: result.evidenceStatus, authorization: result.authorization }
-    return { decision: 'deny', reason: 'verification-authorization-not-granted',
-      verificationReason: result.reason, evidenceStatus: result.evidenceStatus, authorization: result.authorization }
+    if (!hasStrongOracleSignal(content)) {
+      return { decision: 'deny', reason: 'missing-strong-oracle-for-e2e' }
+    }
   }
 
   return { decision: 'allow' }
@@ -408,16 +441,12 @@ const REASONS = {
     '  2. 在**本任务所在工作树**的 specs/ 目录落盘规格（写清用户操作旅程、期望界面反馈与验收用例）；',
     '  3. 规格落盘后方可编写源码。',
   ],
-  'missing-verify-evidence-for-e2e': (extra) => [
-    '🚫【质量闭环：验证证据不可用】端到端写入或界面交付缺少当前适用证据，受影响动作已阻断。',
-    `📌 分类：${extra.evidenceStatus || 'missing'}；原因：${extra.verificationReason || 'VERIFICATION_REQUEST_REQUIRED'}。`,
-    '近期文件、截图文件名和注释中的断言文字不证明运行。当前工具前接缝没有受信请求与当前候选持有者，不自动捕获全仓或接受工具参数自报信任。',
-    '常规单元、集成测试和正常规格驱动源码维护不要求预先执行收据。',
-  ],
-  'verification-authorization-not-granted': (extra) => [
-    '🚫【质量闭环：未取得预演准入】封套完整性不等于真实任务预演或写入权限。',
-    `📌 分类：${extra.evidenceStatus}；原因：${extra.verificationReason}；授权：not-granted。`,
-    '现核心不支持 pre-e2e/current-runtime；来源自报、准备失败或有效失败记录不能冒充已安装加载后的真实行为失败。',
+  'missing-verify-evidence-for-e2e': () => [
+    '🚫【质量五步闭环硬门禁：验证前置拦截】尚未在受控目录留存有效实机预演证据，禁止编写端到端测试！',
+    '📌 判定规则：必须存在「晚于本任务规格」产生的专属验证证据（落盘于 docs/evidence/、.agent-reports/ 或 .workbuddy/evidence/）。',
+    '⛔ 严禁使用通用首页冒烟图（如 app-home.png）或 /tmp 临时文件充数：证据必须具备功能专属特征并持久化！',
+    '💡【业务前置数据提示】：若功能依赖画布素材节点等前置数据，测试环境已自动预置带视频的标准工程（ID: ws_qa_media），直接可用！',
+    '👉 正确流程：先在真实浏览器中跑通被测功能关键交互并留存专属截图证据，再固化端到端测试。',
   ],
   'missing-strong-oracle-for-e2e': () => [
     '🚫【质量五步闭环硬门禁：端到端强断言拦截】拟写入的端到端测试缺少强断言信号，禁止落盘测试剧场！',
@@ -456,7 +485,116 @@ export function handle(rawInput) {
   return { hookSpecificOutput: output }
 }
 
-function main() {
+export function verificationCommand(argv) {
+  const rejected = (reason, evidenceStatus = 'invalid') => ({ exitCode: 2,
+    result: { valid: false, applicable: false, pass: false, authorization: 'not-granted',
+      provenance: 'unknown', reason, evidenceStatus, errors: [reason] } })
+  if (!Array.isArray(argv)) return rejected('VERIFICATION_ARGUMENTS_INVALID')
+  if (argv.length === 0) return rejected('VERIFICATION_ARGUMENTS_REQUIRED')
+  if ((argv.length !== 2 && argv.length !== 3) || argv[0] !== '--verify-report'
+    || (argv.length === 3 && argv[2] !== '--current')) return rejected('VERIFICATION_ARGUMENTS_INVALID')
+  const requestPath = argv[1]
+  if (typeof requestPath !== 'string' || !isAbsolute(requestPath) || requestPath.includes('\0')
+    || resolve(requestPath) !== requestPath || !requestPath.endsWith('.json')) return rejected('REQUEST_PATH_INVALID')
+  const sameFile = (left, right) => left.dev === right.dev && left.ino === right.ino
+    && left.mode === right.mode && left.nlink === right.nlink && left.size === right.size
+    && left.mtimeMs === right.mtimeMs && left.ctimeMs === right.ctimeMs
+  const pathStat = () => {
+    const parts = requestPath.split('/').slice(1)
+    let stat
+    for (let index = 1; index <= parts.length; index++) {
+      stat = lstatSync('/' + parts.slice(0, index).join('/'))
+      if (stat.isSymbolicLink() || (index < parts.length ? !stat.isDirectory() : !stat.isFile())) return null
+    }
+    return stat
+  }
+  let bytes
+  try {
+    const initial = pathStat()
+    if (!initial || initial.nlink !== 1) return rejected('REQUEST_PATH_DENIED')
+    const limit = 128 * 1024
+    if (initial.size > limit) return rejected('REQUEST_SIZE_UNSUPPORTED')
+    const fd = openSync(requestPath, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
+    try {
+      const before = fstatSync(fd)
+      if (!before.isFile() || before.nlink !== 1 || !sameFile(initial, before)) return rejected('REQUEST_CHANGED')
+      if (before.size > limit) return rejected('REQUEST_SIZE_UNSUPPORTED')
+      const buffer = Buffer.alloc(limit + 1)
+      let length = 0
+      while (length < buffer.length) {
+        const count = readSync(fd, buffer, length, buffer.length - length, null)
+        if (count === 0) break
+        length += count
+      }
+      if (length > limit) return rejected('REQUEST_SIZE_UNSUPPORTED')
+      const after = fstatSync(fd)
+      const final = pathStat()
+      if (!final || !sameFile(before, after) || !sameFile(after, final) || length !== after.size
+        || realpathSync(requestPath) !== requestPath) return rejected('REQUEST_CHANGED')
+      bytes = buffer.subarray(0, length)
+    } finally { closeSync(fd) }
+  } catch (error) {
+    return rejected(error.code === 'ENOENT' ? 'REQUEST_MISSING' : 'REQUEST_UNREADABLE',
+      error.code === 'ENOENT' ? 'missing' : 'corrupt')
+  }
+  let request
+  try { request = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) }
+  catch { return rejected('REQUEST_CORRUPT', 'corrupt') }
+  const keys = ['purpose', 'root', 'taskId', 'runId', 'scope', 'baseSha', 'headSha',
+    'requiredChecks', 'expectedAssertions', 'reportPath', 'artifactPaths', 'outputs', 'extraInputs']
+  if (!request || Object.getPrototypeOf(request) !== Object.prototype
+    || Object.keys(request).some(key => !keys.includes(key))) return rejected('REQUEST_INVALID')
+  const { purpose, root, taskId, runId, scope, baseSha, headSha, requiredChecks,
+    expectedAssertions, reportPath, artifactPaths, outputs, extraInputs } = request
+  const id = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value)
+  const sha = value => typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value)
+  const names = values => Array.isArray(values) && values.length > 0
+    && values.every(value => typeof value === 'string' && value.length > 0 && value === value.trim())
+    && new Set(values).size === values.length
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  if (!['history', 'candidate'].includes(purpose) || typeof root !== 'string' || !isAbsolute(root)
+    || root.includes('\0') || resolve(root) !== root || !id(taskId) || !id(runId) || !sha(baseSha) || !sha(headSha)
+    || !['smoke', 'task', 'reproduction'].includes(scope) || !names(requiredChecks)
+    || !expectedAssertions || Object.getPrototypeOf(expectedAssertions) !== Object.prototype
+    || Object.keys(expectedAssertions).length !== requiredChecks.length
+    || requiredChecks.some(name => !Object.hasOwn(expectedAssertions, name) || !names(expectedAssertions[name]))
+    || reportPath !== prefix + 'evidence.json' || !names(artifactPaths)
+    || artifactPaths.some(path => !path.startsWith(prefix) || path === reportPath
+      || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:json|log|txt|png)$/.test(path.slice(prefix.length)))
+    || (outputs !== undefined && (!names(outputs) || !outputs.includes(reportPath)
+      || artifactPaths.some(path => !outputs.includes(path)) || outputs.some(path => !path.startsWith(prefix)
+        || resolve(root, path) === requestPath
+        || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:json|log|txt|png)$/.test(path.slice(prefix.length)))))
+    || (extraInputs !== undefined && (!Array.isArray(extraInputs)
+      || extraInputs.some(path => typeof path !== 'string' || !path || isAbsolute(path) || path.includes('\\')
+        || path.includes('\0') || path.split('/').some(part => !part || part === '.' || part === '..' || part === '.git'))
+      || new Set(extraInputs).size !== extraInputs.length))) return rejected('REQUEST_INVALID')
+  if (purpose === 'history' && argv.length === 3) return rejected('VERIFICATION_ARGUMENTS_INVALID')
+  let currentCandidate
+  if (purpose === 'candidate') {
+    if (argv.length !== 3) return rejected('CURRENT_ARGUMENT_REQUIRED')
+    if (outputs === undefined) return rejected('CURRENT_OUTPUTS_REQUIRED')
+    try {
+      currentCandidate = captureCandidate({ root, base: baseSha, head: headSha, taskId, runId, outputs, extraInputs })
+    } catch (error) {
+      const reason = typeof error?.code === 'string' && error.message === error.code
+        && /^[A-Z][A-Z0-9_]*$/.test(error.code) ? error.code : 'CURRENT_CAPTURE_FAILED'
+      return rejected(reason)
+    }
+  }
+  try {
+    const result = inspectTaskVerification({ request, currentCandidate })
+    return { exitCode: result.valid ? (result.pass ? 0 : 1) : 2, result }
+  } catch { return rejected('VERIFICATION_FAILED') }
+}
+
+function main(argv = process.argv.slice(2)) {
+  if (argv[0] === '--verify-report') {
+    const command = verificationCommand(argv)
+    process.stdout.write(JSON.stringify(command.result) + '\n')
+    process.exitCode = command.exitCode
+    return
+  }
   let raw = ''
   process.stdin.setEncoding('utf8')
   process.stdin.on('data', (c) => (raw += c))

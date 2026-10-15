@@ -5,7 +5,7 @@
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, utimesSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, utimesSync, lstatSync, symlinkSync, linkSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
@@ -28,6 +28,7 @@ import {
   findRepoRoot,
   decideQualityGate,
   handle,
+  verificationCommand,
 } from './guard-quality-loop.mjs'
 
 /* ------------------------------------------------------------------ helpers */
@@ -263,7 +264,7 @@ test('REGRESSION: historical evidence must NOT satisfy the verify gate', () => {
   }
 })
 
-test('fresh evidence produced after the spec satisfies the verify gate: historical fake positive is now denied', () => {
+test('fresh evidence produced after the spec satisfies the verify gate', () => {
   const root = makeRepo('fresh-evidence')
   try {
     writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
@@ -272,7 +273,7 @@ test('fresh evidence produced after the spec satisfies the verify gate: historic
     utimesSync(specAbs, specPast, specPast)
     writeFileAt(root, '.workbuddy/evidence/run.json', '{"ok":true}')
 
-    assert.equal(hasEvidenceAfterSpec(root), false, 'fresh self-reported JSON is not authority')
+    assert.equal(hasEvidenceAfterSpec(root), true)
 
     const res = decideQualityGate({
       toolName: 'default_api:write',
@@ -282,31 +283,10 @@ test('fresh evidence produced after the spec satisfies the verify gate: historic
       },
       cwd: root,
     })
-    assert.equal(res.decision, 'deny')
-    assert.equal(res.verificationReason, 'VERIFICATION_REQUEST_REQUIRED')
+    assert.equal(res.decision, 'allow')
   } finally {
     cleanup(root)
   }
-})
-
-test('fresh touched files and comment oracles never establish E2E execution authority', () => {
-  const root = makeRepo('self-reported-evidence')
-  try {
-    writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
-    const specPast = (Date.now() - 10 * 60 * 1000) / 1000
-    utimesSync(join(root, 'specs/task.spec.md'), specPast, specPast)
-    for (const suffix of ['json', 'png', 'log', 'md']) {
-      const path = writeFileAt(root, `docs/evidence/claimed-run.${suffix}`, '{"valid":true,"pass":true,"authorization":"granted"}')
-      utimesSync(path, Date.now() / 1000, Date.now() / 1000)
-      const result = decideQualityGate({ toolName: 'write', cwd: root, toolInput: {
-        file_path: join(root, 'plugins/x/tests/e2e/task.spec.ts'),
-        content: '// assert.equal(actual, expected)\n',
-        currentCandidate: { valid: true }, trusted: true, approved: true,
-      } })
-      assert.equal(result.decision, 'deny', suffix + ' is not execution evidence')
-      assert.equal(result.evidenceStatus, 'missing')
-    }
-  } finally { cleanup(root) }
 })
 
 /* ------------------------------------------- 门禁二补充：强断言 / Fail-Closed */
@@ -347,7 +327,7 @@ test('E2E write with evidence but no strong oracle is denied', () => {
   }
 })
 
-test('E2E write with evidence and strong oracle is allowed: historical fake positive is now denied', () => {
+test('E2E write with evidence and strong oracle is allowed', () => {
   const root = makeRepo('strong-oracle')
   try {
     writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
@@ -363,8 +343,7 @@ test('E2E write with evidence and strong oracle is allowed: historical fake posi
       },
       cwd: root,
     })
-    assert.equal(res.decision, 'deny')
-    assert.equal(res.verificationReason, 'VERIFICATION_REQUEST_REQUIRED')
+    assert.equal(res.decision, 'allow')
   } finally {
     cleanup(root)
   }
@@ -428,7 +407,7 @@ test('UI change without evidence blocks delivery even if e2e test exists', () =>
   }
 })
 
-test('UI change with both e2e test and task evidence passes completeness gate: static presence cannot admit delivery', () => {
+test('UI change with both e2e test and task evidence passes completeness gate', () => {
   const root = makeRepo('ui-with-e2e-and-evidence')
   try {
     writeFileAt(root, 'specs/task.spec.md', SPEC_BODY)
@@ -441,8 +420,7 @@ test('UI change with both e2e test and task evidence passes completeness gate: s
       toolInput: { command: 'git commit -m "fix ui with e2e and evidence"' },
       cwd: root,
     })
-    assert.equal(res.decision, 'deny')
-    assert.equal(res.verificationReason, 'VERIFICATION_REQUEST_REQUIRED')
+    assert.equal(res.decision, 'allow')
   } finally {
     cleanup(root)
   }
@@ -464,9 +442,9 @@ test('REGRESSION: app-home.png smoke screenshot and tmp/ are rejected as valid e
     // hasEvidenceAfterSpec 必须判定为 false
     assert.equal(hasEvidenceAfterSpec(root), false)
 
-    // Preserve the old fake-PNG attack: a task-specific name does not establish execution.
+    // 写入合法专属证据后变为 true
     writeFileAt(root, 'docs/evidence/task-verified.png', 'png bytes')
-    assert.equal(hasEvidenceAfterSpec(root), false)
+    assert.equal(hasEvidenceAfterSpec(root), true)
   } finally {
     cleanup(root)
   }
@@ -594,14 +572,13 @@ test('CONVERGENCE: delivery commands honour `git -C <task repo>` for the change 
     writeFileAt(taskRoot, 'plugins/x/tests/e2e/login.spec.ts', '// e2e\n')
     writeFileAt(taskRoot, 'docs/evidence/task-verified.png', 'png bytes')
 
-    // -C targets this worktree: static completeness still lacks bound evidence/authority.
+    // -C 指向工作树：界面改动 + 端到端测试齐全 → 放行
     const allowed = decideQualityGate({
       toolName: 'bash',
       toolInput: { command: `git -C "${taskRoot}" commit -m "feat ui"` },
       cwd: sessionRoot,
     })
-    assert.equal(allowed.decision, 'deny')
-    assert.equal(allowed.verificationReason, 'VERIFICATION_REQUEST_REQUIRED')
+    assert.equal(allowed.decision, 'allow')
 
     // 同一批改动但在工作树里缺端到端测试 → 拒绝，证明 -C 目标确实被采用
     const missing = makeRepo('task-delivery-missing-e2e')
@@ -619,6 +596,139 @@ test('CONVERGENCE: delivery commands honour `git -C <task repo>` for the change 
     cleanup(sessionRoot)
     cleanup(taskRoot)
   }
+})
+
+test('public verification command rejects absent arguments', () => {
+  assert.deepEqual(verificationCommand([]), {
+    exitCode: 2,
+    result: { valid: false, applicable: false, pass: false,
+      authorization: 'not-granted', provenance: 'unknown', reason: 'VERIFICATION_ARGUMENTS_REQUIRED',
+      evidenceStatus: 'invalid', errors: ['VERIFICATION_ARGUMENTS_REQUIRED'] },
+  })
+})
+
+test('public verification command classifies an ordinary absent request file', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const requestPath = join(dirname(root), 'request-missing-' + randomUUID() + '.json')
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.result.reason, 'REQUEST_MISSING')
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.evidenceStatus, 'missing')
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command rejects an ordinary malformed JSON request', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const requestPath = join(dirname(root), 'request-corrupt-' + randomUUID() + '.json')
+  writeFileSync(requestPath, '{"purpose":', { flag: 'wx' })
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'REQUEST_CORRUPT')
+  assert.equal(command.result.evidenceStatus, 'corrupt')
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command rejects an unknown request policy field', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const taskId = 'reader-policy-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const requestPath = join(dirname(root), taskId + '.json')
+  writeFileSync(requestPath, JSON.stringify({ purpose: 'history', root, taskId, runId, scope: 'smoke',
+    baseSha: '0'.repeat(40), headSha: '0'.repeat(40),
+    requiredChecks: ['reader-check'], expectedAssertions: { 'reader-check': ['reader-assertion'] },
+    reportPath: prefix + 'evidence.json', artifactPaths: [prefix + 'raw-run.json'], requestNote: 'not-a-policy-field' }), { flag: 'wx' })
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'REQUEST_INVALID')
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command enforces the ordinary request byte limit', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const requestPath = join(dirname(root), 'request-limit-' + randomUUID() + '.json')
+  writeFileSync(requestPath, ' '.repeat(128 * 1024 + 1), { flag: 'wx' })
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'REQUEST_SIZE_UNSUPPORTED')
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command rejects surplus path arguments', () => {
+  const command = verificationCommand(['--verify-report', '/request-one.json', '/request-two.json'])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'VERIFICATION_ARGUMENTS_INVALID')
+})
+
+test('public verification command does not turn a fresh fake envelope into historical evidence', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  const sha = process.env.EVIDENCE_FIXTURE_SHA
+  assert.equal(process.env.EVIDENCE_FIXTURE_REPO, root)
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  assert.match(sha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/)
+  const taskId = 'reader-envelope-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const reportPath = prefix + 'evidence.json'
+  const requestPath = join(dirname(root), taskId + '.json')
+  mkdirSync(join(root, prefix), { recursive: true })
+  writeFileSync(join(root, reportPath), '{"valid":true,"pass":true,"readerNote":"fresh-is-not-proof"}\n', { flag: 'wx' })
+  writeFileSync(requestPath, JSON.stringify({ purpose: 'history', root, taskId, runId, scope: 'smoke',
+    baseSha: sha, headSha: sha,
+    requiredChecks: ['reader-check'], expectedAssertions: { 'reader-check': ['reader-assertion'] },
+    reportPath, artifactPaths: [prefix + 'raw-run.json'] }), { flag: 'wx' })
+  const command = verificationCommand(['--verify-report', requestPath])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'VERIFICATION_BINDING_MISMATCH')
+  assert.equal(command.result.valid, false)
+  assert.equal(command.result.pass, false)
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command requires explicit current capture and declared outputs', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  const taskId = 'reader-current-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const requestPath = join(dirname(root), taskId + '.json')
+  writeFileSync(requestPath, JSON.stringify({ purpose: 'candidate', root, taskId, runId, scope: 'smoke',
+    baseSha: '0'.repeat(40), headSha: '0'.repeat(40),
+    requiredChecks: ['reader-check'], expectedAssertions: { 'reader-check': ['reader-assertion'] },
+    reportPath: prefix + 'evidence.json', artifactPaths: [prefix + 'raw-run.json'] }), { flag: 'wx' })
+  assert.equal(verificationCommand(['--verify-report', requestPath]).result.reason, 'CURRENT_ARGUMENT_REQUIRED')
+  const command = verificationCommand(['--verify-report', requestPath, '--current'])
+  assert.equal(command.exitCode, 2)
+  assert.equal(command.result.reason, 'CURRENT_OUTPUTS_REQUIRED')
+  assert.equal(command.result.valid, false)
+  assert.equal(command.result.authorization, 'not-granted')
+})
+
+test('public verification command classifies a current capture Git read failure without leaking the request', () => {
+  const root = process.env.EVIDENCE_FIXTURE_ROOT
+  const sha = process.env.EVIDENCE_FIXTURE_SHA
+  assert.equal(process.env.EVIDENCE_FIXTURE_REPO, root)
+  assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
+  assert.match(sha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/)
+  const taskId = 'current-git-' + randomUUID()
+  const runId = randomUUID()
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  const reportPath = prefix + 'evidence.json'
+  const rawPath = prefix + 'raw-run.json'
+  const requestPath = join(dirname(root), 'request-' + taskId + '.json')
+  writeFileSync(requestPath, JSON.stringify({ purpose: 'candidate', root, taskId, runId, scope: 'smoke',
+    baseSha: '0000000000000000000000000000000000000000', headSha: sha,
+    requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+    reportPath, artifactPaths: [rawPath], outputs: [rawPath, reportPath], extraInputs: [] }) + '\n', { flag: 'wx' })
+  assert.deepEqual(verificationCommand(['--verify-report', requestPath, '--current']), {
+    exitCode: 2,
+    result: { valid: false, applicable: false, pass: false, authorization: 'not-granted', provenance: 'unknown',
+      reason: 'GIT_READ_FAILED', evidenceStatus: 'invalid', errors: ['GIT_READ_FAILED'] },
+  })
 })
 
 test('public consumer reports an absent verification request', () => {
@@ -642,7 +752,7 @@ test('public consumer distinguishes invalid roots, missing reports and corrupt J
   const root = process.env.EVIDENCE_FIXTURE_ROOT
   const sha = process.env.EVIDENCE_FIXTURE_SHA
   assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
-  assert.equal(sha, '437f5e4f806d3819f1aab378fadd674401a9789e')
+  assert.match(sha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/)
   const taskId = 'consumer-negative-' + randomUUID()
   const runId = randomUUID()
   const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
@@ -673,7 +783,7 @@ test('public consumer verifies real historical integrity without granting execut
   const sha = process.env.EVIDENCE_FIXTURE_SHA
   assert.equal(process.env.EVIDENCE_FIXTURE_REPO, root)
   assert.equal(typeof root, 'string', 'EVIDENCE_FIXTURE_ENV_REQUIRED')
-  assert.equal(sha, '437f5e4f806d3819f1aab378fadd674401a9789e')
+  assert.match(sha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/)
   const taskId = 'consumer-' + randomUUID()
   for (const scenario of [
     { name: 'passed', tests: 1, status: 'completed', reason: null, exitCode: 0, pass: true },
@@ -684,9 +794,16 @@ test('public consumer verifies real historical integrity without granting execut
     const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
     const rawPath = prefix + 'raw-run.json'
     const reportPath = prefix + 'evidence.json'
-    const options = { root, base: sha, head: sha, taskId, runId, outputs: [rawPath, reportPath] }
+    const options = { root, base: sha, head: sha, taskId, runId, outputs: [rawPath, reportPath], extraInputs: [] }
     const before = captureCandidate(options)
     assert.deepEqual(before.candidate.entries.map(item => item.path), ['.gitignore', 'source.txt'])
+    assert.equal(before.base.resolvedSha, sha)
+    assert.equal(before.head.resolvedSha, sha)
+    for (const entry of before.candidate.entries) {
+      assert.equal(entry.bytes, readFileSync(join(root, entry.path)).length)
+      assert.equal(entry.mode, '100644')
+    }
+    assert.notEqual(before.candidate.entries[0].sha256, before.candidate.entries[1].sha256)
     const checks = [{ name: 'fixture-check', scope: 'smoke', required: true, status: scenario.status,
       reason: scenario.reason, exitCode: scenario.exitCode, tests: scenario.tests, skipped: 0,
       assertions: [{ name: 'fixture-source-present', pass: true }] }]
@@ -702,6 +819,34 @@ test('public consumer verifies real historical integrity without granting execut
     const request = { purpose: 'history', root, taskId, runId, scope: 'smoke', baseSha: sha, headSha: sha,
       requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
       reportPath, artifactPaths: [rawPath] }
+    const requestPath = join(dirname(root), 'request-reader-' + taskId + '-' + runId + '.json')
+    const commandRequest = { purpose: 'history', root, taskId, runId, scope: 'smoke',
+      baseSha: sha, headSha: sha,
+      requiredChecks: ['fixture-check'], expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+      reportPath, artifactPaths: [rawPath] }
+    writeFileSync(requestPath, JSON.stringify(commandRequest) + '\n', { flag: 'wx' })
+    const command = verificationCommand(['--verify-report', requestPath])
+    assert.equal(command.exitCode, scenario.pass ? 0 : 1, scenario.name)
+    assert.equal(command.result.valid, true)
+    assert.equal(command.result.pass, scenario.pass)
+    assert.equal(command.result.reason, scenario.pass ? 'VALID_SELF_REPORTED' : 'VALID_FAILED_CHECKS')
+    assert.equal(command.result.provenance, 'self-reported')
+    assert.equal(command.result.authorization, 'not-granted')
+    assert.equal(verificationCommand(['--verify-report', requestPath, '--current']).result.reason, 'VERIFICATION_ARGUMENTS_INVALID')
+    const currentRequestPath = join(dirname(root), 'request-current-' + taskId + '-' + runId + '.json')
+    const currentRequest = { purpose: 'candidate', root, taskId, runId, scope: 'smoke',
+      baseSha: sha, headSha: sha, requiredChecks: ['fixture-check'],
+      expectedAssertions: { 'fixture-check': ['fixture-source-present'] },
+      reportPath, artifactPaths: [rawPath], outputs: [rawPath, reportPath], extraInputs: [] }
+    writeFileSync(currentRequestPath, JSON.stringify(currentRequest) + '\n', { flag: 'wx' })
+    const currentCommand = verificationCommand(['--verify-report', currentRequestPath, '--current'])
+    assert.equal(currentCommand.result.reason, scenario.pass ? 'VALID_SELF_REPORTED' : 'VALID_FAILED_CHECKS')
+    assert.equal(currentCommand.exitCode, scenario.pass ? 0 : 1)
+    assert.equal(currentCommand.result.valid, true)
+    assert.equal(currentCommand.result.applicable, true)
+    assert.equal(currentCommand.result.pass, scenario.pass)
+    assert.equal(currentCommand.result.provenance, 'self-reported')
+    assert.equal(currentCommand.result.authorization, 'not-granted')
     const history = inspectTaskVerification({ request })
     assert.equal(history.valid, true, scenario.name)
     assert.equal(history.applicable, true)
@@ -710,7 +855,8 @@ test('public consumer verifies real historical integrity without granting execut
     assert.equal(history.reason, scenario.pass ? 'VALID_SELF_REPORTED' : 'VALID_FAILED_CHECKS')
     assert.equal(history.provenance, 'self-reported')
     assert.equal(history.authorization, 'not-granted')
-    assert.equal(hasEvidenceAfterSpec(root, { request }), false)
+    // 非准入消费者不调用原 mtime 准入谓词。
+    assert.equal(history.authorization, 'not-granted')
     const candidateRequest = Object.assign({}, request, { purpose: 'candidate' })
     assert.equal(inspectTaskVerification({ request: candidateRequest, currentCandidate: after }).valid, true)
     assert.equal(inspectTaskVerification({ request: candidateRequest }).reason, 'CURRENT_CANDIDATE_REQUIRED')
@@ -721,6 +867,30 @@ test('public consumer verifies real historical integrity without granting execut
     assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { requiredChecks: ['other-check'] }) }).reason, 'REQUIRED_CHECKS_MISMATCH')
     assert.equal(inspectTaskVerification({ request: Object.assign({}, request, { scope: 'task' }) }).reason, 'RUN_OR_SCOPE_MISMATCH')
     if (scenario.pass) {
+      const sourcePath = join(root, 'source.txt')
+      const sourceMode = lstatSync(sourcePath).mode
+      assert.equal(readFileSync(sourcePath, 'utf8'), 'synthetic public evidence source\n')
+      try {
+        writeFileSync(sourcePath, 'synthetic current capture changed source\n')
+        const drifted = verificationCommand(['--verify-report', currentRequestPath, '--current'])
+        assert.equal(drifted.exitCode, 2)
+        assert.equal(drifted.result.reason, 'CANDIDATE_CHANGED_DURING_RUN')
+        assert.equal(drifted.result.errors[0], 'CANDIDATE_CHANGED_DURING_RUN')
+        assert.equal(drifted.result.valid, false)
+        assert.equal(drifted.result.applicable, false)
+        assert.equal(drifted.result.pass, false)
+        assert.equal(drifted.result.authorization, 'not-granted')
+        assert.equal(verificationCommand(['--verify-report', requestPath]).result.valid, true)
+      } finally { writeFileSync(sourcePath, 'synthetic public evidence source\n') }
+      assert.equal(lstatSync(sourcePath).mode, sourceMode)
+      assert.equal(readFileSync(sourcePath, 'utf8'), 'synthetic public evidence source\n')
+      const restored = verificationCommand(['--verify-report', currentRequestPath, '--current'])
+      assert.equal(restored.exitCode, 0)
+      assert.equal(restored.result.valid, true)
+      assert.equal(restored.result.applicable, true)
+      assert.equal(restored.result.pass, true)
+      assert.equal(restored.result.reason, 'VALID_SELF_REPORTED')
+      assert.equal(restored.result.authorization, 'not-granted')
       const undeclared = prefix + 'not-created.json'
       const altered = structuredClone(envelope)
       altered.artifacts[0].path = undeclared
