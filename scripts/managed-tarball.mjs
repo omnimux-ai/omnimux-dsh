@@ -105,27 +105,29 @@ def defaults():
  os.fchdir(anchors[r['cwd']].fd)
  signal.signal(signal.SIGTERM,signal.SIG_DFL);signal.signal(signal.SIGINT,signal.SIG_DFL)
 verify()
-p=subprocess.Popen(r['command'],env=r['env'],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,pass_fds=(lease,anchors[r['cwd']].fd),preexec_fn=defaults)
-s=selectors.DefaultSelector();s.register(sys.stdin,selectors.EVENT_READ);s.register(p.stdout,selectors.EVENT_READ)
-chunks=[];size=0;deadline=time.monotonic()+r['timeout']/1000;stopping=None;reason=None;eof=False
+p=subprocess.Popen(r['command'],env=r['env'],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,pass_fds=(lease,anchors[r['cwd']].fd),preexec_fn=defaults)
+s=selectors.DefaultSelector();s.register(sys.stdin,selectors.EVENT_READ);s.register(p.stdout,selectors.EVENT_READ,'stdout');s.register(p.stderr,selectors.EVENT_READ,'stderr')
+chunks={'stdout':[],'stderr':[]};size=0;deadline=time.monotonic()+r['timeout']/1000;stopping=None;reason=None;eof=0
 while True:
  for key,_ in s.select(.05):
   if key.fileobj is sys.stdin:
    os.read(sys.stdin.fileno(),4096);s.unregister(sys.stdin);reason='aborted'
   else:
-   b=os.read(p.stdout.fileno(),65536)
-   if not b:s.unregister(p.stdout);eof=True
-   elif size+len(b)>r['limit']:reason='output-limit'
-   else:chunks.append(b);size+=len(b)
+   b=os.read(key.fileobj.fileno(),65536)
+   if not b:s.unregister(key.fileobj);eof+=1
+   else:
+    kept=b[:max(0,r['limit']-size)]
+    if kept:chunks[key.data].append(kept);size+=len(kept)
+    if len(kept)<len(b):reason='output-limit'
  if time.monotonic()>deadline:reason='timeout'
  if reason and stopping is None:
   stopping=time.monotonic();os.killpg(os.getpgrp(),signal.SIGTERM)
- if eof and p.poll() is not None or stopping is not None and time.monotonic()-stopping>.5:break
+ if eof==2 and p.poll() is not None or stopping is not None and time.monotonic()-stopping>.5:break
 code=p.poll()
 try:verify()
 except (ValueError,OSError):reason='directory-drift'
 stack.close()
-result={'code':code if code is not None and not reason else 5,'signal':reason,'stdout':b''.join(chunks).decode('utf-8','replace') if not reason else ''}
+result={'code':code if code is not None and not reason else 5,'signal':reason,**{name:b''.join(parts).decode('utf-8','replace') for name,parts in chunks.items()}}
 try:sys.stdout.write(json.dumps(result));sys.stdout.flush()
 finally:
  # The supervisor owns this group ID even when the coordinator's pipe is gone.
@@ -134,7 +136,7 @@ finally:
 
 /** Run fixed pnpm with bounded output, a timeout, and an owned lifetime pipe. */
 export async function runPnpm(argv, { cwd, env, signal, lease, directoryIdentities = [], timeoutMs = 120000, maxOutput = 8 << 20 } = {}) {
-  if (signal?.aborted) return { code: 5, signal: 'aborted', stdout: '' };
+  if (signal?.aborted) return { code: 5, signal: 'aborted', stdout: '', stderr: '' };
   const privateHome = env.HOME;
   makeDirectory(privateHome);
   const leasePath = lease || path.join(privateHome, 'pnpm-worker.lock');
@@ -156,7 +158,7 @@ export async function runPnpm(argv, { cwd, env, signal, lease, directoryIdentiti
     child.on('close', () => {
       signal?.removeEventListener('abort', abort);
       try { const result = JSON.parse(output); resolve(result); }
-      catch { resolve({ code: 5, signal: 'worker-failed', stdout: '' }); }
+      catch { resolve({ code: 5, signal: 'worker-failed', stdout: '', stderr: '' }); }
     });
   });
 }

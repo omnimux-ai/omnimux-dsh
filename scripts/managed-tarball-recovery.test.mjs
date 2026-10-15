@@ -131,7 +131,11 @@ test('runner bounds logs and waits on timeout and abort', async () => {
   const home = path.join(scratch, 'runner'); fs.mkdirSync(home);
   const env = pnpmEnvironment(home);
   const bounded = await runPnpm(['--help'], { cwd: home, env, maxOutput: 10 });
-  assert.equal(bounded.code, 5); assert.equal(bounded.stdout, '');
+  assert.equal(bounded.code, 5);
+  assert.equal(bounded.signal, 'output-limit');
+  assert.equal(bounded.stdout, 'Version 11');
+  assert.equal(bounded.stderr, '');
+  assert.equal(Buffer.byteLength(bounded.stdout) + Buffer.byteLength(bounded.stderr), 10);
   const timeout = await runPnpm(['--version'], { cwd: home, env, timeoutMs: 1 });
   assert.equal(timeout.code, 5); assert.equal(timeout.signal, 'timeout');
   const controller = new AbortController();
