@@ -171,3 +171,54 @@ print(json.dumps({'hit':hit,'rejected':rejected,'outside':sorted(p.name for p in
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(result.stdout), { hit: true, rejected: true, outside: ['sentinel'], sentinel: 'unchanged' });
 });
+
+test('real pnpm preserves separate stderr on nonzero exit', async () => {
+  const f = await fixture('isolated', 'stderr-failure');
+  const result = await runPnpm(['--config.verify-deps-before-run=false', 'exec', process.execPath, '-e', 'process.stdout.write("owned worker stdout\\n"); process.stderr.write("owned worker stderr\\n"); process.exit(7)'], { cwd: f.profile, env: f.env });
+  assert.equal(result.code, 7);
+  assert.equal(result.signal, null);
+  assert.equal(result.stdout, 'owned worker stdout\n');
+  assert.equal(result.stderr, 'owned worker stderr\n');
+});
+
+test('real pnpm shares a raw byte output budget across separate streams', async () => {
+  const f = await fixture('isolated', 'shared-output-budget');
+  const result = await runPnpm(['--config.verify-deps-before-run=false', 'exec', process.execPath, '-e', 'require("fs").writeSync(1,"OK"); setTimeout(()=>require("fs").writeSync(2,"😀".repeat(3)),50)'], { cwd: f.profile, env: f.env, maxOutput: 7 });
+  assert.equal(result.code, 5);
+  assert.equal(result.signal, 'output-limit');
+  assert.equal(result.stdout, 'OK');
+  assert.equal(result.stderr, '😀�');
+});
+
+test('real pnpm retains separate output when timing out', async () => {
+  const f = await fixture('isolated', 'output-timeout');
+  const result = await runPnpm(['--config.verify-deps-before-run=false', 'exec', process.execPath, '-e', 'require("fs").writeSync(1,"timeout stdout"); require("fs").writeSync(2,"timeout stderr"); setInterval(()=>{},1000)'], { cwd: f.profile, env: f.env, timeoutMs: 1000 });
+  assert.equal(result.code, 5);
+  assert.equal(result.signal, 'timeout');
+  assert.equal(result.stdout, 'timeout stdout');
+  assert.equal(result.stderr, 'timeout stderr');
+});
+
+test('real pnpm retains separate output when aborted after writing', async () => {
+  const f = await fixture('isolated', 'output-abort');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1000);
+  let result;
+  try {
+    result = await runPnpm(['--config.verify-deps-before-run=false', 'exec', process.execPath, '-e', 'require("fs").writeSync(1,"abort stdout"); require("fs").writeSync(2,"abort stderr"); setInterval(()=>{},1000)'], { cwd: f.profile, env: f.env, signal: controller.signal });
+  } finally { clearTimeout(timer); }
+  assert.equal(result.code, 5);
+  assert.equal(result.signal, 'aborted');
+  assert.equal(result.stdout, 'abort stdout');
+  assert.equal(result.stderr, 'abort stderr');
+});
+
+test('real pnpm drains multibyte stderr without polluting successful JSON stdout', async () => {
+  const f = await fixture('isolated', 'output-utf8');
+  const result = await runPnpm(['--config.verify-deps-before-run=false', 'exec', process.execPath, '-e', 'process.stdout.write("{\\"ok\\":true}\\n"); process.stderr.write("中😀".repeat(20000))'], { cwd: f.profile, env: f.env, maxOutput: 140012 });
+  assert.equal(result.code, 0);
+  assert.equal(result.signal, null);
+  assert.equal(result.stdout, '{"ok":true}\n');
+  assert.deepEqual(JSON.parse(result.stdout), { ok: true });
+  assert.equal(result.stderr, '中😀'.repeat(20000));
+});
