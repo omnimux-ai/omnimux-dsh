@@ -1,5 +1,5 @@
 import { after, describe, it } from 'node:test'
-import { chmodSync, mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs'
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, writeFileSync, symlinkSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import {
   decideBashCommand,
   decideMaterializationCommand,
+  decideMainCheckoutBuildCommand,
   decideSearchTarget,
   decideWrite,
   isDestructiveResetCommand,
@@ -817,7 +818,52 @@ describe('guard-worktree bash command write safety guard (防命令行绕过篡�
   })
 })
 
-describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖硬拦截)', () => {
+describe('main checkout build query reuse', () => {
+  function withGitLog(name, check) {
+    const lookup = spawnSync('which', ['git'], { encoding: 'utf8' })
+    assert.equal(lookup.status, 0, lookup.stderr)
+    const realGit = realpathSync(lookup.stdout.trim())
+    const bin = join(fixture, name)
+    mkdirSync(bin)
+    const log = join(bin, 'queries.log')
+    writeFileSync(log, '')
+    const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`
+    writeFileSync(join(bin, 'git'), `#!/bin/sh\nprintf '%s\\t%s\\n' "$PWD" "$*" >> ${quote(log)}\nexec ${quote(realGit)} "$@"\n`, { mode: 0o755 })
+    const previousPath = process.env.PATH
+    process.env.PATH = `${bin}:${previousPath || ''}`
+    try {
+      check(() => readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((line) => {
+        const [cwd, args] = line.split('\t')
+        return [realpathSync(cwd), args]
+      }))
+    } finally {
+      if (previousPath === undefined) delete process.env.PATH
+      else process.env.PATH = previousPath
+    }
+  }
+
+  it('reuses the first ordered query chain for literal ordinary segments at one cwd', () => {
+    withGitLog('build-reuse-same-cwd-bin', (queries) => {
+      assert.deepEqual(decideMainCheckoutBuildCommand('echo amber-orchard', mainRepoRoot), { decision: 'allow' })
+      const single = queries()
+      assert.deepEqual(single, [
+        [realpathSync(mainRepoRoot), 'rev-parse --show-toplevel'],
+        [realpathSync(mainRepoRoot), 'rev-parse --absolute-git-dir'],
+        [realpathSync(mainRepoRoot), 'rev-parse --path-format=absolute --git-common-dir'],
+        [realpathSync(mainRepoRoot), 'rev-parse --show-toplevel'],
+        [realpathSync(mainRepoRoot), 'rev-parse --show-toplevel'],
+        [realpathSync(mainRepoRoot), 'rev-parse --absolute-git-dir'],
+        [realpathSync(mainRepoRoot), 'rev-parse --path-format=absolute --git-common-dir'],
+      ])
+      assert.deepEqual(decideMainCheckoutBuildCommand('echo amber-orchard && echo violet-meadow', mainRepoRoot), { decision: 'allow' })
+      const multiple = queries().slice(single.length)
+      assert.equal(multiple.length, single.length, `single=${single.length}, multiple=${multiple.length}`)
+      assert.deepEqual(multiple, single)
+    })
+  })
+})
+
+ describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖硬拦截)', () => {
   it('correctly classifies materialization scripts and commands', () => {
     assert.equal(isMaterializationCommand('./scripts/sync-to-app.sh'), true)
     assert.equal(isMaterializationCommand('bash scripts/sync-to-app.sh omnimux-assets'), true)
