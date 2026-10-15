@@ -16,7 +16,7 @@
 - `ManagedSync.pnpm` 返回完整结果；其版本检查读取 `code` / `signal` / `stdout.trim()`，capture 在失败判据后解析 `stdout` JSON。
 - `materialize-cache.mjs` 的运行消费在 `code !== 0 || signal` 时拒绝，仅成功返回 stdout；新增 stderr 不能污染 JSON 或覆盖失败。
 - 原 preparation 测试173行展开18例：2 no-op、3 mutation、1 recheck、1 ordinary copy、1 cwd、10 held descriptor；其原断言/声明均不改。
-- 原 recovery 测试 `runner bounds logs and waits on timeout and abort` 明确把 maxOutput10 的 stdout 期待为空，与本票预算内前缀保留冲突。原测试不改、不跳过；如实报告该旧契约冲突，交父独立评审，不能以改期待刷绿。已读其它公开调用测试没有整返回对象 literal deepEqual；pre-abort 新增字段是明确加法，不删旧字段。
+- 原 recovery 的 maxOutput10 空 stdout 期待与前缀保留存在实质旧契约冲突。独立语义审查确认现有消费者先检查 code/signal，父仅维护这一处预算断言：同时要求 code5、output-limit、固定十字节前缀、空 stderr、两流合计10字节；原 timeout/abort 后半及其它断言保持。历史65过1失败记录保留，不将它倒签为通过。其它公开调用测试没有整返回对象 literal deepEqual；pre-abort 新增字段是明确加法，不删旧字段。
 
 ## 新用户基线与边界
 使用原安装前提：现有宿主 PATH 中固定 pnpm 11.7.0、Python3、公开调用者提供的私有 cwd/env；不改 PATH 来源、工具解析、参数界面或宿主设置。缺工具仍沿原错误，不新增替身/依赖安装/通用命令入口。此票只证明有限输出保留，不证明 OS 写隔离、#3301B、fresh App、源码安装加载或 #3357 实际构建打包。
@@ -30,11 +30,11 @@
 最小命令：
 - `node --test --test-name-pattern='real pnpm preserves separate stderr on nonzero exit' scripts/managed-tarball-preparation.test.mjs`（先红后绿）。
 - `node --test scripts/managed-tarball-preparation.test.mjs`（旧18例及新增用例）。
-- `node --test scripts/managed-tarball.test.mjs scripts/managed-tarball-recovery.test.mjs`（归档/原监督生命周期，旧冲突原样报告）。
+- `node --test scripts/managed-tarball.test.mjs scripts/managed-tarball-recovery.test.mjs`（归档/原监督生命周期，含经独立审查确认的唯一预算断言维护）。
 - `node --test --test-name-pattern='same bytes in different peer contexts retain distinct occurrences and edges' scripts/materialize-cache.test.mjs`（本轮用户限定 actual pure subset；原 native/preflight 虽无注册表包仍经 fixture install 与空私有 Corepack，故不运行，不换工具或安装）。
 - `node --check scripts/managed-tarball.mjs`、`git diff --check`；父另负责全门禁、独立审查、CI/PR/合入，不在本委派执行。
 
-总是：保原断言、真实红绿、结果/skip数/摘要/mode；先交父审：旧空stdout契约冲突、超本写集或接口变更；绝不：改旧期待、绕硬拒、真实profile/账号/系统写、外部包安装、提交/远程/发布/官方DSH写。
+总是：保原断言、真实红绿、结果/skip数/摘要/mode；先交父审：旧空stdout契约冲突、超本写集或接口变更；绝不：未经独立审查改变旧期待、绕硬拒、真实profile/账号/系统写、外部包安装、提交/远程/发布/官方DSH写。唯一允许的旧标准变化仅第7、19行规定的输出预算断言。
 
 ## 本轮验证状态
-父已在原源码证明同一 exit7 用例 stderr undefined 真 RED；最小实现后同例 GREEN。逐例追加共享7字节/截断替换、超时、中断、大量多字节 stderr 与成功 JSON 分流覆盖，均是已实现行为的后补验证，不虚报额外 RED。原173行完整保留；完整准备现23例。完整 managed/recovery 以规范 `TMPDIR=/private/tmp` 原样运行，66例65过1失败0skip，唯一失败为原 recovery134 的空 stdout 契约（实际 `Version 11`）。不改该旧测试，交父独立审查；因此整体仅部分完成。
+父已在原源码证明同一 exit7 用例 stderr undefined 真 RED；最小实现后同例 GREEN。逐例追加共享7字节/截断替换、超时、中断、大量多字节 stderr 与成功 JSON 分流覆盖，均是已实现行为的后补验证，不虚报额外 RED。原173行完整保留；完整准备现23例。完整 managed/recovery 以规范 `TMPDIR=/private/tmp` 原样运行，66例65过1失败0skip，唯一失败为原 recovery134 的空 stdout 契约（实际 `Version 11`）。此为独立审查前的历史状态。经父采纳旧标准语义审查并精准维护唯一预算断言后，完整三正式文件实际89/89、0失败、0跳过，含原43 managed unit、23 recovery与23 preparation；独立固定候选审查再次复验89/89。完整门禁、真实持续检查与合并队列仍按当前候选核验，不由局部绿色宣称安装隔离或#3357完成。
