@@ -263,14 +263,18 @@ async function runTaskPreparation({ options, io, deps }) {
     || !Object.values(evidenceContext).every(value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value))) throw failure('OPTIONS');
   const observations = { contract: 'preparation-only', runtimeStarted: false, userFresh: 'unknown', taskBinding: 'unknown', steps: [] };
   const capture = deps.captureCandidate ?? captureCandidate;
-  const strictJson = deps.readJson ?? readJson;
+  const readJsonFile = deps.readJson ?? readJson;
   const privateDir = io.mkdtempSync(join(root, '.test-env-'));
+  const created = io.statSync(privateDir, { bigint: true });
+  const ownerIdentity = [String(created.dev), String(created.ino)];
   const cleanup = async () => {
     const privateRoot = io.realpathSync(privateDir);
     if (dirname(privateRoot) !== root || !basename(privateRoot).startsWith('.test-env-') || io.realpathSync(privateRoot) !== privateRoot) throw failure('ROOT_UNSAFE');
     canonical(io, privateRoot, true);
+    const current = io.statSync(privateRoot, { bigint: true });
+    if (String(current.dev) !== ownerIdentity[0] || String(current.ino) !== ownerIdentity[1]) throw failure('ROOT_UNSAFE');
     io.rmSync(privateRoot, { recursive: true, force: true });
-    return { cleaned: true };
+    return { cleaned: true, ownerIdentity };
   };
   try {
     io.chmodSync(privateDir, 0o700);
@@ -315,6 +319,12 @@ async function runTaskPreparation({ options, io, deps }) {
       catch { throw failure('PREPARE_DEPENDENCY_REQUIRED'); }
     }
     if (!linkedTools) throw failure('PREPARE_DEPENDENCY_REQUIRED');
+    // Snapshot the staged source before building: the build must not mutate the copied inputs, and
+    // this same snapshot is the honest source map the caller receives.
+    const stageExclusions = ['node_modules', ...PREPARATION_PACKAGES.map(item => `${item}/node_modules`)];
+    const stagedSource = [...allowed].filter(path => io.existsSync(join(stageRoot, path)));
+    const stageBefore = payloadManifest(stageRoot, { exclude: stageExclusions, links: false });
+    const sourceMap = stageBefore.entries.filter(entry => stagedSource.includes(entry.path));
     io.mkdirSync(join(privateDir, 'pnpm'), { recursive: true, mode: 0o700 });
     // The shared install environment disables the project package-manager spec and owns an empty
     // corepack cache, which is correct for offline lockfile installs but cannot launch a build.
@@ -335,6 +345,13 @@ async function runTaskPreparation({ options, io, deps }) {
     };
     await runStep(['--config.verify-deps-before-run=false', '--filter', 'dsh-ui-kit', 'build'], stageRoot);
     await runStep(['--config.verify-deps-before-run=false', '--filter', 'omnimux', 'build'], stageRoot);
+    // The build may add generated outputs but must leave every copied candidate input untouched.
+    const stageAfter = payloadManifest(stageRoot, { exclude: stageExclusions, links: false });
+    const stagedAfter = new Map(stageAfter.entries.map(item => [item.path, item]));
+    for (const entry of sourceMap) {
+      const now = stagedAfter.get(entry.path);
+      if (!now || now.size !== entry.size || now.sha256 !== entry.sha256 || now.mode !== entry.mode) throw failure('PREPARE_SOURCE_MUTATED', { path: entry.path });
+    }
     const after = capture(captureOptions);
     if (JSON.stringify(before.candidate) !== JSON.stringify(after.candidate)) throw failure('PREPARE_CANDIDATE_CHANGED');
     observations.steps.push('candidate-after');
@@ -344,12 +361,12 @@ async function runTaskPreparation({ options, io, deps }) {
       const destination = join(packRoot, rel);
       copyTree(join(stageRoot, rel), destination, true);
       const manifestPath = join(destination, 'package.json');
-      const manifest = strictJson(manifestPath);
+      const manifest = readJsonFile(manifestPath);
       if (rel === 'plugins/omnimux') {
         if (manifest.dependencies?.['dsh-ui-kit'] !== 'file:../../packages/dsh-ui-kit') throw failure('PREPARE_PACKAGE_MANIFEST_UNSUPPORTED');
         manifest.dependencies['dsh-ui-kit'] = 'file:../dsh-ui-kit';
         const channelPath = join(destination, 'src/release-channel.json');
-        const channel = strictJson(channelPath);
+        const channel = readJsonFile(channelPath);
         if (channel.channel !== 'development') throw failure('PREPARE_RELEASE_CHANNEL_UNSUPPORTED');
         io.writeFileSync(channelPath, `${JSON.stringify(channel, null, 2)}\n`);
       }
@@ -357,6 +374,11 @@ async function runTaskPreparation({ options, io, deps }) {
       // both here keeps the archived manifest byte-identical instead of re-serialized by the packer.
       if (manifest.scripts && Object.hasOwn(manifest.scripts, 'prepare')) delete manifest.scripts.prepare;
       io.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+      const dryRun = await run(['--config.ignore-scripts=true', '--config.verify-deps-before-run=false', 'pack', '--dry-run', '--json'], { cwd: destination, env });
+      if (dryRun.code !== 0 || dryRun.signal) throw failure('PREPARE_PACK_PLAN_FAILED');
+      let declaredFiles;
+      try { declaredFiles = JSON.parse(dryRun.stdout).files.map(item => item.path); } catch { throw failure('PREPARE_PACK_PLAN_FAILED'); }
+      if (!Array.isArray(declaredFiles) || !declaredFiles.length) throw failure('PREPARE_PACK_PLAN_FAILED');
       const packResult = await run(['--config.ignore-scripts=true', '--config.verify-deps-before-run=false', 'pack', '--pack-destination', privateDir], { cwd: destination, env });
       observations.steps.push({ argv: ['pack'], code: packResult.code, signal: packResult.signal ?? null, stdout: (packResult.stdout || '').slice(-2048), stderr: (packResult.stderr || '').slice(-2048) });
       if (packResult.code !== 0 || packResult.signal) throw failure('PREPARE_PACK_FAILED');
@@ -364,44 +386,42 @@ async function runTaskPreparation({ options, io, deps }) {
       const sha256 = hashFile(tarball);
       const inspection = deps.inspectArchive ? deps.inspectArchive(tarball, manifest.name, manifest.version, sha256)
         : inspectArchive(tarball, manifest.name, manifest.version, sha256);
-      // Every archived regular file must be the declared pack payload byte for byte; the archive may
-      // omit undeclared files but must never invent, alter, or relax the mode of a declared one.
-      // The packer re-serializes the manifest, so that one file is compared by content instead.
+      // The archive file set must equal the set the packer itself declared, so a build that produced
+      // nothing or dropped an output cannot still be reported as prepared. Every declared file is
+      // then matched byte for byte against its real origin; the packer re-serializes only the manifest.
+      const archivedFiles = inspection.entries.filter(entry => entry.type === 'file').map(entry => entry.path).sort();
+      const plannedFiles = [...declaredFiles].sort();
+      if (archivedFiles.length !== plannedFiles.length || archivedFiles.some((path, index) => path !== plannedFiles[index])) {
+        throw failure('PREPARE_ARCHIVE_SET_MISMATCH', { planned: plannedFiles.length, archived: archivedFiles.length,
+          missing: plannedFiles.filter(path => !archivedFiles.includes(path)).slice(0, 8),
+          unexpected: archivedFiles.filter(path => !plannedFiles.includes(path)).slice(0, 8) });
+      }
       const declaredPayload = payloadManifest(destination, { links: false });
       const declared = new Map(declaredPayload.entries.map(item => [item.path, item]));
-      for (const entry of inspection.entries) {
-        const source = declared.get(entry.path);
-        if (!source) {
-          // The packer always adds README/LICENSE, taking LICENSE from an ancestor directory when the
-          // package has none; that origin file is still verified byte for byte, never waved through.
-          const origin = PACKER_INCLUDED[entry.path];
-          if (!origin) throw failure('PREPARE_ARCHIVE_UNDECLARED_ENTRY', { path: entry.path });
-          const originPath = join(root, origin);
-          const originStat = io.lstatSync(originPath);
-          if (entry.type !== 'file' || entry.size !== originStat.size || entry.sha256 !== hashFile(originPath) || entry.mode !== (originStat.mode & 0o777)) {
-            throw failure('PREPARE_ARCHIVE_PACKER_INCLUDE_MISMATCH', { path: entry.path });
-          }
-          continue;
-        }
-        if (source.type !== entry.type) throw failure('PREPARE_ARCHIVE_TYPE_MISMATCH', { path: entry.path, declaredType: source.type, archivedType: entry.type });
-        if (entry.type !== 'file' || entry.path === 'package.json') continue;
-        if (source.size !== entry.size || source.sha256 !== entry.sha256 || source.mode !== entry.mode) {
-          throw failure('PREPARE_ARCHIVE_BYTES_MISMATCH', { path: entry.path,
-            declaredSize: source.size, archivedSize: entry.size, declaredMode: source.mode, archivedMode: entry.mode });
+      const archived = new Map(inspection.entries.map(entry => [entry.path, entry]));
+      for (const path of plannedFiles) {
+        const entry = archived.get(path);
+        const origin = declared.get(path) ? join(destination, path) : join(root, PACKER_INCLUDED[path] ?? '');
+        if (!declared.has(path) && !PACKER_INCLUDED[path]) throw failure('PREPARE_ARCHIVE_UNDECLARED_ENTRY', { path });
+        const originStat = io.lstatSync(origin);
+        if (path === 'package.json') continue;
+        if (entry.size !== originStat.size || entry.sha256 !== hashFile(origin) || entry.mode !== (originStat.mode & 0o777)) {
+          throw failure('PREPARE_ARCHIVE_BYTES_MISMATCH', { path, originSize: originStat.size, archivedSize: entry.size,
+            originMode: originStat.mode & 0o777, archivedMode: entry.mode });
         }
       }
       const extractedRoot = join(privateDir, `extracted-${manifest.name}`);
       const extraction = deps.extractArchive ? deps.extractArchive(tarball, manifest.name, manifest.version, sha256, extractedRoot)
         : extractArchive(tarball, manifest.name, manifest.version, sha256, extractedRoot);
-      const archivedManifest = strictJson(join(extractedRoot, 'package.json'));
-      if (stable(archivedManifest) !== stable(manifest)) throw failure('PREPARE_ARCHIVE_MANIFEST_MISMATCH', { path: 'package.json', declared: stable(manifest), archived: stable(archivedManifest) });
+      const archivedManifest = readJsonFile(join(extractedRoot, 'package.json'));
+      if (stable(archivedManifest) !== stable(manifest)) throw failure('PREPARE_ARCHIVE_MANIFEST_MISMATCH', { path: 'package.json' });
       packages.push({ name: manifest.name, version: manifest.version, tarball, sha256, inspection, extraction,
-        payloadDigest: declaredPayload.digest, archiveDigest: inspection.digest });
+        plannedFiles: plannedFiles.length, payloadDigest: declaredPayload.digest, archiveDigest: inspection.digest });
     }
-    const manifests = { stage: payloadManifest(stageRoot, { exclude: ['node_modules', ...PREPARATION_PACKAGES.map(item => `${item}/node_modules`)], links: false }) };
+    const manifests = { stage: stageAfter };
     observations.steps.push('completed');
     const result = { scope: 'preparation-only', status: 'task-source-prepared', preparationPath: privateDir,
-      candidateBefore: before, candidateAfter: after, sourceMap: packages.map(pkg => pkg.name), packages, build: observations.steps, observations, manifests };
+      candidateBefore: before, candidateAfter: after, sourceMap, packages, build: observations.steps, observations, manifests, ownerIdentity };
     Object.defineProperty(result, 'cleanup', { value: cleanup, enumerable: false });
     return result;
   } catch (error) {

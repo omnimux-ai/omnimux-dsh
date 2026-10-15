@@ -47,17 +47,20 @@
 - 始终：事实/推断分开，准备错误保持 unknown/not-run；先问：新增文件/依赖、worker Interface 扩张或范围超五项；绝不：本轮生产/test写、真实 build/pack/install/App/profile、Git refs/remote、秘密、别工作区或官方写入/下级委派。
 - 官方当前 publish 文档及已安装 0.1.5-rc.3 为父已读上下文，不保证本仓 alpha.3 pin 兼容；本轮不升级。E2 真 source-installed-loaded、fresh App 和任务行为验证仍未证。
 
-## 实施后的实测事实（本轮真实运行一次，非推断）
-第一纵切已在原 bootstrap、原测试与本规格内实现并真实跑通一次：真实候选捕获前后一致 → owned stage 实体复制 → 真实构建 → 真实 pack → 归档 inspect 与受验 extract → 精确清理。观测到 `status='task-source-prepared'`，omnimux 0.1.2 归档 947 项、dsh-ui-kit 0.1.0 归档 98 项，stage 清单 1423 项，两次构建与两次 pack 退出码均为 0，cleanup `cleaned=true`。
+## 实施后的实测事实（本轮真实运行，非推断）
+第一纵切已在原 bootstrap、原测试与本规格内实现并真实跑通：真实候选捕获前后一致 → owned stage 实体复制 → 真实构建 → 真实 pack → 归档 inspect 与受验 extract → 精确清理。观测到 `status='task-source-prepared'`，omnimux 0.1.2 归档 874 个文件（含 73 个目录项共 947 项）、dsh-ui-kit 0.1.0 归档 78 个文件，stage 清单 1423 项，sourceMap 1305 项，两次构建与两次 pack 退出码均为 0，cleanup `cleaned=true` 并回报 owner 身份。同一候选两次独立运行的归档摘要完全相同。
 
 构建阶段只使用任务 root 已按原 lock 安装的依赖（hub 固定 esbuild 0.25.12、kit 固定 tsdown 0.22.14），以包级 `node_modules` 链接供模块解析；未安装、未联网、未读 Dev/profile/凭据。
 
-实测修正了规格原先的三处推断，均以真实字节为准：
+实测修正了规格原先的推断，均以真实字节为准：
 1. **stage 必须包含兄弟插件**：`plugins/omnimux/src/client/session-guide/trending/recommendation-engine.js` 真实跨插件引用 `plugins/omnimux-inspiration/src/recommendation-engine.js`，故 stage 增加该插件源码；打包集合仍仅 hub 与 kit。
 2. **声明三项 pack 变换而非两项**：除 kit 依赖路径与 release-channel 外，packer 会移除生命周期 `prepare` 脚本且不写末尾换行，因此在声明负载中提前落地该规范化，使归档清单与声明负载逐字节一致。
-3. **归档校验为“严格字节 + 清单内容 + packer 附加”**：除 `package.json` 外所有文件要求 size/sha256/mode 与声明负载完全一致；`package.json` 经受验 extract 后按内容深度相等（packer 会重排键序，键序非语义）；packer 从仓根自动附加的 `LICENSE` 必须与仓根原文件逐字节一致，不是豁免。
+3. **归档集合完整性以 packer 自己的声明为准**：先以真实 `pack --dry-run --json` 取声明文件集合，要求归档文件集合与之完全相等（数量与逐路径），再对每个声明文件按其真实来源（暂存目标或仓根附加文件）比对 size/sha256/mode；`package.json` 经受验 extract 后按内容深度相等（packer 会重排键序，键序非语义）。因此“构建空转或丢文件仍报已准备”不再可能。
+4. **暂存源码在构建后必须未被改写**：构建前记录全部候选已复制输入（path/mode/size/sha256）为 sourceMap，构建后逐项复核，任一漂移即失败。
+5. **owned 根身份**：创建时记录 dev/ino，删除前复核同一身份，并在 cleanup 结果中回报；失败保留现场且 `cleaned=false`。
 
 构建子环境对既有安装向 private env 做了两处显式覆盖：`COREPACK_HOME` 指向调用环境提供的工具缓存，`COREPACK_ENABLE_PROJECT_SPEC=1` 以尊重 `packageManager: pnpm@11.7.0` 固定值；网络仍禁用，解析失败即大声失败。
 
-仍未证：pnpm 驱动仍由宿主 PATH 解析（worker 尚无固定 EXE 入参，属已记录的前置依赖票）；无 OS 子进程写隔离；未安装、未加载、非 fresh、未启动 App、无任务行为证据。
+写集说明：因新增静态依赖使 `managed-tarball.mjs`、`materialize-cache.mjs`、`materialize-graph.mjs` 成为 CI 实际消费的根，按仓库既有治理门禁要求把这三项从 localRequired 升为 ciRequired（`scripts/governance-manifest.json`），这是门禁的既有契约而非新增信任。
 
+仍未证：pnpm 驱动仍由宿主 PATH 解析（worker 尚无固定 EXE 入参，属已记录的前置依赖票）；无 OS 子进程写隔离；未安装、未加载、非 fresh、未启动 App、无任务行为证据。
