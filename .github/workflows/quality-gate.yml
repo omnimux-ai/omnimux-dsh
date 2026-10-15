@@ -214,7 +214,9 @@ jobs:
           phase=ready
 
       - name: Verify public evidence core and consumer
-        run: node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs
+        run: |
+          node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs
+          node --test scripts/guard-quality-loop.test.mjs
 
       # A direct registered task below the original checkout resolves its already locked root dependencies.
       # The dynamic shell root remains unproven to the governance parser; do not relabel it static CI evidence.
@@ -359,6 +361,28 @@ jobs:
           test -f "$fixture/owner-receipt.txt" && test ! -L "$fixture/owner-receipt.txt"
           cp -a -- "$fixture/owner-receipt.txt" "$saved/owner-receipt.txt"
           printf 'source_job_status=%s\ncleanup=started\n' "$SOURCE_JOB_STATUS" >> "$saved/owner-receipt.txt"
+          # Only these public test-generated requests may be retained outside primary.
+          # An undeclared owner entry stops cleanup; never copy the entire owner or .git.
+          shopt -s nullglob dotglob
+          for request in "$fixture"/*; do
+            name="${request##*/}"
+            case "$name" in primary|owner-receipt.txt) continue ;; esac
+            if ! [[ "$name" =~ ^(reader-(policy|current|envelope)|request-(missing|corrupt|limit|current-git|reader-consumer|current-consumer))-[a-f0-9-]+\.json$ ]]; then
+              printf 'Undeclared public evidence owner entry; owner retained\n' >&2
+              exit 1
+            fi
+            test -f "$request" && test ! -L "$request"
+            test "$(realpath -e -- "$request")" = "$request"
+            test "$(stat -c '%h' -- "$request")" = 1
+            request_identity="$(stat -c '%d:%i:%h:%s:%f:%y:%z' -- "$request")"
+            cp --preserve=mode,timestamps -- "$request" "$saved/$name"
+            test -f "$saved/$name" && test ! -L "$saved/$name"
+            test "$(realpath -e -- "$saved/$name")" = "$saved/$name"
+            test "$(stat -c '%h' -- "$saved/$name")" = 1
+            cmp -s -- "$request" "$saved/$name"
+            test "$(stat -c '%d:%i:%h:%s:%f:%y:%z' -- "$request")" = "$request_identity"
+            sha256sum -- "$saved/$name" >> "$saved/request-sha256.txt"
+          done
           if test -e "$fixture/primary/.workbuddy/evidence/contract" || test -L "$fixture/primary/.workbuddy/evidence/contract"; then
             no_link_directory "$fixture/primary/.workbuddy/evidence/contract"
             cp -a -- "$fixture/primary/.workbuddy/evidence/contract" "$saved/contract"

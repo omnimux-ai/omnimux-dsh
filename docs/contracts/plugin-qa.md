@@ -68,6 +68,16 @@ subsystem: "omnimux"
 
 物化后冒烟（dev-smoke）：`scripts/dev-smoke.mjs` 由 `worktree.sh` 物化成功后自动调用——只读探活 Dev 45120 页面并截图，对本次物化插件比对「物化包内最新文件 mtime vs Dev 主进程启动时间」，晚于进程即输出 `needs-restart` 提示（不自动重启）；Dev 未运行或调试口不可达时报 `blocked` 而非误报 PASS。证据落 `docs/evidence/dev-smoke-report.json` 与 `docs/evidence/dev-smoke-<runId>/dev-page.png`。两者都是本机生成物：报告已被 `.gitignore` 忽略且不进版本库，冒烟覆盖写它不得弄脏主检出（否则 `worktree.sh ship` 的干净检查会拒绝物化）。
 
+## 质量闭环证据消费
+
+当前已建立公开请求读取与历史核证边界：空参数退出2；请求须为绝对规范路径的普通单硬链接非秘密JSON，逐段拒链接、NOFOLLOW/NONBLOCK打开、128KiB有界读取并核前后身份，有效UTF8与固定字段白名单。缺失、损坏、类型/大小不支持及未知字段均分类退出2，不回显路径、请求或底层异常。该字节上限不等于核心全流程资源或耗时上限。原入口已恢复基线行为，仅撤销本片新增的永久拒绝，不代表原证据漏洞已修复。
+
+`node scripts/guard-quality-loop.mjs --verify-report <非秘密固定请求JSON> [--current]` 是非准入核证入口；history 实际调用公共 `inspectTaskVerification`，先绑定精确 root/task/run/base/head、检查/断言、报告与原件，再调用公共核心，只读精确报告及原件。candidate 必须显式 --current 且预声明包含报告和全部原件的 outputs，缺失分别返回 CURRENT_ARGUMENT_REQUIRED / CURRENT_OUTPUTS_REQUIRED、退出2；以同一运行的 outputs/extraInputs 真实调用公共 captureCandidate，仅传本次返回值，不复制封套快照或回退 history。真实当前源字节漂移由核心分类失效；捕获错误保原核心稳定错误码，意外异常为 CURRENT_CAPTURE_FAILED，不回显请求、路径或底层异常。history 加 --current 或多余参数拒绝；JSON 候选或信任自报不在白名单。请求不能伪装 output 排除，根内请求须在原捕获前稳定存在或用已授权根外请求。当前历史/候选域覆盖有限，进程行为、读取竞态及来源认证仍按实际证据独立判断，不据此报完整质量闭环完成。
+
+只有 valid 且 pass 才退出0，有效失败退出1，其余无效/读取/捕获错误退出2；输出分类及代码，始终 self-reported/not-granted，不输出工具权限决策、不执行检查或应用，不证明来源认证、真实业务预演或端到端准入。
+
+无参数已注册工具前入口保持原基线行为；本片撤销自身新增的 E2E/UI 永久拒绝，不修复原 mtime、注释和假PNG 假正例漏洞，也不代表完整质量闭环或批准 D 完成，后继须真实当前持有者及源码安装加载行为闭包。
+
 ## 浏览器与共享探针
 
 - API、脚本和配置优先；需要 Web/Stage 浏览器验收时统一使用 ego-browser 的任务隔离空间，先加载 ego-browser skill。不得回退 IAB，也不得用桌面截图替代浏览器检查。ego 缺少 CDP 事件、脚本源、稳定 task/tab 身份或真实 PNG 能力时为 BLOCKED，不降低校验。

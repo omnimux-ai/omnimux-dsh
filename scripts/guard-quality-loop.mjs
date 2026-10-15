@@ -11,10 +11,12 @@
  *  4. bash 覆盖：终端写入业务源码与提交类命令同样受门禁约束。
  */
 
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, readFileSync, readSync, realpathSync, statSync } from 'node:fs'
 import { isAbsolute, resolve, relative, dirname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
+
+import { captureCandidate, validateEvidence } from './evidence-contract.mjs'
 
 const EVIDENCE_WINDOW_MS = 4 * 60 * 60 * 1000
 const MAX_SCAN_ENTRIES = 4000
@@ -120,6 +122,79 @@ export const BANNED_SMOKE_EVIDENCE_NAMES = new Set([
 export function isBannedSmokeEvidence(name) {
   if (!name || typeof name !== 'string') return false
   return BANNED_SMOKE_EVIDENCE_NAMES.has(name.toLowerCase())
+}
+
+/** Explicit caller-owned policy; JSON/tool claims never supply a current capture or authority.
+ * @param {{request?:object, currentCandidate?:object}} input
+ */
+export function inspectTaskVerification(input = {}) {
+  const rejected = (reason, evidenceStatus) => ({ valid: false, applicable: false, pass: false,
+    authorization: 'not-granted', provenance: 'unknown', reason, evidenceStatus, errors: [reason] })
+  const request = input?.request
+  if (!request) return rejected('VERIFICATION_REQUEST_REQUIRED', 'missing')
+  const { purpose, root, taskId, runId, scope, baseSha, headSha, requiredChecks,
+    expectedAssertions, reportPath, artifactPaths } = request
+  const id = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value)
+  const sha = value => typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value)
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  if (!id(taskId) || !id(runId) || !sha(baseSha) || !sha(headSha) || typeof root !== 'string' || !isAbsolute(root)
+    || reportPath !== prefix + 'evidence.json' || !Array.isArray(artifactPaths) || !artifactPaths.length
+    || new Set(artifactPaths).size !== artifactPaths.length || artifactPaths.some(path => typeof path !== 'string'
+      || !path.startsWith(prefix) || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:json|log|txt|png)$/.test(path.slice(prefix.length))
+      || path === reportPath)) return rejected('VERIFICATION_REQUEST_INVALID', 'invalid')
+  let envelope
+  try {
+    try {
+      if (realpathSync(root) !== resolve(root)) return rejected('INVALID_GIT_ROOT', 'invalid')
+    } catch { return rejected('INVALID_GIT_ROOT', 'invalid') }
+    const parts = reportPath.split('/')
+    for (let index = 1; index <= parts.length; index++) {
+      const stat = lstatSync(resolve(root, ...parts.slice(0, index)))
+      if (stat.isSymbolicLink() || (index < parts.length ? !stat.isDirectory() : !stat.isFile())) {
+        return rejected('REPORT_PATH_DENIED', 'invalid')
+      }
+    }
+    const fd = openSync(resolve(root, reportPath), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
+    try {
+      const before = fstatSync(fd)
+      if (!before.isFile() || before.size > 16 * 1024 * 1024) return rejected('REPORT_SIZE_OR_TYPE_UNSUPPORTED', 'invalid')
+      const bytes = readFileSync(fd)
+      const after = fstatSync(fd)
+      if (!['dev', 'ino', 'size', 'mode', 'mtimeMs', 'ctimeMs'].every(key => before[key] === after[key])
+        || realpathSync(resolve(root, reportPath)) !== resolve(root, reportPath)) return rejected('REPORT_CHANGED', 'invalid')
+      envelope = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
+    } finally { closeSync(fd) }
+  } catch (error) {
+    return rejected(error.code === 'ENOENT' ? 'VERIFICATION_REPORT_MISSING' : 'VERIFICATION_REPORT_CORRUPT',
+      error.code === 'ENOENT' ? 'missing' : 'corrupt')
+  }
+  // Bind permitted references before the core is allowed to read any artifact.
+  if (!envelope || envelope.reportPath !== reportPath || envelope.candidate?.base?.resolvedSha !== baseSha
+    || envelope.candidate?.head?.resolvedSha !== headSha || !Array.isArray(envelope.artifacts)
+    || envelope.artifacts.some(item => !item || typeof item.path !== 'string')
+    || [...artifactPaths].sort().join('\0') !== envelope.artifacts.map(item => item.path).sort().join('\0')) {
+    return rejected('VERIFICATION_BINDING_MISMATCH', 'invalid')
+  }
+  for (const artifactPath of artifactPaths) {
+    try {
+      const parts = artifactPath.split('/')
+      for (let index = 1; index <= parts.length; index++) {
+        const stat = lstatSync(resolve(root, ...parts.slice(0, index)))
+        if (stat.isSymbolicLink() || (index < parts.length ? !stat.isDirectory() : !stat.isFile())) return rejected('ARTIFACT_PATH_DENIED', 'invalid')
+      }
+    } catch (error) {
+      return rejected(error.code === 'ENOENT' ? 'VERIFICATION_ARTIFACT_MISSING' : 'VERIFICATION_ARTIFACT_UNREADABLE', error.code === 'ENOENT' ? 'missing' : 'corrupt')
+    }
+  }
+  const validation = validateEvidence(envelope, { purpose, root, taskId, runId, scope,
+    requiredChecks, expectedAssertions, currentCandidate: input.currentCandidate })
+  if (!validation.valid) {
+    const reason = validation.errors[0]
+    const corrupt = /^(?:INVALID_|REPORT_DIGEST_|ARTIFACT_CHANGED|RESULT_NOT_DERIVED)/.test(reason)
+    return { ...validation, reason, evidenceStatus: corrupt ? 'corrupt' : 'invalid' }
+  }
+  return { ...validation, reason: validation.pass ? 'VALID_SELF_REPORTED' : 'VALID_FAILED_CHECKS',
+    evidenceStatus: validation.pass ? 'valid' : 'valid-failure' }
 }
 
 /** 递归收集证据候选文件（受限深度与数量，排除黑名单首页冒烟）。 */
@@ -410,7 +485,116 @@ export function handle(rawInput) {
   return { hookSpecificOutput: output }
 }
 
-function main() {
+export function verificationCommand(argv) {
+  const rejected = (reason, evidenceStatus = 'invalid') => ({ exitCode: 2,
+    result: { valid: false, applicable: false, pass: false, authorization: 'not-granted',
+      provenance: 'unknown', reason, evidenceStatus, errors: [reason] } })
+  if (!Array.isArray(argv)) return rejected('VERIFICATION_ARGUMENTS_INVALID')
+  if (argv.length === 0) return rejected('VERIFICATION_ARGUMENTS_REQUIRED')
+  if ((argv.length !== 2 && argv.length !== 3) || argv[0] !== '--verify-report'
+    || (argv.length === 3 && argv[2] !== '--current')) return rejected('VERIFICATION_ARGUMENTS_INVALID')
+  const requestPath = argv[1]
+  if (typeof requestPath !== 'string' || !isAbsolute(requestPath) || requestPath.includes('\0')
+    || resolve(requestPath) !== requestPath || !requestPath.endsWith('.json')) return rejected('REQUEST_PATH_INVALID')
+  const sameFile = (left, right) => left.dev === right.dev && left.ino === right.ino
+    && left.mode === right.mode && left.nlink === right.nlink && left.size === right.size
+    && left.mtimeMs === right.mtimeMs && left.ctimeMs === right.ctimeMs
+  const pathStat = () => {
+    const parts = requestPath.split('/').slice(1)
+    let stat
+    for (let index = 1; index <= parts.length; index++) {
+      stat = lstatSync('/' + parts.slice(0, index).join('/'))
+      if (stat.isSymbolicLink() || (index < parts.length ? !stat.isDirectory() : !stat.isFile())) return null
+    }
+    return stat
+  }
+  let bytes
+  try {
+    const initial = pathStat()
+    if (!initial || initial.nlink !== 1) return rejected('REQUEST_PATH_DENIED')
+    const limit = 128 * 1024
+    if (initial.size > limit) return rejected('REQUEST_SIZE_UNSUPPORTED')
+    const fd = openSync(requestPath, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
+    try {
+      const before = fstatSync(fd)
+      if (!before.isFile() || before.nlink !== 1 || !sameFile(initial, before)) return rejected('REQUEST_CHANGED')
+      if (before.size > limit) return rejected('REQUEST_SIZE_UNSUPPORTED')
+      const buffer = Buffer.alloc(limit + 1)
+      let length = 0
+      while (length < buffer.length) {
+        const count = readSync(fd, buffer, length, buffer.length - length, null)
+        if (count === 0) break
+        length += count
+      }
+      if (length > limit) return rejected('REQUEST_SIZE_UNSUPPORTED')
+      const after = fstatSync(fd)
+      const final = pathStat()
+      if (!final || !sameFile(before, after) || !sameFile(after, final) || length !== after.size
+        || realpathSync(requestPath) !== requestPath) return rejected('REQUEST_CHANGED')
+      bytes = buffer.subarray(0, length)
+    } finally { closeSync(fd) }
+  } catch (error) {
+    return rejected(error.code === 'ENOENT' ? 'REQUEST_MISSING' : 'REQUEST_UNREADABLE',
+      error.code === 'ENOENT' ? 'missing' : 'corrupt')
+  }
+  let request
+  try { request = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) }
+  catch { return rejected('REQUEST_CORRUPT', 'corrupt') }
+  const keys = ['purpose', 'root', 'taskId', 'runId', 'scope', 'baseSha', 'headSha',
+    'requiredChecks', 'expectedAssertions', 'reportPath', 'artifactPaths', 'outputs', 'extraInputs']
+  if (!request || Object.getPrototypeOf(request) !== Object.prototype
+    || Object.keys(request).some(key => !keys.includes(key))) return rejected('REQUEST_INVALID')
+  const { purpose, root, taskId, runId, scope, baseSha, headSha, requiredChecks,
+    expectedAssertions, reportPath, artifactPaths, outputs, extraInputs } = request
+  const id = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value)
+  const sha = value => typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value)
+  const names = values => Array.isArray(values) && values.length > 0
+    && values.every(value => typeof value === 'string' && value.length > 0 && value === value.trim())
+    && new Set(values).size === values.length
+  const prefix = `.workbuddy/evidence/contract/${taskId}/${runId}/`
+  if (!['history', 'candidate'].includes(purpose) || typeof root !== 'string' || !isAbsolute(root)
+    || root.includes('\0') || resolve(root) !== root || !id(taskId) || !id(runId) || !sha(baseSha) || !sha(headSha)
+    || !['smoke', 'task', 'reproduction'].includes(scope) || !names(requiredChecks)
+    || !expectedAssertions || Object.getPrototypeOf(expectedAssertions) !== Object.prototype
+    || Object.keys(expectedAssertions).length !== requiredChecks.length
+    || requiredChecks.some(name => !Object.hasOwn(expectedAssertions, name) || !names(expectedAssertions[name]))
+    || reportPath !== prefix + 'evidence.json' || !names(artifactPaths)
+    || artifactPaths.some(path => !path.startsWith(prefix) || path === reportPath
+      || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:json|log|txt|png)$/.test(path.slice(prefix.length)))
+    || (outputs !== undefined && (!names(outputs) || !outputs.includes(reportPath)
+      || artifactPaths.some(path => !outputs.includes(path)) || outputs.some(path => !path.startsWith(prefix)
+        || resolve(root, path) === requestPath
+        || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:json|log|txt|png)$/.test(path.slice(prefix.length)))))
+    || (extraInputs !== undefined && (!Array.isArray(extraInputs)
+      || extraInputs.some(path => typeof path !== 'string' || !path || isAbsolute(path) || path.includes('\\')
+        || path.includes('\0') || path.split('/').some(part => !part || part === '.' || part === '..' || part === '.git'))
+      || new Set(extraInputs).size !== extraInputs.length))) return rejected('REQUEST_INVALID')
+  if (purpose === 'history' && argv.length === 3) return rejected('VERIFICATION_ARGUMENTS_INVALID')
+  let currentCandidate
+  if (purpose === 'candidate') {
+    if (argv.length !== 3) return rejected('CURRENT_ARGUMENT_REQUIRED')
+    if (outputs === undefined) return rejected('CURRENT_OUTPUTS_REQUIRED')
+    try {
+      currentCandidate = captureCandidate({ root, base: baseSha, head: headSha, taskId, runId, outputs, extraInputs })
+    } catch (error) {
+      const reason = typeof error?.code === 'string' && error.message === error.code
+        && /^[A-Z][A-Z0-9_]*$/.test(error.code) ? error.code : 'CURRENT_CAPTURE_FAILED'
+      return rejected(reason)
+    }
+  }
+  try {
+    const result = inspectTaskVerification({ request, currentCandidate })
+    return { exitCode: result.valid ? (result.pass ? 0 : 1) : 2, result }
+  } catch { return rejected('VERIFICATION_FAILED') }
+}
+
+function main(argv = process.argv.slice(2)) {
+  if (argv[0] === '--verify-report') {
+    const command = verificationCommand(argv)
+    process.stdout.write(JSON.stringify(command.result) + '\n')
+    process.exitCode = command.exitCode
+    return
+  }
   let raw = ''
   process.stdin.setEncoding('utf8')
   process.stdin.on('data', (c) => (raw += c))
