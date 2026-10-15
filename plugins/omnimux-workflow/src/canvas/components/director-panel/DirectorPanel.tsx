@@ -4,6 +4,7 @@ import type { DirectorAdapters, DirectorMountHandle, DirectorScene, DirectorScen
 import { DIRECTOR_OPEN_EVENT } from '../../nodes/definitions/director';
 import { planDirectorOutput, rollbackDirectorOutput } from '../../bridge/directorOutputPlan';
 import { planDirectorReferenceImage } from '../../bridge/directorReferencePlan';
+import { resolveMissingDirectorScene } from '../../bridge/directorMissingScene';
 import { registerDirectorCloseGuard } from '../../bridge/directorLifecycle';
 import { loadDirectorRuntime } from '../../bridge/directorLoader';
 import { getDirectorScene, importDirectorMedia, importDirectorModelFiles, managedDirectorUrl, saveDirectorScene, serializeDirectorScene } from '../../bridge/directorApi';
@@ -100,10 +101,12 @@ export function DirectorPanel({ workspaceId, saveGraph }: { workspaceId: string 
           else updateNode({ directorDescriptionApplied: source.data.directorDescriptionEdit });
         }
       }
-      else if (loaded.body.error === 'director-scene-not-found' || (loaded.body.error === 'project-required' && !source.data.directorSceneId)) {
-        latest = emptyScene(String(source.data.title || '3D 导演台')); latest.shots[0]!.prompt = String(source.data.description || '');
+      else {
+        const missing = resolveMissingDirectorScene({ error: loaded.body.error, priorSceneId: source.data.directorSceneId, emptyScene: () => emptyScene(String(source.data.title || '3D 导演台')) });
+        if (missing.action === 'throw') throw new Error(missing.message);
+        latest = missing.scene; latest.shots[0]!.prompt = String(source.data.description || '');
         await save(latest, 0, controller.signal);
-      } else throw new Error(loaded.body.error || '导演场景无法读取，请保留原节点并重试');
+      }
       const apiPath = directorScenePath(workspaceId, nodeId);
       const session = await request<{ operatorScope: string; epoch: number; sessionDigest: string }>(`${apiPath}/session`, { signal: controller.signal }); check();
       if (!session.ok || !session.body.operatorScope) throw new Error('导演会话身份尚未确认');

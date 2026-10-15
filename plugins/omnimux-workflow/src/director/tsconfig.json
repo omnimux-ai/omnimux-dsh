@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
       "react": ["../../node_modules/@types/react/index.d.ts"],

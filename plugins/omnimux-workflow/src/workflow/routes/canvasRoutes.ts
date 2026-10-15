@@ -346,7 +346,7 @@ export function registerWorkflowRoutes(
     return async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
       try {
         let authenticatedDirectorSession: import('../director/directorSession.ts').DirectorSessionContext | undefined;
-        const requestPath = new URL(req.url || '/', 'http://127.0.0.1').pathname;
+        const requestPath = decodeURIComponent(new URL(req.url || '/', 'http://127.0.0.1').pathname);
         if (/^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director(?:-operations)?\//.test(requestPath) || /^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director-operations$/.test(requestPath) || /^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director\/[^/]+$/.test(requestPath)) {
           const rejection = dispatcher.authorizeDirectorRequest(req);
           if (rejection !== undefined) { sendJson(res, rejection, { error: rejection === 503 ? 'auth-unavailable' : 'unauthorized' }); return; }

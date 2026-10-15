@@ -12,7 +12,7 @@ export type DirectorSaveController = {
     commitScene: (scene: DirectorScene) => void;
     retry: () => Promise<boolean>;
     restoreCandidate: () => DirectorDraftEnvelope | null;
-    restoreDraft: (candidate: DirectorDraftEnvelope) => boolean;
+    restoreDraft: (candidate: DirectorDraftEnvelope) => Promise<boolean>;
     discardDraft: () => boolean;
     prepareClose: () => Promise<DirectorCloseDecision>;
     handlePageHide: () => Promise<boolean>;
@@ -119,14 +119,14 @@ export function useDirectorSaveCoordinator(input: { sceneId: string | null; init
     const restoreCandidate = useCallback(() => coordinatorRef.current?.restoreCandidate() ?? null, []);
 
     const restoreDraft = useCallback(
-        (candidate: DirectorDraftEnvelope) => {
+        async (candidate: DirectorDraftEnvelope) => {
             const coordinator = coordinatorRef.current;
             if (!coordinator?.explicitRestore(candidate)) return false;
             // 恢复后必须回到项目状态并触发可靠保存，否则草稿只活在本地。
             persistSceneRef.current(candidate.scene);
-            void coordinator.flushLatest().finally(syncProgress);
+            const confirmed = await coordinator.flushLatest();
             syncProgress();
-            return true;
+            return confirmed;
         },
         [syncProgress],
     );

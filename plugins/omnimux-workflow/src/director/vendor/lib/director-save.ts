@@ -1,5 +1,5 @@
-import { scopedStorageKey } from "../../services";
-import { isDirectorAspectRatio } from "./director-aspect-ratio";
+import { directorSceneFingerprint, scopedStorageKey } from "../../services.ts";
+import { isDirectorAspectRatio } from "./director-aspect-ratio.ts";
 import type { DirectorScene } from "../../scene-types";
 
 export type DirectorSaveStatus = "dirty" | "saving" | "saved" | "error";
@@ -185,6 +185,24 @@ export function createDirectorSaveCoordinator(options: DirectorSaveCoordinatorOp
         debounceHandle = null;
     };
 
+    const writeVerifiedDraft = (envelope: DirectorDraftEnvelope): boolean => {
+        draftStored = false;
+        try {
+            storage.setItem(storageKey, JSON.stringify(envelope));
+            const raw = storage.getItem(storageKey);
+            const readback = raw === null ? null : parseDraftEnvelope(raw, fixedSceneId);
+            draftStored = readback !== null &&
+                readback.sceneId === envelope.sceneId &&
+                readback.revision === envelope.revision &&
+                readback.baseUpdatedAt === envelope.baseUpdatedAt &&
+                readback.savedAt === envelope.savedAt &&
+                directorSceneFingerprint(readback.scene) === directorSceneFingerprint(envelope.scene);
+        } catch {
+            draftStored = false;
+        }
+        return draftStored;
+    };
+
     const storeCurrentDraft = () => {
         const envelope: DirectorDraftEnvelope = {
             schemaVersion: 1,
@@ -197,14 +215,7 @@ export function createDirectorSaveCoordinator(options: DirectorSaveCoordinatorOp
 
         localDraft = envelope;
 
-        try {
-            storage.setItem(storageKey, JSON.stringify(envelope));
-            draftStored = true;
-            setStatus("dirty");
-        } catch {
-            draftStored = false;
-            setStatus("error");
-        }
+        setStatus(writeVerifiedDraft(envelope) ? "dirty" : "error");
     };
 
     const scheduleFlush = () => {
@@ -245,12 +256,7 @@ export function createDirectorSaveCoordinator(options: DirectorSaveCoordinatorOp
             baseUpdatedAt,
         };
 
-        try {
-            storage.setItem(storageKey, JSON.stringify(localDraft));
-            draftStored = true;
-        } catch {
-            draftStored = false;
-        }
+        writeVerifiedDraft(localDraft);
     };
 
     const runDrain = async (): Promise<boolean> => {
@@ -353,7 +359,7 @@ export function createDirectorSaveCoordinator(options: DirectorSaveCoordinatorOp
         if (disposed) return false;
 
         const envelope = validateDraftEnvelope(candidate, fixedSceneId);
-        if (!envelope || envelope.revision <= currentRevision) return false;
+        if (!envelope) return false;
 
         cancelDebounce();
         currentScene = cloneScene(envelope.scene);
@@ -361,14 +367,7 @@ export function createDirectorSaveCoordinator(options: DirectorSaveCoordinatorOp
         baseUpdatedAt = envelope.baseUpdatedAt;
         localDraft = envelope;
 
-        try {
-            storage.setItem(storageKey, JSON.stringify(envelope));
-            draftStored = true;
-            setStatus("dirty");
-        } catch {
-            draftStored = false;
-            setStatus("error");
-        }
+        setStatus(writeVerifiedDraft(envelope) ? "dirty" : "error");
 
         return true;
     };

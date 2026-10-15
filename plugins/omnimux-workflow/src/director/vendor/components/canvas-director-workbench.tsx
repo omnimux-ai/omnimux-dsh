@@ -53,7 +53,7 @@ import { bindDirectorCameraFollow, removeDirectorCameraBindingsForObject, replac
 import { blocksDirectorShortcut, releaseDirectorFocusAfterPointer, resolveDirectorShortcut, type DirectorShortcutAction } from "../lib/director-shortcuts";
 import { applyDirectorUniformScale, createDirectorActor, createDirectorBillboard, createDirectorCamera, createDirectorLight, createDirectorModel, createDirectorObject, DIRECTOR_ACTOR_COLORS, DIRECTOR_KEYFRAME_EPSILON, directorBoneLabel, directorFocalLengthToFov, directorPoseBoneDeltas, directorPoseLabel, duplicateDirectorCamera, duplicateDirectorGroup, duplicateDirectorObject, groupDirectorObjects, interpolateDirectorTransform, removeDirectorSceneKeyframe, setDirectorSceneKeyframeEasing, toggleDirectorCameraLock, toggleDirectorCameraVisibility, toggleDirectorGroupCollapsed, toggleDirectorGroupLock, toggleDirectorGroupVisibility, toggleDirectorObjectLock, toggleDirectorObjectVisibility, touchDirectorScene, ungroupDirectorObjects, upsertDirectorBoneKeyframe } from "../lib/director-scene";
 import { resolveDirectorSceneSelection, searchDirectorSceneItems } from "../lib/director-scene-search";
-import { describeDirectorSaveStatus, isDirectorSaveConflict, resolveDirectorCloseOutcome, shouldBlockDirectorUnload, shouldOfferDirectorDraftRecovery } from "../lib/director-save-wiring";
+import { describeDirectorSaveStatus, isDirectorSaveConflict, resolveDirectorCloseOutcome, shouldBlockDirectorUnload, classifyDirectorDraftRecovery } from "../lib/director-save-wiring";
 import { useDirectorSaveCoordinator } from "./use-director-save-coordinator";
 import { imageToDataUrl, resolveImageUrl, uploadImage } from "../../services";
 import { directorServices, operationContext } from "../../services";
@@ -389,19 +389,23 @@ export function CanvasDirectorWorkbench({ open, scene, projectId, imageNodes, on
         const controller = saveControllerRef.current;
         const candidate = controller?.restoreCandidate() ?? null;
         if (!controller || !candidate) return;
-        if (!shouldOfferDirectorDraftRecovery({ candidate, authoritativeScene: scene })) return;
+        const recoveryKind = classifyDirectorDraftRecovery({ candidate, authoritativeScene: scene });
+        if (recoveryKind === 'none') return;
 
         modal.confirm({
-            title: "发现未保存的本地草稿",
-            content: `这个镜头存在一份比项目更新的本地草稿（修订 ${candidate.revision}）。恢复后会立即写回项目并保存。`,
+            title: recoveryKind === 'newer' ? "发现未保存的本地草稿" : "发现过期的本地草稿",
+            content: recoveryKind === 'newer'
+                ? `这个镜头存在一份比项目更新的本地草稿（修订 ${candidate.revision}）。恢复后先载入草稿，保存以项目确认回执为准。`
+                : `项目里已有更新版本，这份本地草稿可能过期（修订 ${candidate.revision}）。载入草稿保存前必须先看差异确认；也可放弃草稿。`,
             okText: "恢复草稿",
             cancelText: "放弃草稿",
             closable: false,
             mask: { closable: false },
             keyboard: false,
-            onOk: () => {
-                if (!controller.restoreDraft(candidate)) {
-                    message.error("草稿恢复失败，已保留当前场景");
+            onOk: async () => {
+                const confirmed = await controller.restoreDraft(candidate);
+                if (!confirmed) {
+                    message.error("草稿未能写回项目，已保留当前场景和本地草稿");
                     return;
                 }
                 writeDraft(candidate.scene);

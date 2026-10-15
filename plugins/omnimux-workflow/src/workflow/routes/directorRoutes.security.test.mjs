@@ -129,6 +129,17 @@ async function fixture(t, { identity = account('A'), connection = true } = {}) {
   return { root, project, store, assetsStore, host, operations, state, seams, dispatcher, base, origin, workspaceId, nodeId, send, save, session };
 }
 
+test('encoded director route spelling cannot bypass Connection or exact Origin admission', async t => {
+  const f = await fixture(t);
+  const encoded = f.base.replace('/director/', '/%64irector/');
+  const missingCookie = await f.send(encoded, { cookie: null });
+  assert.equal(missingCookie.status, 401);
+  const foreignOrigin = await f.send(encoded, { originHeader: 'https://other.example.test' });
+  assert.equal(foreignOrigin.status, 403);
+  const operations = '/omnimux-workflow/api/workspaces/ws_route_security/%64irector-operations';
+  assert.equal((await f.send(operations, { cookie: null })).status, 401);
+});
+
 // Tracer 1: admission is tested at the registered raw handler, before any JSON DTO.
 test('raw director HTTP denies no/invalid cookie even if JSON claims authentication', async t => {
   const f = await fixture(t);

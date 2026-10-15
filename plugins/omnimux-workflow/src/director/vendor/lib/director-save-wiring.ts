@@ -1,6 +1,6 @@
 import type { DirectorScene } from "../../scene-types";
 import type { DirectorAdapters, DirectorConflictRecoveryContext, DirectorConflictRecoveryReceipt } from "../../contract";
-import type { DirectorCloseDecision, DirectorDraftEnvelope, DirectorSaveSnapshot, StorageLike } from "./director-save";
+import type { DirectorCloseDecision, DirectorDraftEnvelope, DirectorSaveSnapshot, StorageLike } from "./director-save.ts";
 
 export function isDirectorSaveConflict(error: unknown): boolean {
     return typeof error === "object" && error !== null && "code" in error && error.code === "version_conflict";
@@ -111,12 +111,16 @@ export function describeDirectorSaveStatus(progress: DirectorSaveProgress): Dire
  * scene.updatedAt 是 canonical 保存时间，candidate.baseUpdatedAt 是草稿写入时的基线；
  * 基线落后于权威说明远端已保存过更新的内容，这份草稿是陈旧残留。
  */
-export function shouldOfferDirectorDraftRecovery(input: { candidate: DirectorDraftEnvelope | null; authoritativeScene: DirectorScene | null }): boolean {
+export type DirectorDraftRecoveryKind = 'newer' | 'stale' | 'none';
+export function classifyDirectorDraftRecovery(input: { candidate: DirectorDraftEnvelope | null; authoritativeScene: DirectorScene | null }): DirectorDraftRecoveryKind {
     const { candidate, authoritativeScene } = input;
-    if (!candidate || !authoritativeScene) return false;
-    if (candidate.sceneId !== authoritativeScene.id) return false;
-    if (candidate.baseUpdatedAt !== authoritativeScene.updatedAt) return false;
-    return candidate.scene.updatedAt > authoritativeScene.updatedAt;
+    if (!candidate) return 'none';
+    if (!authoritativeScene || candidate.sceneId !== authoritativeScene.id) return 'none';
+    if (candidate.baseUpdatedAt === authoritativeScene.updatedAt && candidate.scene.updatedAt > authoritativeScene.updatedAt) return 'newer';
+    return 'stale';
+}
+export function shouldOfferDirectorDraftRecovery(input: { candidate: DirectorDraftEnvelope | null; authoritativeScene: DirectorScene | null }): boolean {
+    return classifyDirectorDraftRecovery(input) === 'newer';
 }
 
 /** 关闭决策的用户可见后果，组件按此分支决定退出/二次确认/留下。 */
