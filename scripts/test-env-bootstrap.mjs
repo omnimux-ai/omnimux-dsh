@@ -238,6 +238,12 @@ const PREPARATION_OUTPUTS = {
   'plugins/omnimux': ['lib/client.js', 'lib/generation-core.js', 'lib/video-inspect.js', 'lib/mediabunny-LICENSE.txt'],
   'packages/dsh-ui-kit': ['lib/index.js', 'lib/index.d.ts', 'lib/index.js.map', 'lib/index.d.ts.map'],
 };
+// The build body comes from the candidate manifest, so a candidate that rewrote it would otherwise
+// have its own script executed here; only these reviewed values may run.
+const PREPARATION_BUILD_SCRIPTS = {
+  'plugins/omnimux': 'node scripts/build-media-inspect.mjs && node scripts/build-client.mjs',
+  'packages/dsh-ui-kit': 'tsdown',
+};
 
 function inspectArchive(tarball, name, version, sha256) {
   const result = spawnSync('python3', ['-B', ARCHIVE_SCRIPT, 'inspect'], {
@@ -350,6 +356,10 @@ async function runTaskPreparation({ options, io, deps }) {
       if (result.code !== 0 || result.signal) throw failure('PREPARE_BUILD_FAILED');
       return step;
     };
+    for (const [rel, expected] of Object.entries(PREPARATION_BUILD_SCRIPTS)) {
+      const staged = readJsonFile(join(stageRoot, rel, 'package.json'));
+      if (staged?.scripts?.build !== expected) throw failure('PREPARE_BUILD_SCRIPT_UNSUPPORTED', { path: `${rel}/package.json`, build: staged?.scripts?.build ?? null });
+    }
     await runStep(['--config.verify-deps-before-run=false', '--filter', 'dsh-ui-kit', 'build'], stageRoot);
     await runStep(['--config.verify-deps-before-run=false', '--filter', 'omnimux', 'build'], stageRoot);
     // The build may add generated outputs but must leave every copied candidate input untouched.

