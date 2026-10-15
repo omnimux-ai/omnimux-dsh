@@ -863,7 +863,7 @@ describe('main checkout build query reuse', () => {
   })
 })
 
- describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖硬拦截)', () => {
+describe('guard-worktree materialization safety guard (多 Agent 物化防覆盖硬拦截)', () => {
   it('correctly classifies materialization scripts and commands', () => {
     assert.equal(isMaterializationCommand('./scripts/sync-to-app.sh'), true)
     assert.equal(isMaterializationCommand('bash scripts/sync-to-app.sh omnimux-assets'), true)
