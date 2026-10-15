@@ -198,6 +198,95 @@ test('role filtering preserves context slots occurrences risk multiplicity and n
   ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
 })
 
+test('unrelated literal parent callbacks preserve existing dynamic member risks in delta only', () => {
+  const before = "test('first', async () => { data[key] }); test('second', async () => { other[index] })"
+  const after = "test('unrelated', async () => {}); " + before
+  assert.deepEqual(inspectTestAuthoringDelta(before, after), {
+    allowed: true,
+    reason: null,
+    scope: 'syntax-only; changed test standards still require independent review',
+  })
+  assert.equal(inspectTestAuthoring(after).allowed, false)
+})
+
+test('parent stability uses only source strings without fixture graph or import authority', () => {
+  for (const prefix of [
+    '',
+    "import test from 'node:test'; ",
+    "import { safeApi } from './notGraph.mjs'; ",
+    "import { apply } from './unknown-source.mjs'; ",
+  ]) {
+    const body = "test('first', async () => { data[key] }); test('second', async () => { other[index] })"
+    const before = prefix + body
+    const after = prefix + "test('unrelated', async () => {}); " + body
+    assert.equal(inspectTestAuthoringDelta(before, after).allowed, true, prefix)
+    assert.equal(inspectTestAuthoring(after).allowed, false, prefix)
+  }
+  assert.equal(inspectTestAuthoring("import { apply } from './unknown-source.mjs'; apply(ctx)").allowed, false)
+})
+
+test('parent domains retain repeated risks and multiset excess denials', () => {
+  for (const [before, after] of [
+    ["test('first', async () => { data[key] })", "test('first', async () => { data[key] }); test('first', async () => { data[key] })"],
+    ["test('first', async () => { data[key] })", "test('first', async () => { data[key]; data[key] })"],
+    ["test('first', async () => { data[key] })", "test('first', async () => {}); test('first', async () => { data[key] })"],
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+})
+
+test('parent domains preserve callback slots literal titles scope and risk bodies', () => {
+  for (const [before, after] of [
+    ["consume('first', async () => { data[key] }, async () => {})", "consume('first', async () => {}, async () => { data[key] })"],
+    ["test('first', async () => { data[key] })", "test('renamed', async () => { data[key] })"],
+    ["test('first', async () => { data[key] })", "test('first', async () => { async function nested() { data[key] } })"],
+    ["test('first', async () => { data[key] })", "test('first', async () => { other[index] })"],
+    ["test('first', async () => { data[key] })", "check('first', async () => { data[key] })"],
+    ["test('first', async () => { data[key] })", "test('first', async value => { data[key] })"],
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+})
+
+test('same parent block insertion and ancestor occurrences retain old identities', () => {
+  for (const [before, after] of [
+    ["test('first', async () => { { data[key] } })", "test('first', async () => { {} { data[key] } })"],
+    ["{ test('first', async () => { data[key] }) }", "{} { test('first', async () => { data[key] }) }"],
+    ['class Example { static { data[key] } }', 'class Example { static {} static { data[key] } }'],
+  ]) assert.equal(inspectTestAuthoringDelta(before, after).allowed, false, after)
+})
+
+test('nonadjacent identical parents keep active callback occurrence beyond zero', () => {
+  const before = "test('shared', async () => {}); test('middle', async () => {}); test('shared', async () => { data[key] })"
+  const after = "test('middle', async () => {}); test('shared', async () => { data[key] })"
+  assert.equal(inspectTestAuthoringDelta(before, before).allowed, true)
+  assert.equal(inspectTestAuthoringDelta(before, "test('unrelated', async () => {}); " + before).allowed, true)
+  assert.equal(inspectTestAuthoringDelta(before, after).allowed, false)
+})
+
+test('for of data stays in the full parent context instead of being evaluated', () => {
+  const before = "for (const scenario of [{ name: 'first' }]) { test('fixed', async () => { data[key] }) }"
+  const after = "for (const scenario of [{ name: 'unrelated' }, { name: 'first' }]) { test('fixed', async () => { data[key] }) }"
+  assert.equal(inspectTestAuthoringDelta(before, before).allowed, true)
+  assert.equal(inspectTestAuthoringDelta(before, after).allowed, false)
+  assert.equal(inspectTestAuthoring("for (const scenario of cases) { test(scenario.name, async () => {}) }").allowed, false)
+})
+
+test('parent stability never absorbs changed imports options or new execution risks', () => {
+  const before = "test('first', async () => { data[key] }); test('second', async () => { other[index] })"
+  for (const suffix of [
+    "test('new', options, async () => {})",
+    "test(scenario.name, async () => {})",
+    "new Example(...values)",
+    "consume([...values])",
+    "import vm from 'node:vm'",
+    "import { constructor as create } from './domain.mjs'",
+    "eval(code)",
+    "test.only('new', async () => {})",
+    "test('new', { skip: true }, async () => {})",
+    'const typed: number = 1',
+  ]) assert.equal(inspectTestAuthoringDelta(before, before + '; ' + suffix).allowed, false, suffix)
+  const imported = "import { data } from './domain.mjs'; " + before
+  assert.equal(inspectTestAuthoringDelta(imported, "import { data, safeApi } from './domain.mjs'; " + before).allowed, true)
+  assert.equal(inspectTestAuthoringDelta(imported, "import { data } from './changed.mjs'; " + before).allowed, false)
+})
+
 test('import declaration risk bodies and contexts remain conservative when adding siblings', () => {
   for (const [before, after] of [
     ["import { constructor as create } from './domain.mjs'; create(ctx)", "import { constructor as create, safeApi } from './domain.mjs'; create(ctx)"],
