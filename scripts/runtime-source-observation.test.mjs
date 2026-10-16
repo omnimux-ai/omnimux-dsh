@@ -43,7 +43,7 @@ test('observes the parsed script bytes exactly for a controlled entry', async ()
     assert.equal(result.exit.code, 0);
     assert.equal(result.exit.signal, null);
     assert.equal(result.observations.childPid > 0, true);
-    assert.ok(result.observations.rawReceipts.stdout.includes('SOURCE_OBSERVATION_DONE'));
+    assert.ok(result.rawReceipts.stdout.includes('SOURCE_OBSERVATION_DONE'));
   } finally { rmSync(f.dir, { recursive: true, force: true }); }
 });
 

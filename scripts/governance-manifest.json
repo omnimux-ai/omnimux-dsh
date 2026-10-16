@@ -259,6 +259,8 @@
     "resolve-omnimux-profile.sh",
     "rewrite-inspiration-categories.mjs",
     "rewrite-inspiration-categories.test.mjs",
+    "runtime-source-observation.mjs",
+    "runtime-source-observation.test.mjs",
     "scan-tiktok-items.mjs",
     "scan-ui-gates.test.mjs",
     "search-avatars.mjs",
