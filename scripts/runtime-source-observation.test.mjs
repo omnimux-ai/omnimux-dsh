@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -95,6 +95,95 @@ test('rejects a non-zero child exit without calling it success', async () => {
       { code: 'SOURCE_OBSERVATION_CHILD_EXIT' },
     );
   } finally { rmSync(f.dir, { recursive: true, force: true }); }
+});
+
+test('rejects an EOF-resistant entry only after confirmed child cleanup', async (t) => {
+  const f = makeFixture();
+  const ownerRoot = realpathSync(f.dir);
+  const pidFile = join(f.dir, 'child-owner.json');
+  const fallback = { ownerRoot, childPid: null, signals: [], probes: [], gone: false };
+  let timer;
+  let observationError;
+  let observationResult;
+  try {
+    f.write(f.expected, 'export const value = 37;\n');
+    f.write(f.entry, `import { value } from './expected.mjs';\nimport { writeFileSync } from 'node:fs';\nwriteFileSync(${JSON.stringify(pidFile)}, JSON.stringify({ ownerRoot: ${JSON.stringify(ownerRoot)}, entryPath: ${JSON.stringify(f.entry)}, childPid: process.pid, parentPid: process.ppid }));\nif (value !== 37) throw new Error('unexpected');\nconsole.log('SOURCE_OBSERVATION_DONE');\nsetInterval(() => {}, 1000);\n`);
+    try {
+      observationResult = await Promise.race([
+        observeLoadedSource({ rootDir: f.dir, entryName: 'entry.mjs', expectedName: 'expected.mjs', timeoutMs: 3000 }),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('test observation wait exceeded 10000ms')), 10000);
+        }),
+      ]);
+    } catch (error) {
+      observationError = error;
+    } finally {
+      clearTimeout(timer);
+    }
+    const record = JSON.parse(readFileSync(pidFile, 'utf8'));
+    assert.equal(record.ownerRoot, ownerRoot);
+    assert.equal(record.entryPath, f.entry);
+    assert.equal(record.parentPid, process.pid);
+    assert.ok(Number.isSafeInteger(record.childPid) && record.childPid > 1 && record.childPid !== process.pid);
+    assert.equal(observationResult, undefined, 'a forced child cleanup must not report observed');
+    assert.ok(observationError, 'an EOF-resistant entry must reject');
+    assert.equal(observationError.code, 'SOURCE_OBSERVATION_CHILD_EXIT_TIMEOUT');
+    assert.equal(observationError.cleanup.ownerRoot, ownerRoot);
+    assert.equal(observationError.cleanup.childPid, record.childPid);
+    assert.equal(observationError.cleanup.childClosed, true);
+    assert.deepEqual(observationError.cleanup.exit, { code: null, signal: 'SIGTERM' });
+    assert.deepEqual(observationError.cleanup.close, { code: null, signal: 'SIGTERM' });
+    assert.equal(observationError.cleanup.websocketClosed, true);
+    assert.throws(() => process.kill(record.childPid, 0), { code: 'ESRCH' });
+  } finally {
+    clearTimeout(timer);
+    t.diagnostic(JSON.stringify({ observationError: observationError && { message: observationError.message, code: observationError.code, cleanup: observationError.cleanup }, observationResult }));
+    try {
+      const record = JSON.parse(readFileSync(pidFile, 'utf8'));
+      assert.equal(record.ownerRoot, ownerRoot);
+      assert.equal(record.entryPath, f.entry);
+      assert.equal(record.parentPid, process.pid);
+      assert.ok(Number.isSafeInteger(record.childPid) && record.childPid > 1 && record.childPid !== process.pid);
+      fallback.childPid = record.childPid;
+      for (const signal of ['SIGTERM', 'SIGKILL']) {
+        try {
+          process.kill(record.childPid, 0);
+          fallback.probes.push('alive');
+        } catch (error) {
+          if (error.code !== 'ESRCH') throw error;
+          fallback.probes.push('ESRCH');
+          fallback.gone = true;
+          break;
+        }
+        assert.deepEqual(JSON.parse(readFileSync(pidFile, 'utf8')), record, 'owner record must remain identical before signaling');
+        try {
+          process.kill(record.childPid, signal);
+          fallback.signals.push(signal);
+        } catch (error) {
+          if (error.code !== 'ESRCH') throw error;
+          fallback.probes.push('ESRCH');
+          fallback.gone = true;
+          break;
+        }
+        const deadline = Date.now() + 1500;
+        while (Date.now() < deadline) {
+          try { process.kill(record.childPid, 0); } catch (error) {
+            if (error.code !== 'ESRCH') throw error;
+            fallback.probes.push('ESRCH');
+            fallback.gone = true;
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        if (fallback.gone) break;
+      }
+      assert.equal(fallback.gone, true, 'owned child must disappear within bounded fallback cleanup');
+      assert.throws(() => process.kill(record.childPid, 0), { code: 'ESRCH' });
+      rmSync(f.dir, { recursive: true, force: true });
+    } finally {
+      t.diagnostic(JSON.stringify({ fallback }));
+    }
+  }
 });
 
 test('rejects missing or unsafe arguments before doing anything', async () => {

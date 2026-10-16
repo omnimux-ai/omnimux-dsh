@@ -59,6 +59,17 @@ function timeout(ms, code, detail) {
   })
 }
 
+// Cleanup waits fulfill on timeout so escalation cannot be skipped by rejection.
+async function settledWithin(promise, ms) {
+  let timer
+  try {
+    return await Promise.race([
+      promise.then(() => true),
+      new Promise((resolve) => { timer = setTimeout(() => resolve(false), ms) }),
+    ])
+  } finally { clearTimeout(timer) }
+}
+
 function decodeWsMessage(data) {
   try { return JSON.parse(String(data)) } catch { return null }
 }
@@ -101,6 +112,21 @@ export async function observeLoadedSource(options = {}) {
     entry.full,
   ], { cwd: owner, env: childEnv, stdio: ['pipe', 'pipe', 'pipe'] })
 
+  const state = { exit: null, close: null, closed: false, error: null }
+  let resolveExit, resolveClose, resolveError
+  const exited = new Promise((resolve) => { resolveExit = resolve })
+  const closed = new Promise((resolve) => { resolveClose = resolve })
+  const childError = new Promise((resolve) => { resolveError = resolve })
+  child.once('exit', (code, signal) => { state.exit = { code, signal }; resolveExit() })
+  child.once('close', (code, signal) => {
+    state.close = { code, signal }
+    state.closed = true
+    resolveClose()
+  })
+  child.once('error', (error) => { state.error = error; resolveError(error) })
+  const cleanupErrors = []
+  child.stdin.on('error', (error) => cleanupErrors.push({ phase: 'stdin', message: error.message, code: error.code }))
+
   const raw = { stdout: '', stderr: '', endpoint: null, commands: [], events: 0, exit: null, detached: false }
   const scripts = []
   let endpoint = null
@@ -115,7 +141,16 @@ export async function observeLoadedSource(options = {}) {
   let decoyLoaded = false
   const pending = new Map()
   const deadline = Date.now() + Math.min(timeoutMs, SOURCE_OBSERVATION_TIMEOUT_MS)
-  const state = { exit: null, closed: false }
+  let originalFailure = null
+  let websocketClosed = false
+  let socketClosed = null
+  const signals = []
+  const phases = []
+  const rememberFailure = (error) => { originalFailure = originalFailure || error }
+  child.stdout.on('data', (data) => {
+    raw.stdout += data.toString()
+    if (raw.stdout.includes(COMPLETION_MARKER)) markerSeen = true
+  })
 
   // Only enable/getScriptSource/disable and the release command may be issued;
   // evaluate, setScriptSource, or any other mutation is refused before the wire.
@@ -152,19 +187,19 @@ export async function observeLoadedSource(options = {}) {
           resolve()
         }
         child.stderr.on('data', onData)
-        child.once('error', reject)
-        child.once('exit', () => reject(failure('CHILD_EXIT_BEFORE_ENDPOINT', { stderr: raw.stderr.slice(-RECEIPT_TAIL) })))
       }),
+      childError.then((error) => { throw error }),
+      exited.then(() => { throw failure('CHILD_EXIT_BEFORE_ENDPOINT', { stderr: raw.stderr.slice(-RECEIPT_TAIL) }) }),
       timeout(Math.max(1, deadline - Date.now()), 'ENDPOINT_TIMEOUT', { stderr: 'inspector endpoint not published' }),
     ])
 
-    child.stdout.on('data', (data) => {
-      raw.stdout += data.toString()
-      if (raw.stdout.includes(COMPLETION_MARKER)) markerSeen = true
-    })
-    child.once('exit', (code, signal) => { state.exit = { code, signal } })
-
     socket = new WebSocket(String(endpoint))
+    socketClosed = new Promise((resolve) => {
+      socket.addEventListener('close', () => { websocketClosed = true; raw.detached = true; resolve() }, { once: true })
+    })
+    socket.addEventListener('error', () => {
+      cleanupErrors.push({ phase: 'websocket', code: 'SOURCE_OBSERVATION_WS_ERROR' })
+    })
     await Promise.race([
       once(socket, 'open'),
       timeout(Math.max(1, deadline - Date.now()), 'WS_CONNECT_TIMEOUT', { endpoint: String(endpoint) }),
@@ -240,53 +275,74 @@ export async function observeLoadedSource(options = {}) {
       throw failure('DECOY_LOADED', { path: decoyPath })
     }
 
-    try {
-      await send('Debugger.disable')
-    } catch { /* detach failure does not downgrade an already verified identity */ }
-    const socketToClose = socket
-    socket = null
-    try {
-      socketToClose.close()
-      await Promise.race([
-        once(socketToClose, 'close'),
-        timeout(2000, 'WS_CLOSE_TIMEOUT', { endpoint: String(endpoint) }),
-      ])
-    } catch { /* teardown bounded; the session ends with the socket or child anyway */ }
-    raw.detached = true
+    await send('Debugger.disable')
+  } catch (error) {
+    rememberFailure(error)
   } finally {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      try { socket.close() } catch { /* best effort */ }
+    if (socket && !websocketClosed) {
+      try { socket.close() } catch (error) {
+        cleanupErrors.push({ phase: 'websocket-close', message: error.message, code: error.code })
+        rememberFailure(error)
+      }
+      const confirmed = await settledWithin(socketClosed, 2000)
+      phases.push({ phase: 'websocket-close', graceMs: 2000, completed: confirmed })
+      if (!confirmed) rememberFailure(failure('WS_CLOSE_TIMEOUT', { endpoint: String(endpoint) }))
     }
     if (!state.closed) {
-      if (!state.exit) {
-        try { child.stdin.end() } catch { /* already closed */ }
-        state.exit = await Promise.race([
-          new Promise((resolve) => {
-            child.once('exit', (code, signal) => resolve({ code, signal }))
-          }),
-          timeout(1000, 'CHILD_EXIT_TIMEOUT', { pid: child.pid }),
-        ])
+      try { child.stdin.end() } catch (error) {
+        cleanupErrors.push({ phase: 'stdin-end', message: error.message, code: error.code })
+        rememberFailure(error)
       }
-      state.closed = true
-      if (!state.exit) {
-        child.kill('SIGTERM')
-        state.exit = await Promise.race([
-          new Promise((resolve) => {
-            child.once('exit', (code, signal) => resolve({ code, signal }))
-          }),
-          timeout(1000, 'CHILD_KILL_TIMEOUT', { pid: child.pid }),
-        ]) || { code: null, signal: 'SIGTERM' }
+      const natural = await settledWithin(closed, 1000)
+      phases.push({ phase: 'natural-eof', graceMs: 1000, completed: natural })
+      if (!natural) {
+        rememberFailure(failure(state.exit ? 'CHILD_CLOSE_TIMEOUT' : 'CHILD_EXIT_TIMEOUT', { pid: child.pid }))
+        for (const signal of ['SIGTERM', 'SIGKILL']) {
+          if (state.closed) break
+          if (!state.exit) {
+            const receipt = { signal, sent: false }
+            signals.push(receipt)
+            try { receipt.sent = child.kill(signal) } catch (error) {
+              receipt.error = { message: error.message, code: error.code }
+              cleanupErrors.push({ phase: signal, ...receipt.error })
+            }
+          }
+          const confirmed = await settledWithin(closed, 1000)
+          phases.push({ phase: signal, graceMs: 1000, completed: confirmed })
+        }
+        if (!state.closed) cleanupErrors.push({ phase: 'child-close', code: 'SOURCE_OBSERVATION_CHILD_KILL_TIMEOUT' })
       }
     }
     raw.exit = state.exit
   }
 
   const childOutcome = state.exit
+  if (state.error) rememberFailure(state.error)
   if (!childOutcome || childOutcome.code !== 0 || childOutcome.signal) {
-    throw failure('CHILD_EXIT', childOutcome ? { code: childOutcome.code, signal: childOutcome.signal } : { code: null })
+    rememberFailure(failure('CHILD_EXIT', childOutcome ? { code: childOutcome.code, signal: childOutcome.signal } : { code: null }))
   }
+  if (!state.closed) rememberFailure(failure('CHILD_CLOSE_TIMEOUT', { pid: child.pid }))
+  if (!websocketClosed) rememberFailure(failure('WS_CLOSE_TIMEOUT'))
+  if (cleanupErrors.length) rememberFailure(failure('CLEANUP', { errors: cleanupErrors }))
+  if (sourceError) rememberFailure(sourceError)
   if (!raw.stdout.includes(COMPLETION_MARKER)) {
-    throw failure('COMPLETION_MISSING', { stdout: raw.stdout.slice(-RECEIPT_TAIL) })
+    rememberFailure(failure('COMPLETION_MISSING', { stdout: raw.stdout.slice(-RECEIPT_TAIL) }))
+  }
+  const cleanup = {
+    ownerRoot: owner,
+    childPid: child.pid,
+    childClosed: state.closed,
+    exit: state.exit,
+    close: state.close,
+    websocketClosed,
+    signals,
+    phases,
+    errors: cleanupErrors,
+    originalFailure: originalFailure ? { message: originalFailure.message, code: originalFailure.code, hint: originalFailure.hint } : null,
+  }
+  if (originalFailure) {
+    originalFailure.cleanup = cleanup
+    throw originalFailure
   }
 
   return {
@@ -317,7 +373,9 @@ export async function observeLoadedSource(options = {}) {
       stdout: raw.stdout.slice(-RECEIPT_TAIL),
       stderr: raw.stderr.slice(-RECEIPT_TAIL),
       exit: raw.exit,
+      close: state.close,
       detached: raw.detached,
+      cleanup,
     },
   }
 }
