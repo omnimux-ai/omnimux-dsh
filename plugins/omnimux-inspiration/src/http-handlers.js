@@ -528,18 +528,44 @@ function imagesFromLayer(layer) {
 }
 
 /** @typedef {{ type: 'video' | 'image', url: string }} SocialMediaItem */
+/** @typedef {{ type: 'video' | 'image', id: string, poster: string, asset: string }} MediaReference */
+
+/** @param {unknown} raw @param {'video' | 'image'} type @param {string} [url] @returns {MediaReference} */
+function mediaReference(raw, type, url = '') {
+  const media = asObject(raw)
+  const asset = url ? mediaIdentity({ type, url }) : ''
+  const id = firstText([media.id_str, typeof media.id === 'number' ? String(media.id) : media.id])
+    || (type === 'video' ? asset.match(/^video:(?:amplify_video|ext_tw_video|tweet_video):(.+)$/)?.[1] : '') || ''
+  const posterUrl = type === 'video' ? firstPublicHttpUrl([media.media_url_https, media.media_url, media.poster]) : ''
+  return { type, id, asset, poster: posterUrl ? mediaIdentity({ type: 'image', url: posterUrl }) : '' }
+}
+
+/**
+ * Matching ids are strongest; when absent, a shared poster or asset identifies a mirror.
+ * @param {MediaReference} left
+ * @param {MediaReference} right
+ * @returns {boolean}
+ */
+function sameMediaReference(left, right) {
+  if (left.type !== right.type) return false
+  if (left.id && right.id) return left.id === right.id
+  return Boolean((left.asset && left.asset === right.asset) || (left.poster && left.poster === right.poster))
+}
 
 /**
  * Read post-owned media in the order provided by the richest list. The other
  * supported fields are mirrors, not another set of attachments.
  * @param {Record<string, any>} layer
- * @returns {{ items: SocialMediaItem[], unavailable: boolean, posters: string[] }}
+ * @returns {{ items: SocialMediaItem[], available: MediaReference[], missing: MediaReference[], posters: string[] }}
  */
 function mediaItemsFromLayer(layer) {
   /** @type {SocialMediaItem[]} */
   const items = []
   const posters = []
-  let unavailable = false
+  /** @type {MediaReference[]} */
+  const available = []
+  /** @type {MediaReference[]} */
+  const missing = []
   const append = (raw, assumedType = '') => {
     const media = asObject(raw)
     const video = firstPublicHttpUrl([
@@ -549,19 +575,22 @@ function mediaItemsFromLayer(layer) {
     ])
     if (video) {
       items.push({ type: 'video', url: video })
+      available.push(mediaReference(media, 'video', video))
       const poster = firstPublicHttpUrl([media.media_url_https, media.media_url, media.poster])
       if (poster) posters.push(poster)
       return
     }
     const type = firstText([media.type, assumedType])
     if (type === 'video' || type === 'animated_gif') {
-      unavailable = true
+      missing.push(mediaReference(media, 'video'))
       return
     }
     const image = firstPublicHttpUrl([media.media_url_https, media.media_url, media.url, media.src, typeof raw === 'string' ? raw : ''])
     if (type === 'photo' || type === 'image') {
-      if (image) items.push({ type: 'image', url: image })
-      else unavailable = true
+      if (image) {
+        items.push({ type: 'image', url: image })
+        available.push(mediaReference(media, 'image', image))
+      } else missing.push(mediaReference(media, 'image'))
     }
   }
   for (const list of [layer.mediaDetails, asObject(layer.extended_entities).media, asObject(layer.entities).media]) {
@@ -572,13 +601,17 @@ function mediaItemsFromLayer(layer) {
   const singleVideo = videoUrlFromLayer(layer) || firstPublicHttpUrl([bestVariantUrl(asObject(layer.video).variants)])
   if (singleVideo) {
     items.push({ type: 'video', url: singleVideo })
+    available.push(mediaReference(layer.video, 'video', singleVideo))
     const poster = firstPublicHttpUrl([asObject(layer.video).poster])
     if (poster) posters.push(poster)
   }
   for (const url of imagesFromLayer(layer)) {
-    if (isPublicHttpUrl(url)) items.push({ type: 'image', url })
+    if (isPublicHttpUrl(url)) {
+      items.push({ type: 'image', url })
+      available.push(mediaReference({}, 'image', url))
+    }
   }
-  return { items, unavailable, posters }
+  return { items, available, missing, posters }
 }
 
 /** Treat quality ladders and image-size aliases as one asset, never its poster. */
@@ -610,12 +643,15 @@ function collectMediaItems(layers) {
   const indices = new Map()
   const posters = new Set()
   const orderedLayers = [...layers].sort((left, right) => mediaListPriority(right) - mediaListPriority(left))
-  const priority = mediaListPriority(orderedLayers[0])
-  let unavailable = false
+  /** @type {MediaReference[]} */
+  const available = []
+  /** @type {MediaReference[]} */
+  const missing = []
   for (const layer of orderedLayers) {
     const collection = mediaItemsFromLayer(layer)
     for (const url of collection.posters) posters.add(mediaIdentity({ type: 'image', url }))
-    if (mediaListPriority(layer) === priority) unavailable ||= collection.unavailable
+    available.push(...collection.available)
+    missing.push(...collection.missing)
     for (const item of collection.items) {
       const key = mediaIdentity(item)
       const existing = indices.get(key)
@@ -627,6 +663,7 @@ function collectMediaItems(layers) {
       }
     }
   }
+  const unavailable = missing.some((reference) => !available.some((resolved) => sameMediaReference(reference, resolved)))
   return { items: items.filter((item) => item.type !== 'image' || !posters.has(mediaIdentity(item))), unavailable }
 }
 

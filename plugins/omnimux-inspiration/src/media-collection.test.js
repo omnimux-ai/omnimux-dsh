@@ -71,6 +71,27 @@ describe('post media collection parsing', () => {
     const meta = parseSocialMeta({ mediaDetails: [photo('one')], images: ['https://pbs.twimg.com/media/one?format=jpg&name=orig', 'https://pbs.twimg.com/media/one.jpg:large'] })
     assert.deepEqual(meta.media_items, [{ type: 'image', url: photo('one').media_url_https }])
   })
+
+  it('reconciles a complete video with its simplified same-layer entity mirror', async () => {
+    const complete = { ...video('123'), id_str: '123' }
+    const simplified = { type: 'video', id_str: '123', media_url_https: complete.media_url_https }
+    const payload = { text: 'same video mirrors', extended_entities: { media: [complete] }, entities: { media: [simplified] } }
+    const meta = parseSocialMeta(payload)
+    assert.equal(meta.unavailable_media, false)
+    assert.deepEqual(meta.media_items, [{ type: 'video', url: high('123') }])
+    assert.equal(parseSocialMeta({ ...payload, entities: { media: [{ type: 'video', media_url_https: complete.media_url_https }] } }).unavailable_media, false)
+    const { run } = setup(payload)
+    assert.equal((await run()).status, 200)
+  })
+
+  it('still refuses a distinct unavailable video in a simplified mirror', async () => {
+    const complete = { ...video('123'), id_str: '123' }
+    const extra = { type: 'video', id_str: '456', media_url_https: complete.media_url_https }
+    const { run } = setup({ text: 'missing additional video', extended_entities: { media: [complete] }, entities: { media: [complete, extra] } })
+    const res = await run()
+    assert.equal(res.status, 422)
+    assert.match(res.body.error, /部分素材.*可下载/)
+  })
 })
 
 describe('complete post media persistence', () => {
