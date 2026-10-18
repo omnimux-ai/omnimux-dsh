@@ -849,15 +849,6 @@ export const INSPIRATION_CSS = `
   background: var(--dsw-alias-bg-elevated);
 }
 
-.omnimux-inspiration-gallery-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  flex: 0 0 auto;
-  min-height: 32px;
-  color: var(--dsw-alias-label-secondary);
-}
 .omnimux-inspiration-modal-post-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -2288,6 +2279,7 @@ export const INSPIRATION_CSS = `
   font-weight: 600;
   white-space: nowrap;
 }
+.omnimux-inspiration-media-tabs { margin-bottom: 8px; flex-shrink: 0; overflow-x: auto; }
 .omnimux-inspiration-modal-player-box {
   position: relative;
   width: 100%;

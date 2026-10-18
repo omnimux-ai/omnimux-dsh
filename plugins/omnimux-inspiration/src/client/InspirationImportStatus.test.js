@@ -965,13 +965,14 @@ describe('InspirationCoverCard — shared content cards', () => {
     const row = {
       id: 'gallery', is_local: true, source_platform: 'x', type: 'image',
       title: '简短标题', content: '推文正文应作为卡片正文展示，而不是藏在悬停标题里。',
-      media_urls: ['https://images.example/first.jpg', 'https://images.example/second.jpg'],
+      media_urls: [],
+      media_items: [{ type: 'image', url: 'https://images.example/first.jpg' }, { type: 'image', url: 'https://images.example/second.jpg' }],
     }
     const mounted = await mount('InspirationCoverCard.jsx', props(row), 'InspirationCoverCard')
     try {
       assert.equal(mounted.container.querySelector('[data-card-type]')?.getAttribute('data-card-type'), 'text-media')
       assert.equal(mounted.container.querySelector('.omnimux-rival-card-text')?.textContent, row.content)
-      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-img')?.getAttribute('src'), row.media_urls[0])
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-img')?.getAttribute('src'), row.media_items[0].url)
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-media')?.textContent, '2 图片')
       assert.equal(mounted.container.querySelector('video'), null)
     } finally {

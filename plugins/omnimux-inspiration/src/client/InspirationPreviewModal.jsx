@@ -8,6 +8,7 @@ import {
   pickCoverSrc,
   pickImageSources,
   pickVideoSrc,
+  pickImportedMedia,
   resolveTikTokEmbedUrl,
   shareRequestPayload,
   triggerAnalyzeInspiration,
@@ -158,6 +159,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [currentTime, setCurrentTime] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef(null)
+  const pendingSeekRef = useRef(null)
 
   const handleTimeUpdate = () => {
     if (!videoRef.current) return
@@ -171,7 +173,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [showTranslation, setShowTranslation] = useState(false)
   const [activeSegmentId, setActiveSegmentId] = useState('')
   const [videoFailed, setVideoFailed] = useState(false)
-  const [imageIndex, setImageIndex] = useState(0)
   const [showSharePopover, setShowSharePopover] = useState(false)
   const shareTriggerRef = useRef(null)
   const sharePopoverRef = useRef(null)
@@ -298,11 +299,24 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   }, [row])
   // The media source of the row currently on screen. Declared before the reset
   // effect below because that effect keys off it.
-  const videoSrc = pickVideoSrc(item)
+  const [mediaIndex, setMediaIndex] = useState(0)
+  const mediaItems = useMemo(() => {
+    const imported = pickImportedMedia(item)
+    return imported.length ? imported : pickImageSources(item).map((url) => ({ type: 'image', url }))
+  }, [item])
+  const selectedMedia = mediaItems[mediaIndex] || mediaItems[0]
+  const videoSrc = selectedMedia ? (selectedMedia.type === 'video' ? selectedMedia.url : '') : pickVideoSrc(item)
+  const mediaListKey = mediaItems.map((media) => `${media.type}:${media.url}`).join('\n')
+  useEffect(() => { pendingSeekRef.current = null; setMediaIndex(0) }, [item?.id, mediaListKey])
   // A message that belongs to one media source must never outlive it: without
   // this reset the next row opened in the same modal would render its cover
   // under the previous row's "cannot be played" notice.
-  useEffect(() => setVideoFailed(false), [videoSrc, item?.id])
+  useEffect(() => {
+    setVideoFailed(false)
+    setCurrentTime(0)
+    setIsPlaying(false)
+    setActiveSegmentId('')
+  }, [videoSrc, selectedMedia?.url, item?.id])
 
 
   const data = useMemo(() => getInspirationPreviewData(item), [item])
@@ -314,25 +328,29 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
     })
   }, [data?.shots, currentTime])
 
-  const handleSeekShot = (shot) => {
-    if (!shot) return
-    const { start } = parseShotTimeWindow(shot)
-    if (videoRef.current) {
-      videoRef.current.currentTime = start
-      videoRef.current.play?.().catch(() => {})
-      setIsPlaying(true)
+  const playAtTime = (start) => {
+    if (!videoRef.current) return
+    videoRef.current.currentTime = start
+    videoRef.current.play?.().catch(() => {})
+  }
+  const seekAnalysisVideo = (start) => {
+    const index = mediaItems.findIndex((media) => media.type === 'video')
+    if (index >= 0 && mediaIndex !== index) {
+      pendingSeekRef.current = start
+      setMediaIndex(index)
+      return
     }
+    playAtTime(start)
+  }
+  const handleSeekShot = (shot) => {
+    if (shot) seekAnalysisVideo(parseShotTimeWindow(shot).start)
   }
 
   const sourceUrl = data.safeItem.source_url
   const embedUrl = resolveTikTokEmbedUrl(data.analysis.embed_player_url || data.analysis.tiktok_video_id || sourceUrl)
   const canAnalyze = canAnalyzeInspiration(data.safeItem)
   const cover = pickCoverSrc(data.safeItem)
-  const images = useMemo(() => pickImageSources(item), [item])
-  const imageListKey = images.join('\n')
-  useEffect(() => setImageIndex(0), [item?.id, imageListKey])
-  const activeImageIndex = Math.min(imageIndex, Math.max(0, images.length - 1))
-  const textOnly = !videoSrc && !embedUrl && !images.length
+  const textOnly = !videoSrc && !embedUrl && !mediaItems.length
     && (data.safeItem.content_shape === 'text' || (data.safeItem.type === 'link' && !cover))
   const importing = isImportingRow(data.safeItem)
   const failed = isFailedRow(data.safeItem)
@@ -582,6 +600,16 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
           <main className="omnimux-inspiration-modal-body is-workbench is-triptych">
             {/* 左栏：视听主控面板 (9:16 大画幅播放器与底部精炼元数据) */}
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-video-panel omnimux-inspiration-workbench-left ${activeTab === 'video' ? 'is-active' : ''}`}>
+              {mediaItems.length > 1 ? (
+                <Tabs
+                  className="omnimux-inspiration-media-tabs"
+                  size="sm"
+                  items={mediaItems.map((media, index) => ({ id: String(index), label: `${t(`modal.media.${media.type}`)} ${index + 1}` }))}
+                  activeId={String(mediaIndex)}
+                  onChange={(id) => { pendingSeekRef.current = null; setMediaIndex(Number(id)) }}
+                  aria-label={t('modal.media.label')}
+                />
+              ) : null}
               <div className="omnimux-inspiration-modal-player-box">
                 {videoSrc && !videoFailed ? (
                   <video
@@ -590,18 +618,22 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                     controls
                     className="omnimux-inspiration-player-frame"
                     onError={() => setVideoFailed(true)}
+                    onLoadedMetadata={() => {
+                      if (pendingSeekRef.current == null) return
+                      const start = pendingSeekRef.current
+                      pendingSeekRef.current = null
+                      playAtTime(start)
+                    }}
                     onTimeUpdate={handleTimeUpdate}
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                   />
-                ) : embedUrl ? (
+                ) : !selectedMedia && embedUrl ? (
                   <iframe title={data.title} src={embedUrl} className="omnimux-inspiration-player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
-                ) : images.length ? (
-                  <img src={images[activeImageIndex]} alt={`${data.title} ${activeImageIndex + 1}/${images.length}`} className="omnimux-inspiration-modal-cover-bg" />
                 ) : textOnly ? (
                   <div className="omnimux-inspiration-modal-post-text">{data.script || data.title}</div>
-                ) : cover ? (
-                  <img src={cover} alt={data.title} className="omnimux-inspiration-modal-cover-bg" />
+                ) : selectedMedia?.type === 'image' || cover ? (
+                  <img src={selectedMedia?.type === 'image' ? selectedMedia.url : cover} alt={data.title} className="omnimux-inspiration-modal-cover-bg" />
                 ) : (
                   <div className="omnimux-inspiration-cover-fallback">{data.title.slice(0, 1)}</div>
                 )}
@@ -633,30 +665,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   </div>
                 ) : null}
               </div>
-
-              {images.length > 1 ? (
-                <nav className="omnimux-inspiration-gallery-nav" aria-label={t('modal.images.label')}>
-                  <IconButton
-                    variant="ghost"
-                    size="sm"
-                    aria-label={t('modal.images.previous')}
-                    disabled={activeImageIndex === 0}
-                    onClick={() => setImageIndex((index) => Math.max(0, index - 1))}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
-                  </IconButton>
-                  <span aria-live="polite">{activeImageIndex + 1} / {images.length}</span>
-                  <IconButton
-                    variant="ghost"
-                    size="sm"
-                    aria-label={t('modal.images.next')}
-                    disabled={activeImageIndex === images.length - 1}
-                    onClick={() => setImageIndex((index) => Math.min(images.length - 1, index + 1))}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
-                  </IconButton>
-                </nav>
-              ) : null}
 
               {/* 播放器下方精炼元数据栏 */}
               <div className="omnimux-inspiration-player-meta-box">
@@ -789,10 +797,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                           className={activeSegmentId === segment.id ? 'is-active' : ''}
                           onClick={() => {
                             setActiveSegmentId(segment.id)
-                            if (videoRef.current && segment.start != null) {
-                              videoRef.current.currentTime = segment.start
-                              videoRef.current.play?.().catch(() => {})
-                            }
+                            if (segment.start != null) seekAnalysisVideo(segment.start)
                           }}
                         >
                           <span className="omnimux-inspiration-modal-timecode">{segment.startLabel || '—'}</span>

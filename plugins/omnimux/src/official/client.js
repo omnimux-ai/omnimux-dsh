@@ -20,7 +20,7 @@ export function createOfficialClient(deps) {
   /**
    * @param {string} base
    * @param {string} path
-   * @param {{ method?: string, headers?: Record<string, string>, body?: unknown }} [opts]
+   * @param {{ method?: string, headers?: Record<string, string>, body?: unknown, signal?: AbortSignal }} [opts]
    * @param {() => void} [beforeSend] Trusted synchronous authorization check.
    */
   async function request(base, path, opts = {}, beforeSend) {
@@ -30,6 +30,7 @@ export function createOfficialClient(deps) {
     const multipart = typeof FormData !== 'undefined' && opts.body instanceof FormData
     const init = {
       method,
+      ...(opts.signal ? { signal: opts.signal } : {}),
       headers: {
         accept: 'application/json',
         ...(opts.body !== undefined && !multipart ? { 'content-type': 'application/json' } : {}),
@@ -85,7 +86,7 @@ export function createOfficialClient(deps) {
    * accepts the `sk-` gateway key, and those routes live on the site base rather
    * than the API base. Same key resolution, same error mapping as `withSk`.
    * @param {string} path
-   * @param {{ method?: string, headers?: Record<string, string>, body?: unknown }} [opts]
+   * @param {{ method?: string, headers?: Record<string, string>, body?: unknown, signal?: AbortSignal }} [opts]
    */
   async function withSkSite(path, opts = {}) {
     return request(siteBaseUrl, path, {

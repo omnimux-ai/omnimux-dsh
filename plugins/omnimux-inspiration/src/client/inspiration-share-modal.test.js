@@ -310,24 +310,48 @@ describe('InspirationPreviewModal share popover', () => {
 describe('InspirationPreviewModal saved gallery', () => {
   it('browses all saved images in order and resets for a different item', async () => {
     const urls = ['one', 'two', 'three', 'four'].map((id) => `https://pbs.twimg.com/media/${id}.jpg`)
-    const row = { id: 'gallery-1', type: 'image', content_shape: 'gallery', title: '四张配图', media_urls: urls }
+    const row = { id: 'gallery-1', type: 'image', content_shape: 'gallery', title: '四张配图', media_urls: [], media_items: urls.map((url) => ({ type: 'image', url })) }
     const mounted = await mountRerenderable(row)
     const { document, window, render } = mounted
     const image = () => document.querySelector('.omnimux-inspiration-modal-cover-bg')
     assert.equal(document.querySelector('video'), null)
     assert.equal(image().getAttribute('src'), urls[0])
-    assert.equal(document.querySelector('[aria-label="上一张"]').disabled, true)
     for (let index = 1; index < urls.length; index += 1) {
-      await React.act(async () => document.querySelector('[aria-label="下一张"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+      await React.act(async () => document.querySelector(`[data-tab="${index}"]`).dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
       assert.equal(image().getAttribute('src'), urls[index])
-      assert.equal(document.querySelector('.omnimux-inspiration-gallery-nav [aria-live]').textContent, `${index + 1} / 4`)
+      assert.equal(document.querySelector(`[data-tab="${index}"]`).getAttribute('aria-pressed'), 'true')
     }
-    assert.equal(document.querySelector('[aria-label="下一张"]').disabled, true)
     await render({ ...row, id: 'gallery-2' })
     assert.equal(image().getAttribute('src'), urls[0])
+    await render({ ...row, id: 'legacy-gallery', media_items: undefined, media_urls: urls })
+    await React.act(async () => document.querySelector('[data-tab="3"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+    assert.equal(image().getAttribute('src'), urls[3], 'old saved galleries reuse the same media tabs')
     await render({ id: 'text-1', type: 'link', content_shape: 'text', title: '文字', content: '完整推文正文' })
     assert.equal(document.querySelector('.omnimux-inspiration-modal-post-text').textContent, '完整推文正文')
     assert.equal(document.querySelector('video'), null)
-    assert.equal(document.querySelector('.omnimux-inspiration-gallery-nav'), null)
+    assert.equal(document.querySelector('[data-tab="0"]'), null)
+  })
+})
+
+describe('post media selection and analysis playback (#3369)', () => {
+  it('timecodes return from another video or photo to the analysed first video', async () => {
+    const first = '/omnimux/inspiration/local/media/videos/first.mp4'
+    const { document, window } = await mountRerenderable({
+      id: 'insp-media-timecode', title: '帖子素材', type: 'video',
+      media_urls: [first, '/omnimux/inspiration/local/media/videos/second.mp4'],
+      media_items: [{type:'video',url:first},{type:'video',url:'/omnimux/inspiration/local/media/videos/second.mp4'},{type:'image',url:'/omnimux/inspiration/local/media/images/photo.jpg'}],
+      deconstruction: {shots:[{id:'shot-a',time_range:'00:10-00:12',script:'镜头台词'}]},
+    })
+    window.HTMLMediaElement.prototype.play = async function () {}
+    const click = async (node) => React.act(async () => node.dispatchEvent(new window.MouseEvent('click',{bubbles:true})))
+    for (const index of ['1','2']) {
+      await click(document.querySelector(`[data-tab="${index}"]`))
+      await click(document.querySelector('.omnimux-inspiration-shot-card'))
+      const video = document.querySelector('video')
+      assert.equal(video?.getAttribute('src'), first)
+      await React.act(async () => video.dispatchEvent(new window.Event('loadedmetadata')))
+      assert.equal(video.currentTime, 10)
+    }
+
   })
 })

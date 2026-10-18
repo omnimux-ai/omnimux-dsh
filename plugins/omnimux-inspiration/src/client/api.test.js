@@ -577,3 +577,21 @@ describe('share request payload — what a cloud row hands to the Host', () => {
     assert.equal(shareDeconstructionOf({ analysis: {} }), undefined)
   })
 })
+
+
+describe('typed post images', () => {
+  it('reads mixed-post images from typed media without using video-only media_urls', () => {
+    const first = '/omnimux/inspiration/local/media/images/first.jpg'
+    const second = '/omnimux/inspiration/local/media/images/second.jpg'
+    const video = '/omnimux/inspiration/local/media/videos/one.mp4'
+    assert.deepEqual(pickImageSources({
+      type: 'video', media_urls: [video],
+      media_items: [{ type: 'image', url: first }, { type: 'video', url: video }, { type: 'image', url: second }],
+    }), [first, second])
+    assert.deepEqual(pickImageSources({
+      type: 'image', media_urls: ['https://images.example/stale.jpg'],
+      media_items: [{ type: 'image', url: first }],
+    }), [first], 'the typed collection takes priority over legacy gallery fields')
+    assert.deepEqual(pickImageSources({ type: 'video', media_urls: [video], media_items: [{ type: 'video', url: video }] }), [])
+  })
+})

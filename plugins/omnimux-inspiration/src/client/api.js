@@ -393,6 +393,8 @@ export function pickCoverSrc(row) {
 export function pickImageSources(row) {
   if (!row || typeof row !== 'object') return []
   const rec = /** @type {Record<string, unknown>} */ (row)
+  const imported = pickImportedMedia(row)
+  if (imported.length) return imported.filter((item) => item.type === 'image').map((item) => item.url)
   if (rec.type === 'video') return []
   const isImage = ['image', 'photo', 'gallery'].includes(String(rec.type || ''))
     || ['photo', 'gallery'].includes(String(rec.content_shape || ''))
@@ -447,6 +449,16 @@ export function pickVideoSrc(row) {
   if (first.startsWith('/omnimux/inspiration/local/media/')) return first
   if (first.startsWith('/omnimux/inspiration/media/')) return first
   return ''
+}
+
+/** Typed local attachments, ordered as the source post. Legacy rows use their existing player. */
+export function pickImportedMedia(row) {
+  if (!Array.isArray(row?.media_items)) return []
+  return row.media_items.flatMap((item) => {
+    if (item?.type !== 'video' && item?.type !== 'image') return []
+    const url = pickVideoSrc({ media_urls: [item.url] })
+    return url ? [{ type: item.type, url }] : []
+  })
 }
 
 /**

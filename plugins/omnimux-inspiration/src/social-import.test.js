@@ -7,6 +7,7 @@ import { createLocalStore } from './local-store.js'
 import { createLocalInspirationDispatcher, detectPlatformFromUrl } from './http-routes.js'
 import { createSocialFetcher, hasSocialPayload, platformDisplayName } from './index.js'
 import { FALLBACK_SWITCH_ENV, fallbackResolveSocial, isSocialFallbackEnabled } from './scraper-fallback.js'
+import { parseSocialMeta } from './http-handlers.js'
 import { formatPlatformName } from './client/feed-helpers.js'
 import { en, zh } from './client/locales.js'
 
@@ -142,11 +143,15 @@ describe('social import — media and degraded persistence', () => {
     })
 
     assert.equal(res.status, 200)
-    assert.equal(res.body.media_degraded, true)
+    assert.equal(res.body.media_degraded, undefined)
+    assert.equal(res.body.data.import_status, 'ready')
+    assert.equal(res.body.data.media_items.length, 1)
+    assert.ok(res.body.data.local_paths.image_1)
     assert.equal(res.body.data.type, 'image')
     assert.ok(res.body.data.cover_url)
     assert.equal(res.body.data.content_shape, 'photo')
-    assert.deepEqual(res.body.data.media_urls, ['https://pbs.twimg.com/media/only-photo.jpg'])
+    assert.deepEqual(res.body.data.media_urls, [])
+    assert.equal(res.body.data.media_items[0].type, 'image')
   })
 
   it('persists four safe photos in source order across storage reloads', async () => {
@@ -163,8 +168,14 @@ describe('social import — media and degraded persistence', () => {
     assert.equal(res.status, 200)
     assert.equal(res.body.data.type, 'image')
     assert.equal(res.body.data.content_shape, 'gallery')
-    assert.deepEqual(res.body.data.media_urls, images)
-    assert.deepEqual(createLocalStore({ paths }).get(res.body.data.id).media_urls, images)
+    assert.deepEqual(res.body.data.media_urls, [])
+    assert.deepEqual(res.body.data.media_items.map((item) => item.type), ['image', 'image', 'image', 'image'])
+    const saved = createLocalStore({ paths }).get(res.body.data.id)
+    assert.deepEqual(saved.media_items, res.body.data.media_items)
+    for (let index = 0; index < 4; index += 1) {
+      assert.ok(existsSync(saved.local_paths[`image_${index + 1}`]))
+      assert.ok(saved.media_items[index].url.endsWith(saved.local_paths[`image_${index + 1}`].split('/').pop()))
+    }
   })
 
   it('preserves X photo entities and keeps video media separate from photos', async () => {
@@ -182,7 +193,9 @@ describe('social import — media and degraded persistence', () => {
       paths, url: 'https://x.com/creator/status/224',
     })
     assert.equal(res.body.data.content_shape, 'gallery')
-    assert.deepEqual(res.body.data.media_urls, images)
+    assert.deepEqual(res.body.data.media_urls, [])
+    assert.equal(res.body.data.media_items.length, 4)
+    assert.deepEqual(parseSocialMeta({ data: { entities: { media: photos }, extended_entities: { media: photos } } }).images, images)
     const { res: video } = await importUrl({
       socialFetcher: async () => ({ ...X_VIDEO_ENVELOPE, data: { ...X_VIDEO_ENVELOPE.data, images } }),
       paths, url: 'https://x.com/creator/status/225',
@@ -852,5 +865,44 @@ describe('social import — a cover no browser can render is not published', () 
     assert.ok(res.body.data.local_paths.video, 'the TikTok video stream must be downloaded and landed')
     assert.equal(res.body.data.media_urls.length, 1)
     assert.equal(res.body.media_degraded, undefined)
+  })
+})
+
+
+describe('social import — upstream abort is not caller cancellation (#3369)', () => {
+  for (const signal of [undefined, new AbortController().signal]) {
+    it(`recovers through fallback after upstream abort (signal=${Boolean(signal)})`, async () => {
+      let calls = 0
+      const fetcher = createSocialFetcher({
+        getTool: () => ({ execute: async () => { throw Object.assign(new Error('aborted'), { name: 'AbortError', code: 'ABORT_ERR' }) } }),
+        fallback: async () => { calls += 1; return X_VIDEO_ENVELOPE },
+      })
+      const result = await fetcher({ platform: 'x', url: 'https://x.com/brainextends/status/2111569272732553535?s=', signal })
+      assert.equal(result, X_VIDEO_ENVELOPE)
+      assert.equal(calls, 1)
+    })
+  }
+
+  it('reports resolver failure rather than cancellation when both sources fail', async () => {
+    const fetcher = createSocialFetcher({
+      getTool: () => ({ execute: async () => { throw Object.assign(new Error('upstream timed out'), { name: 'AbortError' }) } }),
+      fallback: async () => { throw Object.assign(new Error('fallback timed out'), { name: 'AbortError' }) },
+    })
+    await assert.rejects(fetcher({ platform: 'x', url: 'https://x.com/a/status/12345' }), (error) => {
+      assert.notEqual(error.name, 'AbortError')
+      assert.match(error.message, /云端社媒解析失败.*upstream timed out/)
+      return true
+    })
+  })
+
+  it('does not recover or persist after actual caller cancellation', async () => {
+    const controller = new AbortController()
+    let fallbackCalls = 0
+    const fetcher = createSocialFetcher({
+      getTool: () => ({ execute: async () => { controller.abort(); throw new Error('connection closed') } }),
+      fallback: async () => { fallbackCalls += 1; return X_VIDEO_ENVELOPE },
+    })
+    await assert.rejects(fetcher({ platform: 'x', url: 'https://x.com/a/status/12345', signal: controller.signal }), { name: 'AbortError' })
+    assert.equal(fallbackCalls, 0)
   })
 })

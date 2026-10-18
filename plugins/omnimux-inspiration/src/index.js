@@ -110,9 +110,6 @@ async function runFallback(fallback, params) {
     if (params?.signal?.aborted) {
       throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') ? err : createAbortError('This operation was aborted', err)
     }
-    if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
-      throw err
-    }
     return null
   }
 }
@@ -157,9 +154,8 @@ export function createSocialFetcher({ getTool, fallback = fallbackResolveSocial 
         if (signal?.aborted) {
           throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') ? err : createAbortError('This operation was aborted', err)
         }
-        if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
-          throw err
-        }
+        // Only the caller's signal cancels the import. An upstream timeout can
+        // also throw AbortError and must still reach the public resolver.
         cloudError = err
       }
     }

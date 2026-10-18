@@ -713,7 +713,7 @@ describe('import landing — unchanged behaviour', () => {
     const images = Array.from({ length: 4 }, (_, index) => `https://images.example/${index + 1}.jpg`)
     const completed = {
       ...placeholder, type: 'image', content_shape: 'gallery', import_status: 'ready',
-      title: '完成后的图文', content: '完成后的推文正文与四张图片', media_urls: images, cover_url: images[0],
+      title: '完成后的图文', content: '完成后的推文正文与四张图片', media_urls: [], media_items: images.map((url) => ({ type: 'image', url })), cover_url: images[0],
     }
     const host = createHost({
       contentImport: jsonResponse(202, { success: true, data: placeholder }),
@@ -752,7 +752,7 @@ describe('import landing — unchanged behaviour', () => {
     const id = 'persistent-gallery'
     const placeholder = { id, title: 'https://x.com/a/status/794', source_platform: 'x', type: 'video', import_status: 'importing' }
     const images = Array.from({ length: 4 }, (_, index) => `https://images.example/saved-${index + 1}.jpg`)
-    const completed = { ...placeholder, title: '已保存图文', content: '完成后仍留在灵感库', type: 'image', content_shape: 'gallery', media_urls: images, import_status: 'ready' }
+    const completed = { ...placeholder, title: '已保存图文', content: '完成后仍留在灵感库', type: 'image', content_shape: 'gallery', media_urls: [], media_items: images.map((url) => ({ type: 'image', url })), import_status: 'ready' }
     const host = createHost({
       localItems: [], contentImport: jsonResponse(202, { success: true, data: placeholder }),
       localItemGet: () => {
@@ -848,7 +848,7 @@ describe('import landing — unchanged behaviour', () => {
   it('continues polling a filtered-out pin through pending updates without inserting it into the filtered list', async () => {
     const id = 'filtered-import'
     const placeholder = { id, title: 'https://x.com/a/status/790', source_platform: 'x', type: 'video', import_status: 'importing', import_stage: 'resolving' }
-    const completed = { ...placeholder, type: 'image', import_status: 'ready', content: '最终正文', media_urls: ['https://images.example/final.jpg'] }
+    const completed = { ...placeholder, type: 'image', import_status: 'ready', content: '最终正文', media_urls: [], media_items: [{ type: 'image', url: 'https://images.example/final.jpg' }] }
     let polls = 0
     const host = createHost({
       localItems: [{ id: 'matching-row', title: '当前筛选匹配的旧行', source_platform: 'x', type: 'video' }],

@@ -70,3 +70,18 @@ describe('inspiration cards — shared account-feed mapping', () => {
   })
 
 })
+
+
+describe('inspiration cards — typed post attachments', () => {
+  it('counts saved images for image and mixed-video posts while keeping the shared shapes', () => {
+    const media = [{ type: 'image', url: '/omnimux/inspiration/local/media/images/a.jpg' }, { type: 'image', url: '/omnimux/inspiration/local/media/images/b.jpg' }]
+    const image = toInspirationCardRow({ id: 'typed-image', source_platform: 'x', type: 'image', media_urls: [], media_items: media })
+    assert.equal(image.image_count, 2)
+    assert.equal(image.cover_key, media[0].url)
+    assert.equal(image.media_kind, 'image')
+    const mixed = toInspirationCardRow({ id: 'typed-mixed', source_platform: 'x', type: 'video', media_urls: ['/omnimux/inspiration/local/media/videos/a.mp4'], media_items: [media[0], { type: 'video', url: '/omnimux/inspiration/local/media/videos/a.mp4' }, media[1]] })
+    assert.equal(mixed.image_count, 2)
+    assert.equal(mixed.card_type, 'text-media')
+    assert.equal(mixed.media_kind, 'video')
+  })
+})
