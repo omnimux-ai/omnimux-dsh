@@ -33,7 +33,7 @@ ffmpeg 缺失不会阻止插件加载；工具/seam 调用时会抛 `ffmpeg-miss
 | `audio_extract` | single | 600s | `videoUrl` + `outputFormat mp3\|m4a` |
 | `audio_prepare` | single | 300s | `audioUrl` + 重编码参数 |
 | `video_thumbnail_extract` | single | 180s | `videoUrl` + 时间/尺寸 |
-| `video_inline_analysis_prepare` | single | 600s | `videoUrl` + 体积上限（crf+scale 递减逼近） |
+| `video_inline_analysis_prepare` | single | 600s | `videoUrl` + 体积上限（crf+scale 递减逼近）；显式 `preserveTimeline: true, keepAudio: true` 保留完整时间轴及可选 AAC 音轨，核验前后时长，超预算失败；默认仍为旧前 100 秒无声预览 |
 | `video_scene_detect` | multi | 300s | `videoUrl` + `threshold` |
 | `slideshow_export` | single | 1200s | `imageUrls[]` + 转场/背景乐 |
 | `video_export` | single | 1200s | `clips[]` + `subtitles` / 分辨率 / 画幅 |

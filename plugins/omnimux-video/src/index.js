@@ -115,7 +115,7 @@ export function apply(ctx, config = {}) {
           'audio_extract: { videoUrl, startSeconds?, durationSeconds?, outputFormat?, audioBitrate? }. ' +
           'audio_prepare: { audioUrl, durationSeconds?, outputFormat?, audioBitrate?, sampleRate?, channels? }. ' +
           'video_thumbnail_extract: { videoUrl, timeSeconds?, width?, height?, maxEdge?, fit? }. ' +
-          'video_inline_analysis_prepare: { videoUrl, maxRequestBytes?, maxSourceBytes? }. ' +
+          'video_inline_analysis_prepare: { videoUrl, maxRequestBytes?, maxSourceBytes?, preserveTimeline?, keepAudio? } (explicit preserveTimeline verifies full duration; keepAudio retains optional AAC audio; budget failure rejects). ' +
           'video_scene_detect: { videoUrl, threshold?, extractFrames? }. ' +
           'slideshow_export: { imageUrls[], durationPerImage?, aspectRatio?, resolution?, transitionType?, frameRate?, audioUrl?, audioVolume? }. ' +
           'video_export: { clips:[{url,type?,duration?,start?,volume?}], resolution?, aspectRatio?, width?, height?, frameRate?, subtitles?, timeline? }. ' +
