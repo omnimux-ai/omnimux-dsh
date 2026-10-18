@@ -95,6 +95,60 @@ function declaredRegistration(source, plugin, path) {
   return registration
 }
 
+/** Shared comparison core; the caller owns origin and installed-file checks. */
+export async function prepareClientProofBundle(bundle) {
+  const registration = declaredRegistration(bundle.source, bundle.plugin, bundle.path)
+  const normalized = await canonicalCode(registration.source)
+  return {
+    ...bundle,
+    registration: registration.source,
+    registrationSha256: sha256(registration.source),
+    normalized,
+    codeSha256: sha256(normalized),
+  }
+}
+
+export async function compareClientProofBundles(bundles, scripts, renderer = 'ego renderer') {
+  const targetPlugins = new Set(bundles.map(bundle => bundle.plugin))
+  await Promise.all(scripts.map(async (script) => {
+    script.registrations = runtimeRegistrations(script.source, `CDP script ${script.scriptId}`)
+    await Promise.all(script.registrations
+      .filter((registration) => targetPlugins.has(registration.id))
+      .map(async (registration) => { registration.normalized = await canonicalCode(registration.source) }))
+    // The whole Host script is evidence, while the registration is the
+    // comparison unit: concatenation may rename symbols between factories.
+    script.normalized = await canonicalCode(script.source)
+  }))
+  return bundles.map((bundle) => {
+    const versionDigests = new Set(scripts.filter((script) => urlMentionsPlugin(script.url, bundle.plugin))
+      .map((script) => sha256(script.source)))
+    assert.ok(versionDigests.size <= 1, `${bundle.plugin} has ambiguous old/new client scripts in the ${renderer}`)
+    const candidates = scripts.flatMap((script) => script.registrations
+      .filter((registration) => registration.id === bundle.plugin)
+      .map((registration) => ({ script, registration })))
+    assert.ok(candidates.length > 0, `${bundle.plugin} current client bundle is not loaded in the ${renderer}`)
+    assert.equal(candidates.length, 1, `${bundle.plugin} has multiple registrations in the ${renderer}`)
+    const loaded = candidates[0]
+    assert.ok(loaded.registration.normalized === bundle.normalized, `${bundle.plugin} loaded registration does not match its current client bundle`)
+    const rawExact = loaded.registration.source === bundle.registration
+    return {
+      plugin: bundle.plugin,
+      bundlePath: bundle.path,
+      bundleSha256: bundle.sha256,
+      bundleRegistrationSha256: bundle.registrationSha256,
+      bundleCodeSha256: bundle.codeSha256,
+      bundleBytes: bundle.bytes,
+      loadedScriptUrl: loaded.script.url || null,
+      loadedScriptSha256: sha256(loaded.script.source),
+      loadedScriptCodeSha256: sha256(loaded.script.normalized),
+      loadedRegistrationSha256: sha256(loaded.registration.source),
+      loadedRegistrationCodeSha256: sha256(loaded.registration.normalized),
+      match: rawExact ? 'raw-registration' : 'normalized-registration',
+      matchingRegistrationCount: candidates.length,
+    }
+  })
+}
+
 function cleanPluginId(value) {
   assert.equal(typeof value, 'string', 'Plugin identifier must be a string')
   assert.match(value, /^omnimux(?:-[a-z0-9-]+)?$/, `Invalid OmniMux plugin identifier: ${value}`)
@@ -173,18 +227,7 @@ export async function captureRuntimeProof(tab, { root, targets = [], url, target
   assert.ok(allowedAddress(url, target), 'Runtime proof requires a local Dev origin on 45120')
   assert.ok(Array.isArray(targets), 'Runtime proof targets must be an array')
   const plugins = [...new Set(['omnimux', ...targets.map(pluginFromTarget)])]
-  const bundles = await Promise.all(plugins.map(async (plugin) => {
-    const bundle = declaredClientBundle(root, plugin)
-    const registration = declaredRegistration(bundle.source, plugin, bundle.path)
-    const normalized = await canonicalCode(registration.source)
-    return {
-      ...bundle,
-      registration: registration.source,
-      registrationSha256: sha256(registration.source),
-      normalized,
-      codeSha256: sha256(normalized),
-    }
-  }))
+  const bundles = await Promise.all(plugins.map(plugin => prepareClientProofBundle(declaredClientBundle(root, plugin))))
   const beforeUrl = await assertTabOrigin(tab, url, 'before proof')
   const cdp = tab.cdp
   assert.ok(cdp?.send && cdp?.readEvents, 'Selected ego tab does not expose the CDP Debugger API')
@@ -212,44 +255,7 @@ export async function captureRuntimeProof(tab, { root, targets = [], url, target
       scripts.push({ scriptId: event.scriptId, url: event.url || '', source: response.scriptSource })
     }
     assert.ok(scripts.length > 0, 'CDP emitted no same-origin /plugins/ bundle scripts after Debugger.enable')
-    const targetPlugins = new Set(plugins)
-    await Promise.all(scripts.map(async (script) => {
-      script.registrations = runtimeRegistrations(script.source, `CDP script ${script.scriptId}`)
-      await Promise.all(script.registrations
-        .filter((registration) => targetPlugins.has(registration.id))
-        .map(async (registration) => { registration.normalized = await canonicalCode(registration.source) }))
-      // This digest still identifies the complete Host script. It is evidence,
-      // not the module comparison unit, because concat can rename local symbols.
-      script.normalized = await canonicalCode(script.source)
-    }))
-    const proofBundles = bundles.map((bundle) => {
-      const versionDigests = new Set(scripts.filter((script) => urlMentionsPlugin(script.url, bundle.plugin))
-        .map((script) => sha256(script.source)))
-      assert.ok(versionDigests.size <= 1, `${bundle.plugin} has ambiguous old/new client scripts in the ego renderer`)
-      const candidates = scripts.flatMap((script) => script.registrations
-        .filter((registration) => registration.id === bundle.plugin)
-        .map((registration) => ({ script, registration })))
-      assert.ok(candidates.length > 0, `${bundle.plugin} current client bundle is not loaded in the ego renderer`)
-      assert.equal(candidates.length, 1, `${bundle.plugin} has multiple registrations in the ego renderer`)
-      const loaded = candidates[0]
-      assert.ok(loaded.registration.normalized === bundle.normalized, `${bundle.plugin} loaded registration does not match its current client bundle`)
-      const rawExact = loaded.registration.source === bundle.registration
-      return {
-        plugin: bundle.plugin,
-        bundlePath: bundle.path,
-        bundleSha256: bundle.sha256,
-        bundleRegistrationSha256: bundle.registrationSha256,
-        bundleCodeSha256: bundle.codeSha256,
-        bundleBytes: bundle.bytes,
-        loadedScriptUrl: loaded.script.url || null,
-        loadedScriptSha256: sha256(loaded.script.source),
-        loadedScriptCodeSha256: sha256(loaded.script.normalized),
-        loadedRegistrationSha256: sha256(loaded.registration.source),
-        loadedRegistrationCodeSha256: sha256(loaded.registration.normalized),
-        match: rawExact ? 'raw-registration' : 'normalized-registration',
-        matchingRegistrationCount: candidates.length,
-      }
-    })
+    const proofBundles = await compareClientProofBundles(bundles, scripts)
     const afterUrl = await assertTabOrigin(tab, url, 'after proof')
     return {
       requestedOrigin: new URL(url).origin,
