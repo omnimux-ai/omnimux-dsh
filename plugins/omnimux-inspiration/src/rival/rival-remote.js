@@ -42,11 +42,10 @@ const HUB_GATE_CODES = new Set([RIVAL_ERROR_CODES.NEEDS_OMNIMUX, RIVAL_ERROR_COD
  * Inspect only the bounded envelope layers the mappers unwrap, never post rows
  * or arbitrary nested data, and never include upstream text in our message.
  * @param {unknown} value
- * @param {number} [depth]
- * @returns {Record<string, any> | null}
+ * @returns {boolean}
  */
-function findPayloadFailure(value, depth = 0) {
-  if (!isPlainObject(value)) return null
+function hasPayloadFailure(value) {
+  if (!isPlainObject(value)) return false
   const hasError = value.error !== false && value.error !== 0 && !isEmptyValue(value.error)
   const failedStatus = [value.code, value.status, value.status_code].some((status) => {
     const code = asNumber(status)
@@ -54,13 +53,38 @@ function findPayloadFailure(value, depth = 0) {
     return typeof status === 'string'
       && (/^(?:error|failed|failure|denied|forbidden|unauthorized)$/i.test(status.trim()) || HUB_GATE_CODES.has(status))
   })
-  if (value.success === false || value.ok === false || hasError || failedStatus) return value
+  return value.success === false || value.ok === false || hasError || failedStatus
+}
+
+/** @param {unknown} value @param {number} [depth] */
+function findPayloadFailure(value, depth = 0) {
+  if (!isPlainObject(value)) return null
+  if (hasPayloadFailure(value)) return value
   if (depth >= 3) return null
   for (const key of ['data', 'result', 'user', 'channel', 'author']) {
     const failure = findPayloadFailure(value[key], depth + 1)
     if (failure) return failure
   }
   return null
+}
+
+/** Inspect only the three fixed containers added for the TikTok user answer. */
+function findTikTokUserFailure(data) {
+  const wrapper = isPlainObject(data) ? data.userInfo : null
+  if (!isPlainObject(wrapper)) return null
+  return [wrapper, wrapper.user, wrapper.stats].find((layer) => hasPayloadFailure(layer) || hasTikTokUserCodeFailure(layer)) || null
+}
+
+/** The new TikTok containers allow only 0/2xx finite numeric business codes. */
+function hasTikTokUserCodeFailure(value) {
+  if (!isPlainObject(value)) return false
+  if (value.status === false) return true
+  return [value.code, value.status, value.status_code].some((status) => {
+    const text = typeof status === 'string' ? status.trim() : ''
+    const numeric = typeof status === 'number' ? status
+      : (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(text) ? Number(text) : NaN)
+    return Number.isFinite(numeric) && numeric !== 0 && (numeric < 200 || numeric >= 300)
+  })
 }
 
 export class RivalRemoteError extends Error {
@@ -193,6 +217,7 @@ export function createRivalRemote(opts = {}) {
         async fetchUser({ platform, value }) {
           const raw = await execute({ platform, capability: CLOUD_CAPABILITY_USER, id: value })
           const failure = findPayloadFailure(raw)
+            || (platform === 'tiktok' ? findTikTokUserFailure(raw?.data) : null)
           if (failure) {
             throw new RivalRemoteError(classifyRemoteError(failure), '云端返回账号资料采集失败，请稍后重试', { callsUsed: guard.calls() })
           }
@@ -205,7 +230,7 @@ export function createRivalRemote(opts = {}) {
               raw: { platform, capability: CLOUD_CAPABILITY_USER, model: raw?.model, field: raw?.field, value: raw?.value },
             }
           }
-          const mapped = mapRivalUser(data)
+          const mapped = mapRivalUser(data, { platform })
           if (!mapped.recognized) {
             throw new RivalRemoteError(RIVAL_ERROR_CODES.CLOUD_ERROR, '云端账号资料格式无法识别，请稍后重试', { callsUsed: guard.calls() })
           }

@@ -159,6 +159,7 @@ export function createRivalAccountsService(deps) {
       calls_used: cycle.calls(),
       accountPatch: {
         nickname: profile.nickname || account.nickname,
+        avatar_url: profile.avatar_url || account.avatar_url,
         bio: profile.bio || account.bio,
         followers: profile.followers ?? account.followers,
         posts_count: profile.posts_count ?? account.posts_count,

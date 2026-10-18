@@ -18,7 +18,7 @@ afterEach(() => {
   for (const root of sandboxes.splice(0)) rmSync(root, { recursive: true, force: true })
 })
 
-function makeWorld({ user = PROFILE, posts = { items: [] } } = {}) {
+function makeWorld({ user = PROFILE, posts = { items: [] }, platform = 'youtube' } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'rival-payload-'))
   sandboxes.push(root)
   const paths = resolveRivalPaths({ paths: { dir: join(root, 'inspirations'), mediaDir: join(root, 'media') } })
@@ -29,7 +29,7 @@ function makeWorld({ user = PROFILE, posts = { items: [] } } = {}) {
     getTool: () => ({
       execute: async (args) => {
         calls.push(args.capability)
-        return { data: args.capability === 'user' ? user : posts }
+        return { platform: args.platform, capability: args.capability, model: `${args.platform}-${args.capability}`, data: args.capability === 'user' ? user : posts }
       },
     }),
     now,
@@ -38,10 +38,12 @@ function makeWorld({ user = PROFILE, posts = { items: [] } } = {}) {
   const scheduler = createRivalRefreshScheduler({ store, remote, now, runCycle: (input) => service.runCycle(input) })
   service = createRivalAccountsService({ store, remote, scheduler, now })
   const account = store.addAccount({
-    platform: 'youtube',
+    platform,
     external_id: '@example',
     external_id_kind: 'handle-unverified',
     nickname: 'Saved account',
+    bio: 'Saved biography',
+    avatar_url: 'https://example.com/saved-avatar.jpg',
     followers: 120,
     last_success_at: PREVIOUS_SUCCESS,
     last_refresh_at: PREVIOUS_SUCCESS,
@@ -104,6 +106,190 @@ describe('refresh payload validation preserves the last successful data', () => 
       assert.equal(world.store.readPosts(world.account.id)[0].id, 'saved-post')
     })
   }
+})
+
+describe('TikTok userInfo profile is consumed through the real refresh cycle', () => {
+  // This is P after the hub's existing one-layer { code: 200, data: P }
+  // unwrap. The seam returns { platform, capability, model, data: P }.
+  const fixture = {
+    userInfo: {
+      user: { nickname: 'Fixture Creator', signature: 'Fixture biography', avatarLarger: 'https://example.com/avatar.jpg' },
+      stats: { followerCount: 0, videoCount: 2 },
+    },
+  }
+
+  it('persists all five leaves and posts before recording a new successful refresh', async () => {
+    const world = makeWorld({ platform: 'tiktok', user: fixture, posts: { items: [{ id: 'new-post', play_count: 12 }] } })
+    const writePosts = world.store.writePosts
+    world.store.writePosts = (...args) => {
+      assert.equal(world.store.getAccount(world.account.id).last_success_at, PREVIOUS_SUCCESS)
+      assert.equal(world.store.getAccount(world.account.id).refresh_count, 3)
+      return writePosts(...args)
+    }
+    const row = await refresh(world)
+    assert.equal(row.refresh_state, 'idle')
+    assert.equal(row.error_code, null)
+    assert.equal(row.consecutive_failures, 0)
+    assert.equal(row.nickname, 'Fixture Creator')
+    assert.equal(row.bio, 'Fixture biography')
+    assert.equal(row.avatar_url, 'https://example.com/avatar.jpg')
+    assert.equal(row.followers, 0)
+    assert.equal(row.posts_count, 2)
+    assert.equal(row.metrics.latest.followers, 0)
+    assert.equal(row.metrics.latest.posts_count, 2)
+    assert.equal(row.refresh_count, 4)
+    assert.equal(row.last_success_at, new Date(NOW).toISOString())
+    assert.equal(row.last_refresh_at, new Date(NOW).toISOString())
+    const saved = world.store.readPostsFile(world.account.id)
+    assert.equal(saved.items.some((post) => post.id === 'new-post' && post.last_seen_at === new Date(NOW).toISOString()), true)
+    assert.equal(saved.field_probe.avatar_url, 'userInfo.user.avatarLarger')
+    assert.equal(saved.field_probe.followers, 'userInfo.stats.followerCount')
+    assert.deepEqual(world.calls, ['user', 'posts'])
+  })
+
+  for (const avatarLarger of [undefined, 'file:///private/avatar.jpg', 'https://']) {
+    it(`keeps the cached avatar for a recognized partial profile with ${String(avatarLarger)}`, async () => {
+      const world = makeWorld({ platform: 'tiktok', user: { userInfo: { user: { nickname: 'Fixture Creator', avatarLarger }, stats: {} } } })
+      const row = await refresh(world)
+      assert.equal(row.refresh_state, 'idle')
+      assert.equal(row.nickname, 'Fixture Creator')
+      assert.equal(row.avatar_url, 'https://example.com/saved-avatar.jpg')
+      assert.equal(row.followers, 120)
+      assert.deepEqual(world.calls, ['user', 'posts'])
+    })
+  }
+
+  const failures = [
+    ['missing stats', { userInfo: { user: { nickname: 'Untrusted account' } } }],
+    ['missing user', { userInfo: { stats: { followerCount: 0 } } }],
+    ['wrong stats type', { userInfo: { user: { nickname: 'Untrusted account' }, stats: [] } }],
+    ['all unusable leaves', { userInfo: { user: { nickname: ' ', avatarLarger: 'file:///private/avatar.jpg' }, stats: { followerCount: -1, videoCount: '2' } } }],
+    ['failed wrapper', { nickname: 'Fallback account', userInfo: { ...fixture.userInfo, success: false } }],
+    ['failed nested user', { nickname: 'Fallback account', userInfo: { ...fixture.userInfo, user: { ...fixture.userInfo.user, error: { message: 'sensitive-upstream-detail' } } } }],
+    ['failed nested stats', { nickname: 'Fallback account', userInfo: { ...fixture.userInfo, stats: { ...fixture.userInfo.stats, code: 500 } } }],
+    ['failed original user', { ...fixture, user: { code: 500 } }],
+  ]
+  for (const [name, user] of failures) {
+    it(`rejects ${name} before requesting posts or changing successful data`, async () => {
+      const world = makeWorld({ platform: 'tiktok', user })
+      const cached = world.store.readPostsFile(world.account.id)
+      const row = await refresh(world)
+      assert.equal(row.refresh_state, 'backoff')
+      assert.equal(row.error_code, 'cloud-error')
+      assert.equal(row.error_message.includes('sensitive-upstream-detail'), false)
+      assert.equal(row.refresh_count, 3)
+      assert.equal(row.last_success_at, PREVIOUS_SUCCESS)
+      assert.equal(row.nickname, 'Saved account')
+      assert.equal(row.bio, 'Saved biography')
+      assert.equal(row.avatar_url, 'https://example.com/saved-avatar.jpg')
+      assert.equal(row.followers, 120)
+      assert.deepEqual(world.store.readPostsFile(world.account.id), cached)
+      assert.deepEqual(world.calls, ['user'])
+    })
+  }
+
+  const statuses = [{ code: 500 }, { status: 'failed' }, { status_code: -1 }, { success: false }, { ok: false }, { error: 'sensitive-upstream-detail' }]
+  for (const container of ['wrapper', 'user', 'stats']) {
+    for (const status of statuses) {
+      it(`refuses ${container} business failure ${Object.keys(status)[0]} before accepting a flat fallback`, async () => {
+        const userInfo = structuredClone(fixture.userInfo)
+        Object.assign(container === 'wrapper' ? userInfo : userInfo[container], status)
+        const world = makeWorld({ platform: 'tiktok', user: { nickname: 'Flat fallback', userInfo } })
+        const cached = world.store.readPostsFile(world.account.id)
+        const row = await refresh(world)
+        assert.equal(row.refresh_state, 'backoff')
+        assert.equal(row.error_code, 'cloud-error')
+        assert.equal(row.last_success_at, PREVIOUS_SUCCESS)
+        assert.equal(row.refresh_count, 3)
+        assert.equal(row.nickname, 'Saved account')
+        assert.equal(row.error_message.includes('sensitive-upstream-detail'), false)
+        assert.deepEqual(world.store.readPostsFile(world.account.id), cached)
+        assert.deepEqual(world.calls, ['user'])
+      })
+    }
+  }
+
+  const rejectedCodes = [{ code: 1 }, { status: 302 }, { status_code: ' 1 ' }, { status: '3.02e2' }, { status: false }]
+  for (const container of ['wrapper', 'user', 'stats']) {
+    for (const status of rejectedCodes) {
+      it(`refuses non-success business code ${JSON.stringify(status)} in ${container} before fallback`, async () => {
+        const userInfo = structuredClone(fixture.userInfo)
+        Object.assign(container === 'wrapper' ? userInfo : userInfo[container], status)
+        const world = makeWorld({ platform: 'tiktok', user: { nickname: 'Flat fallback', userInfo } })
+        const cached = world.store.readPostsFile(world.account.id)
+        const row = await refresh(world)
+        assert.equal(row.refresh_state, 'backoff')
+        assert.equal(row.error_code, 'cloud-error')
+        assert.equal(row.last_success_at, PREVIOUS_SUCCESS)
+        assert.equal(row.refresh_count, 3)
+        assert.equal(row.nickname, 'Saved account')
+        assert.deepEqual(world.store.readPostsFile(world.account.id), cached)
+        assert.deepEqual(world.calls, ['user'])
+      })
+    }
+  }
+
+  const acceptedCodes = [
+    { code: 0, status: 200, status_code: 299.5 },
+    { code: ' 0 ', status: '2e2', status_code: ' 2.99e2 ' },
+    { code: '', status: null, status_code: null },
+    { code: false, status_code: false },
+    { code: '1,0', status: '0x1', status_code: '0b1' },
+  ]
+  for (const container of ['wrapper', 'user', 'stats']) {
+    for (const status of acceptedCodes) {
+      it(`keeps success or absent business code ${JSON.stringify(status)} in ${container}`, async () => {
+        const userInfo = structuredClone(fixture.userInfo)
+        Object.assign(container === 'wrapper' ? userInfo : userInfo[container], status)
+        const world = makeWorld({ platform: 'tiktok', user: { userInfo } })
+        const row = await refresh(world)
+        assert.equal(row.refresh_state, 'idle')
+        assert.equal(row.nickname, 'Fixture Creator')
+        assert.equal(row.followers, 0)
+        assert.equal(row.refresh_count, 4)
+        assert.deepEqual(world.calls, ['user', 'posts'])
+      })
+    }
+  }
+
+  it('keeps old root business-code behavior instead of applying the new container rule globally', async () => {
+    const world = makeWorld({ platform: 'tiktok', user: { code: 1, nickname: 'Old flat profile' } })
+    assert.equal((await refresh(world)).refresh_state, 'idle')
+    assert.deepEqual(world.calls, ['user', 'posts'])
+  })
+
+  it('does not record success when persisting the new profile posts fails', async () => {
+    const world = makeWorld({ platform: 'tiktok', user: fixture, posts: { items: [{ id: 'new-post' }] } })
+    const cached = world.store.readPostsFile(world.account.id)
+    world.store.writePosts = () => { throw new Error('fixture disk failure') }
+    const row = await refresh(world)
+    assert.equal(row.refresh_state, 'backoff')
+    assert.equal(row.last_success_at, PREVIOUS_SUCCESS)
+    assert.equal(row.refresh_count, 3)
+    assert.equal(row.nickname, 'Saved account')
+    assert.equal(row.avatar_url, 'https://example.com/saved-avatar.jpg')
+    assert.deepEqual(world.store.readPostsFile(world.account.id), cached)
+    assert.deepEqual(world.calls, ['user', 'posts'])
+  })
+
+  it('preserves successful data when posts fail after the new profile was parsed', async () => {
+    const world = makeWorld({ platform: 'tiktok', user: fixture, posts: { success: false, items: [{ id: 'untrusted-post' }] } })
+    const cached = world.store.readPostsFile(world.account.id)
+    const row = await refresh(world)
+    assert.equal(row.refresh_state, 'backoff')
+    assert.equal(row.last_success_at, PREVIOUS_SUCCESS)
+    assert.equal(row.refresh_count, 3)
+    assert.equal(row.nickname, 'Saved account')
+    assert.equal(row.avatar_url, 'https://example.com/saved-avatar.jpg')
+    assert.deepEqual(world.store.readPostsFile(world.account.id), cached)
+    assert.deepEqual(world.calls, ['user', 'posts'])
+  })
+
+  it('does not introduce TikTok wrapper failure scanning on other platforms', async () => {
+    const world = makeWorld({ platform: 'x', user: { nickname: 'Old profile', userInfo: { success: false } } })
+    assert.equal((await refresh(world)).refresh_state, 'idle')
+    assert.deepEqual(world.calls, ['user', 'posts'])
+  })
 })
 
 describe('recognized empty accounts and known post shapes remain successful', () => {
