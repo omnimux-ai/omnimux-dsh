@@ -1,0 +1,229 @@
+{
+  "issue": 3393,
+  "at": "2026-10-18T06:58:45.080209+00:00",
+  "scope": "Actual product library Section -> library tab -> card -> direct detail plus preview service, real shared UI and native dialog in Ego; bounded static JSON/SVG; not full App, real post import, model or Dev human acceptance",
+  "baseline": "e3f802f36e17a88a8362fbdf81cd780ec8d9f7c3",
+  "sourceFiles": {
+    "InspirationSection.jsx": "411b053dda67c41a0f714f8860bc191bd40459332a9d5d8575fbdd4819630313",
+    "InspirationPreviewModal.jsx": "25bc4f9741fd41169f20792b8891524055469fecb89749b9e3e4736c3624924c",
+    "preview-service.jsx": "8daa5211142ab91aa40375ebc306273bf001a4fe54b80f361c0ea2cd8f0264a2",
+    "PreviewModalLayer.jsx": "ea4a86e7095f9add40dc51e16127d39d83a7892a91176f68d44e6fab192ed65f",
+    "styles.js": "2875d7c70f4b19a7d19a10d9ac81276fe467bee4d1bb994055e04a0e0f23bcdd"
+  },
+  "observations": {
+    "baseline-browser.json": {
+      "layers": 0,
+      "modal": false,
+      "points": [
+        {
+          "x": 266,
+          "y": 350,
+          "hit": "sidebar"
+        },
+        {
+          "x": 279,
+          "y": 350,
+          "hit": "resize-handle"
+        }
+      ],
+      "viewport": {
+        "w": 1920,
+        "h": 883
+      },
+      "errors": []
+    },
+    "fixed-library-before-tab.json": {
+      "layers": 1,
+      "modal": true,
+      "panelBg": "rgb(21, 21, 23)",
+      "maskBg": "rgb(21, 21, 23)",
+      "points": [
+        {
+          "x": 266,
+          "y": 350,
+          "hit": "omnimux-inspiration-modal-backdrop",
+          "inside": true
+        },
+        {
+          "x": 279,
+          "y": 350,
+          "hit": "omnimux-inspiration-modal-backdrop",
+          "inside": true
+        }
+      ],
+      "viewport": {
+        "w": 1920,
+        "h": 883
+      },
+      "errors": []
+    },
+    "nested-tab-before.json": {
+      "forward": {
+        "active": "<button type=\"button\" class=\"dshUk-Button-button dshUk-Button-ghost dshUk-Button-iconOnly\" aria-label=\"关闭\"><span class=\"dshUk-Button-slot\" aria-hidden=\"true\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"non",
+        "inImage": true
+      },
+      "reverse": {
+        "active": "<button aria-pressed=\"false\" type=\"button\" class=\"dshUk-Button-button dshUk-Button-ghost dshUk-Button-sm\"><span class=\"dshUk-Button-slot\" aria-hidden=\"true\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none",
+        "inImage": true
+      }
+    },
+    "creation-close-service.json": {
+      "forward": {
+        "inside": true,
+        "label": "关闭",
+        "text": ""
+      },
+      "reverse": {
+        "inside": true,
+        "text": "带入新会话"
+      },
+      "childEscape": {
+        "modal": true,
+        "focus": "用于创作",
+        "child": false
+      },
+      "rootEscape": {
+        "layers": 0,
+        "cancels": 1,
+        "focus": "omnimux-rival-card t-text-media tier-watch omnimux-inspiration-card-pure",
+        "overflow": "",
+        "errors": []
+      },
+      "service": {
+        "layers": 1,
+        "modals": 1
+      },
+      "serviceClose": {
+        "focus": "service-open",
+        "overflow": ""
+      }
+    },
+    "light-close-browser.json": {
+      "light": {
+        "modal": true,
+        "bg": "rgb(255, 255, 255)",
+        "hit": "omnimux-inspiration-modal-backdrop",
+        "errors": []
+      },
+      "closeButton": {
+        "overflow": "",
+        "focus": "omnimux-rival-card t-text-media tier-watch omnimux-inspiration-card-pure"
+      },
+      "backdropClose": {
+        "overflow": "",
+        "focus": "omnimux-rival-card t-text-media tier-watch omnimux-inspiration-card-pure"
+      }
+    },
+    "narrow-browser.json": {
+      "narrow": {
+        "viewport": [
+          390,
+          844
+        ],
+        "panel": {
+          "x": 12,
+          "y": 25.3203125,
+          "w": 366,
+          "h": 793.359375
+        },
+        "close": {
+          "x": 334,
+          "y": 37.3203125,
+          "w": 32,
+          "h": 32
+        },
+        "modal": true,
+        "horizontalOverflow": false,
+        "hits": [
+          {
+            "inside": true
+          },
+          {
+            "inside": true
+          }
+        ]
+      },
+      "image": {
+        "complete": true,
+        "natural": [
+          1170,
+          1560
+        ],
+        "render": {
+          "x": 21,
+          "y": 200.3359375,
+          "w": 349,
+          "h": 465.328125
+        },
+        "viewport": [
+          390,
+          844
+        ],
+        "fit": "contain"
+      },
+      "imageEscape": {
+        "modal": true,
+        "focus": "完整打开 图片 1"
+      },
+      "shareEscape": {
+        "popover": false,
+        "modal": true,
+        "focus": "分享"
+      },
+      "close": {
+        "focus": "omnimux-rival-card t-text-media tier-watch omnimux-inspiration-card-pure",
+        "overflow": "",
+        "errors": []
+      }
+    },
+    "browser-closed.json": {
+      "spaceId": 187,
+      "closed": true,
+      "matchingSpaces": [],
+      "at": "2026-10-18T06:58:14.260Z"
+    },
+    "source-identity.json": {
+      "generatedAt": "2026-10-18T06:54:42.902Z",
+      "baseline": {
+        "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh",
+        "head": "e3f802f36e17a88a8362fbdf81cd780ec8d9f7c3",
+        "files": {
+          "InspirationSection.jsx": "411b053dda67c41a0f714f8860bc191bd40459332a9d5d8575fbdd4819630313",
+          "InspirationPreviewModal.jsx": "02027d49544ddbc04a3e73bf207ffd992c0d84c25ecf1856dfb511f444c31e9e",
+          "preview-service.jsx": "febf164c4d424cc500c69da9585801304f19ae7896b55d643080d40ba107e1cf",
+          "PreviewModalLayer.jsx": "ea4a86e7095f9add40dc51e16127d39d83a7892a91176f68d44e6fab192ed65f",
+          "styles.js": "2875d7c70f4b19a7d19a10d9ac81276fe467bee4d1bb994055e04a0e0f23bcdd"
+        }
+      },
+      "fixed": {
+        "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-dialog-layer-issue-3393",
+        "head": "e3f802f36e17a88a8362fbdf81cd780ec8d9f7c3",
+        "files": {
+          "InspirationSection.jsx": "411b053dda67c41a0f714f8860bc191bd40459332a9d5d8575fbdd4819630313",
+          "InspirationPreviewModal.jsx": "25bc4f9741fd41169f20792b8891524055469fecb89749b9e3e4736c3624924c",
+          "preview-service.jsx": "8daa5211142ab91aa40375ebc306273bf001a4fe54b80f361c0ea2cd8f0264a2",
+          "PreviewModalLayer.jsx": "ea4a86e7095f9add40dc51e16127d39d83a7892a91176f68d44e6fab192ed65f",
+          "styles.js": "2875d7c70f4b19a7d19a10d9ac81276fe467bee4d1bb994055e04a0e0f23bcdd"
+        }
+      },
+      "sharedKit": {
+        "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/packages/dsh-ui-kit/lib/index.js",
+        "sha256": "bdfa5b84691708830eab1d210f21572b4c1a972ba1cf72c24fba5a23dfa2f98e"
+      },
+      "scope": "Actual InspirationSection -> library tab -> real InspirationCoverCard -> real detail, plus separate actual preview service. Synthetic local JSON and SVG only. No import, model, remote account or full App acceptance."
+    }
+  },
+  "screenshots": {
+    "fixed-library-light.png": "427e2bc19d082917541b87acc2e967d13397ef55be74eebefb7a4b56f57b1081",
+    "fixed-image-desktop.png": "f65ddb04b3f7606934fc1e2db31fa0de07ad230edaf3b79867013d46f073dcad",
+    "fixed-image-narrow.png": "f297d8ff5fe2ac2910f2cfe7c97d5ddb2ed676bf5fc3609eb9d430470a09b3c8",
+    "fixed-creation-desktop.png": "249f392b963e6dc2306f8f2432c1c3a4f1e587a75ee7ee0da3c807087e745d2b",
+    "fixed-library-narrow.png": "919f76d2d84b1f51f034e4bfd3a978bbfb9ce9927597e58f0af3c14eaadd8d19",
+    "baseline-library.png": "296343b5349af44f2adcaf6701e6dd4b8423c6390f846fe2d485ba8949d65e4f",
+    "fixed-library-dark.png": "9678b074f28e3101c2b174d7193b827e62bcbd4627d7b664ef15354e19983715"
+  },
+  "cleanup": {
+    "egoClosed": true,
+    "fixtureServerClosed": true
+  }
+}
