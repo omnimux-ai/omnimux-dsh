@@ -34,10 +34,13 @@ function requestScope(body) {
 /** @returns {AnalysisReference | null} */
 function resolveSavedReference(media, item, paths) {
   if (!['image', 'video'].includes(media?.type) || typeof media.url !== 'string') return null
-  const folder = media.type === 'video' ? 'videos' : 'images'
-  const match = media.url.match(/^\/omnimux\/inspiration\/local\/media\/(videos|images)\/([^/?#]+)$/)
-  if (!match || match[1] !== folder) return null
-  const root = media.type === 'video' ? paths?.videosDir : paths?.imagesDir
+  const match = media.url.match(/^\/omnimux\/inspiration\/local\/media\/(videos|images|covers)\/([^/?#]+)$/)
+  if (!match) return null
+  const isPhotoRecord = item.type !== 'video' && (['image', 'photo', 'gallery'].includes(String(item.type || ''))
+    || ['photo', 'gallery'].includes(String(item.content_shape || '')) || item.media_kind === 'image')
+  const coverPhoto = media.type === 'image' && match[1] === 'covers' && isPhotoRecord
+  if (!coverPhoto && match[1] !== (media.type === 'video' ? 'videos' : 'images')) return null
+  const root = coverPhoto ? paths?.coversDir : media.type === 'video' ? paths?.videosDir : paths?.imagesDir
   if (!root) return null
   for (const path of Object.values(item.local_paths || {})) {
     if (typeof path !== 'string' || basename(path) !== match[2]) continue

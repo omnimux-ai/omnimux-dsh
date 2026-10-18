@@ -729,6 +729,16 @@ const isBlankText = (value) => !value
 const isBlankNumber = (value) => value === null || value === undefined
 const isBlankObject = (value) => Object.keys(value).length === 0
 
+/** X text fields contain one layer of HTML entities, not HTML markup. */
+function decodeXPostText(text) {
+  const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' }
+  return text.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (entity, code) => {
+    if (code[0] !== '#') return named[code.toLowerCase()]
+    const value = /^#x/i.test(code) ? Number.parseInt(code.slice(2), 16) : Number.parseInt(code.slice(1), 10)
+    return value > 0 && value <= 0x10ffff && !(value >= 0xd800 && value <= 0xdfff) ? String.fromCodePoint(value) : entity
+  })
+}
+
 /**
  * Map any supported platform envelope onto the flat metadata contract used by
  * the import pipeline.
@@ -741,6 +751,7 @@ const isBlankObject = (value) => Object.keys(value).length === 0
  * `aweme_detail` / `item_list[0]`.
  *
  * @param {unknown} data raw `data` envelope from the cloud tool or the fallback resolver
+ * @param {{platform?: string}} [options] Source encoding is normalized only for known X text.
  * @returns {{
  *   title: string, text: string, cover_url: string, video_url: string,
  *   images: string[], media_items: SocialMediaItem[], author: Record<string, any>, stats: Record<string, any>,
@@ -748,10 +759,11 @@ const isBlankObject = (value) => Object.keys(value).length === 0
  *   has_metadata: boolean, unavailable_media: boolean,
  * }}
  */
-export function parseSocialMeta(data) {
+export function parseSocialMeta(data, { platform } = {}) {
   const layers = socialPayloadLayers(data)
-  const text = pickLayerValue(layers, textFromLayer, isBlankText)
-  const title = pickLayerValue(layers, titleFromLayer, isBlankText)
+  const decode = platform === 'x' || platform === 'twitter' ? decodeXPostText : (text) => text
+  const text = decode(pickLayerValue(layers, textFromLayer, isBlankText))
+  const title = decode(pickLayerValue(layers, titleFromLayer, isBlankText))
   const cover_url = pickLayerValue(layers, coverUrlFromLayer, isBlankText)
   const { items: media_items, unavailable: unavailable_media } = collectMediaItems(layers)
   const video_url = media_items.find((item) => item.type === 'video')?.url || ''
@@ -1817,7 +1829,7 @@ async function fetchSocialMeta(args) {
     if (!fetched || !fetched.data) {
       return { error: fail(502, 'OmniMux 社媒解析接口未返回有效数据，请稍后重试') }
     }
-    return { meta: parseSocialMeta(fetched.data) }
+    return { meta: parseSocialMeta(fetched.data, { platform: args.platform }) }
   } catch (fetchErr) {
     if (args.signal?.aborted) {
       throw (fetchErr?.name === 'AbortError' || fetchErr?.code === 'ABORT_ERR')
