@@ -8,9 +8,34 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveJourneyPath, runJourney, createAppQaRunner } from './worktree-app-qa.mjs';
+import { resolveJourneyPath, runJourney, createAppQaRunner, dismissFirstLaunchNotice } from './worktree-app-qa.mjs';
 
 const root = '/repo/.worktrees/task-x';
+
+test('first-launch notice requires a visible actionable button and observed disappearance after real pointer input', async () => {
+  let time = 0, released = false;
+  const input = [];
+  const pass = await dismissFirstLaunchNotice({ now: () => time, sleep: async ms => { time += ms; }, send: async (method, params) => {
+    if (method === 'Runtime.evaluate') return { result: { value: released ? { present: false } : { present: true, actionable: true, x: 20, y: 30 } } };
+    input.push(params); if (params.type === 'mouseReleased') released = true;
+    return {};
+  } });
+  assert.equal(pass, true);
+  assert.deepEqual(input.map(item => [item.type, item.x, item.y]), [['mousePressed', 20, 30], ['mouseReleased', 20, 30]]);
+  assert.ok(time >= 1000);
+});
+
+test('blocked or persistent first-launch notices never pass', async () => {
+  for (const actionable of [false, true]) {
+    let time = 0, clicks = 0;
+    const pass = await dismissFirstLaunchNotice({ now: () => time, sleep: async ms => { time += ms; }, send: async method => {
+      if (method === 'Runtime.evaluate') return { result: { value: { present: true, actionable, x: 20, y: 30 } } };
+      clicks++; return {};
+    } });
+    assert.equal(pass, false);
+    assert.equal(clicks, actionable ? 2 : 0);
+  }
+});
 
 test('resolveJourneyPath 只接受工作树内的 js 模块', () => {
   assert.deepEqual(resolveJourneyPath('.workbuddy/qa-journeys/a.mjs', root).ok, true);

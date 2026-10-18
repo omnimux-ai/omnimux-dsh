@@ -63,6 +63,46 @@ export function isAppReady(geometry) {
     && geometry.largest.height > 100;
 }
 
+/** Complete the actual first-launch notice through its visible Continue button. */
+export async function dismissFirstLaunchNotice({ send, sleep, now = Date.now, timeoutMs = 6000, settleMs = 1000 }) {
+  const deadline = now() + timeoutMs;
+  let absentSince = null, clicked = false;
+  do {
+    const response = await send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+      const visible = element => {
+        const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+        return box.width > 0 && box.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+      };
+      const dialogs = [...document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"]')]
+        .filter(dialog => visible(dialog) && [...dialog.querySelectorAll('h1,h2,h3,h4,[role="heading"]')]
+          .some(heading => heading.textContent.trim() === '内测声明'));
+      if (!dialogs.length) return { present: false };
+      if (dialogs.length !== 1) return { present: true, actionable: false };
+      const buttons = [...dialogs[0].querySelectorAll('button')]
+        .filter(button => button.textContent.trim() === '继续' && !button.disabled && visible(button));
+      if (buttons.length !== 1) return { present: true, actionable: false };
+      const button = buttons[0], box = button.getBoundingClientRect(), x = box.x + box.width / 2, y = box.y + box.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      return { present: true, actionable: Boolean(hit && button.contains(hit)), x, y };
+    })()` });
+    const state = response?.result?.value;
+    if (response.exceptionDetails || !state || typeof state.present !== 'boolean') return false;
+    if (!state.present) {
+      absentSince ??= now();
+      if (now() - absentSince >= settleMs) return true;
+    } else {
+      absentSince = null;
+      if (!clicked && state.actionable === true && Number.isFinite(state.x) && Number.isFinite(state.y)) {
+        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: state.x, y: state.y, button: 'left', clickCount: 1 });
+        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: state.x, y: state.y, button: 'left', clickCount: 1 });
+        clicked = true;
+      }
+    }
+    await sleep(150);
+  } while (now() < deadline);
+  return false;
+}
+
 /** 工作树根解析：只接受 <repo>/.worktrees/<task> 直接子级，失败时带可读原因。 */
 export function resolveWorktreeRoot(candidate, io = fs, repo = repositoryRoot) {
   const diagnosis = diagnoseWorktreeRoot(candidate, io, repo);
@@ -248,7 +288,13 @@ export async function assertBlankSessionHubPath({
   let hubVisible = false;
   do {
     const hubCheck = await send('Runtime.evaluate', {
-      expression: `Boolean(document.querySelector('.omx-hub-panel') || document.querySelector('[aria-label="素材工作台顶栏"]') || document.querySelector('[aria-label="素材筛选工具栏"]'))`,
+      expression: `(() => [...document.querySelectorAll('.omx-hub-panel, [aria-label="素材工作台顶栏"], [aria-label="素材筛选工具栏"]')].some(element => {
+        const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+        const left = Math.max(0, box.left), top = Math.max(0, box.top), right = Math.min(innerWidth, box.right), bottom = Math.min(innerHeight, box.bottom);
+        if (right <= left || bottom <= top || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+        return Boolean(hit && element.contains(hit));
+      }))()`,
       returnByValue: true,
     });
     hubVisible = hubCheck?.result?.value === true;
@@ -587,7 +633,8 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       visibleCount: geometry ? geometry.visibleCount : 0,
     });
 
-// Runtime guide 可能晚于首屏几何出现；轮询等待其消失，避免瞬时误判。
+    const noticeDismissed = await dismissFirstLaunchNotice({ send, sleep });
+    // Runtime guide 可能晚于首屏几何出现；轮询等待其消失，避免瞬时误判。
     let modalShowing = true;
     const modalDeadline = Date.now() + 6000;
     while (Date.now() < modalDeadline) {
@@ -599,7 +646,7 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       if (!modalShowing) break;
       await sleep(500);
     }
-    assertions.push({ name: 'runtime-modal-bypassed', pass: !modalShowing });
+    assertions.push({ name: 'runtime-modal-bypassed', pass: noticeDismissed && !modalShowing });
 
     // Hub 业务路径：进入空白会话并断言 Explore / library→asset-hub。
     // SessionGuide 仅在 blank|awaitingFirstTurn 且非 compact 时渲染探索区。

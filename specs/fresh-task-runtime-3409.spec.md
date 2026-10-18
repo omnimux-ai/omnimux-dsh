@@ -33,6 +33,8 @@ installation固定包含taskId/runId、sourceRoot/privateRoot/profile、base/hea
 
 消费者只有在正式生产者、任务候选一致、安装完整性、同PID server加载与browser客户端观测全部满足后计算userFresh/taskBinding和task-source-installed-loaded。依赖桩仍明确dependency-stub、自报且不授权，不升级为真实fresh证据。
 
+首次public运行13机器断言虽过，真实PNG被首次“内测声明”遮挡，外部视觉复核判不通过并保留原件。driver仅通过已知声明的真实可见“继续”按钮发送鼠标事件，观察弹窗稳定消失后才通过原runtime-modal断言；资产库业务可达性另核视口几何与实际命中元素，遮挡不能因DOM存在刷绿。须用新冻结候选重跑并审图，旧机器通过不回填视觉通过。
+
 断言按预声明expectedAssertions归属分组并拒绝跨组重名，不能从返回断言推导预期。失败记录真实阶段，cleanup必须await子进程exit+close并清理精确自有目录；不会因清理失败签通过。保留历史失败封套。
 
 ## 实施分工与验收
