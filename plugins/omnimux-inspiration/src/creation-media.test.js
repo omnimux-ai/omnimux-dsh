@@ -80,7 +80,7 @@ test('non-media references and a video poster do not become independent images',
 test('legacy media_urls map the second video without falling back to the first', async (t) => {
   const input = await world(t)
   delete input.item.media_items
-  input.item.media_urls = ['one', 'two']
+  input.item.media_urls = ['/omnimux/inspiration/local/media/videos/one.mp4', '/omnimux/inspiration/local/media/videos/two.mp4']
   const videoProcess = service()
   await prepareCreationMedia({ ...input, draft: select(1), videoProcess })
   assert.equal(videoProcess.calls.find((call) => call.capability === 'video_trim').input.videoUrl, await realpath(input.item.local_paths.video_2))
