@@ -567,7 +567,12 @@ export function mapRivalUser(data, ctx = {}) {
  * @returns {{ rows: ReturnType<typeof normalizeRivalPost>[], field_probe: Record<string, string | null>, recognized: boolean, source_count: number }}
  */
 export function mapRivalPosts(data, ctx) {
-  const source = probeRivalPostRows(data)
+  let source = probeRivalPostRows(data)
+  // Only the observed direct X container is new; retain every recognized old
+  // list (including empty or unusable ones) and the existing row/identity rules.
+  if (source === null && ctx?.platform === 'x' && isPlainObject(data) && Array.isArray(data.timeline)) {
+    source = rowsOf(data.timeline)
+  }
   const raw = source?.rows || []
   const rows = []
   /** @type {Record<string, string | null>} */

@@ -292,6 +292,125 @@ describe('TikTok userInfo profile is consumed through the real refresh cycle', (
   })
 })
 
+describe('X direct timeline is validated before a successful refresh is recorded', () => {
+  // The same synthetic parent/node identities as the cloud validator, with
+  // already-supported metadata solely to verify local persistence and feed.
+  const timeline = [
+    { id: 'fixture-parent', title: 'Fixture parent', text: 'Fixture parent body', created_at: '2026-10-18T01:00:00Z', node: { id: 'fixture-child' } },
+    { node: { tweet_id: 'fixture-node', text: 'Fixture node body', created_at: '2026-10-18T00:00:00Z' } },
+    null,
+    {},
+  ]
+
+  it('persists the two normalized posts and profile before advancing successful state', async () => {
+    const world = makeWorld({ platform: 'x', user: { nickname: 'Fixture account', follower_count: 0 }, posts: { timeline } })
+    const writePosts = world.store.writePosts
+    world.store.writePosts = (...args) => {
+      const before = world.store.getAccount(world.account.id)
+      assert.equal(before.last_success_at, PREVIOUS_SUCCESS)
+      assert.equal(before.refresh_count, 3)
+      assert.equal(before.nickname, 'Saved account')
+      return writePosts(...args)
+    }
+    const row = await refresh(world)
+    assert.equal(row.refresh_state, 'idle')
+    assert.equal(row.error_code, null)
+    assert.equal(row.consecutive_failures, 0)
+    assert.equal(row.nickname, 'Fixture account')
+    assert.equal(row.followers, 0)
+    assert.equal(row.refresh_count, 4)
+    assert.equal(row.last_success_at, new Date(NOW).toISOString())
+    assert.equal(row.last_refresh_at, new Date(NOW).toISOString())
+    const saved = world.store.readPostsFile(world.account.id)
+    const parent = saved.items.find((post) => post.id === 'fixture-parent')
+    const node = saved.items.find((post) => post.id === 'fixture-node')
+    assert.equal(saved.items.length, 3)
+    assert.equal(saved.items.some((post) => post.id === 'fixture-child'), false)
+    assert.equal(parent.title, 'Fixture parent')
+    assert.equal(parent.text, 'Fixture parent body')
+    assert.equal(parent.posted_at, '2026-10-18T01:00:00.000Z')
+    assert.equal(node.title, 'Fixture node body')
+    assert.equal(node.posted_at, '2026-10-18T00:00:00.000Z')
+    assert.equal(parent.last_seen_at, new Date(NOW).toISOString())
+    assert.equal(node.last_seen_at, new Date(NOW).toISOString())
+    const feed = world.service.listFeed({ accounts: [world.account.id] })
+    assert.equal(feed.total, 3)
+    for (const id of ['fixture-parent', 'fixture-node']) {
+      const post = feed.items.find((item) => item.id === id)
+      const persisted = saved.items.find((item) => item.id === id)
+      assert.equal(post.account_id, world.account.id)
+      assert.equal(post.title, persisted.title)
+      assert.equal(post.text, persisted.text)
+      assert.equal(post.posted_at, persisted.posted_at)
+    }
+    assert.deepEqual(world.calls, ['user', 'posts'])
+  })
+
+  for (const posts of [{ timeline: [] }, { items: [], timeline }]) {
+    it(`keeps the recognized empty list successful for ${JSON.stringify(posts)}`, async () => {
+      const world = makeWorld({ platform: 'x', posts })
+      const row = await refresh(world)
+      assert.equal(row.refresh_state, 'idle')
+      assert.equal(row.refresh_count, 4)
+      assert.equal(row.last_success_at, new Date(NOW).toISOString())
+      assert.deepEqual(world.store.readPosts(world.account.id).map((post) => post.id), ['saved-post'])
+      assert.deepEqual(world.calls, ['user', 'posts'])
+    })
+  }
+
+  const invalid = [
+    ['nonempty unusable rows', { timeline: [{}, null, false, 'text'] }],
+    ['metadata without an existing identity', { timeline: [{ title: 'Not identity' }] }],
+    ['an unusable older list despite a valid timeline', { items: [{}], timeline }],
+    ['an unobserved timeline_v2 array', { timeline_v2: timeline }],
+    ['an object timeline', { timeline: { items: [{ id: 'not-a-direct-array' }] } }],
+    ['a nested data timeline', { data: { timeline } }],
+    ['a nested user timeline', { user: { timeline } }],
+    ['a bare array', timeline],
+    ['an unknown legacy identity', { timeline: [{ legacy: { id: 'not-a-new-alias' } }] }],
+    ['a deeper node identity', { timeline: [{ node: { node: { id: 'not-a-new-path' } } }] }],
+    ['a failed envelope with usable rows', { success: false, timeline }],
+    ['an envelope error with usable rows', { error: 'sensitive-upstream-detail', timeline }],
+    ['a nested envelope failure with usable rows', { timeline, result: { status: 'failed' } }],
+  ]
+  for (const [name, posts] of invalid) {
+    it(`rejects ${name} without overwriting cached or successful state`, async () => {
+      const world = makeWorld({ platform: 'x', user: { nickname: 'Untrusted new profile' }, posts })
+      const cached = world.store.readPostsFile(world.account.id)
+      const feed = world.service.listFeed({ accounts: [world.account.id] })
+      const row = await refresh(world)
+      assert.equal(row.refresh_state, 'backoff')
+      assert.equal(row.error_code, 'cloud-error')
+      assert.equal(row.error_message.includes('sensitive-upstream-detail'), false)
+      assert.equal(row.consecutive_failures, 2)
+      assert.equal(row.last_success_at, PREVIOUS_SUCCESS)
+      assert.equal(row.refresh_count, 3)
+      assert.equal(row.nickname, 'Saved account')
+      assert.deepEqual(world.store.readPostsFile(world.account.id), cached)
+      assert.deepEqual(world.service.listFeed({ accounts: [world.account.id] }), feed)
+      assert.deepEqual(world.calls, ['user', 'posts'])
+    })
+  }
+
+  it('does not advance successful state when writing valid timeline rows fails', async () => {
+    const world = makeWorld({ platform: 'x', posts: { timeline } })
+    const cached = world.store.readPostsFile(world.account.id)
+    let writeAttempted = false
+    world.store.writePosts = () => {
+      writeAttempted = true
+      throw new Error('fixture disk failure')
+    }
+    const row = await refresh(world)
+    assert.equal(writeAttempted, true)
+    assert.equal(row.refresh_state, 'backoff')
+    assert.equal(row.last_success_at, PREVIOUS_SUCCESS)
+    assert.equal(row.refresh_count, 3)
+    assert.equal(row.nickname, 'Saved account')
+    assert.deepEqual(world.store.readPostsFile(world.account.id), cached)
+    assert.deepEqual(world.calls, ['user', 'posts'])
+  })
+})
+
 describe('recognized empty accounts and known post shapes remain successful', () => {
   const emptyLists = [
     { items: [] },

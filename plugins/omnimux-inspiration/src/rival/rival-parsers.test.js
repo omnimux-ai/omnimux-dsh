@@ -492,6 +492,85 @@ describe('rival-parsers: post mapping', () => {
   })
 })
 
+describe('X direct timeline uses only the existing post-row rules', () => {
+  // Synthetic rows shared with the cloud validator; no live row values or
+  // additional field aliases are implied by the observed array container.
+  const timeline = [
+    { id: 'fixture-parent', node: { id: 'fixture-child' } },
+    { node: { tweet_id: 'fixture-node' } },
+    null,
+    {},
+  ]
+
+  it('recognizes the direct X array and keeps parent identity ahead of node', () => {
+    const mapped = mapRivalPosts({ timeline }, { platform: 'x' })
+    assert.equal(mapped.recognized, true)
+    assert.equal(mapped.source_count, 4)
+    assert.deepEqual(mapped.rows.map((row) => row.id), ['fixture-parent', 'fixture-node'])
+    assert.equal(mapped.field_probe.id, 'id')
+    assert.equal(mapped.rows.every((row) => row.posted_at === null && row.cover_url === '' && row.video_url === ''), true)
+  })
+
+  it('retains the existing string and finite numeric identity rule', () => {
+    const mapped = mapRivalPosts({ timeline: [{ id: 'fixture-id' }, { rest_id: 0 }] }, { platform: 'x' })
+    assert.deepEqual(mapped.rows.map((row) => row.id), ['fixture-id', '0'])
+  })
+
+  it('keeps an explicitly empty direct array separate from unusable nonempty rows', () => {
+    const empty = mapRivalPosts({ timeline: [] }, { platform: 'x' })
+    assert.equal(empty.recognized, true)
+    assert.equal(empty.source_count, 0)
+    assert.deepEqual(empty.rows, [])
+    const unusable = mapRivalPosts({ timeline: [{}, null, false, 'text'] }, { platform: 'x' })
+    assert.equal(unusable.recognized, true)
+    assert.equal(unusable.source_count, 4)
+    assert.deepEqual(unusable.rows, [])
+  })
+
+  for (const items of [[], [{}], [{ id: 'old-post' }]]) {
+    it(`does not replace the previously recognized items ${JSON.stringify(items)}`, () => {
+      const mapped = mapRivalPosts({ items, timeline }, { platform: 'x' })
+      assert.equal(mapped.recognized, true)
+      assert.equal(mapped.source_count, items.length)
+      assert.deepEqual(mapped.rows.map((row) => row.id), items[0]?.id ? ['old-post'] : [])
+    })
+  }
+
+  for (const platform of ['tiktok', 'instagram', 'youtube', 'unknown']) {
+    it(`does not add a timeline container to ${platform}`, () => {
+      const mapped = mapRivalPosts({ timeline }, { platform })
+      assert.equal(mapped.recognized, false)
+      assert.deepEqual(mapped.rows, [])
+    })
+  }
+
+  const unsupported = [
+    ['the unobserved timeline_v2 array', { timeline_v2: timeline }],
+    ['an object timeline', { timeline: { items: [{ id: 'not-a-direct-array' }] } }],
+    ['a nested data timeline', { data: { timeline } }],
+    ['a nested user timeline', { user: { timeline } }],
+    ['a bare array', timeline],
+    ['a null timeline', { timeline: null }],
+    ['a string timeline', { timeline: 'not-an-array' }],
+    ['an unknown legacy identity', { timeline: [{ legacy: { id: 'not-a-new-alias' } }] }],
+    ['a deeper node identity', { timeline: [{ node: { node: { id: 'not-a-new-path' } } }] }],
+  ]
+  for (const [name, data] of unsupported) {
+    it(`does not consume ${name}`, () => {
+      assert.deepEqual(mapRivalPosts(data, { platform: 'x' }).rows, [])
+    })
+  }
+
+  it('keeps the platform-independent container helper unchanged', () => {
+    assert.deepEqual(unwrapRivalPostRows({ timeline }), [])
+  })
+
+  it('requires an explicit X context without breaking an omitted context', () => {
+    assert.equal(mapRivalPosts({ timeline }).recognized, false)
+    assert.equal(mapRivalPosts({}, null).recognized, false)
+  })
+})
+
 describe('rival-parsers: empty sentinel detection', () => {
   it('flags the hub sentinel, an empty answer and an empty list answer', () => {
     assert.equal(isEmptyPayload({ text: null }), true)
