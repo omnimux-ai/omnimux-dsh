@@ -290,6 +290,52 @@ describe('rival-accounts-store: post cache', () => {
 })
 
 describe('rival-accounts-store: budget ledger', () => {
+  it('allows one explicitly manual account overrun without resetting or persisting an exemption', () => {
+    const { store, paths } = sandbox()
+    store.reserve({ accountId: 'riv_a' })
+    store.reserve({ accountId: 'riv_a' })
+    const before = store.readBudget()
+    const opts = { accountId: 'riv_a', scope: 'manual', allowBudgetOverrun: true }
+    assert.equal(store.canReserve(opts).allowed, true)
+    assert.deepEqual(store.readBudget(), before, 'probing must not spend calls')
+    const result = store.reserve(opts)
+    assert.equal(result.allowed, true)
+    assert.equal(result.budget.per_account.riv_a.calls, 6)
+    assert.equal(result.budget.global_calls, 6)
+    assert.equal(result.budget.per_account.riv_a.manual, 1)
+    assert.equal(store.canReserve({ accountId: 'riv_a' }).reason, 'account-daily-cap')
+    assert.equal(store.canReserve({ accountId: 'riv_a', allowBudgetOverrun: false }).reason, 'account-daily-cap')
+    assert.equal(store.readConfig().limits.cloud_calls_per_account_per_day, 4)
+    assert.equal(/allowBudgetOverrun/.test(readFileSync(paths.budgetFile, 'utf8')), false)
+  })
+
+  it('rejects invalid or non-manual overrun requests before writing the ledger', () => {
+    const { store } = sandbox()
+    const before = store.readBudget()
+    for (const method of ['canReserve', 'reserve']) {
+      for (const allowBudgetOverrun of [undefined, null, 1, 'true', {}, []]) {
+        assert.throws(() => store[method]({ accountId: 'riv_a', scope: 'manual', allowBudgetOverrun }), { code: 'invalid-budget-overrun', status: 400 })
+      }
+      for (const opts of [{ accountId: 'riv_a' }, { accountId: 'riv_a', scope: 'cycle' }, { scope: 'manual' }]) {
+        assert.throws(() => store[method]({ ...opts, allowBudgetOverrun: true }), { code: 'invalid-budget-overrun', status: 400 })
+      }
+    }
+    assert.deepEqual(store.readBudget(), before)
+  })
+
+  it('retains the global daily cap even for an authorized account overrun', () => {
+    const { store } = sandbox()
+    store.reserve({ accountId: 'riv_0' })
+    for (let index = 0; index < LIMIT_CALLS_GLOBAL_DAY / LIMIT_CALLS_PER_ACCOUNT_CYCLE - 1; index += 1) {
+      assert.equal(store.reserve({ accountId: `riv_${index}` }).allowed, true)
+    }
+    const opts = { accountId: 'riv_0', scope: 'manual', allowBudgetOverrun: true }
+    assert.equal(store.canReserve(opts).reason, 'global-daily-cap')
+    assert.equal(store.reserve(opts).reason, 'global-daily-cap')
+    assert.equal(store.readBudget().global_calls, 50)
+    assert.equal(store.readBudget().per_account.riv_0.calls, 4)
+  })
+
   it('reserves exactly the per-cycle contract and reports the ledger', () => {
     const { store } = sandbox()
     const decision = store.reserve({ accountId: 'riv_a' })

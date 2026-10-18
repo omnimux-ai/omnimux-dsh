@@ -260,7 +260,7 @@ $DSH_HOME/omnimux/inspirations/            ← 既有 storageDomain: "$DSH_HOME/
   "posts_per_refresh": 20,               // ★ 语义 = 单次拉取处理条数上限（不是请求参数）
   "limits": {
     "cloud_calls_per_account_per_cycle": 2,   // 硬上限：单账号单次 ≤2（1 user + 1 posts）
-    "cloud_calls_per_account_per_day": 4,     // 硬上限：单账号单日 ≤4
+    "cloud_calls_per_account_per_day": 4,     // 默认单账号日限额；仅 E7 显式人工授权可按请求越额
     "cloud_calls_global_per_day": 50          // 硬上限：全局单日 ≤50
   },
   "backoff_minutes": [5, 15, 60],        // 连续失败退避；用尽后 refresh_state='error'
@@ -385,6 +385,8 @@ $DSH_HOME/omnimux/inspirations/            ← 既有 storageDomain: "$DSH_HOME/
 }
 ```
 
+预算单位是刷新尝试的预留量：入队即完整累计 2，首步失败也不退回，不能据此推断实际 HTTP 或收费次数。E7 的单次人工越额授权不重置或减少账本；账号可从 4 累计为 6，全局同步累计 2，原失败预留规则保持。授权字段不保存为账号或全局配置。
+
 ### 3.6 首刷时的字段白名单提醒（本仓库踩坑两次）
 
 `rival-accounts-store.js` **必须**沿用 `buildRow(record, identity)` 的**白名单构造函数**写法（同 `local-store.js:83-121`）：新字段不进白名单就落不了盘，表现为"接口成功但卡片永远停在运行中"。本模块的三份数据各有一个 `buildAccountRow` / `buildPostRow` / `buildConfig`，**禁止 spread 透传**。
@@ -405,14 +407,16 @@ $DSH_HOME/omnimux/inspirations/            ← 既有 storageDomain: "$DSH_HOME/
 | E4 | GET | `/rival-accounts/:id` | — | `200 { data:{ account, analysis, monitor } }` | 404 `account-not-found` |
 | E5 | PATCH | `/rival-accounts/:id` | `{ tags?, refresh_interval_hours?:24\|12\|48\|0 }` | `200 { data:Account }` | 400 `invalid-interval` / 404 |
 | E6 | DELETE | `/rival-accounts/:id` | — | `200 { data:{ removed:true } }` | 404 |
-| E7 | POST | `/rival-accounts/:id/refresh` | `{ manual:true }` | `202 { data:{ account_id, job:'running', cloud_calls_planned:2 } }` | 404 / 429 `manual-cooldown` / 429 `refresh-budget-exhausted`(含 `reason`) |
-| E8 | POST | `/rival-accounts/refresh-all` | `{ manual:true }` | `202 { data:{ queued:[id…], skipped:[{id,reason_key}] } }` | 429 `manual-cooldown` / 429 `refresh-budget-exhausted` |
+| E7 | POST | `/rival-accounts/:id/refresh` | `{ manual:true, allow_budget_overrun?:boolean }` | `202 { data:{ account_id, job:'running', cloud_calls_planned:2 } }` | 400 `invalid-budget-overrun` / 404 / 429 `manual-cooldown` / 429 `refresh-budget-exhausted`(含 `reason`) |
+| E8 | POST | `/rival-accounts/refresh-all` | `{ manual:true }`；不接受越额授权字段 | `202 { data:{ queued:[id…], skipped:[{id,reason_key}] } }` | 400 `invalid-budget-overrun` / 429 `manual-cooldown` / 429 `refresh-budget-exhausted` |
 | E9 | GET | `/rival-accounts/status` | — | `200 { data:{ running:[…], queued:[…], paused, budget_used, budget_limits, next_auto_at } }` | — |
 | E10 | GET | `/rival-accounts/:id/monitor` | — | `200 { data:{ latest, previous, delta_pct, first_baseline:boolean } }` | 404 |
 | E11 | POST | `/rival-accounts/:id/analyze` | — | `200 { data:{ analysis } }`（纯本地聚合，0 云端调用） | 404 |
 | E12 | GET | `/rival-accounts/:id/posts` | query `?only_potential=1&limit=20&sort=posted_at\|views` | `200 { data:{ items:[Post], total, carry_over, field_probe } }` | 404 |
 | E13 | POST | `/rival-accounts/:id/posts/:postId/to-inspiration` | `{ tags?:string[], auto_analyze?:boolean }` | `202 { data:{ post_id, inspiration_placeholder, job:'running' } }`（复用既有 `background:true` 链路） | 404 / 409（已在库，回 `{ data:{ inspiration_id } }`） |
 | E14 | GET | `/media/rival-accounts/<subpath>` | — | `200`（字节流，支持 Range） | 400 `invalid path` / 404 `file not found` |
+
+**E7 人工授权**：`allow_budget_overrun` 是可选严格布尔字段。仅该字段为 true 且显式 `manual:true` 的单账号刷新请求可以略过本次 `account-daily-cap`；缺省或 false 保持默认行为。坏类型、true 配合未显式 manual:true，以及批量携带该字段（包括 false）均在入队前拒绝。自动任务不能获得该授权；全局预算、每轮调用上限、手动冷却和排队/运行去重保持。此次接口增量不新增 UI，原“继续刷新”动作不隐含授予越额权限。
 
 **E14 说明**：`subpath` 是相对 `paths.mediaDir` 的真实相对路径（`http-routes.js` 的 `streamLocalMedia` 语义），实现方式是**在既有 media 分支内加一个 `rival-accounts/` 子目录判断并复用同一 `pipeMedia`**，不新建端点前缀。
 
@@ -613,9 +617,10 @@ stateDiagram-v2
     backoff --> queued: 退避窗口结束（仍消耗预算）
     running --> error: 第 3 次退避也失败\n或错误码 = identity-unverified\n→ 停止该账号自动刷新
     error --> queued: 用户手动刷新 / 修改主页 URL 重新导入
-    idle --> paused: 触发硬上限\n（单次>2 / 单账号单日>4 / 全局单日>50）
+    idle --> paused: 触发适用上限\n（单次>2 / 未获本次人工授权且账号单日>4 / 全局单日>50）
     backoff --> paused: 同上
     paused --> idle: 跨日重置（budget.json 的 day 变化）\n或用户在 UI 上「继续刷新」
+    paused --> queued: E7 单账号显式人工越额授权\n仍须满足全局预算与冷却
     note right of paused
       暂停必须「持续提示」：UI 常驻横幅 + status 端点返回 paused.reason
       绝不静默失败；其他账号不受影响
@@ -862,7 +867,8 @@ graph LR
 | `account-not-found` / `post-not-found` | 404 | 记录不存在 | 否 |
 | `invalid-interval` | 400 | 刷新间隔不在 `[24,12,48,0]` | 否 |
 | `manual-cooldown` | 429 | 手动刷新限频（单账号 10min / 全部 30min） | 否 |
-| `refresh-budget-exhausted` | 429 | 触发三层硬上限之一，`reason` 说明是哪一层 | 否（返回时**不递减**） |
+| `invalid-budget-overrun` | 400 | 越额字段类型或人工单账号授权上下文不合法 | 否 |
+| `refresh-budget-exhausted` | 429 | 触发适用预算上限；合法 E7 授权仅豁免账号日限额，`reason` 说明拒绝层 | 否（返回时**不递减**） |
 | `cloud-error` | 502 | 云端调用失败（超时/5xx/结构异常） | **是**（已发出的调用要计入） |
 | `identity-unverified` | — | 状态字段（非 HTTP 码）：`@handle` 未被云端接受 | 是 |
 | `no-content` | 422 | 云端返回空哨兵（`{text:null}` 风格） | 是 |
@@ -948,7 +954,7 @@ rivalAccounts.error.cloud | .login | .toolMissing
 | G6 | `rival-add-to-chat.test.js`：断言 `payload.kind==='rival_post'`、指纹稳定、**未调用 `setDraft`/未调用 `closeTab`/未调用任何 canvas API/未触发 send** | 需求 5 与全部红线（一次断言覆盖四条红线） |
 | G7 | `rival-potential.test.js`：R1~R4 边界 + 除零 + 样本不足 | 潜力误判导致"推荐落空" |
 | G8 | `rival-analyze.test.js`：首刷 `delta_pct === null`（不显示 +0%）；聚合 0 云端调用 | 需求"首次为基线" |
-| G9 | `rival-refresh.test.js`：超上限 → `paused` 且 `paused.reason` 非空；单账号失败不影响其他账号 | "静默失败"与"一颗老鼠屎" |
+| G9 | `rival-refresh.test.js`：超适用上限 → `paused` 且 `paused.reason` 非空；单账号失败不影响其他账号；显式人工例外只越账号日限额且完整累计，默认/自动/批量和全局超限仍拒绝 | "静默失败"与"一颗老鼠屎" |
 | G10 | 结构门禁：全 `src/rival/**` 内禁止出现 `fetch(`（除 `rival-remote.js`）与 `plugins/omnimux/src/` 导入 | 成本泄漏与跨插件耦合（可用一个 30 行测试直接 grep 源码断言） |
 
 ### 10.2 如何用注入 mock 断言"单次刷新 ≤2 次云端调用"

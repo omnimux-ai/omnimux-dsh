@@ -20,7 +20,7 @@ import { readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { RivalServiceError } from './rival-accounts-service.js'
-import { RivalStoreError } from './rival-accounts-store.js'
+import { readBudgetOverrun, RivalStoreError } from './rival-accounts-store.js'
 import { RIVAL_ERROR_CODES, DEFAULT_COVER_EXT } from './constants.js'
 import { downloadMedia } from '../downloader.js'
 
@@ -64,6 +64,15 @@ const CODE_MESSAGES = {
 /** @param {unknown} value */
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+/** @param {Record<string, any>} body @param {boolean} [singleAccount] */
+function refreshOptions(body, singleAccount = true) {
+  const opts = Object.hasOwn(body, 'allow_budget_overrun')
+    ? { allowBudgetOverrun: body.allow_budget_overrun }
+    : {}
+  readBudgetOverrun(opts, { manual: body.manual, singleAccount })
+  return { manual: body.manual !== false, ...opts }
 }
 
 /**
@@ -222,7 +231,7 @@ export function createRivalDispatcher(deps) {
 
       case 'refresh-all':
         if (method !== 'POST') return fail(405, 'method-not-allowed', 'method not allowed')
-        return ok(service.refreshAll({ manual: body.manual !== false }), 202)
+        return ok(service.refreshAll(refreshOptions(body, false)), 202)
 
       case 'status':
         if (method !== 'GET') return fail(405, 'method-not-allowed', 'method not allowed')
@@ -236,7 +245,7 @@ export function createRivalDispatcher(deps) {
 
       case 'account-refresh':
         if (method !== 'POST') return fail(405, 'method-not-allowed', 'method not allowed')
-        return ok(service.refreshAccount(String(route.id), { manual: body.manual !== false }), 202)
+        return ok(service.refreshAccount(String(route.id), refreshOptions(body)), 202)
 
       case 'monitor':
         if (method !== 'GET') return fail(405, 'method-not-allowed', 'method not allowed')

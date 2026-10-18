@@ -224,6 +224,72 @@ function makeWorld(options = {}) {
   }
 }
 
+describe('explicit manual budget overrun scheduler boundary', () => {
+  it('retains running/queued deduplication and the manual cooldown while spending 4 to 6', async () => {
+    let release
+    const held = new Promise((resolve) => { release = resolve })
+    const world = makeWorld({ runCycle: async () => { await held; return { calls_used: 2 } } })
+    const first = world.store.addAccount({ platform: 'x', external_id: '@first' })
+    const second = world.store.addAccount({ platform: 'x', external_id: '@second' })
+    for (const account of [first, second]) {
+      world.store.reserve({ accountId: account.id })
+      world.store.reserve({ accountId: account.id })
+    }
+    const opts = { manual: true, allowBudgetOverrun: true }
+    assert.equal(world.scheduler.refreshAccount(first.id, opts).queued, true)
+    assert.equal(world.scheduler.refreshAccount(first.id, opts).status, 'running')
+    assert.equal(world.scheduler.refreshAccount(second.id, opts).status, 'queued')
+    assert.equal(world.scheduler.refreshAccount(second.id, opts).status, 'queued')
+    assert.equal(world.store.readBudget().global_calls, 12)
+    release()
+    await world.scheduler.settled()
+    assert.equal(world.scheduler.refreshAccount(first.id, opts).status, 'cooldown')
+    assert.equal(world.store.readBudget().per_account[first.id].calls, 6)
+    assert.equal(world.store.readBudget().global_calls, 12)
+    assert.equal(world.scheduler.refreshAccount(first.id, { manual: true }).status, 'budget')
+  })
+
+  it('rejects malformed, first/auto, and bulk consent before any reservation or work', () => {
+    const world = makeWorld()
+    const account = world.store.addAccount({ platform: 'x', external_id: '@invalid' })
+    const before = world.store.readBudget()
+    for (const allowBudgetOverrun of [undefined, null, 1, 'true', {}, []]) {
+      assert.throws(() => world.scheduler.refreshAccount(account.id, { manual: true, allowBudgetOverrun }), { code: 'invalid-budget-overrun', status: 400 })
+    }
+    for (const opts of [{}, { manual: false }, { manual: 'true' }]) {
+      assert.throws(() => world.scheduler.refreshAccount(account.id, { ...opts, allowBudgetOverrun: true }), { code: 'invalid-budget-overrun', status: 400 })
+    }
+    for (const mode of [undefined, 'first', 'auto']) {
+      assert.throws(() => world.scheduler.enqueue({ account_id: account.id, mode, allowBudgetOverrun: true }), { code: 'invalid-budget-overrun', status: 400 })
+    }
+    assert.throws(() => world.scheduler.enqueue({ account_id: account.id, mode: 'manual', scope: 1, allowBudgetOverrun: true }), { code: 'invalid-budget-overrun', status: 400 })
+    for (const allowBudgetOverrun of [true, false]) {
+      assert.throws(() => world.scheduler.refreshAll({ manual: true, allowBudgetOverrun }), { code: 'invalid-budget-overrun', status: 400 })
+      assert.throws(() => world.scheduler.enqueueMany({ mode: 'manual', allowBudgetOverrun }), { code: 'invalid-budget-overrun', status: 400 })
+    }
+    assert.deepEqual(world.store.readBudget(), before)
+    assert.equal(world.cloud.calls.length, 0)
+    assert.equal(world.scheduler.snapshot().running.length, 0)
+  })
+
+  it('keeps the complete two-call reservation on a first-call failure without a false success', async () => {
+    const world = makeWorld({ cloud: makeCountingCloud({ failUser: new Error('supplier unavailable') }) })
+    const account = world.store.addAccount({ platform: 'youtube', external_id: '@failure' })
+    world.store.reserve({ accountId: account.id })
+    world.store.reserve({ accountId: account.id })
+    assert.equal(world.scheduler.refreshAccount(account.id, { manual: true, allowBudgetOverrun: true }).queued, true)
+    await world.scheduler.settled()
+    const row = world.store.getAccount(account.id)
+    assert.equal(row.refresh_state, 'backoff')
+    assert.equal(row.refresh_count, 0)
+    assert.equal(row.last_success_at, null)
+    assert.equal(row.consecutive_failures, 1)
+    assert.equal(world.cloud.calls.length, 1)
+    assert.equal(world.store.readBudget().per_account[account.id].calls, 6)
+    assert.equal(world.store.readBudget().global_calls, 6)
+  })
+})
+
 describe('G1/G2: the cost contract is exactly two cloud calls per cycle', () => {
   it('spends exactly 1×user + 1×posts on a successful refresh', async () => {
     const world = makeWorld()

@@ -21,6 +21,7 @@
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
+import { readBudgetOverrun } from './rival-accounts-store.js'
 import {
   BACKOFF_MINUTES,
   BUDGET_REASONS,
@@ -190,10 +191,14 @@ export function createRivalRefreshScheduler(deps) {
    * today would leave it reading `idle` — the silent failure this module must
    * not produce. The probe is non-mutating (`canReserve`), so nothing is
    * charged for an answer that does not start a job.
-   * @param {{ account_id: string, mode?: 'first' | 'auto' | 'manual', scope?: number }} request
+   * @param {{ account_id: string, mode?: 'first' | 'auto' | 'manual', scope?: number, allowBudgetOverrun?: boolean }} request
    * @returns {EnqueueResult}
    */
   function enqueue(request) {
+    const allowBudgetOverrun = readBudgetOverrun(request, {
+      manual: request?.mode === 'manual',
+      singleAccount: request?.scope === undefined || request.scope === 0,
+    })
     const accountId = String(request?.account_id || '')
     if (!accountId) return { queued: false, status: 'not-found', account_id: accountId }
     if (inFlight.has(accountId)) return { queued: false, status: 'running', account_id: accountId }
@@ -201,7 +206,8 @@ export function createRivalRefreshScheduler(deps) {
     const mode = request.mode || 'auto'
     const account = store.getAccount(accountId)
     if (!account) return { queued: false, status: 'not-found', account_id: accountId }
-    const budgetProbe = store.canReserve({ accountId })
+    const budgetRequest = { accountId, scope: allowBudgetOverrun ? 'manual' : 'cycle', allowBudgetOverrun }
+    const budgetProbe = store.canReserve(budgetRequest)
     if (!budgetProbe.allowed) {
       const reason = budgetProbe.reason || BUDGET_REASONS.GLOBAL_DAILY_CAP
       parkForBudget(accountId, reason)
@@ -211,7 +217,7 @@ export function createRivalRefreshScheduler(deps) {
     if (!cooldown.allowed) {
       return { queued: false, status: 'cooldown', reason_key: cooldown.reason_key, account_id: accountId }
     }
-    const decision = store.reserve({ accountId, scope: 'cycle' })
+    const decision = store.reserve(budgetRequest)
     if (!decision.allowed) {
       const reason = decision.reason || BUDGET_REASONS.GLOBAL_DAILY_CAP
       parkForBudget(accountId, reason)
@@ -232,6 +238,7 @@ export function createRivalRefreshScheduler(deps) {
    * @returns {{ queued: string[], skipped: Array<{ id: string, reason_key: string }> }}
    */
   function enqueueMany(request) {
+    readBudgetOverrun(request, { manual: request?.mode === 'manual', singleAccount: false })
     const mode = request.mode || 'auto'
     const scope = request.scope ?? 0
     const accounts = store.listAccounts()
@@ -505,9 +512,11 @@ export function createRivalRefreshScheduler(deps) {
     enqueueMany,
     /** Queue a manual refresh; refuses inside the cooldown window. */
     refreshAccount(accountId, opts = {}) {
-      return enqueue({ account_id: accountId, mode: opts.manual === false ? 'auto' : 'manual' })
+      const allowBudgetOverrun = readBudgetOverrun(opts, { manual: opts.manual })
+      return enqueue({ account_id: accountId, mode: opts.manual === false ? 'auto' : 'manual', allowBudgetOverrun })
     },
     refreshAll(opts = {}) {
+      readBudgetOverrun(opts, { manual: opts.manual, singleAccount: false })
       return enqueueMany({
         mode: opts.manual === false ? 'auto' : 'manual',
         scope: 1,

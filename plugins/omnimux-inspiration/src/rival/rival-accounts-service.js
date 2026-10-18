@@ -17,6 +17,7 @@ import { markPotential } from './rival-potential.js'
 import { mergeAccountPosts, paginateFeed, sortFeedRows } from './rival-feed.js'
 import { rivalMediaFilename, rivalMediaUrl } from './rival-paths.js'
 import { RivalRemoteError } from './rival-remote.js'
+import { readBudgetOverrun } from './rival-accounts-store.js'
 import {
   BUDGET_REASONS,
   CLIENT_POLL_INTERVAL_MS,
@@ -387,11 +388,12 @@ export function createRivalAccountsService(deps) {
 
   /**
    * @param {string} accountId
-   * @param {{ manual?: boolean }} [opts]
+   * @param {{ manual?: boolean, allowBudgetOverrun?: boolean }} [opts]
    */
   function refreshAccount(accountId, opts = {}) {
+    const allowBudgetOverrun = readBudgetOverrun(opts, { manual: opts.manual })
     requireAccount(accountId)
-    const result = scheduler.refreshAccount(accountId, { manual: opts.manual !== false })
+    const result = scheduler.refreshAccount(accountId, { manual: opts.manual !== false, allowBudgetOverrun })
     if (result.status === 'cooldown') {
       throw new RivalServiceError(RIVAL_ERROR_CODES.MANUAL_COOLDOWN, '手动刷新过于频繁，请稍后再试', 429, { reason: 'cooldown' })
     }
@@ -417,6 +419,7 @@ export function createRivalAccountsService(deps) {
    * @param {{ manual?: boolean }} [opts]
    */
   function refreshAll(opts = {}) {
+    readBudgetOverrun(opts, { manual: opts.manual, singleAccount: false })
     const result = scheduler.refreshAll({ manual: opts.manual !== false })
     return { queued: result.queued, skipped: result.skipped }
   }
