@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+import { analysisInputFingerprint } from './analysis-input.js'
+import { createEmptyCreationDraft, creationBasis, buildCreationDraftText, reconcileCreationDraft, confirmCreationDraftBasis, validateCreationDraft, creationReferenceLabel } from './creation-draft.js'
+const item = { id: 'post', title: '账号案例', source_url: 'https://x.com/a/status/1', content: '完整帖子正文', media_items: [{ type: 'video', url: '/videos/first.mp4' }, { type: 'image', url: '/images/second.jpg' }, { type: 'video', url: '/videos/third.mp4' }] }
+const draft = (patch = {}) => reconcileCreationDraft(item, createEmptyCreationDraft(item), patch)
+describe('creation draft selection and user edits', () => {
+ it('creates no first-media selection or product template', () => { const value = createEmptyCreationDraft(item); assert.deepEqual(value.references, []); assert.equal(value.text, ''); assert.equal(validateCreationDraft(item, value).ok, false) })
+ it('builds only the selected image and purpose', () => { const value = draft({ references: [{ kind: 'media', media_index: 1 }], purpose: 'visual' }); assert.match(value.text, /图片 1/); assert.match(value.text, /画面风格/); assert.doesNotMatch(value.text, /商品|复刻原视频|视频 1/); assert.equal(validateCreationDraft(item, value).ok, true) })
+ it('preserves manual text and requires explicit confirmation of changed references', () => { const value = draft({ references: [{ kind: 'body' }] }); const manual = reconcileCreationDraft(item, value, { manual: true, text: '我的手工稿' }); const changed = reconcileCreationDraft(item, manual, { purpose: 'story' }); assert.equal(changed.text, '我的手工稿'); assert.equal(changed.stale, true); assert.equal(validateCreationDraft(item, changed).ok, false); const confirmed = confirmCreationDraftBasis(item, changed); assert.equal(confirmed.text, '我的手工稿'); assert.equal(validateCreationDraft(item, confirmed).ok, true) })
+ it('updates automatic text and explicitly rebuilds a manual draft', () => { const value = draft({ references: [{ kind: 'media', media_index: 1 }] }); const updated = reconcileCreationDraft(item, value, { references: [{ kind: 'body' }] }); assert.match(updated.text, /帖子正文/); assert.doesNotMatch(updated.text, /图片 1/); const rebuilt = reconcileCreationDraft(item, { ...value, manual: true, text: '手工' }, { manual: false, references: [{ kind: 'body' }] }); assert.equal(rebuilt.manual, false); assert.match(rebuilt.text, /帖子正文/) })
+ it('keeps unfinished clip inputs empty and rejects missing or invalid ranges', () => { for (const clips of [[], [{ media_index: 2, start_seconds: '', end_seconds: '' }], [{ media_index: 2, start_seconds: 2, end_seconds: 1 }], [{ media_index: 2, start_seconds: 0, end_seconds: Infinity }]]) assert.equal(validateCreationDraft(item, draft({ references: [{ kind: 'media', media_index: 2 }], clips })).ok, false); const value = draft({ references: [{ kind: 'media', media_index: 2 }], clips: [{ media_index: 2, start_seconds: '', end_seconds: '' }] }); assert.equal(value.clips[0].start_seconds, '') })
+ it('uses exactly the chosen video range and canonical numeric identity', () => { const value = draft({ references: [{ kind: 'media', media_index: 2 }], clips: [{ media_index: 2, start_seconds: '1.5', end_seconds: '4' }] }); assert.equal(validateCreationDraft(item, value).ok, true); assert.match(value.text, /视频 2.*1.5.*4/); assert.equal(creationBasis(item, value), creationBasis(item, { ...value, clips: [{ media_index: 2, start_seconds: 1.5, end_seconds: 4 }] })); assert.equal(buildCreationDraftText(item, value), value.text) })
+ it('rejects nonselected clips, image clips and invalid indexes', () => { for (const value of [draft({ references: [{ kind: 'body' }], clips: [{ media_index: 0, start_seconds: 0, end_seconds: 1 }] }), draft({ references: [{ kind: 'media', media_index: 1 }], clips: [{ media_index: 1, start_seconds: 0, end_seconds: 1 }] }), draft({ references: [{ kind: 'media', media_index: 40 }] })]) assert.equal(validateCreationDraft(item, value).ok, false) })
+ it('accepts only current live analysis and binds the saved result', () => { const target = { scope: 'media', media_index: 1, directions: ['creative'] }; const analysis = { ...target, status: 'done', source: 'live', input_fingerprint: analysisInputFingerprint(item, target), result: { markdown: '当前真实分析' } }; const row = { ...item, analysis_results: { 'media:1': analysis } }; const value = reconcileCreationDraft(row, createEmptyCreationDraft(row), { references: [{ kind: 'analysis', scope: 'media', media_index: 1, input_fingerprint: analysis.input_fingerprint, result_snapshot: { markdown: '伪造客户端内容' } }] }); assert.equal(validateCreationDraft(row, value).ok, true); assert.equal(validateCreationDraft({ ...row, analysis_results: { 'media:1': { ...analysis, source: 'legacy_unknown' } } }, value).ok, false); assert.equal(validateCreationDraft({ ...row, content: '正文已变化' }, value).ok, false); assert.notEqual(creationBasis(row, value), creationBasis({ ...row, analysis_results: { 'media:1': { ...analysis, result: { markdown: '重新分析结果' } } } }, value)) })
+})
+
+it('rejects malformed draft fields without throwing',()=>{
+ const item={id:'post',content:'正文'};const draft=reconcileCreationDraft(item,createEmptyCreationDraft(item),{references:[{kind:'body'}]});
+ assert.equal(validateCreationDraft(item,{...draft,references:[null]}).ok,false);
+ assert.equal(validateCreationDraft(item,{...draft,intent:{arbitrary:'value'}}).ok,false);
+ assert.equal(validateCreationDraft(item,{...draft,clips:[null]}).ok,false);
+})
+
+it('numbers mixed media and analysis references by the same type as the reader',()=>{
+ assert.equal(creationReferenceLabel(item,{kind:'media',media_index:1}),'图片 1');
+ assert.equal(creationReferenceLabel(item,{kind:'media',media_index:2}),'视频 2');
+ assert.equal(creationReferenceLabel(item,{kind:'analysis',scope:'media',media_index:1}),'图片 1的分析思路');
+})
