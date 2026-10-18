@@ -163,16 +163,17 @@ export function RivalAccountsPanel(props) {
    */
   const handleInspirationReplicate = useCallback(async (row) => {
     const ticket = String(row?.id ?? '')
-    if (!ticket || busyId) return
+    if (!ticket || busyId) return { ok: false, error: 'busy' }
     setBusyId(ticket)
     try {
-      await oneClickReplicate(row, {
+      return await oneClickReplicate(row, {
         onStatus: (key) => {
           setNotice(key ? { key } : null)
         },
       })
-    } catch {
+    } catch (error) {
       setNotice({ key: 'rivalAccounts.post.attachFailed' })
+      return { ok: false, error: error instanceof Error ? error.message : String(error) }
     } finally {
       setBusyId(null)
     }
@@ -296,10 +297,7 @@ export function RivalAccountsPanel(props) {
           t={t}
           onClose={() => setDeconstructRow(null)}
           onItemUpdated={(updated) => setDeconstructRow(updated)}
-          onReplicate={(row) => {
-            setDeconstructRow(null)
-            void handleInspirationReplicate(row)
-          }}
+          onReplicate={handleInspirationReplicate}
           replicateBusy={busyId != null}
         />
       ) : null}

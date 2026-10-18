@@ -1269,6 +1269,9 @@ async function runShareJob(args) {
 
 export function handleCreate({ req, store }) {
   const body = req.body || {}
+  if (['analysis_results', 'body_translation', 'creation_draft', 'creation_reference'].some((key) => Object.hasOwn(body, key))) {
+    return fail(400, '分析结果与创作参考只能通过对应功能保存')
+  }
   if (!body.title) return fail(400, 'title is required')
   const created = store.add(body)
   return { status: 201, body: { data: created } }
@@ -2187,6 +2190,15 @@ export function handleGetItem({ id, store }) {
 
 export function handlePatchItem({ id, req, store }) {
   const body = req.body || {}
+  const editable = new Set(['title', 'content', 'tags', 'is_favorite', 'category', 'country_code', 'traffic_type', 'posted_at', 'published_at'])
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !editable.has(key))) {
+    return fail(400, '此入口仅支持编辑原帖文字、标签、分类与收藏')
+  }
+  if (Object.entries(body).some(([key, value]) => key === 'tags'
+    ? !Array.isArray(value) || value.some((tag) => typeof tag !== 'string')
+    : key === 'is_favorite' ? typeof value !== 'boolean' : typeof value !== 'string')) {
+    return fail(400, '编辑内容格式不正确')
+  }
   const updated = store.update(id, body)
   return { status: 200, body: { data: updated } }
 }

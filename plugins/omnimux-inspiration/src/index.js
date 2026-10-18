@@ -286,6 +286,8 @@ export function apply(ctx) {
     videoAnalyzeTool,
     textComplete,
     rivalDispatcher,
+    videoProcess: () => (typeof ctx.get === 'function' ? ctx.get('videoProcess') : undefined),
+    composerAttachments: () => (typeof ctx.get === 'function' ? ctx.get('composerAttachments') : undefined),
     fetcher: typeof ctx.get === 'function' ? ctx.get('fetcher') : undefined,
     resolver: typeof ctx.get === 'function' ? ctx.get('resolver') : undefined,
     // Hub capability `inspirationShare` owns the cloud publish (upload assets →

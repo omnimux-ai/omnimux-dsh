@@ -43,6 +43,7 @@ import { SHARE_STATUS_IDLE } from './share-status.js'
  * @property {Record<string, object>} [analysis_results] results keyed by post/body/media:<index>
  * @property {object} [body_translation] original-body translation with source_fingerprint
  * @property {object} [creation_draft] user-owned creation reference draft
+ * @property {object} [creation_reference] server-owned prepared reference handle, never a client-supplied file path
  * @property {string} [content_shape] shape of a saved post: text | photo | gallery | video | quote | repost | thread | article | poll | link
  * @property {Record<string, unknown>} [quoted] the post this one quotes: author, text, coverUrl
  * @property {string[]} [thread_items] the conversation entries of a thread
@@ -123,6 +124,7 @@ function buildRow(record, identity = {}) {
     analysis_results: record.analysis_results || {},
     body_translation: record.body_translation,
     creation_draft: record.creation_draft,
+    creation_reference: record.creation_reference,
     stats: record.stats || {},
     author: record.author || {},
     // Captured-post structure. Keys the capture did not fill stay absent so a

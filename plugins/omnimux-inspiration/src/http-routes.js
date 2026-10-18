@@ -14,6 +14,7 @@ import {
   handleTranslate,
 } from './http-handlers.js'
 import { handleRadarKeywords, handleRadarMatch } from './radar/radar-handlers.js'
+import { handleSaveCreationDraft, handlePrepareCreationReferences, handleMaterializeCreationReferences } from './creation-handlers.js'
 import { detectPlatformFromUrl } from './url-normalizer.js'
 
 export { detectPlatformFromUrl } from './url-normalizer.js'
@@ -43,6 +44,9 @@ const ROUTE_HANDLERS = {
   'fetch-media': handleFetchMedia,
   analyze: handleAnalyze,
   translate: handleTranslate,
+  'creation-draft': handleSaveCreationDraft,
+  'creation-reference': handlePrepareCreationReferences,
+  'creation-attachments': handleMaterializeCreationReferences,
   share: handleShare,
   'batch-delete': handleBatchDelete,
   'radar-keywords': handleRadarKeywords,
@@ -183,6 +187,10 @@ const SPECIAL_PATHS = {
 
 function matchAnalyze(method, path) {
   if (method !== 'POST') return null
+  for (const name of ['creation-draft', 'creation-reference', 'creation-attachments']) {
+    const id = parseActionId(path, name)
+    if (id) return { name, id }
+  }
   const analyzeId = parseActionId(path, 'analyze')
   if (analyzeId) return { name: 'analyze', id: analyzeId }
   const translateId = parseActionId(path, 'translate')
@@ -334,6 +342,8 @@ function pipeRange(opts) {
  *   socialFetcher?: Function,
  *   videoAnalyzeTool?: any,
  *   textComplete?: any,
+ *   videoProcess?: (() => {execute: Function} | undefined) | {execute: Function},
+ *   composerAttachments?: (() => object | undefined) | object,
  *   fetcher?: typeof fetch,
  *   resolver?: Function,
  *   analyzeInspiration?: Function,
@@ -351,6 +361,8 @@ export function createLocalInspirationDispatcher(deps) {
     socialFetcher: deps.socialFetcher,
     videoAnalyzeTool: deps.videoAnalyzeTool,
     textComplete: deps.textComplete,
+    videoProcess: deps.videoProcess,
+    composerAttachments: deps.composerAttachments,
     fetcher,
     // Forwarded to the download target check. Left undefined in production so the
     // real `dns.lookup` is used; tests inject a stub to stay offline.
