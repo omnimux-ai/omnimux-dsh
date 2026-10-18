@@ -24,6 +24,8 @@ starter保留现有origin、非枚举loginUrl、summary、observations、assertA
 
 installation固定包含taskId/runId、sourceRoot/privateRoot/profile、base/head、candidateDigest/inputsDigest、实际origin/pid、packages。每个package包含name、installedRoot、发布payload(path/sha256/size)；任务插件另有serverEntry(path/sha256)与可选clientBundle(path/sha256/bytes)，descriptor path为包内相对路径。所有实际路径均落该任务自有目录；源码或归档身份可追回捕获的候选。原固定资产工作台断言需要显式omnimux-assets和其betterSidebar支持层，不能通过删除旧断言省包；非任务支持包同样要核安装payload，但不冒充任务源码插件。
 
+真实系统tmp探测发现当前App没有Node react-dom包，ui-kit声明required peer >=18.2.0。唯一额外纯库支持为仓内已安装react-dom18.3.1及其声明transitives，复制正常私有图，保留并实际核其React peer；不注册插件bundle，不覆盖官方包。installation另记录固定runtimeExecutable和二进制哈希，server同PID读取process.execPath，shipping peer anchor须由该真实路径派生；peer observer真实文件与加载源码哈希保留为witness。最终通过仍依赖正式公开runner本次实际安装、加载和浏览器观测。
+
 独立proof helper实现：
 - `verifyTaskServerLoading({inspectorUrl,pid,installation})`：同进程CDP实际script URL、getScriptSource、源哈希，返回匹配清单；不落原始脚本、login token或环境变量。
 - `captureTaskClientProof({send,readEvents,origin,installation})`：实际浏览器Debugger脚本，复用live-runtime-proof的AST注册/语义哈希比较，真实页面origin前后一致；任务动态origin入口独立于既有Dev白名单，不放宽原Dev入口。
