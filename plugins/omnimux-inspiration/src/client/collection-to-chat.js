@@ -156,27 +156,57 @@ export function resolveActiveSessionId(windowObject) {
 }
 
 /**
- * Reveal the conversation column: uncollapse + split focus. A failure here must
- * not abort the prefill, so it is reported to the caller's error sink instead.
+ * Reveal the conversation column the same way the "replicate" CTA does.
+ *
+ * The official workbench entry `ensureConversationVisible` is the only path that
+ * also exits a host right-sidebar fullscreen panel (the plugin collapse key and
+ * the host layout mode are independent, so clearing the key alone leaves the
+ * conversation behind the fullscreen stage — the exact "clicked, nothing
+ * happened" symptom). Fall back to the collapse/focus pair used by
+ * `replicate-to-chat`, and replay it like that path does so a layout that
+ * settles after the click still lands on the revealed conversation.
+ *
+ * A failure here must not abort the prefill, so it is reported to the caller's
+ * error sink instead.
  * @param {Window | undefined} windowObject
+ * @param {string} [sessionId]
  * @param {(error: unknown) => void} [onError]
  */
-export function revealConversation(windowObject, onError) {
+export function revealConversation(windowObject, sessionId = '', onError) {
   const workbench = windowObject?.__omnimuxWorkbench
   if (!workbench) return
-  if (typeof workbench.setConversationCollapsed === 'function') {
-    try {
-      workbench.setConversationCollapsed(false)
-    } catch (error) {
-      if (typeof onError === 'function') onError(error)
+  const report = error => { if (typeof onError === 'function') onError(error) }
+  const revealOnce = () => {
+    if (typeof workbench.ensureConversationVisible === 'function') {
+      try {
+        // No options: exit a host right-sidebar fullscreen and clear the
+        // collapse key while keeping the current surface in a split layout, so
+        // the library stage (and its toast) stays visible next to the session.
+        workbench.ensureConversationVisible()
+        return
+      } catch (error) {
+        report(error)
+      }
+    }
+    if (typeof workbench.setConversationCollapsed === 'function') {
+      try {
+        workbench.setConversationCollapsed(false)
+      } catch (error) {
+        report(error)
+      }
+    }
+    if (typeof workbench.setFocus === 'function') {
+      try {
+        workbench.setFocus('split')
+      } catch (error) {
+        report(error)
+      }
     }
   }
-  if (typeof workbench.setFocus === 'function') {
-    try {
-      workbench.setFocus('split')
-    } catch (error) {
-      if (typeof onError === 'function') onError(error)
-    }
+  revealOnce()
+  if (typeof setTimeout === 'function') {
+    setTimeout(revealOnce, 0)
+    setTimeout(revealOnce, 50)
   }
 }
 
@@ -204,7 +234,22 @@ export async function addCollectionToSession(collection, io = {}) {
     const collectionId = String(collection?.id ?? '').trim()
     if (!collectionId) return { ok: false, errorKey: 'collection.sessionFailed', code: 'invalid-collection' }
 
-    // 1. Full membership, read-only, lean projection: the prompt needs ids,
+    // 1. Target session: current conversation, never a new one.
+    const sessionId = Object.hasOwn(io, 'sessionId')
+      ? normalizeSessionId(io.sessionId)
+      : resolveActiveSessionId(windowObject)
+    if (!sessionId) return { ok: false, errorKey: 'collection.sessionNoSession', code: 'no-session' }
+
+    // 2. Reveal the conversation immediately — before the member read — exactly
+    //    like the replicate CTA: a slow/failing read must never be why the
+    //    session bar stays closed, and `ensureConversationVisible` is what
+    //    pulls it out from behind a host right-sidebar fullscreen panel.
+    const reveal = typeof io.reveal === 'function'
+      ? io.reveal
+      : () => revealConversation(windowObject, sessionId, error => reportError(io, error))
+    reveal()
+
+    // 3. Full membership, read-only, lean projection: the prompt needs ids,
     //    names, platform and type, not the stored breakdown payload.
     const readMembers = typeof io.fetchCollectionItems === 'function'
       ? io.fetchCollectionItems
@@ -225,18 +270,6 @@ export async function addCollectionToSession(collection, io = {}) {
     const items = Array.isArray(data.items) ? data.items : []
     const total = Number(data.total) > 0 ? Number(data.total) : items.length
     if (items.length === 0) return { ok: false, errorKey: 'collection.sessionEmpty', code: 'empty' }
-
-    // 2. Target session: current conversation, never a new one.
-    const sessionId = Object.hasOwn(io, 'sessionId')
-      ? normalizeSessionId(io.sessionId)
-      : resolveActiveSessionId(windowObject)
-    if (!sessionId) return { ok: false, errorKey: 'collection.sessionNoSession', code: 'no-session' }
-
-    // 3. Reveal the column only once the operation can actually complete.
-    const reveal = typeof io.reveal === 'function'
-      ? io.reveal
-      : () => revealConversation(windowObject, error => reportError(io, error))
-    reveal()
 
     // 4. Official prefill seam, append mode: an existing draft or attachments
     //    never block "add to session"; the collection context is appended after

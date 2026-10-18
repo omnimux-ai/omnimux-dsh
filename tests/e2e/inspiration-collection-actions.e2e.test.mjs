@@ -24,6 +24,15 @@
  * append-specific toast. The stub below implements the hub append contract; the
  * real hub append implementation is covered by hub unit tests (18 pass).
  *
+ * #3422: the column is revealed through the official
+ * `__omnimuxWorkbench.ensureConversationVisible()` entry with NO arguments (hub
+ * no-arg semantics: exit a host right-sidebar fullscreen + clear the collapse key
+ * + keep split, so the library stage and its toast stay visible) — the same
+ * activation the replicate CTA uses. It runs immediately after the session is
+ * resolved, before the member read, and replays at 0ms/50ms. The stub below
+ * records the full argument list; the real hub ensure/fullscreen-exit logic is
+ * covered by hub unit tests.
+ *
  * Live precondition: `docs/evidence/2026-10-18-inspiration-collection-cta-css-3418/`
  * (browser.json + cta-shared-ui.png / cta-host-rule-immunity.png, 1600x1100) from
  * the #3418 real-browser run (9/9 assertions), inspected before this regression
@@ -65,7 +74,7 @@ button[class*="add"] svg,.Q7WfXG_add svg,
 .sh-picker-trigger svg{flex:none !important;width:14px !important;height:14px !important;min-width:14px !important;min-height:14px !important;display:block !important}`
 
 
-const livePrecondition = 'Issue #3420: docs/evidence/2026-10-18-inspiration-append-to-session-3420/browser.json + 2 decodable 1600x1100 PNGs (append-existing-draft, append-protected) from the real-browser run, 7/7 assertions (append draft + blank line, conversation open, no toast, no send; phase-protected toast + draft untouched); #3418 evidence under docs/evidence/2026-10-18-inspiration-collection-cta-css-3418/.'
+const livePrecondition = 'Issue #3422 (round 2, no-arg ensure): docs/evidence/2026-10-18-inspiration-session-ensure-visible-3422/browser.json + ensure-reveal.png (1600x1100) from the real-browser run, 6/6 assertions (ensureConversationVisible called exactly 3x with an EMPTY argument list before the deferred member read completes, column collapsed->open, no setConversationCollapsed fallback, append draft, no toast/send; fallback path recorded); #3420 evidence under docs/evidence/2026-10-18-inspiration-append-to-session-3420/.'
 
 async function settle(browser) {
   await browser.wait(() => {
@@ -157,6 +166,12 @@ async function installHostStubs(browser) {
     document.body.dataset.conversation = 'collapsed'
     window.__omnimuxWorkbench = {
       getSnapshot: () => ({ sessionId: 'qa-session-1' }),
+      ensureConversationVisible(...args) {
+        // Hub no-arg contract: exit host right-sidebar fullscreen + clear the
+        // collapse key + keep split (library stage/toast stay visible).
+        qaHost.calls.push(['ensure', args])
+        document.body.dataset.conversation = 'open'
+      },
       setConversationCollapsed(value) {
         qaHost.calls.push(['collapsed', value])
         document.body.dataset.conversation = value ? 'collapsed' : 'open'
@@ -556,7 +571,7 @@ async function withEnvironment(name, run) {
   }
 }
 
-test('collection card actions: shared CTA under the market host rule, hover, view, append to session, focus, phase-protected and no-session', { timeout: 180000 }, async () => {
+test('collection card actions: shared CTA under the market host rule, hover, view, ensure-visible append to session, focus, phase-protected and no-session', { timeout: 180000 }, async () => {
   await withEnvironment('journey', async context => {
     const { fixture, browser, report, capture } = context
     // Drift guard: the injected host rule must stay verbatim in the market source.
@@ -726,9 +741,12 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     assert.equal(host.prefill[0].prompt, expectedPrompt(collection.id))
     assert.equal(host.composer, expectedPrompt(collection.id))
     assert.equal(host.conversation, 'open')
-    assert.deepEqual(host.calls, [['collapsed', false], ['focus', 'split']])
-    assert.deepEqual(host.calls[0], ['collapsed', false])
-    assert.deepEqual(host.calls[1], ['focus', 'split'])
+    assert.ok(host.calls.length >= 1, 'ensureConversationVisible must be called')
+    for (const call of host.calls) {
+      assert.equal(call[0], 'ensure')
+      assert.equal(call[1].length, 0, 'ensure must be called with no arguments (hub no-arg contract)')
+    }
+    assert.equal(host.calls.some(call => call[0] === 'collapsed' || call[0] === 'focus'), false, 'ensure path must not fall back to setConversationCollapsed/setFocus')
     assert.equal(host.sends.length, 0)
     assert.deepEqual(host.requests.filter(entry => entry.method !== 'GET'), [])
     assert.deepEqual(host.requests.filter(entry => /(send|message|draft|turn|completion)/i.test(entry.url)), [])
@@ -740,7 +758,7 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     assert.equal(memberRead.length, 1)
     assert.deepEqual(memberRead[0].query, { page: '1', page_size: '100', projection: 'lean', collection_id: collection.id })
     assert.equal(memberRead[0].status, 200)
-    report.checks.push('加入会话 reads the real lean member list, reveals the column (uncollapse + split focus), writes exactly one sourced prompt via the prefill seam to qa-session-1, never sends')
+    report.checks.push('加入会话 resolves the current session, calls ensureConversationVisible() with no arguments immediately (replayed at 0/50ms; exits host fullscreen and keeps split), then reads the real lean member list and appends exactly one sourced prompt via the prefill seam to qa-session-1, never sends')
     await capture('add-to-session')
 
     // 4. Keyboard :focus-within reveal (mouse parked away), media-token palette.
@@ -799,7 +817,12 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     assert.equal(beforeAppend.composer, SENTINEL_DRAFT)
     assert.equal(beforeAppend.attachments, 1)
     assert.equal(afterAppend.conversation, 'open', '加入会话 must open the collapsed conversation column')
-    assert.deepEqual(afterAppend.calls, [['collapsed', false], ['focus', 'split']])
+    assert.equal(afterAppend.calls.length, 3, 'immediate ensure + 0ms/50ms replays')
+    for (const call of afterAppend.calls) {
+      assert.equal(call[0], 'ensure')
+      assert.equal(call[1].length, 0, 'ensure must be called with no arguments (hub no-arg contract)')
+    }
+    assert.equal(afterAppend.calls.some(call => call[0] === 'collapsed' || call[0] === 'focus'), false, 'ensure path must not fall back to setConversationCollapsed/setFocus')
     assert.equal(afterAppend.prefill.length, 1)
     assert.equal(afterAppend.prefill[0].mode, 'append')
     assert.equal(afterAppend.prefill[0].targetSessionId, SESSION_ID)
@@ -906,7 +929,7 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     assert.equal(noSession.sends.length, 0)
     assert.deepEqual(noSession.requests.filter(entry => entry.method !== 'GET'), [])
     const readsAfter = fixture.requests.filter(entry => entry.method === 'GET' && entry.path === LOCAL && entry.query.collection_id === collection.id && entry.query.page_size === '100').length
-    assert.equal(readsAfter, readsBefore + 1, 'members must still be read before the session check aborts')
+    assert.equal(readsAfter, readsBefore, 'no member read may start when there is no session (session is resolved before the member read)')
     assert.equal(noSession.buttonDisabled, false)
     assert.notEqual(noSession.buttonBusy, 'true')
     assert.equal(noSession.rootCardTitle, COLLECTION_TITLE)

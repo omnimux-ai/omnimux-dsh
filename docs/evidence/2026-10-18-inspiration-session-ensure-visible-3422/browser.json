@@ -1,0 +1,181 @@
+{
+  "kind": "browser-evidence-for-issue-3422",
+  "issue": 3422,
+  "title": "合集「加入会话」复用无参 ensureConversationVisible 激活会话栏",
+  "runId": "20261018T130320-v9i8s",
+  "createdAt": "2026-10-18T13:03:20.097Z",
+  "scope": "real-section-and-production-local-handlers + synthetic-workbench-ensure-stub + synthetic-append-prefill-stub; not-full-host-install",
+  "finalHead": "00e28aecd8fad4c2a4b41eb00fe359ffde884587",
+  "identity": {
+    "sourceSha256": "b579548ba817d44b7bb2ffab5b298dcea5ae4a0e487c2031f64f6b54a468315f",
+    "bundleSha256": "c6008b31ed887e05cfec1411cbe19ffb34245bf0f3186c8673c598d4bba98946",
+    "head": "00e28aecd8fad4c2a4b41eb00fe359ffde884587"
+  },
+  "origin": "http://127.0.0.1:52581",
+  "chrome": {
+    "kind": "independent-headless-chromium",
+    "pid": 18865,
+    "port": 52583
+  },
+  "collection": {
+    "id": "collection_d32aca1f-47e8-466f-9b2c-e0c89ebf8aa3",
+    "title": "测试合集",
+    "item_ids": [
+      "qa-dance1",
+      "qa-dance2",
+      "qa-fashion1"
+    ]
+  },
+  "seamModel": {
+    "description": "The synthetic `__omnimuxWorkbench` stub implements the official `ensureConversationVisible()` entry with NO arguments (hub no-arg semantics: exit a host right-sidebar fullscreen + clear the collapse key + keep split, so the library stage and its toast stay visible), records the full argument list, and sets body[data-conversation]=open. It keeps the replicate-style `setConversationCollapsed`/`setFocus` recorders for the fallback. The real hub ensure/fullscreen-exit logic is covered by hub unit tests, not by this fixture.",
+    "ensureCallsAreReplayed": "implementation calls ensure once immediately and replays at 0ms/50ms (same as replicate CTA): exactly three calls are expected, each with an empty argument list (no sessionId/options)"
+  },
+  "scenarioA": {
+    "precondition": {
+      "conversation": "collapsed",
+      "draft": "我的问题：先看舞蹈参考",
+      "attachments": 1
+    },
+    "duringDeferredMemberRead": {
+      "conversation": "open",
+      "ensureCalls": [
+        [
+          "ensure",
+          []
+        ]
+      ],
+      "prefillCount": 0,
+      "note": "the real member read was held open by the fixture; ensure already ran and the column is open while prefill is still 0 — reveal happens before the member read"
+    },
+    "result": {
+      "conversation": "open",
+      "ensureCalls": [
+        [
+          "ensure",
+          []
+        ],
+        [
+          "ensure",
+          []
+        ],
+        [
+          "ensure",
+          []
+        ]
+      ],
+      "collapseCalls": [],
+      "focusCalls": [],
+      "prefillCount": 1,
+      "prefillMode": "append",
+      "prefillTargetSessionId": "qa-session-1",
+      "prefillHasAttach": true,
+      "draftBefore": "我的问题：先看舞蹈参考",
+      "draftAfter": "我的问题：先看舞蹈参考\n\n来源：OmniMux 灵感库 · 本地合集\n合集：测试合集\n合集 ID：collection_d32aca1f-47e8-466f-9b2c-e0c89ebf8aa3\n成员条数：3\n成员清单：\n1. 舞蹈参考一（成员 id：qa-dance1；平台：tiktok；类型：image）\n2. 舞蹈参考二（成员 id：qa-dance2；平台：tiktok；类型：image）\n3. 穿搭参考一（成员 id：qa-fashion1；平台：tiktok；类型：image）\n使用 inspiration_get 按上述 id 逐条读取（标题、正文/脚本、拆解、本地媒体路径）再回答问题。\n问题：",
+      "toastCount": 0,
+      "sends": 0
+    }
+  },
+  "fallbackScenario": {
+    "precondition": {
+      "conversation": "collapsed",
+      "draft": "我的问题：先看舞蹈参考"
+    },
+    "result": {
+      "conversation": "open",
+      "ensureCalls": [],
+      "collapseCalls": [
+        [
+          "collapsed",
+          false
+        ],
+        [
+          "collapsed",
+          false
+        ],
+        [
+          "collapsed",
+          false
+        ]
+      ],
+      "focusCalls": [
+        [
+          "focus",
+          "split"
+        ],
+        [
+          "focus",
+          "split"
+        ],
+        [
+          "focus",
+          "split"
+        ]
+      ],
+      "prefillMode": "append",
+      "draftAfter": "我的问题：先看舞蹈参考\n\n来源：OmniMux 灵感库 · 本地合集\n合集：测试合集\n合集 ID：collection_d32aca1f-47e8-466f-9b2c-e0c89ebf8aa3\n成员条数：3\n成员清单：\n1. 舞蹈参考一（成员 id：qa-dance1；平台：tiktok；类型：image）\n2. 舞蹈参考二（成员 id：qa-dance2；平台：tiktok；类型：image）\n3. 穿搭参考一（成员 id：qa-fashion1；平台：tiktok；类型：image）\n使用 inspiration_get 按上述 id 逐条读取（标题、正文/脚本、拆解、本地媒体路径）再回答问题。\n问题："
+    }
+  },
+  "assertions": [
+    {
+      "name": "click reveals the conversation before the member read finishes (ensure called immediately with no arguments)",
+      "pass": true
+    },
+    {
+      "name": "ensureConversationVisible is called exactly 3 times with NO arguments and replaces the collapse/focus fallback",
+      "pass": true
+    },
+    {
+      "name": "conversation column is open after the click and the collection prompt is appended after a blank line",
+      "pass": true
+    },
+    {
+      "name": "no blocking toast, no send, no send-like request",
+      "pass": true
+    },
+    {
+      "name": "fallback: without ensure, the replicate-style collapse/focus pair reveals the column and the append still happens",
+      "pass": true
+    },
+    {
+      "name": "no browser request escaped the fixture origin; no console exceptions",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "ensure-reveal.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 228620,
+      "sha256": "4361fed7f935a82d020e1f8c02cf3e47bda776c24fbff4d10085e4571edcd107"
+    }
+  ],
+  "consoleErrors": [],
+  "network": {
+    "events": 16,
+    "external": []
+  },
+  "counters": {
+    "syntheticCloud": 1,
+    "blockedCapabilities": 0,
+    "blockedExternalFetch": 0,
+    "injectedReadFailures": 0
+  },
+  "cleanup": {
+    "browser": {
+      "chromeExited": true,
+      "profileRemoved": true
+    },
+    "fixture": {
+      "serverClosed": true,
+      "storeRemoved": true,
+      "environmentRestored": true
+    }
+  },
+  "pass": true,
+  "boundaries": [
+    "Synthetic workbench/append seams and the conversation column/composer; this is not a full Host install. The real ensureConversationVisible (exit host right-sidebar fullscreen + clear collapse key) is covered by hub unit tests and is not re-implemented here.",
+    "Real: product InspirationSection bundle, production local handlers/store, real loopback HTTP, real DOM/composer writes and clicks in headless Chrome; the deferred member read proves reveal ordering in-page.",
+    "No Dev app (port 45120), no user profile, no external network; dynamic loopback ports only; Chrome/server/temp store cleaned up."
+  ]
+}
