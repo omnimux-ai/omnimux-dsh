@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { captureCandidate, sealEvidence, validateEvidence } from './evidence-contract.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -788,8 +788,8 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
     || installation.base !== candidate?.base?.resolvedSha || installation.head !== candidate?.head?.resolvedSha
     || !digest(installation.candidateDigest) || installation.candidateDigest !== candidate?.candidate?.contentDigest
     || !digest(installation.inputsDigest) || installation.inputsDigest !== candidate?.inputs?.contentDigest
-    || typeof installation.privateRoot !== 'string' || dirname(installation.privateRoot) !== root
-    || !installation.privateRoot.startsWith(join(root, '.test-env-'))) reject();
+    || typeof installation.privateRoot !== 'string' || dirname(installation.privateRoot) !== fs.realpathSync(tmpdir())
+    || !basename(installation.privateRoot).startsWith('omnimux-task-')) reject();
   const privatePath = path => typeof path === 'string' && resolve(path) === path && path.startsWith(installation.privateRoot + sep);
   if (!privatePath(installation.profile) || !Array.isArray(installation.packages) || !installation.packages.length
     || installation.packages.some(pkg => !pkg || typeof pkg.name !== 'string')) reject();

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { tmpdir } from 'node:os';
 import { createAppQaRunner, validateTaskRuntimeBinding } from './worktree-app-qa.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -74,7 +75,7 @@ test('self-reported installed and fresh flags cannot become task proof', async (
 
 // These are consistency tests for captured facts, not installation or browser acceptance.
 function bindingFixture() {
-  const privateRoot = join(root, '.test-env-binding-unit');
+  const privateRoot = join(fs.realpathSync(tmpdir()), 'omnimux-task-binding-unit');
   const candidate = { base: { resolvedSha: 'a'.repeat(40) }, head: { resolvedSha: 'b'.repeat(40) },
     candidate: { contentDigest: 'c'.repeat(64) }, inputs: { contentDigest: 'd'.repeat(64) } };
   const shared = { taskId: '3409', runId: 'unit', origin: 'http://127.0.0.1:12345', pid: 123,

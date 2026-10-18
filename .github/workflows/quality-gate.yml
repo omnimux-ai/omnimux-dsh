@@ -215,7 +215,7 @@ jobs:
 
       - name: Verify public evidence core and consumer
         run: |
-          node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs
+          node --test scripts/evidence-contract.test.mjs scripts/worktree-app-qa-journey.test.mjs scripts/test-env-bootstrap.test.mjs scripts/test-env-bootstrap-fresh.test.mjs scripts/task-runtime-install.test.mjs scripts/task-runtime-proof.test.mjs
           node --test scripts/guard-quality-loop.test.mjs
 
       # A direct registered task below the original checkout resolves its already locked root dependencies.
@@ -316,7 +316,7 @@ jobs:
           test "$("${clean_git[@]}" -C "$task" rev-parse --verify 'HEAD^{commit}')" = "$candidate"
           test "$(stat -c '%d:%i' -- "$task")" = "$identity"
           phase=tests
-          node --test "$task/scripts/worktree-app-qa.test.mjs"
+          node --test "$task/scripts/worktree-app-qa.test.mjs" "$task/scripts/worktree-app-qa-task.test.mjs"
           phase=tests-completed
 
       - name: Retain evidence and clean owned public evidence data repository

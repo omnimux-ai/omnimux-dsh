@@ -6,6 +6,8 @@
 
 新用户基线是已安装的官方 packaged runtime 与本任务候选源码、仓内已安装构建依赖。运行配置、业务数据、HOME/DSH_HOME、agents、缓存、store全部在一次性私有目录；运行环境不继承凭据。缺runtime或依赖明确分类失败，不读Dev补缺，不下载真实上游。
 
+实际独审发现将运行包图放worktree内会使Node向祖先node_modules找缺失peer。正式fresh安装/运行目录因此固定为系统真实临时目录下新建omnimux-task-*，绑定task/run与目录dev/ino；源码prep仍在worktree拥有的.test-env-*。部署的生产file图不得指回repo。声明peer在同packaged wrapper中检查真实解析，只允许私有图或App只读anchor，版本不符/其它来源拒绝；optional缺失明确记录而非假包。普通依赖重写file前验证声明版本/定位，使用已锁semver7.8.5，不手写宽松版本比较。
+
 ## 公开交接
 
 - 保留无evidenceContext的旧兼容路径；显式fresh路径仅支持ui，onboarding/live保持明确拒绝。
