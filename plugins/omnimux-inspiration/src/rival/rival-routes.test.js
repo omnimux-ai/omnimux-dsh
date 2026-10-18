@@ -114,6 +114,68 @@ async function call(dispatcher, method, url, body) {
 
 const WIDE = { cloud_calls_per_account_per_day: 1000, cloud_calls_global_per_day: 5000 }
 
+describe('single-account explicit manual budget overrun HTTP contract', () => {
+  it('uses the existing refresh chain, spends two calls beyond four, and leaves defaults capped', async () => {
+    const world = makeWorld()
+    const account = world.store.addAccount({ platform: 'youtube', external_id: '@overrun' })
+    world.store.reserve({ accountId: account.id })
+    world.store.reserve({ accountId: account.id })
+    for (const body of [{}, { manual: true, allow_budget_overrun: false }]) {
+      const refused = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${account.id}/refresh`, body)
+      assert.equal(refused.status, 429)
+      assert.equal(refused.body.reason, 'account-daily-cap')
+    }
+    const result = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${account.id}/refresh`, { manual: true, allow_budget_overrun: true })
+    assert.equal(result.status, 202)
+    await world.scheduler.settled()
+    assert.equal(world.cloud.calls.length, 2)
+    assert.equal(world.store.getAccount(account.id).refresh_count, 1)
+    assert.equal(world.store.getAccount(account.id).refresh_state, 'idle')
+    assert.equal(world.store.readBudget().per_account[account.id].calls, 6)
+    assert.equal(world.store.readBudget().global_calls, 6)
+  })
+
+  it('rejects malformed or non-explicit manual consent before calling any service', async () => {
+    let calls = 0
+    const dispatcher = createRivalDispatcher({ service: { refreshAccount() { calls += 1 } } })
+    const bodies = [
+      ...[undefined, null, 1, 'true', {}, []].map((value) => ({ manual: true, allow_budget_overrun: value })),
+      ...[undefined, false, 'true', 1].map((manual) => ({ manual, allow_budget_overrun: true })),
+    ]
+    for (const body of bodies) {
+      const result = await call(dispatcher, 'POST', `${RIVAL_PREFIX}/riv_a/refresh`, body)
+      assert.equal(result.status, 400)
+      assert.equal(result.body.code, 'invalid-budget-overrun')
+    }
+    assert.equal(calls, 0)
+  })
+
+  it('rejects this explicit option on refresh-all, including false, instead of silently dropping it', async () => {
+    let calls = 0
+    const dispatcher = createRivalDispatcher({ service: { refreshAll() { calls += 1 } } })
+    for (const value of [true, false, null, 'true']) {
+      const result = await call(dispatcher, 'POST', `${RIVAL_PREFIX}/refresh-all`, { manual: true, allow_budget_overrun: value })
+      assert.equal(result.status, 400)
+      assert.equal(result.body.code, 'invalid-budget-overrun')
+    }
+    assert.equal(calls, 0)
+  })
+
+  it('reports the global cap and makes no cloud call when the shared day budget is spent', async () => {
+    const world = makeWorld()
+    const account = world.store.addAccount({ platform: 'youtube', external_id: '@global' })
+    world.store.reserve({ accountId: account.id })
+    world.store.reserve({ accountId: account.id })
+    for (let index = 0; index < 23; index += 1) world.store.reserve({ accountId: `riv_other_${index}` })
+    const result = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/${account.id}/refresh`, { manual: true, allow_budget_overrun: true })
+    assert.equal(result.status, 429)
+    assert.equal(result.body.reason, 'global-daily-cap')
+    assert.equal(world.cloud.calls.length, 0)
+    assert.equal(world.store.readBudget().global_calls, 50)
+    assert.equal(world.store.readBudget().per_account[account.id].calls, 4)
+  })
+})
+
 describe('E1/E2/E3 + G4: import, dedup and classification', () => {
   it('classifies an account URL and a content URL', async () => {
     const world = makeWorld()

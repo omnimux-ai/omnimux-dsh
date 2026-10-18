@@ -51,6 +51,22 @@ export class RivalStoreError extends Error {
 }
 
 /**
+ * A budget overrun is consent for this one manual account request, never a
+ * stored setting or a permission inherited by bulk/automatic work. Callers
+ * validate before applying their usual default of a manual refresh.
+ * @param {{ allowBudgetOverrun?: boolean }} opts
+ * @param {{ manual?: unknown, singleAccount?: boolean }} context
+ * @returns {boolean}
+ */
+export function readBudgetOverrun(opts, { manual, singleAccount = true } = {}) {
+  if (!Object.hasOwn(opts ?? {}, 'allowBudgetOverrun')) return false
+  if (typeof opts.allowBudgetOverrun !== 'boolean' || !singleAccount || (opts.allowBudgetOverrun && manual !== true)) {
+    throw new RivalStoreError('invalid-budget-overrun', '超额刷新仅支持单个账号，并须明确设置 manual: true 和布尔 allow_budget_overrun', 400)
+  }
+  return opts.allowBudgetOverrun
+}
+
+/**
  * @param {unknown} value
  * @returns {boolean}
  */
@@ -838,10 +854,11 @@ export function createRivalAccountsStore(opts = {}) {
      * is parked by the caller, and its own ledger entry is the refusal's record.
      *
      * A granted probe still writes nothing — no budget is spent by asking.
-     * @param {{ accountId?: string }} [opts]
+     * @param {{ accountId?: string, scope?: 'cycle' | 'manual', allowBudgetOverrun?: boolean }} [opts]
      * @returns {{ allowed: boolean, reason: string | null, budget: Record<string, any> }}
      */
     canReserve(opts = {}) {
+      const allowBudgetOverrun = readBudgetOverrun(opts, { manual: opts.scope === 'manual', singleAccount: Boolean(opts.accountId) })
       const budget = readBudget()
       const accountId = opts.accountId ? String(opts.accountId) : ''
       const limits = readConfigFile().limits
@@ -857,7 +874,7 @@ export function createRivalAccountsStore(opts = {}) {
       }
       if (accountId) {
         const used = finiteNumber(budget.per_account[accountId]?.calls, 0)
-        if (used + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_per_account_per_day) {
+        if (!allowBudgetOverrun && used + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_per_account_per_day) {
           // A per-account cap parks *that account* only. The global pause stays
           // clear, so one spent account cannot stall the others.
           return { allowed: false, reason: BUDGET_REASONS.ACCOUNT_DAILY_CAP, budget }
@@ -881,10 +898,11 @@ export function createRivalAccountsStore(opts = {}) {
      * an unbounded number of cloud calls inside the same allowance — the exact
      * thing `LIMIT_CALLS_PER_ACCOUNT_DAY` exists to bound. A refund path was
      * removed for that reason rather than left unwired.
-     * @param {{ accountId?: string, scope?: 'cycle' | 'manual' }} [opts]
+     * @param {{ accountId?: string, scope?: 'cycle' | 'manual', allowBudgetOverrun?: boolean }} [opts]
      * @returns {{ allowed: boolean, reason: string | null, budget: Record<string, any> }}
      */
     reserve(opts = {}) {
+      const allowBudgetOverrun = readBudgetOverrun(opts, { manual: opts.scope === 'manual', singleAccount: Boolean(opts.accountId) })
       const budget = readBudget()
       const accountId = opts.accountId ? String(opts.accountId) : ''
       const limits = readConfigFile().limits
@@ -900,7 +918,7 @@ export function createRivalAccountsStore(opts = {}) {
       }
       if (accountId) {
         const used = finiteNumber(budget.per_account[accountId]?.calls, 0)
-        if (used + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_per_account_per_day) {
+        if (!allowBudgetOverrun && used + LIMIT_CALLS_PER_ACCOUNT_CYCLE > limits.cloud_calls_per_account_per_day) {
           // Per-account cap: the ledger is unchanged and the global pause stays
           // clear, so one spent account cannot stall the others.
           return { allowed: false, reason: BUDGET_REASONS.ACCOUNT_DAILY_CAP, budget }
