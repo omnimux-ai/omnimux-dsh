@@ -118,7 +118,8 @@ function installationIdentity(installation) {
 }
 
 function installationBinding(installation, identity) {
-  return sha256(JSON.stringify({ identity, appAnchor: installation.appAnchor, peerProbe: installation.peerProbe,
+  return sha256(JSON.stringify({ identity, runtimeExecutable: installation.runtimeExecutable,
+    appAnchor: installation.appAnchor, peerProbe: installation.peerProbe,
     hostPeerExpectations: installation.hostPeerExpectations, packages: installation.packages.map(pkg => ({
     name: pkg.name, version: pkg.version, installedRoot: pkg.installedRoot, payload: pkg.payload,
     serverEntry: pkg.serverEntry, clientBundle: pkg.clientBundle,
@@ -408,6 +409,7 @@ async function inspectorConnection(inspectorUrl) {
 export async function verifyTaskServerLoading({ inspectorUrl, pid, installation }) {
   const identity = installationIdentity(installation)
   const binding = installationBinding(installation, identity)
+  assert.ok(typeof installation.runtimeExecutable === 'string' && isAbsolute(installation.runtimeExecutable), 'Task runtime executable is required')
   assert.equal(pid, identity.pid, 'Inspector PID does not belong to this installation')
   const entries = installation.packages.filter(pkg => pkg.serverEntry).map(pkg => ({ pkg, file: installedFile(installation, pkg, pkg.serverEntry) }))
   assert.ok(entries.length, 'Task installation has no server entries')
@@ -417,6 +419,10 @@ export async function verifyTaskServerLoading({ inspectorUrl, pid, installation 
     const observedPid = await connection.send('Runtime.evaluate', { expression: 'process.pid', returnByValue: true })
     assert.ok(!observedPid.exceptionDetails, 'Unable to observe task inspector PID')
     assert.equal(observedPid?.result?.value, pid, 'Task inspector is attached to a different process')
+    const observedExecutable = await connection.send('Runtime.evaluate', { expression: 'process.execPath', returnByValue: true })
+    assert.ok(!observedExecutable.exceptionDetails, 'Unable to observe task runtime executable')
+    const runtimeExecutable = observedExecutable?.result?.value
+    assert.equal(runtimeExecutable, installation.runtimeExecutable, 'Task inspector executable differs from the installed runtime')
     await connection.send('Debugger.enable'); enabled = true
     await connection.send('Runtime.evaluate', { expression: 'void 0', returnByValue: true })
     const scripts = connection.readEvents().map(event => event.params)
@@ -441,8 +447,12 @@ export async function verifyTaskServerLoading({ inspectorUrl, pid, installation 
         loadedScriptUrl: pathToFileURL(file.full).href, loadedScriptSha256: loadedHash, matchingScriptCount: unique.length })
     }
     const { peers, peerObserver } = await captureTaskPeerProof(connection, installation)
+    if (peers.some(peer => peer.scope === 'shipping-app')) {
+      assert.equal(installation.appAnchor, resolve(dirname(runtimeExecutable), '../Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json'),
+        'Task shipping anchor does not belong to the actual server executable')
+    }
     assert.equal(installationBinding(installation, installationIdentity(installation)), binding, 'Task installation identity changed during server proof')
-    return { kind: 'task-server-loading', ...identity, modules, peers, peerObserver }
+    return { kind: 'task-server-loading', ...identity, runtimeExecutable, modules, peers, peerObserver }
   } catch (error) { operationError = error; throw error }
   finally {
     try { if (enabled) await connection.send('Debugger.disable') } catch (error) { if (!operationError) operationError = error }

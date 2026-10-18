@@ -21,6 +21,7 @@ function fixture() {
     profile: 'web', base: 'a'.repeat(40), head: 'b'.repeat(40), candidateDigest: 'c'.repeat(64), inputsDigest: 'd'.repeat(64),
     origin: 'http://127.0.0.1:48765', pid: process.pid, packages: [],
     hostPeerExpectations: [],
+    runtimeExecutable: process.execPath,
   }
   for (const name of ['omnimux', 'omnimux-inspiration']) {
     const installedRoot = join(privateRoot, name)
@@ -232,12 +233,14 @@ test('real task-owned Node inspector binds same PID and exact source bytes', asy
     const proof = await verifyTaskServerLoading({ ...child, installation })
     assert.equal(proof.kind, 'task-server-loading')
     assert.equal(proof.pid, child.pid)
+    assert.equal(proof.runtimeExecutable, process.execPath)
     assert.equal(proof.modules.length, 2)
     assert.equal(proof.peerObserver, null)
     assert.ok(proof.modules.every(module => module.sha256 === module.loadedScriptSha256 && module.matchingScriptCount === 1))
     assertTaskProofStable(proof, await verifyTaskServerLoading({ ...child, installation }))
     const wrong = { ...installation, pid: child.pid + 1 }
     await assert.rejects(verifyTaskServerLoading({ inspectorUrl: child.inspectorUrl, pid: wrong.pid, installation: wrong }), /different process/)
+    await assert.rejects(verifyTaskServerLoading({ ...child, installation: { ...installation, runtimeExecutable: '/wrong/node' } }), /executable differs/)
   } finally { await child.cleanup() }
 })
 
