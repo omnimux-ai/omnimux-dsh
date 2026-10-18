@@ -1,4 +1,4 @@
-import { detectPlatformFromUrl, getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
+import { hostMatchesDomain, normalizeUrl } from './url-normalizer.js'
 import { isPublicHttpUrl } from './url-policy.js'
 
 const SHAPES = new Set(['text', 'photo', 'gallery', 'video', 'quote', 'repost', 'thread', 'article', 'poll', 'link'])
@@ -13,17 +13,38 @@ export function publicCaptureUrl(value) {
   return parsed.username || parsed.password ? '' : url
 }
 
+/** Read content ids only from that platform's complete route or its independent v field. */
+function captureSourceKey(value) {
+  if (typeof value !== 'string' || value.length > 4096 || !publicCaptureUrl(value)) return ''
+  const url = new URL(normalizeUrl(value))
+  const host = url.hostname
+  const path = url.pathname
+  let match
+  if (hostMatchesDomain(host, 'x.com') || hostMatchesDomain(host, 'twitter.com')) {
+    match = /^\/[A-Za-z0-9_]+\/status\/(\d+)(?:\/(?:photo|video)\/\d+)?$/.exec(path)
+    return match ? `x:tweet:${match[1]}` : ''
+  }
+  if (hostMatchesDomain(host, 'tiktok.com') && (match = /^\/(?:@[^/]+\/video|v)\/(\d{15,25})(?:\.html)?$/i.exec(path))) return `tiktok:video:${match[1]}`
+  if (hostMatchesDomain(host, 'instagram.com') && (match = /^\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)$/i.exec(path))) return `instagram:media:${match[1]}`
+  if (hostMatchesDomain(host, 'youtube.com') || hostMatchesDomain(host, 'youtu.be')) {
+    const id = hostMatchesDomain(host, 'youtu.be') ? /^\/([A-Za-z0-9_-]{11})$/.exec(path)?.[1]
+      : path === '/watch' && url.searchParams.getAll('v').length === 1 ? url.searchParams.get('v') : /^\/shorts\/([A-Za-z0-9_-]{11})$/.exec(path)?.[1]
+    if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) return `youtube:video:${id}`
+  }
+  if (hostMatchesDomain(host, 'facebook.com')) {
+    const id = /^\/(?:[^/?#]+\/videos|videos|reel)\/(\d{6,})$/i.exec(path)?.[1]
+      ?? (/^\/(?:watch|video\.php)$/i.test(path) && url.searchParams.getAll('v').length === 1 ? url.searchParams.get('v') : null)
+    if (id && /^\d{6,}$/.test(id)) return `facebook:video:${id}`
+  }
+  if (hostMatchesDomain(host, 'fb.watch') && (match = /^\/([A-Za-z0-9_-]{4,})$/.exec(path))) return `facebook:video:${match[1]}`
+  if ((hostMatchesDomain(host, 'threads.net') || hostMatchesDomain(host, 'threads.com')) && (match = /^\/(?:@[^/?#]+\/post|t)\/([A-Za-z0-9_-]+)$/i.exec(path))) return `threads:post:${match[1]}`
+  return `url:${url.href}`
+}
+
 /** Compare a complete source identity, never a search substring or an embedded URL. */
 export function sameCaptureSource(left, right) {
-  if (!publicCaptureUrl(left) || !publicCaptureUrl(right)) return false
-  const leftPlatform = detectPlatformFromUrl(left)
-  const rightPlatform = detectPlatformFromUrl(right)
-  if (leftPlatform !== rightPlatform) return false
-  const a = getCanonicalItemKey(left)
-  const b = getCanonicalItemKey(right)
-  if (leftPlatform === 'x' && (!/^x:tweet:\d+$/.test(a.key) || !/^x:tweet:\d+$/.test(b.key))) return false
-  if (a.platform === leftPlatform && b.platform === rightPlatform && a.key === b.key) return true
-  return normalizeUrl(left) === normalizeUrl(right)
+  const key = captureSourceKey(left)
+  return Boolean(key) && key === captureSourceKey(right)
 }
 
 function authorOf(value) {

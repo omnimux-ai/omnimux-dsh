@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { createLocalStore } from './local-store.js'
 import { createLocalInspirationDispatcher } from './http-routes.js'
+import { normalizeCapture, sameCaptureSource } from './captured-import.js'
 
 const URL = 'https://x.com/creator/status/2111569272732553535'
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64')
@@ -388,6 +389,104 @@ describe('browser result reconciliation and failures', () => {
     const row = (await run({ auto_analyze: true })).body.data
     assert.equal(row.import_status, 'degraded')
     assert.deepEqual(row.analysis_results['media:0'], analysis)
+  })
+})
+
+describe('strict captured source identities', () => {
+  const sameSources = [
+    ['https://x.com/creator/status/123?s=20', 'https://x.com/i/status/123'],
+    ['https://mobile.twitter.com/oldname/status/123/photo/1/', 'http://www.x.com/newname/status/123/video/2'],
+    ['https://www.tiktok.com/@alice/video/7412345678901234567?is_from_webapp=1', 'https://m.tiktok.com/v/7412345678901234567/'],
+    ['https://www.tiktok.com/v/7412345678901234567.html', 'https://www.tiktok.com/@bob/video/7412345678901234567'],
+    ['https://www.instagram.com/reel/ABC_def/?igsh=tracking', 'https://www.instagram.com/p/ABC_def'],
+    ['https://www.instagram.com/reels/ABC_def', 'https://www.instagram.com/p/ABC_def'],
+    ['https://youtu.be/abcdefghijk?si=tracking', 'https://www.youtube.com/watch?feature=share&v=abcdefghijk'],
+    ['https://www.youtube.com/shorts/abcdefghijk/?utm_source=test', 'https://www.youtube.com/watch?v=abcdefghijk'],
+    ['https://m.facebook.com/alice/videos/12345678/?ref=share', 'https://www.facebook.com/watch/?v=12345678'],
+    ['https://web.facebook.com/reel/12345678', 'https://www.facebook.com/video.php?v=12345678'],
+    ['https://fb.watch/AB_123/?utm_source=share', 'https://fb.watch/AB_123'],
+    ['https://www.threads.com/@alice/post/ABC_123?utm_source=test', 'https://www.threads.net/t/ABC_123'],
+    ['https://m.threads.net/@renamed/post/ABC_123', 'https://www.threads.com/t/ABC_123'],
+    ['https://www.bilibili.com/video/BV123/?id=1&utm_campaign=share#fragment', 'https://www.bilibili.com/video/BV123?id=1'],
+  ]
+  const distinctSources = [
+    ['https://x.com/creator/status/123', 'https://x.com/redirect?target=https://x.com/creator/status/123'],
+    ['https://x.com/creator/status/123', 'https://x.com/redirect/https://x.com/creator/status/123'],
+    ['https://x.com/creator/status/123', 'https://x.com/creator/status/123garbage'],
+    ['https://x.com/creator/status/123', 'https://x.com/creator/status/123/redirect/https://x.com/other/status/123'],
+    ['https://x.com/creator/status/123', 'https://x.com.evil.example/creator/status/123'],
+    ['https://x.com/creator/status/123', 'https://x.com/i/web/status/123'],
+    ['https://x.com/creator/status/123', 'https://x.com/creator/status/124'],
+    ['https://www.tiktok.com/@alice/video/7412345678901234567', 'https://www.tiktok.com/redirect?to=https://www.tiktok.com/@alice/video/7412345678901234567'],
+    ['https://www.tiktok.com/@alice/video/7412345678901234567', 'https://www.tiktok.com/redirect/https://www.tiktok.com/@alice/video/7412345678901234567'],
+    ['https://www.tiktok.com/@alice/video/7412345678901234567', 'https://www.tiktok.com/@alice/video/7412345678901234567garbage'],
+    ['https://www.tiktok.com/@alice/video/7412345678901234567', 'https://www.tiktok.com/@alice/video/7412345678901234567890123456'],
+    ['https://www.instagram.com/p/ABC_def', 'https://www.instagram.com/redirect?to=https://www.instagram.com/p/ABC_def'],
+    ['https://www.instagram.com/p/ABC_def', 'https://www.instagram.com/redirect/https://www.instagram.com/p/ABC_def'],
+    ['https://www.instagram.com/p/ABC_def', 'https://www.instagram.com/p/ABC_def/garbage'],
+    ['https://www.youtube.com/watch?v=abcdefghijk', 'https://www.youtube.com/redirect?to=https://www.youtube.com/watch?v=abcdefghijk'],
+    ['https://www.youtube.com/watch?v=abcdefghijk', 'https://www.youtube.com/redirect/https://www.youtube.com/watch?v=abcdefghijk'],
+    ['https://www.youtube.com/watch?v=abcdefghijk', 'https://www.youtube.com/watch?v=abcdefghijkgarbage'],
+    ['https://www.youtube.com/watch?v=abcdefghijk', 'https://www.youtube.com/watch?v=abcdefghijk&v=12345678901'],
+    ['https://www.youtube.com/watch?v=abcdefghijk', 'https://www.youtube.com/watch?v=abcdefghijk&v=abcdefghijk'],
+    ['https://www.youtube.com/watch?v=abcdefghijk', 'https://youtube.com.evil.example/watch?v=abcdefghijk'],
+    ['https://www.facebook.com/watch?v=12345678', 'https://www.facebook.com/redirect?to=https://www.facebook.com/watch?v=12345678'],
+    ['https://www.facebook.com/watch?v=12345678', 'https://www.facebook.com/redirect/https://www.facebook.com/alice/videos/12345678'],
+    ['https://www.facebook.com/watch?v=12345678', 'https://www.facebook.com/reel/12345678garbage'],
+    ['https://www.facebook.com/watch?v=12345678', 'https://www.facebook.com/watch?v=12345678&v=87654321'],
+    ['https://fb.watch/AB_123', 'https://fb.watch/AB_123/other'],
+    ['https://www.threads.net/t/ABC_123', 'https://www.threads.net/redirect?to=https://www.threads.net/t/ABC_123'],
+    ['https://www.threads.net/t/ABC_123', 'https://www.threads.net/redirect/https://www.threads.net/t/ABC_123'],
+    ['https://www.threads.net/t/ABC_123', 'https://www.threads.net/t/ABC_123/other'],
+    ['https://example.com/post?id=1', 'https://example.com/post?id=2'],
+  ]
+
+  it('accepts existing complete platform routes, aliases and share parameters in either direction', () => {
+    for (const [left, right] of sameSources) {
+      assert.equal(sameCaptureSource(left, right), true, `${left} should match ${right}`)
+      assert.equal(sameCaptureSource(right, left), true, `${right} should match ${left}`)
+      assert.equal(normalizeCapture({ url: left, text: 'same original post' }, right).url, left)
+    }
+  })
+
+  it('rejects embedded URLs, partial ids, false domains and ambiguous identity parameters', () => {
+    for (const [left, right] of distinctSources) {
+      assert.equal(sameCaptureSource(left, right), false, `${left} must not match ${right}`)
+      assert.equal(sameCaptureSource(right, left), false, `${right} must not match ${left}`)
+      assert.throws(() => normalizeCapture({ url: right, text: 'unrelated captured post' }, left), /当前原帖不一致/)
+    }
+    for (const url of ['https://x.com/home', 'https://x.com/i/web/status/123']) {
+      assert.equal(sameCaptureSource(url, url), false)
+      assert.throws(() => normalizeCapture({ url, text: 'not an accepted post route' }, url), /当前原帖不一致/)
+    }
+  })
+
+  it('uses those same identities for real import duplicate checks and exact-source lookup', async () => {
+    const { run, dispatcher } = setup()
+    for (const [left, right] of sameSources) {
+      const first = await run({ url: left, capture: { url: right, text: 'actual captured body', shape: 'text', media_items: [] } })
+      assert.equal(first.status, 200, left)
+      assert.equal(first.body.data.import_status, 'ready')
+      const duplicate = await run({ url: right, capture: { url: left, text: 'actual captured body', shape: 'text', media_items: [] } })
+      assert.equal(duplicate.body.existing, true, `${left} / ${right}`)
+      assert.equal(duplicate.body.data.id, first.body.data.id)
+      const lookup = await dispatcher.dispatch({ method: 'GET', url: `/omnimux/inspiration/local?source_url=${encodeURIComponent(right)}` })
+      assert.equal(lookup.status, 200)
+      assert.deepEqual(lookup.body.data.items.map((item) => item.id), [first.body.data.id])
+    }
+  })
+
+  it('never returns the saved original for an embedded or malformed source query, and refuses that snapshot', async () => {
+    const { run, dispatcher } = setup()
+    for (const [target, unrelated] of distinctSources) {
+      const saved = await run({ url: target, capture: { url: target, text: 'actual original', shape: 'text', media_items: [] } })
+      assert.equal(saved.status, 200, target)
+      const lookup = await dispatcher.dispatch({ method: 'GET', url: `/omnimux/inspiration/local?source_url=${encodeURIComponent(unrelated)}` })
+      assert.equal(lookup.status, 200)
+      assert.equal(lookup.body.data.total, 0, unrelated)
+      const rejected = await run({ url: target, capture: { url: unrelated, text: 'wrong captured content' } })
+      assert.equal(rejected.status, 400, unrelated)
+    }
   })
 })
 
