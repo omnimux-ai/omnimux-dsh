@@ -105,10 +105,16 @@ async function mount(entryFile, props, exportName) {
     window: globalThis.window,
     document: globalThis.document,
     act: globalThis.IS_REACT_ACT_ENVIRONMENT,
+    fetch: globalThis.fetch,
   }
   globalThis.window = dom.window
   globalThis.document = dom.window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  // The real detail now reads this safe Hub metadata on mount. Keep unrelated
+  // import/player gates offline; unexpected requests still reach deny-network.
+  globalThis.fetch = async (url, init) => String(url) === '/omnimux/analysis/service'
+    ? { ok: true, status: 200, json: async () => ({ revision: 1, channel: 'official', configured: true, imageToolConfigured: false }) }
+    : previous.fetch(url, init)
 
   let root = null
   const teardown = async () => {
@@ -120,6 +126,7 @@ async function mount(entryFile, props, exportName) {
     globalThis.window = previous.window
     globalThis.document = previous.document
     globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+    globalThis.fetch = previous.fetch
     dom.window.close()
   }
   pendingTeardowns.push(teardown)

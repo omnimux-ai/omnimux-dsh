@@ -45,10 +45,16 @@ function setupDom() {
     window: globalThis.window,
     document: globalThis.document,
     actEnvironment: globalThis.IS_REACT_ACT_ENVIRONMENT,
+    fetch: globalThis.fetch,
   }
   globalThis.window = dom.window
   globalThis.document = dom.window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  // Verified with Ego for #3412 (browser/01-pending.png through 07-result.png).
+  // This legacy top-layer lifecycle probe supplies only the new status read.
+  globalThis.fetch = async (url, init) => String(url) === '/omnimux/analysis/service'
+    ? { ok: true, status: 200, json: async () => ({ revision: 1, channel: 'official', configured: true, imageToolConfigured: false }) }
+    : previous.fetch(url, init)
   const nativeCalls = { showModal: 0, close: 0 }
   // jsdom cannot verify native top-layer paint order. This shim only verifies
   // that each entry owns one dialog and releases its lifecycle resources;
@@ -70,6 +76,7 @@ function setupDom() {
       globalThis.window = previous.window
       globalThis.document = previous.document
       globalThis.IS_REACT_ACT_ENVIRONMENT = previous.actEnvironment
+      globalThis.fetch = previous.fetch
     },
   }
 }

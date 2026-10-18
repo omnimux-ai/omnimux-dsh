@@ -141,7 +141,9 @@ export function createOfficialClient(deps) {
       throw new OmnimuxError('quota-exceeded', '当前操作需要更多额度，充值后即可继续使用 OmniMux。')
     }
     if (response.status === 401 || response.status === 403) {
-      throw new OmnimuxError('needs-omnimux', `official request unauthorized (HTTP ${response.status})`)
+      throw new OmnimuxError('needs-omnimux', response.status === 401
+        ? '登录已失效，请重新登录 OmniMux'
+        : '账号授权不足，请重新登录并确认操作权限', { status: response.status })
     }
     return response
   }

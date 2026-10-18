@@ -4,6 +4,8 @@ import { assertLocalWrite, readOriginHeaders } from '../apps/origin.js'
 import { findDescriptor } from '../catalog/composer-sync.js'
 import { RUNTIME_MODES, MEDIA_PROVIDERS } from '../settings/runtime-mode.js'
 import { parseSettingsSection } from '../settings/schema.js'
+import { requestRejection } from '../host/request-authorization.js'
+import { readScenarioSettings, resolveScenarioBindings, resolveScenarioChoice } from '../settings/runtime-mode.js'
 
 /** Legacy reference is read-only here; new provider saves never write it. */
 export const BYOK_KEY_REF = 'OMNIMUX_BYOK_API_KEY'
@@ -378,6 +380,44 @@ export function registerByokRoutes(webServer, deps) {
     },
   })
 
+  async function analysisView(settings) {
+    const snapshot = await readSnapshot(settings)
+    const effective = readScenarioSettings(settings)
+    const choice = resolveScenarioChoice(effective, 'analysis')
+    const toolModel = str(effective.toolModel)
+    const separator = toolModel.indexOf(':')
+    const imageToolConfigured = separator > 0 && separator < toolModel.length - 1
+    const after = await readSnapshot(settings)
+    if (after.revision !== snapshot.revision) fail(409, '配置正在变化，请重新读取')
+    return { revision: snapshot.revision, channel: choice.channel, configured: choice.configured,
+      reason: choice.reason || '', imageToolConfigured }
+  }
+
+  const stopAnalysisService = webServer.register({
+    kind: 'exact', path: '/omnimux/analysis/service',
+    async handler(req, res) {
+      const method = (req.method || 'GET').toUpperCase()
+      if (method === 'OPTIONS') return sendJson(res, 204, {})
+      try {
+        if (method === 'GET') return sendJson(res, 200, await exclusive(() => analysisView(getSettings())))
+        if (method !== 'PUT') return sendJson(res, 405, { error: 'method-not-allowed' })
+        const rejection = requestRejection(req, deps.getConnection)
+        if (rejection !== undefined) return sendJson(res, rejection, { error: 'request-denied' })
+        const input = object(await readJsonBody(req, 4096))
+        if (input.channel !== 'official') fail(400, '请选择 OmniMux 分析服务')
+        const result = await exclusive(async () => {
+          const settings = getSettings()
+          const snapshot = await readSnapshot(settings)
+          expectRevision(input, snapshot)
+          const bindings = resolveScenarioBindings(readScenarioSettings(settings))
+          await writeConfirmed(settings, { scenarioBindings: { ...bindings, analysis: { channel: 'official' } } }, snapshot.revision)
+          return analysisView(settings)
+        })
+        return sendJson(res, 200, result)
+      } catch (error) { errorResponse(res, error) }
+    },
+  })
+
   // Legacy explicit mode endpoint remains separate; provider save/check never invokes it.
   const stopMode = webServer.register({
     kind: 'exact', path: '/omnimux/runtime/mode',
@@ -444,5 +484,5 @@ export function registerByokRoutes(webServer, deps) {
     },
   })
 
-  return () => { stopConfig(); stopMode(); stopTest(); stopCredentialEvents?.() }
+  return () => { stopConfig(); stopAnalysisService(); stopMode(); stopTest(); stopCredentialEvents?.() }
 }

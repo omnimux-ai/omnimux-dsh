@@ -169,10 +169,16 @@ export async function executeOmnimuxText(input) {
       scenarioBindings: { ...runtimeSettings.scenarioBindings, [scenario]: binding } }
   }
   const choice = resolveScenarioChoice(scenarioSettings, scenario)
+  if (isExplicitAgent && references.length) throw new OmnimuxError('omnimux-invalid-request', '本机助手只承接纯文字，请配置素材理解服务')
   if (targetChannel && !channelIntent.isByokChannel && !isExplicitAgent && !channelIntent.isOfficialChannel) {
     throw new OmnimuxError('unknown-group', '所选文字渠道不可用')
   }
-  if (!choice.configured) throw new OmnimuxError('omnimux-unconfigured', choice.reason || '此用途尚未配置')
+  if (!choice.configured) {
+    if (scenario === 'analysis' && choice.channel === 'pending') {
+      throw new OmnimuxError('analysis-service-unconfigured', '素材理解服务尚未确认，请选择分析服务')
+    }
+    throw new OmnimuxError('omnimux-unconfigured', choice.reason || '此用途尚未配置')
+  }
   const useByok = choice.channel === 'byok'
   const useAgent = choice.channel === 'agent'
   if (useAgent && references.length) throw new OmnimuxError('omnimux-invalid-request', '本机助手只承接纯文字，请配置素材理解服务')
@@ -326,6 +332,7 @@ export async function executeOmnimuxText(input) {
       fetcher: input.fetcher,
       signal: input.signal,
       apiKey: byokKey,
+      credentialScope: 'byok',
       baseUrl: byokEndpoint,
       credentials: input.credentials,
     })
@@ -340,7 +347,8 @@ export async function executeOmnimuxText(input) {
   // any request. Routing intent therefore uses the same direct chat path as a
   // video input, which carries the group and its failover candidates.
   const wantsChannels = route.routed && route.candidates.length > 0
-  if (hasComplexMedia || wantsChannels) {
+  const usesAccountKeyResolver = isOfficialRequest && typeof input.resolveOfficialApiKey === 'function'
+  if (hasComplexMedia || wantsChannels || usesAccountKeyResolver) {
     const mediaParts = []
     for (const [index, asset] of references.entries()) {
       // `probed` mirrors `references` by index; the probed entries carry the
@@ -366,6 +374,7 @@ export async function executeOmnimuxText(input) {
       baseUrl: input.baseUrl,
       credentials: input.credentials,
       settings: input.settings,
+      resolveOfficialApiKey: input.resolveOfficialApiKey,
     })
     assertGuardOutput(guardPlan, result, { capability: 'text' })
     return result

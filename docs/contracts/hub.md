@@ -50,7 +50,7 @@ vertical disk  <--only the vertical writes its own files
 - Official-only tool and OmniMux is not configured or the user is not signed in: throw `needs-omnimux`. Do not return 500 or a successful empty value.
 - Apps and other plugins consume the same seams. They must not import `omnimux` internals.
 
-Chat stays on the dsh LLM surface (`llm-pi-ai` `omnimux` route). The hub must not register a parallel chat tool. A one-shot expert completion (`textComplete` / `omnimux_text_complete`) is not chat: text/image runs one `ctx.llm.stream` call with no tools and no parent messages; **video** bypasses stream/attachments and POSTs `/v1/chat/completions` with `image_url` + `data:video/…` (harness `ImageMediaType` cannot store video MIME).
+Chat stays on the dsh LLM surface (`llm-pi-ai` `omnimux` route). The hub must not register a parallel chat tool. A one-shot expert completion (`textComplete` / `omnimux_text_complete`) has no tools or parent messages. An explicitly configured session tool model uses `ctx.llm.stream` for text/image; official requests with the account credential resolver use Hub chat completions for text and all supported media. **Video** always bypasses stream/attachments and POSTs `/v1/chat/completions` with `image_url` + `data:video/…` (harness `ImageMediaType` cannot store video MIME).
 
 ## Configuration consistency
 
@@ -213,7 +213,7 @@ text:
     - { id: glm-5.3,                  brand: zhipu,     role: flagship, enabled: true }
 ```
 
-A request may name `model` or omit it for `defaultModel`. The image is an absolute path, `http(s)` URL, or data URI (still via `ctx.llm.stream` + `ctx.attachments`). The video is an absolute path (`.mp4` / `.webm` / `.mov`) or `data:video/…` URI; video **bypasses** `ctx.llm` / attachments and uses hub chat completions with `OMNIMUX_API_KEY` / `OMNIMUX_TOKEN` (+ optional `OMNIMUX_BASE_URL`). Missing `ctx.llm` on text/image, or (when `image` is set) `ctx.attachments`, throws `needs-provider`. Missing key on video throws `omnimux-unconfigured`.
+A request may name `model` or omit it for `defaultModel`. Images accept an absolute path, `http(s)` URL, or data URI. Videos accept an absolute path (`.mp4` / `.webm` / `.mov`) or `data:video/…` URI. The official account route sends these inputs through Hub chat completions using an explicit API credential or the account-bound credential selected in Profile; only explicit API credentials may use a custom `OMNIMUX_BASE_URL`. Session tool-model text/image requests retain the `ctx.llm.stream` and attachment contract. Missing account execution credentials produce `official-credential-required`; an unconfirmed analysis service produces `analysis-service-unconfigured`, before any model request. The text HTTP endpoint never retries an existing execution seam's failure through another route.
 
 ## Seams and tools
 
@@ -335,6 +335,23 @@ Writes are same-origin only. Unsigned → 401 `needs-omnimux`. Tools keep the or
 | `DEEPSEEK_API_KEY` | agent `web_search` (`web-search-deepseek` provider), written via the official credentials domain | never |
 
 Do not export a `sk-` as `OMNIMUX_ACCESS_TOKEN`.
+
+For official one-shot analysis, Profile offers an explicit selection of one of
+the signed-in account's existing API keys. The Hub reads the chosen key through
+the account-owned reveal endpoint and saves it only through the Host credentials
+service under a reference derived from the site origin and current account ID.
+Public responses contain key metadata and readiness only. Sign-out or an account
+change prevents reuse of the previous account's reference. Explicit
+`OMNIMUX_API_KEY` / `OMNIMUX_TOKEN` remain higher priority. The login access token
+is never sent to a model endpoint, and analysis never creates an API key or
+retries against another account when authentication fails.
+
+`GET /omnimux/auth/model-keys` lists safe metadata; the user explicitly selects
+an existing key with `POST /omnimux/auth/model-key`. These operations do not
+create keys or alter their quota, expiry or permissions. An account without a
+usable key receives the official `/keys/` management entry. Agent fixture
+verification of this flow is not evidence of real account provisioning or live
+analysis.
 
 ## Capability gate (`Config.gate`)
 

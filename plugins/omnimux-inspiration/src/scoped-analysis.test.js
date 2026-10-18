@@ -30,6 +30,24 @@ function world(execute = async () => ({ mode: 'live', model: 'test-model', text:
 }
 
 describe('scoped post analysis', () => {
+  it('persists the real service failure and clears it after a successful retry', async () => {
+    let ready = false
+    const w = world(async () => {
+      if (!ready) throw Object.assign(new Error('素材理解服务尚未确认，请选择分析服务'), { code: 'analysis-service-unconfigured' })
+      return { mode: 'live', model: 'fixture-model', text: '## 摘要\n已恢复的分析。' }
+    })
+    const failed = await w.send('analyze', { scope: 'post' })
+    assert.equal(failed.status, 502)
+    assert.equal(failed.body.error, '素材理解服务尚未确认，请选择分析服务')
+    const stored = createLocalStore({ paths: w.paths }).get(w.row.id).analysis_results.post
+    assert.equal(stored.error_code, 'analysis-service-unconfigured')
+    assert.doesNotMatch(stored.error, /API Key/)
+    ready = true
+    const success = await w.send('analyze', { scope: 'post' })
+    assert.equal(success.status, 200)
+    assert.equal(success.body.data.analysis_results.post.error_code, null)
+    assert.equal(success.body.data.analysis_results.post.error, null)
+  })
   it('sends complete ordered inputs and only selected directions, preserving real source and model', async () => {
     const w = world(); const selection = { scope: 'post', directions: ['expression', 'creative'] }
     const res = await w.send('analyze', selection)

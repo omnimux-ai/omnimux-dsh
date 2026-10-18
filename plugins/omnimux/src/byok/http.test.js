@@ -89,6 +89,50 @@ describe('parseByokPut', () => {
 })
 
 describe('byok routes', () => {
+  it('analysis confirmation changes only its binding and checks the settings revision', async () => {
+    const settings = fakeSettings({ scenarioBindings: { text: { channel: 'agent' }, analysis: { channel: 'pending' },
+      image: { channel: 'byok', provider: 'openai' }, video: { channel: 'official' }, audio: { channel: 'pending' } },
+      toolModel: 'provider:some-image-model' })
+    const before = settings.value
+    const handlers = register({ settings, getConnection: () => ({ requestRejection() {} }) })
+    const read = fakeRes()
+    await handlers.get('/omnimux/analysis/service')(fakeReq('GET'), read)
+    assert.deepEqual(read.body(), { revision: 1, channel: 'pending', configured: false,
+      reason: '请确认此用途的模型服务', imageToolConfigured: true })
+    const confirmed = fakeRes()
+    await handlers.get('/omnimux/analysis/service')(fakeReq('PUT', { expectedRevision: 1, channel: 'official' }), confirmed)
+    assert.equal(confirmed.status, 200)
+    assert.equal(confirmed.body().channel, 'official')
+    assert.equal(confirmed.body().revision, 2)
+    assert.deepEqual(settings.value, { ...before, scenarioBindings: { ...before.scenarioBindings, analysis: { channel: 'official' } } })
+    assert.deepEqual(Object.keys(settings.updates[0]), ['scenarioBindings'])
+    const stale = fakeRes()
+    await handlers.get('/omnimux/analysis/service')(fakeReq('PUT', { expectedRevision: 1, channel: 'official' }), stale)
+    assert.equal(stale.status, 409)
+    assert.equal(settings.updates.length, 1)
+  })
+  it('analysis writes reject malicious origins and unavailable Host authorization', async () => {
+    for (const [headers, connection, expected] of [
+      [{ host: '127.0.0.1:8080', origin: 'https://evil.example' }, { requestRejection() {} }, 403],
+      [{}, undefined, 503],
+    ]) {
+      const settings = fakeSettings()
+      const handlers = register({ settings, getConnection: () => connection })
+      const res = fakeRes()
+      await handlers.get('/omnimux/analysis/service')(fakeReq('PUT', { expectedRevision: 1, channel: 'official' }, headers), res)
+      assert.equal(res.status, expected)
+      assert.deepEqual(settings.updates, [])
+    }
+  })
+  it('analysis reads honor raw legacy choices instead of schema defaults', async () => {
+    const value = parseSettingsSection({ toolModel: 'auto' })
+    const handlers = register({ settings: { describe: () => [{ ns: 'omnimux', revision: 2, value,
+      user: { runtimeMode: 'key' } }], get: async () => value } })
+    const res = fakeRes()
+    await handlers.get('/omnimux/analysis/service')(fakeReq('GET'), res)
+    assert.equal(res.body().channel, 'pending')
+    assert.equal(res.body().imageToolConfigured, false)
+  })
   it('GET reports config and provider credential metadata without trusting a legacy verification flag', async () => {
     const settings = storedSettings()
     const credentials = fakeCredentials('sk-stored')

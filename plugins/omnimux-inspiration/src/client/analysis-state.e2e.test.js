@@ -103,3 +103,46 @@ test('analysis stays disabled across owner preview reopen, settles live and reje
     globalThis.setTimeout = previous.setTimeout; globalThis.clearTimeout = previous.clearTimeout
   }
 })
+
+// Verified first in Ego for #3412: browser/01-pending.png, 07-result.png and
+// 12-text-pending-result.png. This checks recovery UI, not real model quality.
+test('pending media service preserves body analysis and explicit confirmation never starts a paid request', async () => {
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost:3000', pretendToBeVisual: true })
+  const previous = { window: globalThis.window, document: globalThis.document, fetch: globalThis.fetch, act: globalThis.IS_REACT_ACT_ENVIRONMENT }
+  globalThis.window = dom.window; globalThis.document = dom.window.document; globalThis.IS_REACT_ACT_ENVIRONMENT = true
+  const row = { id: 'service-recovery', title: '服务恢复', content: '正文可以独立分析', is_local: true, media_items: [{ type: 'video', url: '/omnimux/inspiration/local/media/videos/fixture.mp4' }] }
+  let service = { revision: 7, channel: 'pending', configured: false, imageToolConfigured: false }
+  const writes = []
+  globalThis.fetch = async (url, init = {}) => {
+    if (String(url) === '/omnimux/analysis/service') {
+      if (init.method === 'PUT') { writes.push(JSON.parse(init.body)); service = { ...service, revision: 8, channel: 'official', configured: true } }
+      return { ok: true, status: 200, json: async () => structuredClone(service) }
+    }
+    assert.equal(init.method || 'GET', 'GET', 'service confirmation must not submit analysis')
+    assert.equal(String(url), `/omnimux/inspiration/local/${row.id}`)
+    return response(row)
+  }
+  const flush = async fn => act(async () => { fn?.(); await new Promise(resolve => setTimeout(resolve, 0)) })
+  const button = label => [...dom.window.document.querySelectorAll('.omnimux-post-analysis button')].find(node => node.textContent.trim() === label)
+  let dispose, close
+  try {
+    const register = await previewService(); dispose = register(key => zh[key] || key, dom.window)
+    const open = () => flush(() => { close = dom.window.__omnimuxInspirationPreview.open({ row }) })
+    await open()
+    assert.equal(button(zh['post.analyzeTarget']).disabled, true)
+    assert.ok(button(zh['post.useOfficialService']))
+    await flush(() => button(zh['post.body']).click())
+    assert.equal(button(zh['post.analyzeTarget']).disabled, false, 'text-only scope keeps its own configured route')
+    assert.equal(button(zh['post.useOfficialService']), undefined)
+    await flush(() => button(zh['post.wholePost']).click())
+    await flush(() => button(zh['post.useOfficialService']).click())
+    assert.deepEqual(writes, [{ expectedRevision: 7, channel: 'official' }])
+    assert.equal(button(zh['post.analyzeTarget']).disabled, false)
+    await flush(() => close()); await open()
+    assert.equal(button(zh['post.useOfficialService']), undefined, 'reopen reads the saved service')
+    assert.equal(button(zh['post.analyzeTarget']).disabled, false)
+  } finally {
+    await flush(() => dispose?.()); dom.window.close()
+    globalThis.window = previous.window; globalThis.document = previous.document; globalThis.fetch = previous.fetch; globalThis.IS_REACT_ACT_ENVIRONMENT = previous.act
+  }
+})

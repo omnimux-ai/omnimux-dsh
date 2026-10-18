@@ -50,6 +50,7 @@ export function mountHubHttp(httpCtx, deps) {
     siteBaseUrl: deps.siteBaseUrl,
     clientName: deps.clientName,
     identity: deps.identity,
+    modelKeys: deps.modelKeys,
     capabilities: {
       identity: true,
       videoGenerate: true,
@@ -118,6 +119,7 @@ export function mountHubHttp(httpCtx, deps) {
       // Services arrive after mount; resolve them per request, never eagerly.
       getSettings: () => deps.settings ?? httpCtx.get?.('settings'),
       getCredentials: () => deps.credentials ?? httpCtx.get?.('credentials'),
+      getConnection: deps.getConnection,
       hubEvents: deps.hubEvents,
       onCredentialUpdated: typeof httpCtx.on === 'function'
         ? (listener) => httpCtx.on('credentials/reference-updated', listener) : undefined,

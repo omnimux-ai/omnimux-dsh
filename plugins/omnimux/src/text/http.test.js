@@ -150,21 +150,56 @@ describe('toolModel fail-loud at the HTTP route', () => {
     assert.match(json.error, /cpa:x/)
   })
 
-  it('still falls back when toolModel is not configured', async () => {
+  it('preserves a failed selected service even when an account credential exists', async () => {
     const server = createMockWebServer()
     const textComplete = { execute: async () => { throw new Error('llm down') } }
+    let credentialReads = 0, accountResolves = 0, requests = 0
     registerTextCompleteRoutes(server, {
       textComplete,
       settings: { get: () => undefined },
       env: { OMNIMUX_API_KEY: '' },
+      credentials: { resolve: async () => { credentialReads++; return { value: 'unused-explicit-key' } } },
+      resolveOfficialApiKey: async () => { accountResolves++; return 'unused-account-key' },
+      fetcher: async () => { requests++; throw new Error('must not request') },
     })
     const handler = server.routes.get('exact:/omnimux/text/complete')
     const payload = JSON.stringify({ prompt: 'hi' })
     const req = Object.assign(createStream([payload]), { method: 'POST', headers: { 'content-type': 'application/json' } })
     const res = createMockRes()
     await handler(req, res)
-    // Fallback attempted and failed on missing key → error, not silent 200.
-    assert.notEqual(res.statusCode, 200)
-    assert.equal(JSON.parse(res.body).ok, false)
+    assert.equal(res.statusCode, 500)
+    assert.equal(JSON.parse(res.body).error, 'llm down')
+    assert.equal(credentialReads, 0)
+    assert.equal(accountResolves, 0)
+    assert.equal(requests, 0)
+  })
+
+  it('does not submit an empty seam result again through another service', async () => {
+    const server = createMockWebServer()
+    let requests = 0
+    registerTextCompleteRoutes(server, { textComplete: { execute: async () => ({ text: '' }) },
+      env: { OMNIMUX_API_KEY: 'unused-explicit-key' },
+      fetcher: async () => { requests++; throw new Error('must not request') } })
+    const handler = server.routes.get('exact:/omnimux/text/complete')
+    const req = Object.assign(createStream(['{"prompt":"hi"}']), { method: 'POST', headers: {} })
+    const res = createMockRes()
+    await handler(req, res)
+    assert.equal(JSON.parse(res.body).code, 'omnimux-invalid-response')
+    assert.equal(requests, 0)
+  })
+
+  it('legacy direct compatibility without a seam never activates account credentials', async () => {
+    const server = createMockWebServer()
+    let accountResolves = 0, requests = 0
+    registerTextCompleteRoutes(server, { env: {},
+      resolveOfficialApiKey: async () => { accountResolves++; return 'unused-account-key' },
+      fetcher: async () => { requests++; throw new Error('must not request') } })
+    const handler = server.routes.get('exact:/omnimux/text/complete')
+    const req = Object.assign(createStream(['{"prompt":"hi"}']), { method: 'POST', headers: {} })
+    const res = createMockRes()
+    await handler(req, res)
+    assert.equal(JSON.parse(res.body).code, 'official-credential-required')
+    assert.equal(accountResolves, 0)
+    assert.equal(requests, 0)
   })
 })

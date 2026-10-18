@@ -1,19 +1,6 @@
 import { requestRejection } from '../host/request-authorization.js'
 import { completeTextViaChat } from './chat.js'
-
-/**
- * Whether `omnimux.toolModel` pins requests to one session model pair.
- * A configured value (anything except ''/'auto') means the request may only
- * run on that model — a failure must surface, never silently fall back.
- * @param {unknown} settings
- */
-function hasToolModelPin(settings) {
-  const section = typeof settings?.get === 'function' ? settings.get('omnimux') : undefined
-  const raw = section && typeof section === 'object' ? section.toolModel : undefined
-  if (typeof raw !== 'string') return false
-  const trimmed = raw.trim()
-  return trimmed !== '' && trimmed !== 'auto'
-}
+import { OmnimuxError } from '../media/errors.js'
 
 function sendJsonResponse(res, status, body) {
   const text = JSON.stringify(body)
@@ -73,27 +60,14 @@ export function registerTextCompleteRoutes(webServer, deps = {}) {
           return sendJsonResponse(res, 400, { ok: false, error: 'prompt is required' })
         }
 
-        // 1. 优先调用宿主注入的标准 textComplete 管道 (ctx.llm.stream)
+        // The registered seam owns the chosen service. Its failure must never
+        // submit the prompt a second time through a different channel.
         const textComplete = deps.getTextComplete?.() ?? deps.textComplete
         if (textComplete && typeof textComplete.execute === 'function') {
-          try {
-            const result = await textComplete.execute({
-              prompt,
-              system,
-              model,
-              maxTokens,
-            })
-            const text = typeof result === 'string' ? result : (result?.text || result?.content || '')
-            if (text.trim()) {
-              return sendJsonResponse(res, 200, { ok: true, text: text.trim() })
-            }
-          } catch (execErr) {
-            // A pinned tool model owns the request: falling back to a
-            // different model would hide a configuration error and silently
-            // run the prompt on an engine the user did not choose.
-            if (hasToolModelPin(deps.settings)) throw execErr
-            console.warn('[TextComplete HTTP] textComplete.execute failed, fallback to completeTextViaChat:', execErr?.message)
-          }
+          const result = await textComplete.execute({ prompt, system, model, maxTokens })
+          const text = typeof result === 'string' ? result : (result?.text || result?.content || '')
+          if (!text.trim()) throw new OmnimuxError('omnimux-invalid-response', 'model returned empty text')
+          return sendJsonResponse(res, 200, { ok: true, text: text.trim() })
         }
 
         // 2. 回退通道：通过 completeTextViaChat 直接连接已配置的模型供应商
@@ -105,6 +79,7 @@ export function registerTextCompleteRoutes(webServer, deps = {}) {
           credentials: deps.credentials,
           settings: deps.settings,
           env: deps.env ?? process.env,
+          fetcher: deps.fetcher,
         })
 
         const text = typeof chatResult === 'string' ? chatResult : (chatResult?.text || chatResult?.content || '')
@@ -114,8 +89,8 @@ export function registerTextCompleteRoutes(webServer, deps = {}) {
 
         return sendJsonResponse(res, 200, { ok: true, text: text.trim() })
       } catch (err) {
-        console.error('[TextComplete HTTP] Route handler error:', err)
-        return sendJsonResponse(res, 500, { ok: false, error: err?.message || String(err) })
+        return sendJsonResponse(res, err?.status || 500, { ok: false, error: err?.message || String(err),
+          ...(typeof err?.code === 'string' ? { code: err.code } : {}) })
       }
     },
   })

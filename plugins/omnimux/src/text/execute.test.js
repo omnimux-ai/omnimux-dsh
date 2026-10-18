@@ -262,7 +262,7 @@ describe('textComplete execute', () => {
     assert.equal(vendorCalls, 0)
   })
 
-  it('throws omnimux-unconfigured when video lacks an API key', async () => {
+  it('throws official-credential-required when video lacks an execution key', async () => {
     await assert.rejects(
       () => executeOmnimuxText({
         prompt: 'describe',
@@ -270,7 +270,7 @@ describe('textComplete execute', () => {
         env: {},
         fetcher: async () => ({ ok: true, json: async () => ({}) }),
       }),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+      (error) => error instanceof OmnimuxError && error.code === 'official-credential-required',
     )
   })
 
@@ -317,7 +317,7 @@ describe('textComplete execute', () => {
           return { ok: true, status: 200, json: async () => ({}) }
         },
       }),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+      (error) => error instanceof OmnimuxError && error.code === 'official-credential-required',
     )
     assert.equal(called, 0, 'must not call any provider without hub credentials')
   })
@@ -385,11 +385,13 @@ describe('omnimux_text_complete tool', () => {
     const tools = {}
     const provided = {}
     const seen = []
+    const requests = []
     apply({
       tools: { register(tool) { Object.assign(tools, Object.fromEntries([[tool.name, tool]])) } },
       provide(name, value) { Object.assign(provided, Object.fromEntries([[name, value]])) },
       get(name) {
         if (name === 'llm') return collectStream(seen)
+        if (name === 'credentials') return { resolve: async (ref) => ref === 'OMNIMUX_API_KEY' ? { value: 'sk-tool-fixture' } : undefined }
         return undefined
       },
     })
@@ -401,13 +403,24 @@ describe('omnimux_text_complete tool', () => {
     assert.match(tools.omnimux_text_complete.description, /whitelist/)
     assert.ok(tools.omnimux_text_complete.parameters.properties.video)
     assert.match(tools.omnimux_text_complete.description, /image_url\(data:video\)/)
-    const result = await tools.omnimux_text_complete.execute({
-      model: 'gemini-3.8-flash',
-      prompt: 'one line',
-      reason: 'user asked for Gemini wording',
-    }, { signal: undefined })
-    assert.equal(result.model, 'gemini-3.8-flash')
-    assert.equal(seen[0].model, 'gemini-3.8-flash')
+    const previousFetch = globalThis.fetch
+    globalThis.fetch = async (url, options) => {
+      requests.push({ url, body: JSON.parse(options.body) })
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'fixture completion' } }] }) }
+    }
+    try {
+      const result = await tools.omnimux_text_complete.execute({
+        model: 'gemini-3.8-flash',
+        prompt: 'one line',
+        reason: 'user asked for Gemini wording',
+      }, { signal: undefined })
+      assert.equal(result.model, 'gemini-3.8-flash')
+      assert.equal(requests.length, 1)
+      assert.equal(requests[0].url, 'https://api.omnimux.ai/v1/chat/completions')
+      assert.equal(requests[0].body.model, 'gemini-3.8-flash')
+      assert.match(JSON.stringify(requests[0].body.messages), /one line/)
+      assert.equal(seen.length, 0)
+    } finally { globalThis.fetch = previousFetch }
   })
 
   it('hides a disabled whitelist model from the tool enum', () => {
@@ -449,6 +462,7 @@ describe('omnimux_text_complete tool', () => {
       prompt: 'test prompt',
       model: 'gemini-3.8-flash',
       maxTokens: 128,
+      env: {},
       mediaParts: [{ type: 'image_url', image_url: { url: 'data:video/mp4;base64,AAAAHGZ0eXBpc29t' } }],
       settings: {
         get: (section) => {
@@ -519,7 +533,7 @@ describe('omnimux_text_complete tool', () => {
           return { ok: true, status: 200, json: async () => ({}) }
         },
       }),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+      (error) => error instanceof OmnimuxError && error.code === 'official-credential-required',
     )
     assert.equal(called, 0)
   })
@@ -862,7 +876,7 @@ describe('omnimux_text_complete tool', () => {
         llm: { async * stream() { streamCalls += 1; yield {} } },
         agentRun: async () => { agentCalls += 1; return 'must not run' },
       }),
-      (error) => error instanceof OmnimuxError && error.code === 'omnimux-unconfigured',
+      (error) => error instanceof OmnimuxError && error.code === 'analysis-service-unconfigured',
     )
     assert.equal(saved, 0)
     assert.equal(credentialCalls, 0)

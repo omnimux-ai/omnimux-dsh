@@ -1,5 +1,6 @@
 import { requestRejection } from '../host/request-authorization.js'
 import { createIdentity } from './identity.js'
+import { OmnimuxError } from '../media/errors.js'
 import {
   CLIENT_NAME,
   fetchSelf,
@@ -28,7 +29,7 @@ export function sendJson(res, status, body) {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Private-Network': 'true',
   })
   res.end(text)
@@ -123,6 +124,19 @@ export function createAuthDispatcher(deps) {
       return { status, body: loaded.body }
     }
 
+    if ((method === 'GET' && path === '/omnimux/auth/model-keys')
+      || (method === 'POST' && path === '/omnimux/auth/model-key')) {
+      try {
+        if (!deps.modelKeys) return { status: 503, body: { code: 'official-credential-unavailable', error: '分析凭据服务不可用，请重新打开应用' } }
+        const body = method === 'GET' ? await deps.modelKeys.list() : await deps.modelKeys.select(req.body?.id)
+        return { status: 200, body }
+      } catch (error) {
+        return { status: error instanceof OmnimuxError ? error.status || 503 : 503,
+          body: { code: error instanceof OmnimuxError ? error.code : 'official-key-request-failed',
+            error: error instanceof OmnimuxError ? error.message : '账号密钥读取未完成，请重试' } }
+      }
+    }
+
     if (method === 'POST' && path === '/omnimux/auth/login') {
       try {
         const started = await startDeviceLogin({ fetcher, siteBaseUrl, clientName })
@@ -214,6 +228,8 @@ export function registerAuthRoutes(webServer, dispatcher, deps = {}) {
     '/omnimux/auth/login',
     '/omnimux/auth/poll',
     '/omnimux/auth/logout',
+    '/omnimux/auth/model-keys',
+    '/omnimux/auth/model-key',
     '/omnimux/capabilities',
   ]
   const disposers = paths.map((path) => webServer.register({
@@ -221,7 +237,7 @@ export function registerAuthRoutes(webServer, dispatcher, deps = {}) {
     path,
     async handler(req, res) {
       try {
-        if (req.method !== 'GET' && req.method !== 'HEAD') {
+        if ((req.method !== 'GET' && req.method !== 'HEAD') || path === '/omnimux/auth/model-keys') {
           const rejection = requestRejection(req, deps.getConnection)
           if (rejection !== undefined) return sendJson(res, rejection, { error: 'request-denied' })
         }
