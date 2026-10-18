@@ -389,9 +389,12 @@ export function normalizeMedia(
   const metric = measureElement(element)
   const natural = naturalSizeOf(element, kind)
   const inspiration = kind === 'video' ? captureInspirationFromElement(element, baseUrl) : {}
+  const playable = kind === 'video' && element instanceof HTMLVideoElement ? videoSourceOf(element, baseUrl) : ''
+  const poster = kind === 'video' && element instanceof HTMLVideoElement ? toAbsoluteUrl(element.poster, baseUrl) : ''
   return {
     id: mediaIdOf(kind, resolution.src),
     type: kind,
+    ...(kind === 'video' ? { videoSrc: isFetchableUrl(playable) ? playable : '', posterSrc: isFetchableUrl(poster) ? poster : '' } : {}),
     src: resolution.src,
     previewSrc: resolution.previewSrc !== '' ? resolution.previewSrc : resolution.src,
     pageUrl: context.pageUrl ?? resolvePageUrl(),

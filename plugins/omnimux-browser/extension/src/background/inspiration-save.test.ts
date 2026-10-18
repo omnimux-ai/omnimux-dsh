@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { InspirationSaveCoordinator } from './inspiration-save.ts'
 import { INSPIRATION_TASKS_KEY } from '../shared/inspiration-save.ts'
 
+const canonicalSourceUrl = 'https://x.com/i/status/123'
 const sourceUrl = 'https://x.com/second/status/123'
 const host = 'http://127.0.0.1:43120'
 const receipt = (state: string, extra = {}) => Response.json({ data: { id: 'row-1', source_url: sourceUrl, import_status: state, ...extra } })
@@ -51,7 +52,7 @@ describe('host-confirmed inspiration saves', () => {
     const recovered = setup(fetchImpl, stored(), async () => 'http://127.0.0.1:45120').coordinator
     await recovered.submit({ targetUrl: sourceUrl })
     await tick()
-    expect(fetchImpl.mock.calls[1]?.[0]).toBe(`${host}/omnimux/inspiration/local?source_url=${encodeURIComponent(sourceUrl)}`)
+    expect(fetchImpl.mock.calls[1]?.[0]).toBe(`${host}/omnimux/inspiration/local?source_url=${encodeURIComponent(canonicalSourceUrl)}`)
     expect(fetchImpl.mock.calls.filter((call) => call[1]?.method === 'POST')).toHaveLength(1)
     expect((await recovered.list())[0]).toMatchObject({ state: 'saved', host })
   })
@@ -132,6 +133,33 @@ describe('host-confirmed inspiration saves', () => {
     await coordinator.reconcile()
     expect((await coordinator.list())[0]?.state).toBe('saved')
     expect(fetchImpl.mock.calls.filter((call) => call[1]?.method === 'POST')).toHaveLength(1)
+  })
+
+  it('accepts a ready duplicate returned under an X post id alias', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(Response.json({ is_duplicate: true, data: { id: 'row-1', source_url: canonicalSourceUrl, import_status: 'ready' } }))
+    const { coordinator } = setup(fetchImpl)
+    await coordinator.submit({ targetUrl: sourceUrl })
+    await tick()
+    expect((await coordinator.list())[0]).toMatchObject({ state: 'duplicate', sourceUrl: canonicalSourceUrl })
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
+  it('restores an old author-named receipt through the exact-source alias lookup without reposting', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(Response.json({ data: { items: [{ id: 'row-1', source_url: canonicalSourceUrl, import_status: 'ready' }] } }))
+    const initial = [{ taskId: 'old-task', host, sourceUrl, state: 'pending', updatedAt: 1 }]
+    const { coordinator } = setup(fetchImpl, initial)
+    await coordinator.submit({ targetUrl: 'https://x.com/newname/status/123' })
+    await tick()
+    expect((await coordinator.list())[0]).toMatchObject({ state: 'saved', taskId: 'old-task' })
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(fetchImpl.mock.calls[0]?.[1]?.method).not.toBe('POST')
+  })
+  it('accepts a same-video non-X receipt despite sharing parameters and a host alias', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(Response.json({ data: { id: 'row-1', source_url: 'https://youtu.be/abcdefghijk?si=share', import_status: 'ready' } }))
+    const { coordinator } = setup(fetchImpl)
+    await coordinator.submit({ targetUrl: 'https://www.youtube.com/watch?v=abcdefghijk&utm_source=share' })
+    await tick()
+    expect((await coordinator.list())[0]?.state).toBe('saved')
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
   })
 
 })

@@ -1,3 +1,4 @@
+import { sameInspirationSource } from './inspiration-source.ts'
 /** Shared receipts: browser caches never stand in for a host library result. */
 export const INSPIRATION_TASKS_KEY = 'omnimuxInspirationSaveTasks'
 export const INSPIRATION_SAVE_MESSAGE = 'DSH_SAVE_INSPIRATION_PANEL'
@@ -20,19 +21,7 @@ export interface InspirationSaveRequest {
   capture?: Record<string, unknown>
 }
 
-export function canonicalInspirationUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > 4096) return null
-  try {
-    const url = new URL(value)
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null
-    if (/(^|\.)(x\.com|twitter\.com)$/i.test(url.hostname)) {
-      const match = /^\/([^/]+)\/status\/(\d+)(?:\/|$)/.exec(url.pathname)
-      return match ? `https://x.com/${match[1]}/status/${match[2]}` : null
-    }
-    url.hash = ''
-    return url.href
-  } catch { return null }
-}
+export { canonicalInspirationUrl, sameInspirationSource } from './inspiration-source.ts'
 
 export function isInspirationTask(value: unknown): value is InspirationSaveTask {
   if (!value || typeof value !== 'object') return false
@@ -40,6 +29,12 @@ export function isInspirationTask(value: unknown): value is InspirationSaveTask 
   return typeof task.taskId === 'string' && typeof task.host === 'string'
     && typeof task.sourceUrl === 'string' && typeof task.updatedAt === 'number'
     && ['saving', 'saved', 'partial', 'duplicate', 'pending', 'failed'].includes(task.state ?? '')
+}
+
+/** An active submission owns its fixed host even if another instance has a newer old receipt. */
+export function inspirationTaskForSource(tasks: InspirationSaveTask[], source: unknown): InspirationSaveTask | null {
+  const matching = tasks.filter((task) => sameInspirationSource(task.sourceUrl, source)).sort((a, b) => b.updatedAt - a.updatedAt)
+  return matching.find((task) => task.state === 'saving' || task.state === 'pending') ?? matching[0] ?? null
 }
 
 export function inspirationSaveLabel(task: Pick<InspirationSaveTask, 'state'> | null, locale: 'zh' | 'en' = 'zh'): string {

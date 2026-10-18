@@ -8,7 +8,7 @@
  */
 
 import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
-import { observeInspirationTasks, submitInspirationSave, canonicalInspirationUrl, inspirationSaveLabel, inspirationSaveDetail, type InspirationSaveTask } from '../shared/inspiration-save.ts'
+import { observeInspirationTasks, submitInspirationSave, canonicalInspirationUrl, inspirationTaskForSource, inspirationSaveLabel, inspirationSaveDetail, type InspirationSaveTask } from '../shared/inspiration-save.ts'
 import { pageInspirationRequest } from './inspiration-save.ts'
 import { BRIDGE_FETCH_MEDIA_METHOD } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeCaps } from 'omnimux-browser/src/protocol.ts'
@@ -1056,7 +1056,7 @@ export function App(): React.JSX.Element {
 
   const [pageScene, setPageScene] = useState<PageSceneInfo | null>(null)
   const saveSourceUrl = canonicalInspirationUrl(pageScene?.tweet?.url || pageScene?.url)
-  const saveInspirationTask = inspirationTasks.filter((task) => task.sourceUrl === saveSourceUrl).sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null
+  const saveInspirationTask = inspirationTaskForSource(inspirationTasks, saveSourceUrl)
   const saveInspirationStatus = saveInspirationTask?.state ?? 'idle'
   const saveInspirationLabel = inspirationSaveLabel(saveInspirationTask, locale)
 
@@ -3697,6 +3697,7 @@ export function App(): React.JSX.Element {
         {detectedMedia.some((item) => !attachedMediaIds.has(item.id)) && (
           <MediaSnifferBar
             inspirationTasks={inspirationTasks}
+            scene={pageScene}
             items={detectedMedia.filter((item) => !attachedMediaIds.has(item.id))}
             locale={locale}
             onActiveChange={setActiveMediaItems}

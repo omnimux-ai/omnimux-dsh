@@ -13,7 +13,7 @@
     "dev:firefox": "node scripts/build.mjs --firefox --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build:harness": "vite build --config vite.harness.config.ts",
-    "test": "vitest run"
+    "test": "vitest run && vitest run --config vitest.inspiration-unit.config.ts"
   },
   "dependencies": {
     "dompurify": "^3.4.13",

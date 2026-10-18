@@ -1,6 +1,9 @@
 import { memo, useRef, useState, useEffect } from 'react'
 import { CloseIcon, SaveIcon } from './icons.tsx'
-import { canonicalInspirationUrl, inspirationSaveLabel, inspirationSaveDetail, type InspirationSaveTask } from '../../shared/inspiration-save.ts'
+import { inspirationSaveLabel, inspirationSaveDetail, type InspirationSaveTask } from '../../shared/inspiration-save.ts'
+import { pageInspirationTask } from '../inspiration-save.ts'
+import type { PageSceneInfo } from './SceneBadge.tsx'
+import type { MediaSourceKind } from '../../content/media-hover/types.ts'
 import type { TweetInspirationCapture } from '../../content/twitter-capture/types.ts'
 
 export interface SniffedMediaItem {
@@ -11,7 +14,9 @@ export interface SniffedMediaItem {
   alt?: string
   inspirationUrl?: string
   inspirationCapture?: TweetInspirationCapture
-  sourceKind?: string
+  sourceKind?: MediaSourceKind
+  videoSrc?: string
+  posterSrc?: string
   width?: number
   height?: number
 }
@@ -23,6 +28,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   onSaveToInspiration,
   attachedIds,
   inspirationTasks = [],
+  scene = null,
   onAttachMedia,
 }: {
   items: SniffedMediaItem[]
@@ -31,6 +37,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   onSaveToInspiration?: (item: SniffedMediaItem) => void
   attachedIds?: ReadonlySet<string>
   inspirationTasks?: InspirationSaveTask[]
+  scene?: PageSceneInfo | null
   onAttachMedia?: (item: SniffedMediaItem) => void
 }) {
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
@@ -52,8 +59,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   }, [])
 
   if (!items || items.length === 0) return null
-  const previewUrl = canonicalInspirationUrl(previewItem?.inspirationUrl)
-  const previewTask = inspirationTasks.filter((task) => task.sourceUrl === previewUrl).sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null
+  const previewTask = previewItem ? pageInspirationTask(scene, previewItem, inspirationTasks) : null
 
   const updatePreviewPosition = (itemId: string) => {
     const el = chipRefs.current.get(itemId)

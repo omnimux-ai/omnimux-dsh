@@ -1,5 +1,5 @@
 import {
-  canonicalInspirationUrl, INSPIRATION_TASKS_KEY, isInspirationTask,
+  canonicalInspirationUrl, sameInspirationSource, INSPIRATION_TASKS_KEY, isInspirationTask,
   type InspirationSaveRequest, type InspirationSaveTask,
 } from '../shared/inspiration-save.ts'
 import { INSPIRATION_BASE_PATH, IMPORT_URL_PATH } from './media-export.ts'
@@ -58,8 +58,8 @@ export class InspirationSaveCoordinator {
     if (!sourceUrl) return this.failure('', '无法确定原帖地址，请打开原帖后重试')
     await this.ready
     if (this.loadFailed) return this.failure(sourceUrl, '无法读取保存收据，请检查浏览器存储后重试')
-    if (request.capture?.url !== undefined && canonicalInspirationUrl(request.capture.url) !== sourceUrl) return this.failure(sourceUrl, '采集内容与原帖不一致，请刷新原帖后重试')
-    const pending = this.tasks.find((task) => task.sourceUrl === sourceUrl && active(task))
+    if (request.capture?.url !== undefined && !sameInspirationSource(request.capture.url, sourceUrl)) return this.failure(sourceUrl, '采集内容与原帖不一致，请刷新原帖后重试')
+    const pending = this.tasks.find((task) => sameInspirationSource(task.sourceUrl, sourceUrl) && active(task))
     if (pending) {
       void this.check(pending).catch(() => {})
       return { ...pending }
@@ -74,7 +74,7 @@ export class InspirationSaveCoordinator {
   private async begin(sourceUrl: string, capture?: Record<string, unknown>): Promise<InspirationSaveTask> {
     const host = await this.deps.resolveHost()
     if (!host) return this.failure(sourceUrl, '请启动并连接主程序后再保存')
-    const existing = this.tasks.find((task) => task.host === host && task.sourceUrl === sourceUrl)
+    const existing = this.tasks.find((task) => task.host === host && sameInspirationSource(task.sourceUrl, sourceUrl))
     // Re-check ready entries too: the host may have deleted a row since last save.
     const task: InspirationSaveTask = existing ?? { taskId: crypto.randomUUID(), host, sourceUrl, state: 'saving', updatedAt: this.now() }
     if (!existing) {
@@ -104,7 +104,7 @@ export class InspirationSaveCoordinator {
     const id = typeof data?.id === 'string' && data.id.trim() ? data.id : null
     const status = data?.import_status
     if (!id || !['importing', 'ready', 'degraded', 'failed'].includes(String(status))) return null
-    if (data?.source_url && canonicalInspirationUrl(data.source_url) !== task.sourceUrl) return null
+    if (data?.source_url && !sameInspirationSource(data.source_url, task.sourceUrl)) return null
     return {
       itemId: id,
       state: status === 'importing' ? 'saving' : status === 'ready' ? (envelope?.is_duplicate === true ? 'duplicate' : 'saved') : status === 'degraded' ? 'partial' : 'failed',
@@ -153,7 +153,7 @@ export class InspirationSaveCoordinator {
       if (!task.itemId) {
         const data = record(record(body)?.data)
         const items = Array.isArray(data?.items) ? data.items : []
-        const matching = items.filter((item) => canonicalInspirationUrl(record(item)?.source_url) === task.sourceUrl)
+        const matching = items.filter((item) => sameInspirationSource(record(item)?.source_url, task.sourceUrl))
         if (matching.length !== 1) throw new Error('no exact receipt')
         body = { data: matching[0] }
       }

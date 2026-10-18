@@ -1849,8 +1849,8 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     const source = payload.inspirationUrl ?? payload.pageUrl
     void inspirationSaves.submit({ targetUrl: source, capture: payload.inspirationCapture ? { ...payload.inspirationCapture } : {
       url: source, title: payload.pageTitle, text: payload.alt || '', shape: 'video',
-      cover_url: payload.previewSrc,
-      media_items: [{ type: 'video', url: payload.sourceKind === 'direct' && payload.attachable !== false ? payload.src : '', poster_url: payload.previewSrc }],
+      cover_url: payload.posterSrc ?? (payload.sourceKind === 'poster' ? payload.previewSrc : ''),
+      media_items: [{ type: 'video', url: payload.videoSrc ?? (payload.sourceKind === 'direct' && payload.attachable !== false ? payload.src : ''), poster_url: payload.posterSrc ?? (payload.sourceKind === 'poster' ? payload.previewSrc : '') }],
     } }).then((task) => sendResponse({ ok: true, task }), () => sendResponse({ ok: false, message: '保存失败，请重新连接主程序' }))
     return true
   }

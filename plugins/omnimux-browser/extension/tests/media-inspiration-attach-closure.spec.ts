@@ -22,7 +22,7 @@ describe('hover save delivery semantics', () => {
     expect((await coordinator.list())[0]?.state).toBe('pending')
     expect(fetchImpl.mock.calls.map((call) => call[0])).toEqual([
       'http://127.0.0.1:43120/omnimux/inspiration/local/import-url',
-      `http://127.0.0.1:43120/omnimux/inspiration/local?source_url=${encodeURIComponent(sourceUrl)}`,
+      `http://127.0.0.1:43120/omnimux/inspiration/local?source_url=${encodeURIComponent('https://x.com/i/status/123')}`,
     ])
     expect(JSON.parse(fetchImpl.mock.calls[0]?.[1].body).capture.media_items).toEqual([{ type: 'video', url: '', poster_url: payload.src }])
   })

@@ -30,6 +30,9 @@ export interface HoveredMedia {
   src: string
   /** Thumbnail address: the video poster, or `src` when no poster exists. */
   previewSrc: string
+  /** Fetchable playable source and poster, separate from the legacy visual src ladder. */
+  videoSrc?: string
+  posterSrc?: string
   pageUrl: string
   /** Explicit save target; `''` means X media could not be attributed safely. */
   inspirationUrl?: string
