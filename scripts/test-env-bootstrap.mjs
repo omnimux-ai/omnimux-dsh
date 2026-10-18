@@ -2,7 +2,6 @@ import * as fs from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
 import { readDevDeepSeekCredential, readDevCredentialsBundle } from './test-env-credentials.mjs';
@@ -10,6 +9,7 @@ import { captureCandidate } from './evidence-contract.mjs';
 import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { prepareFiles, payloadManifest, hashFile, readJson, stable } from './materialize-graph.mjs';
+import { createTaskPnpmTool, installTaskRuntime } from './task-runtime-install.mjs';
 
 const EXECUTABLE = '/Applications/OmniMux Dev.app/Contents/MacOS/OmniMux';
 const WRAPPER = '/Applications/OmniMux Dev.app/Contents/Resources/app.asar/lib/desktop-cli.js';
@@ -226,7 +226,7 @@ function parseLogin(line) {
 }
 
 // Hub client sources import a sibling plugin's module across the plugin boundary, so the stage
-// must carry that source too; the packaged set below stays limited to hub and kit.
+// must carry that source too; only explicitly selected plugins become installed bundles.
 const PREPARATION_PACKAGES = ['plugins/omnimux', 'plugins/omnimux-inspiration', 'packages/dsh-ui-kit', 'packages/generation-capabilities'];
 const PREPARATION_CONFIG = ['package.json', 'pnpm-workspace.yaml', 'pnpm-lock.yaml'];
 const ARCHIVE_SCRIPT = fileURLToPath(new URL('./managed-tarball-archive.py', import.meta.url));
@@ -237,13 +237,25 @@ const PACKER_INCLUDED = { LICENSE: 'LICENSE' };
 const PREPARATION_OUTPUTS = {
   'plugins/omnimux': ['lib/client.js', 'lib/generation-core.js', 'lib/video-inspect.js', 'lib/mediabunny-LICENSE.txt'],
   'packages/dsh-ui-kit': ['lib/index.js', 'lib/index.d.ts', 'lib/index.js.map', 'lib/index.d.ts.map'],
+  'plugins/omnimux-inspiration': ['lib/client.js'],
+  'plugins/omnimux-assets': ['lib/client.js'],
+  'plugins/omnimux-browser': ['lib/index.js', 'lib/protocol.js', 'lib/invariant.js', 'lib/client.js'],
 };
 // The build body comes from the candidate manifest, so a candidate that rewrote it would otherwise
 // have its own script executed here; only these reviewed values may run.
 const PREPARATION_BUILD_SCRIPTS = {
   'plugins/omnimux': 'node scripts/build-media-inspect.mjs && node scripts/build-client.mjs',
   'packages/dsh-ui-kit': 'tsdown',
+  'plugins/omnimux-inspiration': 'node scripts/build-client.mjs',
+  'plugins/omnimux-assets': 'node scripts/build-client.mjs',
+  'plugins/omnimux-browser': 'tsc -b --pretty false && tsdown && node -e "require(\'node:fs\').copyFileSync(\'src/client.js\', \'lib/client.js\')"',
 };
+
+export const TASK_RUNTIME_PLUGINS = Object.freeze(['omnimux-inspiration', 'omnimux-browser', 'omnimux-assets']);
+export function normalizeTaskPlugins(value) {
+  if (!Array.isArray(value) || value.some(name => !TASK_RUNTIME_PLUGINS.includes(name)) || new Set(value).size !== value.length) throw failure('OPTIONS');
+  return ['omnimux', ...value.slice().sort()];
+}
 
 function inspectArchive(tarball, name, version, sha256) {
   const result = spawnSync('python3', ['-B', ARCHIVE_SCRIPT, 'inspect'], {
@@ -273,6 +285,12 @@ async function runTaskPreparation({ options, io, deps }) {
   validateRoot(root, io, deps.repositoryRoot ?? repositoryRoot);
   if (!evidenceContext || Object.keys(evidenceContext).sort().join(',') !== 'runId,taskId'
     || !Object.values(evidenceContext).every(value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value))) throw failure('OPTIONS');
+  const taskPlugins = options.taskPlugins === undefined ? ['omnimux'] : normalizeTaskPlugins(options.taskPlugins);
+  const packagePaths = [...new Set([...PREPARATION_PACKAGES, ...taskPlugins.map(name => `plugins/${name}`),
+    // Assets reuses this candidate-owned menu source at build time; it is not installed as a bundle.
+    ...(taskPlugins.includes('omnimux-assets') ? ['plugins/omnimux-products'] : []),
+  ])];
+  const packedPaths = ['packages/dsh-ui-kit', ...taskPlugins.map(name => `plugins/${name}`)];
   const observations = { contract: 'preparation-only', runtimeStarted: false, userFresh: 'unknown', taskBinding: 'unknown', steps: [] };
   const capture = deps.captureCandidate ?? captureCandidate;
   const readJsonFile = deps.readJson ?? readJson;
@@ -291,11 +309,12 @@ async function runTaskPreparation({ options, io, deps }) {
   };
   try {
     io.chmodSync(privateDir, 0o700);
-    const captureOptions = { root, base: candidate.base, head: candidate.head, taskId: evidenceContext.taskId, runId: evidenceContext.runId, outputs: [], extraInputs: [] };
+    const captureOptions = { root, base: candidate.base, head: candidate.head, taskId: evidenceContext.taskId, runId: evidenceContext.runId, outputs: candidate.outputs ?? [], extraInputs: candidate.extraInputs ?? [] };
     const before = capture(captureOptions);
     observations.steps.push('candidate-before');
     const allowed = new Set((before.candidate?.entries || []).map(item => item.path));
-    const copyTree = (source, destination, allowAll = false) => {
+    const copyTree = (source, destination, allowAll = false, batch = null) => {
+      const operations = batch ?? [];
       for (const name of io.readdirSync(source)) {
         if (['node_modules', '.git', '.scratch'].includes(name)) continue;
         const from = join(source, name), to = join(destination, name);
@@ -303,18 +322,18 @@ async function runTaskPreparation({ options, io, deps }) {
         if (stat.isSymbolicLink()) throw failure('PREPARE_INPUT_UNSUPPORTED');
         if (stat.isDirectory()) {
           const rel = relative(root, from);
-          if (allowAll || [...allowed].some(path => path === rel || path.startsWith(`${rel}/`))) copyTree(from, to, allowAll);
+          if (allowAll || [...allowed].some(path => path === rel || path.startsWith(`${rel}/`))) copyTree(from, to, allowAll, operations);
         } else if (stat.isFile()) {
           const rel = relative(root, from);
           if (!allowAll && !allowed.has(rel)) throw failure('PREPARE_INPUT_UNSUPPORTED');
           io.mkdirSync(dirname(to), { recursive: true });
-          try { prepareFiles({ operation: 'copy', source: from, destination: to }); }
-          catch (error) { error.path = to; error.sourcePath = from; throw error; }
+          operations.push({ operation: 'copy', source: from, destination: to });
         } else throw failure('PREPARE_INPUT_UNSUPPORTED');
       }
+      if (batch === null) prepareFiles({ operation: 'batch', root: privateDir, operations });
     };
     const stageRoot = join(privateDir, 'stage');
-    for (const rel of PREPARATION_CONFIG.concat(PREPARATION_PACKAGES)) {
+    for (const rel of PREPARATION_CONFIG.concat(packagePaths)) {
       const source = join(root, rel), destination = join(stageRoot, rel);
       const stat = io.lstatSync(source);
       if (stat.isSymbolicLink()) throw failure('PREPARE_INPUT_UNSUPPORTED');
@@ -324,7 +343,7 @@ async function runTaskPreparation({ options, io, deps }) {
     }
     observations.steps.push('stage-copied');
     let linkedTools = 0;
-    for (const rel of ['node_modules', ...PREPARATION_PACKAGES.map(item => join(item, 'node_modules'))]) {
+    for (const rel of ['node_modules', ...packagePaths.map(item => join(item, 'node_modules'))]) {
       const source = join(root, rel);
       if (!io.existsSync(source)) continue;
       io.mkdirSync(dirname(join(stageRoot, rel)), { recursive: true });
@@ -334,36 +353,36 @@ async function runTaskPreparation({ options, io, deps }) {
     if (!linkedTools) throw failure('PREPARE_DEPENDENCY_REQUIRED');
     // Snapshot the staged source before building: the build must not mutate the copied inputs, and
     // this same snapshot is the honest source map the caller receives.
-    const stageExclusions = ['node_modules', ...PREPARATION_PACKAGES.map(item => `${item}/node_modules`)];
+    const stageExclusions = ['node_modules', ...packagePaths.map(item => `${item}/node_modules`)];
     const stagedSource = [...allowed].filter(path => io.existsSync(join(stageRoot, path)));
     const stageBefore = payloadManifest(stageRoot, { exclude: stageExclusions, links: false });
     const sourceMap = stageBefore.entries.filter(entry => stagedSource.includes(entry.path));
     io.mkdirSync(join(privateDir, 'pnpm'), { recursive: true, mode: 0o700 });
-    // The shared install environment disables the project package-manager spec and owns an empty
-    // corepack cache, which is correct for offline lockfile installs but cannot launch a build.
-    // Builds honor the pinned toolchain from the invoking environment and still fail loudly offline.
+    // Build and pack use an already installed, version-checked tool; all mutable caches stay private.
     const env = Object.assign(privatePnpmEnvironment(join(privateDir, 'pnpm')), {
       PATH: `${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`,
-      COREPACK_HOME: process.env.COREPACK_HOME || join(homedir(), '.cache', 'node', 'corepack'),
-      COREPACK_ENABLE_PROJECT_SPEC: '1',
     });
     const run = deps.runPnpm ?? runPnpm;
+    const toolchain = createTaskPnpmTool(privateDir);
+    const runOptions = { executable: toolchain.executable };
     const runStep = async (argv, cwd) => {
-      const result = await run(argv, { cwd, env });
+      const result = await run(argv, { cwd, env, ...runOptions });
       const step = { argv, cwd: relative(stageRoot, cwd) || cwd, code: result.code, signal: result.signal ?? null,
         stdout: (result.stdout || '').slice(-2048), stderr: (result.stderr || '').slice(-2048) };
       observations.steps.push({ argv, code: result.code, signal: result.signal ?? null, stdout: step.stdout, stderr: step.stderr });
       if (result.code !== 0 || result.signal) throw failure('PREPARE_BUILD_FAILED');
       return step;
     };
-    for (const [rel, expected] of Object.entries(PREPARATION_BUILD_SCRIPTS)) {
+    for (const rel of packedPaths) {
+      const expected = PREPARATION_BUILD_SCRIPTS[rel];
       const staged = readJsonFile(join(stageRoot, rel, 'package.json'));
-      if (staged?.scripts?.build !== expected) throw failure('PREPARE_BUILD_SCRIPT_UNSUPPORTED', { path: `${rel}/package.json`, build: staged?.scripts?.build ?? null });
+      if (staged?.scripts?.[rel === 'plugins/omnimux-browser' ? 'build:server' : 'build'] !== expected) throw failure('PREPARE_BUILD_SCRIPT_UNSUPPORTED', { path: `${rel}/package.json` });
     }
     // Lifecycle pre/post hooks are not part of the reviewed build body, so they are switched off.
     const buildArgs = ['--config.verify-deps-before-run=false', '--config.enable-pre-post-scripts=false'];
     await runStep([...buildArgs, '--filter', 'dsh-ui-kit', 'build'], stageRoot);
     await runStep([...buildArgs, '--filter', 'omnimux', 'build'], stageRoot);
+    for (const name of taskPlugins.filter(name => name !== 'omnimux')) await runStep([...buildArgs, '--filter', name, name === 'omnimux-browser' ? 'build:server' : 'build'], stageRoot);
     // The build may add generated outputs but must leave every copied candidate input untouched.
     const stageAfter = payloadManifest(stageRoot, { exclude: stageExclusions, links: false });
     const stagedAfter = new Map(stageAfter.entries.map(item => [item.path, item]));
@@ -376,7 +395,7 @@ async function runTaskPreparation({ options, io, deps }) {
     observations.steps.push('candidate-after');
     const packRoot = join(privateDir, 'pack');
     const packages = [];
-    for (const rel of ['plugins/omnimux', 'packages/dsh-ui-kit']) {
+    for (const rel of packedPaths) {
       const destination = join(packRoot, rel);
       copyTree(join(stageRoot, rel), destination, true);
       const manifestPath = join(destination, 'package.json');
@@ -393,7 +412,8 @@ async function runTaskPreparation({ options, io, deps }) {
       // both here keeps the archived manifest byte-identical instead of re-serialized by the packer.
       if (manifest.scripts && Object.hasOwn(manifest.scripts, 'prepare')) delete manifest.scripts.prepare;
       io.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-      const dryRun = await run(['--config.ignore-scripts=true', '--config.verify-deps-before-run=false', 'pack', '--dry-run', '--json'], { cwd: destination, env });
+      const dryRun = await run(['--config.ignore-scripts=true', '--config.verify-deps-before-run=false', 'pack', '--dry-run', '--json'], { cwd: destination, env, ...runOptions });
+      observations.steps.push({ argv: ['pack', '--dry-run', '--json'], code: dryRun.code, signal: dryRun.signal ?? null, stdout: (dryRun.stdout || '').slice(-2048), stderr: (dryRun.stderr || '').slice(-2048) });
       if (dryRun.code !== 0 || dryRun.signal) throw failure('PREPARE_PACK_PLAN_FAILED');
       let declaredFiles;
       try { declaredFiles = JSON.parse(dryRun.stdout).files.map(item => item.path); } catch { throw failure('PREPARE_PACK_PLAN_FAILED'); }
@@ -403,7 +423,7 @@ async function runTaskPreparation({ options, io, deps }) {
         if (!built?.isFile() || built.size === 0) throw failure('PREPARE_OUTPUT_MISSING', { path: artifact });
         if (!declaredFiles.includes(artifact)) throw failure('PREPARE_OUTPUT_UNPLANNED', { path: artifact });
       }
-      const packResult = await run(['--config.ignore-scripts=true', '--config.verify-deps-before-run=false', 'pack', '--pack-destination', privateDir], { cwd: destination, env });
+      const packResult = await run(['--config.ignore-scripts=true', '--config.verify-deps-before-run=false', 'pack', '--pack-destination', privateDir], { cwd: destination, env, ...runOptions });
       observations.steps.push({ argv: ['pack'], code: packResult.code, signal: packResult.signal ?? null, stdout: (packResult.stdout || '').slice(-2048), stderr: (packResult.stderr || '').slice(-2048) });
       if (packResult.code !== 0 || packResult.signal) throw failure('PREPARE_PACK_FAILED');
       const tarball = join(privateDir, `${manifest.name}-${manifest.version}.tgz`);
@@ -439,13 +459,13 @@ async function runTaskPreparation({ options, io, deps }) {
         : extractArchive(tarball, manifest.name, manifest.version, sha256, extractedRoot);
       const archivedManifest = readJsonFile(join(extractedRoot, 'package.json'));
       if (stable(archivedManifest) !== stable(manifest)) throw failure('PREPARE_ARCHIVE_MANIFEST_MISMATCH', { path: 'package.json' });
-      packages.push({ name: manifest.name, version: manifest.version, tarball, sha256, inspection, extraction,
+      packages.push({ name: manifest.name, version: manifest.version, sourcePath: rel, extractedRoot, tarball, sha256, inspection, extraction,
         plannedFiles: plannedFiles.length, payloadDigest: declaredPayload.digest, archiveDigest: inspection.digest });
     }
     const manifests = { stage: stageAfter };
     observations.steps.push('completed');
-    const result = { scope: 'preparation-only', status: 'task-source-prepared', preparationPath: privateDir,
-      candidateBefore: before, candidateAfter: after, sourceMap, packages, build: observations.steps, observations, manifests, ownerIdentity };
+    const result = { scope: 'preparation-only', status: 'task-source-prepared', preparationPath: privateDir, stageRoot,
+      candidateBefore: before, candidateAfter: after, sourceMap, packages, build: observations.steps, observations, manifests, ownerIdentity, ...(toolchain ? { toolchain } : {}) };
     Object.defineProperty(result, 'cleanup', { value: cleanup, enumerable: false });
     return result;
   } catch (error) {
@@ -453,7 +473,162 @@ async function runTaskPreparation({ options, io, deps }) {
     classified.observations = observations;
     classified.rootReason = error?.code || error?.message || 'unknown';
     if (error?.sourcePath) classified.failedInput = { source: error.sourcePath, destination: error.path };
-    classified.cleanup = { cleaned: false, resources: [{ name: 'preparation-directory', owner: 'app-environment', status: 'failed', reason: 'not-deleted' }] };
+    try { await cleanup(); classified.cleanup = { cleaned: true, resources: [{ name: 'preparation-directory', owner: 'app-environment', status: 'completed', reason: null }] }; }
+    catch { classified.cleanup = { cleaned: false, resources: [{ name: 'preparation-directory', owner: 'app-environment', status: 'failed', reason: 'remove-failed' }] }; }
+    throw classified;
+  }
+}
+
+function validateFreshRequest(options) {
+  if (options.mode !== 'ui') throw failure('FRESH_MODE_UNSUPPORTED');
+  const candidate = options.candidate;
+  if (!candidate || Object.getPrototypeOf(candidate) !== Object.prototype || Object.keys(candidate).some(key => !['base', 'head', 'outputs', 'extraInputs'].includes(key))
+    || !SHA_RE.test(candidate.base) || !SHA_RE.test(candidate.head) || ['outputs', 'extraInputs'].some(key => candidate[key] !== undefined && !Array.isArray(candidate[key]))) throw failure('PREPARE_CANDIDATE_REQUIRED');
+  normalizeTaskPlugins(options.taskPlugins);
+}
+
+async function startFreshTaskRuntime({ options, io, deps }) {
+  validateFreshRequest(options);
+  if (io !== fs) throw failure('FRESH_FILESYSTEM_REQUIRED');
+  try { io.accessSync(EXECUTABLE, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
+  let preparation, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise;
+  const observations = { contract: 'task-private-installation', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
+  const signals = deps.signals ?? process;
+  const timeout = deps.shutdownTimeoutMs ?? 5000;
+  const waitExit = milliseconds => new Promise(yes => {
+    if (!child || (exited && closed)) return yes(true);
+    let timer;
+    const finish = value => { clearTimeout(timer); child.off('exit', check); child.off('close', check); yes(value); };
+    const check = () => { if (exited && closed) finish(true); };
+    child.on('exit', check); child.on('close', check); timer = setTimeout(() => finish(false), milliseconds); check();
+  });
+  const onSignal = () => { observations.interrupted = true; void cleanup(); };
+  const cleanup = () => cleanupPromise ??= (async () => {
+    cleaning = true;
+    signals.off('SIGINT', onSignal); signals.off('SIGTERM', onSignal);
+    const resources = [];
+    const record = (name, status, reason = null) => resources.push({ name, owner: 'app-environment', status, reason });
+    if (!child) record('app-child', 'not-applicable', 'not-created');
+    else {
+      let stopped = exited && closed;
+      try {
+        if (!exited) child.kill('SIGTERM');
+        stopped = await waitExit(timeout);
+        if (!stopped && !exited) { child.kill('SIGKILL'); stopped = await waitExit(timeout); }
+      } catch { stopped = false; }
+      record('app-child', stopped ? 'completed' : 'failed', stopped ? null : 'exit-or-close-unconfirmed');
+    }
+    if (!mock) record('mock-server', 'not-applicable', 'not-created');
+    else { try { await mock.close(); record('mock-server', 'completed'); } catch { record('mock-server', 'failed', 'close-failed'); } }
+    if (!preparation) record('app-private-directory', 'not-applicable', 'not-created');
+    else if (resources.some(item => item.status === 'failed')) record('app-private-directory', 'failed', 'resource-still-open');
+    else { try { await preparation.cleanup(); record('app-private-directory', 'completed'); } catch { record('app-private-directory', 'failed', 'remove-failed'); } }
+    return { cleaned: resources.every(item => item.status !== 'failed'), resources };
+  })();
+  try {
+    preparation = await runTaskPreparation({ options, io, deps });
+    observations.preparation = { candidateDigest: preparation.candidateBefore.candidate.contentDigest, inputsDigest: preparation.candidateBefore.inputs.contentDigest, packages: preparation.packages.map(item => ({ name: item.name, sha256: item.sha256 })) };
+    const privateRoot = preparation.preparationPath;
+    const env = { PATH: `${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`, ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--max-http-header-size=65536', COREPACK_ENABLE_NETWORK: '0' };
+    for (const [name, leaf] of Object.entries({ HOME: 'home', DSH_HOME: 'dsh', DSH_AGENTS_HOME: 'agents', XDG_CONFIG_HOME: 'config', XDG_CACHE_HOME: 'cache', XDG_STATE_HOME: 'state', XDG_DATA_HOME: 'data', TMPDIR: 'tmp', TMP: 'tmp', TEMP: 'tmp' })) {
+      env[name] = join(privateRoot, leaf); io.mkdirSync(env[name], { recursive: true, mode: 0o700 });
+    }
+    mock = await startMock();
+    Object.assign(env, { DEEPSEEK_API_KEY: SYNTHETIC_KEY, DEEPSEEK_BASE_URL: mock.origin, OMNIMUX_BASE_URL: `${mock.origin}/v1`, OMNIMUX_SITE_URL: mock.origin, OMNIMUX_API_KEY: SYNTHETIC_MEDIA_KEY });
+    io.writeFileSync(join(env.DSH_HOME, 'settings.yaml'), JSON.stringify({
+      'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: mock.origin },
+      'agent-default-model': { provider: 'deepseek-official', model: 'deepseek-flash' },
+    }) + '\n', { flag: 'wx', mode: 0o600 });
+    const installed = installTaskRuntime({ root: options.root, repository: deps.repositoryRoot ?? repositoryRoot, preparation, evidenceContext: options.evidenceContext, candidate: options.candidate, executable: EXECUTABLE, wrapper: WRAPPER, env });
+    const profilePatch = [
+      { id: 'llm-pi-ai', name: '@deepseek-ai/dsh-llm-pi-ai', config: { providers: { omnimux: { displayName: 'QA模拟', apiKeyEnv: 'OMNIMUX_API_KEY', api: 'openai-completions', baseURL: mock.origin, models: [{ id: 'qa-synthetic', name: 'QA模拟', contextWindow: 8192, maxTokens: 2048 }] } } } },
+      { id: 'omnimux', config: { siteBaseUrl: mock.origin, official: { accountAvatars: { enabled: false } }, media: { defaultProvider: 'omnimux', providers: { omnimux: { protocol: 'openai-media', baseUrl: `${mock.origin}/v1`, apiKeyEnv: 'OMNIMUX_API_KEY' } } } } },
+    ];
+    const patchPath = join(installed.installation.profile, 'cordis.patch.yml');
+    if (io.existsSync(patchPath)) {
+      canonical(io, patchPath, false);
+      const initial = parseDocument(io.readFileSync(patchPath, 'utf8')).toJS();
+      if (initial !== null && (!Array.isArray(initial) || initial.length)) throw failure('FRESH_PROFILE_CONFIG_UNEXPECTED');
+    }
+    io.writeFileSync(patchPath, JSON.stringify(profilePatch) + '\n', { mode: 0o600 });
+    // The only seeded business state is the repository's declared synthetic media workspace.
+    const seededWorkspace = 'ws_qa_media';
+    const fixtureSource = join(options.root, 'tests/fixtures/qa-workspace-media');
+    const fixtureTarget = join(env.DSH_HOME, 'workspaces', seededWorkspace);
+    const capturedFiles = new Map(preparation.candidateBefore.candidate.entries.map(item => [item.path, item.sha256]));
+    const seed = (from, to) => {
+      io.mkdirSync(to, { recursive: true, mode: 0o700 });
+      for (const name of io.readdirSync(from)) {
+        const source = join(from, name), target = join(to, name), stat = io.lstatSync(source);
+        if (stat.isSymbolicLink()) throw failure('FRESH_FIXTURE_UNSAFE');
+        if (stat.isDirectory()) seed(source, target);
+        else if (stat.isFile()) {
+          const expected = capturedFiles.get(relative(options.root, source));
+          if (!expected || hashFile(source) !== expected) throw failure('FRESH_FIXTURE_CHANGED');
+          io.copyFileSync(source, target);
+          if (hashFile(target) !== expected) throw failure('FRESH_FIXTURE_CHANGED');
+        } else throw failure('FRESH_FIXTURE_UNSAFE');
+      }
+    };
+    seed(fixtureSource, fixtureTarget);
+    io.mkdirSync(join(env.DSH_HOME, 'storages'), { recursive: true, mode: 0o700 });
+    const timestamp = new Date().toISOString();
+    io.writeFileSync(join(env.DSH_HOME, 'storages/workspace.json'), JSON.stringify({ unit: { name: 'workspace', version: 2 }, global: { initialized: true, workspaceIds: [seededWorkspace], archivedSessionIds: [] }, tables: { workspaces: { [seededWorkspace]: { path: fixtureTarget, title: 'QA Media', sessionIds: [], createdAt: timestamp, updatedAt: timestamp } } } }) + '\n', { flag: 'wx', mode: 0o600 });
+    signals.on('SIGINT', onSignal); signals.on('SIGTERM', onSignal);
+    let inspectorUrl;
+    const login = await new Promise((yes, no) => {
+      let stdout = '', stderr = '', loginUrl, settled = false;
+      const finish = () => { if (loginUrl && inspectorUrl && !settled) { settled = true; clearTimeout(timer); yes(loginUrl); } };
+      const timer = setTimeout(() => no(failure('START_TIMEOUT')), deps.startupTimeoutMs ?? 60000);
+      child = (deps.spawn ?? spawn)(EXECUTABLE, ['--inspect=127.0.0.1:0', '--expose-internals', WRAPPER, '--profile', 'web', '--port', '0', '--host', '127.0.0.1', '--no-open'], { cwd: env.HOME, env, stdio: ['ignore', 'pipe', 'pipe'] });
+      observations.runtimeStarted = true;
+      observations.events.push({ event: 'spawn', pid: child.pid ?? null, parentPid: process.pid });
+      child.once('exit', (code, signal) => { exited = true; observations.events.push({ event: 'exit', code: code ?? null, signal: signal ?? null }); if (!cleaning) observations.unexpectedExit = true; clearTimeout(timer); no(failure('RUNTIME_EXIT')); });
+      child.once('close', () => { closed = true; });
+      child.once('error', () => { clearTimeout(timer); no(failure('RUNTIME_START')); });
+      const consume = (kind, chunk) => {
+        if (settled) return;
+        if (kind === 'stdout') stdout += chunk.toString(); else stderr += chunk.toString();
+        if (stdout.length + stderr.length > 65536) { clearTimeout(timer); return no(failure('OUTPUT_LIMIT')); }
+        let buffer = kind === 'stdout' ? stdout : stderr, end;
+        while ((end = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, end).replace(/\r$/, ''); buffer = buffer.slice(end + 1);
+          try {
+            if (kind === 'stdout') loginUrl = parseLogin(line) ?? loginUrl;
+            else {
+              const match = /^Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]+)$/.exec(line);
+              if (match) inspectorUrl = match[1];
+            }
+          } catch (error) { clearTimeout(timer); return no(error); }
+        }
+        if (kind === 'stdout') stdout = buffer; else stderr = buffer;
+        finish();
+      };
+      child.stdout.on('data', chunk => consume('stdout', chunk));
+      child.stderr.on('data', chunk => consume('stderr', chunk));
+    });
+    installed.installation.origin = login.origin;
+    installed.installation.pid = child.pid;
+    const freeze = value => { if (value && typeof value === 'object' && !Object.isFrozen(value)) { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
+    freeze(installed.installation);
+    const assertAlive = () => { if (exited || closed || observations.unexpectedExit || observations.interrupted) throw failure('RUNTIME_EXIT'); };
+    assertAlive(); installed.assertInstalledIntegrity();
+    const { verifyTaskServerLoading } = await import('./task-runtime-proof.mjs');
+    const verifyServerLoading = async () => { assertAlive(); installed.assertInstalledIntegrity(); return verifyTaskServerLoading({ inspectorUrl, pid: child.pid, installation: installed.installation }); };
+    const serverLoading = await verifyServerLoading();
+    const summary = Object.freeze({ mode: 'ui', origin: login.origin, evidenceLevel: 'task-source-installed', taskPluginsInstalled: true, taskPluginsCount: normalizeTaskPlugins(options.taskPlugins).length, seededDataDomains: ['synthetic-workspace'], realModelRequest: false, modelConfiguration: 'QA模拟', seededWorkspace });
+    const result = { origin: login.origin, summary, observations, installation: installed.installation, serverLoading, cleanup };
+    Object.defineProperties(result, { loginUrl: { value: login.href }, assertAlive: { value: assertAlive }, assertInstalledIntegrity: { value: installed.assertInstalledIntegrity }, verifyServerLoading: { value: verifyServerLoading } });
+    return result;
+  } catch (error) {
+    const cleaned = await cleanup();
+    const classified = safeError(error, 'FRESH_RUNTIME');
+    classified.rootReason = error.code ?? error.name;
+    if (typeof error.path === 'string' && error.path.startsWith(options.root + '/.test-env-')) classified.failedPath = error.path;
+    classified.cleanup = error.cleanup?.cleaned === false ? error.cleanup : error.cleanup?.resources?.some(item => item.name === 'preparation-directory')
+      ? { cleaned: cleaned.cleaned, resources: cleaned.resources.map(item => item.name === 'app-private-directory' ? { ...item, status: 'completed', reason: null } : item) } : cleaned;
+    classified.observations = { ...observations, ...(error.observations ? { failedPreparation: error.observations } : {}) };
+    if (error.installDiagnostic) classified.installDiagnostic = error.installDiagnostic;
     throw classified;
   }
 }
@@ -473,25 +648,27 @@ export function createTestEnvironmentStarter(deps = {}) {
   const io = deps.fs ?? fs;
   const signals = deps.signals ?? process;
   return async function start(options = {}) {
-    if (!options || typeof options !== 'object' || Object.keys(options).some(k => !['root', 'mode', 'evidenceContext', 'preparationOnly', 'candidate'].includes(k))) throw failure('OPTIONS');
+    if (!options || typeof options !== 'object' || Object.keys(options).some(k => !['root', 'mode', 'evidenceContext', 'preparationOnly', 'candidate', 'taskPlugins'].includes(k))) throw failure('OPTIONS');
     const { root, mode = 'ui', evidenceContext = null, preparationOnly = false, candidate = null } = options;
     if (!['ui', 'onboarding', 'live'].includes(mode)) throw failure('OPTIONS');
     validateRoot(root, io, deps.repositoryRoot ?? repositoryRoot);
     if (preparationOnly) {
       if (mode !== 'ui') throw failure('OPTIONS');
       if (!candidate || typeof candidate !== 'object' || !SHA_RE.test(candidate.base) || !SHA_RE.test(candidate.head)) throw failure('PREPARE_CANDIDATE_REQUIRED');
-      return runTaskPreparation({ options: { root, mode, candidate, evidenceContext }, io, deps });
+      return runTaskPreparation({ options: { root, mode, candidate, evidenceContext, ...(options.taskPlugins === undefined ? {} : { taskPlugins: options.taskPlugins }) }, io, deps });
     }
-    if (Object.hasOwn(options, 'candidate')) throw failure('OPTIONS');
+    if (Object.hasOwn(options, 'candidate') && options.taskPlugins === undefined) throw failure('OPTIONS');
     if (evidenceContext !== null) {
       if (!evidenceContext || Object.keys(evidenceContext).sort().join(',') !== 'runId,taskId'
         || !Object.values(evidenceContext).every(value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(value))) throw failure('OPTIONS');
+      if (options.taskPlugins !== undefined) return startFreshTaskRuntime({ options: { ...options, mode }, io, deps });
       // The legacy full profile is Dev-backed, not a fresh synthetic installation.
       const error = failure('NOT_USER_FRESH_TASK_UNKNOWN');
       error.cleanup = { cleaned: true, resources: ['app-child', 'mock-server', 'app-private-directory'].map(name => ({ name, owner: 'app-environment', status: 'not-applicable', reason: 'not-created' })) };
       error.observations = { userFresh: false, taskBinding: 'unknown', runtimeStarted: false };
       throw error;
     }
+    if (options.taskPlugins !== undefined) throw failure('OPTIONS');
     try { io.accessSync(EXECUTABLE, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
     let privateDir, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise, startupReject;
     const observations = { contract: 'none', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
@@ -1016,7 +1193,8 @@ export function createTestEnvironmentStarter(deps = {}) {
 /** Start a private complete core Web runtime. Callers must use try/finally cleanup.
  * `live` requires prior task-specific authorization and does not submit a model request.
  * loginUrl is a secret in-memory capability: never log it or put it in evidence.
- * evidenceContext rejects the Dev-backed legacy preparation before runtime or profile access.
+ * Explicit taskPlugins + candidate select the ui-only, task-private installation path.
+ * A legacy evidenceContext without taskPlugins still refuses to claim a fresh installation.
  * @param {{root: string, mode?: 'ui'|'onboarding'|'live', evidenceContext?: {taskId:string, runId:string}}} options
  */
 export const startTestEnvironment = createTestEnvironmentStarter();
