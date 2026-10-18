@@ -13,6 +13,7 @@ import { clickOfficialNewSession } from './new-session-click.js'
 
 /** Module-level inflight lock. A second call returns `{ error: 'busy' }` and does not queue. */
 let replicateInflight = null
+const recoverableDrafts = new Map()
 
 /**
  * Immediate try-lock. If a replicate is already running, the second caller
@@ -43,6 +44,7 @@ export function isReplicateBusy() {
  */
 export function resetReplicateLock() {
   replicateInflight = null
+  recoverableDrafts.clear()
 }
 
 function resolveDoc(io) {
@@ -173,6 +175,50 @@ function defaultAddAttachment(win) {
   }
 }
 
+function defaultRemoveAttachment(win) {
+  return (sessionId, id) => win?.__omnimuxAttachments?.removeAttachment?.(sessionId, id)
+}
+
+async function materializeReferences(win, input) {
+  const fetcher = win?.fetch?.bind(win) ?? globalThis.fetch
+  if (typeof fetcher !== 'function') return { ok: false, error: '会话附件能力未就绪，请稍后重试' }
+  const response = await fetcher(`/omnimux/inspiration/local/${encodeURIComponent(input.id)}/creation-attachments`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: input.sessionId, reference_id: input.reference_id }),
+  })
+  const body = await response.json()
+  return response.ok ? { ok: true, attachments: body.attachments } : { ok: false, error: body.error || '参考文件带入失败，请重试' }
+}
+
+/** All-or-nothing composer insertion; only attachments inserted by this call are rolled back. */
+function preparedAttachmentBatch(sessionId, payloads, add, remove) {
+  const ownedIds = []
+  let rolledBack = false
+  const rollback = () => {
+    if (rolledBack) return
+    rolledBack = true
+    for (const id of ownedIds) remove(sessionId, id)
+  }
+  const attach = () => {
+    try {
+      for (const payload of payloads) {
+        const result = add(sessionId, payload)
+        if (result?.reason === 'duplicate') continue
+        if (result?.ok !== true || typeof result.attachment?.id !== 'string' || !result.attachment.id) {
+          rollback()
+          return { ok: false, reason: result?.reason || 'invalid-payload' }
+        }
+        ownedIds.push(result.attachment.id)
+      }
+      return { ok: true, rollback }
+    } catch {
+      rollback()
+      return { ok: false, reason: 'invalid-payload' }
+    }
+  }
+  return { attach, rollback }
+}
+
 /**
  * @param {{ id?: unknown, title?: unknown, source_url?: unknown, source_platform?: unknown, type?: unknown, local_paths?: object, stats?: object, deconstruction?: object, duration?: unknown }} row
  * @param {object} [io]
@@ -182,7 +228,7 @@ export async function oneClickReplicate(row, io = {}) {
 
   if (isReplicateBusy()) {
     onStatus('card.cta.busy')
-    return { ok: false, error: 'busy' }
+    return { ok: false, error: row?.creation_reference ? '创作参考正在带入，请稍候' : 'busy' }
   }
 
   return runExclusive(async () => {
@@ -202,6 +248,10 @@ export async function oneClickReplicate(row, io = {}) {
         onDismissModal: io.onDismissModal,
       })
 
+    const prepared = row?.creation_reference != null
+    if (prepared && (typeof row.creation_reference.id !== 'string' || !row.creation_reference.id || typeof row.creation_reference.text !== 'string' || !row.creation_reference.text.trim())) {
+      return { ok: false, error: '创作参考尚未准备完成，请重新整理' }
+    }
     onStatus('card.cta.replicating')
 
     let clickPromise
@@ -212,7 +262,7 @@ export async function oneClickReplicate(row, io = {}) {
     } catch {
       try { reveal() } catch { /* keep the visible retry surface */ }
       onStatus('card.cta.newSessionFailed')
-      return { ok: false, error: 'newSessionFailed' }
+      return { ok: false, error: prepared ? '新会话未能打开，请重试' : 'newSessionFailed' }
     }
     try { reveal() } catch { /* keep awaiting official resolution */ }
 
@@ -221,35 +271,63 @@ export async function oneClickReplicate(row, io = {}) {
       clickResult = await clickPromise
     } catch {
       onStatus('card.cta.newSessionFailed')
-      return { ok: false, error: 'newSessionFailed' }
+      return { ok: false, error: prepared ? '新会话未能打开，请重试' : 'newSessionFailed' }
     }
     if (!clickResult || clickResult.ok !== true) {
       onStatus('card.cta.newSessionFailed')
-      return { ok: false, error: 'newSessionFailed' }
+      return { ok: false, error: prepared ? '新会话未能打开，请重试' : 'newSessionFailed' }
     }
 
     const sessionId = resolveNewSessionId(clickResult)
     if (!sessionId) {
       onStatus('card.cta.newSessionFailed')
-      return { ok: false, error: 'newSessionFailed' }
+      return { ok: false, error: prepared ? '新会话未能打开，请重试' : 'newSessionFailed' }
     }
     // The input.dock consumer performs the empty-draft guard, attachment write,
     // and official setDraft in that order. This keeps an attachment failure
     // retryable: it cannot leave a system-owned prompt in the draft.
     const prompt = buildReplicationPrompt(row)
-    const payload = buildInspirationPayload(row)
+    let batch
+    if (prepared) {
+      try {
+        const materialize = typeof io.materializeReferences === 'function' ? io.materializeReferences : (input) => materializeReferences(win, input)
+        const result = await materialize({ id: row.id, sessionId, reference_id: row.creation_reference.id })
+        if (!result?.ok || !Array.isArray(result.attachments) || !result.attachments.length || result.attachments.some((file) => typeof file?.relativePath !== 'string' || !file.relativePath || file.relativePath.startsWith('/') || file.relativePath.split(/[\\/]/).includes('..'))) {
+          onStatus('card.cta.attachFailed')
+          return { ok: false, error: result?.error || '参考文件尚未完整带入，请重试' }
+        }
+        const remove = typeof io.removeAttachment === 'function' ? io.removeAttachment : defaultRemoveAttachment(win)
+        batch = preparedAttachmentBatch(sessionId, result.attachments, addAttachment, remove)
+      } catch {
+        onStatus('card.cta.attachFailed')
+        return { ok: false, error: '参考文件带入失败，请重试' }
+      }
+    }
+    const payload = prepared ? null : buildInspirationPayload(row)
+    const recoveryKey = prepared ? `${row.id}:${row.creation_reference.id}` : null
+    const ownDraft = prepared ? recoverableDrafts.get(recoveryKey) : null
     let prefilled
     try {
       prefilled = await prefill({
         targetSessionId: sessionId,
         prompt,
-        attach: () => addAttachment(sessionId, payload),
+        attach: batch ? batch.attach : () => addAttachment(sessionId, payload),
+        ...(prepared ? {
+          requireReadback: true,
+          resumeOwnPrompt: ownDraft?.sessionId === sessionId && ownDraft?.prompt === prompt,
+          onDraftWritten: () => {
+            if (recoverableDrafts.size >= 32) recoverableDrafts.delete(recoverableDrafts.keys().next().value)
+            recoverableDrafts.set(recoveryKey, { sessionId, prompt })
+          },
+        } : {}),
       })
     } catch {
+      batch?.rollback()
       onStatus('card.cta.sendManual')
-      return { ok: false, error: 'sendManual' }
+      return { ok: false, error: prepared ? '草稿未能完整带入，请重试' : 'sendManual' }
     }
     if (!prefilled || prefilled.ok !== true) {
+      batch?.rollback()
       const error = prefilled?.error === 'draft-protected'
         ? 'draftProtected'
         : prefilled?.error === 'attach-full'
@@ -258,9 +336,11 @@ export async function oneClickReplicate(row, io = {}) {
             ? 'attachFailed'
             : 'sendManual'
       onStatus(`card.cta.${error}`)
-      return { ok: false, error }
+      const message = { draftProtected: '目标会话已有草稿，请先处理后重试', attachFull: '会话附件已满，请移除部分附件后重试', attachFailed: '参考文件未能完整带入，请重试', sendManual: '草稿未能完整带入，请重试' }[error]
+      return { ok: false, error: prepared ? message : error }
     }
 
+    if (prepared) recoverableDrafts.delete(recoveryKey)
     onStatus(null)
     return {
       ok: true,

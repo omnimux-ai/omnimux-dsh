@@ -131,6 +131,7 @@ const MEDIA_SOURCE_FILES = [
   'api.js',
   'InspirationCoverCard.jsx',
   'InspirationPreviewModal.jsx',
+  'InspirationPostDetail.jsx',
   'InspirationSection.jsx',
   'feed-helpers.js',
   'inspiration-preview-data.js',

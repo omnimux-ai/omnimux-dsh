@@ -195,132 +195,27 @@ export function parseShotsFromMarkdownTable(markdown) {
   return shots
 }
 
-/**
- * Generate semantic 5-dimension deconstruction from metadata when video file is not locally present.
- * @param {{ title?: string, content?: string, tags?: string[], platform?: string }} meta
- */
-export function generateSemanticDeconstruction(meta = {}) {
-  const rawText = String(meta.content || meta.title || '短视频爆款内容').trim()
-  const tagsList = Array.isArray(meta.tags) ? meta.tags : []
-  const tagStr = tagsList.length > 0 ? tagsList.join(', ') : 'TikTok, 爆款, 短视频'
-  const platform = (meta.platform || 'tiktok').toUpperCase()
-
-  const summary = rawText.length > 60 ? `${rawText.slice(0, 58)}…` : rawText
-  const hook = `【视觉前置反差 & 痛点唤醒】开场0-3秒通过产品强对比与高饱和视觉画面抓取用户停留，配合第一人称强烈语气词唤醒目标人群对相关护理/变美痛点的即时共鸣。`
-  const targetGoal = `* **转化目标**: 强化品牌功效心智，直接引导主页橱窗链接点击与转化购买\n* **情绪基调**: 惊喜、种草、种草信任感\n* **爆款基因**: 痛点即时唤醒 + 直观使用前后效果呈现 + 评论区购买路径指引`
-  const narrative = `* **核心载体**: 口播种草 + 第一视角实测演示\n* **人声DNA**: 亲切真诚的闺蜜/博主分享口吻，语速适中微快，情绪饱满\n* **叙事节奏**: 0-3s 抛出痛点反问 → 中段 3-10s 演示解决过程与质地细节 → 结尾 10-15s 抛出 CTA 购买指引`
-  const visual = `* **场景设置**: 明亮简约的个人梳妆台/生活化室内场景\n* **镜头语言**: 0-3s 紧凑特写(Close-up) → 演示段多角度近景切换，突出产品细节质感\n* **节奏特征**: 伴随清脆原声音效，视听卡点增强种草真实度\n\n### 逐帧拆解 (Shot-by-Shot Breakdown)\n\n| 时间 (Time) | 画面描述 & 镜头 (Visual & Shot) | Midjourney Prompt (For AI Gen) | 关键动作 (Action) | 脚本模板 (Script Template with {Variables}) |\n| :--- | :--- | :--- | :--- | :--- |\n| 00:00 - 00:03 | 特写，主播手持产品做出震惊表情。 | \`Young creator holding product with shocked wide eyes, cozy indoor ambient light --ar 9:16\` | 快速举起产品贴近镜头，制造悬念停顿 | (Audio): "这真的是我今年发现最绝的宝藏，千万别被别人抢先知道了！" |\n| 00:03 - 00:07 | 中景，主播对镜拆解展示核心成分与质地。 | \`Close-up hands displaying product texture and minimalist packaging, modern vanity table --ar 9:16\` | 细致涂抹推开，展示水润吸收效果 | (Audio): "质地超级清爽细腻，上脸瞬间吸收，专门解决干燥暗沉痛点。" |\n| 00:07 - 00:11 | 微距特写，前后使用对比与核心细节展示。 | \`Macro split comparison of radiant hydrated skin versus dull tone, soft studio lighting --ar 9:16\` | 手指轻弹面部，展现通透弹润光泽感 | (Audio): "连续用了一周之后，整个皮肤状态都在发光，完全不挑肤质。" |\n| 00:11 - 00:15 | 中景，主播微笑向镜头展示主页链接并引导点击。 | \`Smiling creator pointing towards profile bio with energetic posture, clean aesthetic background --ar 9:16\` | 热情挥手并手势指向下方/主页 | (Audio): "现在右下角还有粉丝限时专属福利，赶紧去主页链接冲！" |`
-  const replication = `* **复刻公式**: [痛点反问/冲突开场] + [产品第一人称实测] + [视觉效果即时展示] + [引导主页 Bio 下单]\n* **创作建议**: 建议保持原生无滤镜光影，前3秒必须出现核心产品与视觉动作，文案带精准 Hashtags: #${tagsList.join(' #')}`
-
-  const markdown = `## 一句话视频描述
-${summary}
-
-## I. 核心目标
-${targetGoal}
-
-## II. 影响力分析
-* **明线卖点**: 产品直观功效展示与高性价比卖点
-* **暗线价值**: 解决容貌/护理焦虑，提升自信生活品质
-
-## III. 叙事分析
-${narrative}
-
-## IV. 画面分析
-${visual}
-
-## V. 核心复刻策略
-${replication}
-`
-
-  const shots = parseShotsFromMarkdownTable(markdown)
-  const segments = shots.map((s, idx) => ({
-    id: `seg_${idx + 1}`,
-    start: s.start_seconds,
-    end: s.end_seconds,
-    time_range: s.time_range,
-    text: s.script || s.title,
-    section: s.stage || 'Body',
-  }))
-
-  return {
-    summary,
-    hook_highlight: hook,
-    target_goal: targetGoal,
-    narrative_strategy: narrative,
-    visual_breakdown: visual,
-    replication_action: replication,
-    markdown,
-    shots,
-    segments,
-    structure: [
-      { stage: 'Hook', title: '黄金钩子 (0-3s)', description: hook },
-      { stage: 'Goal', title: '核心转化目标', description: targetGoal },
-      { stage: 'Narrative', title: '叙事分析与人声DNA', description: narrative },
-      { stage: 'Visual', title: '视觉与镜头语言', description: visual },
-      { stage: 'Replication', title: '复刻策略指引', description: replication },
-    ],
-  }
-}
-
-/**
- * Execute content deconstruction on a video file or semantic metadata.
- * @param {{
- *   videoPath?: string,
- *   coverPath?: string,
- *   title?: string,
- *   content?: string,
- *   tags?: string[],
- *   platform?: string,
- *   videoAnalyzeTool?: { execute: (args: object) => Promise<any> },
- *   textComplete?: { execute: Function },
- * }} deps
- */
+/** Analyze an actual video through the registered tool; never invent observations. */
 export async function analyzeInspirationVideo(deps) {
-  const { videoPath, videoAnalyzeTool, textComplete } = deps
-
-  // 1. If local video path exists and videoAnalyzeTool is available, execute native multimodal video analysis
-  if (videoPath && videoAnalyzeTool && typeof videoAnalyzeTool.execute === 'function') {
-    try {
-      const res = await videoAnalyzeTool.execute({ video: videoPath })
-      const text = res?.report || res?.text || (typeof res === 'string' ? res : '')
-      if (text && text.trim()) {
-        const structured = extractStructuredBreakdown(text)
-        return {
-          deconstruction: {
-            summary: structured.summary,
-            hook: structured.hook_highlight,
-            hook_highlight: structured.hook_highlight,
-            target_goal: structured.target_goal,
-            narrative_strategy: structured.narrative_strategy,
-            visual_breakdown: structured.visual_breakdown,
-            replication_action: structured.replication_action,
-            markdown: structured.raw_markdown,
-            shots: structured.shots,
-            segments: structured.segments,
-            structure: structured.structure,
-          },
-        }
-      }
-    } catch {
-      // Fall through to semantic generation
-    }
+  if (deps.signal?.aborted) throw new DOMException('分析已取消', 'AbortError')
+  if (!deps.videoPath || !deps.videoAnalyzeTool?.execute) {
+    return { deconstruction: null, error: '视频分析能力未就绪', source: 'legacy_unknown', model: '' }
   }
-
-  // 2. Semantic fallback analysis (guarantees deconstruction is NEVER blocked)
   try {
-    const semantic = generateSemanticDeconstruction({
-      title: deps.title,
-      content: deps.content,
-      tags: deps.tags,
-      platform: deps.platform,
-    })
-    return {
-      deconstruction: semantic,
+    const response = await deps.videoAnalyzeTool.execute({ video: deps.videoPath, notes: deps.content || '' }, { signal: deps.signal })
+    if (deps.signal?.aborted) throw new DOMException('分析已取消', 'AbortError')
+    const markdown = response?.report || response?.text || ''
+    if (response?.mode !== 'live' || typeof markdown !== 'string' || !markdown.trim()) {
+      return { deconstruction: null, error: '视频分析未返回真实有效结果，请重试', source: 'legacy_unknown', model: '' }
     }
-  } catch (err) {
+    const parsed = extractStructuredBreakdown(markdown)
     return {
-      deconstruction: null,
-      error: err instanceof Error ? err.message : String(err),
+      deconstruction: { ...parsed, hook: parsed.hook_highlight, markdown, source: 'live', model: response.model || '' },
+      source: 'live', model: response.model || '',
     }
+  } catch (error) {
+    if (deps.signal?.aborted) throw new DOMException('分析已取消', 'AbortError')
+    if (error?.name === 'AbortError' || error?.code === 'ABORT_ERR') throw error
+    return { deconstruction: null, error: error?.message || String(error), source: 'legacy_unknown', model: '' }
   }
 }

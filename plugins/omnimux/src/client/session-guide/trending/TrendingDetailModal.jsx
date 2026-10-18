@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 
 /** Thin lazy bridge; the inspiration plugin owns all detail UI and copy. */
-export function TrendingDetailModal({ item, open = true, onClose, onRecreate }) {
-  const callbacks = useRef({ onClose, onRecreate })
-  callbacks.current = { onClose, onRecreate }
+export function TrendingDetailModal({ item, open = true, onClose }) {
+  const callbacks = useRef({ onClose })
+  callbacks.current = { onClose }
   useEffect(() => {
     if (!open || !item) return
     let close
@@ -24,7 +24,6 @@ export function TrendingDetailModal({ item, open = true, onClose, onRecreate }) 
           close = undefined
           if (!disposed && reason !== 'replaced' && reason !== 'unavailable') callbacks.current.onClose?.()
         },
-        onReplicate: () => callbacks.current.onRecreate?.(item),
       })
     }
     window.addEventListener('omnimux:inspiration-preview:ready', launch)

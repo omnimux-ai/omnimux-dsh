@@ -84,15 +84,15 @@ export function resolveDurationBudget(row) {
 export const REPLICATION_PROMPT_BODY = '完全复刻原视频脚本和画面，仅将原视频中的商品替换成我的商品、如有口播内容需结合我的商品进行调整（没有则不需要出现口播），同时视频不需要出现字幕，原视频有出镜人物的话，新视频也需要有。复刻后的新脚本的时长需控制在时间范围内。'
 
 /**
- * Composer prompt: `/video-deconstruct` + user constraints only.
+ * Prepared references use the exact saved user draft; legacy callers keep the prior prompt.
  * Inspiration id is on the session attachment (entityId / metadata.inspiration_id);
- * the agent should call inspiration_get. `row` is unused on purpose.
- * @param {object | null | undefined} [_row]
+ * the legacy agent may call inspiration_get.
+ * @param {object | null | undefined} [row]
  * @param {{ product?: unknown }} [opts]
  * @returns {string}
  */
-export function buildReplicationPrompt(_row, opts = {}) {
-  void _row
+export function buildReplicationPrompt(row, opts = {}) {
+  if (row?.creation_reference != null) return typeof row.creation_reference.text === 'string' ? row.creation_reference.text : ''
   void opts.product
   return `/${REPLICATION_SKILL}\n\n${REPLICATION_PROMPT_BODY}`
 }

@@ -223,6 +223,7 @@ A request may name `model` or omit it for `defaultModel`. The image is an absolu
 | `videoGenerate` | neutral provide | `{ dest, prompt?, duration?, image?, speech?, audio?, provider?, model?, taskId?, wait?, signal? }` | `{ mode: "live" \| "submitted", taskId, url? }` | `capability-disabled`, `needs-provider`, `omnimux-unconfigured`, `unknown-provider`, `unknown-protocol`, `omnimux-invalid-request`, task/download errors |
 | `imageGenerate` | neutral provide | same job handle as video | same | same |
 | `mediaInspect` | neutral provide | `inspect({ path, type:'image'|'video', maxBytes?, signal? })`，仅本地绝对路径 | `{type,mime,sizeBytes,duration?,width?,height?,codec?,frameRate?,audioCodecs?}`，真实字节与视频轨道解析；不读取凭据、不访问提供方、不上传或生成，不保证完整解码质量 | 非本地/格式不符/超限明确抛错；未知时长与尺寸不伪造 |
+| `composerAttachments` | server-only hub provide | `registerSource(sourcePlugin, root)` → 注销函数；`materializeProduced({sessionId,sourcePlugin,files:[{path,title?}],requestId?}, {signal?})` | `{results:[{ok,relativePath,title,extension,kind,size}]}`；会话目录内真实附件 | 缺能力 `needs-session-query` / `needs-attachment-source`；逐项 `error`，取消抛出，不伪报全成功 |
 | `audioGenerate` | neutral provide | `{ dest, prompt?, duration?, voice?, style?, instrumental?, speed?, provider?, model?, taskId?, wait?, signal? }` | `{ mode: "live" \| "submitted", taskId, url? }` | `capability-disabled`, `needs-provider`, `omnimux-unconfigured`, `unknown-provider`, `unknown-protocol`, `omnimux-invalid-request`, task/download errors |
 | `speechToText` | neutral provide | `{ audio, model?, provider?, language?, response_format?, signal? }` (`audio` = absolute path / http(s) URL / `data:audio` URI; `response_format` = json [default] / text / verbose_json / srt / vtt) | `{ mode: "live", model, text }` | `capability-disabled`, `needs-omnimux`, `omnimux-unconfigured`, `unknown-provider`, `unknown-protocol`, `omnimux-invalid-request`, `omnimux-request-failed`, `omnimux-invalid-response`, `quota-exceeded` |
 | `omnimux_video_submit` | hub tool over `videoGenerate` | same as the seam | same | same |
@@ -252,6 +253,12 @@ A request may name `model` or omit it for `defaultModel`. The image is an absolu
 | `POST /omnimux/workbench/rpc/ack` | hub Host HTTP | `{ requestId, ok, applied, code, tabId }` | `{ ok: true }` | 403 `not-local` |
 
 `audioGenerate` exposes audio generation / TTS / music capabilities (Suno, GPT 4o Mini TTS). Speech-to-text is the separate `speechToText` seam (Whisper-1 class): one synchronous multipart POST to `/v1/audio/transcriptions` (file bytes + model) → `{ text }`; no task poll, no dest download. Its gate key is `gate.tools.omnimux_speech_to_text` (there is no `gate.media.stt` kind). Digital-human / talking-head is a `videoGenerate` request on a digital-human model (kling-avatar): reference image + duration + `audioTrack`; the mapper passes `audioTrack` through only for `DIGITAL_HUMAN_MODEL_IDS` and still strips it from generic video requests (#429/#538). Not a third HTTP client.
+
+### 可信域产物附件
+
+`composerAttachments` 只接收服务器域插件解析出的常规文件，不暴露任意路径 HTTP。可信插件注册已存在的产物根；会话 cwd 由 Host 会话查询取得。来源须位于注册真实根且不是文件符号链接；目标 `assets/imported` 各级目录在复制前拒绝符号链接。浏览器只能向所属域提交记录/素材标识，不能提交 root/cwd 或源绝对路径。
+
+最多 32 个文件，结果与输入逐项对应，不返回源绝对路径或 cwd。`requestId` 是一次交接的稳定标识：相同请求并发和重试复用已验证的成功副本，失败项可补办，变更请求冲突；持久回执跨服务重建有效。目标被改动后保留原文件并另存，源内容改变则明确失败。部分失败或取消保留完成副本供同请求续办，取消清理当前未完成临时文件；调用方不得把部分结果当作全部成功。
 
 ## Official-only (C-class)
 

@@ -7,15 +7,18 @@ import {
   createReadStream,
   createWriteStream,
   existsSync,
+  lstatSync,
+  linkSync,
   mkdirSync,
   realpathSync,
-  renameSync,
   statSync,
   unlinkSync,
 } from 'node:fs'
+import { createHash, randomUUID } from 'node:crypto'
 import { statfsSync } from 'node:fs'
 import { basename, extname, isAbsolute, join, posix, resolve, sep } from 'node:path'
 import { pipeline } from 'node:stream/promises'
+import { Transform } from 'node:stream'
 
 export const DISK_HEADROOM_BYTES = 500 * 1024 * 1024
 export const DISK_SIZE_FACTOR = 1.5
@@ -37,9 +40,10 @@ const DEFAULT_FS = {
   createReadStream,
   createWriteStream,
   existsSync,
+  lstatSync,
+  linkSync,
   mkdirSync,
   realpathSync,
-  renameSync,
   statSync,
   unlinkSync,
 }
@@ -171,6 +175,41 @@ function assertDestInsideCwd(abs, cwd) {
 }
 
 /**
+ * Validate each target directory before a copy can create bytes there.
+ * @param {string} cwd
+ * @param {string} [destDir]
+ * @param {Partial<typeof DEFAULT_FS>} [fsOverrides]
+ */
+export function ensureImportedDirectory(cwd, destDir, fsOverrides) {
+  const fs = { ...DEFAULT_FS, ...fsOverrides }
+  const requestedCwd = resolve(cwd)
+  const realCwd = fs.realpathSync(requestedCwd)
+  if (!fs.lstatSync(realCwd).isDirectory()) {
+    throw new ComposerAttachmentError('import-directory-invalid', 'import-directory-invalid')
+  }
+  const requestedDest = destDir ? resolve(destDir) : join(requestedCwd, ...IMPORTED_REL.split('/'))
+  const destination = isInsideDir(requestedDest, requestedCwd)
+    ? join(realCwd, requestedDest.slice(requestedCwd.length)) : requestedDest
+  assertDestInsideCwd(destination, realCwd)
+  let current = realCwd
+  for (const part of destination.slice(realCwd.length).split(sep).filter(Boolean)) {
+    current = join(current, part)
+    let info
+    try { info = fs.lstatSync(current) } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+      try { fs.mkdirSync(current, { mode: 0o700 }) } catch (mkdirError) {
+        if (mkdirError.code !== 'EEXIST') throw mkdirError
+      }
+      info = fs.lstatSync(current)
+    }
+    if (!info.isDirectory() || info.isSymbolicLink() || fs.realpathSync(current) !== current) {
+      throw new ComposerAttachmentError('import-directory-invalid', 'import-directory-invalid')
+    }
+  }
+  return { cwd: realCwd, destDir: destination }
+}
+
+/**
  * @param {{
  *   cwd: string,
  *   sourceAbs: string,
@@ -178,9 +217,12 @@ function assertDestInsideCwd(abs, cwd) {
  *   originalName?: string,
  *   fs?: Partial<typeof DEFAULT_FS>,
  *   statfs?: typeof statfsSync,
+ *   signal?: AbortSignal,
+ *   expectedDigest?: string,
  * }} opts
  */
 export async function copyFileIntoImported(opts) {
+  opts.signal?.throwIfAborted()
   const fs = { ...DEFAULT_FS, ...opts.fs }
   const sourceCode = forbiddenSourcePathCode(opts.sourceAbs)
   if (sourceCode) {
@@ -195,25 +237,48 @@ export async function copyFileIntoImported(opts) {
   if (!stat.isFile()) {
     throw new ComposerAttachmentError('not-a-file', 'path is not a regular file')
   }
-  const cwd = resolve(opts.cwd)
-  const destDir = opts.destDir ? resolve(opts.destDir) : join(cwd, ...IMPORTED_REL.split('/'))
-  assertDestInsideCwd(destDir, cwd)
-  fs.mkdirSync(destDir, { recursive: true })
+  const { cwd, destDir } = ensureImportedDirectory(opts.cwd, opts.destDir, fs)
+  opts.signal?.throwIfAborted()
   assertDiskSpace(cwd, stat.size, opts.statfs ?? statfsSync)
-  const name = uniqueImportedName(destDir, opts.originalName || basename(opts.sourceAbs), (p) => fs.existsSync(p))
-  const destAbs = join(destDir, name)
+  const originalName = opts.originalName || basename(opts.sourceAbs)
+  const exists = (path) => {
+    try { fs.lstatSync(path); return true } catch (error) {
+      if (error.code === 'ENOENT') return false
+      throw error
+    }
+  }
+  let name = uniqueImportedName(destDir, originalName, exists)
+  let destAbs = join(destDir, name)
   assertDestInsideCwd(destAbs, cwd)
-  const tmp = `${destAbs}.tmp-${process.pid}-${Date.now()}`
+  const tmp = join(destDir, `.attachment-${randomUUID()}.tmp`)
   try {
-    await pipeline(fs.createReadStream(opts.sourceAbs), fs.createWriteStream(tmp))
+    const streams = [fs.createReadStream(opts.sourceAbs)]
+    const digest = opts.expectedDigest ? createHash('sha256') : null
+    if (digest) streams.push(new Transform({ transform(bytes, _encoding, done) { digest.update(bytes); done(null, bytes) } }))
+    streams.push(fs.createWriteStream(tmp, { flags: 'wx', mode: 0o600 }))
+    await pipeline(streams, { signal: opts.signal })
+    if (digest && digest.digest('hex') !== opts.expectedDigest) {
+      throw new ComposerAttachmentError('attachment-source-changed', 'attachment-source-changed')
+    }
+    opts.signal?.throwIfAborted()
+    ensureImportedDirectory(cwd, destDir, fs)
     assertDestInsideCwd(tmp, cwd)
-    fs.renameSync(tmp, destAbs)
+    // Atomic no-overwrite publication also preserves dangling symlink entries.
+    for (;;) {
+      try { fs.linkSync(tmp, destAbs); break } catch (error) {
+        if (error.code !== 'EEXIST') throw error
+        name = uniqueImportedName(destDir, originalName, exists)
+        destAbs = join(destDir, name)
+      }
+    }
+    fs.unlinkSync(tmp)
   } catch (error) {
     try {
       if (fs.existsSync(tmp)) fs.unlinkSync(tmp)
     } catch {
       // tmp cleanup is best-effort
     }
+    if (opts.signal?.aborted || error?.name === 'AbortError') throw error
     if (error instanceof ComposerAttachmentError) throw error
     throw new ComposerAttachmentError('internal', error instanceof Error ? error.message : 'copy failed')
   }
@@ -272,9 +337,12 @@ function itemError(sourcePath, error) {
  *   fs?: Partial<typeof DEFAULT_FS>,
  *   statfs?: typeof statfsSync,
  *   resolveCwd?: (sessionId: string) => Promise<string>,
+ *   signal?: AbortSignal,
+ *   expectedDigests?: string[],
  * }} opts
  */
 export async function materializePaths(opts) {
+  opts.signal?.throwIfAborted()
   if (!Array.isArray(opts.paths)) {
     throw new ComposerAttachmentError('invalid-payload', 'paths must be an array')
   }
@@ -282,7 +350,8 @@ export async function materializePaths(opts) {
     ? await opts.resolveCwd(opts.sessionId)
     : await resolveSessionCwd(opts.sessionId, opts.sessionQuery)
   const results = []
-  for (const raw of opts.paths) {
+  for (const [index, raw] of opts.paths.entries()) {
+    opts.signal?.throwIfAborted()
     const sourcePath = typeof raw === 'string' ? raw : ''
     try {
       const copied = await copyFileIntoImported({
@@ -290,6 +359,8 @@ export async function materializePaths(opts) {
         sourceAbs: sourcePath,
         fs: opts.fs,
         statfs: opts.statfs,
+        signal: opts.signal,
+        expectedDigest: opts.expectedDigests?.[index],
       })
       const extension = extname(copied.name).replace(/^\./, '').toUpperCase() || 'FILE'
       results.push({
@@ -302,6 +373,7 @@ export async function materializePaths(opts) {
         size: copied.size,
       })
     } catch (error) {
+      if (opts.signal?.aborted || error?.name === 'AbortError') throw error
       results.push(itemError(sourcePath, error))
     }
   }

@@ -42,6 +42,8 @@ import { SettingsConfig } from '../settings/schema.js'
 import { readScenarioSettings } from '../settings/runtime-mode.js'
 import { mountHubHttp } from './http.js'
 import { mountComposerCommands } from './composer-commands.js'
+import { createProducedAttachmentService } from './produced-attachments.js'
+import { join } from 'node:path'
 import { hubHomeDir, hubProfileName } from './paths.js'
 import { mountWebSocketHmr } from '../hmr/host.js'
 import { mountPresetsTools } from '../presets/tools.js'
@@ -145,6 +147,10 @@ export function apply(ctx, config = {}) {
     readReferenceStorageConfig,
     credentials: ctx.get?.('credentials'),
   }
+  ctx.provide?.('composerAttachments', createProducedAttachmentService({
+    getSessionQuery: () => httpDeps.sessionQuery ?? ctx.get?.('sessionQuery'),
+    receiptRoot: join(homeDir, 'omnimux', 'composer-attachments', 'handoffs'),
+  }))
   mountComposerCommands(ctx)
   // Session model pin: the composer's picker writes it here, the agent is told
   // about it each turn, and the media tools fall back to it when `model` is

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
 import { PreviewModalLayer } from './PreviewModalLayer.jsx'
 import { injectInspirationStyles } from './styles.js'
+import { oneClickReplicate } from './replicate-to-chat.js'
 
 /** Owner-side API: callers provide records and actions, never detail markup. */
 export function registerPreviewService(t, target = window) {
@@ -35,7 +36,7 @@ export function registerPreviewService(t, target = window) {
         if (!closed) {
           root.render(
             createElement(PreviewModalLayer, { onClose: () => close(), title: row?.title || '' },
-              createElement(InspirationPreviewModal, { row, t, onClose: () => close(), onReplicate })
+              createElement(InspirationPreviewModal, { row, t, onClose: () => close(), onReplicate: typeof onReplicate === 'function' ? onReplicate : oneClickReplicate })
             )
           )
         }

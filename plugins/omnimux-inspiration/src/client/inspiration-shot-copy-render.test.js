@@ -20,7 +20,7 @@ const result = await build({
   platform: 'node',
   jsx: 'automatic',
   write: false,
-  external: ['react', 'react/jsx-runtime'],
+  external: ['lucide-react', 'react', 'react/jsx-runtime'],
   alias: { 'dsh-ui-kit': join(here, 'test-fixtures/ui-kit-shim.mjs') },
 })
 const bundle = join(cache, 'preview.mjs')
@@ -69,7 +69,8 @@ it('shows a human shots title and no per-shot copy button', () => {
       id: 'shot-copy',
       title: 'Cowboy costume',
       type: 'video',
-      analysis: {
+      media_items: [{ type: 'video', url: 'https://video.twimg.com/a.mp4' }],
+      deconstruction: {
         shots,
         hook_highlight: '开场 0-3 秒抓注意力',
         target_goal: '引导评论区转化',
@@ -90,7 +91,7 @@ it('shows a human shots title and no per-shot copy button', () => {
     const perShotCopies = [...cards].flatMap((card) => [...card.querySelectorAll('button')])
       .filter((button) => /复制/.test(button.textContent || '') || /copyPrompt/.test(button.getAttribute('aria-label') || ''))
     assert.equal(perShotCopies.length, 0, '分镜卡片内不得出现复制按钮')
-    const actionButtons = [...dom.window.document.querySelectorAll('.omnimux-inspiration-modal-script-panel .omnimux-inspiration-modal-panel-actions button')]
+    const actionButtons = [...dom.window.document.querySelectorAll('.omnimux-inspiration-modal-script-panel .omnimux-post-section-heading button')]
     const panelCopy = actionButtons.find((button) => (button.textContent || '').trim() === '复制')
     assert.ok(panelCopy, '中栏标题旁整段复制必须保留')
     const deconCopy = [...dom.window.document.querySelectorAll('.omnimux-inspiration-modal-deconstruction-panel .omnimux-inspiration-deconstruct-heading button')]

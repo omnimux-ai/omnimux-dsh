@@ -15,7 +15,7 @@ after(() => rmSync(cache, { recursive: true, force: true }))
 const result = await build({
   entryPoints: [join(here, 'InspirationPreviewModal.jsx')],
   bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', write: false,
-  external: ['react', 'react/jsx-runtime'],
+  external: ['lucide-react', 'react', 'react/jsx-runtime'],
   alias: { 'dsh-ui-kit': join(here, 'test-fixtures/ui-kit-shim.mjs') },
 })
 const bundle = join(cache, 'preview.mjs')
@@ -25,7 +25,7 @@ const { InspirationPreviewModal } = await import(bundle)
 it('renders table records as visible vertical fields without table delimiters or folds', () => {
   const raw = '| 时间 | 画面 |\n| --- | --- |\n| 0–3 秒 | 左\\|右 `a|b` |\n| 3–6 秒 | 特写。 |'
   const markup = renderToStaticMarkup(React.createElement(InspirationPreviewModal, {
-    row: { id: 'doc', analysis: { sections: [{ title: '分镜', analysis: raw }] } },
+    row: { id: 'doc', type: 'video', media_items: [{ type: 'video', url: 'https://video.twimg.com/a.mp4' }], deconstruction: { sections: [{ title: '分镜', analysis: raw }] } },
     t: (key) => key,
     onClose() {},
   }))

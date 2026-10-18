@@ -9,6 +9,7 @@ export async function inspirationRequest(path, opts = {}) {
     method: opts.method ?? 'GET',
     headers: opts.body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+    signal: opts.signal,
   })
   let json = {}
   try {
@@ -283,19 +284,66 @@ export async function importLocalInspiration(payload) {
  * Trigger or re-run AI deconstruction on an existing local inspiration item
  * @param {string} id
  */
-export function triggerAnalyzeInspiration(id) {
+export function triggerAnalyzeInspiration(id, selection) {
   invalidateInspirationCache()
   return quotaGuard(() => inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/analyze`, {
     method: 'POST',
+    body: selection,
   }), { capability: 'inspiration-analyze' })()
 }
 
-export function translateInspiration(id, lang = 'zh') {
+export function translateInspiration(id, lang = 'zh', options = {}) {
   invalidateInspirationCache()
   return quotaGuard(() => inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/translate`, {
     method: 'POST',
-    body: { lang },
+    body: { ...options, lang },
   }), { capability: 'inspiration-analyze' })()
+}
+
+/** Save the domain-owned draft without starting a session or producing media. */
+export function saveCreationDraft(id, draft) {
+  invalidateInspirationCache()
+  return inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/creation-draft`, {
+    method: 'POST', body: { draft },
+  })
+}
+
+/** Prepare a source manifest and the exact selected media before handing off. */
+export function prepareCreationReferences(id, draft) {
+  invalidateInspirationCache()
+  return inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/creation-reference`, {
+    method: 'POST', body: { draft },
+  })
+}
+
+export function materializeCreationReferences(id, sessionId, referenceId) {
+  return inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/creation-attachments`, {
+    method: 'POST', body: { sessionId, reference_id: referenceId },
+  })
+}
+
+/** A cloud reference becomes a real saved record before analysis or file handoff. */
+export async function ensureLocalInspiration(row, options = {}) {
+  const { signal, onProgress } = options
+  if (signal?.aborted) throw Object.assign(new Error('操作已取消'), { name: 'AbortError' })
+  let response = row?.is_local !== false && row?.id ? await getLocalInspiration(row.id) : null
+  if (!response?.ok) {
+    if (!row?.source_url) throw new Error('该内容尚未保存本地，且缺少原帖链接')
+    response = await authGuard(() => importLocalInspiration({ url: row.source_url, tags: Array.isArray(row.tags) ? row.tags : [], auto_analyze: false, return_existing: true }))()
+  }
+  let saved = response?.body?.data
+  if (!response?.ok || !saved?.id) throw new Error(response?.body?.error || '保存原帖失败，请重试')
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    if (signal?.aborted) throw Object.assign(new Error('操作已取消'), { name: 'AbortError' })
+    onProgress?.(saved)
+    if (saved.import_status === 'failed') throw new Error(saved.import_error || '原帖素材保存失败，请重试')
+    if (saved.import_status !== 'importing') return { ...saved, is_local: true }
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    response = await getLocalInspiration(saved.id)
+    if (!response?.ok || !response.body?.data) throw new Error(response?.body?.error || '读取已保存原帖失败')
+    saved = response.body.data
+  }
+  throw new Error('原帖仍在后台保存，请稍后重新打开继续')
 }
 
 export function patchLocalInspiration(id, patch) {

@@ -31,7 +31,7 @@ const result = await build({
   platform: 'node',
   jsx: 'automatic',
   write: false,
-  external: ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/client'],
+  external: ['lucide-react', 'react', 'react/jsx-runtime', 'react-dom', 'react-dom/client'],
   alias: { 'dsh-ui-kit': join(here, 'test-fixtures/ui-kit-shim.mjs') },
 })
 const bundlePath = join(cache, 'preview.mjs')
@@ -99,7 +99,7 @@ async function mountModal(row) {
  * shape a publish produces, where the Host's own row replaces the catalogue's.
  * @param {Record<string, any>} row
  */
-async function mountRerenderable(row) {
+async function mountRerenderable(row, callbacks = {}) {
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="host"></div></body></html>', {
     url: 'http://localhost:3000',
   })
@@ -127,7 +127,8 @@ async function mountRerenderable(row) {
       root.render(React.createElement(InspirationPreviewModal, {
         row: next,
         t: (key) => zh[key] || key,
-        onClose() {},
+        onClose: callbacks.onClose || (() => {}),
+        onReplicate: callbacks.onReplicate,
       }))
     })
   }
@@ -308,50 +309,200 @@ describe('InspirationPreviewModal share popover', () => {
 })
 
 describe('InspirationPreviewModal saved gallery', () => {
-  it('browses all saved images in order and resets for a different item', async () => {
-    const urls = ['one', 'two', 'three', 'four'].map((id) => `https://pbs.twimg.com/media/${id}.jpg`)
-    const row = { id: 'gallery-1', type: 'image', content_shape: 'gallery', title: '四张配图', media_urls: [], media_items: urls.map((url) => ({ type: 'image', url })) }
-    const mounted = await mountRerenderable(row)
-    const { document, window, render } = mounted
-    const image = () => document.querySelector('.omnimux-inspiration-modal-cover-bg')
+  it('renders every saved image in source order and resets when the item changes', async () => {
+    const urls = ['one', 'two', 'three', 'four'].map(id => `https://pbs.twimg.com/media/${id}.jpg`)
+    const row = { id: 'gallery-1', type: 'image', content_shape: 'gallery', title: '四张配图', media_urls: [], media_items: urls.map(url => ({ type: 'image', url })) }
+    const { document, render } = await mountRerenderable(row)
+    const images = () => [...document.querySelectorAll('.omnimux-post-source img')].map(node => node.getAttribute('src'))
     assert.equal(document.querySelector('video'), null)
-    assert.equal(image().getAttribute('src'), urls[0])
-    for (let index = 1; index < urls.length; index += 1) {
-      await React.act(async () => document.querySelector(`[data-tab="${index}"]`).dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
-      assert.equal(image().getAttribute('src'), urls[index])
-      assert.equal(document.querySelector(`[data-tab="${index}"]`).getAttribute('aria-pressed'), 'true')
-    }
+    assert.deepEqual(images(), urls)
     await render({ ...row, id: 'gallery-2' })
-    assert.equal(image().getAttribute('src'), urls[0])
+    assert.deepEqual(images(), urls)
     await render({ ...row, id: 'legacy-gallery', media_items: undefined, media_urls: urls })
-    await React.act(async () => document.querySelector('[data-tab="3"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
-    assert.equal(image().getAttribute('src'), urls[3], 'old saved galleries reuse the same media tabs')
+    assert.deepEqual(images(), urls, 'legacy galleries retain every picture')
     await render({ id: 'text-1', type: 'link', content_shape: 'text', title: '文字', content: '完整推文正文' })
-    assert.equal(document.querySelector('.omnimux-inspiration-modal-post-text').textContent, '完整推文正文')
+    assert.equal(document.querySelector('.omnimux-post-body').textContent, '完整推文正文')
     assert.equal(document.querySelector('video'), null)
-    assert.equal(document.querySelector('[data-tab="0"]'), null)
+    assert.deepEqual(images(), [])
   })
 })
 
-describe('post media selection and analysis playback (#3369)', () => {
-  it('timecodes return from another video or photo to the analysed first video', async () => {
+describe('post media and analysis playback', () => {
+  it('keeps both videos mounted when selecting references and seeks the historical analyzed video', async () => {
     const first = '/omnimux/inspiration/local/media/videos/first.mp4'
+    const second = '/omnimux/inspiration/local/media/videos/second.mp4'
     const { document, window } = await mountRerenderable({
-      id: 'insp-media-timecode', title: '帖子素材', type: 'video',
-      media_urls: [first, '/omnimux/inspiration/local/media/videos/second.mp4'],
-      media_items: [{type:'video',url:first},{type:'video',url:'/omnimux/inspiration/local/media/videos/second.mp4'},{type:'image',url:'/omnimux/inspiration/local/media/images/photo.jpg'}],
-      deconstruction: {shots:[{id:'shot-a',time_range:'00:10-00:12',script:'镜头台词'}]},
+      id: 'insp-media-timecode', title: '帖子素材', type: 'video', media_urls: [first, second],
+      media_items: [{ type: 'video', url: first }, { type: 'video', url: second }, { type: 'image', url: '/omnimux/inspiration/local/media/images/photo.jpg' }],
+      deconstruction: { shots: [{ id: 'shot-a', time_range: '00:10-00:12', script: '镜头台词' }] },
     })
     window.HTMLMediaElement.prototype.play = async function () {}
-    const click = async (node) => React.act(async () => node.dispatchEvent(new window.MouseEvent('click',{bubbles:true})))
-    for (const index of ['1','2']) {
-      await click(document.querySelector(`[data-tab="${index}"]`))
-      await click(document.querySelector('.omnimux-inspiration-shot-card'))
-      const video = document.querySelector('video')
-      assert.equal(video?.getAttribute('src'), first)
-      await React.act(async () => video.dispatchEvent(new window.Event('loadedmetadata')))
-      assert.equal(video.currentTime, 10)
-    }
-
+    const nodes = [...document.querySelectorAll('video')]
+    assert.equal(nodes.length, 2)
+    nodes[0].currentTime = 7
+    const select = document.querySelector('.omnimux-post-media .omnimux-post-asset-footer [aria-pressed]')
+    await React.act(async () => select.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+    assert.equal(document.querySelector('video'), nodes[0])
+    assert.equal(nodes[0].currentTime, 7, 'reference selection must preserve playback')
+    await React.act(async () => document.querySelector('.omnimux-inspiration-shot-card button').dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+    assert.equal(document.querySelector('video'), nodes[0])
+    assert.equal(nodes[0].currentTime, 10)
+    assert.equal(nodes[1].getAttribute('src'), second)
   })
+})
+
+describe('post detail object interactions', () => {
+  it('opens the full image, zooms and closes only the top overlay', async () => {
+    let closes = 0
+    const { document, window } = await mountRerenderable({ id: 'full-image', title: '配图', content: '完整原文', type: 'image', media_items: [{ type: 'image', url: 'https://pbs.twimg.com/media/photo.jpg' }] }, { onClose: () => { closes++ } })
+    const click = async node => React.act(async () => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+    await click(document.querySelector('.omnimux-post-image-open'))
+    const overlay = document.querySelector('.omnimux-post-lightbox')
+    assert.ok(overlay)
+    await click(overlay.querySelector(`[aria-label="${zh['post.zoomIn']}"]`))
+    assert.equal(overlay.querySelector('img').style.maxWidth, 'none')
+    await click([...overlay.querySelectorAll('button')].find(node => /150%/.test(node.textContent)))
+    assert.equal(overlay.querySelector('img').style.maxWidth, '')
+    await React.act(async () => window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    assert.equal(document.querySelector('.omnimux-post-lightbox'), null)
+    assert.equal(closes, 0, 'Escape must leave the underlying post open')
+  })
+
+  it('sends the selected object and directions, keeping failures on their own object', async () => {
+    const item = { id: 'scoped', title: '混合', content: '独立正文', media_items: [{ type: 'video', url: 'https://video.twimg.com/a.mp4' }, { type: 'image', url: 'https://pbs.twimg.com/media/photo.jpg' }] }
+    const { document, window } = await mountRerenderable(item)
+    const requests = []
+    globalThis.fetch = async (url, init) => {
+      if (init.method === 'GET') return { ok: true, status: 200, json: async () => ({ data: item }) }
+      requests.push({ url, body: JSON.parse(init.body) })
+      return { ok: false, status: 422, json: async () => ({ error: '图片处理失败' }) }
+    }
+    const click = async node => React.act(async () => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+    await click([...document.querySelectorAll('.omnimux-post-media button')].find(node => node.textContent === zh['post.analyzeImage']))
+    await click(document.querySelectorAll('.omnimux-post-direction input')[1])
+    await click([...document.querySelectorAll('.omnimux-post-analysis-scroll button')].find(node => node.textContent === zh['post.analyzeTarget']))
+    assert.equal(requests.length, 1)
+    assert.equal(requests[0].body.scope, 'media')
+    assert.equal(requests[0].body.media_index, 1)
+    assert.deepEqual(requests[0].body.directions, ['content', 'creative'])
+    assert.match(document.querySelector('[role="alert"]').textContent, /图片处理失败/)
+    await click([...document.querySelectorAll('.omnimux-post-targets button')].find(node => node.textContent === zh['post.body']))
+    assert.equal(document.querySelector('[role="alert"]'), null, 'the image failure must not appear on the body')
+  })
+})
+
+  it('preserves an edited draft when the purpose changes and saves only after confirmation', async () => {
+    const item = { id: 'manual-draft', title: '正文参考', content: '完整帖子正文', type: 'link' }
+    const { document, window, render } = await mountRerenderable(item)
+    let stored = item
+    const writes = []
+    globalThis.fetch = async (_url, init) => {
+      if (init.method === 'GET') return { ok: true, status: 200, json: async () => ({ data: stored }) }
+      const payload = JSON.parse(init.body)
+      writes.push(payload)
+      stored = { ...item, creation_draft: payload.draft }
+      return { ok: true, status: 200, json: async () => ({ data: stored }) }
+    }
+    const click = async node => React.act(async () => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+    await click(document.querySelector('.omnimux-post-original [aria-pressed]'))
+    await click(document.querySelector('.omnimux-post-reference-bar button'))
+    let drawer = document.querySelector('.omnimux-post-creation-drawer')
+    const field = drawer.querySelectorAll('textarea')[1]
+    await React.act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set.call(field, '保留我手工写下的创作要求')
+      field.dispatchEvent(new window.Event('input', { bubbles: true }))
+    })
+    await click([...drawer.querySelectorAll('.omnimux-post-purpose button')].find(node => node.textContent === zh['post.purpose.story']))
+    assert.equal(field.value, '保留我手工写下的创作要求')
+    assert.ok(drawer.querySelector('.omnimux-post-warning'))
+    await click([...drawer.querySelectorAll('button')].find(node => node.textContent === zh['post.saveDraft']))
+    assert.equal(writes.length, 0, 'stale manual prose needs an explicit decision before saving')
+    await click([...drawer.querySelectorAll('button')].find(node => node.textContent === zh['post.keepDraft']))
+    await click([...drawer.querySelectorAll('button')].find(node => node.textContent === zh['post.saveDraft']))
+    assert.equal(writes.length, 1)
+    assert.equal(writes[0].draft.text, '保留我手工写下的创作要求')
+    assert.equal(writes[0].draft.purpose, 'story')
+    await render({ id: 'another-post', title: '另一条', content: '其他正文' })
+    await render(stored)
+    await click(document.querySelector('.omnimux-post-reference-bar button'))
+    drawer = document.querySelector('.omnimux-post-creation-drawer')
+    assert.equal(drawer.querySelectorAll('textarea')[1].value, '保留我手工写下的创作要求')
+  })
+
+it('translates only the original body and keeps model analysis separate', async () => {
+  const { sourceFingerprint } = await import('../analysis-input.js')
+  const item = { id: 'body-translation', title: '正文翻译', content: 'Original post body', type: 'link' }
+  const { document, window } = await mountRerenderable(item)
+  const requests = []
+  globalThis.fetch = async (_url, init) => {
+    if (init.method === 'GET') return { ok: true, status: 200, json: async () => ({ data: item }) }
+    requests.push(JSON.parse(init.body))
+    return { ok: true, status: 200, json: async () => ({ data: { ...item, body_translation: { text: '原帖中文译文', source_fingerprint: sourceFingerprint(item.content) } } }) }
+  }
+  const click = async node => React.act(async () => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+  await click([...document.querySelectorAll('.omnimux-post-original button')].find(node => node.textContent === zh['post.translateBody']))
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].scope, 'body')
+  assert.equal(document.querySelector('.omnimux-post-body').textContent, '原帖中文译文')
+  assert.equal(document.querySelector('.omnimux-post-result'), null)
+  await click([...document.querySelectorAll('.omnimux-post-original button')].find(node => node.textContent === zh['post.showOriginal']))
+  assert.equal(document.querySelector('.omnimux-post-body').textContent, item.content)
+})
+
+it('locks every draft and external reference control until a pending save finishes', async () => {
+  const { reconcileCreationDraft } = await import('../creation-draft.js')
+  const item = { id: 'pending-draft', title: '待保存参考', content: '原帖正文', is_local: true, media_items: [{ type: 'video', url: 'https://video.twimg.com/clip.mp4', duration: 20 }, { type: 'image', url: 'https://pbs.twimg.com/media/one.jpg' }] }
+  item.creation_draft = reconcileCreationDraft(item, { references: [{ kind: 'body' }, { kind: 'media', media_index: 0 }], purpose: 'idea', intent: '保留此要求', text: '', clips: [{ media_index: 0, start_seconds: 1, end_seconds: 5 }], manual: false })
+  const { document, window } = await mountRerenderable(item)
+  let release
+  const pending = new Promise(resolve => { release = resolve })
+  const writes = []
+  globalThis.fetch = async (_url, init) => {
+    if (init.method === 'GET') return { ok: true, status: 200, json: async () => ({ data: item }) }
+    const payload = JSON.parse(init.body)
+    writes.push(payload)
+    await pending
+    return { ok: true, status: 200, json: async () => ({ data: { ...item, creation_draft: payload.draft } }) }
+  }
+  const click = async node => React.act(async () => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+  await click(document.querySelector('.omnimux-post-reference-bar button'))
+  const drawer = document.querySelector('.omnimux-post-creation-drawer')
+  await click([...drawer.querySelectorAll('button')].find(node => node.textContent === zh['post.saveDraft']))
+  assert.equal(writes.length, 1)
+  assert.ok([...drawer.querySelectorAll('textarea, input, .omnimux-post-purpose button, .omnimux-post-draft-reference button')].every(node => node.disabled), 'prose, purpose, clip times and reference removal must all be locked')
+  const externalReferences = [...document.querySelectorAll('.omnimux-post-original [aria-pressed], .omnimux-post-media [aria-pressed]')]
+  assert.ok(externalReferences.length >= 3)
+  assert.ok(externalReferences.every(node => node.disabled), 'reference controls on the original post must also be locked')
+  const originalText = drawer.querySelectorAll('textarea')[1].value
+  await click(drawer.querySelectorAll('.omnimux-post-purpose button')[1])
+  await click(externalReferences[0])
+  assert.equal(drawer.querySelectorAll('.omnimux-post-draft-reference').length, 2)
+  assert.equal(drawer.querySelectorAll('textarea')[1].value, originalText)
+  await React.act(async () => { release(); await pending })
+  assert.equal(drawer.querySelectorAll('textarea')[1].value, originalText)
+  assert.ok([...drawer.querySelectorAll('textarea, input')].every(node => !node.disabled), 'editing resumes after the saved reply')
+})
+
+it('retains the prepared draft and drawer when the handoff callback has no success receipt', async () => {
+  const item = { id: 'undefined-handoff', title: '交接结果', content: '选中的原帖正文', is_local: true }
+  let closes = 0
+  const handedOff = []
+  const { document, window } = await mountRerenderable(item, { onClose: () => { closes++ }, onReplicate: async row => { handedOff.push(row) } })
+  globalThis.fetch = async (_url, init) => {
+    if (init.method === 'GET') return { ok: true, status: 200, json: async () => ({ data: item }) }
+    const { draft } = JSON.parse(init.body)
+    return { ok: true, status: 200, json: async () => ({ data: { ...item, creation_draft: draft, creation_reference: { id: 'prepared-undefined', text: draft.text } } }) }
+  }
+  const click = async node => React.act(async () => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+  await click(document.querySelector('.omnimux-post-original [aria-pressed]'))
+  await click(document.querySelector('.omnimux-post-reference-bar button'))
+  const drawer = document.querySelector('.omnimux-post-creation-drawer')
+  const text = drawer.querySelectorAll('textarea')[1].value
+  await click([...drawer.querySelectorAll('button')].find(node => node.textContent === zh['post.useInChat']))
+  assert.equal(handedOff.length, 1)
+  assert.equal(handedOff[0].creation_reference.id, 'prepared-undefined')
+  assert.equal(closes, 0)
+  assert.ok(document.querySelector('.omnimux-post-creation-drawer'))
+  assert.equal(drawer.querySelectorAll('textarea')[1].value, text)
+  assert.equal(drawer.querySelector('[role="alert"]').textContent, zh['post.prepareFailed'])
 })

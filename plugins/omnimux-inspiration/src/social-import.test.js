@@ -135,6 +135,18 @@ describe('social import — media and degraded persistence', () => {
     assert.deepEqual(res.body.data.media_urls, [])
   })
 
+  it('decodes X source entities once before saving the original text and title', async () => {
+    const encoded = '步骤 -&gt; 完成 &amp; 检查 &#x1F680; &#65; &lt;示例&gt; &amp;gt;'
+    const expected = '步骤 -> 完成 & 检查 🚀 A <示例> &gt;'
+    const { res, store } = await importUrl({ socialFetcher: async () => ({ data: { text: encoded } }), paths, url: 'https://x.com/creator/status/222' })
+    assert.equal(res.status, 200)
+    assert.equal(res.body.data.content, expected)
+    assert.equal(res.body.data.title, expected)
+    assert.equal(store.get(res.body.data.id).content, expected)
+    assert.equal(parseSocialMeta({ text: encoded }, { platform: 'tiktok' }).text, encoded)
+    assert.equal(parseSocialMeta({ text: 'literal <标签> & unrelated' }, { platform: 'x' }).text, 'literal <标签> & unrelated')
+  })
+
   it('stores a photo-only tweet as an image without failing', async () => {
     const { res } = await importUrl({
       socialFetcher: async () => X_PHOTO_ENVELOPE,

@@ -29,10 +29,11 @@ const h = React.createElement
 // R9 补 loading 语义：生产 isDisabled = Boolean(disabled) || loading 并置
 // aria-busy——InspirationPreviewModal 等确实传 loading={analyzing}，
 // shim 完全吞掉会让「loading 时按钮不可点 / busy 态」在装置里不可断言。
-export const Button = ({ children, leadingIcon, disabled, loading, ...rest }) => h(
+export const Button = React.forwardRef(function Button({ children, leadingIcon, disabled, loading, ...rest }, ref) { return h(
   'button',
   {
     type: 'button',
+    ref,
     disabled: Boolean(disabled) || Boolean(loading),
     'aria-busy': Boolean(loading) || undefined,
     'aria-disabled': (Boolean(disabled) || Boolean(loading)) || undefined,
@@ -42,7 +43,7 @@ export const Button = ({ children, leadingIcon, disabled, loading, ...rest }) =>
   children != null && children !== ''
     ? h('span', { className: `label${loading ? ' label-loading' : ''}` }, children)
     : null,
-)
+) })
 
 export const Divider = () => h('hr', null)
 
@@ -200,3 +201,10 @@ export const EmptyState = ({ icon, title, description, action, children }) => h(
 export const createSidebarEntry = () => ({})
 
 export const createStageStore = () => ({})
+
+// The plugin owns the open/close state; production Drawer supplies focus trapping.
+export const Drawer = ({ open, title, description, children, footer, onClose, className, closable = true }) => open ? h(
+  'section', { role: 'dialog', 'aria-label': typeof title === 'string' ? title : undefined, className },
+  h('header', null, title, closable && h('button', { type: 'button', 'aria-label': 'Close drawer', onClick: onClose }, 'Close')),
+  description && h('p', null, description), children, footer && h('footer', null, footer),
+) : null

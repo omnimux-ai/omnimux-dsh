@@ -55,14 +55,14 @@ function useReplicateToChat() {
   }, [])
 
   const handleReplicate = useCallback((row) => {
-    if (replicateBusyRef.current) return
+    if (replicateBusyRef.current) return Promise.resolve({ ok: false, error: 'busy' })
     const ticket = row.id
     replicateBusyRef.current = ticket
     setReplicateBusy(ticket)
 
     const onStatus = createReplicateStatusHandler(flashCtaStatus, setCtaStatus)
     const execOpts = { onStatus }
-    void oneClickReplicate(row, execOpts).finally(() => {
+    return oneClickReplicate(row, execOpts).finally(() => {
       resetReplicateBusy(replicateBusyRef, setReplicateBusy, ticket)
     })
   }, [flashCtaStatus])
