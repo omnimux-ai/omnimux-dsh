@@ -306,3 +306,25 @@ describe('InspirationPreviewModal share popover', () => {
     )
   })
 })
+
+describe('post media selection and analysis playback (#3369)', () => {
+  it('timecodes return from another video or photo to the analysed first video', async () => {
+    const first = '/omnimux/inspiration/local/media/videos/first.mp4'
+    const { document, window } = await mountRerenderable({
+      id: 'insp-media-timecode', title: '帖子素材', type: 'video',
+      media_urls: [first, '/omnimux/inspiration/local/media/videos/second.mp4'],
+      media_items: [{type:'video',url:first},{type:'video',url:'/omnimux/inspiration/local/media/videos/second.mp4'},{type:'image',url:'/omnimux/inspiration/local/media/images/photo.jpg'}],
+      deconstruction: {shots:[{id:'shot-a',time_range:'00:10-00:12',script:'镜头台词'}]},
+    })
+    window.HTMLMediaElement.prototype.play = async function () {}
+    const click = async (node) => React.act(async () => node.dispatchEvent(new window.MouseEvent('click',{bubbles:true})))
+    for (const index of ['1','2']) {
+      await click(document.querySelector(`[data-tab="${index}"]`))
+      await click(document.querySelector('.omnimux-inspiration-shot-card'))
+      const video = document.querySelector('video')
+      assert.equal(video?.getAttribute('src'), first)
+      await React.act(async () => video.dispatchEvent(new window.Event('loadedmetadata')))
+      assert.equal(video.currentTime, 10)
+    }
+  })
+})
