@@ -40,13 +40,13 @@ const X_VIDEO_ENVELOPE = {
   },
 }
 
-/** Envelope with content but no downloadable stream → degraded import. */
-const X_PHOTO_ENVELOPE = {
+/** Envelope with only text and a preview, no post attachments → degraded import. */
+const X_METADATA_ENVELOPE = {
   platform: 'x',
   capability: 'tweet',
   data: {
-    text: '只有一张图',
-    entities: { media: [{ media_url_https: 'https://pbs.twimg.com/media/only-photo.jpg', type: 'photo' }] },
+    text: '只有文案和预览',
+    cover_url: 'https://pbs.twimg.com/media/only-photo.jpg',
   },
 }
 
@@ -192,14 +192,13 @@ describe('background import — placeholder and completion', { concurrency: 1 },
   })
 
   it('settles a degraded import and reports the state it settled in', async () => {
-    const ctx = makeDispatcher(paths, async () => X_PHOTO_ENVELOPE)
+    const ctx = makeDispatcher(paths, async () => X_METADATA_ENVELOPE)
     const started = await postImport(ctx.dispatcher, { url: X_URL, background: true })
 
     const settled = await waitForSettled(ctx, started.body.data.id)
     assert.equal(settled.import_status, 'degraded')
     assert.equal(settled.import_stage, null)
-    // A photo post whose envelope carries only text and a poster is a `link`: the
-    // classifier promotes to `image` only when the envelope lists image urls.
+    // A preview is not an attachment; the metadata-only result stays a link.
     assert.equal(settled.type, 'link')
     assert.deepEqual(settled.media_urls, [])
     assert.equal(ctx.store.list().total, 1)
@@ -220,7 +219,7 @@ describe('background import — placeholder and completion', { concurrency: 1 },
   })
 
   it('has no stage for a degraded import, which never reaches the AI', async () => {
-    const ctx = makeDispatcher(paths, async () => X_PHOTO_ENVELOPE)
+    const ctx = makeDispatcher(paths, async () => X_METADATA_ENVELOPE)
     const started = await postImport(ctx.dispatcher, { url: X_URL, background: true, auto_analyze: true })
     const id = started.body.data.id
     // The row it was created with is the only stage this import may ever have.
@@ -375,7 +374,7 @@ describe('background import — idempotency and duplicates', { concurrency: 1 },
   })
 
   it('upgrades a degraded row in place through the background path', async () => {
-    const ctx = makeDispatcher(paths, async () => X_PHOTO_ENVELOPE)
+    const ctx = makeDispatcher(paths, async () => X_METADATA_ENVELOPE)
     const first = await postImport(ctx.dispatcher, { url: X_URL, background: true })
     const degraded = await waitForSettled(ctx, first.body.data.id)
     assert.equal(degraded.import_status, 'degraded')
@@ -424,7 +423,7 @@ describe('synchronous import — unchanged contract', { concurrency: 1 }, () => 
   })
 
   it('keeps its degraded body keys exactly when background is false', async () => {
-    const ctx = makeDispatcher(paths, async () => X_PHOTO_ENVELOPE)
+    const ctx = makeDispatcher(paths, async () => X_METADATA_ENVELOPE)
     const res = await postImport(ctx.dispatcher, { url: X_URL, background: false })
 
     assert.equal(res.status, 200)
@@ -482,7 +481,7 @@ describe('synchronous import — unchanged contract', { concurrency: 1 }, () => 
   it('imports a video on the background=false request of a resumed agent tool call', async () => {
     // `inspiration_create` dispatches with no `background` key at all and reads the
     // record synchronously; that is the call this whole suite protects.
-    const ctx = makeDispatcher(paths, async () => X_PHOTO_ENVELOPE)
+    const ctx = makeDispatcher(paths, async () => X_METADATA_ENVELOPE)
     const result = await ctx.dispatcher.dispatch({
       method: 'POST',
       url: '/omnimux/inspiration/local/import-url',
@@ -667,7 +666,7 @@ describe('background import — an AI failure never discards the item', { concur
     const dispatcher = createLocalInspirationDispatcher({
       resolver: offlineResolver,
       localStore: store,
-      socialFetcher: async () => X_PHOTO_ENVELOPE,
+      socialFetcher: async () => X_METADATA_ENVELOPE,
       fetcher: mockFetcher,
       // A photo post never reaches the model, so this must not be called.
       analyzeInspiration: async () => { throw new Error('不该被调用') },
@@ -709,7 +708,7 @@ describe('background import — an AI failure never discards the item', { concur
     const dispatcher = createLocalInspirationDispatcher({
       resolver: offlineResolver,
       localStore: store,
-      socialFetcher: async () => X_PHOTO_ENVELOPE,
+      socialFetcher: async () => X_METADATA_ENVELOPE,
       fetcher: mockFetcher,
       videoAnalyzeTool: { execute: async () => { throw new Error('不该被调用') } },
     })
@@ -820,5 +819,32 @@ describe('analyze guard while an import runs', { concurrency: 1 }, () => {
 
     release()
     await waitForSettled(ctx, started.body.data.id)
+  })
+})
+
+
+describe('accepted background import owns its lifetime (#3369)', () => {
+  it('finishes after the submitting connection is cancelled', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'omnimux-bg-lifetime-'))
+    const controller = new AbortController()
+    let release
+    const gate = new Promise((resolve) => { release = resolve })
+    const ctx = makeDispatcher(makePaths(tmp), async ({ signal }) => {
+      await gate
+      if (signal?.aborted) throw Object.assign(new Error('aborted'), { name: 'AbortError' })
+      return X_VIDEO_ENVELOPE
+    })
+    try {
+      const response = await ctx.dispatcher.dispatch({ method: 'POST', url: '/omnimux/inspiration/local/import-url', body: { url: X_URL, auto_analyze: false, background: true }, signal: controller.signal })
+      assert.equal(response.status, 202)
+      controller.abort()
+      release()
+      const row = await waitForSettled(ctx, response.body.data.id)
+      assert.equal(row.import_status, 'ready')
+      assert.ok(existsSync(row.local_paths.video))
+    } finally {
+      release()
+      rmSync(tmp, { recursive: true, force: true })
+    }
   })
 })

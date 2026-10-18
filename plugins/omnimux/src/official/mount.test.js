@@ -154,3 +154,14 @@ describe('official mount', () => {
   await tool.execute(args)
   assert.equal(posts, 1)
  })
+
+it('X tweet dedicated tool preserves caller cancellation before any request (#3369)', async () => {
+  const capture = registerCapture()
+  let calls = 0
+  capture.deps.fetcher = async () => { calls += 1; throw new Error('unexpected request') }
+  mountOfficial(capture.ctx, capture.deps)
+  const controller = new AbortController()
+  controller.abort()
+  await assert.rejects(capture.registeredTools.omnimux_x_tweet.execute({ tweet_id: '12345' }, { signal: controller.signal }), { name: 'AbortError' })
+  assert.equal(calls, 0)
+})

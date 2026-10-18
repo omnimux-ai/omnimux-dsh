@@ -140,7 +140,10 @@ describe('social import — media and degraded persistence', () => {
     })
 
     assert.equal(res.status, 200)
-    assert.equal(res.body.media_degraded, true)
+    assert.equal(res.body.media_degraded, undefined)
+    assert.equal(res.body.data.import_status, 'ready')
+    assert.equal(res.body.data.media_items.length, 1)
+    assert.ok(res.body.data.local_paths.image_1)
     assert.equal(res.body.data.type, 'image')
     assert.ok(res.body.data.cover_url)
   })
@@ -805,5 +808,44 @@ describe('social import — a cover no browser can render is not published', () 
     assert.ok(res.body.data.local_paths.video, 'the TikTok video stream must be downloaded and landed')
     assert.equal(res.body.data.media_urls.length, 1)
     assert.equal(res.body.media_degraded, undefined)
+  })
+})
+
+
+describe('social import — upstream abort is not caller cancellation (#3369)', () => {
+  for (const signal of [undefined, new AbortController().signal]) {
+    it(`recovers through fallback after upstream abort (signal=${Boolean(signal)})`, async () => {
+      let calls = 0
+      const fetcher = createSocialFetcher({
+        getTool: () => ({ execute: async () => { throw Object.assign(new Error('aborted'), { name: 'AbortError', code: 'ABORT_ERR' }) } }),
+        fallback: async () => { calls += 1; return X_VIDEO_ENVELOPE },
+      })
+      const result = await fetcher({ platform: 'x', url: 'https://x.com/brainextends/status/2111569272732553535?s=', signal })
+      assert.equal(result, X_VIDEO_ENVELOPE)
+      assert.equal(calls, 1)
+    })
+  }
+
+  it('reports resolver failure rather than cancellation when both sources fail', async () => {
+    const fetcher = createSocialFetcher({
+      getTool: () => ({ execute: async () => { throw Object.assign(new Error('upstream timed out'), { name: 'AbortError' }) } }),
+      fallback: async () => { throw Object.assign(new Error('fallback timed out'), { name: 'AbortError' }) },
+    })
+    await assert.rejects(fetcher({ platform: 'x', url: 'https://x.com/a/status/12345' }), (error) => {
+      assert.notEqual(error.name, 'AbortError')
+      assert.match(error.message, /云端社媒解析失败.*upstream timed out/)
+      return true
+    })
+  })
+
+  it('does not recover or persist after actual caller cancellation', async () => {
+    const controller = new AbortController()
+    let fallbackCalls = 0
+    const fetcher = createSocialFetcher({
+      getTool: () => ({ execute: async () => { controller.abort(); throw new Error('connection closed') } }),
+      fallback: async () => { fallbackCalls += 1; return X_VIDEO_ENVELOPE },
+    })
+    await assert.rejects(fetcher({ platform: 'x', url: 'https://x.com/a/status/12345', signal: controller.signal }), { name: 'AbortError' })
+    assert.equal(fallbackCalls, 0)
   })
 })

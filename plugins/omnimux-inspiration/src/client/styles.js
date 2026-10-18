@@ -2237,6 +2237,7 @@ export const INSPIRATION_CSS = `
   font-weight: 600;
   white-space: nowrap;
 }
+.omnimux-inspiration-media-tabs { margin-bottom: 8px; flex-shrink: 0; overflow-x: auto; }
 .omnimux-inspiration-modal-player-box {
   position: relative;
   width: 100%;

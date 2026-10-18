@@ -31,7 +31,8 @@ import { SHARE_STATUS_IDLE } from './share-status.js'
  * @property {string} [source_url]
  * @property {string} [cover_url] relative host media path or absolute url
  * @property {string[]} [media_urls] relative host media paths or urls
- * @property {Record<string, unknown>} [local_paths]
+ * @property {Array<{ type: 'video' | 'image', url: string }>} [media_items] ordered post assets, excluding video posters
+ * @property {Record<string, string>} [local_paths]
  * @property {string[]} [tags]
  * @property {boolean} [is_favorite]
  * @property {number} [hot_score]
@@ -108,6 +109,7 @@ function buildRow(record, identity = {}) {
     source_url: record.source_url,
     cover_url: record.cover_url,
     media_urls: record.media_urls || [],
+    media_items: record.media_items || [],
     local_paths: record.local_paths || {},
     tags: Array.isArray(record.tags) ? record.tags : [],
     is_favorite: Boolean(record.is_favorite),
@@ -165,13 +167,13 @@ function buildRow(record, identity = {}) {
  * @returns {string[]}
  */
 function orphanedMedia(previous, next) {
-  const kept = new Set(
-    [next.local_paths?.video, next.local_paths?.cover].filter(Boolean).map(String),
-  )
-  return [previous.local_paths?.video, previous.local_paths?.cover]
-    .filter(Boolean)
-    .map(String)
-    .filter((filePath) => !kept.has(filePath))
+  const kept = new Set(localMediaPaths(next.local_paths))
+  return localMediaPaths(previous.local_paths).filter((filePath) => !kept.has(filePath))
+}
+
+/** @param {Record<string, string> | undefined} paths @returns {string[]} */
+export function localMediaPaths(paths) {
+  return [...new Set(Object.values(paths || {}).filter((value) => typeof value === 'string' && value.length > 0))]
 }
 
 export function createLocalStore(opts = {}) {
@@ -684,7 +686,7 @@ export function createLocalStore(opts = {}) {
       if (index === -1) throw new InspirationError('not-found', `inspiration ${id} not found`, 404)
       const [removed] = items.splice(index, 1)
       writeAll(items)
-      queueTrash([removed.local_paths?.video, removed.local_paths?.cover])
+      queueTrash(localMediaPaths(removed.local_paths))
       await this.settled()
       return removed
     },
@@ -709,7 +711,7 @@ export function createLocalStore(opts = {}) {
       }
 
       writeAll(remaining)
-      queueTrash(removed.flatMap((item) => [item.local_paths?.video, item.local_paths?.cover]))
+      queueTrash(removed.flatMap((item) => localMediaPaths(item.local_paths)))
       await this.settled()
       return { deleted: removed.map((it) => it.id), count: removed.length }
     },
