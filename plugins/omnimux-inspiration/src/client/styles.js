@@ -1440,7 +1440,7 @@ export const INSPIRATION_CSS = `
 }
 
 /* Original post and scoped analysis share one reading surface. */
-.omnimux-inspiration-modal-backdrop { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--dsw-alias-bg-base); overscroll-behavior: contain; }
+.omnimux-inspiration-modal-backdrop { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--dsw-alias-bg-mask-1); overscroll-behavior: contain; }
 .omnimux-inspiration-modal-wrapper { position: relative; width: min(1200px, 100%); height: min(88vh, 900px); display: flex; }
 .omnimux-inspiration-modal-container { position: relative; display: flex; flex-direction: column; width: 100%; min-height: 0; border-radius: 16px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-base)); color: var(--dsw-alias-label-primary); overflow: hidden; isolation: isolate; }
 .omnimux-inspiration-modal-close { position: absolute; top: 14px; right: 16px; z-index: 5; width: 32px; height: 32px; padding: 0; }
@@ -1522,7 +1522,7 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-shot-prompt { font-size: 11px; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
 .omnimux-post-embed { display: block; width: 100%; height: 400px; border: 0; }
 dialog.omnimux-inspiration-preview-layer { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; }
-dialog.omnimux-inspiration-preview-layer::backdrop { background: transparent; }
+dialog.omnimux-inspiration-preview-layer::backdrop { background: transparent; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 @media (max-width: 860px) {
   .omnimux-inspiration-modal-backdrop { padding: 12px; }
   .omnimux-inspiration-modal-wrapper { height: 94dvh; }
