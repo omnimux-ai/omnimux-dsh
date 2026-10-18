@@ -345,6 +345,7 @@ async function probe(caseName) {
   assert.ok(js, 'real React application must be bundled')
   const result = runStyleDomProbe({
     name: `provider-config-${caseName}`, styles: css?.text || '',
+    waitForCompletion: true,
     html: `<div id="root"></div><script>${js.text.replaceAll('</script', '<\\/script')}</script>`,
     measure: () => ({ done: false, phase: 'async-not-finished' }),
   })

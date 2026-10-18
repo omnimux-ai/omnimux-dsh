@@ -504,6 +504,60 @@ describe('rival-accounts-store: budget ledger', () => {
     assert.equal(store.getAccount(held.id).refresh_state, 'paused')
   })
 
+  for (const { zone, beforeMidnight, midnight } of [
+    { zone: 'Asia/Taipei', beforeMidnight: '2026-10-18T15:59:59.999Z', midnight: '2026-10-18T16:00:00.000Z' },
+    { zone: 'America/Los_Angeles', beforeMidnight: '2026-10-19T06:59:59.999Z', midnight: '2026-10-19T07:00:00.000Z' },
+  ]) {
+    it(`makes released cap pauses due at local midnight in ${zone}`, () => {
+      const previous = process.env.TZ
+      process.env.TZ = zone
+      try {
+        let clock = Date.parse(beforeMidnight)
+        const { store } = sandbox({ nowMs: () => clock })
+        const future = new Date(clock + 24 * 3_600_000).toISOString()
+        const automatic = store.addAccount({ platform: 'tiktok', external_id: '@auto', refresh_interval_hours: 24, next_auto_refresh_at: future })
+        const global = store.addAccount({ platform: 'x', external_id: '@global', refresh_interval_hours: 24, next_auto_refresh_at: future })
+        const manual = store.addAccount({ platform: 'x', external_id: '@manual', refresh_interval_hours: 0, next_auto_refresh_at: future })
+        const preserved = [
+          store.addAccount({ platform: 'x', external_id: '@identity', refresh_state: 'paused', error_code: 'identity-unverified', next_auto_refresh_at: future }),
+          store.addAccount({ platform: 'x', external_id: '@held', refresh_state: 'paused', error_code: 'user-hold', next_auto_refresh_at: future }),
+          store.addAccount({ platform: 'x', external_id: '@failed', refresh_state: 'error', error_code: 'cloud-error', consecutive_failures: 4, next_auto_refresh_at: future }),
+        ]
+        for (const account of [automatic, global, manual]) {
+          store.reserve({ accountId: account.id })
+          store.reserve({ accountId: account.id })
+          store.updateAccount(account.id, { refresh_state: 'paused', error_code: account === global ? 'global-daily-cap' : 'account-daily-cap' })
+        }
+        assert.equal(store.readBudget().day, '2026-10-18')
+        assert.equal(store.readBudget().global_calls, 12)
+        assert.equal(store.getAccount(automatic.id).refresh_state, 'paused')
+
+        clock = Date.parse(midnight)
+        const budget = store.readBudget()
+        assert.equal(budget.day, '2026-10-19')
+        assert.equal(budget.global_calls, 0)
+        assert.deepEqual(budget.per_account, {})
+        for (const account of [automatic, global]) {
+          const released = store.getAccount(account.id)
+          assert.equal(released.refresh_state, 'idle')
+          assert.equal(released.error_code, null)
+          assert.equal(released.next_auto_refresh_at, midnight)
+          assert.equal(store.isRefreshDue(released, clock - 1), false)
+          assert.equal(store.isRefreshDue(released, clock), true)
+          assert.equal(released.external_id, account.external_id)
+          assert.equal(released.id, account.id)
+        }
+        assert.equal(store.getAccount(manual.id).refresh_state, 'idle')
+        assert.equal(store.getAccount(manual.id).next_auto_refresh_at, null)
+        assert.equal(store.isRefreshDue(store.getAccount(manual.id), clock), false)
+        for (const account of preserved) assert.deepEqual(store.getAccount(account.id), account)
+      } finally {
+        if (previous === undefined) delete process.env.TZ
+        else process.env.TZ = previous
+      }
+    })
+  }
+
   it('releases a cap pause even when the budget file was written same-day', () => {
     // The rollover can be consumed by an unrelated budget write (a reserve, a
     // refusal) before anything reads the accounts. The release lives on that

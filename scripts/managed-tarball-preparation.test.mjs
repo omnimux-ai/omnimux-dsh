@@ -192,7 +192,7 @@ test('real pnpm shares a raw byte output budget across separate streams', async 
 
 test('real pnpm retains separate output when timing out', async () => {
   const f = await fixture('isolated', 'output-timeout');
-  const result = await runPnpm(['--config.verify-deps-before-run=false', 'exec', process.execPath, '-e', 'require("fs").writeSync(1,"timeout stdout"); require("fs").writeSync(2,"timeout stderr"); setInterval(()=>{},1000)'], { cwd: f.profile, env: f.env, timeoutMs: 1000 });
+  const result = await runPnpm(['--config.verify-deps-before-run=false', '--reporter=silent', 'exec', process.execPath, '-e', 'require("fs").writeSync(1,"timeout stdout"); require("fs").writeSync(2,"timeout stderr"); setInterval(()=>{},1000)'], { cwd: f.profile, env: f.env, timeoutMs: 1000 });
   assert.equal(result.code, 5);
   assert.equal(result.signal, 'timeout');
   assert.equal(result.stdout, 'timeout stdout');
@@ -205,7 +205,7 @@ test('real pnpm retains separate output when aborted after writing', async () =>
   const timer = setTimeout(() => controller.abort(), 1000);
   let result;
   try {
-    result = await runPnpm(['--config.verify-deps-before-run=false', 'exec', process.execPath, '-e', 'require("fs").writeSync(1,"abort stdout"); require("fs").writeSync(2,"abort stderr"); setInterval(()=>{},1000)'], { cwd: f.profile, env: f.env, signal: controller.signal });
+    result = await runPnpm(['--config.verify-deps-before-run=false', '--reporter=silent', 'exec', process.execPath, '-e', 'require("fs").writeSync(1,"abort stdout"); require("fs").writeSync(2,"abort stderr"); setInterval(()=>{},1000)'], { cwd: f.profile, env: f.env, signal: controller.signal });
   } finally { clearTimeout(timer); }
   assert.equal(result.code, 5);
   assert.equal(result.signal, 'aborted');
