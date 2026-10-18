@@ -40,4 +40,6 @@ it('rejects missing slots and preserves the later selected video when an earlier
  const complete = { ...row, media_items: [{ ...row.media_items[0], url: '/images/first.jpg', status: 'saved' }, ...row.media_items.slice(1)] }
  assert.equal(creationBasis(row, selected), creationBasis(complete, selected))
  assert.equal(validateCreationDraft(complete, selected).ok, true)
+ const refreshed = { ...complete, media_items: complete.media_items.map(media => ({ ...media, source_url: 'https://example.com/refreshed-token' })) }
+ assert.equal(creationBasis(complete, selected), creationBasis(refreshed, selected), 'download metadata must not invalidate an unchanged saved reference')
 })

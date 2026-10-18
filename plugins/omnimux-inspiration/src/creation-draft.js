@@ -27,7 +27,10 @@ export function creationBasis(item, draft) {
   return sourceFingerprint({ post: item?.id || '', source: item?.source_url || '', purpose: draft?.purpose || 'idea', intent: text(draft?.intent),
     references: refs(draft).map((ref) => {
       if (ref.kind === 'body') return { kind: 'body', content: text(item?.content) }
-      if (ref.kind === 'media') return { kind: 'media', media_index: ref.media_index, source: media[ref.media_index] || null }
+      if (ref.kind === 'media') {
+        const source = media[ref.media_index]
+        return { kind: 'media', media_index: ref.media_index, source: source ? { type: source.type, url: source.url } : null }
+      }
       const entry = resolveCreationAnalysis(item, ref)
       return { kind: ref.kind, scope: ref.scope, media_index: ref.media_index, input_fingerprint: entry?.input_fingerprint || ref.input_fingerprint || '', result: entry?.result || null }
     }),
