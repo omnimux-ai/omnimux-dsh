@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { alignMediaExtension, downloadMedia, isKnownUnrenderableCover } from './downloader.js'
 import { analyzeInspirationVideo } from './analyzer.js'
-import { handleScopedAnalysis, handleBodyTranslation, prepareAnalysis } from './scoped-analysis.js'
+import { handleScopedAnalysis, handleBodyTranslation, prepareAnalysis, recoverInterruptedAnalyses } from './scoped-analysis.js'
 import { analysisMediaItems } from './analysis-input.js'
 import { EXPORT_KIND, exportMediaFile, resolveDownloadsDir } from './media-export.js'
 import {
@@ -2191,7 +2191,10 @@ export function handleGetItem({ id, store }) {
   const failed = sweepStaleImports(store)
   if (snapshot && !failed) store.cacheReadSnapshot?.(snapshot)
   const rawItem = store.get(id, snapshot ?? undefined)
-  const item = rawItem ? maybeEnsureVideoCover(rawItem, store, store?.paths) : rawItem
+  const recovered = rawItem ? recoverInterruptedAnalyses(store, rawItem) : rawItem
+  // A recovery writes a raw row; reread only changed rows for the authoritative view.
+  const current = recovered !== rawItem ? store.get(id) : recovered
+  const item = current ? maybeEnsureVideoCover(current, store, store?.paths) : current
   if (item) return { status: 200, body: { data: item } }
   // A cloud publish has no local row to read — its progress lives in the job
   // table, and the page polls this very endpoint. Answering 404 here would tell
