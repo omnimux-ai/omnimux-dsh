@@ -40,6 +40,9 @@ import { SHARE_STATUS_IDLE } from './share-status.js'
  * @property {Record<string, unknown> | string} [deconstruction] five-dimension breakdown object or markdown
  * @property {Record<string, unknown>} [stats] likes, comments, shares, etc.
  * @property {Record<string, unknown>} [author] name, handle, avatar, verified
+ * @property {Record<string, object>} [analysis_results] results keyed by post/body/media:<index>
+ * @property {object} [body_translation] original-body translation with source_fingerprint
+ * @property {object} [creation_draft] user-owned creation reference draft
  * @property {string} [content_shape] shape of a saved post: text | photo | gallery | video | quote | repost | thread | article | poll | link
  * @property {Record<string, unknown>} [quoted] the post this one quotes: author, text, coverUrl
  * @property {string[]} [thread_items] the conversation entries of a thread
@@ -115,7 +118,11 @@ function buildRow(record, identity = {}) {
     is_favorite: Boolean(record.is_favorite),
     hot_score: typeof record.hot_score === 'number' ? record.hot_score : 0,
     content: record.content || '',
-    deconstruction: record.deconstruction,
+    deconstruction: record.deconstruction && typeof record.deconstruction === 'object'
+      ? { ...record.deconstruction, source: record.deconstruction.source || 'legacy_unknown' } : record.deconstruction,
+    analysis_results: record.analysis_results || {},
+    body_translation: record.body_translation,
+    creation_draft: record.creation_draft,
     stats: record.stats || {},
     author: record.author || {},
     // Captured-post structure. Keys the capture did not fill stay absent so a
@@ -620,6 +627,7 @@ export function createLocalStore(opts = {}) {
           is_favorite: record.is_favorite ?? previous.is_favorite,
           favorited_at: record.favorited_at ?? previous.favorited_at,
           tags: Array.isArray(record.tags) && record.tags.length > 0 ? record.tags : (previous.tags || []),
+          creation_draft: record.creation_draft ?? previous.creation_draft,
           // A replacement is the *completion* of the import the previous row
           // started — the background job's placeholder today, an upgraded
           // degraded row before that. The completion record carries no start
@@ -642,6 +650,18 @@ export function createLocalStore(opts = {}) {
         await settled.trash
         return settled.row
       })
+    },
+
+    /**
+     * Merge one scope synchronously so concurrent completions preserve other scopes.
+     * @param {string} id
+     * @param {string} key
+     * @param {Record<string, unknown>} result
+     */
+    updateAnalysis(id, key, result) {
+      const current = this.get(id)
+      if (!current) throw new InspirationError('not-found', '灵感不存在', 404)
+      return this.update(id, { analysis_results: { ...(current.analysis_results || {}), [key]: result } })
     },
 
     /**

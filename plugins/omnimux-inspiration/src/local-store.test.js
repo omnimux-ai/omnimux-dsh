@@ -254,6 +254,7 @@ describe('Local Inspiration Store', () => {
     const mockVideoAnalyzeTool = {
       async execute({ video }) {
         return {
+          mode: 'live', model: 'test-video',
           text: `
 ## 一句话视频描述
 素人逆袭爆款短剧。
@@ -370,6 +371,7 @@ describe('Local Inspiration Store', () => {
     const mockVideoAnalyzeTool = {
       async execute({ video }) {
         return {
+          mode: 'live', model: 'test-video',
           text: `
 ## 一句话视频描述
 Ecolchi 发膜核心拆解。

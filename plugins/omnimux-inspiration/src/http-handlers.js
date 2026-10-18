@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, statSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { alignMediaExtension, downloadMedia, isKnownUnrenderableCover } from './downloader.js'
 import { analyzeInspirationVideo } from './analyzer.js'
+import { handleScopedAnalysis, handleBodyTranslation, prepareAnalysis } from './scoped-analysis.js'
+import { analysisMediaItems } from './analysis-input.js'
 import { EXPORT_KIND, exportMediaFile, resolveDownloadsDir } from './media-export.js'
 import {
   IMPORT_STAGES,
@@ -1754,7 +1756,7 @@ function buildImportRecord(args, meta, media, analysis = {}) {
   const content_shape = type === 'video' ? 'video'
     : savedImageCount > 1 ? 'gallery'
       : type === 'image' ? 'photo' : meta.text ? 'text' : 'link'
-  return {
+  const record = {
     title: meta.title || args.rawUrl,
     content: meta.text,
     type,
@@ -1780,6 +1782,21 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     import_stage: null,
     import_error: analysis.error || null,
   }
+  if (args.autoAnalyze && media.localVideoPath) {
+    const media_index = record.media_items.findIndex((item) => item.type === 'video')
+    const selection = { scope: 'media', media_index, directions: ['content', 'expression', 'creative'] }
+    const prepared = prepareAnalysis(record, selection, args.paths)
+    const live = analysis.deconstruction?.source === 'live'
+    const time = new Date().toISOString()
+    record.analysis_results = { [`media:${media_index}`]: {
+      ...selection, input_fingerprint: prepared.input_fingerprint,
+      status: live ? 'done' : 'failed', source: live ? 'live' : 'legacy_unknown',
+      model: analysis.deconstruction?.model || '', result: live ? analysis.deconstruction : null,
+      error: live ? null : (analysis.error || '分析未取得真实模型结果，请重试'),
+      started_at: time, analyzed_at: live ? time : null,
+    } }
+  }
+  return record
 }
 
 /** Keep the fetcher's own actionable reason instead of prefixing it twice. */
@@ -2003,6 +2020,7 @@ async function downloadImportCover(args, meta) {
 }
 
 export async function handleAnalyze(ctx) {
+  if (Object.hasOwn(ctx.req.body || {}, 'scope')) return handleScopedAnalysis(ctx)
   const item = ctx.store.get(ctx.id)
   if (!item) return fail(404, 'not found')
   // The UI hides the action while a row is still importing; this refuses the
@@ -2020,41 +2038,35 @@ export async function handleAnalyze(ctx) {
 }
 
 async function persistAnalysis(ctx, item, videoPath) {
-  const analysisResult = await analyzeInspirationVideo({
-    videoPath,
-    title: item.title,
-    content: item.content,
-    tags: item.tags,
-    platform: item.source_platform,
-    videoAnalyzeTool: ctx.videoAnalyzeTool,
+  const media = analysisMediaItems(item)
+  const index = Math.max(0, media.findIndex((asset) => asset.type === 'video'))
+  const localUrl = `/omnimux/inspiration/local/media/videos/${basename(videoPath)}`
+  if (item.local_paths?.video !== videoPath || media[index]?.url !== localUrl) {
+    const media_items = media.map((asset, assetIndex) => assetIndex === index ? { type: 'video', url: localUrl } : asset)
+    if (!media_items.length) media_items.push({ type: 'video', url: localUrl })
+    ctx.store.update(ctx.id, { local_paths: { ...(item.local_paths || {}), video: videoPath }, media_items, media_urls: media_items.filter((asset) => asset.type === 'video').map((asset) => asset.url) })
+  }
+  return handleScopedAnalysis({ ...ctx, req: { ...ctx.req, body: { scope: 'media', media_index: index } } }, {
+    mirrorLegacy: true,
+    async execute() {
+      const response = await analyzeInspirationVideo({ videoPath, title: item.title, content: item.content, tags: item.tags, platform: item.source_platform, videoAnalyzeTool: ctx.videoAnalyzeTool, signal: ctx.signal })
+      if (!response.deconstruction) throw new Error(response.error || '视频分析失败')
+      const result = { ...response.deconstruction, analyzed_at: new Date().toISOString() }
+      try {
+        const structure = await extractScriptStructure(ctx.textComplete?.execute ? { execute: (args) => ctx.textComplete.execute(args, { signal: ctx.signal }) } : undefined, { content: item.content || '', markdown: result.markdown || '' })
+        result.segments = structure.segments?.length ? structure.segments : (result.segments || [])
+        result.sections = structure.sections || []
+      } catch (error) {
+        if (ctx.signal?.aborted || error?.name === 'AbortError' || error?.code === 'ABORT_ERR') throw error
+        result.structure_error = ctx.formatErrorMessage(error)
+      }
+      return { mode: 'live', model: response.model, text: result.markdown, result }
+    },
   })
-  if (!analysisResult.deconstruction) {
-    return fail(500, analysisResult.error || 'AI 视频拆解失败，请确保大模型视觉分析服务可用')
-  }
-  const markdown = analysisResult.deconstruction.markdown || analysisResult.deconstruction.raw_markdown || ''
-  let structure = { segments: [], sections: [] }
-  try {
-    structure = await extractScriptStructure(ctx.textComplete, {
-      content: item.content || '',
-      markdown,
-    })
-  } catch {
-    structure = { segments: [], sections: [] }
-  }
-  const deconstruction = {
-    ...analysisResult.deconstruction,
-    analyzed_at: new Date().toISOString(),
-    segments: structure.segments,
-    sections: structure.sections,
-  }
-  const updated = ctx.store.update(ctx.id, {
-    deconstruction,
-    local_paths: item.local_paths,
-  })
-  return { status: 200, body: { data: updated } }
 }
 
 export async function handleTranslate(ctx) {
+  if (ctx.req.body?.scope === 'body') return handleBodyTranslation(ctx)
   const item = ctx.store.get(ctx.id)
   if (!item) return fail(404, 'not found')
   const lang = String(ctx.req.body?.lang || ctx.req.body?.target || 'zh').trim() || 'zh'
@@ -2110,6 +2122,7 @@ async function downloadAnalyzeVideo(args) {
       platform,
       capability: capabilityOf(platform),
       url: args.item.source_url,
+      signal: args.signal,
     })
     const vUrl = videoUrlFromFetched(fetched)
     if (!vUrl) return { path: args.item.local_paths?.video }
@@ -2117,10 +2130,12 @@ async function downloadAnalyzeVideo(args) {
       prefix: 'video_',
       fetcher: args.fetcher,
       resolver: args.resolver,
+      signal: args.signal,
     })
     args.item.local_paths = { ...(args.item.local_paths || {}), video: videoPath }
     return { path: videoPath }
   } catch (downErr) {
+    if (args.signal?.aborted || downErr?.name === 'AbortError' || downErr?.code === 'ABORT_ERR') throw downErr
     const message = downErr instanceof Error ? downErr.message : String(downErr)
     return { error: fail(502, `重新下载视频失败: ${message}`) }
   }

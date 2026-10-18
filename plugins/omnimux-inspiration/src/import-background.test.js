@@ -608,11 +608,8 @@ describe('background import — an AI failure never discards the item', { concur
   /**
    * Dispatcher with a stubbed analysis tool.
    *
-   * `analyzeInspirationVideo` swallows a throwing tool and degrades to its local
-   * semantic generator, so this is the *partial* failure a real AI outage
-   * produces: a breakdown is stored, but never the model's. Both branches must end
-   * in a stored item — the point of these cases is that nothing the analysis does
-   * may discard the download.
+   * A throwing or empty model produces an accurate analysis failure while the
+   * already saved attachments remain available for a later retry.
    * @param {{ execute?: (args: object) => Promise<any> }} videoAnalyzeTool
    * @param {object} [extra] additional dispatcher dependencies
    */
@@ -658,8 +655,9 @@ describe('background import — an AI failure never discards the item', { concur
       url: `/omnimux/inspiration/local/${started.body.data.id}/analyze`,
       body: {},
     })
-    assert.equal(analyzed.status, 200, `re-analysis must succeed (${analyzed.body?.error || ''})`)
-    assert.ok(analyzed.body?.data?.deconstruction, 'the row must come back with a breakdown')
+    assert.equal(analyzed.status, 502, 'a still-empty model response must remain a visible failure')
+    assert.equal(analyzed.body?.data?.analysis_results['media:0'].status, 'failed')
+    assert.equal(analyzed.body?.data?.deconstruction ?? null, null)
   })
 
   it('settles a failed breakdown as degraded, not failed, when there is no video', async () => {
@@ -702,6 +700,10 @@ describe('background import — an AI failure never discards the item', { concur
     // way back to it.
     assert.equal(settled.import_status, 'ready')
     assert.equal(settled.import_stage, null)
+    assert.equal(settled.deconstruction, null)
+    assert.equal(settled.analysis_results['media:0'].status, 'failed')
+    assert.equal(settled.analysis_results['media:0'].source, 'legacy_unknown')
+    assert.match(settled.analysis_results['media:0'].error, /AI 视觉分析服务不可用/)
   })
 
   it('settles as degraded, never failed, when the import has no video at all', async () => {
@@ -723,9 +725,10 @@ describe('background import — an AI failure never discards the item', { concur
     assert.equal(settled.import_error, null)
   })
 
-  it('still leaves the row analyzable afterwards', async () => {
+  it('still leaves the row analyzable after the model recovers', async () => {
+    let calls = 0
     const ctx = dispatcherWithAnalyzer({
-      execute: async () => { throw new Error('AI 视觉分析服务不可用') },
+      execute: async () => { if (++calls === 1) throw new Error('AI 视觉分析服务不可用'); return { mode: 'live', model: 'test-video', text: '## 一句话视频描述\n真实恢复后的分析' } },
     })
 
     const started = await postImport(ctx.dispatcher, { url: X_URL, background: true, auto_analyze: true })
@@ -751,7 +754,7 @@ describe('background import — an AI failure never discards the item', { concur
     const ctx = dispatcherWithAnalyzer({
       execute: async () => {
         calls.push(1)
-        return { report: '## 一句话视频描述\n开场三秒反杀\n## I. 核心目标\n拉高完播' }
+        return { mode: 'live', model: 'test-video', report: '## 一句话视频描述\n开场三秒反杀\n## I. 核心目标\n拉高完播' }
       },
     })
 
@@ -770,7 +773,7 @@ describe('background import — an AI failure never discards the item', { concur
     const ctx = dispatcherWithAnalyzer({
       execute: async () => {
         calls.push(1)
-        return { report: 'x' }
+        return { mode: 'live', model: 'test-video', report: 'x' }
       },
     })
 

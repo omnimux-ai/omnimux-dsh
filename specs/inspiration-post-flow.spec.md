@@ -43,3 +43,7 @@
 ## 文档影响
 
 同步灵感插件 README/接口说明及能力状态；业务实现和验收细节保留在本任务规格与证据中，根级政策不变。
+
+## #3385 服务端子任务
+
+分析范围沿用POST记录/analyze；显式scope为post/body/media，directions仅接受content/expression/creative，media仅接受记录内media_index。结果按analysis_results的post/body/media:<index>保存，含范围、方向、输入指纹、running/done/failed/partial、live/legacy_unknown、模型、result/error与时间。缺失整帖附件明确partial，不以子集调用冒充完整分析；失败/取消不走本地模板。无scope兼容首视频并保留旧deconstruction消费。正文翻译scope=body只读原始content，保存body_translation和source_fingerprint，旧翻译保持兼容。白名单保留creation_draft，细节由创作子任务实现。服务只复用现有工具，不发真实请求、不安装开发版；验收为有针对性的离线单元/集成，真实运行与界面由父任务统一完成。

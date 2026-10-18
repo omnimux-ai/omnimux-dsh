@@ -219,20 +219,20 @@ export function apply(ctx) {
 
   // Video analyze tool: exclusively consumes omnimux-video tool video_analyze
   const videoAnalyzeTool = {
-    async execute(args) {
+    async execute(args, exec) {
       const tool = getTool('video_analyze')
       if (tool && typeof tool.execute === 'function') {
-        return tool.execute(args)
+        return tool.execute(args, exec)
       }
       throw new Error('多模态视频分析工具 (video_analyze) 未就绪，请检查 omnimux-video 插件是否加载')
     },
   }
 
   const textComplete = {
-    async execute(args) {
+    async execute(args, exec) {
       const tool = getTool('omnimux_text_complete')
       if (tool && typeof tool.execute === 'function') {
-        return tool.execute(args)
+        return tool.execute(args, exec)
       }
       throw new Error('omnimux_text_complete 未就绪')
     },
