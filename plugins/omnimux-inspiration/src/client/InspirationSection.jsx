@@ -241,12 +241,18 @@ export function InspirationSection({ t, active }) {
   const [addingCollectionId, setAddingCollectionId] = useState('')
   const addingCollectionRef = useRef('')
   const handleAddCollectionToSession = useCallback(async collection => {
-    if (addingCollectionRef.current) return
+    if (addingCollectionRef.current) {
+      showToast(t('collection.sessionBusy'))
+      return
+    }
     const collectionId = String(collection?.id ?? '')
     addingCollectionRef.current = collectionId || 'pending'
     setAddingCollectionId(collectionId)
     try {
-      const result = await addCollectionToSession(collection, { t })
+      const result = await addCollectionToSession(collection, {
+        t,
+        onError: failure => console.error('[omnimux-inspiration] collection to session failed', failure),
+      })
       if (!result?.ok) showToast(t(result?.errorKey || 'collection.sessionFailed'))
     } catch (failure) {
       // The module answers recoverable failures with error keys. Only an
@@ -631,6 +637,7 @@ export function InspirationSection({ t, active }) {
                 renderCard={({ card: descriptor, style, column }) => descriptor.card_type === 'collection' ? (
                   <InspirationCollectionCard collection={descriptor.collection} t={t} style={style} column={column}
                     onOpen={selectCollection}
+                    onView={() => libraryCollections.open(descriptor.collection)}
                     onAddToSession={handleAddCollectionToSession}
                     addToSessionBusy={addingCollectionId === String(descriptor.collection.id)}
                     menuNode={<InspirationCollectionMenu t={t} disabled={libraryCollections.busy} onRename={() => libraryCollections.rename(descriptor.collection)} />}

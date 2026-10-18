@@ -62,12 +62,13 @@ describe('InspirationCollectionCard hover actions', () => {
     }
   })
 
-  it('查看 only opens the collection and never adds to a session', async () => {
+  it('查看 uses the dedicated view handler and never the card/merge handler', async () => {
     const mounted = await mountCollectionCard({ collection: COLLECTION, t: zhT })
     try {
       await mounted.click(mounted.buttons()[0])
-      assert.equal(mounted.calls.open.length, 1, '查看 必须进入合集一次')
-      assert.equal(mounted.calls.open[0], COLLECTION)
+      assert.equal(mounted.calls.view.length, 1, '查看 必须恰好进入合集一次')
+      assert.equal(mounted.calls.view[0], COLLECTION)
+      assert.equal(mounted.calls.open.length, 0, '查看 不得复用整卡点击的合并选择链路')
       assert.equal(mounted.calls.add.length, 0, '查看 不得触发加入会话')
     } finally {
       await mounted.unmount()

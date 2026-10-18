@@ -118,6 +118,18 @@ describe('buildCollectionPrompt', () => {
     })
     assert.match(prompt, /1\. plain（成员 id：insp_9）/)
   })
+
+  it('collapses line breaks and never re-expands user text tokens', () => {
+    const prompt = buildCollectionPrompt({
+      collection: { id: 'col_1', title: '第一行\n第二行' },
+      items: [{ id: 'insp_1', title: '标题 {id} 注入\r\n尾行' }],
+      total: 1,
+      t: zhT,
+    })
+    assert.match(prompt, /合集：第一行 第二行/)
+    assert.match(prompt, /1\. 标题 \{id\} 注入 尾行（成员 id：insp_1）/)
+    assert.equal(prompt.split('\n').filter(line => line.startsWith('1. ')).length, 1)
+  })
 })
 
 describe('resolveActiveSessionId', () => {
@@ -125,6 +137,12 @@ describe('resolveActiveSessionId', () => {
     assert.equal(resolveActiveSessionId(makeWindow('sess-workbench', 'sess-attach')), 'sess-workbench')
     assert.equal(resolveActiveSessionId(makeWindow(null, 'sess-attach')), 'sess-attach')
     assert.equal(resolveActiveSessionId(makeWindow(null, null)), '')
+  })
+
+  it('treats the unbound attachment sentinel as no session', () => {
+    assert.equal(resolveActiveSessionId(makeWindow('', 'default')), '')
+    assert.equal(resolveActiveSessionId(makeWindow('default', '__none__')), '')
+    assert.equal(resolveActiveSessionId(makeWindow('default', 'sess-attach')), 'sess-attach')
   })
 })
 
@@ -208,6 +226,42 @@ describe('addCollectionToSession', () => {
     assert.equal(result.code, 'no-session')
     assert.equal(prefills.length, 0)
     assert.equal(reveals.length, 0, '没有会话时不得展开空会话')
+  })
+
+  it('reports the no-session key when the attachment store only has its unbound sentinel', async () => {
+    const prefills = []
+    const reveals = []
+    const result = await addCollectionToSession(COLLECTION, {
+      window: makeWindow('', 'default'),
+      t: zhT,
+      fetchCollectionItems: async () => MEMBERS,
+      reveal: () => reveals.push(1),
+      prefill: async request => {
+        prefills.push(request)
+        return { ok: true }
+      },
+    })
+    assert.equal(result.errorKey, 'collection.sessionNoSession')
+    assert.equal(result.code, 'no-session')
+    assert.equal(reveals.length, 0, '未绑定会话时不得先展开会话栏')
+    assert.equal(prefills.length, 0)
+  })
+
+  it('refuses a collection without an id before reading anything', async () => {
+    let reads = 0
+    const result = await addCollectionToSession({ title: '无 id' }, {
+      window: makeWindow('sess-1', null),
+      t: zhT,
+      fetchCollectionItems: async () => {
+        reads += 1
+        return MEMBERS
+      },
+      reveal: () => undefined,
+      prefill: async () => ({ ok: true }),
+    })
+    assert.equal(result.ok, false)
+    assert.equal(result.code, 'invalid-collection')
+    assert.equal(reads, 0)
   })
 
   it('honours an injected empty sessionId over the window', async () => {

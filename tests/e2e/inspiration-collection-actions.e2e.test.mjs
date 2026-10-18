@@ -10,8 +10,10 @@
  *
  * Live precondition: the browser evidence in
  * `docs/evidence/2026-10-18-inspiration-collection-actions-3411/` (browser.json +
- * hover-actions / view-collection / add-to-session / draft-protected PNGs,
- * 1600x1100) from the stage-2 run, inspected before this regression was added.
+ * 6 PNGs: hover-actions / view-collection / add-to-session / focus-actions /
+ * draft-protected / no-session, 1600x1100) from the stage-3 run (19/19
+ * assertions, pixel contrast 11.73:1 / 18.86:1), inspected before this
+ * regression was updated.
  */
 
 import assert from 'node:assert/strict'
@@ -21,6 +23,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { assertPng } from '../../scripts/worktree-web-qa.mjs'
+import { RIVAL_TOKENS_CSS } from '../../plugins/omnimux-inspiration/src/client/rival-tokens.js'
 import { startInspirationCollectionsFixture } from './inspiration-collections.fixture.mjs'
 import { startCollectionsBrowser } from './inspiration-collections.browser.mjs'
 
@@ -30,8 +33,9 @@ const COLLECTION_TITLE = '测试合集'
 const ITEM_IDS = ['qa-dance1', 'qa-dance2', 'qa-fashion1']
 const SESSION_ID = 'qa-session-1'
 const DRAFT_PROTECTED = '输入框已有内容，请先清空或新建会话后重试'
+const NO_SESSION = '没有可加入的会话，请先打开一个会话'
 const SENTINEL_DRAFT = '用户既有草稿（QA 哨兵）'
-const livePrecondition = 'Issue #3411: docs/evidence/2026-10-18-inspiration-collection-actions-3411/browser.json + 4 decodable 1600x1100 PNGs (hover-actions, view-collection, add-to-session, draft-protected), stage-2 run 15/15 assertions, inspected before this regression was added.'
+const livePrecondition = 'Issue #3411: docs/evidence/2026-10-18-inspiration-collection-actions-3411/browser.json + 6 decodable 1600x1100 PNGs (hover-actions, view-collection, add-to-session, focus-actions, draft-protected, no-session), stage-3 run 19/19 assertions with pixel contrast 11.73:1 / 18.86:1, inspected before this regression was updated.'
 
 async function settle(browser) {
   await browser.wait(() => {
@@ -81,11 +85,12 @@ async function openLocalTab(browser, origin, collectionId) {
 
 /** Synthetic host seams; installed before any action is triggered. */
 async function installHostStubs(browser) {
-  const installed = await browser.evaluate(() => {
+  const installed = await browser.evaluate(css => {
     const style = document.createElement('style')
     style.id = 'qa-host-style'
     style.textContent = [
-      ':root{--dsw-alias-bg-elevated:#fff;--dsw-alias-state-success-primary:#0a7;--dsw-alias-state-error-primary:#d33;--dsw-alias-bg-mask-1:rgba(0,0,0,.08);--dsw-specific-media-overlay:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0));--dsw-specific-media-fg:#fff;--dsw-specific-media-pill-bg:rgba(0,0,0,.6)}',
+      String(css || ''),
+      ':root{--dsw-alias-bg-elevated:#fff;--dsw-alias-state-success-primary:#0a7;--dsw-alias-state-error-primary:#d33;--dsw-alias-bg-mask-1:rgba(0,0,0,.08)}',
       '#qa-conversation{position:fixed;top:0;right:0;height:100vh;box-sizing:border-box;display:flex;flex-direction:column;background:#fafafa;border-left:1px solid #ddd;z-index:40;font-family:system-ui;color:#1b1b1b}',
       'body[data-conversation="collapsed"] #qa-conversation{width:64px}',
       'body[data-conversation="open"] #qa-conversation{width:340px}',
@@ -137,6 +142,8 @@ async function installHostStubs(browser) {
         return Promise.resolve({ ok: true })
       },
     }
+    qaHost.goodPrefill = window.__omnimuxSessionPrefill.queueSessionPrefill
+    qaHost.goodSnapshot = window.__omnimuxWorkbench.getSnapshot
     document.getElementById('qa-send').addEventListener('click', () => { qaHost.sends.push('send-click') })
     const nativeFetch = window.fetch
     window.fetch = (input, init) => {
@@ -150,7 +157,7 @@ async function installHostStubs(browser) {
       prefill: typeof window.__omnimuxSessionPrefill.queueSessionPrefill === 'function',
       conversation: document.body.dataset.conversation,
     }
-  })
+  }, RIVAL_TOKENS_CSS)
   assert.deepEqual(installed, { workbench: true, prefill: true, conversation: 'collapsed' })
 }
 
@@ -160,12 +167,23 @@ async function readActions(browser) {
       const rect = element.getBoundingClientRect()
       return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
     }
+    const buttonFacts = element => {
+      if (!element) return null
+      const style = getComputedStyle(element)
+      return {
+        className: String(element.className),
+        text: element.textContent.trim(),
+        ariaLabel: element.getAttribute('aria-label'),
+        disabled: element.disabled,
+        ariaBusy: element.getAttribute('aria-busy'),
+        color: style.color,
+        backgroundColor: style.backgroundColor,
+        rect: rectOf(element),
+      }
+    }
     const card = document.querySelector('[data-collection-id]')
     const layer = card?.querySelector('.omnimux-inspiration-collection-actions')
     const style = layer ? getComputedStyle(layer) : null
-    const cover = card?.querySelector('.omnimux-inspiration-collection-cover')
-    const title = card?.querySelector('.omnimux-inspiration-collection-title')
-    const menu = card?.querySelector('.omnimux-inspiration-collection-menu button')
     return {
       card: Boolean(card),
       layer: Boolean(layer),
@@ -176,15 +194,14 @@ async function readActions(browser) {
       pointerEvents: style ? style.pointerEvents : null,
       transform: style ? style.transform : null,
       rect: layer ? rectOf(layer) : null,
-      coverRect: cover ? rectOf(cover) : null,
-      titleRect: title ? rectOf(title) : null,
-      menuRect: menu ? rectOf(menu) : null,
-      buttons: layer ? Array.from(layer.querySelectorAll('button')).map(button => ({
-        text: button.textContent.trim(),
-        ariaLabel: button.getAttribute('aria-label'),
-        disabled: button.disabled,
-        rect: rectOf(button),
-      })) : [],
+      coverRect: card?.querySelector('.omnimux-inspiration-collection-cover') ? rectOf(card.querySelector('.omnimux-inspiration-collection-cover')) : null,
+      titleRect: card?.querySelector('.omnimux-inspiration-collection-title') ? rectOf(card.querySelector('.omnimux-inspiration-collection-title')) : null,
+      menuRect: card?.querySelector('.omnimux-inspiration-collection-menu button') ? rectOf(card.querySelector('.omnimux-inspiration-collection-menu button')) : null,
+      focusWithin: card ? card.matches(':focus-within') : false,
+      activeElementClass: String(document.activeElement?.className ?? ''),
+      buttons: layer ? Array.from(layer.querySelectorAll('button')).map(buttonFacts) : [],
+      view: card ? buttonFacts(card.querySelector('.omnimux-inspiration-collection-action-view')) : null,
+      add: card ? buttonFacts(card.querySelector('.omnimux-inspiration-collection-action-add')) : null,
     }
   })
 }
@@ -200,12 +217,12 @@ async function waitActionsVisible(browser) {
 
 async function hoverCard(browser) {
   await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1596, y: 1094 })
-  await sleep(120)
+  await sleep(150)
   const box = await browser.evaluate(() => {
     const card = document.querySelector('[data-collection-id]')
     card.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     const rect = card.getBoundingClientRect()
-    return { x: rect.x + rect.width / 2, y: rect.y + Math.min(rect.height / 2, 160) }
+    return { x: rect.x + rect.width / 2, y: rect.y + 16 }
   })
   await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y })
   await waitActionsVisible(browser)
@@ -228,11 +245,30 @@ async function readHost(browser) {
   return browser.evaluate(() => ({
     calls: window.__qaHost.calls.map(call => call.slice()),
     prefill: window.__qaHost.prefill.map(entry => ({ targetSessionId: entry.targetSessionId, prompt: entry.prompt })),
-    sends: window.__qaHost.sends.map(entry => String(entry)),
+    sends: window.__qaHost.sends.map(String),
     requests: window.__qaHost.requests.map(entry => ({ method: entry.method, url: entry.url })),
     conversation: document.body.dataset.conversation,
     composer: document.getElementById('qa-composer')?.value ?? null,
+    hasAttachments: Object.hasOwn(window, '__omnimuxAttachments'),
   }))
+}
+
+/** Collapse + clear the recorder; optionally restore the pristine stubs. */
+async function resetHost(browser, restoreStubs) {
+  await browser.evaluate(restore => {
+    const host = window.__qaHost
+    if (restore) {
+      window.__omnimuxSessionPrefill.queueSessionPrefill = host.goodPrefill
+      window.__omnimuxWorkbench.getSnapshot = host.goodSnapshot
+    }
+    host.calls = []
+    host.prefill = []
+    host.sends = []
+    host.requests = []
+    document.body.dataset.conversation = 'collapsed'
+    document.getElementById('qa-composer').value = ''
+    return true
+  }, restoreStubs === true)
 }
 
 async function ordinaryAudit(browser) {
@@ -304,7 +340,7 @@ async function withEnvironment(name, run) {
   }
 }
 
-test('collection card actions: hover, view, add to session and draft-protected failure', { timeout: 180000 }, async () => {
+test('collection card actions: hover, view, add to session, focus, draft-protected and no-session', { timeout: 180000 }, async () => {
   await withEnvironment('journey', async context => {
     const { fixture, browser, report, capture } = context
     const collection = await createCollection(fixture)
@@ -313,11 +349,10 @@ test('collection card actions: hover, view, add to session and draft-protected f
 
     await openLocalTab(browser, fixture.origin, collection.id)
     await installHostStubs(browser)
-    await hoverCard(browser)
-
-    // 1. Real hover reveals the action layer; ordinary cards stay clean.
     await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1596, y: 1094 })
     await sleep(300)
+
+    // 1. Hidden by default, revealed by real pointer hover.
     const hidden = await readActions(browser)
     assert.equal(hidden.card, true)
     assert.equal(hidden.layer, true)
@@ -330,11 +365,19 @@ test('collection card actions: hover, view, add to session and draft-protected f
     assert.deepEqual(hidden.buttons.map(button => button.text), ['查看', '加入会话'])
     assert.deepEqual(hidden.buttons.map(button => button.ariaLabel), ['查看', '加入会话'])
     assert.deepEqual(hidden.buttons.map(button => button.disabled), [false, false])
+    assert.equal(hidden.view.className.includes('omnimux-inspiration-collection-action-view'), true)
+    assert.equal(hidden.add.className.includes('omnimux-inspiration-collection-action-add'), true)
+
     await hoverCard(browser)
+    await sleep(200)
     const hovered = await readActions(browser)
     assert.ok(hovered.opacity >= 0.99)
     assert.equal(hovered.pointerEvents, 'auto')
     assert.match(hovered.transform, /matrix\(1, 0, 0, 1, 0, 0\)/)
+    assert.equal(hovered.view.color, 'rgb(255, 255, 255)')
+    assert.equal(hovered.view.backgroundColor, 'rgba(0, 0, 0, 0.6)')
+    assert.equal(hovered.add.backgroundColor, 'rgb(255, 255, 255)')
+    assert.equal(hovered.add.color, 'rgb(17, 17, 19)')
     assert.equal(hovered.rect.y >= hovered.coverRect.y - 0.5, true)
     assert.equal(hovered.rect.y + hovered.rect.height <= hovered.coverRect.y + hovered.coverRect.height + 0.5, true)
     const overlaps = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
@@ -345,7 +388,7 @@ test('collection card actions: hover, view, add to session and draft-protected f
       assert.equal(card.texts.includes('查看'), false)
       assert.equal(card.texts.includes('加入会话'), false)
     }
-    report.checks.push('hidden until real hover; hover reveals 查看/加入会话 with opacity/pointer-events/translateY transition inside the cover; ordinary cards have no such controls')
+    report.checks.push('hidden until real hover; hover reveals 查看/加入会话 with opacity/pointer-events/translateY inside the cover, media-token palette (dark view / white add); ordinary cards have no such controls')
     await capture('hover-actions')
 
     // 2. 查看 enters the collection content view, no session side effects.
@@ -372,7 +415,7 @@ test('collection card actions: hover, view, add to session and draft-protected f
     assert.deepEqual(host.calls, [], '查看 must not reveal the conversation')
     assert.equal(host.conversation, 'collapsed')
     for (const card of await ordinaryAudit(browser)) assert.equal(card.hasActionsLayer, false)
-    report.checks.push('查看 shows the real collection view (back/heading/rename + 3 member cards) and produces no prefill or reveal calls')
+    report.checks.push('查看 (dedicated onView handler) shows the real collection view (back/heading/rename + 3 member cards) and produces no prefill or reveal calls')
     await capture('view-collection')
 
     // 3. Back to the root, then 加入会话.
@@ -409,14 +452,48 @@ test('collection card actions: hover, view, add to session and draft-protected f
     report.checks.push('加入会话 reads the real lean member list, reveals the column (uncollapse + split focus), writes exactly one sourced prompt via the prefill seam to qa-session-1, never sends')
     await capture('add-to-session')
 
-    // 4. draft-protected: visible toast, existing draft preserved, no navigation.
-    const callsBefore = (await readHost(browser)).calls.length
+    // 4. Keyboard :focus-within reveal (mouse parked away), media-token palette.
+    await resetHost(browser, true)
+    await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1596, y: 1094 })
+    await sleep(300)
+    const focusStart = await browser.evaluate(() => {
+      const button = document.querySelector('.omnimux-inspiration-collection-action-view')
+      const layer = document.querySelector('.omnimux-inspiration-collection-actions')
+      const before = Number(getComputedStyle(layer).opacity)
+      button.focus()
+      return { before, active: document.activeElement === button }
+    })
+    await browser.wait(() => {
+      const layer = document.querySelector('.omnimux-inspiration-collection-actions')
+      if (!layer) return false
+      const style = getComputedStyle(layer)
+      return Number(style.opacity) > 0.99 && style.pointerEvents === 'auto'
+    })
+    await sleep(200)
+    const focusState = await readActions(browser)
+    assert.ok(focusStart.before <= 0.01, 'layer must start hidden before focus')
+    assert.equal(focusStart.active, true)
+    assert.equal(focusState.focusWithin, true)
+    assert.ok(focusState.opacity >= 0.99)
+    assert.equal(focusState.pointerEvents, 'auto')
+    assert.match(focusState.transform, /matrix\(1, 0, 0, 1, 0, 0\)/)
+    assert.equal(focusState.activeElementClass.includes('omnimux-inspiration-collection-action-view'), true)
+    report.checks.push('keyboard focus on 查看 reveals the action layer through :focus-within (opacity ~1, pointer-events auto) with the mouse parked away')
+    await capture('focus-actions')
+    await browser.evaluate(() => { document.activeElement?.blur?.(); return true })
+
+    // 5. draft-protected: visible toast, existing draft preserved, no navigation.
+    await resetHost(browser, true)
+    await sleep(150)
+    await hoverCard(browser)
+    const beforeFailureHost = await readHost(browser)
+    const callsBefore = beforeFailureHost.calls.length
+    const prefillBefore = beforeFailureHost.prefill.length
     await browser.evaluate(sentinel => {
       document.getElementById('qa-composer').value = sentinel
       window.__omnimuxSessionPrefill.queueSessionPrefill = () => Promise.resolve({ ok: false, error: 'draft-protected' })
       return true
     }, SENTINEL_DRAFT)
-    await hoverCard(browser)
     await browser.clickText('加入会话', '[data-collection-id] button')
     await browser.wait(() => document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim().length > 0)
     const toast = await readToast(browser)
@@ -443,9 +520,70 @@ test('collection card actions: hover, view, add to session and draft-protected f
     assert.equal(failure.rootCardTitle, COLLECTION_TITLE, 'must stay on the library root')
     assert.equal(failure.navigation, false, 'must not navigate into the collection view')
     assert.equal(failure.activeTab, '灵感库')
-    assert.equal(afterFailure.prefill.length, 1, 'the failing seam must not record a second prefill')
+    assert.equal(afterFailure.prefill.length, prefillBefore, 'the failing seam must not add a prefill record')
     assert.equal(afterFailure.sends.length, 0)
     assert.deepEqual(afterFailure.calls.slice(callsBefore), [['collapsed', false], ['focus', 'split']])
     report.checks.push('draft-protected shows 输入框已有内容，请先清空或新建会话后重试 while keeping the sentinel draft, staying on the root view and never sending')
+
+    // 6. no active session: explicit toast, no reveal, no prefill, no expansion.
+    await resetHost(browser, true)
+    const readsBefore = fixture.requests.filter(entry => entry.method === 'GET' && entry.path === LOCAL && entry.query.collection_id === collection.id && entry.query.page_size === '100').length
+    await browser.evaluate(() => {
+      window.__omnimuxWorkbench.getSnapshot = () => ({ sessionId: '' })
+      delete window.__omnimuxAttachments
+      window.__qaHost.calls = []
+      window.__qaHost.prefill = []
+      window.__qaHost.sends = []
+      window.__qaHost.requests = []
+      document.body.dataset.conversation = 'collapsed'
+      document.getElementById('qa-composer').value = ''
+      return true
+    })
+    await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1596, y: 1094 })
+    await sleep(150)
+    await hoverCard(browser)
+    const beforeNoSession = await readHost(browser)
+    await browser.clickText('加入会话', '[data-collection-id] button')
+    await browser.wait(() => document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() === '没有可加入的会话，请先打开一个会话')
+    const noSessionToast = await readToast(browser)
+    await browser.wait(() => {
+      const button = document.querySelector('.omnimux-inspiration-collection-action-add')
+      return Boolean(button) && button.disabled === false && button.getAttribute('aria-busy') !== 'true'
+    })
+    await sleep(150)
+    const noSession = await browser.evaluate(() => {
+      const button = document.querySelector('.omnimux-inspiration-collection-action-add')
+      const card = document.querySelector('[data-collection-id]')
+      return {
+        toastText: document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() ?? null,
+        calls: window.__qaHost.calls.map(call => call.slice()),
+        prefill: window.__qaHost.prefill.map(entry => ({ targetSessionId: entry.targetSessionId, prompt: entry.prompt })),
+        sends: window.__qaHost.sends.map(String),
+        requests: window.__qaHost.requests.map(entry => ({ method: entry.method, url: entry.url })),
+        conversation: document.body.dataset.conversation,
+        composer: document.getElementById('qa-composer')?.value ?? null,
+        buttonDisabled: button?.disabled ?? null,
+        buttonBusy: button?.getAttribute('aria-busy') ?? null,
+        rootCardTitle: card?.querySelector('.omnimux-inspiration-collection-title')?.textContent?.trim() ?? null,
+        navigation: Boolean(document.querySelector('.omnimux-inspiration-collection-navigation')),
+      }
+    })
+    await capture('no-session')
+    assert.equal(beforeNoSession.hasAttachments, false)
+    assert.equal(noSessionToast.visible, true)
+    assert.equal(noSession.toastText, NO_SESSION)
+    assert.deepEqual(noSession.calls, [], 'no reveal may run without a bound session')
+    assert.deepEqual(noSession.prefill, [])
+    assert.equal(noSession.composer, '')
+    assert.equal(noSession.conversation, 'collapsed', 'empty conversation column must not be expanded')
+    assert.equal(noSession.sends.length, 0)
+    assert.deepEqual(noSession.requests.filter(entry => entry.method !== 'GET'), [])
+    const readsAfter = fixture.requests.filter(entry => entry.method === 'GET' && entry.path === LOCAL && entry.query.collection_id === collection.id && entry.query.page_size === '100').length
+    assert.equal(readsAfter, readsBefore + 1, 'members must still be read before the session check aborts')
+    assert.equal(noSession.buttonDisabled, false)
+    assert.notEqual(noSession.buttonBusy, 'true')
+    assert.equal(noSession.rootCardTitle, COLLECTION_TITLE)
+    assert.equal(noSession.navigation, false)
+    report.checks.push('no active session shows 没有可加入的会话，请先打开一个会话, performs no reveal and no prefill, keeps the conversation collapsed and the button enabled again')
   })
 })

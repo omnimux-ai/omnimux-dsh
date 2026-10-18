@@ -61,13 +61,14 @@ function CollectionThumbnail({ item }) {
  *   style?: Record<string, any>,
  *   column?: number,
  *   onOpen?: (collection: InspirationCollection) => void,
+ *   onView?: (collection: InspirationCollection) => void,
  *   onAddToSession?: (collection: InspirationCollection) => void,
  *   addToSessionBusy?: boolean,
  *   onMenu?: (event: import('react').MouseEvent<HTMLButtonElement>, collection: InspirationCollection) => void,
  *   preview?: boolean,
  * }} props
  */
-export function InspirationCollectionCard({ collection, t, style, column, onOpen, onAddToSession, addToSessionBusy = false, onMenu, menuNode, preview = false }) {
+export function InspirationCollectionCard({ collection, t, style, column, onOpen, onView, onAddToSession, addToSessionBusy = false, onMenu, menuNode, preview = false }) {
   const items = (Array.isArray(collection.preview_items) ? collection.preview_items : []).slice(0, 3)
   const count = Number.isFinite(Number(collection.item_count))
     ? Math.max(items.length, Number(collection.item_count))
@@ -98,6 +99,7 @@ export function InspirationCollectionCard({ collection, t, style, column, onOpen
               <Button
                 variant="outline"
                 size="sm"
+                className="omnimux-inspiration-collection-action-view"
                 aria-label={t('collection.view')}
                 leadingIcon={<Eye size={14} aria-hidden="true" />}
                 onPointerDown={stopInnerEvent}
@@ -105,7 +107,8 @@ export function InspirationCollectionCard({ collection, t, style, column, onOpen
                 onKeyDown={isolateInnerKey}
                 onClick={event => {
                   stopInnerEvent(event)
-                  if (typeof onOpen === 'function') onOpen(collection)
+                  const view = typeof onView === 'function' ? onView : onOpen
+                  if (typeof view === 'function') view(collection)
                 }}
               >
                 {t('collection.view')}
@@ -113,6 +116,7 @@ export function InspirationCollectionCard({ collection, t, style, column, onOpen
               <Button
                 variant="primary"
                 size="sm"
+                className="omnimux-inspiration-collection-action-add"
                 aria-label={t('collection.addToSession')}
                 leadingIcon={<MessageSquarePlus size={14} aria-hidden="true" />}
                 loading={addBusy}

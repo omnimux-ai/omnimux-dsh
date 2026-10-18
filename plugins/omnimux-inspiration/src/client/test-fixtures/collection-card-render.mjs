@@ -83,7 +83,7 @@ export async function mountCollectionCard(options) {
   globalThis.document = dom.window.document
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-  const calls = { open: [], add: [] }
+  const calls = { open: [], view: [], add: [] }
   const container = dom.window.document.getElementById('host')
   const reactRoot = createRoot(container)
 
@@ -96,6 +96,7 @@ export async function mountCollectionCard(options) {
       preview: options.preview === true,
       addToSessionBusy: options.addToSessionBusy === true,
       onOpen: collection => calls.open.push(collection),
+      onView: collection => calls.view.push(collection),
       onAddToSession: collection => calls.add.push(collection),
     }))
   })

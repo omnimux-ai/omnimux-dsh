@@ -64,13 +64,23 @@ function reportError(io, error) {
 }
 
 function fill(template, tokens) {
-  let text = String(template ?? '')
-  for (const key of Object.keys(tokens)) text = text.split(`{${key}}`).join(String(tokens[key]))
-  return text
+  // Single pass: tokens substituted into the template are never re-scanned, so
+  // a user-owned title containing `{id}` cannot corrupt the rest of the line.
+  return String(template ?? '').replace(/\{(\w+)\}/g, (match, key) => (
+    Object.hasOwn(tokens, key) ? String(tokens[key]) : match
+  ))
+}
+
+/** One-line user text: control characters and line breaks would break the list. */
+function plainText(value) {
+  return String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function memberName(row) {
-  return String(row?.title || row?.source_url || row?.id || '').trim()
+  return plainText(row?.title || row?.source_url || row?.id || '')
 }
 
 /**
@@ -86,7 +96,7 @@ export function buildCollectionPrompt({ collection, items, total, t }) {
   const translate = typeof t === 'function' ? t : key => collectionEn[key] || key
   const rows = Array.isArray(items) ? items : []
   const collectionId = String(collection?.id ?? '').trim()
-  const name = String(collection?.title ?? '').trim() || collectionId
+  const name = plainText(collection?.title) || collectionId
   const listed = rows.length
   const totalCount = Number.isFinite(Number(total)) && Number(total) > 0 ? Number(total) : listed
 
@@ -121,10 +131,14 @@ export function buildCollectionPrompt({ collection, items, total, t }) {
   return lines.join('\n')
 }
 
+/** Host sentinel for "no session bound yet"; the official prefill seam refuses it. */
+const UNBOUND_SESSION_IDS = new Set(['default', '__none__'])
+
 function normalizeSessionId(value) {
-  if (typeof value === 'string') return value.trim()
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
-  return ''
+  let id = ''
+  if (typeof value === 'string') id = value.trim()
+  else if (typeof value === 'number' && Number.isFinite(value)) id = String(value)
+  return UNBOUND_SESSION_IDS.has(id) ? '' : id
 }
 
 /**
@@ -188,6 +202,7 @@ export async function addCollectionToSession(collection, io = {}) {
     const windowObject = io.window ?? (typeof window !== 'undefined' ? window : undefined)
     const t = typeof io.t === 'function' ? io.t : translator(windowObject)
     const collectionId = String(collection?.id ?? '').trim()
+    if (!collectionId) return { ok: false, errorKey: 'collection.sessionFailed', code: 'invalid-collection' }
 
     // 1. Full membership, read-only, lean projection: the prompt needs ids,
     //    names, platform and type, not the stored breakdown payload.

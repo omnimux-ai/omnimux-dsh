@@ -12,7 +12,7 @@ import { InspirationCollectionCard } from '../InspirationCollectionCard.jsx'
 import { InspirationCoverCard } from '../InspirationCoverCard.jsx'
 import { toInspirationCardRow } from '../inspiration-card.js'
 
-export function CollectionCardStage({ kind, collection, row, t, preview, addToSessionBusy, onOpen, onAddToSession }) {
+export function CollectionCardStage({ kind, collection, row, t, preview, addToSessionBusy, onOpen, onView, onAddToSession }) {
   if (kind === 'inspiration') {
     return (
       <InspirationCoverCard
@@ -40,6 +40,7 @@ export function CollectionCardStage({ kind, collection, row, t, preview, addToSe
       preview={preview}
       addToSessionBusy={addToSessionBusy}
       onOpen={onOpen}
+      onView={onView}
       onAddToSession={onAddToSession}
     />
   )
