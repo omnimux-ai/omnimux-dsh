@@ -42,11 +42,12 @@ export function refreshGate(gate) {
  *   quota: { left: number, total: number } | null,
  *   cooldownLeft: number | null,
  *   fresh: boolean,
+ *   busy?: boolean,
  *   onRefresh: () => void,
  * }} props
  */
 export function RivalRefreshButton(props) {
-  const { t, gate, quota, cooldownLeft, fresh, onRefresh } = props
+  const { t, gate, quota, cooldownLeft, fresh, busy = false, onRefresh } = props
   const [reasonOpen, setReasonOpen] = useState(false)
   const wrapRef = useRef(null)
 
@@ -97,10 +98,11 @@ export function RivalRefreshButton(props) {
         variant="primary"
         size="sm"
         className={`omnimux-rival-refresh${blocked ? ' is-blocked' : ''}${fresh && !blocked ? ' is-fresh' : ''}`}
-        aria-disabled={blocked ? 'true' : 'false'}
+        aria-disabled={blocked || busy ? 'true' : 'false'}
+        disabled={busy}
         onClick={handleClick}
       >
-        {fresh ? t('rivalAccounts.refresh.fresh') : t('rivalAccounts.refresh.btn')}
+        {t(busy ? 'rivalAccounts.refresh.submitting' : fresh ? 'rivalAccounts.refresh.requested' : 'rivalAccounts.refresh.btn')}
         {quota ? (
           <span className="omnimux-rival-refresh-badge">
             {`${quota.left}/${quota.total}`}

@@ -19,6 +19,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { Button, EmptyState } from 'dsh-ui-kit'
 import { RivalMasonry } from './RivalMasonry.jsx'
 import { EMPTY_ICON_SEARCH, EMPTY_ICON_USER, EMPTY_ICON_WORKS } from './icons.jsx'
+import { rivalErrorKey } from './rival-health.js'
 
 /** Blocks a first paint or a page append shows while it has nothing to show. */
 const SKELETON_COUNT = 10
@@ -30,7 +31,8 @@ const SKELETON_COUNT = 10
  *   loading: boolean,
  *   loadingMore: boolean,
  *   emptyKind: 'no-accounts' | 'no-posts' | 'filtered' | 'loading' | 'fetching' | 'fetch-failed',
- *   fetchPhase?: null | { kind: 'stopped'|'cooling'|'failed'|'timeout', account?: any, minutes?: number },
+ *   fetchPhase?: null | { kind: 'reimport'|'stopped'|'cooling'|'failed'|'timeout', account?: any, minutes?: number },
+ *   refreshBusy?: boolean,
  *   onResetFilters: () => void,
  *   onImport: () => void,
  *   onRetryFetch?: () => void,
@@ -45,7 +47,7 @@ const SKELETON_COUNT = 10
 export function RivalFeedGrid(props) {
   const {
     t, cards, loading, loadingMore, emptyKind, fetchPhase, onResetFilters, onImport,
-    onRetryFetch, onBrowseTrend,
+    onRetryFetch, onBrowseTrend, refreshBusy = false,
     onDetail, onReplicate, onMarkDone, onDeconstruct, replicateBusy,
   } = props
 
@@ -135,24 +137,36 @@ export function RivalFeedGrid(props) {
       const stoppedFailures = phase.kind === 'stopped'
         ? Number(phase.account?.consecutive_failures)
         : null
-      const title = phase.kind === 'stopped'
+      const title = phase.kind === 'reimport'
+        ? t('rivalAccounts.health.reimport')
+        : phase.kind === 'stopped'
         ? t('rivalFeed.empty.failedStopped')
         : (phase.kind === 'cooling'
           ? t('rivalFeed.empty.failedCooling').replace('{n}', String(phase.minutes ?? 1))
-          : t('rivalAccounts.import.error'))
-      const reason = Number.isFinite(stoppedFailures) && stoppedFailures > 0
+          : t(phase.kind === 'timeout' ? 'rivalFeed.empty.failedTimeout' : 'rivalFeed.empty.failedTitle'))
+      const failures = Number.isFinite(stoppedFailures) && stoppedFailures > 0
         ? t('rivalFeed.empty.failedStoppedReason').replace('{n}', String(stoppedFailures))
         : null
+      const accountName = phase.account?.handle || phase.account?.nickname || t('rivalAccounts.refresh.account')
+      const reason = phase.kind === 'timeout'
+        ? t('rivalFeed.empty.failedTimeoutReason')
+        : t(rivalErrorKey(phase.account?.error_code))
+      const description = `${accountName}：${[failures, reason].filter(Boolean).join('。')}`
       return (
         <EmptyState
           icon={EMPTY_ICON_WORKS}
           title={title}
-          description={reason || undefined}
+          description={description}
           action={(
             <div className="omnimux-rival-empty-actions">
-              {onRetryFetch ? (
-                <Button variant="primary" size="sm" onClick={onRetryFetch}>
-                  {t('rivalFeed.empty.failedRetry')}
+              {phase.kind === 'reimport' ? (
+                <Button variant="primary" size="sm" onClick={onImport}>
+                  {t('rivalAccounts.health.reimportAction')}
+                </Button>
+              ) : onRetryFetch ? (
+                <Button variant="primary" size="sm" disabled={refreshBusy} onClick={onRetryFetch}>
+                  {t(refreshBusy ? 'rivalAccounts.refresh.submitting' : phase.kind === 'timeout'
+                    ? 'rivalFeed.empty.checkProgress' : 'rivalFeed.empty.failedRetry')}
                 </Button>
               ) : null}
               {onBrowseTrend ? (

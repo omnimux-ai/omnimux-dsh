@@ -273,17 +273,12 @@ export function apply(ctx) {
     inspirationShare: () => (typeof ctx.get === 'function' ? ctx.get('inspirationShare') : undefined),
   })
 
-  /** Start the refresh tick, and stop it when the host tears the plugin down. */
-  const startRivalScheduler = (host) => {
-    rivalScheduler.start()
-    if (host && typeof host.effect === 'function') {
-      host.effect(() => () => rivalScheduler.stop(), 'omnimux-inspiration-rival-scheduler')
-    }
-  }
   if (typeof ctx.effect === 'function') {
-    ctx.effect(() => () => rivalScheduler.stop(), 'omnimux-inspiration-rival-scheduler')
+    ctx.effect(() => {
+      rivalScheduler.start()
+      return () => rivalScheduler.stop()
+    }, 'omnimux-inspiration-rival-scheduler')
   }
-  void startRivalScheduler
 
   /**
    * Serve one request under this plugin's HTTP prefix.

@@ -4,6 +4,15 @@ import { OmnimuxError } from '../media/errors.js'
 import { createOfficialClient } from './client.js'
 
 describe('official client', () => {
+  it('keeps a confirmed missing-channel reason and removes provider diagnostics', async () => {
+    const client = createOfficialClient({
+      siteBaseUrl: 'https://omnimux.ai', resolveApiKey: () => 'fixture-key', resolveAccess: async () => ({ token: '' }),
+      fetcher: async () => ({ ok: false, status: 503, json: async () => ({ error: { message: '分组 auto 下模型 sample 无可用渠道（distributor） secret-diagnostic' } }) }),
+    })
+    await assert.rejects(() => client.withSk('/v1/chat/completions'),
+      (error) => error.code === 'CHANNEL_UNAVAILABLE' && error.status === 503 && !error.message.includes('secret-diagnostic'))
+  })
+
   it('withSk throws omnimux-unconfigured without a key', async () => {
     const client = createOfficialClient({
       siteBaseUrl: 'https://omnimux.ai',

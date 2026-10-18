@@ -71,7 +71,10 @@ async function mount(api, extra = {}) {
     root.render(React.createElement(Probe, { api, ...extra }))
   })
   const unmount = async () => { await act(async () => root.unmount()); restore() }
-  return { container, unmount, get feed() { return Probe.latest } }
+  const rerender = async (next) => {
+    await act(async () => { root.render(React.createElement(Probe, { api, ...extra, ...next })) })
+  }
+  return { container, unmount, rerender, get feed() { return Probe.latest } }
 }
 
 const okAccounts = (items, pollIntervalMs = 2500) => ({
@@ -235,5 +238,152 @@ describe('useRivalFeed — sort 选项映射（#3113 增速排序）', () => {
       assert.ok(seen.length > 0, `sort=${option}: feed must be requested`)
       assert.equal(seen[0], wire, `option ${option} must map to wire sort ${wire}`)
     }
+  })
+})
+
+describe('useRivalFeed scoped refresh and safe feedback (#3374)', () => {
+  const accounts = [
+    { id: 'a', handle: '@first', platform: 'x', refresh_state: 'error', error_code: 'cloud-error', post_count: 0 },
+    { id: 'b', handle: '@second', platform: 'youtube', refresh_state: 'idle', post_count: 0 },
+    { id: 'c', handle: '@third', platform: 'x', refresh_state: 'backoff', post_count: 0 },
+  ]
+
+  it('ignores failures and active jobs outside the selected platform', async () => {
+    let reads = 0
+    const m = await mount({
+      fetchRivalAccounts: async () => { reads += 1; return okAccounts([...accounts, { id: 'd', platform: 'x', refresh_state: 'running' }]) },
+      fetchRivalFeed: async () => okFeed(),
+    }, { platform: 'youtube', pollIntervalMs: 10 })
+    try {
+      assert.equal(m.feed.fetchPhase, null)
+      assert.equal(m.feed.fetching, false)
+      await act(async () => { await sleep(35) })
+      assert.equal(reads, 1, 'unselected jobs must not start this platform’s observation timer')
+    } finally { await m.unmount() }
+  })
+
+  it('clears an excluded account failure when the account selection changes', async () => {
+    const m = await mount({ fetchRivalAccounts: async () => okAccounts(accounts), fetchRivalFeed: async () => okFeed() })
+    try {
+      await act(async () => { m.feed.toggleAccount('a'); m.feed.toggleAccount('c') })
+      assert.equal(m.feed.fetchPhase, null)
+    } finally { await m.unmount() }
+  })
+
+  it('retries only failed accounts in the current selection and platform, as explicit manual retries', async () => {
+    const sent = []
+    const m = await mount({
+      fetchRivalAccounts: async () => okAccounts(accounts), fetchRivalFeed: async () => okFeed(),
+      refreshRivalAccount: async (id, options) => { sent.push({ id, options }); return { ok: true, body: { data: { queued: true } } } },
+    }, { platform: 'x' })
+    try {
+      await act(async () => { m.feed.toggleAccount('c') })
+      await act(async () => { await m.feed.retryFetch() })
+      assert.deepEqual(sent, [{ id: 'a', options: { manual: true } }])
+      assert.equal(m.feed.refreshNotice?.key, 'rivalAccounts.refresh.queued')
+    } finally { await m.unmount() }
+  })
+
+  it('top refresh uses single-account requests for the selected range', async () => {
+    const sent = []
+    let allCalls = 0
+    const m = await mount({
+      fetchRivalAccounts: async () => okAccounts(accounts), fetchRivalFeed: async () => okFeed(),
+      refreshAllRivalAccounts: async () => { allCalls += 1; return { ok: true } },
+      refreshRivalAccount: async (id, options) => { sent.push({ id, options }); return { ok: true, body: { data: { queued: true } } } },
+    }, { platform: 'youtube' })
+    try {
+      await act(async () => { await m.feed.refreshPool() })
+      assert.equal(allCalls, 0, 'a narrowed toolbar action must never call refresh-all')
+      assert.deepEqual(sent, [{ id: 'b', options: { manual: true } }])
+    } finally { await m.unmount() }
+  })
+
+  it('keeps the current platform visible when an earlier refresh submission finishes after switching platforms', async () => {
+    const sent = []
+    const reads = []
+    let finishSubmission
+    const receipt = new Promise((resolve) => { finishSubmission = resolve })
+    const m = await mount({
+      fetchRivalAccounts: async () => okAccounts(accounts.slice(0, 2).map((account) => ({ ...account, refresh_state: 'idle', post_count: 1 }))),
+      fetchRivalFeed: async (filter) => {
+        reads.push(filter.platform)
+        return okFeed([{ id: `${filter.platform}-post`, title: filter.platform }])
+      },
+      refreshRivalAccount: async (id) => { sent.push(id); return receipt },
+    }, { platform: 'x' })
+    try {
+      let refresh
+      await act(async () => { refresh = m.feed.refreshPool() })
+      await m.rerender({ platform: 'youtube' })
+      assert.equal(m.feed.items[0]?.title, 'youtube', 'the new platform has already loaded')
+      await act(async () => {
+        finishSubmission({ ok: true, body: { data: { status: 'queued' } } })
+        await refresh
+      })
+      assert.deepEqual(sent, ['a'], 'submission keeps the account range selected when the user clicked')
+      assert.equal(m.feed.items[0]?.title, 'youtube', 'the old receipt must reload the latest platform')
+      assert.deepEqual(reads, ['x', 'youtube', 'youtube'])
+    } finally { await m.unmount() }
+  })
+
+  it('keeps the toolbar’s 30-minute cooldown on accepted accounts without blocking a different selection', async () => {
+    const sent = []
+    const m = await mount({
+      fetchRivalAccounts: async () => okAccounts(accounts.slice(0, 2).map((account) => ({ ...account, refresh_state: 'idle' }))),
+      fetchRivalFeed: async () => okFeed(),
+      refreshRivalAccount: async (id) => { sent.push(id); return { ok: true, body: { data: { status: 'queued' } } } },
+    })
+    try {
+      await act(async () => { m.feed.toggleAccount('b') })
+      await act(async () => { await m.feed.refreshPool() })
+      assert.equal(m.feed.manualCooldownLeft, 30)
+      await act(async () => { m.feed.invertAccounts() })
+      assert.equal(m.feed.manualCooldownLeft, null, 'the other account has not been refreshed')
+      await act(async () => { await m.feed.refreshPool() })
+      assert.deepEqual(sent, ['a', 'b'])
+      assert.equal(m.feed.manualCooldownLeft, 30)
+    } finally { await m.unmount() }
+  })
+
+  it('deduplicates concurrent retries before the first render can disable the button', async () => {
+    let resolveRefresh
+    let submissions = 0
+    const response = new Promise((resolve) => { resolveRefresh = resolve })
+    const m = await mount({
+      fetchRivalAccounts: async () => okAccounts([accounts[0]]), fetchRivalFeed: async () => okFeed(),
+      refreshRivalAccount: async () => { submissions += 1; return response },
+    })
+    try {
+      await act(async () => {
+        const first = m.feed.retryFetch()
+        const second = m.feed.retryFetch()
+        assert.equal(submissions, 1)
+        resolveRefresh({ ok: true, body: { data: { queued: true } } })
+        await Promise.all([first, second])
+      })
+    } finally { await m.unmount() }
+  })
+
+  it('reports a queue refusal even when HTTP accepted the request', async () => {
+    const m = await mount({
+      fetchRivalAccounts: async () => okAccounts([accounts[0]]), fetchRivalFeed: async () => okFeed(),
+      refreshRivalAccount: async () => ({ ok: true, status: 202, body: { data: { queued: false, status: 'budget', reason_key: 'rivalAccounts.skip.budget' } } }),
+    })
+    try {
+      await act(async () => { await m.feed.retryFetch() })
+      assert.equal(m.feed.refreshFailure?.reason, 'budget')
+      assert.equal(m.feed.refreshNotice?.key, 'rivalAccounts.skip.budget')
+    } finally { await m.unmount() }
+  })
+
+  it('never exposes arbitrary upstream error text in the feed error', async () => {
+    const m = await mount({
+      fetchRivalAccounts: async () => ({ ok: false, body: { error: 'upstream request contained secret=fixture-secret' } }),
+      fetchRivalFeed: async () => okFeed(),
+    })
+    try {
+      assert.equal(m.feed.error, 'rivalAccounts.error.failed')
+    } finally { await m.unmount() }
   })
 })

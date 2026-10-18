@@ -57,6 +57,9 @@ export function createOfficialClient(deps) {
       if (classification.kind === 'quota-exceeded') {
         throw new OmnimuxError('quota-exceeded', classification.message, { status: response.status, details: classification })
       }
+      if (classification.kind === 'channel-unavailable') {
+        throw new OmnimuxError(classification.code, classification.message, { status: response.status, retryable: classification.retryable })
+      }
       const message = pickErrorMessage(json) || `official request failed (HTTP ${response.status})`
       throw new OmnimuxError('omnimux-request-failed', message, { status: response.status })
     }
