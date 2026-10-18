@@ -7,6 +7,7 @@ import { createLocalStore } from './local-store.js'
 import { createLocalInspirationDispatcher } from './http-routes.js'
 import { analysisInputFingerprint, sourceFingerprint } from './analysis-input.js'
 import { analyzeInspirationVideo } from './analyzer.js'
+import { handleGetItem } from './http-handlers.js'
 
 const dirs = []
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }) })
@@ -84,10 +85,25 @@ describe('scoped post analysis', () => {
     const w = world(async () => { await gate; return { mode: 'live', text: '真实分析' } })
     const body = w.send('analyze', { scope: 'body' }); const media = w.send('analyze', { scope: 'media', media_index: 1 })
     assert.equal(w.store.get(w.row.id).analysis_results.body.status, 'running')
+    assert.equal(handleGetItem({ id: w.row.id, store: w.store }).body.data.analysis_results.body.status, 'running', 'a live executor must survive status reads')
     assert.equal((await w.send('analyze', { scope: 'body' })).status, 409)
     release(); await Promise.all([body, media])
     const results = w.store.get(w.row.id).analysis_results
     assert.equal(results.body.status, 'done'); assert.equal(results['media:1'].status, 'done')
+  })
+  it('recovers interrupted persisted scopes on read while preserving completed results', async () => {
+    const w = world()
+    await w.send('analyze', { scope: 'body' })
+    const completed = w.store.get(w.row.id).analysis_results.body
+    w.store.updateAnalysis(w.row.id, 'post', { scope: 'post', status: 'running', result: null })
+    w.store.updateAnalysis(w.row.id, 'media:1', { scope: 'media', media_index: 1, status: 'running', result: null })
+    const row = handleGetItem({ id: w.row.id, store: w.store }).body.data
+    assert.equal(row.analysis_results.post.status, 'failed')
+    assert.match(row.analysis_results.post.error, /已中断/)
+    assert.equal(row.analysis_results['media:1'].status, 'failed')
+    assert.deepEqual(row.analysis_results.body, completed)
+    assert.equal(createLocalStore({ paths: w.paths }).get(w.row.id).analysis_results.post.status, 'failed')
+    assert.equal((await w.send('analyze', { scope: 'body' })).status, 200)
   })
   it('records errors, empty and non-live results without fabricated success', async () => {
     for (const execute of [async () => { throw new Error('provider unavailable') }, async () => ({ mode: 'live', text: '' }), async () => ({ mode: 'mock', text: 'template' })]) {

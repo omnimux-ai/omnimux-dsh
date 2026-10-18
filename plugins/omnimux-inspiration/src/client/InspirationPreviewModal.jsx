@@ -134,12 +134,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
 
   useEffect(() => {
     setItem(row)
-    if (!row?.id || !row?.is_local) return
-    let current = true
-    getLocalInspiration(row.id).then(response => {
-      if (current && response.ok && response.body?.data) setItem(response.body.data)
-    }).catch(() => {})
-    return () => { current = false }
   }, [row])
   const data = useMemo(() => getInspirationPreviewData(item), [item])
   const shareUrl = shareUrlOf(item)
