@@ -47,8 +47,8 @@ function AnalysisResult({ result, t, onSeek }) {
   </>
 }
 
-function ReferenceButton({ selected, onClick, t }) {
-  return <Button size="sm" variant={selected ? 'secondary' : 'ghost'} aria-pressed={selected} onClick={onClick} leadingIcon={selected ? <Check size={14} /> : <Plus size={14} />}>{t(selected ? 'post.selected' : 'post.selectReference')}</Button>
+function ReferenceButton({ selected, onClick, t, disabled }) {
+  return <Button size="sm" disabled={disabled} variant={selected ? 'secondary' : 'ghost'} aria-pressed={selected} onClick={onClick} leadingIcon={selected ? <Check size={14} /> : <Plus size={14} />}>{t(selected ? 'post.selected' : 'post.selectReference')}</Button>
 }
 
 /** A post remains mounted while analysis, reference selection and drawers change. */
@@ -82,6 +82,7 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   const [drawer, setDrawer] = useState(false)
   const [draft, setDraft] = useState(() => reconcileCreationDraft(item, item.creation_draft || createEmptyCreationDraft(item)))
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
   const [draftError, setDraftError] = useState('')
   const [saved, setSaved] = useState(false)
   const id = String(item.id)
@@ -126,8 +127,9 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
     return () => window.removeEventListener('keydown', cancel, true)
   }, [image, drawer])
   const container = () => root.current?.closest('dialog') || root.current?.closest('.omnimux-inspiration-modal-container') || root.current
-  const changeDraft = (next) => { setDraft(current => reconcileCreationDraft(item, current, next)); setSaved(false); setDraftError('') }
+  const changeDraft = (next) => { if (savingRef.current) return; setDraft(current => reconcileCreationDraft(item, current, next)); setSaved(false); setDraftError('') }
   const toggleReference = (reference) => {
+    if (savingRef.current) return
     const exists = hasReference(reference)
     const next = exists ? selected.filter(entry => refKey(entry) !== refKey(reference)) : [...selected, reference]
     const clips = (draft.clips || []).filter(clip => next.some(entry => entry.kind === 'media' && entry.media_index === clip.media_index))
@@ -214,12 +216,13 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   }, [item])
   const clipError = (draft.clips || []).some(clip => clip.start_seconds === '' || clip.end_seconds === '' || !Number.isFinite(Number(clip.start_seconds)) || !Number.isFinite(Number(clip.end_seconds)) || Number(clip.start_seconds) < 0 || Number(clip.end_seconds) <= Number(clip.start_seconds) || (dimensions[clip.media_index]?.duration && Number(clip.end_seconds) > dimensions[clip.media_index].duration))
   const save = async (prepare = false) => {
-    if (saving || !selected.length) return
+    if (savingRef.current || !selected.length) return
     if (clipError) { setDraftError(copy('clipInvalid')); return }
     if (manualStale) { setDraftError(copy('manualChanged')); return }
     const validation = validateCreationDraft(item, draft)
     if (!validation.ok) { setDraftError(validation.error); return }
     const identity = postIdentity
+    savingRef.current = true
     setSaving(true); setDraftError('')
     try {
       const local = await ensureCurrent()
@@ -242,7 +245,7 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
         onClose?.()
       }
     } catch (error) { if (requestIdentity.current === identity) setDraftError(error.message || copy('saveFailed')) }
-    finally { if (requestIdentity.current === identity) setSaving(false) }
+    finally { savingRef.current = false; if (requestIdentity.current === identity) setSaving(false) }
   }
 
   return <div ref={root} className="omnimux-post-detail">
@@ -256,7 +259,7 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
             {displayedBody.length > 420 && <Button variant="ghost" size="sm" onClick={() => setExpanded(value => !value)}>{copy(expanded ? 'collapse' : 'expand')}</Button>}
             <Button variant="ghost" size="sm" loading={translating} onClick={translate}>{copy(translated ? 'showOriginal' : 'translateBody')}</Button>
             <CopyButton text={body} label={copy('copyOriginal')} size="sm" variant="ghost" />
-            <ReferenceButton selected={hasReference({ kind: 'body' })} onClick={() => toggleReference({ kind: 'body' })} t={t} />
+            <ReferenceButton disabled={saving} selected={hasReference({ kind: 'body' })} onClick={() => toggleReference({ kind: 'body' })} t={t} />
           </div>{translationError && <p role="alert" className="omnimux-inspiration-error-text">{translationError}</p>}
         </article>}
         {notice}
@@ -269,7 +272,7 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
           </div>
           {failedImages[asset.id] && <p role="alert" className="omnimux-inspiration-error-text">{copy('imageUnavailable')}</p>}
           {failedMedia[asset.id] && <p className="omnimux-inspiration-player-notice" role="alert">{t('modal.video.unplayable')}</p>}
-          <div className="omnimux-post-asset-footer"><div><strong>{asset.label}</strong><p>{dimensions[asset.index]?.width > 0 && `${dimensions[asset.index].width} × ${dimensions[asset.index].height}`}{asset.type === 'video' && dimensions[asset.index]?.duration > 0 && ` · ${Math.round(dimensions[asset.index].duration)} ${copy('seconds')}`}</p></div><div className="omnimux-post-actions"><Button variant="ghost" size="sm" leadingIcon={<Sparkles size={14} />} onClick={() => chooseTarget({ scope: 'media', media_index: asset.index })}>{copy(asset.type === 'video' ? 'analyzeVideo' : 'analyzeImage')}</Button><ReferenceButton selected={hasReference({ kind: 'media', media_index: asset.index })} onClick={() => toggleReference({ kind: 'media', media_index: asset.index })} t={t} /></div></div>
+          <div className="omnimux-post-asset-footer"><div><strong>{asset.label}</strong><p>{dimensions[asset.index]?.width > 0 && `${dimensions[asset.index].width} × ${dimensions[asset.index].height}`}{asset.type === 'video' && dimensions[asset.index]?.duration > 0 && ` · ${Math.round(dimensions[asset.index].duration)} ${copy('seconds')}`}</p></div><div className="omnimux-post-actions"><Button variant="ghost" size="sm" leadingIcon={<Sparkles size={14} />} onClick={() => chooseTarget({ scope: 'media', media_index: asset.index })}>{copy(asset.type === 'video' ? 'analyzeVideo' : 'analyzeImage')}</Button><ReferenceButton disabled={saving} selected={hasReference({ kind: 'media', media_index: asset.index })} onClick={() => toggleReference({ kind: 'media', media_index: asset.index })} t={t} /></div></div>
         </article>)}
         {!media.length && resolveTikTokEmbedUrl(item.source_url) && <iframe className="omnimux-post-embed" src={resolveTikTokEmbedUrl(item.source_url)} title={preview.title} allowFullScreen />}
         {!media.length && !body && pickCoverSrc(item) && <img className="omnimux-post-orphan-cover" src={pickCoverSrc(item)} alt={copy('videoCover')} />}
@@ -294,24 +297,24 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
           {selectedResult && <div className="omnimux-post-result" data-analysis-scope={key}>
             <div className="omnimux-post-section-heading omnimux-inspiration-deconstruct-heading"><span className="omnimux-post-meta">{historicalResult ? copy('historical') : [copy('modelResult'), record?.model].filter(Boolean).join(' · ')}</span><CopyButton text={deconstructionCopyText(getInspirationPreviewData({ analysis: selectedResult })) || selectedResult.summary || ''} label={t('modal.deconstruction.copy')} size="sm" variant="ghost" /></div>
             <AnalysisResult result={selectedResult} t={t} onSeek={seconds => seek(seconds)} />
-            {record?.status === 'done' && record?.source === 'live' && <ReferenceButton t={t} selected={hasReference({ kind: 'analysis', ...target })} onClick={() => toggleReference({ kind: 'analysis', ...target, input_fingerprint: record.input_fingerprint, result_snapshot: record.result })} />}
+            {record?.status === 'done' && record?.source === 'live' && <ReferenceButton disabled={saving} t={t} selected={hasReference({ kind: 'analysis', ...target })} onClick={() => toggleReference({ kind: 'analysis', ...target, input_fingerprint: record.input_fingerprint, result_snapshot: record.result })} />}
           </div>}
           {!record && <p className="omnimux-post-analysis-empty">{copy('noAnalysis')}</p>}
         </div>
       </section>
     </main>
     <footer className="omnimux-inspiration-modal-footer omnimux-post-reference-bar"><div><strong>{selected.length ? `${copy('selectedReferences')} ${selected.length}` : copy('chooseHint')}</strong><div className="omnimux-post-reference-chips">{selected.map(ref => <span key={refKey(ref)}>{labelFor(ref)}</span>)}</div></div><Button className="omnimux-inspiration-modal-replicate" variant="primary" leadingIcon={<ArrowRight size={15} />} disabled={!selected.length} onClick={() => setDrawer(true)}>{copy('create')}</Button></footer>
-    <Drawer open={Boolean(image)} onClose={() => setImage(null)} title={<div className="omnimux-post-drawer-heading"><span>{image?.label || copy('image')}</span><IconButton variant="ghost" aria-label={t('close')} onClick={() => setImage(null)}><X size={16} /></IconButton></div>} closable={false} className="omnimux-post-lightbox" width="100%" container={container} closeOnEsc={false} footer={image && <ReferenceButton selected={hasReference({ kind: 'media', media_index: image.index })} onClick={() => toggleReference({ kind: 'media', media_index: image.index })} t={t} />}>
+    <Drawer open={Boolean(image)} onClose={() => setImage(null)} title={<div className="omnimux-post-drawer-heading"><span>{image?.label || copy('image')}</span><IconButton variant="ghost" aria-label={t('close')} onClick={() => setImage(null)}><X size={16} /></IconButton></div>} closable={false} className="omnimux-post-lightbox" width="100%" container={container} closeOnEsc={false} footer={image && <ReferenceButton disabled={saving} selected={hasReference({ kind: 'media', media_index: image.index })} onClick={() => toggleReference({ kind: 'media', media_index: image.index })} t={t} />}>
       {image && <><div className="omnimux-post-lightbox-tools"><IconButton variant="ghost" aria-label={copy('zoomOut')} onClick={() => setZoom(value => Math.max(1, value - .5))}><Minus size={16} /></IconButton><Button size="sm" variant="ghost" leadingIcon={<RotateCcw size={14} />} onClick={() => setZoom(1)}>{zoom === 1 ? copy('fit') : `${Math.round(zoom * 100)}%`}</Button><IconButton variant="ghost" aria-label={copy('zoomIn')} onClick={() => setZoom(value => Math.min(4, value + .5))}><Plus size={16} /></IconButton><a href={image.url} target="_blank" rel="noopener noreferrer">{copy('openOriginal')}</a></div><div className={`omnimux-post-lightbox-canvas ${zoom > 1 ? 'is-zoomed' : ''}`}><img src={image.url} alt={image.title || image.label} style={zoom > 1 ? { width: `${(dimensions[image.index]?.width || 600) * zoom}px`, maxWidth: 'none', maxHeight: 'none' } : undefined} /></div></>}
     </Drawer>
     <Drawer open={drawer} onClose={() => setDrawer(false)} title={<div className="omnimux-post-drawer-heading"><span>{copy('creationTitle')}</span><IconButton variant="ghost" aria-label={t('close')} onClick={() => setDrawer(false)}><X size={16} /></IconButton></div>} closable={false} description={copy('creationHint')} width={460} container={container} closeOnEsc={false} className="omnimux-post-creation-drawer" footer={<div className="omnimux-post-draft-actions"><Button variant="secondary" loading={saving} disabled={!selected.length} onClick={() => save(false)}>{copy('saveDraft')}</Button><Button variant="primary" loading={saving || replicateBusy} disabled={!selected.length || !onReplicate || manualStale || clipError} onClick={() => save(true)}>{copy('useInChat')}</Button></div>}>
       <div className="omnimux-post-draft-content">
-        <section><h4>{copy('reference')}</h4>{selected.map(ref => <div className="omnimux-post-draft-reference" key={refKey(ref)}><span>{ref.kind === 'media' ? <Film size={15} /> : <FileText size={15} />}{labelFor(ref)}</span><Button size="sm" variant="ghost" onClick={() => toggleReference(ref)}>{copy('remove')}</Button></div>)}</section>
-        {(draft.clips || []).map(clip => <fieldset className="omnimux-post-clip" key={clip.media_index}><legend>{labelFor({ kind: 'media', media_index: clip.media_index })} · {copy('clip')}</legend><p>{copy('clipHint')}</p><div>{['start_seconds', 'end_seconds'].map(field => <InputField key={field} label={copy(field === 'start_seconds' ? 'start' : 'end')} type="number" min="0" step="0.1" value={clip[field]} onChange={event => changeDraft({ clips: draft.clips.map(value => value.media_index === clip.media_index ? { ...value, [field]: event.target.value } : value) })} />)}<Button size="sm" variant="ghost" disabled={clipError} onClick={() => previewClip(clip)}>{copy('previewClip')}</Button></div></fieldset>)}
-        <section><h4>{copy('purpose')}</h4><div className="omnimux-post-purpose">{['idea', 'story', 'script', 'motion', 'visual', 'scene'].map(value => <Button key={value} size="sm" variant={draft.purpose === value ? 'secondary' : 'ghost'} aria-pressed={draft.purpose === value} onClick={() => changeDraft({ purpose: value })}>{copy(`purpose.${value}`)}</Button>)}</div></section>
-        <label className="omnimux-post-draft-field">{copy('intent')}<textarea rows={3} value={draft.intent || ''} placeholder={copy('intentPlaceholder')} onChange={event => changeDraft({ intent: event.target.value })} /></label>
-        <label className="omnimux-post-draft-field">{copy('draftText')}<textarea rows={9} value={draft.text || ''} onChange={event => changeDraft({ text: event.target.value, manual: true, basis })} /></label>
-        {manualStale && <div className="omnimux-post-warning" role="status"><p>{copy('manualChanged')}</p><Button size="sm" variant="secondary" onClick={() => changeDraft({ manual: false })}>{copy('rebuildDraft')}</Button><Button size="sm" variant="ghost" onClick={() => { setDraft(current => confirmCreationDraftBasis(item, current)); setSaved(false) }}>{copy('keepDraft')}</Button></div>}
+        <section><h4>{copy('reference')}</h4>{selected.map(ref => <div className="omnimux-post-draft-reference" key={refKey(ref)}><span>{ref.kind === 'media' ? <Film size={15} /> : <FileText size={15} />}{labelFor(ref)}</span><Button size="sm" variant="ghost" disabled={saving} onClick={() => toggleReference(ref)}>{copy('remove')}</Button></div>)}</section>
+        {(draft.clips || []).map(clip => <fieldset className="omnimux-post-clip" key={clip.media_index}><legend>{labelFor({ kind: 'media', media_index: clip.media_index })} · {copy('clip')}</legend><p>{copy('clipHint')}</p><div>{['start_seconds', 'end_seconds'].map(field => <InputField key={field} label={copy(field === 'start_seconds' ? 'start' : 'end')} disabled={saving} type="number" min="0" step="0.1" value={clip[field]} onChange={event => changeDraft({ clips: draft.clips.map(value => value.media_index === clip.media_index ? { ...value, [field]: event.target.value } : value) })} />)}<Button size="sm" variant="ghost" disabled={clipError} onClick={() => previewClip(clip)}>{copy('previewClip')}</Button></div></fieldset>)}
+        <section><h4>{copy('purpose')}</h4><div className="omnimux-post-purpose">{['idea', 'story', 'script', 'motion', 'visual', 'scene'].map(value => <Button key={value} size="sm" variant={draft.purpose === value ? 'secondary' : 'ghost'} aria-pressed={draft.purpose === value} disabled={saving} onClick={() => changeDraft({ purpose: value })}>{copy(`purpose.${value}`)}</Button>)}</div></section>
+        <label className="omnimux-post-draft-field">{copy('intent')}<textarea disabled={saving} rows={3} value={draft.intent || ''} placeholder={copy('intentPlaceholder')} onChange={event => changeDraft({ intent: event.target.value })} /></label>
+        <label className="omnimux-post-draft-field">{copy('draftText')}<textarea disabled={saving} rows={9} value={draft.text || ''} onChange={event => changeDraft({ text: event.target.value, manual: true, basis })} /></label>
+        {manualStale && <div className="omnimux-post-warning" role="status"><p>{copy('manualChanged')}</p><Button size="sm" variant="secondary" disabled={saving} onClick={() => changeDraft({ manual: false })}>{copy('rebuildDraft')}</Button><Button size="sm" variant="ghost" disabled={saving} onClick={() => { if (savingRef.current) return; setDraft(current => confirmCreationDraftBasis(item, current)); setSaved(false) }}>{copy('keepDraft')}</Button></div>}
         {draftError && <p role="alert" className="omnimux-inspiration-error-text">{draftError}</p>}{saved && <p role="status">{copy('saved')}</p>}
         <p className="omnimux-post-help">{copy('noAutoSend')}</p>
       </div>

@@ -1442,11 +1442,11 @@ export const INSPIRATION_CSS = `
 /* Original post and scoped analysis share one reading surface. */
 .omnimux-inspiration-modal-backdrop { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--dsw-alias-bg-mask-1); overscroll-behavior: contain; }
 .omnimux-inspiration-modal-wrapper { position: relative; width: min(1200px, 100%); height: min(88vh, 900px); display: flex; }
-.omnimux-inspiration-modal-container { position: relative; display: flex; flex-direction: column; width: 100%; min-height: 0; border-radius: 16px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-elevated); color: var(--dsw-alias-label-primary); overflow: hidden; isolation: isolate; }
+.omnimux-inspiration-modal-container { position: relative; display: flex; flex-direction: column; width: 100%; min-height: 0; border-radius: 16px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); overflow: hidden; isolation: isolate; }
 .omnimux-inspiration-modal-close { position: absolute; top: 14px; right: 16px; z-index: 5; width: 32px; height: 32px; padding: 0; }
 .omnimux-inspiration-modal-header { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; padding: 20px 60px 20px 28px; min-height: 72px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
 .omnimux-inspiration-modal-heading { display: flex; align-items: center; min-width: 0; flex: 1; gap: 8px; }
-.omnimux-inspiration-modal-heading h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+.omnimux-inspiration-modal-heading h2 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 .omnimux-inspiration-modal-header-actions { display: flex; align-items: center; position: relative; flex-shrink: 0; }
 .omnimux-inspiration-modal-copy { flex-shrink: 0; }
 .omnimux-post-detail { display: flex; flex-direction: column; flex: 1; min-height: 0; }
@@ -1458,7 +1458,7 @@ export const INSPIRATION_CSS = `
 .omnimux-post-analysis-scroll { overflow-y: auto; padding: 24px 26px; min-height: 0; flex: 1; overscroll-behavior: contain; }
 .omnimux-post-source, .omnimux-post-analysis-scroll { scrollbar-width: thin; scrollbar-color: var(--dsw-alias-border-l2) transparent; }
 .omnimux-post-author { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; font-size: 14px; }
-.omnimux-post-avatar { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: 50%; background: var(--dsw-alias-bg-layer-2); font-size: 17px; }
+.omnimux-post-avatar { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: 50%; background: var(--dsw-alias-bg-layer-2); font-size: 16px; }
 .omnimux-post-meta { display: flex; gap: 8px; flex-wrap: wrap; color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 1.7; }
 .omnimux-post-source-link { display: inline-flex; margin-left: auto; color: var(--dsw-alias-label-secondary); padding: 8px; }
 .omnimux-post-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.9; color: var(--dsw-alias-label-primary); }
@@ -1471,7 +1471,7 @@ export const INSPIRATION_CSS = `
 .omnimux-post-orphan-cover { max-width: 100%; max-height: 400px; object-fit: contain; }
 .omnimux-post-media-viewer .omnimux-post-image-open { width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; }
 .omnimux-post-image-open > span { display: contents; }
-.omnimux-post-image-caption { position: absolute; right: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; background: var(--dsw-alias-bg-elevated); color: var(--dsw-alias-label-primary); font-size: 12px; }
+.omnimux-post-image-caption { position: absolute; right: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); font-size: 12px; }
 .omnimux-post-asset-footer { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 14px 0 4px; font-size: 13px; }
 .omnimux-post-asset-footer p { margin: 4px 0 0; font-size: 11px; color: var(--dsw-alias-label-secondary); }
 .omnimux-post-analysis-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 22px 26px 14px; }
@@ -1489,7 +1489,7 @@ export const INSPIRATION_CSS = `
 .omnimux-post-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .omnimux-post-section-heading h3 { font-size: 14px; }
 .omnimux-post-analysis-empty { margin: 24px 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 1.8; }
-.omnimux-post-reference-bar { display: flex; gap: 16px; justify-content: space-between; align-items: center; flex-shrink: 0; min-height: 68px; padding: 14px 28px; border-top: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-elevated); font-size: 12px; }
+.omnimux-post-reference-bar { display: flex; gap: 16px; justify-content: space-between; align-items: center; flex-shrink: 0; min-height: 68px; padding: 14px 28px; border-top: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: 12px; }
 .omnimux-post-reference-bar > div { min-width: 0; }
 .omnimux-post-reference-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; color: var(--dsw-alias-label-secondary); }
 .omnimux-post-reference-chips span { border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 2px 6px; font-size: 11px; }

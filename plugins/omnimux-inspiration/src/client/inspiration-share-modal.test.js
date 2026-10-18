@@ -448,3 +448,37 @@ it('translates only the original body and keeps model analysis separate', async 
   await click([...document.querySelectorAll('.omnimux-post-original button')].find(node => node.textContent === zh['post.showOriginal']))
   assert.equal(document.querySelector('.omnimux-post-body').textContent, item.content)
 })
+
+it('locks every draft and external reference control until a pending save finishes', async () => {
+  const { reconcileCreationDraft } = await import('../creation-draft.js')
+  const item = { id: 'pending-draft', title: '待保存参考', content: '原帖正文', is_local: true, media_items: [{ type: 'video', url: 'https://video.twimg.com/clip.mp4', duration: 20 }, { type: 'image', url: 'https://pbs.twimg.com/media/one.jpg' }] }
+  item.creation_draft = reconcileCreationDraft(item, { references: [{ kind: 'body' }, { kind: 'media', media_index: 0 }], purpose: 'idea', intent: '保留此要求', text: '', clips: [{ media_index: 0, start_seconds: 1, end_seconds: 5 }], manual: false })
+  const { document, window } = await mountRerenderable(item)
+  let release
+  const pending = new Promise(resolve => { release = resolve })
+  const writes = []
+  globalThis.fetch = async (_url, init) => {
+    if (init.method === 'GET') return { ok: true, status: 200, json: async () => ({ data: item }) }
+    const payload = JSON.parse(init.body)
+    writes.push(payload)
+    await pending
+    return { ok: true, status: 200, json: async () => ({ data: { ...item, creation_draft: payload.draft } }) }
+  }
+  const click = async node => React.act(async () => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+  await click(document.querySelector('.omnimux-post-reference-bar button'))
+  const drawer = document.querySelector('.omnimux-post-creation-drawer')
+  await click([...drawer.querySelectorAll('button')].find(node => node.textContent === zh['post.saveDraft']))
+  assert.equal(writes.length, 1)
+  assert.ok([...drawer.querySelectorAll('textarea, input, .omnimux-post-purpose button, .omnimux-post-draft-reference button')].every(node => node.disabled), 'prose, purpose, clip times and reference removal must all be locked')
+  const externalReferences = [...document.querySelectorAll('.omnimux-post-original [aria-pressed], .omnimux-post-media [aria-pressed]')]
+  assert.ok(externalReferences.length >= 3)
+  assert.ok(externalReferences.every(node => node.disabled), 'reference controls on the original post must also be locked')
+  const originalText = drawer.querySelectorAll('textarea')[1].value
+  await click(drawer.querySelectorAll('.omnimux-post-purpose button')[1])
+  await click(externalReferences[0])
+  assert.equal(drawer.querySelectorAll('.omnimux-post-draft-reference').length, 2)
+  assert.equal(drawer.querySelectorAll('textarea')[1].value, originalText)
+  await React.act(async () => { release(); await pending })
+  assert.equal(drawer.querySelectorAll('textarea')[1].value, originalText)
+  assert.ok([...drawer.querySelectorAll('textarea, input')].every(node => !node.disabled), 'editing resumes after the saved reply')
+})
