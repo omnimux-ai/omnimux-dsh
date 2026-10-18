@@ -253,7 +253,15 @@ export function InspirationSection({ t, active }) {
         t,
         onError: failure => console.error('[omnimux-inspiration] collection to session failed', failure),
       })
-      if (!result?.ok) showToast(t(result?.errorKey || 'collection.sessionFailed'))
+      // 成功时输入框里出现原生附件卡就是回执，不再叠加 toast；只有
+      // 「该合集已在附件中」需要解释为什么没有第二张卡。
+      if (result?.duplicate) showToast(t('collection.attachmentExists'))
+      else if (!result?.ok) {
+        // 官方 composer 的拒绝原因（提交中/相册上限等）已是宿主本地化文案，
+        // 比通用失败文案更能解释「为什么这次没挂上」。
+        const detail = typeof result?.detail === 'string' ? result.detail.trim() : ''
+        showToast(detail || t(result?.errorKey || 'collection.sessionFailed'))
+      }
     } catch (failure) {
       // The module answers recoverable failures with error keys. Only an
       // unexpected fault lands here: keep its detail out of the UI, but do not

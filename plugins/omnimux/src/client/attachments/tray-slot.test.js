@@ -44,6 +44,9 @@ describe('composer inner attachment slot', () => {
     assert.match(traySource, /uploads=\{nativeUploads\}/)
     assert.match(traySource, /onRetryFile=\{nativeOnRetry\}/)
     assert.match(traySource, /data-omnimux-attachments-dock="true"/)
+    // 合集模块等跨模块调用方拿到的是同一份官方原生附件入口，含可接受态。
+    assert.match(traySource, /useNativeFilesBridge\(/)
+    assert.match(traySource, /canAcceptDrop,\s*\n\s*onAddFiles: nativeOnAddFiles/)
   })
 
   it('does not pull the inner tray back outside when the composer docks', () => {

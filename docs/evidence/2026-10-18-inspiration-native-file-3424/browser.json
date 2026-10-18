@@ -1,0 +1,187 @@
+{
+  "kind": "browser-evidence-for-issue-3424",
+  "issue": 3424,
+  "title": "合集「加入会话」改为官方原生 Markdown 文件附件",
+  "runId": "20261018T141611-3iyzg",
+  "createdAt": "2026-10-18T14:16:11.591Z",
+  "scope": "real-section-and-production-local-handlers + synthetic-workbench-ensure + synthetic-native-files-bridge-stub; not-full-host-install",
+  "finalHead": "fa1bed40ab6affe76c21835d73e2d027f6cb84f3",
+  "identity": {
+    "sourceSha256": "2a10809f72c0b703b5e8fec31af1b9462f10527627dee21f7f04545a7ff320b5",
+    "bundleSha256": "3e06a603189102a27809705953eb004d794cda639e924a919c4f870e12504a12",
+    "head": "fa1bed40ab6affe76c21835d73e2d027f6cb84f3"
+  },
+  "origin": "http://127.0.0.1:55548",
+  "chrome": {
+    "kind": "independent-headless-chromium",
+    "pid": 66341,
+    "port": 55575
+  },
+  "collection": {
+    "id": "collection_c1587ecb-ebbe-4376-bcac-a9e48912bd81",
+    "title": "测试合集",
+    "item_ids": [
+      "qa-dance1",
+      "qa-dance2",
+      "qa-fashion1"
+    ]
+  },
+  "seamModel": {
+    "description": "The synthetic `__omnimuxComposerFiles[sessionId]` stub implements the async bridge contract: `async add(files)` records each File name/type/size, reads `file.text()`, mounts a synthetic native file card and updates `list()` synchronously on success before resolving `{ok:true}` (or resolves `{ok:false,message}` in the busy probe); the module awaits the Promise. The real tray has a VOID official `onAddFiles(files): void` intake; it shows its own toast for a rejected batch and returns nothing, so the hub bridge confirms success by observing the official attachments list (bounded 1500ms) and keeps an unconfirmed name in list() for a 3s TTL after a timeout so an immediate retry deduplicates instead of uploading twice. That confirmation/TTL logic, the tray registration and the silent-failure fallback are covered by the 16 hub bridge/hook tests, not by this fixture; the stub does not simulate the TTL.",
+    "noPrefillSeam": "window.__omnimuxSessionPrefill is not installed; the module no longer writes the draft or calls the prefill seam."
+  },
+  "mainScenario": {
+    "precondition": {
+      "conversation": "collapsed",
+      "composer": "我的问题：先看舞蹈参考",
+      "attachments": 1
+    },
+    "result": {
+      "conversation": "open",
+      "ensureCalls": [
+        [
+          "ensure",
+          []
+        ],
+        [
+          "ensure",
+          []
+        ],
+        [
+          "ensure",
+          []
+        ]
+      ],
+      "collapseCalls": [],
+      "focusCalls": [],
+      "addCalls": 1,
+      "fileNames": [
+        "测试合集 · 灵感库合集.md"
+      ],
+      "fileName": "测试合集 · 灵感库合集.md",
+      "fileType": "text/markdown",
+      "fileSize": 542,
+      "contentSummary": {
+        "length": 299,
+        "heading": "# 灵感库合集：测试合集",
+        "hasCollectionId": true,
+        "memberIds": [
+          "qa-dance1",
+          "qa-dance2",
+          "qa-fashion1"
+        ],
+        "hasInspirationGet": true,
+        "hasQuestionLine": false
+      },
+      "composerAfter": "我的问题：先看舞蹈参考",
+      "revealAttachments": 1,
+      "nativeCard": {
+        "visible": true,
+        "text": "MD测试合集 · 灵感库合集.md"
+      },
+      "toastCount": 0,
+      "sends": 0,
+      "hasPrefillSeam": false
+    }
+  },
+  "duplicateScenario": {
+    "addCallsAfterSecondClick": 1,
+    "composer": "我的问题：先看舞蹈参考",
+    "conversation": "open",
+    "toastText": "该合集附件已在输入框中"
+  },
+  "addFailureScenario": {
+    "injectedAddMessage": "正在提交，暂时不能添加附件",
+    "actualToastText": "正在提交，暂时不能添加附件",
+    "addCalls": 2,
+    "composer": "我的问题：先看舞蹈参考",
+    "nativeCardVisible": false,
+    "detailSurfaced": "This is a synthetic probe: the stub injects an official rejection message so the view layer's detail-first branch can be asserted (toast equals the injected message). The real hub bridge's silent confirmation failure returns an empty message, so the real fallback toast is collection.attachmentFailed (合集附件添加失败，请重试); an official toast shown by the host intake is owned by the host."
+  },
+  "bridgeMissingScenario": {
+    "bridgePresentBefore": false,
+    "toastText": "当前无法挂载文件附件，请稍后重试",
+    "composer": "我的问题：先看舞蹈参考",
+    "addCallsUnchanged": 2,
+    "conversation": "open"
+  },
+  "assertions": [
+    {
+      "name": "click opens the collapsed conversation through 3 no-arg ensure calls, without the collapse/focus fallback",
+      "pass": true
+    },
+    {
+      "name": "exactly one native Markdown file is handed to the official composer intake",
+      "pass": true
+    },
+    {
+      "name": "Markdown content carries the collection facts, member ids and inspiration_get instruction, without a question line",
+      "pass": true
+    },
+    {
+      "name": "the composer draft is untouched, no send/prefill happens, the reveal-attachments bridge is used and no toast appears",
+      "pass": true
+    },
+    {
+      "name": "second click on the same collection is deduplicated by list() and explains why with the attachment-exists toast",
+      "pass": true
+    },
+    {
+      "name": "add() failure surfaces the official localized rejection message and creates no attachment card",
+      "pass": true
+    },
+    {
+      "name": "missing native bridge falls back to the unavailable toast after the bounded wait, without touching the draft",
+      "pass": true
+    },
+    {
+      "name": "no browser request escaped the fixture origin; no console exceptions",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "native-file-attached.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 186340,
+      "sha256": "6a646998cf4692cd21aa919588f350e446a21b218c9fcb6d456942cd059e9e9c"
+    }
+  ],
+  "consoleErrors": [],
+  "network": {
+    "events": 16,
+    "external": []
+  },
+  "counters": {
+    "syntheticCloud": 1,
+    "blockedCapabilities": 0,
+    "blockedExternalFetch": 0,
+    "injectedReadFailures": 0
+  },
+  "cleanup": {
+    "browser": {
+      "chromeExited": true,
+      "profileRemoved": true
+    },
+    "fixture": {
+      "serverClosed": true,
+      "storeRemoved": true,
+      "environmentRestored": true
+    }
+  },
+  "pass": true,
+  "boundaries": [
+    "Synthetic native-files bridge + workbench ensure stub + composer/card DOM; this is not a full Host install. The real AttachmentTray registration and delegation to the official onAddFiles/upload lifecycle are covered by hub bridge/mount tests; official upload and Dev visual acceptance are human-owned.",
+    "Real: product InspirationSection bundle, production local handlers/store, real loopback HTTP, real File generation in the page and real DOM writes in headless Chrome.",
+    "The Markdown document lists all three fixture members (qa-dance1/qa-dance2/qa-fashion1); the task text mentioned two member ids as examples, the assertion covers every member in the fixture collection.",
+    "No Dev app (port 45120), no user profile, no external network; dynamic loopback ports only; Chrome/server/temp store cleaned up."
+  ],
+  "supplementalIdentity": {
+    "note": "The untracked hub bridge files are outside the fixture sourceSha256 (which hashes the inspiration-side bundle/fixture); their exact hashes are recorded here so the final hardened bridge revision is identifiable.",
+    "nativeFilesBridge": "cbbf85c46d3503a6d48a416087225daf742ce69e36958b2c438988b457ad0fc6",
+    "useNativeFilesBridge": "6fa438ca203634f02921f6d96892aa3a26d35eac707b022e0b342e77b0d70439",
+    "nativeFilesBridgeTest": "21d63a7da0c57ef87ad38f0e00db6a78e4ca8d21ce3facf35f999803f972d11c",
+    "useNativeFilesBridgeTest": "fc739f74737a1680339f659f3e8dee0c950cb46be7059b5fbfcb261bbfd95898"
+  }
+}
