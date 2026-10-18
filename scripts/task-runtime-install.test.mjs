@@ -96,6 +96,12 @@ test('unsupported dependency redirects cannot be converted into admitted private
   assert.throws(f.run, { code: 'TEST_ENV_INSTALL_DEPENDENCY_SPEC_UNSUPPORTED' });
 });
 
+test('a file dependency must point to the exact admitted candidate package directory', t => {
+  const f = fixture(t); f.pkg('dsh-ui-kit'); f.pkg('omnimux', { dependencies: { 'dsh-ui-kit': 'file:../different-kit' } });
+  fs.mkdirSync(join(f.preparation.stageRoot, 'plugins/different-kit'));
+  assert.throws(f.run, { code: 'TEST_ENV_INSTALL_DEPENDENCY_SPEC_MISMATCH' });
+});
+
 test('peer RC matching is limited to explicitly declared prerelease bounds', () => {
   assert.equal(matchesTaskPeerVersion('0.1.5-rc.3', '>=0.1.0-rc.6'), true);
   assert.equal(matchesTaskPeerVersion('0.1.0-rc.5', '>=0.1.0-rc.6'), false);
