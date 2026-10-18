@@ -110,6 +110,13 @@ function installationIdentity(installation) {
   }
 }
 
+function installationBinding(installation, identity) {
+  return sha256(JSON.stringify({ identity, packages: installation.packages.map(pkg => ({
+    name: pkg.name, installedRoot: pkg.installedRoot, payload: pkg.payload,
+    serverEntry: pkg.serverEntry, clientBundle: pkg.clientBundle,
+  })) }))
+}
+
 function debuggerEvents(response, phase, afterSequence) {
   assert.ok(response && Number.isSafeInteger(response.cursor) && response.cursor >= 0 && Array.isArray(response.events)
     && !response.hasMore && !response.truncated, `Task CDP event capture is incomplete ${phase}`)
@@ -129,6 +136,7 @@ async function pageOrigin(send, origin, phase) {
 /** The event adapter must return bounded cursor pages in the live-proof format. */
 export async function captureTaskClientProof({ send, readEvents, origin, installation }) {
   const identity = installationIdentity(installation)
+  const binding = installationBinding(installation, identity)
   assert.equal(localOrigin(origin), identity.origin, 'Requested browser origin does not belong to this installation')
   assert.equal(typeof send, 'function', 'Task CDP send is required')
   assert.equal(typeof readEvents, 'function', 'Task CDP cursor reader is required')
@@ -166,7 +174,7 @@ export async function captureTaskClientProof({ send, readEvents, origin, install
     const proofBundles = await compareClientProofBundles(bundles, scripts, 'task renderer')
     await pageOrigin(send, identity.origin, 'after proof')
     // Check installed bytes again, including during an asynchronous browser read.
-    installationIdentity(installation)
+    assert.equal(installationBinding(installation, installationIdentity(installation)), binding, 'Task installation identity changed during client proof')
     for (const pkg of installation.packages.filter(pkg => pkg.clientBundle)) installedFile(installation, pkg, pkg.clientBundle, 'bytes')
     return { kind: 'task-client-loading', ...identity, scriptCount: scripts.length, bundles: proofBundles }
   } catch (error) { operationError = error; throw error }
@@ -231,6 +239,7 @@ async function inspectorConnection(inspectorUrl) {
 /** Observe already-loaded real files in the exact task child, without source logging. */
 export async function verifyTaskServerLoading({ inspectorUrl, pid, installation }) {
   const identity = installationIdentity(installation)
+  const binding = installationBinding(installation, identity)
   assert.equal(pid, identity.pid, 'Inspector PID does not belong to this installation')
   const entries = installation.packages.filter(pkg => pkg.serverEntry).map(pkg => ({ pkg, file: installedFile(installation, pkg, pkg.serverEntry) }))
   assert.ok(entries.length, 'Task installation has no server entries')
@@ -263,6 +272,7 @@ export async function verifyTaskServerLoading({ inspectorUrl, pid, installation 
       modules.push({ name: pkg.name, path: file.path, sha256: file.sha256, bytes: file.bytes,
         loadedScriptUrl: pathToFileURL(file.full).href, loadedScriptSha256: loadedHash, matchingScriptCount: unique.length })
     }
+    assert.equal(installationBinding(installation, installationIdentity(installation)), binding, 'Task installation identity changed during server proof')
     return { kind: 'task-server-loading', ...identity, modules }
   } catch (error) { operationError = error; throw error }
   finally {

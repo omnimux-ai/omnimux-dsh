@@ -171,6 +171,13 @@ test('client rechecks installed bundle after asynchronous reads', async () => {
   await assert.rejects(capture(installation, { duringSource: () => writeFileSync(file, 'changed') }), /changed/)
 })
 
+test('client rejects task identity and payload metadata changing during asynchronous reads', async () => {
+  for (const change of [installation => { installation.head = 'f'.repeat(40) }, installation => { installation.packages[0].payload.reverse() }]) {
+    const installation = fixture()
+    await assert.rejects(capture(installation, { duringSource: () => change(installation) }), /installation identity changed/)
+  }
+})
+
 async function ownedProcess(installation, body) {
   const runner = join(installation.privateRoot, 'runner.mjs')
   writeFileSync(runner, `${body}\nconsole.log('TASK_PROOF_READY'); setInterval(()=>{},1000);\n`)
