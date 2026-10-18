@@ -1440,9 +1440,9 @@ export const INSPIRATION_CSS = `
 }
 
 /* Original post and scoped analysis share one reading surface. */
-.omnimux-inspiration-modal-backdrop { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--dsw-alias-bg-mask-1); overscroll-behavior: contain; }
+.omnimux-inspiration-modal-backdrop { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--dsw-alias-bg-base); overscroll-behavior: contain; }
 .omnimux-inspiration-modal-wrapper { position: relative; width: min(1200px, 100%); height: min(88vh, 900px); display: flex; }
-.omnimux-inspiration-modal-container { position: relative; display: flex; flex-direction: column; width: 100%; min-height: 0; border-radius: 16px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); overflow: hidden; isolation: isolate; }
+.omnimux-inspiration-modal-container { position: relative; display: flex; flex-direction: column; width: 100%; min-height: 0; border-radius: 16px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-elevated, var(--dsw-alias-bg-base)); color: var(--dsw-alias-label-primary); overflow: hidden; isolation: isolate; }
 .omnimux-inspiration-modal-close { position: absolute; top: 14px; right: 16px; z-index: 5; width: 32px; height: 32px; padding: 0; }
 .omnimux-inspiration-modal-header { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; padding: 20px 60px 20px 28px; min-height: 72px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
 .omnimux-inspiration-modal-heading { display: flex; align-items: center; min-width: 0; flex: 1; gap: 8px; }
