@@ -64,7 +64,7 @@ test('missing seam, failed/oversize output and cancellation clean output and nev
   }
 })
 
-test('scope pipeline calls model only with prepared input and cleans on model success/failure/cancel', async () => {
+test('scope pipeline resolves the lazy service getter, calls model only with prepared input and cleans on model success/failure/cancel', async () => {
   for (const outcome of ['done', 'failed', 'cancel']) {
     const source = asset(98_376_196)
     const root = join(source, '..')
@@ -72,10 +72,10 @@ test('scope pipeline calls model only with prepared input and cleans on model su
     const store = createLocalStore({ paths })
     const row = store.add({ title: 'saved post', content: 'complete body', type: 'video', local_paths: { video: source }, media_items: [{ type: 'video', url: '/omnimux/inspiration/local/media/videos/source.mp4' }] })
     let output; let calls = 0; const controller = new AbortController()
-    const work = handleScopedAnalysis({ id: row.id, store, paths, signal: controller.signal, req: { body: { scope: 'post' } }, videoProcess: { execute: async (req) => {
+    const work = handleScopedAnalysis({ id: row.id, store, paths, signal: controller.signal, req: { body: { scope: 'post' } }, videoProcess: () => ({ execute: async (req) => {
       output = req.dest; writeFileSync(output, 'whole prepared video')
       return { mode: 'live', files: [{ path: output, kind: 'video', meta: { preserveTimeline: true, keepAudio: true } }] }
-    } }, textComplete: { execute: async (req) => {
+    } }), textComplete: { execute: async (req) => {
       calls += 1; assert.equal(req.references[0].pathOrUrl, output); assert.equal(existsSync(output), true)
       if (outcome === 'failed') throw new Error('provider failed')
       if (outcome === 'cancel') controller.abort()

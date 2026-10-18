@@ -170,7 +170,10 @@ export async function handleScopedAnalysis(ctx, options = {}) {
     }
     if (prepared.empty || (selection.scope === 'body' && !prepared.body.trim())) throw Object.assign(new Error('暂无完整正文可分析'), { status: 422 })
     if (!options.execute && !ctx.textComplete?.execute) throw new Error('分析能力未就绪，请检查模型设置')
-    if (!options.execute) transport = await prepareAnalysisTransport(prepared, { videoProcess: ctx.videoProcess || ctx.get?.('videoProcess'), signal: ctx.signal })
+    if (!options.execute) {
+      const videoProcess = typeof ctx.videoProcess === 'function' ? ctx.videoProcess() : (ctx.videoProcess || ctx.get?.('videoProcess'))
+      transport = await prepareAnalysisTransport(prepared, { videoProcess, signal: ctx.signal })
+    }
     const response = options.execute
       ? await options.execute(prepared)
       : await ctx.textComplete.execute({ prompt: prepared.prompt, reason: `inspiration-${selection.scope}-analysis`, references: transport.references, max_tokens: 4096 }, { signal: ctx.signal })
