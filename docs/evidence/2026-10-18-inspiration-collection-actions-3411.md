@@ -19,7 +19,9 @@ related:
 
 ## 身份与实际观察
 
-目标工作树 HEAD 为 `836733c02bbbac1e92e8f8e5240490cffb91b09b`（已提交的实现基线）；评审修复仍是工作树内未提交改动，因此以真实源码指纹 `sourceSha256=899875120db9725ab5cf90ff7ab7f854bb79027c2a750d82366ad9804601e16e` 与构建指纹 `bundleSha256=762083d92887c8eb775ce848ef78872128e46661e34d6736c2fe0108e8c1389b` 标识被验证的精确代码。完整断言、截图尺寸与 sha256、像素采样、prefill 原文、reveal 序列与清理回执见[浏览器记录](2026-10-18-inspiration-collection-actions-3411/browser.json)。
+目标工作树 HEAD 为 `836733c02bbbac1e92e8f8e5240490cffb91b09b`（本次浏览器运行时的已提交实现基线）；该次运行时评审修复尚未提交，因此以真实源码指纹 `sourceSha256=899875120db9725ab5cf90ff7ab7f854bb79027c2a750d82366ad9804601e16e` 与构建指纹 `bundleSha256=762083d92887c8eb775ce848ef78872128e46661e34d6736c2fe0108e8c1389b` 标识被验证的精确代码。完整断言、截图尺寸与 sha256、像素采样、prefill 原文、reveal 序列与清理回执见[浏览器记录](2026-10-18-inspiration-collection-actions-3411/browser.json)。
+
+> 状态补充：上述评审修复随后提交为 `257ddad56`，并把当时最新 `origin/main` 合入为 `b19474c80`（仅 `plugins/omnimux-inspiration/src/rival/**` 与另一任务规格，不在本证据的客户端 bundle/服务端输入集内）。合入后重跑 fixture E2E 与独立评审得到相同的 `sourceSha256` / `bundleSha256`，即本记录仍对应当前源码；`browser.json` 保留运行当时的原始身份与工作树状态，不回写。
 
 真实链路：产品 `InspirationSection` 由工作树源码经 esbuild 打包渲染，合集写读走真实 production local handlers/store（`POST /omnimux/inspiration/local/collections` 返回 201，成员读取命中真实本地列表接口），页面由独立 headless Chrome 经 CDP 驱动。合成部分：`window.__omnimuxWorkbench`（`getSnapshot() -> { sessionId: 'qa-session-1' }`、`setConversationCollapsed`、`setFocus`）、`window.__omnimuxSessionPrefill.queueSessionPrefill` 记录请求并把 prompt 写入合成 composer；右侧会话栏为合成 DOM，发送按钮从未点击。页面额外注入 `rival-tokens.js` 的真实 media token CSS（隔离夹具只挂载 Section，不经过注入 token 的插件入口）。
 
