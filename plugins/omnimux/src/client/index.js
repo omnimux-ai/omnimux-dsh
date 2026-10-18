@@ -4,10 +4,8 @@ import { mountFormsBridge } from './forms/mount.js'
 import { NS } from './locales.js'
 import { ProfileSection } from './ProfileSection.jsx'
 import { DshPluginsSection } from './DshPluginsSection.jsx'
-import { ModelsSettingsCard } from './ModelsSettingsCard.jsx'
 import { ReferenceStorageSection } from './ReferenceStorageSection.jsx'
 import { LoginGate } from './LoginGate.jsx'
-import { RuntimeGuideGate } from './RuntimeGuideGate.jsx'
 import { setRuntimeChoiceReader } from './auth-gate.js'
 import { QuotaGate } from './QuotaGate.jsx'
 import { installQuotaGlobal } from './quota-gate.js'
@@ -125,20 +123,8 @@ export function apply(ctx) {
       label: () => t('referenceStorage.title'), locale: NS, inject: () => ({ t }),
     }, ({ t: translate, view }) => view === 'summary' ? translate('referenceStorage.description') : createElement(ReferenceStorageSection, { t: translate })))), 'omnimux: reference storage configuration')
   })
-  if (typeof ctx.inject === 'function') ctx.inject(['configForms'], (formCtx) => {
-    const form = formCtx.configForms.get('omnimux')
-    const scope = {
-      getSnapshot: () => form.getSnapshot(), subscribe: listener => form.subscribe(listener),
-      async set(field, value) { if (!await form.mutate([{ op: 'set', path: [field], value }])) throw new Error('设置未能保存，请刷新后重试') },
-      async unset(field) { if (!await form.mutate([{ op: 'unset', path: [field] }])) throw new Error('设置未能保存，请刷新后重试') },
-    }
-    formCtx.effect(() => formCtx.configForms.whileServed(['omnimux'], () => formCtx.slots.inject('plugins.item', () => formCtx.slots.register({
-      name: 'plugins.item', id: 'omnimux-model-settings', order: 90,
-      label: () => t('runtime.cardTitle'), locale: NS, inject: () => ({ t, scope }),
-    }, ({ t: translate, view }) => view === 'summary' ? translate('runtime.cardDesc') : createElement(ModelsSettingsCard, { t: translate, scope })))), 'omnimux: model scenario configuration')
-  })
-  // Canvas default models — Settings → 插件 → 可配置 (keyed by Host namespace).
-  // Bind once when the slot mounts; do not re-bind inside the React card.
+  // Read existing choices for login compatibility without exposing another
+  // model configuration surface. Account/API setup remains on the Host page.
   if (typeof ctx.inject === 'function') {
     ctx.inject(['settingsScope'], (sctx) => {
       const binder = sctx.settingsScope
@@ -151,23 +137,6 @@ export function apply(ctx) {
         const snapshot = typeof scope.getSnapshot === 'function' ? scope.getSnapshot() : undefined
         return snapshot && typeof snapshot === 'object' ? snapshot.value : undefined
       })
-      ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
-        name: 'settings.plugin.item',
-        key: 'omnimux',
-        id: 'omnimux',
-        locale: NS,
-        inject: () => ({ t, scope }),
-      }, ModelsSettingsCard))
-      // First-run runtime guide: shows only while `runtimeMode` is unset, then
-      // never again. Mounted on the overlay seat below the login gate so the
-      // official choice can open sign-in on top of it.
-      ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-        name: 'shell.overlay',
-        id: 'omnimux-runtime-guide',
-        order: 29,
-        locale: NS,
-        inject: () => ({ t, scope }),
-      }, RuntimeGuideGate))
     })
   }
   // Unified login gate. It lives on the shell.overlay seat but renders as a

@@ -46,7 +46,8 @@ describe('settings placement', () => {
     const hub = readFileSync(join(here, 'index.js'), 'utf8')
     assert.deepEqual(sectionIds(hub), ['omnimux-profile'])
     assert.deepEqual(pluginsTabIds(hub), ['omnimux-dsh-plugins'])
-    assert.deepEqual(pluginItemKeys(hub), ['omnimux'])
+    assert.deepEqual(pluginItemKeys(hub), [])
+    assert.doesNotMatch(hub, /ModelsSettingsCard|RuntimeGuideGate|omnimux-model-settings/)
     assert.ok(!hub.includes("settings.section', () =>") || sectionIds(hub).length === 1)
   })
 

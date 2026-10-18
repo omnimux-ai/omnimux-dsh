@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-26"
-updated: "2026-09-09"
+updated: "2026-10-18"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux-accounts"
 ---
@@ -43,15 +43,16 @@ The legacy seats below remain descriptions of older composition surfaces; their 
 | `settings.section` | `omnimux-profile` | `omnimux` | Device login and public profile |
 | `settings.plugins.tab` | `omnimux-dsh-plugins` | `omnimux` | Install / uninstall into the `omnimux` profile |
 | `settings.plugin.item` | `web-search` | official `ui-settings-plugins` | DeepSeek search key via credentials |
-| `settings.plugin.item` | `omnimux` | `omnimux` | Canvas default models (`defaultTextModel` / `defaultImageModel` / `defaultVideoModel` / `defaultAudioModel`) plus `allowAgentSwitchTab`（允许 Agent 切换工作台页面，默认开；见 [agent-workbench-sync.md](./agent-workbench-sync.md)） |
 | Workbench Tab | `omnimux-accounts:library` | `omnimux-accounts` | Accounts page registered with `ctx.betterSidebar.registerTab`, not a Settings seat or Apps shelf |
 | Workbench Tab | `omnimux-inspiration:library` | `omnimux-inspiration` | 灵感社区 page registered with `ctx.betterSidebar.registerTab`; Host `/omnimux/inspiration` |
 
 Official Settings plugin tabs already occupy `configurable` (order 0) and `all` (order 10). Product `settings.plugins.tab` entries use order ≥ 20 so they sit after the official ones; this ordering does not apply to Workbench Tabs.
 
-## Scenario choices and truthful checks
+## Account and model configuration ownership
 
-The existing OmniMux card owns independent `text`, `analysis`, `image`, `video`, and retained `audio` choices in `scenarioBindings`. Saving a provider does not select it for every scenario or write a global runtime mode. Existing session chat remains on the Host LLM settings surface. Canvas defaults apply to unspecified new-node choices, never rewrite saved nodes; the canvas projection preserves a lawful Hub default before its curated fallback.
+OmniMux keeps its existing profile and sign-in surface. DeepSeek official API configuration and session model providers remain on the Host model settings surface. The additional OmniMux model-service card, canvas-default-model card, and retired first-run runtime chooser are no longer registered, on either current configuration forms or legacy Settings seats. Reference media storage remains independent.
+
+Stored `scenarioBindings`, provider records, canvas defaults and composer choices remain readable for compatibility; removing their extra settings UI does not erase data or change routing. Saving a provider does not select it for every scenario or write a global runtime mode. Canvas defaults apply to unspecified new-node choices, never rewrite saved nodes; the canvas projection preserves a lawful Hub default before its curated fallback. Official API configuration is distinct from a newer Host's official account sign-in capability; the installed Host must actually ship that capability before it can be offered.
 
 Provider metadata lives in `byokProviders`; values remain in the credentials domain under the provider-specific reference. Configuration writes carry the read revision, invalidate the target record before a credential write, and confirm normalized readback. Partial writes retain `saveState: pending`; recovery requires a newly supplied credential rather than silently pairing a rotated credential with old-origin metadata. Deletion affects only the named provider. A changed origin cannot reuse an old credential without supplying it again.
 
