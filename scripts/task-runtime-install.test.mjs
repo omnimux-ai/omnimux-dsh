@@ -117,6 +117,23 @@ test('an ancestor fake peer is refused before the packaged runtime can resolve i
   assert.doesNotThrow(() => assertTaskPeerSearchBoundary({ installedRoot: graph.targets[0].target, privateRoot: f.privateRoot, name: 'qa-absent-optional-peer' }));
 });
 
+test('fixed react-dom support stays private, preserves its own React peer and never becomes a bundle', t => {
+  const f = fixture(t); f.pkg('omnimux', { peers: { 'react-dom': '>=18.2.0', react: '^18.2.0' } });
+  const source = f.installed('react-dom', { helper: '^1.0.0' }); f.installed('helper');
+  fs.writeFileSync(join(source, 'package.json'), JSON.stringify({ name: 'react-dom', version: '18.3.1', dependencies: { helper: '^1.0.0' }, peerDependencies: { react: '^18.3.1' } }));
+  const graph = f.run();
+  assert.deepEqual(graph.peerSupport.map(item => [item.name, item.version]), [['react-dom', '18.3.1']]);
+  assert.equal(graph.support.length, 0); assert.equal(graph.targets.length, 1);
+  assert.equal(graph.records.some(item => item.name === 'react'), false, 'React remains a packaged host peer');
+  const copy = JSON.parse(fs.readFileSync(join(graph.peerSupport[0].target, 'package.json')));
+  assert.equal(copy.peerDependencies.react, '^18.3.1'); assert.match(copy.dependencies.helper, /^file:/);
+});
+
+test('local peer support refuses an unreviewed react-dom version', t => {
+  const f = fixture(t); f.pkg('omnimux', { peers: { 'react-dom': '>=18.2.0' } }); f.installed('react-dom');
+  assert.throws(f.run, { code: 'TEST_ENV_INSTALL_PEER_SUPPORT_REQUIRED' });
+});
+
 test('ordinary transitive dependencies retain different versions in separate private instances', t => {
   const f = fixture(t); f.pkg('omnimux', { dependencies: { left: '*', right: '*' } });
   for (const [name, version] of [['left', '1.0.0'], ['right', '2.0.0']]) {

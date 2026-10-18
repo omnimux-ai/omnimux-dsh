@@ -149,7 +149,19 @@ export function preparePrivateTaskPackages({ preparation, root, repository, priv
     if (manifest.name !== 'dsh-better-sidebar' || manifest.version !== '0.18.0') fail('INSTALL_SUPPORT_REQUIRED');
     support.push(visit({ source: actual, resolveRoot: actual }));
   }
-  return { targets, support, records: [...records.values()] };
+  const peerSupport = [];
+  // The packaged host supplies React but has no Node react-dom package. This one
+  // admitted pure-library support is copied locally; it is never a plugin bundle.
+  const needsReactDOM = [...records.values()].some(parent => typeof parent.peers['react-dom'] === 'string'
+    && ![...records.values()].some(item => item.name === 'react-dom' && matchesTaskPeerVersion(item.version, parent.peers['react-dom'])));
+  if (needsReactDOM) {
+    const source = join(root, 'node_modules/react-dom');
+    if (!fs.existsSync(join(source, 'package.json'))) fail('INSTALL_PEER_SUPPORT_REQUIRED');
+    const actual = fs.realpathSync(source), manifest = json(join(actual, 'package.json'));
+    if (manifest.name !== 'react-dom' || manifest.version !== '18.3.1') fail('INSTALL_PEER_SUPPORT_REQUIRED');
+    peerSupport.push(visit({ source: actual, resolveRoot: actual }));
+  }
+  return { targets, support, peerSupport, records: [...records.values()] };
 }
 
 export function assertPreparedTaskArchives(preparation) {
@@ -216,6 +228,7 @@ export async function installTaskRuntime({ root, repository, privateRoot, ownerI
     }
     const entry = { name: item.name, version: item.version, installedRoot, payload: item.payload, manifestTransform: item.manifestTransform,
       ...(graph.support.includes(item) ? { role: 'packaged-support' } : {}),
+      ...(graph.peerSupport.includes(item) ? { role: 'local-peer-support' } : {}),
       ...(item.archive ? { archive: { sha256: item.archive.sha256, payloadDigest: item.archive.archiveDigest } } : {}) };
     if (pluginNames.includes(item.name)) {
       const installedManifest = json(join(installedRoot, 'package.json'));
