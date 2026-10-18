@@ -16,10 +16,30 @@ export function sourceFingerprint(value) {
   return hash.toString(16).padStart(16, '0')
 }
 
-/** Current posts preserve their original indexes; legacy rows have one first video. */
+/** Normalize legacy photo keys with the existing gallery URL rules. */
+function legacyImageUrl(value) {
+  if (typeof value !== 'string' || !value || value.includes('..')) return ''
+  if (/^[a-z][a-z\d+.-]*:/i.test(value)) return /^https?:\/\//i.test(value) ? value : ''
+  if (value.startsWith('/omnimux/inspiration/local/media/') || value.startsWith('/omnimux/inspiration/media/')) return value
+  if (value.startsWith('/api/inspiration/v1/media/')) return `/omnimux/inspiration/media/${value.slice('/api/inspiration/v1/media/'.length)}`
+  return `/omnimux/inspiration/media/${value.replace(/^\/+/, '')}`
+}
+
+/** Typed posts keep original indexes; legacy rows follow their photo or video shape. */
 export function analysisMediaItems(item) {
   if (Array.isArray(item?.media_items) && item.media_items.length) return item.media_items
-  if (Array.isArray(item?.media_urls) && item.media_urls.length) return item.media_urls.map((url) => ({ type: 'video', url }))
+  const urls = Array.isArray(item?.media_urls) ? item.media_urls : []
+  const isImage = item?.type !== 'video' && (['image', 'photo', 'gallery'].includes(String(item?.type || ''))
+    || ['photo', 'gallery'].includes(String(item?.content_shape || '')) || item?.media_kind === 'image')
+  if (isImage) {
+    const photos = urls.map(legacyImageUrl).filter(Boolean)
+    const cover = legacyImageUrl(item.cover_key ?? item.cover_url)
+    return [...new Set(photos.length ? photos : [cover].filter(Boolean))].map((url) => ({ type: 'image', url }))
+  }
+  if (['text', 'link'].includes(String(item?.type || '')) || item?.content_shape === 'text') return []
+  const videos = urls.filter((url) => typeof url === 'string' && (/^https?:\/\//i.test(url)
+    || url.startsWith('/omnimux/inspiration/local/media/') || url.startsWith('/omnimux/inspiration/media/')))
+  if (videos.length) return videos.map((url) => ({ type: 'video', url }))
   if (item?.local_paths?.video) {
     const name = String(item.local_paths.video).split(/[\\/]/).pop()
     return [{ type: 'video', url: `/omnimux/inspiration/local/media/videos/${name}` }]
