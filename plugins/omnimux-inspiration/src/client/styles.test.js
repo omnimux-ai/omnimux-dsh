@@ -154,7 +154,7 @@ describe('one-click replicate source isolation', () => {
 })
 
 describe('preview document typography', () => {
-  it('keeps source and analysis readable without a blurred backdrop', () => {
+  it('keeps reading typography independent from native background blur', () => {
     assert.doesNotMatch(ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-backdrop'), /blur/)
     assert.equal(decl(ruleBody(INSPIRATION_CSS, '.omnimux-post-body'), 'white-space'), 'pre-wrap')
     assert.match(INSPIRATION_CSS, /omnimux-inspiration-doc-record/)

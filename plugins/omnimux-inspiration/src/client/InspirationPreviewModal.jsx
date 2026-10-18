@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, CopyButton, IconButton } from 'dsh-ui-kit'
 import { InspirationPostDetail } from './InspirationPostDetail.jsx'
+import { PreviewModalLayer } from './PreviewModalLayer.jsx'
 import { createShareLink, getLocalInspiration, shareRequestPayload } from './api.js'
 import { getInspirationPreviewData } from './inspiration-preview-data.js'
 import { importErrorText, importSettledNotice, importStageLabel, isFailedRow, isImportingRow } from './import-status.js'
@@ -27,14 +28,6 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [showSharePopover, setShowSharePopover] = useState(false)
   const shareTriggerRef = useRef(null)
   const sharePopoverRef = useRef(null)
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && !showSharePopover) onClose?.()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose, showSharePopover])
 
   useEffect(() => {
     if (!showSharePopover) return
@@ -160,7 +153,8 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const settledNotice = importSettledNotice(item, t)
   const applyItem = (next) => { setItem(next); onItemUpdated?.(next) }
   if (!row) return null
-  return <div className="omnimux-inspiration-modal-backdrop" onClick={onClose} onWheel={event => event.stopPropagation()}>
+  return <PreviewModalLayer onClose={onClose} title={data.title}>
+    <div className="omnimux-inspiration-modal-backdrop" onClick={onClose} onWheel={event => event.stopPropagation()}>
     <div className="omnimux-inspiration-modal-wrapper" onClick={event => event.stopPropagation()}>
       <IconButton className="omnimux-modal-close-btn is-external omnimux-inspiration-modal-close" variant="ghost" aria-label={t('close')} onClick={onClose}>{ICON_CLOSE}</IconButton>
       <div className="omnimux-inspiration-modal-container">
@@ -296,4 +290,5 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
       </div>
     </div>
   </div>
+  </PreviewModalLayer>
 }
