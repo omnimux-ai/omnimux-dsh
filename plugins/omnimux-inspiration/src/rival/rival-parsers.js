@@ -165,7 +165,7 @@ export function isNoContentSentinel(data) {
   if (!isPlainObject(data)) return false
   const keys = Object.keys(data)
   if (keys.length === 0) return false
-  return keys.every((key) => EMPTY_PAYLOAD_KEYS.includes(key))
+  return isEmptyPayload(data) && keys.every((key) => EMPTY_PAYLOAD_KEYS.includes(key))
 }
 
 /**
@@ -214,40 +214,62 @@ const LIST_CONTAINERS = Object.freeze([
  * row has no id, or the nested list is never reached and every refresh stores
  * nothing.
  */
-const CONTAINER_KEYS = Object.freeze([
-  'edges', 'items', 'aweme_list', 'item_list', 'contents', 'posts', 'list', 'node',
-])
+const CONTAINER_KEYS = Object.freeze([...LIST_CONTAINERS, 'node'])
 
 /**
  * @param {Record<string, any>} value
  * @returns {boolean}
  */
 function isContainerObject(value) {
+  if (probeField(value, POST_FIELD_CANDIDATES.id, isUsableText).source !== FIELD_PROBE_MISS) return false
   return CONTAINER_KEYS.some((key) => value[key] !== undefined)
 }
 
 /**
  * @param {unknown} value
- * @returns {Record<string, any>[] | null}
+ * @returns {{ rows: Record<string, any>[], source_count: number } | null}
  */
 function rowsOf(value) {
   if (Array.isArray(value)) {
-    const rows = value.filter((entry) => isPlainObject(entry))
-    return rows.length > 0 ? rows : null
+    const rows = value
+      .map((entry) => (isPlainObject(entry) && isContainerObject(entry) && isPlainObject(entry.node) ? entry.node : entry))
+      .filter((entry) => isPlainObject(entry))
+    return { rows, source_count: value.length }
   }
   if (isPlainObject(value)) {
     // Instagram-style edges: `{ edges: [{ node: {...} }] }`.
-    if (Array.isArray(value.edges)) {
-      const nodes = value.edges
-        .map((edge) => (isPlainObject(edge) ? edge.node ?? edge : null))
-        .filter((node) => isPlainObject(node))
-      if (nodes.length > 0) return nodes
-    }
+    if (Array.isArray(value.edges)) return rowsOf(value.edges)
     // A single-object answer is a one-row list (`aweme_detail`, a lone `video`),
     // unless it is itself a wrapper the caller still has to descend into.
-    if (Object.keys(value).length > 0 && !isContainerObject(value)) return [value]
+    if (Object.keys(value).length > 0 && !isContainerObject(value)) return { rows: [value], source_count: 1 }
   }
   return null
+}
+
+/**
+ * Recognize at most two known container levels, retaining the source length so
+ * an empty list and a nonempty list of unusable rows stay different outcomes.
+ * @param {unknown} data
+ * @returns {{ rows: Record<string, any>[], source_count: number } | null}
+ */
+function probeRivalPostRows(data) {
+  if (!isPlainObject(data)) return null
+  let empty = null
+  for (const key of LIST_CONTAINERS) {
+    const found = rowsOf(data[key])
+    if (found?.source_count > 0) return found
+    if (found) empty = found
+  }
+  for (const key of LIST_CONTAINERS) {
+    const nested = data[key]
+    if (!isPlainObject(nested)) continue
+    for (const inner of LIST_CONTAINERS) {
+      const found = rowsOf(nested[inner])
+      if (found?.source_count > 0) return found
+      if (found) empty = found
+    }
+  }
+  return empty
 }
 
 /**
@@ -256,20 +278,7 @@ function rowsOf(value) {
  * @returns {Record<string, any>[]}
  */
 export function unwrapRivalPostRows(data) {
-  if (!isPlainObject(data)) return []
-  for (const key of LIST_CONTAINERS) {
-    const rows = rowsOf(data[key])
-    if (rows) return rows
-  }
-  for (const key of LIST_CONTAINERS) {
-    const nested = data[key]
-    if (!isPlainObject(nested)) continue
-    for (const inner of LIST_CONTAINERS) {
-      const rows = rowsOf(nested[inner])
-      if (rows) return rows
-    }
-  }
-  return []
+  return probeRivalPostRows(data)?.rows || []
 }
 
 /**
@@ -482,22 +491,24 @@ export function synthesizedPostUrl(platform, id) {
 /**
  * Map the account fields of a `user` answer.
  * @param {unknown} data
- * @returns {{ profile: Record<string, any>, field_probe: Record<string, string | null> }}
+ * @returns {{ profile: Record<string, any>, field_probe: Record<string, string | null>, recognized: boolean }}
  */
 export function mapRivalUser(data) {
   const layer = unwrapRivalUserLayer(data)
   const { values, probe } = probeLayer(layer, USER_FIELD_CANDIDATES)
   const canonical = extractYouTubeChannelId(values.external_id_canonical)
+  const profile = {
+    nickname: asText(values.nickname),
+    avatar_url: firstHttpUrl(values.avatar_url),
+    bio: asText(values.bio),
+    followers: asNumber(values.followers),
+    posts_count: asNumber(values.posts_count),
+    external_id_canonical: canonical || null,
+  }
   return {
-    profile: {
-      nickname: asText(values.nickname),
-      avatar_url: firstHttpUrl(values.avatar_url),
-      bio: asText(values.bio),
-      followers: asNumber(values.followers),
-      posts_count: asNumber(values.posts_count),
-      external_id_canonical: canonical || null,
-    },
+    profile,
     field_probe: probe,
+    recognized: Object.values(profile).some((value) => typeof value === 'number' ? value >= 0 : Boolean(value)),
   }
 }
 
@@ -505,10 +516,11 @@ export function mapRivalUser(data) {
  * Map a `posts` answer onto normalized rows.
  * @param {unknown} data
  * @param {{ platform: string }} ctx
- * @returns {{ rows: ReturnType<typeof normalizeRivalPost>[], field_probe: Record<string, string | null> }}
+ * @returns {{ rows: ReturnType<typeof normalizeRivalPost>[], field_probe: Record<string, string | null>, recognized: boolean, source_count: number }}
  */
 export function mapRivalPosts(data, ctx) {
-  const raw = unwrapRivalPostRows(data)
+  const source = probeRivalPostRows(data)
+  const raw = source?.rows || []
   const rows = []
   /** @type {Record<string, string | null>} */
   const fieldProbe = {}
@@ -523,7 +535,7 @@ export function mapRivalPosts(data, ctx) {
     delete normalized.field_probe
     rows.push(normalized)
   }
-  return { rows, field_probe: fieldProbe }
+  return { rows, field_probe: fieldProbe, recognized: source !== null, source_count: source?.source_count || 0 }
 }
 
 /**

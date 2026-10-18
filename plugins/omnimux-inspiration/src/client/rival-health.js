@@ -17,6 +17,35 @@ import { zh } from './locales.js'
 
 const MS_PER_MINUTE = 60_000
 
+/** Identity failures need a corrected profile URL rather than another collection. */
+export function accountNeedsReimport(account) {
+  return account?.error_code === 'identity-unverified' || account?.error_code === 'identity-unresolved'
+}
+
+/** Translate known failure codes only; upstream text can contain credentials. */
+export function rivalErrorKey(code) {
+  switch (code) {
+    case 'identity-unverified':
+    case 'identity-unresolved': return 'rivalAccounts.health.reimportReason'
+    case 'needs-omnimux': return 'rivalAccounts.error.login'
+    case 'quota-exceeded': return 'rivalAccounts.error.quota'
+    case 'CHANNEL_UNAVAILABLE': return 'rivalAccounts.error.channelUnavailable'
+    case 'omnimux-unconfigured': return 'rivalAccounts.error.configure'
+    case 'refresh-budget-exhausted':
+    case 'global-daily-cap':
+    case 'account-daily-cap':
+    case 'per-cycle-cap': return 'rivalAccounts.skip.budget'
+    case 'manual-cooldown': return 'rivalAccounts.skip.cooldown'
+    case 'cloud-error':
+    case 'omnimux-request-failed': return 'rivalAccounts.error.cloud'
+    case 'no-content': return 'rivalAccounts.error.noContent'
+    case 'tool-missing':
+    case 'tool-unavailable': return 'rivalAccounts.error.toolMissing'
+    case 'account-not-found': return 'rivalAccounts.error.accountMissing'
+    default: return 'rivalAccounts.error.failed'
+  }
+}
+
 /**
  * One account's health for the filter row.
  * @param {Record<string, any> | null | undefined} account
@@ -32,7 +61,7 @@ export function accountHealth(account, nowMs = Date.now()) {
   }
   // `error` 的两个互斥子类：身份类失败只能换链接重新导入，其余失败由
   // 行内「重试」承担。两个态的用户动作不同，合并会让一个状态挂两种修法。
-  return account.error_code === 'identity-unverified' ? 'reimport' : 'stopped'
+  return accountNeedsReimport(account) ? 'reimport' : 'stopped'
 }
 
 /**

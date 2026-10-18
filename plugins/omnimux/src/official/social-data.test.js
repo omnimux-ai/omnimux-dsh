@@ -138,6 +138,29 @@ describe('social data catalog', () => {
     assert.equal(payload.id, '1')
     assert.equal(payload.text, 't')
   })
+
+  it('rejects explicit business failures before unwrapping otherwise usable data', async () => {
+    for (const failure of [{ code: 500 }, { success: false }, { ok: false }, { code: -1 }, { status_code: 500 }, { status: 'failed' }, { status: 'denied' }, { error: { message: 'upstream failed' } }]) {
+      for (const capability of ['user', 'posts']) await assert.rejects(
+        fetchSocialData({ withSk: async () => ({ ...failure, data: { nickname: 'Sample', items: [] } }) },
+          { platform: 'tiktok', capability, id: 'sample' }),
+        (error) => error instanceof OmnimuxError && error.code === 'omnimux-request-failed',
+      )
+    }
+  })
+
+  it('keeps successful zero and HTTP-style business codes and empty lists', () => {
+    for (const code of [0, '0', 200, '200']) {
+      assert.deepEqual(pickSocialPayload({ code, data: { items: [] } }), { items: [] })
+    }
+  })
+
+  it('preserves authentication and quota reasons without echoing an arbitrary upstream message', () => {
+    for (const [marker, expected] of [[{ code: 401 }, 'needs-omnimux'], [{ status: 401 }, 'needs-omnimux'], [{ status_code: 402 }, 'quota-exceeded'], [{ code: 500 }, 'omnimux-request-failed']]) {
+      assert.throws(() => pickSocialPayload({ ...marker, message: 'secret-value-must-not-be-shown', data: {} }),
+        (error) => error.code === expected && !error.message.includes('secret-value-must-not-be-shown'))
+    }
+  })
 })
 
 

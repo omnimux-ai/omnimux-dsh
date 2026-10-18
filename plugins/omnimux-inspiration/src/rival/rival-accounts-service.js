@@ -124,6 +124,9 @@ export function createRivalAccountsService(deps) {
     if (user.status === 'empty') {
       throw new RivalRemoteError(RIVAL_ERROR_CODES.NO_CONTENT, '云端未返回该账号资料', { callsUsed: cycle.calls() })
     }
+    if (user.status !== 'ok' || !isPlainObject(user.profile)) {
+      throw new RivalRemoteError(RIVAL_ERROR_CODES.CLOUD_ERROR, '云端账号资料格式无法识别，请稍后重试', { callsUsed: cycle.calls() })
+    }
     let posts
     try {
       posts = await cycle.fetchPosts({ platform: account.platform, value })
@@ -135,6 +138,9 @@ export function createRivalAccountsService(deps) {
     // *list* is not this case — it is a successful refresh with no new rows.
     if (posts.status === 'no-content') {
       throw new RivalRemoteError(RIVAL_ERROR_CODES.NO_CONTENT, '云端未返回该账号的动态内容', { callsUsed: cycle.calls() })
+    }
+    if (posts.status !== 'ok' || !Array.isArray(posts.rows)) {
+      throw new RivalRemoteError(RIVAL_ERROR_CODES.CLOUD_ERROR, '云端作品数据格式无法识别，请稍后重试', { callsUsed: cycle.calls() })
     }
     const rows = (posts.rows || []).slice(0, POSTS_PER_REFRESH)
     const marked = markPotential(rows, { now: new Date(now()).toISOString() })

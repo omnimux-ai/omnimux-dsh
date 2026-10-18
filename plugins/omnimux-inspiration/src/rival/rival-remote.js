@@ -20,7 +20,7 @@
  * `OmnimuxError` and sometimes only inside the message, so both are inspected.
  */
 
-import { mapRivalPosts, mapRivalUser, isEmptyPayload, isNoContentSentinel } from './rival-parsers.js'
+import { mapRivalPosts, mapRivalUser, isEmptyPayload, isNoContentSentinel, isPlainObject, isEmptyValue, asNumber } from './rival-parsers.js'
 import {
   CLOUD_CAPABILITY_POSTS,
   CLOUD_CAPABILITY_USER,
@@ -36,6 +36,32 @@ export const TOOL_MISSING_MESSAGE = 'OmniMux 社媒解析工具 (omnimux_social_
 
 /** Whether a thrown value is one of the hub's own account/quota gates. */
 const HUB_GATE_CODES = new Set([RIVAL_ERROR_CODES.NEEDS_OMNIMUX, RIVAL_ERROR_CODES.QUOTA_EXCEEDED, 'omnimux-unconfigured'])
+
+/**
+ * Explicit business failures can accompany an otherwise successful tool call.
+ * Inspect only the bounded envelope layers the mappers unwrap, never post rows
+ * or arbitrary nested data, and never include upstream text in our message.
+ * @param {unknown} value
+ * @param {number} [depth]
+ * @returns {Record<string, any> | null}
+ */
+function findPayloadFailure(value, depth = 0) {
+  if (!isPlainObject(value)) return null
+  const hasError = value.error !== false && value.error !== 0 && !isEmptyValue(value.error)
+  const failedStatus = [value.code, value.status, value.status_code].some((status) => {
+    const code = asNumber(status)
+    if (code !== null && (code < 0 || code >= 400)) return true
+    return typeof status === 'string'
+      && (/^(?:error|failed|failure|denied|forbidden|unauthorized)$/i.test(status.trim()) || HUB_GATE_CODES.has(status))
+  })
+  if (value.success === false || value.ok === false || hasError || failedStatus) return value
+  if (depth >= 3) return null
+  for (const key of ['data', 'result', 'user', 'channel', 'author']) {
+    const failure = findPayloadFailure(value[key], depth + 1)
+    if (failure) return failure
+  }
+  return null
+}
 
 export class RivalRemoteError extends Error {
   /**
@@ -166,6 +192,10 @@ export function createRivalRemote(opts = {}) {
          */
         async fetchUser({ platform, value }) {
           const raw = await execute({ platform, capability: CLOUD_CAPABILITY_USER, id: value })
+          const failure = findPayloadFailure(raw)
+          if (failure) {
+            throw new RivalRemoteError(classifyRemoteError(failure), '云端返回账号资料采集失败，请稍后重试', { callsUsed: guard.calls() })
+          }
           const data = raw && typeof raw === 'object' ? raw.data : undefined
           if (isEmptyPayload(data)) {
             return {
@@ -176,6 +206,9 @@ export function createRivalRemote(opts = {}) {
             }
           }
           const mapped = mapRivalUser(data)
+          if (!mapped.recognized) {
+            throw new RivalRemoteError(RIVAL_ERROR_CODES.CLOUD_ERROR, '云端账号资料格式无法识别，请稍后重试', { callsUsed: guard.calls() })
+          }
           return { status: 'ok', profile: mapped.profile, field_probe: mapped.field_probe }
         },
         /**
@@ -192,8 +225,12 @@ export function createRivalRemote(opts = {}) {
          */
         async fetchPosts({ platform, value }) {
           const raw = await execute({ platform, capability: CLOUD_CAPABILITY_POSTS, id: value })
+          const failure = findPayloadFailure(raw)
+          if (failure) {
+            throw new RivalRemoteError(classifyRemoteError(failure), '云端返回作品采集失败，请稍后重试', { callsUsed: guard.calls() })
+          }
           const data = raw && typeof raw === 'object' ? raw.data : undefined
-          if (isNoContentSentinel(data)) {
+          if (data == null || isNoContentSentinel(data)) {
             return {
               status: 'no-content',
               rows: [],
@@ -201,10 +238,13 @@ export function createRivalRemote(opts = {}) {
               raw: { platform, capability: CLOUD_CAPABILITY_POSTS, model: raw?.model, field: raw?.field, value: raw?.value },
             }
           }
-          if (isEmptyPayload(data)) {
-            return { status: 'empty', rows: [], field_probe: {} }
-          }
           const mapped = mapRivalPosts(data, { platform })
+          if (!mapped.recognized) {
+            throw new RivalRemoteError(RIVAL_ERROR_CODES.CLOUD_ERROR, '云端作品数据格式无法识别，请稍后重试', { callsUsed: guard.calls() })
+          }
+          if (mapped.source_count > 0 && mapped.rows.length === 0) {
+            throw new RivalRemoteError(RIVAL_ERROR_CODES.CLOUD_ERROR, '云端作品列表未包含有效作品，请稍后重试', { callsUsed: guard.calls() })
+          }
           return { status: 'ok', rows: mapped.rows, field_probe: mapped.field_probe }
         },
       }

@@ -216,7 +216,20 @@ export function RivalAccountsPanel(props) {
       ) : null}
       {feed.error ? (
         <div className="omnimux-rival-notice is-error" role="alert">
-          <p>{feed.error}</p>
+          <p>{t(feed.error)}</p>
+        </div>
+      ) : null}
+      {feed.refreshNotice ? (
+        <div className={`omnimux-rival-notice${feed.refreshNotice.failures?.length ? ' is-error' : ''}`}
+          role={feed.refreshNotice.failures?.length ? 'alert' : 'status'}>
+          {feed.refreshNotice.n > 0 || !feed.refreshNotice.failures?.length ? (
+            <p>{t(feed.refreshNotice.key).replace('{n}', String(feed.refreshNotice.n ?? 0))}</p>
+          ) : null}
+          {(feed.refreshNotice.failures || []).map((failure) => (
+            <p key={failure.account.id}>
+              {failure.account.handle || failure.account.nickname || t('rivalAccounts.refresh.account')}：{t(failure.key)}
+            </p>
+          ))}
         </div>
       ) : null}
 
@@ -237,6 +250,7 @@ export function RivalAccountsPanel(props) {
         loadingMore={feed.loadingMore}
         emptyKind={emptyKind}
         fetchPhase={feed.fetchPhase}
+        refreshBusy={feed.refreshBusy}
         onResetFilters={feed.resetAccounts}
         onImport={() => setImportOpen(true)}
         onRetryFetch={feed.retryFetch}

@@ -16,10 +16,8 @@ import { useInspirationFeed } from './use-inspiration-feed.js'
 import { useRivalFeed } from './use-rival-feed.js'
 import {
   accountHealth,
-  manualCooldownMinutesLeft,
   poolQuota,
 } from './rival-health.js'
-import { accountIds, selectedAccountIds } from './rival-filter.js'
 
 export { formatPlatformName }
 
@@ -158,12 +156,9 @@ export function InspirationSection({ t, active }) {
     [rivalFeed.status, rivalFeed.configSummary],
   )
   const rivalStoppedInSelection = useMemo(() => {
-    const selected = new Set(selectedAccountIds(accountIds(rivalFeed.accounts), rivalFeed.selection))
-    return (rivalFeed.accounts || []).some(
-      (account) => selected.has(String(account?.id ?? '')) && accountHealth(account) === 'stopped',
-    )
-  }, [rivalFeed.accounts, rivalFeed.selection])
-  const rivalCooldownLeft = manualCooldownMinutesLeft(rivalFeed.lastManualRefreshAt, Date.now(), 30)
+    return rivalFeed.scopedAccounts.some((account) => accountHealth(account) === 'stopped')
+  }, [rivalFeed.scopedAccounts])
+  const rivalCooldownLeft = rivalFeed.manualCooldownLeft
   const rivalRefreshGate = {
     quotaLeft: rivalQuota?.left,
     stoppedInSelection: rivalStoppedInSelection,
@@ -331,6 +326,7 @@ export function InspirationSection({ t, active }) {
               onReset={rivalFeed.resetAccounts}
               onRetry={rivalFeed.retryAccount}
               quotaLeft={rivalQuota?.left}
+              refreshBusy={rivalFeed.refreshBusy}
             />
             {rivalFeed.accounts.length > 0 ? (
               <RivalRefreshButton
@@ -339,6 +335,7 @@ export function InspirationSection({ t, active }) {
                 quota={rivalQuota}
                 cooldownLeft={rivalCooldownLeft}
                 fresh={rivalCooldownLeft !== null}
+                busy={rivalFeed.refreshBusy}
                 onRefresh={rivalFeed.refreshPool}
               />
             ) : null}

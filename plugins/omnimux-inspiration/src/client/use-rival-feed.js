@@ -26,10 +26,9 @@ import {
   fetchRivalAccounts,
   fetchRivalFeed,
   fetchRivalStatus,
-  refreshAllRivalAccounts,
   refreshRivalAccount,
-  retryRivalAccount,
 } from './rival-api.js'
+import { accountNeedsReimport, manualCooldownMinutesLeft, rivalErrorKey } from './rival-health.js'
 import {
   activeFetchAccounts,
   FALLBACK_POLL_INTERVAL_MS,
@@ -42,6 +41,7 @@ import {
   accountIds,
   invertAccountSelection,
   resetAccountSelection,
+  selectedRivalAccounts,
   selectionQuery,
   toRivalCardRow,
   toggleAccountSelection,
@@ -56,8 +56,23 @@ const REQUEST_BUDGET = 40
  */
 function errorText(res) {
   const body = res?.body
-  if (body && typeof body.error === 'string' && body.error.trim()) return body.error.trim()
-  return 'error.generic'
+  const code = body?.code || body?.error?.code || body?.error
+  return rivalErrorKey(res?.status === 401 ? 'needs-omnimux'
+    : res?.status === 402 ? 'quota-exceeded' : code)
+}
+
+/** A successful HTTP receipt must still explicitly acknowledge a queued/running job. */
+function refreshIssue(res) {
+  const data = res?.body?.data
+  if (res?.ok && (data?.queued === true || data?.status === 'queued' || data?.status === 'running')) return null
+  const code = res?.body?.code || res?.body?.error?.code || res?.body?.error
+  const reason = code === 'manual-cooldown' || data?.status === 'cooldown' ? 'cooldown'
+    : code === 'refresh-budget-exhausted' || data?.status === 'budget' ? 'budget' : 'error'
+  return {
+    reason,
+    key: reason === 'cooldown' ? 'rivalAccounts.skip.cooldown'
+      : reason === 'budget' ? 'rivalAccounts.skip.budget' : errorText(res),
+  }
 }
 
 /**
@@ -76,7 +91,7 @@ function selectionSize(state) {
  *   query?: string,
  *   platform?: string,
  *   sort?: string,
- *   api?: { fetchRivalAccounts?: Function, fetchRivalFeed?: Function, refreshRivalAccount?: Function, fetchRivalStatus?: Function, refreshAllRivalAccounts?: Function, retryRivalAccount?: Function },
+ *   api?: { fetchRivalAccounts?: Function, fetchRivalFeed?: Function, refreshRivalAccount?: Function, fetchRivalStatus?: Function },
  *     test seam: when given, this object is the whole endpoint set — an
  *     endpoint it omits is not called. Production passes nothing.
  * }} [options]
@@ -96,8 +111,6 @@ export function useRivalFeed(options = {}) {
   const feedApi = options.api?.fetchRivalFeed
   const refreshApi = options.api?.refreshRivalAccount
   const statusApi = options.api?.fetchRivalStatus
-  const refreshAllApi = options.api?.refreshAllRivalAccounts
-  const retryApi = options.api?.retryRivalAccount
   /**
    * Endpoint resolution.
    *
@@ -114,15 +127,11 @@ export function useRivalFeed(options = {}) {
     fetchRivalFeed: feedApi ?? fetchRivalFeed,
     refreshRivalAccount: refreshApi ?? (options.api ? undefined : refreshRivalAccount),
     fetchRivalStatus: statusApi ?? (options.api ? undefined : fetchRivalStatus),
-    refreshAllRivalAccounts: refreshAllApi ?? (options.api ? undefined : refreshAllRivalAccounts),
-    retryRivalAccount: retryApi ?? (options.api ? undefined : retryRivalAccount),
   }), [
     accountsApi,
     feedApi,
     refreshApi,
     statusApi,
-    refreshAllApi,
-    retryApi,
     options.api,
   ])
   /**
@@ -160,13 +169,18 @@ export function useRivalFeed(options = {}) {
   const [status, setStatus] = useState(null)
   const [configSummary, setConfigSummary] = useState(null)
   /**
-   * When this client last asked for a manual pool refresh. The Host enforces
-   * a 30-minute window on `refresh-all`; mirroring it locally is what lets the
-   * 置灰 button name its own reason instead of waiting for a refusal.
+   * The toolbar keeps its 30-minute window for accepted accounts only. A
+   * different selection remains refreshable; the Host still enforces every
+   * account's own allowance and manual cooldown.
    */
   const [lastManualRefreshAt, setLastManualRefreshAt] = useState(0)
+  const [manualRefreshes, setManualRefreshes] = useState({})
   /** Failure of the most recent refresh action, keyed by reason kind. */
   const [refreshFailure, setRefreshFailure] = useState(null)
+  const [refreshNotice, setRefreshNotice] = useState(null)
+  const [refreshBusy, setRefreshBusy] = useState(false)
+  // A ref closes the same-event double-click gap before React commits disabled state.
+  const refreshBusyRef = useRef(false)
 
   /** Number of requests this hook has issued; also the request gate. */
   const issued = useRef(0)
@@ -229,8 +243,9 @@ export function useRivalFeed(options = {}) {
    * @param {boolean} polled true when this read came from the poll timer
    */
   const watchAccounts = useCallback((nextAccounts, polled) => {
-    const active = activeFetchAccounts(nextAccounts)
-    const issue = fetchIssue(nextAccounts)
+    const scoped = selectedRivalAccounts(nextAccounts, selectionRef.current, platform)
+    const active = activeFetchAccounts(scoped)
+    const issue = fetchIssue(scoped)
     if (issue && active.length === 0) {
       clearPollTimer()
       updateFetchPhase(issue)
@@ -258,7 +273,7 @@ export function useRivalFeed(options = {}) {
       if (!mounted.current || !enabled) return
       void loadRef.current({ polled: true })
     }, pollIntervalRef.current)
-  }, [clearPollTimer, enabled, updateFetchPhase, watchBudgetOption])
+  }, [clearPollTimer, enabled, platform, updateFetchPhase, watchBudgetOption])
 
   /**
    * Load page 1 under whatever the toolbar currently holds.
@@ -301,7 +316,8 @@ export function useRivalFeed(options = {}) {
           statusData = statusRes?.ok ? (statusRes.body?.data || null) : null
         } catch { statusData = null }
       }
-      if (isCurrent(ticket)) setStatus(statusData)
+      if (!isCurrent(ticket)) return
+      setStatus(statusData)
       const nextAllIds = accountIds(nextAccounts)
       allIdsRef.current = nextAllIds
       watchAccounts(nextAccounts, opts.polled === true)
@@ -342,7 +358,7 @@ export function useRivalFeed(options = {}) {
     } catch (err) {
       if (!isCurrent(ticket)) return
       setPhase('ready')
-      setError(String(err?.message || err))
+      setError('rivalAccounts.error.failed')
     } finally {
       if (isCurrent(ticket)) setLoading(false)
     }
@@ -390,7 +406,7 @@ export function useRivalFeed(options = {}) {
       setHasMore(Boolean(data.has_more))
     } catch (err) {
       if (!isCurrent(ticket)) return
-      setError(String(err?.message || err))
+      setError('rivalAccounts.error.failed')
     } finally {
       if (isCurrent(ticket)) setLoadingMore(false)
     }
@@ -405,11 +421,13 @@ export function useRivalFeed(options = {}) {
    * @param {{ mode: 'all' | 'subset', ids: string[] }} next
    */
   const commitSelection = useCallback((next) => {
+    clearPollTimer()
+    updateFetchPhase(null)
     selectionRef.current = next
     setSelection(next)
     setPage(1)
     void load()
-  }, [load])
+  }, [clearPollTimer, load, updateFetchPhase])
 
   /** Check or uncheck one account; the grid follows immediately. */
   const toggleAccount = useCallback((id) => {
@@ -426,66 +444,69 @@ export function useRivalFeed(options = {}) {
     commitSelection(resetAccountSelection())
   }, [commitSelection])
 
-  /**
-   * 「刷新」：一次性让 Host 把筛选集内的账号都排进刷新队列。
-   *
-   * 本地镜像的只是「上一次按下去的时刻」——冷却期内的置灰理由由外壳读它；
-   * 真正的额度与拒绝理由仍以 Host 的 `skipped`/`budget` 回答为准。
-   * @returns {Promise<{ ok: boolean, reason?: 'cooldown' | 'budget' | 'error', n?: number }>}
-   */
-  const refreshPool = useCallback(async () => {
-    if (typeof api.refreshAllRivalAccounts !== 'function') return { ok: false, reason: 'error' }
+  /** One guarded submission path for toolbar refresh, row retry and first-fetch retry. */
+  const refreshAccounts = useCallback(async (targets, pool = false) => {
+    if (!enabled || refreshBusyRef.current) return { ok: false, reason: 'busy' }
+    refreshBusyRef.current = true
+    setRefreshBusy(true)
+    setRefreshFailure(null)
+    setRefreshNotice({ key: 'rivalAccounts.refresh.submitting', n: targets.length, failures: [] })
+    const accepted = []
+    const failures = []
     try {
-      const res = await api.refreshAllRivalAccounts()
-      if (!res?.ok) {
-        const code = res?.body?.code || res?.body?.error?.code || ''
-        if (code === 'refresh-budget-exhausted' || code === 'manual-cooldown' || res?.status === 429) {
-          const reason = code === 'manual-cooldown' ? 'cooldown' : 'budget'
-          setRefreshFailure({ reason })
-          return { ok: false, reason }
+      for (const account of targets) {
+        let issue = null
+        if (accountNeedsReimport(account)) {
+          issue = { reason: 'reimport', key: 'rivalAccounts.health.reimportReason' }
+        } else if (typeof api.refreshRivalAccount !== 'function') {
+          issue = { reason: 'error', key: 'rivalAccounts.error.toolMissing' }
+        } else {
+          try {
+            // Explicit retries use the Host's manual path, preserving its budget and cooldown checks.
+            const res = await api.refreshRivalAccount(String(account.id), { manual: true })
+            issue = refreshIssue(res)
+          } catch {
+            issue = { reason: 'error', key: 'rivalAccounts.error.failed' }
+          }
         }
-        setRefreshFailure({ reason: 'error' })
-        return { ok: false, reason: 'error' }
+        if (issue) failures.push({ ...issue, account })
+        else accepted.push(String(account.id))
       }
-      setLastManualRefreshAt(Date.now())
-      setRefreshFailure(null)
-      void load()
-      return { ok: true }
-    } catch {
-      setRefreshFailure({ reason: 'error' })
-      return { ok: false, reason: 'error' }
+      if (pool && accepted.length > 0) {
+        const at = Date.now()
+        setLastManualRefreshAt(at)
+        setManualRefreshes((previous) => ({ ...previous, ...Object.fromEntries(accepted.map((id) => [id, at])) }))
+      }
+      const failure = failures[0] || null
+      setRefreshFailure(failure)
+      setRefreshNotice({
+        key: accepted.length > 0 ? 'rivalAccounts.refresh.queued'
+          : failure?.key || 'rivalAccounts.refresh.emptySelection',
+        n: accepted.length,
+        failures,
+      })
+      clearPollTimer()
+      updateFetchPhase(null)
+      await loadRef.current()
+      return { ok: accepted.length > 0, reason: failure?.reason, n: accepted.length }
+    } finally {
+      refreshBusyRef.current = false
+      if (mounted.current) setRefreshBusy(false)
     }
-  }, [api, load])
+  }, [api, clearPollTimer, enabled, updateFetchPhase])
 
-  /**
-   * 「已停止」行的重试：让 Host 把这个账号重新排进队列。
-   *
-   * Host 接受后刷新事实马上重读——`refresh_state` 变 `queued`，行回 `normal`，
-   * 正是规格 §8.1 要求的即时恢复语义；连续失败计数由 Host 在新一轮刷新成功
-   * 后清零。
-   * @param {string} accountId
-   * @returns {Promise<{ ok: boolean, reason?: 'cooldown' | 'budget' | 'error' }>}
-   */
-  const retryAccount = useCallback(async (accountId) => {
-    if (typeof api.retryRivalAccount !== 'function') return { ok: false, reason: 'error' }
-    try {
-      const res = await api.retryRivalAccount(accountId)
-      if (!res?.ok) {
-        const code = res?.body?.code || res?.body?.error?.code || ''
-        const reason = code === 'manual-cooldown' ? 'cooldown'
-          : (code === 'refresh-budget-exhausted' || res?.status === 429) ? 'budget'
-          : 'error'
-        setRefreshFailure({ reason })
-        return { ok: false, reason }
-      }
-      setRefreshFailure(null)
-      await load()
-      return { ok: true }
-    } catch {
-      setRefreshFailure({ reason: 'error' })
-      return { ok: false, reason: 'error' }
-    }
-  }, [api, load])
+  const scopedAccounts = useMemo(
+    () => selectedRivalAccounts(accounts, selection, platform),
+    [accounts, platform, selection],
+  )
+  const refreshPool = useCallback(
+    () => refreshAccounts(selectedRivalAccounts(accounts, selectionRef.current, platform), true),
+    [accounts, platform, refreshAccounts],
+  )
+  // The row itself names the explicit account range; it never retries neighboring accounts.
+  const retryAccount = useCallback((accountId) => refreshAccounts(
+    accounts.filter((account) => String(account.id) === String(accountId)),
+  ), [accounts, refreshAccounts])
 
   /**
    * Cards for the grid. `cover_src` is derived once on the server and still
@@ -510,23 +531,26 @@ export function useRivalFeed(options = {}) {
    */
   const retryFetch = useCallback(async () => {
     if (!enabled) return
-    clearPollTimer()
-    const failed = (accounts || []).filter((account) => (
+    const failed = selectedRivalAccounts(accounts, selectionRef.current, platform).filter((account) => (
       (account?.refresh_state === 'error' || account?.refresh_state === 'backoff')
       && Number(account?.post_count) === 0
     ))
-    updateFetchPhase(null)
-    if (typeof api.refreshRivalAccount === 'function') {
-      for (const account of failed) {
-        // eslint-disable-next-line no-await-in-loop
-        try { await api.refreshRivalAccount(String(account.id), { manual: false }) } catch { /* the next read reports the truth */ }
-      }
+    if (failed.length > 0) return refreshAccounts(failed)
+    if (!refreshBusyRef.current) {
+      clearPollTimer()
+      updateFetchPhase(null)
+      await load()
     }
-    await load()
-  }, [accounts, api, clearPollTimer, enabled, load, updateFetchPhase])
+  }, [accounts, clearPollTimer, enabled, load, platform, refreshAccounts, updateFetchPhase])
 
   /** True while an E1 row still reports a fetch in flight. */
-  const fetching = useMemo(() => activeFetchAccounts(accounts).length > 0, [accounts])
+  const fetching = useMemo(() => activeFetchAccounts(scopedAccounts).length > 0, [scopedAccounts])
+  const visibleFetchPhase = !fetchPhase?.account
+    || scopedAccounts.some((account) => String(account.id) === String(fetchPhase.account.id)) ? fetchPhase : null
+  const cooldowns = scopedAccounts.filter((account) => !accountNeedsReimport(account))
+    .map((account) => manualCooldownMinutesLeft(manualRefreshes[account.id]))
+  const manualCooldownLeft = cooldowns.length > 0 && cooldowns.every((value) => value !== null)
+    ? Math.min(...cooldowns) : null
 
   return {
     phase,
@@ -534,6 +558,7 @@ export function useRivalFeed(options = {}) {
     loading,
     loadingMore,
     accounts,
+    scopedAccounts,
     allIds,
     selection,
     items,
@@ -552,7 +577,7 @@ export function useRivalFeed(options = {}) {
      * (`timeout`). Both drive the empty state; `retryFetch` is its exit.
      */
     fetching,
-    fetchPhase,
+    fetchPhase: visibleFetchPhase,
     retryFetch,
     load,
     loadMore,
@@ -563,7 +588,10 @@ export function useRivalFeed(options = {}) {
     status,
     configSummary,
     lastManualRefreshAt,
+    manualCooldownLeft,
     refreshFailure,
+    refreshNotice,
+    refreshBusy,
     refreshPool,
     retryAccount,
   }
