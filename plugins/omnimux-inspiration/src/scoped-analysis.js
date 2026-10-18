@@ -15,6 +15,16 @@ const DIRECTIONS = { content: '内容：主题、事实、结构和可借鉴的�
 const active = new WeakMap()
 const fail = (status, error, data, key) => ({ status, body: { error, ...(data ? { data, analysis_key: key } : {}) } })
 
+/** A persisted running entry without an executor was interrupted by a restart. */
+export function recoverInterruptedAnalyses(store, item) {
+  let current = item
+  for (const [key, entry] of Object.entries(item?.analysis_results || {})) {
+    if (entry?.status !== 'running' || active.get(store)?.has(`${item.id}:${key}`)) continue
+    current = store.updateAnalysis(item.id, key, { ...entry, status: 'failed', error: '分析已中断，请重新分析' })
+  }
+  return current
+}
+
 function cancelled(signal) {
   if (!signal?.aborted) return
   throw Object.assign(new Error('分析已取消'), { name: 'AbortError', code: 'ABORT_ERR' })

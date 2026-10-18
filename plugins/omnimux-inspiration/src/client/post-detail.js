@@ -35,6 +35,19 @@ export function analysisTargetKey(target = { scope: 'post' }) {
   return target.scope === 'media' ? `media:${target.media_index}` : target.scope
 }
 
+/** The server lock remains active even if the saved input has since changed. */
+export function hasRunningAnalysis(item) {
+  return Object.values(item?.analysis_results || {}).some(entry => entry?.status === 'running')
+}
+
+/** Reuse the row poller without treating network errors as task completion. */
+export function decideAnalysisPollOutcome(response) {
+  if (response?.status === 404) return { action: 'gone' }
+  const item = response?.body?.data
+  if (!response?.ok || !item || typeof item !== 'object' || Array.isArray(item)) return { action: 'keep' }
+  return { action: hasRunningAnalysis(item) ? 'pending' : 'settled', item }
+}
+
 /** Return only results whose complete saved inputs still match this post. */
 export function getTargetAnalysis(item, target = { scope: 'post' }) {
   const key = analysisTargetKey(target)
