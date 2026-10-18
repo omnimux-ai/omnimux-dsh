@@ -1,0 +1,102 @@
+{
+  "scope": "task-private-settings-browser",
+  "spaceId": 189,
+  "origin": "http://127.0.0.1:60072",
+  "checks": [
+    {
+      "name": "prepared-page-origin",
+      "actual": "http://127.0.0.1:60072",
+      "expected": "http://127.0.0.1:60072",
+      "pass": true
+    },
+    {
+      "name": "loaded-client-response",
+      "actual": 200,
+      "expected": 200,
+      "pass": true
+    },
+    {
+      "name": "current-task-client-exact-bytes",
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    {
+      "name": "one-official-models-module",
+      "actual": 1,
+      "expected": 1,
+      "pass": true
+    },
+    {
+      "name": "retained-providers",
+      "actual": [
+        "编辑 DeepSeek (deepseek-official)",
+        "编辑 OmniMux (omnimux)"
+      ],
+      "expected": [
+        "编辑 DeepSeek (deepseek-official)",
+        "编辑 OmniMux (omnimux)"
+      ],
+      "pass": true
+    },
+    {
+      "name": "编辑 DeepSeek (deepseek-official):synthetic-credential-editor",
+      "actual": {
+        "visible": true,
+        "disabled": true
+      },
+      "expected": {
+        "visible": true,
+        "disabled": true
+      },
+      "pass": true
+    },
+    {
+      "name": "编辑 OmniMux (omnimux):synthetic-credential-editor",
+      "actual": {
+        "visible": true,
+        "disabled": true
+      },
+      "expected": {
+        "visible": true,
+        "disabled": true
+      },
+      "pass": true
+    },
+    {
+      "name": "omnimux-profile-and-login-entry",
+      "actual": {
+        "visible": true,
+        "signedOut": true,
+        "loginAvailable": true
+      },
+      "expected": {
+        "visible": true,
+        "signedOut": true,
+        "loginAvailable": true
+      },
+      "pass": true
+    },
+    {
+      "name": "removed-configuration-has-no-registration-output",
+      "actual": {
+        "pluginConfiguration": true,
+        "removedTitles": [],
+        "oldCards": 0
+      },
+      "expected": {
+        "pluginConfiguration": true,
+        "removedTitles": [],
+        "oldCards": 0
+      },
+      "pass": true
+    }
+  ],
+  "closed": true,
+  "startedAt": "2026-10-18T07:11:55.350Z",
+  "clientHash": "4c026b73ab850205f3b9f073f4595e5ef64a50bbf5a4958321c702aa3f97fabc",
+  "snapshot": "[p1 \"OmniMux\" | space \"#3395 设置账号入口验收\"(189): 1 managed, 0 untracked — p1* \"OmniMux\"]\nroot\n  container\n    container\n      container\n        button \"新对话\" [ref=1]\n          svg_root\n          text \"OmniMux\"\n        button \"新对话\" [ref=2]\n          svg_root\n          text \"新对话\"\n        button \"技能/专家\" [ref=3, loc=css:button[aria-label=\"技能/专家\"]]\n          svg_root\n          text \"技能/专家\"\n        button \"探索\" [ref=4, loc=css:button[aria-label=\"探索\"]]\n          svg_root\n          text \"探索\"\n        container\n          container\n            text \"工作区\"\n            button \"搜索会话\" [ref=5, loc=css:button[aria-label=\"搜索会话\"]]\n              svg_root\n            container\n              button \"视图选项\" [ref=6, loc=css:button[aria-label=\"视图选项\"]]\n                svg_root\n              button \"添加工作区\" [ref=7, loc=css:button[aria-label=\"添加工作区\"]]\n                svg_root\n          tree \"会话\"\n            treeitem\n              svg_root\n              text \"QA Media\"\n            treeitem\n              text \"新对话\"\n        container\n          button \"设置\" [ref=8, loc=css:button[aria-label=\"设置\"]]\n            svg_root\n            text \"设置\"\n          dialog \"设置\"\n            container\n              text \"设置\"\n              container\n                button [ref=19]\n                  svg_root\n                  text \"通用设置\"\n                button [ref=20]\n                  svg_root\n                  text \"个人资料\"\n                button [ref=21]\n                  svg_root\n                  text \"模型\"\n                button [ref=22]\n                  svg_root\n                  text \"插件\"\n                button [ref=23]\n                  svg_root\n                  text \"Agent 预设\"\n            container\n              container\n                button [ref=24]\n                  text \"打开配置文件\"\n                button [ref=25]\n                  svg_root\n              container\n                heading\n                  text \"插件\"\n                paragraph\n                  text \"配置和查看本部署已安装的插件。\"\n                tablist \"插件视图\"\n                  tab [ref=63]\n                    text \"插件配置\"\n                  tab [ref=64]\n                    text \"插件列表\"\n                  tab [ref=65]\n                    text \"系统扩展\"\n                tabpanel \"插件配置\"\n                  unordered_list\n                    list_item\n                      button \"展开设置: 终端\" [ref=66, loc=css:button[aria-label=\"展开设置: 终端\"]]\n                        container\n                          text \"终端\"\n                          text \"限制 agent 运行的每一条命令。\"\n                        svg_root\n                    list_item\n                      button \"展开设置: Agent 循环\" [ref=67, loc=css:button[aria-label=\"展开设置: Agent 循环\"]]\n                        container\n                          text \"Agent 循环\"\n                          text \"Agent 如何派发工具调用。\"\n                        svg_root\n                    list_item\n                      button \"展开设置: Subagent\" [ref=68, loc=css:button[aria-label=\"展开设置: Subagent\"]]\n                        container\n                          text \"Subagent\"\n                          text \"控制 Agent 为 Subagent 选择模型的权限。\"\n                        svg_root\n                    list_item\n                      button \"展开设置: 网页搜索\" [ref=69, loc=css:button[aria-label=\"展开设置: 网页搜索\"]]\n                        container\n                          text \"网页搜索\"\n                          text \"DeepSeek 搜索提供方。\"\n                        svg_root\n                    list_item\n                      button [ref=70]\n                        text \"SkillHub\"\n                        text \"搜索 API、安装目录与结果数量。\"\n                      button \"展开\" [ref=71, loc=css:button[aria-label=\"展开\"]]\n                        svg_root\n      container\n        container\n          svg_root\n          text \"属于你的AI社媒运营团队\"\n        container\n          button \"选择工作区\" [ref=9, loc=css:button[aria-label=\"选择工作区\"]]\n            svg_root\n            text \"QA Media\"\n            svg_root\n          button [ref=10]\n            image\n            text \"代码开发\"\n            svg_root\n        container\n          container\n            textfield \"描述你想要构建的内容, / 调用指令, @ 文件或对话\" [ref=11]\n            text \"描述你想要构建的内容, / 调用指令, @ 文件或对话\"\n          container\n            container\n              button \"指令\" [ref=12, loc=css:button[aria-label=\"指令\"]]\n                svg_root\n              button \"技能\" [ref=13, loc=css:button[aria-label=\"技能\"]]\n                svg_root\n                text \"技能\"\n            container\n              button \"选择模型，当前 DeepSeek-V41-Flash，推理等级 High\" [ref=14, loc=css:button[aria-label=\"选择模型，当前 DeepSeek-V41-Flash，推理等级 High\"]]\n                svg_root\n              button \"发送消息\" [ref=15, loc=css:button[aria-label=\"发送消息\"]]\n                svg_root\n    button \"收起侧边栏\" [ref=16]\n      svg_root\n  dialog \"OmniMux工作台\"\n    iframe\n      root\n        toolbar \"OmniMux\"\n          button \"OmniMux\" [ref=17]\n            svg_root\n  toolbar \"OmniMux\"\n    button \"OmniMux\" [ref=18]\n      svg_root\n",
+  "status": "PASS",
+  "completedAt": "2026-10-18T07:12:02.646Z",
+  "spaceAbsent": true
+}
