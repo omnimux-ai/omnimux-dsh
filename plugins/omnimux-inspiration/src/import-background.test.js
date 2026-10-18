@@ -822,3 +822,30 @@ describe('analyze guard while an import runs', { concurrency: 1 }, () => {
     await waitForSettled(ctx, started.body.data.id)
   })
 })
+
+
+describe('accepted background import owns its lifetime (#3369)', () => {
+  it('finishes after the submitting connection is cancelled', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'omnimux-bg-lifetime-'))
+    const controller = new AbortController()
+    let release
+    const gate = new Promise((resolve) => { release = resolve })
+    const ctx = makeDispatcher(makePaths(tmp), async ({ signal }) => {
+      await gate
+      if (signal?.aborted) throw Object.assign(new Error('aborted'), { name: 'AbortError' })
+      return X_VIDEO_ENVELOPE
+    })
+    try {
+      const response = await ctx.dispatcher.dispatch({ method: 'POST', url: '/omnimux/inspiration/local/import-url', body: { url: X_URL, auto_analyze: false, background: true }, signal: controller.signal })
+      assert.equal(response.status, 202)
+      controller.abort()
+      release()
+      const row = await waitForSettled(ctx, response.body.data.id)
+      assert.equal(row.import_status, 'ready')
+      assert.ok(existsSync(row.local_paths.video))
+    } finally {
+      release()
+      rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+})

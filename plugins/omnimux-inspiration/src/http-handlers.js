@@ -1176,7 +1176,9 @@ async function startBackgroundImport(ctx, placeholder) {
 
   activeJobs.add(id)
   importLocks.add(canonicalKey)
-  void runBackgroundImport(ctx, placeholder).finally(() => {
+  // Once accepted, the persisted job outlives the submitting HTTP connection.
+  // handleImportUrl still rejects a caller already cancelled before acceptance.
+  void runBackgroundImport({ ...ctx, signal: undefined }, placeholder).finally(() => {
     importLocks.delete(canonicalKey)
     activeJobs.delete(id)
   })
