@@ -1,18 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { runStyleDomProbe } from '../../../../scripts/test-fixtures/style-dom-probe.mjs'
 import { PRODUCT_STAGE_CHROME } from './conversation-box.js'
 
 /**
  * 端到端回归：macOS 红绿灯安全区不得在页头嵌套层级上累加（Issue #1838）。
  *
- * 在真实 Chrome 里渲染真实的安全区规则与真实页头 DOM，断言布局几何。纯字符串断言无法发现
+ * 在真实浏览器里渲染真实的安全区规则与真实页头 DOM，断言布局几何。纯字符串断言无法发现
  * 「84px 被每一层各加一次」这类缺陷，只有真实布局计算能发现。
  *
- * 依赖本机安装的 Chrome；CI 不执行本文件（与 comment-native.e2e.test.js 同类的本地专用 e2e）。
+ * 浏览器选择与证据由共享布局探针管理。
  */
 
 /** PageHeader 的关键布局声明，取自 dsh-ui-kit 的 PageHeader.module.css。 */
@@ -39,7 +36,7 @@ const HEADER_DOM = `
   <div class="omnimux-workflow-library-action-row"><button>新建项目</button></div>
 </div>`
 
-const MEASURE = `(() => {
+const MEASURE = () => {
   const host = document.querySelector('.omnimux-workflow-library-page').getBoundingClientRect();
   const pick = (sel) => {
     const el = document.querySelector(sel);
@@ -54,59 +51,24 @@ const MEASURE = `(() => {
     subtitle: pick('.dshUk-PageHeader-subtitle'),
     actionRow: pick('.omnimux-workflow-library-action-row'),
   };
-})()`
-
-const CHROME_CANDIDATES = [
-  process.env.CHROME_PATH,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/opt/homebrew/bin/chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/google-chrome-stable',
-  '/usr/bin/chromium',
-].filter(Boolean)
-
-function findChrome() {
-  const found = CHROME_CANDIDATES.find((candidate) => existsSync(candidate))
-  assert.ok(found, `未找到 Chrome，无法执行布局端到端回归。候选路径：${CHROME_CANDIDATES.join(', ')}`)
-  return found
 }
 
 /**
  * 渲染给定状态下的页头并读取几何。
- * 页面自测后把结果写进 <title>，由 --dump-dom 带回，测试里无需维护一套 CDP 客户端。
+ * 页面自测后把结果写进标题，由共享探针带回。
  */
 function measure({ darwin = false, leftCollapsed = false, conversationCollapsed = false, productStage = null } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'omnimux-header-e2e-'))
-  try {
-    const attrs = [
+  const attrs = [
       darwin ? `document.body.setAttribute('data-dsh-desktop-platform','darwin');` : '',
       leftCollapsed ? `document.documentElement.setAttribute('data-omnimux-left-collapsed','');` : '',
       conversationCollapsed ? `document.documentElement.setAttribute('data-omnimux-conversation-collapsed','');` : '',
       productStage ? `document.documentElement.setAttribute('data-dsh-product-stage','${productStage}');` : '',
-    ].join('')
-    const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>pending</title>
-<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { width: 1600px; }</style>
-<style>${PAGE_HEADER_BASE_CSS}</style>
-<style>${PRODUCT_STAGE_CHROME}</style>
-</head><body>${HEADER_DOM}
-<script>
-${attrs}
-document.title = 'RESULT:' + JSON.stringify(${MEASURE});
-</script></body></html>`
-    const page = join(dir, 'probe.html')
-    writeFileSync(page, html)
-    const out = spawnSync(findChrome(), [
-      '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-      '--window-size=1600,600', '--virtual-time-budget=1500', '--dump-dom', `file://${page}`,
-    ], { encoding: 'utf8', timeout: 30000 })
-    const stdout = out.stdout ?? ''
-    const match = /<title>RESULT:(.*?)<\/title>/s.exec(stdout)
-    assert.ok(match, `页面未回传测量结果。Chrome 输出片段：${stdout.slice(0, 400)}`)
-    return JSON.parse(match[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'))
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-  }
+  ].join('')
+  return runStyleDomProbe({
+    name: 'header-safe-inset', viewportHeight: 600,
+    styles: PAGE_HEADER_BASE_CSS + PRODUCT_STAGE_CHROME,
+    html: `${HEADER_DOM}<script>${attrs}</script>`, measure: MEASURE,
+  })
 }
 
 test('页头安全区不在嵌套层级上累加，标题与描述保持左对齐', () => {
