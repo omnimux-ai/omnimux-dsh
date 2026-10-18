@@ -172,6 +172,58 @@ describe('session-scoped replication prefill', () => {
   })
 })
 
+describe('append mode for add-to-session', () => {
+  it('appends after a blank line and keeps the existing draft and attachment flow', async () => {
+    let attached = 0
+    const completion = queue({ targetSessionId: 's', prompt: 'COLLECTION', mode: 'append', attach() { attached += 1; return { ok: true } } })
+    let draft = '我的问题：先看这个'
+    const slot = {
+      sessionId: 's',
+      get draft() { return draft },
+      // mount consumer marks inline images as protected; append must ignore it.
+      protected: true,
+      phase: 'plain',
+      inputActions: { setDraft(next) { draft = next } },
+    }
+    assert.equal(consumeSessionPrefill(getPendingSessionPrefill(), slot), 'consumed')
+    assert.deepEqual(await completion, { ok: true, via: 'input-actions', appended: true })
+    assert.equal(draft, '我的问题：先看这个\n\nCOLLECTION')
+    assert.equal(attached, 1)
+  })
+
+  it('appends to an empty draft without a leading blank line', async () => {
+    const completion = queue({ targetSessionId: 's', prompt: 'COLLECTION', mode: 'append' })
+    const writes = []
+    assert.equal(consumeSessionPrefill(getPendingSessionPrefill(), {
+      sessionId: 's', draft: '', inputActions: { setDraft(next) { writes.push(next) } },
+    }), 'consumed')
+    assert.deepEqual(await completion, { ok: true, via: 'input-actions', appended: true })
+    assert.deepEqual(writes, ['COLLECTION'])
+  })
+
+  it('refuses only a non-plain composer phase and never writes or attaches', async () => {
+    let attached = 0
+    const completion = queue({ targetSessionId: 's', prompt: 'COLLECTION', mode: 'append', attach() { attached += 1; return { ok: true } } })
+    const writes = []
+    assert.equal(consumeSessionPrefill(getPendingSessionPrefill(), {
+      sessionId: 's', draft: '已有草稿', phase: 'command', inputActions: { setDraft(next) { writes.push(next) } },
+    }), 'protected')
+    assert.deepEqual(await completion, { ok: false, error: 'draft-protected' })
+    assert.deepEqual(writes, [])
+    assert.equal(attached, 0)
+  })
+
+  it('readback waits for the exact appended draft', async () => {
+    let draft = 'keep'
+    const completion = queue({ targetSessionId: 's', prompt: 'COLLECTION', mode: 'append', requireReadback: true, attach: () => ({ ok: true }) })
+    const slot = { sessionId: 's', get draft() { return draft }, inputActions: { setDraft(next) { draft = next } } }
+    assert.equal(consumeSessionPrefill(getPendingSessionPrefill(), slot), 'waiting')
+    assert.equal(draft, 'keep\n\nCOLLECTION')
+    assert.equal(consumeSessionPrefill(getPendingSessionPrefill(), { sessionId: 's', draft: 'keep\n\nCOLLECTION' }), 'consumed')
+    assert.deepEqual(await completion, { ok: true, via: 'input-actions', appended: true })
+  })
+})
+
 it('readback handoff does not claim success from a void setDraft call', async () => {
   let rollbacks = 0
   const completion = queueSessionPrefill({ targetSessionId: 's', prompt: 'expected', requireReadback: true, timeoutMs: 5,

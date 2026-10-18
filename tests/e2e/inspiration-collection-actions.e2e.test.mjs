@@ -17,6 +17,13 @@
  * Round 3 keeps the shared geometry/type/width while the collection CTA keeps the
  * media dark-room colours (light-theme pixel contrast re-checked in the evidence).
  *
+ * #3420: collection "add to session" appends the collection context to the
+ * current draft through the hub `mode:'append'` seam — an existing draft or
+ * session attachment never blocks and the collapsed conversation column is
+ * opened; only a composer in a non-plain phase is refused with the new
+ * append-specific toast. The stub below implements the hub append contract; the
+ * real hub append implementation is covered by hub unit tests (18 pass).
+ *
  * Live precondition: `docs/evidence/2026-10-18-inspiration-collection-cta-css-3418/`
  * (browser.json + cta-shared-ui.png / cta-host-rule-immunity.png, 1600x1100) from
  * the #3418 real-browser run (9/9 assertions), inspected before this regression
@@ -40,7 +47,8 @@ const LOCAL = '/omnimux/inspiration/local'
 const COLLECTION_TITLE = '测试合集'
 const ITEM_IDS = ['qa-dance1', 'qa-dance2', 'qa-fashion1']
 const SESSION_ID = 'qa-session-1'
-const DRAFT_PROTECTED = '输入框已有内容，请先清空或新建会话后重试'
+const PHASE_PROTECTED = '输入框当前状态不支持追加，请完成当前输入后重试'
+const APPEND_SEPARATOR = '\n\n'
 const NO_SESSION = '没有可加入的会话，请先打开一个会话'
 const SENTINEL_DRAFT = '用户既有草稿（QA 哨兵）'
 
@@ -57,7 +65,7 @@ button[class*="add"] svg,.Q7WfXG_add svg,
 .sh-picker-trigger svg{flex:none !important;width:14px !important;height:14px !important;min-width:14px !important;min-height:14px !important;display:block !important}`
 
 
-const livePrecondition = 'Issue #3418: docs/evidence/2026-10-18-inspiration-collection-cta-css-3418/browser.json + 2 decodable 1600x1100 PNGs (cta-shared-ui, cta-host-rule-immunity) from the real-browser run, 11/11 assertions including light-theme pixel contrast (secondary 13.57:1, primary 18.86:1), inspected before this regression was updated; #3411 evidence under docs/evidence/2026-10-18-inspiration-collection-actions-3411/.'
+const livePrecondition = 'Issue #3420: docs/evidence/2026-10-18-inspiration-append-to-session-3420/browser.json + 2 decodable 1600x1100 PNGs (append-existing-draft, append-protected) from the real-browser run, 7/7 assertions (append draft + blank line, conversation open, no toast, no send; phase-protected toast + draft untouched); #3418 evidence under docs/evidence/2026-10-18-inspiration-collection-cta-css-3418/.'
 
 async function settle(browser) {
   await browser.wait(() => {
@@ -144,7 +152,7 @@ async function installHostStubs(browser) {
     ].join('')
     document.body.appendChild(pane)
 
-    const qaHost = { calls: [], prefill: [], sends: [], requests: [] }
+    const qaHost = { calls: [], prefill: [], sends: [], requests: [], attachments: 1 }
     window.__qaHost = qaHost
     document.body.dataset.conversation = 'collapsed'
     window.__omnimuxWorkbench = {
@@ -155,13 +163,32 @@ async function installHostStubs(browser) {
       },
       setFocus(value) { qaHost.calls.push(['focus', value]) },
     }
+    // Synthetic attachment fact: the session already has one attachment. The
+    // append stub (like the hub append contract) is not blocked by it.
+    window.__omnimuxAttachments = {
+      getActiveSessionId: () => '',
+      listAttachments: () => [{ id: 'qa-attachment-1', kind: 'image' }],
+    }
     window.__omnimuxSessionPrefill = {
       queueSessionPrefill(request) {
         const prompt = String(request?.prompt ?? '')
-        qaHost.prefill.push({ targetSessionId: request?.targetSessionId, prompt })
+        const mode = request?.mode === 'append' ? 'append' : 'replace'
         const composer = document.getElementById('qa-composer')
-        if (composer) composer.value = prompt
-        return Promise.resolve({ ok: true })
+        const draftBefore = composer ? composer.value : ''
+        const base = String(draftBefore ?? '').replace(/\s+$/, '')
+        const draftAfter = mode === 'append' ? (base ? base + '\n\n' + prompt : prompt) : prompt
+        qaHost.prefill.push({
+          targetSessionId: request?.targetSessionId,
+          prompt,
+          mode,
+          hasAttach: typeof request?.attach === 'function',
+          draftBefore,
+          draftAfter,
+        })
+        if (composer) composer.value = draftAfter
+        const result = { ok: true, via: 'input-actions' }
+        if (mode === 'append') result.appended = true
+        return Promise.resolve(result)
       },
     }
     qaHost.goodPrefill = window.__omnimuxSessionPrefill.queueSessionPrefill
@@ -416,8 +443,13 @@ async function readToast(browser) {
     const toast = document.querySelector('.omnimux-inspiration-toast')
     const text = document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')
     const rect = toast?.getBoundingClientRect()
+    const toasts = Array.from(document.querySelectorAll('.omnimux-inspiration-toast')).filter(element => {
+      const box = element.getBoundingClientRect()
+      return box.width > 0 && box.height > 0 && box.top < innerHeight
+    })
     return {
       visible: Boolean(toast) && Boolean(rect) && rect.width > 0 && rect.height > 0 && rect.top < innerHeight,
+      toastCount: toasts.length,
       text: text?.textContent?.trim() ?? null,
     }
   })
@@ -426,11 +458,12 @@ async function readToast(browser) {
 async function readHost(browser) {
   return browser.evaluate(() => ({
     calls: window.__qaHost.calls.map(call => call.slice()),
-    prefill: window.__qaHost.prefill.map(entry => ({ targetSessionId: entry.targetSessionId, prompt: entry.prompt })),
+    prefill: window.__qaHost.prefill.map(entry => ({ targetSessionId: entry.targetSessionId, prompt: entry.prompt, mode: entry.mode, hasAttach: entry.hasAttach, draftBefore: entry.draftBefore, draftAfter: entry.draftAfter })),
     sends: window.__qaHost.sends.map(String),
     requests: window.__qaHost.requests.map(entry => ({ method: entry.method, url: entry.url })),
     conversation: document.body.dataset.conversation,
     composer: document.getElementById('qa-composer')?.value ?? null,
+    attachments: window.__qaHost.attachments,
     hasAttachments: Object.hasOwn(window, '__omnimuxAttachments'),
   }))
 }
@@ -447,6 +480,7 @@ async function resetHost(browser, restoreStubs) {
     host.prefill = []
     host.sends = []
     host.requests = []
+    host.attachments = 1
     document.body.dataset.conversation = 'collapsed'
     document.getElementById('qa-composer').value = ''
     return true
@@ -522,7 +556,7 @@ async function withEnvironment(name, run) {
   }
 }
 
-test('collection card actions: shared CTA under the market host rule, hover, view, add to session, focus, draft-protected and no-session', { timeout: 180000 }, async () => {
+test('collection card actions: shared CTA under the market host rule, hover, view, append to session, focus, phase-protected and no-session', { timeout: 180000 }, async () => {
   await withEnvironment('journey', async context => {
     const { fixture, browser, report, capture } = context
     // Drift guard: the injected host rule must stay verbatim in the market source.
@@ -688,6 +722,7 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     host = await readHost(browser)
     assert.equal(host.prefill.length, 1)
     assert.equal(host.prefill[0].targetSessionId, SESSION_ID)
+    assert.equal(host.prefill[0].mode, 'append', '加入会话 must use the hub append mode')
     assert.equal(host.prefill[0].prompt, expectedPrompt(collection.id))
     assert.equal(host.composer, expectedPrompt(collection.id))
     assert.equal(host.conversation, 'open')
@@ -739,13 +774,49 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     await capture('focus-actions')
     await browser.evaluate(() => { document.activeElement?.blur?.(); return true })
 
-    // 5. draft-protected: visible toast, existing draft preserved, no navigation.
+    // 5. append into an existing draft (+ synthetic attachment) with the column collapsed.
+    await resetHost(browser, true)
+    await browser.evaluate(sentinel => {
+      window.__qaHost.attachments = 1
+      document.body.dataset.conversation = 'collapsed'
+      document.getElementById('qa-composer').value = sentinel
+      return true
+    }, SENTINEL_DRAFT)
+    await sleep(150)
+    await hoverCard(browser)
+    const beforeAppend = await readHost(browser)
+    await browser.clickText('加入会话', '[data-collection-id] button')
+    await browser.wait(() => {
+      const state = window.__qaHost
+      return Boolean(state) && state.prefill.length === 1 && document.body.dataset.conversation === 'open'
+    })
+    await sleep(300)
+    const afterAppend = await readHost(browser)
+    const appendToast = await readToast(browser)
+    const expectedAppended = SENTINEL_DRAFT + APPEND_SEPARATOR + expectedPrompt(collection.id)
+    await capture('append-existing-draft')
+    assert.equal(beforeAppend.conversation, 'collapsed')
+    assert.equal(beforeAppend.composer, SENTINEL_DRAFT)
+    assert.equal(beforeAppend.attachments, 1)
+    assert.equal(afterAppend.conversation, 'open', '加入会话 must open the collapsed conversation column')
+    assert.deepEqual(afterAppend.calls, [['collapsed', false], ['focus', 'split']])
+    assert.equal(afterAppend.prefill.length, 1)
+    assert.equal(afterAppend.prefill[0].mode, 'append')
+    assert.equal(afterAppend.prefill[0].targetSessionId, SESSION_ID)
+    assert.equal(afterAppend.prefill[0].prompt, expectedPrompt(collection.id))
+    assert.equal(afterAppend.prefill[0].hasAttach, true)
+    assert.equal(afterAppend.prefill[0].draftBefore, SENTINEL_DRAFT)
+    assert.equal(afterAppend.composer, expectedAppended, 'existing draft must be preserved and the prompt appended after a blank line')
+    assert.equal(appendToast.visible, false, 'append must not show a blocking toast')
+    assert.equal(appendToast.toastCount, 0)
+    assert.equal(afterAppend.sends.length, 0)
+    assert.deepEqual(afterAppend.requests.filter(entry => entry.method !== 'GET'), [])
+    report.checks.push('加入会话 with an existing draft + attachment in a collapsed column opens the column and appends the collection prompt after a blank line via exactly one mode=append prefill, without a toast or send')
+
+    // 6. phase-protected (composer not plain): visible toast, draft untouched, no append.
     await resetHost(browser, true)
     await sleep(150)
     await hoverCard(browser)
-    const beforeFailureHost = await readHost(browser)
-    const callsBefore = beforeFailureHost.calls.length
-    const prefillBefore = beforeFailureHost.prefill.length
     await browser.evaluate(sentinel => {
       document.getElementById('qa-composer').value = sentinel
       window.__omnimuxSessionPrefill.queueSessionPrefill = () => Promise.resolve({ ok: false, error: 'draft-protected' })
@@ -753,9 +824,9 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     }, SENTINEL_DRAFT)
     await browser.clickText('加入会话', '[data-collection-id] button')
     await browser.wait(() => document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim().length > 0)
-    const toast = await readToast(browser)
+    const protectedToast = await readToast(browser)
     await sleep(200)
-    const failure = await browser.evaluate(sentinel => {
+    const protectedState = await browser.evaluate(sentinel => {
       const card = document.querySelector('[data-collection-id]')
       return {
         toastText: document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() ?? null,
@@ -763,26 +834,25 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
         conversation: document.body.dataset.conversation,
         rootCardTitle: card?.querySelector('.omnimux-inspiration-collection-title')?.textContent?.trim() ?? null,
         navigation: Boolean(document.querySelector('.omnimux-inspiration-collection-navigation')),
-        activeTab: document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.trim() ?? null,
         sentinel,
       }
     }, SENTINEL_DRAFT)
-    await capture('draft-protected')
-    const afterFailure = await readHost(browser)
-    assert.equal(toast.visible, true)
-    assert.equal(toast.text, DRAFT_PROTECTED)
-    assert.equal(failure.toastText, DRAFT_PROTECTED)
-    assert.equal(failure.composer, SENTINEL_DRAFT, 'existing draft must not be overwritten')
-    assert.equal(failure.conversation, 'open')
-    assert.equal(failure.rootCardTitle, COLLECTION_TITLE, 'must stay on the library root')
-    assert.equal(failure.navigation, false, 'must not navigate into the collection view')
-    assert.equal(failure.activeTab, '灵感库')
-    assert.equal(afterFailure.prefill.length, prefillBefore, 'the failing seam must not add a prefill record')
-    assert.equal(afterFailure.sends.length, 0)
-    assert.deepEqual(afterFailure.calls.slice(callsBefore), [['collapsed', false], ['focus', 'split']])
-    report.checks.push('draft-protected shows 输入框已有内容，请先清空或新建会话后重试 while keeping the sentinel draft, staying on the root view and never sending')
+    await capture('append-protected')
+    const afterProtected = await readHost(browser)
+    assert.equal(protectedToast.visible, true)
+    assert.equal(protectedToast.toastCount, 1)
+    assert.equal(protectedToast.text, PHASE_PROTECTED)
+    assert.equal(protectedState.toastText, PHASE_PROTECTED)
+    assert.equal(protectedState.composer, SENTINEL_DRAFT, 'protected append must not modify the draft')
+    assert.equal(afterProtected.composer, SENTINEL_DRAFT)
+    assert.deepEqual(afterProtected.prefill, [], 'the protected seam must not record an append request')
+    assert.equal(protectedState.conversation, 'open', 'column is revealed before the protected write attempt')
+    assert.equal(afterProtected.sends.length, 0)
+    assert.equal(protectedState.rootCardTitle, COLLECTION_TITLE)
+    assert.equal(protectedState.navigation, false)
+    report.checks.push('phase-protected append shows 输入框当前状态不支持追加，请完成当前输入后重试 while keeping the draft untouched, staying on the root view and never appending')
 
-    // 6. no active session: explicit toast, no reveal, no prefill, no expansion.
+    // 7. no active session: explicit toast, no reveal, no prefill, no expansion.
     await resetHost(browser, true)
     const readsBefore = fixture.requests.filter(entry => entry.method === 'GET' && entry.path === LOCAL && entry.query.collection_id === collection.id && entry.query.page_size === '100').length
     await browser.evaluate(() => {

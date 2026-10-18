@@ -8,7 +8,7 @@ export function SessionPrefillConsumer(props) {
   const state = props.useInput?.(state => state)
   useEffect(() => {
     if (!state) return
-    prefill.consumeSessionPrefill(intent, { sessionId: props.sessionId, draft: state.draft,
+    prefill.consumeSessionPrefill(intent, { sessionId: props.sessionId, draft: state.draft, phase: state.phase,
       protected: state.imageIds?.length > 0 || state.phase !== 'plain', inputActions: props.inputActions })
   }, [intent, state, props.sessionId, props.inputActions])
   return null
