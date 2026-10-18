@@ -489,11 +489,56 @@ export function synthesizedPostUrl(platform, id) {
 }
 
 /**
+ * The observed TikTok wrapper separates profile text from its sibling stats.
+ * Only this exact shape and its five observed leaves are supported here.
+ * @param {unknown} data
+ */
+function mapTikTokUserInfo(data) {
+  const wrapper = isPlainObject(data) ? data.userInfo : null
+  if (!isPlainObject(wrapper) || !isPlainObject(wrapper.user) || !isPlainObject(wrapper.stats)) return null
+  const text = (value) => typeof value === 'string' ? value.trim() : ''
+  const count = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+  const profile = {
+    nickname: text(wrapper.user.nickname),
+    avatar_url: tikTokAvatarUrl(wrapper.user.avatarLarger),
+    bio: text(wrapper.user.signature),
+    followers: count(wrapper.stats.followerCount),
+    posts_count: count(wrapper.stats.videoCount),
+    external_id_canonical: null,
+  }
+  return {
+    profile,
+    field_probe: {
+      nickname: profile.nickname ? 'userInfo.user.nickname' : FIELD_PROBE_MISS,
+      avatar_url: profile.avatar_url ? 'userInfo.user.avatarLarger' : FIELD_PROBE_MISS,
+      bio: profile.bio ? 'userInfo.user.signature' : FIELD_PROBE_MISS,
+      followers: profile.followers !== null ? 'userInfo.stats.followerCount' : FIELD_PROBE_MISS,
+      posts_count: profile.posts_count !== null ? 'userInfo.stats.videoCount' : FIELD_PROBE_MISS,
+      external_id_canonical: FIELD_PROBE_MISS,
+    },
+    recognized: Object.values(profile).some((value) => value !== null && value !== ''),
+  }
+}
+
+/** @param {unknown} value */
+function tikTokAvatarUrl(value) {
+  const text = typeof value === 'string' ? value.trim() : ''
+  if (!/^https?:\/\/[^/]/i.test(text)) return ''
+  try {
+    const url = new URL(text)
+    return url.hostname && ['http:', 'https:'].includes(url.protocol) ? text : ''
+  } catch {
+    return ''
+  }
+}
+
+/**
  * Map the account fields of a `user` answer.
  * @param {unknown} data
+ * @param {{ platform?: string }} [ctx]
  * @returns {{ profile: Record<string, any>, field_probe: Record<string, string | null>, recognized: boolean }}
  */
-export function mapRivalUser(data) {
+export function mapRivalUser(data, ctx = {}) {
   const layer = unwrapRivalUserLayer(data)
   const { values, probe } = probeLayer(layer, USER_FIELD_CANDIDATES)
   const canonical = extractYouTubeChannelId(values.external_id_canonical)
@@ -505,11 +550,14 @@ export function mapRivalUser(data) {
     posts_count: asNumber(values.posts_count),
     external_id_canonical: canonical || null,
   }
-  return {
+  const mapped = {
     profile,
     field_probe: probe,
     recognized: Object.values(profile).some((value) => typeof value === 'number' ? value >= 0 : Boolean(value)),
   }
+  // Keep the existing layer preference and all other platforms unchanged.
+  if (mapped.recognized || ctx.platform !== 'tiktok') return mapped
+  return mapTikTokUserInfo(data) || mapped
 }
 
 /**

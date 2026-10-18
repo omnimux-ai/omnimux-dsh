@@ -347,6 +347,113 @@ describe('rival-parsers: user mapping', () => {
   })
 })
 
+describe('rival-parsers: fixed TikTok userInfo profile', () => {
+  const fixture = {
+    userInfo: {
+      user: { nickname: 'Fixture Creator', signature: 'Fixture biography', avatarLarger: 'https://example.com/avatar.jpg' },
+      stats: { followerCount: 0, videoCount: 2 },
+    },
+  }
+  const map = (data) => mapRivalUser(data, { platform: 'tiktok' })
+
+  it('consumes the five observed leaves from user and its sibling stats', () => {
+    const mapped = map(fixture)
+    assert.equal(mapped.recognized, true)
+    assert.deepEqual(mapped.profile, {
+      nickname: 'Fixture Creator', bio: 'Fixture biography', avatar_url: 'https://example.com/avatar.jpg',
+      followers: 0, posts_count: 2, external_id_canonical: null,
+    })
+    assert.deepEqual(mapped.field_probe, {
+      nickname: 'userInfo.user.nickname', bio: 'userInfo.user.signature', avatar_url: 'userInfo.user.avatarLarger',
+      followers: 'userInfo.stats.followerCount', posts_count: 'userInfo.stats.videoCount', external_id_canonical: null,
+    })
+  })
+
+  for (const platform of [undefined, 'x', 'instagram', 'youtube']) {
+    it(`does not enable the wrapper for ${platform || 'an unspecified platform'}`, () => {
+      assert.equal(mapRivalUser(fixture, { platform }).recognized, false)
+    })
+  }
+
+  const invalidContainers = [
+    ['missing user', { stats: { followerCount: 0 } }],
+    ['missing stats', { user: { nickname: 'Fixture Creator' } }],
+    ['null user', { user: null, stats: { followerCount: 0 } }],
+    ['array user', { user: [], stats: { followerCount: 0 } }],
+    ['string stats', { user: { nickname: 'Fixture Creator' }, stats: 'stats' }],
+    ['array stats', { user: { nickname: 'Fixture Creator' }, stats: [] }],
+  ]
+  for (const [name, userInfo] of invalidContainers) {
+    it(`does not recognize ${name} as the fixed wrapper`, () => {
+      assert.equal(map({ userInfo }).recognized, false)
+      assert.equal(map({ nickname: 'Old profile', userInfo }).profile.nickname, 'Old profile')
+    })
+  }
+
+  for (const userInfo of [null, [], 'profile', {}]) {
+    it(`rejects wrapper type ${JSON.stringify(userInfo)}`, () => {
+      assert.equal(map({ userInfo }).recognized, false)
+    })
+  }
+
+  const validLeaves = [
+    [{ nickname: ' Fixture Creator ' }, {}, 'nickname', 'Fixture Creator'],
+    [{ signature: ' Fixture biography ' }, {}, 'bio', 'Fixture biography'],
+    [{ avatarLarger: 'https://example.com/avatar.jpg' }, {}, 'avatar_url', 'https://example.com/avatar.jpg'],
+    [{ avatarLarger: 'HTTPS://example.com/avatar.jpg' }, {}, 'avatar_url', 'HTTPS://example.com/avatar.jpg'],
+    [{}, { followerCount: 0 }, 'followers', 0],
+    [{}, { videoCount: 0 }, 'posts_count', 0],
+  ]
+  for (const [user, stats, field, expected] of validLeaves) {
+    it(`recognizes ${field} alone without inventing missing counters`, () => {
+      const { recognized, profile } = map({ userInfo: { user, stats } })
+      assert.equal(recognized, true)
+      assert.equal(profile[field], expected)
+      if (field !== 'followers') assert.equal(profile.followers, null)
+      if (field !== 'posts_count') assert.equal(profile.posts_count, null)
+    })
+  }
+
+  const invalidLeaves = [
+    [{}, {}],
+    [{ nickname: ' ', signature: '\t', avatarLarger: 'file:///private/avatar.jpg' }, {}],
+    [{ nickname: 123, signature: false, avatarLarger: 'https://' }, {}],
+    [{ avatarLarger: 'https:///example.com/avatar.jpg' }, {}],
+    [{ avatarLarger: 'https://invalid host/avatar.jpg' }, {}],
+    [{}, { followerCount: -1, videoCount: -2 }],
+    [{}, { followerCount: NaN, videoCount: Infinity }],
+    [{}, { followerCount: '0', videoCount: '2' }],
+    [{ followerCount: 0, videoCount: 2 }, {}],
+    [{ name: 'Not an observed leaf' }, { video_count: 2 }],
+  ]
+  for (const [index, [user, stats]] of invalidLeaves.entries()) {
+    it(`does not recognize unusable or misplaced leaves ${index + 1}`, () => {
+      const { recognized, profile } = map({ userInfo: { user, stats } })
+      assert.equal(recognized, false)
+      assert.equal(profile.followers, null)
+      assert.equal(profile.posts_count, null)
+    })
+  }
+
+  it('keeps invalid counters unknown even when a separate valid leaf recognizes the profile', () => {
+    const { profile } = map({ userInfo: { user: { nickname: 'Fixture Creator' }, stats: { followerCount: -1, videoCount: '2' } } })
+    assert.equal(profile.nickname, 'Fixture Creator')
+    assert.equal(profile.followers, null)
+    assert.equal(profile.posts_count, null)
+    const statsOnly = map({ userInfo: { user: {}, stats: { followerCount: -1, videoCount: 2 } } })
+    assert.equal(statsOnly.recognized, true)
+    assert.equal(statsOnly.profile.followers, null)
+    assert.equal(statsOnly.profile.posts_count, 2)
+  })
+
+  it('keeps old valid layers first and does not search deeper wrappers', () => {
+    assert.equal(map({ ...fixture, user: { nickname: 'Old profile', fans: '7' } }).profile.nickname, 'Old profile')
+    assert.equal(map({ ...fixture, nickname: 'Old flat profile' }).profile.nickname, 'Old flat profile')
+    assert.equal(map({ data: fixture }).recognized, false)
+    assert.equal(map({ result: fixture }).recognized, false)
+  })
+})
+
 describe('rival-parsers: post mapping', () => {
   it('maps a posts answer and merges per-field probes', () => {
     const { rows, field_probe } = mapRivalPosts(
