@@ -255,7 +255,7 @@ export function createTaskPeerProbeSource({ expectations, appAnchor }) {
 
 async function captureTaskPeerProof(connection, installation) {
   assertPeerDeclarations(installation)
-  if (!installation.hostPeerExpectations.length) return []
+  if (!installation.hostPeerExpectations.length) return { peers: [], peerObserver: null }
   const probe = installation.peerProbe
   assert.ok(probe && dirname(probe.path) === installation.profile, 'Task peer probe must be a real file directly in its profile')
   const file = ownedPath(installation.privateRoot, probe.path)
@@ -280,7 +280,9 @@ async function captureTaskPeerProof(connection, installation) {
   assert.equal(typeof loaded?.scriptSource, 'string', 'Task peer probe source is unavailable')
   assert.equal(sha256(loaded.scriptSource), probe.sha256, 'Loaded peer observer differs from its real installed file')
   assert.equal(sha256(readFileSync(file)), probe.sha256, 'Task peer probe changed during observation')
-  return validateTaskPeerResolution(installation, response.result?.value)
+  return { peers: validateTaskPeerResolution(installation, response.result?.value),
+    peerObserver: { path: file, sha256: probe.sha256, loadedScriptUrl: pathToFileURL(file).href,
+      loadedScriptSha256: sha256(loaded.scriptSource), matchingScriptCount: 1 } }
 }
 
 function debuggerEvents(response, phase, afterSequence) {
@@ -438,9 +440,9 @@ export async function verifyTaskServerLoading({ inspectorUrl, pid, installation 
       modules.push({ name: pkg.name, path: file.path, sha256: file.sha256, bytes: file.bytes,
         loadedScriptUrl: pathToFileURL(file.full).href, loadedScriptSha256: loadedHash, matchingScriptCount: unique.length })
     }
-    const peers = await captureTaskPeerProof(connection, installation)
+    const { peers, peerObserver } = await captureTaskPeerProof(connection, installation)
     assert.equal(installationBinding(installation, installationIdentity(installation)), binding, 'Task installation identity changed during server proof')
-    return { kind: 'task-server-loading', ...identity, modules, peers }
+    return { kind: 'task-server-loading', ...identity, modules, peers, peerObserver }
   } catch (error) { operationError = error; throw error }
   finally {
     try { if (enabled) await connection.send('Debugger.disable') } catch (error) { if (!operationError) operationError = error }

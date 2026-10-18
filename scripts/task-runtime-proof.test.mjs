@@ -233,6 +233,7 @@ test('real task-owned Node inspector binds same PID and exact source bytes', asy
     assert.equal(proof.kind, 'task-server-loading')
     assert.equal(proof.pid, child.pid)
     assert.equal(proof.modules.length, 2)
+    assert.equal(proof.peerObserver, null)
     assert.ok(proof.modules.every(module => module.sha256 === module.loadedScriptSha256 && module.matchingScriptCount === 1))
     assertTaskProofStable(proof, await verifyTaskServerLoading({ ...child, installation }))
     const wrong = { ...installation, pid: child.pid + 1 }
@@ -320,6 +321,9 @@ test('same-PID controlled profile probe resolves the real declared private peer 
     assert.equal(proof.peers.length, 1)
     assert.equal(proof.peers[0].scope, 'private')
     assert.equal(proof.peers[0].version, '1.2.3')
+    assert.equal(proof.peerObserver.loadedScriptSha256, installation.peerProbe.sha256)
+    assert.equal(proof.peerObserver.path, installation.peerProbe.path)
+    assert.equal(proof.peerObserver.matchingScriptCount, 1)
     validateTaskPeerResolution(installation, proof.peers)
     const outside = structuredClone(proof.peers); outside[0].packageRoot = '/outside'
     assert.throws(() => validateTaskPeerResolution(installation, outside), /manifest path|entry escapes|private graph/)
