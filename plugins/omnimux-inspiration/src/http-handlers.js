@@ -2171,6 +2171,16 @@ export async function handleAnalyze(ctx) {
   if (isImportBlocked(item)) {
     return fail(422, '该灵感正在后台导入中，请等待导入完成后再拆解')
   }
+  if (item.preserve_available === true || item.media_items?.some((asset) => asset?.status === 'saved' || asset?.status === 'missing')) {
+    const media = analysisMediaItems(item)
+    const index = media.findIndex((asset) => asset.type === 'video')
+    if (index < 0 || media[index].status === 'missing' || !media[index].url) {
+      return fail(422, '首个视频尚未保存，请先补齐素材后再分析')
+    }
+    // The unscoped compatibility request still means the first video, including
+    // its fixed position. Never re-resolve another available video into that slot.
+    return handleScopedAnalysis({ ...ctx, req: { ...ctx.req, body: { ...ctx.req.body, scope: 'media', media_index: index } } }, { mirrorLegacy: true })
+  }
   const videoPath = await resolveAnalyzeVideo({ ...ctx, item })
   if (videoPath.error) return videoPath.error
   if (!videoPath.path || !existsSync(videoPath.path)) {

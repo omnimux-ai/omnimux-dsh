@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync, symlinkSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { createLocalStore } from './local-store.js'
@@ -19,11 +19,13 @@ function setup() {
   dirs.push(dir)
   const paths = { dir, libraryFile: join(dir, 'library.json'), mediaDir: join(dir, 'media'), videosDir: join(dir, 'media/videos'), imagesDir: join(dir, 'media/images'), coversDir: join(dir, 'media/covers') }
   const store = createLocalStore({ paths, recycleFile: async () => { throw new Error('partial retries must not recycle previous files') } })
-  const state = { payload: {}, error: null, failures: new Set(), bytes: new Map(), fetched: [], fetchHook: null, socialHook: null }
+  const state = { payload: {}, error: null, failures: new Set(), bytes: new Map(), fetched: [], fetchHook: null, socialHook: null,
+    analysisCalls: [], analysisExecute: async () => { throw new Error('analysis deliberately unavailable') } }
   const dispatcher = createLocalInspirationDispatcher({ localStore: store,
     socialFetcher: async () => { if (state.socialHook) await state.socialHook(); if (state.error) throw state.error; return { data: state.payload } },
     resolver: async () => [{ address: '93.184.216.34', family: 4 }],
     runFfmpeg: async () => { throw new Error('No poster fixture') },
+    textComplete: { execute: async (args) => { state.analysisCalls.push(args); return state.analysisExecute(args) } },
     fetcher: async (url) => {
       state.fetched.push(url)
       if (state.fetchHook) await state.fetchHook(url)
@@ -386,5 +388,63 @@ describe('browser result reconciliation and failures', () => {
     const row = (await run({ auto_analyze: true })).body.data
     assert.equal(row.import_status, 'degraded')
     assert.deepEqual(row.analysis_results['media:0'], analysis)
+  })
+})
+
+describe('unscoped analysis preserves fixed browser media identities', () => {
+  const video = (id, available) => ({ type: 'video', id_str: id,
+    media_url_https: `https://pbs.twimg.com/amplify_video_thumb/${id}/poster.jpg`,
+    ...(available ? { video_info: { variants: [{ content_type: 'video/mp4', url: `https://video.twimg.com/amplify_video/${id}/vid/main.mp4` }] } } : {}) })
+  const analyze = (dispatcher, id) => dispatcher.dispatch({ method: 'POST', url: `/omnimux/inspiration/local/${id}/analyze`, body: undefined })
+
+  it('refuses a missing first video without redownloading the second or changing either position', async () => {
+    const { run, state, store, dispatcher } = setup()
+    state.payload = { text: 'two videos', mediaDetails: [video('111', false), video('222', true)] }
+    const saved = (await run()).body.data
+    assert.deepEqual(saved.media_items.map((asset) => [asset.source_id, asset.status]), [['111', 'missing'], ['222', 'saved']])
+    const fetched = [...state.fetched]
+    const response = await analyze(dispatcher, saved.id)
+    assert.equal(response.status, 422)
+    assert.match(response.body.error, /首个视频尚未保存/)
+    const current = store.get(saved.id)
+    assert.deepEqual(current.media_items, saved.media_items)
+    assert.deepEqual(current.local_paths, saved.local_paths)
+    assert.deepEqual(state.fetched, fetched)
+    assert.equal(state.analysisCalls.length, 0)
+    assert.deepEqual(current.analysis_results, {})
+  })
+
+  it('analyzes the first saved video at its actual index and preserves source identity on provider failure', async () => {
+    const { run, state, store, dispatcher } = setup()
+    state.payload = { text: 'photo then two videos', mediaDetails: [photo('photo'), video('111', true), video('222', true)] }
+    const saved = (await run()).body.data
+    const fetched = [...state.fetched]
+    const response = await analyze(dispatcher, saved.id)
+    assert.equal(response.status, 502)
+    assert.equal(response.body.analysis_key, 'media:1')
+    assert.deepEqual(state.analysisCalls[0].references, [{ type: 'video', pathOrUrl: realpathSync(saved.local_paths.video) }])
+    const current = store.get(saved.id)
+    assert.deepEqual(current.media_items, saved.media_items)
+    assert.deepEqual(current.local_paths, saved.local_paths)
+    assert.deepEqual(state.fetched, fetched)
+    assert.equal(current.analysis_results['media:1'].status, 'failed')
+    assert.equal(current.analysis_results['media:0'], undefined)
+  })
+
+  it('permits a saved first video while a later video remains missing, and mirrors actual analysis for old callers', async () => {
+    const { run, state, store, dispatcher } = setup()
+    state.payload = { text: 'first available', mediaDetails: [video('111', true), video('222', false)] }
+    state.analysisExecute = async () => ({ mode: 'live', model: 'test-model', text: '实际提供的第一段视频分析' })
+    const saved = (await run()).body.data
+    const response = await analyze(dispatcher, saved.id)
+    assert.equal(response.status, 200)
+    assert.equal(response.body.analysis_key, 'media:0')
+    assert.deepEqual(state.analysisCalls[0].references, [{ type: 'video', pathOrUrl: realpathSync(saved.local_paths.video) }])
+    const current = store.get(saved.id)
+    assert.deepEqual(current.media_items, saved.media_items)
+    assert.deepEqual(current.local_paths, saved.local_paths)
+    assert.equal(current.analysis_results['media:0'].source, 'live')
+    assert.equal(current.analysis_results['media:1'], undefined)
+    assert.equal(current.deconstruction.markdown, '实际提供的第一段视频分析')
   })
 })
