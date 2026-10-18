@@ -93,7 +93,7 @@ function makeCloudTool() {
  * `ctx.tools` for tool registration, `ctx.inject` for the async `webServer`
  * dependency, and `ctx.effect` for teardown. `ctx.get` is the hub seam; a test
  * passes the capability it wants the hub to have exposed (`inspirationShare`).
- * @param {{ capability?: Record<string, unknown> }} [options]
+ * @param {{ capability?: Record<string, unknown>, socialTool?: { execute: Function } }} [options]
  */
 function bootPlugin(options = {}) {
   const root = mkdtempSync(join(tmpdir(), 'inspiration-http-entry-'))
@@ -111,7 +111,7 @@ function bootPlugin(options = {}) {
         registeredTools.push(tool)
       },
       get(toolName) {
-        return toolName === SOCIAL_DATA_TOOL ? makeCloudTool() : undefined
+        return toolName === SOCIAL_DATA_TOOL ? (options.socialTool || makeCloudTool()) : undefined
       },
     },
     get(capability) {
@@ -200,6 +200,167 @@ async function httpCall(route, { method = 'GET', url, headers = {}, body } = {})
   }
   return { status: res.state.status, headers: res.state.headers, body: res.json(), raw: res.state.body }
 }
+
+describe('HTTP entry: import request cancellation', () => {
+  const importPath = `${LOCAL_PREFIX}/import-url`
+  const importBody = { url: 'https://x.com/creator/status/2111569272732553535', auto_analyze: false }
+
+  function pendingImport() {
+    let started
+    let release
+    let signal
+    const entered = new Promise((resolve) => { started = resolve })
+    const world = bootPlugin({ socialTool: { async execute(_args, execution) {
+      signal = execution?.signal
+      started()
+      await new Promise((resolve) => { release = resolve })
+      return { data: { text: '离线请求生命周期检查' } }
+    } } })
+    const req = makeReq({ method: 'POST', url: importPath, body: importBody })
+    const res = makeRes()
+    return { world, req, res, entered, release: () => release(), signal: () => signal }
+  }
+
+  function unfinishedRequest() {
+    const req = new Readable({ read() {} })
+    req.method = 'POST'
+    req.url = importPath
+    req.headers = { host: '127.0.0.1', 'content-type': 'application/json' }
+    return req
+  }
+
+  async function finishesPromptly(handling) {
+    let timer
+    try {
+      return await Promise.race([handling.then(() => true), new Promise((resolve) => { timer = setTimeout(() => resolve(false), 500) })])
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  it('validates a fully read request despite an unrelated cancelled req.signal', async () => {
+    const world = bootPlugin()
+    const req = makeReq({ method: 'POST', url: importPath, body: {} })
+    const controller = new AbortController()
+    controller.abort()
+    req.signal = controller.signal
+    const res = makeRes()
+    await world.route.handler(req, res)
+    assert.equal(res.state.status, 400)
+    assert.equal(res.json().error, 'url is required')
+    assert.equal(req.listenerCount('aborted'), 0)
+    assert.equal(res.listenerCount('close'), 0)
+  })
+
+  it('refuses a request whose transport was already aborted', async () => {
+    const world = bootPlugin()
+    const req = makeReq({ method: 'POST', url: importPath, body: {} })
+    req.aborted = true
+    const res = makeRes()
+    await world.route.handler(req, res)
+    assert.equal(res.state.status, 499)
+    assert.equal(res.json().error, 'aborted')
+    assert.equal(req.listenerCount('aborted'), 0)
+    assert.equal(res.listenerCount('close'), 0)
+  })
+
+  it('refuses an already aborted request without waiting for future body events', async () => {
+    const world = bootPlugin()
+    const req = unfinishedRequest()
+    req.aborted = true
+    const res = makeRes()
+    const handling = world.route.handler(req, res)
+    try {
+      assert.equal(await finishesPromptly(handling), true, 'an aborted request must not wait for body end/error')
+      assert.equal(res.state.status, 499)
+      assert.equal(res.json().error, 'aborted')
+      for (const event of ['data', 'end', 'error', 'aborted']) assert.equal(req.listenerCount(event), 0, event)
+      assert.equal(res.listenerCount('close'), 0)
+    } finally {
+      req.push(null)
+      await handling
+      req.destroy()
+    }
+  })
+
+  it('cancels an unfinished body when the response closes and removes body listeners', async () => {
+    const world = bootPlugin()
+    const req = unfinishedRequest()
+    req.push('{"url":')
+    const res = makeRes()
+    const handling = world.route.handler(req, res)
+    try {
+      assert.ok(req.listenerCount('data') > 0, 'the handler must be waiting for upload data')
+      res.emit('close')
+      assert.equal(await finishesPromptly(handling), true, 'a closed response must release the unfinished body read')
+      assert.equal(res.state.status, 499)
+      assert.equal(res.json().error, 'aborted')
+      for (const event of ['data', 'end', 'error', 'aborted']) assert.equal(req.listenerCount(event), 0, event)
+      assert.equal(res.listenerCount('close'), 0)
+    } finally {
+      req.push(null)
+      await handling
+      req.destroy()
+    }
+  })
+
+  it('cancels an in-flight synchronous import on a real request abort', async () => {
+    const active = pendingImport()
+    const handling = active.world.route.handler(active.req, active.res)
+    await active.entered
+    active.req.aborted = true
+    active.req.emit('aborted')
+    active.release()
+    await handling
+    assert.equal(active.signal()?.aborted, true)
+    assert.equal(active.res.state.status, 499)
+    assert.equal(active.res.json().error, 'aborted')
+    assert.equal(active.req.listenerCount('aborted'), 0)
+    assert.equal(active.res.listenerCount('close'), 0)
+  })
+
+  it('cancels an in-flight import when the response closes before completion', async () => {
+    const active = pendingImport()
+    const handling = active.world.route.handler(active.req, active.res)
+    await active.entered
+    assert.equal(active.res.writableEnded, false)
+    active.res.emit('close')
+    active.release()
+    await handling
+    assert.equal(active.signal()?.aborted, true)
+    assert.equal(active.res.state.status, 499)
+    assert.equal(active.req.listenerCount('aborted'), 0)
+    assert.equal(active.res.listenerCount('close'), 0)
+  })
+
+  it('keeps normal request close and response end successful, then removes cancellation listeners', async () => {
+    const active = pendingImport()
+    const handling = active.world.route.handler(active.req, active.res)
+    await active.entered
+    active.req.emit('close')
+    const abortedAfterRequestClose = active.signal()?.aborted
+    active.release()
+    await handling
+    assert.equal(abortedAfterRequestClose, false)
+    assert.equal(active.res.state.status, 200)
+    assert.equal(active.res.writableEnded, true)
+    active.res.emit('close')
+    active.req.emit('aborted')
+    assert.equal(active.signal()?.aborted, false)
+    assert.equal(active.req.listenerCount('aborted'), 0)
+    assert.equal(active.req.listenerCount('close'), 0)
+    assert.equal(active.res.listenerCount('close'), 0)
+  })
+
+  it('preserves the explicit cancellation signal of an agent tool invocation', async () => {
+    const world = bootPlugin()
+    const create = world.registeredTools.find((tool) => tool.name === 'inspiration_create')
+    const controller = new AbortController()
+    controller.abort()
+    await assert.rejects(create.execute(importBody, { signal: controller.signal }), { name: 'AbortError' })
+    assert.equal(cloudCalls.length, 0)
+  })
+})
 
 /**
  * A real file on disk for a row's `local_paths`.

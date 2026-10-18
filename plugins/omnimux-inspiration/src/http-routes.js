@@ -86,29 +86,49 @@ export function formatErrorMessage(err) {
 }
 
 
-function parseJsonChunk(raw, resolve) {
+function parseJsonChunk(raw) {
   if (!raw.trim()) {
-    resolve({})
-    return
+    return {}
   }
   try {
-    resolve(JSON.parse(raw))
+    return JSON.parse(raw)
   } catch {
-    resolve(null)
+    return null
   }
 }
 
-/** Read request body safely. */
-export async function readJsonBody(req) {
-  return new Promise((resolve) => {
+/**
+ * Read a JSON body, releasing listeners even if its connection ends mid-upload.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {{ signal?: AbortSignal }} [options]
+ */
+export async function readJsonBody(req, { signal } = {}) {
+  return new Promise((resolve, reject) => {
     let raw = ''
-    req.setEncoding('utf8')
-    req.on('data', (chunk) => {
+    const finish = (value, error) => {
+      req.off('data', onData)
+      req.off('end', onEnd)
+      req.off('error', onError)
+      signal?.removeEventListener('abort', onAbort)
+      if (error) reject(error)
+      else resolve(value)
+    }
+    const onAbort = () => finish(undefined, signal.reason)
+    const onEnd = () => finish(parseJsonChunk(raw))
+    const onError = () => finish(null)
+    const onData = (chunk) => {
       raw += chunk
-      if (raw.length > 2 * 1024 * 1024) resolve(null)
-    })
-    req.on('end', () => parseJsonChunk(raw, resolve))
-    req.on('error', () => resolve(null))
+      if (raw.length > 2 * 1024 * 1024) finish(null)
+    }
+    if (signal?.aborted) {
+      onAbort()
+      return
+    }
+    req.setEncoding('utf8')
+    req.on('data', onData)
+    req.on('end', onEnd)
+    req.on('error', onError)
+    signal?.addEventListener('abort', onAbort, { once: true })
   })
 }
 

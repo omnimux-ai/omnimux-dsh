@@ -170,6 +170,31 @@ export function createSocialFetcher({ getTool, fallback = fallbackResolveSocial 
 }
 
 /**
+ * Node requests finish reading before their response finishes. Only an aborted
+ * upload or a prematurely closed response cancels the work, not request close
+ * or an adapter's undocumented `req.signal`.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {import('node:http').ServerResponse} res
+ */
+function trackRequestCancellation(req, res) {
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  const close = () => {
+    if (!res.writableEnded) abort()
+  }
+  req.once('aborted', abort)
+  res.once('close', close)
+  if (req.aborted === true || (res.destroyed && !res.writableEnded)) abort()
+  return {
+    signal: controller.signal,
+    dispose() {
+      req.off('aborted', abort)
+      res.off('close', close)
+    },
+  }
+}
+
+/**
  * @param {{
  *   tools: { register: (tool: object) => unknown, get?: (name: string) => any },
  *   get?: (name: string) => unknown,
@@ -287,6 +312,7 @@ export function apply(ctx) {
    * @param {any} res
    */
   const callLocalEndpoint = async (req, res) => {
+    const cancellation = trackRequestCancellation(req, res)
     try {
       // Cross-origin pages (e.g. a file:// workbench) preflight JSON POSTs with
       // OPTIONS. `sendJson` already carries the full CORS headers, so answering
@@ -307,8 +333,10 @@ export function apply(ctx) {
       // Read the JSON body only when the request carries one. Redundant for a
       // rival request (that dispatcher reads `req.body` and ignores it), harmless
       // for a DELETE, and it keeps the invalid-JSON answer on every write method.
+      cancellation.signal.throwIfAborted()
       const wantsBody = req.method === 'POST' || req.method === 'PATCH'
-      const body = wantsBody ? await readJsonBody(req) : undefined
+      const body = wantsBody ? await readJsonBody(req, { signal: cancellation.signal }) : undefined
+      cancellation.signal.throwIfAborted()
       if (wantsBody && body === null) {
         sendJson(res, 400, { error: 'invalid json' })
         return
@@ -317,15 +345,18 @@ export function apply(ctx) {
         method: req.method || 'GET',
         url: rawUrl,
         body,
-        signal: req.signal,
+        signal: cancellation.signal,
       })
       sendJson(res, result.status, result.body)
     } catch (err) {
+      if (res.destroyed) return
       if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
         sendJson(res, 499, { error: 'aborted' })
         return
       }
       sendJson(res, 500, { error: 'internal error' })
+    } finally {
+      cancellation.dispose()
     }
   }
 
