@@ -5,6 +5,10 @@ import {
   createShareLink,
   extractTikTokVideoId,
   hostMediaSrc,
+  getLocalInspiration,
+  importLocalInspiration,
+  pickImageSources,
+  pickVideoSrc,
   listInspirations,
   listLocalInspirations,
   loadInspirationsAtomic,
@@ -16,6 +20,38 @@ import {
   shareRequestPayload,
   whenAuthReady,
 } from './api.js'
+
+describe('saved photo media', () => {
+  it('keeps local identity through background import and polling while preserving cloud jobs', async () => {
+    const saved = globalThis.fetch
+    let item = { id: 'local-1', type: 'video', import_status: 'importing' }
+    globalThis.fetch = async () => ({ ok: true, status: 202, json: async () => ({ data: item }) })
+    try {
+      assert.equal((await importLocalInspiration({ url: 'https://x.com/a/status/1' })).body.data.is_local, true)
+      item = { id: 'local-1', type: 'image', media_urls: ['https://pbs.twimg.com/a.jpg'] }
+      assert.equal((await getLocalInspiration('local-1')).body.data.is_local, true)
+      item = { id: 'cloud-1', is_local: false, share_status: 'running' }
+      assert.equal((await getLocalInspiration('cloud-1')).body.data.is_local, false)
+    } finally {
+      globalThis.fetch = saved
+    }
+  })
+
+  it('keeps gallery order and never sends a photo to the video player', () => {
+    const urls = ['1', '2', '3', '4'].map((id) => `https://pbs.twimg.com/media/${id}.jpg`)
+    const row = { type: 'image', content_shape: 'gallery', media_urls: [...urls, urls[0]] }
+    assert.deepEqual(pickImageSources(row), urls)
+    assert.equal(pickVideoSrc(row), '')
+    assert.deepEqual(pickImageSources({ type: 'video', media_urls: ['https://video.twimg.com/a.mp4'] }), [])
+    assert.equal(pickVideoSrc({ type: 'video', media_urls: ['https://video.twimg.com/a.mp4'] }), 'https://video.twimg.com/a.mp4')
+  })
+
+  it('uses a legacy photo cover and rejects executable image schemes', () => {
+    assert.deepEqual(pickImageSources({ type: 'image', cover_url: 'https://pbs.twimg.com/a.jpg' }), ['https://pbs.twimg.com/a.jpg'])
+    assert.deepEqual(pickImageSources({ type: 'image', media_urls: ['javascript:alert(1)', 'file:///tmp/a.jpg'] }), [])
+    assert.deepEqual(pickImageSources({ type: 'link', content_shape: 'text', cover_url: 'https://pbs.twimg.com/a.jpg' }), [])
+  })
+})
 
 function fakeGate() {
   let ensureArgs = null
@@ -539,5 +575,23 @@ describe('share request payload — what a cloud row hands to the Host', () => {
     assert.equal('deconstruction' in payload, false)
     assert.equal(shareDeconstructionOf({}), undefined)
     assert.equal(shareDeconstructionOf({ analysis: {} }), undefined)
+  })
+})
+
+
+describe('typed post images', () => {
+  it('reads mixed-post images from typed media without using video-only media_urls', () => {
+    const first = '/omnimux/inspiration/local/media/images/first.jpg'
+    const second = '/omnimux/inspiration/local/media/images/second.jpg'
+    const video = '/omnimux/inspiration/local/media/videos/one.mp4'
+    assert.deepEqual(pickImageSources({
+      type: 'video', media_urls: [video],
+      media_items: [{ type: 'image', url: first }, { type: 'video', url: video }, { type: 'image', url: second }],
+    }), [first, second])
+    assert.deepEqual(pickImageSources({
+      type: 'image', media_urls: ['https://images.example/stale.jpg'],
+      media_items: [{ type: 'image', url: first }],
+    }), [first], 'the typed collection takes priority over legacy gallery fields')
+    assert.deepEqual(pickImageSources({ type: 'video', media_urls: [video], media_items: [{ type: 'video', url: video }] }), [])
   })
 })

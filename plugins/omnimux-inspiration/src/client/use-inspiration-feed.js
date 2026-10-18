@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getLocalInspiration, whenAuthReady } from './api.js'
-import { CONTENT_LANDING_TABS, LANDED_PIN_MS, tabAfterContentImport } from './import-landing.js'
+import { getLocalInspiration, invalidateInspirationCache, whenAuthReady } from './api.js'
+import { CONTENT_LANDING_TABS, LANDED_PIN_MS, tabAfterContentImport, withLandedItem } from './import-landing.js'
 import { createImportPoller } from './import-poller.js'
 import { importErrorDetail, isImportingRow } from './import-status.js'
 import {
@@ -278,14 +278,15 @@ function useFeedData(options) {
     }
   }, [])
 
-  const loadData = useCallback((isNextPage = false) => {
+  const loadData = useCallback((isNextPage = false, refreshLoaded = false) => {
     const { duration_min, duration_max } = resolveDurationRange(duration)
     const { views_min, views_max } = resolveViewsRange(views)
     const { posted_after, posted_before } = resolveDateRange(dateRange)
 
-    const targetPage = isNextPage ? pageRef.current + 1 : 1
+    const refreshThroughPage = refreshLoaded ? pageRef.current : undefined
+    const targetPage = refreshLoaded ? refreshThroughPage : isNextPage ? pageRef.current + 1 : 1
     const requestKey = [
-      isNextPage ? 'next' : 'first', tab, q, platform, type, sort, favorite,
+      refreshLoaded ? 'refresh' : isNextPage ? 'next' : 'first', tab, q, platform, type, sort, favorite,
       country, category, duration_min, duration_max, views_min, views_max,
       trafficType, posted_after, posted_before, targetPage,
     ].join('\x00')
@@ -295,7 +296,7 @@ function useFeedData(options) {
     }
     inFlightRef.current = null
 
-    if (!isNextPage) {
+    if (!isNextPage && !refreshLoaded) {
       pageRef.current = 1
       setPage(1)
     }
@@ -304,6 +305,7 @@ function useFeedData(options) {
     const promise = executeFeedLoad(
       {
         isNextPage,
+        refreshThroughPage,
         tab,
         q,
         platform,
@@ -333,6 +335,12 @@ function useFeedData(options) {
     return promise
   }, [tab, q, platform, type, sort, favorite, country, category, duration, views, trafficType, dateRange])
 
+  const refreshData = useCallback(() => {
+    invalidateInspirationCache()
+    inFlightRef.current = null
+    return loadData(false, true)
+  }, [loadData])
+
   useEffect(() => {
     if (!active) return
     loadData(false)
@@ -356,6 +364,7 @@ function useFeedData(options) {
     phase,
     error,
     loadData,
+    refreshData,
   }
 }
 
@@ -367,34 +376,47 @@ function useFeedData(options) {
  * survive a reload — the page rebuilds its watch set from persisted rows alone,
  * so a job started before the tab was closed is still picked up.
  *
- * When a row settles the list is patched in place by id. A full reload would
- * work too, but it would drop the user's scroll position and page for an event
- * that changes exactly one card. A `404` means the user deleted the row, so it is
+ * Pending changes patch existing rows in place. A terminal result also refreshes
+ * the current filtered list, so a new row survives the temporary landing pin
+ * only when the backend includes it. A `404` means the user deleted the row, so it is
  * dropped from the grid instead of being left to poll a gone id forever.
  *
  * The notice is stored as a locale key plus its parameters, never as formatted
  * text: the wording — and the language — is decided at render time by the page.
- * @param {{ setItems: Function }} options
+ * @param {{ setItems: Function, setLandedItem: Function, setSelectedItem: Function, refreshData: Function }} options
  */
 function useImportWatch(options) {
-  const { setItems } = options
+  const { setItems, setLandedItem, setSelectedItem, refreshData } = options
   const pollerRef = useRef(null)
-  const setItemsRef = useRef(setItems)
+  const settersRef = useRef({ setItems, setLandedItem, setSelectedItem, refreshData })
   const [importFailed, setImportFailed] = useState(null)
 
   useEffect(() => {
-    setItemsRef.current = setItems
-  }, [setItems])
+    settersRef.current = { setItems, setLandedItem, setSelectedItem, refreshData }
+  }, [setItems, setLandedItem, setSelectedItem, refreshData])
 
   if (pollerRef.current === null) {
+    const applyItem = (item) => {
+      if (!item) return
+      const setters = settersRef.current
+      setters.setItems((prev) => updateItemInList(prev, item))
+      const replaceMatching = (prev) => prev && String(prev.id) === String(item.id) ? item : prev
+      setters.setLandedItem(replaceMatching)
+      setters.setSelectedItem(replaceMatching)
+    }
     pollerRef.current = createImportPoller({
       deps: {
         fetchItem: (id) => getLocalInspiration(id),
         onItem: (item) => {
-          setItemsRef.current((prev) => updateItemInList(prev, item))
+          applyItem(item)
+          if (!isImportingRow(item)) void settersRef.current.refreshData()
         },
         onRemove: (id) => {
-          setItemsRef.current((prev) => filterOutItemsByIds(prev, [id]))
+          const setters = settersRef.current
+          setters.setItems((prev) => filterOutItemsByIds(prev, [id]))
+          const removeMatching = (prev) => prev && String(prev.id) === String(id) ? null : prev
+          setters.setLandedItem(removeMatching)
+          setters.setSelectedItem(removeMatching)
         },
         onDegraded: () => setImportFailed({ key: 'add.degradedNotice' }),
         // The item itself was stored and only the AI breakdown failed, so this is
@@ -405,7 +427,8 @@ function useImportWatch(options) {
           if (detail) setImportFailed({ key: 'add.analysisFailed', detail })
         },
         onFailed: (item) => {
-          if (item) setItemsRef.current((prev) => updateItemInList(prev, item))
+          applyItem(item)
+          void settersRef.current.refreshData()
           // Retryable by design: importing the same URL again reuses this row's id
           // and restarts the job in place, so the notice may say so.
           setImportFailed({ key: 'add.status.failed', detail: importErrorDetail(item), retryable: true })
@@ -431,7 +454,7 @@ export function useInspirationFeed({ active }) {
   const filters = useInspirationFilters()
   const { tab, setTab } = filters
   const data = useFeedData({ active, filters })
-  const { items, setItems, backendPlatforms, hasMore, loading, loadingMore, loadData } = data
+  const { items, setItems, backendPlatforms, hasMore, loading, loadingMore, loadData, refreshData } = data
 
   const [selectedItem, setSelectedItem] = useState(null)
   const [importOpen, setImportOpen] = useState(false)
@@ -449,27 +472,28 @@ export function useInspirationFeed({ active }) {
 
   const replicate = useReplicateToChat()
   const selection = useFeedSelection({ items, selectedItem, setSelectedItem, setItems, onRemoved: dropLanded })
-  const watch = useImportWatch({ setItems })
+  const watch = useImportWatch({ setItems, setLandedItem, setSelectedItem, refreshData })
 
   useSentinelObserver({ sentinelRef, hasMore, loading, loadingMore, loadData })
 
   // Rebuild the watch set from whatever the feed actually holds, so a page that
   // was closed while an import ran resumes watching it on its very first load.
   useEffect(() => {
-    watch.pollerRef.current?.sync(items)
-  }, [items, watch.pollerRef])
+    watch.pollerRef.current?.sync(withLandedItem(items, landedItem, tab))
+  }, [items, landedItem, tab, watch.pollerRef])
 
   // The pin is a reveal window, not a second list: it expires on its own, and it
   // is dropped as soon as the grid moves to a tab that cannot hold a local row.
+  const landedId = landedItem?.id
   useEffect(() => {
-    if (!landedItem) return undefined
+    if (landedId == null) return undefined
     if (!CONTENT_LANDING_TABS.includes(tab)) {
       setLandedItem(null)
       return undefined
     }
     const timer = setTimeout(() => setLandedItem(null), LANDED_PIN_MS)
     return () => clearTimeout(timer)
-  }, [landedItem, tab])
+  }, [landedId, tab])
 
   /**
    * A content import landed in the local library: prepend the row, keep the grid
@@ -490,13 +514,14 @@ export function useInspirationFeed({ active }) {
     setLandedItem(newItem)
     // 爆款趋势 cannot show a local row, so the grid follows the import to 灵感库.
     setTab((prev) => tabAfterContentImport(prev))
+    if (CONTENT_LANDING_TABS.includes(tab)) void refreshData()
     if (isImportingRow(newItem)) watch.pollerRef.current?.track([newItem.id])
     const plat = (newItem?.source_platform || newItem?.platform || '').trim().toLowerCase()
     if (plat && plat !== 'unknown') {
       const canonical = plat === 'twitter' ? 'x' : plat
       setImportedPlatforms((prev) => (prev.includes(canonical) ? prev : [...prev, canonical]))
     }
-  }, [setTab, watch.pollerRef])
+  }, [tab, setTab, refreshData, watch.pollerRef])
 
   /**
    * An account import landed in the 对标账号 workbench. The panel mounts fresh on
@@ -509,6 +534,7 @@ export function useInspirationFeed({ active }) {
 
   const handleItemUpdated = useCallback((updatedItem) => {
     setItems((prev) => updateItemInList(prev, updatedItem))
+    setLandedItem((prev) => prev && String(prev.id) === String(updatedItem?.id) ? updatedItem : prev)
     setSelectedItem(updatedItem)
   }, [setItems])
 

@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
 import { JSDOM } from 'jsdom'
 import { zh } from './locales.js'
+import { IMPORT_POLL_INTERVAL_MS } from './import-status.js'
+import { LANDED_PIN_MS } from './import-landing.js'
 
 /**
  * A document has to exist before react-dom is evaluated.
@@ -123,7 +125,7 @@ function jsonResponse(status, body) {
  * Order matters: the rival-accounts paths are a prefix extension of the local
  * library path, so they are matched first.
  * @param {{ classify?: object, accountImport?: object, contentImport?: object,
- *   localItems?: Array<object>, accounts?: Array<object> }} routes
+ *   localItems?: Array<object>, accounts?: Array<object>, localItemGet?: (id: string) => object, paginateLocalItems?: boolean }} routes
  */
 function createHost(routes) {
   const state = {
@@ -148,13 +150,18 @@ function createHost(routes) {
     }
     if (path.startsWith('/omnimux/inspiration/local/')) {
       const id = decodeURIComponent(path.slice('/omnimux/inspiration/local/'.length).split('?')[0])
+      if (typeof routes.localItemGet === 'function') return routes.localItemGet(id)
       const item = state.localItems.find((row) => String(row.id) === id) || null
       return jsonResponse(200, { success: true, data: item })
     }
     if (path.startsWith('/omnimux/inspiration/local')) {
+      const query = new URL(path, 'http://localhost').searchParams
+      const page = Number(query.get('page') || 1)
+      const size = Number(query.get('page_size') || 20)
+      const items = routes.paginateLocalItems ? state.localItems.slice((page - 1) * size, page * size) : state.localItems
       return jsonResponse(200, {
         success: true,
-        data: { items: state.localItems, total: state.localItems.length, platforms: [] },
+        data: { items, total: state.localItems.length, platforms: [] },
       })
     }
     return jsonResponse(200, { success: true, data: { items: [], total: 0 } })
@@ -166,17 +173,33 @@ function createHost(routes) {
  * Mount the section against the scripted Host and wait for the first paint.
  * @param {ReturnType<typeof createHost>} host
  */
-async function mountSection(host) {
+async function mountSection(host, options = {}) {
   const sectionModule = await import(`${await bundleSection()}?mount=${bundleCounter}`)
 
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="host"></div></body></html>', {
     url: 'http://localhost:3000',
+    pretendToBeVisual: true,
   })
   const previousWindow = globalThis.window
   const previousDocument = globalThis.document
   const previousFetch = globalThis.fetch
   const previousIntersectionObserver = globalThis.IntersectionObserver
   const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
+  const previousSetTimeout = globalThis.setTimeout
+  const previousClearTimeout = globalThis.clearTimeout
+  const pollTimers = new Map()
+  if (options.manualPollClock) {
+    globalThis.setTimeout = (fn, ms, ...args) => {
+      if (ms !== IMPORT_POLL_INTERVAL_MS && ms !== LANDED_PIN_MS) return previousSetTimeout(fn, ms, ...args)
+      const token = {}
+      pollTimers.set(token, { callback: () => fn(...args), delay: ms })
+      return token
+    }
+    globalThis.clearTimeout = (token) => {
+      if (pollTimers.has(token)) pollTimers.delete(token)
+      else previousClearTimeout(token)
+    }
+  }
 
   globalThis.window = dom.window
   globalThis.document = dom.window.document
@@ -184,10 +207,12 @@ async function mountSection(host) {
   // The deferred page-load path waits for the host auth bridge; without it only
   // the first effect runs and the second load is never attempted.
   dom.window.__omnimuxAuth = { ensureLogin() {} }
+  const observers = []
   globalThis.IntersectionObserver = class {
+    constructor(callback) { this.callback = callback; this.disconnected = false; observers.push(this) }
     observe() {}
     unobserve() {}
-    disconnect() {}
+    disconnect() { this.disconnected = true }
   }
 
   const calls = []
@@ -222,8 +247,36 @@ async function mountSection(host) {
     requestsTo(fragment) {
       return calls.filter((call) => call.path.includes(fragment))
     },
+    async advancePoll() {
+      const due = [...pollTimers.entries()].filter(([, timer]) => timer.delay === IMPORT_POLL_INTERVAL_MS)
+      assert.ok(due.length, 'the visible background import must keep a completion poll scheduled')
+      await React.act(async () => {
+        for (const [token, timer] of due) {
+          pollTimers.delete(token)
+          timer.callback()
+        }
+      })
+    },
+    async loadMore() {
+      const observer = [...observers].reverse().find((entry) => !entry.disconnected)
+      assert.ok(observer, 'the next page must remain available after refresh')
+      await React.act(async () => { observer.callback([{ isIntersecting: true }]) })
+    },
+    async expirePin() {
+      const due = [...pollTimers.entries()].filter(([, timer]) => timer.delay === LANDED_PIN_MS)
+      assert.equal(due.length, 1, 'the temporary landing pin must still have a bounded expiry')
+      await React.act(async () => {
+        for (const [token, timer] of due) {
+          pollTimers.delete(token)
+          timer.callback()
+        }
+      })
+    },
     async unmount() {
       await React.act(async () => reactRoot.unmount())
+      globalThis.setTimeout = previousSetTimeout
+      globalThis.clearTimeout = previousClearTimeout
+      pollTimers.clear()
       globalThis.window = previousWindow
       globalThis.document = previousDocument
       globalThis.fetch = previousFetch
@@ -651,33 +704,264 @@ describe('import landing — unchanged behaviour', () => {
     }
   })
 
-  it('still polls a background import and patches the card when it settles', async () => {
-    const importingRow = {
-      id: 'local-new-3',
-      title: '新作品',
-      source_platform: 'tiktok',
-      is_local: true,
-      import_status: 'importing',
-      import_stage: 'resolving',
+  it('settles a pinned import absent from an empty feed into a selectable four-image card without opening detail', async () => {
+    const id = 'local-new-gallery'
+    const placeholder = {
+      id, title: 'https://x.com/a/status/789', source_platform: 'x', type: 'video',
+      import_status: 'importing', import_stage: 'resolving',
+    }
+    const images = Array.from({ length: 4 }, (_, index) => `https://images.example/${index + 1}.jpg`)
+    const completed = {
+      ...placeholder, type: 'image', content_shape: 'gallery', import_status: 'ready',
+      title: '完成后的图文', content: '完成后的推文正文与四张图片', media_urls: [], media_items: images.map((url) => ({ type: 'image', url })), cover_url: images[0],
     }
     const host = createHost({
-      classify: jsonResponse(200, { success: true, data: { kind: 'content', platform: 'tiktok' } }),
-      contentImport: jsonResponse(202, { success: true, data: importingRow }),
-      // The row exists in the library, so the completion poll answers with it
-      // rather than reporting the row gone.
-      localItems: [importingRow],
+      contentImport: jsonResponse(202, { success: true, data: placeholder }),
+      localItems: [],
+      localItemGet: () => jsonResponse(200, { success: true, data: completed }),
     })
+    const mounted = await mountSection(host, { manualPollClock: true })
+    try {
+      await click(mounted.container.querySelector('[data-tab="local"]'))
+      await paste(mounted, placeholder.title)
+      await click(button(mounted.container, L.submit))
+      await settle(mounted.container, () => cardIds(mounted.container).includes(id))
+      const importing = mounted.container.querySelector(`[data-inspiration-id="${id}"]`)
+      assert.ok(importing.querySelector('.wf-organic-shimmer'))
+      assert.ok(importing.querySelector('.omnimux-inspiration-card-check'), 'the actual 202 row has no is_local; its local API origin must still make it selectable')
+      assert.equal(mounted.container.querySelector(PREVIEW_MODAL_SELECTOR), null)
 
+      await mounted.advancePoll()
+      const card = mounted.container.querySelector(`[data-inspiration-id="${id}"]`)
+      assert.equal(card?.getAttribute('data-card-type'), 'text-media')
+      assert.equal(card.querySelector('.omnimux-rival-card-text')?.textContent, completed.content)
+      assert.equal(card.querySelector('.omnimux-inspiration-cover-img')?.getAttribute('src'), images[0])
+      assert.equal(card.querySelector('.omnimux-inspiration-badge-media')?.textContent, '4 图片')
+      assert.equal(card.querySelector('.wf-organic-shimmer'), null, 'the visible pin must receive the completed row even when no list contains its ID')
+      assert.equal(mounted.requestsTo(`/omnimux/inspiration/local/${id}`).length, 1)
+      assert.equal(mounted.container.querySelector(PREVIEW_MODAL_SELECTOR), null, 'completion must not open detail')
+      await click(card.querySelector('.omnimux-inspiration-card-check'))
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-selection-bar'))
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('refreshes the unfiltered library so a completed import survives its bounded pin expiry', async () => {
+    const id = 'persistent-gallery'
+    const placeholder = { id, title: 'https://x.com/a/status/794', source_platform: 'x', type: 'video', import_status: 'importing' }
+    const images = Array.from({ length: 4 }, (_, index) => `https://images.example/saved-${index + 1}.jpg`)
+    const completed = { ...placeholder, title: '已保存图文', content: '完成后仍留在灵感库', type: 'image', content_shape: 'gallery', media_urls: [], media_items: images.map((url) => ({ type: 'image', url })), import_status: 'ready' }
+    const host = createHost({
+      localItems: [], contentImport: jsonResponse(202, { success: true, data: placeholder }),
+      localItemGet: () => {
+        host.state.localItems = [completed]
+        return jsonResponse(200, { success: true, data: completed })
+      },
+    })
+    const originalHandle = host.handle
+    host.handle = (call) => {
+      if (call.path === IMPORT_URL_PATH && call.method === 'POST') host.state.localItems = [placeholder]
+      return originalHandle(call)
+    }
+    const mounted = await mountSection(host, { manualPollClock: true })
+    try {
+      await click(mounted.container.querySelector('[data-tab="local"]'))
+      const localLoadsBefore = mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).length
+      await paste(mounted, placeholder.title)
+      await click(button(mounted.container, L.submit))
+      await settle(mounted.container, () => cardIds(mounted.container).includes(id))
+      const loadsAfterImport = mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).length
+      assert.ok(loadsAfterImport > localLoadsBefore, 'importing while already on the local tab must refresh its list')
+      await mounted.advancePoll()
+      assert.ok(mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).length > loadsAfterImport, 'completion must refresh beyond the cached importing list')
+      await mounted.expirePin()
+      const card = mounted.container.querySelector(`[data-inspiration-id="${id}"]`)
+      assert.ok(card, 'the backend-listed completed item must remain after the reveal pin expires')
+      assert.equal(card.querySelector('.omnimux-rival-card-text')?.textContent, completed.content)
+      assert.equal(card.querySelector('.omnimux-inspiration-badge-media')?.textContent, '4 图片')
+      assert.equal(card.querySelector('.wf-organic-shimmer'), null)
+      await click(card.querySelector('.omnimux-inspiration-card-check'))
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-selection-bar'))
+      assert.equal(mounted.container.querySelector(PREVIEW_MODAL_SELECTOR), null)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('refreshes both loaded pages after completion and keeps the next request on page three', async () => {
+    const id = 'paged-import'
+    const placeholder = { id, title: 'https://x.com/a/status/795', source_platform: 'x', type: 'link', import_status: 'importing' }
+    const completed = { ...placeholder, title: '已完成的新文字', content: '分页完成后的正文', import_status: 'ready' }
+    const oldRows = Array.from({ length: 45 }, (_, index) => ({ id: `paged-old-${index + 1}`, title: `原有作品${index + 1}`, type: 'link', source_platform: 'x' }))
+    const host = createHost({
+      localItems: oldRows, paginateLocalItems: true,
+      contentImport: jsonResponse(202, { success: true, data: placeholder }),
+      localItemGet: () => {
+        host.state.localItems = [completed, ...oldRows]
+        return jsonResponse(200, { success: true, data: completed })
+      },
+    })
+    const originalHandle = host.handle
+    let holdSecondPage = null
+    host.handle = async (call) => {
+      if (call.path === IMPORT_URL_PATH && call.method === 'POST') host.state.localItems = [placeholder, ...oldRows]
+      if (holdSecondPage && call.path.startsWith('/omnimux/inspiration/local?') && new URL(call.path, 'http://localhost').searchParams.get('page') === '2') await holdSecondPage
+      return originalHandle(call)
+    }
+    const mounted = await mountSection(host, { manualPollClock: true })
+    try {
+      await click(mounted.container.querySelector('[data-tab="local"]'))
+      await mounted.loadMore()
+      assert.equal(cardIds(mounted.container).length, 40)
+      assert.ok(cardIds(mounted.container).includes('paged-old-39'))
+      await paste(mounted, placeholder.title)
+      await click(button(mounted.container, L.submit))
+      await settle(mounted.container, () => cardIds(mounted.container).includes(id))
+      assert.equal(cardIds(mounted.container).length, 40, 'the original local-tab refresh must preserve the loaded depth')
+
+      let releaseSecondPage
+      holdSecondPage = new Promise((resolve) => { releaseSecondPage = resolve })
+      const listStart = mounted.calls.length
+      await mounted.advancePoll()
+      assert.equal(cardIds(mounted.container).length, 40, 'a partly refreshed range must not shrink the visible masonry to page one')
+      assert.ok(cardIds(mounted.container).includes('paged-old-39'), 'page-two content must remain while its replacement is loading')
+      await React.act(async () => { releaseSecondPage(); holdSecondPage = null })
+      await settle(mounted.container, () => mounted.container.querySelector(`[data-inspiration-id="${id}"] .omnimux-rival-card-text`)?.textContent === completed.content)
+      assert.deepEqual(mounted.calls.slice(listStart).filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).map((call) => new URL(call.path, 'http://localhost').searchParams.get('page')), ['1', '2'])
+      await mounted.expirePin()
+      assert.equal(cardIds(mounted.container).length, 40)
+      assert.ok(cardIds(mounted.container).includes('paged-old-39'))
+      assert.ok(cardIds(mounted.container).includes(id), 'the completed item must be held by the refreshed real list')
+      await mounted.loadMore()
+      assert.equal(new URL(mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).at(-1).path, 'http://localhost').searchParams.get('page'), '3')
+      assert.equal(cardIds(mounted.container).length, 46, 'loading the third page must append its six remaining entries exactly once')
+      assert.ok(cardIds(mounted.container).includes('paged-old-45'))
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('continues polling a filtered-out pin through pending updates without inserting it into the filtered list', async () => {
+    const id = 'filtered-import'
+    const placeholder = { id, title: 'https://x.com/a/status/790', source_platform: 'x', type: 'video', import_status: 'importing', import_stage: 'resolving' }
+    const completed = { ...placeholder, type: 'image', import_status: 'ready', content: '最终正文', media_urls: [], media_items: [{ type: 'image', url: 'https://images.example/final.jpg' }] }
+    let polls = 0
+    const host = createHost({
+      localItems: [{ id: 'matching-row', title: '当前筛选匹配的旧行', source_platform: 'x', type: 'video' }],
+      contentImport: jsonResponse(202, { success: true, data: placeholder }),
+      localItemGet: () => {
+        polls += 1
+        return jsonResponse(200, { success: true, data: polls < 3 ? { ...placeholder, import_stage: polls === 1 ? 'downloading' : 'analyzing' } : completed })
+      },
+    })
+    const mounted = await mountSection(host, { manualPollClock: true })
+    try {
+      await click(mounted.container.querySelector('[data-tab="local"]'))
+      await paste(mounted, placeholder.title)
+      await click(button(mounted.container, L.submit))
+      await settle(mounted.container, () => cardIds(mounted.container).includes(id))
+      const loadsAfterImport = mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).length
+      await mounted.advancePoll()
+      assert.equal(mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).length, loadsAfterImport, 'pending progress must not reload the list')
+      assert.ok(mounted.container.querySelector(`[data-inspiration-id="${id}"]`).textContent.includes(zh['add.status.downloading']))
+
+      await click(mounted.container.querySelector(`[aria-label="${zh['filter.type']}"]`))
+      await click([...mounted.container.querySelectorAll('[role="option"]')].find((node) => node.textContent === zh['type.video']))
+      await settle(mounted.container, () => mounted.calls.some((call) => call.path.includes('/local?') && call.path.includes('type=video')))
+      const loadsAfterFilter = mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).length
+      await mounted.advancePoll()
+      assert.equal(polls, 2, 'a list reload missing the pin must not remove it from the polling set')
+      assert.equal(mounted.calls.filter((call) => call.path.startsWith('/omnimux/inspiration/local?')).length, loadsAfterFilter)
+      await mounted.advancePoll()
+      assert.equal(polls, 3)
+      assert.equal(mounted.container.querySelector(`[data-inspiration-id="${id}"] .omnimux-rival-card-text`)?.textContent, '最终正文')
+      assert.equal(mounted.container.querySelector(PREVIEW_MODAL_SELECTOR), null)
+
+      await mounted.expirePin()
+      assert.deepEqual(cardIds(mounted.container), ['matching-row'], 'the completed image must disappear after its reveal pin expires while the active filter still requires videos')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('delivers failed completion to the pin and an already-open matching detail', async () => {
+    const id = 'failed-import'
+    const placeholder = { id, title: 'https://x.com/a/status/792', source_platform: 'x', type: 'link', import_status: 'importing' }
+    let response = jsonResponse(200, { success: true, data: placeholder })
+    const host = createHost({
+      localItems: [], contentImport: jsonResponse(202, { success: true, data: placeholder }),
+      localItemGet: () => response,
+    })
+    const mounted = await mountSection(host, { manualPollClock: true })
+    try {
+      await click(mounted.container.querySelector('[data-tab="local"]'))
+      await paste(mounted, placeholder.title)
+      await click(button(mounted.container, L.submit))
+      await settle(mounted.container, () => cardIds(mounted.container).includes(id))
+      await click(mounted.container.querySelector(`[data-inspiration-id="${id}"]`))
+      const reason = '解析图片失败，请重试'
+      response = jsonResponse(200, { success: true, data: { ...placeholder, import_status: 'failed', import_error: reason } })
+      await mounted.advancePoll()
+      assert.ok(mounted.container.querySelector(`[data-inspiration-id="${id}"] .omnimux-inspiration-card-error`)?.textContent.includes(reason))
+      assert.ok(mounted.container.querySelector(`${PREVIEW_MODAL_SELECTOR} [role="alert"]`)?.textContent.includes(reason), 'only the already-open matching detail should receive the failed row')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('keeps a detail update on the pinned card even when the current list has no matching row', async () => {
+    const id = 'updated-pin'
+    const row = { id, title: '原始视频标题', source_platform: 'tiktok', source_url: 'https://www.tiktok.com/@creator/video/793', type: 'video', import_status: 'ready', media_urls: ['/omnimux/inspiration/local/media/videos/v_ab12.mp4'] }
+    const updated = { ...row, title: '详情更新后的标题', deconstruction: { summary: '已完成' } }
+    const host = createHost({
+      localItems: [], contentImport: jsonResponse(200, { success: true, data: row }),
+      localItemGet: (key) => jsonResponse(200, { success: true, data: key.endsWith('/analyze') ? updated : row }),
+    })
     const mounted = await mountSection(host)
     try {
-      await paste(mounted, 'https://www.tiktok.com/@creator/video/789')
+      await click(mounted.container.querySelector('[data-tab="local"]'))
+      await paste(mounted, 'https://www.tiktok.com/@creator/video/793')
       await click(button(mounted.container, L.submit))
-      await settle(mounted.container, () => cardIds(mounted.container).includes('local-new-3'))
+      await settle(mounted.container, () => cardIds(mounted.container).includes(id))
+      await click(mounted.container.querySelector(`[data-inspiration-id="${id}"]`))
+      await click(button(mounted.container, zh['modal.deconstruction.analyze']))
+      assert.ok(await settle(mounted.container, () => mounted.container.querySelector(`[data-inspiration-id="${id}"] .omnimux-rival-card-title`)?.textContent === updated.title))
+      const close = mounted.container.querySelector(`${PREVIEW_MODAL_SELECTOR} [aria-label="${zh.close}"]`)
+      await click(close)
+      assert.equal(mounted.container.querySelector(PREVIEW_MODAL_SELECTOR), null)
+      assert.equal(mounted.container.querySelector(`[data-inspiration-id="${id}"] .omnimux-rival-card-title`)?.textContent, updated.title, 'closing detail must not reveal the original stale pin')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
 
-      // The row is still importing, so the card must display organic shimmer rather than look done.
-      const card = mounted.container.querySelector('[data-inspiration-id="local-new-3"]')
-      assert.ok(card.querySelector('.wf-organic-shimmer'), 'the importing card must show organic shimmer animation')
-      assert.equal(card.querySelector('.omnimux-inspiration-badge-status'), null, 'center status pill is removed')
+  it('removes a vanished pinned import and its already-open matching detail after a 404', async () => {
+    const id = 'removed-import'
+    const placeholder = { id, title: 'https://x.com/a/status/791', source_platform: 'x', type: 'link', import_status: 'importing' }
+    let response = jsonResponse(200, { success: true, data: placeholder })
+    const host = createHost({
+      localItems: [], contentImport: jsonResponse(202, { success: true, data: placeholder }),
+      localItemGet: () => response,
+    })
+    const mounted = await mountSection(host, { manualPollClock: true })
+    try {
+      await click(mounted.container.querySelector('[data-tab="local"]'))
+      await paste(mounted, placeholder.title)
+      await click(button(mounted.container, L.submit))
+      await settle(mounted.container, () => cardIds(mounted.container).includes(id))
+      await click(mounted.container.querySelector(`[data-inspiration-id="${id}"]`))
+      assert.ok(mounted.container.querySelector(PREVIEW_MODAL_SELECTOR), 'this detail is explicitly opened by the user')
+      response = jsonResponse(404, { error: 'not-found' })
+      await mounted.advancePoll()
+      assert.equal(mounted.container.querySelector(`[data-inspiration-id="${id}"]`), null)
+      assert.equal(mounted.container.querySelector(PREVIEW_MODAL_SELECTOR), null, 'a removed pin must not leave a stale open detail')
     } finally {
       await mounted.unmount()
       mounted.close()

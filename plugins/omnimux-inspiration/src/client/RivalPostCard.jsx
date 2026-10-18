@@ -1,16 +1,4 @@
-/**
- * 账号监控 v2.1 专用卡片（方案 A：与 InspirationCoverCard 分叉）。
- *
- * 分叉是有意为之，代价写在 PR 里：两张组件从此漂移，缓解靠三条纪律——
- *   1. 颜色/圆角/间距一律走 --dsw-* token，组件内不出现裸色；
- *   2. 媒体比例的判定只存在于 rival-masonry.js，卡片消费已算好的 mediaRatio；
- *   3. 形态分支（标题行数、胶囊行有无、媒体位置）只留在本文件的一张表里，
- *      不下沉到 rival-filter.js 的映射层——映射层只搬运数据。
- *
- * spec §9.1/§9.2：默认态只留「媒体 / 增速胶囊 / 标题或正文」；其余元素全部
- * 收进悬停层（作者行 + 指标行 + 四个操作位）。已处理样式（is-done）只改
- * 颜色与滤镜，不改尺寸——瀑布流因此永不因状态变化重排。
- */
+/** Shared content card for account monitoring and the inspiration library. */
 
 import { Button } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
@@ -116,10 +104,22 @@ function stateText(card, t) {
  *   style?: Record<string, any>,
  *   column?: number,
  *   busy?: boolean,
+ *   mediaNode?: import('react').ReactNode,
+ *   overlayNode?: import('react').ReactNode,
+ *   children?: import('react').ReactNode,
+ *   className?: string,
+ *   selected?: boolean,
+ *   inspirationId?: string,
+ *   bodyClassName?: string,
+ *   bodyRole?: 'status',
  * }} props
  */
 export function RivalPostCard(props) {
-  const { card, t, onDetail, onReplicate, onDeconstruct, onMarkDone, style, column, busy } = props
+  const {
+    card, t, onDetail, onReplicate, onDeconstruct, onMarkDone, style, column, busy,
+    mediaNode: customMedia, overlayNode, children, className = '', selected, inspirationId,
+    bodyClassName = '', bodyRole,
+  } = props
   const cardType = rivalCardTypeOf(card)
   const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image'
   const isDone = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
@@ -147,7 +147,7 @@ export function RivalPostCard(props) {
 
   // 滤镜与淡出只作用在媒体元素本身（§9.2）：胶囊是与媒体同级的独立图层，
   // 绝不能被一个容器级 filter 顺带褪色。
-  const mediaNode = (
+  const mediaNode = customMedia !== undefined ? customMedia : (
     <img
       className="omnimux-rival-card-media"
       src={cover || undefined}
@@ -174,8 +174,10 @@ export function RivalPostCard(props) {
 
   return (
     <article
-      className={`omnimux-rival-card t-${cardType} tier-${tier}${isDone ? ' is-done' : ''}`}
+      className={`omnimux-rival-card t-${cardType} tier-${tier}${isDone ? ' is-done' : ''} ${className}`.trim()}
       data-card-id={String(card?.id ?? '')}
+      data-inspiration-id={inspirationId}
+      aria-selected={selected}
       data-card-type={cardType}
       data-col={column}
       role="button"
@@ -205,12 +207,13 @@ export function RivalPostCard(props) {
               <VelocityPill velocity={card.velocity} surface="on-surface" t={t} />
             </div>
           ) : null}
-          <div className={`omnimux-rival-card-text clamp-${clamp}`}>{title}</div>
+          <div className={`omnimux-rival-card-text clamp-${clamp} ${bodyClassName}`.trim()} role={bodyRole}>{title}</div>
           {cardType === 'text-media' ? mediaNode : null}
         </>
       )}
 
-      <div className={`omnimux-rival-card-overlay ${onMedia ? 'on-media' : 'on-surface'}`}>
+      {children}
+      {overlayNode !== undefined ? overlayNode : <div className={`omnimux-rival-card-overlay ${onMedia ? 'on-media' : 'on-surface'}`}>
         <div className="omnimux-rival-ov-author">
           <RivalPlatformMark platform={String(account.platform || card?.source_platform || '')} />
           <span className="omnimux-rival-ov-name">{String(account.nickname || account.handle || card?.author_name || '')}</span>
@@ -282,7 +285,7 @@ export function RivalPostCard(props) {
             {t('rivalFeed.card.replicate')}
           </Button>
         ) : null}
-      </div>
+      </div>}
     </article>
   )
 }

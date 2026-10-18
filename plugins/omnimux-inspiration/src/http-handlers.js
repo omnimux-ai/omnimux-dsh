@@ -1749,15 +1749,21 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     : coverName
       ? (imageCoverUrl || `/omnimux/inspiration/local/media/covers/${coverName}`)
       : meta.cover_url
+  const type = resolveImportType(meta, media)
+  const savedImageCount = (media.mediaItems || []).filter((item) => item.type === 'image').length
+  const content_shape = type === 'video' ? 'video'
+    : savedImageCount > 1 ? 'gallery'
+      : type === 'image' ? 'photo' : meta.text ? 'text' : 'link'
   return {
     title: meta.title || args.rawUrl,
     content: meta.text,
-    type: resolveImportType(meta, media),
+    type,
     source_platform: args.platform,
     source_url: args.rawUrl,
     cover_url,
     media_items: media.mediaItems || [],
     media_urls: (media.mediaItems || []).filter((item) => item.type === 'video').map((item) => item.url),
+    content_shape,
     local_paths: media.localPaths,
     tags: args.customTags,
     auto_analyze: args.autoAnalyze !== false,

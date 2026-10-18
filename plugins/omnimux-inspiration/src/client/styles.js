@@ -320,41 +320,11 @@ export const INSPIRATION_CSS = `
   animation: omni-shimmer 1.4s infinite;
 }
 
-/* 统一卡片网格：创建独立层叠上下文，杜绝卡片内定位元素（角标/多选框）溢出穿透到吸附栏上方 */
+/* 共享账号监控瀑布流，保留灵感库自己的层叠边界。 */
 .omnimux-inspiration-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-  width: 100%;
-  max-width: 100%;
   isolation: isolate;
-  position: relative;
   z-index: 1;
   animation: omni-fade-in 160ms ease;
-}
-@media (min-width: 1600px) {
-  .omnimux-inspiration-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 18px;
-  }
-}
-@media (max-width: 1100px) {
-  .omnimux-inspiration-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-  }
-}
-@media (max-width: 840px) {
-  .omnimux-inspiration-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-  }
-}
-@media (max-width: 640px) {
-  .omnimux-inspiration-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
 }
 
 /* 批量多选操作栏 */
@@ -415,9 +385,6 @@ export const INSPIRATION_CSS = `
 }
 
 .omnimux-inspiration-card-pure {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 9 / 16;
   /* 卡片自身宽度即容器查询基准：CTA 按卡片宽度退化，不随视口列数走 */
   container-type: inline-size;
   container-name: inspiration-card;
@@ -430,15 +397,11 @@ export const INSPIRATION_CSS = `
               border-color 180ms cubic-bezier(.2,.4,.6,1),
               box-shadow 180ms ease;
 }
-.omnimux-inspiration-card-pure > [class*="body"] {
-  display: none;
-}
 .omnimux-inspiration-card-pure[aria-selected="true"] {
   border-color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.7));
   box-shadow: 0 0 0 1px var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.7)), 0 8px 24px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.5));
 }
 .omnimux-inspiration-card-pure:hover {
-  transform: translateY(-3px);
   border-color: var(--dsw-alias-border-l4, #4a4a4a);
   box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.45));
 }
@@ -477,6 +440,7 @@ export const INSPIRATION_CSS = `
               border-color 120ms ease;
 }
 .omnimux-inspiration-stage .omnimux-inspiration-card-pure:hover .omnimux-inspiration-card-check,
+.omnimux-inspiration-stage .omnimux-inspiration-card-pure:focus-within .omnimux-inspiration-card-check,
 .omnimux-inspiration-stage .omnimux-inspiration-card-pure .omnimux-inspiration-card-check[data-selected="true"],
 .omnimux-inspiration-stage .omnimux-inspiration-grid.selecting .omnimux-inspiration-card-check {
   opacity: 1;
@@ -754,6 +718,22 @@ export const INSPIRATION_CSS = `
   background: var(--dsw-alias-state-error-secondary, rgba(220, 68, 68, 0.28));
   color: var(--dsw-alias-state-error-primary, #f26d6d);
 }
+/* 无媒体的状态直接占用共享正文，布局估算和可见文字使用同一内容。 */
+.omnimux-inspiration-card-error.is-inline,
+.omnimux-inspiration-card-state-text {
+  position: relative;
+  z-index: 2;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-line-clamp: 8;
+}
+.omnimux-inspiration-card-state-text {
+  color: var(--dsw-alias-label-primary);
+}
 .omnimux-inspiration-cover-img {
   display: block;
   width: 100%;
@@ -820,6 +800,65 @@ export const INSPIRATION_CSS = `
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   word-break: break-all;
+}
+
+/* 内容卡媒体沿用共享占位比例；完整显示图片，避免竖屏封面裁掉图文。 */
+.omnimux-inspiration-card-pure .omnimux-rival-card-media {
+  height: auto;
+  aspect-ratio: var(--rival-media-ratio, 1);
+  object-fit: contain;
+}
+.omnimux-inspiration-card-pure .omnimux-inspiration-card-shimmer {
+  aspect-ratio: auto;
+  pointer-events: none;
+}
+.omnimux-inspiration-card-pure .omnimux-inspiration-cover-fallback {
+  box-sizing: border-box;
+}
+.omnimux-inspiration-card-pure .omnimux-inspiration-badge-media {
+  position: absolute;
+  right: 8px;
+  top: 36px;
+  z-index: 4;
+  color: var(--dsw-specific-media-fg);
+  background: var(--dsw-specific-media-pill-bg);
+  border: 1px solid var(--dsw-specific-media-border);
+  font-size: 11px;
+  line-height: 16px;
+}
+.omnimux-inspiration-card-pure.t-text-media .omnimux-inspiration-badge-media {
+  top: auto;
+  right: 20px;
+  bottom: 20px;
+}
+.omnimux-inspiration-card-pure.t-text .omnimux-inspiration-badge-platform,
+.omnimux-inspiration-card-pure.t-text-media .omnimux-inspiration-badge-platform {
+  opacity: 0;
+}
+.omnimux-inspiration-card-pure.t-text:hover .omnimux-inspiration-badge-platform,
+.omnimux-inspiration-card-pure.t-text-media:hover .omnimux-inspiration-badge-platform,
+.omnimux-inspiration-card-pure:focus-within .omnimux-inspiration-badge-platform {
+  opacity: 1;
+}
+.omnimux-inspiration-card-pure:focus-within .omnimux-inspiration-card-overlay {
+  opacity: 1;
+}
+.omnimux-inspiration-card-pure.t-text .omnimux-inspiration-card-overlay,
+.omnimux-inspiration-card-pure.t-text-media .omnimux-inspiration-card-overlay {
+  top: auto;
+  background: var(--dsw-alias-bg-elevated);
+}
+
+.omnimux-inspiration-modal-post-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  padding: 20px;
+  width: 100%;
+  height: 100%;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 /* 卡片角标 Badge (置于右上角) */
@@ -898,6 +937,9 @@ export const INSPIRATION_CSS = `
   padding: 0 2px;
   box-sizing: border-box;
   pointer-events: auto;
+}
+.omnimux-inspiration-card-pure:not(:hover):not(:focus-within) .omnimux-inspiration-overlay-cta {
+  pointer-events: none;
 }
 .omnimux-inspiration-grid.selecting .omnimux-inspiration-overlay-cta {
   display: none;

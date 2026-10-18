@@ -13,8 +13,10 @@
  * 自测宽度；列数仍走 `rivalColumnsForWidth`（共享核心的公式，不断点硬编码）。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RivalPostCard } from './RivalPostCard.jsx'
+import { injectRivalStyles } from './rival-styles.js'
+import { injectRivalTokens } from './rival-tokens.js'
 import {
   RIVAL_GAP,
   RIVAL_MIN_CARD_HEIGHT,
@@ -74,13 +76,17 @@ function useMeasuredWidth(fixedWidth) {
  *   onMarkDone?: (card: Record<string, any>) => void,
  *   busyId?: string | null,
  *   containerWidth?: number,
+ *   className?: string,
+ *   renderCard?: (props: Record<string, any>) => import('react').ReactNode,
  * }} props
  */
 export function RivalMasonry(props) {
   const {
     cards, t, onDetail, onReplicate, onDeconstruct, onMarkDone, busyId,
-    containerWidth,
+    containerWidth, className = '', renderCard,
   } = props
+
+  useEffect(() => { injectRivalStyles(); injectRivalTokens() }, [])
 
   const [ref, measured] = useMeasuredWidth(containerWidth)
   const width = Number(containerWidth) > 0 ? Number(containerWidth) : measured
@@ -101,7 +107,7 @@ export function RivalMasonry(props) {
   return (
     <div
       ref={ref}
-      className="omnimux-rival-masonry"
+      className={`omnimux-rival-masonry ${className}`.trim()}
       data-rival-grid="true"
       data-columns={layout.columns}
       data-col-width={layout.columnWidth ? Math.round(layout.columnWidth * 100) / 100 : undefined}
@@ -115,20 +121,13 @@ export function RivalMasonry(props) {
           '--rival-card-top': `${placement.top}px`,
           '--rival-card-w': `${layout.columnWidth}px`,
         }
-        return (
-          <RivalPostCard
-            key={key}
-            card={card}
-            t={t}
-            column={placement.col}
-            busy={busyId === key}
-            onDetail={onDetail}
-            onReplicate={onReplicate}
-            onDeconstruct={onDeconstruct}
-            onMarkDone={onMarkDone}
-            style={style}
-          />
-        )
+        const cardProps = {
+          card, t, column: placement.col, busy: busyId === key,
+          onDetail, onReplicate, onDeconstruct, onMarkDone, style,
+        }
+        return typeof renderCard === 'function'
+          ? <Fragment key={key}>{renderCard(cardProps)}</Fragment>
+          : <RivalPostCard key={key} {...cardProps} />
       })}
     </div>
   )

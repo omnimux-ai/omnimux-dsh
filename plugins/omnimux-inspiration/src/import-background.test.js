@@ -200,6 +200,7 @@ describe('background import — placeholder and completion', { concurrency: 1 },
     assert.equal(settled.import_stage, null)
     // A preview is not an attachment; the metadata-only result stays a link.
     assert.equal(settled.type, 'link')
+    assert.equal(settled.content_shape, 'text')
     assert.deepEqual(settled.media_urls, [])
     assert.equal(ctx.store.list().total, 1)
   })

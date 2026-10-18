@@ -493,21 +493,31 @@ describe('card reveal shimmer and batch loading UX', () => {
   it('renders batch skeleton cards on loadMore instead of plain text spinner', () => {
     const sectionSrc = readFileSync(join(here, 'InspirationSection.jsx'), 'utf8')
     assert.doesNotMatch(sectionSrc, /omnimux-inspiration-scroll-loader/)
-    assert.match(sectionSrc, /loadingMore \? Array\.from\(\{ length: 10 \}\)/)
+    assert.match(sectionSrc, /loadingMore \? <div className="omnimux-inspiration-skeleton omnimux-rival-loadmore"/)
     assert.match(sectionSrc, /key=\{`skel_more_\$\{i\}`\}/)
   })
 
-  it('configures self-adaptive 5-column grid layout for cards and skeleton', () => {
+  it('delegates card sizing to the shared masonry and keeps loading placeholders below it', () => {
+    const sectionSrc = readFileSync(join(here, 'InspirationSection.jsx'), 'utf8')
+    assert.match(sectionSrc, /<RivalMasonry/)
     const gridCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-grid')
-    assert.equal(decl(gridCss, 'grid-template-columns'), 'repeat(5, minmax(0, 1fr))')
-    assert.equal(decl(gridCss, 'display'), 'grid')
-
-    const skelCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-skeleton')
-    assert.equal(decl(skelCss, 'grid-template-columns'), 'repeat(5, minmax(0, 1fr))')
-
+    assert.doesNotMatch(gridCss, /grid-template-columns|display:\s*grid/)
+    const sharedGrid = ruleBody(RIVAL_CSS, '.omnimux-rival-masonry')
+    assert.equal(decl(sharedGrid, 'position'), 'relative')
+    assert.match(sharedGrid, /(?:^|;)\s*height:\s*var\(--rival-feed-height, auto\)/)
     const cardPureCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-card-pure')
-    assert.equal(decl(cardPureCss, 'width'), '100%')
-    assert.equal(decl(cardPureCss, 'aspect-ratio'), '9 / 16')
+    assert.doesNotMatch(cardPureCss, /aspect-ratio|width:/, 'the library must not override shared card geometry')
+    const mediaCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-card-pure .omnimux-rival-card-media')
+    assert.equal(decl(mediaCss, 'object-fit'), 'contain', 'saved photos must remain fully visible')
+  })
+
+  it('keeps text import notices in flow with the same body typography as shared height estimates', () => {
+    const body = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-card-state-text')
+    assert.equal(decl(body, 'position'), 'relative')
+    assert.equal(decl(body, 'padding'), '0')
+    assert.equal(decl(body, 'font-size'), '14px')
+    assert.equal(decl(body, 'line-height'), '20px')
+    assert.equal(decl(body, '-webkit-line-clamp'), '8')
   })
 
   it('exports preloadBatchCovers and preloadCover for concurrent media readiness with timeout fallback', async () => {

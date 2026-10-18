@@ -6,6 +6,7 @@ import {
   createShareLink,
   getLocalInspiration,
   pickCoverSrc,
+  pickImageSources,
   pickVideoSrc,
   pickImportedMedia,
   resolveTikTokEmbedUrl,
@@ -299,10 +300,14 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   // The media source of the row currently on screen. Declared before the reset
   // effect below because that effect keys off it.
   const [mediaIndex, setMediaIndex] = useState(0)
-  const mediaItems = useMemo(() => pickImportedMedia(item), [item])
+  const mediaItems = useMemo(() => {
+    const imported = pickImportedMedia(item)
+    return imported.length ? imported : pickImageSources(item).map((url) => ({ type: 'image', url }))
+  }, [item])
   const selectedMedia = mediaItems[mediaIndex] || mediaItems[0]
   const videoSrc = selectedMedia ? (selectedMedia.type === 'video' ? selectedMedia.url : '') : pickVideoSrc(item)
-  useEffect(() => { pendingSeekRef.current = null; setMediaIndex(0) }, [item?.id])
+  const mediaListKey = mediaItems.map((media) => `${media.type}:${media.url}`).join('\n')
+  useEffect(() => { pendingSeekRef.current = null; setMediaIndex(0) }, [item?.id, mediaListKey])
   // A message that belongs to one media source must never outlive it: without
   // this reset the next row opened in the same modal would render its cover
   // under the previous row's "cannot be played" notice.
@@ -345,6 +350,8 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const embedUrl = resolveTikTokEmbedUrl(data.analysis.embed_player_url || data.analysis.tiktok_video_id || sourceUrl)
   const canAnalyze = canAnalyzeInspiration(data.safeItem)
   const cover = pickCoverSrc(data.safeItem)
+  const textOnly = !videoSrc && !embedUrl && !mediaItems.length
+    && (data.safeItem.content_shape === 'text' || (data.safeItem.type === 'link' && !cover))
   const importing = isImportingRow(data.safeItem)
   const failed = isFailedRow(data.safeItem)
   // A settled row that carries an `import_error` imported fine but could not be
@@ -623,6 +630,8 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   />
                 ) : !selectedMedia && embedUrl ? (
                   <iframe title={data.title} src={embedUrl} className="omnimux-inspiration-player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+                ) : textOnly ? (
+                  <div className="omnimux-inspiration-modal-post-text">{data.script || data.title}</div>
                 ) : selectedMedia?.type === 'image' || cover ? (
                   <img src={selectedMedia?.type === 'image' ? selectedMedia.url : cover} alt={data.title} className="omnimux-inspiration-modal-cover-bg" />
                 ) : (

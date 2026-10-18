@@ -878,3 +878,39 @@ describe('executeFeedLoad cache-hit cleanup (Issue #2988 review)', () => {
     assert.equal(state.loadingMore, false, 'a superseded next-page spinner must not stay on')
   })
 })
+
+
+describe('executeFeedLoad loaded-range refresh', () => {
+  it('discards a staged refresh when a newer filter request supersedes it', async () => {
+    const { executeFeedLoad: run } = await import('./feed-helpers.js')
+    const previousFetch = globalThis.fetch
+    invalidateInspirationCache()
+    let releasePageTwo
+    let pageTwoRequested = false
+    let current = true
+    const gate = new Promise((resolve) => { releasePageTwo = resolve })
+    const writes = []
+    globalThis.fetch = async (input) => {
+      const page = Number(new URL(String(input), 'http://localhost').searchParams.get('page'))
+      if (page === 2) { pageTwoRequested = true; await gate }
+      return jsonResponse(200, { data: { items: inspirationRows('refreshed', (page - 1) * 20 + 1, 20), total: 60 } })
+    }
+    const setters = Object.fromEntries(['Items', 'Page', 'HasMore', 'Phase', 'Error', 'Loading', 'LoadingMore', 'Platforms'].map((key) => [`set${key}`, (value) => writes.push([key, value])]))
+    try {
+      const pending = run(
+        { isNextPage: false, tab: 'local', sort: 'new', page: 2, refreshThroughPage: 2, hasExistingItems: true },
+        setters,
+        { isCurrent: () => current },
+      )
+      await waitFor(() => pageTwoRequested, 'the second loaded page must be refreshed')
+      assert.deepEqual(writes, [], 'page one must stay staged while page two is loading')
+      current = false
+      releasePageTwo()
+      await pending
+      assert.deepEqual(writes, [], 'a superseded refresh must not overwrite any state owned by the new filter')
+    } finally {
+      globalThis.fetch = previousFetch
+      invalidateInspirationCache()
+    }
+  })
+})
