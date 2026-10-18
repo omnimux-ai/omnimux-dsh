@@ -346,7 +346,15 @@ test('same-PID peer proof explicitly records optional missing but rejects requir
       if (options.optional) {
         const proof = await verifyTaskServerLoading({ ...child, installation })
         assert.equal(proof.peers[0].status, 'missing'); assert.equal(proof.peers[0].entryPath, null)
-      } else await assert.rejects(verifyTaskServerLoading({ ...child, installation }), /Required task peer|version does not satisfy/)
+      } else await assert.rejects(verifyTaskServerLoading({ ...child, installation }), error => {
+        assert.match(error.message, /Required task peer|version does not satisfy/)
+        assert.equal(error.peerResolutionFailure.name, 'test-peer')
+        assert.equal(error.peerResolutionFailure.spec, '^1.0.0')
+        assert.equal(error.peerResolutionFailure.optional, false)
+        assert.equal(error.peerResolutionFailure.status, options.missing ? 'missing' : 'resolved')
+        assert.deepEqual(Object.keys(error.peerResolutionFailure), ['parentName', 'parentRoot', 'name', 'spec', 'optional', 'status', 'scope', 'version', 'packageRoot'])
+        return true
+      })
     } finally { await child.cleanup() }
   }
 })

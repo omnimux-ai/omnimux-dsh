@@ -168,6 +168,7 @@ export function validateTaskPeerResolution(installation, peers) {
   const expected = new Map(installation.hostPeerExpectations.map(peer => [peerKey(peer), peer]))
   const seen = new Set()
   for (const peer of peers) {
+    try {
     const declaration = expected.get(peerKey(peer))
     assert.ok(declaration && !seen.has(peerKey(peer)), 'Unexpected or duplicate task peer receipt')
     seen.add(peerKey(peer))
@@ -207,6 +208,11 @@ export function validateTaskPeerResolution(installation, peers) {
       assert.deepEqual(peer.anchorResolution, { packageRoot: peer.packageRoot, version: peer.version,
         manifestPath: peer.manifestPath, manifestSha256: peer.manifestSha256,
         entryPath: peer.entryPath, entrySha256: peer.entrySha256 }, 'Task host peer differs from shipping anchor resolution')
+    }
+    } catch (error) {
+      error.peerResolutionFailure = Object.fromEntries(['parentName', 'parentRoot', 'name', 'spec', 'optional', 'status', 'scope', 'version', 'packageRoot']
+        .map(key => [key, peer?.[key] ?? null]))
+      throw error
     }
   }
   return peers
