@@ -345,6 +345,55 @@ describe('addCollectionToSession', () => {
     assert.deepEqual(result, { ok: false, errorKey: 'collection.sessionFailed', code: 'prefill-failed' })
   })
 
+  it('reveals the conversation before waiting for the member read', async () => {
+    let release
+    const gate = new Promise(resolve => { release = resolve })
+    const reveals = []
+    const pending = addCollectionToSession(COLLECTION, {
+      window: makeWindow('sess-1', null),
+      t: zhT,
+      fetchCollectionItems: async () => { await gate; return MEMBERS },
+      reveal: () => reveals.push(1),
+      prefill: async () => ({ ok: true }),
+    })
+    await Promise.resolve()
+    assert.equal(reveals.length, 1, '点击后必须立即展开会话栏，不等待合集成员读取')
+    release()
+    assert.deepEqual(await pending, { ok: true })
+  })
+
+  it('uses the official ensureConversationVisible entry when available', async () => {
+    const calls = []
+    const windowObject = makeWindow('sess-1', null)
+    windowObject.__omnimuxWorkbench.ensureConversationVisible = options => calls.push({ kind: 'ensure', ...options })
+    const result = await addCollectionToSession(COLLECTION, {
+      window: windowObject,
+      t: zhT,
+      fetchCollectionItems: async () => MEMBERS,
+      prefill: async () => ({ ok: true }),
+    })
+    assert.deepEqual(result, { ok: true })
+    await new Promise(resolve => setTimeout(resolve, 80))
+    assert.ok(calls.length >= 1, '必须调用 ensureConversationVisible')
+    assert.equal(calls[0].kind, 'ensure')
+    assert.equal(Object.hasOwn(calls[0], 'sessionId'), false, 'ensure 不传 sessionId，保持库与会话分栏而不是会话全屏')
+    assert.equal(windowObject.calls.filter(entry => entry[0] === 'setConversationCollapsed').length, 0, '有 ensure 时不应回退到折叠键')
+  })
+
+  it('falls back to collapse + split when ensureConversationVisible is unavailable', async () => {
+    const windowObject = makeWindow('sess-1', null)
+    const result = await addCollectionToSession(COLLECTION, {
+      window: windowObject,
+      t: zhT,
+      fetchCollectionItems: async () => MEMBERS,
+      prefill: async () => ({ ok: true }),
+    })
+    assert.deepEqual(result, { ok: true })
+    await new Promise(resolve => setTimeout(resolve, 80))
+    assert.ok(windowObject.calls.some(entry => entry[0] === 'setConversationCollapsed' && entry[1] === false))
+    assert.ok(windowObject.calls.some(entry => entry[0] === 'setFocus' && entry[1] === 'split'))
+  })
+
   it('refuses a concurrent add while the first is still running', async () => {
     let release
     const gate = new Promise(resolve => {
