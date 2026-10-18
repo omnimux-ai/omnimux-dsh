@@ -1,0 +1,385 @@
+{
+  "kind": "browser-evidence-for-issue-3411",
+  "issue": 3411,
+  "runId": "20261018T100531-yp0ap",
+  "createdAt": "2026-10-18T10:05:31.816Z",
+  "scope": "real-section-and-production-local-handlers + synthetic host seams; not-full-host-install",
+  "finalHead": "881487d97695ace8441aad19aff4632ab5605a74",
+  "worktreeStatus": [
+    "M plugins/omnimux-inspiration/README.md",
+    " M plugins/omnimux-inspiration/src/client/InspirationCollectionCard.jsx",
+    " M plugins/omnimux-inspiration/src/client/InspirationSection.jsx",
+    " M plugins/omnimux-inspiration/src/client/collection-locales.js",
+    " M plugins/omnimux-inspiration/src/client/collection-styles.js",
+    "?? plugins/omnimux-inspiration/src/client/collection-card-actions.test.js",
+    "?? plugins/omnimux-inspiration/src/client/collection-to-chat.js",
+    "?? plugins/omnimux-inspiration/src/client/collection-to-chat.test.js",
+    "?? plugins/omnimux-inspiration/src/client/test-fixtures/collection-card-render.mjs",
+    "?? plugins/omnimux-inspiration/src/client/test-fixtures/collection-card-stage.jsx",
+    "?? specs/inspiration-collection-card-actions-3411.spec.md"
+  ],
+  "identity": {
+    "sourceSha256": "efa23c778c6481b7080382abfefe7d1a75c7ddb4c80b6c5813c6bfbb80b660d0",
+    "bundleSha256": "b66cdf5f2c48daf5cd7d3af25b09252c0898796350443ba63f2d6ab2759eec96",
+    "head": "881487d97695ace8441aad19aff4632ab5605a74"
+  },
+  "origin": "http://127.0.0.1:53308",
+  "chrome": {
+    "kind": "independent-headless-chromium",
+    "pid": 18996,
+    "port": 53313
+  },
+  "collection": {
+    "id": "collection_d505c854-c674-4287-8271-407531f635e7",
+    "title": "测试合集",
+    "item_ids": [
+      "qa-dance1",
+      "qa-dance2",
+      "qa-fashion1"
+    ]
+  },
+  "evidenceScopeNote": "real InspirationSection + real production local handlers/store + real loopback HTTP + independent headless Chrome; synthetic __omnimuxWorkbench/__omnimuxSessionPrefill host seams and synthetic conversation column; not a full Host install; Dev 45120 not used; no external network.",
+  "hover": {
+    "hidden": {
+      "opacity": 0,
+      "pointerEvents": "none",
+      "transform": "matrix(1, 0, 0, 1, 0, 4)",
+      "role": "group",
+      "ariaLabel": "合集操作",
+      "ariaHidden": null,
+      "buttons": [
+        {
+          "text": "查看",
+          "ariaLabel": "查看"
+        },
+        {
+          "text": "加入会话",
+          "ariaLabel": "加入会话"
+        }
+      ]
+    },
+    "hovered": {
+      "opacity": 1,
+      "pointerEvents": "auto",
+      "transform": "matrix(1, 0, 0, 1, 0, 0)",
+      "rect": {
+        "x": 21,
+        "y": 213.625,
+        "width": 234,
+        "height": 64
+      },
+      "coverRect": {
+        "x": 21,
+        "y": 146,
+        "width": 234,
+        "height": 131.625
+      },
+      "titleRect": {
+        "x": 21,
+        "y": 277.625,
+        "width": 234,
+        "height": 42
+      },
+      "menuRect": {
+        "x": 218,
+        "y": 282.625,
+        "width": 32,
+        "height": 32
+      },
+      "buttons": [
+        {
+          "text": "查看",
+          "ariaLabel": "查看",
+          "disabled": false
+        },
+        {
+          "text": "加入会话",
+          "ariaLabel": "加入会话",
+          "disabled": false
+        }
+      ]
+    },
+    "ordinaryCards": [
+      {
+        "id": "qa-fashion2",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      },
+      {
+        "id": "qa-portrait1",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      },
+      {
+        "id": "qa-portrait2",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      },
+      {
+        "id": "qa-city1",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      },
+      {
+        "id": "qa-travel1",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      }
+    ]
+  },
+  "view": {
+    "heading": "测试合集",
+    "backLabel": [
+      "返回灵感库",
+      "重命名"
+    ],
+    "memberIds": [
+      "qa-dance1",
+      "qa-dance2",
+      "qa-fashion1"
+    ],
+    "rootCards": 0,
+    "actionsLayers": 0,
+    "host": {
+      "prefill": [],
+      "calls": [],
+      "conversation": "collapsed"
+    }
+  },
+  "addToSession": {
+    "prefill": {
+      "targetSessionId": "qa-session-1",
+      "prompt": "来源：OmniMux 灵感库 · 本地合集\n合集：测试合集\n合集 ID：collection_d505c854-c674-4287-8271-407531f635e7\n成员条数：3\n成员清单：\n1. 舞蹈参考一（成员 id：qa-dance1；平台：tiktok；类型：image）\n2. 舞蹈参考二（成员 id：qa-dance2；平台：tiktok；类型：image）\n3. 穿搭参考一（成员 id：qa-fashion1；平台：tiktok；类型：image）\n使用 inspiration_get 按上述 id 逐条读取（标题、正文/脚本、拆解、本地媒体路径）再回答问题。\n问题："
+    },
+    "promptFacts": {
+      "memberLines": [
+        {
+          "index": 1,
+          "title": "舞蹈参考一",
+          "id": "qa-dance1",
+          "platform": "tiktok",
+          "type": "image"
+        },
+        {
+          "index": 2,
+          "title": "舞蹈参考二",
+          "id": "qa-dance2",
+          "platform": "tiktok",
+          "type": "image"
+        },
+        {
+          "index": 3,
+          "title": "穿搭参考一",
+          "id": "qa-fashion1",
+          "platform": "tiktok",
+          "type": "image"
+        }
+      ],
+      "tail": "使用 inspiration_get 按上述 id 逐条读取（标题、正文/脚本、拆解、本地媒体路径）再回答问题。\n问题："
+    },
+    "revealCalls": [
+      [
+        "collapsed",
+        false
+      ],
+      [
+        "focus",
+        "split"
+      ]
+    ],
+    "memberRead": {
+      "path": "/omnimux/inspiration/local",
+      "query": {
+        "page": "1",
+        "page_size": "100",
+        "projection": "lean",
+        "collection_id": "collection_d505c854-c674-4287-8271-407531f635e7"
+      },
+      "status": 200,
+      "instance": 1,
+      "allCollectionReads": [
+        {
+          "sort": "new",
+          "page": "1",
+          "page_size": "20",
+          "projection": "lean",
+          "collection_id": "collection_d505c854-c674-4287-8271-407531f635e7"
+        },
+        {
+          "page": "1",
+          "page_size": "100",
+          "projection": "lean",
+          "collection_id": "collection_d505c854-c674-4287-8271-407531f635e7"
+        }
+      ]
+    },
+    "noSend": {
+      "sendClicks": 0,
+      "requests": [
+        {
+          "method": "GET",
+          "url": "/omnimux/inspiration/local?page=1&page_size=100&projection=lean&collection_id=collection_d505c854-c674-4287-8271-407531f635e7"
+        }
+      ],
+      "nonGet": []
+    },
+    "assertionPassed": true
+  },
+  "failurePath": {
+    "toastText": "输入框已有内容，请先清空或新建会话后重试",
+    "toastVisible": true,
+    "composerAfter": "用户既有草稿（QA 哨兵）",
+    "conversation": "open",
+    "stillOnRoot": true,
+    "activeTab": "灵感库",
+    "revealCalls": [
+      [
+        "collapsed",
+        false
+      ],
+      [
+        "focus",
+        "split"
+      ]
+    ],
+    "prefillCountAfter": 1,
+    "sendClicksAfter": 0,
+    "assertionPassed": true
+  },
+  "assertions": [
+    {
+      "name": "actions layer exists in the collection card but is hidden before hover (opacity 0, pointer-events none)",
+      "pass": true
+    },
+    {
+      "name": "real mouse hover reveals both buttons: opacity ~1, pointer-events auto, translateY 4->0",
+      "pass": true
+    },
+    {
+      "name": "action layer sits inside the cover bottom and does not overlap the card title or the 更多操作 menu",
+      "pass": true
+    },
+    {
+      "name": "ordinary inspiration cards on the same page expose no 查看/加入会话 controls",
+      "pass": true
+    },
+    {
+      "name": "查看 enters the real collection view (back button + heading + 3 member cards) without any session prefill",
+      "pass": true
+    },
+    {
+      "name": "member view cards are ordinary inspiration cards without the collection action layer",
+      "pass": true
+    },
+    {
+      "name": "加入会话 writes exactly one sourced prompt through the official prefill seam to the current session",
+      "pass": true
+    },
+    {
+      "name": "prompt carries source label, collection name/id, count, member ids/platform/type and inspiration_get instruction",
+      "pass": true
+    },
+    {
+      "name": "conversation column really opened and the synthetic composer holds exactly the prompt draft",
+      "pass": true
+    },
+    {
+      "name": "reveal sequence is uncollapse -> split focus (after the real member read)",
+      "pass": true
+    },
+    {
+      "name": "members were read from the real local endpoint with collection_id + lean projection before prefill",
+      "pass": true
+    },
+    {
+      "name": "no send happened: send button never clicked and no send-like/non-GET request left the page",
+      "pass": true
+    },
+    {
+      "name": "draft-protected path shows the visible toast copy and keeps the existing draft, root view and open conversation",
+      "pass": true
+    },
+    {
+      "name": "failure path did not write the session draft through the seam (no second prefill record)",
+      "pass": true
+    },
+    {
+      "name": "no browser request escaped the fixture origin; no console exceptions",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "hover-actions.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 142844,
+      "sha256": "df7dcf07cf09809521f1ded6d36c4c33212e1ed4e4ae3f078f75b926da562d66"
+    },
+    {
+      "name": "view-collection.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 127571,
+      "sha256": "65a19aa79b79294153214e2a7294805fbd64b6c54459c2bfa78b5cd195018356"
+    },
+    {
+      "name": "add-to-session.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 222965,
+      "sha256": "cdc81477315d23bc9626e1713a538ab00d6064d649a67a5e73c9cb51b674a48b"
+    },
+    {
+      "name": "draft-protected.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 189195,
+      "sha256": "2bd18196ef2fda3da6e2e647224014d0b748f253013fefdac6e5f7dcbb267886"
+    }
+  ],
+  "consoleErrors": [],
+  "network": {
+    "events": 17,
+    "localRequests": 4,
+    "external": []
+  },
+  "counters": {
+    "syntheticCloud": 1,
+    "blockedCapabilities": 0,
+    "blockedExternalFetch": 0,
+    "injectedReadFailures": 0
+  },
+  "cleanup": {
+    "browser": {
+      "chromeExited": true,
+      "profileRemoved": true
+    },
+    "fixture": {
+      "serverClosed": true,
+      "storeRemoved": true,
+      "environmentRestored": true
+    }
+  },
+  "pass": true,
+  "boundaries": [
+    "Host seams (__omnimuxWorkbench, __omnimuxSessionPrefill) and the conversation column/composer are synthetic stubs; this is not a full Host install.",
+    "Real: product InspirationSection bundle, production local handlers/store, real collection HTTP write/read, real mouse hover and clicks in headless Chrome.",
+    "No Dev app (port 45120), no user profile, no external network; dynamic loopback ports only; Chrome/server/temp store cleaned up."
+  ]
+}

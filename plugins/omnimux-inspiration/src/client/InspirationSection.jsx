@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { InspirationCollectionCard, toCollectionCardRow } from './InspirationCollectionCard.jsx'
 import { InspirationCollectionDialog } from './InspirationCollectionDialog.jsx'
 import { InspirationCollectionMenu } from './InspirationCollectionMenu.jsx'
+import { addCollectionToSession } from './collection-to-chat.js'
 import { injectCollectionStyles } from './collection-styles.js'
 import { useCollectionDrag, useInspirationCollections } from './use-inspiration-collections.js'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
@@ -229,6 +230,35 @@ export function InspirationSection({ t, active }) {
   }, [handleImportSuccess, showToast, t])
 
   const libraryCollections = useInspirationCollections({ feed, collectionId, setCollectionId, t, showToast })
+
+  /**
+   * 合集卡「加入会话」：同一时刻只处理一个合集。
+   *
+   * 成功不加气泡——草稿出现在输入框里本身就是回执；失败把模块给的
+   * `errorKey` 交给既有顶部气泡通道，不新建全局弹窗。ref 与 state 成对：
+   * ref 挡住同一 tick 内的连点，state 只负责按钮忙碌态。
+   */
+  const [addingCollectionId, setAddingCollectionId] = useState('')
+  const addingCollectionRef = useRef('')
+  const handleAddCollectionToSession = useCallback(async collection => {
+    if (addingCollectionRef.current) return
+    const collectionId = String(collection?.id ?? '')
+    addingCollectionRef.current = collectionId || 'pending'
+    setAddingCollectionId(collectionId)
+    try {
+      const result = await addCollectionToSession(collection, { t })
+      if (!result?.ok) showToast(t(result?.errorKey || 'collection.sessionFailed'))
+    } catch (failure) {
+      // The module answers recoverable failures with error keys. Only an
+      // unexpected fault lands here: keep its detail out of the UI, but do not
+      // drop it silently either.
+      console.error('[omnimux-inspiration] add collection to session failed', failure)
+      showToast(t('collection.sessionFailed'))
+    } finally {
+      addingCollectionRef.current = ''
+      setAddingCollectionId('')
+    }
+  }, [showToast, t])
 
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
@@ -601,6 +631,8 @@ export function InspirationSection({ t, active }) {
                 renderCard={({ card: descriptor, style, column }) => descriptor.card_type === 'collection' ? (
                   <InspirationCollectionCard collection={descriptor.collection} t={t} style={style} column={column}
                     onOpen={selectCollection}
+                    onAddToSession={handleAddCollectionToSession}
+                    addToSessionBusy={addingCollectionId === String(descriptor.collection.id)}
                     menuNode={<InspirationCollectionMenu t={t} disabled={libraryCollections.busy} onRename={() => libraryCollections.rename(descriptor.collection)} />}
                   />
                 ) : (

@@ -80,12 +80,47 @@ export const COLLECTION_CSS = `
   cursor: default;
 }
 .omnimux-inspiration-collection-card .omnimux-inspiration-collection-cover {
+  position: relative;
   display: flex;
   width: 100%;
   aspect-ratio: ${RIVAL_COLLECTION_MEDIA_RATIO};
   gap: 3px;
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
+}
+.omnimux-inspiration-collection-actions {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 28px 8px 8px;
+  background: var(--dsw-specific-media-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+.omnimux-inspiration-collection-card:hover .omnimux-inspiration-collection-actions,
+.omnimux-inspiration-collection-card:focus-within .omnimux-inspiration-collection-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+@media (hover: none) {
+  .omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-inspiration-collection-actions {
+    transition: none;
+  }
 }
 .omnimux-inspiration-collection-column {
   position: relative;
