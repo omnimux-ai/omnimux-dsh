@@ -29,7 +29,7 @@ related:
 
 ## 身份与实际观察
 
-目标工作树 HEAD 为 `2e15b40344fe83e9750aeb2c8fc0dc30e3d2769a`；真实源码指纹 `sourceSha256=dbf38fa8e861041e3f7e2516040b89bb81732f0228a52593d1182c8bb773cc18`，构建指纹 `bundleSha256=28da38c650ece86d245d982ea588fc9895035959077415fa7a47dee7ebca043b`。完整断言、注入规则 sha256、对照按钮前后值、截图尺寸与 sha256、清理回执见[浏览器记录](2026-10-18-inspiration-collection-cta-css-3418/browser.json)。
+目标工作树 HEAD 为 `2e15b40344fe83e9750aeb2c8fc0dc30e3d2769a`（本次浏览器运行时的已提交基线；修复随后提交为 `e5cdf4984`，源码指纹未变，复审在该提交上重跑 fixture E2E 得到相同的 `sourceSha256` / `bundleSha256`）；真实源码指纹 `sourceSha256=dbf38fa8e861041e3f7e2516040b89bb81732f0228a52593d1182c8bb773cc18`，构建指纹 `bundleSha256=28da38c650ece86d245d982ea588fc9895035959077415fa7a47dee7ebca043b`。完整断言、注入规则 sha256、对照按钮前后值、截图尺寸与 sha256、清理回执见[浏览器记录](2026-10-18-inspiration-collection-cta-css-3418/browser.json)。
 
 真实链路：产品 `InspirationSection` 由工作树源码经 esbuild 打包渲染，合集经真实 HTTP `POST /omnimux/inspiration/local/collections` 创建，页面由独立 headless Chrome 经 CDP 驱动，样式均取 `getComputedStyle` 的真实渲染值。对照：将 market 规则原文注入 `<head>`，并追加两个命中 `button[class*="add"]` 的对照按钮（旧类名 `omnimux-inspiration-collection-action-add` 与任意 `add` 子串类）。
 
