@@ -232,12 +232,13 @@ export async function installTaskRuntime({ root, repository, privateRoot, ownerI
   });
   const before = preparation.candidateBefore;
   const installation = { taskId: evidenceContext.taskId, runId: evidenceContext.runId, sourceRoot: root, privateRoot, profile,
-    ownerIdentity, hostPeerExpectations, appAnchor: resolve(dirname(wrapper), '../node_modules/@deepseek-ai/dsh/package.json'),
+    ownerIdentity, hostPeerExpectations, runtimeExecutable: executable, runtimeExecutableSha256: hashFile(executable), appAnchor: resolve(dirname(wrapper), '../node_modules/@deepseek-ai/dsh/package.json'),
     base: before.base.resolvedSha, head: before.head.resolvedSha, candidateDigest: before.candidate.contentDigest, inputsDigest: before.inputs.contentDigest, packages };
   const assertInstalledIntegrity = () => {
     const identity = fs.statSync(privateRoot, { bigint: true });
     if (fs.lstatSync(privateRoot).isSymbolicLink() || fs.realpathSync(privateRoot) !== privateRoot
       || String(identity.dev) !== ownerIdentity[0] || String(identity.ino) !== ownerIdentity[1]) fail('INSTALL_LOCATION_UNSAFE');
+    if (fs.realpathSync(executable) !== executable || hashFile(executable) !== installation.runtimeExecutableSha256) fail('INSTALL_RUNTIME_CHANGED');
     const now = captureCandidate({ root, ...candidate, ...evidenceContext });
     if (now.candidate.contentDigest !== installation.candidateDigest || now.inputs.contentDigest !== installation.inputsDigest || now.head.resolvedSha !== installation.head) fail('INSTALL_CANDIDATE_CHANGED');
     const registry = json(join(profile, 'package.json'));
@@ -246,6 +247,10 @@ export async function installTaskRuntime({ root, repository, privateRoot, ownerI
       if (stable(taskPackagePayload(item.installedRoot)) !== stable(item.payload)) fail('INSTALL_BYTES_MISMATCH');
     }
     for (const item of topLevel) if (fs.realpathSync(join(profile, 'node_modules', item.name)) !== item.target) fail('INSTALL_LOCATION_UNSAFE');
+    if (installation.peerProbe) {
+      const probe = installation.peerProbe;
+      if (probe.path !== join(profile, 'task-peer-probe.mjs') || fs.lstatSync(probe.path).isSymbolicLink() || hashFile(probe.path) !== probe.sha256) fail('INSTALL_BYTES_MISMATCH');
+    }
     for (const item of graph.records) for (const dependency of item.dependencies) {
       if (fs.realpathSync(join(item.target, 'node_modules', dependency.name)) !== dependency.target) fail('INSTALL_DEPENDENCY_IDENTITY');
     }

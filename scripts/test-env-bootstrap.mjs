@@ -567,6 +567,12 @@ async function startFreshTaskRuntime({ options, io, deps }) {
       'agent-default-model': { provider: 'deepseek-official', model: 'deepseek-flash' },
     }) + '\n', { flag: 'wx', mode: 0o600 });
     const installed = await installTaskRuntime({ root: options.root, repository: deps.repositoryRoot ?? repositoryRoot, privateRoot, ownerIdentity: runtimeOwnerIdentity, preparation, evidenceContext: options.evidenceContext, candidate: options.candidate, executable: EXECUTABLE, wrapper: WRAPPER, env });
+    const { createTaskPeerProbeSource } = await import('./task-runtime-proof.mjs');
+    if (installed.installation.hostPeerExpectations.length) {
+      const probePath = join(installed.installation.profile, 'task-peer-probe.mjs');
+      io.writeFileSync(probePath, createTaskPeerProbeSource({ expectations: installed.installation.hostPeerExpectations, appAnchor: installed.installation.appAnchor }), { mode: 0o600, flag: 'wx' });
+      installed.installation.peerProbe = { path: probePath, sha256: hashFile(probePath) };
+    }
     const profilePatch = [
       { id: 'llm-pi-ai', name: '@deepseek-ai/dsh-llm-pi-ai', config: { providers: { omnimux: { displayName: 'QA模拟', apiKeyEnv: 'OMNIMUX_API_KEY', api: 'openai-completions', baseURL: mock.origin, models: [{ id: 'qa-synthetic', name: 'QA模拟', contextWindow: 8192, maxTokens: 2048 }] } } } },
       { id: 'omnimux', config: { siteBaseUrl: mock.origin, official: { accountAvatars: { enabled: false } }, media: { defaultProvider: 'omnimux', providers: { omnimux: { protocol: 'openai-media', baseUrl: `${mock.origin}/v1`, apiKeyEnv: 'OMNIMUX_API_KEY' } } } } },
@@ -661,6 +667,8 @@ async function startFreshTaskRuntime({ options, io, deps }) {
       ? { cleaned: cleaned.cleaned, resources: cleaned.resources.map(item => item.name === 'app-private-directory' ? { ...item, status: 'completed', reason: null } : item) } : cleaned;
     classified.observations = { ...observations, ...(error.observations ? { failedPreparation: error.observations } : {}) };
     if (error.installDiagnostic) classified.installDiagnostic = error.installDiagnostic;
+    if (error.peerObserverFailure) classified.peerObserverFailure = error.peerObserverFailure;
+    if (error.peerResolutionFailure) classified.peerResolutionFailure = error.peerResolutionFailure;
     throw classified;
   }
 }
