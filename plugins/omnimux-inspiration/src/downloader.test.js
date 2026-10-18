@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { after, beforeEach, describe, it } from 'node:test'
+import { after, afterEach, beforeEach, describe, it } from 'node:test'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -12,6 +12,7 @@ import {
   detectExtFromBytes,
   downloadMedia,
   isKnownUnrenderableCover,
+  isSavedMediaFile,
 } from './downloader.js'
 
 const PUBLIC_MP4 = 'https://video.twimg.com/amplify_video/1/vid/1280x720/high.mp4'
@@ -219,6 +220,68 @@ describe('downloadMedia — download target policy', () => {
     assert.equal(detectExt('not a url'), '.mp4')
     assert.equal(MAX_DOWNLOAD_BYTES, 512 * 1024 * 1024)
     assert.equal(DOWNLOAD_TIMEOUT_MS, 60_000)
+  })
+})
+
+describe('saved attachments require a real file with the requested media type', () => {
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6nkwAAAAASUVORK5CYII=', 'base64')
+  const MP4 = readFileSync(new URL('../../../tests/fixtures/qa-workspace-media/assets/imported/fixture-video.mp4', import.meta.url))
+  // One black VP8 frame generated offline; EBML must declare WebM, not Matroska.
+  const WEBM = Buffer.from('GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwH/////////EU2bdKtNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHWTbuMU6uEElTDZ1OsggEj7AEAAAAAAABoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsCrXsYMPQkBNgIxMYXZmNjMuMS4xMDJXQYxMYXZmNjMuMS4xMDJEiYhAj0AAAAAAABZUrmvIrgEAAAAAAAA/14EBc8WIt+2OHMhxRb6cgQAitZyDdW5kiIEAhoVWX1ZQOIOBASPjg4Q7msoA4JCwgQK6gQKagQJVsIRVuYEBElTDZ9Zzc59jwIBnyJlFo4dFTkNPREVSRIeMTGF2ZjYzLjEuMTAyc3OxY8CLY8WIt+2OHMhxRb5nyKBFo4dFTkNPREVSRIeTTGF2YzYzLjEuMTAyIGxpYnZweB9DtnWn54EAo6KBAACAEAIAnQEqAgACAAvHCIWFiJmEiD+CAAwNYAD+5rUA', 'base64')
+  let dir
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'omnimux-saved-media-'))
+  })
+
+  afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+  function write(name, bytes) {
+    const file = join(dir, name)
+    writeFileSync(file, bytes)
+    return file
+  }
+
+  it('accepts recognised images and MP4/WebM files independently of the suffix', () => {
+    assert.equal(isSavedMediaFile(write('image.data', PNG), 'image'), true)
+    assert.equal(isSavedMediaFile(write('video.data', MP4), 'video'), true)
+    assert.equal(isSavedMediaFile(write('webm.data', WEBM), 'video'), true)
+  })
+
+  it('refuses an image masquerading as video and a video masquerading as image', () => {
+    assert.equal(isSavedMediaFile(write('image.mp4', PNG), 'video'), false)
+    assert.equal(isSavedMediaFile(write('video.jpg', MP4), 'image'), false)
+    assert.equal(isSavedMediaFile(write('webm.png', WEBM), 'image'), false)
+  })
+
+  it('refuses document, unknown, empty and unavailable files for either type', () => {
+    const files = [
+      write('html.mp4', Buffer.from('<!doctype html><html>blocked</html>')),
+      write('json.jpg', Buffer.from('{"error":"blocked"}')),
+      write('unknown.mp4', Buffer.from('not-media')),
+      write('empty.png', Buffer.alloc(0)),
+      join(dir, 'missing.mp4'),
+      dir,
+    ]
+    for (const file of files) {
+      assert.equal(isSavedMediaFile(file, 'image'), false, file)
+      assert.equal(isSavedMediaFile(file, 'video'), false, file)
+    }
+    assert.equal(isSavedMediaFile(write('image.png', PNG), 'audio'), false)
+  })
+
+  it('does not accept unknown, still-image or QuickTime containers as MP4 video', () => {
+    for (const brand of ['zzzz', 'heic', 'avif', 'qt  ']) {
+      const bytes = Buffer.concat([Buffer.from([0, 0, 0, 20]), Buffer.from(`ftyp${brand}`), Buffer.alloc(8)])
+      assert.equal(isSavedMediaFile(write(`${brand.trim()}.mp4`, bytes), 'video'), false, brand)
+    }
+    assert.equal(isSavedMediaFile(write('heic.jpg', Buffer.from('0000ftypheic0000')), 'image'), false)
+  })
+
+  it('does not accept an unknown EBML container as WebM', () => {
+    const bytes = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x42, 0x82, 0x88]), Buffer.from('matroska')])
+    assert.equal(isSavedMediaFile(write('matroska.webm', bytes), 'video'), false)
+    assert.equal(isSavedMediaFile(write('header-only.webm', bytes.subarray(0, 4)), 'video'), false)
   })
 })
 

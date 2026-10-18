@@ -5,6 +5,7 @@ import { resolveInspirationPaths } from './paths.js'
 import { getCanonicalItemKey, isSameSocialContent, normalizeUrl } from './url-normalizer.js'
 import { moveToTrash } from './trash.js'
 import { calculateRecommendationScore } from './recommendation-engine.js'
+import { normalizeCapture, sameCaptureSource } from './captured-import.js'
 
 export class InspirationError extends Error {
   /**
@@ -31,7 +32,9 @@ import { SHARE_STATUS_IDLE } from './share-status.js'
  * @property {string} [source_url]
  * @property {string} [cover_url] relative host media path or absolute url
  * @property {string[]} [media_urls] relative host media paths or urls
- * @property {Array<{ type: 'video' | 'image', url: string }>} [media_items] ordered post assets, excluding video posters
+ * @property {Array<{ type: 'video' | 'image', url: string, source_id?: string, source_url?: string, status?: 'saved' | 'missing', error?: string }>} [media_items] fixed post asset positions, excluding video posters
+ * @property {Record<string, unknown>} [capture] restricted same-source webpage snapshot
+ * @property {boolean} [preserve_available] preserve partial browser saves on retry
  * @property {Record<string, string>} [local_paths]
  * @property {string[]} [tags]
  * @property {boolean} [is_favorite]
@@ -114,6 +117,8 @@ function buildRow(record, identity = {}) {
     cover_url: record.cover_url,
     media_urls: record.media_urls || [],
     media_items: record.media_items || [],
+    capture: normalizeCapture(record.capture, record.source_url),
+    preserve_available: record.preserve_available,
     local_paths: record.local_paths || {},
     tags: Array.isArray(record.tags) ? record.tags : [],
     is_favorite: Boolean(record.is_favorite),
@@ -599,7 +604,8 @@ export function createLocalStore(opts = {}) {
     add(record, opts = {}) {
       const items = readAll()
       if (record.source_url && !opts.allowDuplicate) {
-        const existing = items.find((item) => item.source_url && isSameSocialContent(item.source_url, record.source_url))
+        const sameSource = record.preserve_available ? sameCaptureSource : isSameSocialContent
+        const existing = items.find((item) => item.source_url && sameSource(item.source_url, record.source_url))
         if (existing) return existing
       }
       const row = buildRow(record)

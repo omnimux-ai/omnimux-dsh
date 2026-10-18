@@ -1,8 +1,12 @@
 import {
+  closeSync,
+  constants,
   createWriteStream,
   existsSync,
+  fstatSync,
   mkdirSync,
-  readFileSync,
+  openSync,
+  readSync,
   renameSync,
   unlinkSync,
   writeFileSync,
@@ -60,6 +64,12 @@ export const RENDERABLE_IMAGE_EXTS = new Set(['.jpg', '.png', '.webp', '.gif', '
 /** ISO-BMFF brands that name a HEIF/HEIC still image rather than a video track. */
 const HEIF_BRANDS = new Set(['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1'])
 
+/** Known MPEG-4 video brands, excluding QuickTime and still-image containers. */
+const MP4_BRANDS = new Set(['isom', 'iso2', 'iso3', 'iso4', 'iso5', 'iso6', 'iso7', 'iso8', 'iso9', 'mp41', 'mp42', 'avc1', 'dash', 'm4v '])
+
+/** A bounded header is enough to identify the containers accepted for saving. */
+const SAVED_MEDIA_HEADER_BYTES = 4096
+
 /**
  * Extension implied by a payload's own leading bytes.
  *
@@ -101,11 +111,48 @@ export function detectExtFromBytes(head) {
 
 /** Leading bytes of a saved file, or an empty buffer when it cannot be read. */
 function readHead(filePath, length = 16) {
+  let fd
   try {
-    return readFileSync(filePath).subarray(0, length)
+    // Nonblocking mode also lets an accidentally supplied pipe fail the regular
+    // file check without hanging the caller while opening it.
+    fd = openSync(filePath, constants.O_RDONLY | constants.O_NONBLOCK)
+    const stat = fstatSync(fd)
+    if (!stat.isFile() || stat.size === 0) return Buffer.alloc(0)
+    const buffer = Buffer.alloc(Math.min(length, stat.size))
+    const bytesRead = readSync(fd, buffer, 0, buffer.length, 0)
+    return buffer.subarray(0, bytesRead)
   } catch {
     return Buffer.alloc(0)
+  } finally {
+    if (fd !== undefined) closeSync(fd)
   }
+}
+
+/**
+ * Whether a nonempty saved file has a recognised image/video header.
+ *
+ * Unlike extension alignment, saving an available attachment needs positive
+ * evidence: unknown bodies and a cover in place of a video are never usable
+ * attachments. The caller owns checking that the path belongs to its managed
+ * media directory. This is container identification, not a full decoder check.
+ * @param {string} filePath
+ * @param {'image' | 'video'} type
+ * @returns {boolean}
+ */
+export function isSavedMediaFile(filePath, type) {
+  if (type !== 'image' && type !== 'video') return false
+  const head = readHead(filePath, SAVED_MEDIA_HEADER_BYTES)
+  const detected = detectExtFromBytes(head)
+  if (type === 'image') return RENDERABLE_IMAGE_EXTS.has(detected)
+  if (detected === '.mp4') {
+    return head.length >= 16 && MP4_BRANDS.has(head.subarray(8, 12).toString('latin1').toLowerCase())
+  }
+  if (detected === '.webm') {
+    // EBML also wraps Matroska. Require its DocType element (0x4282), rather
+    // than treating every EBML container as a browser-playable WebM video.
+    return head.indexOf(Buffer.from([0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6d])) >= 4
+  }
+  return false
 }
 
 /**
