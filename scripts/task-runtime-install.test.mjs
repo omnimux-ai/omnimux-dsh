@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { assertPreparedTaskArchives, preparePrivateTaskPackages, taskPackagePayload } from './task-runtime-install.mjs';
+import { assertPreparedTaskArchives, matchesTaskPeerVersion, preparePrivateTaskPackages, taskPackagePayload } from './task-runtime-install.mjs';
 import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { hashFile } from './materialize-graph.mjs';
@@ -83,6 +83,24 @@ test('a local dependency link that leaves admitted repository dependencies is re
   const link = join(f.preparation.stageRoot, 'plugins/omnimux/node_modules/helper');
   fs.mkdirSync(dirname(link), { recursive: true }); fs.symlinkSync(foreign, link, 'dir');
   assert.throws(f.run, { code: 'TEST_ENV_INSTALL_DEPENDENCY_UNSAFE' });
+});
+
+test('private file rewrites cannot silently accept the wrong declared production version', t => {
+  const f = fixture(t); f.pkg('omnimux', { dependencies: { helper: '^2.0.0' } }); f.installed('helper');
+  assert.throws(f.run, { code: 'TEST_ENV_INSTALL_DEPENDENCY_SPEC_MISMATCH' });
+});
+
+test('unsupported dependency redirects cannot be converted into admitted private files', t => {
+  const f = fixture(t); f.pkg('omnimux', { dependencies: { helper: 'npm:substitute@1.0.0' } }); f.installed('helper');
+  assert.throws(f.run, { code: 'TEST_ENV_INSTALL_DEPENDENCY_SPEC_UNSUPPORTED' });
+});
+
+test('peer RC matching is limited to explicitly declared prerelease bounds', () => {
+  assert.equal(matchesTaskPeerVersion('0.1.5-rc.3', '>=0.1.0-rc.6'), true);
+  assert.equal(matchesTaskPeerVersion('0.1.0-rc.5', '>=0.1.0-rc.6'), false);
+  assert.equal(matchesTaskPeerVersion('0.2.0-rc.1', '^0.1.2-rc.1'), false);
+  assert.equal(matchesTaskPeerVersion('0.1.5-rc.3', '>=0.1.0'), false);
+  assert.equal(matchesTaskPeerVersion('18.3.1', '^18.2.0'), true);
 });
 
 test('ordinary transitive dependencies retain different versions in separate private instances', t => {

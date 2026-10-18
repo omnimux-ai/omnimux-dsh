@@ -6,11 +6,20 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { hashFile, stable } from './materialize-graph.mjs';
 import { captureCandidate } from './evidence-contract.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
+import { runPnpm } from './managed-tarball.mjs';
+import semver from 'semver';
+import { createRequire } from 'node:module';
 
 const fail = code => { throw Object.assign(new Error(`TEST_ENV_${code}`), { code: `TEST_ENV_${code}` }); };
 const inside = (root, path) => path === root || path.startsWith(root + sep);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const json = path => JSON.parse(fs.readFileSync(path, 'utf8'));
+
+export function matchesTaskPeerVersion(version, spec) {
+  if (typeof spec !== 'string' || !semver.validRange(spec)) return false;
+  const includesPrereleaseBound = /\d+\.\d+\.\d+-[0-9A-Za-z]/.test(spec);
+  return semver.satisfies(version, spec, { includePrerelease: includesPrereleaseBound });
+}
 
 /** Resolve an already installed pinned tool without package-manager auto acquisition. */
 export function createTaskPnpmTool(privateRoot) {
@@ -96,15 +105,23 @@ export function preparePrivateTaskPackages({ preparation, root, repository, priv
     if (original.name === '@deepseek-ai/dsh-base' || original.name === '@deepseek-ai/dsh-web-app') fail('INSTALL_HOST_OVERRIDE');
     const target = join(graphRoot, String(records.size));
     fs.mkdirSync(target, { mode: 0o700 });
-    const record = { name: original.name, version: original.version, source, target, dependencies: [], archive: item.archive };
+    const record = { name: original.name, version: original.version, source, target, dependencies: [], peers: original.peerDependencies || {}, peerMeta: original.peerDependenciesMeta || {}, archive: item.archive };
     records.set(source, record);
     copy(source, target);
     const manifest = structuredClone(original);
     for (const kind of ['dependencies', 'optionalDependencies']) {
       if (!original[kind]) continue;
       manifest[kind] = {};
-      for (const name of Object.keys(original[kind])) {
-        const child = visit(dependency(item.resolveRoot, name));
+      for (const [name, spec] of Object.entries(original[kind])) {
+        const resolved = dependency(item.resolveRoot, name);
+        const dependencyManifest = json(join(resolved.source, 'package.json'));
+        if (typeof spec !== 'string') fail('INSTALL_DEPENDENCY_SPEC_UNSUPPORTED');
+        if (spec.startsWith('file:')) {
+          const expected = resolve(item.resolveRoot, spec.slice(5));
+          if (!fs.existsSync(expected) || !fs.statSync(expected).isDirectory() || fs.realpathSync(expected) !== fs.realpathSync(resolved.resolveRoot)) fail('INSTALL_DEPENDENCY_SPEC_MISMATCH');
+        } else if (!semver.validRange(spec)) fail('INSTALL_DEPENDENCY_SPEC_UNSUPPORTED');
+        else if (!semver.satisfies(dependencyManifest.version, spec)) fail('INSTALL_DEPENDENCY_SPEC_MISMATCH');
+        const child = visit(resolved);
         if (child.name !== name) fail('INSTALL_DEPENDENCY_IDENTITY');
         manifest[kind][name] = `file:${child.target}`;
         record.dependencies.push({ name, target: child.target });
@@ -139,10 +156,26 @@ export function assertPreparedTaskArchives(preparation) {
 }
 
 /** Install through the shipping CLI, then verify every private payload against its archive graph. */
-export function installTaskRuntime({ root, repository, preparation, evidenceContext, candidate, executable, wrapper, env }) {
-  const privateRoot = preparation.preparationPath;
+export async function installTaskRuntime({ root, repository, privateRoot, ownerIdentity, preparation, evidenceContext, candidate, executable, wrapper, env }) {
   assertPreparedTaskArchives(preparation);
   const graph = preparePrivateTaskPackages({ preparation, root, repository, privateRoot });
+  const hostPeerExpectations = [];
+  for (const item of graph.records) for (const [name, spec] of Object.entries(item.peers)) {
+    if (typeof spec !== 'string' || !semver.validRange(spec)) fail('INSTALL_PEER_SPEC_UNSUPPORTED');
+    const matching = graph.records.filter(candidate => candidate.name === name && matchesTaskPeerVersion(candidate.version, spec));
+    const direct = item.dependencies.find(dependency => dependency.name === name);
+    const selected = direct ? graph.records.find(candidate => candidate.target === direct.target) : matching.length === 1 ? matching[0] : null;
+    if (direct && !matchesTaskPeerVersion(selected.version, spec)) fail('INSTALL_PEER_VERSION_MISMATCH');
+    if (!direct && matching.length > 1) fail('INSTALL_PEER_AMBIGUOUS');
+    if (!direct && selected) item.dependencies.push({ name, target: selected.target, peer: true });
+    const lookup = createRequire(join(item.target, 'package.json')).resolve.paths(name) || [];
+    for (const searchRoot of lookup) {
+      if (inside(privateRoot, searchRoot)) continue;
+      if (fs.existsSync(join(searchRoot, name))) fail('INSTALL_PEER_ANCESTOR_UNSAFE');
+    }
+    hostPeerExpectations.push({ parentName: item.name, parentRoot: item.target, name, spec, optional: item.peerMeta[name]?.optional === true,
+      versionPolicy: /\d+\.\d+\.\d+-[0-9A-Za-z]/.test(spec) ? 'explicit-prerelease-bounds' : 'semver', ...(selected ? { privateRoot: selected.target } : {}) });
+  }
   fs.mkdirSync(join(privateRoot, 'installer'), { recursive: true, mode: 0o700 });
   const installEnv = { ...env, ...privatePnpmEnvironment(join(privateRoot, 'installer')), ELECTRON_RUN_AS_NODE: '1', DSH_HOME: env.DSH_HOME, DSH_AGENTS_HOME: env.DSH_AGENTS_HOME,
     npm_config_auto_install_peers: 'false', npm_config_strict_peer_dependencies: 'false', npm_config_engine_strict: 'false' };
@@ -151,10 +184,13 @@ export function installTaskRuntime({ root, repository, preparation, evidenceCont
   if (!tool || hashFile(tool.pnpm) !== tool.sha256) fail('INSTALL_TOOLCHAIN_REQUIRED');
   installEnv.PATH = `${tool.toolRoot}:${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`;
   const topLevel = [...graph.targets, ...graph.support];
-  const result = spawnSync(executable, ['--expose-internals', wrapper, 'plugin', '--profile', 'web', 'add', ...topLevel.map(item => item.target), '--ignore-scripts', '--offline', '--prod', '--config.auto-install-peers=false', '--config.strict-peer-dependencies=false', `--store-dir=${installEnv.npm_config_store_dir}`],
-    { cwd: installEnv.HOME, env: installEnv, encoding: 'utf8', timeout: 120000, maxBuffer: 8 << 20 });
-  if (result.error || result.status !== 0 || result.signal) {
-    const error = Object.assign(new Error('TEST_ENV_INSTALL_FAILED'), { code: 'TEST_ENV_INSTALL_FAILED', rootReason: result.error?.code ?? `exit-${result.status}` });
+  const installCommand = join(tool.toolRoot, 'dsh-install');
+  const quote = value => `'${value.replaceAll("'", "'\\''")}'`;
+  fs.writeFileSync(installCommand, `#!/bin/sh\nexec ${quote(executable)} --expose-internals ${quote(wrapper)} "$@"\n`, { mode: 0o700 });
+  const result = await runPnpm(['plugin', '--profile', 'web', 'add', ...topLevel.map(item => item.target), '--ignore-scripts', '--offline', '--prod', '--config.auto-install-peers=false', '--config.strict-peer-dependencies=false', `--store-dir=${installEnv.npm_config_store_dir}`],
+    { cwd: installEnv.HOME, env: installEnv, executable: installCommand, timeoutMs: 120000, maxOutput: 8 << 20 });
+  if (result.code !== 0 || result.signal) {
+    const error = Object.assign(new Error('TEST_ENV_INSTALL_FAILED'), { code: 'TEST_ENV_INSTALL_FAILED', rootReason: `exit-${result.code}` });
     // Fixed configuration contains no credentials; retain only the tail of installer diagnostics.
     error.installDiagnostic = ((result.stdout || '') + '\n' + (result.stderr || '')).slice(-8000);
     throw error;
@@ -194,8 +230,12 @@ export function installTaskRuntime({ root, repository, preparation, evidenceCont
   });
   const before = preparation.candidateBefore;
   const installation = { taskId: evidenceContext.taskId, runId: evidenceContext.runId, sourceRoot: root, privateRoot, profile,
+    ownerIdentity, hostPeerExpectations, appAnchor: resolve(dirname(wrapper), '../dsh/package.json'),
     base: before.base.resolvedSha, head: before.head.resolvedSha, candidateDigest: before.candidate.contentDigest, inputsDigest: before.inputs.contentDigest, packages };
   const assertInstalledIntegrity = () => {
+    const identity = fs.statSync(privateRoot, { bigint: true });
+    if (fs.lstatSync(privateRoot).isSymbolicLink() || fs.realpathSync(privateRoot) !== privateRoot
+      || String(identity.dev) !== ownerIdentity[0] || String(identity.ino) !== ownerIdentity[1]) fail('INSTALL_LOCATION_UNSAFE');
     const now = captureCandidate({ root, ...candidate, ...evidenceContext });
     if (now.candidate.contentDigest !== installation.candidateDigest || now.inputs.contentDigest !== installation.inputsDigest || now.head.resolvedSha !== installation.head) fail('INSTALL_CANDIDATE_CHANGED');
     const registry = json(join(profile, 'package.json'));

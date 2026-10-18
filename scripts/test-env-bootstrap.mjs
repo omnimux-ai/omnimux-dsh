@@ -3,6 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 import { parseDocument } from 'yaml';
 import { readDevDeepSeekCredential, readDevCredentialsBundle } from './test-env-credentials.mjs';
 import { captureCandidate } from './evidence-contract.mjs';
@@ -347,7 +348,17 @@ async function runTaskPreparation({ options, io, deps }) {
       const source = join(root, rel);
       if (!io.existsSync(source)) continue;
       io.mkdirSync(dirname(join(stageRoot, rel)), { recursive: true });
-      try { io.symlinkSync(source, join(stageRoot, rel), 'dir'); linkedTools++; }
+      try {
+        const destination = join(stageRoot, rel);
+        if (rel === 'node_modules') io.symlinkSync(source, destination, 'dir');
+        else {
+          io.mkdirSync(destination, { recursive: true });
+          for (const name of io.readdirSync(source)) {
+            io.symlinkSync(name === 'dsh-ui-kit' ? join(stageRoot, 'packages/dsh-ui-kit') : join(source, name), join(destination, name), 'dir');
+          }
+        }
+        linkedTools++;
+      }
       catch { throw failure('PREPARE_DEPENDENCY_REQUIRED'); }
     }
     if (!linkedTools) throw failure('PREPARE_DEPENDENCY_REQUIRED');
@@ -402,7 +413,6 @@ async function runTaskPreparation({ options, io, deps }) {
       const manifest = readJsonFile(manifestPath);
       if (rel === 'plugins/omnimux') {
         if (manifest.dependencies?.['dsh-ui-kit'] !== 'file:../../packages/dsh-ui-kit') throw failure('PREPARE_PACKAGE_MANIFEST_UNSUPPORTED');
-        manifest.dependencies['dsh-ui-kit'] = 'file:../dsh-ui-kit';
         const channelPath = join(destination, 'src/release-channel.json');
         const channel = readJsonFile(channelPath);
         if (channel.channel !== 'development') throw failure('PREPARE_RELEASE_CHANNEL_UNSUPPORTED');
@@ -491,7 +501,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
   validateFreshRequest(options);
   if (io !== fs) throw failure('FRESH_FILESYSTEM_REQUIRED');
   try { io.accessSync(EXECUTABLE, fs.constants.X_OK); } catch { throw failure('RUNTIME_MISSING'); }
-  let preparation, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise;
+  let preparation, runtimeRoot, runtimeOwnerIdentity, mock, child, exited = false, closed = false, cleaning = false, cleanupPromise;
   const observations = { contract: 'task-private-installation', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
   const signals = deps.signals ?? process;
   const timeout = deps.shutdownTimeoutMs ?? 5000;
@@ -520,15 +530,31 @@ async function startFreshTaskRuntime({ options, io, deps }) {
     }
     if (!mock) record('mock-server', 'not-applicable', 'not-created');
     else { try { await mock.close(); record('mock-server', 'completed'); } catch { record('mock-server', 'failed', 'close-failed'); } }
-    if (!preparation) record('app-private-directory', 'not-applicable', 'not-created');
+    if (!runtimeRoot && !preparation) record('app-private-directory', 'not-applicable', 'not-created');
     else if (resources.some(item => item.status === 'failed')) record('app-private-directory', 'failed', 'resource-still-open');
-    else { try { await preparation.cleanup(); record('app-private-directory', 'completed'); } catch { record('app-private-directory', 'failed', 'remove-failed'); } }
+    else {
+      try {
+        if (runtimeRoot) {
+          canonical(io, runtimeRoot, true);
+          const current = io.statSync(runtimeRoot, { bigint: true });
+          if (dirname(runtimeRoot) !== io.realpathSync(tmpdir()) || !basename(runtimeRoot).startsWith('omnimux-task-')
+            || String(current.dev) !== runtimeOwnerIdentity[0] || String(current.ino) !== runtimeOwnerIdentity[1]) throw failure('ROOT_UNSAFE');
+          io.rmSync(runtimeRoot, { recursive: true, force: true });
+        }
+        if (preparation) await preparation.cleanup();
+        record('app-private-directory', 'completed');
+      } catch { record('app-private-directory', 'failed', 'remove-failed'); }
+    }
     return { cleaned: resources.every(item => item.status !== 'failed'), resources };
   })();
   try {
     preparation = await runTaskPreparation({ options, io, deps });
     observations.preparation = { candidateDigest: preparation.candidateBefore.candidate.contentDigest, inputsDigest: preparation.candidateBefore.inputs.contentDigest, packages: preparation.packages.map(item => ({ name: item.name, sha256: item.sha256 })) };
-    const privateRoot = preparation.preparationPath;
+    runtimeRoot = io.realpathSync(io.mkdtempSync(join(io.realpathSync(tmpdir()), `omnimux-task-${options.evidenceContext.taskId}-${options.evidenceContext.runId}-`)));
+    io.chmodSync(runtimeRoot, 0o700);
+    const owner = io.statSync(runtimeRoot, { bigint: true });
+    runtimeOwnerIdentity = [String(owner.dev), String(owner.ino)];
+    const privateRoot = runtimeRoot;
     const env = { PATH: `${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`, ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--max-http-header-size=65536', COREPACK_ENABLE_NETWORK: '0' };
     for (const [name, leaf] of Object.entries({ HOME: 'home', DSH_HOME: 'dsh', DSH_AGENTS_HOME: 'agents', XDG_CONFIG_HOME: 'config', XDG_CACHE_HOME: 'cache', XDG_STATE_HOME: 'state', XDG_DATA_HOME: 'data', TMPDIR: 'tmp', TMP: 'tmp', TEMP: 'tmp' })) {
       env[name] = join(privateRoot, leaf); io.mkdirSync(env[name], { recursive: true, mode: 0o700 });
@@ -539,7 +565,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
       'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: mock.origin },
       'agent-default-model': { provider: 'deepseek-official', model: 'deepseek-flash' },
     }) + '\n', { flag: 'wx', mode: 0o600 });
-    const installed = installTaskRuntime({ root: options.root, repository: deps.repositoryRoot ?? repositoryRoot, preparation, evidenceContext: options.evidenceContext, candidate: options.candidate, executable: EXECUTABLE, wrapper: WRAPPER, env });
+    const installed = await installTaskRuntime({ root: options.root, repository: deps.repositoryRoot ?? repositoryRoot, privateRoot, ownerIdentity: runtimeOwnerIdentity, preparation, evidenceContext: options.evidenceContext, candidate: options.candidate, executable: EXECUTABLE, wrapper: WRAPPER, env });
     const profilePatch = [
       { id: 'llm-pi-ai', name: '@deepseek-ai/dsh-llm-pi-ai', config: { providers: { omnimux: { displayName: 'QA模拟', apiKeyEnv: 'OMNIMUX_API_KEY', api: 'openai-completions', baseURL: mock.origin, models: [{ id: 'qa-synthetic', name: 'QA模拟', contextWindow: 8192, maxTokens: 2048 }] } } } },
       { id: 'omnimux', config: { siteBaseUrl: mock.origin, official: { accountAvatars: { enabled: false } }, media: { defaultProvider: 'omnimux', providers: { omnimux: { protocol: 'openai-media', baseUrl: `${mock.origin}/v1`, apiKeyEnv: 'OMNIMUX_API_KEY' } } } } },
@@ -624,6 +650,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
     const cleaned = await cleanup();
     const classified = safeError(error, 'FRESH_RUNTIME');
     classified.rootReason = error.code ?? error.name;
+    if (!classified.hint && typeof error.message === 'string' && !/[?&]token=|Bearer\s|password|api[-_]?key/i.test(error.message)) classified.hint = error.message.slice(0, 512);
     if (typeof error.path === 'string' && error.path.startsWith(options.root + '/.test-env-')) classified.failedPath = error.path;
     classified.cleanup = error.cleanup?.cleaned === false ? error.cleanup : error.cleanup?.resources?.some(item => item.name === 'preparation-directory')
       ? { cleaned: cleaned.cleaned, resources: cleaned.resources.map(item => item.name === 'app-private-directory' ? { ...item, status: 'completed', reason: null } : item) } : cleaned;
