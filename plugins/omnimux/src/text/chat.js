@@ -14,8 +14,8 @@ const DEFAULT_UA =
  * stream path.
  *
  * Hub-only: never discovers or falls back to local CPA / localhost providers.
- * Credentials come only from explicit input, OMNIMUX_* env, or credentials
- * OMNIMUX_API_KEY/OMNIMUX_TOKEN. Default base is the execution hub.
+ * Explicit keys retain priority; the private account resolver is admitted only
+ * for the default official API address. Identity tokens never enter this lane.
  * @param {{
  *   model: string,
  *   prompt: string,
@@ -30,6 +30,8 @@ const DEFAULT_UA =
  *   baseUrl?: string,
  *   credentials?: { resolve: (ref: string) => Promise<{ value?: string } | undefined> },
  *   settings?: { get: (section: string) => any },
+ *   resolveOfficialApiKey?: (env: Record<string, string | undefined>) => Promise<string | undefined>,
+ *   credentialScope?: 'official' | 'byok',
  * }} input
  */
 export async function completeTextViaChat(input) {
@@ -54,12 +56,21 @@ export async function completeTextViaChat(input) {
           apiKey = val
           break
         }
-      } catch {}
+      } catch {
+        throw new OmnimuxError('official-credential-unavailable', '无法读取 OmniMux 调用凭据，请检查凭据服务')
+      }
     }
   }
 
+  if (!apiKey && typeof input.resolveOfficialApiKey === 'function') {
+    if (normalizeBaseUrl(baseUrl || DEFAULT_CHAT_BASE) !== DEFAULT_CHAT_BASE) {
+      throw new OmnimuxError('official-credential-destination-invalid', '账号分析凭据只能用于 OmniMux 官方服务，请检查接口地址')
+    }
+    apiKey = String(await input.resolveOfficialApiKey(env) || '').trim()
+  }
+
   if (!apiKey) {
-    throw new OmnimuxError('omnimux-unconfigured', 'set OMNIMUX_API_KEY or OMNIMUX_TOKEN')
+    throw new OmnimuxError('official-credential-required', '请在个人资料中启用 OmniMux 分析服务')
   }
   baseUrl = normalizeBaseUrl(baseUrl || DEFAULT_CHAT_BASE)
   const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : ''
@@ -117,7 +128,7 @@ export async function completeTextViaChat(input) {
       }
       throw new OmnimuxError(
         'omnimux-failed',
-        `text complete transport failed: ${error instanceof Error ? error.message : String(error)}`,
+        `text complete transport failed: ${safeErrorMessage(error instanceof Error ? error.message : String(error), apiKey)}`,
       )
     }
 
@@ -128,10 +139,10 @@ export async function completeTextViaChat(input) {
       payload = {}
     }
     if (!response.ok) {
-      const message = pickErrorMessage(payload) || `text complete HTTP ${response.status}`
+      const message = safeErrorMessage(pickErrorMessage(payload), apiKey) || `text complete HTTP ${response.status}`
       // 401 pins the credential, not the channel; a group switch cannot fix it.
       if (response.status === 401) {
-        throw new OmnimuxError('omnimux-unconfigured', message)
+        throw new OmnimuxError(input.credentialScope === 'byok' ? 'omnimux-unconfigured' : 'official-credential-rejected', message, { status: 401 })
       }
       // One chat completion carries no task handle, so a retry cannot double-charge.
       // A grouped plan may switch groups on permission/unknown-model wording; a
@@ -144,7 +155,7 @@ export async function completeTextViaChat(input) {
         continue
       }
       if (response.status === 403) {
-        throw new OmnimuxError('omnimux-unconfigured', message)
+        throw new OmnimuxError(input.credentialScope === 'byok' ? 'omnimux-unconfigured' : 'official-permission-denied', message, { status: 403 })
       }
       throw new OmnimuxError('omnimux-failed', message)
     }
@@ -158,6 +169,12 @@ export async function completeTextViaChat(input) {
     }
     return out
   }
+}
+
+function safeErrorMessage(value, key) {
+  let safe = String(value || '').split(key).join('[已隐藏]')
+  if (key.startsWith('sk-')) safe = safe.split(key.slice(3)).join('[已隐藏]')
+  return safe.replace(/sk-[A-Za-z0-9_-]{8,}|Bearer\s+\S+/gi, '[已隐藏]')
 }
 
 /**

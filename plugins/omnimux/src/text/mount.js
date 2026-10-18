@@ -16,7 +16,7 @@ import { executeOmnimuxText } from './execute.js'
  * @param {object} jsonOut
  * @param {(error: unknown) => never} onError
  */
-export function mountTextComplete(ctx, hub, jsonOut, onError) {
+export function mountTextComplete(ctx, hub, jsonOut, onError, deps = {}) {
   const gate = hub.gate ?? ctx.get?.('gate')
 
   const api = {
@@ -40,6 +40,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
         attachments: ctx.get?.('attachments'),
         credentials: ctx.get?.('credentials'),
         settings: ctx.get?.('settings'),
+        resolveOfficialApiKey: deps.resolveOfficialApiKey,
         env: finalReq.env ?? process.env,
       })
     },
@@ -145,6 +146,7 @@ export function mountTextComplete(ctx, hub, jsonOut, onError) {
           attachments: ctx.get?.('attachments'),
           credentials: ctx.get?.('credentials'),
           settings: ctx.get?.('settings'),
+          resolveOfficialApiKey: deps.resolveOfficialApiKey,
           env: process.env,
           specsDir: exec?.specsDir,
           catalogIndex: exec?.catalogIndex,

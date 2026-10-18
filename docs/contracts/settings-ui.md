@@ -54,6 +54,14 @@ OmniMux keeps its existing profile and sign-in surface. DeepSeek official API co
 
 Stored `scenarioBindings`, provider records, canvas defaults and composer choices remain readable for compatibility; removing their extra settings UI does not erase data or change routing. Saving a provider does not select it for every scenario or write a global runtime mode. Canvas defaults apply to unspecified new-node choices, never rewrite saved nodes; the canvas projection preserves a lawful Hub default before its curated fallback. Official API configuration is distinct from a newer Host's official account sign-in capability; the installed Host must actually ship that capability before it can be offered.
 
+A pending media-analysis choice can be recovered in the analysis panel with
+“使用 OmniMux 分析服务”. This explicit action updates only the `analysis`
+binding through the Hub's revision-checked `/omnimux/analysis/service` route;
+it does not start analysis, change other scenarios or restore the retired
+model-service card. Existing configured choices continue to route as saved.
+The existing Profile section owns explicit selection of an account API key for
+official analysis; the domain panel never reads or stores that value.
+
 Provider metadata lives in `byokProviders`; values remain in the credentials domain under the provider-specific reference. Configuration writes carry the read revision, invalidate the target record before a credential write, and confirm normalized readback. Partial writes retain `saveState: pending`; recovery requires a newly supplied credential rather than silently pairing a rotated credential with old-origin metadata. Deletion affects only the named provider. A changed origin cannot reuse an old credential without supplying it again.
 
 `POST /omnimux/byok/test` is a read-only offline configuration check: no generation, provider HTTP, credential resolution, key saving or default selection. A format pass is not connection authentication, adapter support or a historical generation success. The response carries configuration and provider revision, a Host-controlled non-secret credential generation, identity and time. Committed credential reference events invalidate this generation and notify the existing Hub event stream, so displayed checks withdraw immediately; already-confirmed duplicate events do not erase a completed save receipt. Process environment changes are not observable. Settings or credential changes during checking/confirmation reject the old result. Client drafts keep their own identity and discard late results; tab changes preserve unfinished drafts.

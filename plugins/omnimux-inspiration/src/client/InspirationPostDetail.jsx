@@ -3,7 +3,7 @@ import { Badge, Button, CopyButton, Drawer, IconButton, InputField, Tabs } from 
 import { ArrowRight, Check, ExternalLink, FileText, Film, Minus, Plus, RotateCcw, Sparkles, X, ZoomIn } from 'lucide-react'
 import { getPostBody, getPostMedia, analysisTargetKey, getTargetAnalysis, getBodyTranslation, analysisDirections, hasRunningAnalysis, decideAnalysisPollOutcome } from './post-detail.js'
 import { getInspirationPreviewData, parseDocAnalysis, renderPlainBreakdownText, scriptCopyText, deconstructionCopyText } from './inspiration-preview-data.js'
-import { triggerAnalyzeInspiration, translateInspiration, saveCreationDraft, prepareCreationReferences, ensureLocalInspiration, getLocalInspiration, pickCoverSrc, resolveTikTokEmbedUrl } from './api.js'
+import { triggerAnalyzeInspiration, getAnalysisService, confirmOfficialAnalysisService, translateInspiration, saveCreationDraft, prepareCreationReferences, ensureLocalInspiration, getLocalInspiration, pickCoverSrc, resolveTikTokEmbedUrl } from './api.js'
 import { createImportPoller } from './import-poller.js'
 import { formatPlatformName } from './feed-helpers.js'
 import { parseShotTimeWindow } from '../structure-script.js'
@@ -81,6 +81,10 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   const [localizing, setLocalizing] = useState(false)
   const [configureKey, setConfigureKey] = useState('')
   const [analysisErrors, setAnalysisErrors] = useState({})
+  const [analysisService, setAnalysisService] = useState(null)
+  const [serviceError, setServiceError] = useState('')
+  const [savingService, setSavingService] = useState(false)
+  const savingServiceRef = useRef(false)
   const [mobilePane, setMobilePane] = useState('post')
   const [image, setImage] = useState(null)
   const [zoom, setZoom] = useState(1)
@@ -98,6 +102,9 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   const preview = getInspirationPreviewData(item)
   const key = analysisTargetKey(target)
   const record = getTargetAnalysis(item, target)
+  const targetMedia = target.scope === 'body' ? [] : target.scope === 'media' ? media.filter(asset => asset.index === target.media_index) : media
+  const needsAnalysisService = targetMedia.some(asset => asset.type === 'video') || (targetMedia.length > 0 && !analysisService?.imageToolConfigured)
+  const servicePending = needsAnalysisService && analysisService?.channel === 'pending'
   const analyzing = runningKey === key || item.analysis_results?.[key]?.status === 'running'
   const selectedResult = record?.result || null
   const configuring = !selectedResult || configureKey === key
@@ -114,6 +121,18 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   function targetLabel(value) { return value.scope === 'post' ? copy('wholePost') : value.scope === 'body' ? copy('body') : media.find(entry => entry.index === value.media_index)?.label || copy('media') }
 
   const mediaIdentity = media.map(asset => `${asset.id}:${asset.url}`).join('\n')
+  useEffect(() => {
+    let current = true
+    setAnalysisService(null); setServiceError('')
+    getAnalysisService().then(response => {
+      if (!current) return
+      if (response.ok) setAnalysisService(response.body)
+      else setAnalysisService({ unavailable: true })
+    }).catch(() => {
+      if (current) setAnalysisService({ unavailable: true })
+    })
+    return () => { current = false }
+  }, [id])
   useEffect(() => {
     if (item.is_local !== true) { setStatusReady(true); return }
     let current = true
@@ -229,7 +248,7 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
     } finally { if (requestIdentity.current === postIdentity) setLocalizing(false) }
   }
   const analyze = async () => {
-    if (submittingAnalysis.current || runningKey || serverRunning || !statusReady || !directions.length) return
+    if (submittingAnalysis.current || runningKey || serverRunning || !statusReady || !directions.length || savingServiceRef.current || servicePending) return
     const identity = postIdentity
     submittingAnalysis.current = true
     analysisReadVersion.current++
@@ -245,6 +264,22 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
       if (!response.ok) setAnalysisErrors(current => ({ ...current, [key]: response.body?.error || copy('analysisFailed') }))
     } catch (error) { if (requestIdentity.current === identity) setAnalysisErrors(current => ({ ...current, [key]: error.message || copy('analysisFailed') })) }
     finally { submittingAnalysis.current = false; if (requestIdentity.current === identity) setRunningKey('') }
+  }
+  const confirmAnalysisService = async () => {
+    if (savingServiceRef.current || runningKey || serverRunning || analysisService?.channel !== 'pending') return
+    savingServiceRef.current = true; setSavingService(true); setServiceError('')
+    const identity = postIdentity
+    try {
+      const response = await confirmOfficialAnalysisService(analysisService.revision)
+      if (requestIdentity.current !== identity) return
+      if (response.ok) { setAnalysisService(response.body); setAnalysisErrors({}) }
+      else {
+        setServiceError(response.body?.error || copy('serviceSaveFailed'))
+        const current = await getAnalysisService()
+        if (requestIdentity.current === identity && current.ok) setAnalysisService(current.body)
+      }
+    } catch { if (requestIdentity.current === identity) setServiceError(copy('serviceSaveFailed')) }
+    finally { savingServiceRef.current = false; if (requestIdentity.current === identity) setSavingService(false) }
   }
   const translate = async () => {
     if (bodyTranslation) { setTranslated(value => !value); return }
@@ -336,10 +371,17 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
         </div>
         <div className="omnimux-post-analysis-scroll">
           <h2 className="omnimux-post-scope-title">{targetLabel(target)}</h2>
+          {analysisService?.unavailable && <p className="omnimux-post-help" role="status">{copy('serviceReadFailed')}</p>}
+          {servicePending && <div className="omnimux-post-service-recovery">
+            <p className="omnimux-post-help" role="status">{copy('servicePending')}</p>
+            <Button variant="outline" size="sm" loading={savingService} disabled={savingService || Boolean(runningKey) || serverRunning} onClick={confirmAnalysisService}>{copy('useOfficialService')}</Button>
+            <p className="omnimux-post-help">{copy('serviceScope')}</p>
+          </div>}
+          {serviceError && <p className="omnimux-inspiration-error-text" role="alert">{serviceError}</p>}
           {configuring ? <>
           <p className="omnimux-post-help">{copy('analysisIntro')}</p>
           <div className="omnimux-post-directions">{analysisDirections().map(value => <label className="omnimux-post-direction" key={value}><input type="checkbox" checked={directions.includes(value)} onChange={() => setDirections(current => current.includes(value) ? current.filter(entry => entry !== value) : [...current, value])} /><span><strong>{copy(`direction.${value}`)}</strong><small>{copy(`directionHint.${value}`)}</small></span></label>)}</div>
-          <Button variant="primary" leadingIcon={<Sparkles size={14} />} loading={analyzing} disabled={Boolean(runningKey) || serverRunning || !statusReady || !directions.length || item.import_status === 'importing'} onClick={analyze}>{copy(analyzing ? 'parsing' : record ? 'reanalyze' : 'analyzeTarget')}</Button>
+          <Button variant="primary" leadingIcon={<Sparkles size={14} />} loading={analyzing} disabled={Boolean(runningKey) || serverRunning || !statusReady || !directions.length || savingService || servicePending || item.import_status === 'importing'} onClick={analyze}>{copy(analyzing ? 'parsing' : record ? 'reanalyze' : 'analyzeTarget')}</Button>
           </> : <Button variant="ghost" size="sm" leadingIcon={<RotateCcw size={14} />} loading={analyzing} disabled={Boolean(runningKey) || serverRunning || !statusReady} onClick={() => setConfigureKey(key)}>{copy(analyzing ? 'parsing' : 'reanalyze')}</Button>}
           {statusError && <p className="omnimux-inspiration-error-text" role="alert">{statusError}</p>}
           {(analysisErrors[key] || record?.error) && <p className="omnimux-inspiration-error-text" role="alert">{analysisErrors[key] || record.error}</p>}

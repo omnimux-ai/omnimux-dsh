@@ -139,7 +139,7 @@ describe('Channel Group Routing & Failover', () => {
         apiKey: 'sk-test',
         fetcher,
       }),
-      (error) => error.code === 'omnimux-unconfigured',
+      (error) => error.code === 'official-permission-denied',
     );
     assert.equal(calls, 1);
   })

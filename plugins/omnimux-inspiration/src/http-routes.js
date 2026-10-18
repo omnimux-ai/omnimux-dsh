@@ -23,7 +23,6 @@ export { detectPlatformFromUrl } from './url-normalizer.js'
 export const LOCAL_PREFIX = '/omnimux/inspiration/local'
 
 const CODE_MESSAGES = {
-  'omnimux-unconfigured': 'OmniMux 未配置 API Key，请在 设置 → 个人资料 或凭据库中配置 OMNIMUX_API_KEY',
   'needs-omnimux': '需要登录 OmniMux 账号，请在 设置 → 个人资料 中登录',
 }
 
@@ -64,6 +63,12 @@ function extractObjectMessage(obj) {
   if (typeof obj.message === 'string') msg = obj.message
   else if (typeof obj.error === 'string') msg = obj.error
   if (CODE_MESSAGES[code]) return CODE_MESSAGES[code]
+  // Configuration errors can describe a pending service, a user provider or
+  // official credentials. Keep the execution hub's cause instead of guessing
+  // that every failure means an absent official API key.
+  if (code.startsWith('official-') || ['omnimux-unconfigured', 'analysis-service-unconfigured'].includes(code)) {
+    return msg || '分析服务尚未配置，请检查所选服务'
+  }
   if (code && msg) return `[${code}] ${msg}`
   if (msg) return msg
   if (code) return `[${code}]`

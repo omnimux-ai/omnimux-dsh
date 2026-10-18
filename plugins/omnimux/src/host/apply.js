@@ -15,6 +15,7 @@ import { CLIENT_NAME, DEFAULT_SITE, resolveSiteBaseUrl } from '../auth/omnimux-a
 import { createAppsStore } from '../apps/store.js'
 import { createTabsStore } from '../apps/tabs.js'
 import { createIdentity } from '../auth/identity.js'
+import { createAccountModelKeyService } from '../auth/model-key.js'
 import { createTokenStore } from '../auth/store.js'
 import { parseHubConfig } from '../config.js'
 import { createAccountAvatarStore } from '../official/account-avatar.js'
@@ -73,6 +74,8 @@ export function apply(ctx, config = {}) {
     homeDir,
   })
   const identity = createIdentity({ store, siteBaseUrl })
+  const modelKeys = createAccountModelKeyService({ store, identity, siteBaseUrl,
+    getCredentials: () => ctx.get?.('credentials') })
   ctx.provide('identity', { status: identity.status, require: identity.require })
   const profile = hubProfileName()
   const appsStore = createAppsStore({
@@ -126,6 +129,7 @@ export function apply(ctx, config = {}) {
     products: generationProducts,
     store,
     identity,
+    modelKeys,
     siteBaseUrl,
     clientName,
     hub,
@@ -297,7 +301,7 @@ export function apply(ctx, config = {}) {
   mountMedia(ctx, { kind: 'audio', execute: executeOmnimuxAudio, ...mediaDeps })
   mountAudioVoices(ctx, { gate: hub.gate, jsonOut })
   mountSpeechToText(ctx, { execute: executeOmnimuxSpeechToText, media: hub.media, gate: hub.gate, store, jsonOut })
-  mountTextComplete(ctx, hub, jsonOut, rethrow)
+  mountTextComplete(ctx, hub, jsonOut, rethrow, { resolveOfficialApiKey: (env) => modelKeys.resolve({ env }) })
   mountOfficial(ctx, {
     accountMetaStore,
     hub,

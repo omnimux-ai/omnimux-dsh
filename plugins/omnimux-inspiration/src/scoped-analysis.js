@@ -170,7 +170,7 @@ export async function handleScopedAnalysis(ctx, options = {}) {
   locks.add(lock)
   const previous = item.analysis_results?.[key]
   const prior = previous?.input_fingerprint === prepared.input_fingerprint ? previous : null
-  const entry = { ...selection, input_fingerprint: prepared.input_fingerprint, status: 'running', source: prior?.source || 'legacy_unknown', model: prior?.model || '', result: prior?.result || null, error: null, started_at: new Date().toISOString(), analyzed_at: prior?.analyzed_at || null }
+  const entry = { ...selection, input_fingerprint: prepared.input_fingerprint, status: 'running', source: prior?.source || 'legacy_unknown', model: prior?.model || '', result: prior?.result || null, error: null, error_code: null, started_at: new Date().toISOString(), analyzed_at: prior?.analyzed_at || null }
   let transport
   try {
     ctx.store.updateAnalysis(ctx.id, key, entry)
@@ -202,7 +202,7 @@ export async function handleScopedAnalysis(ctx, options = {}) {
   } catch (error) {
     const aborted = ctx.signal?.aborted || error?.name === 'AbortError' || error?.code === 'ABORT_ERR'
     const current = ctx.store.get(ctx.id)
-    const row = current ? ctx.store.updateAnalysis(ctx.id, key, { ...entry, status: 'failed', error: aborted ? '分析已取消，可重新分析' : (ctx.formatErrorMessage?.(error) || error.message || String(error)) }) : null
+    const row = current ? ctx.store.updateAnalysis(ctx.id, key, { ...entry, status: 'failed', error_code: aborted ? 'analysis-cancelled' : (typeof error.code === 'string' ? error.code : null), error: aborted ? '分析已取消，可重新分析' : (ctx.formatErrorMessage?.(error) || error.message || String(error)) }) : null
     if (aborted) throw Object.assign(new Error('分析已取消'), { name: 'AbortError', code: 'ABORT_ERR' })
     return fail(error.status || 502, row?.analysis_results[key].error || '分析失败，请重试', row, key)
   } finally { try { await transport?.cleanup() } finally { locks.delete(lock) } }

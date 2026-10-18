@@ -309,6 +309,17 @@ export function triggerAnalyzeInspiration(id, selection) {
   }), { capability: 'inspiration-analyze' })()
 }
 
+/** The hub owns service choices; a library never writes model settings itself. */
+export function getAnalysisService() {
+  return inspirationRequest('/omnimux/analysis/service')
+}
+
+export function confirmOfficialAnalysisService(expectedRevision) {
+  return inspirationRequest('/omnimux/analysis/service', {
+    method: 'PUT', body: { expectedRevision, channel: 'official' },
+  })
+}
+
 export function translateInspiration(id, lang = 'zh', options = {}) {
   invalidateInspirationCache()
   return quotaGuard(() => inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}/translate`, {
