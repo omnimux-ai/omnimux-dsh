@@ -7,6 +7,7 @@ import {
   getLocalInspiration,
   pickCoverSrc,
   pickVideoSrc,
+  pickImportedMedia,
   resolveTikTokEmbedUrl,
   shareRequestPayload,
   triggerAnalyzeInspiration,
@@ -296,7 +297,11 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   }, [row])
   // The media source of the row currently on screen. Declared before the reset
   // effect below because that effect keys off it.
-  const videoSrc = pickVideoSrc(item)
+  const [mediaIndex, setMediaIndex] = useState(0)
+  const mediaItems = useMemo(() => pickImportedMedia(item), [item])
+  const selectedMedia = mediaItems[mediaIndex] || mediaItems[0]
+  const videoSrc = selectedMedia ? (selectedMedia.type === 'video' ? selectedMedia.url : '') : pickVideoSrc(item)
+  useEffect(() => setMediaIndex(0), [item?.id])
   // A message that belongs to one media source must never outlive it: without
   // this reset the next row opened in the same modal would render its cover
   // under the previous row's "cannot be played" notice.
@@ -574,6 +579,16 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
           <main className="omnimux-inspiration-modal-body is-workbench is-triptych">
             {/* 左栏：视听主控面板 (9:16 大画幅播放器与底部精炼元数据) */}
             <section className={`omnimux-inspiration-modal-panel omnimux-inspiration-modal-video-panel omnimux-inspiration-workbench-left ${activeTab === 'video' ? 'is-active' : ''}`}>
+              {mediaItems.length > 1 ? (
+                <Tabs
+                  className="omnimux-inspiration-media-tabs"
+                  size="sm"
+                  items={mediaItems.map((media, index) => ({ id: String(index), label: `${t(`modal.media.${media.type}`)} ${index + 1}` }))}
+                  activeId={String(mediaIndex)}
+                  onChange={(id) => setMediaIndex(Number(id))}
+                  aria-label={t('modal.media.label')}
+                />
+              ) : null}
               <div className="omnimux-inspiration-modal-player-box">
                 {videoSrc && !videoFailed ? (
                   <video
@@ -586,10 +601,10 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                   />
-                ) : embedUrl ? (
+                ) : !selectedMedia && embedUrl ? (
                   <iframe title={data.title} src={embedUrl} className="omnimux-inspiration-player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
-                ) : cover ? (
-                  <img src={cover} alt={data.title} className="omnimux-inspiration-modal-cover-bg" />
+                ) : selectedMedia?.type === 'image' || cover ? (
+                  <img src={selectedMedia?.type === 'image' ? selectedMedia.url : cover} alt={data.title} className="omnimux-inspiration-modal-cover-bg" />
                 ) : (
                   <div className="omnimux-inspiration-cover-fallback">{data.title.slice(0, 1)}</div>
                 )}

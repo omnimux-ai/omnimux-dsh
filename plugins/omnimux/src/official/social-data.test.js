@@ -104,7 +104,7 @@ describe('social data catalog', () => {
           },
         }
       },
-    }, { platform: 'x', capability: 'tweet', url: 'https://x.com/u/status/2094156823020323038' })
+    }, { platform: 'x', capability: 'tweet', url: 'https://x.com/u/status/2094156823020323038' }, { allowPublicTweet: false })
 
     assert.equal(seen[0].path, '/v1/chat/completions')
     assert.equal(seen[0].opts.body.model, 'x-tweet')

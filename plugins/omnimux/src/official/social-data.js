@@ -1,3 +1,4 @@
+import { fetchPublicTweet } from './public-tweet.js'
 import { OmnimuxError } from '../media/errors.js'
 
 /** Complete catalog. Model ids match OmniMux social-data L3 pages. */
@@ -367,11 +368,24 @@ function extractDigitsId(value) {
 /**
  * @param {{ withSk: Function }} client
  * @param {{ platform?: string, capability?: string, id?: string, url?: string, query?: string, region?: string }} args
+ * @param {{ fetcher?: typeof fetch, signal?: AbortSignal, allowPublicTweet?: boolean }} [options]
  */
-export async function fetchSocialData(client, args) {
+export async function fetchSocialData(client, args, options = {}) {
   const { model, platform, capability, field, value, extras } = resolveSocialDataModel(args)
+  if (platform === 'x' && capability === 'tweet' && options.allowPublicTweet !== false) {
+    try {
+      const data = await fetchPublicTweet(value, options)
+      return { platform, capability, model, field, value, extras: extras || {}, source: 'x-public-embed', data }
+    } catch (error) {
+      if (options.signal?.aborted) options.signal.throwIfAborted()
+      // Public embeds can be unavailable; keep the configured cloud resolver.
+      if (error?.code !== 'omnimux-request-failed') throw error
+    }
+  }
+  options.signal?.throwIfAborted()
   const raw = await client.withSk('/v1/chat/completions', {
     method: 'POST',
+    ...(options.signal ? { signal: options.signal } : {}),
     body: {
       model,
       messages: [{ role: 'user', content: '.' }],

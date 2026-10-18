@@ -421,6 +421,16 @@ export function pickVideoSrc(row) {
   return ''
 }
 
+/** Typed local attachments, ordered as the source post. Legacy rows use their existing player. */
+export function pickImportedMedia(row) {
+  if (!Array.isArray(row?.media_items)) return []
+  return row.media_items.flatMap((item) => {
+    if (item?.type !== 'video' && item?.type !== 'image') return []
+    const url = pickVideoSrc({ media_urls: [item.url] })
+    return url ? [{ type: item.type, url }] : []
+  })
+}
+
 /**
  * Gateway seed covers are 1×1 JPEG stubs. Treat those as empty.
  * @param {number} width

@@ -63,6 +63,13 @@ export function mountOfficial(ctx, deps) {
     },
   })
 
+  const fetchSocial = (args, exec) => fetchSocialData(client, args, {
+    fetcher: deps.fetcher,
+    signal: exec?.signal,
+    // Preserve the existing import switch for users who disabled public reads.
+    allowPublicTweet: !['off', '0', 'false', 'no'].includes(String(env.OMNIMUX_INSPIRATION_SOCIAL_FALLBACK || '').trim().toLowerCase()),
+  })
+
   // Publish a local inspiration (upload assets → publish) on behalf of a
   // vertical. The vertical owns the local library and hands over file paths plus
   // metadata; the gateway key, the upload route and the publish payload stay in
@@ -75,7 +82,7 @@ export function mountOfficial(ctx, deps) {
       resolveApiKey: deps.resolveApiKey ?? (() => env.OMNIMUX_API_KEY || env.OMNIMUX_TOKEN),
     }))
     ctx.provide('socialData', {
-      fetch: (args) => fetchSocialData(client, args),
+      fetch: (args, exec) => fetchSocial(args, exec),
     })
     ctx.provide('youtube', {
       getVideo: (args) => {
@@ -161,11 +168,11 @@ export function mountOfficial(ctx, deps) {
       },
     })
     ctx.provide('x', {
-      getTweet: (args) => {
+      getTweet: (args, exec) => {
         const payload = typeof args === 'string'
           ? (args.includes('://') ? { url: args } : { id: args })
           : { url: args?.url, id: args?.tweet_id || args?.id }
-        return fetchSocialData(client, { platform: 'x', capability: 'tweet', ...payload })
+        return fetchSocial({ platform: 'x', capability: 'tweet', ...payload }, exec)
       },
       getUser: (args) => {
         const payload = typeof args === 'string'
@@ -199,10 +206,10 @@ export function mountOfficial(ctx, deps) {
       description,
       parameters: deps.objectParams(fields),
       output: deps.jsonOut,
-      async execute(args) {
+      async execute(args, exec) {
         try {
           assertCapabilityEnabled(gate, name, 'tool')
-          return await run(args)
+          return await run(args, exec)
         } catch (error) {
           if (error instanceof OmnimuxError) throw error
           return deps.rethrow(error)
@@ -228,7 +235,7 @@ export function mountOfficial(ctx, deps) {
       'engagement (likes/views/retweets/replies/bookmarks), and media attachments:',
       'data.media.video[].variants[].url (mp4/m3u8), data.media.video[].media_url_https (thumb),',
       'plus data.entities.media[] (type, media_url_https, expanded_url, video_info.variants).',
-      'Requires OMNIMUX_API_KEY. Example: {platform:"x", capability:"tweet", url:"https://x.com/<user>/status/<tweet_id>"}.',
+      'X/tweet reads public X embeds first; other capabilities and cloud fallback require OMNIMUX_API_KEY. Example: {platform:"x", capability:"tweet", url:"https://x.com/<user>/status/<tweet_id>"}.',
       'Shop example: {platform:"tiktok", capability:"shop_product", url:"https://shop.tiktok.com/sg/pdp/<id>", region:"SG"}.',
     ].join(' '),
     {
@@ -253,7 +260,7 @@ export function mountOfficial(ctx, deps) {
       region: { type: 'string' },
       author_id: { type: 'string' },
     },
-    (args) => fetchSocialData(client, args),
+    (args, exec) => fetchSocial(args, exec),
   )
 
   tool(
@@ -413,12 +420,12 @@ export function mountOfficial(ctx, deps) {
       url: { type: 'string', description: 'X / Twitter tweet URL (https://x.com/.../status/...)' },
       tweet_id: { type: 'string', description: 'Numeric tweet ID' },
     },
-    (args) => fetchSocialData(client, {
+    (args, exec) => fetchSocial({
       platform: 'x',
       capability: 'tweet',
       url: args.url,
       id: args.tweet_id,
-    }),
+    }, exec),
   )
 
   tool(
