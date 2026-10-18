@@ -12,6 +12,7 @@ import type { LinkInputState, LinkKind } from './linkReference.ts';
 import { focusEditorElement } from './focusEditorElement.ts';
 import { useDragDrop } from './useDragDrop.ts';
 import { useCommentAttachment, removeCommentAttachment } from './useCommentAttachment.ts';
+import { useNativeFilesBridge } from './useNativeFilesBridge.js';
 
 import { VideoLinkPopover } from './VideoLinkPopover.tsx';
 import type { LinkPopoverCloseReason } from './VideoLinkPopover.tsx';
@@ -196,6 +197,15 @@ export const AttachmentTray: React.FC<AttachmentTrayProps> = (props) => {
   const nativeOnAddFiles = props.onAddFiles;
   const nativeDropLimits = props.dropLimits;
   const canAcceptDrop = Boolean(props.canAcceptDrop) && typeof nativeOnAddFiles === 'function';
+
+  // 向同一插件的其它模块（如灵感库合集）暴露本会话的原生附件入口：
+  // 它们要挂的是官方 composer 的草稿文件，不是本插件自建的附件 store。
+  useNativeFilesBridge(typeof window === 'undefined' ? undefined : window, {
+    sessionId: currentSessionId,
+    attachments: nativeAttachments,
+    canAcceptDrop,
+    onAddFiles: nativeOnAddFiles,
+  });
 
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
   const [linkPopover, setLinkPopover] = useState<{ kind: LinkKind; anchor: HTMLElement } | null>(null);

@@ -1,29 +1,33 @@
 /**
- * Collection → current session prefill.
+ * Collection → current session, as one native Markdown attachment.
  *
- * A local collection card can hand its whole membership to the conversation the
- * user is already in. The module owns exactly one side effect: it writes a
- * sourced prompt through the official prefill seam and lets the user finish the
- * question. It never sends, never starts a session, never closes the library
- * tab, and never writes collection data.
+ * A local collection card hands its whole membership to the conversation the
+ * user is already in. The module owns exactly two side effects: it reveals the
+ * conversation (same entry as the replicate CTA), and it mounts one generated
+ * Markdown file through the official composer's native file intake
+ * (`window.__omnimuxComposerFiles`, published by the hub's attachment tray).
+ * It never writes the collection body into the draft, never sends, never starts
+ * a session, never closes the library tab, and never writes collection data.
  *
- * Four red lines (same family as `rival-add-to-chat.js`):
+ * Red lines (same family as `rival-add-to-chat.js`):
  *
- * 1. Nothing is sent — no `setDraft`/send call exists here; the seam writes the
- *    draft and the user submits it.
- * 2. The collection is read-only — the local list endpoint is the only read and
- *    no collection mutation route is imported.
+ * 1. Nothing is sent — no send call exists here; the user submits the message.
+ * 2. The collection is read-only — the local list endpoint is the only read.
  * 3. Failure is explicit — every abort returns an `errorKey` the view turns into
- *    a toast; the user's existing draft is never silently overwritten.
+ *    a toast; the user's existing draft and attachments are never overwritten.
  * 4. One operation at a time — a module-level lock refuses concurrent adds.
  */
 
 import { listLocalInspirations } from './api.js'
-import { queueSessionPrefill } from './session-prefill.js'
 import { collectionEn, collectionZh } from './collection-locales.js'
 
-/** Members requested in one read; the prompt always reports the true total. */
+/** Members requested per page; the local list endpoint clamps this to 100. */
 const MEMBER_PAGE_SIZE = 100
+/** Upper bound of pages read into the document; extra members stay resolvable by id. */
+const MAX_MEMBER_PAGES = 5
+/** How long to wait for the tray to publish its native file intake after reveal. */
+const BRIDGE_WAIT_MS = 1200
+const BRIDGE_POLL_MS = 50
 
 /** Module-level inflight lock: a second add while the first runs is refused. */
 let addInflight = null
@@ -83,56 +87,8 @@ function memberName(row) {
   return plainText(row?.title || row?.source_url || row?.id || '')
 }
 
-/**
- * The sourced prompt the user's question is appended to.
- *
- * Pure: no window, no fetch, no state. Locale text comes exclusively from `t`,
- * so zh/en stay in `collection-locales.js` and nowhere else.
- *
- * @param {{ collection?: Record<string, any>, items?: Record<string, any>[], total?: number, t: (key: string) => string }} input
- * @returns {string}
- */
-export function buildCollectionPrompt({ collection, items, total, t }) {
-  const translate = typeof t === 'function' ? t : key => collectionEn[key] || key
-  const rows = Array.isArray(items) ? items : []
-  const collectionId = String(collection?.id ?? '').trim()
-  const name = plainText(collection?.title) || collectionId
-  const listed = rows.length
-  const totalCount = Number.isFinite(Number(total)) && Number(total) > 0 ? Number(total) : listed
-
-  const lines = [
-    translate('collection.prompt.sourceLine'),
-    fill(translate('collection.prompt.collectionLine'), { name }),
-    fill(translate('collection.prompt.collectionIdLine'), { id: collectionId }),
-    fill(translate('collection.prompt.memberCountLine'), { count: totalCount }),
-    translate('collection.prompt.memberListHeader'),
-  ]
-
-  rows.forEach((row, index) => {
-    const platform = String(row?.source_platform ?? '').trim()
-    const type = String(row?.type ?? '').trim()
-    let extra = ''
-    if (platform) extra += fill(translate('collection.prompt.memberPlatform'), { platform })
-    if (type) extra += fill(translate('collection.prompt.memberType'), { type })
-    lines.push(fill(translate('collection.prompt.memberLine'), {
-      index: index + 1,
-      title: memberName(row),
-      id: String(row?.id ?? ''),
-      extra,
-    }))
-  })
-
-  if (totalCount > listed) {
-    lines.push(fill(translate('collection.prompt.memberMore'), { listed, total: totalCount }))
-  }
-
-  lines.push(translate('collection.prompt.readInstruction'))
-  lines.push(translate('collection.prompt.question'))
-  return lines.join('\n')
-}
-
-/** Host sentinel for "no session bound yet"; the official prefill seam refuses it. */
-const UNBOUND_SESSION_IDS = new Set(['default', '__none__'])
+/** Host sentinels for "no session bound yet"; never a valid attachment target. */
+const UNBOUND_SESSION_IDS = new Set(['default', '__none__', 'undefined', 'null'])
 
 function normalizeSessionId(value) {
   let id = ''
@@ -166,8 +122,8 @@ export function resolveActiveSessionId(windowObject) {
  * `replicate-to-chat`, and replay it like that path does so a layout that
  * settles after the click still lands on the revealed conversation.
  *
- * A failure here must not abort the prefill, so it is reported to the caller's
- * error sink instead.
+ * A failure here must not abort the attachment, so it is reported to the
+ * caller's error sink instead.
  * @param {Window | undefined} windowObject
  * @param {string} [sessionId]
  * @param {(error: unknown) => void} [onError]
@@ -210,20 +166,169 @@ export function revealConversation(windowObject, sessionId = '', onError) {
   }
 }
 
+const INVALID_FILE_NAME = /[\\/:*?"<>|\u0000-\u001f]/g
+
 /**
- * Hand a collection to the current session.
+ * `{collection title} · 灵感库合集.md`, safe for a native composer upload.
+ * @param {{ id?: unknown, title?: unknown } | null | undefined} collection
+ * @returns {string}
+ */
+export function collectionFileName(collection) {
+  const raw = plainText(collection?.title)
+    .replace(INVALID_FILE_NAME, '-')
+    .trim()
+    .replace(/^\.+/, '')
+    .replace(/\.+$/, '')
+  if (!raw) {
+    const idPart = String(collection?.id ?? '').replace(/[^\w-]/g, '').slice(0, 8)
+    return `灵感库合集-${idPart || 'collection'}.md`
+  }
+  const safe = raw.slice(0, 60).trim() || '灵感库合集'
+  return `${safe} · 灵感库合集.md`
+}
+
+/**
+ * The Markdown document itself. It carries the sourced collection facts and the
+ * read instruction; the user's own question stays in the composer.
+ *
+ * @param {{ collection?: Record<string, any>, items?: Record<string, any>[], total?: number, t: (key: string) => string }} input
+ * @returns {string}
+ */
+export function buildCollectionDocument({ collection, items, total, t }) {
+  const translate = typeof t === 'function' ? t : key => collectionEn[key] || key
+  const rows = Array.isArray(items) ? items : []
+  const collectionId = String(collection?.id ?? '').trim()
+  const name = plainText(collection?.title) || collectionId
+  const listed = rows.length
+  const totalCount = Number.isFinite(Number(total)) && Number(total) > 0 ? Number(total) : listed
+
+  const lines = [
+    `# ${fill(translate('collection.file.heading'), { name })}`,
+    '',
+    translate('collection.prompt.sourceLine'),
+    fill(translate('collection.prompt.collectionIdLine'), { id: collectionId }),
+    fill(translate('collection.prompt.memberCountLine'), { count: totalCount }),
+    '',
+    translate('collection.prompt.memberListHeader'),
+  ]
+
+  rows.forEach((row, index) => {
+    const platform = String(row?.source_platform ?? '').trim()
+    const type = String(row?.type ?? '').trim()
+    let extra = ''
+    if (platform) extra += fill(translate('collection.prompt.memberPlatform'), { platform })
+    if (type) extra += fill(translate('collection.prompt.memberType'), { type })
+    lines.push(fill(translate('collection.prompt.memberLine'), {
+      index: index + 1,
+      title: memberName(row),
+      id: String(row?.id ?? ''),
+      extra,
+    }))
+  })
+
+  if (totalCount > listed) {
+    lines.push('', fill(translate('collection.prompt.memberMore'), { listed, total: totalCount }))
+  }
+
+  lines.push('', translate('collection.prompt.readInstruction'))
+  return `${lines.join('\n')}\n`
+}
+
+function createFile(content, name, io) {
+  if (typeof io?.makeFile === 'function') return io.makeFile(content, name)
+  return new File([content], name, { type: 'text/markdown' })
+}
+
+/**
+ * Read the whole membership in bounded pages. The document lists what was read
+ * and keeps the true total so the agent can page the remainder through
+ * `inspiration_get`.
+ * @param {(filters: Record<string, unknown>) => Promise<{ ok: boolean, body?: any }>} read
+ * @param {string} collectionId
+ */
+async function readMembers(read, collectionId) {
+  const items = []
+  let total = 0
+  for (let page = 1; page <= MAX_MEMBER_PAGES; page += 1) {
+    const loaded = await read({
+      collection_id: collectionId,
+      page,
+      page_size: MEMBER_PAGE_SIZE,
+      projection: 'lean',
+    })
+    if (!loaded || loaded.ok !== true) return { ok: false }
+    const data = loaded.body?.data ?? {}
+    const pageItems = Array.isArray(data.items) ? data.items : []
+    const reportedTotal = Number(data.total)
+    if (Number.isFinite(reportedTotal) && reportedTotal > total) total = reportedTotal
+    items.push(...pageItems)
+    if (pageItems.length < MEMBER_PAGE_SIZE || items.length >= total) break
+  }
+  return { ok: true, items, total: total || items.length }
+}
+
+/**
+ * The native composer file intake published by the hub's attachment tray.
+ * @param {Window | undefined} windowObject
+ * @param {string} sessionId
+ */
+export function resolveComposerFiles(windowObject, sessionId) {
+  if (!sessionId) return null
+  const table = windowObject?.__omnimuxComposerFiles
+  const entry = table && typeof table === 'object' ? table[sessionId] : null
+  return entry && typeof entry.add === 'function' ? entry : null
+}
+
+/**
+ * Wait (bounded) for the tray to mount after the conversation is revealed. The
+ * slot normally stays mounted while collapsed; this covers the cold/slow mount
+ * window instead of failing the click on the first frame.
+ * @param {Window | undefined} windowObject
+ * @param {string} sessionId
+ * @param {{ timeout?: number, interval?: number }} [options]
+ * @returns {Promise<{ add: Function, list: Function } | null>}
+ */
+export function waitForComposerFiles(windowObject, sessionId, options = {}) {
+  const found = resolveComposerFiles(windowObject, sessionId)
+  if (found) return Promise.resolve(found)
+  if (typeof setTimeout !== 'function') return Promise.resolve(null)
+  const timeout = Number.isFinite(options.timeout) ? Math.max(0, options.timeout) : BRIDGE_WAIT_MS
+  const interval = Number.isFinite(options.interval) ? Math.max(10, options.interval) : BRIDGE_POLL_MS
+  if (timeout <= 0) return Promise.resolve(null)
+  return new Promise(resolve => {
+    const startedAt = Date.now()
+    const tick = () => {
+      const entry = resolveComposerFiles(windowObject, sessionId)
+      if (entry) {
+        resolve(entry)
+        return
+      }
+      if (Date.now() - startedAt >= timeout) {
+        resolve(null)
+        return
+      }
+      setTimeout(tick, interval)
+    }
+    setTimeout(tick, interval)
+  })
+}
+
+/**
+ * Mount a collection into the current session as one native Markdown file.
  *
  * @param {{ id?: unknown, title?: unknown } | null | undefined} collection
  * @param {{
  *   window?: Window,
  *   sessionId?: string,
  *   fetchCollectionItems?: (filters: Record<string, unknown>) => Promise<{ ok: boolean, status?: number, body?: any }>,
- *   prefill?: (request: { targetSessionId: string, prompt: string, attach: () => { ok: boolean } }) => Promise<any>,
+ *   nativeFiles?: { add: (files: readonly File[]) => Promise<{ ok: boolean, message?: string }>, list: () => readonly string[] },
+ *   waitForFiles?: (windowObject: Window | undefined, sessionId: string) => Promise<any>,
+ *   makeFile?: (content: string, name: string) => File,
  *   reveal?: () => void,
  *   t?: (key: string) => string,
  *   onError?: (error: unknown) => void,
  * }} [io]
- * @returns {Promise<{ ok: true } | { ok: false, errorKey: string, code: string }>}
+ * @returns {Promise<{ ok: true, duplicate?: true } | { ok: false, errorKey: string, code: string, detail?: string }>}
  */
 export async function addCollectionToSession(collection, io = {}) {
   if (isCollectionAddBusy()) return { ok: false, errorKey: 'collection.sessionBusy', code: 'busy' }
@@ -240,63 +345,77 @@ export async function addCollectionToSession(collection, io = {}) {
       : resolveActiveSessionId(windowObject)
     if (!sessionId) return { ok: false, errorKey: 'collection.sessionNoSession', code: 'no-session' }
 
-    // 2. Reveal the conversation immediately — before the member read — exactly
-    //    like the replicate CTA: a slow/failing read must never be why the
-    //    session bar stays closed, and `ensureConversationVisible` is what
-    //    pulls it out from behind a host right-sidebar fullscreen panel.
+    // 2. Reveal immediately — before waiting for anything else — exactly like
+    //    the replicate CTA: a slow read or a missing tray must never be why the
+    //    session bar stays closed.
     const reveal = typeof io.reveal === 'function'
       ? io.reveal
       : () => revealConversation(windowObject, sessionId, error => reportError(io, error))
     reveal()
 
-    // 3. Full membership, read-only, lean projection: the prompt needs ids,
-    //    names, platform and type, not the stored breakdown payload.
-    const readMembers = typeof io.fetchCollectionItems === 'function'
+    // 3. The tray publishes the official native file intake per session. Wait
+    //    for it (bounded) instead of racing the cold mount.
+    const waitForFiles = typeof io.waitForFiles === 'function'
+      ? io.waitForFiles
+      : (win, session) => waitForComposerFiles(win, session)
+    const composerFiles = io.nativeFiles ?? await waitForFiles(windowObject, sessionId)
+    if (!composerFiles || typeof composerFiles.add !== 'function') {
+      return { ok: false, errorKey: 'collection.attachmentUnavailable', code: 'no-native-files' }
+    }
+
+    // 4. One collection → one file. A second click must not upload a duplicate.
+    const fileName = collectionFileName(collection)
+    let existing = []
+    try {
+      existing = composerFiles.list()
+    } catch (error) {
+      reportError(io, error)
+    }
+    if (Array.isArray(existing) && existing.includes(fileName)) return { ok: true, duplicate: true }
+
+    // 5. Full membership, read-only, lean projection: the document needs ids,
+    //    titles, platform and type, not the stored breakdown payload.
+    const read = typeof io.fetchCollectionItems === 'function'
       ? io.fetchCollectionItems
       : filters => listLocalInspirations(filters)
-    let loaded
-    let loadFailed = false
+    let members
+    let readFailed = false
     try {
-      loaded = await readMembers({ collection_id: collectionId, page: 1, page_size: MEMBER_PAGE_SIZE, projection: 'lean' })
+      members = await readMembers(read, collectionId)
     } catch (error) {
-      loadFailed = true
+      readFailed = true
       reportError(io, error)
     }
-    if (loadFailed || !loaded || loaded.ok !== true) {
+    if (readFailed || !members || members.ok !== true) {
       return { ok: false, errorKey: 'collection.sessionFetchFailed', code: 'fetch-failed' }
     }
+    if (members.items.length === 0) return { ok: false, errorKey: 'collection.sessionEmpty', code: 'empty' }
 
-    const data = loaded.body?.data ?? {}
-    const items = Array.isArray(data.items) ? data.items : []
-    const total = Number(data.total) > 0 ? Number(data.total) : items.length
-    if (items.length === 0) return { ok: false, errorKey: 'collection.sessionEmpty', code: 'empty' }
-
-    // 4. Official prefill seam, append mode: an existing draft or attachments
-    //    never block "add to session"; the collection context is appended after
-    //    a blank line and the user's text is preserved. Never sends, never
-    //    touches collection data.
-    const prompt = buildCollectionPrompt({ collection, items, total, t })
-    const prefill = typeof io.prefill === 'function' ? io.prefill : queueSessionPrefill
-    let prefilled
-    let prefillFailed = false
+    // 6. Build the document and hand the File to the official native intake.
+    const content = buildCollectionDocument({ collection, items: members.items, total: members.total, t })
+    const file = createFile(content, fileName, io)
+    let added
+    let addFailed = false
     try {
-      prefilled = await prefill({ targetSessionId: sessionId, prompt, mode: 'append', attach: () => ({ ok: true }) })
+      // The bridge confirms by observing the official attachment list; a void
+      // intake that rejected or silently dropped the file resolves `ok:false`.
+      added = await composerFiles.add([file])
     } catch (error) {
-      prefillFailed = true
+      addFailed = true
       reportError(io, error)
     }
-    if (prefillFailed) return { ok: false, errorKey: 'collection.sessionFailed', code: 'prefill-failed' }
-    if (!prefilled || prefilled.ok !== true) {
-      const reason = String(prefilled?.error ?? '')
-      if (reason === 'draft-protected') {
-        return { ok: false, errorKey: 'collection.sessionDraftProtected', code: 'draft-protected' }
-      }
-      if (reason === 'composer-busy') {
-        return { ok: false, errorKey: 'collection.sessionBusy', code: 'composer-busy' }
-      }
-      return { ok: false, errorKey: 'collection.sessionFailed', code: reason || 'prefill-failed' }
+    if (addFailed) return { ok: false, errorKey: 'collection.attachmentFailed', code: 'add-failed' }
+    if (!added || added.ok !== true) {
+      const detail = typeof added?.message === 'string' ? added.message : ''
+      return { ok: false, errorKey: 'collection.attachmentFailed', code: 'add-failed', detail }
     }
 
+    // 7. Bring the user's eye to the attachment rail (existing hub bridge).
+    try {
+      windowObject?.__omnimuxComposerActions?.revealAttachments?.()
+    } catch (error) {
+      reportError(io, error)
+    }
     return { ok: true }
   })
 }

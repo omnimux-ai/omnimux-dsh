@@ -5,8 +5,8 @@
  * `InspirationSection` bundle, production local handlers/store, dynamic loopback
  * server) and the existing CDP driver (`inspiration-collections.browser.mjs`).
  * The host seams are page-injected stubs (`__omnimuxWorkbench`,
- * `__omnimuxSessionPrefill`) plus a synthetic conversation column; this is not a
- * full Host install.
+ * `__omnimuxComposerFiles`) plus a synthetic conversation column and native-file
+ * card; this is not a full Host install.
  *
  * #3418 additionally injects the omnimux-market global rule verbatim
  * (`button[class*="add"]`, copied from plugins/omnimux-market/src/client/css.js
@@ -17,21 +17,15 @@
  * Round 3 keeps the shared geometry/type/width while the collection CTA keeps the
  * media dark-room colours (light-theme pixel contrast re-checked in the evidence).
  *
- * #3420: collection "add to session" appends the collection context to the
- * current draft through the hub `mode:'append'` seam — an existing draft or
- * session attachment never blocks and the collapsed conversation column is
- * opened; only a composer in a non-plain phase is refused with the new
- * append-specific toast. The stub below implements the hub append contract; the
- * real hub append implementation is covered by hub unit tests (18 pass).
- *
- * #3422: the column is revealed through the official
- * `__omnimuxWorkbench.ensureConversationVisible()` entry with NO arguments (hub
- * no-arg semantics: exit a host right-sidebar fullscreen + clear the collapse key
- * + keep split, so the library stage and its toast stay visible) — the same
- * activation the replicate CTA uses. It runs immediately after the session is
- * resolved, before the member read, and replays at 0ms/50ms. The stub below
- * records the full argument list; the real hub ensure/fullscreen-exit logic is
- * covered by hub unit tests.
+ * #3424: collection "add to session" no longer writes the draft at all. It
+ * generates one Markdown file (`{title} · 灵感库合集.md`) from the collection
+ * members and hands it to the official composer file intake
+ * (`window.__omnimuxComposerFiles[sessionId].add([File])`, published by the hub
+ * attachment tray); the draft stays untouched and nothing is sent. Duplicate
+ * clicks are deduplicated by `list()`, a missing bridge shows the unavailable
+ * toast, and a rejecting `add` surfaces a failure toast. The stub below
+ * implements the bridge contract; the real tray -> official onAddFiles
+ * passthrough and upload lifecycle are covered by the hub bridge/mount tests.
  *
  * Live precondition: `docs/evidence/2026-10-18-inspiration-collection-cta-css-3418/`
  * (browser.json + cta-shared-ui.png / cta-host-rule-immunity.png, 1600x1100) from
@@ -56,8 +50,10 @@ const LOCAL = '/omnimux/inspiration/local'
 const COLLECTION_TITLE = '测试合集'
 const ITEM_IDS = ['qa-dance1', 'qa-dance2', 'qa-fashion1']
 const SESSION_ID = 'qa-session-1'
-const PHASE_PROTECTED = '输入框当前状态不支持追加，请完成当前输入后重试'
-const APPEND_SEPARATOR = '\n\n'
+const ATTACHMENT_EXISTS = '该合集附件已在输入框中'
+const ATTACHMENT_UNAVAILABLE = '当前无法挂载文件附件，请稍后重试'
+const ADD_BUSY_MESSAGE = '正在提交，暂时不能添加附件'
+const EXPECTED_FILE_NAME = COLLECTION_TITLE + ' · 灵感库合集.md'
 const NO_SESSION = '没有可加入的会话，请先打开一个会话'
 const SENTINEL_DRAFT = '用户既有草稿（QA 哨兵）'
 
@@ -74,7 +70,7 @@ button[class*="add"] svg,.Q7WfXG_add svg,
 .sh-picker-trigger svg{flex:none !important;width:14px !important;height:14px !important;min-width:14px !important;min-height:14px !important;display:block !important}`
 
 
-const livePrecondition = 'Issue #3422 (round 2, no-arg ensure): docs/evidence/2026-10-18-inspiration-session-ensure-visible-3422/browser.json + ensure-reveal.png (1600x1100) from the real-browser run, 6/6 assertions (ensureConversationVisible called exactly 3x with an EMPTY argument list before the deferred member read completes, column collapsed->open, no setConversationCollapsed fallback, append draft, no toast/send; fallback path recorded); #3420 evidence under docs/evidence/2026-10-18-inspiration-append-to-session-3420/.'
+const livePrecondition = 'Issue #3424: docs/evidence/2026-10-18-inspiration-native-file-3424/browser.json + native-file-attached.png (1600x1100) from the real-browser run, 8/8 assertions (one File handed to the native intake with name/type/Markdown content, draft untouched, no prefill/send, duplicate toast, missing-bridge toast after the bounded wait; add-error toast equals the official message); #3422 evidence under docs/evidence/2026-10-18-inspiration-session-ensure-visible-3422/.'
 
 async function settle(browser) {
   await browser.wait(() => {
@@ -141,6 +137,11 @@ async function installHostStubs(browser) {
       '#qa-conversation .qa-title{padding:12px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #eee}',
       '#qa-conversation .qa-body{flex:1 1 auto;display:flex;flex-direction:column;gap:8px;min-height:0;padding:12px}',
       '#qa-conversation .qa-hint{font-size:11px;line-height:16px;color:#888}',
+      '#qa-conversation .qa-attachments{display:flex;flex-wrap:wrap;gap:6px;min-height:36px}',
+      '#qa-native-file{display:none;align-items:center;gap:8px;box-sizing:border-box;max-width:100%;padding:6px 10px;border:1px solid #ccc;border-radius:10px;background:#fff;font-size:12px;line-height:18px;color:#1b1b1b}',
+      '#qa-native-file.is-visible{display:flex}',
+      '#qa-native-file .qa-file-badge{flex:none;padding:1px 5px;border-radius:4px;background:#111113;color:#fff;font-size:10px;font-weight:600}',
+      '#qa-native-file .qa-file-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '#qa-conversation #qa-composer{flex:1 1 auto;min-height:220px;box-sizing:border-box;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;background:#fff;font:inherit;font-size:12px;line-height:18px;resize:none}',
       '#qa-conversation .qa-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}',
       '#qa-conversation .qa-draft-state{font-size:11px;color:#888}',
@@ -155,13 +156,14 @@ async function installHostStubs(browser) {
       '<div class="qa-title">会话 <span>草稿</span></div>',
       '<div class="qa-body">',
       '  <div class="qa-hint">合成会话宿主（QA 桩，非完整 Host 安装）</div>',
+      '  <div class="qa-attachments"><div id="qa-native-file"><span class="qa-file-badge">MD</span><span class="qa-file-name"></span></div></div>',
       '  <textarea id="qa-composer" aria-label="会话输入框（合成桩）" placeholder="输入你的问题…"></textarea>',
       '  <div class="qa-actions"><span class="qa-draft-state">草稿未发送</span><button id="qa-send" type="button">发送</button></div>',
       '</div>',
     ].join('')
     document.body.appendChild(pane)
 
-    const qaHost = { calls: [], prefill: [], sends: [], requests: [], attachments: 1 }
+    const qaHost = { calls: [], fileAdds: [], fileNames: [], addMode: 'ok', revealAttachments: 0, sends: [], requests: [], attachments: 1 }
     window.__qaHost = qaHost
     document.body.dataset.conversation = 'collapsed'
     window.__omnimuxWorkbench = {
@@ -178,35 +180,40 @@ async function installHostStubs(browser) {
       },
       setFocus(value) { qaHost.calls.push(['focus', value]) },
     }
-    // Synthetic attachment fact: the session already has one attachment. The
-    // append stub (like the hub append contract) is not blocked by it.
+    // Synthetic attachment fact: an existing session attachment must not block
+    // the native file path (the new contract never touches the draft).
     window.__omnimuxAttachments = {
       getActiveSessionId: () => '',
       listAttachments: () => [{ id: 'qa-attachment-1', kind: 'image' }],
     }
-    window.__omnimuxSessionPrefill = {
-      queueSessionPrefill(request) {
-        const prompt = String(request?.prompt ?? '')
-        const mode = request?.mode === 'append' ? 'append' : 'replace'
-        const composer = document.getElementById('qa-composer')
-        const draftBefore = composer ? composer.value : ''
-        const base = String(draftBefore ?? '').replace(/\s+$/, '')
-        const draftAfter = mode === 'append' ? (base ? base + '\n\n' + prompt : prompt) : prompt
-        qaHost.prefill.push({
-          targetSessionId: request?.targetSessionId,
-          prompt,
-          mode,
-          hasAttach: typeof request?.attach === 'function',
-          draftBefore,
-          draftAfter,
-        })
-        if (composer) composer.value = draftAfter
-        const result = { ok: true, via: 'input-actions' }
-        if (mode === 'append') result.appended = true
-        return Promise.resolve(result)
+    window.__omnimuxComposerActions = {
+      revealAttachments() { qaHost.revealAttachments += 1 },
+    }
+    // Hub native-files bridge contract: add(files) -> {ok,message?}; list() -> names.
+    window.__omnimuxComposerFiles = {
+      'qa-session-1': {
+        async add(files) {
+          const list = Array.from(files || [])
+          const entry = { files: [] }
+          for (const file of list) {
+            const record = { name: String(file?.name ?? ''), type: String(file?.type ?? ''), size: Number(file?.size ?? 0), content: null }
+            entry.files.push(record)
+            Promise.resolve().then(() => file.text()).then(text => { record.content = String(text) }).catch(() => { record.content = null })
+          }
+          qaHost.fileAdds.push(entry)
+          if (qaHost.addMode === 'fail') return { ok: false, message: '正在提交，暂时不能添加附件' }
+          for (const record of entry.files) {
+            qaHost.fileNames.push(record.name)
+            const card = document.getElementById('qa-native-file')
+            const label = card?.querySelector('.qa-file-name')
+            if (label) label.textContent = record.name
+            card?.classList.add('is-visible')
+          }
+          return { ok: true }
+        },
+        list() { return qaHost.fileNames.slice() },
       },
     }
-    qaHost.goodPrefill = window.__omnimuxSessionPrefill.queueSessionPrefill
     qaHost.goodSnapshot = window.__omnimuxWorkbench.getSnapshot
     document.getElementById('qa-send').addEventListener('click', () => { qaHost.sends.push('send-click') })
     const nativeFetch = window.fetch
@@ -218,11 +225,11 @@ async function installHostStubs(browser) {
     }
     return {
       workbench: typeof window.__omnimuxWorkbench.getSnapshot === 'function',
-      prefill: typeof window.__omnimuxSessionPrefill.queueSessionPrefill === 'function',
+      files: typeof window.__omnimuxComposerFiles?.['qa-session-1']?.add === 'function',
       conversation: document.body.dataset.conversation,
     }
   }, RIVAL_TOKENS_CSS)
-  assert.deepEqual(installed, { workbench: true, prefill: true, conversation: 'collapsed' })
+  assert.deepEqual(installed, { workbench: true, files: true, conversation: 'collapsed' })
 }
 
 async function readActions(browser) {
@@ -470,16 +477,37 @@ async function readToast(browser) {
   })
 }
 
+async function waitNoToast(browser, timeoutMs = 4000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const state = await readToast(browser)
+    if (state.toastCount === 0) return true
+    await sleep(100)
+  }
+  return false
+}
+
 async function readHost(browser) {
   return browser.evaluate(() => ({
-    calls: window.__qaHost.calls.map(call => call.slice()),
-    prefill: window.__qaHost.prefill.map(entry => ({ targetSessionId: entry.targetSessionId, prompt: entry.prompt, mode: entry.mode, hasAttach: entry.hasAttach, draftBefore: entry.draftBefore, draftAfter: entry.draftAfter })),
+    calls: window.__qaHost.calls.map(call => [call[0], Array.isArray(call[1]) ? call[1].slice() : call[1]]),
+    fileAdds: window.__qaHost.fileAdds.map(entry => ({
+      files: entry.files.map(file => ({ name: file.name, type: file.type, size: file.size, content: file.content })),
+    })),
+    fileNames: window.__qaHost.fileNames.slice(),
+    addMode: window.__qaHost.addMode,
+    revealAttachments: window.__qaHost.revealAttachments,
     sends: window.__qaHost.sends.map(String),
     requests: window.__qaHost.requests.map(entry => ({ method: entry.method, url: entry.url })),
     conversation: document.body.dataset.conversation,
     composer: document.getElementById('qa-composer')?.value ?? null,
     attachments: window.__qaHost.attachments,
     hasAttachments: Object.hasOwn(window, '__omnimuxAttachments'),
+    hasBridge: Boolean(window.__omnimuxComposerFiles),
+    nativeCard: (() => {
+      const card = document.getElementById('qa-native-file')
+      const rect = card?.getBoundingClientRect()
+      return { visible: Boolean(card) && card.classList.contains('is-visible') && Boolean(rect) && rect.width > 0, text: card?.textContent?.trim() ?? null }
+    })(),
   }))
 }
 
@@ -487,14 +515,11 @@ async function readHost(browser) {
 async function resetHost(browser, restoreStubs) {
   await browser.evaluate(restore => {
     const host = window.__qaHost
-    if (restore) {
-      window.__omnimuxSessionPrefill.queueSessionPrefill = host.goodPrefill
-      window.__omnimuxWorkbench.getSnapshot = host.goodSnapshot
-    }
+    if (restore) window.__omnimuxWorkbench.getSnapshot = host.goodSnapshot
     host.calls = []
-    host.prefill = []
     host.sends = []
     host.requests = []
+    host.revealAttachments = 0
     host.attachments = 1
     document.body.dataset.conversation = 'collapsed'
     document.getElementById('qa-composer').value = ''
@@ -508,21 +533,6 @@ async function ordinaryAudit(browser) {
     hasActionsLayer: Boolean(card.querySelector('.omnimux-inspiration-collection-actions')),
     texts: Array.from(card.querySelectorAll('button')).map(button => button.textContent.trim()).filter(Boolean),
   })))
-}
-
-function expectedPrompt(collectionId) {
-  return [
-    '来源：OmniMux 灵感库 · 本地合集',
-    '合集：' + COLLECTION_TITLE,
-    '合集 ID：' + collectionId,
-    '成员条数：3',
-    '成员清单：',
-    '1. 舞蹈参考一（成员 id：qa-dance1；平台：tiktok；类型：image）',
-    '2. 舞蹈参考二（成员 id：qa-dance2；平台：tiktok；类型：image）',
-    '3. 穿搭参考一（成员 id：qa-fashion1；平台：tiktok；类型：image）',
-    '使用 inspiration_get 按上述 id 逐条读取（标题、正文/脚本、拆解、本地媒体路径）再回答问题。',
-    '问题：',
-  ].join('\n')
 }
 
 async function withEnvironment(name, run) {
@@ -571,7 +581,7 @@ async function withEnvironment(name, run) {
   }
 }
 
-test('collection card actions: shared CTA under the market host rule, hover, view, ensure-visible append to session, focus, phase-protected and no-session', { timeout: 180000 }, async () => {
+test('collection card actions: shared CTA under the market host rule, hover, view, native-file add to session, focus, duplicate, add-failure, bridge-missing and no-session', { timeout: 180000 }, async () => {
   await withEnvironment('journey', async context => {
     const { fixture, browser, report, capture } = context
     // Drift guard: the injected host rule must stay verbatim in the market source.
@@ -716,50 +726,68 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     )
     assert.equal(await browser.evaluate(() => document.querySelectorAll('.omnimux-inspiration-collection-surface [data-collection-id]').length), 0)
     let host = await readHost(browser)
-    assert.equal(host.prefill.length, 0, '查看 must not prefill')
+    assert.equal(host.fileAdds.length, 0, '查看 must not add a file')
     assert.deepEqual(host.calls, [], '查看 must not reveal the conversation')
     assert.equal(host.conversation, 'collapsed')
     for (const card of await ordinaryAudit(browser)) assert.equal(card.hasActionsLayer, false)
-    report.checks.push('查看 (dedicated onView handler) shows the real collection view (back/heading/rename + 3 member cards) and produces no prefill or reveal calls')
+    report.checks.push('查看 (dedicated onView handler) shows the real collection view (back/heading/rename + 3 member cards) and produces no file/reveal calls')
     await capture('view-collection')
 
-    // 3. Back to the root, then 加入会话.
+    // 3. Back to the root, then 加入会话: one native Markdown file, draft untouched.
     await browser.clickText('返回灵感库', '.omnimux-inspiration-collection-navigation button')
     await browser.wait(id => Boolean(document.querySelector('[data-collection-id="' + id + '"]')), collection.id)
     await settle(browser)
+    await browser.evaluate(sentinel => {
+      document.getElementById('qa-composer').value = sentinel
+      document.body.dataset.conversation = 'collapsed'
+      return true
+    }, SENTINEL_DRAFT)
     await hoverCard(browser)
+    const beforeAdd = await readHost(browser)
     await browser.clickText('加入会话', '[data-collection-id] button')
     await browser.wait(() => {
       const state = window.__qaHost
-      return Boolean(state) && state.prefill.length === 1 && document.getElementById('qa-composer')?.value === state.prefill[0].prompt
+      return Boolean(state) && state.fileAdds.length === 1 && state.fileAdds[0].files[0]?.content != null
     })
-    await browser.wait(() => document.body.dataset.conversation === 'open')
+    await sleep(250)
     host = await readHost(browser)
-    assert.equal(host.prefill.length, 1)
-    assert.equal(host.prefill[0].targetSessionId, SESSION_ID)
-    assert.equal(host.prefill[0].mode, 'append', '加入会话 must use the hub append mode')
-    assert.equal(host.prefill[0].prompt, expectedPrompt(collection.id))
-    assert.equal(host.composer, expectedPrompt(collection.id))
+    const fileRecord = host.fileAdds[0].files[0]
+    const fileContent = String(fileRecord.content ?? '')
+    assert.equal(beforeAdd.conversation, 'collapsed')
+    assert.equal(beforeAdd.composer, SENTINEL_DRAFT)
+    assert.equal(beforeAdd.fileAdds.length, 0)
     assert.equal(host.conversation, 'open')
-    assert.ok(host.calls.length >= 1, 'ensureConversationVisible must be called')
+    assert.equal(host.calls.length, 3, 'immediate ensure + 0ms/50ms replays')
     for (const call of host.calls) {
       assert.equal(call[0], 'ensure')
       assert.equal(call[1].length, 0, 'ensure must be called with no arguments (hub no-arg contract)')
     }
     assert.equal(host.calls.some(call => call[0] === 'collapsed' || call[0] === 'focus'), false, 'ensure path must not fall back to setConversationCollapsed/setFocus')
+    assert.equal(host.fileAdds.length, 1, 'exactly one native add call')
+    assert.equal(host.fileAdds[0].files.length, 1, 'exactly one File per add')
+    assert.equal(host.fileNames.length, 1)
+    assert.equal(fileRecord.name, EXPECTED_FILE_NAME)
+    assert.equal(fileRecord.type, 'text/markdown')
+    assert.ok(fileRecord.size > 0)
+    assert.ok(fileContent.startsWith('# 灵感库合集：测试合集\n'), 'document heading')
+    assert.ok(fileContent.includes('合集 ID：' + collection.id))
+    assert.ok(fileContent.includes('成员条数：3'))
+    for (const memberId of ITEM_IDS) assert.ok(fileContent.includes(memberId), 'document must list ' + memberId)
+    assert.ok(fileContent.includes('inspiration_get'))
+    assert.equal(fileContent.includes('问题：'), false, 'the document must not embed a question line')
+    assert.equal(host.composer, SENTINEL_DRAFT, 'the user draft must stay untouched')
     assert.equal(host.sends.length, 0)
+    assert.ok(host.revealAttachments >= 1, 'best-effort revealAttachments bridge is used')
+    assert.equal(host.nativeCard.visible, true)
+    const addToast = await readToast(browser)
+    assert.equal(addToast.toastCount, 0, 'success is shown by the attachment card, not a toast')
     assert.deepEqual(host.requests.filter(entry => entry.method !== 'GET'), [])
-    assert.deepEqual(host.requests.filter(entry => /(send|message|draft|turn|completion)/i.test(entry.url)), [])
-    assert.equal(
-      await browser.evaluate(() => document.getElementById('qa-conversation').getBoundingClientRect().width >= 300),
-      true,
-    )
     const memberRead = fixture.requests.filter(entry => entry.method === 'GET' && entry.path === LOCAL && entry.query.collection_id === collection.id && entry.query.page_size === '100')
     assert.equal(memberRead.length, 1)
     assert.deepEqual(memberRead[0].query, { page: '1', page_size: '100', projection: 'lean', collection_id: collection.id })
     assert.equal(memberRead[0].status, 200)
-    report.checks.push('加入会话 resolves the current session, calls ensureConversationVisible() with no arguments immediately (replayed at 0/50ms; exits host fullscreen and keeps split), then reads the real lean member list and appends exactly one sourced prompt via the prefill seam to qa-session-1, never sends')
-    await capture('add-to-session')
+    report.checks.push('加入会话 reveals the column (3 no-arg ensure calls), reads the real lean member list, hands exactly one native Markdown File (测试合集 · 灵感库合集.md, text/markdown, all member ids + inspiration_get) to the official composer intake, keeps the draft untouched and never sends')
+    await capture('native-file-attached')
 
     // 4. Keyboard :focus-within reveal (mouse parked away), media-token palette.
     await resetHost(browser, true)
@@ -792,97 +820,97 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     await capture('focus-actions')
     await browser.evaluate(() => { document.activeElement?.blur?.(); return true })
 
-    // 5. append into an existing draft (+ synthetic attachment) with the column collapsed.
+    // 5. duplicate: the same session already lists the file name -> no second add.
     await resetHost(browser, true)
     await browser.evaluate(sentinel => {
-      window.__qaHost.attachments = 1
       document.body.dataset.conversation = 'collapsed'
       document.getElementById('qa-composer').value = sentinel
       return true
     }, SENTINEL_DRAFT)
-    await sleep(150)
+    await waitNoToast(browser)
     await hoverCard(browser)
-    const beforeAppend = await readHost(browser)
+    const beforeDuplicate = await readHost(browser)
     await browser.clickText('加入会话', '[data-collection-id] button')
-    await browser.wait(() => {
-      const state = window.__qaHost
-      return Boolean(state) && state.prefill.length === 1 && document.body.dataset.conversation === 'open'
-    })
-    await sleep(300)
-    const afterAppend = await readHost(browser)
-    const appendToast = await readToast(browser)
-    const expectedAppended = SENTINEL_DRAFT + APPEND_SEPARATOR + expectedPrompt(collection.id)
-    await capture('append-existing-draft')
-    assert.equal(beforeAppend.conversation, 'collapsed')
-    assert.equal(beforeAppend.composer, SENTINEL_DRAFT)
-    assert.equal(beforeAppend.attachments, 1)
-    assert.equal(afterAppend.conversation, 'open', '加入会话 must open the collapsed conversation column')
-    assert.equal(afterAppend.calls.length, 3, 'immediate ensure + 0ms/50ms replays')
-    for (const call of afterAppend.calls) {
-      assert.equal(call[0], 'ensure')
-      assert.equal(call[1].length, 0, 'ensure must be called with no arguments (hub no-arg contract)')
-    }
-    assert.equal(afterAppend.calls.some(call => call[0] === 'collapsed' || call[0] === 'focus'), false, 'ensure path must not fall back to setConversationCollapsed/setFocus')
-    assert.equal(afterAppend.prefill.length, 1)
-    assert.equal(afterAppend.prefill[0].mode, 'append')
-    assert.equal(afterAppend.prefill[0].targetSessionId, SESSION_ID)
-    assert.equal(afterAppend.prefill[0].prompt, expectedPrompt(collection.id))
-    assert.equal(afterAppend.prefill[0].hasAttach, true)
-    assert.equal(afterAppend.prefill[0].draftBefore, SENTINEL_DRAFT)
-    assert.equal(afterAppend.composer, expectedAppended, 'existing draft must be preserved and the prompt appended after a blank line')
-    assert.equal(appendToast.visible, false, 'append must not show a blocking toast')
-    assert.equal(appendToast.toastCount, 0)
-    assert.equal(afterAppend.sends.length, 0)
-    assert.deepEqual(afterAppend.requests.filter(entry => entry.method !== 'GET'), [])
-    report.checks.push('加入会话 with an existing draft + attachment in a collapsed column opens the column and appends the collection prompt after a blank line via exactly one mode=append prefill, without a toast or send')
-
-    // 6. phase-protected (composer not plain): visible toast, draft untouched, no append.
-    await resetHost(browser, true)
+    await browser.wait(() => document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() === '该合集附件已在输入框中', null, 8000)
+    const duplicateToast = await readToast(browser)
     await sleep(150)
-    await hoverCard(browser)
+    const afterDuplicate = await readHost(browser)
+    assert.equal(beforeDuplicate.conversation, 'collapsed')
+    assert.equal(beforeDuplicate.composer, SENTINEL_DRAFT)
+    assert.equal(afterDuplicate.conversation, 'open')
+    assert.equal(afterDuplicate.fileAdds.length, 1, 'a duplicate click must not call add again')
+    assert.equal(afterDuplicate.toast?.toastCount ?? duplicateToast.toastCount, 1)
+    assert.equal(duplicateToast.text, ATTACHMENT_EXISTS)
+    assert.equal(afterDuplicate.composer, SENTINEL_DRAFT)
+    assert.equal(afterDuplicate.sends.length, 0)
+    report.checks.push('a second click on the same collection is deduplicated by the bridge list() (add stays at one call) and shows 该合集附件已在输入框中 while the draft stays untouched')
+    await capture('attachment-duplicate')
+
+    // 6. native add rejects with the official busy message -> failure toast, no card.
+    await waitNoToast(browser)
+    await resetHost(browser, true)
     await browser.evaluate(sentinel => {
+      window.__qaHost.fileNames = []
+      document.getElementById('qa-native-file').classList.remove('is-visible')
+      window.__qaHost.addMode = 'fail'
+      document.body.dataset.conversation = 'collapsed'
       document.getElementById('qa-composer').value = sentinel
-      window.__omnimuxSessionPrefill.queueSessionPrefill = () => Promise.resolve({ ok: false, error: 'draft-protected' })
       return true
     }, SENTINEL_DRAFT)
+    await hoverCard(browser)
     await browser.clickText('加入会话', '[data-collection-id] button')
-    await browser.wait(() => document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim().length > 0)
-    const protectedToast = await readToast(browser)
-    await sleep(200)
-    const protectedState = await browser.evaluate(sentinel => {
-      const card = document.querySelector('[data-collection-id]')
-      return {
-        toastText: document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() ?? null,
-        composer: document.getElementById('qa-composer')?.value ?? null,
-        conversation: document.body.dataset.conversation,
-        rootCardTitle: card?.querySelector('.omnimux-inspiration-collection-title')?.textContent?.trim() ?? null,
-        navigation: Boolean(document.querySelector('.omnimux-inspiration-collection-navigation')),
-        sentinel,
-      }
-    }, SENTINEL_DRAFT)
-    await capture('append-protected')
-    const afterProtected = await readHost(browser)
-    assert.equal(protectedToast.visible, true)
-    assert.equal(protectedToast.toastCount, 1)
-    assert.equal(protectedToast.text, PHASE_PROTECTED)
-    assert.equal(protectedState.toastText, PHASE_PROTECTED)
-    assert.equal(protectedState.composer, SENTINEL_DRAFT, 'protected append must not modify the draft')
-    assert.equal(afterProtected.composer, SENTINEL_DRAFT)
-    assert.deepEqual(afterProtected.prefill, [], 'the protected seam must not record an append request')
-    assert.equal(protectedState.conversation, 'open', 'column is revealed before the protected write attempt')
-    assert.equal(afterProtected.sends.length, 0)
-    assert.equal(protectedState.rootCardTitle, COLLECTION_TITLE)
-    assert.equal(protectedState.navigation, false)
-    report.checks.push('phase-protected append shows 输入框当前状态不支持追加，请完成当前输入后重试 while keeping the draft untouched, staying on the root view and never appending')
+    await browser.wait(() => document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() === '正在提交，暂时不能添加附件', null, 8000)
+    const addFailureToast = await readToast(browser)
+    await sleep(150)
+    const afterAddFailure = await readHost(browser)
+    assert.equal(afterAddFailure.fileAdds.length, 2, 'the second add attempt is recorded and fails')
+    assert.equal(afterAddFailure.fileNames.length, 0)
+    assert.equal(addFailureToast.toastCount, 1)
+    assert.equal(addFailureToast.text, ADD_BUSY_MESSAGE)
+    assert.equal(afterAddFailure.conversation, 'open')
+    assert.equal(afterAddFailure.composer, SENTINEL_DRAFT)
+    assert.equal(afterAddFailure.nativeCard.visible, false)
+    assert.equal(afterAddFailure.sends.length, 0)
+    report.checks.push('a rejecting native add surfaces the official localized message 正在提交，暂时不能添加附件 as the toast (module detail takes precedence over the generic copy), adds no card and keeps the draft untouched')
+    await capture('attachment-add-failure')
 
-    // 7. no active session: explicit toast, no reveal, no prefill, no expansion.
+    // 7. bridge missing: bounded wait, unavailable toast, no add, draft untouched.
+    await waitNoToast(browser)
+    await resetHost(browser, true)
+    await browser.evaluate(sentinel => {
+      delete window.__omnimuxComposerFiles
+      window.__qaHost.addMode = 'ok'
+      document.body.dataset.conversation = 'collapsed'
+      document.getElementById('qa-composer').value = sentinel
+      return true
+    }, SENTINEL_DRAFT)
+    await hoverCard(browser)
+    const beforeBridgeMissing = await readHost(browser)
+    await browser.clickText('加入会话', '[data-collection-id] button')
+    await browser.wait(() => document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() === '当前无法挂载文件附件，请稍后重试', null, 8000)
+    const bridgeMissingToast = await readToast(browser)
+    await sleep(150)
+    const afterBridgeMissing = await readHost(browser)
+    assert.equal(beforeBridgeMissing.hasBridge, false)
+    assert.equal(beforeBridgeMissing.composer, SENTINEL_DRAFT)
+    assert.equal(bridgeMissingToast.toastCount, 1)
+    assert.equal(bridgeMissingToast.text, ATTACHMENT_UNAVAILABLE)
+    assert.equal(afterBridgeMissing.fileAdds.length, 2, 'no add call happens without a bridge')
+    assert.equal(afterBridgeMissing.composer, SENTINEL_DRAFT)
+    assert.equal(afterBridgeMissing.conversation, 'open')
+    assert.equal(afterBridgeMissing.sends.length, 0)
+    report.checks.push('a missing native bridge waits the bounded 1200ms, then shows 当前无法挂载文件附件，请稍后重试 without adding a file or touching the draft')
+    await capture('attachment-unavailable')
+
+    // 8. no active session: explicit toast, no reveal, no add, no expansion.
+    await waitNoToast(browser)
     await resetHost(browser, true)
     const readsBefore = fixture.requests.filter(entry => entry.method === 'GET' && entry.path === LOCAL && entry.query.collection_id === collection.id && entry.query.page_size === '100').length
+    const fileAddsBeforeNoSession = await browser.evaluate(() => window.__qaHost.fileAdds.length)
     await browser.evaluate(() => {
       window.__omnimuxWorkbench.getSnapshot = () => ({ sessionId: '' })
       delete window.__omnimuxAttachments
       window.__qaHost.calls = []
-      window.__qaHost.prefill = []
       window.__qaHost.sends = []
       window.__qaHost.requests = []
       document.body.dataset.conversation = 'collapsed'
@@ -907,7 +935,7 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
       return {
         toastText: document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() ?? null,
         calls: window.__qaHost.calls.map(call => call.slice()),
-        prefill: window.__qaHost.prefill.map(entry => ({ targetSessionId: entry.targetSessionId, prompt: entry.prompt })),
+        fileAdds: window.__qaHost.fileAdds.length,
         sends: window.__qaHost.sends.map(String),
         requests: window.__qaHost.requests.map(entry => ({ method: entry.method, url: entry.url })),
         conversation: document.body.dataset.conversation,
@@ -923,7 +951,7 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     assert.equal(noSessionToast.visible, true)
     assert.equal(noSession.toastText, NO_SESSION)
     assert.deepEqual(noSession.calls, [], 'no reveal may run without a bound session')
-    assert.deepEqual(noSession.prefill, [])
+    assert.equal(noSession.fileAdds, fileAddsBeforeNoSession, 'no native add may run without a bound session')
     assert.equal(noSession.composer, '')
     assert.equal(noSession.conversation, 'collapsed', 'empty conversation column must not be expanded')
     assert.equal(noSession.sends.length, 0)
@@ -934,6 +962,6 @@ test('collection card actions: shared CTA under the market host rule, hover, vie
     assert.notEqual(noSession.buttonBusy, 'true')
     assert.equal(noSession.rootCardTitle, COLLECTION_TITLE)
     assert.equal(noSession.navigation, false)
-    report.checks.push('no active session shows 没有可加入的会话，请先打开一个会话, performs no reveal and no prefill, keeps the conversation collapsed and the button enabled again')
+    report.checks.push('no active session shows 没有可加入的会话，请先打开一个会话, performs no reveal and no native add, keeps the conversation collapsed and the button enabled again')
   })
 })
