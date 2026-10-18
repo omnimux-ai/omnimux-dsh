@@ -4,6 +4,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
+import { DOM_RENDER_LOADERS } from './test-fixtures/dom-render-build.mjs'
 import { JSDOM } from 'jsdom'
 // 必须先于 react-dom 求值：本文件也驱动受控输入框（顶部「导入灵感」弹窗）。
 import './test-fixtures/dom-bootstrap.mjs'
@@ -151,6 +152,7 @@ async function bundleStage() {
   const outFile = join(cacheDir, `account-monitor-${bundleCounter}.mjs`)
   bundleCounter += 1
   const result = await esbuild.build({
+    loader: DOM_RENDER_LOADERS,
     absWorkingDir: join(here, '..', '..'),
     entryPoints: [sourceEntry],
     bundle: true,

@@ -15,6 +15,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
+import { DOM_RENDER_LOADERS } from './test-fixtures/dom-render-build.mjs'
 import { JSDOM } from 'jsdom'
 import './test-fixtures/dom-bootstrap.mjs'
 import React, { act } from 'react'
@@ -51,6 +52,7 @@ async function bundleStage() {
   const outFile = join(cacheDir, `qa-stage-${bundleCounter}.mjs`)
   bundleCounter += 1
   const result = await esbuild.build({
+    loader: DOM_RENDER_LOADERS,
     absWorkingDir: join(here, '..', '..'),
     entryPoints: [sourceEntry],
     bundle: true, format: 'esm', platform: 'browser', jsx: 'automatic', write: false, logLevel: 'silent',

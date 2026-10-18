@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ConfirmModal, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
+import { ArrowLeft } from 'lucide-react'
+import { InspirationCollectionCard, toCollectionCardRow } from './InspirationCollectionCard.jsx'
+import { InspirationCollectionDialog } from './InspirationCollectionDialog.jsx'
+import { InspirationCollectionMenu } from './InspirationCollectionMenu.jsx'
+import { injectCollectionStyles } from './collection-styles.js'
+import { useCollectionDrag, useInspirationCollections } from './use-inspiration-collections.js'
 import { RivalAccountFilter } from './RivalAccountFilter.jsx'
 import { RivalAccountsPanel, buildRivalPlatformOptions, buildRivalSortOptions } from './RivalAccountsPanel.jsx'
 import { RivalRefreshButton } from './RivalPoolStatusBar.jsx'
@@ -72,7 +78,8 @@ function InspirationEmptyState({ t, onOpenAdd }) {
 }
 
 export function InspirationSection({ t, active }) {
-  const feed = useInspirationFeed({ active })
+  const [collectionId, setCollectionId] = useState('')
+  const feed = useInspirationFeed({ active, collectionId })
   const {
     tab, setTab,
     q, setQ,
@@ -176,17 +183,17 @@ export function InspirationSection({ t, active }) {
   const [toastLeaving, setToastLeaving] = useState(false)
   const toastSeq = useRef(0)
 
-  const showToast = useCallback((text) => {
+  const showToast = useCallback((text, options = {}) => {
     const message = String(text ?? '').trim()
     if (!message) return
     toastSeq.current += 1
     setToastLeaving(false)
-    setToast({ id: toastSeq.current, text: message })
+    setToast({ id: toastSeq.current, text: message, ...options })
   }, [])
 
   useEffect(() => {
     if (!toast) return undefined
-    const timer = setTimeout(() => setToastLeaving(true), TOAST_VISIBLE_MS)
+    const timer = setTimeout(() => setToastLeaving(true), toast.duration || TOAST_VISIBLE_MS)
     return () => clearTimeout(timer)
   }, [toast])
 
@@ -216,9 +223,12 @@ export function InspirationSection({ t, active }) {
    */
   const handleContentImported = useCallback((item) => {
     if (!item) return
+    setCollectionId(item.collection_id || '')
     handleImportSuccess(item)
     showToast(t('add.importedToast'))
   }, [handleImportSuccess, showToast, t])
+
+  const libraryCollections = useInspirationCollections({ feed, collectionId, setCollectionId, t, showToast })
 
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
@@ -246,6 +256,23 @@ export function InspirationSection({ t, active }) {
     [items, landedItem, tab],
   )
   const landedId = landedItem?.id
+  const gridCollections = tab === 'local' && !collectionId ? libraryCollections.collections : []
+  const gridCards = useMemo(() => [
+    ...gridCollections.map(collection => ({ ...toCollectionCardRow(collection), collection })),
+    ...visibleItems.map(row => toInspirationCardRow(row, t)),
+  ], [gridCollections, visibleItems, t])
+  const drag = useCollectionDrag({
+    enabled: tab === 'local' && !collectionId && !selecting && !libraryCollections.busy && !libraryCollections.intent && !selectedItem,
+    items: visibleItems, collections: gridCollections, onDrop: libraryCollections.requestMerge, onStart: libraryCollections.cancelSelection, t,
+  })
+  const selectItem = item => {
+    if (libraryCollections.selectedSource && item.is_local) libraryCollections.requestMerge(libraryCollections.selectedSource, item)
+    else setSelectedItem(item)
+  }
+  const selectCollection = collection => {
+    if (libraryCollections.selectedSource) libraryCollections.requestMerge(libraryCollections.selectedSource, null, collection)
+    else libraryCollections.open(collection)
+  }
 
   // Bring the landed card into view and flash it. The effect owns the highlight;
   // the pin above is what guarantees there is a card to find.
@@ -256,6 +283,7 @@ export function InspirationSection({ t, active }) {
 
   useEffect(() => {
     injectInspirationStyles()
+    injectCollectionStyles()
   }, [])
 
   const toolbarRef = useRef(null)
@@ -509,6 +537,19 @@ export function InspirationSection({ t, active }) {
       </div>
 
       {/* Content area — the one region a tab switch replaces. */}
+      {tab === 'local' && collectionId ? (
+        <div className="omnimux-inspiration-collection-navigation">
+          <Button variant="ghost" leadingIcon={<ArrowLeft size={16} />} onClick={libraryCollections.back}>{t('collection.back')}</Button>
+          <span className="omnimux-inspiration-collection-heading">{libraryCollections.activeCollection?.title || ''}</span>
+          {libraryCollections.activeCollection ? <Button variant="outline" disabled={libraryCollections.busy} onClick={() => libraryCollections.rename(libraryCollections.activeCollection)}>{t('collection.rename')}</Button> : null}
+        </div>
+      ) : null}
+      {tab === 'local' && libraryCollections.selectedSource ? (
+        <div className="omnimux-inspiration-collection-selection" role="status">
+          <span>{t('collection.chooseTarget')} · {libraryCollections.selectedSource.title}</span>
+          <Button variant="ghost" onClick={libraryCollections.cancelSelection}>{t('collection.cancel')}</Button>
+        </div>
+      ) : null}
       {rivalTab ? (
         <>
         <RivalAccountsPanel
@@ -527,7 +568,7 @@ export function InspirationSection({ t, active }) {
         </>
       ) : (
         <>
-          {loading && items.length === 0 ? (
+          {loading && gridCards.length === 0 ? (
             <div className="omnimux-inspiration-skeleton">
               {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="omnimux-inspiration-skel" />
@@ -537,29 +578,40 @@ export function InspirationSection({ t, active }) {
 
           {phase === 'need-login' && tab === 'public' ? <LoginGate t={t} /> : null}
 
-          {phase === 'ready' && error && visibleItems.length === 0 ? (
+          {phase === 'ready' && error && (tab === 'local' || gridCards.length === 0) ? (
             <div className="omnimux-inspiration-error">
               <p className="omnimux-inspiration-empty-text">
                 {error === 'disabled' ? t('error.disabled') : error || t('error.generic')}
               </p>
+              {tab === 'local' ? <Button variant="outline" onClick={() => feed.refreshData()}>{t('collection.retry')}</Button> : null}
             </div>
           ) : null}
 
-          {!loading && visibleItems.length === 0 && (!error || tab === 'local') ? (
-            <InspirationEmptyState t={t} onOpenAdd={() => setImportOpen(true)} />
+          {!loading && gridCards.length === 0 && !error ? (
+            collectionId ? <EmptyState title={t('collection.empty')} /> : <InspirationEmptyState t={t} onOpenAdd={() => setImportOpen(true)} />
           ) : null}
 
-          {visibleItems.length > 0 ? (
+          {gridCards.length > 0 ? (
             <>
+              <div className="omnimux-inspiration-collection-surface" {...drag}>
               <RivalMasonry
                 className={`omnimux-inspiration-grid ${selecting ? 'selecting' : ''}`}
-                cards={visibleItems.map((row) => toInspirationCardRow(row, t))}
+                cards={gridCards}
                 t={t}
-                renderCard={({ card: descriptor, style, column }) => (
+                renderCard={({ card: descriptor, style, column }) => descriptor.card_type === 'collection' ? (
+                  <InspirationCollectionCard collection={descriptor.collection} t={t} style={style} column={column}
+                    onOpen={selectCollection}
+                    menuNode={<InspirationCollectionMenu t={t} disabled={libraryCollections.busy} onRename={() => libraryCollections.rename(descriptor.collection)} />}
+                  />
+                ) : (
                   <InspirationCoverCard
                     descriptor={descriptor}
                     style={style}
                     column={column}
+                    actionsNode={tab === 'local' ? <InspirationCollectionMenu t={t} disabled={libraryCollections.busy}
+                      onMerge={!collectionId ? () => libraryCollections.selectSource(descriptor.source_row) : undefined}
+                      onRemove={collectionId ? () => libraryCollections.remove(descriptor.source_row) : undefined}
+                    /> : null}
                     card={{
                       row: descriptor.source_row,
                       t,
@@ -567,12 +619,13 @@ export function InspirationSection({ t, active }) {
                       selecting,
                       replicateBusy,
                       onToggleSelect: toggleSelect,
-                      onSelect: (item) => setSelectedItem(item),
+                      onSelect: selectItem,
                       onReplicate: handleReplicate,
                     }}
                   />
                 )}
               />
+              </div>
               {loadingMore ? <div className="omnimux-inspiration-skeleton omnimux-rival-loadmore">
                 {Array.from({ length: 10 }).map((_, i) => (
                   <div key={`skel_more_${i}`} className="omnimux-inspiration-skel" aria-hidden="true" />
@@ -625,7 +678,7 @@ export function InspirationSection({ t, active }) {
               open
               onClose={() => setPendingRemove(null)}
               title={t('confirmRemove.title').replace('{n}', String(pendingRemove.count))}
-              message={t('confirmRemove.description')}
+              message={pendingRemove.error || t('confirmRemove.description')}
               confirmLabel={removing ? t('confirmRemove.deleting') : t('confirmRemove.confirm')}
               cancelLabel={t('confirmRemove.cancel')}
               confirmVariant="danger"
@@ -643,11 +696,13 @@ export function InspirationSection({ t, active }) {
         onImported={handleContentImported}
         onAccountImported={handleAccountImported}
       />
+      <InspirationCollectionDialog intent={libraryCollections.intent} t={t} onClose={libraryCollections.close}
+        onConfirm={libraryCollections.confirm} busy={libraryCollections.busy} error={libraryCollections.error} />
 
       {/* 导入成功的气泡：浮在内容之上，不占内容区高度。 */}
       {toast ? (
         <div
-          className={`omnimux-inspiration-toast${toastLeaving ? ' is-leaving' : ''}`}
+          className={`omnimux-inspiration-toast${toastLeaving ? ' is-leaving' : ''}${toast.action ? ' has-action' : ''}`}
           role="status"
           data-toast-id={toast.id}
         >
@@ -655,6 +710,7 @@ export function InspirationSection({ t, active }) {
             <CheckIcon size={16} />
           </span>
           <span className="omnimux-inspiration-toast-text">{toast.text}</span>
+          {toast.action ? <Button variant="ghost" size="sm" disabled={libraryCollections.busy} onClick={toast.action}>{toast.actionLabel}</Button> : null}
         </div>
       ) : null}
     </div>

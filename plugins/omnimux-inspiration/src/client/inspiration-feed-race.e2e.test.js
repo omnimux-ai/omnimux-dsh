@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import * as esbuild from 'esbuild'
+import { DOM_RENDER_LOADERS } from './test-fixtures/dom-render-build.mjs'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { JSDOM } from 'jsdom'
@@ -23,6 +24,7 @@ const cacheDir = join(here, '.esbuild-cache', 'feed-race')
 async function bundleSection() {
   mkdirSync(cacheDir, { recursive: true })
   const result = await esbuild.build({
+    loader: DOM_RENDER_LOADERS,
     absWorkingDir: join(here, '..', '..'),
     entryPoints: [join(here, 'InspirationSection.jsx')],
     bundle: true,

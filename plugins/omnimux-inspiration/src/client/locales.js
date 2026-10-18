@@ -1,4 +1,7 @@
+import { collectionZh, collectionEn } from './collection-locales.js'
+
 export const zh = {
+  ...collectionZh,
   'post.savedReview': '原帖已保存，内容与素材已更新，请确认后重新选择参考或重试。',
   'post.savingPost': '正在保存原帖与素材…',
   'post.staleAnalysis': '原帖内容或素材已变化，请重新分析当前对象。',
@@ -476,6 +479,7 @@ export const zh = {
 }
 
 export const en = {
+  ...collectionEn,
   'post.savedReview': 'The original post is saved and its content changed. Review it and choose references again.',
   'post.savingPost': 'Saving the original post and media…',
   'post.staleAnalysis': 'The post or media changed. Analyze this target again.',

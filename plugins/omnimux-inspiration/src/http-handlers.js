@@ -1513,7 +1513,22 @@ export async function handleFetchMedia(ctx) {
   }
 }
 
+/** Import responses keep their status snapshot and derive current membership at the exit.
+ * @param {Record<string, any>} ctx
+ */
 export async function handleImportUrl(ctx) {
+  const response = await importUrl(ctx)
+  const record = response.body?.data
+  if (!record || typeof record !== 'object' || !record.id) return response
+  const current = ctx.store.get(record.id)
+  if (!current) return fail(404, '该灵感已被移除，请刷新后重试')
+  const { collection_id: _previousMembership, ...data } = record
+  if (current.collection_id) data.collection_id = current.collection_id
+  return { ...response, body: { ...response.body, data } }
+}
+
+/** @param {Record<string, any>} ctx */
+async function importUrl(ctx) {
   if (ctx.signal?.aborted) throw createAbortError()
   const parsed = parseImportBody(ctx)
   if (!parsed.rawUrl) return fail(400, 'url is required')

@@ -898,6 +898,35 @@ describe('HTTP entry: local inspiration collections', () => {
     assert.equal(cloudCalls.length, 0)
   })
 
+  it('carries current collection membership on immediate duplicate and pending import replies', async () => {
+    const world = await collectionWorld()
+    const url = 'https://x.com/creator/status/2098246364895547904'
+    await world.call('PATCH', '/local-1', { content: '已有完整视频' })
+    const file = resolveInspirationPaths({ homeDir: world.root }).libraryFile
+    let library = JSON.parse(readFileSync(file, 'utf8'))
+    const row = library.items.find((item) => item.id === 'local-1')
+    row.source_url = url
+    row.type = 'video'
+    writeFileSync(file, JSON.stringify(library))
+    const made = await world.call('POST', '/collections', { title: '重复导入归属', item_ids: ['local-1', 'local-2'] })
+    for (const background of [false, true]) for (const return_existing of [false, true]) {
+      const response = await world.call('POST', '/import-url', { url, background, return_existing })
+      assert.equal(response.status, return_existing ? 200 : 409)
+      assert.equal(response.body.data.collection_id, made.body.data.id)
+    }
+    library = JSON.parse(readFileSync(file, 'utf8'))
+    const pending = library.items.find((item) => item.id === 'local-1')
+    pending.import_status = 'importing'
+    pending.import_stage = 'downloading'
+    writeFileSync(file, JSON.stringify(library))
+    const response = await world.call('POST', '/import-url', { url, background: true })
+    assert.equal(response.status, 202)
+    assert.equal(response.body.data.collection_id, made.body.data.id)
+    assert.equal(response.body.data.import_stage, 'downloading')
+    assert.ok(JSON.parse(readFileSync(file, 'utf8')).items.every((item) => !Object.hasOwn(item, 'collection_id')))
+    assert.equal(cloudCalls.length, 0)
+  })
+
   it('rejects untrusted snapshots, malformed input, missing locals and cross-collection membership atomically', async () => {
     const world = await collectionWorld()
     const first = (await world.call('POST', '/collections', { title: '第一组', item_ids: ['local-1', 'local-2'] })).body.data

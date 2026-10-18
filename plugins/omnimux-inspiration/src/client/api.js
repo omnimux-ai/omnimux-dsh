@@ -101,6 +101,12 @@ export function whenAuthReady(cb) {
  */
 const CACHE_TTL_MS = 120_000
 const memoryCache = new Map()
+let cacheGeneration = 0
+
+/** @returns {number} */
+export function getInspirationCacheGeneration() {
+  return cacheGeneration
+}
 
 export function getInspirationCache(key) {
   const entry = memoryCache.get(key)
@@ -109,11 +115,19 @@ export function getInspirationCache(key) {
   return { data: entry.data, isStale }
 }
 
-export function setInspirationCache(key, data) {
+/**
+ * A request may warm its own cache only until an intervening write invalidates it.
+ * @param {string} key
+ * @param {object} data
+ * @param {number} [generation]
+ */
+export function setInspirationCache(key, data, generation = cacheGeneration) {
+  if (generation !== cacheGeneration) return
   memoryCache.set(key, { data, at: Date.now() })
 }
 
 export function invalidateInspirationCache() {
+  cacheGeneration += 1
   memoryCache.clear()
 }
 
@@ -126,7 +140,7 @@ const CLOUD_FILTER_KEYS = [
 const LOCAL_FILTER_KEYS = [
   'type', 'tag', 'tags', 'q', 'platform', 'is_favorite', 'sort', 'page', 'page_size',
   'country', 'category', 'duration_min', 'duration_max', 'views_min', 'views_max',
-  'traffic_type', 'posted_after', 'posted_before', 'projection',
+  'traffic_type', 'posted_after', 'posted_before', 'projection', 'root_only', 'collection_id',
 ]
 
 /**
@@ -183,6 +197,7 @@ export async function loadInspirationsAtomic(params) {
     traffic_type = '',
     posted_after = '',
     posted_before = '',
+    collection_id = '',
   } = params
   const sharedArgs = {
     q: q.trim() || undefined,
@@ -210,12 +225,14 @@ export async function loadInspirationsAtomic(params) {
   const cloudArgs = { ...sharedArgs, category: industry || undefined }
 
   if (tab === 'local') {
-    const res = await listLocalInspirations(sharedArgs)
+    const res = await listLocalInspirations({ ...sharedArgs, root_only: collection_id ? undefined : true, collection_id: collection_id || undefined })
     if (!res.ok) throw new Error(res.body?.error || `HTTP ${res.status}`)
     const items = (res.body?.data?.items || []).map((it) => ({ ...it, is_local: true }))
     const total = Number(res.body?.data?.total) || items.length
     const platforms = res.body?.data?.platforms || []
-    return { items, total, hasMore: items.length === pageSize && page * pageSize < total, phase: 'ready', platforms }
+    return { items, total, hasMore: items.length === pageSize && page * pageSize < total, phase: 'ready', platforms,
+      collections: res.body?.data?.collections || [], collection: res.body?.data?.collection || null,
+      collection_names: res.body?.data?.collection_names || [] }
   }
 
   if (tab === 'public' || (tab === 'all' && industry)) {

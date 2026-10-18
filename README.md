@@ -53,6 +53,7 @@
 | 当前产品方向与宣传边界 | [产品定位](docs/contracts/product-positioning.md) |
 | 角色视频制作的目标与验收 | [角色生成与视频复刻指南](docs/guides/ecommerce-video-replication.md) |
 | 开发文档与适用合同 | [文档导航](docs/README.md)、[智能体约束](AGENTS.md) |
+| 灵感库合集整理与能力状态 | [灵感插件说明](plugins/omnimux-inspiration/README.md#本地灵感合集)、[能力记录](docs/capabilities.md) |
 | 中枢接口目录快照 | [接口面板](docs/tools/hub-interfaces.html)，不是部署状态或上游能力真源 |
 | 软件使用与商业授权 | [许可原文](LICENSE)、[商业授权说明](COMMERCIAL.md)，不等于生成免费 |
 | 第三方来源与许可 | [致谢与第三方声明](ACKNOWLEDGEMENTS.md) |

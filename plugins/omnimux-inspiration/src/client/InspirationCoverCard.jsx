@@ -36,7 +36,7 @@ function isolateInnerCardKey(e) {
   if (e.key === 'Enter' || e.key === ' ') e.preventDefault()
 }
 
-export function InspirationCoverCard({ card, descriptor, style, column }) {
+export function InspirationCoverCard({ card, descriptor, style, column, actionsNode }) {
   const { row, t, onSelect, onReplicate, selected, onToggleSelect, selecting, replicateBusy, revealed } = card
   const title = String(row.title || row.source_url || row.id)
   const contentCard = descriptor || toInspirationCardRow(row, t)
@@ -326,6 +326,7 @@ export function InspirationCoverCard({ card, descriptor, style, column }) {
       inspirationId={String(row.id)}
     >
       {decorations}
+      {actionsNode}
     </RivalPostCard>
   )
 }

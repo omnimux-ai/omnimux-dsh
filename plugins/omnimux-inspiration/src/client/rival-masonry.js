@@ -36,9 +36,13 @@ export const RIVAL_IMAGE_RATIO_MIN = 4 / 5
 export const RIVAL_IMAGE_RATIO_MAX = 1.91
 export const RIVAL_DEFAULT_IMAGE_RATIO = 4 / 5
 
-const CARD_TYPES = new Set(['short-video', 'long-video', 'image', 'text', 'text-media'])
+const CARD_TYPES = new Set(['short-video', 'long-video', 'image', 'text', 'text-media', 'collection'])
 const VIDEO_RATIO = 16 / 9
 const SHORT_VIDEO_RATIO = 9 / 16
+
+/** 合集封面与名称行的唯一几何来源，样式与瀑布流共同消费。 */
+export const RIVAL_COLLECTION_MEDIA_RATIO = 16 / 9
+export const RIVAL_COLLECTION_TITLE_HEIGHT = 42
 
 /** 卡片 1px 描边（上 + 下）：估算按渲染的 border-box 高度计，含这 2px。 */
 const CARD_BORDER = 2
@@ -530,7 +534,7 @@ function titleLines(card, columnWidth, type) {
  *   - X 的 tweet：有内嵌媒体 → text-media，否则 → text。
  * 未知行回退到最高的 short-video——放错列的代价小于把媒体卡压扁。
  * @param {Record<string, any>} card
- * @returns {'short-video'|'long-video'|'image'|'text'|'text-media'}
+ * @returns {'short-video'|'long-video'|'image'|'text'|'text-media'|'collection'}
  */
 export function rivalCardTypeOf(card) {
   const declared = String(card?.card_type || '')
@@ -569,6 +573,7 @@ export function rivalCardTypeOf(card) {
  */
 export function rivalMediaRatioOf(card) {
   const type = rivalCardTypeOf(card)
+  if (type === 'collection') return RIVAL_COLLECTION_MEDIA_RATIO
   if (type === 'short-video') return SHORT_VIDEO_RATIO
   if (type === 'long-video') return VIDEO_RATIO
   if (type === 'text-media') {
@@ -627,7 +632,7 @@ const hasPill = rivalHasPill
 
 /**
  * 一张卡的估算高度（px，border-box，含上下各 1px 描边）。
- * 所有结果满足 ≥ 144px（§9.3 悬停层高度）。
+ * 普通卡片满足 ≥ 144px（§9.3 悬停层高度）；合集没有悬停操作层。
  *
  * 这是本文件唯一的高度真源：`rivalPlacements` 的分列决策与 `top` 累加、
  * `RivalMasonry` 的容器高都消费同一个数——不再经过共享核心的
@@ -636,6 +641,7 @@ const hasPill = rivalHasPill
  * - `text-media`：24 + (胶囊?36) + 正文行数(≤3)×20 + 10 + (内宽−24) ÷ 媒体比 + 描边 2
  * - 媒体类：内宽 ÷ 媒体比 + 标题区(22 + 行数×18) + 描边 2；
  *   行数按真实换行估（≤2），不再恒取截断上限
+ * - 合集：内宽 ÷ 固定横版比例 + 固定名称行 + 描边 2
  * @param {Record<string, any>} card
  * @param {number} columnWidth
  * @returns {number}
@@ -644,6 +650,9 @@ export function rivalCardHeightPx(card, columnWidth) {
   const w = Number(columnWidth) > 0 ? Number(columnWidth) : RIVAL_MIN_COL_WIDTH
   const inner = Math.max(0, w - CARD_BORDER)
   const type = rivalCardTypeOf(card)
+  if (type === 'collection') {
+    return inner / RIVAL_COLLECTION_MEDIA_RATIO + RIVAL_COLLECTION_TITLE_HEIGHT + CARD_BORDER
+  }
   if (type === 'text') {
     const lines = textBodyLines(card, w)
     return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + (hasPill(card) ? PILL_ROW : 0) + lines * BODY_LINE + CARD_BORDER)
