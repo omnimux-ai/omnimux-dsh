@@ -36,3 +36,20 @@ test('body translation cache belongs to the original text only', () => {
   assert.equal(getBodyTranslation({ script_translation: item.script_translation }), null)
   assert.deepEqual(analysisDirections('image'), ['content', 'expression', 'creative'])
 })
+
+test('missing captured attachments keep their positions and labels while later references stay current', () => {
+  const item = { id: 'partial', content: '正文', media_items: [
+    { type: 'image', url: '', source_id: 'one', status: 'missing', error: '下载失败' },
+    { type: 'image', url: '/omnimux/inspiration/local/media/images/two.jpg', source_id: 'two', status: 'saved' },
+  ] }
+  const target = { scope: 'media', media_index: 1, directions: ['creative'] }
+  const entry = { ...target, status: 'done', input_fingerprint: analysisInputFingerprint(item, target), result: { summary: '第二张图的分析' } }
+  item.analysis_results = { 'media:1': entry }
+  assert.deepEqual(getPostMedia(item).map(({ index, label, missing }) => ({ index, label, missing })), [
+    { index: 0, label: '图片 1', missing: true },
+    { index: 1, label: '图片 2', missing: false },
+  ])
+  const complete = { ...item, media_items: [{ ...item.media_items[0], url: '/omnimux/inspiration/local/media/images/one.jpg', status: 'saved' }, item.media_items[1]] }
+  assert.equal(getTargetAnalysis(complete, target), entry)
+  assert.equal(getPostMedia(complete)[1].index, 1)
+})

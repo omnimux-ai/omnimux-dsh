@@ -2,7 +2,7 @@ import { copyFile, lstat, open, realpath, unlink } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve, sep, extname, basename } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { creationMediaLabel } from './creation-draft.js'
-import { analysisMediaItems } from './analysis-input.js'
+import { analysisMediaItems, isAvailableMedia } from './analysis-input.js'
 
 /** @typedef {{path:string, title:string, type:'video'|'image', media_index:number, clip?:{start_seconds:number,end_seconds:number}}} CreationFile */
 
@@ -88,6 +88,7 @@ function selectedInputs(item, draft, paths) {
     seen.add(index)
     const type = media[index]?.type
     if (type !== 'image' && type !== 'video') throw new Error('所选素材类型不受支持')
+    if (!isAvailableMedia(media[index])) throw new Error(`${creationMediaLabel(item, index)}尚未保存，请先重试补齐`)
     const ordinal = media.slice(0, index + 1).filter((entry) => entry?.type === type).length
     const key = type === 'image' ? `image_${ordinal}` : ordinal === 1 ? 'video' : `video_${ordinal}`
     let clip

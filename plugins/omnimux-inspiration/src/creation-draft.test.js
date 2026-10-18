@@ -27,3 +27,17 @@ it('numbers mixed media and analysis references by the same type as the reader',
  assert.equal(creationReferenceLabel(item,{kind:'media',media_index:2}),'视频 2');
  assert.equal(creationReferenceLabel(item,{kind:'analysis',scope:'media',media_index:1}),'图片 1的分析思路');
 })
+
+it('rejects missing slots and preserves the later selected video when an earlier slot is filled', () => {
+ const row = { ...item, media_items: [
+  { type: 'image', url: '', status: 'missing', source_id: 'missing' },
+  { type: 'image', url: '/images/second.jpg', status: 'saved', source_id: 'second' },
+  { type: 'video', url: '/videos/third.mp4', status: 'saved', source_id: 'third' },
+ ] }
+ const unavailable = reconcileCreationDraft(row, createEmptyCreationDraft(row), { references: [{ kind: 'media', media_index: 0 }] })
+ assert.equal(validateCreationDraft(row, unavailable).ok, false)
+ const selected = reconcileCreationDraft(row, createEmptyCreationDraft(row), { references: [{ kind: 'media', media_index: 2 }], clips: [{ media_index: 2, start_seconds: 1, end_seconds: 3 }] })
+ const complete = { ...row, media_items: [{ ...row.media_items[0], url: '/images/first.jpg', status: 'saved' }, ...row.media_items.slice(1)] }
+ assert.equal(creationBasis(row, selected), creationBasis(complete, selected))
+ assert.equal(validateCreationDraft(complete, selected).ok, true)
+})

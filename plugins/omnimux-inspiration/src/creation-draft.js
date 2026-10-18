@@ -1,4 +1,4 @@
-import { analysisInputFingerprint, analysisMediaItems, sourceFingerprint } from './analysis-input.js'
+import { analysisInputFingerprint, analysisMediaItems, isAvailableMedia, sourceFingerprint } from './analysis-input.js'
 
 /** @typedef {{kind:'body'} | {kind:'media',media_index:number} | {kind:'analysis',scope:'body'|'post'|'media',media_index?:number,input_fingerprint?:string,result_snapshot?:unknown}} CreationReference */
 /** @typedef {{references:CreationReference[],purpose:string,intent:string,text:string,clips:Array<{media_index:number,start_seconds:number|string,end_seconds:number|string}>,manual:boolean,basis:string,stale?:boolean}} CreationDraft */
@@ -102,6 +102,7 @@ export function validateCreationDraft(item, draft) {
     if (ref.kind === 'body' && !text(item?.content).trim()) return fail('帖子正文不可用')
     if (ref.kind === 'media') {
       if (!Number.isInteger(ref.media_index) || !['video', 'image'].includes(media[ref.media_index]?.type)) return fail('所选素材不存在')
+      if (!isAvailableMedia(media[ref.media_index])) return fail('所选素材尚未保存，请先重试补齐')
       if (media[ref.media_index].type === 'video') selectedVideos.add(ref.media_index)
     }
     if (ref.kind === 'analysis' && !resolveCreationAnalysis(item, ref)) return fail('所选分析尚未完成或来源已变化，请重新分析')

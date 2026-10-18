@@ -143,6 +143,30 @@ async function mountRerenderable(row, callbacks = {}) {
 }
 
 describe('InspirationPreviewModal share popover', () => {
+  it('keeps missing media visible and disabled without renumbering later references after repair', async () => {
+    const row = { id: 'partial-slots', title: '部分保存', content: '原帖正文', import_status: 'degraded', preserve_available: true,
+      source_url: 'https://x.com/creator/status/12345', media_items: [
+        { type: 'image', url: '', source_id: 'first', status: 'missing', error: '图片暂时不可用' },
+        { type: 'image', url: '/omnimux/inspiration/local/media/images/second.jpg', source_id: 'second', status: 'saved' },
+      ],
+    }
+    const { document, window, render } = await mountRerenderable(row)
+    const cards = [...document.querySelectorAll('.omnimux-post-media')]
+    assert.equal(cards.length, 2)
+    assert.equal(cards[0].querySelector('img, video'), null)
+    assert.match(cards[0].textContent, /图片 1.*未保存/)
+    assert.ok([...cards[0].querySelectorAll('button')].every(node => node.disabled))
+    assert.match(cards[1].querySelector('strong').textContent, /图片 2/)
+    await React.act(async () => cards[1].querySelector('[aria-pressed]').dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+    await render({ ...row, import_status: 'ready', media_items: [
+      { ...row.media_items[0], url: '/omnimux/inspiration/local/media/images/first.jpg', status: 'saved' }, row.media_items[1],
+    ] })
+    const repaired = [...document.querySelectorAll('.omnimux-post-media')]
+    assert.equal(repaired[1].dataset.mediaId, 'media:1')
+    assert.equal(repaired[1].querySelector('[aria-pressed]').getAttribute('aria-pressed'), 'true')
+    assert.equal(repaired[0].querySelector('[aria-pressed]').getAttribute('aria-pressed'), 'false')
+  })
+
   it('renders the share button in header actions area', async () => {
     const { document } = await mountModal({ id: 'insp-1', title: '测试灵感分享素材' })
     const shareBtn = document.querySelector('.omnimux-inspiration-share-trigger-btn')

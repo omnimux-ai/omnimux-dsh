@@ -3,7 +3,7 @@ import { Badge, Button, CopyButton, Drawer, IconButton, InputField, Tabs } from 
 import { ArrowRight, Check, ExternalLink, FileText, Film, Minus, Plus, RotateCcw, Sparkles, X, ZoomIn } from 'lucide-react'
 import { getPostBody, getPostMedia, analysisTargetKey, getTargetAnalysis, getBodyTranslation, analysisDirections } from './post-detail.js'
 import { getInspirationPreviewData, parseDocAnalysis, renderPlainBreakdownText, scriptCopyText, deconstructionCopyText } from './inspiration-preview-data.js'
-import { triggerAnalyzeInspiration, translateInspiration, saveCreationDraft, prepareCreationReferences, ensureLocalInspiration, pickCoverSrc, resolveTikTokEmbedUrl } from './api.js'
+import { triggerAnalyzeInspiration, translateInspiration, saveCreationDraft, prepareCreationReferences, ensureLocalInspiration, importLocalInspiration, pickCoverSrc, resolveTikTokEmbedUrl } from './api.js'
 import { formatPlatformName } from './feed-helpers.js'
 import { parseShotTimeWindow } from '../structure-script.js'
 import { createEmptyCreationDraft, creationBasis, reconcileCreationDraft, validateCreationDraft, confirmCreationDraftBasis } from '../creation-draft.js'
@@ -60,17 +60,19 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   const requestIdentity = useRef(String(item.source_url || item.id))
   const body = getPostBody(item)
   const media = useMemo(() => getPostMedia(item), [item])
+  const missingMedia = media.some(asset => asset.missing)
   const [expanded, setExpanded] = useState(false)
   const [translated, setTranslated] = useState(false)
   const [translating, setTranslating] = useState(false)
   const [translationError, setTranslationError] = useState('')
   const [target, setTarget] = useState(() => {
-    const video = media.find(asset => asset.type === 'video')
+    const video = media.find(asset => asset.type === 'video' && !asset.missing)
     return /** @type {AnalysisTarget} */ (video && (item.deconstruction || item.analysis) && !item.analysis_results?.post ? { scope: 'media', media_index: video.index } : { scope: 'post' })
   })
   const [directions, setDirections] = useState(() => analysisDirections())
   const [runningKey, setRunningKey] = useState('')
   const [localizing, setLocalizing] = useState(false)
+  const [retryError, setRetryError] = useState('')
   const [configureKey, setConfigureKey] = useState('')
   const [analysisErrors, setAnalysisErrors] = useState({})
   const [mobilePane, setMobilePane] = useState('post')
@@ -172,13 +174,35 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
       const bodyChanged = getPostBody(savedRow) !== body
       const promoted = String(savedRow.id) !== id
       if (mediaChanged || bodyChanged || promoted) {
-        setDraft(current => reconcileCreationDraft(savedRow, current, {
-          references: (current.references || []).filter(ref => ref.kind === 'body' && !bodyChanged), clips: [],
-        }))
+        setDraft(current => {
+          const references = (current.references || []).filter(ref => {
+            const selectedDraft = { ...current, references: [ref], clips: (current.clips || []).filter(clip => ref.kind === 'media' && clip.media_index === ref.media_index) }
+            return creationBasis(item, selectedDraft) === creationBasis(savedRow, selectedDraft)
+          })
+          return reconcileCreationDraft(savedRow, current, { references,
+            clips: (current.clips || []).filter(clip => references.some(ref => ref.kind === 'media' && ref.media_index === clip.media_index)),
+          })
+        })
       }
       onItemUpdated?.(savedRow)
       return { savedRow, mediaChanged, bodyChanged, promoted }
     } finally { if (requestIdentity.current === postIdentity) setLocalizing(false) }
+  }
+  const retrySave = async () => {
+    if (localizing || !item.source_url) return
+    const identity = postIdentity
+    setLocalizing(true); setRetryError('')
+    try {
+      const response = await importLocalInspiration({ url: item.source_url, background: true, auto_analyze: false, return_existing: true,
+        preserve_available: true, ...(item.capture ? { capture: item.capture } : {}), tags: item.tags || [],
+      })
+      if (!response.ok || !response.body?.data?.id) throw new Error(response.body?.error || copy('saveRetryFailed'))
+      const savedRow = await ensureLocalInspiration({ ...response.body.data, is_local: true }, { onProgress: row => {
+        if (requestIdentity.current === identity) onItemUpdated?.({ ...row, is_local: true })
+      } })
+      if (requestIdentity.current === identity) onItemUpdated?.(savedRow)
+    } catch (error) { if (requestIdentity.current === identity) setRetryError(error.message || copy('saveRetryFailed')) }
+    finally { if (requestIdentity.current === identity) setLocalizing(false) }
   }
   const analyze = async () => {
     if (runningKey || !directions.length) return
@@ -263,16 +287,22 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
           </div>{translationError && <p role="alert" className="omnimux-inspiration-error-text">{translationError}</p>}
         </article>}
         {notice}
+        {(item.import_status === 'degraded' || missingMedia) && <div className="omnimux-post-warning" role="status">
+          <strong>{copy('partialSave')}</strong>{item.import_error && <p>{item.import_error}</p>}
+          <Button size="sm" variant="ghost" disabled={localizing || item.import_status === 'importing'} loading={localizing} onClick={retrySave}>{copy('retrySave')}</Button>
+        </div>}
+        {retryError && <p role="alert" className="omnimux-inspiration-error-text">{retryError}</p>}
         {localizing && <p role="status" className="omnimux-post-help">{copy('savingPost')}</p>}
         {media.map(asset => <article key={asset.id} ref={node => node ? mediaNodes.current.set(asset.index, node) : mediaNodes.current.delete(asset.index)} className="omnimux-post-media" data-media-id={asset.id}>
           <div className="omnimux-inspiration-modal-player-box omnimux-post-media-viewer">
-            {asset.type === 'video' ? <video ref={node => node ? videos.current.set(asset.index, node) : videos.current.delete(asset.index)} src={asset.url} poster={asset.poster || pickCoverSrc(item) || undefined} hidden={Boolean(failedMedia[asset.id])} controls playsInline preload="metadata" className="omnimux-inspiration-player-frame" aria-label={asset.label} onError={() => setFailedMedia(value => ({ ...value, [asset.id]: true }))} onLoadedMetadata={event => { const node = event.currentTarget; setDimensions(value => ({ ...value, [asset.index]: { width: node.videoWidth, height: node.videoHeight, duration: node.duration } })) }} />
+            {asset.missing ? <p className="omnimux-post-help" role="status">{asset.label} · {copy('mediaMissing')}{asset.error && <span>：{asset.error}</span>}</p>
+              : asset.type === 'video' ? <video ref={node => node ? videos.current.set(asset.index, node) : videos.current.delete(asset.index)} src={asset.url} poster={asset.poster || pickCoverSrc(item) || undefined} hidden={Boolean(failedMedia[asset.id])} controls playsInline preload="metadata" className="omnimux-inspiration-player-frame" aria-label={asset.label} onError={() => setFailedMedia(value => ({ ...value, [asset.id]: true }))} onLoadedMetadata={event => { const node = event.currentTarget; setDimensions(value => ({ ...value, [asset.index]: { width: node.videoWidth, height: node.videoHeight, duration: node.duration } })) }} />
               : <Button className="omnimux-post-image-open" variant="ghost" aria-label={`${copy('openImage')} ${asset.label}`} onClick={() => { setImage(asset); setZoom(1) }}><img src={asset.url} alt={asset.title || asset.label} className="omnimux-inspiration-modal-cover-bg" onError={() => setFailedImages(value => ({ ...value, [asset.id]: true }))} onLoad={event => { const node = event.currentTarget; setDimensions(value => ({ ...value, [asset.index]: { width: node.naturalWidth, height: node.naturalHeight } })) }} /><span className="omnimux-post-image-caption"><ZoomIn size={14} />{copy('openImage')}</span></Button>}
           {failedMedia[asset.id] && pickCoverSrc(item) && <img src={pickCoverSrc(item)} alt={copy('videoCover')} className="omnimux-inspiration-modal-cover-bg" />}
           </div>
           {failedImages[asset.id] && <p role="alert" className="omnimux-inspiration-error-text">{copy('imageUnavailable')}</p>}
           {failedMedia[asset.id] && <p className="omnimux-inspiration-player-notice" role="alert">{t('modal.video.unplayable')}</p>}
-          <div className="omnimux-post-asset-footer"><div><strong>{asset.label}</strong><p>{dimensions[asset.index]?.width > 0 && `${dimensions[asset.index].width} × ${dimensions[asset.index].height}`}{asset.type === 'video' && dimensions[asset.index]?.duration > 0 && ` · ${Math.round(dimensions[asset.index].duration)} ${copy('seconds')}`}</p></div><div className="omnimux-post-actions"><Button variant="ghost" size="sm" leadingIcon={<Sparkles size={14} />} onClick={() => chooseTarget({ scope: 'media', media_index: asset.index })}>{copy(asset.type === 'video' ? 'analyzeVideo' : 'analyzeImage')}</Button><ReferenceButton disabled={saving} selected={hasReference({ kind: 'media', media_index: asset.index })} onClick={() => toggleReference({ kind: 'media', media_index: asset.index })} t={t} /></div></div>
+          <div className="omnimux-post-asset-footer"><div><strong>{asset.label}</strong><p>{dimensions[asset.index]?.width > 0 && `${dimensions[asset.index].width} × ${dimensions[asset.index].height}`}{asset.type === 'video' && dimensions[asset.index]?.duration > 0 && ` · ${Math.round(dimensions[asset.index].duration)} ${copy('seconds')}`}</p></div><div className="omnimux-post-actions"><Button variant="ghost" size="sm" disabled={asset.missing} leadingIcon={<Sparkles size={14} />} onClick={() => chooseTarget({ scope: 'media', media_index: asset.index })}>{copy(asset.type === 'video' ? 'analyzeVideo' : 'analyzeImage')}</Button><ReferenceButton disabled={saving || asset.missing} selected={hasReference({ kind: 'media', media_index: asset.index })} onClick={() => toggleReference({ kind: 'media', media_index: asset.index })} t={t} /></div></div>
         </article>)}
         {!media.length && resolveTikTokEmbedUrl(item.source_url) && <iframe className="omnimux-post-embed" src={resolveTikTokEmbedUrl(item.source_url)} title={preview.title} allowFullScreen />}
         {!media.length && !body && pickCoverSrc(item) && <img className="omnimux-post-orphan-cover" src={pickCoverSrc(item)} alt={copy('videoCover')} />}
@@ -281,14 +311,14 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
       <section className={`omnimux-post-analysis omnimux-inspiration-modal-deconstruction-panel ${mobilePane === 'analysis' ? 'is-active' : ''}`} aria-label={copy('analysis')}>
         <header className="omnimux-post-analysis-header"><h3><Sparkles size={17} />{copy('analysis')}</h3><span className="omnimux-post-meta">{copy('separate')}</span></header>
         <div className="omnimux-post-targets" role="group" aria-label={copy('scope')}>
-          {[{ scope: 'post' }, ...(body ? [{ scope: 'body' }] : []), ...media.map(asset => ({ scope: 'media', media_index: asset.index }))].map(value => <Button key={analysisTargetKey(value)} size="sm" variant={key === analysisTargetKey(value) ? 'secondary' : 'ghost'} aria-pressed={key === analysisTargetKey(value)} onClick={() => chooseTarget(value)}>{targetLabel(value)}</Button>)}
+          {[{ scope: 'post' }, ...(body ? [{ scope: 'body' }] : []), ...media.map(asset => ({ scope: 'media', media_index: asset.index }))].map(value => <Button key={analysisTargetKey(value)} size="sm" disabled={value.scope === 'media' && media.find(asset => asset.index === value.media_index)?.missing} variant={key === analysisTargetKey(value) ? 'secondary' : 'ghost'} aria-pressed={key === analysisTargetKey(value)} onClick={() => chooseTarget(value)}>{targetLabel(value)}</Button>)}
         </div>
         <div className="omnimux-post-analysis-scroll">
           <h2 className="omnimux-post-scope-title">{targetLabel(target)}</h2>
           {configuring ? <>
           <p className="omnimux-post-help">{copy('analysisIntro')}</p>
           <div className="omnimux-post-directions">{analysisDirections().map(value => <label className="omnimux-post-direction" key={value}><input type="checkbox" checked={directions.includes(value)} onChange={() => setDirections(current => current.includes(value) ? current.filter(entry => entry !== value) : [...current, value])} /><span><strong>{copy(`direction.${value}`)}</strong><small>{copy(`directionHint.${value}`)}</small></span></label>)}</div>
-          <Button variant="primary" leadingIcon={<Sparkles size={14} />} loading={runningKey === key} disabled={Boolean(runningKey) || !directions.length || item.import_status === 'importing'} onClick={analyze}>{copy(record ? 'reanalyze' : 'analyzeTarget')}</Button>
+          <Button variant="primary" leadingIcon={<Sparkles size={14} />} loading={runningKey === key} disabled={Boolean(runningKey) || !directions.length || item.import_status === 'importing' || (target.scope === 'post' && missingMedia) || (target.scope === 'media' && media.find(asset => asset.index === target.media_index)?.missing)} onClick={analyze}>{copy(record ? 'reanalyze' : 'analyzeTarget')}</Button>
           </> : <Button variant="ghost" size="sm" leadingIcon={<RotateCcw size={14} />} onClick={() => setConfigureKey(key)}>{copy('reanalyze')}</Button>}
           {(analysisErrors[key] || record?.error) && <p className="omnimux-inspiration-error-text" role="alert">{analysisErrors[key] || record.error}</p>}
           {record?.status === 'stale' && <p role="status" className="omnimux-post-warning">{copy('staleAnalysis')}</p>}

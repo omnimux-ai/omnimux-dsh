@@ -109,6 +109,14 @@ test('the selected saved local URL identifies the image after media order change
   assert.equal(await readFile(result.files[0].path, 'utf8'), 'image_2-original')
 })
 
+test('a missing captured slot cannot use a leftover ordinal path for a different picture', async (t) => {
+  const input = await world(t)
+  input.item.media_items[0] = { type: 'image', url: '', status: 'missing', source_id: 'unavailable' }
+  await assert.rejects(prepareCreationMedia({ ...input, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] } }), /尚未保存/)
+  assert.deepEqual(await readdir(input.outputDir), [])
+  assert.equal(await readFile(input.item.local_paths.image_1, 'utf8'), 'image_1-original')
+})
+
 test('a legacy picture URL must match a saved owned path and cannot fall back to a different cover', async (t) => {
   const input = await world(t)
   input.paths.coversDir = join(input.paths.dir, 'media/covers')

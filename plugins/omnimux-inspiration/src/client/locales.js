@@ -1,4 +1,8 @@
 export const zh = {
+  'post.partialSave': '部分保存',
+  'post.retrySave': '重试补齐',
+  'post.mediaMissing': '未保存',
+  'post.saveRetryFailed': '补齐未完成，请重试',
   'post.savedReview': '原帖已保存，内容与素材已更新，请确认后重新选择参考或重试。',
   'post.savingPost': '正在保存原帖与素材…',
   'post.staleAnalysis': '原帖内容或素材已变化，请重新分析当前对象。',
@@ -319,7 +323,7 @@ export const zh = {
   'add.success': '已添加至灵感社区',
   'add.importedToast': '已导入到本地灵感库',
   'add.error': '抓取或解析失败',
-  'add.degradedNotice': '已按链接入库，未获取到可下载视频（该链接暂无公开直链，稍后可再次导入重试）',
+  'add.degradedNotice': '部分保存，内容或素材尚未齐全，可重试补齐',
   'add.duplicateVideoHint': '库中已有该链接，但未取得视频，是否重新解析？',
   'add.reimportVideo': '重新解析并获取视频',
   'add.status.resolving': '解析中…',
@@ -476,6 +480,10 @@ export const zh = {
 }
 
 export const en = {
+  'post.partialSave': 'Partially saved',
+  'post.retrySave': 'Retry missing content',
+  'post.mediaMissing': 'Not saved',
+  'post.saveRetryFailed': 'Could not complete the save. Try again.',
   'post.savedReview': 'The original post is saved and its content changed. Review it and choose references again.',
   'post.savingPost': 'Saving the original post and media…',
   'post.staleAnalysis': 'The post or media changed. Analyze this target again.',
@@ -796,7 +804,7 @@ export const en = {
   'add.success': 'Saved to community',
   'add.importedToast': 'Imported to your local library',
   'add.error': 'Failed to fetch or parse',
-  'add.degradedNotice': 'Saved as a link — no downloadable video was found for this URL (re-import later to retry)',
+  'add.degradedNotice': 'Partially saved. Some content or media is missing; retry to complete it.',
   'add.duplicateVideoHint': 'This link is already saved without a video. Re-resolve it now?',
   'add.reimportVideo': 'Re-resolve and fetch video',
   'add.status.resolving': 'Resolving…',

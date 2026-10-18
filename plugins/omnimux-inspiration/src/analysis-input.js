@@ -47,6 +47,12 @@ export function analysisMediaItems(item) {
   return []
 }
 
+/** Missing captured slots retain their index but never authorize a media input. */
+export function isAvailableMedia(media) {
+  return Boolean(media && ['image', 'video'].includes(media.type)
+    && (media.status === undefined || media.status === 'saved') && typeof media.url === 'string' && media.url.trim())
+}
+
 /** Same target and directions produce the same identity on the browser and server. */
 export function analysisInputFingerprint(item, target) {
   const all = analysisMediaItems(item)
