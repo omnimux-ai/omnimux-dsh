@@ -240,7 +240,7 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
         if (!reference) { setDraftError(copy('prepareFailed')); return }
         const result = await onReplicate?.({ ...local.savedRow, ...(updated?.id ? updated : {}), creation_reference: reference })
         if (requestIdentity.current !== identity) return
-        if (result?.ok === false) { setDraftError(result.error || copy('prepareFailed')); return }
+        if (result?.ok !== true) { setDraftError(result?.error || copy('prepareFailed')); return }
         setDrawer(false)
         onClose?.()
       }

@@ -482,3 +482,27 @@ it('locks every draft and external reference control until a pending save finish
   assert.equal(drawer.querySelectorAll('textarea')[1].value, originalText)
   assert.ok([...drawer.querySelectorAll('textarea, input')].every(node => !node.disabled), 'editing resumes after the saved reply')
 })
+
+it('retains the prepared draft and drawer when the handoff callback has no success receipt', async () => {
+  const item = { id: 'undefined-handoff', title: '交接结果', content: '选中的原帖正文', is_local: true }
+  let closes = 0
+  const handedOff = []
+  const { document, window } = await mountRerenderable(item, { onClose: () => { closes++ }, onReplicate: async row => { handedOff.push(row) } })
+  globalThis.fetch = async (_url, init) => {
+    if (init.method === 'GET') return { ok: true, status: 200, json: async () => ({ data: item }) }
+    const { draft } = JSON.parse(init.body)
+    return { ok: true, status: 200, json: async () => ({ data: { ...item, creation_draft: draft, creation_reference: { id: 'prepared-undefined', text: draft.text } } }) }
+  }
+  const click = async node => React.act(async () => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+  await click(document.querySelector('.omnimux-post-original [aria-pressed]'))
+  await click(document.querySelector('.omnimux-post-reference-bar button'))
+  const drawer = document.querySelector('.omnimux-post-creation-drawer')
+  const text = drawer.querySelectorAll('textarea')[1].value
+  await click([...drawer.querySelectorAll('button')].find(node => node.textContent === zh['post.useInChat']))
+  assert.equal(handedOff.length, 1)
+  assert.equal(handedOff[0].creation_reference.id, 'prepared-undefined')
+  assert.equal(closes, 0)
+  assert.ok(document.querySelector('.omnimux-post-creation-drawer'))
+  assert.equal(drawer.querySelectorAll('textarea')[1].value, text)
+  assert.equal(drawer.querySelector('[role="alert"]').textContent, zh['post.prepareFailed'])
+})
