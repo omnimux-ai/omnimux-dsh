@@ -542,7 +542,7 @@ export function createRivalAccountsStore(opts = {}) {
       if (budget.paused.global || overAccountCap || overGlobalCap) return row
       // `refresh_interval_hours === 0` means "manual only": the account has no
       // automatic schedule to resume, so it is not given one.
-      const nextAt = finiteNumber(row.refresh_interval_hours, 0) > 0 ? `${day}T00:00:00.000Z` : null
+      const nextAt = finiteNumber(row.refresh_interval_hours, 0) > 0 ? new Date(`${day}T00:00:00`).toISOString() : null
       changed = true
       return buildAccountRow(
         {
