@@ -69,6 +69,32 @@ describe('local inspiration collections', () => {
     assert.throws(() => store.list({ collection_id: 'missing' }), hasStatus(404))
   })
 
+  it('derives read-only membership for get/list/snapshots after re-import without persisting it to items', async () => {
+    const { store, paths, bytes } = setup()
+    const group = store.createCollection('重新导入归属', ['item-1', 'item-2']).data
+    assert.equal(store.get('item-1').collection_id, group.id)
+    assert.equal(Object.hasOwn(store.get('item-3'), 'collection_id'), false)
+    assert.equal(store.list().items.find((row) => row.id === 'item-1').collection_id, group.id)
+    assert.ok(store.list({ collection_id: group.id }).items.every((row) => row.collection_id === group.id))
+    assert.ok(store.list({ root_only: true }).items.every((row) => !Object.hasOwn(row, 'collection_id')))
+    const snapshot = store.snapshotForRead()
+    store.cacheReadSnapshot(snapshot)
+    assert.equal(store.get('item-1', snapshot).collection_id, group.id)
+    await store.replace('item-1', { title: '重新导入已完成' })
+    assert.equal(store.get('item-1').collection_id, group.id)
+    assert.equal(store.get('item-1').title, '重新导入已完成')
+    store.update('item-1', { ...store.get('item-1'), collection_id: 'forged-collection' })
+    assert.equal(store.get('item-1').collection_id, group.id)
+    assert.ok(JSON.parse(bytes()).items.every((row) => !Object.hasOwn(row, 'collection_id')))
+    const latest = store.snapshotForRead()
+    store.cacheReadSnapshot(latest)
+    const removed = createLocalStore({ paths }).removeCollectionItems(group.id, ['item-1'])
+    assert.equal(Object.hasOwn(store.get('item-1', latest), 'collection_id'), false)
+    assert.equal(Object.hasOwn(store.list().items.find((row) => row.id === 'item-1'), 'collection_id'), false)
+    assert.equal(createLocalStore({ paths }).get('item-2').collection_id, group.id)
+    assert.equal(removed.data.item_count, 1)
+  })
+
   it('rejects invalid names and foreign/missing members atomically, and appends duplicate same-group members once', () => {
     const { store, bytes } = setup()
     for (const title of ['', '  ', '字'.repeat(21), '😀'.repeat(21), null]) assert.throws(() => store.createCollection(title, ['item-1', 'item-2']), hasStatus(400))

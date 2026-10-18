@@ -868,7 +868,7 @@ export function maybeEnsureVideoCover(item, store, paths) {
 }
 
 export function handleList({ url, store }) {
-  const failed = sweepStaleImports(store)
+  sweepStaleImports(store)
   const q = url.searchParams.get('q') || undefined
   const platform = url.searchParams.get('platform') || undefined
   const type = url.searchParams.get('type') || undefined
@@ -909,10 +909,7 @@ export function handleList({ url, store }) {
   })
   const platforms = typeof store.platforms === 'function' ? store.platforms() : []
   const isLean = url.searchParams.get('projection') === 'lean'
-  const rawItems = failed
-    ? result.items.map((row) => failed.get(String(row.id)) || row)
-    : result.items
-  const resolvedItems = rawItems.map((row) => maybeEnsureVideoCover(row, store, store?.paths))
+  const resolvedItems = result.items.map((row) => maybeEnsureVideoCover(row, store, store?.paths))
   const items = isLean
     ? resolvedItems.map((row) => {
         if (!row || typeof row !== 'object' || !row.deconstruction) return row
@@ -2174,12 +2171,11 @@ export function handleGetItem({ id, store }) {
   // Both halves of this poll — the sweep and the row lookup — read the same
   // library file, and a poll fires every 2.5s per running row. The snapshot makes
   // them share one read: taken before the sweep, kept only when the sweep changed
-  // nothing (a sweep that failed a row already answered the lookup with the row it
-  // patched).
+  // nothing. A changed row is read again with its authoritative collection view.
   const snapshot = store.snapshotForRead ? store.snapshotForRead() : null
   const failed = sweepStaleImports(store)
   if (snapshot && !failed) store.cacheReadSnapshot?.(snapshot)
-  const rawItem = failed?.get(String(id)) || store.get(id, snapshot ?? undefined)
+  const rawItem = store.get(id, snapshot ?? undefined)
   const item = rawItem ? maybeEnsureVideoCover(rawItem, store, store?.paths) : rawItem
   if (item) return { status: 200, body: { data: item } }
   // A cloud publish has no local row to read — its progress lives in the job

@@ -869,6 +869,35 @@ describe('HTTP entry: local inspiration collections', () => {
     assert.equal(cloudCalls.length, 0)
   })
 
+  it('returns authoritative read-only membership even when a read sweeps an interrupted import', async () => {
+    const world = await collectionWorld()
+    const made = await world.call('POST', '/collections', { title: '成员归属', item_ids: ['local-1', 'local-2'] })
+    const id = made.body.data.id
+    assert.equal((await world.call('GET', '/local-1')).body.data.collection_id, id)
+    assert.equal(Object.hasOwn((await world.call('GET', '/local-3')).body.data, 'collection_id'), false)
+    const file = resolveInspirationPaths({ homeDir: world.root }).libraryFile
+    function interrupt() {
+      const library = JSON.parse(readFileSync(file, 'utf8'))
+      const row = library.items.find((item) => item.id === 'local-1')
+      row.import_status = 'importing'
+      row.import_started_at = '2000-01-01T00:00:00.000Z'
+      writeFileSync(file, JSON.stringify(library))
+    }
+    interrupt()
+    const single = (await world.call('GET', '/local-1')).body.data
+    assert.equal(single.import_status, 'failed')
+    assert.equal(single.collection_id, id)
+    interrupt()
+    const listed = (await world.call('GET', '')).body.data.items.find((row) => row.id === 'local-1')
+    assert.equal(listed.import_status, 'failed')
+    assert.equal(listed.collection_id, id)
+    await world.call('PATCH', '/local-1', { content: '仍可编辑原帖' })
+    assert.ok(JSON.parse(readFileSync(file, 'utf8')).items.every((row) => !Object.hasOwn(row, 'collection_id')))
+    await world.call('POST', `/collections/${id}/remove-items`, { item_ids: ['local-1'] })
+    assert.equal(Object.hasOwn((await world.call('GET', '/local-1')).body.data, 'collection_id'), false)
+    assert.equal(cloudCalls.length, 0)
+  })
+
   it('rejects untrusted snapshots, malformed input, missing locals and cross-collection membership atomically', async () => {
     const world = await collectionWorld()
     const first = (await world.call('POST', '/collections', { title: '第一组', item_ids: ['local-1', 'local-2'] })).body.data

@@ -186,6 +186,21 @@ export function localMediaPaths(paths) {
   return [...new Set(Object.values(paths || {}).filter((value) => typeof value === 'string' && value.length > 0))]
 }
 
+/** A read view derives membership solely from the authoritative collection store.
+ * @typedef {LocalInspirationRecord & {readonly collection_id?: string}} LocalInspirationView
+ */
+
+/** @param {LocalInspirationRecord[]} items
+ * @param {import('./local-collections.js').InspirationCollection[]} collections
+ * @returns {LocalInspirationView[]}
+ */
+function membershipViews(items, collections) {
+  /** @type {Map<string, string>} */
+  const ownerById = new Map()
+  for (const collection of collections) for (const id of collection.item_ids) ownerById.set(id, collection.id)
+  return items.map((item) => ownerById.has(item.id) ? { ...item, collection_id: ownerById.get(item.id) } : item)
+}
+
 /** Apply the same predicates to loose rows and collection members.
  * @param {LocalInspirationRecord[]} source
  * @param {Record<string, any>} query
@@ -410,15 +425,16 @@ export function createLocalStore(opts = {}) {
   let cachedSnapshot = null
 
   /**
-   * @returns {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }}
+   * @returns {{ items: LocalInspirationView[], stat: import('node:fs').Stats | null }}
    */
   function snapshotForRead() {
-    return { items: readAll(), stat: statOf() }
+    const library = readLibrary()
+    return { items: membershipViews(library.items, library.collections), stat: statOf() }
   }
 
   /**
    * @param {unknown} snapshot
-   * @returns {LocalInspirationRecord[] | null} the snapshot's items, or null when they are stale
+   * @returns {LocalInspirationView[] | null} the snapshot's items, or null when they are stale
    */
   function snapshotItems(snapshot) {
     const usable = snapshot && typeof snapshot === 'object' && Array.isArray(snapshot.items)
@@ -505,7 +521,7 @@ export function createLocalStore(opts = {}) {
     /**
      * Read the library once, as a snapshot a later read in the same request can
      * reuse. Optional for callers: `get(id)` without it reads the file itself.
-     * @returns {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }}
+     * @returns {{ items: LocalInspirationView[], stat: import('node:fs').Stats | null }}
      */
     snapshotForRead,
 
@@ -513,7 +529,7 @@ export function createLocalStore(opts = {}) {
      * Make a snapshot reusable. Only the caller that took the snapshot can know
      * whether anything has written the library since — the sweep endpoint does,
      * and passes it only when the sweep itself changed nothing.
-     * @param {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }} snapshot
+     * @param {{ items: LocalInspirationView[], stat: import('node:fs').Stats | null }} snapshot
      */
     cacheReadSnapshot(snapshot) {
       cachedSnapshot = snapshot && typeof snapshot === 'object' ? snapshot : null
@@ -634,7 +650,7 @@ export function createLocalStore(opts = {}) {
       const paginated = items.slice(start, start + pageSize)
 
       return {
-        items: paginated,
+        items: membershipViews(paginated, library.collections),
         total,
         page,
         page_size: pageSize,
@@ -645,15 +661,17 @@ export function createLocalStore(opts = {}) {
 
     /**
      * @param {string} id
-     * @param {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }} [snapshot]
+     * @param {{ items: LocalInspirationView[], stat: import('node:fs').Stats | null }} [snapshot]
      *   a library read the caller already paid for (see `snapshotForRead`); ignored
      *   when it is stale, which keeps the parameter a pure optimization
-     * @returns {LocalInspirationRecord | null}
+     * @returns {LocalInspirationView | null}
      */
     get(id, snapshot) {
       const cached = snapshot === undefined ? null : snapshotItems(snapshot)
-      const items = cached || readAll()
-      return items.find((item) => item.id === id) || null
+      if (cached) return cached.find((item) => item.id === id) || null
+      const library = readLibrary()
+      const item = library.items.find((row) => row.id === id)
+      return item ? membershipViews([item], library.collections)[0] : null
     },
 
     /**
@@ -748,7 +766,7 @@ export function createLocalStore(opts = {}) {
 
     /**
      * @param {string} id
-     * @param {Partial<LocalInspirationRecord>} patch
+     * @param {Partial<LocalInspirationRecord> & {collection_id?: unknown}} patch
      */
     update(id, patch) {
       const items = readAll()
@@ -757,9 +775,11 @@ export function createLocalStore(opts = {}) {
       const current = items[index]
       const now = new Date().toISOString()
       const nextFavorite = patch.is_favorite !== undefined ? Boolean(patch.is_favorite) : current.is_favorite
+      // Membership is a read projection, never an editable item field.
+      const { collection_id: _collectionId, ...writablePatch } = patch
       const updated = {
         ...current,
-        ...patch,
+        ...writablePatch,
         id: current.id,
         is_favorite: nextFavorite,
         favorited_at: nextFavorite
