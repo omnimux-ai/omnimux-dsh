@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { analysisInputFingerprint, sourceFingerprint } from '../analysis-input.js'
-import { analysisDirections, analysisTargetKey, getBodyTranslation, getPostBody, getPostMedia, getTargetAnalysis } from './post-detail.js'
+import { analysisDirections, analysisTargetKey, getBodyTranslation, getPostBody, getPostMedia, getTargetAnalysis, hasRunningAnalysis, decideAnalysisPollOutcome } from './post-detail.js'
 
 test('post reading never substitutes a generated script for missing original text', () => {
   assert.equal(getPostBody({ title: '标题', deconstruction: { narrative: '生成故事' } }), '')
@@ -35,4 +35,14 @@ test('body translation cache belongs to the original text only', () => {
   assert.equal(getBodyTranslation({ ...item, content: '新原文' }), null)
   assert.equal(getBodyTranslation({ script_translation: item.script_translation }), null)
   assert.deepEqual(analysisDirections('image'), ['content', 'expression', 'creative'])
+})
+
+test('analysis polling follows every running scope and retains state on unreadable responses', () => {
+  const item = { id: 'poll-item', analysis_results: { post: { status: 'done' }, 'media:2': { status: 'running', input_fingerprint: 'old-input' } } }
+  assert.equal(hasRunningAnalysis(item), true, 'even a stale input still owns its server execution lock')
+  assert.deepEqual(decideAnalysisPollOutcome({ ok: true, body: { data: item } }), { action: 'pending', item })
+  item.analysis_results['media:2'].status = 'failed'
+  assert.deepEqual(decideAnalysisPollOutcome({ ok: true, body: { data: item } }), { action: 'settled', item })
+  for (const response of [null, { ok: false, status: 500 }, { ok: true, body: {} }, { ok: true, body: { data: [] } }]) assert.equal(decideAnalysisPollOutcome(response).action, 'keep')
+  assert.equal(decideAnalysisPollOutcome({ ok: false, status: 404 }).action, 'gone')
 })

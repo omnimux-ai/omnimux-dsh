@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge, Button, CopyButton, Drawer, IconButton, InputField, Tabs } from 'dsh-ui-kit'
 import { ArrowRight, Check, ExternalLink, FileText, Film, Minus, Plus, RotateCcw, Sparkles, X, ZoomIn } from 'lucide-react'
-import { getPostBody, getPostMedia, analysisTargetKey, getTargetAnalysis, getBodyTranslation, analysisDirections } from './post-detail.js'
+import { getPostBody, getPostMedia, analysisTargetKey, getTargetAnalysis, getBodyTranslation, analysisDirections, hasRunningAnalysis, decideAnalysisPollOutcome } from './post-detail.js'
 import { getInspirationPreviewData, parseDocAnalysis, renderPlainBreakdownText, scriptCopyText, deconstructionCopyText } from './inspiration-preview-data.js'
-import { triggerAnalyzeInspiration, translateInspiration, saveCreationDraft, prepareCreationReferences, ensureLocalInspiration, pickCoverSrc, resolveTikTokEmbedUrl } from './api.js'
+import { triggerAnalyzeInspiration, translateInspiration, saveCreationDraft, prepareCreationReferences, ensureLocalInspiration, getLocalInspiration, pickCoverSrc, resolveTikTokEmbedUrl } from './api.js'
+import { createImportPoller } from './import-poller.js'
 import { formatPlatformName } from './feed-helpers.js'
 import { parseShotTimeWindow } from '../structure-script.js'
 import { createEmptyCreationDraft, creationBasis, reconcileCreationDraft, validateCreationDraft, confirmCreationDraftBasis } from '../creation-draft.js'
@@ -70,6 +71,13 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   })
   const [directions, setDirections] = useState(() => analysisDirections())
   const [runningKey, setRunningKey] = useState('')
+  const submittingAnalysis = useRef(false)
+  const analysisReadVersion = useRef(0)
+  const analysisPoller = useRef(null)
+  const updateItem = useRef(onItemUpdated)
+  updateItem.current = onItemUpdated
+  const [statusReady, setStatusReady] = useState(item.is_local !== true)
+  const [statusError, setStatusError] = useState('')
   const [localizing, setLocalizing] = useState(false)
   const [configureKey, setConfigureKey] = useState('')
   const [analysisErrors, setAnalysisErrors] = useState({})
@@ -90,6 +98,7 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   const preview = getInspirationPreviewData(item)
   const key = analysisTargetKey(target)
   const record = getTargetAnalysis(item, target)
+  const analyzing = runningKey === key || item.analysis_results?.[key]?.status === 'running'
   const selectedResult = record?.result || null
   const configuring = !selectedResult || configureKey === key
   const historicalResult = record?.status === 'legacy' || record?.source === 'legacy_unknown'
@@ -105,6 +114,45 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
   function targetLabel(value) { return value.scope === 'post' ? copy('wholePost') : value.scope === 'body' ? copy('body') : media.find(entry => entry.index === value.media_index)?.label || copy('media') }
 
   const mediaIdentity = media.map(asset => `${asset.id}:${asset.url}`).join('\n')
+  useEffect(() => {
+    if (item.is_local !== true) { setStatusReady(true); return }
+    let current = true
+    setStatusReady(false)
+    const apply = (next) => {
+      if (!current) return
+      setStatusReady(true); setStatusError('')
+      updateItem.current?.(next)
+    }
+    const fetchItem = async () => {
+      const version = analysisReadVersion.current
+      let response
+      try { response = await getLocalInspiration(id) }
+      catch (error) { if (current) setStatusError(copy('statusSyncFailed')); throw error }
+      if (!current || version !== analysisReadVersion.current) return null
+      if (!response.ok || String(response.body?.data?.id) !== id) {
+        setStatusError(copy('statusSyncFailed'))
+        return response.status === 404 ? response : null
+      }
+      return response
+    }
+    const poller = createImportPoller({ interpret: decideAnalysisPollOutcome, deps: { fetchItem, onItem: apply } })
+    analysisPoller.current = poller
+    poller.start()
+    // Read once on reopen, then keep watching only while the server is busy.
+    fetchItem().then(response => {
+      if (!current) return
+      const outcome = decideAnalysisPollOutcome(response)
+      if (outcome.item) apply(outcome.item)
+      if (outcome.action === 'pending' || outcome.action === 'keep') poller.track(id)
+    }).catch(() => {
+      if (current) { setStatusError(copy('statusSyncFailed')); poller.track(id) }
+    })
+    return () => { current = false; poller.dispose(); analysisPoller.current = null }
+  }, [id, item.is_local])
+  const serverRunning = hasRunningAnalysis(item)
+  useEffect(() => {
+    if (runningKey || serverRunning) analysisPoller.current?.track(id)
+  }, [id, runningKey, serverRunning])
   useEffect(() => {
     setFailedMedia({}); setFailedImages({}); setDimensions({})
     setImage(current => current && media.some(asset => asset.id === current.id && asset.url === current.url) ? current : null)
@@ -181,8 +229,10 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
     } finally { if (requestIdentity.current === postIdentity) setLocalizing(false) }
   }
   const analyze = async () => {
-    if (runningKey || !directions.length) return
+    if (submittingAnalysis.current || runningKey || serverRunning || !statusReady || !directions.length) return
     const identity = postIdentity
+    submittingAnalysis.current = true
+    analysisReadVersion.current++
     setRunningKey(key); setAnalysisErrors(current => ({ ...current, [key]: '' }))
     try {
       const local = await ensureCurrent()
@@ -190,10 +240,11 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
       if (target.scope === 'media' && local.mediaChanged) { setAnalysisErrors(current => ({ ...current, [key]: copy('savedReview') })); return }
       const response = await triggerAnalyzeInspiration(local.savedRow.id, { ...target, directions })
       if (requestIdentity.current !== identity) return
+      analysisReadVersion.current++
       if (response.body?.data) { onItemUpdated?.(response.body.data); setConfigureKey('') }
       if (!response.ok) setAnalysisErrors(current => ({ ...current, [key]: response.body?.error || copy('analysisFailed') }))
     } catch (error) { if (requestIdentity.current === identity) setAnalysisErrors(current => ({ ...current, [key]: error.message || copy('analysisFailed') })) }
-    finally { if (requestIdentity.current === identity) setRunningKey('') }
+    finally { submittingAnalysis.current = false; if (requestIdentity.current === identity) setRunningKey('') }
   }
   const translate = async () => {
     if (bodyTranslation) { setTranslated(value => !value); return }
@@ -288,11 +339,12 @@ export function InspirationPostDetail({ item, t, onItemUpdated, onReplicate, rep
           {configuring ? <>
           <p className="omnimux-post-help">{copy('analysisIntro')}</p>
           <div className="omnimux-post-directions">{analysisDirections().map(value => <label className="omnimux-post-direction" key={value}><input type="checkbox" checked={directions.includes(value)} onChange={() => setDirections(current => current.includes(value) ? current.filter(entry => entry !== value) : [...current, value])} /><span><strong>{copy(`direction.${value}`)}</strong><small>{copy(`directionHint.${value}`)}</small></span></label>)}</div>
-          <Button variant="primary" leadingIcon={<Sparkles size={14} />} loading={runningKey === key} disabled={Boolean(runningKey) || !directions.length || item.import_status === 'importing'} onClick={analyze}>{copy(record ? 'reanalyze' : 'analyzeTarget')}</Button>
-          </> : <Button variant="ghost" size="sm" leadingIcon={<RotateCcw size={14} />} onClick={() => setConfigureKey(key)}>{copy('reanalyze')}</Button>}
+          <Button variant="primary" leadingIcon={<Sparkles size={14} />} loading={analyzing} disabled={Boolean(runningKey) || serverRunning || !statusReady || !directions.length || item.import_status === 'importing'} onClick={analyze}>{copy(analyzing ? 'parsing' : record ? 'reanalyze' : 'analyzeTarget')}</Button>
+          </> : <Button variant="ghost" size="sm" leadingIcon={<RotateCcw size={14} />} loading={analyzing} disabled={Boolean(runningKey) || serverRunning || !statusReady} onClick={() => setConfigureKey(key)}>{copy(analyzing ? 'parsing' : 'reanalyze')}</Button>}
+          {statusError && <p className="omnimux-inspiration-error-text" role="alert">{statusError}</p>}
           {(analysisErrors[key] || record?.error) && <p className="omnimux-inspiration-error-text" role="alert">{analysisErrors[key] || record.error}</p>}
           {record?.status === 'stale' && <p role="status" className="omnimux-post-warning">{copy('staleAnalysis')}</p>}
-          {record?.status === 'running' && <p role="status" className="omnimux-post-help">{copy('running')}</p>}
+          {analyzing && <p role="status" className="omnimux-post-help">{copy('running')}</p>}
           {record?.status === 'partial' && <p className="omnimux-post-warning" role="status">{copy('partial')}</p>}
           {selectedResult && <div className="omnimux-post-result" data-analysis-scope={key}>
             <div className="omnimux-post-section-heading omnimux-inspiration-deconstruct-heading"><span className="omnimux-post-meta">{historicalResult ? copy('historical') : [copy('modelResult'), record?.model].filter(Boolean).join(' · ')}</span><CopyButton text={deconstructionCopyText(getInspirationPreviewData({ analysis: selectedResult })) || selectedResult.summary || ''} label={t('modal.deconstruction.copy')} size="sm" variant="ghost" /></div>
