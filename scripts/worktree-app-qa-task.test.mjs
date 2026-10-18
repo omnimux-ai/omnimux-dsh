@@ -89,8 +89,10 @@ function bindingFixture() {
     serverEntry: { path: 'src/index.js', sha256: serverHash },
     clientBundle: { path: 'lib/client.js', sha256: clientHash, bytes: 20 } };
   });
-  const installation = { ...shared, sourceRoot: root, privateRoot, profile: join(privateRoot, 'dsh/profiles/web'), packages };
-  const serverLoading = { ...shared, kind: 'task-server-loading', modules: packages.map(pkg => ({ name: pkg.name,
+  const runtimeExecutable = '/Applications/OmniMux QA.app/Contents/MacOS/OmniMux';
+  const installation = { ...shared, sourceRoot: root, privateRoot, profile: join(privateRoot, 'dsh/profiles/web'), packages, hostPeerExpectations: [],
+    runtimeExecutable, appAnchor: resolve(dirname(runtimeExecutable), '../Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json') };
+  const serverLoading = { ...shared, kind: 'task-server-loading', runtimeExecutable, peers: [], peerObserver: null, modules: packages.map(pkg => ({ name: pkg.name,
     path: pkg.serverEntry.path, sha256: pkg.serverEntry.sha256, loadedScriptSha256: pkg.serverEntry.sha256,
     loadedScriptUrl: pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href, matchingScriptCount: 1 })) };
   const clientLoading = { ...shared, kind: 'task-client-loading', bundles: packages.map(pkg => ({ plugin: pkg.name,
@@ -108,7 +110,10 @@ test('binding comparison requires exact task, candidate, installed payload, proc
     ['different candidate', value => { value.installation.candidateDigest = '0'.repeat(64); }],
     ['different input', value => { value.clientLoading.inputsDigest = '0'.repeat(64); }],
     ['different process', value => { value.serverLoading.pid++; }],
+    ['different runtime executable', value => { value.serverLoading.runtimeExecutable = '/other/runtime'; }],
     ['different task', value => { value.serverLoading.taskId = 'other'; }],
+    ['missing peer expectations', value => { delete value.installation.hostPeerExpectations; }],
+    ['missing actual peer observations', value => { delete value.serverLoading.peers; }],
     ['outside private installation', value => { value.installation.packages[0].installedRoot = '/outside'; }],
     ['duplicate installation roots', value => { value.installation.packages[1].installedRoot = value.installation.packages[0].installedRoot; }],
     ['missing server module', value => { value.serverLoading.modules.pop(); }],
@@ -131,4 +136,36 @@ test('ordinary dependency instances may share a name without merging their actua
   value.installation.packages.push(...['1.0.0', '2.0.0'].map(version => ({ name: 'dependency', version,
     installedRoot: join(value.installation.privateRoot, 'deps', version), payload: [{ path: 'package.json', sha256: '1'.repeat(64), size: 2 }] })));
   assert.equal(validateTaskRuntimeBinding(value).installation.dependencyCount, 2);
+});
+
+test('consumer requires actual peer receipts that bind declared dependency versions and installed bytes', () => {
+  const value = bindingFixture();
+  const installedRoot = join(value.installation.privateRoot, 'packages/helper');
+  const payload = [{ path: 'package.json', sha256: '6'.repeat(64), size: 30 },
+    { path: 'index.js', sha256: '7'.repeat(64), size: 10 }];
+  value.installation.packages.push({ name: 'helper', version: '1.2.3', installedRoot, payload });
+  const expectation = { parentName: 'omnimux', parentRoot: value.installation.packages[0].installedRoot,
+    name: 'helper', spec: '^1.0.0', optional: false, versionPolicy: 'semver', privateRoot: installedRoot };
+  value.installation.hostPeerExpectations = [expectation];
+  value.installation.peerProbe = { path: join(value.installation.profile, '.omnimux-task-peers.mjs'), sha256: '8'.repeat(64) };
+  value.serverLoading.peerObserver = { ...value.installation.peerProbe,
+    loadedScriptUrl: pathToFileURL(value.installation.peerProbe.path).href,
+    loadedScriptSha256: value.installation.peerProbe.sha256, matchingScriptCount: 1 };
+  const receipt = { ...expectation, status: 'resolved', scope: 'private', version: '1.2.3', packageRoot: installedRoot,
+    manifestPath: join(installedRoot, 'package.json'), manifestSha256: payload[0].sha256,
+    entryPath: join(installedRoot, 'index.js'), entrySha256: payload[1].sha256, anchorResolution: null };
+  value.serverLoading.peers = [receipt];
+  assert.equal(validateTaskRuntimeBinding(value).installation.peerCount, 1);
+  for (const change of [
+    target => { target.serverLoading.peers = []; },
+    target => { target.serverLoading.peers[0].version = '2.0.0'; },
+    target => { target.serverLoading.peers[0].entrySha256 = '0'.repeat(64); },
+    target => { target.serverLoading.peers[0].packageRoot = '/repository/node_modules/helper'; },
+    target => { target.serverLoading.peerObserver = null; },
+    target => { target.serverLoading.peerObserver.loadedScriptSha256 = '0'.repeat(64); },
+    target => { target.serverLoading.peerObserver.matchingScriptCount = 2; },
+  ]) {
+    const changed = structuredClone(value); change(changed);
+    assert.throws(() => validateTaskRuntimeBinding(changed), { code: 'TEST_APP_QA_TASK_BINDING' });
+  }
 });

@@ -19,6 +19,7 @@ import { captureCandidate, sealEvidence, validateEvidence } from './evidence-con
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startTestEnvironment, diagnoseWorktreeRoot } from './test-env-bootstrap.mjs';
 import { findChromePath, assertPng } from './worktree-web-qa.mjs';
+import { validateTaskPeerResolution } from './task-runtime-proof.mjs';
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = sourceRoot.split(`${sep}.worktrees${sep}`)[0];
@@ -785,6 +786,9 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
   if (typeof root !== 'string' || !Array.isArray(taskPlugins) || !taskPlugins.length
     || !installation || installation.sourceRoot !== root || installation.taskId !== taskId || installation.runId !== runId
     || installation.origin !== origin || !Number.isSafeInteger(installation.pid) || installation.pid <= 0
+    || typeof installation.runtimeExecutable !== 'string' || !installation.runtimeExecutable.startsWith('/')
+    || resolve(installation.runtimeExecutable) !== installation.runtimeExecutable
+    || installation.appAnchor !== resolve(dirname(installation.runtimeExecutable), '../Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json')
     || installation.base !== candidate?.base?.resolvedSha || installation.head !== candidate?.head?.resolvedSha
     || !digest(installation.candidateDigest) || installation.candidateDigest !== candidate?.candidate?.contentDigest
     || !digest(installation.inputsDigest) || installation.inputsDigest !== candidate?.inputs?.contentDigest
@@ -815,7 +819,16 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
       .some(key => proof[key] !== installation[key])) reject();
   }
   if (serverLoading.kind !== 'task-server-loading' || !Array.isArray(serverLoading.modules)
+    || serverLoading.runtimeExecutable !== installation.runtimeExecutable
     || !namesEqual(serverLoading.modules.map(item => item.name), expectedNames)) reject();
+  try { validateTaskPeerResolution(installation, serverLoading.peers); } catch { reject(); }
+  if (installation.hostPeerExpectations.length) {
+    const probe = installation.peerProbe, loaded = serverLoading.peerObserver;
+    if (!probe || !privatePath(probe.path) || dirname(probe.path) !== installation.profile || !digest(probe.sha256)
+      || !loaded || loaded.path !== probe.path || loaded.sha256 !== probe.sha256
+      || loaded.loadedScriptSha256 !== probe.sha256 || loaded.matchingScriptCount !== 1
+      || loaded.loadedScriptUrl !== pathToFileURL(probe.path).href) reject();
+  } else if (serverLoading.peerObserver !== null) reject();
   for (const pkg of plugins) {
     const loaded = serverLoading.modules.find(item => item.name === pkg.name);
     if (loaded.path !== pkg.serverEntry.path || loaded.sha256 !== pkg.serverEntry.sha256
@@ -836,7 +849,9 @@ export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, c
   }
   return { installation: { taskId, runId, sourceRoot: root, privateRoot: installation.privateRoot, profile: installation.profile,
     base: installation.base, head: installation.head, candidateDigest: installation.candidateDigest, inputsDigest: installation.inputsDigest,
-    pid: installation.pid, origin, dependencyCount: installation.packages.length - plugins.length,
+    pid: installation.pid, origin, runtimeExecutable: installation.runtimeExecutable, appAnchor: installation.appAnchor,
+    dependencyCount: installation.packages.length - plugins.length,
+    peerCount: installation.hostPeerExpectations.length,
     packages: plugins.map(({ name, version, installedRoot, payload, serverEntry, clientBundle }) => ({ name, version, installedRoot,
       publishedFiles: payload.length, serverEntry, ...(clientBundle ? { clientBundle } : {}) })) } };
 }
