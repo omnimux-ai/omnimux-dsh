@@ -173,6 +173,7 @@ describe('addCollectionToSession', () => {
     assert.equal(reveals.length, 1)
     assert.equal(prefills.length, 1)
     assert.equal(prefills[0].targetSessionId, 'sess-1')
+    assert.equal(prefills[0].mode, 'append', '必须使用 append 模式保留用户已有草稿/附件')
     assert.match(prefills[0].prompt, /夏日护肤/)
     assert.match(prefills[0].prompt, /insp_1/)
     assert.equal(windowObject.calls.filter(entry => entry[0] === 'setDraft').length, 0, '不得直接写输入框')
@@ -322,6 +323,7 @@ describe('addCollectionToSession', () => {
       ['attach-full', 'collection.sessionFailed'],
       ['attach-failed', 'collection.sessionFailed'],
       ['composer-missing', 'collection.sessionFailed'],
+      ['composer-busy', 'collection.sessionBusy'],
     ]
     for (const pair of cases) {
       resetCollectionAddLock()

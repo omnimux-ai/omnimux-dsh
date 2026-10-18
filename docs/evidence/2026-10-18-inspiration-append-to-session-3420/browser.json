@@ -1,0 +1,168 @@
+{
+  "kind": "browser-evidence-for-issue-3420",
+  "issue": 3420,
+  "title": "合集「加入会话」：打开会话栏并向已有草稿追加合集上下文",
+  "runId": "20261018T120206-nk5gs",
+  "createdAt": "2026-10-18T12:02:06.405Z",
+  "scope": "real-section-and-production-local-handlers + synthetic-host-seams-implementing-hub-append-contract + synthetic-attachment-fact; not-full-host-install",
+  "finalHead": "e3dd772f53578ffb7f7eb17d306ddc91afb493c6",
+  "identity": {
+    "sourceSha256": "75cb577ea1ca7cf0b01083610efa42306c724f2ef66ce8d2c98d1145047d94e5",
+    "bundleSha256": "f1a23f241d05910c65116e8d32e7032708271d5c7a3615c4b7f0644672e3b41d",
+    "head": "e3dd772f53578ffb7f7eb17d306ddc91afb493c6"
+  },
+  "origin": "http://127.0.0.1:49796",
+  "chrome": {
+    "kind": "independent-headless-chromium",
+    "pid": 96497,
+    "port": 49798
+  },
+  "collection": {
+    "id": "collection_4a75f0f7-bcc7-4467-9d60-6d56854e2856",
+    "title": "测试合集",
+    "item_ids": [
+      "qa-dance1",
+      "qa-dance2",
+      "qa-fashion1"
+    ]
+  },
+  "seamModel": {
+    "description": "The synthetic `__omnimuxSessionPrefill.queueSessionPrefill` stub implements the hub `mode:\"append\"` contract: read the live draft, append `prompt` after a blank line when the draft is non-empty (otherwise write prompt alone), ignore existing draft/attachments, and only a non-plain composer would return draft-protected. The real hub append implementation is covered by the hub unit tests (18 pass), not by this synthetic stub.",
+    "requestShape": {
+      "targetSessionId": "qa-session-1",
+      "mode": "append",
+      "hasAttach": true
+    }
+  },
+  "scenarioA": {
+    "precondition": {
+      "conversation": "collapsed",
+      "draft": "我的问题：先看舞蹈参考",
+      "attachments": 1
+    },
+    "result": {
+      "conversation": "open",
+      "draftBefore": "我的问题：先看舞蹈参考",
+      "draftAfter": "我的问题：先看舞蹈参考\n\n来源：OmniMux 灵感库 · 本地合集\n合集：测试合集\n合集 ID：collection_4a75f0f7-bcc7-4467-9d60-6d56854e2856\n成员条数：3\n成员清单：\n1. 舞蹈参考一（成员 id：qa-dance1；平台：tiktok；类型：image）\n2. 舞蹈参考二（成员 id：qa-dance2；平台：tiktok；类型：image）\n3. 穿搭参考一（成员 id：qa-fashion1；平台：tiktok；类型：image）\n使用 inspiration_get 按上述 id 逐条读取（标题、正文/脚本、拆解、本地媒体路径）再回答问题。\n问题：",
+      "expectedAppend": "我的问题：先看舞蹈参考\n\n来源：OmniMux 灵感库 · 本地合集\n合集：测试合集\n合集 ID：collection_4a75f0f7-bcc7-4467-9d60-6d56854e2856\n成员条数：3\n成员清单：\n1. 舞蹈参考一（成员 id：qa-dance1；平台：tiktok；类型：image）\n2. 舞蹈参考二（成员 id：qa-dance2；平台：tiktok；类型：image）\n3. 穿搭参考一（成员 id：qa-fashion1；平台：tiktok；类型：image）\n使用 inspiration_get 按上述 id 逐条读取（标题、正文/脚本、拆解、本地媒体路径）再回答问题。\n问题：",
+      "prefillCount": 1,
+      "prefillMode": "append",
+      "prefillHasAttach": true,
+      "revealCalls": [
+        [
+          "collapsed",
+          false
+        ],
+        [
+          "focus",
+          "split"
+        ]
+      ],
+      "toastCount": 0,
+      "toastText": null,
+      "sends": 0
+    }
+  },
+  "scenarioB": {
+    "precondition": {
+      "conversation": "collapsed",
+      "draft": "我的问题：先看舞蹈参考"
+    },
+    "result": {
+      "toastVisible": true,
+      "toastCount": 1,
+      "toastText": "输入框当前状态不支持追加，请完成当前输入后重试",
+      "draftAfter": "我的问题：先看舞蹈参考",
+      "prefillCount": 0,
+      "conversation": "open",
+      "revealCalls": [
+        [
+          "collapsed",
+          false
+        ],
+        [
+          "focus",
+          "split"
+        ]
+      ],
+      "sends": 0,
+      "rootCardTitle": "测试合集",
+      "navigation": false
+    }
+  },
+  "assertions": [
+    {
+      "name": "scenario A: clicking 加入会话 opens the collapsed conversation column even with an existing draft and attachment",
+      "pass": true
+    },
+    {
+      "name": "scenario A: exactly one append-mode prefill request carrying the real collection prompt and attach hook",
+      "pass": true
+    },
+    {
+      "name": "scenario A: composer is the existing draft plus a blank line plus the collection prompt (draft preserved, no separator when empty branch not taken)",
+      "pass": true
+    },
+    {
+      "name": "scenario A: no blocking toast, no send, no send-like request",
+      "pass": true
+    },
+    {
+      "name": "scenario B: non-plain composer returns draft-protected and shows the new append-specific toast copy",
+      "pass": true
+    },
+    {
+      "name": "scenario B: protected result keeps the draft untouched, performs no append and stays on the library root",
+      "pass": true
+    },
+    {
+      "name": "no browser request escaped the fixture origin; no console exceptions",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "append-existing-draft.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 228116,
+      "sha256": "3e850e59518417b2d153fd86ad666243c01a4e3ef5997b64e5e255d54cc9ab0c"
+    },
+    {
+      "name": "append-protected.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 189668,
+      "sha256": "7053dfb8e327d0dd74a402d2f4e066cc7240d2561063271c7c76e8a8d5386690"
+    }
+  ],
+  "consoleErrors": [],
+  "network": {
+    "events": 16,
+    "external": []
+  },
+  "counters": {
+    "syntheticCloud": 1,
+    "blockedCapabilities": 0,
+    "blockedExternalFetch": 0,
+    "injectedReadFailures": 0
+  },
+  "cleanup": {
+    "browser": {
+      "chromeExited": true,
+      "profileRemoved": true
+    },
+    "fixture": {
+      "serverClosed": true,
+      "storeRemoved": true,
+      "environmentRestored": true
+    }
+  },
+  "pass": true,
+  "boundaries": [
+    "Host seams and the conversation column/composer are synthetic; this is not a full Host install. The stub realises the hub append contract; the real hub append logic is covered by hub unit tests (18 pass) and is not re-implemented by the browser harness.",
+    "Real: product InspirationSection bundle, production local handlers/store, real loopback HTTP, real DOM/composer writes and clicks in headless Chrome.",
+    "The synthetic attachment fact (attachments=1) proves the append path is not blocked by an existing attachment; it is not a rendered attachment tray.",
+    "No Dev app (port 45120), no user profile, no external network; dynamic loopback ports only; Chrome/server/temp store cleaned up."
+  ]
+}

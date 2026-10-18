@@ -238,13 +238,16 @@ export async function addCollectionToSession(collection, io = {}) {
       : () => revealConversation(windowObject, error => reportError(io, error))
     reveal()
 
-    // 4. Official prefill seam; never sends and never touches collection data.
+    // 4. Official prefill seam, append mode: an existing draft or attachments
+    //    never block "add to session"; the collection context is appended after
+    //    a blank line and the user's text is preserved. Never sends, never
+    //    touches collection data.
     const prompt = buildCollectionPrompt({ collection, items, total, t })
     const prefill = typeof io.prefill === 'function' ? io.prefill : queueSessionPrefill
     let prefilled
     let prefillFailed = false
     try {
-      prefilled = await prefill({ targetSessionId: sessionId, prompt, attach: () => ({ ok: true }) })
+      prefilled = await prefill({ targetSessionId: sessionId, prompt, mode: 'append', attach: () => ({ ok: true }) })
     } catch (error) {
       prefillFailed = true
       reportError(io, error)
@@ -254,6 +257,9 @@ export async function addCollectionToSession(collection, io = {}) {
       const reason = String(prefilled?.error ?? '')
       if (reason === 'draft-protected') {
         return { ok: false, errorKey: 'collection.sessionDraftProtected', code: 'draft-protected' }
+      }
+      if (reason === 'composer-busy') {
+        return { ok: false, errorKey: 'collection.sessionBusy', code: 'composer-busy' }
       }
       return { ok: false, errorKey: 'collection.sessionFailed', code: reason || 'prefill-failed' }
     }
