@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest'
 import {
   discoverHostBase,
   httpBaseFromBridgeUrl,
-  requestInspirationSave,
   requestMediaExport,
 } from '../src/background/media-export.ts'
 
@@ -109,61 +108,6 @@ describe('下载无水印视频', () => {
 
     expect(outcome.ok).toBe(false)
     expect(outcome.code).toBe('rejected')
-  })
-})
-
-describe('保存到灵感库', () => {
-  it('新素材写入成功', async () => {
-    const calls: Array<{ url: string; body: unknown }> = []
-    const outcome = await requestInspirationSave({
-      base: BASE,
-      url: POST,
-      fetchImpl: async (input, init) => {
-        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) })
-        return jsonResponse(200, { data: { id: 'ins_1', title: '三秒钩子' } })
-      },
-    })
-
-    expect(outcome).toEqual({ ok: true, code: 'saved' })
-    expect(calls[0].url).toBe(`${BASE}/omnimux/inspiration/local/import-url`)
-    // The save states the choice: the host runs its AI breakdown unless the
-    // request turns it off, and saving a post is not asking for an analysis.
-    expect(calls[0].body).toEqual({ url: POST, auto_analyze: false })
-  })
-
-  it('库里已经有的素材按“已经在库里”回答，不当成失败', async () => {
-    const outcome = await requestInspirationSave({
-      base: BASE,
-      url: POST,
-      fetchImpl: async () => jsonResponse(409, {
-        error: '该灵感素材已在库中，请勿重复导入',
-        data: { id: 'ins_1' },
-        is_duplicate: true,
-      }),
-    })
-
-    expect(outcome).toEqual({ ok: true, code: 'duplicate' })
-  })
-
-  it('主程序没在跑时同样回答连不上', async () => {
-    const outcome = await requestInspirationSave({
-      base: BASE,
-      url: POST,
-      fetchImpl: async () => { throw new TypeError('Failed to fetch') },
-    })
-
-    expect(outcome).toEqual({ ok: false, code: 'unreachable' })
-  })
-
-  it('入库被拒绝时带回宿主的说明', async () => {
-    const outcome = await requestInspirationSave({
-      base: BASE,
-      url: POST,
-      fetchImpl: async () => jsonResponse(502, { error: 'OmniMux 社媒解析调用失败: region blocked' }),
-    })
-
-    expect(outcome.ok).toBe(false)
-    expect(outcome.detail).toContain('region blocked')
   })
 })
 

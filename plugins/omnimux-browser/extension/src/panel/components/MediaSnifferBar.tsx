@@ -1,5 +1,10 @@
 import { memo, useRef, useState, useEffect } from 'react'
 import { CloseIcon, SaveIcon } from './icons.tsx'
+import { inspirationSaveLabel, inspirationSaveDetail, type InspirationSaveTask } from '../../shared/inspiration-save.ts'
+import { pageInspirationTask } from '../inspiration-save.ts'
+import type { PageSceneInfo } from './SceneBadge.tsx'
+import type { MediaSourceKind } from '../../content/media-hover/types.ts'
+import type { TweetInspirationCapture } from '../../content/twitter-capture/types.ts'
 
 export interface SniffedMediaItem {
   id: string
@@ -7,6 +12,11 @@ export interface SniffedMediaItem {
   src: string
   previewSrc: string
   alt?: string
+  inspirationUrl?: string
+  inspirationCapture?: TweetInspirationCapture
+  sourceKind?: MediaSourceKind
+  videoSrc?: string
+  posterSrc?: string
   width?: number
   height?: number
 }
@@ -17,6 +27,8 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   onActiveChange,
   onSaveToInspiration,
   attachedIds,
+  inspirationTasks = [],
+  scene = null,
   onAttachMedia,
 }: {
   items: SniffedMediaItem[]
@@ -24,6 +36,8 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   onActiveChange?: (activeItems: SniffedMediaItem[]) => void
   onSaveToInspiration?: (item: SniffedMediaItem) => void
   attachedIds?: ReadonlySet<string>
+  inspirationTasks?: InspirationSaveTask[]
+  scene?: PageSceneInfo | null
   onAttachMedia?: (item: SniffedMediaItem) => void
 }) {
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
@@ -45,6 +59,7 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
   }, [])
 
   if (!items || items.length === 0) return null
+  const previewTask = previewItem ? pageInspirationTask(scene, previewItem, inspirationTasks) : null
 
   const updatePreviewPosition = (itemId: string) => {
     const el = chipRefs.current.get(itemId)
@@ -134,11 +149,14 @@ export const MediaSnifferBar = memo(function MediaSnifferBar({
               type="button"
               className="float-preview-save-btn"
               onClick={() => onSaveToInspiration?.(previewItem)}
+              disabled={previewTask?.state === 'saving'}
+              title={previewTask ? inspirationSaveDetail(previewTask, locale) : undefined}
             >
               <SaveIcon size={13} />
-              <span>{locale === 'en' ? 'Save' : '保存到灵感库'}</span>
+              <span>{inspirationSaveLabel(previewTask, locale)}</span>
             </button>
           </div>
+          {previewTask && ['partial', 'pending', 'failed'].includes(previewTask.state) && <p role="status">{inspirationSaveDetail(previewTask, locale)}</p>}
         </div>
       )}
 

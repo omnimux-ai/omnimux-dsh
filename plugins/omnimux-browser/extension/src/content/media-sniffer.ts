@@ -10,6 +10,7 @@
  */
 
 import {
+  captureInspirationFromElement,
   isAttachablePayload,
   isElementInViewport,
   isEligibleMediaSize,
@@ -17,9 +18,9 @@ import {
   mediaSourceOf,
   normalizeMedia,
 } from './media-hover/payload.ts'
-import type { MediaKind } from './media-hover/types.ts'
+import type { HoveredMedia, MediaKind } from './media-hover/types.ts'
 
-export interface DetectedMediaItem {
+export interface DetectedMediaItem extends Pick<HoveredMedia, 'inspirationUrl' | 'inspirationCapture' | 'sourceKind' | 'videoSrc' | 'posterSrc'> {
   id: string
   type: 'image' | 'video'
   src: string
@@ -48,6 +49,8 @@ function sniffElement(el: Element, kind: MediaKind, index: number): DetectedMedi
   return {
     id: `${kind === 'video' ? 'video' : 'img'}_${index + 1}`,
     type: payload.type,
+    sourceKind: payload.sourceKind,
+    ...(kind === 'video' ? { videoSrc: payload.videoSrc, posterSrc: payload.posterSrc } : {}),
     // A page-scoped address is dead outside its own tab, so the panel gets the
     // captured frame or the page address instead of a link that resolves nowhere.
     src: isAttachablePayload(payload) ? payload.src : (payload.previewSrc || payload.pageUrl),
@@ -55,6 +58,9 @@ function sniffElement(el: Element, kind: MediaKind, index: number): DetectedMedi
     alt: payload.alt,
     width: payload.naturalWidth || payload.width,
     height: payload.naturalHeight || payload.height,
+    ...(kind === 'video'
+      ? { inspirationUrl: payload.inspirationUrl, inspirationCapture: payload.inspirationCapture }
+      : captureInspirationFromElement(el)),
   }
 }
 

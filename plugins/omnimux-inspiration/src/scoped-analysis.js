@@ -2,7 +2,7 @@ import { realpathSync, statSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, isAbsolute, join, relative, sep } from 'node:path'
-import { analysisInputFingerprint, analysisMediaItems, sourceFingerprint } from './analysis-input.js'
+import { analysisInputFingerprint, analysisMediaItems, isAvailableMedia, sourceFingerprint } from './analysis-input.js'
 export { analysisInputFingerprint, sourceFingerprint } from './analysis-input.js'
 import { extractStructuredBreakdown } from './analyzer.js'
 import { buildTranslatePrompt, parseTranslateJson } from './structure-script.js'
@@ -45,7 +45,7 @@ function requestScope(body) {
 
 /** @returns {AnalysisReference | null} */
 function resolveSavedReference(media, item, paths) {
-  if (!['image', 'video'].includes(media?.type) || typeof media.url !== 'string') return null
+  if (!isAvailableMedia(media)) return null
   const match = media.url.match(/^\/omnimux\/inspiration\/local\/media\/(videos|images|covers)\/([^/?#]+)$/)
   if (!match) return null
   const isPhotoRecord = item.type !== 'video' && (['image', 'photo', 'gallery'].includes(String(item.type || ''))

@@ -88,7 +88,9 @@ import {
   PAGE_SESSION_CONTEXT_STORAGE_KEY,
   PageSessionContextTracker,
 } from './session-continuity.ts'
-import { appendMediaInspiration } from './media-library.ts'
+import { InspirationSaveCoordinator } from './inspiration-save.ts'
+import { InspirationSaveRecovery } from './inspiration-recovery.ts'
+import { INSPIRATION_OBSERVER_PORT, INSPIRATION_CHECK_MESSAGE, INSPIRATION_RECOVERY_ALARM, type InspirationSaveRequest } from '../shared/inspiration-save.ts'
 import { PanelPresence } from './panel-presence.ts'
 import { normalizeSaveRequestId, saveImageAssetRpc } from './save-image-assets.ts'
 import type { HoveredMedia } from '../content/media-hover/types.ts'
@@ -96,7 +98,6 @@ import { TIKTOK_RUNTIME_MESSAGE } from '../content/tiktok-scene/messages.ts'
 import {
   discoverHostBase,
   httpBaseFromBridgeUrl,
-  requestInspirationSave,
   requestMediaExport,
   type ExportKind,
   type ExportOutcome,
@@ -128,17 +129,11 @@ const SETTINGS_DEFAULTS: Settings = {
   autoResumeSession: true,
 }
 
-/**
- * 自动探测的候选端口：
- * - OmniMux Dev 默认 45120 / 45128；
- * - DSH Desktop 默认 43120 / 43128 / 43189；
- * - dsh web（CLI）默认 3080，端口被占时依次回退 3081 / 3090；
- * - 14389 为历史桌面应用端口，保留兼容旧版。
- */
-const DISCOVERY_PORTS = [45120, 45128, 43120, 43128, 3080, 3081, 3090, 14389, 43189]
+/** Production discovery defaults. Development hosts require an explicit saved address/port. */
+const DISCOVERY_PORTS = [43120, 43128, 3080, 3081, 3090, 14389, 43189]
 const LEGACY_LOCAL_URL = 'ws://127.0.0.1:3080'
 
-/** 探测本机 dsh 的桥地址：fetch /ext/bridge-config 直到成功。优先匹配 OmniMux Dev (45120) 及用户指定端口。 */
+/** 探测本机 dsh 的桥地址：fetch /ext/bridge-config 直到成功。优先使用用户指定端口。 */
 async function discoverBridge(shouldContinue: () => boolean = () => true): Promise<string | undefined> {
   let prioritizedPorts = [...DISCOVERY_PORTS]
   try {
@@ -1725,6 +1720,7 @@ function readTiktokShortcut(message: unknown): { url: string; kind: ExportKind }
  * renders as "OmniMux is not running" instead of a content error.
  */
 async function hostHttpBase(): Promise<string | null> {
+  await settingsReady
   const known = settings.bridgeUrl !== '' ? settings.bridgeUrl : discoveredBridgeUrl
   if (known !== '') {
     const base = httpBaseFromBridgeUrl(known)
@@ -1734,10 +1730,46 @@ async function hostHttpBase(): Promise<string | null> {
   // port at once: the user is watching a menu row that says it is working, and
   // nine serial timeouts is not an acceptable wait for one download.
   if (discoveredHostBase !== '') return discoveredHostBase
-  const found = await discoverHostBase(DISCOVERY_PORTS)
+  const selected = (await chrome.storage.local.get('omnimux_target_port')).omnimux_target_port
+  const selectedPort = Number(selected)
+  const ports = Number.isInteger(selectedPort) && selectedPort > 0 && selectedPort <= 65535
+    ? [selectedPort, ...DISCOVERY_PORTS.filter((port) => port !== selectedPort)] : DISCOVERY_PORTS
+  const found = await discoverHostBase(ports)
   if (found !== null) discoveredHostBase = found
   return found
 }
+
+/** A save binds to a responding selected/discovered host before it can submit. */
+async function inspirationHost(): Promise<string | null> {
+  await settingsReady
+  const handshaken = bridge?.localTarget
+  if (handshaken && bridge?.state === 'connected') return httpBaseFromBridgeUrl(handshaken.url)
+  const base = await hostHttpBase()
+  if (!base) return null
+  try {
+    const response = await fetch(`${base}${BRIDGE_CONFIG_PATH}`, { signal: AbortSignal.timeout(1_500) })
+    const config = response.ok ? await response.json() as { wsUrl?: unknown } : null
+    return typeof config?.wsUrl === 'string' && httpBaseFromBridgeUrl(config.wsUrl) === base ? base : null
+  } catch { return null }
+}
+
+const inspirationSaves = new InspirationSaveCoordinator({ storage: chrome.storage.local, resolveHost: inspirationHost, changed: () => { void inspirationRecovery.refresh() } })
+const inspirationRecovery = new InspirationSaveRecovery(inspirationSaves, chrome.alarms)
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== INSPIRATION_OBSERVER_PORT) return
+  const release = inspirationRecovery.observe()
+  port.onDisconnect.addListener(release)
+})
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+  if ((message as { type?: unknown } | null)?.type !== INSPIRATION_CHECK_MESSAGE || sender.id !== chrome.runtime.id) return
+  void inspirationSaves.reconcile().then(() => sendResponse({ ok: true }), () => sendResponse({ ok: false }))
+  return true
+})
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === INSPIRATION_RECOVERY_ALARM) void inspirationRecovery.resume()
+})
+chrome.runtime.onStartup?.addListener(() => { void inspirationRecovery.resume() })
+void inspirationRecovery.resume()
 
 /**
  * Run one TikTok shortcut against the host.
@@ -1746,15 +1778,11 @@ async function hostHttpBase(): Promise<string | null> {
  * handler never rejects: the menu has to render something for every press.
  */
 async function runTiktokShortcut(
-  type: string,
   request: { url: string; kind: ExportKind },
 ): Promise<ExportOutcome> {
   const base = await hostHttpBase()
   if (base === null) return { ok: false, code: 'unreachable' }
   try {
-    if (type === TIKTOK_RUNTIME_MESSAGE.saveToInspiration) {
-      return await requestInspirationSave({ base, url: request.url })
-    }
     return await requestMediaExport({ base, url: request.url, kind: request.kind })
   } catch {
     return { ok: false, code: 'unreachable' }
@@ -1785,7 +1813,11 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
       sendResponse({ ok: false, error: { code: 'invalid-request', message: 'shortcut payload is malformed' } })
       return
     }
-    void runTiktokShortcut(type, request).then(
+    if (type === TIKTOK_RUNTIME_MESSAGE.saveToInspiration) {
+      void inspirationSaves.submit({ targetUrl: request.url }).then((task) => sendResponse({ ok: true, task }), () => sendResponse({ ok: false, message: '保存失败' }))
+      return true
+    }
+    void runTiktokShortcut(request).then(
       (result) => { sendResponse({ ok: true, result }) },
       () => { sendResponse({ ok: false, error: { code: 'shortcut-failed', message: 'shortcut failed' } }) },
     )
@@ -1810,29 +1842,16 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
 
   if (type === 'DSH_MEDIA_TO_INSPIRATION') {
     const payload = readHoveredMedia(message)
-    if (payload === null) {
-      sendResponse({ ok: false, error: { code: 'invalid-media', message: 'media payload is malformed' } })
+    if (payload === null || payload.type !== 'video') {
+      sendResponse({ ok: false, message: '无法确定视频来源' })
       return
     }
-    void Promise.allSettled([
-      saveMediaToHostInspiration(payload),
-      appendMediaInspiration(payload),
-    ]).then(
-      ([hostRes, localRes]) => {
-        const localResult = localRes.status === 'fulfilled' ? localRes.value : null
-        const hostSaved = hostRes.status === 'fulfilled' && hostRes.value
-        if (hostSaved || (localResult && localResult.ok)) {
-          sendResponse({
-            ok: true,
-            result: localResult ?? { ok: true, total: 1, duplicate: false, evicted: 0, savedAt: Date.now() },
-            hostSaved,
-          })
-          return
-        }
-        sendResponse({ ok: false, error: { code: 'storage-failed', message: 'inspiration store rejected the write' } })
-      },
-      () => { sendResponse({ ok: false, error: { code: 'storage-failed', message: 'inspiration store rejected the write' } }) },
-    )
+    const source = payload.inspirationUrl ?? payload.pageUrl
+    void inspirationSaves.submit({ targetUrl: source, capture: payload.inspirationCapture ? { ...payload.inspirationCapture } : {
+      url: source, title: payload.pageTitle, text: payload.alt || '', shape: 'video',
+      cover_url: payload.posterSrc ?? (payload.sourceKind === 'poster' ? payload.previewSrc : ''),
+      media_items: [{ type: 'video', url: payload.videoSrc ?? (payload.sourceKind === 'direct' && payload.attachable !== false ? payload.src : ''), poster_url: payload.posterSrc ?? (payload.sourceKind === 'poster' ? payload.previewSrc : '') }],
+    } }).then((task) => sendResponse({ ok: true, task }), () => sendResponse({ ok: false, message: '保存失败，请重新连接主程序' }))
     return true
   }
 
@@ -1966,52 +1985,6 @@ function takePendingMedia(windowId?: number, mediaId?: string): HoveredMedia | n
     return pending
   }
   return null
-}
-
-async function saveMediaToHostInspiration(payload: HoveredMedia): Promise<boolean> {
-  const candidatePorts = [45120, 45128, 43120, 43128, 3080]
-  try {
-    const saved = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
-    const p = saved ? parseInt(saved, 10) : undefined
-    if (p && !isNaN(p) && !candidatePorts.includes(p)) {
-      candidatePorts.unshift(p)
-    }
-  } catch {
-    // Ignore storage failure
-  }
-
-  const title = (payload.alt || payload.pageTitle || '网页灵感素材').trim().slice(0, 120)
-  const itemBody = {
-    title: title || '未命名素材',
-    type: payload.type === 'video' ? 'video' : 'image',
-    source_platform: payload.pageUrl.includes('x.com') || payload.pageUrl.includes('twitter.com')
-      ? 'twitter'
-      : (payload.pageUrl.includes('tiktok.com') ? 'tiktok' : 'web'),
-    source_url: payload.pageUrl,
-    cover_url: payload.previewSrc || payload.src,
-    media_urls: [payload.src],
-    content: (payload.alt || payload.pageTitle || '').trim().slice(0, 2000),
-    // Saving is not analysing; the host would otherwise run its breakdown.
-    auto_analyze: false,
-    tags: ['网页采集', payload.type === 'video' ? '视频' : '图片'],
-  }
-
-  for (const port of candidatePorts) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/omnimux/inspiration/local`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(itemBody),
-        signal: AbortSignal.timeout(2000),
-      })
-      if (res.ok || res.status === 201 || res.status === 200) {
-        return true
-      }
-    } catch {
-      // try next port
-    }
-  }
-  return false
 }
 
 /**
@@ -2620,131 +2593,15 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     })()
     return true
   } else if (m?.type === 'DSH_SAVE_INSPIRATION_PANEL') {
-    const payload = m.payload as {
-      targetUrl?: string
-      title?: string
-      type?: 'video' | 'image'
-      source_platform?: string
-      sourcePlatform?: string
-      cover_url?: string
-      coverUrl?: string
-      media_urls?: string[]
-      mediaUrls?: string[]
-      content?: string
-      // Captured-post fields. This list is explicit: a key missing here never
-      // reaches `itemBody`, and the host would store the row without it.
-      content_shape?: string
-      author?: Record<string, unknown>
-      stats?: Record<string, unknown>
-      posted_at?: string | null
-      quoted?: Record<string, unknown>
-      poll?: Record<string, unknown>
-      thread_items?: string[]
-      auto_analyze?: boolean
-      tags?: string[]
-      targetPort?: number
-    } | undefined
-
-    const targetUrl = payload?.targetUrl || ''
-    if (!targetUrl) {
-      sendResponse({ ok: false, message: 'url is required' })
+    const payload = m.payload as InspirationSaveRequest | undefined
+    if (!payload || typeof payload.targetUrl !== 'string') {
+      sendResponse({ ok: false, message: '无法确定原帖地址' })
       return true
     }
-
-    void (async () => {
-      const candidatePorts: number[] = []
-      if (typeof payload?.targetPort === 'number' && !isNaN(payload.targetPort)) {
-        candidatePorts.push(payload.targetPort)
-      }
-      try {
-        const saved = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
-        const p = saved ? parseInt(saved, 10) : undefined
-        if (p && !isNaN(p) && !candidatePorts.includes(p)) candidatePorts.push(p)
-      } catch {}
-      for (const p of [45120, 45128, 43120, 43128, 3080]) {
-        if (!candidatePorts.includes(p)) candidatePorts.push(p)
-      }
-
-      let saved = false
-      const itemBody = {
-        title: (payload?.title || targetUrl).slice(0, 120),
-        type: payload?.type || 'image',
-        source_platform: payload?.source_platform || payload?.sourcePlatform || 'web',
-        source_url: targetUrl,
-        cover_url: payload?.cover_url || payload?.coverUrl || '',
-        media_urls: payload?.media_urls || payload?.mediaUrls || (payload?.cover_url || payload?.coverUrl ? [payload.cover_url || payload.coverUrl || ''] : []),
-        // 2000 rather than 500: a post's body is the thing being saved, and the
-        // old cap cut most of a long one.
-        content: (payload?.content || '').slice(0, 2000),
-        content_shape: payload?.content_shape,
-        author: payload?.author,
-        stats: payload?.stats,
-        posted_at: payload?.posted_at ?? null,
-        quoted: payload?.quoted,
-        poll: payload?.poll,
-        thread_items: payload?.thread_items,
-        // `undefined` drops the key and leaves the host on its own default; the
-        // panel states `false` explicitly, and nothing else needs to.
-        auto_analyze: payload?.auto_analyze === false ? false : undefined,
-        tags: payload?.tags || ['网页采集', '灵感采集'],
-      }
-
-      for (const port of candidatePorts) {
-        const targetBase = `http://127.0.0.1:${port}`
-        try {
-          // 1. 尝试 import-url 全量抓取
-          let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            // Saving is not analysing; the host would otherwise run its breakdown.
-            body: JSON.stringify({ url: targetUrl, background: true, auto_analyze: false }),
-            signal: AbortSignal.timeout(3500),
-          }).catch(() => null)
-
-          // 2. 如果 import-url 失败或异常（如反爬中断 499），采用前台已嗅探图文直存
-          if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
-            res = await fetch(`${targetBase}/omnimux/inspiration/local`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(itemBody),
-              signal: AbortSignal.timeout(3000),
-            }).catch(() => null)
-          }
-
-          if (res && (res.ok || res.status === 200 || res.status === 201 || res.status === 202)) {
-            saved = true
-            break
-          }
-        } catch {
-          // try next port
-        }
-      }
-
-      if (saved) {
-        try {
-          await appendMediaInspiration({
-            id: `insp_${Date.now().toString(36)}`,
-            src: itemBody.cover_url || targetUrl,
-            type: itemBody.type,
-            pageUrl: targetUrl,
-            pageTitle: itemBody.title,
-            alt: itemBody.content,
-            previewSrc: itemBody.cover_url,
-            width: 0,
-            height: 0,
-            naturalWidth: 0,
-            naturalHeight: 0,
-            capturedAt: Date.now(),
-          })
-        } catch {
-          // ignore cache error
-        }
-      }
-
-      sendResponse({ ok: saved })
-    })()
+    void inspirationSaves.submit(payload).then((task) => sendResponse({ ok: true, task }), () => sendResponse({ ok: false, message: '保存失败，请重新连接主程序' }))
     return true
   }
+
 })
 
 // `settingsReady` intentionally has no bridge-start continuation: opening a

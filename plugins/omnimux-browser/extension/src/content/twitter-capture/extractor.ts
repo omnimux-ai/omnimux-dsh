@@ -21,11 +21,8 @@
  */
 
 import { TWEET_MEDIA_SELECTOR } from '../media-hover/classifier.ts'
-import { extractTweetIdAndUrl, parseMetricValue } from '../twitter-velocity/extractor.ts'
-import type { PollOption, QuotedTweet, TweetAuthor, TweetCapture, TweetPoll, TweetShape, TweetStats } from './types.ts'
-
-/** Matches a permanent post address; anything else is not a capturable post. */
-const STATUS_URL_RE = /\/status\/\d+/
+import { parseMetricValue } from '../twitter-velocity/extractor.ts'
+import type { PollOption, QuotedTweet, TweetAuthor, TweetCapture, TweetInspirationCapture, TweetMediaItem, TweetPoll, TweetShape, TweetStats } from './types.ts'
 
 /** Header carrying the author's display name, handle and timestamp. */
 const USER_NAME_SELECTOR = '[data-testid="User-Name"]'
@@ -110,6 +107,35 @@ function isQuoted(quoteRoot: HTMLElement | null, element: Element): boolean {
   return quoteRoot !== null && quoteRoot.contains(element)
 }
 
+/** A target's own nodes never include the content of a nested article. */
+function belongsToPost(article: HTMLElement, quoteRoot: HTMLElement | null, element: Element): boolean {
+  return !isQuoted(quoteRoot, element) && element.closest('article') === article
+}
+
+function firstOwn(article: HTMLElement, quoteRoot: HTMLElement | null, selector: string): Element | undefined {
+  return Array.from(article.querySelectorAll(selector)).find((node) => belongsToPost(article, quoteRoot, node))
+}
+
+/** Resolves only explicit X permalinks; the current page is never a fallback. */
+function permanentUrlOf(article: HTMLElement, quoteRoot: HTMLElement | null): string {
+  const links = [
+    ...Array.from(article.querySelectorAll('time')).map((time) => time.closest('a[href]')),
+    ...Array.from(article.querySelectorAll('a[href*="/status/"]')),
+  ]
+  for (const link of links) {
+    if (link === null || !belongsToPost(article, quoteRoot, link)) continue
+    try {
+      const url = new URL(link.getAttribute('href') || '', 'https://x.com')
+      if (!/^https?:$/.test(url.protocol) || !/^(?:www\.)?(?:x|twitter)\.com$/i.test(url.hostname)) continue
+      const match = url.pathname.match(/^\/([\w]+)\/status\/(\d+)(?:\/|$)/)
+      if (match !== null) return `https://x.com/${match[1]}/status/${match[2]}`
+    } catch {
+      // An unreadable link is not evidence of the target post's identity.
+    }
+  }
+  return ''
+}
+
 /** Normalised text of a node, or `''`. */
 function textOf(node: Element | null | undefined): string {
   return (node?.textContent || '').replace(/\s+/g, ' ').trim()
@@ -152,8 +178,11 @@ function displayNameOf(scope: Element | null, handle: string): string {
  * profile image is rewritten, since a media address carries no such suffix and
  * rewriting one would break it.
  */
-function avatarOf(scope: Element | null): string {
-  const src = scope?.querySelector<HTMLImageElement>(`${AVATAR_SELECTOR} img`)?.getAttribute('src') || ''
+function avatarOf(scope: Element | null, quoteRoot: HTMLElement | null = null): string {
+  const image = scope?.localName === 'article'
+    ? firstOwn(scope as HTMLElement, quoteRoot, `${AVATAR_SELECTOR} img`)
+    : scope?.querySelector(`${AVATAR_SELECTOR} img`)
+  const src = image?.getAttribute('src') || ''
   if (!src.includes('profile_images')) return src
   return src.replace(/_[A-Za-z0-9_]+\.(jpg|jpeg|png|webp)$/i, '_400x400.$1')
 }
@@ -161,22 +190,22 @@ function avatarOf(scope: Element | null): string {
 /** Whether a verification badge is drawn outside the quoted post. */
 function verifiedOf(article: HTMLElement, quoteRoot: HTMLElement | null): boolean {
   for (const badge of article.querySelectorAll(VERIFIED_SELECTOR)) {
-    if (!isQuoted(quoteRoot, badge)) return true
+    if (belongsToPost(article, quoteRoot, badge)) return true
   }
   return false
 }
 
-/** The author of the post, or of the quoted post when `scope` is the quote card. */
-function authorOf(scope: Element | null, verified: boolean): TweetAuthor {
-  const nameEl = scope?.querySelector(USER_NAME_SELECTOR) ?? null
+/** The target post's author, excluding every quoted header. */
+function authorOf(article: HTMLElement, quoteRoot: HTMLElement | null, verified: boolean): TweetAuthor {
+  const nameEl = firstOwn(article, quoteRoot, USER_NAME_SELECTOR) ?? null
   const handle = handleOf(nameEl)
-  return { name: displayNameOf(nameEl, handle), handle, avatar: avatarOf(scope ?? null), verified }
+  return { name: displayNameOf(nameEl, handle), handle, avatar: avatarOf(article, quoteRoot), verified }
 }
 
 /** The post body, skipping the quoted post's own body. */
 function bodyOf(article: HTMLElement, quoteRoot: HTMLElement | null): string {
   for (const el of article.querySelectorAll(TWEET_TEXT_SELECTOR)) {
-    if (!isQuoted(quoteRoot, el)) return (el.textContent || '').trim()
+    if (belongsToPost(article, quoteRoot, el)) return (el.textContent || '').trim()
   }
   return ''
 }
@@ -198,9 +227,11 @@ function mediaUrlOf(container: Element): string {
 function mediaContainersOf(article: HTMLElement, quoteRoot: HTMLElement | null): Element[] {
   const containers: Element[] = []
   for (const container of article.querySelectorAll(TWEET_MEDIA_SELECTOR)) {
-    if (isQuoted(quoteRoot, container)) continue
+    if (!belongsToPost(article, quoteRoot, container)) continue
     if (container.closest(AVATAR_SELECTOR) !== null) continue
-    if (mediaUrlOf(container) === '') continue
+    // X nests videoPlayer inside videoComponent. Those wrappers represent one
+    // attachment even when neither exposes a playable source yet.
+    if (containers.some((parent) => parent.contains(container))) continue
     containers.push(container)
   }
   return containers
@@ -222,12 +253,48 @@ function uniqueUrls(containers: readonly Element[]): string[] {
 /** Whether a media container holds a player rather than a still image. */
 function isVideoContainer(container: Element): boolean {
   return container.matches('[data-testid="videoComponent"], [data-testid="videoPlayer"]')
+    || container.querySelector('video') !== null
+}
+
+/** A page-scoped blob, data URL or missing source is not a downloadable file. */
+function fetchableMediaUrl(raw: string, container: Element): string {
+  if (raw.trim() === '') return ''
+  try {
+    const url = new URL(raw, container.ownerDocument.baseURI)
+    return /^https?:$/.test(url.protocol) ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
+/** The actual typed attachments, including unavailable video/file positions. */
+function mediaItemsOf(containers: readonly Element[]): TweetMediaItem[] {
+  const items = containers.map((container): TweetMediaItem => {
+    const sourceId = container.getAttribute('data-media-id')
+      || container.querySelector('[data-media-id]')?.getAttribute('data-media-id') || ''
+    const identity = sourceId === '' ? {} : { source_id: sourceId }
+    if (isVideoContainer(container)) {
+      const video = container.querySelector('video')
+      const sources = video === null ? [] : [video.currentSrc, video.getAttribute('src') || '',
+        ...Array.from(video.querySelectorAll('source')).map((source) => source.getAttribute('src') || '')]
+      const url = sources.map((source) => fetchableMediaUrl(source, container)).find(Boolean) || ''
+      const poster = fetchableMediaUrl(video?.getAttribute('poster') || container.querySelector('img')?.getAttribute('src') || '', container)
+      return { type: 'video', url, ...identity, ...(poster === '' ? {} : { poster_url: poster }) }
+    }
+    const image = container.querySelector('img')
+    const url = fetchableMediaUrl(image?.currentSrc || image?.getAttribute('src') || '', container)
+    return { type: 'image', url, ...identity }
+  })
+  const posters = new Set(items.filter((item) => item.type === 'video').map((item) => item.poster_url).filter(Boolean))
+  // A sibling tweetPhoto may be the same player's still preview, not an extra
+  // image attachment. Keep the video in its own place and discard that still.
+  return items.filter((item) => item.type === 'video' || item.url === '' || !posters.has(item.url))
 }
 
 /** Reads one counter, leaving the key out when the page did not render it. */
-function counterOf(article: HTMLElement, testId: string, label: RegExp): number | undefined {
-  const button = article.querySelector(`[data-testid="${testId}"]`)
-  if (button === null) return undefined
+function counterOf(article: HTMLElement, quoteRoot: HTMLElement | null, testId: string, label: RegExp): number | undefined {
+  const button = firstOwn(article, quoteRoot, `[data-testid="${testId}"]`)
+  if (button === undefined) return undefined
   for (const source of [button.getAttribute('aria-label') || '', button.textContent || '']) {
     const match = source.match(label)
     if (match !== null) return parseMetricValue(match[1])
@@ -236,9 +303,9 @@ function counterOf(article: HTMLElement, testId: string, label: RegExp): number 
 }
 
 /** Views, from the analytics link or the action bar's accessible label. */
-function viewsOf(article: HTMLElement): number | undefined {
-  const analytics = article.querySelector('a[href*="/analytics"]')
-  const group = article.querySelector('div[role="group"]')
+function viewsOf(article: HTMLElement, quoteRoot: HTMLElement | null): number | undefined {
+  const analytics = firstOwn(article, quoteRoot, 'a[href*="/analytics"]')
+  const group = firstOwn(article, quoteRoot, 'div[role="group"]')
   for (const source of [textOf(analytics), analytics?.getAttribute('aria-label') || '', group?.getAttribute('aria-label') || '']) {
     const match = source.match(VIEWS_RE)
     if (match !== null) return parseMetricValue(match[1])
@@ -247,20 +314,21 @@ function viewsOf(article: HTMLElement): number | undefined {
 }
 
 /** Counters the page rendered. Absent keys stay absent. */
-function statsOf(article: HTMLElement): TweetStats {
+function statsOf(article: HTMLElement, quoteRoot: HTMLElement | null): TweetStats {
   const stats: TweetStats = {}
   for (const { key, testId, label } of COUNTERS) {
-    const value = counterOf(article, testId, label)
+    const value = counterOf(article, quoteRoot, testId, label)
     if (value !== undefined) stats[key] = value
   }
-  const views = viewsOf(article)
+  const views = viewsOf(article, quoteRoot)
   if (views !== undefined) stats.views = views
   return stats
 }
 
 /** ISO timestamp, or `null` — the page's own value, never a stand-in. */
-function postedAtOf(article: HTMLElement): string | null {
-  const raw = article.querySelector('time[datetime]')?.getAttribute('datetime') || ''
+function postedAtOf(article: HTMLElement, quoteRoot: HTMLElement | null): string | null {
+  const time = firstOwn(article, quoteRoot, 'time[datetime]')
+  const raw = time?.getAttribute('datetime') || ''
   if (raw === '') return null
   const parsed = Date.parse(raw)
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null
@@ -292,8 +360,8 @@ function quotedOf(quoteRoot: HTMLElement | null): QuotedTweet | undefined {
  * degrades to its media shape instead of shipping half-parsed options.
  */
 function pollOf(article: HTMLElement, quoteRoot: HTMLElement | null): TweetPoll | undefined {
-  const root = article.querySelector<HTMLElement>(POLL_SELECTOR)
-  if (root === null || isQuoted(quoteRoot, root)) return undefined
+  const root = firstOwn(article, quoteRoot, POLL_SELECTOR)
+  if (root === undefined) return undefined
   const options: PollOption[] = []
   for (const choice of root.querySelectorAll(POLL_CHOICE_SELECTOR)) {
     const raw = textOf(choice)
@@ -355,11 +423,12 @@ function shapeOf(input: {
   // stills: a player and its preview still share one address, so counting
   // containers would call a single photo a gallery.
   if (input.containers.some(isVideoContainer)) return 'video'
-  const photos = uniqueUrls(input.containers.filter((container) => !isVideoContainer(container))).length
+  const stills = input.containers.filter((container) => !isVideoContainer(container))
+  const photos = uniqueUrls(stills).length + stills.filter((container) => mediaUrlOf(container) === '').length
   if (photos >= 2) return 'gallery'
   if (photos === 1) return 'photo'
-  const card = input.article.querySelector(CARD_SELECTOR)
-  if (card !== null && !isQuoted(input.quoteRoot, card)) return 'link'
+  const card = firstOwn(input.article, input.quoteRoot, CARD_SELECTOR)
+  if (card !== undefined) return 'link'
   return 'text'
 }
 
@@ -372,12 +441,12 @@ function shapeOf(input: {
  *   than saving a partially read post.
  */
 export function extractTweetCapture(article: HTMLElement): TweetCapture | null {
-  const { url } = extractTweetIdAndUrl(article)
-  if (!STATUS_URL_RE.test(url)) return null
-
   const quoteRoot = quoteRootOf(article)
+  const url = permanentUrlOf(article, quoteRoot)
+  if (url === '') return null
   const containers = mediaContainersOf(article, quoteRoot)
   const mediaUrls = uniqueUrls(containers)
+  const mediaItems = mediaItemsOf(containers)
   const quoted = quotedOf(quoteRoot)
   const poll = pollOf(article, quoteRoot)
   const reposted = isRepost(article)
@@ -388,12 +457,35 @@ export function extractTweetCapture(article: HTMLElement): TweetCapture | null {
     shape,
     url,
     text: bodyOf(article, quoteRoot),
-    author: authorOf(article, verifiedOf(article, quoteRoot)),
-    postedAt: postedAtOf(article),
+    author: authorOf(article, quoteRoot, verifiedOf(article, quoteRoot)),
+    postedAt: postedAtOf(article, quoteRoot),
     mediaUrls,
+    mediaItems,
     coverUrl,
-    stats: statsOf(article),
+    stats: statsOf(article, quoteRoot),
     ...(quoted === undefined ? {} : { quoted }),
     ...(poll === undefined ? {} : { poll }),
+  }
+}
+
+/** The single projection shared by page and media save entrypoints. */
+export function tweetCaptureForInspiration(capture: TweetCapture): TweetInspirationCapture {
+  return {
+    url: capture.url,
+    text: capture.text,
+    shape: capture.shape,
+    author: { ...capture.author },
+    stats: { ...capture.stats },
+    posted_at: capture.postedAt,
+    cover_url: capture.coverUrl,
+    media_items: (capture.mediaItems ?? []).map((item) => ({ ...item })),
+    ...(capture.quoted === undefined ? {} : { quoted: {
+      author: { ...capture.quoted.author }, text: capture.quoted.text,
+      ...(capture.quoted.coverUrl === undefined ? {} : { coverUrl: capture.quoted.coverUrl }),
+    } }),
+    ...(capture.poll === undefined ? {} : { poll: {
+      options: capture.poll.options.map((option) => ({ ...option })), votes: capture.poll.votes,
+      ...(capture.poll.closesAt === undefined ? {} : { closesAt: capture.poll.closesAt }),
+    } }),
   }
 }

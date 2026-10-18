@@ -18,10 +18,11 @@
  * @module
  */
 
-import { MediaActionBridge, browserTransport, type ActionOutcome } from '../media-hover/actions.ts'
+import { MediaActionBridge, browserTransport } from '../media-hover/actions.ts'
 import { hoverCopy, resolveHoverLocale } from '../media-hover/copy.ts'
+import { svgIcon } from '../media-hover/overlay-icons.ts'
 import { resolveSaveIntent } from '../media-hover/save-intent.ts'
-import type { HoveredMedia, MediaKind } from '../media-hover/types.ts'
+import type { HoveredMedia, MediaKind, ActionOutcome } from '../media-hover/types.ts'
 import { mediaTriggerFor, type SurfacePageFacts } from './registry.ts'
 import {
   MEDIA_TRIGGER_SIZE_PX,
@@ -120,6 +121,7 @@ interface TriggerEntry {
   closeTimer: number | null
   readonly listeners: Array<() => void>
   saved?: boolean
+  savedFor?: string
   busyAction?: string | null
   updatePrimary?: () => void
 }
@@ -412,7 +414,7 @@ export function initMediaTrigger(
       const isEn = resolveHoverLocale() === 'en' && typeof localStorage !== 'undefined' && localStorage.getItem('omnimux_manual_locale') === 'en'
       const copy = hoverCopy(isEn ? 'en' : 'zh')
       if (entryPair.saved) {
-        if (primaryBtn.innerHTML !== ACTION_ICON.check) primaryBtn.innerHTML = ACTION_ICON.check
+        if (primaryBtn.innerHTML !== svgIcon('check')) primaryBtn.innerHTML = svgIcon('check')
         const label = intent === 'image-asset' ? copy.image.done : copy.done.inspiration
         primaryBtn.title = label
         primaryBtn.setAttribute('aria-label', label)
@@ -498,7 +500,7 @@ export function initMediaTrigger(
     const primaryBtn = entry.toolbar.querySelector<HTMLButtonElement>('.omt-action[data-action="inspiration"]')
     const copy = hoverCopy()
 
-    if (action === 'inspiration' && entry.saved) {
+    if (action === 'inspiration' && entry.saved && entry.savedFor === payload.id) {
       const intent = resolveSaveIntent(payload)
       const msg = intent === 'image-asset' ? copy.image.done : copy.done.inspiration
       if (primaryBtn) {
@@ -530,11 +532,13 @@ export function initMediaTrigger(
         } else {
           outcome = { ok: false, status: 'failed', message: copy.image.typeUnknown }
         }
+        if (disposed || !entry.card.isConnected || payloadFor(entry.card, doc)?.id !== payload.id) return
         if (primaryBtn) {
           primaryBtn.removeAttribute('aria-busy')
           if (outcome.ok) {
             entry.saved = true
-            primaryBtn.innerHTML = ACTION_ICON.check
+            entry.savedFor = payload.id
+            primaryBtn.innerHTML = svgIcon('check')
             primaryBtn.title = outcome.message
             primaryBtn.setAttribute('aria-label', outcome.message)
             primaryBtn.setAttribute('aria-pressed', 'true')

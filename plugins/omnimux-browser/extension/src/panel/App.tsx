@@ -8,7 +8,9 @@
  */
 
 import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
-import { BRIDGE_FETCH_MEDIA_METHOD, DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
+import { observeInspirationTasks, submitInspirationSave, canonicalInspirationUrl, inspirationTaskForSource, inspirationSaveLabel, inspirationSaveDetail, type InspirationSaveTask } from '../shared/inspiration-save.ts'
+import { pageInspirationRequest } from './inspiration-save.ts'
+import { BRIDGE_FETCH_MEDIA_METHOD } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeCaps } from 'omnimux-browser/src/protocol.ts'
 import type { ServerFrame } from 'omnimux-browser/src/protocol.ts'
 import type { BridgeState } from '../background/bridge.ts'
@@ -26,7 +28,7 @@ import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
 import { ModelSelector } from './components/ModelSelector.tsx'
 import { AutoModelPicker } from './components/AutoModelPicker.tsx'
-import { CloseIcon, SearchIcon, MenuIcon, ArrowUpIcon, SquareIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, PaperclipIcon, SidebarPanelIcon, TwitterXIcon, PlatformMarkIcon, SaveIcon, BinocularsIcon, MoreHorizontalIcon } from './components/icons.tsx'
+import { CloseIcon, SearchIcon, ArrowUpIcon, SquareIcon, MessageSquareIcon, PlusIcon as PlusSvgIcon, PaperclipIcon, SidebarPanelIcon, PlatformMarkIcon, SaveIcon, MoreHorizontalIcon } from './components/icons.tsx'
 import type { ApprovalDecision, ApprovalRequest } from '../security/approval.ts'
 import { getUiLocale, safeGetStorage, safeSetStorage, safeRemoveStorage } from '../i18n.ts'
 import type { UiLocale } from '../i18n.ts'
@@ -96,7 +98,6 @@ import {
   latestSessionTitle,
   projectedSessionTitle,
   resumableSessions,
-  sessionAcceptsPrompts,
   sessionDisplayTitle,
   sessionTitleFromEvent,
   SessionRuntimeCache,
@@ -267,15 +268,6 @@ async function discoverWithFallback(
     }
   }
   throw lastCause ?? new PanelRpcError('model-discovery-failed', 'model discovery failed', {})
-}
-
-function SettingsIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M10 7.35A2.65 2.65 0 1 0 10 12.65 2.65 2.65 0 0 0 10 7.35Z" />
-      <path d="M16.15 11.2a6.4 6.4 0 0 0 0-2.4l1.18-.91-1.5-2.6-1.4.57a6.3 6.3 0 0 0-2.08-1.2L12.15 3h-3l-.2 1.66a6.3 6.3 0 0 0-2.08 1.2l-1.4-.57-1.5 2.6 1.18.91a6.4 6.4 0 0 0 0 2.4l-1.18.91 1.5 2.6 1.4-.57a6.3 6.3 0 0 0 2.08 1.2l.2 1.66h3l.2-1.66a6.3 6.3 0 0 0 2.08-1.2l1.4.57 1.5-2.6-1.18-.91Z" />
-    </svg>
-  )
 }
 
 function ChevronDownIcon({ size = 13 }: { size?: number } = {}): React.JSX.Element {
@@ -802,13 +794,14 @@ export function App(): React.JSX.Element {
     }
   }, [themeSetting])
 
-  const [saveInspirationStatus, setSaveInspirationStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+  const [inspirationTasks, setInspirationTasks] = useState<InspirationSaveTask[]>([])
+  useEffect(() => observeInspirationTasks(setInspirationTasks), [])
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
   const [fabEnabled, setFabEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.fab))
   const [mediaHoverEnabled, setMediaHoverEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.mediaHover))
-  const [velocityEnabled, setVelocityEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.velocity))
+  const [velocityEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.velocity))
   const [keywordTags, setKeywordTags] = useState<string[]>([])
   const [keywordDraft, setKeywordDraft] = useState('')
   useEffect(() => {
@@ -1062,6 +1055,11 @@ export function App(): React.JSX.Element {
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   const [pageScene, setPageScene] = useState<PageSceneInfo | null>(null)
+  const saveSourceUrl = canonicalInspirationUrl(pageScene?.tweet?.url || pageScene?.url)
+  const saveInspirationTask = inspirationTaskForSource(inspirationTasks, saveSourceUrl)
+  const saveInspirationStatus = saveInspirationTask?.state ?? 'idle'
+  const saveInspirationLabel = inspirationSaveLabel(saveInspirationTask, locale)
+
   const [detectedMedia, setDetectedMedia] = useState<SniffedMediaItem[]>([])
   /** Pairing card state: the in-flight approval and its last outcome. */
   const [pairBusy, setPairBusy] = useState(false)
@@ -1344,118 +1342,21 @@ export function App(): React.JSX.Element {
   }, [])
 
   const handleSaveToInspiration = async (mediaItem?: SniffedMediaItem) => {
-    const targetUrl = mediaItem?.src || pageScene?.url || ''
-    if (!targetUrl || saveInspirationStatus === 'saving') return
-    setSaveInspirationStatus('saving')
-    const mediaSrc = mediaItem?.src || detectedMedia[0]?.src || pageScene?.heroImage || ''
-    // A captured post carries its own media, author and counters; the media the
-    // page happened to have sniffed is only the fallback for everything else.
-    const tweet = pageScene?.tweet
-    const tweetMedia = tweet?.mediaUrls ?? []
-    const directItem = {
-      title: (pageScene?.title || (pageScene?.author ? `@${pageScene.author}` : targetUrl)).slice(0, 120),
-      type: (mediaItem?.type === 'video' || detectedMedia[0]?.type === 'video') ? 'video' as const : 'image' as const,
-      source_platform: pageScene?.platform || 'twitter',
-      source_url: tweet?.url || targetUrl,
-      cover_url: tweet?.coverUrl || mediaSrc,
-      media_urls: tweetMedia.length > 0 ? tweetMedia : (mediaSrc ? [mediaSrc] : []),
-      content: tweet?.text || pageScene?.postText || pageScene?.title || '',
-      tags: [pageScene?.platform ? `${pageScene.platform}` : '社交媒体', '灵感采集'],
-      // Saving is not analysing. The host turns its breakdown on unless told
-      // otherwise, so the choice is stated here rather than inherited.
-      auto_analyze: false,
-      ...(tweet === undefined ? {} : {
-        content_shape: tweet.shape,
-        author: tweet.author,
-        stats: tweet.stats,
-        posted_at: tweet.postedAt,
-        ...(tweet.quoted === undefined ? {} : { quoted: tweet.quoted }),
-        ...(tweet.poll === undefined ? {} : { poll: tweet.poll }),
-        ...(tweet.threadItems === undefined ? {} : { thread_items: tweet.threadItems }),
-      }),
+    const request = pageInspirationRequest(pageScene, mediaItem)
+    if (!request) {
+      setToastMessage(locale === 'en' ? 'Open the original post and retry' : '无法确定原帖地址，请打开原帖后重试')
+      return
     }
-
-    let saved = false
-
-    // 1. 优先通过 chrome.runtime.sendMessage 委托后台 service worker 保存（彻底免疫 Edge 私有网络 PNA 拦截）
-    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-      try {
-        const bgRes = await new Promise<{ ok?: boolean }>((resolve) => {
-          chrome.runtime.sendMessage(
-            {
-              type: 'DSH_SAVE_INSPIRATION_PANEL',
-              payload: {
-                targetUrl,
-                ...directItem,
-                targetPort,
-              },
-            },
-            (response) => {
-              if (chrome.runtime?.lastError || !response) {
-                resolve({ ok: false })
-              } else {
-                resolve(response as { ok?: boolean })
-              }
-            },
-          )
-        })
-        if (bgRes?.ok) {
-          saved = true
-        }
-      } catch {
-        // Fall back to direct fetch if message fails
-      }
-    }
-
-    // 2. 备选：直连本地候选端口（全量 import-url 及 local 直存保底）
-    if (!saved) {
-      const candidatePorts = [targetPort, 45120, 43120, 3080].filter((p, i, arr) => arr.indexOf(p) === i)
-      for (const port of candidatePorts) {
-        const targetBase = `http://127.0.0.1:${port}`
-        try {
-          // 优先尝试 import-url 全量社媒抓取
-          let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            // Saving is not analysing; the host would otherwise run its breakdown.
-            body: JSON.stringify({ url: targetUrl, background: true, auto_analyze: false }),
-            signal: AbortSignal.timeout(3500),
-          }).catch(() => null)
-
-          // 如果 import-url 异常（如反爬、502、解析空），采用前台已嗅探的多模态图文数据直存灵感库
-          if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
-            res = await fetch(`${targetBase}/omnimux/inspiration/local`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(directItem),
-              signal: AbortSignal.timeout(3000),
-            }).catch(() => null)
-          }
-
-          if (res && (res.ok || res.status === 200 || res.status === 201 || res.status === 202)) {
-            saved = true
-            break
-          }
-        } catch {
-          // try next port
-        }
-      }
-    }
-
-    if (saved) {
-      setSaveInspirationStatus('saved')
-      setToastMessage(locale === 'en' ? 'Saved to Inspiration Library!' : '已保存到 OmniMux 灵感素材库！')
-      setTimeout(() => {
-        setSaveInspirationStatus('idle')
-        setToastMessage(null)
-      }, 3000)
-    } else {
-      setSaveInspirationStatus('failed')
-      setToastMessage(locale === 'en' ? 'Failed to save (check OmniMux server)' : '保存失败，请检查 OmniMux 运行状态')
-      setTimeout(() => {
-        setSaveInspirationStatus('idle')
-        setToastMessage(null)
-      }, 3000)
+    try {
+      const task = await submitInspirationSave(request)
+      setInspirationTasks((current) => {
+        const existing = current.find((item) => item.taskId === task.taskId)
+        if (existing && existing.updatedAt >= task.updatedAt && existing.state !== 'saving') return current
+        return current.filter((item) => item.taskId !== task.taskId).concat(task)
+      })
+      if (task.state === 'failed') setToastMessage(inspirationSaveDetail(task, locale))
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : (locale === 'en' ? 'Save failed' : '保存失败，请重新连接主程序'))
     }
   }
 
@@ -1642,11 +1543,7 @@ export function App(): React.JSX.Element {
   const questionSubmitting = question !== null && hasPendingQuestion(questionSubmissions, question)
   const sessionSwitchBlocked = sessionChanging || busy || addingImages || stopping
     || questions.length > 0 || approvalQueue.length > 0
-  const sessionReady = sessionAcceptsPrompts(
-    state === 'connected',
-    sessionChanging,
-    sessionRef.current,
-  )
+
 
   function replaceQuestions(next: PendingQuestion[]): void {
     questionsRef.current = next
@@ -3601,17 +3498,14 @@ export function App(): React.JSX.Element {
           </div>
           <button
             type="button"
-            className={`sticky-bar-action-btn ${saveInspirationStatus === 'saved' ? 'success' : ''}`}
+            className={`sticky-bar-action-btn ${(saveInspirationStatus === 'saved' || saveInspirationStatus === 'duplicate') ? 'success' : ''}`}
             onClick={() => { void handleSaveToInspiration() }}
             disabled={saveInspirationStatus === 'saving'}
+            title={saveInspirationTask ? inspirationSaveDetail(saveInspirationTask, locale) : undefined}
           >
             <SaveIcon size={11} />
             <span>
-              {saveInspirationStatus === 'saving'
-                ? (locale === 'en' ? 'Saving...' : '保存中...')
-                : saveInspirationStatus === 'saved'
-                  ? (locale === 'en' ? '✓ Saved' : '✓ 已保存')
-                  : (locale === 'en' ? 'Save' : '保存到灵感库')}
+              {saveInspirationLabel}
             </span>
           </button>
         </div>
@@ -3713,19 +3607,18 @@ export function App(): React.JSX.Element {
                 <div className="hero-card-action-shelf">
                   <button
                     type="button"
-                    className={`hero-action-pill-btn ${saveInspirationStatus === 'saved' ? 'success' : ''}`}
+                    className={`hero-action-pill-btn ${(saveInspirationStatus === 'saved' || saveInspirationStatus === 'duplicate') ? 'success' : ''}`}
                     onClick={() => { void handleSaveToInspiration() }}
                     disabled={saveInspirationStatus === 'saving'}
                   >
                     <span>
-                      {saveInspirationStatus === 'saving'
-                        ? (locale === 'en' ? 'Saving...' : '保存中...')
-                        : saveInspirationStatus === 'saved'
-                          ? (locale === 'en' ? '✓ Saved' : '✓ 已保存到灵感库')
-                          : (locale === 'en' ? 'Save' : '保存到灵感库')}
+                      {saveInspirationLabel}
                     </span>
                   </button>
                 </div>
+                {saveInspirationTask && ['partial', 'pending', 'failed'].includes(saveInspirationTask.state) && (
+                  <p role="status">{inspirationSaveDetail(saveInspirationTask, locale)}</p>
+                )}
               </div>
             </div>
             <PresetChips scene={pageScene} locale={locale} onSelectPrompt={(p) => void send(p)} />
@@ -3803,6 +3696,8 @@ export function App(): React.JSX.Element {
       <footer className="composer">
         {detectedMedia.some((item) => !attachedMediaIds.has(item.id)) && (
           <MediaSnifferBar
+            inspirationTasks={inspirationTasks}
+            scene={pageScene}
             items={detectedMedia.filter((item) => !attachedMediaIds.has(item.id))}
             locale={locale}
             onActiveChange={setActiveMediaItems}

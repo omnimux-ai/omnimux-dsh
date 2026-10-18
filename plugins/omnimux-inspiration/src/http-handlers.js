@@ -40,6 +40,8 @@ import { getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
 import { extractVideoPoster } from './media-export.js'
 import { isDownloadableHttpUrl, isPublicHttpUrl } from './url-policy.js'
 import { localMediaPaths } from './local-store.js'
+import { mergeCapturedMeta, normalizeCapture, mediaSourceId, sameMediaSource, publicCaptureUrl, sameCaptureSource } from './captured-import.js'
+import { downloadAvailableMedia, isCompleteSavedRecord, cleanupUnreferencedDownloads } from './available-import.js'
 import {
   buildTranslatePrompt,
   extractScriptStructure,
@@ -124,8 +126,9 @@ function duplicateBody(existing, returnExisting) {
  * @param {Record<string, any> | null | undefined} item
  * @returns {boolean}
  */
-function needsVideoUpgrade(item) {
+function needsVideoUpgrade(item, args) {
   if (!item || typeof item !== 'object') return false
+  if (args?.preserveAvailable) return !isCompleteSavedRecord(item, args.paths)
   if (item.media_items?.length > 0 && item.import_status === IMPORT_STATUS_READY) return false
   return item.type !== 'video'
 }
@@ -568,6 +571,13 @@ function mediaItemsFromLayer(layer) {
   const available = []
   /** @type {MediaReference[]} */
   const missing = []
+  const slots = []
+  const slot = (raw, type, url = '') => {
+    const reference = mediaReference(raw, type, url)
+    const poster_url = type === 'video' ? firstPublicHttpUrl([raw?.media_url_https, raw?.media_url, raw?.poster]) : ''
+    const item = { type, url, ...(reference.id ? { source_id: reference.id } : {}), ...(poster_url ? { poster_url } : {}) }
+    slots.push({ ...item, source_id: mediaSourceId(item) })
+  }
   const append = (raw, assumedType = '') => {
     const media = asObject(raw)
     const video = firstPublicHttpUrl([
@@ -577,6 +587,7 @@ function mediaItemsFromLayer(layer) {
     ])
     if (video) {
       items.push({ type: 'video', url: video })
+      slot(media, 'video', video)
       available.push(mediaReference(media, 'video', video))
       const poster = firstPublicHttpUrl([media.media_url_https, media.media_url, media.poster])
       if (poster) posters.push(poster)
@@ -585,14 +596,16 @@ function mediaItemsFromLayer(layer) {
     const type = firstText([media.type, assumedType])
     if (type === 'video' || type === 'animated_gif') {
       missing.push(mediaReference(media, 'video'))
+      slot(media, 'video')
       return
     }
     const image = firstPublicHttpUrl([media.media_url_https, media.media_url, media.url, media.src, typeof raw === 'string' ? raw : ''])
     if (type === 'photo' || type === 'image') {
       if (image) {
         items.push({ type: 'image', url: image })
+        slot(media, 'image', image)
         available.push(mediaReference(media, 'image', image))
-      } else missing.push(mediaReference(media, 'image'))
+      } else { missing.push(mediaReference(media, 'image')); slot(media, 'image') }
     }
   }
   for (const list of [layer.mediaDetails, asObject(layer.extended_entities).media, asObject(layer.entities).media]) {
@@ -603,17 +616,29 @@ function mediaItemsFromLayer(layer) {
   const singleVideo = videoUrlFromLayer(layer) || firstPublicHttpUrl([bestVariantUrl(asObject(layer.video).variants)])
   if (singleVideo) {
     items.push({ type: 'video', url: singleVideo })
+    slot(layer.video, 'video', singleVideo)
     available.push(mediaReference(layer.video, 'video', singleVideo))
     const poster = firstPublicHttpUrl([asObject(layer.video).poster])
     if (poster) posters.push(poster)
+  } else if (firstText([layer.video_url, layer.play_url, layer.play, layer.download_url,
+    typeof layer.video === 'string' ? layer.video : '']) || asArray(layer.video_versions).length
+    || asArray(asObject(layer.video).variants).length || asArray(asObject(layer.play_addr).url_list).length) {
+    // Keep a known-but-unusable flat video as a slot for the opt-in browser policy.
+    // Ordinary imports retain their existing metadata-only degradation behavior.
+    slot(layer.video, 'video')
   }
   for (const url of imagesFromLayer(layer)) {
     if (isPublicHttpUrl(url)) {
       items.push({ type: 'image', url })
+      slot({}, 'image', url)
       available.push(mediaReference({}, 'image', url))
-    }
+    } else slot({}, 'image')
   }
-  return { items, available, missing, posters }
+  for (const raw of [...asArray(layer.images), ...asArray(layer.image_urls), layer.image_url]) {
+    const value = asText(raw) || asText(raw?.url) || asText(raw?.src)
+    if (value && !HTTP_URL_RE.test(value)) slot({}, 'image')
+  }
+  return { items, available, missing, posters, slots }
 }
 
 /** Treat quality ladders and image-size aliases as one asset, never its poster. */
@@ -649,11 +674,19 @@ function collectMediaItems(layers) {
   const available = []
   /** @type {MediaReference[]} */
   const missing = []
+  const slots = []
   for (const layer of orderedLayers) {
     const collection = mediaItemsFromLayer(layer)
     for (const url of collection.posters) posters.add(mediaIdentity({ type: 'image', url }))
     available.push(...collection.available)
     missing.push(...collection.missing)
+    for (const item of collection.slots) {
+      const index = slots.findIndex((current) => sameMediaSource(current, item))
+      if (index < 0) slots.push(item)
+      else if ((!slots[index].url && item.url) || (item.type === 'video' && videoUrlResolution(item.url) > videoUrlResolution(slots[index].url))) {
+        slots[index] = { ...slots[index], ...item, source_id: slots[index].source_id || item.source_id }
+      }
+    }
     for (const item of collection.items) {
       const key = mediaIdentity(item)
       const existing = indices.get(key)
@@ -666,7 +699,8 @@ function collectMediaItems(layers) {
     }
   }
   const unavailable = missing.some((reference) => !available.some((resolved) => sameMediaReference(reference, resolved)))
-  return { items: items.filter((item) => item.type !== 'image' || !posters.has(mediaIdentity(item))), unavailable }
+  return { items: items.filter((item) => item.type !== 'image' || !posters.has(mediaIdentity(item))), unavailable,
+    slots: slots.filter((item) => item.type !== 'image' || !item.url || !posters.has(mediaIdentity(item))) }
 }
 
 function resolvedUrlFromLayer(layer) {
@@ -765,7 +799,7 @@ export function parseSocialMeta(data, { platform } = {}) {
   const text = decode(pickLayerValue(layers, textFromLayer, isBlankText))
   const title = decode(pickLayerValue(layers, titleFromLayer, isBlankText))
   const cover_url = pickLayerValue(layers, coverUrlFromLayer, isBlankText)
-  const { items: media_items, unavailable: unavailable_media } = collectMediaItems(layers)
+  const { items: media_items, unavailable: unavailable_media, slots: media_slots } = collectMediaItems(layers)
   const video_url = media_items.find((item) => item.type === 'video')?.url || ''
   const images = media_items.filter((item) => item.type === 'image').map((item) => item.url)
   const author = pickLayerValue(layers, authorFromLayer, isBlankObject)
@@ -793,6 +827,7 @@ export function parseSocialMeta(data, { platform } = {}) {
     video_url,
     images,
     media_items,
+    media_slots,
     author,
     stats,
     duration,
@@ -869,6 +904,13 @@ export function maybeEnsureVideoCover(item, store, paths) {
 
 export function handleList({ url, store }) {
   const failed = sweepStaleImports(store)
+  if (url.searchParams.has('source_url')) {
+    const sourceUrl = url.searchParams.get('source_url')?.trim() || ''
+    if (!publicCaptureUrl(sourceUrl)) return fail(400, 'source_url 必须是公开的原帖地址')
+    const row = store.readAll().find((item) => sameCaptureSource(item.source_url, sourceUrl))
+    const items = row ? [failed?.get(String(row.id)) || row] : []
+    return { status: 200, body: { data: { items, total: items.length, page: 1, page_size: 1 } } }
+  }
   const q = url.searchParams.get('q') || undefined
   const platform = url.searchParams.get('platform') || undefined
   const type = url.searchParams.get('type') || undefined
@@ -1269,6 +1311,7 @@ async function runShareJob(args) {
 
 export function handleCreate({ req, store }) {
   const body = req.body || {}
+  if (['capture', 'preserve_available'].some((key) => Object.hasOwn(body, key))) return fail(400, '网页采集内容只能通过链接导入保存')
   if (['analysis_results', 'body_translation', 'creation_draft', 'creation_reference'].some((key) => Object.hasOwn(body, key))) {
     return fail(400, '分析结果与创作参考只能通过对应功能保存')
   }
@@ -1291,6 +1334,8 @@ function parseImportBody(ctx) {
     // the inline import dialog) leaves it unset and therefore keeps the original
     // synchronous contract, including its 409 / 429 / 422 / 502 statuses.
     background: body.background === true,
+    preserveAvailable: body.preserve_available === true,
+    capture: normalizeCapture(body.capture, rawUrl),
   }
 }
 
@@ -1317,6 +1362,8 @@ function buildImportPlaceholder(args) {
     local_paths: {},
     tags: args.customTags,
     auto_analyze: args.autoAnalyze,
+    ...(args.capture ? { capture: args.capture } : {}),
+    ...(args.preserveAvailable ? { preserve_available: true } : {}),
     import_status: IMPORT_STATUS_IMPORTING,
     import_stage: IMPORT_STAGES.RESOLVING,
     import_started_at: new Date().toISOString(),
@@ -1516,14 +1563,22 @@ export async function handleFetchMedia(ctx) {
 
 export async function handleImportUrl(ctx) {
   if (ctx.signal?.aborted) throw createAbortError()
-  const parsed = parseImportBody(ctx)
+  let parsed
+  try { parsed = parseImportBody(ctx) } catch (error) { return fail(400, error.message) }
   if (!parsed.rawUrl) return fail(400, 'url is required')
-  const existing = ctx.store.findByUrl(parsed.rawUrl)
+  let existing = ctx.store.findByUrl(parsed.rawUrl)
+  parsed.preserveAvailable ||= existing?.preserve_available === true
+  if (parsed.preserveAvailable && !publicCaptureUrl(parsed.rawUrl)) return fail(400, 'url 必须是公开的原帖地址')
+  if (parsed.preserveAvailable) existing = ctx.store.readAll().find((row) => sameCaptureSource(row.source_url, parsed.rawUrl)) || null
+  if (!parsed.capture && existing?.capture) {
+    try { parsed.capture = normalizeCapture(existing.capture, parsed.rawUrl) } catch { /* An old invalid snapshot grants no recovery input. */ }
+  }
+  if (existing && ctx.req.body?.auto_analyze === undefined) parsed.autoAnalyze = existing.auto_analyze !== false
   if (parsed.background) return beginBackgroundImport({ ...ctx, ...parsed, upgradeId: '' }, existing, parsed)
   // Only a record that already holds a video is a true duplicate. A degraded
   // record is re-resolved so a later-available direct link can upgrade it.
-  if (existing && !parsed.force && !needsVideoUpgrade(existing)) {
-    return duplicateBody(existing, parsed.returnExisting)
+  if (existing && !parsed.force && !needsVideoUpgrade(existing, { ...ctx, ...parsed })) {
+    return duplicateBody(parsed.preserveAvailable ? { ...existing, import_status: importStatusOf(existing) } : existing, parsed.returnExisting)
   }
   const upgradeId = existing ? existing.id : ''
   return withImportLock(parsed.rawUrl, () => runImport({ ...ctx, ...parsed, upgradeId }))
@@ -1551,19 +1606,19 @@ async function beginBackgroundImport(ctx, existing, parsed) {
   // place and the user does not end up with a second card for one link.
   if (existing && importStatusOf(existing) === IMPORT_STATUS_FAILED) {
     const restarted = ctx.store.update(existing.id, {
-      ...buildImportPlaceholder(parsed),
+      ...retryImportPatch(parsed),
       import_error: null,
     })
     return startBackgroundImport({ ...ctx, upgradeId: existing.id }, restarted)
   }
-  if (existing && !parsed.force && !needsVideoUpgrade(existing)) {
-    return duplicateBody(existing, parsed.returnExisting)
+  if (existing && !parsed.force && !needsVideoUpgrade(existing, ctx)) {
+    return duplicateBody(parsed.preserveAvailable ? { ...existing, import_status: importStatusOf(existing) } : existing, parsed.returnExisting)
   }
   // A degraded row is upgraded in place: no second card, and the completion
   // replaces this very row.
   if (existing) {
     const upgraded = ctx.store.update(existing.id, {
-      ...buildImportPlaceholder(parsed),
+      ...retryImportPatch(parsed),
       import_error: null,
     })
     return startBackgroundImport({ ...ctx, upgradeId: existing.id }, upgraded)
@@ -1573,6 +1628,14 @@ async function beginBackgroundImport(ctx, existing, parsed) {
   // duplicate of the link it was asked to import.
   const placeholder = ctx.store.add(buildImportPlaceholder(parsed))
   return startBackgroundImport({ ...ctx, upgradeId: String(placeholder.id) }, placeholder)
+}
+
+/** Starting a retry never erases already readable content or saved media. */
+function retryImportPatch(parsed) {
+  return { import_status: IMPORT_STATUS_IMPORTING, import_stage: IMPORT_STAGES.RESOLVING,
+    import_started_at: new Date().toISOString(), auto_analyze: parsed.autoAnalyze,
+    ...(parsed.capture ? { capture: parsed.capture } : {}),
+    ...(parsed.preserveAvailable ? { preserve_available: true } : {}) }
 }
 
 async function withImportLock(rawUrl, work) {
@@ -1590,15 +1653,31 @@ async function withImportLock(rawUrl, work) {
 
 async function runImport(args) {
   if (args.signal?.aborted) throw createAbortError()
-  if (!args.socialFetcher) {
+  if (!args.socialFetcher && !args.preserveAvailable) {
     return fail(500, '未注入 OmniMux 社媒解析能力 (socialFetcher 未就绪)')
   }
-  const social = await fetchSocialMeta(args)
-  if (social.error) return social.error
+  const social = args.socialFetcher ? await fetchSocialMeta(args)
+    : { error: fail(500, '社媒解析暂不可用') }
+  if (social.error && !args.preserveAvailable) return social.error
+  let meta = social.meta || parseSocialMeta({})
+  if (args.preserveAvailable || args.capture) meta = mergeCapturedMeta(meta, args.capture)
+  if (args.preserveAvailable) {
+    const previous = args.upgradeId ? args.store.get(args.upgradeId) : null
+    meta = { ...meta, title: meta.title || (previous?.title !== args.rawUrl ? previous?.title : '') || '',
+      text: meta.text || previous?.content || '', author: { ...(previous?.author || {}), ...meta.author },
+      stats: { ...(previous?.stats || {}), ...meta.stats }, quoted: meta.quoted ?? previous?.quoted,
+      poll: meta.poll ?? previous?.poll, published_at: meta.published_at || previous?.published_at || '',
+      cover_url: publicCaptureUrl(meta.cover_url),
+      shape: meta.shape || previous?.content_shape,
+      resolution_error: social.error?.body?.error || '' }
+    if (!meta.media_slots.length && ['video', 'photo', 'gallery'].includes(meta.shape)) {
+      meta.media_slots = [{ type: meta.shape === 'video' ? 'video' : 'image', url: '' }]
+    }
+  }
   if (args.signal?.aborted) throw createAbortError()
-  const dup = checkResolvedDuplicate(args, social.meta)
+  const dup = checkResolvedDuplicate(args, meta)
   if (dup) return dup
-  return persistImportedItem(args, social.meta)
+  return persistImportedItem(args, meta)
 }
 
 /**
@@ -1625,6 +1704,7 @@ async function reportStage(args, stage) {
  */
 async function persistImportedItem(args, meta) {
   if (args.signal?.aborted) throw createAbortError()
+  if (args.preserveAvailable) return persistAvailableItem(args, meta)
   if (meta.unavailable_media) return fail(422, '该帖子部分素材未提供可下载地址，无法完整导入，请稍后重试')
   const videoUrl = HTTP_URL_RE.test(meta.video_url || '') ? meta.video_url : ''
   if (!videoUrl && !meta.has_metadata) {
@@ -1659,6 +1739,31 @@ async function persistImportedItem(args, meta) {
   }
 }
 
+/** Opt-in partial saves share the resolver, downloader and record builder with ordinary imports. */
+async function persistAvailableItem(args, meta) {
+  const hasMedia = Boolean(meta.media_slots?.length || meta.media_items?.length)
+  if (hasMedia) await reportStage(args, IMPORT_STAGES.DOWNLOADING)
+  const media = await downloadAvailableMedia(args, meta, {
+    downloadCover: downloadCoverBestEffort,
+    extractPoster: extractVideoPosterBestEffort,
+    checkpoint: async (state) => {
+      const record = buildImportRecord(args, meta, state)
+      await persistImportedRecord(args, { ...record, import_status: IMPORT_STATUS_IMPORTING, import_stage: IMPORT_STAGES.DOWNLOADING })
+    },
+  })
+  try {
+    if (args.signal?.aborted) throw createAbortError()
+    const analysis = media.missingReasons.length ? {} : await maybeAnalyze(args, media, meta)
+    await reportStage(args, IMPORT_STAGES.PERSISTING)
+    const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, analysis))
+    return { status: 200, body: { data: record,
+      ...(record.import_status === IMPORT_STATUS_DEGRADED ? { media_degraded: true, degrade_reason: record.import_error } : {}) } }
+  } catch (error) {
+    cleanupUnreferencedDownloads(media.newFiles, args.store)
+    throw error
+  }
+}
+
 /**
  * Write the imported record.
  *
@@ -1671,6 +1776,18 @@ async function persistImportedItem(args, meta) {
  */
 async function persistImportedRecord(args, record) {
   if (!args.upgradeId) return args.store.add(record)
+  if (args.preserveAvailable) {
+    const previous = args.store.get(args.upgradeId)
+    if (!previous) throw new Error('该灵感已被删除，保存已停止')
+    return args.store.update(args.upgradeId, { ...record,
+      tags: [...new Set([...(previous.tags || []), ...(record.tags || [])])],
+      analysis_results: { ...(previous.analysis_results || {}), ...(record.analysis_results || {}) },
+      body_translation: previous.body_translation,
+      deconstruction: record.deconstruction || previous.deconstruction,
+      creation_draft: previous.creation_draft,
+      creation_reference: previous.creation_reference,
+    })
+  }
   const replaced = await args.store.replace(args.upgradeId, record)
   return replaced || args.store.add(record)
 }
@@ -1766,9 +1883,10 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     : coverName
       ? (imageCoverUrl || `/omnimux/inspiration/local/media/covers/${coverName}`)
       : meta.cover_url
-  const type = resolveImportType(meta, media)
-  const savedImageCount = (media.mediaItems || []).filter((item) => item.type === 'image').length
-  const content_shape = type === 'video' ? 'video'
+  const type = args.preserveAvailable && media.mediaItems?.some((item) => item.type === 'video') ? 'video'
+    : args.preserveAvailable && media.mediaItems?.some((item) => item.type === 'image') ? 'image' : resolveImportType(meta, media)
+  const savedImageCount = (media.mediaItems || []).filter((item) => item.type === 'image' && item.url).length
+  const content_shape = args.preserveAvailable && meta.shape ? meta.shape : type === 'video' ? 'video'
     : savedImageCount > 1 ? 'gallery'
       : type === 'image' ? 'photo' : meta.text ? 'text' : 'link'
   const record = {
@@ -1779,7 +1897,7 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     source_url: args.rawUrl,
     cover_url,
     media_items: media.mediaItems || [],
-    media_urls: (media.mediaItems || []).filter((item) => item.type === 'video').map((item) => item.url),
+    media_urls: (media.mediaItems || []).filter((item) => item.type === 'video' && item.url).map((item) => item.url),
     content_shape,
     local_paths: media.localPaths,
     tags: args.customTags,
@@ -1788,6 +1906,8 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     stats: meta.stats,
     duration: meta.duration,
     published_at: meta.published_at,
+    ...(args.capture ? { capture: args.capture } : {}),
+    ...(args.preserveAvailable ? { preserve_available: true, quoted: meta.quoted, poll: meta.poll, posted_at: meta.published_at || null } : {}),
     deconstruction: analysis.deconstruction ?? null,
     // This record is the completion of an import, so it settles the placeholder
     // the background path published: `ready` once every attachment was saved,
@@ -1797,7 +1917,14 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     import_stage: null,
     import_error: analysis.error || null,
   }
-  if (args.autoAnalyze && media.localVideoPath) {
+  if (args.preserveAvailable) {
+    const missing = media.missingReasons || []
+    const complete = missing.length === 0 && (media.mediaItems?.length > 0 || Boolean(meta.text?.trim()))
+    record.import_status = complete ? IMPORT_STATUS_READY : IMPORT_STATUS_DEGRADED
+    record.import_error = complete ? analysis.error || null : missing.length ? [...new Set(missing)].join('；')
+      : meta.resolution_error ? `仅保留原帖链接：${meta.resolution_error}` : '仅保留原帖链接，尚未取得完整正文或素材'
+  }
+  if (args.autoAnalyze && media.localVideoPath && analysis.deconstruction !== undefined) {
     const media_index = record.media_items.findIndex((item) => item.type === 'video')
     const selection = { scope: 'media', media_index, directions: ['content', 'expression', 'creative'] }
     const prepared = prepareAnalysis(record, selection, args.paths)
@@ -1929,7 +2056,7 @@ async function downloadImportMedia(args, meta) {
 
 async function extractVideoPosterBestEffort(args, localVideoPath, localPaths) {
   if (args.signal?.aborted) {
-    if (localVideoPath) removeQuietly(localVideoPath)
+    if (!args.preserveAvailable && localVideoPath) removeQuietly(localVideoPath)
     throw createAbortError()
   }
   if (!localVideoPath || !existsSync(localVideoPath)) return { path: '', renderable: null }
@@ -1941,7 +2068,7 @@ async function extractVideoPosterBestEffort(args, localVideoPath, localPaths) {
       runFfmpeg: args.runFfmpeg,
     })
     if (args.signal?.aborted) {
-      if (localVideoPath) removeQuietly(localVideoPath)
+      if (!args.preserveAvailable && localVideoPath) removeQuietly(localVideoPath)
       if (poster) removeQuietly(poster)
       throw createAbortError()
     }
@@ -1951,7 +2078,7 @@ async function extractVideoPosterBestEffort(args, localVideoPath, localPaths) {
     }
   } catch (err) {
     if (args.signal?.aborted || err?.name === 'AbortError' || err?.code === 'ABORT_ERR') {
-      if (localVideoPath) removeQuietly(localVideoPath)
+      if (!args.preserveAvailable && localVideoPath) removeQuietly(localVideoPath)
       throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR')
         ? err
         : createAbortError('This operation was aborted', err)
@@ -2043,6 +2170,16 @@ export async function handleAnalyze(ctx) {
   // started early would race the import that is already writing the row.
   if (isImportBlocked(item)) {
     return fail(422, '该灵感正在后台导入中，请等待导入完成后再拆解')
+  }
+  if (item.preserve_available === true || item.media_items?.some((asset) => asset?.status === 'saved' || asset?.status === 'missing')) {
+    const media = analysisMediaItems(item)
+    const index = media.findIndex((asset) => asset.type === 'video')
+    if (index < 0 || media[index].status === 'missing' || !media[index].url) {
+      return fail(422, '首个视频尚未保存，请先补齐素材后再分析')
+    }
+    // The unscoped compatibility request still means the first video, including
+    // its fixed position. Never re-resolve another available video into that slot.
+    return handleScopedAnalysis({ ...ctx, req: { ...ctx.req, body: { ...ctx.req.body, scope: 'media', media_index: index } } }, { mirrorLegacy: true })
   }
   const videoPath = await resolveAnalyzeVideo({ ...ctx, item })
   if (videoPath.error) return videoPath.error

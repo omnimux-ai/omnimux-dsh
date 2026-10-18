@@ -76,6 +76,25 @@ describe('page-sensor suite', () => {
     expect(heroImg).toBe('https://pbs.twimg.com/media/XYZ123.jpg')
   })
 
+  it('首页存在多个帖子时，当前焦点帖向侧栏传递同一份有类型采集', () => {
+    window.history.pushState({}, '', '/home')
+    document.body.innerHTML = `<main>
+      <article data-testid="tweet"><a href="/first/status/111"><time></time></a>
+        <div data-testid="tweetText">First post</div>
+        <div data-testid="tweetPhoto"><img src="https://pbs.twimg.com/media/first.jpg" /></div>
+      </article>
+      <article data-testid="tweet" tabindex="-1"><a href="/focused/status/222"><time></time></a>
+        <div data-testid="tweetText">Focused post</div>
+        <div data-testid="videoPlayer"><video poster="https://pbs.twimg.com/media/cover.jpg"></video></div>
+      </article>
+    </main>`
+    const context = getFullContext('https://x.com/home')
+    expect(context.postText).toBe('Focused post')
+    expect(context.tweet?.url).toBe('https://x.com/focused/status/222')
+    expect(context.tweet?.mediaItems).toEqual([{ type: 'video', url: '', poster_url: 'https://pbs.twimg.com/media/cover.jpg' }])
+    expect(context.heroImage).toBe('https://pbs.twimg.com/media/cover.jpg')
+  })
+
   it('strictly ignores account switcher avatar in header and picks profile owner avatar', () => {
     window.history.pushState({}, '', '/yihui_indie')
 

@@ -1,4 +1,4 @@
-import { analysisInputFingerprint, analysisMediaItems, sourceFingerprint } from '../analysis-input.js'
+import { analysisInputFingerprint, analysisMediaItems, isAvailableMedia, sourceFingerprint } from '../analysis-input.js'
 import { hostMediaSrc, pickVideoSrc } from './api.js'
 
 /** Original post text is independent of generated narration and analysis. */
@@ -17,12 +17,17 @@ export function getPostMedia(item) {
   const counters = { video: 0, image: 0 }
   return analysisMediaItems(item).flatMap((media, index) => {
     if (!media || !['video', 'image'].includes(media.type) || typeof media.url !== 'string') return []
+    if (media.status === 'missing') {
+      const number = ++counters[media.type]
+      const label = `${media.type === 'video' ? '视频' : '图片'} ${number}`
+      return [{ ...media, id: `media:${index}`, index, url: '', label, title: media.title || label, missing: true }]
+    }
     if (/^[a-z][a-z\d+.-]*:/i.test(media.url) && !/^https?:\/\//i.test(media.url)) return []
     const url = media.type === 'video' ? pickVideoSrc({ media_urls: [media.url] }) : hostMediaSrc(media.url)
     if (!url) return []
     const number = ++counters[media.type]
     const label = `${media.type === 'video' ? '视频' : '图片'} ${number}`
-    return [{ ...media, id: `media:${index}`, index, url, label, title: media.title || label, duration: media.duration || (media.type === 'video' && number === 1 ? item?.duration : undefined) }]
+    return [{ ...media, id: `media:${index}`, index, url, label, missing: !isAvailableMedia(media), title: media.title || label, duration: media.duration || (media.type === 'video' && number === 1 ? item?.duration : undefined) }]
   })
 }
 

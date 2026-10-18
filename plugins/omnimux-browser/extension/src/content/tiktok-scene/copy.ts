@@ -58,11 +58,11 @@ const ZH: TiktokCopy = {
   busy: {
     video: '解析下载中',
     audio: '提取音轨中',
-    save: '解析入库中',
+    save: '保存中',
   },
   done: (action, outcome) => {
     if (outcome.code === 'duplicate') return '已在灵感库'
-    if (outcome.code === 'saved') return '已进灵感库'
+    if (outcome.code === 'saved') return '已保存'
     return action === 'audio' ? '原声已存「下载」' : '已存到「下载」'
   },
   detail: (action, outcome) => {

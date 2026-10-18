@@ -10,6 +10,14 @@ The host and Chrome extension communicate through the authenticated WebSocket br
 
 The endpoint belongs to the running host; do not assume a fixed port. Browser automation reads structured text rather than treating a page snapshot as an image.
 
+## Saving inspiration
+
+The panel, sticky header, media preview and video hover actions share one worker-owned save flow. X saves target the selected post's permanent URL. Image hover saves still go to the asset library.
+
+Only a complete host record earns the saved state. Incomplete saves retain the original text, source and available files, report partial completion, and can retry in place. Browser-local cache writes are not host-library saves. Saving never starts analysis, publication or media generation.
+
+Submitted receipts retain the host and record identities so closing the panel or restarting the worker can resume reconciliation. Unknown results are read back before any retry; they never trigger a submission to another host. An unavailable host prompts the user to start it rather than adding an offline collection queue.
+
 ## Source layout
 
 - `package.json`: server package metadata and build commands.
@@ -37,6 +45,8 @@ pnpm run build
 For an isolated extension preview, open `chrome://extensions/`, enable developer mode, choose **Load unpacked**, and select this checkout's `plugins/omnimux-browser/extension/dist`. Rebuild after source changes and reload that extension card. This does not update another installed copy automatically.
 
 A separately installed distribution may use `~/.dsh/browser-extension` or `~/.omnimux-dev/browser-extension`; do not confuse it with the current checkout's output or overwrite it during isolated development.
+
+Host-plugin installation, extension build, distribution-copy update and the browser's loaded version are separate delivery states. Verify each applicable state rather than treating source changes as a browser update.
 
 ## License and attribution
 
