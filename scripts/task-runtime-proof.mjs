@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { lstatSync, readFileSync, realpathSync } from 'node:fs'
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import semver from 'semver'
 import { compareClientProofBundles, prepareClientProofBundle } from './live-runtime-proof.mjs'
 
 const SCRIPT_METHOD = 'Debugger.scriptParsed'
@@ -117,10 +118,169 @@ function installationIdentity(installation) {
 }
 
 function installationBinding(installation, identity) {
-  return sha256(JSON.stringify({ identity, packages: installation.packages.map(pkg => ({
+  return sha256(JSON.stringify({ identity, appAnchor: installation.appAnchor, peerProbe: installation.peerProbe,
+    hostPeerExpectations: installation.hostPeerExpectations, packages: installation.packages.map(pkg => ({
     name: pkg.name, version: pkg.version, installedRoot: pkg.installedRoot, payload: pkg.payload,
     serverEntry: pkg.serverEntry, clientBundle: pkg.clientBundle,
   })) }))
+}
+
+const peerKey = peer => `${peer.parentRoot}\0${peer.name}`
+const prereleasePolicy = spec => /\d+\.\d+\.\d+-[0-9A-Za-z]/.test(spec) ? 'explicit-prerelease-bounds' : 'semver'
+const samePeerFields = peer => ({ parentName: peer.parentName, parentRoot: peer.parentRoot, name: peer.name,
+  spec: peer.spec, optional: peer.optional, versionPolicy: peer.versionPolicy, ...(peer.privateRoot ? { privateRoot: peer.privateRoot } : {}) })
+
+function validatePeerExpectations(installation) {
+  assert.ok(Array.isArray(installation.hostPeerExpectations), 'Task host peer expectations are required')
+  const seen = new Set()
+  for (const peer of installation.hostPeerExpectations) {
+    assert.ok(peer && typeof peer.name === 'string' && /^(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+$/i.test(peer.name), 'Invalid task peer name')
+    assert.ok(typeof peer.spec === 'string' && semver.validRange(peer.spec), 'Invalid task peer version range')
+    assert.equal(typeof peer.optional, 'boolean', 'Task peer optional declaration is required')
+    assert.equal(peer.versionPolicy, prereleasePolicy(peer.spec), 'Task peer version policy differs from its range')
+    assert.ok(!seen.has(peerKey(peer)), 'Duplicate task peer expectation')
+    seen.add(peerKey(peer))
+    assert.ok(installation.packages.some(pkg => pkg.name === peer.parentName && pkg.installedRoot === peer.parentRoot), 'Task peer parent is outside installed graph')
+    if (peer.privateRoot) assert.ok(installation.packages.some(pkg => pkg.name === peer.name && pkg.installedRoot === peer.privateRoot), 'Task peer target is outside installed graph')
+  }
+}
+
+function assertPeerDeclarations(installation) {
+  validatePeerExpectations(installation)
+  const declared = installation.packages.flatMap(pkg => {
+    const manifest = JSON.parse(installedFile(installation, pkg, pkg.payload.find(item => item.path === 'package.json')).source)
+    return Object.entries(manifest.peerDependencies || {}).map(([name, spec]) => ({
+      parentName: pkg.name, parentRoot: pkg.installedRoot, name, spec,
+      optional: manifest.peerDependenciesMeta?.[name]?.optional === true, versionPolicy: prereleasePolicy(spec),
+    }))
+  })
+  const withoutTarget = peer => { const { privateRoot: _privateRoot, ...value } = samePeerFields(peer); return value }
+  const sorted = peers => peers.map(withoutTarget).sort((a, b) => peerKey(a).localeCompare(peerKey(b)))
+  assert.deepEqual(sorted(installation.hostPeerExpectations), sorted(declared), 'Task peer expectations differ from installed declarations')
+}
+
+/** Pure receipt validation shared by the proof producer and report consumer. */
+export function validateTaskPeerResolution(installation, peers) {
+  validatePeerExpectations(installation)
+  assert.ok(Array.isArray(peers), 'Task peer resolution receipts are required')
+  assert.equal(peers.length, installation.hostPeerExpectations.length, 'Task peer resolution set is incomplete')
+  const expected = new Map(installation.hostPeerExpectations.map(peer => [peerKey(peer), peer]))
+  const seen = new Set()
+  for (const peer of peers) {
+    const declaration = expected.get(peerKey(peer))
+    assert.ok(declaration && !seen.has(peerKey(peer)), 'Unexpected or duplicate task peer receipt')
+    seen.add(peerKey(peer))
+    assert.deepEqual(samePeerFields(peer), samePeerFields(declaration), 'Task peer receipt declaration changed')
+    if (peer.status === 'missing') {
+      assert.ok(declaration.optional, 'Required task peer is missing')
+      assert.equal(peer.scope, null, 'Missing peer has a resolution scope')
+      for (const key of ['version', 'packageRoot', 'manifestPath', 'manifestSha256', 'entryPath', 'entrySha256', 'anchorResolution']) {
+        assert.equal(peer[key], null, 'Missing peer retains resolved identity')
+      }
+      continue
+    }
+    assert.equal(peer.status, 'resolved', 'Task peer resolution status is invalid')
+    assert.ok(semver.valid(peer.version) && semver.satisfies(peer.version, peer.spec,
+      { includePrerelease: peer.versionPolicy === 'explicit-prerelease-bounds' }), 'Task peer version does not satisfy its declaration')
+    for (const key of ['manifestSha256', 'entrySha256']) assert.match(peer[key], HASH, 'Task peer file digest is invalid')
+    assert.ok(typeof peer.packageRoot === 'string' && isAbsolute(peer.packageRoot)
+      && resolve(peer.packageRoot) === peer.packageRoot, 'Task peer package root is invalid')
+    assert.equal(peer.manifestPath, join(peer.packageRoot, 'package.json'), 'Task peer manifest path is invalid')
+    assert.ok(typeof peer.entryPath === 'string' && inside(peer.packageRoot, peer.entryPath)
+      && resolve(peer.entryPath) === peer.entryPath, 'Task peer entry escapes its package')
+    if (declaration.privateRoot) {
+      assert.equal(peer.scope, 'private', 'Private task peer has the wrong resolution scope')
+      assert.equal(peer.packageRoot, declaration.privateRoot, 'Task peer resolved outside its declared private graph')
+      const record = installation.packages.find(pkg => pkg.installedRoot === declaration.privateRoot)
+      const manifest = record.payload.find(file => file.path === 'package.json')
+      const entry = record.payload.find(file => resolve(record.installedRoot, file.path) === peer.entryPath)
+      assert.equal(peer.manifestSha256, manifest?.sha256, 'Private peer manifest differs from installed payload')
+      assert.equal(peer.entrySha256, entry?.sha256, 'Private peer entry differs from installed payload')
+      if (record.version !== undefined) assert.equal(peer.version, record.version, 'Private peer version differs from installed record')
+      assert.equal(peer.anchorResolution, null, 'Private peer unexpectedly claims a shipping anchor')
+    } else {
+      assert.equal(peer.scope, 'shipping-app', 'Task host peer did not resolve from the shipping app')
+      assert.ok(typeof installation.appAnchor === 'string' && /\/Contents\/Resources\/app\.asar\/node_modules\/@deepseek-ai\/dsh\/package\.json$/.test(installation.appAnchor), 'Task shipping app anchor is invalid')
+      const appRoot = installation.appAnchor.split('/app.asar/')[0] + '/app.asar'
+      assert.ok(inside(appRoot, peer.packageRoot), 'Task host peer resolved outside the shipping app')
+      assert.deepEqual(peer.anchorResolution, { packageRoot: peer.packageRoot, version: peer.version,
+        manifestPath: peer.manifestPath, manifestSha256: peer.manifestSha256,
+        entryPath: peer.entryPath, entrySha256: peer.entrySha256 }, 'Task host peer differs from shipping anchor resolution')
+    }
+  }
+  return peers
+}
+
+// This function runs only from the real, hashed profile-side probe module.
+function observeTaskPeerGraph(expectations, appAnchor, fs, path, crypto, module) {
+  const digest = value => crypto.createHash('sha256').update(value).digest('hex')
+  const manifestAt = file => ({ value: JSON.parse(fs.readFileSync(file, 'utf8')), sha256: digest(fs.readFileSync(file)) })
+  const anchorPath = fs.realpathSync(appAnchor)
+  if (anchorPath !== appAnchor || manifestAt(anchorPath).value.name !== '@deepseek-ai/dsh') throw new Error('Task app anchor identity is invalid')
+  const resolvePackage = (parent, name) => {
+    let entry
+    try { entry = module.createRequire(parent).resolve(name) }
+    catch (error) { if (['MODULE_NOT_FOUND', 'ERR_MODULE_NOT_FOUND'].includes(error.code)) return null; throw error }
+    entry = fs.realpathSync(entry)
+    let directory = path.dirname(entry)
+    for (;;) {
+      const manifestPath = path.join(directory, 'package.json')
+      if (fs.existsSync(manifestPath)) {
+        const manifest = manifestAt(manifestPath)
+        if (manifest.value.name === name) return { packageRoot: fs.realpathSync(directory), version: manifest.value.version,
+          manifestPath: fs.realpathSync(manifestPath), manifestSha256: manifest.sha256,
+          entryPath: entry, entrySha256: digest(fs.readFileSync(entry)) }
+      }
+      const parent = path.dirname(directory)
+      if (parent === directory) throw new Error('Resolved task peer has no matching package manifest')
+      directory = parent
+    }
+  }
+  return expectations.map(expected => {
+    const actual = resolvePackage(path.join(expected.parentRoot, 'package.json'), expected.name)
+    if (!actual) return { ...expected, status: 'missing', scope: null, version: null, packageRoot: null,
+      manifestPath: null, manifestSha256: null, entryPath: null, entrySha256: null, anchorResolution: null }
+    return { ...expected, ...actual, status: 'resolved', scope: expected.privateRoot ? 'private' : 'shipping-app',
+      anchorResolution: expected.privateRoot ? null : resolvePackage(appAnchor, expected.name) }
+  })
+}
+
+/** Fixed source installed as a real module directly inside the private profile. */
+export function createTaskPeerProbeSource({ expectations, appAnchor }) {
+  assert.ok(Array.isArray(expectations), 'Peer probe requires explicit expectations')
+  const imports = [...new Set(expectations.map(peer => peer.parentRoot))].sort()
+    .map(root => `import ${JSON.stringify(pathToFileURL(join(root, 'package.json')).href)} with { type: 'json' };`).join('\n')
+  return `${imports}\nimport * as fs from 'node:fs';\nimport * as path from 'node:path';\nimport * as crypto from 'node:crypto';\nimport * as module from 'node:module';\nconst observe=${observeTaskPeerGraph.toString()};\nexport function observeTaskPeers() { return observe(${JSON.stringify(expectations)},${JSON.stringify(appAnchor)},fs,path,crypto,module); }\n`
+}
+
+async function captureTaskPeerProof(connection, installation) {
+  assertPeerDeclarations(installation)
+  if (!installation.hostPeerExpectations.length) return []
+  const probe = installation.peerProbe
+  assert.ok(probe && dirname(probe.path) === installation.profile, 'Task peer probe must be a real file directly in its profile')
+  const file = ownedPath(installation.privateRoot, probe.path)
+  assert.match(probe.sha256, HASH, 'Task peer probe digest is invalid')
+  const source = readFileSync(file, 'utf8')
+  assert.equal(sha256(source), probe.sha256, 'Task peer probe file changed')
+  assert.equal(source, createTaskPeerProbeSource({ expectations: installation.hostPeerExpectations, appAnchor: installation.appAnchor }), 'Task peer probe source is not the declared controlled observer')
+  const response = await connection.send('Runtime.evaluate', {
+    expression: `process.getBuiltinModule('node:module').createRequire(${JSON.stringify(installation.appAnchor)})(${JSON.stringify(file)}).observeTaskPeers()`,
+    returnByValue: true,
+  })
+  if (response.exceptionDetails) {
+    throw Object.assign(new Error('Task peer observer failed in the actual server process'), {
+      peerObserverFailure: { className: response.exceptionDetails.exception?.className,
+        detail: String(response.exceptionDetails.exception?.description || response.exceptionDetails.text || '').split('\n', 1)[0].slice(0, 300) },
+    })
+  }
+  const parsed = connection.readEvents().filter(event => event.params.url === pathToFileURL(file).href).map(event => event.params)
+  assert.equal(new Set(parsed.map(script => script.scriptId)).size, 1, 'Task peer probe was not uniquely parsed by the server')
+  assert.ok(!parsed[0].hasSourceURL, 'Task peer probe uses a sourceURL alias')
+  const loaded = await connection.send('Debugger.getScriptSource', { scriptId: parsed[0].scriptId })
+  assert.equal(typeof loaded?.scriptSource, 'string', 'Task peer probe source is unavailable')
+  assert.equal(sha256(loaded.scriptSource), probe.sha256, 'Loaded peer observer differs from its real installed file')
+  assert.equal(sha256(readFileSync(file)), probe.sha256, 'Task peer probe changed during observation')
+  return validateTaskPeerResolution(installation, response.result?.value)
 }
 
 function debuggerEvents(response, phase, afterSequence) {
@@ -278,8 +438,9 @@ export async function verifyTaskServerLoading({ inspectorUrl, pid, installation 
       modules.push({ name: pkg.name, path: file.path, sha256: file.sha256, bytes: file.bytes,
         loadedScriptUrl: pathToFileURL(file.full).href, loadedScriptSha256: loadedHash, matchingScriptCount: unique.length })
     }
+    const peers = await captureTaskPeerProof(connection, installation)
     assert.equal(installationBinding(installation, installationIdentity(installation)), binding, 'Task installation identity changed during server proof')
-    return { kind: 'task-server-loading', ...identity, modules }
+    return { kind: 'task-server-loading', ...identity, modules, peers }
   } catch (error) { operationError = error; throw error }
   finally {
     try { if (enabled) await connection.send('Debugger.disable') } catch (error) { if (!operationError) operationError = error }

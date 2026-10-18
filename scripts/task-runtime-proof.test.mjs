@@ -3,10 +3,10 @@ import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, test } from 'node:test'
-import { assertTaskProofStable, captureTaskClientProof, verifyTaskServerLoading } from './task-runtime-proof.mjs'
+import { assertTaskProofStable, captureTaskClientProof, createTaskPeerProbeSource, validateTaskPeerResolution, verifyTaskServerLoading } from './task-runtime-proof.mjs'
 
 const roots = []
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
@@ -20,6 +20,7 @@ function fixture() {
     taskId: 'task-3409', runId: 'run-proof', sourceRoot: process.cwd(), privateRoot,
     profile: 'web', base: 'a'.repeat(40), head: 'b'.repeat(40), candidateDigest: 'c'.repeat(64), inputsDigest: 'd'.repeat(64),
     origin: 'http://127.0.0.1:48765', pid: process.pid, packages: [],
+    hostPeerExpectations: [],
   }
   for (const name of ['omnimux', 'omnimux-inspiration']) {
     const installedRoot = join(privateRoot, name)
@@ -275,4 +276,122 @@ test('server inspector rejects unsafe endpoints before connecting', async () => 
   for (const inspectorUrl of ['ws://example.com:1234/abc', 'ws://127.0.0.1:1234/abc?token=x', 'http://127.0.0.1:1234/abc']) {
     await assert.rejects(verifyTaskServerLoading({ inspectorUrl, pid: installation.pid, installation }), /Unsafe task inspector/)
   }
+})
+
+function addPeerFixture(installation, { optional = false, missing = false, version = '1.2.3', spec = '^1.0.0' } = {}) {
+  const parent = installation.packages[0], parentManifest = join(parent.installedRoot, 'package.json')
+  const manifest = JSON.parse(readFileSync(parentManifest, 'utf8'))
+  manifest.peerDependencies = { 'test-peer': spec }
+  if (optional) manifest.peerDependenciesMeta = { 'test-peer': { optional: true } }
+  writeFileSync(parentManifest, JSON.stringify(manifest))
+  const parentRecord = parent.payload.find(file => file.path === 'package.json'), parentBytes = readFileSync(parentManifest)
+  Object.assign(parentRecord, { sha256: hash(parentBytes), size: parentBytes.length })
+  const peerRoot = join(installation.privateRoot, 'test-peer')
+  if (!missing) {
+    mkdirSync(peerRoot)
+    writeFileSync(join(peerRoot, 'package.json'), JSON.stringify({ name: 'test-peer', version, main: 'index.js' }))
+    writeFileSync(join(peerRoot, 'index.js'), 'module.exports = 1;\n')
+    const payload = ['package.json', 'index.js'].map(path => { const bytes = readFileSync(join(peerRoot, path)); return { path, sha256: hash(bytes), size: bytes.length } })
+    installation.packages.push({ name: 'test-peer', version, installedRoot: peerRoot, payload })
+    mkdirSync(join(parent.installedRoot, 'node_modules'))
+    symlinkSync(peerRoot, join(parent.installedRoot, 'node_modules/test-peer'))
+  }
+  installation.hostPeerExpectations = [{ parentName: parent.name, parentRoot: parent.installedRoot, name: 'test-peer', spec, optional,
+    versionPolicy: /\d+\.\d+\.\d+-/.test(spec) ? 'explicit-prerelease-bounds' : 'semver', ...(!missing ? { privateRoot: peerRoot } : {}) }]
+  // This fixture is a regular directory, not an actual shipping App. It only
+  // exercises the controlled observer protocol in a task-owned Node process.
+  installation.appAnchor = join(installation.privateRoot, 'Host.app/Contents/Resources/app.asar/node_modules/@deepseek-ai/dsh/package.json')
+  mkdirSync(dirname(installation.appAnchor), { recursive: true })
+  writeFileSync(installation.appAnchor, JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.1.0' }))
+  installation.profile = join(installation.privateRoot, 'profile')
+  mkdirSync(installation.profile)
+  const source = createTaskPeerProbeSource({ expectations: installation.hostPeerExpectations, appAnchor: installation.appAnchor })
+  const path = join(installation.profile, 'task-peer-probe.mjs')
+  writeFileSync(path, source)
+  installation.peerProbe = { path, sha256: hash(source) }
+}
+
+test('same-PID controlled profile probe resolves the real declared private peer graph', async () => {
+  const installation = fixture(); addPeerFixture(installation)
+  const child = await ownedProcess(installation, installation.packages.filter(pkg => pkg.serverEntry)
+    .map(pkg => `import ${JSON.stringify(pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href)};`).join('\n'))
+  try {
+    const proof = await verifyTaskServerLoading({ ...child, installation })
+    assert.equal(proof.peers.length, 1)
+    assert.equal(proof.peers[0].scope, 'private')
+    assert.equal(proof.peers[0].version, '1.2.3')
+    validateTaskPeerResolution(installation, proof.peers)
+    const outside = structuredClone(proof.peers); outside[0].packageRoot = '/outside'
+    assert.throws(() => validateTaskPeerResolution(installation, outside), /manifest path|entry escapes|private graph/)
+    const missing = structuredClone(proof.peers); missing[0].status = 'missing'; missing[0].scope = null
+    assert.throws(() => validateTaskPeerResolution(installation, missing), /Required task peer/)
+    const duplicate = [...proof.peers, proof.peers[0]]
+    assert.throws(() => validateTaskPeerResolution(installation, duplicate), /incomplete/)
+  } finally { await child.cleanup() }
+})
+
+test('same-PID peer proof explicitly records optional missing but rejects required missing and wrong versions', async () => {
+  for (const options of [{ optional: true, missing: true }, { missing: true }, { version: '2.0.0' }]) {
+    const installation = fixture(); addPeerFixture(installation, options)
+    const child = await ownedProcess(installation, installation.packages.filter(pkg => pkg.serverEntry)
+      .map(pkg => `import ${JSON.stringify(pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href)};`).join('\n'))
+    try {
+      if (options.optional) {
+        const proof = await verifyTaskServerLoading({ ...child, installation })
+        assert.equal(proof.peers[0].status, 'missing'); assert.equal(proof.peers[0].entryPath, null)
+      } else await assert.rejects(verifyTaskServerLoading({ ...child, installation }), /Required task peer|version does not satisfy/)
+    } finally { await child.cleanup() }
+  }
+})
+
+test('peer proof rejects missing declarations and modified or unowned probe source', async () => {
+  for (const kind of ['declaration', 'source', 'location']) {
+    const installation = fixture(); addPeerFixture(installation)
+    if (kind === 'declaration') installation.hostPeerExpectations = []
+    if (kind === 'source') writeFileSync(installation.peerProbe.path, 'export const observeTaskPeers=()=>[];')
+    if (kind === 'location') installation.peerProbe.path = join(installation.privateRoot, 'outside.mjs')
+    const child = await ownedProcess(installation, installation.packages.filter(pkg => pkg.serverEntry)
+      .map(pkg => `import ${JSON.stringify(pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href)};`).join('\n'))
+    try { await assert.rejects(verifyTaskServerLoading({ ...child, installation }), /differ from installed|probe file changed|directly in its profile/) }
+    finally { await child.cleanup() }
+  }
+})
+
+test('pure peer validator binds shipping resolution to the exact App anchor and semver policy', () => {
+  const installation = fixture(); addPeerFixture(installation)
+  const expected = installation.hostPeerExpectations[0]
+  delete expected.privateRoot
+  const packageRoot = installation.appAnchor.split('/app.asar/')[0] + '/app.asar/node_modules/test-peer'
+  const anchorResolution = { packageRoot, version: '1.2.3', manifestPath: join(packageRoot, 'package.json'),
+    manifestSha256: '1'.repeat(64), entryPath: join(packageRoot, 'index.js'), entrySha256: '2'.repeat(64) }
+  const peer = { ...expected, ...anchorResolution, status: 'resolved', scope: 'shipping-app', anchorResolution }
+  validateTaskPeerResolution(installation, [peer])
+  const wrongAnchor = structuredClone(peer); wrongAnchor.anchorResolution.entrySha256 = '3'.repeat(64)
+  assert.throws(() => validateTaskPeerResolution(installation, [wrongAnchor]), /differs from shipping anchor/)
+  const foreign = structuredClone(peer)
+  foreign.packageRoot = '/repository/node_modules/test-peer'; foreign.manifestPath = join(foreign.packageRoot, 'package.json'); foreign.entryPath = join(foreign.packageRoot, 'index.js')
+  assert.throws(() => validateTaskPeerResolution(installation, [foreign]), /outside the shipping app/)
+  const prerelease = structuredClone(peer)
+  prerelease.version = '1.2.3-rc.1'; prerelease.anchorResolution.version = prerelease.version
+  assert.throws(() => validateTaskPeerResolution(installation, [prerelease]), /version does not satisfy/)
+  expected.spec = '>=1.0.0-rc.1'; expected.versionPolicy = 'explicit-prerelease-bounds'
+  prerelease.spec = expected.spec; prerelease.versionPolicy = expected.versionPolicy
+  validateTaskPeerResolution(installation, [prerelease])
+  const unexpected = structuredClone(prerelease); unexpected.name = 'other-peer'
+  assert.throws(() => validateTaskPeerResolution(installation, [unexpected]), /Unexpected or duplicate/)
+})
+
+test('same-PID peer proof rejects a real ancestor package outside the declared private graph', async () => {
+  const installation = fixture(); addPeerFixture(installation)
+  const expected = installation.hostPeerExpectations[0]
+  const wrongRoot = join(installation.privateRoot, 'undeclared-ancestor-peer')
+  mkdirSync(wrongRoot)
+  writeFileSync(join(wrongRoot, 'package.json'), JSON.stringify({ name: 'test-peer', version: '1.2.3', main: 'index.js' }))
+  writeFileSync(join(wrongRoot, 'index.js'), 'module.exports = "outside declared graph";\n')
+  const link = join(expected.parentRoot, 'node_modules/test-peer')
+  rmSync(link); symlinkSync(wrongRoot, link)
+  const child = await ownedProcess(installation, installation.packages.filter(pkg => pkg.serverEntry)
+    .map(pkg => `import ${JSON.stringify(pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href)};`).join('\n'))
+  try { await assert.rejects(verifyTaskServerLoading({ ...child, installation }), /outside its declared private graph/) }
+  finally { await child.cleanup() }
 })
