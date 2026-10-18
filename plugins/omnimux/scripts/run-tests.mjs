@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { globSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
+import { globSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -70,6 +70,10 @@ export function runTests(cwd = process.cwd()) {
   const dshHome = mkdtempSync(join(tmpdir(), 'omnimux-test-home-'))
   const ownedHome = realpathSync(dshHome)
   const env = { ...process.env, DSH_HOME: dshHome }
+  if (env.OMNIMUX_STYLE_PROBE_TRANSPORT === 'ego') {
+    env.OMNIMUX_EGO_PROBE_STATE_DIR = join(dshHome, 'ego-probe-state')
+    mkdirSync(env.OMNIMUX_EGO_PROBE_STATE_DIR)
+  }
   const cleanup = () => {
     if (!ownedHome.startsWith(join(realpathSync(tmpdir()), 'omnimux-test-home-'))) {
       throw new Error('Hub test home is outside its owned temporary prefix')

@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import { spawnSync as realSpawnSync } from 'node:child_process'
-import { existsSync, fstatSync, readFileSync } from 'node:fs'
+import { existsSync, fstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { registerHooks } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
 import test from 'node:test'
 import { parse } from 'yaml'
+import { parse as parseJavaScript } from 'acorn'
 
 const helperUrl = new URL('./test-fixtures/style-dom-probe.mjs', import.meta.url).href
 const moduleUrl = source => `data:text/javascript,${encodeURIComponent(source)}`
@@ -13,12 +15,19 @@ const calls = []
 let outcome
 let duringSpawn
 let lifecycle
+const ownedStates = []
+const egoEnvironment = ['OMNIMUX_STYLE_PROBE_TRANSPORT', 'OMNIMUX_EGO_SPACE_ID', 'OMNIMUX_EGO_PROBE_STATE_DIR', 'OMNIMUX_EGO_PROBE_EVIDENCE_DIR']
+const initialEnvironment = Object.fromEntries(egoEnvironment.map(key => [key, process.env[key]]))
 const resultDom = '<html><head><title>RESULT:{&quot;width&quot;:321,&quot;label&quot;:&quot;A&amp;B&quot;}</title></head></html>'
 globalThis.__styleProbeSpawn = (binary, args, options) => {
-  const page = fileURLToPath(args.at(-1))
+  const ego = binary === 'ego-browser'
+  const moduleFile = ego ? fileURLToPath(JSON.parse(/^await import\((.+)\)$/.exec(args[2])[1])) : null
+  const script = ego ? readFileSync(moduleFile, 'utf8') : null
+  const invocation = ego ? JSON.parse(/^const input = (.+)$/m.exec(script)[1]) : null
+  const page = ego ? invocation.file : fileURLToPath(args.at(-1))
   const profileArg = args.find(arg => arg.startsWith('--user-data-dir='))
   const profile = profileArg?.slice('--user-data-dir='.length)
-  calls.push({ binary, args, options, page, profile })
+  calls.push({ binary, args, options, page, profile, invocation, script })
   assert.ok(existsSync(page), 'fixture must exist while the child runs')
   assert.match(readFileSync(page, 'utf8'), /document.title = 'RESULT:'/)
   if (options.stdio) {
@@ -34,7 +43,19 @@ globalThis.__styleProbeSpawn = (binary, args, options) => {
     assert.ok(existsSync(join(dirname(page), 'stderr')))
   }
   duringSpawn?.()
-  const controlled = outcome
+  const controlled = ego ? {
+    ...outcome,
+    stdout: outcome.egoStdout ?? '__OMNIMUX_STYLE_PROBE__' + JSON.stringify({
+      token: invocation.token, name: invocation.name, spaceId: invocation.spaceId, pageLabel: 'p1', ownership: 'agent',
+      targetId: 'fixture-target', afterTargetId: 'fixture-target', fixtureToken: invocation.token,
+      title: 'RESULT:{"width":321,"label":"A&B"}', sourceTransport: 'file', pageNeutralized: true,
+      ...outcome.egoReceipt,
+    }) + '\n',
+  } : outcome
+  if (ego && outcome.egoUsesStderr) {
+    controlled.stderr = controlled.stdout
+    controlled.stdout = ''
+  }
   const code = lifecycle === 'descendant'
     ? `import { spawn } from 'node:child_process'; import { writeSync } from 'node:fs'; const child = spawn(process.execPath, ['-e', 'setTimeout(() => process.exit(0), 400)'], { stdio: ['ignore', 1, 2] }); child.unref(); writeSync(1, ${JSON.stringify(controlled.stdout)}); process.exit(0)`
     : lifecycle === 'direct-live'
@@ -63,6 +84,16 @@ const input = { name: 'diagnostics', styles: '.fixture { width: 321px }', html: 
 const success = () => ({ status: 0, signal: null, stdout: resultDom, stderr: '' })
 function reset(value = success()) {
   calls.length = 0; outcome = value; duringSpawn = undefined; lifecycle = undefined
+  for (const key of egoEnvironment) delete process.env[key]
+}
+function resetEgo(value = success()) {
+  reset(value)
+  const state = mkdtempSync(join(tmpdir(), 'omnimux-ego-probe-unit-'))
+  ownedStates.push(state)
+  process.env.OMNIMUX_STYLE_PROBE_TRANSPORT = 'ego'
+  process.env.OMNIMUX_EGO_SPACE_ID = '107'
+  process.env.OMNIMUX_EGO_PROBE_STATE_DIR = state
+  return state
 }
 function assertClean() {
   for (const call of calls) {
@@ -178,6 +209,90 @@ test('a directly live child times out even after writing valid measurement', () 
   assert.equal(calls[0].options.timeout, 30000)
 })
 
+test('Ego opt-in reuses the explicit space and page through the CLI without a browser executable', () => {
+  const state = resetEgo()
+  assert.deepEqual(runStyleDomProbe({ ...input, viewportHeight: 600 }), { width: 321, label: 'A&B' })
+  const call = calls[0]
+  assert.equal(call.binary, 'ego-browser')
+  assert.deepEqual(call.args.slice(0, 2), ['nodejs', '-e'])
+  assert.match(call.args[2], /^await import\("file:\/\//)
+  assert.equal(call.options.timeout, 30000)
+  assert.equal(call.invocation.spaceId, 107)
+  assert.equal(call.invocation.viewportHeight, 600)
+  assert.equal(call.invocation.pageLabel, 'p1')
+  assert.match(call.script, /taskSpace\(input.spaceId\)/)
+  assert.doesNotMatch(call.script, /task\.finish|newPage|createBrowser|launch\(/)
+  assert.doesNotThrow(() => parseJavaScript(call.script, { ecmaVersion: 'latest', sourceType: 'module' }), 'generated Ego module must parse before any real-browser run')
+  assert.equal(existsSync(join(state, 'active.lock')), false)
+  assert.equal(existsSync(join(state, 'blocked.json')), false)
+  assertClean()
+})
+
+test('Ego requires valid explicit selection and never falls back to a browser', () => {
+  for (const [key, value] of [['OMNIMUX_EGO_SPACE_ID', ''], ['OMNIMUX_EGO_SPACE_ID', '107x'], ['OMNIMUX_EGO_PROBE_STATE_DIR', '']]) {
+    resetEgo()
+    process.env[key] = value
+    assert.throws(() => runStyleDomProbe(input), /Ego/)
+    assert.equal(calls.length, 0)
+  }
+})
+
+test('Ego accepts its single tagged module receipt on stderr without changing output limits', () => {
+  resetEgo({ ...success(), egoUsesStderr: true })
+  assert.deepEqual(runStyleDomProbe(input), { width: 321, label: 'A&B' })
+  assertClean()
+})
+
+test('Ego failures latch the current run, keep diagnostics and prohibit further browser actions', () => {
+  const failures = [
+    { status: 9 }, { signal: 'SIGTERM' },
+    { status: null, error: Object.assign(new Error('synthetic Ego missing'), { code: 'ENOENT' }) },
+    { status: null, error: Object.assign(new Error('synthetic Ego timeout'), { code: 'ETIMEDOUT' }) },
+    { egoReceipt: { spaceId: 999 } }, { egoReceipt: { pageLabel: 'p2' } },
+    { egoReceipt: { ownership: 'user' } }, { egoReceipt: { afterTargetId: 'other' } },
+    { egoReceipt: { fixtureToken: 'old-page' } }, { egoReceipt: { sourceTransport: 'other' } },
+    { egoReceipt: { pageNeutralized: false } }, { egoStdout: '' },
+    { egoStdout: '__OMNIMUX_STYLE_PROBE__not-json\n' },
+    { egoReceipt: { title: 'RESULT:not-json' } },
+  ]
+  for (const override of failures) {
+    const state = resetEgo({ ...success(), ...override })
+    rejected()
+    assert.equal(calls.length, 1)
+    assert.equal(existsSync(join(state, 'active.lock')), false)
+    assert.equal(existsSync(join(state, 'blocked.json')), true)
+    assert.throws(() => runStyleDomProbe(input), /Ego.*blocked/)
+    assert.equal(calls.length, 1, 'a blocked run must not invoke any browser transport')
+  }
+})
+
+test('Ego rejects duplicate receipts, oversized output, pending async sentinels and concurrent ownership', () => {
+  resetEgo()
+  duringSpawn = () => { outcome.egoStdout = '__OMNIMUX_STYLE_PROBE__{}\n__OMNIMUX_STYLE_PROBE__{}\n' }
+  rejected()
+  resetEgo({ ...success(), egoStdout: 'x'.repeat(8 * 1024 * 1024 + 1) })
+  rejected()
+  resetEgo({ ...success(), egoReceipt: { title: 'RESULT:{"done":false,"phase":"async-not-finished"}' } })
+  assert.throws(() => runStyleDomProbe({ ...input, waitForCompletion: true }), /completed/)
+  assertClean()
+  const state = resetEgo()
+  writeFileSync(join(state, 'active.lock'), 'synthetic owner', { flag: 'wx' })
+  assert.throws(() => runStyleDomProbe(input), /Ego/)
+  assert.equal(calls.length, 0)
+  assert.equal(readFileSync(join(state, 'active.lock'), 'utf8'), 'synthetic owner')
+})
+
+test('Ego cleanup rejects a replaced lock without deleting the replacement', () => {
+  const state = resetEgo()
+  duringSpawn = () => {
+    rmSync(join(state, 'active.lock'))
+    writeFileSync(join(state, 'active.lock'), 'replacement owner', { flag: 'wx' })
+  }
+  rejected()
+  assert.equal(readFileSync(join(state, 'active.lock'), 'utf8'), 'replacement owner')
+  assert.equal(existsSync(join(state, 'blocked.json')), true)
+})
+
 test('quality gate retains existing verdict and uploads only explicit failure receipt paths', () => {
   const workflow = parse(readFileSync(new URL('../.github/workflows/quality-gate.yml', import.meta.url), 'utf8'))
   const job = workflow.jobs['static-and-tests']
@@ -203,5 +318,10 @@ test('quality gate retains existing verdict and uploads only explicit failure re
 test.after(async () => {
   hooks.deregister()
   delete globalThis.__styleProbeSpawn
+  for (const state of ownedStates) rmSync(state, { recursive: true })
+  for (const [key, value] of Object.entries(initialEnvironment)) {
+    if (value === undefined) delete process.env[key]
+    else process.env[key] = value
+  }
   await new Promise(resolve => setTimeout(resolve, 450))
 })

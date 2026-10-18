@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { OmnimuxError } from '../media/errors.js'
+import { createOfficialClient } from './client.js'
 import {
+  SOCIAL_DATA_CATALOG,
   extractTweetId,
   extractTikTokShopProductId,
   extractYouTubeVideoId,
@@ -13,6 +15,99 @@ import {
 } from './social-data.js'
 
 describe('social data catalog', () => {
+  it('sends the same bare account username for stored handles and direct usernames on the four collection routes', async () => {
+    for (const [platform, capability, field] of [
+      ['x', 'user', 'screen_name'], ['x', 'posts', 'screen_name'],
+      ['tiktok', 'user', 'uniqueId'], ['tiktok', 'posts', 'unique_id'],
+    ]) {
+      for (const id of ['@sample_name', 'sample_name']) {
+        const args = Object.freeze({ platform, capability, id })
+        const calls = []
+        await fetchSocialData({ async withSk(path, options) {
+          calls.push({ path, options })
+          return { code: 200, data: { items: [] } }
+        } }, args)
+        assert.equal(calls.length, 1)
+        assert.equal(calls[0].path, '/v1/chat/completions')
+        assert.equal(calls[0].options.body[field], 'sample_name')
+        assert.equal(calls[0].options.headers['X-Omnimux-Group'], 'social-data-tikhub')
+        assert.equal(args.id, id)
+      }
+    }
+    assert.equal(resolveSocialDataModel({ platform: 'youtube', capability: 'user', id: '@sample_name' }).value, '@sample_name')
+    assert.equal(resolveSocialDataModel({ platform: 'x', capability: 'search', query: '@sample_name' }).value, '@sample_name')
+  })
+
+  it('binds only the four account collection capabilities to their dedicated group per request', async () => {
+    const requests = []
+    const client = createOfficialClient({
+      siteBaseUrl: 'https://site.example', apiBaseUrl: 'https://api.example',
+      resolveApiKey: () => 'fixture-key', resolveAccess: async () => ({ token: '' }),
+      fetcher: async (url, init) => {
+        requests.push({ url, init })
+        return { ok: true, status: 200, json: async () => ({ code: 200, data: { items: [] } }) }
+      },
+    })
+    const signal = new AbortController().signal
+    const targetModels = ['x-user', 'x-posts', 'tiktok-user', 'tiktok-posts']
+    const pairs = Object.entries(SOCIAL_DATA_CATALOG).flatMap(([platform, capabilities]) =>
+      Object.entries(capabilities).map(([capability, model]) => ({ platform, capability, model })))
+    // Follow grouped requests with every unrelated capability to catch a sticky client-wide group.
+    pairs.sort((a, b) => Number(targetModels.includes(b.model)) - Number(targetModels.includes(a.model)))
+    for (const { platform, capability, model } of pairs) {
+      await fetchSocialData(client, { platform, capability, id: '12345678' }, { signal, allowPublicTweet: false })
+      const { url, init } = requests.at(-1)
+      assert.equal(url, 'https://api.example/v1/chat/completions')
+      assert.equal(JSON.parse(init.body).model, model)
+      assert.equal(init.headers.authorization, 'Bearer fixture-key')
+      assert.equal(init.signal, signal)
+      assert.equal(init.headers['X-Omnimux-Group'], targetModels.includes(model) ? 'social-data-tikhub' : undefined, model)
+    }
+    assert.equal(requests.length, pairs.length)
+  })
+
+  it('keeps account collection cancellation before and during a grouped request', async () => {
+    const aborted = new AbortController()
+    const reason = new Error('fixture cancellation')
+    aborted.abort(reason)
+    let requests = 0
+    const client = createOfficialClient({
+      siteBaseUrl: 'https://site.example', resolveApiKey: () => 'fixture-key', resolveAccess: async () => ({ token: '' }),
+      fetcher: async (_url, init) => {
+        requests += 1
+        assert.equal(init.headers['X-Omnimux-Group'], 'social-data-tikhub')
+        return new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true }))
+      },
+    })
+    await assert.rejects(fetchSocialData(client, { platform: 'x', capability: 'user', id: 'sample' }, { signal: aborted.signal }), (error) => error === reason)
+    assert.equal(requests, 0)
+    const active = new AbortController()
+    const pending = fetchSocialData(client, { platform: 'tiktok', capability: 'posts', id: 'sample' }, { signal: active.signal })
+    await new Promise((resolve) => setImmediate(resolve))
+    active.abort(reason)
+    await assert.rejects(pending, (error) => error === reason)
+    assert.equal(requests, 1)
+  })
+
+  it('keeps authentication, quota, channel and business failures on grouped collection requests', async () => {
+    for (const [status, body, expected] of [
+      [401, { error: 'unauthorized' }, 'needs-omnimux'],
+      [402, { error: 'payment required' }, 'quota-exceeded'],
+      [503, { error: { message: '分组 social-data-tikhub 下模型 x-user 无可用渠道（distributor）' } }, 'CHANNEL_UNAVAILABLE'],
+      [200, { success: false, data: { nickname: 'Sample' } }, 'omnimux-request-failed'],
+    ]) {
+      const client = createOfficialClient({
+        siteBaseUrl: 'https://site.example', resolveApiKey: () => 'fixture-key', resolveAccess: async () => ({ token: '' }),
+        fetcher: async (_url, init) => {
+          assert.equal(init.headers['X-Omnimux-Group'], 'social-data-tikhub')
+          return { ok: status < 400, status, json: async () => body }
+        },
+      })
+      await assert.rejects(fetchSocialData(client, { platform: 'x', capability: 'user', id: 'sample' }),
+        (error) => error instanceof OmnimuxError && error.code === expected)
+    }
+  })
+
   it('resolves documented platform pairs and business fields', () => {
     assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'video', url: 'https://tiktok.com/@a/video/7123' }).model, 'tiktok-video')
     assert.equal(resolveSocialDataModel({ platform: 'tiktok', capability: 'video', url: 'https://tiktok.com/@a/video/7123' }).field, 'aweme_id')
