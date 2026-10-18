@@ -12,7 +12,8 @@ describe('Direct Inspiration Save & System Dark Mode Suite (#1613)', () => {
 
   it('triggers HTTP endpoint directly on save instead of dispatching user prompt to Agent', () => {
     // 确认 handleSaveToInspiration 直接调用 /omnimux/inspiration/local/import-url
-    expect(appCode).toContain('/omnimux/inspiration/local/import-url')
+    expect(appCode).toContain('submitInspirationSave(request)')
+    expect(appCode).not.toContain('/omnimux/inspiration/local/import-url')
     expect(appCode).toContain('saveInspirationStatus')
 
     // 核心安全契约：严禁在 handleSaveToInspiration 中使用 send 往会话框注入长 URL 指令

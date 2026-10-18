@@ -24,6 +24,8 @@ import type {
   MediaSourceKind,
   MediaSourceResolution,
 } from './types.ts'
+import { extractTweetCapture, tweetCaptureForInspiration } from '../twitter-capture/extractor.ts'
+import { platformForHost } from '../../platform/registry.ts'
 
 /**
  * The creative-asset rule lives in its own module and is re-exported here so a
@@ -386,12 +388,14 @@ export function normalizeMedia(
   if (resolution.src === '') return null
   const metric = measureElement(element)
   const natural = naturalSizeOf(element, kind)
+  const inspiration = kind === 'video' ? captureInspirationFromElement(element, baseUrl) : {}
   return {
     id: mediaIdOf(kind, resolution.src),
     type: kind,
     src: resolution.src,
     previewSrc: resolution.previewSrc !== '' ? resolution.previewSrc : resolution.src,
     pageUrl: context.pageUrl ?? resolvePageUrl(),
+    ...inspiration,
     pageTitle: context.pageTitle ?? resolvePageTitle(),
     width: Math.round(metric.width),
     height: Math.round(metric.height),
@@ -402,6 +406,29 @@ export function normalizeMedia(
     sourceKind: resolution.kind,
     attachable: resolution.attachable,
   }
+}
+
+/** Save X media by its own article, never by a feed/first-post fallback. */
+export function captureInspirationFromElement(element: Element, baseUrl: string = resolvePageUrl()): Pick<HoveredMedia, 'inspirationUrl' | 'inspirationCapture'> {
+  let isTwitter = false
+  try {
+    isTwitter = platformForHost(new URL(baseUrl).hostname).id === 'twitter'
+  } catch {
+    return {}
+  }
+  if (!isTwitter) return {}
+  const article = element.closest<HTMLElement>('article[data-testid="tweet"]')
+  if (article === null) return { inspirationUrl: '' }
+  const capture = extractTweetCapture(article)
+  // A quote's embedded media does not belong to the outer target post. It may
+  // only be saved when it has its own enclosing tweet article and permalink.
+  const quote = element.closest('[data-testid="quoteTweet"]')
+  if (capture === null || (quote !== null && article.contains(quote))
+    || Array.from(article.querySelectorAll('[data-testid="attachments"]'))
+      .some((attachments) => attachments.contains(element) && attachments.querySelector('[data-testid="tweetText"]') !== null)) {
+    return { inspirationUrl: '' }
+  }
+  return { inspirationUrl: capture.url, inspirationCapture: tweetCaptureForInspiration(capture) }
 }
 
 /**

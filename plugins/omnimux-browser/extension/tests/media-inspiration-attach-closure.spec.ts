@@ -1,133 +1,33 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { MediaActionBridge, type ActionTransport } from '../src/content/media-hover/actions.ts'
+import { hoverCopy } from '../src/content/media-hover/copy.ts'
+import { InspirationSaveCoordinator } from '../src/background/inspiration-save.ts'
 import type { HoveredMedia } from '../src/content/media-hover/types.ts'
 
-describe('灵感素材直存与对话附件打通闭环专项测试 (#1748)', () => {
-  const SAMPLE_MEDIA: HoveredMedia = {
-    id: 'image:https://pbs.twimg.com/media/sample.jpg',
-    type: 'image',
-    src: 'https://pbs.twimg.com/media/sample.jpg',
-    previewSrc: 'https://pbs.twimg.com/media/sample.jpg',
-    pageUrl: 'https://x.com/VynqorxeAI/status/1234567890',
-    pageTitle: 'X 上的 VynqorxeAI: MEDICAL ROBOT RUNS FROM POLICE',
-    width: 800,
-    height: 600,
-    naturalWidth: 1600,
-    naturalHeight: 1200,
-    alt: 'Medical robot escaping in city center',
-    capturedAt: Date.now(),
-  }
+const sourceUrl = 'https://x.com/current/status/123'
+const payload: HoveredMedia = { id: 'video:poster', type: 'video', src: 'https://pbs.twimg.com/poster.jpg', previewSrc: 'https://pbs.twimg.com/poster.jpg', pageUrl: 'https://x.com/home', inspirationUrl: sourceUrl, inspirationCapture: { url: sourceUrl, text: '完整正文', author: { name: 'Current', handle: 'current', avatar: '', verified: false }, stats: {}, posted_at: null, cover_url: '', shape: 'video', media_items: [{ type: 'video', url: '', poster_url: 'https://pbs.twimg.com/poster.jpg' }] }, pageTitle: 'Current post', width: 100, height: 100, naturalWidth: 100, naturalHeight: 100, alt: '', capturedAt: 1 }
 
-  beforeEach(() => {
-    vi.restoreAllMocks()
+describe('hover save delivery semantics', () => {
+  it('a cache-only reply cannot paint a saved mark', async () => {
+    const bridge = new MediaActionBridge({ postToBackground: async () => ({ ok: true, hostSaved: false, result: { ok: true, total: 1 } }), copy: () => hoverCopy('zh') } as unknown as ActionTransport)
+    expect(await bridge.saveToInspiration(payload)).toMatchObject({ ok: false, status: 'failed' })
   })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
+  it('calls the actual coordinator; a non-receipt response only triggers exact lookup', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(Response.json({ error: 'resolve failed' }, { status: 502 })).mockResolvedValueOnce(Response.json({ data: { items: [] } }))
+    const storage = { get: async () => ({}), set: async () => {} } as unknown as Pick<chrome.storage.StorageArea, 'get' | 'set'>
+    const coordinator = new InspirationSaveCoordinator({ storage, resolveHost: async () => 'http://127.0.0.1:43120', fetchImpl })
+    await coordinator.submit({ targetUrl: payload.inspirationUrl!, capture: payload.inspirationCapture })
+    for (let i = 0; i < 40; i += 1) await Promise.resolve()
+    expect((await coordinator.list())[0]?.state).toBe('pending')
+    expect(fetchImpl.mock.calls.map((call) => call[0])).toEqual([
+      'http://127.0.0.1:43120/omnimux/inspiration/local/import-url',
+      `http://127.0.0.1:43120/omnimux/inspiration/local?source_url=${encodeURIComponent(sourceUrl)}`,
+    ])
+    expect(JSON.parse(fetchImpl.mock.calls[0]?.[1].body).capture.media_items).toEqual([{ type: 'video', url: '', poster_url: payload.src }])
   })
-
-  it('悬浮条加入灵感库直存：构造合规灵感对象并正确发送给主程序灵感库接口', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 201,
-      json: async () => ({ data: { id: 'insp_test123' } }),
-    })
-    globalThis.fetch = fetchMock
-
-    const candidatePorts = [45120, 43120]
-    const itemBody = {
-      title: (SAMPLE_MEDIA.alt || SAMPLE_MEDIA.pageTitle).slice(0, 120),
-      type: 'image',
-      source_platform: 'twitter',
-      source_url: SAMPLE_MEDIA.pageUrl,
-      cover_url: SAMPLE_MEDIA.src,
-      media_urls: [SAMPLE_MEDIA.src],
-      content: SAMPLE_MEDIA.alt,
-      tags: ['网页采集', '图片'],
-    }
-
-    const res = await fetch(`http://127.0.0.1:${candidatePorts[0]}/omnimux/inspiration/local`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(itemBody),
-    })
-
-    expect(fetchMock).toHaveBeenCalled()
-    const call = fetchMock.mock.calls[0]
-    expect(call[0]).toBe('http://127.0.0.1:45120/omnimux/inspiration/local')
-    const sentBody = JSON.parse(call[1].body)
-    expect(sentBody.source_platform).toBe('twitter')
-    expect(sentBody.cover_url).toBe(SAMPLE_MEDIA.src)
-    expect(sentBody.media_urls).toContain(SAMPLE_MEDIA.src)
-    expect(res.ok).toBe(true)
-  })
-
-  it('侧栏卡片保存到灵感库：import-url 遇到反爬或超时，自动无缝降级采用前台多模态数据直存', async () => {
-    let callCount = 0
-    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
-      callCount++
-      if (url.includes('/import-url')) {
-        // 模拟推特海外防爬 502
-        return { ok: false, status: 502, json: async () => ({ error: 'fetch failed' }) }
-      }
-      if (url.endsWith('/omnimux/inspiration/local')) {
-        // 模拟前台数据直存成功
-        return { ok: true, status: 201, json: async () => ({ data: { id: 'insp_fallback_99' } }) }
-      }
-      return { ok: false, status: 404 }
-    })
-    globalThis.fetch = fetchMock
-
-    const targetUrl = 'https://x.com/VynqorxeAI/status/1234567890'
-    const pageScene = {
-      title: 'MEDICAL ROBOT RUNS FROM POLICE',
-      author: 'VynqorxeAI',
-      platform: 'twitter',
-      url: targetUrl,
-      media: [{ src: 'https://pbs.twimg.com/media/sample.jpg', type: 'image' }],
-    }
-
-    // 运行降级保存逻辑
-    let res = await fetch(`http://127.0.0.1:45120/omnimux/inspiration/local/import-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: targetUrl, background: true }),
-    }).catch(() => null)
-
-    if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
-      const fallbackBody = {
-        title: `@${pageScene.author}: ${pageScene.title}`,
-        type: 'image',
-        source_platform: pageScene.platform,
-        source_url: targetUrl,
-        cover_url: pageScene.media[0].src,
-        media_urls: [pageScene.media[0].src],
-        content: pageScene.title,
-        tags: ['twitter', '灵感采集'],
-      }
-      res = await fetch(`http://127.0.0.1:45120/omnimux/inspiration/local`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fallbackBody),
-      }).catch(() => null)
-    }
-
-    expect(callCount).toBe(2)
-    expect(res).not.toBeNull()
-    expect(res?.ok).toBe(true)
-    expect(res?.status).toBe(201)
-  })
-
-  it('暂存媒体收集协议：优先通过 runtime.sendMessage 向后台请求待挂载媒体', async () => {
-    const runtimeMock = vi.fn().mockResolvedValue({
-      ok: true,
-      result: { pending: true, media: SAMPLE_MEDIA },
-    })
-
-    const bgRes = await runtimeMock({ type: 'DSH_MEDIA_ATTACH_REQUEST' })
-    expect(bgRes.ok).toBe(true)
-    expect(bgRes.result.pending).toBe(true)
-    expect(bgRes.result.media.id).toBe(SAMPLE_MEDIA.id)
-    expect(bgRes.result.media.src).toBe(SAMPLE_MEDIA.src)
+  it('a partial receipt stays retryable and carries the host reason', async () => {
+    const bridge = new MediaActionBridge({ postToBackground: async () => ({ ok: true, task: { taskId: 'save-1', host: 'http://127.0.0.1:43120', sourceUrl, state: 'partial', detail: '视频未取得', updatedAt: 1 } }), copy: () => hoverCopy('zh') } as unknown as ActionTransport)
+    expect(await bridge.saveToInspiration(payload)).toMatchObject({ ok: false, status: 'partial', message: '部分保存：视频未取得 · 点击重试补齐' })
   })
 })

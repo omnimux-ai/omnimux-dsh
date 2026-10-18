@@ -1,10 +1,9 @@
 /**
  * Contract for one captured X/Twitter post.
  *
- * The panel saves a post through `directItem`, the background worker forwards it
- * through `itemBody`, and the host persists it through the `buildRow` whitelist.
- * All three are explicit key lists, so this interface is the single declaration
- * of what a tweet capture carries; a field missing here cannot reach the library.
+ * The capture is projected into the import request's whitelist before the
+ * background worker submits it. Media types belong to that capture rather than
+ * being inferred from a poster address by its consumers.
  *
  * Every optional field means "the page did not show it". A reader must render
  * nothing for an absent field rather than a zero: a tweet whose like count is
@@ -80,6 +79,31 @@ export interface TweetPoll {
   closesAt?: string
 }
 
+/** One attachment belonging to the target post, in document order. */
+export interface TweetMediaItem {
+  type: 'image' | 'video'
+  /** Fetchable media URL; `''` records a visible attachment with no usable URL. */
+  url: string
+  /** Explicit page-provided identity, when present; never an invented index. */
+  source_id?: string
+  /** Video thumbnail, kept separate from its playable address. */
+  poster_url?: string
+}
+
+/** Whitelisted capture carried by the inspiration import request. */
+export type TweetInspirationCapture = {
+  url: string
+  text: string
+  shape: TweetShape
+  author: TweetAuthor
+  stats: TweetStats
+  posted_at: string | null
+  cover_url: string
+  quoted?: { author: TweetAuthor; text: string; coverUrl?: string }
+  poll?: TweetPoll
+  media_items: TweetMediaItem[]
+}
+
 /** One captured post. */
 export interface TweetCapture {
   shape: TweetShape
@@ -89,8 +113,10 @@ export interface TweetCapture {
   author: TweetAuthor
   /** ISO timestamp, or `null` when the post carried no timestamp element. */
   postedAt: string | null
-  /** Every media address the post showed, in document order. */
+  /** Legacy visual addresses for copying/older consumers, in document order. */
   mediaUrls: string[]
+  /** Typed attachments; a video poster can never stand in for a video file. */
+  mediaItems: TweetMediaItem[]
   /** Card cover: first media address, video poster, or the quoted post's thumbnail. */
   coverUrl: string
   stats: TweetStats

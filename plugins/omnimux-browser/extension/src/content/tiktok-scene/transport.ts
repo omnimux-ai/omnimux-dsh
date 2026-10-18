@@ -12,6 +12,7 @@
  */
 
 import { TIKTOK_RUNTIME_MESSAGE } from './messages.ts'
+import { isInspirationTask, waitForInspirationTask, inspirationSaveDetail } from '../../shared/inspiration-save.ts'
 import type { TiktokAction } from './copy.ts'
 import type { ExportOutcome } from '../../background/media-export.ts'
 
@@ -68,7 +69,16 @@ export async function sendTiktokShortcut(
     ? { type: TIKTOK_RUNTIME_MESSAGE.saveToInspiration, payload: { url } }
     : { type: TIKTOK_RUNTIME_MESSAGE.fetchMedia, payload: { url, kind: action } }
   try {
-    return readExportOutcome(await send(message))
+    const response = await send(message)
+    if (action !== 'save') return readExportOutcome(response)
+    const task = (response as { task?: unknown } | null)?.task
+    if (!isInspirationTask(task)) return { ok: false, code: 'rejected', detail: '保存失败，请重新连接主程序' }
+    const settled = await waitForInspirationTask(task)
+    return {
+      ok: settled.state === 'saved' || settled.state === 'duplicate',
+      code: settled.state === 'saved' || settled.state === 'duplicate' ? settled.state : 'rejected',
+      detail: inspirationSaveDetail(settled),
+    }
   } catch {
     // A closed channel (worker asleep, extension reloaded) rejects the promise.
     return { ok: false, code: 'unreachable' }

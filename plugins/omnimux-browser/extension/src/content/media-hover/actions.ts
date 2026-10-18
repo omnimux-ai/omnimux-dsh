@@ -14,6 +14,7 @@
  */
 
 import { RUNTIME_MESSAGE, TIMING } from './messages.ts'
+import { isInspirationTask, waitForInspirationTask, inspirationSaveDetail, type InspirationSaveTask } from '../../shared/inspiration-save.ts'
 import { isAttachablePayload } from './payload.ts'
 import type { ActionOutcome, HoveredMedia } from './types.ts'
 import type { HoverCopy } from './copy.ts'
@@ -183,32 +184,21 @@ export class MediaActionBridge {
     this.transport = transport
   }
 
-  /**
-   * Saves the media into the extension-local inspiration library.
-   *
-   * The write is delegated to the background worker so the storage schema and
-   * its de-duplication/cap rules have exactly one owner.
-   *
-   * The store writes once and answers once: an accepted envelope whose own
-   * result reports a rejected write must not reach the capsule as a saved
-   * library, because painting the saved mark is the only feedback the user gets.
-   */
-  async saveToInspiration(payload: HoveredMedia): Promise<ActionOutcome> {
-    const hints = this.transport.copy()
+  /** Saves a post through the worker; only a final host receipt paints a check. */
+  async saveToInspiration(payload: HoveredMedia, onUpdate?: (outcome: ActionOutcome) => void, signal?: AbortSignal): Promise<ActionOutcome> {
     const record = asRecord(await this.transport.postToBackground({
       type: RUNTIME_MESSAGE.mediaToInspiration,
-      payload: outboundMedia(payload),
+      // Keep direct video and typed capture separate from clipboard/attach fallback.
+      payload,
     }))
-    if (record?.ok !== true) return { ok: false, status: 'failed', message: hints.failed }
-    const outcome = asRecord(record.result)
-    if (outcome !== null && outcome.ok === false) {
-      return { ok: false, status: 'failed', message: hints.failed }
-    }
-    return {
-      ok: true,
-      status: 'saved',
-      message: isAttachablePayload(payload) ? hints.done.inspiration : hints.pageReference,
-    }
+    if (!isInspirationTask(record?.task)) return { ok: false, status: 'failed', message: typeof record?.message === 'string' ? record.message : '保存失败，请重新连接主程序' }
+    const outcomeOf = (task: InspirationSaveTask): ActionOutcome => ({
+      ok: task.state === 'saved' || task.state === 'duplicate',
+      status: task.state === 'saved' || task.state === 'duplicate' ? 'saved' : task.state === 'partial' ? 'partial' : task.state === 'pending' || task.state === 'saving' ? 'pending' : 'failed',
+      message: inspirationSaveDetail(task),
+    })
+    const task = await waitForInspirationTask(record.task, onUpdate ? (next) => onUpdate(outcomeOf(next)) : undefined, signal)
+    return outcomeOf(task)
   }
 
   /**

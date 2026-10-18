@@ -10,6 +10,7 @@
  */
 
 import {
+  captureInspirationFromElement,
   isAttachablePayload,
   isElementInViewport,
   isEligibleMediaSize,
@@ -17,9 +18,9 @@ import {
   mediaSourceOf,
   normalizeMedia,
 } from './media-hover/payload.ts'
-import type { MediaKind } from './media-hover/types.ts'
+import type { HoveredMedia, MediaKind } from './media-hover/types.ts'
 
-export interface DetectedMediaItem {
+export interface DetectedMediaItem extends Pick<HoveredMedia, 'inspirationUrl' | 'inspirationCapture'> {
   id: string
   type: 'image' | 'video'
   src: string
@@ -55,6 +56,9 @@ function sniffElement(el: Element, kind: MediaKind, index: number): DetectedMedi
     alt: payload.alt,
     width: payload.naturalWidth || payload.width,
     height: payload.naturalHeight || payload.height,
+    ...(kind === 'video'
+      ? { inspirationUrl: payload.inspirationUrl, inspirationCapture: payload.inspirationCapture }
+      : captureInspirationFromElement(el)),
   }
 }
 

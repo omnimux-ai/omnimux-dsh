@@ -100,7 +100,7 @@ export async function discoverHostBase(
   timeoutMs: number = HOST_PROBE_TIMEOUT_MS,
 ): Promise<string | null> {
   // Every probe starts at once, then the answers are read in port order. The list
-  // is a priority order (Dev, then Desktop, then the legacy ports), so letting
+  // is the caller's explicit priority order, so letting
   // "whoever answers first" win could hand the shortcuts to a second local DSH that
   // the user’s panel is not talking to — and that host may not serve the
   // inspiration prefix at all. Reading in order costs nothing here: the slower
@@ -200,34 +200,4 @@ export async function requestMediaExport(args: {
   if (!response.ok) return { ok: false, code: 'rejected', detail: errorText(body, response) }
   const filename = typeof body?.data?.filename === 'string' ? body.data.filename : ''
   return { ok: true, code: 'exported', filename }
-}
-
-/**
- * Import a post into the OmniMux inspiration library.
- *
- * A 409 duplicate is answered as success: the user asked for the post to be in
- * the library, and it is. Reporting it as a failure would be a lie the user
- * cannot act on.
- * @param args
- */
-export async function requestInspirationSave(args: {
-  base: string
-  url: string
-  fetchImpl?: typeof fetch
-  timeoutMs?: number
-}): Promise<ExportOutcome> {
-  const fetchImpl = args.fetchImpl ?? fetch
-  const response = await postJson(
-    fetchImpl,
-    `${args.base}${IMPORT_URL_PATH}`,
-    // Saving is not analysing: the host runs its breakdown unless told not to.
-    { url: args.url, auto_analyze: false },
-    args.timeoutMs ?? SHORTCUT_TIMEOUT_MS,
-  )
-  if (response === 'timeout') return { ok: false, code: 'timeout' }
-  if (response === null) return { ok: false, code: 'unreachable' }
-  const body = await readJson(response)
-  if (body?.is_duplicate === true) return { ok: true, code: 'duplicate' }
-  if (!response.ok) return { ok: false, code: 'rejected', detail: errorText(body, response) }
-  return { ok: true, code: 'saved' }
 }

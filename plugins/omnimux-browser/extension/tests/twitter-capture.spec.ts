@@ -15,7 +15,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { extractTweetCapture } from '../src/content/twitter-capture/extractor.ts'
+import { extractTweetCapture, tweetCaptureForInspiration } from '../src/content/twitter-capture/extractor.ts'
 
 /** Avatar address in the shape the live header serves (size-suffixed file). */
 const AVATAR = 'https://pbs.twimg.com/profile_images/1/avatar_x96.jpg'
@@ -102,6 +102,38 @@ describe('extractTweetCapture · 地址与作者', () => {
     expect(bare).not.toBeNull()
     expect(extractTweetCapture(bare as HTMLElement)).toBeNull()
   })
+
+  it('引用帖先出现在 DOM 也不能抢占目标地址、作者、时间和计数', () => {
+    const article = mount(`<article data-testid="tweet">
+      <div data-testid="quoteTweet">${header({ handle: 'quoted', datetime: '2026-01-01T00:00:00.000Z' })}
+        <div data-testid="tweetText">Quoted</div><button data-testid="like" aria-label="999 喜欢"></button>
+      </div>
+      ${header()}<div data-testid="tweetText">Actual target</div>
+      <button data-testid="like" aria-label="2 喜欢"></button>
+    </article>`)
+    const capture = extractTweetCapture(article)
+    expect(capture?.url).toBe('https://x.com/kai/status/1234567890')
+    expect(capture?.author.handle).toBe('kai')
+    expect(capture?.postedAt).toBe('2026-10-05T10:00:00.000Z')
+    expect(capture?.stats).toEqual({ likes: 2 })
+    expect(capture?.text).toBe('Actual target')
+  })
+
+  it('目标没有自己的永久地址时，不借引用地址或当前页面地址保存', () => {
+    window.history.pushState({}, '', '/unrelated/status/555')
+    const article = mount(`<article data-testid="tweet"><div data-testid="tweetText">Mine</div>
+      <div data-testid="quoteTweet">${header({ handle: 'quoted' })}</div>
+    </article>`)
+    expect(extractTweetCapture(article)).toBeNull()
+  })
+
+  it('永久地址去除媒体子路径和跟踪参数，拒绝外站同形链接', () => {
+    const article = mount(`<article data-testid="tweet">
+      <a href="https://evil.example/kai/status/1"><time></time></a>
+      <a href="https://twitter.com/kai/status/222/video/1?s=20">post</a>
+    </article>`)
+    expect(extractTweetCapture(article)?.url).toBe('https://x.com/kai/status/222')
+  })
 })
 
 describe('extractTweetCapture · 类型识别', () => {
@@ -109,6 +141,7 @@ describe('extractTweetCapture · 类型识别', () => {
     const capture = extractTweetCapture(post('<div data-testid="tweetText">Just words</div>'))
     expect(capture?.shape).toBe('text')
     expect(capture?.mediaUrls).toEqual([])
+    expect(capture?.mediaItems).toEqual([])
     expect(capture?.coverUrl).toBe('')
   })
 
@@ -123,6 +156,7 @@ describe('extractTweetCapture · 类型识别', () => {
     const capture = extractTweetCapture(post(`<div data-testid="tweetText">Many</div>${photos(PHOTO_1, PHOTO_2, PHOTO_3, PHOTO_4)}`))
     expect(capture?.shape).toBe('gallery')
     expect(capture?.mediaUrls).toEqual([PHOTO_1, PHOTO_2, PHOTO_3, PHOTO_4])
+    expect(capture?.mediaItems).toEqual([PHOTO_1, PHOTO_2, PHOTO_3, PHOTO_4].map((url) => ({ type: 'image', url })))
   })
 
   it('视频：video，封面取 poster', () => {
@@ -131,6 +165,7 @@ describe('extractTweetCapture · 类型识别', () => {
     ))
     expect(capture?.shape).toBe('video')
     expect(capture?.coverUrl).toBe(POSTER)
+    expect(capture?.mediaItems).toEqual([{ type: 'video', url: '', poster_url: POSTER }])
   })
 
   it('视频同时有预览静图容器时仍是 video，且媒体只算一次', () => {
@@ -143,6 +178,40 @@ describe('extractTweetCapture · 类型识别', () => {
     const capture = extractTweetCapture(article)
     expect(capture?.shape).toBe('video')
     expect(capture?.mediaUrls).toEqual([POSTER])
+    expect(capture?.mediaItems).toEqual([{ type: 'video', url: '', poster_url: POSTER }])
+  })
+
+  it('嵌套播放器是一个视频，保留真实地址、封面与明确的媒体身份', () => {
+    const capture = extractTweetCapture(post(`<div data-testid="videoComponent" data-media-id="media-123">
+      <div data-testid="videoPlayer"><video poster="${POSTER}" src="https://video.twimg.com/123/video.mp4"></video></div>
+    </div>`))
+    expect(capture?.mediaItems).toEqual([{
+      type: 'video', url: 'https://video.twimg.com/123/video.mp4', poster_url: POSTER, source_id: 'media-123',
+    }])
+  })
+
+  it('没有地址或只有 blob 的视频仍保留视频缺失位置', () => {
+    const capture = extractTweetCapture(post(`<div data-testid="videoPlayer"><video></video></div>
+      <div data-testid="videoPlayer"><video src="blob:https://x.com/one"></video></div>`))
+    expect(capture?.shape).toBe('video')
+    expect(capture?.mediaItems).toEqual([{ type: 'video', url: '' }, { type: 'video', url: '' }])
+  })
+
+  it('图片尚未加载地址也保留图片类型与缺失位置', () => {
+    const capture = extractTweetCapture(post('<div data-testid="tweetPhoto"><img /></div>'))
+    expect(capture?.shape).toBe('photo')
+    expect(capture?.mediaItems).toEqual([{ type: 'image', url: '' }])
+  })
+
+  it('混合附件按原顺序保留，缺失图片不挪走后续视频', () => {
+    const capture = extractTweetCapture(post(`${photos(PHOTO_1)}
+      <div data-testid="tweetPhoto"><img /></div>
+      <div data-testid="videoPlayer"><video><source src="https://video.twimg.com/one.mp4" /></video></div>
+      ${photos(PHOTO_2)}`))
+    expect(capture?.mediaItems).toEqual([
+      { type: 'image', url: PHOTO_1 }, { type: 'image', url: '' },
+      { type: 'video', url: 'https://video.twimg.com/one.mp4' }, { type: 'image', url: PHOTO_2 },
+    ])
   })
 
   it('引用转帖：quote，含被引用作者与正文，地址仍是外层推文', () => {
@@ -161,6 +230,7 @@ describe('extractTweetCapture · 类型识别', () => {
     expect(capture?.quoted?.coverUrl).toBe(QUOTED_PHOTO)
     expect(capture?.url).toBe('https://x.com/kai/status/1234567890')
     expect(capture?.mediaUrls).toEqual([])
+    expect(capture?.mediaItems).toEqual([])
   })
 
   it('投票：poll，解析选项与票数', () => {
@@ -215,6 +285,21 @@ describe('extractTweetCapture · 类型识别', () => {
     </div>`
     const mine = document.querySelectorAll<HTMLElement>('article[data-testid="tweet"]')[1]
     expect(extractTweetCapture(mine)?.shape).toBe('text')
+  })
+})
+
+describe('tweetCaptureForInspiration', () => {
+  it('保留完整已解码正文，投影真实类型而不是把封面转成图片附件', () => {
+    const text = `${'长正文'.repeat(1200)} &amp; 保留实体文本`
+    const capture = extractTweetCapture(post(`<div data-testid="tweetText">${text}</div>
+      <div data-testid="videoPlayer"><video poster="${POSTER}"></video></div>`))!
+    const projected = tweetCaptureForInspiration(capture)
+    expect(projected.text).toBe(`${'长正文'.repeat(1200)} & 保留实体文本`)
+    expect(projected.posted_at).toBe(capture.postedAt)
+    expect(projected.cover_url).toBe(POSTER)
+    expect(projected.media_items).toEqual([{ type: 'video', url: '', poster_url: POSTER }])
+    expect(projected).not.toHaveProperty('mediaUrls')
+    expect(projected).not.toHaveProperty('mediaItems')
   })
 })
 

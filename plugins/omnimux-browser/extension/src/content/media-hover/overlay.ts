@@ -84,6 +84,7 @@ export class MediaOverlay {
    * payload id (after the pointer visited another media) is dropped as stale.
    */
   private mediaGeneration = 0
+  private inspirationWatch: AbortController | null = null
   /**
    * Actions with a request in flight. `OverlayState.busyAction` is a single
    * field shared with the capsule paint contract, so concurrent slots are
@@ -208,6 +209,7 @@ export class MediaOverlay {
 
   /** Tears everything down: listeners, timers and nodes. */
   dispose(): void {
+    this.inspirationWatch?.abort()
     this.clearLeaveTimer()
     this.clearCollapseTimer()
     this.clearFlashTimer()
@@ -316,6 +318,8 @@ export class MediaOverlay {
     if (!candidate.element.isConnected) return
     this.payload = candidate.payload
     this.anchorElement = candidate.element
+    this.inspirationWatch?.abort()
+    this.inspirationWatch = null
     this.mediaGeneration += 1
     // A new media owns a new busy ledger: its presses were issued against a
     // payload that is gone, so a stale in-flight marker must not freeze this
@@ -331,6 +335,8 @@ export class MediaOverlay {
   }
 
   private hideNow(clear: boolean): void {
+    this.inspirationWatch?.abort()
+    this.inspirationWatch = null
     this.clearCollapseTimer()
     this.clearDismissTimer()
     this.clearIdleTimer()
@@ -591,14 +597,6 @@ export class MediaOverlay {
     if (this.state.phase === 'interactive') this.state.phase = 'shown'
   }
 
-  private readonly onCapsuleEnter = (): void => {
-    this.expandCapsule()
-  }
-
-  private readonly onCapsuleLeave = (): void => {
-    this.scheduleCollapse()
-  }
-
   /**
    * The hover/focus hint a slot should read right now.
    *
@@ -687,7 +685,12 @@ export class MediaOverlay {
         if (intent === 'unknown') {
           return Promise.resolve({ ok: false, status: 'failed', message: this.copy.image.typeUnknown })
         }
-        return this.bridge.saveToInspiration(payload)
+        const generation = this.mediaGeneration
+        this.inspirationWatch?.abort()
+        this.inspirationWatch = new AbortController()
+        return this.bridge.saveToInspiration(payload, (outcome) => {
+          if (this.mediaGeneration === generation && this.state.activeId === payload.id) this.showMessage(outcome.message, 'inspiration')
+        }, this.inspirationWatch.signal)
       }
       case 'copy':
         return this.bridge.copyToClipboard(payload)
@@ -734,7 +737,7 @@ export class MediaOverlay {
 
   private setBusy(action: MediaActionKind | null, busy: boolean): void {
     if (busy && action !== null) this.pendingActions.add(action)
-    else this.pendingActions.delete(action)
+    else if (action !== null) this.pendingActions.delete(action)
     // The capsule paints one busy slot; the primary action owns it while a
     // save is pending so its busy label/aria stays put until the real receipt.
     const next: MediaActionKind | null = this.pendingActions.has('inspiration')

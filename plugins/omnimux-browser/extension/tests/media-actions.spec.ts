@@ -47,14 +47,14 @@ function transport(overrides: Partial<ActionTransport> = {}): ActionTransport {
 
 describe('add to inspiration library', () => {
   it('delegates the write to the background worker', async () => {
-    const postToBackground = vi.fn(async () => ({ ok: true, result: { total: 3, duplicate: false } }))
+    const postToBackground = vi.fn(async () => ({ ok: true, task: { taskId: 'save-1', host: 'http://127.0.0.1:43120', sourceUrl: PAYLOAD.pageUrl, itemId: 'row-1', state: 'saved', updatedAt: 1 } }))
     const bridge = new MediaActionBridge(transport({ postToBackground }))
 
     const outcome = await bridge.saveToInspiration(PAYLOAD)
 
     expect(outcome.ok).toBe(true)
     expect(outcome.status).toBe('saved')
-    expect(outcome.message).toBe('已加入灵感库')
+    expect(outcome.message).toBe('已保存')
     expect(postToBackground).toHaveBeenCalledWith({
       type: RUNTIME_MESSAGE.mediaToInspiration,
       payload: PAYLOAD,

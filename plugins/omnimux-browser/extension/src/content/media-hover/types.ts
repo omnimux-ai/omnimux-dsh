@@ -11,6 +11,8 @@
  * @module
  */
 
+import type { TweetInspirationCapture } from '../twitter-capture/types.ts'
+
 /**
  * Normalised hovered media payload.
  *
@@ -29,6 +31,10 @@ export interface HoveredMedia {
   /** Thumbnail address: the video poster, or `src` when no poster exists. */
   previewSrc: string
   pageUrl: string
+  /** Explicit save target; `''` means X media could not be attributed safely. */
+  inspirationUrl?: string
+  /** Target-post capture for saving; never changes the copy/attach addresses. */
+  inspirationCapture?: TweetInspirationCapture
   pageTitle: string
   /** Rendered size in CSS pixels. */
   width: number
@@ -109,7 +115,7 @@ export type MediaActionKind = 'inspiration' | 'copy' | 'attach'
 export type OverlayPhase = 'idle' | 'shown' | 'interactive' | 'hidden'
 
 /** Outcome discriminator returned by every action handler. */
-export type ActionStatus = 'saved' | 'copied' | 'attached' | 'failed'
+export type ActionStatus = 'saved' | 'copied' | 'attached' | 'partial' | 'pending' | 'failed'
 
 /** A hoverable element resolved from a pointer event. */
 export interface HoverCandidate {
