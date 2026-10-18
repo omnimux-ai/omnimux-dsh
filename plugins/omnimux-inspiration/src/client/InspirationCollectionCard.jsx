@@ -96,41 +96,48 @@ export function InspirationCollectionCard({ collection, t, style, column, onOpen
           )) : <div className="omnimux-inspiration-collection-placeholder" aria-hidden="true"><Folder size={26} aria-hidden="true" /></div>}
           {!preview ? (
             <div className="omnimux-inspiration-collection-actions" role="group" aria-label={t('collection.actions')}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="omnimux-inspiration-collection-action-view"
-                aria-label={t('collection.view')}
-                leadingIcon={<Eye size={14} aria-hidden="true" />}
-                onPointerDown={stopInnerEvent}
-                onMouseDown={stopInnerEvent}
-                onKeyDown={isolateInnerKey}
-                onClick={event => {
-                  stopInnerEvent(event)
-                  const view = typeof onView === 'function' ? onView : onOpen
-                  if (typeof view === 'function') view(collection)
-                }}
-              >
-                {t('collection.view')}
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                className="omnimux-inspiration-collection-action-add"
-                aria-label={t('collection.addToSession')}
-                leadingIcon={<MessageSquarePlus size={14} aria-hidden="true" />}
-                loading={addBusy}
-                onPointerDown={stopInnerEvent}
-                onMouseDown={stopInnerEvent}
-                onKeyDown={isolateInnerKey}
-                onClick={event => {
-                  stopInnerEvent(event)
-                  if (addBusy) return
-                  if (typeof onAddToSession === 'function') onAddToSession(collection)
-                }}
-              >
-                {t('collection.addToSession')}
-              </Button>
+              {/* One UI set with the ordinary card's hover CTA: the same
+                  `.omnimux-inspiration-overlay-cta*` classes own height, radius,
+                  icon size and the secondary/primary surface pair. Class names
+                  must avoid substrings that other plugins' global selectors
+                  target (e.g. `button[class*="add"]`). */}
+              <div className="omnimux-inspiration-overlay-cta">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="omnimux-inspiration-overlay-cta-btn secondary"
+                  aria-label={t('collection.view')}
+                  leadingIcon={<Eye size={14} aria-hidden="true" />}
+                  onPointerDown={stopInnerEvent}
+                  onMouseDown={stopInnerEvent}
+                  onKeyDown={isolateInnerKey}
+                  onClick={event => {
+                    stopInnerEvent(event)
+                    const view = typeof onView === 'function' ? onView : onOpen
+                    if (typeof view === 'function') view(collection)
+                  }}
+                >
+                  <span className="omnimux-inspiration-overlay-cta-label">{t('collection.view')}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="omnimux-inspiration-overlay-cta-btn primary"
+                  aria-label={t('collection.addToSession')}
+                  leadingIcon={<MessageSquarePlus size={14} aria-hidden="true" />}
+                  loading={addBusy}
+                  onPointerDown={stopInnerEvent}
+                  onMouseDown={stopInnerEvent}
+                  onKeyDown={isolateInnerKey}
+                  onClick={event => {
+                    stopInnerEvent(event)
+                    if (addBusy) return
+                    if (typeof onAddToSession === 'function') onAddToSession(collection)
+                  }}
+                >
+                  <span className="omnimux-inspiration-overlay-cta-label">{t('collection.addToSession')}</span>
+                </Button>
+              </div>
             </div>
           ) : null}
         </div>

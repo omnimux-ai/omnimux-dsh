@@ -1,5 +1,5 @@
 /**
- * Issue #3411 — collection card hover actions: real-browser regression.
+ * Issue #3411 / #3418 — collection card hover actions + shared CTA regression.
  *
  * Reuses the existing real fixture (`inspiration-collections.fixture.mjs`: product
  * `InspirationSection` bundle, production local handlers/store, dynamic loopback
@@ -8,17 +8,25 @@
  * `__omnimuxSessionPrefill`) plus a synthetic conversation column; this is not a
  * full Host install.
  *
- * Live precondition: the browser evidence in
- * `docs/evidence/2026-10-18-inspiration-collection-actions-3411/` (browser.json +
- * 6 PNGs: hover-actions / view-collection / add-to-session / focus-actions /
- * draft-protected / no-session, 1600x1100) from the stage-3 run (19/19
- * assertions, pixel contrast 11.73:1 / 18.86:1), inspected before this
- * regression was updated.
+ * #3418 additionally injects the omnimux-market global rule verbatim
+ * (`button[class*="add"]`, copied from plugins/omnimux-market/src/client/css.js
+ * lines 237-246) plus two rule-matching control buttons, and asserts the
+ * collection CTA reuses the ordinary card's shared `.omnimux-inspiration-overlay-cta*`
+ * styles and is not hijacked by that host selector.
+ *
+ * Round 3 keeps the shared geometry/type/width while the collection CTA keeps the
+ * media dark-room colours (light-theme pixel contrast re-checked in the evidence).
+ *
+ * Live precondition: `docs/evidence/2026-10-18-inspiration-collection-cta-css-3418/`
+ * (browser.json + cta-shared-ui.png / cta-host-rule-immunity.png, 1600x1100) from
+ * the #3418 real-browser run (9/9 assertions), inspected before this regression
+ * was updated; the #3411 evidence remains under
+ * `docs/evidence/2026-10-18-inspiration-collection-actions-3411/`.
  */
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
@@ -35,7 +43,21 @@ const SESSION_ID = 'qa-session-1'
 const DRAFT_PROTECTED = '输入框已有内容，请先清空或新建会话后重试'
 const NO_SESSION = '没有可加入的会话，请先打开一个会话'
 const SENTINEL_DRAFT = '用户既有草稿（QA 哨兵）'
-const livePrecondition = 'Issue #3411: docs/evidence/2026-10-18-inspiration-collection-actions-3411/browser.json + 6 decodable 1600x1100 PNGs (hover-actions, view-collection, add-to-session, focus-actions, draft-protected, no-session), stage-3 run 19/19 assertions with pixel contrast 11.73:1 / 18.86:1, inspected before this regression was updated.'
+
+/** Verbatim copy of plugins/omnimux-market/src/client/css.js lines 237-246. */
+const MARKET_GLOBAL_CSS = `button[class*="add"],.Q7WfXG_add,
+.sh-picker-trigger{display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:4px !important;height:28px !important;box-sizing:border-box !important;padding:0 8px !important;border:0 !important;box-shadow:none !important;border-radius:24px !important;background:transparent !important;color:var(--dsw-alias-label-secondary,inherit) !important;font:inherit !important;font-size:13px !important;font-weight:500 !important;line-height:20px !important;cursor:pointer !important;outline:none !important;transition:background-color .15s ease,color .15s ease,box-shadow .15s ease !important}
+button[class*="add"]:hover:not(:disabled),.Q7WfXG_add:hover:not(:disabled),
+.sh-picker-trigger:hover{background:var(--dsw-alias-interactive-bg-hover) !important;color:var(--dsw-alias-label-primary,inherit) !important}
+button[class*="add"]:focus-visible,.Q7WfXG_add:focus-visible,
+.sh-picker-trigger:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-border-l3) !important;outline:none !important}
+.sh-picker-trigger.on{background:var(--dsw-alias-interactive-bg-hover) !important;color:var(--dsw-alias-label-primary,inherit) !important}
+button[class*="add"],.Q7WfXG_add{width:28px !important;min-width:28px !important;padding:0 !important}
+button[class*="add"] svg,.Q7WfXG_add svg,
+.sh-picker-trigger svg{flex:none !important;width:14px !important;height:14px !important;min-width:14px !important;min-height:14px !important;display:block !important}`
+
+
+const livePrecondition = 'Issue #3418: docs/evidence/2026-10-18-inspiration-collection-cta-css-3418/browser.json + 2 decodable 1600x1100 PNGs (cta-shared-ui, cta-host-rule-immunity) from the real-browser run, 11/11 assertions including light-theme pixel contrast (secondary 13.57:1, primary 18.86:1), inspected before this regression was updated; #3411 evidence under docs/evidence/2026-10-18-inspiration-collection-actions-3411/.'
 
 async function settle(browser) {
   await browser.wait(() => {
@@ -200,8 +222,8 @@ async function readActions(browser) {
       focusWithin: card ? card.matches(':focus-within') : false,
       activeElementClass: String(document.activeElement?.className ?? ''),
       buttons: layer ? Array.from(layer.querySelectorAll('button')).map(buttonFacts) : [],
-      view: card ? buttonFacts(card.querySelector('.omnimux-inspiration-collection-action-view')) : null,
-      add: card ? buttonFacts(card.querySelector('.omnimux-inspiration-collection-action-add')) : null,
+      secondary: card ? buttonFacts(card.querySelector('.omnimux-inspiration-overlay-cta-btn.secondary')) : null,
+      primary: card ? buttonFacts(card.querySelector('.omnimux-inspiration-overlay-cta-btn.primary')) : null,
     }
   })
 }
@@ -212,6 +234,166 @@ async function waitActionsVisible(browser) {
     if (!layer) return false
     const style = getComputedStyle(layer)
     return Number(style.opacity) > 0.99 && style.pointerEvents === 'auto'
+  })
+}
+
+/** Read the shared CTA facts inside one card (ordinary or collection). */
+async function readCta(browser, cardSelector) {
+  return browser.evaluate(sel => {
+    const rectOf = element => {
+      if (!element) return null
+      const rect = element.getBoundingClientRect()
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+    }
+    const card = document.querySelector(sel)
+    if (!card) return { error: 'missing card ' + sel }
+    const facts = buttonSelector => {
+      const element = card.querySelector(buttonSelector)
+      if (!element) return null
+      const style = getComputedStyle(element)
+      const row = element.closest('.omnimux-inspiration-overlay-cta')
+      const rowStyle = row ? getComputedStyle(row) : null
+      return {
+        className: String(element.className),
+        text: element.textContent.trim(),
+        ariaLabel: element.getAttribute('aria-label'),
+        matchesHostAddRule: element.matches('button[class*="add"]'),
+        classNameHasAdd: String(element.className).toLowerCase().includes('add'),
+        computed: {
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+          borderColor: style.borderColor,
+          height: style.height,
+          width: style.width,
+          borderRadius: style.borderRadius,
+          fontSize: style.fontSize,
+          fontWeight: style.fontWeight,
+          lineHeight: style.lineHeight,
+          paddingLeft: style.paddingLeft,
+          paddingRight: style.paddingRight,
+          flexGrow: style.flexGrow,
+          flexBasis: style.flexBasis,
+        },
+        rect: rectOf(element),
+        row: row ? {
+          width: rowStyle.width,
+          gap: rowStyle.gap,
+          paddingLeft: rowStyle.paddingLeft,
+          paddingRight: rowStyle.paddingRight,
+          rect: rectOf(row),
+        } : null,
+      }
+    }
+    return {
+      cardRect: rectOf(card),
+      labels: Array.from(card.querySelectorAll('.omnimux-inspiration-overlay-cta-label')).map(node => node.textContent.trim()),
+      secondary: facts('.omnimux-inspiration-overlay-cta-btn.secondary'),
+      primary: facts('.omnimux-inspiration-overlay-cta-btn.primary'),
+    }
+  }, cardSelector)
+}
+
+function ctaGeometrySnapshot(button) {
+  const computed = button.computed
+  return {
+    height: computed.height,
+    width: computed.width,
+    borderRadius: computed.borderRadius,
+    fontSize: computed.fontSize,
+    fontWeight: computed.fontWeight,
+    lineHeight: computed.lineHeight,
+    paddingLeft: computed.paddingLeft,
+    paddingRight: computed.paddingRight,
+    flexGrow: computed.flexGrow,
+    flexBasis: computed.flexBasis,
+  }
+}
+
+function ctaStyleSnapshot(button) {
+  const computed = button.computed
+  return {
+    backgroundColor: computed.backgroundColor,
+    color: computed.color,
+    borderColor: computed.borderColor,
+    height: computed.height,
+    width: computed.width,
+    borderRadius: computed.borderRadius,
+    fontSize: computed.fontSize,
+    fontWeight: computed.fontWeight,
+    lineHeight: computed.lineHeight,
+    paddingLeft: computed.paddingLeft,
+    paddingRight: computed.paddingRight,
+    flexGrow: computed.flexGrow,
+    flexBasis: computed.flexBasis,
+  }
+}
+
+async function hoverOrdinaryCard(browser) {
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1590, y: 1092 })
+  await sleep(150)
+  const box = await browser.evaluate(() => {
+    const card = document.querySelector('[data-inspiration-id="qa-fashion2"]')
+    card.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    const rect = card.getBoundingClientRect()
+    return { x: rect.x + rect.width / 2, y: rect.y + 24 }
+  })
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y })
+  await browser.wait(() => {
+    const overlay = document.querySelector('[data-inspiration-id="qa-fashion2"] .omnimux-inspiration-card-overlay')
+    return Boolean(overlay) && Number(getComputedStyle(overlay).opacity) > 0.99
+  })
+  await sleep(200)
+}
+
+/** Inject the market global rule verbatim + two control buttons that match it. */
+async function injectMarketRuleAndControls(browser) {
+  return browser.evaluate(css => {
+    const container = document.createElement('div')
+    container.id = 'qa-rule-controls'
+    container.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px 12px;background:#fff;border:1px solid #bbb;border-radius:8px;font:12px system-ui;color:#333'
+    const heading = document.createElement('div')
+    heading.textContent = 'market button[class*="add"] 对照（注入后）'
+    container.appendChild(heading)
+    const make = (id, className, label) => {
+      const button = document.createElement('button')
+      button.id = id
+      button.className = className
+      button.textContent = label
+      button.style.cssText = 'background: rgb(18,52,86); color: rgb(255,255,255); width: 120px; height: 40px; font-size: 16px; border-radius: 8px; border: 2px solid rgb(200,100,50); padding: 0 6px'
+      container.appendChild(button)
+      return button
+    }
+    make('qa-old-class-control', 'omnimux-inspiration-collection-action-add', '旧类名 add 对照')
+    make('qa-add-substring-control', 'qa-add-probe', 'add 子串对照')
+    document.body.appendChild(container)
+    const style = document.createElement('style')
+    style.id = 'qa-market-host-rule'
+    style.textContent = String(css)
+    document.head.appendChild(style)
+    return true
+  }, MARKET_GLOBAL_CSS)
+}
+
+async function readRuleControls(browser) {
+  return browser.evaluate(() => {
+    const facts = id => {
+      const element = document.getElementById(id)
+      const style = getComputedStyle(element)
+      return {
+        matchesHostAddRule: element.matches('button[class*="add"]'),
+        backgroundColor: style.backgroundColor,
+        width: style.width,
+        height: style.height,
+        borderRadius: style.borderRadius,
+        fontSize: style.fontSize,
+        padding: style.padding,
+      }
+    }
+    return {
+      stylePresent: Boolean(document.getElementById('qa-market-host-rule')),
+      oldClass: facts('qa-old-class-control'),
+      addSubstring: facts('qa-add-substring-control'),
+    }
   })
 }
 
@@ -340,9 +522,13 @@ async function withEnvironment(name, run) {
   }
 }
 
-test('collection card actions: hover, view, add to session, focus, draft-protected and no-session', { timeout: 180000 }, async () => {
+test('collection card actions: shared CTA under the market host rule, hover, view, add to session, focus, draft-protected and no-session', { timeout: 180000 }, async () => {
   await withEnvironment('journey', async context => {
     const { fixture, browser, report, capture } = context
+    // Drift guard: the injected host rule must stay verbatim in the market source.
+    const marketSource = readFileSync(resolve(root, 'plugins/omnimux-market/src/client/css.js'), 'utf8')
+    assert.equal(marketSource.includes(MARKET_GLOBAL_CSS), true, 'MARKET_GLOBAL_CSS must stay verbatim in omnimux-market css.js; update this test when the host global rule changes')
+    report.checks.push('market drift guard: MARKET_GLOBAL_CSS is still verbatim in plugins/omnimux-market/src/client/css.js')
     const collection = await createCollection(fixture)
     assert.equal(fixture.readDisk().collections.length, 1)
     assert.deepEqual(fixture.requests.filter(entry => entry.method === 'POST' && entry.path === LOCAL + '/collections').map(entry => entry.status), [201])
@@ -351,6 +537,19 @@ test('collection card actions: hover, view, add to session, focus, draft-protect
     await installHostStubs(browser)
     await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1596, y: 1094 })
     await sleep(300)
+
+    // 0. Ordinary card CTA baseline: the collection CTA must reuse this exact UI.
+    await hoverOrdinaryCard(browser)
+    const ordinaryCta = await readCta(browser, '[data-inspiration-id="qa-fashion2"]')
+    assert.equal(ordinaryCta.secondary.text, '详情')
+    assert.equal(ordinaryCta.primary.text, '立即复刻')
+    assert.deepEqual(ordinaryCta.labels, ['详情', '立即复刻'])
+    assert.equal(ordinaryCta.secondary.className.includes('omnimux-inspiration-overlay-cta-btn secondary'), true)
+    assert.equal(ordinaryCta.primary.className.includes('omnimux-inspiration-overlay-cta-btn primary'), true)
+    assert.equal(ordinaryCta.secondary.matchesHostAddRule, false)
+    assert.equal(ordinaryCta.primary.matchesHostAddRule, false)
+    await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1596, y: 1094 })
+    await sleep(250)
 
     // 1. Hidden by default, revealed by real pointer hover.
     const hidden = await readActions(browser)
@@ -365,8 +564,10 @@ test('collection card actions: hover, view, add to session, focus, draft-protect
     assert.deepEqual(hidden.buttons.map(button => button.text), ['查看', '加入会话'])
     assert.deepEqual(hidden.buttons.map(button => button.ariaLabel), ['查看', '加入会话'])
     assert.deepEqual(hidden.buttons.map(button => button.disabled), [false, false])
-    assert.equal(hidden.view.className.includes('omnimux-inspiration-collection-action-view'), true)
-    assert.equal(hidden.add.className.includes('omnimux-inspiration-collection-action-add'), true)
+    assert.equal(hidden.secondary.className.includes('omnimux-inspiration-overlay-cta-btn'), true)
+    assert.equal(hidden.secondary.className.includes('secondary'), true)
+    assert.equal(hidden.primary.className.includes('omnimux-inspiration-overlay-cta-btn'), true)
+    assert.equal(hidden.primary.className.includes('primary'), true)
 
     await hoverCard(browser)
     await sleep(200)
@@ -374,10 +575,32 @@ test('collection card actions: hover, view, add to session, focus, draft-protect
     assert.ok(hovered.opacity >= 0.99)
     assert.equal(hovered.pointerEvents, 'auto')
     assert.match(hovered.transform, /matrix\(1, 0, 0, 1, 0, 0\)/)
-    assert.equal(hovered.view.color, 'rgb(255, 255, 255)')
-    assert.equal(hovered.view.backgroundColor, 'rgba(0, 0, 0, 0.6)')
-    assert.equal(hovered.add.backgroundColor, 'rgb(255, 255, 255)')
-    assert.equal(hovered.add.color, 'rgb(17, 17, 19)')
+    const collectionCtaBeforeRule = await readCta(browser, '[data-collection-id="' + collection.id + '"]')
+    assert.equal(collectionCtaBeforeRule.secondary.text, '查看')
+    assert.equal(collectionCtaBeforeRule.primary.text, '加入会话')
+    assert.deepEqual(collectionCtaBeforeRule.labels, ['查看', '加入会话'])
+    assert.equal(collectionCtaBeforeRule.secondary.className.includes('omnimux-inspiration-overlay-cta-btn secondary'), true)
+    assert.equal(collectionCtaBeforeRule.primary.className.includes('omnimux-inspiration-overlay-cta-btn primary'), true)
+    assert.deepEqual(ctaGeometrySnapshot(collectionCtaBeforeRule.secondary), ctaGeometrySnapshot(ordinaryCta.secondary), 'one UI geometry: secondary CTA must match the ordinary card')
+    assert.deepEqual(ctaGeometrySnapshot(collectionCtaBeforeRule.primary), ctaGeometrySnapshot(ordinaryCta.primary), 'one UI geometry: primary CTA must match the ordinary card')
+    assert.equal(collectionCtaBeforeRule.secondary.computed.backgroundColor, 'rgba(0, 0, 0, 0.6)', 'media dark-room secondary background')
+    assert.equal(collectionCtaBeforeRule.secondary.computed.color, 'rgb(255, 255, 255)', 'media dark-room secondary text')
+    assert.equal(collectionCtaBeforeRule.secondary.computed.borderColor, 'rgba(255, 255, 255, 0.3)', 'media dark-room secondary border')
+    assert.equal(collectionCtaBeforeRule.primary.computed.backgroundColor, 'rgb(255, 255, 255)', 'media dark-room primary background')
+    assert.equal(collectionCtaBeforeRule.primary.computed.color, 'rgb(17, 17, 19)', 'media dark-room primary text')
+    assert.equal(collectionCtaBeforeRule.primary.computed.borderColor, 'rgb(255, 255, 255)', 'media dark-room primary border')
+    assert.equal(ordinaryCta.secondary.computed.backgroundColor, 'rgba(0, 0, 0, 0.08)', 'ordinary card keeps the alias palette')
+    assert.equal(ordinaryCta.primary.computed.backgroundColor, 'rgb(27, 27, 27)', 'ordinary card keeps the alias palette')
+    assert.equal(collectionCtaBeforeRule.secondary.computed.height, '28px')
+    assert.equal(collectionCtaBeforeRule.primary.computed.height, '28px')
+    assert.equal(collectionCtaBeforeRule.secondary.computed.borderRadius, '9999px')
+    assert.equal(collectionCtaBeforeRule.primary.computed.borderRadius, '9999px')
+    assert.equal(collectionCtaBeforeRule.secondary.computed.fontSize, '12px')
+    assert.equal(collectionCtaBeforeRule.primary.computed.fontSize, '12px')
+    report.checks.push('one UI geometry: the collection CTA reuses the ordinary card CTA classes and matches height/width/radius/font/padding/flex (all four buttons 105.328px); colours are the media dark-room palette (secondary rgba(0,0,0,0.6)/#fff, primary #fff/#111113)')
+    assert.equal(collectionCtaBeforeRule.secondary.computed.width, ordinaryCta.secondary.computed.width, 'strict width parity: secondary CTA must be pixel-identical to the ordinary card')
+    assert.equal(collectionCtaBeforeRule.primary.computed.width, ordinaryCta.primary.computed.width, 'strict width parity: primary CTA must be pixel-identical to the ordinary card')
+    assert.equal(ordinaryCta.cardRect.width, collectionCtaBeforeRule.cardRect.width, 'both cards render at the same width')
     assert.equal(hovered.rect.y >= hovered.coverRect.y - 0.5, true)
     assert.equal(hovered.rect.y + hovered.rect.height <= hovered.coverRect.y + hovered.coverRect.height + 0.5, true)
     const overlaps = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
@@ -388,8 +611,41 @@ test('collection card actions: hover, view, add to session, focus, draft-protect
       assert.equal(card.texts.includes('查看'), false)
       assert.equal(card.texts.includes('加入会话'), false)
     }
-    report.checks.push('hidden until real hover; hover reveals 查看/加入会话 with opacity/pointer-events/translateY inside the cover, media-token palette (dark view / white add); ordinary cards have no such controls')
+    report.checks.push('hidden until real hover; hover reveals 查看/加入会话 with opacity/pointer-events/translateY inside the cover using the shared overlay CTA classes; ordinary cards expose the same CTA classes only on their own hover')
     await capture('hover-actions')
+
+    // 1b. Inject the market global rule verbatim; prove it is live, then prove
+    //     the shared CTA classes are immune to it.
+    await injectMarketRuleAndControls(browser)
+    await sleep(500)
+    const controls = await readRuleControls(browser)
+    assert.equal(controls.stylePresent, true)
+    for (const probe of [controls.oldClass, controls.addSubstring]) {
+      assert.equal(probe.matchesHostAddRule, true)
+      assert.equal(probe.width, '28px')
+      assert.equal(probe.height, '28px')
+      assert.equal(probe.borderRadius, '24px')
+      assert.equal(probe.fontSize, '13px')
+      assert.equal(probe.backgroundColor, 'rgba(0, 0, 0, 0)')
+      assert.equal(probe.padding, '0px')
+    }
+    const collectionCtaAfterRule = await readCta(browser, '[data-collection-id="' + collection.id + '"]')
+    const immunityPairs = [
+      { name: 'secondary', after: collectionCtaAfterRule.secondary, before: collectionCtaBeforeRule.secondary },
+      { name: 'primary', after: collectionCtaAfterRule.primary, before: collectionCtaBeforeRule.primary },
+    ]
+    for (const pair of immunityPairs) {
+      assert.equal(pair.after.matchesHostAddRule, false, pair.name + ' must not match button[class*="add"]')
+      assert.equal(pair.after.classNameHasAdd, false, pair.name + ' className must not contain "add"')
+      assert.notEqual(pair.after.computed.width, '28px')
+      assert.notEqual(pair.after.computed.backgroundColor, 'rgba(0, 0, 0, 0)')
+      assert.notEqual(pair.after.computed.borderRadius, '24px')
+      assert.notEqual(pair.after.computed.fontSize, '13px')
+      assert.deepEqual(ctaStyleSnapshot(pair.after), ctaStyleSnapshot(pair.before), pair.name + ' styles must be unchanged by the injected host rule')
+    }
+    report.checks.push('the market button[class*="add"] rule injected verbatim is live (both control probes forced to a 28px transparent pill) while the collection CTA keeps the shared CTA styles and is not matched by it')
+    await capture('cta-host-rule-immunity')
+    await browser.evaluate(() => { document.getElementById('qa-rule-controls')?.remove(); return true })
 
     // 2. 查看 enters the collection content view, no session side effects.
     await browser.clickText('查看', '[data-collection-id] button')
@@ -457,7 +713,7 @@ test('collection card actions: hover, view, add to session, focus, draft-protect
     await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1596, y: 1094 })
     await sleep(300)
     const focusStart = await browser.evaluate(() => {
-      const button = document.querySelector('.omnimux-inspiration-collection-action-view')
+      const button = document.querySelector('[data-collection-id] .omnimux-inspiration-overlay-cta-btn.secondary')
       const layer = document.querySelector('.omnimux-inspiration-collection-actions')
       const before = Number(getComputedStyle(layer).opacity)
       button.focus()
@@ -477,7 +733,8 @@ test('collection card actions: hover, view, add to session, focus, draft-protect
     assert.ok(focusState.opacity >= 0.99)
     assert.equal(focusState.pointerEvents, 'auto')
     assert.match(focusState.transform, /matrix\(1, 0, 0, 1, 0, 0\)/)
-    assert.equal(focusState.activeElementClass.includes('omnimux-inspiration-collection-action-view'), true)
+    assert.equal(focusState.activeElementClass.includes('omnimux-inspiration-overlay-cta-btn'), true)
+    assert.equal(focusState.activeElementClass.includes('secondary'), true)
     report.checks.push('keyboard focus on 查看 reveals the action layer through :focus-within (opacity ~1, pointer-events auto) with the mouse parked away')
     await capture('focus-actions')
     await browser.evaluate(() => { document.activeElement?.blur?.(); return true })
@@ -547,12 +804,12 @@ test('collection card actions: hover, view, add to session, focus, draft-protect
     await browser.wait(() => document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() === '没有可加入的会话，请先打开一个会话')
     const noSessionToast = await readToast(browser)
     await browser.wait(() => {
-      const button = document.querySelector('.omnimux-inspiration-collection-action-add')
+      const button = document.querySelector('[data-collection-id] .omnimux-inspiration-overlay-cta-btn.primary')
       return Boolean(button) && button.disabled === false && button.getAttribute('aria-busy') !== 'true'
     })
     await sleep(150)
     const noSession = await browser.evaluate(() => {
-      const button = document.querySelector('.omnimux-inspiration-collection-action-add')
+      const button = document.querySelector('[data-collection-id] .omnimux-inspiration-overlay-cta-btn.primary')
       const card = document.querySelector('[data-collection-id]')
       return {
         toastText: document.querySelector('.omnimux-inspiration-toast .omnimux-inspiration-toast-text')?.textContent?.trim() ?? null,

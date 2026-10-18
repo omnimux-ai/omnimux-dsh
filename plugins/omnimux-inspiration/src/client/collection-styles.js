@@ -97,7 +97,7 @@ export const COLLECTION_CSS = `
   justify-content: center;
   gap: 8px;
   box-sizing: border-box;
-  padding: 28px 8px 8px;
+  padding: 28px 12px 8px;
   background: var(--dsw-specific-media-overlay);
   opacity: 0;
   pointer-events: none;
@@ -122,32 +122,46 @@ export const COLLECTION_CSS = `
     transition: none;
   }
 }
-/* 操作层按钮必须走媒体暗房调色板：普通主题按钮放在任意封面上不能保证
-   对比度（浅色主题 outline 按钮是深字浅底，叠在亮封面上会掉到 AA 以下）。
-   查看=半透明深底白字，加入会话=白底深字；两者都沿用既有 media token。 */
-.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-view {
-  border-color: var(--dsw-specific-media-border-strong);
+/* 操作层与普通灵感卡的悬停 CTA 共用同一套按钮样式
+   （.omnimux-inspiration-overlay-cta*：同高、同圆角、同图标尺寸、
+   secondary/primary 表面）。这里只负责操作层的出现/隐藏与底部过渡，
+   不再定义第二套按钮外观。按钮类名不得包含会被其它插件全局选择器命中的
+   子串（例如 omnimux-market 的 button[class*="add"] 会把加号类按钮
+   强制成透明窄条）。 */
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta {
+  margin-bottom: 0;
+  pointer-events: none;
+}
+.omnimux-inspiration-collection-card:hover .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta,
+.omnimux-inspiration-collection-card:focus-within .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta {
+  pointer-events: auto;
+}
+@media (hover: none) {
+  .omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta {
+    pointer-events: auto;
+  }
+}
+/* 共享 CTA 的几何/字阶/等宽保持不变；合集操作层位于封面媒体之上，颜色
+   继续走媒体暗房 token，保证浅色与深色主题、任意封面上文字对比度 ≥4.5:1
+   （深色主题下与普通卡 CTA 观感一致；浅色主题下不会出现深字叠深封面）。 */
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta-btn.secondary {
   background: var(--dsw-specific-media-badge-bg-strong);
+  border-color: var(--dsw-specific-media-border-strong);
   color: var(--dsw-specific-media-fg);
 }
-.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-view:hover:not(:disabled) {
-  border-color: var(--dsw-specific-media-fg-dimmed);
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta-btn.secondary:hover:not(:disabled) {
   background: var(--dsw-specific-media-pill-bg);
+  border-color: var(--dsw-specific-media-fg-dimmed);
 }
-.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-add {
-  border-color: var(--dsw-specific-media-fg);
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta-btn.primary {
   background: var(--dsw-specific-media-fg);
+  border-color: var(--dsw-specific-media-fg);
   color: var(--dsw-specific-media-ink);
 }
-.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-add:hover:not(:disabled) {
-  border-color: var(--dsw-specific-media-fg-strong);
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-overlay-cta-btn.primary:hover:not(:disabled) {
   background: var(--dsw-specific-media-fg-strong);
+  border-color: var(--dsw-specific-media-fg-strong);
   color: var(--dsw-specific-media-ink);
-}
-.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-view:focus-visible,
-.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-add:focus-visible {
-  outline: 2px solid var(--dsw-specific-media-fg);
-  outline-offset: 2px;
 }
 .omnimux-inspiration-collection-column {
   position: relative;
