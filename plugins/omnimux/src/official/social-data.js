@@ -1,5 +1,6 @@
 import { fetchPublicTweet } from './public-tweet.js'
 import { OmnimuxError } from '../media/errors.js'
+import { classifyQuotaFailure } from '../errors/quota-classifier.js'
 
 /** Complete catalog. Model ids match OmniMux social-data L3 pages. */
 export const SOCIAL_DATA_CATALOG = Object.freeze({
@@ -411,6 +412,21 @@ export async function fetchSocialData(client, args, options = {}) {
  */
 export function pickSocialPayload(raw) {
   const row = raw && typeof raw === 'object' ? /** @type {Record<string, unknown>} */ (raw) : {}
+  const statuses = [row.code, row.status, row.status_code]
+  const code = statuses.map(Number).find((value) => value >= 400 && value <= 599)
+  const failedStatus = statuses.some((value) => {
+    const numeric = Number(value)
+    return numeric < 0 || numeric >= 400
+      || /^(?:error|failed|failure|denied|forbidden|unauthorized|needs-omnimux|quota-exceeded|omnimux-unconfigured)$/i.test(String(value || '').trim())
+  })
+  const hasError = row.error && typeof row.error === 'object' ? Object.keys(row.error).length > 0 : Boolean(row.error)
+  const failed = row.success === false || row.ok === false || failedStatus || hasError
+  if (failed) {
+    const failure = classifyQuotaFailure({ status: code, body: row })
+    throw new OmnimuxError(failure.code,
+      failure.kind === 'other' ? '社媒采集服务返回失败，请稍后重试' : failure.message,
+      { status: failure.status || 502 })
+  }
   if (row.data && typeof row.data === 'object') return row.data
 
   const choices = Array.isArray(row.choices) ? row.choices : []

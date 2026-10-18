@@ -15,7 +15,7 @@ import { Button, IconButton } from 'dsh-ui-kit'
 import { formatCount, rivalLocaleOf } from './rival-format.js'
 import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 import { rivalSelectionSummary, toAccountFilterRow } from './rival-filter.js'
-import { accountHealth, coolingMinutesLeft, stoppedReasonText } from './rival-health.js'
+import { accountHealth, coolingMinutesLeft, rivalErrorKey, stoppedReasonText } from './rival-health.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 
 const ICON_ACCOUNTS = (
@@ -62,7 +62,7 @@ const ICON_EXTERNAL = (
  *   locale?: 'zh' | 'en',
  * }} props
  */
-function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft, locale }) {
+function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft, locale, refreshBusy }) {
   const handleToggle = () => onToggle(row.id)
   const profileUrlSafe = isSafeExternalUrl(row.profileUrl)
   const [retryReasonOpen, setRetryReasonOpen] = useState(false)
@@ -84,6 +84,7 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft,
   const handleRetry = (event) => {
     event.preventDefault()
     event.stopPropagation()
+    if (refreshBusy) return
     // 额度为 0 时重试置灰但可点：D4 的额度原因在这里回答，不静默。
     if (quotaEmpty) {
       setRetryReasonOpen((previous) => !previous)
@@ -149,7 +150,8 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft,
                 variant="ghost"
                 size="xs"
                 className={`omnimux-rival-retry${quotaEmpty ? ' is-blocked' : ''}`}
-                aria-disabled={quotaEmpty ? 'true' : 'false'}
+                aria-disabled={quotaEmpty || refreshBusy ? 'true' : 'false'}
+                disabled={refreshBusy}
                 onClick={handleRetry}
                 onMouseDown={(event) => event.stopPropagation()}
                 onPointerDown={(event) => event.stopPropagation()}
@@ -176,8 +178,10 @@ function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft,
           <span className="omnimux-rival-filter-reason">{t('rivalAccounts.health.reimportReason')}</span>
         ) : null}
         {/* `{n}` 未由 Host 上报时原因行整行不渲染，标记仍在——无占位符。 */}
-        {health === 'stopped' && stoppedReason ? (
-          <span className="omnimux-rival-filter-reason">{stoppedReason}</span>
+        {health === 'stopped' ? (
+          <span className="omnimux-rival-filter-reason">
+            {[stoppedReason, t(rivalErrorKey(row.error_code))].filter(Boolean).join('。')}
+          </span>
         ) : null}
       </span>
     </div>
@@ -209,7 +213,7 @@ function hoursToMidnight() {
  * }} props
  */
 export function RivalAccountFilter(props) {
-  const { t, accounts, selection, onToggle, onInvert, onReset, onRetry, quotaLeft } = props
+  const { t, accounts, selection, onToggle, onInvert, onReset, onRetry, quotaLeft, refreshBusy = false } = props
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
@@ -276,6 +280,7 @@ export function RivalAccountFilter(props) {
                 onToggle={onToggle}
                 onRetry={onRetry}
                 quotaLeft={quotaLeft}
+                refreshBusy={refreshBusy}
                 onOpenProfile={(url) => openExternalUrl(url)}
               />
             ))}

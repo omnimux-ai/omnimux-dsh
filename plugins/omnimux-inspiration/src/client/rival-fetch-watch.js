@@ -20,6 +20,8 @@
  * endpoint, no cloud call, no job concept.
  */
 
+import { accountNeedsReimport } from './rival-health.js'
+
 /** The promise the dictionary makes: `首次采集约需 1 分钟`. */
 export const FIRST_FETCH_PROMISE_MS = 60_000
 
@@ -60,16 +62,19 @@ export function activeFetchAccounts(accounts) {
  * empty state for a misleading failure.
  * @param {Array<Record<string, any>>} accounts
  * @param {number} [now]
- * @returns {{ kind: 'stopped' | 'cooling' | 'failed', account: Record<string, any>, minutes?: number } | null}
+ * @returns {{ kind: 'reimport' | 'stopped' | 'cooling' | 'failed', account: Record<string, any>, minutes?: number } | null}
  */
 export function fetchIssue(accounts, now = Date.now()) {
   for (const account of Array.isArray(accounts) ? accounts : []) {
     if (!FAILED_STATES.has(account?.refresh_state)) continue
     if (Number(account?.post_count) > 0) continue
+    if (accountNeedsReimport(account)) {
+      return { kind: 'reimport', account }
+    }
     if (account.refresh_state === 'error') return { kind: 'stopped', account }
     const until = Date.parse(account.next_auto_refresh_at ?? '')
-    if (Number.isFinite(until)) {
-      const minutes = Math.max(1, Math.ceil((until - now) / 60_000))
+    if (Number.isFinite(until) && until > now) {
+      const minutes = Math.ceil((until - now) / 60_000)
       return { kind: 'cooling', account, minutes }
     }
     return { kind: 'failed', account }

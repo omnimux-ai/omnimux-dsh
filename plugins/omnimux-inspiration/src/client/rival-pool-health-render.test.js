@@ -153,7 +153,7 @@ function jsonResponse(status, body) {
 }
 
 /**
- * @param {{ accounts?: Array<object>, status?: object }} [options]
+ * @param {{ accounts?: Array<object>, status?: object, refreshResponse?: { status: number, body: object } }} [options]
  */
 async function mountStage(options = {}) {
   const accounts = (options.accounts ?? ACCOUNTS).map((account) => ({ ...account }))
@@ -202,6 +202,7 @@ async function mountStage(options = {}) {
     }
     const retryMatch = path.match(new RegExp(`${RIVAL_PREFIX}/([^/]+)/refresh$`))
     if (retryMatch && method === 'POST') {
+      if (options.refreshResponse) return jsonResponse(options.refreshResponse.status, options.refreshResponse.body)
       const target = accounts.find((account) => account.id === decodeURIComponent(retryMatch[1]))
       if (target) {
         target.refresh_state = 'queued'
@@ -364,7 +365,7 @@ describe('D1 账号行四态健康标记（#3111）', () => {
     }
   })
 
-  it('{n} 未上报时原因行整行不渲染，标记仍在', async () => {
+  it('未上报次数时仍显示可行动原因，不编造失败次数', async () => {
     const accounts = ACCOUNTS.map((account) => (
       account.id === 'ra_stopped' ? { ...account, consecutive_failures: undefined } : account
     ))
@@ -374,7 +375,7 @@ describe('D1 账号行四态健康标记（#3111）', () => {
       await mounted.click(filterTrigger(mounted.container))
       const stopped = rowById(mounted.container, 'ra_stopped')
       assert.ok(stopped.textContent.includes('已停止'))
-      assert.equal(stopped.querySelector('.omnimux-rival-filter-reason'), null, '无计数时原因行整行不渲染')
+      assert.ok(stopped.querySelector('.omnimux-rival-filter-reason').textContent.includes(zh['rivalAccounts.error.cloud']))
       assert.ok(!stopped.textContent.includes('连续'), '不显示占位符或 0')
       assert.ok(stopped.querySelector('.omnimux-rival-retry'), '重试仍在')
     } finally {
@@ -464,8 +465,8 @@ describe('R4 刷新置灰与 D4 原因（#3111）', () => {
       await settle(mounted.container, () => refreshButton(mounted.container))
       await mounted.click(refreshButton(mounted.container))
       assert.ok(
-        mounted.calls.some((call) => call.method === 'POST' && call.path.includes('/refresh-all')),
-        '首次点击必须发出刷新请求',
+        mounted.calls.some((call) => call.method === 'POST' && /\/ra_ok\/refresh$/.test(call.path)),
+        '首次点击必须发出范围内的单账号刷新请求',
       )
       await mounted.click(refreshButton(mounted.container))
       const pop = reasonPopover(mounted.container)
@@ -476,5 +477,51 @@ describe('R4 刷新置灰与 D4 原因（#3111）', () => {
       await mounted.unmount()
       mounted.close()
     }
+  })
+})
+
+describe('账号采集失败的可见、安全恢复 (#3374)', () => {
+  const failed = { ...ACCOUNTS[3], post_count: 0, error_message: 'secret=fixture-upstream-token' }
+
+  it('首采失败点名账号并显示白名单原因，不回显上游原文', async () => {
+    const mounted = await mountStage({ accounts: [failed] })
+    try {
+      await mounted.openAccountTab()
+      const text = mounted.container.textContent || ''
+      assert.ok(text.includes('@ootd_lab'))
+      assert.ok(text.includes(zh['rivalAccounts.error.cloud']))
+      assert.ok(!text.includes('fixture-upstream-token'))
+      assert.ok(text.includes('连续 3 次刷新失败'))
+    } finally { await mounted.unmount(); mounted.close() }
+  })
+
+  it('额度拒绝显示在页面且不宣称刷新完成', async () => {
+    const mounted = await mountStage({
+      accounts: [failed],
+      refreshResponse: { status: 429, body: { error: 'secret=fixture-upstream-token', code: 'refresh-budget-exhausted' } },
+    })
+    try {
+      await mounted.openAccountTab()
+      const retry = [...mounted.container.querySelectorAll('button')].find((node) => node.textContent.trim() === '重试')
+      await mounted.click(retry)
+      const alert = mounted.container.querySelector('.omnimux-rival-notice[role="alert"]')
+      assert.ok(alert, '拒绝受理必须有可见提示')
+      assert.ok(alert.textContent.includes('@ootd_lab'))
+      assert.ok(alert.textContent.includes(zh['rivalAccounts.skip.budget']))
+      assert.ok(!mounted.container.textContent.includes('fixture-upstream-token'))
+      assert.ok(!mounted.container.textContent.includes('刚刚更新'))
+    } finally { await mounted.unmount(); mounted.close() }
+  })
+
+  it('身份错误直接引导重新导入，不发送无效重试', async () => {
+    const mounted = await mountStage({ accounts: [ACCOUNTS[2]] })
+    try {
+      await mounted.openAccountTab()
+      const button = [...mounted.container.querySelectorAll('button')].find((node) => node.textContent.trim() === '重新导入')
+      assert.ok(button)
+      await mounted.click(button)
+      assert.ok(mounted.container.querySelector('[role="dialog"]'))
+      assert.ok(!mounted.calls.some((call) => call.method === 'POST' && /\/refresh$/.test(call.path)))
+    } finally { await mounted.unmount(); mounted.close() }
   })
 })

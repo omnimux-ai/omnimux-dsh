@@ -165,21 +165,21 @@ const hostPost = (id) => ({
  * callback). The harness lives in its own bundled module so esbuild resolves
  * the same imports the bundle uses.
  */
-function Harness({ api, onBrowseTrend, Panel, useRivalFeed }) {
-  const feed = useRivalFeed({ enabled: true, api })
+function Harness({ api, onBrowseTrend, Panel, useRivalFeed, options = {} }) {
+  const feed = useRivalFeed({ enabled: true, api, ...options })
   return React.createElement(Panel, {
     t: (key) => zh[key] || key,
     active: true,
     query: '',
     platform: '',
-    feed: { ...feed, query: '', platform: '' },
+    feed: { ...feed, query: options.query || '', platform: options.platform || '' },
     onImported() {},
     onAccountImported() {},
     onBrowseTrend,
   })
 }
 
-async function mountHarness(api, onBrowseTrend) {
+async function mountHarness(api, onBrowseTrend, options = {}) {
   const panelFile = await bundle(join(here, 'RivalAccountsPanel.jsx'), 'panel')
   const panelMod = await import(`${panelFile}?mount=${bundleCounter}`)
   const feedMod = await import('./use-rival-feed.js')
@@ -191,6 +191,7 @@ async function mountHarness(api, onBrowseTrend) {
       onBrowseTrend,
       Panel: panelMod.RivalAccountsPanel,
       useRivalFeed: feedMod.useRivalFeed,
+      options,
     }))
   })
   return {
@@ -274,9 +275,44 @@ describe('first-fetch promise end to end (#3112)', () => {
     assert.equal(api.state.refreshCalls[0].id, 'acc-1')
     assert.equal(
       api.state.refreshCalls[0].manual,
-      false,
-      'the retry must not spend a manual-cooldown slot — it is the same first fetch, retried',
+      true,
+      'an explicit retry preserves the Host manual cooldown and budget limits',
     )
+  })
+
+  it('names the failed account safely and shows a rejected retry without duplicate submission', async () => {
+    const api = makeHost()
+    api.state.accounts = [{ id: 'acc-1', handle: '@reference', platform: 'x', refresh_state: 'error', post_count: 0, consecutive_failures: 4, error_code: 'CHANNEL_UNAVAILABLE', error_message: 'unsafe diagnostic' }]
+    api.refreshRivalAccount = async (id, opts) => {
+      api.state.refreshCalls.push({ id, manual: opts.manual })
+      return { ok: false, status: 429, body: { code: 'manual-cooldown', error: 'unsafe diagnostic' } }
+    }
+    const mounted = await mountHarness(api, () => {})
+    open.push(mounted)
+    await settle(mounted.container, (c) => textOf(c).includes('采集通道暂不可用'))
+    assert.equal(textOf(mounted.container).includes('@reference'), true)
+    assert.equal(textOf(mounted.container).includes('unsafe diagnostic'), false)
+    const retry = [...mounted.container.querySelectorAll('button')].find((button) => button.textContent === '重试')
+    await act(async () => {
+      retry.dispatchEvent(new mounted.dom.window.MouseEvent('click', { bubbles: true }))
+      retry.dispatchEvent(new mounted.dom.window.MouseEvent('click', { bubbles: true }))
+    })
+    await settle(mounted.container, (c) => textOf(c).includes('刷新过于频繁'))
+    assert.deepEqual(api.state.refreshCalls, [{ id: 'acc-1', manual: true }])
+    assert.equal(textOf(mounted.container).includes('unsafe diagnostic'), false)
+  })
+
+  it('does not show another platform account failure over the selected platform', async () => {
+    const api = makeHost()
+    api.state.accounts = [
+      { id: 'failed-x', platform: 'x', refresh_state: 'error', post_count: 0, consecutive_failures: 4 },
+      { id: 'healthy-tiktok', platform: 'tiktok', refresh_state: 'idle', post_count: 0 },
+    ]
+    const mounted = await mountHarness(api, () => {}, { platform: 'tiktok' })
+    open.push(mounted)
+    await settle(mounted.container, (c) => textOf(c).includes('当前筛选下没有作品'))
+    assert.equal(textOf(mounted.container).includes('已停止'), false)
+    assert.deepEqual(api.state.refreshCalls, [])
   })
 
   it('routes the browse-out link to the trending tab through the shell callback', async () => {

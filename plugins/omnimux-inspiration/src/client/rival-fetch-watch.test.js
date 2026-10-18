@@ -88,6 +88,16 @@ describe('fetchIssue (#3112)', () => {
     assert.equal(issue.kind, 'failed')
   })
 
+  it('does not invent another cooling minute after the retry time has passed', () => {
+    const now = Date.parse('2026-10-05T09:11:00.000Z')
+    assert.equal(fetchIssue([cooling], now).kind, 'failed')
+  })
+
+  it('requires reimport for an unverified account identity', () => {
+    const issue = fetchIssue([{ ...errored, error_code: 'identity-unverified' }])
+    assert.equal(issue.kind, 'reimport')
+  })
+
   it('ignores paused accounts — a skipped budget window is not a fetch failure', () => {
     assert.equal(fetchIssue([pausedEmpty]), null)
   })

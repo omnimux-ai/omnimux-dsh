@@ -42,6 +42,14 @@ export function selectedAccountIds(allIds, state) {
   return ids.filter((id) => set.has(id))
 }
 
+/** Accounts covered by the toolbar selection and platform together. */
+export function selectedRivalAccounts(accounts, selection, platform = '') {
+  const rows = Array.isArray(accounts) ? accounts : []
+  const selected = new Set(selectedAccountIds(accountIds(rows), selection))
+  return rows.filter((account) => selected.has(String(account?.id ?? ''))
+    && (!platform || account?.platform === platform))
+}
+
 /**
  * Normalize a subset back to `all` when it covers every account.
  *

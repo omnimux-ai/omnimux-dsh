@@ -7,7 +7,14 @@ import {
   poolQuota,
   poolTally,
   stoppedReasonText,
+  rivalErrorKey,
 } from './rival-health.js'
+
+it('maps channel and setup failures to fixed actionable messages', () => {
+  assert.equal(rivalErrorKey('CHANNEL_UNAVAILABLE'), 'rivalAccounts.error.channelUnavailable')
+  assert.equal(rivalErrorKey('omnimux-unconfigured'), 'rivalAccounts.error.configure')
+  assert.equal(rivalErrorKey('secret provider diagnostic'), 'rivalAccounts.error.failed')
+})
 
 /**
  * #3111 四态判据（规格 §8.1）。期望值逐字取自规格字典与判据表：
