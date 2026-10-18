@@ -271,12 +271,12 @@ export async function loadInspirationsAtomic(params) {
  * Import and deconstruct URL to local vault
  * @param {{ url: string, tags?: string[], auto_analyze?: boolean }} payload
  */
-export function importLocalInspiration(payload) {
+export async function importLocalInspiration(payload) {
   invalidateInspirationCache()
-  return inspirationRequest('/omnimux/inspiration/local/import-url', {
+  return localItemResponse(await inspirationRequest('/omnimux/inspiration/local/import-url', {
     method: 'POST',
     body: payload,
-  })
+  }))
 }
 
 /**
@@ -333,8 +333,15 @@ export function deleteLocalInspiration(id) {
  * Get single local inspiration details
  * @param {string} id
  */
-export function getLocalInspiration(id) {
-  return inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}`)
+function localItemResponse(response) {
+  const item = response.body?.data
+  if (!response.ok || !item || typeof item !== 'object' || Array.isArray(item)) return response
+  return { ...response, body: { ...response.body, data: { ...item, is_local: item.is_local !== false } } }
+}
+
+export async function getLocalInspiration(id) {
+  // This endpoint also returns cloud share jobs, whose explicit false is kept.
+  return localItemResponse(await inspirationRequest(`/omnimux/inspiration/local/${encodeURIComponent(id)}`))
 }
 
 export const listTags = quotaGuard(
@@ -379,6 +386,25 @@ export function pickCoverSrc(row) {
   return hostMediaSrc(rec.cover_key ?? rec.cover_url)
 }
 
+/** Saved photos in source order; a video stream is never a gallery image.
+ * @param {unknown} row
+ * @returns {string[]}
+ */
+export function pickImageSources(row) {
+  if (!row || typeof row !== 'object') return []
+  const rec = /** @type {Record<string, unknown>} */ (row)
+  if (rec.type === 'video') return []
+  const isImage = ['image', 'photo', 'gallery'].includes(String(rec.type || ''))
+    || ['photo', 'gallery'].includes(String(rec.content_shape || ''))
+    || rec.media_kind === 'image'
+  if (!isImage) return []
+  const urls = Array.isArray(rec.media_urls) ? rec.media_urls : []
+  const images = urls.filter((url) => typeof url === 'string' && url
+    && (!/^[a-z][a-z\d+.-]*:/i.test(url) || /^https?:\/\//i.test(url)))
+    .map(hostMediaSrc).filter(Boolean)
+  return [...new Set(images.length ? images : [pickCoverSrc(rec)].filter(Boolean))]
+}
+
 /**
  * Playable video source of a row, or `''` when it has none.
  *
@@ -411,6 +437,8 @@ export function pickCoverSrc(row) {
 export function pickVideoSrc(row) {
   if (!row || typeof row !== 'object') return ''
   const rec = /** @type {Record<string, unknown>} */ (row)
+  if (['image', 'photo', 'gallery', 'link', 'text'].includes(String(rec.type || ''))
+    || (rec.type !== 'video' && ['photo', 'gallery', 'text'].includes(String(rec.content_shape || '')))) return ''
   const first = Array.isArray(rec.media_urls)
     ? rec.media_urls.find((url) => typeof url === 'string' && url)
     : ''

@@ -322,6 +322,34 @@ export function checkCacheEarlyReturn(cacheKey, setters) {
   return false
 }
 
+/** Reload the loaded page range through the normal request/merge path, then paint once. */
+async function refreshLoadedPages(params, cacheKey, live, isStale) {
+  const depth = Math.max(1, Math.floor(Number(params.refreshThroughPage) || 1))
+  const result = { items: [], page: 1, hasMore: true, phase: undefined, platforms: undefined }
+  const staged = {
+    setItems(value) { result.items = typeof value === 'function' ? value(result.items) : value },
+    setPage(value) { result.page = value },
+    setHasMore(value) { result.hasMore = value },
+    setPhase(value) { result.phase = value },
+    setPlatforms(value) { result.platforms = value },
+  }
+  for (let targetPage = 1; targetPage <= depth; targetPage += 1) {
+    if (isStale()) return
+    await fetchAndMergeInspirations(
+      { ...params, targetPage },
+      { isNextPage: targetPage > 1, cacheKey, setters: staged },
+    )
+    if (!result.hasMore) break
+  }
+  if (isStale()) return
+  live.setItems(result.items)
+  live.setPage(result.page)
+  live.setHasMore(result.hasMore)
+  if (result.phase) live.setPhase(result.phase)
+  if (result.platforms) live.setPlatforms(result.platforms)
+  live.setError(null)
+}
+
 /**
  * Run one feed page load and paint its result.
  *
@@ -362,7 +390,7 @@ export async function executeFeedLoad(params, setters, lifecycle = {}) {
     views_min, views_max, traffic_type, posted_after, posted_before,
   })
 
-  if (!isNextPage) {
+  if (!isNextPage && !params.refreshThroughPage) {
     const hitFresh = checkCacheEarlyReturn(cacheKey, {
       setItems: live.setItems, setHasMore: live.setHasMore, setPhase: live.setPhase, setLoading: live.setLoading,
     })
@@ -372,11 +400,15 @@ export async function executeFeedLoad(params, setters, lifecycle = {}) {
       live.setLoadingMore(false)
       return
     }
-  } else {
+  } else if (isNextPage) {
     live.setLoadingMore(true)
   }
 
   try {
+    if (params.refreshThroughPage) {
+      await refreshLoadedPages(params, cacheKey, live, isStale)
+      return
+    }
     await fetchAndMergeInspirations(
       {
         tab, q, platform, type, sort, favorite, targetPage,

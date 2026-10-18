@@ -130,6 +130,8 @@ describe('social import — media and degraded persistence', () => {
     assert.equal(res.body.data.local_paths.video, undefined)
     assert.equal(res.body.data.deconstruction, null)
     assert.equal(res.body.data.content, '纯文字推文，没有视频')
+    assert.equal(res.body.data.content_shape, 'text')
+    assert.deepEqual(res.body.data.media_urls, [])
   })
 
   it('stores a photo-only tweet as an image without failing', async () => {
@@ -143,6 +145,51 @@ describe('social import — media and degraded persistence', () => {
     assert.equal(res.body.media_degraded, true)
     assert.equal(res.body.data.type, 'image')
     assert.ok(res.body.data.cover_url)
+    assert.equal(res.body.data.content_shape, 'photo')
+    assert.deepEqual(res.body.data.media_urls, ['https://pbs.twimg.com/media/only-photo.jpg'])
+  })
+
+  it('persists four safe photos in source order across storage reloads', async () => {
+    const images = ['one', 'two', 'three', 'four'].map((name) => `https://pbs.twimg.com/media/${name}.jpg`)
+    const { res } = await importUrl({
+      socialFetcher: async () => ({ platform: 'x', capability: 'tweet', data: {
+        text: '四图推文',
+        images: [images[0], { url: images[1] }, { src: images[2] }, images[3], images[0],
+          'http://127.0.0.1/a.jpg', 'http://192.168.1.1/a.jpg', 'http://169.254.169.254/a.jpg',
+          'file:///tmp/a.jpg', 'javascript:alert(1)', 'https://localhost/a.jpg'],
+      } }),
+      paths, url: 'https://x.com/creator/status/223',
+    })
+    assert.equal(res.status, 200)
+    assert.equal(res.body.data.type, 'image')
+    assert.equal(res.body.data.content_shape, 'gallery')
+    assert.deepEqual(res.body.data.media_urls, images)
+    assert.deepEqual(createLocalStore({ paths }).get(res.body.data.id).media_urls, images)
+  })
+
+  it('preserves X photo entities and keeps video media separate from photos', async () => {
+    const images = ['one', 'two', 'three', 'four'].map((name) => `https://pbs.twimg.com/media/${name}.jpg`)
+    const photos = images.map((url) => ({
+      type: 'photo',
+      url: 'https://t.co/shared-post-link',
+      media_url_https: url,
+      media_url: url.replace('https:', 'http:'),
+    }))
+    const { res } = await importUrl({
+      socialFetcher: async () => ({ platform: 'x', capability: 'tweet', data: {
+        text: '四张配图', entities: { media: photos }, extended_entities: { media: photos },
+      } }),
+      paths, url: 'https://x.com/creator/status/224',
+    })
+    assert.equal(res.body.data.content_shape, 'gallery')
+    assert.deepEqual(res.body.data.media_urls, images)
+    const { res: video } = await importUrl({
+      socialFetcher: async () => ({ ...X_VIDEO_ENVELOPE, data: { ...X_VIDEO_ENVELOPE.data, images } }),
+      paths, url: 'https://x.com/creator/status/225',
+    })
+    assert.equal(video.body.data.content_shape, 'video')
+    assert.equal(video.body.data.media_urls.length, 1)
+    assert.match(video.body.data.media_urls[0], /^\/omnimux\/inspiration\/local\/media\/videos\//)
   })
 
   it('downloads the chosen YouTube mp4 when one is usable', async () => {

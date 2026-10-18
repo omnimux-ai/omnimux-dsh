@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Button, IconButton, MediaCard } from 'dsh-ui-kit'
+import { Badge, Button, IconButton } from 'dsh-ui-kit'
 import { isUsableCoverSize, pickCoverSrc, pickVideoSrc } from './api.js'
 import { formatPlatformName } from './feed-helpers.js'
 import { importErrorText, importPillLabel, importSettledNotice, isFailedRow, isImportingRow } from './import-status.js'
 import { OrganicShimmerOverlay } from './OrganicShimmer.jsx'
+import { RivalPostCard } from './RivalPostCard.jsx'
+import { toInspirationCardRow } from './inspiration-card.js'
+import { rivalMediaRatioOf } from './rival-masonry.js'
 
 const ICON_EYE = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -33,10 +36,14 @@ function isolateInnerCardKey(e) {
   if (e.key === 'Enter' || e.key === ' ') e.preventDefault()
 }
 
-export function InspirationCoverCard({ card }) {
+export function InspirationCoverCard({ card, descriptor, style, column }) {
   const { row, t, onSelect, onReplicate, selected, onToggleSelect, selecting, replicateBusy, revealed } = card
   const title = String(row.title || row.source_url || row.id)
-  const cover = pickCoverSrc(row)
+  const contentCard = descriptor || toInspirationCardRow(row, t)
+  const cover = contentCard.cover_key || pickCoverSrc(row)
+  const hasMedia = contentCard.card_type !== 'text'
+  const inlineNotice = Boolean(contentCard.notice_kind)
+  const mediaStyle = { '--rival-media-ratio': rivalMediaRatioOf(contentCard) }
   // Second source for the cover area, not a different card: an item whose cover
   // is missing or undecodable still holds a playable video, and a first frame of
   // that video is a real preview where the icon placeholder is not. Covers are
@@ -120,7 +127,7 @@ export function InspirationCoverCard({ card }) {
     if (typeof onReplicate === 'function') onReplicate(row)
   }
 
-  const coverNode = (
+  const decorations = (
     <>
       {/* 悬停/多选复选框 Checkbox */}
       {isLocal && onToggleSelect ? (
@@ -164,19 +171,19 @@ export function InspirationCoverCard({ card }) {
       {/* 内嵌卡片骨架扫光层：素材未完全就绪或未揭幕时置顶展示。
           导入生成中时全屏渲染创作画布同款流体微光折射动效（Organic Shimmer）。 */}
       <div
-        className={`omnimux-inspiration-card-shimmer ${isShowCover || (broken && !usesVideoFrame && !importing) ? 'is-hidden' : ''} ${importing ? 'is-importing' : ''}`}
+        className={`omnimux-inspiration-card-shimmer ${(!hasMedia && !importing) || isShowCover || (broken && !usesVideoFrame && !importing) ? 'is-hidden' : ''} ${importing ? 'is-importing' : ''}`}
         aria-hidden="true"
       >
         {importing ? <OrganicShimmerOverlay /> : null}
       </div>
 
       {/* 运行状态胶囊：仅在导入失败时显示红调提示；导入生成中已通过全屏流体微光呈现，中间移除文本按钮 */}
-      {failed && statusPill ? (
+      {!inlineNotice && (failed || importing) && statusPill ? (
         <Badge
           size="sm"
           shape="capsule"
-          variant="danger"
-          className="omnimux-inspiration-badge-status is-failed"
+          variant={failed ? 'danger' : 'neutral'}
+          className={`omnimux-inspiration-badge-status ${failed ? 'is-failed' : ''}`}
           role="status"
         >
           {statusPill}
@@ -184,7 +191,7 @@ export function InspirationCoverCard({ card }) {
       ) : null}
 
       {/* 失败原因：卡片本身要能说清「为什么」，否则用户只看到一个无法处置的结果 */}
-      {errorDetail ? (
+      {!inlineNotice && errorDetail ? (
         <div
           className={`omnimux-inspiration-card-error ${failed ? 'is-failed' : ''}`}
           role="status"
@@ -193,9 +200,19 @@ export function InspirationCoverCard({ card }) {
         </div>
       ) : null}
 
-      {importing ? null : usesVideoFrame ? (
+      {hasMedia && contentCard.media_kind === 'video' ? (
+        <Badge size="sm" shape="capsule" className="omnimux-inspiration-badge-media">{t('type.video')}</Badge>
+      ) : contentCard.image_count > 1 ? (
+        <Badge size="sm" shape="capsule" className="omnimux-inspiration-badge-media">{contentCard.image_count} {t('type.image')}</Badge>
+      ) : null}
+    </>
+  )
+
+  const mediaNode = hasMedia ? (
+    importing ? <div className="omnimux-rival-card-media" style={mediaStyle} /> : usesVideoFrame ? (
         <video
-          className={`omnimux-inspiration-cover-video ${isShowCover ? 'is-loaded' : ''}`}
+          style={mediaStyle}
+          className={`omnimux-rival-card-media omnimux-inspiration-cover-video ${isShowCover ? 'is-loaded' : ''}`}
           src={videoSrc}
           muted
           playsInline
@@ -209,7 +226,7 @@ export function InspirationCoverCard({ card }) {
           }}
         />
       ) : broken ? (
-        <div className="omnimux-inspiration-cover-fallback" aria-hidden="true">
+        <div className="omnimux-rival-card-media omnimux-inspiration-cover-fallback" style={mediaStyle} aria-hidden="true">
           <div className="omnimux-inspiration-fallback-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="5 3 19 12 5 21 5 3" />
@@ -222,7 +239,8 @@ export function InspirationCoverCard({ card }) {
       ) : (
         <img
           ref={imgRef}
-          className={`omnimux-inspiration-cover-img ${isShowCover ? 'is-loaded' : ''}`}
+          style={mediaStyle}
+          className={`omnimux-rival-card-media omnimux-inspiration-cover-img ${isShowCover ? 'is-loaded' : ''}`}
           src={cover}
           alt={title}
           loading="lazy"
@@ -240,13 +258,16 @@ export function InspirationCoverCard({ card }) {
             }
           }}
         />
-      )}
+      )
+  ) : null
+
+  const overlayNode = (
       <div className="omnimux-inspiration-card-overlay">
-        <div className="omnimux-inspiration-overlay-play">
+        {contentCard.media_kind === 'video' ? <div className="omnimux-inspiration-overlay-play">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M8 5v14l11-7z" />
           </svg>
-        </div>
+        </div> : null}
         <div className="omnimux-inspiration-overlay-cta">
           <Button
             type="button"
@@ -287,20 +308,24 @@ export function InspirationCoverCard({ card }) {
           {title.length > 32 ? `${title.slice(0, 32)}…` : title}
         </div>
       </div>
-    </>
   )
 
   return (
-    <MediaCard
+    <RivalPostCard
+      card={contentCard}
+      t={t}
       className={`omnimux-inspiration-card-pure ${importing ? 'is-importing' : ''}`}
-      aspectRatio="9:16"
-      selected={selected}
-      onClick={handleClick}
-      coverNode={coverNode}
-      title={title}
-      // Identity of the row on the card element: the import reveal has to find
-      // the card it just landed, and the grid order may not survive a reload.
-      data-inspiration-id={String(row.id)}
-    />
+      selected={Boolean(selected)}
+      bodyClassName={inlineNotice ? (contentCard.notice_kind === 'error' ? `omnimux-inspiration-card-error is-inline ${failed ? 'is-failed' : ''}` : 'omnimux-inspiration-card-state-text') : ''}
+      bodyRole={inlineNotice ? 'status' : undefined}
+      onDetail={handleClick}
+      mediaNode={mediaNode}
+      overlayNode={overlayNode}
+      style={style}
+      column={column}
+      inspirationId={String(row.id)}
+    >
+      {decorations}
+    </RivalPostCard>
   )
 }

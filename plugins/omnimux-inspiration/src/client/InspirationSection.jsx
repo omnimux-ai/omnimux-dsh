@@ -4,6 +4,8 @@ import { RivalAccountFilter } from './RivalAccountFilter.jsx'
 import { RivalAccountsPanel, buildRivalPlatformOptions, buildRivalSortOptions } from './RivalAccountsPanel.jsx'
 import { RivalRefreshButton } from './RivalPoolStatusBar.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
+import { RivalMasonry } from './RivalMasonry.jsx'
+import { toInspirationCardRow } from './inspiration-card.js'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
 import { buildCategoryFilterOptions, buildPlatformFilterOptions, formatPlatformName } from './feed-helpers.js'
@@ -551,26 +553,35 @@ export function InspirationSection({ t, active }) {
           ) : null}
 
           {visibleItems.length > 0 ? (
-            <div className={`omnimux-inspiration-grid ${selecting ? 'selecting' : ''}`}>
-              {visibleItems.map((row) => (
-                <InspirationCoverCard
-                  key={String(row.id)}
-                  card={{
-                    row,
-                    t,
-                    selected: selectedIds.has(row.id),
-                    selecting,
-                    replicateBusy,
-                    onToggleSelect: toggleSelect,
-                    onSelect: (item) => setSelectedItem(item),
-                    onReplicate: handleReplicate,
-                  }}
-                />
-              ))}
-              {loadingMore ? Array.from({ length: 10 }).map((_, i) => (
-                <div key={`skel_more_${i}`} className="omnimux-inspiration-skel" aria-hidden="true" />
-              )) : null}
-            </div>
+            <>
+              <RivalMasonry
+                className={`omnimux-inspiration-grid ${selecting ? 'selecting' : ''}`}
+                cards={visibleItems.map((row) => toInspirationCardRow(row, t))}
+                t={t}
+                renderCard={({ card: descriptor, style, column }) => (
+                  <InspirationCoverCard
+                    descriptor={descriptor}
+                    style={style}
+                    column={column}
+                    card={{
+                      row: descriptor.source_row,
+                      t,
+                      selected: selectedIds.has(descriptor.source_row.id),
+                      selecting,
+                      replicateBusy,
+                      onToggleSelect: toggleSelect,
+                      onSelect: (item) => setSelectedItem(item),
+                      onReplicate: handleReplicate,
+                    }}
+                  />
+                )}
+              />
+              {loadingMore ? <div className="omnimux-inspiration-skeleton omnimux-rival-loadmore">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={`skel_more_${i}`} className="omnimux-inspiration-skel" aria-hidden="true" />
+                ))}
+              </div> : null}
+            </>
           ) : null}
 
           <div

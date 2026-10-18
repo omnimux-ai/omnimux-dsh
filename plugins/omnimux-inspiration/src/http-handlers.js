@@ -515,9 +515,17 @@ function publishedAtFromLayer(layer) {
  * @returns {string[]}
  */
 function imagesFromLayer(layer) {
-  return [...asArray(layer.images), ...asArray(layer.image_urls), layer.image_url]
-    .map((value) => httpText(value) || httpText(value?.url) || httpText(value?.src))
-    .filter(Boolean)
+  const photos = [
+    ...asArray(asObject(layer.entities).media),
+    ...asArray(asObject(layer.extended_entities).media),
+  ].filter((item) => asObject(item).type === 'photo')
+    .map((item) => httpText(item.media_url_https) || httpText(item.media_url)
+      || httpText(item.url) || httpText(item.src))
+  const urls = [...asArray(layer.images), ...asArray(layer.image_urls), layer.image_url, ...photos]
+    .map((value) => httpText(value) || httpText(value?.url) || httpText(value?.src)
+      || httpText(value?.media_url_https) || httpText(value?.media_url))
+    .filter((url) => isPublicHttpUrl(url))
+  return [...new Set(urls)]
 }
 
 function resolvedUrlFromLayer(layer) {
@@ -1602,14 +1610,19 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     : coverName
       ? `/omnimux/inspiration/local/media/covers/${coverName}`
       : meta.cover_url
+  const type = resolveImportType(meta, media)
+  const content_shape = type === 'video' ? 'video'
+    : meta.images.length > 1 ? 'gallery'
+      : type === 'image' ? 'photo' : meta.text ? 'text' : 'link'
   return {
     title: meta.title || args.rawUrl,
     content: meta.text,
-    type: resolveImportType(meta, media),
+    type,
     source_platform: args.platform,
     source_url: args.rawUrl,
     cover_url,
-    media_urls: videoName ? [`/omnimux/inspiration/local/media/videos/${videoName}`] : [],
+    media_urls: videoName ? [`/omnimux/inspiration/local/media/videos/${videoName}`] : meta.images,
+    content_shape,
     local_paths: media.localPaths,
     tags: args.customTags,
     auto_analyze: args.autoAnalyze !== false,

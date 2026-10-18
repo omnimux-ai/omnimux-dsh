@@ -318,7 +318,7 @@ describe('InspirationPreviewModal render gate — media source chain', () => {
     }
   })
 
-  it('renders the title glyph when there is no source and no cover', async () => {
+  it('renders the text when there is no source and no cover', async () => {
     const mounted = await mount('InspirationPreviewModal.jsx', {
       row: {
         id: 'insp_5',
@@ -336,9 +336,9 @@ describe('InspirationPreviewModal render gate — media source chain', () => {
       assert.equal(mounted.container.querySelector('video'), null)
       assert.equal(mounted.container.querySelector('iframe'), null)
       assert.equal(mounted.container.querySelector('img'), null)
-      const glyph = mounted.container.querySelector('.omnimux-inspiration-cover-fallback')
-      assert.ok(glyph, 'the first-character fallback must render')
-      assert.equal(glyph.textContent, '仅')
+      const text = mounted.container.querySelector('.omnimux-inspiration-modal-post-text')
+      assert.ok(text, 'text-only entries remain readable without a media placeholder')
+      assert.equal(text.textContent, '仅有标题')
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -467,7 +467,7 @@ describe('InspirationCoverCard render gate — running status', () => {
     }
   }
 
-  it('renders organic shimmer animation and removes center text/buttons while importing', async () => {
+  it('keeps organic shimmer with an explicit importing stage and no center controls', async () => {
     const mounted = await mount('InspirationCoverCard.jsx', cardProps({
       id: 'insp_1',
       title: 'https://x.com/a/status/1',
@@ -477,9 +477,10 @@ describe('InspirationCoverCard render gate — running status', () => {
       import_stage: 'resolving',
     }), 'InspirationCoverCard')
     try {
-      // 1. 中间状态胶囊文本与按钮已移除
+      // 阶段作为共享正文参与布局，不使用悬浮在正文上的居中胶囊。
       const pill = mounted.container.querySelector('.omnimux-inspiration-badge-status')
-      assert.equal(pill, null, 'an importing card must remove center text pill')
+      assert.equal(pill, null, 'a text import uses its body for stage feedback')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-state-text')?.textContent, zh['add.status.resolving'])
       // 2. 中间占位播放图标与长链接已移除
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-fallback'), null)
       // 3. 复用创作画布同款 Organic Shimmer 有机微光生成动效
@@ -493,7 +494,7 @@ describe('InspirationCoverCard render gate — running status', () => {
     }
   })
 
-  it('renders a failed pill and keeps the card clickable', async () => {
+  it('shows a failed text import inline and keeps the card clickable', async () => {
     let clicked = 0
     const mounted = await mount('InspirationCoverCard.jsx', cardProps({
       id: 'insp_2',
@@ -505,9 +506,10 @@ describe('InspirationCoverCard render gate — running status', () => {
     }, { onSelect() { clicked += 1 } }), 'InspirationCoverCard')
     try {
       const pill = mounted.container.querySelector('.omnimux-inspiration-badge-status')
-      assert.ok(pill, 'a failed card must show a failure pill')
-      assert.equal(pill.textContent, zh['add.status.failed'])
-      assert.equal(pill.getAttribute('data-variant'), 'danger')
+      assert.equal(pill, null, 'the failed text body already labels the failure without a covering badge')
+      const notice = mounted.container.querySelector('.omnimux-inspiration-card-error.is-inline')
+      assert.equal(notice?.textContent, zh['add.failedDetail'].replace('{error}', '导入中断或超时，请重试'))
+      assert.equal(notice?.getAttribute('role'), 'status')
 
       await React.act(async () => {
         mounted.container.querySelector('.omnimux-inspiration-card-pure')?.dispatchEvent(
@@ -732,7 +734,7 @@ describe('InspirationCoverCard render gate — cover fallback to the video frame
     }
   })
 
-  it('keeps the placeholder when the row has neither a cover nor a video', async () => {
+  it('shows the tweet body without a media placeholder when the row has no media', async () => {
     const mounted = await mount('InspirationCoverCard.jsx', props({
       id: 'insp_bare',
       title: '纯文字推文',
@@ -740,10 +742,9 @@ describe('InspirationCoverCard render gate — cover fallback to the video frame
       source_platform: 'x',
     }), 'InspirationCoverCard')
     try {
-      assert.ok(
-        mounted.container.querySelector('.omnimux-inspiration-cover-fallback'),
-        'nothing to preview must fall through to the placeholder',
-      )
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-fallback'), null)
+      assert.equal(mounted.container.querySelector('.omnimux-rival-card-text')?.textContent, '纯文字推文')
+      assert.equal(mounted.container.querySelector('[data-card-type]')?.getAttribute('data-card-type'), 'text')
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-video'), null)
     } finally {
       await mounted.unmount()
@@ -950,6 +951,77 @@ describe('InspirationInlineImportDialog render gate — background import hand-o
       await mounted?.unmount()
       mounted?.close()
       fetchStub.restore()
+    }
+  })
+})
+
+
+describe('InspirationCoverCard — shared content cards', () => {
+  function props(row, handlers = {}) {
+    return { card: { row, t, onSelect() {}, onReplicate() {}, ...handlers } }
+  }
+
+  it('shows complete tweet text in the body and images with a gallery count', async () => {
+    const row = {
+      id: 'gallery', is_local: true, source_platform: 'x', type: 'image',
+      title: '简短标题', content: '推文正文应作为卡片正文展示，而不是藏在悬停标题里。',
+      media_urls: ['https://images.example/first.jpg', 'https://images.example/second.jpg'],
+    }
+    const mounted = await mount('InspirationCoverCard.jsx', props(row), 'InspirationCoverCard')
+    try {
+      assert.equal(mounted.container.querySelector('[data-card-type]')?.getAttribute('data-card-type'), 'text-media')
+      assert.equal(mounted.container.querySelector('.omnimux-rival-card-text')?.textContent, row.content)
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-cover-img')?.getAttribute('src'), row.media_urls[0])
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-media')?.textContent, '2 图片')
+      assert.equal(mounted.container.querySelector('video'), null)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('keeps text-media videos recognizable and preserves the video-frame fallback', async () => {
+    const mounted = await mount('InspirationCoverCard.jsx', props({
+      id: 'video-tweet', source_platform: 'x', type: 'video', title: '带视频的推文',
+      media_urls: ['/omnimux/inspiration/local/media/videos/v_ab12.mp4'],
+    }), 'InspirationCoverCard')
+    try {
+      assert.equal(mounted.container.querySelector('[data-card-type]')?.getAttribute('data-card-type'), 'text-media')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-media')?.textContent, '视频')
+      assert.ok(mounted.container.querySelector('.omnimux-inspiration-cover-video'))
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('keeps selection, detail and replication attached to the original row', async () => {
+    const row = { id: 'selected-tweet', title: '纯文字推文', type: 'link', source_platform: 'x', is_local: true }
+    const calls = []
+    const mounted = await mount('InspirationCoverCard.jsx', props(row, {
+      selecting: true,
+      selected: true,
+      onToggleSelect(value) { calls.push(['select', value]) },
+      onSelect(value) { calls.push(['detail', value]) },
+      onReplicate(value) { calls.push(['replicate', value]) },
+    }), 'InspirationCoverCard')
+    try {
+      const card = mounted.container.querySelector('[data-inspiration-id]')
+      assert.equal(card.getAttribute('aria-selected'), 'true')
+      await React.act(async () => { card.click() })
+      await React.act(async () => { mounted.container.querySelector(`[aria-label="${t('card.cta.detail')}"]`).click() })
+      await React.act(async () => { mounted.container.querySelector(`[aria-label="${t('card.cta.tryFull')}"]`).click() })
+      assert.deepEqual(calls.map(([action]) => action), ['select', 'detail', 'replicate'])
+      assert.ok(calls.every(([, value]) => value === row), 'callbacks must receive the saved row, not the display descriptor')
+      const check = mounted.container.querySelector('.omnimux-inspiration-card-check')
+      await React.act(async () => {
+        check.dispatchEvent(new mounted.window.KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }))
+      })
+      assert.equal(calls.length, 4)
+      assert.equal(calls.at(-1)[0], 'select', 'keyboard selection must not open detail')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
     }
   })
 })

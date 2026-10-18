@@ -6,6 +6,7 @@ import {
   createShareLink,
   getLocalInspiration,
   pickCoverSrc,
+  pickImageSources,
   pickVideoSrc,
   resolveTikTokEmbedUrl,
   shareRequestPayload,
@@ -170,6 +171,7 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const [showTranslation, setShowTranslation] = useState(false)
   const [activeSegmentId, setActiveSegmentId] = useState('')
   const [videoFailed, setVideoFailed] = useState(false)
+  const [imageIndex, setImageIndex] = useState(0)
   const [showSharePopover, setShowSharePopover] = useState(false)
   const shareTriggerRef = useRef(null)
   const sharePopoverRef = useRef(null)
@@ -326,6 +328,12 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
   const embedUrl = resolveTikTokEmbedUrl(data.analysis.embed_player_url || data.analysis.tiktok_video_id || sourceUrl)
   const canAnalyze = canAnalyzeInspiration(data.safeItem)
   const cover = pickCoverSrc(data.safeItem)
+  const images = useMemo(() => pickImageSources(item), [item])
+  const imageListKey = images.join('\n')
+  useEffect(() => setImageIndex(0), [item?.id, imageListKey])
+  const activeImageIndex = Math.min(imageIndex, Math.max(0, images.length - 1))
+  const textOnly = !videoSrc && !embedUrl && !images.length
+    && (data.safeItem.content_shape === 'text' || (data.safeItem.type === 'link' && !cover))
   const importing = isImportingRow(data.safeItem)
   const failed = isFailedRow(data.safeItem)
   // A settled row that carries an `import_error` imported fine but could not be
@@ -588,6 +596,10 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   />
                 ) : embedUrl ? (
                   <iframe title={data.title} src={embedUrl} className="omnimux-inspiration-player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+                ) : images.length ? (
+                  <img src={images[activeImageIndex]} alt={`${data.title} ${activeImageIndex + 1}/${images.length}`} className="omnimux-inspiration-modal-cover-bg" />
+                ) : textOnly ? (
+                  <div className="omnimux-inspiration-modal-post-text">{data.script || data.title}</div>
                 ) : cover ? (
                   <img src={cover} alt={data.title} className="omnimux-inspiration-modal-cover-bg" />
                 ) : (
@@ -621,6 +633,30 @@ export function InspirationPreviewModal({ row, t, onClose, onItemUpdated, onRepl
                   </div>
                 ) : null}
               </div>
+
+              {images.length > 1 ? (
+                <nav className="omnimux-inspiration-gallery-nav" aria-label={t('modal.images.label')}>
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t('modal.images.previous')}
+                    disabled={activeImageIndex === 0}
+                    onClick={() => setImageIndex((index) => Math.max(0, index - 1))}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                  </IconButton>
+                  <span aria-live="polite">{activeImageIndex + 1} / {images.length}</span>
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t('modal.images.next')}
+                    disabled={activeImageIndex === images.length - 1}
+                    onClick={() => setImageIndex((index) => Math.min(images.length - 1, index + 1))}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                  </IconButton>
+                </nav>
+              ) : null}
 
               {/* 播放器下方精炼元数据栏 */}
               <div className="omnimux-inspiration-player-meta-box">

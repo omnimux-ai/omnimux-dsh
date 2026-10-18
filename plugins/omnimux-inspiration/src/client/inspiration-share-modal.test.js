@@ -306,3 +306,28 @@ describe('InspirationPreviewModal share popover', () => {
     )
   })
 })
+
+describe('InspirationPreviewModal saved gallery', () => {
+  it('browses all saved images in order and resets for a different item', async () => {
+    const urls = ['one', 'two', 'three', 'four'].map((id) => `https://pbs.twimg.com/media/${id}.jpg`)
+    const row = { id: 'gallery-1', type: 'image', content_shape: 'gallery', title: '四张配图', media_urls: urls }
+    const mounted = await mountRerenderable(row)
+    const { document, window, render } = mounted
+    const image = () => document.querySelector('.omnimux-inspiration-modal-cover-bg')
+    assert.equal(document.querySelector('video'), null)
+    assert.equal(image().getAttribute('src'), urls[0])
+    assert.equal(document.querySelector('[aria-label="上一张"]').disabled, true)
+    for (let index = 1; index < urls.length; index += 1) {
+      await React.act(async () => document.querySelector('[aria-label="下一张"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true })))
+      assert.equal(image().getAttribute('src'), urls[index])
+      assert.equal(document.querySelector('.omnimux-inspiration-gallery-nav [aria-live]').textContent, `${index + 1} / 4`)
+    }
+    assert.equal(document.querySelector('[aria-label="下一张"]').disabled, true)
+    await render({ ...row, id: 'gallery-2' })
+    assert.equal(image().getAttribute('src'), urls[0])
+    await render({ id: 'text-1', type: 'link', content_shape: 'text', title: '文字', content: '完整推文正文' })
+    assert.equal(document.querySelector('.omnimux-inspiration-modal-post-text').textContent, '完整推文正文')
+    assert.equal(document.querySelector('video'), null)
+    assert.equal(document.querySelector('.omnimux-inspiration-gallery-nav'), null)
+  })
+})

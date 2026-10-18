@@ -198,10 +198,9 @@ describe('background import — placeholder and completion', { concurrency: 1 },
     const settled = await waitForSettled(ctx, started.body.data.id)
     assert.equal(settled.import_status, 'degraded')
     assert.equal(settled.import_stage, null)
-    // A photo post whose envelope carries only text and a poster is a `link`: the
-    // classifier promotes to `image` only when the envelope lists image urls.
-    assert.equal(settled.type, 'link')
-    assert.deepEqual(settled.media_urls, [])
+    assert.equal(settled.type, 'image')
+    assert.equal(settled.content_shape, 'photo')
+    assert.deepEqual(settled.media_urls, ['https://pbs.twimg.com/media/only-photo.jpg'])
     assert.equal(ctx.store.list().total, 1)
   })
 
@@ -379,7 +378,7 @@ describe('background import — idempotency and duplicates', { concurrency: 1 },
     const first = await postImport(ctx.dispatcher, { url: X_URL, background: true })
     const degraded = await waitForSettled(ctx, first.body.data.id)
     assert.equal(degraded.import_status, 'degraded')
-    assert.equal(degraded.type, 'link')
+    assert.equal(degraded.type, 'image')
 
     const videoDispatcher = makeDispatcher(paths, async () => X_VIDEO_ENVELOPE)
     const upgrade = await postImport(videoDispatcher.dispatcher, { url: X_URL, background: true })
@@ -677,7 +676,7 @@ describe('background import — an AI failure never discards the item', { concur
     const settled = await waitForSettled({ store }, started.body.data.id)
 
     assert.equal(settled.import_status, 'degraded')
-    assert.deepEqual(settled.media_urls, [])
+    assert.deepEqual(settled.media_urls, ['https://pbs.twimg.com/media/only-photo.jpg'])
     assert.equal(settled.import_error, null, 'nothing was attempted, so nothing failed')
   })
 
@@ -718,7 +717,7 @@ describe('background import — an AI failure never discards the item', { concur
     const settled = await waitForSettled({ store }, started.body.data.id)
 
     assert.equal(settled.import_status, 'degraded')
-    assert.deepEqual(settled.media_urls, [])
+    assert.deepEqual(settled.media_urls, ['https://pbs.twimg.com/media/only-photo.jpg'])
     // Never reached the model, so there is nothing to report as a failure.
     assert.equal(settled.import_error, null)
   })
