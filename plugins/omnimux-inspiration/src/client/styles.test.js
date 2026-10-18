@@ -31,204 +31,27 @@ function decl(body, property) {
   return match[1].trim()
 }
 
-describe('inspiration triptych modal', () => {
-  it('balances the desktop triptych while keeping independently scrolling panels', () => {
-    const body = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-body')
-    assert.match(decl(body, 'display'), /grid/)
-    const columns = decl(body, 'grid-template-columns').split(/\s+(?=minmax)/)
-    assert.equal(columns.length, 3)
-    assert.match(columns[0], /^minmax\(300px, 1\.1fr\)$/)
-    assert.match(columns[1], /^minmax\(320px, 1\.15fr\)$/)
-    assert.equal(columns[0], columns[2])
-    const panel = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel')
-    assert.equal(decl(panel, 'min-width'), '0')
-    assert.equal(decl(panel, 'overflow'), 'hidden')
+describe('original-post detail layout', () => {
+  it('uses two independent reading panes without the obsolete triptych cascade', () => {
+    const columns = ruleBody(INSPIRATION_CSS, '.omnimux-post-columns')
+    assert.equal(decl(columns, 'display'), 'grid')
+    assert.equal(decl(columns, 'grid-template-columns'), 'minmax(0, 1.18fr) minmax(340px, 1fr)')
+    assert.equal(decl(ruleBody(INSPIRATION_CSS, '.omnimux-post-source'), 'overflow-y'), 'auto')
+    assert.equal(decl(ruleBody(INSPIRATION_CSS, '.omnimux-post-analysis-scroll'), 'overflow-y'), 'auto')
+    assert.doesNotMatch(INSPIRATION_CSS, /is-triptych|omnimux-inspiration-workbench-center/)
   })
-
-  it('keeps the footer focused on a stable one-line replication action', () => {
-    const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    const footer = section.slice(
-      section.indexOf('<footer className="omnimux-inspiration-modal-footer">'),
-      section.indexOf('</footer>'),
-    )
-    const footerCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-footer')
-    const replicateCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-footer .omnimux-inspiration-modal-replicate')
-    assert.match(section, /modal\.deconstruction\.analyze/)
-    assert.match(footer, /onReplicate\(data\.safeItem\)/)
-    assert.match(footer, /omnimux-inspiration-modal-replicate/)
-    assert.doesNotMatch(footer, /footer-meta|footer-stats|data\.publishedAt|data\.createdAt|Object\.keys\(data\.stats\)/)
-    assert.equal(decl(footerCss, 'justify-content'), 'flex-end')
-    assert.equal(decl(replicateCss, 'height'), '32px')
-    assert.equal(decl(replicateCss, 'white-space'), 'nowrap')
-    assert.match(INSPIRATION_CSS, /padding: 10px;\s*margin-bottom: 8px/)
+  it('keeps images uncropped and lets the full-image surface scroll when zoomed', () => {
+    assert.match(INSPIRATION_CSS, /object-fit: contain/)
+    assert.equal(decl(ruleBody(INSPIRATION_CSS, '.omnimux-post-lightbox-canvas'), 'overflow'), 'auto')
+    assert.equal(decl(ruleBody(INSPIRATION_CSS, '.omnimux-post-lightbox-canvas.is-zoomed'), 'display'), 'block')
   })
-
-  it('provides narrow-screen tabs without horizontal overflow', () => {
-    assert.match(INSPIRATION_CSS, /@media \(max-width: 860px\)/)
-    assert.match(INSPIRATION_CSS, /modal-mobile-tabs/)
-    assert.match(
-      INSPIRATION_CSS,
-      /@media \(max-width: 860px\)[\s\S]*?\.omnimux-inspiration-modal-panel\.is-active \{\s*display:\s*flex;\s*flex-direction:\s*column;\s*overflow:\s*hidden;/,
-    )
-  })
-
-  it('fills the video panel width with a 9:16 preview, floating actions, and compact title-only header', () => {
-    const videoPanel = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-video-panel')
-    assert.equal(decl(videoPanel, 'display'), 'flex')
-    assert.equal(decl(videoPanel, 'flex-direction'), 'column')
-    assert.equal(decl(videoPanel, 'align-items'), 'center')
-    assert.equal(decl(videoPanel, 'justify-content'), 'center')
-    assert.equal(decl(videoPanel, 'padding'), '12px')
-    assert.equal(decl(videoPanel, 'height'), '100%')
-
-    const player = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-player-box')
-    assert.equal(decl(player, 'width'), '100%')
-    assert.equal(decl(player, 'height'), '100%')
-    assert.equal(decl(player, 'max-height'), '100%')
-    assert.equal(decl(player, 'aspect-ratio'), '9 / 16')
-    assert.equal(decl(player, 'margin'), '0')
-    assert.equal(decl(player, 'display'), 'flex')
-
-    const actions = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-player-actions')
-    assert.equal(decl(actions, 'position'), 'absolute')
-    assert.equal(decl(actions, 'top'), '10px')
-    assert.equal(decl(actions, 'right'), '10px')
-    assert.equal(decl(actions, 'z-index'), '20')
-    assert.equal(decl(actions, 'display'), 'flex')
-    assert.equal(decl(actions, 'gap'), '6px')
-    assert.equal(decl(actions, 'opacity'), '0')
-    assert.equal(decl(actions, 'pointer-events'), 'none')
-
-    const actionsHover = ruleBody(
-      INSPIRATION_CSS,
-      '.omnimux-inspiration-modal-player-box:hover .omnimux-inspiration-player-actions,\n.omnimux-inspiration-modal-player-box:focus-within .omnimux-inspiration-player-actions',
-    )
-    assert.equal(decl(actionsHover, 'opacity'), '1')
-    assert.equal(decl(actionsHover, 'pointer-events'), 'auto')
-
-    const actionCopy = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-player-actions .omnimux-inspiration-modal-copy')
-    assert.equal(decl(actionCopy, 'width'), '32px')
-    assert.equal(decl(actionCopy, 'height'), '32px')
-    assert.equal(decl(actionCopy, 'border-radius'), '6px')
-    assert.equal(decl(actionCopy, 'color'), 'var(--dsw-alias-label-primary, #ffffff)')
-
-    const media = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-player-frame,\n.omnimux-inspiration-modal-cover-bg')
-    assert.equal(decl(media, 'object-fit'), 'contain')
-    const header = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-header')
-    const heading = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-heading')
-    const headingTitle = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-heading h2')
-    const headingCopy = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-heading .omnimux-inspiration-modal-copy')
-    assert.equal(decl(header, 'height'), '60px')
-    assert.equal(decl(header, 'flex-wrap'), 'nowrap')
-    assert.equal(decl(heading, 'max-width'), 'min(520px, calc(100% - 40px))')
-    assert.equal(decl(heading, 'flex'), '0 1 auto')
-    assert.equal(decl(headingTitle, 'flex'), '0 1 auto')
-    assert.equal(decl(headingTitle, 'text-overflow'), 'ellipsis')
-    assert.equal(decl(headingCopy, 'flex-shrink'), '0')
-    assert.match(INSPIRATION_CSS, /modal-copy\.is-icon-only/)
-  })
-
-  it('removes video panel heading and metadata list, adding floating action controls on player', () => {
-    const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.doesNotMatch(section, /modal\.panel\.video/)
-    assert.doesNotMatch(section, /omnimux-inspiration-modal-meta-list/)
-    assert.doesNotMatch(section, /omnimux-inspiration-stats-grid/)
-    assert.match(section, /omnimux-inspiration-player-actions/)
-    assert.match(section, /omnimux-inspiration-player-open-link/)
-    assert.match(section, /modal\.meta\.visitLink/)
-  })
-
-  it('removes platform, favorite, and re-analyze controls from the modal header', () => {
-    const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    const header = section.slice(
-      section.indexOf('<header className="omnimux-inspiration-modal-header">'),
-      section.indexOf('</header>'),
-    )
-    assert.doesNotMatch(header, /modal\.header\.favorite/)
-    assert.doesNotMatch(header, /modal\.header\.reanalyze/)
-    assert.doesNotMatch(header, /modal-header-meta/)
-    assert.doesNotMatch(header, /modal-actions/)
-    assert.match(section, /omnimux-inspiration-modal-close/)
-  })
-
-  it('supports optional timecode columns and quote blocks without fabricating timestamps', () => {
-    const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.match(INSPIRATION_CSS, /omnimux-inspiration-modal-script-list\.has-timecode/)
-    assert.match(INSPIRATION_CSS, /omnimux-inspiration-modal-dimensions blockquote/)
-    assert.match(section, /translateInspiration/)
-    assert.match(section, /modal\.script\.translate/)
-    assert.doesNotMatch(section, /00:00 hello/)
-  })
-})
-
-describe('legacy inspiration modal segmented switch', () => {
-  it('keeps mobile tabs accessible and powered by dsh-ui-kit Tabs', () => {
-    const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.match(section, /modal-mobile-tabs/)
-    assert.match(section, /<Tabs[\s\S]*items=\{mobileTabs\}/)
-    assert.doesNotMatch(section, new RegExp('exempt-' + 'ui01'))
-  })
-
-  it('keeps the track at 32px with overflow clipping so the inner pill cannot burst', () => {
-    const body = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-switch-group')
-    assert.equal(decl(body, 'display'), 'inline-flex')
-    assert.equal(decl(body, 'height'), '32px')
-    assert.equal(decl(body, 'overflow'), 'hidden')
-    assert.equal(decl(body, 'border-radius'), '9999px')
-    assert.equal(decl(body, 'padding'), '1px')
-  })
-
-  it('locks inner tabs to the 28px compact variant inside the track', () => {
-    const body = ruleBody(
-      INSPIRATION_CSS,
-      '.omnimux-inspiration-switch-group > .omnimux-inspiration-switch-btn',
-    )
-    assert.equal(decl(body, 'height'), '28px')
-    assert.equal(decl(body, 'min-height'), '28px')
-    assert.equal(decl(body, 'max-height'), '28px')
-    assert.equal(decl(body, 'border-radius'), '9999px')
-    assert.equal(decl(body, 'border'), 'none')
-    assert.equal(decl(body, 'transform'), 'none')
-  })
-
-  it('does not use the illegal 26px height that used to overflow the capsule', () => {
-    const body = ruleBody(
-      INSPIRATION_CSS,
-      '.omnimux-inspiration-switch-group > .omnimux-inspiration-switch-btn',
-    )
-    assert.notEqual(decl(body, 'height'), '26px')
-  })
-
-  it.skip('legacy segmented switch was replaced by triptych mobile tabs', () => {
-    const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    const switchBlock = section.slice(
-      section.indexOf('omnimux-inspiration-preview-switch'),
-      section.indexOf('omnimux-inspiration-preview-player'),
-    )
-    assert.match(switchBlock, /role="tablist"/)
-    assert.match(switchBlock, /role="tab"/)
-    assert.match(switchBlock, /<button\s+type="button"/)
-    assert.doesNotMatch(switchBlock, /<Button[\s\S]*omnimux-inspiration-switch-btn/)
-  })
-
-  it.skip('legacy switch glyph contract was replaced by triptych mobile tabs', () => {
-    const section = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    const switchBlock = section.slice(
-      section.indexOf('omnimux-inspiration-preview-switch'),
-      section.indexOf('omnimux-inspiration-preview-player'),
-    )
-    assert.doesNotMatch(switchBlock, /polyline points="2 17"/)
-    assert.doesNotMatch(switchBlock, /polygon points="12 2/)
-    assert.doesNotMatch(switchBlock, /strokeWidth="2"/)
-    assert.doesNotMatch(switchBlock, /width="13"/)
-    assert.match(switchBlock, /width="16"/)
-    assert.match(switchBlock, /d="M2 5 8 2\.2 14 5"/)
-    const svgRule = ruleBody(
-      INSPIRATION_CSS,
-      '.omnimux-inspiration-switch-group > .omnimux-inspiration-switch-btn svg',
-    )
-    assert.equal(decl(svgRule, 'width'), '16px')
-    assert.equal(decl(svgRule, 'height'), '16px')
+  it('reuses shared drawers and scope-keyed analysis without exposing static demo results', () => {
+    const source = readFileSync(join(here, 'InspirationPostDetail.jsx'), 'utf8')
+    assert.match(source, /Drawer, /)
+    assert.match(source, /container=\{container\}/)
+    assert.match(source, /getTargetAnalysis\(item, target\)/)
+    assert.match(source, /getBodyTranslation\(item\)/)
+    assert.doesNotMatch(source, /localStorage|demo:true|demo: true/)
   })
 })
 
@@ -317,10 +140,12 @@ describe('one-click replicate source isolation', () => {
     }
   })
 
-  it('keeps Preview primary CTA on card.cta.try and does not fallback 添加到会话', () => {
+  it('keeps selected references behind a creation action and preserves existing external handoff', () => {
     const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
     const section = readFileSync(join(here, 'InspirationSection.jsx'), 'utf8')
-    assert.match(preview, /t\('card\.cta\.try'\)/)
+    const detail = readFileSync(join(here, 'InspirationPostDetail.jsx'), 'utf8')
+    assert.match(detail, /prepareCreationReferences/)
+    assert.match(detail, /onReplicate\?\./)
     assert.match(preview, /onReplicate/)
     assert.doesNotMatch(preview, /添加到会话/)
     assert.doesNotMatch(preview, /MessageSquarePlus/)
@@ -328,147 +153,12 @@ describe('one-click replicate source isolation', () => {
   })
 })
 
-describe('preview modal doc style and glass removal', () => {
-  it('removes glass blur effect from modal backdrop and gives container solid background', () => {
-    const backdrop = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-backdrop')
-    assert.equal(decl(backdrop, 'backdrop-filter'), 'none')
-    const container = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-container')
-    assert.match(decl(container, 'background'), /#121212|#131313|var\(--dsw-alias-bg-module-platform/)
-  })
-
-  it('updates copy button labels to 复制 for both script and deconstruction', () => {
-    assert.equal(zh['modal.script.copy'], '复制')
-    assert.equal(zh['modal.deconstruction.copy'], '复制')
-    assert.equal(en['modal.script.copy'], 'Copy')
-    assert.equal(en['modal.deconstruction.copy'], 'Copy')
-  })
-
-  it('registers a human shots-panel title and never a per-shot copyPrompt key', () => {
-    assert.equal(zh['modal.deconstruction.shotsTitle'], '逐镜头分镜脚本')
-    assert.equal(en['modal.deconstruction.shotsTitle'], 'Shot-by-shot script')
-    assert.equal(zh['modal.deconstruction.copyPrompt'], undefined)
-    assert.equal(en['modal.deconstruction.copyPrompt'], undefined)
-    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.match(preview, /t\('modal\.deconstruction\.shotsTitle'\)/)
-    assert.doesNotMatch(preview, /copyPrompt/)
-    assert.doesNotMatch(preview, /omnimux-inspiration-shot-copy-btn/)
-    assert.doesNotMatch(INSPIRATION_CSS, /omnimux-inspiration-shot-copy-btn/)
-    const title = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-deconstruct-title h3')
-    assert.equal(decl(title, 'white-space'), 'nowrap')
-    const headingTitle = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel-heading h3')
-    assert.equal(decl(headingTitle, 'white-space'), 'nowrap')
-    const wrap = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-deconstruct-title')
-    assert.equal(decl(wrap, 'flex'), '0 0 auto')
-    const heading = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel-heading')
-    assert.equal(decl(heading, 'flex'), '0 0 auto')
-  })
-
-  it('removes breakdown badge from deconstruction panel and renders document layout without accordion fold', () => {
-    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.doesNotMatch(preview, /omnimux-inspiration-status-badge/)
-    assert.doesNotMatch(preview, /omnimux-inspiration-modal-fold/)
-    assert.doesNotMatch(preview, /omnimux-inspiration-modal-chevron/)
-    assert.match(preview, /omnimux-inspiration-deconstruct-heading/)
-    assert.match(preview, /ICON_CLAPPERBOARD/)
-    assert.match(preview, /omnimux-inspiration-doc-section/)
-    assert.match(preview, /omnimux-inspiration-doc-title/)
-    assert.match(preview, /omnimux-inspiration-doc-quote/)
-    assert.match(preview, /omnimux-inspiration-doc-analysis/)
-  })
-
-  it('eliminates scroll jitter by decoupling heading from scroll container and containing overscroll', () => {
-    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.match(preview, /omnimux-inspiration-modal-deconstruction-body/)
-    assert.match(preview, /onWheel=\{\(e\) => e\.stopPropagation\(\)\}/)
-
-    const panelCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-panel')
-    assert.equal(decl(panelCss, 'overscroll-behavior'), 'contain')
-    assert.equal(decl(panelCss, 'scrollbar-gutter'), 'stable')
-
-    const deconPanelCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-panel')
-    assert.equal(decl(deconPanelCss, 'display'), 'flex')
-    assert.equal(decl(deconPanelCss, 'flex-direction'), 'column')
-
-    const deconHeadingCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-deconstruct-heading')
-    assert.doesNotMatch(deconHeadingCss, /position:\s*sticky/)
-    assert.doesNotMatch(deconHeadingCss, /border-bottom:\s*1px/)
-    assert.equal(decl(deconHeadingCss, 'padding'), '0')
-    assert.equal(decl(deconHeadingCss, 'margin-bottom'), '12px')
-    const deconPanelPad = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-panel')
-    assert.doesNotMatch(deconPanelPad, /padding:\s*0\s*!important/)
-
-    const deconBodyCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-deconstruction-body')
-    assert.equal(decl(deconBodyCss, 'overflow-y'), 'auto')
-    assert.equal(decl(deconBodyCss, 'overscroll-behavior'), 'contain')
-    assert.equal(decl(deconBodyCss, 'scrollbar-gutter'), 'auto')
-  })
-
-  it('uses one narrow card inset on both the shot list and the deconstruction column', () => {
-    const center = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-workbench-center')
-    const right = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-workbench-right')
-    assert.equal(decl(center, 'padding'), '12px 8px !important')
-    assert.equal(decl(right, 'padding'), '12px 8px !important')
-    const doc = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-dimensions.is-doc-style')
-    assert.equal(decl(doc, 'padding'), '0')
-    const shots = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-shots-scroll-area')
-    assert.equal(decl(shots, 'scrollbar-gutter'), 'auto')
-    const prompt = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-shot-prompt')
-    assert.equal(decl(prompt, 'white-space'), 'normal')
-    assert.notEqual(decl(prompt, 'text-overflow'), 'ellipsis')
-  })
-
-  it('hides overlay scroll thumbs until the pane is scrolling', () => {
-    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.match(preview, /useOverlayScrollReveal/)
-    assert.match(preview, /omnimux-inspiration-shots-scroll-area/)
-    assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*transparent/)
-    assert.match(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll\.is-scrolling::-webkit-scrollbar-thumb/)
-    assert.doesNotMatch(INSPIRATION_CSS, /\.omnimux-inspiration-overlay-scroll:hover::-webkit-scrollbar-thumb/)
-    assert.doesNotMatch(INSPIRATION_CSS, /\.omnimux-inspiration-modal-deconstruction-body::-webkit-scrollbar-thumb/)
-  })
-
-  it('establishes clear 3-level visual hierarchy: title (15px) -> item (14px) -> description (13px)', () => {
-    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.match(preview, /omnimux-inspiration-doc-title-bar/)
-    assert.match(preview, /omnimux-inspiration-doc-item-title/)
-    assert.match(preview, /omnimux-inspiration-doc-item-indicator/)
-    assert.match(preview, /omnimux-inspiration-doc-desc-block/)
-    assert.match(preview, /omnimux-inspiration-doc-desc/)
-
-    const titleCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-title')
-    assert.equal(decl(titleCss, 'font-size'), '15px')
-    assert.equal(decl(titleCss, 'font-weight'), '600')
-
-    const itemCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-item-title')
-    assert.equal(decl(itemCss, 'font-size'), '14px')
-    assert.equal(decl(itemCss, 'font-weight'), '600')
-
-    const descCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-desc')
-    assert.equal(decl(descCss, 'font-size'), '13px')
-    assert.equal(decl(descCss, 'font-weight'), '400')
-
-    const descBlockCss = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-desc-block')
-    assert.match(decl(descBlockCss, 'padding-left'), /12px|14px/)
-  })
-
-  it('stacks long labels over full-width descriptions with safe text wrapping', () => {
-    const row = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-labeled-row')
-    assert.equal(decl(row, 'flex-direction'), 'column')
-    assert.equal(decl(row, 'align-items'), 'stretch')
-    assert.equal(decl(row, 'text-align'), 'left')
-    const label = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-label')
-    assert.equal(decl(label, 'white-space'), 'normal')
-    assert.equal(decl(label, 'overflow-wrap'), 'anywhere')
-    const desc = ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-doc-desc')
-    assert.equal(decl(desc, 'overflow-wrap'), 'anywhere')
-    assert.equal(decl(desc, 'white-space'), 'pre-wrap')
-  })
-
-  it('removes raw markdown button from deconstruction panel', () => {
-    const preview = readFileSync(join(here, 'InspirationPreviewModal.jsx'), 'utf8')
-    assert.doesNotMatch(preview, /modal\.deconstruction\.showRaw/)
-    assert.doesNotMatch(preview, /omnimux-inspiration-modal-raw/)
-    assert.doesNotMatch(preview, /setShowRaw/)
+describe('preview document typography', () => {
+  it('keeps source and analysis readable without a blurred backdrop', () => {
+    assert.doesNotMatch(ruleBody(INSPIRATION_CSS, '.omnimux-inspiration-modal-backdrop'), /blur/)
+    assert.equal(decl(ruleBody(INSPIRATION_CSS, '.omnimux-post-body'), 'white-space'), 'pre-wrap')
+    assert.match(INSPIRATION_CSS, /omnimux-inspiration-doc-record/)
+    assert.match(INSPIRATION_CSS, /overflow-wrap/)
   })
 })
 
@@ -601,18 +291,11 @@ describe('灵感预览弹窗分享按钮激活态视觉规范', () => {
   })
 })
 
-describe('灵感预览弹窗桌面端移除多余切换标签栏规范', () => {
-  it('桌面端宽屏下强制隐藏移动端切换标签栏，窄屏下维持弹性展示', () => {
-    assert.match(
-      INSPIRATION_CSS,
-      /\.omnimux-inspiration-modal-container \.omnimux-inspiration-modal-mobile-tabs[\s\S]*?display:\s*none !important;/,
-      '桌面端必须声明复合选择器与 display: none !important 以防被外部组件库样式覆盖',
-    )
-    assert.match(
-      INSPIRATION_CSS,
-      /@media\s*\(max-width:\s*860px\)[\s\S]*?display:\s*flex !important;/,
-      '窄屏响应式下必须声明 display: flex !important 保障可用性',
-    )
+describe('post detail narrow-screen navigation', () => {
+  it('keeps both mounted panes selectable at narrow widths', () => {
+    assert.equal(decl(ruleBody(INSPIRATION_CSS, '.omnimux-post-mobile-tabs'), 'display'), 'none')
+    assert.match(INSPIRATION_CSS, /@media \(max-width: 860px\)[\s\S]*omnimux-post-mobile-tabs \{ display: flex/)
+    assert.match(INSPIRATION_CSS, /omnimux-post-source\.is-active/)
+    assert.match(INSPIRATION_CSS, /omnimux-post-analysis\.is-active/)
   })
 })
-

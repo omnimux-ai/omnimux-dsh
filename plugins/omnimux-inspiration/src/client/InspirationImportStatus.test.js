@@ -204,7 +204,7 @@ describe('InspirationPreviewModal render gate — media source chain', () => {
     }
   })
 
-  it('falls back to the cover when the video element reports an error', async () => {
+  it('shows the cover and failure notice while retaining the video node for stable state', async () => {
     const mounted = await mount('InspirationPreviewModal.jsx', {
       row: {
         id: 'insp_2',
@@ -226,7 +226,8 @@ describe('InspirationPreviewModal render gate — media source chain', () => {
         video.dispatchEvent(new mounted.window.Event('error', { bubbles: false }))
       })
 
-      assert.equal(mounted.container.querySelector('video'), null, 'an unplayable source must stop rendering the player')
+      assert.equal(mounted.container.querySelector('video'), video, 'source identity remains mounted after failure')
+      assert.equal(video.hidden, true, 'the broken video is hidden behind its cover')
       const img = mounted.container.querySelector('img')
       assert.ok(img, 'the cover must take over')
       assert.equal(img.getAttribute('src'), '/omnimux/inspiration/local/media/covers/cover_ab12.jpg')
@@ -336,9 +337,9 @@ describe('InspirationPreviewModal render gate — media source chain', () => {
       assert.equal(mounted.container.querySelector('video'), null)
       assert.equal(mounted.container.querySelector('iframe'), null)
       assert.equal(mounted.container.querySelector('img'), null)
-      const text = mounted.container.querySelector('.omnimux-inspiration-modal-post-text')
-      assert.ok(text, 'text-only entries remain readable without a media placeholder')
-      assert.equal(text.textContent, '仅有标题')
+      assert.equal(mounted.container.querySelector('.omnimux-post-body'), null, 'a title alone must not be fabricated as original post text')
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-modal-heading h2').textContent, '仅有标题')
+      assert.ok(mounted.container.textContent.includes(zh['post.noOriginal']))
     } finally {
       await mounted.unmount()
       mounted.close()
