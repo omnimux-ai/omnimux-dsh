@@ -227,7 +227,8 @@ async function mountStage(options = {}) {
   globalThis.fetch = async (url, fetchOptions = {}) => {
     const path = String(url)
     const method = fetchOptions?.method ?? 'GET'
-    calls.push({ path, method })
+    const body = typeof fetchOptions.body === 'string' ? JSON.parse(fetchOptions.body) : undefined
+    calls.push({ path, method, body })
     // A gate that fails loudly beats a gate that spins.
     if (calls.length > REQUEST_BUDGET) {
       throw new Error(`request storm: ${calls.length} calls, last ${method} ${path}`)
@@ -289,6 +290,11 @@ async function mountStage(options = {}) {
     }
     if (path.includes(RIVAL_PREFIX)) {
       return jsonResponse(200, { success: true, data: { items: accounts, total: accounts.length } })
+    }
+    const preparation = path.match(/^\/omnimux\/inspiration\/local\/([^/?]+)\/creation-reference$/)
+    if (preparation && method === 'POST' && localItems[preparation[1]]) {
+      const row = localItems[preparation[1]]
+      return jsonResponse(200, { success: true, data: { ...row, creation_draft: body.draft, creation_reference: { id: 'c47d2fd4-f2f7-4e33-948c-8187bfb0aceb', text: body.draft.text, basis: body.draft.basis, prepared_at: '2026-10-18T12:00:00.000Z', reference_count: body.draft.references.length } } })
     }
     // A single library item by id — the row the deconstruct modal is opened on.
     const single = path.match(/^\/omnimux\/inspiration\/local\/([^/?]+)$/)
@@ -923,6 +929,7 @@ describe('账号监控 — 空态与导入反馈', () => {
 const LOCAL_ITEM = {
   id: 'insp-3110',
   title: '拆解入库的作品',
+  content: '用于下一次创作的完整原帖正文',
   type: 'video',
   source_url: 'https://www.tiktok.com/@alice/video/1',
   source_platform: 'tiktok',
@@ -930,7 +937,7 @@ const LOCAL_ITEM = {
 }
 
 describe('账号监控 — 第三轮整改回执', () => {
-  it('routes the deconstruct modal\'s 立即复刻 to the inspiration chain, not the rival handler', async () => {
+  it('routes selected references from the deconstruct modal to the inspiration chain, not the rival handler', async () => {
     const mounted = await mountStage({ localItems: { 'insp-3110': LOCAL_ITEM } })
     try {
       await mounted.openAccountTab()
@@ -945,13 +952,22 @@ describe('账号监控 — 第三轮整改回执', () => {
       assert.ok(modalReady, 'the deconstruct modal must open on the converted library item')
 
       const callsBefore = mounted.calls.length
+      await mounted.click(mounted.container.querySelector('.omnimux-post-original [aria-pressed]'))
       await mounted.click(mounted.container.querySelector('.omnimux-inspiration-modal-replicate'))
+      const drawer = mounted.container.querySelector('.omnimux-post-creation-drawer')
+      assert.ok(drawer, 'selected references must be reviewed in the creation drawer')
+      await mounted.click([...drawer.querySelectorAll('button')].find(node => node.textContent === zh['post.useInChat']))
       await settle(
         mounted.container,
         () => mounted.container.querySelector('.omnimux-rival-notice'),
       )
 
       const after = mounted.calls.slice(callsBefore)
+      const prepared = after.filter(call => call.path === '/omnimux/inspiration/local/insp-3110/creation-reference' && call.method === 'POST')
+      assert.equal(prepared.length, 1, 'prepare the selected references before invoking the inspiration handoff')
+      assert.deepEqual(prepared[0].body.draft.references, [{ kind: 'body' }])
+      assert.ok(prepared[0].body.draft.text.includes(LOCAL_ITEM.source_url))
+      assert.ok(mounted.container.querySelector('.omnimux-post-creation-drawer'), 'the failed awaited handoff must leave the drawer available for retry')
       const rivalChainHits = after.filter((call) => /\/posts\/.+\/(media|to-inspiration)/.test(call.path))
       assert.deepEqual(
         rivalChainHits.map((call) => call.path),

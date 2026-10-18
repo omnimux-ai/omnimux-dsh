@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
 import { JSDOM } from 'jsdom'
 import { zh } from './locales.js'
+import { analysisInputFingerprint } from '../analysis-input.js'
 import { IMPORT_POLL_INTERVAL_MS } from './import-status.js'
 import { LANDED_PIN_MS } from './import-landing.js'
 
@@ -132,7 +133,7 @@ function createHost(routes) {
     localItems: routes.localItems ?? [],
     accounts: routes.accounts ?? [],
   }
-  const handle = ({ path, method }) => {
+  const handle = ({ path, method, body }) => {
     if (path.includes(`${RIVAL_PREFIX}/classify`)) {
       return routes.classify ?? jsonResponse(200, { success: true, data: { kind: 'content', platform: 'x' } })
     }
@@ -150,7 +151,7 @@ function createHost(routes) {
     }
     if (path.startsWith('/omnimux/inspiration/local/')) {
       const id = decodeURIComponent(path.slice('/omnimux/inspiration/local/'.length).split('?')[0])
-      if (typeof routes.localItemGet === 'function') return routes.localItemGet(id)
+      if (typeof routes.localItemGet === 'function') return routes.localItemGet(id, { method, body })
       const item = state.localItems.find((row) => String(row.id) === id) || null
       return jsonResponse(200, { success: true, data: item })
     }
@@ -918,10 +919,18 @@ describe('import landing — unchanged behaviour', () => {
   it('keeps a detail update on the pinned card even when the current list has no matching row', async () => {
     const id = 'updated-pin'
     const row = { id, title: '原始视频标题', source_platform: 'tiktok', source_url: 'https://www.tiktok.com/@creator/video/793', type: 'video', import_status: 'ready', media_urls: ['/omnimux/inspiration/local/media/videos/v_ab12.mp4'] }
-    const updated = { ...row, title: '详情更新后的标题', deconstruction: { summary: '已完成' } }
+    const target = { scope: 'post', directions: ['content', 'expression', 'creative'] }
+    const updated = { ...row, title: '详情更新后的标题', analysis_results: { post: { ...target, input_fingerprint: analysisInputFingerprint(row, target), status: 'done', source: 'live', model: 'test-model', result: { summary: '已完成' }, error: null } } }
     const host = createHost({
       localItems: [], contentImport: jsonResponse(200, { success: true, data: row }),
-      localItemGet: (key) => jsonResponse(200, { success: true, data: key.endsWith('/analyze') ? updated : row }),
+      localItemGet: (key, request) => {
+        if (key.endsWith('/analyze')) {
+          assert.equal(request.method, 'POST')
+          assert.deepEqual(request.body, target)
+          return jsonResponse(200, { success: true, data: updated, analysis_key: 'post' })
+        }
+        return jsonResponse(200, { success: true, data: row })
+      },
     })
     const mounted = await mountSection(host)
     try {
@@ -930,7 +939,7 @@ describe('import landing — unchanged behaviour', () => {
       await click(button(mounted.container, L.submit))
       await settle(mounted.container, () => cardIds(mounted.container).includes(id))
       await click(mounted.container.querySelector(`[data-inspiration-id="${id}"]`))
-      await click(button(mounted.container, zh['modal.deconstruction.analyze']))
+      await click(button(mounted.container, zh['post.analyzeTarget']))
       assert.ok(await settle(mounted.container, () => mounted.container.querySelector(`[data-inspiration-id="${id}"] .omnimux-rival-card-title`)?.textContent === updated.title))
       const close = mounted.container.querySelector(`${PREVIEW_MODAL_SELECTOR} [aria-label="${zh.close}"]`)
       await click(close)
