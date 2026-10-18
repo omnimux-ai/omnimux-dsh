@@ -3,7 +3,7 @@ import { mkdir, writeFile, readFile, rename, rm, realpath, stat, lstat } from 'n
 import { join, basename, resolve, sep } from 'node:path'
 import { probeTextImage } from '../text/image.js'
 import { probeTextVideo } from '../text/video.js'
-import { materializePaths, resolveSessionCwd } from './composer-attachments.js'
+import { materializePaths, resolveSessionCwd, ensureImportedDirectory } from './composer-attachments.js'
 
 export const MAX_FORM_FILE_BYTES = 100 * 1024 * 1024
 const idPattern = /^[a-zA-Z0-9_-]{1,100}$/
@@ -130,20 +130,6 @@ export function createFormAttachmentService({ root, getWorkspaceRegistry, getSes
     } catch (error) {
       if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false
       throw error
-    }
-  }
-  async function ensureImportedDirectory(cwd) {
-    let path = cwd
-    for (const part of ['assets', 'imported']) {
-      path = join(path, part)
-      try {
-        const info = await lstat(path)
-        if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('import-directory-invalid')
-      } catch (error) {
-        if (error.code !== 'ENOENT') throw error
-        await mkdir(path, { mode: 0o700 })
-      }
-      if (await realpath(path) !== path) throw new Error('import-directory-invalid')
     }
   }
   return { importFile, resolveFiles, resolveFile, materialize }

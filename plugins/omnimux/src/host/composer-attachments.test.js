@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
+import { Readable } from 'node:stream'
 import {
   ComposerAttachmentError,
   copyFileIntoImported,
@@ -123,6 +124,41 @@ describe('materializePaths', () => {
     assert.equal(copied.relativePath, 'assets/imported/a (1).txt')
     assert.equal(readFileSync(join(cwd, 'assets/imported/a.txt'), 'utf8'), 'keep')
     assert.equal(readFileSync(copied.destAbs, 'utf8'), 'new')
+  })
+
+  it('publishes simultaneous same-name copies without overwriting either result', async () => {
+    const cwd = tempDir('omx-att-concurrent-')
+    const a = tempDir('omx-att-a-'); const b = tempDir('omx-att-b-')
+    const first = join(a, 'note.md'); const second = join(b, 'note.md')
+    writeFileSync(first, 'first'); writeFileSync(second, 'second')
+    const copies = await Promise.all([first, second].map(sourceAbs => copyFileIntoImported({ cwd, sourceAbs })))
+    assert.notEqual(copies[0].relativePath, copies[1].relativePath)
+    assert.deepEqual(copies.map(row => readFileSync(row.destAbs, 'utf8')), ['first', 'second'])
+  })
+
+  it('propagates cancellation during streaming and removes the incomplete file', async () => {
+    const cwd = tempDir('omx-att-abort-'); const source = join(tempDir('omx-att-abort-src-'), 'large.bin')
+    writeFileSync(source, 'source')
+    const controller = new AbortController()
+    const copy = copyFileIntoImported({ cwd, sourceAbs: source, signal: controller.signal,
+      fs: { createReadStream: () => Readable.from((async function* () {
+        yield Buffer.alloc(1024)
+        controller.abort()
+        await new Promise(resolve => setTimeout(resolve, 5))
+        yield Buffer.alloc(1024)
+      })()) },
+    })
+    await assert.rejects(copy, { name: 'AbortError' })
+    const { readdirSync } = await import('node:fs')
+    assert.deepEqual(readdirSync(join(cwd, 'assets', 'imported')), [])
+  })
+
+  it('refuses changed source bytes before publishing a file', async () => {
+    const cwd = tempDir('omx-att-digest-'); const source = join(tempDir('omx-att-digest-src-'), 'note.md')
+    writeFileSync(source, 'changed')
+    await assert.rejects(copyFileIntoImported({ cwd, sourceAbs: source, expectedDigest: '0'.repeat(64) }), /attachment-source-changed/)
+    const { readdirSync } = await import('node:fs')
+    assert.deepEqual(readdirSync(join(cwd, 'assets', 'imported')), [])
   })
 })
 
