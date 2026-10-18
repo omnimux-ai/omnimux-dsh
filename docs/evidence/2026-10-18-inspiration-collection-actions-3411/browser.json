@@ -1,0 +1,526 @@
+{
+  "kind": "browser-evidence-for-issue-3411",
+  "issue": 3411,
+  "runId": "20261018T102552-lf6it",
+  "createdAt": "2026-10-18T10:25:52.146Z",
+  "scope": "real-section-and-production-local-handlers + synthetic host seams; not-full-host-install",
+  "finalHead": "836733c02bbbac1e92e8f8e5240490cffb91b09b",
+  "worktreeStatus": [
+    "M plugins/omnimux-inspiration/src/client/InspirationCollectionCard.jsx",
+    " M plugins/omnimux-inspiration/src/client/InspirationSection.jsx",
+    " M plugins/omnimux-inspiration/src/client/collection-card-actions.test.js",
+    " M plugins/omnimux-inspiration/src/client/collection-styles.js",
+    " M plugins/omnimux-inspiration/src/client/collection-to-chat.js",
+    " M plugins/omnimux-inspiration/src/client/collection-to-chat.test.js",
+    " M plugins/omnimux-inspiration/src/client/test-fixtures/collection-card-render.mjs",
+    " M plugins/omnimux-inspiration/src/client/test-fixtures/collection-card-stage.jsx",
+    " M specs/inspiration-collection-card-actions-3411.spec.md"
+  ],
+  "identity": {
+    "sourceSha256": "899875120db9725ab5cf90ff7ab7f854bb79027c2a750d82366ad9804601e16e",
+    "bundleSha256": "762083d92887c8eb775ce848ef78872128e46661e34d6736c2fe0108e8c1389b",
+    "head": "836733c02bbbac1e92e8f8e5240490cffb91b09b",
+    "note": "HEAD is the committed implementation; the review fixes are uncommitted worktree changes, so sourceSha256/bundleSha256 identify the exact verified source/build."
+  },
+  "origin": "http://127.0.0.1:55287",
+  "chrome": {
+    "kind": "independent-headless-chromium",
+    "pid": 1353,
+    "port": 55289
+  },
+  "collection": {
+    "id": "collection_ccb9c5c8-e164-496b-b28a-305ff2bce82b",
+    "title": "测试合集",
+    "item_ids": [
+      "qa-dance1",
+      "qa-dance2",
+      "qa-fashion1"
+    ]
+  },
+  "evidenceScopeNote": "real InspirationSection + real production local handlers/store + real loopback HTTP + independent headless Chrome; synthetic __omnimuxWorkbench/__omnimuxSessionPrefill host seams and synthetic conversation column; not a full Host install; Dev 45120 not used; no external network.",
+  "hover": {
+    "hidden": {
+      "opacity": 0,
+      "pointerEvents": "none",
+      "transform": "matrix(1, 0, 0, 1, 0, 4)",
+      "role": "group",
+      "ariaLabel": "合集操作",
+      "ariaHidden": null,
+      "buttons": [
+        {
+          "text": "查看",
+          "ariaLabel": "查看"
+        },
+        {
+          "text": "加入会话",
+          "ariaLabel": "加入会话"
+        }
+      ]
+    },
+    "hovered": {
+      "opacity": 1,
+      "pointerEvents": "auto",
+      "transform": "matrix(1, 0, 0, 1, 0, 0)",
+      "rect": {
+        "x": 21,
+        "y": 213.625,
+        "width": 234,
+        "height": 64
+      },
+      "coverRect": {
+        "x": 21,
+        "y": 146,
+        "width": 234,
+        "height": 131.625
+      },
+      "titleRect": {
+        "x": 21,
+        "y": 277.625,
+        "width": 234,
+        "height": 42
+      },
+      "menuRect": {
+        "x": 218,
+        "y": 282.625,
+        "width": 32,
+        "height": 32
+      },
+      "view": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0.6)"
+      },
+      "add": {
+        "color": "rgb(17, 17, 19)",
+        "backgroundColor": "rgb(255, 255, 255)"
+      }
+    },
+    "ordinaryCards": [
+      {
+        "id": "qa-fashion2",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      },
+      {
+        "id": "qa-portrait1",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      },
+      {
+        "id": "qa-portrait2",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      },
+      {
+        "id": "qa-city1",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      },
+      {
+        "id": "qa-travel1",
+        "hasActionsLayer": false,
+        "texts": [
+          "详情",
+          "立即复刻"
+        ]
+      }
+    ]
+  },
+  "view": {
+    "heading": "测试合集",
+    "backLabel": [
+      "返回灵感库",
+      "重命名"
+    ],
+    "memberIds": [
+      "qa-dance1",
+      "qa-dance2",
+      "qa-fashion1"
+    ],
+    "rootCards": 0,
+    "host": {
+      "prefill": [],
+      "calls": [],
+      "conversation": "collapsed"
+    }
+  },
+  "focus": {
+    "mouseParkedAway": true,
+    "beforeOpacity": 0,
+    "afterOpacity": 1,
+    "pointerEvents": "auto",
+    "transform": "matrix(1, 0, 0, 1, 0, 0)",
+    "focusWithin": true,
+    "activeElementClass": "dshUk-Button-button dshUk-Button-outline dshUk-Button-sm omnimux-inspiration-collection-action-view",
+    "note": "programmatic focus() reveals the layer through :focus-within; :focus-visible heuristics are browser-owned and not asserted"
+  },
+  "contrast": {
+    "algorithm": "Page.captureScreenshot clip of the button; second capture with the button color forced transparent; glyph pixels = pixels whose RGB differs by >=24 in any channel (inset 3px); text core = max/min-luminance glyph pixel; WCAG 2.x relative luminance over #RRGGBB; ratio = min over glyph pixels against the exact composited background pixel under that glyph (conservative worst point).",
+    "computedStyles": {
+      "view": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0.6)",
+        "borderColor": "rgba(255, 255, 255, 0.3)",
+        "fontSize": "12px",
+        "fontWeight": "500"
+      },
+      "add": {
+        "color": "rgb(17, 17, 19)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(255, 255, 255)",
+        "fontSize": "12px",
+        "fontWeight": "500"
+      },
+      "tokens": {
+        "badgeBgStrong": "rgba(0,0,0,0.60)",
+        "fg": "#ffffff",
+        "ink": "#111113"
+      }
+    },
+    "view": {
+      "selector": ".omnimux-inspiration-collection-action-view",
+      "polarity": "light",
+      "buttonRect": {
+        "width": 68,
+        "height": 28
+      },
+      "clipPixels": {
+        "width": 68,
+        "height": 28
+      },
+      "textColor": {
+        "rgb": [
+          255,
+          255,
+          255
+        ],
+        "css": "rgb(255, 255, 255)"
+      },
+      "textCorePixel": {
+        "x": 54,
+        "y": 18,
+        "composite": [
+          255,
+          255,
+          255
+        ],
+        "difference": 239
+      },
+      "glyphPixels": 303,
+      "backgroundLuminance": {
+        "min": 0.01620424444000088,
+        "max": 0.03954623527673283
+      },
+      "worstBackground": {
+        "x": 43,
+        "y": 8,
+        "rgb": [
+          56,
+          56,
+          56
+        ]
+      },
+      "ratio": 11.725786089779096,
+      "ratioAtCoreBackground": 15.764354695547647
+    },
+    "add": {
+      "selector": ".omnimux-inspiration-collection-action-add",
+      "polarity": "dark",
+      "buttonRect": {
+        "width": 92,
+        "height": 28
+      },
+      "clipPixels": {
+        "width": 92,
+        "height": 28
+      },
+      "textColor": {
+        "rgb": [
+          17,
+          17,
+          19
+        ],
+        "css": "rgb(17, 17, 19)"
+      },
+      "textCorePixel": {
+        "x": 62,
+        "y": 8,
+        "composite": [
+          17,
+          17,
+          19
+        ],
+        "difference": 238
+      },
+      "glyphPixels": 417,
+      "backgroundLuminance": {
+        "min": 1,
+        "max": 1
+      },
+      "worstBackground": {
+        "x": 13,
+        "y": 8,
+        "rgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      "ratio": 18.860856264256594,
+      "ratioAtCoreBackground": 18.860856264256594
+    },
+    "requirement": "both >= 4.5:1 (WCAG AA normal text)",
+    "passed": true
+  },
+  "addToSession": {
+    "prefill": {
+      "targetSessionId": "qa-session-1",
+      "prompt": "来源：OmniMux 灵感库 · 本地合集\n合集：测试合集\n合集 ID：collection_ccb9c5c8-e164-496b-b28a-305ff2bce82b\n成员条数：3\n成员清单：\n1. 舞蹈参考一（成员 id：qa-dance1；平台：tiktok；类型：image）\n2. 舞蹈参考二（成员 id：qa-dance2；平台：tiktok；类型：image）\n3. 穿搭参考一（成员 id：qa-fashion1；平台：tiktok；类型：image）\n使用 inspiration_get 按上述 id 逐条读取（标题、正文/脚本、拆解、本地媒体路径）再回答问题。\n问题："
+    },
+    "promptFacts": {
+      "length": 294,
+      "lines": 10
+    },
+    "revealCalls": [
+      [
+        "collapsed",
+        false
+      ],
+      [
+        "focus",
+        "split"
+      ]
+    ],
+    "memberRead": {
+      "path": "/omnimux/inspiration/local",
+      "query": {
+        "page": "1",
+        "page_size": "100",
+        "projection": "lean",
+        "collection_id": "collection_ccb9c5c8-e164-496b-b28a-305ff2bce82b"
+      },
+      "status": 200,
+      "instance": 1,
+      "allCollectionReads": [
+        {
+          "sort": "new",
+          "page": "1",
+          "page_size": "20",
+          "projection": "lean",
+          "collection_id": "collection_ccb9c5c8-e164-496b-b28a-305ff2bce82b"
+        },
+        {
+          "page": "1",
+          "page_size": "100",
+          "projection": "lean",
+          "collection_id": "collection_ccb9c5c8-e164-496b-b28a-305ff2bce82b"
+        }
+      ]
+    },
+    "noSend": {
+      "sendClicks": 0,
+      "requests": [
+        {
+          "method": "GET",
+          "url": "/omnimux/inspiration/local?page=1&page_size=100&projection=lean&collection_id=collection_ccb9c5c8-e164-496b-b28a-305ff2bce82b"
+        }
+      ],
+      "nonGet": []
+    },
+    "assertionPassed": true
+  },
+  "draftProtectedPath": {
+    "toastText": "输入框已有内容，请先清空或新建会话后重试",
+    "toastVisible": true,
+    "composerAfter": "用户既有草稿（QA 哨兵）",
+    "conversation": "open",
+    "stillOnRoot": "测试合集",
+    "revealCalls": [
+      [
+        "collapsed",
+        false
+      ],
+      [
+        "focus",
+        "split"
+      ]
+    ],
+    "prefillCountAfter": 0,
+    "assertionPassed": true
+  },
+  "noSessionPath": {
+    "toastText": "没有可加入的会话，请先打开一个会话",
+    "toastVisible": true,
+    "revealCalls": [],
+    "prefill": [],
+    "conversation": "collapsed",
+    "composer": "",
+    "buttonDisabled": false,
+    "buttonAriaBusy": null,
+    "memberReadsBefore": 2,
+    "assertionPassed": true
+  },
+  "assertions": [
+    {
+      "name": "actions layer exists in the collection card but is hidden before hover (opacity 0, pointer-events none)",
+      "pass": true
+    },
+    {
+      "name": "real mouse hover reveals both buttons: opacity ~1, pointer-events auto, translateY 4->0",
+      "pass": true
+    },
+    {
+      "name": "action layer sits inside the cover bottom and does not overlap the card title or the 更多操作 menu",
+      "pass": true
+    },
+    {
+      "name": "ordinary inspiration cards on the same page expose no 查看/加入会话 controls",
+      "pass": true
+    },
+    {
+      "name": "action buttons consume the real media tokens (dark-room palette, not the theme outline/primary defaults)",
+      "pass": true
+    },
+    {
+      "name": "查看 (dedicated onView handler) enters the real collection view without any session prefill",
+      "pass": true
+    },
+    {
+      "name": "member view cards are ordinary inspiration cards without the collection action layer",
+      "pass": true
+    },
+    {
+      "name": "加入会话 writes exactly one sourced prompt through the official prefill seam to the current session",
+      "pass": true
+    },
+    {
+      "name": "conversation column really opened and the synthetic composer holds exactly the prompt draft",
+      "pass": true
+    },
+    {
+      "name": "reveal sequence is uncollapse -> split focus",
+      "pass": true
+    },
+    {
+      "name": "members were read from the real local endpoint with collection_id + lean projection before prefill",
+      "pass": true
+    },
+    {
+      "name": "no send happened: send button never clicked and no send-like/non-GET request left the page",
+      "pass": true
+    },
+    {
+      "name": "keyboard focus on 查看 reveals the layer via :focus-within (opacity ~1, pointer-events auto) with the mouse parked away",
+      "pass": true
+    },
+    {
+      "name": "查看 uses the dark-room media palette and meets WCAG AA ≥4.5:1 on real rendered pixels",
+      "pass": true
+    },
+    {
+      "name": "加入会话 uses the white media palette and meets WCAG AA ≥4.5:1 on real rendered pixels",
+      "pass": true
+    },
+    {
+      "name": "draft-protected path shows the visible toast copy and keeps the existing draft, root view and open conversation",
+      "pass": true
+    },
+    {
+      "name": "no active session: visible 没有可加入的会话 toast, no reveal, no prefill, no empty conversation opened",
+      "pass": true
+    },
+    {
+      "name": "no-session failure leaves the action button enabled again (busy state cleared) and stays on the root",
+      "pass": true
+    },
+    {
+      "name": "no browser request escaped the fixture origin; no console exceptions",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "hover-actions.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 141964,
+      "sha256": "57576767ea6cca30a48113a4fe5fb3f60b2f1e66489f711bd59bce818e2d9e1c"
+    },
+    {
+      "name": "view-collection.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 127571,
+      "sha256": "65a19aa79b79294153214e2a7294805fbd64b6c54459c2bfa78b5cd195018356"
+    },
+    {
+      "name": "add-to-session.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 222882,
+      "sha256": "ddb8ad896212f9215bbc4d8395aed22493ad43be51f314c58a20b447eeeeeb61"
+    },
+    {
+      "name": "focus-actions.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 142293,
+      "sha256": "f275f7ae36a414e909470a69fe81dc9b1cf34a6d6c72d548c13214eeb0e9ba3c"
+    },
+    {
+      "name": "draft-protected.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 188726,
+      "sha256": "e6a6c695aa05c5e5bdf6ad5266ba22d337b5801a15461b857bfbaf747414c2cd"
+    },
+    {
+      "name": "no-session.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 149781,
+      "sha256": "fe909f2072a71cf7447a79cb40b5ad76a347366a11d1c064a937819e7c09c5dc"
+    }
+  ],
+  "consoleErrors": [],
+  "network": {
+    "events": 18,
+    "localRequests": 5,
+    "external": []
+  },
+  "counters": {
+    "syntheticCloud": 1,
+    "blockedCapabilities": 0,
+    "blockedExternalFetch": 0,
+    "injectedReadFailures": 0
+  },
+  "cleanup": {
+    "browser": {
+      "chromeExited": true,
+      "profileRemoved": true
+    },
+    "fixture": {
+      "serverClosed": true,
+      "storeRemoved": true,
+      "environmentRestored": true
+    }
+  },
+  "pass": true,
+  "boundaries": [
+    "Host seams (__omnimuxWorkbench, __omnimuxSessionPrefill) and the conversation column/composer are synthetic stubs; this is not a full Host install.",
+    "Real: product InspirationSection bundle, production local handlers/store, real collection HTTP write/read, real mouse hover/focus/clicks in headless Chrome, real rendered pixels for the contrast measurement.",
+    "No Dev app (port 45120), no user profile, no external network; dynamic loopback ports only; Chrome/server/temp store cleaned up.",
+    "The contrast sampler hides only the button text colour to obtain the composited background, then restores it; it does not alter product styles."
+  ]
+}

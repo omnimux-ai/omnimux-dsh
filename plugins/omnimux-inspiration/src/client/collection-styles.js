@@ -80,12 +80,74 @@ export const COLLECTION_CSS = `
   cursor: default;
 }
 .omnimux-inspiration-collection-card .omnimux-inspiration-collection-cover {
+  position: relative;
   display: flex;
   width: 100%;
   aspect-ratio: ${RIVAL_COLLECTION_MEDIA_RATIO};
   gap: 3px;
   overflow: hidden;
   background: var(--dsw-alias-bg-layer-2);
+}
+.omnimux-inspiration-collection-actions {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 28px 8px 8px;
+  background: var(--dsw-specific-media-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+.omnimux-inspiration-collection-card:hover .omnimux-inspiration-collection-actions,
+.omnimux-inspiration-collection-card:focus-within .omnimux-inspiration-collection-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+@media (hover: none) {
+  .omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-inspiration-collection-actions {
+    transition: none;
+  }
+}
+/* 操作层按钮必须走媒体暗房调色板：普通主题按钮放在任意封面上不能保证
+   对比度（浅色主题 outline 按钮是深字浅底，叠在亮封面上会掉到 AA 以下）。
+   查看=半透明深底白字，加入会话=白底深字；两者都沿用既有 media token。 */
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-view {
+  border-color: var(--dsw-specific-media-border-strong);
+  background: var(--dsw-specific-media-badge-bg-strong);
+  color: var(--dsw-specific-media-fg);
+}
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-view:hover:not(:disabled) {
+  border-color: var(--dsw-specific-media-fg-dimmed);
+  background: var(--dsw-specific-media-pill-bg);
+}
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-add {
+  border-color: var(--dsw-specific-media-fg);
+  background: var(--dsw-specific-media-fg);
+  color: var(--dsw-specific-media-ink);
+}
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-add:hover:not(:disabled) {
+  border-color: var(--dsw-specific-media-fg-strong);
+  background: var(--dsw-specific-media-fg-strong);
+  color: var(--dsw-specific-media-ink);
+}
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-view:focus-visible,
+.omnimux-inspiration-collection-card .omnimux-inspiration-collection-actions .omnimux-inspiration-collection-action-add:focus-visible {
+  outline: 2px solid var(--dsw-specific-media-fg);
+  outline-offset: 2px;
 }
 .omnimux-inspiration-collection-column {
   position: relative;
