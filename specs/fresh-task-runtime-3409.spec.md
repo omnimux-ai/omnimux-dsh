@@ -37,6 +37,8 @@ installation固定包含taskId/runId、sourceRoot/privateRoot/profile、base/hea
 
 第二次运行真实关闭弹窗，12/13，资产库可见性明确失败。只读已装官方input-trigger确认菜单拾取在onMouseDown，原click没有选中。driver改真实鼠标点选唯一可见菜单行，按当前已注册素材工作台tab等待openWorkbench的Promise<boolean>，最终必须菜单已选中且工作台未遮挡可见；API fallback不能替代菜单路径通过。历史第二次失败原样保留。
 
+第三次运行菜单已关闭，真实截图为宽屏空会话Explore内嵌资产库，旧split选择器仍判12/13。现按产品源码同时识别内嵌/素材工作台：内嵌须同section内资产库主tab选中、全部六个资产专属分类、all选中、真实UnifiedLibraryGrid成功内容/正确空态且无spinner/retry，关键元素均视口几何与命中通过，命令菜单已关闭。openWorkbench布尔值只记requestAccepted诊断，不能证明可见split；不修本范围外的产品focus返回值。旧失败原件保留，需新冻结候选再次实跑审图。
+
 断言按预声明expectedAssertions归属分组并拒绝跨组重名，不能从返回断言推导预期。失败记录真实阶段，cleanup必须await子进程exit+close并清理精确自有目录；不会因清理失败签通过。保留历史失败封套。
 
 ## 实施分工与验收

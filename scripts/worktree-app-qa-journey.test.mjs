@@ -8,9 +8,36 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveJourneyPath, runJourney, createAppQaRunner, dismissFirstLaunchNotice } from './worktree-app-qa.mjs';
+import { JSDOM } from 'jsdom';
+import { resolveJourneyPath, runJourney, createAppQaRunner, dismissFirstLaunchNotice, ASSET_LIBRARY_VISIBLE_EXPRESSION } from './worktree-app-qa.mjs';
 
 const root = '/repo/.worktrees/task-x';
+
+test('inline Assets visibility needs its selected tab, category structure, real content and unobscured geometry', async t => {
+  function fixture() {
+    const categories = ['all', 'local-upload', 'ai-generated', 'digital-human', 'product-images', 'character'];
+    const dom = new JSDOM(`<section data-omnimux-starter-guide><section data-omnimux-explore-section>
+      <button role="tab" data-primary-tab="assets" aria-selected="true">资产库</button>
+      <div role="tablist">${categories.map(id => `<button role="tab" data-sub-category="${id}" aria-selected="${id === 'all'}">${id}</button>`).join('')}</div>
+      <div class="omnimux-explore-grid-view-wrap"><div class="omx-library-flow-root"><div class="omx-library-flow-status"><p>暂无素材</p></div></div></div>
+      </section></section><div id="cover"></div>`, { runScripts: 'outside-only' });
+    let measured, covered = false;
+    dom.window.HTMLElement.prototype.getBoundingClientRect = function () { measured = this; return { left: 1, top: 1, right: 101, bottom: 101, width: 100, height: 100 }; };
+    dom.window.document.elementFromPoint = () => covered ? dom.window.document.querySelector('#cover') : measured;
+    return { document: dom.window.document, cover: () => { covered = true; }, check: () => dom.window.eval(ASSET_LIBRARY_VISIBLE_EXPRESSION), close: () => dom.window.close() };
+  }
+  const good = fixture(); try { assert.equal(good.check(), true); } finally { good.close(); }
+  for (const [name, change] of [
+    ['unselected asset tab', f => f.document.querySelector('[data-primary-tab]').setAttribute('aria-selected', 'false')],
+    ['wrong categories', f => f.document.querySelector('[data-sub-category="character"]').remove()],
+    ['loading', f => f.document.querySelector('.omx-library-flow-root').insertAdjacentHTML('beforeend', '<div class="omx-library-flow-spinner"></div>')],
+    ['failed data request', f => f.document.querySelector('.omx-library-flow-root').insertAdjacentHTML('beforeend', '<button class="omx-library-flow-retry">重试</button>')],
+    ['generic error text', f => { f.document.querySelector('p').textContent = '加载失败'; }],
+    ['content outside selected surface', f => f.document.body.append(f.document.querySelector('.omx-library-flow-root'))],
+    ['retained command menu', f => f.document.body.insertAdjacentHTML('beforeend', '<div role="listbox">菜单</div>')],
+    ['occluded', f => f.cover()],
+  ]) await t.test(name, () => { const f = fixture(); try { change(f); assert.equal(f.check(), false); } finally { f.close(); } });
+});
 
 test('first-launch notice requires a visible actionable button and observed disappearance after real pointer input', async () => {
   let time = 0, released = false;

@@ -58,7 +58,7 @@ subsystem: "omnimux"
 
 任务准备从同一候选捕获源码，在工作树自有目录构建、打包并核对归档；通过已安装 App 的正式 `dsh plugin --profile web add` 离线安装。运行图位于系统真实临时目录下独占的 `omnimux-task-*`，绑定 task/run 与目录身份；HOME、DSH_HOME、agents、配置、缓存与 store 均私有，不继承宿主凭据。普通依赖先验证原声明再改写私有定位；包图不得指回仓库，缺依赖明确失败。核心 base/web-app 来自 packaged App；assets 所需 sidebar 作为固定支持包正式安装并核对发布字节。缺失的 ReactDOM peer 仅支持仓内已安装的固定 `react-dom@18.3.1` 及其声明依赖，复制成普通私有库、不注册为插件；其自身 React peer 仍须实际核验。合成业务夹具显式记账，不等于空数据首启；所有配置路由指向本机 mock，不产生真实模型证据。
 
-登录 URL 仅在受信调用者内存中用于本次同源 token→Cookie 交换，不打印、不持久化、不放入截图说明。浏览器进程不继承宿主密钥。完整核心应用启动或 `evidenceLevel=full` 不证明任务源码已安装加载。正式路径逐文件核安装 payload，通过同一应用 PID 的 inspector 核实际 server 文件 URL、源哈希及声明 peer 的解析位置/版本，再通过真实浏览器 CDP 核 client 注册与候选 bundle；只允许任务私有依赖图或 packaged App 的宿主 peer。旅程前后重核身份与字节。公开消费者据此计算 `userFresh`、`taskBinding=installed-loaded` 与 `task-source-installed-loaded`；缺观测、外源、歧义或漂移均不能通过，注入桩仍是非授权自报。
+登录 URL 仅在受信调用者内存中用于本次同源 token→Cookie 交换，不打印、不持久化、不放入截图说明。浏览器进程不继承宿主密钥。完整核心应用启动或 `evidenceLevel=full` 不证明任务源码已安装加载。正式路径逐文件核安装 payload，通过同一应用 PID 的 inspector 核实际 server 文件 URL、源哈希及声明 peer 的解析位置/版本，再通过真实浏览器 CDP 核 client 注册与候选 bundle；只允许任务私有依赖图或 packaged App 的宿主 peer。旅程前后重核身份与字节。公开消费者据此计算 `userFresh`、`taskBinding=installed-loaded` 与 `task-source-installed-loaded`；缺观测、外源、歧义或漂移均不能通过，注入桩仍是非授权自报。资产库路径按现行内嵌 Explore 或素材工作台结构核验选择状态、内容和未遮挡几何，弹窗/菜单须实际关闭；API 返回成功或隐藏 DOM 存在不能替代可见性。
 
 应用级入口为 `pnpm verify:app`（等价于 `node scripts/worktree-app-qa.mjs`），root 从脚本位置推导，只接受 `<repo>/.worktrees/<task>` 真实直接登记树。无显式请求的旧调用保留无契约 smoke：原件落 `<root>/.workbuddy/evidence/app-qa/<runId>/`，兼容摘要写 `<root>/docs/evidence/worktree-app-qa-report.json`；其 pass 只涵盖真实执行的固定安全名称冒烟，不签 task/fresh。legacy 使用静态断言名称白名单，普通自定义 `journey:<名称>` 不在白名单，会分类失败，不承诺任意 journey 任务成功。摘要不是权威封套，且现有摘要路径没有被 ignore，可能改变候选状态。
 

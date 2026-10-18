@@ -103,6 +103,37 @@ export async function dismissFirstLaunchNotice({ send, sleep, now = Date.now, ti
   return false;
 }
 
+/** Current inline Assets and material-workbench surfaces, with actual hit testing. */
+export const ASSET_LIBRARY_VISIBLE_EXPRESSION = `(() => {
+  const visible = element => {
+    if (!element) return false;
+    const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+    const left = Math.max(0, box.left), top = Math.max(0, box.top), right = Math.min(innerWidth, box.right), bottom = Math.min(innerHeight, box.bottom);
+    if (right <= left || bottom <= top || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+    return Boolean(hit && element.contains(hit));
+  };
+  if ([...document.querySelectorAll('[role="listbox"]')].some(visible)) return false;
+  if ([...document.querySelectorAll('.omx-hub-panel, [aria-label="素材工作台顶栏"], [aria-label="素材筛选工具栏"]')].some(visible)) return true;
+  for (const section of document.querySelectorAll('[data-omnimux-starter-guide] [data-omnimux-explore-section]')) {
+    const primary = section.querySelectorAll('button[role="tab"][data-primary-tab="assets"][aria-selected="true"]');
+    if (primary.length !== 1 || !visible(primary[0])) continue;
+    const categories = ['all', 'local-upload', 'ai-generated', 'digital-human', 'product-images', 'character'];
+    const tabs = [...section.querySelectorAll('button[role="tab"][data-sub-category]')];
+    if (tabs.length !== categories.length || categories.some(id => tabs.filter(tab => tab.dataset.subCategory === id).length !== 1)
+      || !tabs.every(visible) || tabs.find(tab => tab.dataset.subCategory === 'all')?.getAttribute('aria-selected') !== 'true') continue;
+    const roots = section.querySelectorAll('.omnimux-explore-grid-view-wrap > .omx-library-flow-root');
+    if (roots.length !== 1 || !visible(roots[0])) continue;
+    const root = roots[0];
+    if (root.querySelector('.omx-library-flow-spinner, .omx-library-flow-retry')) continue;
+    const empty = root.querySelector('.omx-library-flow-status > p');
+    if (empty?.textContent.trim() === '暂无素材' && visible(empty)) return true;
+    const grid = root.matches('[data-flow-container]') && root.querySelector('[role="region"][aria-label="素材瀑布流网格"]');
+    if (visible(grid) && [...grid.querySelectorAll('[data-library-lane="assets"]')].some(visible)) return true;
+  }
+  return false;
+})()`;
+
 /** 工作树根解析：只接受 <repo>/.worktrees/<task> 直接子级，失败时带可读原因。 */
 export function resolveWorktreeRoot(candidate, io = fs, repo = repositoryRoot) {
   const diagnosis = diagnoseWorktreeRoot(candidate, io, repo);
@@ -263,8 +294,7 @@ export async function assertBlankSessionHubPath({
     await sleep(250);
   } while (Date.now() < menuDeadline);
 
-  // 全屏 Explore 下菜单项只会滚动 Tab、不打开右栏 split；验收需强制 openWorkbench。
-  // 即使菜单点击成功，也再走一次 split 打开，保证 `.omx-hub-panel` 可见。
+  // 请求已注册工作台；其布尔返回只记诊断，实际 inline/split 可见性另核。
   {
     const fallback = await send('Runtime.evaluate', {
       expression: `(async () => {
@@ -297,13 +327,7 @@ export async function assertBlankSessionHubPath({
   let hubVisible = false;
   do {
     const hubCheck = await send('Runtime.evaluate', {
-      expression: `(() => [...document.querySelectorAll('.omx-hub-panel, [aria-label="素材工作台顶栏"], [aria-label="素材筛选工具栏"]')].some(element => {
-        const box = element.getBoundingClientRect(), style = getComputedStyle(element);
-        const left = Math.max(0, box.left), top = Math.max(0, box.top), right = Math.min(innerWidth, box.right), bottom = Math.min(innerHeight, box.bottom);
-        if (right <= left || bottom <= top || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-        const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
-        return Boolean(hit && element.contains(hit));
-      }))()`,
+      expression: ASSET_LIBRARY_VISIBLE_EXPRESSION,
       returnByValue: true,
     });
     hubVisible = hubCheck?.result?.value === true;
@@ -313,7 +337,7 @@ export async function assertBlankSessionHubPath({
   } while (Date.now() < hubDeadline);
   detail.assetHubOpened = hubVisible;
   detail.librarySelected = clickedLibrary;
-  detail.workbenchOpened = usedWorkbenchFallback;
+  detail.workbenchRequestAccepted = usedWorkbenchFallback;
   assertions.push({
     name: 'asset-hub-reachable-via-library',
     pass: hubVisible && clickedLibrary,
@@ -1035,7 +1059,7 @@ export function createAppQaRunner(deps = {}) {
         width: Number(browser.screenshot.width) || 0, height: Number(browser.screenshot.height) || 0, bytes: Number(browser.screenshot.bytes) || 0 };
       if (browser.hubPath) report.hubPath = { clickedNewSession: browser.hubPath.clickedNewSession === true,
         exploreVisible: browser.hubPath.exploreVisible === true, assetHubOpened: browser.hubPath.assetHubOpened === true,
-        librarySelected: browser.hubPath.librarySelected === true, workbenchOpened: browser.hubPath.workbenchOpened === true };
+        librarySelected: browser.hubPath.librarySelected === true, workbenchRequestAccepted: browser.hubPath.workbenchRequestAccepted === true };
       if (request && report.assertions.some(item => item.name === 'screenshot-png-verified' && item.pass)) {
         try { assertPng(io.readFileSync(join(evidenceDir, 'app-home.png'))); }
         catch { report.errors.push('TEST_APP_QA_SCREENSHOT_MISSING_OR_INVALID'); }
