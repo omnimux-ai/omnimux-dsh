@@ -47,3 +47,7 @@
 ## #3385 服务端子任务
 
 分析范围沿用POST记录/analyze；显式scope为post/body/media，directions仅接受content/expression/creative，media仅接受记录内media_index。结果按analysis_results的post/body/media:<index>保存，含范围、方向、输入指纹、running/done/failed/partial、live/legacy_unknown、模型、result/error与时间。缺失整帖附件明确partial，不以子集调用冒充完整分析；失败/取消不走本地模板。无scope兼容首视频并保留旧deconstruction消费。正文翻译scope=body只读原始content，保存body_translation和source_fingerprint，旧翻译保持兼容。白名单保留creation_draft，细节由创作子任务实现。服务只复用现有工具，不发真实请求、不安装开发版；验收为有针对性的离线单元/集成，真实运行与界面由父任务统一完成。
+
+## 大视频真实传输修复
+
+范围分析在模型调用前核算整帖内联载荷（base64、正文及封装余量），复用正式videoProcess的video_inline_analysis_prepare，不提高模型输入上限。超预算视频保留全时长和可选音轨，禁止默认前100秒或去音轨；准备失败/预算不符时不发模型请求。模型渠道的数量、格式和时长准入仍由Hub负责，不能将准备成功称为模型验收。产物只在独立请求临时目录，成功/失败/取消均清理；原始素材不变。实际98,376,196字节源文件仅离线预处理取证，不发真实模型请求。

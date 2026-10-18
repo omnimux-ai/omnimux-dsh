@@ -1,5 +1,7 @@
 import { realpathSync, statSync } from 'node:fs'
-import { basename, isAbsolute, relative, sep } from 'node:path'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { basename, isAbsolute, join, relative, sep } from 'node:path'
 import { analysisInputFingerprint, analysisMediaItems, sourceFingerprint } from './analysis-input.js'
 export { analysisInputFingerprint, sourceFingerprint } from './analysis-input.js'
 import { extractStructuredBreakdown } from './analyzer.js'
@@ -83,6 +85,59 @@ export function prepareAnalysis(item, selection, paths) {
   return { input_fingerprint, references, prompt, missing, empty: !body.trim() && !targets.length, body }
 }
 
+// Conservative inline transport budget from the existing video preparation seam.
+// The Hub retains model/channel count, format and duration admission authority.
+const INLINE_REQUEST_BYTES = 9 * 1024 * 1024
+const ENVELOPE_RESERVE_BYTES = 64 * 1024
+const encodedBytes = (size) => 4 * Math.ceil(size / 3)
+
+/** Prepare complete saved inputs for inline transport, never a clipped substitute.
+ * @param {{references: AnalysisReference[], prompt: string}} prepared
+ * @param {{videoProcess?: {execute: Function}, signal?: AbortSignal}} deps
+ * @returns {Promise<{references: AnalysisReference[], cleanup: () => Promise<void>}>}
+ */
+export async function prepareAnalysisTransport(prepared, { videoProcess, signal } = {}) {
+  let directory
+  const cleanup = async () => { if (directory) await rm(directory, { recursive: true, force: true }) }
+  try {
+    cancelled(signal)
+    const sizes = prepared.references.map((ref) => statSync(ref.pathOrUrl).size)
+    let remaining = INLINE_REQUEST_BYTES - ENVELOPE_RESERVE_BYTES - Buffer.byteLength(JSON.stringify(prepared.prompt))
+    const references = prepared.references.map((ref) => ({ ...ref }))
+    const videos = []
+    for (let i = 0; i < references.length; i += 1) {
+      if (references[i].type === 'video') videos.push(i)
+      else remaining -= encodedBytes(sizes[i]) + 256
+    }
+    if (remaining <= 0) throw new Error('整帖图片或正文超过分析传输容量，请选择具体素材或正文分析')
+    // Reserve small videos at original size, and share the rest among large ones.
+    let pending = [...videos]
+    while (pending.length) {
+      const share = Math.floor(remaining / pending.length)
+      const small = pending.filter((i) => encodedBytes(sizes[i]) + 256 <= share && sizes[i] <= 20 * 1024 * 1024)
+      if (!small.length) break
+      for (const i of small) remaining -= encodedBytes(sizes[i]) + 256
+      pending = pending.filter((i) => !small.includes(i))
+    }
+    if (pending.length && !videoProcess?.execute) throw new Error('视频较大，需要视频处理能力准备完整视频后再分析')
+    const maxRequestBytes = Math.min(20 * 1024 * 1024, 3 * Math.floor((Math.floor(remaining / (pending.length || 1)) - 256) / 4))
+    if (pending.length && maxRequestBytes <= 0) throw new Error('整帖素材超过分析传输容量，请选择具体素材分析')
+    for (const i of pending) {
+      cancelled(signal)
+      directory ||= await mkdtemp(join(tmpdir(), 'inspiration-analysis-'))
+      const dest = join(directory, `video-${i}.mp4`)
+      const output = await videoProcess.execute({ capability: 'video_inline_analysis_prepare', input: { videoUrl: references[i].pathOrUrl, maxRequestBytes, preserveTimeline: true, keepAudio: true }, dest, signal })
+      cancelled(signal)
+      const file = output?.files?.find((file) => file.path === dest && file.kind === 'video')
+      if (output?.mode !== 'live' || !file || file.meta?.preserveTimeline !== true || file.meta?.keepAudio !== true || file.meta?.overshoot || statSync(dest).size > maxRequestBytes) throw new Error('完整视频准备未满足分析容量，未提交不完整分析')
+      references[i] = { type: 'video', pathOrUrl: dest }
+    }
+    const total = references.reduce((bytes, ref) => bytes + encodedBytes(statSync(ref.pathOrUrl).size) + 256, Buffer.byteLength(JSON.stringify(prepared.prompt)) + ENVELOPE_RESERVE_BYTES)
+    if (total > INLINE_REQUEST_BYTES) throw new Error('整帖素材超过分析传输容量，未提交不完整分析')
+    return { references, cleanup }
+  } catch (error) { await cleanup(); throw error }
+}
+
 function parsedResult(markdown) {
   const parsed = extractStructuredBreakdown(markdown)
   return { ...parsed, summary: parsed.summary !== '短视频灵感素材' ? parsed.summary : (markdown.split('\n').find((line) => line.trim() && !/^\s*#/.test(line))?.trim().slice(0, 160) || ''), markdown, sections: [] }
@@ -106,6 +161,7 @@ export async function handleScopedAnalysis(ctx, options = {}) {
   const previous = item.analysis_results?.[key]
   const prior = previous?.input_fingerprint === prepared.input_fingerprint ? previous : null
   const entry = { ...selection, input_fingerprint: prepared.input_fingerprint, status: 'running', source: prior?.source || 'legacy_unknown', model: prior?.model || '', result: prior?.result || null, error: null, started_at: new Date().toISOString(), analyzed_at: prior?.analyzed_at || null }
+  let transport
   try {
     ctx.store.updateAnalysis(ctx.id, key, entry)
     if (prepared.missing) {
@@ -114,9 +170,10 @@ export async function handleScopedAnalysis(ctx, options = {}) {
     }
     if (prepared.empty || (selection.scope === 'body' && !prepared.body.trim())) throw Object.assign(new Error('暂无完整正文可分析'), { status: 422 })
     if (!options.execute && !ctx.textComplete?.execute) throw new Error('分析能力未就绪，请检查模型设置')
+    if (!options.execute) transport = await prepareAnalysisTransport(prepared, { videoProcess: ctx.videoProcess || ctx.get?.('videoProcess'), signal: ctx.signal })
     const response = options.execute
       ? await options.execute(prepared)
-      : await ctx.textComplete.execute({ prompt: prepared.prompt, reason: `inspiration-${selection.scope}-analysis`, references: prepared.references, max_tokens: 4096 }, { signal: ctx.signal })
+      : await ctx.textComplete.execute({ prompt: prepared.prompt, reason: `inspiration-${selection.scope}-analysis`, references: transport.references, max_tokens: 4096 }, { signal: ctx.signal })
     cancelled(ctx.signal)
     if (response?.mode !== 'live' || typeof response.text !== 'string' || !response.text.trim()) throw new Error('分析未返回真实有效结果，请重试')
     const current = ctx.store.get(ctx.id)
@@ -135,7 +192,7 @@ export async function handleScopedAnalysis(ctx, options = {}) {
     const row = current ? ctx.store.updateAnalysis(ctx.id, key, { ...entry, status: 'failed', error: aborted ? '分析已取消，可重新分析' : (ctx.formatErrorMessage?.(error) || error.message || String(error)) }) : null
     if (aborted) throw Object.assign(new Error('分析已取消'), { name: 'AbortError', code: 'ABORT_ERR' })
     return fail(error.status || 502, row?.analysis_results[key].error || '分析失败，请重试', row, key)
-  } finally { locks.delete(lock) }
+  } finally { try { await transport?.cleanup() } finally { locks.delete(lock) } }
 }
 
 /** Body translation never reads the generated script or overwrites its translation. */
