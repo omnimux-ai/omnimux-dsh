@@ -5,7 +5,7 @@ type: "core"
 status: "living"
 authority: "L1"
 date: "2026-08-14"
-updated: "2026-10-08"
+updated: "2026-10-18"
 authors: ["x", "agent-architect"]
 subsystem: "global"
 tags: ["capabilities", "matrix", "truth", "seams"]
@@ -35,6 +35,9 @@ Honest surface for both coding agents and the product agent. If a row is stub or
 | `audioGenerate` / `omnimux_audio_submit` | **real** (keyless) | Default `suno`. Also routes `gpt-4o-mini-tts` and `whisper-1`. Full seam + workflow mapping |
 | `needs-omnimux` error | **real** (keyless) | `identity.require()` throws `needs-omnimux` when unsigned. Official-only tools throw the same code when unsigned |
 | `omnimux_social_data` | **partial** (live `x/tweet` probed) | Posts top-level business fields (`tweet_id`, `aweme_id`, …) with dummy `messages`; parses TikHub-style `{code,data}` envelope. Live 2026-08-30: `x/tweet` returned `text`/`display_text`, `author`, engagement, `media.video[].variants[].url` (mp4/m3u8) + thumbs. Other pairs mapped from docs but not all live-proven. Needs `OMNIMUX_API_KEY` |
+| 灵感帖子阅读与媒体选择 | **unproven** | #3383：正文、原文复制、图片/图组/视频选择及独立译文已实现。离线及隔离浏览器链路证据不证明完整 App 宿主可用；未提升既有等级。行为与接口见[灵感插件说明](../plugins/omnimux-inspiration/README.md)。 |
+| 灵感按对象分析 | **unproven** | #3385：整帖/正文/具体媒体，方向与实际输入绑定，按范围保存 `running/done/failed/partial` 和输入指纹；真实失败不回退固定模板，历史来源标 `legacy_unknown`。离线桩返回 `mode: live` 不是真实调用证据；本任务未验收真实模型质量。 |
+| 灵感创作草稿、视频片段与附件交接 | **unproven** | #3386：选择参考、手工草稿保护、明确视频起止、实际裁片、来源说明及现有会话附件交接已实现；不自动发送或生成。隔离裁片/页面验证与正式宿主交接分别计证，本任务未完成完整 App 宿主验收。 |
 | Analytics tools / routes | **unproven** | `omnimux_analytics_*` (`daily_metrics`, `best_time`, `frequency`, `content_decay`, `follower_stats`, `posts`, `sync_external`, `inbox`) + Host `/omnimux/analytics/*` wrap `/api/social/v1/analytics/*`. Unauthenticated → `needs-omnimux` |
 | `omnimux_page_fetch` | **real** (unit + live HTTP + L2 Agent session) | Hub `src/reader/*`. Live 2026-08-23 HTTP probe + 2026-08-24 ego L2: Agent called `omnimux_page_fetch` → `mode live` / `jina-reader-v1` / `Title: Example Domain`; `ftp://` → `url must be http(s)`; products URL-create fetched then `products_create` (`prd_fb7ab277`). Tool `response.text()`, never `withSk` JSON. Resolves `OMNIMUX_API_KEY` from env then `$DSH_HOME/.credentials.yaml`. App window QA still needs a new session after reopen |
 | Accounts / publish tools | **unproven** | `omnimux_accounts_*` + `omnimux_publish_*` wrap `/api/social/v1`. Unauthenticated → `needs-omnimux` |

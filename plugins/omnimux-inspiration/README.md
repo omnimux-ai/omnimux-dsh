@@ -1,45 +1,71 @@
 # omnimux-inspiration
 
-Pinned first-level plugin for browsing OmniMux inspiration items. It renders its own sidebar row under 新会话 and opens a standalone product page over the conversation column — it does not go through the Apps catalog, the `omnimux-app-open` event, or a Settings seat. The browser only calls Host `/omnimux/inspiration` (JSON) and `/omnimux/inspiration/media/...` (covers). It does not import the hub and does not read `OMNIMUX_*` secrets.
+灵感插件提供帖子阅读、按对象分析和创作参考整理。页面只调用 Host 的 `/omnimux/inspiration`、`/omnimux/inspiration/local` 及对应媒体路由；账户、凭据和模型请求由执行中枢提供，业务插件不直接访问提供方。
 
-Install:
+安装：
 
 ```sh
 dsh plugin --profile omnimux add ./plugins/omnimux-inspiration
 ```
 
-After install, restart the Host. The **灵感社区** row appears under 新会话 (placed by the shared sidebar coordinator, rank 7) and opens the inspiration stage directly. Filter by type / favorite / sort, search, or open a source URL. Unsigned users see a sign-in hint; login stays on the hub Profile page. Placement: repo `docs/contracts/settings-ui.md`.
+安装后重启宿主，从侧栏打开灵感。登录由执行中枢的个人资料入口处理。页面位置遵循[设置与页面入口合同](../../docs/contracts/settings-ui.md)。
 
-v1 is read-first. Creating / bulk import stays on the microservice CLI and hub tools (`omnimux_inspiration_*`).
+## 帖子阅读与按对象分析
 
-## Import: outbound requests and how to turn them off
+- 正文与媒体分开阅读，保留完整原文、作者和来源；原文可以复制，正文译文独立保存，不以生成的分镜台词代替原文。
+- 图片、图组、视频与混合帖按原顺序选择素材；图片支持完整查看与放大，视频保持独立播放。
+- 分析对象是整帖、正文或具体一项媒体；方向可选内容、表达、创作。整帖提交完整正文和全部已保存附件，不能只分析首视频便称为整帖完成。
+- 每个对象独立保存结果、输入指纹、来源、模型和状态。原文或素材改变后，旧结果不能直接用于当前对象。
+- 只有真实工具返回有效结果才记为完成；缺素材标记部分未完成，取消或失败保留原因并允许重试，不生成固定带货模板冒充分析。历史来源未知的结果与新模型结果分开显示。
 
-Importing a social link uses the hub (`omnimux_social_data`). X posts first read official public embed data, including video and photo attachments; other platforms use the configured cloud resolver. When that yields no
-content, the plugin falls back to public, no-key endpoints and sends **the URL you are importing** to them:
+正文翻译只读取保存的原文，写入 `body_translation` 并绑定原文指纹；旧脚本翻译仍保留在 `script_translation`。推特新导入的标题和正文在解析源解码一层实体，已有库记录不会自动批量改写。
 
-| Host | Purpose |
+## 保存草稿与用于创作
+
+可选择正文、具体图片或视频、当前有效的分析思路作为参考，并注明借鉴用途。自动草稿随参考变化更新；手工编辑的草稿保留，关闭后可恢复。
+
+选视频时必须明确起止时间。服务端从记录内素材解析路径，核验时长和媒体后生成实际片段；选图片则准备所选图片。客户端不能提供任意本机路径，准备过程不改动原始素材。
+
+“用于创作”先保存草稿、准备所选文件及来源说明，再通过现有新会话与附件能力带入。附件与草稿须核对一致；来源、片段或草稿变化、文件准备失败、附件未全部接收时，不宣称交接完成。不自动发送消息或触发生成，正文和图片不默认进入商品替换模板。
+
+## 本地接口与记录
+
+以下路径都位于 `/omnimux/inspiration/local/:id/`：
+
+| 路径 | 请求与行为 |
 | --- | --- |
-| `www.tikwm.com` | TikTok stream resolver |
-| `www.tiktok.com` | TikTok oEmbed (title / cover) |
-| `www.youtube.com` | YouTube oEmbed (title / cover) |
-| `cdn.syndication.twimg.com` | Official X post embed data (videos / photos / text; hub-owned) |
-| `publish.twitter.com` | X post oEmbed (author / text only, last resort) |
+| `analyze` | POST `{ scope: 'post' \| 'body' \| 'media', media_index?, directions? }`；方向为 `content`、`expression`、`creative`。无范围的旧请求兼容首视频分析。 |
+| `translate` | POST `{ scope: 'body', lang }` 翻译原文；不带此范围时保留旧脚本翻译行为。 |
+| `creation-draft` | POST `{ draft }` 保存领域草稿，不开启会话或生成媒体。 |
+| `creation-reference` | POST `{ draft }` 准备来源说明及实际选中的图片、视频片段，返回已保存参考编号。 |
+| `creation-attachments` | POST `{ sessionId, reference_id }` 将已准备、仍有效的参考物化到目标会话；不接收客户端指定的文件路径。 |
 
-Only the post URL and a browser user agent are sent — no tokens, no library content, no credentials. The
-resolver chain is bounded by a 10 s total budget and an 8 s per-request timeout.
+`analysis_results` 以 `post`、`body`、`media:<原索引>` 寻址。条目保留范围、方向、输入指纹、`running` / `done` / `failed` / `partial`、`live` / `legacy_unknown`、模型、结果、错误和时间。`live` 是执行结果来源字段，不能用离线测试返回的同名字段替代真实模型验收。
 
-Set the local switch to disable public metadata reads (including the hub X source); the import then relies on the cloud
-resolver alone:
+本地帖子、译文和草稿保存于 `<DSH_HOME>/omnimux/inspirations/`。分析失败不删除已导入素材；替换、删除及失败清理处理记录所属文件，保留用户手工草稿的边界由领域存储负责。
+
+## 导入外发与关闭方式
+
+社媒导入使用执行中枢的 `omnimux_social_data`。推特优先读取官方公开嵌入数据，包含正文、图片和视频；其他平台使用配置的云端解析。未取得内容时，现有公开备用来源可能接收正在导入的帖子链接：
+
+| 主机 | 用途 |
+| --- | --- |
+| `www.tikwm.com` | TikTok 视频直链解析 |
+| `www.tiktok.com` | TikTok oEmbed 标题与封面 |
+| `www.youtube.com` | YouTube oEmbed 标题与封面 |
+| `cdn.syndication.twimg.com` | 官方推特嵌入数据，归执行中枢管理 |
+| `publish.twitter.com` | 推特末级 oEmbed，仅作者与正文 |
+
+这些公开解析只发送帖子链接和浏览器标识，不发送凭据或灵感库内容。备用解析总预算为 10 秒，单次请求上限为 8 秒。设置以下本地开关可关闭公开元数据读取，包括执行中枢的推特公开来源；此时只依赖云端解析：
 
 ```sh
 OMNIMUX_INSPIRATION_SOCIAL_FALLBACK=off
 ```
 
-Media downloads are validated separately: only public `http(s)` targets are fetched, loopback / private /
-link-local / `.local` / `.internal` targets and `file:` URLs are refused on the target and on every redirect
-hop, and each download is bounded by a 60 s timeout and a 512 MB byte ceiling.
+媒体下载单独校验目标及每次重定向，只接受公开 `http(s)` 地址，拒绝本地、私有、链路本地地址以及 `.local`、`.internal` 和 `file:`。每份文件限时 60 秒、限量 512 MB。
 
+附件逐项下载并按原顺序保存；真实照片全部保存后可记为就绪，仅正文备用结果仍标记降级。任何必要附件失败都会使该次导入失败并清理本次文件。
 
-Imported post attachments are downloaded individually and stored in source order. The detail player can
-switch between videos and photos. A photo post is ready only after its images are saved; a text-only
-fallback remains degraded. A failed attachment fails the import and cleans up files from that attempt.
+## 验证边界
+
+本次帖子详情改动具有离线检查及隔离浏览器链路证据；隔离浏览器中的模型与正式会话附件依赖桩不构成真实模型调用或完整 App 宿主验收。真实模型输出质量、当前账户模型配置和完整宿主中的交接仍未在本任务验收，能力等级不提升。当前状态见[能力矩阵](../../docs/capabilities.md)，验收规则见[插件质量合同](../../docs/contracts/plugin-qa.md)。
