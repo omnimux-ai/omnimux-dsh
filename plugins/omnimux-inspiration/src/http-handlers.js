@@ -37,6 +37,7 @@ import {
 import { getCanonicalItemKey, normalizeUrl } from './url-normalizer.js'
 import { extractVideoPoster } from './media-export.js'
 import { isDownloadableHttpUrl, isPublicHttpUrl } from './url-policy.js'
+import { localMediaPaths } from './local-store.js'
 import {
   buildTranslatePrompt,
   extractScriptStructure,
@@ -116,16 +117,14 @@ function duplicateBody(existing, returnExisting) {
 }
 
 /**
- * A record that holds no video is a degraded import: `resolveImportType` only
- * returns `video` when a local video file was written, so `link`/`image` is the
- * persisted marker of "no direct video link was available". Re-importing the
- * same URL must be allowed to upgrade such a record — otherwise the 409 lock
- * makes a degraded item impossible to ever turn into a video.
+ * Complete galleries and videos are duplicates. Legacy image/link records
+ * without a saved attachment collection can be re-resolved to obtain media.
  * @param {Record<string, any> | null | undefined} item
  * @returns {boolean}
  */
 function needsVideoUpgrade(item) {
   if (!item || typeof item !== 'object') return false
+  if (item.media_items?.length > 0 && item.import_status === IMPORT_STATUS_READY) return false
   return item.type !== 'video'
 }
 
@@ -243,16 +242,22 @@ function bestVariantUrl(variants) {
   let bestBitrate = -1
   for (const raw of asArray(variants)) {
     const variant = isPlainObject(raw) ? raw : {}
-    const url = httpText(variant.url) || httpText(raw)
+    const url = httpText(variant.url) || httpText(variant.src) || httpText(raw)
     if (!url) continue
-    if (!isMp4Variant(url, firstText([variant.content_type, variant.contentType]))) continue
-    const bitrate = firstNumber([variant.bitrate, variant.bit_rate, variant.height]) ?? 0
+    if (!isMp4Variant(url, firstText([variant.content_type, variant.contentType, typeof variant.type === 'string' ? variant.type : '']))) continue
+    const bitrate = firstNumber([variant.bitrate, variant.bit_rate, variant.height]) ?? videoUrlResolution(url)
     if (bitrate > bestBitrate) {
       bestUrl = url
       bestBitrate = bitrate
     }
   }
   return bestUrl
+}
+
+/** Resolution encoded in X's bitrate-free public video variants. */
+function videoUrlResolution(url) {
+  const dimensions = urlPathname(url).match(/\/(\d+)x(\d+)\//)
+  return dimensions ? Number(dimensions[1]) * Number(dimensions[2]) : 0
 }
 
 /**
@@ -398,6 +403,8 @@ function coverUrlFromLayer(layer) {
     layer.thumbnail,
     layer.origin_cover,
     layer.dynamic_cover,
+    asObject(layer.video).poster,
+    coverFromMediaList(layer.mediaDetails),
     coverFromMediaList(asObject(layer.media).video),
     coverFromMediaList(asObject(layer.entities).media),
     coverFromMediaList(asObject(layer.extended_entities).media),
@@ -520,6 +527,109 @@ function imagesFromLayer(layer) {
     .filter(Boolean)
 }
 
+/** @typedef {{ type: 'video' | 'image', url: string }} SocialMediaItem */
+
+/**
+ * Read post-owned media in the order provided by the richest list. The other
+ * supported fields are mirrors, not another set of attachments.
+ * @param {Record<string, any>} layer
+ * @returns {{ items: SocialMediaItem[], unavailable: boolean, posters: string[] }}
+ */
+function mediaItemsFromLayer(layer) {
+  /** @type {SocialMediaItem[]} */
+  const items = []
+  const posters = []
+  let unavailable = false
+  const append = (raw, assumedType = '') => {
+    const media = asObject(raw)
+    const video = firstPublicHttpUrl([
+      bestVariantUrl(media.variants),
+      bestVariantUrl(asObject(media.video_info).variants),
+      (assumedType === 'video' || media.type === 'video') ? mediaLikeUrl(media.url || media.src || raw) : '',
+    ])
+    if (video) {
+      items.push({ type: 'video', url: video })
+      const poster = firstPublicHttpUrl([media.media_url_https, media.media_url, media.poster])
+      if (poster) posters.push(poster)
+      return
+    }
+    const type = firstText([media.type, assumedType])
+    if (type === 'video' || type === 'animated_gif') {
+      unavailable = true
+      return
+    }
+    const image = firstPublicHttpUrl([media.media_url_https, media.media_url, media.url, media.src, typeof raw === 'string' ? raw : ''])
+    if (type === 'photo' || type === 'image') {
+      if (image) items.push({ type: 'image', url: image })
+      else unavailable = true
+    }
+  }
+  for (const list of [layer.mediaDetails, asObject(layer.extended_entities).media, asObject(layer.entities).media]) {
+    for (const raw of asArray(list)) append(raw)
+  }
+  for (const raw of asArray(asObject(layer.media).video)) append(raw, 'video')
+  for (const raw of [...asArray(asObject(layer.media).photo), ...asArray(asObject(layer.media).photos), ...asArray(layer.photos)]) append(raw, 'image')
+  const singleVideo = videoUrlFromLayer(layer) || firstPublicHttpUrl([bestVariantUrl(asObject(layer.video).variants)])
+  if (singleVideo) {
+    items.push({ type: 'video', url: singleVideo })
+    const poster = firstPublicHttpUrl([asObject(layer.video).poster])
+    if (poster) posters.push(poster)
+  }
+  for (const url of imagesFromLayer(layer)) {
+    if (isPublicHttpUrl(url)) items.push({ type: 'image', url })
+  }
+  return { items, unavailable, posters }
+}
+
+/** Treat quality ladders and image-size aliases as one asset, never its poster. */
+function mediaIdentity(item) {
+  const url = new URL(item.url)
+  if (/(^|\.)twimg\.com$/i.test(url.hostname)) {
+    const video = url.pathname.match(/^\/(amplify_video|ext_tw_video|tweet_video)\/([^/]+)/)
+    if (item.type === 'video' && video) return `${item.type}:${video[1]}:${video[2]}`
+    if (item.type === 'image') {
+      const pathname = url.pathname.replace(/:\w+$/, '').replace(/\.(jpe?g|png|webp|gif)$/i, '')
+      return `${item.type}:${url.hostname}${pathname}`
+    }
+  }
+  return `${item.type}:${item.url}`
+}
+
+/** Rich ordered post lists take precedence over flat wrapper mirrors. */
+function mediaListPriority(layer) {
+  if (asArray(layer.mediaDetails).length) return 3
+  if (asArray(asObject(layer.extended_entities).media).length) return 2
+  if (asArray(asObject(layer.entities).media).length) return 1
+  return 0
+}
+
+/** @param {Array<Record<string, any>>} layers @returns {{ items: SocialMediaItem[], unavailable: boolean }} */
+function collectMediaItems(layers) {
+  /** @type {SocialMediaItem[]} */
+  const items = []
+  const indices = new Map()
+  const posters = new Set()
+  const orderedLayers = [...layers].sort((left, right) => mediaListPriority(right) - mediaListPriority(left))
+  const priority = mediaListPriority(orderedLayers[0])
+  let unavailable = false
+  for (const layer of orderedLayers) {
+    const collection = mediaItemsFromLayer(layer)
+    for (const url of collection.posters) posters.add(mediaIdentity({ type: 'image', url }))
+    if (mediaListPriority(layer) === priority) unavailable ||= collection.unavailable
+    for (const item of collection.items) {
+      const key = mediaIdentity(item)
+      const existing = indices.get(key)
+      if (existing === undefined) {
+        indices.set(key, items.length)
+        items.push(item)
+      } else if (item.type === 'video' && videoUrlResolution(item.url) > videoUrlResolution(items[existing].url)) {
+        items[existing] = item
+      }
+    }
+  }
+  return { items: items.filter((item) => item.type !== 'image' || !posters.has(mediaIdentity(item))), unavailable }
+}
+
 function resolvedUrlFromLayer(layer) {
   return firstHttpUrl([layer.url, layer.canonical_url, layer.permalink])
 }
@@ -577,7 +687,6 @@ function pickLayerValue(layers, read, isBlank) {
 }
 
 const isBlankText = (value) => !value
-const isBlankArray = (value) => value.length === 0
 const isBlankNumber = (value) => value === null || value === undefined
 const isBlankObject = (value) => Object.keys(value).length === 0
 
@@ -595,9 +704,9 @@ const isBlankObject = (value) => Object.keys(value).length === 0
  * @param {unknown} data raw `data` envelope from the cloud tool or the fallback resolver
  * @returns {{
  *   title: string, text: string, cover_url: string, video_url: string,
- *   images: string[], author: Record<string, any>, stats: Record<string, any>,
+ *   images: string[], media_items: SocialMediaItem[], author: Record<string, any>, stats: Record<string, any>,
  *   duration: number | null, published_at: string, resolvedUrl: string,
- *   has_metadata: boolean,
+ *   has_metadata: boolean, unavailable_media: boolean,
  * }}
  */
 export function parseSocialMeta(data) {
@@ -605,8 +714,9 @@ export function parseSocialMeta(data) {
   const text = pickLayerValue(layers, textFromLayer, isBlankText)
   const title = pickLayerValue(layers, titleFromLayer, isBlankText)
   const cover_url = pickLayerValue(layers, coverUrlFromLayer, isBlankText)
-  const video_url = pickLayerValue(layers, videoUrlFromLayer, isBlankText)
-  const images = pickLayerValue(layers, imagesFromLayer, isBlankArray)
+  const { items: media_items, unavailable: unavailable_media } = collectMediaItems(layers)
+  const video_url = media_items.find((item) => item.type === 'video')?.url || ''
+  const images = media_items.filter((item) => item.type === 'image').map((item) => item.url)
   const author = pickLayerValue(layers, authorFromLayer, isBlankObject)
   const stats = pickLayerValue(layers, statsFromLayer, isBlankObject)
   const duration = pickLayerValue(layers, durationFromLayer, isBlankNumber)
@@ -631,12 +741,14 @@ export function parseSocialMeta(data) {
     cover_url,
     video_url,
     images,
+    media_items,
     author,
     stats,
     duration,
     published_at,
     resolvedUrl,
     has_metadata,
+    unavailable_media,
   }
 }
 
@@ -1450,24 +1562,24 @@ async function reportStage(args, stage) {
 /**
  * Persist a resolved social item.
  *
- * A downloadable direct video link keeps the full pipeline (download video +
- * cover, `type: 'video'`, AI deconstruction). Without one — a photo post, a
- * YouTube page, a platform without a public stream — the item is still imported
- * as `link`/`image` with the metadata that was resolved, flagged as degraded so
- * callers can tell the difference. Only a completely empty envelope fails.
+ * Every resolved attachment must be saved before the item becomes ready. Video
+ * posters are optional previews. A metadata-only result remains degraded, and a
+ * completely empty envelope fails.
  *
  * An AI breakdown that fails does not fail the import either: the item is stored
  * whole with the reason on `import_error`, and the caller sees it on the row.
  */
 async function persistImportedItem(args, meta) {
   if (args.signal?.aborted) throw createAbortError()
+  if (meta.unavailable_media) return fail(422, '该帖子部分素材未提供可下载地址，无法完整导入，请稍后重试')
   const videoUrl = HTTP_URL_RE.test(meta.video_url || '') ? meta.video_url : ''
   if (!videoUrl && !meta.has_metadata) {
     return fail(422, '未从该链接解析到可入库的内容（标题、文案、封面与视频直链均为空）')
   }
-  if (videoUrl) await reportStage(args, IMPORT_STAGES.DOWNLOADING)
-  const media = videoUrl
-    ? await downloadImportMedia(args, meta, videoUrl)
+  const hasMedia = meta.media_items.length > 0
+  if (hasMedia) await reportStage(args, IMPORT_STAGES.DOWNLOADING)
+  const media = hasMedia
+    ? await downloadImportMedia(args, meta)
     : await downloadImportCover(args, meta)
   if (media.error) return media.error
 
@@ -1478,7 +1590,7 @@ async function persistImportedItem(args, meta) {
 
     await reportStage(args, IMPORT_STAGES.PERSISTING)
     const record = await persistImportedRecord(args, buildImportRecord(args, meta, media, analysis))
-    if (videoUrl) return { status: 200, body: { data: record } }
+    if (hasMedia) return { status: 200, body: { data: record } }
     return {
       status: 200,
       body: {
@@ -1488,11 +1600,7 @@ async function persistImportedItem(args, meta) {
       },
     }
   } catch (err) {
-    if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR' || args.signal?.aborted) {
-      if (media.localPaths) {
-        for (const p of Object.values(media.localPaths)) removeQuietly(p)
-      }
-    }
+    for (const path of localMediaPaths(media.localPaths)) removeQuietly(path)
     throw err
   }
 }
@@ -1559,8 +1667,8 @@ async function maybeAnalyze(args, media, meta) {
 }
 
 /**
- * Item type for a degraded import: image-only content becomes `image`,
- * anything else keeps its metadata as a `link`.
+ * A saved video leads the preview; photo collections become images. A result
+ * carrying only a poster and metadata remains a link.
  * @param {Record<string, any>} meta
  * @param {{ localVideoPath: string }} media
  * @returns {'video' | 'image' | 'link'}
@@ -1591,7 +1699,6 @@ function resolveImportType(meta, media) {
  */
 function buildImportRecord(args, meta, media, analysis = {}) {
   const coverName = media.localCoverPath ? media.localCoverPath.split('/').pop() : ''
-  const videoName = media.localVideoPath ? media.localVideoPath.split('/').pop() : ''
   // A cover that was downloaded but cannot be rendered (HEIC, say) is not a
   // cover. Falling back to `meta.cover_url` there would re-publish the same
   // undecodable bytes as a remote URL, and every consumer would mount an image
@@ -1599,10 +1706,11 @@ function buildImportRecord(args, meta, media, analysis = {}) {
   // all read this field. Only a *failed* download (`null`) keeps the remote
   // fallback, which is the pre-existing behaviour for a poster that has no local
   // copy.
+  const imageCoverUrl = (media.mediaItems || []).find((item) => item.type === 'image' && item.url.endsWith(`/${coverName}`))?.url
   const cover_url = media.coverRenderable === false
     ? ''
     : coverName
-      ? `/omnimux/inspiration/local/media/covers/${coverName}`
+      ? (imageCoverUrl || `/omnimux/inspiration/local/media/covers/${coverName}`)
       : meta.cover_url
   return {
     title: meta.title || args.rawUrl,
@@ -1611,7 +1719,8 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     source_platform: args.platform,
     source_url: args.rawUrl,
     cover_url,
-    media_urls: videoName ? [`/omnimux/inspiration/local/media/videos/${videoName}`] : [],
+    media_items: media.mediaItems || [],
+    media_urls: (media.mediaItems || []).filter((item) => item.type === 'video').map((item) => item.url),
     local_paths: media.localPaths,
     tags: args.customTags,
     auto_analyze: args.autoAnalyze !== false,
@@ -1621,10 +1730,10 @@ function buildImportRecord(args, meta, media, analysis = {}) {
     published_at: meta.published_at,
     deconstruction: analysis.deconstruction ?? null,
     // This record is the completion of an import, so it settles the placeholder
-    // the background path published: `degraded` when no video stream was
-    // obtained, `ready` otherwise. Leaving `import_stage` at null is what stops a
-    // finished row from rendering a running stage.
-    import_status: media.localVideoPath ? IMPORT_STATUS_READY : IMPORT_STATUS_DEGRADED,
+    // the background path published: `ready` once every attachment was saved,
+    // `degraded` when only metadata was obtained. A null stage stops a finished
+    // row from rendering a running stage.
+    import_status: media.mediaItems?.length ? IMPORT_STATUS_READY : IMPORT_STATUS_DEGRADED,
     import_stage: null,
     import_error: analysis.error || null,
   }
@@ -1676,63 +1785,71 @@ function checkResolvedDuplicate(args, meta) {
   return duplicateBody(secondExisting, args.returnExisting)
 }
 
-async function downloadImportMedia(args, meta, rawVideoUrl) {
+/** Download all attachments atomically; optional posters do not count as assets. */
+async function downloadImportMedia(args, meta) {
   if (args.signal?.aborted) throw createAbortError()
+  /** @type {Record<string, string>} */
   const localPaths = {}
+  /** @type {SocialMediaItem[]} */
+  const mediaItems = []
   let localVideoPath = ''
+  let firstImagePath = ''
+  let videoCount = 0
+  let imageCount = 0
+  let downloadingType = 'video'
   try {
-    localVideoPath = await downloadMedia(rawVideoUrl, args.paths.videosDir, {
-      prefix: 'video_',
-      fetcher: args.fetcher,
-      resolver: args.resolver,
-      signal: args.signal,
-    })
-    localPaths.video = localVideoPath
-  } catch (downErr) {
-    if (args.signal?.aborted) {
-      throw (downErr?.name === 'AbortError' || downErr?.code === 'ABORT_ERR')
-        ? downErr
-        : createAbortError('This operation was aborted', downErr)
+    for (const item of meta.media_items) {
+      if (args.signal?.aborted) throw createAbortError()
+      downloadingType = item.type
+      const isVideo = item.type === 'video'
+      const number = isVideo ? ++videoCount : ++imageCount
+      const key = isVideo ? (number === 1 ? 'video' : `video_${number}`) : `image_${number}`
+      const folder = isVideo ? 'videos' : 'images'
+      let saved = await downloadMedia(item.url, isVideo ? args.paths.videosDir : args.paths.imagesDir, {
+        prefix: isVideo ? 'video_' : 'image_',
+        fetcher: args.fetcher,
+        resolver: args.resolver,
+        signal: args.signal,
+      })
+      localPaths[key] = saved
+      if (!isVideo) {
+        saved = alignMediaExtension(saved)
+        localPaths[key] = saved
+        if (isKnownUnrenderableCover(saved)) throw new Error('该图片格式暂不支持预览')
+        firstImagePath ||= saved
+      } else {
+        localVideoPath ||= saved
+      }
+      mediaItems.push({ type: item.type, url: `/omnimux/inspiration/local/media/${folder}/${saved.split('/').pop()}` })
     }
-    if (downErr?.name === 'AbortError' || downErr?.code === 'ABORT_ERR') {
-      throw downErr
+    if (args.signal?.aborted) throw createAbortError()
+    let cover = { path: '', renderable: null }
+    const imageCover = meta.media_items.findIndex((item) => item.type === 'image' && item.url === meta.cover_url)
+    if (imageCover >= 0) {
+      const imageIndex = meta.media_items.slice(0, imageCover + 1).filter((item) => item.type === 'image').length
+      cover = { path: localPaths[`image_${imageIndex}`], renderable: true }
+      localPaths.cover = cover.path
+    } else {
+      cover = await downloadCoverBestEffort(args, meta, localPaths)
     }
-    const message = `视频素材下载落盘失败: ${args.formatErrorMessage(downErr)}`
-    return { error: fail(502, message) }
-  }
-  if (args.signal?.aborted) {
-    if (localVideoPath) removeQuietly(localVideoPath)
-    throw createAbortError()
-  }
-  let cover = { path: '', renderable: null }
-  try {
-    cover = await downloadCoverBestEffort(args, meta, localPaths)
-  } catch (coverErr) {
-    if (localVideoPath) removeQuietly(localVideoPath)
-    if (cover?.path) removeQuietly(cover.path)
-    throw coverErr
-  }
-  if (args.signal?.aborted) {
-    if (localVideoPath) removeQuietly(localVideoPath)
-    if (cover.path) removeQuietly(cover.path)
-    throw createAbortError()
-  }
-  if (!cover.path && localVideoPath) {
-    try {
+    if (!cover.path && localVideoPath) {
       const poster = await extractVideoPosterBestEffort(args, localVideoPath, localPaths)
       if (poster.path) cover = poster
-    } catch (posterErr) {
-      if (localVideoPath) removeQuietly(localVideoPath)
-      if (cover?.path) removeQuietly(cover.path)
-      throw posterErr
     }
+    if (!cover.path && firstImagePath) {
+      cover = { path: firstImagePath, renderable: true }
+      localPaths.cover = firstImagePath
+    }
+    if (args.signal?.aborted) throw createAbortError()
+    return { localPaths, mediaItems, localVideoPath, localCoverPath: cover.path, coverRenderable: cover.renderable }
+  } catch (err) {
+    for (const path of localMediaPaths(localPaths)) removeQuietly(path)
+    if (err?.name === 'AbortError' || err?.code === 'ABORT_ERR' || args.signal?.aborted) {
+      throw (err?.name === 'AbortError' || err?.code === 'ABORT_ERR') ? err : createAbortError('This operation was aborted', err)
+    }
+    const kind = downloadingType === 'image' ? '图片' : '视频'
+    return { error: fail(502, `${kind}素材下载落盘失败: ${args.formatErrorMessage(err)}`) }
   }
-  if (args.signal?.aborted) {
-    if (localVideoPath) removeQuietly(localVideoPath)
-    if (cover.path) removeQuietly(cover.path)
-    throw createAbortError()
-  }
-  return { localPaths, localVideoPath, localCoverPath: cover.path, coverRenderable: cover.renderable }
 }
 
 async function extractVideoPosterBestEffort(args, localVideoPath, localPaths) {

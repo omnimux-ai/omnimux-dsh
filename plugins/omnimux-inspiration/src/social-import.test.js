@@ -140,7 +140,10 @@ describe('social import — media and degraded persistence', () => {
     })
 
     assert.equal(res.status, 200)
-    assert.equal(res.body.media_degraded, true)
+    assert.equal(res.body.media_degraded, undefined)
+    assert.equal(res.body.data.import_status, 'ready')
+    assert.equal(res.body.data.media_items.length, 1)
+    assert.ok(res.body.data.local_paths.image_1)
     assert.equal(res.body.data.type, 'image')
     assert.ok(res.body.data.cover_url)
   })
