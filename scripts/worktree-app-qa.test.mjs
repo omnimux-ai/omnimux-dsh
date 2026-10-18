@@ -315,7 +315,9 @@ test('runner 对合规根产出报告且 cleanup 只调用一次', async () => {
 test('assertBlankSessionHubPath 进入空白会话并断言 Explore / asset-hub', async () => {
   let guideStep = 0;
   let libraryPoll = 0;
+  const pointerEvents = [];
   const send = async (method, params = {}) => {
+    if (method === 'Input.dispatchMouseEvent') pointerEvents.push(params.type);
     if (method === 'Runtime.evaluate') {
       const expr = params.expression || '';
       if (expr.includes('data-omnimux-starter-guide') && expr.includes('exploreCardCount')) {
@@ -331,10 +333,10 @@ test('assertBlankSessionHubPath 进入空白会话并断言 Explore / asset-hub'
       if (expr.includes('button[aria-label="添加附件"]') || expr.includes('Add attachment')) {
         return { result: { value: { openedMenu: true } } };
       }
-      if (expr.includes('clickedLibrary') && expr.includes('从资产库选择')) {
+      if (expr.includes('const library =') && expr.includes('从资产库选择')) {
         libraryPoll += 1;
-        if (libraryPoll < 2) return { result: { value: { clickedLibrary: false, found: false } } };
-        return { result: { value: { clickedLibrary: true, found: true, text: '从资产库选择' } } };
+        if (libraryPoll < 2) return { result: { value: { found: false } } };
+        return { result: { value: { found: true, actionable: true, x: 20, y: 30 } } };
       }
       if (expr.includes('__omnimuxWorkbench') && expr.includes('openWorkbench')) {
         return { result: { value: { ok: true, thenable: true, sessionId: 'sess_qa' } } };
@@ -370,13 +372,14 @@ test('assertBlankSessionHubPath 进入空白会话并断言 Explore / asset-hub'
     assert.equal(hubAssertion.clickedLibrary, true);
     // 全屏 Explore 下菜单只滚 Tab；验收路径始终再走 openWorkbench(split)
     assert.equal(hubAssertion.usedWorkbenchFallback, true);
+    assert.deepEqual(pointerEvents, ['mousePressed', 'mouseReleased']);
     assert.equal(result.assertions.every(a => a.pass), true);
   } finally {
     rmSync(evidenceDir, { recursive: true, force: true });
   }
 });
 
-test('assertBlankSessionHubPath 菜单未命中时仍靠 workbench split 打开 asset-hub', async () => {
+test('assertBlankSessionHubPath 菜单未命中即使 workbench 可见仍不能证明资产库选择路径通过', async () => {
   const send = async (method, params = {}) => {
     if (method === 'Runtime.evaluate') {
       const expr = params.expression || '';
@@ -386,8 +389,8 @@ test('assertBlankSessionHubPath 菜单未命中时仍靠 workbench split 打开 
       if (expr.includes('button[aria-label="添加附件"]') || expr.includes('Add attachment')) {
         return { result: { value: { openedMenu: true } } };
       }
-      if (expr.includes('clickedLibrary') && expr.includes('从资产库选择')) {
-        return { result: { value: { clickedLibrary: false, found: false } } };
+      if (expr.includes('const library =') && expr.includes('从资产库选择')) {
+        return { result: { value: { found: false } } };
       }
       if (expr.includes('__omnimuxWorkbench') && expr.includes('openWorkbench')) {
         return { result: { value: { ok: true, thenable: true, sessionId: 'sess_qa' } } };
@@ -415,7 +418,7 @@ test('assertBlankSessionHubPath 菜单未命中时仍靠 workbench split 打开 
       blankTimeoutMs: 10,
     });
     const hubAssertion = result.assertions.find(a => a.name === 'asset-hub-reachable-via-library');
-    assert.equal(hubAssertion.pass, true);
+    assert.equal(hubAssertion.pass, false);
     assert.equal(hubAssertion.clickedLibrary, false);
     assert.equal(hubAssertion.usedWorkbenchFallback, true);
     assert.equal(result.detail.assetHubOpened, true);

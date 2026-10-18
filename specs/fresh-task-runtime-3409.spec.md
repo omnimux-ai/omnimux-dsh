@@ -35,6 +35,8 @@ installation固定包含taskId/runId、sourceRoot/privateRoot/profile、base/hea
 
 首次public运行13机器断言虽过，真实PNG被首次“内测声明”遮挡，外部视觉复核判不通过并保留原件。driver仅通过已知声明的真实可见“继续”按钮发送鼠标事件，观察弹窗稳定消失后才通过原runtime-modal断言；资产库业务可达性另核视口几何与实际命中元素，遮挡不能因DOM存在刷绿。须用新冻结候选重跑并审图，旧机器通过不回填视觉通过。
 
+第二次运行真实关闭弹窗，12/13，资产库可见性明确失败。只读已装官方input-trigger确认菜单拾取在onMouseDown，原click没有选中。driver改真实鼠标点选唯一可见菜单行，按当前已注册素材工作台tab等待openWorkbench的Promise<boolean>，最终必须菜单已选中且工作台未遮挡可见；API fallback不能替代菜单路径通过。历史第二次失败原样保留。
+
 断言按预声明expectedAssertions归属分组并拒绝跨组重名，不能从返回断言推导预期。失败记录真实阶段，cleanup必须await子进程exit+close并清理精确自有目录；不会因清理失败签通过。保留历史失败封套。
 
 ## 实施分工与验收

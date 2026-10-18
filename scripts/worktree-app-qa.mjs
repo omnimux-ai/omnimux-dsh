@@ -205,19 +205,22 @@ export async function assertBlankSessionHubPath({
   });
 
   // library-stage → asset-hub：
-  // 1) 点加号打开菜单 → 等待菜单项渲染 → 点「从资产库选择」
+  // 1) 点加号打开菜单 → 等待菜单项渲染 → 真实鼠标选择「从资产库选择」
   // 2) 菜单未命中时，用 window.__omnimuxWorkbench.openWorkbench 兜底（与 openLibrary 同路径）
   const findLibraryRowExpr = `(() => {
-    const rows = [...document.querySelectorAll('[role="menuitem"], [role="option"], button, [data-command-name], [data-name]')];
-    return rows.find(el => {
+    const rows = [...document.querySelectorAll('[role="listbox"] button[role="option"], [role="menuitem"], [data-command-name], [data-name]')];
+    const matches = rows.filter(el => {
       const name = el.getAttribute?.('data-command-name') || el.getAttribute?.('data-name') || '';
-      const text = (el.textContent || '').trim();
-      return name === 'add-from-library'
+      const text = (el.querySelector('[class*="itemName"]')?.textContent || el.textContent || '').trim();
+      const box = el.getBoundingClientRect(), style = getComputedStyle(el);
+      return box.width > 0 && box.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0'
+        && (name === 'add-from-library'
         || text === '从资产库选择'
         || text === '从资产库添加'
         || text === 'Choose from asset library'
-        || /从资产库|asset library|add-from-library/i.test(text);
-    }) || null;
+        || text === 'Add from asset library');
+    });
+    return matches.length === 1 ? matches[0] : null;
   })()`;
 
   const clickAdd = await send('Runtime.evaluate', {
@@ -239,14 +242,21 @@ export async function assertBlankSessionHubPath({
     const clickLibrary = await send('Runtime.evaluate', {
       expression: `(() => {
         const library = ${findLibraryRowExpr};
-        if (!library) return { clickedLibrary: false, found: false };
-        library.click();
-        return { clickedLibrary: true, found: true, text: (library.textContent || '').trim().slice(0, 40) };
+        if (!library) return { found: false };
+        const box = library.getBoundingClientRect(), style = getComputedStyle(library);
+        const x = box.x + box.width / 2, y = box.y + box.height / 2, hit = document.elementFromPoint(x, y);
+        return { found: true, actionable: box.width > 0 && box.height > 0 && style.display !== 'none'
+          && style.visibility !== 'hidden' && style.opacity !== '0' && Boolean(hit && library.contains(hit)), x, y };
       })()`,
       returnByValue: true,
     });
-    if (clickLibrary?.result?.value?.clickedLibrary) {
+    const row = clickLibrary?.result?.value;
+    if (row?.found && row.actionable === true && Number.isFinite(row.x) && Number.isFinite(row.y)) {
+      // Shipping input-trigger picks onMouseDown; HTMLElement.click() does not select it.
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: row.x, y: row.y, button: 'left', clickCount: 1 });
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: row.x, y: row.y, button: 'left', clickCount: 1 });
       clickedLibrary = true;
+      await sleep(150);
       break;
     }
     if (Date.now() >= menuDeadline) break;
@@ -257,7 +267,7 @@ export async function assertBlankSessionHubPath({
   // 即使菜单点击成功，也再走一次 split 打开，保证 `.omx-hub-panel` 可见。
   {
     const fallback = await send('Runtime.evaluate', {
-      expression: `(() => {
+      expression: `(async () => {
         const wb = window.__omnimuxWorkbench;
         if (!wb || typeof wb.openWorkbench !== 'function') {
           return { ok: false, reason: 'no-workbench-api' };
@@ -267,14 +277,13 @@ export async function assertBlankSessionHubPath({
           || snap?.state?.sessionId
           || document.querySelector('[data-omnimux-starter-guide]')?.getAttribute('data-session-id')
           || null;
-        const p = wb.openWorkbench({
+        const result = await wb.openWorkbench({
           tabId: 'omnimux:asset-hub',
           focus: 'split',
           sessionId: sessionId || undefined,
         });
         return {
-          ok: true,
-          thenable: Boolean(p && typeof p.then === 'function'),
+          ok: result === true,
           sessionId: sessionId || null,
         };
       })()`,
@@ -303,9 +312,11 @@ export async function assertBlankSessionHubPath({
     await sleep(400);
   } while (Date.now() < hubDeadline);
   detail.assetHubOpened = hubVisible;
+  detail.librarySelected = clickedLibrary;
+  detail.workbenchOpened = usedWorkbenchFallback;
   assertions.push({
     name: 'asset-hub-reachable-via-library',
-    pass: hubVisible,
+    pass: hubVisible && clickedLibrary,
     openedMenu: Boolean(clickAdd?.result?.value?.openedMenu),
     clickedLibrary,
     usedWorkbenchFallback,
@@ -1023,7 +1034,8 @@ export function createAppQaRunner(deps = {}) {
       if (browser.screenshot) report.screenshot = { path: join(evidenceDir, 'app-home.png'),
         width: Number(browser.screenshot.width) || 0, height: Number(browser.screenshot.height) || 0, bytes: Number(browser.screenshot.bytes) || 0 };
       if (browser.hubPath) report.hubPath = { clickedNewSession: browser.hubPath.clickedNewSession === true,
-        exploreVisible: browser.hubPath.exploreVisible === true, assetHubOpened: browser.hubPath.assetHubOpened === true };
+        exploreVisible: browser.hubPath.exploreVisible === true, assetHubOpened: browser.hubPath.assetHubOpened === true,
+        librarySelected: browser.hubPath.librarySelected === true, workbenchOpened: browser.hubPath.workbenchOpened === true };
       if (request && report.assertions.some(item => item.name === 'screenshot-png-verified' && item.pass)) {
         try { assertPng(io.readFileSync(join(evidenceDir, 'app-home.png'))); }
         catch { report.errors.push('TEST_APP_QA_SCREENSHOT_MISSING_OR_INVALID'); }
