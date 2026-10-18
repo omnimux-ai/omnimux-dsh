@@ -1,7 +1,6 @@
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
-import { PreviewModalLayer } from './PreviewModalLayer.jsx'
 import { injectInspirationStyles } from './styles.js'
 import { oneClickReplicate } from './replicate-to-chat.js'
 
@@ -35,9 +34,7 @@ export function registerPreviewService(t, target = window) {
       queueMicrotask(() => {
         if (!closed) {
           root.render(
-            createElement(PreviewModalLayer, { onClose: () => close(), title: row?.title || '' },
-              createElement(InspirationPreviewModal, { row, t, onClose: () => close(), onReplicate: typeof onReplicate === 'function' ? onReplicate : oneClickReplicate })
-            )
+            createElement(InspirationPreviewModal, { row, t, onClose: () => close(), onReplicate: typeof onReplicate === 'function' ? onReplicate : oneClickReplicate })
           )
         }
       })
