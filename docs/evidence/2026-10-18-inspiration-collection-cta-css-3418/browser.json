@@ -1,0 +1,680 @@
+{
+  "kind": "browser-evidence-for-issue-3418",
+  "issue": 3418,
+  "title": "合集卡 CTA 共享几何 + 媒体安全配色，且不被 market 全局 add 规则污染",
+  "runId": "20261018T112951-cewdg",
+  "createdAt": "2026-10-18T11:29:51.927Z",
+  "scope": "real-section-and-production-local-handlers + injected-verbatim-market-global-rule + synthetic-rule-controls; not-full-host-install",
+  "finalHead": "2e15b40344fe83e9750aeb2c8fc0dc30e3d2769a",
+  "identity": {
+    "sourceSha256": "dbf38fa8e861041e3f7e2516040b89bb81732f0228a52593d1182c8bb773cc18",
+    "bundleSha256": "28da38c650ece86d245d982ea588fc9895035959077415fa7a47dee7ebca043b",
+    "head": "2e15b40344fe83e9750aeb2c8fc0dc30e3d2769a"
+  },
+  "origin": "http://127.0.0.1:65106",
+  "chrome": {
+    "kind": "independent-headless-chromium",
+    "pid": 47250,
+    "port": 65108
+  },
+  "marketRule": {
+    "source": "plugins/omnimux-market/src/client/css.js lines 237-246",
+    "selectorUnderTest": "button[class*=\"add\"]",
+    "sha256": "e7357a7618c61ce99641b8fbd3825b875aabca0f016aa28f1493f1b93207d324",
+    "injections": [
+      "base rule (display/background/color/font/radius/height)",
+      "hover variant",
+      "focus-visible variant",
+      "width:28px/min-width:28px",
+      "svg size variant"
+    ]
+  },
+  "ordinaryCard": {
+    "id": "qa-fashion2",
+    "labels": [
+      "详情",
+      "立即复刻"
+    ],
+    "secondary": {
+      "backgroundColor": "rgba(0, 0, 0, 0.08)",
+      "color": "rgb(27, 27, 27)",
+      "borderColor": "rgb(204, 204, 204)",
+      "height": "28px",
+      "width": "105.328px",
+      "borderRadius": "9999px",
+      "fontSize": "12px",
+      "fontWeight": "550",
+      "lineHeight": "16px",
+      "paddingLeft": "6px",
+      "paddingRight": "6px",
+      "flexGrow": "1",
+      "flexBasis": "0px"
+    },
+    "primary": {
+      "backgroundColor": "rgb(27, 27, 27)",
+      "color": "rgb(255, 255, 255)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "height": "28px",
+      "width": "105.328px",
+      "borderRadius": "9999px",
+      "fontSize": "12px",
+      "fontWeight": "550",
+      "lineHeight": "16px",
+      "paddingLeft": "6px",
+      "paddingRight": "6px",
+      "flexGrow": "1",
+      "flexBasis": "0px"
+    },
+    "secondaryClassName": "dshUk-Button-button dshUk-Button-ghost omnimux-inspiration-overlay-cta-btn secondary",
+    "primaryClassName": "dshUk-Button-button dshUk-Button-primary omnimux-inspiration-overlay-cta-btn primary"
+  },
+  "collectionCard": {
+    "labelsBefore": [
+      "查看",
+      "加入会话"
+    ],
+    "secondaryBefore": {
+      "backgroundColor": "rgba(0, 0, 0, 0.6)",
+      "color": "rgb(255, 255, 255)",
+      "borderColor": "rgba(255, 255, 255, 0.3)",
+      "height": "28px",
+      "width": "105.328px",
+      "borderRadius": "9999px",
+      "fontSize": "12px",
+      "fontWeight": "550",
+      "lineHeight": "16px",
+      "paddingLeft": "6px",
+      "paddingRight": "6px",
+      "flexGrow": "1",
+      "flexBasis": "0px"
+    },
+    "primaryBefore": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(17, 17, 19)",
+      "borderColor": "rgb(255, 255, 255)",
+      "height": "28px",
+      "width": "105.328px",
+      "borderRadius": "9999px",
+      "fontSize": "12px",
+      "fontWeight": "550",
+      "lineHeight": "16px",
+      "paddingLeft": "6px",
+      "paddingRight": "6px",
+      "flexGrow": "1",
+      "flexBasis": "0px"
+    },
+    "secondaryAfter": {
+      "backgroundColor": "rgba(0, 0, 0, 0.6)",
+      "color": "rgb(255, 255, 255)",
+      "borderColor": "rgba(255, 255, 255, 0.3)",
+      "height": "28px",
+      "width": "105.328px",
+      "borderRadius": "9999px",
+      "fontSize": "12px",
+      "fontWeight": "550",
+      "lineHeight": "16px",
+      "paddingLeft": "6px",
+      "paddingRight": "6px",
+      "flexGrow": "1",
+      "flexBasis": "0px"
+    },
+    "primaryAfter": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(17, 17, 19)",
+      "borderColor": "rgb(255, 255, 255)",
+      "height": "28px",
+      "width": "105.328px",
+      "borderRadius": "9999px",
+      "fontSize": "12px",
+      "fontWeight": "550",
+      "lineHeight": "16px",
+      "paddingLeft": "6px",
+      "paddingRight": "6px",
+      "flexGrow": "1",
+      "flexBasis": "0px"
+    },
+    "secondaryClassName": "dshUk-Button-button dshUk-Button-ghost omnimux-inspiration-overlay-cta-btn secondary",
+    "primaryClassName": "dshUk-Button-button dshUk-Button-primary omnimux-inspiration-overlay-cta-btn primary",
+    "matchesHostAddRule": {
+      "secondary": false,
+      "primary": false
+    },
+    "classNameHasAdd": {
+      "secondary": false,
+      "primary": false
+    }
+  },
+  "comparison": {
+    "geometry": {
+      "secondary": {
+        "height": {
+          "ordinary": "28px",
+          "collection": "28px",
+          "equal": true
+        },
+        "width": {
+          "ordinary": "105.328px",
+          "collection": "105.328px",
+          "equal": true
+        },
+        "borderRadius": {
+          "ordinary": "9999px",
+          "collection": "9999px",
+          "equal": true
+        },
+        "fontSize": {
+          "ordinary": "12px",
+          "collection": "12px",
+          "equal": true
+        },
+        "fontWeight": {
+          "ordinary": "550",
+          "collection": "550",
+          "equal": true
+        },
+        "lineHeight": {
+          "ordinary": "16px",
+          "collection": "16px",
+          "equal": true
+        },
+        "paddingLeft": {
+          "ordinary": "6px",
+          "collection": "6px",
+          "equal": true
+        },
+        "paddingRight": {
+          "ordinary": "6px",
+          "collection": "6px",
+          "equal": true
+        },
+        "flexGrow": {
+          "ordinary": "1",
+          "collection": "1",
+          "equal": true
+        },
+        "flexBasis": {
+          "ordinary": "0px",
+          "collection": "0px",
+          "equal": true
+        }
+      },
+      "primary": {
+        "height": {
+          "ordinary": "28px",
+          "collection": "28px",
+          "equal": true
+        },
+        "width": {
+          "ordinary": "105.328px",
+          "collection": "105.328px",
+          "equal": true
+        },
+        "borderRadius": {
+          "ordinary": "9999px",
+          "collection": "9999px",
+          "equal": true
+        },
+        "fontSize": {
+          "ordinary": "12px",
+          "collection": "12px",
+          "equal": true
+        },
+        "fontWeight": {
+          "ordinary": "550",
+          "collection": "550",
+          "equal": true
+        },
+        "lineHeight": {
+          "ordinary": "16px",
+          "collection": "16px",
+          "equal": true
+        },
+        "paddingLeft": {
+          "ordinary": "6px",
+          "collection": "6px",
+          "equal": true
+        },
+        "paddingRight": {
+          "ordinary": "6px",
+          "collection": "6px",
+          "equal": true
+        },
+        "flexGrow": {
+          "ordinary": "1",
+          "collection": "1",
+          "equal": true
+        },
+        "flexBasis": {
+          "ordinary": "0px",
+          "collection": "0px",
+          "equal": true
+        }
+      }
+    },
+    "colors": {
+      "ordinary": {
+        "secondary": {
+          "backgroundColor": "rgba(0, 0, 0, 0.08)",
+          "color": "rgb(27, 27, 27)",
+          "borderColor": "rgb(204, 204, 204)"
+        },
+        "primary": {
+          "backgroundColor": "rgb(27, 27, 27)",
+          "color": "rgb(255, 255, 255)",
+          "borderColor": "rgba(0, 0, 0, 0)"
+        }
+      },
+      "collection": {
+        "secondary": {
+          "backgroundColor": "rgba(0, 0, 0, 0.6)",
+          "color": "rgb(255, 255, 255)",
+          "borderColor": "rgba(255, 255, 255, 0.3)"
+        },
+        "primary": {
+          "backgroundColor": "rgb(255, 255, 255)",
+          "color": "rgb(17, 17, 19)",
+          "borderColor": "rgb(255, 255, 255)"
+        }
+      },
+      "expected": {
+        "secondary": {
+          "backgroundColor": "rgba(0, 0, 0, 0.6)",
+          "color": "rgb(255, 255, 255)",
+          "borderColor": "rgba(255, 255, 255, 0.3)"
+        },
+        "primary": {
+          "backgroundColor": "rgb(255, 255, 255)",
+          "color": "rgb(17, 17, 19)",
+          "borderColor": "rgb(255, 255, 255)"
+        }
+      }
+    },
+    "width": {
+      "secondary": {
+        "ordinary": "105.328px",
+        "collection": "105.328px"
+      },
+      "primary": {
+        "ordinary": "105.328px",
+        "collection": "105.328px"
+      },
+      "ordinaryCard": 246.65625,
+      "collectionCard": 246.65625,
+      "ordinaryRow": {
+        "rowWidth": 220.656,
+        "gap": 6,
+        "padLeft": 2,
+        "padRight": 2,
+        "content": 216.656
+      },
+      "collectionRow": {
+        "rowWidth": 220.656,
+        "gap": 6,
+        "padLeft": 2,
+        "padRight": 2,
+        "content": 216.656
+      }
+    }
+  },
+  "mediaColors": {
+    "ordinary": {
+      "secondary": {
+        "backgroundColor": "rgba(0, 0, 0, 0.08)",
+        "color": "rgb(27, 27, 27)",
+        "borderColor": "rgb(204, 204, 204)"
+      },
+      "primary": {
+        "backgroundColor": "rgb(27, 27, 27)",
+        "color": "rgb(255, 255, 255)",
+        "borderColor": "rgba(0, 0, 0, 0)"
+      }
+    },
+    "collection": {
+      "secondary": {
+        "backgroundColor": "rgba(0, 0, 0, 0.6)",
+        "color": "rgb(255, 255, 255)",
+        "borderColor": "rgba(255, 255, 255, 0.3)"
+      },
+      "primary": {
+        "backgroundColor": "rgb(255, 255, 255)",
+        "color": "rgb(17, 17, 19)",
+        "borderColor": "rgb(255, 255, 255)"
+      }
+    },
+    "expected": {
+      "secondary": {
+        "backgroundColor": "rgba(0, 0, 0, 0.6)",
+        "color": "rgb(255, 255, 255)",
+        "borderColor": "rgba(255, 255, 255, 0.3)"
+      },
+      "primary": {
+        "backgroundColor": "rgb(255, 255, 255)",
+        "color": "rgb(17, 17, 19)",
+        "borderColor": "rgb(255, 255, 255)"
+      }
+    }
+  },
+  "contrast": {
+    "theme": "light",
+    "algorithm": "Page.captureScreenshot clip of the button, then a second capture with only the button text colour forced transparent (background/border untouched, transition disabled); glyph pixels = pixels whose RGB differs by >=24 in any channel (3px inset); text core = max/min-luminance glyph pixel; WCAG 2.x relative luminance; ratio = minimum over glyph pixels against the exact composited background pixel under that glyph.",
+    "requirement": "both >= 4.5:1 (WCAG AA normal text, light theme)",
+    "focusWithMouseAway": {
+      "active": true,
+      "beforeOpacity": 0,
+      "computed": {
+        "secondary": {
+          "backgroundColor": "rgba(0, 0, 0, 0.6)",
+          "color": "rgb(255, 255, 255)",
+          "borderColor": "rgba(255, 255, 255, 0.3)",
+          "height": "28px",
+          "width": "105.328px",
+          "borderRadius": "9999px",
+          "fontSize": "12px",
+          "fontWeight": "550",
+          "lineHeight": "16px",
+          "paddingLeft": "6px",
+          "paddingRight": "6px",
+          "flexGrow": "1",
+          "flexBasis": "0px"
+        },
+        "primary": {
+          "backgroundColor": "rgb(255, 255, 255)",
+          "color": "rgb(17, 17, 19)",
+          "borderColor": "rgb(255, 255, 255)",
+          "height": "28px",
+          "width": "105.328px",
+          "borderRadius": "9999px",
+          "fontSize": "12px",
+          "fontWeight": "550",
+          "lineHeight": "16px",
+          "paddingLeft": "6px",
+          "paddingRight": "6px",
+          "flexGrow": "1",
+          "flexBasis": "0px"
+        }
+      }
+    },
+    "secondary": {
+      "selector": "[data-collection-id=\"collection_f0a82304-e2d3-48df-84eb-e690f51807ce\"] .omnimux-inspiration-overlay-cta-btn.secondary",
+      "polarity": "light",
+      "buttonRect": {
+        "width": 105.328125,
+        "height": 28
+      },
+      "clipPixels": {
+        "width": 105,
+        "height": 28
+      },
+      "textColor": {
+        "rgb": [
+          255,
+          255,
+          255
+        ],
+        "css": "rgb(255, 255, 255)"
+      },
+      "textCorePixel": {
+        "x": 72,
+        "y": 18,
+        "composite": [
+          255,
+          255,
+          255
+        ],
+        "difference": 235
+      },
+      "glyphPixels": 300,
+      "worstBackground": {
+        "x": 56,
+        "y": 7,
+        "rgb": [
+          42,
+          49,
+          19
+        ]
+      },
+      "ratio": 13.573110550475038
+    },
+    "primary": {
+      "selector": "[data-collection-id=\"collection_f0a82304-e2d3-48df-84eb-e690f51807ce\"] .omnimux-inspiration-overlay-cta-btn.primary",
+      "polarity": "dark",
+      "buttonRect": {
+        "width": 105.328125,
+        "height": 28
+      },
+      "clipPixels": {
+        "width": 105,
+        "height": 28
+      },
+      "textColor": {
+        "rgb": [
+          17,
+          17,
+          19
+        ],
+        "css": "rgb(17, 17, 19)"
+      },
+      "textCorePixel": {
+        "x": 68,
+        "y": 8,
+        "composite": [
+          17,
+          17,
+          19
+        ],
+        "difference": 238
+      },
+      "glyphPixels": 447,
+      "worstBackground": {
+        "x": 21,
+        "y": 8,
+        "rgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      "ratio": 18.860856264256594
+    }
+  },
+  "hostRuleProof": {
+    "ruleSource": "plugins/omnimux-market/src/client/css.js lines 237-246",
+    "ruleSha256": "e7357a7618c61ce99641b8fbd3825b875aabca0f016aa28f1493f1b93207d324",
+    "controlBefore": {
+      "oldClass": {
+        "backgroundColor": "rgb(18, 52, 86)",
+        "color": "rgb(255, 255, 255)",
+        "width": "120px",
+        "height": "40px",
+        "borderRadius": "8px",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "padding": "0px 6px",
+        "borderWidth": "2px",
+        "matchesHostAddRule": true
+      },
+      "addSubstring": {
+        "backgroundColor": "rgb(18, 52, 86)",
+        "color": "rgb(255, 255, 255)",
+        "width": "120px",
+        "height": "40px",
+        "borderRadius": "8px",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "padding": "0px 6px",
+        "borderWidth": "2px",
+        "matchesHostAddRule": true
+      }
+    },
+    "controlAfter": {
+      "stylePresent": true,
+      "oldClass": {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "rgb(119, 119, 119)",
+        "width": "28px",
+        "height": "28px",
+        "borderRadius": "24px",
+        "fontSize": "13px",
+        "fontWeight": "500",
+        "padding": "0px",
+        "borderWidth": "0px",
+        "matchesHostAddRule": true,
+        "rect": {
+          "x": 25,
+          "y": 1015,
+          "width": 28,
+          "height": 28
+        }
+      },
+      "addSubstring": {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "color": "rgb(119, 119, 119)",
+        "width": "28px",
+        "height": "28px",
+        "borderRadius": "24px",
+        "fontSize": "13px",
+        "fontWeight": "500",
+        "padding": "0px",
+        "borderWidth": "0px",
+        "matchesHostAddRule": true,
+        "rect": {
+          "x": 25,
+          "y": 1049,
+          "width": 28,
+          "height": 28
+        }
+      }
+    },
+    "applied": true
+  },
+  "immunity": {
+    "notMatched": true,
+    "classesWithoutAdd": true,
+    "unchangedBeforeAfter": true,
+    "widthNotCollapsed": true,
+    "note": "shared CTA geometry/type/padding/width are identical between the two cards (four buttons 105.328px, cards 246.65625px); colours are intentionally the media dark-room palette (secondary rgba(0,0,0,0.6)/#fff, primary #fff/#111113), restoring the #3411 contrast contract instead of matching the ordinary card alias palette."
+  },
+  "geometry": {
+    "card": {
+      "x": 20,
+      "y": 145,
+      "width": 246.65625,
+      "height": 181.609375
+    },
+    "cover": {
+      "x": 21,
+      "y": 146,
+      "width": 244.65625,
+      "height": 137.609375
+    },
+    "layer": {
+      "x": 21,
+      "y": 219.609375,
+      "width": 244.65625,
+      "height": 64
+    },
+    "title": {
+      "x": 21,
+      "y": 283.609375,
+      "width": 244.65625,
+      "height": 42
+    },
+    "menu": {
+      "x": 228.65625,
+      "y": 288.609375,
+      "width": 32,
+      "height": 32
+    }
+  },
+  "assertions": [
+    {
+      "name": "ordinary inspiration card exposes the shared CTA from real hover (secondary 详情 / primary 立即复刻)",
+      "pass": true
+    },
+    {
+      "name": "collection card exposes the same shared CTA structure before rule injection (secondary 查看 / primary 加入会话)",
+      "pass": true
+    },
+    {
+      "name": "light-theme pixel contrast of the media-safe collection CTA meets WCAG AA >=4.5:1 for both buttons",
+      "pass": true
+    },
+    {
+      "name": "injected market `button[class*=\"add\"]` rule is live in the page: both add-class probes are rewritten to a transparent 28px pill",
+      "pass": true
+    },
+    {
+      "name": "collection CTA is not matched by `button[class*=\"add\"]` and keeps the shared CTA classes/text",
+      "pass": true
+    },
+    {
+      "name": "one UI geometry: height/width/radius/font/weight/line-height/padding/flex are identical between the ordinary and collection CTAs",
+      "pass": true
+    },
+    {
+      "name": "collection CTA colours are the media dark-room palette; the ordinary card keeps the alias palette (two palettes by design, #3411 contrast contract restored)",
+      "pass": true
+    },
+    {
+      "name": "strict width parity: secondary and primary widths are pixel-identical between the ordinary and collection cards after the container padding alignment",
+      "pass": true
+    },
+    {
+      "name": "host rule does not pollute the collection CTA: values unchanged before/after injection and never the 28px/transparent/13px host values",
+      "pass": true
+    },
+    {
+      "name": "action layer geometry still sits inside the cover and does not overlap the title row or the 更多操作 menu",
+      "pass": true
+    },
+    {
+      "name": "no browser request escaped the fixture origin; no console exceptions",
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "cta-shared-ui.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 181591,
+      "sha256": "962fd2d142a3b1f883d75bb137e5cdf73a6ae2b45e0ff5b331570337fcd46b05"
+    },
+    {
+      "name": "cta-host-rule-immunity.png",
+      "width": 1600,
+      "height": 1100,
+      "bytes": 161090,
+      "sha256": "01c5faf7ceb3a29207d8533476de26537dc34235d844e03ccbdf39bfde61ceb7"
+    }
+  ],
+  "consoleErrors": [],
+  "network": {
+    "events": 14,
+    "external": []
+  },
+  "counters": {
+    "syntheticCloud": 1,
+    "blockedCapabilities": 0,
+    "blockedExternalFetch": 0,
+    "injectedReadFailures": 0
+  },
+  "cleanup": {
+    "browser": {
+      "chromeExited": true,
+      "profileRemoved": true
+    },
+    "fixture": {
+      "serverClosed": true,
+      "storeRemoved": true,
+      "environmentRestored": true
+    }
+  },
+  "pass": true,
+  "boundaries": [
+    "The fixture does not mount the omnimux-market client: its global rule was injected verbatim (sha256 recorded) into the real product page, and two synthetic control buttons prove the rule is live.",
+    "Real: product InspirationSection bundle, production local handlers/store, real loopback HTTP, real rendered computed styles and screenshots in headless Chrome.",
+    "Media-safe colours and pixel WCAG ratios were measured under the light theme fixture (real rival-tokens.js CSS injected as page setup); the collection CTA can differ from the ordinary card colour palette by design while sharing geometry.",
+    "Not a full Host install; Dev 45120 is human-owned and was not used as acceptance evidence; no external network, no user profile."
+  ]
+}

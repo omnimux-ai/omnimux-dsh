@@ -48,6 +48,27 @@ describe('InspirationCollectionCard hover actions', () => {
     }
   })
 
+  it('reuses the ordinary card CTA classes and never matches host [class*="add"] rules', async () => {
+    const mounted = await mountCollectionCard({ collection: COLLECTION, t: zhT })
+    try {
+      const buttons = mounted.buttons()
+      assert.equal(buttons.length, 2)
+      for (const button of buttons) {
+        assert.equal(button.className.includes('omnimux-inspiration-overlay-cta-btn'), true, '必须复用普通卡的 CTA 按钮样式')
+        // omnimux-market ships `button[class*="add"] { ... !important }` globally;
+        // any class containing "add" would hijack the CTA in the real host.
+        assert.equal(button.matches('button[class*="add"]'), false, `${button.className} 不得被宿主全局 add 规则命中`)
+      }
+      assert.equal(buttons[0].className.includes('secondary'), true, '查看 使用 secondary 表面')
+      assert.equal(buttons[1].className.includes('primary'), true, '加入会话 使用 primary 表面')
+      assert.equal(buttons[0].querySelector('.omnimux-inspiration-overlay-cta-label')?.textContent, zhTable.get('collection.view'))
+      assert.equal(buttons[1].querySelector('.omnimux-inspiration-overlay-cta-label')?.textContent, zhTable.get('collection.addToSession'))
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
   it('renders the English labels from the shared dictionary', async () => {
     const mounted = await mountCollectionCard({ collection: COLLECTION, t: enT })
     try {
