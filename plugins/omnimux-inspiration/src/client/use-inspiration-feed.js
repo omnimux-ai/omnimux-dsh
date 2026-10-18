@@ -72,6 +72,8 @@ function useReplicateToChat() {
 
 function useFeedSelection(options) {
   const { items, selectedItem, setSelectedItem, setItems, onRemoved } = options || {}
+  const onRemovedRef = useRef(onRemoved)
+  onRemovedRef.current = onRemoved
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [pendingRemove, setPendingRemove] = useState(null)
   const [removing, setRemoving] = useState(false)
@@ -93,18 +95,19 @@ function useFeedSelection(options) {
     const ids = pendingRemove?.ids
     if (!ids || ids.length === 0) return
     setRemoving(true)
+    setPendingRemove(prev => prev && { ...prev, error: null })
     try {
-      await executeBatchDelete(ids, { selectedItem, setSelectedItem, setItems, setSelectedIds, setPendingRemove })
+      const { deleted } = await executeBatchDelete(ids, { selectedItem, setSelectedItem, setItems, setSelectedIds, setPendingRemove })
       // A deleted row must not survive on screen through the landing pin: the
       // pin holds a row the feed no longer lists, which is exactly the state a
       // removal leaves behind.
-      onRemoved?.(ids)
+      if (deleted.length > 0) await onRemovedRef.current?.(deleted)
     } catch (err) {
-      console.error('Failed to delete local inspirations:', err)
+      setPendingRemove(prev => prev && { ...prev, error: String(err?.message || '删除失败，请重试') })
     } finally {
       setRemoving(false)
     }
-  }, [pendingRemove, selectedItem, setItems, setSelectedItem, onRemoved])
+  }, [pendingRemove, selectedItem, setItems, setSelectedItem])
 
   return {
     selectedIds,
@@ -232,8 +235,11 @@ function useInspirationFilters() {
   }
 }
 
+const EMPTY_FEED_ITEMS = []
+const EMPTY_COLLECTION_DATA = { collections: [], collection_names: [], collection: null }
+
 function useFeedData(options) {
-  const { active, filters } = options || {}
+  const { active, filters, collectionId = '' } = options || {}
   const {
     tab, q, platform, type, sort, favorite,
     country, category, duration, views, trafficType, dateRange,
@@ -241,7 +247,19 @@ function useFeedData(options) {
   // The rival workbench owns its own data path; the inspiration feed stays idle
   // while it is on screen, so switching back does not re-query twice.
   const rivalTab = tab === 'rivals'
+  // Rows and pagination belong to one tab/collection scope. Hide a previous
+  // scope immediately, before the new effect starts or its request can fail.
+  const scope = JSON.stringify([tab, tab === 'local' ? collectionId : ''])
+  const scopeRef = useRef(scope)
+  scopeRef.current = scope
+  const [dataScope, setDataScope] = useState(scope)
+  const dataScopeRef = useRef(scope)
+  const currentScope = dataScope === scope
   const [items, setItems] = useState([])
+  const [collectionData, setCollectionDataState] = useState(EMPTY_COLLECTION_DATA)
+  const setCollectionData = useCallback(result => setCollectionDataState({
+    collections: result.collections || [], collection_names: result.collection_names || [], collection: result.collection || null,
+  }), [])
   const [backendPlatforms, setBackendPlatforms] = useState([])
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -279,6 +297,22 @@ function useFeedData(options) {
   }, [])
 
   const loadData = useCallback((isNextPage = false, refreshLoaded = false) => {
+    if (scopeRef.current !== scope) return Promise.resolve()
+    if (dataScopeRef.current !== scope) {
+      dataScopeRef.current = scope
+      setDataScope(scope)
+      setItems(EMPTY_FEED_ITEMS)
+      setCollectionData(EMPTY_COLLECTION_DATA)
+      setBackendPlatforms(EMPTY_FEED_ITEMS)
+      pageRef.current = 1
+      itemsRef.current = EMPTY_FEED_ITEMS
+      setPage(1)
+      setHasMore(false)
+      setError(null)
+      setPhase('loading')
+      setLoading(true)
+      setLoadingMore(false)
+    }
     const { duration_min, duration_max } = resolveDurationRange(duration)
     const { views_min, views_max } = resolveViewsRange(views)
     const { posted_after, posted_before } = resolveDateRange(dateRange)
@@ -288,7 +322,7 @@ function useFeedData(options) {
     const requestKey = [
       refreshLoaded ? 'refresh' : isNextPage ? 'next' : 'first', tab, q, platform, type, sort, favorite,
       country, category, duration_min, duration_max, views_min, views_max,
-      trafficType, posted_after, posted_before, targetPage,
+      trafficType, posted_after, posted_before, targetPage, collectionId,
     ].join('\x00')
     const inFlight = inFlightRef.current
     if (inFlight && inFlight.key === requestKey) {
@@ -321,11 +355,12 @@ function useFeedData(options) {
         traffic_type: trafficType,
         posted_after,
         posted_before,
+        collection_id: tab === 'local' ? collectionId : '',
         page: pageRef.current,
         hasExistingItems: itemsRef.current.length > 0,
       },
-      { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore, setPlatforms: setBackendPlatforms },
-      { isCurrent: () => loadSeqRef.current === seq },
+      { setItems, setPage, setHasMore, setPhase, setError, setLoading, setLoadingMore, setPlatforms: setBackendPlatforms, setCollectionData },
+      { isCurrent: () => loadSeqRef.current === seq && scopeRef.current === scope },
     )
     const clearInFlight = () => {
       if (inFlightRef.current?.promise === promise) inFlightRef.current = null
@@ -333,7 +368,7 @@ function useFeedData(options) {
     inFlightRef.current = { key: requestKey, promise }
     void promise.then(clearInFlight, clearInFlight)
     return promise
-  }, [tab, q, platform, type, sort, favorite, country, category, duration, views, trafficType, dateRange])
+  }, [tab, q, platform, type, sort, favorite, country, category, duration, views, trafficType, dateRange, collectionId, setCollectionData, scope])
 
   const refreshData = useCallback(() => {
     invalidateInspirationCache()
@@ -353,16 +388,17 @@ function useFeedData(options) {
   }, [loadData])
 
   return {
-    items,
+    items: currentScope ? items : EMPTY_FEED_ITEMS,
+    collectionData: currentScope ? collectionData : EMPTY_COLLECTION_DATA,
     setItems,
-    backendPlatforms,
+    backendPlatforms: currentScope ? backendPlatforms : EMPTY_FEED_ITEMS,
     setBackendPlatforms,
-    page,
-    hasMore,
-    loading,
-    loadingMore,
-    phase,
-    error,
+    page: currentScope ? page : 1,
+    hasMore: currentScope && hasMore,
+    loading: !currentScope || loading,
+    loadingMore: currentScope && loadingMore,
+    phase: currentScope ? phase : 'loading',
+    error: currentScope ? error : null,
     loadData,
     refreshData,
   }
@@ -450,10 +486,10 @@ function useImportWatch(options) {
  * Pagination, tab/filter loading, selection and replicate busy state
  * for the inspiration grid. Extracted from InspirationSection.
  */
-export function useInspirationFeed({ active }) {
+export function useInspirationFeed({ active, collectionId = '' }) {
   const filters = useInspirationFilters()
   const { tab, setTab } = filters
-  const data = useFeedData({ active, filters })
+  const data = useFeedData({ active, filters, collectionId })
   const { items, setItems, backendPlatforms, hasMore, loading, loadingMore, loadData, refreshData } = data
 
   const [selectedItem, setSelectedItem] = useState(null)
@@ -466,12 +502,21 @@ export function useInspirationFeed({ active }) {
   const sentinelRef = useRef(null)
 
   const dropLanded = useCallback((ids) => {
+    if (!ids) { setLandedItem(null); return }
     const removed = new Set((ids || []).map((id) => String(id)))
     setLandedItem((prev) => (prev && removed.has(String(prev.id)) ? null : prev))
   }, [])
 
+  const handleItemsRemoved = useCallback((ids) => {
+    dropLanded(ids)
+    // Deletion also changes collection previews and membership metadata. Reload
+    // the current scope rather than reconstructing that authority in the client.
+    return refreshData()
+  }, [dropLanded, refreshData])
+
   const replicate = useReplicateToChat()
-  const selection = useFeedSelection({ items, selectedItem, setSelectedItem, setItems, onRemoved: dropLanded })
+  const selection = useFeedSelection({ items, selectedItem, setSelectedItem, setItems, onRemoved: handleItemsRemoved })
+  useEffect(() => { selection.clearSelection() }, [tab, collectionId, selection.clearSelection])
   const watch = useImportWatch({ setItems, setLandedItem, setSelectedItem, refreshData })
 
   useSentinelObserver({ sentinelRef, hasMore, loading, loadingMore, loadData })
@@ -586,6 +631,7 @@ export function useInspirationFeed({ active }) {
   return {
     ...filters,
     ...data,
+    dropLanded,
     platform: filters.platform,
     setPlatform: filters.setPlatform,
     availablePlatforms,

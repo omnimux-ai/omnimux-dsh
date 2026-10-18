@@ -868,7 +868,7 @@ export function maybeEnsureVideoCover(item, store, paths) {
 }
 
 export function handleList({ url, store }) {
-  const failed = sweepStaleImports(store)
+  sweepStaleImports(store)
   const q = url.searchParams.get('q') || undefined
   const platform = url.searchParams.get('platform') || undefined
   const type = url.searchParams.get('type') || undefined
@@ -894,7 +894,9 @@ export function handleList({ url, store }) {
     is_favorite: isFavorite,
     sort,
     page,
-    pageSize,
+    page_size: pageSize,
+    root_only: url.searchParams.get('root_only') === 'true',
+    collection_id: url.searchParams.get('collection_id') || undefined,
     country,
     category,
     duration_min,
@@ -907,10 +909,7 @@ export function handleList({ url, store }) {
   })
   const platforms = typeof store.platforms === 'function' ? store.platforms() : []
   const isLean = url.searchParams.get('projection') === 'lean'
-  const rawItems = failed
-    ? result.items.map((row) => failed.get(String(row.id)) || row)
-    : result.items
-  const resolvedItems = rawItems.map((row) => maybeEnsureVideoCover(row, store, store?.paths))
+  const resolvedItems = result.items.map((row) => maybeEnsureVideoCover(row, store, store?.paths))
   const items = isLean
     ? resolvedItems.map((row) => {
         if (!row || typeof row !== 'object' || !row.deconstruction) return row
@@ -1514,7 +1513,22 @@ export async function handleFetchMedia(ctx) {
   }
 }
 
+/** Import responses keep their status snapshot and derive current membership at the exit.
+ * @param {Record<string, any>} ctx
+ */
 export async function handleImportUrl(ctx) {
+  const response = await importUrl(ctx)
+  const record = response.body?.data
+  if (!record || typeof record !== 'object' || !record.id) return response
+  const current = ctx.store.get(record.id)
+  if (!current) return fail(404, '该灵感已被移除，请刷新后重试')
+  const { collection_id: _previousMembership, ...data } = record
+  if (current.collection_id) data.collection_id = current.collection_id
+  return { ...response, body: { ...response.body, data } }
+}
+
+/** @param {Record<string, any>} ctx */
+async function importUrl(ctx) {
   if (ctx.signal?.aborted) throw createAbortError()
   const parsed = parseImportBody(ctx)
   if (!parsed.rawUrl) return fail(400, 'url is required')
@@ -2172,13 +2186,15 @@ export function handleGetItem({ id, store }) {
   // Both halves of this poll — the sweep and the row lookup — read the same
   // library file, and a poll fires every 2.5s per running row. The snapshot makes
   // them share one read: taken before the sweep, kept only when the sweep changed
-  // nothing (a sweep that failed a row already answered the lookup with the row it
-  // patched).
+  // nothing. A changed row is read again with its authoritative collection view.
   const snapshot = store.snapshotForRead ? store.snapshotForRead() : null
   const failed = sweepStaleImports(store)
   if (snapshot && !failed) store.cacheReadSnapshot?.(snapshot)
-  const rawItem = failed?.get(String(id)) || store.get(id, snapshot ?? undefined)
-  const item = rawItem ? maybeEnsureVideoCover(recoverInterruptedAnalyses(store, rawItem), store, store?.paths) : rawItem
+  const rawItem = store.get(id, snapshot ?? undefined)
+  const recovered = rawItem ? recoverInterruptedAnalyses(store, rawItem) : rawItem
+  // A recovery writes a raw row; reread only changed rows for the authoritative view.
+  const current = recovered !== rawItem ? store.get(id) : recovered
+  const item = current ? maybeEnsureVideoCover(current, store, store?.paths) : current
   if (item) return { status: 200, body: { data: item } }
   // A cloud publish has no local row to read — its progress lives in the job
   // table, and the page polls this very endpoint. Answering 404 here would tell

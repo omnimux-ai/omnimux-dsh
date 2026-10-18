@@ -20,7 +20,7 @@
 import assert from 'node:assert/strict'
 import { PassThrough, Readable } from 'node:stream'
 import { after, afterEach, before, beforeEach, describe, it } from 'node:test'
-import { mkdtempSync, mkdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { apply } from './index.js'
@@ -826,5 +826,165 @@ describe('HTTP entry: the media-export route is reachable through the registered
     const leanRes = await httpCall(world.route, { url: `${LOCAL_PREFIX}?projection=lean` })
     assert.equal(leanRes.status, 200)
     assert.equal('deconstruction' in leanRes.body.data.items[0], false, 'lean list must omit deconstruction')
+  })
+})
+
+
+describe('HTTP entry: local inspiration collections', () => {
+  async function collectionWorld() {
+    const world = bootPlugin()
+    for (let n = 1; n <= 5; n++) await createLocalItem(world, { id: `local-${n}`, title: `本地参考${n}`, content: n === 2 ? '成员可搜索' : '', created_at: `2026-01-0${n}T00:00:00.000Z` })
+    const call = (method, suffix, body) => httpCall(world.route, { method, url: `${LOCAL_PREFIX}${suffix}`, body })
+    return { ...world, call }
+  }
+
+  it('creates, lists, searches, renames, appends and removes through the actual registered prefix', async () => {
+    const world = await collectionWorld()
+    const made = await world.call('POST', '/collections', { title: '  我的合集  ', item_ids: ['local-2', 'local-1'] })
+    assert.equal(made.status, 201)
+    assert.equal(made.body.data.title, '我的合集')
+    assert.equal(typeof made.body.undo_token, 'string')
+    const id = made.body.data.id
+    const all = await world.call('GET', '/collections')
+    assert.equal(all.status, 200)
+    assert.deepEqual(all.body.data.collection_names, ['我的合集'])
+    const root = await world.call('GET', '?root_only=true&page_size=1&page=2')
+    assert.equal(root.status, 200)
+    assert.equal(root.body.data.total, 3)
+    assert.equal(root.body.data.page_size, 1)
+    assert.deepEqual(root.body.data.items.map((row) => row.id), ['local-4'])
+    assert.equal(root.body.data.collections[0].item_count, 2)
+    assert.equal((await world.call('GET', '')).body.data.total, 5)
+    const searched = await world.call('GET', '?root_only=true&q=' + encodeURIComponent('成员可搜索'))
+    assert.equal(searched.body.data.total, 0)
+    assert.equal(searched.body.data.collections[0].id, id)
+    assert.equal((await world.call('PATCH', `/collections/${id}`, { title: '新名称' })).body.data.title, '新名称')
+    assert.deepEqual((await world.call('POST', `/collections/${id}/items`, { item_ids: ['local-3', 'local-3'] })).body.data.item_ids, ['local-2', 'local-1', 'local-3'])
+    const inside = await world.call('GET', `?collection_id=${id}&page_size=1&page=2`)
+    assert.deepEqual(inside.body.data.items.map((row) => row.id), ['local-1'])
+    assert.equal(inside.body.data.collection.title, '新名称')
+    const removed = await world.call('POST', `/collections/${id}/remove-items`, { item_ids: ['local-2'] })
+    assert.deepEqual(removed.body.data.item_ids, ['local-1', 'local-3'])
+    assert.equal((await world.call('GET', '/local-2')).status, 200)
+    assert.equal(cloudCalls.length, 0)
+  })
+
+  it('returns authoritative read-only membership even when a read sweeps an interrupted import', async () => {
+    const world = await collectionWorld()
+    const made = await world.call('POST', '/collections', { title: '成员归属', item_ids: ['local-1', 'local-2'] })
+    const id = made.body.data.id
+    assert.equal((await world.call('GET', '/local-1')).body.data.collection_id, id)
+    assert.equal(Object.hasOwn((await world.call('GET', '/local-3')).body.data, 'collection_id'), false)
+    const file = resolveInspirationPaths({ homeDir: world.root }).libraryFile
+    function interrupt() {
+      const library = JSON.parse(readFileSync(file, 'utf8'))
+      const row = library.items.find((item) => item.id === 'local-1')
+      row.import_status = 'importing'
+      row.import_started_at = '2000-01-01T00:00:00.000Z'
+      writeFileSync(file, JSON.stringify(library))
+    }
+    interrupt()
+    const single = (await world.call('GET', '/local-1')).body.data
+    assert.equal(single.import_status, 'failed')
+    assert.equal(single.collection_id, id)
+    interrupt()
+    const listed = (await world.call('GET', '')).body.data.items.find((row) => row.id === 'local-1')
+    assert.equal(listed.import_status, 'failed')
+    assert.equal(listed.collection_id, id)
+    await world.call('PATCH', '/local-1', { content: '仍可编辑原帖' })
+    assert.ok(JSON.parse(readFileSync(file, 'utf8')).items.every((row) => !Object.hasOwn(row, 'collection_id')))
+    await world.call('POST', `/collections/${id}/remove-items`, { item_ids: ['local-1'] })
+    assert.equal(Object.hasOwn((await world.call('GET', '/local-1')).body.data, 'collection_id'), false)
+    assert.equal(cloudCalls.length, 0)
+  })
+
+  it('carries current collection membership on immediate duplicate and pending import replies', async () => {
+    const world = await collectionWorld()
+    const url = 'https://x.com/creator/status/2098246364895547904'
+    await world.call('PATCH', '/local-1', { content: '已有完整视频' })
+    const file = resolveInspirationPaths({ homeDir: world.root }).libraryFile
+    let library = JSON.parse(readFileSync(file, 'utf8'))
+    const row = library.items.find((item) => item.id === 'local-1')
+    row.source_url = url
+    row.type = 'video'
+    writeFileSync(file, JSON.stringify(library))
+    const made = await world.call('POST', '/collections', { title: '重复导入归属', item_ids: ['local-1', 'local-2'] })
+    for (const background of [false, true]) for (const return_existing of [false, true]) {
+      const response = await world.call('POST', '/import-url', { url, background, return_existing })
+      assert.equal(response.status, return_existing ? 200 : 409)
+      assert.equal(response.body.data.collection_id, made.body.data.id)
+    }
+    library = JSON.parse(readFileSync(file, 'utf8'))
+    const pending = library.items.find((item) => item.id === 'local-1')
+    pending.import_status = 'importing'
+    pending.import_stage = 'downloading'
+    writeFileSync(file, JSON.stringify(library))
+    const response = await world.call('POST', '/import-url', { url, background: true })
+    assert.equal(response.status, 202)
+    assert.equal(response.body.data.collection_id, made.body.data.id)
+    assert.equal(response.body.data.import_stage, 'downloading')
+    assert.ok(JSON.parse(readFileSync(file, 'utf8')).items.every((item) => !Object.hasOwn(item, 'collection_id')))
+    assert.equal(cloudCalls.length, 0)
+  })
+
+  it('rejects untrusted snapshots, malformed input, missing locals and cross-collection membership atomically', async () => {
+    const world = await collectionWorld()
+    const first = (await world.call('POST', '/collections', { title: '第一组', item_ids: ['local-1', 'local-2'] })).body.data
+    await world.call('POST', '/collections', { title: '第二组', item_ids: ['local-3', 'local-4'] })
+    const file = resolveInspirationPaths({ homeDir: world.root }).libraryFile
+    const original = readFileSync(file, 'utf8')
+    for (const [method, path, body, expected] of [
+      ['POST', '/collections', { title: '不存在', item_ids: ['local-5', 'cloud-only'] }, 404],
+      ['POST', '/collections', { title: '空白', item_ids: ['local-5', 'local-5'] }, 400],
+      ['POST', `/collections/${first.id}/items`, { item_ids: ['local-5', 'local-3'] }, 409],
+      ['PATCH', `/collections/${first.id}`, { title: '第二组' }, 409],
+      ['POST', `/collections/${first.id}/items`, { item_ids: ['local-5'], collections: [] }, 400],
+      ['POST', '/collections', [], 400],
+      ['POST', '', { id: 123, title: '非法数字标识' }, 400],
+      ['POST', '', { id: 'local-1', title: '重复本地标识' }, 409],
+      ['POST', '/collections/undo', { token: 'forged-token' }, 409],
+    ]) {
+      const result = await world.call(method, path, body)
+      assert.equal(result.status, expected, `${method} ${path}`)
+      assert.equal(readFileSync(file, 'utf8'), original)
+    }
+    assert.equal((await world.call('GET', '?collection_id=missing')).status, 404)
+    assert.equal(cloudCalls.length, 0)
+  })
+
+  it('undo preserves edits and later new rows and returns a clear conflict for later relationship changes', async () => {
+    const world = await collectionWorld()
+    const made = await world.call('POST', '/collections', { title: '可撤销', item_ids: ['local-1', 'local-2'] })
+    const id = made.body.data.id
+    await world.call('PATCH', '/local-1', { content: '撤销前编辑', is_favorite: true })
+    await world.call('POST', '', { id: 'later', title: '后来新增' })
+    assert.equal((await world.call('POST', '/collections/undo', { token: made.body.undo_token })).status, 200)
+    assert.equal((await world.call('GET', '/local-1')).body.data.content, '撤销前编辑')
+    assert.equal((await world.call('GET', '/later')).body.data.title, '后来新增')
+    assert.equal((await world.call('GET', '/collections')).body.data.collections.length, 0)
+    assert.equal((await world.call('POST', '/collections/undo', { token: made.body.undo_token })).status, 409)
+    const newGroup = await world.call('POST', '/collections', { title: '后来合集', item_ids: ['local-1', 'local-2'] })
+    await world.call('PATCH', `/collections/${newGroup.body.data.id}`, { title: '已有后续操作' })
+    assert.equal((await world.call('POST', '/collections/undo', { token: newGroup.body.undo_token })).status, 409)
+    assert.equal((await world.call('GET', `?collection_id=${id}`)).status, 404)
+    assert.equal(cloudCalls.length, 0)
+  })
+
+  it('prunes references for actual single and batch deletes, retains empty groups, and refuses corrupt-file writes', async () => {
+    const world = await collectionWorld()
+    const made = await world.call('POST', '/collections', { title: '删除保留空壳', item_ids: ['local-1', 'local-2'] })
+    await world.call('DELETE', '/local-1')
+    assert.equal((await world.call('POST', '/collections/undo', { token: made.body.undo_token })).status, 409)
+    await world.call('POST', '/batch-delete', { ids: ['local-2'] })
+    const groups = (await world.call('GET', '/collections')).body.data.collections
+    assert.equal(groups.length, 1)
+    assert.equal(groups[0].item_count, 0)
+    const file = resolveInspirationPaths({ homeDir: world.root }).libraryFile
+    writeFileSync(file, '{broken-file')
+    for (const [method, suffix, body] of [['POST', '', { title: '不要覆盖' }], ['POST', '/collections', { title: '不要覆盖', item_ids: ['local-3', 'local-4'] }], ['GET', '?root_only=true', undefined]]) {
+      assert.equal((await world.call(method, suffix, body)).status, 500)
+      assert.equal(readFileSync(file, 'utf8'), '{broken-file')
+    }
+    assert.equal(cloudCalls.length, 0)
   })
 })

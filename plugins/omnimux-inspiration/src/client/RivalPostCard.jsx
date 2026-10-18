@@ -110,6 +110,7 @@ function stateText(card, t) {
  *   className?: string,
  *   selected?: boolean,
  *   inspirationId?: string,
+ *   collectionId?: string,
  *   bodyClassName?: string,
  *   bodyRole?: 'status',
  * }} props
@@ -117,11 +118,12 @@ function stateText(card, t) {
 export function RivalPostCard(props) {
   const {
     card, t, onDetail, onReplicate, onDeconstruct, onMarkDone, style, column, busy,
-    mediaNode: customMedia, overlayNode, children, className = '', selected, inspirationId,
+    mediaNode: customMedia, overlayNode, children, className = '', selected, inspirationId, collectionId,
     bodyClassName = '', bodyRole,
   } = props
   const cardType = rivalCardTypeOf(card)
-  const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image'
+  const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image' || cardType === 'collection'
+  const interactive = cardType !== 'collection' || typeof onDetail === 'function'
   const isDone = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
   const tier = String(card?.velocity?.tier || 'watch')
   const title = String(card?.title || '')
@@ -177,11 +179,12 @@ export function RivalPostCard(props) {
       className={`omnimux-rival-card t-${cardType} tier-${tier}${isDone ? ' is-done' : ''} ${className}`.trim()}
       data-card-id={String(card?.id ?? '')}
       data-inspiration-id={inspirationId}
+      data-collection-id={collectionId}
       aria-selected={selected}
       data-card-type={cardType}
       data-col={column}
-      role="button"
-      tabIndex={0}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
       style={style}
       onClick={openDetail}
       onKeyDown={(e) => {
@@ -196,9 +199,9 @@ export function RivalPostCard(props) {
         <>
           {mediaNode}
           <VelocityPill velocity={card?.velocity} surface="on-media" t={t} />
-          <div className="omnimux-rival-card-title-zone">
+          {cardType !== 'collection' ? <div className="omnimux-rival-card-title-zone">
             <div className={`omnimux-rival-card-title clamp-${clamp}`}>{title}</div>
-          </div>
+          </div> : null}
         </>
       ) : (
         <>
@@ -248,7 +251,7 @@ export function RivalPostCard(props) {
             </Button>
             {/* disabled 按钮不可聚焦，title 对键盘/读屏不可达（R6-⑨）：
                 同文案经可视隐藏节点挂进 aria-describedby。
-                R7-⑧（PM M4）：隐藏节点必须是 <button> 的 DOM 兄弟而非
+                R7-⑧（PM M4）：隐藏节点必须与原按钮同级而非作为其
                 子节点——作为子节点其文本会被并入可及名称，读屏把
                 "Original Original link unavailable" 念两遍。挂到外层
                 act-slot 即可，describedby 引用不要求后代关系。 */}

@@ -13,6 +13,7 @@ import {
   handleShare,
   handleTranslate,
 } from './http-handlers.js'
+import { handleCollectionRequest } from './collection-handlers.js'
 import { handleRadarKeywords, handleRadarMatch } from './radar/radar-handlers.js'
 import { handleSaveCreationDraft, handlePrepareCreationReferences, handleMaterializeCreationReferences } from './creation-handlers.js'
 import { detectPlatformFromUrl } from './url-normalizer.js'
@@ -54,6 +55,7 @@ const ROUTE_HANDLERS = {
   get: handleGetItem,
   patch: handlePatchItem,
   delete: handleDeleteItem,
+  collections: handleCollectionRequest,
 }
 
 function extractObjectMessage(obj) {
@@ -217,6 +219,8 @@ function matchItem(method, path) {
 }
 
 function matchRoute(method, path) {
+  const prefix = `${LOCAL_PREFIX}/collections`
+  if (path === prefix || path.startsWith(`${prefix}/`)) return { name: 'collections' }
   return matchCollection(method, path) || matchSpecial(method, path) || matchItem(method, path)
 }
 

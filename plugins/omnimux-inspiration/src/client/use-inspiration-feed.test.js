@@ -3,13 +3,14 @@ import { describe, it } from 'node:test'
 import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { JSDOM } from 'jsdom'
-import { invalidateInspirationCache } from './api.js'
+import { getInspirationCache, invalidateInspirationCache } from './api.js'
 import {
   applyCachedPage,
   buildPlatformFilterOptions,
   cacheKeyOf,
   checkCacheEarlyReturn,
   createReplicateStatusHandler,
+  executeBatchDelete,
   extractLocalItemIds,
   filterOutItemsByIds,
   formatPlatformName,
@@ -366,6 +367,98 @@ describe('use-inspiration-feed pure helpers', () => {
       assert.equal(hit, false)
       assert.equal(loadingVal, true)
     })
+  })
+})
+
+describe('executeBatchDelete authoritative receipts', () => {
+  function deletionState() {
+    const state = {
+      items: [{ id: 'A', is_local: true }, { id: 'B', is_local: true }],
+      selectedIds: new Set(['A', 'B']),
+      selectedItem: { id: 'A', is_local: true },
+      pendingRemove: { ids: ['A', 'B'], count: 2 },
+    }
+    const setters = { selectedItem: state.selectedItem }
+    for (const key of ['items', 'selectedIds', 'selectedItem', 'pendingRemove']) {
+      setters[`set${key[0].toUpperCase()}${key.slice(1)}`] = value => {
+        state[key] = typeof value === 'function' ? value(state[key]) : value
+      }
+    }
+    return { state, setters }
+  }
+
+  for (const response of [
+    { status: 503, body: { error: '服务暂不可用，请重试' } },
+    { status: 200, body: { data: { count: 2 } } },
+    { status: 200, body: { data: { deleted: ['A'], count: 2 } } },
+    { status: 200, body: { data: { deleted: ['A', 'outside'], count: 2 } } },
+    { status: 200, body: { data: { deleted: ['A', 'A'], count: 2 } } },
+  ]) {
+    it(`preserves all local state for an unsuccessful or invalid receipt ${JSON.stringify(response.body)}`, async () => {
+      const previousFetch = globalThis.fetch
+      const { state, setters } = deletionState()
+      const before = structuredClone(state)
+      globalThis.fetch = async () => jsonResponse(response.status, response.body)
+      try {
+        await assert.rejects(executeBatchDelete(['A', 'B'], setters))
+        assert.deepEqual(state, before)
+      } finally {
+        globalThis.fetch = previousFetch
+        invalidateInspirationCache()
+      }
+    })
+  }
+
+  it('removes only confirmed ids and leaves remaining selection and confirmation retryable', async () => {
+    const previousFetch = globalThis.fetch
+    const { state, setters } = deletionState()
+    globalThis.fetch = async () => jsonResponse(200, { data: { deleted: ['A'], count: 1 } })
+    try {
+      const result = await executeBatchDelete(['A', 'B'], setters)
+      assert.deepEqual(result, { deleted: ['A'], remaining: ['B'] })
+      assert.deepEqual(state.items.map(item => item.id), ['B'])
+      assert.deepEqual([...state.selectedIds], ['B'])
+      assert.equal(state.selectedItem, null)
+      assert.deepEqual(state.pendingRemove.ids, ['B'])
+      assert.equal(state.pendingRemove.count, 1)
+      assert.match(state.pendingRemove.error, /重试/)
+    } finally {
+      globalThis.fetch = previousFetch
+      invalidateInspirationCache()
+    }
+  })
+
+  it('closes confirmation only when the receipt confirms every requested id', async () => {
+    const previousFetch = globalThis.fetch
+    const { state, setters } = deletionState()
+    globalThis.fetch = async () => jsonResponse(200, { data: { deleted: ['B', 'A'], count: 2 } })
+    try {
+      assert.deepEqual(await executeBatchDelete(['A', 'B'], setters), { deleted: ['B', 'A'], remaining: [] })
+      assert.deepEqual(state.items, [])
+      assert.equal(state.selectedIds.size, 0)
+      assert.equal(state.selectedItem, null)
+      assert.equal(state.pendingRemove, null)
+    } finally {
+      globalThis.fetch = previousFetch
+      invalidateInspirationCache()
+    }
+  })
+
+  it('preserves rows and selections when a valid receipt confirms no deletions', async () => {
+    const previousFetch = globalThis.fetch
+    const { state, setters } = deletionState()
+    globalThis.fetch = async () => jsonResponse(200, { data: { deleted: [], count: 0 } })
+    try {
+      assert.deepEqual(await executeBatchDelete(['A', 'B'], setters), { deleted: [], remaining: ['A', 'B'] })
+      assert.deepEqual(state.items.map(item => item.id), ['A', 'B'])
+      assert.deepEqual([...state.selectedIds], ['A', 'B'])
+      assert.equal(state.selectedItem.id, 'A')
+      assert.deepEqual(state.pendingRemove.ids, ['A', 'B'])
+      assert.match(state.pendingRemove.error, /重试/)
+    } finally {
+      globalThis.fetch = previousFetch
+      invalidateInspirationCache()
+    }
   })
 })
 
@@ -758,10 +851,10 @@ describe('useInspirationFeed request ordering (Issue #2988)', () => {
     Object.assign(dom.window, extraWindow)
     Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true })
     invalidateInspirationCache()
-    globalThis.fetch = (input) => fetchImpl(new URL(String(input), dom.window.location.href))
+    globalThis.fetch = (input, init) => fetchImpl(new URL(String(input), dom.window.location.href), init)
     const state = { feed: null }
-    function Harness() {
-      state.feed = useInspirationFeed({ active: true })
+    function Harness({ collectionId = '' }) {
+      state.feed = useInspirationFeed({ active: true, collectionId })
       return null
     }
     const root = createRoot(dom.window.document.getElementById('root'))
@@ -804,6 +897,218 @@ describe('useInspirationFeed request ordering (Issue #2988)', () => {
       await cleanup()
     }
   })
+
+  it('never presents the previous scope as members while opening or returning fails', async () => {
+    let releaseCollection
+    let releaseRoot
+    let failRoot = false
+    let collectionReady = false
+    const collectionGate = new Promise(resolve => { releaseCollection = resolve })
+    const rootGate = new Promise(resolve => { releaseRoot = resolve })
+    const { state, root, Harness, cleanup } = mountFeed(async url => {
+      if (url.pathname !== '/omnimux/inspiration/local') return jsonResponse(200, { data: { items: [], total: 0 } })
+      if (url.searchParams.get('collection_id')) {
+        if (!collectionReady) {
+          await collectionGate
+          return jsonResponse(503, { error: 'collection unavailable' })
+        }
+        return jsonResponse(200, { data: { items: [{ id: 'member-B' }], total: 1, collection: { id: 'C' } } })
+      }
+      if (failRoot) {
+        await rootGate
+        return jsonResponse(503, { error: 'root unavailable' })
+      }
+      return jsonResponse(200, { data: { items: [{ id: 'independent-A' }], total: 1, collections: [{ id: 'C' }] } })
+    })
+    try {
+      await act(async () => root.render(React.createElement(Harness)))
+      await act(async () => state.feed.setTab('local'))
+      await waitFor(() => state.feed.items[0]?.id === 'independent-A', 'root rows should load')
+      await act(async () => root.render(React.createElement(Harness, { collectionId: 'C' })))
+      assert.deepEqual(state.feed.items, [], 'root rows must disappear as soon as the collection opens')
+      assert.deepEqual(state.feed.collectionData.collections, [], 'root collection cards must not survive into member scope')
+      assert.equal(state.feed.hasMore, false)
+      assert.equal(state.feed.loading, true)
+      await act(async () => releaseCollection())
+      await waitFor(() => !state.feed.loading, 'collection failure should settle')
+      assert.deepEqual(state.feed.items, [])
+      assert.equal(state.feed.error, 'collection unavailable')
+      assert.equal(state.feed.phase, 'ready', 'the failed scope must leave its loading phase')
+
+      collectionReady = true
+      await act(async () => state.feed.loadData())
+      assert.equal(state.feed.items[0]?.id, 'member-B', 'retry should load members normally')
+      failRoot = true
+      invalidateInspirationCache()
+      await act(async () => root.render(React.createElement(Harness)))
+      assert.deepEqual(state.feed.items, [], 'members must disappear as soon as the user returns to root')
+      assert.equal(state.feed.collectionData.collection, null)
+      assert.equal(state.feed.loading, true)
+      await act(async () => releaseRoot())
+      await waitFor(() => !state.feed.loading, 'root failure should settle')
+      assert.deepEqual(state.feed.items, [])
+      assert.equal(state.feed.error, 'root unavailable')
+    } finally {
+      releaseCollection()
+      releaseRoot()
+      await cleanup()
+    }
+  })
+
+  it('keeps failed member deletion selected with feedback and refreshes metadata only after a successful retry', async () => {
+    let attempts = 0
+    let memberReads = 0
+    let deleted = false
+    const { state, root, Harness, cleanup } = mountFeed(async url => {
+      if (url.pathname.endsWith('/batch-delete')) {
+        attempts += 1
+        if (attempts === 1) return jsonResponse(503, { error: '删除服务暂不可用，请重试' })
+        deleted = true
+        return jsonResponse(200, { data: { deleted: ['member-A'], count: 1 } })
+      }
+      if (url.pathname !== '/omnimux/inspiration/local') return jsonResponse(200, { data: { items: [], total: 0 } })
+      memberReads += 1
+      const items = deleted ? [{ id: 'member-B' }] : [{ id: 'member-A' }, { id: 'member-B' }]
+      return jsonResponse(200, { data: { items, total: items.length, collection: { id: 'C', item_count: items.length, preview_items: items } } })
+    })
+    try {
+      await act(async () => root.render(React.createElement(Harness, { collectionId: 'C' })))
+      await act(async () => state.feed.setTab('local'))
+      await waitFor(() => state.feed.items.length === 2, 'collection members should load')
+      await act(async () => {
+        state.feed.setSelectedItem(state.feed.items[0])
+        state.feed.toggleSelect(state.feed.items[0])
+        state.feed.toggleSelect(state.feed.items[1])
+        state.feed.setPendingRemove({ ids: ['member-A'], count: 1 })
+      })
+      await act(async () => state.feed.handleConfirmBatchRemove())
+      assert.deepEqual(state.feed.items.map(item => item.id), ['member-A', 'member-B'])
+      assert.deepEqual([...state.feed.selectedIds], ['member-A', 'member-B'])
+      assert.equal(state.feed.selectedItem?.id, 'member-A')
+      assert.deepEqual(state.feed.pendingRemove.ids, ['member-A'])
+      assert.match(state.feed.pendingRemove.error, /删除服务暂不可用/)
+      assert.equal(memberReads, 1, 'failed deletion must not run a successful-removal refresh')
+      assert.equal(state.feed.removing, false)
+      await act(async () => state.feed.handleConfirmBatchRemove())
+      assert.equal(attempts, 2)
+      assert.equal(memberReads, 2)
+      assert.deepEqual(state.feed.items.map(item => item.id), ['member-B'])
+      assert.deepEqual([...state.feed.selectedIds], ['member-B'])
+      assert.equal(state.feed.selectedItem, null)
+      assert.equal(state.feed.pendingRemove, null)
+      assert.deepEqual(state.feed.collectionData.collection.preview_items.map(item => item.id), ['member-B'])
+    } finally {
+      await cleanup()
+    }
+  })
+
+  it('keeps unconfirmed members retryable after partial deletion and refreshes only authoritative membership', async () => {
+    let attempts = 0
+    let memberReads = 0
+    let remaining = ['member-A', 'member-B']
+    const { state, root, Harness, cleanup } = mountFeed(async (url, init) => {
+      if (url.pathname.endsWith('/batch-delete')) {
+        attempts += 1
+        assert.deepEqual(JSON.parse(init.body).ids, attempts === 1 ? ['member-A', 'member-B'] : ['member-B'])
+        const deleted = attempts === 1 ? ['member-A'] : ['member-B']
+        remaining = remaining.filter(id => !deleted.includes(id))
+        return jsonResponse(200, { data: { deleted, count: deleted.length } })
+      }
+      if (url.pathname !== '/omnimux/inspiration/local') return jsonResponse(200, { data: { items: [], total: 0 } })
+      memberReads += 1
+      const items = remaining.map(id => ({ id }))
+      return jsonResponse(200, { data: { items, total: items.length, collection: { id: 'C', item_count: items.length, preview_items: items } } })
+    })
+    try {
+      await act(async () => root.render(React.createElement(Harness, { collectionId: 'C' })))
+      await act(async () => state.feed.setTab('local'))
+      await waitFor(() => state.feed.items.length === 2, 'collection members should load')
+      await act(async () => {
+        state.feed.toggleSelect(state.feed.items[0])
+        state.feed.toggleSelect(state.feed.items[1])
+        state.feed.setPendingRemove({ ids: ['member-A', 'member-B'], count: 2 })
+      })
+      await act(async () => state.feed.handleConfirmBatchRemove())
+      assert.deepEqual(state.feed.items.map(item => item.id), ['member-B'])
+      assert.deepEqual([...state.feed.selectedIds], ['member-B'])
+      assert.deepEqual(state.feed.pendingRemove.ids, ['member-B'])
+      assert.match(state.feed.pendingRemove.error, /重试/)
+      assert.equal(state.feed.collectionData.collection.item_count, 1)
+      assert.equal(memberReads, 2)
+      await act(async () => state.feed.handleConfirmBatchRemove())
+      assert.equal(attempts, 2)
+      assert.equal(memberReads, 3)
+      assert.deepEqual(state.feed.items, [])
+      assert.equal(state.feed.selectedIds.size, 0)
+      assert.equal(state.feed.pendingRemove, null)
+      assert.equal(state.feed.collectionData.collection.item_count, 0)
+    } finally {
+      await cleanup()
+    }
+  })
+
+  for (const returnToRoot of [false, true]) {
+    it(`refreshes authoritative collection previews after member deletion${returnToRoot ? ' while returning to root' : ''}`, async () => {
+      let deleted = false
+      let releaseDelete
+      let deletionStarted = false
+      let memberReads = 0
+      let rootReads = 0
+      const deletionGate = new Promise(resolve => { releaseDelete = resolve })
+      const collection = () => ({
+        id: 'C',
+        title: 'Saved ideas',
+        item_count: deleted ? 1 : 2,
+        preview_items: deleted ? [{ id: 'member-B' }] : [{ id: 'member-A' }, { id: 'member-B' }],
+      })
+      const { state, root, Harness, cleanup } = mountFeed(async (url, init) => {
+        if (url.pathname.endsWith('/batch-delete')) {
+          assert.equal(init.method, 'POST')
+          assert.deepEqual(JSON.parse(init.body), { ids: ['member-A'] })
+          deletionStarted = true
+          await deletionGate
+          deleted = true
+          return jsonResponse(200, { data: { deleted: ['member-A'], count: 1 } })
+        }
+        if (url.pathname !== '/omnimux/inspiration/local') return jsonResponse(200, { data: { items: [], total: 0 } })
+        if (url.searchParams.get('collection_id')) {
+          memberReads += 1
+          const items = collection().preview_items
+          return jsonResponse(200, { data: { items, total: items.length, collection: collection() } })
+        }
+        rootReads += 1
+        return jsonResponse(200, { data: { items: [], total: 0, collections: [collection()] } })
+      })
+      let removal
+      try {
+        await act(async () => root.render(React.createElement(Harness, { collectionId: 'C' })))
+        await act(async () => state.feed.setTab('local'))
+        await waitFor(() => state.feed.items.length === 2, 'collection members should load')
+        await act(async () => state.feed.setPendingRemove({ ids: ['member-A'], count: 1 }))
+        await act(async () => { removal = state.feed.handleConfirmBatchRemove() })
+        assert.equal(deletionStarted, true)
+        if (returnToRoot) {
+          await act(async () => root.render(React.createElement(Harness)))
+          await waitFor(() => state.feed.collectionData.collections.length === 1, 'root should load while deletion is pending')
+          assert.equal(state.feed.collectionData.collections[0].item_count, 2)
+        }
+        await act(async () => {
+          releaseDelete()
+          await removal
+        })
+        const authoritative = returnToRoot ? state.feed.collectionData.collections[0] : state.feed.collectionData.collection
+        assert.equal(authoritative.item_count, 1, 'collection metadata must reflect server reference cleanup')
+        assert.deepEqual(authoritative.preview_items.map(item => item.id), ['member-B'])
+        assert.equal(memberReads, returnToRoot ? 1 : 2, 'a completed deletion must not reopen an old member scope')
+        assert.equal(rootReads, returnToRoot ? 2 : 0, 'refresh must target the currently displayed scope')
+        assert.deepEqual(state.feed.items.map(item => item.id), returnToRoot ? [] : ['member-B'])
+      } finally {
+        releaseDelete()
+        await removal
+        await cleanup()
+      }
+    })
+  }
 })
 
 describe('useInspirationFeed request deduplication (Issue #2988)', () => {
@@ -909,6 +1214,86 @@ describe('executeFeedLoad loaded-range refresh', () => {
       await pending
       assert.deepEqual(writes, [], 'a superseded refresh must not overwrite any state owned by the new filter')
     } finally {
+      globalThis.fetch = previousFetch
+      invalidateInspirationCache()
+    }
+  })
+})
+
+describe('executeFeedLoad invalidated cache ordering', () => {
+  for (const refresh of [false, true]) {
+    it(`does not refill invalidated cache from an older ${refresh ? 'loaded-range refresh' : 'first-page request'}`, async () => {
+      const { executeFeedLoad: run } = await import('./feed-helpers.js')
+      const previousFetch = globalThis.fetch
+      invalidateInspirationCache()
+      let releaseOld
+      let requests = 0
+      let current = true
+      const oldGate = new Promise(resolve => { releaseOld = resolve })
+      const state = {}
+      const setters = Object.fromEntries(['Items', 'Page', 'HasMore', 'Phase', 'Error', 'Loading', 'LoadingMore', 'Platforms', 'CollectionData'].map(key => [`set${key}`, value => { state[key] = value }]))
+      const params = { isNextPage: false, tab: 'local', sort: 'new', page: 1, hasExistingItems: false }
+      globalThis.fetch = async () => {
+        requests += 1
+        if (requests === 1) {
+          await oldGate
+          return jsonResponse(200, { data: { items: [{ id: 'old-independent-A' }], total: 1, collections: [] } })
+        }
+        return jsonResponse(200, { data: { items: [], total: 0, collections: [{ id: 'created-C' }] } })
+      }
+      try {
+        const oldLoad = run({ ...params, refreshThroughPage: refresh ? 1 : undefined }, setters, { isCurrent: () => current })
+        await waitFor(() => requests === 1, 'old request should start')
+        invalidateInspirationCache()
+        current = false
+        await run(params, setters)
+        assert.equal(state.CollectionData.collections[0]?.id, 'created-C')
+        releaseOld()
+        await oldLoad
+        const cached = getInspirationCache(cacheKeyOf(params))
+        assert.deepEqual(cached.data.items, [], 'an invalidated response cannot restore the old independent row')
+        assert.equal(cached.data.collections[0]?.id, 'created-C')
+        await run(params, setters)
+        assert.equal(requests, 2, 'returning to root should use the latest successful cache')
+        assert.deepEqual(state.Items, [])
+        assert.equal(state.CollectionData.collections[0]?.id, 'created-C')
+      } finally {
+        releaseOld()
+        globalThis.fetch = previousFetch
+        invalidateInspirationCache()
+      }
+    })
+  }
+
+  it('still warms the original scope cache after a navigation supersedes its request', async () => {
+    const { executeFeedLoad: run } = await import('./feed-helpers.js')
+    const previousFetch = globalThis.fetch
+    invalidateInspirationCache()
+    let releaseOld
+    let current = true
+    let requests = 0
+    const gate = new Promise(resolve => { releaseOld = resolve })
+    const writes = []
+    const setters = Object.fromEntries(['Items', 'Page', 'HasMore', 'Phase', 'Error', 'Loading', 'LoadingMore', 'Platforms', 'CollectionData'].map(key => [`set${key}`, value => writes.push([key, value])]))
+    const params = { isNextPage: false, tab: 'local', sort: 'new', collection_id: 'C', page: 1, hasExistingItems: false }
+    globalThis.fetch = async () => {
+      requests += 1
+      await gate
+      return jsonResponse(200, { data: { items: [{ id: 'member-B' }], total: 1, collection: { id: 'C' } } })
+    }
+    try {
+      const pending = run(params, setters, { isCurrent: () => current })
+      await waitFor(() => requests === 1, 'request should start')
+      writes.length = 0
+      current = false
+      releaseOld()
+      await pending
+      assert.deepEqual(writes, [], 'navigation must still suppress all superseded state writes')
+      assert.equal(getInspirationCache(cacheKeyOf(params)).data.items[0]?.id, 'member-B')
+      await run(params, setters)
+      assert.equal(requests, 1, 'a superseded response in the same cache generation remains useful on return')
+    } finally {
+      releaseOld()
       globalThis.fetch = previousFetch
       invalidateInspirationCache()
     }

@@ -1,10 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, realpathSync, lstatSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, realpathSync, lstatSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, relative, isAbsolute } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveInspirationPaths } from './paths.js'
 import { getCanonicalItemKey, isSameSocialContent, normalizeUrl } from './url-normalizer.js'
 import { moveToTrash } from './trash.js'
 import { calculateRecommendationScore } from './recommendation-engine.js'
+import { createCollectionStore, collectionView, pruneCollectionMembers, validateCollections } from './local-collections.js'
 
 export class InspirationError extends Error {
   /**
@@ -185,6 +186,139 @@ export function localMediaPaths(paths) {
   return [...new Set(Object.values(paths || {}).filter((value) => typeof value === 'string' && value.length > 0))]
 }
 
+/** A read view derives membership solely from the authoritative collection store.
+ * @typedef {LocalInspirationRecord & {readonly collection_id?: string}} LocalInspirationView
+ */
+
+/** @param {LocalInspirationRecord[]} items
+ * @param {import('./local-collections.js').InspirationCollection[]} collections
+ * @returns {LocalInspirationView[]}
+ */
+function membershipViews(items, collections) {
+  /** @type {Map<string, string>} */
+  const ownerById = new Map()
+  for (const collection of collections) for (const id of collection.item_ids) ownerById.set(id, collection.id)
+  return items.map((item) => ownerById.has(item.id) ? { ...item, collection_id: ownerById.get(item.id) } : item)
+}
+
+/** Apply the same predicates to loose rows and collection members.
+ * @param {LocalInspirationRecord[]} source
+ * @param {Record<string, any>} query
+ * @returns {LocalInspirationRecord[]}
+ */
+function filterRows(source, query) {
+  let items = source
+  if (query.q && typeof query.q === 'string') {
+    const needle = query.q.toLowerCase().trim()
+    items = items.filter((row) => {
+      const t = (row.title || '').toLowerCase()
+      const c = (row.content || '').toLowerCase()
+      const u = (row.source_url || '').toLowerCase()
+      const dec = typeof row.deconstruction === 'string'
+        ? row.deconstruction.toLowerCase()
+        : JSON.stringify(row.deconstruction || {}).toLowerCase()
+      const tags = Array.isArray(row.tags) ? row.tags.join(' ').toLowerCase() : ''
+      return t.includes(needle) || c.includes(needle) || u.includes(needle) || dec.includes(needle) || tags.includes(needle)
+    })
+  }
+
+  if (query.type) {
+    items = items.filter((row) => row.type === query.type)
+  }
+
+  if (query.platform) {
+    const targetPlat = String(query.platform).toLowerCase().trim()
+    items = items.filter((row) => {
+      const rowPlat = (row.source_platform || row.platform || '').toLowerCase().trim()
+      if (targetPlat === 'x' || targetPlat === 'twitter') {
+        return rowPlat === 'x' || rowPlat === 'twitter'
+      }
+      return rowPlat === targetPlat
+    })
+  }
+
+  const matchTag = query.tag || query.tags
+  if (matchTag) {
+    const expected = String(matchTag).split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
+    if (expected.length > 0) {
+      items = items.filter((row) => {
+        const current = (row.tags || []).map((t) => t.toLowerCase())
+        return expected.some((exp) => current.includes(exp))
+      })
+    }
+  }
+
+  if (query.is_favorite !== undefined && query.is_favorite !== '') {
+    const fav = query.is_favorite === true || query.is_favorite === 'true'
+    items = items.filter((row) => Boolean(row.is_favorite) === fav)
+  }
+
+  if (query.country) {
+    const c = String(query.country).toLowerCase().trim()
+    items = items.filter((row) => (row.country_code || '').toLowerCase() === c)
+  }
+
+  if (query.category) {
+    const cat = String(query.category).toLowerCase().trim()
+    items = items.filter((row) => (row.category || '').toLowerCase().includes(cat))
+  }
+
+  if (query.duration_min != null && query.duration_min !== '') {
+    const min = Number(query.duration_min)
+    if (Number.isFinite(min)) items = items.filter((row) => rowDuration(row) >= min)
+  }
+
+  if (query.duration_max != null && query.duration_max !== '') {
+    const max = Number(query.duration_max)
+    if (Number.isFinite(max)) items = items.filter((row) => rowDuration(row) <= max)
+  }
+
+  if (query.views_min != null && query.views_min !== '') {
+    const min = Number(query.views_min)
+    if (Number.isFinite(min)) items = items.filter((row) => rowViews(row) >= min)
+  }
+
+  if (query.views_max != null && query.views_max !== '') {
+    const max = Number(query.views_max)
+    if (Number.isFinite(max)) items = items.filter((row) => rowViews(row) <= max)
+  }
+
+  if (query.traffic_type) {
+    const tt = String(query.traffic_type).toLowerCase().trim()
+    items = items.filter((row) => (row.traffic_type || 'organic').toLowerCase() === tt)
+  }
+
+  if (query.posted_after) {
+    const afterMs = Date.parse(query.posted_after)
+    if (!Number.isNaN(afterMs)) {
+      items = items.filter((row) => {
+        const p = row.posted_at || row.published_at
+        if (!p) return false
+        const itemMs = Date.parse(p)
+        return !Number.isNaN(itemMs) && itemMs >= afterMs
+      })
+    }
+  }
+
+  if (query.posted_before) {
+    const beforeMs = Date.parse(query.posted_before)
+    if (!Number.isNaN(beforeMs)) {
+      const effectiveBefore = /^\d{4}-\d{2}-\d{2}$/.test(String(query.posted_before).trim())
+        ? beforeMs + 86400000 - 1
+        : beforeMs
+      items = items.filter((row) => {
+        const p = row.posted_at || row.published_at
+        if (!p) return false
+        const itemMs = Date.parse(p)
+        return !Number.isNaN(itemMs) && itemMs <= effectiveBefore
+      })
+    }
+  }
+
+  return items
+}
+
+/** @param {{ paths?: ReturnType<typeof resolveInspirationPaths>, recycleFile?: (path: string) => Promise<unknown>, collectionUndoTtlMs?: number }} [opts] */
 export function createLocalStore(opts = {}) {
   const paths = opts.paths ?? resolveInspirationPaths()
   const recycleFile = opts.recycleFile ?? moveToTrash
@@ -291,15 +425,16 @@ export function createLocalStore(opts = {}) {
   let cachedSnapshot = null
 
   /**
-   * @returns {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }}
+   * @returns {{ items: LocalInspirationView[], stat: import('node:fs').Stats | null }}
    */
   function snapshotForRead() {
-    return { items: readAll(), stat: statOf() }
+    const library = readLibrary()
+    return { items: membershipViews(library.items, library.collections), stat: statOf() }
   }
 
   /**
    * @param {unknown} snapshot
-   * @returns {LocalInspirationRecord[] | null} the snapshot's items, or null when they are stale
+   * @returns {LocalInspirationView[] | null} the snapshot's items, or null when they are stale
    */
   function snapshotItems(snapshot) {
     const usable = snapshot && typeof snapshot === 'object' && Array.isArray(snapshot.items)
@@ -317,29 +452,61 @@ export function createLocalStore(opts = {}) {
    * @returns {LocalInspirationRecord[]}
    */
   function readAll() {
-    if (!statOf()) return []
+    return readLibrary().items
+  }
+
+  /** @returns {import('./local-collections.js').InspirationLibrary} */
+  function readLibrary() {
+    let raw
     try {
-      const raw = readFileSync(paths.libraryFile, 'utf8')
-      const parsed = JSON.parse(raw)
-      return Array.isArray(parsed.items) ? parsed.items : []
+      raw = readFileSync(paths.libraryFile, 'utf8')
+    } catch (error) {
+      if (error.code === 'ENOENT') return { version: 1, items: [], collections: [] }
+      throw new InspirationError('library-read-failed', '无法读取本地灵感库，请检查文件权限', 500)
+    }
+    try {
+      const library = JSON.parse(raw)
+      if (!library || typeof library !== 'object' || !Array.isArray(library.items) ||
+        library.items.some((item) => !item || typeof item.id !== 'string' || !item.id)) throw new Error('invalid library')
+      validateCollections(library.collections, library.items)
+      return { ...library, collections: library.collections || [] }
     } catch {
-      return []
+      throw new InspirationError('library-invalid', '本地灵感库文件损坏，已停止写入以保护原数据', 500)
     }
   }
 
-  /**
+  /** @param {import('./local-collections.js').InspirationLibrary} library */
+  function writeLibrary(library) {
+    ensureDirs()
+    const tempFile = `${paths.libraryFile}.${randomUUID()}.tmp`
+    try {
+      writeFileSync(tempFile, JSON.stringify({ ...library, version: 1, updated_at: new Date().toISOString() }, null, 2), 'utf8')
+      renameSync(tempFile, paths.libraryFile)
+    } catch (error) {
+      if (existsSync(tempFile)) unlinkSync(tempFile)
+      throw error
+    }
+  }
+
+  /** All existing row writes preserve collections and remove only deleted references.
    * @param {LocalInspirationRecord[]} items
    */
   function writeAll(items) {
-    ensureDirs()
-    const tempFile = `${paths.libraryFile}.${randomUUID()}.tmp`
-    const payload = JSON.stringify({ version: 1, items, updated_at: new Date().toISOString() }, null, 2)
-    writeFileSync(tempFile, payload, 'utf8')
-    renameSync(tempFile, paths.libraryFile)
+    const library = readLibrary()
+    writeLibrary({ ...library, items, collections: pruneCollectionMembers(library.collections, items) })
+    const remaining = new Set(items.map((item) => item.id))
+    invalidateDeletedItems(library.items.filter((item) => !remaining.has(item.id)).map((item) => item.id))
   }
+
+  const { invalidateDeletedItems, ...collectionStore } = createCollectionStore({
+    readLibrary, writeLibrary,
+    fail: (code, message, status) => new InspirationError(code, message, status),
+    undoTtlMs: opts.collectionUndoTtlMs,
+  })
 
   return {
     paths,
+    ...collectionStore,
 
     /**
      * Every stored row, unfiltered and unsorted.
@@ -354,7 +521,7 @@ export function createLocalStore(opts = {}) {
     /**
      * Read the library once, as a snapshot a later read in the same request can
      * reuse. Optional for callers: `get(id)` without it reads the file itself.
-     * @returns {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }}
+     * @returns {{ items: LocalInspirationView[], stat: import('node:fs').Stats | null }}
      */
     snapshotForRead,
 
@@ -362,7 +529,7 @@ export function createLocalStore(opts = {}) {
      * Make a snapshot reusable. Only the caller that took the snapshot can know
      * whether anything has written the library since — the sweep endpoint does,
      * and passes it only when the sweep itself changed nothing.
-     * @param {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }} snapshot
+     * @param {{ items: LocalInspirationView[], stat: import('node:fs').Stats | null }} snapshot
      */
     cacheReadSnapshot(snapshot) {
       cachedSnapshot = snapshot && typeof snapshot === 'object' ? snapshot : null
@@ -410,117 +577,38 @@ export function createLocalStore(opts = {}) {
      *   is_favorite?: string | boolean,
      *   sort?: string,
      *   page?: number,
-     *   page_size?: number
+     *   page_size?: number,
+     *   root_only?: boolean | string,
+     *   collection_id?: string
      * }} [query]
      */
     list(query = {}) {
-      let items = readAll()
-
-      if (query.q && typeof query.q === 'string') {
-        const needle = query.q.toLowerCase().trim()
-        items = items.filter((row) => {
-          const t = (row.title || '').toLowerCase()
-          const c = (row.content || '').toLowerCase()
-          const u = (row.source_url || '').toLowerCase()
-          const dec = typeof row.deconstruction === 'string'
-            ? row.deconstruction.toLowerCase()
-            : JSON.stringify(row.deconstruction || {}).toLowerCase()
-          const tags = Array.isArray(row.tags) ? row.tags.join(' ').toLowerCase() : ''
-          return t.includes(needle) || c.includes(needle) || u.includes(needle) || dec.includes(needle) || tags.includes(needle)
-        })
+      const library = readLibrary()
+      const allItems = library.items
+      let items = filterRows(allItems, query)
+      let collection = null
+      if (query.collection_id) {
+        collection = library.collections.find((entry) => entry.id === query.collection_id)
+        if (!collection) throw new InspirationError('collection-not-found', '合集不存在', 404)
+        const matches = new Map(items.map((item) => [item.id, item]))
+        items = collection.item_ids.map((id) => matches.get(id)).filter(Boolean)
       }
-
-      if (query.type) {
-        items = items.filter((row) => row.type === query.type)
-      }
-
-      if (query.platform) {
-        const targetPlat = String(query.platform).toLowerCase().trim()
-        items = items.filter((row) => {
-          const rowPlat = (row.source_platform || row.platform || '').toLowerCase().trim()
-          if (targetPlat === 'x' || targetPlat === 'twitter') {
-            return rowPlat === 'x' || rowPlat === 'twitter'
-          }
-          return rowPlat === targetPlat
-        })
-      }
-
-      const matchTag = query.tag || query.tags
-      if (matchTag) {
-        const expected = String(matchTag).split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
-        if (expected.length > 0) {
-          items = items.filter((row) => {
-            const current = (row.tags || []).map((t) => t.toLowerCase())
-            return expected.some((exp) => current.includes(exp))
-          })
-        }
-      }
-
-      if (query.is_favorite !== undefined && query.is_favorite !== '') {
-        const fav = query.is_favorite === true || query.is_favorite === 'true'
-        items = items.filter((row) => Boolean(row.is_favorite) === fav)
-      }
-
-      if (query.country) {
-        const c = String(query.country).toLowerCase().trim()
-        items = items.filter((row) => (row.country_code || '').toLowerCase() === c)
-      }
-
-      if (query.category) {
-        const cat = String(query.category).toLowerCase().trim()
-        items = items.filter((row) => (row.category || '').toLowerCase().includes(cat))
-      }
-
-      if (query.duration_min != null && query.duration_min !== '') {
-        const min = Number(query.duration_min)
-        if (Number.isFinite(min)) items = items.filter((row) => rowDuration(row) >= min)
-      }
-
-      if (query.duration_max != null && query.duration_max !== '') {
-        const max = Number(query.duration_max)
-        if (Number.isFinite(max)) items = items.filter((row) => rowDuration(row) <= max)
-      }
-
-      if (query.views_min != null && query.views_min !== '') {
-        const min = Number(query.views_min)
-        if (Number.isFinite(min)) items = items.filter((row) => rowViews(row) >= min)
-      }
-
-      if (query.views_max != null && query.views_max !== '') {
-        const max = Number(query.views_max)
-        if (Number.isFinite(max)) items = items.filter((row) => rowViews(row) <= max)
-      }
-
-      if (query.traffic_type) {
-        const tt = String(query.traffic_type).toLowerCase().trim()
-        items = items.filter((row) => (row.traffic_type || 'organic').toLowerCase() === tt)
-      }
-
-      if (query.posted_after) {
-        const afterMs = Date.parse(query.posted_after)
-        if (!Number.isNaN(afterMs)) {
-          items = items.filter((row) => {
-            const p = row.posted_at || row.published_at
-            if (!p) return false
-            const itemMs = Date.parse(p)
-            return !Number.isNaN(itemMs) && itemMs >= afterMs
-          })
-        }
-      }
-
-      if (query.posted_before) {
-        const beforeMs = Date.parse(query.posted_before)
-        if (!Number.isNaN(beforeMs)) {
-          const effectiveBefore = /^\d{4}-\d{2}-\d{2}$/.test(String(query.posted_before).trim())
-            ? beforeMs + 86400000 - 1
-            : beforeMs
-          items = items.filter((row) => {
-            const p = row.posted_at || row.published_at
-            if (!p) return false
-            const itemMs = Date.parse(p)
-            return !Number.isNaN(itemMs) && itemMs <= effectiveBefore
-          })
-        }
+      const rootOnly = query.root_only === true || query.root_only === 'true'
+      let collections
+      if (rootOnly && !collection) {
+        const matchingIds = new Set(items.map((item) => item.id))
+        const withoutSearch = { ...query, q: undefined }
+        const otherMatches = new Set(filterRows(allItems, withoutSearch).map((item) => item.id))
+        const hasOtherFilters = Object.entries(withoutSearch).some(([key, value]) =>
+          !['root_only', 'collection_id', 'sort', 'page', 'page_size', 'q'].includes(key) && value !== undefined && value !== '')
+        const needle = String(query.q || '').trim().toLowerCase()
+        collections = library.collections.filter((entry) =>
+          entry.item_ids.some((id) => matchingIds.has(id)) ||
+          ((!needle || entry.title.toLowerCase().includes(needle)) &&
+            (!hasOtherFilters || entry.item_ids.some((id) => otherMatches.has(id)))))
+          .map((entry) => collectionView(entry, allItems))
+        const grouped = new Set(library.collections.flatMap((entry) => entry.item_ids))
+        items = items.filter((item) => !grouped.has(item.id))
       }
 
       const sortMode = query.sort || 'new'
@@ -534,7 +622,7 @@ export function createLocalStore(opts = {}) {
         }
       }
 
-      items.sort((a, b) => {
+      if (!collection) items.sort((a, b) => {
         if (sortMode === 'fav') {
           if (Boolean(b.is_favorite) !== Boolean(a.is_favorite)) {
             return b.is_favorite ? 1 : -1
@@ -562,24 +650,28 @@ export function createLocalStore(opts = {}) {
       const paginated = items.slice(start, start + pageSize)
 
       return {
-        items: paginated,
+        items: membershipViews(paginated, library.collections),
         total,
         page,
         page_size: pageSize,
+        ...(rootOnly && !collection ? { collections, collection_names: library.collections.map((entry) => entry.title) } : {}),
+        ...(collection ? { collection: collectionView(collection, allItems) } : {}),
       }
     },
 
     /**
      * @param {string} id
-     * @param {{ items: LocalInspirationRecord[], stat: import('node:fs').Stats | null }} [snapshot]
+     * @param {{ items: LocalInspirationView[], stat: import('node:fs').Stats | null }} [snapshot]
      *   a library read the caller already paid for (see `snapshotForRead`); ignored
      *   when it is stale, which keeps the parameter a pure optimization
-     * @returns {LocalInspirationRecord | null}
+     * @returns {LocalInspirationView | null}
      */
     get(id, snapshot) {
       const cached = snapshot === undefined ? null : snapshotItems(snapshot)
-      const items = cached || readAll()
-      return items.find((item) => item.id === id) || null
+      if (cached) return cached.find((item) => item.id === id) || null
+      const library = readLibrary()
+      const item = library.items.find((row) => row.id === id)
+      return item ? membershipViews([item], library.collections)[0] : null
     },
 
     /**
@@ -598,9 +690,15 @@ export function createLocalStore(opts = {}) {
      */
     add(record, opts = {}) {
       const items = readAll()
+      if (record.id !== undefined && (typeof record.id !== 'string' || !record.id.trim())) {
+        throw new InspirationError('item-id-invalid', '灵感标识格式不正确', 400)
+      }
       if (record.source_url && !opts.allowDuplicate) {
         const existing = items.find((item) => item.source_url && isSameSocialContent(item.source_url, record.source_url))
         if (existing) return existing
+      }
+      if (record.id && items.some((item) => item.id === record.id)) {
+        throw new InspirationError('item-id-conflict', '该灵感已存在', 409)
       }
       const row = buildRow(record)
       items.unshift(row)
@@ -668,7 +766,7 @@ export function createLocalStore(opts = {}) {
 
     /**
      * @param {string} id
-     * @param {Partial<LocalInspirationRecord>} patch
+     * @param {Partial<LocalInspirationRecord> & {collection_id?: unknown}} patch
      */
     update(id, patch) {
       const items = readAll()
@@ -677,9 +775,11 @@ export function createLocalStore(opts = {}) {
       const current = items[index]
       const now = new Date().toISOString()
       const nextFavorite = patch.is_favorite !== undefined ? Boolean(patch.is_favorite) : current.is_favorite
+      // Membership is a read projection, never an editable item field.
+      const { collection_id: _collectionId, ...writablePatch } = patch
       const updated = {
         ...current,
-        ...patch,
+        ...writablePatch,
         id: current.id,
         is_favorite: nextFavorite,
         favorited_at: nextFavorite
