@@ -5,7 +5,7 @@ type: "contract"
 status: "living"
 authority: "L1"
 date: "2026-08-28"
-updated: "2026-10-15"
+updated: "2026-10-18"
 authors: ["x", "agent-architect"]
 subsystem: "omnimux"
 ---
@@ -54,13 +54,15 @@ subsystem: "omnimux"
 
 普通界面测试不得在网页填写真实密钥，`live` 不能作为 `ui` 失败的静默回退。缺配置须报告脱敏原因；禁止为凑通过转读 Prod、Base 或扩大当前任务授权。现有 Dev-backed 行为是待替换的兼容事实，不是新任务默认授权，也不改变产品新用户基线。
 
-显式证据请求会传入 `evidenceContext`。真实准备器在根与参数验证后、runtime/profile/credential 访问前以 `TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN` 拒绝所有 contract scope（包括 smoke）；六资源按未创建记账，入口可保留历史有效但 pass=false 的失败封套。缺字段或不合规根在启动前拒绝，未必有原件；失败封套有效不等于检查通过。不能回退兼容路径、Stage 夹具或读取 Dev 来刷绿。
+显式证据请求传入 `evidenceContext:{taskId,runId}`、固定 `candidate:{base,head,outputs?,extraInputs?}` 和 `taskPlugins` 时，准备器支持独立的合成 `ui` 路径。hub 隐含包含，目标仅支持 `omnimux-inspiration`、`omnimux-browser`、`omnimux-assets`；未知目标、命令或源路径在创建资源前拒绝。`onboarding`、`live` 不支持此路径；没有 `taskPlugins` 的旧显式请求仍在 runtime/profile/credential 访问前报 `TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN`。缺字段或不合规根在启动前拒绝，未必有原件；失败封套有效不等于检查通过。不能回退兼容路径、Stage 夹具或读取 Dev 来刷绿。
 
-登录 URL 仅在受信调用者内存中用于本次同源 token→Cookie 交换，不打印、不持久化、不放入截图说明。浏览器进程不继承宿主密钥。完整核心应用启动或 `evidenceLevel=full` 不证明任务源码已安装加载；该绑定当前 unknown，任务检查中的 `task-source-installed-loaded` 不能报通过。
+任务准备从同一候选捕获源码，在工作树自有目录构建、打包并核对归档；通过已安装 App 的正式 `dsh plugin --profile web add` 离线安装。运行图位于系统真实临时目录下独占的 `omnimux-task-*`，绑定 task/run 与目录身份；HOME、DSH_HOME、agents、配置、缓存与 store 均私有，不继承宿主凭据。普通依赖先验证原声明再改写私有定位；包图不得指回仓库，缺依赖明确失败。核心 base/web-app 来自 packaged App；assets 所需 sidebar 作为固定支持包正式安装并核对发布字节。缺失的 ReactDOM peer 仅支持仓内已安装的固定 `react-dom@18.3.1` 及其声明依赖，复制成普通私有库、不注册为插件；其自身 React peer 仍须实际核验。合成业务夹具显式记账，不等于空数据首启；所有配置路由指向本机 mock，不产生真实模型证据。
+
+登录 URL 仅在受信调用者内存中用于本次同源 token→Cookie 交换，不打印、不持久化、不放入截图说明。浏览器进程不继承宿主密钥。完整核心应用启动或 `evidenceLevel=full` 不证明任务源码已安装加载。正式路径逐文件核安装 payload，通过同一应用 PID 的 inspector 核实际 server 文件 URL、源哈希及声明 peer 的解析位置/版本，再通过真实浏览器 CDP 核 client 注册与候选 bundle；只允许任务私有依赖图或 packaged App 的宿主 peer。旅程前后重核身份与字节。公开消费者据此计算 `userFresh`、`taskBinding=installed-loaded` 与 `task-source-installed-loaded`；缺观测、外源、歧义或漂移均不能通过，注入桩仍是非授权自报。资产库路径按现行内嵌 Explore 或素材工作台结构核验选择状态、内容和未遮挡几何，弹窗/菜单须实际关闭；API 返回成功或隐藏 DOM 存在不能替代可见性。
 
 应用级入口为 `pnpm verify:app`（等价于 `node scripts/worktree-app-qa.mjs`），root 从脚本位置推导，只接受 `<repo>/.worktrees/<task>` 真实直接登记树。无显式请求的旧调用保留无契约 smoke：原件落 `<root>/.workbuddy/evidence/app-qa/<runId>/`，兼容摘要写 `<root>/docs/evidence/worktree-app-qa-report.json`；其 pass 只涵盖真实执行的固定安全名称冒烟，不签 task/fresh。legacy 使用静态断言名称白名单，普通自定义 `journey:<名称>` 不在白名单，会分类失败，不承诺任意 journey 任务成功。摘要不是权威封套，且现有摘要路径没有被 ignore，可能改变候选状态。
 
-自定义任务旅程使用显式 `--request <工作树内非秘密JSON>`，可另给 `--journey <路径>`，或在请求中给 journey。请求启动前固定 taskId/base/head/scope/requiredChecks/expectedAssertions，可列 extraInputs/artifactNames；只接受 ui。固定检查为 app-environment/app-browser；有 journey 增加 task-journey，task/reproduction 必须有 journey、非空具名预期及任务安装加载断言。请求、旅程和显式 helper 文件纳入输入，完整动态输入闭包仍 unknown；不从返回断言反推标准。旅程模块默认导出 `async ({send, sleep, evidenceDir, origin, io}) => { assertions: [{name, pass}] }`，空/空白/重名/非布尔整组拒绝，正常 false 保留；同进程仅允许一次 contract journey，未知名不得持久化原文或投影丢弃后刷绿。请求必须先由真实 fresh 准备能力支持，当前默认准备器会提前拒绝，不能称完整任务验收已可用。
+自定义任务旅程使用显式 `--request <工作树内非秘密JSON>`，可另给 `--journey <路径>`，或在请求中给 journey。请求启动前固定 taskId/base/head/scope/requiredChecks/expectedAssertions，可列 extraInputs/artifactNames；只接受 ui。正式 fresh 请求列 `taskPlugins`，且 app-environment 必须预声明 `task-source-installed-loaded`，smoke 也适用。固定检查为 app-environment/app-browser；有 journey 增加 task-journey，task/reproduction 必须有 journey、非空具名预期及任务安装加载断言。请求、旅程和显式 helper 文件纳入输入，完整动态输入闭包仍 unknown；断言按预声明检查归组，拒绝跨组重名，不从返回断言反推标准。旅程模块默认导出 `async ({send, sleep, evidenceDir, origin, io}) => { assertions: [{name, pass}] }`，空/空白/重名/非布尔整组拒绝，正常 false 保留；同进程仅允许一次 contract journey，未知名不得持久化原文或投影丢弃后刷绿。入口成功只覆盖请求中的插件、检查与真实旅程，不自动证明其它业务任务或完整阶段 C。
 
 显式请求只写 `<root>/.workbuddy/evidence/contract/<taskId>/<runId>/` 中预声明单层 png/json/log/txt，不写兼容 docs 摘要。顺序为 capture before → 执行/逐项清理并等待 exit+close → 固定 raw-run.json → 相同 options capture after → seal/写 evidence.json → candidate validate。raw 保持 pass=false/unsealed，不在封存后回改；封套不自含，漂移/封存失败保 raw 且最终 false。输出目录不等于排除源码或来源认证，依赖桩明确 dependency-stub/self-reported/not-granted。该封套只承诺结束运行历史完整性及候选适用性，不承诺当前在线、独立认证、完整阶段 C 或真实浏览器。图片/音频真实任务加强证据仍需沿授权正式路径；视频生成 live 验证恒需任务级特批。
 
@@ -208,6 +210,6 @@ Stage 探针必须从真实 `datasetKey` / Tab ID 触发入口，并至少断言
 
 ## 评审与验收结论
 
-实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。适用界面任务拿不到**自身隔离 worktree 的功能路径真实浏览器证据**不得宣布交付完成；局部 Stage 证据不能冒充完整应用或任务装配。应用入口的无请求 legacy 只签无契约 smoke；自定义任务旅程须固定显式 request，当前真实准备器前置拒绝尚不能提供 fresh/task 通过，应准确记录受影响验收缺口，不降低标准或拿有效失败封套签成功。`live` 真实图片/音频证据仅按实际授权与能力补充，视频生成真实验证需任务级特批。Dev 45120 是单例共享实例：Agent 不重启、不占用、不等待，仅在物化后冒烟或排障时只读使用。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
+实施者完成自检后，由独立评审者核对实际 diff、测试证据、授权和未解决风险，满足合入前适用项后进入 required CI/MQ。适用界面任务拿不到**自身隔离 worktree 的功能路径真实浏览器证据**不得宣布交付完成；局部 Stage 证据不能冒充完整应用或任务装配。应用入口的无请求 legacy 只签无契约 smoke；自定义任务旅程须固定显式 request，只有受支持的任务插件、安装/实际加载观测与全部预期检查通过后才能提供相应 fresh/task 结果，不能拿有效失败封套签成功。`live` 真实图片/音频证据仅按实际授权与能力补充，视频生成真实验证需任务级特批。Dev 45120 是单例共享实例：Agent 不重启、不占用、不等待，仅在物化后冒烟或排障时只读使用。证据不完整为 FAIL，工具或环境不可用且无法安全修复为 BLOCKED，仅阻断受影响阶段。
 
 `qa:pass`、合入方式与 R0–R3 权限统一遵循 [plugin-git-pr](plugin-git-pr.md)。

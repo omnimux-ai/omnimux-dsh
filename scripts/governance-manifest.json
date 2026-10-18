@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-10-15",
+  "updated": "2026-10-18",
   "description": "scripts/ 全量源码库存（含 tests/helpers/fixtures/Python）。ciRequired=支持语法下工作流执行根静态可能可达；localRequired=仅根包执行或语法引用可证；manual=未证明自动可达（不承诺无未知调用）；deprecated=现存退役且禁自动引用。静态可能可达不等于真实CI运行、函数执行或覆盖率。",
   "ciRequired": [
     "agent-tools-suite/eval-runner.mjs",
@@ -82,6 +82,11 @@
     "test-change-review.mjs",
     "test-change-review.test.mjs",
     "test-dx-pipeline.mjs",
+    "task-runtime-install.mjs",
+    "task-runtime-install.test.mjs",
+    "task-runtime-proof.mjs",
+    "task-runtime-proof.test.mjs",
+    "test-env-bootstrap-fresh.test.mjs",
     "test-env-bootstrap.mjs",
     "test-env-bootstrap.test.mjs",
     "test-env-credentials.mjs",
@@ -373,6 +378,7 @@
     "workflows/prepare-args.mjs",
     "workflows/stage-to-dsh-home.mjs",
     "workflows/verify-batch-shoot.mjs",
+    "worktree-app-qa-task.test.mjs",
     "worktree-app-qa.test.mjs",
     "worktree-default-mode-qa.mjs",
     "worktree-web-qa-lifecycle.test.mjs"

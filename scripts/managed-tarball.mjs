@@ -135,7 +135,7 @@ finally:
 `;
 
 /** Run fixed pnpm with bounded output, a timeout, and an owned lifetime pipe. */
-export async function runPnpm(argv, { cwd, env, signal, lease, directoryIdentities = [], timeoutMs = 120000, maxOutput = 8 << 20 } = {}) {
+export async function runPnpm(argv, { cwd, env, signal, lease, executable: requestedExecutable, directoryIdentities = [], timeoutMs = 120000, maxOutput = 8 << 20 } = {}) {
   if (signal?.aborted) return { code: 5, signal: 'aborted', stdout: '', stderr: '' };
   const privateHome = env.HOME;
   makeDirectory(privateHome);
@@ -144,7 +144,8 @@ export async function runPnpm(argv, { cwd, env, signal, lease, directoryIdentiti
   const paths = [...new Set([cwd, path.dirname(leasePath), ...environmentDirectories, ...directoryIdentities.map(([entry]) => entry)])];
   const identities = prepareFiles({ operation: 'identities', paths }).identities;
   for (const [entry, expected] of directoryIdentities) if (stable(identities.find(([name]) => name === entry)?.[1]) !== stable(expected)) fail('pnpm directory identity drift', 5);
-  const executable = (process.env.PATH || '').split(path.delimiter).map(dir => path.join(dir, 'pnpm')).find(file => fs.existsSync(file));
+  if (requestedExecutable !== undefined && (!path.isAbsolute(requestedExecutable) || !fs.statSync(requestedExecutable).isFile())) fail('explicit pnpm executable must be a local file', 5);
+  const executable = requestedExecutable ?? (process.env.PATH || '').split(path.delimiter).map(dir => path.join(dir, 'pnpm')).find(file => fs.existsSync(file));
   if (!executable) fail('pnpm 11.7.0 executable unavailable', 5);
   return await new Promise((resolve, reject) => {
     const child = spawn('python3', ['-B', '-c', workerScript, JSON.stringify({ command: [executable, ...argv], cwd, env,
