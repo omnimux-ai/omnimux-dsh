@@ -68,8 +68,13 @@ function installationIdentity(installation) {
   assert.ok(Array.isArray(installation.packages) && installation.packages.length, 'Installed packages are required')
   const names = new Set(), roots = new Set()
   for (const pkg of installation.packages) {
-    assert.ok(typeof pkg.name === 'string' && pkg.name && !names.has(pkg.name), 'Duplicate or invalid installed package name')
-    names.add(pkg.name)
+    assert.ok(typeof pkg.name === 'string' && pkg.name, 'Invalid installed package name')
+    // Node dependency graphs may contain multiple versions of a package. Only
+    // registered task plugins have a process-wide module registration identity.
+    if (pkg.serverEntry || pkg.clientBundle) {
+      assert.ok(!names.has(pkg.name), 'Duplicate registered task plugin name')
+      names.add(pkg.name)
+    }
     const root = ownedPath(installation.privateRoot, pkg.installedRoot, true)
     assert.ok(!roots.has(root), 'Duplicate installed package root')
     roots.add(root)
@@ -86,6 +91,7 @@ function installationIdentity(installation) {
     assert.ok(manifestRecord, 'Installed package manifest is absent from payload')
     const manifest = JSON.parse(installedFile(installation, pkg, manifestRecord).source)
     assert.equal(manifest.name, pkg.name, 'Installed package name does not match its manifest')
+    if (pkg.version !== undefined) assert.equal(manifest.version, pkg.version, 'Installed package version does not match its manifest')
     if (pkg.serverEntry || pkg.clientBundle) assert.match(pkg.name, /^omnimux(?:-[a-z0-9-]+)?$/, 'Only registered OmniMux packages can declare runtime entries')
     assert.ok(!pkg.clientBundle || pkg.serverEntry, 'Client package has no server entry')
     if (pkg.serverEntry) {
@@ -112,7 +118,7 @@ function installationIdentity(installation) {
 
 function installationBinding(installation, identity) {
   return sha256(JSON.stringify({ identity, packages: installation.packages.map(pkg => ({
-    name: pkg.name, installedRoot: pkg.installedRoot, payload: pkg.payload,
+    name: pkg.name, version: pkg.version, installedRoot: pkg.installedRoot, payload: pkg.payload,
     serverEntry: pkg.serverEntry, clientBundle: pkg.clientBundle,
   })) }))
 }

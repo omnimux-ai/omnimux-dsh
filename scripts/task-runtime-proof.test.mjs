@@ -128,11 +128,34 @@ test('client refuses duplicate and old/new loaded scripts', async () => {
 test('installed identity rejects duplicate packages, duplicate payloads and wrong manifest names', async () => {
   const installation = fixture()
   const duplicate = structuredClone(installation); duplicate.packages.push(structuredClone(duplicate.packages[0]))
-  await assert.rejects(capture(duplicate), /Duplicate or invalid installed package/)
+  await assert.rejects(capture(duplicate), /Duplicate registered task plugin/)
   const repeated = structuredClone(installation); repeated.packages[0].payload.push(repeated.packages[0].payload[0])
   await assert.rejects(capture(repeated), /Duplicate installed payload/)
   installation.packages[0].name = 'wrong-name'
   await assert.rejects(capture(installation), /does not match its manifest/)
+})
+
+test('installed dependency graph preserves same-name multiple versions and checks declared versions', async () => {
+  const installation = fixture()
+  for (const version of ['1.0.0', '2.0.0']) {
+    const installedRoot = join(installation.privateRoot, `normal-dependency-${version}`)
+    mkdirSync(installedRoot)
+    const bytes = Buffer.from(JSON.stringify({ name: 'normal-dependency', version }))
+    writeFileSync(join(installedRoot, 'package.json'), bytes)
+    installation.packages.push({ name: 'normal-dependency', version, installedRoot,
+      payload: [{ path: 'package.json', sha256: hash(bytes), size: bytes.length }] })
+  }
+  const proof = await capture(installation)
+  assert.equal(proof.bundles.length, 2)
+  installation.packages.at(-1).version = '1.0.0'
+  await assert.rejects(capture(installation), /version does not match its manifest/)
+})
+
+test('all canonical package roots remain unique even for ordinary dependencies', async () => {
+  const installation = fixture(), pkg = structuredClone(installation.packages[0])
+  delete pkg.serverEntry; delete pkg.clientBundle
+  installation.packages.push(pkg)
+  await assert.rejects(capture(installation), /Duplicate installed package root/)
 })
 
 test('installed entries must match package declarations and dependencies need no runtime entry', async () => {
