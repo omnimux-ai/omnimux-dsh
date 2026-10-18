@@ -39,8 +39,10 @@ function setupDom() {
   dom.window.HTMLMediaElement.prototype.play = async () => {}
   dom.window.HTMLMediaElement.prototype.pause = () => {}
 
+  const previewCalls = []
   dom.window.__omnimuxInspirationPreview = {
     open({ row, onClose, onReplicate }) {
+      previewCalls.push({ row, onReplicate })
       const modal = dom.window.document.createElement('div')
       modal.className = 'omnimux-trending-modal-overlay'
       modal.innerHTML = `
@@ -75,6 +77,7 @@ function setupDom() {
     dom,
     host,
     root,
+    previewCalls,
     cleanup() {
       try {
         root.unmount()
@@ -88,7 +91,7 @@ function setupDom() {
 }
 
 test('TrendingVideoCard & TrendingDetailModal: 悬停呈现操作栏、平台Badge与居中播放按钮', async () => {
-  const { host, root, cleanup } = setupDom()
+  const { host, root, cleanup, previewCalls } = setupDom()
   const { TrendingVideoCard } = await loadComponent('../../../../omnimux/src/client/session-guide/trending/TrendingVideoCard.jsx')
 
   try {
@@ -170,7 +173,9 @@ test('TrendingVideoCard & TrendingDetailModal: 悬停呈现操作栏、平台Bad
     await act(async () => {
       modalRecreateBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
     })
-    assert.equal(recreatedItem?.id, 'card_demo_1', '弹窗内复刻触发回调')
+    assert.equal(previewCalls[0].row.id, 'card_demo_1', '统一详情获得完整来源记录')
+    assert.equal(previewCalls[0].onReplicate, undefined, '详情由灵感拥有方处理准备后草稿与素材，不复用卡片快捷回调')
+    assert.equal(recreatedItem, null, '详情不能再次选择原卡片冒充完成新草稿交接')
     assert.equal(document.querySelector('.omnimux-trending-modal-overlay'), null, '触发后弹窗自动关闭')
   } finally {
     cleanup()
