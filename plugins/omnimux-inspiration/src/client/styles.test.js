@@ -295,6 +295,9 @@ describe('post detail narrow-screen navigation', () => {
   it('keeps both mounted panes selectable at narrow widths', () => {
     assert.equal(decl(ruleBody(INSPIRATION_CSS, '.omnimux-post-mobile-tabs'), 'display'), 'none')
     assert.match(INSPIRATION_CSS, /@media \(max-width: 860px\)[\s\S]*omnimux-post-mobile-tabs \{ display: flex/)
+    const mobile = INSPIRATION_CSS.split('@media (max-width: 860px)')[1]
+    const tabs = ruleBody(mobile, '.omnimux-post-detail > .omnimux-post-mobile-tabs')
+    assert.equal(decl(tabs, 'margin-inline'), '0', 'standalone detail navigation must neutralize shared underline Tabs negative page-alignment margins')
     assert.match(INSPIRATION_CSS, /omnimux-post-source\.is-active/)
     assert.match(INSPIRATION_CSS, /omnimux-post-analysis\.is-active/)
   })

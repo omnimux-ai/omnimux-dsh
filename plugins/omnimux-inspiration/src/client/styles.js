@@ -1528,7 +1528,7 @@ dialog.omnimux-inspiration-preview-layer::backdrop { background: transparent; }
   .omnimux-inspiration-modal-wrapper { height: 94dvh; }
   .omnimux-inspiration-modal-header { padding-left: 20px; }
   .omnimux-inspiration-modal-heading h2 { font-size: 16px; }
-  .omnimux-post-mobile-tabs { display: flex; flex-shrink: 0; padding: 8px 16px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
+  .omnimux-post-detail > .omnimux-post-mobile-tabs { display: flex; flex-shrink: 0; margin-inline: 0; padding: 8px 16px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
   .omnimux-post-columns { display: block; }
   .omnimux-post-source, .omnimux-post-analysis { display: none; height: 100%; box-sizing: border-box; }
   .omnimux-post-source.is-active { display: block; }
