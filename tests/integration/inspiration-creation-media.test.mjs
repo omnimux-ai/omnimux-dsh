@@ -4,13 +4,25 @@ import { mkdtemp, mkdir, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { apply } from '../../omnimux-video/src/index.js'
-import { resolveBin, spawnFfmpeg } from '../../omnimux-video/src/engine/ffmpeg.js'
-import { prepareCreationMedia } from './creation-media.js'
+import { execFile, spawnSync } from 'node:child_process'
+import { promisify } from 'node:util'
+import { apply } from '../../plugins/omnimux-video/src/index.js'
+import { prepareCreationMedia } from '../../plugins/omnimux-inspiration/src/creation-media.js'
 
-const bin = resolveBin({})
+// Product integration: the two domains meet only through the registered service.
+// This process helper prepares synthetic fixtures; all product cuts and probes
+// below go through the video plugin's public registration entry point.
+const runFixtureTool = promisify(execFile)
+const missingTools = ['ffmpeg', 'ffprobe'].some((name) => {
+  const probe = spawnSync(name, ['-version'], { stdio: 'ignore', timeout: 5000 })
+  if (probe.error?.code === 'ENOENT') return true
+  if (probe.error) throw probe.error
+  assert.equal(probe.status, 0, `${name} 未能正常启动，真实裁片未验收`)
+  return false
+})
+const createFixture = (args) => runFixtureTool('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...args], { timeout: 30_000, maxBuffer: 1024 * 1024 })
 
-test('registered local video service prepares a real accurate clip with audio and a copied image', { skip: bin.missing ? '本机未安装视频处理程序，真实裁片未验收' : false }, async (t) => {
+test('registered local video service prepares a real accurate clip with audio and a copied image', { skip: missingTools ? '本机未安装视频处理程序，真实裁片未验收' : false }, async (t) => {
   const dir = await mkdtemp(join(tmpdir(), 'creation-media-live-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
   const paths = { dir, imagesDir: join(dir, 'media/images'), videosDir: join(dir, 'media/videos') }
@@ -18,12 +30,12 @@ test('registered local video service prepares a real accurate clip with audio an
   await Promise.all([paths.imagesDir, paths.videosDir, outputDir].map((path) => mkdir(path, { recursive: true })))
   const video = join(paths.videosDir, 'original.mp4')
   const picture = join(paths.imagesDir, 'original.png')
-  await spawnFfmpeg({ bin, timeoutMs: 30_000, args: [
+  await createFixture([
     '-f', 'lavfi', '-i', 'testsrc2=s=320x240:r=25:d=3',
     '-f', 'lavfi', '-i', 'sine=frequency=440:duration=3',
     '-c:v', 'libx264', '-c:a', 'aac', '-shortest', video,
-  ] })
-  await spawnFfmpeg({ bin, timeoutMs: 30_000, args: ['-f', 'lavfi', '-i', 'color=c=red:s=320x240:d=1', '-frames:v', '1', picture] })
+  ])
+  await createFixture(['-f', 'lavfi', '-i', 'color=c=red:s=320x240:d=1', '-frames:v', '1', picture])
   let videoProcess
   apply({ tools: { register() {} }, provide(name, value) { if (name === 'videoProcess') videoProcess = value }, effect(factory) { t.after(factory()) } })
   assert.equal(typeof videoProcess?.execute, 'function')
