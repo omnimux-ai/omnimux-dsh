@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, rm, stat } from 'node:fs/promises'
+import { copyFile, mkdtemp, mkdir, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -25,9 +25,9 @@ const createFixture = (args) => runFixtureTool('ffmpeg', ['-hide_banner', '-logl
 test('registered local video service prepares a real accurate clip with audio and a copied image', { skip: missingTools ? '本机未安装视频处理程序，真实裁片未验收' : false }, async (t) => {
   const dir = await mkdtemp(join(tmpdir(), 'creation-media-live-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
-  const paths = { dir, imagesDir: join(dir, 'media/images'), videosDir: join(dir, 'media/videos') }
+  const paths = { dir, imagesDir: join(dir, 'media/images'), videosDir: join(dir, 'media/videos'), coversDir: join(dir, 'media/covers') }
   const outputDir = join(paths.videosDir, 'creation-references', randomUUID())
-  await Promise.all([paths.imagesDir, paths.videosDir, outputDir].map((path) => mkdir(path, { recursive: true })))
+  await Promise.all([paths.imagesDir, paths.videosDir, paths.coversDir, outputDir].map((path) => mkdir(path, { recursive: true })))
   const video = join(paths.videosDir, 'original.mp4')
   const picture = join(paths.imagesDir, 'original.png')
   await createFixture([
@@ -57,5 +57,15 @@ test('registered local video service prepares a real accurate clip with audio an
   assert.ok((await stat(clip.path)).size > 0)
   assert.deepEqual(await readFile(video), originals[0])
   assert.deepEqual(await readFile(picture), originals[1])
-  t.diagnostic(JSON.stringify({ expected_seconds: 1.12, actual_seconds: metadata.result.duration, width: metadata.result.width, height: metadata.result.height, audio: audio.result.codec_type, video_bytes: (await stat(clip.path)).size, image_copied: true, originals_unchanged: true }))
+  const legacyCover = join(paths.coversDir, 'legacy-photo.png')
+  await copyFile(picture, legacyCover)
+  const legacyOutput = join(paths.videosDir, 'creation-references', randomUUID())
+  await mkdir(legacyOutput)
+  const legacyItem = { type: 'image', cover_url: '/omnimux/inspiration/local/media/covers/legacy-photo.png', local_paths: { cover: legacyCover } }
+  const legacy = await prepareCreationMedia({ item: legacyItem, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] }, paths, outputDir: legacyOutput })
+  assert.equal(legacy.files[0].type, 'image')
+  assert.notEqual(legacy.files[0].path, legacyCover)
+  assert.deepEqual(await readFile(legacy.files[0].path), originals[1])
+  assert.deepEqual(await readFile(legacyCover), originals[1])
+  t.diagnostic(JSON.stringify({ expected_seconds: 1.12, actual_seconds: metadata.result.duration, width: metadata.result.width, height: metadata.result.height, audio: audio.result.codec_type, video_bytes: (await stat(clip.path)).size, image_copied: true, legacy_cover_copied: true, originals_unchanged: true }))
 })

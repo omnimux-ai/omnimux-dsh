@@ -80,10 +80,107 @@ test('non-media references and a video poster do not become independent images',
 test('legacy media_urls map the second video without falling back to the first', async (t) => {
   const input = await world(t)
   delete input.item.media_items
-  input.item.media_urls = ['/omnimux/inspiration/local/media/videos/one.mp4', '/omnimux/inspiration/local/media/videos/two.mp4']
+  input.item.media_urls = [input.item.local_paths.video, input.item.local_paths.video_2].map((path) => `/omnimux/inspiration/local/media/videos/${basename(path)}`)
   const videoProcess = service()
   await prepareCreationMedia({ ...input, draft: select(1), videoProcess })
   assert.equal(videoProcess.calls.find((call) => call.capability === 'video_trim').input.videoUrl, await realpath(input.item.local_paths.video_2))
+})
+
+for (const type of ['image', 'photo', 'gallery']) test(`legacy ${type} cover-only reference copies its saved real picture`, async (t) => {
+  const input = await world(t)
+  input.paths.coversDir = join(input.paths.dir, 'media/covers')
+  await mkdir(input.paths.coversDir)
+  const cover = join(input.paths.coversDir, 'legacy.png')
+  const original = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jrfoAAAAASUVORK5CYII=', 'base64')
+  await writeFile(cover, original)
+  input.item = { type, cover_url: '/omnimux/inspiration/local/media/covers/legacy.png', local_paths: { cover } }
+  const result = await prepareCreationMedia({ ...input, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] } })
+  assert.equal(result.files.length, 1)
+  assert.equal(result.files[0].type, 'image')
+  assert.notEqual(result.files[0].path, cover)
+  assert.deepEqual(await readFile(result.files[0].path), original)
+  assert.deepEqual(await readFile(cover), original)
+})
+
+test('the selected saved local URL identifies the image after media order changes', async (t) => {
+  const input = await world(t)
+  input.item.media_items = [{ type: 'image', url: `/omnimux/inspiration/local/media/images/${basename(input.item.local_paths.image_2)}` }, { type: 'image', url: `/omnimux/inspiration/local/media/images/${basename(input.item.local_paths.image_1)}` }]
+  const result = await prepareCreationMedia({ ...input, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] } })
+  assert.equal(await readFile(result.files[0].path, 'utf8'), 'image_2-original')
+})
+
+test('a legacy picture URL must match a saved owned path and cannot fall back to a different cover', async (t) => {
+  const input = await world(t)
+  input.paths.coversDir = join(input.paths.dir, 'media/covers')
+  await mkdir(input.paths.coversDir)
+  const cover = join(input.paths.coversDir, 'different.png')
+  await writeFile(cover, 'unselected cover')
+  input.item = { type: 'image', cover_url: '/omnimux/inspiration/local/media/covers/selected.png', local_paths: { cover } }
+  await assert.rejects(prepareCreationMedia({ ...input, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] } }), /素材文件|来源/)
+  assert.deepEqual(await readdir(input.outputDir), [])
+})
+
+test('a local URL mismatch never falls back to an existing ordinal image', async (t) => {
+  const input = await world(t)
+  for (const url of ['/omnimux/inspiration/local/media/images/missing.png', '/omnimux/inspiration/local/media/videos/image_1.png', '/omnimux/inspiration/local/media/images/../image_1.png', '/omnimux/inspiration/local/media/images/image_1.png?download=1']) {
+    input.item.media_items = [{ type: 'image', url }]
+    await assert.rejects(prepareCreationMedia({ ...input, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] } }), /素材文件/)
+  }
+  assert.deepEqual(await readdir(input.outputDir), [])
+})
+
+test('a saved photo address distinguishes the covers root from an image with the same name', async (t) => {
+  const input = await world(t)
+  input.paths.coversDir = join(input.paths.dir, 'media/covers')
+  await mkdir(input.paths.coversDir)
+  const cover = join(input.paths.coversDir, 'same-name.png')
+  const image = join(input.paths.imagesDir, 'same-name.png')
+  await writeFile(cover, 'selected legacy picture')
+  await writeFile(image, 'different unselected image')
+  input.item = { type: 'image', cover_url: '/omnimux/inspiration/local/media/covers/same-name.png', local_paths: { image_1: image, cover } }
+  const result = await prepareCreationMedia({ ...input, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] } })
+  assert.equal(await readFile(result.files[0].path, 'utf8'), 'selected legacy picture')
+})
+
+test('a same-named nested file cannot impersonate the file at the selected local route', async (t) => {
+  const input = await world(t)
+  const nested = join(input.paths.imagesDir, 'nested')
+  await mkdir(nested)
+  const image = join(nested, 'route.png')
+  await writeFile(image, 'different nested image')
+  input.item = { media_items: [{ type: 'image', url: '/omnimux/inspiration/local/media/images/route.png' }], local_paths: { image_1: image } }
+  await assert.rejects(prepareCreationMedia({ ...input, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] } }), /素材文件/)
+  assert.deepEqual(await readdir(input.outputDir), [])
+})
+
+test('a video poster in the covers root cannot be copied as an independent picture', async (t) => {
+  const input = await world(t)
+  input.paths.coversDir = join(input.paths.dir, 'media/covers')
+  await mkdir(input.paths.coversDir)
+  const cover = join(input.paths.coversDir, 'poster.png')
+  await writeFile(cover, 'video poster')
+  input.item = { type: 'video', content_shape: 'gallery', media_kind: 'image', media_items: [{ type: 'image', url: '/omnimux/inspiration/local/media/covers/poster.png' }], local_paths: { cover } }
+  await assert.rejects(prepareCreationMedia({ ...input, draft: { references: [{ kind: 'media', media_index: 0 }], clips: [] } }), /素材文件/)
+  assert.deepEqual(await readdir(input.outputDir), [])
+})
+
+test('saved cover references reject outside roots, source links and linked cover roots', async (t) => {
+  const input = await world(t)
+  input.paths.coversDir = join(input.paths.dir, 'media/covers')
+  await mkdir(input.paths.coversDir)
+  const outside = join(input.paths.dir, 'legacy.png')
+  const cover = join(input.paths.coversDir, 'legacy.png')
+  await writeFile(outside, 'private source')
+  input.item = { type: 'image', cover_url: '/omnimux/inspiration/local/media/covers/legacy.png', local_paths: { cover: outside } }
+  const draft = { references: [{ kind: 'media', media_index: 0 }], clips: [] }
+  await assert.rejects(prepareCreationMedia({ ...input, draft }), /素材文件/)
+  await symlink(outside, cover)
+  input.item.local_paths.cover = cover
+  await assert.rejects(prepareCreationMedia({ ...input, draft }), /素材文件/)
+  await rm(input.paths.coversDir, { recursive: true })
+  await symlink(input.paths.dir, input.paths.coversDir)
+  await assert.rejects(prepareCreationMedia({ ...input, draft }), /素材文件/)
+  assert.deepEqual(await readdir(input.outputDir), [])
 })
 
 for (const media_index of [-1, 4, 1.5, '1', null]) test(`invalid saved media index ${JSON.stringify(media_index)} is rejected`, async (t) => {

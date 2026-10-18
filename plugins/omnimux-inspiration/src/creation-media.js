@@ -59,7 +59,25 @@ function rangeNumber(value) {
   return Number(value)
 }
 
-function selectedInputs(item, draft) {
+/** Match a saved local URL before using legacy ordinal keys; posters stay video-only. */
+function savedSource(media, item, paths, key) {
+  const expectedRoot = media.type === 'video' ? paths.videosDir : paths.imagesDir
+  const localPrefix = '/omnimux/inspiration/local/media/'
+  if (typeof media.url !== 'string' || !media.url.startsWith(localPrefix)) return { source: item.local_paths?.[key], root: expectedRoot }
+  const match = media.url.match(/^\/omnimux\/inspiration\/local\/media\/(videos|images|covers)\/([^/?#\\]+)$/)
+  if (!match || ['.', '..'].includes(match[2])) return {}
+  const photoRecord = item.type !== 'video' && (['image', 'photo', 'gallery'].includes(String(item.type || ''))
+    || ['photo', 'gallery'].includes(String(item.content_shape || '')) || item.media_kind === 'image')
+  const coverPhoto = media.type === 'image' && match[1] === 'covers' && photoRecord
+  if (!coverPhoto && match[1] !== (media.type === 'video' ? 'videos' : 'images')) return {}
+  const root = coverPhoto ? paths.coversDir : expectedRoot
+  if (typeof root !== 'string' || !isAbsolute(root)) return {}
+  const source = Object.values(item.local_paths || {}).find((path) => typeof path === 'string' && isAbsolute(path)
+    && relative(resolve(root), resolve(path)) === match[2])
+  return { source, root }
+}
+
+function selectedInputs(item, draft, paths) {
   const media = analysisMediaItems(item)
   const references = Array.isArray(draft?.references) ? draft.references.filter((entry) => entry?.kind === 'media') : []
   const seen = new Set()
@@ -80,7 +98,7 @@ function selectedInputs(item, draft) {
       if (clips.length !== 1 || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start >= end) throw new Error(`请为${creationMediaLabel(item, index)}设置有效的起止时间`)
       clip = { start_seconds: start, end_seconds: end }
     }
-    return { media_index: index, type, source: item.local_paths?.[key], clip }
+    return { media_index: index, type, ...savedSource(media[index], item, paths, key), clip }
   })
 }
 
@@ -144,7 +162,7 @@ async function reservePath(outputDir, type, source, createdPaths) {
 
 /**
  * Prepare only selected saved post media. Original assets remain untouched.
- * @param {{item:object,draft:object,paths:{dir:string,imagesDir:string,videosDir:string},videoProcess?:{execute:Function},signal?:AbortSignal,outputDir:string}} args
+ * @param {{item:object,draft:object,paths:{dir:string,imagesDir:string,videosDir:string,coversDir?:string},videoProcess?:{execute:Function},signal?:AbortSignal,outputDir:string}} args
  * @returns {Promise<{files:CreationFile[],createdPaths:string[]}>}
  */
 export async function prepareCreationMedia({ item, draft, paths, videoProcess, signal, outputDir }) {
@@ -153,10 +171,10 @@ export async function prepareCreationMedia({ item, draft, paths, videoProcess, s
   try {
     checkSignal(signal)
     const destination = await validateOutputDir(outputDir, paths)
-    const selected = selectedInputs(item, draft)
+    const selected = selectedInputs(item, draft, paths)
     if (selected.some((entry) => entry.type === 'video') && typeof videoProcess?.execute !== 'function') throw new Error('本地视频处理能力未就绪，暂时无法准备视频片段')
     for (const entry of selected) {
-      entry.source = await ownedPath(entry.source, entry.type === 'video' ? paths.videosDir : paths.imagesDir, 'file', `${creationMediaLabel(item, entry.media_index)}的素材文件无效或已移走`)
+      entry.source = await ownedPath(entry.source, entry.root, 'file', `${creationMediaLabel(item, entry.media_index)}的素材文件无效或已移走`)
       checkSignal(signal)
     }
     /** @type {CreationFile[]} */
