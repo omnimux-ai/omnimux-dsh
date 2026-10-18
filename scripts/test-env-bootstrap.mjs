@@ -505,6 +505,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
   const observations = { contract: 'task-private-installation', userFresh: 'unknown', taskBinding: 'unknown', runtimeStarted: false, unexpectedExit: false, events: [], rawOutputRetained: false };
   const signals = deps.signals ?? process;
   const timeout = deps.shutdownTimeoutMs ?? 5000;
+  const runtimePrefix = `omnimux-task-${options.evidenceContext.taskId}-${options.evidenceContext.runId}-`;
   const waitExit = milliseconds => new Promise(yes => {
     if (!child || (exited && closed)) return yes(true);
     let timer;
@@ -537,7 +538,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
         if (runtimeRoot) {
           canonical(io, runtimeRoot, true);
           const current = io.statSync(runtimeRoot, { bigint: true });
-          if (dirname(runtimeRoot) !== io.realpathSync(tmpdir()) || !basename(runtimeRoot).startsWith('omnimux-task-')
+          if (dirname(runtimeRoot) !== io.realpathSync(tmpdir()) || !basename(runtimeRoot).startsWith(runtimePrefix)
             || String(current.dev) !== runtimeOwnerIdentity[0] || String(current.ino) !== runtimeOwnerIdentity[1]) throw failure('ROOT_UNSAFE');
           io.rmSync(runtimeRoot, { recursive: true, force: true });
         }
@@ -550,7 +551,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
   try {
     preparation = await runTaskPreparation({ options, io, deps });
     observations.preparation = { candidateDigest: preparation.candidateBefore.candidate.contentDigest, inputsDigest: preparation.candidateBefore.inputs.contentDigest, packages: preparation.packages.map(item => ({ name: item.name, sha256: item.sha256 })) };
-    runtimeRoot = io.realpathSync(io.mkdtempSync(join(io.realpathSync(tmpdir()), `omnimux-task-${options.evidenceContext.taskId}-${options.evidenceContext.runId}-`)));
+    runtimeRoot = io.realpathSync(io.mkdtempSync(join(io.realpathSync(tmpdir()), runtimePrefix)));
     io.chmodSync(runtimeRoot, 0o700);
     const owner = io.statSync(runtimeRoot, { bigint: true });
     runtimeOwnerIdentity = [String(owner.dev), String(owner.ino)];
@@ -625,6 +626,10 @@ async function startFreshTaskRuntime({ options, io, deps }) {
               const match = /^Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]+)$/.exec(line);
               if (match) inspectorUrl = match[1];
             }
+            if (/error|cannot find|failed|^\s+at\s/i.test(line) && !/token|Bearer|password|api[-_]?key/i.test(line)) {
+              observations.diagnostics ??= [];
+              if (observations.diagnostics.length < 16) observations.diagnostics.push(line.slice(0, 512));
+            }
           } catch (error) { clearTimeout(timer); return no(error); }
         }
         if (kind === 'stdout') stdout = buffer; else stderr = buffer;
@@ -649,7 +654,7 @@ async function startFreshTaskRuntime({ options, io, deps }) {
   } catch (error) {
     const cleaned = await cleanup();
     const classified = safeError(error, 'FRESH_RUNTIME');
-    classified.rootReason = error.code ?? error.name;
+    classified.rootReason = error.rootReason ?? error.code ?? error.name;
     if (!classified.hint && typeof error.message === 'string' && !/[?&]token=|Bearer\s|password|api[-_]?key/i.test(error.message)) classified.hint = error.message.slice(0, 512);
     if (typeof error.path === 'string' && error.path.startsWith(options.root + '/.test-env-')) classified.failedPath = error.path;
     classified.cleanup = error.cleanup?.cleaned === false ? error.cleanup : error.cleanup?.resources?.some(item => item.name === 'preparation-directory')

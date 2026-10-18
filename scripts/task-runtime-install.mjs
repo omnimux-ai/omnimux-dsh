@@ -21,6 +21,12 @@ export function matchesTaskPeerVersion(version, spec) {
   return semver.satisfies(version, spec, { includePrerelease: includesPrereleaseBound });
 }
 
+export function assertTaskPeerSearchBoundary({ installedRoot, privateRoot, name }) {
+  for (const searchRoot of createRequire(join(installedRoot, 'package.json')).resolve.paths(name) || []) {
+    if (!inside(privateRoot, searchRoot) && fs.existsSync(join(searchRoot, name))) fail('INSTALL_PEER_ANCESTOR_UNSAFE');
+  }
+}
+
 /** Resolve an already installed pinned tool without package-manager auto acquisition. */
 export function createTaskPnpmTool(privateRoot) {
   fs.mkdirSync(join(privateRoot, 'toolchain'), { recursive: true, mode: 0o700 });
@@ -168,11 +174,7 @@ export async function installTaskRuntime({ root, repository, privateRoot, ownerI
     if (direct && !matchesTaskPeerVersion(selected.version, spec)) fail('INSTALL_PEER_VERSION_MISMATCH');
     if (!direct && matching.length > 1) fail('INSTALL_PEER_AMBIGUOUS');
     if (!direct && selected) item.dependencies.push({ name, target: selected.target, peer: true });
-    const lookup = createRequire(join(item.target, 'package.json')).resolve.paths(name) || [];
-    for (const searchRoot of lookup) {
-      if (inside(privateRoot, searchRoot)) continue;
-      if (fs.existsSync(join(searchRoot, name))) fail('INSTALL_PEER_ANCESTOR_UNSAFE');
-    }
+    assertTaskPeerSearchBoundary({ installedRoot: item.target, privateRoot, name });
     hostPeerExpectations.push({ parentName: item.name, parentRoot: item.target, name, spec, optional: item.peerMeta[name]?.optional === true,
       versionPolicy: /\d+\.\d+\.\d+-[0-9A-Za-z]/.test(spec) ? 'explicit-prerelease-bounds' : 'semver', ...(selected ? { privateRoot: selected.target } : {}) });
   }
@@ -230,7 +232,7 @@ export async function installTaskRuntime({ root, repository, privateRoot, ownerI
   });
   const before = preparation.candidateBefore;
   const installation = { taskId: evidenceContext.taskId, runId: evidenceContext.runId, sourceRoot: root, privateRoot, profile,
-    ownerIdentity, hostPeerExpectations, appAnchor: resolve(dirname(wrapper), '../dsh/package.json'),
+    ownerIdentity, hostPeerExpectations, appAnchor: resolve(dirname(wrapper), '../node_modules/@deepseek-ai/dsh/package.json'),
     base: before.base.resolvedSha, head: before.head.resolvedSha, candidateDigest: before.candidate.contentDigest, inputsDigest: before.inputs.contentDigest, packages };
   const assertInstalledIntegrity = () => {
     const identity = fs.statSync(privateRoot, { bigint: true });

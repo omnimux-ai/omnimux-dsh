@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { assertPreparedTaskArchives, matchesTaskPeerVersion, preparePrivateTaskPackages, taskPackagePayload } from './task-runtime-install.mjs';
+import { assertPreparedTaskArchives, assertTaskPeerSearchBoundary, matchesTaskPeerVersion, preparePrivateTaskPackages, taskPackagePayload } from './task-runtime-install.mjs';
 import { runPnpm } from './managed-tarball.mjs';
 import { privatePnpmEnvironment } from './materialize-cache.mjs';
 import { hashFile } from './materialize-graph.mjs';
+import { spawnSync } from 'node:child_process';
 
 function fixture(t) {
   const root = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), 'omnimux-task-install-')));
@@ -103,6 +104,13 @@ test('peer RC matching is limited to explicitly declared prerelease bounds', () 
   assert.equal(matchesTaskPeerVersion('18.3.1', '^18.2.0'), true);
 });
 
+test('an ancestor fake peer is refused before the packaged runtime can resolve it', t => {
+  const f = fixture(t); f.pkg('omnimux', { peers: { 'qa-host-peer': '^2.0.0' } }); f.installed('qa-host-peer');
+  const graph = f.run();
+  assert.throws(() => assertTaskPeerSearchBoundary({ installedRoot: graph.targets[0].target, privateRoot: f.privateRoot, name: 'qa-host-peer' }), { code: 'TEST_ENV_INSTALL_PEER_ANCESTOR_UNSAFE' });
+  assert.doesNotThrow(() => assertTaskPeerSearchBoundary({ installedRoot: graph.targets[0].target, privateRoot: f.privateRoot, name: 'qa-absent-optional-peer' }));
+});
+
 test('ordinary transitive dependencies retain different versions in separate private instances', t => {
   const f = fixture(t); f.pkg('omnimux', { dependencies: { left: '*', right: '*' } });
   for (const [name, version] of [['left', '1.0.0'], ['right', '2.0.0']]) {
@@ -141,4 +149,16 @@ test('supervised pnpm supports a caller-owned fixed executable without changing 
   const result = await runPnpm(['--version'], { cwd: f.privateRoot, env: privatePnpmEnvironment(runtime), executable: tool });
   assert.equal(result.code, 0); assert.equal(result.stdout, 'owned-tool:--version');
   assert.equal(process.env.PATH, originalPath);
+});
+
+test('installation supervision terminates an owned SIGTERM-resistant grandchild before returning', async t => {
+  const f = fixture(t), runtime = join(f.privateRoot, 'installer'); fs.mkdirSync(runtime);
+  const executable = join(f.privateRoot, 'official-cli-double'), pidFile = join(f.privateRoot, 'pnpm-child.pid');
+  fs.writeFileSync(executable, `#!${process.execPath}\nconst {spawn}=require('node:child_process'),fs=require('node:fs');const child=spawn(process.execPath,['-e',"process.on('SIGTERM',()=>{});setInterval(()=>{},1000)"],{stdio:['ignore','ignore','inherit']});fs.writeFileSync(${JSON.stringify(pidFile)},String(child.pid));process.on('SIGTERM',()=>{});setInterval(()=>{},1000);\n`, { mode: 0o700 });
+  const result = await runPnpm(['plugin', 'add'], { cwd: f.privateRoot, env: privatePnpmEnvironment(runtime), executable, timeoutMs: 400 });
+  assert.equal(result.signal, 'timeout');
+  const pid = Number(fs.readFileSync(pidFile, 'utf8'));
+  t.after(() => { try { process.kill(pid, 'SIGKILL'); } catch {} });
+  const state = spawnSync('ps', ['-p', String(pid), '-o', 'stat='], { encoding: 'utf8' }).stdout.trim();
+  assert.ok(!state || /^Z/.test(state), 'pnpm grandchild must have terminated before owned directory cleanup');
 });
