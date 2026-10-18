@@ -493,7 +493,7 @@ export async function runJourney(journeyPath, { send, sleep, evidenceDir, origin
 }
 
 /** 真实无头 Chrome 驱动：动态 CDP 端口、同源 cookie 注入、正几何断言、PNG 取证。 */
-async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', journey = null, io = fs, chromePath = findChromePath() }) {
+async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, mode = 'ui', journey = null, installation = null, io = fs, chromePath = findChromePath() }) {
   let chrome; let socket; let privateDir; let exited = false; let closed = false; let cleaning = false;
   const assertions = [];
   const state = { assertions, cleanup: [], observations: { events: [], rawOutputRetained: false } };
@@ -534,6 +534,13 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
     });
 
     let sequence = 0;
+    let eventSequence = 0;
+    let eventsTruncated = false;
+    const scriptEvents = [];
+    const readEvents = async ({ afterSequence = eventSequence, methods = ['Debugger.scriptParsed'], limit = 2000 } = {}) => {
+      const events = scriptEvents.filter(event => event.sequence > afterSequence && methods.includes(event.method));
+      return { cursor: eventSequence, events: events.slice(0, limit), hasMore: events.length > limit, truncated: eventsTruncated };
+    };
     const pending = new Map();
     const send = (method, params) => new Promise((resolve, reject) => {
       const id = ++sequence;
@@ -543,6 +550,10 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
     });
     socket.onmessage = event => {
       const message = JSON.parse(event.data);
+      if (message.method === 'Debugger.scriptParsed') {
+        if (scriptEvents.length >= 2000) { scriptEvents.shift(); eventsTruncated = true; }
+        scriptEvents.push({ sequence: ++eventSequence, method: message.method, params: message.params });
+      }
       if (!message.id || !pending.has(message.id)) return;
       const { resolve: yes, reject: no } = pending.get(message.id);
       pending.delete(message.id);
@@ -601,10 +612,25 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
       liveMedia = liveRes.detail;
     }
 
+    let taskProof;
+    if (installation) {
+      state.loadingPhase = 'before';
+      taskProof = await import('./task-runtime-proof.mjs');
+      state.runtimeLoading = { before: await taskProof.captureTaskClientProof({ send, readEvents, origin, installation }) };
+      state.loadingPhase = null;
+    }
+
     // 任务自定义功能旅程：保底断言通过后执行，断言并入总判定。
     if (journey) {
       const journeyAssertions = await runJourney(journey, { send, sleep, evidenceDir, origin, io });
       assertions.push(...journeyAssertions);
+    }
+
+    if (installation) {
+      state.loadingPhase = 'after';
+      state.runtimeLoading.after = await taskProof.captureTaskClientProof({ send, readEvents, origin, installation });
+      taskProof.assertTaskProofStable(state.runtimeLoading.before, state.runtimeLoading.after);
+      state.loadingPhase = null;
     }
 
     const captured = await send('Page.captureScreenshot', { format: 'png' });
@@ -632,7 +658,8 @@ async function driveRealBrowser({ origin, cookie, evidenceDir, seededWorkspace, 
         bytes: png.length,
       },
     });
-  } catch {
+  } catch (error) {
+    if (state.loadingPhase) state.loadingFailure = 'TEST_APP_QA_CLIENT_LOADING';
     throw Object.assign(new Error('TEST_APP_QA_BROWSER'), { code: 'TEST_APP_QA_BROWSER', browser: state });
   } finally {
     cleaning = true;
@@ -711,20 +738,25 @@ function inputFile(root, path, io) {
 
 /** Fixed policy comes from the request, never from returned assertions. */
 function contractRequest(options, io) {
-  const fields = ['taskId', 'base', 'head', 'scope', 'requiredChecks', 'expectedAssertions', 'extraInputs', 'artifactNames', 'requestPath'];
+  const fields = ['taskId', 'base', 'head', 'scope', 'requiredChecks', 'expectedAssertions', 'extraInputs', 'artifactNames', 'requestPath', 'taskPlugins'];
   if (!fields.some(key => Object.hasOwn(options, key))) return null;
   const { root, taskId, base, head, scope, journey = null, mode = 'ui' } = options;
   if (typeof taskId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(taskId)
     || ![base, head].every(value => typeof value === 'string' && value.trim() === value && value.length > 0)
     || !['smoke', 'reproduction', 'task'].includes(scope) || mode !== 'ui') throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
   if (scope !== 'smoke' && !journey) throw qaFailure('TEST_APP_QA_TASK_JOURNEY_REQUIRED');
+  const taskPlugins = options.taskPlugins;
+  if (taskPlugins !== undefined && (!namedList(taskPlugins) || taskPlugins.length > 8
+    || taskPlugins.some(name => !/^omnimux(?:-[a-z0-9]+)*$/.test(name)))) throw qaFailure('TEST_APP_QA_TASK_PLUGINS');
   const checks = ['app-environment', 'app-browser', ...(journey ? ['task-journey'] : [])];
   const expected = options.expectedAssertions;
   if (!sameNames(options.requiredChecks, checks) || !expected || Object.getPrototypeOf(expected) !== Object.prototype
     || !sameNames(Object.keys(expected), checks)
-    || !sameNames(expected['app-environment'], [...ENV_ASSERTIONS, ...(scope !== 'smoke' ? ['task-source-installed-loaded'] : [])])
+    || !sameNames(expected['app-environment'], [...ENV_ASSERTIONS, ...(scope !== 'smoke' || taskPlugins ? ['task-source-installed-loaded'] : [])])
     || !sameNames(expected['app-browser'], BROWSER_ASSERTIONS)
     || (journey && (!namedList(expected['task-journey']) || expected['task-journey'].some(name => !name.startsWith('journey:') || !name.slice(8).trim())))) throw qaFailure('TEST_APP_QA_EXPECTED_POLICY');
+  const allNames = checks.flatMap(name => expected[name]);
+  if (new Set(allNames).size !== allNames.length) throw qaFailure('TEST_APP_QA_EXPECTED_POLICY');
   if (options.extraInputs !== undefined && !Array.isArray(options.extraInputs)) throw qaFailure('TEST_APP_QA_INPUT_PATH');
   if ((options.extraInputs ?? []).some(path => typeof path !== 'string' || path !== path.trim() || path.startsWith('/')
     || path.split('/').some(part => !part || part === '.' || part === '..' || part === '.git'))
@@ -737,11 +769,76 @@ function contractRequest(options, io) {
     || artifactNames.some(name => typeof name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:json|log|txt|png)$/.test(name)
       || ['raw-run.json', 'evidence.json', 'app-home.png', 'hub-business-path.png'].includes(name))) throw qaFailure('TEST_APP_QA_ARTIFACT_NAMES');
   if (journey && contractJourneyConsumed) throw qaFailure('TEST_APP_QA_FRESH_PROCESS_REQUIRED');
-  return Object.freeze({ taskId, base, head, scope,
+  return Object.freeze({ taskId, base, head, scope, taskPlugins: taskPlugins ? Object.freeze([...taskPlugins]) : null,
     requiredChecks: Object.freeze([...checks]),
     expectedAssertions: Object.freeze(Object.fromEntries(checks.map(name => [name, Object.freeze([...expected[name]])]))),
     extraInputs: Object.freeze([...new Set(extraInputs)]), artifactNames: Object.freeze([...artifactNames]),
   });
+}
+
+/** Validate correspondence between independently observed facts, never create installation/loading evidence. */
+export function validateTaskRuntimeBinding({ root, taskId, runId, taskPlugins, candidate, origin, installation, serverLoading, clientLoading }) {
+  const reject = () => { throw qaFailure('TEST_APP_QA_TASK_BINDING'); };
+  const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+  const namesEqual = (a, b) => Array.isArray(a) && Array.isArray(b) && new Set(a).size === a.length
+    && [...a].sort().join('\0') === [...b].sort().join('\0');
+  if (typeof root !== 'string' || !Array.isArray(taskPlugins) || !taskPlugins.length
+    || !installation || installation.sourceRoot !== root || installation.taskId !== taskId || installation.runId !== runId
+    || installation.origin !== origin || !Number.isSafeInteger(installation.pid) || installation.pid <= 0
+    || installation.base !== candidate?.base?.resolvedSha || installation.head !== candidate?.head?.resolvedSha
+    || !digest(installation.candidateDigest) || installation.candidateDigest !== candidate?.candidate?.contentDigest
+    || !digest(installation.inputsDigest) || installation.inputsDigest !== candidate?.inputs?.contentDigest
+    || typeof installation.privateRoot !== 'string' || dirname(installation.privateRoot) !== root
+    || !installation.privateRoot.startsWith(join(root, '.test-env-'))) reject();
+  const privatePath = path => typeof path === 'string' && resolve(path) === path && path.startsWith(installation.privateRoot + sep);
+  if (!privatePath(installation.profile) || !Array.isArray(installation.packages) || !installation.packages.length
+    || installation.packages.some(pkg => !pkg || typeof pkg.name !== 'string')) reject();
+  const expectedNames = [...new Set(['omnimux', ...taskPlugins])];
+  const plugins = installation.packages.filter(pkg => pkg.serverEntry);
+  if (!namesEqual(plugins.map(pkg => pkg.name), expectedNames)
+    || new Set(installation.packages.map(pkg => pkg.installedRoot)).size !== installation.packages.length) reject();
+  for (const pkg of installation.packages) {
+    if (!privatePath(pkg.installedRoot) || !Array.isArray(pkg.payload) || !pkg.payload.length) reject();
+    if (pkg.payload.some(file => !file || typeof file.path !== 'string' || file.path.startsWith('/')
+      || file.path.split(/[\\/]/).some(part => !part || part === '.' || part === '..') || !digest(file.sha256)
+      || !Number.isSafeInteger(file.size) || file.size < 0)
+      || new Set(pkg.payload.map(file => file.path)).size !== pkg.payload.length) reject();
+    for (const entry of [pkg.serverEntry, pkg.clientBundle].filter(Boolean)) {
+      if (typeof entry.path !== 'string' || entry.path.startsWith('/') || entry.path.includes('\\')
+        || entry.path.split('/').some(part => !part || part === '.' || part === '..') || !digest(entry.sha256)) reject();
+      const published = pkg.payload.find(file => file.path === entry.path);
+      if (!published || published.sha256 !== entry.sha256 || (entry.bytes !== undefined && entry.bytes !== published.size)) reject();
+    }
+  }
+  for (const proof of [serverLoading, clientLoading]) {
+    if (!proof || ['taskId', 'runId', 'origin', 'pid', 'base', 'head', 'candidateDigest', 'inputsDigest']
+      .some(key => proof[key] !== installation[key])) reject();
+  }
+  if (serverLoading.kind !== 'task-server-loading' || !Array.isArray(serverLoading.modules)
+    || !namesEqual(serverLoading.modules.map(item => item.name), expectedNames)) reject();
+  for (const pkg of plugins) {
+    const loaded = serverLoading.modules.find(item => item.name === pkg.name);
+    if (loaded.path !== pkg.serverEntry.path || loaded.sha256 !== pkg.serverEntry.sha256
+      || loaded.loadedScriptSha256 !== pkg.serverEntry.sha256 || loaded.matchingScriptCount !== 1
+      || loaded.loadedScriptUrl !== pathToFileURL(join(pkg.installedRoot, pkg.serverEntry.path)).href) reject();
+  }
+  const clientPackages = plugins.filter(pkg => pkg.clientBundle);
+  if (!clientPackages.length || clientLoading.kind !== 'task-client-loading' || !Array.isArray(clientLoading.bundles)
+    || !namesEqual(clientLoading.bundles.map(item => item.plugin), clientPackages.map(pkg => pkg.name))) reject();
+  for (const pkg of clientPackages) {
+    const loaded = clientLoading.bundles.find(item => item.plugin === pkg.name);
+    let loadedUrl;
+    try { loadedUrl = new URL(loaded.loadedScriptUrl); } catch { reject(); }
+    if (loaded.bundlePath !== pkg.clientBundle.path || loaded.bundleSha256 !== pkg.clientBundle.sha256 || loaded.bundleBytes !== pkg.clientBundle.bytes
+      || !digest(loaded.bundleCodeSha256) || loaded.bundleCodeSha256 !== loaded.loadedRegistrationCodeSha256
+      || !digest(loaded.loadedScriptSha256)
+      || loaded.matchingRegistrationCount !== 1 || loadedUrl.origin !== origin || !loadedUrl.pathname.startsWith('/plugins/')) reject();
+  }
+  return { installation: { taskId, runId, sourceRoot: root, privateRoot: installation.privateRoot, profile: installation.profile,
+    base: installation.base, head: installation.head, candidateDigest: installation.candidateDigest, inputsDigest: installation.inputsDigest,
+    pid: installation.pid, origin, dependencyCount: installation.packages.length - plugins.length,
+    packages: plugins.map(({ name, version, installedRoot, payload, serverEntry, clientBundle }) => ({ name, version, installedRoot,
+      publishedFiles: payload.length, serverEntry, ...(clientBundle ? { clientBundle } : {}) })) } };
 }
 
 function resourceResults(owner, result, invoked) {
@@ -765,7 +862,7 @@ function resourceResults(owner, result, invoked) {
  * 可测的运行器：编排逻辑与浏览器实现解耦，测试可注入桩。
  * @param {{io?: *, startEnv?: Function, driveBrowser?: Function, fetchImpl?: Function, now?: Function, uuid?: Function}} [deps]
  * Contract calls additionally require explicit taskId/base/head/scope/requiredChecks/expectedAssertions;
- * this slice cannot establish task installation/loading, and default preparation fails closed.
+ * Task plugins opt into the fresh installation path; older requests keep their historical boundary.
  */
 export function createAppQaRunner(deps = {}) {
   const io = deps.io ?? fs;
@@ -831,7 +928,9 @@ export function createAppQaRunner(deps = {}) {
     };
     try {
       prepareAttempted = true;
-      env = await startEnv({ root, mode, ...(request ? { evidenceContext: { taskId: request.taskId, runId } } : {}) });
+      env = await startEnv({ root, mode, ...(request ? { evidenceContext: { taskId: request.taskId, runId },
+        ...(request.taskPlugins ? { taskPlugins: request.taskPlugins,
+          candidate: { base: request.base, head: request.head, outputs, extraInputs: request.extraInputs } } : {}) } : {}) });
       const origin = new URL(env.origin);
       if (origin.protocol !== 'http:' || origin.hostname !== '127.0.0.1' || !origin.port || env.origin !== origin.origin
         || new URL(env.loginUrl).origin !== origin.origin) throw qaFailure('TEST_APP_QA_ORIGIN');
@@ -849,9 +948,14 @@ export function createAppQaRunner(deps = {}) {
       if (!cookieName || !cookieValue) throw qaFailure('TEST_APP_QA_LOGIN_COOKIE');
       addAssertions([{ name: 'same-origin-login', pass: loginResponse.status === 303 }]);
       if (loginResponse.status !== 303) throw qaFailure('TEST_APP_QA_LOGIN_COOKIE');
+      if (request?.taskPlugins) {
+        if (typeof env.assertInstalledIntegrity !== 'function' || typeof env.verifyServerLoading !== 'function') throw qaFailure('TEST_APP_QA_TASK_BINDING');
+        await env.assertInstalledIntegrity();
+      }
       browserAttempted = true;
       browser = await driveBrowser({ origin: origin.origin, cookie: { name: cookieName, value: cookieValue },
-        evidenceDir, seededWorkspace: env.summary?.seededWorkspace, mode, journey, io });
+        evidenceDir, seededWorkspace: env.summary?.seededWorkspace, mode, journey, io,
+        ...(request?.taskPlugins ? { installation: env.installation } : {}) });
       addAssertions(browser.assertions);
       report.cdpPort = Number.isInteger(browser.cdpPort) ? browser.cdpPort : null;
       if (browser.screenshot) report.screenshot = { path: join(evidenceDir, 'app-home.png'),
@@ -868,13 +972,29 @@ export function createAppQaRunner(deps = {}) {
         destBytes: Number(browser.liveMedia.destBytes) || 0, brokenImageCount: Number(browser.liveMedia.brokenImageCount) || 0,
         screenshotPath: browser.liveMedia.screenshotPath ? join(evidenceDir, 'live-image-generated-success.png') : null,
       };
+      if (request?.taskPlugins) {
+        await env.assertInstalledIntegrity();
+        const serverAfter = await env.verifyServerLoading();
+        const { assertTaskProofStable } = await import('./task-runtime-proof.mjs');
+        assertTaskProofStable(env.serverLoading, serverAfter);
+        const proof = validateTaskRuntimeBinding({ root, taskId: request.taskId, runId, taskPlugins: request.taskPlugins,
+          candidate: candidateBefore, origin: origin.origin, installation: env.installation,
+          serverLoading: serverAfter, clientLoading: browser.runtimeLoading?.after });
+        if (producer !== 'controlled-runner') throw qaFailure('TEST_APP_QA_TASK_PRODUCER');
+        report.installation = proof.installation;
+        report.runtimeLoading = { server: serverAfter, clientBefore: browser.runtimeLoading.before, clientAfter: browser.runtimeLoading.after };
+        report.userFresh = true;
+        report.taskBinding = 'installed-loaded';
+        addAssertions([{ name: 'task-source-installed-loaded', pass: true }]);
+      }
       env.assertAlive?.();
     } catch (error) {
-      report.errors.push(error?.code === 'TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN' ? error.code : 'TEST_APP_QA_EXECUTION');
+      report.errors.push(typeof error?.code === 'string' && /^(?:TEST_ENV|TEST_APP_QA)_[A-Z_]+$/.test(error.code) ? error.code : 'TEST_APP_QA_EXECUTION');
       if (error?.code === 'TEST_ENV_NOT_USER_FRESH_TASK_UNKNOWN') report.userFresh = false;
       if (!env && error?.cleanup) envCleanup = error.cleanup;
       if (!env && error?.observations) prepareObservations = error.observations;
       if (error?.browser) { browser = error.browser; addAssertions(browser.assertions); }
+      if (browser?.loadingFailure) report.errors.push('TEST_APP_QA_CLIENT_LOADING');
     } finally {
       if (env) {
         try {
@@ -912,8 +1032,7 @@ export function createAppQaRunner(deps = {}) {
         || report.assertions.some(item => !allExpected.includes(item.name))) report.errors.push('TEST_APP_QA_ASSERTION_SET_MISMATCH');
       const checks = request.requiredChecks.map(name => {
         const names = request.expectedAssertions[name];
-        const actual = report.assertions.filter(item => name === 'app-environment' ? ENV_ASSERTIONS.includes(item.name)
-          : name === 'task-journey' ? item.name.startsWith('journey') : !ENV_ASSERTIONS.includes(item.name) && !item.name.startsWith('journey'));
+        const actual = report.assertions.filter(item => names.includes(item.name));
         const complete = sameNames(actual.map(item => item.name), names);
         return { name, scope: request.scope, required: true, status: actual.length ? 'completed' : 'not-run',
           reason: actual.length ? null : 'not-executed', exitCode: actual.length ? (complete && actual.every(item => item.pass) && !report.errors.length ? 0 : 1) : null,
@@ -986,7 +1105,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       const bytes = fs.readFileSync(join(sourceRoot, requestPath));
       if (bytes.length > 65536) throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
       request = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-      const allowed = ['taskId', 'base', 'head', 'scope', 'requiredChecks', 'expectedAssertions', 'extraInputs', 'artifactNames', 'journey'];
+      const allowed = ['taskId', 'base', 'head', 'scope', 'requiredChecks', 'expectedAssertions', 'extraInputs', 'artifactNames', 'journey', 'taskPlugins'];
       if (!request || Object.getPrototypeOf(request) !== Object.prototype || Object.keys(request).some(key => !allowed.includes(key))) throw qaFailure('TEST_APP_QA_CONTRACT_REQUEST');
       request.requestPath = requestPath;
     }
@@ -999,7 +1118,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         console.log(`   真实生图验收截图: ${report.liveMedia.screenshotPath} (尺寸 ${report.liveMedia.naturalWidth}x${report.liveMedia.naturalHeight}, 落盘 ${report.liveMedia.destBytes} 字节)`);
       }
       console.log(`   证据: ${report.evidence?.reportPath ?? 'docs/evidence/worktree-app-qa-report.json'}`);
-      console.log(`   范围: ${report.scope}；任务绑定: unknown；实时在线: unsupported`);
+      console.log(`   范围: ${report.scope}；任务绑定: ${report.taskBinding}；实时在线: unsupported`);
       if (report.summary?.seededWorkspace) {
         console.log(`💡【测试工程夹具】：已自动预装带媒体素材的标准测试工程（ID: ${report.summary.seededWorkspace}）`);
         console.log(`   前置测试直达：${report.origin}/#/workspace/${report.summary.seededWorkspace}`);

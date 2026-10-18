@@ -9,7 +9,7 @@
 ## 公开交接
 
 - 保留无evidenceContext的旧兼容路径；显式fresh路径仅支持ui，onboarding/live保持明确拒绝。
-- fresh starter必需 `root`、`evidenceContext:{taskId,runId}`、`candidate:{base,head,outputs?,extraInputs?}`、`taskPlugins`；只接收有限已实现构建适配的插件ID，不接命令、任意源目录或已安装包路径。hub始终包含，首批支持omnimux-inspiration与omnimux-browser。未知插件/字段在创建运行资源前拒绝。
+- fresh starter必需 `root`、`evidenceContext:{taskId,runId}`、`candidate:{base,head,outputs?,extraInputs?}`、`taskPlugins`；只接收有限已实现构建适配的插件ID，不接命令、任意源目录或已安装包路径。hub始终包含，首批支持omnimux-inspiration、omnimux-browser、omnimux-assets。未知插件/字段在创建运行资源前拒绝。
 - app-QA显式request增加taskPlugins，固定后纳入输入身份；向starter传同一base/head、outputs/extraInputs与task/run。旧legacy请求不被偷偷转为fresh成功。
 - 复用现有候选捕获、stage、固定构建命令、packlist/归档字节核验。新增task包与声明生产依赖必须从任务源码或仓内已装依赖形成私有可审file图；核心官方base/web-app来自packaged runtime正常初始化，不用仓内旧peer覆盖宿主。不自动安装peer，不读取全局npmrc/registry凭据。
 - 通过官方packaged `dsh plugin --profile web add` 安装，不手写bundle注册表冒充安装；读取实际manifest与安装路径，逐发布文件比较。依赖manifest重写只限私有file定位与禁安装生命周期，记录转换前后身份。安装失败不得启动或回落legacy。
@@ -20,7 +20,7 @@
 
 starter保留现有origin、非枚举loginUrl、summary、observations、assertAlive、cleanup，增加installation与serverLoading，提供assertInstalledIntegrity；这些记录不能单独由journey返回布尔签成功。
 
-installation固定包含taskId/runId、sourceRoot/privateRoot/profile、base/head、candidateDigest/inputsDigest、packages。每个package包含name、installedRoot、发布payload(path/sha256/size)、serverEntry(path/sha256)与可选clientBundle(path/sha256/bytes)。所有实际路径均落该任务自有目录；源码或归档身份可追回捕获的候选。
+installation固定包含taskId/runId、sourceRoot/privateRoot/profile、base/head、candidateDigest/inputsDigest、实际origin/pid、packages。每个package包含name、installedRoot、发布payload(path/sha256/size)；任务插件另有serverEntry(path/sha256)与可选clientBundle(path/sha256/bytes)，descriptor path为包内相对路径。所有实际路径均落该任务自有目录；源码或归档身份可追回捕获的候选。原固定资产工作台断言需要显式omnimux-assets和其betterSidebar支持层，不能通过删除旧断言省包；非任务支持包同样要核安装payload，但不冒充任务源码插件。
 
 独立proof helper实现：
 - `verifyTaskServerLoading({inspectorUrl,pid,installation})`：同进程CDP实际script URL、getScriptSource、源哈希，返回匹配清单；不落原始脚本、login token或环境变量。
@@ -34,6 +34,7 @@ installation固定包含taskId/runId、sourceRoot/privateRoot/profile、base/hea
 ## 实施分工与验收
 
 - runtime worker：bootstrap、安装/构建新模块及其最小单元，负责空环境/正式CLI/安装身份/启动/清理。
+- runtime worker必要窄扩managed-tarball的内部runPnpm显式已核工具入口，默认旧行为保留，fresh使用实际核验的仓库要求版本及私有配置/缓存；不修改全局PATH或安装依赖。
 - proof worker：server/client实际脚本证明与live-runtime-proof行为保持提取，相关单元。
 - coordinator：公开app-QA请求/消费者/driver接线、合同、集成、实际运行与交付。
 
