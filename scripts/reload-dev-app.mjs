@@ -14,6 +14,10 @@
  * 目标必须同时是「被核实的开发版主进程」与「CDP 端口上的监听进程」，且不得存在第二个开发版
  * 实例（可能有其他任务或人工在并发使用同一 App 二进制）。核实通过后只请求优雅退出；超时即
  * 放弃并如实报告，绝不补发强杀信号。重新拉起后等到页面目标就绪才报告成功。
+ *
+ * 拉起环境会剔除 `ELECTRON_RUN_AS_NODE`：Agent 常运行在 Electron 宿主（DeepSeek Harness /
+ * 其他 Electron 应用）里，该变量会让 `open` 拉起的 Dev 以 Node 模式启动后立即退出；2026-10-20
+ * 的 #3437 收尾已真实触发过一次「重启超时 + dev-smoke blocked + Dev 被留在退出状态」。
  */
 import http from 'node:http';
 import { spawnSync } from 'node:child_process';
@@ -28,12 +32,25 @@ const PROD_APP_BUNDLE = '/Applications/OmniMux.app';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * GUI 拉起环境：复制当前环境并剔除 `ELECTRON_RUN_AS_NODE`，不修改入参。
+ * 其他变量（PATH、DSH_* 等）原样保留，避免改变用户在终端里的启动语义。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {NodeJS.ProcessEnv}
+ */
+export function devLaunchEnv(env = process.env) {
+  const next = { ...env };
+  delete next.ELECTRON_RUN_AS_NODE;
+  return next;
+}
+
+/**
  * @param {string} command
  * @param {string[]} args
+ * @param {{ env?: NodeJS.ProcessEnv }} [options]
  * @returns {{ status: number, stdout: string }}
  */
-function defaultRun(command, args) {
-  const result = spawnSync(command, args, { encoding: 'utf8' });
+function defaultRun(command, args, options = {}) {
+  const result = spawnSync(command, args, { encoding: 'utf8', env: options.env });
   return { status: result.status ?? 1, stdout: String(result.stdout || '') };
 }
 
@@ -189,7 +206,7 @@ export async function restartDevApp(opts = {}) {
     };
   }
 
-  if (run('open', ['-a', DEV_APP_NAME]).status !== 0) {
+  if (run('open', ['-a', DEV_APP_NAME], { env: devLaunchEnv() }).status !== 0) {
     return { restarted: false, reason: 'launch-failed', detail: '重新拉起开发版失败' };
   }
 
