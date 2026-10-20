@@ -135,6 +135,12 @@ import('./twitter-copilot/index.ts').then(({ initTwitterCopilot }) => {
   initTwitterCopilot()
 }).catch(() => {})
 
+// Mount the X poster surface: one trigger per tweet, local canvas rendering, and
+// the composer hand-off that attaches the image and prefills the opinion.
+import('./twitter-poster/index.ts').then(({ initTwitterPoster }) => {
+  initTwitterPoster()
+}).catch(() => {})
+
 // Mount the page-media hover assistant (capsule + white tooltip).
 // A re-injected content script replaces its own listeners, so the previous
 // overlay is disposed first; the page must never accumulate shadow hosts.

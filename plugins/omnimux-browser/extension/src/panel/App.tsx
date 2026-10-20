@@ -822,6 +822,7 @@ export function App(): React.JSX.Element {
   const [fabEnabled, setFabEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.fab))
   const [mediaHoverEnabled, setMediaHoverEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.mediaHover))
   const [velocityEnabled, setVelocityEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.velocity))
+  const [posterEnabled, setPosterEnabled] = useState<boolean>(() => readFlagSync(FEATURE_FLAG.poster))
   const [keywordTags, setKeywordTags] = useState<string[]>([])
   const [keywordDraft, setKeywordDraft] = useState('')
   useEffect(() => {
@@ -1561,7 +1562,9 @@ export function App(): React.JSX.Element {
    */
   function updateFeatureFlag(key: FeatureFlagKey, enabled: boolean): void {
     if (key === FEATURE_FLAG.fab) setFabEnabled(enabled)
-    else setMediaHoverEnabled(enabled)
+    else if (key === FEATURE_FLAG.mediaHover) setMediaHoverEnabled(enabled)
+    else if (key === FEATURE_FLAG.velocity) setVelocityEnabled(enabled)
+    else setPosterEnabled(enabled)
     void writeFlag(key, enabled)
     void notifyFeatureFlag(key, enabled)
   }
@@ -1589,9 +1592,13 @@ export function App(): React.JSX.Element {
     const unsubscribes = [
       subscribeFlag(FEATURE_FLAG.fab, setFabEnabled),
       subscribeFlag(FEATURE_FLAG.mediaHover, setMediaHoverEnabled),
+      subscribeFlag(FEATURE_FLAG.velocity, setVelocityEnabled),
+      subscribeFlag(FEATURE_FLAG.poster, setPosterEnabled),
     ]
     void readFlag(FEATURE_FLAG.fab).then((enabled) => { if (live) setFabEnabled(enabled) })
     void readFlag(FEATURE_FLAG.mediaHover).then((enabled) => { if (live) setMediaHoverEnabled(enabled) })
+    void readFlag(FEATURE_FLAG.velocity).then((enabled) => { if (live) setVelocityEnabled(enabled) })
+    void readFlag(FEATURE_FLAG.poster).then((enabled) => { if (live) setPosterEnabled(enabled) })
     return () => {
       live = false
       for (const unsubscribe of unsubscribes) unsubscribe()
@@ -3416,6 +3423,22 @@ export function App(): React.JSX.Element {
               )}
             </div>
           </div>
+        </section>
+        <section className="settings-panel feature-switch" aria-labelledby="omnimux-poster-setting">
+          <div id="omnimux-poster-setting" className="settings-card-heading">{copy.settings.posterSection}</div>
+          <label className="setting-toggle">
+            <span className="setting-toggle-copy">
+              <strong>{copy.settings.posterToggle}</strong>
+              <small>{copy.settings.posterToggleHelp}</small>
+            </span>
+            <input
+              className="setting-toggle-input"
+              type="checkbox"
+              checked={posterEnabled}
+              onChange={(event) => updateFeatureFlag(FEATURE_FLAG.poster, event.target.checked)}
+            />
+            <span className="setting-toggle-control" aria-hidden="true"><span /></span>
+          </label>
         </section>
         <div className="settings-panel preference-toggles">
           <label className="setting-toggle">

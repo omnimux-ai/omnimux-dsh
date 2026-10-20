@@ -2670,6 +2670,33 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       sendResponse({ ok: true })
     })
     return true
+  } else if (m?.type === 'DSH_FETCH_IMAGE_DATA_URL') {
+    // Poster avatars are drawn into a canvas, and a page-origin content script
+    // cannot read a pbs.twimg.com image back out of it (CORS taints the canvas,
+    // so `toDataURL` throws). The worker has the host permission, so it fetches
+    // the bytes and returns a data URL the page can draw and export.
+    const url = String((m as { url?: unknown }).url || '')
+    void (async () => {
+      try {
+        const parsed = new URL(url)
+        if (parsed.protocol !== 'https:' || parsed.hostname !== 'pbs.twimg.com') {
+          throw new Error('不支持的图片地址')
+        }
+        const response = await fetch(parsed.href, { credentials: 'omit', signal: AbortSignal.timeout(8000) })
+        if (!response.ok) throw new Error(`图片读取失败（${response.status}）`)
+        const bytes = new Uint8Array(await response.arrayBuffer())
+        if (bytes.byteLength > 6 * 1024 * 1024) throw new Error('图片过大')
+        const contentType = response.headers.get('content-type') || 'image/jpeg'
+        let binary = ''
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000))
+        }
+        sendResponse({ ok: true, dataUrl: `data:${contentType};base64,${btoa(binary)}` })
+      } catch (error) {
+        sendResponse({ ok: false, message: error instanceof Error ? error.message : String(error) })
+      }
+    })()
+    return true
   } else if (m?.type === 'DSH_TWITTER_COPILOT_GENERATE') {
     // Twitter In-Page Copilot Live LLM generation via local DSH/OmniMux host
     const payload = m as { systemPrompt?: string; userMessage?: string }
