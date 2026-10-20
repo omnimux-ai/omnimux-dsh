@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ConfirmModal, Divider, DropdownSelect, EmptyState, FilterBar, SearchField, Tabs } from 'dsh-ui-kit'
-import { ArrowLeft } from 'lucide-react'
+import { CollectionHeader } from './CollectionHeader.jsx'
 import { InspirationCollectionCard, toCollectionCardRow } from './InspirationCollectionCard.jsx'
 import { InspirationCollectionDialog } from './InspirationCollectionDialog.jsx'
 import { InspirationCollectionMenu } from './InspirationCollectionMenu.jsx'
@@ -12,7 +12,7 @@ import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPa
 import { RivalRefreshButton } from './RivalPoolStatusBar.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { RivalMasonry } from './RivalMasonry.jsx'
-import { toInspirationCardRow } from './inspiration-card.js'
+import { toCollectionMemberCard, toInspirationCardRow } from './inspiration-card.js'
 import { InspirationInlineImportDialog } from './InspirationInlineImportDialog.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
 import { buildCategoryFilterOptions, buildPlatformFilterOptions, formatPlatformName } from './feed-helpers.js'
@@ -304,8 +304,9 @@ export function InspirationSection({ t, active }) {
   const gridCollections = tab === 'local' && !collectionId ? libraryCollections.collections : []
   const gridCards = useMemo(() => [
     ...gridCollections.map(collection => ({ ...toCollectionCardRow(collection), collection })),
-    ...visibleItems.map(row => toInspirationCardRow(row, t)),
-  ], [gridCollections, visibleItems, t])
+    // 合集详情是素材架：成员卡统一封面优先形态；根层信息流保持原映射（#3459）。
+    ...visibleItems.map(row => (collectionId ? toCollectionMemberCard(row, t) : toInspirationCardRow(row, t))),
+  ], [gridCollections, visibleItems, t, collectionId])
   const drag = useCollectionDrag({
     enabled: tab === 'local' && !collectionId && !selecting && !libraryCollections.busy && !libraryCollections.intent && !selectedItem,
     items: visibleItems, collections: gridCollections, onDrop: libraryCollections.requestMerge, onStart: libraryCollections.cancelSelection, t,
@@ -565,11 +566,15 @@ export function InspirationSection({ t, active }) {
 
       {/* Content area — the one region a tab switch replaces. */}
       {tab === 'local' && collectionId ? (
-        <div className="omnimux-inspiration-collection-navigation">
-          <Button variant="ghost" leadingIcon={<ArrowLeft size={16} />} onClick={libraryCollections.back}>{t('collection.back')}</Button>
-          <span className="omnimux-inspiration-collection-heading">{libraryCollections.activeCollection?.title || ''}</span>
-          {libraryCollections.activeCollection ? <Button variant="outline" disabled={libraryCollections.busy} onClick={() => libraryCollections.rename(libraryCollections.activeCollection)}>{t('collection.rename')}</Button> : null}
-        </div>
+        <CollectionHeader
+          t={t}
+          title={libraryCollections.activeCollection?.title || ''}
+          busy={libraryCollections.busy}
+          addToSessionBusy={addingCollectionId === String(libraryCollections.activeCollection?.id || collectionId)}
+          onBack={libraryCollections.back}
+          onRename={libraryCollections.activeCollection ? () => libraryCollections.rename(libraryCollections.activeCollection) : undefined}
+          onAddToSession={libraryCollections.activeCollection ? () => handleAddCollectionToSession(libraryCollections.activeCollection) : undefined}
+        />
       ) : null}
       {tab === 'local' && libraryCollections.selectedSource ? (
         <div className="omnimux-inspiration-collection-selection" role="status">

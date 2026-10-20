@@ -44,6 +44,19 @@ const SHORT_VIDEO_RATIO = 9 / 16
 export const RIVAL_COLLECTION_MEDIA_RATIO = 16 / 9
 export const RIVAL_COLLECTION_TITLE_HEIGHT = 42
 
+/**
+ * 合集详情成员卡（#3459）：媒体框固定 4:5，封面优先。
+ * 渲染侧 `--rival-media-ratio`、估算侧 `rivalCardHeightPx` 共用这一个值，
+ * 两处一旦分叉，同排卡片就会压叠。
+ */
+export const RIVAL_MEDIA_FIRST_RATIO = 4 / 5
+
+/** 合集详情成员卡的布局标记：卡片渲染与高度估算共用，避免两处写字面量。 */
+export const COLLECTION_MEMBER_LAYOUT = 'media-first'
+
+/** 合集详情成员卡正文区：上 10 + 标题两行 36 + 间距 6 + 元信息行 18 + 下 12。 */
+const MEDIA_FIRST_BODY_H = 82
+
 /** 卡片 1px 描边（上 + 下）：估算按渲染的 border-box 高度计，含这 2px。 */
 const CARD_BORDER = 2
 /** 文本卡几何（§9.1/§9.3）：内边距 12×2、胶囊行 28 + 间距 8、正文行高 20。 */
@@ -573,6 +586,8 @@ export function rivalCardTypeOf(card) {
  */
 export function rivalMediaRatioOf(card) {
   const type = rivalCardTypeOf(card)
+  // 合集详情成员卡的封面比例由布局决定，不跟随数据比例（#3459）。
+  if (type !== 'text' && card?.layout === COLLECTION_MEMBER_LAYOUT) return RIVAL_MEDIA_FIRST_RATIO
   if (type === 'collection') return RIVAL_COLLECTION_MEDIA_RATIO
   if (type === 'short-video') return SHORT_VIDEO_RATIO
   if (type === 'long-video') return VIDEO_RATIO
@@ -650,6 +665,10 @@ export function rivalCardHeightPx(card, columnWidth) {
   const w = Number(columnWidth) > 0 ? Number(columnWidth) : RIVAL_MIN_COL_WIDTH
   const inner = Math.max(0, w - CARD_BORDER)
   const type = rivalCardTypeOf(card)
+  if (type !== 'text' && card?.layout === COLLECTION_MEMBER_LAYOUT) {
+    // 合集详情成员卡：封面 4:5 + 固定正文区（标题两行 + 元信息行）。
+    return Math.max(RIVAL_MIN_CARD_HEIGHT, inner / RIVAL_MEDIA_FIRST_RATIO + MEDIA_FIRST_BODY_H + CARD_BORDER)
+  }
   if (type === 'collection') {
     return inner / RIVAL_COLLECTION_MEDIA_RATIO + RIVAL_COLLECTION_TITLE_HEIGHT + CARD_BORDER
   }
