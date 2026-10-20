@@ -1,18 +1,17 @@
 /**
- * Content area of the 账号监控 tab: one grid of the monitored accounts' works.
+ * Right column of the 账号监控 tab: the selected accounts' posts as a timeline.
  *
- * It used to be a two-column workbench — an account column on the left and a
- * post list on the right — and the account dimension now lives in the toolbar's
- * multi-select filter instead. What is left is what the tab is for: the works.
+ * The account column moved back into the content area (#3432): this panel is
+ * the right column, and it owns only what is scoped to it — the timeline, the
+ * import dialog, the detail dialog and the「立即复刻」action.
  *
- * The feed state is mounted by the shell (`use-rival-feed`) because the filter
- * in the toolbar and this grid read the same numbers; the panel renders it and
- * owns only what is scoped to the content area — the import dialog, the detail
- * dialog and the「立即复刻」action.
+ * The feed state is mounted by the shell (`use-rival-feed`) because the left
+ * account column and this timeline read the same numbers.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RivalFeedGrid } from './RivalFeedGrid.jsx'
+import { RivalTimeline } from './RivalTimeline.jsx'
 import { RivalImportDialog } from './RivalImportDialog.jsx'
 import { RivalPostPreviewModal } from './RivalPostPreviewModal.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
@@ -28,9 +27,8 @@ import { injectRivalTokens } from './rival-tokens.js'
 /**
  * Platform filter options, built from the module's own platform names.
  *
- * Exported because the shell renders this dropdown: the account filter and the
- * platform filter that narrows the same grid have to offer the platforms in the
- * same order.
+ * Exported because the shell renders this dropdown: the platform filter and the
+ * account column have to offer the platforms in the same order.
  */
 export function buildRivalPlatformOptions(t) {
   return [
@@ -39,20 +37,6 @@ export function buildRivalPlatformOptions(t) {
     { value: 'instagram', label: t('platform.instagram') },
     { value: 'youtube', label: t('platform.youtube') },
     { value: 'x', label: t('platform.x') },
-  ]
-}
-
-/**
- * `filter.sort` 菜单（规格 R4 白名单：四项、禁加第 5 项）。
- * `recommended` 与 `latest` 在 wire 层共享 `posted_at`——综合推荐分的加权
- * 公式不在本票；时间序是它当前唯一诚实的排法。
- */
-export function buildRivalSortOptions(t) {
-  return [
-    { value: 'recommended', label: t('rivalFeed.sort.recommended') },
-    { value: 'velocity', label: t('rivalFeed.sort.velocity') },
-    { value: 'latest', label: t('rivalFeed.sort.latest') },
-    { value: 'views', label: t('rivalFeed.sort.views') },
   ]
 }
 
@@ -78,6 +62,9 @@ export function RivalAccountsPanel(props) {
   const [notice, setNotice] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [deconstructBusyId, setDeconstructBusyId] = useState(null)
+  // Optimistic「已处理」set: the POST is asynchronous and the row must flip the
+  // moment the user clicks it, exactly like the retired grid did (#3432 review).
+  const [doneIds, setDoneIds] = useState(() => new Set())
 
   useEffect(() => {
     injectRivalStyles()
@@ -180,22 +167,59 @@ export function RivalAccountsPanel(props) {
   }, [busyId])
 
   /**
-   * 「标为已处理」的当前回执：#3114 的端点还没有接上，所以本票只给出
-   * 「动作已被记录」的通知；卡片的 is-done 视觉翻转由 grid 本地完成。
+   * 「标为已处理」：先做本地乐观翻转（行立即 is-done、按钮消失），再提交
+   * 端点；提交失败时保留本地状态直到下次整页重读，与旧 grid 的交互一致。
    */
   const handleMarkDone = useCallback(async (card) => {
     const accountId = String(card?.account_id || card?.account?.id || '')
     const postId = String(card?.post_id || card?.id || '')
-    setNotice({ key: 'rivalFeed.toast.markDone' })
+    const ticket = String(card?.id || '')
+    const flip = (on) => {
+      if (!ticket) return
+      setDoneIds((previous) => {
+        if (on === previous.has(ticket)) return previous
+        const next = new Set(previous)
+        if (on) next.add(ticket)
+        else next.delete(ticket)
+        return next
+      })
+    }
+    flip(true)
     if (!accountId || !postId) return
     try {
-      await markRivalPostDone(accountId, postId)
+      const result = await markRivalPostDone(accountId, postId)
+      if (result && result.ok === false) {
+        flip(false)
+        setNotice({ key: 'rivalAccounts.post.attachFailed' })
+        return
+      }
+      setNotice({ key: 'rivalFeed.toast.markDone' })
     } catch {
-      // 本地存储写入异常时静默或保持乐观测状态，不打扰用户
+      flip(false)
+      setNotice({ key: 'rivalAccounts.post.attachFailed' })
     }
   }, [])
 
   const emptyKind = feedEmptyKind(feed)
+
+  // The optimistic set is a view of the current feed page: rows that disappear
+  // with a selection change must not linger and mask a later Host state.
+  useEffect(() => {
+    setDoneIds((previous) => {
+      if (previous.size === 0) return previous
+      const live = new Set(feed.cards.map((card) => String(card?.id ?? '')))
+      const next = new Set([...previous].filter((id) => live.has(id)))
+      return next.size === previous.size ? previous : next
+    })
+  }, [feed.cards])
+
+  // Merge the optimistic「已处理」set over the Host cards without mutating them.
+  const timelineCards = useMemo(() => {
+    if (doneIds.size === 0) return feed.cards
+    return feed.cards.map((card) => (
+      doneIds.has(String(card?.id ?? '')) ? { ...card, done: true, state: 'done' } : card
+    ))
+  }, [feed.cards, doneIds])
 
   /**
    * The only notice this panel still owns is a failed 复刻 — the answer to the
@@ -234,24 +258,34 @@ export function RivalAccountsPanel(props) {
         </div>
       ) : null}
 
-      <RivalFeedGrid
-        t={t}
-        cards={feed.cards}
-        loading={feed.loading}
-        loadingMore={feed.loadingMore}
-        emptyKind={emptyKind}
-        fetchPhase={feed.fetchPhase}
-        refreshBusy={feed.refreshBusy}
-        onResetFilters={feed.resetAccounts}
-        onImport={() => setImportOpen(true)}
-        onRetryFetch={feed.retryFetch}
-        onBrowseTrend={onBrowseTrend}
-        onDetail={handleDetail}
-        onReplicate={handleReplicate}
-        onDeconstruct={handleDeconstruct}
-        onMarkDone={handleMarkDone}
-        replicateBusy={busyId}
-      />
+      {feed.cards.length > 0 ? (
+        <RivalTimeline
+          cards={timelineCards}
+          t={t}
+          busyId={busyId}
+          hasMore={feed.hasMore === true}
+          loadingMore={feed.loadingMore === true}
+          canLoadMore={feed.hasMore === true && feed.loadingMore !== true && feed.loading !== true && !feed.fetching && !feed.error && !feed.fetchPhase}
+          onLoadMore={feed.loadMore}
+          onDetail={handleDetail}
+          onReplicate={handleReplicate}
+          onDeconstruct={handleDeconstruct}
+          onMarkDone={handleMarkDone}
+        />
+      ) : (
+        <RivalFeedGrid
+          t={t}
+          cards={feed.cards}
+          loading={feed.loading}
+          emptyKind={emptyKind}
+          fetchPhase={feed.fetchPhase}
+          refreshBusy={feed.refreshBusy}
+          onResetFilters={feed.resetAccounts}
+          onImport={() => setImportOpen(true)}
+          onRetryFetch={feed.retryFetch}
+          onBrowseTrend={onBrowseTrend}
+        />
+      )}
 
       <RivalImportDialog
         open={importOpen}

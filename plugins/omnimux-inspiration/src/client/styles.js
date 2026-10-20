@@ -146,13 +146,6 @@ export const INSPIRATION_CSS = `
   overflow: visible !important;
 }
 
-/* 筛选器自成一个层叠上下文：面板的层级在这个上下文里高于同排控件，而它自己与
-   同排控件同层，避免把工具栏整体抬到宿主其它浮层之上。 */
-.omnimux-rival-filter {
-  position: relative;
-  z-index: 100;
-}
-
 .omnimux-inspiration-search-box {
   position: relative;
   display: flex;

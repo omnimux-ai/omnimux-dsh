@@ -292,6 +292,10 @@ export function useRivalFeed(options = {}) {
     latest.current += 1
     const ticket = latest.current
     setLoading(true)
+    // A page-1 reload supersedes any in-flight append: its stale finally will
+    // not clear the append flag, so reset it here or loadMore stays blocked
+    // forever after the user switches accounts mid-append (#3432 review P1).
+    setLoadingMore(false)
     setError(null)
     try {
       const accountRes = await api.fetchRivalAccounts({})
@@ -408,7 +412,9 @@ export function useRivalFeed(options = {}) {
       if (!isCurrent(ticket)) return
       setError('rivalAccounts.error.failed')
     } finally {
-      if (isCurrent(ticket)) setLoadingMore(false)
+      // Clear on stale responses too: a newer page-1 reload has already reset
+      // the flag, and leaving it true would dead-lock the append path.
+      setLoadingMore(false)
     }
   }, [api, enabled, hasMore, isCurrent, loading, loadingMore, page, platform, query, sort])
 

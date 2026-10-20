@@ -1,23 +1,13 @@
 /**
- * The 账号监控 content area: a masonry of monitored accounts' works.
+ * 账号监控右栏的「没有帖子可渲染」状态（#3432）。
  *
- * v2.1 (Issue #3110) replaces the shared library grid with the monitor's own
- * masonry + card pair — a deliberate fork（方案 A）:
- *   - `RivalMasonry` places cards into the shortest column while keeping the
- *     DOM flat (sort order = tab order = rank, spec §9.3/V4);
- *   - `RivalPostCard` renders the five content-type shapes, the minimal default
- *     state and the processed retreat (§9.1/§9.2), none of which the shared
- *     library card can express.
- * `InspirationCoverCard` is untouched; the library keeps its own card.
- *
- * Empty states and the first-paint skeleton stay exactly as they were: the
- * library's shimmer is the honest "collecting" affordance, and a tab switch
- * does not change how loading looks.
+ * The timeline owns every non-empty state; this component is the skeleton /
+ * empty / first-fetch surface behind it. Keeping the states here means the tab
+ * switch keeps the library's honest "collecting" shimmer, and the timeline never
+ * has to grow a second copy of the empty-state copy.
  */
 
-import { useCallback, useMemo, useState } from 'react'
 import { Button, EmptyState } from 'dsh-ui-kit'
-import { RivalMasonry } from './RivalMasonry.jsx'
 import { EMPTY_ICON_SEARCH, EMPTY_ICON_USER, EMPTY_ICON_WORKS } from './icons.jsx'
 import { rivalErrorKey } from './rival-health.js'
 
@@ -29,7 +19,6 @@ const SKELETON_COUNT = 10
  *   t: (key: string) => string,
  *   cards: Array<Record<string, any>>,
  *   loading: boolean,
- *   loadingMore: boolean,
  *   emptyKind: 'no-accounts' | 'no-posts' | 'filtered' | 'loading' | 'fetching' | 'fetch-failed',
  *   fetchPhase?: null | { kind: 'reimport'|'stopped'|'cooling'|'failed'|'timeout', account?: any, minutes?: number },
  *   refreshBusy?: boolean,
@@ -37,43 +26,13 @@ const SKELETON_COUNT = 10
  *   onImport: () => void,
  *   onRetryFetch?: () => void,
  *   onBrowseTrend?: () => void,
- *   onDetail: (row: Record<string, any>) => void,
- *   onReplicate: (row: Record<string, any>) => void,
- *   onMarkDone?: (row: Record<string, any>) => void,
- *   onDeconstruct?: (row: Record<string, any>) => void,
- *   replicateBusy: string | null,
  * }} props
  */
 export function RivalFeedGrid(props) {
   const {
-    t, cards, loading, loadingMore, emptyKind, fetchPhase, onResetFilters, onImport,
+    t, cards, loading, emptyKind, fetchPhase, onResetFilters, onImport,
     onRetryFetch, onBrowseTrend, refreshBusy = false,
-    onDetail, onReplicate, onMarkDone, onDeconstruct, replicateBusy,
   } = props
-
-  // 本地已处理集合：点「标为已处理」先就地退位（不请求、不重排），持久化由
-  // #3114 的端点接线后接管同一个 onMarkDone 回调。
-  const [doneIds, setDoneIds] = useState(() => new Set())
-  const handleMarkDone = useCallback((card) => {
-    const id = String(card?.id ?? '')
-    if (!id) return
-    setDoneIds((prev) => {
-      if (prev.has(id)) return prev
-      const next = new Set(prev)
-      next.add(id)
-      return next
-    })
-    if (typeof onMarkDone === 'function') onMarkDone(card)
-  }, [onMarkDone])
-
-  const renderCards = useMemo(() => {
-    if (doneIds.size === 0) return cards
-    return cards.map((card) => (
-      doneIds.has(String(card?.id ?? ''))
-        ? { ...card, done: true, state: 'done' }
-        : card
-    ))
-  }, [cards, doneIds])
 
   if (loading && (cards.length === 0) && emptyKind !== 'no-accounts') {
     return (
@@ -211,24 +170,7 @@ export function RivalFeedGrid(props) {
     )
   }
 
-  return (
-    <>
-      <RivalMasonry
-        cards={renderCards}
-        t={t}
-        onDetail={onDetail}
-        onReplicate={onReplicate}
-        onMarkDone={handleMarkDone}
-        onDeconstruct={onDeconstruct}
-        busyId={replicateBusy}
-      />
-      {loadingMore ? (
-        <div className="omnimux-inspiration-skeleton omnimux-rival-loadmore" data-rival-loadmore-skeleton="true" aria-hidden="true">
-          {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
-            <div key={index} className="omnimux-inspiration-skel" />
-          ))}
-        </div>
-      ) : null}
-    </>
-  )
+  // The timeline owns every non-empty state now (#3432); this component is
+  // only the empty/skeleton/collection-progress surface behind it.
+  return null
 }

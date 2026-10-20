@@ -231,6 +231,10 @@ export function toRivalCardRow(row) {
   return {
     id: String(row?.row_id || `${row?.account_id || ''}:${row?.id || ''}`),
     title,
+    // Timeline rows (#3432) read the original post body, not the display title:
+    // the title falls back to the URL for a media-only post, which would be a
+    // poor timeline body.
+    text: String(row?.text || title),
     card_type: cardType,
     type: String(row?.type || ''),
     media_kind: mediaKind,
@@ -259,6 +263,7 @@ export function toRivalCardRow(row) {
     stats: row?.stats || {},
     author_name: String(account.nickname || account.handle || ''),
     author_handle: String(account.handle || ''),
+    avatar_url: String(account.avatar_url || ''),
     // The card itself shows a platform badge, but the detail dialog names the
     // creator and needs the block: keeping it here means the dialog is handed
     // the same descriptor the card got, not a second shape to keep in sync.
@@ -268,6 +273,7 @@ export function toRivalCardRow(row) {
       handle: String(account.handle || ''),
       platform: String(account.platform || ''),
       profile_url: String(account.profile_url || ''),
+      avatar_url: String(account.avatar_url || ''),
     },
     // Not a library row: it shows a platform badge and carries no in-library
     // selection checkbox, and it has no import status to announce.

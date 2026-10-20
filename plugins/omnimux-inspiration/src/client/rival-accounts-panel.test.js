@@ -140,7 +140,7 @@ describe('RivalAccountsPanel — 「立即复刻」重入守卫（R5-⑨）', ()
     try {
       const click = async (id) => {
         const button = mounted.container.querySelector(
-          `.omnimux-rival-card[data-card-id="${id}"] .omnimux-rival-act-primary`,
+          `.omnimux-rival-timeline-item[data-card-id="${id}"] [data-act="replicate"]`,
         )
         assert.ok(button, `replicate button for ${id}`)
         await act(async () => {

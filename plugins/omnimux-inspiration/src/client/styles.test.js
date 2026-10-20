@@ -221,26 +221,22 @@ describe('card reveal shimmer and batch loading UX', () => {
   })
 })
 
-describe('账号筛选下拉面板的层级与裁切', () => {
-  it('keeps the filter at the toolbar level and lets its panel out of every clipping box', () => {
-    // 工具栏默认 overflow: hidden，会把展开的账号列表整块切掉 —— 用户看到的
-    // 是「菜单被遮挡」。工具栏与它的三个内容层都必须放开裁切。
+describe('账号监控两栏布局（#3432）', () => {
+  it('lays the account column beside the timeline content', () => {
+    const layout = ruleBody(RIVAL_CSS, '.omnimux-rival-layout')
+    assert.match(layout, /display:\s*grid/)
+    assert.match(layout, /grid-template-columns:\s*248px minmax\(0,\s*1fr\)/)
+    const column = ruleBody(RIVAL_CSS, '.omnimux-rival-accounts')
+    assert.equal(decl(column, 'position'), 'sticky')
+  })
+
+  it('keeps the toolbar and its three content layers unclipped for its dropdown', () => {
     const toolbarSrc = readFileSync(join(here, 'styles.js'), 'utf8')
     assert.match(
       toolbarSrc,
       /\.omnimux-inspiration-toolbar,[\s\S]*?\[class\*="bar"\][\s\S]*?\[class\*="tools"\][\s\S]*?\[class\*="right"\][\s\S]*?overflow:\s*visible\s*!important;/,
-      'the toolbar and its three content layers must stop clipping the popover panel',
+      'the toolbar and its three content layers must stop clipping the platform dropdown',
     )
-
-    const filterCss = ruleBody(INSPIRATION_CSS, '.omnimux-rival-filter')
-    assert.equal(decl(filterCss, 'position'), 'relative', 'the panel is positioned against the trigger')
-    assert.equal(decl(filterCss, 'z-index'), '100')
-  })
-
-  it('puts the account list above everything else on the page', () => {
-    const panelCss = ruleBody(RIVAL_CSS, '.omnimux-rival-filter-panel')
-    assert.equal(decl(panelCss, 'position'), 'absolute')
-    assert.equal(decl(panelCss, 'z-index'), '1000')
   })
 })
 

@@ -7,8 +7,8 @@ import { InspirationCollectionMenu } from './InspirationCollectionMenu.jsx'
 import { addCollectionToSession } from './collection-to-chat.js'
 import { injectCollectionStyles } from './collection-styles.js'
 import { useCollectionDrag, useInspirationCollections } from './use-inspiration-collections.js'
-import { RivalAccountFilter } from './RivalAccountFilter.jsx'
-import { RivalAccountsPanel, buildRivalPlatformOptions, buildRivalSortOptions } from './RivalAccountsPanel.jsx'
+import { RivalAccountColumn } from './RivalAccountColumn.jsx'
+import { RivalAccountsPanel, buildRivalPlatformOptions } from './RivalAccountsPanel.jsx'
 import { RivalRefreshButton } from './RivalPoolStatusBar.jsx'
 import { InspirationCoverCard } from './InspirationCoverCard.jsx'
 import { RivalMasonry } from './RivalMasonry.jsx'
@@ -134,7 +134,6 @@ export function InspirationSection({ t, active }) {
    */
   const [rivalQuery, setRivalQuery] = useState('')
   const [rivalPlatform, setRivalPlatform] = useState('')
-  const [rivalSort, setRivalSort] = useState('recommended')
   const rivalTab = tab === 'rivals'
 
   /**
@@ -148,7 +147,9 @@ export function InspirationSection({ t, active }) {
     enabled: rivalTab && active !== false,
     query: rivalQuery,
     platform: rivalPlatform,
-    sort: rivalSort,
+    // The timeline is a publish-time feed (#3432): its order is fixed, and the
+    // toolbar no longer offers a sort control.
+    sort: 'latest',
   })
   const { reload: reloadRivalFeed } = rivalFeed
 
@@ -277,7 +278,6 @@ export function InspirationSection({ t, active }) {
   // Platform filter gate: null (no dropdown) while a single platform is known.
   const platformOptions = buildPlatformFilterOptions(availablePlatforms, t)
   const rivalPlatformOptions = buildRivalPlatformOptions(t)
-  const rivalSortOptions = buildRivalSortOptions(t)
 
   /**
    * Official 18-industry dropdown (Issue #2507 / #2511). The list is local and does
@@ -389,17 +389,6 @@ export function InspirationSection({ t, active }) {
         )}
         tools={rivalTab ? (
           <>
-            <RivalAccountFilter
-              t={t}
-              accounts={rivalFeed.accounts}
-              selection={rivalFeed.selection}
-              onToggle={rivalFeed.toggleAccount}
-              onInvert={rivalFeed.invertAccounts}
-              onReset={rivalFeed.resetAccounts}
-              onRetry={rivalFeed.retryAccount}
-              quotaLeft={rivalQuota?.left}
-              refreshBusy={rivalFeed.refreshBusy}
-            />
             {rivalFeed.accounts.length > 0 ? (
               <RivalRefreshButton
                 t={t}
@@ -417,13 +406,6 @@ export function InspirationSection({ t, active }) {
               onChange={setRivalPlatform}
               className="omnimux-inspiration-filter-select"
               options={rivalPlatformOptions}
-            />
-            <DropdownSelect
-              value={rivalSort}
-              aria-label={t('filter.sort')}
-              onChange={setRivalSort}
-              className="omnimux-inspiration-filter-select"
-              options={rivalSortOptions}
             />
           </>
         ) : (
@@ -595,21 +577,35 @@ export function InspirationSection({ t, active }) {
         </div>
       ) : null}
       {rivalTab ? (
-        <>
-        <RivalAccountsPanel
-          t={t}
-          active={active !== false}
-          query={rivalQuery}
-          platform={rivalPlatform}
-          feed={{ ...rivalFeed, query: rivalQuery, platform: rivalPlatform }}
-          onImported={(item) => {
-            void reloadRivalFeed()
-            handleContentImported(item)
-          }}
-          onAccountImported={handleAccountImported}
-          onBrowseTrend={() => setTab('public')}
-        />
-        </>
+        <div className={`omnimux-rival-layout${rivalFeed.accounts.length === 0 ? ' is-single' : ''}`}>
+          {rivalFeed.accounts.length > 0 ? (
+          <RivalAccountColumn
+            t={t}
+            accounts={rivalFeed.accounts}
+            selection={rivalFeed.selection}
+            allIds={rivalFeed.allIds}
+            onToggle={rivalFeed.toggleAccount}
+            onInvert={rivalFeed.invertAccounts}
+            onReset={rivalFeed.resetAccounts}
+            onRetry={rivalFeed.retryAccount}
+            quotaLeft={rivalQuota?.left}
+            refreshBusy={rivalFeed.refreshBusy}
+          />
+          ) : null}
+          <div className="omnimux-rival-content">
+            <RivalAccountsPanel
+              t={t}
+              active={active !== false}
+              feed={{ ...rivalFeed, query: rivalQuery, platform: rivalPlatform }}
+              onImported={(item) => {
+                void reloadRivalFeed()
+                handleContentImported(item)
+              }}
+              onAccountImported={handleAccountImported}
+              onBrowseTrend={() => setTab('public')}
+            />
+          </div>
+        </div>
       ) : (
         <>
           {loading && gridCards.length === 0 ? (
