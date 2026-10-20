@@ -45,6 +45,9 @@ export class PickerError extends Error {
  * "choose"; anything else is a cancel, which exits 0 with empty stdout.
  * `NSURL.path` reports directories without a trailing slash — domain clients
  * trim, so the contract is unchanged.
+ *
+ * Selected paths travel back as a single-line JSON string array so filenames
+ * containing newlines, trailing spaces or tabs survive unchanged.
  * @param {'file' | 'directory'} kind
  * @param {string} prompt
  * @returns {string}
@@ -70,24 +73,32 @@ export function pickScript(kind, prompt) {
     '  for (var i = 0; i < Number(urls.count); i += 1) {',
     '    picked.push(ObjC.unwrap(urls.objectAtIndex(i).path));',
     '  }',
-    '  return picked.join("\\n");',
+    '  return JSON.stringify(picked);',
     '}',
   ].join('\n')
 }
 
 /**
+ * Parse the JSON path array printed by `pickScript`. Empty output means the
+ * user cancelled; anything else must be a JSON array of strings — invalid
+ * output throws instead of being mistaken for a cancel.
  * @param {string} stdout
  * @returns {string[]}
  */
 export function parsePickedPaths(stdout) {
   const text = typeof stdout === 'string' ? stdout : ''
-  const paths = []
-  for (const line of text.split(/\r?\n/)) {
-    const path = line.replace(/\s+$/, '')
-    if (path === '') continue
-    paths.push(path)
+  const trimmed = text.trim()
+  if (trimmed === '') return []
+  let parsed
+  try {
+    parsed = JSON.parse(trimmed)
+  } catch {
+    throw new Error('native picker returned a non-JSON path payload')
   }
-  return paths
+  if (!Array.isArray(parsed) || parsed.some((row) => typeof row !== 'string')) {
+    throw new Error('native picker returned an invalid path payload')
+  }
+  return parsed
 }
 
 /**
