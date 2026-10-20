@@ -18,7 +18,7 @@ base: 341ded0a34976a8dad2e1cf61992afbf7ee29e76
 - `use-rival-feed.js`：新增 append 代际 `appendTicket` ref。`load()` 开始时递增（作废旧 append）并清理 `loadingMore`；`loadMore()` 捕获自己的 ticket，`finally` 只在代际仍是自己时清 flag。
 - `locales.js`：新增 `rivalFeed.toast.markDoneFailed`（中英）。
 - `RivalAccountsPanel.jsx`：失败/异常分支改为专用文案，修正注释。
-- `rival-cards.e2e.test.js`：在「pending append + 切换账号」用例中断言恢复后 page2 总请求数正好 2（旧 1 + 新 1），无第三次重复 append。
+- `rival-cards.e2e.test.js`：page2 用按次 deferred 响应；在「旧 append 在途 + page1 reload + 新 append 在途」时先释放旧响应，断言新 append 的 3 个 skeleton 仍在、page2 总请求数保持 2，再释放新响应后正常落地。
 - 真实浏览器 harness：stub 失败的 `/done` 请求，点击「标为已处理」后断言行回滚且出现专用失败文案。
 
 ## 验收

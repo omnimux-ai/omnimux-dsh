@@ -211,6 +211,7 @@ async function mountStageOnAccounts() {
   const pages = requestedPages ?? [hostPayload()]
   requestedPages = null
   const postsRequests = []
+  const deferredAppends = []
   const observers = []
   globalThis.IntersectionObserver = class {
     constructor(callback) {
@@ -243,7 +244,9 @@ async function mountStageOnAccounts() {
       if (entry && entry.fail) {
         return jsonResponse(500, { success: false, error: 'feed-page-failed' })
       }
-      if (entry && entry.hold) await entry.hold
+      if (entry && entry.deferred) {
+        await new Promise((resolve) => { deferredAppends.push(resolve) })
+      }
       return jsonResponse(200, {
         success: true,
         data: {
@@ -273,6 +276,12 @@ async function mountStageOnAccounts() {
   return {
     container,
     postsRequests,
+    /** Release the oldest deferred page-2 answer, newest last. */
+    releaseAppend() {
+      const release = deferredAppends.shift()
+      assert.ok(release, 'a deferred append must be in flight')
+      release()
+    },
     /** Cross the timeline's bottom sentinel the way a scroll would. */
     async loadMore() {
       const observer = observers.slice().reverse().find((entry) => !entry.disconnected)
@@ -387,28 +396,25 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     assert.equal(pageTwo(), 1, 'no background retry may follow the failure')
   })
 
-  it('does not dead-lock the append flag when a page-1 reload supersedes an in-flight page', async () => {
+  it('keeps the newer append in flight when a stale page-2 answer arrives (#3434)', async () => {
     const payload = hostPayload()
-    let release
-    const hold = new Promise((resolve) => { release = resolve })
-    requestedPages = [payload.slice(0, 6), { rows: payload.slice(6), hold }]
+    requestedPages = [payload.slice(0, 6), { rows: payload.slice(6), deferred: true }]
     const mounted = await mountStageOnAccounts()
     open.push(mounted)
     await mounted.loadMore()
     await settle(mounted.container, () => mounted.postsRequests.some((query) => /(?:^|&)page=2(?:&|$)/.test(query)))
+    const pageTwo = () => mounted.postsRequests.filter((query) => /(?:^|&)page=2(?:&|$)/.test(query)).length
 
-    // Switch accounts while the append is still in flight.
+    // Swap the selection while the first page-2 answer is still pending.
     const higgs = ACCOUNTS.higgs
     const pendingRow = mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`)
     await act(async () => {
       pendingRow.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 30))
     })
-    release()
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 120)) })
-    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 0, 'the stale append must not leave its skeleton behind')
 
-    // Reset back to all accounts and append again: the flag must not be stuck.
+    // Back to all accounts, then start a second page-2 append while the first is
+    // still pending.
     const reset = mounted.container.querySelector('.omnimux-rival-accounts-actions button:last-child')
     await act(async () => {
       reset.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
@@ -416,10 +422,20 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     })
     await settle(mounted.container, () => mounted.container.querySelectorAll('.omnimux-rival-timeline-item').length === 6)
     await mounted.loadMore()
+    await settle(mounted.container, () => pageTwo() === 2)
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 3, 'the second append must own the in-flight skeleton')
+
+    // The stale answer resolves first: it must not clear the second append's
+    // loading flag, so its skeleton has to stay until the second answer lands.
+    mounted.releaseAppend()
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 80)) })
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 3, 'a stale answer must not clear the newer append flag')
+    assert.equal(pageTwo(), 2, 'a stale answer must not unlock a third page-2 fetch')
+
+    mounted.releaseAppend()
     await settle(mounted.container, () => mounted.container.querySelectorAll('.omnimux-rival-timeline-item').length === payload.length)
-    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 0, 'the recovered append must finish without a stuck skeleton')
-    const pageTwoRequests = mounted.postsRequests.filter((query) => /(?:^|&)page=2(?:&|$)/.test(query)).length
-    assert.equal(pageTwoRequests, 2, `the stale append must not unlock a third page-2 fetch (got ${pageTwoRequests})`)
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 0, 'the current append must clear its own skeleton when it lands')
+    assert.equal(pageTwo(), 2, 'the same page must not be fetched again after recovery')
   })
 
   it('narrows the timeline through the persistent account column', async () => {
