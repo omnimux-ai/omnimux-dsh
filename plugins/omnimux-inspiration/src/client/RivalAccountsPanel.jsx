@@ -168,7 +168,7 @@ export function RivalAccountsPanel(props) {
 
   /**
    * 「标为已处理」：先做本地乐观翻转（行立即 is-done、按钮消失），再提交
-   * 端点；提交失败时保留本地状态直到下次整页重读，与旧 grid 的交互一致。
+   * 端点；提交失败时回滚本地状态并给出该动作自己的失败文案 (#3434).
    */
   const handleMarkDone = useCallback(async (card) => {
     const accountId = String(card?.account_id || card?.account?.id || '')
@@ -190,13 +190,13 @@ export function RivalAccountsPanel(props) {
       const result = await markRivalPostDone(accountId, postId)
       if (result && result.ok === false) {
         flip(false)
-        setNotice({ key: 'rivalAccounts.post.attachFailed' })
+        setNotice({ key: 'rivalFeed.toast.markDoneFailed' })
         return
       }
       setNotice({ key: 'rivalFeed.toast.markDone' })
     } catch {
       flip(false)
-      setNotice({ key: 'rivalAccounts.post.attachFailed' })
+      setNotice({ key: 'rivalFeed.toast.markDoneFailed' })
     }
   }, [])
 

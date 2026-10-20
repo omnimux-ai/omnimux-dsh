@@ -1,0 +1,18 @@
+{
+  "task": "3434",
+  "base": "341ded0a34976a8dad2e1cf61992afbf7ee29e76",
+  "harness": "real RivalAccountsPanel, fetch stubbed to fail /done (500); localhost port 51125",
+  "browser": "ego-browser (real Chromium), task space 126, finished after run",
+  "before": {
+    "done": false,
+    "hasMarkDone": true
+  },
+  "after": {
+    "done": false,
+    "hasMarkDone": true,
+    "notice": "标记失败，请重试",
+    "errors": []
+  },
+  "failures": [],
+  "screenshot": "browser-done-failure-3434.png"
+}
