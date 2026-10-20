@@ -27,7 +27,7 @@ export interface WorkflowDispatcherDeps {
   executionManager: ExecutionManager;
   /** Override the default videos library (tests). */
   libraryRoot?: string;
-  /** Injected native picker (tests). Default: macOS osascript chooser. */
+  /** Injected native picker (tests). Default: macOS AppKit NSOpenPanel via osascript JXA. */
   picker?: (kind: string) => Promise<{ path: string | null; paths: string[] }>;
   templates?: TemplateStore;
   /** Shared with host mount so generate persist and HTTP ingest use one ledger. */

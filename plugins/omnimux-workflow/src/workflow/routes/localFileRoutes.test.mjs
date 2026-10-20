@@ -67,13 +67,44 @@ test('pickNativePath：darwin 注入 run 返回多选路径', async () => {
     platform: 'darwin',
     run: async (command, argv) => {
       assert.equal(command, 'osascript');
-      assert.equal(argv[0], '-e');
-      assert.match(argv[1], /choose file/);
+      // JXA + AppKit panel: no Apple Events (System Events) permission needed.
+      assert.deepEqual(argv.slice(0, 3), ['-l', 'JavaScript', '-e']);
+      const script = argv[3];
+      assert.match(script, /NSOpenPanel/);
+      assert.match(script, /NSApplicationActivationPolicyAccessory/);
+      assert.match(script, /setCanChooseFiles\(true\)/);
+      assert.match(script, /setCanChooseDirectories\(false\)/);
+      assert.match(script, /setAllowsMultipleSelection\(true\)/);
+      assert.match(script, /选择要导入的素材/);
+      assert.doesNotMatch(script, /System Events/);
+      assert.doesNotMatch(script, /choose file/);
       return { stdout: '/Users/x/a.png\n/Users/x/b.jpg\n', stderr: '' };
     },
   });
   assert.equal(result.path, '/Users/x/a.png');
   assert.deepEqual(result.paths, ['/Users/x/a.png', '/Users/x/b.jpg']);
+});
+
+test('pickNativePath：directory kind 只允许目录且沿用取消契约', async () => {
+  let seen = '';
+  const result = await pickNativePath('directory', {
+    platform: 'darwin',
+    run: async (_command, argv) => {
+      seen = argv[3];
+      return { stdout: '/Users/x/project\n', stderr: '' };
+    },
+  });
+  assert.match(seen, /setCanChooseFiles\(false\)/);
+  assert.match(seen, /setCanChooseDirectories\(true\)/);
+  assert.match(seen, /选择要导入的文件夹/);
+  assert.deepEqual(result, { path: '/Users/x/project', paths: ['/Users/x/project'] });
+
+  // JXA cancel exits 0 with empty stdout; AppleScript cancel keeps -128.
+  const cancelled = await pickNativePath('directory', {
+    platform: 'darwin',
+    run: async () => ({ stdout: '\n', stderr: '' }),
+  });
+  assert.deepEqual(cancelled, { path: null, paths: [] });
 });
 
 test('POST /api/pick 注入 picker：取消 / 多选 / invalid-kind / unsupported', async () => {
