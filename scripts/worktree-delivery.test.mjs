@@ -5,7 +5,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { restartDevApp, verifiedDevAppPids, verifiedDevMainPids } from './reload-dev-app.mjs'
+import { restartDevApp, verifiedDevAppPids, verifiedDevMainPids, devLaunchEnv } from './reload-dev-app.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -269,6 +269,40 @@ test('restartDevApp: 就绪前不声明成功，就绪后才报告重启（AC-7�
     pollMs: 1,
   })
   assert.equal(ready.restarted, true)
+})
+
+test('devLaunchEnv: 剔除 ELECTRON_RUN_AS_NODE 且不修改入参（AC-10）', () => {
+  const source = { ELECTRON_RUN_AS_NODE: '1', PATH: '/usr/bin', DSH_HOME: '/tmp/dsh' }
+  const launch = devLaunchEnv(source)
+  assert.equal(launch.ELECTRON_RUN_AS_NODE, undefined)
+  assert.equal(launch.PATH, '/usr/bin')
+  assert.equal(launch.DSH_HOME, '/tmp/dsh')
+  assert.equal(source.ELECTRON_RUN_AS_NODE, '1', '入参必须保持原样')
+})
+
+test('restartDevApp: 拉起 open 时使用剔除 Electron 运行变量的环境（AC-11）', async () => {
+  const base = probe({
+    processes: [{ pid: '4242', command: DEV_MAIN_CMD }],
+    listeners: ['4242'],
+  })
+  const launches = []
+  const run = (command, args, options) => {
+    launches.push({ command, env: options && options.env })
+    return base.run(command, args)
+  }
+  const result = await restartDevApp({
+    run,
+    sleep: async () => {},
+    probePort: async () => [{ type: 'page', webSocketDebuggerUrl: 'ws://127.0.0.1:9229/devtools/page/x' }],
+    quitTimeoutMs: 50,
+    pollMs: 1,
+  })
+  assert.equal(result.restarted, true)
+  const launch = launches.find((entry) => entry.command === 'open')
+  assert.ok(launch, '重启必须拉起 open')
+  assert.ok(launch.env, 'open 必须显式携带拉起环境')
+  assert.equal(launch.env.ELECTRON_RUN_AS_NODE, undefined)
+  assert.equal(launch.env.PATH, process.env.PATH)
 })
 
 /**
