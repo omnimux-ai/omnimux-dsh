@@ -19,7 +19,7 @@ ad-hoc 签名的 OmniMux Dev/Prod 中，画布导入素材、资源选择器「�
 单测注入 runner：断言 argv 使用 `osascript -l JavaScript -e`、脚本含 `NSOpenPanel` 且不含 `System Events`；保留多选解析、取消（-128/空输出）、失败、非 darwin、invalid-kind 用例。真实运行证据：用实现同款脚本触发一次原生面板并截图（不提交图片，证据留本地 run 目录），确认面板出现且无 Dock 临时图标；Dev 物化后由人工在 45120 复核真实导入入口。
 
 ## 浏览器与 Electron 边界
-本次是 Host 侧原生对话框实现，不改 Client/Stage DOM。隔离 worktree Web 验收不覆盖 macOS 原生面板，故以「真实 osascript 面板截图 + 路由单测」作为本变更的运行证据，并在 Dev 物化后提示人工复核；不伪造浏览器截图证明原生面板。
+本次是 Host 侧原生对话框实现，不改 Client/Stage DOM。隔离 worktree Web 验收不覆盖 macOS 原生面板，故以「真实 osascript 面板截图 + 路由单测」作为本变更的运行证据：工作树内直接调用 `pickNativePath('file')` 弹出 AppKit 面板（面板前置、可点击、无 osascript Dock 图标），选中文件后返回绝对路径 `/Users/x/Downloads/task_ykTFZPLNHSIU6TZvGlPRRDRbbk7xmOKE.png`；证据留本机工作树 `.workbuddy/evidence/native-picker-3437/`（`picker-panel.png`、`picker-out.txt`，已 gitignore，不入库）。备注：JXA 取消时 exit 0 且 stdout 为空，契约仍为 `{path:null,paths:[]}`；`NSURL.path` 返回目录不带尾斜杠，下游 `firstPickedDirectory`/`extractFolderName` 会 trim，行为不变。Dev 物化后提示人工复核真实导入入口，不伪造浏览器截图证明原生面板。
 
 ## 边界与文档影响
-始终：保持既有路由/前端契约与错误码；保留多选与目录选择。先问：改 Electron 壳层/preload、改 assets/products 各自的 picker、新增 Windows/Linux 原生选择器。绝不：提交密钥、改官方 DSH、改 CI/门禁、把 ad-hoc 签名或自动化授权当默认前提。文档影响：仅新增本任务规格；`docs/contracts` 与产品文档无需变更（行为契约未变）。授权：用户当前故障修复及仓库规定的正常开发交付。
+始终：保持既有路由/前端契约与错误码；保留多选与目录选择。先问：改 Electron 壳层/preload、改 assets/products 各自的 picker、新增 Windows/Linux 原生选择器。绝不：提交密钥、改官方 DSH、改 CI/门禁、把 ad-hoc 签名或自动化授权当默认前提。文档影响：新增本任务规格，并同步插件契约 `plugins/omnimux-workflow/docs/contracts/workflow-media-asset-indexing.md`、`canvas-http-api.md` 里已经过时的 picker 机制、取消语义与 501/500 状态码（原 400 为历史漂移）。授权：用户当前故障修复及仓库规定的正常开发交付。

@@ -40,7 +40,9 @@ export class PickerError extends Error {
  * Events (System Events) TCC dependency entirely; the accessory activation
  * policy keeps the dialog out of the Dock, matching the intent of the earlier
  * dock-bounce fix. The modal answer is 1 for "choose"; anything else is a
- * cancel.
+ * cancel, which exits 0 with empty stdout. `NSURL.path` reports directories
+ * without a trailing slash — downstream pickDirectory trims, so the contract
+ * is unchanged. The action button stays Chinese because PROMPTS already are.
  */
 function pickScript(kind: PickKind): string {
   const chooseFiles = kind === 'file';

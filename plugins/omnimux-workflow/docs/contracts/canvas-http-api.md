@@ -63,9 +63,9 @@ Body：`SaveCanvasWorkspacePayload`（必含 `expectedVersion`）。
 
 ### POST /omnimux-workflow/api/pick
 
-本机文件选择器（macOS osascript `choose file`）。**在 workflow 插件内复制** assets picker 模式；**禁止** `import omnimux-assets`。只选文件，不选目录。legacy `/dsh-workflow/api/pick` 同样改写。
+本机文件选择器（macOS `osascript -l JavaScript` 驱动 AppKit `NSOpenPanel`）。**不向 System Events 发 Apple Event**，因此不依赖 `kTCCServiceAppleEvents`，adhoc 签名的产品包同样可用；**禁止** `import omnimux-assets`。legacy `/dsh-workflow/api/pick` 同样改写。
 
-Body：`{ "kind": "file" }`（缺省 `"file"`；`"directory"` → 400 `picker-invalid-kind`）。
+Body：`{ "kind": "file" }`（缺省 `"file"`；`"directory"` 选文件夹，用于新建项目选位置）。
 
 ```json
 { "path": "/Users/x/Movies/clip.mp4", "paths": ["/Users/x/Movies/clip.mp4"] }
@@ -74,8 +74,8 @@ Body：`{ "kind": "file" }`（缺省 `"file"`；`"directory"` → 400 `picker-in
 | 情况 | HTTP | body.error |
 |---|---|---|
 | 用户取消 | 200 | —（`path: null`, `paths: []`） |
-| 非 darwin | 400 | `picker-unsupported` |
-| osascript 失败 | 400 | `picker-failed` |
+| 非 darwin | 501 | `picker-unsupported` |
+| 面板/脚本失败 | 500 | `picker-failed` |
 | 非 loopback | 403 | `not-local` |
 
 返回的是绝对路径，不 stat、不流式、不落盘。Client 随后 `probe` 再写入节点 `realPath`。

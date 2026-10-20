@@ -75,6 +75,9 @@ test('pickNativePath：darwin 注入 run 返回多选路径', async () => {
       assert.match(script, /setCanChooseFiles\(true\)/);
       assert.match(script, /setCanChooseDirectories\(false\)/);
       assert.match(script, /setAllowsMultipleSelection\(true\)/);
+      // Lock the "choose" gate: an always-empty script would silently turn
+      // every confirmation into a cancel.
+      assert.match(script, /Number\(panel\.runModal\) !== 1/);
       assert.match(script, /选择要导入的素材/);
       assert.doesNotMatch(script, /System Events/);
       assert.doesNotMatch(script, /choose file/);
