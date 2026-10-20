@@ -274,18 +274,52 @@ export const RIVAL_CSS = `
 
 /* ── 详情弹窗 ───────────────────────────────────────────────────────── */
 .omnimux-rival-detail {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
+  --omnimux-rival-player-h: calc(min(70vh, 640px, 80vh - 78px) - 82px);
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 .omnimux-rival-detail-cover {
   position: relative;
   width: 100%;
+  max-width: 320px;
+  max-height: var(--omnimux-rival-player-h);
+  align-self: center;
   aspect-ratio: 9 / 16;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 10px;
   background: var(--dsw-alias-bg-module-platform);
   overflow: hidden;
+}
+.omnimux-rival-detail-cover > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.omnimux-rival-detail-cover.is-player {
+  /* content cap already includes a 62px header + 20px body gap (82px); the
+     remaining height is what the player may occupy in the first screen. */
+  width: min(100%, 560px, calc(var(--omnimux-rival-player-h) * var(--player-ratio, 0.5625)));
+  max-width: 100%;
+  max-height: var(--omnimux-rival-player-h);
+}
+.omnimux-rival-detail-cover.is-card {
+  width: min(100%, 560px);
+  max-width: 560px;
+  height: var(--omnimux-rival-player-h);
+  max-height: var(--omnimux-rival-player-h);
+  aspect-ratio: auto;
+}
+.omnimux-rival-detail-content {
+  max-height: min(70vh, 640px);
+}
+.omnimux-rival-detail-player-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--dsw-specific-media-pill-bg);
 }
 .omnimux-rival-detail-cover img {
   width: 100%;
@@ -425,10 +459,7 @@ export const RIVAL_CSS = `
 }
 
 @media (max-width: 720px) {
-  .omnimux-rival-detail {
-    grid-template-columns: minmax(0, 1fr);
   }
-}
 
 /* ── v2.1 瀑布流与五形态卡片（spec §9.1–§9.3） ────────────────────────── */
 
@@ -1133,26 +1164,27 @@ export const RIVAL_CSS = `
   max-height: 360px;
   object-fit: cover;
 }
-.omnimux-rival-timeline-play {
+.omnimux-rival-timeline-media .omnimux-rival-timeline-play {
   position: absolute;
   left: 50%;
   top: 50%;
   width: 44px;
+  min-width: 44px;
   height: 44px;
+  min-height: 44px;
   margin: -22px 0 0 -22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   background: var(--dsw-specific-media-pill-bg);
   border: 1px solid var(--dsw-specific-media-border-dim);
-}
-.omnimux-rival-timeline-play::after {
-  content: '';
-  position: absolute;
-  left: 17px;
-  top: 13px;
-  border-style: solid;
-  border-width: 9px 0 9px 14px;
-  border-color: transparent transparent transparent currentColor;
   color: var(--dsw-specific-media-fg-strong);
+}
+.omnimux-rival-timeline-play svg {
+  width: 18px;
+  height: 18px;
 }
 .omnimux-rival-timeline-duration {
   position: absolute;

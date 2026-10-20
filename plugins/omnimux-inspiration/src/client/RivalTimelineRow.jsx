@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Button, IconButton } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 import {
   formatCount,
@@ -20,6 +20,12 @@ import {
 } from './rival-format.js'
 import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 import { timelineBody, timelineInitial, timelineStateText } from './rival-timeline.js'
+
+const ICON_PLAY = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M8 5v14l11-7L8 5Z" />
+  </svg>
+)
 
 /**
  * @param {{
@@ -110,7 +116,22 @@ export function RivalTimelineRow(props) {
               loading="lazy"
               onError={() => setMediaFailed(true)}
             />
-            {isVideo ? <span className="omnimux-rival-timeline-play" aria-hidden="true" /> : null}
+            {isVideo ? (
+              <IconButton
+                variant="ghost"
+                size="xs"
+                className="omnimux-rival-timeline-play"
+                aria-label={t('rivalFeed.card.play')}
+                title={t('rivalFeed.card.play')}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  openDetail()
+                }}
+              >
+                {ICON_PLAY}
+              </IconButton>
+            ) : null}
             {isVideo && duration ? <span className="omnimux-rival-timeline-duration">{duration}</span> : null}
           </div>
         ) : null}

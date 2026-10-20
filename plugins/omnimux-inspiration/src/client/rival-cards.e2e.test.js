@@ -163,6 +163,11 @@ const POSTS = [
 function hostRow(post, index) {
   const account = post.account
   const base = Date.parse('2026-10-05T08:12:00.000Z')
+  const numericId = `7698442056158465${String(index).padStart(3, '0')}`
+  const url = post.platform === 'tiktok' ? `https://www.tiktok.com/${account.handle}/video/${numericId}`
+    : post.platform === 'x' ? `https://x.com/${account.handle}/status/${numericId}`
+      : post.platform === 'youtube' ? `https://www.youtube.com/shorts/yt${index}`
+        : `https://www.instagram.com/p/ig${index}/`
   return {
     id: post.id,
     row_id: `${account.id}:${post.id}`,
@@ -170,7 +175,7 @@ function hostRow(post, index) {
     title: post.title,
     text: post.title,
     type: post.type,
-    url: `https://${post.platform}.example/${account.handle}/${post.id}`,
+    url,
     posted_at: new Date(base - index * 3_600_000).toISOString(),
     duration: typeof post.duration === 'number' ? post.duration : null,
     stats: { views: 128000, likes: 8640, comments: 214, shares: 96 },
@@ -380,6 +385,48 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
       assert.equal(row.textContent.includes('正常'), false, 'the row must not spell out its health status')
       assert.equal(row.querySelector('.omnimux-rival-filter-warning'), null, 'a healthy fixture row carries no warning icon')
     }
+  })
+
+  it('opens the official embedded player from a timeline row (#3462)', async () => {
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const row = rowOf(mounted.container, POSTS[0])
+    assert.ok(row, 'the newest post must render a row')
+    assert.equal(mounted.container.querySelector('.omnimux-rival-detail-player-frame'), null, 'no player may load before the detail opens')
+    const play = row.querySelector('.omnimux-rival-timeline-play')
+    assert.ok(play, 'a video row must expose the play action')
+    await act(async () => {
+      play.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    await settle(mounted.container, () => Boolean(mounted.container.querySelector('.omnimux-rival-detail-player-frame')))
+    const frame = mounted.container.querySelector('.omnimux-rival-detail-player-frame')
+    assert.match(frame.getAttribute('src'), /^https:\/\/www\.tiktok\.com\/player\/v1\/7698442056158465\d{3}$/, 'a TikTok row must open the TikTok embed')
+    assert.match(frame.getAttribute('allow'), /encrypted-media/, 'the player must allow encrypted media')
+    assert.equal(frame.hasAttribute('allowfullscreen'), true, 'the player must allow fullscreen')
+    assert.equal(frame.getAttribute('loading'), 'lazy', 'the player must load lazily')
+    assert.equal(frame.getAttribute('referrerpolicy'), 'strict-origin-when-cross-origin', 'the player must trim the referrer')
+    assert.match(frame.getAttribute('title'), /Judy's Family Cafe|喵星日常/, 'the player title must name the author')
+    assert.match(mounted.container.querySelector('.omnimux-rival-detail-cover').getAttribute('style') || '', /aspect-ratio/, 'the player box must carry the post ratio')
+    assert.equal(mounted.container.querySelector('.omnimux-rival-detail-cover img'), null, 'the embed replaces the static cover')
+  })
+
+  it('opens a card-style X embed even when the post has no ratio (#3462)', async () => {
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const xPost = POSTS.find((post) => post.platform === 'x' && post.type === 'video')
+    const row = rowOf(mounted.container, xPost)
+    await act(async () => {
+      row.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    await settle(mounted.container, () => Boolean(mounted.container.querySelector('.omnimux-rival-detail-player-frame')))
+    const frame = mounted.container.querySelector('.omnimux-rival-detail-player-frame')
+    assert.match(frame.getAttribute('src'), /^https:\/\/platform\.twitter\.com\/embed\/Tweet\.html\?id=\d+$/, 'an X row must use the tweet embed')
+    const box = mounted.container.querySelector('.omnimux-rival-detail-cover')
+    assert.ok(box.classList.contains('is-card'), 'X embeds are full cards, not media-ratio players')
+    assert.equal(box.getAttribute('style'), null, 'the X card height comes from the shared modal cap')
+    assert.match(frame.getAttribute('title'), /推特 \(X\)/, 'the X player title must be localized')
   })
 
   it('renders each row with the native anatomy and every monitor action', async () => {
