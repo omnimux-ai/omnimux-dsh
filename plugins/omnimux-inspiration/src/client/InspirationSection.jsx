@@ -21,6 +21,7 @@ import { revealLandedCard, withLandedItem } from './import-landing.js'
 import { injectInspirationStyles } from './styles.js'
 import { useInspirationFeed } from './use-inspiration-feed.js'
 import { useRivalFeed } from './use-rival-feed.js'
+import { removeRivalAccount } from './rival-api.js'
 import {
   accountHealth,
   poolQuota,
@@ -584,9 +585,23 @@ export function InspirationSection({ t, active }) {
             accounts={rivalFeed.accounts}
             selection={rivalFeed.selection}
             allIds={rivalFeed.allIds}
-            onToggle={rivalFeed.toggleAccount}
-            onInvert={rivalFeed.invertAccounts}
+            onSelect={rivalFeed.selectAccount}
             onReset={rivalFeed.resetAccounts}
+            onRemove={async (id) => {
+              let result
+              try {
+                result = await removeRivalAccount(id)
+              } catch {
+                return { ok: false }
+              }
+              if (result?.ok === false) return { ok: false }
+              if (rivalFeed.selection.mode === 'subset' && String((rivalFeed.selection.ids || [])[0]) === String(id)) {
+                rivalFeed.resetAccounts()
+              } else {
+                await rivalFeed.reload()
+              }
+              return { ok: true }
+            }}
             onRetry={rivalFeed.retryAccount}
             quotaLeft={rivalQuota?.left}
             refreshBusy={rivalFeed.refreshBusy}

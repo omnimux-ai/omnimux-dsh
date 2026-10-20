@@ -119,9 +119,11 @@ const WORKS = [WORK_ALICE, WORK_BOB]
 /** Labels the gate drives the UI by, taken from the plugin's own table. */
 const L = {
   columnTitle: zh['rivalAccounts.column.title'],
-  invert: zh['rivalFilter.invert'],
-  reset: zh['rivalFilter.reset'],
-  some: zh['rivalFilter.some'],
+  all: zh['rivalAccounts.column.all'],
+  more: zh['rivalAccounts.column.more'],
+  remove: zh['rivalAccounts.column.remove'],
+  confirmRemove: zh['rivalAccounts.column.confirmRemove'],
+  removeFailed: zh['rivalAccounts.column.removeFailed'],
   openProfile: zh['rivalFilter.openProfile'],
   replicate: zh['rivalFeed.card.replicate'],
   importBtn: zh['rivalAccounts.import.btn'],
@@ -132,9 +134,6 @@ const L = {
   submit: zh['add.submit'],
   importSuccess: (handle) => zh['rivalAccounts.import.success'].replace('{handle}', handle),
 }
-
-const label = (key, values = {}) => Object.entries(values)
-  .reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), key)
 
 let bundleCounter = 0
 
@@ -179,9 +178,10 @@ function jsonResponse(status, body) {
  *
  * A fresh bundle path per mount gives every case its own module registry, which
  * matters because the feed keeps an SWR cache at module scope.
- * @param {{ accounts?: Array<object>, works?: Array<object>, localItems?: Record<string, object>, failPaths?: RegExp[] }} [options]
+ * @param {{ accounts?: Array<object>, works?: Array<object>, localItems?: Record<string, object>, failPaths?: RegExp[], removeStatus?: number }} [options]
  *   `failPaths` lists request paths that must reject (network failure), not
  *   return an !ok body — that is the only way an uncaught rejection can leak.
+ *   `removeStatus` is the DELETE receipt of the 更多 menu (default 200).
  */
 async function mountStage(options = {}) {
   // 可变副本：导入用例会让 Host 多出一个监控账号，重读必须看得到它。
@@ -189,6 +189,7 @@ async function mountStage(options = {}) {
   const works = options.works ?? WORKS
   const localItems = options.localItems ?? {}
   const failPaths = options.failPaths ?? []
+  const removeStatus = options.removeStatus ?? 200
   const stageModule = await import(`${await bundleStage()}?mount=${bundleCounter}`)
 
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="host"></div></body></html>', {
@@ -249,6 +250,8 @@ async function mountStage(options = {}) {
       let items = requested.length > 0
         ? works.filter((row) => requested.includes(row.account_id))
         : works
+      // 删掉一个账号之后，它的作品也不再属于账号监控——Host 的行为一致。
+      items = items.filter((row) => accounts.some((account) => account.id === row.account_id))
       if (keyword) {
         items = items.filter((row) => JSON.stringify(row).toLowerCase().includes(keyword))
       }
@@ -263,6 +266,16 @@ async function mountStage(options = {}) {
           requested_accounts: requested.length > 0 ? requested : accounts.map((row) => row.id),
         },
       })
+    }
+    // 「更多」菜单的删除：DELETE 掉那个账号，下一次重读就看不到它了。
+    if (method === 'DELETE' && path.includes(RIVAL_PREFIX)) {
+      if (removeStatus >= 400) {
+        return jsonResponse(removeStatus, { success: false, error: 'remove-failed' })
+      }
+      const id = decodeURIComponent(path.slice(path.lastIndexOf('/') + 1))
+      const index = accounts.findIndex((row) => row.id === id)
+      if (index >= 0) accounts.splice(index, 1)
+      return jsonResponse(200, { success: true, data: { id } })
     }
     // 判定与账号导入：一次导入会先问 Host「这条链接是什么」，再创建监控账号。
     // 新账号进的是同一个数组，所以导入之后的重读必须能把它带回来。
@@ -387,15 +400,50 @@ const TOAST_EXIT_MS = 2500 + 180 + 120
 
 const layout = (container) => container.querySelector('.omnimux-rival-layout')
 const accountColumn = (container) => container.querySelector('.omnimux-rival-accounts')
-const columnSummary = (container) => container.querySelector('.omnimux-rival-accounts-summary')?.textContent.trim() || ''
+const allButton = (container) => container.querySelector('.omnimux-rival-accounts-all')
+const allCount = (container) => container.querySelector('.omnimux-rival-accounts-all-count')?.textContent.trim() || ''
+const accountGroups = (container) => Array.from(container.querySelectorAll('.omnimux-rival-account-group'))
+const groupTitles = (container) => accountGroups(container)
+  .map((group) => group.querySelector('.omnimux-rival-account-group-title')?.textContent.trim() || '')
+const menu = (container) => container.querySelector('.omnimux-rival-menu')
+const menuItem = (container) => container.querySelector('.omnimux-rival-menu-item')
 const timeline = (container) => container.querySelector('[data-rival-timeline="true"]')
 const timelineItems = (container) => Array.from(container.querySelectorAll('.omnimux-rival-timeline-item'))
 const timelineIds = (container) => timelineItems(container).map((node) => node.getAttribute('data-card-id'))
 const filterRows = (container) => [...container.querySelectorAll('.omnimux-rival-filter-row')]
+const selectedRows = (container) => filterRows(container)
+  .filter((node) => node.getAttribute('data-selected') === 'true')
 const toast = (container) => container.querySelector('.omnimux-inspiration-toast')
 const rowById = (container, id) => filterRows(container).find((node) => node.getAttribute('data-account-id') === id)
 const buttonsLabelled = (container, text) => [...container.querySelectorAll('button')]
   .filter((node) => node.textContent.trim() === text)
+
+/** A press outside the menu, which is what dismisses it (the menu listens for pointerdown). */
+async function pointerDown(node) {
+  const view = node.ownerDocument.defaultView
+  await act(async () => {
+    node.dispatchEvent(new view.MouseEvent('pointerdown', { bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+}
+
+/** Escape closes the 更多 menu. */
+async function pressEscape(mounted) {
+  const target = mounted.document.activeElement || mounted.document
+  await act(async () => {
+    target.dispatchEvent(new mounted.document.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+}
+
+/** Click the row's 更多 button; the menu must be on screen before the test goes on. */
+async function openAccountMenu(mounted, id) {
+  const more = rowById(mounted.container, id)?.querySelector('.omnimux-rival-filter-more')
+  assert.ok(more, `the row ${id} must carry its 更多 button`)
+  await mounted.click(more)
+  assert.ok(menu(mounted.container), 'the 更多 button must open the account menu')
+  return menu(mounted.container)
+}
 
 /** Type into a React-controlled input the way a user would. */
 async function typeInto(input, value) {
@@ -430,8 +478,8 @@ after(() => {
   rmSync(cacheDir, { recursive: true, force: true })
 })
 
-describe('账号监控 — 账号筛选（多选）', () => {
-  it('renders the account column beside the content, every account checked by default', async () => {
+describe('账号监控 — 账号单选导航（#3451）', () => {
+  it('renders the account column beside the content, with 全部 selected by default', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
@@ -443,7 +491,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
       assert.ok(column, 'the account column must always be on screen — it is not a popover')
       assert.equal(column.parentElement, twoColumns, 'the account column must be the left column of the layout')
       assert.equal(twoColumns.querySelector('.omnimux-rival-content'), column.nextElementSibling, 'the content column must sit beside the account column')
-      assert.ok(column.querySelector('.omnimux-rival-accounts-head'), 'the column must carry its own title and actions')
+      assert.ok(column.querySelector('.omnimux-rival-accounts-head'), 'the column must carry its own title')
       assert.ok(column.querySelector('.omnimux-rival-accounts-list'), 'the column must render its own row list')
 
       // The retired account popover is gone from this tab: no trigger, no panel.
@@ -452,15 +500,31 @@ describe('账号监控 — 账号筛选（多选）', () => {
 
       assert.ok(column.textContent.includes(L.columnTitle), 'the column header must name what the list is')
       assert.ok(!column.textContent.includes('选择要查看的账号'), 'the header must not carry the retired hint line')
-      assert.equal(columnSummary(mounted.container), '', 'the default all-selected header must not repeat the account count')
-      assert.ok(buttonsLabelled(column, L.invert).length > 0, 'the column header must offer 反选')
-      assert.ok(buttonsLabelled(column, L.reset).length > 0, 'the column header must offer 重置')
+
+      // A1：默认「全部」高亮，右侧是全部内容。
+      const all = allButton(mounted.container)
+      assert.ok(all, 'the column must offer the 全部 target')
+      assert.ok(all.classList.contains('is-selected'), '全部 must be the default target')
+      assert.equal(all.getAttribute('aria-current'), 'page', 'the default target must be marked as the current page')
+      assert.ok(all.textContent.includes(L.all), 'the default target must read 全部')
+      assert.equal(allCount(mounted.container), String(ACCOUNTS.length), '全部 must carry the monitored account count')
+      assert.equal(timelineItems(mounted.container).length, WORKS.length, 'the default view must show every account\'s works')
+
+      // A3：多选已经删除——没有复选框、没有反选/重置、没有已选摘要。
+      assert.equal(column.querySelector('input[type="checkbox"]'), null, 'the column must not render checkboxes any more')
+      assert.equal(column.querySelector('.omnimux-rival-filter-check'), null, 'the retired checkbox square must not render')
+      assert.equal(column.querySelector('.omnimux-rival-accounts-summary'), null, 'the retired selection summary must not render')
+      assert.equal((column.textContent || '').includes('已选'), false, 'the retired「已选 N 个账号」copy must be gone')
+      assert.equal(buttonsLabelled(column, zh['rivalFilter.invert']).length, 0, 'the column must not offer 反选')
+      assert.equal(buttonsLabelled(column, zh['rivalFilter.reset']).length, 0, 'the column must not offer 重置')
 
       for (const account of ACCOUNTS) {
         const row = rowById(mounted.container, account.id)
         assert.ok(row, `the column must list ${account.id}`)
-        assert.equal(row.getAttribute('aria-checked'), 'true', 'every account starts checked')
-        assert.equal(row.getAttribute('data-checked'), 'true')
+        assert.equal(row.querySelector('.omnimux-rival-filter-select').getAttribute('role'), 'button', 'the row main area is a single-select navigation target')
+        assert.equal(row.getAttribute('aria-checked'), null, 'a row is no longer a checkbox')
+        assert.equal(row.getAttribute('data-selected'), 'false', 'no account is selected while 全部 is active')
+        assert.equal(row.getAttribute('aria-current'), null, 'an unselected row carries no aria-current')
       }
     } finally {
       await mounted.unmount()
@@ -468,7 +532,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
     }
   })
 
-  it('lists every account with avatar, handle and platform glyph, without health text or work counts', async () => {
+  it('groups every account under its platform, with the platform label as the group title', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
@@ -477,10 +541,32 @@ describe('账号监控 — 账号筛选（多选）', () => {
       const column = accountColumn(mounted.container)
       assert.ok(column, 'the account column must render on the monitor')
       assert.equal(column.getAttribute('aria-label'), zh['rivalAccounts.column.title'], 'the column must carry the account-list label')
-      assert.ok(
-        column.textContent.includes(L.invert) && column.textContent.includes(L.reset),
-        'the column header must offer 反选 and 重置',
+
+      // A3：每个平台一个分组，组标题就是 t('platform.*') 的文案。
+      const titles = groupTitles(mounted.container)
+      assert.deepEqual(
+        titles.slice().sort(),
+        [zh['platform.tiktok'], zh['platform.x']].sort(),
+        `every platform must get its own titled group (got ${JSON.stringify(titles)})`,
       )
+      const groups = accountGroups(mounted.container)
+      assert.equal(groups.length, 2, 'the fixture spans exactly two platforms')
+      const platformOfTitle = new Map([
+        [zh['platform.tiktok'], 'tiktok'],
+        [zh['platform.x'], 'x'],
+      ])
+      for (const group of groups) {
+        const title = group.querySelector('.omnimux-rival-account-group-title')?.textContent.trim()
+        const platform = platformOfTitle.get(title)
+        assert.ok(platform, `the group title must name its platform (got ${JSON.stringify(title)})`)
+        const groupedRows = Array.from(group.querySelectorAll('.omnimux-rival-filter-row'))
+        assert.ok(groupedRows.length > 0, 'a platform group must list at least one account')
+        for (const row of groupedRows) {
+          const account = ACCOUNTS.find((entry) => entry.id === row.getAttribute('data-account-id'))
+          assert.ok(account, 'every grouped row must belong to a monitored account')
+          assert.equal(account.platform, platform, 'a row must sit under its own platform group')
+        }
+      }
 
       const rows = filterRows(mounted.container)
       assert.equal(rows.length, ACCOUNTS.length, 'every monitored account must have a row')
@@ -492,7 +578,8 @@ describe('账号监控 — 账号筛选（多选）', () => {
         assert.equal(row.textContent.includes('个作品'), false, 'the row must not show the account work count')
         assert.equal(row.textContent.includes('正常'), false, 'a healthy row must not spell out its health status')
         assert.equal(row.querySelector('.omnimux-rival-filter-warning'), null, 'a healthy row carries no warning icon')
-        assert.equal(row.getAttribute('role'), 'checkbox', 'a row is a checkbox to assistive tech')
+        assert.equal(row.querySelector('.omnimux-rival-filter-select').getAttribute('role'), 'button', 'the row main area is a single-select navigation target, not a checkbox')
+        assert.equal(row.getAttribute('aria-checked'), null, 'a row no longer reports checkbox state')
         assert.ok(row.querySelector('.omnimux-rival-filter-platform svg'), 'the row must draw the platform glyph beside the nickname')
       }
     } finally {
@@ -501,73 +588,227 @@ describe('账号监控 — 账号筛选（多选）', () => {
     }
   })
 
-  it('filters the timeline when an account is unchecked, then inverts and resets', async () => {
+  it('switches the timeline to a single account, then back to 全部', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
       await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
       assert.equal(timelineItems(mounted.container).length, WORKS.length, 'both accounts\' works start on screen')
 
-      const aliceRow = rowById(mounted.container, 'ra_alice')
-      assert.ok(aliceRow, 'the column must list ra_alice')
+      const all = allButton(mounted.container)
+      const alice = rowById(mounted.container, 'ra_alice')
+      assert.ok(alice, 'the column must list ra_alice')
 
-      // Unchecking the first account is a subset: 全部 minus Alice.
-      await mounted.click(aliceRow)
+      // A2：点一行就只看这个账号；「全部」退位。
+      await mounted.click(alice)
       await settle(mounted.container, () => timelineItems(mounted.container).length === 1)
-      assert.equal(
-        columnSummary(mounted.container),
-        label(L.some, { k: 1 }),
-        'unchecking one account must read「已选 1 个账号」',
-      )
-      assert.equal(
-        timelineIds(mounted.container)[0],
-        WORK_BOB.row_id,
-        'only the remaining account\'s works may stay on screen',
-      )
-      assert.ok(
-        feedRequests(mounted).includes('ra_bob'),
-        `the request must carry the remaining account (got ${JSON.stringify(feedRequests(mounted))})`,
-      )
+      assert.deepEqual(timelineIds(mounted.container), [WORK_ALICE.row_id], 'clicking an account must show only its works')
+      assert.equal(feedRequests(mounted).at(-1), 'ra_alice', 'the request must carry the clicked account')
+      assert.equal(alice.getAttribute('data-selected'), 'true', 'the clicked row must be selected')
+      assert.equal(alice.querySelector('.omnimux-rival-filter-select').getAttribute('aria-current'), 'true', 'the clicked row is the current page')
+      assert.equal(all.classList.contains('is-selected'), false, '全部 must give up the highlight')
+      assert.equal(all.getAttribute('aria-current'), null, '全部 is no longer the current page')
+      assert.equal(selectedRows(mounted.container).length, 1, 'single-select keeps exactly one row selected')
 
-      // 反选 from that subset selects the complement: Alice again.
-      await mounted.click(buttonsLabelled(mounted.container, L.invert)[0])
-      await settle(mounted.container, () => timelineIds(mounted.container)[0] === WORK_ALICE.row_id)
-      assert.equal(
-        timelineIds(mounted.container)[0],
-        WORK_ALICE.row_id,
-        '反选 must leave the complement on screen',
-      )
+      // 再点另一个账号：视图跟着换，仍然只有一个选中项。
+      const bob = rowById(mounted.container, 'ra_bob')
+      await mounted.click(bob)
+      await settle(mounted.container, () => timelineIds(mounted.container)[0] === WORK_BOB.row_id)
+      assert.deepEqual(timelineIds(mounted.container), [WORK_BOB.row_id], 'the timeline follows the new single selection')
+      assert.equal(feedRequests(mounted).at(-1), 'ra_bob', 'the request must carry the newly clicked account')
+      assert.equal(alice.getAttribute('data-selected'), 'false', 'the previous row must be released')
+      assert.equal(bob.getAttribute('data-selected'), 'true', 'the new row is the only selected one')
+      assert.equal(selectedRows(mounted.container).length, 1, 'single-select never accumulates rows')
 
-      // 重置 goes back to the default: every account, every work.
-      await mounted.click(buttonsLabelled(mounted.container, L.reset)[0])
+      // A1：点「全部」回到默认。
+      await mounted.click(allButton(mounted.container))
       await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
-      assert.equal(columnSummary(mounted.container), '', '重置 must remove the subset count from the header')
-      assert.equal(timelineItems(mounted.container).length, WORKS.length, '重置 must restore the whole timeline')
+      assert.deepEqual(timelineIds(mounted.container), [WORK_ALICE.row_id, WORK_BOB.row_id], '全部 must restore the whole timeline')
+      assert.equal(feedRequests(mounted).at(-1), null, '全部 is requested without an accounts parameter')
+      assert.ok(allButton(mounted.container).classList.contains('is-selected'), '全部 must be highlighted again')
+      assert.equal(allButton(mounted.container).getAttribute('aria-current'), 'page')
+      assert.equal(selectedRows(mounted.container).length, 0, 'no row stays selected after 全部')
+      assert.equal((mounted.container.textContent || '').includes('已选'), false, 'the retired selection summary must not come back')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
 
-      // 反选 from 全部 is the empty set — the one state that only exists on this
-      // path, and the column header has a tally of its own for it.
-      await mounted.click(buttonsLabelled(mounted.container, L.invert)[0])
-      await settle(mounted.container, () => columnSummary(mounted.container) === label(L.some, { k: 0 }))
-      assert.equal(
-        columnSummary(mounted.container),
-        label(L.some, { k: 0 }),
-        'inverting 全部 must report an empty selection',
-      )
-      assert.equal(timelineItems(mounted.container).length, 0, 'an empty selection shows no works')
-      // The wire cannot express「nothing」— an omitted `accounts` means every
-      // account — so the honest empty state is what the user sees, with a way
-      // out of it.
-      const emptyText = mounted.container.textContent || ''
-      assert.ok(emptyText.includes(zh['rivalFeed.empty.filtered']), 'an empty selection must say why the grid is empty')
+  it('loads the account list once when the row main area is clicked', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
+      const accountsCalls = () => mounted.calls.filter((call) => (
+        call.method === 'GET'
+        && call.path.includes(RIVAL_PREFIX)
+        && !call.path.includes('/posts')
+        && !call.path.includes('/status')
+      )).length
+      const before = accountsCalls()
+      await mounted.click(rowById(mounted.container, 'ra_alice').querySelector('.omnimux-rival-filter-select'))
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_alice').getAttribute('data-selected') === 'true')
+      assert.equal(accountsCalls() - before, 1, 'one click on the row main area must trigger exactly one account reload')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('reveals 更多 on the row and opens the account menu without switching accounts', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
+
+      const row = rowById(mounted.container, 'ra_alice')
+      assert.ok(row, 'the column must list ra_alice')
+      const more = row.querySelector('.omnimux-rival-filter-more')
+      assert.ok(more, 'the row must carry its 更多 button')
+      assert.equal(more.getAttribute('aria-label'), L.more, '更多 is the accessible name of the row action')
+
+      const before = feedRequests(mounted).length
+      await mounted.click(more)
+      assert.ok(menu(mounted.container), '更多 must open the account menu')
+      assert.equal(menu(mounted.container).getAttribute('role'), 'menu', 'the menu must present itself as a menu')
+      assert.equal(menuItem(mounted.container)?.textContent.trim(), L.remove, 'the menu offers 删除')
+      assert.equal(row.getAttribute('data-selected'), 'false', 'opening 更多 must not select the account')
+      assert.ok(allButton(mounted.container).classList.contains('is-selected'), '全部 must stay the current target')
+      assert.equal(feedRequests(mounted).length, before, 'opening the menu must not reload the feed')
+
+      // A4：Escape 和点外部都关闭菜单。焦点在 更多 上时 Escape 必须冒泡到 document。
+      more.focus()
+      await pressEscape(mounted)
+      assert.equal(menu(mounted.container), null, 'Escape must close the account menu')
+      await mounted.click(row.querySelector('.omnimux-rival-filter-more'))
+      assert.ok(menu(mounted.container), '更多 must reopen the menu')
+      await pointerDown(mounted.document.body)
+      assert.equal(menu(mounted.container), null, 'a press outside the menu must close it')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('deletes an account only after a second confirmation, then reloads the column and the timeline', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
+      assert.equal(allCount(mounted.container), '2', 'both accounts are listed before the deletion')
+
+      await openAccountMenu(mounted, 'ra_alice')
+      await mounted.click(menuItem(mounted.container))
+      assert.equal(menuItem(mounted.container)?.textContent.trim(), L.confirmRemove, 'the first click must only ask for confirmation')
+      assert.equal(mounted.calls.filter((call) => call.method === 'DELETE').length, 0, 'the first click must not delete anything')
+      assert.ok(rowById(mounted.container, 'ra_alice'), 'the account must still be there while confirming')
+
+      await mounted.click(menuItem(mounted.container))
+      const removed = await settle(mounted.container, () => !rowById(mounted.container, 'ra_alice') && allCount(mounted.container) === '1')
+      assert.ok(removed, 'a confirmed deletion must remove the account from the column')
+
+      const deletes = mounted.calls.filter((call) => call.method === 'DELETE')
+      assert.equal(deletes.length, 1, 'the deletion is one DELETE request')
+      assert.ok(deletes[0].path.endsWith('/ra_alice'), `the DELETE must target the account (got ${deletes[0].path})`)
+      assert.equal(menu(mounted.container), null, 'the menu closes once the deletion succeeds')
+
+      // A5：成功后重读作品流与账号列表，被删账号的作品随之消失。
+      await settle(mounted.container, () => timelineItems(mounted.container).length === 1)
+      assert.deepEqual(timelineIds(mounted.container), [WORK_BOB.row_id], 'the removed account\'s works must leave the timeline')
+      const deleteIndex = mounted.calls.findIndex((call) => call.method === 'DELETE')
+      const afterDelete = mounted.calls.slice(deleteIndex + 1)
+      assert.ok(afterDelete.some((call) => call.path.includes(`${RIVAL_PREFIX}/posts`)), 'the works must be re-read after the deletion')
       assert.ok(
-        buttonsLabelled(mounted.container, L.reset).length > 0,
-        'an empty selection must offer a way back',
+        afterDelete.some((call) => call.method === 'GET' && call.path.includes(RIVAL_PREFIX) && !call.path.includes('/posts')),
+        'the account list must be re-read after the deletion',
       )
+      assert.ok(allButton(mounted.container).classList.contains('is-selected'), 'deleting another account must keep 全部 current')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
 
-      // And back out of it with 重置.
-      await mounted.click(buttonsLabelled(mounted.container, L.reset)[0])
+  it('keeps the row and reports the failure when the deletion is rejected', async () => {
+    const mounted = await mountStage({ removeStatus: 500 })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
+
+      await openAccountMenu(mounted, 'ra_alice')
+      await mounted.click(menuItem(mounted.container))
+      await mounted.click(menuItem(mounted.container))
+      const shown = await settle(
+        mounted.container,
+        () => Boolean(menu(mounted.container)?.querySelector('.omnimux-rival-menu-error')),
+      )
+      assert.ok(shown, 'a rejected deletion must surface its error in the menu')
+      assert.equal(
+        menu(mounted.container).querySelector('.omnimux-rival-menu-error').textContent.trim(),
+        L.removeFailed,
+        'the failure must use the menu\'s own copy',
+      )
+      assert.ok(rowById(mounted.container, 'ra_alice'), 'a rejected deletion must keep the account row')
+      assert.equal(allCount(mounted.container), '2', 'the column keeps the failed account')
+      assert.equal(filterRows(mounted.container).length, 2, 'no other row may disappear on a failure')
+      assert.equal(mounted.calls.filter((call) => call.method === 'DELETE').length, 1, 'the rejection is reported, not retried')
+      assert.equal(menuItem(mounted.container)?.textContent.trim(), L.confirmRemove, 'the menu stays on the confirming action')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('keeps the row and reports the failure when DELETE rejects at the transport layer', async () => {
+    const mounted = await mountStage({ failPaths: [/\/ra_alice$/] })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_alice'))
+      await mounted.click(rowById(mounted.container, 'ra_alice').querySelector('.omnimux-rival-filter-more'))
+      await settle(mounted.container, () => Boolean(menu(mounted.container)))
+      await mounted.click(menuItem(mounted.container))
+      await mounted.click(menuItem(mounted.container))
+      await settle(mounted.container, () => Boolean(menu(mounted.container)?.querySelector('.omnimux-rival-menu-error')))
+      assert.ok(menu(mounted.container).querySelector('.omnimux-rival-menu-error').textContent.includes('删除失败'), 'a rejected DELETE must surface the failure copy')
+      assert.ok(rowById(mounted.container, 'ra_alice'), 'the account must stay when the DELETE network call fails')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('returns to 全部 when the currently selected account is deleted', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
       await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
-      assert.equal(timelineItems(mounted.container).length, WORKS.length, '重置 must leave the empty state behind')
+      await mounted.click(rowById(mounted.container, 'ra_alice'))
+      await settle(mounted.container, () => timelineItems(mounted.container).length === 1)
+      assert.equal(feedRequests(mounted).at(-1), 'ra_alice', 'the account must be the current selection before it is removed')
+      assert.equal(allButton(mounted.container).classList.contains('is-selected'), false)
+
+      await openAccountMenu(mounted, 'ra_alice')
+      await mounted.click(menuItem(mounted.container))
+      await mounted.click(menuItem(mounted.container))
+      const removed = await settle(
+        mounted.container,
+        () => !rowById(mounted.container, 'ra_alice') && allButton(mounted.container)?.classList.contains('is-selected') === true,
+      )
+      assert.ok(removed, 'removing the current account must fall back to 全部')
+      assert.equal(allButton(mounted.container).getAttribute('aria-current'), 'page', '全部 must become the current page again')
+      assert.equal(selectedRows(mounted.container).length, 0, 'the deleted row must not leave a selection behind')
+
+      await settle(mounted.container, () => timelineItems(mounted.container).length === 1)
+      assert.deepEqual(timelineIds(mounted.container), [WORK_BOB.row_id], '全部 after the deletion shows the remaining account\'s works')
+      const deleteIndex = mounted.calls.findIndex((call) => call.method === 'DELETE')
+      const afterDelete = mounted.calls.slice(deleteIndex + 1)
+      const afterFeeds = afterDelete.filter((call) => call.path.includes(`${RIVAL_PREFIX}/posts`))
+      assert.ok(afterFeeds.length > 0, 'the fallback to 全部 must refetch the works')
+      assert.ok(
+        afterFeeds.some((call) => new URL(call.path, 'http://localhost').searchParams.get('accounts') === null),
+        'the refetch after deleting the current account must be「全部」',
+      )
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -588,7 +829,8 @@ describe('账号监控 — 账号筛选（多选）', () => {
       await settle(mounted.container, () => mounted.opened.length > 0)
 
       assert.deepEqual(mounted.opened, [ACCOUNTS[0].profile_url], 'the profile must open in a new tab')
-      assert.equal(columnSummary(mounted.container), '', 'opening a profile must not turn the default selection into a subset')
+      assert.ok(allButton(mounted.container).classList.contains('is-selected'), 'opening a profile must keep 全部 current')
+      assert.equal(selectedRows(mounted.container).length, 0, 'opening a profile must not select a row')
       assert.equal(
         feedRequests(mounted).length,
         before,
@@ -1080,7 +1322,7 @@ describe('账号监控 — 第三轮整改回执', () => {
     assert.match(modal, /formatCount\(value,\s*locale\)/, 'the detail dialog stats must follow the same locale')
     const column = readFileSync(join(here, 'RivalAccountColumn.jsx'), 'utf8')
     assert.match(column, /rivalLocaleOf\(t\)/, 'the account column must derive the same locale')
-    assert.match(column, /formatCount\(selectedCount,\s*locale\)/, 'the account column summary must follow the same locale')
+    assert.match(column, /formatCount\(list\.length,\s*locale\)/, 'the 全部 count must follow the same locale')
     const accountRow = readFileSync(join(here, 'RivalAccountFilter.jsx'), 'utf8')
     assert.doesNotMatch(accountRow, /formatCount\(row\.postCount/, 'the compact row must not format a work count any more')
   })

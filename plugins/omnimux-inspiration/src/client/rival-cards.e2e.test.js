@@ -199,6 +199,9 @@ const cardId = (post) => `${post.account.id}:${post.id}`
  */
 let requestedPages = null
 
+/** DELETE receipt of the 更多 menu; set right before a mount, like `requestedPages`. */
+let removeStatus = 200
+
 async function mountStageOnAccounts() {
   const mod = await import(`${await bundle(join(here, 'InspirationStage.jsx'), 'stage')}?mount=${bundleCounter}`)
   const { dom, container, restore } = installDom()
@@ -210,7 +213,10 @@ async function mountStageOnAccounts() {
   }))
   const pages = requestedPages ?? [hostPayload()]
   requestedPages = null
+  const deleteStatus = removeStatus
+  removeStatus = 200
   const postsRequests = []
+  const requests = []
   const deferredAppends = []
   const observers = []
   globalThis.IntersectionObserver = class {
@@ -224,10 +230,21 @@ async function mountStageOnAccounts() {
     disconnect() { this.disconnected = true }
   }
   let calls = 0
-  globalThis.fetch = async (url) => {
+  globalThis.fetch = async (url, fetchOptions = {}) => {
     const path = String(url)
+    const method = fetchOptions?.method ?? 'GET'
     calls += 1
+    requests.push({ path, method })
     if (calls > REQUEST_BUDGET) throw new Error(`request storm: ${calls} calls, last ${path}`)
+    // 「更多」菜单的删除：DELETE 之后账号从 Host 副本里消失，重读就看不到它。
+    if (path.includes(RIVAL_PREFIX) && method === 'DELETE') {
+      if (deleteStatus >= 400) return jsonResponse(deleteStatus, { success: false, error: 'remove-failed' })
+      const id = decodeURIComponent(path.slice(path.lastIndexOf('/') + 1))
+      const index = accounts.findIndex((account) => account.id === id)
+      assert.equal(index >= 0, true, `the DELETE must name a monitored account (got ${id})`)
+      accounts.splice(index, 1)
+      return jsonResponse(200, { success: true, data: { id } })
+    }
     if (path.includes(`${RIVAL_PREFIX}/status`)) {
       return jsonResponse(200, { success: true, data: { paused: { global: false, reason: null } } })
     }
@@ -238,9 +255,10 @@ async function mountStageOnAccounts() {
       postsRequests.push(query.toString())
       const all = pages.flat().filter((row) => row && row.account)
       const entry = pages.at(page - 1)
-      const visible = requested.length > 0
+      const visible = (requested.length > 0
         ? all.filter((row) => requested.includes(row.account.id))
-        : (entry && Array.isArray(entry.rows) ? entry.rows : (entry ?? []))
+        : (entry && Array.isArray(entry.rows) ? entry.rows : (entry ?? [])))
+        .filter((row) => accounts.some((account) => account.id === row.account.id))
       if (entry && entry.fail) {
         return jsonResponse(500, { success: false, error: 'feed-page-failed' })
       }
@@ -276,6 +294,7 @@ async function mountStageOnAccounts() {
   return {
     container,
     postsRequests,
+    requests,
     /** Release the oldest deferred page-2 answer, newest last. */
     releaseAppend() {
       const release = deferredAppends.shift()
@@ -342,7 +361,21 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     assert.equal(column.querySelectorAll('.omnimux-rival-filter-platform svg').length, rows.length, 'every row must show the platform glyph')
     assert.equal(column.querySelectorAll('.omnimux-rival-accounts-summary').length, 0, 'the all-selected header must not repeat the account count')
     assert.equal(column.textContent.includes('选择要查看的账号'), false, 'the header must not carry the retired hint line')
+    const all = column.querySelector('.omnimux-rival-accounts-all')
+    assert.equal(all?.classList.contains('is-selected'), true, '全部 must be the default target')
+    assert.equal(all?.getAttribute('aria-current'), 'page', '全部 must be the current page')
+    assert.equal(column.querySelector('input[type="checkbox"]'), null, 'the multi-select checkboxes must be gone')
+    const groupTitles = Array.from(column.querySelectorAll('.omnimux-rival-account-group-title'))
+      .map((node) => node.textContent.trim())
+      .sort()
+    assert.deepEqual(
+      groupTitles,
+      [zh['platform.tiktok'], zh['platform.youtube'], zh['platform.instagram'], zh['platform.x']].sort(),
+      'every platform must get its own titled group',
+    )
     for (const row of rows) {
+      assert.equal(row.querySelector('.omnimux-rival-filter-select').getAttribute('role'), 'button', 'the row main area is a single-select target, not a checkbox')
+      assert.equal(row.getAttribute('data-selected'), 'false', 'no row starts selected while 全部 is current')
       assert.equal(row.textContent.includes('个作品'), false, 'the row must not show a work count')
       assert.equal(row.textContent.includes('正常'), false, 'the row must not spell out its health status')
       assert.equal(row.querySelector('.omnimux-rival-filter-warning'), null, 'a healthy fixture row carries no warning icon')
@@ -432,9 +465,9 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
 
     // Back to all accounts, then start a second page-2 append while the first is
     // still pending.
-    const reset = mounted.container.querySelector('.omnimux-rival-accounts-actions button:last-child')
+    const all = mounted.container.querySelector('.omnimux-rival-accounts-all')
     await act(async () => {
-      reset.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      all.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 30))
     })
     await settle(mounted.container, () => mounted.container.querySelectorAll('.omnimux-rival-timeline-item').length === 6)
@@ -455,25 +488,168 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     assert.equal(pageTwo(), 2, 'the same page must not be fetched again after recovery')
   })
 
-  it('narrows the timeline through the persistent account column', async () => {
+  it('narrows the timeline to one account through the persistent account column', async () => {
     const mounted = await mountStageOnAccounts()
     open.push(mounted)
     const higgs = ACCOUNTS.higgs
     const row = mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`)
+    const all = mounted.container.querySelector('.omnimux-rival-accounts-all')
     assert.ok(row, 'the left column must list every monitored account')
-    assert.equal(row.getAttribute('aria-checked'), 'true', 'every account starts checked')
+    assert.equal(all.classList.contains('is-selected'), true, '全部 must be the current target before any click')
+    assert.equal(all.getAttribute('aria-current'), 'page', '全部 must be marked as the current page')
+    assert.equal(row.querySelector('.omnimux-rival-filter-select').getAttribute('role'), 'button', 'the row main area is a single-select navigation target')
+    assert.equal(row.getAttribute('data-selected'), 'false', 'no account starts selected')
 
     await act(async () => {
       row.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
-    const expected = POSTS.filter((post) => post.account !== higgs).map(cardId)
+    const expected = POSTS.filter((post) => post.account === higgs).map(cardId)
     await settle(mounted.container, () => itemIds(mounted.container).length === expected.length)
-    assert.deepEqual(itemIds(mounted.container), expected, 'the timeline must drop the unchecked account\'s posts')
-    const summary = mounted.container.querySelector('.omnimux-rival-accounts-summary')?.textContent || ''
-    assert.ok(summary.includes('6'), `the column summary must carry the narrowed selection size (got ${JSON.stringify(summary)})`)
+    assert.deepEqual(itemIds(mounted.container), expected, 'the timeline must keep only the clicked account\'s posts')
+    assert.equal(row.getAttribute('data-selected'), 'true', 'the clicked row must be selected')
+    assert.equal(row.querySelector('.omnimux-rival-filter-select').getAttribute('aria-current'), 'true', 'the clicked row is the current page')
+    assert.equal(all.classList.contains('is-selected'), false, '全部 must give up the highlight')
     const selectionQuery = mounted.postsRequests.find((query) => query.includes('accounts='))
     assert.ok(selectionQuery, `the selection must reach the feed as the accounts parameter (got ${JSON.stringify(mounted.postsRequests)})`)
-    assert.equal(selectionQuery.includes(higgs.id), false, 'the unchecked account must be left out of the accounts parameter')
+    assert.equal(new URLSearchParams(selectionQuery).get('accounts'), higgs.id, 'the accounts parameter must carry only the clicked account')
+
+    await act(async () => {
+      all.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    await settle(mounted.container, () => itemIds(mounted.container).length === POSTS.length)
+    assert.equal(itemIds(mounted.container).length, POSTS.length, '全部 must restore every account\'s timeline')
+    assert.equal(all.classList.contains('is-selected'), true, '全部 must be highlighted again')
+    assert.equal(row.getAttribute('data-selected'), 'false', 'the row must be released when 全部 is clicked again')
+  })
+
+  it('deletes an account from the 更多 menu only after confirmation, then refreshes the page', async () => {
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const higgs = ACCOUNTS.higgs
+    const row = mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`)
+    assert.ok(row, 'the left column must list the account to delete')
+    const all = mounted.container.querySelector('.omnimux-rival-accounts-all')
+    const more = row.querySelector('.omnimux-rival-filter-more')
+    assert.ok(more, 'the row must carry its 更多 button')
+    assert.equal(more.getAttribute('aria-label'), zh['rivalAccounts.column.more'], '更多 must label the row action')
+
+    const feedRequestsBefore = mounted.postsRequests.length
+    await act(async () => {
+      more.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    const menu = mounted.container.querySelector('.omnimux-rival-menu')
+    assert.ok(menu, '更多 must open the account menu')
+    assert.equal(menu.getAttribute('role'), 'menu', 'the menu must present itself as a menu')
+    assert.equal(menu.querySelector('.omnimux-rival-menu-item')?.textContent.trim(), zh['rivalAccounts.column.remove'], 'the menu must offer 删除')
+    assert.equal(row.getAttribute('data-selected'), 'false', 'opening 更多 must not switch accounts')
+    assert.equal(all.classList.contains('is-selected'), true, '全部 must stay the current target')
+    assert.equal(mounted.postsRequests.length, feedRequestsBefore, 'opening the menu must not refetch the feed')
+
+    // 首次点击只要求确认。
+    await act(async () => {
+      menu.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    assert.equal(mounted.requests.filter((request) => request.method === 'DELETE').length, 0, 'the first click must not delete')
+    const confirmingItem = mounted.container.querySelector('.omnimux-rival-menu-item')
+    assert.equal(confirmingItem?.textContent.trim(), zh['rivalAccounts.column.confirmRemove'], 'the first click must ask to confirm')
+
+    // 第二次点击才真的 DELETE。
+    await act(async () => {
+      confirmingItem.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    await settle(mounted.container, () => !mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`))
+    assert.equal(mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`), null, 'the deleted account must leave the column')
+    const deletes = mounted.requests.filter((request) => request.method === 'DELETE')
+    assert.equal(deletes.length, 1, 'the deletion is one DELETE request')
+    assert.equal(deletes[0].path.endsWith(`/${higgs.id}`), true, `the DELETE must target the account (got ${deletes[0].path})`)
+    assert.equal(mounted.container.querySelector('.omnimux-rival-menu'), null, 'the menu must close once the deletion lands')
+    const deleteIndex = mounted.requests.findIndex((request) => request.method === 'DELETE')
+    const after = mounted.requests.slice(deleteIndex + 1)
+    assert.equal(after.some((request) => request.path.includes(`${RIVAL_PREFIX}/posts`)), true, 'the works must be re-read after the deletion')
+    assert.equal(after.some((request) => request.method === 'GET' && request.path.includes(RIVAL_PREFIX) && !request.path.includes('/posts')), true, 'the account list must be re-read after the deletion')
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-accounts [data-account-id]').length, Object.keys(ACCOUNTS).length - 1, 'the column must lose exactly the deleted account')
+  })
+
+  it('keeps the row and shows the menu error when the deletion is rejected', async () => {
+    removeStatus = 500
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const higgs = ACCOUNTS.higgs
+    const row = mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`)
+    assert.ok(row, 'the left column must list the account to delete')
+    const more = row.querySelector('.omnimux-rival-filter-more')
+    assert.ok(more, 'the row must carry its 更多 button')
+
+    await act(async () => {
+      more.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    const menu = mounted.container.querySelector('.omnimux-rival-menu')
+    assert.ok(menu, '更多 must open the account menu on a failing Host too')
+    await act(async () => {
+      menu.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    await act(async () => {
+      mounted.container.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    await settle(mounted.container, () => Boolean(mounted.container.querySelector('.omnimux-rival-menu-error')))
+    assert.equal(mounted.container.querySelector('.omnimux-rival-menu-error')?.textContent.trim(), zh['rivalAccounts.column.removeFailed'], 'the failure must use the menu copy')
+    assert.ok(mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`), 'a rejected deletion must keep the account row')
+    assert.equal(mounted.requests.filter((request) => request.method === 'DELETE').length, 1, 'a rejected deletion must not be retried')
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-accounts [data-account-id]').length, Object.keys(ACCOUNTS).length, 'the column must keep every account on a failure')
+  })
+
+  it('returns to 全部 after the currently selected account is deleted', async () => {
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const higgs = ACCOUNTS.higgs
+    const row = mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`)
+    assert.ok(row, 'the left column must list the account to delete')
+    const all = mounted.container.querySelector('.omnimux-rival-accounts-all')
+
+    await act(async () => {
+      row.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    const selectedPosts = POSTS.filter((post) => post.account === higgs).map(cardId)
+    await settle(mounted.container, () => itemIds(mounted.container).length === selectedPosts.length)
+    assert.deepEqual(itemIds(mounted.container), selectedPosts, 'the clicked account is the whole timeline')
+    assert.equal(all.classList.contains('is-selected'), false, '全部 must give up the highlight while an account is current')
+
+    const more = mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`).querySelector('.omnimux-rival-filter-more')
+    await act(async () => {
+      more.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    await act(async () => {
+      mounted.container.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    await act(async () => {
+      mounted.container.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+    await settle(
+      mounted.container,
+      () => !mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`)
+        && mounted.container.querySelector('.omnimux-rival-accounts-all')?.classList.contains('is-selected') === true,
+    )
+    assert.equal(mounted.container.querySelector('.omnimux-rival-accounts-all').classList.contains('is-selected'), true, '删除当前账号后必须回到「全部」')
+    assert.equal(mounted.container.querySelector('.omnimux-rival-accounts-all').getAttribute('aria-current'), 'page', '全部 must be the current page again')
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-accounts [data-account-id][data-selected="true"]').length, 0, 'the deleted row must not leave a selection behind')
+    const deleteIndex = mounted.requests.findIndex((request) => request.method === 'DELETE')
+    const after = mounted.requests.slice(deleteIndex + 1)
+    const feedsAfter = after.filter((request) => request.path.includes(`${RIVAL_PREFIX}/posts`))
+    assert.equal(feedsAfter.some((request) => new URL(request.path, 'http://localhost').searchParams.get('accounts') === null), true, 'the fallback request must be「全部」')
+    const remaining = POSTS.filter((post) => post.account !== higgs).map(cardId)
+    await settle(mounted.container, () => itemIds(mounted.container).length === remaining.length)
+    assert.deepEqual(itemIds(mounted.container), remaining, '全部 after the deletion shows only the remaining accounts')
   })
 })
