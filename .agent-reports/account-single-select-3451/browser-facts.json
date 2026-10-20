@@ -1,0 +1,62 @@
+{
+  "task": "3451",
+  "base": "c736cf922e3b13a244bd8faf8f237130fcd70f30",
+  "harness": "real RivalAccountColumn + RivalAccountsPanel in a 720px stage scroll; 5 accounts across X/TikTok/YouTube/Instagram; localhost port 55470",
+  "browser": "ego-browser (real Chromium), task space finalized after run",
+  "initial": {
+    "allSelected": true,
+    "allText": "全部5",
+    "rowCount": 5,
+    "groupTitles": [
+      "推特 (X)",
+      "TikTok",
+      "YouTube",
+      "Instagram"
+    ],
+    "checkboxCount": 0,
+    "invertCount": 0,
+    "timelineCount": 5
+  },
+  "accountSelected": {
+    "selectedIds": [
+      "ra_x"
+    ],
+    "allSelected": false,
+    "timelineCount": 1,
+    "timelineAuthor": "Higgsfield AI"
+  },
+  "hover": {
+    "moreOpacity": "1"
+  },
+  "menu": {
+    "menuText": "删除"
+  },
+  "confirm": {
+    "menuText": "确认删除"
+  },
+  "removed": {
+    "rowCount": 4,
+    "rowIds": [
+      "ra_x2",
+      "ra_tt",
+      "ra_yt",
+      "ra_ig"
+    ],
+    "allSelected": true,
+    "timelineCount": 4,
+    "removeCalls": 1
+  },
+  "failed": {
+    "rowKept": true,
+    "menuError": "删除失败，请重试",
+    "removeCalls": 2
+  },
+  "failures": [],
+  "screenshots": [
+    "browser-single-select-3451.png",
+    "browser-single-select-account-3451.png",
+    "browser-single-select-menu-3451.png",
+    "browser-single-select-confirm-3451.png",
+    "browser-single-select-removed-3451.png"
+  ]
+}

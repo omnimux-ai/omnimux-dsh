@@ -446,6 +446,11 @@ export function useRivalFeed(options = {}) {
     commitSelection(toggleAccountSelection(selectionRef.current, id, allIdsRef.current))
   }, [commitSelection])
 
+  /** Single-select navigation: one account becomes the whole view. */
+  const selectAccount = useCallback((id) => {
+    commitSelection({ mode: 'subset', ids: [String(id)] })
+  }, [commitSelection])
+
   /** Invert the selection (from「全部」this is the empty set). */
   const invertAccounts = useCallback(() => {
     commitSelection(invertAccountSelection(selectionRef.current, allIdsRef.current))
@@ -595,6 +600,7 @@ export function useRivalFeed(options = {}) {
     loadMore,
     reload: load,
     toggleAccount,
+    selectAccount,
     invertAccounts,
     resetAccounts,
     status,

@@ -128,7 +128,7 @@ function probePageHtml() {
             nameRowHeight: row.querySelector('.omnimux-rival-filter-name-row')?.getBoundingClientRect().height || 0,
             nameRowWrap: getComputedStyle(row.querySelector('.omnimux-rival-filter-name-row')).flexWrap,
             statusRightGap: (() => {
-              const status = row.querySelector('.omnimux-rival-filter-status')
+              const status = row.querySelector('.omnimux-rival-filter-actions')
               return status ? Math.round(box.right - status.getBoundingClientRect().right) : null
             })(),
             nameWhiteSpace: getComputedStyle(name).whiteSpace,
@@ -214,9 +214,9 @@ async function runProbe() {
             accounts={accounts}
             selection={{ mode: 'all' }}
             allIds={allIds}
-            onToggle={() => {}}
-            onInvert={() => {}}
+            onSelect={() => {}}
             onReset={() => {}}
+            onRemove={async () => ({ ok: true })}
             onRetry={() => {}}
             quotaLeft={46}
             active={active}
