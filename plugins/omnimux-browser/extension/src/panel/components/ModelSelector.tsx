@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from 'react'
+import { loopbackFetch } from '../../shared/loopback-fetch.ts'
 
 export interface EffortOption {
   id: string
@@ -219,7 +220,7 @@ export const ModelSelector = memo(function ModelSelector({
   // 动态向本地真实服务探查最新模型列表
   useEffect(() => {
     let active = true
-    void fetch(`http://127.0.0.1:${activePort}/ext/bridge-config`, {
+    void loopbackFetch(`http://127.0.0.1:${activePort}/ext/bridge-config`, {
       signal: AbortSignal.timeout(1200),
     })
       .then((res) => (res.ok ? res.json() : null))

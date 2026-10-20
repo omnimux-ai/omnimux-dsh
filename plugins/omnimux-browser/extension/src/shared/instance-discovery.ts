@@ -13,6 +13,8 @@
  *     offline     — timeout / network error / anything else
  */
 
+import { loopbackFetch } from './loopback-fetch.ts'
+
 export type InstanceStatus = 'online' | 'unavailable' | 'offline'
 
 export interface DiscoveredInstance {
@@ -70,7 +72,7 @@ export async function probeInstance(port: number): Promise<DiscoveredInstance> {
   }
   const start = Date.now()
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
+    const response = await loopbackFetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
       cache: 'no-store',
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     })

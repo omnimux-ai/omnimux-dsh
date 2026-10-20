@@ -21,6 +21,7 @@ import { MediaSnifferBar, type SniffedMediaItem } from './components/MediaSniffe
 import { PresetChips } from './components/PresetChips.tsx'
 import { FormDraftCard } from './components/FormDraftCard.tsx'
 import { parseDraftMessage } from '../shared/draft.ts'
+import { loopbackFetch } from '../shared/loopback-fetch.ts'
 import type { DraftField } from '../shared/draft.ts'
 import { WorkspaceSelector } from './components/WorkspaceSelector.tsx'
 import { SessionWorkspaceSelector, type SessionWorkspaceItem } from './components/SessionWorkspaceSelector.tsx'
@@ -1376,11 +1377,15 @@ export function App(): React.JSX.Element {
     }
 
     let saved = false
+    // 431 means the request header block exceeded the host's 16 KiB budget, not
+    // that the host is absent. The real reason must reach the user, or they will
+    // keep checking a process that is already running.
+    let headerOverflow = false
 
     // 1. 优先通过 chrome.runtime.sendMessage 委托后台 service worker 保存（彻底免疫 Edge 私有网络 PNA 拦截）
     if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
       try {
-        const bgRes = await new Promise<{ ok?: boolean }>((resolve) => {
+        const bgRes = await new Promise<{ ok?: boolean; code?: string }>((resolve) => {
           chrome.runtime.sendMessage(
             {
               type: 'DSH_SAVE_INSPIRATION_PANEL',
@@ -1394,13 +1399,15 @@ export function App(): React.JSX.Element {
               if (chrome.runtime?.lastError || !response) {
                 resolve({ ok: false })
               } else {
-                resolve(response as { ok?: boolean })
+                resolve(response as { ok?: boolean; code?: string })
               }
             },
           )
         })
         if (bgRes?.ok) {
           saved = true
+        } else if (bgRes?.code === 'local-header-overflow') {
+          headerOverflow = true
         }
       } catch {
         // Fall back to direct fetch if message fails
@@ -1414,7 +1421,7 @@ export function App(): React.JSX.Element {
         const targetBase = `http://127.0.0.1:${port}`
         try {
           // 优先尝试 import-url 全量社媒抓取
-          let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
+          let res = await loopbackFetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             // Saving is not analysing; the host would otherwise run its breakdown.
@@ -1424,13 +1431,15 @@ export function App(): React.JSX.Element {
 
           // 如果 import-url 异常（如反爬、502、解析空），采用前台已嗅探的多模态图文数据直存灵感库
           if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
-            res = await fetch(`${targetBase}/omnimux/inspiration/local`, {
+            res = await loopbackFetch(`${targetBase}/omnimux/inspiration/local`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(directItem),
               signal: AbortSignal.timeout(3000),
             }).catch(() => null)
           }
+
+          if (res?.status === 431) headerOverflow = true
 
           if (res && (res.ok || res.status === 200 || res.status === 201 || res.status === 202)) {
             saved = true
@@ -1451,7 +1460,11 @@ export function App(): React.JSX.Element {
       }, 3000)
     } else {
       setSaveInspirationStatus('failed')
-      setToastMessage(locale === 'en' ? 'Failed to save (check OmniMux server)' : '保存失败，请检查 OmniMux 运行状态')
+      setToastMessage(headerOverflow
+        ? (locale === 'en'
+          ? 'Failed to save: too many leftover cookies for 127.0.0.1. Clear that site\'s data and retry.'
+          : '保存失败：127.0.0.1 残留 cookie 过多（请求头超限），请清理该站点数据后重试')
+        : (locale === 'en' ? 'Failed to save (check OmniMux server)' : '保存失败，请检查 OmniMux 运行状态'))
       setTimeout(() => {
         setSaveInspirationStatus('idle')
         setToastMessage(null)
@@ -1525,7 +1538,7 @@ export function App(): React.JSX.Element {
       if (manualLocale !== 'auto') return
       for (const port of [43120, 45120, 43128]) {
         try {
-          const res = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
+          const res = await loopbackFetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
             signal: AbortSignal.timeout(1000),
           })
           if (res.ok) {

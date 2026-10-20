@@ -1,0 +1,39 @@
+{
+  "distDir": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/plugins/omnimux-browser/extension/dist",
+  "seededCookies": 6,
+  "probes": {
+    "rawFetch": {
+      "reached": true,
+      "status": 200
+    },
+    "omitFetch": {
+      "reached": true,
+      "status": 200
+    },
+    "saveMessage": {
+      "elapsedMs": 5,
+      "response": {
+        "ok": false
+      },
+      "lastError": null
+    }
+  },
+  "host": {},
+  "browser": "Chrome/151.0.7922.34",
+  "extensionId": "inmgnhdibihgiobaoclifhmjgkheffeb",
+  "storedCookiesForLoopback": 6,
+  "observedRequestHeaders": [
+    {
+      "url": "/raw",
+      "headerBytes": 23996,
+      "cookieBytes": 23464,
+      "cookieCount": 6
+    },
+    {
+      "url": "/omit",
+      "headerBytes": 488,
+      "cookieBytes": 0,
+      "cookieCount": 0
+    }
+  ]
+}

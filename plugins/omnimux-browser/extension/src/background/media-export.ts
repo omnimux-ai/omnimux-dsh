@@ -107,6 +107,10 @@ export async function discoverHostBase(
   // probes are already in flight, so the worst case is still one timeout.
   const probes = ports.map(async (port): Promise<string> => {
     const response = await fetchImpl(`http://127.0.0.1:${port}${BRIDGE_CONFIG_PATH}`, {
+      // Loopback endpoints authenticate with the loopback trust/token, never the
+      // browser cookie jar; see src/shared/loopback-fetch.ts for why the jar must
+      // stay out of these requests even when a transport is injected for tests.
+      credentials: 'omit',
       signal: AbortSignal.timeout(timeoutMs),
     })
     if (!response.ok) throw new Error(`port ${port} answered ${response.status}`)
@@ -169,6 +173,8 @@ async function postJson(
   try {
     return await fetchImpl(endpoint, {
       method: 'POST',
+      // Same rule as discoverHostBase: never attach the 127.0.0.1 cookie jar.
+      credentials: 'omit',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(timeoutMs),
