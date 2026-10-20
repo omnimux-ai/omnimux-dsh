@@ -25,6 +25,8 @@ export const FEATURE_FLAG = {
   mediaHover: 'omnimux_media_hover_enabled',
   /** The velocity badge mounted on X (Twitter) timeline tweets. */
   velocity: 'omnimux_velocity_badge_enabled',
+  /** The per-tweet poster trigger and its composer hand-off on X (Twitter). */
+  poster: 'omnimux_x_poster_enabled',
 } as const
 
 /** One of the switch keys above. */
@@ -42,7 +44,12 @@ export interface FeatureFlagUpdate {
   enabled: boolean
 }
 
-const FEATURE_FLAG_KEYS: readonly string[] = [FEATURE_FLAG.fab, FEATURE_FLAG.mediaHover, FEATURE_FLAG.velocity]
+const FEATURE_FLAG_KEYS: readonly string[] = [
+  FEATURE_FLAG.fab,
+  FEATURE_FLAG.mediaHover,
+  FEATURE_FLAG.velocity,
+  FEATURE_FLAG.poster,
+]
 
 /** Whether `value` names one of the switches this module owns. */
 export function isFeatureFlagKey(value: unknown): value is FeatureFlagKey {

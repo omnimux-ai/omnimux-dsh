@@ -92,6 +92,9 @@ export interface PanelCopy {
     velocitySection: string
     velocityToggle: string
     velocityToggleHelp: string
+    posterSection: string
+    posterToggle: string
+    posterToggleHelp: string
     copilotKeywords: string
     copilotKeywordsPlaceholder: string
     copilotKeywordsHelp: string
@@ -388,6 +391,9 @@ const EN: PanelCopy = {
     velocitySection: 'X velocity badge',
     velocityToggle: 'Show the X velocity badge',
     velocityToggleHelp: 'Show velocity metrics and comment-window hints on X tweets',
+    posterSection: 'X poster',
+    posterToggle: 'Show the poster trigger',
+    posterToggleHelp: 'Adds "Create poster" under X posts. It generates a light or dark poster and a personal opinion, then opens the composer with the image attached and the text filled in.',
     copilotKeywords: 'Niche keywords',
     copilotKeywordsPlaceholder: 'Type a keyword and press Enter',
     copilotKeywordsHelp: 'Press Enter or type a comma to add. Used to pick feed tweets when the composer is empty.',
@@ -695,6 +701,9 @@ const ZH: PanelCopy = {
     velocitySection: 'X 爆速角标',
     velocityToggle: '显示 X 爆速角标',
     velocityToggleHelp: '在 X 推文上展示爆速指标与评论机会提示。',
+    posterSection: 'X 海报',
+    posterToggle: '显示「生成海报」入口',
+    posterToggleHelp: '在 X 推文下增加「生成海报」：选择黑白主题后生成海报与个人观点，跳到发帖页自动附图并预填正文，发布仍由你确认。',
     copilotKeywords: '推特赛道关键词',
     copilotKeywordsPlaceholder: '输入关键词后按回车，例如：AI',
     copilotKeywordsHelp: '按回车或输入逗号添加。发帖框为空时，优先挑选与这些词相关的热帖作为灵感。',
