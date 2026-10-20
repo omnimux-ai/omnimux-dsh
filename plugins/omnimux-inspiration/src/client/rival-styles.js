@@ -864,6 +864,9 @@ export const RIVAL_CSS = `
   width: 100%;
   align-items: start;
 }
+.omnimux-rival-layout.is-single {
+  grid-template-columns: minmax(0, 1fr);
+}
 .omnimux-rival-content {
   min-width: 0;
 }
@@ -1093,6 +1096,11 @@ export const RIVAL_CSS = `
 .omnimux-rival-timeline-item:hover .omnimux-rival-timeline-actions,
 .omnimux-rival-timeline-item:focus-within .omnimux-rival-timeline-actions {
   opacity: 1;
+}
+@media (hover: none) {
+  .omnimux-rival-timeline-actions {
+    opacity: 1;
+  }
 }
 .omnimux-rival-timeline-act {
   font-size: 12px;

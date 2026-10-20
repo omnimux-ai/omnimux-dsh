@@ -652,6 +652,17 @@ describe('账号监控 — 作品网格流', () => {
       assert.deepEqual(actions, ['original', 'replicate', 'deconstruct', 'markDone'], 'the hover row must carry every monitor action through the real panel wiring')
       assert.ok(first.textContent.includes(L.replicate), 'the replicate action must read 立即复刻')
 
+      // 「标为已处理」must flip the row optimistically (#3432 review P2-1).
+      await mounted.click(first.querySelector('[data-act="markDone"]'))
+      await settle(mounted.container, () => first.classList.contains('is-done'))
+      assert.equal(first.classList.contains('is-done'), true, 'mark-done must flip the row without a reload')
+      assert.equal(first.querySelector('[data-act="markDone"]'), null, 'a processed row must not offer mark-done twice')
+      assert.equal(
+        first.querySelector('.omnimux-rival-timeline-state')?.textContent,
+        zh['rivalFeed.card.done'],
+        'the processed row must name its state',
+      )
+
       // The browse-summary line was retired (#3430): the page leads straight
       // into the timeline, and neither the row nor its copy may return.
       assert.equal(

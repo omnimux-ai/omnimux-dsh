@@ -21,11 +21,11 @@ base: 87e7c83bb76cb6feef642b453b95045f8d30b575
 
 - 新增 `RivalAccountColumn`：复用账号筛选行（`AccountFilterRow` 由 `RivalAccountFilter` 导出）渲染常驻左栏；头部展示标题、选择摘要、反选/重置。
 - 新增 `RivalTimeline` / `RivalTimelineRow`：单列列表；行内元素按平台原生卡片组织（头像/昵称/handle/平台标记/时间/正文/媒体/互动指标 + 悬停操作）；媒体加载失败时隐藏媒体块；已处理态弱化。
-- 新增纯函数模块 `rival-timeline.js`：`sortTimelineRows`（posted_at 倒序，id 兜底）与 `toTimelineRow`（补齐文本、正文、头像、媒体、互动字段）。
+- 新增纯函数模块 `rival-timeline.js`：`timelineTimestamp` / `sortTimelineRows`（posted_at 倒序，不可读时间沉底、id 兜底）、`timelineBody`、`timelineInitial`、`timelineStateText`（已处理/已复刻/已互动文案）。
 - `InspirationSection`：rivals tab 内容改为 `.omnimux-rival-layout` 两栏；工具栏删除 `RivalAccountFilter` 与排序下拉；`useRivalFeed` 排序固定 `latest`。
-- `RivalAccountsPanel`：有帖子时渲染时间线（含追加 sentinel），无帖子时沿用现有空态/骨架/首采进度；`RivalFeedGrid` 仅保留状态渲染职责。
+- `RivalAccountsPanel`：有帖子时渲染时间线（含追加 sentinel，且只在 idle 时触发一次；失败不自动重试），「标为已处理」做本地乐观翻转，状态文案区分已处理/已复刻/已互动；无帖子时沿用现有空态/骨架/首采进度。
 - `toRivalCardRow` 增补 `text`、`avatar_url`、`account.avatar_url`（additive，不影响其它消费者）。
-- 删除账号监控不再使用的 `RivalMasonry.jsx`、`RivalPostCard.jsx`、`rival-masonry.js`、`RivalAccountFilter` 弹层 UI 及其测试；`RivalFeedGrid` 去掉卡片/瀑布流渲染。
+- 账号监控不再消费 `RivalMasonry` / `RivalPostCard` / `rival-masonry.js`；它们仍被灵感库消费，保留组件与单测。`RivalAccountFilter` 退役 trigger/panel 与相关文案/样式删除，只保留可复用的账号行；`RivalFeedGrid` 去掉卡片/瀑布流渲染，只保留空态/骨架/首采进度。
 - `rival-styles.js`：删除瀑布流/卡片/筛选弹层样式，新增两栏与时间线样式；响应式窄视口左栏收窄、不横向溢出。
 
 ## 验收用例
@@ -38,7 +38,9 @@ base: 87e7c83bb76cb6feef642b453b95045f8d30b575
 | A4 | 行元素 | 头像/首字母、昵称、handle、平台标记、相对时间、正文、媒体（如有）、播放/点赞/评论/分享；悬停操作可用 |
 | A5 | 空态/首采/加载 | 沿用现有空态、骨架与首采进度 |
 | A6 | 其他 Tab | 灵感库、爆款趋势不受影响 |
-| A7 | 窄视口 | 无横向溢出，左栏宽 200–280px 或堆叠 |
+| A7 | 窄视口 760px / 375px | 760px 时左栏 200px、两栏；375px 时堆叠单列；无横向溢出 |
+| A8 | 追加页失败 | sentinel 暂停，不自动重复请求；恢复后可由下一次 idle 继续 |
+| A9 | 标为已处理 | 点击后行立即 is-done、按钮消失，状态文案按已处理/已复刻/已互动区分 |
 
 ## 验证
 

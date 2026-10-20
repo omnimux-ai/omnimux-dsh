@@ -1,12 +1,12 @@
 {
   "task": "3432",
   "base": "87e7c83bb76cb6feef642b453b95045f8d30b575",
-  "harness": "real RivalAccountColumn + RivalAccountsPanel in .omnimux-rival-layout; real toggleAccountSelection; dsh-ui-kit shimmed; localhost port 54096",
+  "harness": "real RivalAccountColumn + RivalAccountsPanel in .omnimux-rival-layout; real toggleAccountSelection; dsh-ui-kit shimmed; localhost port 59965",
   "browser": "ego-browser (real Chromium); task space finalized after run",
   "initial": {
-    "layoutColumns": "248px 1016px",
+    "layoutColumns": "248px 968px",
     "columnWidth": 248,
-    "contentWidth": 1016,
+    "contentWidth": 968,
     "accountRows": 2,
     "checkedRows": 2,
     "itemCount": 3,
@@ -47,6 +47,26 @@
   "failures": [],
   "screenshots": [
     "browser-timeline-initial-3432.png",
-    "browser-timeline-filtered-3432.png"
-  ]
+    "browser-timeline-filtered-3432.png",
+    "browser-timeline-narrow-760-3432.png",
+    "browser-timeline-narrow-375-3432.png"
+  ],
+  "narrow760": {
+    "viewport": [
+      760,
+      900
+    ],
+    "layoutColumns": "200px 500px",
+    "columnWidth": 200,
+    "scrollOverflow": 0
+  },
+  "narrow375": {
+    "viewport": [
+      375,
+      800
+    ],
+    "layoutColumns": "327px",
+    "columnWidth": 327,
+    "scrollOverflow": 0
+  }
 }

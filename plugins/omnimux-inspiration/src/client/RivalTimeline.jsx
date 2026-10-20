@@ -16,6 +16,7 @@ import { RivalTimelineRow } from './RivalTimelineRow.jsx'
  *   busyId?: string | null,
  *   hasMore?: boolean,
  *   loadingMore?: boolean,
+ *   canLoadMore?: boolean,
  *   onLoadMore?: () => void,
  *   onDetail?: (card: Record<string, any>) => void,
  *   onReplicate?: (card: Record<string, any>) => void,
@@ -25,28 +26,39 @@ import { RivalTimelineRow } from './RivalTimelineRow.jsx'
  */
 export function RivalTimeline(props) {
   const {
-    cards, t, busyId, hasMore = false, loadingMore = false, onLoadMore,
+    cards, t, busyId, hasMore = false, loadingMore = false, canLoadMore, onLoadMore,
     onDetail, onReplicate, onDeconstruct, onMarkDone,
   } = props
   const sentinelRef = useRef(null)
   const rows = sortTimelineRows(cards)
 
+  // The sentinel must only fetch while the previous page is idle. Without the
+  // idle gate a failed append page (hasMore stays true, page unchanged) would
+  // re-arm the observer on every loadingMore flip and retry until the hook's
+  // request budget runs out (#3432 review P1). Loading once per idle window is
+  // also what keeps an intersection from firing twice for one page.
+  const idle = canLoadMore === undefined
+    ? hasMore && !loadingMore && typeof onLoadMore === 'function'
+    : canLoadMore
   useEffect(() => {
     const node = sentinelRef.current
-    if (!node || !hasMore || typeof onLoadMore !== 'function') return undefined
+    if (!node || !idle || typeof onLoadMore !== 'function') return undefined
     if (typeof IntersectionObserver !== 'function') return undefined
     const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) onLoadMore()
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      observer.disconnect()
+      onLoadMore()
     }, { rootMargin: '240px 0px' })
     observer.observe(node)
     return () => observer.disconnect()
-  }, [hasMore, onLoadMore, rows.length])
+  }, [idle, onLoadMore, rows.length])
 
   return (
     <div
       className="omnimux-rival-timeline"
       data-rival-timeline="true"
       role="feed"
+      aria-label={t('tab.rivals')}
       aria-busy={loadingMore ? 'true' : 'false'}
     >
       {rows.map((card) => (
@@ -68,7 +80,7 @@ export function RivalTimeline(props) {
           ))}
         </div>
       ) : null}
-      {hasMore && typeof onLoadMore === 'function' ? (
+      {idle ? (
         <div className="omnimux-rival-timeline-sentinel" ref={sentinelRef} aria-hidden="true" />
       ) : null}
     </div>

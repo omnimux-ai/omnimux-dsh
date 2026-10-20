@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { sortTimelineRows, timelineBody, timelineInitial } from './rival-timeline.js'
+import { sortTimelineRows, timelineBody, timelineInitial, timelineStateText } from './rival-timeline.js'
 
 /**
  * Pure rules of the account-monitor timeline (#3432). The page-level gate
@@ -56,5 +56,19 @@ describe('rival-timeline: row text (#3432)', () => {
     assert.equal(timelineInitial({ account: { nickname: 'Judy Cafe' } }), 'J')
     assert.equal(timelineInitial({ account: { handle: '@gethullo' } }), 'G')
     assert.equal(timelineInitial({}), '?')
+  })
+})
+
+describe('rival-timeline: processed-state text (#3432 review)', () => {
+  const t = (key) => ({ 'rivalFeed.card.done': '已处理', 'rivalFeed.card.replicated': '已复刻', 'rivalFeed.card.interacted': '已互动 · {time}' }[key] || key)
+
+  it('keeps the wire flags distinguishable instead of collapsing them to 已处理', () => {
+    assert.equal(timelineStateText({ done_at: '2026-10-20T01:00:00Z' }, t), '已处理')
+    assert.equal(timelineStateText({ in_library: true }, t), '已复刻')
+    assert.equal(timelineStateText({ state: 'replicated' }, t), '已复刻')
+    const interacted = timelineStateText({ interacted_at: '2026-10-20T03:05:00Z' }, t)
+    assert.match(interacted, /^已互动 · \d{2}:\d{2}$/)
+    assert.equal(timelineStateText({ state_label: '自定义' }, t), '自定义')
+    assert.equal(timelineStateText({}, t), '')
   })
 })

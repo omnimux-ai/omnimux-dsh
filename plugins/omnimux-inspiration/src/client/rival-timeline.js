@@ -46,3 +46,25 @@ export function timelineInitial(row) {
   const chars = [...name.replace(/^@/, '')]
   return chars.length > 0 ? chars[0].toUpperCase() : '?'
 }
+
+/**
+ * Fourth-slot state text of a processed row: 已处理 / 已复刻 / 已互动 · HH:mm.
+ * Mirrors the retired card's mapping so the wire's flags keep their meaning.
+ * @param {Record<string, any>} card
+ * @param {(key: string) => string} t
+ * @returns {string}
+ */
+export function timelineStateText(card, t) {
+  const label = String(card?.state_label || '')
+  if (label) return label
+  if (card?.done_at || card?.state === 'done') return String(t('rivalFeed.card.done'))
+  if (card?.state === 'replicated' || card?.in_library) return String(t('rivalFeed.card.replicated'))
+  if (card?.state === 'interacted' || card?.interacted_at) {
+    const at = Date.parse(String(card?.interacted_at || ''))
+    const template = String(t('rivalFeed.card.interacted'))
+    if (!Number.isFinite(at)) return template.replace(/\s*·\s*\{time\}/, '')
+    const date = new Date(at)
+    return template.replace('{time}', `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`)
+  }
+  return ''
+}

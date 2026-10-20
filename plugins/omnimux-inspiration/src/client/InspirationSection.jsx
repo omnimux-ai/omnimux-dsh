@@ -577,7 +577,8 @@ export function InspirationSection({ t, active }) {
         </div>
       ) : null}
       {rivalTab ? (
-        <div className="omnimux-rival-layout">
+        <div className={`omnimux-rival-layout${rivalFeed.accounts.length === 0 ? ' is-single' : ''}`}>
+          {rivalFeed.accounts.length > 0 ? (
           <RivalAccountColumn
             t={t}
             accounts={rivalFeed.accounts}
@@ -590,12 +591,11 @@ export function InspirationSection({ t, active }) {
             quotaLeft={rivalQuota?.left}
             refreshBusy={rivalFeed.refreshBusy}
           />
+          ) : null}
           <div className="omnimux-rival-content">
             <RivalAccountsPanel
               t={t}
               active={active !== false}
-              query={rivalQuery}
-              platform={rivalPlatform}
               feed={{ ...rivalFeed, query: rivalQuery, platform: rivalPlatform }}
               onImported={(item) => {
                 void reloadRivalFeed()

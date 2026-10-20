@@ -14,9 +14,10 @@
 
 ## 真实浏览器证据（隔离工作树）
 
-- 真实 `RivalAccountColumn` + `RivalAccountsPanel` 放在 `.omnimux-rival-layout` 两栏中，使用真实 `toggleAccountSelection`；localhost 动态端口 64107，ego-browser 真实 Chromium。
-- 初始：布局 `248px 1016px`；账号 2 行且默认全勾选；时间线 3 条且按发布时间倒序（`riv_higgs:2 → riv_judy:3 → riv_judy:1`）；首行头像/媒体自然宽 > 0、播放标记、正文、相对时间、播放/点赞/评论/分享与 4 个操作（原帖/立即复刻/AI 解构/标为已处理）齐全。
+- 真实 `RivalAccountColumn` + `RivalAccountsPanel` 放在 `.omnimux-rival-layout` 两栏中，使用真实 `toggleAccountSelection`；localhost 动态端口 59965，ego-browser 真实 Chromium。
+- 初始（响应式宿主，1280 视口）：布局 `248px 968px`；账号 2 行且默认全勾选；时间线 3 条且按发布时间倒序（`riv_higgs:2 → riv_judy:3 → riv_judy:1`）；首行头像/媒体自然宽 > 0、播放标记、正文、相对时间、播放/点赞/评论/分享与 4 个操作按钮（原帖/立即复刻/AI 解构/标为已处理；默认 hover/focus 显示，触屏媒体查询常显）。
 - 取消勾选 X 账号：账号行 1 行勾选，右栏只剩 2 条 TikTok 帖；点重置：恢复 2 行勾选与 3 条帖。
+- 窄视口：760px 时两栏（`200px 500px`，左栏 200px），375px 时堆叠单列（`327px`）且 `scrollOverflow=0`；截图 `browser-timeline-narrow-760-3432.png`、`browser-timeline-narrow-375-3432.png`。
 - 截图：`browser-timeline-initial-3432.png`、`browser-timeline-filtered-3432.png`；结构化事实：`browser-facts.json`。
 - 限制：组件级真实浏览器证据，不证明完整 Stage 外壳；外壳装配由隔离 worktree 的 jsdom page 门禁与后续 Dev 页面覆盖。
 
@@ -24,12 +25,12 @@
 
 | 检查 | 实际结果 |
 | --- | --- |
-| 插件核心套件（含新增时间线纯函数/渲染/page e2e） | 1631 项，1631 通过，0 失败，0 skip，0 外连 |
+| 插件核心套件（含新增时间线纯函数/渲染/page e2e） | 1632 项，1632 通过，0 失败，0 skip，0 外连 |
 | `src/explore` 套件 | 261 项全部通过 |
 | `node scripts/verify-stage-contracts.mjs` | PASS（14 Stage / 8 sidebar） |
 | `node --test scripts/verify-anti-slop.test.mjs` | 3/3 通过 |
 | `node scripts/scan-ui-gates.mjs` | 退出 1；与 main 同为 8 条既有违规（均在其它插件），inspiration 0 条；新时间线媒体遮罩已改用 media token |
-| `node scripts/build-client.mjs` | 成功，`lib/client.js` 2,385,122 bytes（gitignored） |
+| `node scripts/build-client.mjs` | 成功，`lib/client.js` 2,384,359 bytes（gitignored） |
 | `node scripts/impact-matrix.mjs --git-diff --base origin/main` | `isUiChange=true`、`browser.required=true` |
 
 ## 边界

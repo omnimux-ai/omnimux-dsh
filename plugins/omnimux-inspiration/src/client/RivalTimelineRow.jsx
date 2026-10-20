@@ -19,7 +19,7 @@ import {
   rivalLocaleOf,
 } from './rival-format.js'
 import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
-import { timelineBody, timelineInitial } from './rival-timeline.js'
+import { timelineBody, timelineInitial, timelineStateText } from './rival-timeline.js'
 
 /**
  * @param {{
@@ -56,7 +56,7 @@ export function RivalTimelineRow(props) {
     .replace('{shares}', formatEngagementCount(stats.shares, locale))
   const originalSafe = isSafeExternalUrl(card?.source_url)
   const done = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
-  const stateLabel = String(card?.state_label || '')
+  const stateLabel = timelineStateText(card, t)
   const showAvatar = Boolean(account.avatar_url || card?.avatar_url) && !avatarFailed
 
   const stop = (event) => {
@@ -77,7 +77,7 @@ export function RivalTimelineRow(props) {
       aria-label={`${authorName} · ${posted}`}
       onClick={openDetail}
       onKeyDown={(event) => {
-        if (event.key === 'Enter' && event.target === event.currentTarget) {
+        if ((event.key === 'Enter' || event.key === ' ') && event.target === event.currentTarget) {
           event.preventDefault()
           openDetail()
         }
@@ -97,7 +97,7 @@ export function RivalTimelineRow(props) {
           </span>
           {handle ? <span className="omnimux-rival-timeline-handle">{handle}</span> : null}
           <span className="omnimux-rival-timeline-time">· {posted}</span>
-          {done ? <span className="omnimux-rival-timeline-state">{stateLabel || t('rivalFeed.card.done')}</span> : null}
+          {stateLabel ? <span className="omnimux-rival-timeline-state">{stateLabel}</span> : null}
         </header>
 
         {body ? <p className="omnimux-rival-timeline-body">{body}</p> : null}
