@@ -15,13 +15,13 @@
  * - 仅在用户明确授权后由脚本/命令执行。
  */
 import http from 'node:http';
-import { spawnSync } from 'node:child_process';
 import {
   verifiedDevMainPids,
   verifiedDevAppPids,
   restartDevApp,
   reloadDevApp,
 } from './reload-dev-app.mjs';
+import { launchApp } from './dev-launch-env.mjs';
 
 const CDP_PORT = Number(process.env.OMNIMUX_CDP_PORT || process.env.OMNIMUX_DEV_CDP_PORT || 9229);
 const CATALOG_CACHE_KEY = 'omnimux.canvas.catalog.cache';
@@ -172,7 +172,7 @@ export async function unlockDevApp(port = CDP_PORT) {
   const status = await probeDevStatus(port);
   if (!status.running) {
     console.log('· 开发版应用当前未运行，尝试直接拉起...');
-    spawnSync('open', ['-a', 'OmniMux Dev'], { stdio: 'inherit' });
+    launchApp('OmniMux Dev');
     console.log('✓ 已发送启动指令');
     return { ok: true, status: 'launched' };
   }

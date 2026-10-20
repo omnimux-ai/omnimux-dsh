@@ -21,6 +21,9 @@
  */
 import http from 'node:http';
 import { spawnSync } from 'node:child_process';
+import { devLaunchEnv } from './dev-launch-env.mjs';
+
+export { devLaunchEnv };
 
 const CDP_PORT = Number(process.env.OMNIMUX_CDP_PORT || process.env.OMNIMUX_DEV_CDP_PORT || 9229);
 const DEV_APP_BUNDLE = '/Applications/OmniMux Dev.app';
@@ -30,18 +33,6 @@ const DEV_APP_MAIN = `${DEV_APP_BUNDLE}/Contents/MacOS/`;
 const PROD_APP_BUNDLE = '/Applications/OmniMux.app';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * GUI 拉起环境：复制当前环境并剔除 `ELECTRON_RUN_AS_NODE`，不修改入参。
- * 其他变量（PATH、DSH_* 等）原样保留，避免改变用户在终端里的启动语义。
- * @param {NodeJS.ProcessEnv} [env]
- * @returns {NodeJS.ProcessEnv}
- */
-export function devLaunchEnv(env = process.env) {
-  const next = { ...env };
-  delete next.ELECTRON_RUN_AS_NODE;
-  return next;
-}
 
 /**
  * @param {string} command
