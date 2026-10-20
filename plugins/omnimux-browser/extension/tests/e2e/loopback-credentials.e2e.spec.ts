@@ -45,8 +45,12 @@ describe('loopback credential boundary (#3440)', () => {
 
     const panel = readFileSync(join(srcRoot, 'panel/App.tsx'), 'utf8')
     assert.equal(panel.includes("bgRes?.code === 'local-header-overflow'"), true)
-    assert.equal(panel.includes('127.0.0.1 残留 cookie 过多（请求头超限）'), true)
+
+    // 431 与普通失败的解释文案已抽到可测的 save-target-copy 模块。
+    const copy = readFileSync(join(srcRoot, 'panel/save-target-copy.ts'), 'utf8')
+    assert.equal(copy.includes('127.0.0.1 残留 cookie 过多（请求头超限）'), true)
+    assert.equal(copy.includes("code === 'local-header-overflow'"), true)
     // Genuinely unreachable hosts keep the original message.
-    assert.equal(panel.includes('保存失败，请检查 OmniMux 运行状态'), true)
+    assert.equal(copy.includes('保存失败，请检查 OmniMux 运行状态'), true)
   })
 })

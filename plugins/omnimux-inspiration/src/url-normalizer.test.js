@@ -151,6 +151,37 @@ describe('URL Normalizer & Canonical Key Extraction', () => {
     }
   })
 
+  it('recognizes douyin and xiaohongshu hosts, including their short links', () => {
+    for (const [url, expected] of [
+      ['https://www.douyin.com/video/7321234567890123456', 'douyin'],
+      ['https://www.douyin.com/user/MS4wLjABAAAA1234567890', 'douyin'],
+      ['https://v.douyin.com/iJabc12/', 'douyin'],
+      ['https://www.iesdouyin.com/share/video/7321234567890123456', 'douyin'],
+      ['https://www.xiaohongshu.com/explore/66abcdef0123456789abcdef', 'xiaohongshu'],
+      ['https://www.xiaohongshu.com/user/profile/5f3a1b2c3d4e5f60718293a4', 'xiaohongshu'],
+      ['https://xhslink.com/aBcDeF', 'xiaohongshu'],
+    ]) {
+      assert.equal(detectPlatformFromUrl(url), expected, `${url} must resolve to ${expected}`)
+    }
+
+    // Same dot-boundary rule as the other platform hosts: a suffix or a
+    // platform name inside a foreign domain must not be misread.
+    for (const [url, expected] of [
+      ['https://notdouyin.com/video/1', 'notdouyin'],
+      ['https://douyin.com.evil.com/video/1', 'evil'],
+      ['https://xiaohongshu.com.evil.net/explore/1', 'evil'],
+      ['https://xhslink.com.evil.com/abc', 'evil'],
+    ]) {
+      assert.equal(detectPlatformFromUrl(url), expected, `${url} must self-register as ${expected}`)
+    }
+
+    // Content keys keep the shared `(platform):url:` shape for self-registered
+    // platforms; both new hosts resolve their platform instead of the raw slug.
+    assert.equal(getCanonicalItemKey('https://www.xiaohongshu.com/explore/66abcdef0123456789abcdef').platform, 'xiaohongshu')
+    assert.equal(getCanonicalItemKey('https://v.douyin.com/iJabc12/').platform, 'douyin')
+    assert.equal(detectPlatformFromUrl('https://www.xiaohongshu.com/user/profile/abc?xsec_token=xyz'), 'xiaohongshu')
+  })
+
   it('extracts canonical keys from Facebook video URLs', () => {
     const watchUrl = 'https://www.facebook.com/watch/?v=1234567890&ref=share'
     const mobileUrl = 'https://m.facebook.com/reel/1234567890/'

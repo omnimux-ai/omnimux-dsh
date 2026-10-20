@@ -85,6 +85,12 @@ import {
   type ImageAttachmentLimits,
 } from './attachments.ts'
 import { imageErrorMessage } from './image-errors.ts'
+import {
+  saveButtonLabel,
+  saveFailureToast,
+  saveSuccessToast,
+  type SaveTarget,
+} from './save-target-copy.ts'
 import { dockFloatToNativeSidePanel } from './float-dock.ts'
 import { AssistantStreamView } from './assistant-stream.ts'
 import {
@@ -804,6 +810,12 @@ export function App(): React.JSX.Element {
   }, [themeSetting])
 
   const [saveInspirationStatus, setSaveInspirationStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+  /** host 对当前页面 URL 的分类结果，只决定按钮文案；默认按灵感库展示。 */
+  const [classifiedSaveTarget, setClassifiedSaveTarget] = useState<SaveTarget>('inspiration')
+  /** 分类出的平台：抖音/小红书只有不透明 uid，toast 不能拼成 `@uid`。 */
+  const [classifiedSavePlatform, setClassifiedSavePlatform] = useState('')
+  /** 最近一次实际落库的目标：账号导入失败会回退灵感库，成功态必须显示真实去向。 */
+  const [savedSaveTarget, setSavedSaveTarget] = useState<SaveTarget>('inspiration')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const [manualLocale, setManualLocale] = useState<string>(() => safeGetStorage('omnimux_manual_locale') || 'auto')
@@ -1331,6 +1343,44 @@ export function App(): React.JSX.Element {
     // once per mode and must not re-subscribe on every draft keystroke.
   }, [isFloatMode])
 
+  // 页面类型分流：URL 变化后去抖向后台要 host 分类，只影响按钮文案。
+  // 真正的落点由后台在保存时重新分类决定，所以这里失败也不阻塞保存。
+  const pageUrlForSaveTarget = pageScene?.url || ''
+  useEffect(() => {
+    if (pageUrlForSaveTarget === '') {
+      setClassifiedSaveTarget('inspiration')
+      setClassifiedSavePlatform('')
+      return
+    }
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return
+    let cancelled = false
+    // 300ms 去抖：SPA 切换页面时 URL 会连续变化，最后一次才是用户眼前的页面。
+    const timer = setTimeout(() => {
+      const classify = new Promise<{ ok?: boolean; kind?: string; platform?: string }>((resolve) => {
+        try {
+          chrome.runtime.sendMessage(
+            { type: 'DSH_CLASSIFY_SAVE_TARGET', url: pageUrlForSaveTarget },
+            (response) => {
+              if (chrome.runtime?.lastError || !response) resolve({ ok: false })
+              else resolve(response as { ok?: boolean; kind?: string; platform?: string })
+            },
+          )
+        } catch {
+          resolve({ ok: false })
+        }
+      })
+      void classify.then((result) => {
+        if (cancelled) return
+        setClassifiedSaveTarget(result.ok === true && result.kind === 'account' ? 'account' : 'inspiration')
+        setClassifiedSavePlatform(result.ok === true && typeof result.platform === 'string' ? result.platform : '')
+      })
+    }, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [pageUrlForSaveTarget])
+
   const [stickyTopBarVisible, setStickyTopBarVisible] = useState(false)
   const [activeMediaItems, setActiveMediaItems] = useState<SniffedMediaItem[]>([])
 
@@ -1377,6 +1427,10 @@ export function App(): React.JSX.Element {
     }
 
     let saved = false
+    // 后台是保存去向的唯一决策点：account 表示写进了账号监控，其余是灵感库。
+    let savedTarget: SaveTarget = 'inspiration'
+    let savedHandle: string | undefined
+    let savedExisting = false
     // 431 means the request header block exceeded the host's 16 KiB budget, not
     // that the host is absent. The real reason must reach the user, or they will
     // keep checking a process that is already running.
@@ -1385,7 +1439,13 @@ export function App(): React.JSX.Element {
     // 1. 优先通过 chrome.runtime.sendMessage 委托后台 service worker 保存（彻底免疫 Edge 私有网络 PNA 拦截）
     if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
       try {
-        const bgRes = await new Promise<{ ok?: boolean; code?: string }>((resolve) => {
+        const bgRes = await new Promise<{
+          ok?: boolean
+          code?: string
+          target?: string
+          handle?: string
+          existing?: boolean
+        }>((resolve) => {
           chrome.runtime.sendMessage(
             {
               type: 'DSH_SAVE_INSPIRATION_PANEL',
@@ -1399,13 +1459,22 @@ export function App(): React.JSX.Element {
               if (chrome.runtime?.lastError || !response) {
                 resolve({ ok: false })
               } else {
-                resolve(response as { ok?: boolean; code?: string })
+                resolve(response as {
+                  ok?: boolean
+                  code?: string
+                  target?: string
+                  handle?: string
+                  existing?: boolean
+                })
               }
             },
           )
         })
         if (bgRes?.ok) {
           saved = true
+          if (bgRes.target === 'account') savedTarget = 'account'
+          if (typeof bgRes.handle === 'string' && bgRes.handle.trim() !== '') savedHandle = bgRes.handle
+          savedExisting = bgRes.existing === true
         } else if (bgRes?.code === 'local-header-overflow') {
           headerOverflow = true
         }
@@ -1452,19 +1521,24 @@ export function App(): React.JSX.Element {
     }
 
     if (saved) {
+      setSavedSaveTarget(savedTarget)
       setSaveInspirationStatus('saved')
-      setToastMessage(locale === 'en' ? 'Saved to Inspiration Library!' : '已保存到 OmniMux 灵感素材库！')
+      setToastMessage(saveSuccessToast(
+        {
+          target: savedTarget,
+          handle: savedHandle,
+          existing: savedExisting,
+          platform: classifiedSavePlatform,
+        },
+        locale,
+      ))
       setTimeout(() => {
         setSaveInspirationStatus('idle')
         setToastMessage(null)
       }, 3000)
     } else {
       setSaveInspirationStatus('failed')
-      setToastMessage(headerOverflow
-        ? (locale === 'en'
-          ? 'Failed to save: too many leftover cookies for 127.0.0.1. Clear that site\'s data and retry.'
-          : '保存失败：127.0.0.1 残留 cookie 过多（请求头超限），请清理该站点数据后重试')
-        : (locale === 'en' ? 'Failed to save (check OmniMux server)' : '保存失败，请检查 OmniMux 运行状态'))
+      setToastMessage(saveFailureToast(headerOverflow ? 'local-header-overflow' : 'save-failed', locale))
       setTimeout(() => {
         setSaveInspirationStatus('idle')
         setToastMessage(null)
@@ -3620,11 +3694,12 @@ export function App(): React.JSX.Element {
           >
             <SaveIcon size={11} />
             <span>
-              {saveInspirationStatus === 'saving'
-                ? (locale === 'en' ? 'Saving...' : '保存中...')
-                : saveInspirationStatus === 'saved'
-                  ? (locale === 'en' ? '✓ Saved' : '✓ 已保存')
-                  : (locale === 'en' ? 'Save' : '保存到灵感库')}
+              {saveButtonLabel({
+                // 成功态显示实际落库目标；其余状态跟随当前页面的 host 分类。
+                target: saveInspirationStatus === 'saved' ? savedSaveTarget : classifiedSaveTarget,
+                status: saveInspirationStatus,
+                locale,
+              })}
             </span>
           </button>
         </div>
@@ -3731,11 +3806,12 @@ export function App(): React.JSX.Element {
                     disabled={saveInspirationStatus === 'saving'}
                   >
                     <span>
-                      {saveInspirationStatus === 'saving'
-                        ? (locale === 'en' ? 'Saving...' : '保存中...')
-                        : saveInspirationStatus === 'saved'
-                          ? (locale === 'en' ? '✓ Saved' : '✓ 已保存到灵感库')
-                          : (locale === 'en' ? 'Save' : '保存到灵感库')}
+                      {saveButtonLabel({
+                        // 成功态显示实际落库目标；其余状态跟随当前页面的 host 分类。
+                        target: saveInspirationStatus === 'saved' ? savedSaveTarget : classifiedSaveTarget,
+                        status: saveInspirationStatus,
+                        locale,
+                      })}
                     </span>
                   </button>
                 </div>

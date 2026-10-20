@@ -28,8 +28,11 @@ describe('Inspiration Platform Formatting & Dynamic Registration', () => {
     assert.equal(formatPlatformName('youtube', tZh), 'YouTube')
     assert.equal(formatPlatformName('youtube', tEn), 'YouTube')
 
-    // Self-registered platforms capitalize first letter
-    assert.equal(formatPlatformName('douyin', tZh), 'Douyin')
+    // #3454: douyin/xiaohongshu are known platforms with their own locale name,
+    // while genuinely self-registered slugs keep the first-letter rule.
+    assert.equal(formatPlatformName('douyin', tZh), '抖音')
+    assert.equal(formatPlatformName('douyin', tEn), 'Douyin')
+    assert.equal(formatPlatformName('xiaohongshu', tZh), '小红书')
     assert.equal(formatPlatformName('bilibili', tZh), 'Bilibili')
     assert.equal(formatPlatformName('threads', tZh), 'Threads')
     assert.equal(formatPlatformName('kuaishou', tZh), 'Kuaishou')
@@ -64,8 +67,10 @@ describe('Inspiration Platform Formatting & Dynamic Registration', () => {
       { value: 'tiktok', label: 'TikTok' },
       { value: 'x', label: 'Twitter (X)' },
     ])
-    // Self-registered platforms stay selectable under the first-letter rule.
-    assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'douyin'], tZh)[2], { value: 'douyin', label: 'Douyin' })
+    // Known platforms use their locale name; self-registered ones stay selectable
+    // under the first-letter rule.
+    assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'douyin'], tZh)[2], { value: 'douyin', label: '抖音' })
+    assert.deepEqual(buildPlatformFilterOptions(['tiktok', 'bilibili'], tEn)[2], { value: 'bilibili', label: 'Bilibili' })
   })
 
   // The "does the section actually render the dropdown" half of this gate lives in

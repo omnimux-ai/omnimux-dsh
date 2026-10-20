@@ -807,3 +807,33 @@ describe('G10: structural gates over src/rival/**', () => {
     assert.equal(/LIMIT_CALLS_PER_ACCOUNT_CYCLE/.test(source), true)
   })
 })
+
+describe('#3454: douyin / xiaohongshu import succeeds but refresh is a terminal capability error', () => {
+  it('imports both platforms and never reaches the cloud', async () => {
+    const world = makeWorld()
+    const cases = [
+      ['https://www.douyin.com/user/MS4wLjABAAAA1234567890', 'douyin', 'MS4wLjABAAAA1234567890'],
+      ['https://www.xiaohongshu.com/user/profile/5f3a1b2c3d4e5f60718293a4', 'xiaohongshu', '5f3a1b2c3d4e5f60718293a4'],
+    ]
+    for (const [url, platform, externalId] of cases) {
+      const classified = await call(world.dispatcher, 'POST', `${RIVAL_PREFIX}/classify`, { url })
+      assert.equal(classified.status, 200, url)
+      assert.equal(classified.body.data.kind, 'account', url)
+      assert.equal(classified.body.data.platform, platform, url)
+      assert.equal(classified.body.data.external_id, externalId, url)
+      const imported = await call(world.dispatcher, 'POST', RIVAL_PREFIX, { url })
+      assert.equal(imported.status, 201, url)
+      assert.equal(imported.body.data.platform, platform, url)
+      await world.scheduler.settled()
+    }
+    assert.equal(world.cloud.calls.length, 0, 'the cloud must not be called for an unsupported platform')
+    const rows = world.store.listAccounts()
+    assert.equal(rows.length, 2)
+    for (const row of rows) {
+      assert.equal(row.refresh_state, 'error')
+      assert.equal(row.error_code, RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED)
+      assert.equal(row.error_message, '该平台暂不支持自动刷新（云端采集未接入）')
+      assert.equal(row.next_auto_refresh_at, null)
+    }
+  })
+})

@@ -831,3 +831,44 @@ describe('T03: next refresh scheduling', () => {
     assert.equal(world.scheduler.snapshot().running.length, 0)
   })
 })
+
+describe('T03: a platform without a cloud collector is terminal, never backed off (#3454)', () => {
+  it('marks douyin and xiaohongshu as error without a retry window', async () => {
+    for (const platform of ['douyin', 'xiaohongshu']) {
+      const refusal = new RivalRemoteError(
+        RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED,
+        '该平台暂不支持自动刷新（云端采集未接入）',
+        { callsUsed: 0 },
+      )
+      const world = makeWorld({ runCycle: async () => { throw refusal } })
+      const account = world.store.addAccount({
+        platform,
+        external_id: 'MS4wLjABAAAA1234567890',
+        next_auto_refresh_at: new Date(FIXED_NOW - 1000).toISOString(),
+      })
+      world.scheduler.enqueue({ account_id: account.id, mode: 'first' })
+      await waitForIdle(world, account.id)
+      const updated = world.store.getAccount(account.id)
+      assert.equal(updated.refresh_state, 'error', platform)
+      assert.equal(updated.error_code, 'platform-unsupported', platform)
+      assert.equal(updated.error_message, '该平台暂不支持自动刷新（云端采集未接入）', platform)
+      assert.equal(updated.next_auto_refresh_at, null, platform)
+      assert.equal(updated.consecutive_failures, 1, platform)
+      // 不进入退避：自动 tick 不再把它排队，云端一次都没被调用。
+      assert.deepEqual(world.scheduler.tick().due, [], platform)
+      assert.equal(world.cloud.calls.length, 0, platform)
+    }
+  })
+
+  it('keeps the identity terminal path unchanged', async () => {
+    const refusal = new RivalRemoteError(RIVAL_ERROR_CODES.IDENTITY_UNVERIFIED, 'channel_id is invalid', { callsUsed: 1 })
+    const world = makeWorld({ runCycle: async () => { throw refusal } })
+    const account = world.store.addAccount({ platform: 'youtube', external_id: '@foo', external_id_kind: 'handle-unverified' })
+    world.scheduler.enqueue({ account_id: account.id, mode: 'first' })
+    await waitForIdle(world, account.id)
+    const updated = world.store.getAccount(account.id)
+    assert.equal(updated.refresh_state, 'error')
+    assert.equal(updated.error_code, 'identity-unverified')
+    assert.equal(updated.next_auto_refresh_at, null)
+  })
+})

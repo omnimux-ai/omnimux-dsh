@@ -33,9 +33,24 @@ const PLATFORM_META = {
 }
 
 /**
- * Platforms whose *content* URLs the inspiration import pipeline has a parser
- * for. A host outside this set is not a content link this module can hand on,
- * so it must be refused rather than stored as an "unknown platform" row.
+ * Profile pages of the two UID-addressed platforms. Their identity is an opaque
+ * id read from a fixed path rather than an `@handle`, and their profile URL is
+ * not `base + @id`, so they cannot share the `PLATFORM_META` branch below.
+ * A single free path segment is a short-link code (`v.douyin.com/<code>`), never
+ * a profile.
+ * @type {Record<string, { profileBase: string, profilePaths: string[][], idKind: string }>}
+ */
+const UID_PLATFORM_META = {
+  douyin: { profileBase: 'https://www.douyin.com', profilePaths: [['user'], ['share', 'user']], idKind: 'uid' },
+  xiaohongshu: { profileBase: 'https://www.xiaohongshu.com', profilePaths: [['user', 'profile']], idKind: 'uid' },
+}
+
+/**
+ * Platforms whose *content* links this module hands to the existing inspiration
+ * pipeline, and which have no monitorable `@handle` identity. The UID platforms
+ * above return their own content answer before this gate; a host outside both
+ * sets (facebook/threads/any other domain) is refused rather than stored as an
+ * "unknown platform" row.
  */
 const CONTENT_PLATFORMS = new Set(Object.keys(PLATFORM_META))
 
@@ -45,10 +60,11 @@ const CONTENT_PLATFORMS = new Set(Object.keys(PLATFORM_META))
  * divergence requirement 2's dedup key tripped over.
  *
  * The `@`-prefixed form wins because it is the one the module *shows*
- * (`handle`) and the one two of the four platforms already persist — so the fix
- * adds a form rather than migrating away from one, and no existing row has to
- * change. Comparison never depends on it: `identityKey` in the store strips the
- * prefix, so a `@bar` row and a `bar` row are the same account either way.
+ * (`handle`) and the one two of the established platforms already persist — so
+ * the fix adds a form rather than migrating away from one, and no existing row
+ * has to change. Comparison never depends on it: `identityKey` in the store
+ * strips the prefix, so a `@bar` row and a `bar` row are the same account
+ * either way.
  */
 const AT_PREFIXED_PLATFORMS = new Set(['tiktok', 'instagram', 'x'])
 
@@ -113,6 +129,14 @@ export function detectInputKind(url) {
     return { kind: 'content', platform }
   }
 
+  // 抖音/小红书：主页按固定路径 + 不透明 uid 解析；短链与作品页没有可解析的
+  // 本地身份，一律按作品交给灵感库，host 不做任何网络解析。
+  if (UID_PLATFORM_META[platform]) {
+    const uidIdentity = parseUidProfile(platform, segments)
+    if (uidIdentity) return { kind: 'account', platform, identity: uidIdentity }
+    return { kind: 'content', platform }
+  }
+
   const meta = PLATFORM_META[platform]
   if (meta && segments.length === 1 && isHandleLike(segments[0])) {
     const handle = bareHandle(segments[0])
@@ -165,6 +189,46 @@ export function isHandleLike(segment) {
   if (!text || text.length > 40) return false
   if (!/^[A-Za-z0-9._-]+$/.test(text)) return false
   return !RESERVED_SEGMENTS.has(text.toLowerCase())
+}
+
+/**
+ * Whether a segment is a douyin `sec_uid` / xiaohongshu `user_id`: an opaque,
+ * long base64-ish or hex id. Deliberately not `isHandleLike` — those ids exceed
+ * its 40-character cap and are not usernames. Stored verbatim as the dedup key.
+ * @param {unknown} segment
+ * @returns {boolean}
+ */
+function isUidLike(segment) {
+  return typeof segment === 'string' && /^[A-Za-z0-9_.-]{3,80}$/.test(segment)
+}
+
+/**
+ * Identity of a UID platform profile URL, or `null` when the path is not one of
+ * its profile shapes (`/user/<sec_uid>`, `/share/user/<sec_uid>`,
+ * `/user/profile/<user_id>`).
+ * @param {string} platform
+ * @param {string[]} segments
+ * @returns {RivalIdentity | null}
+ */
+function parseUidProfile(platform, segments) {
+  const meta = UID_PLATFORM_META[platform]
+  if (!meta) return null
+  for (const pathParts of meta.profilePaths) {
+    if (segments.length < pathParts.length + 1) continue
+    if (!pathParts.every((part, index) => segments[index] === part)) continue
+    const id = segments[pathParts.length]
+    if (!isUidLike(id)) continue
+    return {
+      platform,
+      external_id: id,
+      external_id_kind: meta.idKind,
+      // 云端未接入前拿不到昵称，这两个 id 也不是用户名：账号行先显示原始 id。
+      handle: id,
+      // `/share/user/<id>` 归一成规范主页，重新导入时 profile_url 不随分享形式变化。
+      profile_url: `${meta.profileBase}/${meta.profilePaths[0].join('/')}/${id}`,
+    }
+  }
+  return null
 }
 
 /**
@@ -243,8 +307,12 @@ export function rivalProfileUrl(account) {
   const stored = normalizeUrl(account?.profile_url || '')
   if (stored) return stored
   const platform = typeof account?.platform === 'string' ? account.platform : ''
-  const meta = PLATFORM_META[platform]
   const externalId = typeof account?.external_id === 'string' ? account.external_id : ''
+  const uidMeta = UID_PLATFORM_META[platform]
+  if (uidMeta && externalId) {
+    return `${uidMeta.profileBase}/${uidMeta.profilePaths[0].join('/')}/${externalId.replace(/^@+/, '')}`
+  }
+  const meta = PLATFORM_META[platform]
   if (!meta || !externalId) return ''
   return `${meta.profileBase}${externalId.startsWith('@') ? externalId : `@${externalId}`}`
 }

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
+import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -12,6 +13,9 @@ describe('Edge PNA / Loopback Inspiration Save Suite (#3088)', () => {
 
   const routesPath = resolve(__dirname, '../../../omnimux-inspiration/src/http-routes.js')
   const routesCode = readFileSync(routesPath, 'utf8')
+
+  const copyPath = resolve(__dirname, '../src/panel/save-target-copy.ts')
+  const copyCode = readFileSync(copyPath, 'utf8')
 
   it('delegates panel inspiration saving to background service worker via DSH_SAVE_INSPIRATION_PANEL', () => {
     expect(appCode).toContain("type: 'DSH_SAVE_INSPIRATION_PANEL'")
@@ -38,7 +42,21 @@ describe('Edge PNA / Loopback Inspiration Save Suite (#3088)', () => {
   })
 
   it('preserves user feedback on success and failure without throwing uncaught rejections', () => {
-    expect(appCode).toContain("locale === 'en' ? 'Saved to Inspiration Library!' : '已保存到 OmniMux 灵感素材库！'")
-    expect(appCode).toContain("locale === 'en' ? 'Failed to save (check OmniMux server)' : '保存失败，请检查 OmniMux 运行状态'")
+    // 文案已抽到 save-target-copy 模块；面板只调用纯函数，成功/失败语义保持不变。
+    assert.equal(copyCode.includes('Saved to Inspiration Library!'), true)
+    assert.equal(copyCode.includes('已保存到 OmniMux 灵感素材库！'), true)
+    assert.equal(copyCode.includes('Failed to save (check OmniMux server)'), true)
+    assert.equal(copyCode.includes('保存失败，请检查 OmniMux 运行状态'), true)
+    assert.equal(appCode.includes('saveSuccessToast('), true)
+    assert.equal(appCode.includes('saveFailureToast('), true)
+  })
+
+  it('classifies the save target before writing (#3454)', () => {
+    assert.equal(appCode.includes("type: 'DSH_CLASSIFY_SAVE_TARGET'"), true)
+    assert.equal(bgCode.includes("m?.type === 'DSH_CLASSIFY_SAVE_TARGET'"), true)
+    assert.equal(bgCode.includes('/omnimux/inspiration/local/rival-accounts/classify'), true)
+    assert.equal(bgCode.includes('background: true })'), true)
+    assert.equal(bgCode.includes("target: 'account'"), true)
+    assert.equal(bgCode.includes("target: 'inspiration'"), true)
   })
 })

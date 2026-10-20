@@ -21,24 +21,18 @@ import { addRivalPostToSession } from './rival-add-to-chat.js'
 import { oneClickReplicate } from './replicate-to-chat.js'
 import { feedEmptyKind } from './rival-feed-empty.js'
 import { toRivalPost } from './rival-filter.js'
+import { buildRivalPlatformOptions } from './rival-platforms.js'
 import { injectRivalStyles } from './rival-styles.js'
 import { injectRivalTokens } from './rival-tokens.js'
 
 /**
  * Platform filter options, built from the module's own platform names.
  *
- * Exported because the shell renders this dropdown: the platform filter and the
- * account column have to offer the platforms in the same order.
+ * Re-exported because the shell renders this dropdown from this module: the
+ * platform filter and the account column have to offer the platforms in the same
+ * order.
  */
-export function buildRivalPlatformOptions(t) {
-  return [
-    { value: '', label: t('platform.all') },
-    { value: 'tiktok', label: t('platform.tiktok') },
-    { value: 'instagram', label: t('platform.instagram') },
-    { value: 'youtube', label: t('platform.youtube') },
-    { value: 'x', label: t('platform.x') },
-  ]
-}
+export { buildRivalPlatformOptions }
 
 /**
  * @param {{

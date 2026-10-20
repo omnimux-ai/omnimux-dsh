@@ -89,6 +89,12 @@ import {
   PageSessionContextTracker,
 } from './session-continuity.ts'
 import { appendMediaInspiration } from './media-library.ts'
+import {
+  readAccountImportOutcome,
+  readSaveTargetClassification,
+  saveTargetFromClassification,
+  type SaveTargetClassification,
+} from './save-target.ts'
 import { loopbackFetch } from '../shared/loopback-fetch.ts'
 import { PanelPresence } from './panel-presence.ts'
 import { normalizeSaveRequestId, saveImageAssetRpc } from './save-image-assets.ts'
@@ -1762,6 +1768,101 @@ async function runTiktokShortcut(
   }
 }
 
+// ---- 保存目标分流（账号监控 / 灵感库） ----
+//
+// 分类是 host 的能力（`…/rival-accounts/classify`），service worker 只是唯一决策点：
+// 保存消息先用同一份候选端口向 host 分类，account 走账号导入，其余（含分类失败）
+// 走原有灵感库保存。分类失败不得阻断保存。
+
+/** host 的 URL 分类路由（已存在，扩展只消费）。 */
+const RIVAL_CLASSIFY_PATH = '/omnimux/inspiration/local/rival-accounts/classify'
+/** host 的账号导入路由（已存在，扩展只消费）。 */
+const RIVAL_ACCOUNTS_PATH = '/omnimux/inspiration/local/rival-accounts'
+
+/**
+ * 本机候选端口：面板指定端口 → 用户保存的端口 → 产品默认端口。
+ *
+ * 分类与保存共用这一份顺序，两个请求才不会落在不同实例上；顺序与既有保存路径一致。
+ */
+async function resolveHostCandidatePorts(targetPort?: number): Promise<number[]> {
+  const candidatePorts: number[] = []
+  if (typeof targetPort === 'number' && !isNaN(targetPort)) candidatePorts.push(targetPort)
+  try {
+    const saved = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
+    const port = saved ? parseInt(String(saved), 10) : undefined
+    if (port && !isNaN(port) && !candidatePorts.includes(port)) candidatePorts.push(port)
+  } catch {
+    // storage 不可用：只靠默认端口
+  }
+  for (const port of [45120, 45128, 43120, 43128, 3080]) {
+    if (!candidatePorts.includes(port)) candidatePorts.push(port)
+  }
+  return candidatePorts
+}
+
+/**
+ * 询问 host 这个 URL 该保存到哪里。
+ *
+ * 2xx 且响应结构合法时返回 host 的分类；host 不可达、非 2xx 或响应不可解析都返回
+ * `{ ok: false }`，调用方按灵感库处理（spec J4/J6）。
+ */
+async function classifySaveTargetOnHost(
+  url: string,
+  candidatePorts: number[],
+): Promise<{ ok: true; classification: SaveTargetClassification } | { ok: false }> {
+  for (const port of candidatePorts) {
+    try {
+      const res = await loopbackFetch(`http://127.0.0.1:${port}${RIVAL_CLASSIFY_PATH}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+        // 分类只决定按钮文案与保存去路，host 慢时必须尽快回退，不能拖住保存本身。
+        signal: AbortSignal.timeout(1_500),
+      })
+      if (!res.ok) continue
+      const classification = readSaveTargetClassification(await res.json().catch(() => null))
+      if (classification !== null) return { ok: true, classification }
+    } catch {
+      // 该端口没有本机 host：试下一个
+    }
+  }
+  return { ok: false }
+}
+
+/**
+ * 把账号主页导入「账号监控」。
+ *
+ * 只有 2xx 才是成功证据；失败时调用方回退灵感库保存，并如实返回最终落库位置。
+ */
+async function importRivalAccountOnHost(
+  url: string,
+  candidatePorts: number[],
+): Promise<{ ok: true; handle?: string; existing: boolean } | { ok: false }> {
+  for (const port of candidatePorts) {
+    try {
+      const res = await loopbackFetch(`http://127.0.0.1:${port}${RIVAL_ACCOUNTS_PATH}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // background: true 让 host 把首次采集排队而不是阻塞这次保存请求。
+        body: JSON.stringify({ url, background: true }),
+        signal: AbortSignal.timeout(3_500),
+      })
+      if (!res.ok) continue
+      return { ok: true, ...readAccountImportOutcome(await res.json().catch(() => null)) }
+    } catch {
+      // 该端口没有本机 host：试下一个
+    }
+  }
+  return { ok: false }
+}
+
+/** 分类消息的 URL 既接受顶层 `url`（spec 契约），也接受 `payload.url`。 */
+function readSaveTargetProbeUrl(message: { url?: unknown; payload?: Record<string, unknown> }): string {
+  if (typeof message.url === 'string' && message.url.trim() !== '') return message.url.trim()
+  const payloadUrl = message.payload?.url
+  return typeof payloadUrl === 'string' ? payloadUrl.trim() : ''
+}
+
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (typeof message !== 'object' || message === null) return
   if (sender.id !== chrome.runtime.id) return
@@ -2620,6 +2721,27 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       }
     })()
     return true
+  } else if (m?.type === 'DSH_CLASSIFY_SAVE_TARGET') {
+    // 面板在页面 URL 变化时询问保存去向，只用来切换按钮文案；真正的分流仍在
+    // DSH_SAVE_INSPIRATION_PANEL 里重新分类决定，面板状态无权决定数据落点。
+    const url = readSaveTargetProbeUrl(m as { url?: unknown; payload?: Record<string, unknown> })
+    if (url === '') {
+      sendResponse({ ok: false })
+      return true
+    }
+    void (async () => {
+      const candidatePorts = await resolveHostCandidatePorts()
+      const classified = await classifySaveTargetOnHost(url, candidatePorts)
+      sendResponse(classified.ok
+        ? {
+            ok: true,
+            kind: classified.classification.kind,
+            platform: classified.classification.platform,
+            ...(classified.classification.handle ? { handle: classified.classification.handle } : {}),
+          }
+        : { ok: false })
+    })()
+    return true
   } else if (m?.type === 'DSH_SAVE_INSPIRATION_PANEL') {
     const payload = m.payload as {
       targetUrl?: string
@@ -2653,17 +2775,25 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     }
 
     void (async () => {
-      const candidatePorts: number[] = []
-      if (typeof payload?.targetPort === 'number' && !isNaN(payload.targetPort)) {
-        candidatePorts.push(payload.targetPort)
-      }
-      try {
-        const saved = (await chrome.storage.local.get('omnimux_target_port'))?.omnimux_target_port
-        const p = saved ? parseInt(saved, 10) : undefined
-        if (p && !isNaN(p) && !candidatePorts.includes(p)) candidatePorts.push(p)
-      } catch {}
-      for (const p of [45120, 45128, 43120, 43128, 3080]) {
-        if (!candidatePorts.includes(p)) candidatePorts.push(p)
+      const candidatePorts = await resolveHostCandidatePorts(payload?.targetPort)
+
+      // 1. host 分类先行：账号主页写账号监控，其余（content/unknown/分类失败）走灵感库。
+      //    分类失败不是保存失败——它只是把这次保存留在原来的灵感库路径上。
+      const classified = await classifySaveTargetOnHost(targetUrl, candidatePorts)
+      const saveTarget = saveTargetFromClassification(classified.ok ? classified.classification : null)
+      if (saveTarget === 'account') {
+        const accountResult = await importRivalAccountOnHost(targetUrl, candidatePorts)
+        if (accountResult.ok) {
+          // 账号导入不写媒体缓存：那份缓存只服务灵感库卡片。
+          sendResponse({
+            ok: true,
+            target: 'account',
+            ...(accountResult.handle ? { handle: accountResult.handle } : {}),
+            existing: accountResult.existing,
+          })
+          return
+        }
+        // 账号导入失败：回退到灵感库保存，并如实返回最终落库位置（spec §10）。
       }
 
       let saved = false
@@ -2750,7 +2880,7 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       }
 
       sendResponse(saved
-        ? { ok: true }
+        ? { ok: true, target: 'inspiration' }
         : { ok: false, code: headerOverflow ? 'local-header-overflow' : 'save-failed' })
     })()
     return true

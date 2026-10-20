@@ -379,12 +379,16 @@ export function createRivalRefreshScheduler(deps) {
     const code = outcome.code || RIVAL_ERROR_CODES.CLOUD_ERROR
     const failures = (account.consecutive_failures || 0) + 1
     const identityUnverified = code === RIVAL_ERROR_CODES.IDENTITY_UNVERIFIED
+    // 平台在云端没有采集能力是能力缺失，不是瞬时故障：与身份未验证同等终态，
+    // 不进 backoff，否则每分钟的 tick 会对一个永远失败的能力做重试风暴。
+    const platformUnsupported = code === RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED
+    const terminal = identityUnverified || platformUnsupported
     const exhausted = failures > BACKOFF_MINUTES.length
-    if (identityUnverified || exhausted) {
+    if (terminal || exhausted) {
       store.updateAccount(accountId, {
         refresh_state: 'error',
         consecutive_failures: failures,
-        error_code: identityUnverified ? RIVAL_ERROR_CODES.IDENTITY_UNVERIFIED : code,
+        error_code: code,
         error_message: outcome.message || null,
         last_refresh_at: new Date(now()).toISOString(),
         // A terminal state stops the automatic refresh; the persisted null makes
