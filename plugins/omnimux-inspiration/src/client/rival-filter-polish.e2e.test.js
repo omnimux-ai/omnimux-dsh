@@ -120,6 +120,13 @@ function probePageHtml() {
             rowHeight: box.height,
             insideList: box.top >= listRect.top - 1 && box.bottom <= listRect.bottom + 1,
             nameText: name.textContent,
+            nameRowHeight: row.querySelector('.omnimux-rival-filter-name-row')?.getBoundingClientRect().height || 0,
+            nameRowWrap: getComputedStyle(row.querySelector('.omnimux-rival-filter-name-row')).flexWrap,
+            statusRightGap: (() => {
+              const status = row.querySelector('.omnimux-rival-filter-status')
+              return status ? Math.round(box.right - status.getBoundingClientRect().right) : null
+            })(),
+            nameWhiteSpace: getComputedStyle(name).whiteSpace,
             nameScrollWidth: name.scrollWidth,
             nameClientWidth: name.clientWidth,
             nameWidth: name.getBoundingClientRect().width,
@@ -142,7 +149,7 @@ const ACCOUNTS = [
     refresh_state: 'idle', error_code: null, consecutive_failures: 0, post_count: 3,
   },
   {
-    id: 'ra_cool', nickname: '毛孩子食堂', handle: '@fur_kitchen', platform: 'tiktok',
+    id: 'ra_cool', nickname: 'Jeff | Chinese AI Gateway · 中文模型网关（超长昵称）', handle: '@chineseapi_gateway_official', platform: 'tiktok',
     refresh_state: 'backoff', error_code: 'cloud-error', consecutive_failures: 1,
     next_auto_refresh_at: new Date(Date.now() + 42 * 60_000).toISOString(), post_count: 1,
   },
@@ -256,22 +263,29 @@ if (probe.skipped !== true) {
     assert.deepEqual(outside, [], `这些行落在列表可视区外: ${outside.join(', ')}`)
   })
 
-  test('冷却行昵称完整显示，状态只以警告图标表达（#3436）', () => {
+  test('长昵称行不换行：行高一致，超长昵称省略（#3446）', () => {
     const cooling = probe.rows.find((row) => row.id === 'ra_cool')
     const normal = probe.rows.find((row) => row.id === 'ra_ok')
     assert.ok(cooling, '冷却行未渲染')
-    assert.equal(cooling.health, 'cooling')
-    // 状态文字已收敛为警告图标，行高不再承担换行职责；本用例只锁昵称可读性。
     assert.ok(normal, '普通行未渲染')
-    assert.ok(
-      cooling.nameScrollWidth <= cooling.nameClientWidth + 1,
-      `冷却行昵称被截断: ${cooling.nameText} scrollWidth=${cooling.nameScrollWidth} clientWidth=${cooling.nameClientWidth}`,
+    assert.equal(cooling.health, 'cooling')
+    // Every row keeps the same one-line height; the long name truncates instead
+    // of pushing the platform/warning icons onto a second line.
+    // 不换行由布局契约保证：昵称行 nowrap、昵称单行省略，且昵称行始终只有一行高。
+    assert.ok(probe.rows.every((row) => row.nameRowWrap === 'nowrap'), '昵称行必须禁止换行')
+    assert.ok(probe.rows.every((row) => row.nameWhiteSpace === 'nowrap'), '昵称必须保持单行')
+    const heights = probe.rows.map((row) => Math.round(row.nameRowHeight))
+    assert.ok(heights.every((height) => height <= 28), `昵称行出现了第二行: ${heights.join(', ')}`)
+    const truncated = probe.rows.filter((row) => row.nameScrollWidth > row.nameClientWidth + 1)
+    assert.ok(truncated.length > 0, '夹具里的长昵称应被省略号截断，而不是换行')
+    const pinned = probe.rows.filter((row) => row.statusRightGap !== null)
+    assert.ok(pinned.length >= 3, '至少三种异常行必须渲染右侧状态组')
+    assert.deepEqual(
+      pinned.filter((row) => row.statusRightGap > 8).map((row) => row.id),
+      [],
+      '异常行的警告/重试状态组必须固定在行最右侧',
     )
-    assert.ok(cooling.nameWidth >= 56, `冷却行昵称宽度不足以容纳五个字: ${cooling.nameWidth}`)
-    const truncated = probe.rows
-      .filter((row) => row.nameScrollWidth > row.nameClientWidth + 1)
-      .map((row) => row.id)
-    assert.deepEqual(truncated, [], `这些行的昵称被截断: ${truncated.join(', ')}`)
+    assert.ok(cooling.nameWidth >= 40, `冷却行昵称被压得过窄: ${cooling.nameWidth}`)
   })
 
   test('提示条底色取自组件库已定义的令牌，未定义令牌的反向对照是透明的', () => {

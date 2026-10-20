@@ -29,6 +29,13 @@ const ICON_EXTERNAL = (
   </svg>
 )
 
+const ICON_RETRY = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path d="M20 11a8 8 0 1 0-2.34 5.66" />
+    <path d="M20 4v7h-7" />
+  </svg>
+)
+
 const ICON_WARNING = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
     <path d="M12 3 2.5 20h19L12 3Z" />
@@ -181,12 +188,14 @@ export function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quo
                 aria-disabled={quotaEmpty || refreshBusy ? 'true' : 'false'}
                 disabled={refreshBusy || quotaEmpty}
                 title={quotaEmpty ? quotaReason : t('rivalAccounts.health.retry')}
+                aria-label={t('rivalAccounts.health.retry')}
                 onClick={handleRetry}
                 onMouseDown={(event) => event.stopPropagation()}
                 onPointerDown={(event) => event.stopPropagation()}
                 onKeyDown={(event) => event.stopPropagation()}
               >
-                {t('rivalAccounts.health.retry')}
+                <span className="omnimux-rival-retry-icon" aria-hidden="true">{ICON_RETRY}</span>
+                <span className="omnimux-rival-retry-label">{t('rivalAccounts.health.retry')}</span>
               </Button>
             ) : null}
           </span>
