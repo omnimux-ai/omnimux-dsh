@@ -164,15 +164,25 @@ export async function probeDevStatus(port = CDP_PORT) {
 /**
  * 一键完全解锁（清缓存 + 优雅重载）
  * @param {number} port
+ * @param {{
+ *   launch?: (name: string) => { status: number | null },
+ *   probe?: typeof probeDevStatus,
+ * }} [deps]
  */
-export async function unlockDevApp(port = CDP_PORT) {
+export async function unlockDevApp(port = CDP_PORT, deps = {}) {
+  const launch = deps.launch ?? launchApp;
+  const probe = deps.probe ?? probeDevStatus;
   console.log('== 启动 OmniMux Dev 深度更新一键解锁 ==');
 
   // 1. 探测状态
-  const status = await probeDevStatus(port);
+  const status = await probe(port);
   if (!status.running) {
     console.log('· 开发版应用当前未运行，尝试直接拉起...');
-    launchApp('OmniMux Dev');
+    const launched = launch('OmniMux Dev');
+    if (launched?.status !== 0) {
+      console.error('✗ 拉起开发版失败（open -a "OmniMux Dev" 返回非 0）');
+      return { ok: false, error: 'launch-failed' };
+    }
     console.log('✓ 已发送启动指令');
     return { ok: true, status: 'launched' };
   }

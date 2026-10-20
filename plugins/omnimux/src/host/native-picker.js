@@ -35,6 +35,8 @@ export class PickerError extends Error {
     super(message)
     this.name = 'PickerError'
     this.code = code
+    /** Truncated helper stdout for picker-failed diagnostics; undefined otherwise. */
+    this.stdout = undefined
   }
 }
 
@@ -86,8 +88,10 @@ export function pickScript(kind, prompt) {
  * @returns {string[]}
  */
 export function parsePickedPaths(stdout) {
-  const text = typeof stdout === 'string' ? stdout : ''
-  const trimmed = text.trim()
+  if (typeof stdout !== 'string') {
+    throw new Error('native picker returned a non-string path payload')
+  }
+  const trimmed = stdout.trim()
   if (trimmed === '') return []
   let parsed
   try {
@@ -142,7 +146,7 @@ function runCommand(command, argv) {
         return
       }
       const error = new Error(`${command} exited with code ${code}`)
-      Object.assign(error, { code: code ?? undefined, stderr })
+      Object.assign(error, { code: code ?? undefined, stderr, stdout })
       rejectPromise(error)
     })
   })
@@ -173,13 +177,21 @@ export async function pickNativePath(kind, deps = {}) {
     ? deps.prompt
     : PICKER_DEFAULT_PROMPTS[kind]
   const run = deps.run ?? runCommand
+  let stdout = ''
   try {
-    const { stdout } = await run('osascript', ['-l', 'JavaScript', '-e', pickScript(kind, prompt)])
+    const result = await run('osascript', ['-l', 'JavaScript', '-e', pickScript(kind, prompt)])
+    stdout = result.stdout
     const paths = parsePickedPaths(stdout)
     return { path: paths[0] ?? null, paths }
   } catch (error) {
     if (isUserCancel(error)) return { path: null, paths: [] }
-    throw new PickerError(PICKER_ERROR_CODES.failed, messageOf(error))
+    const failure = new PickerError(PICKER_ERROR_CODES.failed, messageOf(error))
+    // Prefer stdout captured before the rejection; runCommand also attaches it
+    // on non-zero exits so real osascript failures keep their raw output.
+    const rejected = /** @type {{ stdout?: unknown } | null} */ (error)?.stdout
+    const raw = typeof rejected === 'string' && rejected !== '' ? rejected : stdout
+    if (typeof raw === 'string' && raw.trim() !== '') failure.stdout = raw.slice(0, 500)
+    throw failure
   }
 }
 

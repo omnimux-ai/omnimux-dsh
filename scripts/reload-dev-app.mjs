@@ -21,9 +21,9 @@
  */
 import http from 'node:http';
 import { spawnSync } from 'node:child_process';
-import { devLaunchEnv } from './dev-launch-env.mjs';
+import { launchApp } from './dev-launch-env.mjs';
 
-export { devLaunchEnv };
+export { devLaunchEnv } from './dev-launch-env.mjs';
 
 const CDP_PORT = Number(process.env.OMNIMUX_CDP_PORT || process.env.OMNIMUX_DEV_CDP_PORT || 9229);
 const DEV_APP_BUNDLE = '/Applications/OmniMux Dev.app';
@@ -197,7 +197,7 @@ export async function restartDevApp(opts = {}) {
     };
   }
 
-  if (run('open', ['-a', DEV_APP_NAME], { env: devLaunchEnv() }).status !== 0) {
+  if (launchApp(DEV_APP_NAME, { spawn: run }).status !== 0) {
     return { restarted: false, reason: 'launch-failed', detail: '重新拉起开发版失败' };
   }
 
