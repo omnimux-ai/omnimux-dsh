@@ -124,6 +124,10 @@ const L = {
   remove: zh['rivalAccounts.column.remove'],
   confirmRemove: zh['rivalAccounts.column.confirmRemove'],
   removeFailed: zh['rivalAccounts.column.removeFailed'],
+  remove: zh['rivalAccounts.column.remove'],
+  refresh: zh['rivalAccounts.column.refresh'],
+  removeConfirm: zh['rivalAccounts.column.removeConfirm'],
+  removeCancel: zh['rivalAccounts.column.removeCancel'],
   openProfile: zh['rivalFilter.openProfile'],
   replicate: zh['rivalFeed.card.replicate'],
   importBtn: zh['rivalAccounts.import.btn'],
@@ -407,6 +411,11 @@ const groupTitles = (container) => accountGroups(container)
   .map((group) => group.querySelector('.omnimux-rival-account-group-title')?.textContent.trim() || '')
 const menu = (container) => container.querySelector('.omnimux-rival-menu')
 const menuItem = (container) => container.querySelector('.omnimux-rival-menu-item')
+const menuItemByLabel = (container, label) => [...container.querySelectorAll('.omnimux-rival-menu-item')]
+  .find((node) => node.textContent.trim() === label)
+const confirmDialog = (container) => container.querySelector('[role="dialog"]')
+const dialogButton = (container, label) => [...(confirmDialog(container)?.querySelectorAll('button') || [])]
+  .find((node) => node.textContent.trim() === label)
 const timeline = (container) => container.querySelector('[data-rival-timeline="true"]')
 const timelineItems = (container) => Array.from(container.querySelectorAll('.omnimux-rival-timeline-item'))
 const timelineIds = (container) => timelineItems(container).map((node) => node.getAttribute('data-card-id'))
@@ -546,14 +555,14 @@ describe('账号监控 — 账号单选导航（#3451）', () => {
       const titles = groupTitles(mounted.container)
       assert.deepEqual(
         titles.slice().sort(),
-        [zh['platform.tiktok'], zh['platform.x']].sort(),
+        [zh['platform.tiktok'], 'X'].sort(),
         `every platform must get its own titled group (got ${JSON.stringify(titles)})`,
       )
       const groups = accountGroups(mounted.container)
       assert.equal(groups.length, 2, 'the fixture spans exactly two platforms')
       const platformOfTitle = new Map([
         [zh['platform.tiktok'], 'tiktok'],
-        [zh['platform.x'], 'x'],
+        ['X', 'x'],
       ])
       for (const group of groups) {
         const title = group.querySelector('.omnimux-rival-account-group-title')?.textContent.trim()
@@ -672,7 +681,8 @@ describe('账号监控 — 账号单选导航（#3451）', () => {
       await mounted.click(more)
       assert.ok(menu(mounted.container), '更多 must open the account menu')
       assert.equal(menu(mounted.container).getAttribute('role'), 'menu', 'the menu must present itself as a menu')
-      assert.equal(menuItem(mounted.container)?.textContent.trim(), L.remove, 'the menu offers 删除')
+      assert.ok(menuItemByLabel(mounted.container, L.refresh), 'the menu offers 刷新')
+      assert.ok(menuItemByLabel(mounted.container, L.remove), 'the menu offers 删除')
       assert.equal(row.getAttribute('data-selected'), 'false', 'opening 更多 must not select the account')
       assert.ok(allButton(mounted.container).classList.contains('is-selected'), '全部 must stay the current target')
       assert.equal(feedRequests(mounted).length, before, 'opening the menu must not reload the feed')
@@ -691,6 +701,64 @@ describe('账号监控 — 账号单选导航（#3451）', () => {
     }
   })
 
+  it('closes the account menu when the viewport scrolls or resizes (#3467)', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
+      await openAccountMenu(mounted, 'ra_alice')
+      assert.ok(menu(mounted.container), 'the menu must open first')
+      await act(async () => {
+        window.dispatchEvent(new window.Event('scroll'))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+      assert.equal(menu(mounted.container), null, 'scrolling must close the anchored menu')
+
+      await openAccountMenu(mounted, 'ra_alice')
+      await act(async () => {
+        window.dispatchEvent(new window.Event('resize'))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+      assert.equal(menu(mounted.container), null, 'resizing must close the anchored menu')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('does not reload when the already-selected account is clicked again (#3467)', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
+      await mounted.click(rowById(mounted.container, 'ra_alice').querySelector('.omnimux-rival-filter-select'))
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_alice').getAttribute('data-selected') === 'true')
+      const before = mounted.calls.filter((call) => call.method === 'GET').length
+      await mounted.click(rowById(mounted.container, 'ra_alice').querySelector('.omnimux-rival-filter-select'))
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 40)) })
+      assert.equal(mounted.calls.filter((call) => call.method === 'GET').length, before, 'a repeated click on the current account must not reload the feed')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('offers a manual refresh action in the 更多 menu (#3467)', async () => {
+    const mounted = await mountStage()
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
+      await openAccountMenu(mounted, 'ra_alice')
+      await mounted.click(menuItemByLabel(mounted.container, L.refresh))
+      const refreshed = await settle(mounted.container, () => mounted.calls.some((call) => call.method === 'POST' && /\/ra_alice\/refresh$/.test(call.path)))
+      assert.ok(refreshed, '刷新 must call the single-account manual refresh endpoint')
+      assert.equal(menu(mounted.container), null, 'the menu closes after requesting a refresh')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
   it('deletes an account only after a second confirmation, then reloads the column and the timeline', async () => {
     const mounted = await mountStage()
     try {
@@ -698,13 +766,25 @@ describe('账号监控 — 账号单选导航（#3451）', () => {
       await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
       assert.equal(allCount(mounted.container), '2', 'both accounts are listed before the deletion')
 
+      // 取消路径：不 DELETE、账号保留、弹窗关闭。
       await openAccountMenu(mounted, 'ra_alice')
-      await mounted.click(menuItem(mounted.container))
-      assert.equal(menuItem(mounted.container)?.textContent.trim(), L.confirmRemove, 'the first click must only ask for confirmation')
-      assert.equal(mounted.calls.filter((call) => call.method === 'DELETE').length, 0, 'the first click must not delete anything')
+      await mounted.click(menuItemByLabel(mounted.container, L.remove))
+      await mounted.click(dialogButton(mounted.container, L.removeCancel))
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)) })
+      assert.equal(confirmDialog(mounted.container), null, '取消 must close the dialog')
+      assert.equal(mounted.calls.filter((call) => call.method === 'DELETE').length, 0, '取消 must not delete')
+      assert.ok(rowById(mounted.container, 'ra_alice'), '取消 must keep the account')
+
+      await openAccountMenu(mounted, 'ra_alice')
+      await mounted.click(menuItemByLabel(mounted.container, L.remove))
+      const dialog = confirmDialog(mounted.container)
+      assert.ok(dialog, '删除 must open the confirmation dialog')
+      assert.match(dialog.textContent, /确认删除/, 'the dialog must ask for confirmation')
+      assert.match(dialog.textContent, /@0xCodez|alice/i, 'the dialog must name the account')
+      assert.equal(mounted.calls.filter((call) => call.method === 'DELETE').length, 0, 'opening the dialog must not delete anything')
       assert.ok(rowById(mounted.container, 'ra_alice'), 'the account must still be there while confirming')
 
-      await mounted.click(menuItem(mounted.container))
+      await mounted.click(dialogButton(mounted.container, L.removeConfirm))
       const removed = await settle(mounted.container, () => !rowById(mounted.container, 'ra_alice') && allCount(mounted.container) === '1')
       assert.ok(removed, 'a confirmed deletion must remove the account from the column')
 
@@ -737,23 +817,18 @@ describe('账号监控 — 账号单选导航（#3451）', () => {
       await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
 
       await openAccountMenu(mounted, 'ra_alice')
-      await mounted.click(menuItem(mounted.container))
-      await mounted.click(menuItem(mounted.container))
+      await mounted.click(menuItemByLabel(mounted.container, L.remove))
+      await mounted.click(dialogButton(mounted.container, L.removeConfirm))
       const shown = await settle(
         mounted.container,
-        () => Boolean(menu(mounted.container)?.querySelector('.omnimux-rival-menu-error')),
+        () => (confirmDialog(mounted.container)?.textContent || '').includes(L.removeFailed),
       )
-      assert.ok(shown, 'a rejected deletion must surface its error in the menu')
-      assert.equal(
-        menu(mounted.container).querySelector('.omnimux-rival-menu-error').textContent.trim(),
-        L.removeFailed,
-        'the failure must use the menu\'s own copy',
-      )
+      assert.ok(shown, 'a rejected deletion must surface its error in the dialog message')
+      assert.ok(confirmDialog(mounted.container).textContent.includes(L.removeFailed), 'the failure must use the dialog copy')
       assert.ok(rowById(mounted.container, 'ra_alice'), 'a rejected deletion must keep the account row')
       assert.equal(allCount(mounted.container), '2', 'the column keeps the failed account')
       assert.equal(filterRows(mounted.container).length, 2, 'no other row may disappear on a failure')
       assert.equal(mounted.calls.filter((call) => call.method === 'DELETE').length, 1, 'the rejection is reported, not retried')
-      assert.equal(menuItem(mounted.container)?.textContent.trim(), L.confirmRemove, 'the menu stays on the confirming action')
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -767,10 +842,10 @@ describe('账号监控 — 账号单选导航（#3451）', () => {
       await settle(mounted.container, () => rowById(mounted.container, 'ra_alice'))
       await mounted.click(rowById(mounted.container, 'ra_alice').querySelector('.omnimux-rival-filter-more'))
       await settle(mounted.container, () => Boolean(menu(mounted.container)))
-      await mounted.click(menuItem(mounted.container))
-      await mounted.click(menuItem(mounted.container))
-      await settle(mounted.container, () => Boolean(menu(mounted.container)?.querySelector('.omnimux-rival-menu-error')))
-      assert.ok(menu(mounted.container).querySelector('.omnimux-rival-menu-error').textContent.includes('删除失败'), 'a rejected DELETE must surface the failure copy')
+      await mounted.click(menuItemByLabel(mounted.container, L.remove))
+      await mounted.click(dialogButton(mounted.container, L.removeConfirm))
+      await settle(mounted.container, () => (confirmDialog(mounted.container)?.textContent || '').includes('删除失败'))
+      assert.ok(confirmDialog(mounted.container).textContent.includes('删除失败'), 'a rejected DELETE must surface the failure copy')
       assert.ok(rowById(mounted.container, 'ra_alice'), 'the account must stay when the DELETE network call fails')
     } finally {
       await mounted.unmount()
@@ -789,8 +864,8 @@ describe('账号监控 — 账号单选导航（#3451）', () => {
       assert.equal(allButton(mounted.container).classList.contains('is-selected'), false)
 
       await openAccountMenu(mounted, 'ra_alice')
-      await mounted.click(menuItem(mounted.container))
-      await mounted.click(menuItem(mounted.container))
+      await mounted.click(menuItemByLabel(mounted.container, L.remove))
+      await mounted.click(dialogButton(mounted.container, L.removeConfirm))
       const removed = await settle(
         mounted.container,
         () => !rowById(mounted.container, 'ra_alice') && allButton(mounted.container)?.classList.contains('is-selected') === true,

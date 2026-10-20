@@ -107,7 +107,16 @@ export const DropdownSelect = ({ value, options, className, onChange, 'aria-labe
   )
 }
 
-export const ConfirmModal = ({ children, ...rest }) => h('div', rest, children)
+export const ConfirmModal = ({ open = true, children, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', confirmLoading = false, onConfirm, onClose, ...rest }) => (open
+  ? h(
+    'div',
+    { role: 'dialog', 'aria-label': typeof title === 'string' ? title : undefined, ...rest },
+    typeof title === 'string' ? h('h2', null, title) : title,
+    message != null ? h('p', null, message) : children,
+    h('button', { type: 'button', onClick: onClose }, cancelLabel),
+    h('button', { type: 'button', disabled: confirmLoading, onClick: onConfirm }, confirmLabel),
+  )
+  : null)
 
 export const Badge = ({ children, variant, ...rest }) => h('span', { 'data-variant': variant, ...rest }, children)
 

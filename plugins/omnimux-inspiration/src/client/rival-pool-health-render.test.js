@@ -342,14 +342,19 @@ describe('D1 账号行四态健康标记（#3111）', () => {
 
       const cooling = rowById(mounted.container, 'ra_cool')
       assert.equal(cooling.getAttribute('data-health'), 'cooling')
-      assert.equal(cooling.textContent.includes('冷却中'), false, '冷却行不再显示状态文字')
+      assert.equal(cooling.querySelector('.omnimux-rival-filter-select').textContent.includes('冷却中'), false, '冷却行不再显示状态文字')
       const coolingWarning = cooling.querySelector('.omnimux-rival-filter-warning')
+      assert.equal(coolingWarning.getAttribute('tabindex'), '0', 'the warning must be keyboard focusable')
+      const describedBy = coolingWarning.getAttribute('aria-describedby')
+      assert.ok(describedBy, 'the warning must point at its tooltip copy')
+      assert.equal(coolingWarning.querySelector(`#${describedBy}`)?.getAttribute('role'), 'tooltip', 'the tooltip must expose its role')
+      assert.equal(coolingWarning.querySelector(`#${describedBy}`)?.textContent.trim(), coolingWarning.getAttribute('aria-label'), 'the tooltip must carry the health reason')
       assert.ok(coolingWarning, '冷却行显示警告图标')
       assert.match(coolingWarning.getAttribute('aria-label'), /^冷却中 · \d+ 分钟后恢复$/, '冷却原因在图标悬停提示里')
 
       const reimport = rowById(mounted.container, 'ra_reimport')
       assert.equal(reimport.getAttribute('data-health'), 'reimport')
-      assert.equal(reimport.textContent.includes('需要重新导入'), false, '重导入行不再显示状态文字')
+      assert.equal(reimport.querySelector('.omnimux-rival-filter-select').textContent.includes('需要重新导入'), false, '重导入行不再显示状态文字')
       assert.equal(
         reimport.querySelector('.omnimux-rival-filter-warning')?.getAttribute('aria-label'),
         '该 YouTube 频道尚未验证身份，请改用 channel/UC… 链接重新导入',

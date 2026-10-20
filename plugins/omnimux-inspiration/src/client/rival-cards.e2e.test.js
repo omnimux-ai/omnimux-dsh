@@ -375,7 +375,7 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
       .sort()
     assert.deepEqual(
       groupTitles,
-      [zh['platform.tiktok'], zh['platform.youtube'], zh['platform.instagram'], zh['platform.x']].sort(),
+      [zh['platform.tiktok'], zh['platform.youtube'], zh['platform.instagram'], 'X'].sort(),
       'every platform must get its own titled group',
     )
     for (const row of rows) {
@@ -590,23 +590,28 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     const menu = mounted.container.querySelector('.omnimux-rival-menu')
     assert.ok(menu, '更多 must open the account menu')
     assert.equal(menu.getAttribute('role'), 'menu', 'the menu must present itself as a menu')
-    assert.equal(menu.querySelector('.omnimux-rival-menu-item')?.textContent.trim(), zh['rivalAccounts.column.remove'], 'the menu must offer 删除')
+    assert.ok([...menu.querySelectorAll('.omnimux-rival-menu-item')].some((node) => node.textContent.trim() === zh['rivalAccounts.column.remove']), 'the menu must offer 删除')
+    assert.ok([...menu.querySelectorAll('.omnimux-rival-menu-item')].some((node) => node.textContent.trim() === zh['rivalAccounts.column.refresh']), 'the menu must offer 刷新')
     assert.equal(row.getAttribute('data-selected'), 'false', 'opening 更多 must not switch accounts')
     assert.equal(all.classList.contains('is-selected'), true, '全部 must stay the current target')
     assert.equal(mounted.postsRequests.length, feedRequestsBefore, 'opening the menu must not refetch the feed')
 
-    // 首次点击只要求确认。
+    // 单击删除只打开发送确认弹窗，不 DELETE。
+    const deleteItem = [...menu.querySelectorAll('.omnimux-rival-menu-item')].find((node) => node.textContent.trim() === zh['rivalAccounts.column.remove'])
     await act(async () => {
-      menu.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      deleteItem.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
-    assert.equal(mounted.requests.filter((request) => request.method === 'DELETE').length, 0, 'the first click must not delete')
-    const confirmingItem = mounted.container.querySelector('.omnimux-rival-menu-item')
-    assert.equal(confirmingItem?.textContent.trim(), zh['rivalAccounts.column.confirmRemove'], 'the first click must ask to confirm')
+    assert.equal(mounted.requests.filter((request) => request.method === 'DELETE').length, 0, 'opening the confirmation must not delete')
+    const dialog = mounted.container.querySelector('[role="dialog"]')
+    assert.ok(dialog, '删除 must open the confirmation dialog')
+    assert.match(dialog.textContent, /确认删除/, 'the dialog must ask for confirmation')
+    assert.match(dialog.textContent, new RegExp(higgs.handle.replace('@', '@?')), 'the dialog must name the account')
 
-    // 第二次点击才真的 DELETE。
+    // 确认按钮才真的 DELETE。
     await act(async () => {
-      confirmingItem.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      [...dialog.querySelectorAll('button')].find((node) => node.textContent.trim() === zh['rivalAccounts.column.removeConfirm'])
+        .dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
     await settle(mounted.container, () => !mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`))
@@ -639,15 +644,18 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     const menu = mounted.container.querySelector('.omnimux-rival-menu')
     assert.ok(menu, '更多 must open the account menu on a failing Host too')
     await act(async () => {
-      menu.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      [...menu.querySelectorAll('.omnimux-rival-menu-item')].find((node) => node.textContent.trim() === zh['rivalAccounts.column.remove'])
+        .dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
+    const dialog = mounted.container.querySelector('[role="dialog"]')
     await act(async () => {
-      mounted.container.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      [...dialog.querySelectorAll('button')].find((node) => node.textContent.trim() === zh['rivalAccounts.column.removeConfirm'])
+        .dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
-    await settle(mounted.container, () => Boolean(mounted.container.querySelector('.omnimux-rival-menu-error')))
-    assert.equal(mounted.container.querySelector('.omnimux-rival-menu-error')?.textContent.trim(), zh['rivalAccounts.column.removeFailed'], 'the failure must use the menu copy')
+    await settle(mounted.container, () => (mounted.container.querySelector('[role="dialog"]')?.textContent || '').includes(zh['rivalAccounts.column.removeFailed']))
+    assert.ok(mounted.container.querySelector('[role="dialog"]')?.textContent.includes(zh['rivalAccounts.column.removeFailed']), 'the failure must use the dialog copy')
     assert.ok(mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`), 'a rejected deletion must keep the account row')
     assert.equal(mounted.requests.filter((request) => request.method === 'DELETE').length, 1, 'a rejected deletion must not be retried')
     assert.equal(mounted.container.querySelectorAll('.omnimux-rival-accounts [data-account-id]').length, Object.keys(ACCOUNTS).length, 'the column must keep every account on a failure')
@@ -675,12 +683,16 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
       more.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
+    const menu = mounted.container.querySelector('.omnimux-rival-menu')
     await act(async () => {
-      mounted.container.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      [...menu.querySelectorAll('.omnimux-rival-menu-item')].find((node) => node.textContent.trim() === zh['rivalAccounts.column.remove'])
+        .dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
+    const dialog = mounted.container.querySelector('[role="dialog"]')
     await act(async () => {
-      mounted.container.querySelector('.omnimux-rival-menu-item').dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      [...dialog.querySelectorAll('button')].find((node) => node.textContent.trim() === zh['rivalAccounts.column.removeConfirm'])
+        .dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
     await settle(

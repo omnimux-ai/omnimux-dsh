@@ -1,0 +1,46 @@
+{
+  "task": "3467",
+  "base": "c110886b94ba95ddcea89b9f0ab6b561f7af0198",
+  "harness": "real RivalAccountColumn + injected styles/tokens; localhost port 62929; component-level page (kit ModalDialog shim), not full shell",
+  "groups": [
+    "X",
+    "TikTok"
+  ],
+  "menuItems": [
+    "刷新",
+    "删除"
+  ],
+  "deleteDialog": {
+    "text": "删除账号 确认删除 Higgsfield AI（@higgsfield_ai）？删除后其帖子不再监控。",
+    "buttons": [
+      "取消",
+      "删除"
+    ]
+  },
+  "warning": {
+    "tabIndex": "0",
+    "role": "tooltip",
+    "popVisibleOnTab": true,
+    "reason": "冷却中 · 10 分钟后恢复"
+  },
+  "menuClosesOnScroll": true,
+  "manualRefreshCallback": [
+    "refresh",
+    "ra_x"
+  ],
+  "sameAccountNoReload": "covered by unit test",
+  "failures": [],
+  "screenshots": [
+    "browser-groups-3467.png",
+    "browser-warning-focus-3467.png",
+    "browser-menu-3467.png",
+    "browser-delete-confirm-3467.png",
+    "browser-delete-failure-3467.png"
+  ],
+  "deleteFailure": {
+    "text": "删除账号 删除失败，请重试 取消 删除",
+    "accountsStillListed": 3,
+    "messageRole": "alert"
+  },
+  "touchMoreRule": true
+}
