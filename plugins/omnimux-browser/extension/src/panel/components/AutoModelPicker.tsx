@@ -226,6 +226,9 @@ export const AutoModelPicker = memo(function AutoModelPicker({
     const fallback = async (): Promise<PickerModelRow[] | null> => {
       try {
         const res = await fetcher(`http://127.0.0.1:${port}/ext/bridge-config`, {
+          // Loopback endpoints never authenticate with the browser cookie jar;
+          // see src/shared/loopback-fetch.ts for the header-budget reason.
+          credentials: 'omit',
           signal: AbortSignal.timeout(1200),
         })
         if (!res.ok) return null

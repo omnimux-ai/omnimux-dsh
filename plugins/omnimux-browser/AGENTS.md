@@ -19,6 +19,7 @@ Browser capability plugin: background bridge, page-level overlay/capsule, and si
 - **Hit-test purity**: Corner probe (`probeCornerControl`) MUST skip overlay nodes (`MEDIA_OVERLAY_HOST_ID` and Shadow DOM descendants) via `elementsFromPoint` to avoid self-occlusion.
 - **Layout viewport alignment**: Right-pinned geometry MUST clamp against `documentElement.clientWidth` (layout viewport), never raw `innerWidth` with scrollbars.
 - **Visibility handling**: The overlay hides on genuine document `visibilitychange: hidden`. Never bypass pointer-loss safety based on synthetic test-tool events.
+- **Loopback transport**: Extension `fetch` to `127.0.0.1` MUST go through `extension/src/shared/loopback-fetch.ts` (`credentials: 'omit'`). A browser's 127.0.0.1 cookie jar accumulates `dsh-auth-*` entries across local instances (cookies ignore ports); an oversized Cookie header makes the host answer 431 before any route runs (#3440).
 
 ## Verify
 

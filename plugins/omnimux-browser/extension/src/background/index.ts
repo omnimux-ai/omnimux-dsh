@@ -89,6 +89,7 @@ import {
   PageSessionContextTracker,
 } from './session-continuity.ts'
 import { appendMediaInspiration } from './media-library.ts'
+import { loopbackFetch } from '../shared/loopback-fetch.ts'
 import { PanelPresence } from './panel-presence.ts'
 import { normalizeSaveRequestId, saveImageAssetRpc } from './save-image-assets.ts'
 import type { HoveredMedia } from '../content/media-hover/types.ts'
@@ -154,7 +155,7 @@ async function discoverBridge(shouldContinue: () => boolean = () => true): Promi
   for (const port of prioritizedPorts) {
     if (!shouldContinue()) return undefined
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
+      const response = await loopbackFetch(`http://127.0.0.1:${port}/ext/bridge-config`, {
         signal: AbortSignal.timeout(1_000),
       })
       if (!shouldContinue()) return undefined
@@ -171,7 +172,7 @@ async function discoverBridge(shouldContinue: () => boolean = () => true): Promi
   for (const port of prioritizedPorts) {
     if (!shouldContinue()) return undefined
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/`, {
+      const response = await loopbackFetch(`http://127.0.0.1:${port}/`, {
         signal: AbortSignal.timeout(600),
       })
       if (response.status > 0) {
@@ -193,7 +194,7 @@ async function probeBridge(url: string): Promise<boolean> {
     target.pathname = BRIDGE_CONFIG_PATH
     target.search = ''
     target.hash = ''
-    const response = await fetch(target, { signal: AbortSignal.timeout(1_200) }).catch(() => null)
+    const response = await loopbackFetch(target, { signal: AbortSignal.timeout(1_200) }).catch(() => null)
     if (response !== null) {
       if (response.ok) {
         const body = await response.json().catch(() => ({})) as { wsUrl?: unknown }
@@ -204,7 +205,7 @@ async function probeBridge(url: string): Promise<boolean> {
     }
     // 兜底探测端口根路径
     target.pathname = '/'
-    const rootRes = await fetch(target, { signal: AbortSignal.timeout(800) }).catch(() => null)
+    const rootRes = await loopbackFetch(target, { signal: AbortSignal.timeout(800) }).catch(() => null)
     return rootRes !== null
   } catch {
     return true
@@ -1571,7 +1572,7 @@ async function startPairing(): Promise<{ ok: true; approveUrl: string; code: str
   let approveUrl = ''
   let code = ''
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/ext/pair/request`, { method: 'POST' })
+    const response = await loopbackFetch(`http://127.0.0.1:${port}/ext/pair/request`, { method: 'POST' })
     if (!response.ok) throw new Error(String(response.status))
     const body = await response.json() as { requestId?: unknown; approveUrl?: unknown; code?: unknown }
     requestId = typeof body.requestId === 'string' ? body.requestId : ''
@@ -1620,7 +1621,7 @@ async function startPairing(): Promise<{ ok: true; approveUrl: string; code: str
           return
         }
         try {
-          const status = await fetch(
+          const status = await loopbackFetch(
             `http://127.0.0.1:${port}/ext/pair/status?request=${encodeURIComponent(attempt.requestId)}`,
           )
           const body = await status.json() as { state?: unknown; token?: unknown }
@@ -1998,7 +1999,7 @@ async function saveMediaToHostInspiration(payload: HoveredMedia): Promise<boolea
 
   for (const port of candidatePorts) {
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/omnimux/inspiration/local`, {
+      const res = await loopbackFetch(`http://127.0.0.1:${port}/omnimux/inspiration/local`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(itemBody),
@@ -2666,6 +2667,11 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       }
 
       let saved = false
+      // The host answers 431 before routing when the request's header block is
+      // over its 16 KiB budget. Carrying no cookies makes that pathological
+      // rather than ordinary, but the panel still needs the real reason instead
+      // of "is OmniMux running?" when another client triggers it.
+      let headerOverflow = false
       const itemBody = {
         title: (payload?.title || targetUrl).slice(0, 120),
         type: payload?.type || 'image',
@@ -2693,7 +2699,7 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
         const targetBase = `http://127.0.0.1:${port}`
         try {
           // 1. 尝试 import-url 全量抓取
-          let res = await fetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
+          let res = await loopbackFetch(`${targetBase}/omnimux/inspiration/local/import-url`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             // Saving is not analysing; the host would otherwise run its breakdown.
@@ -2703,13 +2709,15 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
 
           // 2. 如果 import-url 失败或异常（如反爬中断 499），采用前台已嗅探图文直存
           if (!res || (!res.ok && res.status !== 200 && res.status !== 201 && res.status !== 202)) {
-            res = await fetch(`${targetBase}/omnimux/inspiration/local`, {
+            res = await loopbackFetch(`${targetBase}/omnimux/inspiration/local`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(itemBody),
               signal: AbortSignal.timeout(3000),
             }).catch(() => null)
           }
+
+          if (res?.status === 431) headerOverflow = true
 
           if (res && (res.ok || res.status === 200 || res.status === 201 || res.status === 202)) {
             saved = true
@@ -2741,7 +2749,9 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
         }
       }
 
-      sendResponse({ ok: saved })
+      sendResponse(saved
+        ? { ok: true }
+        : { ok: false, code: headerOverflow ? 'local-header-overflow' : 'save-failed' })
     })()
     return true
   }
