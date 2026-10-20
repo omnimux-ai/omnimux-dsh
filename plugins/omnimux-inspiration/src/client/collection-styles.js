@@ -20,6 +20,8 @@ export const COLLECTION_CSS = `
   gap: 12px;
   min-width: 0;
 }
+/* 页头标题与合并选择条的文案共用一个几何规则，但字阶各自独立：
+   页头是 16/22 标题，选择条仍是 14/20 的正文（Issue 3459）。 */
 .omnimux-inspiration-collection-heading,
 .omnimux-inspiration-collection-selection > span {
   flex: 1;
@@ -28,6 +30,10 @@ export const COLLECTION_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 20px;
+}
+.omnimux-inspiration-collection-heading {
   font-size: 16px;
   line-height: 22px;
   font-weight: 600;

@@ -848,6 +848,15 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-card-pure.is-media-first .omnimux-rival-card-media {
   object-fit: cover;
 }
+/* text-media（X/Twitter 行）同样有媒体：封面优先时去掉它的卡片内边距与内嵌
+   圆角，否则封面缩进 12px、高度估算与真实渲染差 24px（Issue 3459）。 */
+.omnimux-rival-card.is-media-first.t-text-media {
+  padding: 0;
+}
+.omnimux-rival-card.is-media-first.t-text-media .omnimux-rival-card-media {
+  border-radius: 0;
+  margin-top: 0;
+}
 .omnimux-inspiration-cover-wrap {
   position: relative;
   width: 100%;

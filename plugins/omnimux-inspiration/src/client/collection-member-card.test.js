@@ -29,8 +29,10 @@ import { zh } from './locales.js'
  *     rename, with disabled states while a write is in flight.
  *
  * The control cases matter as much as the new ones: the root library feed has no
- * `layout` marker and must keep the old card shape, and a text-only member must
- * keep its in-flow notice instead of gaining a cover row it does not have.
+ * `layout` marker and must keep the old card shape, a text-only member must keep
+ * its in-flow notice, and an X/Twitter member (which resolves to the text-media
+ * shape) must still be cover-first — that shape is the one the first version of
+ * this change missed.
  */
 
 const zhTable = new Map(Object.entries(zh))
@@ -64,6 +66,25 @@ const FAILED_ROW = {
   import_error: DETAIL,
 }
 
+/**
+ * X/Twitter rows resolve to the `text-media` shape (see `rivalCardTypeOf`).
+ * The collection layout must cover them too: they have media, so they are
+ * cover-first like every other member.
+ */
+const X_MEDIA_ROW = {
+  id: 'insp_x1',
+  title: 'X 上的一条竖屏视频',
+  is_local: true,
+  source_platform: 'x',
+  type: 'video',
+  content_shape: 'video',
+  media_urls: ['/omnimux/inspiration/local/media/videos/x_f1.mp4'],
+  duration: 22,
+  created_at: CREATED,
+  import_status: 'failed',
+  import_error: DETAIL,
+}
+
 const ANALYSIS_FAILED_ROW = {
   id: 'insp_a1',
   title: '已入库但未拆解',
@@ -76,6 +97,23 @@ const ANALYSIS_FAILED_ROW = {
   created_at: CREATED,
   import_status: 'ready',
   import_error: 'AI 视频拆解失败，请确保大模型视觉分析服务可用',
+}
+
+const GALLERY_ROW = {
+  id: 'insp_g1',
+  title: '桌面收纳的四种构图',
+  is_local: true,
+  source_platform: 'instagram',
+  type: 'image',
+  content_shape: 'gallery',
+  cover_url: '/omnimux/inspiration/local/media/covers/g0.png',
+  media_urls: [
+    '/omnimux/inspiration/local/media/covers/g0.png',
+    '/omnimux/inspiration/local/media/covers/g1.png',
+    '/omnimux/inspiration/local/media/covers/g2.png',
+    '/omnimux/inspiration/local/media/covers/g3.png',
+  ],
+  created_at: CREATED,
 }
 
 const TEXT_ROW = {
@@ -153,9 +191,19 @@ describe('collection member geometry', () => {
     }
   })
 
+  it('covers text-media members (X/Twitter) with the same cover geometry', () => {
+    const xCard = { card_type: 'text-media', media_kind: 'video', has_media: true, layout: COLLECTION_MEMBER_LAYOUT, title: 'x' }
+    assert.equal(rivalMediaRatioOf(xCard), 4 / 5)
+    assert.equal(rivalCardHeightPx(xCard, 240), 238 / (4 / 5) + 82 + 2)
+  })
+
   it('leaves text members and plain cards on their old geometry', () => {
     const text = { card_type: 'text', type: 'text', title: '一条纯文字灵感' }
-    assert.equal(rivalCardHeightPx(text, 240), rivalCardHeightPx(text, 240))
+    const withLayout = { card_type: 'text', type: 'text', title: '一条纯文字灵感', layout: COLLECTION_MEMBER_LAYOUT }
+    const textHeight = Math.max(144, 24 + 20 + 2)
+    assert.equal(rivalCardHeightPx(text, 240), textHeight)
+    assert.equal(rivalCardHeightPx(withLayout, 240), textHeight, 'a text member keeps its text card geometry')
+    assert.notEqual(rivalMediaRatioOf(withLayout), 4 / 5)
     const plain = { card_type: 'short-video', type: 'video', title: '普通卡' }
     assert.equal(rivalMediaRatioOf(plain), 9 / 16)
     assert.equal(rivalCardHeightPx(plain, 240), 238 / (9 / 16) + 22 + 18 + 2)
@@ -197,6 +245,42 @@ describe('collection member card', () => {
     }
   })
 
+  it('keeps X/Twitter media members cover-first instead of falling back to text-media layout', async () => {
+    const descriptor = member(X_MEDIA_ROW)
+    assert.equal(descriptor.card_type, 'text-media', 'X rows resolve to the text-media shape')
+    const mounted = await mountCoverCard({ card: cardProps(X_MEDIA_ROW), descriptor })
+    try {
+      const article = mounted.container.querySelector('article')
+      assert.ok(article.classList.contains('is-media-first'), 'text-media members have media, so they are cover-first too')
+      assert.ok(article.classList.contains('t-text-media'))
+      assert.ok(mounted.container.querySelector('.omnimux-rival-card-body'), 'the body must render for text-media members')
+      assert.ok(metaRow(mounted.container), 'the meta row must render for text-media members')
+      assert.equal(mounted.container.querySelector('.omnimux-rival-card-title-zone'), null)
+      const chip = statusChip(mounted.container)
+      assert.ok(chip, 'a failed text-media member still needs its status chip')
+      assert.equal(chip.textContent, zhTable.get('add.status.failed'))
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-error'), null)
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('puts the type on the left corner and the count on the right corner', async () => {
+    const mounted = await mountCoverCard({ card: cardProps(GALLERY_ROW), descriptor: member(GALLERY_ROW) })
+    try {
+      assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-type').textContent, zhTable.get('type.image'))
+      assert.equal(
+        mounted.container.querySelector('.omnimux-inspiration-badge-duration').textContent,
+        `4 ${zhTable.get('type.image')}`,
+        'the multi-image count belongs to the duration corner',
+      )
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
   it('moves a failed import reason into the status chip', async () => {
     const mounted = await mountCoverCard({ card: cardProps(FAILED_ROW), descriptor: member(FAILED_ROW) })
     try {
@@ -204,6 +288,7 @@ describe('collection member card', () => {
       assert.ok(chip, 'a failed media card must say so on the card')
       assert.equal(chip.textContent, zhTable.get('add.status.failed'))
       assert.ok(chip.getAttribute('title').includes(DETAIL), 'the reason must stay reachable from the card')
+      assert.ok(chip.getAttribute('aria-label').includes(DETAIL), 'assistive tech must get the reason too')
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-card-error'), null, 'no absolute block over the cover or title')
       assert.equal(mounted.container.querySelector('.omnimux-inspiration-badge-status'), null, 'no duplicate centred pill')
     } finally {

@@ -132,7 +132,10 @@ export function RivalPostCard(props) {
   const cardType = rivalCardTypeOf(card)
   const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image' || cardType === 'collection'
   // 合集详情成员卡（#3459）：封面优先，标题与元信息下沉到固定正文区。
-  const mediaFirst = card?.layout === COLLECTION_MEMBER_LAYOUT && onMedia
+  // 判据必须与估算层（rivalCardHeightPx）逐字一致——两边都用 type !== 'text'：
+  // X/Twitter 的成员行会落到 text-media，它同样有媒体，也必须走封面优先正文，
+  // 否则卡片有几何、没有正文与状态胶囊。
+  const mediaFirst = card?.layout === COLLECTION_MEMBER_LAYOUT && cardType !== 'text'
   const interactive = cardType !== 'collection' || typeof onDetail === 'function'
   const isDone = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
   const tier = String(card?.velocity?.tier || 'watch')

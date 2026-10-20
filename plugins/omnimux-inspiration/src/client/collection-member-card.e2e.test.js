@@ -14,6 +14,8 @@ import { RIVAL_CSS } from './rival-styles.js'
  *
  * The fixture uses the production class contract; CSS comes from the real style
  * modules. React is not involved: this is the same markup the components emit.
+ * `t-text-media` is covered explicitly: X/Twitter members land in that shape and
+ * it used to carry its own card padding, which the collection layout must drop.
  */
 
 const CARD_WIDTH = 240
@@ -23,10 +25,10 @@ const BASE_CSS = `
   .probe-card { position: relative !important; left: auto !important; top: auto !important; }
 `
 
-function fixtureHtml() {
+function fixtureHtml(cardTypeClass) {
   return `
 <div class="probe-stage"><div class="omnimux-inspiration-stage">
-  <article class="probe-card omnimux-rival-card t-short-video omnimux-inspiration-card-pure is-media-first" style="--rival-card-w:${CARD_WIDTH}px">
+  <article class="probe-card omnimux-rival-card ${cardTypeClass} omnimux-inspiration-card-pure is-media-first" style="--rival-card-w:${CARD_WIDTH}px">
     <div class="omnimux-inspiration-cover-wrap">
       <div class="omnimux-rival-card-media" style="--rival-media-ratio:0.8"></div>
       <span class="omnimux-inspiration-badge-type">视频</span>
@@ -92,18 +94,18 @@ function measure() {
   }
 }
 
-function probe() {
+function probe(cardTypeClass) {
   return runStyleDomProbe({
     name: 'collection-member-card',
     styles: `${INSPIRATION_CSS}\n${RIVAL_CSS}\n${BASE_CSS}`,
-    html: fixtureHtml(),
+    html: fixtureHtml(cardTypeClass),
     measure,
     viewportHeight: 900,
   })
 }
 
 test('合集成员卡：4:5 封面、正文紧随、固定高度', () => {
-  const geometry = probe()
+  const geometry = probe('t-short-video')
   assert.ok(Math.abs(geometry.ratio - 0.8) <= 0.02, `cover must be 4:5, got ${geometry.ratio.toFixed(3)}`)
   assert.equal(geometry.objectFit, 'cover', 'the collection cover crops to fill')
   assert.equal(geometry.titleClamp, '2', 'the title is clamped to two lines')
@@ -114,8 +116,18 @@ test('合集成员卡：4:5 封面、正文紧随、固定高度', () => {
   )
 })
 
+test('合集成员卡：text-media 成员同样按封面优先几何', () => {
+  const geometry = probe('t-text-media')
+  assert.ok(Math.abs(geometry.ratio - 0.8) <= 0.02, `text-media cover must be 4:5, got ${geometry.ratio.toFixed(3)}`)
+  assert.ok(geometry.body.y >= geometry.media.bottom, 'the body starts below the cover')
+  assert.ok(
+    Math.abs(geometry.card.h - (geometry.media.h + 82 + 2)) <= 2,
+    `text-media member must drop its card padding (card ${geometry.card.h}, cover ${geometry.media.h})`,
+  )
+})
+
 test('合集成员卡：复选框与角标互不越界', () => {
-  const geometry = probe()
+  const geometry = probe('t-short-video')
   assert.ok(geometry.check.bottom <= geometry.title.y, 'the checkbox must not cover the title')
   assert.ok(geometry.check.right <= geometry.card.right, 'the checkbox stays inside the card')
   assert.equal(geometry.typeChip.y, geometry.durationChip.y, 'type and duration chips share one baseline')

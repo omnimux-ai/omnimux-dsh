@@ -115,12 +115,18 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
   const durationText = mediaFirst ? formatDuration(contentCard.duration) : ''
   const createdRaw = mediaFirst ? formatRelativeTime(row.created_at, Date.now(), locale) : ''
   const createdText = createdRaw === '--' ? '' : createdRaw
+  // 封面左下只写类型，右下写时长/图数（规格：类型左下、时长/图数右下）。
   const typeLabel = mediaFirst
     ? contentCard.media_kind === 'video'
       ? t('type.video')
+      : t('type.image')
+    : ''
+  const cornerMetric = mediaFirst
+    ? contentCard.media_kind === 'video'
+      ? durationText
       : contentCard.image_count > 1
         ? `${contentCard.image_count} ${t('type.image')}`
-        : t('type.image')
+        : ''
     : ''
   // 胶囊只说状态，完整原因走 title 与详情弹窗（详情里已有 role="alert" 的原因块）。
   const statusChip = mediaFirst
@@ -152,6 +158,7 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
           className={`omnimux-inspiration-card-status ${statusChip.tone}`.trim()}
           role="status"
           title={errorDetail || undefined}
+          aria-label={errorDetail ? `${statusChip.text}：${errorDetail}` : statusChip.text}
         >
           {statusChip.text}
         </span>
@@ -365,7 +372,7 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
       <div className="omnimux-inspiration-cover-wrap">
         {mediaCore}
         {typeLabel ? <span className="omnimux-inspiration-badge-type">{typeLabel}</span> : null}
-        {durationText ? <span className="omnimux-inspiration-badge-duration">{durationText}</span> : null}
+        {cornerMetric ? <span className="omnimux-inspiration-badge-duration">{cornerMetric}</span> : null}
         <div className="omnimux-inspiration-cover-tools">{ctaRow}</div>
       </div>
     ) : mediaCore
