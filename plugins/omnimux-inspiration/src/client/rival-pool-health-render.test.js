@@ -329,7 +329,7 @@ describe('R3 监控池状态条已移除', () => {
 })
 
 describe('D1 账号行四态健康标记（#3111）', () => {
-  it('四态齐全：正常 / 冷却中 · {n} 分钟后恢复 / 需要重新导入 / 已停止 + 常驻原因行', async () => {
+  it('四态收敛为警告图标：正常无标记，冷却/重导入/停止只露图标与悬停原因', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
@@ -337,27 +337,31 @@ describe('D1 账号行四态健康标记（#3111）', () => {
 
       const ok = rowById(mounted.container, 'ra_ok')
       assert.equal(ok.getAttribute('data-health'), 'normal')
-      assert.ok(ok.textContent.includes('正常'))
-      assert.equal(ok.querySelector('.omnimux-rival-filter-reason'), null, '正常行没有原因行')
+      assert.equal(ok.textContent.includes('正常'), false, '正常行不再显示状态文字')
+      assert.equal(ok.querySelector('.omnimux-rival-filter-warning'), null, '正常行没有警告图标')
 
       const cooling = rowById(mounted.container, 'ra_cool')
       assert.equal(cooling.getAttribute('data-health'), 'cooling')
-      assert.ok(cooling.textContent.includes('冷却中 · '), '冷却行显示恢复分钟')
-      assert.ok(/冷却中 · \d+ 分钟后恢复/.test(cooling.textContent), '冷却行逐字 `冷却中 · {n} 分钟后恢复`')
+      assert.equal(cooling.textContent.includes('冷却中'), false, '冷却行不再显示状态文字')
+      const coolingWarning = cooling.querySelector('.omnimux-rival-filter-warning')
+      assert.ok(coolingWarning, '冷却行显示警告图标')
+      assert.match(coolingWarning.getAttribute('aria-label'), /^冷却中 · \d+ 分钟后恢复$/, '冷却原因在图标悬停提示里')
 
       const reimport = rowById(mounted.container, 'ra_reimport')
       assert.equal(reimport.getAttribute('data-health'), 'reimport')
-      assert.ok(reimport.textContent.includes('需要重新导入'))
-      assert.ok(
-        reimport.textContent.includes('该 YouTube 频道尚未验证身份，请改用 channel/UC… 链接重新导入'),
-        '重导入原因行常驻可见',
+      assert.equal(reimport.textContent.includes('需要重新导入'), false, '重导入行不再显示状态文字')
+      assert.equal(
+        reimport.querySelector('.omnimux-rival-filter-warning')?.getAttribute('aria-label'),
+        '该 YouTube 频道尚未验证身份，请改用 channel/UC… 链接重新导入',
+        '重导入原因只在图标悬停提示里',
       )
       assert.equal(reimport.querySelector('.omnimux-rival-retry'), null, '重导入行没有重试按钮')
 
       const stopped = rowById(mounted.container, 'ra_stopped')
       assert.equal(stopped.getAttribute('data-health'), 'stopped')
-      assert.ok(stopped.textContent.includes('已停止'))
-      assert.ok(stopped.textContent.includes('连续 3 次刷新失败'), '已停止原因行带计数')
+      assert.equal(stopped.textContent.includes('已停止'), false, '停止行不再显示状态文字')
+      const stoppedTitle = stopped.querySelector('.omnimux-rival-filter-warning')?.getAttribute('aria-label') || ''
+      assert.ok(stoppedTitle.includes('连续 3 次刷新失败'), `停止原因在图标悬停提示里 (got ${JSON.stringify(stoppedTitle)})`)
       assert.ok(stopped.querySelector('.omnimux-rival-retry'), '已停止行有重试按钮')
     } finally {
       await mounted.unmount()
@@ -374,9 +378,10 @@ describe('D1 账号行四态健康标记（#3111）', () => {
       await mounted.openAccountTab()
       await settle(mounted.container, () => rowById(mounted.container, 'ra_stopped'))
       const stopped = rowById(mounted.container, 'ra_stopped')
-      assert.ok(stopped.textContent.includes('已停止'))
-      assert.ok(stopped.querySelector('.omnimux-rival-filter-reason').textContent.includes(zh['rivalAccounts.error.cloud']))
-      assert.ok(!stopped.textContent.includes('连续'), '不显示占位符或 0')
+      assert.equal(stopped.textContent.includes('已停止'), false, '停止行不显示状态文字')
+      const title = stopped.querySelector('.omnimux-rival-filter-warning')?.getAttribute('aria-label') || ''
+      assert.ok(title.includes(zh['rivalAccounts.error.cloud']), `图标提示必须给出可行动原因 (got ${JSON.stringify(title)})`)
+      assert.equal(title.includes('连续'), false, '不显示占位符或 0')
       assert.ok(stopped.querySelector('.omnimux-rival-retry'), '重试仍在')
     } finally {
       await mounted.unmount()
@@ -405,8 +410,8 @@ describe('D1 账号行四态健康标记（#3111）', () => {
       )
       const updated = rowById(mounted.container, 'ra_stopped')
       assert.equal(updated.getAttribute('data-health'), 'normal')
-      assert.ok(updated.textContent.includes('正常'))
-      assert.equal(updated.querySelector('.omnimux-rival-filter-reason'), null, '原因行消失')
+      assert.equal(updated.textContent.includes('正常'), false, '恢复正常后不显示状态文字')
+      assert.equal(updated.querySelector('.omnimux-rival-filter-warning'), null, '警告图标消失')
       assert.equal(updated.querySelector('.omnimux-rival-retry'), null, '重试随健康态消失')
     } finally {
       await mounted.unmount()
@@ -450,6 +455,51 @@ describe('R4 刷新置灰与 D4 原因（#3111）', () => {
       assert.ok(pop, '额度耗尽必须弹原因')
       assert.ok(pop.textContent.includes('今日额度已用完'), '原因逐字取 refresh.quota')
       assert.ok(!pop.textContent.includes('已停止'), '额度原因优先于停止原因')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('额度耗尽时正常行不出现警告图标，已停止行的悬停提示带额度原因', async () => {
+    const mounted = await mountStage({
+      status: {
+        ...STATUS,
+        budget_used: { global_calls: 50, per_account: {} },
+      },
+    })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_stopped'))
+      assert.equal(
+        rowById(mounted.container, 'ra_ok').querySelector('.omnimux-rival-filter-warning'),
+        null,
+        '额度是池级事实，正常行不得因此长出警告图标',
+      )
+      const title = rowById(mounted.container, 'ra_stopped')
+        .querySelector('.omnimux-rival-filter-warning')?.getAttribute('aria-label') || ''
+      assert.ok(title.includes('今日额度已用完'), '已停止行的提示可补充额度原因')
+    } finally {
+      await mounted.unmount()
+      mounted.close()
+    }
+  })
+
+  it('额度耗尽时账号行重试置灰，悬停提示 refresh.quota', async () => {
+    const mounted = await mountStage({
+      status: {
+        ...STATUS,
+        budget_used: { global_calls: 50, per_account: {} },
+      },
+    })
+    try {
+      await mounted.openAccountTab()
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_stopped'))
+      const retry = rowById(mounted.container, 'ra_stopped').querySelector('.omnimux-rival-retry')
+      assert.ok(retry, '已停止行有重试按钮')
+      assert.equal(retry.disabled, true, '额度耗尽时重试禁用')
+      assert.ok((retry.getAttribute('title') || '').includes('今日额度已用完'), '额度原因逐字取 refresh.quota')
+      assert.equal(reasonPopover(mounted.container), null, '不再弹出额度气泡')
     } finally {
       await mounted.unmount()
       mounted.close()

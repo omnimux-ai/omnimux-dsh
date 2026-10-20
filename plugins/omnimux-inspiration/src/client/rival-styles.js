@@ -90,10 +90,9 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-filter-name-row {
   display: flex;
-  /* 昵称与状态文字一行放不下时，让状态文字整体落到第二行，而不是压缩昵称。 */
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
   min-width: 0;
 }
 .omnimux-rival-filter-name {
@@ -130,27 +129,79 @@ export const RIVAL_CSS = `
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
 }
-.omnimux-rival-filter-id {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--dsw-alias-label-secondary);
-  min-width: 0;
-}
 .omnimux-rival-platform-mark {
   flex: none;
 }
+.omnimux-rival-filter-platform {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-specific-media-chip-bg));
+  color: var(--dsw-alias-label-secondary, var(--dsw-specific-media-fg-secondary));
+}
+.omnimux-rival-filter-platform svg {
+  width: 13px;
+  height: 13px;
+}
 .omnimux-rival-filter-handle {
+  display: block;
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.omnimux-rival-filter-count {
-  flex: none;
+.omnimux-rival-filter-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   margin-left: auto;
+  flex: none;
+}
+.omnimux-rival-filter-warning {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 5px;
+  cursor: help;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-rival-filter-warning-tip {
+  position: fixed;
+  box-sizing: border-box;
+  z-index: 1000;
+  width: 220px;
+  max-width: calc(100vw - 16px);
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-alias-border-l2, var(--dsw-specific-media-border-strong));
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-elevated, var(--dsw-specific-media-pill-bg));
+  box-shadow: var(--dsw-specific-shadow-pop, 0 8px 24px rgba(0, 0, 0, .35));
   font-size: 11px;
-  color: var(--dsw-alias-label-secondary);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--dsw-alias-label-secondary, var(--dsw-specific-media-fg-secondary));
+  white-space: normal;
+  pointer-events: none;
+}
+.omnimux-rival-filter-warning.is-cooling {
+  color: var(--dsw-alias-state-warn-primary, var(--dsw-alias-label-warning));
+}
+.omnimux-rival-filter-warning.is-reimport,
+.omnimux-rival-filter-warning.is-stopped {
+  color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-danger));
+}
+.omnimux-rival-filter-warning:hover,
+.omnimux-rival-filter-warning:focus-visible {
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 /* ── 空态与提示 ─────────────────────────────────────────────────────── */
@@ -320,22 +371,6 @@ export const RIVAL_CSS = `
 .omnimux-rival-refresh.is-blocked {
   opacity: 0.55;
 }
-.omnimux-rival-refresh.is-fresh {
-  opacity: 0.75;
-}
-.omnimux-rival-refresh-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 16px;
-  padding: 0 5px;
-  margin-left: 7px;
-  border-radius: 999px;
-  background: var(--dsw-alias-bg-base);
-  color: var(--dsw-alias-label-primary);
-  font-size: 10px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
 .omnimux-rival-reason {
   position: absolute;
   top: calc(100% + 6px);
@@ -353,38 +388,21 @@ export const RIVAL_CSS = `
   line-height: 1.6;
   color: var(--dsw-alias-label-secondary);
 }
-
-/* ── D1 账号行健康态（#3111） ─────────────────────────────────────── */
-.omnimux-rival-health {
-  margin-left: auto;
-  flex: none;
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary);
-  white-space: nowrap;
+.omnimux-rival-refresh.is-fresh {
+  opacity: 0.75;
 }
-.omnimux-rival-health.is-cooling {
-  color: var(--dsw-alias-state-warn-primary, var(--dsw-alias-label-warning));
-}
-.omnimux-rival-health.is-reimport,
-.omnimux-rival-health.is-stopped {
-  color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-danger));
-}
-.omnimux-rival-filter-reason {
-  display: block;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--dsw-alias-label-tertiary);
-  margin-top: 2px;
-  white-space: normal;
-}
-.omnimux-rival-filter-row.is-reimport .omnimux-rival-filter-reason,
-.omnimux-rival-filter-row.is-stopped .omnimux-rival-filter-reason {
-  color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-danger));
-}
-.omnimux-rival-retry-wrap {
-  position: relative;
+.omnimux-rival-refresh-badge {
   display: inline-flex;
-  flex: none;
+  align-items: center;
+  height: 16px;
+  padding: 0 5px;
+  margin-left: 7px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .omnimux-rival-retry.is-blocked {
   opacity: 0.55;
@@ -898,30 +916,32 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-accounts-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 8px;
-  padding: 0 2px;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 2px 2px;
+  min-width: 0;
 }
-.omnimux-rival-accounts-title {
+.omnimux-rival-accounts-titles {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
+}
+.omnimux-rival-accounts-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
-}
-.omnimux-rival-accounts-role {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--dsw-alias-label-tertiary);
+  overflow-wrap: anywhere;
 }
 .omnimux-rival-accounts-summary {
   font-size: 11px;
   color: var(--dsw-alias-label-secondary);
+  overflow-wrap: anywhere;
 }
 .omnimux-rival-accounts-actions {
   display: flex;
+  flex: none;
   gap: 2px;
   margin-left: auto;
 }

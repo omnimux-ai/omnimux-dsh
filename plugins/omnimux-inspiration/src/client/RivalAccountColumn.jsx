@@ -42,12 +42,13 @@ export function RivalAccountColumn(props) {
   return (
     <aside className="omnimux-rival-accounts" aria-label={t('rivalAccounts.column.title')}>
       <header className="omnimux-rival-accounts-head">
-        <span className="omnimux-rival-accounts-title">
-          {t('rivalAccounts.column.title')}
-          <span className="omnimux-rival-accounts-role">{t('rivalAccounts.column.hint')}</span>
-        </span>
-        <span className="omnimux-rival-accounts-summary" data-account-selected={String(selectedCount)}>
-          {String(t('rivalFilter.some')).replace('{k}', formatCount(selectedCount, locale))}
+        <span className="omnimux-rival-accounts-titles">
+          <span className="omnimux-rival-accounts-title">{t('rivalAccounts.column.title')}</span>
+          {selection.mode === 'subset' ? (
+            <span className="omnimux-rival-accounts-summary" data-account-selected={String(selectedCount)}>
+              {String(t('rivalFilter.some')).replace('{k}', formatCount(selectedCount, locale))}
+            </span>
+          ) : null}
         </span>
         <span className="omnimux-rival-accounts-actions">
           <Button variant="ghost" size="xs" onClick={onInvert}>{t('rivalFilter.invert')}</Button>
@@ -60,7 +61,6 @@ export function RivalAccountColumn(props) {
             key={row.id}
             row={row}
             t={t}
-            locale={locale}
             onToggle={onToggle}
             onRetry={onRetry}
             quotaLeft={quotaLeft}
