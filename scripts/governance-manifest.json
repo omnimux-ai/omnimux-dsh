@@ -64,6 +64,8 @@
     "public-plugin-apply.test.mjs",
     "qa-label.mjs",
     "qa-label.test.mjs",
+    "dev-launch-env.mjs",
+    "dev-launch-env.test.mjs",
     "reload-dev-app.mjs",
     "repair-inspiration-covers.mjs",
     "repair-inspiration-covers.test.mjs",
