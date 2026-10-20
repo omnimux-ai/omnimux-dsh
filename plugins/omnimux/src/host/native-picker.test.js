@@ -28,13 +28,26 @@ function runFail(message, stderr = '') {
 }
 
 describe('parsePickedPaths', () => {
-  it('splits one POSIX path per line and drops empty rows', () => {
-    assert.deepEqual(parsePickedPaths('/Users/x/a.png\n/Users/x/b.jpg\n'), [
+  it('parses the JSON path array and preserves newlines, tabs and trailing spaces', () => {
+    const paths = [
       '/Users/x/a.png',
-      '/Users/x/b.jpg',
-    ])
+      '/Users/x/with\nnewline.png',
+      '/Users/x/trailing space ',
+      '/Users/x/tab\tname.png',
+    ]
+    assert.deepEqual(parsePickedPaths(JSON.stringify(paths)), paths)
+    assert.deepEqual(parsePickedPaths(`${JSON.stringify(paths)}\n`), paths)
+  })
+
+  it('treats empty or whitespace-only output as cancellation', () => {
     assert.deepEqual(parsePickedPaths(''), [])
     assert.deepEqual(parsePickedPaths('\n\n'), [])
+  })
+
+  it('rejects non-JSON or invalid payloads instead of treating them as cancel', () => {
+    assert.throws(() => parsePickedPaths('/tmp/a.png\n/tmp/b.png'), /non-JSON/)
+    assert.throws(() => parsePickedPaths('{"paths":[]}'), /invalid/)
+    assert.throws(() => parsePickedPaths('["/a", 42]'), /invalid/)
   })
 })
 
@@ -73,7 +86,7 @@ describe('pickNativePath macOS JXA script', () => {
       platform: 'darwin',
       run: async (command, argv) => {
         seen = { command, argv }
-        return { stdout: '/Users/x/a.png\n/Users/x/b.jpg\n', stderr: '' }
+        return { stdout: `${JSON.stringify(['/Users/x/a.png', '/Users/x/b.jpg'])}\n`, stderr: '' }
       },
     })
     assert.equal(seen.command, 'osascript')
@@ -85,6 +98,8 @@ describe('pickNativePath macOS JXA script', () => {
     assert.match(script, /setCanChooseDirectories\(false\)/)
     assert.match(script, /setAllowsMultipleSelection\(true\)/)
     assert.match(script, /Number\(panel\.runModal\) !== 1/)
+    assert.match(script, /return JSON\.stringify\(picked\)/)
+    assert.doesNotMatch(script, /picked\.join/)
     assert.match(script, new RegExp(PICKER_DEFAULT_PROMPTS.file))
     assert.doesNotMatch(script, /System Events/)
     assert.doesNotMatch(script, /choose file/)
@@ -98,7 +113,7 @@ describe('pickNativePath macOS JXA script', () => {
       prompt: '选择要添加的文件夹',
       run: async (_command, argv) => {
         script = argv[3]
-        return { stdout: '/Users/x/project\n', stderr: '' }
+        return { stdout: `${JSON.stringify(['/Users/x/project'])}\n`, stderr: '' }
       },
     })
     assert.match(script, /setCanChooseFiles\(false\)/)
@@ -116,6 +131,15 @@ describe('pickNativePath macOS JXA script', () => {
       run: runFail('User canceled. (-128)'),
     })
     assert.deepEqual(legacy, { path: null, paths: [] })
+  })
+
+  it('maps invalid picker output to picker-failed instead of cancel', async () => {
+    await assert.rejects(
+      () => pickNativePath('file', { platform: 'darwin', run: runOk('not a json payload') }),
+      (error) => error instanceof PickerError
+        && error.code === 'picker-failed'
+        && /non-JSON/.test(error.message),
+    )
   })
 
   it('maps runner failures to picker-failed', async () => {
@@ -138,7 +162,7 @@ describe('createNativeFilePicker seam', () => {
       platform: 'darwin',
       run: async (_command, argv) => {
         calls.push(argv[3])
-        return { stdout: '/tmp/hero.png\n', stderr: '' }
+        return { stdout: `${JSON.stringify(['/tmp/hero.png'])}\n`, stderr: '' }
       },
     })
     const result = await seam.pick('file', { prompt: '选择要挂到产品的文件' })
