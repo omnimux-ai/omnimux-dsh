@@ -1,8 +1,8 @@
 {
   "task": "3428",
   "base": "01647e1c5539d7e014e1260eadf6798da6c0b657",
-  "harness": "real RivalMasonry -> RivalPostCard, dsh-ui-kit shimmed, ephemeral port 61101",
-  "browser": "ego-browser (real Chromium), task space 106, closed after run",
+  "harness": "real RivalMasonry -> RivalPostCard, dsh-ui-kit shimmed, ephemeral localhost port",
+  "browser": "ego-browser (real Chromium), task space 107, closed after run",
   "viewport": { "width": 1280, "height": 789 },
   "columns": "4",
   "cards": [
@@ -49,6 +49,21 @@
       "metrics": "播放 -- · 点赞 0 · 评论 0 · 分享 0",
       "placeholder": "无封面",
       "title": "Unknown views",
+      "hasPlatformMark": true
+    },
+    {
+      "id": "failed-cover",
+      "cardType": "short-video",
+      "width": 276,
+      "height": 531,
+      "mediaTag": "DIV",
+      "mediaEmpty": true,
+      "mediaRatio": "0.5625",
+      "imgSrc": null,
+      "imgNatural": null,
+      "metrics": "播放 100 · 点赞 1 · 评论 0 · 分享 0",
+      "placeholder": "无封面",
+      "title": "Expired cover URL",
       "hasPlatformMark": true
     },
     {

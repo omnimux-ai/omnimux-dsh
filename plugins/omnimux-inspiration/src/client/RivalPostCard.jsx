@@ -1,5 +1,6 @@
 /** Shared content card for account monitoring and the inspiration library. */
 
+import { useState } from 'react'
 import { Button } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 import { rivalHasPill, rivalMediaRatioOf, rivalCardTypeOf } from './rival-masonry.js'
@@ -158,18 +159,13 @@ export function RivalPostCard(props) {
   //
   // A media card without a cover must not render an empty `<img>` (#3428): an
   // `<img>` with no `src` reserves the 9:16 box but paints nothing, which reads
-  // as a black card. The placeholder keeps the same media class/ratio geometry
-  // (so masonry placement and the done-state fade stay unchanged) and names the
-  // missing cover instead.
+  // as a black card. A cover URL can also 404 or outlive its CDN signature, so
+  // the same placeholder takes over after a load error; the failure is keyed by
+  // the address, which lets a refreshed cover retry instead of staying failed.
+  const [failedCover, setFailedCover] = useState('')
+  const showPlaceholder = !cover || failedCover === cover
   const mediaNode = customMedia !== undefined ? customMedia : (
-    cover ? (
-      <img
-        className="omnimux-rival-card-media"
-        src={cover}
-        alt={title}
-        style={{ '--rival-media-ratio': mediaRatio }}
-      />
-    ) : (
+    showPlaceholder ? (
       <div
         className="omnimux-rival-card-media omnimux-rival-media-empty"
         style={{ '--rival-media-ratio': mediaRatio }}
@@ -180,6 +176,14 @@ export function RivalPostCard(props) {
         <RivalPlatformMark platform={String(account.platform || card?.source_platform || '')} />
         <span>{t('noCover')}</span>
       </div>
+    ) : (
+      <img
+        className="omnimux-rival-card-media"
+        src={cover}
+        alt={title}
+        style={{ '--rival-media-ratio': mediaRatio }}
+        onError={() => setFailedCover(cover)}
+      />
     )
   )
 

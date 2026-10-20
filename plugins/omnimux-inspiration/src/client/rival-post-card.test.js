@@ -243,12 +243,34 @@ describe('RivalPostCard — 无封面兜底与未知播放量（#3428）', () =>
     }
   })
 
+  it('falls back to the placeholder when the cover fails to load (B4)', async () => {
+    const mounted = await mountStage([cardOf('short-video')])
+    try {
+      const card = byType(mounted.container, 'short-video')
+      const image = card.querySelector('img.omnimux-rival-card-media')
+      assert.ok(image, 'the cover image renders first')
+      await act(async () => {
+        image.dispatchEvent(new mounted.document.defaultView.Event('error'))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+      const media = card.querySelector('.omnimux-rival-card-media')
+      assert.equal(media.tagName, 'DIV', 'a failed cover must degrade to the named placeholder')
+      assert.equal(media.getAttribute('data-media'), 'empty')
+      assert.ok((media.textContent || '').includes('无封面'))
+      assert.equal(card.querySelector('img'), null, 'the broken <img> is removed, not left as a black box')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
   it('renders -- for an unknown view count instead of the -1 sort sentinel (B3)', async () => {
-    const mounted = await mountStage([cardOf('short-video', { stats: { views: -1 } })])
+    const mounted = await mountStage([cardOf('short-video', {
+      stats: { views: -1, likes: 0, comments: 0, shares: 0 },
+    })])
     try {
       const metrics = mounted.container.querySelector('.omnimux-rival-overlay-metrics')
       const text = metrics.textContent || ''
-      assert.ok(text.includes('--'), 'unknown counts use the module marker')
+      assert.match(text, /播放 --/, 'the play template renders the unknown marker')
       assert.equal(text.includes('-1'), false, 'the sort sentinel must never reach the card')
     } finally {
       await mounted.unmount()

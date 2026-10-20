@@ -399,9 +399,10 @@ function urlListUrl(value) {
 /**
  * Highest-quality directly playable mp4 of a `variants[]` list.
  *
- * Mirrors the import pipeline's ranking (bitrate → bit_rate → height) so the
- * monitor card and the import see the same stream, without importing the import
- * pipeline module into this pure mapper.
+ * Mirrors the import pipeline's ranking (bitrate → bit_rate → height, then the
+ * resolution encoded in the URL) so the monitor card and the import see the
+ * same stream, without importing the import pipeline module into this pure
+ * mapper.
  * @param {unknown} variants
  * @returns {string}
  */
@@ -417,13 +418,19 @@ function bestMp4Url(variants) {
     const isMp4 = declared ? declared.includes('mp4') : /\.mp4$/i.test(urlPathname(url))
     if (!isMp4) continue
     const score = asNumber(variant.bitrate) ?? asNumber(variant.bit_rate)
-      ?? asNumber(variant.height) ?? 0
+      ?? asNumber(variant.height) ?? videoUrlResolution(url)
     if (score > bestScore) {
       best = url
       bestScore = score
     }
   }
   return best
+}
+
+/** Resolution encoded in X's bitrate-free public video variants. */
+function videoUrlResolution(value) {
+  const match = urlPathname(value).match(/\/(\d+)x(\d+)\//)
+  return match ? Number(match[1]) * Number(match[2]) : 0
 }
 
 /**
@@ -467,9 +474,10 @@ function xMediaEntries(layer) {
  * empty media card (Issue #3428). The map is a **one-level whitelist**: known
  * containers only, no recursion, and every filled field records its source.
  * @param {Record<string, any>} layer
+ * @param {{ platform?: string }} [ctx]
  * @returns {{ values: Record<string, any>, probe: Record<string, string> }}
  */
-function nestedPostFields(layer) {
+function nestedPostFields(layer, ctx = {}) {
   /** @type {Record<string, any>} */
   const values = {}
   /** @type {Record<string, string>} */
@@ -492,8 +500,13 @@ function nestedPostFields(layer) {
   fill('video_url', urlListUrl(objectOf(video.playAddr).url_list), 'video.playAddr.url_list')
   fill('video_url', urlListUrl(objectOf(video.download_addr).url_list), 'video.download_addr.url_list')
   const videoDuration = asNumber(video.duration)
-  // TikTok's `video.duration` is milliseconds; the module's post shape uses seconds.
-  if (videoDuration !== null && videoDuration > 0) fill('duration', Math.round(videoDuration / 1000), 'video.duration')
+  // TikTok's `video.duration` is milliseconds; the same field on other platforms
+  // is normally seconds. The conversion is therefore platform-gated instead of
+  // applied globally, which would truncate non-TikTok rows to 0.
+  if (videoDuration !== null && videoDuration > 0) {
+    const seconds = ctx?.platform === 'tiktok' ? Math.round(videoDuration / 1000) : Math.round(videoDuration)
+    fill('duration', seconds, 'video.duration')
+  }
   const videoWidth = asNumber(video.width)
   const videoHeight = asNumber(video.height)
   if (videoWidth !== null && videoHeight !== null && videoWidth > 0 && videoHeight > 0) {
@@ -620,8 +633,15 @@ export function normalizeRivalPost(row, ctx) {
   const { values, probe } = probeLayer(layer, POST_FIELD_CANDIDATES)
   // One-level nested containers fill only the fields the flat candidates could
   // not read; a hoisted flat field always wins (see `nestedPostFields`).
-  const nested = nestedPostFields(layer)
+  // Cover/video precedence is judged on the *derived* flat answer, not just the
+  // singular field: a flat `images[]` that already yields a cover must not be
+  // overridden by a nested `media[]`/`video.cover`.
+  const nested = nestedPostFields(layer, ctx)
+  const flatCover = pickCoverUrl(values)
+  const flatVideo = pickVideoUrl(values)
   for (const [field, value] of Object.entries(nested.values)) {
+    if (field === 'cover_url' && flatCover) continue
+    if (field === 'video_url' && flatVideo) continue
     const current = values[field]
     const missing = current === null || current === undefined || current === ''
       || (Array.isArray(current) && current.length === 0)

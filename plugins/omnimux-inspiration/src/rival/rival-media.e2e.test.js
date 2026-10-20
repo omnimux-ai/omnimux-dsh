@@ -143,14 +143,14 @@ describe('refresh cycles carry the nested platform media into the feed row (#342
     assert.equal(row.stats.shares, 12)
   })
 
-  it('keeps a media-less TikTok post as an empty cover and the -1 sort sentinel', async () => {
+  it('keeps a media-less TikTok post as an empty cover and an unknown view count', async () => {
     const world = makeWorld('tiktok', TIKTOK_POSTS)
     await world.service.runCycle({ account: world.account })
     const feed = world.service.listFeed({ accounts: world.account.id })
     const row = feed.items.find((item) => item.title === 'No cover post')
     assert.equal(row.cover_key, '')
     assert.equal(row.type, 'text')
-    assert.equal(row.stats.views, -1)
+    assert.equal(row.stats.views, null, 'the wire row reports unknown as null, never the -1 sort sentinel')
   })
 
   it('serves the X poster/stream and the flat view counter through listFeed', async () => {

@@ -28,13 +28,13 @@ Issue #3428。用户在「灵感社区 → 账号监控」看到的作品卡，�
 - 解析器为作品行增加**单层嵌套白名单**取值，只在扁平候选为空时回填，命中来源写回 `field_probe`；不做递归搜索，不改变已命中扁平字段的优先级与其他平台行为：
   - 封面：`video.cover / origin_cover / dynamic_cover` 的 `url_list[0]`、`video.poster`；`image_post_info.images[].display_image.url_list[0]` / `thumbnail.url_list[0]`；X `media` / `extended_entities.media` / `entities.media` 的 `media_url_https` / `media_url` / `display_url` / `preview_image_url`；`media[].preview_image_url`。
   - 视频：`video.play_addr` / `playAddr` / `download_addr` 的 `url_list[0]`；X `media[].video_info.variants[]` 与 `media.video[].variants[]` 的最高 mp4。
-  - 时长：`video.duration`（毫秒 → 秒）。
+  - 时长：`video.duration`（仅 TikTok 按毫秒 → 秒，其他平台保持秒）。
   - 比例：`video.width / video.height`；X `media[].original_info`。
   - 图片列表：`image_post_info.images[]`、X 图片 media。
   - 统计：`statistics.play_count / digg_count / comment_count / share_count / collect_count`。
   - 类型：仍由 `pickPostType` 依据媒体是否存在推导，不把 `aweme_type` 数字当类型。
-- 客户端 `RivalPostCard`：媒体类卡片无封面时不渲染 `<img>`，渲染占位（复用 `noCover` 文案 + 平台标记，保留 `--rival-media-ratio` 占位高度与既有 `omnimux-rival-card-media` 类）；播放量未知显示 `--`。
-- `src/rival/rival-feed.js` 的 `feedViews` 排序哨兵不变；只修展示层，不动排序/增速契约。
+- 客户端 `RivalPostCard`：媒体类卡片无封面时不渲染 `<img>`，渲染占位（复用 `noCover` 文案 + 平台标记，保留 `--rival-media-ratio` 占位高度与既有 `omnimux-rival-card-media` 类）；封面加载失败（404/过期）后按地址记录失败状态并复用同一占位；播放量未知显示 `--`。
+- `src/rival/rival-feed.js`：`feedViews` 的 `-1` 保留为排序哨兵，wire 行 `stats.views` 归一为 `null`，让卡片与详情弹窗统一显示 `--`；排序/增速契约不变。
 - 允许改动：`plugins/omnimux-inspiration/src/rival/{constants,rival-parsers}.js`、`plugins/omnimux-inspiration/src/client/{RivalPostCard.jsx,rival-styles.js}`、对应测试与本 spec。不改 Hub、云端模型/分组、预算、调度、凭据、账号身份、灵感库卡片与发布能力。
 
 ## 验收用例
@@ -43,20 +43,23 @@ Issue #3428。用户在「灵感社区 → 账号监控」看到的作品卡，�
 |---|---|---|
 | A1 | TikTok aweme 行含 `video.cover.url_list`、`video.play_addr.url_list`、`video.duration=15000`、`statistics.*` | `cover_url`/`video_url` 为对应 URL，`duration=15`，`stats.views/likes/comments/shares` 为统计值，`type='video'`；`field_probe` 记录嵌套来源 |
 | A2 | TikTok 图集行含 `image_post_info.images[].display_image.url_list` | `images` 与 `cover_url` 取首图，`type='image'` |
-| A3 | X 行含 `media[].media_url_https` 与 `video_info.variants[]` mp4 | 封面取图片、`video_url` 取 mp4，`type='video'`；只有图片时为 `image` |
-| A4 | 扁平字段与嵌套字段并存 | 扁平字段优先（既有测试不回归） |
+| A3 | X 行含 `media[].media_url_https` 与 `video_info.variants[]` mp4 | 封面取图片、`video_url` 取最高 mp4，`type='video'`；只有图片时为 `image` |
+| A4 | 扁平字段与嵌套字段并存 | 扁平字段优先（含由扁平 `images[]` 派生出的 cover，不得被嵌套 `media[]` 覆盖；既有测试不回归） |
 | A5 | 无 `video`/`media`/`statistics` 的行 | 行为与改动前完全一致（`cover_url=''`、`stats` 全 null） |
+| A6 | 非 TikTok 行含 `video.duration=15` | 按秒保留 `duration=15`，不做毫秒换算；TikTok 的 `15000` 才换算为 15 |
+| A7 | 无 bitrate 的 X variants | 按 URL 中的分辨率选最高，而不是取第一个 |
 | B1 | 媒体卡无封面 | 渲染 `.omnimux-rival-card-media` 占位，含「无封面」与平台标记，不出现 `<img>` |
 | B2 | 媒体卡有封面 | 渲染 `<img src=cover>` |
-| B3 | `stats.views = -1`（未知） | 悬停层显示「播放 --」，不出现 `-1` |
-| B4 | `text` 卡不受影响 | 无媒体区、无占位 |
+| B3 | 播放量未知 | 卡片悬停层与详情弹窗都显示「播放 --」；wire 行 `stats.views` 为 `null`（`-1` 只作排序哨兵，不外泄） |
+| B4 | 封面 URL 404/过期加载失败 | 自动降级为同一占位，移除 broken `<img>` |
+| B5 | `text` 卡不受影响 | 无媒体区、无占位 |
 
 ## 验证
 
-- 单测：`node --import plugins/omnimux-inspiration/scripts/deny-network.mjs --test plugins/omnimux-inspiration/src/rival/*.test.js plugins/omnimux-inspiration/src/client/*.test.js plugins/omnimux-inspiration/src/client/*.e2e.test.js`（先红后绿）。
-- 静态：`pnpm verify:stages`；`node --test scripts/verify-anti-slop.test.mjs`；`node scripts/impact-matrix.mjs --git-diff --base origin/main`。
-- 隔离工作树真实浏览器：`pnpm test:worktree-web` 或 ego-browser，在动态端口渲染账号监控作品流，断言（1）封面可见、（2）无封面卡占位、（3）播放量非 `-1`，保留截图/结构化报告。
-- 真实采集：用户已授权重新采集 5 个账号验证封面与播放量；只使用既有云端社媒能力与用户凭据，不新增采集器。
+- 单测：`cd plugins/omnimux-inspiration && node --import ./scripts/deny-network.mjs --test src/rival/*.test.js src/client/*.test.js src/client/*.e2e.test.js`（先红后绿）。
+- 静态：`node scripts/verify-stage-contracts.mjs`；`node --test scripts/verify-anti-slop.test.mjs`；`node scripts/impact-matrix.mjs --git-diff --base origin/main`。
+- 隔离工作树真实浏览器：ego-browser，在动态端口渲染账号监控作品流，断言（1）封面可见、（2）无封面卡占位、（3）封面 404 时降级占位、（4）播放量非 `-1`，保留截图/结构化报告。
+- 真实采集：用户已授权重新采集 5 个账号验证封面与播放量；只使用既有云端社媒能力与用户凭据，不新增采集器。该项在合并并物化 Dev 后执行，执行前不宣称已取得真实云端证据。
 
 ## 新用户基线
 

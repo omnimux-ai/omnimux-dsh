@@ -384,6 +384,18 @@ describe('rival-parsers: nested media/statistics of the platform envelope (#3428
     assert.equal(post.field_probe.video_url, 'media[].video_info.variants')
   })
 
+  it('reads X image-only media as an image post (A3)', () => {
+    const post = normalizeRivalPost({
+      tweet_id: '2112335003086643577',
+      text: 'photo tweet',
+      media: [{ media_url_https: 'https://pbs.twimg.com/media/photo.jpg', original_info: { width: 1200, height: 800 } }],
+    }, { platform: 'x' })
+    assert.equal(post.type, 'image')
+    assert.equal(post.cover_url, 'https://pbs.twimg.com/media/photo.jpg')
+    assert.equal(post.video_url, '')
+    assert.equal(post.ratio, 1200 / 800)
+  })
+
   it('keeps a flat hoisted field ahead of the nested one (A4)', () => {
     const post = normalizeRivalPost({
       id: 'a',
@@ -421,6 +433,41 @@ describe('rival-parsers: nested media/statistics of the platform envelope (#3428
     }, { platform: 'tiktok' })
     assert.equal(post.cover_url, '')
     assert.equal(post.video_url, '')
+  })
+
+  it('applies the millisecond conversion only to TikTok (A6)', () => {
+    for (const platform of ['instagram', 'youtube', 'x']) {
+      const post = normalizeRivalPost({ id: 'a', video: { duration: 15 } }, { platform })
+      assert.equal(post.duration, 15, `${platform} stores seconds, not milliseconds`)
+      assert.equal(post.field_probe.duration, 'video.duration')
+    }
+    const tiktok = normalizeRivalPost({ aweme_id: '7321234567890123456', video: { duration: 15_000 } }, { platform: 'tiktok' })
+    assert.equal(tiktok.duration, 15)
+  })
+
+  it('judges flat precedence on the derived cover, not only the singular field (A7)', () => {
+    const post = normalizeRivalPost({
+      tweet_id: '2112335003086643577',
+      images: [{ url: 'https://flat.example.com/flat.jpg' }],
+      media: [{ media_url_https: 'https://nested.example.com/nested.jpg' }],
+    }, { platform: 'x' })
+    assert.equal(post.cover_url, 'https://flat.example.com/flat.jpg')
+    assert.equal(post.field_probe.cover_url, null, 'the cover came from the flat images list, no nested source fired')
+  })
+
+  it('ranks bitrate-free variants by the resolution in the URL', () => {
+    const post = normalizeRivalPost({
+      tweet_id: '2112335003086643577',
+      media: [{
+        video_info: {
+          variants: [
+            { url: 'https://video.twimg.com/ext/640x360/low.mp4' },
+            { url: 'https://video.twimg.com/ext/1280x720/high.mp4' },
+          ],
+        },
+      }],
+    }, { platform: 'x' })
+    assert.equal(post.video_url, 'https://video.twimg.com/ext/1280x720/high.mp4')
   })
 })
 
