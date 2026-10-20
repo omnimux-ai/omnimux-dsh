@@ -10,28 +10,13 @@
  * unit tests pin down.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
-import { formatCount, rivalLocaleOf } from './rival-format.js'
-import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
-import { rivalSelectionSummary, toAccountFilterRow } from './rival-filter.js'
+import { formatCount } from './rival-format.js'
+import { isSafeExternalUrl } from './open-url.js'
+import { toAccountFilterRow } from './rival-filter.js'
 import { accountHealth, coolingMinutesLeft, rivalErrorKey, stoppedReasonText } from './rival-health.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
-
-const ICON_ACCOUNTS = (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-)
-
-const ICON_CARET = (
-  <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-    <path d="m4 6 4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
 
 const ICON_CHECK = (
   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
@@ -62,7 +47,7 @@ const ICON_EXTERNAL = (
  *   locale?: 'zh' | 'en',
  * }} props
  */
-function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft, locale, refreshBusy }) {
+export function AccountFilterRow({ row, t, onToggle, onOpenProfile, onRetry, quotaLeft, locale, refreshBusy }) {
   const handleToggle = () => onToggle(row.id)
   const profileUrlSafe = isSafeExternalUrl(row.profileUrl)
   const [retryReasonOpen, setRetryReasonOpen] = useState(false)
@@ -198,95 +183,4 @@ function hoursToMidnight() {
   const next = new Date()
   next.setHours(24, 0, 0, 0)
   return Math.max(1, Math.ceil((next.getTime() - Date.now()) / 3_600_000))
-}
-
-/**
- * @param {{
- *   t: (key: string) => string,
- *   accounts: Array<Record<string, any>>,
- *   selection: { mode: 'all' | 'subset', ids: string[] | Set<string> },
- *   onToggle: (id: string) => void,
- *   onInvert: () => void,
- *   onReset: () => void,
- *   onRetry?: (id: string) => void,
- *   quotaLeft?: number,
- * }} props
- */
-export function RivalAccountFilter(props) {
-  const { t, accounts, selection, onToggle, onInvert, onReset, onRetry, quotaLeft, refreshBusy = false } = props
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef(null)
-
-  const close = useCallback(() => setOpen(false), [])
-
-  // Escape and an outside click both close the panel. Listening on the document
-  // rather than on the panel is what makes the outside click work at all — the
-  // click that closes it never reaches a node inside it.
-  useEffect(() => {
-    if (!open) return undefined
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') close()
-    }
-    const onPointerDown = (event) => {
-      const root = rootRef.current
-      if (root && event.target instanceof root.ownerDocument.defaultView.Node
-        && root.contains(event.target)) return
-      close()
-    }
-    const doc = rootRef.current?.ownerDocument ?? (typeof document !== 'undefined' ? document : null)
-    if (!doc) return undefined
-    doc.addEventListener('keydown', onKeyDown)
-    doc.addEventListener('mousedown', onPointerDown)
-    return () => {
-      doc.removeEventListener('keydown', onKeyDown)
-      doc.removeEventListener('mousedown', onPointerDown)
-    }
-  }, [close, open])
-
-  const rows = (Array.isArray(accounts) ? accounts : []).map((account) => toAccountFilterRow(account, selection))
-  const summary = rivalSelectionSummary(selection, t)
-  const locale = rivalLocaleOf(t)
-
-  return (
-    <div className="omnimux-rival-filter" ref={rootRef}>
-      <Button
-        variant="outline"
-        className={`omnimux-rival-filter-trigger${open ? ' is-open' : ''}`}
-        aria-haspopup="dialog"
-        aria-expanded={open ? 'true' : 'false'}
-        aria-label={`${t('rivalFilter.trigger')}：${summary}`}
-        leadingIcon={ICON_ACCOUNTS}
-        trailingIcon={ICON_CARET}
-        onClick={() => setOpen((previous) => !previous)}
-      >
-        <span className="omnimux-rival-filter-trigger-label">{summary}</span>
-      </Button>
-      {open ? (
-        <div className="omnimux-rival-filter-panel" role="dialog" aria-label={t('rivalFilter.title')}>
-          <div className="omnimux-rival-filter-head">
-            <span className="omnimux-rival-filter-title">{t('rivalFilter.title')}</span>
-            <span className="omnimux-rival-filter-actions">
-              <Button variant="ghost" size="xs" onClick={onInvert}>{t('rivalFilter.invert')}</Button>
-              <Button variant="ghost" size="xs" onClick={onReset}>{t('rivalFilter.reset')}</Button>
-            </span>
-          </div>
-          <div className="omnimux-rival-filter-list">
-            {rows.map((row) => (
-              <AccountFilterRow
-                key={row.id}
-                row={row}
-                t={t}
-                locale={locale}
-                onToggle={onToggle}
-                onRetry={onRetry}
-                quotaLeft={quotaLeft}
-                refreshBusy={refreshBusy}
-                onOpenProfile={(url) => openExternalUrl(url)}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  )
 }

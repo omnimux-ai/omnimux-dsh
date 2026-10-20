@@ -287,7 +287,6 @@ async function settle(container, predicate) {
 }
 
 const poolBar = (container) => container.querySelector('[data-rival-pool="true"]')
-const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
 const filterRows = (container) => [...container.querySelectorAll('.omnimux-rival-filter-row')]
 const rowById = (container, id) => filterRows(container).find((node) => node.getAttribute('data-account-id') === id)
 const reasonPopover = (container) => container.querySelector('.omnimux-rival-refresh-wrap .omnimux-rival-reason')
@@ -334,7 +333,6 @@ describe('D1 账号行四态健康标记（#3111）', () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await mounted.click(filterTrigger(mounted.container))
       await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
 
       const ok = rowById(mounted.container, 'ra_ok')
@@ -374,7 +372,7 @@ describe('D1 账号行四态健康标记（#3111）', () => {
     const mounted = await mountStage({ accounts })
     try {
       await mounted.openAccountTab()
-      await mounted.click(filterTrigger(mounted.container))
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_stopped'))
       const stopped = rowById(mounted.container, 'ra_stopped')
       assert.ok(stopped.textContent.includes('已停止'))
       assert.ok(stopped.querySelector('.omnimux-rival-filter-reason').textContent.includes(zh['rivalAccounts.error.cloud']))
@@ -390,7 +388,7 @@ describe('D1 账号行四态健康标记（#3111）', () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await mounted.click(filterTrigger(mounted.container))
+      await settle(mounted.container, () => rowById(mounted.container, 'ra_stopped'))
       const stopped = rowById(mounted.container, 'ra_stopped')
       const retry = stopped.querySelector('.omnimux-rival-retry')
       assert.ok(retry, '已停止行必须有重试')

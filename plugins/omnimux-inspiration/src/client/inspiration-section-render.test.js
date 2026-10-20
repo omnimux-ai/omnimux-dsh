@@ -407,31 +407,42 @@ describe('InspirationSection render gate — official 18-industry dropdown', () 
 })
 
 
-describe('InspirationSection render gate — 账号监控 filter.sort（#3113）', () => {
-  it('renders the four spec sort options on the rivals tab', async () => {
-    const mounted = await mountSection(['tiktok'])
+describe('InspirationSection render gate — 账号监控 timeline order (#3432)', () => {
+  it('offers no sort control on the account monitor and requests the fixed latest order', async () => {
+    /** @type {string[]} */
+    const fetched = []
+    const mounted = await mountSection(['tiktok'], { onFetch: (url) => fetched.push(url) })
     try {
       // 切到账号监控 tab（Tabs shim 同步回写 onChange）
       const tabBtn = mounted.container.querySelector('[data-tab="rivals"]')
       assert.ok(tabBtn, 'the rivals tab must exist')
       await act(async () => { tabBtn.click() })
-      const trigger = await mounted.waitFor(() =>
+      const column = await mounted.waitFor(() => mounted.container.querySelector('.omnimux-rival-accounts'), 3000)
+      assert.ok(column, 'the persistent account column must render')
+
+      assert.equal(
         mounted.container.querySelector(`[aria-haspopup="listbox"][aria-label="${SORT_LABEL}"]`),
-        3000,
+        null,
+        'the account monitor timeline is fixed to latest, so it offers no sort dropdown',
       )
-      assert.ok(trigger, 'the rivals toolbar must render the filter.sort dropdown')
-      await act(async () => { trigger.click() })
-      const options = [...mounted.container.querySelectorAll('[role="option"]')]
-        .map((el) => el.textContent.trim())
-      assert.deepEqual(options, [
-        zh['rivalFeed.sort.recommended'],
-        zh['rivalFeed.sort.velocity'],
-        zh['rivalFeed.sort.latest'],
-        zh['rivalFeed.sort.views'],
-      ], 'spec R4: exactly four sort options, verbatim labels, no fifth item')
-      const selected = mounted.container.querySelector('[role="option"][aria-selected="true"]')
-      assert.equal(selected?.textContent.trim(), zh['rivalFeed.sort.recommended'],
-        'the default selection must be 综合推荐')
+      assert.equal(
+        mounted.container.querySelector('.omnimux-rival-filter-trigger'),
+        null,
+        'the retired account filter trigger must not render',
+      )
+      assert.equal(
+        mounted.container.querySelector('.omnimux-rival-filter-panel'),
+        null,
+        'the retired account filter panel must not render',
+      )
+
+      const feedUrls = fetched.filter((url) => url.includes('rival-accounts/posts'))
+      assert.ok(feedUrls.length > 0, `the timeline feed must be requested (got ${JSON.stringify(fetched)})`)
+      // `latest` is the only order the hook can send, and its wire value is
+      // `posted_at`: the timeline must never forward the retired sort choice.
+      for (const url of feedUrls) {
+        assert.match(url, /[?&]sort=posted_at(?:&|$)/, `the timeline order is fixed to latest (got ${url})`)
+      }
     } finally {
       await mounted.unmount()
       mounted.close()

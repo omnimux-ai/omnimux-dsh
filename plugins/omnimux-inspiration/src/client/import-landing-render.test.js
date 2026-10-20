@@ -75,7 +75,6 @@ const L = {
   tabLocal: zh['tab.local'],
   tabPublic: zh['tab.public'],
   tabRivals: zh['tab.rivals'],
-  filterTrigger: zh['rivalFilter.trigger'],
   echoAccount: (handle, platform) => zh['rivalAccounts.import.echoAccount']
     .replace('{handle}', handle)
     .replace('{platform}', platform),
@@ -138,6 +137,31 @@ function createHost(routes) {
   const handle = ({ path, method, body }) => {
     if (path.includes(`${RIVAL_PREFIX}/classify`)) {
       return routes.classify ?? jsonResponse(200, { success: true, data: { kind: 'content', platform: 'x' } })
+    }
+    if (path.includes(`${RIVAL_PREFIX}/posts`)) {
+      // One collected work, so landing on the tab is visible as a timeline row
+      // rather than inferred from an empty state.
+      return jsonResponse(200, {
+        success: true,
+        data: {
+          items: [{
+            id: 'post_1',
+            row_id: 'acc-1:post_1',
+            account_id: 'acc-1',
+            title: 'probe work',
+            text: 'probe work',
+            url: 'https://x.com/li9292/status/1',
+            type: 'image',
+            posted_at: '2026-09-12T08:00:00.000Z',
+            stats: { views: 10, likes: 1, comments: 0, shares: 0 },
+            account: { id: 'acc-1', nickname: 'li9292', handle: '@li9292', platform: 'x' },
+          }],
+          total: 1,
+          page: 1,
+          page_size: 20,
+          has_more: false,
+        },
+      })
     }
     if (path.includes(RIVAL_PREFIX) && method === 'POST') {
       return routes.accountImport ?? jsonResponse(201, { success: true, data: { id: 'acc-1', handle: '@li9292' } })
@@ -410,17 +434,18 @@ describe('import landing — account profile URL', () => {
       assert.equal(imports.length, 1, 'exactly one account import')
       assert.equal(imports[0].path, RIVAL_PREFIX)
 
-      // The 账号监控 tab renders the works feed, so the feed's own container on
-      // screen *is* the evidence that the import moved the view there. Its grid
-      // is the library's 9:16 grid on purpose — that is the point of the
-      // redesign — so the distinguishing marker is the feed wrapper, not the
-      // grid class.
+      // The 账号监控 page is the evidence that the import moved the view: the
+      // two-column layout, its account column and the works timeline are all on
+      // screen.
       const feed = mounted.container.querySelector('.omnimux-rival-root')
       assert.ok(feed, 'the 账号监控 feed must be on screen')
-      assert.ok(
-        feed.querySelector('[data-rival-grid="true"], [data-rival-skeleton="true"]'),
-        'the works grid must be what the account import lands on',
+      const twoColumns = mounted.container.querySelector('.omnimux-rival-layout')
+      assert.ok(twoColumns, 'the account import must land on the two-column monitor')
+      const timelineReady = await settle(
+        mounted.container,
+        () => Boolean(twoColumns.querySelector('.omnimux-rival-timeline[data-rival-timeline="true"]')),
       )
+      assert.ok(timelineReady, 'the works timeline must be what the account import lands on')
       assert.equal(
         mounted.container.querySelector(`input[aria-label="${L.urlLabel}"]`),
         null,
@@ -445,18 +470,19 @@ describe('import landing — account profile URL', () => {
         reloaded,
         'the works feed must be re-read for the account that was just added',
       )
-      // The account dimension lives in the filter panel now, so the imported
-      // account is found by opening it — not in a column beside the grid. The
-      // trigger's label carries the current summary after its own name, which is
-      // why it is matched by prefix.
-      const filterTrigger = [...mounted.container.querySelectorAll('button')]
-        .find((node) => (node.getAttribute('aria-label') || '').startsWith(L.filterTrigger))
-      assert.ok(filterTrigger, 'the account filter must be in the toolbar of the tab it landed on')
-      await click(filterTrigger)
-      await settle(mounted.container, () => mounted.container.querySelector('[data-account-id="acc-1"]'))
-      assert.ok(
-        mounted.container.querySelector('[data-account-id="acc-1"]'),
-        'the imported account must be listed in the account filter',
+      // The imported account is already listed in the persistent column — there
+      // is no account popover to open first.
+      const column = twoColumns.querySelector('.omnimux-rival-accounts')
+      assert.ok(column, 'the two-column layout must carry the persistent account column')
+      const listed = await settle(
+        mounted.container,
+        () => Boolean(column.querySelector('[data-account-id="acc-1"]')),
+      )
+      assert.ok(listed, 'the imported account must be listed in the account column')
+      assert.equal(
+        mounted.container.querySelector('.omnimux-rival-filter-trigger'),
+        null,
+        'the retired account filter trigger must not render',
       )
       assert.equal(
         mounted.container.querySelector(PREVIEW_MODAL_SELECTOR),

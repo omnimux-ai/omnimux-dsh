@@ -1,0 +1,52 @@
+{
+  "task": "3432",
+  "base": "87e7c83bb76cb6feef642b453b95045f8d30b575",
+  "harness": "real RivalAccountColumn + RivalAccountsPanel in .omnimux-rival-layout; real toggleAccountSelection; dsh-ui-kit shimmed; localhost port 54096",
+  "browser": "ego-browser (real Chromium); task space finalized after run",
+  "initial": {
+    "layoutColumns": "248px 1016px",
+    "columnWidth": 248,
+    "contentWidth": 1016,
+    "accountRows": 2,
+    "checkedRows": 2,
+    "itemCount": 3,
+    "itemIds": [
+      "riv_higgs:2",
+      "riv_judy:3",
+      "riv_judy:1"
+    ],
+    "first": {
+      "author": "Higgsfield AI",
+      "handle": "@higgsfield_ai",
+      "time": "· 2 小时前",
+      "body": "Newer X post: comparing two motion styles",
+      "avatarLoaded": true,
+      "mediaLoaded": true,
+      "hasPlayBadge": true,
+      "metrics": "播放 1.3万 · 点赞 320 · 评论 12 · 分享 4",
+      "actions": [
+        "original",
+        "replicate",
+        "deconstruct",
+        "markDone"
+      ]
+    }
+  },
+  "filtered": {
+    "checkedRows": 1,
+    "itemCount": 2,
+    "itemIds": [
+      "riv_judy:3",
+      "riv_judy:1"
+    ]
+  },
+  "reset": {
+    "checkedRows": 2,
+    "itemCount": 3
+  },
+  "failures": [],
+  "screenshots": [
+    "browser-timeline-initial-3432.png",
+    "browser-timeline-filtered-3432.png"
+  ]
+}

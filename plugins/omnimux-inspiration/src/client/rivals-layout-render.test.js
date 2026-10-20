@@ -33,9 +33,11 @@ import { zh } from './locales.js'
  *     trip to 对标账号 and back);
  *   - the content tabs keep the library's own filters, the platform gate
  *     included, while 账号监控 swaps the row to accounts' works filters — the
- *     account multi-select among them — and drops the library-only second row;
+ *     platform dropdown only, since the account dimension is now a persistent
+ *     column beside the timeline and the sort control is gone — and drops the
+ *     library-only second row;
  *   - the workbench's former header buttons (「导入对标账号」「全部刷新」「只看潜力帖」)
- *     are gone from the page: the account dimension is a toolbar filter now, so
+ *     are gone from the page: the account dimension is a persistent column now, so
  *     none of them has a home left, and a surviving copy would be a second
  *     control for one decision.
  *
@@ -73,7 +75,6 @@ const L = {
   // "must not exist" check would pass for the wrong reason.
   refreshAll: '全部刷新',
   potentialFilter: '只看潜力帖',
-  filterTrigger: zh['rivalFilter.trigger'],
   accountTab: '账号监控',
   rivalImportBtn: zh['rivalAccounts.import.btn'],
 }
@@ -282,9 +283,9 @@ const searchInput = (container) => container.querySelector('input[type="search"]
 const platformTriggers = (container) => [...container.querySelectorAll(`[aria-haspopup="listbox"][aria-label="${L.platform}"]`)]
 const subfilterRow = (container) => container.querySelector('.omnimux-inspiration-subfilter-row')
 const rivalRoot = (container) => container.querySelector('.omnimux-rival-root')
-const grid = (container) => container.querySelector('.omnimux-rival-masonry')
 const importButton = (container) => buttonsLabelled(container, L.importBtn)[0] || null
-const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
+const rivalLayout = (container) => container.querySelector('.omnimux-rival-layout')
+const accountColumn = (container) => container.querySelector('.omnimux-rival-accounts')
 
 /**
  * Everything the shell owns, whatever tab is selected.
@@ -366,14 +367,23 @@ describe('inspiration tabs — shared shell', () => {
         )
       }
 
-      // The account dimension moved up into the shared row, which is the one
-      // region a tab switch does not replace.
-      const trigger = filterTrigger(mounted.container)
-      assert.ok(trigger, '[rivals] the toolbar must render the account filter')
+      // The account dimension is a persistent column inside the content area
+      // (#3432): the toolbar no longer owns it, and the retired popover must
+      // not come back anywhere on the page.
+      const twoColumns = rivalLayout(mounted.container)
+      assert.ok(twoColumns, '[rivals] the monitor must render as a two-column layout')
+      const column = accountColumn(mounted.container)
+      assert.ok(column, '[rivals] the left column must be the account list')
+      assert.equal(column.parentElement, twoColumns, '[rivals] the account list must be the left column of the layout')
+      assert.ok(column.querySelector('.omnimux-rival-accounts-list'), '[rivals] the column must render its own row list')
+      assert.ok(
+        twoColumns.querySelector('.omnimux-rival-content')?.querySelector('.omnimux-rival-root'),
+        '[rivals] the right column must own the timeline content',
+      )
       assert.equal(
-        trigger.closest('.omnimux-rival-root'),
+        mounted.container.querySelector('.omnimux-rival-filter-trigger'),
         null,
-        '[rivals] the account filter belongs to the shell toolbar, not to the content area',
+        '[rivals] the retired account filter trigger must not render',
       )
 
       // The works come from the aggregate endpoint, and the row is what drives it.
@@ -476,7 +486,7 @@ describe('inspiration tabs — filter row follows the tab', () => {
     }
   })
 
-  it('swaps the row to the account filters on 对标账号', async () => {
+  it('keeps the account list out of the toolbar and drops the sort control on 对标账号', async () => {
     const mounted = await mountStage({ platforms: ['tiktok', 'x'] })
     try {
       await mounted.openTab('rivals')
@@ -496,7 +506,19 @@ describe('inspiration tabs — filter row follows the tab', () => {
         null,
         '[rivals] the library content filters must not be shown over works',
       )
-      assert.ok(filterTrigger(mounted.container), '[rivals] the account filter must be on the row')
+      // #3432: the timeline order is fixed to `latest`, so the toolbar offers
+      // no sort dropdown — and the account dimension is not a toolbar popover.
+      assert.equal(
+        mounted.container.querySelector(`[aria-label="${L.sort}"]`),
+        null,
+        '[rivals] the toolbar must not render a sort dropdown',
+      )
+      assert.equal(
+        mounted.container.querySelector('.omnimux-rival-filter-trigger'),
+        null,
+        '[rivals] the retired account filter trigger must not render on the row',
+      )
+      assert.ok(accountColumn(mounted.container), '[rivals] the account list must live in the two-column layout')
       assert.ok(
         mounted.requestsTo(RIVAL_PREFIX).length > 0,
         '[rivals] the row must be driving the works feed',

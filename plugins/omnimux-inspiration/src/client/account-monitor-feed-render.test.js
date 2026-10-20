@@ -13,20 +13,22 @@ import { createRoot } from 'react-dom/client'
 import { zh } from './locales.js'
 
 /**
- * Render gate for the 账号监控 feed — the account filter and the works grid.
+ * Render gate for the 账号监控 feed — the account column and the timeline.
  *
- * What the tab promises, and what this file pins down:
+ * What the tab promises after #3432, and what this file pins down:
  *
- *   - the account dimension is a 32px multi-select filter in the shared toolbar
- *     row, and its panel lists every monitored account with its avatar, handle,
- *     platform glyph and work count;
- *   - checking an account narrows the works grid immediately, 反选 inverts and
- *     重置 restores the default — the three rules `rival-filter.js` owns,
- *     observed through the real components;
+ *   - the monitor is a two-column layout: a persistent account column that
+ *     lists every monitored account with its avatar, handle, platform glyph and
+ *     work count, and a content column beside it;
+ *   - every account starts checked; checking one narrows the timeline
+ *     immediately, 反选 inverts and 重置 restores the default — the three rules
+ *     `rival-filter.js` owns, observed through the real components;
  *   - the ↗ button opens the creator's profile without touching the selection;
- *   - the works render as the library's own 9:16 cards, with 详情 / 立即复刻 as
- *     their hover actions, and 详情 opens a detail dialog that knows it is not a
- *     library item.
+ *   - the works render as one native-looking timeline (avatar / author / handle
+ *     / platform / time / body / media / metrics / actions), newest first, and
+ *     a row opens a detail dialog that knows it is not a library item;
+ *   - the retired account popover, masonry and 9:16 work cards do not render on
+ *     this tab.
  *
  * Mounted the same way `rivals-layout-render.test.js` mounts: the real
  * `InspirationStage` bundled by esbuild, in jsdom, with `dsh-ui-kit`'s leaf
@@ -116,17 +118,15 @@ const WORKS = [WORK_ALICE, WORK_BOB]
 
 /** Labels the gate drives the UI by, taken from the plugin's own table. */
 const L = {
-  tab: zh['tab.rivals'],
-  filterTrigger: zh['rivalFilter.trigger'],
   filterTitle: zh['rivalFilter.title'],
+  columnTitle: zh['rivalAccounts.column.title'],
+  columnHint: zh['rivalAccounts.column.hint'],
   invert: zh['rivalFilter.invert'],
   reset: zh['rivalFilter.reset'],
   some: zh['rivalFilter.some'],
-  none: zh['rivalFilter.none'],
   posts: zh['rivalFilter.posts'],
   openProfile: zh['rivalFilter.openProfile'],
-  detail: zh['card.cta.detail'],
-  replicate: zh['card.cta.try'],
+  replicate: zh['rivalFeed.card.replicate'],
   importBtn: zh['rivalAccounts.import.btn'],
   searchPlaceholder: zh['rivalAccounts.import.searchPlaceholder'],
   // 顶部「导入灵感」弹窗的三个控件标签，账号主页链接就是从它进来的。
@@ -388,17 +388,17 @@ async function waitFor(ms) {
  */
 const TOAST_EXIT_MS = 2500 + 180 + 120
 
-const filterTrigger = (container) => container.querySelector('.omnimux-rival-filter-trigger')
-const filterPanel = (container) => container.querySelector('.omnimux-rival-filter-panel')
+const layout = (container) => container.querySelector('.omnimux-rival-layout')
+const accountColumn = (container) => container.querySelector('.omnimux-rival-accounts')
+const columnSummary = (container) => container.querySelector('.omnimux-rival-accounts-summary')?.textContent.trim() || ''
+const timeline = (container) => container.querySelector('[data-rival-timeline="true"]')
+const timelineItems = (container) => Array.from(container.querySelectorAll('.omnimux-rival-timeline-item'))
+const timelineIds = (container) => timelineItems(container).map((node) => node.getAttribute('data-card-id'))
 const filterRows = (container) => [...container.querySelectorAll('.omnimux-rival-filter-row')]
-// v2.1: the monitor works render as `.omnimux-rival-card` inside the flat
-// masonry — the composite row id moved to `data-card-id`.
-const cards = (container) => [...container.querySelectorAll('.omnimux-rival-card')]
 const toast = (container) => container.querySelector('.omnimux-inspiration-toast')
 const rowById = (container, id) => filterRows(container).find((node) => node.getAttribute('data-account-id') === id)
 const buttonsLabelled = (container, text) => [...container.querySelectorAll('button')]
   .filter((node) => node.textContent.trim() === text)
-const triggerText = (container) => filterTrigger(container)?.textContent.trim() || ''
 
 /** Type into a React-controlled input the way a user would. */
 async function typeInto(input, value) {
@@ -434,18 +434,37 @@ after(() => {
 })
 
 describe('账号监控 — 账号筛选（多选）', () => {
-  it('renders a 32px-class trigger reading 账号', async () => {
+  it('renders the account column beside the content, every account checked by default', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      const trigger = filterTrigger(mounted.container)
-      assert.ok(trigger, 'the toolbar must render the account filter')
-      assert.ok(
-        triggerText(mounted.container).includes(zh['rivalFilter.all']),
-        `the trigger must read「账号」(got ${JSON.stringify(triggerText(mounted.container))})`,
-      )
-      assert.equal(trigger.getAttribute('aria-expanded'), 'false', 'the panel starts closed')
-      assert.equal(filterPanel(mounted.container), null, 'the panel must not be rendered while closed')
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
+
+      const twoColumns = layout(mounted.container)
+      assert.ok(twoColumns, 'the monitor must render as the two-column layout')
+      const column = accountColumn(mounted.container)
+      assert.ok(column, 'the account column must always be on screen — it is not a popover')
+      assert.equal(column.parentElement, twoColumns, 'the account column must be the left column of the layout')
+      assert.equal(twoColumns.querySelector('.omnimux-rival-content'), column.nextElementSibling, 'the content column must sit beside the account column')
+      assert.ok(column.querySelector('.omnimux-rival-accounts-head'), 'the column must carry its own title and actions')
+      assert.ok(column.querySelector('.omnimux-rival-accounts-list'), 'the column must render its own row list')
+
+      // The retired account popover is gone from this tab: no trigger, no panel.
+      assert.equal(mounted.container.querySelector('.omnimux-rival-filter-trigger'), null, 'the retired account filter trigger must not render')
+      assert.equal(mounted.container.querySelector('.omnimux-rival-filter-panel'), null, 'the retired account filter panel must not render')
+
+      assert.ok(column.textContent.includes(L.columnTitle), 'the column header must name what the list is')
+      assert.ok(column.textContent.includes(L.columnHint), 'the column header must explain what selecting a row does')
+      assert.equal(columnSummary(mounted.container), label(L.some, { k: ACCOUNTS.length }), 'the header must summarise the default selection')
+      assert.ok(buttonsLabelled(column, L.invert).length > 0, 'the column header must offer 反选')
+      assert.ok(buttonsLabelled(column, L.reset).length > 0, 'the column header must offer 重置')
+
+      for (const account of ACCOUNTS) {
+        const row = rowById(mounted.container, account.id)
+        assert.ok(row, `the column must list ${account.id}`)
+        assert.equal(row.getAttribute('aria-checked'), 'true', 'every account starts checked')
+        assert.equal(row.getAttribute('data-checked'), 'true')
+      }
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -456,15 +475,14 @@ describe('账号监控 — 账号筛选（多选）', () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await mounted.click(filterTrigger(mounted.container))
-      await settle(mounted.container, () => filterRows(mounted.container).length > 0)
+      await settle(mounted.container, () => filterRows(mounted.container).length === ACCOUNTS.length)
 
-      const panel = filterPanel(mounted.container)
-      assert.ok(panel, 'clicking the trigger must open the panel')
-      assert.ok(panel.textContent.includes(L.filterTitle), 'the panel must carry its title')
+      const column = accountColumn(mounted.container)
+      assert.ok(column, 'the account column must render on the monitor')
+      assert.equal(column.getAttribute('aria-label'), zh['rivalAccounts.column.title'], 'the column must carry the account-list label')
       assert.ok(
-        panel.textContent.includes(L.invert) && panel.textContent.includes(L.reset),
-        'the panel header must offer 反选 and 重置',
+        column.textContent.includes(L.invert) && column.textContent.includes(L.reset),
+        'the column header must offer 反选 and 重置',
       )
 
       const rows = filterRows(mounted.container)
@@ -487,26 +505,26 @@ describe('账号监控 — 账号筛选（多选）', () => {
     }
   })
 
-  it('filters the works when an account is unchecked, then inverts and resets', async () => {
+  it('filters the timeline when an account is unchecked, then inverts and resets', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
-      assert.equal(cards(mounted.container).length, WORKS.length, 'both accounts\' works start on screen')
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
+      assert.equal(timelineItems(mounted.container).length, WORKS.length, 'both accounts\' works start on screen')
 
-      await mounted.click(filterTrigger(mounted.container))
       const aliceRow = rowById(mounted.container, 'ra_alice')
-      assert.ok(aliceRow, 'the panel must list ra_alice')
+      assert.ok(aliceRow, 'the column must list ra_alice')
 
       // Unchecking the first account is a subset: 全部 minus Alice.
       await mounted.click(aliceRow)
-      await settle(mounted.container, () => cards(mounted.container).length === 1)
-      assert.ok(
-        triggerText(mounted.container).includes(label(L.some, { k: 1 })),
-        `unchecking one account must read「已选 1 个账号」(got ${JSON.stringify(triggerText(mounted.container))})`,
+      await settle(mounted.container, () => timelineItems(mounted.container).length === 1)
+      assert.equal(
+        columnSummary(mounted.container),
+        label(L.some, { k: 1 }),
+        'unchecking one account must read「已选 1 个账号」',
       )
       assert.equal(
-        cards(mounted.container)[0].getAttribute('data-card-id'),
+        timelineIds(mounted.container)[0],
         WORK_BOB.row_id,
         'only the remaining account\'s works may stay on screen',
       )
@@ -517,31 +535,33 @@ describe('账号监控 — 账号筛选（多选）', () => {
 
       // 反选 from that subset selects the complement: Alice again.
       await mounted.click(buttonsLabelled(mounted.container, L.invert)[0])
-      await settle(mounted.container, () => cards(mounted.container).length === 1)
+      await settle(mounted.container, () => timelineIds(mounted.container)[0] === WORK_ALICE.row_id)
       assert.equal(
-        cards(mounted.container)[0].getAttribute('data-card-id'),
+        timelineIds(mounted.container)[0],
         WORK_ALICE.row_id,
         '反选 must leave the complement on screen',
       )
 
       // 重置 goes back to the default: every account, every work.
       await mounted.click(buttonsLabelled(mounted.container, L.reset)[0])
-      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
-      assert.ok(
-        triggerText(mounted.container).includes(zh['rivalFilter.all']),
-        '重置 must restore「账号」',
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
+      assert.equal(
+        columnSummary(mounted.container),
+        label(L.some, { k: ACCOUNTS.length }),
+        '重置 must restore the full selection',
       )
-      assert.equal(cards(mounted.container).length, WORKS.length, '重置 must restore the whole grid')
+      assert.equal(timelineItems(mounted.container).length, WORKS.length, '重置 must restore the whole timeline')
 
       // 反选 from 全部 is the empty set — the one state that only exists on this
-      // path, and the trigger has a wording of its own for it.
+      // path, and the column header has a tally of its own for it.
       await mounted.click(buttonsLabelled(mounted.container, L.invert)[0])
-      await settle(mounted.container, () => triggerText(mounted.container).includes(L.none))
-      assert.ok(
-        triggerText(mounted.container).includes(L.none),
-        `inverting 全部 must read「${L.none}」(got ${JSON.stringify(triggerText(mounted.container))})`,
+      await settle(mounted.container, () => columnSummary(mounted.container) === label(L.some, { k: 0 }))
+      assert.equal(
+        columnSummary(mounted.container),
+        label(L.some, { k: 0 }),
+        'inverting 全部 must report an empty selection',
       )
-      assert.equal(cards(mounted.container).length, 0, 'an empty selection shows no works')
+      assert.equal(timelineItems(mounted.container).length, 0, 'an empty selection shows no works')
       // The wire cannot express「nothing」— an omitted `accounts` means every
       // account — so the honest empty state is what the user sees, with a way
       // out of it.
@@ -554,8 +574,8 @@ describe('账号监控 — 账号筛选（多选）', () => {
 
       // And back out of it with 重置.
       await mounted.click(buttonsLabelled(mounted.container, L.reset)[0])
-      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
-      assert.equal(cards(mounted.container).length, WORKS.length, '重置 must leave the empty state behind')
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
+      assert.equal(timelineItems(mounted.container).length, WORKS.length, '重置 must leave the empty state behind')
     } finally {
       await mounted.unmount()
       mounted.close()
@@ -566,7 +586,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await mounted.click(filterTrigger(mounted.container))
+      await settle(mounted.container, () => Boolean(rowById(mounted.container, 'ra_alice')))
       const before = feedRequests(mounted).length
 
       const jump = rowById(mounted.container, 'ra_alice')
@@ -576,8 +596,9 @@ describe('账号监控 — 账号筛选（多选）', () => {
       await settle(mounted.container, () => mounted.opened.length > 0)
 
       assert.deepEqual(mounted.opened, [ACCOUNTS[0].profile_url], 'the profile must open in a new tab')
-      assert.ok(
-        triggerText(mounted.container).includes(zh['rivalFilter.all']),
+      assert.equal(
+        columnSummary(mounted.container),
+        label(L.some, { k: ACCOUNTS.length }),
         'opening a profile must not change the selection',
       )
       assert.equal(
@@ -591,75 +612,52 @@ describe('账号监控 — 账号筛选（多选）', () => {
     }
   })
 
-  it('closes the panel on Escape', async () => {
-    const mounted = await mountStage()
-    try {
-      await mounted.openAccountTab()
-      await mounted.click(filterTrigger(mounted.container))
-      assert.ok(filterPanel(mounted.container), 'the panel must be open')
-
-      await act(async () => {
-        mounted.document.dispatchEvent(new mounted.document.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-        await new Promise((resolve) => setTimeout(resolve, 0))
-      })
-      assert.equal(filterPanel(mounted.container), null, 'Escape must close the panel')
-    } finally {
-      await mounted.unmount()
-      mounted.close()
-    }
-  })
 })
 
 describe('账号监控 — 作品网格流', () => {
-  it('renders the works as the v2.1 masonry: flat DOM, minimal default state, hover actions', async () => {
-    const mounted = await mountStage()
+  it('renders the works as one native-looking timeline, newest first, with hover actions', async () => {
+    // Host order is deliberately oldest-first: the timeline owns the order.
+    const mounted = await mountStage({ works: [WORK_BOB, WORK_ALICE] })
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
 
-      const gridNode = mounted.container.querySelector('.omnimux-rival-masonry')
-      assert.ok(gridNode, 'the works must render in the v2.1 masonry container')
-      assert.ok(
-        gridNode.querySelector('[data-card-id]'),
-        'the works must be inside that masonry, not beside it',
-      )
-      assert.equal(cards(mounted.container).length, WORKS.length, 'one card per work')
-      // v2.1 DOM order = feed order (spec V4): cards are flat children, never
-      // sorted into column wrappers.
+      const feed = timeline(mounted.container)
+      assert.ok(feed, 'the works must render in the single-column timeline')
+      assert.equal(feed.getAttribute('role'), 'feed', 'the timeline must present itself as a feed')
+      assert.equal(mounted.container.querySelector('.omnimux-rival-masonry'), null, 'the retired masonry must not render on the monitor')
+      assert.equal(mounted.container.querySelector('.omnimux-rival-card'), null, 'the retired work card must not render on the monitor')
       assert.deepEqual(
-        [...gridNode.children].map((node) => node.getAttribute('data-card-id')),
-        WORKS.map((work) => work.row_id),
-        'the flat list must keep the feed order',
+        timelineIds(mounted.container),
+        [WORK_ALICE.row_id, WORK_BOB.row_id],
+        'rows must be sorted by publish time, newest first, whatever order the Host returned',
       )
-      assert.equal(
-        gridNode.querySelector('.omnimux-rival-masonry-col'),
-        null,
-        'column wrappers would break the tab order (spec V4)',
-      )
-      for (const card of cards(mounted.container)) {
-        // Default state is minimal: the hover layer carries the actions.
-        const overlay = card.querySelector('.omnimux-rival-card-overlay')
-        assert.ok(overlay, 'every card must carry its hover layer')
-        assert.ok(
-          card.textContent.includes(L.replicate),
-          'the hover CTA must read 立即复刻',
-        )
-        assert.ok(
-          card.querySelector('[data-act="deconstruct"]'),
-          'the hover layer must carry the AI breakdown button through the real panel wiring (PM B2)',
-        )
-        assert.ok(
-          card.querySelector('.omnimux-rival-card-media'),
-          'media cards must reserve their media area',
-        )
-      }
+      assert.equal(timelineItems(mounted.container).length, WORKS.length, 'one row per work')
 
-      // The browse-summary line was retired (#3430): the filter row leads
-      // straight into the grid, and neither the row nor its copy may return.
+      const first = timelineItems(mounted.container)[0]
+      assert.equal(first.getAttribute('data-platform'), 'tiktok')
+      assert.ok(first.querySelector('.omnimux-rival-timeline-avatar'), 'every row must carry the author avatar slot')
+      assert.equal(first.querySelector('.omnimux-rival-timeline-author')?.textContent, WORK_ALICE.account.nickname)
+      assert.equal(first.querySelector('.omnimux-rival-timeline-handle')?.textContent, WORK_ALICE.account.handle)
+      assert.ok(first.querySelector('.omnimux-rival-timeline-platform svg'), 'the row must draw the platform mark')
+      assert.ok((first.querySelector('.omnimux-rival-timeline-time')?.textContent || '').includes('·'), 'the row must carry the relative publish time')
+      assert.equal(first.querySelector('.omnimux-rival-timeline-body')?.textContent, WORK_ALICE.title)
+      assert.ok(first.querySelector('.omnimux-rival-timeline-media'), 'media rows must reserve their media block')
+      assert.ok(first.querySelector('.omnimux-rival-timeline-play'), 'video rows must carry a play badge')
+      const metrics = first.querySelector('.omnimux-rival-timeline-metrics')?.textContent || ''
+      for (const labelText of [zh['rivalAccounts.post.views'], zh['rivalAccounts.post.likes'], zh['rivalAccounts.post.comments'], zh['rivalAccounts.post.shares']]) {
+        assert.ok(metrics.includes(labelText), `the metrics line must name「${labelText}」`)
+      }
+      const actions = Array.from(first.querySelectorAll('[data-act]')).map((node) => node.getAttribute('data-act'))
+      assert.deepEqual(actions, ['original', 'replicate', 'deconstruct', 'markDone'], 'the hover row must carry every monitor action through the real panel wiring')
+      assert.ok(first.textContent.includes(L.replicate), 'the replicate action must read 立即复刻')
+
+      // The browse-summary line was retired (#3430): the page leads straight
+      // into the timeline, and neither the row nor its copy may return.
       assert.equal(
         mounted.container.querySelector('[data-rival-summary]'),
         null,
-        'the retired summary line must not render above the grid',
+        'the retired summary line must not render above the timeline',
       )
       assert.equal(
         mounted.container.querySelector('.omnimux-rival-summary'),
@@ -681,13 +679,13 @@ describe('账号监控 — 作品网格流', () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
 
-      // v2.1: the card body itself opens the detail dialog — there is no
-      // separate 详情 button in the whitelist anymore.
-      const card = cards(mounted.container)[0]
-      assert.ok(card, 'a card must be on screen')
-      await mounted.click(card)
+      // The timeline row itself opens the detail dialog; there is no separate
+      // 详情 button.
+      const item = timelineItems(mounted.container)[0]
+      assert.ok(item, 'a timeline row must be on screen')
+      await mounted.click(item)
       await settle(mounted.container, () => (mounted.container.textContent || '').includes(zh['rivalFeed.detail.title']))
 
       const text = mounted.container.textContent || ''
@@ -831,7 +829,7 @@ describe('账号监控 — 空态与导入反馈', () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
 
       const postsBefore = feedRequests(mounted).length
 
@@ -901,12 +899,11 @@ describe('账号监控 — 空态与导入反馈', () => {
         'the reload must be a new request, not the one already in flight',
       )
 
-      // 重读的成果要看见：新账号出现在账号筛选器里。
-      await mounted.click(filterTrigger(mounted.container))
+      // 重读的成果要看见：新账号出现在常驻账号列里，不需要手动打开任何弹层。
       await settle(mounted.container, () => rowById(mounted.container, NEW_ACCOUNT_ID))
       assert.ok(
         rowById(mounted.container, NEW_ACCOUNT_ID),
-        'the imported account must be listed in the filter without a manual refresh',
+        'the imported account must be listed in the account column without a manual refresh',
       )
 
       // 气泡自己走：2.5 秒后淡出，不留下一条需要人来关掉的通知。
@@ -947,10 +944,10 @@ describe('账号监控 — 第三轮整改回执', () => {
     const mounted = await mountStage({ localItems: { 'insp-3110': LOCAL_ITEM } })
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
 
-      const card = cards(mounted.container)[0]
-      await mounted.click(card.querySelector('[data-act="deconstruct"]'))
+      const row = timelineItems(mounted.container)[0]
+      await mounted.click(row.querySelector('[data-act="deconstruct"]'))
       const modalReady = await settle(
         mounted.container,
         () => mounted.container.querySelector('.omnimux-inspiration-modal-replicate'),
@@ -1009,9 +1006,9 @@ describe('账号监控 — 第三轮整改回执', () => {
     const mounted = await mountStage({ failPaths: [/to-inspiration/] })
     try {
       await mounted.openAccountTab()
-      await settle(mounted.container, () => cards(mounted.container).length === WORKS.length)
+      await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
 
-      const button = cards(mounted.container)[0].querySelector('[data-act="deconstruct"]')
+      const button = timelineItems(mounted.container)[0].querySelector('[data-act="deconstruct"]')
       const requestsBefore = mounted.calls.filter((call) => call.path.includes('to-inspiration')).length
       await mounted.click(button)
       const shown = await settle(
@@ -1044,7 +1041,6 @@ describe('账号监控 — 第三轮整改回执', () => {
     const mounted = await mountStage({ accounts: [evil], works: [] })
     try {
       await mounted.openAccountTab()
-      await mounted.click(filterTrigger(mounted.container))
       await settle(mounted.container, () => filterRows(mounted.container).length > 0)
 
       const jump = rowById(mounted.container, 'ra_evil')
@@ -1071,12 +1067,21 @@ describe('账号监控 — 第三轮整改回执', () => {
     assert.match(card, /formatEngagementCount\(stats\.(likes|comments|shares),\s*locale\)/, 'engagement counts must be formatted with the card\'s locale')
     assert.match(card, /formatCount\(views,\s*locale\)/, 'view count must be formatted with the card\'s locale')
     assert.match(card, /stats\.views >= 0/, 'unknown views (-1 sentinel) must be shown as the -- marker, never a negative count')
+    // The monitor itself renders `RivalTimelineRow` now; it must derive the same
+    // locale from the same `t()`.
+    const timelineRow = readFileSync(join(here, 'RivalTimelineRow.jsx'), 'utf8')
+    assert.match(timelineRow, /rivalLocaleOf\(t\)/, 'the timeline row must derive its locale from t()')
+    assert.match(timelineRow, /formatRelativeTime\(card\?\.posted_at,\s*Date\.now\(\),\s*locale\)/, 'the timeline time must follow the same locale')
+    assert.match(timelineRow, /formatEngagementCount\(stats\.(likes|comments|shares),\s*locale\)/, 'the timeline engagement counts must follow the same locale')
+    assert.match(timelineRow, /formatCount\(views,\s*locale\)/, 'the timeline view count must follow the same locale')
+    assert.match(timelineRow, /stats\.views >= 0/, 'the timeline must keep the -1 views sentinel out of the count')
     const modal = readFileSync(join(here, 'RivalPostPreviewModal.jsx'), 'utf8')
     assert.match(modal, /rivalLocaleOf\(t\)/, 'the detail dialog must derive the same locale')
     assert.match(modal, /formatRelativeTime\(row\.posted_at,\s*Date\.now\(\),\s*locale\)/, 'the detail dialog time must follow the same locale')
     assert.match(modal, /formatCount\(value,\s*locale\)/, 'the detail dialog stats must follow the same locale')
-    const filter = readFileSync(join(here, 'RivalAccountFilter.jsx'), 'utf8')
-    assert.match(filter, /rivalLocaleOf\(t\)/, 'the account filter must derive the same locale')
-    assert.match(filter, /formatCount\(row\.postCount,\s*locale\)/, 'the account row count must follow the same locale')
+    const column = readFileSync(join(here, 'RivalAccountColumn.jsx'), 'utf8')
+    assert.match(column, /rivalLocaleOf\(t\)/, 'the account column must derive the same locale')
+    assert.match(column, /locale=\{locale\}/, 'the account column must pass its locale down to the rows')
+    assert.match(column, /formatCount\(selectedCount,\s*locale\)/, 'the account column summary must follow the same locale')
   })
 })

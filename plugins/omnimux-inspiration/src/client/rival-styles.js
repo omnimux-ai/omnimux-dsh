@@ -27,84 +27,6 @@ export const RIVAL_CSS = `
 }
 
 /* ── 账号筛选（多选） ───────────────────────────────────────────────── */
-.omnimux-rival-filter {
-  position: relative;
-  flex: none;
-}
-.omnimux-rival-filter-trigger {
-  height: 32px;
-  min-height: 32px;
-  padding: 0 10px 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-bg-layer-1);
-  color: var(--dsw-alias-label-primary);
-  font-size: 12px;
-  font-weight: 500;
-  gap: 8px;
-}
-.omnimux-rival-filter-trigger:hover {
-  border-color: var(--dsw-alias-border-l3);
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-.omnimux-rival-filter-trigger.is-open {
-  border-color: var(--dsw-alias-border-l4);
-  background: var(--dsw-alias-bg-layer-2);
-}
-.omnimux-rival-filter-trigger-label {
-  white-space: nowrap;
-}
-.omnimux-rival-filter-panel {
-  position: absolute;
-  top: 38px;
-  right: 0;
-  width: 290px;
-  /* 面板必须压在一切同屏元素之上：任何后置的卡片、摘要行都不允许盖住这份账号
-     列表，否则被盖住的行既看不见也点不到。 */
-  z-index: 1000;
-  padding: 8px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 10px;
-  background: var(--dsw-alias-bg-elevated);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 12px 32px var(--dsw-alias-bg-mask-1), 0 2px 8px var(--dsw-alias-bg-mask-1);
-  animation: omni-rival-pop 120ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes omni-rival-pop {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.omnimux-rival-filter-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 8px 8px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-}
-.omnimux-rival-filter-title {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--dsw-alias-label-tertiary);
-}
-.omnimux-rival-filter-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-}
-.omnimux-rival-filter-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  /* 四行账号（其中终态行带两行原因）实测 272px：上限必须容得下这个常见规模，
-     否则最后一行与其原因行被裁在滚动区外。账号更多时仍按本列表自身滚动。 */
-  max-height: 320px;
-  overflow-y: auto;
-}
 .omnimux-rival-filter-row {
   display: flex;
   align-items: center;
@@ -934,6 +856,263 @@ export const RIVAL_CSS = `
 .on-surface .omnimux-rival-act-primary:hover:not(:disabled) {
   opacity: .88;
 }
+/* ── 账号监控两栏布局（#3432） ─────────────────────────────────────── */
+.omnimux-rival-layout {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
+  align-items: start;
+}
+.omnimux-rival-content {
+  min-width: 0;
+}
+@media (max-width: 960px) {
+  .omnimux-rival-layout {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+@media (max-width: 720px) {
+  .omnimux-rival-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.omnimux-rival-accounts {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 220px);
+}
+.omnimux-rival-accounts-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  padding: 0 2px;
+}
+.omnimux-rival-accounts-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+.omnimux-rival-accounts-role {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-rival-accounts-summary {
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-rival-accounts-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.omnimux-rival-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+@media (max-width: 720px) {
+  .omnimux-rival-accounts {
+    position: static;
+    max-height: 240px;
+  }
+}
+
+/* ── 原生风格帖子时间线（#3432） ─────────────────────────────────── */
+.omnimux-rival-timeline {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-1);
+}
+.omnimux-rival-timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+.omnimux-rival-timeline-item:last-child {
+  border-bottom: none;
+}
+.omnimux-rival-timeline-item:hover,
+.omnimux-rival-timeline-item:focus-visible {
+  background: var(--dsw-alias-bg-layer-2);
+}
+.omnimux-rival-timeline-item.is-done {
+  opacity: .58;
+}
+.omnimux-rival-timeline-avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-layer-2));
+  color: var(--dsw-alias-label-secondary);
+  font-size: 15px;
+  font-weight: 600;
+}
+.omnimux-rival-timeline-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.omnimux-rival-timeline-main {
+  flex: 1;
+  min-width: 0;
+}
+.omnimux-rival-timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.omnimux-rival-timeline-author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+.omnimux-rival-timeline-platform {
+  display: inline-flex;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-rival-timeline-handle,
+.omnimux-rival-timeline-time {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-rival-timeline-state {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary);
+}
+.omnimux-rival-timeline-body {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--dsw-alias-label-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.omnimux-rival-timeline-media {
+  position: relative;
+  margin-top: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-specific-media-ink);
+}
+.omnimux-rival-timeline-media img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+}
+.omnimux-rival-timeline-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  background: var(--dsw-specific-media-pill-bg);
+  border: 1px solid var(--dsw-specific-media-border-dim);
+}
+.omnimux-rival-timeline-play::after {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 13px;
+  border-style: solid;
+  border-width: 9px 0 9px 14px;
+  border-color: transparent transparent transparent currentColor;
+  color: var(--dsw-specific-media-fg-strong);
+}
+.omnimux-rival-timeline-duration {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--dsw-specific-media-pill-bg);
+  color: var(--dsw-specific-media-fg-strong);
+  font-size: 11px;
+}
+.omnimux-rival-timeline-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  min-height: 24px;
+}
+.omnimux-rival-timeline-metrics {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-rival-timeline-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+.omnimux-rival-timeline-item:hover .omnimux-rival-timeline-actions,
+.omnimux-rival-timeline-item:focus-within .omnimux-rival-timeline-actions {
+  opacity: 1;
+}
+.omnimux-rival-timeline-act {
+  font-size: 12px;
+}
+.omnimux-rival-timeline-loadmore {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+}
+.omnimux-rival-timeline-skel {
+  height: 88px;
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-2);
+  animation: omnimux-rival-skel-pulse 1.4s ease-in-out infinite;
+}
+.omnimux-rival-timeline-sentinel {
+  height: 1px;
+}
+
 `
 
 /** Inject the rival stylesheet once. */

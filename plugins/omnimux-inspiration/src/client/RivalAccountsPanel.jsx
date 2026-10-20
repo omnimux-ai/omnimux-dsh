@@ -1,18 +1,19 @@
 /**
- * Content area of the 账号监控 tab: one grid of the monitored accounts' works.
+ * Right column of the 账号监控 tab: the selected accounts' posts as a timeline.
  *
  * It used to be a two-column workbench — an account column on the left and a
  * post list on the right — and the account dimension now lives in the toolbar's
  * multi-select filter instead. What is left is what the tab is for: the works.
  *
- * The feed state is mounted by the shell (`use-rival-feed`) because the filter
- * in the toolbar and this grid read the same numbers; the panel renders it and
- * owns only what is scoped to the content area — the import dialog, the detail
+ * The feed state is mounted by the shell (`use-rival-feed`) because the account
+ * column and this timeline read the same numbers; the panel renders the
+ * content and owns only what is scoped to it — the import dialog, the detail
  * dialog and the「立即复刻」action.
  */
 
 import { useCallback, useEffect, useState } from 'react'
 import { RivalFeedGrid } from './RivalFeedGrid.jsx'
+import { RivalTimeline } from './RivalTimeline.jsx'
 import { RivalImportDialog } from './RivalImportDialog.jsx'
 import { RivalPostPreviewModal } from './RivalPostPreviewModal.jsx'
 import { InspirationPreviewModal } from './InspirationPreviewModal.jsx'
@@ -39,20 +40,6 @@ export function buildRivalPlatformOptions(t) {
     { value: 'instagram', label: t('platform.instagram') },
     { value: 'youtube', label: t('platform.youtube') },
     { value: 'x', label: t('platform.x') },
-  ]
-}
-
-/**
- * `filter.sort` 菜单（规格 R4 白名单：四项、禁加第 5 项）。
- * `recommended` 与 `latest` 在 wire 层共享 `posted_at`——综合推荐分的加权
- * 公式不在本票；时间序是它当前唯一诚实的排法。
- */
-export function buildRivalSortOptions(t) {
-  return [
-    { value: 'recommended', label: t('rivalFeed.sort.recommended') },
-    { value: 'velocity', label: t('rivalFeed.sort.velocity') },
-    { value: 'latest', label: t('rivalFeed.sort.latest') },
-    { value: 'views', label: t('rivalFeed.sort.views') },
   ]
 }
 
@@ -234,24 +221,39 @@ export function RivalAccountsPanel(props) {
         </div>
       ) : null}
 
-      <RivalFeedGrid
-        t={t}
-        cards={feed.cards}
-        loading={feed.loading}
-        loadingMore={feed.loadingMore}
-        emptyKind={emptyKind}
-        fetchPhase={feed.fetchPhase}
-        refreshBusy={feed.refreshBusy}
-        onResetFilters={feed.resetAccounts}
-        onImport={() => setImportOpen(true)}
-        onRetryFetch={feed.retryFetch}
-        onBrowseTrend={onBrowseTrend}
-        onDetail={handleDetail}
-        onReplicate={handleReplicate}
-        onDeconstruct={handleDeconstruct}
-        onMarkDone={handleMarkDone}
-        replicateBusy={busyId}
-      />
+      {feed.cards.length > 0 ? (
+        <RivalTimeline
+          cards={feed.cards}
+          t={t}
+          busyId={busyId}
+          hasMore={feed.hasMore === true}
+          loadingMore={feed.loadingMore === true}
+          onLoadMore={feed.loadMore}
+          onDetail={handleDetail}
+          onReplicate={handleReplicate}
+          onDeconstruct={handleDeconstruct}
+          onMarkDone={handleMarkDone}
+        />
+      ) : (
+        <RivalFeedGrid
+          t={t}
+          cards={feed.cards}
+          loading={feed.loading}
+          loadingMore={feed.loadingMore}
+          emptyKind={emptyKind}
+          fetchPhase={feed.fetchPhase}
+          refreshBusy={feed.refreshBusy}
+          onResetFilters={feed.resetAccounts}
+          onImport={() => setImportOpen(true)}
+          onRetryFetch={feed.retryFetch}
+          onBrowseTrend={onBrowseTrend}
+          onDetail={handleDetail}
+          onReplicate={handleReplicate}
+          onDeconstruct={handleDeconstruct}
+          onMarkDone={handleMarkDone}
+          replicateBusy={busyId}
+        />
+      )}
 
       <RivalImportDialog
         open={importOpen}
