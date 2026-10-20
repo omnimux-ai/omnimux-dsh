@@ -107,15 +107,34 @@ const FEED_ROW = {
 }
 
 describe('RivalPostPreviewModal — 封面与发布时间（第五轮整改）', () => {
-  it('renders the cover the card descriptor carries (R5-②)', async () => {
+  it('plays an embeddable post through the official platform player (#3462)', async () => {
     const card = toRivalCardRow(FEED_ROW)
-    assert.ok(card.cover_src, 'the descriptor must keep a dialog-readable cover field')
+    const mounted = await mountModal(card)
+    try {
+      const frame = mounted.container.querySelector('.omnimux-rival-detail-player-frame')
+      assert.ok(frame, 'the detail dialog must render an embed iframe for an X post')
+      assert.match(frame.getAttribute('src'), /^https:\/\/platform\.twitter\.com\/embed\/Tweet\.html\?id=1$/, 'the iframe must use the X embed URL')
+      assert.match(frame.getAttribute('allow'), /encrypted-media/, 'the player must allow encrypted media')
+      assert.equal(frame.hasAttribute('allowfullscreen'), true, 'the player must allow fullscreen')
+      assert.equal(frame.getAttribute('loading'), 'lazy', 'the player must load lazily')
+      assert.equal(frame.getAttribute('referrerpolicy'), 'strict-origin-when-cross-origin', 'the player must trim the referrer')
+      assert.equal(frame.getAttribute('title'), 'Higgsfield AI · 推特 (X)', 'the player title must use the localized platform name')
+      assert.ok(mounted.container.querySelector('.omnimux-rival-detail-cover').classList.contains('is-card'), 'X uses a full-card embed, not a media ratio box')
+      assert.equal(mounted.container.querySelector('.omnimux-rival-detail-cover').getAttribute('style'), null, 'the X card geometry comes from the shared CSS cap, not a magic inline height')
+      assert.equal(mounted.container.querySelector('.omnimux-rival-detail-cover img'), null, 'an embed replaces the static cover')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('falls back to the cover when the post has no embeddable URL (#3462)', async () => {
+    const card = toRivalCardRow({ ...FEED_ROW, url: '', source_platform: 'bilibili' })
     const mounted = await mountModal(card)
     try {
       const img = mounted.container.querySelector('.omnimux-rival-detail-cover img')
-      assert.ok(img, 'the detail dialog must render a cover <img>')
-      assert.ok(String(img.getAttribute('src') || '').includes('rival-cover-1.jpg'),
-        `cover src must reach the <img>, got ${img.getAttribute('src')}`)
+      assert.ok(img, 'unknown platforms must keep the static cover')
+      assert.ok(String(img.getAttribute('src') || '').includes('rival-cover-1.jpg'), `cover src must reach the <img>, got ${img.getAttribute('src')}`)
+      assert.equal(mounted.container.querySelector('.omnimux-rival-detail-player-frame'), null, 'no empty iframe for an unknown platform')
     } finally {
       await mounted.unmount()
     }

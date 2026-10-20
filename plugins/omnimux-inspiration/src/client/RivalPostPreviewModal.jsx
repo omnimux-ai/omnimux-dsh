@@ -55,6 +55,7 @@ function velocityNote(row, t) {
 }
 import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
+import { rivalEmbedAspectRatio, rivalEmbedIsCard, rivalEmbedUrl } from './rival-embed.js'
 
 const ICON_EXTERNAL = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -96,10 +97,17 @@ export function RivalPostPreviewModal(props) {
   const author = String(account.nickname || account.handle || '')
   const handle = String(account.handle || '')
   const vNote = velocityNote(row, t)
+  const embedUrl = rivalEmbedUrl(row)
+  const playerRatio = rivalEmbedAspectRatio(row)
+  const cardEmbed = rivalEmbedIsCard(row)
+  const platform = String(account.platform || row.source_platform || '')
+  const platformLabel = t(`platform.${platform === 'twitter' ? 'x' : platform}`)
 
   return (
     <ModalDialog
       open
+      size="lg"
+      contentClassName="omnimux-rival-detail-content"
       onClose={onClose}
       title={t('rivalFeed.detail.title')}
       closeLabel={t('rivalFeed.detail.close')}
@@ -128,9 +136,23 @@ export function RivalPostPreviewModal(props) {
       )}
     >
       <div className="omnimux-rival-detail">
-        <div className="omnimux-rival-detail-cover">
-          {cover ? <img src={cover} alt="" loading="lazy" /> : null}
-          {duration ? <span className="omnimux-rival-detail-duration">{duration}</span> : null}
+        <div
+          className={`omnimux-rival-detail-cover${embedUrl ? ' is-player' : ''}${embedUrl && cardEmbed ? ' is-card' : ''}`}
+          style={embedUrl && !cardEmbed ? { aspectRatio: String(playerRatio), '--player-ratio': String(playerRatio) } : undefined}
+        >
+          {embedUrl ? (
+            <iframe
+              className="omnimux-rival-detail-player-frame"
+              src={embedUrl}
+              title={`${author || t('rivalFeed.detail.title')} · ${platformLabel}`}
+              loading="lazy"
+              allow="encrypted-media; picture-in-picture; fullscreen"
+              scrolling="auto"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          ) : cover ? <img src={cover} alt="" loading="lazy" /> : null}
+          {!embedUrl && duration ? <span className="omnimux-rival-detail-duration">{duration}</span> : null}
         </div>
         <div className="omnimux-rival-detail-body">
           <p className="omnimux-rival-detail-title">{row.title || row.url || row.id}</p>

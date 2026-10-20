@@ -1,0 +1,42 @@
+{
+  "task": "3462",
+  "base": "eba15edf98da095316d314f4e51ad01907ade030",
+  "harness": "real RivalPostPreviewModal component + real TikTok/X embed URLs; localhost port 56406; component-level harness, production modal header/footer verified by CSS math (62+20=82) not a full shell",
+  "browser": "ego-browser (real Chromium) 1728x883; task space finalized after run",
+  "tiktok": {
+    "src": "https://www.tiktok.com/player/v1/7698442056158465294",
+    "allow": "encrypted-media; picture-in-picture; fullscreen",
+    "allowFullscreen": true,
+    "title": "Judy's Family Cafe · TikTok",
+    "frame": [
+      300,
+      534
+    ],
+    "ratio": 0.562,
+    "coverHasImg": false,
+    "playerVisible": true,
+    "coverStyle": "aspect-ratio: 0.5625 / 1; --player-ratio: 0.5625;"
+  },
+  "x": {
+    "src": "https://platform.twitter.com/embed/Tweet.html?id=2112335003086643577",
+    "title": "Higgsfield AI · 推特 (X)",
+    "allow": "encrypted-media; picture-in-picture; fullscreen",
+    "frame": [
+      558,
+      534
+    ],
+    "cardEmbed": true,
+    "coverClass": "omnimux-rival-detail-cover is-player is-card",
+    "coverHasImg": false,
+    "playerVisible": true,
+    "coverStyle": "CSS var --omnimux-rival-player-h = calc(min(70vh, 640px, 80vh - 78px) - 82px)",
+    "note": "full-card embed; lower actions scroll inside the iframe"
+  },
+  "urlValidation": "http(s) + platform host allowlist; wrong host/js scheme -> null; ids encodeURIComponent",
+  "failures": [],
+  "screenshots": [
+    "browser-tiktok-embed-3462.png",
+    "browser-x-embed-3462.png"
+  ],
+  "fallbackCover": "max-height capped by the same CSS var; no oversized 320x569 cover"
+}
