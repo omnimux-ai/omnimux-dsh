@@ -314,6 +314,10 @@ export function toFeedRow(post, account) {
   const accountId = text(account?.id)
   const postId = text(post?.id)
   const coverSrc = feedCoverSrc(post)
+  // `feedViews`'s `-1` is the sort sentinel only (#3428): the wire row must
+  // report "unknown" as null so every consumer — card overlay, detail dialog —
+  // renders the module's `--` marker instead of a negative view count.
+  const views = feedViews(post)
   return {
     id: postId,
     row_id: `${accountId}:${postId}`,
@@ -326,7 +330,7 @@ export function toFeedRow(post, account) {
     duration: typeof post?.duration === 'number' ? post.duration : null,
     ratio: Number.isFinite(post?.ratio) ? post.ratio : null,
     stats: {
-      views: feedViews(post),
+      views: views >= 0 ? views : null,
       likes: typeof post?.stats?.likes === 'number' ? post.stats.likes : 0,
       comments: typeof post?.stats?.comments === 'number' ? post.stats.comments : 0,
       shares: typeof post?.stats?.shares === 'number' ? post.stats.shares : 0,

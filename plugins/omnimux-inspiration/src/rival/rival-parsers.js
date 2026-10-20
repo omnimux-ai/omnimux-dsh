@@ -358,6 +358,210 @@ function firstHttpUrl(value) {
   return /^https?:\/\//i.test(asText(value)) ? asText(value) : ''
 }
 
+/** @param {unknown} value */
+function objectOf(value) {
+  return isPlainObject(value) ? value : {}
+}
+
+/** @param {unknown} value */
+function arrayOf(value) {
+  return Array.isArray(value) ? value : []
+}
+
+/** @param {unknown} value */
+function urlPathname(value) {
+  const url = asText(value)
+  if (!url) return ''
+  try {
+    return new URL(url).pathname
+  } catch {
+    return url
+  }
+}
+
+/**
+ * First playable URL inside a `url_list`-shaped field (TikTok/Instagram).
+ *
+ * The observed gateway answers carry the stream and the covers as
+ * `{ url_list: string[...] }`; an entry may also be an object with `url`.
+ * Anything that is not an absolute http(s) URL is skipped rather than guessed.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function urlListUrl(value) {
+  for (const entry of arrayOf(value)) {
+    const url = typeof entry === 'string' ? firstHttpUrl(entry) : firstHttpUrl(objectOf(entry).url)
+    if (url) return url
+  }
+  return ''
+}
+
+/**
+ * Highest-quality directly playable mp4 of a `variants[]` list.
+ *
+ * Mirrors the import pipeline's ranking (bitrate → bit_rate → height, then the
+ * resolution encoded in the URL) so the monitor card and the import see the
+ * same stream, without importing the import pipeline module into this pure
+ * mapper.
+ * @param {unknown} variants
+ * @returns {string}
+ */
+function bestMp4Url(variants) {
+  let best = ''
+  let bestScore = -1
+  for (const raw of arrayOf(variants)) {
+    const variant = objectOf(raw)
+    const url = firstHttpUrl(variant.url) || firstHttpUrl(variant.src)
+      || (typeof raw === 'string' ? firstHttpUrl(raw) : '')
+    if (!url) continue
+    const declared = asText(variant.content_type || variant.contentType).toLowerCase()
+    const isMp4 = declared ? declared.includes('mp4') : /\.mp4$/i.test(urlPathname(url))
+    if (!isMp4) continue
+    const score = asNumber(variant.bitrate) ?? asNumber(variant.bit_rate)
+      ?? asNumber(variant.height) ?? videoUrlResolution(url)
+    if (score > bestScore) {
+      best = url
+      bestScore = score
+    }
+  }
+  return best
+}
+
+/** Resolution encoded in X's bitrate-free public video variants. */
+function videoUrlResolution(value) {
+  const match = urlPathname(value).match(/\/(\d+)x(\d+)\//)
+  return match ? Number(match[1]) * Number(match[2]) : 0
+}
+
+/**
+ * Media entries of an X/Twitter post row.
+ *
+ * The observed shapes are `media` / `extended_entities.media` /
+ * `entities.media` arrays, a single `media` object, and the gateway's
+ * `media.video[]` / `media.photo[]` containers. Only these bounded containers
+ * are read — never a recursive walk.
+ * @param {Record<string, any>} layer
+ * @returns {Array<Record<string, any>>}
+ */
+function xMediaEntries(layer) {
+  /** @type {Array<Record<string, any>>} */
+  const entries = []
+  const push = (value) => {
+    if (Array.isArray(value)) {
+      entries.push(...value.filter(isPlainObject))
+      return
+    }
+    if (!isPlainObject(value)) return
+    entries.push(value)
+    entries.push(...arrayOf(value.video).filter(isPlainObject))
+    entries.push(...arrayOf(value.photo).filter(isPlainObject))
+  }
+  push(layer.media)
+  push(objectOf(layer.extended_entities).media)
+  push(objectOf(layer.entities).media)
+  return entries
+}
+
+/**
+ * Media, duration, aspect ratio and statistics nested one level inside a raw
+ * platform row, in the same spirit as the import pipeline's `parseSocialMeta`.
+ *
+ * Why this exists: the gateway returns the platform's own envelope
+ * (TikTok `video.cover.url_list` / `video.play_addr.url_list` /
+ * `statistics.*`, X `media[].video_info.variants[]`), while the flat candidates
+ * in `POST_FIELD_CANDIDATES` only cover envelopes that hoist those fields. A
+ * row that carries only the platform shape therefore used to normalize to an
+ * empty media card (Issue #3428). The map is a **one-level whitelist**: known
+ * containers only, no recursion, and every filled field records its source.
+ * @param {Record<string, any>} layer
+ * @param {{ platform?: string }} [ctx]
+ * @returns {{ values: Record<string, any>, probe: Record<string, string> }}
+ */
+function nestedPostFields(layer, ctx = {}) {
+  /** @type {Record<string, any>} */
+  const values = {}
+  /** @type {Record<string, string>} */
+  const probe = {}
+  /** @param {string} field @param {unknown} value @param {string} source */
+  const fill = (field, value, source) => {
+    if (values[field] !== undefined) return
+    if (value === null || value === undefined || value === '') return
+    if (Array.isArray(value) && value.length === 0) return
+    values[field] = value
+    probe[field] = source
+  }
+
+  const video = objectOf(layer.video)
+  fill('cover_url', urlListUrl(objectOf(video.cover).url_list), 'video.cover.url_list')
+  fill('cover_url', urlListUrl(objectOf(video.origin_cover).url_list), 'video.origin_cover.url_list')
+  fill('cover_url', urlListUrl(objectOf(video.dynamic_cover).url_list), 'video.dynamic_cover.url_list')
+  fill('cover_url', firstHttpUrl(video.poster), 'video.poster')
+  fill('video_url', urlListUrl(objectOf(video.play_addr).url_list), 'video.play_addr.url_list')
+  fill('video_url', urlListUrl(objectOf(video.playAddr).url_list), 'video.playAddr.url_list')
+  fill('video_url', urlListUrl(objectOf(video.download_addr).url_list), 'video.download_addr.url_list')
+  const videoDuration = asNumber(video.duration)
+  // TikTok's `video.duration` is milliseconds; the same field on other platforms
+  // is normally seconds. The conversion is therefore platform-gated instead of
+  // applied globally, which would truncate non-TikTok rows to 0.
+  if (videoDuration !== null && videoDuration > 0) {
+    const seconds = ctx?.platform === 'tiktok' ? Math.round(videoDuration / 1000) : Math.round(videoDuration)
+    fill('duration', seconds, 'video.duration')
+  }
+  const videoWidth = asNumber(video.width)
+  const videoHeight = asNumber(video.height)
+  if (videoWidth !== null && videoHeight !== null && videoWidth > 0 && videoHeight > 0) {
+    fill('ratio', videoWidth / videoHeight, 'video.width/height')
+  }
+
+  // TikTok image posts (`image_post_info.images[].display_image.url_list`).
+  /** @type {string[]} */
+  const imageUrls = []
+  for (const raw of arrayOf(objectOf(layer.image_post_info).images)) {
+    const image = objectOf(raw)
+    const url = urlListUrl(objectOf(image.display_image).url_list)
+      || urlListUrl(objectOf(image.thumbnail).url_list)
+    if (url) imageUrls.push(url)
+  }
+  fill('images', imageUrls, 'image_post_info.images[].display_image.url_list')
+  if (imageUrls.length > 0) fill('cover_url', imageUrls[0], 'image_post_info.images[0].display_image.url_list')
+
+  const media = xMediaEntries(layer)
+  /** @type {string[]} */
+  const photoUrls = []
+  let bestVideoUrl = ''
+  let mediaRatio = null
+  let mediaDuration = null
+  for (const item of media) {
+    const photo = firstHttpUrl(item.media_url_https) || firstHttpUrl(item.media_url)
+      || firstHttpUrl(item.display_url) || firstHttpUrl(item.preview_image_url)
+    if (photo) photoUrls.push(photo)
+    bestVideoUrl = bestVideoUrl || bestMp4Url(objectOf(item.video_info).variants)
+      || bestMp4Url(item.variants) || bestMp4Url(objectOf(item.video).variants)
+    const info = objectOf(item.original_info)
+    const width = asNumber(info.width)
+    const height = asNumber(info.height)
+    if (mediaRatio === null && width !== null && height !== null && width > 0 && height > 0) {
+      mediaRatio = width / height
+    }
+    const millis = asNumber(objectOf(item.video_info).duration_millis)
+    if (mediaDuration === null && millis !== null && millis > 0) mediaDuration = Math.round(millis / 1000)
+  }
+  fill('images', photoUrls, 'media[].media_url_https')
+  fill('cover_url', photoUrls[0], 'media[0].media_url_https')
+  fill('video_url', bestVideoUrl, 'media[].video_info.variants')
+  fill('ratio', mediaRatio, 'media[].original_info')
+  fill('duration', mediaDuration, 'media[].video_info.duration_millis')
+
+  const statistics = objectOf(layer.statistics)
+  fill('views', asNumber(statistics.play_count), 'statistics.play_count')
+  fill('likes', asNumber(statistics.digg_count), 'statistics.digg_count')
+  fill('comments', asNumber(statistics.comment_count), 'statistics.comment_count')
+  fill('shares', asNumber(statistics.share_count), 'statistics.share_count')
+  fill('saves', asNumber(statistics.collect_count), 'statistics.collect_count')
+
+  return { values, probe }
+}
+
 /**
  * Cover of a post: a direct field first, then the first image of an image list.
  * @param {Record<string, any>} values
@@ -419,7 +623,7 @@ export function pickPostType(values, duration) {
  * @returns {null | {
  *   id: string, short_code: string, url: string, title: string, text: string,
  *   posted_at: string | null, type: 'video' | 'image' | 'text',
- *   cover_url: string, video_url: string, duration: number | null,
+ *   cover_url: string, video_url: string, duration: number | null, ratio: number | null,
  *   stats: { views: number | null, likes: number | null, comments: number | null, shares: number | null, saves: number | null },
  *   field_probe: Record<string, string | null>,
  * }}
@@ -427,9 +631,28 @@ export function pickPostType(values, duration) {
 export function normalizeRivalPost(row, ctx) {
   const layer = isPlainObject(row) ? row : {}
   const { values, probe } = probeLayer(layer, POST_FIELD_CANDIDATES)
+  // One-level nested containers fill only the fields the flat candidates could
+  // not read; a hoisted flat field always wins (see `nestedPostFields`).
+  // Cover/video precedence is judged on the *derived* flat answer, not just the
+  // singular field: a flat `images[]` that already yields a cover must not be
+  // overridden by a nested `media[]`/`video.cover`.
+  const nested = nestedPostFields(layer, ctx)
+  const flatCover = pickCoverUrl(values)
+  const flatVideo = pickVideoUrl(values)
+  for (const [field, value] of Object.entries(nested.values)) {
+    if (field === 'cover_url' && flatCover) continue
+    if (field === 'video_url' && flatVideo) continue
+    const current = values[field]
+    const missing = current === null || current === undefined || current === ''
+      || (Array.isArray(current) && current.length === 0)
+    if (!missing) continue
+    values[field] = value
+    probe[field] = nested.probe[field]
+  }
   const id = asText(values.id)
   if (!id) return null
   const duration = asNumber(values.duration)
+  const ratio = asNumber(values.ratio)
   const text = asText(values.text)
   const title = asText(values.title) || text
   return {
@@ -447,6 +670,7 @@ export function normalizeRivalPost(row, ctx) {
     cover_url: pickCoverUrl(values),
     video_url: pickVideoUrl(values),
     duration,
+    ratio: ratio !== null && ratio > 0 ? ratio : null,
     stats: {
       views: asNumber(values.views),
       likes: asNumber(values.likes),

@@ -559,6 +559,24 @@ export const RIVAL_CSS = `
   border: none;
   transition: transform 300ms ease, filter 180ms ease, opacity 180ms ease;
 }
+/* 无封面兜底（#3428）：占位沿用媒体块的几何与暗底，只把「没有封面」讲清楚；
+   绝不渲染空 src 的 <img>，否则 9:16 区域就是一块黑板。 */
+.omnimux-rival-card-media.omnimux-rival-media-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0 12px;
+  box-sizing: border-box;
+  color: var(--dsw-specific-media-fg-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.omnimux-rival-media-empty .omnimux-rival-platform-mark {
+  flex: 0 0 auto;
+  opacity: 0.8;
+}
 .t-short-video:hover .omnimux-rival-card-media,
 .t-long-video:hover .omnimux-rival-card-media,
 .t-image:hover .omnimux-rival-card-media {

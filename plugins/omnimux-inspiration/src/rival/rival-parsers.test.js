@@ -280,6 +280,197 @@ describe('rival-parsers: tolerant extraction never invents values', () => {
   })
 })
 
+/**
+ * #3428: the gateway answers with the platform's own envelope, so media and
+ * statistics live one level down. These fixtures are the observed TikHub shapes
+ * (`tiktok-posts` aweme item, `x-posts` tweet item) that used to normalize to an
+ * empty media card; the flat candidates keep precedence, nested containers only
+ * fill what they missed.
+ */
+describe('rival-parsers: nested media/statistics of the platform envelope (#3428)', () => {
+  const TIKTOK_AWEME = {
+    aweme_id: '7321234567890123456',
+    desc: 'nested cover test',
+    create_time: 1_700_000_000,
+    share_url: 'https://www.tiktok.com/@alice/video/7321234567890123456',
+    aweme_type: 0,
+    video: {
+      cover: { url_list: ['https://p16-sign.example.com/cover.jpg?x=1'] },
+      origin_cover: { url_list: ['https://p16-sign.example.com/origin.jpg'] },
+      play_addr: { url_list: ['https://v16-webapp.example.com/play.mp4'] },
+      duration: 15_000,
+      width: 720,
+      height: 1280,
+    },
+    statistics: { play_count: 12_345, digg_count: 678, comment_count: 90, share_count: 12, collect_count: 34 },
+  }
+  const withPost = (extra) => Object.assign({}, TIKTOK_AWEME, extra)
+
+  it('reads TikTok video cover/play_addr/duration/statistics (A1)', () => {
+    const post = normalizeRivalPost(TIKTOK_AWEME, { platform: 'tiktok' })
+    assert.equal(post.cover_url, 'https://p16-sign.example.com/cover.jpg?x=1')
+    assert.equal(post.video_url, 'https://v16-webapp.example.com/play.mp4')
+    assert.equal(post.duration, 15, 'video.duration is milliseconds, the post shape is seconds')
+    assert.equal(post.ratio, 720 / 1280)
+    assert.equal(post.type, 'video')
+    assert.deepEqual(post.stats, {
+      views: 12_345,
+      likes: 678,
+      comments: 90,
+      shares: 12,
+      saves: 34,
+    })
+    assert.equal(post.field_probe.cover_url, 'video.cover.url_list')
+    assert.equal(post.field_probe.video_url, 'video.play_addr.url_list')
+    assert.equal(post.field_probe.duration, 'video.duration')
+    assert.equal(post.field_probe.views, 'statistics.play_count')
+    assert.equal(post.field_probe.likes, 'statistics.digg_count')
+  })
+
+  it('keeps a nested zero view count as a real 0 (A1)', () => {
+    const post = normalizeRivalPost(
+      withPost({ statistics: { play_count: 0, digg_count: 0 } }),
+      { platform: 'tiktok' },
+    )
+    assert.equal(post.stats.views, 0)
+    assert.equal(post.stats.likes, 0)
+  })
+
+  it('reads a TikTok image post from image_post_info (A2)', () => {
+    const post = normalizeRivalPost({
+      aweme_id: '7360000000000000000',
+      desc: 'photo set',
+      create_time: 1_700_000_000,
+      aweme_type: 68,
+      image_post_info: {
+        images: [
+          { display_image: { url_list: ['https://p16-sign.example.com/1.jpg'] } },
+          { display_image: { url_list: ['https://p16-sign.example.com/2.jpg'] } },
+        ],
+      },
+    }, { platform: 'tiktok' })
+    assert.equal(post.type, 'image')
+    assert.equal(post.cover_url, 'https://p16-sign.example.com/1.jpg')
+    assert.equal(post.video_url, '')
+  })
+
+  it('reads X media: poster cover, best mp4 variant, duration and ratio (A3)', () => {
+    const post = normalizeRivalPost({
+      tweet_id: '2112335003086643577',
+      text: 'video tweet',
+      created_at: '2026-10-19T10:00:00.000Z',
+      views: 6378,
+      media: [{
+        media_url_https: 'https://pbs.twimg.com/media/poster.jpg',
+        preview_image_url: 'https://pbs.twimg.com/media/poster.jpg',
+        original_info: { width: 1280, height: 720 },
+        video_info: {
+          duration_millis: 8000,
+          variants: [
+            { content_type: 'application/x-mpegURL', url: 'https://video.twimg.com/x.m3u8' },
+            { content_type: 'video/mp4', bitrate: 832_000, url: 'https://video.twimg.com/x-832.mp4' },
+            { content_type: 'video/mp4', bitrate: 2_176_000, url: 'https://video.twimg.com/x-2176.mp4' },
+          ],
+        },
+      }],
+    }, { platform: 'x' })
+    assert.equal(post.cover_url, 'https://pbs.twimg.com/media/poster.jpg')
+    assert.equal(post.video_url, 'https://video.twimg.com/x-2176.mp4', 'the highest-bitrate mp4 wins')
+    assert.equal(post.duration, 8)
+    assert.equal(post.ratio, 16 / 9)
+    assert.equal(post.type, 'video')
+    assert.equal(post.stats.views, 6378, 'the flat X view counter still wins')
+    assert.equal(post.field_probe.cover_url, 'media[0].media_url_https')
+    assert.equal(post.field_probe.video_url, 'media[].video_info.variants')
+  })
+
+  it('reads X image-only media as an image post (A3)', () => {
+    const post = normalizeRivalPost({
+      tweet_id: '2112335003086643577',
+      text: 'photo tweet',
+      media: [{ media_url_https: 'https://pbs.twimg.com/media/photo.jpg', original_info: { width: 1200, height: 800 } }],
+    }, { platform: 'x' })
+    assert.equal(post.type, 'image')
+    assert.equal(post.cover_url, 'https://pbs.twimg.com/media/photo.jpg')
+    assert.equal(post.video_url, '')
+    assert.equal(post.ratio, 1200 / 800)
+  })
+
+  it('keeps a flat hoisted field ahead of the nested one (A4)', () => {
+    const post = normalizeRivalPost({
+      id: 'a',
+      cover_url: 'https://flat.example.com/cover.jpg',
+      play_count: 9,
+      video: {
+        cover: { url_list: ['https://nested.example.com/cover.jpg'] },
+        play_addr: { url_list: ['https://nested.example.com/play.mp4'] },
+      },
+      statistics: { play_count: 1, digg_count: 2 },
+    }, { platform: 'tiktok' })
+    assert.equal(post.cover_url, 'https://flat.example.com/cover.jpg')
+    assert.equal(post.video_url, 'https://nested.example.com/play.mp4', 'a field the flat probe missed still fills')
+    assert.equal(post.stats.views, 9, 'the flat probe keeps precedence')
+    assert.equal(post.field_probe.cover_url, 'cover_url')
+    assert.equal(post.field_probe.views, 'play_count')
+  })
+
+  it('does not invent media for a row without nested containers (A5)', () => {
+    const post = normalizeRivalPost({ id: 'a' }, { platform: 'tiktok' })
+    assert.equal(post.cover_url, '')
+    assert.equal(post.video_url, '')
+    assert.equal(post.ratio, null)
+    assert.equal(post.type, 'text')
+    assert.deepEqual(post.stats, { views: null, likes: null, comments: null, shares: null, saves: null })
+  })
+
+  it('refuses non-http(s) urls inside nested containers (A5)', () => {
+    const post = normalizeRivalPost({
+      aweme_id: '7321234567890123456',
+      video: {
+        cover: { url_list: ['javascript:alert(1)', 'file:///etc/passwd'] },
+        play_addr: { url_list: ['javascript:alert(1)'] },
+      },
+    }, { platform: 'tiktok' })
+    assert.equal(post.cover_url, '')
+    assert.equal(post.video_url, '')
+  })
+
+  it('applies the millisecond conversion only to TikTok (A6)', () => {
+    for (const platform of ['instagram', 'youtube', 'x']) {
+      const post = normalizeRivalPost({ id: 'a', video: { duration: 15 } }, { platform })
+      assert.equal(post.duration, 15, `${platform} stores seconds, not milliseconds`)
+      assert.equal(post.field_probe.duration, 'video.duration')
+    }
+    const tiktok = normalizeRivalPost({ aweme_id: '7321234567890123456', video: { duration: 15_000 } }, { platform: 'tiktok' })
+    assert.equal(tiktok.duration, 15)
+  })
+
+  it('judges flat precedence on the derived cover, not only the singular field (A7)', () => {
+    const post = normalizeRivalPost({
+      tweet_id: '2112335003086643577',
+      images: [{ url: 'https://flat.example.com/flat.jpg' }],
+      media: [{ media_url_https: 'https://nested.example.com/nested.jpg' }],
+    }, { platform: 'x' })
+    assert.equal(post.cover_url, 'https://flat.example.com/flat.jpg')
+    assert.equal(post.field_probe.cover_url, null, 'the cover came from the flat images list, no nested source fired')
+  })
+
+  it('ranks bitrate-free variants by the resolution in the URL', () => {
+    const post = normalizeRivalPost({
+      tweet_id: '2112335003086643577',
+      media: [{
+        video_info: {
+          variants: [
+            { url: 'https://video.twimg.com/ext/640x360/low.mp4' },
+            { url: 'https://video.twimg.com/ext/1280x720/high.mp4' },
+          ],
+        },
+      }],
+    }, { platform: 'x' })
+    assert.equal(post.video_url, 'https://video.twimg.com/ext/1280x720/high.mp4')
+  })
+})
+
 describe('rival-parsers: list unwrapping is bounded', () => {
   it('reads the known containers', () => {
     assert.equal(unwrapRivalPostRows({ items: [{ id: 1 }] }).length, 1)
