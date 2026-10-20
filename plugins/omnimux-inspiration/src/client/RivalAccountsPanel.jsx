@@ -190,13 +190,13 @@ export function RivalAccountsPanel(props) {
       const result = await markRivalPostDone(accountId, postId)
       if (result && result.ok === false) {
         flip(false)
-        setNotice({ key: 'rivalAccounts.post.attachFailed' })
+        setNotice({ key: 'rivalFeed.toast.markDoneFailed' })
         return
       }
       setNotice({ key: 'rivalFeed.toast.markDone' })
     } catch {
       flip(false)
-      setNotice({ key: 'rivalAccounts.post.attachFailed' })
+      setNotice({ key: 'rivalFeed.toast.markDoneFailed' })
     }
   }, [])
 

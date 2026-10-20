@@ -418,6 +418,8 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     await mounted.loadMore()
     await settle(mounted.container, () => mounted.container.querySelectorAll('.omnimux-rival-timeline-item').length === payload.length)
     assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 0, 'the recovered append must finish without a stuck skeleton')
+    const pageTwoRequests = mounted.postsRequests.filter((query) => /(?:^|&)page=2(?:&|$)/.test(query)).length
+    assert.equal(pageTwoRequests, 2, `the stale append must not unlock a third page-2 fetch (got ${pageTwoRequests})`)
   })
 
   it('narrows the timeline through the persistent account column', async () => {

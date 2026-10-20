@@ -186,6 +186,9 @@ export function useRivalFeed(options = {}) {
   const issued = useRef(0)
   /** Identifier of the newest request: a stale reply must not overwrite it. */
   const latest = useRef(0)
+  // Append generation: a stale page-2 response must not clear the flag of a
+  // newer append that started after the page-1 reload (#3434).
+  const appendTicket = useRef(0)
   const mounted = useRef(true)
   /**
    * The selection as the request path needs it.
@@ -292,9 +295,10 @@ export function useRivalFeed(options = {}) {
     latest.current += 1
     const ticket = latest.current
     setLoading(true)
-    // A page-1 reload supersedes any in-flight append: its stale finally will
-    // not clear the append flag, so reset it here or loadMore stays blocked
-    // forever after the user switches accounts mid-append (#3432 review P1).
+    // A page-1 reload supersedes any in-flight append: invalidate its
+    // generation and clear the flag here, or loadMore stays blocked forever
+    // after the user switches accounts mid-append (#3432 review P1).
+    appendTicket.current += 1
     setLoadingMore(false)
     setError(null)
     try {
@@ -388,6 +392,7 @@ export function useRivalFeed(options = {}) {
     issued.current += 1
     latest.current += 1
     const ticket = latest.current
+    const append = ++appendTicket.current
     const nextPage = page + 1
     setLoadingMore(true)
     try {
@@ -412,9 +417,10 @@ export function useRivalFeed(options = {}) {
       if (!isCurrent(ticket)) return
       setError('rivalAccounts.error.failed')
     } finally {
-      // Clear on stale responses too: a newer page-1 reload has already reset
-      // the flag, and leaving it true would dead-lock the append path.
-      setLoadingMore(false)
+      // Only the current append generation may clear the flag: a stale response
+      // resolving after a newer append started must not unlock a second fetch
+      // for the same page (#3434).
+      if (appendTicket.current === append) setLoadingMore(false)
     }
   }, [api, enabled, hasMore, isCurrent, loading, loadingMore, page, platform, query, sort])
 
