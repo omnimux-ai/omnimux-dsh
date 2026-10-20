@@ -526,6 +526,15 @@ export const RIVAL_CSS = `
 .omnimux-rival-card-title-zone {
   padding: 10px 12px 12px;
 }
+/* 合集详情成员卡的正文区（Issue 3459）：几何必须与 rival-masonry.js 的
+   MEDIA_FIRST_BODY_H 逐像素一致（上 10 + 标题 36 + 间距 6 + 元信息 18 + 下 12），
+   估算与渲染一旦分叉，同排卡片就会压叠。 */
+.omnimux-rival-card-body {
+  padding: 10px 12px 12px;
+}
+.omnimux-rival-card-body .omnimux-rival-card-title {
+  min-height: 36px;
+}
 .omnimux-rival-card-title {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Source Han Sans SC",

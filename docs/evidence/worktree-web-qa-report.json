@@ -1,27 +1,27 @@
 {
-  "runId": "030baa12-81d7-4d07-8216-a24e53defa0a",
-  "stage": "workflow",
-  "plugin": "omnimux-workflow",
-  "startedAt": "2026-10-07T03:47:37.532Z",
-  "completedAt": "2026-10-07T03:47:43.885Z",
+  "runId": "2e2e65b1-3532-480d-ac6f-b9e5c4707d12",
+  "stage": "inspiration",
+  "plugin": "omnimux-inspiration",
+  "startedAt": "2026-10-20T15:43:12.095Z",
+  "completedAt": "2026-10-20T15:43:13.754Z",
   "pass": true,
-  "serverPort": 52516,
-  "cdpPort": 52526,
+  "serverPort": 49778,
+  "cdpPort": 49779,
   "assertions": [
     {
       "name": "bundle-client-code",
       "pass": true,
-      "size": 5611184
+      "size": 7418195
     },
     {
       "name": "ephemeral-server-listen",
       "pass": true,
-      "port": 52516
+      "port": 49778
     },
     {
       "name": "ephemeral-cdp-listen",
       "pass": true,
-      "port": 52526
+      "port": 49779
     },
     {
       "name": "runner-page-ready",
@@ -30,16 +30,16 @@
     {
       "name": "sidebar-entry-clicked",
       "pass": true,
-      "selector": "[data-omnimux-workflow-entry]"
+      "selector": "[data-omnimux-inspiration-entry]"
     },
     {
       "name": "stage-content-rendered",
       "pass": true,
       "dimensions": {
         "width": 548,
-        "height": 88
+        "height": 106
       },
-      "textSnippet": "工作流库\n\n工作树隔离环境已成功渲染 Stage 内容 (Tab: omnimux-workflow"
+      "textSnippet": "创作灵感\n\n工作树隔离环境已成功渲染 Stage 内容 (Tab: omnimux-inspirat"
     },
     {
       "name": "screenshot-png-verified",
@@ -48,14 +48,14 @@
         "width": 1280,
         "height": 713
       },
-      "bytes": 36012
+      "bytes": 37909
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-param-line-narrowing/.workbuddy/evidence/worktree-qa/030baa12-81d7-4d07-8216-a24e53defa0a/workflow.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/inspiration-collection-card-ui/.workbuddy/evidence/worktree-qa/2e2e65b1-3532-480d-ac6f-b9e5c4707d12/inspiration.png",
     "width": 1280,
     "height": 713,
-    "bytes": 36012
+    "bytes": 37909
   },
   "errors": []
 }

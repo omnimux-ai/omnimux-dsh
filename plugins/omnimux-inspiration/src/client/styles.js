@@ -842,6 +842,147 @@ export const INSPIRATION_CSS = `
   background: var(--dsw-alias-bg-elevated);
 }
 
+/* ── 合集详情成员卡：封面优先（Issue 3459）──────────────────────────────
+   只覆盖合集层：根层继续 contain，保存的图片必须完整可见（已有测试锁定）；
+   合集层是等高素材网格，封面统一 4:5 裁切填充。 */
+.omnimux-inspiration-card-pure.is-media-first .omnimux-rival-card-media {
+  object-fit: cover;
+}
+/* text-media（X/Twitter 行）同样有媒体：封面优先时去掉它的卡片内边距与内嵌
+   圆角，否则封面缩进 12px、高度估算与真实渲染差 24px（Issue 3459）。 */
+.omnimux-rival-card.is-media-first.t-text-media {
+  padding: 0;
+}
+.omnimux-rival-card.is-media-first.t-text-media .omnimux-rival-card-media {
+  border-radius: 0;
+  margin-top: 0;
+}
+/* 封面兜底里也写了一遍标题；封面优先的卡正文已经显示标题，这里只留播放
+   图标，避免同一张卡出现两遍标题（Issue 3459）。 */
+.omnimux-inspiration-card-pure.is-media-first .omnimux-inspiration-fallback-title {
+  display: none;
+}
+.omnimux-inspiration-cover-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--dsw-specific-media-ink);
+}
+.omnimux-inspiration-badge-type,
+.omnimux-inspiration-badge-duration {
+  position: absolute;
+  bottom: 8px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-specific-media-fg);
+  background: var(--dsw-specific-media-pill-bg);
+  border: 1px solid var(--dsw-specific-media-border);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+.omnimux-inspiration-badge-type {
+  left: 8px;
+}
+.omnimux-inspiration-badge-duration {
+  right: 8px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+/* 悬停工具条贴在封面底部：底部留 36px 给类型/时长角标，工具条浮在它们上方，
+   不遮封面主体，也不再出现居中播放钮。 */
+.omnimux-inspiration-cover-tools {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 6;
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 8px 36px;
+  background: var(--dsw-specific-media-overlay);
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+.omnimux-inspiration-card-pure:hover .omnimux-inspiration-cover-tools,
+.omnimux-inspiration-card-pure:focus-within .omnimux-inspiration-cover-tools {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+@media (hover: none) {
+  .omnimux-inspiration-cover-tools {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omnimux-inspiration-cover-tools {
+    transition: none;
+  }
+}
+/* 元信息行固定 18px：估算层按同一高度记账，状态胶囊出现与否都不改卡片高度。 */
+.omnimux-inspiration-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 18px;
+  margin-top: 6px;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.omnimux-inspiration-card-meta-source {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omnimux-inspiration-card-meta-sep {
+  flex: none;
+  opacity: 0.6;
+}
+.omnimux-inspiration-card-meta-duration,
+.omnimux-inspiration-card-meta-time {
+  flex: none;
+  white-space: nowrap;
+}
+.omnimux-inspiration-card-status {
+  margin-left: auto;
+  flex: none;
+  max-width: 60%;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.omnimux-inspiration-card-status.is-failed {
+  color: var(--dsw-alias-state-error-primary);
+  background: var(--dsw-alias-state-error-secondary, transparent);
+  border-color: var(--dsw-alias-state-error-primary);
+}
+.omnimux-inspiration-card-status.is-settled {
+  color: var(--dsw-alias-state-warn-primary);
+  background: var(--dsw-alias-state-warn-secondary, transparent);
+  border-color: var(--dsw-alias-state-warn-primary);
+}
+
 .omnimux-inspiration-modal-post-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -962,6 +1103,18 @@ export const INSPIRATION_CSS = `
   text-overflow: ellipsis;
   box-sizing: border-box;
   -webkit-app-region: no-drag;
+}
+/* 合集详情的封面工具条：CTA 行贴着封面底边排布，宽度由内容决定，
+   不再撑满整卡（基础规则的 100% / 均分仍服务整卡悬停层）。 */
+.omnimux-inspiration-cover-tools .omnimux-inspiration-overlay-cta {
+  width: auto;
+  margin-bottom: 0;
+  padding: 0;
+  pointer-events: auto;
+}
+.omnimux-inspiration-cover-tools .omnimux-inspiration-overlay-cta-btn {
+  flex: 0 0 auto;
+  width: auto;
 }
 .omnimux-inspiration-overlay-cta-btn svg {
   width: 14px;

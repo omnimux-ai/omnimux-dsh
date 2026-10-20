@@ -4,6 +4,15 @@ const COLLECTION_STYLES_ID = 'omnimux-inspiration-collection-styles'
 
 export const COLLECTION_CSS = `
 .omnimux-inspiration-collection-surface { position: relative; }
+/* 合集详情页头（Issue 3459）：吸附在一级工具栏（含二级筛选行）下方。
+   z-index 低于 .omx-stage-sticky 的 20，滚动时内容从页头底下穿过。 */
+.omnimux-inspiration-collection-navigation {
+  position: sticky;
+  top: var(--stage-sticky-offset, 44px);
+  z-index: 19;
+  padding: 12px 0;
+  background: var(--dsw-alias-bg-base);
+}
 .omnimux-inspiration-collection-navigation,
 .omnimux-inspiration-collection-selection {
   display: flex;
@@ -11,6 +20,8 @@ export const COLLECTION_CSS = `
   gap: 12px;
   min-width: 0;
 }
+/* 页头标题与合并选择条的文案共用一个几何规则，但字阶各自独立：
+   页头是 16/22 标题，选择条仍是 14/20 的正文（Issue 3459）。 */
 .omnimux-inspiration-collection-heading,
 .omnimux-inspiration-collection-selection > span {
   flex: 1;
@@ -21,6 +32,18 @@ export const COLLECTION_CSS = `
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
   line-height: 20px;
+}
+.omnimux-inspiration-collection-heading {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.omnimux-inspiration-collection-navigation .omnimux-inspiration-collection-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  margin-left: auto;
 }
 .omnimux-inspiration-collection-selection {
   padding: 6px 12px;
@@ -33,6 +56,12 @@ export const COLLECTION_CSS = `
   right: 5px;
   bottom: 5px;
   z-index: 8;
+}
+/* 合集详情成员卡：菜单移到封面右上，避开标题与元信息行（Issue 3459）。 */
+.omnimux-inspiration-card-pure.is-media-first .omnimux-inspiration-collection-menu {
+  top: 8px;
+  right: 8px;
+  bottom: auto;
 }
 .omnimux-inspiration-collection-menu > div { display: flex; }
 .omnimux-inspiration-toast.has-action { pointer-events: auto; }

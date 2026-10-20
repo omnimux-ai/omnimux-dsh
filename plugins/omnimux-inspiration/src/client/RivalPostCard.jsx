@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
-import { rivalHasPill, rivalMediaRatioOf, rivalCardTypeOf } from './rival-masonry.js'
+import { COLLECTION_MEMBER_LAYOUT, rivalHasPill, rivalMediaRatioOf, rivalCardTypeOf } from './rival-masonry.js'
 import {
   formatCount,
   formatEngagementCount,
@@ -113,6 +113,7 @@ function stateText(card, t) {
  *   busy?: boolean,
  *   mediaNode?: import('react').ReactNode,
  *   overlayNode?: import('react').ReactNode,
+ *   metaNode?: import('react').ReactNode,
  *   children?: import('react').ReactNode,
  *   className?: string,
  *   selected?: boolean,
@@ -125,11 +126,16 @@ function stateText(card, t) {
 export function RivalPostCard(props) {
   const {
     card, t, onDetail, onReplicate, onDeconstruct, onMarkDone, style, column, busy,
-    mediaNode: customMedia, overlayNode, children, className = '', selected, inspirationId, collectionId,
+    mediaNode: customMedia, overlayNode, metaNode, children, className = '', selected, inspirationId, collectionId,
     bodyClassName = '', bodyRole,
   } = props
   const cardType = rivalCardTypeOf(card)
   const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image' || cardType === 'collection'
+  // 合集详情成员卡（#3459）：封面优先，标题与元信息下沉到固定正文区。
+  // 判据必须与估算层（rivalCardHeightPx）逐字一致——两边都用 type !== 'text'：
+  // X/Twitter 的成员行会落到 text-media，它同样有媒体，也必须走封面优先正文，
+  // 否则卡片有几何、没有正文与状态胶囊。
+  const mediaFirst = card?.layout === COLLECTION_MEMBER_LAYOUT && cardType !== 'text'
   const interactive = cardType !== 'collection' || typeof onDetail === 'function'
   const isDone = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
   const tier = String(card?.velocity?.tier || 'watch')
@@ -205,7 +211,7 @@ export function RivalPostCard(props) {
 
   return (
     <article
-      className={`omnimux-rival-card t-${cardType} tier-${tier}${isDone ? ' is-done' : ''} ${className}`.trim()}
+      className={`omnimux-rival-card t-${cardType} tier-${tier}${isDone ? ' is-done' : ''}${mediaFirst ? ' is-media-first' : ''} ${className}`.trim()}
       data-card-id={String(card?.id ?? '')}
       data-inspiration-id={inspirationId}
       data-collection-id={collectionId}
@@ -224,7 +230,15 @@ export function RivalPostCard(props) {
         }
       }}
     >
-      {onMedia ? (
+      {mediaFirst ? (
+        <>
+          {mediaNode}
+          <div className="omnimux-rival-card-body">
+            <div className="omnimux-rival-card-title clamp-2" title={title}>{title}</div>
+            {metaNode || null}
+          </div>
+        </>
+      ) : onMedia ? (
         <>
           {mediaNode}
           <VelocityPill velocity={card?.velocity} surface="on-media" t={t} />
