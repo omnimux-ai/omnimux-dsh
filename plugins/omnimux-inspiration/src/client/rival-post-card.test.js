@@ -211,6 +211,51 @@ describe('RivalPostCard — 五种形态（§9.1）', () => {
   })
 })
 
+describe('RivalPostCard — 无封面兜底与未知播放量（#3428）', () => {
+  it('renders a named placeholder instead of an empty <img> when the cover is missing (B1)', async () => {
+    const mounted = await mountStage([cardOf('short-video', { cover_key: '' })])
+    try {
+      const card = byType(mounted.container, 'short-video')
+      const media = card.querySelector('.omnimux-rival-card-media')
+      assert.ok(media, 'the media box must still reserve the ratio geometry')
+      assert.equal(media.tagName, 'DIV', 'an empty-src IMG would paint a black 9:16 block')
+      assert.equal(card.querySelector('img'), null, 'no <img> may render without a cover')
+      assert.ok(media.classList.contains('omnimux-rival-media-empty'))
+      assert.equal(media.getAttribute('data-media'), 'empty')
+      assert.ok((media.textContent || '').includes('无封面'), 'the placeholder names the missing cover')
+      assert.ok(media.querySelector('svg'), 'the platform mark keeps the placeholder identifiable')
+      assert.equal(media.style.getPropertyValue('--rival-media-ratio').trim(), `${9 / 16}`)
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('keeps the real <img> when a cover exists (B2)', async () => {
+    const mounted = await mountStage([cardOf('short-video')])
+    try {
+      const media = byType(mounted.container, 'short-video').querySelector('.omnimux-rival-card-media')
+      assert.equal(media.tagName, 'IMG')
+      assert.equal(media.getAttribute('src'), CARD_BASE.cover_key)
+      assert.equal(media.getAttribute('alt'), CARD_BASE.title)
+      assert.equal(byType(mounted.container, 'short-video').querySelector('.omnimux-rival-media-empty'), null)
+    } finally {
+      await mounted.unmount()
+    }
+  })
+
+  it('renders -- for an unknown view count instead of the -1 sort sentinel (B3)', async () => {
+    const mounted = await mountStage([cardOf('short-video', { stats: { views: -1 } })])
+    try {
+      const metrics = mounted.container.querySelector('.omnimux-rival-overlay-metrics')
+      const text = metrics.textContent || ''
+      assert.ok(text.includes('--'), 'unknown counts use the module marker')
+      assert.equal(text.includes('-1'), false, 'the sort sentinel must never reach the card')
+    } finally {
+      await mounted.unmount()
+    }
+  })
+})
+
 describe('RivalPostCard — 默认态极简白名单（V12/V13）', () => {
   it('default state shows only media, pill and title/body', async () => {
     const cards = [cardOf('short-video'), cardOf('text'), cardOf('text-media')]

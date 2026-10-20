@@ -59,8 +59,14 @@ function metricsText(card, t) {
   const stats = card?.stats || {}
   const locale = rivalLocaleOf(t)
   const key = card?.metrics_template === 'read' ? 'rivalFeed.metrics.reads' : 'rivalFeed.metrics.views'
+  // `-1` is the Host's sort sentinel for "view count unknown" (#3428): it must
+  // never leak into the card as a negative number. `formatCount(null)` renders
+  // the module's `--` unknown marker instead.
+  const views = typeof stats.views === 'number' && Number.isFinite(stats.views) && stats.views >= 0
+    ? stats.views
+    : null
   return String(t(key) || '')
-    .replace('{views}', formatCount(stats.views, locale))
+    .replace('{views}', formatCount(views, locale))
     .replace('{likes}', formatEngagementCount(stats.likes, locale))
     .replace('{comments}', formatEngagementCount(stats.comments, locale))
     .replace('{shares}', formatEngagementCount(stats.shares, locale))
@@ -149,13 +155,32 @@ export function RivalPostCard(props) {
 
   // 滤镜与淡出只作用在媒体元素本身（§9.2）：胶囊是与媒体同级的独立图层，
   // 绝不能被一个容器级 filter 顺带褪色。
+  //
+  // A media card without a cover must not render an empty `<img>` (#3428): an
+  // `<img>` with no `src` reserves the 9:16 box but paints nothing, which reads
+  // as a black card. The placeholder keeps the same media class/ratio geometry
+  // (so masonry placement and the done-state fade stay unchanged) and names the
+  // missing cover instead.
   const mediaNode = customMedia !== undefined ? customMedia : (
-    <img
-      className="omnimux-rival-card-media"
-      src={cover || undefined}
-      alt={cover ? title : ''}
-      style={{ '--rival-media-ratio': mediaRatio }}
-    />
+    cover ? (
+      <img
+        className="omnimux-rival-card-media"
+        src={cover}
+        alt={title}
+        style={{ '--rival-media-ratio': mediaRatio }}
+      />
+    ) : (
+      <div
+        className="omnimux-rival-card-media omnimux-rival-media-empty"
+        style={{ '--rival-media-ratio': mediaRatio }}
+        role="img"
+        aria-label={String(t('noCover') || '')}
+        data-media="empty"
+      >
+        <RivalPlatformMark platform={String(account.platform || card?.source_platform || '')} />
+        <span>{t('noCover')}</span>
+      </div>
+    )
   )
 
   const fourth = isDone

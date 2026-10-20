@@ -1,0 +1,72 @@
+{
+  "task": "3428",
+  "base": "01647e1c5539d7e014e1260eadf6798da6c0b657",
+  "harness": "real RivalMasonry -> RivalPostCard, dsh-ui-kit shimmed, ephemeral port 61101",
+  "browser": "ego-browser (real Chromium), task space 106, closed after run",
+  "viewport": { "width": 1280, "height": 789 },
+  "columns": "4",
+  "cards": [
+    {
+      "id": "with-cover",
+      "cardType": "short-video",
+      "width": 276,
+      "height": 531,
+      "mediaTag": "IMG",
+      "mediaEmpty": false,
+      "mediaRatio": "0.5625",
+      "imgSrc": "/cover.svg",
+      "imgNatural": [360, 640],
+      "metrics": "播放 1.2万 · 点赞 678 · 评论 90 · 分享 12",
+      "placeholder": null,
+      "title": "For the whole family 🥞",
+      "hasPlatformMark": true
+    },
+    {
+      "id": "no-cover",
+      "cardType": "short-video",
+      "width": 276,
+      "height": 531,
+      "mediaTag": "DIV",
+      "mediaEmpty": true,
+      "mediaRatio": "0.5625",
+      "imgSrc": null,
+      "imgNatural": null,
+      "metrics": "播放 0 · 点赞 0 · 评论 0 · 分享 0",
+      "placeholder": "无封面",
+      "title": "No cover post",
+      "hasPlatformMark": true
+    },
+    {
+      "id": "unknown-views",
+      "cardType": "short-video",
+      "width": 276,
+      "height": 531,
+      "mediaTag": "DIV",
+      "mediaEmpty": true,
+      "mediaRatio": "0.5625",
+      "imgSrc": null,
+      "imgNatural": null,
+      "metrics": "播放 -- · 点赞 0 · 评论 0 · 分享 0",
+      "placeholder": "无封面",
+      "title": "Unknown views",
+      "hasPlatformMark": true
+    },
+    {
+      "id": "x-text",
+      "cardType": "text",
+      "width": 300,
+      "height": 168,
+      "mediaTag": null,
+      "mediaEmpty": null,
+      "mediaRatio": null,
+      "imgSrc": null,
+      "imgNatural": null,
+      "metrics": "播放 6378 · 点赞 0 · 评论 0 · 分享 0",
+      "placeholder": null,
+      "title": "X text post with real copy",
+      "hasPlatformMark": true
+    }
+  ],
+  "failures": [],
+  "screenshot": "browser-card-3428.png"
+}
