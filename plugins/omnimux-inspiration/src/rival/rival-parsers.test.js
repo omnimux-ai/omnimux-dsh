@@ -1,5 +1,6 @@
 /**
- * T01 gates: URL classification (four platforms × homepage / channel / content),
+ * T01 gates: URL classification (the handle platforms × homepage / channel /
+ * content), the six-platform extension in the block at the end of the file,
  * path resolution for the data+media trees, and the tolerant payload mappers.
  *
  * These are the fixtures the module treats as "unknown shape": empty objects,
@@ -21,6 +22,7 @@ import {
 import { hashId, rivalMediaFilename, rivalMediaSubpath, rivalMediaUrl, resolveRivalPaths } from './rival-paths.js'
 import {
   BACKOFF_MINUTES,
+  CLOUD_RIVAL_PLATFORMS,
   LIMIT_CALLS_PER_ACCOUNT_CYCLE,
   REFRESH_INTERVAL_CHOICES,
   RIVAL_PLATFORMS,
@@ -786,6 +788,70 @@ describe('T01 completion criteria: constants are the single source of truth', ()
     assert.equal(LIMIT_CALLS_PER_ACCOUNT_CYCLE, 2)
     assert.deepEqual([...BACKOFF_MINUTES], [5, 15, 60])
     assert.deepEqual([...REFRESH_INTERVAL_CHOICES], [24, 12, 48, 0])
-    assert.deepEqual([...RIVAL_PLATFORMS], ['tiktok', 'instagram', 'youtube', 'x'])
+    // #3454: the monitor set grows to six; the cloud catalog keeps collecting
+    // the original four (asserted as a separate constant below).
+    assert.deepEqual(RIVAL_PLATFORMS, ['tiktok', 'instagram', 'youtube', 'x', 'douyin', 'xiaohongshu'])
+  })
+})
+
+describe('rival-identity: douyin and xiaohongshu (six-platform classification, #3454)', () => {
+  it('classifies both UID profile shapes as accounts', () => {
+    const cases = [
+      ['https://www.douyin.com/user/MS4wLjABAAAA1234567890abcdef', 'douyin', 'MS4wLjABAAAA1234567890abcdef'],
+      ['https://www.douyin.com/share/user/MS4wLjABAAAA1234567890abcdef', 'douyin', 'MS4wLjABAAAA1234567890abcdef'],
+      ['https://www.xiaohongshu.com/user/profile/5f3a1b2c3d4e5f60718293a4?xsec_token=abc', 'xiaohongshu', '5f3a1b2c3d4e5f60718293a4'],
+    ]
+    for (const [url, platform, externalId] of cases) {
+      const result = detectInputKind(url)
+      assert.equal(result.kind, 'account', url)
+      assert.equal(result.platform, platform, url)
+      assert.equal(result.identity.external_id, externalId, url)
+      assert.equal(result.identity.external_id_kind, 'uid', url)
+      assert.equal(result.identity.handle, externalId, url)
+      assert.equal(result.identity.profile_url.startsWith('https://'), true, url)
+    }
+    // `/share/user/<id>` 归一成规范主页：重新导入时 profile_url 不随分享形式变化。
+    assert.equal(
+      detectInputKind('https://www.douyin.com/share/user/MS4wLjABAAAA1234567890abcdef').identity.profile_url,
+      'https://www.douyin.com/user/MS4wLjABAAAA1234567890abcdef',
+    )
+  })
+
+  it('hands every work page and short link to the content pipeline', () => {
+    const contentUrls = [
+      'https://www.douyin.com/video/7321234567890123456',
+      'https://www.douyin.com/note/7321234567890123456',
+      'https://www.douyin.com/share/video/7321234567890123456',
+      'https://www.iesdouyin.com/share/video/7321234567890123456',
+      'https://v.douyin.com/iJabc12/',
+      'https://www.xiaohongshu.com/explore/66abcdef0123456789abcdef',
+      'https://www.xiaohongshu.com/discovery/item/66abcdef0123456789abcdef',
+      'https://www.xiaohongshu.com/item/66abcdef0123456789abcdef',
+      'https://xhslink.com/aBcDeF',
+      'https://www.douyin.com/',
+    ]
+    for (const url of contentUrls) {
+      const result = detectInputKind(url)
+      assert.equal(result.kind, 'content', url)
+      assert.notEqual(result.platform, 'unknown', url)
+      assert.equal(parseRivalIdentity(url), null, url)
+    }
+  })
+
+  it('rebuilds a UID profile url when none was stored', () => {
+    assert.equal(
+      rivalProfileUrl({ platform: 'douyin', external_id: 'abc123' }),
+      'https://www.douyin.com/user/abc123',
+    )
+    assert.equal(
+      rivalProfileUrl({ platform: 'xiaohongshu', external_id: 'abc123' }),
+      'https://www.xiaohongshu.com/user/profile/abc123',
+    )
+  })
+
+  it('keeps the cloud platform list the collected subset of the monitor set', () => {
+    assert.deepEqual(Array.from(CLOUD_RIVAL_PLATFORMS), ['tiktok', 'instagram', 'youtube', 'x'])
+    assert.equal(RIVAL_PLATFORMS.length, 6)
+    assert.deepEqual(Array.from(RIVAL_PLATFORMS).slice(4), ['douyin', 'xiaohongshu'])
   })
 })

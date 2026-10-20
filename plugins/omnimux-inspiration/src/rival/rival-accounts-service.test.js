@@ -39,3 +39,45 @@ describe('service budget overrun boundary', () => {
     assert.equal(calls.length, 0)
   })
 })
+
+describe('service platform capability guard (douyin / xiaohongshu, #3454)', () => {
+  function makeGuardedService() {
+    const touched = { remote: false }
+    const service = createRivalAccountsService({
+      store: { getAccount: () => null },
+      scheduler: {},
+      remote: {
+        createCycle() {
+          touched.remote = true
+          throw new Error('remote must not be reached')
+        },
+      },
+    })
+    return { service, touched }
+  }
+
+  it('refuses a platform without a cloud collector before any remote call', async () => {
+    for (const platform of ['douyin', 'xiaohongshu']) {
+      const harness = makeGuardedService()
+      await assert.rejects(
+        harness.service.runCycle({ account: { platform, external_id: 'uid_1' } }),
+        (error) => {
+          assert.equal(error.code, 'platform-unsupported')
+          assert.equal(error.message, '该平台暂不支持自动刷新（云端采集未接入）')
+          assert.equal(error.calls_used, 0)
+          return true
+        },
+      )
+      assert.equal(harness.touched.remote, false, 'no remote call may start for this platform')
+    }
+  })
+
+  it('lets a cloud platform through to the remote cycle', async () => {
+    const harness = makeGuardedService()
+    await assert.rejects(
+      harness.service.runCycle({ account: { platform: 'tiktok', external_id: '@a' } }),
+      /remote must not be reached/,
+    )
+    assert.equal(harness.touched.remote, true)
+  })
+})

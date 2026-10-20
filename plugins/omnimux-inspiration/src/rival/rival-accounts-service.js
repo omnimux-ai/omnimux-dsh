@@ -21,6 +21,7 @@ import { readBudgetOverrun } from './rival-accounts-store.js'
 import {
   BUDGET_REASONS,
   CLIENT_POLL_INTERVAL_MS,
+  CLOUD_RIVAL_PLATFORMS,
   IDENTITY_KINDS,
   LIMIT_CALLS_PER_ACCOUNT_CYCLE,
   POSTS_PER_REFRESH,
@@ -114,6 +115,15 @@ export function createRivalAccountsService(deps) {
    * @param {{ account: Record<string, any> }} input
    */
   async function runCycle({ account }) {
+    // 抖音/小红书可导入但云端没有采集能力：在 `user`/`posts` 任何远端调用之前
+    // 直接终态失败，`callsUsed: 0` 让调用方看到这条路径没有花采集额度。
+    if (!CLOUD_RIVAL_PLATFORMS.includes(account.platform)) {
+      throw new RivalRemoteError(
+        RIVAL_ERROR_CODES.PLATFORM_UNSUPPORTED,
+        '该平台暂不支持自动刷新（云端采集未接入）',
+        { callsUsed: 0 },
+      )
+    }
     const cycle = remote.createCycle({})
     const value = rivalIdentityValue(account)
     let user

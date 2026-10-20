@@ -9,6 +9,7 @@ import {
   stoppedReasonText,
   rivalErrorKey,
 } from './rival-health.js'
+import { zh } from './locales.js'
 
 it('maps channel and setup failures to fixed actionable messages', () => {
   assert.equal(rivalErrorKey('CHANNEL_UNAVAILABLE'), 'rivalAccounts.error.channelUnavailable')
@@ -190,5 +191,21 @@ describe('manualCooldownMinutesLeft — 手动刷新冷却', () => {
     assert.equal(manualCooldownMinutesLeft(NOW - 31 * 60_000, NOW, windowMinutes), null)
     assert.equal(manualCooldownMinutesLeft(0, NOW, windowMinutes), null)
     assert.equal(manualCooldownMinutesLeft(undefined, NOW, windowMinutes), null)
+  })
+})
+
+describe('#3454 platform-unsupported 终态原因', () => {
+  it('账号行把「云端采集未接入」作为可见原因，并归入已停止', () => {
+    assert.equal(rivalErrorKey('platform-unsupported'), 'rivalAccounts.error.platformUnsupported')
+    assert.equal(
+      zh['rivalAccounts.error.platformUnsupported'],
+      '该平台暂不支持自动刷新（云端采集未接入）',
+    )
+    // 与身份类失败互斥：它是「已停止」（可手动重试），不是「需要重新导入」。
+    assert.equal(accountHealth({ refresh_state: 'error', error_code: 'platform-unsupported' }), 'stopped')
+    assert.equal(
+      accountHealth({ refresh_state: 'error', error_code: 'identity-unverified' }),
+      'reimport',
+    )
   })
 })

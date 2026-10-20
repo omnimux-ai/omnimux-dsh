@@ -39,6 +39,7 @@ export function rivalErrorKey(code) {
     case 'cloud-error':
     case 'omnimux-request-failed': return 'rivalAccounts.error.cloud'
     case 'no-content': return 'rivalAccounts.error.noContent'
+    case 'platform-unsupported': return 'rivalAccounts.error.platformUnsupported'
     case 'tool-missing':
     case 'tool-unavailable': return 'rivalAccounts.error.toolMissing'
     case 'account-not-found': return 'rivalAccounts.error.accountMissing'

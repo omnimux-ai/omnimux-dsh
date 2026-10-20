@@ -247,7 +247,8 @@ describe('InspirationSection render gate — platform dropdown', () => {
         'clicking the platform trigger must open a listbox (trigger is not wired to a menu)',
       )
       const openedOptions = [...mounted.container.querySelectorAll('[role="option"]')].map((node) => node.textContent)
-      for (const label of ['TikTok', 'Douyin', zh['platform.all']]) {
+      // #3454: douyin is a known platform now, so the menu shows its locale name.
+      for (const label of ['TikTok', '抖音', zh['platform.all']]) {
         assert.ok(
           openedOptions.includes(label),
           `the opened menu must offer ${label} (got ${JSON.stringify(openedOptions)})`,

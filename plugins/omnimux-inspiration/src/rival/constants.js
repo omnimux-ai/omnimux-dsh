@@ -10,8 +10,15 @@
  * consumer — Host or client-side test — can load it offline.
  */
 
-/** Platform slugs served by the OmniMux cloud social-data catalog. */
-export const RIVAL_PLATFORMS = Object.freeze(['tiktok', 'instagram', 'youtube', 'x'])
+/** Platform slugs the 对标账号 module can monitor (import + classification). */
+export const RIVAL_PLATFORMS = Object.freeze(['tiktok', 'instagram', 'youtube', 'x', 'douyin', 'xiaohongshu'])
+
+/**
+ * Subset of `RIVAL_PLATFORMS` the OmniMux cloud social-data catalog can collect.
+ * A monitored account outside this set is importable but never auto-refreshed:
+ * `runCycle` refuses it with `PLATFORM_UNSUPPORTED` instead of calling the cloud.
+ */
+export const CLOUD_RIVAL_PLATFORMS = Object.freeze(['tiktok', 'instagram', 'youtube', 'x'])
 
 /** Directory and file naming. Data and media are two separate trees. */
 export const RIVAL_DATA_DIR_NAME = 'rival-accounts'
@@ -103,6 +110,7 @@ export const RIVAL_ERROR_CODES = Object.freeze({
   CLOUD_ERROR: 'cloud-error', // 502
   NO_CONTENT: 'no-content', // 422
   IDENTITY_UNVERIFIED: 'identity-unverified', // account state, not an HTTP code
+  PLATFORM_UNSUPPORTED: 'platform-unsupported', // account state: cloud has no collector for this platform
   QUOTA_EXCEEDED: 'quota-exceeded', // 402, forwarded from the hub
   NEEDS_OMNIMUX: 'needs-omnimux', // 401, forwarded from the hub
   NO_MEDIA: 'no-media', // 409, "add to session" found nothing to attach
