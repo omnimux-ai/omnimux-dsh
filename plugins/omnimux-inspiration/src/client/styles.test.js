@@ -228,6 +228,16 @@ describe('账号监控两栏布局（#3432）', () => {
     assert.match(layout, /grid-template-columns:\s*248px minmax\(0,\s*1fr\)/)
     const column = ruleBody(RIVAL_CSS, '.omnimux-rival-accounts')
     assert.equal(decl(column, 'position'), 'sticky')
+    assert.equal(
+      decl(column, 'top'),
+      'calc(var(--omnimux-rival-sticky-h, var(--stage-sticky-offset, 44px)) + 12px)',
+      '左栏必须吸附在一级 Tab/工具栏下方，而不是视口顶部',
+    )
+    assert.equal(
+      decl(column, 'max-height'),
+      'calc(var(--omnimux-rival-scroll-h, 100vh) - var(--omnimux-rival-sticky-h, var(--stage-sticky-offset, 44px)) - 24px)',
+      '吸附后整列必须留在视口内，列表自己滚动',
+    )
   })
 
   it('keeps the toolbar and its three content layers unclipped for its dropdown', () => {

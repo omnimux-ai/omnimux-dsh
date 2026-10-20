@@ -62,10 +62,12 @@ function probePageHtml() {
   /* 宿主必须给足高度：账号监控页自带滚动容器，宿主过矮会把左栏下沿裁掉，
      那是夹具失真，不是产品布局。 */
   #root { width: 720px; height: 860px; }
+  .omx-stage-scroll { width: 720px; height: 600px; overflow-y: auto; overflow-x: hidden; position: relative; }
+  .omx-stage-sticky { position: sticky; top: 0; height: 48px; background: #ffffff; z-index: 20; }
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root"><div class="omx-stage-scroll" id="scroll"><div class="omx-stage-sticky" id="sticky"></div><div id="stage-root"></div></div></div>
 <script>
   window.__probeErrors = []
   window.addEventListener('error', (e) => window.__probeErrors.push(String(e.message || e.error)))
@@ -101,6 +103,9 @@ function probePageHtml() {
         columnWidth: columnRect.width,
         contentPresent: !!layout.querySelector('.omnimux-rival-content'),
         columnMaxHeight: cs(column).maxHeight,
+        columnPosition: cs(column).position,
+        columnTop: cs(column).top,
+        viewportHeight: window.innerHeight,
         listDisplay: cs(list).display,
         probePadding: cs(probe).padding,
         layer2Resolved: cs(probe).getPropertyValue('--dsw-alias-bg-layer-2').trim(),
@@ -135,7 +140,28 @@ function probePageHtml() {
         errors: window.__probeErrors,
       }
       probe.remove(); echo.remove(); control.remove()
-      finish(result)
+      var scroll = document.getElementById('scroll')
+      scroll.style.display = 'none'
+      window.__setActive(false)
+      scroll.style.height = '400px'
+      setTimeout(function () {
+        scroll.style.display = ''
+        window.__setActive(true)
+        setTimeout(function () {
+          var col = document.querySelector('.omnimux-rival-accounts')
+          var list2 = document.querySelector('.omnimux-rival-accounts-list')
+          var scrollRect = scroll.getBoundingClientRect()
+          var colRect = col.getBoundingClientRect()
+          result.reshown = {
+            scrollHeightVar: col.style.getPropertyValue('--omnimux-rival-scroll-h').trim(),
+            columnBottom: Math.round(colRect.bottom),
+            scrollportBottom: Math.round(scrollRect.bottom),
+            listClientHeight: list2.clientHeight,
+            columnTop: Math.round(colRect.top),
+          }
+          finish(result)
+        }, 200)
+      }, 120)
     }
     measure()
   })()
@@ -180,7 +206,8 @@ async function runProbe() {
       const t = (key) => zh[key] ?? key
       const accounts = ${JSON.stringify(ACCOUNTS)}
       const allIds = accounts.map((account) => account.id)
-      createRoot(document.getElementById('root')).render(
+      const root = createRoot(document.getElementById('stage-root'))
+      const render = (active) => root.render(
         <div className="omnimux-rival-layout">
           <RivalAccountColumn
             t={t}
@@ -192,10 +219,13 @@ async function runProbe() {
             onReset={() => {}}
             onRetry={() => {}}
             quotaLeft={46}
+            active={active}
           />
           <div className="omnimux-rival-content" />
-        </div>,
+        </div>
       )
+      window.__setActive = render
+      render(true)
     `)
     const outfile = join(dir, 'stage.js')
     await esbuild.build({
@@ -251,6 +281,23 @@ if (probe.skipped !== true) {
       probe.columnMaxHeight !== 'none' && parseFloat(probe.columnMaxHeight) > 0,
       `账号列必须有像素级 max-height，而不是 none: ${probe.columnMaxHeight}`,
     )
+  })
+
+  test('账号列吸附在一级 Tab 栏下方（#3448）', () => {
+    assert.equal(probe.columnPosition, 'sticky')
+    assert.equal(probe.columnTop, '60px', `吸顶偏移必须留出实测 48px Tab 栏 + 12px 间距（实际 ${probe.columnTop}）`)
+    assert.equal(
+      Math.round(parseFloat(probe.columnMaxHeight)),
+      600 - 48 - 24,
+      `max-height 必须按真实 scrollport 扣掉 Tab 栏高度（实际 ${probe.columnMaxHeight}）`,
+    )
+    assert.ok(probe.reshown, '隐藏/缩放/再显示场景必须回传测量')
+    assert.equal(probe.reshown.scrollHeightVar, '400px', '切回该 tab 后必须重新测量 scrollport')
+    assert.ok(
+      probe.reshown.columnBottom <= probe.reshown.scrollportBottom,
+      `重新显示后列底必须落在 scrollport 内: bottom=${probe.reshown.columnBottom} scrollport=${probe.reshown.scrollportBottom}`,
+    )
+    assert.ok(probe.reshown.columnTop >= 60, '重新显示后仍需留在 48px 头部下方')
   })
 
   test('常驻账号列的四行不需要滚动就能看全', () => {

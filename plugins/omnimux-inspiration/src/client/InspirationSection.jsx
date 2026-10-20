@@ -590,6 +590,7 @@ export function InspirationSection({ t, active }) {
             onRetry={rivalFeed.retryAccount}
             quotaLeft={rivalQuota?.left}
             refreshBusy={rivalFeed.refreshBusy}
+            active={active !== false}
           />
           ) : null}
           <div className="omnimux-rival-content">

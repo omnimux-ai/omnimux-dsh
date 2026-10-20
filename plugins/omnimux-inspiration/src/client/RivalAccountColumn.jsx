@@ -8,6 +8,7 @@
  * `accounts` query parameter is sent to the feed endpoint.
  */
 
+import { useLayoutEffect, useRef } from 'react'
 import { Button } from 'dsh-ui-kit'
 import { formatCount, rivalLocaleOf } from './rival-format.js'
 import { selectedAccountIds, toAccountFilterRow } from './rival-filter.js'
@@ -26,21 +27,61 @@ import { openExternalUrl } from './open-url.js'
  *   onRetry?: (id: string) => void,
  *   quotaLeft?: number,
  *   refreshBusy?: boolean,
+ *   active?: boolean,
  * }} props
  */
 export function RivalAccountColumn(props) {
   const {
     t, accounts, selection, allIds, onToggle, onInvert, onReset, onRetry,
-    quotaLeft, refreshBusy = false,
+    quotaLeft, refreshBusy = false, active = true,
   } = props
   const list = Array.isArray(accounts) ? accounts : []
   const ids = Array.isArray(allIds) ? allIds : list.map((account) => String(account?.id ?? ''))
   const rows = list.map((account) => toAccountFilterRow(account, selection))
   const selectedCount = selectedAccountIds(ids, selection).length
   const locale = rivalLocaleOf(t)
+  const asideRef = useRef(null)
+
+  // The workbench pane is shorter than the window (tab strip + header), so the
+  // sticky offset and the max-height must follow the real scrollport, not 100vh.
+  // Measure the Stage scroll container and its sticky header and expose both as
+  // CSS variables consumed by `.omnimux-rival-accounts` (#3448).
+  useLayoutEffect(() => {
+    const node = asideRef.current
+    if (!node) return undefined
+    const scroll = node.closest('.omx-stage-scroll')
+    if (!scroll) return undefined
+    let header = scroll.querySelector('.omx-stage-sticky')
+    let observer = null
+    const read = () => {
+      // Re-read the header each time: the Stage may remount it after a tab
+      // switch. Never write 0px while the pane is display:none — keep the last
+      // valid measurement and retry when `active` flips back (#3448).
+      header = scroll.querySelector('.omx-stage-sticky')
+      const headerHeight = header ? header.getBoundingClientRect().height : 0
+      const scrollHeight = scroll.clientHeight
+      if (headerHeight <= 0 || scrollHeight <= 0) return
+      node.style.setProperty('--omnimux-rival-sticky-h', `${headerHeight}px`)
+      node.style.setProperty('--omnimux-rival-scroll-h', `${scrollHeight}px`)
+    }
+    read()
+    if (typeof ResizeObserver === 'function') {
+      observer = new ResizeObserver(read)
+      observer.observe(scroll)
+      if (header) observer.observe(header)
+    }
+    // Chrome does not fire ResizeObserver on display:none -> visible, and the
+    // sidebar keeps inactive tabs mounted. Re-measure whenever the tab becomes
+    // visible, on window resize, and after the observer re-resolves the header.
+    window.addEventListener('resize', read)
+    return () => {
+      window.removeEventListener('resize', read)
+      if (observer) observer.disconnect()
+    }
+  }, [active])
 
   return (
-    <aside className="omnimux-rival-accounts" aria-label={t('rivalAccounts.column.title')}>
+    <aside ref={asideRef} className="omnimux-rival-accounts" aria-label={t('rivalAccounts.column.title')}>
       <header className="omnimux-rival-accounts-head">
         <span className="omnimux-rival-accounts-titles">
           <span className="omnimux-rival-accounts-title">{t('rivalAccounts.column.title')}</span>
