@@ -106,6 +106,7 @@ export function apply(ctx) {
   const dispatcher = createProductsDispatcher({
     library,
     ctx,
+    getService: (name) => ctx.get?.(name),
     // 草稿媒体登记表要落在这个媒体目录内才算合法（创建态图片只读预览）。
     paths,
     importFromUrl: (args) => importProductFromUrl({

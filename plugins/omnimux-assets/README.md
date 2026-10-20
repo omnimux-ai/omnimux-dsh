@@ -219,7 +219,7 @@ omnimux/assets/
 
 ## 已知限制（v0.2）
 
-- 系统选择窗仅支持 macOS；其他平台 `picker-unsupported`
+- 系统选择窗由 hub `nativeFilePicker` seam 提供（macOS AppKit NSOpenPanel，无 Apple Events 依赖）；其他平台 `picker-unsupported`
 - 添加素材支持多选文件 / 多选文件夹；文件夹只记一条目录引用，详情里一层一层进，不拍平子孙文件
 - 本地资产卡片封面本轮用类型占位，真实缩略图 / 视频首帧是 P1
 - 无 FSEvents；靠 5s revision 轮询

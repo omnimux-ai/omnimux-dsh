@@ -11,14 +11,44 @@ import {
   mimeFromFilename,
 } from '../../shared/localMedia.ts';
 import { assertLocalWrite, jsonBodyProblem } from '../../http/helpers.ts';
-import { PickerError, pickNativePath } from '../picker.ts';
 import { browseDirectory } from '../browseDirectory.ts';
 import type { RouteTry, WorkflowDispatchRequest } from './dispatch.ts';
 
 const PROBE_LIMIT = 64;
 
+const PICKER_PROMPTS = {
+  file: '选择要导入的素材',
+  directory: '选择要导入的文件夹',
+} as const;
+
+export type NativePickerKind = 'file' | 'directory';
+
+type NativePicker = (
+  kind: NativePickerKind,
+  options?: { prompt?: string },
+) => Promise<{ path: string | null; paths: string[] }>;
+
 export interface LocalFileRouteDeps {
-  picker?: typeof pickNativePath;
+  /** Injected picker (tests). Production reads the hub `nativeFilePicker` seam. */
+  picker?: NativePicker;
+  /** Lazy neutral seam lookup from the host context. */
+  getService?: (name: string) => unknown;
+}
+
+/** The shared picker lives in the hub; workflow only forwards kind + its copy. */
+function nativePickerFromSeam(getService?: (name: string) => unknown): NativePicker {
+  return async (kind) => {
+    const seam = getService?.('nativeFilePicker') as { pick?: NativePicker } | undefined;
+    if (!seam || typeof seam.pick !== 'function') {
+      throw Object.assign(new Error('nativeFilePicker seam is unavailable'), { code: 'picker-unavailable' });
+    }
+    return seam.pick(kind, { prompt: PICKER_PROMPTS[kind] });
+  };
+}
+
+function pickerCode(error: unknown): string | null {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === 'string' && code.startsWith('picker-') ? code : null;
 }
 
 function jsonError(status: number, error: string, message: string) {
@@ -98,7 +128,7 @@ function probeOne(rawPath: string): {
 }
 
 export function createLocalFileRoutes(deps: LocalFileRouteDeps = {}): { tryHandle: RouteTry } {
-  const picker = deps.picker ?? pickNativePath;
+  const picker = deps.picker ?? nativePickerFromSeam(deps.getService);
   const pickPath = `${WORKFLOW_ROUTE_PREFIX}/api/pick`;
   const browsePath = `${WORKFLOW_ROUTE_PREFIX}/api/browse-directory`;
   const filePath = `${WORKFLOW_ROUTE_PREFIX}/api/local-file`;
@@ -122,12 +152,14 @@ export function createLocalFileRoutes(deps: LocalFileRouteDeps = {}): { tryHandl
           : [];
         return { status: 200, body: { path: paths[0] ?? result.path ?? null, paths } };
       } catch (error) {
-        if (error instanceof PickerError) {
+        const code = pickerCode(error);
+        if (code) {
           const status =
-            error.code === 'picker-unsupported' ? 501
-            : error.code === 'picker-invalid-kind' ? 400
+            code === 'picker-unsupported' ? 501
+            : code === 'picker-invalid-kind' ? 400
+            : code === 'picker-unavailable' ? 503
             : 500;
-          return jsonError(status, error.code, error.message);
+          return jsonError(status, code, error instanceof Error ? error.message : String(error));
         }
         return jsonError(500, 'picker-failed', error instanceof Error ? error.message : String(error));
       }

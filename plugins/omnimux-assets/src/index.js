@@ -159,7 +159,14 @@ export function apply(ctx, config) {
     library,
     catalogDir: typeof config?.catalogDir === 'string' ? config.catalogDir : undefined,
   })
-  const dispatcher = createAssetsDispatcher({ mappings, artifacts, library, cloud, paths })
+  const dispatcher = createAssetsDispatcher({
+    mappings,
+    artifacts,
+    library,
+    cloud,
+    paths,
+    getService: (name) => ctx.get?.(name),
+  })
 
   // changed 事件的唯一出口：lrev/arev 取自同一对活跃 store，op 区分新建与追加，
   // 载荷形态与 assets_create / assets_update 工具保持一致。

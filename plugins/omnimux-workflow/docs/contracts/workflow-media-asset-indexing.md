@@ -160,15 +160,16 @@ Canonical 前缀：`/omnimux-workflow`。Dispatcher 对 `/dsh-workflow/*` **in-m
 | 多选 | 200 | `paths` 全量；`path` = `paths[0]` 或仍为 `null` |
 | 非 darwin | 501 | `{ "error": "picker-unsupported", "message": "…" }` |
 | osascript 失败（非取消） | 500 | `{ "error": "picker-failed", "message": "…" }` |
+| hub seam 缺失 | 503 | `{ "error": "picker-unavailable", "message": "…" }` |
 | 非 loopback | 403 | `{ "error": "not-local", "message": "cross-origin write refused" }` |
 
 实现约束：
 
-- 用 `osascript -l JavaScript` 在辅助进程内驱动 AppKit `NSOpenPanel`（accessory 激活策略，无 Dock 图标）；**不要** `tell application "System Events"`，那条路径要求 `kTCCServiceAppleEvents`，adhoc 签名的产品包无法获得授权。
-- **禁止** `import` / 依赖 `omnimux-assets`；沿用其 `parsePickedPaths` + 可注入 `run` 模式即可。
-- `spawn(command, argv)`，无 shell，防注入。
-- 用户取消：JXA 取消时 exit 0 且 stdout 为空 → 空 paths；保留 `/User canceled|-128/i` 兼容旧 AppleScript 取消码。
-- 提示文案：「选择要导入的素材」。目录选择用 `setCanChooseDirectories(true)`；**Host 仍须按 §6 再校验**，对话框过滤不是安全边界。
+- 选择器由 hub 的 `nativeFilePicker` seam 提供（`osascript -l JavaScript` 驱动 AppKit `NSOpenPanel`，accessory 激活策略，无 Apple Events / Dock 图标依赖）；本插件**不复制** picker 实现，只在请求时 `ctx.get('nativeFilePicker')`。
+- 该 seam 的实现与取消/多选/目录契约由 hub 单测覆盖（注入 runner，零真实 osascript）；seam 内部 `spawn(command, argv)` 无 shell，prompt 经 JSON 编码；**禁止** `import` / 依赖 `omnimux-assets`。
+- 对话框过滤/选择结果**不是安全边界**：Host 仍须按 §6 再校验（绝对路径、regular file、MIME 白名单），本路由只返回路径。
+- 取消：JXA 取消时 exit 0 且 stdout 为空 → 空 paths；兼容旧 AppleScript 的 `/User canceled|-128/i` 取消码。
+- 提示文案仍由本路由提供：「选择要导入的素材」（目录为「选择要导入的文件夹」），seam 缺失时报 `picker-unavailable` 503，不静默降级。
 - 本路由只返回路径，不 stat、不流式、不写入 `canvas.json`。Client 拿到 path 后应 `probe` 再落节点。
 
 ### 5.2 `GET /omnimux-workflow/api/local-file?path=`
@@ -268,12 +269,12 @@ MIME / 扩展名白名单（与画布 `mimeToMaterialType` 对齐，取交集收
 | | `omnimux-assets` | `omnimux-workflow`（本契约） |
 |---|---|---|
 | 语义 | 素材只记 `real_path`，删库记录不删源文件 | 节点只记 `realPath`，删节点不删源文件 |
-| Picker | `POST /omnimux/assets/pick` + `src/picker.js`（裸 `choose file`，无 Automation） | `POST /omnimux-workflow/api/pick`，`osascript -l JavaScript` + AppKit NSOpenPanel（不向 System Events 发 Apple Event） |
+| Picker | `POST /omnimux/assets/pick`，经 hub `nativeFilePicker` seam | `POST /omnimux-workflow/api/pick`，经 hub `nativeFilePicker` seam |
 | 预览 | 库内 `library/preview`（资产 id 间接化） | 节点直出 `local-file?path=`（画布需要按节点播放） |
 | 包边界 | — | **禁止** import 资产库模块、禁止调 `/omnimux/assets/*` 完成导入 |
 | 丢失 | 库列表隐藏失效文件 | 画布节点保留并标 Offline + Relink |
 
-两个 picker 互不复制脚本。必须保留：可注入 `run`、取消判定（空 stdout，兼容 -128）、`parsePickedPaths`、darwin 门闩、无 shell spawn。单测同样注入 runner，**禁止**测里真调 osascript。
+两个插件都不再自带 picker 实现；脚本/取消/激活逻辑只有 hub 一份。必须保留：域路由的 prompt 文案、取消 `{path:null,paths:[]}`、`picker-unsupported`/`picker-failed` 状态映射，以及 hub seam 缺失时的 `picker-unavailable` 503。
 
 ## 8. Client 行为
 
@@ -322,7 +323,7 @@ Offline 卡片主按钮「重新链接」。走同一套 pick → probe → 覆�
 
 | # | 任务 | 依赖 | 验收断言 |
 |---|---|---|---|
-| T1 | 本插件复制 picker（osascript + 可注入 run），挂 `POST /api/pick` | — | 单测覆盖：多路径解析、取消 → 空数组、非 darwin → `picker-unsupported`、directory kind → 400；**零次**真实 osascript |
+| T1 | 经 hub `nativeFilePicker` seam 挂 `POST /api/pick`（本插件不带 picker 实现） | — | hub 单测覆盖：多路径解析、取消 → 空数组、非 darwin → `picker-unsupported`、目录/多选脚本；本插件单测覆盖：seam 转发 prompt、seam 缺失 503；**零次**真实 osascript |
 | T2 | 路径安全函数：绝对路径 / NUL / regular file / 目录拒绝 / MIME 白名单 | — | 单测：相对路径、`\0`、目录、`.pdf`、无扩展名 → 拒绝；白名单图片/视频/音频 → 通过 |
 | T3 | `GET /api/local-file` + Range 206 + loopback | T2 | 非 loopback 403；缺文件 404；目录 400；合法 mp4 Range 回 206；`Content-Type` 为白名单 MIME |
 | T4 | `POST /api/local-file/probe` | T2 | 64 条上限；结果顺序对齐；缺失 `isMissing: true` 且 HTTP 仍 200 |
