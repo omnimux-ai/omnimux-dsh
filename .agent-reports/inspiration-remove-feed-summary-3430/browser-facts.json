@@ -1,0 +1,21 @@
+{
+  "task": "3430",
+  "base": "0abb16c33345214474655ba850b38c2e155ae426",
+  "harness": "real RivalAccountsPanel with synthetic 2-card feed; dsh-ui-kit shimmed; localhost ephemeral port 52698",
+  "browser": "ego-browser (real Chromium), task space 115, finished after run",
+  "facts": {
+    "rootPresent": true,
+    "summaryLine": false,
+    "summaryClass": false,
+    "retiredCopy": false,
+    "countCopy": false,
+    "cardCount": 2,
+    "firstCardType": "short-video",
+    "firstCardImage": {
+      "src": "/cover.svg",
+      "naturalWidth": 360
+    }
+  },
+  "failures": [],
+  "screenshot": "browser-panel-3430.png"
+}

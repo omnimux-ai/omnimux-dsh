@@ -784,5 +784,30 @@ describe('account-monitor card shapes and waterfall (#3110)', () => {
         assert.ok(ids.includes(cardId(post)), `${cardId(post)} must reach the grid through the real page wiring`)
       }
     })
+
+    it('leads straight from the filter row into the grid — no retired browse-summary line (#3430)', async () => {
+      const mounted = await mountStageOnAccounts()
+      open.push(mounted)
+      assert.equal(
+        mounted.container.querySelector('[data-rival-summary]'),
+        null,
+        'the retired summary line must not render above the grid',
+      )
+      assert.equal(
+        mounted.container.querySelector('.omnimux-rival-summary'),
+        null,
+        'the retired summary classes must not render either',
+      )
+      assert.equal(
+        (mounted.container.textContent || '').includes('正在浏览'),
+        false,
+        'the retired summary copy must go with its line',
+      )
+      assert.equal(
+        cardsOf(mounted.container).length,
+        POSTS.length,
+        'removing the summary line must keep every work card on screen',
+      )
+    })
   })
 })
