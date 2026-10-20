@@ -32,7 +32,14 @@ export function CollectionHeader({ t, title, busy = false, addToSessionBusy = fa
       >
         {t('collection.back')}
       </Button>
-      <span className="omnimux-inspiration-collection-heading" title={title}>{title}</span>
+      <span
+        className="omnimux-inspiration-collection-heading"
+        role="heading"
+        aria-level={2}
+        title={title || undefined}
+      >
+        {title}
+      </span>
       <div className="omnimux-inspiration-collection-header-actions">
         <Button
           variant="primary"
