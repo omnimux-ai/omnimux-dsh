@@ -363,6 +363,13 @@ describe('D1 账号行四态健康标记（#3111）', () => {
       const stoppedTitle = stopped.querySelector('.omnimux-rival-filter-warning')?.getAttribute('aria-label') || ''
       assert.ok(stoppedTitle.includes('连续 3 次刷新失败'), `停止原因在图标悬停提示里 (got ${JSON.stringify(stoppedTitle)})`)
       assert.ok(stopped.querySelector('.omnimux-rival-retry'), '已停止行有重试按钮')
+      const nameRow = stopped.querySelector('.omnimux-rival-filter-name-row')
+      assert.ok(nameRow, '昵称行必须存在')
+      assert.ok(nameRow.querySelector('.omnimux-rival-filter-warning'), '警告图标必须固定在昵称同一行（#3446）')
+      assert.ok(nameRow.querySelector('.omnimux-rival-filter-status'), '警告/重试状态组必须在昵称行内')
+      const platform = nameRow.querySelector('.omnimux-rival-filter-platform')
+      assert.ok(platform, '平台图标必须在昵称行内')
+      assert.equal(platform.previousElementSibling?.className, 'omnimux-rival-filter-name', '平台图标必须紧随昵称')
     } finally {
       await mounted.unmount()
       mounted.close()

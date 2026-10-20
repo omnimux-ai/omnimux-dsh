@@ -1,0 +1,92 @@
+{
+  "task": "3446",
+  "base": "cb1a5c148acdef6f3cfb397e5d964d6cdaed2da6",
+  "harness": "real RivalAccountColumn in real .omnimux-rival-layout; 5 long-name accounts (all four health states); localhost port 60374",
+  "browser": "ego-browser (real Chromium); task space finalized after run",
+  "initial": {
+    "columnWidth": 248,
+    "headerWrap": "nowrap",
+    "titleWhiteSpace": "nowrap",
+    "pageOverflow": 0,
+    "rows": [
+      {
+        "id": "ra_long",
+        "nameRowWrap": "nowrap",
+        "nameRowHeight": 20,
+        "nameTruncated": true,
+        "platformGap": 6,
+        "warning": false
+      },
+      {
+        "id": "ra_long2",
+        "nameRowWrap": "nowrap",
+        "nameRowHeight": 20,
+        "nameTruncated": true,
+        "platformGap": 6,
+        "warning": false
+      },
+      {
+        "id": "ra_stop",
+        "nameRowWrap": "nowrap",
+        "nameRowHeight": 22,
+        "nameTruncated": true,
+        "platformGap": 6,
+        "warningRightGap": 58
+      },
+      {
+        "id": "ra_cool",
+        "nameRowWrap": "nowrap",
+        "nameRowHeight": 20,
+        "nameTruncated": true,
+        "platformGap": 6,
+        "warningRightGap": 8
+      },
+      {
+        "id": "ra_reimport",
+        "nameRowWrap": "nowrap",
+        "nameRowHeight": 20,
+        "nameTruncated": true,
+        "platformGap": 6,
+        "warningRightGap": 8
+      }
+    ]
+  },
+  "narrow": {
+    "viewport": [
+      760,
+      900
+    ],
+    "columnWidth": 200,
+    "pageOverflow": 0,
+    "nameWidthMin": 36,
+    "summaryHidden": true,
+    "jumpHidden": true,
+    "retryIconOnly": true
+  },
+  "english": {
+    "viewport": [
+      1200,
+      900
+    ],
+    "columnWidth": 248,
+    "pageOverflow": 0
+  },
+  "failures": [],
+  "screenshots": [
+    "browser-row-nowrap-3436.png",
+    "browser-row-nowrap-subset-3436.png",
+    "browser-row-nowrap-narrow-3436.png",
+    "browser-row-nowrap-narrow-en-3436.png",
+    "browser-row-nowrap-en-3436.png"
+  ],
+  "narrowEnglish": {
+    "viewport": [
+      760,
+      900
+    ],
+    "columnWidth": 200,
+    "pageOverflow": 0,
+    "titleOverflow": "ellipsis",
+    "titleWidth": ">=40"
+  }
+}

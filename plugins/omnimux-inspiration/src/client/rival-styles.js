@@ -90,7 +90,7 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-filter-name-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 4px 6px;
   min-width: 0;
@@ -99,9 +99,9 @@ export const RIVAL_CSS = `
   font-size: 12px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
-  /* 昵称必须完整可读：不参与压缩，宁可让同行的状态文字换行。 */
-  flex: none;
-  max-width: 100%;
+  /* 单行截断：昵称过长时省略，绝不把平台/警告图标挤到第二行。 */
+  flex: 0 1 auto;
+  min-width: 36px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -149,6 +149,7 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-filter-handle {
   display: block;
+  max-width: 100%;
   font-size: 11px;
   color: var(--dsw-alias-label-secondary);
   overflow: hidden;
@@ -403,6 +404,12 @@ export const RIVAL_CSS = `
   font-size: 10px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+.omnimux-rival-retry-icon {
+  display: none;
+}
+.omnimux-rival-retry-label {
+  display: inline;
 }
 .omnimux-rival-retry.is-blocked {
   opacity: 0.55;
@@ -916,7 +923,8 @@ export const RIVAL_CSS = `
 }
 .omnimux-rival-accounts-head {
   display: flex;
-  align-items: flex-start;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 8px;
   padding: 0 2px 2px;
   min-width: 0;
@@ -924,20 +932,30 @@ export const RIVAL_CSS = `
 .omnimux-rival-accounts-titles {
   display: flex;
   flex: 1 1 auto;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  overflow: hidden;
 }
 .omnimux-rival-accounts-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .omnimux-rival-accounts-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11px;
   color: var(--dsw-alias-label-secondary);
-  overflow-wrap: anywhere;
 }
 .omnimux-rival-accounts-actions {
   display: flex;
@@ -952,6 +970,23 @@ export const RIVAL_CSS = `
   min-height: 0;
   overflow-y: auto;
   padding-right: 2px;
+}
+@media (max-width: 960px) {
+  .omnimux-rival-filter-jump {
+    display: none;
+  }
+  .omnimux-rival-retry-label {
+    display: none;
+  }
+  .omnimux-rival-retry-icon {
+    display: inline-flex;
+  }
+  .omnimux-rival-accounts-summary {
+    display: none;
+  }
+  .omnimux-rival-accounts-titles {
+    gap: 0;
+  }
 }
 @media (max-width: 720px) {
   .omnimux-rival-accounts {
