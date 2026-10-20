@@ -234,16 +234,6 @@ export function RivalAccountsPanel(props) {
         </div>
       ) : null}
 
-      {/* 空态不占摘要行：「显示 0 个作品」对一片空白没有任何解释力，只会把留白切碎。 */}
-      {feed.cards.length > 0 ? (
-        <div className="omnimux-rival-summary" data-rival-summary="true">
-          <span className="omnimux-rival-summary-text">{t('rivalFeed.summary')}</span>
-          <span className="omnimux-rival-summary-count">
-            {t('rivalFeed.count').replace('{n}', String(feed.total || 0))}
-          </span>
-        </div>
-      ) : null}
-
       <RivalFeedGrid
         t={t}
         cards={feed.cards}

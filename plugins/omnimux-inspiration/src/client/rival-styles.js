@@ -26,21 +26,6 @@ export const RIVAL_CSS = `
   display: none;
 }
 
-/* 「正在浏览：…」+「显示 N 个作品」 */
-.omnimux-rival-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 2px 4px;
-  font-size: 12px;
-  color: var(--dsw-alias-label-tertiary);
-}
-.omnimux-rival-summary-count {
-  flex: none;
-  color: var(--dsw-alias-label-secondary);
-}
-
 /* ── 账号筛选（多选） ───────────────────────────────────────────────── */
 .omnimux-rival-filter {
   position: relative;

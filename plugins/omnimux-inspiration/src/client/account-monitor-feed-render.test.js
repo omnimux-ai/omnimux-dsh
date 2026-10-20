@@ -125,8 +125,6 @@ const L = {
   none: zh['rivalFilter.none'],
   posts: zh['rivalFilter.posts'],
   openProfile: zh['rivalFilter.openProfile'],
-  summary: zh['rivalFeed.summary'],
-  count: zh['rivalFeed.count'],
   detail: zh['card.cta.detail'],
   replicate: zh['card.cta.try'],
   importBtn: zh['rivalAccounts.import.btn'],
@@ -400,7 +398,6 @@ const toast = (container) => container.querySelector('.omnimux-inspiration-toast
 const rowById = (container, id) => filterRows(container).find((node) => node.getAttribute('data-account-id') === id)
 const buttonsLabelled = (container, text) => [...container.querySelectorAll('button')]
   .filter((node) => node.textContent.trim() === text)
-const summaryCount = (container) => container.querySelector('.omnimux-rival-summary-count')?.textContent.trim()
 const triggerText = (container) => filterTrigger(container)?.textContent.trim() || ''
 
 /** Type into a React-controlled input the way a user would. */
@@ -657,15 +654,22 @@ describe('账号监控 — 作品网格流', () => {
         )
       }
 
-      // The line above the grid says what is being browsed and how much of it.
-      assert.ok(
-        (mounted.container.textContent || '').includes(L.summary),
-        'the summary line must explain what is being browsed',
+      // The browse-summary line was retired (#3430): the filter row leads
+      // straight into the grid, and neither the row nor its copy may return.
+      assert.equal(
+        mounted.container.querySelector('[data-rival-summary]'),
+        null,
+        'the retired summary line must not render above the grid',
       )
       assert.equal(
-        summaryCount(mounted.container),
-        label(L.count, { n: WORKS.length }),
-        'the summary line must carry the work count',
+        mounted.container.querySelector('.omnimux-rival-summary'),
+        null,
+        'the retired summary classes must not render either',
+      )
+      assert.equal(
+        (mounted.container.textContent || '').includes('正在浏览'),
+        false,
+        'the retired summary copy must go with its line',
       )
     } finally {
       await mounted.unmount()
@@ -806,16 +810,16 @@ describe('账号监控 — 空态与导入反馈', () => {
         'an empty grid must offer a way out of itself',
       )
 
-      // 摘要行只属于有作品的时候：「显示 0 个作品」和空态是两套说法。
+      // 摘要行（#3430 已删除）在空态同样不得出现。
       assert.equal(
         mounted.container.querySelector('[data-rival-summary]'),
         null,
-        'an empty grid must not carry the summary line',
+        'an empty grid must not carry the retired summary line',
       )
       assert.equal(
-        (mounted.container.textContent || '').includes(L.summary),
+        (mounted.container.textContent || '').includes('正在浏览'),
         false,
-        'the summary copy must go with its line',
+        'the retired summary copy must not return on an empty grid',
       )
     } finally {
       await mounted.unmount()
