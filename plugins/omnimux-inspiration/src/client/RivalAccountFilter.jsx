@@ -6,6 +6,8 @@
  * interactive element is nested inside another button.
  */
 
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Button, IconButton } from 'dsh-ui-kit'
 import { isSafeExternalUrl } from './open-url.js'
 import { accountHealth, coolingMinutesLeft, rivalErrorKey, stoppedReasonText } from './rival-health.js'
@@ -72,6 +74,8 @@ export function AccountFilterRow({ row, t, selected = false, onSelect, onMore, o
         ? t('rivalAccounts.health.cooling').replace('{n}', String(cooling ?? 1))
         : ''
   const warningTitle = warningText ? [warningText, quotaReason].filter(Boolean).join(' · ') : ''
+  const warningId = `omnimux-rival-warning-${row.id}`
+  const [tipPos, setTipPos] = useState(null)
 
   const handleRetry = (event) => {
     event.preventDefault()
@@ -136,11 +140,30 @@ export function AccountFilterRow({ row, t, selected = false, onSelect, onMore, o
           <span
             className={`omnimux-rival-filter-warning is-${health}`}
             role="img"
+            tabIndex={0}
             aria-label={warningTitle}
+            aria-describedby={warningId}
             title={warningTitle}
             onClick={(event) => event.stopPropagation()}
+            onMouseEnter={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect()
+              setTipPos({ left: rect.left + rect.width / 2, top: rect.top - 6 })
+            }}
+            onMouseLeave={() => setTipPos(null)}
+            onFocus={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect()
+              setTipPos({ left: rect.left + rect.width / 2, top: rect.top - 6 })
+            }}
+            onBlur={() => setTipPos(null)}
           >
             {ICON_WARNING}
+            <span className="omnimux-rival-warning-sr" id={warningId} role="tooltip">{warningTitle}</span>
+            {tipPos && typeof document !== 'undefined'
+              ? createPortal(
+                <span className="omnimux-rival-warning-pop" role="presentation" style={{ '--omnimux-tip-x': `${tipPos.left}px`, '--omnimux-tip-y': `${tipPos.top}px` }}>{warningTitle}</span>,
+                document.body,
+              )
+              : null}
           </span>
         ) : null}
         {health === 'stopped' ? (

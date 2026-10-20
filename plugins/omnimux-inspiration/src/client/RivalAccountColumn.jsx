@@ -8,13 +8,14 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Button } from 'dsh-ui-kit'
+import { Button, ConfirmModal } from 'dsh-ui-kit'
 import { formatCount, rivalLocaleOf } from './rival-format.js'
 import { selectedAccountIds, toAccountFilterRow } from './rival-filter.js'
 import { AccountFilterRow } from './RivalAccountFilter.jsx'
 import { openExternalUrl } from './open-url.js'
 
 const PLATFORM_ORDER = ['x', 'tiktok', 'youtube', 'instagram']
+const platformLabel = (platform, t) => (platform === 'x' ? 'X' : t(`platform.${platform}`))
 
 /**
  * @param {{
@@ -25,6 +26,7 @@ const PLATFORM_ORDER = ['x', 'tiktok', 'youtube', 'instagram']
  *   onSelect: (id: string) => void,
  *   onReset: () => void,
  *   onRemove?: (id: string) => Promise<{ ok: boolean, message?: string }>,
+ *   onRefresh?: (id: string) => void,
  *   onRetry?: (id: string) => void,
  *   quotaLeft?: number,
  *   refreshBusy?: boolean,
@@ -33,7 +35,7 @@ const PLATFORM_ORDER = ['x', 'tiktok', 'youtube', 'instagram']
  */
 export function RivalAccountColumn(props) {
   const {
-    t, accounts, selection, allIds, onSelect, onReset, onRemove, onRetry,
+    t, accounts, selection, allIds, onSelect, onReset, onRemove, onRefresh, onRetry,
     quotaLeft, refreshBusy = false, active = true,
   } = props
   const list = Array.isArray(accounts) ? accounts : []
@@ -43,6 +45,7 @@ export function RivalAccountColumn(props) {
   const selectedId = selection.mode === 'subset' && selected.length === 1 ? selected[0] : null
   const locale = rivalLocaleOf(t)
   const [menu, setMenu] = useState(null)
+  const [confirm, setConfirm] = useState(null)
   const asideRef = useRef(null)
 
   // Sticky offset/max-height follow the real Stage scrollport (#3448).
@@ -81,11 +84,16 @@ export function RivalAccountColumn(props) {
       setMenu(null)
     }
     const onKey = (event) => { if (event.key === 'Escape') setMenu(null) }
+    const onViewport = () => setMenu(null)
     document.addEventListener('pointerdown', close)
     document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', onViewport, true)
+    window.addEventListener('resize', onViewport)
     return () => {
       document.removeEventListener('pointerdown', close)
       document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onViewport, true)
+      window.removeEventListener('resize', onViewport)
     }
   }, [menu])
 
@@ -95,20 +103,22 @@ export function RivalAccountColumn(props) {
       id,
       left: Math.max(8, Math.min(rect.right - 176, (typeof window !== 'undefined' ? window.innerWidth : 1024) - 184)),
       top: Math.min(rect.bottom + 4, (typeof window !== 'undefined' ? window.innerHeight : 768) - 96),
-      confirming: false,
-      busy: false,
-      error: '',
     })
   }
 
+  const askRemove = (id) => {
+    const account = list.find((entry) => String(entry?.id) === String(id))
+    const handle = String(account?.handle || '')
+    const nickname = String(account?.nickname || '')
+    const name = nickname && handle ? `${nickname}（${handle}）` : (nickname || handle || id)
+    setMenu(null)
+    setConfirm({ id, name, busy: false, error: '' })
+  }
+
   const remove = async () => {
-    if (!menu || menu.busy) return
-    if (!menu.confirming) {
-      setMenu({ ...menu, confirming: true, error: '' })
-      return
-    }
-    const id = menu.id
-    setMenu({ ...menu, busy: true, error: '' })
+    if (!confirm || confirm.busy) return
+    const id = confirm.id
+    setConfirm({ ...confirm, busy: true, error: '' })
     let result
     try {
       result = await onRemove?.(id)
@@ -116,10 +126,10 @@ export function RivalAccountColumn(props) {
       result = { ok: false }
     }
     if (result && result.ok === false) {
-      setMenu((previous) => (previous && previous.id === id ? { ...previous, busy: false, error: result.message || t('rivalAccounts.column.removeFailed') } : previous))
+      setConfirm((previous) => (previous ? { ...previous, busy: false, error: result.message || t('rivalAccounts.column.removeFailed') } : previous))
       return
     }
-    setMenu((previous) => (previous && previous.id === id ? null : previous))
+    setConfirm(null)
   }
 
   const groups = []
@@ -158,8 +168,8 @@ export function RivalAccountColumn(props) {
           <span className="omnimux-rival-accounts-all-count">{formatCount(list.length, locale)}</span>
         </div>
         {groups.map((group) => (
-          <section className="omnimux-rival-account-group" key={group.platform || 'unknown'} aria-label={t(`platform.${group.platform}`)}>
-            <h3 className="omnimux-rival-account-group-title">{t(`platform.${group.platform}`)}</h3>
+          <section className="omnimux-rival-account-group" key={group.platform || 'unknown'} aria-label={platformLabel(group.platform, t)}>
+            <h3 className="omnimux-rival-account-group-title">{platformLabel(group.platform, t)}</h3>
             {group.accounts.map((account) => {
               const row = rows.find((entry) => entry.id === String(account.id))
               if (!row) return null
@@ -192,17 +202,43 @@ export function RivalAccountColumn(props) {
           <Button
             variant="ghost"
             size="sm"
-            className={`omnimux-rival-menu-item is-danger${menu.confirming ? ' is-confirming' : ''}`}
+            className="omnimux-rival-menu-item"
             role="menuitem"
-            autoFocus
-            disabled={menu.busy}
-            onClick={remove}
+            autoFocus={!(refreshBusy || quotaLeft === 0)}
+            title={refreshBusy || quotaLeft === 0 ? t('rivalAccounts.column.refreshBlocked') : undefined}
+            disabled={refreshBusy || quotaLeft === 0}
+            onClick={() => {
+              onRefresh?.(menu.id)
+              setMenu(null)
+            }}
           >
-            {menu.confirming ? t('rivalAccounts.column.confirmRemove') : t('rivalAccounts.column.remove')}
+            {t('rivalAccounts.column.refresh')}
           </Button>
-          {menu.error ? <p className="omnimux-rival-menu-error">{menu.error}</p> : null}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="omnimux-rival-menu-item is-danger"
+            role="menuitem"
+            autoFocus={Boolean(refreshBusy || quotaLeft === 0)}
+            onClick={() => askRemove(menu.id)}
+          >
+            {t('rivalAccounts.column.remove')}
+          </Button>
         </div>
       ) : null}
+      <ConfirmModal
+        open={Boolean(confirm)}
+        title={t('rivalAccounts.column.removeTitle')}
+        message={confirm?.error
+          ? <span role="alert">{confirm.error}</span>
+          : String(t('rivalAccounts.column.removeMessage')).replace('{name}', confirm?.name || '')}
+        confirmLabel={t('rivalAccounts.column.removeConfirm')}
+        cancelLabel={t('rivalAccounts.column.removeCancel')}
+        confirmVariant="danger"
+        confirmLoading={confirm?.busy === true}
+        onConfirm={remove}
+        onClose={() => { if (!confirm?.busy) setConfirm(null) }}
+      />
     </aside>
   )
 }

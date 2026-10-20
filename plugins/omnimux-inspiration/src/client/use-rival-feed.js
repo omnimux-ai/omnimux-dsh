@@ -448,7 +448,10 @@ export function useRivalFeed(options = {}) {
 
   /** Single-select navigation: one account becomes the whole view. */
   const selectAccount = useCallback((id) => {
-    commitSelection({ mode: 'subset', ids: [String(id)] })
+    const next = String(id)
+    const current = selectionRef.current
+    if (current.mode === 'subset' && current.ids.length === 1 && String(current.ids[0]) === next) return
+    commitSelection({ mode: 'subset', ids: [next] })
   }, [commitSelection])
 
   /** Invert the selection (from「全部」this is the empty set). */

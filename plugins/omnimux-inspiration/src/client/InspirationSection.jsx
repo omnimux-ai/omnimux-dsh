@@ -607,6 +607,7 @@ export function InspirationSection({ t, active }) {
               }
               return { ok: true }
             }}
+            onRefresh={rivalFeed.retryAccount}
             onRetry={rivalFeed.retryAccount}
             quotaLeft={rivalQuota?.left}
             refreshBusy={rivalFeed.refreshBusy}

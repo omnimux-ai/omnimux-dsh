@@ -81,6 +81,12 @@ export const RIVAL_CSS = `
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
 }
+@media (hover: none), (pointer: coarse) {
+  .omnimux-rival-filter-more {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
 .omnimux-rival-filter-avatar {
   display: inline-flex;
   align-items: center;
@@ -196,8 +202,41 @@ export const RIVAL_CSS = `
 .omnimux-rival-filter-warning.is-stopped {
   color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-danger));
 }
-.omnimux-rival-filter-warning:hover {
+.omnimux-rival-filter-warning:hover,
+.omnimux-rival-filter-warning:focus-visible {
   background: var(--dsw-alias-interactive-bg-hover);
+  outline: 1px solid var(--dsw-alias-border-l3);
+  outline-offset: 1px;
+}
+.omnimux-rival-warning-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.omnimux-rival-warning-pop {
+  position: fixed;
+  left: var(--omnimux-tip-x);
+  top: var(--omnimux-tip-y);
+  z-index: 60;
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-elevated);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  box-shadow: var(--dsw-specific-shadow-pop);
 }
 
 /* ── 空态与提示 ─────────────────────────────────────────────────────── */
@@ -1037,11 +1076,6 @@ export const RIVAL_CSS = `
   justify-content: flex-start;
 }
 .omnimux-rival-menu-item.is-danger {
-  color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-danger));
-}
-.omnimux-rival-menu-error {
-  margin: 4px 8px 2px;
-  font-size: 11px;
   color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-danger));
 }
 .omnimux-rival-accounts-list {
