@@ -280,29 +280,38 @@ test('devLaunchEnv: 剔除 ELECTRON_RUN_AS_NODE 且不修改入参（AC-10）', 
   assert.equal(source.ELECTRON_RUN_AS_NODE, '1', '入参必须保持原样')
 })
 
-test('restartDevApp: 拉起 open 时使用剔除 Electron 运行变量的环境（AC-11）', async () => {
-  const base = probe({
-    processes: [{ pid: '4242', command: DEV_MAIN_CMD }],
-    listeners: ['4242'],
-  })
-  const launches = []
-  const run = (command, args, options) => {
-    launches.push({ command, env: options && options.env })
-    return base.run(command, args)
+test('restartDevApp: 拉起 open 时剔除 Electron 运行变量（AC-11）', async () => {
+  const previous = process.env.ELECTRON_RUN_AS_NODE
+  process.env.ELECTRON_RUN_AS_NODE = '1'
+  try {
+    const base = probe({
+      processes: [{ pid: '4242', command: DEV_MAIN_CMD }],
+      listeners: ['4242'],
+    })
+    const launches = []
+    const run = (command, args, options) => {
+      launches.push({ command, env: options && options.env })
+      return base.run(command, args)
+    }
+    const result = await restartDevApp({
+      run,
+      sleep: async () => {},
+      probePort: async () => [{ type: 'page', webSocketDebuggerUrl: 'ws://127.0.0.1:9229/devtools/page/x' }],
+      quitTimeoutMs: 50,
+      pollMs: 1,
+    })
+    assert.equal(result.restarted, true)
+    const launch = launches.find((entry) => entry.command === 'open')
+    assert.ok(launch, '重启必须拉起 open')
+    assert.ok(launch.env, 'open 必须显式携带拉起环境')
+    // 父进程确实带着该变量：实现若直接复制 process.env 会在这里失败。
+    assert.equal(process.env.ELECTRON_RUN_AS_NODE, '1')
+    assert.equal(launch.env.ELECTRON_RUN_AS_NODE, undefined, '拉起环境不得继承 ELECTRON_RUN_AS_NODE')
+    assert.equal(launch.env.PATH, process.env.PATH)
+  } finally {
+    if (previous === undefined) delete process.env.ELECTRON_RUN_AS_NODE
+    else process.env.ELECTRON_RUN_AS_NODE = previous
   }
-  const result = await restartDevApp({
-    run,
-    sleep: async () => {},
-    probePort: async () => [{ type: 'page', webSocketDebuggerUrl: 'ws://127.0.0.1:9229/devtools/page/x' }],
-    quitTimeoutMs: 50,
-    pollMs: 1,
-  })
-  assert.equal(result.restarted, true)
-  const launch = launches.find((entry) => entry.command === 'open')
-  assert.ok(launch, '重启必须拉起 open')
-  assert.ok(launch.env, 'open 必须显式携带拉起环境')
-  assert.equal(launch.env.ELECTRON_RUN_AS_NODE, undefined)
-  assert.equal(launch.env.PATH, process.env.PATH)
 })
 
 /**
