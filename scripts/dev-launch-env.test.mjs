@@ -58,5 +58,6 @@ test('所有 Dev/Prod 拉起入口都经共享 helper，不残留裸 open', () =
     const source = readFileSync(join(root, rel), 'utf8');
     assert.doesNotMatch(source, bareOpen, `${rel} 不得直接 spawnSync('open', …)`);
     assert.match(source, /\.\/dev-launch-env\.mjs/, `${rel} 必须使用共享拉起环境`);
+    assert.match(source, /\blaunchApp\b/, `${rel} 必须经 launchApp 拉起`);
   }
 });

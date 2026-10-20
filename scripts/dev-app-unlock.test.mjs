@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clearCanvasCache, probeDevStatus } from './dev-app-unlock.mjs';
+import { clearCanvasCache, probeDevStatus, unlockDevApp } from './dev-app-unlock.mjs';
 
 test('dev-app-unlock probe handles unreachable CDP port gracefully', async () => {
   // Use a high unused port
@@ -13,4 +13,19 @@ test('clearCanvasCache returns clear false on unreachable port', async () => {
   const result = await clearCanvasCache(59999);
   assert.equal(result.cleared, false);
   assert.match(result.detail, /无法连接 CDP 端口/);
+});
+
+test('unlockDevApp reports launch failure instead of success when open fails', async () => {
+  const probe = async () => ({ running: false, mainPid: null, totalPids: 0, cdpAvailable: false, pageUrl: null });
+  const result = await unlockDevApp(59999, { launch: () => ({ status: 1 }), probe });
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'launch-failed');
+  assert.equal(result.status, 'launch-failed');
+});
+
+test('unlockDevApp returns launched only when open succeeds', async () => {
+  const probe = async () => ({ running: false, mainPid: null, totalPids: 0, cdpAvailable: false, pageUrl: null });
+  const result = await unlockDevApp(59999, { launch: () => ({ status: 0 }), probe });
+  assert.equal(result.ok, true);
+  assert.equal(result.status, 'launched');
 });

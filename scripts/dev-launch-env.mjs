@@ -27,13 +27,15 @@ export function devLaunchEnv(env = process.env) {
 
 /**
  * Launch an app bundle via macOS `open` with the sanitized environment.
+ * `spawn` is injectable and may be a spawnSync wrapper returning only
+ * `{ status }` (the reload path injects its own runner).
  * @param {string} name  app name accepted by `open -a` (e.g. `OmniMux Dev`)
  * @param {{
- *   spawn?: typeof spawnSync,
+ *   spawn?: (command: string, args: string[], options: { stdio: string, env: NodeJS.ProcessEnv }) => { status: number | null },
  *   env?: NodeJS.ProcessEnv,
  *   stdio?: 'inherit' | 'ignore' | 'pipe',
  * }} [options]
- * @returns {ReturnType<typeof spawnSync>}
+ * @returns {{ status: number | null }}
  */
 export function launchApp(name, { spawn = spawnSync, env = devLaunchEnv(), stdio = 'inherit' } = {}) {
   return spawn('open', ['-a', name], { stdio, env });

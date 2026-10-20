@@ -49,6 +49,11 @@ describe('parsePickedPaths', () => {
     assert.throws(() => parsePickedPaths('{"paths":[]}'), /invalid/)
     assert.throws(() => parsePickedPaths('["/a", 42]'), /invalid/)
   })
+
+  it('rejects non-string helper output explicitly', () => {
+    assert.throws(() => parsePickedPaths(undefined), /non-string/)
+    assert.throws(() => parsePickedPaths(Buffer.from('[]')), /non-string/)
+  })
 })
 
 describe('pickNativePath kind and platform gates', () => {
@@ -133,12 +138,26 @@ describe('pickNativePath macOS JXA script', () => {
     assert.deepEqual(legacy, { path: null, paths: [] })
   })
 
-  it('maps invalid picker output to picker-failed instead of cancel', async () => {
+  it('maps invalid picker output to picker-failed and keeps the raw stdout diagnosis', async () => {
     await assert.rejects(
       () => pickNativePath('file', { platform: 'darwin', run: runOk('not a json payload') }),
       (error) => error instanceof PickerError
         && error.code === 'picker-failed'
-        && /non-JSON/.test(error.message),
+        && /non-JSON/.test(error.message)
+        && error.stdout === 'not a json payload',
+    )
+  })
+
+  it('maps non-string helper output to picker-failed instead of cancel', async () => {
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: async () => ({ stdout: undefined, stderr: '' }),
+      }),
+      (error) => error instanceof PickerError
+        && error.code === 'picker-failed'
+        && /non-string/.test(error.message)
+        && error.stdout === undefined,
     )
   })
 

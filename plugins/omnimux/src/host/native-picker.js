@@ -35,6 +35,8 @@ export class PickerError extends Error {
     super(message)
     this.name = 'PickerError'
     this.code = code
+    /** Truncated helper stdout for picker-failed diagnostics; undefined otherwise. */
+    this.stdout = undefined
   }
 }
 
@@ -86,8 +88,10 @@ export function pickScript(kind, prompt) {
  * @returns {string[]}
  */
 export function parsePickedPaths(stdout) {
-  const text = typeof stdout === 'string' ? stdout : ''
-  const trimmed = text.trim()
+  if (typeof stdout !== 'string') {
+    throw new Error('native picker returned a non-string path payload')
+  }
+  const trimmed = stdout.trim()
   if (trimmed === '') return []
   let parsed
   try {
@@ -173,13 +177,17 @@ export async function pickNativePath(kind, deps = {}) {
     ? deps.prompt
     : PICKER_DEFAULT_PROMPTS[kind]
   const run = deps.run ?? runCommand
+  let stdout = ''
   try {
-    const { stdout } = await run('osascript', ['-l', 'JavaScript', '-e', pickScript(kind, prompt)])
+    const result = await run('osascript', ['-l', 'JavaScript', '-e', pickScript(kind, prompt)])
+    stdout = result.stdout
     const paths = parsePickedPaths(stdout)
     return { path: paths[0] ?? null, paths }
   } catch (error) {
     if (isUserCancel(error)) return { path: null, paths: [] }
-    throw new PickerError(PICKER_ERROR_CODES.failed, messageOf(error))
+    const failure = new PickerError(PICKER_ERROR_CODES.failed, messageOf(error))
+    if (typeof stdout === 'string' && stdout.trim() !== '') failure.stdout = stdout.slice(0, 500)
+    throw failure
   }
 }
 
