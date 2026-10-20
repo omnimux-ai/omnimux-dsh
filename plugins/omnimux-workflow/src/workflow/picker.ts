@@ -1,6 +1,15 @@
 /**
  * Native file chooser for canvas import (path index, never a copy).
- * macOS uses AppleScript `choose file`. Other platforms: picker-unsupported.
+ *
+ * macOS drives an AppKit `NSOpenPanel` through JavaScript for Automation
+ * (`osascript -l JavaScript`). The panel is owned by the helper process and the
+ * app runs as an accessory, so the chooser needs no Automation (Apple Events)
+ * permission and shows no temporary Dock icon. The previous
+ * `tell application "System Events"` wrapper required `kTCCServiceAppleEvents`,
+ * which ad-hoc signed builds can never be granted — every import then failed
+ * with `picker-failed`.
+ *
+ * Other platforms answer `picker-unsupported` (no silent path-typing fallback).
  */
 import { spawn } from 'node:child_process';
 
@@ -26,19 +35,38 @@ export class PickerError extends Error {
   }
 }
 
+/**
+ * Build the JXA chooser. Keeping the panel inside `osascript` avoids the Apple
+ * Events (System Events) TCC dependency entirely; the accessory activation
+ * policy keeps the dialog out of the Dock, matching the intent of the earlier
+ * dock-bounce fix. The modal answer is 1 for "choose"; anything else is a
+ * cancel, which exits 0 with empty stdout. `NSURL.path` reports directories
+ * without a trailing slash — downstream pickDirectory trims, so the contract
+ * is unchanged. The action button stays Chinese because PROMPTS already are.
+ */
 function pickScript(kind: PickKind): string {
-  const prompt = PROMPTS[kind];
-  const choose = kind === 'file' ? 'file' : 'folder';
+  const chooseFiles = kind === 'file';
+  const chooseDirectories = kind === 'directory';
   return [
-    'tell application "System Events"',
-    '  activate',
-    `  set theItems to choose ${choose} with prompt "${prompt}" with multiple selections allowed`,
-    'end tell',
-    'set posixPaths to ""',
-    'repeat with theItem in theItems',
-    'set posixPaths to posixPaths & POSIX path of theItem & linefeed',
-    'end repeat',
-    'return posixPaths',
+    "ObjC.import('Cocoa');",
+    'function run() {',
+    '  var app = $.NSApplication.sharedApplication;',
+    '  app.setActivationPolicy($.NSApplicationActivationPolicyAccessory);',
+    '  app.activateIgnoringOtherApps(true);',
+    '  var panel = $.NSOpenPanel.openPanel;',
+    `  panel.setCanChooseFiles(${chooseFiles});`,
+    `  panel.setCanChooseDirectories(${chooseDirectories});`,
+    '  panel.setAllowsMultipleSelection(true);',
+    `  panel.setMessage(${JSON.stringify(PROMPTS[kind])});`,
+    '  panel.setPrompt("选取");',
+    '  if (Number(panel.runModal) !== 1) return "";',
+    '  var urls = panel.URLs;',
+    '  var picked = [];',
+    '  for (var i = 0; i < Number(urls.count); i += 1) {',
+    '    picked.push(ObjC.unwrap(urls.objectAtIndex(i).path));',
+    '  }',
+    '  return picked.join("\\n");',
+    '}',
   ].join('\n');
 }
 
@@ -104,7 +132,7 @@ export async function pickNativePath(
   }
   const run = deps.run ?? runCommand;
   try {
-    const { stdout } = await run('osascript', ['-e', pickScript(kind)]);
+    const { stdout } = await run('osascript', ['-l', 'JavaScript', '-e', pickScript(kind)]);
     const paths = parsePickedPaths(stdout);
     return { path: paths[0] ?? null, paths };
   } catch (error) {

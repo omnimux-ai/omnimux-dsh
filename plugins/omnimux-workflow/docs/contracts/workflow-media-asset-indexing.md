@@ -33,7 +33,7 @@
                │ legacy /dsh-workflow in-memory 改写，不 redirect）
 ┌──────────────▼───────────────────────────────────────────────────┐
 │  Host dispatcher (canvasRoutes.ts)                                │
-│  POST /api/pick              osascript choose file（本插件复制）   │
+│  POST /api/pick              osascript JXA + NSOpenPanel（无 Apple Events）│
 │  GET  /api/local-file        任意绝对路径流式（Range 206）         │
 │  POST /api/local-file/probe  stat + MIME 白名单，不落盘            │
 │  安全闸：loopback / 绝对路径 / NUL / regular file / MIME / 拒目录 │
@@ -158,17 +158,17 @@ Canonical 前缀：`/omnimux-workflow`。Dispatcher 对 `/dsh-workflow/*` **in-m
 |---|---|---|
 | 用户取消 | 200 | `{ "path": null, "paths": [] }`（**不是** 4xx） |
 | 多选 | 200 | `paths` 全量；`path` = `paths[0]` 或仍为 `null` |
-| 非 darwin | 400 | `{ "error": "picker-unsupported", "message": "…" }` |
-| osascript 失败（非取消） | 400 | `{ "error": "picker-failed", "message": "…" }` |
+| 非 darwin | 501 | `{ "error": "picker-unsupported", "message": "…" }` |
+| osascript 失败（非取消） | 500 | `{ "error": "picker-failed", "message": "…" }` |
 | 非 loopback | 403 | `{ "error": "not-local", "message": "cross-origin write refused" }` |
 
 实现约束：
 
-- 在 `plugins/omnimux-workflow/src/` **复制** `omnimux-assets/src/picker.js` 的 osascript + `parsePickedPaths` + 可注入 `run` 模式。
-- **禁止** `import` / 依赖 `omnimux-assets`。
+- 用 `osascript -l JavaScript` 在辅助进程内驱动 AppKit `NSOpenPanel`（accessory 激活策略，无 Dock 图标）；**不要** `tell application "System Events"`，那条路径要求 `kTCCServiceAppleEvents`，adhoc 签名的产品包无法获得授权。
+- **禁止** `import` / 依赖 `omnimux-assets`；沿用其 `parsePickedPaths` + 可注入 `run` 模式即可。
 - `spawn(command, argv)`，无 shell，防注入。
-- 用户取消识别：`/User canceled|-128/i` → 空 paths。
-- 提示文案：「选择要导入的素材」。可选用 AppleScript `of type` 限 image/movie/audio；**Host 仍须按 §6 再校验**，对话框过滤不是安全边界。
+- 用户取消：JXA 取消时 exit 0 且 stdout 为空 → 空 paths；保留 `/User canceled|-128/i` 兼容旧 AppleScript 取消码。
+- 提示文案：「选择要导入的素材」。目录选择用 `setCanChooseDirectories(true)`；**Host 仍须按 §6 再校验**，对话框过滤不是安全边界。
 - 本路由只返回路径，不 stat、不流式、不写入 `canvas.json`。Client 拿到 path 后应 `probe` 再落节点。
 
 ### 5.2 `GET /omnimux-workflow/api/local-file?path=`
@@ -268,12 +268,12 @@ MIME / 扩展名白名单（与画布 `mimeToMaterialType` 对齐，取交集收
 | | `omnimux-assets` | `omnimux-workflow`（本契约） |
 |---|---|---|
 | 语义 | 素材只记 `real_path`，删库记录不删源文件 | 节点只记 `realPath`，删节点不删源文件 |
-| Picker | `POST /omnimux/assets/pick` + `src/picker.js` | `POST /omnimux-workflow/api/pick`，**源码复制** osascript 模式 |
+| Picker | `POST /omnimux/assets/pick` + `src/picker.js`（裸 `choose file`，无 Automation） | `POST /omnimux-workflow/api/pick`，`osascript -l JavaScript` + AppKit NSOpenPanel（不向 System Events 发 Apple Event） |
 | 预览 | 库内 `library/preview`（资产 id 间接化） | 节点直出 `local-file?path=`（画布需要按节点播放） |
 | 包边界 | — | **禁止** import 资产库模块、禁止调 `/omnimux/assets/*` 完成导入 |
 | 丢失 | 库列表隐藏失效文件 | 画布节点保留并标 Offline + Relink |
 
-复制 picker 时允许改 prompt / 去掉 `choose folder`。必须保留：可注入 `run`、取消码、`parsePickedPaths`、darwin 门闩、无 shell spawn。单测同样注入 runner，**禁止**测里真调 osascript。
+两个 picker 互不复制脚本。必须保留：可注入 `run`、取消判定（空 stdout，兼容 -128）、`parsePickedPaths`、darwin 门闩、无 shell spawn。单测同样注入 runner，**禁止**测里真调 osascript。
 
 ## 8. Client 行为
 
