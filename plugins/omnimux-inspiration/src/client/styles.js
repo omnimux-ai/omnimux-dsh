@@ -857,6 +857,11 @@ export const INSPIRATION_CSS = `
   border-radius: 0;
   margin-top: 0;
 }
+/* 封面兜底里也写了一遍标题；封面优先的卡正文已经显示标题，这里只留播放
+   图标，避免同一张卡出现两遍标题（Issue 3459）。 */
+.omnimux-inspiration-card-pure.is-media-first .omnimux-inspiration-fallback-title {
+  display: none;
+}
 .omnimux-inspiration-cover-wrap {
   position: relative;
   width: 100%;

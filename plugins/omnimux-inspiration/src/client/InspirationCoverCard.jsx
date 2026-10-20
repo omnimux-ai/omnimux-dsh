@@ -158,7 +158,7 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
           className={`omnimux-inspiration-card-status ${statusChip.tone}`.trim()}
           role="status"
           title={errorDetail || undefined}
-          aria-label={errorDetail ? `${statusChip.text}：${errorDetail}` : statusChip.text}
+          aria-label={errorDetail || statusChip.text}
         >
           {statusChip.text}
         </span>
