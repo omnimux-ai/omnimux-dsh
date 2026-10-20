@@ -25,7 +25,7 @@ base: 87e7c83bb76cb6feef642b453b95045f8d30b575
 - `InspirationSection`：rivals tab 内容改为 `.omnimux-rival-layout` 两栏；工具栏删除 `RivalAccountFilter` 与排序下拉；`useRivalFeed` 排序固定 `latest`。
 - `RivalAccountsPanel`：有帖子时渲染时间线（含追加 sentinel，且只在 idle 时触发一次；失败不自动重试），「标为已处理」做本地乐观翻转，状态文案区分已处理/已复刻/已互动；无帖子时沿用现有空态/骨架/首采进度。
 - `toRivalCardRow` 增补 `text`、`avatar_url`、`account.avatar_url`（additive，不影响其它消费者）。
-- 账号监控不再消费 `RivalMasonry` / `RivalPostCard` / `rival-masonry.js`；它们仍被灵感库消费，保留组件与单测。`RivalAccountFilter` 退役 trigger/panel 与相关文案/样式删除，只保留可复用的账号行；`RivalFeedGrid` 去掉卡片/瀑布流渲染，只保留空态/骨架/首采进度。
+- 账号监控不再渲染 `RivalMasonry` / `RivalPostCard`；它们的纯函数 `rivalCardTypeOf` 仍被 `rival-filter.js` 与灵感库复用，组件与单测保留。`RivalAccountFilter` 退役 trigger/panel 与相关文案/样式删除，只保留可复用的账号行；`RivalFeedGrid` 去掉卡片/瀑布流渲染，只保留空态/骨架/首采进度。
 - `rival-styles.js`：删除瀑布流/卡片/筛选弹层样式，新增两栏与时间线样式；响应式窄视口左栏收窄、不横向溢出。
 
 ## 验收用例

@@ -1,7 +1,7 @@
 {
   "task": "3432",
   "base": "87e7c83bb76cb6feef642b453b95045f8d30b575",
-  "harness": "real RivalAccountColumn + RivalAccountsPanel in .omnimux-rival-layout; real toggleAccountSelection; dsh-ui-kit shimmed; localhost port 59965",
+  "harness": "real RivalAccountColumn + RivalAccountsPanel in .omnimux-rival-layout; real toggleAccountSelection; dsh-ui-kit shimmed; localhost port 64253",
   "browser": "ego-browser (real Chromium); task space finalized after run",
   "initial": {
     "layoutColumns": "248px 968px",
@@ -58,7 +58,8 @@
     ],
     "layoutColumns": "200px 500px",
     "columnWidth": 200,
-    "scrollOverflow": 0
+    "scrollOverflow": 0,
+    "actionsOverflow": -16
   },
   "narrow375": {
     "viewport": [
@@ -67,6 +68,7 @@
     ],
     "layoutColumns": "327px",
     "columnWidth": 327,
-    "scrollOverflow": 0
+    "scrollOverflow": 0,
+    "actionsOverflow": -183
   }
 }

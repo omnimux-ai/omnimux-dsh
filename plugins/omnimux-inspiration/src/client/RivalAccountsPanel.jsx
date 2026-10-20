@@ -174,23 +174,44 @@ export function RivalAccountsPanel(props) {
     const accountId = String(card?.account_id || card?.account?.id || '')
     const postId = String(card?.post_id || card?.id || '')
     const ticket = String(card?.id || '')
-    if (ticket) setDoneIds((previous) => {
-      if (previous.has(ticket)) return previous
-      const next = new Set(previous)
-      next.add(ticket)
-      return next
-    })
-    setNotice({ key: 'rivalFeed.toast.markDone' })
+    const flip = (on) => {
+      if (!ticket) return
+      setDoneIds((previous) => {
+        if (on === previous.has(ticket)) return previous
+        const next = new Set(previous)
+        if (on) next.add(ticket)
+        else next.delete(ticket)
+        return next
+      })
+    }
+    flip(true)
     if (!accountId || !postId) return
     try {
-      await markRivalPostDone(accountId, postId)
+      const result = await markRivalPostDone(accountId, postId)
+      if (result && result.ok === false) {
+        flip(false)
+        setNotice({ key: 'rivalAccounts.post.attachFailed' })
+        return
+      }
+      setNotice({ key: 'rivalFeed.toast.markDone' })
     } catch {
-      // The optimistic state stands until the next full reload; the toast has
-      // already said the action was recorded.
+      flip(false)
+      setNotice({ key: 'rivalAccounts.post.attachFailed' })
     }
   }, [])
 
   const emptyKind = feedEmptyKind(feed)
+
+  // The optimistic set is a view of the current feed page: rows that disappear
+  // with a selection change must not linger and mask a later Host state.
+  useEffect(() => {
+    setDoneIds((previous) => {
+      if (previous.size === 0) return previous
+      const live = new Set(feed.cards.map((card) => String(card?.id ?? '')))
+      const next = new Set([...previous].filter((id) => live.has(id)))
+      return next.size === previous.size ? previous : next
+    })
+  }, [feed.cards])
 
   // Merge the optimistic「已处理」set over the Host cards without mutating them.
   const timelineCards = useMemo(() => {
@@ -244,7 +265,7 @@ export function RivalAccountsPanel(props) {
           busyId={busyId}
           hasMore={feed.hasMore === true}
           loadingMore={feed.loadingMore === true}
-          canLoadMore={feed.hasMore === true && feed.loadingMore !== true && feed.loading !== true && !feed.error && !feed.fetchPhase}
+          canLoadMore={feed.hasMore === true && feed.loadingMore !== true && feed.loading !== true && !feed.fetching && !feed.error && !feed.fetchPhase}
           onLoadMore={feed.loadMore}
           onDetail={handleDetail}
           onReplicate={handleReplicate}

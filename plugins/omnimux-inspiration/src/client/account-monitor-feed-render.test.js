@@ -118,7 +118,6 @@ const WORKS = [WORK_ALICE, WORK_BOB]
 
 /** Labels the gate drives the UI by, taken from the plugin's own table. */
 const L = {
-  filterTitle: zh['rivalFilter.title'],
   columnTitle: zh['rivalAccounts.column.title'],
   columnHint: zh['rivalAccounts.column.hint'],
   invert: zh['rivalFilter.invert'],

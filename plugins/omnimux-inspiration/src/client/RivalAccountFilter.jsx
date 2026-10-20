@@ -1,13 +1,11 @@
 /**
- * 「账号筛选（多选）」— the 32px trigger and its frosted multi-select panel.
+ * One monitored-account row of the 账号监控 account column (#3432).
  *
- * The panel is the *only* account control of the 账号监控 tab: the two-column
- * workbench it replaced is gone, so monitoring an account now means choosing it
- * from this list, and the grid below follows the selection immediately.
- *
- * Presentational: the selection lives in `use-rival-feed.js` and arrives as
- * props, so「反选」「重置」and the per-row checkbox are the same three rules the
- * unit tests pin down.
+ * The popover that used to wrap these rows is retired; the row itself is still
+ * the single place the four health states, the profile jump and the retry
+ * action are rendered. Presentational: the selection lives in
+ * `use-rival-feed.js` and arrives as props, so「反选」「重置」and the checkbox are
+ * the same three rules the unit tests pin down.
  */
 
 import { useState } from 'react'

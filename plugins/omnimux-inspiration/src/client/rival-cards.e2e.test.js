@@ -235,10 +235,15 @@ async function mountStageOnAccounts() {
       const requested = (query.get('accounts') || '').split(',').filter(Boolean)
       const page = Number(query.get('page') || 1)
       postsRequests.push(query.toString())
-      const all = pages.flat()
+      const all = pages.flat().filter((row) => row && row.account)
+      const entry = pages.at(page - 1)
       const visible = requested.length > 0
         ? all.filter((row) => requested.includes(row.account.id))
-        : (pages.at(page - 1) ?? [])
+        : (entry && Array.isArray(entry.rows) ? entry.rows : (entry ?? []))
+      if (entry && entry.fail) {
+        return jsonResponse(500, { success: false, error: 'feed-page-failed' })
+      }
+      if (entry && entry.hold) await entry.hold
       return jsonResponse(200, {
         success: true,
         data: {
@@ -362,6 +367,57 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     assert.deepEqual(itemIds(mounted.container), payload.map((row) => row.row_id), 'the appended page must land below the rows already on screen, in publish order')
     assert.ok(mounted.postsRequests.some((query) => /(?:^|&)page=2(?:&|$)/.test(query)), 'crossing the sentinel must request the next page')
     assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-sentinel').length, 0, 'the sentinel goes away once the last page is on screen')
+  })
+
+  it('stops appending after a failed next page and never retries in a loop', async () => {
+    const payload = hostPayload()
+    requestedPages = [payload.slice(0, 6), { fail: true }]
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-sentinel').length, 1, 'page one keeps its sentinel')
+
+    await mounted.loadMore()
+    await settle(mounted.container, () => mounted.postsRequests.some((query) => /(?:^|&)page=2(?:&|$)/.test(query)))
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 120)) })
+    const pageTwo = () => mounted.postsRequests.filter((query) => /(?:^|&)page=2(?:&|$)/.test(query)).length
+    assert.equal(pageTwo(), 1, 'a failed append must be requested exactly once')
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-sentinel').length, 0, 'a failed append must remove the sentinel instead of retrying it')
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 0, 'a failed append must clear its skeleton')
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 150)) })
+    assert.equal(pageTwo(), 1, 'no background retry may follow the failure')
+  })
+
+  it('does not dead-lock the append flag when a page-1 reload supersedes an in-flight page', async () => {
+    const payload = hostPayload()
+    let release
+    const hold = new Promise((resolve) => { release = resolve })
+    requestedPages = [payload.slice(0, 6), { rows: payload.slice(6), hold }]
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    await mounted.loadMore()
+    await settle(mounted.container, () => mounted.postsRequests.some((query) => /(?:^|&)page=2(?:&|$)/.test(query)))
+
+    // Switch accounts while the append is still in flight.
+    const higgs = ACCOUNTS.higgs
+    const pendingRow = mounted.container.querySelector(`.omnimux-rival-accounts [data-account-id="${higgs.id}"]`)
+    await act(async () => {
+      pendingRow.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    })
+    release()
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 120)) })
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 0, 'the stale append must not leave its skeleton behind')
+
+    // Reset back to all accounts and append again: the flag must not be stuck.
+    const reset = mounted.container.querySelector('.omnimux-rival-accounts-actions button:last-child')
+    await act(async () => {
+      reset.dispatchEvent(new mounted.container.ownerDocument.defaultView.MouseEvent('click', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    })
+    await settle(mounted.container, () => mounted.container.querySelectorAll('.omnimux-rival-timeline-item').length === 6)
+    await mounted.loadMore()
+    await settle(mounted.container, () => mounted.container.querySelectorAll('.omnimux-rival-timeline-item').length === payload.length)
+    assert.equal(mounted.container.querySelectorAll('.omnimux-rival-timeline-skel').length, 0, 'the recovered append must finish without a stuck skeleton')
   })
 
   it('narrows the timeline through the persistent account column', async () => {

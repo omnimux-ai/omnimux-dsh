@@ -1102,6 +1102,16 @@ export const RIVAL_CSS = `
     opacity: 1;
   }
 }
+@media (max-width: 720px) {
+  .omnimux-rival-timeline-foot {
+    flex-wrap: wrap;
+  }
+  .omnimux-rival-timeline-actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
 .omnimux-rival-timeline-act {
   font-size: 12px;
 }
