@@ -146,7 +146,7 @@ function runCommand(command, argv) {
         return
       }
       const error = new Error(`${command} exited with code ${code}`)
-      Object.assign(error, { code: code ?? undefined, stderr })
+      Object.assign(error, { code: code ?? undefined, stderr, stdout })
       rejectPromise(error)
     })
   })
@@ -186,7 +186,11 @@ export async function pickNativePath(kind, deps = {}) {
   } catch (error) {
     if (isUserCancel(error)) return { path: null, paths: [] }
     const failure = new PickerError(PICKER_ERROR_CODES.failed, messageOf(error))
-    if (typeof stdout === 'string' && stdout.trim() !== '') failure.stdout = stdout.slice(0, 500)
+    // Prefer stdout captured before the rejection; runCommand also attaches it
+    // on non-zero exits so real osascript failures keep their raw output.
+    const rejected = /** @type {{ stdout?: unknown } | null} */ (error)?.stdout
+    const raw = typeof rejected === 'string' && rejected !== '' ? rejected : stdout
+    if (typeof raw === 'string' && raw.trim() !== '') failure.stdout = raw.slice(0, 500)
     throw failure
   }
 }

@@ -180,8 +180,8 @@ export async function unlockDevApp(port = CDP_PORT, deps = {}) {
     console.log('· 开发版应用当前未运行，尝试直接拉起...');
     const launched = launch('OmniMux Dev');
     if (launched?.status !== 0) {
-      console.log('✗ 拉起开发版失败（open -a "OmniMux Dev" 返回非 0），未打印成功');
-      return { ok: false, error: 'launch-failed', status: 'launch-failed' };
+      console.error('✗ 拉起开发版失败（open -a "OmniMux Dev" 返回非 0）');
+      return { ok: false, error: 'launch-failed' };
     }
     console.log('✓ 已发送启动指令');
     return { ok: true, status: 'launched' };

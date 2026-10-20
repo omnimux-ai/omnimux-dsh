@@ -31,7 +31,7 @@ export function devLaunchEnv(env = process.env) {
  * `{ status }` (the reload path injects its own runner).
  * @param {string} name  app name accepted by `open -a` (e.g. `OmniMux Dev`)
  * @param {{
- *   spawn?: (command: string, args: string[], options: { stdio: string, env: NodeJS.ProcessEnv }) => { status: number | null },
+ *   spawn?: (command: string, args: string[], options: { stdio: 'inherit' | 'ignore' | 'pipe', env: NodeJS.ProcessEnv }) => { status: number | null },
  *   env?: NodeJS.ProcessEnv,
  *   stdio?: 'inherit' | 'ignore' | 'pipe',
  * }} [options]

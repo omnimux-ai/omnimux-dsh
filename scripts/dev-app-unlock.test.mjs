@@ -20,7 +20,16 @@ test('unlockDevApp reports launch failure instead of success when open fails', a
   const result = await unlockDevApp(59999, { launch: () => ({ status: 1 }), probe });
   assert.equal(result.ok, false);
   assert.equal(result.error, 'launch-failed');
-  assert.equal(result.status, 'launch-failed');
+  assert.equal(result.status, undefined, '失败不得复用成功状态字段');
+});
+
+test('unlockDevApp treats null or missing launch status as failure', async () => {
+  const probe = async () => ({ running: false, mainPid: null, totalPids: 0, cdpAvailable: false, pageUrl: null });
+  for (const status of [null, undefined]) {
+    const result = await unlockDevApp(59999, { launch: () => ({ status }), probe });
+    assert.equal(result.ok, false, `status=${String(status)}`);
+    assert.equal(result.error, 'launch-failed');
+  }
 });
 
 test('unlockDevApp returns launched only when open succeeds', async () => {

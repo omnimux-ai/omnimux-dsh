@@ -161,6 +161,34 @@ describe('pickNativePath macOS JXA script', () => {
     )
   })
 
+  it('keeps stdout from a non-zero helper exit as the picker-failed diagnosis', async () => {
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: async () => {
+          const failure = new Error('osascript exited with code 1')
+          failure.stderr = 'syntax error near line 3'
+          failure.stdout = 'partial-payload'
+          throw failure
+        },
+      }),
+      (error) => error instanceof PickerError
+        && error.code === 'picker-failed'
+        && /syntax error/.test(error.message)
+        && error.stdout === 'partial-payload',
+    )
+  })
+
+  it('truncates the stdout diagnosis to 500 characters', async () => {
+    const long = 'x'.repeat(600)
+    await assert.rejects(
+      () => pickNativePath('file', { platform: 'darwin', run: runOk(long) }),
+      (error) => error instanceof PickerError
+        && error.code === 'picker-failed'
+        && error.stdout.length === 500,
+    )
+  })
+
   it('maps runner failures to picker-failed', async () => {
     await assert.rejects(
       () => pickNativePath('file', {
