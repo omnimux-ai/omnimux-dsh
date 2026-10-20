@@ -332,6 +332,23 @@ describe('账号监控 — timeline page wiring (#3432)', () => {
     assert.equal(rowOf(mounted.container, POSTS[0]).getAttribute('data-platform'), 'tiktok')
   })
 
+  it('presents the compact account column without health text or work counts', async () => {
+    const mounted = await mountStageOnAccounts()
+    open.push(mounted)
+    const column = mounted.container.querySelector('.omnimux-rival-accounts')
+    assert.ok(column, 'the page must render the persistent account column')
+    const rows = [...column.querySelectorAll('.omnimux-rival-filter-row')]
+    assert.equal(rows.length, Object.keys(ACCOUNTS).length, 'every monitored account must have a row')
+    assert.equal(column.querySelectorAll('.omnimux-rival-filter-platform svg').length, rows.length, 'every row must show the platform glyph')
+    assert.equal(column.querySelectorAll('.omnimux-rival-accounts-summary').length, 0, 'the all-selected header must not repeat the account count')
+    assert.equal(column.textContent.includes('选择要查看的账号'), false, 'the header must not carry the retired hint line')
+    for (const row of rows) {
+      assert.equal(row.textContent.includes('个作品'), false, 'the row must not show a work count')
+      assert.equal(row.textContent.includes('正常'), false, 'the row must not spell out its health status')
+      assert.equal(row.querySelector('.omnimux-rival-filter-warning'), null, 'a healthy fixture row carries no warning icon')
+    }
+  })
+
   it('renders each row with the native anatomy and every monitor action', async () => {
     const mounted = await mountStageOnAccounts()
     open.push(mounted)

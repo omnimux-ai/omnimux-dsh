@@ -1,0 +1,76 @@
+{
+  "task": "3436",
+  "base": "57a6a20b567ba0421f82afc260e4da98af89b60f",
+  "harness": "real RivalAccountColumn with 5 accounts covering normal/stopped/cooling/reimport; injectRivalStyles/Token + minimal host alias tokens for accurate screenshot; localhost port 57589",
+  "browser": "ego-browser (real Chromium); task space finalized after run",
+  "initial": {
+    "headerText": "监控账号反选重置",
+    "summary": "",
+    "headerHeight": 27,
+    "rowCount": 5,
+    "platformIcons": 5,
+    "warningCount": 3,
+    "retryCount": 1,
+    "rowTexts": [
+      "HHiggsfield AI@higgsfield_ai",
+      "HHullo@gethullo",
+      "0@0xCodez重试@0xCodez",
+      "JJeff | Chinese AI Gateway@chineseapi",
+      "S@StassOneLet@StassOneLet"
+    ],
+    "columnWidth": 248,
+    "headerOverflow": 0,
+    "warningLabel": "冷却中 · 7 分钟后恢复"
+  },
+  "hover": {
+    "tipText": "冷却中 · 7 分钟后恢复",
+    "tipInsideViewport": true,
+    "tipRect": {
+      "left": 231,
+      "top": 318,
+      "right": 451,
+      "bottom": 352
+    },
+    "tipWidth": 220
+  },
+  "subset": {
+    "summary": "已选 4 个账号"
+  },
+  "failures": [],
+  "screenshots": [
+    "browser-account-column-3436.png",
+    "browser-account-column-tooltip-3436.png",
+    "browser-account-column-subset-3436.png",
+    "browser-account-column-narrow-3436.png",
+    "browser-account-column-en-3436.png"
+  ],
+  "narrow": {
+    "viewport": [
+      760,
+      900
+    ],
+    "columnWidth": 200,
+    "titleTruncated": false,
+    "summaryTruncated": false,
+    "pageOverflow": 0,
+    "tipText": "该 YouTube 频道尚未验证身份，请改用 channel/UC… 链接重新导入",
+    "tipInsideViewport": true,
+    "tipRect": {
+      "left": 183,
+      "top": 426,
+      "right": 403,
+      "bottom": 477
+    },
+    "tipWidth": 220
+  },
+  "english": {
+    "viewport": [
+      1200,
+      900
+    ],
+    "columnWidth": 248,
+    "titleTruncated": false,
+    "pageOverflow": 0,
+    "headerText": "Monitored accountsInvertReset"
+  }
+}

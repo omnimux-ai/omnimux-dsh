@@ -119,11 +119,9 @@ const WORKS = [WORK_ALICE, WORK_BOB]
 /** Labels the gate drives the UI by, taken from the plugin's own table. */
 const L = {
   columnTitle: zh['rivalAccounts.column.title'],
-  columnHint: zh['rivalAccounts.column.hint'],
   invert: zh['rivalFilter.invert'],
   reset: zh['rivalFilter.reset'],
   some: zh['rivalFilter.some'],
-  posts: zh['rivalFilter.posts'],
   openProfile: zh['rivalFilter.openProfile'],
   replicate: zh['rivalFeed.card.replicate'],
   importBtn: zh['rivalAccounts.import.btn'],
@@ -453,8 +451,8 @@ describe('账号监控 — 账号筛选（多选）', () => {
       assert.equal(mounted.container.querySelector('.omnimux-rival-filter-panel'), null, 'the retired account filter panel must not render')
 
       assert.ok(column.textContent.includes(L.columnTitle), 'the column header must name what the list is')
-      assert.ok(column.textContent.includes(L.columnHint), 'the column header must explain what selecting a row does')
-      assert.equal(columnSummary(mounted.container), label(L.some, { k: ACCOUNTS.length }), 'the header must summarise the default selection')
+      assert.ok(!column.textContent.includes('选择要查看的账号'), 'the header must not carry the retired hint line')
+      assert.equal(columnSummary(mounted.container), '', 'the default all-selected header must not repeat the account count')
       assert.ok(buttonsLabelled(column, L.invert).length > 0, 'the column header must offer 反选')
       assert.ok(buttonsLabelled(column, L.reset).length > 0, 'the column header must offer 重置')
 
@@ -470,7 +468,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
     }
   })
 
-  it('lists every account with avatar, handle, platform glyph and work count', async () => {
+  it('lists every account with avatar, handle and platform glyph, without health text or work counts', async () => {
     const mounted = await mountStage()
     try {
       await mounted.openAccountTab()
@@ -491,12 +489,11 @@ describe('账号监控 — 账号筛选（多选）', () => {
         assert.ok(row, `the panel must list ${account.id}`)
         assert.ok(row.textContent.includes(account.nickname), `the row must show ${account.nickname}`)
         assert.ok(row.textContent.includes(account.handle), `the row must show ${account.handle}`)
-        assert.ok(
-          row.textContent.includes(label(L.posts, { n: account.post_count })),
-          `the row must show the account's work count (${account.post_count})`,
-        )
+        assert.equal(row.textContent.includes('个作品'), false, 'the row must not show the account work count')
+        assert.equal(row.textContent.includes('正常'), false, 'a healthy row must not spell out its health status')
+        assert.equal(row.querySelector('.omnimux-rival-filter-warning'), null, 'a healthy row carries no warning icon')
         assert.equal(row.getAttribute('role'), 'checkbox', 'a row is a checkbox to assistive tech')
-        assert.ok(row.querySelector('svg'), 'the row must draw a platform glyph')
+        assert.ok(row.querySelector('.omnimux-rival-filter-platform svg'), 'the row must draw the platform glyph beside the nickname')
       }
     } finally {
       await mounted.unmount()
@@ -544,11 +541,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
       // 重置 goes back to the default: every account, every work.
       await mounted.click(buttonsLabelled(mounted.container, L.reset)[0])
       await settle(mounted.container, () => timelineItems(mounted.container).length === WORKS.length)
-      assert.equal(
-        columnSummary(mounted.container),
-        label(L.some, { k: ACCOUNTS.length }),
-        '重置 must restore the full selection',
-      )
+      assert.equal(columnSummary(mounted.container), '', '重置 must remove the subset count from the header')
       assert.equal(timelineItems(mounted.container).length, WORKS.length, '重置 must restore the whole timeline')
 
       // 反选 from 全部 is the empty set — the one state that only exists on this
@@ -595,11 +588,7 @@ describe('账号监控 — 账号筛选（多选）', () => {
       await settle(mounted.container, () => mounted.opened.length > 0)
 
       assert.deepEqual(mounted.opened, [ACCOUNTS[0].profile_url], 'the profile must open in a new tab')
-      assert.equal(
-        columnSummary(mounted.container),
-        label(L.some, { k: ACCOUNTS.length }),
-        'opening a profile must not change the selection',
-      )
+      assert.equal(columnSummary(mounted.container), '', 'opening a profile must not turn the default selection into a subset')
       assert.equal(
         feedRequests(mounted).length,
         before,
@@ -1091,7 +1080,8 @@ describe('账号监控 — 第三轮整改回执', () => {
     assert.match(modal, /formatCount\(value,\s*locale\)/, 'the detail dialog stats must follow the same locale')
     const column = readFileSync(join(here, 'RivalAccountColumn.jsx'), 'utf8')
     assert.match(column, /rivalLocaleOf\(t\)/, 'the account column must derive the same locale')
-    assert.match(column, /locale=\{locale\}/, 'the account column must pass its locale down to the rows')
     assert.match(column, /formatCount\(selectedCount,\s*locale\)/, 'the account column summary must follow the same locale')
+    const accountRow = readFileSync(join(here, 'RivalAccountFilter.jsx'), 'utf8')
+    assert.doesNotMatch(accountRow, /formatCount\(row\.postCount/, 'the compact row must not format a work count any more')
   })
 })

@@ -256,17 +256,13 @@ if (probe.skipped !== true) {
     assert.deepEqual(outside, [], `这些行落在列表可视区外: ${outside.join(', ')}`)
   })
 
-  test('冷却行的昵称完整显示，不被状态文字挤成省略号', () => {
+  test('冷却行昵称完整显示，状态只以警告图标表达（#3436）', () => {
     const cooling = probe.rows.find((row) => row.id === 'ra_cool')
     const normal = probe.rows.find((row) => row.id === 'ra_ok')
     assert.ok(cooling, '冷却行未渲染')
     assert.equal(cooling.health, 'cooling')
-    // 换行规则生效的证据：冷却行比普通行高（状态文字落到第二行），
-    // 而不是靠压缩昵称挤进一行。
-    assert.ok(
-      cooling.rowHeight > normal.rowHeight,
-      `冷却行没有把状态文字换行，行高与普通行相同: cooling=${cooling.rowHeight} normal=${normal.rowHeight}`,
-    )
+    // 状态文字已收敛为警告图标，行高不再承担换行职责；本用例只锁昵称可读性。
+    assert.ok(normal, '普通行未渲染')
     assert.ok(
       cooling.nameScrollWidth <= cooling.nameClientWidth + 1,
       `冷却行昵称被截断: ${cooling.nameText} scrollWidth=${cooling.nameScrollWidth} clientWidth=${cooling.nameClientWidth}`,
