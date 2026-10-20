@@ -1,0 +1,42 @@
+{
+  "task": "3448",
+  "base": "1c90dfe25dae5d99c37bfa26018dccf68cfed222",
+  "harness": "real RivalAccountColumn in .omnimux-rival-layout inside .omx-stage-scroll height 600 with a measured 48px .omx-stage-sticky header; viewport 1200x900; localhost port 52166",
+  "browser": "ego-browser (real Chromium), task space finalized after run",
+  "before": {
+    "scrollTop": 0,
+    "headerBottom": 48,
+    "columnTop": 64,
+    "columnBottom": 592,
+    "rightTop": 64,
+    "stickyVar": "48px",
+    "scrollVar": "600px",
+    "listScrollHeight": 1111,
+    "listClientHeight": 472
+  },
+  "after": {
+    "scrollTop": 300,
+    "headerBottom": 48,
+    "columnTop": 60,
+    "columnBottom": 588,
+    "scrollportTop": 0,
+    "scrollportBottom": 600,
+    "rightTop": -236,
+    "stickyVar": "48px",
+    "scrollVar": "600px",
+    "listScrollHeight": 1111,
+    "listClientHeight": 472
+  },
+  "failures": [],
+  "screenshot": "browser-sticky-scrolled-3448.png",
+  "reshown": {
+    "scrollVar": "400px",
+    "stickyVar": "48px",
+    "columnTop": 60,
+    "columnBottom": 388,
+    "scrollportBottom": 400,
+    "listClientHeight": 272,
+    "scenario": "display:none -> shrink to 400px -> show + active=true"
+  },
+  "automated_e2e": "rival-filter-polish.e2e.test.js mounts .omx-stage-scroll(600)+.omx-stage-sticky(48), asserts top=60/maxheight=528, then hides/shrinks to 400 and re-shows: scrollVar=400, bottom<=scrollport"
+}

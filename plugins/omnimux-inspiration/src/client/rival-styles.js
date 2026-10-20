@@ -918,8 +918,10 @@ export const RIVAL_CSS = `
   border-radius: 12px;
   background: var(--dsw-alias-bg-layer-1);
   position: sticky;
-  top: 12px;
-  max-height: calc(100vh - 220px);
+  /* 吸附在一级 Tab/工具栏下方：#3448 用实测的 header 高度与 scrollport 高度，
+     回退到 Stage 骨架偏移变量/100vh，避免滑入 Tab 栏或超出滚动区。 */
+  top: calc(var(--omnimux-rival-sticky-h, var(--stage-sticky-offset, 44px)) + 12px);
+  max-height: calc(var(--omnimux-rival-scroll-h, 100vh) - var(--omnimux-rival-sticky-h, var(--stage-sticky-offset, 44px)) - 24px);
 }
 .omnimux-rival-accounts-head {
   display: flex;
