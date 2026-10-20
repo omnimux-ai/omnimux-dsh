@@ -9,7 +9,6 @@ import { createDraftMediaRegistry } from './draft-media.js'
 import { LinkImportError, importProductFromUrl } from './link-importer.js'
 import { PRODUCT_KINDS, listViewOf, ProductsError } from './library.js'
 import { mediaDirOf } from './paths.js'
-import { PickerError, pickNativePath } from './picker.js'
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
 const PREFIX = '/omnimux/products'
@@ -35,6 +34,7 @@ const STATUS_BY_CODE = {
   'picker-invalid-kind': 400,
   'picker-unsupported': 501,
   'picker-failed': 500,
+  'picker-unavailable': 503,
   'product-not-found': 404,
   'draft-media-not-found': 404,
   'name-conflict': 409,
@@ -399,12 +399,39 @@ function parseProductPath(pathname) {
   return { kind: 'unknown' }
 }
 
+const PICKER_PROMPTS = Object.freeze({
+  file: '选择要挂到产品的文件',
+  directory: '选择要挂到产品的文件夹',
+})
+
+/**
+ * The shared macOS chooser lives in the hub (`nativeFilePicker`); products only
+ * supplies its own copy. Missing seam is an explicit 503, never a fake path.
+ * @param {((name: string) => unknown) | undefined} getService
+ */
+function nativePickerFromSeam(getService) {
+  return async (kind) => {
+    const seam = getService?.('nativeFilePicker')
+    if (!seam || typeof seam.pick !== 'function') {
+      throw Object.assign(new Error('nativeFilePicker seam is unavailable'), { code: 'picker-unavailable' })
+    }
+    return seam.pick(kind, { prompt: PICKER_PROMPTS[kind] ?? PICKER_PROMPTS.file })
+  }
+}
+
+/** @param {unknown} error */
+function isPickerCode(error) {
+  const code = (/** @type {{ code?: unknown } | null} */ (error))?.code
+  return typeof code === 'string' && code.startsWith('picker-')
+}
+
 /**
  * @param {{
  *   library: ReturnType<typeof import('./library.js').createLibraryStore>,
  *   ctx?: unknown,
  *   hub?: { textComplete?: Function, pageFetch?: Function } | null,
- *   picker?: (kind: 'file' | 'directory') => Promise<{ path: string | null, paths?: string[] }>,
+ *   picker?: (kind: 'file' | 'directory', options?: { prompt?: string }) => Promise<{ path: string | null, paths?: string[] }>,
+ *   getService?: (name: string) => unknown,
  *   importFromUrl?: (args: { url: unknown, kind?: 'physical' | 'digital', hub?: object | null }) => Promise<object>,
  *   chatComplete?: Function,
  *   channelTimeoutMs?: number,
@@ -412,7 +439,7 @@ function parseProductPath(pathname) {
  */
 export function createProductsDispatcher(deps) {
   const { library } = deps
-  const picker = deps.picker ?? ((kind) => pickNativePath(kind))
+  const picker = deps.picker ?? nativePickerFromSeam(deps.getService)
   const importFromUrl = deps.importFromUrl ?? importProductFromUrl
   // 草稿媒体只读通路：导入写盘后登记 id → 路径，创建态就能看截图。
   const drafts = deps.draftMedia ?? createDraftMediaRegistry({
@@ -589,7 +616,7 @@ export function createProductsDispatcher(deps) {
 
       return { status: 404, body: { error: 'not-found', message: 'unknown route' } }
     } catch (error) {
-      if (error instanceof ProductsError || error instanceof PickerError || error instanceof LinkImportError) {
+      if (error instanceof ProductsError || isPickerCode(error) || error instanceof LinkImportError) {
         return {
           status: STATUS_BY_CODE[error.code] ?? 400,
           body: { error: error.code, message: error.message },

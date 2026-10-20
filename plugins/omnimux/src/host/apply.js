@@ -50,6 +50,7 @@ import { mountWebSocketHmr } from '../hmr/host.js'
 import { mountPresetsTools } from '../presets/tools.js'
 import { mountTemplatesTools } from '../templates/tools.js'
 import { mountDecisions } from '../decisions/mount.js'
+import { createNativeFilePicker } from './native-picker.js'
 
 /**
  * @param {{
@@ -354,6 +355,9 @@ export function apply(ctx, config = {}) {
     ctx.provide('modelCatalog', { list: listCatalog })
     ctx.provide('generationProducts', generationProducts)
     ctx.provide('mediaInspect', createMediaInspector())
+    // Shared macOS file/folder chooser: assets, products and workflow consume
+    // this seam instead of shipping three copies of the JXA script.
+    ctx.provide('nativeFilePicker', createNativeFilePicker())
   }
 
   /**

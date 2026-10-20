@@ -10,7 +10,6 @@ import { createReadStream, realpathSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import { statStatus, scanDir, scanFile } from './scanner.js'
 import { AssetsError } from './mappings.js'
-import { PickerError, pickNativePath } from './picker.js'
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
 
@@ -25,6 +24,7 @@ const STATUS_BY_CODE = {
   'picker-invalid-kind': 400,
   'picker-unsupported': 501,
   'picker-failed': 500,
+  'picker-unavailable': 503,
   'reveal-unsupported': 501,
   'reveal-failed': 500,
   'mapping-not-found': 404,
@@ -253,19 +253,46 @@ function runNative(command, args) {
   })
 }
 
+const PICKER_PROMPTS = Object.freeze({
+  file: '选择要添加的文件',
+  directory: '选择要添加的文件夹',
+})
+
+/**
+ * The shared macOS chooser lives in the hub (`nativeFilePicker`); assets only
+ * supplies its own copy. Missing seam is an explicit 503, never a fake path.
+ * @param {((name: string) => unknown) | undefined} getService
+ */
+function nativePickerFromSeam(getService) {
+  return async (kind) => {
+    const seam = getService?.('nativeFilePicker')
+    if (!seam || typeof seam.pick !== 'function') {
+      throw Object.assign(new Error('nativeFilePicker seam is unavailable'), { code: 'picker-unavailable' })
+    }
+    return seam.pick(kind, { prompt: PICKER_PROMPTS[kind] ?? PICKER_PROMPTS.file })
+  }
+}
+
+/** @param {unknown} error */
+function isPickerCode(error) {
+  const code = (/** @type {{ code?: unknown } | null} */ (error))?.code
+  return typeof code === 'string' && code.startsWith('picker-')
+}
+
 /**
  * @param {{
  *   mappings: ReturnType<typeof import('./mappings.js').createMappingStore>,
  *   artifacts: ReturnType<typeof import('./artifacts.js').createArtifactStore>,
  *   library?: ReturnType<typeof import('./library.js').createLibraryStore>,
- *   picker?: (kind: 'file' | 'directory') => Promise<{ path: string | null }>,
+ *   picker?: (kind: 'file' | 'directory', options?: { prompt?: string }) => Promise<{ path: string | null, paths?: string[] }>,
+ *   getService?: (name: string) => unknown,
  *   platform?: NodeJS.Platform,
  *   run?: (command: string, args: string[]) => Promise<void>,
  * }} deps
  */
 export function createAssetsDispatcher(deps) {
   const { mappings, artifacts, library, cloud, paths } = deps
-  const picker = deps.picker ?? ((kind) => pickNativePath(kind))
+  const picker = deps.picker ?? nativePickerFromSeam(deps.getService)
 
   /**
    * `/omnimux/assets/cloud/<category>/[<sub_category>/]page-NNNN.json`
@@ -753,7 +780,7 @@ export function createAssetsDispatcher(deps) {
 
       return { status: 404, body: { error: 'not-found', message: 'unknown route' } }
     } catch (error) {
-      if (error instanceof AssetsError || error instanceof PickerError) {
+      if (error instanceof AssetsError || isPickerCode(error)) {
         return {
           status: STATUS_BY_CODE[error.code] ?? 400,
           body: { error: error.code, message: error.message },

@@ -109,6 +109,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   'picker-unsupported': 501,
   'picker-failed': 500,
   'picker-invalid-kind': 400,
+  'picker-unavailable': 503,
   'unsupported-media': 415,
   'invalid-path': 400,
   'not-a-file': 400,
@@ -157,7 +158,10 @@ export function createWorkflowDispatcher(deps: WorkflowDispatcherDeps) {
     getCatalog: async () => (await gateway.capabilities()) as import('../../shared/api').CapabilityCatalog,
   });
   const mediaRoutes = createMediaRoutes(mediaDir);
-  const localFileRoutes = createLocalFileRoutes(picker ? { picker } : {});
+  const localFileRoutes = createLocalFileRoutes({
+    ...(picker ? { picker } : {}),
+    getService: deps.getSeam,
+  });
   const templateRoutes = createTemplateRoutes(templates);
   const tableRoutes = createTableRoutes(store);
   const speechToTextRoutes = createSpeechToTextRoutes({

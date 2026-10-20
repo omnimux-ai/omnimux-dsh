@@ -44,6 +44,7 @@ function makeDispatcher(opts = {}) {
   })
   const deps = { mappings, artifacts, library }
   if (opts.picker) deps.picker = opts.picker
+  if (opts.getService) deps.getService = opts.getService
   if (opts.platform) deps.platform = opts.platform
   if (opts.run) deps.run = opts.run
   return { dispatcher: createAssetsDispatcher(deps), mappings, artifacts, library }
@@ -469,6 +470,31 @@ describe('AssetsDispatcher mappings routes', () => {
     assert.equal(cancelled.status, 200)
     assert.equal(cancelled.body.path, null)
     assert.deepEqual(cancelled.body.paths, [])
+  })
+
+  it('uses the hub nativeFilePicker seam by default and forwards the assets prompt', async () => {
+    const calls = []
+    const { dispatcher } = makeDispatcher({
+      getService: (name) => (name === 'nativeFilePicker'
+        ? {
+            pick: async (kind, options) => {
+              calls.push({ kind, options })
+              return { path: '/tmp/a.png', paths: ['/tmp/a.png'] }
+            },
+          }
+        : undefined),
+    })
+    const picked = await dispatcher.dispatch(post('/omnimux/assets/pick', { kind: 'file' }))
+    assert.equal(picked.status, 200)
+    assert.deepEqual(picked.body, { path: '/tmp/a.png', paths: ['/tmp/a.png'] })
+    assert.deepEqual(calls, [{ kind: 'file', options: { prompt: '选择要添加的文件' } }])
+  })
+
+  it('answers 503 picker-unavailable when the hub seam is missing', async () => {
+    const { dispatcher } = makeDispatcher({ getService: () => undefined })
+    const missing = await dispatcher.dispatch(post('/omnimux/assets/pick', { kind: 'file' }))
+    assert.equal(missing.status, 503)
+    assert.equal(missing.body.error, 'picker-unavailable')
   })
 })
 

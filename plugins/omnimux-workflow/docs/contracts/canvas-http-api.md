@@ -63,7 +63,7 @@ Body：`SaveCanvasWorkspacePayload`（必含 `expectedVersion`）。
 
 ### POST /omnimux-workflow/api/pick
 
-本机文件选择器（macOS `osascript -l JavaScript` 驱动 AppKit `NSOpenPanel`）。**不向 System Events 发 Apple Event**，因此不依赖 `kTCCServiceAppleEvents`，adhoc 签名的产品包同样可用；**禁止** `import omnimux-assets`。legacy `/dsh-workflow/api/pick` 同样改写。
+本机文件选择器，实现来自 hub 的 `nativeFilePicker` seam（macOS `osascript -l JavaScript` 驱动 AppKit `NSOpenPanel`）。**不向 System Events 发 Apple Event**，因此不依赖 `kTCCServiceAppleEvents`，adhoc 签名的产品包同样可用；workflow 只在请求时 `ctx.get('nativeFilePicker')`，不带自己的 picker 实现，也**禁止** `import omnimux-assets`。legacy `/dsh-workflow/api/pick` 同样改写。seam 缺失 → 503 `picker-unavailable`。
 
 Body：`{ "kind": "file" }`（缺省 `"file"`；`"directory"` 选文件夹，用于新建项目选位置）。
 

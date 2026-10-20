@@ -27,6 +27,7 @@ function makeDispatcher(opts = {}) {
   })
   const deps = { library }
   if (opts.picker) deps.picker = opts.picker
+  if (opts.getService) deps.getService = opts.getService
   if (opts.importFromUrl) deps.importFromUrl = opts.importFromUrl
   if (opts.ctx) deps.ctx = opts.ctx
   if (opts.chatComplete) deps.chatComplete = opts.chatComplete
@@ -36,6 +37,33 @@ function makeDispatcher(opts = {}) {
   if (opts.draftMedia) deps.draftMedia = opts.draftMedia
   return { dispatcher: createProductsDispatcher(deps), library }
 }
+
+describe('ProductsDispatcher nativeFilePicker seam', () => {
+  it('uses the hub seam by default and forwards the products prompt', async () => {
+    const calls = []
+    const { dispatcher } = makeDispatcher({
+      getService: (name) => (name === 'nativeFilePicker'
+        ? {
+            pick: async (kind, options) => {
+              calls.push({ kind, options })
+              return { path: '/tmp/product.png', paths: ['/tmp/product.png'] }
+            },
+          }
+        : undefined),
+    })
+    const picked = await dispatcher.dispatch(post('/omnimux/products/pick', { kind: 'file' }))
+    assert.equal(picked.status, 200)
+    assert.deepEqual(picked.body, { path: '/tmp/product.png', paths: ['/tmp/product.png'] })
+    assert.deepEqual(calls, [{ kind: 'file', options: { prompt: '选择要挂到产品的文件' } }])
+  })
+
+  it('answers 503 picker-unavailable when the hub seam is missing', async () => {
+    const { dispatcher } = makeDispatcher({ getService: () => undefined })
+    const missing = await dispatcher.dispatch(post('/omnimux/products/pick', { kind: 'file' }))
+    assert.equal(missing.status, 503)
+    assert.equal(missing.body.error, 'picker-unavailable')
+  })
+})
 
 function post(path, body, extra = {}) {
   return { method: 'POST', url: path, body, ...extra }

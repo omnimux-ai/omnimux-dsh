@@ -9,7 +9,6 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { createLocalFileRoutes } from './localFileRoutes.ts';
 import { parseByteRange } from '../byteRange.ts';
-import { parsePickedPaths, pickNativePath, PickerError } from '../picker.ts';
 
 const local = { origin: 'http://127.0.0.1:43120' };
 
@@ -29,85 +28,39 @@ test('parseByteRange：bytes=0-1 与 suffix / 越界', () => {
   assert.equal(parseByteRange(undefined, 10), null);
 });
 
-test('parsePickedPaths 拆 POSIX 行并丢掉空行', () => {
-  assert.deepEqual(parsePickedPaths('/a.png\n/b.mp4\n'), ['/a.png', '/b.mp4']);
-  assert.deepEqual(parsePickedPaths(''), []);
-  assert.deepEqual(parsePickedPaths('\n\n'), []);
+test('POST /api/pick：默认从 hub nativeFilePicker seam 取选择器并转发本域 prompt', async () => {
+  const calls = [];
+  const routes = createLocalFileRoutes({
+    getService: (name) => name === 'nativeFilePicker'
+      ? {
+          pick: async (kind, options) => {
+            calls.push({ kind, options });
+            return { path: '/tmp/a.png', paths: ['/tmp/a.png', '/tmp/b.mp4'] };
+          },
+        }
+      : undefined,
+  });
+  const picked = await routes.tryHandle('POST', '/omnimux-workflow/api/pick', {
+    method: 'POST',
+    url: '/omnimux-workflow/api/pick',
+    origin: local.origin,
+    body: { kind: 'file' },
+  });
+  assert.equal(picked.status, 200);
+  assert.deepEqual(picked.body, { path: '/tmp/a.png', paths: ['/tmp/a.png', '/tmp/b.mp4'] });
+  assert.deepEqual(calls, [{ kind: 'file', options: { prompt: '选择要导入的素材' } }]);
 });
 
-test('pickNativePath：invalid-kind / 非 darwin / 取消 / 失败', async () => {
-  await assert.rejects(
-    () => pickNativePath('folder', { platform: 'darwin', run: async () => ({ stdout: '', stderr: '' }) }),
-    (error) => error instanceof PickerError && error.code === 'picker-invalid-kind',
-  );
-  await assert.rejects(
-    () => pickNativePath('file', { platform: 'linux' }),
-    (error) => error instanceof PickerError && error.code === 'picker-unsupported',
-  );
-  const cancelled = await pickNativePath('file', {
-    platform: 'darwin',
-    run: async () => {
-      throw Object.assign(new Error('User canceled. (-128)'), { stderr: '' });
-    },
+test('POST /api/pick：seam 缺失时明确 503 picker-unavailable', async () => {
+  const routes = createLocalFileRoutes({ getService: () => undefined });
+  const missing = await routes.tryHandle('POST', '/omnimux-workflow/api/pick', {
+    method: 'POST',
+    url: '/omnimux-workflow/api/pick',
+    origin: local.origin,
+    body: { kind: 'file' },
   });
-  assert.deepEqual(cancelled, { path: null, paths: [] });
-  await assert.rejects(
-    () => pickNativePath('file', {
-      platform: 'darwin',
-      run: async () => {
-        throw Object.assign(new Error('osascript exited with code 1'), { stderr: 'syntax error' });
-      },
-    }),
-    (error) => error instanceof PickerError && error.code === 'picker-failed',
-  );
-});
-
-test('pickNativePath：darwin 注入 run 返回多选路径', async () => {
-  const result = await pickNativePath('file', {
-    platform: 'darwin',
-    run: async (command, argv) => {
-      assert.equal(command, 'osascript');
-      // JXA + AppKit panel: no Apple Events (System Events) permission needed.
-      assert.deepEqual(argv.slice(0, 3), ['-l', 'JavaScript', '-e']);
-      const script = argv[3];
-      assert.match(script, /NSOpenPanel/);
-      assert.match(script, /NSApplicationActivationPolicyAccessory/);
-      assert.match(script, /setCanChooseFiles\(true\)/);
-      assert.match(script, /setCanChooseDirectories\(false\)/);
-      assert.match(script, /setAllowsMultipleSelection\(true\)/);
-      // Lock the "choose" gate: an always-empty script would silently turn
-      // every confirmation into a cancel.
-      assert.match(script, /Number\(panel\.runModal\) !== 1/);
-      assert.match(script, /选择要导入的素材/);
-      assert.doesNotMatch(script, /System Events/);
-      assert.doesNotMatch(script, /choose file/);
-      return { stdout: '/Users/x/a.png\n/Users/x/b.jpg\n', stderr: '' };
-    },
-  });
-  assert.equal(result.path, '/Users/x/a.png');
-  assert.deepEqual(result.paths, ['/Users/x/a.png', '/Users/x/b.jpg']);
-});
-
-test('pickNativePath：directory kind 只允许目录且沿用取消契约', async () => {
-  let seen = '';
-  const result = await pickNativePath('directory', {
-    platform: 'darwin',
-    run: async (_command, argv) => {
-      seen = argv[3];
-      return { stdout: '/Users/x/project\n', stderr: '' };
-    },
-  });
-  assert.match(seen, /setCanChooseFiles\(false\)/);
-  assert.match(seen, /setCanChooseDirectories\(true\)/);
-  assert.match(seen, /选择要导入的文件夹/);
-  assert.deepEqual(result, { path: '/Users/x/project', paths: ['/Users/x/project'] });
-
-  // JXA cancel exits 0 with empty stdout; AppleScript cancel keeps -128.
-  const cancelled = await pickNativePath('directory', {
-    platform: 'darwin',
-    run: async () => ({ stdout: '\n', stderr: '' }),
-  });
-  assert.deepEqual(cancelled, { path: null, paths: [] });
+  assert.equal(missing.status, 503);
+  assert.equal(missing.body.error, 'picker-unavailable');
 });
 
 test('POST /api/pick 注入 picker：取消 / 多选 / invalid-kind / unsupported', async () => {
@@ -149,7 +102,7 @@ test('POST /api/pick 注入 picker：取消 / 多选 / invalid-kind / unsupporte
 
   const unsupported = await createLocalFileRoutes({
     picker: async () => {
-      throw new PickerError('picker-unsupported', 'native picker not supported on linux');
+      throw Object.assign(new Error('native picker not supported on linux'), { code: 'picker-unsupported' });
     },
   }).tryHandle('POST', '/omnimux-workflow/api/pick', {
     method: 'POST',
