@@ -496,6 +496,23 @@ describe('AssetsDispatcher mappings routes', () => {
     assert.equal(missing.status, 503)
     assert.equal(missing.body.error, 'picker-unavailable')
   })
+
+  it('maps coded picker failures to 400 / 501 / 500 and unknown errors to internal', async () => {
+    for (const [code, status] of [['picker-invalid-kind', 400], ['picker-unsupported', 501], ['picker-failed', 500]]) {
+      const { dispatcher } = makeDispatcher({
+        picker: async () => { throw Object.assign(new Error(code), { code }) },
+      })
+      const result = await dispatcher.dispatch(post('/omnimux/assets/pick', { kind: 'file' }))
+      assert.equal(result.status, status, code)
+      assert.equal(result.body.error, code)
+    }
+    const { dispatcher } = makeDispatcher({
+      picker: async () => { throw new Error('boom') },
+    })
+    const plain = await dispatcher.dispatch(post('/omnimux/assets/pick', { kind: 'file' }))
+    assert.equal(plain.status, 500)
+    assert.equal(plain.body.error, 'internal')
+  })
 })
 
 describe('AssetsDispatcher artifacts routes', () => {
