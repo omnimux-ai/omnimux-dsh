@@ -681,8 +681,8 @@ export function rivalCardHeightPx(card, columnWidth) {
     // 两者的唯一差异是比例：合集固定 4:5，根层取数据比例。
     return Math.max(RIVAL_MIN_CARD_HEIGHT, inner / rivalMediaRatioOf(card) + MEDIA_FIRST_BODY_H + CARD_BORDER)
   }
-  if (type === 'text' && layout === FEED_LAYOUT) {
-    // 根层帖子卡：正文最多 3 行 + 元信息行，没有封面。
+  if (type === 'text' && (layout === FEED_LAYOUT || layout === COLLECTION_MEMBER_LAYOUT)) {
+    // 帖子卡（根层与合集成员）：正文最多 3 行 + 元信息行，没有封面。
     const lines = Math.min(POST_MAX_LINES, textBodyLines(card, w))
     return Math.max(RIVAL_MIN_CARD_HEIGHT, TEXT_PAD_V + lines * BODY_LINE + POST_META_H + CARD_BORDER)
   }

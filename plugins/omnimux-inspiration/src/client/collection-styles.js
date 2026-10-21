@@ -57,8 +57,8 @@ export const COLLECTION_CSS = `
   bottom: 5px;
   z-index: 8;
 }
-/* 合集详情成员卡：菜单移到封面右上，避开标题与元信息行（Issue 3459）。 */
-.omnimux-inspiration-card-pure.is-media-first .omnimux-inspiration-collection-menu {
+/* 媒体库卡片：菜单移到封面右上，避开标题与元信息行（Issue 3459 / 3477）。 */
+.omnimux-inspiration-card-pure.is-library:not(.t-text) .omnimux-inspiration-collection-menu {
   top: 8px;
   right: 8px;
   bottom: auto;

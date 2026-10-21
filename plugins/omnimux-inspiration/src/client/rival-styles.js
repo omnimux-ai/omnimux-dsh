@@ -611,12 +611,10 @@ export const RIVAL_CSS = `
   padding: 12px;
 }
 .omnimux-rival-card.is-library.t-text,
-.omnimux-rival-card.is-library.t-text-media,
-.omnimux-rival-card.is-media-first.t-text-media {
+.omnimux-rival-card.is-library.t-text-media {
   padding: 0;
 }
-.omnimux-rival-card.is-library.t-text-media .omnimux-rival-card-media,
-.omnimux-rival-card.is-media-first.t-text-media .omnimux-rival-card-media {
+.omnimux-rival-card.is-library.t-text-media .omnimux-rival-card-media {
   border-radius: 0;
   margin-top: 0;
 }

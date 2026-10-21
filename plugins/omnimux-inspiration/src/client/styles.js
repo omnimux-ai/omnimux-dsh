@@ -727,6 +727,20 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-card-state-text {
   color: var(--dsw-alias-label-primary);
 }
+/* 帖子卡正文最多 3 行：inline 原因/阶段文案也走同一上限，否则卡片会比估算高，
+   同列下一张卡会被压住（Issue 3477）。 */
+.omnimux-rival-card-body.is-post .omnimux-inspiration-card-error.is-inline,
+.omnimux-rival-card-body.is-post .omnimux-inspiration-card-state-text {
+  -webkit-line-clamp: 3;
+}
+/* 帖子卡的复选框在右上，正文右侧留出它的热区，首行不会被盖住。 */
+.omnimux-inspiration-card-pure.is-library.t-text .omnimux-rival-card-text {
+  padding-right: 28px;
+}
+/* 帖子卡的 ⋯ 菜单仍在右下，元信息行右侧留出它的位置。 */
+.omnimux-inspiration-card-pure.is-library.t-text .omnimux-inspiration-card-meta {
+  padding-right: 34px;
+}
 .omnimux-inspiration-cover-img {
   display: block;
   width: 100%;
@@ -845,8 +859,7 @@ export const INSPIRATION_CSS = `
 /* ── 库卡片：封面优先（Issue 3477，根层与合集共用）────────────────────
    基础规则仍然 contain（保存的图片完整可见，已有测试锁定）；库卡片是封面
    形态，统一裁切填充，避免封面内部出现黑边。 */
-.omnimux-inspiration-card-pure.is-library .omnimux-rival-card-media,
-.omnimux-inspiration-card-pure.is-media-first .omnimux-rival-card-media {
+.omnimux-inspiration-card-pure.is-library .omnimux-rival-card-media {
   object-fit: cover;
 }
 /* 封面兜底里也写了一遍标题；库卡片正文已经显示标题，这里只留播放图标，
