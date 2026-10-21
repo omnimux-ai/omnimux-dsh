@@ -49,6 +49,19 @@ export const RUNTIME_MESSAGE = {
   openAssistantWithMedia: 'DSH_OPEN_ASSISTANT_WITH_MEDIA',
   /** Content → background: hand the stashed media to a freshly opened panel. */
   mediaAttachRequest: 'DSH_MEDIA_ATTACH_REQUEST',
+  /**
+   * Content → background: download one resolved media file into the browser's
+   * download folder. The request carries an already-resolved http(s) address —
+   * the worker never guesses a source from the page.
+   */
+  mediaDownload: 'DSH_MEDIA_DOWNLOAD',
+  /**
+   * Content → background: fetch the public tweet payload for one X post so the
+   * content script can read its real video variants. The syndication endpoint
+   * only allows `platform.twitter.com` as a CORS origin, so the page itself can
+   * never read it.
+   */
+  xVideoVariants: 'DSH_X_VIDEO_VARIANTS',
 } as const
 
 /** Layer stacking. The host matches the existing FAB; each child adds a layer. */
@@ -229,8 +242,12 @@ export const TIMING = {
   collapseGrace: 220,
   /** Receipt window for the workbench attach request. */
   attachReceiptTimeout: 800,
-  /** Instant check feedback on the copy icon. */
-  copyCheckFlash: 600,
+  /** Instant check feedback on the download icon. */
+  downloadCheckFlash: 600,
+  /** Receipt window for the worker's `chrome.downloads` acceptance. */
+  downloadStartTimeout: 6000,
+  /** Budget for the worker's X video-variant lookup. */
+  xVariantsTimeout: 4000,
   /** Lifetime of an error tooltip. */
   errorDismiss: 3000,
   /** Cache expiry for a candidate that the pointer has left. */

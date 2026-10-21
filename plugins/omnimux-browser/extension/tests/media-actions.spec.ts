@@ -6,15 +6,15 @@
  * contract, the receipt wait and both degradation paths are covered without a
  * live extension runtime.
  */
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   MediaActionBridge,
   browserTransport,
-  legacyCopy,
   type ActionTransport,
   type SidePanelState,
   type WorkstationResult,
 } from '../src/content/media-hover/actions.ts'
+import { mediaElementFor, planMediaDownload } from '../src/content/media-hover/download-plan.ts'
 import { hoverCopy } from '../src/content/media-hover/copy.ts'
 import { RUNTIME_MESSAGE, TIMING } from '../src/content/media-hover/messages.ts'
 import type { HoveredMedia } from '../src/content/media-hover/types.ts'
@@ -34,12 +34,21 @@ const PAYLOAD: HoveredMedia = {
   capturedAt: 1_700_000_000_000,
 }
 
+/** A generic video that only exposes its poster: not a downloadable file. */
+const POSTER_ONLY_VIDEO: HoveredMedia = {
+  ...PAYLOAD,
+  id: 'video:https://cdn.example.com/clip-poster.jpg',
+  type: 'video',
+  src: 'https://cdn.example.com/clip-poster.jpg',
+  previewSrc: 'https://cdn.example.com/clip-poster.jpg',
+  sourceKind: 'poster',
+}
+
 function transport(overrides: Partial<ActionTransport> = {}): ActionTransport {
   return {
     sidePanelState: async () => 'inactive',
     deliverToWorkstation: vi.fn(async (): Promise<WorkstationResult> => 'unavailable'),
     postToBackground: vi.fn(async () => ({ ok: true, result: {} })),
-    writeClipboard: vi.fn(async () => true),
     copy: () => hoverCopy('zh'),
     ...overrides,
   }
@@ -88,32 +97,326 @@ describe('add to inspiration library', () => {
   })
 })
 
-describe('copy the media link', () => {
-  it('copies the absolute address', async () => {
-    const writeClipboard = vi.fn(async () => true)
-    const bridge = new MediaActionBridge(transport({ writeClipboard }))
-    const outcome = await bridge.copyToClipboard(PAYLOAD)
+describe('download the media file', () => {
+  it('asks the background worker to save the resolved file', async () => {
+    const postToBackground = vi.fn(async () => ({ ok: true, downloadId: 42, filename: 'a.png' }))
+    const bridge = new MediaActionBridge(transport({ postToBackground }))
+
+    const outcome = await bridge.downloadMedia(PAYLOAD)
 
     expect(outcome.ok).toBe(true)
-    expect(outcome.status).toBe('copied')
-    expect(outcome.message).toBe('已复制素材链接')
-    expect(writeClipboard).toHaveBeenCalledWith('https://cdn.example.com/a.png')
+    expect(outcome.status).toBe('downloading')
+    expect(outcome.message).toBe('已开始下载')
+    expect(postToBackground).toHaveBeenCalledTimes(1)
+    expect(postToBackground).toHaveBeenCalledWith({
+      type: RUNTIME_MESSAGE.mediaDownload,
+      request: {
+        url: 'https://cdn.example.com/a.png',
+        filename: '',
+        pageUrl: 'https://page.example.com/post/1',
+        pageTitle: '示例页面',
+        type: 'image',
+      },
+    })
   })
 
-  it('surfaces a rejection from both clipboard channels as a failure', async () => {
-    const bridge = new MediaActionBridge(transport({ writeClipboard: vi.fn(async () => false) }))
-    const outcome = await bridge.copyToClipboard(PAYLOAD)
+  it('reports the download-failed copy when the worker refuses to start it', async () => {
+    const bridge = new MediaActionBridge(transport({
+      postToBackground: vi.fn(async () => ({ ok: false, error: { code: 'download-failed' } })),
+    }))
+    const outcome = await bridge.downloadMedia(PAYLOAD)
     expect(outcome.ok).toBe(false)
-    expect(outcome.message).toBe('操作失败，请重试')
+    expect(outcome.status).toBe('failed')
+    expect(outcome.message).toBe('下载失败，请重试')
   })
 
-  it('falls back to the copy command when the async clipboard API is absent', () => {
-    const execCommand = vi.fn(() => true)
-    Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand })
-    expect(legacyCopy('hello')).toBe(true)
-    expect(execCommand).toHaveBeenCalledWith('copy')
-    // The scratch textarea must not survive the call.
-    expect(document.querySelectorAll('textarea')).toHaveLength(0)
+  it('reports an unusable address instead of sending it to the worker', async () => {
+    const postToBackground = vi.fn(async () => ({ ok: true, downloadId: 1 }))
+    const bridge = new MediaActionBridge(transport({ postToBackground }))
+    const blobImage: HoveredMedia = { ...PAYLOAD, src: 'blob:https://page.example.com/1', previewSrc: 'blob:https://page.example.com/1' }
+
+    const outcome = await bridge.downloadMedia(blobImage)
+
+    expect(outcome.ok).toBe(false)
+    expect(outcome.message).toBe('该素材地址不可用')
+    expect(postToBackground).not.toHaveBeenCalled()
+  })
+
+  it('never downloads a video poster as if it were the video file', async () => {
+    // The press must resolve a progressive file: the poster the capsule paints
+    // is a thumbnail, and saving it would report a video that was never saved.
+    const postToBackground = vi.fn(async () => ({ ok: true, downloadId: 1 }))
+    const bridge = new MediaActionBridge(transport({ postToBackground }))
+
+    const outcome = await bridge.downloadMedia(POSTER_ONLY_VIDEO)
+
+    expect(outcome.ok).toBe(false)
+    expect(outcome.status).toBe('failed')
+    expect(outcome.message).toBe('该视频仅在页面内可播，无法直接下载')
+    expect(postToBackground).not.toHaveBeenCalledWith(expect.objectContaining({
+      type: RUNTIME_MESSAGE.mediaDownload,
+    }))
+  })
+})
+
+describe('resolve the real source of an X video before downloading', () => {
+  const TWEET_ID = '2112819774573179175'
+  const POSTER = `https://pbs.twimg.com/amplify_video_thumb/${TWEET_ID}/img/abc.jpg`
+  const MP4_480 = 'https://video.twimg.com/amplify_video/1/vid/avc1/480x270/clip.mp4?tag=12'
+  const MP4_1080 = 'https://video.twimg.com/amplify_video/1/vid/avc1/1920x1080/clip.mp4?tag=12'
+  const HLS = 'https://video.twimg.com/amplify_video/1/pl/playlist.m3u8'
+
+  const X_VIDEO: HoveredMedia = {
+    ...PAYLOAD,
+    id: `video:${POSTER}`,
+    type: 'video',
+    src: POSTER,
+    previewSrc: POSTER,
+    pageUrl: `https://x.com/robot/status/${TWEET_ID}`,
+    sourceKind: 'poster',
+  }
+
+  /** Mounts the tweet card the pointer is actually hovering. */
+  function mountTweet(): void {
+    document.body.innerHTML = `
+      <article data-testid="tweet">
+        <a href="/robot/status/${TWEET_ID}"></a>
+        <video poster="${POSTER}"></video>
+      </article>`
+  }
+
+  /** One syndication payload whose `media_url_https` repeats the hovered poster. */
+  function syndication(...variants: Array<{ url: string; content_type: string; bitrate: number }>): Record<string, unknown> {
+    return {
+      mediaDetails: [{
+        media_url_https: `${POSTER}?format=jpg&name=small`,
+        video_info: { variants },
+      }],
+    }
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('asks the worker for the variants, then downloads the best mp4', async () => {
+    mountTweet()
+    const postToBackground = vi.fn(async (message: Record<string, unknown>) => {
+      if (message.type === RUNTIME_MESSAGE.xVideoVariants) {
+        return {
+          ok: true,
+          result: syndication(
+            { url: MP4_480, content_type: 'video/mp4', bitrate: 256_000 },
+            { url: MP4_1080, content_type: 'video/mp4', bitrate: 2_176_000 },
+            { url: HLS, content_type: 'application/x-mpegURL', bitrate: 0 },
+          ),
+        }
+      }
+      return { ok: true, downloadId: 42 }
+    })
+    const bridge = new MediaActionBridge(transport({ postToBackground }))
+
+    const outcome = await bridge.downloadMedia(X_VIDEO)
+
+    expect(outcome.ok).toBe(true)
+    expect(outcome.status).toBe('downloading')
+    expect(outcome.message).toBe('已开始下载')
+    expect(postToBackground).toHaveBeenNthCalledWith(1, {
+      type: RUNTIME_MESSAGE.xVideoVariants,
+      tweetId: TWEET_ID,
+    })
+    expect(postToBackground).toHaveBeenNthCalledWith(2, {
+      type: RUNTIME_MESSAGE.mediaDownload,
+      request: {
+        url: MP4_1080,
+        filename: `x-${TWEET_ID}-1920x1080.mp4`,
+        pageUrl: X_VIDEO.pageUrl,
+        pageTitle: '示例页面',
+        type: 'video',
+      },
+    })
+  })
+
+  it('never substitutes another video when the matched poster has no video_info', async () => {
+    mountTweet()
+    const OTHER_POSTER = `https://pbs.twimg.com/amplify_video_thumb/${TWEET_ID}/img/other.jpg`
+    const postToBackground = vi.fn(async (message: Record<string, unknown>) => {
+      if (message.type === RUNTIME_MESSAGE.xVideoVariants) {
+        return {
+          ok: true,
+          result: {
+            mediaDetails: [
+              { media_url_https: POSTER },
+              { media_url_https: OTHER_POSTER, video_info: { variants: [{ url: MP4_1080, content_type: 'video/mp4', bitrate: 2_176_000 }] } },
+            ],
+          },
+        }
+      }
+      return { ok: true, downloadId: 42 }
+    })
+    const bridge = new MediaActionBridge(transport({ postToBackground }))
+
+    const outcome = await bridge.downloadMedia(X_VIDEO)
+
+    expect(outcome.ok).toBe(false)
+    expect(outcome.message).toBe('该视频仅在页面内可播，无法直接下载')
+    expect(postToBackground).not.toHaveBeenCalledWith(expect.objectContaining({
+      type: RUNTIME_MESSAGE.mediaDownload,
+    }))
+  })
+
+  it('refuses an HLS-only post rather than saving the playlist', async () => {
+    mountTweet()
+    const postToBackground = vi.fn(async (message: Record<string, unknown>) => {
+      if (message.type === RUNTIME_MESSAGE.xVideoVariants) {
+        return { ok: true, result: syndication({ url: HLS, content_type: 'application/x-mpegURL', bitrate: 0 }) }
+      }
+      return { ok: true, downloadId: 42 }
+    })
+    const bridge = new MediaActionBridge(transport({ postToBackground }))
+
+    const outcome = await bridge.downloadMedia(X_VIDEO)
+
+    expect(outcome.ok).toBe(false)
+    expect(outcome.message).toBe('该视频仅在页面内可播，无法直接下载')
+    expect(postToBackground).not.toHaveBeenCalledWith(expect.objectContaining({
+      type: RUNTIME_MESSAGE.mediaDownload,
+    }))
+  })
+})
+
+describe('download planning', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+    document.head.innerHTML = ''
+  })
+
+  it('plans an image download from its own address', () => {
+    const plan = planMediaDownload({ payload: PAYLOAD, pageUrl: PAYLOAD.pageUrl })
+    expect(plan).toEqual({
+      ok: true,
+      request: {
+        url: 'https://cdn.example.com/a.png',
+        filename: '',
+        pageUrl: 'https://page.example.com/post/1',
+        pageTitle: '示例页面',
+        type: 'image',
+      },
+    })
+  })
+
+  it('falls back to the preview address when the image src is not fetchable', () => {
+    const blobImage: HoveredMedia = { ...PAYLOAD, src: 'blob:https://page.example.com/1' }
+    const plan = planMediaDownload({ payload: blobImage, pageUrl: PAYLOAD.pageUrl })
+    expect(plan).toMatchObject({
+      ok: true,
+      request: { url: 'https://cdn.example.com/a.png', type: 'image' },
+    })
+  })
+
+  it('picks the highest-resolution mp4 variant and names it by tweet id', () => {
+    const TWEET_ID = '2112819774573179175'
+    const plan = planMediaDownload({
+      payload: {
+        ...PAYLOAD,
+        id: 'video:x',
+        type: 'video',
+        src: 'https://pbs.twimg.com/amplify_video_thumb/x/img/a.jpg',
+        previewSrc: 'https://pbs.twimg.com/amplify_video_thumb/x/img/a.jpg',
+        pageUrl: `https://x.com/robot/status/${TWEET_ID}`,
+      },
+      pageUrl: `https://x.com/robot/status/${TWEET_ID}`,
+      variants: [
+        { url: 'https://video.twimg.com/a/vid/avc1/480x270/clip.mp4', contentType: 'video/mp4', bitrate: 256_000 },
+        { url: 'https://video.twimg.com/a/vid/avc1/1920x1080/clip.mp4', contentType: 'video/mp4', bitrate: 2_176_000 },
+        { url: 'https://video.twimg.com/a/pl/playlist.m3u8', contentType: 'application/x-mpegURL', bitrate: 0 },
+      ],
+    })
+
+    expect(plan).toEqual({
+      ok: true,
+      request: {
+        url: 'https://video.twimg.com/a/vid/avc1/1920x1080/clip.mp4',
+        filename: `x-${TWEET_ID}-1920x1080.mp4`,
+        pageUrl: `https://x.com/robot/status/${TWEET_ID}`,
+        pageTitle: '示例页面',
+        type: 'video',
+      },
+    })
+  })
+
+  it('answers video-unavailable for an HLS-only variant list', () => {
+    const plan = planMediaDownload({
+      payload: { ...PAYLOAD, id: 'video:x', type: 'video', src: 'https://pbs.twimg.com/amplify_video_thumb/x/img/a.jpg', previewSrc: 'https://pbs.twimg.com/amplify_video_thumb/x/img/a.jpg' },
+      pageUrl: 'https://x.com/robot/status/2112819774573179175',
+      variants: [{ url: 'https://video.twimg.com/a/pl/playlist.m3u8', contentType: 'application/x-mpegURL', bitrate: 0 }],
+    })
+    expect(plan).toEqual({ ok: false, reason: 'video-unavailable' })
+  })
+
+  it('downloads a generic page video declared through og:video', () => {
+    document.head.innerHTML = '<meta property="og:video" content="https://cdn.example.com/clip.mp4">'
+    const video = document.createElement('video')
+    document.body.appendChild(video)
+    const payload: HoveredMedia = {
+      ...PAYLOAD,
+      id: 'video:https://cdn.example.com/clip-poster.jpg',
+      type: 'video',
+      src: 'https://cdn.example.com/clip-poster.jpg',
+      previewSrc: 'https://cdn.example.com/clip-poster.jpg',
+      sourceKind: 'poster',
+    }
+
+    const plan = planMediaDownload({
+      payload,
+      pageUrl: 'https://blog.example.com/post/1',
+      element: video,
+      entryNames: [],
+    })
+
+    expect(plan).toMatchObject({
+      ok: true,
+      request: { url: 'https://cdn.example.com/clip.mp4', type: 'video', filename: '' },
+    })
+  })
+
+  it('never treats a poster-only video as a downloadable file', () => {
+    const poster = 'https://cdn.example.com/clip-poster.jpg'
+    document.body.innerHTML = `<video poster="${poster}"></video>`
+    const video = document.querySelector('video')!
+    const payload: HoveredMedia = {
+      ...PAYLOAD,
+      id: `video:${poster}`,
+      type: 'video',
+      src: poster,
+      previewSrc: poster,
+      sourceKind: 'poster',
+    }
+
+    const plan = planMediaDownload({ payload, pageUrl: 'https://blog.example.com/post/1', element: video, entryNames: [] })
+
+    expect(plan).toEqual({ ok: false, reason: 'video-unavailable' })
+  })
+
+  it('matches the live media element by its poster', () => {
+    const poster = 'https://cdn.example.com/clip-poster.jpg'
+    document.body.innerHTML = `
+      <video poster="https://cdn.example.com/other.jpg"></video>
+      <video poster="${poster}"></video>`
+    const [other, hovered] = [...document.querySelectorAll('video')]
+    const payload: HoveredMedia = {
+      ...PAYLOAD,
+      id: `video:${poster}`,
+      type: 'video',
+      src: poster,
+      previewSrc: poster,
+    }
+
+    expect(mediaElementFor(payload, document)).toBe(hovered)
+
+    const recycled: HoveredMedia = { ...payload, previewSrc: 'https://cdn.example.com/missing.jpg', src: 'https://cdn.example.com/missing.jpg' }
+    expect(mediaElementFor(recycled, document)).toBeNull()
+    expect(other).not.toBe(hovered)
   })
 })
 
@@ -166,7 +469,6 @@ describe('add to conversation', () => {
         setTimeout(() => resolve('unavailable'), timeoutMs)
       }),
       postToBackground: vi.fn(async () => ({ ok: true })),
-      writeClipboard: vi.fn(async () => true),
       copy: () => hoverCopy('zh'),
     })
     const outcome = await bridge.attachToConversation(PAYLOAD)

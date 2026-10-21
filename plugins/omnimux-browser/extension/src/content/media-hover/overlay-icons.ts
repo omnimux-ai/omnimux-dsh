@@ -12,7 +12,7 @@
  */
 
 /** Marks drawn as outlines; the checked/active look is a CSS fill. */
-export type CapsuleIcon = 'brand' | 'bulb' | 'copy' | 'bubble' | 'plus' | 'check' | 'external' | 'star' | 'asset'
+export type CapsuleIcon = 'brand' | 'bulb' | 'download' | 'bubble' | 'plus' | 'check' | 'external' | 'star' | 'asset'
 
 /**
  * The asset-library glyph approved for the image primary action.
@@ -105,10 +105,11 @@ const ICON_PATHS: Record<CapsuleIcon, string> = {
     '<path d="M10 21.5h4"/>',
     '<path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.77c.5.36.8.94.8 1.55V18h6v-2.18c0-.61.3-1.19.8-1.55A6.5 6.5 0 0 0 12 2.5Z"/>',
   ].join(''),
-  // Two sheets: "copy the link".
-  copy: [
-    '<rect x="9" y="9" width="11.5" height="11.5" rx="2.5"/>',
-    '<path d="M5.5 15H5A1.5 1.5 0 0 1 3.5 13.5V5A1.5 1.5 0 0 1 5 3.5h8.5A1.5 1.5 0 0 1 15 5v.5"/>',
+  // Down arrow onto a tray: "download this media file".
+  download: [
+    '<path d="M12 3.5v11"/>',
+    '<path d="M7.5 10.5 12 15l4.5-4.5"/>',
+    '<path d="M4.5 17.5v1.5A1.5 1.5 0 0 0 6 20.5h12a1.5 1.5 0 0 0 1.5-1.5v-1.5"/>',
   ].join(''),
   // Round bubble with a square speech tail: "send it into the chat".
   bubble: [
@@ -119,7 +120,7 @@ const ICON_PATHS: Record<CapsuleIcon, string> = {
   ].join(''),
   // Plus: the in-flight mark an action wears while it runs.
   plus: '<path d="M12 4.5v15"/><path d="M4.5 12h15"/>',
-  // Check: saved / copied confirmation.
+  // Check: saved / downloaded / attached confirmation.
   check: '<path d="M20.5 6.5 9.8 17.5 3.8 11.6"/>',
   // Open elsewhere: used when the attach falls back to the side panel.
   external: [
@@ -147,7 +148,7 @@ export function svgIcon(name: CapsuleIcon, size = 18): string {
 /** Replaceable icons the capsule swaps in place for a confirmed action. */
 export const ICON_BY_ACTION = {
   inspiration: 'bulb',
-  copy: 'copy',
+  download: 'download',
   attach: 'bubble',
 } as const
 

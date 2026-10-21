@@ -8,13 +8,22 @@
  *
  * Hovering still sends nothing. A message leaves this module only after the user
  * presses a capsule icon, which keeps the MV3 service worker asleep while the
- * pointer moves.
+ * pointer moves. The second slot saves a real file through the worker's
+ * `chrome.downloads` channel; the media address it saves is planned in
+ * `download-plan.ts`, never the poster the capsule happens to paint.
  *
  * @module
  */
 
 import { RUNTIME_MESSAGE, TIMING } from './messages.ts'
 import { isAttachablePayload } from './payload.ts'
+import {
+  isXVideoPayload,
+  mediaElementFor,
+  planMediaDownload,
+  xTweetIdForDownload,
+} from './download-plan.ts'
+import { xVariantsOfTweetResult, type XVideoVariant } from './video-source.ts'
 import type { ActionOutcome, HoveredMedia } from './types.ts'
 import type { HoverCopy } from './copy.ts'
 
@@ -68,8 +77,6 @@ export interface ActionTransport {
   deliverToWorkstation(payload: HoveredMedia, timeoutMs: number): Promise<WorkstationResult>
   /** Send a runtime message to the background worker. */
   postToBackground(message: Record<string, unknown>): Promise<unknown>
-  /** Write text to the system clipboard. */
-  writeClipboard(text: string): Promise<boolean>
   /** Live UI copy for the active locale. */
   copy(): HoverCopy
 }
@@ -113,18 +120,6 @@ export function browserTransport(copy: () => HoverCopy): ActionTransport {
         return null
       }
     },
-    async writeClipboard(text) {
-      try {
-        if (navigator.clipboard?.writeText !== undefined) {
-          await navigator.clipboard.writeText(text)
-          return true
-        }
-      } catch {
-        // Permission policy or a non-secure context: fall through to the copy
-        // command, the only path available on older embedded webviews.
-      }
-      return legacyCopy(text)
-    },
     copy,
   }
   return transport
@@ -147,26 +142,20 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | nul
   })
 }
 
-/** Select-and-copy fallback used when the async clipboard API is unavailable. */
-export function legacyCopy(text: string): boolean {
-  if (typeof document === 'undefined') return false
-  const area = document.createElement('textarea')
-  area.value = text
-  area.setAttribute('readonly', 'true')
-  area.style.position = 'fixed'
-  area.style.top = '0'
-  area.style.left = '0'
-  area.style.opacity = '0'
-  area.style.pointerEvents = 'none'
-  document.body.appendChild(area)
-  try {
-    area.select()
-    return typeof document.execCommand === 'function' ? document.execCommand('copy') : false
-  } catch {
-    return false
-  } finally {
-    area.remove()
-  }
+/** The address a video payload is known by: its poster, else its source. */
+function xPosterOf(payload: HoveredMedia): string {
+  return payload.previewSrc !== '' ? payload.previewSrc : payload.src
+}
+
+/** Reads the resource-timing names of this document, or `[]` outside a page. */
+function readResourceNames(): readonly string[] {
+  if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') return []
+  return performance.getEntriesByType('resource').map((entry) => entry.name)
+}
+
+/** The document this bridge runs in, or `null` outside a page. */
+function readDocument(): Document | null {
+  return typeof document === 'undefined' ? null : document
 }
 
 /**
@@ -251,20 +240,64 @@ export class MediaActionBridge {
   }
 
   /**
-   * Copies the media address to the system clipboard.
+   * Downloads the hovered media as a real file.
    *
-   * A page-scoped video is copied as its page address: the `blob:` handle it
-   * carries would paste a link that resolves nowhere.
+   * The press is the only point where a video's playable address is resolved:
+   * hovering stays cheap, and the poster the capsule paints is never mistaken
+   * for the file. An X post's public variants travel through the worker — the
+   * syndication endpoint refuses page origins — and the shared planner then
+   * decides whether a progressive file exists at all. A page-scoped stream is
+   * reported as unavailable instead of saving a playlist or a poster.
    */
-  async copyToClipboard(payload: HoveredMedia): Promise<ActionOutcome> {
+  async downloadMedia(payload: HoveredMedia): Promise<ActionOutcome> {
     const hints = this.transport.copy()
-    const copied = await this.transport.writeClipboard(outboundMedia(payload).src)
-    if (!copied) return { ok: false, status: 'failed', message: hints.failed }
-    return {
-      ok: true,
-      status: 'copied',
-      message: isAttachablePayload(payload) ? hints.done.copy : hints.pageReference,
+    const element = mediaElementFor(payload, readDocument())
+
+    let variants: readonly XVideoVariant[] = []
+    if (isXVideoPayload(payload, element)) {
+      const tweetId = xTweetIdForDownload(payload, element)
+      if (tweetId !== null) {
+        const record = asRecord(await withTimeout(
+          this.transport.postToBackground({ type: RUNTIME_MESSAGE.xVideoVariants, tweetId }),
+          TIMING.xVariantsTimeout,
+        ))
+        if (record?.ok === true) {
+          variants = xVariantsOfTweetResult(record.result, xPosterOf(payload))
+        }
+      }
     }
+
+    const plan = planMediaDownload({
+      payload,
+      pageUrl: payload.pageUrl !== ''
+        ? payload.pageUrl
+        : (typeof location === 'undefined' ? '' : location.href),
+      pageTitle: payload.pageTitle,
+      element,
+      variants,
+      entryNames: readResourceNames(),
+    })
+    if (!plan.ok) {
+      return {
+        ok: false,
+        status: 'failed',
+        message: plan.reason === 'video-unavailable' ? hints.downloadUnavailable : hints.unusable,
+      }
+    }
+
+    const record = asRecord(await withTimeout(this.transport.postToBackground({
+      type: RUNTIME_MESSAGE.mediaDownload,
+      request: plan.request,
+    }), TIMING.downloadStartTimeout))
+    if (record?.ok !== true) {
+      const code = asRecord(record?.error)?.code
+      return {
+        ok: false,
+        status: 'failed',
+        message: code === 'invalid-url' || code === 'invalid-request' ? hints.unusable : hints.downloadFailed,
+      }
+    }
+    return { ok: true, status: 'downloading', message: hints.done.download }
   }
 
   /**

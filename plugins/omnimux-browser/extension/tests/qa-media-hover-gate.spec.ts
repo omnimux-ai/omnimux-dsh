@@ -11,7 +11,7 @@
  *  B. the tooltip is pure white, sits above the icon with a downward tail, and
  *     flips below when the icon is near the viewport top;
  *  C. the >= 40px media threshold admits images and videos and ignores avatars;
- *  D. the three shortcuts close their loops (library / clipboard / conversation);
+ *  D. the three shortcuts close their loops (library / download / conversation);
  *  E. the cross-module constants agree;
  *  F. the capsule is two-staged: a 32px brand circle that widens to the 92px
  *     row of three actions, and folds back on the required buffer.
@@ -20,7 +20,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { MediaActionBridge, browserTransport, legacyCopy } from '../src/content/media-hover/actions.ts'
+import { MediaActionBridge, browserTransport } from '../src/content/media-hover/actions.ts'
 import { MediaCapsule } from '../src/content/media-hover/capsule.ts'
 import { hoverCopy } from '../src/content/media-hover/copy.ts'
 import { MediaDetector } from '../src/content/media-hover/detector.ts'
@@ -560,7 +560,6 @@ describe('D1. add to inspiration library', () => {
           ? { ok: true, result }
           : { ok: false, error: { code: 'storage-failed', message: 'inspiration store rejected the write' } }
       }),
-      writeClipboard: vi.fn(async () => true),
       copy: () => hoverCopy('zh'),
     })
 
@@ -573,45 +572,75 @@ describe('D1. add to inspiration library', () => {
   })
 })
 
-describe('D2. copy the media link', () => {
-  it('writes the absolute address to the system clipboard', async () => {
-    const writeClipboard = vi.fn(async () => true)
+describe('D2. download the media file', () => {
+  it('asks the worker to save the resolved media address', async () => {
+    const postToBackground = vi.fn(async () => ({ ok: true, downloadId: 3 }))
     const bridge = new MediaActionBridge({
       sidePanelState: async () => 'inactive',
       deliverToWorkstation: vi.fn(async () => 'unavailable' as const),
-      postToBackground: vi.fn(async () => ({ ok: true })),
-      writeClipboard,
+      postToBackground,
       copy: () => hoverCopy('zh'),
     })
 
-    const outcome = await bridge.copyToClipboard(media('https://cdn.example.com/a.png'))
+    const outcome = await bridge.downloadMedia(media('https://cdn.example.com/a.png'))
 
     expect(outcome.ok).toBe(true)
-    expect(outcome.status).toBe('copied')
-    expect(writeClipboard).toHaveBeenCalledWith('https://cdn.example.com/a.png')
+    expect(outcome.status).toBe('downloading')
+    expect(outcome.message).toBe('已开始下载')
+    expect(postToBackground).toHaveBeenCalledWith({
+      type: RUNTIME_MESSAGE.mediaDownload,
+      request: {
+        url: 'https://cdn.example.com/a.png',
+        filename: '',
+        pageUrl: 'https://page.example.com/post/1',
+        pageTitle: '示例页面',
+        type: 'image',
+      },
+    })
   })
 
-  it('prefers the async clipboard API through the real transport', async () => {
-    const writeText = vi.fn(async () => undefined)
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  it('drives the download through the real runtime transport', async () => {
+    const sendMessage = vi.fn(async () => ({ ok: true, downloadId: 5 }))
+    vi.stubGlobal('chrome', { runtime: { sendMessage } })
     try {
-      const copied = await browserTransport(() => hoverCopy('zh'))
-        .writeClipboard('https://cdn.example.com/a.png')
-      expect(copied).toBe(true)
-      expect(writeText).toHaveBeenCalledWith('https://cdn.example.com/a.png')
+      const outcome = await new MediaActionBridge(browserTransport(() => hoverCopy('zh')))
+        .downloadMedia(media('https://cdn.example.com/a.png'))
+      expect(outcome).toMatchObject({ ok: true, status: 'downloading' })
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: RUNTIME_MESSAGE.mediaDownload,
+        request: expect.objectContaining({ url: 'https://cdn.example.com/a.png', type: 'image' }),
+      })
     } finally {
-      Reflect.deleteProperty(navigator as unknown as Record<string, unknown>, 'clipboard')
+      vi.unstubAllGlobals()
     }
   })
 
-  it('falls back to the copy command and leaves no scratch node behind', () => {
-    const exec = vi.fn(() => true)
-    ;(document as Document & { execCommand?: (command: string) => boolean }).execCommand = exec
+  it('refuses a page-scoped stream instead of saving a playlist or the page', async () => {
+    // Replacement for the retired clipboard fallback case: the second shortcut
+    // no longer has a text channel, and a video that only lives in its page must
+    // not become a fake download.
+    const postToBackground = vi.fn(async () => ({ ok: true, downloadId: 1 }))
+    const bridge = new MediaActionBridge({
+      sidePanelState: async () => 'inactive',
+      deliverToWorkstation: vi.fn(async () => 'unavailable' as const),
+      postToBackground,
+      copy: () => hoverCopy('zh'),
+    })
+    const blobVideo: HoveredMedia = {
+      ...media('blob:https://x.test/9f8e'),
+      id: 'video:blob:https://x.test/9f8e',
+      type: 'video',
+      previewSrc: 'data:image/jpeg;base64,AAAA',
+      sourceKind: 'blob',
+      attachable: false,
+    }
 
-    expect(legacyCopy('https://cdn.example.com/a.png')).toBe(true)
-    expect(exec).toHaveBeenCalledWith('copy')
-    // The hidden textarea the fallback creates must be removed again.
-    expect(document.querySelectorAll('textarea')).toHaveLength(0)
+    const outcome = await bridge.downloadMedia(blobVideo)
+
+    expect(outcome.ok).toBe(false)
+    expect(outcome.status).toBe('failed')
+    expect(outcome.message).toBe(hoverCopy('zh').downloadUnavailable)
+    expect(postToBackground).not.toHaveBeenCalled()
   })
 })
 
@@ -688,32 +717,32 @@ describe('D4. capsule icon state machine', () => {
     capsule.destroy()
   })
 
-  it('shows the tick on the copy icon and restores it afterwards', () => {
+  it('shows the tick on the download icon and restores it afterwards', () => {
     const capsule = MediaCapsule.create(hoverCopy('zh'))
-    const copy = capsule.buttonElement('copy')!
-    const idle = copy.innerHTML
+    const download = capsule.buttonElement('download')!
+    const idle = download.innerHTML
 
-    capsule.setState({ copied: true })
-    expect(copy.classList.contains('is-done')).toBe(true)
-    expect(copy.innerHTML).toContain('M20.5 6.5')  // check mark path
+    capsule.setState({ downloaded: true })
+    expect(download.classList.contains('is-done')).toBe(true)
+    expect(download.innerHTML).toContain('M20.5 6.5')  // check mark path
 
-    capsule.setState({ copied: false })
-    expect(copy.classList.contains('is-done')).toBe(false)
-    expect(copy.innerHTML).toBe(idle)
+    capsule.setState({ downloaded: false })
+    expect(download.classList.contains('is-done')).toBe(false)
+    expect(download.innerHTML).toBe(idle)
     capsule.destroy()
   })
 
   it('clears the per-media state when a different media is hovered', () => {
     const capsule = MediaCapsule.create(hoverCopy('zh'))
     capsule.render(media('https://cdn.example.com/a.png', 'a'))
-    capsule.setState({ saved: true, copied: true, attached: true })
+    capsule.setState({ saved: true, downloaded: true, attached: true })
     expect(capsule.buttonElement('inspiration')!.getAttribute('aria-pressed')).toBe('true')
 
     capsule.render(media('https://cdn.example.com/b.png', 'b'))
 
     const snapshot = capsule.snapshot()
     expect(snapshot.saved).toBe(false)
-    expect(snapshot.copied).toBe(false)
+    expect(snapshot.downloaded).toBe(false)
     expect(snapshot.attached).toBe(false)
     expect(capsule.buttonElement('inspiration')!.getAttribute('aria-pressed')).toBe('false')
     capsule.destroy()
@@ -884,7 +913,7 @@ describe('F. two-stage hover expansion', () => {
     // `pointer-events` is inherited, but the icons' own `auto` beats the `none`
     // on the retired row: both stage layers are absolutely centred, so while the
     // pill is 32px wide the middle icon covers the brand circle. Without this
-    // override a hover on folded stage one lands on the copy button and its hint
+    // override a hover on folded stage one lands on the download button and its hint
     // leaks before the capsule ever opens.
     const collapsedIcon = declarationsOf(
       OVERLAY_STYLES,
@@ -919,7 +948,7 @@ describe('F. two-stage hover expansion', () => {
     expect(capsule.brandElement().querySelectorAll('path').length).toBeGreaterThan(0)
 
     const actions = [...capsule.element.querySelectorAll('.omnimux-capsule-actions [data-action]')]
-    expect(actions.map((node) => node.getAttribute('data-action'))).toEqual(['inspiration', 'copy', 'attach'])
+    expect(actions.map((node) => node.getAttribute('data-action'))).toEqual(['inspiration', 'download', 'attach'])
 
     capsule.expand()
     expect(capsule.element.classList.contains('is-expanded')).toBe(true)

@@ -101,7 +101,7 @@ describe('V2 角标工具栏图片入库复用与视频封面防误存', () => {
     expect(primaryBtn.innerHTML).toContain('viewBox="0 0 22 22"')
   })
 
-  it('复制链接与加入对话文案、顺序与图标保持不变', () => {
+  it('下载与加入对话文案、顺序与图标保持不变', () => {
     document.body.innerHTML = `
       <div data-e2e="user-post-item">
         <img src="https://p.example.com/plain.jpg" alt="plain img" />
@@ -114,11 +114,11 @@ describe('V2 角标工具栏图片入库复用与视频封面防误存', () => {
     fire(mark, 'pointerenter')
 
     const actions = [...mark.querySelectorAll('.omt-action')].map((el) => el.getAttribute('data-action'))
-    expect(actions).toEqual(['inspiration', 'copy', 'attach'])
+    expect(actions).toEqual(['inspiration', 'download', 'attach'])
 
-    const copyBtn = mark.querySelector('.omt-action[data-action="copy"]') as HTMLButtonElement
-    expect(copyBtn.getAttribute('title')).toBe('复制')
-    expect(copyBtn.getAttribute('aria-label')).toBe('复制')
+    const downloadBtn = mark.querySelector('.omt-action[data-action="download"]') as HTMLButtonElement
+    expect(downloadBtn.getAttribute('title')).toBe('下载')
+    expect(downloadBtn.getAttribute('aria-label')).toBe('下载')
 
     const attachBtn = mark.querySelector('.omt-action[data-action="attach"]') as HTMLButtonElement
     expect(attachBtn.getAttribute('title')).toBe('加入对话')

@@ -3,7 +3,7 @@
  *
  * The module is shared by the detection layer (pointer → element), the overlay
  * layer (Shadow DOM capsule + white tooltip) and the action layer (inspiration
- * library / clipboard / conversation attach).
+ * library / file download / conversation attach).
  *
  * The contract is re-declared in the panel (`App.tsx`) rather than imported from
  * this bundle: the two surfaces ship separately and must not share a module.
@@ -102,14 +102,20 @@ export interface CapsuleAnchorPolicy {
   overflow: CapsuleOverflowPolicy
 }
 
-/** The three shortcuts the capsule offers, in capsule order. */
-export type MediaActionKind = 'inspiration' | 'copy' | 'attach'
+/**
+ * The three shortcuts the capsule offers, in capsule order.
+ *
+ * `download` replaced the former clipboard `copy` action in #3581: the capsule
+ * hands the user a real file (image or video) instead of a link, so the media's
+ * resolved address has to be a downloadable one rather than merely printable.
+ */
+export type MediaActionKind = 'inspiration' | 'download' | 'attach'
 
 /** Lifecycle of one hover session. */
 export type OverlayPhase = 'idle' | 'shown' | 'interactive' | 'hidden'
 
 /** Outcome discriminator returned by every action handler. */
-export type ActionStatus = 'saved' | 'copied' | 'attached' | 'failed'
+export type ActionStatus = 'saved' | 'downloading' | 'attached' | 'failed'
 
 /** A hoverable element resolved from a pointer event. */
 export interface HoverCandidate {
@@ -163,7 +169,7 @@ export interface OverlayState {
   activeId: string
   busyAction: MediaActionKind | null
   saved: boolean
-  copied: boolean
+  downloaded: boolean
   attached: boolean
 }
 

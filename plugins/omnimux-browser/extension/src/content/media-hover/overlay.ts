@@ -42,7 +42,7 @@ import type { ActionOutcome, AnchorRect, HoverCandidate, HoveredMedia, MediaActi
 export { MEDIA_OVERLAY_HOST_ID }
 
 /** Icon slots that own a tooltip. */
-const TOOLTIP_ACTIONS: readonly MediaActionKind[] = ['inspiration', 'copy', 'attach']
+const TOOLTIP_ACTIONS: readonly MediaActionKind[] = ['inspiration', 'download', 'attach']
 
 /**
  * Mounts and drives the hover overlay.
@@ -73,7 +73,7 @@ export class MediaOverlay {
     activeId: '',
     busyAction: null,
     saved: false,
-    copied: false,
+    downloaded: false,
     attached: false,
   }
   private payload: HoveredMedia | null = null
@@ -604,7 +604,7 @@ export class MediaOverlay {
    *
    * The primary slot is intent-aware: an image advertises the asset-library
    * action across its idle/busy/done states, a video keeps the baseline
-   * inspiration hint, and copy/chat never change. An outcome message is never
+   * inspiration hint, and download/chat never change. An outcome message is never
    * re-derived here — `applyOutcome` paints it once and `repositionNow`
    * repaints this same resolver so a scroll cannot resurrect stale words.
    */
@@ -641,7 +641,7 @@ export class MediaOverlay {
   private async runAction(action: MediaActionKind): Promise<void> {
     const payload = this.payload
     // Only the action that is actually in flight is blocked: a pending save
-    // must not freeze the copy and attach slots (UI-Spec §3.1).
+    // must not freeze the download and attach slots (UI-Spec §3.1).
     if (payload === null || this.pendingActions.has(action)) return
 
     // A media session that already holds a confirmed save answers the done
@@ -689,8 +689,8 @@ export class MediaOverlay {
         }
         return this.bridge.saveToInspiration(payload)
       }
-      case 'copy':
-        return this.bridge.copyToClipboard(payload)
+      case 'download':
+        return this.bridge.downloadMedia(payload)
       case 'attach':
         return this.bridge.attachToConversation(payload)
     }
@@ -705,15 +705,15 @@ export class MediaOverlay {
       if (action === 'inspiration') {
         this.state.saved = true
         capsule.setState({ saved: true })
-      } else if (action === 'copy') {
-        this.state.copied = true
-        capsule.setState({ copied: true })
+      } else if (action === 'download') {
+        this.state.downloaded = true
+        capsule.setState({ downloaded: true })
         this.clearFlashTimer()
         this.flashTimer = this.setTimer(() => {
           this.flashTimer = null
-          this.state.copied = false
-          capsule.setState({ copied: false })
-        }, TIMING.copyCheckFlash)
+          this.state.downloaded = false
+          capsule.setState({ downloaded: false })
+        }, TIMING.downloadCheckFlash)
       } else {
         this.state.attached = true
         capsule.setState({ attached: true })

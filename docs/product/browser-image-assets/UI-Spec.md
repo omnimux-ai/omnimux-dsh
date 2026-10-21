@@ -76,20 +76,23 @@ subsystem: "omnimux-browser"
 
 视频基线没有新的 busy 文字，本次不要求新造视频处理中字符串。若旧组件需要 idle 名称，继续用 `video.idle`；不可拿图片 busy/done 文字套用。
 
-## 4. 复制与对话：原文冻结
+## 4. 下载与对话：当前文案（#3581 起）
+
+> 变更说明：Issue #3581 把原来的「复制 / 复制素材链接」动作整体改造为「下载 / 下载素材」，图片下载原图、视频下载真实 mp4 到浏览器下载目录。下表是当前实现与验收依据；本文件历史版本、PRD 与 Prototype 中关于复制动作的文案行自本任务起只作历史记录，不再约束实现。
 
 | 入口 / 渠道 | 中文 | English | 基线与执行边界 |
 |---|---|---|---|
-| 两入口复制按钮 aria；角标 title | `复制` | `Copy` | 保持原 action 文案；角标原来只有中文，切英文时复用既有 copy 表，不重写中文 |
-| 胶囊复制 hover/focus 提示 | `复制素材链接` | `Copy media link` | 保留既有 hint；不改成“复制链接” |
-| 复制已有 done | `已复制素材链接` | `Media link copied` | 保留结果原文；不强制给角标新增完整复制反馈 UI |
+| 两入口下载按钮 aria；角标 title | `下载` | `Download` | 替换原 `复制`；两入口（胶囊、TikTok 网格角标）一致 |
+| 胶囊下载 hover/focus 提示 | `下载素材` | `Download media` | 替换原 `复制素材链接`；不写成「下载链接」 |
+| 下载已有 done | `已开始下载` | `Download started` | 只在后台确认 `chrome.downloads` 已受理后亮勾；下载完成不在扩展内再报一次 |
 | 两入口对话 title/aria/提示 | `加入对话` | `Add to chat` | 保留 action/hint |
 | 对话已有 done | `已加入对话` | `Added to chat` | 仅原协议结果，不修改成功门槛 |
-| 复制/对话已有失败 | `操作失败，请重试` | `Something went wrong. Try again.` | 保留通用失败 |
+| 下载/对话已有失败 | `操作失败，请重试`；下载通道拒绝或失败用 `下载失败，请重试` / `Download failed. Try again.` | 保留通用失败语义，不把未受理说成已下载 |
 | 既有素材不可用 | `该素材地址不可用` | `This media address cannot be used` | 保留原文，图片入库用 §3 专用原因 |
-| 既有页内视频引用 | `该视频仅在页面内可播，已引用页面链接` | `This video only plays in its page, so the page link was used` | 不影响原 URL 降级逻辑 |
+| 页内视频无法下载 | `该视频仅在页面内可播，无法直接下载` | `This video only plays in its page, so it cannot be downloaded` | 只有 HLS/`blob:` 没有 progressive 文件时不保存播放列表或封面图冒充视频 |
+| 既有页内视频引用 | `该视频仅在页面内可播，已引用页面链接` | `This video only plays in its page, so the page link was used` | 灵感库保存路径保持原降级逻辑 |
 
-“一致”指图片第一动作两入口的四渠道一致。复制自身已有的 `action=复制`、`hint=复制素材链接` 是有意冻结的渠道差别，不得修成一致以扩大任务。
+下载地址必须是真实文件地址：视频优先 progressive mp4（X 走公开 syndication variants，取最高码率），图片取原图 http(s) 地址；绝不以 `<video>` 的 poster 冒充视频。
 
 ## 5. 图标复用核定
 

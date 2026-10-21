@@ -1,0 +1,45 @@
+{
+  "id_str": "2112819774573179175",
+  "mediaDetails": [
+    {
+      "display_url": "pic.x.com/5RU5kDzSUK",
+      "expanded_url": "https://x.com/UnitreeRobotics/status/2112819774573179175/video/1",
+      "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2112814220194828288/img/RL8lXu0dfq4qop9M.jpg",
+      "original_info": {
+        "height": 1080,
+        "width": 1920
+      },
+      "type": "video",
+      "video_info": {
+        "aspect_ratio": [16, 9],
+        "duration_millis": 60660,
+        "variants": [
+          {
+            "content_type": "application/x-mpegURL",
+            "url": "https://video.twimg.com/amplify_video/2112814220194828288/pl/bU7bOlafZ-ViNoTe.m3u8?v=cfc"
+          },
+          {
+            "bitrate": 256000,
+            "content_type": "video/mp4",
+            "url": "https://video.twimg.com/amplify_video/2112814220194828288/vid/avc1/480x270/nwrAjHxtQkoavmC2.mp4"
+          },
+          {
+            "bitrate": 832000,
+            "content_type": "video/mp4",
+            "url": "https://video.twimg.com/amplify_video/2112814220194828288/vid/avc1/640x360/Bw0OLM1J4ooT5tBF.mp4"
+          },
+          {
+            "bitrate": 2176000,
+            "content_type": "video/mp4",
+            "url": "https://video.twimg.com/amplify_video/2112814220194828288/vid/avc1/1280x720/qQFeTMrcQITPE76L.mp4"
+          },
+          {
+            "bitrate": 10368000,
+            "content_type": "video/mp4",
+            "url": "https://video.twimg.com/amplify_video/2112814220194828288/vid/avc1/1920x1080/dphHVlNFst1G9RW0.mp4"
+          }
+        ]
+      }
+    }
+  ]
+}
