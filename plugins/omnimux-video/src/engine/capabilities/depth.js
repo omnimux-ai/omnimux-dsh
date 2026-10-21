@@ -28,7 +28,129 @@ export const DEPTH_PYTHON_CANDIDATES = [
   'python3',
 ]
 
+/** uv-managed fallback: the desktop app ships uv, so users need no Python install. */
+export const UV_DEPTH_PYTHON_VERSION = '3.11'
+// Pin opencv to a version with published macOS/Windows/Linux wheels: newer 5.x
+// releases fall back to a source build (cmake) and blow the first-run budget.
+export const UV_DEPTH_PACKAGES = ['numpy', 'opencv-python-headless==4.10.0.84', 'onnxruntime']
+export const UV_BIN_ENV_KEYS = ['OMNIMUX_UV_PATH', 'UV_PATH']
+
 const depthPythonCache = new Map()
+const depthUvCache = { checked: false, bin: null }
+
+/** Test/verification helper: forget the probed uv binary. */
+export function clearUvCache() {
+  depthUvCache.checked = false
+  depthUvCache.bin = null
+}
+
+/** Explicit uv path env wins, otherwise rely on PATH lookup. */
+export function resolveUvCandidates() {
+  const candidates = []
+  for (const key of UV_BIN_ENV_KEYS) {
+    const value = String(process.env[key] || '').trim()
+    if (value && !candidates.includes(value)) candidates.push(value)
+  }
+  if (!candidates.includes('uv')) candidates.push('uv')
+  return candidates
+}
+
+/** `uv run --with ... python depth_engine.py <engine args>` */
+export function buildUvDepthArgs({ scriptPath, input, inputPath, outputPath, modelsDir }) {
+  const engineArgs = buildDepthCliArgs(input, {
+    scriptPath,
+    inputPath,
+    outputPath,
+    modelsDir,
+  }).slice(1)
+  const withArgs = []
+  for (const pkg of UV_DEPTH_PACKAGES) withArgs.push('--with', pkg)
+  return [
+    'run',
+    '--no-project',
+    '--python',
+    UV_DEPTH_PYTHON_VERSION,
+    ...withArgs,
+    'python',
+    scriptPath,
+    ...engineArgs,
+  ]
+}
+
+/**
+ * Probe for a usable uv binary. Returns null when neither the configured env
+ * path nor PATH has a working uv (caller then reports the Python error).
+ */
+export async function probeUv({ signal, procs, runProbe } = {}) {
+  if (depthUvCache.checked) return depthUvCache.bin
+  depthUvCache.checked = true
+  let lastError = null
+  for (const bin of resolveUvCandidates()) {
+    try {
+      if (typeof runProbe === 'function') {
+        await runProbe(bin, ['--version'])
+      } else {
+        await runControlled({
+          cmd: bin,
+          args: ['--version'],
+          timeoutMs: 15_000,
+          signal,
+          procs,
+          failCode: 'uv-missing',
+          cancelCode: 'video-canceled',
+          timeoutCode: 'video-timeout',
+        })
+      }
+      depthUvCache.bin = bin
+      return bin
+    } catch (error) {
+      if (error instanceof VideoError && error.code === 'video-canceled') throw error
+      lastError = error
+    }
+  }
+  depthUvCache.bin = null
+  return null
+}
+
+/**
+ * Resolve how to run the depth engine:
+ * explicit python config → system python discovery → uv-managed python.
+ * Explicit config never falls through to uv (fail loud on the configured value).
+ */
+export async function resolveDepthRuntime({
+  configured = '',
+  signal,
+  procs,
+  runProbe,
+  runUvProbe,
+  useUv = true,
+} = {}) {
+  const explicit = String(configured || '').trim()
+  if (explicit) {
+    const bin = await selectDepthPython({ configured: explicit, signal, procs, runProbe })
+    return { kind: 'python', bin }
+  }
+
+  let pythonError = null
+  try {
+    const bin = await selectDepthPython({ configured: '', signal, procs, runProbe })
+    return { kind: 'python', bin }
+  } catch (error) {
+    if (
+      error instanceof VideoError &&
+      (error.code === 'video-canceled' || error.code === 'video-timeout')
+    ) {
+      throw error
+    }
+    pythonError = error
+  }
+
+  if (useUv) {
+    const uv = await probeUv({ signal, procs, runProbe: runUvProbe })
+    if (uv) return { kind: 'uv', bin: uv }
+  }
+  throw pythonError
+}
 
 /** Test/verification helper: forget which interpreter auto-discovery picked. */
 export function clearDepthPythonCache() {
@@ -42,7 +164,7 @@ export function resolveDepthPythonCandidates(configured = '') {
 }
 
 const DEPTH_DEPS_HINT =
-  'Install them with `pip install onnxruntime opencv-python`, or point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them.'
+  'Install them with `pip install onnxruntime opencv-python`, point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them, or make uv available (OMNIMUX_UV_PATH / UV_PATH) so the plugin can provision them itself.'
 
 /** `import a; import b` probe so missing deps fail before any model work starts. */
 export function buildDepthRuntimeCheckCode(modules = DEPTH_PYTHON_MODULES) {
@@ -181,11 +303,13 @@ export async function selectDepthPython({
   }
 
   const tried = candidates.join(' / ')
+  const explicitHint = 'Fix or clear Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH so the plugin can use a discovered interpreter or the uv fallback.'
+  const hint = explicit ? explicitHint : DEPTH_DEPS_HINT
   const reason = explicit
     ? `video_depth configured python '${explicit}' cannot run the depth engine (${DEPTH_PYTHON_MODULES.join(', ')})`
     : `video_depth found no Python interpreter with ${DEPTH_PYTHON_MODULES.join(', ')}; tried: ${tried}`
-  throw new VideoError('video-depth-deps-missing', `${reason}. ${DEPTH_DEPS_HINT}`, {
-    hint: DEPTH_DEPS_HINT,
+  throw new VideoError('video-depth-deps-missing', `${reason}. ${hint}`, {
+    hint,
     tried: candidates,
     stderrTail: failures[0]?.detail || '',
   })
@@ -334,7 +458,9 @@ function parseProbeStdout(probeRes) {
  *   runFfmpeg: (args: string[]) => Promise<unknown>,
  *   runFprobe: (args: string[]) => Promise<{ stdout: string, stderr: string } | string>,
  *   runPython?: (args: string[], opts?: object) => Promise<unknown>,
+ *   runUv?: (args: string[], opts?: object) => Promise<unknown>,
  *   runDepthRuntimeProbe?: (pythonBin: string, args: string[]) => Promise<unknown>,
+ *   runUvProbe?: (uvBin: string, args: string[]) => Promise<unknown>,
  * }} ctx
  */
 export async function execute(input, ctx) {
@@ -353,15 +479,16 @@ export async function execute(input, ctx) {
     process.env.DSH_VIDEO_MODELS_DIR ||
     ''
 
-  // Dependency gate before any encode: pick an interpreter that can import
-  // numpy/cv2/onnxruntime (explicit config wins; otherwise discover by version)
-  // so a usable local Python is not misreported as missing.
-  const pythonBin = await selectDepthPython({
+  // Dependency gate before any encode: explicit python config wins, then any
+  // local python with numpy/cv2/onnxruntime, then uv-managed python (the
+  // desktop app ships uv, so no user-installed Python is required).
+  const runtime = await resolveDepthRuntime({
     configured: configuredPython,
     signal: ctx.signal,
     procs: ctx.procs,
     runProbe: ctx.runDepthRuntimeProbe,
-    useCache: ctx.depthPythonUseCache !== false,
+    runUvProbe: ctx.runUvProbe,
+    useUv: ctx.depthUseUv !== false,
   })
 
   const videoPath = await ctx.materialize(input.videoUrl, 'depth_src')
@@ -401,11 +528,33 @@ export async function execute(input, ctx) {
     modelsDir,
   })
 
-  if (typeof ctx.runPython === 'function') {
+  if (runtime.kind === 'uv') {
+    const uvArgs = buildUvDepthArgs({
+      scriptPath,
+      input,
+      inputPath: videoPath,
+      outputPath: tmpDepth,
+      modelsDir,
+    })
+    if (typeof ctx.runUv === 'function') {
+      await ctx.runUv(uvArgs, { timeoutMs })
+    } else {
+      await runControlled({
+        cmd: runtime.bin,
+        args: uvArgs,
+        timeoutMs,
+        signal: ctx.signal,
+        procs: ctx.procs,
+        failCode: 'video-depth-failed',
+        cancelCode: 'video-canceled',
+        timeoutCode: 'video-timeout',
+      })
+    }
+  } else if (typeof ctx.runPython === 'function') {
     await ctx.runPython(pyArgs, { timeoutMs })
   } else {
     await runControlled({
-      cmd: pythonBin,
+      cmd: runtime.bin,
       args: pyArgs,
       timeoutMs,
       signal: ctx.signal,
@@ -438,8 +587,10 @@ export async function execute(input, ctx) {
       model: 'depth-anything-v2-small',
       convention: input.invert ? 'near=black, far=white' : 'near=white, far=black',
       audioPreserved: keepAudio,
-      // Which interpreter discovery actually used (useful for support/evidence).
-      python: pythonBin,
+      // Which runtime selection actually used (useful for support/evidence).
+      python: runtime.kind === 'uv'
+        ? `uv (managed python ${UV_DEPTH_PYTHON_VERSION})`
+        : runtime.bin,
     },
   }
 }

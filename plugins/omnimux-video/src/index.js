@@ -52,7 +52,7 @@ const PROCESS_DESCRIPTION =
 const DEPTH_DESCRIPTION =
   'Generate a grayscale monocular depth-map video (Depth Anything V2 Small ONNX). ' +
   'Default convention: near=white, far=black. Optional invert / side-by-side preview. Keeps original audio by default. ' +
-  'Uses local onnxruntime (CoreML/CUDA/CPU); auto-discovers a python3.x that can import numpy/cv2/onnxruntime (explicit Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH wins, no silent fallback), and fails fast with `video-depth-deps-missing` plus an install hint when none works. ' +
+  'Uses local onnxruntime (CoreML/CUDA/CPU); picks an explicit python config, then any local python3.x that can import numpy/cv2/onnxruntime, then a uv-managed python (the desktop app ships uv, so no user-installed Python is required). Explicit config never falls back. Fails fast with `video-depth-deps-missing` plus an install/uv hint when none works. ' +
   'Not a style-transfer / anime stylize tool.'
 
 const ANALYZE_DESCRIPTION =

@@ -1,0 +1,8 @@
+{
+  "ok": false,
+  "mode": "uv-missing",
+  "path": "/tmp/uvdepth/bin-no-uv:/usr/bin:/bin",
+  "code": "video-depth-deps-missing",
+  "message": "video_depth found no Python interpreter with numpy, cv2, onnxruntime; tried: python3.16 / python3.15 / python3.14 / python3.13 / python3.12 / python3.11 / python3.10 / python3. Install them with `pip install onnxruntime opencv-python`, point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them, or make uv available (OMNIMUX_UV_PATH / UV_PATH) so the plugin can provision them itself.",
+  "hint": "Install them with `pip install onnxruntime opencv-python`, point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them, or make uv available (OMNIMUX_UV_PATH / UV_PATH) so the plugin can provision them itself."
+}
