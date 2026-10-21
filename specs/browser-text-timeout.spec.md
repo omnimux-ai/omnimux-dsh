@@ -18,3 +18,16 @@
 ## 4. 边界
 
 R1；不改 provider adapter、模型目录或用户配置。
+
+## 假设
+
+根因假设：DeepSeek 默认 max 推理的一次性补全耗时超过 bridge 25s 截止；把截止放宽到 90s 并显式传 reasoningEffort=off 后，同一调用可以在 90s 内返回正文。如果仍超时，则说明 llm.stream 的 provider 路由本身不可用，应改走聊天会话模型。
+
+## 证伪方式
+
+合入并物化 Dev 后，用 bridge 探针执行：
+
+`node /tmp/bridge-probe2.mjs`
+
+若 90s 内返回 `ok:false`（包括再次 `Text completion timed out`）而不是 `ok:true` 正文，即证明「放宽截止 + reasoning off 可修复」的假设错误，应改走聊天会话模型；若返回 `ok:true` 则假设成立。
+

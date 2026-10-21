@@ -121,7 +121,7 @@ function requestCompletion(prompt: OpinionPrompt): Promise<OpinionResult> {
  */
 export async function generateOpinionResult(
   input: OpinionInput,
-  timeoutMs = 20_000,
+  timeoutMs = 95_000,
 ): Promise<OpinionResult> {
   if (String(input.text || '').trim() === '') return { text: '', error: '原帖没有正文' }
 
@@ -140,6 +140,6 @@ export async function generateOpinionResult(
 }
 
 /** Backwards-compatible wrapper: text only. */
-export async function generateOpinion(input: OpinionInput, timeoutMs = 20_000): Promise<string> {
+export async function generateOpinion(input: OpinionInput, timeoutMs = 95_000): Promise<string> {
   return (await generateOpinionResult(input, timeoutMs)).text
 }
