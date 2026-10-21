@@ -1,17 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PRESET_REFERENCE_ASSETS, REFERENCE_TABS } from './reference-constants.js';
 import { readDuration } from './MediaSlotGroup.jsx';
+import { assetForSlot, mapArtifactAsset, mapCloudAsset, mapLocalAsset, mapProductAsset } from './picker-asset-mime.js';
 import {
   ensureReferenceTab,
   peekReferenceTab,
   subscribeReferenceAssets,
 } from './reference-asset-cache.js';
 
-function normalizeMediaType(type) {
-  if (type === 'video') return 'video';
-  if (type === 'audio') return 'audio';
-  return 'image';
-}
 
 /** 首次加载骨架卡数量：铺满两行可视格 */
 const SKELETON_COUNT = 8;
@@ -98,21 +94,7 @@ export function ReferencePickerPopover({
         const res = await fetch('/omnimux/assets/state');
         if (res.ok) {
           const data = await res.json();
-          const items = (data.assets || []).map((a) => {
-            const coverFile = a.cover?.id ? a.cover : (a.files && a.files[0]);
-            const coverUrl = coverFile?.id
-              ? `/omnimux/assets/library/preview?id=${encodeURIComponent(a.id)}&file=${encodeURIComponent(coverFile.id)}`
-              : '';
-            return {
-              id: a.id,
-              title: a.name || a.handle || a.id,
-              name: a.name || a.handle || a.id,
-              url: coverUrl,
-              type: normalizeMediaType(a.type),
-              isMine: true,
-              raw: a,
-            };
-          }).filter((item) => item.url);
+          const items = (data.assets || []).map(mapLocalAsset).filter((item) => item.url);
           return items;
         }
         return null;
@@ -121,18 +103,7 @@ export function ReferencePickerPopover({
         const res = await fetch('/omnimux/assets/cloud/search?q=&limit=24');
         if (res.ok) {
           const data = await res.json();
-          const items = (data.items || []).map((c) => {
-            const coverUrl = c.meta?.source_cover_url || `/omnimux/assets/cloud/media?id=${encodeURIComponent(c.id)}&which=cover`;
-            return {
-              id: c.id,
-              title: c.name || c.id,
-              name: c.name || c.id,
-              url: coverUrl,
-              type: normalizeMediaType(c.media_type),
-              isMine: false,
-              raw: c,
-            };
-          }).filter((item) => item.url);
+          const items = (data.items || []).map(mapCloudAsset).filter((item) => item.url);
           return items;
         }
         return null;
@@ -141,21 +112,7 @@ export function ReferencePickerPopover({
         const res = await fetch('/omnimux/products/state');
         if (res.ok) {
           const data = await res.json();
-          const items = (data.products || []).map((p) => {
-            const coverMediaId = p.cover_media_id || p.cover?.id;
-            const coverUrl = coverMediaId
-              ? `/omnimux/products/${encodeURIComponent(p.id)}?preview=${encodeURIComponent(coverMediaId)}`
-              : '';
-            return {
-              id: p.id,
-              title: p.name || p.id,
-              name: p.name || p.id,
-              url: coverUrl,
-              type: 'image',
-              isMine: true,
-              raw: p,
-            };
-          }).filter((item) => item.url);
+          const items = (data.products || []).map(mapProductAsset).filter((item) => item.url);
           return items;
         }
         return null;
@@ -164,18 +121,7 @@ export function ReferencePickerPopover({
         const res = await fetch('/omnimux/assets/artifacts');
         if (res.ok) {
           const data = await res.json();
-          const items = (data.artifacts || []).map((art) => {
-            const coverUrl = `/omnimux/assets/artifacts/preview?id=${encodeURIComponent(art.id)}`;
-            return {
-              id: art.id,
-              title: art.title || art.id,
-              name: art.title || art.id,
-              url: coverUrl,
-              type: normalizeMediaType(art.type),
-              isMine: true,
-              raw: art,
-            };
-          }).filter((item) => item.url);
+          const items = (data.artifacts || []).map(mapArtifactAsset).filter((item) => item.url);
           return items;
         }
         return null;
@@ -274,7 +220,8 @@ export function ReferencePickerPopover({
     if (selectingRef.current) return;
     selectingRef.current = true;
     try {
-      const result = onSelectAsset ? onSelectAsset(asset, targetSlot) : false;
+      const selected = assetForSlot(asset, targetSlot?.type);
+      const result = onSelectAsset ? onSelectAsset(selected, targetSlot) : false;
       const accepted = result instanceof Promise ? await result : result;
       if (accepted === true) {
         onClose?.();
@@ -385,7 +332,7 @@ export function ReferencePickerPopover({
                   }
                 }}
               >
-                <ReferenceAssetThumb url={asset.url} square={isSquareRatio} />
+                <ReferenceAssetThumb url={asset.thumbUrl || asset.url} square={isSquareRatio} />
               </div>
             ))}
 

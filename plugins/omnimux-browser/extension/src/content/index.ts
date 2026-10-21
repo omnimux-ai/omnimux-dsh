@@ -14,6 +14,7 @@ import { DEFAULT_SNAPSHOT_MAX_CHARS } from 'omnimux-browser/src/protocol.ts'
 import { runAction, ActionError } from './actions.ts'
 import { capturePost } from './capture/index.ts'
 import type { CapturedPost } from './capture/index.ts'
+import { captureAccount, mergeAccountSnapshots } from './capture/account.ts'
 import { planRelayChunks } from '../shared/media-relay.ts'
 import { ElementIds } from './ids.ts'
 import { SelectionWatcher } from './selection.ts'
@@ -282,3 +283,140 @@ import('./surfaces/media-trigger.ts').then(({ initMediaTrigger, MEDIA_TRIGGER_HO
 import('./tiktok-scene/index.ts').then(({ initTiktokScene }) => {
   initTiktokScene()
 }).catch(() => {})
+
+// ---- 手动「更新这个账号」（#3556） ----
+//
+// 客户端在默认浏览器里打开带 #omnimux-refresh=<token> 的账号主页；本脚本识别
+// token，采集 profile + 首屏作品回写 host，成功后请求关闭这个标签页。
+// 失败时保留标签页并显示原因，绝不假装成功。
+
+const ACCOUNT_REFRESH_HASH_RE = /#omnimux-refresh=([a-f0-9]{32})/
+const ACCOUNT_REFRESH_SCROLL_TIMES = 5
+const ACCOUNT_REFRESH_POST_TARGET = 24
+
+function accountRefreshStrings(): Record<string, string> {
+  const zh = (navigator.language || '').toLowerCase().startsWith('zh')
+  return zh
+    ? {
+        working: 'OmniMux 正在更新这个账号…',
+        done: 'OmniMux 已更新',
+        posts: '条新作品',
+        failed: '更新失败：',
+        noPlugin: '未连接 OmniMux',
+      }
+    : {
+        working: 'OmniMux is updating this account…',
+        done: 'OmniMux updated',
+        posts: 'new posts',
+        failed: 'Update failed: ',
+        noPlugin: 'OmniMux is not connected',
+      }
+}
+
+function accountRefreshOverlay(): { setText: (text: string) => void, remove: () => void } {
+  const host = document.createElement('div')
+  host.id = 'omnimux-account-refresh'
+  host.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:2147483647;pointer-events:none;'
+  const shadow = host.attachShadow({ mode: 'closed' })
+  const box = document.createElement('div')
+  box.style.cssText = 'font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff;background:rgba(17,17,19,.92);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 16px;box-shadow:0 8px 24px rgba(0,0,0,.28);max-width:80vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+  shadow.appendChild(box)
+  document.documentElement.appendChild(host)
+  return {
+    setText: (text: string) => { box.textContent = text },
+    remove: () => host.remove(),
+  }
+}
+
+function sendAccountRefresh(type: string, payload: Record<string, unknown>): Promise<any> {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage({ type, payload }, (response) => {
+        if (chrome.runtime?.lastError || !response) resolve({ ok: false, error: 'extension-unavailable' })
+        else resolve(response)
+      })
+    } catch {
+      resolve({ ok: false, error: 'extension-unavailable' })
+    }
+  })
+}
+
+function isAccountProfilePath(hostname: string, pathname: string): boolean {
+  if (hostname === 'tiktok.com' || hostname.endsWith('.tiktok.com')) {
+    return /^\/@[^/]+\/?$/.test(pathname)
+  }
+  if (hostname === 'x.com' || hostname.endsWith('.x.com') || hostname === 'twitter.com' || hostname.endsWith('.twitter.com')) {
+    if (/^\/(?:home|explore|search|notifications|messages|i|settings|login|signup|logout|compose)\b/.test(pathname)) return false
+    return /^\/[A-Za-z0-9_]+\/?$/.test(pathname)
+  }
+  return false
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function waitForAccountCapture(href: string): Promise<ReturnType<typeof captureAccount>> {
+  for (let attempt = 0; attempt < 15; attempt += 1) {
+    if (document.readyState === 'complete') {
+      const captured = captureAccount(document, href)
+      if (captured.ok) return captured
+    }
+    await sleep(800)
+  }
+  return captureAccount(document, href)
+}
+
+async function runAccountRefresh(token: string): Promise<void> {
+  const strings = accountRefreshStrings()
+  const overlay = accountRefreshOverlay()
+  overlay.setText(strings.working)
+  const href = location.href
+  const first = await waitForAccountCapture(href)
+  if (!first.ok) {
+    overlay.setText(strings.failed + first.reason)
+    await sleep(6000)
+    overlay.remove()
+    return
+  }
+  let account = first.account
+  const claim = await sendAccountRefresh('ACCOUNT_REFRESH_CLAIM', {
+    token,
+    pageUrl: href,
+    handle: account.handle,
+  })
+  if (claim?.ok !== true) {
+    overlay.setText(strings.failed + String(claim?.error || 'claim-rejected'))
+    await sleep(6000)
+    overlay.remove()
+    return
+  }
+  // Accumulate across limited scrolling: X virtualizes its list, so each pass is merged.
+  for (let pass = 0; pass < ACCOUNT_REFRESH_SCROLL_TIMES; pass += 1) {
+    if (account.posts.length >= ACCOUNT_REFRESH_POST_TARGET) break
+    const before = account.posts.length
+    window.scrollTo(0, document.documentElement.scrollHeight)
+    await sleep(1400)
+    const next = captureAccount(document, href)
+    if (!next.ok) continue
+    account = mergeAccountSnapshots(account, next.account)
+    if (account.posts.length === before) break
+  }
+  const completed = await sendAccountRefresh('ACCOUNT_REFRESH_COMPLETE', { token, account })
+  if (completed?.ok !== true) {
+    overlay.setText(strings.failed + String(completed?.error || 'complete-rejected'))
+    await sleep(6000)
+    overlay.remove()
+    return
+  }
+  const newPosts = completed?.data?.new_posts
+  overlay.setText(`${strings.done} @${account.handle}${typeof newPosts === 'number' ? ` · ${newPosts} ${strings.posts}` : ''}`)
+  await sleep(1200)
+  await sendAccountRefresh('ACCOUNT_REFRESH_CLOSE_TAB', { token })
+}
+
+if (window.top === window && globalThis.__omnimuxAccountRefreshStarted !== true) {
+  const match = ACCOUNT_REFRESH_HASH_RE.exec(location.hash)
+  if (match !== null && isAccountProfilePath(location.hostname, location.pathname)) {
+    (globalThis as typeof globalThis & { __omnimuxAccountRefreshStarted?: boolean }).__omnimuxAccountRefreshStarted = true
+    void runAccountRefresh(match[1])
+  }
+}
