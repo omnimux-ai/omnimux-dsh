@@ -326,9 +326,11 @@ describe('lit page media becomes a real attachment', () => {
   })
 
   it('AC-9: the extension page policy still names no outbound host of its own', async () => {
-    // The bridge carries the bytes, so the panel's CSP must stay as it was:
-    // loopback plus the repository's single allowlisted host, and no scheme-wide
-    // escape hatch that would let this page dial anyone.
+    // The bridge carries the bytes, so the panel's CSP has no general outbound
+    // reach: loopback plus the two explicitly reviewed hosts, and no scheme-wide
+    // escape hatch that would let this page dial anyone. The second host is
+    // `cdn.syndication.twimg.com` (#3592): the worker needs it to read the public
+    // X video variant list; it is a single named origin, not a wildcard.
     const manifest = await import('../manifest.json').then((module) => module.default) as {
       content_security_policy: { extension_pages: string }
     }
@@ -338,6 +340,7 @@ describe('lit page media becomes a real attachment', () => {
       'ws://127.0.0.1:*',
       'http://127.0.0.1:*',
       'https://raw.githubusercontent.com',
+      'https://cdn.syndication.twimg.com',
     ])
   })
 

@@ -96,6 +96,13 @@ describe('auto-qa-scan：R1 base64 承载的凭据', () => {
 })
 
 describe('auto-qa-scan：R2 扩展联网出口白名单', () => {
+  it('放行 X 视频 variant JSON 的公开主机（#3592）', () => {
+    const text = manifestWith({
+      extension_pages: "script-src 'self'; object-src 'self'; connect-src ws://127.0.0.1:* https://raw.githubusercontent.com https://cdn.syndication.twimg.com",
+    })
+    assert.deepEqual(securityViolations(CHROME_MANIFEST, text), [])
+  })
+
   it('命中 manifest 里放行的外部模型主机（字符串形式 connect-src）', () => {
     const text = manifestWith({
       extension_pages: "script-src 'self'; object-src 'self'; connect-src ws://127.0.0.1:* https://api.deepseek.com https://api.apikey.fun",
