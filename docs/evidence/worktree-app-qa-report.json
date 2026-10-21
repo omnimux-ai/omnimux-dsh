@@ -1,54 +1,38 @@
 {
-  "runId": "df128ddd-d3fe-4a04-b762-9d3f1c433e32",
+  "runId": "67c6643a-569c-4f5e-ba1b-3f8a5698a5fb",
   "mode": "ui",
-  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/canvas-upstream-reason",
-  "origin": "http://127.0.0.1:49361",
-  "appPort": 49361,
-  "cdpPort": 49364,
-  "startedAt": "2026-10-07T04:40:10.230Z",
-  "completedAt": "2026-10-07T04:40:46.869Z",
-  "pass": true,
+  "root": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-depth-python-issue-3574",
+  "origin": "http://127.0.0.1:55401",
+  "appPort": 55401,
+  "cdpPort": 55410,
+  "startedAt": "2026-10-21T08:59:19.429Z",
+  "completedAt": "2026-10-21T08:59:46.625Z",
+  "pass": false,
+  "scope": "smoke",
+  "producer": "controlled-runner",
+  "contract": "none",
+  "taskBinding": "unknown",
+  "userFresh": "unknown",
+  "inputClosure": "unknown",
   "summary": {
     "mode": "ui",
-    "origin": "http://127.0.0.1:49361",
     "evidenceLevel": "full",
     "taskPluginsInstalled": true,
-    "taskPluginsCount": 22,
-    "seededDataDomains": [
-      "assets",
-      "assets-storage",
-      "avatar",
-      "clip",
-      "form-attachments",
-      "forms",
-      "inspirations",
-      "media-tasks",
-      "products",
-      "publish",
-      "recipes",
-      "workflow"
-    ],
     "realModelRequest": false,
-    "modelConfiguration": "QA模拟",
     "seededWorkspace": "ws_qa_media"
   },
   "assertions": [
     {
       "name": "app-runtime-ready",
-      "pass": true,
-      "origin": "http://127.0.0.1:49361",
-      "evidenceLevel": "full"
+      "pass": true
     },
     {
       "name": "same-origin-login",
-      "pass": true,
-      "status": 303,
-      "cookieName": "dsh-auth-QZ4LxbfqkyUsPHm1nTI5euwfzBxRB2n97MSFB8A71UE"
+      "pass": true
     },
     {
       "name": "chrome-cdp-listen",
-      "pass": true,
-      "port": 49364
+      "pass": true
     },
     {
       "name": "auth-cookie-applied",
@@ -56,29 +40,11 @@
     },
     {
       "name": "app-dom-mounted",
-      "pass": true,
-      "geometry": {
-        "visibleCount": 10,
-        "largest": {
-          "width": 1280,
-          "height": 713,
-          "tag": "DIV"
-        },
-        "vw": 1280,
-        "vh": 713,
-        "title": "OmniMux",
-        "bodyTextLength": 24
-      }
+      "pass": true
     },
     {
       "name": "visible-geometry-positive",
-      "pass": true,
-      "largest": {
-        "width": 1280,
-        "height": 713,
-        "tag": "DIV"
-      },
-      "visibleCount": 10
+      "pass": true
     },
     {
       "name": "runtime-modal-bypassed",
@@ -86,239 +52,148 @@
     },
     {
       "name": "blank-session-guide-visible",
-      "pass": true,
-      "clickedNewSession": false
+      "pass": true
     },
     {
       "name": "explore-section-visible",
-      "pass": true,
-      "cardCount": 40
+      "pass": true
     },
     {
       "name": "explore-cards-present",
-      "pass": true,
-      "cardCount": 40
+      "pass": true
     },
     {
       "name": "asset-hub-reachable-via-library",
-      "pass": true,
-      "openedMenu": true,
-      "clickedLibrary": true,
-      "usedWorkbenchFallback": true
+      "pass": true
     },
     {
-      "name": "journey:canvas-mount-api-present",
-      "pass": true,
-      "detail": {
-        "present": true,
-        "loadIsland": {
-          "ok": true,
-          "already": false,
-          "src": "/omnimux-workflow/canvas.js?v=9fd79edb2d8dfd98",
-          "hasApi": true
-        }
-      }
+      "name": "journey:builtin-app-entry-present-in-real-ui",
+      "pass": false
     },
     {
-      "name": "journey:workspace-seed-accepted",
-      "pass": true,
-      "detail": {
-        "getStatus": 200,
-        "postStatus": 200,
-        "postBody": "{\"workspace\":{\"schemaVersion\":3,\"id\":\"ws_qa_media\",\"name\":\"QA Media\",\"version\":0,\"nodes\":[],\"edges\":[],\"settings\":{\"maxParallel\":3,\"failStrategy\":\"fail-fast\"},\"metadata\":{\"createdAt\":\"2026-10-07T04:40:33.564Z\",\"updatedAt\":\"2026-10-07T04:40:33.564Z\",\"nodeCount\":0}}}",
-        "snapshotKeys": [
-          "schemaVersion",
-          "id",
-          "name",
-          "version",
-          "nodes",
-          "edges",
-          "settings",
-          "metadata"
-        ],
-        "version": 0,
-        "existingNodes": 0,
-        "existingEdges": 0,
-        "schemaVersion": 3,
-        "putStatus": 200,
-        "putBody": "{\"workspace\":{\"schemaVersion\":3,\"id\":\"ws_qa_media\",\"name\":\"QA Media\",\"version\":1,\"nodes\":[{\"id\":\"node_qa_upstream_1\",\"type\":\"material\",\"position\":{\"x\":160,\"y\":160},\"data\":{\"label\":\"QA 视频素材\",\"materialType\":\"video\",\"status\":\"completed\",\"selectedTool\":\"import\",\"nodeKind\":\"import\",\"params\":{},\"failStrategy\":\"abort\",\"inputBindingVersion\":1,\"slotBindings\":{},\"relativePath\":\"assets/imported/fixture-video"
-      }
+      "name": "journey:explore-entry-clicked",
+      "pass": true
     },
     {
-      "name": "journey:canvas-island-mounted",
-      "pass": true,
-      "detail": {
-        "ok": true
-      }
+      "name": "journey:ai-apps-panel-clicked",
+      "pass": true
     },
     {
-      "name": "journey:canvas-root-rendered",
-      "pass": true,
-      "detail": {
-        "ready": true
-      }
+      "name": "journey:ai-apps-panel-renders-first-level-apps",
+      "pass": false
     },
     {
-      "name": "journey:A1-attribution-row-present",
-      "pass": true,
-      "detail": {
-        "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input重新生成",
-        "cardHeight": 195.75,
-        "cardWidth": 348,
-        "upstreamPresent": true,
-        "upstreamText": "该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input",
-        "reasonText": "该渠道不支持此素材类型，请更换渠道后重试。",
-        "detailText": "tool model only accepts text and image input",
-        "detailTitle": "tool model only accepts text and image input",
-        "detailWhiteSpace": "nowrap",
-        "detailTextOverflow": "ellipsis",
-        "detailOverflow": "hidden",
-        "detailScrollWidth": 247,
-        "detailClientWidth": 247,
-        "detailClientHeight": 17,
-        "detailLineHeight": "16.5px",
-        "detailOffsetTop": 345.88,
-        "cardHasMachineCode": false
-      }
-    },
-    {
-      "name": "journey:A1-chinese-conclusion",
-      "pass": true,
-      "detail": {
-        "reasonText": "该渠道不支持此素材类型，请更换渠道后重试。"
-      }
-    },
-    {
-      "name": "journey:A1-technical-detail-verbatim",
-      "pass": true,
-      "detail": {
-        "detailText": "tool model only accepts text and image input"
-      }
-    },
-    {
-      "name": "journey:A1-interceptor-hit",
-      "pass": true,
-      "detail": {
-        "hits": 1,
-        "urls": [
-          "/omnimux-workflow/api/workspaces/ws_qa_media/storyboard-video"
-        ]
-      }
-    },
-    {
-      "name": "journey:A6-machine-code-absent",
-      "pass": true,
-      "detail": {
-        "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试该渠道不支持此素材类型，请更换渠道后重试。tool model only accepts text and image input重新生成"
-      }
-    },
-    {
-      "name": "journey:A6-machine-code-absent-in-document",
-      "pass": true,
-      "detail": {}
-    },
-    {
-      "name": "journey:A3-no-attribution-row",
-      "pass": true,
-      "detail": {
-        "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试重新生成",
-        "cardHeight": 195.75,
-        "cardWidth": 348,
-        "upstreamPresent": false,
-        "upstreamText": null,
-        "reasonText": null,
-        "detailText": null,
-        "detailTitle": null,
-        "detailWhiteSpace": null,
-        "detailTextOverflow": null,
-        "detailOverflow": null,
-        "detailScrollWidth": null,
-        "detailClientWidth": null,
-        "detailClientHeight": null,
-        "detailLineHeight": null,
-        "detailOffsetTop": null,
-        "cardHasMachineCode": false
-      }
-    },
-    {
-      "name": "journey:A3-failure-card-still-rendered",
-      "pass": true,
-      "detail": {
-        "cardText": "生成失败视频文件不满足理解要求（格式、大小或路径），请更换视频后重试重新生成"
-      }
-    },
-    {
-      "name": "journey:A5-long-detail-rendered",
-      "pass": true,
-      "detail": {
-        "detailLength": 200
-      }
-    },
-    {
-      "name": "journey:A5-single-line-ellipsis",
-      "pass": true,
-      "detail": {
-        "whiteSpace": "nowrap",
-        "textOverflow": "ellipsis"
-      }
-    },
-    {
-      "name": "journey:A5-text-actually-clipped",
-      "pass": true,
-      "detail": {
-        "scrollWidth": 1137,
-        "clientWidth": 316
-      }
-    },
-    {
-      "name": "journey:A5-single-line-height",
-      "pass": true,
-      "detail": {
-        "clientHeight": 17,
-        "lineHeight": "16.5px"
-      }
-    },
-    {
-      "name": "journey:A5-card-height-equal-A1",
-      "pass": true,
-      "detail": {
-        "a1Height": 195.75,
-        "a5Height": 195.75,
-        "delta": 0
-      }
-    },
-    {
-      "name": "journey:A5-full-text-in-title",
-      "pass": true,
-      "detail": {
-        "titleLength": 200
-      }
+      "name": "journey:builtin-app-not-in-first-level-app-menu",
+      "pass": true
     },
     {
       "name": "screenshot-png-verified",
-      "pass": true,
-      "dimensions": {
-        "width": 1280,
-        "height": 713
-      },
-      "bytes": 59038
+      "pass": true
     }
   ],
   "screenshot": {
-    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/canvas-upstream-reason/.workbuddy/evidence/app-qa/df128ddd-d3fe-4a04-b762-9d3f1c433e32/app-home.png",
+    "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/video-depth-python-issue-3574/.workbuddy/evidence/app-qa/67c6643a-569c-4f5e-ba1b-3f8a5698a5fb/app-home.png",
     "width": 1280,
-    "height": 713,
-    "bytes": 59038
+    "height": 657,
+    "bytes": 341676
   },
   "errors": [],
   "cleanup": {
-    "cleaned": true
+    "cleaned": true,
+    "resources": [
+      {
+        "name": "app-child",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "mock-server",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "app-private-directory",
+        "owner": "app-environment",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-child",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "cdp-transport",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      },
+      {
+        "name": "browser-private-directory",
+        "owner": "app-browser",
+        "status": "completed",
+        "reason": null
+      }
+    ]
   },
+  "observations": {
+    "rawOutputRetained": false,
+    "appEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 45707,
+        "parentPid": 45600
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ],
+    "browserEvents": [
+      {
+        "event": "spawn",
+        "code": null,
+        "signal": null,
+        "pid": 45776,
+        "parentPid": 45600
+      },
+      {
+        "event": "exit",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      },
+      {
+        "event": "close",
+        "code": 0,
+        "signal": null,
+        "pid": null,
+        "parentPid": null
+      }
+    ]
+  },
+  "beforeCaptureMs": 0,
   "hubPath": {
-    "guideVisibleBefore": true,
     "clickedNewSession": false,
     "exploreVisible": true,
-    "exploreCardCount": 40,
-    "assetHubOpened": true
+    "assetHubOpened": true,
+    "librarySelected": true,
+    "workbenchRequestAccepted": true
   }
 }

@@ -44,7 +44,7 @@ test('E2E 解释器发现：候选链版本优先，显式配置优先且不回�
     .split(',')
     .map((item) => item.trim().replace(/^'|'$/g, ''))
     .filter(Boolean);
-  assert.deepEqual(candidates, ['python3.14', 'python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3']);
+  assert.deepEqual(candidates, ['python3.16', 'python3.15', 'python3.14', 'python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3']);
 
   assert.match(depthSrc, /explicit \? \[explicit\] : DEPTH_PYTHON_CANDIDATES\.slice\(\)/, '显式配置只能作为唯一候选');
   assert.match(depthSrc, /selectDepthPython/, '必须存在解释器选择函数');

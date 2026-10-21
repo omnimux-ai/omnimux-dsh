@@ -635,6 +635,8 @@ test('depth: ensureDepthPython reports an unusable interpreter', async () => {
 test('depth: 解释器候选链版本优先，显式配置优先且不参与发现', () => {
   assert.deepEqual(depth.resolveDepthPythonCandidates(''), depth.DEPTH_PYTHON_CANDIDATES)
   assert.deepEqual(depth.resolveDepthPythonCandidates(''), [
+    'python3.16',
+    'python3.15',
     'python3.14',
     'python3.13',
     'python3.12',
@@ -651,13 +653,13 @@ test('depth: selectDepthPython 选用首个可导入依赖的解释器', async (
   const bin = await depth.selectDepthPython({
     runProbe: async (b) => {
       probes.push(b)
-      if (b !== 'python3.13') {
+      if (b !== 'python3.14') {
         throw Object.assign(new Error('missing'), { stderrTail: "No module named 'numpy'" })
       }
     },
   })
-  assert.deepEqual(probes, ['python3.14', 'python3.13'])
-  assert.equal(bin, 'python3.13')
+  assert.deepEqual(probes, ['python3.16', 'python3.15', 'python3.14'])
+  assert.equal(bin, 'python3.14')
 })
 
 test('depth: selectDepthPython 显式配置失败不回退', async () => {
@@ -683,8 +685,8 @@ test('depth: selectDepthPython 缓存已选解释器，避免重复探测', asyn
   const runProbe = async () => { probes += 1 }
   const first = await depth.selectDepthPython({ runProbe })
   const second = await depth.selectDepthPython({ runProbe })
-  assert.equal(first, 'python3.14')
-  assert.equal(second, 'python3.14')
+  assert.equal(first, 'python3.16')
+  assert.equal(second, 'python3.16')
   assert.equal(probes, 1)
 })
 
@@ -698,8 +700,38 @@ test('depth: selectDepthPython 全失败时列出尝试过的解释器', async (
     }),
   )
   assert.equal(err.code, 'video-depth-deps-missing')
-  assert.match(err.message, /tried: python3\.14 \/ python3\.13/)
+  assert.match(err.message, /tried: python3\.16 \/ python3\.15/)
   assert.match(err.message, /pip install onnxruntime opencv-python/)
+})
+
+test('depth: selectDepthPython 单个候选超时继续下一个，不截断候选链', async () => {
+  depth.clearDepthPythonCache()
+  const probes = []
+  const bin = await depth.selectDepthPython({
+    runProbe: async (b) => {
+      probes.push(b)
+      if (b === 'python3.16') {
+        throw Object.assign(new Error('timed out'), { code: 'video-timeout' })
+      }
+    },
+  })
+  assert.deepEqual(probes, ['python3.16', 'python3.15'])
+  assert.equal(bin, 'python3.15')
+})
+
+test('depth: selectDepthPython 调用方取消时立即抛出，不继续探测', async () => {
+  depth.clearDepthPythonCache()
+  const probes = []
+  const err = await invalid(
+    depth.selectDepthPython({
+      runProbe: async (b) => {
+        probes.push(b)
+        throw new VideoError('video-canceled', 'canceled')
+      },
+    }),
+  )
+  assert.deepEqual(probes, ['python3.16'])
+  assert.equal(err.code, 'video-canceled')
 })
 
 test('depth: execute gates on the runtime probe before any ffmpeg work', async () => {
@@ -747,6 +779,7 @@ test('depth: execute runs probe, audio extract, python depth and muxing', async 
   )
   assert.equal(out.files[0].path, '/out.mp4')
   assert.equal(out.result.model, 'depth-anything-v2-small')
+  assert.equal(out.result.python, 'python3')
   assert.equal(calls.probe, 1)
   assert.equal(calls.python.length, 1)
   assert.ok(calls.ffmpeg.length >= 1)

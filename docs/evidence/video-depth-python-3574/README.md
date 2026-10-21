@@ -30,6 +30,13 @@ env -u OMNIMUX_VIDEO_PYTHON_PATH node --test                            # 单元
 node --test "src/**/*.test.mjs" "src/**/*.test.js" "tests/*.test.mjs"
 ```
 
+## 独立评审后的修复（同轮复验）
+
+- 单个候选探测超时不再中止整条候选链：只有调用方取消（或 signal 已 abort）才立即抛出；超时记为失败并继续下一个候选（补两条单测）。
+- 候选链补到 `python3.16 / python3.15`，避免新版本 Python 再出现同类误报。
+- 「全部失败」的 tried 列表现在透传到用户可见文案：`VideoError` 保留 `tried`，服务端 `deps-missing` 消息追加「已尝试：…」。
+- 深度节点重试优先按 `sourceVideoNodeId` 实时解析源视频，解析不到才退回建节点时的快照路径（避免用户换源后重跑旧视频）。
+
 ## 边界与限制
 
 - 不自动安装依赖、不打包 Python；候选链只按通用版本名探测（`python3.14 → … → python3`），显式配置优先且失败高声。

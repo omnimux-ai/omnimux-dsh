@@ -17,8 +17,8 @@
 
 ### omnimux-video
 
-- 新增候选链常量 `DEPTH_PYTHON_CANDIDATES = ['python3.14','python3.13','python3.12','python3.11','python3.10','python3']`。
-- 新增 `selectDepthPython({ configured, runProbe, ... })`：逐个探测 `numpy/cv2/onnxruntime`，返回首个可用的解释器；成功结果按「配置键」缓存（进程内），避免每次执行重复探测。
+- 新增候选链常量 `DEPTH_PYTHON_CANDIDATES = ['python3.16','python3.15','python3.14','python3.13','python3.12','python3.11','python3.10','python3']`。
+- 新增 `selectDepthPython({ configured, runProbe, ... })`：逐个探测 `numpy/cv2/onnxruntime`，返回首个可用的解释器；成功结果按「配置键」缓存（进程内），避免每次执行重复探测。单个候选探测超时只记为失败并继续下一候选；只有调用方取消（或 signal 已 abort）才立即抛出。
 - 显式配置（`Config.video.pythonPath` 或 `OMNIMUX_VIDEO_PYTHON_PATH`）时只尝试该解释器；失败不回退、不静默，仍抛 `video-depth-deps-missing`。
 - 全部候选失败时错误消息列出已尝试解释器，并保留安装指引。
 - `execute` 使用选中的解释器跑实际引擎；`index.js` 工具说明同步。

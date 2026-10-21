@@ -18,6 +18,8 @@ export const DEPTH_PYTHON_MODULES = ['numpy', 'cv2', 'onnxruntime']
  * never falls through to these.
  */
 export const DEPTH_PYTHON_CANDIDATES = [
+  'python3.16',
+  'python3.15',
   'python3.14',
   'python3.13',
   'python3.12',
@@ -165,12 +167,12 @@ export async function selectDepthPython({
       if (useCache) depthPythonCache.set(cacheKey, pythonBin)
       return pythonBin
     } catch (error) {
-      if (
-        error instanceof VideoError &&
-        (error.code === 'video-canceled' || error.code === 'video-timeout')
-      ) {
-        throw error
-      }
+      // Only an explicit cancel stops the chain. A single interpreter timing out
+      // (cold start, Gatekeeper scan, broken install) must not hide a usable
+      // lower-priority candidate.
+      const canceled =
+        (error instanceof VideoError && error.code === 'video-canceled') || signal?.aborted === true
+      if (canceled) throw error
       failures.push({
         pythonBin,
         detail: truncateTail(String(error?.stderrTail || error?.message || error), 300),

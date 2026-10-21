@@ -20,7 +20,7 @@ pip install onnxruntime opencv-python
 
 首次运行会把 Depth Anything V2 Small ONNX 下载到 `$DSH_HOME/models/depth/`（或 `~/.dsh/models/depth/`）。
 
-每次 `video_depth` 执行前会先挑选解释器：显式配置 `Config.video.pythonPath` / `OMNIMUX_VIDEO_PYTHON_PATH` 时只认该解释器且失败不回退；未配置时按 `python3.14 → python3.13 → python3.12 → python3.11 → python3.10 → python3` 顺序探测 `numpy` / `cv2` / `onnxruntime`，选中首个可用的并缓存。全部不可用时抛 `video-depth-deps-missing`（带已尝试解释器、安装与 `OMNIMUX_VIDEO_PYTHON_PATH` 指引），不会把 Python traceback 直接抛给调用方。
+每次 `video_depth` 执行前会先挑选解释器：显式配置 `Config.video.pythonPath` / `OMNIMUX_VIDEO_PYTHON_PATH` 时只认该解释器且失败不回退；未配置时按 `python3.16 → python3.15 → python3.14 → python3.13 → python3.12 → python3.11 → python3.10 → python3` 顺序探测 `numpy` / `cv2` / `onnxruntime`，选中首个可用的并缓存。全部不可用时抛 `video-depth-deps-missing`（带已尝试解释器、安装与 `OMNIMUX_VIDEO_PYTHON_PATH` 指引），不会把 Python traceback 直接抛给调用方。单个候选探测超时只会记为失败并继续下一个候选；只有调用方取消才立即中止。
 
 ffmpeg 缺失不会阻止插件加载；工具/seam 调用时会抛 `ffmpeg-missing` 并给出安装指引。
 

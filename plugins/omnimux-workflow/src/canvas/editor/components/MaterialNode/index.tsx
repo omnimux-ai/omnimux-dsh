@@ -1301,8 +1301,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       return;
     }
     const sourceNodeId = typeof nodeData.sourceVideoNodeId === 'string' ? nodeData.sourceVideoNodeId : '';
-    let videoPath = typeof nodeData.sourceVideoPath === 'string' ? nodeData.sourceVideoPath : '';
-    if (!videoPath && sourceNodeId) {
+    // 先按当前源节点实时解析（用户可能已替换/重链源视频），失败再退回建节点时的快照路径。
+    let videoPath = '';
+    if (sourceNodeId) {
       const source = useCanvasStore.getState().nodes.find((n) => n.id === sourceNodeId);
       if (source?.data) {
         const sourceData = source.data as Record<string, unknown>;
@@ -1317,6 +1318,9 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
         ) || '';
       }
+    }
+    if (!videoPath && typeof nodeData.sourceVideoPath === 'string') {
+      videoPath = nodeData.sourceVideoPath;
     }
     if (!videoPath) {
       toast.error(t('depthVideo.noVideo'));
