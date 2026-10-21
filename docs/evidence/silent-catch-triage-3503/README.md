@@ -4,7 +4,8 @@
 - 本文件是 P1 `sidebar-toggle-topbar.js` catch 收敛的过程证据；P0 与全量集成验收见 `verification.md`。
 - 分支：`agent/common-silent-catch-triage-issue-3503`
 - base SHA：`d2d54d177dac869f8a8cdabeb0c601a81ac571dc`
-- 采集时间：2026-10-21 11:54–11:58 (Asia/Taipei)
+- 采集时间：2026-10-21 11:54–12:20 (Asia/Taipei)
+- 口径注意：本目录的基线/前后计数是 **worktree-dirty** 扫描（base SHA 记录 `origin/main`，统计对象为含未提交改动的本工作树）；合入后以 PR head 复核。
 
 ## 环境
 
@@ -62,7 +63,7 @@ Chrome 动态空闲端口 + 临时 profile，测完即焚。关键 stdout：
 | 命令 | 结果 |
 |---|---|
 | `node --test plugins/omnimux/src/client/sidebar-toggle-topbar.test.js plugins/omnimux/src/client/sidebar-toggle-topbar.e2e.test.js` | **95 pass / 0 fail**（88 既有单测 + 7 新增 jsdom E2E） |
-| `pnpm --filter omnimux test` | **3604 pass / 0 fail**，exit 0（386 个测试文件；3 个 phase：network guard 2 + ordinary 3513 + resource/E2E 89） |
+| `pnpm --filter omnimux test` | **3605 pass / 0 fail**，exit 0（386 个测试文件；3 个 phase：network guard 2 + ordinary 3514 + resource/E2E 89） |
 
 新增 E2E 覆盖（`sidebar-toggle-topbar.e2e.test.js`，真实 jsdom DOM，非源码文本断言）：
 

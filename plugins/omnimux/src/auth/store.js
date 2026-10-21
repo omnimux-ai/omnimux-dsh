@@ -417,8 +417,8 @@ export function createTokenStore(opts = {}) {
     // OMNIMUX_ACCESS_TOKEN is explicit process-level configuration, not a credential
     // this store persisted; logout owns the on-disk copies only. The official
     // credentials seam refuses `unset` while the env shadows it (assertUnshadowed),
-    // so attempting that step would turn a legitimate env-token logout into a 5xx.
-    const envToken = typeof env.OMNIMUX_ACCESS_TOKEN === 'string' ? env.OMNIMUX_ACCESS_TOKEN.trim() : ''
+    // so a shadowed seam failure is recorded as a known residue instead of a 5xx.
+    const envOverride = typeof env.OMNIMUX_ACCESS_TOKEN === 'string' && env.OMNIMUX_ACCESS_TOKEN.length > 0
 
     /** @type {string[]} */
     const failedSteps = []
@@ -429,11 +429,16 @@ export function createTokenStore(opts = {}) {
       // 2. config.json user_id (logs + throws on real failure)
       ['unsetConfig', () => unsetConfig()],
       // 3. Credentials seam: a stale seam value still resolves after logout.
-      //    Skipped under an env override: it is process config, not persisted state.
+      //    Always attempt it; under an env override the seam refuses by design, so
+      //    the refusal is kept visible as a warning (seam mirror may survive) rather
+      //    than failing a logout whose active credential is process config.
       ['credentials.unset', async () => {
-        if (envToken) return
-        if (credentials && typeof credentials.unset === 'function') {
+        if (!credentials || typeof credentials.unset !== 'function') return
+        try {
           await credentials.unset(CREDENTIAL_REF)
+        } catch (error) {
+          if (!envOverride) throw error
+          logCleanupFailure('credentials.unset', error)
         }
       }],
       // 4. Profile cache

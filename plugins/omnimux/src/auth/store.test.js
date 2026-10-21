@@ -403,6 +403,7 @@ describe('logout cleanup failures are observable and propagated', () => {
     /** @type {string[]} */
     const seamUnsets = []
     const store = createTokenStore({
+      env: {},
       homeDir,
       configDir,
       logger: { warn(message) { warnings.push(String(message)) } },
@@ -444,6 +445,7 @@ describe('logout cleanup failures are observable and propagated', () => {
     /** @type {string[]} */
     const warnings = []
     const store = createTokenStore({
+      env: {},
       homeDir,
       configDir,
       profilePath: join(profileDir, 'profile.json'),
@@ -523,6 +525,7 @@ describe('logout cleanup failures are observable and propagated', () => {
     /** @type {string[]} */
     const warnings = []
     const store = createTokenStore({
+      env: {},
       homeDir,
       configDir,
       logger: { warn(message) { warnings.push(String(message)) } },
@@ -552,7 +555,7 @@ describe('logout cleanup failures are observable and propagated', () => {
   it('falls back to console.warn when no logger is injected', async () => {
     const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
     const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
-    const store = createTokenStore({ homeDir, configDir })
+    const store = createTokenStore({ env: {}, homeDir, configDir })
     const originalWarn = console.warn
     /** @type {string[]} */
     const captured = []
@@ -571,7 +574,7 @@ describe('logout cleanup failures are observable and propagated', () => {
     assert.match(captured[0], /unsetSecrets failed:/)
   })
 
-  it('does not turn an env-token logout into a 5xx when the credentials seam refuses unset', async () => {
+  it('does not turn an env-token logout into a 5xx and records the shadowed seam residue', async () => {
     const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-home-'))
     const configDir = mkdtempSync(join(tmpdir(), 'omnimux-auth-cfg-'))
     /** @type {string[]} */
@@ -595,14 +598,18 @@ describe('logout cleanup failures are observable and propagated', () => {
       await store.set('pat-env-ignored', { userId: '42', baseUrl: 'https://omnimux.ai' })
       store.writeProfileCache({ username: 'ada' })
 
-      // env token is process configuration; logout must still clear the on-disk copies.
+      // env token is process configuration; logout can only clear the on-disk copies it owns.
       await store.unset()
 
-      assert.deepEqual(warnings, [], 'env-token logout has no cleanup failure to report')
-      assert.deepEqual(seamUnsets, [], 'env override is not a persisted credential; seam unset is skipped')
+      assert.equal(seamUnsets.length, 1, 'the seam unset must still be attempted, not skipped')
+      assert.equal(warnings.length, 1, 'the refused seam unset is kept visible instead of being silent')
+      assert.match(warnings[0], /credentials\.unset failed: .*shadowed/)
+      assert.equal(/pat-from-env|pat-env-ignored|access_token/.test(warnings.join('\n')), false)
       assert.equal(existsSync(store.secretsPath), false)
       assert.equal(store.readConfig()?.user_id, undefined)
       assert.equal(existsSync(store.profilePath), false)
+      // The env override still authenticates after logout; only disk cleanup was attempted.
+      assert.equal(await store.resolve(), 'pat-from-env')
     } finally {
       rmSync(homeDir, { recursive: true, force: true })
       rmSync(configDir, { recursive: true, force: true })

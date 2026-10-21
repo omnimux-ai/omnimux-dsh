@@ -158,6 +158,40 @@ describe('auth http dispatcher', () => {
     }
   })
 
+  it('logout via the HTTP dispatcher stays 200 under an env token whose shadowed seam refuses unset', async () => {
+    const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-http-'))
+    const configDir = mkdtempSync(join(tmpdir(), 'omnimux-http-cfg-'))
+    /** @type {string[]} */
+    const warnings = []
+    const store = createTokenStore({
+      homeDir,
+      configDir,
+      env: { OMNIMUX_ACCESS_TOKEN: 'pat-env-http' },
+      logger: { warn(message) { warnings.push(String(message)) } },
+      credentials: {
+        async unset() {
+          throw new Error('credential is shadowed by the environment')
+        },
+      },
+    })
+    const dispatcher = createAuthDispatcher({
+      store,
+      pending: createPendingStore(),
+      siteBaseUrl: 'https://omnimux.ai',
+    })
+    try {
+      const result = await dispatcher.dispatch({ method: 'POST', url: '/omnimux/auth/logout' })
+      assert.equal(result.status, 200)
+      assert.equal(result.body.logged_in, false)
+      assert.equal(warnings.length, 1)
+      assert.match(warnings[0], /credentials\.unset failed: .*shadowed/)
+      assert.equal(/pat-env-http|access_token/.test(JSON.stringify(result.body) + warnings.join('\n')), false)
+    } finally {
+      rmSync(homeDir, { recursive: true, force: true })
+      rmSync(configDir, { recursive: true, force: true })
+    }
+  })
+
   it('lists hub capabilities without secrets', async () => {
     const homeDir = mkdtempSync(join(tmpdir(), 'omnimux-cap-'))
     const configDir = mkdtempSync(join(tmpdir(), 'omnimux-cap-cfg-'))

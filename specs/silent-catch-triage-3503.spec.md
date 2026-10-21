@@ -1,6 +1,6 @@
 # 静默吞错存量分诊：先止血假成功与凭据残留（Issue #3503）
 
-- 关联 Issue：#3503（type: chore / plugin: common / track: D / risk: R1）；评审残留由 #3509 承接（market 重置语义/客户端反馈/同源校验）。
+- 关联 Issue：#3503（type: chore / plugin: common / track: D / risk: R1）；评审残留由 #3509 承接（market 重置语义/客户端反馈/同源校验），env token 的 seam 镜像残留由 #3514 承接。
 - 关联合同：[anti-agent-fake-completion-guard §1.1、§3.2.1](../docs/contracts/anti-agent-fake-completion-guard.md)、[plugin-git-pr](../docs/contracts/plugin-git-pr.md)
 - 前置：PR #3492（已合入 main `914d80f9b`）只做**增量**静默兜底拦截；本任务只做存量**分诊与止血**，不清零。
 
@@ -28,7 +28,7 @@
 ## 非目标
 
 - 不清零 685 处存量；不设「685→0」KPI。
-- 不动 SC3 存量（基线 882 处）；本任务因新增「有语句留痕」形态使 SC3 +3（884→885 中的 885 为全仓终值），不属于清理对象。
+- 不动 SC3 存量（基线 882 处，本任务后全仓 885）；本任务新增 3 处「有语句留痕」形态，库存问题本身不清零。
 - 不批量改 C 档 client best-effort catch 的语义；不新增豁免条目替代真实修复。
 - 不改 `auth/store.js` 的读侧容错（json 解析、stat、chmod、legacy 缓存、seam 探测）与 `set()` 的 credentials 镜像 best-effort。
 - 不改 market 写接口除错误上报外的业务逻辑（含 POST `order: []` 仍不落盘的既有语义、客户端吞掉 5xx、写路径同源校验，均由 #3509 跟进）。
@@ -37,13 +37,13 @@
 ## 新用户基线
 
 - market 写接口：普通安装目录（可能只读）。写失败时必须返回 5xx + 错误，不再把未落盘报告为成功；只读/缺文件/损坏 JSON 都是显式失败，不依赖任何开发机私有状态。
-- auth 登出：只依赖 `$HOME/.config/omnimux/`（或测试注入目录）。清理失败时留 `warn` 并让登出请求 5xx；不把「token 仍在磁盘」报告为登出成功。显式 `OMNIMUX_ACCESS_TOKEN` 进程环境覆盖时，登出只清理磁盘副本、不尝试 unset 被 env 遮蔽的 credentials seam，避免把合法登出变成 500。
+- auth 登出：只依赖 `$HOME/.config/omnimux/`（或测试注入目录）。清理失败时留 `warn` 并让登出请求 5xx；不把「token 仍在磁盘」报告为登出成功。显式 `OMNIMUX_ACCESS_TOKEN` 进程环境覆盖时，仍会尝试官方 credentials seam unset；被 env 遮蔽时 seam 按设计拒绝，登出保留 200 但记录 warn（seam 中登录时镜像的旧副本可能残留，撤销 env 后可能被 resolve 回读，由 #3514 跟进）。
 - sidebar：纯 DOM best-effort，宿主结构缺失时静默降级并保持页面可操作（与改动前一致），不依赖 Dev 端口、本地模型或开发 profile。
 
 ## 假设
 
 1. `handleHomeCustomOrder` 的假成功根因是 `catch {}` 吞掉 `readFileSync`/`JSON.parse`/`writeFileSync` 的异常后无条件 `200`；把写盘收敛进会抛错的 `persistHomeCustomOrder` 并映射为 5xx 即可消除。
-2. `unsetSecrets`/`unsetConfig` 的凭据残留根因是空 catch 让 `rmSync`/`atomicWriteFileSync` 失败对调用方不可见；warn 留痕 + `unset()` 聚合失败并 reject，会让登出路由（已有 `catch → 500`）如实返回失败。env token 是进程级配置而非持久凭据，其 seam 拒绝不应计入失败。
+2. `unsetSecrets`/`unsetConfig` 的凭据残留根因是空 catch 让 `rmSync`/`atomicWriteFileSync` 失败对调用方不可见；warn 留痕 + `unset()` 聚合失败并 reject，会让登出路由（已有 `catch → 500`）如实返回失败。env token 是进程级配置，其 seam 拒绝应留痕但不让合法登出变 500；seam 镜像是否可清理属 #3514。
 3. `sidebar-toggle-topbar.js` 的 41 处 catch 属同一类 DOM best-effort（探测/注入/移除/监听解绑），收敛为统一 helper 不改变任何可观察行为，且真实内核几何/交互与改动前一致。
 
 ## 证伪方式
@@ -55,7 +55,7 @@
 ## 验收
 
 - [x] market 写失败（损坏 JSON / 只读目录 / 缺 catalog）返回 5xx 且 `ok:false`；成功路径仍返回 200 并真实落盘。
-- [x] auth 清理失败可观察到 warn，且 `store.unset()` reject；http 登出路由返回 5xx 而非 200；env token 登出仍 200 且清理磁盘副本。
+- [x] auth 清理失败可观察到 warn，且 `store.unset()` reject；http 登出路由返回 5xx 而非 200。env token 场景：dispatcher 级登出仍 200、磁盘副本清理、被遮蔽 seam 拒绝留 warn（镜像残留由 #3514 跟进）。
 - [x] `sidebar-toggle-topbar.js` 的 SC1/SC2 命中数 = 0（SC3 helper 内部允许）。
 - [x] `node scripts/verify-silent-catch.mjs --json` 基线数字（改动前后）记录到 Issue #3503 评论。
 - [x] 未新增任何 SC1/SC2（`scripts/lib/silent-catch-delta.mjs` 对改动文件返回 0 新增）。
@@ -63,7 +63,7 @@
 
 ## 风险复核
 
-- Issue 标签为 `risk:R1`（维护者定级）。本任务不做生产发布/回滚、不改凭据存储与删除逻辑、不新增凭据读取、不写真实凭据；只把既有清理失败从静默改为 warn + 向上回传，并已用测试断言日志与响应体不含 token。按实际 diff 维持 R1，并在此记录复核理由。
+- Issue 标签为 `risk:R1`（维护者定级）。本任务触及凭据清理的**失败语义**（silent → warn + 向上回传）与 env 遮蔽下的 seam 拒绝留痕，但不改凭据存储格式、不改变成功删除路径、不新增凭据读取、不写真实凭据；测试断言 warn/响应体不含 token。按实际 diff 复核后维持 R1；#3514 承接的 seam 镜像清理按 R0 另行授权处理。
 
 ## 存量基线（main `d2d54d177`，本任务记录）
 
