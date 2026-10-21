@@ -254,12 +254,6 @@
   color: rgba(255, 255, 255, 0.45);
 }
 
-.omx-item.is-done,
-.omx-item.is-done svg,
-.omx-item.is-done .omx-item-state {
-  color: #7ee0a8;
-}
-
 .omx-item.is-error,
 .omx-item.is-error svg,
 .omx-item.is-error .omx-item-state {
@@ -285,11 +279,6 @@
 
 .omx-item-detail.is-visible {
   display: block;
-}
-
-/* A settled shortcut reports what it wrote, not what went wrong. */
-.omx-item-detail.is-ok {
-  color: rgba(126, 224, 168, 0.92);
 }
 
 .omx-spinner {

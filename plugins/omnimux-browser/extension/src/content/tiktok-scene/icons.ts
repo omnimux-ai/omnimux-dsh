@@ -70,8 +70,3 @@ export function brandIcon(size = 20): string {
     + '<rect x="731" y="562" width="75" height="172" rx="37.5" ry="37.5" class="omx-eye"/>'
     + '</g></svg>'
 }
-
-/** The settled mark a row swaps in once its work is done. */
-export function checkIcon(size = 19): string {
-  return `<svg ${SVG_OUTLINE_ATTRS} width="${size}" height="${size}"><path d="m5 12.5 4.5 4.5L19 7"/></svg>`
-}

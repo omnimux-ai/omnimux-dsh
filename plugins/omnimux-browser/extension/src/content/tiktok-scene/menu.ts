@@ -31,7 +31,7 @@ import inlineStyles from './styles.css?inline'
 import { findAvatarElement, resolvePlatformAnchor } from '../../platform/anchor.ts'
 import { platformById } from '../../platform/registry.ts'
 import { resolveCoexistPlacement } from './coexist.ts'
-import { actionIcon, brandIcon, checkIcon } from './icons.ts'
+import { actionIcon, brandIcon } from './icons.ts'
 import { resolveMenuSide } from './menu-side.ts'
 import { TIKTOK_SCENE_HOST_ID } from './messages.ts'
 import type { TiktokAction, TiktokCopy } from './copy.ts'
@@ -90,7 +90,7 @@ export interface TiktokSceneOptions {
 }
 
 /** Per-row visual state. */
-type RowState = 'idle' | 'busy' | 'done' | 'error'
+type RowState = 'idle' | 'busy' | 'error'
 
 /**
  * Whether an event was produced by a pointer that can hover.
@@ -299,34 +299,42 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     const iconSlot = iconSlots.get(action)
     if (row === undefined || stateLabel === undefined || iconSlot === undefined) return
     row.classList.toggle('is-busy', state === 'busy')
-    row.classList.toggle('is-done', state === 'done')
     row.classList.toggle('is-error', state === 'error')
     stateLabel.textContent = text
     if (state === 'busy') iconSlot.innerHTML = '<span class="omx-spinner"></span>'
-    else if (state === 'done') iconSlot.innerHTML = checkIcon(ROW_ICON_PX)
     else iconSlot.innerHTML = actionIcon(action, ROW_ICON_PX)
   }
 
   /**
-   * Report an outcome under the row of columns, then re-place the toolbar.
+   * Which action the visible failure reason belongs to.
    *
-   * The detail row is the only part of the toolbar with no width of its own: a
-   * saved file's name can be longer than the three columns put together, and the
-   * panel widens with it. The direction was decided against the width the panel
-   * had before this line, so it is decided again — `getBoundingClientRect` reads
-   * the box the new text already produced, which is why the write comes first.
+   * Several rows can be in flight at once. A reason is the answer to one click,
+   * so a different row finishing must not erase it: only the owning action — or
+   * a newer failure — touches the line.
    */
-  const showDetail = (text: string, tone: 'ok' | 'error'): void => {
+  let detailOwner: TiktokAction | null = null
+
+  /**
+   * Report a failure under the row of columns, then re-place the toolbar.
+   *
+   * The detail row is the only part of the toolbar with no width of its own, and
+   * the panel widens with it. The direction was decided against the width the
+   * panel had before this line, so it is decided again — `getBoundingClientRect`
+   * reads the box the new text already produced, which is why the write comes
+   * first.
+   */
+  const showDetail = (text: string, owner: TiktokAction): void => {
+    detailOwner = owner
     detail.textContent = text
-    detail.classList.toggle('is-ok', tone === 'ok')
     detail.classList.add('is-visible')
     reposition()
   }
 
   /** Clear it, and re-place for the narrower panel that leaves. */
   const hideDetail = (): void => {
+    detailOwner = null
     detail.textContent = ''
-    detail.classList.remove('is-visible', 'is-ok')
+    detail.classList.remove('is-visible')
     reposition()
   }
 
@@ -335,7 +343,8 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
   const perform = async (action: TiktokAction): Promise<void> => {
     if (pending.has(action)) return
     pending.add(action)
-    hideDetail()
+    // Retrying this row clears its own stale reason; another row's reason stays.
+    if (detailOwner === action) hideDetail()
     setRowState(action, 'busy', copy.busy[action])
     let outcome: ExportOutcome
     try {
@@ -347,13 +356,18 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
     }
     pending.delete(action)
     if (outcome.ok) {
-      setRowState(action, 'done', copy.done(action, outcome))
-      // Naming the file is what turns "something was saved" into "this is what
-      // you got", which is the only way the user can notice a wrong post.
-      showDetail(copy.detail(action, outcome), 'ok')
+      // Success is silent: the row goes back to its default label and the detail
+      // line stays shut. The menu is the tool the user just used, not a log —
+      // a permanent "saved" line outlives the moment it was useful and pushes
+      // the rest of the menu around.
+      setRowState(action, 'idle', '')
+      if (detailOwner === action) hideDetail()
+      // The row's text changed, and a wide label can change the panel's width;
+      // re-place even when no detail line moved.
+      else reposition()
     } else {
       setRowState(action, 'error', '')
-      showDetail(copy.failed(outcome), 'error')
+      showDetail(copy.failed(outcome), action)
     }
   }
 
