@@ -472,6 +472,23 @@ export function partitionToolbarActions(
     return { visible: [], overflow: [] };
   }
 
+  // 无主区（例如只有「对话」一个次区动作）：按次区自身宽度排布，不能整体折进更多。
+  if (primary.length === 0) {
+    for (let k = secondary.length; k >= 0; k -= 1) {
+      const visibleSecondary = secondary.slice(0, k);
+      const overflow = secondary.slice(k);
+      if (k === 1 && overflow.length > 0) continue;
+      const secWidth = sumSectionWidth(visibleSecondary, gap);
+      const morePart = overflow.length > 0
+        ? moreWidth + (visibleSecondary.length > 0 ? gap : 0)
+        : 0;
+      if (secWidth + morePart <= maxWidth) {
+        return { visible: visibleSecondary, overflow };
+      }
+    }
+    return { visible: secondary.slice(0, 1), overflow: secondary.slice(1) };
+  }
+
   const hasDivider = primary.length > 0;
 
   for (let p = primary.length; p >= 1; p -= 1) {

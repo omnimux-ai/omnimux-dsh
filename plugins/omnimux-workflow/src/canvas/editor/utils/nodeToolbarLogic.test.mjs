@@ -195,6 +195,39 @@ test('partitionToolbarActions：200px 窄视频节点只保留放得下的主胶
   assert.equal(result.visible.filter((item) => item.section === 'primary').length, 2);
 });
 
+test('partitionToolbarActions：只有次区动作时按次区排布，不整体折进更多', () => {
+  const only = [spec('chat', 'secondary', 40)];
+  const single = partitionToolbarActions(only, OPTS);
+  assert.deepEqual(single.visible.map((item) => item.id), ['chat']);
+  assert.deepEqual(single.overflow, []);
+
+  const many = [
+    spec('chat', 'secondary', 60),
+    spec('copy', 'secondary', 60),
+    spec('more', 'secondary', 60),
+    spec('share', 'secondary', 60),
+  ];
+  const overflowed = partitionToolbarActions(many, { ...OPTS, maxWidth: 200 });
+  assert.ok(overflowed.visible.length >= 1);
+  assert.ok(overflowed.overflow.length >= 1);
+});
+
+test('partitionToolbarActions：visible + overflow 恰好覆盖全部动作，不丢不重', () => {
+  const combos = [
+    [spec('a', 'primary', 82), spec('b', 'primary', 70), spec('c', 'secondary', 40)],
+    [spec('a', 'secondary', 40), spec('b', 'secondary', 40), spec('c', 'secondary', 40)],
+    [spec('a', 'primary', 200), spec('b', 'secondary', 40)],
+    [spec('a', 'primary', 10)],
+  ];
+  for (const actions of combos) {
+    const result = partitionToolbarActions(actions, OPTS);
+    const ids = result.visible.concat(result.overflow).map((item) => item.id).sort();
+    const expected = actions.map((item) => item.id).sort();
+    assert.deepEqual(ids, expected);
+    assert.equal(new Set(ids).size, expected.length);
+  }
+});
+
 test('buildConversationPayloadFromNode：文本 / 表格 / 合成 fallback 路径', () => {
   const text = buildConversationPayloadFromNode({
     nodeType: 'material',
