@@ -1,14 +1,14 @@
 {
   "pass": true,
   "issue": 3533,
-  "capturedAt": "2026-10-21T06:21:46.501Z",
-  "sourceCommit": "d1d76e544c691b0beef317e954f3823cb44b1826",
+  "capturedAt": "2026-10-21T06:27:06.773Z",
+  "sourceCommit": "0c14a1d4ac297bd18dbaeb8f1d34c80b80943644",
   "sourceDirty": false,
   "browser": "ego-lite",
   "harness": "/tmp/flow-alignment-3533/harness.html",
   "sources": {
-    "tab": "df502d033ac287a1a0eaa83ce7efd3b861f741eb32f64a00f6489dc326b90ede",
-    "panel": "33a56d7d2f28e2253838784c71dec1147c8c5861d2d6037c1ae50394f2f941d4",
+    "tab": "e3164db5495adec1db8ce37a6928b4f3f7b9a3ea5b32ce9d92dcc0abbb7c671b",
+    "panel": "89d55058248e034b9e4f01760670b7a8abca4fc5aafc2aa609590b06fd3e3e0f",
     "styles": "a810ab2a5c967967fada55dd60405673b8de3938ff54a8afe6d1d45d90c4c024",
     "history": "e981f3f987727055226dba24e86774c0aeb5d75a4b64f8decddccdfdf1b7d720",
     "cost": "777cbc858b14eeecfb07c19cfec02878a131eae3114d0722ab70e6b18681a67c",
