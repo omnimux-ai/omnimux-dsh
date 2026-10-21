@@ -180,6 +180,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   // 默认选中缩略图栏首项（最新项），回退为 session 列表首项
   const activeItem = sessionMediaList.find((m) => m.id === activeId) || thumbnailsList[0] || sessionMediaList[0];
   const toolbarRef = useRef(null);
+  const historyToggleRef = useRef(null);
   const timelineGroups = store.getTimelineGroups(sessionId);
 
   // 生成历史：数据全部来自既有 mediaList 的提交快照，不新增 store。
@@ -221,10 +222,19 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   // stop being focusable/clickable while it is open.
   useEffect(() => {
     const toolbar = toolbarRef.current;
-    if (!toolbar) return undefined;
-    if (historyOpen) toolbar.setAttribute('inert', '');
-    else toolbar.removeAttribute('inert');
-    return () => toolbar.removeAttribute('inert');
+    if (!toolbar || !historyOpen) return undefined;
+    toolbar.setAttribute('inert', '');
+    return () => {
+      toolbar.removeAttribute('inert');
+      const toggle = historyToggleRef.current;
+      if (!toggle) return;
+      const schedule = typeof requestAnimationFrame === 'function'
+        ? requestAnimationFrame
+        : (callback) => setTimeout(callback, 0);
+      schedule(() => {
+        if (toggle.isConnected && isElementShown(toggle)) toggle.focus();
+      });
+    };
   }, [historyOpen]);
 
   // 会话切换时，若当前 activeId 不属于当前会话的媒体列表，自动联动选中该会话最新的一张素材
@@ -655,6 +665,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
             <button // exempt-ui01: 历史抽屉触发器（窄容器显示，宽容器由 CSS 隐藏）
               type="button"
               className="omx-mv-btn omx-mv-history-toggle"
+              ref={historyToggleRef}
               title={flowAlignmentText(t, 'mediaViewer.history.toggle')}
               aria-label={flowAlignmentText(t, 'mediaViewer.history.toggle')}
               aria-expanded={historyOpen}

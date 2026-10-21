@@ -162,6 +162,7 @@ async function withMountedTab(run, options = {}) {
     await act(async () => { await new Promise((resolvePromise) => setTimeout(resolvePromise, 30)); });
     await run({
       dom,
+      act,
       requests,
       store,
       text: () => document.body.textContent,
@@ -285,7 +286,7 @@ test('无会话时不聚合其他会话的历史', async () => {
 });
 
 test('抽屉打开时方向键不切换背后舞台，关闭按钮可收起', async () => {
-  await withMountedTab(async ({ click, keydown, dom }) => {
+  await withMountedTab(async ({ click, keydown, dom, act }) => {
     const before = document.querySelector('.omx-mv-display img').getAttribute('src');
     await click('.omx-mv-history-toggle');
     if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
@@ -295,6 +296,8 @@ test('抽屉打开时方向键不切换背后舞台，关闭按钮可收起', as
     assert.equal(document.querySelector('.omx-media-viewer').getAttribute('data-history-open'), 'true');
     await click('.omx-mv-history__close');
     assert.equal(document.querySelector('.omx-media-viewer').getAttribute('data-history-open'), 'false');
+    await act(async () => { await new Promise((resolvePromise) => setTimeout(resolvePromise, 20)); });
+    assert.equal(document.activeElement, document.querySelector('.omx-mv-history-toggle'));
   });
 });
 

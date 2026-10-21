@@ -52,13 +52,12 @@ export function HistoryPanel({
   const list = Array.isArray(entries) ? entries : [];
   const rootRef = useRef(null);
   const closeRef = useRef(null);
-  const previousFocusRef = useRef(null);
 
-  // Overlay drawer semantics: move focus in, trap Tab, restore focus on close.
+  // Overlay drawer semantics: move focus in and trap Tab. Restoring focus is the
+  // parent's job because the toolbar inert attribute must be removed first.
   // Wide mode never sets `open`, so the static rail keeps normal page focus order.
   useEffect(() => {
     if (!open) return undefined;
-    previousFocusRef.current = document.activeElement;
     closeRef.current?.focus();
     const onKeyDown = (event) => {
       if (event.key !== 'Tab') return;
@@ -77,8 +76,6 @@ export function HistoryPanel({
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      const previous = previousFocusRef.current;
-      if (previous && typeof previous.focus === 'function' && previous.isConnected) previous.focus();
     };
   }, [open]);
 
