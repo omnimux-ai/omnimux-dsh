@@ -596,3 +596,87 @@ describe('overlay image action', () => {
     expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'DSH_MEDIA_TO_ASSETS' }))
   })
 })
+/**
+ * #3598: a download receipt owns the tooltip for its dismiss window. The old
+ * path re-derived the hover hint on every reposition frame, which erased
+ * "Download started" in the same frame the press produced it.
+ */
+describe('overlay download receipt', () => {
+  let overlay: MediaOverlay
+  let shadow: ShadowRoot
+  let sendMessage: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    document.documentElement.querySelectorAll(`#${MEDIA_OVERLAY_HOST_ID}`).forEach((node) => node.remove())
+    sendMessage = vi.fn(async () => ({ ok: true, result: { downloadId: 7, filename: 'a.png' } }))
+    vi.stubGlobal('chrome', {
+      runtime: {
+        getURL: (path: string) => `chrome-extension://test/${path}`,
+        sendMessage,
+        i18n: { getUILanguage: () => 'zh-CN' },
+      },
+      storage: { local: { get: vi.fn(async () => ({})), set: vi.fn(async () => undefined) } },
+    })
+    window.localStorage.setItem('omnimux_manual_locale', 'zh')
+    overlay = new MediaOverlay(document)
+    overlay.mount()
+    const host = document.getElementById(MEDIA_OVERLAY_HOST_ID) as HTMLElement
+    shadow = host.shadowRoot as ShadowRoot
+  })
+
+  afterEach(() => {
+    overlay.dispose()
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  function receiptText(): string {
+    return (shadow.querySelector('.white-tooltip-text') as HTMLElement).textContent ?? ''
+  }
+
+  function showDownloadable(): void {
+    const image = document.createElement('img')
+    document.body.appendChild(image)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).showNow({ element: image, payload: { ...IMAGE, id: 'image:download-receipt' } })
+  }
+
+  it('keeps the receipt words across a reposition frame', async () => {
+    showDownloadable()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (overlay as any).runAction('download')
+    expect(receiptText()).toBe('已开始下载')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).repositionNow()
+    expect(receiptText()).toBe('已开始下载')
+  })
+
+  it('keeps the receipt when the repainted icon re-fires pointerenter', async () => {
+    // The done state repaints the download glyph under the pointer; the browser
+    // can synthesise a pointerenter for the new icon and the hint path used to
+    // write the hover words back in the same frame (1/17 in the real e2e).
+    showDownloadable()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (overlay as any).runAction('download')
+    expect(receiptText()).toBe('已开始下载')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).showHint('download')
+    expect(receiptText()).toBe('已开始下载')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).repositionNow()
+    expect(receiptText()).toBe('已开始下载')
+  })
+
+  it('retires the receipt once the pointer moves to another icon', async () => {
+    showDownloadable()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (overlay as any).runAction('download')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).showHint('inspiration')
+    expect(receiptText()).toBe('加入资产库')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(overlay as any).repositionNow()
+    expect(receiptText()).toBe('加入资产库')
+  })
+})
