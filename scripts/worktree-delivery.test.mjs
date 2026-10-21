@@ -9,7 +9,7 @@ import { restartDevApp, verifiedDevAppPids, verifiedDevMainPids, devLaunchEnv } 
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
-for (const scenario of ['missing-pr', 'open-pr', 'wrong-head', 'merged-pr']) {
+for (const scenario of ['missing-pr', 'open-pr', 'wrong-head', 'merged-pr', 'merged-pr-missing-merge-commit']) {
   test(`worktree ship ${scenario}: require the matching merged PR and retain acceptance workspace`, () => {
     const fixture = mkdtempSync(join(tmpdir(), 'omnimux-ship-'))
     const repo = join(fixture, 'repo')
@@ -43,9 +43,10 @@ for (const scenario of ['missing-pr', 'open-pr', 'wrong-head', 'merged-pr']) {
       const args = ['scripts/worktree.sh', 'ship', 'common-feature']
       if (scenario !== 'missing-pr') args.push('--pr', '864')
       const result = spawnSync('bash', args, { cwd: repo, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } })
+      const pulled = scenario === 'merged-pr'
       assert.equal(result.status, scenario === 'merged-pr' ? 0 : 1, `${result.stdout}\n${result.stderr}`)
-      assert.equal(git('rev-parse', 'HEAD'), scenario === 'merged-pr' ? head : before)
-      assert.equal(git('--git-dir', remote, 'rev-parse', 'main'), scenario === 'merged-pr' ? head : before, 'ship must never push main')
+      assert.equal(git('rev-parse', 'HEAD'), pulled ? head : before)
+      assert.equal(git('--git-dir', remote, 'rev-parse', 'main'), pulled ? head : before, 'ship must never push main')
       if (scenario === 'merged-pr') {
         assert.equal(existsSync(worktree), false, 'ship defaults to automatically cleaning the merged worktree')
         assert.match(result.stdout, /交付全链路闭环完成/i)
@@ -179,6 +180,52 @@ test('ship 物化范围跟随 PR mergeCommit：同批两个 PR 合入后补 ship
       readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(),
       'omnimux-workflow',
       '只物化本 PR 的插件，而不是 HEAD~1..HEAD 的后一个 PR',
+    )
+    assert.equal(existsSync(worktree), false)
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
+})
+
+test('ship 对双父合并提交只物化 PR 分支相对第一父的改动', () => {
+  const { fixture, repo, bin, git } = mergedRepo('ship-merge-commit')
+  try {
+    const worktree = join(repo, '.worktrees/plugin-feature')
+    git('worktree', 'add', '-b', 'agent/plugin-feature', worktree)
+    mkdirSync(join(worktree, 'plugins/omnimux-workflow/src'), { recursive: true })
+    writeFileSync(join(worktree, 'plugins/omnimux-workflow/src/index.ts'), 'export const workflow = 1\n')
+    git('-C', worktree, 'add', '.')
+    git('-C', worktree, 'commit', '-m', 'feat(workflow): PR branch')
+    const prHead = git('-C', worktree, 'rev-parse', 'HEAD')
+
+    // main 在分叉后合入另一个 PR（assets），再把本 PR --no-ff 合入 main。
+    const other = join(repo, '.worktrees/unrelated-pr')
+    git('worktree', 'add', '-b', 'agent/unrelated-pr', other)
+    mkdirSync(join(other, 'plugins/omnimux-assets/src'), { recursive: true })
+    writeFileSync(join(other, 'plugins/omnimux-assets/src/index.ts'), 'export const assets = 2\n')
+    git('-C', other, 'add', '.')
+    git('-C', other, 'commit', '-m', 'feat(assets): other PR')
+    git('-C', other, 'push', 'origin', 'HEAD:main')
+    git('fetch', 'origin')
+    git('merge', '--ff-only', 'origin/main')
+    git('merge', '--no-ff', '--no-edit', 'agent/plugin-feature')
+    const mergeCommit = git('rev-parse', 'HEAD')
+    assert.equal(git('rev-parse', `${mergeCommit}^2`), prHead)
+    git('push', 'origin', 'main')
+
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *) printf 'MERGED\\tagent/plugin-feature\\t${prHead}\\tmain\\t${mergeCommit}\\n' ;;\nesac\n`, { mode: 0o755 })
+
+    const result = spawnSync('bash', ['scripts/worktree.sh', 'ship', 'plugin-feature', '--pr', '3002'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: Object.assign({}, process.env, {
+        PATH: `${bin}:${process.env.PATH}`,
+        OMNIMUX_DEV_SNAPSHOT: join(fixture, 'absent-dev'),
+      }),
+    })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.equal(
+      readFileSync(join(repo, 'sync_receipt.txt'), 'utf8').trim(),
+      'omnimux-workflow',
+      '双父合并只物化 PR 分支改动，不把 main 分叉后的其他 PR 一起物化',
     )
     assert.equal(existsSync(worktree), false)
   } finally { rmSync(fixture, { recursive: true, force: true }) }
