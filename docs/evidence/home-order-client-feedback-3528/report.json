@@ -1,0 +1,101 @@
+{
+  "task": "3528",
+  "generatedAt": "2026-10-21T06:25:24.373Z",
+  "script": "scripts/evidence-home-order-feedback-3528.mjs",
+  "source": {
+    "path": "plugins/omnimux-market/src/client/plaza/plazaUtils.js",
+    "sha256": "71b8d6ddff8b56df17bcfc2df2087494391796552792c598fbd2c80d0e15e41e"
+  },
+  "bundleSha256": "7f73a2e0d5f22010fe851367b81c00ab5d0bfd41585c6fae7550b52fbfe996ea",
+  "engine": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "taskSpaceId": 117,
+    "viewport": {
+      "width": 960,
+      "height": 640,
+      "deviceScaleFactor": 2
+    }
+  },
+  "observed": {
+    "warnings": [
+      "[omnimux-market] home custom order write failed (reset): home custom order not saved: home order state not writable (EACCES)",
+      "[omnimux-market] home custom order write failed (move-to-top): home custom order not saved: home order state not writable (EACCES)"
+    ],
+    "unhandled": [],
+    "lastOrder": [
+      "b",
+      "a"
+    ],
+    "history": [
+      null,
+      [
+        "b",
+        "a"
+      ]
+    ],
+    "statusText": "warnings: 2 · unhandled: 0",
+    "logText": "[omnimux-market] home custom order write failed (reset): home custom order not saved: home order state not writable (EACCES)\n[omnimux-market] home custom order write failed (move-to-top): home custom order not saved: home order state not writable (EACCES)"
+  },
+  "screenshot": {
+    "path": "docs/evidence/home-order-client-feedback-3528/browser-console.png",
+    "bytes": 100898,
+    "sha256": "bd32555e4f6bc13ca770ef2ff5017cb437d06afba048480efc70a01de58cd093",
+    "cdpShot": {
+      "path": "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/market-home-order-feedback-3528/docs/evidence/home-order-client-feedback-3528/browser-console.png",
+      "bytes": 100898
+    }
+  },
+  "assertions": [
+    {
+      "name": "harness-ready",
+      "pass": true
+    },
+    {
+      "name": "warning-count",
+      "pass": true,
+      "detail": 2
+    },
+    {
+      "name": "warning-reset",
+      "pass": true
+    },
+    {
+      "name": "warning-move-to-top",
+      "pass": true
+    },
+    {
+      "name": "warning-has-server-error",
+      "pass": true
+    },
+    {
+      "name": "no-unhandled-rejection",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "optimistic-state-history",
+      "pass": true,
+      "detail": [
+        null,
+        [
+          "b",
+          "a"
+        ]
+      ]
+    },
+    {
+      "name": "rendered-log",
+      "pass": true
+    },
+    {
+      "name": "rendered-status",
+      "pass": true
+    },
+    {
+      "name": "screenshot-bytes",
+      "pass": true,
+      "detail": 100898
+    }
+  ],
+  "pass": true
+}
