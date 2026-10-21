@@ -66,6 +66,23 @@ function isProviderAdapterUnavailable(error) {
   return /no adapter registered for provider|unknown provider|provider .*(?:not registered|not found)/i.test(message)
 }
 
+/** Live catalog default provider:model, when the host exposes one. */
+function readCatalogDefault(source) {
+  try {
+    const catalog = typeof source === 'function' ? source() : source
+    const value = catalog && typeof catalog === 'object' && catalog.value && typeof catalog.value === 'object'
+      ? catalog.value
+      : catalog
+    const fallback = value && typeof value === 'object' ? value.default : undefined
+    if (!fallback || typeof fallback !== 'object') return null
+    const provider = typeof fallback.provider === 'string' ? fallback.provider.trim() : ''
+    const model = typeof fallback.model === 'string' ? fallback.model.trim() : ''
+    return provider && model ? { provider, model } : null
+  } catch {
+    return null
+  }
+}
+
 function parseToolModel(value) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -162,7 +179,27 @@ export async function executeOmnimuxText(input) {
       // case falls through to the configured default route; real model errors
       // stay visible to the caller.
       if (!isProviderAdapterUnavailable(error)) throw error
-      console.warn(`[omnimux:text] tool model ${toolModel.provider}:${toolModel.model} has no adapter; falling back to the default text route`)
+      console.warn(`[omnimux:text] tool model ${toolModel.provider}:${toolModel.model} has no adapter; trying the live catalog default`)
+      const catalogDefault = readCatalogDefault(input.modelCatalog)
+      if (catalogDefault !== null) {
+        try {
+          toolResult = await streamTextReply(input.llm, {
+            provider: catalogDefault.provider,
+            model: catalogDefault.model,
+            prompt,
+            system: typeof input.system === 'string' ? input.system.trim() : '',
+            maxTokens: typeof input.maxTokens === 'number' && Number.isFinite(input.maxTokens) && input.maxTokens > 0
+              ? input.maxTokens : text.maxTokens,
+            content: toolContent,
+            signal: input.signal,
+            sessionId: input.sessionId,
+          })
+          return { ...toolResult, model: `${catalogDefault.provider}:${catalogDefault.model}` }
+        } catch (catalogError) {
+          if (!isProviderAdapterUnavailable(catalogError)) throw catalogError
+          console.warn(`[omnimux:text] catalog default ${catalogDefault.provider}:${catalogDefault.model} has no adapter; falling back to the default text route`)
+        }
+      }
       toolResult = null
     }
     if (toolResult !== null) {
