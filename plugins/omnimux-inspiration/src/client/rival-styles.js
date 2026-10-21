@@ -1122,7 +1122,8 @@ export const RIVAL_CSS = `
   display: flex;
   flex-direction: column;
   width: min(100%, 620px);
-  margin: 0 auto;
+  /* #3565: 时间线靠左对齐；不再用 auto 外边距把列表居中。 */
+  margin: 0;
 }
 .omnimux-rival-timeline-item {
   display: flex;
@@ -1135,7 +1136,8 @@ export const RIVAL_CSS = `
 .omnimux-rival-timeline-item:last-child {
   border-bottom: none;
 }
-.omnimux-rival-timeline-item:hover,
+/* #3565: 悬停不再改变条目背景（用户要求内容区不要 hover 交互）；
+   键盘 focus-visible 仍保留可见背景，避免失去焦点提示。 */
 .omnimux-rival-timeline-item:focus-visible {
   background: var(--dsw-alias-bg-layer-2);
 }

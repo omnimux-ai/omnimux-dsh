@@ -327,10 +327,13 @@ describe('post detail narrow-screen navigation', () => {
     assert.match(INSPIRATION_CSS, /omnimux-post-analysis\.is-active/)
   })
 
-  it('centres the timeline at an X-like reading width and keeps media uncropped (#3486)', () => {
+  it('left-aligns the timeline at an X-like reading width and keeps media uncropped (#3565)', () => {
     const timeline = ruleBody(RIVAL_CSS, '.omnimux-rival-timeline')
     assert.match(timeline, /width:\s*min\(100%,\s*620px\)/, 'the timeline must cap its reading width')
-    assert.match(timeline, /margin:\s*0 auto/, 'the timeline must centre itself')
+    assert.match(timeline, /margin:\s*0\s*;/, 'the timeline must align to the left edge (#3565)')
+    assert.equal(/margin:\s*0 auto/.test(timeline), false, 'the timeline must not centre itself anymore (#3565)')
+    assert.equal(/\.omnimux-rival-timeline-item:hover\s*[,{]/.test(RIVAL_CSS), false, 'hover must not change the item background (#3565)')
+    assert.match(RIVAL_CSS, /\.omnimux-rival-timeline-item:focus-visible \{[^}]*background:/, 'keyboard focus keeps a visible background')
     assert.match(RIVAL_CSS, /\.omnimux-rival-timeline-media img,[\s\S]*?object-fit:\s*contain/, 'media must use contain, not cover')
     assert.match(RIVAL_CSS, /max-height:\s*510px/, 'media must cap its height instead of stretching')
   })
