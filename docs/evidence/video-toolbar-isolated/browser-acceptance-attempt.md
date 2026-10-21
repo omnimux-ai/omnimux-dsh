@@ -69,3 +69,13 @@ FAIL TEST_ENV_RUNTIME_EXIT
 - 包级测试：`pnpm --filter omnimux-workflow test` → 2540/2540 通过。
 
 这些证据证明行为契约，但**不能替代** AGENTS 要求的隔离工作树真实浏览器验收；浏览器验收在本环境保持 BLOCKED，不得在交付汇报中写成已通过。
+
+---
+
+## 6. 解除记录（2026-10-21 16:09）
+
+环境阻断已解除，本文件仅保留为失败现场记录，**最终结论以 `browser-acceptance.md` 为准**：
+
+- 依赖漂移修复：Dev profile 的 `@deepseek-ai/schemastery` 3.18.2 → 3.18.4、`@deepseek-ai/cosmokit` 1.8.3 → 1.8.5，并在 profile `package.json` + `pnpm-lock.yaml` 固化（schemastery `^3.18.4`、cosmokit `^1.8.5`），避免 Dev 重启/物化后回退。见 Issue #3552。
+- 运行器缺陷修复：legacy `--journey` 断言白名单不接受 `journey:` 前缀，已由 PR #3558 修复并合入。
+- 解除后执行结果：`REAL_EXIT=0`，24/24 断言全绿（12 基础 + 12 journey）；截图与报告见 `browser-acceptance/`。

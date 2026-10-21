@@ -11,7 +11,6 @@ import type { ApiUpstream } from '../../../../shared/api.ts';
 import { toast } from '../../../ui';
 import { useCanvasStore } from '../../../store/canvasStore';
 import { tableDocumentCache } from '../../../store/tableDocumentCache.ts';
-import { notifyWorkspaceSaved } from '../../../bridge/useWorkspacePersistence.ts';
 import { deconstructVideo, storyboardVideo, transcribeAudio } from '../../../bridge/apiClient.ts';
 import { planSpeechToTextDownstream } from '../../utils/planSpeechToTextDownstream.ts';
 import {
@@ -107,27 +106,6 @@ function getVideoDeconstructPath(query: MediaPathQuery): string | null {
 function getVideoStoryboardPath(query: MediaPathQuery): string | null {
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
   return resolveVideoStoryboardPath(query, { baseUrl });
-}
-
-function applyServerWorkspaceGraph(
-  serverWorkspace: { nodes: any[]; edges: any[] },
-  returnedTableId: string,
-  setNodes: SetNodes,
-): void {
-  useCanvasStore.getState().hydrateGraph(serverWorkspace.nodes, serverWorkspace.edges);
-  notifyWorkspaceSaved(serverWorkspace as any);
-
-  const matched = serverWorkspace.nodes.find((n: any) => {
-    return n.id === returnedTableId || n.data?.tableId === returnedTableId;
-  });
-  const targetNodeId = matched ? matched.id : returnedTableId;
-  selectTargetNode(targetNodeId, setNodes);
-}
-
-function isServerWorkspaceValid(workspace: unknown): workspace is { nodes: any[]; edges: any[] } {
-  if (!workspace || typeof workspace !== 'object') return false;
-  const candidate = workspace as { nodes?: unknown; edges?: unknown };
-  return Array.isArray(candidate.nodes) && Array.isArray(candidate.edges);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -492,40 +470,16 @@ export async function deriveVideoTable(params: DeriveVideoTableParams): Promise<
     const tableResult = buildDerivedTableResult(body.tableId, body, title);
     refreshTableCache(workspaceId, tableResult.tableId);
 
-    if (isServerWorkspaceValid(body.workspace)) {
-      // 服务端图已包含按 targetNodeId 复用的同一节点；hydrate 后 id 保持一致，不会产生双节点。
-      const hasTargetNode = body.workspace.nodes.some(
-        (n: any) => n.id === targetNodeId || n.data?.tableId === tableResult.tableId,
-      );
-      if (hasTargetNode) {
-        applyServerWorkspaceGraph(body.workspace, tableResult.tableId, setNodes);
-        // 服务端 patch 是数据浅合并，不会清掉预建节点上残留的 executionStatus/executionError；
-        // hydrate 后必须再落一次完成态结算，保证派生节点不会卡在「生成中」。
-        applyDerivedTableSettlement(kind, {
-          targetNodeId,
-          origin: config.origin,
-          sourceVideoNodeId,
-          label: tableResult.title,
-          tableResult,
-        });
-      } else {
-        applyDerivedTableSettlement(kind, {
-          targetNodeId,
-          origin: config.origin,
-          sourceVideoNodeId,
-          label: tableResult.title,
-          tableResult,
-        });
-      }
-    } else {
-      applyDerivedTableSettlement(kind, {
-        targetNodeId,
-        origin: config.origin,
-        sourceVideoNodeId,
-        label: tableResult.title,
-        tableResult,
-      });
-    }
+    // 成功路径只结算目标节点，不 hydrate 服务端整图：客户端已持有预建节点与连线，
+    // 服务端按 targetNodeId 原地补齐同一节点；整图灌回会让 React Flow 用内部旧快照
+    // 发出 replace 变更，把下游节点重新写回 running（真实浏览器实测复现）。
+    applyDerivedTableSettlement(kind, {
+      targetNodeId,
+      origin: config.origin,
+      sourceVideoNodeId,
+      label: tableResult.title,
+      tableResult,
+    });
 
     toast.success(t(config.successToastKey));
   } catch (error) {

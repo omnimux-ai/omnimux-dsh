@@ -45,7 +45,7 @@
    - `planVideoStoryboardProvisioning` / `planVideoStoryboardSettlement`（新增 `planVideoStoryboardDownstream.ts`）。
    provisioning 产出下游 table 节点（客户端生成 id `node_table_<ts>_<rand>`、`origin`、`sourceVideoNodeId`、running/generating 数据、out→in 连线），settlement 只 patch 目标节点。
 2. **后端 targetNodeId**：`deconstruct-video` / `storyboard-video` 请求体新增可选 `targetNodeId`（严格 `^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$`）。服务端优先复用已有同源下游节点的 tableId；否则以 `targetNodeId` 作为新节点 id 与 tableId，写回 workspace 图。
-3. **执行收敛**：`nodeMediaOperations` 不再写源视频节点状态；先 provisioning 上屏，再调用 API，成功后按响应 patch 目标节点（服务端 workspace 可用时以服务端图 hydrate 但目标节点 id 已对齐），失败 patch 目标节点错误态。
+3. **执行收敛**：`nodeMediaOperations` 不再写源视频节点状态；先 provisioning 上屏，再调用 API，成功后**只对目标节点做 settlement patch**（不做整图 hydrate）。真机验证发现：整图 hydrate 会让 React Flow 用内部旧节点快照发出 `replace` 变更，经 store `onNodesChange` 把下游节点重新写回 running；客户端已持有预建节点与连线、服务端又按 `targetNodeId` 原地补齐同一节点，成功路径因此不需要整图 hydrate。失败 patch 目标节点错误态。
 4. **表格节点状态 UI**：`TableNode` 用 `GenerationStateContainer` 包裹卡片内容；生成中/失败时显示骨架/错误卡与重试，完成时显示既有表格预览。重试通过共享 `retryDerivedTableNode` 在新节点内重跑。
 5. 提取音频路径不改。
 

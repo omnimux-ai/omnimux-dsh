@@ -269,12 +269,10 @@ test('E2E A7: 执行链路透传 targetNodeId，服务端原样复用客户端�
   assert.match(deriveBlock, /const targetNodeId = provisioning\.targetNodeId/);
   assert.match(deriveBlock, /targetNodeId,/);
   assert.doesNotMatch(deriveBlock, /updateNodeData\(\{\s*executionStatus/, '派生执行不得写源视频节点状态');
-  // hydrate 后必须再落一次完成态结算：服务端 patch 浅合并不会清掉预建节点的 executionStatus
-  assert.match(
-    deriveBlock,
-    /applyServerWorkspaceGraph\(body\.workspace, tableResult\.tableId, setNodes\);[\s\S]{0,400}applyDerivedTableSettlement\(kind,/,
-    'hydrate 后必须补一次完成态结算，避免派生节点卡在生成中',
-  );
+  // 成功路径不得整图 hydrate：客户端已持有预建节点与连线，整图灌回会让 React Flow 用内部
+  // 旧快照发出 replace 变更，把下游节点重新写回 running（真实浏览器实测复现）。
+  assert.doesNotMatch(deriveBlock, /applyServerWorkspaceGraph|hydrateGraph/, '成功路径必须只结算目标节点');
+  assert.match(deriveBlock, /applyDerivedTableSettlement\(kind, \{[\s\S]{0,240}tableResult,/, '成功路径必须就地结算目标节点');
 
   // 两个 API 客户端都声明了 targetNodeId 载荷字段
   const deconstructApi = apiClientSrc.indexOf('export function deconstructVideo');
