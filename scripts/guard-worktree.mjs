@@ -793,15 +793,36 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
       }
     }
 
-    // 2. build / compile / bundle / 包安装修改命令（剥离引号后稳健识别，如 pnpm run "build"）
+    // 2. build / compile / bundle 仍禁止；依赖恢复放行，manifest/lock 变更仍禁止。
     if (['pnpm', 'npm', 'yarn', 'bun'].includes(verb)) {
       const isBuild = cleanWords.some((w) => ['build', 'compile', 'bundle'].includes(w))
-      const isPkgMutation = cleanWords.some((w) => ['install', 'add', 'update', 'remove', 'uninstall'].includes(w))
-      if (isBuild || isPkgMutation) {
+      if (isBuild) {
         return {
           decision: 'deny',
           reason: 'forbidden-main-checkout-build',
           command: seg,
+        }
+      }
+      const subcommand = (cleanWords[1] || '').toLowerCase()
+      // `pnpm add/remove/update…` 与带包名的安装会改 package.json/lock，仍拦截。
+      const manifestMutation = ['add', 'remove', 'uninstall', 'update', 'up', 'upgrade', 'link', 'unlink', 'dedupe', 'prune', 'publish', 'pack']
+      if (manifestMutation.includes(subcommand)) {
+        return {
+          decision: 'deny',
+          reason: 'forbidden-main-checkout-build',
+          command: seg,
+        }
+      }
+      if (['install', 'i', 'ci'].includes(subcommand)) {
+        // 依赖恢复（primary 维护 / node_modules 修复）：只允许无位置包名的
+        // install/ci；flags 可带值，任何非 flag 位置参数按 add 语义保守拒绝。
+        const positional = cleanWords.slice(2).filter((w) => !w.startsWith('-'))
+        if (positional.length > 0) {
+          return {
+            decision: 'deny',
+            reason: 'forbidden-main-checkout-build',
+            command: seg,
+          }
         }
       }
     }
@@ -1193,10 +1214,10 @@ function decisionJson(hookEventName, decision, reason, extra = {}) {
       ].join('\n')
     } else if (reason === 'forbidden-main-checkout-build') {
       output.permissionDecisionReason = [
-        '🚫【OmniMux 主检出硬隔离拦截】主目录除 .tmp/ 目录外严禁执行任何产生磁盘修改的构建/编译或包安装命令！',
+        '🚫【OmniMux 主检出硬隔离拦截】主目录除 .tmp/ 目录外严禁执行构建/编译/产物命令；会改 package.json 或 lock 的包管理变更同样禁止。',
         `🎯 被拦截的命令：${extra.command || '构建命令'}`,
-        '📌 核心防线原则：主目录除 .tmp 外必须保持绝对只读与洁净，严禁在主检出直接运行 build/tsc 触发编译器副作用。',
-        '👉 强制流程：主目录除 .tmp 外禁止编译构建。请向用户汇报当前阻断，并等待指示切入专属 Worktree 执行构建！',
+        '📌 核心防线原则：主目录除 .tmp 外必须保持洁净，严禁在主检出运行 build/tsc 触发编译器副作用；依赖恢复（pnpm install / npm ci，无包名参数）已放行。',
+        '👉 强制流程：构建请切入专属 Worktree；依赖维护（如 node_modules 元数据修复）可直接在主目录执行 pnpm install --frozen-lockfile。',
       ].join('\n')
     } else if (reason === 'forbidden-main-checkout-git-mutation') {
       output.permissionDecisionReason = [
