@@ -51,6 +51,7 @@ import {
 } from 'omnimux-browser/src/protocol.ts'
 import { BridgeClient, type BridgeState } from './bridge.ts'
 import { createRpc } from './rpc.ts'
+import { SessionTextCollector } from './session-completion.ts'
 import {
   dispatchOpenTab,
   dispatchToolCall,
@@ -263,6 +264,14 @@ let settingsPersistence = Promise.resolve()
 let caps: BridgeCaps | null = null
 let bridge: BridgeClient | null = null
 let rpc: ReturnType<typeof createRpc> | null = null
+interface PendingSessionCompletion {
+  collector: SessionTextCollector
+  resolve: (text: string) => void
+  reject: (error: Error) => void
+  timer: ReturnType<typeof setTimeout>
+}
+/** Poster opinions waiting on a temporary session turn, keyed by session id. */
+const pendingSessionCompletions = new Map<string, PendingSessionCompletion>()
 const panelPorts = new Set<chrome.runtime.Port>()
 const BRIDGE_KEEPALIVE_ALARM = 'bridge-keepalive'
 /** Invalidates an asynchronous discovery attempt when its panel lease ends. */
@@ -637,6 +646,30 @@ function eventMessageText(event: { data?: unknown }): string {
 function clipText(text: string, limit: number): string {
   const normalized = text.replace(/\s+/g, ' ').trim()
   return normalized.length <= limit ? normalized : `${normalized.slice(0, limit - 1).trimEnd()}…`
+}
+
+/**
+ * Resolve a temporary poster-opinion session from its event stream.
+ * Returns after the first matching collector reaches a final outcome.
+ */
+function observeSessionCompletion(frame: ServerFrame): void {
+  for (const [sessionId, entry] of pendingSessionCompletions) {
+    if (!entry.collector.push(frame)) continue
+    if (entry.collector.outcome === null) return
+    clearTimeout(entry.timer)
+    pendingSessionCompletions.delete(sessionId)
+    const outcome = entry.collector.outcome
+    if (!outcome.ok) {
+      entry.reject(new Error(outcome.error || '会话没有完成'))
+      return
+    }
+    if (entry.collector.text.trim() === '') {
+      entry.reject(new Error('会话没有返回正文'))
+      return
+    }
+    entry.resolve(entry.collector.text)
+    return
+  }
 }
 
 /**
@@ -1502,6 +1535,7 @@ async function startBridge(): Promise<void> {
           transientEvents.ingest(frame)
           broadcastEvent(frame)
           observeSessionEvent(frame)
+          observeSessionCompletion(frame)
         }
         else if (frame.t === 'tool.call') routeToolCall(frame)
         else if (frame.t === 'tool.cancel') cancelToolCall(frame.id)
@@ -1529,6 +1563,53 @@ const TWITTER_COPILOT_LOG_KEY = 'omnimux_twitter_copilot_log'
 const TWITTER_COPILOT_LOG_LIMIT = 100
 
 /** Gateway RPC with a helpful error when the bridge is down. */
+function unwrapHostValue(raw: unknown): unknown {
+  const response = (raw as { result?: { ok?: boolean; value?: unknown; error?: { message?: string } } } | null)?.result
+  if (response === undefined) return raw
+  if (response.ok === false) {
+    throw new Error(response.error?.message || 'host rpc failed')
+  }
+  return response.value
+}
+
+/**
+ * Generate one opinion through a temporary chat session.
+ *
+ * The host creates the session lazily on the first prompt; the turn is then
+ * read from assistant/message and turn/end events. Purge runs in `finally` so
+ * a failed turn never leaves the temporary session behind.
+ */
+async function completeTextWithSession(system: string, user: string): Promise<string> {
+  const created = unwrapHostValue(await gatewayRpc('session.create', {})) as { sessionId?: unknown } | undefined
+  const sessionId = typeof created?.sessionId === 'string' ? created.sessionId : ''
+  if (sessionId === '') throw new Error('会话创建失败')
+
+  const prompt = [system.trim(), user.trim()].filter((part) => part !== '').join('\n\n')
+  const collector = new SessionTextCollector(sessionId)
+  const textPromise = new Promise<string>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pendingSessionCompletions.delete(sessionId)
+      reject(new Error('会话生成超时'))
+    }, 90_000)
+    pendingSessionCompletions.set(sessionId, { collector, resolve, reject, timer })
+  })
+  try {
+    await gatewayRpc('session.prompt', {
+      sessionId,
+      mode: 'queue',
+      content: [{ type: 'text', text: prompt }],
+    })
+    return await textPromise
+  } finally {
+    const pending = pendingSessionCompletions.get(sessionId)
+    if (pending !== undefined) {
+      clearTimeout(pending.timer)
+      pendingSessionCompletions.delete(sessionId)
+    }
+    void gatewayRpc('bridge.session.purge', { sessionId }).catch(() => {})
+  }
+}
+
 async function gatewayRpc(method: string, payload: unknown): Promise<unknown> {
   if (rpc === null || bridge === null || !bridge.connected) {
     const zh = getUiLocale() === 'zh'
@@ -2847,12 +2928,22 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     const userMessage = payload.userMessage || ''
 
     void (async () => {
+      let sessionError: unknown = null
+      try {
+        const text = await completeTextWithSession(systemPrompt, userMessage)
+        sendResponse({ ok: true, text: text.trim() })
+        return
+      } catch (error) {
+        sessionError = error
+      }
       try {
         const result = await gatewayRpc(BRIDGE_COMPLETE_TEXT_METHOD, { prompt: userMessage, system: systemPrompt }) as { text?: unknown }
         if (typeof result?.text !== 'string' || !result.text.trim()) throw new Error('模型没有返回正文')
         sendResponse({ ok: true, text: result.text.trim() })
-      } catch (error) {
-        sendResponse({ ok: false, message: error instanceof Error ? error.message : String(error) })
+      } catch (fallbackError) {
+        const first = sessionError instanceof Error ? sessionError.message : String(sessionError)
+        const second = fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+        sendResponse({ ok: false, message: first === second ? first : `${first}；回退失败：${second}` })
       }
     })()
     return true
