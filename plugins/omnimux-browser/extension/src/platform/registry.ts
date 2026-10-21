@@ -63,6 +63,8 @@ export type SimpleAnchorStrategy =
   | 'side-rail-parking'
   | 'viewport-corner-left'
   | 'viewport-corner-right'
+  | 'modal-prev-arrow'
+  | 'modal-panel-left'
 
 /** A placement rule that stacks the mark above an element the page already renders. */
 export interface StackAboveStep {
@@ -341,6 +343,7 @@ const TIKTOK_ENTRY: PlatformEntry = {
       default: ['avatar-above', 'viewport-corner-left'],
       byLayout: {
         'side-rail': ['avatar-above', 'side-rail-parking'],
+        'browse-modal': ['modal-prev-arrow', 'modal-panel-left', 'viewport-corner-right'],
       },
     },
   },

@@ -30,7 +30,7 @@
 import inlineStyles from './styles.css?inline'
 import { findAvatarElement, resolvePlatformAnchor } from '../../platform/anchor.ts'
 import { platformById } from '../../platform/registry.ts'
-import { resolveIconConflicts, restoreDisplacedIcons } from './conflict.ts'
+import { resolveCoexistPlacement } from './coexist.ts'
 import { actionIcon, brandIcon, checkIcon } from './icons.ts'
 import { resolveMenuSide } from './menu-side.ts'
 import { TIKTOK_SCENE_HOST_ID } from './messages.ts'
@@ -127,7 +127,7 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
   host.style.width = '0'
   host.style.height = '0'
   host.style.overflow = 'visible'
-  host.style.zIndex = '2147483640'
+  host.style.zIndex = '2147483647'
 
   const shadow = host.attachShadow({ mode: 'open' })
   const style = doc.createElement('style')
@@ -192,11 +192,27 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
   let open = false
   let hovering = false
 
+  /**
+   * Put our layer last among the root's children.
+   *
+   * CreatOK renders its toolbar into a fixed portal at `z-index: 2147483647`;
+   * ours lives in a root-level fixed host at the same z-index, so when both
+   * toolbars are open the paint order is decided by DOM order. Moving the host to
+   * the end on open is what keeps our toolbar on top without a z-index race.
+   */
+  const raiseLayer = (): void => {
+    const root = doc.documentElement
+    if (root.lastElementChild !== host) root.appendChild(host)
+  }
+
   const setOpen = (next: boolean): void => {
     open = next
     menu.classList.toggle('is-open', next)
     trigger.setAttribute('aria-expanded', next ? 'true' : 'false')
-    if (next) reposition()
+    if (next) {
+      raiseLayer()
+      reposition()
+    }
   }
 
   let placedLeft = -1
@@ -227,41 +243,52 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
       viewport,
       { box: TRIGGER_BOX_PX },
     )
+    const avatarEl = findAvatarElement(doc, viewport)
+    // The anchor layer answers where the mark belongs; the coexist layer answers
+    // where it can stand without covering an injected rival. Only our own layer
+    // moves — the rival is read, never rewritten.
+    const coexisted = resolveCoexistPlacement(
+      doc,
+      TIKTOK_SCENE_HOST_ID,
+      avatarEl,
+      {
+        left: placement.left,
+        top: viewport.height - placement.bottom - TRIGGER_BOX_PX,
+        width: TRIGGER_BOX_PX,
+        height: TRIGGER_BOX_PX,
+      },
+      viewport,
+    )
     const side = resolveMenuSide({
-      buttonLeft: placement.left,
+      buttonLeft: coexisted.left,
       buttonBox: TRIGGER_BOX_PX,
       menuWidth: menuWidth(),
       viewportWidth: viewport.width,
     })
     // The toolbar is positioned inside the anchor, so its offset is relative to
     // the trigger rather than to the viewport.
-    const menuOffset = side.left - placement.left
-
-    const avatarEl = findAvatarElement(doc, viewport)
-    const ourPlacement = {
-      left: placement.left,
-      top: viewport.height - placement.bottom - TRIGGER_BOX_PX,
-      width: TRIGGER_BOX_PX,
-      height: TRIGGER_BOX_PX,
-    }
-    resolveIconConflicts(doc, ourPlacement, avatarEl, TIKTOK_SCENE_HOST_ID)
+    const menuOffset = side.left - coexisted.left
 
     // Attribute observation makes this run on a busy page, and writing the same
     // values would force a style recalculation for no movement at all.
+    // The anchor is expressed in the same viewport terms the anchor layer uses:
+    // a left edge and a bottom edge. The coexist layer answers in `top`, so the
+    // conversion happens once, here.
+    const bottom = viewport.height - coexisted.top - TRIGGER_BOX_PX
     if (
-      placement.left === placedLeft &&
-      placement.bottom === placedBottom &&
+      coexisted.left === placedLeft &&
+      bottom === placedBottom &&
       menuOffset === placedMenuLeft &&
       side.side === placedMenuSide
     ) {
       return
     }
-    placedLeft = placement.left
-    placedBottom = placement.bottom
+    placedLeft = coexisted.left
+    placedBottom = bottom
     placedMenuLeft = menuOffset
     placedMenuSide = side.side
-    anchor.style.left = `${placement.left}px`
-    anchor.style.bottom = `${placement.bottom}px`
+    anchor.style.left = `${coexisted.left}px`
+    anchor.style.bottom = `${bottom}px`
     menu.style.left = `${menuOffset}px`
     menu.classList.toggle('is-left', side.side === 'left')
   }
@@ -408,7 +435,6 @@ export function mountTiktokScene(options: TiktokSceneOptions): TiktokSceneHandle
       doc.removeEventListener('keydown', onKeydown)
       doc.defaultView?.removeEventListener('resize', onResize)
       doc.defaultView?.removeEventListener('scroll', onScroll)
-      restoreDisplacedIcons(doc)
       host.remove()
     },
     reposition,
