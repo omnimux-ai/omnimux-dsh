@@ -53,6 +53,21 @@ window.fetch = async (url) => {
 
 try { window.localStorage.clear(); } catch (error) { console.warn('localStorage clear failed', error); }
 
+const previewCover = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="#2f9e44"/><text x="50%" y="54%" fill="#fff" font-family="system-ui" font-size="28" text-anchor="middle">hero.png</text></svg>')}`;
+const imageSrc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+Object.defineProperty(HTMLImageElement.prototype, 'src', {
+  configurable: true,
+  get: imageSrc.get,
+  set(value) {
+    const next = String(value || '');
+    if (next.includes('/omnimux/assets/library/preview') || next.includes('/omnimux/assets/artifacts/preview')) {
+      imageSrc.set.call(this, previewCover);
+      return;
+    }
+    imageSrc.set.call(this, value);
+  },
+});
+
 const store = getGlobalMediaViewerStore();
 store.addMedia({ id: 'img-1', sessionId: 's1', type: 'image', status: 'completed', url: cover, title: '基准图', prompt: '基准图', request: { prompt: '基准图' }, aspectRatio: '1:1', timestamp: 1_760_000_000_000 });
 store.setActiveId('img-1');

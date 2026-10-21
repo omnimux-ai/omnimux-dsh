@@ -54,4 +54,5 @@ const report = {
   screenshots: ['before-picker.png', 'picker-open.png', 'after-select.png'],
 };
 await fs.writeFile(`${target.evidence}/report.json`, JSON.stringify(report, null, 2));
+await task.finish({ keep: [] });
 console.log(JSON.stringify({ pass: report.pass, assertions }, null, 2));

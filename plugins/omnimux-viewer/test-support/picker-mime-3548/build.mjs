@@ -37,7 +37,10 @@ writeFileSync(join(outDir, 'target.json'), JSON.stringify({
   sources: {
     picker: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/ReferencePickerPopover.jsx'),
     mime: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/picker-asset-mime.js'),
+    composer: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/MediaViewerComposer.jsx'),
+    slot: join(worktree, 'plugins/omnimux-viewer/src/media-viewer/media-slot.js'),
     harness: join(here, 'harness.jsx'),
+    capture: join(here, 'capture.mjs'),
   },
 }, null, 2));
 console.log('built', join(outDir, 'harness.html'));

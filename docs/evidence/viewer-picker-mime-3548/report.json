@@ -1,9 +1,9 @@
 {
   "pass": true,
   "issue": 3548,
-  "capturedAt": "2026-10-21T07:04:01.270Z",
-  "sourceCommit": "bb00c31b6d9bf02b216634e9c3d178fd70593e13",
-  "sourceDirty": false,
+  "capturedAt": "2026-10-21T07:10:43.545Z",
+  "sourceCommit": "ed5f55d64553db3820b2ee3c7f1d4c12f87f8012",
+  "sourceDirty": true,
   "browser": "ego-lite",
   "assertions": [
     {
@@ -14,7 +14,7 @@
         "pickerOpen": false,
         "slotCards": 1,
         "slotImages": [
-          "/omnimux/assets/library/preview?id=ast_3548&file=file_3548"
+          "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22240%22%20height%3D%22240%22%3E%3Crect%20width%3D%22240%22%20height%3D%22240%22%20fill%3D%22%232f9e44%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2254%25%22%20fill%3D%22%23fff%22%20font-family%3D%22system-ui%22%20font-size%3D%2228%22%20text-anchor%3D%22middle%22%3Ehero.png%3C%2Ftext%3E%3C%2Fsvg%3E"
         ],
         "bodyText": "添加评论历史100%打开图像视频素材 [本地角色] 已入槽Synthetic Image标准版参数1:1·1K·1预估消耗 ≈0.13 积分历史基准图16:53 · 图片复用提示词下载\"use strict\"; (() => { var __create = Object.create; var __defProp = Object.defineProperty; var __getOwnPropDesc = Object.getOwnPropertyDescriptor; "
       }
@@ -35,14 +35,17 @@
     "pickerOpen": false,
     "slotCards": 1,
     "slotImages": [
-      "/omnimux/assets/library/preview?id=ast_3548&file=file_3548"
+      "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22240%22%20height%3D%22240%22%3E%3Crect%20width%3D%22240%22%20height%3D%22240%22%20fill%3D%22%232f9e44%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2254%25%22%20fill%3D%22%23fff%22%20font-family%3D%22system-ui%22%20font-size%3D%2228%22%20text-anchor%3D%22middle%22%3Ehero.png%3C%2Ftext%3E%3C%2Fsvg%3E"
     ],
     "bodyText": "添加评论历史100%打开图像视频素材 [本地角色] 已入槽Synthetic Image标准版参数1:1·1K·1预估消耗 ≈0.13 积分历史基准图16:53 · 图片复用提示词下载\"use strict\"; (() => { var __create = Object.create; var __defProp = Object.defineProperty; var __getOwnPropDesc = Object.getOwnPropertyDescriptor; "
   },
   "sources": {
-    "picker": "93d3a5155979e8cda4839bcd4f6bbf70405de067178a6b35348fd6d8b3daa99c",
-    "mime": "0cff51b99fb2468506f66d9ff76b0b7fbc18da2029882aff7e8ab6469506c813",
-    "harness": "654d3c6ffdd5ce96b48d8ac3a9207dc3ccbaced0cd904a92378787917eb8b5b9"
+    "picker": "48666df8b367897baf5be3b7ebc84073a7a78f2bc1624ee32d20d5ea4c5f81e7",
+    "mime": "bed4fe1ae70939178f12ad0eb75e4844a6892358fc4dd3bf2683d2042cab8245",
+    "composer": "094c0e1595196036ecf28fcf208a0959392a2ad07a013245dfc1dfe300a875a5",
+    "slot": "fac05484b1b76cb22c314990552e70572feff76b7c46a9392d73ade41ea20f43",
+    "harness": "c1099a471d0660745c238db52cb7c0bf2d1df6f44eb597c0ed5e45256689361f",
+    "capture": "1ab66d020a84afd2b68c9591b302323fd3723a3a231a7e097dbf3e8dd4f1816b"
   },
   "screenshots": [
     "before-picker.png",
