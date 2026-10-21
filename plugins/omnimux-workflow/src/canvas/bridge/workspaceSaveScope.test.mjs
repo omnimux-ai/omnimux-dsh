@@ -249,3 +249,87 @@ test('late A finally does not release the B in-flight save guard', async () => {
   assert.equal(h.env.calls.length, 2, 'B keeps the original single-save-in-flight behavior');
   pendingB.resolve({ ok: true, body: { workspace: workspace('B', 21) } }); await settle();
 });
+
+// --- Issue #3595：自撞推进不得弹「内容冲突」并冻结自动保存 -----------------
+
+test('自撞推进（远端 == 上次已存、本地多了导入节点）不弹冲突并立即续存', async () => {
+  const h = setup();
+  // 远端版本被推进到 4，但内容仍是上次已存的那份（导入前的快照）。
+  h.env.get = async () => ({ ok: true, body: { workspace: workspace('A', 4) } });
+  h.env.version = async () => ({ ok: true, body: { version: 4 } });
+  h.edit('imported node');
+  h.poll(); await settle();
+  assert.notEqual(h.render().status, 'conflict');
+  assert.equal(h.controller.isDirty, true);
+  assert.equal(h.env.saved.length, 0, '未真正保存前不得广播已保存');
+  h.autosave(); await settle();
+  assert.equal(h.env.calls.length, 1);
+  assert.equal(h.env.calls[0].payload.expectedVersion, 4);
+  assert.equal(h.render().status, 'saved');
+  assert.equal(h.controller.isDirty, false);
+});
+
+test('409 后远端已含当前本地内容（adopt）不弹冲突，也不重复写', async () => {
+  const h = setup();
+  h.env.save = async (wsId, payload) => {
+    h.env.calls.push({ wsId, payload });
+    return { ok: false, status: 409, body: { current: 4 } };
+  };
+  h.edit('A edit');
+  await settle();
+  h.env.get = async () => ({
+    ok: true,
+    body: { workspace: { id: 'A', name: 'A', version: 4, nodes: h.state.nodes, edges: [] } },
+  });
+  // 内容其实已在服务端：不弹冲突条、不重发 PUT；但这次点击仍被提交栅栏阻断。
+  await assert.rejects(() => h.controller.saveNow(), /版本冲突/);
+  assert.equal(h.render().status, 'idle');
+  assert.equal(h.env.calls.length, 1, 'adopt 不应该再发一次 PUT');
+});
+
+test('409 后本地已无未存内容（reload）不弹冲突条', async () => {
+  const h = setup();
+  h.env.save = async (wsId, payload) => {
+    h.env.calls.push({ wsId, payload });
+    return { ok: false, status: 409, body: { current: 4 } };
+  };
+  h.env.get = async () => ({ ok: true, body: { workspace: workspace('A', 4) } });
+  h.edit('A edit');
+  h.autosave();
+  h.state.nodes = workspace('A', 3).nodes; // PUT 期间用户撤回到上次已存
+  await settle();
+  assert.notEqual(h.render().status, 'conflict');
+  assert.equal(h.render().status, 'idle');
+  assert.equal(h.state.nodes[0].data.prompt, 'A', '已按远端重新载入');
+});
+
+test('真分叉（远端含别人的新节点 + 本地也脏）仍然弹冲突条并冻结保存', async () => {
+  const h = setup();
+  const remoteNodes = workspace('A', 4).nodes.concat([
+    { id: 'other-session', type: 'text', position: { x: 10, y: 10 }, data: { prompt: 'other' } },
+  ]);
+  h.env.get = async () => ({
+    ok: true,
+    body: { workspace: { id: 'A', name: 'A', version: 4, nodes: remoteNodes, edges: [] } },
+  });
+  h.env.version = async () => ({ ok: true, body: { version: 4 } });
+  h.edit('mine');
+  h.poll(); await settle();
+  assert.equal(h.render().status, 'conflict');
+  const calls = h.env.calls.length;
+  h.edit('mine again'); h.autosave(); await settle();
+  assert.equal(h.env.calls.length, calls, '冲突期间不得继续写');
+});
+
+test('探测与快照之间继续编辑：按当前图判定，不自撞成冲突', async () => {
+  const h = setup(), pending = deferred();
+  h.env.version = async () => ({ ok: true, body: { version: 4 } });
+  h.env.get = () => pending.promise;
+  h.edit('imported node');
+  h.poll(); await settle(); // 版本探测已通过，正在等快照
+  h.edit('imported node + later edit'); // 等快照期间又改了一笔
+  pending.resolve({ ok: true, body: { workspace: workspace('A', 4) } });
+  await settle();
+  assert.notEqual(h.render().status, 'conflict', '旧实现拿探测前的快照比当前 store，这里会误报冲突');
+  assert.equal(h.render().status, 'pending');
+});

@@ -231,6 +231,9 @@ export function useWorkspacePersistence(
       return 'unavailable';
     }
     const snapshot = latest.body.workspace;
+    // 期间若有自己的保存在飞/已完成，快照可能比本地记录的版本还旧：
+    // 版本只能前进，过旧快照直接放弃应用，避免把版本写回去再撞 409。
+    if (snapshot.version < serverVersionRef.current) return 'unavailable';
     serverVersionRef.current = snapshot.version;
     // Only the explicit resolution controls may release an existing conflict.
     if (conflictRef.current) return 'conflict';
@@ -260,9 +263,9 @@ export function useWorkspacePersistence(
     }
     if (decision === 'resave') {
       // 远端没有本地尚未拥有的内容：本地领先，续存即可，不弹条。
+      // 这里还没有保存成功，不能当成「已保存」广播给宿主。
       setIsDirty(true);
       setStatus((prev) => (prev === 'saving' ? prev : 'pending'));
-      onSavedRef.current?.(snapshot);
       return 'resave';
     }
     setIsDirty(false);
@@ -336,15 +339,34 @@ export function useWorkspacePersistence(
         let result = await saveWorkspace(ws.id, { ...payload, expectedVersion: saved.version });
         if (result.status === 409) {
           if (!isCurrentScope(scope)) return { error: '画布版本冲突，未保存离开前的修改' };
-          const decision = await resolveRemoteAdvance();
+          const reconcile = await resolveRemoteAdvance();
           if (!isCurrentScope(scope)) return { error: '画布已切换，请重新发起生成' };
-          // 远端只是落后于本地（不含任何别人的新内容）：带最新版本重试一次，
-          // 不把「自己的保存推进了版本」误报成内容冲突（Issue #3595）。
-          if (decision === 'resave') {
+          if (reconcile === 'adopt') {
+            // 远端已经等于当前本地内容：内容其实已在服务端，不弹冲突条、不重复写；
+            // 但这次点击仍按「未保存成功」阻断（同一张图也不重发提交）。
+            if (isCurrentScope(scope)) {
+              setIsDirty(currentSigRef.current !== lastSavedSigRef.current);
+              setStatus('idle');
+            }
+            return { error: '画布版本冲突，请确认最新内容后重新生成' };
+          }
+          if (reconcile === 'reload') {
+            // 本地相对服务端没有未存内容，已载入远端图；不要让页面停在冲突态。
+            return { error: '画布已被其它会话更新，已载入最新内容，请重新发起生成' };
+          }
+          if (reconcile === 'resave') {
+            // 远端只是落后于本地（不含任何别人的新内容）：带最新版本重试一次，
+            // 不把「自己的保存推进了版本」误报成内容冲突（Issue #3595）。
             result = await saveWorkspace(ws.id, { ...payload, expectedVersion: serverVersionRef.current });
             if (!isCurrentScope(scope)) return { error: '画布已切换，请重新发起生成' };
-          }
-          if (result.status === 409 || decision === 'conflict') {
+            if (result.status === 409) {
+              // 重试前远端又被推进：这才是真的没法自动合并。
+              conflictRef.current = true;
+              setStatus('conflict');
+              return { error: '画布版本冲突，请确认最新内容后重新生成' };
+            }
+          } else {
+            // reconcile === 'conflict'，或快照不可用：交给用户显式选择。
             conflictRef.current = true;
             setStatus('conflict');
             return { error: '画布版本冲突，请确认最新内容后重新生成' };
@@ -578,12 +600,19 @@ export function useWorkspacePersistence(
       try {
         const probe = await getWorkspaceVersion(ws.id);
         if (!isCurrentScope(scope)) return;
+        // 两次 await 期间可能有自己的保存开始/完成：它已经处理过版本，
+        // 这里再判会用旧快照覆盖新版本。
+        if (savingRef.current || conflictRef.current) return;
         if (!probe.ok || typeof probe.body.version !== 'number') return;
         if (probe.body.version <= serverVersionRef.current) return;
         const decision = await resolveRemoteAdvance();
         if (!isCurrentScope(scope)) return;
         // 远端只是落后于本地：立即续存，不弹冲突条（Issue #3595）。
-        if (decision === 'resave') armAutosave(readStoreCapture());
+        // 已有排程时不动它：那笔保存会带更新的本地图，也保留用户删除的 cause。
+        if (decision === 'resave' && !timerRef.current) {
+          const capture = readStoreCapture();
+          armAutosave(capture, inferPersistCause(capture.nodes.length, 'autosave'));
+        }
       } catch {
         // Probe failures are silent — the next tick retries.
       } finally {

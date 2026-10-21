@@ -34,17 +34,21 @@
 
 ## 测试策略
 
-先写失败用例：给 `persistConflict` 补四态断言（含 `resave`），再用 `signatureOf` 构造"导入前 / 导入后 / 远端"三份真实签名，断言判定链给出 `resave` 而不是 `conflict`；随后实现并跑同一批用例转绿。不新增 E2E（本次改动只在 `src/canvas/bridge` 的持久化判定，非界面源码，无 DOM/样式改动）。
+先写失败用例再实现。判定层：`persistConflict.test.mjs` 追加四态断言（含 `resave`）。调用层：在既有 hook harness（`workspaceSaveScope.test.mjs`，esbuild + 假 React + `poll()`/`autosave()`）中追加 5 个用例——自撞推进不弹冲突并续存、409 + adopt 不弹条不重发 PUT、409 + reload 不弹条、真分叉仍弹条并冻结、探测与快照之间继续编辑时按当前图判定。
+
+RED 证据：临时注释掉 `resave` 分支后重跑 harness，`自撞推进…` 与 `探测与快照之间继续编辑…` 两条立即失败（25 pass / 2 fail），恢复后 27/27 通过；说明这两条用例真的覆盖了本次修复的语义，而不是复述实现。
+
+不新增 E2E：本次改动只在 `src/canvas/bridge` 的持久化判定，`impact-matrix` 判定 `isUiChange=false`、`browser.required=false`，无 DOM/样式/文案改动。
 
 ## 假设
 
-1. 远端版本推进有两种良性来源：本机自己的 PUT 成功（内容 == 上次已存快照），以及其它会话写入的**相同**图；只要远端签名 == 上次已存签名，远端就没有任何本地尚未拥有的内容，续存不会覆盖别人的工作。
-2. 本地编辑在 `await` 期间继续增长时，正确语义是"以最新本地图重新判定"，而沿用探测前的旧快照会制造假分叉。
+1. 远端版本推进有两种良性来源：本机自己的 PUT 成功（内容 == 上次已存快照），以及其它会话写入的**相同**图；只要远端签名 == 上次已存签名，远端就没有本地尚未拥有的内容（模 sanitize 剥掉的派生字段），续存不会覆盖别人的工作。
+2. 本地编辑在 `await` 期间继续增长时，正确语义是"以最新本地图重新判定"，沿用探测前的旧快照会制造假分叉。
 
 ## 证伪方式
 
-1. 若存在"远端 == lastSaved 但远端其实携带别人新增内容"的场景，签名必然不等（签名覆盖节点/边白名单字段），可用 `signatureOf` 构造该用例验证 `remoteSignature !== lastSavedSignature`，从而不会走 `resave`。
-2. 若把 `resolveRemoteAdvance` 改回使用旧快照仍能通过 `workspaceSelfSaveRace.test.mjs`，则该测试没有真正覆盖竞态，需要加入"await 期间本地新增节点"的构造；反之四态单测会直接失败（先红后绿）。
+1. 若存在"远端 == lastSaved 但远端其实携带别人新增内容"的场景，签名必然不等（签名覆盖节点/边白名单字段）：可用 `signatureOf` 构造该用例，`remoteSignature !== lastSavedSignature`，从而不会走 `resave`；`workspaceSelfSaveRace.test.mjs` 的"远端只落后一条边"用例即此形状。
+2. 若测试没有真正覆盖调用层竞态，把 `resave` 分支摘掉后用例仍然全绿——已实测相反（2 条红灯），见「测试策略」；同时 harness 用例直接加载 `useWorkspacePersistence.ts`，不再只有纯函数层覆盖。
 
 ## 边界与文档影响
 
