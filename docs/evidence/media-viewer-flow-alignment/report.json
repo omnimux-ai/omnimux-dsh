@@ -1,13 +1,13 @@
 {
   "pass": true,
   "issue": 3533,
-  "capturedAt": "2026-10-21T06:27:06.773Z",
-  "sourceCommit": "0c14a1d4ac297bd18dbaeb8f1d34c80b80943644",
+  "capturedAt": "2026-10-21T08:37:26.307Z",
+  "sourceCommit": "969a9c9c4aa279cc067d6c9f109b6b5ca09f5414",
   "sourceDirty": false,
   "browser": "ego-lite",
   "harness": "/tmp/flow-alignment-3533/harness.html",
   "sources": {
-    "tab": "e3164db5495adec1db8ce37a6928b4f3f7b9a3ea5b32ce9d92dcc0abbb7c671b",
+    "tab": "87dc807328f41ee74e1af7ed994978fc3b3c79b09c2417e20b868fa0b3949c5f",
     "panel": "89d55058248e034b9e4f01760670b7a8abca4fc5aafc2aa609590b06fd3e3e0f",
     "styles": "a810ab2a5c967967fada55dd60405673b8de3938ff54a8afe6d1d45d90c4c024",
     "history": "e981f3f987727055226dba24e86774c0aeb5d75a4b64f8decddccdfdf1b7d720",
@@ -18,7 +18,7 @@
     "mount": "62c069a75a28d4d2a6495517feeab9c4cde1d72b8239e2fef6ef2b217ceb4761",
     "locales": "4da9a9ad55b54984eb24412c88877322d26c5e4e4ed1242ce3e8b0f24309a254",
     "copy": "3bfaf8d0eba7c9cfcd2b0e87209247f6c002b6528c100817584b303da02ef4b1",
-    "harness": "8cc78b170c9d872404b8709b261ebad66da21f4d6ce1ba5709003695e58520db",
+    "harness": "ccc929b35af6ec2c83aef9136e388cf04578330f68654803d0dae8317d1a4426",
     "capture": "38e866d064e1b2b3b618c6757d6ff60405021aa17224e931d91c4f4baf3dc64e",
     "buildHarness": "e40f3deebffb5361ce9b90cb3748ecc97be9372859f3ca343983b493a83bc0e3"
   },
@@ -27,14 +27,14 @@
       "name": "wide: rail visible beside stage",
       "pass": true,
       "detail": {
-        "x": 1237,
+        "x": 1243,
         "y": 47,
         "width": 261,
         "height": 753,
         "top": 47,
-        "right": 1498,
+        "right": 1504,
         "bottom": 800,
-        "left": 1237
+        "left": 1243
       }
     },
     {
@@ -105,14 +105,14 @@
       "name": "narrow: drawer width stays inside the frame",
       "pass": true,
       "detail": {
-        "x": 857,
+        "x": 863,
         "y": 47,
         "width": 321,
         "height": 753,
         "top": 47,
-        "right": 1178,
+        "right": 1184,
         "bottom": 800,
-        "left": 857
+        "left": 863
       }
     },
     {
@@ -131,20 +131,20 @@
   ],
   "wide": {
     "viewport": {
-      "width": 1716,
-      "height": 871
+      "width": 1728,
+      "height": 883
     },
     "frameWidth": 1280,
     "hasHistoryOpen": "false",
     "rail": {
-      "x": 1237,
+      "x": 1243,
       "y": 47,
       "width": 261,
       "height": 753,
       "top": 47,
-      "right": 1498,
+      "right": 1504,
       "bottom": 800,
-      "left": 1237
+      "left": 1243
     },
     "railVisibility": "visible",
     "railPosition": "static",
@@ -164,20 +164,20 @@
   },
   "narrowClosed": {
     "viewport": {
-      "width": 1716,
-      "height": 871
+      "width": 1728,
+      "height": 883
     },
     "frameWidth": 640,
     "hasHistoryOpen": "false",
     "rail": {
-      "x": 1178,
+      "x": 1184,
       "y": 47,
       "width": 321,
       "height": 753,
       "top": 47,
-      "right": 1499,
+      "right": 1505,
       "bottom": 800,
-      "left": 1178
+      "left": 1184
     },
     "railVisibility": "hidden",
     "railPosition": "absolute",
@@ -197,20 +197,20 @@
   },
   "narrowOpen": {
     "viewport": {
-      "width": 1716,
-      "height": 871
+      "width": 1728,
+      "height": 883
     },
     "frameWidth": 640,
     "hasHistoryOpen": "true",
     "rail": {
-      "x": 857,
+      "x": 863,
       "y": 47,
       "width": 321,
       "height": 753,
       "top": 47,
-      "right": 1178,
+      "right": 1184,
       "bottom": 800,
-      "left": 857
+      "left": 863
     },
     "railVisibility": "visible",
     "railPosition": "absolute",

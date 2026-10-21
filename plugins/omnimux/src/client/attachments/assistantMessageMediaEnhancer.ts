@@ -435,7 +435,6 @@ export function createMediaTailElement(items: readonly DetectedMedia[], doc: Doc
       sessionId: item.sessionId || currentSessionId(),
     });
     store.setActiveId(media.id);
-    store.setSubViewMode('single');
     // Enter full canvas mode (2-column layout with middle conversation collapsed)
     store.setLayoutMode('2col');
 

@@ -26,7 +26,7 @@ test('E2E: 图像生成大图预览消除黑边、手势缩放记忆与左上角
 
   // 1. 验证 AC-1: 消除黑边规则
   const css = MEDIA_VIEWER_CSS;
-  const hasZeroPadding = /\.omx-mv-stage-wrapper\[data-subview="single"\]\s+\.omx-mv-viewport\s*\{[^}]*padding:\s*0\s*!important;/s.test(css);
+  const hasZeroPadding = /\.omx-mv-stage-wrapper\s+\.omx-mv-viewport\s*\{[^}]*padding:\s*0\s*!important;/s.test(css);
   record('AC-1_VIEWPORT_NO_LETTERBOX', hasZeroPadding, '单图视口成功消除死板 padding，杜绝黑边');
 
   const noMaxWidth90 = !/\.omx-mv-display\s*\{[^}]*max-width:\s*90%/s.test(css);
@@ -84,9 +84,6 @@ test('E2E: 图像生成大图预览消除黑边、手势缩放记忆与左上角
   const tabSource = fs.readFileSync(new URL('./MediaViewerTab.jsx', import.meta.url), 'utf8');
   const hasVideoBranch = /item\.type === 'video'\s*\?\s*\(\s*<>\s*<video[^>]*className="omx-mv-thumbnails-rail__img"/s.test(tabSource);
   record('AC-5_VIDEO_THUMBNAIL_ELEMENT', hasVideoBranch, '缩略图栏对视频素材正常渲染 video 标签并附带播放微图标');
-
-  const hasTimelineVideo = /group\.items\[0\]\.type === 'video'\s*\?\s*\(\s*<video/s.test(tabSource);
-  record('AC-5_TIMELINE_VIDEO_ELEMENT', hasTimelineVideo, '时间线列表对视频素材正常渲染 video 标签');
 
   // 留存正式验证证据文件
   const evidenceReport = {

@@ -18,7 +18,7 @@ describe('大图预览与左上角 1:1 居中缩略图契约测试 (Issue #1844)
     // 验证视口单图模式下 padding 为 0
     assert.match(
       css,
-      /\.omx-mv-stage-wrapper\[data-subview="single"\]\s+\.omx-mv-viewport\s*\{[^}]*padding:\s*0\s*!important;/s,
+      /\.omx-mv-stage-wrapper\s+\.omx-mv-viewport\s*\{[^}]*padding:\s*0\s*!important;/s,
       '单图视口必须消除 padding 以彻底去除黑边'
     );
 
@@ -103,7 +103,7 @@ describe('大图预览与左上角 1:1 居中缩略图契约测试 (Issue #1844)
     assert.equal(snapshot.zoom, 180, '切换图片后缩放比例必须保持锁定在 180%，严禁还原重置');
   });
 
-  it('AC-5: 缩略图栏与时间线对视频素材正常渲染 video 封面而非破损 img (Issue #1852, #1857)', async () => {
+  it('AC-5: 缩略图栏对视频素材正常渲染 video 封面而非破损 img (Issue #1852, #1857)', async () => {
     const fs = await import('node:fs');
     const tabSource = fs.readFileSync(new URL('./MediaViewerTab.jsx', import.meta.url), 'utf8');
 
@@ -116,16 +116,6 @@ describe('大图预览与左上角 1:1 居中缩略图契约测试 (Issue #1844)
       tabSource,
       /omx-mv-thumbnails-rail__play-icon/s,
       '缩略图栏必须包含播放标识微图标'
-    );
-    assert.match(
-      tabSource,
-      /group\.items\[0\]\.type === 'video'\s*\?\s*\(\s*<video/s,
-      '时间线单图卡片必须具备视频渲染分支'
-    );
-    assert.match(
-      tabSource,
-      /it\.type === 'video'\s*\?\s*\(\s*<video/s,
-      '时间线多图卡片必须具备视频渲染分支'
     );
   });
 });

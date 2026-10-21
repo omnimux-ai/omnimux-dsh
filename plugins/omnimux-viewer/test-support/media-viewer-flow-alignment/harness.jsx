@@ -52,6 +52,8 @@ window.fetch = async (url) => {
   throw new Error(`Unplanned request ${path}`);
 };
 
+try { window.localStorage.clear(); } catch (error) { console.warn('localStorage clear failed', error); }
+
 const store = getGlobalMediaViewerStore();
 const base = 1_760_000_000_000;
 const items = [

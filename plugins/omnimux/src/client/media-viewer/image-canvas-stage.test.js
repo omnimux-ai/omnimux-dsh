@@ -45,19 +45,15 @@ function assertCanvasInactive(root, message) {
 }
 
 describe('isImageCanvasActive', () => {
-  it('单图浏览且存在活动媒体时声明画布身份', () => {
-    assert.equal(isImageCanvasActive({ subViewMode: 'single', hasActiveMedia: true }), true);
-  });
-
-  it('时间线（grid）不声明画布身份', () => {
-    assert.equal(isImageCanvasActive({ subViewMode: 'grid', hasActiveMedia: true }), false);
+  it('存在活动媒体时声明画布身份', () => {
+    assert.equal(isImageCanvasActive({ hasActiveMedia: true }), true);
   });
 
   it('没有活动媒体时不声明画布身份', () => {
-    assert.equal(isImageCanvasActive({ subViewMode: 'single', hasActiveMedia: false }), false);
+    assert.equal(isImageCanvasActive({ hasActiveMedia: false }), false);
   });
 
-  it('视图模式缺省时按非画布处理', () => {
+  it('缺省状态按非画布处理', () => {
     assert.equal(isImageCanvasActive({}), false);
     assert.equal(isImageCanvasActive(), false);
   });
@@ -66,29 +62,29 @@ describe('isImageCanvasActive', () => {
 describe('syncImageCanvasStage', () => {
   it('单图可见时写入画布身份与可见标识', () => {
     const root = createNode();
-    syncImageCanvasStage(root, { subViewMode: 'single', hasActiveMedia: true, visible: true });
+    syncImageCanvasStage(root, { hasActiveMedia: true, visible: true });
     assertCanvasActive(root, '画布身份应写入');
     assert.equal(root.getAttribute(IMAGE_CANVAS_VISIBLE_ATTR), 'true');
   });
 
-  it('时间线态清除画布身份', () => {
+  it('没有活动媒体时清除画布身份', () => {
     const root = createNode();
-    syncImageCanvasStage(root, { subViewMode: 'single', hasActiveMedia: true, visible: true });
-    syncImageCanvasStage(root, { subViewMode: 'grid', hasActiveMedia: true, visible: true });
-    assertCanvasInactive(root, '切到时间线必须清除画布身份');
+    syncImageCanvasStage(root, { hasActiveMedia: true, visible: true });
+    syncImageCanvasStage(root, { hasActiveMedia: false, visible: true });
+    assertCanvasInactive(root, '没有活动媒体必须清除画布身份');
     assert.equal(root.getAttribute(IMAGE_CANVAS_VISIBLE_ATTR), 'true');
   });
 
   it('画布身份存在但舞台不可见时标记不可见', () => {
     const root = createNode();
-    syncImageCanvasStage(root, { subViewMode: 'single', hasActiveMedia: true, visible: false });
+    syncImageCanvasStage(root, { hasActiveMedia: true, visible: false });
     assertCanvasActive(root, '不可见不等于撤销身份');
     assert.equal(root.getAttribute(IMAGE_CANVAS_VISIBLE_ATTR), 'false');
   });
 
   it('重复同步是幂等的', () => {
     const root = createNode();
-    const state = { subViewMode: 'single', hasActiveMedia: true, visible: true };
+    const state = { hasActiveMedia: true, visible: true };
     syncImageCanvasStage(root, state);
     syncImageCanvasStage(root, state);
     assertCanvasActive(root, '幂等：再次同步仍为画布');
@@ -96,7 +92,7 @@ describe('syncImageCanvasStage', () => {
   });
 
   it('失效节点不抛错（组件卸载后同步安全）', () => {
-    assert.doesNotThrow(() => syncImageCanvasStage(null, { subViewMode: 'single', hasActiveMedia: true, visible: true }));
-    assert.doesNotThrow(() => syncImageCanvasStage({}, { subViewMode: 'single', hasActiveMedia: true }));
+    assert.doesNotThrow(() => syncImageCanvasStage(null, { hasActiveMedia: true, visible: true }));
+    assert.doesNotThrow(() => syncImageCanvasStage({}, { hasActiveMedia: true }));
   });
 });

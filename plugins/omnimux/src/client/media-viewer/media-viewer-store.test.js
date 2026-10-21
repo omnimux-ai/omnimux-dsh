@@ -1,13 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMediaViewerStore, formatTimelineDate, clearPersistedMediaViewerStore } from './media-viewer-store.js';
-
-test('formatTimelineDate formats timestamp to YYYY年M月D日 HH:mm', () => {
-  // 2026-09-13 20:29:00 local time
-  const d = new Date(2026, 8, 13, 20, 29, 0);
-  const str = formatTimelineDate(d.getTime());
-  assert.equal(str, '2026年9月13日 20:29');
-});
+import { createMediaViewerStore, clearPersistedMediaViewerStore } from './media-viewer-store.js';
 
 test('media-viewer-store: addMedia and activeId tracking', () => {
   const store = createMediaViewerStore();
@@ -27,51 +20,20 @@ test('media-viewer-store: addMedia and activeId tracking', () => {
   assert.equal(store.getSnapshot().activeId, item2.id);
 });
 
-test('media-viewer-store: view modes and zoom cycling', () => {
+test('media-viewer-store: layout mode and zoom cycling', () => {
   const store = createMediaViewerStore();
-  assert.equal(store.getSnapshot().subViewMode, 'single');
   assert.equal(store.getSnapshot().layoutMode, '3col');
-
-  store.setSubViewMode('grid');
-  assert.equal(store.getSnapshot().subViewMode, 'grid');
 
   store.setLayoutMode('2col');
   assert.equal(store.getSnapshot().layoutMode, '2col');
 
   assert.equal(store.getSnapshot().zoom, 100);
-  store.cycleZoom(); // 100 -> 150
+  store.cycleZoom();
   assert.equal(store.getSnapshot().zoom, 150);
-  store.cycleZoom(); // 150 -> 50
+  store.cycleZoom();
   assert.equal(store.getSnapshot().zoom, 50);
-  store.cycleZoom(); // 50 -> 70
+  store.cycleZoom();
   assert.equal(store.getSnapshot().zoom, 70);
-});
-
-test('media-viewer-store: timeline grouping supports multi-card generation in single timestamp group', () => {
-  const store = createMediaViewerStore();
-  const ts1 = new Date(2026, 8, 13, 20, 24, 0).getTime();
-  const ts2 = new Date(2026, 8, 13, 20, 29, 0).getTime();
-
-  // Single generation at 20:24
-  store.addMedia({ id: 'm1', timestamp: ts1, url: 'http://example.com/m1.jpg', groupId: 'batch1' });
-
-  // Multi-generation at 20:29 (two items in same batch/groupId)
-  store.addMedia({ id: 'm2_a', timestamp: ts2, url: 'http://example.com/m2_a.jpg', groupId: 'batch2' });
-  store.addMedia({ id: 'm2_b', timestamp: ts2, url: 'http://example.com/m2_b.jpg', groupId: 'batch2' });
-
-  const groups = store.getTimelineGroups();
-  assert.equal(groups.length, 2);
-
-  // Group 1: 20:24, 1 item
-  assert.equal(groups[0].timeKey, '2026年9月13日 20:24');
-  assert.equal(groups[0].items.length, 1);
-  assert.equal(groups[0].items[0].id, 'm1');
-
-  // Group 2: 20:29, 2 items
-  assert.equal(groups[1].timeKey, '2026年9月13日 20:29');
-  assert.equal(groups[1].items.length, 2);
-  assert.equal(groups[1].items[0].id, 'm2_a');
-  assert.equal(groups[1].items[1].id, 'm2_b');
 });
 
 test('media-viewer-store: generating state subscription', () => {
@@ -180,21 +142,6 @@ test('media-viewer-store: session binding, deduplication and session-scoped filt
   assert.equal(store.getMediaList(sessionA).length, 2);
   assert.equal(store.getMediaList(sessionA)[0].title, 'A1更新标题');
 
-  // Verify timeline grouping scoped by session
-  const groupsA = store.getTimelineGroups(sessionA);
-  const groupsB = store.getTimelineGroups(sessionB);
-  // groupId = per-add timestamp; items may split into several minute/group
-  // buckets on slow runners — assert the session-scoped content, not bucket count.
-  const groupIdsA = groupsA.flatMap((g) => g.items.map((item) => item.id))
-  const groupIdsB = groupsB.flatMap((g) => g.items.map((item) => item.id))
-  // group buckets sort by the dedup refresh timestamp, not insert order —
-  // a millisecond tick on a slow runner can reshuffle buckets, so compare
-  // session-scoped membership, not positional order.
-  assert.deepEqual([...groupIdsA].sort(), store.getMediaList(sessionA).map((item) => item.id).sort())
-  assert.equal(new Set(groupIdsA).size, 2)
-  assert.ok(groupIdsA.includes(itemA2.id))
-  assert.deepEqual([...groupIdsB].sort(), store.getMediaList(sessionB).map((item) => item.id).sort())
-  assert.deepEqual(groupIdsB, [itemB1.id])
 });
 
 test('media-viewer-store: localStorage persistence and restore', () => {

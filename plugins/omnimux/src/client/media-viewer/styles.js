@@ -260,50 +260,29 @@ export const MEDIA_VIEWER_CSS = `
 .omx-mv-toolbar {
   height: 46px;
   padding: 0 16px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-base);
   flex-shrink: 0;
   z-index: 10;
 }
 
-.omx-mv-toolbar__left,
-.omx-mv-toolbar__center,
-.omx-mv-toolbar__right {
+.omx-mv-toolbar__center {
+  grid-column: 2;
+  justify-self: center;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.omx-mv-capsule {
+.omx-mv-toolbar__right {
+  grid-column: 3;
+  justify-self: end;
   display: flex;
   align-items: center;
-  background: var(--dsw-alias-bg-layer-2);
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
-  padding: 2px;
-  gap: 2px;
-}
-
-.omx-mv-capsule__btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--dsw-alias-label-tertiary);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.omx-mv-capsule__btn.active {
-  background: var(--dsw-alias-bg-layer-3);
-  color: var(--dsw-alias-label-primary);
+  gap: 6px;
 }
 
 .omx-mv-btn {
@@ -454,94 +433,7 @@ export const MEDIA_VIEWER_CSS = `
 }
 
 /* ========================================================
-   4. 时间线瀑布流 (Timeline Feed, 支持单时间线多图横排)
-   ======================================================== */
-.omx-mv-timeline {
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  padding: 20px 32px 100px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 28px;
-}
-
-.omx-mv-timeline__group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 820px;
-}
-
-.omx-mv-timeline__date {
-  font-size: 13px;
-  color: var(--dsw-alias-label-tertiary);
-  font-weight: 400;
-  letter-spacing: 0.2px;
-}
-
-.omx-mv-timeline__card-single {
-  width: 380px;
-  max-width: 100%;
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--dsw-alias-bg-layer-2);
-  box-shadow: 0 4px 20px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 时间线卡片投影 */
-  cursor: pointer;
-  position: relative;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.omx-mv-timeline__card-single.selected {
-  outline: 2px solid var(--dsw-alias-brand-primary);
-  outline-offset: -1px;
-}
-
-.omx-mv-timeline__card-single img,
-.omx-mv-timeline__card-single video {
-  width: 100%;
-  height: 270px;
-  object-fit: cover;
-  display: block;
-}
-
-/* 核心：同一时间线下多图横排 */
-.omx-mv-timeline__row {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-
-.omx-mv-timeline__card-multi {
-  flex: 1;
-  height: 220px;
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--dsw-alias-bg-layer-2);
-  box-shadow: 0 4px 20px var(--dsw-alias-bg-layer-1); /* exempt-ui03: 时间线卡片投影 */
-  cursor: pointer;
-  position: relative;
-  border: none !important;
-  outline: none !important;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.omx-mv-timeline__card-multi:hover {
-  transform: translateY(-2px);
-}
-
-.omx-mv-timeline__card-multi img,
-.omx-mv-timeline__card-multi video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* ========================================================
-   5. 大图/大视频居中视口 (Main Display Viewport)
+   4. 大图/大视频居中视口 (Main Display Viewport)
    ======================================================== */
 .omx-mv-viewport {
   flex: 1;
@@ -554,7 +446,7 @@ export const MEDIA_VIEWER_CSS = `
   background: var(--dsw-alias-bg-base);
 }
 
-.omx-mv-stage-wrapper[data-subview="single"] .omx-mv-viewport {
+.omx-mv-stage-wrapper .omx-mv-viewport {
   padding: 0 !important;
   overflow: hidden !important;
 }
@@ -2668,15 +2560,6 @@ button.omx-slot-add:hover,
   background: var(--dsw-alias-bg-layer-2);
   border-radius: inherit;
   box-sizing: border-box;
-}
-
-/* 时间线卡片无固定高度：失败卡改为相对定位并给最小高度，避免卡槽塌陷 */
-.omx-mv-timeline__card-single > .omx-mv-failure-card,
-.omx-mv-timeline__card-multi > .omx-mv-failure-card {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 160px;
 }
 
 /* 失败卡槽不投影：与生成中态一致，投影只留在完成态大图卡槽 */
