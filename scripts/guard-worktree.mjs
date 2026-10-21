@@ -333,6 +333,49 @@ function positionalArgs(words) {
   return positional
 }
 
+/** Wrapper flags that consume the next token before the wrapped command starts. */
+const WRAPPER_FLAGS_WITH_VALUE = new Set(['--package', '-p', '--with', '--node-options', '--registry', '--cache'])
+
+function skipLeadingWrapperFlags(words) {
+  let i = 0
+  while (i < words.length) {
+    const word = words[i]
+    if (word === '--') {
+      i += 1
+      continue
+    }
+    if (!word.startsWith('-')) break
+    i += WRAPPER_FLAGS_WITH_VALUE.has(word) ? 2 : 1
+  }
+  return words.slice(i)
+}
+
+/**
+ * Unwrap `npx`, `pnpm exec|dlx`, `npm exec`, `yarn exec|dlx`, `bunx` so the
+ * wrapped command is classified with the same rules as a direct invocation.
+ * Bounded to 3 layers so nested wrappers cannot loop.
+ */
+function unwrapExecutionWrapper(words) {
+  let current = words
+  for (let depth = 0; depth < 3; depth += 1) {
+    const head = (current[0] || '').toLowerCase()
+    const sub = (current[1] || '').toLowerCase()
+    let rest = null
+    if (['npx', 'bunx'].includes(head)) {
+      rest = skipLeadingWrapperFlags(current.slice(1))
+    } else if (head === 'pnpm' && ['exec', 'dlx'].includes(sub)) {
+      rest = skipLeadingWrapperFlags(current.slice(2))
+    } else if (head === 'npm' && sub === 'exec') {
+      rest = skipLeadingWrapperFlags(current.slice(2))
+    } else if (head === 'yarn' && ['exec', 'dlx'].includes(sub)) {
+      rest = skipLeadingWrapperFlags(current.slice(2))
+    }
+    if (!rest || rest.length === 0) break
+    current = rest
+  }
+  return current
+}
+
 function looksLikeGitInvocation(segment) {
   return /(?:^|\s)git(?:\s|$)/i.test(segment)
 }
@@ -802,19 +845,24 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
 
     const cleanWords = words.map((w) => w.replace(/^['"]|['"]$/g, ''))
 
+    // 包装执行器（npx / pnpm exec|dlx / npm exec / yarn dlx / bunx）先解包，
+    // 再按被包装命令本身做构建/依赖恢复判定。
+    const effectiveWords = unwrapExecutionWrapper(cleanWords)
+    const effectiveVerb = (effectiveWords[0] || '').toLowerCase()
+
     // 1. tsc（严密校验 --noEmit，杜绝 --noEmit=false 或 --noEmit false 等篡改穿透，包含 pnpm/yarn/npm exec 包装）
     const isTscInvocation =
-      verb === 'tsc' ||
-      (verb === 'npx' && cleanWords[1] === 'tsc') ||
-      (['pnpm', 'yarn', 'bun'].includes(verb) && cleanWords[1] === 'tsc') ||
-      (verb === 'npm' && cleanWords[1] === 'exec' && cleanWords.includes('tsc'))
+      effectiveVerb === 'tsc' ||
+      (effectiveVerb === 'npx' && effectiveWords[1] === 'tsc') ||
+      (['pnpm', 'yarn', 'bun'].includes(effectiveVerb) && effectiveWords[1] === 'tsc') ||
+      (effectiveVerb === 'npm' && effectiveWords[1] === 'exec' && effectiveWords.includes('tsc'))
 
     if (isTscInvocation) {
       let isNoEmit = false
-      for (let i = 0; i < cleanWords.length; i++) {
-        const w = cleanWords[i]
+      for (let i = 0; i < effectiveWords.length; i++) {
+        const w = effectiveWords[i]
         if (w === '--noEmit') {
-          const next = cleanWords[i + 1]
+          const next = effectiveWords[i + 1]
           if (next !== 'false' && next !== '0') {
             isNoEmit = true
           }
@@ -835,8 +883,8 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
     }
 
     // 2. build / compile / bundle 仍禁止；依赖恢复放行，manifest/lock 变更仍禁止。
-    if (['pnpm', 'npm', 'yarn', 'bun'].includes(verb)) {
-      const isBuild = cleanWords.some((w) => ['build', 'compile', 'bundle'].includes(w))
+    if (['pnpm', 'npm', 'yarn', 'bun'].includes(effectiveVerb)) {
+      const isBuild = effectiveWords.some((w) => ['build', 'compile', 'bundle'].includes(w))
       if (isBuild) {
         return {
           decision: 'deny',
@@ -844,7 +892,7 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
           command: seg,
         }
       }
-      const subcommand = (cleanWords[1] || '').toLowerCase()
+      const subcommand = (effectiveWords[1] || '').toLowerCase()
       // `pnpm add/remove/update…` 与带包名的安装会改 package.json/lock，仍拦截。
       const manifestMutation = ['add', 'remove', 'uninstall', 'update', 'up', 'upgrade', 'link', 'unlink', 'dedupe', 'prune', 'publish', 'pack']
       if (manifestMutation.includes(subcommand)) {
@@ -857,7 +905,7 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
       if (['install', 'i', 'ci'].includes(subcommand)) {
         // 依赖恢复（primary 维护 / node_modules 修复）：只允许无位置包名的
         // install/ci；带值 flag 的值不算位置参数，其余非 flag 参数按 add 语义保守拒绝。
-        const positional = positionalArgs(cleanWords.slice(2))
+        const positional = positionalArgs(effectiveWords.slice(2))
         if (positional.length > 0) {
           return {
             decision: 'deny',
@@ -869,7 +917,7 @@ export function decideMainCheckoutBuildCommand(command, cwd) {
     }
 
     // 3. direct vite build or esbuild
-    if ((verb === 'vite' && cleanWords.includes('build')) || verb === 'esbuild') {
+    if ((effectiveVerb === 'vite' && effectiveWords.includes('build')) || effectiveVerb === 'esbuild') {
       return {
         decision: 'deny',
         reason: 'forbidden-main-checkout-build',
