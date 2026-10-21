@@ -43,3 +43,11 @@ findPosterActionAnchor(group: HTMLElement): Element | null
 ## 6. 非目标
 
 不改海报渲染、观点生成、发帖页附图、主题数量；不做悬浮 tooltip 组件；不调整其他互动图标顺序。
+
+## 假设
+
+X 互动栏的书签按钮是 group 的直属子节点（或仅隔一层包装），且 React 重绘不会整体替换互动栏。若书签被渲染到别的容器或 Shadow DOM，则 insertBefore 定位会失败。
+
+## 证伪方式
+
+真实 Chromium fixture 中若 `.omnimux-poster-action` 的 `nextElementSibling` 不再包含 `[data-testid="bookmark"]`，或入口落到互动栏外，即证伪。复跑 `docs/evidence/issue-3474` 的 CDP 脚本并检查 `entryBeforeBookmark`。
