@@ -179,9 +179,8 @@ const CanvasNodeHandle: React.FC<CanvasNodeHandleProps> = ({
   // stationary press is a menu click (Gxgen :199-248).
   const handlePlusPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
-    if (typeof event.currentTarget.setPointerCapture === 'function') {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    }
+    // Never capture on the hit area: React Flow's Handle must keep the
+    // connection gesture so a drop on the opposite side can complete it.
     pointerGestureRef.current.pointerId = event.pointerId;
     pointerGestureRef.current.startX = event.clientX;
     pointerGestureRef.current.startY = event.clientY;

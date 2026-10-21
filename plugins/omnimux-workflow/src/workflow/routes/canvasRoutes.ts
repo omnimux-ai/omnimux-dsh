@@ -358,7 +358,7 @@ export function registerWorkflowRoutes(
         const method = (req.method || 'GET').toUpperCase();
         let body: unknown;
         if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-          const pathname = new URL(req.url || '/', 'http://127.0.0.1').pathname;
+          const pathname = requestPath;
           const directorWrite = method === 'PUT' && /^\/(?:omnimux-workflow|dsh-workflow)\/api\/workspaces\/[^/]+\/director\/[^/]+$/.test(pathname);
           if (directorWrite) body = await readJsonBody(req, DIRECTOR_DOCUMENT_LIMIT);
           else body = await readJsonBody(req);
