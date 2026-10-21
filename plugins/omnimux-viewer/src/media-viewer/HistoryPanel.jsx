@@ -171,4 +171,3 @@ export function HistoryPanel({
     </aside>
   );
 }
-
