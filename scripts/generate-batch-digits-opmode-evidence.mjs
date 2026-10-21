@@ -1,61 +1,14 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MEDIA_VIEWER_CSS } from '../plugins/omnimux/src/client/media-viewer/styles.js';
+import { runEgoSteps } from './lib/ego-browser-steps.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
 const EVIDENCE_FILE = join(ROOT, 'docs', 'evidence', 'batch-digits-opmode-verified.png');
-
-const CHROME_CANDIDATES = [
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-];
-
-function findChrome() {
-  for (const candidate of CHROME_CANDIDATES) {
-    if (existsSync(candidate)) return candidate;
-  }
-  throw new Error('no Chrome found');
-}
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-function createCdp(url) {
-  const socket = new WebSocket(url);
-  let nextId = 0;
-  const pending = new Map();
-  const ready = new Promise((resolvePromise, reject) => {
-    socket.addEventListener('open', () => resolvePromise());
-    socket.addEventListener('error', (event) => reject(new Error(`cdp socket error: ${event.message || 'unknown'}`)));
-  });
-  socket.addEventListener('message', (event) => {
-    const message = JSON.parse(String(event.data));
-    if (message.id === undefined) return;
-    const record = pending.get(message.id);
-    if (!record) return;
-    pending.delete(message.id);
-    if (message.error) record.reject(new Error(message.error.message || 'cdp call failed'));
-    else record.resolve(message.result);
-  });
-  return {
-    ready,
-    send(method, params = {}, sessionId = undefined) {
-      const id = ++nextId;
-      return new Promise((resolvePromise, reject) => {
-        pending.set(id, { resolve: resolvePromise, reject });
-        socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
-      });
-    },
-    close() {
-      try { socket.close(); } catch {}
-    },
-  };
-}
 
 async function main() {
   mkdirSync(join(ROOT, 'docs', 'evidence'), { recursive: true });
@@ -257,55 +210,23 @@ async function main() {
   const tempHtmlPath = join(tmpdir(), `batch-digits-opmode-${Date.now()}.html`);
   writeFileSync(tempHtmlPath, demoHtml, 'utf8');
 
-  const chrome = findChrome();
-  const profileDir = mkdtempSync(join(tmpdir(), 'omnimux-evidence-'));
-
-  const child = spawn(chrome, [
-    '--headless=new',
-    '--disable-gpu',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-extensions',
-    '--hide-scrollbars',
-    '--window-size=1080,780',
-    `--user-data-dir=${profileDir}`,
-    '--remote-debugging-port=0',
-    'about:blank',
-  ], { stdio: 'ignore' });
-
-  let cdp;
   try {
-    const portFile = join(profileDir, 'DevToolsActivePort');
-    for (let i = 0; i < 100 && !existsSync(portFile); i += 1) await sleep(100);
-    if (!existsSync(portFile)) throw new Error('Chrome never opened a debugging port');
-    const [port, browserPath] = readFileSync(portFile, 'utf8').split('\n');
-    cdp = createCdp(`ws://127.0.0.1:${port}${browserPath}`);
-    await cdp.ready;
-
-    const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
-    const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
-    const send = (method, params) => cdp.send(method, params, sessionId);
-
-    await send('Page.enable');
-    await send('Runtime.enable');
-    await send('Emulation.setDeviceMetricsOverride', {
+    const run = await runEgoSteps({
+      spaceName: `batch-digits-opmode-${Date.now()}`,
       width: 1080,
       height: 780,
       deviceScaleFactor: 2,
-      mobile: false,
+      steps: [
+        { type: 'goto', url: `file://${tempHtmlPath}`, settleMs: 600 },
+        { type: 'screenshot', path: EVIDENCE_FILE },
+      ],
     });
-
-    await send('Page.navigate', { url: `file://${tempHtmlPath}` });
-    await sleep(600);
-
-    const shot = await send('Page.captureScreenshot', { format: 'png' });
-    writeFileSync(EVIDENCE_FILE, Buffer.from(shot.data, 'base64'));
+    for (const shot of run.shots) {
+      if (shot.bytes < 20_000) throw new Error(`screenshot looks empty: ${shot.path} (${shot.bytes} bytes)`);
+    }
     console.log('✅ 实测证据截图已成功输出至:', EVIDENCE_FILE);
   } finally {
-    if (cdp) cdp.close();
-    try { child.kill('SIGKILL'); } catch {}
-    try { rmSync(profileDir, { recursive: true, force: true }); } catch {}
-    try { rmSync(tempHtmlPath, { force: true }); } catch {}
+    rmSync(tempHtmlPath, { force: true });
   }
 }
 
