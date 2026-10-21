@@ -252,7 +252,12 @@ const PREPARATION_BUILD_SCRIPTS = {
   'plugins/omnimux-browser': 'tsc -b --pretty false && tsdown && node -e "require(\'node:fs\').copyFileSync(\'src/client.js\', \'lib/client.js\')"',
 };
 
-export const TASK_RUNTIME_PLUGINS = Object.freeze(['omnimux-inspiration', 'omnimux-browser', 'omnimux-assets']);
+/**
+ * Task-source assembly targets. Optional runtime plugins plus the first-party
+ * canvas/workflow packages, so canvas-level task work can be installed and
+ * loaded from the task's own candidate build instead of a Dev-backed profile.
+ */
+export const TASK_RUNTIME_PLUGINS = Object.freeze(['omnimux-inspiration', 'omnimux-browser', 'omnimux-assets', 'omnimux-workflow', 'omnimux-automation']);
 export function normalizeTaskPlugins(value) {
   if (!Array.isArray(value) || value.some(name => !TASK_RUNTIME_PLUGINS.includes(name)) || new Set(value).size !== value.length) throw failure('OPTIONS');
   return ['omnimux', ...value.slice().sort()];

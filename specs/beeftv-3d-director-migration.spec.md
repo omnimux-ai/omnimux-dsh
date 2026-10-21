@@ -2,10 +2,10 @@
 title: "BeefTV 三维导演台迁移需求与真实验收规格"
 id: "spec-beeftv-3d-director-migration"
 type: "spec"
-status: "draft"
+status: "active"
 authority: "L2"
 date: "2026-10-14"
-updated: "2026-10-14"
+updated: "2026-10-21"
 authors: ["x", "agent"]
 subsystem: "omnimux-workflow"
 ---
@@ -172,4 +172,8 @@ TypeScript精确领域类型，数学/状态与副作用分层，主机校验/�
 
 ## 8. 本轮状态
 
-实施已启动，当前处于P0来源/安全装配及接入准备。任务Issue已创建，尚无导演业务运行验收、远端代码提交、合入或开发安装证据。保留工作树，逐阶段更新事实，不用研究报告或旧截图证明实现。全仓文档检查存在既有错误，不修无关历史文档或冒充全绿。
+2026-10-21 收尾（本分支）：原实施树已基于 origin/main `0856e06c2` 重做为线性集成分支，四个冲突按主分支语义解决；`#3290` 私有 profile 装配由主分支 `#3357/#3414` 的 task-private installation 取代并删除；`test-env-bootstrap` 采用主分支实现。许可正文已随包（MIT × 3、CC0 × 1），notice 三处 unknown 闭合。安全复审 P1 已由当前源码与 HTTP 15/15 验证：操作来源哈希只绑定稳定内容、模型任务归属改为稳定账号（session cookie 轮换可恢复）。workflow 2773/2773、hub 3528+89、typecheck、build、plugin-load 22/22、静态门禁均绿。
+
+正式验收在本集成分支上重跑（路径/结论见 `docs/evidence/2026-10-21-director-3289-integration-acceptance.md`）；旧 `formal-acceptance-vdQfTK` 的 `ElementResolutionError` 是 10-15 旧树相机面板步骤的失效，不作为本分支结论。
+
+仍未闭合（不得写入“完整迁移验收通过”）：A11 真实视觉/生图渠道与 A12 Agent 真实旅程未配置实际云调用；剪辑消费时间线与原 assetId 贯通；F/A 其余 PENDING 子项；零字节队列用例因测试只读门禁未能新增。这些是 #3289 后续跟进项，PR 描述中如实列出。
