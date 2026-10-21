@@ -32,6 +32,13 @@ OMNIMUX_VIDEO_PYTHON_PATH=/opt/homebrew/opt/python@3.14/bin/python3.14 \
 OMNIMUX_VIDEO_SKIP_FFMPEG=1 node --test  # 135 pass / 12 skipped
 ```
 
+## 独立评审后的修复（同轮复验）
+
+- 远程 `http(s)` 视频节点不再被 `existsSync` 误判 404，直接交给 `video_depth` 的 `materialize` 下载。
+- 派生节点放置改为对**所有**已有节点做 y 带碰撞避让（不再只避让下游节点），复验截图中不再压住上游节点。
+- 重跑/失败时清空旧 `realPath/mediaUrl/previewUrl`，避免失败卡片继续播放上一次的深度视频；移除未接线的 `depthVideoActive` 状态。
+- 补齐 route-level 测试（200 / 403 not-local / 503 deps-missing / 404 / 400）与远程 URL 服务测试。
+
 ## 边界与限制
 
 - 浏览器证据里的 `video-depth` HTTP 响应为页面内 stub：本次验证目标是画布客户端接线（胶囊 → 预建节点 → 请求 → 结算 → 播放器），真实服务端路径由 `src/workflow/videoDepth/videoDepth.test.mjs`（8/8）与真实 `video_depth` 执行证据覆盖。没有把 stub 结果说成真实模型或真实服务端时延。

@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-21T07:07:09.239Z",
+  "capturedAt": "2026-10-21T07:19:07.586Z",
   "harness": "http://127.0.0.1:4931/",
   "pillState": {
     "count": 2,
@@ -16,16 +16,15 @@
     "workspace": "ws_harness"
   },
   "provisioned": {
-    "id": "node_depth_1792566425466_1wlu",
+    "id": "node_depth_1792567143893_ynit",
     "status": "running",
     "label": "成片视频 深度视频",
-    "materialType": "video",
-    "active": true
+    "materialType": "video"
   },
   "result": {
     "sourceStatus": "completed",
     "derived": {
-      "id": "node_depth_1792566425466_1wlu",
+      "id": "node_depth_1792567143893_ynit",
       "label": "成片视频 深度视频",
       "materialType": "video",
       "executionStatus": "completed",
@@ -34,13 +33,13 @@
       "previewUrl": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
       "position": {
         "x": 550,
-        "y": 60
+        "y": 780
       }
     },
     "edge": {
-      "id": "edge_n-video_node_depth_1792566425466_1wlu",
+      "id": "edge_n-video_node_depth_1792567143893_ynit",
       "source": "n-video",
-      "target": "node_depth_1792566425466_1wlu"
+      "target": "node_depth_1792567143893_ynit"
     },
     "calls": [
       {

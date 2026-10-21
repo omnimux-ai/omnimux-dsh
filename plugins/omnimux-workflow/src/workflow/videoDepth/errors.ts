@@ -24,7 +24,7 @@ const FAILURES: Record<string, [number, string]> = {
     503,
     '本机缺少深度图 Python 依赖（numpy / opencv-python / onnxruntime）。安装后重试，或把 OMNIMUX_VIDEO_PYTHON_PATH 指向已装依赖的解释器',
   ],
-  'ffmpeg-missing': [503, '本机缺少 ffmpeg/ffprobe，安装后重试'],
+  'ffmpeg-missing': [503, '本机缺少 ffmpeg/ffprobe，安装后重试（macOS: brew install ffmpeg）'],
   'timeout': [504, '深度视频生成超时，请缩短视频后重试'],
   'canceled': [502, '深度视频生成已取消'],
   'depth-failed': [502, '深度视频生成失败，请重试'],

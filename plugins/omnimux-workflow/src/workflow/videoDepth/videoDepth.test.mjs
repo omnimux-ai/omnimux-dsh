@@ -9,6 +9,7 @@ import {
   createVideoDepthService,
   mapVideoDepthExecutionError,
 } from './service.ts';
+import { createVideoDepthRoutes } from '../routes/videoDepthRoutes.ts';
 
 function makeStore(root) {
   return {
@@ -196,4 +197,117 @@ test('service: 执行未落盘时抛 depth-failed', async (t) => {
       return true;
     },
   );
+});
+
+
+test('service: 远程 http(s) 视频交给能力层下载，不按本地文件 404', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'video-depth-service-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const { deps, calls } = makeDeps(root);
+  deps.resolveVideoPath = () => 'https://example.com/clip.mp4';
+  const result = await createVideoDepthService(deps)('ws_ok', {
+    nodeId: 'n1',
+    videoPath: 'https://example.com/clip.mp4',
+    title: '远程视频 深度视频',
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].input.videoUrl, 'https://example.com/clip.mp4');
+  assert.ok(result.depthPath.endsWith('.mp4'));
+});
+
+const ROUTE_PATH = (workspaceId) => `/omnimux-workflow/api/workspaces/${workspaceId}/video-depth`;
+
+function makeRoute(root, overrides = {}) {
+  const { deps, calls } = makeDeps(root, overrides);
+  return { handler: createVideoDepthRoutes(deps), calls };
+}
+
+test('route: 200 成功返回 depthPath/mediaUrl 并调用 video_depth', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'video-depth-route-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const source = join(root, 'source.mp4');
+  writeFileSync(source, 'FAKE_VIDEO');
+  const { handler, calls } = makeRoute(root);
+
+  const res = await handler.tryHandle('POST', ROUTE_PATH('ws_ok'), {
+    origin: 'http://127.0.0.1:43120',
+    body: { nodeId: 'n1', videoPath: source, title: '产品视频 深度视频' },
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.message, '深度视频生成成功');
+  assert.ok(res.body.data.depthPath.endsWith('.mp4'));
+  assert.ok(res.body.data.mediaUrl.includes('/omnimux-workflow/media/video-depth/ws_ok/'));
+  assert.equal(calls[0].capability, 'video_depth');
+});
+
+test('route: 非本地来源 403 not-local，且不触达视频能力', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'video-depth-route-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const source = join(root, 'source.mp4');
+  writeFileSync(source, 'FAKE_VIDEO');
+  const { handler, calls } = makeRoute(root);
+
+  const res = await handler.tryHandle('POST', ROUTE_PATH('ws_ok'), {
+    origin: 'http://evil.com',
+    body: { nodeId: 'n1', videoPath: source },
+  });
+
+  assert.equal(res.status, 403);
+  assert.equal(res.body.error, 'not-local');
+  assert.equal(calls.length, 0);
+});
+
+test('route: 缺 Python 依赖 503 deps-missing，响应带 upstream 明细', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'video-depth-route-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const source = join(root, 'source.mp4');
+  writeFileSync(source, 'FAKE_VIDEO');
+  const { handler } = makeRoute(root, {
+    processExecute: async () => {
+      throw Object.assign(new Error('video_depth requires Python packages'), {
+        code: 'video-depth-deps-missing',
+        hint: 'Install them with `pip install onnxruntime opencv-python`',
+      });
+    },
+  });
+
+  const res = await handler.tryHandle('POST', ROUTE_PATH('ws_ok'), {
+    origin: 'http://127.0.0.1:43120',
+    body: { nodeId: 'n1', videoPath: source },
+  });
+
+  assert.equal(res.status, 503);
+  assert.equal(res.body.error, 'deps-missing');
+  assert.match(res.body.message, /onnxruntime/);
+  assert.equal(res.body.upstream.code, 'video-depth-deps-missing');
+});
+
+test('route: 视频不存在 404 video-not-found', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'video-depth-route-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const { handler } = makeRoute(root);
+
+  const res = await handler.tryHandle('POST', ROUTE_PATH('ws_ok'), {
+    origin: 'http://127.0.0.1:43120',
+    body: { nodeId: 'n1', videoPath: join(root, 'missing.mp4') },
+  });
+
+  assert.equal(res.status, 404);
+  assert.equal(res.body.error, 'video-not-found');
+});
+
+test('route: 请求体非法 400 invalid-request', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'video-depth-route-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const { handler } = makeRoute(root);
+
+  const res = await handler.tryHandle('POST', ROUTE_PATH('ws_ok'), {
+    origin: 'http://127.0.0.1:43120',
+    body: { nodeId: '', videoPath: '' },
+  });
+
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'invalid-request');
 });

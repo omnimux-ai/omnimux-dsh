@@ -26,7 +26,7 @@ const UPSTREAM_CODE_MAP: Record<string, [string, number]> = {
 const FAILURE_MESSAGES: Record<string, string> = {
   'deps-missing':
     '本机缺少深度图 Python 依赖（numpy / opencv-python / onnxruntime）。安装后重试，或把 OMNIMUX_VIDEO_PYTHON_PATH 指向已装依赖的解释器',
-  'ffmpeg-missing': '本机缺少 ffmpeg/ffprobe，安装后重试',
+  'ffmpeg-missing': '本机缺少 ffmpeg/ffprobe，安装后重试（macOS: brew install ffmpeg）',
   timeout: '深度视频生成超时，请缩短视频后重试',
   canceled: '深度视频生成已取消',
   'invalid-request': '深度视频请求参数无效',
@@ -67,9 +67,11 @@ export function createVideoDepthService(deps: VideoDepthServiceDeps) {
     // 1. 验证工作区有效性
     deps.store.get(workspaceId);
 
-    // 2. 解析源视频物理绝对路径（与视频拆解共用同一套解析）
+    // 2. 解析源视频（与视频拆解共用同一套解析）。本地路径要求存在；远程
+    //    http(s) 地址交给 video_depth 自带的 materialize 下载，不能按本地文件 404。
     const absVideoPath = deps.resolveVideoPath(workspaceId, input.videoPath);
-    if (!absVideoPath || !existsSync(absVideoPath)) {
+    const isRemoteVideo = /^https?:\/\//i.test(String(absVideoPath || ''));
+    if (!absVideoPath || (!isRemoteVideo && !existsSync(absVideoPath))) {
       throw new VideoDepthError('video-not-found', '未找到指定视频文件', 404);
     }
 

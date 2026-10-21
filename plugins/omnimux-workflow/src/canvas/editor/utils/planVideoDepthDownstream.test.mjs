@@ -37,7 +37,6 @@ test('provisioning: 点击深度视频立即创建 Running 态下游视频节点
   assert.equal(node.data.materialType, 'video');
   assert.equal(node.data.executionStatus, 'running');
   assert.equal(node.data.status, 'generating');
-  assert.equal(node.data.depthVideoActive, true);
   assert.equal(node.data.origin, VIDEO_DEPTH_ORIGIN);
   assert.equal(node.data.sourceVideoNodeId, 'video_1');
   assert.equal(node.position.x, 100 + 360 + 120);
@@ -149,7 +148,6 @@ test('settlement: 成功回填深度视频路径与媒体 URL，节点收敛 com
   assert.equal(data.mediaUrl, '/omnimux-workflow/media/video-depth/ws/out/depth_1.mp4');
   assert.equal(data.previewUrl, '/api/local-file?path=%2Ftmp%2Fout%2Fdepth_1.mp4');
   assert.equal(data.label, '产品视频 深度视频');
-  assert.equal(data.depthVideoActive, undefined);
 });
 
 test('settlement: 失败只把下游节点置为 error，保留可读错误', () => {
@@ -162,6 +160,8 @@ test('settlement: 失败只把下游节点置为 error，保留可读错误', ()
   assert.equal(data.executionStatus, 'error');
   assert.equal(data.status, 'failed');
   assert.equal(data.executionError, '本机缺少深度图 Python 依赖');
+  assert.equal(data.realPath, undefined, '失败后不得继续播放上一次的深度视频');
+  assert.equal(data.mediaUrl, undefined);
   assert.equal(plan.nodePatches.length, 1);
   assert.equal(plan.nodePatches[0].nodeId, 'depth_1');
 });

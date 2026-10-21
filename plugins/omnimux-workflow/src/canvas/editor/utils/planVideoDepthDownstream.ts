@@ -168,7 +168,9 @@ export function planVideoDepthProvisioning(
             status: 'generating',
             executionStatus: 'running',
             executionError: undefined,
-            depthVideoActive: true,
+            realPath: undefined,
+            mediaUrl: undefined,
+            previewUrl: undefined,
             origin: VIDEO_DEPTH_ORIGIN,
             sourceVideoNodeId: input.videoNodeId,
           },
@@ -185,21 +187,24 @@ export function planVideoDepthProvisioning(
       ? input.videoNodeWidth
       : 350;
 
-  const isOccupiedAtY = input.currentNodes.some((node) => {
-    if (!node.position) return false;
-    const isDownstream =
-      node.data?.sourceVideoNodeId === input.videoNodeId || connectedTargetIds.has(node.id);
-    if (!isDownstream) return false;
-    return Math.abs(node.position.y - input.videoPosition.y) < 60;
-  });
+  // 目标空槽：源视频右侧。与任意已有节点（不只下游）在 y 带内重叠时向下错开，
+  // 避免压住上游/无关节点。
+  const targetX = input.videoPosition.x + width + VIDEO_DEPTH_DOWNSTREAM_GAP;
+  const overlapsAnyNode = (y: number) =>
+    input.currentNodes.some((node) => {
+      if (!node.position) return false;
+      if (node.id === input.videoNodeId) return false;
+      return Math.abs(node.position.y - y) < 260 && Math.abs(node.position.x - targetX) < 420;
+    });
+  let targetY = input.videoPosition.y;
+  for (let step = 0; step < 5 && overlapsAnyNode(targetY); step += 1) {
+    targetY += 360;
+  }
 
   const newNode: VideoDepthCreatedNode = {
     id: newNodeId,
     type: 'material',
-    position: {
-      x: input.videoPosition.x + width + VIDEO_DEPTH_DOWNSTREAM_GAP,
-      y: isOccupiedAtY ? input.videoPosition.y + 360 : input.videoPosition.y,
-    },
+    position: { x: targetX, y: targetY },
     selected: true,
     data: {
       label: nodeLabel,
@@ -210,7 +215,6 @@ export function planVideoDepthProvisioning(
       status: 'generating',
       executionStatus: 'running',
       executionError: undefined,
-      depthVideoActive: true,
       origin: VIDEO_DEPTH_ORIGIN,
       sourceVideoNodeId: input.videoNodeId,
       params: {},
@@ -238,7 +242,9 @@ export function planVideoDepthSettlement(
           data: {
             executionStatus: 'error',
             executionError: input.error || '深度视频生成失败',
-            depthVideoActive: true,
+            realPath: undefined,
+            mediaUrl: undefined,
+            previewUrl: undefined,
             status: 'failed',
           },
         },
@@ -261,7 +267,6 @@ export function planVideoDepthSettlement(
           status: 'ready',
           executionStatus: 'completed',
           executionError: undefined,
-          depthVideoActive: undefined,
           realPath: result.depthPath,
           mediaUrl: result.mediaUrl,
           previewUrl: result.previewUrl,
