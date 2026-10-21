@@ -179,12 +179,13 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
 
   // 默认选中缩略图栏首项（最新项），回退为 session 列表首项
   const activeItem = sessionMediaList.find((m) => m.id === activeId) || thumbnailsList[0] || sessionMediaList[0];
+  const toolbarRef = useRef(null);
   const timelineGroups = store.getTimelineGroups(sessionId);
 
   // 生成历史：数据全部来自既有 mediaList 的提交快照，不新增 store。
   // 有会话时按会话过滤；无会话时保持空态，避免把其他会话的提示词聚合进来。
   const historyEntries = React.useMemo(
-    () => buildHistoryEntries(sessionMediaList, sessionId),
+    () => (sessionId ? buildHistoryEntries(sessionMediaList, sessionId) : []),
     [sessionMediaList, sessionId]
   );
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -193,6 +194,11 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
 
   // 用 ResizeObserver 而不是 CSS container-type：container-type 的 layout containment
   // 会改变 fixed 浮层（如 .omx-slot-notice）的包含块，属于既有布局回归风险。
+  useLayoutEffect(() => {
+    const node = viewerRootRef.current;
+    const width = node?.getBoundingClientRect?.().width;
+    if (Number.isFinite(width) && width > 0) setContainerWidth(width);
+  }, []);
   useEffect(() => {
     const node = viewerRootRef.current;
     if (!node || typeof ResizeObserver === 'undefined') return undefined;
@@ -210,6 +216,16 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   useEffect(() => {
     if (subViewMode !== 'single' || wideLayout) setHistoryOpen(false);
   }, [sessionId, subViewMode, wideLayout]);
+
+  // The drawer marks itself aria-modal, so the toolbar outside the scrim must
+  // stop being focusable/clickable while it is open.
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return undefined;
+    if (historyOpen) toolbar.setAttribute('inert', '');
+    else toolbar.removeAttribute('inert');
+    return () => toolbar.removeAttribute('inert');
+  }, [historyOpen]);
 
   // 会话切换时，若当前 activeId 不属于当前会话的媒体列表，自动联动选中该会话最新的一张素材
   useEffect(() => {
@@ -558,7 +574,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
       data-history-open={historyOpen ? 'true' : 'false'}
     >
       {/* 顶部工具栏 */}
-      <div className="omx-mv-toolbar">
+      <div className="omx-mv-toolbar" ref={toolbarRef}>
         <div className="omx-mv-toolbar__left">
           <div className="omx-mv-capsule">
             <button // exempt-ui01: 视图切换大图模式按钮

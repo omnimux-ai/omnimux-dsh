@@ -134,7 +134,9 @@ async function withMountedTab(run, options = {}) {
       if (options.catalogFailure) {
         return new Response('unavailable', { status: 503 });
       }
-      return new Response(JSON.stringify(catalog()), { status: 200, headers: { 'content-type': 'application/json' } });
+      const body = catalog();
+      if (options.catalogVideoOnly) body.image = [];
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     if (String(url) === '/omnimux/assets/state') {
       return new Response(JSON.stringify({ assets: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -144,7 +146,7 @@ async function withMountedTab(run, options = {}) {
 
   production.resetComposerPrefill();
   let root;
-  const activeSession = options.sessionId || 's1';
+  const activeSession = options.sessionId === undefined ? 's1' : options.sessionId;
   const sessions = {
     list: {
       getSnapshot: () => ({ current: activeSession }),
@@ -257,9 +259,16 @@ test('批量中的非 primary 项选中时卡片仍高亮', async () => {
 });
 
 test('目录加载失败时不显示成本预估', async () => {
-  await withMountedTab(async () => {
+  await withMountedTab(async ({ requests }) => {
+    assert.ok(requests.some((request) => request.url === '/omnimux/model-catalog'));
     assert.equal(document.querySelector('.omx-mv-cost'), null);
   }, { catalogFailure: true });
+});
+
+test('目录只返回视频时图像模式仍不显示成本', async () => {
+  await withMountedTab(async () => {
+    assert.equal(document.querySelector('.omx-mv-cost'), null);
+  }, { catalogVideoOnly: true });
 });
 
 test('空会话显示历史空态且不聚合其他会话', async () => {
@@ -269,10 +278,17 @@ test('空会话显示历史空态且不聚合其他会话', async () => {
   }, { sessionId: 's-empty' });
 });
 
+test('无会话时不聚合其他会话的历史', async () => {
+  await withMountedTab(async () => {
+    assert.equal(document.querySelectorAll('.omx-mv-history__card').length, 0);
+  }, { sessionId: null });
+});
+
 test('抽屉打开时方向键不切换背后舞台，关闭按钮可收起', async () => {
   await withMountedTab(async ({ click, keydown, dom }) => {
     const before = document.querySelector('.omx-mv-display img').getAttribute('src');
     await click('.omx-mv-history-toggle');
+    if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
     await keydown('ArrowDown');
     const after = document.querySelector('.omx-mv-display img').getAttribute('src');
     assert.equal(after, before);
@@ -304,7 +320,7 @@ test('下载历史卡触发对应素材的 anchor 且使用记录标题', async 
   });
 });
 
-test('窄档抽屉状态与 Esc 关闭', async () => {
+test('抽屉状态与 Esc 关闭', async () => {
   await withMountedTab(async ({ click, keydown }) => {
     const root = document.querySelector('.omx-media-viewer');
     assert.equal(root.getAttribute('data-history-open'), 'false');

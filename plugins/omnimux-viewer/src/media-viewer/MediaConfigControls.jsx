@@ -39,20 +39,24 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
     image: parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image),
     video: parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.video),
   }));
-  // Only a live catalog may feed money-adjacent UI (cost estimate). The offline
-  // fallback keeps the composer usable but must not show a price.
-  const [catalogStatus, setCatalogStatus] = useState('fallback');
+  // Only a live image slice may feed the cost estimate. A video-only catalog
+  // still leaves the image fallback in place, so status is tracked per slice.
+  const [catalogLive, setCatalogLive] = useState({ image: false, video: false });
 
   useEffect(() => {
     let alive = true;
     async function loadCatalog() {
       try {
         const resp = await fetch('/omnimux/model-catalog');
-        if (!resp.ok) return;
+        if (!resp.ok) {
+          console.warn('[MediaConfigControls] model catalog unavailable:', resp.status);
+          if (alive) setCatalogLive({ image: false, video: false });
+          return;
+        }
         const data = await resp.json();
         if (!alive || !data || typeof data !== 'object') return;
-        const hasLiveCatalog = (Array.isArray(data.image) && data.image.length > 0)
-          || (Array.isArray(data.video) && data.video.length > 0);
+        const liveImage = Array.isArray(data.image) && data.image.length > 0;
+        const liveVideo = Array.isArray(data.video) && data.video.length > 0;
 
         const nextImage = Array.isArray(data.image) && data.image.length > 0
           ? parseCatalogToCascade(data.image)
@@ -63,10 +67,10 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
           : parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.video);
 
         setCatalogMap({ image: nextImage, video: nextVideo });
-        setCatalogStatus(hasLiveCatalog ? 'live' : 'fallback');
+        setCatalogLive({ image: liveImage, video: liveVideo });
       } catch (error) {
         console.warn('[MediaConfigControls] model catalog unavailable:', error?.message || error);
-        if (alive) setCatalogStatus('fallback');
+        if (alive) setCatalogLive({ image: false, video: false });
       }
     }
     loadCatalog();
@@ -136,7 +140,7 @@ export function useMediaGenerationConfig({ initialMode = 'image' } = {}) {
     mode, setMode,
     popoverEpoch, closePopovers,
     catalogMap,
-    catalogStatus,
+    catalogLive,
     currentCascadeList,
     brand, setBrand,
     model, setModel,
