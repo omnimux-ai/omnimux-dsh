@@ -10,7 +10,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSaveRemoteAudio } from '../../hooks/useSaveRemoteAudio.ts';
-import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, Music, RefreshCw, Upload } from 'lucide-react';
+import { AudioLines, Check, Clapperboard, Copy, FileEdit, FileSpreadsheet, Film, Layers, MessageSquarePlus, Music, RefreshCw, Scan, Upload } from 'lucide-react';
 import { type NodeProps, useReactFlow } from '@xyflow/react';
 import type { MaterialNodeData, MaterialType, MaterialTool } from '../../../types/materialNode';
 import { resolveNodeKind } from '../../../types/materialNode';
@@ -56,7 +56,11 @@ import {
   planAudioExtractProvisioning,
   planAudioExtractSettlement,
 } from '../../utils/planAudioExtractDownstream.ts';
-import { extractAudioFromVideo, extractVideoFromUrl } from '../../../bridge/apiClient.ts';
+import {
+  planVideoDepthProvisioning,
+  planVideoDepthSettlement,
+} from '../../utils/planVideoDepthDownstream.ts';
+import { convertVideoToDepth, extractAudioFromVideo, extractVideoFromUrl } from '../../../bridge/apiClient.ts';
 import { planSelectAndPatchNode } from '../../utils/planSelectAndPatchNode';
 import { useExecutionStore } from '../../../store/executionStore';
 import { useCanvasStore, useIsMultiSelected } from '../../../store/canvasStore';
@@ -146,6 +150,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const [textEditing, setTextEditing] = useState(false);
   const [mediaAspectHeight, setMediaAspectHeight] = useState<number | null>(null);
   const [isExtractingAudio, setIsExtractingAudio] = useState(false);
+  const [isConvertingDepth, setIsConvertingDepth] = useState(false);
 
   const { setNodes } = useReactFlow();
 
@@ -777,6 +782,95 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
   }, [applyCanvasInputMutation, id, isExtractingAudio, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t]);
 
+  // 视频深度视频：派生下游深度图视频节点（Running 态），源视频节点零侵入
+  const handleDepthVideo = useCallback(async () => {
+    if (isConvertingDepth) return;
+    const workspaceId = typeof nodeData.__workspaceId === 'string' ? nodeData.__workspaceId : '';
+    if (!workspaceId) {
+      toast.error(t('depthVideo.noWorkspace'));
+      return;
+    }
+    const videoPath = resolveVideoAudioExtractPath(
+      {
+        realPath: nodeData.realPath,
+        relativePath: nodeData.relativePath,
+        mediaUrl,
+        previewUrl,
+        workspaceId,
+      },
+      { baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined },
+    );
+    if (!videoPath) {
+      toast.error(t('depthVideo.noVideo'));
+      return;
+    }
+
+    const store = useCanvasStore.getState();
+    const videoNode = store.nodes.find((n) => n.id === id);
+    const depthLabel = label ? `${label} ${t('depthVideo.nodeLabel')}` : t('depthVideo.nodeLabel');
+    const provision = planVideoDepthProvisioning({
+      videoNodeId: id,
+      videoPosition: videoNode?.position ?? { x: 0, y: 0 },
+      videoNodeWidth: nodeWidth,
+      label: depthLabel,
+      currentNodes: store.nodes as any,
+      currentEdges: store.edges as any,
+    });
+
+    if (provision.mode === 'noop') {
+      return;
+    }
+
+    const targetNodeId = provision.targetNodeId;
+    const nodesToAdd = attachVideoSourceToNodes(provision.addNodes, videoPath, workspaceId);
+    const patchesToApply = attachVideoSourceToNodes(provision.nodePatches, videoPath, workspaceId);
+
+    applyCanvasInputMutation({
+      addNodes: nodesToAdd as any,
+      addEdges: provision.addEdges as any,
+      nodePatches: patchesToApply as any,
+    });
+
+    selectTargetNode(targetNodeId, setNodes);
+
+    setIsConvertingDepth(true);
+    try {
+      const result = await convertVideoToDepth(workspaceId, {
+        nodeId: id,
+        videoPath,
+        title: depthLabel,
+      });
+
+      if (!result.ok || !result.body?.data) {
+        const message = result.body?.message || result.body?.error || t('depthVideo.toast.failed');
+        const settlement = planVideoDepthSettlement({ targetNodeId, error: message });
+        applyCanvasInputMutation({ nodePatches: settlement.nodePatches as any });
+        toast.error(message);
+        return;
+      }
+
+      const settlement = planVideoDepthSettlement({
+        targetNodeId,
+        label: depthLabel,
+        depthResult: {
+          depthPath: result.body.data.depthPath,
+          mediaUrl: result.body.data.mediaUrl,
+          previewUrl: result.body.data.previewUrl,
+          title: result.body.data.title || depthLabel,
+        },
+      });
+      applyCanvasInputMutation({ nodePatches: settlement.nodePatches as any });
+      toast.success(t('depthVideo.toast.success'));
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : t('depthVideo.toast.failed');
+      const settlement = planVideoDepthSettlement({ targetNodeId, error: message });
+      applyCanvasInputMutation({ nodePatches: settlement.nodePatches as any });
+      toast.error(message);
+    } finally {
+      setIsConvertingDepth(false);
+    }
+  }, [applyCanvasInputMutation, id, isConvertingDepth, label, mediaUrl, nodeData.__workspaceId, nodeData.realPath, nodeData.relativePath, nodeWidth, previewUrl, setNodes, t]);
+
   const handleAddToConversation = useCallback(() => {
     const payload = buildConversationPayloadFromNode({
       nodeType: 'material',
@@ -976,6 +1070,19 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             void handleExtractAudio();
           },
         });
+        actions.push({
+          key: 'depth-video',
+          label: t('pill.depthVideo'),
+          icon: Scan,
+          section: 'primary',
+          disabled: isConvertingDepth,
+          title: isConvertingDepth ? t('depthVideo.running') : t('pill.depthVideo'),
+          onClick: (event) => {
+            event.stopPropagation();
+            if (isConvertingDepth) return;
+            void handleDepthVideo();
+          },
+        });
       }
       actions.push(chat);
       return actions;
@@ -1008,6 +1115,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     handleAddToConversation,
     handleCopyText,
     handleDeconstructVideo,
+    handleDepthVideo,
     handleExtractAudio,
     handleExtractVideo,
     handleOpenTextStage,
@@ -1018,6 +1126,7 @@ const MaterialNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     isGenerating,
     isOffline,
     isExtractingAudio,
+    isConvertingDepth,
     kind,
     materialType,
     mediaAssets,

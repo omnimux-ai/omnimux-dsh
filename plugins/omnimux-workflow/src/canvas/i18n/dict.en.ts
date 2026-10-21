@@ -145,6 +145,7 @@ const en: Record<DictKey, string> = {
   'pill.deconstructVideo': 'Deconstruct',
   'pill.storyboardVideo': 'Storyboard',
   'pill.extractAudio': 'Extract Audio',
+  'pill.depthVideo': 'Depth Video',
   // Video audio extraction (extractAudio.*)
   'extractAudio.nodeLabel': 'Video Audio',
   'extractAudio.toast.success': 'Audio extracted into audio node',
@@ -152,6 +153,13 @@ const en: Record<DictKey, string> = {
   'extractAudio.toast.noAudioStream': 'No audio track detected in this video',
   'extractAudio.noWorkspace': 'Workspace not ready',
   'extractAudio.noVideo': 'No video file found',
+  // Video depth map (depthVideo.*)
+  'depthVideo.nodeLabel': 'Depth Video',
+  'depthVideo.toast.success': 'Depth video generated into video node',
+  'depthVideo.running': 'Generating depth video…',
+  'depthVideo.toast.failed': 'Depth video generation failed, please retry',
+  'depthVideo.noWorkspace': 'Workspace not ready',
+  'depthVideo.noVideo': 'No video file found',
   // Video deconstruction (deconstructVideo.*)
   'deconstructVideo.nodeLabel': 'Video Breakdown',
   'deconstructVideo.toast.success': 'Video deconstructed into table node',

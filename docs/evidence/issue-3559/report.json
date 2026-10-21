@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-10-21T07:32:32.482Z",
+  "bridge": "ws://127.0.0.1:45120/ext/bridge",
+  "ok": true,
+  "extensionId": "iaplljhfcpipkigoccjblppdkdfmpnid",
+  "result": {
+    "response": {
+      "ok": true,
+      "text": "正常"
+    },
+    "lastError": null
+  },
+  "finishedAt": "2026-10-21T07:32:51.574Z",
+  "chromePid": 34457,
+  "singleSpawn": true
+}

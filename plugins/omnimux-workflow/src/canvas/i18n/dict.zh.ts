@@ -151,6 +151,7 @@ const zh = {
   'pill.deconstructVideo': '内容拆解',
   'pill.storyboardVideo': '分镜表',
   'pill.extractAudio': '提取音频',
+  'pill.depthVideo': '深度视频',
   // 视频提取音频（extractAudio.*）
   'extractAudio.nodeLabel': '视频原声',
   'extractAudio.toast.success': '音频提取完成，音频节点已就绪',
@@ -158,6 +159,13 @@ const zh = {
   'extractAudio.toast.noAudioStream': '该视频未检测到音频轨道',
   'extractAudio.noWorkspace': '工作区未就绪',
   'extractAudio.noVideo': '未找到可用视频文件',
+  // 视频深度图（depthVideo.*）
+  'depthVideo.nodeLabel': '深度视频',
+  'depthVideo.toast.success': '深度视频已生成，视频节点已就绪',
+  'depthVideo.running': '正在生成深度视频…',
+  'depthVideo.toast.failed': '深度视频生成失败，请重试',
+  'depthVideo.noWorkspace': '工作区未就绪',
+  'depthVideo.noVideo': '未找到可用视频文件',
   // 视频内容拆解（deconstructVideo.*）
   'deconstructVideo.nodeLabel': '视频拆解表',
   'deconstructVideo.toast.success': '视频内容拆解完成，已生成表格节点',
