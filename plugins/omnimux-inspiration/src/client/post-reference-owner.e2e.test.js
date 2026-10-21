@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { JSDOM } from 'jsdom'
-import './test-fixtures/dom-bootstrap.mjs'
+import '../../tests/fixtures/dom-bootstrap.mjs'
 import React, { act } from 'react'
 import { zh } from './locales.js'
 
@@ -19,7 +19,7 @@ async function ownerService() {
     entryPoints: [fileURLToPath(new URL('./preview-service.jsx', import.meta.url))],
     bundle: true, write: false, format: 'cjs', platform: 'node', jsx: 'automatic',
     external: ['react', 'react-dom', 'react-dom/client'],
-    alias: { 'dsh-ui-kit': fileURLToPath(new URL('./test-fixtures/ui-kit-shim.mjs', import.meta.url)) },
+    alias: { 'dsh-ui-kit': fileURLToPath(new URL('../../tests/fixtures/ui-kit-shim.mjs', import.meta.url)) },
   })
   const module = { exports: {} }
   new Function('require', 'module', 'exports', result.outputFiles[0].text)(require, module, module.exports)

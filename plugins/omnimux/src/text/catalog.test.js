@@ -11,18 +11,17 @@ import {
 } from './catalog.js'
 
 describe('text whitelist', () => {
-  it('defaults to the twelve chat-directory models, all enabled', () => {
+  it('defaults to the single listed chat-directory model, all enabled', () => {
     const parsed = parseTextConfig(undefined)
     assert.equal(parsed.defaultProvider, 'omnimux')
     assert.equal(parsed.defaultModel, 'gemini-3.8-flash')
     assert.equal(parsed.maxTokens, 4096)
+    // 2026-10-21 #3527：路由声明只保留网关现役文本型号；契约与证据仍留在目录/处置表。
+    assert.deepEqual(Array.from(CHAT_MODEL_IDS), ['gemini-3.8-flash'])
     assert.deepEqual(parsed.models.map((row) => row.id), Array.from(CHAT_MODEL_IDS))
-    assert.equal(enabledTextModels(parsed).length, 13)
-    assert.equal(parsed.models.find((row) => row.id === 'deepseek-v4-flash')?.role, 'classic')
-    assert.equal(parsed.models.find((row) => row.id === 'grok-4.6')?.brand, 'xai')
-    assert.equal(parsed.models.find((row) => row.id === 'gpt-5.5')?.brand, 'openai')
-    assert.equal(parsed.models.find((row) => row.id === 'claude-opus-4-6')?.brand, 'anthropic')
-    assert.equal(parsed.models.find((row) => row.id === 'gemini-3.1-pro-preview')?.brand, 'google')
+    assert.equal(enabledTextModels(parsed).length, 1)
+    assert.equal(parsed.models[0].brand, 'google')
+    assert.equal(parsed.models[0].role, 'flagship')
   })
 
   it('rejects an id outside the chat directory', () => {
@@ -34,56 +33,43 @@ describe('text whitelist', () => {
 
   it('rejects a repeated id', () => {
     assert.throws(
-      () => parseTextConfig({ models: [{ id: 'grok-4.6' }, { id: 'grok-4.6' }] }),
+      () => parseTextConfig({ models: [{ id: 'gemini-3.8-flash' }, { id: 'gemini-3.8-flash' }] }),
       /repeats id/,
     )
   })
 
   it('treats enabled false as absent at resolve', () => {
     const text = parseTextConfig({
-      models: [
-        { id: 'grok-4.6', enabled: false },
-        { id: 'deepseek-v4-pro' },
-      ],
+      models: [{ id: 'gemini-3.8-flash', enabled: false }],
     })
-    assert.equal(enabledTextModels(text).map((row) => row.id).join(','), 'deepseek-v4-pro')
+    assert.deepEqual(enabledTextModels(text).map((row) => row.id), [])
     assert.throws(
-      () => resolveTextRoute({ model: 'grok-4.6' }, text),
+      () => resolveTextRoute({ model: 'gemini-3.8-flash' }, text),
       (error) => error instanceof OmnimuxError && error.code === 'unknown-model',
     )
   })
 
   it('merges gate.models.textComplete with text.models[].enabled (AND logic)', () => {
-    const text = parseTextConfig({
-      models: [
-        { id: 'grok-4.6', enabled: true },
-        { id: 'claude-opus-5', enabled: false },
-        { id: 'gemini-3.7-flash', enabled: true },
-      ],
+    const text = parseTextConfig({ models: [{ id: 'gemini-3.8-flash', enabled: true }] })
+    const disabledByGate = parseGateConfig({
+      models: { textComplete: { 'gemini-3.8-flash': false } }, // gate disabled
     })
-    const gate = parseGateConfig({
-      models: {
-        textComplete: {
-          'grok-4.6': false, // gate disabled
-          'claude-opus-5': true, // row disabled, gate enabled => disabled
-          'gemini-3.7-flash': true, // both enabled => enabled
-        },
-      },
-    })
-    const enabled = enabledTextModels(text, gate)
-    assert.deepEqual(enabled.map((r) => r.id), ['gemini-3.7-flash'])
+    assert.deepEqual(enabledTextModels(text, disabledByGate).map((r) => r.id), [])
+    assert.throws(
+      () => resolveTextRoute({ model: 'gemini-3.8-flash' }, text, undefined, disabledByGate),
+      (error) => error instanceof OmnimuxError && error.code === 'unknown-model',
+    )
 
-    // resolveTextRoute with gate
-    assert.throws(
-      () => resolveTextRoute({ model: 'grok-4.6' }, text, undefined, gate),
-      (error) => error instanceof OmnimuxError && error.code === 'unknown-model',
-    )
-    assert.throws(
-      () => resolveTextRoute({ model: 'claude-opus-5' }, text, undefined, gate),
-      (error) => error instanceof OmnimuxError && error.code === 'unknown-model',
-    )
-    const route = resolveTextRoute({ model: 'gemini-3.7-flash' }, text, undefined, gate)
-    assert.equal(route.modelId, 'gemini-3.7-flash')
+    // row disabled + gate enabled 仍为 disabled（AND 语义）
+    const rowDisabled = parseTextConfig({ models: [{ id: 'gemini-3.8-flash', enabled: false }] })
+    const gateEnabled = parseGateConfig({ models: { textComplete: { 'gemini-3.8-flash': true } } })
+    assert.deepEqual(enabledTextModels(rowDisabled, gateEnabled).map((r) => r.id), [])
+
+    // both enabled => enabled
+    const gate = parseGateConfig({ models: { textComplete: { 'gemini-3.8-flash': true } } })
+    assert.deepEqual(enabledTextModels(text, gate).map((r) => r.id), ['gemini-3.8-flash'])
+    const route = resolveTextRoute({ model: 'gemini-3.8-flash' }, text, undefined, gate)
+    assert.equal(route.modelId, 'gemini-3.8-flash')
   })
 
   it('defaults a named-less request to the configured model', () => {
@@ -100,30 +86,28 @@ describe('text whitelist', () => {
   })
 
   it('honors OMNIMUX_TEXT_DEFAULT_MODEL when that id is enabled', () => {
-    const text = parseTextConfig({
-      models: [{ id: 'grok-4.6' }, { id: 'deepseek-v4-pro' }],
-    })
-    const route = resolveTextRoute({ prompt: 'hi' }, text, { OMNIMUX_TEXT_DEFAULT_MODEL: 'grok-4.6' })
-    assert.equal(route.modelId, 'grok-4.6')
+    const text = parseTextConfig({ models: [{ id: 'gemini-3.8-flash' }] })
+    const route = resolveTextRoute({ prompt: 'hi' }, text, { OMNIMUX_TEXT_DEFAULT_MODEL: 'gemini-3.8-flash' })
+    assert.equal(route.modelId, 'gemini-3.8-flash')
   })
 
   it('rejects OMNIMUX_TEXT_DEFAULT_MODEL when the model is disabled', () => {
-    const text = parseTextConfig({
-      models: [{ id: 'grok-4.6', enabled: false }, { id: 'deepseek-v4-pro' }],
-    })
+    const text = parseTextConfig({ models: [{ id: 'gemini-3.8-flash', enabled: false }] })
     assert.throws(
-      () => resolveTextRoute({ prompt: 'hi' }, text, { OMNIMUX_TEXT_DEFAULT_MODEL: 'grok-4.6' }),
+      () => resolveTextRoute({ prompt: 'hi' }, text, { OMNIMUX_TEXT_DEFAULT_MODEL: 'gemini-3.8-flash' }),
       (error) => error instanceof OmnimuxError && error.code === 'unknown-model',
     )
   })
 
-  it('rejects an image on a text-only model', () => {
+  it('rejects an image request on a text model that is not on the listed whitelist', () => {
+    // 2026-10-21 #3527：chat 目录只剩多模态 gemini；旧的「纯文本模型拒绝 image」样本
+    // （deepseek-v4-pro 等）已不在路由声明里，改为断言它们在任何模态校验之前就被拒绝。
     assert.throws(
       () => resolveTextRoute({ model: 'deepseek-v4-pro', image: '/tmp/a.png' }, parseTextConfig(undefined)),
-      (error) => error instanceof OmnimuxError
-        && error.code === 'omnimux-invalid-request'
-        && /does not accept image input/.test(error.message),
+      (error) => error instanceof OmnimuxError && error.code === 'unknown-model',
     )
+    const listed = resolveTextRoute({ image: '/tmp/a.png' }, parseTextConfig(undefined))
+    assert.ok(listed.input.includes('image'))
   })
 
   it('defaults a video request to gemini and accepts video modality', () => {
@@ -132,12 +116,10 @@ describe('text whitelist', () => {
     assert.ok(route.input.includes('video'))
   })
 
-  it('rejects video on a vision-but-not-video model', () => {
+  it('rejects video on a vision model that left the listed whitelist', () => {
     assert.throws(
       () => resolveTextRoute({ model: 'grok-4.6', video: '/tmp/a.mp4' }, parseTextConfig(undefined)),
-      (error) => error instanceof OmnimuxError
-        && error.code === 'omnimux-invalid-request'
-        && /does not accept video input/.test(error.message),
+      (error) => error instanceof OmnimuxError && error.code === 'unknown-model',
     )
   })
 
@@ -151,14 +133,14 @@ describe('text whitelist', () => {
   })
 
   it('pins an explicit enabled model', () => {
-    const route = resolveTextRoute({ model: 'claude-opus-5' }, parseTextConfig(undefined))
-    assert.equal(route.modelId, 'claude-opus-5')
-    assert.deepEqual(route.input, ['text'])
+    const route = resolveTextRoute({ model: 'gemini-3.8-flash' }, parseTextConfig(undefined))
+    assert.equal(route.modelId, 'gemini-3.8-flash')
+    assert.deepEqual(route.input, ['text', 'image', 'video', 'audio', 'document'])
   })
 
   it('keeps the default table frozen identity for omitted config', () => {
-    assert.equal(DEFAULT_TEXT.models.length, 13)
-    assert.equal(DEFAULT_TEXT.models.find((row) => row.id === 'grok-4.6')?.id, 'grok-4.6')
+    assert.equal(DEFAULT_TEXT.models.length, 1)
+    assert.equal(DEFAULT_TEXT.models[0].id, 'gemini-3.8-flash')
     assert.equal(DEFAULT_TEXT.defaultModel, 'gemini-3.8-flash')
   })
 
@@ -178,10 +160,14 @@ describe('text whitelist', () => {
     assert.equal(stabRoute.strategy, 'stability_first')
     assert.equal(stabRoute.candidates[0], 'gemini-3.8-flash@default')
 
-    // 无分组的文本模型带分组意图必须 fail-closed，绝不回落到裸模型。
+    // 未登记的分组必须 fail-closed，绝不回落到裸模型；未上架型号更早以 unknown-model 拒绝。
+    assert.throws(
+      () => resolveTextRoute({ model: 'gemini-3.8-flash@cheap' }, parseTextConfig(undefined)),
+      { code: 'unknown-group' },
+    )
     assert.throws(
       () => resolveTextRoute({ model: 'claude-opus-4-6@claude-plus' }, parseTextConfig(undefined)),
-      { code: 'unknown-group' },
+      { code: 'unknown-model' },
     )
   })
 })

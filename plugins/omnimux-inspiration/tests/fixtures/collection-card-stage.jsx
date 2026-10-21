@@ -8,9 +8,9 @@
  * buttons" assertion.
  */
 
-import { InspirationCollectionCard } from '../InspirationCollectionCard.jsx'
-import { InspirationCoverCard } from '../InspirationCoverCard.jsx'
-import { toInspirationCardRow } from '../inspiration-card.js'
+import { InspirationCollectionCard } from '../../src/client/InspirationCollectionCard.jsx'
+import { InspirationCoverCard } from '../../src/client/InspirationCoverCard.jsx'
+import { toInspirationCardRow } from '../../src/client/inspiration-card.js'
 
 export function CollectionCardStage({ kind, collection, row, t, preview, addToSessionBusy, onOpen, onView, onAddToSession }) {
   if (kind === 'inspiration') {

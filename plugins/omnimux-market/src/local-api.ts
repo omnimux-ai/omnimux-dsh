@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { clamp, fetchSkillCard, parseSlug } from './api.js'
 import { parseCategory } from './categories.js'
 import { assignConfig, dshHome, publicConfig, sanitizePatch, sanitizeSortBy, writeOverlay } from './config-store.js'
@@ -471,78 +471,116 @@ async function handleSkillTab(ctx: ApiContext): Promise<void> {
   return sendJson(res, 200, { ok: true, slug, ...result })
 }
 
-let homeOrderConfigPathForTests: string | null = null
+let homeOrderPathsForTests: { state: string, catalog: string } | null = null
 
-/** 测试接缝：覆盖首页自定义排序的配置文件路径；传 null 恢复默认 catalog 路径。仅测试使用。 */
-export function setHomeOrderConfigPathForTests(path: string | null): void {
-  homeOrderConfigPathForTests = path
+/**
+ * 测试接缝：覆盖首页自定义排序的 state/catalog 路径；传 null 恢复默认。
+ * 仅测试使用（生产读取 DSH_HOME 与包内 catalog）。
+ */
+export function setHomeOrderPathsForTests(paths: { state: string, catalog: string } | null): void {
+  homeOrderPathsForTests = paths
 }
 
-function homeOrderConfigPath(): string {
-  return homeOrderConfigPathForTests ?? join(packageRoot(), 'catalog', 'skill-recommendations.json')
+/** 用户可写的自定义排序覆盖文件；catalog 内的 homeRecommendations 是打包默认，永不被运行时改写。 */
+export function homeOrderStatePath(): string {
+  return homeOrderPathsForTests?.state ?? join(dshHome(), 'omnimux-market-home-order.json')
+}
+
+function homeOrderCatalogPath(): string {
+  return homeOrderPathsForTests?.catalog ?? join(packageRoot(), 'catalog', 'skill-recommendations.json')
 }
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
+function errorCode(err: unknown): string {
+  const code = (err as NodeJS.ErrnoException | null)?.code
+  return typeof code === 'string' && code ? code : 'unknown'
+}
+
+/** 读取用户覆盖文件；缺失/损坏一律按「无自定义排序」处理（读侧容错）。 */
+function readHomeOrderState(statePath: string): string[] | null {
+  try {
+    const raw = JSON.parse(readFileSync(statePath, 'utf8'))
+    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.order)) return null
+    return raw.order.map(String)
+  } catch {
+    return null
+  }
+}
+
+/** 读取打包默认排序；缺失/损坏返回空数组（GET 读侧降级，不升级为 5xx）。 */
+function readCatalogHomeOrder(catalogPath: string): string[] {
+  try {
+    if (!existsSync(catalogPath)) return []
+    const raw = JSON.parse(readFileSync(catalogPath, 'utf8'))
+    return Array.isArray(raw?.homeRecommendations) ? raw.homeRecommendations.map(String) : []
+  } catch {
+    return []
+  }
+}
+
 /**
- * 持久化首页自定义排序（Issue #3503）。
- * 缺文件 / 损坏 JSON / 写盘失败都抛错，由 handler 映射为 5xx；
- * 先写同目录临时文件再 rename，避免半截写入损坏 catalog。
+ * 写入用户自定义排序（Issue #3509）：只写 DSH_HOME 覆盖文件，catalog 保持打包默认。
+ * 写盘失败抛错由 handler 映射为 5xx；错误文案只含固定描述与错误码，不回传路径。
  */
-export function persistHomeCustomOrder(configPath: string, order: string[]): void {
-  if (!existsSync(configPath)) {
-    throw new Error(`config file not found: ${configPath}`)
-  }
-  let parsed: unknown
+export function writeHomeOrderState(statePath: string, order: string[]): void {
+  const tmpPath = `${statePath}.tmp-${process.pid}-${Date.now()}`
   try {
-    parsed = JSON.parse(readFileSync(configPath, 'utf8'))
+    // A brand-new DSH_HOME may not exist yet; create only the parent directory.
+    mkdirSync(dirname(statePath), { recursive: true })
+    writeFileSync(tmpPath, `${JSON.stringify({ version: 1, order, updatedAt: new Date().toISOString() }, null, 2)}\n`)
+    renameSync(tmpPath, statePath)
   } catch (err) {
-    throw new Error(`config JSON invalid (${configPath}): ${errorText(err)}`)
-  }
-  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error(`config JSON must be an object (${configPath})`)
-  }
-  const raw = parsed as Record<string, unknown>
-  raw.homeRecommendations = order
-  const tmpPath = `${configPath}.tmp-${process.pid}-${Date.now()}`
-  try {
-    writeFileSync(tmpPath, `${JSON.stringify(raw, null, 2)}\n`)
-    renameSync(tmpPath, configPath)
+    throw new Error(`home order state not writable (${errorCode(err)})`)
   } finally {
     if (existsSync(tmpPath)) {
       try {
         rmSync(tmpPath, { force: true })
       } catch (cleanupError) {
-        console.warn(`[omnimux-market] failed to remove temp file ${tmpPath}: ${errorText(cleanupError)}`)
+        console.warn(`[omnimux-market] failed to remove stale home order temp file (${errorCode(cleanupError)})`)
       }
     }
   }
 }
 
+/** 清除用户覆盖 = 恢复打包默认排序（Issue #3509）。 */
+export function clearHomeOrderState(statePath: string): void {
+  try {
+    rmSync(statePath, { force: true })
+  } catch (err) {
+    throw new Error(`home order state not writable (${errorCode(err)})`)
+  }
+}
+
 function handleHomeCustomOrder(ctx: ApiContext): void {
   const { req, res, body } = ctx
-  const configPath = homeOrderConfigPath()
+  const statePath = homeOrderStatePath()
+  const catalogPath = homeOrderCatalogPath()
   if (req.method === 'POST') {
-    const order = Array.isArray(body.order) ? body.order.map(String) : []
-    if (order.length > 0) {
-      try {
-        persistHomeCustomOrder(configPath, order)
-      } catch (err) {
-        return sendJson(res, 500, { ok: false, error: `home custom order not saved: ${errorText(err)}` })
-      }
+    // Mutating path: same rule as the other mutating methods (Issue #3509).
+    if (!trustedRestartRequest(req)) {
+      return sendJson(res, 403, { ok: false, error: 'home custom order is limited to same-origin requests' })
+    }
+    if (!Array.isArray(body.order)) {
+      return sendJson(res, 400, { ok: false, error: 'order must be an array' })
+    }
+    const order = body.order.map(String)
+    try {
+      // Empty array is the documented reset: drop the override and fall back to the
+      // packaged default catalog instead of overwriting that default with [].
+      if (order.length > 0) writeHomeOrderState(statePath, order)
+      else clearHomeOrderState(statePath)
+    } catch (err) {
+      return sendJson(res, 500, { ok: false, error: `home custom order not saved: ${errorText(err)}` })
     }
     return sendJson(res, 200, { ok: true, order })
   }
-  let currentOrder: string[] = []
-  try {
-    if (existsSync(configPath)) {
-      const raw = JSON.parse(readFileSync(configPath, 'utf8'))
-      currentOrder = Array.isArray(raw.homeRecommendations) ? raw.homeRecommendations : []
-    }
-  } catch {}
-  return sendJson(res, 200, { ok: true, order: currentOrder })
+  const customOrder = readHomeOrderState(statePath)
+  const hasCustom = Boolean(customOrder && customOrder.length > 0)
+  const order = hasCustom ? (customOrder as string[]) : readCatalogHomeOrder(catalogPath)
+  return sendJson(res, 200, { ok: true, order, source: hasCustom ? 'custom' : 'default' })
 }
 
 async function handleExpertMarketList(ctx: ApiContext): Promise<void> {

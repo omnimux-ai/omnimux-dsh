@@ -148,17 +148,15 @@ test('M4 路由行没有 input 键 → 等价 [text]，不产生假阳性', () =
   assert.deepEqual(report.routeDefaulted, ['model-text-only'])
 })
 
-test('M4（真实数据）三行缺 input 键的模型等价 [text] 且不产生缺口', () => {
+test('M4（真实数据）现役路由行全部显式声明 input，缺键等价 [text] 不产生假阳性', () => {
   const report = runOnRealRepo()
-  assert.deepEqual(report.routeDefaulted, ['claude-opus-5', 'deepseek-v4-pro', 'glm-5.3'])
-  for (const id of ['claude-opus-5', 'deepseek-v4-pro', 'glm-5.3']) {
-    const pair = report.pairs.find((entry) => entry.id === id)
-    assert.ok(pair, `${id} 必须与契约配对`)
-    assert.deepEqual(pair.route, ['text'], `${id} 的路由模态必须等价为 ['text']`)
-    assert.deepEqual(pair.contract, ['text'], `${id} 的契约模态必须只有 text`)
-  }
+  // #3527 后路由只声明网关现役的 gemini-3.8-flash，且该行显式声明 input；
+  // 「缺 input 键等价 [text]」的解析语义仍由上面的夹具用例覆盖。
+  assert.deepEqual(report.routeDefaulted, [])
+  assert.equal(report.pairs.length, 1)
+  for (const pair of report.pairs) assert.ok(pair.route.length > 0)
   const offending = report.mismatches.filter((entry) => report.routeDefaulted.includes(entry.id))
-  assert.deepEqual(offending, [], '缺 input 键的三行不得出现在缺口清单里')
+  assert.deepEqual(offending, [], '显式声明行不得出现在缺口清单里')
 })
 
 /* --------------------------------------------------------------------- M5 */
@@ -224,7 +222,6 @@ test('M5 反向对照（真实契约 + 合成路由）：把 video 补进路由�
 test('M6 主干真实数据报出预期缺口，且缺口之外没有别的分歧', () => {
   const report = runOnRealRepo()
   assert.deepEqual(gapIds(report.mismatches), [
-    'gemini-3.7-flash × video under',
     'gemini-3.8-flash × audio under',
     'gemini-3.8-flash × document under',
     'gemini-3.8-flash × video under',
@@ -234,15 +231,19 @@ test('M6 主干真实数据报出预期缺口，且缺口之外没有别的分�
   assert.deepEqual(report.stale, [])
   assert.deepEqual(report.unknownModalities, [])
   assert.deepEqual(report.structural, [])
-  assert.equal(report.pairs.length, 12)
-  assert.deepEqual(report.unpaired.routeOnly, ['deepseek-v4-flash-vision-exp'])
-  assert.deepEqual(report.unpaired.contractOnly, ['deepseek-v4-flash'])
+  assert.equal(report.pairs.length, 1)
+  assert.deepEqual(report.unpaired.routeOnly, [])
+  assert.deepEqual(report.unpaired.contractOnly, [
+    'claude-opus-4-6', 'claude-opus-5', 'claude-sonnet-4-6',
+    'deepseek-v4-flash', 'deepseek-v4-pro', 'gemini-3.1-pro-preview',
+    'gemini-3.7-flash', 'glm-5.3', 'gpt-5.5', 'gpt-5.6-sol', 'grok-4.6', 'kimi-k3',
+  ])
 })
 
 test('M6 真实数据：--no-baseline 形态下同样的缺口被判定为阻断', () => {
   const report = runOnRealRepo({ useBaseline: false })
   assert.equal(report.ok, false, '不应用基线时真实缺口必须阻断')
-  assert.equal(report.unexpected.length, 4)
+  assert.equal(report.unexpected.length, 3)
   assert.deepEqual(report.stale, [])
 })
 
@@ -286,7 +287,7 @@ test('基线条目不再复现即失败（防止基线腐化把回归静音）',
   assert.deepEqual(unexpected, [])
   assert.deepEqual(
     stale.map((entry) => `${entry.id} × ${entry.modality}`).sort(),
-    ['gemini-3.7-flash × video', 'gemini-3.8-flash × audio', 'gemini-3.8-flash × document'],
+    ['gemini-3.8-flash × audio', 'gemini-3.8-flash × document'],
   )
 
   const report = verifyModalityMatrix({
@@ -337,7 +338,7 @@ test('结构性守卫：路由或契约任一侧为空即拒绝放行（不得�
 
 test('真实 cordis.patch.yml 可解析，且两处真源各自独立读取', () => {
   const models = parseRouteModalities(readFileSync(CORDIS_PATH, 'utf8'))
-  assert.ok(models.length >= 10, `解析出的路由模型过少: ${models.length}`)
+  assert.ok(models.length >= 1, `解析出的路由模型过少: ${models.length}`)
   for (const model of models) assert.ok(model.id.length > 0)
   assert.ok(models.some((model) => model.declaredInput), '至少要有一行显式声明 input')
 

@@ -81,13 +81,6 @@ export const KNOWN_GAPS = Object.freeze([
     issue: '#3236',
     reason: '契约 text-models.yaml 有 document 槽；pi-ai 的 input 枚举不含 document，路由侧无法声明',
   },
-  {
-    id: 'gemini-3.7-flash',
-    modality: 'video',
-    direction: 'under',
-    issue: '#3236',
-    reason: '契约 text-models.yaml 有 video 槽（limitSource.kind=policy_conservative），路由只声明 [text, image]',
-  },
 ])
 
 /**

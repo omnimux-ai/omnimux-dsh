@@ -34,7 +34,7 @@ const CHROME_PATH = process.env.OMNIMUX_QA_CHROME
 const HAS_CHROME = existsSync(CHROME_PATH)
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '../../../..')
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 
 /** 与组件库令牌表一致的浅色令牌；不含 --dsw-alias-bg-tertiary。 */
 const TOKENS = `

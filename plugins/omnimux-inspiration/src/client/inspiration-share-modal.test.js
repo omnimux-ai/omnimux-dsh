@@ -32,7 +32,7 @@ const result = await build({
   jsx: 'automatic',
   write: false,
   external: ['lucide-react', 'react', 'react/jsx-runtime', 'react-dom', 'react-dom/client'],
-  alias: { 'dsh-ui-kit': join(here, 'test-fixtures/ui-kit-shim.mjs') },
+  alias: { 'dsh-ui-kit': join(here, '../../tests/fixtures/ui-kit-shim.mjs') },
 })
 const bundlePath = join(cache, 'preview.mjs')
 writeFileSync(bundlePath, result.outputFiles[0].text)

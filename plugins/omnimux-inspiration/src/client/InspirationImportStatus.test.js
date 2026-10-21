@@ -36,7 +36,7 @@ const { createRoot } = await import('react-dom/client')
  * with no error anywhere.
  */
 const here = fileURLToPath(new URL('.', import.meta.url))
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 // Per-suite cache directory: `node --test` runs test files in parallel, so two
 // suites sharing one directory would delete each other's bundles.
 const cacheDir = join(here, '.esbuild-cache', 'import-status')

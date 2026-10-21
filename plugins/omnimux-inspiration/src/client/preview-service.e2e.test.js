@@ -8,7 +8,7 @@ import { JSDOM } from 'jsdom'
 
 const require = createRequire(import.meta.url)
 const here = fileURLToPath(new URL('.', import.meta.url))
-const shimEntry = join(here, 'test-fixtures', 'ui-kit-shim.mjs')
+const shimEntry = join(here, '../../tests/fixtures', 'ui-kit-shim.mjs')
 
 async function loadComponent(entry) {
   const output = await build({

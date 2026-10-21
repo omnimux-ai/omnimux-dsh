@@ -1,0 +1,7 @@
+HOST http://127.0.0.1:53208
+CAPTURE_READY true
+CLICK clicked TOAST 已保存到 OmniMux 灵感素材库！ after 707ms
+ROW {"id":"insp_2c47a1d7","type":"video","import_status":"ready","media_urls":["/omnimux/inspiration/local/media/videos/video_3769bec6.mp4","/omnimux/inspiration/local/media/videos/video_f5e9204f.mp4","/omnimux/inspiration/local/media/videos/video_026bb5a9.mp4","/omnimux/inspiration/local/media/videos/video_e5f93e00.mp4"],"local_paths":{"video":"/tmp/omnimux-relay-e2e-home-1792561651729/omnimux/inspirations/media/videos/video_3769bec6.mp4","video_2":"/tmp/omnimux-relay-e2e-home-1792561651729/omnimux/inspirations/media/videos/video_f5e9204f.mp4","video_3":"/tmp/omnimux-relay-e2e-home-1792561651729/omnimux/inspirations/media/videos/video_026bb5a9.mp4","video_4":"/tmp/omnimux-relay-e2e-home-1792561651729/omnimux/inspirations/media/videos/video_e5f93e00.mp4","cover":"/tmp/omnimux-relay-e2e-home-1792561651729/omnimux/inspirations/media/covers/cover_2c47a1d7.jpg"},"import_error":null}
+FILE {"localVideo":"/tmp/omnimux-relay-e2e-home-1792561651729/omnimux/inspirations/media/videos/video_3769bec6.mp4","fileSize":236377548,"served":2048}
+E2E_RESULT PASS
+CLEANUP status=200

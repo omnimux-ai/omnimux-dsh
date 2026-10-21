@@ -16,7 +16,7 @@ const result = await build({
   entryPoints: [join(here, 'InspirationPreviewModal.jsx')],
   bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', write: false,
   external: ['lucide-react', 'react', 'react/jsx-runtime'],
-  alias: { 'dsh-ui-kit': join(here, 'test-fixtures/ui-kit-shim.mjs') },
+  alias: { 'dsh-ui-kit': join(here, '../../tests/fixtures/ui-kit-shim.mjs') },
 })
 const bundle = join(cache, 'preview.mjs')
 writeFileSync(bundle, result.outputFiles[0].text)
