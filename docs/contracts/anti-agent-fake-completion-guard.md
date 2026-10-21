@@ -36,6 +36,21 @@ related:
 **核心治理原则**：
 > **放弃对 Agent 自觉性的道德规劝，全面构建物理硬门禁。将“如实暴露阻断”定义为合格行为，将“虚假交差”定义为不可容忍的致命违纪。**
 
+### 1.1 先分类，再判定 (Defense / Local-Optimum / Concealment)
+
+“打补丁”混着三种异质行为；不分类就无法判断某次修补是否合规：
+
+| 行为 | 形态 | 判定 | 处置 |
+|---|---|---|---|
+| **边界防御** | 入参校验、超时、重试上限、fail-safe 降级 | 正当 | 允许，但必须留痕（日志/指标/退出条件） |
+| **局部最优修复** | 最小编辑让当前用例通过，根因未动 | 常理性 | 允许，但规格必须写明根因假设与证伪方式（§4.4） |
+| **掩盖内部不变式** | 空 catch、默认值吞错、`mock` 兜底、隐藏/黑名单 | 病理 | 硬门禁拦截（§3.2、§4.5） |
+| **绕过验证器** | 改断言、skip 测试、特判输入、假执行凭证 | 作弊 | 致命违纪，见 §2 |
+
+判据三问，任一为“否”即落入病理：失败源在系统边界外吗？补丁留痕吗（有日志/指标/退出条件）？登记为债务了吗（根因假设 + 触发条件 + owner）？
+
+> 注意：**形态规则只是下限**。`RULE-02` 拦 `mock*` 变量名、`RULE-03` 拦带括号 `catch` 返回 `{ ok }`，改名或换写法即可绕过；它们提高的是显性作弊成本，不是防线。防线是“证据是否齐备”，见 §3.3 / §3.4。
+
 ---
 
 ## 2. 四大经典造假姿势与禁止清单 (Cheating Patterns & Denylist)
@@ -86,11 +101,18 @@ related:
 
 ### 3.2 层级 2：有界语法与生产模式检查 (Static Anti-Fallback Gates)
 
-现有 `scripts/guard-anti-cheat.mjs` 在写前执行确定性检查，不是执行沙箱，也不证明任意代码没有间接造假：
+现有 `scripts/guard-anti-cheat.mjs` 在写前执行确定性检查，不是执行沙箱，也不证明任意代码没有间接造假。**本层只处理可枚举形态，是下限而不是防线**；增量静默兜底由 §3.2.1 在交付命令时拦截：
 
 1. **生产假数据声明**：沿现有路径资格，在非测试、非 fixture 路径检查 `const|let|var` 后名称以 `mock`、`fake`、`dummy`、`fallback` 开头且直接赋数组或对象的原模式。任务意图、日志和 approved 元数据不提供免检权；正常占位代码若不命中模式，仍按原规则处理。
 2. **catch 状态对象**：沿现有正则检查有括号 catch 内直接返回包含 `ok|status|success` 的对象。即使存在日志或 `fallback_infra` 意图也不免检。该模式不判断值是真或假，可能匹配明确失败对象；普通返回缓存、抛错、空 catch、无括号 catch 与复杂嵌套并未被完整解析，本切片不扩大关键词或重写异常分析器。
 3. **测试语法**：完整候选、现有 before/after 风险比较与公开函数来源检查使用原有有界规则；语法放行不等于独立批准旧标准变化，也不实现通用查表作弊分析。使用处风险的导入绑定只保留原声明级字段与该单项导入，新增无关安全兄弟项不重签该绑定；导入声明本身的风险正文与上下文仍保留整声明，不承诺全面导入列表维护放行。使用处绑定仅收集真正引用角色，排除声明模式及非计算属性名，保留对象简写值、计算键与默认值右侧；此角色过滤不解析完整作用域，同名局部真正引用仍保守关联。
+
+### 3.2.1 增量静默兜底拦截 (Incremental Silent-Catch Gate)
+
+* **存量测量**：`scripts/verify-silent-catch.mjs` 扫描 `plugins/*/src/**`，区分 SC1 空 catch / SC2 仅注释 catch（确证）与 SC3 有语句无痕迹（疑似）。CI 侧保持告警档，只给存量数字。
+* **增量阻断**：`scripts/guard-quality-loop.mjs` 在交付命令（`git commit` / `git push` / `gh pr` / `worktree.sh ship`）时，用 `scripts/lib/silent-catch-delta.mjs` 把改动文件与 `git merge-base HEAD origin/main` 版本比对，键为 `path|rule|bodyKey`（catch 体归一化摘要），**行号漂移不影响判定**。新增 SC1/SC2 → deny `new-silent-catch`。
+* **只拦增量**：存量代码不改不报；修好旧吞错也不会因行号变化误报。显式豁免仍走 `scripts/silent-catch-allowlist.json`（行号绑定 + `reason` ≥8 字），条目僵尸即失败。
+* **fail-open**：扫描器自身 git/IO 异常打印告警并放行，基础设施缺陷不得阻断全部交付（与安全类钩子的 fail-closed 相反）。
 
 ### 3.3 层级 3：零自我认证与独立物理凭据 (Zero Self-Certification)
 * **废除口头宣称**：禁止采信 Agent 在会话中的“已测试通过”、“数据已获取”。
@@ -101,9 +123,11 @@ related:
 * 任何仅对静态样例过拟合的假代码，在动态变异测试下会立刻暴露并判定失败。
 
 ### 3.5 层级 5：容败阻断上报协议 (Safe Fail Escalation Protocol)
-* **合法阻断出口**：为 Agent 明确提供 `report_hard_blocker` 或状态机受控阻断通道。
+* **合法阻断出口**：`pnpm report:blocker`（即 `node scripts/report-blocker.mjs`）把一次真实卡住落成结构化记录：`docs/evidence/blockers/<taskId>.json`，schema 见 §4.5。
+* **有证据才叫阻断**：`attempts` 至少一条真实失败命令与退出码，或 `missing` 明确列出缺失的能力/授权/上下文；空口“卡住了”不是阻断。
+* **阻断 ≠ 通过**：记录**不解除任何门禁**，也**不计入** `hasEvidenceAfterSpec()` 的验证证据（`docs/evidence/blockers/` 被显式排除）。任务状态是 `blocked`，不是 `pass`。
 * **激励重塑规则**：
-  * **合规阻断（Pass with Blocker）**：当遇到不可抗力（无权限、外部服务宕机、缺少上下文），如实提供复现现场与错误堆栈并暂停，视为**有效且高质量交付**；
+  * **合规阻断（Blocked with Evidence）**：不可抗力（无权限、外部服务宕机、缺少上下文）下如实给出复现现场与错误堆栈并暂停，视为**有效且高质量手交**，不计失败；
   * **虚假通过（Fake Pass）**：一旦被检测到通过造假手段假装完成，立即评定为最低等级并计入永久防御黑名单。
 
 ---
@@ -133,8 +157,53 @@ related:
 3. **[独立物理复验]** 脱离 Agent 所在会话，在干净的隔离子进程中直接运行测试和构建命令，只认终端真实退出码（Exit Code 0）。
 4. **[边界抽样]** 针对核心计算与逻辑，使用随机边界入参进行抽检，排除硬编码查表作弊。
 
+### 4.4 规格「假设 / 证伪方式」门禁
+
+任务规格（`specs/*.md`）在**本任务改动业务源码**时必须包含两节，正文各 ≥20 字；doc/scripts-only 任务不要求：
+
+```html
+## 假设
+（本次改动依赖的关键假设；bugfix 写根因假设，feature 写设计假设）
+
+## 证伪方式
+（什么可观测结果会证明上述假设是错的；写出可执行的验证命令或观测点）
+```
+
+`scripts/guard-quality-loop.mjs` 的 `inspectSpecContract()` 只保证**存在且非空**，不判断语义。这两节是给人类评审的信号，不是自动正确性判据；把它当判据会立刻退化成仪式。
+
+### 4.5 阻断记录 schema (`docs/evidence/blockers/<taskId>.json`)
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "omnimux-blocker",
+  "taskId": "governance-patch-discipline-issue-3491",
+  "phase": "implement",
+  "summary": "一句话说明卡在哪",
+  "createdAt": "2026-10-21T03:00:00.000Z",
+  "repo": { "baseSha": "<40 hex | null>", "headSha": "<40 hex | null>" },
+  "attempts": [{ "command": "pnpm --filter x test", "exitCode": 1, "stderrExcerpt": "…" }],
+  "missing": ["ego-browser capability"],
+  "evidence": ["docs/evidence/example.png"],
+  "nextAction": "…",
+  "authorization": "not-granted"
+}
+```
+
+约束：`taskId` 匹配 `^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$`；`phase ∈ {inspect, implement, verify, deliver}`；`attempts` 至少一条且 `exitCode !== 0`，或 `missing` 非空；`evidence` 必须是仓库内相对路径、存在、无 `..`、非符号链接；写入前校验 realpath 仍在仓库内。
+
 ---
 
 ## 5. 结论
 
 防范 Agent 的兜底与假交差，核心在于**用系统工程的严密性对抗深度学习模型的投机性**。通过将测试权限剥离、部署静态 AST 探针、依托独立物理执行凭证，并保障合法的失败上报路径，才能构建起值得信赖的自主 Agent 工程交付底座。
+
+## 6. 日落条款 (Sunset Clause)
+
+**任何新增门禁必须在同一处写明删除条件**；未写删除条件的门禁不得合入。删除条件不是“以后再看”，而是可判定的触发式，例如：
+
+* 某规则连续 N 个自然月零命中 → 降级为告警或删除；
+* 某规则被更底层机制覆盖（如类型系统、上游校验）→ 删除；
+* 某规则的误杀率超过 X% → 先降级为告警，再重建。
+
+理由：用补丁治理补丁会让治理系统自己变成没人敢改的边界假设。门禁的价值是改变收益结构，不是积累规则数量；规则只增不减的系统，最终会成为新的根因。

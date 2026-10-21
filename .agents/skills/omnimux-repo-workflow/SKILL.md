@@ -20,6 +20,10 @@ Input: the user's goal, affected files, acceptance evidence, and authorization a
 
 - State the new-user baseline in the task spec: what this feature relies on for a brand-new user, and what error it shows when that is missing. Anything that exists only on a dev machine is not a default path — [product baseline](../../../docs/contracts/product-baseline.md), enforced by `pnpm verify:product-baseline`.
 
+- When the task changes business source, the task spec must contain `## 假设` and `## 证伪方式` (both ≥20 chars) — enforced by `scripts/guard-quality-loop.mjs`, contract [§4.4](../../../docs/contracts/anti-agent-fake-completion-guard.md#44-规格假设--证伪方式门禁). 这两节是给人类评审的信号，不是自动正确性判据。
+
+- 遇到无权限、外部服务不可用或缺少上下文时，用 `pnpm report:blocker --task <id> --phase <phase> --summary … --next … --command … --exit-code …` 落阻断记录，再以阻断结束本轮；不要用编造完成代替。有效记录是合格手交，但不是 pass（[Issue lifecycle · 阻断手交](../../../docs/contracts/agent-issue-lifecycle.md#等待恢复与阻断)）。
+
 - Select only relevant skills and references. Shared external symlinks are not repository-owned files. Read a skill's exact pause clause before treating it as a blocker; current user instructions take precedence over skill guidelines within system/platform bounds.
 - Delegate independent work with bounded inputs, paths, and completion criteria; use separate worktrees for concurrent edits. The coordinator integrates and accepts the result. Do not launch a fixed team for a simple edit.
 - Select the **minimal sufficient command set** before running checks (do not default to `pnpm test:all` / `pnpm verify:all`):

@@ -85,6 +85,7 @@ non-goals: "本 Issue 明确不做的内容"
 - wake-up/交接最少保留 Issue/PR、仓库/worktree、base/head SHA、goal、当前阶段、授权范围与撤销状态、证据路径、等待条件、下一动作及自动化 ID。没有成功调度回执不得声称已安排后续检查。
 - 用户在同一任务中已经给出的授权继续有效；恢复时核对目标未变化，不重复索要同一确认。
 - 外部状态未变化时保持循环且不重复通知；失败后继续授权范围内的诊断修复，成功后立即推进下一步。目标完成、用户取消或仅剩必要人工输入时，停止循环并核对回执。自动唤醒不授予额外权限，也不允许把仅完成 CI 写成任务已完成。
+- **阻断手交**：遇到无权限、外部服务不可用或缺少必要上下文时，用 `pnpm report:blocker` 落一条 `docs/evidence/blockers/<taskId>.json`（schema 见 [anti-agent-fake-completion-guard §4.5](anti-agent-fake-completion-guard.md#45-阻断记录-schema-docsevidenceblockerstaskidjson)），再以“阻断”结束本轮。有效记录视为合格手交，但**不是 pass**：它不生成验收证据、不解除任何门禁、不得据此合并。
 
 ## 最终报告
 
