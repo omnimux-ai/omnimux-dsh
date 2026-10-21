@@ -1874,27 +1874,70 @@ function readSaveTargetProbeUrl(message: { url?: unknown; payload?: Record<strin
 // 保存作品时先在当前标签页里提取，成功即把作品与媒体直链交给 host 落盘；
 // 提取不到（或 host 拒绝）就回退旧的 import-url 链路，绝不假成功。
 
-/** 向当前活动标签页索取作品提取结果。 */
-async function capturePostFromActiveTab(): Promise<ReturnType<typeof readCapturedPost>> {
-  try {
-    const tabs = await chrome.tabs?.query?.({ active: true, currentWindow: true })
+/** 捕获尝试的等待预算：内容脚本在页面加载后才注入，刚打开页面时可能还不在。 */
+export const CAPTURE_ATTEMPT_COUNT = 3
+export const CAPTURE_RETRY_DELAY_MS = 400
+
+/**
+ * 一次页面捕获的结果。
+ *
+ * 失败原因需要区分，才能告诉用户为什么回退到云端解析：
+ * - `no-tab`：当前没有可保存的 http(s) 标签页；
+ * - `capture-unavailable`：内容脚本始终没有应答（未注入/已卸载）；
+ * - `capture-empty`：内容脚本应答了，但页面上没有可提取的作品。
+ */
+export type CaptureAttempt =
+  | { kind: 'captured', post: NonNullable<ReturnType<typeof readCapturedPost>> }
+  | { kind: 'no-tab' }
+  | { kind: 'capture-unavailable' }
+  | { kind: 'capture-empty' }
+
+/** One `CAPTURE_POST` round trip; `null` when the tab has no answering content script. */
+function sendCaptureRequest(tabId: number): Promise<{ ok?: boolean, post?: unknown } | null> {
+  return new Promise((resolve) => {
+    try {
+      // 只问顶层 frame：页面里的 iframe 也有内容脚本，会抢先回答 ok:false，把
+      // 一个本来能采集的页面变成「无作品」并回退云端（真实浏览器验收发现）。
+      chrome.tabs.sendMessage(tabId, { action: 'CAPTURE_POST' }, { frameId: 0 }, (reply) => {
+        if (chrome.runtime?.lastError || !reply) resolve(null)
+        else resolve(reply as { ok?: boolean, post?: unknown })
+      })
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
+/**
+ * 向当前活动标签页索取作品提取结果，带短暂重试。
+ *
+ * 大页面刚打开时内容脚本可能尚未注入；一次失败就回退云端会让不支持的站点直接
+ * 失败（真实浏览器验收发现）。这里最多等 ~1.2s，仍失败才把原因交给调用方。
+ */
+export async function capturePostFromActiveTab(): Promise<CaptureAttempt> {
+  let lastReply: { ok?: boolean, post?: unknown } | null = null
+  for (let attempt = 0; attempt < CAPTURE_ATTEMPT_COUNT; attempt += 1) {
+    let tabs: chrome.tabs.Tab[] | undefined
+    try {
+      tabs = await chrome.tabs?.query?.({ active: true, currentWindow: true })
+    } catch {
+      return { kind: 'no-tab' }
+    }
     const tab = tabs?.[0]
-    if (tab?.id === undefined || typeof tab.url !== 'string' || !/^https?:/i.test(tab.url)) return null
-    const response = await new Promise<{ ok?: boolean; post?: unknown }>((resolve) => {
-      try {
-        chrome.tabs.sendMessage(tab.id as number, { action: 'CAPTURE_POST' }, (reply) => {
-          if (chrome.runtime?.lastError || !reply) resolve({ ok: false })
-          else resolve(reply as { ok?: boolean; post?: unknown })
-        })
-      } catch {
-        resolve({ ok: false })
-      }
-    })
-    if (response.ok !== true) return null
-    return readCapturedPost(response.post)
-  } catch {
-    return null
+    if (tab?.id === undefined || typeof tab.url !== 'string' || !/^https?:/i.test(tab.url)) {
+      return { kind: 'no-tab' }
+    }
+    const reply = await sendCaptureRequest(tab.id)
+    lastReply = reply
+    if (reply?.ok === true) {
+      const post = readCapturedPost(reply.post)
+      if (post !== null) return { kind: 'captured', post }
+    }
+    if (attempt < CAPTURE_ATTEMPT_COUNT - 1) {
+      await new Promise((resolve) => setTimeout(resolve, CAPTURE_RETRY_DELAY_MS))
+    }
   }
+  return { kind: lastReply === null ? 'capture-unavailable' : 'capture-empty' }
 }
 
 /**
@@ -2888,40 +2931,49 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
         // 账号导入失败：回退到灵感库保存，并如实返回最终落库位置（spec §10）。
       }
 
-      // 2. 作品页：先在页面内提取，成功即由 host 下载落盘（不依赖云端采集）。
-      //    提取不到或 host 拒绝时继续走下面的 import-url 兜底。
+      // 2. 作品页：先在页面内提取（内容脚本可能尚未注入，带短暂重试），成功即由
+      //    host 下载落盘；确实失败才继续走 import-url，并把失败原因带回面板。
+      let captureFallback: string | undefined
       if (payload?.capturePage === true) {
-        const captured = await capturePostFromActiveTab()
-        if (captured !== null) {
-          const captureResult = await saveCapturedPostOnHost(captured, candidatePorts)
-          if (captureResult.ok) {
-            const firstMedia = captured.media[0]
-            try {
-              await appendMediaInspiration({
-                id: `insp_${Date.now().toString(36)}`,
-                src: captured.cover_url || firstMedia?.url || captured.source_url,
-                type: (captured.content_shape === 'video' || firstMedia?.type === 'video') ? 'video' : 'image',
-                pageUrl: captured.source_url,
-                pageTitle: captured.title,
-                alt: captured.content,
-                previewSrc: captured.cover_url || firstMedia?.url || '',
-                width: 0,
-                height: 0,
-                naturalWidth: 0,
-                naturalHeight: 0,
-                capturedAt: Date.now(),
+        const attempt = await capturePostFromActiveTab()
+        if (attempt.kind === 'captured') {
+          if (attempt.post.media.length === 0) {
+            // 页面只有标题、没有可下载素材：直传不会写入任何东西，按「无作品」回退。
+            captureFallback = 'capture-empty'
+          } else {
+            const captureResult = await saveCapturedPostOnHost(attempt.post, candidatePorts)
+            if (captureResult.ok) {
+              const firstMedia = attempt.post.media[0]
+              try {
+                await appendMediaInspiration({
+                  id: `insp_${Date.now().toString(36)}`,
+                  src: attempt.post.cover_url || firstMedia?.url || attempt.post.source_url,
+                  type: (attempt.post.content_shape === 'video' || firstMedia?.type === 'video') ? 'video' : 'image',
+                  pageUrl: attempt.post.source_url,
+                  pageTitle: attempt.post.title,
+                  alt: attempt.post.content,
+                  previewSrc: attempt.post.cover_url || firstMedia?.url || '',
+                  width: 0,
+                  height: 0,
+                  naturalWidth: 0,
+                  naturalHeight: 0,
+                  capturedAt: Date.now(),
+                })
+              } catch {
+                // 缓存失败不影响已入库的作品
+              }
+              sendResponse({
+                ok: true,
+                target: 'inspiration',
+                via: 'capture',
+                existing: captureResult.existing,
               })
-            } catch {
-              // 缓存失败不影响已入库的作品
+              return
             }
-            sendResponse({
-              ok: true,
-              target: 'inspiration',
-              via: 'capture',
-              existing: captureResult.existing,
-            })
-            return
+            captureFallback = 'capture-rejected'
           }
+        } else {
+          captureFallback = attempt.kind
         }
       }
 
@@ -3009,8 +3061,8 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       }
 
       sendResponse(saved
-        ? { ok: true, target: 'inspiration' }
-        : { ok: false, code: headerOverflow ? 'local-header-overflow' : 'save-failed' })
+        ? { ok: true, target: 'inspiration', ...(captureFallback ? { fallback: captureFallback } : {}) }
+        : { ok: false, code: headerOverflow ? 'local-header-overflow' : 'save-failed', ...(captureFallback ? { fallback: captureFallback } : {}) })
     })()
     return true
   }

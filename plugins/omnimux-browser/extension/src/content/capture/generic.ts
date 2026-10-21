@@ -152,10 +152,26 @@ export function extractGeneric(
   if (href.trim() === '') return null
   const node = workNode(doc)
   const root = workRoot(doc)
+  // 只收「作品本身」的素材：og/twitter/JSON-LD 图片 + 主视频。正文里的其它图片
+  // 是页面排版噪音（真实浏览器验收：Wikipedia 文章曾存成 20 张正文图）。
+  const primaryImages: CapturedMedia[] = []
+  for (const candidate of [
+    metaContent(doc, IMAGE_META),
+    jsonLdImageUrl(node?.['image'] ?? node?.['thumbnailUrl'], href) ?? '',
+  ]) {
+    const url = absoluteHttpUrl(candidate, href)
+    if (url !== null && !primaryImages.some((item) => item.url === url)) {
+      primaryImages.push({ type: 'image', url })
+    }
+  }
+  const mainImage = primaryImages.length === 0
+    ? domImages(root, href, 'article img, main img, [role="main"] img').slice(0, 1)
+    : []
   const media = uniqueMedia([
-    ...domVideos(root, href),
+    ...domVideos(root, href).slice(0, 1),
     ...jsonLdVideos(node, href),
-    ...domImages(root, href),
+    ...primaryImages,
+    ...mainImage,
   ])
   const coverUrl = firstNonEmpty(
     metaContent(doc, IMAGE_META),

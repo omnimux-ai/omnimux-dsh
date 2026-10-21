@@ -87,6 +87,56 @@ export function saveSuccessToast(input: SaveSuccessCopyInput, locale: UiLocale):
   return localized(locale, '已保存到 OmniMux 灵感素材库！', 'Saved to Inspiration Library!')
 }
 
+/** 页面内采集失败、已回退云端解析时的原因码（后台回传）。 */
+export type SaveFallbackReason =
+  | 'capture-unavailable'
+  | 'capture-empty'
+  | 'capture-rejected'
+  | 'no-tab'
+
+/**
+ * 回退云端解析时的成功 toast。
+ *
+ * 真实浏览器验收发现：内容脚本未就绪会静默回退 import-url，用户只看到「已保存」，
+ * 而云端不支持的站点最终是 failed。回退必须说明原因，否则成功文案在骗人。
+ */
+export function saveFallbackToast(fallback: string | undefined, locale: UiLocale): string {
+  const reason = String(fallback || '')
+  if (reason === 'capture-unavailable') {
+    return localized(
+      locale,
+      '已保存到灵感库（页面内容脚本未就绪，已转云端解析）',
+      'Saved to Inspiration Library (page script was not ready; parsed in the cloud)',
+    )
+  }
+  if (reason === 'capture-empty') {
+    return localized(
+      locale,
+      '已保存到灵感库（页面未提取到作品，已转云端解析）',
+      'Saved to Inspiration Library (no work found on the page; parsed in the cloud)',
+    )
+  }
+  if (reason === 'capture-rejected') {
+    return localized(
+      locale,
+      '已保存到灵感库（内页采集未入库，已转云端解析）',
+      'Saved to Inspiration Library (in-page capture was not stored; parsed in the cloud)',
+    )
+  }
+  if (reason === 'no-tab') {
+    return localized(
+      locale,
+      '已保存到灵感库（没有可采集的标签页，已转云端解析）',
+      'Saved to Inspiration Library (no capturable tab; parsed in the cloud)',
+    )
+  }
+  return localized(
+    locale,
+    '已保存到灵感库（内页采集失败，已转云端解析）',
+    'Saved to Inspiration Library (in-page capture failed; parsed in the cloud)',
+  )
+}
+
 /**
  * 保存失败后的 toast。
  *
