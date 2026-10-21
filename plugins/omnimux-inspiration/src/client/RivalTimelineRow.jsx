@@ -8,7 +8,7 @@
  * row so the default state stays a readable timeline.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, IconButton } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
 import {
@@ -19,6 +19,8 @@ import {
   rivalLocaleOf,
 } from './rival-format.js'
 import { isSafeExternalUrl, openExternalUrl } from './open-url.js'
+import { rivalEmbedTarget } from './rival-embed.js'
+import { RivalTimelineEmbed, embedTheme, embedWidgetLang } from './rival-timeline-embed.jsx'
 import { timelineBody, timelineInitial, timelineStateText } from './rival-timeline.js'
 
 const ICON_PLAY = (
@@ -44,6 +46,10 @@ export function RivalTimelineRow(props) {
   const [mediaFailed, setMediaFailed] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
   const [videoLoaded, setVideoLoaded] = useState(false)
+  const [embedVisible, setEmbedVisible] = useState(false)
+  const [embedState, setEmbedState] = useState('idle')
+  const rowRef = useRef(null)
+  const embedTarget = rivalEmbedTarget(card)
   const locale = rivalLocaleOf(t)
   const account = card?.account || {}
   const authorName = String(account.nickname || card?.author_name || account.handle || t('rivalAccounts.refresh.account'))
@@ -84,19 +90,63 @@ export function RivalTimelineRow(props) {
     return () => clearTimeout(timer)
   }, [useVideoPreview, videoLoaded, videoSrc])
 
+  // Lazy official embed (#3542): only a row within 600px of the viewport may
+  // create a third-party iframe. `IntersectionObserver` is always available in
+  // the app (Chromium); without it (jsdom/legacy) the row keeps its own card
+  // and never touches the network.
+  useEffect(() => {
+    if (!embedTarget) return undefined
+    const node = rowRef.current
+    if (!node || typeof IntersectionObserver !== 'function') return undefined
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      observer.disconnect()
+      setEmbedVisible(true)
+    }, { rootMargin: '600px 0px' })
+    observer.observe(node)
+    return () => observer.disconnect()
+    // Primitive identity: the target object is rebuilt on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedTarget?.platform, embedTarget?.id, embedTarget?.kind])
+
+  const cardEmbedReady = embedTarget?.kind === 'card' && embedState === 'ready'
+  const playerEmbedReady = embedTarget?.kind === 'player' && embedState === 'ready'
+  const mountEmbed = Boolean(embedTarget) && embedVisible && embedState !== 'failed'
+  const embedNode = mountEmbed
+    ? (
+      <RivalTimelineEmbed
+        target={embedTarget}
+        card={card}
+        theme={embedTheme()}
+        lang={embedWidgetLang(locale)}
+        title={`${authorName} · ${t(`platform.${platform === 'twitter' ? 'x' : platform}`)}`}
+        onState={setEmbedState}
+      />
+    )
+    : null
+  const hasMediaBlock = useVideoPreview || showImage || showPlaceholder || (embedTarget?.kind === 'player' && mountEmbed)
+
   const stop = (event) => {
     event.preventDefault()
     event.stopPropagation()
   }
-  const openDetail = () => {
+  const openDetail = (event) => {
+    // A click that lands on the official embed belongs to the platform player,
+    // not to「作品详情」: the iframe swallows real clicks, and this guard also
+    // covers clicks synthesized on the iframe element itself (#3542).
+    if (event?.target?.closest?.('.omnimux-rival-timeline-embed')) return
     if (typeof onDetail === 'function') onDetail(card)
   }
 
   return (
     <article
-      className={`omnimux-rival-timeline-item is-${platform || 'unknown'}${done ? ' is-done' : ''}`}
+      ref={rowRef}
+      className={`omnimux-rival-timeline-item is-${platform || 'unknown'}${done ? ' is-done' : ''}${cardEmbedReady ? ' is-embed-card' : ''}${playerEmbedReady ? ' is-embed-player' : ''}`}
       data-card-id={String(card?.id ?? '')}
       data-platform={platform}
+      data-embed-platform={embedTarget?.platform || ''}
+      data-embed-kind={embedTarget?.kind || ''}
+      data-embed-mounted={mountEmbed ? 'true' : 'false'}
       tabIndex={0}
       role="article"
       aria-label={`${authorName} · ${posted}`}
@@ -115,6 +165,8 @@ export function RivalTimelineRow(props) {
       </div>
 
       <div className="omnimux-rival-timeline-main">
+        {embedTarget?.kind === 'card' ? embedNode : null}
+
         <header className="omnimux-rival-timeline-head">
           <span className="omnimux-rival-timeline-author">{authorName}</span>
           <span className="omnimux-rival-timeline-platform" aria-hidden="true">
@@ -127,7 +179,7 @@ export function RivalTimelineRow(props) {
 
         {body ? <p className="omnimux-rival-timeline-body">{body}</p> : null}
 
-        {useVideoPreview || showImage || showPlaceholder ? (
+        {hasMediaBlock ? (
           <div className={`omnimux-rival-timeline-media${isVideo ? ' is-video' : ''}${showPlaceholder ? ' is-placeholder' : ''}`}>
             {useVideoPreview ? (
               <video
@@ -180,6 +232,7 @@ export function RivalTimelineRow(props) {
               </IconButton>
             ) : null}
             {isVideo && duration ? <span className="omnimux-rival-timeline-duration">{duration}</span> : null}
+            {embedTarget?.kind === 'player' ? embedNode : null}
           </div>
         ) : null}
 
