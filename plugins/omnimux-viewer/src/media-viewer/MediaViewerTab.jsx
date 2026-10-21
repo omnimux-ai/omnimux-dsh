@@ -12,6 +12,11 @@ import { registerContextContributor } from '../../../omnimux/src/client/workbenc
 import { serializeReferenceAssets, isAllowedReferenceUrl } from './media-slot.js';
 import { runGenerationTask, resumePendingGenerations, canRetryGeneration } from './generation-runner.js';
 import { describeGenerationFailure } from './generation-failure.js';
+import { HistoryPanel } from './HistoryPanel.jsx';
+import { buildHistoryEntries } from './generation-history.js';
+import { injectFlowAlignmentStyles } from './flow-alignment-styles.js';
+import { flowAlignmentText } from './flow-alignment-copy.js';
+import { queueComposerPrefill } from '../../../omnimux/src/client/media-viewer/composer-prefill.js';
 
 export const MEDIA_VIEWER_TAB_ID = 'omnimux:media-viewer';
 export { serializeReferenceAssets, isAllowedReferenceUrl };
@@ -140,11 +145,12 @@ function FailureCard({ item, retryingIds, onRetry }) {
   );
 }
 
-export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
+export function MediaViewerTab({ scope, sessions, imageUrl, readFile, t }) {
   const getSessionSnapshot = () => sessions?.list?.getSnapshot().current || currentSessionId();
   const sessionId = useSyncExternalStore(sessions?.list?.subscribe || noSubscription, getSessionSnapshot, getSessionSnapshot);
   useEffect(() => {
     injectMediaViewerStyles();
+    injectFlowAlignmentStyles();
   }, []);
 
   const store = getGlobalMediaViewerStore();
@@ -173,6 +179,18 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   // 默认选中缩略图栏首项（最新项），回退为 session 列表首项
   const activeItem = sessionMediaList.find((m) => m.id === activeId) || thumbnailsList[0] || sessionMediaList[0];
   const timelineGroups = store.getTimelineGroups(sessionId);
+
+  // 生成历史：数据全部来自既有 mediaList 的提交快照，不新增 store。
+  const historyEntries = React.useMemo(
+    () => buildHistoryEntries(sessionMediaList, null),
+    [sessionMediaList]
+  );
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // 会话切换时历史抽屉必须收起，避免停留在上一会话的记录上。
+  useEffect(() => {
+    setHistoryOpen(false);
+  }, [sessionId]);
 
   // 会话切换时，若当前 activeId 不属于当前会话的媒体列表，自动联动选中该会话最新的一张素材
   useEffect(() => {
@@ -379,20 +397,40 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
     });
   }, [activeItem?.id]);
 
-  // ESC key to exit annotating mode or cancel draft
+  // Esc 优先关闭历史抽屉，其次退出打点；单图模式下 ↑/↓ 切换历史素材。
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        if (historyOpen) {
+          e.preventDefault();
+          setHistoryOpen(false);
+          return;
+        }
         if (isAnnotating) {
           store.cancelDraftAnnotation(activeItem?.id);
           store.setAnnotating(false);
           setDraftText('');
         }
+        return;
       }
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const target = e.target;
+      const tagName = target?.tagName;
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return;
+      if (subViewMode !== 'single' || thumbnailsList.length === 0) return;
+      const currentIndex = thumbnailsList.findIndex((item) => item.id === activeItem?.id);
+      const delta = e.key === 'ArrowDown' ? 1 : -1;
+      const nextIndex = currentIndex < 0
+        ? 0
+        : Math.min(Math.max(currentIndex + delta, 0), thumbnailsList.length - 1);
+      if (nextIndex === currentIndex) return;
+      e.preventDefault();
+      store.setActiveId(thumbnailsList[nextIndex].id);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAnnotating, activeItem?.id]);
+  }, [historyOpen, isAnnotating, activeItem?.id, thumbnailsList, subViewMode, store]);
 
   // 切换图片：严格保持当前缩放比例不变（跨图锁定）
   const handleSelectMedia = (item) => {
@@ -443,12 +481,31 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
     }
   };
 
-  const handleDownload = () => {
-    if (!activeItem?.url) return;
+  const downloadMediaItem = (item) => {
+    if (!item?.url) return;
     const a = document.createElement('a');
-    a.href = activeItem.url;
-    a.download = activeItem.title || 'media_export.jpg';
+    a.href = item.url;
+    a.download = item.title || 'media_export.jpg';
     a.click();
+  };
+
+  const handleDownload = () => downloadMediaItem(activeItem);
+
+  const handleSelectHistory = (entry) => {
+    const primary = entry?.primary || entry?.items?.[0];
+    if (!primary) return;
+    handleSelectMedia(primary);
+    setHistoryOpen(false);
+  };
+
+  const handleReuseHistoryPrompt = (entry) => {
+    if (!entry?.prompt) return;
+    store.setSubViewMode('single');
+    queueComposerPrefill({
+      prompt: entry.prompt,
+      kind: entry.kind === 'video' ? 'video' : 'image',
+    });
+    setHistoryOpen(false);
   };
 
   const handleToggleSplit = () => {
@@ -472,7 +529,7 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
   };
 
   return (
-    <div className="omx-media-viewer" ref={viewerRootRef} data-layout-mode={layoutMode}>
+    <div className="omx-media-viewer" ref={viewerRootRef} data-layout-mode={layoutMode} data-history-open={historyOpen ? 'true' : 'false'}>
       {/* 顶部工具栏 */}
       <div className="omx-mv-toolbar">
         <div className="omx-mv-toolbar__left">
@@ -551,6 +608,27 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
         </div>
 
         <div className="omx-mv-toolbar__right">
+          {subViewMode === 'single' ? (
+            <button // exempt-ui01: 历史抽屉触发器（窄容器显示，宽容器由 CSS 隐藏）
+              type="button"
+              className="omx-mv-btn omx-mv-history-toggle"
+              title={flowAlignmentText(t, 'mediaViewer.history.toggle')}
+              aria-label={flowAlignmentText(t, 'mediaViewer.history.toggle')}
+              aria-expanded={historyOpen}
+              aria-controls="omx-mv-history"
+              onClick={() => setHistoryOpen((open) => !open)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+              <span>{flowAlignmentText(t, 'mediaViewer.history.toggle')}</span>
+            </button>
+          ) : null}
           {subViewMode === 'single' ? (
             <>
               <button // exempt-ui01: 变焦缩放按钮
@@ -913,9 +991,28 @@ export function MediaViewerTab({ scope, sessions, imageUrl, readFile }) {
             </div>
           )}
           {subViewMode === 'single' ? (
-            <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={false} />
+            <MediaViewerComposer onDirectSubmit={handleDirectSubmit} disabled={false} t={t} />
           ) : null}
         </div>
+        {subViewMode === 'single' ? (
+          <>
+            <div
+              className="omx-mv-history-scrim"
+              aria-hidden="true"
+              onClick={() => setHistoryOpen(false)}
+            />
+            <HistoryPanel
+              entries={historyEntries}
+              activeId={activeItem?.id}
+              open={historyOpen}
+              onSelect={handleSelectHistory}
+              onReusePrompt={handleReuseHistoryPrompt}
+              onDownload={downloadMediaItem}
+              onClose={() => setHistoryOpen(false)}
+              t={t}
+            />
+          </>
+        ) : null}
       </div>
 
     </div>

@@ -14,6 +14,11 @@ export type ViewerKey =
   | 'action.open' | 'action.openNew' | 'action.close' | 'action.expand' | 'action.collapse'
   | 'media.noVideo' | 'media.noAudio'
   | 'mediaViewer.tabTitle'
+  | 'mediaViewer.history.title' | 'mediaViewer.history.empty' | 'mediaViewer.history.toggle'
+  | 'mediaViewer.history.close' | 'mediaViewer.history.reusePrompt' | 'mediaViewer.history.download'
+  | 'mediaViewer.history.noPrompt' | 'mediaViewer.history.failed' | 'mediaViewer.history.generating'
+  | 'mediaViewer.kind.image' | 'mediaViewer.kind.video'
+  | 'mediaViewer.cost.estimated' | 'mediaViewer.cost.unit' | 'mediaViewer.cost.hint'
 
 /** Simplified Chinese copy. */
 export const zh: Record<ViewerKey, string> = {
@@ -41,6 +46,20 @@ export const zh: Record<ViewerKey, string> = {
   'media.noVideo': '当前浏览器无法播放该视频格式',
   'media.noAudio': '当前浏览器无法播放该音频格式',
   'mediaViewer.tabTitle': '图像生成',
+  'mediaViewer.history.title': '历史',
+  'mediaViewer.history.empty': '暂无历史',
+  'mediaViewer.history.toggle': '历史',
+  'mediaViewer.history.close': '关闭',
+  'mediaViewer.history.reusePrompt': '复用提示',
+  'mediaViewer.history.download': '下载',
+  'mediaViewer.history.noPrompt': '无提示词',
+  'mediaViewer.history.failed': '生成失败',
+  'mediaViewer.history.generating': '生成中',
+  'mediaViewer.kind.image': '图片',
+  'mediaViewer.kind.video': '视频',
+  'mediaViewer.cost.estimated': '预估消耗',
+  'mediaViewer.cost.unit': '积分',
+  'mediaViewer.cost.hint': '预估值，实际以执行中枢结算为准',
 }
 
 /** English copy. */
@@ -69,4 +88,18 @@ export const en: Record<ViewerKey, string> = {
   'media.noVideo': 'This browser cannot play that video format',
   'media.noAudio': 'This browser cannot play that audio format',
   'mediaViewer.tabTitle': 'Image Generation',
+  'mediaViewer.history.title': 'History',
+  'mediaViewer.history.empty': 'No history yet',
+  'mediaViewer.history.toggle': 'History',
+  'mediaViewer.history.close': 'Close',
+  'mediaViewer.history.reusePrompt': 'Reuse prompt',
+  'mediaViewer.history.download': 'Download',
+  'mediaViewer.history.noPrompt': 'No prompt',
+  'mediaViewer.history.failed': 'Generation failed',
+  'mediaViewer.history.generating': 'Generating',
+  'mediaViewer.kind.image': 'Image',
+  'mediaViewer.kind.video': 'Video',
+  'mediaViewer.cost.estimated': 'Estimated',
+  'mediaViewer.cost.unit': 'credits',
+  'mediaViewer.cost.hint': 'Estimate only; final charge is settled by the hub',
 }

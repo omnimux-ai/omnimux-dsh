@@ -5,6 +5,8 @@ import { ReferencePickerPopover } from './ReferencePickerPopover.jsx';
 import { peekComposerPrefill, subscribeComposerPrefill } from '../../../omnimux/src/client/media-viewer/composer-prefill.js';
 import { claimPrefillWhenVisible, isElementShown } from './prefill-claim.js';
 import { clampPromptTextareaHeight } from './prompt-textarea-height.js';
+import { estimateMediaPoints } from './media-cost.js';
+import { flowAlignmentText } from './flow-alignment-copy.js';
 import {
   VIDEO_MODE_OPTIONS,
   activeOperation,
@@ -91,6 +93,7 @@ export function MediaViewerComposer({
   onDirectSubmit,
   initialMode = 'image',
   disabled = false,
+  t,
 }) {
   const store = getGlobalMediaViewerStore();
   const storeState = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
@@ -1084,6 +1087,11 @@ export function MediaViewerComposer({
     }
   }, [handleSend]);
 
+  // 生成前成本提示：只消费中枢目录已有的 pointsEstimate，缺失时整行不渲染。
+  const estimatedPoints = mode === 'image'
+    ? estimateMediaPoints({ points: config.channel?.points, count: config.params?.batch })
+    : null;
+
   return (
     <div className="omx-mv-composer-outer">
       {/* 1. 输入框左侧外置垂直胶囊切换器（上图像、下视频，间距 10px，对标图 4） */}
@@ -1253,6 +1261,15 @@ export function MediaViewerComposer({
           </div>
 
           <div className="omx-mv-toolbar-right">
+            {estimatedPoints ? (
+              <span
+                className="omx-mv-cost"
+                title={flowAlignmentText(t, 'mediaViewer.cost.hint')}
+                aria-label={`${flowAlignmentText(t, 'mediaViewer.cost.estimated')} ≈${estimatedPoints.text} ${flowAlignmentText(t, 'mediaViewer.cost.unit')}`}
+              >
+                {flowAlignmentText(t, 'mediaViewer.cost.estimated')} ≈{estimatedPoints.text} {flowAlignmentText(t, 'mediaViewer.cost.unit')}
+              </span>
+            ) : null}
             <button // exempt-ui01: 纯黑白主发送按钮
               type="button"
               className="omx-send-cta-btn"
