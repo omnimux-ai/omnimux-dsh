@@ -167,32 +167,32 @@ function loadSession(paths, rawSessionId) {
   if (!SESSION_ID_RE.test(sessionId)) return { error: fail(404, 'relay session not found') }
   const file = join(sessionDir(paths, sessionId), SESSION_FILE_NAME)
   if (!existsSync(file)) return { error: fail(404, 'relay session not found') }
-  let session
+  let state
   try {
-    session = JSON.parse(readFileSync(file, 'utf8'))
+    state = JSON.parse(readFileSync(file, 'utf8'))
   } catch (error) {
     removeSessionDir(paths, sessionId)
     return { error: fail(404, 'relay session not found') }
   }
   if (
-    !isPlainObject(session) ||
-    !Array.isArray(session.media) ||
-    session.session_id !== sessionId ||
-    !isPlainObject(session.source) ||
-    !publicHttpUrl(session.source.source_url)
+    !isPlainObject(state) ||
+    !Array.isArray(state.media) ||
+    state.session_id !== sessionId ||
+    !isPlainObject(state.source) ||
+    !publicHttpUrl(state.source.source_url)
   ) {
     removeSessionDir(paths, sessionId)
     return { error: fail(404, 'relay session not found') }
   }
-  if (isExpiredSession(session, sessionDir(paths, sessionId))) {
+  if (isExpiredSession(state, sessionDir(paths, sessionId))) {
     removeSessionDir(paths, sessionId)
     return { error: fail(404, 'relay session expired') }
   }
-  return { session }
+  return { session: state }
 }
 
-function writeSession(paths, session) {
-  writeFileSync(join(sessionDir(paths, session.session_id), SESSION_FILE_NAME), JSON.stringify(session, null, 2), 'utf8')
+function writeSession(paths, state) {
+  writeFileSync(join(sessionDir(paths, state.session_id), SESSION_FILE_NAME), JSON.stringify(state, null, 2), 'utf8')
 }
 
 /**
