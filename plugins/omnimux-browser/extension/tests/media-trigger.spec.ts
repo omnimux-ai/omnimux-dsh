@@ -156,7 +156,7 @@ describe('卡片触发按钮', () => {
   it('工具栏里三个动作齐全', () => {
     handle = mount(GRID)
     const actions = [...entries()[0]!.querySelectorAll('.omt-action')].map((el) => el.getAttribute('data-action'))
-    expect(actions).toEqual(['inspiration', 'copy', 'attach'])
+    expect(actions).toEqual(['inspiration', 'download', 'attach'])
   })
 
   it('地址换成不该挂的页面后，标记自己撤掉', () => {

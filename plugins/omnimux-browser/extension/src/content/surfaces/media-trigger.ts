@@ -299,10 +299,10 @@ const ACTION_ICON = {
   asset:
     '<svg viewBox="0 0 22 22" fill="currentColor" stroke="none" aria-hidden="true">'
     + '<path fill-rule="evenodd" clip-rule="evenodd" d="m7.249 11.552-1.691.323A2.335 2.335 0 0 0 6 16.5h10a2.333 2.333 0 0 0 .443-4.625l-1.691-.323.216-1.708a4 4 0 1 0-7.936 0l.217 1.708ZM5.167 9.333a5.833 5.833 0 1 1 11.62.741 4.168 4.168 0 0 1-.787 8.26H6a4.167 4.167 0 0 1-.787-8.26 5.89 5.89 0 0 1-.046-.74Z"/></svg>',
-  copy:
+  download:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-    + '<rect x="9" y="9" width="11.5" height="11.5" rx="2.5"/>'
-    + '<path d="M5.5 15H5A1.5 1.5 0 0 1 3.5 13.5V5A1.5 1.5 0 0 1 5 3.5h8.5A1.5 1.5 0 0 1 15 5v.5"/></svg>',
+    + '<path d="M12 3.5v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/>'
+    + '<path d="M4.5 17.5v1.5A1.5 1.5 0 0 0 6 20.5h12a1.5 1.5 0 0 0 1.5-1.5v-1.5"/></svg>',
   attach:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
     + '<path d="M20.5 12.25v8.25h-5.6"/><path d="M14.9 20.5v-5.2h5.6"/>'
@@ -393,7 +393,7 @@ export function initMediaTrigger(
     toolbar.className = 'omt-toolbar'
     toolbar.setAttribute('role', 'toolbar')
     toolbar.setAttribute('aria-label', 'OmniMux')
-    toolbar.innerHTML = (['inspiration', 'copy', 'attach'] as const).map((action) =>
+    toolbar.innerHTML = (['inspiration', 'download', 'attach'] as const).map((action) =>
       `<button type="button" class="omt-action" data-action="${action}" title="${ACTION_LABEL[action]}" aria-label="${ACTION_LABEL[action]}">${ACTION_ICON[action]}</button>`,
     ).join('')
     wrapper.append(trigger, toolbar)
@@ -552,8 +552,8 @@ export function initMediaTrigger(
             primaryBtn.setAttribute('aria-label', outcome.message)
           }
         }
-      } else if (action === 'copy') {
-        await bridge.copyToClipboard(payload)
+      } else if (action === 'download') {
+        await bridge.downloadMedia(payload)
       } else if (action === 'attach') {
         await bridge.attachToConversation(payload)
       }
@@ -652,9 +652,9 @@ export function initMediaTrigger(
 }
 
 /** The label each action carries, in the panel's language. */
-const ACTION_LABEL: Readonly<Record<'inspiration' | 'copy' | 'attach', string>> = {
+const ACTION_LABEL: Readonly<Record<'inspiration' | 'download' | 'attach', string>> = {
   inspiration: '加入灵感库',
-  copy: '复制',
+  download: '下载',
   attach: '加入对话',
 }
 

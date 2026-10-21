@@ -191,11 +191,11 @@ describe('capsule primary slot: video unchanged', () => {
   })
 })
 
-describe('copy and attach slots unchanged', () => {
-  it('keeps the verbatim copy and chat labels', () => {
+describe('download and attach slots unchanged', () => {
+  it('keeps the verbatim download and chat labels', () => {
     const capsule = MediaCapsule.create(hoverCopy('zh'))
     capsule.render(IMAGE)
-    expect(capsule.buttonElement('copy')?.getAttribute('aria-label')).toBe('复制')
+    expect(capsule.buttonElement('download')?.getAttribute('aria-label')).toBe('下载')
     expect(capsule.buttonElement('attach')?.getAttribute('aria-label')).toBe('加入对话')
   })
 })
@@ -206,7 +206,6 @@ describe('MediaActionBridge.saveImageToAssets', () => {
       sidePanelState: async () => 'inactive',
       deliverToWorkstation: async () => 'unavailable',
       postToBackground: vi.fn(async () => ({ ok: true, result: { status: 'saved', assetId: 'a1', fileId: 'f1', lrev: 2 } })),
-      writeClipboard: vi.fn(async () => true),
       copy: () => hoverCopy('zh'),
       ...overrides,
     }
@@ -517,28 +516,31 @@ describe('overlay image action', () => {
     expect(tipAfter).not.toBe('已加入资产库')
   })
 
-  it('keeps copy and attach usable while the image save is pending', async () => {
-    const writeText = vi.fn(async () => undefined)
-    vi.stubGlobal('navigator', { clipboard: { writeText } })
+  it('keeps download and attach usable while the image save is pending', async () => {
     show(IMAGE)
     let settle!: (value: unknown) => void
-    sendMessage.mockImplementation(async () => await new Promise((resolve) => { settle = resolve }))
+    sendMessage.mockImplementation(async (message: { type?: string }) => {
+      // The download channel answers on its own wire while the asset save hangs.
+      if (message.type === 'DSH_MEDIA_DOWNLOAD') return { ok: true, downloadId: 1 }
+      return await new Promise((resolve) => { settle = resolve })
+    })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const saving = (overlay as any).runAction('inspiration') as Promise<void>
     await vi.waitFor(() => { expect(primary().getAttribute('aria-busy')).toBe('true') })
 
-    // Only the pending first action blocks itself; UI-Spec freezes copy/attach
-    // as independent actions that must stay live during the image save.
+    // Only the pending first action blocks itself; the download channel stays
+    // live while the image save runs.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (overlay as any).runAction('copy')
-    expect(writeText).toHaveBeenCalledWith('https://cdn.example.com/photo.png')
-    const copyButton = shadow.querySelector('[data-action="copy"]') as HTMLButtonElement
-    const copyBusy = copyButton.getAttribute('aria-busy')
-    const copyIcon = iconName(copyButton)
-    expect(copyBusy).toBe('false')
-    // The completed copy keeps its baseline check flash; what matters here is
-    // that it ran at all and never painted the other slot's busy spinner.
-    expect(copyIcon).toBe('check')
+    await (overlay as any).runAction('download')
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'DSH_MEDIA_DOWNLOAD',
+      request: expect.objectContaining({ url: 'https://cdn.example.com/photo.png', type: 'image' }),
+    }))
+    const downloadButton = shadow.querySelector('[data-action="download"]') as HTMLButtonElement
+    expect(downloadButton.getAttribute('aria-busy')).toBe('false')
+    // The started download keeps its check flash; what matters here is that it
+    // ran at all and never painted the other slot's busy spinner.
+    expect(iconName(downloadButton)).toBe('check')
     const saveBusy = primary().getAttribute('aria-busy')
     const saveLabel = primary().getAttribute('aria-label')
     expect(saveBusy).toBe('true')
@@ -583,13 +585,14 @@ describe('overlay image action', () => {
     expect(primary().getAttribute('aria-label')).toBe('加入灵感库')
   })
 
-  it('keeps the copy action on the clipboard path for images', async () => {
-    const writeText = vi.fn(async () => undefined)
-    vi.stubGlobal('navigator', { clipboard: { writeText } })
+  it('keeps the download action on the download channel for images', async () => {
     show(IMAGE)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (overlay as any).runAction('copy')
+    await (overlay as any).runAction('download')
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'DSH_MEDIA_DOWNLOAD',
+      request: expect.objectContaining({ url: 'https://cdn.example.com/photo.png', type: 'image' }),
+    }))
     expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'DSH_MEDIA_TO_ASSETS' }))
-    expect(writeText).toHaveBeenCalledWith('https://cdn.example.com/photo.png')
   })
 })

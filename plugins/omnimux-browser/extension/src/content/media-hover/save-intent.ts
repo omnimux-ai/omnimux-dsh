@@ -4,8 +4,8 @@
  * The primary slot means different things depending on the hovered work: a
  * confirmed image goes to the host asset library, a video keeps the
  * inspiration-library path, and anything ambiguous must not be written
- * anywhere. This is a separate derivation from the shared payload so the copy
- * and attach actions keep their payload semantics untouched — the first
+ * anywhere. This is a separate derivation from the shared payload so the
+ * download and attach actions keep their payload semantics untouched — the first
  * action consults this resolver both when the button is painted and when it
  * is pressed.
  *

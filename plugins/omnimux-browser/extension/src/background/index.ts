@@ -126,6 +126,16 @@ import {
   type ExportKind,
   type ExportOutcome,
 } from './media-export.ts'
+import { startMediaDownload } from './media-download.ts'
+import { createXVariantLookup } from './x-video-variants.ts'
+
+/**
+ * Cached reader for one X post's public video variants.
+ *
+ * One worker instance shares the cache across presses; the endpoint is public,
+ * so no credential or page cookie is involved.
+ */
+const lookupXVariant = createXVariantLookup({ fetch: (input, init) => fetch(input, init) })
 
 /** User settings persisted in chrome.storage.local. */
 export interface Settings {
@@ -2222,6 +2232,42 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
         pendingImageAssetSaves.delete(requestId)
         respond({ ok: false, error: { code: 'save-unconfirmed' } })
       },
+    )
+    return true
+  }
+
+  if (type === 'DSH_X_VIDEO_VARIANTS') {
+    // An X video's real mp4 addresses only exist in the public syndication
+    // payload; the page plays HLS through a `blob:` handle. The endpoint refuses
+    // page origins by CORS, so only the worker can read it.
+    void lookupXVariant((message as { tweetId?: unknown }).tweetId).then(
+      (answer) => { sendResponse(answer) },
+      () => { sendResponse({ ok: false, error: { code: 'fetch-failed' } }) },
+    )
+    return true
+  }
+
+  if (type === 'DSH_MEDIA_DOWNLOAD') {
+    // The address was already resolved by the content script; this worker only
+    // turns it into a real file. `chrome.downloads` uses the browser's own
+    // network stack, so a CDN that wants no page credentials still downloads.
+    void startMediaDownload(
+      (message as { request?: unknown }).request,
+      {
+        download: (options) => new Promise<number>((resolve, reject) => {
+          chrome.downloads.download(options, (downloadId) => {
+            const failure = chrome.runtime.lastError
+            if (failure !== undefined) {
+              reject(new Error(failure.message ?? 'download failed'))
+              return
+            }
+            resolve(downloadId)
+          })
+        }),
+      },
+    ).then(
+      (answer) => { sendResponse(answer) },
+      () => { sendResponse({ ok: false, code: 'download-failed' }) },
     )
     return true
   }

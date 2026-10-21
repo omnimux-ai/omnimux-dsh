@@ -59,6 +59,10 @@ export interface HoverCopy {
    * with no poster — so the shortcut fell back to citing the page itself.
    */
   pageReference: string
+  /** Rendered when a video has no address the browser can save as a file. */
+  downloadUnavailable: string
+  /** Rendered when the download channel refused or failed the request. */
+  downloadFailed: string
   /** Accessible name of the capsule toolbar. */
   brand: string
   action: Record<MediaActionKind, string>
@@ -69,21 +73,23 @@ export interface HoverCopy {
 const ZH: HoverCopy = {
   hint: {
     inspiration: '加入灵感库',
-    copy: '复制素材链接',
+    download: '下载素材',
     attach: '加入对话',
   },
   done: {
     inspiration: '已加入灵感库',
-    copy: '已复制素材链接',
+    download: '已开始下载',
     attach: '已加入对话',
   },
   failed: '操作失败，请重试',
   unusable: '该素材地址不可用',
   pageReference: '该视频仅在页面内可播，已引用页面链接',
+  downloadUnavailable: '该视频仅在页面内可播，无法直接下载',
+  downloadFailed: '下载失败，请重试',
   brand: 'OmniMux',
   action: {
     inspiration: '加入灵感库',
-    copy: '复制',
+    download: '下载',
     attach: '加入对话',
   },
   image: {
@@ -103,21 +109,23 @@ const ZH: HoverCopy = {
 const EN: HoverCopy = {
   hint: {
     inspiration: 'Add to library',
-    copy: 'Copy media link',
+    download: 'Download media',
     attach: 'Add to chat',
   },
   done: {
     inspiration: 'Added to library',
-    copy: 'Media link copied',
+    download: 'Download started',
     attach: 'Added to chat',
   },
   failed: 'Something went wrong. Try again.',
   unusable: 'This media address cannot be used',
   pageReference: 'This video only plays in its page, so the page link was used',
+  downloadUnavailable: 'This video only plays in its page, so it cannot be downloaded',
+  downloadFailed: 'Download failed. Try again.',
   brand: 'OmniMux',
   action: {
     inspiration: 'Add to library',
-    copy: 'Copy',
+    download: 'Download',
     attach: 'Add to chat',
   },
   image: {

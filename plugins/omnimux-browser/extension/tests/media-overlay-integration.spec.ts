@@ -186,10 +186,10 @@ describe('two-stage hover expansion', () => {
   it('shows the stage-two hint above a button and clears it with the fold-back', () => {
     vi.useFakeTimers()
     const { overlay, capsule, tooltip } = mountedCapsule()
-    const copy = capsule.querySelector('[data-action="copy"]') as HTMLElement
+    const download = capsule.querySelector('[data-action="download"]') as HTMLElement
 
     capsule.dispatchEvent(new MouseEvent('pointerenter'))
-    copy.dispatchEvent(new MouseEvent('pointerenter'))
+    download.dispatchEvent(new MouseEvent('pointerenter'))
     expect(tooltip.classList.contains('is-visible')).toBe(true)
 
     capsule.dispatchEvent(new MouseEvent('pointerleave'))

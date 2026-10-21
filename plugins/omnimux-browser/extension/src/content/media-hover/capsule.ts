@@ -5,7 +5,7 @@
  *
  * ```
  * stage one (collapsed, 24 x 24)     stage two (expanded, 128 x 24)
- *   ( OmniMux brand mark )             [ inspiration ] [ copy ] [ attach ]
+ *   ( OmniMux brand mark )             [ inspiration ] [ download ] [ attach ]
  * ```
  *
  * Both stages are mounted at once and absolutely centred inside the pill, and
@@ -25,7 +25,7 @@ import type { CapsuleActionEvent, HoveredMedia, MediaActionKind, OverlayState } 
 import type { HoverCopy } from './copy.ts'
 
 /** The three action slots, in capsule order. */
-const ACTION_ORDER: readonly MediaActionKind[] = ['inspiration', 'copy', 'attach']
+const ACTION_ORDER: readonly MediaActionKind[] = ['inspiration', 'download', 'attach']
 
 /** Which of the two stages the capsule currently paints. */
 export type CapsuleStage = 'collapsed' | 'expanded'
@@ -70,7 +70,7 @@ export class MediaCapsule {
     activeId: '',
     busyAction: null,
     saved: false,
-    copied: false,
+    downloaded: false,
     attached: false,
   }
   private current: CapsuleStage = 'collapsed'
@@ -130,7 +130,7 @@ export class MediaCapsule {
       activeId: payload.id,
       busyAction: null,
       saved: false,
-      copied: false,
+      downloaded: false,
       attached: false,
     }
     // Every new media starts at stage one: the brand circle is what the pointer
@@ -310,8 +310,8 @@ export class MediaCapsule {
   /**
    * The accessible name a slot advertises right now.
    *
-   * Copy and chat keep their frozen action names; the primary slot is
-   * intent-aware: image copy comes from the UI-spec matrix (idle / busy /
+   * Download and chat keep their own action names; the primary slot is
+   * intent-aware: image saving comes from the UI-spec matrix (idle / busy /
    * done), while video and unresolvable types keep the baseline label so
    * nothing claims an asset save it cannot perform.
    */
@@ -330,10 +330,10 @@ export class MediaCapsule {
 
   private iconState(action: MediaActionKind): IconState {
     // Only the slot whose request is actually in flight is busy: UI-Spec §3.1
-    // keeps copy and attach live while the image save runs.
+    // keeps download and attach live while the image save runs.
     if (this.state.busyAction === action) return 'busy'
     if (action === 'inspiration' && this.state.saved) return 'saved'
-    if (action === 'copy' && this.state.copied) return 'done'
+    if (action === 'download' && this.state.downloaded) return 'done'
     if (action === 'attach' && this.state.attached) return 'done'
     return 'idle'
   }

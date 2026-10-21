@@ -112,7 +112,7 @@ describe('overlay structure', () => {
 
     const actions = [...capsule.element.querySelectorAll('[data-action]')]
       .map((node) => node.getAttribute('data-action'))
-    expect(actions).toEqual(['inspiration', 'copy', 'attach'])
+    expect(actions).toEqual(['inspiration', 'download', 'attach'])
     expect(capsule.element.querySelectorAll('.omnimux-capsule-icon')).toHaveLength(3)
 
     // The decorative divider and "+" affordance stayed out; the brand mark is the
@@ -165,9 +165,9 @@ describe('overlay structure', () => {
     capsule.show('left')
     capsule.expand()
 
-    const copy = capsule.buttonElement('copy')
-    copy?.focus()
-    expect(document.activeElement).toBe(copy)
+    const download = capsule.buttonElement('download')
+    download?.focus()
+    expect(document.activeElement).toBe(download)
 
     capsule.collapse()
     expect(document.activeElement).toBe(capsule.brandElement())
@@ -209,13 +209,13 @@ describe('overlay structure', () => {
     expect(inspiration?.getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('marks the copied icon done and restores it on the next patch', () => {
+  it('marks the download icon done and restores it on the next patch', () => {
     const capsule = MediaCapsule.create(hoverCopy('zh'))
-    const copy = capsule.buttonElement('copy')
-    capsule.setState({ copied: true })
-    expect(copy?.classList.contains('is-done')).toBe(true)
-    capsule.setState({ copied: false })
-    expect(copy?.classList.contains('is-done')).toBe(false)
+    const download = capsule.buttonElement('download')
+    capsule.setState({ downloaded: true })
+    expect(download?.classList.contains('is-done')).toBe(true)
+    capsule.setState({ downloaded: false })
+    expect(download?.classList.contains('is-done')).toBe(false)
   })
 
   it('hides the tooltip without unmounting it', () => {
@@ -236,11 +236,11 @@ describe('overlay structure', () => {
 
   it('points the tail at the icon centre on the side that has room', () => {
     const tooltip = MediaTooltip.create(() => 120)
-    tooltip.show('复制素材链接', anchor(400, 400), VIEWPORT)
+    tooltip.show('下载素材', anchor(400, 400), VIEWPORT)
     expect(tooltip.element.getAttribute('data-side')).toBe('above')
     expect(tooltip.element.style.left).not.toBe('')
 
-    tooltip.show('复制素材链接', anchor(400, 2), VIEWPORT)
+    tooltip.show('下载素材', anchor(400, 2), VIEWPORT)
     expect(tooltip.element.getAttribute('data-side')).toBe('below')
   })
 
