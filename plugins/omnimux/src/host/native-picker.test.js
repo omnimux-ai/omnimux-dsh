@@ -241,6 +241,72 @@ describe('pickNativePath macOS JXA script', () => {
   })
 })
 
+describe('picker failure diagnostics', () => {
+  it('logs one line with code, stdout length and a sample on picker-failed', async () => {
+    const logs = []
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: runOk('not a json payload'),
+        log: (message) => logs.push(message),
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+    assert.equal(logs.length, 1)
+    assert.match(logs[0], /\[nativeFilePicker\] picker-failed stdout=18chars/)
+    assert.match(logs[0], /sample="not a json payload"/)
+  })
+
+  it('truncates the logged sample to 200 characters while keeping the full length', async () => {
+    const logs = []
+    const long = 'x'.repeat(600)
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: runOk(long),
+        log: (message) => logs.push(message),
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+    assert.equal(logs.length, 1)
+    assert.match(logs[0], /stdout=600chars/)
+    const sample = /sample=(.+)$/.exec(logs[0])
+    assert.ok(sample)
+    assert.equal(JSON.parse(sample[1]).length, 200)
+  })
+
+  it('logs a zero-length stdout for a non-string helper payload', async () => {
+    const logs = []
+    await assert.rejects(
+      () => pickNativePath('file', {
+        platform: 'darwin',
+        run: async () => ({ stdout: undefined, stderr: '' }),
+        log: (message) => logs.push(message),
+      }),
+      (error) => error instanceof PickerError && error.code === 'picker-failed',
+    )
+    assert.equal(logs.length, 1)
+    assert.match(logs[0], /stdout=0chars/)
+  })
+
+  it('stays silent on success and cancellation', async () => {
+    const logs = []
+    const picked = await pickNativePath('file', {
+      platform: 'darwin',
+      run: runOk(JSON.stringify(['/tmp/a.png'])),
+      log: (message) => logs.push(message),
+    })
+    assert.deepEqual(picked, { path: '/tmp/a.png', paths: ['/tmp/a.png'] })
+    const cancelled = await pickNativePath('file', {
+      platform: 'darwin',
+      run: runOk(''),
+      log: (message) => logs.push(message),
+    })
+    assert.deepEqual(cancelled, { path: null, paths: [] })
+    assert.deepEqual(logs, [])
+  })
+})
+
 describe('createNativeFilePicker seam', () => {
   it('forwards kind, prompt and result through a single shared implementation', async () => {
     const calls = []
