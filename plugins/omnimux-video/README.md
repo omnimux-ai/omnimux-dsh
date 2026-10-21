@@ -20,7 +20,7 @@ pip install onnxruntime opencv-python
 
 首次运行会把 Depth Anything V2 Small ONNX 下载到 `$DSH_HOME/models/depth/`（或 `~/.dsh/models/depth/`）。
 
-每次 `video_depth` 执行前会先探测解释器能否导入 `numpy` / `cv2` / `onnxruntime`；缺失时抛 `video-depth-deps-missing`（带安装与 `OMNIMUX_VIDEO_PYTHON_PATH` 指引），不会把 Python traceback 直接抛给调用方。
+每次 `video_depth` 执行前会先挑选解释器：显式配置 `Config.video.pythonPath` / `OMNIMUX_VIDEO_PYTHON_PATH` 时只认该解释器且失败不回退；未配置时按 `python3.14 → python3.13 → python3.12 → python3.11 → python3.10 → python3` 顺序探测 `numpy` / `cv2` / `onnxruntime`，选中首个可用的并缓存。全部不可用时抛 `video-depth-deps-missing`（带已尝试解释器、安装与 `OMNIMUX_VIDEO_PYTHON_PATH` 指引），不会把 Python traceback 直接抛给调用方。
 
 ffmpeg 缺失不会阻止插件加载；工具/seam 调用时会抛 `ffmpeg-missing` 并给出安装指引。
 
@@ -100,7 +100,7 @@ Config.video = {
 | `video-invalid-input` | 主输入字段缺失 / 非法 |
 | `video-ffmpeg-failed` | ffmpeg / ffprobe 非零退出，附截断 stderr 尾部 |
 | `video-depth-failed` | 深度估计 Python/ONNX 推理失败 |
-| `video-depth-deps-missing` | 配置的 Python 无法导入 `numpy` / `cv2` / `onnxruntime`（或解释器不可启动）；message/hint 给出 `pip install onnxruntime opencv-python` 与 `OMNIMUX_VIDEO_PYTHON_PATH` 两条处理路径 |
+| `video-depth-deps-missing` | 所有候选解释器都无法导入 `numpy` / `cv2` / `onnxruntime`（显式配置时只试配置值、不回退）；message 列出已尝试解释器，hint 给出 `pip install onnxruntime opencv-python` 与 `OMNIMUX_VIDEO_PYTHON_PATH` 两条处理路径 |
 | `video-incompatible-streams` | merge 各路视频流编码/尺寸/pix_fmt 不一致（fail-fast，提示先统一转码） |
 | `video-canceled` | 调用方 signal abort，进程已杀、半成品清理 |
 | `video-timeout` | 超过能力默认超时，已杀进程、半成品清理 |

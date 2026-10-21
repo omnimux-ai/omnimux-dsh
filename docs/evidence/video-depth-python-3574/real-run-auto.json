@@ -1,0 +1,14 @@
+{
+  "scenario": "默认环境：未设置 OMNIMUX_VIDEO_PYTHON_PATH，pythonPath 为空",
+  "env": {},
+  "outcome": {
+    "ok": true,
+    "result": {
+      "model": "depth-anything-v2-small",
+      "convention": "near=white, far=black",
+      "audioPreserved": true,
+      "python": "python3.14"
+    },
+    "file": "/tmp/depth3574/auto.mp4"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "scenario": "显式配置不存在的解释器：必须失败且不回退",
+  "outcome": {
+    "ok": false,
+    "code": "video-depth-deps-missing",
+    "message": "video_depth configured python '/no/such/python' cannot run the depth engine (numpy, cv2, onnxruntime). Install them with `pip install onnxruntime opencv-python`, or point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them.",
+    "hint": "Install them with `pip install onnxruntime opencv-python`, or point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them."
+  }
+}

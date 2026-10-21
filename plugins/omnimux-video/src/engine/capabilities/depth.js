@@ -12,6 +12,33 @@ export const PROVIDERS = ['auto', 'coreml', 'cuda', 'cpu']
 /** Python packages the depth engine imports at module scope. */
 export const DEPTH_PYTHON_MODULES = ['numpy', 'cv2', 'onnxruntime']
 
+/**
+ * Auto-discovery order when no interpreter is configured explicitly. Newest
+ * first; the configured value (Config.video.pythonPath / env) always wins and
+ * never falls through to these.
+ */
+export const DEPTH_PYTHON_CANDIDATES = [
+  'python3.14',
+  'python3.13',
+  'python3.12',
+  'python3.11',
+  'python3.10',
+  'python3',
+]
+
+const depthPythonCache = new Map()
+
+/** Test/verification helper: forget which interpreter auto-discovery picked. */
+export function clearDepthPythonCache() {
+  depthPythonCache.clear()
+}
+
+/** `configured` (explicit) → single candidate; otherwise the discovery chain. */
+export function resolveDepthPythonCandidates(configured = '') {
+  const explicit = String(configured || '').trim()
+  return explicit ? [explicit] : DEPTH_PYTHON_CANDIDATES.slice()
+}
+
 const DEPTH_DEPS_HINT =
   'Install them with `pip install onnxruntime opencv-python`, or point Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH at an interpreter that already has them.'
 
@@ -33,23 +60,23 @@ export function missingDepthModules(stderrTail) {
 }
 
 /**
- * Fail fast with an actionable code when the configured Python cannot import
- * the depth engine dependencies. Never lets a raw traceback become the
- * user-facing error.
+ * Probe one interpreter; throws an actionable `video-depth-deps-missing` when
+ * its modules are missing or it cannot be started. Never lets a raw traceback
+ * become the user-facing error.
  *
  * @param {{
  *   pythonBin: string,
  *   signal?: AbortSignal,
  *   procs?: Set<unknown>,
- *   runProbe?: (args: string[]) => Promise<unknown>,
+ *   runProbe?: (pythonBin: string, args: string[]) => Promise<unknown>,
  * }} input
  */
-export async function ensureDepthPython({ pythonBin, signal, procs, runProbe }) {
+async function probeDepthPython({ pythonBin, signal, procs, runProbe }) {
   const probe =
     runProbe ??
-    ((args) =>
+    ((bin, args) =>
       runControlled({
-        cmd: pythonBin,
+        cmd: bin,
         args,
         timeoutMs: 20_000,
         signal,
@@ -59,7 +86,7 @@ export async function ensureDepthPython({ pythonBin, signal, procs, runProbe }) 
         timeoutCode: 'video-timeout',
       }))
   try {
-    await probe(['-c', buildDepthRuntimeCheckCode()])
+    await probe(pythonBin, ['-c', buildDepthRuntimeCheckCode()])
     return
   } catch (error) {
     if (
@@ -86,6 +113,80 @@ export async function ensureDepthPython({ pythonBin, signal, procs, runProbe }) 
       { hint: DEPTH_DEPS_HINT, stderrTail: detail },
     )
   }
+}
+
+/**
+ * Single-interpreter check kept for callers/tests that already know the binary.
+ * `runProbe` here receives only the argv (legacy signature).
+ */
+export async function ensureDepthPython({ pythonBin, signal, procs, runProbe }) {
+  await probeDepthPython({
+    pythonBin,
+    signal,
+    procs,
+    runProbe: runProbe ? (bin, args) => runProbe(args) : undefined,
+  })
+}
+
+/**
+ * Pick the interpreter that can run the depth engine.
+ *
+ * - Explicit config/env → only that binary, failure is loud (no silent fallback).
+ * - Otherwise probe the shared candidate chain and cache the first usable one
+ *   per configured value so repeated depth calls do not re-probe.
+ * @param {{
+ *   configured?: string,
+ *   signal?: AbortSignal,
+ *   procs?: Set<unknown>,
+ *   runProbe?: (pythonBin: string, args: string[]) => Promise<unknown>,
+ *   useCache?: boolean,
+ * }} input
+ * @returns {Promise<string>} usable python binary
+ */
+export async function selectDepthPython({
+  configured = '',
+  signal,
+  procs,
+  runProbe,
+  useCache = true,
+} = {}) {
+  const explicit = String(configured || '').trim()
+  const cacheKey = explicit || '__auto__'
+  if (useCache) {
+    const cached = depthPythonCache.get(cacheKey)
+    if (cached) return cached
+  }
+
+  const candidates = resolveDepthPythonCandidates(explicit)
+  const failures = []
+  for (const pythonBin of candidates) {
+    try {
+      await probeDepthPython({ pythonBin, signal, procs, runProbe })
+      if (useCache) depthPythonCache.set(cacheKey, pythonBin)
+      return pythonBin
+    } catch (error) {
+      if (
+        error instanceof VideoError &&
+        (error.code === 'video-canceled' || error.code === 'video-timeout')
+      ) {
+        throw error
+      }
+      failures.push({
+        pythonBin,
+        detail: truncateTail(String(error?.stderrTail || error?.message || error), 300),
+      })
+    }
+  }
+
+  const tried = candidates.join(' / ')
+  const reason = explicit
+    ? `video_depth configured python '${explicit}' cannot run the depth engine (${DEPTH_PYTHON_MODULES.join(', ')})`
+    : `video_depth found no Python interpreter with ${DEPTH_PYTHON_MODULES.join(', ')}; tried: ${tried}`
+  throw new VideoError('video-depth-deps-missing', `${reason}. ${DEPTH_DEPS_HINT}`, {
+    hint: DEPTH_DEPS_HINT,
+    tried: candidates,
+    stderrTail: failures[0]?.detail || '',
+  })
 }
 
 export function validate(input) {
@@ -231,7 +332,7 @@ function parseProbeStdout(probeRes) {
  *   runFfmpeg: (args: string[]) => Promise<unknown>,
  *   runFprobe: (args: string[]) => Promise<{ stdout: string, stderr: string } | string>,
  *   runPython?: (args: string[], opts?: object) => Promise<unknown>,
- *   runDepthRuntimeProbe?: (args: string[]) => Promise<unknown>,
+ *   runDepthRuntimeProbe?: (pythonBin: string, args: string[]) => Promise<unknown>,
  * }} ctx
  */
 export async function execute(input, ctx) {
@@ -239,24 +340,26 @@ export async function execute(input, ctx) {
   const out = ctx.dest
   ctx.addFile(out)
 
-  const pythonBin =
+  const configuredPython =
     ctx.videoConfig?.video?.pythonPath ||
     process.env.OMNIMUX_VIDEO_PYTHON_PATH ||
     process.env.DSH_VIDEO_PYTHON_PATH ||
-    'python3'
+    ''
   const modelsDir =
     ctx.videoConfig?.video?.modelsDir ||
     process.env.OMNIMUX_VIDEO_MODELS_DIR ||
     process.env.DSH_VIDEO_MODELS_DIR ||
     ''
 
-  // Dependency gate before any encode: a missing onnxruntime must surface as an
-  // actionable error, not as a Python traceback after a long ffmpeg pass.
-  await ensureDepthPython({
-    pythonBin,
+  // Dependency gate before any encode: pick an interpreter that can import
+  // numpy/cv2/onnxruntime (explicit config wins; otherwise discover by version)
+  // so a usable local Python is not misreported as missing.
+  const pythonBin = await selectDepthPython({
+    configured: configuredPython,
     signal: ctx.signal,
     procs: ctx.procs,
     runProbe: ctx.runDepthRuntimeProbe,
+    useCache: ctx.depthPythonUseCache !== false,
   })
 
   const videoPath = await ctx.materialize(input.videoUrl, 'depth_src')
@@ -333,6 +436,8 @@ export async function execute(input, ctx) {
       model: 'depth-anything-v2-small',
       convention: input.invert ? 'near=black, far=white' : 'near=white, far=black',
       audioPreserved: keepAudio,
+      // Which interpreter discovery actually used (useful for support/evidence).
+      python: pythonBin,
     },
   }
 }

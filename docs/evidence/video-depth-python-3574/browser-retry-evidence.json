@@ -1,0 +1,34 @@
+{
+  "capturedAt": "2026-10-21T08:52:37.094Z",
+  "harness": "http://127.0.0.1:4933/",
+  "errorState": {
+    "executionStatus": "error",
+    "executionError": "本机缺少深度图 Python 依赖（numpy / opencv-python / onnxruntime）。安装后重试，或把 OMNIMUX_VIDEO_PYTHON_PATH 指向已装依赖的解释器",
+    "hasRetryButton": true,
+    "retryLabel": "重新生成",
+    "calls": [
+      {
+        "url": "/omnimux-workflow/api/workspaces/ws_harness/video-depth",
+        "method": "POST"
+      }
+    ]
+  },
+  "result": {
+    "executionStatus": "completed",
+    "mediaUrl": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    "realPath": "/tmp/omnimux-depth/depth_demo.mp4",
+    "calls": [
+      {
+        "url": "/omnimux-workflow/api/workspaces/ws_harness/video-depth",
+        "method": "POST"
+      },
+      {
+        "url": "/omnimux-workflow/api/workspaces/ws_harness/video-depth",
+        "method": "POST"
+      }
+    ],
+    "depthCalls": 2,
+    "otherWrites": []
+  },
+  "note": "video-depth responses stubbed in-page: first 503 deps-missing, retry 200 success"
+}

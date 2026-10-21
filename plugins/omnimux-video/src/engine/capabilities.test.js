@@ -632,7 +632,78 @@ test('depth: ensureDepthPython reports an unusable interpreter', async () => {
   assert.match(err.message, /cannot start Python interpreter/)
 })
 
+test('depth: 解释器候选链版本优先，显式配置优先且不参与发现', () => {
+  assert.deepEqual(depth.resolveDepthPythonCandidates(''), depth.DEPTH_PYTHON_CANDIDATES)
+  assert.deepEqual(depth.resolveDepthPythonCandidates(''), [
+    'python3.14',
+    'python3.13',
+    'python3.12',
+    'python3.11',
+    'python3.10',
+    'python3',
+  ])
+  assert.deepEqual(depth.resolveDepthPythonCandidates('/opt/py'), ['/opt/py'])
+})
+
+test('depth: selectDepthPython 选用首个可导入依赖的解释器', async () => {
+  depth.clearDepthPythonCache()
+  const probes = []
+  const bin = await depth.selectDepthPython({
+    runProbe: async (b) => {
+      probes.push(b)
+      if (b !== 'python3.13') {
+        throw Object.assign(new Error('missing'), { stderrTail: "No module named 'numpy'" })
+      }
+    },
+  })
+  assert.deepEqual(probes, ['python3.14', 'python3.13'])
+  assert.equal(bin, 'python3.13')
+})
+
+test('depth: selectDepthPython 显式配置失败不回退', async () => {
+  depth.clearDepthPythonCache()
+  const probes = []
+  const err = await invalid(
+    depth.selectDepthPython({
+      configured: '/no/such/python',
+      runProbe: async (b) => {
+        probes.push(b)
+        throw Object.assign(new Error('missing'), { stderrTail: "No module named 'onnxruntime'" })
+      },
+    }),
+  )
+  assert.deepEqual(probes, ['/no/such/python'])
+  assert.equal(err.code, 'video-depth-deps-missing')
+  assert.match(err.message, /configured python/)
+})
+
+test('depth: selectDepthPython 缓存已选解释器，避免重复探测', async () => {
+  depth.clearDepthPythonCache()
+  let probes = 0
+  const runProbe = async () => { probes += 1 }
+  const first = await depth.selectDepthPython({ runProbe })
+  const second = await depth.selectDepthPython({ runProbe })
+  assert.equal(first, 'python3.14')
+  assert.equal(second, 'python3.14')
+  assert.equal(probes, 1)
+})
+
+test('depth: selectDepthPython 全失败时列出尝试过的解释器', async () => {
+  depth.clearDepthPythonCache()
+  const err = await invalid(
+    depth.selectDepthPython({
+      runProbe: async () => {
+        throw Object.assign(new Error('missing'), { stderrTail: "No module named 'cv2'" })
+      },
+    }),
+  )
+  assert.equal(err.code, 'video-depth-deps-missing')
+  assert.match(err.message, /tried: python3\.14 \/ python3\.13/)
+  assert.match(err.message, /pip install onnxruntime opencv-python/)
+})
+
 test('depth: execute gates on the runtime probe before any ffmpeg work', async () => {
+  depth.clearDepthPythonCache()
   let materialized = false
   const err = await invalid(
     depth.execute(
@@ -658,6 +729,7 @@ test('depth: execute gates on the runtime probe before any ffmpeg work', async (
 })
 
 test('depth: execute runs probe, audio extract, python depth and muxing', async () => {
+  depth.clearDepthPythonCache()
   const calls = { ffmpeg: [], python: [], probe: 0 }
   const out = await depth.execute(
     { videoUrl: '/src.mp4', maxEdge: 518, keepAudio: true },
