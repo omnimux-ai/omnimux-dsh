@@ -1,0 +1,93 @@
+{
+  "issue": 3599,
+  "startedAt": "2026-10-21T15:07:08.415Z",
+  "chromePath": "/Users/x/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "extensionId": "fahmjalhlbgfehojjnnknlanckjenibl",
+  "before": {
+    "sceneGone": false,
+    "rows": [
+      {
+        "action": "video",
+        "text": "下载视频",
+        "busy": false,
+        "error": false
+      },
+      {
+        "action": "audio",
+        "text": "下载音频",
+        "busy": false,
+        "error": false
+      },
+      {
+        "action": "save",
+        "text": "收藏到灵感库",
+        "busy": false,
+        "error": false
+      }
+    ],
+    "detail": ""
+  },
+  "afterClick": {
+    "sceneGone": false,
+    "rows": [
+      {
+        "action": "video",
+        "text": "下载视频",
+        "busy": false,
+        "error": false
+      },
+      {
+        "action": "audio",
+        "text": "下载音频提取音轨中",
+        "busy": true,
+        "error": false
+      },
+      {
+        "action": "save",
+        "text": "收藏到灵感库",
+        "busy": false,
+        "error": false
+      }
+    ],
+    "detail": ""
+  },
+  "settled": {
+    "sceneGone": false,
+    "rows": [
+      {
+        "action": "video",
+        "text": "下载视频",
+        "busy": false,
+        "error": false
+      },
+      {
+        "action": "audio",
+        "text": "下载音频",
+        "busy": false,
+        "error": false
+      },
+      {
+        "action": "save",
+        "text": "收藏到灵感库",
+        "busy": false,
+        "error": false
+      }
+    ],
+    "detail": ""
+  },
+  "downloadedFiles": [
+    "alana7bernal-#sanjose #Soccer #thingstodo #SJ.m4a"
+  ],
+  "settledIsNotNoTarget": true,
+  "busyObserved": true,
+  "resolutionProven": true,
+  "noTargetStillShown": false,
+  "reachedHostOrBusy": true,
+  "screenshots": [
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-photo-target-issue-3599/.agent-reports/tiktok-photo-target-3599/01-photo-card-menu.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-photo-target-issue-3599/.agent-reports/tiktok-photo-target-3599/02-photo-card-after-click.png",
+    "/Users/x/Desktop/Project/dsh-plugin/product/omnimux-dsh/.worktrees/browser-tiktok-photo-target-issue-3599/.agent-reports/tiktok-photo-target-3599/03-photo-card-settled.png"
+  ],
+  "downloadsCleaned": true,
+  "finishedAt": "2026-10-21T15:07:34.617Z"
+}
