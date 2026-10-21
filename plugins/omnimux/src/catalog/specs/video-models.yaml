@@ -1894,6 +1894,8 @@ models:
       notes: "已解封（#1751）：无执行证据，不挂 profile"
 
   # APIMart MiniMax H3：一个产品模型覆盖五种官方模式。
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: minimax-h3
     label: MiniMax H3
     family: minimax
@@ -2229,7 +2231,8 @@ models:
           verifiedAt: 2026-09-20
           notes: 能力与约束取 fal.ai 官方对口型图生视频模型页与网关生产配置基线（渠道 44，image_url + audio_url 必填、无需 prompt）
         implementation:
-          status: ready
+          # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+          status: "none"
           profileId: videoDigitalHuman
           seam: videoGenerate
           verifiedAt: 2026-09-20
@@ -2284,7 +2287,8 @@ models:
       verifiedAt: 2026-09-05
       notes: MiniMax-H3 为单一产品模型，覆盖文生、首帧、尾帧、首尾帧和全模态参考
     implementation:
-      status: ready
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: videoGenerate
       seam: videoGenerate
       verifiedAt: 2026-09-05

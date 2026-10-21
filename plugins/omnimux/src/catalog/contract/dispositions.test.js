@@ -71,14 +71,18 @@ test('seedasr-auc is an independent canonical row that neither alias nor id unif
   // Neither direction of unification may exist: no alias row, no aliases[] entry either way.
   assert.deepEqual(index.get('seedasr-auc')?.aliases ?? [], []);
   assert.deepEqual(index.get('doubao-asr-bigmodel')?.aliases ?? [], []);
-  assert.equal(index.get('seedasr-auc')?.listed, true);
-  assert.deepEqual(index.get('seedasr-auc')?.listedOperations, ['seedasr-auc#speech_to_text']);
+  // 2026-10-21 网关对账 #3516：上游渠道停用后转为「仅登记不上架」，但仍是独立 canonical 行。
+  assert.equal(resolveDisposition(doc, 'seedasr-auc')?.disposition, 'canonical');
+  assert.equal(index.get('seedasr-auc')?.listed, false);
+  assert.deepEqual(index.get('seedasr-auc')?.listedOperations, []);
 });
 
 test('locked dispositions: draft-probeable / tombstones / un-quarantined / alias / Batch A canonical', () => {
   const doc = loadDispositions();
-  // #538: seams mounted and probeable but unprobed → draft; listed stays empty until #530
-  assert.equal(resolveDisposition(doc, 'whisper-1')?.disposition, 'draft');
+  // #538 → #3516：speechToText seam 已挂载，2026-10-21 网关对账确认真实渠道在售，
+  // 处置由 draft 翻 canonical 并上架；执行探测证据仍在 #530 跟踪。
+  assert.equal(resolveDisposition(doc, 'whisper-1')?.disposition, 'canonical');
+  assert.ok(resolveDisposition(doc, 'whisper-1')?.evidence?.length > 0);
   // #1751: the removed models keep a tombstone row instead of a shelf entry.
   assert.equal(resolveDisposition(doc, 'kling-avatar')?.disposition, 'unavailable');
   assert.equal(resolveDisposition(doc, 'gpt-image-2')?.disposition, 'unavailable');
@@ -152,8 +156,10 @@ test('forbidden-listed set has no listed op in the real index', () => {
       assert.deepEqual(model.listedOperations ?? [], [], `${model.id} must not list`);
     }
   }
-  // whisper-1 / kling-avatar concretely unlisted
-  assert.deepEqual(index.get('whisper-1')?.listedOperations ?? [], []);
+  // #3516: whisper-1 已翻 canonical 并上架 speech_to_text，因此不属于 forbidden-listed 集合；
+  // kling-avatar 仍是墓碑行，永远没有 listed operation。
+  assert.equal(forbidden.has('whisper-1'), false);
+  assert.deepEqual(index.get('whisper-1')?.listedOperations ?? [], ['whisper-1#speech_to_text']);
   assert.deepEqual(index.get('kling-avatar')?.listedOperations ?? [], []);
 });
 

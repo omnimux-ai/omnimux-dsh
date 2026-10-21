@@ -34,10 +34,10 @@ const { resolveLineConstraints, resolveModelChannelGroups, buildChannelContract,
 
 const COMFYUI_ROUTING = { channelGroupId: 'comfyui', allowedGroups: ['comfyui'] };
 
-describe('comfyui 渠道组契约收窄', () => {
-  test('TC-OPS-01: operations 约束收窄模型操作为仅 video_multi_ref', () => {
-    const lc = resolveLineConstraints('minimax-h3', COMFYUI_ROUTING, null);
-    assert.deepEqual(lc.operations, ['video_multi_ref']);
+describe('线路约束收窄（2026-10-21 网关对账后）', () => {
+  test('TC-OPS-01: operations 约束把模型操作收窄到线路允许项', () => {
+    // H3/ComfyUI 专线已下架（模型只登记不上架），这里直接验证线路契约的收窄机制。
+    const lc = { operations: ['video_multi_ref'] };
 
     const model = {
       operations: [
@@ -47,19 +47,31 @@ describe('comfyui 渠道组契约收窄', () => {
       ],
       parameters: {},
     };
-    const narrowed = narrowModelByLineConstraints(model, 'minimax-h3', lc);
+    const narrowed = narrowModelByLineConstraints(model, 'seedance-2-5', lc);
     assert.deepEqual(narrowed.operations.map((op) => op.id), ['video_multi_ref']);
+    // 旧 comfyui 路由不再为 H3 产生任何约束或渠道池。
+    assert.deepEqual(resolveLineConstraints('minimax-h3', COMFYUI_ROUTING, null), {});
+    assert.deepEqual(resolveModelChannelGroups('minimax-h3', null), []);
   });
 
   test('TC-OPS-02: resolution.supported=false 清空契约分辨率集合', () => {
-    const lc = resolveLineConstraints('minimax-h3', COMFYUI_ROUTING, null);
-    assert.equal(lc.parameters?.resolution?.supported, false);
-
-    const group = resolveModelChannelGroups('minimax-h3', null).find((g) => g.id === 'comfyui');
-    assert.ok(group, 'comfyui group must exist');
-    const contract = buildChannelContract('minimax-h3', group);
+    // 线路显式声明不支持 resolution 时，契约分辨率集合与默认值必须整体清空。
+    const group = {
+      id: 'comfyui',
+      label: 'ComfyUI',
+      enabled: true,
+      constraints: { parameters: { resolution: { supported: false } } },
+    };
+    const contract = buildChannelContract('seedance-2-5', group);
     assert.deepEqual(contract.constraints.supportedResolutions, []);
     assert.equal(contract.constraints.defaultResolution, '');
+
+    // 现售官方线路 gpt-image-2.5 标准版把分辨率固定为 1K，同样的机制必须生效。
+    const standardGroup = resolveModelChannelGroups('gpt-image-2.5', null).find((g) => g.id === 'standard');
+    assert.ok(standardGroup, 'gpt-image-2.5 standard group must exist');
+    const imageContract = buildChannelContract('gpt-image-2.5', standardGroup);
+    assert.deepEqual(imageContract.constraints.supportedResolutions, ['1K']);
+    assert.equal(imageContract.constraints.defaultResolution, '1K');
   });
 
   test('TC-OPS-03: buildU06Prompt 写入 ResolutionSelector 枚举串', () => {
@@ -80,7 +92,9 @@ describe('comfyui 渠道组契约收窄', () => {
       resolve(repoRoot, 'plugins/omnimux/src/catalog/serving/channel-groups.js'), 'utf8');
     const canvasSrc = readFileSync(
       resolve(repoRoot, 'plugins/omnimux-workflow/src/canvas/editor/components/MaterialNode/ConfigPanel/channelGroups.ts'), 'utf8');
-    assert.ok(hubSrc.includes('"supported": false'), 'hub channel-groups must declare resolution unsupported');
-    assert.ok(canvasSrc.includes('"supported": false'), 'canvas channelGroups mirror must declare resolution unsupported');
+    assert.ok(hubSrc.includes('"supported": false'), 'hub channel-groups must declare the quality parameter unsupported');
+    assert.ok(canvasSrc.includes('"supported": false'), 'canvas channelGroups mirror must declare the quality parameter unsupported');
+    assert.ok(hubSrc.includes('"wireGroup": "gpt-image-2.5-economy"'), 'hub must expose the gpt-image-2.5 economy line');
+    assert.ok(canvasSrc.includes('"wireGroup": "gpt-image-2.5-economy"'), 'canvas mirror must expose the gpt-image-2.5 economy line');
   });
 });

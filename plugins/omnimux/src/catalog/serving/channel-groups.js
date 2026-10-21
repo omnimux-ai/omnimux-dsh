@@ -55,57 +55,9 @@ export const BYOK_PROVIDER_DISPLAY_MAP = Object.freeze({
 export const MODEL_CHANNEL_GROUPS = Object.freeze({
   "seedance-2-0": [
     {
-      "id": "pro",
-      "label": "旗舰版",
-      "badge": "满血出片 · 按次专线",
-      "pricing": {
-        "pointsEstimate": 9.8,
-        "discountRate": 3.333,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 45
-      },
-      "wireGroup": "seedance-2-0-task-pro",
-      "enabled": true
-    },
-    {
-      "id": "official",
-      "label": "官方版",
-      "badge": "官方原厂直签 · 极稳高画质",
-      "pricing": {
-        "pointsEstimate": 4.9,
-        "discountRate": 1,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 67,
-        "avgWaitTimeSec": 90
-      },
-      "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      "id": "preferred",
-      "label": "优选版",
-      "badge": "精品专线 · 极稳高画质",
-      "pricing": {
-        "pointsEstimate": 5.7,
-        "discountRate": 1.178,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 60
-      },
-      "wireGroup": "seedance-standard",
-      "enabled": true
-    },
-    {
       "id": "standard",
       "label": "标准版",
-      "badge": "主流专线 · 官方原生",
+      "badge": "官方原生专线 · 按秒计费",
       "pricing": {
         "pointsEstimate": 4.9,
         "discountRate": 1,
@@ -116,22 +68,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "avgWaitTimeSec": 90
       },
       "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      "id": "cheap",
-      "label": "经济版",
-      "badge": "经济走量 · 按条计费",
-      "pricing": {
-        "pointsEstimate": 1.5,
-        "discountRate": 0.5,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 90,
-        "avgWaitTimeSec": 120
-      },
-      "wireGroup": "cheap",
+      "default": true,
       "enabled": true
     }
   ],
@@ -141,7 +78,7 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "极速出片 · 官方专线",
       "pricing": {
-        "pointsEstimate": 4.9,
+        "pointsEstimate": 3,
         "discountRate": 1,
         "billingMode": "per_second"
       },
@@ -150,330 +87,107 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "avgWaitTimeSec": 30
       },
       "wireGroup": "default",
+      "default": true,
       "enabled": true
-    },
+    }
+  ],
+  "seedance-2-0-mini": [
     {
-      "id": "cheap",
-      "label": "经济版",
-      "badge": "经济走量 · 按条计费",
+      "id": "standard",
+      "label": "标准版",
+      "badge": "轻量视频官方专线",
       "pricing": {
-        "pointsEstimate": 1.5,
-        "discountRate": 0.5,
-        "billingMode": "per_task"
+        "pointsEstimate": 0.8,
+        "discountRate": 1,
+        "billingMode": "per_second"
       },
       "sla": {
-        "stability24h": 90,
-        "avgWaitTimeSec": 120
+        "stability24h": 100,
+        "avgWaitTimeSec": 45
       },
-      "wireGroup": "cheap",
+      "wireGroup": "default",
+      "default": true,
       "enabled": true
     }
   ],
   "seedance-2-5": [
     {
-      "id": "pro",
-      "label": "旗舰版",
-      "badge": "满血出片 · 按次专线",
-      "pricing": {
-        "pointsEstimate": 19,
-        "discountRate": 3.333,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 45
-      },
-      "constraints": {
-        "parameters": {
-          "duration": {
-            "fixed": 30
-          }
-        }
-      },
-      "wireGroup": "seedance-2-5-task-pro",
-      "enabled": false
-    },
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "全新 2.5 旗舰 · 官方原生专线",
-      "pricing": {
-        "pointsEstimate": 16,
-        "discountRate": 1,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 60
-      },
-      "wireGroup": "default",
-      "enabled": true
-    }
-  ],
-  "claude-opus-4-6": [
-    {
-      "id": "claude-max-open",
-      "label": "旗舰版",
-      "badge": "官方订阅直连",
-      "pricing": { "pointsEstimate": 2000, "discountRate": 1.0, "billingMode": "per_token" },
-      "sla": { "stability24h": 100, "avgWaitTimeSec": 8 },
-      "wireGroup": "claude-max-open",
-      "enabled": true
-    },
-    {
-      "id": "claude-plus",
-      "label": "优选版",
-      "badge": "精品专线 · 高品质输出",
-      "pricing": { "pointsEstimate": 1000, "discountRate": 1.0, "billingMode": "per_token" },
-      "sla": { "stability24h": 99, "avgWaitTimeSec": 10 },
-      "wireGroup": "claude-plus",
-      "enabled": true
-    },
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "主流高品质专线",
-      "pricing": { "pointsEstimate": 500, "discountRate": 1.0, "billingMode": "per_token" },
-      "sla": { "stability24h": 98, "avgWaitTimeSec": 12 },
-      "wireGroup": "standard",
-      "enabled": true
-    }
-  ],
-  "claude-sonnet-4-6": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "Anthropic 官方专线",
-      "pricing": { "pointsEstimate": 400, "discountRate": 1.0, "billingMode": "per_token" },
-      "sla": { "stability24h": 98, "avgWaitTimeSec": 12 },
-      "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      "id": "pool",
-      "label": "畅享版",
-      "badge": "自建集群 · 随取随用",
-      "pricing": { "pointsEstimate": 114, "discountRate": 0.2857, "billingMode": "per_token" },
-      "sla": { "stability24h": 95, "avgWaitTimeSec": 15 },
-      "wireGroup": "pool",
-      "enabled": true
-    }
-  ],
-  "deepseek-v4-flash": [
-    {
-      "id": "deepseek-official",
-      "label": "官方版",
-      "badge": "官方原厂直签",
-      "pricing": { "pointsEstimate": 100, "discountRate": 1.0, "billingMode": "per_token" },
-      "sla": { "stability24h": 100, "avgWaitTimeSec": 4 },
-      "wireGroup": "deepseek-official",
-      "enabled": true
-    },
-    {
-      "id": "default",
-      "label": "标准版",
-      "badge": "DeepSeek 官方专线",
-      "pricing": { "pointsEstimate": 50, "discountRate": 1.0, "billingMode": "per_token" },
-      "sla": { "stability24h": 99, "avgWaitTimeSec": 5 },
-      "wireGroup": "default",
-      "enabled": true
-    }
-  ],
-  "kling": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "可灵商业专线",
-      "pricing": {
-        "pointsEstimate": 4,
-        "discountRate": 1,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 98,
-        "avgWaitTimeSec": 60
-      },
-      "wireGroup": "default",
-      "enabled": true
-    }
-  ],
-  // H3 全系列按分组接入：包含官方原生标准版、3倍速极速版、ComfyUI工作流双档专线、15秒长片版以及口型同步专线版。
-  // 各自通过 `wireModel` 绑定上游独立型号，并通过 `wireGroup` 挂载对应的官方或专属分组。
-  // 每个分组携带独立契约，实现完全隔离的参数与计费控制。
-  "minimax-h3": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "海螺 MiniMax 官方专线 · 4–15 秒",
-      "pricing": {
-        "pointsEstimate": 3.6,
-        "discountRate": 1,
-        "billingMode": "per_second"
-      },
-      "sla": {
-        "stability24h": 99,
-        "avgWaitTimeSec": 50
-      },
-      "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      // 上游 `minimax-h3-turbo`（ID 172）：海螺 3.0 极速版视频生成，$0.035/次，出片提速 3 倍。
-      "id": "turbo",
-      "label": "极速版",
-      "badge": "海螺 3.0 极速版 · 3倍出片速度",
-      "pricing": {
-        "pointsEstimate": 0.4,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "wireModel": "minimax-h3-turbo",
-      "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      // 上游 `minimax-h3-video`（ID 173）专属高速档分组 `minimax-h3-video-fast`：AutoDL 极速出片，0.9倍折算 $0.0225/次。
-      "id": "video_fast",
+      "id": "480p",
       "label": "经济版",
-      "badge": "极速出片 · 极致低价专线",
+      "badge": "480p 档 · 经济走量",
       "pricing": {
-        "pointsEstimate": 0.2,
-        "discountRate": 0.9,
-        "billingMode": "per_task"
-      },
-      "constraints": {
-        "parameters": {
-          "resolution": {
-            "only": [
-              "768P",
-              "2K"
-            ]
-          }
-        }
-      },
-      "wireModel": "minimax-h3-video",
-      "wireGroup": "minimax-h3-video-fast",
-      "enabled": true
-    },
-    {
-      // 上游 `minimax-h3-video`（ID 173）专属画质档分组 `minimax-h3-video-pro`：AutoDL 极限画质先行版，1.15倍折算 $0.02875/次。
-      "id": "video_pro",
-      "label": "高清版",
-      "badge": "极限画质 · 先行专线",
-      "pricing": {
-        "pointsEstimate": 0.3,
-        "discountRate": 1.15,
-        "billingMode": "per_task"
-      },
-      "constraints": {
-        "parameters": {
-          "resolution": {
-            "only": [
-              "768P",
-              "2K"
-            ]
-          }
-        }
-      },
-      "wireModel": "minimax-h3-video",
-      "wireGroup": "minimax-h3-video-pro",
-      "enabled": true
-    },
-    {
-      // 上游 `minimax-h3-task`（ID 166）：固定 15 秒按次专线（$0.3781/次）。
-      "id": "task",
-      "label": "长片版",
-      "badge": "固定 15 秒 · 按次专线",
-      "pricing": {
-        "pointsEstimate": 3.8,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "constraints": {
-        "operations": [
-          "text_to_video",
-          "first_frame",
-          "first_last_frame",
-          "video_multi_ref"
-        ],
-        "parameters": {
-          "duration": {
-            "fixed": 15
-          },
-          "resolution": {
-            "only": [
-              "768P",
-              "2K"
-            ]
-          }
-        }
-      },
-      "wireModel": "minimax-h3-task",
-      "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      // 上游 `minimax-h3-lip-sync`（网关渠道 44 fal.ai 官方直连，model_mapping 至 minimax/h3-max/lip-sync/image-to-video）：
-      // 对口型图生视频，人像图片 + 驱动音频 → 唇形对齐视频；按秒计费 $0.125/秒（1.25 积分/秒）。
-      "id": "lipsync",
-      "label": "口型版",
-      "badge": "音频驱动唇形对齐 · 适合人像口播对白",
-      "description": "专注音频驱动人像唇形对齐，完美匹配口播短剧、带货解说与虚拟角色对白场景。",
-      "pricing": {
-        "pointsEstimate": 6.3,
-        "discountRate": 1,
+        "pointsEstimate": 21,
+        "discountRate": 0.524,
         "billingMode": "per_second"
       },
       "sla": {
-        "stability24h": 98,
-        "avgWaitTimeSec": 45
+        "stability24h": 100,
+        "avgWaitTimeSec": 60
       },
       "constraints": {
-        "operations": [
-          "digital_human"
-        ],
         "parameters": {
-          "resolution": {
-            "only": [
-              "768P",
-              "2K"
-            ]
-          }
+          "resolution": { "fixed": "480p" }
         }
       },
-      "wireModel": "minimax-h3-lip-sync",
-      "wireGroup": "default",
+      "wireGroup": "seedance-2-5-480p",
       "enabled": true
     },
     {
-      // ComfyUI 专属算力实例（U06，docs/comfyui-instance-api-spec.md）：
-      // 默认全能参考模式 video_multi_ref（9 图 / 3 视频 / 3 音频契约）。
-      // 由执行中枢 comfyui-instance.js 直连专属 GPU 实例，不走公共网关计费通道。
-      "id": "comfyui",
-      "label": "全能参考版",
-      "badge": "专属算力实例 · 9图3视频3音频参考",
-      "description": "专属 GPU 算力实例 ComfyUI U06 工作流（海螺 H3 换人与多模态参考生视频），默认全能参考模式，支持最多 9 张参考图、3 条参考视频、3 条参考音频。",
+      "id": "720p",
+      "label": "标准版",
+      "badge": "720p 档 · 稳定满血",
       "pricing": {
-        "pointsEstimate": 3.8,
+        "pointsEstimate": 29,
+        "discountRate": 0.7206,
+        "billingMode": "per_second"
+      },
+      "constraints": {
+        "parameters": {
+          "resolution": { "fixed": "720p" }
+        }
+      },
+      "wireGroup": "seedance-2-5-720p",
+      "default": true,
+      "enabled": true
+    }
+  ],
+  "gpt-image-2.5": [
+    {
+      "id": "standard",
+      "label": "标准版",
+      "badge": "基础清晰度 · 异步出图",
+      "pricing": {
+        "pointsEstimate": 0.13,
         "discountRate": 1,
         "billingMode": "per_task"
       },
-      "sla": {
-        "stability24h": 97,
-        "avgWaitTimeSec": 180
-      },
+      "wireGroup": "default",
       "constraints": {
-        "operations": [
-          "video_multi_ref"
-        ],
         "parameters": {
           "resolution": {
+            "fixed": "1K"
+          },
+          "quality": {
             "supported": false
+          },
+          "n": {
+            "fixed": 1
           }
         }
       },
-      "wireModel": "minimax-h3",
-      "wireGroup": "comfyui",
+      "default": true,
+      "enabled": true
+    },
+    {
+      "id": "economy",
+      "label": "经济版",
+      "badge": "经济走量 · 独立线路",
+      "pricing": {
+        "pointsEstimate": 0.01,
+        "discountRate": 0.112455,
+        "billingMode": "per_task"
+      },
+      "wireGroup": "gpt-image-2.5-economy",
       "enabled": true
     }
   ],
@@ -487,242 +201,27 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
         "discountRate": 1,
         "billingMode": "per_token"
       },
-      "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      "id": "cheap",
-      "label": "经济版",
-      "badge": "经济走量专线",
-      "pricing": {
-        "pointsEstimate": 80,
-        "discountRate": 1.111,
-        "billingMode": "per_token"
-      },
-      "wireGroup": "gemini-cheap",
-      "enabled": true
-    },
-    {
-      "id": "pool",
-      "label": "畅享版",
-      "badge": "自建集群 · 随取随用",
-      "pricing": {
-        "pointsEstimate": 28,
-        "discountRate": 0.2857,
-        "billingMode": "per_token"
-      },
-      "wireGroup": "pool",
-      "enabled": true
-    }
-  ],
-  "gpt-5.5": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "OpenAI 官方专线",
-      "pricing": {
-        "pointsEstimate": 600,
-        "discountRate": 1,
-        "billingMode": "per_token"
+      "sla": {
+        "stability24h": 99,
+        "avgWaitTimeSec": 8
       },
       "wireGroup": "default",
-      "enabled": true
-    }
-  ],
-  "gpt-image-2.5": [
-    {
-      "id": "pro",
-      "label": "旗舰版",
-      "badge": "原生高分 · 独立线路",
-      "pricing": {
-        "pointsEstimate": 0.036765,
-        "discountRate": 0.281248,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "gpt-image-2.5-pro",
-      "enabled": true
-    },
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "基础清晰度 · 异步出图",
-      "pricing": {
-        "pointsEstimate": 0.13072,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "default",
-      "constraints": {
-        "parameters": {
-          "resolution": { "fixed": "1K" },
-          "quality": { "supported": false },
-          "n": { "fixed": 1 }
-        }
-      },
-      "default": true,
-      "enabled": true
-    },
-    {
-      "id": "economy",
-      "label": "经济版",
-      "badge": "经济走量 · 独立线路",
-      "pricing": {
-        "pointsEstimate": 0.0147,
-        "discountRate": 0.112455,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "gpt-image-2.5-economy",
-      "enabled": true
-    }
-  ],
-  // 2026-09-15：分组与模型名绑定 —— 实测 `model=gpt-image-2.5` 配 `-flare-std`
-  // 分组回 503「分组 … 下模型 … 无可用渠道」，故两个 profile 各自成独立模型，
-  // 且各自的 std 分组即其唯一可达线路。网关 `-pro` 分组未取得档位定价依据，暂不登记。
-  "gpt-image-2.5-flare": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "极速专线 · 快速迭代",
-      "pricing": {
-        "pointsEstimate": 0.2,
-        "discountRate": 1.125,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "gpt-image-2.5-flare-std",
       "default": true,
       "enabled": true
     }
   ],
-  "gpt-image-2.5-sunburst": [
+  "seedream-5-0-pro": [
     {
       "id": "standard",
       "label": "标准版",
-      "badge": "画质专线 · 精细成品",
+      "badge": "Seedream 官方专线",
       "pricing": {
-        "pointsEstimate": 0.2,
-        "discountRate": 1.125,
+        "pointsEstimate": 0.64,
+        "discountRate": 1,
         "billingMode": "per_task"
       },
-      "wireGroup": "gpt-image-2.5-sunburst-std",
+      "wireGroup": "default",
       "default": true,
-      "enabled": true
-    }
-  ],
-  "nano-banana-2": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "Google 官方生图专线",
-      "pricing": {
-        "pointsEstimate": 0.2,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 15
-      },
-      "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      "id": "pro",
-      "label": "高清版",
-      "badge": "全档高清专线",
-      "pricing": {
-        "pointsEstimate": 0.3,
-        "discountRate": 1.714,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 10
-      },
-      "wireGroup": "nano-banana-2-pro",
-      "enabled": true
-    }
-  ],
-  "seedance-2-0-mini": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "轻量视频官方专线",
-      "pricing": {
-        "pointsEstimate": 1.5,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 45
-      },
-      "wireGroup": "default",
-      "enabled": true
-    }
-  ],
-  "wan-3.0": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "Wan 官方专线",
-      "pricing": {
-        "pointsEstimate": 2.5,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "wireGroup": "default",
-      "enabled": true
-    }
-  ],
-  "grok-imagine-video-1-5": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "xAI 官方视频专线",
-      "pricing": {
-        "pointsEstimate": 2,
-        "discountRate": 1,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 30
-      },
-      "wireGroup": "default",
-      "enabled": true
-    },
-    {
-      "id": "pool",
-      "label": "经济版",
-      "badge": "极致低价 · 随取随用",
-      "pricing": {
-        "pointsEstimate": 0.6,
-        "discountRate": 0.2857,
-        "billingMode": "per_task"
-      },
-      "sla": {
-        "stability24h": 88,
-        "avgWaitTimeSec": 90
-      },
-      "wireGroup": "pool",
-      "enabled": true
-    }
-  ],
-  "seed-audio-1.0": [
-    {
-      "id": "standard",
-      "label": "标准版",
-      "badge": "豆包语音官方专线",
-      "pricing": {
-        "pointsEstimate": 50,
-        "discountRate": 1,
-        "billingMode": "per_token"
-      },
-      "sla": {
-        "stability24h": 100,
-        "avgWaitTimeSec": 5
-      },
-      "wireGroup": "default",
       "enabled": true
     }
   ],
@@ -732,11 +231,12 @@ export const MODEL_CHANNEL_GROUPS = Object.freeze({
       "label": "标准版",
       "badge": "Suno 音乐生成官方专线",
       "pricing": {
-        "pointsEstimate": 0.5,
+        "pointsEstimate": 0.76,
         "discountRate": 1,
         "billingMode": "per_task"
       },
       "wireGroup": "default",
+      "default": true,
       "enabled": true
     }
   ]

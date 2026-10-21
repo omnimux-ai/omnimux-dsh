@@ -43,12 +43,16 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
   assert.equal(index.get('kling-avatar'), undefined);
   assert.ok(index.contentFingerprint);
   assert.equal(index.contentFingerprint.length, 16);
-  assert.equal(index.listedOperations.length, 37); // #3209 google-vids-omni 下线 −4 → 37（#3152 为 37）
-  assert.ok(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'));
-  // #3063: indextts-2 voice-clone operation reaches listed through its own contract row.
-  assert.ok(index.listedOperations.includes('indextts-2#voice_clone'));
+  assert.equal(index.listedOperations.length, 24); // 2026-10-21 网关对账 #3516：上架面收敛为 24
+  // #3516: whisper-1 由 draft 翻 canonical，成为唯一在架 speech_to_text 入口。
+  assert.ok(index.listedOperations.includes('whisper-1#speech_to_text'));
+  // #3516: doubao-asr-bigmodel / seedasr-auc / indextts-2 / minimax-h3 上游渠道停用，
+  // 仅登记不上架 —— 契约行还在，但不再有 listed operation。
+  assert.equal(index.listedOperations.includes('doubao-asr-bigmodel#speech_to_text'), false);
+  assert.equal(index.listedOperations.includes('indextts-2#voice_clone'), false);
   // #1789: the ASR pair are two independent models; neither declares the other as an alias.
-  assert.ok(index.listedOperations.includes('seedasr-auc#speech_to_text'));
+  assert.ok(index.get('seedasr-auc'));
+  assert.equal(index.listedOperations.includes('seedasr-auc#speech_to_text'), false);
   assert.deepEqual(index.get('seedasr-auc').aliases ?? [], []);
   assert.deepEqual(index.get('doubao-asr-bigmodel').aliases ?? [], []);
   for (const key of [
@@ -57,10 +61,13 @@ test('loadAll real specs: 4 files merge without parse errors', () => {
     'seedance-2-5#first_frame',
     'seedance-2-5#video_edit',
     'seedance-2-5#video_extend',
-    'minimax-h3#end_frame',
-    'minimax-h3#first_frame',
+    'seedance-2-0-fast#text_to_video',
+    'seedance-2-0-mini#text_to_video',
   ]) {
     assert.ok(index.listedOperations.includes(key), key);
+  }
+  for (const key of ['minimax-h3#end_frame', 'minimax-h3#first_frame']) {
+    assert.equal(index.listedOperations.includes(key), false, key);
   }
   // formal specs must not produce schemaVersion admission errors
   assert.ok(

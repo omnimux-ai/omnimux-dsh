@@ -42,7 +42,7 @@ export const PRIMARY_KIND_OPERATIONS = Object.freeze({
   image: 'text_to_image',
   video: 'text_to_video',
   text: 'chat',
-  audio: 'text_to_speech',
+  audio: 'text_to_music',
 });
 
 /**

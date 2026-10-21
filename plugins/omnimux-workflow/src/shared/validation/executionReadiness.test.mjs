@@ -149,47 +149,40 @@ test('multiple effective video operations require a persisted selection', () => 
 
 
 // ============================================================================
-// MiniMax H3 Canvas Readiness & Submission Tests
+// Seedance 2.0 Canvas Readiness & Submission Tests
+// （2026-10-21 网关对账 #3516：MiniMax H3 渠道停用，改用现役 Seedance 2.0 验证真实目录。）
 // ============================================================================
 const realHubCatalog = projectCanvasCatalog(buildModelCatalog({ env: {} }));
 
-test('MiniMax H3: text_to_video with valid parameters passes execution readiness (returns null)', () => {
+test('Seedance 2.0: text_to_video with valid parameters passes execution readiness (returns null)', () => {
   const node = {
-    id: 'video-t2v-minimax-h3',
+    id: 'video-t2v-seedance-2-0',
     type: 'material',
     data: {
       materialType: 'video',
       selectedTool: 'video-generation',
       prompt: 'A cinematic drone shot of majestic mountains',
       params: {
-        model: 'minimax-h3',
+        model: 'seedance-2-0',
         operation: 'text_to_video',
         aspectRatio: '16:9',
         duration: 5,
-        resolution: '768P',
+        resolution: '720p',
       },
     },
   };
   const failure = findExecutionReadinessFailure([node], realHubCatalog);
-  assert.equal(failure, null, 'Expected null failure for minimax-h3 text_to_video');
+  assert.equal(failure, null, 'Expected null failure for seedance-2-0 text_to_video');
 
-  // Boundary values of the published duration range and the second resolution option.
-  const rangeNode = {
-    ...node,
-    data: {
-      ...node.data,
-      params: {
-        ...node.data.params,
-        aspectRatio: '21:9',
-        duration: 15,
-        resolution: '2K',
-      },
-    },
-  };
+  // Boundary values of the published 4–15s duration range and the widest aspect/resolution options.
+  const rangeNode = structuredClone(node);
+  rangeNode.data.params.aspectRatio = '21:9';
+  rangeNode.data.params.duration = 15;
+  rangeNode.data.params.resolution = '4k';
   assert.equal(findExecutionReadinessFailure([rangeNode], realHubCatalog), null);
 });
 
-test('MiniMax H3: first_frame with valid image upstream passes execution readiness', () => {
+test('Seedance 2.0: first_frame with valid image upstream passes execution readiness', () => {
   const imgNode = {
     id: 'img-first-frame',
     type: 'material',
@@ -203,25 +196,25 @@ test('MiniMax H3: first_frame with valid image upstream passes execution readine
   };
 
   const videoNode = {
-    id: 'video-ff-minimax-h3',
+    id: 'video-ff-seedance-2-0',
     type: 'material',
     data: {
       materialType: 'video',
       selectedTool: 'video-generation',
       prompt: 'Animate this character walking forward',
       params: {
-        model: 'minimax-h3',
+        model: 'seedance-2-0',
         operation: 'first_frame',
         aspectRatio: 'adaptive',
         duration: 5,
-        resolution: '768P',
+        resolution: '720p',
       },
     },
   };
   const graph = {
     nodes: [imgNode, videoNode],
     edges: [{
-      id: 'e-ff-minimax-h3',
+      id: 'e-ff-seedance-2-0',
       source: 'img-first-frame',
       target: videoNode.id,
       data: {
@@ -231,10 +224,10 @@ test('MiniMax H3: first_frame with valid image upstream passes execution readine
     }],
   };
   const failure = findExecutionReadinessFailure([videoNode], realHubCatalog, graph);
-  assert.equal(failure, null, 'Expected null failure for minimax-h3 first_frame');
+  assert.equal(failure, null, 'Expected null failure for seedance-2-0 first_frame');
 });
 
-test('MiniMax H3: video_multi_ref with reference image upstream passes execution readiness', () => {
+test('Seedance 2.0: video_multi_ref with reference image upstream passes execution readiness', () => {
   const refImgNode = {
     id: 'img-ref-1',
     type: 'material',
@@ -254,11 +247,11 @@ test('MiniMax H3: video_multi_ref with reference image upstream passes execution
       selectedTool: 'video-generation',
       prompt: 'A cyberpunk cityscape matching this art style',
       params: {
-        model: 'minimax-h3',
+        model: 'seedance-2-0',
         operation: 'video_multi_ref',
         aspectRatio: 'adaptive',
         duration: 10,
-        resolution: '2K',
+        resolution: '1080p',
       },
     },
   };
@@ -275,21 +268,13 @@ test('MiniMax H3: video_multi_ref with reference image upstream passes execution
     }],
   };
   const failure = findExecutionReadinessFailure([refNode], realHubCatalog, graph);
-  assert.equal(failure, null, 'Expected null failure for minimax-h3 video_multi_ref');
+  assert.equal(failure, null, 'Expected null failure for seedance-2-0 video_multi_ref');
 
   // The single-image mode has no reference_images slot, so the same edge must be rejected
-  // as a role conflict instead of being silently absorbed.
-  const singleModeNode = {
-    ...refNode,
-    id: 'video-mr-single',
-    data: {
-      ...refNode.data,
-      params: {
-        ...refNode.data.params,
-        operation: 'first_frame',
-      },
-    },
-  };
+  // as an unsatisfied required slot instead of being silently absorbed.
+  const singleModeNode = structuredClone(refNode);
+  singleModeNode.id = 'video-mr-single';
+  singleModeNode.data.params.operation = 'first_frame';
   const singleModeGraph = {
     nodes: [refImgNode, singleModeNode],
     edges: [{
@@ -307,7 +292,7 @@ test('MiniMax H3: video_multi_ref with reference image upstream passes execution
   assert.equal(singleModeFailure.reasonCode, 'min_unsatisfied');
 });
 
-test('MiniMax H3: invalid parameters strictly intercepted with parameter_unsupported', () => {
+test('Seedance 2.0: invalid parameters strictly intercepted with parameter_unsupported', () => {
   const baseNode = {
     id: 'video-bad-param',
     type: 'material',
@@ -316,24 +301,19 @@ test('MiniMax H3: invalid parameters strictly intercepted with parameter_unsuppo
       selectedTool: 'video-generation',
       prompt: 'Testing invalid parameters',
       params: {
-        model: 'minimax-h3',
+        model: 'seedance-2-0',
         operation: 'text_to_video',
         aspectRatio: '16:9',
         duration: 5,
-        resolution: '768P',
+        resolution: '720p',
       },
     },
   };
 
   // 1. Duration outside the published 4–15s range
   for (const badDuration of [3, 16, 0, -1]) {
-    const node = {
-      ...baseNode,
-      data: {
-        ...baseNode.data,
-        params: { ...baseNode.data.params, duration: badDuration },
-      },
-    };
+    const node = structuredClone(baseNode);
+    node.data.params.duration = badDuration;
     const failure = findExecutionReadinessFailure([node], realHubCatalog);
     assert.deepEqual(failure, {
       nodeId: 'video-bad-param',
@@ -344,13 +324,8 @@ test('MiniMax H3: invalid parameters strictly intercepted with parameter_unsuppo
 
   // 2. Unsupported aspectRatio
   for (const badAspect of ['3:2', '2:1', 'square', 'invalid']) {
-    const node = {
-      ...baseNode,
-      data: {
-        ...baseNode.data,
-        params: { ...baseNode.data.params, aspectRatio: badAspect },
-      },
-    };
+    const node = structuredClone(baseNode);
+    node.data.params.aspectRatio = badAspect;
     const failure = findExecutionReadinessFailure([node], realHubCatalog);
     assert.deepEqual(failure, {
       nodeId: 'video-bad-param',
@@ -360,14 +335,9 @@ test('MiniMax H3: invalid parameters strictly intercepted with parameter_unsuppo
   }
 
   // 3. Unsupported resolution
-  for (const badRes of ['480p', '4k', '2k']) {
-    const node = {
-      ...baseNode,
-      data: {
-        ...baseNode.data,
-        params: { ...baseNode.data.params, resolution: badRes },
-      },
-    };
+  for (const badRes of ['768P', '2K', '8k']) {
+    const node = structuredClone(baseNode);
+    node.data.params.resolution = badRes;
     const failure = findExecutionReadinessFailure([node], realHubCatalog);
     assert.deepEqual(failure, {
       nodeId: 'video-bad-param',
@@ -377,27 +347,27 @@ test('MiniMax H3: invalid parameters strictly intercepted with parameter_unsuppo
   }
 });
 
-test('MiniMax H3: resolveCanvasSubmission and resolveExecutorSubmission produce canonical model and parameters', () => {
+test('Seedance 2.0: resolveCanvasSubmission and resolveExecutorSubmission produce canonical model and parameters', () => {
   // Declared alias resolves onto the canonical model id.
   const t2vSubmission = resolveCanvasSubmission({
     capability: 'video',
-    model: 'MiniMax-H3',
+    model: 'seedance-2.0',
     operation: 'text_to_video',
     prompt: 'A sunny beach',
     aspectRatio: '16:9',
     duration: 5,
-    resolution: '768P',
+    resolution: '720p',
   }, realHubCatalog);
-  assert.equal(t2vSubmission.model, 'minimax-h3');
+  assert.equal(t2vSubmission.model, 'seedance-2-0');
   assert.equal(t2vSubmission.operation, 'text_to_video');
   assert.equal(t2vSubmission.aspectRatio, '16:9');
   assert.equal(t2vSubmission.duration, 5);
-  assert.equal(t2vSubmission.resolution, '768P');
+  assert.equal(t2vSubmission.resolution, '720p');
 
   // Canonical id with first_frame references
   const ffSubmission = resolveCanvasSubmission({
     capability: 'video',
-    model: 'minimax-h3',
+    model: 'seedance-2-0',
     operation: 'first_frame',
     prompt: 'Dance animation',
     references: [{
@@ -410,20 +380,20 @@ test('MiniMax H3: resolveCanvasSubmission and resolveExecutorSubmission produce 
     }],
     aspectRatio: 'adaptive',
     duration: 10,
-    resolution: '2K',
+    resolution: '1080p',
   }, realHubCatalog);
-  assert.equal(ffSubmission.model, 'minimax-h3');
+  assert.equal(ffSubmission.model, 'seedance-2-0');
   assert.equal(ffSubmission.operation, 'first_frame');
   assert.equal(ffSubmission.references.length, 1);
   assert.equal(ffSubmission.references[0].role, 'first_frame');
   assert.equal(ffSubmission.references[0].targetSlot, 'first_frame');
   assert.equal(ffSubmission.duration, 10);
-  assert.equal(ffSubmission.resolution, '2K');
+  assert.equal(ffSubmission.resolution, '1080p');
 
   // video_multi_ref submission with a reference image
   const mrSubmission = resolveCanvasSubmission({
     capability: 'video',
-    model: 'minimax-h3',
+    model: 'seedance-2-0',
     operation: 'video_multi_ref',
     prompt: 'Style replication',
     references: [{
@@ -436,9 +406,9 @@ test('MiniMax H3: resolveCanvasSubmission and resolveExecutorSubmission produce 
     }],
     aspectRatio: '16:9',
     duration: 5,
-    resolution: '768P',
+    resolution: '720p',
   }, realHubCatalog);
-  assert.equal(mrSubmission.model, 'minimax-h3');
+  assert.equal(mrSubmission.model, 'seedance-2-0');
   assert.equal(mrSubmission.operation, 'video_multi_ref');
   assert.equal(mrSubmission.references.length, 1);
   assert.equal(mrSubmission.references[0].role, 'reference');
@@ -447,13 +417,13 @@ test('MiniMax H3: resolveCanvasSubmission and resolveExecutorSubmission produce 
   // Test resolveExecutorSubmission with explicit operation and declared alias
   const execSubmission = resolveExecutorSubmission({
     capability: 'video',
-    model: 'MiniMax-H3',
+    model: 'seedance-2.0',
     operation: 'text_to_video',
     prompt: 'Quick cinematic cut',
     aspectRatio: '16:9',
     duration: 5,
-    resolution: '768P',
+    resolution: '720p',
   }, realHubCatalog);
-  assert.equal(execSubmission.model, 'minimax-h3');
+  assert.equal(execSubmission.model, 'seedance-2-0');
   assert.equal(execSubmission.operation, 'text_to_video');
 });

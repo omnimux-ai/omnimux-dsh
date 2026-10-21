@@ -67,28 +67,46 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     it('returns defined channel groups for seedance-2-0', () => {
       const groups = getModelChannelGroups('seedance-2-0')
       assert.ok(Array.isArray(groups))
-      assert.ok(groups.length >= 3)
-      const ids = groups.map((g) => g.id)
-      assert.ok(ids.includes('pro'))
-      assert.ok(ids.includes('preferred'))
-      assert.ok(ids.includes('standard'))
-      assert.ok(ids.includes('cheap'))
+      // 2026-10-21 网关对账 #3516：只保留现役 default 标准版线路。
+      assert.equal(groups.length, 1)
+      assert.deepEqual(groups.map((g) => g.id), ['standard'])
+      const [standard] = groups
+      assert.equal(standard.wireGroup, 'default')
+      assert.equal(standard.default, true)
+      assert.equal(standard.enabled, true)
+      assert.equal(standard.pricing?.pointsEstimate, 4.9)
+      assert.equal(standard.pricing?.billingMode, 'per_second')
+      // 旧的多分组线路（pro / preferred / cheap / official）已随上游对账退场。
+      for (const retired of ['pro', 'preferred', 'cheap', 'official']) {
+        assert.equal(groups.some((g) => g.id === retired), false, retired)
+      }
     })
 
-    it('returns defined channel groups for seedance-2-5 with the task-based pro line only', () => {
+    it('returns the 480p economy and 720p standard(default) lines for seedance-2-5', () => {
       const groups = getModelChannelGroups('seedance-2-5')
       assert.ok(Array.isArray(groups))
       assert.equal(groups.length, 2)
-      const ids = groups.map((g) => g.id)
-      assert.ok(ids.includes('pro'))
-      assert.ok(ids.includes('standard'))
-      // 30 秒 / 9 图特惠线路（wireGroup seedance-cheap）上游断货，已下架
-      assert.equal(ids.includes('cheap'), false)
+      assert.deepEqual(groups.map((g) => g.id), ['480p', '720p'])
+      const [p480, p720] = groups
+      // #3516 评审修正：默认档位是 720p 标准版；480p 是经济版（非默认）。
+      assert.equal(p480.label, '经济版')
+      assert.equal(p480.wireGroup, 'seedance-2-5-480p')
+      assert.equal(p480.pricing?.billingMode, 'per_second')
+      assert.equal(p480.pricing?.pointsEstimate, 21)
+      assert.equal(p480.pricing?.discountRate, 0.524)
+      assert.equal(p480.default, undefined)
+      // 每档用固定分辨率约束锁住自己的档位，禁止跨档静默改写。
+      assert.deepEqual(p480.constraints?.parameters?.resolution, { fixed: '480p' })
+      assert.equal(p720.label, '标准版')
+      assert.equal(p720.wireGroup, 'seedance-2-5-720p')
+      assert.equal(p720.pricing?.billingMode, 'per_second')
+      assert.equal(p720.pricing?.pointsEstimate, 29)
+      assert.equal(p720.pricing?.discountRate, 0.7206)
+      assert.equal(p720.default, true)
+      assert.deepEqual(p720.constraints?.parameters?.resolution, { fixed: '720p' })
+      // 旧的 task-based pro 线路与特惠线路上游断货，已下架
+      assert.equal(groups.some((g) => g.wireGroup === 'seedance-2-5-task-pro'), false)
       assert.equal(groups.some((g) => g.wireGroup === 'seedance-cheap'), false)
-
-      const proGroup = groups.find((g) => g.id === 'pro')
-      assert.equal(proGroup.wireGroup, 'seedance-2-5-task-pro')
-      assert.equal(proGroup.pricing?.billingMode, 'per_task')
     })
 
     it('returns empty array for models without defined groups', () => {
@@ -105,58 +123,81 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
 
     it('resolves explicit group from inline model@group', () => {
-      const candidates = resolveChannelCandidates('claude-opus-4-6@standard')
-      assert.deepEqual(candidates, ['claude-opus-4-6@standard'])
-      const unregistered = resolveChannelPlan('claude-opus-4-6@default')
+      const candidates = resolveChannelCandidates('seedance-2-0@standard')
+      assert.deepEqual(candidates, ['seedance-2-0@default'])
+      const unregistered = resolveChannelPlan('seedance-2-0@pro')
       assert.deepEqual(unregistered.candidates, [])
-      assert.deepEqual(unregistered.unresolvedGroups, ['default'])
+      assert.deepEqual(unregistered.unresolvedGroups, ['pro'])
+      // #3516：claude-opus-4-6 的分组目录已整体退场，带分组请求必须 fail-closed。
+      const retiredModel = resolveChannelPlan('claude-opus-4-6@standard')
+      assert.deepEqual(retiredModel.candidates, [])
+      assert.deepEqual(retiredModel.unresolvedGroups, ['standard'])
     })
 
-    it('rejects the disabled pro line, reports the delisted cheap line, and fails closed on a pinned dead line', () => {
+    it('retires the old pro/cheap lines and fails closed on a pinned dead line', () => {
+      // #3516：旧的 task-based pro 与 seedance-cheap 特惠线路都不再登记。
       const proPlan = resolveChannelPlan('seedance-2-5', { group: 'pro' })
       assert.deepEqual(proPlan.candidates, [])
       assert.deepEqual(proPlan.unresolvedGroups, ['pro'])
       assert.deepEqual(resolveChannelCandidates('seedance-2-5', { group: 'seedance-2-5-task-pro' }), [])
 
-      // 下架后显式请求旧分组必须被报告为不可解析，而不是当成有效线路继续下发。
       const cheapPlan = resolveChannelPlan('seedance-2-5', { group: 'seedance-cheap' })
+      assert.deepEqual(cheapPlan.candidates, [])
       assert.deepEqual(cheapPlan.unresolvedGroups, ['seedance-cheap'])
 
-      // 低价优先不再指向已下架的特惠线路，落到标准版。
+      // 低价优先落到现役最低价的 480p 档，而不是任何已下架线路。
       const costCandidates = resolveChannelCandidates('seedance-2-5', { strategy: 'cost_first' })
-      assert.equal(costCandidates[0], 'seedance-2-5@default')
+      assert.equal(costCandidates[0], 'seedance-2-5@seedance-2-5-480p')
 
-      // 历史工程把该线路钉成白名单时必须失败关闭：零候选，且不放宽为全量线路。
+      // 历史工程把已删线路钉成白名单时必须失败关闭：零候选，且不放宽为全量线路。
       const pinned = resolveChannelPlan('seedance-2-5', { allowedGroups: ['seedance-cheap'] })
       assert.deepEqual(pinned.candidates, [])
       assert.deepEqual(pinned.unresolvedGroups, ['seedance-cheap'])
+      // 钉住现役线路则只返回该线路。
+      const pinnedLive = resolveChannelPlan('seedance-2-5', { allowedGroups: ['seedance-2-5-480p'] })
+      assert.deepEqual(pinnedLive.candidates, ['seedance-2-5@seedance-2-5-480p'])
     })
 
     it('sorts by cost_first (lowest points estimate first)', () => {
-      const candidates = resolveChannelCandidates('seedance-2-0', { strategy: 'cost_first' })
-      assert.ok(candidates.length >= 4)
-      // cheap (1.5) -> standard (4.9, wireGroup: default) -> preferred (5.7) -> pro (9.8)
-      assert.equal(candidates[0], 'seedance-2-0@cheap')
-      assert.equal(candidates[1], 'seedance-2-0@default')
+      // #3516：seedance-2-5 是唯一仍有多线路的模型：480p (21) < 720p (29)。
+      const candidates = resolveChannelCandidates('seedance-2-5', { strategy: 'cost_first' })
+      assert.deepEqual(candidates, [
+        'seedance-2-5@seedance-2-5-480p',
+        'seedance-2-5@seedance-2-5-720p',
+      ])
+      assert.ok(
+        candidates.indexOf('seedance-2-5@seedance-2-5-480p') < candidates.indexOf('seedance-2-5@seedance-2-5-720p'),
+      )
     })
 
-    it('sorts by stability_first (highest 24h stability first)', () => {
-      const candidates = resolveChannelCandidates('seedance-2-0', { strategy: 'stability_first' })
-      assert.ok(candidates.length >= 4)
-      // cheap has 90% stability, should be ranked last among groups
-      const cheapIndex = candidates.findIndex((c) => c.includes('@cheap'))
-      const proIndex = candidates.findIndex((c) => c.includes('@seedance-2-0-task-pro'))
-      assert.ok(proIndex < cheapIndex, 'pro (100%) should rank before cheap (90%)')
+    it('sorts by stability_first (highest 24h stability first; unpublished SLA ranks last)', () => {
+      const groups = getModelChannelGroups('seedance-2-5')
+      // #3516 评审修正：只有 480p 经济版公布了 SLA（100% / 60s）；720p 默认档未公布，
+      // 按「未公布 SLA 用中性默认值参与排序」的既有规则排在后面。
+      assert.deepEqual(groups.map((g) => g.sla?.stability24h), [100, undefined])
+      assert.deepEqual(groups.map((g) => g.sla?.avgWaitTimeSec), [60, undefined])
+      const candidates = resolveChannelCandidates('seedance-2-5', { strategy: 'stability_first' })
+      assert.deepEqual(candidates, [
+        'seedance-2-5@seedance-2-5-480p',
+        'seedance-2-5@seedance-2-5-720p',
+      ])
     })
 
     it('filters by allowedGroups when provided', () => {
-      const candidates = resolveChannelCandidates('seedance-2-0', {
+      const only480 = resolveChannelCandidates('seedance-2-5', {
         strategy: 'cost_first',
-        allowedGroups: ['standard', 'cheap'],
+        allowedGroups: ['480p'],
       })
-      assert.ok(candidates.includes('seedance-2-0@default'))
-      assert.ok(candidates.includes('seedance-2-0@cheap'))
-      assert.ok(!candidates.includes('seedance-2-0@seedance-standard'))
+      assert.deepEqual(only480, ['seedance-2-5@seedance-2-5-480p'])
+      const both = resolveChannelCandidates('seedance-2-5', { allowedGroups: ['480p', '720p'] })
+      assert.deepEqual(both, [
+        'seedance-2-5@seedance-2-5-480p',
+        'seedance-2-5@seedance-2-5-720p',
+      ])
+      // allowedGroups 也可直接用 wireGroup 名称匹配。
+      const byWire = resolveChannelCandidates('seedance-2-5', { allowedGroups: ['seedance-2-5-720p'] })
+      assert.deepEqual(byWire, ['seedance-2-5@seedance-2-5-720p'])
+      assert.ok(!both.includes('seedance-2-5@seedance-cheap'))
     })
 
     it('fails closed when the requested pool matches no configured group', () => {
@@ -175,23 +216,22 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
 
     it('restricts the explicit-group failover tail to the allowed pool', () => {
-      const plan = resolveChannelPlan('seedance-2-0', { group: 'cheap', allowedGroups: ['cheap'] })
-      assert.deepEqual(plan.candidates, ['seedance-2-0@cheap'])
+      const plan = resolveChannelPlan('seedance-2-5', { group: '480p', allowedGroups: ['480p'] })
+      assert.deepEqual(plan.candidates, ['seedance-2-5@seedance-2-5-480p'])
     })
 
     it('orders the explicit-group tail by the requested strategy', () => {
-      const single = resolveChannelPlan('seedance-2-0', { group: 'cheap', strategy: 'cost_first' })
-      assert.deepEqual(single.candidates, ['seedance-2-0@cheap'])
-      const plan = resolveChannelPlan('seedance-2-0', {
-        group: 'cheap',
+      const single = resolveChannelPlan('seedance-2-5', { group: '480p', strategy: 'cost_first' })
+      assert.deepEqual(single.candidates, ['seedance-2-5@seedance-2-5-480p'])
+      const plan = resolveChannelPlan('seedance-2-5', {
+        group: '720p',
         strategy: 'cost_first',
-        allowedGroups: ['cheap', 'standard', 'preferred', 'pro'],
+        allowedGroups: ['480p', '720p'],
       })
+      // 显式选中的线路排首位，其余按成本升序（480p 21 < 720p 29）。
       assert.deepEqual(plan.candidates, [
-        'seedance-2-0@cheap',
-        'seedance-2-0@default',
-        'seedance-2-0@seedance-standard',
-        'seedance-2-0@seedance-2-0-task-pro',
+        'seedance-2-5@seedance-2-5-720p',
+        'seedance-2-5@seedance-2-5-480p',
       ])
     })
 
@@ -225,110 +265,42 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
   })
 
-  // H3 全系列按分组接入：包含标准版、3倍速极速版、ComfyUI工作流双档专线、15秒长片版以及口型同步专线版。
-  // 靠分组自带的 wireModel 指向各自的上游独立型号；每个分组携带独立契约。
+  // 2026-10-21 网关对账 #3516：minimax-h3 上游渠道全部停用，7 条专线随分组表整体移除。
+  // 分组路由必须 fail-closed，绝不合成已退场的上游型号。
   describe('MiniMax H3 series as groups', () => {
-    it('declares all 7 lines, each with its own upstream model and contract', () => {
+    it('retires all 7 upstream lines: the delisted model declares no channel group', () => {
       const groups = getModelChannelGroups('minimax-h3')
-      assert.equal(groups.length, 7)
-      const byId = new Map(groups.map((group) => [group.id, group]))
-
-      const standard = byId.get('standard')
-      assert.equal(standard.wireGroup, 'default')
-      assert.equal(standard.wireModel, undefined)
-      assert.equal(standard.constraints, undefined)
-
-      const turbo = byId.get('turbo')
-      assert.equal(turbo.wireModel, 'minimax-h3-turbo')
-      assert.equal(turbo.wireGroup, 'default')
-      assert.equal(turbo.pricing?.pointsEstimate, 0.4)
-
-      const videoFast = byId.get('video_fast')
-      assert.equal(videoFast.wireModel, 'minimax-h3-video')
-      assert.equal(videoFast.wireGroup, 'minimax-h3-video-fast')
-      assert.equal(videoFast.pricing?.pointsEstimate, 0.2)
-      assert.deepEqual(videoFast.constraints?.parameters?.resolution, Object.fromEntries([['only', ['768P', '2K']]]))
-
-      const videoPro = byId.get('video_pro')
-      assert.equal(videoPro.wireModel, 'minimax-h3-video')
-      assert.equal(videoPro.wireGroup, 'minimax-h3-video-pro')
-      assert.equal(videoPro.pricing?.pointsEstimate, 0.3)
-      assert.deepEqual(videoPro.constraints?.parameters?.resolution, Object.fromEntries([['only', ['768P', '2K']]]))
-
-      const task = byId.get('task')
-      assert.equal(task.wireModel, 'minimax-h3-task')
-      assert.equal(task.wireGroup, 'default')
-      assert.equal(task.pricing?.billingMode, 'per_task')
-      assert.deepEqual(task.constraints.parameters.duration, { fixed: 15 })
-      assert.deepEqual(task.constraints.parameters.resolution, Object.fromEntries([['only', ['768P', '2K']]]))
-      assert.deepEqual(task.constraints.operations, [
-        'text_to_video',
-        'first_frame',
-        'first_last_frame',
-        'video_multi_ref',
-      ])
-
-      const lipsync = byId.get('lipsync')
-      assert.equal(lipsync.wireModel, 'minimax-h3-lip-sync')
-      assert.equal(lipsync.wireGroup, 'default')
-      assert.equal(lipsync.pricing?.pointsEstimate, 6.3)
-      assert.equal(lipsync.pricing?.billingMode, 'per_second')
-      assert.deepEqual(lipsync.constraints?.parameters?.resolution, Object.fromEntries([['only', ['768P', '2K']]]))
-      assert.deepEqual(lipsync.constraints?.operations, ['digital_human'])
-      assert.equal(lipsync.description, '专注音频驱动人像唇形对齐，完美匹配口播短剧、带货解说与虚拟角色对白场景。')
-
-      const comfyui = byId.get('comfyui')
-      assert.equal(comfyui.wireModel, 'minimax-h3')
-      assert.equal(comfyui.wireGroup, 'comfyui')
-      assert.equal(comfyui.pricing?.billingMode, 'per_task')
-      assert.deepEqual(comfyui.constraints?.operations, ['video_multi_ref'])
+      assert.deepEqual(groups, [])
+      for (const retired of ['standard', 'turbo', 'video_fast', 'video_pro', 'task', 'lipsync', 'comfyui']) {
+        assert.equal(getModelChannelGroups('minimax-h3').some((group) => group.id === retired), false, retired)
+        const plan = resolveChannelPlan('minimax-h3', { group: retired })
+        assert.deepEqual(plan.candidates, [], retired)
+        assert.deepEqual(plan.unresolvedGroups, [retired], retired)
+      }
     })
 
-    it('routes each line to its own upstream model', () => {
+    it('fails closed for every retired H3 line instead of routing to an upstream model', () => {
+      for (const line of ['standard', 'turbo', 'video_fast', 'video_pro', 'task', 'lipsync', 'comfyui']) {
+        const plan = resolveChannelPlan('minimax-h3', { allowedGroups: [line] })
+        assert.deepEqual(plan.candidates, [], line)
+        assert.deepEqual(plan.unresolvedGroups, [line], line)
+      }
+      assert.deepEqual(resolveChannelPlan('minimax-h3@video_fast').candidates, [])
+      // 不带路由意图时仅保留网关登记别名；不再有分组线路候选。
+      assert.deepEqual(resolveChannelPlan('minimax-h3').candidates, ['minimax-h3', 'MiniMax-H3'])
       assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { allowedGroups: ['standard'] }).candidates,
-        ['minimax-h3@default'],
-      )
-      assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { allowedGroups: ['turbo'] }).candidates,
-        ['minimax-h3-turbo@default'],
-      )
-      assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { allowedGroups: ['video_fast'] }).candidates,
-        ['minimax-h3-video@minimax-h3-video-fast'],
-      )
-      assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { allowedGroups: ['video_pro'] }).candidates,
-        ['minimax-h3-video@minimax-h3-video-pro'],
-      )
-      assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { allowedGroups: ['task'] }).candidates,
-        ['minimax-h3-task@default'],
-      )
-      assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { allowedGroups: ['lipsync'] }).candidates,
-        ['minimax-h3-lip-sync@default'],
-      )
-      assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { allowedGroups: ['comfyui'] }).candidates,
-        ['minimax-h3@comfyui'],
-      )
-      // 显式点名分组同样走该线路自己的上游型号与分组
-      assert.deepEqual(
-        resolveChannelPlan('minimax-h3', { group: 'video_fast', allowedGroups: ['video_fast'] }).candidates,
-        ['minimax-h3-video@minimax-h3-video-fast'],
+        resolveChannelPlan('minimax-h3', { allowedGroups: ['standard'] }).unresolvedGroups,
+        ['standard'],
       )
     })
 
-    it('sorts by strategy: cost_first picks video_fast, stability_first picks standard', () => {
+    it('keeps strategy sorting empty when no H3 line is configured', () => {
       const allAllowed = ['standard', 'turbo', 'video_fast', 'video_pro', 'task', 'lipsync']
-      // 成本优先：video_fast (0.2积分) 单价最低，排在首位
-      const costPlan = resolveChannelPlan('minimax-h3', { strategy: 'cost_first', allowedGroups: allAllowed })
-      assert.equal(costPlan.candidates[0], 'minimax-h3-video@minimax-h3-video-fast')
-
-      // 稳定性优先：standard (99% 24h 稳定性) 排在首位
-      const stabilityPlan = resolveChannelPlan('minimax-h3', { strategy: 'stability_first', allowedGroups: allAllowed })
-      assert.equal(stabilityPlan.candidates[0], 'minimax-h3@default')
+      for (const strategy of ['cost_first', 'stability_first', 'auto']) {
+        const plan = resolveChannelPlan('minimax-h3', { strategy, allowedGroups: allAllowed })
+        assert.deepEqual(plan.candidates, [], strategy)
+        assert.deepEqual(plan.unresolvedGroups, allAllowed, strategy)
+      }
     })
   })
 
@@ -355,7 +327,8 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
 
     it('returns official groups without BYOK when settings not configured or verified', () => {
       const groups = resolveModelChannelGroups('seedance-2-0', null)
-      assert.ok(groups.length >= 3)
+      // #3516：seedance-2-0 只剩一条官方 standard 线路。
+      assert.equal(groups.length, 1)
       assert.ok(groups.every((g) => g.category === 'official'))
       assert.ok(groups.every((g) => g.sourceType === 'official'))
       assert.equal(groups.some((g) => g.id.startsWith('byok-')), false)
@@ -544,11 +517,14 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.equal(explicitGroup.byokProvider, 'openai')
 
       // 5. req.allowedGroups 兜底
-      const allowedIntent = resolveRequestChannelIntent({ model: 'seedance-2-0', allowedGroups: ['pro', 'default'] })
+      // #3516：`pro` 已退场，改用现役官方分组 standard。
+      const allowedIntent = resolveRequestChannelIntent({ model: 'seedance-2-0', allowedGroups: ['standard', 'default'] })
       assert.equal(allowedIntent.requestedChannel, '')
-      assert.equal(allowedIntent.effectiveChannel, 'pro')
+      assert.equal(allowedIntent.effectiveChannel, 'standard')
       assert.equal(allowedIntent.isByokChannel, false)
       assert.equal(allowedIntent.isOfficialChannel, true)
+      // 已退场的 pro 不再被识别为官方渠道。
+      assert.equal(resolveRequestChannelIntent({ model: 'seedance-2-0', allowedGroups: ['pro'] }).isOfficialChannel, false)
 
       // 6. req.allowedGroups 混合列表（官方渠道与 BYOK 混杂），包含 BYOK 时不应误判为仅限官方专线
       const mixedAllowedIntent = resolveRequestChannelIntent({ model: 'seedance-2-0', allowedGroups: ['default', 'byok-fal'] })
@@ -693,13 +669,18 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
       assert.ok(OFFICIAL_CHANNEL_IDS.includes('official'))
       assert.ok(OFFICIAL_CHANNEL_IDS.includes('default'))
       assert.ok(OFFICIAL_CHANNEL_IDS.includes('standard'))
-      assert.ok(OFFICIAL_CHANNEL_IDS.includes('pro'))
-      assert.ok(OFFICIAL_CHANNEL_IDS.includes('seedance-2-0-task-pro'))
-      assert.ok(OFFICIAL_CHANNEL_IDS.includes('minimax-h3-video-fast'))
+      // #3516：现役分组 id / wireGroup 动态收敛为 480p、720p、economy 及其 wire 名称。
+      for (const id of ['480p', '720p', 'economy', 'seedance-2-5-480p', 'seedance-2-5-720p', 'gpt-image-2.5-economy']) {
+        assert.ok(OFFICIAL_CHANNEL_IDS.includes(id), id)
+      }
+      // 已退场的旧线路不再出现在白名单里。
+      for (const retired of ['pro', 'seedance-2-0-task-pro', 'minimax-h3-video-fast', 'preferred', 'cheap']) {
+        assert.equal(OFFICIAL_CHANNEL_IDS.includes(retired), false, retired)
+      }
       assert.ok(!OFFICIAL_CHANNEL_IDS.includes('byok-fal'))
       assert.throws(() => OFFICIAL_CHANNEL_IDS.push('malicious'), TypeError)
       assert.equal(isOfficialChannelId('official'), true)
-      assert.equal(isOfficialChannelId('seedance-2-0-task-pro'), true)
+      assert.equal(isOfficialChannelId('seedance-2-5-480p'), true)
       assert.equal(isOfficialChannelId('byok-fal'), false)
       assert.equal(isOfficialChannelId('unknown-channel'), false)
       assert.equal(isOfficialChannelId(null), false)
@@ -975,14 +956,23 @@ describe('OmniMux Model Channel Groups & Routing Strategies', () => {
     })
 
     it('matches official channel group case-insensitively with lowercasing', () => {
-      // 传入大写 PRO 能够成功解析，匹配到对应 wireGroup，不作为未解析组
-      const planUpper = resolveChannelPlan('seedance-2-0', { group: 'PRO' })
+      // 传入大写 480P 能够成功解析，匹配到对应 wireGroup，不作为未解析组
+      const planUpper = resolveChannelPlan('seedance-2-5', { group: '480P' })
       assert.equal(planUpper.unresolvedGroups.length, 0)
-      assert.equal(planUpper.candidates[0], 'seedance-2-0@seedance-2-0-task-pro')
+      assert.equal(planUpper.candidates[0], 'seedance-2-5@seedance-2-5-480p')
 
+      // wireGroup 名称同样大小写不敏感。
+      const planWire = resolveChannelPlan('seedance-2-5', { group: 'SEEDANCE-2-5-720P' })
+      assert.equal(planWire.unresolvedGroups.length, 0)
+      assert.equal(planWire.candidates[0], 'seedance-2-5@seedance-2-5-720p')
+
+      const planStandard = resolveChannelPlan('seedance-2-0', { group: 'STANDARD' })
+      assert.equal(planStandard.unresolvedGroups.length, 0)
+      assert.equal(planStandard.candidates[0], 'seedance-2-0@default')
+      // 已退场的 OFFICIAL 分组不再可解析（fail-closed）。
       const planOfficial = resolveChannelPlan('seedance-2-0', { group: 'OFFICIAL' })
-      assert.equal(planOfficial.unresolvedGroups.length, 0)
-      assert.equal(planOfficial.candidates[0], 'seedance-2-0@default')
+      assert.deepEqual(planOfficial.candidates, [])
+      assert.deepEqual(planOfficial.unresolvedGroups, ['OFFICIAL'])
     })
 
     it('strictly requires modal-specific model declaration and ignores generic model fallback', () => {

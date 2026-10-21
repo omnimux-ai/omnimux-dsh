@@ -89,7 +89,11 @@ describe('Issue #3054 current-operation media API credentials', () => {
           assert.deepEqual(plan.finalReq.env, {})
         }
       }
-      assert.throws(() => resolveExecutionPlan({ kind: 'image', req: { model: 'gpt-image-2.5@seedance-2-0-task-pro' }, current: { runtimeMode: 'agent' } }), /尚未配置/)
+      // #3516：已退场的专线分组同样是不可穿透的 unknown-group（不再只是「尚未配置」）。
+      assert.throws(
+        () => resolveExecutionPlan({ kind: 'image', req: { model: 'gpt-image-2.5@seedance-2-0-task-pro' }, current: { runtimeMode: 'agent' } }),
+        (error) => error.code === 'unknown-group' && /不可用/.test(error.message),
+      )
     })
   })
 
@@ -147,7 +151,8 @@ describe('Issue #3054 current-operation media API credentials', () => {
       const credentials = { resolve: async (ref) => ref === 'OMNIMUX_API_KEY' ? { value: key } : undefined }
       const api = mountedApi('video', { runtimeMode: 'agent' }, credentials)
       const fetcher = async (url, init) => {
-        calls.push({ url: String(url), method: init.method || 'GET', authorization: init.headers.authorization })
+        // #3516：视频路由现在带默认线路分组，header 由 withRoutingGroup 包装为 Headers。
+        calls.push({ url: String(url), method: init.method || 'GET', authorization: new Headers(init.headers).get('authorization') })
         if (init.method === 'POST') return json({ task_id: 'task-auth-3054-fixture' })
         if (String(url).endsWith('/content')) return new Response('video-fixture-bytes', { headers: { 'content-type': 'video/mp4' } })
         return json({ status: 'succeeded', url: 'https://api.omnimux.ai/v1/videos/task-auth-3054-fixture/content' })

@@ -213,6 +213,8 @@ models:
   # 故不能表达成同一模型的档位。两者在专属分组下同步返回 b64_json，不经过
   # gpt-image-2.5 那条会 502/504 的内容端点。证据：
   # docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: "gpt-image-2.5-flare"
     label: "GPT Image 2.5 极速版"
     family: "openai"
@@ -235,7 +237,8 @@ models:
           docUrl: "docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md"
           verifiedAt: "2026-09-15"
         implementation:
-          status: "ready"
+          # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+          status: "none"
           profileId: "imageGenerate"
           seam: "imageGenerate"
           notes: "复用既有 OpenAI 图像协议映射；上游同步返回 b64_json"
@@ -279,7 +282,8 @@ models:
       verifiedAt: "2026-09-15"
       notes: "网关公开价目表模型级元数据（USD 0.014706/次）+ dated live 出图记录；专属分组 gpt-image-2.5-flare-std / -pro"
     implementation:
-      status: "ready"
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: "imageGenerate"
       seam: "imageGenerate"
     execution:
@@ -287,6 +291,7 @@ models:
       profileId: "imageGenerate"
       seam: "imageGenerate"
 
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: "gpt-image-2.5-sunburst"
     label: "GPT Image 2.5 画质版"
     family: "openai"
@@ -309,7 +314,8 @@ models:
           docUrl: "docs/evidence/2026-09-15-omnimux-image-flare-sunburst.md"
           verifiedAt: "2026-09-15"
         implementation:
-          status: "ready"
+          # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+          status: "none"
           profileId: "imageGenerate"
           seam: "imageGenerate"
           notes: "复用既有 OpenAI 图像协议映射；上游同步返回 b64_json"
@@ -353,7 +359,8 @@ models:
       verifiedAt: "2026-09-15"
       notes: "网关公开价目表模型级元数据（USD 0.014706/次）+ dated live 出图记录；专属分组 gpt-image-2.5-sunburst-std / -pro"
     implementation:
-      status: "ready"
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: "imageGenerate"
       seam: "imageGenerate"
     execution:

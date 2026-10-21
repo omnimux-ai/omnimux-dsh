@@ -26,7 +26,8 @@ describe('channel group naming gate', () => {
     const enabled = Object.values(MODEL_CHANNEL_GROUPS)
       .flat()
       .filter((g) => g.enabled !== false)
-    assert.ok(enabled.length >= 30)
+    // 2026-10-21 #3516：8 个模型族 / 10 个分组（全部启用）。
+    assert.ok(enabled.length >= 10)
     for (const g of enabled) {
       assert.ok(ALLOWED_LABELS.includes(g.label), `${g.id} label「${g.label}」需在白名单内`)
     }

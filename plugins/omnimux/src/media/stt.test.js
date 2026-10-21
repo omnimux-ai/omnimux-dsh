@@ -9,7 +9,11 @@ import { executeOmnimuxSpeechToText, transcribeSpeechToTextRequest } from './stt
 const AUDIO_BYTES = Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x00])
 const M4A_BYTES = Buffer.from([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20])
 const SRT = '1\r\n00:00:00,000 --> 00:00:01,500\r\n你好世界\r\n\r\n'
-const model = 'doubao-asr-bigmodel'
+// 2026-10-21 网关对账 #3516：whisper-1 翻 canonical 并成为唯一在架 speech_to_text 模型，
+// 也是媒体配置里的默认 STT 型号（doubao-asr-bigmodel / seedasr-auc 仅登记不上架）。
+const model = 'whisper-1'
+// 仅登记不上架的历史 URL-first 型号，wire primitive 覆盖仍按契约保留。
+const DELISTED_URL_FIRST_MODEL = 'doubao-asr-bigmodel'
 const dataAudio = `data:audio/mpeg;base64,${AUDIO_BYTES.toString('base64')}`
 const request = { audio: dataAudio, model, env: { OMNIMUX_API_KEY: 'sk-stt-fixture' } }
 
@@ -40,14 +44,16 @@ function transcribeFixture(input) {
       modelId: input.model ?? env.OMNIMUX_STT_MODEL ?? 'whisper-1',
     },
     apiKey: input.apiKey ?? env.OMNIMUX_API_KEY,
+    signal: input.signal,
   })
 }
 
-test('STT requires audio and rejects draft whisper before HTTP despite bypassSubmitGuard', async (t) => {
+test('STT requires audio and rejects the delisted ASR id before HTTP despite bypassSubmitGuard', async (t) => {
   await assert.rejects(() => executeOmnimuxSpeechToText({}), { code: 'omnimux-invalid-request' })
   let calls = 0
+  // #3516：whisper-1 已上架；用仅登记不上架的 doubao-asr-bigmodel 保持「listing 依赖路径先拒」覆盖。
   await assert.rejects(() => executeOmnimuxSpeechToText({
-    audio: tempAudio(t), model: 'whisper-1', operation: 'speech_to_text', bypassSubmitGuard: true,
+    audio: tempAudio(t), model: DELISTED_URL_FIRST_MODEL, operation: 'speech_to_text', bypassSubmitGuard: true,
     env: {}, fetcher: async () => { calls++ },
   }), { code: 'omnimux-invalid-request' })
   assert.equal(calls, 0)
@@ -127,13 +133,15 @@ test('STT rejects invalid formats before credentials, audio loading or HTTP', as
   assert.equal(calls, 0)
 })
 
-test(`STT ${model} forwards public URL fields without downloading audio`, async () => {
+test('STT URL-first wire primitive forwards public URL fields without downloading audio', async () => {
+  // #3516：whisper-1（已上架）走 multipart 文件上传；URL-first 是历史型号的 wire primitive
+  // 行为，仍由契约保留，故直接验证 transcribeSpeechToTextRequest 而不过 SubmitGuard。
   const captured = {}
   const signal = new AbortController().signal
   const audio = 'https://cdn.example.com/voice/note.m4a?signature=abc'
   let calls = 0
-  const result = await executeOmnimuxSpeechToText({
-    ...request, model, audio: ` ${audio} `, signal, response_format: 'srt',
+  const result = await transcribeFixture({
+    audio: ` ${audio} `, model: DELISTED_URL_FIRST_MODEL, signal, response_format: 'srt',
     fetcher: async (url, init) => {
       calls++
       assert.equal(init.method, 'POST')
@@ -144,26 +152,49 @@ test(`STT ${model} forwards public URL fields without downloading audio`, async 
   assert.equal(calls, 1)
   assert.equal(captured.init.body.get('url'), audio)
   assert.equal(captured.init.body.get('audio_url'), audio)
-  assert.equal(captured.init.body.get('model'), model)
+  assert.equal(captured.init.body.get('model'), DELISTED_URL_FIRST_MODEL)
   assert.equal(captured.init.body.has('file'), false)
-  assert.deepEqual(result, { mode: 'live', model, text: SRT })
+  assert.deepEqual(result, { mode: 'live', model: DELISTED_URL_FIRST_MODEL, text: SRT })
 })
 
-test('seedasr-auc is an independent canonical model the STT runtime serves URL-first', async () => {
-  // #1789: the id is its own contract model (not an alias of doubao-asr-bigmodel), so the
-  // guard admits it by its own name and the runtime keeps it on the URL-first wire path.
+test('STT whisper-1 uploads public URL audio and still forwards the URL fields', async () => {
+  const captured = {}
+  const audio = 'https://cdn.example.com/voice/note.m4a?signature=abc'
+  let calls = 0
+  const result = await executeOmnimuxSpeechToText({
+    ...request, audio, response_format: 'srt',
+    fetcher: async (url, init) => {
+      calls++
+      if (init.method !== 'POST') return new Response(M4A_BYTES, { headers: { 'content-type': 'audio/m4a' } })
+      return sttFetcher(captured, SRT)(url, init)
+    },
+  })
+  assert.equal(calls, 2)
+  assert.equal(captured.init.body.get('url'), audio)
+  assert.equal(captured.init.body.get('audio_url'), audio)
+  assert.equal(captured.init.body.get('model'), 'whisper-1')
+  assert.equal(captured.init.body.get('file').type, 'audio/m4a')
+  assert.deepEqual(result, { mode: 'live', model: 'whisper-1', text: SRT })
+})
+
+test('seedasr-auc stays an independent canonical model; the delisted id is not routable but its URL-first wire contract survives', async () => {
+  // #1789: the id is its own contract model (not an alias of doubao-asr-bigmodel).
   const admission = guardSubmit(
     { model: 'seedasr-auc', operation: 'speech_to_text', audio: dataAudio, response_format: 'json', seam: 'speechToText', capability: 'stt' },
     { seam: 'speechToText', capability: 'stt', outputType: 'text' },
   )
-  assert.equal(admission.ok, true, JSON.stringify(admission))
-  assert.equal(admission.modelId, 'seedasr-auc')
-  assert.notEqual(admission.modelId, 'doubao-asr-bigmodel')
+  // #3516: 上游渠道停用 → 仅登记不上架，listing 依赖路径必须 fail-closed。
+  assert.equal(admission.ok, false, JSON.stringify(admission))
+  assert.equal(admission.code, GUARD_CODES.IMPLEMENTATION_UNAVAILABLE)
+  assert.equal(admission.details?.modelId, 'seedasr-auc')
+  // 非归一：两个 ASR id 仍是独立契约（未被折叠成别名）。
+  assert.notEqual(admission.details?.modelId, 'doubao-asr-bigmodel')
 
+  // URL-first 是历史型号的 wire primitive 行为，契约保留：直接验证 transport 层。
   const captured = {}
   const audio = 'https://cdn.example.com/voice/note.m4a'
   let calls = 0
-  const result = await executeOmnimuxSpeechToText({
+  const result = await transcribeFixture({
     ...request, model: 'seedasr-auc', audio, response_format: 'srt',
     fetcher: async (url, init) => {
       calls++

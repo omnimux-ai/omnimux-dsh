@@ -31,8 +31,10 @@ export const TEXT_MODEL_BASE_PRICING = Object.freeze({
 
 export const MODEL_BASE_PRICING = Object.freeze({
   // Video - Per Second
-  'seedance-2-5': { unitPrice: 0.3143, billingMode: 'per_second', defaultDuration: 5 },
+  'seedance-2-5': { unitPrice: 0.8, billingMode: 'per_second', defaultDuration: 5 },
   'seedance-2-0': { unitPrice: 0.0971, billingMode: 'per_second', defaultDuration: 5 },
+  'seedance-2-0-fast': { unitPrice: 0.059022, billingMode: 'per_second', defaultDuration: 5 },
+  'seedance-2-0-mini': { unitPrice: 0.0157, billingMode: 'per_second', defaultDuration: 5 },
   'minimax-h3': { unitPrice: 0.0714, billingMode: 'per_second', defaultDuration: 5 },
   'minimax-h3-turbo': { unitPrice: 0.035, billingMode: 'per_second', defaultDuration: 5 },
   'minimax-h3-video': { unitPrice: 0.025, billingMode: 'per_second', defaultDuration: 5 },
@@ -47,12 +49,16 @@ export const MODEL_BASE_PRICING = Object.freeze({
   'gpt-image-2.5': { unitPrice: 0.013072, billingMode: 'per_task' },
   'gpt-image-2.5-flare': { unitPrice: 0.014706, billingMode: 'per_task' },
   'gpt-image-2.5-sunburst': { unitPrice: 0.014706, billingMode: 'per_task' },
+  'seedream-5-0-pro': { unitPrice: 0.064286, billingMode: 'per_task' },
 
   // Audio / Speech - Per Second or Token
   'seed-audio-1.0': { unitPrice: 0.001, billingMode: 'per_second', defaultDuration: 10 },
   'doubao-asr-bigmodel': { unitPrice: 0.0005, billingMode: 'per_second', defaultDuration: 60 },
   'seedasr-auc': { unitPrice: 0.0005, billingMode: 'per_second', defaultDuration: 60 },
   'bigasr-auc': { unitPrice: 0.0005, billingMode: 'per_second', defaultDuration: 60 },
+  'suno': { unitPrice: 0.075556, billingMode: 'per_task' },
+  'suno-sounds': { unitPrice: 0.010667, billingMode: 'per_task' },
+  'whisper-1': { unitPrice: 0.015, billingMode: 'per_task' },
 })
 
 /**

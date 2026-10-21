@@ -373,7 +373,7 @@
     {
       "id": "suno",
       "disposition": "canonical",
-      "reason": "命中 runtime；H1 已有契约；YAML 已声明 ≠ live，无 dated 证据保持 draft"
+      "reason": "2026-10-21 #3516：网关渠道 32 default 现役（/v1/video/generations 任务通道），text_to_music 上架；未发真实生成请求"
     },
     {
       "id": "gpt-4o-mini-tts",
@@ -568,9 +568,12 @@
     },
     {
       "id": "whisper-1",
-      "disposition": "draft",
-      "reason": "speechToText seam 已挂载（#538），可探测；仓内无 dated live 证据不上架，#530 探测后方可翻 live",
-      "notes": "speech_to_text 产出 text，不得入 audio 产出桶；探测前 listed 保持空"
+      "disposition": "canonical",
+      "reason": "2026-10-21 网关对账 #3516：网关渠道 31（APIMart 语音识别专线）status=1，default 分组可达 whisper-1；中枢 speechToText profile/seam 已挂载，按现役在售上架。",
+      "notes": "2026-10-21 #3516：渠道 31 default 现役；speech_to_text 已上架，未发真实转写请求",
+      "evidence": [
+        "docs/evidence/2026-10-21-model-whisper-1-speech_to_text.md"
+      ]
     },
     {
       "id": "kling-avatar",

@@ -42,9 +42,19 @@ test('image channel switch retains ratio and narrows standard resolution/batch w
     const channel = async (id) => { await click('#modelCascadeTriggerBtn'); const buttons = [...document.querySelectorAll('.omx-version-row')]; const node = buttons.find(button => button.querySelector('.omx-version-name')?.textContent === id); assert.ok(node, id); await act(async () => node.click()); };
     assert.equal(state().channel, 'standard');
     const { DEFAULT_FALLBACK_CATALOG, parseCatalogToCascade, imageParameterOptions } = await import('./MediaViewerComposerData.js');
-    for (const model of parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image).flatMap(brand => brand.models)) {
+    const imageModels = parseCatalogToCascade(DEFAULT_FALLBACK_CATALOG.image).flatMap(brand => brand.models);
+    // The fallback now pins gpt-image-2.5's default line to 1K while seedream-5-0-pro keeps the full domain.
+    const defaultResolutionOptions = Object.fromEntries(imageModels.map(model => [
+      model.id,
+      imageParameterOptions(model, model.channels[0]).resolution.options.map(option => option.value),
+    ]));
+    assert.deepEqual(defaultResolutionOptions, {
+      'gpt-image-2.5': ['1K'],
+      'seedream-5-0-pro': ['1K', '2K', '4K'],
+    });
+    for (const model of imageModels) {
       const options = imageParameterOptions(model, model.channels[0]);
-      assert.deepEqual(options.resolution.options.map(option => option.value), ['1K', '2K', '4K']);
+      assert.equal(options.resolution.defaultValue, '1K');
       assert.doesNotMatch(options.resolution.defaultValue, /x/);
     }
     await channel('经济版');
@@ -63,7 +73,8 @@ test('image channel switch retains ratio and narrows standard resolution/batch w
     await option('.omx-ratio-grid', '自适应');
     assert.equal(state().params.aspectRatio, 'auto');
     await click('#paramSummaryTriggerBtn');
-    await channel('旗舰版');
+    // 经济版 is the remaining unconstrained image line; switching back to it must widen clarity/batch again.
+    await channel('经济版');
     await click('#paramSummaryTriggerBtn');
     assert.deepEqual([...document.querySelectorAll('.omx-subcol-clarity button')].map(b => b.textContent.trim()), ['1K', '2K', '4K']);
     assert.deepEqual([...document.querySelectorAll('.omx-subcol-sound button')].map(b => b.textContent.trim()), ['1', '2', '4']);

@@ -21,10 +21,15 @@ const input = (t, extra = {}) => {
 }
 
 test('standard and economy are distinct routes and explicit selection cannot widen', () => {
-  for (const [group, wire] of [['standard', 'default'], ['economy', 'gpt-image-2.5-economy'], ['pro', 'gpt-image-2.5-pro']]) {
+  // #3516：现役分组只剩 standard(default) + economy；无渠道的 pro 线路已删除。
+  for (const [group, wire] of [['standard', 'default'], ['economy', 'gpt-image-2.5-economy']]) {
     const route = resolveMediaRoute('image', { model, group }, parseMediaConfig())
     assert.deepEqual(route.candidates, [`${model}@${wire}`])
   }
+  assert.throws(
+    () => resolveMediaRoute('image', { model, group: 'pro' }, parseMediaConfig()),
+    { code: 'unknown-group' },
+  )
   assert.deepEqual(resolveMediaRoute('image', { model }, parseMediaConfig()).candidates, [`${model}@default`])
 })
 

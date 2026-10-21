@@ -43,7 +43,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
 
     // Authoritative flat list includes contracted models under disposition governance.
     assert.equal(catalog.models.length, 44) // #3209 google-vids-omni 下线（墓碑行无契约）→ 44
-    assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'draft')
+    // 2026-10-21 网关对账 #3516：whisper-1 处置 draft → canonical 并上架 speech_to_text。
+    assert.equal(catalog.models.find((m) => m.id === 'whisper-1')?.disposition, 'canonical')
     assert.equal(catalog.models.find((m) => m.id === 'grok-imagine-image-quality')?.disposition, 'draft')
     assert.equal(catalog.models.find((m) => m.id === 'kling-o3')?.disposition, 'canonical')
     assert.equal(catalog.models.find((m) => m.id === 'nano-banana-2')?.aliases?.includes('nanobanana-2'), true)
@@ -64,10 +65,9 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     }
 
     // four lists derive ONLY from listed ops' output.type
+    // #3516: gpt-image-2.5-flare / sunburst 上游渠道停用，只剩 2 个在架图片模型。
     assert.deepEqual(catalog.image.map((row) => row.id).sort(), [
       'gpt-image-2.5',
-      'gpt-image-2.5-flare',
-      'gpt-image-2.5-sunburst',
       'seedream-5-0-pro',
     ])
     const imageRow = catalog.image.find((row) => row.id === 'gpt-image-2.5')
@@ -82,29 +82,27 @@ describe('buildModelCatalog (H2 contract projection)', () => {
       'grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2.0',
     ])
     assert.equal(catalog.image.some((row) => row.id === 'grok-imagine-image-2-0'), false)
+    // #3516: minimax-h3 上游渠道停用；seedance 四行保持上架。
     assert.deepEqual(catalog.video.map((row) => row.id), [
-      'minimax-h3',
       'seedance-2-0',
       'seedance-2-0-fast',
       'seedance-2-0-mini',
       'seedance-2-5',
-    ]) // #3209 google-vids-omni 下线 −1
-    assert.deepEqual(catalog.audio.map((row) => row.id), [
-      'gemini-3.8-flash-tts',
-      'indextts-2',
-      'seed-audio-1.0',
     ])
+    // #3516: 音频桶收敛为在架 suno；TTS 三行转为仅登记不上架。
+    assert.deepEqual(catalog.audio.map((row) => row.id), ['suno'])
     // Text bucket includes implementation-ready models without requiring live history.
-    assert.deepEqual(catalog.text.map((row) => row.id), [
-      'claude-sonnet-4-6',
-      'gemini-3.8-flash',
-    ])
+    // #3516: claude-sonnet-4-6 上游渠道停用，文本桶只剩 gemini-3.8-flash。
+    assert.deepEqual(catalog.text.map((row) => row.id), ['gemini-3.8-flash'])
 
     // draft / canonical-without-listed-ops models never appear in any bucket
     for (const kind of ['text', 'image', 'video', 'audio']) {
       for (const forbidden of [
-        'whisper-1', 'grok-imagine-image-quality', 'grok-imagine-image-2-0', 'gpt-4o-mini-tts', 'suno',
+        'grok-imagine-image-quality', 'grok-imagine-image-2-0', 'gpt-4o-mini-tts',
         'jina-reader-v1', 'kling-o3', 'kling-v2-6', 'kling-v3', 'kling-v3-motion-control',
+        // #3516: 这些型号渠道停用、仅登记不上架，四个产出桶都不得再出现。
+        'claude-sonnet-4-6', 'minimax-h3', 'doubao-asr-bigmodel', 'seedasr-auc',
+        'seed-audio-1.0', 'gemini-3.8-flash-tts', 'indextts-2',
       ]) {
         assert.equal(catalog[kind].some((row) => row.id === forbidden), false, `${kind}:${forbidden}`)
       }
@@ -120,12 +118,16 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     assert.equal(catalog.defaults.text, 'gemini-3.8-flash')
     assert.equal(catalog.defaults.image, 'gpt-image-2.5')
     assert.equal(catalog.defaults.video, 'seedance-2-5')
-    assert.equal(catalog.defaults.audio, 'seed-audio-1.0')
+    assert.equal(catalog.defaults.audio, 'suno') // #3516: text_to_speech 键移除，audio 归属迁到 suno
     assert.equal(catalog.defaultsByOperation.text_to_video, 'seedance-2-5')
     assert.equal(catalog.defaultsByOperation.text_to_image, 'gpt-image-2.5')
     assert.equal(catalog.defaultsByOperation.chat, 'gemini-3.8-flash')
+    // #3516: 默认语音识别改为 whisper-1。
+    assert.equal(catalog.defaultsByOperation.speech_to_text, 'whisper-1')
+    assert.equal(catalog.defaultsByOperation.text_to_music, 'suno')
+    assert.equal('text_to_speech' in catalog.defaultsByOperation, false)
 
-    assert.equal(catalog.text.length, 2) // #3086 claude-sonnet-4-6 上架
+    assert.equal(catalog.text.length, 1)
   })
 
   it('forbids ASCII hyphen-minus in every catalog model label', () => {
@@ -188,8 +190,8 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     // grok-imagine-image normalizes to grok-imagine-image-2-0, which declares no listed
     // op → the image overlay is refused and the listed config default survives.
     assert.equal(catalog.defaults.image, 'gpt-image-2.5')
-    // The TTS setting names no listed op either; the listed Seed Audio default survives.
-    assert.equal(catalog.defaults.audio, 'seed-audio-1.0')
+    // The TTS setting names no listed op either; the listed Suno default survives.
+    assert.equal(catalog.defaults.audio, 'suno')
   })
 
   for (const model of ['grok-imagine-image-2', 'grok-imagine-image', 'grok-imagine-image-2-0', 'grok-imagine-image-2.0']) {
@@ -224,7 +226,7 @@ describe('buildModelCatalog (H2 contract projection)', () => {
     const catalog = buildModelCatalog({ text: h.text, media: h.media, gate: h.gate, env: {} })
     // #530 PR-A listed text set is contract-driven, not gate-invented
     assert.ok(catalog.text.some((row) => row.id === 'gemini-3.8-flash'))
-    assert.equal(catalog.text.length, 2) // #3086 claude-sonnet-4-6 上架
+    assert.equal(catalog.text.length, 1)
     assert.equal(catalog.text.some((row) => row.id === 'whisper-1'), false)
   })
 

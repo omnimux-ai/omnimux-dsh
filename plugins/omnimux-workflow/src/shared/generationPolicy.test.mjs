@@ -45,23 +45,28 @@ test('curation intersects listed operations and enabled buckets; policy defaults
   assert.equal(projectCanvasCatalog(raw).text.some((m)=>m.id===GPT), false);
 });
 
-test('audio policy admits listed seed-audio-1.0 as the canvas default (Issue #746)', () => {
-  const audioModel = (id) => ({ id, label: id, family: 'test', operations: [
-    { id: 'text_to_speech', label: '语音合成', listed: true, output: { type: 'audio' }, inputs: [
+test('audio policy admits only the listed suno model as the canvas default (#3516)', () => {
+  const audioModel = (id, operationId) => ({ id, label: id, family: 'test', operations: [
+    { id: operationId, label: operationId, listed: true, output: { type: 'audio' }, inputs: [
       { slot: 'prompt', type: 'text', role: 'prompt', source: 'node_field', min: 1, max: 1 },
     ] },
   ] });
-  const models = [audioModel('seed-audio-1.0'), audioModel('suno'), audioModel('gpt-4o-mini-tts')];
+  // 2026-10-21 网关对账 #3516：语音合成/克隆渠道全部停用，只有 Suno 音乐生成在售。
+  const models = [audioModel('seed-audio-1.0', 'text_to_speech'), audioModel('indextts-2', 'voice_clone'),
+    audioModel('suno', 'text_to_music'), audioModel('gpt-4o-mini-tts', 'text_to_speech')];
   const raw = { source: 'omnimux', fingerprint: 'fixture', models,
     text: [], image: [], video: [], audio: models.map(({ id, label }) => ({ id, label })),
-    defaults: { audio: 'suno' } };
+    defaults: { audio: 'seed-audio-1.0' } };
   const view = projectCanvasCatalog(raw);
-  // gpt-4o-mini-tts 与 suno 不在白名单中
-  assert.deepEqual(view.audio.map((m) => m.id), ['seed-audio-1.0']);
+  // 已下线/未列出的音频模型即便仍在 hub 目录里登记，也不得进入画布。
+  assert.deepEqual(view.audio.map((m) => m.id), ['suno']);
   assert.ok(!view.audio.some((m) => m.id === 'gpt-4o-mini-tts'), '未列出的 stub 模型不得出现在画布');
-  assert.equal(view.defaults.audio, 'seed-audio-1.0');
-  assert.ok(view.models.some((m) => m.id === 'seed-audio-1.0'
-    && m.operations.some((op) => op.id === 'text_to_speech')));
+  assert.ok(!view.audio.some((m) => m.id === 'seed-audio-1.0'), '停用的语音合成模型不得出现在画布');
+  assert.ok(!view.models.some((m) => m.id === 'indextts-2'), '停用的声音克隆模型不得出现在画布');
+  // 配置的旧默认已不在白名单：默认回退到策略里唯一在售的 Suno。
+  assert.equal(view.defaults.audio, 'suno');
+  assert.ok(view.models.some((m) => m.id === 'suno'
+    && m.operations.some((op) => op.id === 'text_to_music')));
 });
 
 test('new nodes use compatible manual preference, then type default, then curated order', () => {

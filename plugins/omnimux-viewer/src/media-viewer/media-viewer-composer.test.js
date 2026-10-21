@@ -18,11 +18,17 @@ describe('MediaViewerComposer Component Contract', () => {
 
     const seedance20 = seedanceBrand.models.find((m) => m.id === 'seedance-2.0');
     assert.ok(seedance20, 'Must include seedance-2.0 model');
-    assert.ok(seedance20.channels.length >= 2, 'Must include channels/versions');
+    assert.equal(seedance20.channels.length, 1, 'Seedance 2.0 exposes only the standard line');
+    assert.equal(defaultMediaChannel(seedance20).id, 'standard');
+    assert.equal(defaultMediaChannel(seedance20).name, '标准版');
 
-    const flagship = seedance20.channels.find((c) => c.id === 'pro');
-    assert.ok(flagship, 'Must include flagship version');
-    assert.equal(flagship.name, '旗舰版');
+    const seedance25 = seedanceBrand.models.find((m) => m.id === 'seedance-2-5');
+    assert.ok(seedance25, 'Must include seedance-2-5 model');
+    assert.ok(seedance25.channels.length >= 2, 'Must include channels/versions');
+
+    const hd720 = seedance25.channels.find((c) => c.id === '720p');
+    assert.ok(hd720, 'Must include 720p version');
+    assert.equal(hd720.name, '高清版');
   });
 
   it('preserves declared channel identities and selects the authoritative default', () => {
@@ -30,7 +36,11 @@ describe('MediaViewerComposer Component Contract', () => {
     const [brand] = parseCatalogToCascade([{ id: 'gpt-image-2.5', family: 'openai', channelGroups: source }]);
     const model = brand.models[0];
     assert.deepEqual(model.channels.map((channel) => channel.id), source.map((channel) => channel.id));
-    assert.equal(model.channels.find((channel) => channel.name === '旗舰版').id, 'pro');
+    assert.deepEqual(
+      model.channels.map((channel) => [channel.id, channel.name]),
+      source.map((channel) => [channel.id, channel.label]),
+    );
+    assert.equal(model.channels.find((channel) => channel.name === '经济版').id, 'economy');
     assert.equal(defaultMediaChannel(model).id, 'standard');
     assert.equal(source.find((channel) => channel.id === 'standard').default, true);
     assert.equal(defaultMediaChannel({ channels: [{ id: 'custom-first' }] }).id, 'custom-first');
@@ -40,8 +50,9 @@ describe('MediaViewerComposer Component Contract', () => {
   it('includes image and video brands in the cascade catalog', () => {
     const brands = DEFAULT_CASCADE_MODELS.map((b) => b.brandId);
     assert.ok(brands.includes('seedance'), 'Should support video brand seedance');
-    assert.ok(brands.includes('minimax'), 'Should support video brand minimax');
     assert.ok(brands.includes('openai'), 'Should support image brand openai');
+    assert.ok(brands.includes('seedream'), 'Should support image brand seedream');
+    assert.ok(!brands.includes('minimax'), 'Dead model minimax-h3 must stay out of the fallback catalog');
   });
 
   it('画布模特注入白名单正则严格收敛对齐 serializeReferenceAssets：不放行 http:// 与 file://，仅支持 https://、blob: 与站内相对路径 /，且使用负向先行断言严格排除 // 协议相对路径', () => {

@@ -6,6 +6,8 @@ managementGroup: "audio"
 modality: "audio"
 
 models:
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: "doubao-asr-bigmodel"
     label: "豆包语音识别大模型 (Doubao-ASR)"
     family: "bytedance"
@@ -14,7 +16,6 @@ models:
     operations:
       - id: "speech_to_text"
         label: "语音转文字"
-        listed: true
         output: { type: "text" }
         inputs:
           - { slot: "audio_input", type: "audio", role: "source", source: "upstream_edge", min: 1, max: 1 }
@@ -28,7 +29,8 @@ models:
       verifiedAt: "2026-09-07"
       notes: "Issue #744 提供的中枢接入契约；离线验证范围与未核验项见证据文档"
     implementation:
-      status: "ready"
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: "speechToText"
       seam: "speechToText"
     execution:
@@ -40,6 +42,7 @@ models:
   # #1789：seedasr-auc 是上游独立在售的语音识别型号（官方直连-火山 渠道 43，upstream_id 与公开 ID 相同），
   # 与 doubao-asr-bigmodel 不是同一模型，二者互不归一（bigasr-auc 档案 notes 明写「不要与 seedasr-auc 混用」）。
   # 本 ID 只以 canonical 身份登记，且不得出现在任何模型的 aliases[] 中。
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: "seedasr-auc"
     label: "Seed ASR 2.0 语音识别"
     family: "bytedance"
@@ -48,7 +51,6 @@ models:
     operations:
       - id: "speech_to_text"
         label: "语音转文字"
-        listed: true
         output: { type: "text" }
         inputs:
           - slot: "audio_input"
@@ -71,7 +73,8 @@ models:
       verifiedAt: "2026-09-14"
       notes: "官方出处为字节跳动 BytePlus（Seed Speech）文档：X-Api-Resource-Id 取值 volc.seedasr.auc 与本 ID 逐字对应，即 Seed ASR 2.0 录音文件识别标准模式（异步转写，提交后查询结果）。上游档案记 status=documented、vendor_model_id=volc.seedasr.auc，并绑定 [官方直连-火山] Seed Audio 豆包语音 渠道（upstream_id 与公开 ID 相同）。与 doubao-asr-bigmodel 不可互相归一：该档案自认「是否等价于 Seed ASR 资源 ID 未确认」，bigasr-auc 档案 notes 亦明写「不要与 seedasr-auc 混用」。本轮不发起真实模型调用。"
     implementation:
-      status: "ready"
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: "speechToText"
       seam: "speechToText"
     execution:
@@ -80,6 +83,7 @@ models:
       seam: "speechToText"
       notes: "复用已挂载且 live 的 speechToText profile/seam；运行期本 ID 走 URL-first 直传（src/media/stt.js URL_FIRST_MODELS）。execution=live 表示该 ID 挂在 live 执行通道上；本轮不发起真实模型调用，不声明独立真实执行结论。"
 
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: "seed-audio-1.0"
     label: "Seed Audio 1.0"
     family: "bytedance"
@@ -89,7 +93,6 @@ models:
     operations:
       - id: "text_to_speech"
         label: "文本转语音"
-        listed: true
         output: { type: "audio" }
         inputs:
           - { slot: "prompt", type: "text", role: "prompt", source: "node_field", valueSources: ["local_field", "upstream_output"], composition: { kind: "single_body", localRole: "body" }, min: 1, max: 1 }
@@ -122,7 +125,8 @@ models:
       verifiedAt: "2026-09-18"
       notes: "火山引擎 HTTP v3 语音合成接口网关真实执行与创作画布端到端验收通过（见 live 证据文档）"
     implementation:
-      status: "ready"
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: "audioGenerate"
       seam: "audioGenerate"
     execution:
@@ -131,6 +135,7 @@ models:
       seam: "audioGenerate"
       notes: "同步 POST /v1/audio/speech 管道（2026-09-18 实测 200 返回 MP3 音频与元数据）"
 
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: "gemini-3.8-flash-tts"
     label: "Gemini 3.8 Flash TTS"
     family: "google"
@@ -139,7 +144,6 @@ models:
     operations:
       - id: "text_to_speech"
         label: "文本转语音"
-        listed: true
         output: { type: "audio" }
         inputs:
           - { slot: "prompt", type: "text", role: "prompt", source: "node_field", min: 1, max: 1 }
@@ -268,7 +272,8 @@ models:
       verifiedAt: "2026-09-29"
       notes: "基于 opencli gemini tts (Google AI Studio) 本地驱动的拟真语音合成模型"
     implementation:
-      status: "ready"
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: "audioGenerate"
       seam: "audioGenerate"
     execution:
@@ -284,6 +289,7 @@ models:
   # 公网 URL）/emo_control_method（文档推荐「与音色参考音频相同」）；emo_happy/
   # emo_sad/emo_angry ∈ [0,1] 可选；轮询 GET /v1/tasks/{task_id}，产物经
   # GET /v1/tasks/{task_id}/artifacts 收取 WAV 直链。
+  # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
   - id: "indextts-2"
     label: "Index TTS2 声音克隆"
     family: "indextts"
@@ -292,7 +298,6 @@ models:
     operations:
       - id: "voice_clone"
         label: "声音克隆"
-        listed: true
         output: { type: "audio" }
         inputs:
           - { slot: "prompt", type: "text", role: "prompt", source: "node_field", min: 1, max: 1 }
@@ -310,7 +315,8 @@ models:
       verifiedAt: "2026-10-04"
       notes: "渠道官方文档 zh/api-reference/audio-series/models/index-tts.mdx（OmniMux-docs 仓，2026-10-04 离线复核）：canonical 型号 indextts-2；POST /v1/tasks/autodl；必填 prompt_text（文稿）、prompt_simple（参考音 URL，不得 data: URI）、emo_control_method（推荐「与音色参考音频相同」）；可选 emo_happy/emo_sad/emo_angry ∈ [0,1]；轮询 GET /v1/tasks/{id}，产物 GET /v1/tasks/{id}/artifacts 取 WAV。旧型号 index-tts 已下线，保留 alias 兼容存量画布/账本。参考素材限制差异登记：上游合同 4b4e2aff3500ec80 的 reference_audios 为 {max:2, formats:[wav,mp3]}，本仓 voice_sample 声明 max=1 且不声明 maxSizeMb/maxDurationSec——max=1 因 AutoDL 契约只有单值 prompt_simple（参考音公网 URL），多值无落点；上游未公布 max_bytes_each 与 max_seconds_each，故不声明体积与时长上限；formats 转写为 MIME 并双写 audio/mp3 与 audio/mpeg，覆盖画布探测（audio/mpeg）与中枢探针归一（audio/mp3）两条通路。"
     implementation:
-      status: "ready"
+      # 2026-10-21 网关对账 #3516：上游渠道全部停用，仅登记不开放。
+      status: "none"
       profileId: "audioGenerate"
       seam: "audioGenerate"
     execution:
@@ -348,10 +354,14 @@ models:
         supported: true
         defaultValue: false
     research:
-      status: "draft"
-      notes: "runtime AUDIO 目录有 suno；仓内无 dated live 证据，不上架"
+      status: "verified"
+      docUrl: "docs/evidence/2026-10-21-model-suno-text_to_music.md"
+      verifiedAt: "2026-10-21"
+      notes: "2026-10-21 #3516：网关渠道 32 default 现役，按渠道文档与 Video 任务端点证据上架；未发真实生成请求，execution 保持 stub"
     implementation:
-      status: "none"
+      status: "ready"
+      profileId: "audioGenerate"
+      seam: "audioGenerate"
     execution:
       status: "stub"
       profileId: "audioGenerate"
@@ -414,16 +424,23 @@ models:
             min: 1
             max: 1
             allowedMimes: ["audio/mp3", "audio/wav", "audio/m4a", "audio/webm"]
-            maxSizeMb: 25
             limitSource:
               kind: "policy_conservative"
-              note: "OpenAI Whisper common 25MB class; seam not live in hub"
-    parameters: {}
+              note: "2026-10-21 #3516：原 maxSizeMb 25 为保守策略，但 URL/工具输入在提交前无 sizeBytes，声明会阻断全部 STT 提交；体积上限改由网关在上传/下载后校验（与 doubao-asr-bigmodel 现役契约一致）。"
+    parameters:
+      # 与 doubao-asr-bigmodel 现役 speech_to_text 契约同形：枚举在提交前拦截非法格式（#3516）。
+      response_format:
+        options: ["json", "text", "verbose_json", "srt", "vtt"]
+        defaultValue: "json"
     research:
-      status: "draft"
-      notes: "draft 处置：speech_to_text output 为 text；speechToText seam 已挂载（#538）可探测；promptPolicy=none；#530 探测翻 live"
+      status: "verified"
+      docUrl: "docs/evidence/2026-10-21-model-whisper-1-speech_to_text.md"
+      verifiedAt: "2026-10-21"
+      notes: "2026-10-21 #3516：网关渠道 31 default 现役，canonical + listed；离线文档证据见 research.docUrl，未发真实转写请求"
     implementation:
-      status: "none"
+      status: "ready"
+      profileId: "speechToText"
+      seam: "speechToText"
     execution:
       status: "none"
       profileId: "speechToText"

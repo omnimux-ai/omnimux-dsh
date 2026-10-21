@@ -36,8 +36,9 @@ const {
 describe('Channel Contract and Adaptive Reconciler', () => {
   describe('resolveModelChannelGroups', () => {
     it('returns official groups with category official when no runtimeSettings provided', () => {
+      // 2026-10-21 网关对账 #3516：seedance-2-0 只剩一条官方标准线路。
       const groups = resolveModelChannelGroups('seedance-2-0');
-      assert.ok(groups.length >= 3);
+      assert.deepEqual(groups.map((group) => group.id), ['standard']);
       for (const group of groups) {
         assert.equal(group.category, 'official');
         assert.equal(group.isAvailable, true);

@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import { MANIFEST_URL, verifyAutoServing } from './verify-auto-serving.mjs'
 import { runVerify } from './verify-model-contracts.mjs'
 import { loadDispositions } from '../plugins/omnimux/src/catalog/contract/index.js'
+import { CANVAS_GENERATION_POLICY } from '../plugins/omnimux-workflow/src/shared/generationPolicy.ts'
 
 const fixture = () => JSON.parse(readFileSync(MANIFEST_URL, 'utf8'))
 function checkMutation(mutate, code) {
@@ -25,13 +26,23 @@ test('manifest registers all whitelist IDs without claiming online supply', () =
     assert.ok(!manifest.models.some((row) => row.productId === removed), `${removed} must be deregistered`)
     assert.ok(!report.issues.some((issue) => issue.modelId === removed), `${removed} must not be reported`)
   }
-  assert.equal(report.registeredCount, 21)
-  assert.equal(report.requiredCount, 10)
+  // 2026-10-21 网关对账 #3516：24 行登记，其中 8 款已上架白名单型号为必需。
+  assert.equal(report.registeredCount, 24)
+  assert.equal(report.requiredCount, 8)
   assert.equal(report.onlineVerified, false)
 })
 
 test('every whitelist model must be registered even when not listed', () => {
-  checkMutation((m) => { m.models = m.models.filter((row) => row.productId !== 'seed-audio-1.0') }, 'missing')
+  // 2026-10-21 #3516 后音频白名单只剩已上架的 suno，真实目录不再有「白名单内但无
+  // listed 操作」的型号；用显式策略矩阵还原该形态，门禁仍必须要求它登记。
+  const policy = structuredClone(CANVAS_GENERATION_POLICY)
+  policy.audio.allowedModelIds.push('seed-audio-1.0')
+  const manifest = fixture()
+  manifest.models = manifest.models.filter((row) => row.productId !== 'seed-audio-1.0')
+  const report = verifyAutoServing({ manifest, policy })
+  assert.equal(report.exitCode, 1)
+  assert.equal(report.ok, false)
+  assert.ok(report.issues.some((issue) => issue.code === 'auto_serving_missing' && issue.modelId === 'seed-audio-1.0'), JSON.stringify(report))
 })
 
 test('alias IDs cannot replace canonical product registrations', () => {
@@ -59,7 +70,8 @@ test('manifest candidate ordering may override the default without crossing mode
 })
 
 test('required supply cannot include an unlisted model or exclude a listed whitelist model', () => {
-  checkMutation((m) => { m.models.find((row) => row.productId === 'suno').requiredInAuto = true }, 'not_listed')
+  // suno 现在是已上架型号；用仍无 listed 操作的已登记型号触发 not_listed。
+  checkMutation((m) => { m.models.find((row) => row.productId === 'minimax-h3').requiredInAuto = true }, 'not_listed')
   checkMutation((m) => { m.models.find((row) => row.productId === 'gpt-image-2.5').requiredInAuto = false }, 'required')
 })
 

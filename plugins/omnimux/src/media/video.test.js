@@ -413,11 +413,13 @@ describe('mapOmnimuxInput video branch (#429)', () => {
     assert.notEqual(input.image_tail, input.image)
   })
 
-  it('executeOmnimuxVideo submits canonical H3 end-frame through the offline runtime', async () => {
+  it('executeOmnimuxVideo refuses the delisted H3 end-frame path before the offline runtime', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'omnimux-endframe-'))
     const dest = join(dir, 'out.mp4')
     let runtimeCalls = 0
-    const result = await executeOmnimuxVideo({
+    // 2026-10-21 网关对账 #3516：minimax-h3 上游渠道停用 → end_frame 仅登记不上架。
+    // 提交必须在进入 runtime / 下载素材之前 fail-closed（映射契约仍由上一测试直接锁定）。
+    await assert.rejects(() => executeOmnimuxVideo({
       prompt: 'end frame only',
       dest,
       model: 'minimax-h3',
@@ -428,15 +430,13 @@ describe('mapOmnimuxInput video branch (#429)', () => {
       wait: false,
       env: { OMNIMUX_API_KEY: 'sk-test' },
       runtime: {
-        async execute(request) {
+        async execute() {
           runtimeCalls += 1
-          assert.deepEqual(request.input.image_with_roles, [
-            { url: 'https://example.com/end-only.png', role: 'last_frame' },
-          ])
           return { taskId: 'task-h3-end-frame', outputs: [] }
         },
       },
       fetcher: async (url) => {
+        // 素材探测发生在 SubmitGuard 之前；这里只提供合法 PNG，让断言落在 guard 放行链上。
         assert.equal(String(url), 'https://example.com/end-only.png')
         return {
           ok: true,
@@ -445,9 +445,14 @@ describe('mapOmnimuxInput video branch (#429)', () => {
           body: new Response(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])).body,
         }
       },
+    }), (error) => {
+      assert.equal(error.code, 'omnimux-invalid-request')
+      assert.equal(error.details?.guardCode, 'implementation_unavailable')
+      assert.match(error.message, /minimax-h3#end_frame implementation is none/)
+      return true
     })
-    assert.equal(result.mode, 'submitted')
-    assert.equal(runtimeCalls, 1)
+    assert.equal(runtimeCalls, 0, 'offline runtime must not be reached')
+    assert.equal(existsSync(dest), false)
     rmSync(dir, { recursive: true, force: true })
   })
 

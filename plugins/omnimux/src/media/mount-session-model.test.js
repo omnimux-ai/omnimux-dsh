@@ -51,10 +51,11 @@ describe('media submit model resolution', () => {
   })
   it('does not disturb the other request fields', async () => {
     const { tool, calls } = harness({ sessionModel: pinned('seedance-2-5') })
-    await tool.execute({ dest: '/tmp/a.mp4', prompt: 'a cat', duration: 5, group: 'standard' }, exec())
+    // #3516：seedance-2-5 的现役分组是 480p（默认）/720p；standard 分组已退场。
+    await tool.execute({ dest: '/tmp/a.mp4', prompt: 'a cat', duration: 5, group: '480p' }, exec())
     assert.equal(calls[0].prompt, 'a cat')
     assert.equal(calls[0].duration, 5)
-    assert.equal(calls[0].group, 'standard')
+    assert.equal(calls[0].group, '480p')
     assert.equal(calls[0].dest, '/tmp/a.mp4')
   })
   it('a session pin never authorizes its stopped pro line', async () => {
