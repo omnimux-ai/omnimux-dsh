@@ -35,5 +35,6 @@
       "SC2": 0,
       "SC3": 4
     }
-  }
+  },
+  "note": "worktree-dirty 扫描：baseSha 为 origin/main；统计对象为含未提交改动的本工作树。"
 }

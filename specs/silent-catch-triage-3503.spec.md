@@ -1,6 +1,6 @@
 # 静默吞错存量分诊：先止血假成功与凭据残留（Issue #3503）
 
-- 关联 Issue：#3503（type: chore / plugin: common / track: D / risk: R1）
+- 关联 Issue：#3503（type: chore / plugin: common / track: D / risk: R1）；评审残留由 #3509 承接（market 重置语义/客户端反馈/同源校验）。
 - 关联合同：[anti-agent-fake-completion-guard §1.1、§3.2.1](../docs/contracts/anti-agent-fake-completion-guard.md)、[plugin-git-pr](../docs/contracts/plugin-git-pr.md)
 - 前置：PR #3492（已合入 main `914d80f9b`）只做**增量**静默兜底拦截；本任务只做存量**分诊与止血**，不清零。
 
@@ -18,8 +18,8 @@
 | `plugins/omnimux-market/src/local-api.ts` | 写盘失败 → 500；抽 `persistHomeCustomOrder(configPath, order)`；测试接缝 `setHomeOrderConfigPathForTests` |
 | `plugins/omnimux-market/lib/local-api.js` | 上述 TS 的构建产物（仓库跟踪） |
 | `plugins/omnimux-market/src/tests/home-order-write.test.ts` | 新增：成功 / 损坏 JSON / 只读目录 / 缺文件四类可观察结果 |
-| `plugins/omnimux/src/auth/store.js` | `logger` 注入、`unsetConfig`/`unsetSecrets` 留痕并回传、`unset()` 聚合失败后抛错 |
-| `plugins/omnimux/src/auth/store.test.js` | 新增：`rmSync` 失败可观察 warn + `unset()` reject；正常路径不回归 |
+| `plugins/omnimux/src/auth/store.js` | `logger` 注入、`unsetConfig`/`unsetSecrets` 留痕并回传、`unset()` 聚合失败后抛错；env `OMNIMUX_ACCESS_TOKEN` 覆盖时跳过 credentials seam unset（进程级配置，不是登出拥有的持久凭据，官方 seam 会因 env 遮蔽而拒绝） |
+| `plugins/omnimux/src/auth/store.test.js` | 新增：`rmSync` 失败可观察 warn + `unset()` reject、正常路径不回归、env token 登出不因 seam 拒绝变 5xx |
 | `plugins/omnimux/src/client/sidebar-toggle-topbar.js` | 41 处 catch → `safeDom` helper；文件 SC1/SC2 = 0；不改变导出面与可观察行为 |
 | `plugins/omnimux/src/client/sidebar-toggle-topbar.e2e.test.js` | 新增：DOM 操作抛错时安装/触发/清理仍完成（jsdom 真实 DOM 语义） |
 | `docs/evidence/silent-catch-triage-3503/` | 基线 + 真实内核 QA + 测试结果证据 |
@@ -28,22 +28,22 @@
 ## 非目标
 
 - 不清零 685 处存量；不设「685→0」KPI。
-- 不动 SC3（有语句无痕迹）881 处（本任务后为 882）。
+- 不动 SC3 存量（基线 882 处）；本任务因新增「有语句留痕」形态使 SC3 +3（884→885 中的 885 为全仓终值），不属于清理对象。
 - 不批量改 C 档 client best-effort catch 的语义；不新增豁免条目替代真实修复。
 - 不改 `auth/store.js` 的读侧容错（json 解析、stat、chmod、legacy 缓存、seam 探测）与 `set()` 的 credentials 镜像 best-effort。
-- 不改 market 写接口除错误上报外的业务逻辑（含 POST `order: []` 仍不落盘的既有语义，另立 Issue 跟进）。
+- 不改 market 写接口除错误上报外的业务逻辑（含 POST `order: []` 仍不落盘的既有语义、客户端吞掉 5xx、写路径同源校验，均由 #3509 跟进）。
 - 不对 `:167`、`:229` 做写路径改造：当前 main 上这两行分别是 host 通知镜像（best-effort）与评分读取，不是同类的持久化写路径。
 
 ## 新用户基线
 
 - market 写接口：普通安装目录（可能只读）。写失败时必须返回 5xx + 错误，不再把未落盘报告为成功；只读/缺文件/损坏 JSON 都是显式失败，不依赖任何开发机私有状态。
-- auth 登出：只依赖 `$HOME/.config/omnimux/`（或测试注入目录）。清理失败时留 `warn` 并让登出请求 5xx；不把「token 仍在磁盘」报告为登出成功。
+- auth 登出：只依赖 `$HOME/.config/omnimux/`（或测试注入目录）。清理失败时留 `warn` 并让登出请求 5xx；不把「token 仍在磁盘」报告为登出成功。显式 `OMNIMUX_ACCESS_TOKEN` 进程环境覆盖时，登出只清理磁盘副本、不尝试 unset 被 env 遮蔽的 credentials seam，避免把合法登出变成 500。
 - sidebar：纯 DOM best-effort，宿主结构缺失时静默降级并保持页面可操作（与改动前一致），不依赖 Dev 端口、本地模型或开发 profile。
 
 ## 假设
 
 1. `handleHomeCustomOrder` 的假成功根因是 `catch {}` 吞掉 `readFileSync`/`JSON.parse`/`writeFileSync` 的异常后无条件 `200`；把写盘收敛进会抛错的 `persistHomeCustomOrder` 并映射为 5xx 即可消除。
-2. `unsetSecrets`/`unsetConfig` 的凭据残留根因是空 catch 让 `rmSync`/`atomicWriteFileSync` 失败对调用方不可见；warn 留痕 + `unset()` 聚合失败并 reject，会让登出路由（已有 `catch → 500`）如实返回失败。
+2. `unsetSecrets`/`unsetConfig` 的凭据残留根因是空 catch 让 `rmSync`/`atomicWriteFileSync` 失败对调用方不可见；warn 留痕 + `unset()` 聚合失败并 reject，会让登出路由（已有 `catch → 500`）如实返回失败。env token 是进程级配置而非持久凭据，其 seam 拒绝不应计入失败。
 3. `sidebar-toggle-topbar.js` 的 41 处 catch 属同一类 DOM best-effort（探测/注入/移除/监听解绑），收敛为统一 helper 不改变任何可观察行为，且真实内核几何/交互与改动前一致。
 
 ## 证伪方式
@@ -54,12 +54,16 @@
 
 ## 验收
 
-- [ ] market 写失败（损坏 JSON / 只读目录 / 缺 catalog）返回 5xx 且 `ok:false`；成功路径仍返回 200 并真实落盘。
-- [ ] auth 清理失败可观察到 warn，且 `store.unset()` reject；http 登出路由返回 5xx 而非 200。
-- [ ] `sidebar-toggle-topbar.js` 的 SC1/SC2 命中数 = 0（SC3 helper 内部允许）。
-- [ ] `node scripts/verify-silent-catch.mjs --json` 基线数字（改动前后）记录到 Issue #3503 评论。
-- [ ] 未新增任何 SC1/SC2（`scripts/lib/silent-catch-delta.mjs` 对改动文件返回 0 新增）。
-- [ ] 隔离 worktree 内真实内核 QA（`scripts/three-column-collapse-qa.mjs`）通过并留存 PNG/JSON；新增 jsdom e2e。
+- [x] market 写失败（损坏 JSON / 只读目录 / 缺 catalog）返回 5xx 且 `ok:false`；成功路径仍返回 200 并真实落盘。
+- [x] auth 清理失败可观察到 warn，且 `store.unset()` reject；http 登出路由返回 5xx 而非 200；env token 登出仍 200 且清理磁盘副本。
+- [x] `sidebar-toggle-topbar.js` 的 SC1/SC2 命中数 = 0（SC3 helper 内部允许）。
+- [x] `node scripts/verify-silent-catch.mjs --json` 基线数字（改动前后）记录到 Issue #3503 评论。
+- [x] 未新增任何 SC1/SC2（`scripts/lib/silent-catch-delta.mjs` 对改动文件返回 0 新增）。
+- [x] 隔离 worktree 内真实内核 QA（`scripts/three-column-collapse-qa.mjs`）通过并留存 PNG/JSON；新增 jsdom e2e。
+
+## 风险复核
+
+- Issue 标签为 `risk:R1`（维护者定级）。本任务不做生产发布/回滚、不改凭据存储与删除逻辑、不新增凭据读取、不写真实凭据；只把既有清理失败从静默改为 warn + 向上回传，并已用测试断言日志与响应体不含 token。按实际 diff 维持 R1，并在此记录复核理由。
 
 ## 存量基线（main `d2d54d177`，本任务记录）
 
@@ -70,7 +74,7 @@
 | 确证合计 | 686 |
 | SC3 有语句无痕迹（疑似） | 882 |
 
-Issue 正文的 685 / 881 采集于 `914d80f9b`；其后 #3496/#3499 等合入使 SC2 +1、SC3 +1，属正常漂移，本任务以现基线为准并记录到 Issue 评论。
+Issue 正文的 685 / 881 采集于 `914d80f9b`；其后 #3496/#3499 等合入使 SC2 +1、SC3 +1，属正常漂移，本任务以现基线为准并记录到 Issue 评论。改动后（本工作树）：SC1 241 / SC2 399 / SC3 885 / 合计 1525。
 
 ## 文档影响
 

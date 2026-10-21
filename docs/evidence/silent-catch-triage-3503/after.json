@@ -23,5 +23,6 @@
       "SC2": 0,
       "SC3": 4
     }
-  }
+  },
+  "note": "worktree-dirty 扫描：head 记录的是 base（d2d54d177），统计对象为含未提交改动的本工作树；提交后以 PR head 为准。"
 }

@@ -414,6 +414,12 @@ export function createTokenStore(opts = {}) {
   async function unset() {
     clearExpired()
 
+    // OMNIMUX_ACCESS_TOKEN is explicit process-level configuration, not a credential
+    // this store persisted; logout owns the on-disk copies only. The official
+    // credentials seam refuses `unset` while the env shadows it (assertUnshadowed),
+    // so attempting that step would turn a legitimate env-token logout into a 5xx.
+    const envToken = typeof env.OMNIMUX_ACCESS_TOKEN === 'string' ? env.OMNIMUX_ACCESS_TOKEN.trim() : ''
+
     /** @type {string[]} */
     const failedSteps = []
     /** @type {Array<[string, () => void | Promise<void>]>} */
@@ -423,7 +429,9 @@ export function createTokenStore(opts = {}) {
       // 2. config.json user_id (logs + throws on real failure)
       ['unsetConfig', () => unsetConfig()],
       // 3. Credentials seam: a stale seam value still resolves after logout.
+      //    Skipped under an env override: it is process config, not persisted state.
       ['credentials.unset', async () => {
+        if (envToken) return
         if (credentials && typeof credentials.unset === 'function') {
           await credentials.unset(CREDENTIAL_REF)
         }

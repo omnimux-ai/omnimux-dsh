@@ -62,7 +62,7 @@ Chrome 动态空闲端口 + 临时 profile，测完即焚。关键 stdout：
 | 命令 | 结果 |
 |---|---|
 | `node --test plugins/omnimux/src/client/sidebar-toggle-topbar.test.js plugins/omnimux/src/client/sidebar-toggle-topbar.e2e.test.js` | **95 pass / 0 fail**（88 既有单测 + 7 新增 jsdom E2E） |
-| `pnpm --filter omnimux test` | **3603 pass / 0 fail**，exit 0（386 个测试文件；3 个 phase：network guard 2 + ordinary 3512 + resource/E2E 89） |
+| `pnpm --filter omnimux test` | **3604 pass / 0 fail**，exit 0（386 个测试文件；3 个 phase：network guard 2 + ordinary 3513 + resource/E2E 89） |
 
 新增 E2E 覆盖（`sidebar-toggle-topbar.e2e.test.js`，真实 jsdom DOM，非源码文本断言）：
 
@@ -108,7 +108,7 @@ baseRef = `d2d54d177dac869f8a8cdabeb0c601a81ac571dc`。
   但「注入按钮在极端 DOM 异常下的交互」由 jsdom E2E 覆盖，不是真实内核覆盖。
 - `docs/evidence/three-column-collapse-viewport-tiers.png` 在本仓 `.git/info/exclude` 中被忽略（非跟踪文件），
   无法用 git 恢复原状，只能以本次运行产物覆盖；不影响 git 跟踪面。
-- **交付注意**：本仓 `.git/info/exclude` 有 `docs/evidence/*` 规则，本目录 5 个新证据文件也是
+- **交付注意**：本仓 `.git/info/exclude` 有 `docs/evidence/*` 规则，本目录 10 个新证据文件也是
   local-ignored（`git status` 不显示）。提交时需 `git add -f docs/evidence/silent-catch-triage-3503/`，
   否则 guard-quality-loop 的 `missing-evidence-for-ui-delivery` 会把它们视为不存在。
 - safeDom 保持「不新增日志」：这些 catch 仍无显式痕迹（SC3 语义），错误只通过既有降级行为体现；

@@ -4,7 +4,7 @@
 - Worktree：`.worktrees/common-silent-catch-triage-issue-3503`
 - 分支：`agent/common-silent-catch-triage-issue-3503`
 - base：`origin/main` = `d2d54d177dac869f8a8cdabeb0c601a81ac571dc`（提交时 HEAD 未包含本次改动，故 head SHA 以 PR 为准）
-- 采集时间：2026-10-21 11:58 (Asia/Taipei)
+- 采集时间：2026-10-21 11:58–12:20 (Asia/Taipei)
 - 规格：`specs/silent-catch-triage-3503.spec.md`
 
 ## 影响面（`node scripts/impact-matrix.mjs --git-diff --base origin/main`）
@@ -40,11 +40,12 @@
 | 配置目录只读（原子写 EACCES） | `unset()` reject 且包含 `unsetConfig failed`；其余步骤继续执行 |
 | 双失败 + token 泄漏检查 | warn/reject 消息均不含 token/access_token |
 | POST `/omnimux/auth/logout` 且 `store.unset()` reject | handler 返回 **500**（body 不含 token）；正常登出仍 200 |
+| env `OMNIMUX_ACCESS_TOKEN` + 官方 credentials seam 拒绝 unset（assertUnshadowed） | 登出仍成功（200 路径）：env 是进程级配置，不尝试 unset 被遮蔽的 seam；磁盘 secrets/config/profile 仍被清理 |
 
 命令与结果：
 
-- `cd plugins/omnimux && node --test src/auth/store.test.js src/auth/http-routes.test.js` → **26 pass / 0 fail**
-- `pnpm --filter omnimux test`（最终工作树）→ **3603 pass / 0 fail**（386 文件，exit 0）
+- `cd plugins/omnimux && node --test src/auth/store.test.js src/auth/http-routes.test.js` → **27 pass / 0 fail**
+- `pnpm --filter omnimux test`（最终工作树）→ **3604 pass / 0 fail**（386 文件，exit 0）
 
 ## P1 sidebar catch 收敛
 
@@ -73,7 +74,7 @@
 |---|---|
 | `node scripts/verify-silent-catch.mjs --json` | exit 0；SC1 241 / SC2 399 / SC3 885；目标文件 sidebar SC1/SC2 = 0 |
 | `node --test scripts/verify-silent-catch.test.mjs scripts/lib/silent-catch-delta.test.mjs` | 44 pass / 0 fail |
-| `pnpm --filter omnimux test` | exit 0；3603 pass / 0 fail |
+| `pnpm --filter omnimux test` | exit 0；3604 pass / 0 fail |
 | `pnpm --filter omnimux-market test` | exit 0；988 pass / 0 fail |
 | `node --test plugins/omnimux/src/client/sidebar-toggle-topbar*.test.js` | 95 pass / 0 fail |
 | `node scripts/three-column-collapse-qa.mjs` | exit 0；PASS 34 断言，cleanup 全释放 |
@@ -87,9 +88,14 @@
 
 - 不清零存量（本任务只减 46 条确证形态），不设「685→0」KPI；SC3 881/882 未动。
 - C 档约 540 处 client best-effort 未批量挂账（Issue 允许分批，另立任务）。
+- #3509 承接评审残留：`order: []` 重置语义、客户端 `catch(() => {})` 吞掉 5xx、写路径同源校验、错误体绝对路径。
 - `homeCustomOrder` POST `order: []`（重置）仍按既有语义不落盘（已加回归用例锁定），属业务语义问题，另立 Issue 跟进。
 - 真实浏览器证据覆盖三分栏几何/缩放档位；「DOM 注入按钮在极端异常下的交互」由 jsdom E2E 覆盖，真实内核不注入 DOM 异常。
 - 未做 Electron 证据：本改动不涉及壳层/平台门控行为。
+
+## 风险复核
+
+- Issue 为 `risk:R1`（维护者定级）。本任务不做生产发布/回滚、不改凭据存储/删除逻辑、不新增凭据读取、不写真实凭据；只把既有清理失败从静默改为 warn 并向上回传。测试断言 warn/响应体不含 token。按实际 diff 维持 R1，理由记录于此供合入核对。
 
 ## 证据文件索引
 
