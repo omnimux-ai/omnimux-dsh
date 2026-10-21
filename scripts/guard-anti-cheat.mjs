@@ -22,7 +22,7 @@ function testDecision(inspection) {
   return inspection.allowed ? { permissionDecision: 'allow' } : {
     permissionDecision: 'deny',
     ruleId: 'RULE-01-TEST-IMMUTABLE',
-    reason: '【硬门禁拦截】测试用例与断言属于只读评估契约，严禁新增执行风险；旧标准变更仍须独立审查。'
+    reason: '【硬门禁拦截】测试用例与断言属于只读评估契约：禁止删除/改写已有测试用例或断言（新增用例、追加断言放行）；不可新增执行风险；旧标准变更仍须独立审查。'
   };
 }
 
