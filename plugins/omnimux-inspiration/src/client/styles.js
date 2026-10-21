@@ -727,6 +727,20 @@ export const INSPIRATION_CSS = `
 .omnimux-inspiration-card-state-text {
   color: var(--dsw-alias-label-primary);
 }
+/* 帖子卡正文最多 3 行：inline 原因/阶段文案也走同一上限，否则卡片会比估算高，
+   同列下一张卡会被压住（Issue 3477）。 */
+.omnimux-rival-card-body.is-post .omnimux-inspiration-card-error.is-inline,
+.omnimux-rival-card-body.is-post .omnimux-inspiration-card-state-text {
+  -webkit-line-clamp: 3;
+}
+/* 帖子卡的复选框在右上，正文右侧留出它的热区，首行不会被盖住。 */
+.omnimux-inspiration-card-pure.is-library.t-text .omnimux-rival-card-text {
+  padding-right: 28px;
+}
+/* 帖子卡的 ⋯ 菜单仍在右下：悬停 CTA 右侧留出它的位置，避免主按钮被盖住。 */
+.omnimux-inspiration-card-pure.is-library.t-text .omnimux-inspiration-card-overlay {
+  padding-right: 40px;
+}
 .omnimux-inspiration-cover-img {
   display: block;
   width: 100%;
@@ -842,25 +856,21 @@ export const INSPIRATION_CSS = `
   background: var(--dsw-alias-bg-elevated);
 }
 
-/* ── 合集详情成员卡：封面优先（Issue 3459）──────────────────────────────
-   只覆盖合集层：根层继续 contain，保存的图片必须完整可见（已有测试锁定）；
-   合集层是等高素材网格，封面统一 4:5 裁切填充。 */
-.omnimux-inspiration-card-pure.is-media-first .omnimux-rival-card-media {
+/* ── 库卡片：封面优先（Issue 3477，根层与合集共用）────────────────────
+   基础规则仍然 contain（保存的图片完整可见，已有测试锁定）；库卡片是封面
+   形态，统一裁切填充，避免封面内部出现黑边。 */
+.omnimux-inspiration-card-pure.is-library .omnimux-rival-card-media {
   object-fit: cover;
 }
-/* text-media（X/Twitter 行）同样有媒体：封面优先时去掉它的卡片内边距与内嵌
-   圆角，否则封面缩进 12px、高度估算与真实渲染差 24px（Issue 3459）。 */
-.omnimux-rival-card.is-media-first.t-text-media {
-  padding: 0;
-}
-.omnimux-rival-card.is-media-first.t-text-media .omnimux-rival-card-media {
-  border-radius: 0;
-  margin-top: 0;
-}
-/* 封面兜底里也写了一遍标题；封面优先的卡正文已经显示标题，这里只留播放
-   图标，避免同一张卡出现两遍标题（Issue 3459）。 */
-.omnimux-inspiration-card-pure.is-media-first .omnimux-inspiration-fallback-title {
+/* 封面兜底里也写了一遍标题；库卡片正文已经显示标题，这里只留播放图标，
+   避免同一张卡出现两遍标题。 */
+.omnimux-inspiration-card-pure.is-library .omnimux-inspiration-fallback-title {
   display: none;
+}
+/* 帖子卡（无媒体）没有封面安全区，复选框移到右上，不再压标题首行。 */
+.omnimux-inspiration-card-pure.is-library.t-text .omnimux-inspiration-card-check {
+  left: auto;
+  right: 8px;
 }
 .omnimux-inspiration-cover-wrap {
   position: relative;
@@ -950,6 +960,7 @@ export const INSPIRATION_CSS = `
   opacity: 0.6;
 }
 .omnimux-inspiration-card-meta-duration,
+.omnimux-inspiration-card-meta-views,
 .omnimux-inspiration-card-meta-time {
   flex: none;
   white-space: nowrap;

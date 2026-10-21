@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from 'dsh-ui-kit'
 import { RivalPlatformMark } from './RivalPlatformMark.jsx'
-import { COLLECTION_MEMBER_LAYOUT, rivalHasPill, rivalMediaRatioOf, rivalCardTypeOf } from './rival-masonry.js'
+import { COLLECTION_MEMBER_LAYOUT, FEED_LAYOUT, rivalHasPill, rivalMediaRatioOf, rivalCardTypeOf } from './rival-masonry.js'
 import {
   formatCount,
   formatEngagementCount,
@@ -131,17 +131,20 @@ export function RivalPostCard(props) {
   } = props
   const cardType = rivalCardTypeOf(card)
   const onMedia = cardType === 'short-video' || cardType === 'long-video' || cardType === 'image' || cardType === 'collection'
-  // 合集详情成员卡（#3459）：封面优先，标题与元信息下沉到固定正文区。
-  // 判据必须与估算层（rivalCardHeightPx）逐字一致——两边都用 type !== 'text'：
-  // X/Twitter 的成员行会落到 text-media，它同样有媒体，也必须走封面优先正文，
-  // 否则卡片有几何、没有正文与状态胶囊。
-  const mediaFirst = card?.layout === COLLECTION_MEMBER_LAYOUT && cardType !== 'text'
+  // 库卡片（根层信息流 / 合集成员）共用一套卡壳（Issue 3477）：封面优先、
+  // 标题两行、元信息行。判据必须与估算层（rivalCardHeightPx）逐字一致——
+  // 两边都用 type !== 'text'：X/Twitter 的成员行会落到 text-media，它同样有
+  // 媒体，也必须走封面优先正文，否则卡片有几何、没有正文与状态胶囊。
+  const libraryLayout = card?.layout === FEED_LAYOUT || card?.layout === COLLECTION_MEMBER_LAYOUT
+  const coverFirst = libraryLayout && cardType !== 'text'
+  // 无媒体的帖子卡：正文（最多 3 行）+ 同一元信息行，没有封面。
+  const postLayout = libraryLayout && cardType === 'text'
   const interactive = cardType !== 'collection' || typeof onDetail === 'function'
   const isDone = Boolean(card?.done || card?.done_at || card?.in_library || card?.interacted_at || card?.state || card?.state_label)
   const tier = String(card?.velocity?.tier || 'watch')
   const title = String(card?.title || '')
   const mediaRatio = rivalMediaRatioOf(card)
-  const clamp = TITLE_CLAMP[cardType] || 2
+  const clamp = postLayout ? 3 : (TITLE_CLAMP[cardType] || 2)
   const cover = String(card?.cover_key || '')
   const account = card?.account || {}
   const locale = rivalLocaleOf(t)
@@ -211,7 +214,7 @@ export function RivalPostCard(props) {
 
   return (
     <article
-      className={`omnimux-rival-card t-${cardType} tier-${tier}${isDone ? ' is-done' : ''}${mediaFirst ? ' is-media-first' : ''} ${className}`.trim()}
+      className={`omnimux-rival-card t-${cardType} tier-${tier}${isDone ? ' is-done' : ''}${libraryLayout ? ' is-library' : ''}${card?.layout === COLLECTION_MEMBER_LAYOUT ? ' is-media-first' : ''} ${className}`.trim()}
       data-card-id={String(card?.id ?? '')}
       data-inspiration-id={inspirationId}
       data-collection-id={collectionId}
@@ -230,7 +233,7 @@ export function RivalPostCard(props) {
         }
       }}
     >
-      {mediaFirst ? (
+      {coverFirst ? (
         <>
           {mediaNode}
           <div className="omnimux-rival-card-body">
@@ -238,6 +241,11 @@ export function RivalPostCard(props) {
             {metaNode || null}
           </div>
         </>
+      ) : postLayout ? (
+        <div className="omnimux-rival-card-body is-post">
+          <div className={`omnimux-rival-card-text clamp-3 ${bodyClassName}`.trim()} role={bodyRole}>{title}</div>
+          {metaNode || null}
+        </div>
       ) : onMedia ? (
         <>
           {mediaNode}

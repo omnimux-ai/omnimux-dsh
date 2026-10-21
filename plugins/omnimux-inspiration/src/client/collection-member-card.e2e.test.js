@@ -28,7 +28,7 @@ const BASE_CSS = `
 function fixtureHtml(cardTypeClass) {
   return `
 <div class="probe-stage"><div class="omnimux-inspiration-stage">
-  <article class="probe-card omnimux-rival-card ${cardTypeClass} omnimux-inspiration-card-pure is-media-first" style="--rival-card-w:${CARD_WIDTH}px">
+  <article class="probe-card omnimux-rival-card ${cardTypeClass} omnimux-inspiration-card-pure is-library is-media-first" style="--rival-card-w:${CARD_WIDTH}px">
     <div class="omnimux-inspiration-cover-wrap">
       <div class="omnimux-rival-card-media" style="--rival-media-ratio:0.8"></div>
       <span class="omnimux-inspiration-badge-type">视频</span>

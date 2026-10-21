@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Button, IconButton } from 'dsh-ui-kit'
+import { Button, IconButton } from 'dsh-ui-kit'
 import { isUsableCoverSize, pickCoverSrc, pickVideoSrc } from './api.js'
 import { formatPlatformName } from './feed-helpers.js'
 import { importErrorText, importPillLabel, importSettledNotice, isFailedRow, isImportingRow } from './import-status.js'
 import { OrganicShimmerOverlay } from './OrganicShimmer.jsx'
 import { RivalPostCard } from './RivalPostCard.jsx'
 import { toInspirationCardRow } from './inspiration-card.js'
-import { formatDuration, formatRelativeTime, rivalLocaleOf } from './rival-format.js'
-import { COLLECTION_MEMBER_LAYOUT, rivalMediaRatioOf } from './rival-masonry.js'
+import { formatCount, formatDuration, formatRelativeTime, rivalLocaleOf } from './rival-format.js'
+import { COLLECTION_MEMBER_LAYOUT, FEED_LAYOUT, rivalMediaRatioOf } from './rival-masonry.js'
 
 const ICON_EYE = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -108,20 +108,28 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
   // "导入失败", which would be false. The settled wording therefore gets first
   // refusal, and `importSettledNotice` answers `''` for a `failed` row.
   const errorDetail = importSettledNotice(row, t) || importErrorText(row, t)
-  // 合集详情成员卡 = 封面优先（#3459）：封面之下是两行标题和一行元信息，
-  // 失败原因收进元信息行的状态胶囊，不再用绝对定位浮层压住任何文字。
-  const mediaFirst = contentCard.layout === COLLECTION_MEMBER_LAYOUT && hasMedia
+  // 库卡片 = 根层与合集共用一套卡壳（Issue 3477）：封面优先、两行标题、
+  // 元信息行（平台 · 播放量 · 时间）+ 状态胶囊；帖子卡没有封面，用正文 +
+  // 同一元信息行。根层与合集唯一差异是封面比例（数据比例 vs 固定 4:5）。
+  const libraryLayout = contentCard.layout === FEED_LAYOUT || contentCard.layout === COLLECTION_MEMBER_LAYOUT
+  const coverFirst = libraryLayout && hasMedia
   const locale = rivalLocaleOf(t)
-  const durationText = mediaFirst ? formatDuration(contentCard.duration) : ''
-  const createdRaw = mediaFirst ? formatRelativeTime(row.created_at, Date.now(), locale) : ''
+  const durationText = coverFirst ? formatDuration(contentCard.duration) : ''
+  // 本地行有 created_at，云端/对标行只有 posted_at：两者都接受，缺了就不显示。
+  const createdRaw = libraryLayout ? formatRelativeTime(row.created_at || row.posted_at, Date.now(), locale) : ''
   const createdText = createdRaw === '--' ? '' : createdRaw
+  // 播放量只在数据真的带了这个字段时出现；本地行没有 stats，整段省略。
+  const rawViews = contentCard.stats ? Number(contentCard.stats.views) : NaN
+  const viewsText = libraryLayout && Number.isFinite(rawViews) && rawViews >= 0
+    ? t('card.meta.views').replace('{views}', formatCount(rawViews, locale))
+    : ''
   // 封面左下只写类型，右下写时长/图数（规格：类型左下、时长/图数右下）。
-  const typeLabel = mediaFirst
+  const typeLabel = coverFirst
     ? contentCard.media_kind === 'video'
       ? t('type.video')
       : t('type.image')
     : ''
-  const cornerMetric = mediaFirst
+  const cornerMetric = coverFirst
     ? contentCard.media_kind === 'video'
       ? durationText
       : contentCard.image_count > 1
@@ -129,7 +137,8 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
         : ''
     : ''
   // 胶囊只说状态，完整原因走 title 与详情弹窗（详情里已有 role="alert" 的原因块）。
-  const statusChip = mediaFirst
+  // 帖子卡没有封面，失败原因就是正文本身，不再重复加胶囊。
+  const statusChip = coverFirst
     ? failed
       ? { text: t('add.status.failed'), tone: 'is-failed' }
       : errorDetail
@@ -138,13 +147,13 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
           ? { text: statusPill, tone: '' }
           : null
     : null
-  const metaNode = mediaFirst ? (
+  const metaNode = libraryLayout ? (
     <div className="omnimux-inspiration-card-meta">
       <span className="omnimux-inspiration-card-meta-source">{platform}</span>
-      {durationText ? (
+      {viewsText ? (
         <>
           <span className="omnimux-inspiration-card-meta-sep" aria-hidden="true">·</span>
-          <span className="omnimux-inspiration-card-meta-duration">{durationText}</span>
+          <span className="omnimux-inspiration-card-meta-views">{viewsText}</span>
         </>
       ) : null}
       {createdText ? (
@@ -216,18 +225,6 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
         </IconButton>
       ) : null}
 
-      {/* 右上角平台/本地角标：合集详情把来源放进元信息行，卡片上不再重复（Issue 3459） */}
-      {!mediaFirst ? (
-        <Badge
-          size="sm"
-          shape="capsule"
-          variant={isLocal ? 'brand' : 'neutral'}
-          className={`omnimux-inspiration-badge-platform ${isLocal ? 'local' : ''}`}
-        >
-          {isLocal ? '本地' : platform}
-        </Badge>
-      ) : null}
-
       {/* 内嵌卡片骨架扫光层：素材未完全就绪或未揭幕时置顶展示。
           导入生成中时全屏渲染创作画布同款流体微光折射动效（Organic Shimmer）。 */}
       <div
@@ -236,39 +233,6 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
       >
         {importing ? <OrganicShimmerOverlay /> : null}
       </div>
-
-      {/* 运行状态胶囊：仅在导入失败时显示红调提示；合集详情把它收进元信息行（Issue 3459） */}
-      {!mediaFirst && !inlineNotice && (failed || importing) && statusPill ? (
-        <Badge
-          size="sm"
-          shape="capsule"
-          variant={failed ? 'danger' : 'neutral'}
-          className={`omnimux-inspiration-badge-status ${failed ? 'is-failed' : ''}`}
-          role="status"
-        >
-          {statusPill}
-        </Badge>
-      ) : null}
-
-      {/* 失败原因：卡片本身要能说清「为什么」。合集详情改用元信息行胶囊 +
-          title/详情弹窗承载原因，绝对定位浮层会压住标题（Issue 3459）。 */}
-      {!mediaFirst && !inlineNotice && errorDetail ? (
-        <div
-          className={`omnimux-inspiration-card-error ${failed ? 'is-failed' : ''}`}
-          role="status"
-        >
-          {errorDetail}
-        </div>
-      ) : null}
-
-      {/* 媒体类型角标：合集详情把它放在封面左下，与右下时长成对（Issue 3459） */}
-      {!mediaFirst ? (
-        hasMedia && contentCard.media_kind === 'video' ? (
-          <Badge size="sm" shape="capsule" className="omnimux-inspiration-badge-media">{t('type.video')}</Badge>
-        ) : contentCard.image_count > 1 ? (
-          <Badge size="sm" shape="capsule" className="omnimux-inspiration-badge-media">{contentCard.image_count} {t('type.image')}</Badge>
-        ) : null
-      ) : null}
     </>
   )
 
@@ -366,9 +330,9 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
       )
   ) : null
 
-  // 合集详情：角标与悬停工具条都住在封面里，正文区只放标题与元信息。
+  // 封面优先：角标与悬停工具条都住在封面里，正文区只放标题与元信息。
   const mediaNode = mediaCore ? (
-    mediaFirst ? (
+    coverFirst ? (
       <div className="omnimux-inspiration-cover-wrap">
         {mediaCore}
         {typeLabel ? <span className="omnimux-inspiration-badge-type">{typeLabel}</span> : null}
@@ -378,18 +342,11 @@ export function InspirationCoverCard({ card, descriptor, style, column, actionsN
     ) : mediaCore
   ) : null
 
-  const overlayNode = mediaFirst ? null : (
-      <div className="omnimux-inspiration-card-overlay">
-        {contentCard.media_kind === 'video' ? <div className="omnimux-inspiration-overlay-play">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </div> : null}
-        {ctaRow}
-        <div className="omnimux-inspiration-overlay-footer">
-          {title.length > 32 ? `${title.slice(0, 32)}…` : title}
-        </div>
-      </div>
+  // 帖子卡没有封面：CTA 放在整卡底部悬停层，不再有播放钮与 footer。
+  const overlayNode = coverFirst ? null : (
+    <div className="omnimux-inspiration-card-overlay">
+      {ctaRow}
+    </div>
   )
 
   return (

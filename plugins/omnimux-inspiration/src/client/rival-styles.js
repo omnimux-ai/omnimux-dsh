@@ -596,14 +596,27 @@ export const RIVAL_CSS = `
 .omnimux-rival-card-title-zone {
   padding: 10px 12px 12px;
 }
-/* 合集详情成员卡的正文区（Issue 3459）：几何必须与 rival-masonry.js 的
-   MEDIA_FIRST_BODY_H 逐像素一致（上 10 + 标题 36 + 间距 6 + 元信息 18 + 下 12），
+/* 库卡片的正文区（Issue 3477：根层与合集共用）：几何必须与 rival-masonry.js
+   的 MEDIA_FIRST_BODY_H 逐像素一致（上 10 + 标题 36 + 间距 6 + 元信息 18 + 下 12），
    估算与渲染一旦分叉，同排卡片就会压叠。 */
 .omnimux-rival-card-body {
   padding: 10px 12px 12px;
 }
 .omnimux-rival-card-body .omnimux-rival-card-title {
   min-height: 36px;
+}
+/* 帖子卡（无媒体）：正文最多 3 行 + 元信息行，内边距 12；卡片自身不再加一层
+   内边距，否则几何会比估算多 24px。 */
+.omnimux-rival-card-body.is-post {
+  padding: 12px;
+}
+.omnimux-rival-card.is-library.t-text,
+.omnimux-rival-card.is-library.t-text-media {
+  padding: 0;
+}
+.omnimux-rival-card.is-library.t-text-media .omnimux-rival-card-media {
+  border-radius: 0;
+  margin-top: 0;
 }
 .omnimux-rival-card-title {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
