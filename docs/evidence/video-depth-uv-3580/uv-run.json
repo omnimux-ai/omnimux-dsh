@@ -1,0 +1,12 @@
+{
+  "scenario": "PATH 中只有 ffmpeg/ffprobe/uv，没有任何 python3.x",
+  "path": "/tmp/uvdepth/bin:/usr/bin:/bin",
+  "uv": "(resolved from PATH)",
+  "result": {
+    "model": "depth-anything-v2-small",
+    "convention": "near=white, far=black",
+    "audioPreserved": true,
+    "python": "uv (managed python 3.11)"
+  },
+  "file": "/tmp/uvdepth/out.mp4"
+}

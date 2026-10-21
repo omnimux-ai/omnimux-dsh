@@ -702,6 +702,7 @@ test('depth: selectDepthPython 全失败时列出尝试过的解释器', async (
   assert.equal(err.code, 'video-depth-deps-missing')
   assert.match(err.message, /tried: python3\.16 \/ python3\.15/)
   assert.match(err.message, /pip install onnxruntime opencv-python/)
+  assert.match(err.message, /OMNIMUX_UV_PATH/)
 })
 
 test('depth: selectDepthPython 单个候选超时继续下一个，不截断候选链', async () => {
@@ -732,6 +733,88 @@ test('depth: selectDepthPython 调用方取消时立即抛出，不继续探测'
   )
   assert.deepEqual(probes, ['python3.16'])
   assert.equal(err.code, 'video-canceled')
+})
+
+test('depth: buildUvDepthArgs 组装 uv 托管运行时命令', () => {
+  const args = depth.buildUvDepthArgs({
+    scriptPath: '/opt/depth_engine.py',
+    input: { maxEdge: 256, invert: true },
+    inputPath: '/tmp/src.mp4',
+    outputPath: '/tmp/depth.mp4',
+    modelsDir: '/models',
+  })
+  assert.deepEqual(args.slice(0, 13), [
+    'run',
+    '--no-project',
+    '--python',
+    '3.11',
+    '--with', 'numpy',
+    '--with', 'opencv-python-headless==4.10.0.84',
+    '--with', 'onnxruntime',
+    'python',
+    '/opt/depth_engine.py',
+    '--input',
+  ])
+  assert.equal(args[13], '/tmp/src.mp4')
+  assert.ok(args.includes('--max-edge'))
+  assert.ok(args.includes('--invert'))
+  assert.ok(args.includes('--models-dir'))
+})
+
+test('depth: resolveDepthRuntime 顺序——显式 > 系统 Python > uv', async () => {
+  depth.clearDepthPythonCache()
+  depth.clearUvCache()
+  const uvProbes = []
+
+  // 1) 显式配置失败：不回退 uv
+  const explicitErr = await invalid(depth.resolveDepthRuntime({
+    configured: '/no/such/python',
+    runProbe: async () => { throw Object.assign(new Error('missing'), { stderrTail: "No module named 'numpy'" }) },
+    runUvProbe: async (bin) => { uvProbes.push(bin) },
+  }))
+  assert.equal(explicitErr.code, 'video-depth-deps-missing')
+  assert.deepEqual(uvProbes, [])
+
+  // 2) 系统 Python 可用：优先系统，不探测 uv
+  const pythonRuntime = await depth.resolveDepthRuntime({
+    runProbe: async (bin) => { if (bin !== 'python3.12') throw Object.assign(new Error('missing'), { stderrTail: "No module named 'numpy'" }) },
+    runUvProbe: async (bin) => { uvProbes.push(bin) },
+  })
+  assert.equal(pythonRuntime.kind, 'python')
+  assert.equal(pythonRuntime.bin, 'python3.12')
+  assert.deepEqual(uvProbes, [])
+
+  // 3) 系统全部失败：回退 uv
+  depth.clearDepthPythonCache()
+  const uvRuntime = await depth.resolveDepthRuntime({
+    runProbe: async () => { throw Object.assign(new Error('missing'), { stderrTail: "No module named 'numpy'" }) },
+    runUvProbe: async (bin) => { uvProbes.push(bin) },
+  })
+  assert.equal(uvRuntime.kind, 'uv')
+  assert.equal(uvRuntime.bin, 'uv')
+})
+
+test('depth: resolveDepthRuntime 在 uv 也不可用时保留 Python 错误', async () => {
+  depth.clearDepthPythonCache()
+  depth.clearUvCache()
+  const err = await invalid(depth.resolveDepthRuntime({
+    runProbe: async () => { throw Object.assign(new Error('missing'), { stderrTail: "No module named 'numpy'" }) },
+    runUvProbe: async () => { throw Object.assign(new Error('uv not found'), { code: 'ENOENT' }) },
+  }))
+  assert.equal(err.code, 'video-depth-deps-missing')
+  assert.match(err.message, /tried: python3\.16/)
+})
+
+test('depth: probeUv 缓存探测结果，失败返回 null', async () => {
+  depth.clearUvCache()
+  let calls = 0
+  const runProbe = async () => { calls += 1 }
+  assert.equal(await depth.probeUv({ runProbe }), 'uv')
+  assert.equal(await depth.probeUv({ runProbe }), 'uv')
+  assert.equal(calls, 1)
+
+  depth.clearUvCache()
+  assert.equal(await depth.probeUv({ runProbe: async () => { throw new Error('missing') } }), null)
 })
 
 test('depth: execute gates on the runtime probe before any ffmpeg work', async () => {
@@ -783,6 +866,32 @@ test('depth: execute runs probe, audio extract, python depth and muxing', async 
   assert.equal(calls.probe, 1)
   assert.equal(calls.python.length, 1)
   assert.ok(calls.ffmpeg.length >= 1)
+})
+
+test('depth: execute 走 uv 时使用托管运行时并回传运行方式', async () => {
+  depth.clearDepthPythonCache()
+  depth.clearUvCache()
+  const uvCalls = []
+  const out = await depth.execute(
+    { videoUrl: '/src.mp4', keepAudio: false },
+    {
+      dest: '/out.mp4',
+      tmpDir: '/tmp/x',
+      addFile() {},
+      materialize: async () => '/src.local.mp4',
+      runFprobe: async () => JSON.stringify({ streams: [{ codec_type: 'video' }] }),
+      runFfmpeg: async () => {},
+      runPython: async () => { throw new Error('system python must not be used') },
+      runUv: async (args) => { uvCalls.push(args) },
+      runDepthRuntimeProbe: async () => { throw Object.assign(new Error('missing'), { stderrTail: "No module named 'numpy'" }) },
+      runUvProbe: async () => {},
+      videoConfig: { video: { pythonPath: '', modelsDir: '' } },
+    },
+  )
+  assert.equal(uvCalls.length, 1)
+  assert.equal(uvCalls[0][0], 'run')
+  assert.equal(uvCalls[0].includes('opencv-python-headless==4.10.0.84'), true)
+  assert.equal(out.result.python, 'uv (managed python 3.11)')
 })
 
 // ---------------------------------------------------------------------------

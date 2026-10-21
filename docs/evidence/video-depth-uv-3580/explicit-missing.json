@@ -1,0 +1,8 @@
+{
+  "ok": false,
+  "mode": "explicit-missing",
+  "path": "/tmp/uvdepth/bin:/usr/bin:/bin",
+  "code": "video-depth-deps-missing",
+  "message": "video_depth configured python '/no/such/python' cannot run the depth engine (numpy, cv2, onnxruntime). Fix or clear Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH so the plugin can use a discovered interpreter or the uv fallback.",
+  "hint": "Fix or clear Config.video.pythonPath / OMNIMUX_VIDEO_PYTHON_PATH so the plugin can use a discovered interpreter or the uv fallback."
+}
